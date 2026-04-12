@@ -4,7 +4,6 @@ import { composeTwoResponses, fetchDirectory } from "@jsenv/server";
 import { URL_META } from "@jsenv/url-meta";
 import { readFileSync } from "node:fs";
 
-import { createEventEmitter } from "../../helpers/event_emitter.js";
 import { watchSourceFiles } from "../../helpers/watch_source_files.js";
 import { WEB_URL_CONVERTER } from "../../helpers/web_url_converter.js";
 import { createKitchen } from "../../kitchen/kitchen.js";
@@ -34,15 +33,9 @@ export const devServerPluginServeSourceFiles = ({
   kitchenCache,
   packageDirectory,
 }) => {
-  const clientFileChangeEventEmitter = createEventEmitter();
-  const clientFileDereferencedEventEmitter = createEventEmitter();
-  clientAutoreload = {
-    enabled: true,
-    clientServerEventsConfig: {},
-    clientFileChangeEventEmitter,
-    clientFileDereferencedEventEmitter,
-    ...clientAutoreload,
-  };
+  const { clientFileChangeEventEmitter, clientFileDereferencedEventEmitter } =
+    clientAutoreload;
+
   const stopWatchingSourceFiles = watchSourceFiles(
     sourceDirectoryUrl,
     (fileInfo) => {

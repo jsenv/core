@@ -12,6 +12,7 @@ import { urlIsOrIsInsideOf, urlToRelativeUrl } from "@jsenv/urls";
 import { existsSync } from "node:fs";
 
 import { defaultRuntimeCompat } from "../build/build_params.js";
+import { createEventEmitter } from "../helpers/event_emitter.js";
 import { jsenvCoreDirectoryUrl } from "../jsenv_core_directory_url.js";
 import { createPackageDirectory } from "../kitchen/package_directory.js";
 import { createJsenvPluginStore } from "../plugins/jsenv_plugins_controller.js";
@@ -169,6 +170,16 @@ export const startDevServer = async ({
   const packageDirectory = createPackageDirectory({
     sourceDirectoryUrl,
   });
+  const clientFileChangeEventEmitter = createEventEmitter();
+  const clientFileDereferencedEventEmitter = createEventEmitter();
+  clientAutoreload = {
+    enabled: true,
+    clientServerEventsConfig: {},
+    clientFileChangeEventEmitter,
+    clientFileDereferencedEventEmitter,
+    ...clientAutoreload,
+  };
+
   const devServerJsenvPluginStore = await createJsenvPluginStore([
     jsenvPluginServerEvents({ clientAutoreload }),
     ...plugins,
