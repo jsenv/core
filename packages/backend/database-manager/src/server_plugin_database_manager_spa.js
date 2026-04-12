@@ -58,6 +58,7 @@ export const serverPluginDatabaseManagerSpa = ({
                   apiUrl: apiServerUrl,
                 };
               },
+              __DB_MANAGER_ASSETS_URL__: () => `${pathname}assets`,
             },
           );
           return new Response(htmlManagerModified, {
@@ -72,7 +73,9 @@ export const serverPluginDatabaseManagerSpa = ({
 const replacePlaceholdersInHtml = (html, replacers) => {
   for (const [name, replacer] of Object.entries(replacers)) {
     const value = typeof replacer === "function" ? replacer() : replacer;
-    html = html.replaceAll(name, JSON.stringify(value));
+    const replacement =
+      typeof value === "string" ? value : JSON.stringify(value);
+    html = html.replaceAll(name, replacement);
   }
   return html;
 };
