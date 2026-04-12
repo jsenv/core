@@ -1,4 +1,4 @@
-import { WebSocketResponse, pickContentType, ServerEvents, serverPluginCORS, jsenvAccessControlAllowedHeaders, composeTwoResponses, serveDirectory, serverPluginErrorHandler, startServer } from "@jsenv/server";
+import { WebSocketResponse, pickContentType, ServerEvents, serverPluginCORS, jsenvAccessControlAllowedHeaders, composeTwoResponses, fetchDirectory, serverPluginErrorHandler, startServer } from "@jsenv/server";
 import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/plugins/filesystem/filesystem_error_to_response.js";
 import { lookupPackageDirectory, registerDirectoryLifecycle, urlToRelativeUrl, moveUrl, urlIsOrIsInsideOf, ensureWindowsDriveLetter, createDetailedMessage, stringifyUrlSite, generateContentFrame, validateResponseIntegrity, setUrlFilename, getCallerPosition, urlToBasename, urlToExtension, asSpecifierWithoutSearch, asUrlWithoutSearch, injectQueryParamsIntoSpecifier, bufferToEtag, isFileSystemPath, urlToPathname, setUrlBasename, urlToFileSystemPath, writeFileSync, createLogger, URL_META, applyNodeEsmResolution, normalizeUrl, ANSI, RUNTIME_COMPAT, CONTENT_TYPE, readPackageAtOrNull, errorToHTML, DATA_URL, normalizeImportMap, composeTwoImportMaps, resolveImport, JS_QUOTES, readCustomConditionsFromProcessArgs, readEntryStatSync, ensurePathnameTrailingSlash, compareFileUrls, urlToFilename, applyFileSystemMagicResolution, getExtensionsToTry, setUrlExtension, isSpecifierForNodeBuiltin, injectQueryParams, memoizeByFirstArgument, assertAndNormalizeDirectoryUrl, createTaskLog, formatError } from "./jsenv_core_packages.js";
 import { readFileSync, existsSync, readdirSync, lstatSync, realpathSync } from "node:fs";
@@ -10041,7 +10041,7 @@ const startDevServer = async ({
                 };
               }
               if (code === "DIRECTORY_REFERENCE_NOT_ALLOWED") {
-                return serveDirectory(reference.url, {
+                return fetchDirectory(reference.url, {
                   headers: {
                     accept: "text/html",
                   },
