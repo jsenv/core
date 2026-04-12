@@ -16,7 +16,7 @@ const serverPluginDatabaseManagerSpa = ({ pathname }) => {
         endpoint: `GET ${pathname}assets/*`,
         description: "Serve static files for database manager Web interface",
         declarationSource: import.meta.url,
-        fetch: createFileSystemFetch(import.meta.resolve("./assets/")),
+        fetch: createFileSystemFetch(import.meta.resolve("./client/assets/")),
       },
       {
         endpoint: `GET ${pathname}`,

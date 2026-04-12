@@ -3724,7 +3724,11 @@ const jsenvPluginDirectoryReferenceEffect = (
           reference.ownerUrlInfo.filenameHint
         }${urlToFilename(reference.url)}/`;
       } else if (reference.specifierPathname.endsWith("./")) ; else {
-        reference.filenameHint = `${urlToFilename(reference.url)}/`;
+        const directoryRelativeUrl = urlToRelativeUrl(
+          reference.url,
+          reference.ownerUrlInfo.originalUrl,
+        );
+        reference.filenameHint = directoryRelativeUrl;
       }
       let actionForDirectory;
       if (reference.type === "a_href") {
@@ -4450,6 +4454,14 @@ const jsenvPluginImportMetaScenarios = () => {
     appliesDuring: "*",
     transformUrlContent: {
       js_module: async (urlInfo) => {
+        // Do not scan node modules for import.meta.dev/import.meta.build
+        // - node modules won't have this in their code
+        // - ;or should use other an other technic as this one won't be available
+        // They would be discarded by content.includes detection
+        // but it's cheaper to detect by URL than to scan potentially large files
+        if (urlInfo.url.includes("/node_modules/")) {
+          return null;
+        }
         if (
           !urlInfo.content.includes("import.meta.dev") &&
           !urlInfo.content.includes("import.meta.test") &&
@@ -4546,6 +4558,14 @@ const babelPluginMetadataImportMetaScenarios = () => {
 
 const jsenvPluginGlobalScenarios = () => {
   const transformIfNeeded = (urlInfo) => {
+    // Do not scan node modules for __DEV__/__BUILD__
+    // - node modules won't have this in their code
+    // - ;or should use other an other technic as this one won't be available
+    // They would be discarded by content.includes detection
+    // but it's cheaper to detect by URL than to scan potentially large files
+    if (urlInfo.url.includes("/node_modules/")) {
+      return null;
+    }
     return {
       contentInjections: {
         __DEV__: INJECTIONS.optional(urlInfo.context.dev),
@@ -4615,6 +4635,14 @@ const jsenvPluginImportMetaCss = () => {
     appliesDuring: "*",
     transformUrlContent: {
       js_module: async (urlInfo) => {
+        // Do not scan node modules for import.meta.css
+        // - unlikely to be there
+        // - we don't watch node modules (too expensive)
+        // They would be discarded by content.includes detection
+        // but it's cheaper to detect by URL than to scan potentially large files
+        if (urlInfo.url.includes("/node_modules/")) {
+          return null;
+        }
         if (!urlInfo.content.includes("import.meta.css")) {
           return null;
         }
@@ -5073,6 +5101,14 @@ const jsenvPluginImportMetaHot = () => {
         cssUrlInfo.data.hotAcceptDependencies = [];
       },
       js_module: async (urlInfo) => {
+        // Do not scan node modules for import.meta.hot
+        // - unlikely to be there
+        // - we don't watch node modules (too expensive)
+        // They would be discarded by content.includes detection
+        // but it's cheaper to detect by URL than to scan potentially large files
+        if (urlInfo.url.includes("/node_modules/")) {
+          return null;
+        }
         if (!urlInfo.content.includes("import.meta.hot")) {
           return null;
         }
