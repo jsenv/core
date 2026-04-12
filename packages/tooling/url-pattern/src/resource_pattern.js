@@ -22,25 +22,24 @@ export const createResourcePattern = (pattern) => {
     });
   }
 
-  const patternEndsWithSlash =
-    pathnamePatternString.length > 1 && pathnamePatternString.endsWith("/");
+  const patternEndsWithSlash = pathnamePatternString.endsWith("/");
 
   return {
     match: (resource) => {
       const [pathname, search, hash] = resourceToParts(resource);
       let decodedPathname = decodeURIComponent(pathname);
-      if (
-        patternEndsWithSlash &&
-        decodedPathname.startsWith(pathnamePatternString)
-      ) {
-        return {
+      let result;
+      if (patternEndsWithSlash && !searchPattern && !hashPattern) {
+        if (!decodedPathname.startsWith(pathnamePatternString)) {
+          return null;
+        }
+        result = {
           named: {},
           stars: [decodedPathname.slice(pathnamePatternString.length)],
         };
+      } else {
+        result = pathnamePattern.match(decodedPathname);
       }
-      let result = patternEndsWithSlash
-        ? null
-        : pathnamePattern.match(decodedPathname);
       if (!result) {
         return null;
       }

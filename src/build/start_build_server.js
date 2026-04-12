@@ -14,7 +14,6 @@
  */
 
 import { Abort, raceProcessTeardownEvents } from "@jsenv/abort";
-import { assertAndNormalizeDirectoryUrl } from "@jsenv/filesystem";
 import { createLogger, createTaskLog } from "@jsenv/humanize";
 import {
   jsenvAccessControlAllowedHeaders,
@@ -23,7 +22,6 @@ import {
   serverPluginStaticFiles,
   startServer,
 } from "@jsenv/server";
-import { existsSync } from "node:fs";
 
 /**
  * Start a server for build files.
@@ -47,55 +45,7 @@ export const startBuildServer = async ({
   signal = new AbortController().signal,
   handleSIGINT = true,
   keepProcessAlive = true,
-
-  ...rest
 }) => {
-  // params validation
-  {
-    const unexpectedParamNames = Object.keys(rest);
-    if (unexpectedParamNames.length > 0) {
-      throw new TypeError(
-        `${unexpectedParamNames.join(",")}: there is no such param`,
-      );
-    }
-    buildDirectoryUrl = assertAndNormalizeDirectoryUrl(
-      buildDirectoryUrl,
-      "buildDirectoryUrl",
-    );
-
-    if (buildDirectoryMainFileRelativeUrl) {
-      if (typeof buildDirectoryMainFileRelativeUrl !== "string") {
-        throw new TypeError(
-          `buildDirectoryMainFileRelativeUrl must be a string, got ${buildDirectoryMainFileRelativeUrl}`,
-        );
-      }
-      if (buildDirectoryMainFileRelativeUrl[0] === "/") {
-        buildDirectoryMainFileRelativeUrl =
-          buildDirectoryMainFileRelativeUrl.slice(1);
-      } else {
-        const buildMainFileUrl = new URL(
-          buildDirectoryMainFileRelativeUrl,
-          buildDirectoryUrl,
-        ).href;
-        if (!buildMainFileUrl.startsWith(buildDirectoryUrl)) {
-          throw new Error(
-            `buildDirectoryMainFileRelativeUrl must be relative, got ${buildDirectoryMainFileRelativeUrl}`,
-          );
-        }
-        buildDirectoryMainFileRelativeUrl = buildMainFileUrl.slice(
-          buildDirectoryUrl.length,
-        );
-      }
-      if (
-        !existsSync(
-          new URL(buildDirectoryMainFileRelativeUrl, buildDirectoryUrl),
-        )
-      ) {
-        buildDirectoryMainFileRelativeUrl = null;
-      }
-    }
-  }
-
   const logger = createLogger({ logLevel });
   const operation = Abort.startOperation();
   operation.addAbortSignal(signal);

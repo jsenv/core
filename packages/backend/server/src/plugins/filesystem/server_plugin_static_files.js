@@ -1,4 +1,6 @@
+import { assertAndNormalizeDirectoryUrl } from "@jsenv/filesystem";
 import { urlToExtension, urlToPathname } from "@jsenv/urls";
+import { existsSync } from "node:fs";
 
 import { createFileSystemFetch } from "./fetch_filesystem.js";
 
@@ -6,7 +8,61 @@ export const serverPluginStaticFiles = ({
   serverRelativeUrl = "/",
   directoryUrl,
   directoryMainFileRelativeUrl = "index.html",
+  canReadDirectory = false,
+  ...rest
 }) => {
+  // params validation
+  {
+    if (typeof serverRelativeUrl !== "string") {
+      throw new TypeError(
+        `serverRelativeUrl must be a string, got ${serverRelativeUrl}`,
+      );
+    }
+    if (serverRelativeUrl[0] !== "/") {
+      throw new TypeError(
+        `serverRelativeUrl must start with /, got ${serverRelativeUrl}`,
+      );
+    }
+    if (!serverRelativeUrl.endsWith("/")) {
+      throw new TypeError(
+        `serverRelativeUrl must end with /, got ${serverRelativeUrl}`,
+      );
+    }
+    const unexpectedParamNames = Object.keys(rest);
+    if (unexpectedParamNames.length > 0) {
+      throw new TypeError(
+        `${unexpectedParamNames.join(",")}: there is no such param`,
+      );
+    }
+    directoryUrl = assertAndNormalizeDirectoryUrl(directoryUrl, "directoryUrl");
+    if (directoryMainFileRelativeUrl) {
+      if (typeof directoryMainFileRelativeUrl !== "string") {
+        throw new TypeError(
+          `buildDirectoryMainFileRelativeUrl must be a string, got ${directoryMainFileRelativeUrl}`,
+        );
+      }
+      if (directoryMainFileRelativeUrl[0] === "/") {
+        directoryMainFileRelativeUrl = directoryMainFileRelativeUrl.slice(1);
+      } else {
+        const buildMainFileUrl = new URL(
+          directoryMainFileRelativeUrl,
+          directoryUrl,
+        ).href;
+        if (!buildMainFileUrl.startsWith(directoryUrl)) {
+          throw new Error(
+            `directoryMainFileRelativeUrl must be relative, got ${directoryMainFileRelativeUrl}`,
+          );
+        }
+        directoryMainFileRelativeUrl = buildMainFileUrl.slice(
+          directoryUrl.length,
+        );
+      }
+      if (!existsSync(new URL(directoryMainFileRelativeUrl, directoryUrl))) {
+        directoryMainFileRelativeUrl = null;
+      }
+    }
+  }
+
   return {
     name: "jsenv:static_files",
     routes: [
@@ -29,13 +85,17 @@ export const serverPluginStaticFiles = ({
             etagEnabled: true,
             compressionEnabled: true,
             rootDirectoryUrl: directoryUrl,
-            canReadDirectory: true,
+            canReadDirectory,
             ENOENTFallback: () => {
               if (
                 !urlToExtension(urlObject) &&
                 !urlToPathname(urlObject).endsWith("/")
               ) {
-                return new URL(directoryMainFileRelativeUrl, directoryUrl);
+                const mainFileUrl = new URL(
+                  directoryMainFileRelativeUrl,
+                  directoryUrl,
+                );
+                return mainFileUrl;
               }
               return null;
             },

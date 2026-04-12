@@ -1,18 +1,17 @@
 import { assert } from "@jsenv/assert";
 import { fetchUrl } from "@jsenv/fetch";
-import { createFileSystemFetch, startServer } from "@jsenv/server";
+import { serverPluginStaticFiles, startServer } from "@jsenv/server";
 
 const testDirectoryUrl = new URL("./", import.meta.url).href;
 const server = await startServer({
   logLevel: "warn",
   keepProcessAlive: false,
-  routes: [
-    {
-      endpoint: "GET *",
-      fetch: createFileSystemFetch(testDirectoryUrl, {
-        canReadDirectory: true,
-      }),
-    },
+  plugins: [
+    serverPluginStaticFiles({
+      directoryUrl: testDirectoryUrl,
+      directoryMainFileRelativeUrl: null,
+      canReadDirectory: true,
+    }),
   ],
 });
 

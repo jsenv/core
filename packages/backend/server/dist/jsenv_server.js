@@ -7,7 +7,7 @@ import http from "node:http";
 import { Http2ServerResponse } from "node:http2";
 import { createReadStream, readFileSync, existsSync, readdirSync, lstatSync, statSync, readFile } from "node:fs";
 import { createRequire } from "node:module";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { pathToFileURL, fileURLToPath } from "node:url";
 import { performance as performance$1 } from "node:perf_hooks";
 import { lookup } from "node:dns";
 import { networkInterfaces } from "node:os";
@@ -3696,6 +3696,33 @@ const urlToExtension = (url) => {
   return pathnameToExtension(pathname);
 };
 
+const transformUrlPathname = (url, transformer) => {
+  if (typeof url === "string") {
+    const urlObject = new URL(url);
+    const { pathname } = urlObject;
+    const pathnameTransformed = transformer(pathname);
+    if (pathnameTransformed === pathname) {
+      return url;
+    }
+    let { origin } = urlObject;
+    // origin is "null" for "file://" urls with Node.js
+    if (origin === "null" && urlObject.href.startsWith("file:")) {
+      origin = "file://";
+    }
+    const { search, hash } = urlObject;
+    const urlWithPathnameTransformed = `${origin}${pathnameTransformed}${search}${hash}`;
+    return urlWithPathnameTransformed;
+  }
+  const pathnameTransformed = transformer(url.pathname);
+  url.pathname = pathnameTransformed;
+  return url;
+};
+const ensurePathnameTrailingSlash = (url) => {
+  return transformUrlPathname(url, (pathname) => {
+    return pathname.endsWith("/") ? pathname : `${pathname}/`;
+  });
+};
+
 const getCommonPathname = (pathname, otherPathname) => {
   if (pathname === otherPathname) {
     return pathname;
@@ -3790,6 +3817,35 @@ const pathnameToParentPathname = (pathname) => {
     return "/";
   }
   return pathname.slice(0, slashLastIndex + 1);
+};
+
+const isFileSystemPath$1 = (value) => {
+  if (typeof value !== "string") {
+    throw new TypeError(
+      `isFileSystemPath first arg must be a string, got ${value}`,
+    );
+  }
+  if (value[0] === "/") {
+    return true;
+  }
+  return startsWithWindowsDriveLetter$1(value);
+};
+
+const startsWithWindowsDriveLetter$1 = (string) => {
+  const firstChar = string[0];
+  if (!/[a-zA-Z]/.test(firstChar)) return false;
+
+  const secondChar = string[1];
+  if (secondChar !== ":") return false;
+
+  return true;
+};
+
+const fileSystemPathToUrl$1 = (value) => {
+  if (!isFileSystemPath$1(value)) {
+    throw new Error(`value must be a filesystem path, got ${value}`);
+  }
+  return String(pathToFileURL(value));
 };
 
 const urlToFileSystemPath = (url) => {
@@ -4385,6 +4441,62 @@ const removeRootIndentation = (text) => {
     result += isRootLine ? `${lineShortened}` : `\n${lineShortened}`;
   }
   return result;
+};
+
+const validateDirectoryUrl = (value) => {
+  let urlString;
+
+  if (value instanceof URL) {
+    urlString = value.href;
+  } else if (typeof value === "string") {
+    if (isFileSystemPath$1(value)) {
+      urlString = fileSystemPathToUrl$1(value);
+    } else {
+      try {
+        urlString = String(new URL(value));
+      } catch {
+        return {
+          valid: false,
+          value,
+          message: `must be a valid url`,
+        };
+      }
+    }
+  } else if (
+    value &&
+    typeof value === "object" &&
+    typeof value.href === "string"
+  ) {
+    value = value.href;
+  } else {
+    return {
+      valid: false,
+      value,
+      message: `must be a string or an url`,
+    };
+  }
+  if (!urlString.startsWith("file://")) {
+    return {
+      valid: false,
+      value,
+      message: 'must start with "file://"',
+    };
+  }
+  return {
+    valid: true,
+    value: ensurePathnameTrailingSlash(urlString),
+  };
+};
+
+const assertAndNormalizeDirectoryUrl = (
+  directoryUrl,
+  name = "directoryUrl",
+) => {
+  const { valid, message, value } = validateDirectoryUrl(directoryUrl);
+  if (!valid) {
+    throw new TypeError(`${name} ${message}, got ${value}`);
+  }
+  return value;
 };
 
 const getParentDirectoryUrl = (url) => {
@@ -5370,25 +5482,24 @@ const createResourcePattern = (pattern) => {
     });
   }
 
-  const patternEndsWithSlash =
-    pathnamePatternString.length > 1 && pathnamePatternString.endsWith("/");
+  const patternEndsWithSlash = pathnamePatternString.endsWith("/");
 
   return {
     match: (resource) => {
       const [pathname, search, hash] = resourceToParts(resource);
       let decodedPathname = decodeURIComponent(pathname);
-      if (
-        patternEndsWithSlash &&
-        decodedPathname.startsWith(pathnamePatternString)
-      ) {
-        return {
+      let result;
+      if (patternEndsWithSlash && !searchPattern && !hashPattern) {
+        if (!decodedPathname.startsWith(pathnamePatternString)) {
+          return null;
+        }
+        result = {
           named: {},
           stars: [decodedPathname.slice(pathnamePatternString.length)],
         };
+      } else {
+        result = pathnamePattern.match(decodedPathname);
       }
-      let result = patternEndsWithSlash
-        ? null
-        : pathnamePattern.match(decodedPathname);
       if (!result) {
         return null;
       }
@@ -8625,7 +8736,61 @@ const serverPluginStaticFiles = ({
   serverRelativeUrl = "/",
   directoryUrl,
   directoryMainFileRelativeUrl = "index.html",
+  canReadDirectory = false,
+  ...rest
 }) => {
+  // params validation
+  {
+    if (typeof serverRelativeUrl !== "string") {
+      throw new TypeError(
+        `serverRelativeUrl must be a string, got ${serverRelativeUrl}`,
+      );
+    }
+    if (serverRelativeUrl[0] !== "/") {
+      throw new TypeError(
+        `serverRelativeUrl must start with /, got ${serverRelativeUrl}`,
+      );
+    }
+    if (!serverRelativeUrl.endsWith("/")) {
+      throw new TypeError(
+        `serverRelativeUrl must end with /, got ${serverRelativeUrl}`,
+      );
+    }
+    const unexpectedParamNames = Object.keys(rest);
+    if (unexpectedParamNames.length > 0) {
+      throw new TypeError(
+        `${unexpectedParamNames.join(",")}: there is no such param`,
+      );
+    }
+    directoryUrl = assertAndNormalizeDirectoryUrl(directoryUrl, "directoryUrl");
+    if (directoryMainFileRelativeUrl) {
+      if (typeof directoryMainFileRelativeUrl !== "string") {
+        throw new TypeError(
+          `buildDirectoryMainFileRelativeUrl must be a string, got ${directoryMainFileRelativeUrl}`,
+        );
+      }
+      if (directoryMainFileRelativeUrl[0] === "/") {
+        directoryMainFileRelativeUrl = directoryMainFileRelativeUrl.slice(1);
+      } else {
+        const buildMainFileUrl = new URL(
+          directoryMainFileRelativeUrl,
+          directoryUrl,
+        ).href;
+        if (!buildMainFileUrl.startsWith(directoryUrl)) {
+          throw new Error(
+            `directoryMainFileRelativeUrl must be relative, got ${directoryMainFileRelativeUrl}`,
+          );
+        }
+        directoryMainFileRelativeUrl = buildMainFileUrl.slice(
+          directoryUrl.length,
+        );
+      }
+      if (!existsSync(new URL(directoryMainFileRelativeUrl, directoryUrl))) {
+        directoryMainFileRelativeUrl = null;
+      }
+    }
+  }
+
   return {
     name: "jsenv:static_files",
     routes: [
@@ -8647,13 +8812,17 @@ const serverPluginStaticFiles = ({
               : "private,max-age=0,must-revalidate",
             etagEnabled: true,
             compressionEnabled: true,
-            canReadDirectory: true,
+            canReadDirectory,
             ENOENTFallback: () => {
               if (
                 !urlToExtension(urlObject) &&
                 !urlToPathname(urlObject).endsWith("/")
               ) {
-                return new URL(directoryMainFileRelativeUrl, directoryUrl);
+                const mainFileUrl = new URL(
+                  directoryMainFileRelativeUrl,
+                  directoryUrl,
+                );
+                return mainFileUrl;
               }
               return null;
             },
