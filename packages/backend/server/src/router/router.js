@@ -28,7 +28,7 @@ const HTTP_METHODS = [
 
 export const createRouter = (
   routeDescriptionArray,
-  { optionsFallback, logLevel } = {},
+  { optionsFallback, logLevel, redirect = "manual" } = {},
 ) => {
   const logger = createLogger({ logLevel });
   const routeSet = new Set();
@@ -293,45 +293,33 @@ It should be should be one of route.${routePropertyName}: ${availableValues.join
         );
       }
 
-      if (isRedirectStatus(status) && headers["location"]) {
-        const redirectedResponse = await followRedirect(
-          request,
-          status,
-          headers["location"],
-        );
-        onRouteMatch(route);
-        onResponseHeaders(request, route, redirectedResponse.headers || {});
-        return redirectedResponse;
+      if (
+        redirect === "follow" &&
+        isRedirectStatus(status) &&
+        headers["location"]
+      ) {
+        const redirectUrl = new URL(headers["location"], request.url);
+        if (redirectUrl.origin === new URL(request.url).origin) {
+          const redirectRequest = {
+            ...request,
+            url: redirectUrl.href,
+            resource:
+              redirectUrl.pathname + redirectUrl.search + redirectUrl.hash,
+            // GET for 301/302/303, preserve method for 307/308
+            method: status === 307 || status === 308 ? request.method : "GET",
+            params: {},
+          };
+          const redirectedResponse = await matchRoutes(redirectRequest);
+          onRouteMatch(route);
+          onResponseHeaders(request, route, redirectedResponse.headers || {});
+          return redirectedResponse;
+        }
+        // redirect to other origins are left to the client to handle
       }
 
       onRouteMatch(route);
       onResponseHeaders(request, route, headers);
       return { status, statusText, statusMessage, headers, body };
-    };
-
-    const followRedirect = (originalRequest, redirectStatus, location) => {
-      const redirectUrl = new URL(location, originalRequest.url);
-      // Only follow same-origin redirects; external URLs cannot match any route
-      if (redirectUrl.origin !== new URL(originalRequest.url).origin) {
-        return Promise.resolve({
-          status: 404,
-          statusText: "Not Found",
-          statusMessage: `The redirect target "${location}" is external and cannot be resolved internally.`,
-          headers: {},
-        });
-      }
-      const redirectRequest = {
-        ...originalRequest,
-        url: redirectUrl.href,
-        resource: redirectUrl.pathname + redirectUrl.search + redirectUrl.hash,
-        // GET for 301/302/303, preserve method for 307/308
-        method:
-          redirectStatus === 307 || redirectStatus === 308
-            ? originalRequest.method
-            : "GET",
-        params: {},
-      };
-      return matchRoutes(redirectRequest);
     };
 
     const matchRoutes = async (request) => {

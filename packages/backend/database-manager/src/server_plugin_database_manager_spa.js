@@ -19,15 +19,12 @@ export const serverPluginDatabaseManagerSpa = ({
         declarationSource: import.meta.url,
         fetch: redirectToSource
           ? (request) => {
-              return new Response(null, {
-                status: 302,
-                headers: {
-                  location: new URL(
-                    request.pathname,
-                    import.meta.resolve("./client/assets/"),
-                  ).href,
-                },
-              });
+              const assetFileUrl = new URL(
+                request.pathname,
+                import.meta.resolve("./client/assets/"),
+              ).href;
+              const assetServerUrl = new URL(assetFileUrl).pathname;
+              return Response.redirect(assetServerUrl, 302);
             }
           : createFileSystemFetch(import.meta.resolve("./client/assets/")),
       },
