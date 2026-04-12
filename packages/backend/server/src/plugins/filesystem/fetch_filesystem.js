@@ -39,7 +39,7 @@ export const fetchFileSystem = async (
     isVersioned = defaultIsVersioned,
     canReadDirectory = false,
     directoryMainFileRelativeUrl = null,
-    ENOENTFallback = null,
+    ENOENTFallback = () => null,
   } = {},
 ) => {
   let directoryUrlString = asUrlString(directoryUrl);
@@ -104,6 +104,11 @@ export const fetchFileSystem = async (
       readStatTiming?.end();
 
       if (fileStat.isDirectory()) {
+        if (directoryMainFileRelativeUrl) {
+          return serveFile(
+            new URL(directoryMainFileRelativeUrl, directoryUrl).href,
+          );
+        }
         if (canReadDirectory) {
           return serveDirectory(fileUrl, {
             headers: request.headers,
