@@ -16,10 +16,10 @@
 import { Abort, raceProcessTeardownEvents } from "@jsenv/abort";
 import { createLogger, createTaskLog } from "@jsenv/humanize";
 import {
+  createFileSystemFetch,
   jsenvAccessControlAllowedHeaders,
   serverPluginCORS,
   serverPluginErrorHandler,
-  serverPluginStaticFiles,
   startServer,
 } from "@jsenv/server";
 
@@ -33,7 +33,7 @@ export const startBuildServer = async ({
   buildDirectoryUrl,
   buildDirectoryMainFileRelativeUrl = "index.html",
   port = 9779,
-  routes,
+  routes = [],
   serverPlugins = [],
   acceptAnyIp,
   hostname,
@@ -79,7 +79,6 @@ export const startBuildServer = async ({
     port,
     serverTiming: true,
     requestWaitingMs: 60_000,
-    routes,
     plugins: [
       serverPluginCORS({
         accessControlAllowRequestOrigin: true,
@@ -90,14 +89,19 @@ export const startBuildServer = async ({
         timingAllowOrigin: true,
       }),
       ...serverPlugins,
-      serverPluginStaticFiles({
-        serverRelativeUrl: "/",
-        directoryUrl: buildDirectoryUrl,
-        directoryMainFileRelativeUrl: buildDirectoryMainFileRelativeUrl,
-      }),
       serverPluginErrorHandler({
         sendErrorDetails: false,
       }),
+    ],
+    routes: [
+      ...routes,
+      {
+        endpoint: "GET /",
+        description: "Serve build files",
+        fetch: createFileSystemFetch(buildDirectoryUrl, {
+          directoryMainFileRelativeUrl: buildDirectoryMainFileRelativeUrl,
+        }),
+      },
     ],
   });
   startBuildServerTask.done();

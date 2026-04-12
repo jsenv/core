@@ -1,17 +1,19 @@
 import { assert } from "@jsenv/assert";
 import { fetchUrl } from "@jsenv/fetch";
-import { serverPluginStaticFiles, startServer } from "@jsenv/server";
+import { createFileSystemFetch, startServer } from "@jsenv/server";
 
 const testDirectoryUrl = new URL("./", import.meta.url).href;
 const server = await startServer({
   logLevel: "warn",
   keepProcessAlive: false,
-  plugins: [
-    serverPluginStaticFiles({
-      directoryUrl: testDirectoryUrl,
-      directoryMainFileRelativeUrl: null,
-      canReadDirectory: true,
-    }),
+  routes: [
+    {
+      endpoint: "GET /",
+      fetch: createFileSystemFetch(testDirectoryUrl, {
+        directoryMainFileRelativeUrl: null,
+        canReadDirectory: true,
+      }),
+    },
   ],
 });
 
@@ -58,3 +60,20 @@ const expect = {
   body: expectedBody,
 };
 assert({ actual, expect });
+
+// fetch a file
+{
+  const fileRequestUrl = new URL("/dir/file.js", server.origin).href;
+  const fileResponse = await fetchUrl(fileRequestUrl);
+  const actual = {
+    url: fileResponse.url,
+    status: fileResponse.status,
+    statusText: fileResponse.statusText,
+  };
+  const expect = {
+    url: fileRequestUrl,
+    status: 200,
+    statusText: "OK",
+  };
+  assert({ actual, expect });
+}

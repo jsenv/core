@@ -4,6 +4,7 @@
  * It is meant to be used inside "requestToResponse"
  */
 
+import { urlToExtension, urlToPathname } from "@jsenv/urls";
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
 import { createReadStream, readFile, statSync } from "node:fs";
 
@@ -34,11 +35,11 @@ export const fetchFileSystem = async (
     mtimeEnabled = false,
     compressionEnabled = false,
     compressionSizeThreshold = 1024,
-    cacheControl = etagEnabled || mtimeEnabled
-      ? "private,max-age=0,must-revalidate"
-      : "no-store",
+    cacheControl,
+    isVersioned = defaultIsVersioned,
     canReadDirectory = false,
-    ENOENTFallback = () => {},
+    directoryMainFileRelativeUrl = null,
+    ENOENTFallback = null,
   } = {},
 ) => {
   let directoryUrlString = asUrlString(directoryUrl);
@@ -64,7 +65,11 @@ export const fetchFileSystem = async (
   const filesystemUrl = new URL(resource, directoryUrl);
   const urlString = asUrlString(filesystemUrl);
 
-  if (typeof cacheControl === "function") {
+  if (cacheControl === undefined) {
+    cacheControl = isVersioned(request)
+      ? `private,max-age=${SECONDS_IN_30_DAYS},immutable`
+      : "private,max-age=0,must-revalidate";
+  } else if (typeof cacheControl === "function") {
     cacheControl = cacheControl(request);
   }
 
@@ -176,6 +181,18 @@ export const fetchFileSystem = async (
       return composeTwoResponses(intermediateResponse, clientCacheResponse);
     } catch (e) {
       if (e.code === "ENOENT") {
+        if (directoryMainFileRelativeUrl) {
+          if (
+            !urlToExtension(fileUrl) &&
+            !urlToPathname(fileUrl).endsWith("/")
+          ) {
+            const mainFileUrl = new URL(
+              directoryMainFileRelativeUrl,
+              directoryUrl,
+            );
+            return serveFile(mainFileUrl);
+          }
+        }
         const fallbackFileUrl = ENOENTFallback();
         if (fallbackFileUrl) {
           return serveFile(fallbackFileUrl);
@@ -445,4 +462,10 @@ const asUrlString = (value) => {
     }
   }
   return null;
+};
+
+const SECONDS_IN_30_DAYS = 60 * 60 * 24 * 30;
+
+const defaultIsVersioned = (request) => {
+  return new URL(request.url).searchParams.has("v");
 };
