@@ -2317,7 +2317,7 @@ const TableLink = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);import.meta.css = [/* css */"\n  .explorer_details {\n    flex: 1;\n  }\n\n  .explorer_details summary {\n    padding-left: calc(16px + var(--details-depth, 0) * 16px);\n  }\n\n  .explorer_details .explorer_item_content {\n    padding-left: calc(32px + var(--details-depth, 0) * 16px);\n  }\n", "/client/role/role_with_ownership/role_with_ownership_list_details.jsx"];
+installImportMetaCssBuild(import.meta);import.meta.css = [/* css */"\n  .explorer_details {\n    flex: 1;\n  }\n\n  .explorer_details summary {\n    padding-left: calc(16px + var(--details-depth, 0) * 16px);\n  }\n\n  .explorer_details .explorer_item_content {\n    padding-left: calc(32px + var(--details-depth, 0) * 16px);\n  }\n", "@jsenv/plugin-database-manager/src/client/role/role_with_ownership/role_with_ownership_list_details.jsx"];
 const RoleWithOwnershipListDetails = () => {
   const [resizable, setResizable] = h(false);
   const roleWithOwnershipCount = useRoleWithOwnershipCount();
@@ -2792,7 +2792,7 @@ const DatabaseField = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);import.meta.css = [/* css */"\n  .page {\n    min-width: max-content;\n  }\n\n  .page_head {\n    position: fixed;\n    top: 0;\n    right: 0;\n    left: var(--aside-width, 0);\n    z-index: 1;\n    display: flex;\n\n    padding: 20px;\n    flex-direction: column;\n    justify-content: space-between;\n    gap: 10px;\n    background: white;\n\n    background-color: rgb(239, 242, 245);\n    border-bottom: 1px solid rgb(69, 76, 84);\n  }\n\n  .page_head h1 {\n    margin: 0;\n    line-height: 1em;\n  }\n\n  .page_head_with_actions {\n    display: flex;\n    flex-direction: row;\n  }\n\n  .page_head > .actions {\n  }\n\n  .page_body {\n    margin-top: 95px;\n    padding-top: 20px;\n    padding-right: 20px;\n    padding-bottom: 20px;\n    padding-left: 20px;\n  }\n\n  .page_error {\n    margin-top: 0;\n    margin-bottom: 20px;\n    padding: 20px;\n    background: #fdd;\n    border: 1px solid red;\n  }\n", "/client/layout/page.jsx"];
+installImportMetaCssBuild(import.meta);import.meta.css = [/* css */"\n  .page {\n    min-width: max-content;\n  }\n\n  .page_head {\n    position: fixed;\n    top: 0;\n    right: 0;\n    left: var(--aside-width, 0);\n    z-index: 1;\n    display: flex;\n\n    padding: 20px;\n    flex-direction: column;\n    justify-content: space-between;\n    gap: 10px;\n    background: white;\n\n    background-color: rgb(239, 242, 245);\n    border-bottom: 1px solid rgb(69, 76, 84);\n  }\n\n  .page_head h1 {\n    margin: 0;\n    line-height: 1em;\n  }\n\n  .page_head_with_actions {\n    display: flex;\n    flex-direction: row;\n  }\n\n  .page_head > .actions {\n  }\n\n  .page_body {\n    margin-top: 95px;\n    padding-top: 20px;\n    padding-right: 20px;\n    padding-bottom: 20px;\n    padding-left: 20px;\n  }\n\n  .page_error {\n    margin-top: 0;\n    margin-bottom: 20px;\n    padding: 20px;\n    background: #fdd;\n    border: 1px solid red;\n  }\n", "@jsenv/plugin-database-manager/src/client/layout/page.jsx"];
 const Page = ({
   children,
   ...props
@@ -4186,7 +4186,7 @@ installImportMetaCssBuild(import.meta);/**
  * 9. Can edit a column (name, type, etc.)
  *
  */
-import.meta.css = [/* css */"\n  .table_data_actions {\n    margin-bottom: 15px;\n  }\n", "/client/table/table_data.jsx"];
+import.meta.css = [/* css */"\n  .table_data_actions {\n    margin-bottom: 15px;\n  }\n", "@jsenv/plugin-database-manager/src/client/table/table_data.jsx"];
 const TableData = ({
   table
 }) => {

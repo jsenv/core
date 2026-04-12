@@ -54,7 +54,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = [         `
   body {
     background-color: red;
   }
-`, "/foo.jsx"];
+`, "@jsenv/plugin-preact/tests/jsx_import_meta_css/client/foo.jsx"];
 const Foo = () => {
   return u("div", {
     children: "foo"

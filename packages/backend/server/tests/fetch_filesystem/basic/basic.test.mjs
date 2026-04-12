@@ -26,6 +26,7 @@ const gitIgnoredDirectoryUrl = import.meta.resolve("./git_ignored/");
     {
       method: "GET",
       resource: "/file.js?ok=true",
+      url: `${fileUrl}?ok=true`,
       headers: {
         "cache-control": "no-store",
         "content-type": "text/javascript",
@@ -34,6 +35,9 @@ const gitIgnoredDirectoryUrl = import.meta.resolve("./git_ignored/");
     },
     null,
     gitIgnoredDirectoryUrl,
+    {
+      cacheControl: "no-store",
+    },
   );
   const expect = {
     status: 200,
@@ -60,6 +64,7 @@ const gitIgnoredDirectoryUrl = import.meta.resolve("./git_ignored/");
     {
       method: "HEAD",
       resource: "/toto",
+      url: fileUrl,
       headers: {},
     },
     null,
@@ -96,6 +101,7 @@ const gitIgnoredDirectoryUrl = import.meta.resolve("./git_ignored/");
     {
       method: "GET",
       resource: "/file.js",
+      url: fileUrl,
       headers: {},
     },
     null,
@@ -129,6 +135,7 @@ const gitIgnoredDirectoryUrl = import.meta.resolve("./git_ignored/");
     {
       method: "GET",
       resource: "/file.js",
+      url: fileUrl,
       headers: {
         "if-none-match": response.headers.etag,
       },
@@ -159,6 +166,7 @@ const gitIgnoredDirectoryUrl = import.meta.resolve("./git_ignored/");
     {
       method: "GET",
       resource: "/file.js",
+      url: fileUrl,
       headers: {
         "if-none-match": response.headers.etag,
       },
@@ -197,6 +205,7 @@ const gitIgnoredDirectoryUrl = import.meta.resolve("./git_ignored/");
     {
       method: "GET",
       resource: "/file.js",
+      url: fileUrl,
       headers: {},
     },
     null,
@@ -231,6 +240,7 @@ const gitIgnoredDirectoryUrl = import.meta.resolve("./git_ignored/");
     {
       method: "GET",
       resource: "/file.js",
+      url: fileUrl,
       headers: {
         "if-modified-since": response.headers["last-modified"],
       },
@@ -263,6 +273,7 @@ const gitIgnoredDirectoryUrl = import.meta.resolve("./git_ignored/");
     {
       method: "GET",
       resource: "/file.js",
+      url: fileUrl,
       headers: {
         "if-modified-since": response.headers["last-modified"],
       },
@@ -300,6 +311,7 @@ const gitIgnoredDirectoryUrl = import.meta.resolve("./git_ignored/");
     {
       method: "GET",
       resource: "/",
+      url: gitIgnoredDirectoryUrl,
       headers: {},
     },
     null,
@@ -318,6 +330,7 @@ const gitIgnoredDirectoryUrl = import.meta.resolve("./git_ignored/");
     {
       method: "GET",
       resource: "/",
+      url: gitIgnoredDirectoryUrl,
       headers: {},
     },
     null,

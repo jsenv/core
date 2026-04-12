@@ -1,15 +1,15 @@
-import { WebSocketResponse, pickContentType, ServerEvents, serverPluginCORS, jsenvAccessControlAllowedHeaders, composeTwoResponses, serveDirectory, serverPluginErrorHandler, startServer } from "@jsenv/server";
-import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/plugins/filesystem/filesystem_error_to_response.js";
-import { lookupPackageDirectory, registerDirectoryLifecycle, urlToRelativeUrl, moveUrl, urlIsOrIsInsideOf, ensureWindowsDriveLetter, createDetailedMessage, stringifyUrlSite, generateContentFrame, validateResponseIntegrity, setUrlFilename, getCallerPosition, urlToBasename, urlToExtension, asSpecifierWithoutSearch, asUrlWithoutSearch, injectQueryParamsIntoSpecifier, bufferToEtag, isFileSystemPath, urlToPathname, setUrlBasename, urlToFileSystemPath, writeFileSync, createLogger, URL_META, applyNodeEsmResolution, normalizeUrl, ANSI, RUNTIME_COMPAT, CONTENT_TYPE, readPackageAtOrNull, errorToHTML, DATA_URL, normalizeImportMap, composeTwoImportMaps, resolveImport, JS_QUOTES, readCustomConditionsFromProcessArgs, readEntryStatSync, ensurePathnameTrailingSlash, compareFileUrls, urlToFilename, applyFileSystemMagicResolution, getExtensionsToTry, setUrlExtension, isSpecifierForNodeBuiltin, injectQueryParams, memoizeByFirstArgument, assertAndNormalizeDirectoryUrl, createTaskLog, formatError } from "./jsenv_core_packages.js";
+import { WebSocketResponse, pickContentType, ServerEvents, serverPluginErrorHandler, composeTwoResponses, fetchDirectory, serverPluginCORS, jsenvAccessControlAllowedHeaders, startServer } from "@jsenv/server";
 import { readFileSync, existsSync, readdirSync, lstatSync, realpathSync } from "node:fs";
-import { pathToFileURL } from "node:url";
-import { generateSourcemapFileUrl, createMagicSource, composeTwoSourcemaps, generateSourcemapDataUrl, SOURCEMAP } from "@jsenv/sourcemap";
-import { parseHtml, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, stringifyHtmlAst, applyBabelPlugins, generateUrlForInlineContent, injectJsenvScript, parseJsWithAcorn, parseCssUrls, getHtmlNodeAttribute, getHtmlNodePosition, getHtmlNodeAttributePosition, setHtmlNodeAttributes, parseSrcSet, getUrlForContentInsideHtml, removeHtmlNodeText, setHtmlNodeText, getHtmlNodeText, analyzeScriptNode, visitHtmlNodes, parseJsUrls, getUrlForContentInsideJs, analyzeLinkNode } from "@jsenv/ast";
+import { lookupPackageDirectory, readPackageAtOrNull, generateContentFrame, urlToRelativeUrl, errorToHTML, DATA_URL, CONTENT_TYPE, normalizeImportMap, composeTwoImportMaps, resolveImport, JS_QUOTES, urlToExtension, urlToBasename, applyNodeEsmResolution, URL_META, readCustomConditionsFromProcessArgs, urlIsOrIsInsideOf, registerDirectoryLifecycle, asUrlWithoutSearch, readEntryStatSync, ensurePathnameTrailingSlash, compareFileUrls, urlToFilename, applyFileSystemMagicResolution, getExtensionsToTry, setUrlExtension, createDetailedMessage, stringifyUrlSite, injectQueryParamsIntoSpecifier, isSpecifierForNodeBuiltin, injectQueryParams, urlToFileSystemPath, writeFileSync, moveUrl, ensureWindowsDriveLetter, validateResponseIntegrity, setUrlFilename, getCallerPosition, asSpecifierWithoutSearch, bufferToEtag, isFileSystemPath, urlToPathname, setUrlBasename, createLogger, normalizeUrl, ANSI, RUNTIME_COMPAT, memoizeByFirstArgument, formatError, assertAndNormalizeDirectoryUrl, createTaskLog } from "./jsenv_core_packages.js";
 import { createPluginsController } from "@jsenv/server/src/plugins_controller.js";
+import { parseHtml, parseCssUrls, getHtmlNodeAttribute, getHtmlNodePosition, getHtmlNodeAttributePosition, setHtmlNodeAttributes, parseSrcSet, getUrlForContentInsideHtml, removeHtmlNodeText, setHtmlNodeText, getHtmlNodeText, analyzeScriptNode, stringifyHtmlAst, visitHtmlNodes, parseJsUrls, getUrlForContentInsideJs, injectJsenvScript, applyBabelPlugins, analyzeLinkNode, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, generateUrlForInlineContent, parseJsWithAcorn } from "@jsenv/ast";
 import { jsenvPluginSupervisor } from "@jsenv/plugin-supervisor";
 import { jsenvPluginTranspilation } from "@jsenv/plugin-transpilation";
-import { randomUUID } from "node:crypto";
+import { createMagicSource, composeTwoSourcemaps, generateSourcemapFileUrl, generateSourcemapDataUrl, SOURCEMAP } from "@jsenv/sourcemap";
+import { pathToFileURL } from "node:url";
 import { bundleJsModules } from "@jsenv/plugin-bundling";
+import { randomUUID } from "node:crypto";
+import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/plugins/filesystem/filesystem_error_to_response.js";
 import { createRequire } from "node:module";
 import "./jsenv_core_node_modules.js";
 import "node:process";
@@ -51,3789 +51,7 @@ const createEventEmitter = () => {
   return { on, off, emit };
 };
 
-const getDirectoryWatchPatterns = (
-  directoryUrl,
-  watchedDirectoryUrl,
-  { sourceFilesConfig },
-) => {
-  const directoryUrlRelativeToWatchedDirectory = urlToRelativeUrl(
-    directoryUrl,
-    watchedDirectoryUrl,
-  );
-  const watchPatterns = {
-    [`${directoryUrlRelativeToWatchedDirectory}**/*`]: true, // by default watch everything inside the source directory
-    [`${directoryUrlRelativeToWatchedDirectory}**/.*`]: false, // file starting with a dot -> do not watch
-    [`${directoryUrlRelativeToWatchedDirectory}**/.*/`]: false, // directory starting with a dot -> do not watch
-    [`${directoryUrlRelativeToWatchedDirectory}**/node_modules/`]: false, // node_modules directory -> do not watch
-  };
-  for (const key of Object.keys(sourceFilesConfig)) {
-    watchPatterns[`${directoryUrlRelativeToWatchedDirectory}${key}`] =
-      sourceFilesConfig[key];
-  }
-  return watchPatterns;
-};
-
-const watchSourceFiles = (
-  sourceDirectoryUrl,
-  callback,
-  { sourceFilesConfig = {}, keepProcessAlive, cooldownBetweenFileEvents },
-) => {
-  // Project should use a dedicated directory (usually "src/")
-  // passed to the dev server via "sourceDirectoryUrl" param
-  // In that case all files inside the source directory should be watched
-  // But some project might want to use their root directory as source directory
-  // In that case source directory might contain files matching "node_modules/*" or ".git/*"
-  // And jsenv should not consider these as source files and watch them (to not hurt performances)
-  const watchPatterns = {};
-  let watchedDirectoryUrl = "";
-  const addDirectoryToWatch = (directoryUrl) => {
-    Object.assign(
-      watchPatterns,
-      getDirectoryWatchPatterns(directoryUrl, watchedDirectoryUrl, {
-        sourceFilesConfig,
-      }),
-    );
-  };
-  const watch = () => {
-    const stopWatchingSourceFiles = registerDirectoryLifecycle(
-      watchedDirectoryUrl,
-      {
-        watchPatterns,
-        cooldownBetweenFileEvents,
-        keepProcessAlive,
-        recursive: true,
-        added: ({ relativeUrl }) => {
-          callback({
-            url: new URL(relativeUrl, watchedDirectoryUrl).href,
-            event: "added",
-          });
-        },
-        updated: ({ relativeUrl }) => {
-          callback({
-            url: new URL(relativeUrl, watchedDirectoryUrl).href,
-            event: "modified",
-          });
-        },
-        removed: ({ relativeUrl }) => {
-          callback({
-            url: new URL(relativeUrl, watchedDirectoryUrl).href,
-            event: "removed",
-          });
-        },
-      },
-    );
-    stopWatchingSourceFiles.watchPatterns = watchPatterns;
-    return stopWatchingSourceFiles;
-  };
-
-  npm_workspaces: {
-    const packageDirectoryUrl = lookupPackageDirectory(sourceDirectoryUrl);
-    let packageContent;
-    try {
-      packageContent = JSON.parse(
-        readFileSync(new URL("package.json", packageDirectoryUrl), "utf8"),
-      );
-    } catch {
-      break npm_workspaces;
-    }
-    const { workspaces } = packageContent;
-    if (!workspaces || !Array.isArray(workspaces) || workspaces.length === 0) {
-      break npm_workspaces;
-    }
-    watchedDirectoryUrl = packageDirectoryUrl;
-    for (const workspace of workspaces) {
-      if (workspace.endsWith("*")) {
-        const workspaceDirectoryUrl = new URL(
-          workspace.slice(0, -1),
-          packageDirectoryUrl,
-        );
-        addDirectoryToWatch(workspaceDirectoryUrl);
-      } else {
-        const workspaceRelativeUrl = new URL(workspace, packageDirectoryUrl);
-        addDirectoryToWatch(workspaceRelativeUrl);
-      }
-    }
-    // we are updating the root directory
-    // we must make the patterns relative to source directory relative to the new root directory
-    addDirectoryToWatch(sourceDirectoryUrl);
-    return watch();
-  }
-
-  watchedDirectoryUrl = sourceDirectoryUrl;
-  addDirectoryToWatch(sourceDirectoryUrl);
-  return watch();
-};
-
-const WEB_URL_CONVERTER = {
-  asWebUrl: (fileUrl, webServer) => {
-    if (urlIsOrIsInsideOf(fileUrl, webServer.rootDirectoryUrl)) {
-      return moveUrl({
-        url: fileUrl,
-        from: webServer.rootDirectoryUrl,
-        to: `${webServer.origin}/`,
-      });
-    }
-    const fsRootUrl = ensureWindowsDriveLetter("file:///", fileUrl);
-    return `${webServer.origin}/@fs/${fileUrl.slice(fsRootUrl.length)}`;
-  },
-  asFileUrl: (webUrl, webServer) => {
-    const { pathname, search } = new URL(webUrl);
-    if (pathname.startsWith("/@fs/")) {
-      const fsRootRelativeUrl = pathname.slice("/@fs/".length);
-      return `file:///${fsRootRelativeUrl}${search}`;
-    }
-    return moveUrl({
-      url: webUrl,
-      from: `${webServer.origin}/`,
-      to: webServer.rootDirectoryUrl,
-    });
-  },
-};
-
 const jsenvCoreDirectoryUrl = new URL("../", import.meta.url);
-
-const createResolveUrlError = ({
-  jsenvPluginsController,
-  reference,
-  error,
-}) => {
-  const createFailedToResolveUrlError = ({
-    name = "RESOLVE_URL_ERROR",
-    code = error.code || "RESOLVE_URL_ERROR",
-    reason,
-    ...details
-  }) => {
-    const resolveError = new Error(
-      createDetailedMessage(
-        `Failed to resolve url reference
-${reference.trace.message}
-${reason}`,
-        {
-          ...detailsFromFirstReference(reference),
-          ...details,
-          ...detailsFromPluginController(jsenvPluginsController),
-        },
-      ),
-    );
-    defineNonEnumerableProperties(resolveError, {
-      isJsenvCookingError: true,
-      name,
-      code,
-      reason,
-      asResponse: error.asResponse,
-      trace: error.trace || reference.trace,
-    });
-    return resolveError;
-  };
-  if (error.message === "NO_RESOLVE") {
-    return createFailedToResolveUrlError({
-      reason: `no plugin has handled the specifier during "resolveUrl" hook`,
-    });
-  }
-  if (error.code === "MODULE_NOT_FOUND") {
-    const bareSpecifierError = createFailedToResolveUrlError({
-      reason: `"${reference.specifier}" is a bare specifier but cannot be remapped to a package`,
-    });
-    return bareSpecifierError;
-  }
-  if (error.code === "DIRECTORY_REFERENCE_NOT_ALLOWED") {
-    error.message = createDetailedMessage(error.message, {
-      "reference trace": reference.trace.message,
-      ...detailsFromFirstReference(reference),
-    });
-    return error;
-  }
-  if (error.code === "PROTOCOL_NOT_SUPPORTED") {
-    const notSupportedError = createFailedToResolveUrlError({
-      reason: error.message,
-    });
-    return notSupportedError;
-  }
-  return createFailedToResolveUrlError({
-    reason: `An error occured during specifier resolution`,
-    ...detailsFromValueThrown(error),
-  });
-};
-
-const createFetchUrlContentError = ({
-  jsenvPluginsController,
-  urlInfo,
-  error,
-}) => {
-  const createFailedToFetchUrlContentError = ({
-    code = error.code || "FETCH_URL_CONTENT_ERROR",
-    reason,
-    parseErrorSourceType,
-    ...details
-  }) => {
-    const reference = urlInfo.firstReference;
-    const fetchError = new Error(
-      createDetailedMessage(
-        `Failed to fetch url content
-${reference.trace.message}
-${reason}`,
-        {
-          ...detailsFromFirstReference(reference),
-          ...details,
-          ...detailsFromPluginController(jsenvPluginsController),
-        },
-      ),
-    );
-    defineNonEnumerableProperties(fetchError, {
-      isJsenvCookingError: true,
-      name: "FETCH_URL_CONTENT_ERROR",
-      code,
-      reason,
-      parseErrorSourceType,
-      url: urlInfo.url,
-      trace: code === "PARSE_ERROR" ? error.trace : reference.trace,
-      asResponse: error.asResponse,
-    });
-    return fetchError;
-  };
-  if (error.code === "EPERM") {
-    return createFailedToFetchUrlContentError({
-      code: "NOT_ALLOWED",
-      reason: `not allowed to read entry on filesystem`,
-    });
-  }
-  if (error.code === "DIRECTORY_REFERENCE_NOT_ALLOWED") {
-    return createFailedToFetchUrlContentError({
-      code: "DIRECTORY_REFERENCE_NOT_ALLOWED",
-      reason: `found a directory on filesystem`,
-    });
-  }
-  if (error.code === "ENOENT") {
-    const urlTried = pathToFileURL(error.path).href;
-    // ensure ENOENT is caused by trying to read the urlInfo.url
-    // any ENOENT trying to read an other file should display the error.stack
-    // because it means some side logic has failed
-    if (urlInfo.url.startsWith(urlTried)) {
-      return createFailedToFetchUrlContentError({
-        code: "NOT_FOUND",
-        reason: "no entry on filesystem",
-      });
-    }
-  }
-  if (error.code === "PARSE_ERROR") {
-    return createFailedToFetchUrlContentError({
-      "code": "PARSE_ERROR",
-      "reason": error.reasonCode,
-      "parseErrorSourceType": error.parseErrorSourceType,
-      ...(error.cause ? { "parse error message": error.cause.message } : {}),
-      "parse error trace": error.trace?.message,
-    });
-  }
-  return createFailedToFetchUrlContentError({
-    reason: `An error occured during "fetchUrlContent"`,
-    ...detailsFromValueThrown(error),
-  });
-};
-
-const createTransformUrlContentError = ({
-  jsenvPluginsController,
-  urlInfo,
-  error,
-}) => {
-  if (error.code === "MODULE_NOT_FOUND") {
-    return error;
-  }
-  if (error.code === "PROTOCOL_NOT_SUPPORTED") {
-    return error;
-  }
-  if (error.code === "DIRECTORY_REFERENCE_NOT_ALLOWED") {
-    return error;
-  }
-  if (error.code === "PARSE_ERROR") {
-    if (error.isJsenvCookingError) {
-      return error;
-    }
-    const trace = getErrorTrace(error, urlInfo.firstReference);
-    const reference = urlInfo.firstReference;
-    const transformError = new Error(
-      createDetailedMessage(
-        `parse error on "${urlInfo.type}"
-${trace.message}
-${error.message}`,
-        {
-          "first reference": reference.trace.url
-            ? `${reference.trace.url}:${reference.trace.line}:${reference.trace.column}`
-            : reference.trace.message,
-          ...detailsFromFirstReference(reference),
-          ...detailsFromPluginController(jsenvPluginsController),
-        },
-      ),
-    );
-    defineNonEnumerableProperties(transformError, {
-      isJsenvCookingError: true,
-      name: "TRANSFORM_URL_CONTENT_ERROR",
-      code: "PARSE_ERROR",
-      reason: error.message,
-      reasonCode: error.reasonCode,
-      parseErrorSourceType: error.parseErrorSourceType,
-      stack: transformError.stack,
-      trace,
-      asResponse: error.asResponse,
-    });
-    return transformError;
-  }
-  const createFailedToTransformError = ({
-    code = error.code || "TRANSFORM_URL_CONTENT_ERROR",
-    reason,
-    ...details
-  }) => {
-    const reference = urlInfo.firstReference;
-    let trace = reference.trace;
-    const transformError = new Error(
-      createDetailedMessage(
-        `"transformUrlContent" error on "${urlInfo.type}"
-${trace.message}
-${reason}`,
-        {
-          ...detailsFromFirstReference(reference),
-          ...details,
-          ...detailsFromPluginController(jsenvPluginsController),
-        },
-      ),
-    );
-    defineNonEnumerableProperties(transformError, {
-      isJsenvCookingError: true,
-      cause: error,
-      name: "TRANSFORM_URL_CONTENT_ERROR",
-      code,
-      reason,
-      stack: error.stack,
-      url: urlInfo.url,
-      trace,
-      asResponse: error.asResponse,
-    });
-    return transformError;
-  };
-  return createFailedToTransformError({
-    reason: `"transformUrlContent" error on "${urlInfo.type}"`,
-    ...detailsFromValueThrown(error),
-  });
-};
-
-const createFinalizeUrlContentError = ({
-  jsenvPluginsController,
-  urlInfo,
-  error,
-}) => {
-  const reference = urlInfo.firstReference;
-  const finalizeError = new Error(
-    createDetailedMessage(
-      `"finalizeUrlContent" error on "${urlInfo.type}"
-${reference.trace.message}`,
-      {
-        ...detailsFromFirstReference(reference),
-        ...detailsFromValueThrown(error),
-        ...detailsFromPluginController(jsenvPluginsController),
-      },
-    ),
-  );
-  defineNonEnumerableProperties(finalizeError, {
-    isJsenvCookingError: true,
-    ...(error && error instanceof Error ? { cause: error } : {}),
-    name: "FINALIZE_URL_CONTENT_ERROR",
-    reason: `"finalizeUrlContent" error on "${urlInfo.type}"`,
-    asResponse: error.asResponse,
-  });
-  return finalizeError;
-};
-
-const getErrorTrace = (error, reference) => {
-  const urlInfo = reference.urlInfo;
-  let trace = reference.trace;
-  let line = error.line;
-  let column = error.column;
-  if (urlInfo.isInline) {
-    line = trace.line + line;
-    line = line - 1;
-    return {
-      ...trace,
-      line,
-      column,
-      codeFrame: generateContentFrame({
-        line,
-        column,
-        content: urlInfo.inlineUrlSite.content,
-      }),
-      message: stringifyUrlSite({
-        url: urlInfo.inlineUrlSite.url,
-        line,
-        column,
-        content: urlInfo.inlineUrlSite.content,
-      }),
-    };
-  }
-  return {
-    url: urlInfo.url,
-    line,
-    column: error.column,
-    codeFrame: generateContentFrame({
-      line,
-      column: error.column,
-      content: urlInfo.content,
-    }),
-    message: stringifyUrlSite({
-      url: urlInfo.url,
-      line,
-      column: error.column,
-      content: urlInfo.content,
-    }),
-  };
-};
-
-const detailsFromFirstReference = (reference) => {
-  const referenceInProject = getFirstReferenceInProject(reference);
-  if (
-    referenceInProject === reference ||
-    referenceInProject.type === "http_request"
-  ) {
-    return {};
-  }
-  if (referenceInProject.type === "entry_point") {
-    return {
-      "first reference": referenceInProject.trace.message,
-    };
-  }
-  return {
-    "first reference in project": `${referenceInProject.trace.url}:${referenceInProject.trace.line}:${referenceInProject.trace.column}`,
-  };
-};
-const getFirstReferenceInProject = (reference) => {
-  const ownerUrlInfo = reference.ownerUrlInfo;
-  if (ownerUrlInfo.isRoot) {
-    return reference;
-  }
-  if (
-    !ownerUrlInfo.url.includes("/node_modules/") &&
-    ownerUrlInfo.packageDirectoryUrl ===
-      ownerUrlInfo.context.packageDirectory.url
-  ) {
-    return reference;
-  }
-  const { firstReference } = ownerUrlInfo;
-  return getFirstReferenceInProject(firstReference);
-};
-
-const detailsFromPluginController = (jsenvPluginsController) => {
-  const currentPlugin = jsenvPluginsController.getCurrentPlugin();
-  if (!currentPlugin) {
-    return null;
-  }
-  return { "plugin name": `"${currentPlugin.name}"` };
-};
-
-const detailsFromValueThrown = (valueThrownByPlugin) => {
-  if (valueThrownByPlugin && valueThrownByPlugin instanceof Error) {
-    // if (
-    //   valueThrownByPlugin.message.includes("Maximum call stack size exceeded")
-    // ) {
-    //   return {
-    //     "error message": valueThrownByPlugin.message,
-    //     "error stack": valueThrownByPlugin.stack,
-    //   };
-    // }
-    if (
-      valueThrownByPlugin.code === "PARSE_ERROR" ||
-      valueThrownByPlugin.code === "MODULE_NOT_FOUND" ||
-      valueThrownByPlugin.name === "RESOLVE_URL_ERROR" ||
-      valueThrownByPlugin.name === "FETCH_URL_CONTENT_ERROR" ||
-      valueThrownByPlugin.name === "TRANSFORM_URL_CONTENT_ERROR" ||
-      valueThrownByPlugin.name === "FINALIZE_URL_CONTENT_ERROR"
-    ) {
-      return {
-        "error message": valueThrownByPlugin.message,
-      };
-    }
-    return {
-      "error stack": valueThrownByPlugin.stack,
-    };
-  }
-  if (valueThrownByPlugin === undefined) {
-    return {
-      error: "undefined",
-    };
-  }
-  return {
-    error: JSON.stringify(valueThrownByPlugin),
-  };
-};
-
-const defineNonEnumerableProperties = (object, properties) => {
-  for (const key of Object.keys(properties)) {
-    Object.defineProperty(object, key, {
-      configurable: true,
-      writable: true,
-      value: properties[key],
-    });
-  }
-};
-
-const assertFetchedContentCompliance = ({ urlInfo, content }) => {
-  if (urlInfo.status === 404) {
-    return;
-  }
-  const { expectedContentType } = urlInfo.firstReference;
-  if (expectedContentType && urlInfo.contentType !== expectedContentType) {
-    throw new Error(
-      `content-type must be "${expectedContentType}", got "${urlInfo.contentType} on ${urlInfo.url}`,
-    );
-  }
-  const { expectedType } = urlInfo.firstReference;
-  if (expectedType && urlInfo.type !== expectedType) {
-    if (urlInfo.type === "entry_build" && urlInfo.context.build) ; else {
-      throw new Error(
-        `type must be "${expectedType}", got "${urlInfo.type}" on ${urlInfo.url}`,
-      );
-    }
-  }
-  const { integrity } = urlInfo.firstReference;
-  if (integrity) {
-    validateResponseIntegrity({
-      url: urlInfo.url,
-      type: "basic",
-      dataRepresentation: content,
-    });
-  }
-};
-
-const FILE_AND_SERVER_URLS_CONVERTER = {
-  asServerUrl: (fileUrl, serverRootDirectoryUrl) => {
-    if (urlIsOrIsInsideOf(fileUrl, serverRootDirectoryUrl)) {
-      const urlRelativeToServer = urlToRelativeUrl(
-        fileUrl,
-        serverRootDirectoryUrl,
-      );
-      return `/${urlRelativeToServer}`;
-    }
-    const urlRelativeToFilesystemRoot = String(fileUrl).slice(
-      "file:///".length,
-    );
-    return `/@fs/${urlRelativeToFilesystemRoot}`;
-  },
-  asFileUrl: (urlRelativeToServer, serverRootDirectoryUrl) => {
-    if (urlRelativeToServer.startsWith("/@fs/")) {
-      const urlRelativeToFilesystemRoot = urlRelativeToServer.slice(
-        "/@fs/".length,
-      );
-      return `file:///${urlRelativeToFilesystemRoot}`;
-    }
-    if (urlRelativeToServer[0] === "/") {
-      return new URL(urlRelativeToServer.slice(1), serverRootDirectoryUrl).href;
-    }
-    return new URL(urlRelativeToServer, serverRootDirectoryUrl).href;
-  },
-};
-
-const determineFileUrlForOutDirectory = (urlInfo) => {
-  let { url, filenameHint } = urlInfo;
-  const { rootDirectoryUrl, outDirectoryUrl } = urlInfo.context;
-  if (!outDirectoryUrl) {
-    return url;
-  }
-  if (!url.startsWith("file:")) {
-    return url;
-  }
-  if (!urlIsOrIsInsideOf(url, rootDirectoryUrl)) {
-    const fsRootUrl = ensureWindowsDriveLetter("file:///", url);
-    url = `${rootDirectoryUrl}@fs/${url.slice(fsRootUrl.length)}`;
-  }
-  if (filenameHint) {
-    url = setUrlFilename(url, filenameHint);
-  }
-  const outUrl = moveUrl({
-    url,
-    from: rootDirectoryUrl,
-    to: outDirectoryUrl,
-  });
-  return outUrl;
-};
-
-const determineSourcemapFileUrl = (urlInfo) => {
-  // sourcemap is a special kind of reference:
-  // It's a reference to a content generated dynamically the content itself.
-  // when jsenv is done cooking the file
-  //   during build it's urlInfo.url to be inside the build
-  //   but otherwise it's generatedUrl to be inside .jsenv/ directory
-  const generatedUrlObject = new URL(urlInfo.generatedUrl);
-  generatedUrlObject.searchParams.delete("js_module_fallback");
-  generatedUrlObject.searchParams.delete("as_js_module");
-  generatedUrlObject.searchParams.delete("as_js_classic");
-  generatedUrlObject.searchParams.delete("as_css_module");
-  generatedUrlObject.searchParams.delete("as_json_module");
-  generatedUrlObject.searchParams.delete("as_text_module");
-  generatedUrlObject.searchParams.delete("dynamic_import");
-  generatedUrlObject.searchParams.delete("dynamic_import_id");
-  generatedUrlObject.searchParams.delete("cjs_as_js_module");
-  const urlForSourcemap = generatedUrlObject.href;
-  return generateSourcemapFileUrl(urlForSourcemap);
-};
-
-const prependContent = async (
-  urlInfoReceivingCode,
-  urlInfoToPrepend,
-) => {
-  // we could also implement:
-  // - prepend svg in html
-  // - prepend css in html
-  // - prepend css in css
-  // - maybe more?
-  // but no need for now
-  if (
-    urlInfoReceivingCode.type === "html" &&
-    urlInfoToPrepend.type === "js_classic"
-  ) {
-    prependJsClassicInHtml(urlInfoReceivingCode, urlInfoToPrepend);
-    return;
-  }
-  if (
-    urlInfoReceivingCode.type === "js_classic" &&
-    urlInfoToPrepend.type === "js_classic"
-  ) {
-    prependJsClassicInJsClassic(urlInfoReceivingCode, urlInfoToPrepend);
-    return;
-  }
-  if (
-    urlInfoReceivingCode.type === "js_module" &&
-    urlInfoToPrepend.type === "js_classic"
-  ) {
-    await prependJsClassicInJsModule(urlInfoReceivingCode, urlInfoToPrepend);
-    return;
-  }
-  throw new Error(
-    `cannot prepend content from "${urlInfoToPrepend.type}" into "${urlInfoReceivingCode.type}"`,
-  );
-};
-
-const prependJsClassicInHtml = (htmlUrlInfo, urlInfoToPrepend) => {
-  const htmlAst = parseHtml({
-    html: htmlUrlInfo.content,
-    url: htmlUrlInfo.url,
-  });
-  injectHtmlNodeAsEarlyAsPossible(
-    htmlAst,
-    createHtmlNode({
-      tagName: "script",
-      ...(urlInfoToPrepend.url
-        ? { "inlined-from-src": urlInfoToPrepend.url }
-        : {}),
-      children: urlInfoToPrepend.content,
-    }),
-    "jsenv:core",
-  );
-  const content = stringifyHtmlAst(htmlAst);
-  htmlUrlInfo.mutateContent({ content });
-};
-
-const prependJsClassicInJsClassic = (jsUrlInfo, urlInfoToPrepend) => {
-  const magicSource = createMagicSource(jsUrlInfo.content);
-  magicSource.prepend(`${urlInfoToPrepend.content}\n\n`);
-  const magicResult = magicSource.toContentAndSourcemap();
-  const sourcemap = composeTwoSourcemaps(
-    jsUrlInfo.sourcemap,
-    magicResult.sourcemap,
-  );
-  jsUrlInfo.mutateContent({
-    content: magicResult.content,
-    sourcemap,
-  });
-};
-
-const prependJsClassicInJsModule = async (jsUrlInfo, urlInfoToPrepend) => {
-  const { code, map } = await applyBabelPlugins({
-    babelPlugins: [
-      [
-        babelPluginPrependCodeInJsModule,
-        { codeToPrepend: urlInfoToPrepend.content },
-      ],
-    ],
-    input: jsUrlInfo.content,
-    inputIsJsModule: true,
-    inputUrl: jsUrlInfo.originalUrl,
-  });
-  jsUrlInfo.mutateContent({
-    content: code,
-    sourcemap: map,
-  });
-};
-const babelPluginPrependCodeInJsModule = (babel) => {
-  return {
-    name: "prepend-code-in-js-module",
-    visitor: {
-      Program: (programPath, state) => {
-        const { codeToPrepend } = state.opts;
-        const astToPrepend = babel.parse(codeToPrepend);
-        const bodyNodePaths = programPath.get("body");
-        for (const bodyNodePath of bodyNodePaths) {
-          if (bodyNodePath.node.type === "ImportDeclaration") {
-            continue;
-          }
-          bodyNodePath.insertBefore(astToPrepend.program.body);
-          return;
-        }
-        bodyNodePaths.unshift(astToPrepend.program.body);
-      },
-    },
-  };
-};
-
-let referenceId = 0;
-
-const createDependencies = (ownerUrlInfo) => {
-  const { referenceToOthersSet } = ownerUrlInfo;
-
-  const startCollecting = async (callback) => {
-    const prevReferenceToOthersSet = new Set(referenceToOthersSet);
-    referenceToOthersSet.clear();
-
-    const stopCollecting = () => {
-      for (const prevReferenceToOther of prevReferenceToOthersSet) {
-        checkForDependencyRemovalEffects(prevReferenceToOther);
-      }
-      prevReferenceToOthersSet.clear();
-    };
-
-    try {
-      await callback();
-    } finally {
-      // finally to ensure reference are updated even in case of error
-      stopCollecting();
-    }
-  };
-
-  const createResolveAndFinalize = (props) => {
-    const originalReference = createReference({
-      ownerUrlInfo,
-      ...props,
-    });
-    const reference = originalReference.resolve();
-    if (reference.urlInfo) {
-      return reference;
-    }
-    const kitchen = ownerUrlInfo.kitchen;
-    const urlInfo = kitchen.graph.reuseOrCreateUrlInfo(reference);
-    reference.urlInfo = urlInfo;
-    addDependency(reference);
-    ownerUrlInfo.context.finalizeReference(reference);
-    return reference;
-  };
-
-  const found = ({ trace, ...rest }) => {
-    if (trace === undefined) {
-      trace = traceFromUrlSite(
-        adjustUrlSite(ownerUrlInfo, {
-          url: ownerUrlInfo.url,
-          line: rest.specifierLine,
-          column: rest.specifierColumn,
-        }),
-      );
-    }
-    const reference = createResolveAndFinalize({
-      trace,
-      ...rest,
-    });
-    return reference;
-  };
-  const foundInline = ({
-    isOriginalPosition,
-    specifierLine,
-    specifierColumn,
-    content,
-    ...rest
-  }) => {
-    const parentUrl = isOriginalPosition
-      ? ownerUrlInfo.url
-      : ownerUrlInfo.generatedUrl;
-    const parentContent = isOriginalPosition
-      ? ownerUrlInfo.originalContent
-      : ownerUrlInfo.content;
-    const trace = traceFromUrlSite({
-      url: parentUrl,
-      content: parentContent,
-      line: specifierLine,
-      column: specifierColumn,
-    });
-    const reference = createResolveAndFinalize({
-      trace,
-      isOriginalPosition,
-      specifierLine,
-      specifierColumn,
-      isInline: true,
-      content,
-      ...rest,
-    });
-    return reference;
-  };
-  // side effect file
-  const foundSideEffectFile = async ({ sideEffectFileUrl, trace, ...rest }) => {
-    if (trace === undefined) {
-      const { url, line, column } = getCallerPosition();
-      trace = traceFromUrlSite({
-        url,
-        line,
-        column,
-      });
-    }
-    const sideEffectFileReference = ownerUrlInfo.dependencies.inject({
-      trace,
-      type: "side_effect_file",
-      specifier: sideEffectFileUrl,
-      ...rest,
-    });
-
-    const injectAsBannerCodeBeforeFinalize = (urlInfoReceiver) => {
-      const basename = urlToBasename(sideEffectFileUrl);
-      const inlineUrl = generateUrlForInlineContent({
-        url: urlInfoReceiver.originalUrl || urlInfoReceiver.url,
-        basename,
-        extension: urlToExtension(sideEffectFileUrl),
-      });
-      const sideEffectFileReferenceInlined = sideEffectFileReference.inline({
-        ownerUrlInfo: urlInfoReceiver,
-        trace,
-        type: "side_effect_file",
-        specifier: inlineUrl,
-      });
-      urlInfoReceiver.addContentTransformationCallback(async () => {
-        await sideEffectFileReferenceInlined.urlInfo.cook();
-        await prependContent(
-          urlInfoReceiver,
-          sideEffectFileReferenceInlined.urlInfo,
-        );
-      });
-    };
-
-    // When possible we inject code inside the file in a common ancestor
-    // -> less duplication
-
-    // During dev:
-    // during dev cooking files is incremental
-    // so HTML/JS is already executed by the browser
-    // we can't late inject into entry point
-    // During build:
-    // files are not executed so it's possible to inject reference
-    // when discovering a side effect file
-    const visitedMap = new Map();
-    let foundOrInjectedOnce = false;
-    const visit = (urlInfo) => {
-      urlInfo = urlInfo.findParentIfInline() || urlInfo;
-      const value = visitedMap.get(urlInfo);
-      if (value !== undefined) {
-        return value;
-      }
-
-      // search if already referenced
-      for (const referenceToOther of urlInfo.referenceToOthersSet) {
-        if (referenceToOther === sideEffectFileReference) {
-          continue;
-        }
-        if (referenceToOther.url === sideEffectFileUrl) {
-          // consider this reference becomes the last reference
-          // this ensure this ref is properly detected as inlined by urlInfo.isUsed()
-          sideEffectFileReference.next =
-            referenceToOther.next || referenceToOther;
-          foundOrInjectedOnce = true;
-          visitedMap.set(urlInfo, true);
-          return true;
-        }
-        if (
-          referenceToOther.original &&
-          referenceToOther.original.url === sideEffectFileUrl
-        ) {
-          // consider this reference becomes the last reference
-          // this ensure this ref is properly detected as inlined by urlInfo.isUsed()
-          sideEffectFileReference.next =
-            referenceToOther.next || referenceToOther;
-          foundOrInjectedOnce = true;
-          visitedMap.set(urlInfo, true);
-          return true;
-        }
-      }
-      // not referenced and we reach an entry point, stop there
-      if (urlInfo.isEntryPoint) {
-        foundOrInjectedOnce = true;
-        visitedMap.set(urlInfo, true);
-        injectAsBannerCodeBeforeFinalize(urlInfo);
-        return true;
-      }
-      visitedMap.set(urlInfo, false);
-      for (const referenceFromOther of urlInfo.referenceFromOthersSet) {
-        const urlInfoReferencingThisOne = referenceFromOther.ownerUrlInfo;
-        visit(urlInfoReferencingThisOne);
-        // during dev the first urlInfo where we inject the side effect file is enough
-        // during build we want to inject into every possible entry point
-        if (foundOrInjectedOnce && urlInfo.context.dev) {
-          break;
-        }
-      }
-      return false;
-    };
-    visit(ownerUrlInfo);
-    if (ownerUrlInfo.context.dev && !foundOrInjectedOnce) {
-      injectAsBannerCodeBeforeFinalize(
-        ownerUrlInfo.findParentIfInline() || ownerUrlInfo,
-      );
-    }
-  };
-
-  const inject = ({ trace, ...rest }) => {
-    if (trace === undefined) {
-      const { url, line, column } = getCallerPosition();
-      trace = traceFromUrlSite({
-        url,
-        line,
-        column,
-      });
-    }
-    const reference = createResolveAndFinalize({
-      trace,
-      injected: true,
-      ...rest,
-    });
-    return reference;
-  };
-
-  return {
-    startCollecting,
-    createResolveAndFinalize,
-    found,
-    foundInline,
-    foundSideEffectFile,
-    inject,
-  };
-};
-
-/*
- * - "http_request"
- * - "entry_point"
- * - "link_href"
- * - "style"
- * - "script"
- * - "a_href"
- * - "iframe_src
- * - "img_src"
- * - "img_srcset"
- * - "source_src"
- * - "source_srcset"
- * - "image_href"
- * - "use_href"
- * - "css_@import"
- * - "css_url"
- * - "js_import"
- * - "js_import_script"
- * - "js_url"
- * - "js_inline_content"
- * - "sourcemap_comment"
- * - "webmanifest_icon_src"
- * - "package_json"
- * - "side_effect_file"
- * */
-const createReference = ({
-  ownerUrlInfo,
-  data = {},
-  trace,
-  type,
-  subtype,
-  expectedContentType,
-  expectedType,
-  expectedSubtype,
-  filenameHint,
-  integrity,
-  crossorigin,
-  specifier,
-  specifierStart,
-  specifierEnd,
-  specifierLine,
-  specifierColumn,
-  baseUrl,
-  isOriginalPosition,
-  isEntryPoint = false,
-  isDynamicEntryPoint = false,
-  isResourceHint = false,
-  // implicit references are not real references
-  // they represent an abstract relationship
-  isImplicit = false,
-  // weak references cannot keep the corresponding url info alive
-  // there must be an other reference to keep the url info alive
-  // an url referenced solely by weak references is:
-  // - not written in build directory
-  // - can be removed from graph during dev/build
-  // - not cooked until referenced by a strong reference
-  isWeak = false,
-  hasVersioningEffect = false,
-  version = null,
-  injected = false,
-  isInline = false,
-  content,
-  contentType,
-  fsStat = null,
-  debug = false,
-  original = null,
-  prev = null,
-  next = null,
-  url = null,
-  searchParams = null,
-  generatedUrl = null,
-  generatedSpecifier = null,
-  urlInfo = null,
-  escape = null,
-  importAttributes,
-  isSideEffectImport = false,
-  astInfo = {},
-  mutation,
-}) => {
-  if (typeof specifier !== "string") {
-    if (specifier instanceof URL) {
-      specifier = specifier.href;
-    } else {
-      throw new TypeError(
-        `"specifier" must be a string, got ${specifier} in ${ownerUrlInfo.url}`,
-      );
-    }
-  }
-
-  const reference = {
-    id: ++referenceId,
-    ownerUrlInfo,
-    original,
-    prev,
-    next,
-    data,
-    trace,
-    url,
-    urlInfo,
-    searchParams,
-    generatedUrl,
-    generatedSpecifier,
-    type,
-    subtype,
-    expectedContentType,
-    expectedType,
-    expectedSubtype,
-    filenameHint,
-    integrity,
-    crossorigin,
-    specifier,
-    get specifierPathname() {
-      return asSpecifierWithoutSearch(reference.specifier);
-    },
-    specifierStart,
-    specifierEnd,
-    specifierLine,
-    specifierColumn,
-    isOriginalPosition,
-    baseUrl,
-    isEntryPoint,
-    isDynamicEntryPoint,
-    isResourceHint,
-    isImplicit,
-    implicitReferenceSet: new Set(),
-    isWeak,
-    hasVersioningEffect,
-    urlInfoEffectSet: new Set(),
-    version,
-    injected,
-    timing: {},
-    fsStat,
-    debug,
-    // for inline resources the reference contains the content
-    isInline,
-    content,
-    contentType,
-    escape,
-    // used mostly by worker and import assertions
-    astInfo,
-    importAttributes,
-    isSideEffectImport,
-    mutation,
-  };
-
-  reference.resolve = () => {
-    const resolvedReference =
-      reference.ownerUrlInfo.context.resolveReference(reference);
-    return resolvedReference;
-  };
-
-  reference.redirect = (url, props = {}) => {
-    const redirectedProps = getRedirectedReferenceProps(reference, url);
-    const referenceRedirected = createReference({
-      ...redirectedProps,
-      ...props,
-    });
-    reference.next = referenceRedirected;
-    return referenceRedirected;
-  };
-
-  // "formatReference" can be async BUT this is an exception
-  // for most cases it will be sync. We want to favor the sync signature to keep things simpler
-  // The only case where it needs to be async is when
-  // the specifier is a `data:*` url
-  // in this case we'll wait for the promise returned by
-  // "formatReference"
-  reference.readGeneratedSpecifier = () => {
-    if (reference.generatedSpecifier.then) {
-      return reference.generatedSpecifier.then((value) => {
-        reference.generatedSpecifier = value;
-        return value;
-      });
-    }
-    return reference.generatedSpecifier;
-  };
-
-  reference.inline = ({
-    line,
-    column,
-    // when urlInfo is given it means reference is moved into an other file
-    ownerUrlInfo = reference.ownerUrlInfo,
-    ...props
-  }) => {
-    const content =
-      ownerUrlInfo === undefined
-        ? isOriginalPosition
-          ? reference.ownerUrlInfo.originalContent
-          : reference.ownerUrlInfo.content
-        : ownerUrlInfo.content;
-    const trace = traceFromUrlSite({
-      url:
-        ownerUrlInfo === undefined
-          ? isOriginalPosition
-            ? reference.ownerUrlInfo.url
-            : reference.ownerUrlInfo.generatedUrl
-          : reference.ownerUrlInfo.url,
-      content,
-      line,
-      column,
-    });
-    const inlineCopy = ownerUrlInfo.dependencies.createResolveAndFinalize({
-      isInline: true,
-      original: reference.original || reference,
-      prev: reference,
-      trace,
-      injected: reference.injected,
-      expectedType: reference.expectedType,
-      ...props,
-    });
-    // the previous reference stays alive so that even after inlining
-    // updating the file will invalidate the other file where it was inlined
-    reference.next = inlineCopy;
-    return inlineCopy;
-  };
-
-  reference.addImplicit = (props) => {
-    const implicitReference = ownerUrlInfo.dependencies.inject({
-      ...props,
-      isImplicit: true,
-    });
-    reference.implicitReferenceSet.add(implicitReference);
-    return implicitReference;
-  };
-
-  reference.gotInlined = () => {
-    return !reference.isInline && reference.next && reference.next.isInline;
-  };
-
-  reference.remove = () => removeDependency(reference);
-
-  // Object.preventExtensions(reference) // useful to ensure all properties are declared here
-  return reference;
-};
-
-const addDependency = (reference) => {
-  const { ownerUrlInfo } = reference;
-  if (ownerUrlInfo.referenceToOthersSet.has(reference)) {
-    return;
-  }
-  if (!canAddOrRemoveReference(reference)) {
-    throw new Error(
-      `cannot add reference for content already sent to the browser
---- reference url ---
-${reference.url}
---- content url ---
-${ownerUrlInfo.url}`,
-    );
-  }
-  ownerUrlInfo.referenceToOthersSet.add(reference);
-  if (reference.isImplicit) {
-    // an implicit reference is a reference that does not explicitely appear in the file
-    // but has an impact on the file
-    // -> package.json on import resolution for instance
-    // in that case:
-    // - file depends on the implicit file (it must autoreload if package.json is modified)
-    // - cache validity for the file depends on the implicit file (it must be re-cooked if package.json is modified)
-    ownerUrlInfo.implicitUrlSet.add(reference.url);
-    if (ownerUrlInfo.isInline) {
-      const parentUrlInfo = ownerUrlInfo.graph.getUrlInfo(
-        ownerUrlInfo.inlineUrlSite.url,
-      );
-      parentUrlInfo.implicitUrlSet.add(reference.url);
-    }
-  }
-  const referencedUrlInfo = reference.urlInfo;
-  referencedUrlInfo.referenceFromOthersSet.add(reference);
-  applyReferenceEffectsOnUrlInfo(reference);
-  for (const implicitRef of reference.implicitReferenceSet) {
-    addDependency(implicitRef);
-  }
-};
-
-const removeDependency = (reference) => {
-  const { ownerUrlInfo } = reference;
-  if (!ownerUrlInfo.referenceToOthersSet.has(reference)) {
-    return false;
-  }
-  if (!canAddOrRemoveReference(reference)) {
-    throw new Error(
-      `cannot remove reference for content already sent to the browser
---- reference url ---
-${reference.url}
---- content url ---
-${ownerUrlInfo.url}`,
-    );
-  }
-  for (const implicitRef of reference.implicitReferenceSet) {
-    implicitRef.remove();
-  }
-  ownerUrlInfo.referenceToOthersSet.delete(reference);
-  return checkForDependencyRemovalEffects(reference);
-};
-
-const canAddOrRemoveReference = (reference) => {
-  if (reference.isWeak || reference.isImplicit) {
-    // weak and implicit references have no restrictions
-    // because they are not actual references with an influence on content
-    return true;
-  }
-  const { ownerUrlInfo } = reference;
-  if (ownerUrlInfo.context.build) {
-    // during build url content is not executed
-    // it's still possible to mutate references safely
-    return true;
-  }
-  if (!ownerUrlInfo.contentFinalized) {
-    return true;
-  }
-  if (ownerUrlInfo.isRoot) {
-    // the root urlInfo is abstract, there is no real file behind it
-    return true;
-  }
-  if (reference.type === "http_request") {
-    // reference created to http requests are abstract concepts
-    return true;
-  }
-  return false;
-};
-
-const checkForDependencyRemovalEffects = (reference) => {
-  const { ownerUrlInfo } = reference;
-  const { referenceToOthersSet } = ownerUrlInfo;
-  if (reference.isImplicit && !reference.isInline) {
-    let hasAnOtherImplicitRef = false;
-    for (const referenceToOther of referenceToOthersSet) {
-      if (
-        referenceToOther.isImplicit &&
-        referenceToOther.url === reference.url
-      ) {
-        hasAnOtherImplicitRef = true;
-        break;
-      }
-    }
-    if (!hasAnOtherImplicitRef) {
-      ownerUrlInfo.implicitUrlSet.delete(reference.url);
-    }
-  }
-
-  const prevReference = reference.prev;
-  const nextReference = reference.next;
-  if (prevReference && nextReference) {
-    nextReference.prev = prevReference;
-    prevReference.next = nextReference;
-  } else if (prevReference) {
-    prevReference.next = null;
-  } else if (nextReference) {
-    nextReference.original = null;
-    nextReference.prev = null;
-  }
-
-  const referencedUrlInfo = reference.urlInfo;
-  referencedUrlInfo.referenceFromOthersSet.delete(reference);
-
-  let firstReferenceFromOther;
-  let wasInlined;
-  for (const referenceFromOther of referencedUrlInfo.referenceFromOthersSet) {
-    if (referenceFromOther.urlInfo !== referencedUrlInfo) {
-      continue;
-    }
-    // Here we want to know if the file is referenced by an other file.
-    // So we want to ignore reference that are created by other means:
-    // - "http_request"
-    //   This type of reference is created when client request a file
-    //   that we don't know yet
-    //   1. reference(s) to this file are not yet discovered
-    //   2. there is no reference to this file
-    if (referenceFromOther.type === "http_request") {
-      continue;
-    }
-    wasInlined = referenceFromOther.gotInlined();
-    if (wasInlined) {
-      // the url info was inlined, an other reference is required
-      // to consider the non-inlined urlInfo as used
-      continue;
-    }
-    firstReferenceFromOther = referenceFromOther;
-    break;
-  }
-  if (firstReferenceFromOther) {
-    // either applying new ref should override old ref
-    // or we should first remove effects before adding new ones
-    // for now we just set firstReference to null
-    if (reference === referencedUrlInfo.firstReference) {
-      referencedUrlInfo.firstReference = null;
-      applyReferenceEffectsOnUrlInfo(firstReferenceFromOther);
-    }
-    return false;
-  }
-  if (wasInlined) {
-    return false;
-  }
-  // referencedUrlInfo.firstReference = null;
-  // referencedUrlInfo.lastReference = null;
-  referencedUrlInfo.onDereferenced(reference);
-  return true;
-};
-
-const traceFromUrlSite = (urlSite) => {
-  const codeFrame = urlSite.content
-    ? generateContentFrame({
-        content: urlSite.content,
-        line: urlSite.line,
-        column: urlSite.column,
-      })
-    : "";
-  return {
-    codeFrame,
-    message: stringifyUrlSite(urlSite),
-    url: urlSite.url,
-    line: urlSite.line,
-    column: urlSite.column,
-  };
-};
-
-const adjustUrlSite = (urlInfo, { url, line, column }) => {
-  const isOriginal = url === urlInfo.url;
-  const adjust = (urlInfo, urlSite) => {
-    if (!urlSite.isOriginal) {
-      return urlSite;
-    }
-    const inlineUrlSite = urlInfo.inlineUrlSite;
-    if (!inlineUrlSite) {
-      return urlSite;
-    }
-    const parentUrlInfo = urlInfo.graph.getUrlInfo(inlineUrlSite.url);
-    line =
-      inlineUrlSite.line === undefined
-        ? urlSite.line
-        : inlineUrlSite.line + urlSite.line;
-    // we remove 1 to the line because imagine the following html:
-    // <style>body { color: red; }</style>
-    // -> content starts same line as <style> (same for <script>)
-    if (urlInfo.content[0] === "\n") {
-      line = line - 1;
-    }
-    column =
-      inlineUrlSite.column === undefined
-        ? urlSite.column
-        : inlineUrlSite.column + urlSite.column;
-    return adjust(parentUrlInfo, {
-      isOriginal: true,
-      url: inlineUrlSite.url,
-      content: inlineUrlSite.content,
-      line,
-      column,
-    });
-  };
-  return adjust(urlInfo, {
-    isOriginal,
-    url,
-    content: isOriginal ? urlInfo.originalContent : urlInfo.content,
-    line,
-    column,
-  });
-};
-
-const getRedirectedReferenceProps = (reference, url) => {
-  const redirectedProps = {
-    ...reference,
-    specifier: url,
-    url,
-    original: reference.original || reference,
-    prev: reference,
-  };
-  return redirectedProps;
-};
-
-const applyReferenceEffectsOnUrlInfo = (reference) => {
-  const referencedUrlInfo = reference.urlInfo;
-  referencedUrlInfo.lastReference = reference;
-  if (reference.isInline) {
-    referencedUrlInfo.isInline = true;
-    referencedUrlInfo.inlineUrlSite = {
-      url: reference.ownerUrlInfo.url,
-      content: reference.isOriginalPosition
-        ? reference.ownerUrlInfo.originalContent
-        : reference.ownerUrlInfo.content,
-      line: reference.specifierLine,
-      column: reference.specifierColumn,
-    };
-  }
-
-  if (
-    referencedUrlInfo.firstReference &&
-    !referencedUrlInfo.firstReference.isWeak
-  ) {
-    return;
-  }
-  referencedUrlInfo.firstReference = reference;
-  referencedUrlInfo.originalUrl =
-    referencedUrlInfo.originalUrl || (reference.original || reference).url;
-
-  if (reference.isEntryPoint) {
-    referencedUrlInfo.isEntryPoint = true;
-  }
-  if (reference.isDynamicEntryPoint) {
-    referencedUrlInfo.isDynamicEntryPoint = true;
-  }
-  Object.assign(referencedUrlInfo.data, reference.data);
-  Object.assign(referencedUrlInfo.timing, reference.timing);
-  if (reference.injected) {
-    referencedUrlInfo.injected = true;
-  }
-  if (reference.filenameHint && !referencedUrlInfo.filenameHint) {
-    referencedUrlInfo.filenameHint = reference.filenameHint;
-  }
-  if (reference.dirnameHint && !referencedUrlInfo.dirnameHint) {
-    referencedUrlInfo.dirnameHint = reference.dirnameHint;
-  }
-  if (reference.debug) {
-    referencedUrlInfo.debug = true;
-  }
-  if (reference.expectedType) {
-    referencedUrlInfo.typeHint = reference.expectedType;
-  }
-  if (reference.expectedSubtype) {
-    referencedUrlInfo.subtypeHint = reference.expectedSubtype;
-  }
-
-  referencedUrlInfo.entryUrlInfo = reference.isEntryPoint
-    ? referencedUrlInfo
-    : reference.ownerUrlInfo.entryUrlInfo;
-
-  for (const urlInfoEffect of reference.urlInfoEffectSet) {
-    urlInfoEffect(referencedUrlInfo);
-  }
-};
-
-const GRAPH_VISITOR = {};
-
-GRAPH_VISITOR.map = (graph, callback) => {
-  const array = [];
-  graph.urlInfoMap.forEach((urlInfo) => {
-    array.push(callback(urlInfo));
-  });
-  return array;
-};
-GRAPH_VISITOR.forEach = (graph, callback) => {
-  graph.urlInfoMap.forEach(callback);
-};
-GRAPH_VISITOR.filter = (graph, callback) => {
-  const urlInfos = [];
-  graph.urlInfoMap.forEach((urlInfo) => {
-    if (callback(urlInfo)) {
-      urlInfos.push(urlInfo);
-    }
-  });
-  return urlInfos;
-};
-GRAPH_VISITOR.find = (graph, callback) => {
-  let found = null;
-  for (const urlInfo of graph.urlInfoMap.values()) {
-    if (callback(urlInfo)) {
-      found = urlInfo;
-      break;
-    }
-  }
-  return found;
-};
-GRAPH_VISITOR.findDependent = (urlInfo, visitor) => {
-  const graph = urlInfo.graph;
-  const seen = new Set();
-  seen.add(urlInfo.url);
-  let found = null;
-  const visit = (dependentUrlInfo) => {
-    if (seen.has(dependentUrlInfo.url)) {
-      return false;
-    }
-    seen.add(dependentUrlInfo.url);
-    if (visitor(dependentUrlInfo)) {
-      found = dependentUrlInfo;
-    }
-    return true;
-  };
-  const iterate = (currentUrlInfo) => {
-    // When cookin html inline content, html dependencies are not yet updated
-    // consequently htmlUrlInfo.dependencies is empty
-    // and inlineContentUrlInfo.referenceFromOthersSet is empty as well
-    // in that case we resort to isInline + inlineUrlSite to establish the dependency
-    if (currentUrlInfo.isInline) {
-      const parentUrl = currentUrlInfo.inlineUrlSite.url;
-      const parentUrlInfo = graph.getUrlInfo(parentUrl);
-      visit(parentUrlInfo);
-      if (found) {
-        return;
-      }
-    }
-    for (const referenceFromOther of currentUrlInfo.referenceFromOthersSet) {
-      const urlInfoReferencingThisOne = referenceFromOther.ownerUrlInfo;
-      if (visit(urlInfoReferencingThisOne)) {
-        if (found) {
-          break;
-        }
-        iterate(urlInfoReferencingThisOne);
-      }
-    }
-  };
-  iterate(urlInfo);
-  return found;
-};
-GRAPH_VISITOR.findDependency = (urlInfo, visitor) => {
-  const graph = urlInfo.graph;
-  const seen = new Set();
-  seen.add(urlInfo.url);
-  let found = null;
-  const visit = (dependencyUrlInfo) => {
-    if (seen.has(dependencyUrlInfo.url)) {
-      return false;
-    }
-    seen.add(dependencyUrlInfo.url);
-    if (visitor(dependencyUrlInfo)) {
-      found = dependencyUrlInfo;
-    }
-    return true;
-  };
-  const iterate = (currentUrlInfo) => {
-    for (const referenceToOther of currentUrlInfo.referenceToOthersSet) {
-      const referencedUrlInfo = graph.getUrlInfo(referenceToOther);
-      if (visit(referencedUrlInfo)) {
-        if (found) {
-          break;
-        }
-        iterate(referencedUrlInfo);
-      }
-    }
-  };
-  iterate(urlInfo);
-  return found;
-};
-
-// This function will be used in "build.js"
-// by passing rootUrlInfo as first arg
-// -> this ensure we visit only urls with strong references
-// because we start from root and ignore weak ref
-// The alternative would be to iterate on urlInfoMap
-// and call urlInfo.isUsed() but that would be more expensive
-GRAPH_VISITOR.forEachUrlInfoStronglyReferenced = (
-  initialUrlInfo,
-  callback,
-  { directoryUrlInfoSet } = {},
-) => {
-  const seen = new Set();
-  seen.add(initialUrlInfo);
-  const iterateOnReferences = (urlInfo) => {
-    for (const referenceToOther of urlInfo.referenceToOthersSet) {
-      if (referenceToOther.gotInlined()) {
-        continue;
-      }
-      if (referenceToOther.url.startsWith("ignore:")) {
-        continue;
-      }
-      const referencedUrlInfo = referenceToOther.urlInfo;
-      if (
-        directoryUrlInfoSet &&
-        referenceToOther.expectedType === "directory"
-      ) {
-        directoryUrlInfoSet.add(referencedUrlInfo);
-      }
-      if (referenceToOther.isWeak) {
-        continue;
-      }
-      if (seen.has(referencedUrlInfo)) {
-        continue;
-      }
-      seen.add(referencedUrlInfo);
-      callback(referencedUrlInfo);
-      iterateOnReferences(referencedUrlInfo);
-    }
-  };
-  iterateOnReferences(initialUrlInfo);
-  seen.clear();
-};
-
-const urlSpecifierEncoding = {
-  encode: (reference) => {
-    const { generatedSpecifier } = reference;
-    if (generatedSpecifier.then) {
-      return generatedSpecifier.then((value) => {
-        reference.generatedSpecifier = value;
-        return urlSpecifierEncoding.encode(reference);
-      });
-    }
-    // allow plugin to return a function to bypas default formatting
-    // (which is to use JSON.stringify when url is referenced inside js)
-    if (typeof generatedSpecifier === "function") {
-      return generatedSpecifier();
-    }
-    const formatter = formatters[reference.type];
-    const value = formatter
-      ? formatter.encode(generatedSpecifier)
-      : generatedSpecifier;
-    if (reference.escape) {
-      return reference.escape(value);
-    }
-    return value;
-  },
-  decode: (reference) => {
-    const formatter = formatters[reference.type];
-    return formatter
-      ? formatter.decode(reference.generatedSpecifier)
-      : reference.generatedSpecifier;
-  },
-};
-const formatters = {
-  "js_import": { encode: JSON.stringify, decode: JSON.parse },
-  "js_url": { encode: JSON.stringify, decode: JSON.parse },
-  "css_@import": { encode: JSON.stringify, decode: JSON.stringify },
-  // https://github.com/webpack-contrib/css-loader/pull/627/files
-  "css_url": {
-    encode: (url) => {
-      // If url is already wrapped in quotes, remove them
-      url = formatters.css_url.decode(url);
-      // Should url be wrapped?
-      // See https://drafts.csswg.org/css-values-3/#urls
-      if (/["'() \t\n]/.test(url)) {
-        return `"${url.replace(/"/g, '\\"').replace(/\n/g, "\\n")}"`;
-      }
-      return url;
-    },
-    decode: (url) => {
-      const firstChar = url[0];
-      const lastChar = url[url.length - 1];
-      if (firstChar === `"` && lastChar === `"`) {
-        return url.slice(1, -1);
-      }
-      if (firstChar === `'` && lastChar === `'`) {
-        return url.slice(1, -1);
-      }
-      return url;
-    },
-  },
-};
-
-const createUrlGraph = ({
-  rootDirectoryUrl,
-  kitchen,
-  name = "anonymous",
-}) => {
-  const urlGraph = {};
-  const urlInfoCreatedEventEmitter = createEventEmitter();
-  const urlInfoDereferencedEventEmitter = createEventEmitter();
-
-  const urlInfoMap = new Map();
-  const hasUrlInfo = (key) => {
-    if (typeof key === "string") {
-      return urlInfoMap.has(key);
-    }
-    if (typeof key === "object" && key && key.url) {
-      return urlInfoMap.has(key.url);
-    }
-    return null;
-  };
-  const getUrlInfo = (key) => {
-    if (typeof key === "string") {
-      return urlInfoMap.get(key);
-    }
-    if (typeof key === "object" && key && key.url) {
-      return urlInfoMap.get(key.url);
-    }
-    return null;
-  };
-
-  const addUrlInfo = (urlInfo) => {
-    urlInfo.graph = urlGraph;
-    urlInfo.kitchen = kitchen;
-    urlInfoMap.set(urlInfo.url, urlInfo);
-  };
-  const reuseOrCreateUrlInfo = (reference, useGeneratedUrl) => {
-    const referencedUrl = useGeneratedUrl
-      ? reference.generatedUrl
-      : reference.url;
-    let referencedUrlInfo = getUrlInfo(referencedUrl);
-    if (!referencedUrlInfo) {
-      const ownerUrlInfo = reference.ownerUrlInfo;
-      const ownerContext = ownerUrlInfo.context;
-      const context = Object.create(ownerContext);
-      referencedUrlInfo = createUrlInfo(referencedUrl, context);
-      addUrlInfo(referencedUrlInfo);
-      urlInfoCreatedEventEmitter.emit(referencedUrlInfo);
-    }
-    if (
-      referencedUrlInfo.searchParams.size > 0 &&
-      kitchen.context.buildStep !== "shape"
-    ) {
-      // A resource is represented by a url.
-      // Variations of a resource are represented by url search params
-      // Each representation of the resource is given a dedicated url info
-      // object (one url -> one url info)
-      // It's because search params often influence the final content returned for that url
-      // When a reference contains url search params it must create 2 url infos:
-      // 1. The url info corresponding to the url with search params
-      // 2. The url info corresponding to url without search params
-      // Because the underlying content without search params is used to generate
-      // the content modified according to search params
-      // This way when a file like "style.css" is considered as modified
-      // references like "style.css?as_css_module" are also affected
-      const urlWithoutSearch = asUrlWithoutSearch(reference.url);
-      // a reference with a search param creates an implicit reference
-      // to the file without search param
-      const referenceWithoutSearch = reference.addImplicit({
-        specifier: urlWithoutSearch,
-        url: urlWithoutSearch,
-        searchParams: new URLSearchParams(),
-        isWeak: true,
-      });
-      const urlInfoWithoutSearch = referenceWithoutSearch.urlInfo;
-      urlInfoWithoutSearch.searchParamVariantSet.add(referencedUrlInfo);
-    }
-    return referencedUrlInfo;
-  };
-
-  const inferReference = (specifier, parentUrl) => {
-    const parentUrlInfo = getUrlInfo(parentUrl);
-    if (!parentUrlInfo) {
-      return null;
-    }
-    const seen = [];
-    const search = (urlInfo) => {
-      for (const referenceToOther of urlInfo.referenceToOthersSet) {
-        if (urlSpecifierEncoding.decode(referenceToOther) === specifier) {
-          return referenceToOther;
-        }
-      }
-      for (const referenceToOther of parentUrlInfo.referenceToOthersSet) {
-        if (seen.includes(referenceToOther.url)) {
-          continue;
-        }
-        seen.push(referenceToOther.url);
-        const referencedUrlInfo = referenceToOther.urlInfo;
-        if (referencedUrlInfo.isInline) {
-          const firstRef = search(referencedUrlInfo);
-          if (firstRef) {
-            return firstRef;
-          }
-        }
-      }
-      return null;
-    };
-    return search(parentUrlInfo);
-  };
-
-  const getEntryPoints = () => {
-    const entryPoints = [];
-    urlInfoMap.forEach((urlInfo) => {
-      if (urlInfo.isEntryPoint && urlInfo.isUsed()) {
-        entryPoints.push(urlInfo);
-      }
-    });
-    return entryPoints;
-  };
-
-  const rootUrlInfo = createUrlInfo(rootDirectoryUrl, kitchen.context);
-  rootUrlInfo.isRoot = true;
-  rootUrlInfo.entryUrlInfo = rootUrlInfo;
-  addUrlInfo(rootUrlInfo);
-
-  Object.assign(urlGraph, {
-    name,
-    rootUrlInfo,
-
-    urlInfoMap,
-    reuseOrCreateUrlInfo,
-    hasUrlInfo,
-    getUrlInfo,
-    getEntryPoints,
-
-    inferReference,
-    urlInfoCreatedEventEmitter,
-    urlInfoDereferencedEventEmitter,
-
-    toObject: () => {
-      const data = {};
-      urlInfoMap.forEach((urlInfo) => {
-        data[urlInfo.url] = urlInfo;
-      });
-      return data;
-    },
-    toJSON: (rootDirectoryUrl) => {
-      const data = {};
-      urlInfoMap.forEach((urlInfo) => {
-        if (urlInfo.referenceToOthersSet.size) {
-          const relativeUrl = urlToRelativeUrl(urlInfo.url, rootDirectoryUrl);
-          const referencedUrlSet = new Set();
-          for (const referenceToOther of urlInfo.referenceToOthersSet) {
-            data[relativeUrl] = referencedUrlSet.add(referenceToOther.url);
-          }
-          data[relativeUrl] = Array.from(referencedUrlSet).map(
-            (referencedUrl) =>
-              urlToRelativeUrl(referencedUrl, rootDirectoryUrl),
-          );
-        }
-      });
-      return data;
-    },
-  });
-  return urlGraph;
-};
-
-const createUrlInfo = (url, context) => {
-  const urlInfo = {
-    isRoot: false,
-    graph: null,
-    kitchen: null,
-    context,
-    error: null,
-    modifiedTimestamp: 0,
-    descendantModifiedTimestamp: 0,
-    dereferencedTimestamp: 0,
-    originalContentEtag: null,
-    contentEtag: null,
-    isWatched: false,
-    isValid: () => false,
-    data: {}, // plugins can put whatever they want here
-    referenceToOthersSet: new Set(),
-    referenceFromOthersSet: new Set(),
-    firstReference: null, // first reference from an other url to this one
-    lastReference: null,
-    remapReference: null, // used solely during build for rollup
-    implicitUrlSet: new Set(),
-    searchParamVariantSet: new Set(),
-
-    type: undefined, // "html", "css", "js_classic", "js_module", "importmap", "sourcemap", "json", "webmanifest", ...
-    subtype: undefined, // "worker", "service_worker", "shared_worker" for js, otherwise undefined
-    typeHint: undefined,
-    subtypeHint: undefined,
-    contentType: "", // "text/html", "text/css", "text/javascript", "application/json", ...
-    url: null,
-    originalUrl: undefined,
-    isEntryPoint: false,
-    isDynamicEntryPoint: false,
-    entryUrlInfo: null,
-    originalContent: undefined,
-    originalContentAst: undefined,
-    content: undefined,
-    contentAst: undefined,
-    contentLength: undefined,
-    contentFinalized: false,
-    contentSideEffects: [],
-    contentInjections: {},
-
-    sourcemap: null,
-    sourcemapIsWrong: false,
-    sourcemapReference: null,
-
-    generatedUrl: null,
-    sourcemapGeneratedUrl: null,
-    filenameHint: "",
-    dirnameHint: "",
-    injected: false,
-
-    isInline: false,
-    inlineUrlSite: null,
-    jsQuote: null, // maybe move to inlineUrlSite?
-
-    timing: {},
-    status: 200,
-    headers: {},
-    debug: false,
-  };
-  Object.defineProperty(urlInfo, "url", {
-    enumerable: true,
-    configurable: false,
-    writable: false,
-    value: url,
-  });
-  urlInfo.pathname = new URL(url).pathname;
-  urlInfo.searchParams = new URL(url).searchParams;
-
-  Object.defineProperty(urlInfo, "packageDirectoryUrl", {
-    enumerable: true,
-    configurable: true,
-    get: () => context.packageDirectory.find(url),
-  });
-  Object.defineProperty(urlInfo, "packageJSON", {
-    enumerable: true,
-    configurable: true,
-    get: () => {
-      const packageDirectoryUrl = context.packageDirectory.find(url);
-      return packageDirectoryUrl
-        ? context.packageDirectory.read(packageDirectoryUrl)
-        : null;
-    },
-  });
-  Object.defineProperty(urlInfo, "packageName", {
-    enumerable: true,
-    configurable: true,
-    get: () => urlInfo.packageJSON?.name,
-  });
-  urlInfo.dependencies = createDependencies(urlInfo);
-  urlInfo.isUsed = () => {
-    if (urlInfo.isRoot) {
-      return true;
-    }
-    for (const referenceFromOther of urlInfo.referenceFromOthersSet) {
-      if (referenceFromOther.urlInfo !== urlInfo) {
-        continue;
-      }
-      if (referenceFromOther.ownerUrlInfo.isRoot) {
-        return true;
-      }
-      const ref = referenceFromOther.original || referenceFromOther;
-      if (ref.isWeak) {
-        // weak reference don't count as using the url
-        continue;
-      }
-      if (ref.gotInlined()) {
-        if (ref.ownerUrlInfo.isUsed()) {
-          return true;
-        }
-        // the url info was inlined, an other reference is required
-        // to consider the non-inlined urlInfo as used
-        continue;
-      }
-      return ref.ownerUrlInfo.isUsed();
-    }
-    // nothing uses this url anymore
-    // - versioning update inline content
-    // - file converted for import assertion or js_classic conversion
-    // - urlInfo for a file that is now inlined
-    return false;
-  };
-  urlInfo.findParentIfInline = () => {
-    let currentUrlInfo = urlInfo;
-    const graph = urlInfo.graph;
-    while (currentUrlInfo.isInline) {
-      const parentUrlInfo = graph.getUrlInfo(currentUrlInfo.inlineUrlSite.url);
-      if (!parentUrlInfo.isInline) {
-        return parentUrlInfo;
-      }
-      currentUrlInfo = parentUrlInfo;
-    }
-    return null;
-  };
-  urlInfo.findDependent = (callback) => {
-    return GRAPH_VISITOR.findDependent(urlInfo, callback);
-  };
-  urlInfo.isSearchParamVariantOf = (otherUrlInfo) => {
-    if (urlInfo.searchParams.size === 0) {
-      return false;
-    }
-    if (otherUrlInfo.searchParams.size > 0) {
-      return false;
-    }
-    const withoutSearch = asUrlWithoutSearch(urlInfo.url);
-    if (withoutSearch === otherUrlInfo.url) {
-      return true;
-    }
-    return false;
-  };
-  const getNextUrlInfo = (newProps) => {
-    const reference = urlInfo.firstReference;
-    const nextReference = reference.addImplicit({
-      type: reference.type,
-      subtype: reference.subtype,
-      expectedContentType: reference.expectedContentType,
-      expectedType: reference.expectedType,
-      expectedSubtype: reference.expectedSubtype,
-      integrity: reference.integrity,
-      crossorigin: reference.crossorigin,
-      specifierStart: reference.specifierStart,
-      specifierEnd: reference.specifierEnd,
-      specifierLine: reference.specifierLine,
-      specifierColumn: reference.specifierColumn,
-      baseUrl: reference.baseUrl,
-      isOriginalPosition: reference.isOriginalPosition,
-      // ok mais cet ref est implicite + weak
-      // donc ne devrait pas etre retournée par getEntryPoints()
-      isEntryPoint: reference.isEntryPoint,
-      isResourceHint: reference.isResourceHint,
-      hasVersioningEffect: reference.hasVersioningEffect,
-      version: reference.version,
-      content: reference.content,
-      contentType: reference.contentType,
-      fsStat: reference.fsStat,
-      debug: reference.debug,
-      importAttributes: reference.importAttributes,
-      astInfo: reference.astInfo,
-      mutation: reference.mutation,
-      data: { ...reference.data },
-      isWeak: true,
-      isInline: reference.isInline,
-      original: reference.original || reference,
-      prev: reference,
-      // urlInfo: null,
-      // url: null,
-      // generatedUrl: null,
-      // generatedSpecifier: null,
-      // filename: null,
-      ...newProps,
-    });
-    reference.next = nextReference;
-    return nextReference.urlInfo;
-  };
-
-  urlInfo.redirect = (props) => {
-    return getNextUrlInfo(props);
-  };
-  urlInfo.getWithoutSearchParam = (searchParam, props) => {
-    // The search param can be
-    // 1. injected by a plugin during "redirectReference"
-    //    - import assertions
-    //    - js module fallback to systemjs
-    // 2. already inside source files
-    //    - turn js module into js classic for convenience ?as_js_classic
-    //    - turn js classic to js module for to make it importable
-    if (!urlInfo.searchParams.has(searchParam)) {
-      return null;
-    }
-    const reference = urlInfo.firstReference;
-    const specifierWithoutSearchParam = injectQueryParamsIntoSpecifier(
-      reference.specifier,
-      {
-        [searchParam]: undefined,
-      },
-    );
-    return urlInfo.redirect({
-      specifier: specifierWithoutSearchParam,
-      ...props,
-    });
-  };
-  urlInfo.onRemoved = () => {
-    urlInfo.kitchen.urlInfoTransformer.resetContent(urlInfo);
-    urlInfo.referenceToOthersSet.forEach((referenceToOther) => {
-      referenceToOther.remove();
-    });
-    if (urlInfo.searchParams.size > 0) {
-      const urlWithoutSearch = asUrlWithoutSearch(urlInfo.url);
-      const urlInfoWithoutSearch = urlInfo.graph.getUrlInfo(urlWithoutSearch);
-      if (urlInfoWithoutSearch) {
-        urlInfoWithoutSearch.searchParamVariantSet.delete(urlInfo);
-      }
-    }
-  };
-  urlInfo.onModified = ({ modifiedTimestamp = Date.now() } = {}) => {
-    const visitedSet = new Set();
-    const considerModified = (urlInfo) => {
-      if (visitedSet.has(urlInfo)) {
-        return;
-      }
-      visitedSet.add(urlInfo);
-      urlInfo.modifiedTimestamp = modifiedTimestamp;
-      urlInfo.kitchen.urlInfoTransformer.resetContent(urlInfo);
-      for (const referenceToOther of urlInfo.referenceToOthersSet) {
-        const referencedUrlInfo = referenceToOther.urlInfo;
-        if (referencedUrlInfo.isInline) {
-          considerModified(referencedUrlInfo);
-        }
-      }
-      for (const referenceFromOther of urlInfo.referenceFromOthersSet) {
-        if (referenceFromOther.gotInlined()) {
-          const urlInfoReferencingThisOne = referenceFromOther.ownerUrlInfo;
-          considerModified(urlInfoReferencingThisOne);
-        }
-      }
-      for (const searchParamVariant of urlInfo.searchParamVariantSet) {
-        considerModified(searchParamVariant);
-      }
-    };
-    considerModified(urlInfo);
-    visitedSet.clear();
-  };
-  urlInfo.onDereferenced = (lastReferenceFromOther) => {
-    urlInfo.dereferencedTimestamp = Date.now();
-    urlInfo.graph.urlInfoDereferencedEventEmitter.emit(
-      urlInfo,
-      lastReferenceFromOther,
-    );
-  };
-
-  urlInfo.cook = (customContext) => {
-    return urlInfo.context.cook(urlInfo, customContext);
-  };
-  urlInfo.cookDependencies = (options) => {
-    return urlInfo.context.cookDependencies(urlInfo, options);
-  };
-  urlInfo.fetchContent = () => {
-    return urlInfo.context.fetchUrlContent(urlInfo);
-  };
-  urlInfo.transformContent = () => {
-    return urlInfo.context.transformUrlContent(urlInfo);
-  };
-  urlInfo.finalizeContent = () => {
-    return urlInfo.context.finalizeUrlContent(urlInfo);
-  };
-  urlInfo.mutateContent = (transformations) => {
-    return urlInfo.kitchen.urlInfoTransformer.applyTransformations(
-      urlInfo,
-      transformations,
-    );
-  };
-
-  const contentTransformationCallbackSet = new Set();
-  urlInfo.addContentTransformationCallback = (callback) => {
-    if (urlInfo.contentFinalized) {
-      if (urlInfo.context.dev) {
-        throw new Error(
-          `cannot add a transform callback on content already sent to the browser.
---- content url ---
-${urlInfo.url}`,
-        );
-      }
-      urlInfo.context.addLastTransformationCallback(callback);
-    } else {
-      contentTransformationCallbackSet.add(callback);
-    }
-  };
-  urlInfo.applyContentTransformationCallbacks = async () => {
-    for (const contentTransformationCallback of contentTransformationCallbackSet) {
-      await contentTransformationCallback();
-    }
-    contentTransformationCallbackSet.clear();
-  };
-
-  // Object.preventExtensions(urlInfo) // useful to ensure all properties are declared here
-  return urlInfo;
-};
-
-const injectionSymbol = Symbol.for("jsenv_injection");
-const INJECTIONS = {
-  global: (value) => {
-    return { [injectionSymbol]: "global", value };
-  },
-  optional: (value) => {
-    if (value && value[injectionSymbol] === "optional") {
-      return value;
-    }
-    return { [injectionSymbol]: "optional", value };
-  },
-};
-
-const isPlaceholderInjection = (value) => {
-  return (
-    !value || !value[injectionSymbol] || value[injectionSymbol] !== "global"
-  );
-};
-
-const applyContentInjections = (content, contentInjections, urlInfo) => {
-  const keys = Object.keys(contentInjections);
-  const globals = {};
-  const placeholderReplacements = [];
-  for (const key of keys) {
-    const contentInjection = contentInjections[key];
-    if (contentInjection && contentInjection[injectionSymbol]) {
-      const valueBehindSymbol = contentInjection[injectionSymbol];
-      if (valueBehindSymbol === "global") {
-        globals[key] = contentInjection.value;
-      } else if (valueBehindSymbol === "optional") {
-        placeholderReplacements.push({
-          key,
-          isOptional: true,
-          value: contentInjection.value,
-        });
-      } else {
-        throw new Error(`unknown injection type "${valueBehindSymbol}"`);
-      }
-    } else {
-      placeholderReplacements.push({
-        key,
-        value: contentInjection,
-      });
-    }
-  }
-
-  const needGlobalsInjection = Object.keys(globals).length > 0;
-  const needPlaceholderReplacements = placeholderReplacements.length > 0;
-
-  if (needGlobalsInjection && needPlaceholderReplacements) {
-    const globalInjectionResult = injectGlobals(content, globals, urlInfo);
-    const replaceInjectionResult = injectPlaceholderReplacements(
-      globalInjectionResult.content,
-      placeholderReplacements,
-      urlInfo,
-    );
-    return {
-      content: replaceInjectionResult.content,
-      sourcemap: composeTwoSourcemaps(
-        globalInjectionResult.sourcemap,
-        replaceInjectionResult.sourcemap,
-      ),
-    };
-  }
-  if (needGlobalsInjection) {
-    return injectGlobals(content, globals, urlInfo);
-  }
-  if (needPlaceholderReplacements) {
-    return injectPlaceholderReplacements(
-      content,
-      placeholderReplacements,
-      urlInfo,
-    );
-  }
-  return null;
-};
-
-const injectPlaceholderReplacements = (
-  content,
-  placeholderReplacements,
-  urlInfo,
-) => {
-  const magicSource = createMagicSource(content);
-  for (const { key, isOptional, value } of placeholderReplacements) {
-    let index = content.indexOf(key);
-    if (index === -1) {
-      if (!isOptional) {
-        urlInfo.context.logger.warn(
-          `placeholder "${key}" not found in ${urlInfo.url}.
---- suggestion a ---
-Add "${key}" in that file.
---- suggestion b ---
-Fix eventual typo in "${key}"?
---- suggestion c ---
-Mark injection as optional using INJECTIONS.optional():
-import { INJECTIONS } from "@jsenv/core";
-
-return {
-  "${key}": INJECTIONS.optional(${JSON.stringify(value)}),
-};`,
-        );
-      }
-      continue;
-    }
-
-    while (index !== -1) {
-      const start = index;
-      const end = index + key.length;
-      magicSource.replace({
-        start,
-        end,
-        replacement:
-          urlInfo.type === "js_classic" ||
-          urlInfo.type === "js_module" ||
-          urlInfo.type === "html"
-            ? JSON.stringify(value, null, "  ")
-            : value,
-      });
-      index = content.indexOf(key, end);
-    }
-  }
-  return magicSource.toContentAndSourcemap();
-};
-
-const injectGlobals = (content, globals, urlInfo) => {
-  if (urlInfo.type === "html") {
-    return globalInjectorOnHtml(content, globals, urlInfo);
-  }
-  if (urlInfo.type === "js_classic" || urlInfo.type === "js_module") {
-    return globalsInjectorOnJs(content, globals, urlInfo);
-  }
-  throw new Error(`cannot inject globals into "${urlInfo.type}"`);
-};
-const globalInjectorOnHtml = (content, globals, urlInfo) => {
-  // ideally we would inject an importmap but browser support is too low
-  // (even worse for worker/service worker)
-  // so for now we inject code into entry points
-  const htmlAst = parseHtml({
-    html: content,
-    url: urlInfo.url,
-    storeOriginalPositions: false,
-  });
-  const clientCode = generateClientCodeForGlobals(globals, {
-    isWebWorker: false,
-  });
-  injectJsenvScript(htmlAst, {
-    content: clientCode,
-    pluginName: "jsenv:inject_globals",
-  });
-  return {
-    content: stringifyHtmlAst(htmlAst),
-  };
-};
-const globalsInjectorOnJs = (content, globals, urlInfo) => {
-  const clientCode = generateClientCodeForGlobals(globals, {
-    isWebWorker:
-      urlInfo.subtype === "worker" ||
-      urlInfo.subtype === "service_worker" ||
-      urlInfo.subtype === "shared_worker",
-  });
-  const magicSource = createMagicSource(content);
-  magicSource.prepend(clientCode);
-  return magicSource.toContentAndSourcemap();
-};
-const generateClientCodeForGlobals = (globals, { isWebWorker = false }) => {
-  const globalName = isWebWorker ? "self" : "window";
-  return `Object.assign(${globalName}, ${JSON.stringify(
-    globals,
-    null,
-    "  ",
-  )});`;
-};
-
-const defineGettersOnPropertiesDerivedFromOriginalContent = (
-  urlInfo,
-) => {
-  const originalContentAstDescriptor = Object.getOwnPropertyDescriptor(
-    urlInfo,
-    "originalContentAst",
-  );
-  if (originalContentAstDescriptor.value === undefined) {
-    defineVolatileGetter(urlInfo, "originalContentAst", () => {
-      return getContentAst(urlInfo.originalContent, urlInfo.type, urlInfo.url);
-    });
-  }
-  const originalContentEtagDescriptor = Object.getOwnPropertyDescriptor(
-    urlInfo,
-    "originalContentEtag",
-  );
-  if (originalContentEtagDescriptor.value === undefined) {
-    defineVolatileGetter(urlInfo, "originalContentEtag", () => {
-      return bufferToEtag(Buffer.from(urlInfo.originalContent));
-    });
-  }
-};
-
-const defineGettersOnPropertiesDerivedFromContent = (urlInfo) => {
-  const contentLengthDescriptor = Object.getOwnPropertyDescriptor(
-    urlInfo,
-    "contentLength",
-  );
-  if (contentLengthDescriptor.value === undefined) {
-    defineVolatileGetter(urlInfo, "contentLength", () => {
-      return Buffer.byteLength(urlInfo.content);
-    });
-  }
-  const contentAstDescriptor = Object.getOwnPropertyDescriptor(
-    urlInfo,
-    "contentAst",
-  );
-  if (contentAstDescriptor.value === undefined) {
-    defineVolatileGetter(urlInfo, "contentAst", () => {
-      if (urlInfo.content === urlInfo.originalContent) {
-        return urlInfo.originalContentAst;
-      }
-      const ast = getContentAst(urlInfo.content, urlInfo.type, urlInfo.url);
-      return ast;
-    });
-  }
-  const contentEtagDescriptor = Object.getOwnPropertyDescriptor(
-    urlInfo,
-    "contentEtag",
-  );
-  if (contentEtagDescriptor.value === undefined) {
-    defineVolatileGetter(urlInfo, "contentEtag", () => {
-      if (urlInfo.content === urlInfo.originalContent) {
-        return urlInfo.originalContentEtag;
-      }
-      return getContentEtag(urlInfo.content);
-    });
-  }
-};
-
-const defineVolatileGetter = (object, property, getter) => {
-  const restore = (value) => {
-    Object.defineProperty(object, property, {
-      enumerable: true,
-      configurable: true,
-      writable: true,
-      value,
-    });
-  };
-
-  Object.defineProperty(object, property, {
-    enumerable: true,
-    configurable: true,
-    get: () => {
-      const value = getter();
-      restore(value);
-      return value;
-    },
-    set: restore,
-  });
-};
-
-const getContentAst = (content, type, url) => {
-  if (type === "js_module") {
-    return parseJsWithAcorn({
-      js: content,
-      url,
-      isJsModule: true,
-    });
-  }
-  if (type === "js_classic") {
-    return parseJsWithAcorn({
-      js: content,
-      url,
-    });
-  }
-  return null;
-};
-
-const getContentEtag = (content) => {
-  return bufferToEtag(Buffer.from(content));
-};
-
-const createUrlInfoTransformer = ({
-  logger,
-  sourcemaps,
-  sourcemapsComment,
-  sourcemapsSources,
-  sourcemapsSourcesProtocol,
-  sourcemapsSourcesContent = true,
-  outDirectoryUrl,
-  supervisor,
-}) => {
-  const formatSourcemapSource =
-    typeof sourcemapsSources === "function"
-      ? (source, urlInfo) => {
-          return sourcemapsSources(source, urlInfo);
-        }
-      : sourcemapsSources === "relative"
-        ? (source, urlInfo) => {
-            const sourceRelative = urlToRelativeUrl(source, urlInfo.url);
-            return sourceRelative || ".";
-          }
-        : null;
-
-  const normalizeSourcemap = (urlInfo, sourcemap) => {
-    let { sources } = sourcemap;
-    if (sources) {
-      sources = sources.map((source) => {
-        if (source && isFileSystemPath(source)) {
-          return String(pathToFileURL(source));
-        }
-        return source;
-      });
-    }
-    const wantSourcesContent =
-      // for inline content (<script> insdide html)
-      // chrome won't be able to fetch the file as it does not exists
-      // so sourcemap must contain sources
-      sourcemapsSourcesContent ||
-      urlInfo.isInline ||
-      (sources &&
-        sources.some((source) => !source || !source.startsWith("file:")));
-    if (sources && sources.length > 1) {
-      sourcemap.sources = sources.map(
-        (source) => new URL(source, urlInfo.originalUrl).href,
-      );
-      if (!wantSourcesContent) {
-        sourcemap.sourcesContent = undefined;
-      }
-      return sourcemap;
-    }
-    sourcemap.sources = [urlInfo.originalUrl];
-    sourcemap.sourcesContent = [urlInfo.originalContent];
-    if (!wantSourcesContent) {
-      sourcemap.sourcesContent = undefined;
-    }
-    return sourcemap;
-  };
-
-  const resetContent = (urlInfo) => {
-    urlInfo.contentFinalized = false;
-    urlInfo.originalContent = undefined;
-    urlInfo.originalContentAst = undefined;
-    urlInfo.originalContentEtag = undefined;
-    urlInfo.contentAst = undefined;
-    urlInfo.contentEtag = undefined;
-    urlInfo.contentLength = undefined;
-    urlInfo.content = undefined;
-    urlInfo.sourcemap = null;
-    urlInfo.sourcemapIsWrong = null;
-    urlInfo.sourcemapReference = null;
-  };
-
-  const setContentProperties = (
-    urlInfo,
-    { content, contentAst, contentEtag, contentLength },
-  ) => {
-    if (content === urlInfo.content) {
-      return false;
-    }
-    urlInfo.contentAst = contentAst;
-    urlInfo.contentEtag = contentEtag;
-    urlInfo.contentLength = contentLength;
-    urlInfo.content = content;
-    defineGettersOnPropertiesDerivedFromContent(urlInfo);
-    return true;
-  };
-
-  const setContent = async (
-    urlInfo,
-    content,
-    {
-      contentAst, // most of the time will be undefined
-      contentEtag, // in practice it's always undefined
-      contentLength,
-      originalContent = content,
-      originalContentAst, // most of the time will be undefined
-      originalContentEtag, // in practice always undefined
-      sourcemap,
-    } = {},
-  ) => {
-    urlInfo.originalContentAst = originalContentAst;
-    urlInfo.originalContentEtag = originalContentEtag;
-    if (originalContent !== urlInfo.originalContent) {
-      urlInfo.originalContent = originalContent;
-    }
-    defineGettersOnPropertiesDerivedFromOriginalContent(urlInfo);
-
-    let may = mayHaveSourcemap(urlInfo);
-    let shouldHandle = shouldHandleSourcemap(urlInfo);
-    if (may && !shouldHandle) {
-      content = SOURCEMAP.removeComment({
-        contentType: urlInfo.contentType,
-        content,
-      });
-    }
-    setContentProperties(urlInfo, {
-      content,
-      contentAst,
-      contentEtag,
-      contentLength,
-    });
-    urlInfo.sourcemap = sourcemap;
-    if (!may || !shouldHandle) {
-      return;
-    }
-
-    // case #1: already loaded during "load" hook
-    // - happens during build
-    // - happens for url converted during fetch (js_module_fallback for instance)
-    if (urlInfo.sourcemap) {
-      urlInfo.sourcemap = normalizeSourcemap(urlInfo, urlInfo.sourcemap);
-      return;
-    }
-
-    // case #2: check for existing sourcemap for this content
-    const sourcemapFound = SOURCEMAP.readComment({
-      contentType: urlInfo.contentType,
-      content: urlInfo.content,
-    });
-    if (sourcemapFound) {
-      const { type, subtype, line, column, specifier } = sourcemapFound;
-      const sourcemapReference = urlInfo.dependencies.found({
-        type,
-        subtype,
-        expectedType: "sourcemap",
-        specifier,
-        specifierLine: line,
-        specifierColumn: column,
-      });
-      urlInfo.sourcemapReference = sourcemapReference;
-      try {
-        await sourcemapReference.urlInfo.cook();
-        const sourcemapRaw = JSON.parse(sourcemapReference.urlInfo.content);
-        const sourcemap = normalizeSourcemap(urlInfo, sourcemapRaw);
-        urlInfo.sourcemap = sourcemap;
-        return;
-      } catch (e) {
-        logger.error(`Error while handling existing sourcemap: ${e.message}`);
-        return;
-      }
-    }
-
-    // case #3: will be injected once cooked
-  };
-
-  const applyTransformations = (urlInfo, transformations) => {
-    if (!transformations) {
-      return;
-    }
-    const {
-      type,
-      contentType,
-      content,
-      contentAst, // undefined most of the time
-      contentEtag, // in practice always undefined
-      contentLength,
-      sourcemap,
-      sourcemapIsWrong,
-      contentInjections,
-    } = transformations;
-    if (type) {
-      urlInfo.type = type;
-    }
-    if (contentType) {
-      urlInfo.contentType = contentType;
-    }
-    if (Object.hasOwn(transformations, "contentInjections")) {
-      if (contentInjections) {
-        Object.assign(urlInfo.contentInjections, contentInjections);
-      }
-      if (content === undefined) {
-        return;
-      }
-    }
-    let contentModified;
-    if (Object.hasOwn(transformations, "content")) {
-      contentModified = setContentProperties(urlInfo, {
-        content,
-        contentAst,
-        contentEtag,
-        contentLength,
-      });
-    }
-    if (
-      sourcemap &&
-      mayHaveSourcemap(urlInfo) &&
-      shouldHandleSourcemap(urlInfo)
-    ) {
-      const sourcemapNormalized = normalizeSourcemap(urlInfo, sourcemap);
-      let currentSourcemap = urlInfo.sourcemap;
-      const finalSourcemap = composeTwoSourcemaps(
-        currentSourcemap,
-        sourcemapNormalized,
-      );
-      const finalSourcemapNormalized = normalizeSourcemap(
-        urlInfo,
-        finalSourcemap,
-      );
-      urlInfo.sourcemap = finalSourcemapNormalized;
-      // A plugin is allowed to modify url content
-      // without returning a sourcemap
-      // This is the case for preact and react plugins.
-      // They are currently generating wrong source mappings
-      // when used.
-      // Generating the correct sourcemap in this situation
-      // is a nightmare no-one could solve in years so
-      // jsenv won't emit a warning and use the following strategy:
-      // "no sourcemap is better than wrong sourcemap"
-      urlInfo.sourcemapIsWrong = urlInfo.sourcemapIsWrong || sourcemapIsWrong;
-    }
-    if (contentModified && urlInfo.contentFinalized) {
-      applyContentEffects(urlInfo);
-    }
-  };
-
-  const applyContentEffects = (urlInfo) => {
-    applySourcemapOnContent(urlInfo);
-    writeInsideOutDirectory(urlInfo);
-  };
-
-  const writeInsideOutDirectory = (urlInfo) => {
-    // writing result inside ".jsenv" directory (debug purposes)
-    if (!outDirectoryUrl) {
-      return;
-    }
-    const { generatedUrl } = urlInfo;
-    if (!generatedUrl) {
-      return;
-    }
-    if (!generatedUrl.startsWith("file:")) {
-      return;
-    }
-    if (urlToPathname(generatedUrl).endsWith("/")) {
-      // when users explicitely request a directory
-      // we can't write the content returned by the server in ".jsenv" at that url
-      // because it would try to write a directory
-      // ideally we would decide a filename for this
-      // for now we just don't write anything
-      return;
-    }
-    if (urlInfo.type === "directory") {
-      // no need to write the directory
-      return;
-    }
-    // if (urlInfo.content === undefined) {
-    //   // Some error might lead to urlInfo.content to be null
-    //   // (error hapenning before urlInfo.content can be set, or 404 for instance)
-    //   // in that case we can't write anything
-    //   return;
-    // }
-
-    let contentIsInlined = urlInfo.isInline;
-    if (
-      contentIsInlined &&
-      supervisor &&
-      urlInfo.graph.getUrlInfo(urlInfo.inlineUrlSite.url).type === "html"
-    ) {
-      contentIsInlined = false;
-    }
-    if (!contentIsInlined) {
-      const generatedUrlObject = new URL(generatedUrl);
-      let baseName = urlToBasename(generatedUrlObject);
-      for (const [key, value] of generatedUrlObject.searchParams) {
-        baseName += `7${encodeFilePathComponent(key)}=${encodeFilePathComponent(value)}`;
-      }
-      const outFileUrl = setUrlBasename(generatedUrlObject, baseName);
-      let outFilePath = urlToFileSystemPath(outFileUrl);
-      outFilePath = truncate(outFilePath, 2055); // for windows
-      writeFileSync(outFilePath, urlInfo.content, { force: true });
-    }
-    const { sourcemapGeneratedUrl, sourcemapReference } = urlInfo;
-    if (sourcemapGeneratedUrl && sourcemapReference) {
-      writeFileSync(
-        new URL(sourcemapGeneratedUrl),
-        sourcemapReference.urlInfo.content,
-      );
-    }
-  };
-
-  const applySourcemapOnContent = (
-    urlInfo,
-    formatSource = formatSourcemapSource,
-  ) => {
-    if (!urlInfo.sourcemap || !shouldHandleSourcemap(urlInfo)) {
-      return;
-    }
-
-    // during build this function can be called after the file is cooked
-    // - to update content and sourcemap after "optimize" hook
-    // - to inject versioning into the entry point content
-    // in this scenarion we don't want to inject sourcemap reference
-    // just update the content
-
-    let sourcemapReference = urlInfo.sourcemapReference;
-    if (!sourcemapReference) {
-      for (const referenceToOther of urlInfo.referenceToOthersSet) {
-        if (referenceToOther.type === "sourcemap_comment") {
-          sourcemapReference = referenceToOther;
-          break;
-        }
-      }
-      if (!sourcemapReference) {
-        sourcemapReference = urlInfo.dependencies.inject({
-          trace: {
-            message: `sourcemap comment placeholder`,
-            url: urlInfo.url,
-          },
-          type: "sourcemap_comment",
-          subtype: urlInfo.contentType === "text/javascript" ? "js" : "css",
-          expectedType: "sourcemap",
-          specifier: urlInfo.sourcemapGeneratedUrl,
-          isInline: sourcemaps === "inline",
-        });
-      }
-      urlInfo.sourcemapReference = sourcemapReference;
-    }
-    const sourcemapUrlInfo = sourcemapReference.urlInfo;
-    // It's possible urlInfo content to be modified after being finalized
-    // In that case we'll recompose sourcemaps (and re-append it to file content)
-    // Recomposition is done on urlInfo.sourcemap and must be done with absolute urls inside .sources
-    // (so we can detect if sources are identical)
-    // For this reason we must not mutate urlInfo.sourcemap.sources
-    const sourcemapGenerated = {
-      ...urlInfo.sourcemap,
-      sources: urlInfo.sourcemap.sources.map((source) => {
-        const sourceFormatted = formatSource
-          ? formatSource(source, urlInfo)
-          : source;
-        if (sourcemapsSourcesProtocol) {
-          if (sourceFormatted.startsWith("file:///")) {
-            return `${sourcemapsSourcesProtocol}${sourceFormatted.slice(
-              "file:///".length,
-            )}`;
-          }
-        }
-        return sourceFormatted;
-      }),
-    };
-    sourcemapUrlInfo.type = "sourcemap";
-    sourcemapUrlInfo.contentType = "application/json";
-    setContentProperties(sourcemapUrlInfo, {
-      content: JSON.stringify(sourcemapGenerated, null, "  "),
-    });
-
-    if (!urlInfo.sourcemapIsWrong) {
-      if (sourcemaps === "inline") {
-        sourcemapReference.generatedSpecifier =
-          generateSourcemapDataUrl(sourcemapGenerated);
-      }
-      if (shouldUpdateSourcemapComment(urlInfo, sourcemaps)) {
-        let specifier;
-        if (sourcemaps === "file" && sourcemapsComment === "relative") {
-          specifier = urlToRelativeUrl(
-            sourcemapReference.generatedUrl,
-            urlInfo.generatedUrl,
-          );
-        } else {
-          specifier = sourcemapReference.generatedSpecifier;
-        }
-        setContentProperties(urlInfo, {
-          content: SOURCEMAP.writeComment({
-            contentType: urlInfo.contentType,
-            content: urlInfo.content,
-            specifier,
-          }),
-        });
-      }
-    }
-  };
-
-  const endTransformations = (urlInfo, transformations) => {
-    if (transformations) {
-      applyTransformations(urlInfo, transformations);
-    }
-    const { contentInjections } = urlInfo;
-    if (contentInjections && Object.keys(contentInjections).length > 0) {
-      const injectionTransformations = applyContentInjections(
-        urlInfo.content,
-        contentInjections,
-        urlInfo,
-      );
-      applyTransformations(urlInfo, injectionTransformations);
-    }
-    applyContentEffects(urlInfo);
-    urlInfo.contentFinalized = true;
-  };
-
-  return {
-    resetContent,
-    setContent,
-    applyTransformations,
-    applySourcemapOnContent,
-    endTransformations,
-  };
-};
-
-// https://gist.github.com/barbietunnie/7bc6d48a424446c44ff4
-const illegalRe = /[/?<>\\:*|"]/g;
-// eslint-disable-next-line no-control-regex
-const controlRe = /[\x00-\x1f\x80-\x9f]/g;
-const reservedRe = /^\.+$/;
-const windowsReservedRe = /^(con|prn|aux|nul|com[0-9]|lpt[0-9])(\..*)?$/i;
-const encodeFilePathComponent = (input, replacement = "") => {
-  const encoded = input
-    .replace(illegalRe, replacement)
-    .replace(controlRe, replacement)
-    .replace(reservedRe, replacement)
-    .replace(windowsReservedRe, replacement);
-  return encoded;
-};
-const truncate = (sanitized, length) => {
-  const uint8Array = new TextEncoder().encode(sanitized);
-  const truncated = uint8Array.slice(0, length);
-  return new TextDecoder().decode(truncated);
-};
-
-const shouldUpdateSourcemapComment = (urlInfo, sourcemaps) => {
-  if (urlInfo.context.buildStep === "shape") {
-    return false;
-  }
-  if (sourcemaps === "file" || sourcemaps === "inline") {
-    return true;
-  }
-  return false;
-};
-const mayHaveSourcemap = (urlInfo) => {
-  if (urlInfo.url.startsWith("data:")) {
-    return false;
-  }
-  if (!SOURCEMAP.enabledOnContentType(urlInfo.contentType)) {
-    return false;
-  }
-  return true;
-};
-const shouldHandleSourcemap = (urlInfo) => {
-  const { sourcemaps } = urlInfo.context;
-  if (
-    sourcemaps !== "inline" &&
-    sourcemaps !== "file" &&
-    sourcemaps !== "programmatic"
-  ) {
-    return false;
-  }
-  return true;
-};
-
-const inlineContentClientFileUrl = import.meta
-  .resolve("../client/inline_content/inline_content.js");
-
-const createKitchen = ({
-  name,
-  signal,
-  logLevel,
-
-  rootDirectoryUrl,
-  mainFilePath,
-  dev = false,
-  build = false,
-  runtimeCompat,
-  mode,
-
-  ignore,
-  ignoreProtocol = "remove",
-  supportedProtocols = [
-    "file:",
-    "data:",
-    // eslint-disable-next-line no-script-url
-    "javascript:",
-    "virtual:",
-    "ignore:",
-    "http:",
-    "https:",
-    "chrome:",
-    "chrome-extension:",
-    "chrome-untrusted:",
-    "isolated-app:",
-  ],
-  includedProtocols = [
-    "file:",
-    "data:",
-    "virtual:",
-    "ignore:",
-    "http:",
-    "https:",
-  ],
-
-  // during dev/test clientRuntimeCompat is a single runtime
-  // during build clientRuntimeCompat is runtimeCompat
-  clientRuntimeCompat = runtimeCompat,
-  supervisor,
-  sourcemaps = dev ? "inline" : "none", // "programmatic" and "file" also allowed
-  sourcemapsComment,
-  sourcemapsSources,
-  sourcemapsSourcesProtocol,
-  sourcemapsSourcesContent,
-  outDirectoryUrl,
-  initialContext = {},
-  packageDirectory,
-  packageDependencies,
-}) => {
-  const logger = createLogger({ logLevel });
-
-  const nodeRuntimeEnabled = Object.keys(runtimeCompat).includes("node");
-  const packageConditions = [nodeRuntimeEnabled ? "node" : "browser", "import"];
-  if (nodeRuntimeEnabled) {
-    supportedProtocols.push("node:");
-  }
-
-  if (packageDependencies === "auto") {
-    packageDependencies =
-      build && (nodeRuntimeEnabled || mode === "package")
-        ? "ignore"
-        : "include";
-  }
-
-  const kitchen = {
-    context: {
-      ...initialContext,
-      kitchen: null,
-      signal,
-      logger,
-      rootDirectoryUrl,
-      mainFilePath,
-      packageDirectory,
-      dev,
-      build,
-      runtimeCompat,
-      clientRuntimeCompat,
-      inlineContentClientFileUrl,
-      isSupportedOnCurrentClients: memoizeIsSupported(clientRuntimeCompat),
-      isSupportedOnFutureClients: memoizeIsSupported(runtimeCompat),
-      isPlaceholderInjection,
-      asServerUrl: (fileUrl) =>
-        FILE_AND_SERVER_URLS_CONVERTER.asServerUrl(fileUrl, rootDirectoryUrl),
-      asFileUrl: (serverUrl) =>
-        FILE_AND_SERVER_URLS_CONVERTER.asFileUrl(serverUrl, rootDirectoryUrl),
-      INJECTIONS,
-      getPluginMeta: null,
-      sourcemaps,
-      outDirectoryUrl,
-    },
-    resolve: (specifier, importer = rootDirectoryUrl) => {
-      const { url, packageDirectoryUrl, packageJson } = applyNodeEsmResolution({
-        conditions: packageConditions,
-        parentUrl: importer,
-        specifier,
-        lookupPackageScope: packageDirectory.find,
-        readPackageJson: packageDirectory.read,
-      });
-      return { url, packageDirectoryUrl, packageJson };
-    },
-    graph: null,
-    urlInfoTransformer: null,
-    jsenvPluginsController: null,
-  };
-  const kitchenContext = kitchen.context;
-  kitchenContext.kitchen = kitchen;
-
-  let jsenvPluginsController;
-  kitchen.setJsenvPluginsController = (value) => {
-    jsenvPluginsController = kitchen.jsenvPluginsController = value;
-  };
-
-  const graph = createUrlGraph({
-    name,
-    rootDirectoryUrl,
-    kitchen,
-  });
-  graph.urlInfoCreatedEventEmitter.on((urlInfoCreated) => {
-    jsenvPluginsController.callHooks(
-      "urlInfoCreated",
-      urlInfoCreated,
-      () => {},
-    );
-  });
-  kitchen.graph = graph;
-
-  const urlInfoTransformer = createUrlInfoTransformer({
-    logger,
-    sourcemaps,
-    sourcemapsComment,
-    sourcemapsSources,
-    sourcemapsSourcesProtocol,
-    sourcemapsSourcesContent,
-    outDirectoryUrl,
-    supervisor,
-  });
-  kitchen.urlInfoTransformer = urlInfoTransformer;
-
-  const isIgnoredByProtocol = (url) => {
-    const { protocol } = new URL(url);
-    const protocolIsIncluded = includedProtocols.includes(protocol);
-    if (protocolIsIncluded) {
-      return false;
-    }
-    return true;
-  };
-  const isIgnoredBecauseInPackageDependencies = (() => {
-    if (packageDependencies === undefined) {
-      return FUNCTION_RETURNING_FALSE;
-    }
-    if (packageDependencies === "include") {
-      return FUNCTION_RETURNING_FALSE;
-    }
-    if (!packageDirectory.url) {
-      return FUNCTION_RETURNING_FALSE;
-    }
-    const rootPackageJSON = packageDirectory.read(packageDirectory.url);
-    if (!rootPackageJSON) {
-      return FUNCTION_RETURNING_FALSE;
-    }
-    const { dependencies = {}, optionalDependencies = {} } = rootPackageJSON;
-    const dependencyKeys = Object.keys(dependencies);
-    const optionalDependencyKeys = Object.keys(optionalDependencies);
-    const dependencySet = new Set([
-      ...dependencyKeys,
-      ...optionalDependencyKeys,
-    ]);
-    if (dependencySet.size === 0) {
-      return FUNCTION_RETURNING_FALSE;
-    }
-
-    let getEffect;
-    if (packageDependencies === "ignore") {
-      getEffect = (dependencyName) => {
-        if (!dependencySet.has(dependencyName)) {
-          return "include";
-        }
-        return "ignore";
-      };
-    } else if (typeof packageDependencies === "object") {
-      let defaultEffect = "ignore";
-      const dependencyEffectMap = new Map();
-      for (const dependencyKey of Object.keys(packageDependencies)) {
-        const dependencyEffect = packageDependencies[dependencyKey];
-        if (dependencyKey === "*") {
-          defaultEffect = dependencyEffect;
-        } else {
-          dependencyEffectMap.set(dependencyKey, dependencyEffect);
-        }
-      }
-      getEffect = (dependencyName) => {
-        if (!dependencySet.has(dependencyName)) {
-          return "include";
-        }
-        const dependencyEffect = packageDependencies[dependencyName];
-        if (dependencyEffect) {
-          return dependencyEffect;
-        }
-        return defaultEffect;
-      };
-    }
-    return (url) => {
-      if (!url.startsWith("file:")) {
-        return false;
-      }
-      const packageDirectoryUrl = packageDirectory.find(url);
-      if (!packageDirectoryUrl) {
-        return false;
-      }
-      const packageJSON = packageDirectory.read(packageDirectoryUrl);
-      const name = packageJSON?.name;
-      if (!name) {
-        return false;
-      }
-      const effect = getEffect(name);
-      if (effect !== "ignore") {
-        return false;
-      }
-      return true;
-    };
-  })();
-
-  let isIgnoredByParam = () => false;
-  if (ignore) {
-    const associations = URL_META.resolveAssociations(
-      { ignore },
-      rootDirectoryUrl,
-    );
-    const cache = new Map();
-    isIgnoredByParam = (url) => {
-      const fromCache = cache.get(url);
-      if (fromCache) return fromCache;
-      const { ignore } = URL_META.applyAssociations({
-        url,
-        associations,
-      });
-      cache.set(url, ignore);
-      return ignore;
-    };
-  }
-  const isIgnored = (url) => {
-    return (
-      isIgnoredByProtocol(url) ||
-      isIgnoredByParam(url) ||
-      isIgnoredBecauseInPackageDependencies(url)
-    );
-  };
-  const resolveReference = (reference) => {
-    const setReferenceUrl = (referenceUrl) => {
-      // ignored urls are prefixed with "ignore:" so that reference are associated
-      // to a dedicated urlInfo that is ignored.
-      // this way it's only once a resource is referenced by reference that is not ignored
-      // that the resource is cooked
-      if (
-        reference.specifier[0] === "#" &&
-        // For Html, css and "#" refer to a resource in the page, reference must be preserved
-        // However for js import specifiers they have a different meaning and we want
-        // to resolve them (https://nodejs.org/api/packages.html#imports for instance)
-        reference.type !== "js_import"
-      ) {
-        referenceUrl = `ignore:${referenceUrl}`;
-      } else if (
-        reference.url && reference.original
-          ? isIgnored(reference.original.url)
-          : isIgnored(referenceUrl)
-      ) {
-        if (
-          referenceUrl.startsWith("node:") &&
-          !reference.specifier.startsWith("node:")
-        ) {
-          reference.specifier = `node:${reference.specifier}`;
-        }
-        referenceUrl = `ignore:${referenceUrl}`;
-      }
-
-      if (
-        referenceUrl.startsWith("ignore:") &&
-        !reference.specifier.startsWith("ignore:")
-      ) {
-        reference.specifier = `ignore:${reference.specifier}`;
-      }
-      Object.defineProperty(reference, "url", {
-        enumerable: true,
-        configurable: false,
-        writable: false,
-        value: referenceUrl,
-      });
-      reference.searchParams = new URL(referenceUrl).searchParams;
-    };
-
-    try {
-      resolve: {
-        if (reference.url) {
-          setReferenceUrl(reference.url);
-          break resolve;
-        }
-        const resolvedUrl = jsenvPluginsController.callHooksUntil(
-          "resolveReference",
-          reference,
-        );
-        if (!resolvedUrl) {
-          throw new Error(`NO_RESOLVE`);
-        }
-        if (resolvedUrl.includes("?debug")) {
-          reference.debug = true;
-        }
-        const normalizedUrl = normalizeUrl(resolvedUrl);
-        setReferenceUrl(normalizedUrl);
-        if (reference.debug) {
-          logger.debug(`url resolved by "${
-            jsenvPluginsController.getLastPluginUsed().name
-          }"
-${ANSI.color(reference.specifier, ANSI.GREY)} ->
-${ANSI.color(reference.url, ANSI.YELLOW)}
-`);
-        }
-      }
-      redirect: {
-        if (reference.isImplicit && reference.isWeak) {
-          // not needed for implicit references that are not rendered anywhere
-          // this condition excludes:
-          // - side_effect_file references injected in entry points or at the top of files
-          break redirect;
-        }
-        jsenvPluginsController.callHooks(
-          "redirectReference",
-          reference,
-          (returnValue, plugin, setReference) => {
-            const normalizedReturnValue = normalizeUrl(returnValue);
-            if (normalizedReturnValue === reference.url) {
-              return;
-            }
-            if (reference.debug) {
-              logger.debug(
-                `url redirected by "${plugin.name}"
-${ANSI.color(reference.url, ANSI.GREY)} ->
-${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
-`,
-              );
-            }
-            const referenceRedirected = reference.redirect(
-              normalizedReturnValue,
-            );
-            reference = referenceRedirected;
-            setReferenceUrl(normalizedReturnValue);
-            setReference(referenceRedirected);
-          },
-        );
-      }
-      reference.generatedUrl = reference.url;
-      reference.generatedSearchParams = reference.searchParams;
-      if (dev) {
-        let url = reference.url;
-        let { protocol } = new URL(url);
-        if (protocol === "ignore:") {
-          url = url.slice("ignore:".length);
-          protocol = new URL(url, "http://example.com").protocol;
-        }
-        if (!supportedProtocols.includes(protocol)) {
-          const protocolNotSupportedError = new Error(
-            `Unsupported protocol "${protocol}" for url "${url}"`,
-          );
-          protocolNotSupportedError.code = "PROTOCOL_NOT_SUPPORTED";
-          throw protocolNotSupportedError;
-        }
-      }
-      return reference;
-    } catch (error) {
-      throw createResolveUrlError({
-        jsenvPluginsController,
-        reference,
-        error,
-      });
-    }
-  };
-  kitchenContext.resolveReference = resolveReference;
-
-  const finalizeReference = (reference) => {
-    const urlInfo = reference.urlInfo;
-    urlInfo.generatedUrl = determineFileUrlForOutDirectory(urlInfo);
-    urlInfo.sourcemapGeneratedUrl = determineSourcemapFileUrl(urlInfo);
-
-    if (reference.isImplicit && reference.isWeak) {
-      // not needed for implicit references that are not rendered anywhere
-      // this condition excludes:
-      // - side_effect_file references injected in entry points or at the top of files
-      return;
-    }
-    {
-      // This hook must touch reference.generatedUrl, NOT reference.url
-      // And this is because this hook inject query params used to:
-      // - bypass browser cache (?v)
-      // - convey information (?hot)
-      // But do not represent an other resource, it is considered as
-      // the same resource under the hood
-      const searchParamTransformationMap = new Map();
-      jsenvPluginsController.callHooks(
-        "transformReferenceSearchParams",
-        reference,
-        (returnValue) => {
-          Object.keys(returnValue).forEach((key) => {
-            searchParamTransformationMap.set(key, returnValue[key]);
-          });
-        },
-      );
-      if (searchParamTransformationMap.size) {
-        const generatedSearchParams = new URLSearchParams(
-          reference.searchParams,
-        );
-        searchParamTransformationMap.forEach((value, key) => {
-          if (value === undefined) {
-            generatedSearchParams.delete(key);
-          } else {
-            generatedSearchParams.set(key, value);
-          }
-        });
-        const generatedUrlObject = new URL(reference.url);
-        const generatedSearch = generatedSearchParams.toString();
-        generatedUrlObject.search = generatedSearch;
-        reference.generatedUrl = normalizeUrl(generatedUrlObject.href);
-        reference.generatedSearchParams = generatedSearchParams;
-      }
-    }
-    {
-      const returnValue = jsenvPluginsController.callHooksUntil(
-        "formatReference",
-        reference,
-      );
-      if (reference.url.startsWith("ignore:")) {
-        if (ignoreProtocol === "remove") {
-          reference.specifier = reference.specifier.slice("ignore:".length);
-        }
-        reference.generatedSpecifier = reference.specifier;
-        reference.generatedSpecifier = urlSpecifierEncoding.encode(reference);
-      } else {
-        reference.generatedSpecifier = returnValue || reference.generatedUrl;
-        reference.generatedSpecifier = urlSpecifierEncoding.encode(reference);
-      }
-    }
-  };
-  kitchenContext.finalizeReference = finalizeReference;
-
-  const fetchUrlContent = async (urlInfo) => {
-    try {
-      const fetchUrlContentReturnValue =
-        await jsenvPluginsController.callAsyncHooksUntil(
-          "fetchUrlContent",
-          urlInfo,
-        );
-      if (!fetchUrlContentReturnValue) {
-        logger.warn(
-          createDetailedMessage(
-            `no plugin has handled url during "fetchUrlContent" hook -> url will be ignored`,
-            {
-              "url": urlInfo.url,
-              "url reference trace": urlInfo.firstReference?.trace.message,
-            },
-          ),
-        );
-        return;
-      }
-      let {
-        content,
-        contentType,
-        originalContent = content,
-        data,
-        type,
-        subtype,
-        originalUrl,
-        sourcemap,
-
-        status = 200,
-        headers = {},
-        body,
-        isEntryPoint,
-        isDynamicEntryPoint,
-        filenameHint,
-        contentSideEffects,
-      } = fetchUrlContentReturnValue;
-      if (content === undefined) {
-        content = body;
-      }
-      if (contentType === undefined) {
-        contentType = headers["content-type"] || "application/octet-stream";
-      }
-      if (filenameHint) {
-        urlInfo.filenameHint = filenameHint;
-      }
-      urlInfo.status = status;
-      urlInfo.contentType = contentType;
-      urlInfo.headers = headers;
-      urlInfo.type = type || inferUrlInfoType(urlInfo);
-      urlInfo.subtype =
-        subtype ||
-        urlInfo.firstReference.expectedSubtype ||
-        urlInfo.subtypeHint ||
-        "";
-      // during build urls info are reused and load returns originalUrl/originalContent
-      urlInfo.originalUrl = originalUrl
-        ? String(originalUrl)
-        : urlInfo.originalUrl;
-      if (data) {
-        Object.assign(urlInfo.data, data);
-      }
-      if (typeof isEntryPoint === "boolean") {
-        urlInfo.isEntryPoint = isEntryPoint;
-      }
-      if (typeof isDynamicEntryPoint === "boolean") {
-        urlInfo.isDynamicEntryPoint = isDynamicEntryPoint;
-      }
-      if (contentSideEffects) {
-        urlInfo.contentSideEffects = contentSideEffects;
-      }
-      assertFetchedContentCompliance({
-        urlInfo,
-        content,
-      });
-
-      // we wait here to read .contentAst and .originalContentAst
-      // so that we don't trigger lazy getters
-      // that would try to parse url too soon (before having urlInfo.type being set)
-      // also we do not want to trigger the getters that would parse url content
-      // too soon
-      const contentAstDescriptor = Object.getOwnPropertyDescriptor(
-        fetchUrlContentReturnValue,
-        "contentAst",
-      );
-      const originalContentAstDescriptor = Object.getOwnPropertyDescriptor(
-        fetchUrlContentReturnValue,
-        "originalContentAst",
-      );
-      await urlInfoTransformer.setContent(urlInfo, content, {
-        sourcemap,
-        originalContent,
-        contentAst: contentAstDescriptor
-          ? contentAstDescriptor.get
-            ? undefined
-            : contentAstDescriptor.value
-          : undefined,
-        originalContentAst: originalContentAstDescriptor
-          ? originalContentAstDescriptor.get
-            ? undefined
-            : originalContentAstDescriptor.value
-          : undefined,
-      });
-    } catch (error) {
-      throw createFetchUrlContentError({
-        jsenvPluginsController,
-        urlInfo,
-        error,
-      });
-    }
-  };
-  kitchenContext.fetchUrlContent = fetchUrlContent;
-
-  const transformUrlContent = async (urlInfo) => {
-    try {
-      await jsenvPluginsController.callAsyncHooks(
-        "transformUrlContent",
-        urlInfo,
-        (transformReturnValue) => {
-          urlInfoTransformer.applyTransformations(
-            urlInfo,
-            transformReturnValue,
-          );
-        },
-      );
-    } catch (error) {
-      const transformError = createTransformUrlContentError({
-        jsenvPluginsController,
-        urlInfo,
-        error,
-      });
-      throw transformError;
-    }
-  };
-  kitchenContext.transformUrlContent = transformUrlContent;
-
-  const finalizeUrlContent = async (urlInfo) => {
-    try {
-      await urlInfo.applyContentTransformationCallbacks();
-      const finalizeReturnValue =
-        await jsenvPluginsController.callAsyncHooksUntil(
-          "finalizeUrlContent",
-          urlInfo,
-        );
-      urlInfoTransformer.endTransformations(urlInfo, finalizeReturnValue);
-    } catch (error) {
-      throw createFinalizeUrlContentError({
-        jsenvPluginsController,
-        urlInfo,
-        error,
-      });
-    }
-  };
-  kitchenContext.finalizeUrlContent = finalizeUrlContent;
-
-  const cookGuard = dev ? debounceCook : memoizeCook;
-  const cook = cookGuard(async (urlInfo, contextDuringCook) => {
-    if (contextDuringCook) {
-      Object.assign(urlInfo.context, contextDuringCook);
-    }
-
-    // urlInfo objects are reused, they must be "reset" before cooking them again
-    if (urlInfo.error || urlInfo.content !== undefined) {
-      urlInfo.error = null;
-      urlInfo.type = null;
-      urlInfo.subtype = null;
-      urlInfo.timing = {};
-      urlInfoTransformer.resetContent(urlInfo);
-    }
-
-    if (!urlInfo.url.startsWith("ignore:")) {
-      try {
-        await urlInfo.dependencies.startCollecting(async () => {
-          // "fetchUrlContent" hook
-          await urlInfo.fetchContent();
-
-          // "transform" hook
-          await urlInfo.transformContent();
-
-          // "finalize" hook
-          await urlInfo.finalizeContent();
-        });
-      } catch (e) {
-        urlInfo.error = e;
-        if (urlInfo.isInline) {
-          const parentUrlInfo = urlInfo.findParentIfInline();
-          parentUrlInfo.error = e;
-        }
-        let errorWrapperMessage;
-        if (e.code === "PARSE_ERROR") {
-          errorWrapperMessage =
-            e.name === "TRANSFORM_URL_CONTENT_ERROR"
-              ? e.message
-              : `parse error on "${urlInfo.type}"
-${e.trace?.message}
-${e.reason}
---- declared in ---
-${urlInfo.firstReference.trace.message}`;
-        } else if (e.isJsenvCookingError) {
-          errorWrapperMessage = e.message;
-        } else {
-          errorWrapperMessage = `Error while cooking ${urlInfo.type}
-${urlInfo.firstReference.trace.message}`;
-        }
-        // if we are cooking inline content during dev it's better not to throw
-        // because the main url info (html) is still valid and can be returned to the browser
-        if (
-          urlInfo.isInline &&
-          urlInfo.context.dev &&
-          // but if we are explicitely requesting inline content file then we throw
-          // to properly send 500 to the browser
-          urlInfo.context.reference !== urlInfo.url
-        ) {
-          logger.error(errorWrapperMessage);
-          return;
-        }
-        if (e.isJsenvCookingError) {
-          throw e;
-        }
-        const error = new Error(errorWrapperMessage, { cause: e });
-        defineNonEnumerableProperties(error, {
-          __INTERNAL_ERROR__: true,
-        });
-        throw error;
-      }
-    }
-
-    // "cooked" hook
-    jsenvPluginsController.callHooks("cooked", urlInfo, (cookedReturnValue) => {
-      if (typeof cookedReturnValue === "function") {
-        const removeCallback = urlInfo.graph.urlInfoDereferencedEventEmitter.on(
-          (urlInfoDereferenced, lastReferenceFromOther) => {
-            if (urlInfoDereferenced === urlInfo) {
-              removeCallback();
-              cookedReturnValue(lastReferenceFromOther.urlInfo);
-            }
-          },
-        );
-      }
-    });
-  });
-  kitchenContext.cook = cook;
-
-  const lastTransformationCallbacks = [];
-  const addLastTransformationCallback = (callback) => {
-    lastTransformationCallbacks.push(callback);
-  };
-  kitchenContext.addLastTransformationCallback = addLastTransformationCallback;
-
-  const cookDependencies = async (
-    urlInfo,
-    { operation, ignoreDynamicImport } = {},
-  ) => {
-    const seen = new Set();
-
-    const cookSelfThenDependencies = async (urlInfo) => {
-      if (operation) {
-        operation.throwIfAborted();
-      }
-      if (seen.has(urlInfo)) {
-        return;
-      }
-      seen.add(urlInfo);
-      await urlInfo.cook();
-      await startCookingDependencies(urlInfo);
-    };
-
-    const startCookingDependencies = async (urlInfo) => {
-      const dependencyPromises = [];
-      for (const referenceToOther of urlInfo.referenceToOthersSet) {
-        if (referenceToOther.type === "sourcemap_comment") {
-          // we don't cook sourcemap reference by sourcemap comments
-          // because this is already done in "initTransformations"
-          continue;
-        }
-        if (referenceToOther.isWeak) {
-          // we don't cook weak references (resource hints mostly)
-          // because they might refer to resource that will be modified during build
-          // It also means something else have to reference that url in order to cook it
-          // so that the preload is deleted by "resync_resource_hints.js" otherwise
-          continue;
-        }
-        if (referenceToOther.isImplicit) {
-          // implicit reference are not auto cooked
-          // when needed code is explicitely cooking/fetching the underlying url
-          continue;
-        }
-        if (
-          ignoreDynamicImport &&
-          referenceToOther.subtype === "import_dynamic"
-        ) {
-          continue;
-        }
-        const referencedUrlInfo = referenceToOther.urlInfo;
-        const dependencyPromise = cookSelfThenDependencies(referencedUrlInfo);
-        dependencyPromises.push(dependencyPromise);
-      }
-      await Promise.all(dependencyPromises);
-    };
-
-    await startCookingDependencies(urlInfo);
-    await Promise.all(
-      lastTransformationCallbacks.map(async (callback) => {
-        await callback();
-      }),
-    );
-    lastTransformationCallbacks.length = 0;
-  };
-  kitchenContext.cookDependencies = cookDependencies;
-
-  return kitchen;
-};
-
-const FUNCTION_RETURNING_FALSE = () => false;
-
-const debounceCook = (cook) => {
-  const pendingDishes = new Map();
-  return async (urlInfo, context) => {
-    const { url, modifiedTimestamp } = urlInfo;
-    const pendingDish = pendingDishes.get(url);
-    if (pendingDish) {
-      if (!modifiedTimestamp) {
-        await pendingDish.promise;
-        return;
-      }
-      if (pendingDish.timestamp > modifiedTimestamp) {
-        await pendingDish.promise;
-        return;
-      }
-      pendingDishes.delete(url);
-    }
-    const timestamp = Date.now();
-    const promise = cook(urlInfo, context);
-    pendingDishes.set(url, {
-      timestamp,
-      promise,
-    });
-    try {
-      await promise;
-    } finally {
-      pendingDishes.delete(url);
-    }
-  };
-};
-
-const memoizeCook = (cook) => {
-  const urlInfoCache = new Map();
-  return async (urlInfo, context) => {
-    const fromCache = urlInfoCache.get(urlInfo);
-    if (fromCache) {
-      await fromCache;
-      return;
-    }
-    let resolveCookPromise;
-    const promise = new Promise((resolve) => {
-      resolveCookPromise = resolve;
-    });
-    urlInfoCache.set(urlInfo, promise);
-    await cook(urlInfo, context);
-    resolveCookPromise();
-  };
-};
-
-const memoizeIsSupported = (runtimeCompat) => {
-  const cache = new Map();
-  return (feature, featureCompat) => {
-    const fromCache = cache.get(feature);
-    if (typeof fromCache === "boolean") {
-      return fromCache;
-    }
-    const supported = RUNTIME_COMPAT.isSupported(
-      runtimeCompat,
-      feature,
-      featureCompat,
-    );
-    cache.set(feature, supported);
-    return supported;
-  };
-};
-
-const inferUrlInfoType = (urlInfo) => {
-  const { type, typeHint } = urlInfo;
-  const mediaType = CONTENT_TYPE.asMediaType(urlInfo.contentType);
-  const { expectedType } = urlInfo.firstReference;
-  if (typeHint === "asset") {
-    return "asset";
-  }
-  if (type === "sourcemap" || typeHint === "sourcemap") {
-    return "sourcemap";
-  }
-  if (mediaType === "text/html") {
-    return "html";
-  }
-  if (mediaType === "text/css") {
-    return "css";
-  }
-  if (mediaType === "text/javascript") {
-    if (expectedType === "js_classic") {
-      return "js_classic";
-    }
-    if (typeHint === "js_classic") {
-      return "js_classic";
-    }
-    return "js_module";
-  }
-  if (mediaType === "application/importmap+json") {
-    return "importmap";
-  }
-  if (mediaType === "application/manifest+json") {
-    return "webmanifest";
-  }
-  if (mediaType === "image/svg+xml") {
-    return "svg";
-  }
-  if (CONTENT_TYPE.isJson(mediaType)) {
-    return "json";
-  }
-  if (CONTENT_TYPE.isTextual(mediaType)) {
-    return "text";
-  }
-  return expectedType || "other";
-};
 
 const createPackageDirectory = ({
   sourceDirectoryUrl,
@@ -6056,6 +2274,147 @@ const jsenvPluginVersionSearchParam = () => {
   };
 };
 
+const FILE_AND_SERVER_URLS_CONVERTER = {
+  asServerUrl: (fileUrl, serverRootDirectoryUrl) => {
+    if (urlIsOrIsInsideOf(fileUrl, serverRootDirectoryUrl)) {
+      const urlRelativeToServer = urlToRelativeUrl(
+        fileUrl,
+        serverRootDirectoryUrl,
+      );
+      return `/${urlRelativeToServer}`;
+    }
+    const urlRelativeToFilesystemRoot = String(fileUrl).slice(
+      "file:///".length,
+    );
+    return `/@fs/${urlRelativeToFilesystemRoot}`;
+  },
+  asFileUrl: (urlRelativeToServer, serverRootDirectoryUrl) => {
+    if (urlRelativeToServer.startsWith("/@fs/")) {
+      const urlRelativeToFilesystemRoot = urlRelativeToServer.slice(
+        "/@fs/".length,
+      );
+      return `file:///${urlRelativeToFilesystemRoot}`;
+    }
+    if (urlRelativeToServer[0] === "/") {
+      return new URL(urlRelativeToServer.slice(1), serverRootDirectoryUrl).href;
+    }
+    return new URL(urlRelativeToServer, serverRootDirectoryUrl).href;
+  },
+};
+
+const getDirectoryWatchPatterns = (
+  directoryUrl,
+  watchedDirectoryUrl,
+  { sourceFilesConfig },
+) => {
+  const directoryUrlRelativeToWatchedDirectory = urlToRelativeUrl(
+    directoryUrl,
+    watchedDirectoryUrl,
+  );
+  const watchPatterns = {
+    [`${directoryUrlRelativeToWatchedDirectory}**/*`]: true, // by default watch everything inside the source directory
+    [`${directoryUrlRelativeToWatchedDirectory}**/.*`]: false, // file starting with a dot -> do not watch
+    [`${directoryUrlRelativeToWatchedDirectory}**/.*/`]: false, // directory starting with a dot -> do not watch
+    [`${directoryUrlRelativeToWatchedDirectory}**/node_modules/`]: false, // node_modules directory -> do not watch
+  };
+  for (const key of Object.keys(sourceFilesConfig)) {
+    watchPatterns[`${directoryUrlRelativeToWatchedDirectory}${key}`] =
+      sourceFilesConfig[key];
+  }
+  return watchPatterns;
+};
+
+const watchSourceFiles = (
+  sourceDirectoryUrl,
+  callback,
+  { sourceFilesConfig = {}, keepProcessAlive, cooldownBetweenFileEvents },
+) => {
+  // Project should use a dedicated directory (usually "src/")
+  // passed to the dev server via "sourceDirectoryUrl" param
+  // In that case all files inside the source directory should be watched
+  // But some project might want to use their root directory as source directory
+  // In that case source directory might contain files matching "node_modules/*" or ".git/*"
+  // And jsenv should not consider these as source files and watch them (to not hurt performances)
+  const watchPatterns = {};
+  let watchedDirectoryUrl = "";
+  const addDirectoryToWatch = (directoryUrl) => {
+    Object.assign(
+      watchPatterns,
+      getDirectoryWatchPatterns(directoryUrl, watchedDirectoryUrl, {
+        sourceFilesConfig,
+      }),
+    );
+  };
+  const watch = () => {
+    const stopWatchingSourceFiles = registerDirectoryLifecycle(
+      watchedDirectoryUrl,
+      {
+        watchPatterns,
+        cooldownBetweenFileEvents,
+        keepProcessAlive,
+        recursive: true,
+        added: ({ relativeUrl }) => {
+          callback({
+            url: new URL(relativeUrl, watchedDirectoryUrl).href,
+            event: "added",
+          });
+        },
+        updated: ({ relativeUrl }) => {
+          callback({
+            url: new URL(relativeUrl, watchedDirectoryUrl).href,
+            event: "modified",
+          });
+        },
+        removed: ({ relativeUrl }) => {
+          callback({
+            url: new URL(relativeUrl, watchedDirectoryUrl).href,
+            event: "removed",
+          });
+        },
+      },
+    );
+    stopWatchingSourceFiles.watchPatterns = watchPatterns;
+    return stopWatchingSourceFiles;
+  };
+
+  npm_workspaces: {
+    const packageDirectoryUrl = lookupPackageDirectory(sourceDirectoryUrl);
+    let packageContent;
+    try {
+      packageContent = JSON.parse(
+        readFileSync(new URL("package.json", packageDirectoryUrl), "utf8"),
+      );
+    } catch {
+      break npm_workspaces;
+    }
+    const { workspaces } = packageContent;
+    if (!workspaces || !Array.isArray(workspaces) || workspaces.length === 0) {
+      break npm_workspaces;
+    }
+    watchedDirectoryUrl = packageDirectoryUrl;
+    for (const workspace of workspaces) {
+      if (workspace.endsWith("*")) {
+        const workspaceDirectoryUrl = new URL(
+          workspace.slice(0, -1),
+          packageDirectoryUrl,
+        );
+        addDirectoryToWatch(workspaceDirectoryUrl);
+      } else {
+        const workspaceRelativeUrl = new URL(workspace, packageDirectoryUrl);
+        addDirectoryToWatch(workspaceRelativeUrl);
+      }
+    }
+    // we are updating the root directory
+    // we must make the patterns relative to source directory relative to the new root directory
+    addDirectoryToWatch(sourceDirectoryUrl);
+    return watch();
+  }
+
+  watchedDirectoryUrl = sourceDirectoryUrl;
+  addDirectoryToWatch(sourceDirectoryUrl);
+  return watch();
+};
+
 /*
  * NICE TO HAVE:
  * 
@@ -6937,6 +3296,386 @@ const asValidFilename = (string) => {
   return string;
 };
 
+const createResolveUrlError = ({
+  jsenvPluginsController,
+  reference,
+  error,
+}) => {
+  const createFailedToResolveUrlError = ({
+    name = "RESOLVE_URL_ERROR",
+    code = error.code || "RESOLVE_URL_ERROR",
+    reason,
+    ...details
+  }) => {
+    const resolveError = new Error(
+      createDetailedMessage(
+        `Failed to resolve url reference
+${reference.trace.message}
+${reason}`,
+        {
+          ...detailsFromFirstReference(reference),
+          ...details,
+          ...detailsFromPluginController(jsenvPluginsController),
+        },
+      ),
+    );
+    defineNonEnumerableProperties(resolveError, {
+      isJsenvCookingError: true,
+      name,
+      code,
+      reason,
+      asResponse: error.asResponse,
+      trace: error.trace || reference.trace,
+    });
+    return resolveError;
+  };
+  if (error.message === "NO_RESOLVE") {
+    return createFailedToResolveUrlError({
+      reason: `no plugin has handled the specifier during "resolveUrl" hook`,
+    });
+  }
+  if (error.code === "MODULE_NOT_FOUND") {
+    const bareSpecifierError = createFailedToResolveUrlError({
+      reason: `"${reference.specifier}" is a bare specifier but cannot be remapped to a package`,
+    });
+    return bareSpecifierError;
+  }
+  if (error.code === "DIRECTORY_REFERENCE_NOT_ALLOWED") {
+    error.message = createDetailedMessage(error.message, {
+      "reference trace": reference.trace.message,
+      ...detailsFromFirstReference(reference),
+    });
+    return error;
+  }
+  if (error.code === "PROTOCOL_NOT_SUPPORTED") {
+    const notSupportedError = createFailedToResolveUrlError({
+      reason: error.message,
+    });
+    return notSupportedError;
+  }
+  return createFailedToResolveUrlError({
+    reason: `An error occured during specifier resolution`,
+    ...detailsFromValueThrown(error),
+  });
+};
+
+const createFetchUrlContentError = ({
+  jsenvPluginsController,
+  urlInfo,
+  error,
+}) => {
+  const createFailedToFetchUrlContentError = ({
+    code = error.code || "FETCH_URL_CONTENT_ERROR",
+    reason,
+    parseErrorSourceType,
+    ...details
+  }) => {
+    const reference = urlInfo.firstReference;
+    const fetchError = new Error(
+      createDetailedMessage(
+        `Failed to fetch url content
+${reference.trace.message}
+${reason}`,
+        {
+          ...detailsFromFirstReference(reference),
+          ...details,
+          ...detailsFromPluginController(jsenvPluginsController),
+        },
+      ),
+    );
+    defineNonEnumerableProperties(fetchError, {
+      isJsenvCookingError: true,
+      name: "FETCH_URL_CONTENT_ERROR",
+      code,
+      reason,
+      parseErrorSourceType,
+      url: urlInfo.url,
+      trace: code === "PARSE_ERROR" ? error.trace : reference.trace,
+      asResponse: error.asResponse,
+    });
+    return fetchError;
+  };
+  if (error.code === "EPERM") {
+    return createFailedToFetchUrlContentError({
+      code: "NOT_ALLOWED",
+      reason: `not allowed to read entry on filesystem`,
+    });
+  }
+  if (error.code === "DIRECTORY_REFERENCE_NOT_ALLOWED") {
+    return createFailedToFetchUrlContentError({
+      code: "DIRECTORY_REFERENCE_NOT_ALLOWED",
+      reason: `found a directory on filesystem`,
+    });
+  }
+  if (error.code === "ENOENT") {
+    const urlTried = pathToFileURL(error.path).href;
+    // ensure ENOENT is caused by trying to read the urlInfo.url
+    // any ENOENT trying to read an other file should display the error.stack
+    // because it means some side logic has failed
+    if (urlInfo.url.startsWith(urlTried)) {
+      return createFailedToFetchUrlContentError({
+        code: "NOT_FOUND",
+        reason: "no entry on filesystem",
+      });
+    }
+  }
+  if (error.code === "PARSE_ERROR") {
+    return createFailedToFetchUrlContentError({
+      "code": "PARSE_ERROR",
+      "reason": error.reasonCode,
+      "parseErrorSourceType": error.parseErrorSourceType,
+      ...(error.cause ? { "parse error message": error.cause.message } : {}),
+      "parse error trace": error.trace?.message,
+    });
+  }
+  return createFailedToFetchUrlContentError({
+    reason: `An error occured during "fetchUrlContent"`,
+    ...detailsFromValueThrown(error),
+  });
+};
+
+const createTransformUrlContentError = ({
+  jsenvPluginsController,
+  urlInfo,
+  error,
+}) => {
+  if (error.code === "MODULE_NOT_FOUND") {
+    return error;
+  }
+  if (error.code === "PROTOCOL_NOT_SUPPORTED") {
+    return error;
+  }
+  if (error.code === "DIRECTORY_REFERENCE_NOT_ALLOWED") {
+    return error;
+  }
+  if (error.code === "PARSE_ERROR") {
+    if (error.isJsenvCookingError) {
+      return error;
+    }
+    const trace = getErrorTrace(error, urlInfo.firstReference);
+    const reference = urlInfo.firstReference;
+    const transformError = new Error(
+      createDetailedMessage(
+        `parse error on "${urlInfo.type}"
+${trace.message}
+${error.message}`,
+        {
+          "first reference": reference.trace.url
+            ? `${reference.trace.url}:${reference.trace.line}:${reference.trace.column}`
+            : reference.trace.message,
+          ...detailsFromFirstReference(reference),
+          ...detailsFromPluginController(jsenvPluginsController),
+        },
+      ),
+    );
+    defineNonEnumerableProperties(transformError, {
+      isJsenvCookingError: true,
+      name: "TRANSFORM_URL_CONTENT_ERROR",
+      code: "PARSE_ERROR",
+      reason: error.message,
+      reasonCode: error.reasonCode,
+      parseErrorSourceType: error.parseErrorSourceType,
+      stack: transformError.stack,
+      trace,
+      asResponse: error.asResponse,
+    });
+    return transformError;
+  }
+  const createFailedToTransformError = ({
+    code = error.code || "TRANSFORM_URL_CONTENT_ERROR",
+    reason,
+    ...details
+  }) => {
+    const reference = urlInfo.firstReference;
+    let trace = reference.trace;
+    const transformError = new Error(
+      createDetailedMessage(
+        `"transformUrlContent" error on "${urlInfo.type}"
+${trace.message}
+${reason}`,
+        {
+          ...detailsFromFirstReference(reference),
+          ...details,
+          ...detailsFromPluginController(jsenvPluginsController),
+        },
+      ),
+    );
+    defineNonEnumerableProperties(transformError, {
+      isJsenvCookingError: true,
+      cause: error,
+      name: "TRANSFORM_URL_CONTENT_ERROR",
+      code,
+      reason,
+      stack: error.stack,
+      url: urlInfo.url,
+      trace,
+      asResponse: error.asResponse,
+    });
+    return transformError;
+  };
+  return createFailedToTransformError({
+    reason: `"transformUrlContent" error on "${urlInfo.type}"`,
+    ...detailsFromValueThrown(error),
+  });
+};
+
+const createFinalizeUrlContentError = ({
+  jsenvPluginsController,
+  urlInfo,
+  error,
+}) => {
+  const reference = urlInfo.firstReference;
+  const finalizeError = new Error(
+    createDetailedMessage(
+      `"finalizeUrlContent" error on "${urlInfo.type}"
+${reference.trace.message}`,
+      {
+        ...detailsFromFirstReference(reference),
+        ...detailsFromValueThrown(error),
+        ...detailsFromPluginController(jsenvPluginsController),
+      },
+    ),
+  );
+  defineNonEnumerableProperties(finalizeError, {
+    isJsenvCookingError: true,
+    ...(error && error instanceof Error ? { cause: error } : {}),
+    name: "FINALIZE_URL_CONTENT_ERROR",
+    reason: `"finalizeUrlContent" error on "${urlInfo.type}"`,
+    asResponse: error.asResponse,
+  });
+  return finalizeError;
+};
+
+const getErrorTrace = (error, reference) => {
+  const urlInfo = reference.urlInfo;
+  let trace = reference.trace;
+  let line = error.line;
+  let column = error.column;
+  if (urlInfo.isInline) {
+    line = trace.line + line;
+    line = line - 1;
+    return {
+      ...trace,
+      line,
+      column,
+      codeFrame: generateContentFrame({
+        line,
+        column,
+        content: urlInfo.inlineUrlSite.content,
+      }),
+      message: stringifyUrlSite({
+        url: urlInfo.inlineUrlSite.url,
+        line,
+        column,
+        content: urlInfo.inlineUrlSite.content,
+      }),
+    };
+  }
+  return {
+    url: urlInfo.url,
+    line,
+    column: error.column,
+    codeFrame: generateContentFrame({
+      line,
+      column: error.column,
+      content: urlInfo.content,
+    }),
+    message: stringifyUrlSite({
+      url: urlInfo.url,
+      line,
+      column: error.column,
+      content: urlInfo.content,
+    }),
+  };
+};
+
+const detailsFromFirstReference = (reference) => {
+  const referenceInProject = getFirstReferenceInProject(reference);
+  if (
+    referenceInProject === reference ||
+    referenceInProject.type === "http_request"
+  ) {
+    return {};
+  }
+  if (referenceInProject.type === "entry_point") {
+    return {
+      "first reference": referenceInProject.trace.message,
+    };
+  }
+  return {
+    "first reference in project": `${referenceInProject.trace.url}:${referenceInProject.trace.line}:${referenceInProject.trace.column}`,
+  };
+};
+const getFirstReferenceInProject = (reference) => {
+  const ownerUrlInfo = reference.ownerUrlInfo;
+  if (ownerUrlInfo.isRoot) {
+    return reference;
+  }
+  if (
+    !ownerUrlInfo.url.includes("/node_modules/") &&
+    ownerUrlInfo.packageDirectoryUrl ===
+      ownerUrlInfo.context.packageDirectory.url
+  ) {
+    return reference;
+  }
+  const { firstReference } = ownerUrlInfo;
+  return getFirstReferenceInProject(firstReference);
+};
+
+const detailsFromPluginController = (jsenvPluginsController) => {
+  const currentPlugin = jsenvPluginsController.getCurrentPlugin();
+  if (!currentPlugin) {
+    return null;
+  }
+  return { "plugin name": `"${currentPlugin.name}"` };
+};
+
+const detailsFromValueThrown = (valueThrownByPlugin) => {
+  if (valueThrownByPlugin && valueThrownByPlugin instanceof Error) {
+    // if (
+    //   valueThrownByPlugin.message.includes("Maximum call stack size exceeded")
+    // ) {
+    //   return {
+    //     "error message": valueThrownByPlugin.message,
+    //     "error stack": valueThrownByPlugin.stack,
+    //   };
+    // }
+    if (
+      valueThrownByPlugin.code === "PARSE_ERROR" ||
+      valueThrownByPlugin.code === "MODULE_NOT_FOUND" ||
+      valueThrownByPlugin.name === "RESOLVE_URL_ERROR" ||
+      valueThrownByPlugin.name === "FETCH_URL_CONTENT_ERROR" ||
+      valueThrownByPlugin.name === "TRANSFORM_URL_CONTENT_ERROR" ||
+      valueThrownByPlugin.name === "FINALIZE_URL_CONTENT_ERROR"
+    ) {
+      return {
+        "error message": valueThrownByPlugin.message,
+      };
+    }
+    return {
+      "error stack": valueThrownByPlugin.stack,
+    };
+  }
+  if (valueThrownByPlugin === undefined) {
+    return {
+      error: "undefined",
+    };
+  }
+  return {
+    error: JSON.stringify(valueThrownByPlugin),
+  };
+};
+
+const defineNonEnumerableProperties = (object, properties) => {
+  for (const key of Object.keys(properties)) {
+    Object.defineProperty(object, key, {
+      configurable: true,
+      writable: true,
+      value: properties[key],
+    });
+  }
+};
+
 const jsenvPluginDirectoryReferenceEffect = (
   directoryReferenceEffect = "error",
   { rootDirectoryUrl },
@@ -7017,6 +3756,179 @@ const jsenvPluginDirectoryReferenceEffect = (
       return null;
     },
   };
+};
+
+const injectionSymbol = Symbol.for("jsenv_injection");
+const INJECTIONS = {
+  global: (value) => {
+    return { [injectionSymbol]: "global", value };
+  },
+  optional: (value) => {
+    if (value && value[injectionSymbol] === "optional") {
+      return value;
+    }
+    return { [injectionSymbol]: "optional", value };
+  },
+};
+
+const isPlaceholderInjection = (value) => {
+  return (
+    !value || !value[injectionSymbol] || value[injectionSymbol] !== "global"
+  );
+};
+
+const applyContentInjections = (content, contentInjections, urlInfo) => {
+  const keys = Object.keys(contentInjections);
+  const globals = {};
+  const placeholderReplacements = [];
+  for (const key of keys) {
+    const contentInjection = contentInjections[key];
+    if (contentInjection && contentInjection[injectionSymbol]) {
+      const valueBehindSymbol = contentInjection[injectionSymbol];
+      if (valueBehindSymbol === "global") {
+        globals[key] = contentInjection.value;
+      } else if (valueBehindSymbol === "optional") {
+        placeholderReplacements.push({
+          key,
+          isOptional: true,
+          value: contentInjection.value,
+        });
+      } else {
+        throw new Error(`unknown injection type "${valueBehindSymbol}"`);
+      }
+    } else {
+      placeholderReplacements.push({
+        key,
+        value: contentInjection,
+      });
+    }
+  }
+
+  const needGlobalsInjection = Object.keys(globals).length > 0;
+  const needPlaceholderReplacements = placeholderReplacements.length > 0;
+
+  if (needGlobalsInjection && needPlaceholderReplacements) {
+    const globalInjectionResult = injectGlobals(content, globals, urlInfo);
+    const replaceInjectionResult = injectPlaceholderReplacements(
+      globalInjectionResult.content,
+      placeholderReplacements,
+      urlInfo,
+    );
+    return {
+      content: replaceInjectionResult.content,
+      sourcemap: composeTwoSourcemaps(
+        globalInjectionResult.sourcemap,
+        replaceInjectionResult.sourcemap,
+      ),
+    };
+  }
+  if (needGlobalsInjection) {
+    return injectGlobals(content, globals, urlInfo);
+  }
+  if (needPlaceholderReplacements) {
+    return injectPlaceholderReplacements(
+      content,
+      placeholderReplacements,
+      urlInfo,
+    );
+  }
+  return null;
+};
+
+const injectPlaceholderReplacements = (
+  content,
+  placeholderReplacements,
+  urlInfo,
+) => {
+  const magicSource = createMagicSource(content);
+  for (const { key, isOptional, value } of placeholderReplacements) {
+    let index = content.indexOf(key);
+    if (index === -1) {
+      if (!isOptional) {
+        urlInfo.context.logger.warn(
+          `placeholder "${key}" not found in ${urlInfo.url}.
+--- suggestion a ---
+Add "${key}" in that file.
+--- suggestion b ---
+Fix eventual typo in "${key}"?
+--- suggestion c ---
+Mark injection as optional using INJECTIONS.optional():
+import { INJECTIONS } from "@jsenv/core";
+
+return {
+  "${key}": INJECTIONS.optional(${JSON.stringify(value)}),
+};`,
+        );
+      }
+      continue;
+    }
+
+    while (index !== -1) {
+      const start = index;
+      const end = index + key.length;
+      magicSource.replace({
+        start,
+        end,
+        replacement:
+          urlInfo.type === "js_classic" ||
+          urlInfo.type === "js_module" ||
+          urlInfo.type === "html"
+            ? JSON.stringify(value, null, "  ")
+            : value,
+      });
+      index = content.indexOf(key, end);
+    }
+  }
+  return magicSource.toContentAndSourcemap();
+};
+
+const injectGlobals = (content, globals, urlInfo) => {
+  if (urlInfo.type === "html") {
+    return globalInjectorOnHtml(content, globals, urlInfo);
+  }
+  if (urlInfo.type === "js_classic" || urlInfo.type === "js_module") {
+    return globalsInjectorOnJs(content, globals, urlInfo);
+  }
+  throw new Error(`cannot inject globals into "${urlInfo.type}"`);
+};
+const globalInjectorOnHtml = (content, globals, urlInfo) => {
+  // ideally we would inject an importmap but browser support is too low
+  // (even worse for worker/service worker)
+  // so for now we inject code into entry points
+  const htmlAst = parseHtml({
+    html: content,
+    url: urlInfo.url,
+    storeOriginalPositions: false,
+  });
+  const clientCode = generateClientCodeForGlobals(globals, {
+    isWebWorker: false,
+  });
+  injectJsenvScript(htmlAst, {
+    content: clientCode,
+    pluginName: "jsenv:inject_globals",
+  });
+  return {
+    content: stringifyHtmlAst(htmlAst),
+  };
+};
+const globalsInjectorOnJs = (content, globals, urlInfo) => {
+  const clientCode = generateClientCodeForGlobals(globals, {
+    isWebWorker:
+      urlInfo.subtype === "worker" ||
+      urlInfo.subtype === "service_worker" ||
+      urlInfo.subtype === "shared_worker",
+  });
+  const magicSource = createMagicSource(content);
+  magicSource.prepend(clientCode);
+  return magicSource.toContentAndSourcemap();
+};
+const generateClientCodeForGlobals = (globals, { isWebWorker = false }) => {
+  const globalName = isWebWorker ? "self" : "window";
+  return `Object.assign(${globalName}, ${JSON.stringify(
+    globals,
+    null,
+    "  ",
+  )});`;
 };
 
 const jsenvPluginInjections = (rawAssociations) => {
@@ -8864,47 +5776,6 @@ const jsenvPluginCleanHTML = () => {
   };
 };
 
-/**
- * https://docs.google.com/document/d/1rfKPnxsNuXhnF7AiQZhu9kIwdiMS5hnAI05HBwFuBSM/edit?tab=t.0#heading=h.7nki9mck5t64
- * https://chromium.googlesource.com/devtools/devtools-frontend/+/main/docs/ecosystem/automatic_workspace_folders.md
- * https://github.com/ChromeDevTools/vite-plugin-devtools-json
- */
-
-
-const jsenvPluginChromeDevtoolsJson = () => {
-  const getOrCreateUUID = (kitchen) => {
-    const { outDirectoryUrl } = kitchen.context;
-    const uuidFileUrl = new URL("./uuid.json", outDirectoryUrl);
-    if (existsSync(uuidFileUrl)) {
-      const { uuid } = JSON.parse(readFileSync(uuidFileUrl, "utf8"));
-      return uuid;
-    }
-    const uuid = randomUUID();
-    writeFileSync(uuidFileUrl, JSON.stringify({ uuid }), { });
-    return uuid;
-  };
-
-  return {
-    name: "jsenv_plugin_chrome_devtools_json",
-    appliesDuring: "dev",
-    serverRoutes: [
-      {
-        endpoint: "GET /.well-known/appspecific/com.chrome.devtools.json",
-        declarationSource: import.meta.url,
-        fetch: (request, { kitchen }) => {
-          const { rootDirectoryUrl } = kitchen.context;
-          return Response.json({
-            workspace: {
-              root: urlToFileSystemPath(rootDirectoryUrl),
-              uuid: getOrCreateUUID(kitchen),
-            },
-          });
-        },
-      },
-    ],
-  };
-};
-
 const jsenvPluginAutoreloadOnServerRestart = () => {
   const autoreloadOnRestartClientFileUrl = import.meta
     .resolve("@jsenv/server/src/plugins/autoreload_on_server_restart/client/autoreload_on_server_restart.js");
@@ -9349,7 +6220,6 @@ const getCorePlugins = ({
     ...(ribbon ? [jsenvPluginRibbon({ rootDirectoryUrl, ...ribbon })] : []),
     ...(dropToOpen ? [jsenvPluginDropToOpen()] : []),
     jsenvPluginCleanHTML(),
-    jsenvPluginChromeDevtoolsJson(),
     ...(packageSideEffects
       ? [jsenvPluginPackageSideEffects({ packageDirectory })]
       : []),
@@ -9457,6 +6327,3203 @@ const jsenvPluginServerEvents = ({ clientAutoreload }) => {
   };
 };
 
+/**
+ * https://docs.google.com/document/d/1rfKPnxsNuXhnF7AiQZhu9kIwdiMS5hnAI05HBwFuBSM/edit?tab=t.0#heading=h.7nki9mck5t64
+ * https://chromium.googlesource.com/devtools/devtools-frontend/+/main/docs/ecosystem/automatic_workspace_folders.md
+ * https://github.com/ChromeDevTools/vite-plugin-devtools-json
+ */
+
+
+const devServerPluginChromeDevToolsJson = ({ sourceDirectoryUrl }) => {
+  const getOrCreateUUID = (kitchen) => {
+    const { outDirectoryUrl } = kitchen.context;
+    const uuidFileUrl = new URL("./uuid.json", outDirectoryUrl);
+    if (existsSync(uuidFileUrl)) {
+      const { uuid } = JSON.parse(readFileSync(uuidFileUrl, "utf8"));
+      return uuid;
+    }
+    const uuid = randomUUID();
+    writeFileSync(uuidFileUrl, JSON.stringify({ uuid }), { });
+    return uuid;
+  };
+
+  return {
+    name: "jsenv:chrome_devtools_json",
+    routes: [
+      {
+        endpoint: "GET /.well-known/appspecific/com.chrome.devtools.json",
+        declarationSource: import.meta.url,
+        fetch: (request, { kitchen }) => {
+          return Response.json({
+            workspace: {
+              root: urlToFileSystemPath(sourceDirectoryUrl),
+              uuid: getOrCreateUUID(kitchen),
+            },
+          });
+        },
+      },
+    ],
+  };
+};
+
+const devServerPluginInjectServerResponseHeader = ({
+  sourceDirectoryUrl,
+}) => {
+  return {
+    name: "jsenv:jsenv_inject_server_response_header",
+    routes: [
+      {
+        endpoint: "GET /.internal/server.json",
+        description: "Get information about jsenv dev server",
+        availableMediaTypes: ["application/json"],
+        declarationSource: import.meta.url,
+        fetch: () =>
+          Response.json({
+            server: "jsenv_dev_server/1",
+            sourceDirectoryUrl,
+          }),
+      },
+    ],
+    injectResponseProperties: () => {
+      return {
+        headers: {
+          server: "jsenv_dev_server/1",
+        },
+      };
+    },
+  };
+};
+
+const devServerPluginOmegaErrorHandler = () => {
+  return [
+    {
+      name: "jsenv:omega_error_handler",
+      handleError: (error) => {
+        const getResponseForError = () => {
+          if (error && error.asResponse) {
+            return error.asResponse();
+          }
+          if (error && error.statusText === "Unexpected directory operation") {
+            return {
+              status: 403,
+            };
+          }
+          return convertFileSystemErrorToResponseProperties(error);
+        };
+        const response = getResponseForError();
+        if (!response) {
+          return null;
+        }
+        const body = JSON.stringify({
+          status: response.status,
+          statusText: response.statusText,
+          headers: response.headers,
+          body: response.body,
+        });
+        return {
+          status: response.status,
+          headers: {
+            "content-type": "application/json",
+            "content-length": Buffer.byteLength(body),
+          },
+          body,
+        };
+      },
+    },
+    serverPluginErrorHandler({
+      sendErrorDetails: true,
+    }),
+  ];
+};
+
+const WEB_URL_CONVERTER = {
+  asWebUrl: (fileUrl, webServer) => {
+    if (urlIsOrIsInsideOf(fileUrl, webServer.rootDirectoryUrl)) {
+      return moveUrl({
+        url: fileUrl,
+        from: webServer.rootDirectoryUrl,
+        to: `${webServer.origin}/`,
+      });
+    }
+    const fsRootUrl = ensureWindowsDriveLetter("file:///", fileUrl);
+    return `${webServer.origin}/@fs/${fileUrl.slice(fsRootUrl.length)}`;
+  },
+  asFileUrl: (webUrl, webServer) => {
+    const { pathname, search } = new URL(webUrl);
+    if (pathname.startsWith("/@fs/")) {
+      const fsRootRelativeUrl = pathname.slice("/@fs/".length);
+      return `file:///${fsRootRelativeUrl}${search}`;
+    }
+    return moveUrl({
+      url: webUrl,
+      from: `${webServer.origin}/`,
+      to: webServer.rootDirectoryUrl,
+    });
+  },
+};
+
+const assertFetchedContentCompliance = ({ urlInfo, content }) => {
+  if (urlInfo.status === 404) {
+    return;
+  }
+  const { expectedContentType } = urlInfo.firstReference;
+  if (expectedContentType && urlInfo.contentType !== expectedContentType) {
+    throw new Error(
+      `content-type must be "${expectedContentType}", got "${urlInfo.contentType} on ${urlInfo.url}`,
+    );
+  }
+  const { expectedType } = urlInfo.firstReference;
+  if (expectedType && urlInfo.type !== expectedType) {
+    if (urlInfo.type === "entry_build" && urlInfo.context.build) ; else {
+      throw new Error(
+        `type must be "${expectedType}", got "${urlInfo.type}" on ${urlInfo.url}`,
+      );
+    }
+  }
+  const { integrity } = urlInfo.firstReference;
+  if (integrity) {
+    validateResponseIntegrity({
+      url: urlInfo.url,
+      type: "basic",
+      dataRepresentation: content,
+    });
+  }
+};
+
+const determineFileUrlForOutDirectory = (urlInfo) => {
+  let { url, filenameHint } = urlInfo;
+  const { rootDirectoryUrl, outDirectoryUrl } = urlInfo.context;
+  if (!outDirectoryUrl) {
+    return url;
+  }
+  if (!url.startsWith("file:")) {
+    return url;
+  }
+  if (!urlIsOrIsInsideOf(url, rootDirectoryUrl)) {
+    const fsRootUrl = ensureWindowsDriveLetter("file:///", url);
+    url = `${rootDirectoryUrl}@fs/${url.slice(fsRootUrl.length)}`;
+  }
+  if (filenameHint) {
+    url = setUrlFilename(url, filenameHint);
+  }
+  const outUrl = moveUrl({
+    url,
+    from: rootDirectoryUrl,
+    to: outDirectoryUrl,
+  });
+  return outUrl;
+};
+
+const determineSourcemapFileUrl = (urlInfo) => {
+  // sourcemap is a special kind of reference:
+  // It's a reference to a content generated dynamically the content itself.
+  // when jsenv is done cooking the file
+  //   during build it's urlInfo.url to be inside the build
+  //   but otherwise it's generatedUrl to be inside .jsenv/ directory
+  const generatedUrlObject = new URL(urlInfo.generatedUrl);
+  generatedUrlObject.searchParams.delete("js_module_fallback");
+  generatedUrlObject.searchParams.delete("as_js_module");
+  generatedUrlObject.searchParams.delete("as_js_classic");
+  generatedUrlObject.searchParams.delete("as_css_module");
+  generatedUrlObject.searchParams.delete("as_json_module");
+  generatedUrlObject.searchParams.delete("as_text_module");
+  generatedUrlObject.searchParams.delete("dynamic_import");
+  generatedUrlObject.searchParams.delete("dynamic_import_id");
+  generatedUrlObject.searchParams.delete("cjs_as_js_module");
+  const urlForSourcemap = generatedUrlObject.href;
+  return generateSourcemapFileUrl(urlForSourcemap);
+};
+
+const prependContent = async (
+  urlInfoReceivingCode,
+  urlInfoToPrepend,
+) => {
+  // we could also implement:
+  // - prepend svg in html
+  // - prepend css in html
+  // - prepend css in css
+  // - maybe more?
+  // but no need for now
+  if (
+    urlInfoReceivingCode.type === "html" &&
+    urlInfoToPrepend.type === "js_classic"
+  ) {
+    prependJsClassicInHtml(urlInfoReceivingCode, urlInfoToPrepend);
+    return;
+  }
+  if (
+    urlInfoReceivingCode.type === "js_classic" &&
+    urlInfoToPrepend.type === "js_classic"
+  ) {
+    prependJsClassicInJsClassic(urlInfoReceivingCode, urlInfoToPrepend);
+    return;
+  }
+  if (
+    urlInfoReceivingCode.type === "js_module" &&
+    urlInfoToPrepend.type === "js_classic"
+  ) {
+    await prependJsClassicInJsModule(urlInfoReceivingCode, urlInfoToPrepend);
+    return;
+  }
+  throw new Error(
+    `cannot prepend content from "${urlInfoToPrepend.type}" into "${urlInfoReceivingCode.type}"`,
+  );
+};
+
+const prependJsClassicInHtml = (htmlUrlInfo, urlInfoToPrepend) => {
+  const htmlAst = parseHtml({
+    html: htmlUrlInfo.content,
+    url: htmlUrlInfo.url,
+  });
+  injectHtmlNodeAsEarlyAsPossible(
+    htmlAst,
+    createHtmlNode({
+      tagName: "script",
+      ...(urlInfoToPrepend.url
+        ? { "inlined-from-src": urlInfoToPrepend.url }
+        : {}),
+      children: urlInfoToPrepend.content,
+    }),
+    "jsenv:core",
+  );
+  const content = stringifyHtmlAst(htmlAst);
+  htmlUrlInfo.mutateContent({ content });
+};
+
+const prependJsClassicInJsClassic = (jsUrlInfo, urlInfoToPrepend) => {
+  const magicSource = createMagicSource(jsUrlInfo.content);
+  magicSource.prepend(`${urlInfoToPrepend.content}\n\n`);
+  const magicResult = magicSource.toContentAndSourcemap();
+  const sourcemap = composeTwoSourcemaps(
+    jsUrlInfo.sourcemap,
+    magicResult.sourcemap,
+  );
+  jsUrlInfo.mutateContent({
+    content: magicResult.content,
+    sourcemap,
+  });
+};
+
+const prependJsClassicInJsModule = async (jsUrlInfo, urlInfoToPrepend) => {
+  const { code, map } = await applyBabelPlugins({
+    babelPlugins: [
+      [
+        babelPluginPrependCodeInJsModule,
+        { codeToPrepend: urlInfoToPrepend.content },
+      ],
+    ],
+    input: jsUrlInfo.content,
+    inputIsJsModule: true,
+    inputUrl: jsUrlInfo.originalUrl,
+  });
+  jsUrlInfo.mutateContent({
+    content: code,
+    sourcemap: map,
+  });
+};
+const babelPluginPrependCodeInJsModule = (babel) => {
+  return {
+    name: "prepend-code-in-js-module",
+    visitor: {
+      Program: (programPath, state) => {
+        const { codeToPrepend } = state.opts;
+        const astToPrepend = babel.parse(codeToPrepend);
+        const bodyNodePaths = programPath.get("body");
+        for (const bodyNodePath of bodyNodePaths) {
+          if (bodyNodePath.node.type === "ImportDeclaration") {
+            continue;
+          }
+          bodyNodePath.insertBefore(astToPrepend.program.body);
+          return;
+        }
+        bodyNodePaths.unshift(astToPrepend.program.body);
+      },
+    },
+  };
+};
+
+let referenceId = 0;
+
+const createDependencies = (ownerUrlInfo) => {
+  const { referenceToOthersSet } = ownerUrlInfo;
+
+  const startCollecting = async (callback) => {
+    const prevReferenceToOthersSet = new Set(referenceToOthersSet);
+    referenceToOthersSet.clear();
+
+    const stopCollecting = () => {
+      for (const prevReferenceToOther of prevReferenceToOthersSet) {
+        checkForDependencyRemovalEffects(prevReferenceToOther);
+      }
+      prevReferenceToOthersSet.clear();
+    };
+
+    try {
+      await callback();
+    } finally {
+      // finally to ensure reference are updated even in case of error
+      stopCollecting();
+    }
+  };
+
+  const createResolveAndFinalize = (props) => {
+    const originalReference = createReference({
+      ownerUrlInfo,
+      ...props,
+    });
+    const reference = originalReference.resolve();
+    if (reference.urlInfo) {
+      return reference;
+    }
+    const kitchen = ownerUrlInfo.kitchen;
+    const urlInfo = kitchen.graph.reuseOrCreateUrlInfo(reference);
+    reference.urlInfo = urlInfo;
+    addDependency(reference);
+    ownerUrlInfo.context.finalizeReference(reference);
+    return reference;
+  };
+
+  const found = ({ trace, ...rest }) => {
+    if (trace === undefined) {
+      trace = traceFromUrlSite(
+        adjustUrlSite(ownerUrlInfo, {
+          url: ownerUrlInfo.url,
+          line: rest.specifierLine,
+          column: rest.specifierColumn,
+        }),
+      );
+    }
+    const reference = createResolveAndFinalize({
+      trace,
+      ...rest,
+    });
+    return reference;
+  };
+  const foundInline = ({
+    isOriginalPosition,
+    specifierLine,
+    specifierColumn,
+    content,
+    ...rest
+  }) => {
+    const parentUrl = isOriginalPosition
+      ? ownerUrlInfo.url
+      : ownerUrlInfo.generatedUrl;
+    const parentContent = isOriginalPosition
+      ? ownerUrlInfo.originalContent
+      : ownerUrlInfo.content;
+    const trace = traceFromUrlSite({
+      url: parentUrl,
+      content: parentContent,
+      line: specifierLine,
+      column: specifierColumn,
+    });
+    const reference = createResolveAndFinalize({
+      trace,
+      isOriginalPosition,
+      specifierLine,
+      specifierColumn,
+      isInline: true,
+      content,
+      ...rest,
+    });
+    return reference;
+  };
+  // side effect file
+  const foundSideEffectFile = async ({ sideEffectFileUrl, trace, ...rest }) => {
+    if (trace === undefined) {
+      const { url, line, column } = getCallerPosition();
+      trace = traceFromUrlSite({
+        url,
+        line,
+        column,
+      });
+    }
+    const sideEffectFileReference = ownerUrlInfo.dependencies.inject({
+      trace,
+      type: "side_effect_file",
+      specifier: sideEffectFileUrl,
+      ...rest,
+    });
+
+    const injectAsBannerCodeBeforeFinalize = (urlInfoReceiver) => {
+      const basename = urlToBasename(sideEffectFileUrl);
+      const inlineUrl = generateUrlForInlineContent({
+        url: urlInfoReceiver.originalUrl || urlInfoReceiver.url,
+        basename,
+        extension: urlToExtension(sideEffectFileUrl),
+      });
+      const sideEffectFileReferenceInlined = sideEffectFileReference.inline({
+        ownerUrlInfo: urlInfoReceiver,
+        trace,
+        type: "side_effect_file",
+        specifier: inlineUrl,
+      });
+      urlInfoReceiver.addContentTransformationCallback(async () => {
+        await sideEffectFileReferenceInlined.urlInfo.cook();
+        await prependContent(
+          urlInfoReceiver,
+          sideEffectFileReferenceInlined.urlInfo,
+        );
+      });
+    };
+
+    // When possible we inject code inside the file in a common ancestor
+    // -> less duplication
+
+    // During dev:
+    // during dev cooking files is incremental
+    // so HTML/JS is already executed by the browser
+    // we can't late inject into entry point
+    // During build:
+    // files are not executed so it's possible to inject reference
+    // when discovering a side effect file
+    const visitedMap = new Map();
+    let foundOrInjectedOnce = false;
+    const visit = (urlInfo) => {
+      urlInfo = urlInfo.findParentIfInline() || urlInfo;
+      const value = visitedMap.get(urlInfo);
+      if (value !== undefined) {
+        return value;
+      }
+
+      // search if already referenced
+      for (const referenceToOther of urlInfo.referenceToOthersSet) {
+        if (referenceToOther === sideEffectFileReference) {
+          continue;
+        }
+        if (referenceToOther.url === sideEffectFileUrl) {
+          // consider this reference becomes the last reference
+          // this ensure this ref is properly detected as inlined by urlInfo.isUsed()
+          sideEffectFileReference.next =
+            referenceToOther.next || referenceToOther;
+          foundOrInjectedOnce = true;
+          visitedMap.set(urlInfo, true);
+          return true;
+        }
+        if (
+          referenceToOther.original &&
+          referenceToOther.original.url === sideEffectFileUrl
+        ) {
+          // consider this reference becomes the last reference
+          // this ensure this ref is properly detected as inlined by urlInfo.isUsed()
+          sideEffectFileReference.next =
+            referenceToOther.next || referenceToOther;
+          foundOrInjectedOnce = true;
+          visitedMap.set(urlInfo, true);
+          return true;
+        }
+      }
+      // not referenced and we reach an entry point, stop there
+      if (urlInfo.isEntryPoint) {
+        foundOrInjectedOnce = true;
+        visitedMap.set(urlInfo, true);
+        injectAsBannerCodeBeforeFinalize(urlInfo);
+        return true;
+      }
+      visitedMap.set(urlInfo, false);
+      for (const referenceFromOther of urlInfo.referenceFromOthersSet) {
+        const urlInfoReferencingThisOne = referenceFromOther.ownerUrlInfo;
+        visit(urlInfoReferencingThisOne);
+        // during dev the first urlInfo where we inject the side effect file is enough
+        // during build we want to inject into every possible entry point
+        if (foundOrInjectedOnce && urlInfo.context.dev) {
+          break;
+        }
+      }
+      return false;
+    };
+    visit(ownerUrlInfo);
+    if (ownerUrlInfo.context.dev && !foundOrInjectedOnce) {
+      injectAsBannerCodeBeforeFinalize(
+        ownerUrlInfo.findParentIfInline() || ownerUrlInfo,
+      );
+    }
+  };
+
+  const inject = ({ trace, ...rest }) => {
+    if (trace === undefined) {
+      const { url, line, column } = getCallerPosition();
+      trace = traceFromUrlSite({
+        url,
+        line,
+        column,
+      });
+    }
+    const reference = createResolveAndFinalize({
+      trace,
+      injected: true,
+      ...rest,
+    });
+    return reference;
+  };
+
+  return {
+    startCollecting,
+    createResolveAndFinalize,
+    found,
+    foundInline,
+    foundSideEffectFile,
+    inject,
+  };
+};
+
+/*
+ * - "http_request"
+ * - "entry_point"
+ * - "link_href"
+ * - "style"
+ * - "script"
+ * - "a_href"
+ * - "iframe_src
+ * - "img_src"
+ * - "img_srcset"
+ * - "source_src"
+ * - "source_srcset"
+ * - "image_href"
+ * - "use_href"
+ * - "css_@import"
+ * - "css_url"
+ * - "js_import"
+ * - "js_import_script"
+ * - "js_url"
+ * - "js_inline_content"
+ * - "sourcemap_comment"
+ * - "webmanifest_icon_src"
+ * - "package_json"
+ * - "side_effect_file"
+ * */
+const createReference = ({
+  ownerUrlInfo,
+  data = {},
+  trace,
+  type,
+  subtype,
+  expectedContentType,
+  expectedType,
+  expectedSubtype,
+  filenameHint,
+  integrity,
+  crossorigin,
+  specifier,
+  specifierStart,
+  specifierEnd,
+  specifierLine,
+  specifierColumn,
+  baseUrl,
+  isOriginalPosition,
+  isEntryPoint = false,
+  isDynamicEntryPoint = false,
+  isResourceHint = false,
+  // implicit references are not real references
+  // they represent an abstract relationship
+  isImplicit = false,
+  // weak references cannot keep the corresponding url info alive
+  // there must be an other reference to keep the url info alive
+  // an url referenced solely by weak references is:
+  // - not written in build directory
+  // - can be removed from graph during dev/build
+  // - not cooked until referenced by a strong reference
+  isWeak = false,
+  hasVersioningEffect = false,
+  version = null,
+  injected = false,
+  isInline = false,
+  content,
+  contentType,
+  fsStat = null,
+  debug = false,
+  original = null,
+  prev = null,
+  next = null,
+  url = null,
+  searchParams = null,
+  generatedUrl = null,
+  generatedSpecifier = null,
+  urlInfo = null,
+  escape = null,
+  importAttributes,
+  isSideEffectImport = false,
+  astInfo = {},
+  mutation,
+}) => {
+  if (typeof specifier !== "string") {
+    if (specifier instanceof URL) {
+      specifier = specifier.href;
+    } else {
+      throw new TypeError(
+        `"specifier" must be a string, got ${specifier} in ${ownerUrlInfo.url}`,
+      );
+    }
+  }
+
+  const reference = {
+    id: ++referenceId,
+    ownerUrlInfo,
+    original,
+    prev,
+    next,
+    data,
+    trace,
+    url,
+    urlInfo,
+    searchParams,
+    generatedUrl,
+    generatedSpecifier,
+    type,
+    subtype,
+    expectedContentType,
+    expectedType,
+    expectedSubtype,
+    filenameHint,
+    integrity,
+    crossorigin,
+    specifier,
+    get specifierPathname() {
+      return asSpecifierWithoutSearch(reference.specifier);
+    },
+    specifierStart,
+    specifierEnd,
+    specifierLine,
+    specifierColumn,
+    isOriginalPosition,
+    baseUrl,
+    isEntryPoint,
+    isDynamicEntryPoint,
+    isResourceHint,
+    isImplicit,
+    implicitReferenceSet: new Set(),
+    isWeak,
+    hasVersioningEffect,
+    urlInfoEffectSet: new Set(),
+    version,
+    injected,
+    timing: {},
+    fsStat,
+    debug,
+    // for inline resources the reference contains the content
+    isInline,
+    content,
+    contentType,
+    escape,
+    // used mostly by worker and import assertions
+    astInfo,
+    importAttributes,
+    isSideEffectImport,
+    mutation,
+  };
+
+  reference.resolve = () => {
+    const resolvedReference =
+      reference.ownerUrlInfo.context.resolveReference(reference);
+    return resolvedReference;
+  };
+
+  reference.redirect = (url, props = {}) => {
+    const redirectedProps = getRedirectedReferenceProps(reference, url);
+    const referenceRedirected = createReference({
+      ...redirectedProps,
+      ...props,
+    });
+    reference.next = referenceRedirected;
+    return referenceRedirected;
+  };
+
+  // "formatReference" can be async BUT this is an exception
+  // for most cases it will be sync. We want to favor the sync signature to keep things simpler
+  // The only case where it needs to be async is when
+  // the specifier is a `data:*` url
+  // in this case we'll wait for the promise returned by
+  // "formatReference"
+  reference.readGeneratedSpecifier = () => {
+    if (reference.generatedSpecifier.then) {
+      return reference.generatedSpecifier.then((value) => {
+        reference.generatedSpecifier = value;
+        return value;
+      });
+    }
+    return reference.generatedSpecifier;
+  };
+
+  reference.inline = ({
+    line,
+    column,
+    // when urlInfo is given it means reference is moved into an other file
+    ownerUrlInfo = reference.ownerUrlInfo,
+    ...props
+  }) => {
+    const content =
+      ownerUrlInfo === undefined
+        ? isOriginalPosition
+          ? reference.ownerUrlInfo.originalContent
+          : reference.ownerUrlInfo.content
+        : ownerUrlInfo.content;
+    const trace = traceFromUrlSite({
+      url:
+        ownerUrlInfo === undefined
+          ? isOriginalPosition
+            ? reference.ownerUrlInfo.url
+            : reference.ownerUrlInfo.generatedUrl
+          : reference.ownerUrlInfo.url,
+      content,
+      line,
+      column,
+    });
+    const inlineCopy = ownerUrlInfo.dependencies.createResolveAndFinalize({
+      isInline: true,
+      original: reference.original || reference,
+      prev: reference,
+      trace,
+      injected: reference.injected,
+      expectedType: reference.expectedType,
+      ...props,
+    });
+    // the previous reference stays alive so that even after inlining
+    // updating the file will invalidate the other file where it was inlined
+    reference.next = inlineCopy;
+    return inlineCopy;
+  };
+
+  reference.addImplicit = (props) => {
+    const implicitReference = ownerUrlInfo.dependencies.inject({
+      ...props,
+      isImplicit: true,
+    });
+    reference.implicitReferenceSet.add(implicitReference);
+    return implicitReference;
+  };
+
+  reference.gotInlined = () => {
+    return !reference.isInline && reference.next && reference.next.isInline;
+  };
+
+  reference.remove = () => removeDependency(reference);
+
+  // Object.preventExtensions(reference) // useful to ensure all properties are declared here
+  return reference;
+};
+
+const addDependency = (reference) => {
+  const { ownerUrlInfo } = reference;
+  if (ownerUrlInfo.referenceToOthersSet.has(reference)) {
+    return;
+  }
+  if (!canAddOrRemoveReference(reference)) {
+    throw new Error(
+      `cannot add reference for content already sent to the browser
+--- reference url ---
+${reference.url}
+--- content url ---
+${ownerUrlInfo.url}`,
+    );
+  }
+  ownerUrlInfo.referenceToOthersSet.add(reference);
+  if (reference.isImplicit) {
+    // an implicit reference is a reference that does not explicitely appear in the file
+    // but has an impact on the file
+    // -> package.json on import resolution for instance
+    // in that case:
+    // - file depends on the implicit file (it must autoreload if package.json is modified)
+    // - cache validity for the file depends on the implicit file (it must be re-cooked if package.json is modified)
+    ownerUrlInfo.implicitUrlSet.add(reference.url);
+    if (ownerUrlInfo.isInline) {
+      const parentUrlInfo = ownerUrlInfo.graph.getUrlInfo(
+        ownerUrlInfo.inlineUrlSite.url,
+      );
+      parentUrlInfo.implicitUrlSet.add(reference.url);
+    }
+  }
+  const referencedUrlInfo = reference.urlInfo;
+  referencedUrlInfo.referenceFromOthersSet.add(reference);
+  applyReferenceEffectsOnUrlInfo(reference);
+  for (const implicitRef of reference.implicitReferenceSet) {
+    addDependency(implicitRef);
+  }
+};
+
+const removeDependency = (reference) => {
+  const { ownerUrlInfo } = reference;
+  if (!ownerUrlInfo.referenceToOthersSet.has(reference)) {
+    return false;
+  }
+  if (!canAddOrRemoveReference(reference)) {
+    throw new Error(
+      `cannot remove reference for content already sent to the browser
+--- reference url ---
+${reference.url}
+--- content url ---
+${ownerUrlInfo.url}`,
+    );
+  }
+  for (const implicitRef of reference.implicitReferenceSet) {
+    implicitRef.remove();
+  }
+  ownerUrlInfo.referenceToOthersSet.delete(reference);
+  return checkForDependencyRemovalEffects(reference);
+};
+
+const canAddOrRemoveReference = (reference) => {
+  if (reference.isWeak || reference.isImplicit) {
+    // weak and implicit references have no restrictions
+    // because they are not actual references with an influence on content
+    return true;
+  }
+  const { ownerUrlInfo } = reference;
+  if (ownerUrlInfo.context.build) {
+    // during build url content is not executed
+    // it's still possible to mutate references safely
+    return true;
+  }
+  if (!ownerUrlInfo.contentFinalized) {
+    return true;
+  }
+  if (ownerUrlInfo.isRoot) {
+    // the root urlInfo is abstract, there is no real file behind it
+    return true;
+  }
+  if (reference.type === "http_request") {
+    // reference created to http requests are abstract concepts
+    return true;
+  }
+  return false;
+};
+
+const checkForDependencyRemovalEffects = (reference) => {
+  const { ownerUrlInfo } = reference;
+  const { referenceToOthersSet } = ownerUrlInfo;
+  if (reference.isImplicit && !reference.isInline) {
+    let hasAnOtherImplicitRef = false;
+    for (const referenceToOther of referenceToOthersSet) {
+      if (
+        referenceToOther.isImplicit &&
+        referenceToOther.url === reference.url
+      ) {
+        hasAnOtherImplicitRef = true;
+        break;
+      }
+    }
+    if (!hasAnOtherImplicitRef) {
+      ownerUrlInfo.implicitUrlSet.delete(reference.url);
+    }
+  }
+
+  const prevReference = reference.prev;
+  const nextReference = reference.next;
+  if (prevReference && nextReference) {
+    nextReference.prev = prevReference;
+    prevReference.next = nextReference;
+  } else if (prevReference) {
+    prevReference.next = null;
+  } else if (nextReference) {
+    nextReference.original = null;
+    nextReference.prev = null;
+  }
+
+  const referencedUrlInfo = reference.urlInfo;
+  referencedUrlInfo.referenceFromOthersSet.delete(reference);
+
+  let firstReferenceFromOther;
+  let wasInlined;
+  for (const referenceFromOther of referencedUrlInfo.referenceFromOthersSet) {
+    if (referenceFromOther.urlInfo !== referencedUrlInfo) {
+      continue;
+    }
+    // Here we want to know if the file is referenced by an other file.
+    // So we want to ignore reference that are created by other means:
+    // - "http_request"
+    //   This type of reference is created when client request a file
+    //   that we don't know yet
+    //   1. reference(s) to this file are not yet discovered
+    //   2. there is no reference to this file
+    if (referenceFromOther.type === "http_request") {
+      continue;
+    }
+    wasInlined = referenceFromOther.gotInlined();
+    if (wasInlined) {
+      // the url info was inlined, an other reference is required
+      // to consider the non-inlined urlInfo as used
+      continue;
+    }
+    firstReferenceFromOther = referenceFromOther;
+    break;
+  }
+  if (firstReferenceFromOther) {
+    // either applying new ref should override old ref
+    // or we should first remove effects before adding new ones
+    // for now we just set firstReference to null
+    if (reference === referencedUrlInfo.firstReference) {
+      referencedUrlInfo.firstReference = null;
+      applyReferenceEffectsOnUrlInfo(firstReferenceFromOther);
+    }
+    return false;
+  }
+  if (wasInlined) {
+    return false;
+  }
+  // referencedUrlInfo.firstReference = null;
+  // referencedUrlInfo.lastReference = null;
+  referencedUrlInfo.onDereferenced(reference);
+  return true;
+};
+
+const traceFromUrlSite = (urlSite) => {
+  const codeFrame = urlSite.content
+    ? generateContentFrame({
+        content: urlSite.content,
+        line: urlSite.line,
+        column: urlSite.column,
+      })
+    : "";
+  return {
+    codeFrame,
+    message: stringifyUrlSite(urlSite),
+    url: urlSite.url,
+    line: urlSite.line,
+    column: urlSite.column,
+  };
+};
+
+const adjustUrlSite = (urlInfo, { url, line, column }) => {
+  const isOriginal = url === urlInfo.url;
+  const adjust = (urlInfo, urlSite) => {
+    if (!urlSite.isOriginal) {
+      return urlSite;
+    }
+    const inlineUrlSite = urlInfo.inlineUrlSite;
+    if (!inlineUrlSite) {
+      return urlSite;
+    }
+    const parentUrlInfo = urlInfo.graph.getUrlInfo(inlineUrlSite.url);
+    line =
+      inlineUrlSite.line === undefined
+        ? urlSite.line
+        : inlineUrlSite.line + urlSite.line;
+    // we remove 1 to the line because imagine the following html:
+    // <style>body { color: red; }</style>
+    // -> content starts same line as <style> (same for <script>)
+    if (urlInfo.content[0] === "\n") {
+      line = line - 1;
+    }
+    column =
+      inlineUrlSite.column === undefined
+        ? urlSite.column
+        : inlineUrlSite.column + urlSite.column;
+    return adjust(parentUrlInfo, {
+      isOriginal: true,
+      url: inlineUrlSite.url,
+      content: inlineUrlSite.content,
+      line,
+      column,
+    });
+  };
+  return adjust(urlInfo, {
+    isOriginal,
+    url,
+    content: isOriginal ? urlInfo.originalContent : urlInfo.content,
+    line,
+    column,
+  });
+};
+
+const getRedirectedReferenceProps = (reference, url) => {
+  const redirectedProps = {
+    ...reference,
+    specifier: url,
+    url,
+    original: reference.original || reference,
+    prev: reference,
+  };
+  return redirectedProps;
+};
+
+const applyReferenceEffectsOnUrlInfo = (reference) => {
+  const referencedUrlInfo = reference.urlInfo;
+  referencedUrlInfo.lastReference = reference;
+  if (reference.isInline) {
+    referencedUrlInfo.isInline = true;
+    referencedUrlInfo.inlineUrlSite = {
+      url: reference.ownerUrlInfo.url,
+      content: reference.isOriginalPosition
+        ? reference.ownerUrlInfo.originalContent
+        : reference.ownerUrlInfo.content,
+      line: reference.specifierLine,
+      column: reference.specifierColumn,
+    };
+  }
+
+  if (
+    referencedUrlInfo.firstReference &&
+    !referencedUrlInfo.firstReference.isWeak
+  ) {
+    return;
+  }
+  referencedUrlInfo.firstReference = reference;
+  referencedUrlInfo.originalUrl =
+    referencedUrlInfo.originalUrl || (reference.original || reference).url;
+
+  if (reference.isEntryPoint) {
+    referencedUrlInfo.isEntryPoint = true;
+  }
+  if (reference.isDynamicEntryPoint) {
+    referencedUrlInfo.isDynamicEntryPoint = true;
+  }
+  Object.assign(referencedUrlInfo.data, reference.data);
+  Object.assign(referencedUrlInfo.timing, reference.timing);
+  if (reference.injected) {
+    referencedUrlInfo.injected = true;
+  }
+  if (reference.filenameHint && !referencedUrlInfo.filenameHint) {
+    referencedUrlInfo.filenameHint = reference.filenameHint;
+  }
+  if (reference.dirnameHint && !referencedUrlInfo.dirnameHint) {
+    referencedUrlInfo.dirnameHint = reference.dirnameHint;
+  }
+  if (reference.debug) {
+    referencedUrlInfo.debug = true;
+  }
+  if (reference.expectedType) {
+    referencedUrlInfo.typeHint = reference.expectedType;
+  }
+  if (reference.expectedSubtype) {
+    referencedUrlInfo.subtypeHint = reference.expectedSubtype;
+  }
+
+  referencedUrlInfo.entryUrlInfo = reference.isEntryPoint
+    ? referencedUrlInfo
+    : reference.ownerUrlInfo.entryUrlInfo;
+
+  for (const urlInfoEffect of reference.urlInfoEffectSet) {
+    urlInfoEffect(referencedUrlInfo);
+  }
+};
+
+const GRAPH_VISITOR = {};
+
+GRAPH_VISITOR.map = (graph, callback) => {
+  const array = [];
+  graph.urlInfoMap.forEach((urlInfo) => {
+    array.push(callback(urlInfo));
+  });
+  return array;
+};
+GRAPH_VISITOR.forEach = (graph, callback) => {
+  graph.urlInfoMap.forEach(callback);
+};
+GRAPH_VISITOR.filter = (graph, callback) => {
+  const urlInfos = [];
+  graph.urlInfoMap.forEach((urlInfo) => {
+    if (callback(urlInfo)) {
+      urlInfos.push(urlInfo);
+    }
+  });
+  return urlInfos;
+};
+GRAPH_VISITOR.find = (graph, callback) => {
+  let found = null;
+  for (const urlInfo of graph.urlInfoMap.values()) {
+    if (callback(urlInfo)) {
+      found = urlInfo;
+      break;
+    }
+  }
+  return found;
+};
+GRAPH_VISITOR.findDependent = (urlInfo, visitor) => {
+  const graph = urlInfo.graph;
+  const seen = new Set();
+  seen.add(urlInfo.url);
+  let found = null;
+  const visit = (dependentUrlInfo) => {
+    if (seen.has(dependentUrlInfo.url)) {
+      return false;
+    }
+    seen.add(dependentUrlInfo.url);
+    if (visitor(dependentUrlInfo)) {
+      found = dependentUrlInfo;
+    }
+    return true;
+  };
+  const iterate = (currentUrlInfo) => {
+    // When cookin html inline content, html dependencies are not yet updated
+    // consequently htmlUrlInfo.dependencies is empty
+    // and inlineContentUrlInfo.referenceFromOthersSet is empty as well
+    // in that case we resort to isInline + inlineUrlSite to establish the dependency
+    if (currentUrlInfo.isInline) {
+      const parentUrl = currentUrlInfo.inlineUrlSite.url;
+      const parentUrlInfo = graph.getUrlInfo(parentUrl);
+      visit(parentUrlInfo);
+      if (found) {
+        return;
+      }
+    }
+    for (const referenceFromOther of currentUrlInfo.referenceFromOthersSet) {
+      const urlInfoReferencingThisOne = referenceFromOther.ownerUrlInfo;
+      if (visit(urlInfoReferencingThisOne)) {
+        if (found) {
+          break;
+        }
+        iterate(urlInfoReferencingThisOne);
+      }
+    }
+  };
+  iterate(urlInfo);
+  return found;
+};
+GRAPH_VISITOR.findDependency = (urlInfo, visitor) => {
+  const graph = urlInfo.graph;
+  const seen = new Set();
+  seen.add(urlInfo.url);
+  let found = null;
+  const visit = (dependencyUrlInfo) => {
+    if (seen.has(dependencyUrlInfo.url)) {
+      return false;
+    }
+    seen.add(dependencyUrlInfo.url);
+    if (visitor(dependencyUrlInfo)) {
+      found = dependencyUrlInfo;
+    }
+    return true;
+  };
+  const iterate = (currentUrlInfo) => {
+    for (const referenceToOther of currentUrlInfo.referenceToOthersSet) {
+      const referencedUrlInfo = graph.getUrlInfo(referenceToOther);
+      if (visit(referencedUrlInfo)) {
+        if (found) {
+          break;
+        }
+        iterate(referencedUrlInfo);
+      }
+    }
+  };
+  iterate(urlInfo);
+  return found;
+};
+
+// This function will be used in "build.js"
+// by passing rootUrlInfo as first arg
+// -> this ensure we visit only urls with strong references
+// because we start from root and ignore weak ref
+// The alternative would be to iterate on urlInfoMap
+// and call urlInfo.isUsed() but that would be more expensive
+GRAPH_VISITOR.forEachUrlInfoStronglyReferenced = (
+  initialUrlInfo,
+  callback,
+  { directoryUrlInfoSet } = {},
+) => {
+  const seen = new Set();
+  seen.add(initialUrlInfo);
+  const iterateOnReferences = (urlInfo) => {
+    for (const referenceToOther of urlInfo.referenceToOthersSet) {
+      if (referenceToOther.gotInlined()) {
+        continue;
+      }
+      if (referenceToOther.url.startsWith("ignore:")) {
+        continue;
+      }
+      const referencedUrlInfo = referenceToOther.urlInfo;
+      if (
+        directoryUrlInfoSet &&
+        referenceToOther.expectedType === "directory"
+      ) {
+        directoryUrlInfoSet.add(referencedUrlInfo);
+      }
+      if (referenceToOther.isWeak) {
+        continue;
+      }
+      if (seen.has(referencedUrlInfo)) {
+        continue;
+      }
+      seen.add(referencedUrlInfo);
+      callback(referencedUrlInfo);
+      iterateOnReferences(referencedUrlInfo);
+    }
+  };
+  iterateOnReferences(initialUrlInfo);
+  seen.clear();
+};
+
+const urlSpecifierEncoding = {
+  encode: (reference) => {
+    const { generatedSpecifier } = reference;
+    if (generatedSpecifier.then) {
+      return generatedSpecifier.then((value) => {
+        reference.generatedSpecifier = value;
+        return urlSpecifierEncoding.encode(reference);
+      });
+    }
+    // allow plugin to return a function to bypas default formatting
+    // (which is to use JSON.stringify when url is referenced inside js)
+    if (typeof generatedSpecifier === "function") {
+      return generatedSpecifier();
+    }
+    const formatter = formatters[reference.type];
+    const value = formatter
+      ? formatter.encode(generatedSpecifier)
+      : generatedSpecifier;
+    if (reference.escape) {
+      return reference.escape(value);
+    }
+    return value;
+  },
+  decode: (reference) => {
+    const formatter = formatters[reference.type];
+    return formatter
+      ? formatter.decode(reference.generatedSpecifier)
+      : reference.generatedSpecifier;
+  },
+};
+const formatters = {
+  "js_import": { encode: JSON.stringify, decode: JSON.parse },
+  "js_url": { encode: JSON.stringify, decode: JSON.parse },
+  "css_@import": { encode: JSON.stringify, decode: JSON.stringify },
+  // https://github.com/webpack-contrib/css-loader/pull/627/files
+  "css_url": {
+    encode: (url) => {
+      // If url is already wrapped in quotes, remove them
+      url = formatters.css_url.decode(url);
+      // Should url be wrapped?
+      // See https://drafts.csswg.org/css-values-3/#urls
+      if (/["'() \t\n]/.test(url)) {
+        return `"${url.replace(/"/g, '\\"').replace(/\n/g, "\\n")}"`;
+      }
+      return url;
+    },
+    decode: (url) => {
+      const firstChar = url[0];
+      const lastChar = url[url.length - 1];
+      if (firstChar === `"` && lastChar === `"`) {
+        return url.slice(1, -1);
+      }
+      if (firstChar === `'` && lastChar === `'`) {
+        return url.slice(1, -1);
+      }
+      return url;
+    },
+  },
+};
+
+const createUrlGraph = ({
+  rootDirectoryUrl,
+  kitchen,
+  name = "anonymous",
+}) => {
+  const urlGraph = {};
+  const urlInfoCreatedEventEmitter = createEventEmitter();
+  const urlInfoDereferencedEventEmitter = createEventEmitter();
+
+  const urlInfoMap = new Map();
+  const hasUrlInfo = (key) => {
+    if (typeof key === "string") {
+      return urlInfoMap.has(key);
+    }
+    if (typeof key === "object" && key && key.url) {
+      return urlInfoMap.has(key.url);
+    }
+    return null;
+  };
+  const getUrlInfo = (key) => {
+    if (typeof key === "string") {
+      return urlInfoMap.get(key);
+    }
+    if (typeof key === "object" && key && key.url) {
+      return urlInfoMap.get(key.url);
+    }
+    return null;
+  };
+
+  const addUrlInfo = (urlInfo) => {
+    urlInfo.graph = urlGraph;
+    urlInfo.kitchen = kitchen;
+    urlInfoMap.set(urlInfo.url, urlInfo);
+  };
+  const reuseOrCreateUrlInfo = (reference, useGeneratedUrl) => {
+    const referencedUrl = useGeneratedUrl
+      ? reference.generatedUrl
+      : reference.url;
+    let referencedUrlInfo = getUrlInfo(referencedUrl);
+    if (!referencedUrlInfo) {
+      const ownerUrlInfo = reference.ownerUrlInfo;
+      const ownerContext = ownerUrlInfo.context;
+      const context = Object.create(ownerContext);
+      referencedUrlInfo = createUrlInfo(referencedUrl, context);
+      addUrlInfo(referencedUrlInfo);
+      urlInfoCreatedEventEmitter.emit(referencedUrlInfo);
+    }
+    if (
+      referencedUrlInfo.searchParams.size > 0 &&
+      kitchen.context.buildStep !== "shape"
+    ) {
+      // A resource is represented by a url.
+      // Variations of a resource are represented by url search params
+      // Each representation of the resource is given a dedicated url info
+      // object (one url -> one url info)
+      // It's because search params often influence the final content returned for that url
+      // When a reference contains url search params it must create 2 url infos:
+      // 1. The url info corresponding to the url with search params
+      // 2. The url info corresponding to url without search params
+      // Because the underlying content without search params is used to generate
+      // the content modified according to search params
+      // This way when a file like "style.css" is considered as modified
+      // references like "style.css?as_css_module" are also affected
+      const urlWithoutSearch = asUrlWithoutSearch(reference.url);
+      // a reference with a search param creates an implicit reference
+      // to the file without search param
+      const referenceWithoutSearch = reference.addImplicit({
+        specifier: urlWithoutSearch,
+        url: urlWithoutSearch,
+        searchParams: new URLSearchParams(),
+        isWeak: true,
+      });
+      const urlInfoWithoutSearch = referenceWithoutSearch.urlInfo;
+      urlInfoWithoutSearch.searchParamVariantSet.add(referencedUrlInfo);
+    }
+    return referencedUrlInfo;
+  };
+
+  const inferReference = (specifier, parentUrl) => {
+    const parentUrlInfo = getUrlInfo(parentUrl);
+    if (!parentUrlInfo) {
+      return null;
+    }
+    const seen = [];
+    const search = (urlInfo) => {
+      for (const referenceToOther of urlInfo.referenceToOthersSet) {
+        if (urlSpecifierEncoding.decode(referenceToOther) === specifier) {
+          return referenceToOther;
+        }
+      }
+      for (const referenceToOther of parentUrlInfo.referenceToOthersSet) {
+        if (seen.includes(referenceToOther.url)) {
+          continue;
+        }
+        seen.push(referenceToOther.url);
+        const referencedUrlInfo = referenceToOther.urlInfo;
+        if (referencedUrlInfo.isInline) {
+          const firstRef = search(referencedUrlInfo);
+          if (firstRef) {
+            return firstRef;
+          }
+        }
+      }
+      return null;
+    };
+    return search(parentUrlInfo);
+  };
+
+  const getEntryPoints = () => {
+    const entryPoints = [];
+    urlInfoMap.forEach((urlInfo) => {
+      if (urlInfo.isEntryPoint && urlInfo.isUsed()) {
+        entryPoints.push(urlInfo);
+      }
+    });
+    return entryPoints;
+  };
+
+  const rootUrlInfo = createUrlInfo(rootDirectoryUrl, kitchen.context);
+  rootUrlInfo.isRoot = true;
+  rootUrlInfo.entryUrlInfo = rootUrlInfo;
+  addUrlInfo(rootUrlInfo);
+
+  Object.assign(urlGraph, {
+    name,
+    rootUrlInfo,
+
+    urlInfoMap,
+    reuseOrCreateUrlInfo,
+    hasUrlInfo,
+    getUrlInfo,
+    getEntryPoints,
+
+    inferReference,
+    urlInfoCreatedEventEmitter,
+    urlInfoDereferencedEventEmitter,
+
+    toObject: () => {
+      const data = {};
+      urlInfoMap.forEach((urlInfo) => {
+        data[urlInfo.url] = urlInfo;
+      });
+      return data;
+    },
+    toJSON: (rootDirectoryUrl) => {
+      const data = {};
+      urlInfoMap.forEach((urlInfo) => {
+        if (urlInfo.referenceToOthersSet.size) {
+          const relativeUrl = urlToRelativeUrl(urlInfo.url, rootDirectoryUrl);
+          const referencedUrlSet = new Set();
+          for (const referenceToOther of urlInfo.referenceToOthersSet) {
+            data[relativeUrl] = referencedUrlSet.add(referenceToOther.url);
+          }
+          data[relativeUrl] = Array.from(referencedUrlSet).map(
+            (referencedUrl) =>
+              urlToRelativeUrl(referencedUrl, rootDirectoryUrl),
+          );
+        }
+      });
+      return data;
+    },
+  });
+  return urlGraph;
+};
+
+const createUrlInfo = (url, context) => {
+  const urlInfo = {
+    isRoot: false,
+    graph: null,
+    kitchen: null,
+    context,
+    error: null,
+    modifiedTimestamp: 0,
+    descendantModifiedTimestamp: 0,
+    dereferencedTimestamp: 0,
+    originalContentEtag: null,
+    contentEtag: null,
+    isWatched: false,
+    isValid: () => false,
+    data: {}, // plugins can put whatever they want here
+    referenceToOthersSet: new Set(),
+    referenceFromOthersSet: new Set(),
+    firstReference: null, // first reference from an other url to this one
+    lastReference: null,
+    remapReference: null, // used solely during build for rollup
+    implicitUrlSet: new Set(),
+    searchParamVariantSet: new Set(),
+
+    type: undefined, // "html", "css", "js_classic", "js_module", "importmap", "sourcemap", "json", "webmanifest", ...
+    subtype: undefined, // "worker", "service_worker", "shared_worker" for js, otherwise undefined
+    typeHint: undefined,
+    subtypeHint: undefined,
+    contentType: "", // "text/html", "text/css", "text/javascript", "application/json", ...
+    url: null,
+    originalUrl: undefined,
+    isEntryPoint: false,
+    isDynamicEntryPoint: false,
+    entryUrlInfo: null,
+    originalContent: undefined,
+    originalContentAst: undefined,
+    content: undefined,
+    contentAst: undefined,
+    contentLength: undefined,
+    contentFinalized: false,
+    contentSideEffects: [],
+    contentInjections: {},
+
+    sourcemap: null,
+    sourcemapIsWrong: false,
+    sourcemapReference: null,
+
+    generatedUrl: null,
+    sourcemapGeneratedUrl: null,
+    filenameHint: "",
+    dirnameHint: "",
+    injected: false,
+
+    isInline: false,
+    inlineUrlSite: null,
+    jsQuote: null, // maybe move to inlineUrlSite?
+
+    timing: {},
+    status: 200,
+    headers: {},
+    debug: false,
+  };
+  Object.defineProperty(urlInfo, "url", {
+    enumerable: true,
+    configurable: false,
+    writable: false,
+    value: url,
+  });
+  urlInfo.pathname = new URL(url).pathname;
+  urlInfo.searchParams = new URL(url).searchParams;
+
+  Object.defineProperty(urlInfo, "packageDirectoryUrl", {
+    enumerable: true,
+    configurable: true,
+    get: () => context.packageDirectory.find(url),
+  });
+  Object.defineProperty(urlInfo, "packageJSON", {
+    enumerable: true,
+    configurable: true,
+    get: () => {
+      const packageDirectoryUrl = context.packageDirectory.find(url);
+      return packageDirectoryUrl
+        ? context.packageDirectory.read(packageDirectoryUrl)
+        : null;
+    },
+  });
+  Object.defineProperty(urlInfo, "packageName", {
+    enumerable: true,
+    configurable: true,
+    get: () => urlInfo.packageJSON?.name,
+  });
+  urlInfo.dependencies = createDependencies(urlInfo);
+  urlInfo.isUsed = () => {
+    if (urlInfo.isRoot) {
+      return true;
+    }
+    for (const referenceFromOther of urlInfo.referenceFromOthersSet) {
+      if (referenceFromOther.urlInfo !== urlInfo) {
+        continue;
+      }
+      if (referenceFromOther.ownerUrlInfo.isRoot) {
+        return true;
+      }
+      const ref = referenceFromOther.original || referenceFromOther;
+      if (ref.isWeak) {
+        // weak reference don't count as using the url
+        continue;
+      }
+      if (ref.gotInlined()) {
+        if (ref.ownerUrlInfo.isUsed()) {
+          return true;
+        }
+        // the url info was inlined, an other reference is required
+        // to consider the non-inlined urlInfo as used
+        continue;
+      }
+      return ref.ownerUrlInfo.isUsed();
+    }
+    // nothing uses this url anymore
+    // - versioning update inline content
+    // - file converted for import assertion or js_classic conversion
+    // - urlInfo for a file that is now inlined
+    return false;
+  };
+  urlInfo.findParentIfInline = () => {
+    let currentUrlInfo = urlInfo;
+    const graph = urlInfo.graph;
+    while (currentUrlInfo.isInline) {
+      const parentUrlInfo = graph.getUrlInfo(currentUrlInfo.inlineUrlSite.url);
+      if (!parentUrlInfo.isInline) {
+        return parentUrlInfo;
+      }
+      currentUrlInfo = parentUrlInfo;
+    }
+    return null;
+  };
+  urlInfo.findDependent = (callback) => {
+    return GRAPH_VISITOR.findDependent(urlInfo, callback);
+  };
+  urlInfo.isSearchParamVariantOf = (otherUrlInfo) => {
+    if (urlInfo.searchParams.size === 0) {
+      return false;
+    }
+    if (otherUrlInfo.searchParams.size > 0) {
+      return false;
+    }
+    const withoutSearch = asUrlWithoutSearch(urlInfo.url);
+    if (withoutSearch === otherUrlInfo.url) {
+      return true;
+    }
+    return false;
+  };
+  const getNextUrlInfo = (newProps) => {
+    const reference = urlInfo.firstReference;
+    const nextReference = reference.addImplicit({
+      type: reference.type,
+      subtype: reference.subtype,
+      expectedContentType: reference.expectedContentType,
+      expectedType: reference.expectedType,
+      expectedSubtype: reference.expectedSubtype,
+      integrity: reference.integrity,
+      crossorigin: reference.crossorigin,
+      specifierStart: reference.specifierStart,
+      specifierEnd: reference.specifierEnd,
+      specifierLine: reference.specifierLine,
+      specifierColumn: reference.specifierColumn,
+      baseUrl: reference.baseUrl,
+      isOriginalPosition: reference.isOriginalPosition,
+      // ok mais cet ref est implicite + weak
+      // donc ne devrait pas etre retournée par getEntryPoints()
+      isEntryPoint: reference.isEntryPoint,
+      isResourceHint: reference.isResourceHint,
+      hasVersioningEffect: reference.hasVersioningEffect,
+      version: reference.version,
+      content: reference.content,
+      contentType: reference.contentType,
+      fsStat: reference.fsStat,
+      debug: reference.debug,
+      importAttributes: reference.importAttributes,
+      astInfo: reference.astInfo,
+      mutation: reference.mutation,
+      data: { ...reference.data },
+      isWeak: true,
+      isInline: reference.isInline,
+      original: reference.original || reference,
+      prev: reference,
+      // urlInfo: null,
+      // url: null,
+      // generatedUrl: null,
+      // generatedSpecifier: null,
+      // filename: null,
+      ...newProps,
+    });
+    reference.next = nextReference;
+    return nextReference.urlInfo;
+  };
+
+  urlInfo.redirect = (props) => {
+    return getNextUrlInfo(props);
+  };
+  urlInfo.getWithoutSearchParam = (searchParam, props) => {
+    // The search param can be
+    // 1. injected by a plugin during "redirectReference"
+    //    - import assertions
+    //    - js module fallback to systemjs
+    // 2. already inside source files
+    //    - turn js module into js classic for convenience ?as_js_classic
+    //    - turn js classic to js module for to make it importable
+    if (!urlInfo.searchParams.has(searchParam)) {
+      return null;
+    }
+    const reference = urlInfo.firstReference;
+    const specifierWithoutSearchParam = injectQueryParamsIntoSpecifier(
+      reference.specifier,
+      {
+        [searchParam]: undefined,
+      },
+    );
+    return urlInfo.redirect({
+      specifier: specifierWithoutSearchParam,
+      ...props,
+    });
+  };
+  urlInfo.onRemoved = () => {
+    urlInfo.kitchen.urlInfoTransformer.resetContent(urlInfo);
+    urlInfo.referenceToOthersSet.forEach((referenceToOther) => {
+      referenceToOther.remove();
+    });
+    if (urlInfo.searchParams.size > 0) {
+      const urlWithoutSearch = asUrlWithoutSearch(urlInfo.url);
+      const urlInfoWithoutSearch = urlInfo.graph.getUrlInfo(urlWithoutSearch);
+      if (urlInfoWithoutSearch) {
+        urlInfoWithoutSearch.searchParamVariantSet.delete(urlInfo);
+      }
+    }
+  };
+  urlInfo.onModified = ({ modifiedTimestamp = Date.now() } = {}) => {
+    const visitedSet = new Set();
+    const considerModified = (urlInfo) => {
+      if (visitedSet.has(urlInfo)) {
+        return;
+      }
+      visitedSet.add(urlInfo);
+      urlInfo.modifiedTimestamp = modifiedTimestamp;
+      urlInfo.kitchen.urlInfoTransformer.resetContent(urlInfo);
+      for (const referenceToOther of urlInfo.referenceToOthersSet) {
+        const referencedUrlInfo = referenceToOther.urlInfo;
+        if (referencedUrlInfo.isInline) {
+          considerModified(referencedUrlInfo);
+        }
+      }
+      for (const referenceFromOther of urlInfo.referenceFromOthersSet) {
+        if (referenceFromOther.gotInlined()) {
+          const urlInfoReferencingThisOne = referenceFromOther.ownerUrlInfo;
+          considerModified(urlInfoReferencingThisOne);
+        }
+      }
+      for (const searchParamVariant of urlInfo.searchParamVariantSet) {
+        considerModified(searchParamVariant);
+      }
+    };
+    considerModified(urlInfo);
+    visitedSet.clear();
+  };
+  urlInfo.onDereferenced = (lastReferenceFromOther) => {
+    urlInfo.dereferencedTimestamp = Date.now();
+    urlInfo.graph.urlInfoDereferencedEventEmitter.emit(
+      urlInfo,
+      lastReferenceFromOther,
+    );
+  };
+
+  urlInfo.cook = (customContext) => {
+    return urlInfo.context.cook(urlInfo, customContext);
+  };
+  urlInfo.cookDependencies = (options) => {
+    return urlInfo.context.cookDependencies(urlInfo, options);
+  };
+  urlInfo.fetchContent = () => {
+    return urlInfo.context.fetchUrlContent(urlInfo);
+  };
+  urlInfo.transformContent = () => {
+    return urlInfo.context.transformUrlContent(urlInfo);
+  };
+  urlInfo.finalizeContent = () => {
+    return urlInfo.context.finalizeUrlContent(urlInfo);
+  };
+  urlInfo.mutateContent = (transformations) => {
+    return urlInfo.kitchen.urlInfoTransformer.applyTransformations(
+      urlInfo,
+      transformations,
+    );
+  };
+
+  const contentTransformationCallbackSet = new Set();
+  urlInfo.addContentTransformationCallback = (callback) => {
+    if (urlInfo.contentFinalized) {
+      if (urlInfo.context.dev) {
+        throw new Error(
+          `cannot add a transform callback on content already sent to the browser.
+--- content url ---
+${urlInfo.url}`,
+        );
+      }
+      urlInfo.context.addLastTransformationCallback(callback);
+    } else {
+      contentTransformationCallbackSet.add(callback);
+    }
+  };
+  urlInfo.applyContentTransformationCallbacks = async () => {
+    for (const contentTransformationCallback of contentTransformationCallbackSet) {
+      await contentTransformationCallback();
+    }
+    contentTransformationCallbackSet.clear();
+  };
+
+  // Object.preventExtensions(urlInfo) // useful to ensure all properties are declared here
+  return urlInfo;
+};
+
+const defineGettersOnPropertiesDerivedFromOriginalContent = (
+  urlInfo,
+) => {
+  const originalContentAstDescriptor = Object.getOwnPropertyDescriptor(
+    urlInfo,
+    "originalContentAst",
+  );
+  if (originalContentAstDescriptor.value === undefined) {
+    defineVolatileGetter(urlInfo, "originalContentAst", () => {
+      return getContentAst(urlInfo.originalContent, urlInfo.type, urlInfo.url);
+    });
+  }
+  const originalContentEtagDescriptor = Object.getOwnPropertyDescriptor(
+    urlInfo,
+    "originalContentEtag",
+  );
+  if (originalContentEtagDescriptor.value === undefined) {
+    defineVolatileGetter(urlInfo, "originalContentEtag", () => {
+      return bufferToEtag(Buffer.from(urlInfo.originalContent));
+    });
+  }
+};
+
+const defineGettersOnPropertiesDerivedFromContent = (urlInfo) => {
+  const contentLengthDescriptor = Object.getOwnPropertyDescriptor(
+    urlInfo,
+    "contentLength",
+  );
+  if (contentLengthDescriptor.value === undefined) {
+    defineVolatileGetter(urlInfo, "contentLength", () => {
+      return Buffer.byteLength(urlInfo.content);
+    });
+  }
+  const contentAstDescriptor = Object.getOwnPropertyDescriptor(
+    urlInfo,
+    "contentAst",
+  );
+  if (contentAstDescriptor.value === undefined) {
+    defineVolatileGetter(urlInfo, "contentAst", () => {
+      if (urlInfo.content === urlInfo.originalContent) {
+        return urlInfo.originalContentAst;
+      }
+      const ast = getContentAst(urlInfo.content, urlInfo.type, urlInfo.url);
+      return ast;
+    });
+  }
+  const contentEtagDescriptor = Object.getOwnPropertyDescriptor(
+    urlInfo,
+    "contentEtag",
+  );
+  if (contentEtagDescriptor.value === undefined) {
+    defineVolatileGetter(urlInfo, "contentEtag", () => {
+      if (urlInfo.content === urlInfo.originalContent) {
+        return urlInfo.originalContentEtag;
+      }
+      return getContentEtag(urlInfo.content);
+    });
+  }
+};
+
+const defineVolatileGetter = (object, property, getter) => {
+  const restore = (value) => {
+    Object.defineProperty(object, property, {
+      enumerable: true,
+      configurable: true,
+      writable: true,
+      value,
+    });
+  };
+
+  Object.defineProperty(object, property, {
+    enumerable: true,
+    configurable: true,
+    get: () => {
+      const value = getter();
+      restore(value);
+      return value;
+    },
+    set: restore,
+  });
+};
+
+const getContentAst = (content, type, url) => {
+  if (type === "js_module") {
+    return parseJsWithAcorn({
+      js: content,
+      url,
+      isJsModule: true,
+    });
+  }
+  if (type === "js_classic") {
+    return parseJsWithAcorn({
+      js: content,
+      url,
+    });
+  }
+  return null;
+};
+
+const getContentEtag = (content) => {
+  return bufferToEtag(Buffer.from(content));
+};
+
+const createUrlInfoTransformer = ({
+  logger,
+  sourcemaps,
+  sourcemapsComment,
+  sourcemapsSources,
+  sourcemapsSourcesProtocol,
+  sourcemapsSourcesContent = true,
+  outDirectoryUrl,
+  supervisor,
+}) => {
+  const formatSourcemapSource =
+    typeof sourcemapsSources === "function"
+      ? (source, urlInfo) => {
+          return sourcemapsSources(source, urlInfo);
+        }
+      : sourcemapsSources === "relative"
+        ? (source, urlInfo) => {
+            const sourceRelative = urlToRelativeUrl(source, urlInfo.url);
+            return sourceRelative || ".";
+          }
+        : null;
+
+  const normalizeSourcemap = (urlInfo, sourcemap) => {
+    let { sources } = sourcemap;
+    if (sources) {
+      sources = sources.map((source) => {
+        if (source && isFileSystemPath(source)) {
+          return String(pathToFileURL(source));
+        }
+        return source;
+      });
+    }
+    const wantSourcesContent =
+      // for inline content (<script> insdide html)
+      // chrome won't be able to fetch the file as it does not exists
+      // so sourcemap must contain sources
+      sourcemapsSourcesContent ||
+      urlInfo.isInline ||
+      (sources &&
+        sources.some((source) => !source || !source.startsWith("file:")));
+    if (sources && sources.length > 1) {
+      sourcemap.sources = sources.map(
+        (source) => new URL(source, urlInfo.originalUrl).href,
+      );
+      if (!wantSourcesContent) {
+        sourcemap.sourcesContent = undefined;
+      }
+      return sourcemap;
+    }
+    sourcemap.sources = [urlInfo.originalUrl];
+    sourcemap.sourcesContent = [urlInfo.originalContent];
+    if (!wantSourcesContent) {
+      sourcemap.sourcesContent = undefined;
+    }
+    return sourcemap;
+  };
+
+  const resetContent = (urlInfo) => {
+    urlInfo.contentFinalized = false;
+    urlInfo.originalContent = undefined;
+    urlInfo.originalContentAst = undefined;
+    urlInfo.originalContentEtag = undefined;
+    urlInfo.contentAst = undefined;
+    urlInfo.contentEtag = undefined;
+    urlInfo.contentLength = undefined;
+    urlInfo.content = undefined;
+    urlInfo.sourcemap = null;
+    urlInfo.sourcemapIsWrong = null;
+    urlInfo.sourcemapReference = null;
+  };
+
+  const setContentProperties = (
+    urlInfo,
+    { content, contentAst, contentEtag, contentLength },
+  ) => {
+    if (content === urlInfo.content) {
+      return false;
+    }
+    urlInfo.contentAst = contentAst;
+    urlInfo.contentEtag = contentEtag;
+    urlInfo.contentLength = contentLength;
+    urlInfo.content = content;
+    defineGettersOnPropertiesDerivedFromContent(urlInfo);
+    return true;
+  };
+
+  const setContent = async (
+    urlInfo,
+    content,
+    {
+      contentAst, // most of the time will be undefined
+      contentEtag, // in practice it's always undefined
+      contentLength,
+      originalContent = content,
+      originalContentAst, // most of the time will be undefined
+      originalContentEtag, // in practice always undefined
+      sourcemap,
+    } = {},
+  ) => {
+    urlInfo.originalContentAst = originalContentAst;
+    urlInfo.originalContentEtag = originalContentEtag;
+    if (originalContent !== urlInfo.originalContent) {
+      urlInfo.originalContent = originalContent;
+    }
+    defineGettersOnPropertiesDerivedFromOriginalContent(urlInfo);
+
+    let may = mayHaveSourcemap(urlInfo);
+    let shouldHandle = shouldHandleSourcemap(urlInfo);
+    if (may && !shouldHandle) {
+      content = SOURCEMAP.removeComment({
+        contentType: urlInfo.contentType,
+        content,
+      });
+    }
+    setContentProperties(urlInfo, {
+      content,
+      contentAst,
+      contentEtag,
+      contentLength,
+    });
+    urlInfo.sourcemap = sourcemap;
+    if (!may || !shouldHandle) {
+      return;
+    }
+
+    // case #1: already loaded during "load" hook
+    // - happens during build
+    // - happens for url converted during fetch (js_module_fallback for instance)
+    if (urlInfo.sourcemap) {
+      urlInfo.sourcemap = normalizeSourcemap(urlInfo, urlInfo.sourcemap);
+      return;
+    }
+
+    // case #2: check for existing sourcemap for this content
+    const sourcemapFound = SOURCEMAP.readComment({
+      contentType: urlInfo.contentType,
+      content: urlInfo.content,
+    });
+    if (sourcemapFound) {
+      const { type, subtype, line, column, specifier } = sourcemapFound;
+      const sourcemapReference = urlInfo.dependencies.found({
+        type,
+        subtype,
+        expectedType: "sourcemap",
+        specifier,
+        specifierLine: line,
+        specifierColumn: column,
+      });
+      urlInfo.sourcemapReference = sourcemapReference;
+      try {
+        await sourcemapReference.urlInfo.cook();
+        const sourcemapRaw = JSON.parse(sourcemapReference.urlInfo.content);
+        const sourcemap = normalizeSourcemap(urlInfo, sourcemapRaw);
+        urlInfo.sourcemap = sourcemap;
+        return;
+      } catch (e) {
+        logger.error(`Error while handling existing sourcemap: ${e.message}`);
+        return;
+      }
+    }
+
+    // case #3: will be injected once cooked
+  };
+
+  const applyTransformations = (urlInfo, transformations) => {
+    if (!transformations) {
+      return;
+    }
+    const {
+      type,
+      contentType,
+      content,
+      contentAst, // undefined most of the time
+      contentEtag, // in practice always undefined
+      contentLength,
+      sourcemap,
+      sourcemapIsWrong,
+      contentInjections,
+    } = transformations;
+    if (type) {
+      urlInfo.type = type;
+    }
+    if (contentType) {
+      urlInfo.contentType = contentType;
+    }
+    if (Object.hasOwn(transformations, "contentInjections")) {
+      if (contentInjections) {
+        Object.assign(urlInfo.contentInjections, contentInjections);
+      }
+      if (content === undefined) {
+        return;
+      }
+    }
+    let contentModified;
+    if (Object.hasOwn(transformations, "content")) {
+      contentModified = setContentProperties(urlInfo, {
+        content,
+        contentAst,
+        contentEtag,
+        contentLength,
+      });
+    }
+    if (
+      sourcemap &&
+      mayHaveSourcemap(urlInfo) &&
+      shouldHandleSourcemap(urlInfo)
+    ) {
+      const sourcemapNormalized = normalizeSourcemap(urlInfo, sourcemap);
+      let currentSourcemap = urlInfo.sourcemap;
+      const finalSourcemap = composeTwoSourcemaps(
+        currentSourcemap,
+        sourcemapNormalized,
+      );
+      const finalSourcemapNormalized = normalizeSourcemap(
+        urlInfo,
+        finalSourcemap,
+      );
+      urlInfo.sourcemap = finalSourcemapNormalized;
+      // A plugin is allowed to modify url content
+      // without returning a sourcemap
+      // This is the case for preact and react plugins.
+      // They are currently generating wrong source mappings
+      // when used.
+      // Generating the correct sourcemap in this situation
+      // is a nightmare no-one could solve in years so
+      // jsenv won't emit a warning and use the following strategy:
+      // "no sourcemap is better than wrong sourcemap"
+      urlInfo.sourcemapIsWrong = urlInfo.sourcemapIsWrong || sourcemapIsWrong;
+    }
+    if (contentModified && urlInfo.contentFinalized) {
+      applyContentEffects(urlInfo);
+    }
+  };
+
+  const applyContentEffects = (urlInfo) => {
+    applySourcemapOnContent(urlInfo);
+    writeInsideOutDirectory(urlInfo);
+  };
+
+  const writeInsideOutDirectory = (urlInfo) => {
+    // writing result inside ".jsenv" directory (debug purposes)
+    if (!outDirectoryUrl) {
+      return;
+    }
+    const { generatedUrl } = urlInfo;
+    if (!generatedUrl) {
+      return;
+    }
+    if (!generatedUrl.startsWith("file:")) {
+      return;
+    }
+    if (urlToPathname(generatedUrl).endsWith("/")) {
+      // when users explicitely request a directory
+      // we can't write the content returned by the server in ".jsenv" at that url
+      // because it would try to write a directory
+      // ideally we would decide a filename for this
+      // for now we just don't write anything
+      return;
+    }
+    if (urlInfo.type === "directory") {
+      // no need to write the directory
+      return;
+    }
+    // if (urlInfo.content === undefined) {
+    //   // Some error might lead to urlInfo.content to be null
+    //   // (error hapenning before urlInfo.content can be set, or 404 for instance)
+    //   // in that case we can't write anything
+    //   return;
+    // }
+
+    let contentIsInlined = urlInfo.isInline;
+    if (
+      contentIsInlined &&
+      supervisor &&
+      urlInfo.graph.getUrlInfo(urlInfo.inlineUrlSite.url).type === "html"
+    ) {
+      contentIsInlined = false;
+    }
+    if (!contentIsInlined) {
+      const generatedUrlObject = new URL(generatedUrl);
+      let baseName = urlToBasename(generatedUrlObject);
+      for (const [key, value] of generatedUrlObject.searchParams) {
+        baseName += `7${encodeFilePathComponent(key)}=${encodeFilePathComponent(value)}`;
+      }
+      const outFileUrl = setUrlBasename(generatedUrlObject, baseName);
+      let outFilePath = urlToFileSystemPath(outFileUrl);
+      outFilePath = truncate(outFilePath, 2055); // for windows
+      writeFileSync(outFilePath, urlInfo.content, { force: true });
+    }
+    const { sourcemapGeneratedUrl, sourcemapReference } = urlInfo;
+    if (sourcemapGeneratedUrl && sourcemapReference) {
+      writeFileSync(
+        new URL(sourcemapGeneratedUrl),
+        sourcemapReference.urlInfo.content,
+      );
+    }
+  };
+
+  const applySourcemapOnContent = (
+    urlInfo,
+    formatSource = formatSourcemapSource,
+  ) => {
+    if (!urlInfo.sourcemap || !shouldHandleSourcemap(urlInfo)) {
+      return;
+    }
+
+    // during build this function can be called after the file is cooked
+    // - to update content and sourcemap after "optimize" hook
+    // - to inject versioning into the entry point content
+    // in this scenarion we don't want to inject sourcemap reference
+    // just update the content
+
+    let sourcemapReference = urlInfo.sourcemapReference;
+    if (!sourcemapReference) {
+      for (const referenceToOther of urlInfo.referenceToOthersSet) {
+        if (referenceToOther.type === "sourcemap_comment") {
+          sourcemapReference = referenceToOther;
+          break;
+        }
+      }
+      if (!sourcemapReference) {
+        sourcemapReference = urlInfo.dependencies.inject({
+          trace: {
+            message: `sourcemap comment placeholder`,
+            url: urlInfo.url,
+          },
+          type: "sourcemap_comment",
+          subtype: urlInfo.contentType === "text/javascript" ? "js" : "css",
+          expectedType: "sourcemap",
+          specifier: urlInfo.sourcemapGeneratedUrl,
+          isInline: sourcemaps === "inline",
+        });
+      }
+      urlInfo.sourcemapReference = sourcemapReference;
+    }
+    const sourcemapUrlInfo = sourcemapReference.urlInfo;
+    // It's possible urlInfo content to be modified after being finalized
+    // In that case we'll recompose sourcemaps (and re-append it to file content)
+    // Recomposition is done on urlInfo.sourcemap and must be done with absolute urls inside .sources
+    // (so we can detect if sources are identical)
+    // For this reason we must not mutate urlInfo.sourcemap.sources
+    const sourcemapGenerated = {
+      ...urlInfo.sourcemap,
+      sources: urlInfo.sourcemap.sources.map((source) => {
+        const sourceFormatted = formatSource
+          ? formatSource(source, urlInfo)
+          : source;
+        if (sourcemapsSourcesProtocol) {
+          if (sourceFormatted.startsWith("file:///")) {
+            return `${sourcemapsSourcesProtocol}${sourceFormatted.slice(
+              "file:///".length,
+            )}`;
+          }
+        }
+        return sourceFormatted;
+      }),
+    };
+    sourcemapUrlInfo.type = "sourcemap";
+    sourcemapUrlInfo.contentType = "application/json";
+    setContentProperties(sourcemapUrlInfo, {
+      content: JSON.stringify(sourcemapGenerated, null, "  "),
+    });
+
+    if (!urlInfo.sourcemapIsWrong) {
+      if (sourcemaps === "inline") {
+        sourcemapReference.generatedSpecifier =
+          generateSourcemapDataUrl(sourcemapGenerated);
+      }
+      if (shouldUpdateSourcemapComment(urlInfo, sourcemaps)) {
+        let specifier;
+        if (sourcemaps === "file" && sourcemapsComment === "relative") {
+          specifier = urlToRelativeUrl(
+            sourcemapReference.generatedUrl,
+            urlInfo.generatedUrl,
+          );
+        } else {
+          specifier = sourcemapReference.generatedSpecifier;
+        }
+        setContentProperties(urlInfo, {
+          content: SOURCEMAP.writeComment({
+            contentType: urlInfo.contentType,
+            content: urlInfo.content,
+            specifier,
+          }),
+        });
+      }
+    }
+  };
+
+  const endTransformations = (urlInfo, transformations) => {
+    if (transformations) {
+      applyTransformations(urlInfo, transformations);
+    }
+    const { contentInjections } = urlInfo;
+    if (contentInjections && Object.keys(contentInjections).length > 0) {
+      const injectionTransformations = applyContentInjections(
+        urlInfo.content,
+        contentInjections,
+        urlInfo,
+      );
+      applyTransformations(urlInfo, injectionTransformations);
+    }
+    applyContentEffects(urlInfo);
+    urlInfo.contentFinalized = true;
+  };
+
+  return {
+    resetContent,
+    setContent,
+    applyTransformations,
+    applySourcemapOnContent,
+    endTransformations,
+  };
+};
+
+// https://gist.github.com/barbietunnie/7bc6d48a424446c44ff4
+const illegalRe = /[/?<>\\:*|"]/g;
+// eslint-disable-next-line no-control-regex
+const controlRe = /[\x00-\x1f\x80-\x9f]/g;
+const reservedRe = /^\.+$/;
+const windowsReservedRe = /^(con|prn|aux|nul|com[0-9]|lpt[0-9])(\..*)?$/i;
+const encodeFilePathComponent = (input, replacement = "") => {
+  const encoded = input
+    .replace(illegalRe, replacement)
+    .replace(controlRe, replacement)
+    .replace(reservedRe, replacement)
+    .replace(windowsReservedRe, replacement);
+  return encoded;
+};
+const truncate = (sanitized, length) => {
+  const uint8Array = new TextEncoder().encode(sanitized);
+  const truncated = uint8Array.slice(0, length);
+  return new TextDecoder().decode(truncated);
+};
+
+const shouldUpdateSourcemapComment = (urlInfo, sourcemaps) => {
+  if (urlInfo.context.buildStep === "shape") {
+    return false;
+  }
+  if (sourcemaps === "file" || sourcemaps === "inline") {
+    return true;
+  }
+  return false;
+};
+const mayHaveSourcemap = (urlInfo) => {
+  if (urlInfo.url.startsWith("data:")) {
+    return false;
+  }
+  if (!SOURCEMAP.enabledOnContentType(urlInfo.contentType)) {
+    return false;
+  }
+  return true;
+};
+const shouldHandleSourcemap = (urlInfo) => {
+  const { sourcemaps } = urlInfo.context;
+  if (
+    sourcemaps !== "inline" &&
+    sourcemaps !== "file" &&
+    sourcemaps !== "programmatic"
+  ) {
+    return false;
+  }
+  return true;
+};
+
+const inlineContentClientFileUrl = import.meta
+  .resolve("../client/inline_content/inline_content.js");
+
+const createKitchen = ({
+  name,
+  signal,
+  logLevel,
+
+  rootDirectoryUrl,
+  mainFilePath,
+  dev = false,
+  build = false,
+  runtimeCompat,
+  mode,
+
+  ignore,
+  ignoreProtocol = "remove",
+  supportedProtocols = [
+    "file:",
+    "data:",
+    // eslint-disable-next-line no-script-url
+    "javascript:",
+    "virtual:",
+    "ignore:",
+    "http:",
+    "https:",
+    "chrome:",
+    "chrome-extension:",
+    "chrome-untrusted:",
+    "isolated-app:",
+  ],
+  includedProtocols = [
+    "file:",
+    "data:",
+    "virtual:",
+    "ignore:",
+    "http:",
+    "https:",
+  ],
+
+  // during dev/test clientRuntimeCompat is a single runtime
+  // during build clientRuntimeCompat is runtimeCompat
+  clientRuntimeCompat = runtimeCompat,
+  supervisor,
+  sourcemaps = dev ? "inline" : "none", // "programmatic" and "file" also allowed
+  sourcemapsComment,
+  sourcemapsSources,
+  sourcemapsSourcesProtocol,
+  sourcemapsSourcesContent,
+  outDirectoryUrl,
+  initialContext = {},
+  packageDirectory,
+  packageDependencies,
+}) => {
+  const logger = createLogger({ logLevel });
+
+  const nodeRuntimeEnabled = Object.keys(runtimeCompat).includes("node");
+  const packageConditions = [nodeRuntimeEnabled ? "node" : "browser", "import"];
+  if (nodeRuntimeEnabled) {
+    supportedProtocols.push("node:");
+  }
+
+  if (packageDependencies === "auto") {
+    packageDependencies =
+      build && (nodeRuntimeEnabled || mode === "package")
+        ? "ignore"
+        : "include";
+  }
+
+  const kitchen = {
+    context: {
+      ...initialContext,
+      kitchen: null,
+      signal,
+      logger,
+      rootDirectoryUrl,
+      mainFilePath,
+      packageDirectory,
+      dev,
+      build,
+      runtimeCompat,
+      clientRuntimeCompat,
+      inlineContentClientFileUrl,
+      isSupportedOnCurrentClients: memoizeIsSupported(clientRuntimeCompat),
+      isSupportedOnFutureClients: memoizeIsSupported(runtimeCompat),
+      isPlaceholderInjection,
+      asServerUrl: (fileUrl) =>
+        FILE_AND_SERVER_URLS_CONVERTER.asServerUrl(fileUrl, rootDirectoryUrl),
+      asFileUrl: (serverUrl) =>
+        FILE_AND_SERVER_URLS_CONVERTER.asFileUrl(serverUrl, rootDirectoryUrl),
+      INJECTIONS,
+      getPluginMeta: null,
+      sourcemaps,
+      outDirectoryUrl,
+    },
+    resolve: (specifier, importer = rootDirectoryUrl) => {
+      const { url, packageDirectoryUrl, packageJson } = applyNodeEsmResolution({
+        conditions: packageConditions,
+        parentUrl: importer,
+        specifier,
+        lookupPackageScope: packageDirectory.find,
+        readPackageJson: packageDirectory.read,
+      });
+      return { url, packageDirectoryUrl, packageJson };
+    },
+    graph: null,
+    urlInfoTransformer: null,
+    jsenvPluginsController: null,
+  };
+  const kitchenContext = kitchen.context;
+  kitchenContext.kitchen = kitchen;
+
+  let jsenvPluginsController;
+  kitchen.setJsenvPluginsController = (value) => {
+    jsenvPluginsController = kitchen.jsenvPluginsController = value;
+  };
+
+  const graph = createUrlGraph({
+    name,
+    rootDirectoryUrl,
+    kitchen,
+  });
+  graph.urlInfoCreatedEventEmitter.on((urlInfoCreated) => {
+    jsenvPluginsController.callHooks(
+      "urlInfoCreated",
+      urlInfoCreated,
+      () => {},
+    );
+  });
+  kitchen.graph = graph;
+
+  const urlInfoTransformer = createUrlInfoTransformer({
+    logger,
+    sourcemaps,
+    sourcemapsComment,
+    sourcemapsSources,
+    sourcemapsSourcesProtocol,
+    sourcemapsSourcesContent,
+    outDirectoryUrl,
+    supervisor,
+  });
+  kitchen.urlInfoTransformer = urlInfoTransformer;
+
+  const isIgnoredByProtocol = (url) => {
+    const { protocol } = new URL(url);
+    const protocolIsIncluded = includedProtocols.includes(protocol);
+    if (protocolIsIncluded) {
+      return false;
+    }
+    return true;
+  };
+  const isIgnoredBecauseInPackageDependencies = (() => {
+    if (packageDependencies === undefined) {
+      return FUNCTION_RETURNING_FALSE;
+    }
+    if (packageDependencies === "include") {
+      return FUNCTION_RETURNING_FALSE;
+    }
+    if (!packageDirectory.url) {
+      return FUNCTION_RETURNING_FALSE;
+    }
+    const rootPackageJSON = packageDirectory.read(packageDirectory.url);
+    if (!rootPackageJSON) {
+      return FUNCTION_RETURNING_FALSE;
+    }
+    const { dependencies = {}, optionalDependencies = {} } = rootPackageJSON;
+    const dependencyKeys = Object.keys(dependencies);
+    const optionalDependencyKeys = Object.keys(optionalDependencies);
+    const dependencySet = new Set([
+      ...dependencyKeys,
+      ...optionalDependencyKeys,
+    ]);
+    if (dependencySet.size === 0) {
+      return FUNCTION_RETURNING_FALSE;
+    }
+
+    let getEffect;
+    if (packageDependencies === "ignore") {
+      getEffect = (dependencyName) => {
+        if (!dependencySet.has(dependencyName)) {
+          return "include";
+        }
+        return "ignore";
+      };
+    } else if (typeof packageDependencies === "object") {
+      let defaultEffect = "ignore";
+      const dependencyEffectMap = new Map();
+      for (const dependencyKey of Object.keys(packageDependencies)) {
+        const dependencyEffect = packageDependencies[dependencyKey];
+        if (dependencyKey === "*") {
+          defaultEffect = dependencyEffect;
+        } else {
+          dependencyEffectMap.set(dependencyKey, dependencyEffect);
+        }
+      }
+      getEffect = (dependencyName) => {
+        if (!dependencySet.has(dependencyName)) {
+          return "include";
+        }
+        const dependencyEffect = packageDependencies[dependencyName];
+        if (dependencyEffect) {
+          return dependencyEffect;
+        }
+        return defaultEffect;
+      };
+    }
+    return (url) => {
+      if (!url.startsWith("file:")) {
+        return false;
+      }
+      const packageDirectoryUrl = packageDirectory.find(url);
+      if (!packageDirectoryUrl) {
+        return false;
+      }
+      const packageJSON = packageDirectory.read(packageDirectoryUrl);
+      const name = packageJSON?.name;
+      if (!name) {
+        return false;
+      }
+      const effect = getEffect(name);
+      if (effect !== "ignore") {
+        return false;
+      }
+      return true;
+    };
+  })();
+
+  let isIgnoredByParam = () => false;
+  if (ignore) {
+    const associations = URL_META.resolveAssociations(
+      { ignore },
+      rootDirectoryUrl,
+    );
+    const cache = new Map();
+    isIgnoredByParam = (url) => {
+      const fromCache = cache.get(url);
+      if (fromCache) return fromCache;
+      const { ignore } = URL_META.applyAssociations({
+        url,
+        associations,
+      });
+      cache.set(url, ignore);
+      return ignore;
+    };
+  }
+  const isIgnored = (url) => {
+    return (
+      isIgnoredByProtocol(url) ||
+      isIgnoredByParam(url) ||
+      isIgnoredBecauseInPackageDependencies(url)
+    );
+  };
+  const resolveReference = (reference) => {
+    const setReferenceUrl = (referenceUrl) => {
+      // ignored urls are prefixed with "ignore:" so that reference are associated
+      // to a dedicated urlInfo that is ignored.
+      // this way it's only once a resource is referenced by reference that is not ignored
+      // that the resource is cooked
+      if (
+        reference.specifier[0] === "#" &&
+        // For Html, css and "#" refer to a resource in the page, reference must be preserved
+        // However for js import specifiers they have a different meaning and we want
+        // to resolve them (https://nodejs.org/api/packages.html#imports for instance)
+        reference.type !== "js_import"
+      ) {
+        referenceUrl = `ignore:${referenceUrl}`;
+      } else if (
+        reference.url && reference.original
+          ? isIgnored(reference.original.url)
+          : isIgnored(referenceUrl)
+      ) {
+        if (
+          referenceUrl.startsWith("node:") &&
+          !reference.specifier.startsWith("node:")
+        ) {
+          reference.specifier = `node:${reference.specifier}`;
+        }
+        referenceUrl = `ignore:${referenceUrl}`;
+      }
+
+      if (
+        referenceUrl.startsWith("ignore:") &&
+        !reference.specifier.startsWith("ignore:")
+      ) {
+        reference.specifier = `ignore:${reference.specifier}`;
+      }
+      Object.defineProperty(reference, "url", {
+        enumerable: true,
+        configurable: false,
+        writable: false,
+        value: referenceUrl,
+      });
+      reference.searchParams = new URL(referenceUrl).searchParams;
+    };
+
+    try {
+      resolve: {
+        if (reference.url) {
+          setReferenceUrl(reference.url);
+          break resolve;
+        }
+        const resolvedUrl = jsenvPluginsController.callHooksUntil(
+          "resolveReference",
+          reference,
+        );
+        if (!resolvedUrl) {
+          throw new Error(`NO_RESOLVE`);
+        }
+        if (resolvedUrl.includes("?debug")) {
+          reference.debug = true;
+        }
+        const normalizedUrl = normalizeUrl(resolvedUrl);
+        setReferenceUrl(normalizedUrl);
+        if (reference.debug) {
+          logger.debug(`url resolved by "${
+            jsenvPluginsController.getLastPluginUsed().name
+          }"
+${ANSI.color(reference.specifier, ANSI.GREY)} ->
+${ANSI.color(reference.url, ANSI.YELLOW)}
+`);
+        }
+      }
+      redirect: {
+        if (reference.isImplicit && reference.isWeak) {
+          // not needed for implicit references that are not rendered anywhere
+          // this condition excludes:
+          // - side_effect_file references injected in entry points or at the top of files
+          break redirect;
+        }
+        jsenvPluginsController.callHooks(
+          "redirectReference",
+          reference,
+          (returnValue, plugin, setReference) => {
+            const normalizedReturnValue = normalizeUrl(returnValue);
+            if (normalizedReturnValue === reference.url) {
+              return;
+            }
+            if (reference.debug) {
+              logger.debug(
+                `url redirected by "${plugin.name}"
+${ANSI.color(reference.url, ANSI.GREY)} ->
+${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
+`,
+              );
+            }
+            const referenceRedirected = reference.redirect(
+              normalizedReturnValue,
+            );
+            reference = referenceRedirected;
+            setReferenceUrl(normalizedReturnValue);
+            setReference(referenceRedirected);
+          },
+        );
+      }
+      reference.generatedUrl = reference.url;
+      reference.generatedSearchParams = reference.searchParams;
+      if (dev) {
+        let url = reference.url;
+        let { protocol } = new URL(url);
+        if (protocol === "ignore:") {
+          url = url.slice("ignore:".length);
+          protocol = new URL(url, "http://example.com").protocol;
+        }
+        if (!supportedProtocols.includes(protocol)) {
+          const protocolNotSupportedError = new Error(
+            `Unsupported protocol "${protocol}" for url "${url}"`,
+          );
+          protocolNotSupportedError.code = "PROTOCOL_NOT_SUPPORTED";
+          throw protocolNotSupportedError;
+        }
+      }
+      return reference;
+    } catch (error) {
+      throw createResolveUrlError({
+        jsenvPluginsController,
+        reference,
+        error,
+      });
+    }
+  };
+  kitchenContext.resolveReference = resolveReference;
+
+  const finalizeReference = (reference) => {
+    const urlInfo = reference.urlInfo;
+    urlInfo.generatedUrl = determineFileUrlForOutDirectory(urlInfo);
+    urlInfo.sourcemapGeneratedUrl = determineSourcemapFileUrl(urlInfo);
+
+    if (reference.isImplicit && reference.isWeak) {
+      // not needed for implicit references that are not rendered anywhere
+      // this condition excludes:
+      // - side_effect_file references injected in entry points or at the top of files
+      return;
+    }
+    {
+      // This hook must touch reference.generatedUrl, NOT reference.url
+      // And this is because this hook inject query params used to:
+      // - bypass browser cache (?v)
+      // - convey information (?hot)
+      // But do not represent an other resource, it is considered as
+      // the same resource under the hood
+      const searchParamTransformationMap = new Map();
+      jsenvPluginsController.callHooks(
+        "transformReferenceSearchParams",
+        reference,
+        (returnValue) => {
+          Object.keys(returnValue).forEach((key) => {
+            searchParamTransformationMap.set(key, returnValue[key]);
+          });
+        },
+      );
+      if (searchParamTransformationMap.size) {
+        const generatedSearchParams = new URLSearchParams(
+          reference.searchParams,
+        );
+        searchParamTransformationMap.forEach((value, key) => {
+          if (value === undefined) {
+            generatedSearchParams.delete(key);
+          } else {
+            generatedSearchParams.set(key, value);
+          }
+        });
+        const generatedUrlObject = new URL(reference.url);
+        const generatedSearch = generatedSearchParams.toString();
+        generatedUrlObject.search = generatedSearch;
+        reference.generatedUrl = normalizeUrl(generatedUrlObject.href);
+        reference.generatedSearchParams = generatedSearchParams;
+      }
+    }
+    {
+      const returnValue = jsenvPluginsController.callHooksUntil(
+        "formatReference",
+        reference,
+      );
+      if (reference.url.startsWith("ignore:")) {
+        if (ignoreProtocol === "remove") {
+          reference.specifier = reference.specifier.slice("ignore:".length);
+        }
+        reference.generatedSpecifier = reference.specifier;
+        reference.generatedSpecifier = urlSpecifierEncoding.encode(reference);
+      } else {
+        reference.generatedSpecifier = returnValue || reference.generatedUrl;
+        reference.generatedSpecifier = urlSpecifierEncoding.encode(reference);
+      }
+    }
+  };
+  kitchenContext.finalizeReference = finalizeReference;
+
+  const fetchUrlContent = async (urlInfo) => {
+    try {
+      const fetchUrlContentReturnValue =
+        await jsenvPluginsController.callAsyncHooksUntil(
+          "fetchUrlContent",
+          urlInfo,
+        );
+      if (!fetchUrlContentReturnValue) {
+        logger.warn(
+          createDetailedMessage(
+            `no plugin has handled url during "fetchUrlContent" hook -> url will be ignored`,
+            {
+              "url": urlInfo.url,
+              "url reference trace": urlInfo.firstReference?.trace.message,
+            },
+          ),
+        );
+        return;
+      }
+      let {
+        content,
+        contentType,
+        originalContent = content,
+        data,
+        type,
+        subtype,
+        originalUrl,
+        sourcemap,
+
+        status = 200,
+        headers = {},
+        body,
+        isEntryPoint,
+        isDynamicEntryPoint,
+        filenameHint,
+        contentSideEffects,
+      } = fetchUrlContentReturnValue;
+      if (content === undefined) {
+        content = body;
+      }
+      if (contentType === undefined) {
+        contentType = headers["content-type"] || "application/octet-stream";
+      }
+      if (filenameHint) {
+        urlInfo.filenameHint = filenameHint;
+      }
+      urlInfo.status = status;
+      urlInfo.contentType = contentType;
+      urlInfo.headers = headers;
+      urlInfo.type = type || inferUrlInfoType(urlInfo);
+      urlInfo.subtype =
+        subtype ||
+        urlInfo.firstReference.expectedSubtype ||
+        urlInfo.subtypeHint ||
+        "";
+      // during build urls info are reused and load returns originalUrl/originalContent
+      urlInfo.originalUrl = originalUrl
+        ? String(originalUrl)
+        : urlInfo.originalUrl;
+      if (data) {
+        Object.assign(urlInfo.data, data);
+      }
+      if (typeof isEntryPoint === "boolean") {
+        urlInfo.isEntryPoint = isEntryPoint;
+      }
+      if (typeof isDynamicEntryPoint === "boolean") {
+        urlInfo.isDynamicEntryPoint = isDynamicEntryPoint;
+      }
+      if (contentSideEffects) {
+        urlInfo.contentSideEffects = contentSideEffects;
+      }
+      assertFetchedContentCompliance({
+        urlInfo,
+        content,
+      });
+
+      // we wait here to read .contentAst and .originalContentAst
+      // so that we don't trigger lazy getters
+      // that would try to parse url too soon (before having urlInfo.type being set)
+      // also we do not want to trigger the getters that would parse url content
+      // too soon
+      const contentAstDescriptor = Object.getOwnPropertyDescriptor(
+        fetchUrlContentReturnValue,
+        "contentAst",
+      );
+      const originalContentAstDescriptor = Object.getOwnPropertyDescriptor(
+        fetchUrlContentReturnValue,
+        "originalContentAst",
+      );
+      await urlInfoTransformer.setContent(urlInfo, content, {
+        sourcemap,
+        originalContent,
+        contentAst: contentAstDescriptor
+          ? contentAstDescriptor.get
+            ? undefined
+            : contentAstDescriptor.value
+          : undefined,
+        originalContentAst: originalContentAstDescriptor
+          ? originalContentAstDescriptor.get
+            ? undefined
+            : originalContentAstDescriptor.value
+          : undefined,
+      });
+    } catch (error) {
+      throw createFetchUrlContentError({
+        jsenvPluginsController,
+        urlInfo,
+        error,
+      });
+    }
+  };
+  kitchenContext.fetchUrlContent = fetchUrlContent;
+
+  const transformUrlContent = async (urlInfo) => {
+    try {
+      await jsenvPluginsController.callAsyncHooks(
+        "transformUrlContent",
+        urlInfo,
+        (transformReturnValue) => {
+          urlInfoTransformer.applyTransformations(
+            urlInfo,
+            transformReturnValue,
+          );
+        },
+      );
+    } catch (error) {
+      const transformError = createTransformUrlContentError({
+        jsenvPluginsController,
+        urlInfo,
+        error,
+      });
+      throw transformError;
+    }
+  };
+  kitchenContext.transformUrlContent = transformUrlContent;
+
+  const finalizeUrlContent = async (urlInfo) => {
+    try {
+      await urlInfo.applyContentTransformationCallbacks();
+      const finalizeReturnValue =
+        await jsenvPluginsController.callAsyncHooksUntil(
+          "finalizeUrlContent",
+          urlInfo,
+        );
+      urlInfoTransformer.endTransformations(urlInfo, finalizeReturnValue);
+    } catch (error) {
+      throw createFinalizeUrlContentError({
+        jsenvPluginsController,
+        urlInfo,
+        error,
+      });
+    }
+  };
+  kitchenContext.finalizeUrlContent = finalizeUrlContent;
+
+  const cookGuard = dev ? debounceCook : memoizeCook;
+  const cook = cookGuard(async (urlInfo, contextDuringCook) => {
+    if (contextDuringCook) {
+      Object.assign(urlInfo.context, contextDuringCook);
+    }
+
+    // urlInfo objects are reused, they must be "reset" before cooking them again
+    if (urlInfo.error || urlInfo.content !== undefined) {
+      urlInfo.error = null;
+      urlInfo.type = null;
+      urlInfo.subtype = null;
+      urlInfo.timing = {};
+      urlInfoTransformer.resetContent(urlInfo);
+    }
+
+    if (!urlInfo.url.startsWith("ignore:")) {
+      try {
+        await urlInfo.dependencies.startCollecting(async () => {
+          // "fetchUrlContent" hook
+          await urlInfo.fetchContent();
+
+          // "transform" hook
+          await urlInfo.transformContent();
+
+          // "finalize" hook
+          await urlInfo.finalizeContent();
+        });
+      } catch (e) {
+        urlInfo.error = e;
+        if (urlInfo.isInline) {
+          const parentUrlInfo = urlInfo.findParentIfInline();
+          parentUrlInfo.error = e;
+        }
+        let errorWrapperMessage;
+        if (e.code === "PARSE_ERROR") {
+          errorWrapperMessage =
+            e.name === "TRANSFORM_URL_CONTENT_ERROR"
+              ? e.message
+              : `parse error on "${urlInfo.type}"
+${e.trace?.message}
+${e.reason}
+--- declared in ---
+${urlInfo.firstReference.trace.message}`;
+        } else if (e.isJsenvCookingError) {
+          errorWrapperMessage = e.message;
+        } else {
+          errorWrapperMessage = `Error while cooking ${urlInfo.type}
+${urlInfo.firstReference.trace.message}`;
+        }
+        // if we are cooking inline content during dev it's better not to throw
+        // because the main url info (html) is still valid and can be returned to the browser
+        if (
+          urlInfo.isInline &&
+          urlInfo.context.dev &&
+          // but if we are explicitely requesting inline content file then we throw
+          // to properly send 500 to the browser
+          urlInfo.context.reference !== urlInfo.url
+        ) {
+          logger.error(errorWrapperMessage);
+          return;
+        }
+        if (e.isJsenvCookingError) {
+          throw e;
+        }
+        const error = new Error(errorWrapperMessage, { cause: e });
+        defineNonEnumerableProperties(error, {
+          __INTERNAL_ERROR__: true,
+        });
+        throw error;
+      }
+    }
+
+    // "cooked" hook
+    jsenvPluginsController.callHooks("cooked", urlInfo, (cookedReturnValue) => {
+      if (typeof cookedReturnValue === "function") {
+        const removeCallback = urlInfo.graph.urlInfoDereferencedEventEmitter.on(
+          (urlInfoDereferenced, lastReferenceFromOther) => {
+            if (urlInfoDereferenced === urlInfo) {
+              removeCallback();
+              cookedReturnValue(lastReferenceFromOther.urlInfo);
+            }
+          },
+        );
+      }
+    });
+  });
+  kitchenContext.cook = cook;
+
+  const lastTransformationCallbacks = [];
+  const addLastTransformationCallback = (callback) => {
+    lastTransformationCallbacks.push(callback);
+  };
+  kitchenContext.addLastTransformationCallback = addLastTransformationCallback;
+
+  const cookDependencies = async (
+    urlInfo,
+    { operation, ignoreDynamicImport } = {},
+  ) => {
+    const seen = new Set();
+
+    const cookSelfThenDependencies = async (urlInfo) => {
+      if (operation) {
+        operation.throwIfAborted();
+      }
+      if (seen.has(urlInfo)) {
+        return;
+      }
+      seen.add(urlInfo);
+      await urlInfo.cook();
+      await startCookingDependencies(urlInfo);
+    };
+
+    const startCookingDependencies = async (urlInfo) => {
+      const dependencyPromises = [];
+      for (const referenceToOther of urlInfo.referenceToOthersSet) {
+        if (referenceToOther.type === "sourcemap_comment") {
+          // we don't cook sourcemap reference by sourcemap comments
+          // because this is already done in "initTransformations"
+          continue;
+        }
+        if (referenceToOther.isWeak) {
+          // we don't cook weak references (resource hints mostly)
+          // because they might refer to resource that will be modified during build
+          // It also means something else have to reference that url in order to cook it
+          // so that the preload is deleted by "resync_resource_hints.js" otherwise
+          continue;
+        }
+        if (referenceToOther.isImplicit) {
+          // implicit reference are not auto cooked
+          // when needed code is explicitely cooking/fetching the underlying url
+          continue;
+        }
+        if (
+          ignoreDynamicImport &&
+          referenceToOther.subtype === "import_dynamic"
+        ) {
+          continue;
+        }
+        const referencedUrlInfo = referenceToOther.urlInfo;
+        const dependencyPromise = cookSelfThenDependencies(referencedUrlInfo);
+        dependencyPromises.push(dependencyPromise);
+      }
+      await Promise.all(dependencyPromises);
+    };
+
+    await startCookingDependencies(urlInfo);
+    await Promise.all(
+      lastTransformationCallbacks.map(async (callback) => {
+        await callback();
+      }),
+    );
+    lastTransformationCallbacks.length = 0;
+  };
+  kitchenContext.cookDependencies = cookDependencies;
+
+  return kitchen;
+};
+
+const FUNCTION_RETURNING_FALSE = () => false;
+
+const debounceCook = (cook) => {
+  const pendingDishes = new Map();
+  return async (urlInfo, context) => {
+    const { url, modifiedTimestamp } = urlInfo;
+    const pendingDish = pendingDishes.get(url);
+    if (pendingDish) {
+      if (!modifiedTimestamp) {
+        await pendingDish.promise;
+        return;
+      }
+      if (pendingDish.timestamp > modifiedTimestamp) {
+        await pendingDish.promise;
+        return;
+      }
+      pendingDishes.delete(url);
+    }
+    const timestamp = Date.now();
+    const promise = cook(urlInfo, context);
+    pendingDishes.set(url, {
+      timestamp,
+      promise,
+    });
+    try {
+      await promise;
+    } finally {
+      pendingDishes.delete(url);
+    }
+  };
+};
+
+const memoizeCook = (cook) => {
+  const urlInfoCache = new Map();
+  return async (urlInfo, context) => {
+    const fromCache = urlInfoCache.get(urlInfo);
+    if (fromCache) {
+      await fromCache;
+      return;
+    }
+    let resolveCookPromise;
+    const promise = new Promise((resolve) => {
+      resolveCookPromise = resolve;
+    });
+    urlInfoCache.set(urlInfo, promise);
+    await cook(urlInfo, context);
+    resolveCookPromise();
+  };
+};
+
+const memoizeIsSupported = (runtimeCompat) => {
+  const cache = new Map();
+  return (feature, featureCompat) => {
+    const fromCache = cache.get(feature);
+    if (typeof fromCache === "boolean") {
+      return fromCache;
+    }
+    const supported = RUNTIME_COMPAT.isSupported(
+      runtimeCompat,
+      feature,
+      featureCompat,
+    );
+    cache.set(feature, supported);
+    return supported;
+  };
+};
+
+const inferUrlInfoType = (urlInfo) => {
+  const { type, typeHint } = urlInfo;
+  const mediaType = CONTENT_TYPE.asMediaType(urlInfo.contentType);
+  const { expectedType } = urlInfo.firstReference;
+  if (typeHint === "asset") {
+    return "asset";
+  }
+  if (type === "sourcemap" || typeHint === "sourcemap") {
+    return "sourcemap";
+  }
+  if (mediaType === "text/html") {
+    return "html";
+  }
+  if (mediaType === "text/css") {
+    return "css";
+  }
+  if (mediaType === "text/javascript") {
+    if (expectedType === "js_classic") {
+      return "js_classic";
+    }
+    if (typeHint === "js_classic") {
+      return "js_classic";
+    }
+    return "js_module";
+  }
+  if (mediaType === "application/importmap+json") {
+    return "importmap";
+  }
+  if (mediaType === "application/manifest+json") {
+    return "webmanifest";
+  }
+  if (mediaType === "image/svg+xml") {
+    return "svg";
+  }
+  if (CONTENT_TYPE.isJson(mediaType)) {
+    return "json";
+  }
+  if (CONTENT_TYPE.isTextual(mediaType)) {
+    return "text";
+  }
+  return expectedType || "other";
+};
+
 const requireFromJsenv = createRequire(import.meta.url);
 
 const parseUserAgentHeader = memoizeByFirstArgument((userAgent) => {
@@ -9477,6 +9544,404 @@ const parseUserAgentHeader = memoizeByFirstArgument((userAgent) => {
       family === "Other" ? "unknown" : `${major}.${minor}${patch}`,
   };
 });
+
+const devServerPluginServeSourceFiles = ({
+  packageDirectory,
+  sourceDirectoryUrl,
+  sourceMainFilePath,
+  ignore,
+  sourceFilesConfig,
+  clientAutoreload,
+  logLevel,
+
+  runtimeCompat,
+  onKitchenCreated,
+
+  supervisor,
+  sourcemaps,
+  sourcemapsSourcesContent,
+  outDirectoryUrl,
+
+  serverStopAbortSignal,
+  serverStopCallbackSet,
+  devServerJsenvPluginStore,
+  kitchenCache,
+}) => {
+  const { clientFileChangeEventEmitter, clientFileDereferencedEventEmitter } =
+    clientAutoreload;
+
+  const stopWatchingSourceFiles = watchSourceFiles(
+    sourceDirectoryUrl,
+    (fileInfo) => {
+      clientFileChangeEventEmitter.emit(fileInfo);
+    },
+    {
+      sourceFilesConfig,
+      keepProcessAlive: false,
+      cooldownBetweenFileEvents: clientAutoreload.cooldownBetweenFileEvents,
+    },
+  );
+  serverStopCallbackSet.add(stopWatchingSourceFiles);
+
+  const getOrCreateKitchen = async (request) => {
+    const { runtimeName, runtimeVersion } = parseUserAgentHeader(
+      request.headers["user-agent"] || "",
+    );
+    const runtimeId = `${runtimeName}@${runtimeVersion}`;
+    const existing = kitchenCache.get(runtimeId);
+    if (existing) {
+      return existing;
+    }
+    const watchAssociations = URL_META.resolveAssociations(
+      { watch: stopWatchingSourceFiles.watchPatterns },
+      sourceDirectoryUrl,
+    );
+    let kitchen;
+    clientFileChangeEventEmitter.on(({ url, event }) => {
+      const urlInfo = kitchen.graph.getUrlInfo(url);
+      if (urlInfo) {
+        if (event === "removed") {
+          urlInfo.onRemoved();
+        } else {
+          urlInfo.onModified();
+        }
+      }
+    });
+    const clientRuntimeCompat = { [runtimeName]: runtimeVersion };
+
+    kitchen = createKitchen({
+      name: runtimeId,
+      signal: serverStopAbortSignal,
+      logLevel,
+      rootDirectoryUrl: sourceDirectoryUrl,
+      mainFilePath: sourceMainFilePath,
+      ignore,
+      dev: true,
+      runtimeCompat,
+      clientRuntimeCompat,
+      supervisor,
+      sourcemaps,
+      sourcemapsSourcesContent,
+      outDirectoryUrl: outDirectoryUrl
+        ? new URL(`${runtimeName}@${runtimeVersion}/`, outDirectoryUrl)
+        : undefined,
+      packageDirectory,
+    });
+    kitchen.graph.urlInfoCreatedEventEmitter.on((urlInfoCreated) => {
+      const { watch } = URL_META.applyAssociations({
+        url: urlInfoCreated.url,
+        associations: watchAssociations,
+      });
+      urlInfoCreated.isWatched = watch;
+      // when an url depends on many others, we check all these (like package.json)
+      urlInfoCreated.isValid = () => {
+        const seenSet = new Set();
+        const checkValidity = (urlInfo) => {
+          if (seenSet.has(urlInfo)) {
+            return true;
+          }
+          seenSet.add(urlInfo);
+          if (!urlInfo.url.startsWith("file:")) {
+            return false;
+          }
+          if (urlInfo.content === undefined) {
+            // urlInfo content is undefined when:
+            // - url info content never fetched
+            // - it is considered as modified because undelying file is watched and got saved
+            // - it is considered as modified because underlying file content
+            //   was compared using etag and it has changed
+            return false;
+          }
+          if (!urlInfo.isWatched) {
+            // file is not watched, check the filesystem
+            let fileContentAsBuffer;
+            try {
+              fileContentAsBuffer = readFileSync(new URL(urlInfo.url));
+            } catch (e) {
+              if (e.code === "ENOENT") {
+                urlInfo.onModified();
+                return false;
+              }
+              return false;
+            }
+            const fileContentEtag = bufferToEtag(fileContentAsBuffer);
+            if (fileContentEtag !== urlInfo.originalContentEtag) {
+              urlInfo.onModified();
+              // restore content to be able to compare it again later
+              urlInfo.kitchen.urlInfoTransformer.setContent(
+                urlInfo,
+                String(fileContentAsBuffer),
+                {
+                  contentEtag: fileContentEtag,
+                },
+              );
+              return false;
+            }
+          }
+          for (const implicitUrl of urlInfo.implicitUrlSet) {
+            const implicitUrlInfo = urlInfo.graph.getUrlInfo(implicitUrl);
+            if (!implicitUrlInfo) {
+              continue;
+            }
+            if (implicitUrlInfo.content === undefined) {
+              // happens when we explicitely load an url with a search param
+              // - it creates an implicit url info to the url without params
+              // - we never explicitely request the url without search param so it has no content
+              // in that case the underlying urlInfo cannot be invalidate by the implicit
+              // we use modifiedTimestamp to detect if the url was loaded once
+              // or is just here to be used later
+              if (implicitUrlInfo.modifiedTimestamp) {
+                return false;
+              }
+              continue;
+            }
+            if (!checkValidity(implicitUrlInfo)) {
+              return false;
+            }
+          }
+          return true;
+        };
+        const valid = checkValidity(urlInfoCreated);
+        return valid;
+      };
+    });
+    kitchen.graph.urlInfoDereferencedEventEmitter.on(
+      (urlInfoDereferenced, lastReferenceFromOther) => {
+        clientFileDereferencedEventEmitter.emit(
+          urlInfoDereferenced,
+          lastReferenceFromOther,
+        );
+      },
+    );
+    const devServerJsenvPluginController = await createJsenvPluginsController(
+      devServerJsenvPluginStore,
+      kitchen,
+    );
+    kitchen.setJsenvPluginsController(devServerJsenvPluginController);
+
+    serverStopCallbackSet.add(() => {
+      devServerJsenvPluginController.callHooks("destroy", kitchen.context);
+    });
+    kitchenCache.set(runtimeId, kitchen);
+    onKitchenCreated(kitchen);
+    return kitchen;
+  };
+
+  const devServerPluginRoutes = {
+    name: "jsenv:dev_server_routes",
+    augmentRouteFetchSecondArg: async (request) => {
+      const kitchen = await getOrCreateKitchen(request);
+      return { kitchen };
+    },
+    routes: [
+      ...devServerJsenvPluginStore.allServerRoutes,
+      {
+        endpoint: "GET *",
+        description: "Serve project files.",
+        declarationSource: import.meta.url,
+        fetch: async (request, { kitchen }) => {
+          const { rootDirectoryUrl, mainFilePath } = kitchen.context;
+          let requestResource = request.resource;
+          let requestedUrl;
+          if (requestResource.startsWith("/@fs/")) {
+            const fsRootRelativeUrl = requestResource.slice("/@fs/".length);
+            requestedUrl = `file:///${fsRootRelativeUrl}`;
+          } else {
+            const requestedUrlObject = new URL(
+              requestResource === "/" ? mainFilePath : requestResource.slice(1),
+              rootDirectoryUrl,
+            );
+            requestedUrlObject.searchParams.delete("hot");
+            requestedUrl = requestedUrlObject.href;
+          }
+          const { referer } = request.headers;
+          const parentUrl = referer
+            ? WEB_URL_CONVERTER.asFileUrl(referer, {
+                origin: request.origin,
+                rootDirectoryUrl: sourceDirectoryUrl,
+              })
+            : sourceDirectoryUrl;
+          let reference = kitchen.graph.inferReference(
+            request.resource,
+            parentUrl,
+          );
+          if (reference) {
+            reference.urlInfo.context.request = request;
+            reference.urlInfo.context.requestedUrl = requestedUrl;
+          } else {
+            const rootUrlInfo = kitchen.graph.rootUrlInfo;
+            rootUrlInfo.context.request = request;
+            rootUrlInfo.context.requestedUrl = requestedUrl;
+            reference = rootUrlInfo.dependencies.createResolveAndFinalize({
+              trace: { message: parentUrl },
+              type: "http_request",
+              specifier: request.resource,
+            });
+            reference.urlInfo.context.requestedUrl = requestedUrl;
+            rootUrlInfo.context.request = null;
+            rootUrlInfo.context.requestedUrl = null;
+          }
+          const urlInfo = reference.urlInfo;
+          const ifNoneMatch = request.headers["if-none-match"];
+          const urlInfoTargetedByCache =
+            urlInfo.findParentIfInline() || urlInfo;
+
+          try {
+            if (!urlInfo.error && ifNoneMatch) {
+              const [clientOriginalContentEtag, clientContentEtag] =
+                ifNoneMatch.split("_");
+              if (
+                urlInfoTargetedByCache.originalContentEtag ===
+                  clientOriginalContentEtag &&
+                urlInfoTargetedByCache.contentEtag === clientContentEtag &&
+                urlInfoTargetedByCache.isValid()
+              ) {
+                const headers = {
+                  "cache-control": `private,max-age=0,must-revalidate`,
+                };
+                Object.keys(urlInfo.headers).forEach((key) => {
+                  if (key !== "content-length") {
+                    headers[key] = urlInfo.headers[key];
+                  }
+                });
+                return {
+                  status: 304,
+                  headers,
+                };
+              }
+            }
+            await urlInfo.cook({ request, reference });
+            let { response } = urlInfo;
+            if (response) {
+              return response;
+            }
+            response = {
+              url: reference.url,
+              status: 200,
+              headers: {
+                // when we send eTag to the client the next request to the server
+                // will send etag in request headers.
+                // If they match jsenv bypass cooking and returns 304
+                // This must not happen when a plugin uses "no-store" or "no-cache" as it means
+                // plugin logic wants to happens for every request to this url
+                ...(cacheIsDisabledInResponseHeader(urlInfoTargetedByCache)
+                  ? {
+                      "cache-control": "no-store", // for inline file we force no-store when parent is no-store
+                    }
+                  : {
+                      "cache-control": `private,max-age=0,must-revalidate`,
+                      // it's safe to use "_" separator because etag is encoded with base64 (see https://stackoverflow.com/a/13195197)
+                      "eTag": `${urlInfoTargetedByCache.originalContentEtag}_${urlInfoTargetedByCache.contentEtag}`,
+                    }),
+                ...urlInfo.headers,
+                "content-type": urlInfo.contentType,
+                "content-length": urlInfo.contentLength,
+              },
+              body: urlInfo.content,
+              timing: urlInfo.timing, // TODO: use something else
+            };
+            const augmentResponseInfo = {
+              ...kitchen.context,
+              reference,
+              urlInfo,
+            };
+            kitchen.jsenvPluginsController.callHooks(
+              "augmentResponse",
+              augmentResponseInfo,
+              (returnValue) => {
+                response = composeTwoResponses(response, returnValue);
+              },
+            );
+            return response;
+          } catch (error) {
+            const originalError = error ? error.cause || error : error;
+            if (originalError.asResponse) {
+              return originalError.asResponse();
+            }
+            const code = originalError.code;
+            if (code === "PARSE_ERROR") {
+              // when possible let browser re-throw the syntax error
+              // it's not possible to do that when url info content is not available
+              // (happens for js_module_fallback for instance)
+              if (urlInfo.content !== undefined) {
+                kitchen.context.logger
+                  .error(`Error while handling ${request.url}:
+  ${originalError.reasonCode || originalError.code}
+  ${error.trace?.message}`);
+                return {
+                  url: reference.url,
+                  status: 200,
+                  // reason becomes the http response statusText, it must not contain invalid chars
+                  // https://github.com/nodejs/node/blob/0c27ca4bc9782d658afeaebcec85ec7b28f1cc35/lib/_http_common.js#L221
+                  statusText: error.reason,
+                  statusMessage: originalError.message,
+                  headers: {
+                    "content-type": urlInfo.contentType,
+                    "content-length": urlInfo.contentLength,
+                    "cache-control": "no-store",
+                  },
+                  body: urlInfo.content,
+                };
+              }
+              return {
+                url: reference.url,
+                status: 500,
+                statusText: error.reason,
+                statusMessage: originalError.message,
+                headers: {
+                  "cache-control": "no-store",
+                },
+                body: urlInfo.content,
+              };
+            }
+            if (code === "DIRECTORY_REFERENCE_NOT_ALLOWED") {
+              return fetchDirectory(reference.url, {
+                headers: {
+                  accept: "text/html",
+                },
+                canReadDirectory: true,
+                rootDirectoryUrl: sourceDirectoryUrl,
+              });
+            }
+            if (code === "NOT_ALLOWED") {
+              return {
+                url: reference.url,
+                status: 403,
+                statusText: originalError.reason,
+              };
+            }
+            if (code === "NOT_FOUND") {
+              return {
+                url: reference.url,
+                status: 404,
+                statusText: originalError.reason,
+                statusMessage: originalError.message,
+              };
+            }
+            return {
+              url: reference.url,
+              status: 500,
+              statusText: error.reason,
+              statusMessage: formatError(error),
+              headers: {
+                "cache-control": "no-store",
+              },
+            };
+          }
+        },
+      },
+    ],
+  };
+
+  return [devServerPluginRoutes, ...devServerJsenvPluginStore.allServerPlugins];
+};
+
+const cacheIsDisabledInResponseHeader = (urlInfo) => {
+  return (
+    urlInfo.headers["cache-control"] === "no-store" ||
+    urlInfo.headers["cache-control"] === "no-cache"
+  );
+};
 
 const EXECUTED_BY_TEST_PLAN = process.argv.includes("--jsenv-test");
 
@@ -9598,7 +10063,6 @@ const startDevServer = async ({
       );
     }
   }
-
   // params normalization
   {
     if (clientAutoreload === true) {
@@ -9620,511 +10084,94 @@ const startDevServer = async ({
     serverStopAbortController.abort();
   });
   const serverStopAbortSignal = serverStopAbortController.signal;
+
   const kitchenCache = new Map();
+  const packageDirectory = createPackageDirectory({ sourceDirectoryUrl });
+  const clientFileChangeEventEmitter = createEventEmitter();
+  const clientFileDereferencedEventEmitter = createEventEmitter();
+  clientAutoreload = {
+    enabled: true,
+    clientServerEventsConfig: {},
+    clientFileChangeEventEmitter,
+    clientFileDereferencedEventEmitter,
+    ...clientAutoreload,
+  };
+
+  const devServerJsenvPluginStore = await createJsenvPluginStore([
+    jsenvPluginServerEvents({ clientAutoreload }),
+    ...plugins,
+    ...getCorePlugins({
+      packageDirectory,
+      rootDirectoryUrl: sourceDirectoryUrl,
+      mainFilePath: sourceMainFilePath,
+      runtimeCompat,
+      sourceFilesConfig,
+
+      referenceAnalysis,
+      nodeEsmResolution,
+      packageConditions,
+      packageConditionsConfig,
+      magicExtensions,
+      magicDirectoryIndex,
+      directoryListing,
+      supervisor,
+      injections,
+      transpilation,
+      spa,
+      packageBundle,
+
+      clientAutoreload,
+      clientAutoreloadOnServerRestart,
+      cacheControl,
+      ribbon,
+      dropToOpen,
+    }),
+  ]);
 
   const finalServerPlugins = [];
-  // x-server-inspect service
-  {
-    finalServerPlugins.push({
-      name: "jsenv:server_header",
-      routes: [
-        {
-          endpoint: "GET /.internal/server.json",
-          description: "Get information about jsenv dev server",
-          availableMediaTypes: ["application/json"],
-          declarationSource: import.meta.url,
-          fetch: () =>
-            Response.json({
-              server: "jsenv_dev_server/1",
-              sourceDirectoryUrl,
-            }),
-        },
+  finalServerPlugins.push(
+    // "header" service
+    devServerPluginInjectServerResponseHeader({ sourceDirectoryUrl }),
+    // cors service
+    serverPluginCORS({
+      accessControlAllowRequestOrigin: true,
+      accessControlAllowRequestMethod: true,
+      accessControlAllowRequestHeaders: true,
+      accessControlAllowedRequestHeaders: [
+        ...jsenvAccessControlAllowedHeaders,
+        "x-jsenv-execution-id",
       ],
-      injectResponseProperties: () => {
-        return {
-          headers: {
-            server: "jsenv_dev_server/1",
-          },
-        };
-      },
-    });
-  }
-  // cors service
-  {
-    finalServerPlugins.push(
-      serverPluginCORS({
-        accessControlAllowRequestOrigin: true,
-        accessControlAllowRequestMethod: true,
-        accessControlAllowRequestHeaders: true,
-        accessControlAllowedRequestHeaders: [
-          ...jsenvAccessControlAllowedHeaders,
-          "x-jsenv-execution-id",
-        ],
-        accessControlAllowCredentials: true,
-        timingAllowOrigin: true,
-      }),
-    );
-  }
-  // custom server plugins
-  {
-    finalServerPlugins.push(...serverPlugins);
-  }
-  // file_service
-  {
-    const clientFileChangeEventEmitter = createEventEmitter();
-    const clientFileDereferencedEventEmitter = createEventEmitter();
-    clientAutoreload = {
-      enabled: true,
-      clientServerEventsConfig: {},
-      clientFileChangeEventEmitter,
-      clientFileDereferencedEventEmitter,
-      ...clientAutoreload,
-    };
-    const stopWatchingSourceFiles = watchSourceFiles(
+      accessControlAllowCredentials: true,
+      timingAllowOrigin: true,
+    }),
+    // chrome devtools
+    devServerPluginChromeDevToolsJson({ sourceDirectoryUrl }),
+    ...serverPlugins,
+    devServerPluginServeSourceFiles({
+      packageDirectory,
       sourceDirectoryUrl,
-      (fileInfo) => {
-        clientFileChangeEventEmitter.emit(fileInfo);
-      },
-      {
-        sourceFilesConfig,
-        keepProcessAlive: false,
-        cooldownBetweenFileEvents: clientAutoreload.cooldownBetweenFileEvents,
-      },
-    );
-    serverStopCallbackSet.add(stopWatchingSourceFiles);
+      sourceMainFilePath,
+      ignore,
+      sourceFilesConfig,
+      clientAutoreload,
 
-    const packageDirectory = createPackageDirectory({
-      sourceDirectoryUrl,
-    });
+      logLevel,
+      runtimeCompat,
+      onKitchenCreated,
 
-    const devServerJsenvPluginStore = await createJsenvPluginStore([
-      jsenvPluginServerEvents({ clientAutoreload }),
-      ...plugins,
-      ...getCorePlugins({
-        packageDirectory,
-        rootDirectoryUrl: sourceDirectoryUrl,
-        mainFilePath: sourceMainFilePath,
-        runtimeCompat,
-        sourceFilesConfig,
+      supervisor,
+      sourcemaps,
+      sourcemapsSourcesContent,
+      outDirectoryUrl,
 
-        referenceAnalysis,
-        nodeEsmResolution,
-        packageConditions,
-        packageConditionsConfig,
-        magicExtensions,
-        magicDirectoryIndex,
-        directoryListing,
-        supervisor,
-        injections,
-        transpilation,
-        spa,
-        packageBundle,
-
-        clientAutoreload,
-        clientAutoreloadOnServerRestart,
-        cacheControl,
-        ribbon,
-        dropToOpen,
-      }),
-    ]);
-    const getOrCreateKitchen = async (request) => {
-      const { runtimeName, runtimeVersion } = parseUserAgentHeader(
-        request.headers["user-agent"] || "",
-      );
-      const runtimeId = `${runtimeName}@${runtimeVersion}`;
-      const existing = kitchenCache.get(runtimeId);
-      if (existing) {
-        return existing;
-      }
-      const watchAssociations = URL_META.resolveAssociations(
-        { watch: stopWatchingSourceFiles.watchPatterns },
-        sourceDirectoryUrl,
-      );
-      let kitchen;
-      clientFileChangeEventEmitter.on(({ url, event }) => {
-        const urlInfo = kitchen.graph.getUrlInfo(url);
-        if (urlInfo) {
-          if (event === "removed") {
-            urlInfo.onRemoved();
-          } else {
-            urlInfo.onModified();
-          }
-        }
-      });
-      const clientRuntimeCompat = { [runtimeName]: runtimeVersion };
-
-      kitchen = createKitchen({
-        name: runtimeId,
-        signal: serverStopAbortSignal,
-        logLevel,
-        rootDirectoryUrl: sourceDirectoryUrl,
-        mainFilePath: sourceMainFilePath,
-        ignore,
-        dev: true,
-        runtimeCompat,
-        clientRuntimeCompat,
-        supervisor,
-        sourcemaps,
-        sourcemapsSourcesContent,
-        outDirectoryUrl: outDirectoryUrl
-          ? new URL(`${runtimeName}@${runtimeVersion}/`, outDirectoryUrl)
-          : undefined,
-        packageDirectory,
-      });
-      kitchen.graph.urlInfoCreatedEventEmitter.on((urlInfoCreated) => {
-        const { watch } = URL_META.applyAssociations({
-          url: urlInfoCreated.url,
-          associations: watchAssociations,
-        });
-        urlInfoCreated.isWatched = watch;
-        // when an url depends on many others, we check all these (like package.json)
-        urlInfoCreated.isValid = () => {
-          const seenSet = new Set();
-          const checkValidity = (urlInfo) => {
-            if (seenSet.has(urlInfo)) {
-              return true;
-            }
-            seenSet.add(urlInfo);
-            if (!urlInfo.url.startsWith("file:")) {
-              return false;
-            }
-            if (urlInfo.content === undefined) {
-              // urlInfo content is undefined when:
-              // - url info content never fetched
-              // - it is considered as modified because undelying file is watched and got saved
-              // - it is considered as modified because underlying file content
-              //   was compared using etag and it has changed
-              return false;
-            }
-            if (!urlInfo.isWatched) {
-              // file is not watched, check the filesystem
-              let fileContentAsBuffer;
-              try {
-                fileContentAsBuffer = readFileSync(new URL(urlInfo.url));
-              } catch (e) {
-                if (e.code === "ENOENT") {
-                  urlInfo.onModified();
-                  return false;
-                }
-                return false;
-              }
-              const fileContentEtag = bufferToEtag(fileContentAsBuffer);
-              if (fileContentEtag !== urlInfo.originalContentEtag) {
-                urlInfo.onModified();
-                // restore content to be able to compare it again later
-                urlInfo.kitchen.urlInfoTransformer.setContent(
-                  urlInfo,
-                  String(fileContentAsBuffer),
-                  {
-                    contentEtag: fileContentEtag,
-                  },
-                );
-                return false;
-              }
-            }
-            for (const implicitUrl of urlInfo.implicitUrlSet) {
-              const implicitUrlInfo = urlInfo.graph.getUrlInfo(implicitUrl);
-              if (!implicitUrlInfo) {
-                continue;
-              }
-              if (implicitUrlInfo.content === undefined) {
-                // happens when we explicitely load an url with a search param
-                // - it creates an implicit url info to the url without params
-                // - we never explicitely request the url without search param so it has no content
-                // in that case the underlying urlInfo cannot be invalidate by the implicit
-                // we use modifiedTimestamp to detect if the url was loaded once
-                // or is just here to be used later
-                if (implicitUrlInfo.modifiedTimestamp) {
-                  return false;
-                }
-                continue;
-              }
-              if (!checkValidity(implicitUrlInfo)) {
-                return false;
-              }
-            }
-            return true;
-          };
-          const valid = checkValidity(urlInfoCreated);
-          return valid;
-        };
-      });
-      kitchen.graph.urlInfoDereferencedEventEmitter.on(
-        (urlInfoDereferenced, lastReferenceFromOther) => {
-          clientFileDereferencedEventEmitter.emit(
-            urlInfoDereferenced,
-            lastReferenceFromOther,
-          );
-        },
-      );
-      const devServerJsenvPluginController = await createJsenvPluginsController(
-        devServerJsenvPluginStore,
-        kitchen,
-      );
-      kitchen.setJsenvPluginsController(devServerJsenvPluginController);
-
-      serverStopCallbackSet.add(() => {
-        devServerJsenvPluginController.callHooks("destroy", kitchen.context);
-      });
-      kitchenCache.set(runtimeId, kitchen);
-      onKitchenCreated(kitchen);
-      return kitchen;
-    };
-
-    finalServerPlugins.push({
-      name: "jsenv:dev_server_routes",
-      augmentRouteFetchSecondArg: async (request) => {
-        const kitchen = await getOrCreateKitchen(request);
-        return { kitchen };
-      },
-      routes: [
-        ...devServerJsenvPluginStore.allServerRoutes,
-        {
-          endpoint: "GET *",
-          description: "Serve project files.",
-          declarationSource: import.meta.url,
-          fetch: async (request, { kitchen }) => {
-            const { rootDirectoryUrl, mainFilePath } = kitchen.context;
-            let requestResource = request.resource;
-            let requestedUrl;
-            if (requestResource.startsWith("/@fs/")) {
-              const fsRootRelativeUrl = requestResource.slice("/@fs/".length);
-              requestedUrl = `file:///${fsRootRelativeUrl}`;
-            } else {
-              const requestedUrlObject = new URL(
-                requestResource === "/"
-                  ? mainFilePath
-                  : requestResource.slice(1),
-                rootDirectoryUrl,
-              );
-              requestedUrlObject.searchParams.delete("hot");
-              requestedUrl = requestedUrlObject.href;
-            }
-            const { referer } = request.headers;
-            const parentUrl = referer
-              ? WEB_URL_CONVERTER.asFileUrl(referer, {
-                  origin: request.origin,
-                  rootDirectoryUrl: sourceDirectoryUrl,
-                })
-              : sourceDirectoryUrl;
-            let reference = kitchen.graph.inferReference(
-              request.resource,
-              parentUrl,
-            );
-            if (reference) {
-              reference.urlInfo.context.request = request;
-              reference.urlInfo.context.requestedUrl = requestedUrl;
-            } else {
-              const rootUrlInfo = kitchen.graph.rootUrlInfo;
-              rootUrlInfo.context.request = request;
-              rootUrlInfo.context.requestedUrl = requestedUrl;
-              reference = rootUrlInfo.dependencies.createResolveAndFinalize({
-                trace: { message: parentUrl },
-                type: "http_request",
-                specifier: request.resource,
-              });
-              reference.urlInfo.context.requestedUrl = requestedUrl;
-              rootUrlInfo.context.request = null;
-              rootUrlInfo.context.requestedUrl = null;
-            }
-            const urlInfo = reference.urlInfo;
-            const ifNoneMatch = request.headers["if-none-match"];
-            const urlInfoTargetedByCache =
-              urlInfo.findParentIfInline() || urlInfo;
-
-            try {
-              if (!urlInfo.error && ifNoneMatch) {
-                const [clientOriginalContentEtag, clientContentEtag] =
-                  ifNoneMatch.split("_");
-                if (
-                  urlInfoTargetedByCache.originalContentEtag ===
-                    clientOriginalContentEtag &&
-                  urlInfoTargetedByCache.contentEtag === clientContentEtag &&
-                  urlInfoTargetedByCache.isValid()
-                ) {
-                  const headers = {
-                    "cache-control": `private,max-age=0,must-revalidate`,
-                  };
-                  Object.keys(urlInfo.headers).forEach((key) => {
-                    if (key !== "content-length") {
-                      headers[key] = urlInfo.headers[key];
-                    }
-                  });
-                  return {
-                    status: 304,
-                    headers,
-                  };
-                }
-              }
-              await urlInfo.cook({ request, reference });
-              let { response } = urlInfo;
-              if (response) {
-                return response;
-              }
-              response = {
-                url: reference.url,
-                status: 200,
-                headers: {
-                  // when we send eTag to the client the next request to the server
-                  // will send etag in request headers.
-                  // If they match jsenv bypass cooking and returns 304
-                  // This must not happen when a plugin uses "no-store" or "no-cache" as it means
-                  // plugin logic wants to happens for every request to this url
-                  ...(cacheIsDisabledInResponseHeader(urlInfoTargetedByCache)
-                    ? {
-                        "cache-control": "no-store", // for inline file we force no-store when parent is no-store
-                      }
-                    : {
-                        "cache-control": `private,max-age=0,must-revalidate`,
-                        // it's safe to use "_" separator because etag is encoded with base64 (see https://stackoverflow.com/a/13195197)
-                        "eTag": `${urlInfoTargetedByCache.originalContentEtag}_${urlInfoTargetedByCache.contentEtag}`,
-                      }),
-                  ...urlInfo.headers,
-                  "content-type": urlInfo.contentType,
-                  "content-length": urlInfo.contentLength,
-                },
-                body: urlInfo.content,
-                timing: urlInfo.timing, // TODO: use something else
-              };
-              const augmentResponseInfo = {
-                ...kitchen.context,
-                reference,
-                urlInfo,
-              };
-              kitchen.jsenvPluginsController.callHooks(
-                "augmentResponse",
-                augmentResponseInfo,
-                (returnValue) => {
-                  response = composeTwoResponses(response, returnValue);
-                },
-              );
-              return response;
-            } catch (error) {
-              const originalError = error ? error.cause || error : error;
-              if (originalError.asResponse) {
-                return originalError.asResponse();
-              }
-              const code = originalError.code;
-              if (code === "PARSE_ERROR") {
-                // when possible let browser re-throw the syntax error
-                // it's not possible to do that when url info content is not available
-                // (happens for js_module_fallback for instance)
-                if (urlInfo.content !== undefined) {
-                  kitchen.context.logger
-                    .error(`Error while handling ${request.url}:
-  ${originalError.reasonCode || originalError.code}
-  ${error.trace?.message}`);
-                  return {
-                    url: reference.url,
-                    status: 200,
-                    // reason becomes the http response statusText, it must not contain invalid chars
-                    // https://github.com/nodejs/node/blob/0c27ca4bc9782d658afeaebcec85ec7b28f1cc35/lib/_http_common.js#L221
-                    statusText: error.reason,
-                    statusMessage: originalError.message,
-                    headers: {
-                      "content-type": urlInfo.contentType,
-                      "content-length": urlInfo.contentLength,
-                      "cache-control": "no-store",
-                    },
-                    body: urlInfo.content,
-                  };
-                }
-                return {
-                  url: reference.url,
-                  status: 500,
-                  statusText: error.reason,
-                  statusMessage: originalError.message,
-                  headers: {
-                    "cache-control": "no-store",
-                  },
-                  body: urlInfo.content,
-                };
-              }
-              if (code === "DIRECTORY_REFERENCE_NOT_ALLOWED") {
-                return serveDirectory(reference.url, {
-                  headers: {
-                    accept: "text/html",
-                  },
-                  canReadDirectory: true,
-                  rootDirectoryUrl: sourceDirectoryUrl,
-                });
-              }
-              if (code === "NOT_ALLOWED") {
-                return {
-                  url: reference.url,
-                  status: 403,
-                  statusText: originalError.reason,
-                };
-              }
-              if (code === "NOT_FOUND") {
-                return {
-                  url: reference.url,
-                  status: 404,
-                  statusText: originalError.reason,
-                  statusMessage: originalError.message,
-                };
-              }
-              return {
-                url: reference.url,
-                status: 500,
-                statusText: error.reason,
-                statusMessage: formatError(error),
-                headers: {
-                  "cache-control": "no-store",
-                },
-              };
-            }
-          },
-        },
-      ],
-    });
-    finalServerPlugins.push(...devServerJsenvPluginStore.allServerPlugins);
-  }
-  // jsenv error handler service
-  {
-    finalServerPlugins.push({
-      name: "jsenv:omega_error_handler",
-      handleError: (error) => {
-        const getResponseForError = () => {
-          if (error && error.asResponse) {
-            return error.asResponse();
-          }
-          if (error && error.statusText === "Unexpected directory operation") {
-            return {
-              status: 403,
-            };
-          }
-          return convertFileSystemErrorToResponseProperties(error);
-        };
-        const response = getResponseForError();
-        if (!response) {
-          return null;
-        }
-        const body = JSON.stringify({
-          status: response.status,
-          statusText: response.statusText,
-          headers: response.headers,
-          body: response.body,
-        });
-        return {
-          status: response.status,
-          headers: {
-            "content-type": "application/json",
-            "content-length": Buffer.byteLength(body),
-          },
-          body,
-        };
-      },
-    });
-  }
-  // default error handler
-  {
-    finalServerPlugins.push(
-      serverPluginErrorHandler({
-        sendErrorDetails: true,
-      }),
-    );
-  }
+      serverStopAbortSignal,
+      serverStopCallbackSet,
+      devServerJsenvPluginStore,
+      kitchenCache,
+    }),
+    // jsenv error handler service
+    devServerPluginOmegaErrorHandler(),
+  );
 
   const server = await startServer({
     signal,
@@ -10169,13 +10216,6 @@ const startDevServer = async ({
     },
     kitchenCache,
   };
-};
-
-const cacheIsDisabledInResponseHeader = (urlInfo) => {
-  return (
-    urlInfo.headers["cache-control"] === "no-store" ||
-    urlInfo.headers["cache-control"] === "no-cache"
-  );
 };
 
 export { startDevServer };

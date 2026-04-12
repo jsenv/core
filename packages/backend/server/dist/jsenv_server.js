@@ -3970,7 +3970,7 @@ const createPluginsController = async ({
     addPluginToHookSetMap(plugin);
   };
 
-  const pluginCandidates = plugins;
+  const pluginCandidates = plugins.flat(Infinity);
   const activePlugins = [];
   const pluginsWithEffect = [];
 
@@ -5370,25 +5370,24 @@ const createResourcePattern = (pattern) => {
     });
   }
 
-  const patternEndsWithSlash =
-    pathnamePatternString.length > 1 && pathnamePatternString.endsWith("/");
+  const patternEndsWithSlash = pathnamePatternString.endsWith("/");
 
   return {
     match: (resource) => {
       const [pathname, search, hash] = resourceToParts(resource);
       let decodedPathname = decodeURIComponent(pathname);
-      if (
-        patternEndsWithSlash &&
-        decodedPathname.startsWith(pathnamePatternString)
-      ) {
-        return {
+      let result;
+      if (patternEndsWithSlash && !searchPattern && !hashPattern) {
+        if (!decodedPathname.startsWith(pathnamePatternString)) {
+          return null;
+        }
+        result = {
           named: {},
           stars: [decodedPathname.slice(pathnamePatternString.length)],
         };
+      } else {
+        result = pathnamePattern.match(decodedPathname);
       }
-      let result = patternEndsWithSlash
-        ? null
-        : pathnamePattern.match(decodedPathname);
       if (!result) {
         return null;
       }
@@ -8029,6 +8028,76 @@ const bufferToEtag = (buffer) => {
   return `"${length.toString(16)}-${hashBase64StringSubset}"`;
 };
 
+const fetchDirectory = (
+  url,
+  { headers = {}, rootDirectoryUrl } = {},
+) => {
+  url = String(url);
+  url = url[url.length - 1] === "/" ? url : `${url}/`;
+  const directoryContentArray = readdirSync(new URL(url));
+  const responseProducers = {
+    "application/json": () => {
+      const directoryContentJson = JSON.stringify(
+        directoryContentArray,
+        null,
+        "  ",
+      );
+      return {
+        status: 200,
+        headers: {
+          "content-type": "application/json",
+          "content-length": directoryContentJson.length,
+        },
+        body: directoryContentJson,
+      };
+    },
+    "text/html": () => {
+      const directoryAsHtml = `<!DOCTYPE html>
+<html>
+  <head>
+    <title>Directory explorer</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+  </head>
+
+  <body>
+    <h1>Content of directory ${url}</h1>
+    <ul>
+      ${directoryContentArray.map((filename) => {
+        const fileUrlObject = new URL(filename, url);
+        const fileUrl = String(fileUrlObject);
+        let fileUrlRelativeToServer = fileUrl.slice(
+          String(rootDirectoryUrl).length,
+        );
+        if (lstatSync(fileUrlObject).isDirectory()) {
+          fileUrlRelativeToServer += "/";
+        }
+        return `<li>
+        <a href="/${fileUrlRelativeToServer}">${fileUrlRelativeToServer}</a>
+      </li>`;
+      }).join(`
+      `)}
+    </ul>
+  </body>
+</html>`;
+
+      return {
+        status: 200,
+        headers: {
+          "content-type": "text/html",
+          "content-length": Buffer.byteLength(directoryAsHtml),
+        },
+        body: directoryAsHtml,
+      };
+    },
+  };
+  const bestContentType = pickContentType(
+    { headers },
+    Object.keys(responseProducers),
+  );
+  return responseProducers[bestContentType || "application/json"]();
+};
+
 const convertFileSystemErrorToResponseProperties = (error) => {
   // https://iojs.org/api/errors.html#errors_eacces_permission_denied
   if (isErrorWithCode(error, "EACCES")) {
@@ -8114,76 +8183,6 @@ const fileSystemPathToUrl = (value) => {
   return String(pathToFileURL(value));
 };
 
-const serveDirectory = (
-  url,
-  { headers = {}, rootDirectoryUrl } = {},
-) => {
-  url = String(url);
-  url = url[url.length - 1] === "/" ? url : `${url}/`;
-  const directoryContentArray = readdirSync(new URL(url));
-  const responseProducers = {
-    "application/json": () => {
-      const directoryContentJson = JSON.stringify(
-        directoryContentArray,
-        null,
-        "  ",
-      );
-      return {
-        status: 200,
-        headers: {
-          "content-type": "application/json",
-          "content-length": directoryContentJson.length,
-        },
-        body: directoryContentJson,
-      };
-    },
-    "text/html": () => {
-      const directoryAsHtml = `<!DOCTYPE html>
-<html>
-  <head>
-    <title>Directory explorer</title>
-    <meta charset="utf-8" />
-    <link rel="icon" href="data:," />
-  </head>
-
-  <body>
-    <h1>Content of directory ${url}</h1>
-    <ul>
-      ${directoryContentArray.map((filename) => {
-        const fileUrlObject = new URL(filename, url);
-        const fileUrl = String(fileUrlObject);
-        let fileUrlRelativeToServer = fileUrl.slice(
-          String(rootDirectoryUrl).length,
-        );
-        if (lstatSync(fileUrlObject).isDirectory()) {
-          fileUrlRelativeToServer += "/";
-        }
-        return `<li>
-        <a href="/${fileUrlRelativeToServer}">${fileUrlRelativeToServer}</a>
-      </li>`;
-      }).join(`
-      `)}
-    </ul>
-  </body>
-</html>`;
-
-      return {
-        status: 200,
-        headers: {
-          "content-type": "text/html",
-          "content-length": Buffer.byteLength(directoryAsHtml),
-        },
-        body: directoryAsHtml,
-      };
-    },
-  };
-  const bestContentType = pickContentType(
-    { headers },
-    Object.keys(responseProducers),
-  );
-  return responseProducers[bestContentType || "application/json"]();
-};
-
 /*
  * This function returns response properties in a plain object like
  * { status: 200, body: "Hello world" }.
@@ -8202,17 +8201,17 @@ const fetchFileSystem = async (
   helpers,
   directoryUrl,
   {
+    mainFileRelativeUrl = null,
     etagEnabled = false,
     etagMemory = true,
     etagMemoryMaxSize = 1000,
     mtimeEnabled = false,
     compressionEnabled = false,
     compressionSizeThreshold = 1024,
-    cacheControl = etagEnabled || mtimeEnabled
-      ? "private,max-age=0,must-revalidate"
-      : "no-store",
+    cacheControl,
+    isVersioned = defaultIsVersioned,
     canReadDirectory = false,
-    ENOENTFallback = () => {},
+    ENOENTFallback = () => null,
   } = {},
 ) => {
   let directoryUrlString = asUrlString(directoryUrl);
@@ -8238,7 +8237,11 @@ const fetchFileSystem = async (
   const filesystemUrl = new URL(resource, directoryUrl);
   const urlString = asUrlString(filesystemUrl);
 
-  if (typeof cacheControl === "function") {
+  if (cacheControl === undefined) {
+    cacheControl = isVersioned(request)
+      ? `private,max-age=${SECONDS_IN_30_DAYS},immutable`
+      : "private,max-age=0,must-revalidate";
+  } else if (typeof cacheControl === "function") {
     cacheControl = cacheControl(request);
   }
 
@@ -8274,11 +8277,14 @@ const fetchFileSystem = async (
 
       if (fileStat.isDirectory()) {
         if (canReadDirectory) {
-          return serveDirectory(fileUrl, {
+          return fetchDirectory(fileUrl, {
             headers: request.headers,
             canReadDirectory,
             rootDirectoryUrl: directoryUrl,
           });
+        }
+        if (mainFileRelativeUrl && fileUrl === directoryUrlString) {
+          return serveFile(new URL(mainFileRelativeUrl, directoryUrl).href);
         }
         return {
           status: 403,
@@ -8350,6 +8356,15 @@ const fetchFileSystem = async (
       return composeTwoResponses(intermediateResponse, clientCacheResponse);
     } catch (e) {
       if (e.code === "ENOENT") {
+        if (mainFileRelativeUrl) {
+          if (
+            !urlToExtension(fileUrl) &&
+            !urlToPathname(fileUrl).endsWith("/")
+          ) {
+            const mainFileUrl = new URL(mainFileRelativeUrl, directoryUrl);
+            return serveFile(mainFileUrl);
+          }
+        }
         const fallbackFileUrl = ENOENTFallback();
         if (fallbackFileUrl) {
           return serveFile(fallbackFileUrl);
@@ -8621,49 +8636,14 @@ const asUrlString = (value) => {
   return null;
 };
 
-const serverPluginStaticFiles = ({
-  serverRelativeUrl = "/",
-  directoryUrl,
-  directoryMainFileRelativeUrl = "index.html",
-}) => {
-  return {
-    name: "jsenv:static_files",
-    routes: [
-      {
-        endpoint: `GET ${serverRelativeUrl}`,
-        description: "Serve static files.",
-        fetch: (request, helpers) => {
-          const urlIsVersioned = new URL(request.url).searchParams.has("v");
-          if (directoryMainFileRelativeUrl && request.resource === "/") {
-            request = {
-              ...request,
-              resource: `/${directoryMainFileRelativeUrl}`,
-            };
-          }
-          const urlObject = new URL(request.resource.slice(1), directoryUrl);
-          return createFileSystemFetch(directoryUrl, {
-            cacheControl: urlIsVersioned
-              ? `private,max-age=${SECONDS_IN_30_DAYS},immutable`
-              : "private,max-age=0,must-revalidate",
-            etagEnabled: true,
-            compressionEnabled: true,
-            canReadDirectory: true,
-            ENOENTFallback: () => {
-              if (
-                !urlToExtension(urlObject) &&
-                !urlToPathname(urlObject).endsWith("/")
-              ) {
-                return new URL(directoryMainFileRelativeUrl, directoryUrl);
-              }
-              return null;
-            },
-          })(request, helpers);
-        },
-      },
-    ],
-  };
-};
 const SECONDS_IN_30_DAYS = 60 * 60 * 24 * 30;
+
+const defaultIsVersioned = (request) => {
+  if (!request.url) {
+    return false;
+  }
+  return new URL(request.url).searchParams.has("v");
+};
 
 const serverPluginResponseAcceptanceCheck = () => {
   return {
@@ -8754,4 +8734,4 @@ const replaceResource = (resourceBeforeAlias, newValue) => {
   return resource;
 };
 
-export { LazyServerEvents, ProgressiveResponse, STOP_REASON_INTERNAL_ERROR, STOP_REASON_NOT_SPECIFIED, STOP_REASON_PROCESS_BEFORE_EXIT, STOP_REASON_PROCESS_EXIT, STOP_REASON_PROCESS_SIGHUP, STOP_REASON_PROCESS_SIGINT, STOP_REASON_PROCESS_SIGTERM, ServerEvents, WebSocketResponse, composeTwoResponses, createFileSystemFetch, createPluginsController, fetchFileSystem, findFreePort, jsenvAccessControlAllowedHeaders, jsenvAccessControlAllowedMethods, pickContentEncoding, pickContentLanguage, pickContentType, serveDirectory, serverPluginCORS, serverPluginErrorHandler, serverPluginRequestAliases, serverPluginResponseAcceptanceCheck, serverPluginStaticFiles, startServer };
+export { LazyServerEvents, ProgressiveResponse, STOP_REASON_INTERNAL_ERROR, STOP_REASON_NOT_SPECIFIED, STOP_REASON_PROCESS_BEFORE_EXIT, STOP_REASON_PROCESS_EXIT, STOP_REASON_PROCESS_SIGHUP, STOP_REASON_PROCESS_SIGINT, STOP_REASON_PROCESS_SIGTERM, ServerEvents, WebSocketResponse, composeTwoResponses, createFileSystemFetch, createPluginsController, fetchDirectory, fetchFileSystem, findFreePort, jsenvAccessControlAllowedHeaders, jsenvAccessControlAllowedMethods, pickContentEncoding, pickContentLanguage, pickContentType, serverPluginCORS, serverPluginErrorHandler, serverPluginRequestAliases, serverPluginResponseAcceptanceCheck, startServer };

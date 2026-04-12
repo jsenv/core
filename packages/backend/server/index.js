@@ -37,9 +37,8 @@ export {
 export {
   createFileSystemFetch,
   fetchFileSystem,
-} from "./src/plugins/filesystem/fetch_filesystem.js";
-export { serveDirectory } from "./src/plugins/filesystem/serve_directory.js";
-export { serverPluginStaticFiles } from "./src/plugins/filesystem/server_plugin_static_files.js";
+} from "./src/plugins/filesystem/fetch_file.js";
+export { fetchDirectory } from "./src/plugins/filesystem/fetch_directory.js";
 
 // content-negotiation
 export { pickContentType } from "./src/content_negotiation/pick_content_type.js";

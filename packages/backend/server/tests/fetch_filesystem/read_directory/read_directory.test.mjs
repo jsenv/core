@@ -8,8 +8,9 @@ const server = await startServer({
   keepProcessAlive: false,
   routes: [
     {
-      endpoint: "GET *",
+      endpoint: "GET /",
       fetch: createFileSystemFetch(testDirectoryUrl, {
+        mainFileRelativeUrl: null,
         canReadDirectory: true,
       }),
     },
@@ -59,3 +60,20 @@ const expect = {
   body: expectedBody,
 };
 assert({ actual, expect });
+
+// fetch a file
+{
+  const fileRequestUrl = new URL("/dir/file.js", server.origin).href;
+  const fileResponse = await fetchUrl(fileRequestUrl);
+  const actual = {
+    url: fileResponse.url,
+    status: fileResponse.status,
+    statusText: fileResponse.statusText,
+  };
+  const expect = {
+    url: fileRequestUrl,
+    status: 200,
+    statusText: "OK",
+  };
+  assert({ actual, expect });
+}
