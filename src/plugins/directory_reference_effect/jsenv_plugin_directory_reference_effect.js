@@ -1,5 +1,6 @@
 import { URL_META } from "@jsenv/url-meta";
-import { urlToFilename } from "@jsenv/urls";
+import { urlToFilename, urlToRelativeUrl } from "@jsenv/urls";
+
 import { defineNonEnumerableProperties } from "../../kitchen/errors.js";
 
 export const jsenvPluginDirectoryReferenceEffect = (
@@ -51,7 +52,11 @@ export const jsenvPluginDirectoryReferenceEffect = (
         }${urlToFilename(reference.url)}/`;
       } else if (reference.specifierPathname.endsWith("./")) {
       } else {
-        reference.filenameHint = `${urlToFilename(reference.url)}/`;
+        const directoryRelativeUrl = urlToRelativeUrl(
+          reference.url,
+          reference.ownerUrlInfo.originalUrl,
+        );
+        reference.filenameHint = directoryRelativeUrl;
       }
       let actionForDirectory;
       if (reference.type === "a_href") {

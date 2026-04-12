@@ -9,6 +9,7 @@
 - [copy_foo](5_copy_foo/5_copy_foo.md)
 - [copy_fs_root](6_copy_fs_root/6_copy_fs_root.md)
 - [resolve_ancestor](7_resolve_ancestor/7_resolve_ancestor.md)
+- [resolve_nested](8_resolve_nested/8_resolve_nested.md)
 
 ---
 
