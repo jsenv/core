@@ -11,7 +11,7 @@ const server = await startServer({
     {
       endpoint: "GET /public/",
       fetch: createFileSystemFetch(testDirectoryUrl, {
-        directoryMainFileRelativeUrl: "index.html",
+        mainFileRelativeUrl: "index.html",
       }),
     },
   ],

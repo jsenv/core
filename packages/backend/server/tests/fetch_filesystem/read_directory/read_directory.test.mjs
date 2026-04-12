@@ -10,7 +10,7 @@ const server = await startServer({
     {
       endpoint: "GET /",
       fetch: createFileSystemFetch(testDirectoryUrl, {
-        directoryMainFileRelativeUrl: null,
+        mainFileRelativeUrl: null,
         canReadDirectory: true,
       }),
     },

@@ -29,6 +29,7 @@ export const fetchFileSystem = async (
   helpers,
   directoryUrl,
   {
+    mainFileRelativeUrl = null,
     etagEnabled = false,
     etagMemory = true,
     etagMemoryMaxSize = 1000,
@@ -38,7 +39,6 @@ export const fetchFileSystem = async (
     cacheControl,
     isVersioned = defaultIsVersioned,
     canReadDirectory = false,
-    directoryMainFileRelativeUrl = null,
     ENOENTFallback = () => null,
   } = {},
 ) => {
@@ -111,10 +111,8 @@ export const fetchFileSystem = async (
             rootDirectoryUrl: directoryUrl,
           });
         }
-        if (directoryMainFileRelativeUrl && fileUrl === directoryUrlString) {
-          return serveFile(
-            new URL(directoryMainFileRelativeUrl, directoryUrl).href,
-          );
+        if (mainFileRelativeUrl && fileUrl === directoryUrlString) {
+          return serveFile(new URL(mainFileRelativeUrl, directoryUrl).href);
         }
         return {
           status: 403,
@@ -186,15 +184,12 @@ export const fetchFileSystem = async (
       return composeTwoResponses(intermediateResponse, clientCacheResponse);
     } catch (e) {
       if (e.code === "ENOENT") {
-        if (directoryMainFileRelativeUrl) {
+        if (mainFileRelativeUrl) {
           if (
             !urlToExtension(fileUrl) &&
             !urlToPathname(fileUrl).endsWith("/")
           ) {
-            const mainFileUrl = new URL(
-              directoryMainFileRelativeUrl,
-              directoryUrl,
-            );
+            const mainFileUrl = new URL(mainFileRelativeUrl, directoryUrl);
             return serveFile(mainFileUrl);
           }
         }

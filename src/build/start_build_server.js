@@ -99,7 +99,7 @@ export const startBuildServer = async ({
         endpoint: "GET /",
         description: "Serve build files",
         fetch: createFileSystemFetch(buildDirectoryUrl, {
-          directoryMainFileRelativeUrl: buildDirectoryMainFileRelativeUrl,
+          mainFileRelativeUrl: buildDirectoryMainFileRelativeUrl,
         }),
       },
     ],
