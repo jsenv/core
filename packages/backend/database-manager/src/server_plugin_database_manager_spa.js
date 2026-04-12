@@ -3,28 +3,30 @@ import { readFileSync } from "node:fs";
 
 const databaseManagerHtmlFileUrl = import.meta
   .resolve("./client/database_manager.html");
+const assetDirectoryUrl = import.meta.resolve("./client/assets/");
 
-export const serverPluginDatabaseManagerSpa = ({ pathname }) => {
-  const apiUrl = new URL(`${pathname}api`, import.meta.url).href;
-
+export const serverPluginDatabaseManagerSpa = ({
+  pathname,
+  sourceDirectoryUrl,
+}) => {
+  // ensure no trailing slash
+  pathname = pathname.endsWith("/") ? pathname.slice(0, -1) : pathname;
   return {
     name: "jsenv:database_manager_spa",
     routes: [
       {
-        endpoint: `GET ${pathname}assets/*`,
+        endpoint: `GET ${pathname}/assets/*`,
         description: "Serve static files for database manager Web interface",
         declarationSource: import.meta.url,
-        fetch: createFileSystemFetch(import.meta.resolve("./client/assets/")),
+        fetch: createFileSystemFetch(assetDirectoryUrl),
       },
+
       {
-        endpoint: `GET ${pathname}`,
+        endpoint: `GET ${pathname}/`,
         description: "Manage database using a Web interface",
         declarationSource: import.meta.url,
         fetch: (request) => {
-          if (request.pathname.startsWith(`${pathname}assets/`)) {
-            // let the static files be handled (by jsenv dev server or a static file service)
-            return undefined;
-          }
+          const apiServerUrl = new URL(`${pathname}/api`, request.origin).href;
           const htmlManagerRaw = readFileSync(
             new URL(databaseManagerHtmlFileUrl),
             "utf8",
@@ -32,12 +34,20 @@ export const serverPluginDatabaseManagerSpa = ({ pathname }) => {
           const htmlManagerModified = replacePlaceholdersInHtml(
             htmlManagerRaw,
             {
-              __DB_MANAGER_CONFIG__: () => {
-                return {
-                  pathname,
-                  apiUrl,
-                };
+              __DB_MANAGER_CONFIG__: {
+                pathname,
+                apiUrl: apiServerUrl,
               },
+              ...(sourceDirectoryUrl
+                ? {
+                    "./assets/database_manager.jsx": () => {
+                      const sourceDir = sourceDirectoryUrl.endsWith("/")
+                        ? sourceDirectoryUrl
+                        : `${sourceDirectoryUrl}/`;
+                      return `/${assetDirectoryUrl.slice(sourceDir.length)}database_manager.jsx`;
+                    },
+                  }
+                : {}),
             },
           );
           return new Response(htmlManagerModified, {
@@ -52,7 +62,9 @@ export const serverPluginDatabaseManagerSpa = ({ pathname }) => {
 const replacePlaceholdersInHtml = (html, replacers) => {
   for (const [name, replacer] of Object.entries(replacers)) {
     const value = typeof replacer === "function" ? replacer() : replacer;
-    html = html.replaceAll(name, JSON.stringify(value));
+    const replacement =
+      typeof value === "string" ? value : JSON.stringify(value);
+    html = html.replaceAll(name, replacement);
   }
   return html;
 };

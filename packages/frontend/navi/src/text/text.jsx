@@ -11,7 +11,7 @@ import {
 import { withPropsClassName } from "../utils/with_props_class_name.js";
 import { useInitialTextSelection } from "./use_initial_text_selection.jsx";
 
-import.meta.css = /* css */ `
+const css = /* css */ `
   *[data-navi-space] {
     /* user-select: none; */
     padding-left: 0.25em;
@@ -19,7 +19,6 @@ import.meta.css = /* css */ `
 
   .navi_text {
     position: relative;
-    color: inherit;
 
     &[data-has-absolute-child] {
       display: inline-block;
@@ -226,6 +225,8 @@ const shouldInjectSpacingBefore = (jsxChild) => {
 
 const OverflowPinnedElementContext = createContext(null);
 export const Text = (props) => {
+  import.meta.css = css;
+
   const { overflowEllipsis, ...rest } = props;
   if (overflowEllipsis) {
     return <TextOverflow {...rest} />;

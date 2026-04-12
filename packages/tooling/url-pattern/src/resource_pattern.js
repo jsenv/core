@@ -30,13 +30,18 @@ export const createResourcePattern = (pattern) => {
       let decodedPathname = decodeURIComponent(pathname);
       let result;
       if (patternEndsWithSlash && !searchPattern && !hashPattern) {
-        if (!decodedPathname.startsWith(pathnamePatternString)) {
+        // also match the path without trailing slash (e.g. /foo matches /foo/)
+        const pathnamePatternWithoutSlash = pathnamePatternString.slice(0, -1);
+        if (decodedPathname === pathnamePatternWithoutSlash) {
+          result = { named: {}, stars: [""] };
+        } else if (!decodedPathname.startsWith(pathnamePatternString)) {
           return null;
+        } else {
+          result = {
+            named: {},
+            stars: [decodedPathname.slice(pathnamePatternString.length)],
+          };
         }
-        result = {
-          named: {},
-          stars: [decodedPathname.slice(pathnamePatternString.length)],
-        };
       } else {
         result = pathnamePattern.match(decodedPathname);
       }

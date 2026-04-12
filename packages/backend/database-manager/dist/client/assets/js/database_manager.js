@@ -41544,28 +41544,6 @@ const NaviSidePanelCloseButton = () => {
   });
 };
 
-/*
- * This file does not use export const InlineContent = function() {} on purpose:
- * - An export would be renamed by rollup,
- *   making it harder to statically detect new InlineContent() calls
- * - An export would be renamed by terser
- *   here again it becomes hard to detect new InlineContent() calls
- * Instead it sets "__InlineContent__" on the global object and terser is configured by jsenv
- * to preserve the __InlineContent__ global variable name
- */
-
-const globalObject = typeof self === "object" ? self : process;
-globalObject.__InlineContent__ = function (content, { type = "text/plain" }) {
-  this.text = content;
-  this.type = type;
-};
-
-const inlineContent$2 = new __InlineContent__("body {\n  color: #333;\n  background-color: #fff;\n  margin: 0;\n  font-family: system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Arial, sans-serif;\n  line-height: 1.5;\n  transition: background-color .3s, color .3s;\n}\n\n* {\n  box-sizing: border-box;\n}\n\n[data-hidden] {\n  display: none !important;\n}\n", { type: "text/css" });
-const stylesheet$2 = new CSSStyleSheet({ baseUrl: "/src/client/assets/database_manager.css?side_effect" });
-stylesheet$2.replaceSync(inlineContent$2.text);
-
-document.adoptedStyleSheets = [...document.adoptedStyleSheets, stylesheet$2];
-
 const roleCanLoginCountSignal = y(0);
 const setRoleCanLoginCount = (count) => {
   roleCanLoginCountSignal.value = count;
@@ -41613,6 +41591,181 @@ const setTableCount = (count) => {
 const useTableCount = () => {
   return tableCountSignal.value;
 };
+
+const errorFromResponse = async (response, message) => {
+  const status = response.status;
+  const statusText = response.statusText;
+  const responseContentType = response.headers.get("content-type") || "";
+
+  let serverErrorMessage;
+  let serverErrorStack;
+  if (responseContentType.includes("application/json")) {
+    try {
+      const serverResponseJson = await response.json();
+      if (typeof serverResponseJson === "string") {
+        serverErrorMessage = serverResponseJson;
+      } else {
+        serverErrorMessage = serverResponseJson.message;
+        serverErrorStack = serverResponseJson.stack;
+      }
+    } catch {
+      serverErrorMessage = statusText;
+    }
+  } else {
+    const serverResponseText = await response.text();
+    if (serverResponseText) {
+      serverErrorMessage = serverResponseText;
+    } else {
+      serverErrorMessage = statusText;
+    }
+  }
+
+  const errorMessage =
+    message && serverErrorMessage
+      ? `${message}: ${serverErrorMessage}`
+      : message
+        ? message
+        : serverErrorMessage;
+  const error = new Error(errorMessage);
+  if (serverErrorStack) {
+    error.stack = serverErrorStack;
+  }
+  error.status = status;
+  throw error;
+};
+
+const DATABASE = resource("database", {
+  idKey: "oid",
+  GET_MANY: async (_, { signal }) => {
+    const response = await fetch(
+      `${window.DB_MANAGER_CONFIG.apiUrl}/databases`,
+      {
+        signal,
+      },
+    );
+    const {
+      data,
+      // { currentRole }
+      // meta,
+    } = await response.json();
+    return data;
+  },
+  GET: async ({ datname }, { signal }) => {
+    const response = await fetch(
+      `${window.DB_MANAGER_CONFIG.apiUrl}/databases/${datname}`,
+      {
+        signal,
+      },
+    );
+    if (!response.ok) {
+      throw await errorFromResponse(response, `Failed to get database`);
+    }
+
+    const { data, meta } = await response.json();
+    const { columns, ownerRole } = meta;
+    return {
+      ...data,
+      ownerRole,
+      meta: {
+        columns,
+      },
+    };
+  },
+  POST: async ({ datname }, { signal }) => {
+    const response = await fetch(
+      `${window.DB_MANAGER_CONFIG.apiUrl}/databases`,
+      {
+        signal,
+        method: "POST",
+        headers: {
+          "accept": "application/json",
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ datname }),
+      },
+    );
+    if (!response.ok) {
+      throw await errorFromResponse(response, `Failed to create database`);
+    }
+
+    const { data, meta } = await response.json();
+    const { count } = meta;
+    setDatabaseCount(count);
+    return data;
+  },
+  DELETE: async ({ datname }, { signal }) => {
+    const response = await fetch(
+      `${window.DB_MANAGER_CONFIG.apiUrl}/databases/${datname}`,
+      {
+        signal,
+        method: "DELETE",
+        headers: {
+          "accept": "application/json",
+          "content-type": "application/json",
+        },
+      },
+    );
+    if (!response.ok) {
+      throw await errorFromResponse(response, `Failed to delete database`);
+    }
+    const { meta } = await response.json();
+    const { count } = meta;
+    setDatabaseCount(count);
+    return { datname };
+  },
+  PUT: async ({ datname, columnName, columnValue, signal }) => {
+    const response = await fetch(
+      `${window.DB_MANAGER_CONFIG.apiUrl}/databases/${datname}/${columnValue}`,
+      {
+        signal,
+        method: "PUT",
+        headers: {
+          "accept": "application/json",
+          "content-type": "application/json",
+        },
+        body: JSON.stringify(columnValue),
+      },
+    );
+    if (!response.ok) {
+      throw await errorFromResponse(response, `Failed to update database`);
+    }
+    return ["datname", datname, { [columnName]: columnValue }];
+  },
+});
+
+const useDatabaseArrayInStore = DATABASE.useArray;
+
+const currentDatabaseIdSignal = y(null);
+const setCurrentDatabaseId = (id) => {
+  currentDatabaseIdSignal.value = id;
+};
+const useCurrentDatabase = () => {
+  const currentDatabaseId = currentDatabaseIdSignal.value;
+  const currentDatabase = DATABASE.store.select(currentDatabaseId);
+  return currentDatabase;
+};
+
+/*
+ * This file does not use export const InlineContent = function() {} on purpose:
+ * - An export would be renamed by rollup,
+ *   making it harder to statically detect new InlineContent() calls
+ * - An export would be renamed by terser
+ *   here again it becomes hard to detect new InlineContent() calls
+ * Instead it sets "__InlineContent__" on the global object and terser is configured by jsenv
+ * to preserve the __InlineContent__ global variable name
+ */
+
+const globalObject = typeof self === "object" ? self : process;
+globalObject.__InlineContent__ = function (content, { type = "text/plain" }) {
+  this.text = content;
+  this.type = type;
+};
+
+const inlineContent$2 = new __InlineContent__("body {\n  color: #333;\n  background-color: #fff;\n  margin: 0;\n  font-family: system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Arial, sans-serif;\n  line-height: 1.5;\n  transition: background-color .3s, color .3s;\n}\n\n* {\n  box-sizing: border-box;\n}\n\n[data-hidden] {\n  display: none !important;\n}\n", { type: "text/css" });
+const stylesheet$2 = new CSSStyleSheet({ baseUrl: "/src/client/assets/database_manager.css?side_effect" });
+stylesheet$2.replaceSync(inlineContent$2.text);
+
+document.adoptedStyleSheets = [...document.adoptedStyleSheets, stylesheet$2];
 
 const ExplorerItem = ({
   nameKey,
@@ -41975,158 +42128,6 @@ const databaseHeightSignal = stateSignal(undefined, {
   persist: true,
 });
 
-const errorFromResponse = async (response, message) => {
-  const status = response.status;
-  const statusText = response.statusText;
-  const responseContentType = response.headers.get("content-type") || "";
-
-  let serverErrorMessage;
-  let serverErrorStack;
-  if (responseContentType.includes("application/json")) {
-    try {
-      const serverResponseJson = await response.json();
-      if (typeof serverResponseJson === "string") {
-        serverErrorMessage = serverResponseJson;
-      } else {
-        serverErrorMessage = serverResponseJson.message;
-        serverErrorStack = serverResponseJson.stack;
-      }
-    } catch {
-      serverErrorMessage = statusText;
-    }
-  } else {
-    const serverResponseText = await response.text();
-    if (serverResponseText) {
-      serverErrorMessage = serverResponseText;
-    } else {
-      serverErrorMessage = statusText;
-    }
-  }
-
-  const errorMessage =
-    message && serverErrorMessage
-      ? `${message}: ${serverErrorMessage}`
-      : message
-        ? message
-        : serverErrorMessage;
-  const error = new Error(errorMessage);
-  if (serverErrorStack) {
-    error.stack = serverErrorStack;
-  }
-  error.status = status;
-  throw error;
-};
-
-const DATABASE = resource("database", {
-  idKey: "oid",
-  GET_MANY: async (_, { signal }) => {
-    const response = await fetch(
-      `${window.DB_MANAGER_CONFIG.apiUrl}/databases`,
-      {
-        signal,
-      },
-    );
-    const {
-      data,
-      // { currentRole }
-      // meta,
-    } = await response.json();
-    return data;
-  },
-  GET: async ({ datname }, { signal }) => {
-    const response = await fetch(
-      `${window.DB_MANAGER_CONFIG.apiUrl}/databases/${datname}`,
-      {
-        signal,
-      },
-    );
-    if (!response.ok) {
-      throw await errorFromResponse(response, `Failed to get database`);
-    }
-
-    const { data, meta } = await response.json();
-    const { columns, ownerRole } = meta;
-    return {
-      ...data,
-      ownerRole,
-      meta: {
-        columns,
-      },
-    };
-  },
-  POST: async ({ datname }, { signal }) => {
-    const response = await fetch(
-      `${window.DB_MANAGER_CONFIG.apiUrl}/databases`,
-      {
-        signal,
-        method: "POST",
-        headers: {
-          "accept": "application/json",
-          "content-type": "application/json",
-        },
-        body: JSON.stringify({ datname }),
-      },
-    );
-    if (!response.ok) {
-      throw await errorFromResponse(response, `Failed to create database`);
-    }
-
-    const { data, meta } = await response.json();
-    const { count } = meta;
-    setDatabaseCount(count);
-    return data;
-  },
-  DELETE: async ({ datname }, { signal }) => {
-    const response = await fetch(
-      `${window.DB_MANAGER_CONFIG.apiUrl}/databases/${datname}`,
-      {
-        signal,
-        method: "DELETE",
-        headers: {
-          "accept": "application/json",
-          "content-type": "application/json",
-        },
-      },
-    );
-    if (!response.ok) {
-      throw await errorFromResponse(response, `Failed to delete database`);
-    }
-    const { meta } = await response.json();
-    const { count } = meta;
-    setDatabaseCount(count);
-    return { datname };
-  },
-  PUT: async ({ datname, columnName, columnValue, signal }) => {
-    const response = await fetch(
-      `${window.DB_MANAGER_CONFIG.apiUrl}/databases/${datname}/${columnValue}`,
-      {
-        signal,
-        method: "PUT",
-        headers: {
-          "accept": "application/json",
-          "content-type": "application/json",
-        },
-        body: JSON.stringify(columnValue),
-      },
-    );
-    if (!response.ok) {
-      throw await errorFromResponse(response, `Failed to update database`);
-    }
-    return ["datname", datname, { [columnName]: columnValue }];
-  },
-});
-
-const useDatabaseArrayInStore = DATABASE.useArray;
-
-const currentDatabaseIdSignal = y(
-  window.DB_MANAGER_CONFIG.currentDatabase.oid,
-);
-const useCurrentDatabase = () => {
-  const currentDatabaseId = currentDatabaseIdSignal.value;
-  const currentDatabase = DATABASE.store.select(currentDatabaseId);
-  return currentDatabase;
-};
-
 /*
 
  */
@@ -42325,7 +42326,10 @@ const useRoleArrayInStore = ROLE.useArray;
 const ROLE_CAN_LOGIN = ROLE.withParams({ canlogin: true });
 const ROLE_CANNOT_LOGIN = ROLE.withParams({ canlogin: false });
 
-const currentRoleIdSignal = y(window.DB_MANAGER_CONFIG.currentRole.oid);
+const currentRoleIdSignal = y(null);
+const setCurrentRoleId = (id) => {
+  currentRoleIdSignal.value = id;
+};
 const useCurrentRole = () => {
   const currentRoleId = currentRoleIdSignal.value;
   const currentRole = ROLE.store.select(currentRoleId);
@@ -42741,8 +42745,6 @@ const ROLE_TABLES = ROLE.many("tables", TABLE, {
 
 DATABASE.one("ownerRole", ROLE);
 
-ROLE.store.upsert(window.DB_MANAGER_CONFIG.currentRole);
-
 const tableListOpenSignal = stateSignal(false, {
   type: "boolean",
   id: "jsenv_db_table_list_open",
@@ -42778,7 +42780,7 @@ const tableListHeightSignal = stateSignal(undefined, {
 //   name: "tables_details",
 // });
 
-setBaseUrl(window.DB_MANAGER_CONFIG.pathname);
+setBaseUrl(`${window.DB_MANAGER_CONFIG.pathname}/`);
 
 const rolnameSignal = stateSignal(null);
 const datnameSignal = stateSignal(null);
@@ -45684,6 +45686,14 @@ const MainRoutes = () => {
   });
 };
 
+const initResponse = await fetch(`${window.DB_MANAGER_CONFIG.apiUrl}/explorer`);
+const {
+  data: initData
+} = await initResponse.json();
+ROLE.store.upsert(initData.currentRole);
+setCurrentRoleId(initData.currentRole.oid);
+DATABASE.store.upsert(initData.currentDatabase);
+setCurrentDatabaseId(initData.currentDatabase.oid);
 const App = () => {
   return u$1("div", {
     id: "app",

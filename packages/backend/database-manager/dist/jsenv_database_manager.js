@@ -5,28 +5,30 @@ import { execSync } from "node:child_process";
 
 const databaseManagerHtmlFileUrl = import.meta
   .resolve("./client/database_manager.html");
+const assetDirectoryUrl = import.meta.resolve("./client/assets/");
 
-const serverPluginDatabaseManagerSpa = ({ pathname }) => {
-  const apiUrl = new URL(`${pathname}api`, import.meta.url).href;
-
+const serverPluginDatabaseManagerSpa = ({
+  pathname,
+  sourceDirectoryUrl,
+}) => {
+  // ensure no trailing slash
+  pathname = pathname.endsWith("/") ? pathname.slice(0, -1) : pathname;
   return {
     name: "jsenv:database_manager_spa",
     routes: [
       {
-        endpoint: `GET ${pathname}assets/*`,
+        endpoint: `GET ${pathname}/assets/*`,
         description: "Serve static files for database manager Web interface",
         declarationSource: import.meta.url,
-        fetch: createFileSystemFetch(import.meta.resolve("./client/assets/")),
+        fetch: createFileSystemFetch(assetDirectoryUrl),
       },
+
       {
-        endpoint: `GET ${pathname}`,
+        endpoint: `GET ${pathname}/`,
         description: "Manage database using a Web interface",
         declarationSource: import.meta.url,
         fetch: (request) => {
-          if (request.pathname.startsWith(`${pathname}assets/`)) {
-            // let the static files be handled (by jsenv dev server or a static file service)
-            return undefined;
-          }
+          const apiServerUrl = new URL(`${pathname}/api`, request.origin).href;
           const htmlManagerRaw = readFileSync(
             new URL(databaseManagerHtmlFileUrl),
             "utf8",
@@ -34,12 +36,20 @@ const serverPluginDatabaseManagerSpa = ({ pathname }) => {
           const htmlManagerModified = replacePlaceholdersInHtml(
             htmlManagerRaw,
             {
-              __DB_MANAGER_CONFIG__: () => {
-                return {
-                  pathname,
-                  apiUrl,
-                };
+              __DB_MANAGER_CONFIG__: {
+                pathname,
+                apiUrl: apiServerUrl,
               },
+              ...(sourceDirectoryUrl
+                ? {
+                    "./assets/database_manager.jsx": () => {
+                      const sourceDir = sourceDirectoryUrl.endsWith("/")
+                        ? sourceDirectoryUrl
+                        : `${sourceDirectoryUrl}/`;
+                      return `/${assetDirectoryUrl.slice(sourceDir.length)}database_manager.jsx`;
+                    },
+                  }
+                : {}),
             },
           );
           return new Response(htmlManagerModified, {
@@ -54,7 +64,9 @@ const serverPluginDatabaseManagerSpa = ({ pathname }) => {
 const replacePlaceholdersInHtml = (html, replacers) => {
   for (const [name, replacer] of Object.entries(replacers)) {
     const value = typeof replacer === "function" ? replacer() : replacer;
-    html = html.replaceAll(name, JSON.stringify(value));
+    const replacement =
+      typeof value === "string" ? value : JSON.stringify(value);
+    html = html.replaceAll(name, replacement);
   }
   return html;
 };
@@ -65,6 +77,33 @@ const alterDatabaseQuery = async (sql, datname, colname, value) => {
   if (colname === "datdba") {
     await sql`ALTER DATABASE ${sql(datname)} OWNER TO ${sql(value)}`;
   }
+};
+
+const selectCurrentInfo = async (sql) => {
+  const currentRoleResult = await sql`
+    SELECT
+      current_user
+  `;
+  const currentRoleName = currentRoleResult[0].current_user;
+  const [currentRole] = await sql`
+    SELECT
+      *
+    FROM
+      pg_roles
+    WHERE
+      rolname = ${currentRoleName}
+  `;
+
+  const [currentDatabase] = await sql`
+    SELECT
+      *
+    FROM
+      pg_database
+    WHERE
+      datname = current_database()
+  `;
+
+  return { currentRole, currentDatabase };
 };
 
 const countRoles = async (sql) => {
@@ -762,15 +801,18 @@ const serverPluginDatabaseRestApi = ({ pathname }) => {
 
     routes: [
       {
-        endpoint: `GET ${DATABASE_REST_API_PATHNAME}/api/explorer`,
+        endpoint: `GET ${DATABASE_REST_API_PATHNAME}/explorer`,
         description: "Get info about the database manager explorer.",
         declarationSource: import.meta.url,
         fetch: async () => {
+          const { currentRole, currentDatabase } = await selectCurrentInfo(sql);
           const databaseCount = await countRows(sql, "pg_database");
           const tableCount = await countRows(sql, "pg_tables");
           const roleCounts = await countRoles(sql);
           return Response.json({
             data: {
+              currentRole,
+              currentDatabase,
               databaseCount,
               tableCount,
               roleCounts,
@@ -778,7 +820,6 @@ const serverPluginDatabaseRestApi = ({ pathname }) => {
           });
         },
       },
-
       ...createRESTRoutes(`${DATABASE_REST_API_PATHNAME}/tables`, {
         "GET": async (request) => {
           const publicFilter = request.searchParams.has("public");
@@ -1624,11 +1665,12 @@ const createRESTRoutes = (resource, endpoints) => {
 };
 
 const serverPluginDatabaseManager = ({
-  pathname = "/.internal/database/",
+  pathname = "/.internal/database",
+  sourceDirectoryUrl,
 } = {}) => {
   return [
     serverPluginDatabaseRestApi({ pathname }),
-    serverPluginDatabaseManagerSpa({ pathname }),
+    serverPluginDatabaseManagerSpa({ pathname, sourceDirectoryUrl }),
     serverPluginPostgresErrorHandler(),
     serverPluginJsonParseErrorHandler(),
   ];

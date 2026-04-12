@@ -18784,7 +18784,7 @@ const selectByTextStrings = (element, range, startText, endText) => {
 };
 
 installImportMetaCssBuild(import.meta);/* eslint-disable jsenv/no-unknown-params */
-import.meta.css = [/* css */`
+const css$3 = /* css */`
   *[data-navi-space] {
     /* user-select: none; */
     padding-left: 0.25em;
@@ -18792,7 +18792,6 @@ import.meta.css = [/* css */`
 
   .navi_text {
     position: relative;
-    color: inherit;
 
     &[data-has-absolute-child] {
       display: inline-block;
@@ -18893,7 +18892,7 @@ import.meta.css = [/* css */`
       transition-timing-function: ease;
     }
   }
-`, "@jsenv/navi/src/text/text.jsx"];
+`;
 
 // We could use <span data-navi-space=""> </span>
 // but we prefer to use zero width space as it has the nice side effects of
@@ -19002,6 +19001,7 @@ const shouldInjectSpacingBefore = jsxChild => {
 };
 const OverflowPinnedElementContext = createContext(null);
 const Text = props => {
+  import.meta.css = [css$3, "@jsenv/navi/src/text/text.jsx"];
   const {
     overflowEllipsis,
     ...rest
@@ -19159,7 +19159,7 @@ const TextBasic = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
+installImportMetaCssBuild(import.meta);const css$2 = /* css */`
   @layer navi {
     /* Ensure data attributes from box.jsx can win to update display */
     .navi_icon {
@@ -19197,7 +19197,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
     cursor: default;
     user-select: none;
   }
-  .navi_icon_foreground {
+  .navi_text.navi_icon_foreground {
     position: absolute;
     inset: 0;
     display: inline-flex;
@@ -19234,7 +19234,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
     width: 100%;
     height: 100%;
   }
-`, "@jsenv/navi/src/graphic/icon.jsx"];
+`;
 const Icon = ({
   href,
   children,
@@ -19247,6 +19247,7 @@ const Icon = ({
   onClick,
   ...props
 }) => {
+  import.meta.css = [css$2, "@jsenv/navi/src/graphic/icon.jsx"];
   const innerChildren = href ? jsx("svg", {
     width: "100%",
     height: "100%",
@@ -30093,7 +30094,7 @@ const Address = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
+installImportMetaCssBuild(import.meta);const css$1 = /* css */`
   @layer navi {
   }
   .navi_badge {
@@ -30121,7 +30122,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
       --x-color-contrasting: var(--navi-color-white);
     }
   }
-`, "@jsenv/navi/src/text/badge.jsx"];
+`;
 const BadgeStyleCSSVars$1 = {
   borderWidth: "--border-width",
   borderRadius: "--border-radius",
@@ -30138,6 +30139,7 @@ const Badge = ({
   className,
   ...props
 }) => {
+  import.meta.css = [css$1, "@jsenv/navi/src/text/badge.jsx"];
   const defaultRef = useRef();
   const ref = props.ref || defaultRef;
   useDarkBackgroundAttribute(ref);
@@ -30216,10 +30218,10 @@ const formatNumber = (value, { lang } = {}) => {
   return new Intl.NumberFormat(lang).format(value);
 };
 
-installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
+installImportMetaCssBuild(import.meta);const css = /* css */`
   @layer navi {
   }
-  .navi_badge_count {
+  .navi_text.navi_badge_count {
     --font-size: 0.7em;
     --x-background: var(--background);
     --x-background-color: var(--background-color, var(--x-background));
@@ -30305,7 +30307,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
       }
     }
   }
-`, "@jsenv/navi/src/text/badge_count.jsx"];
+`;
 const BadgeStyleCSSVars = {
   borderWidth: "--border-width",
   borderRadius: "--border-radius",
@@ -30335,6 +30337,7 @@ const BadgeCount = ({
   loading,
   ...props
 }) => {
+  import.meta.css = [css, "@jsenv/navi/src/text/badge_count.jsx"];
   const defaultRef = useRef();
   const ref = props.ref || defaultRef;
   useDarkBackgroundAttribute(ref, [loading]);

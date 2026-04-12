@@ -6,7 +6,12 @@ import { connectAs } from "@jsenv/database";
 
 import { execSync } from "node:child_process";
 import { alterDatabaseQuery } from "./sql/database_sql.js";
-import { countRoles, countRows, getTableColumns } from "./sql/manage_sql.js";
+import {
+  countRoles,
+  countRows,
+  getTableColumns,
+  selectCurrentInfo,
+} from "./sql/manage_sql.js";
 import { alterRoleQuery, selectRoleByName } from "./sql/role_sql.js";
 import {
   addColumn,
@@ -39,15 +44,18 @@ export const serverPluginDatabaseRestApi = ({ pathname }) => {
 
     routes: [
       {
-        endpoint: `GET ${DATABASE_REST_API_PATHNAME}/api/explorer`,
+        endpoint: `GET ${DATABASE_REST_API_PATHNAME}/explorer`,
         description: "Get info about the database manager explorer.",
         declarationSource: import.meta.url,
         fetch: async () => {
+          const { currentRole, currentDatabase } = await selectCurrentInfo(sql);
           const databaseCount = await countRows(sql, "pg_database");
           const tableCount = await countRows(sql, "pg_tables");
           const roleCounts = await countRoles(sql);
           return Response.json({
             data: {
+              currentRole,
+              currentDatabase,
               databaseCount,
               tableCount,
               roleCounts,
@@ -55,7 +63,6 @@ export const serverPluginDatabaseRestApi = ({ pathname }) => {
           });
         },
       },
-
       ...createRESTRoutes(`${DATABASE_REST_API_PATHNAME}/tables`, {
         "GET": async (request) => {
           const publicFilter = request.searchParams.has("public");

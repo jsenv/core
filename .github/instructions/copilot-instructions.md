@@ -42,6 +42,7 @@ Testing in @jsenv/core focuses on **behavior verification** and **regression pre
   - Use targeted logging to trace complex behaviors during development
   - Clean up debug logs once issues are resolved
   - Run tests from project root to ensure correct Node.js version (25.8.1)
+  - **Run tests without building**: Use `node --conditions=dev:jsenv <test-file>` from the repo root — this uses source files directly via the `dev:jsenv` export condition, so no build step is needed. For packages like `@jsenv/server`, this avoids having to rebuild `dist/` after every source change.
 
 - **Test Organization**:
   - Co-locate tests with source code or place in dedicated `tests/` directories
