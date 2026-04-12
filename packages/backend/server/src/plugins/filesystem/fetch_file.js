@@ -11,12 +11,12 @@ import { createReadStream, readFile, statSync } from "node:fs";
 import { pickContentEncoding } from "../../content_negotiation/pick_content_encoding.js";
 import { composeTwoResponses } from "../../internal/response_composition.js";
 import { bufferToEtag } from "./etag.js";
+import { fetchDirectory } from "./fetch_directory.js";
 import { convertFileSystemErrorToResponseProperties } from "./filesystem_error_to_response.js";
 import {
   fileSystemPathToUrl,
   isFileSystemPath,
 } from "./filesystem_path_and_url.js";
-import { serveDirectory } from "./serve_directory.js";
 
 export const createFileSystemFetch = (directoryUrl, options) => {
   return (request, helpers) => {
@@ -105,7 +105,7 @@ export const fetchFileSystem = async (
 
       if (fileStat.isDirectory()) {
         if (canReadDirectory) {
-          return serveDirectory(fileUrl, {
+          return fetchDirectory(fileUrl, {
             headers: request.headers,
             canReadDirectory,
             rootDirectoryUrl: directoryUrl,

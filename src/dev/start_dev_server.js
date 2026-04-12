@@ -6,8 +6,8 @@ import {
 import { createLogger, createTaskLog, formatError } from "@jsenv/humanize";
 import {
   composeTwoResponses,
+  fetchDirectory,
   jsenvAccessControlAllowedHeaders,
-  serveDirectory,
   serverPluginCORS,
   serverPluginErrorHandler,
   startServer,
@@ -595,7 +595,7 @@ export const startDevServer = async ({
                 };
               }
               if (code === "DIRECTORY_REFERENCE_NOT_ALLOWED") {
-                return serveDirectory(reference.url, {
+                return fetchDirectory(reference.url, {
                   headers: {
                     accept: "text/html",
                   },
