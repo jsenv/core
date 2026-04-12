@@ -1,27 +1,28 @@
 {
-  "name": "@jsenv/plugin-database-manager",
+  "name": "@jsenv/database-manager",
   "version": "0.1.8",
   "private": true,
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
-    "directory": "packages/related/plugin-database-manager"
+    "directory": "packages/backend/database-manager"
   },
   "license": "MIT",
   "type": "module",
   "exports": {
     ".": {
       "import": {
-        "dev:jsenv": "./src/main.js",
-        "default": "./dist/jsenv_plugin_database_manager.js"
+        "dev:jsenv": "./index.js",
+        "default": "./dist/jsenv_database_manager.js"
       }
     },
     "./*": "./*"
   },
-  "main": "./src/main.js",
+  "main": "./index.js",
   "files": [
     "/dist/",
-    "/src/"
+    "/src/",
+    "/index.js"
   ],
   "scripts": {
     "build": "node ./scripts/build.mjs",

@@ -36,8 +36,8 @@
   },
   "devDependencies": {
     "@jsenv/core": "../../../",
+    "@jsenv/database-manager": "../../backend/database-manager",
     "@jsenv/plugin-commonjs": "../../related/plugin-commonjs",
-    "@jsenv/plugin-database-manager": "../../related/plugin-database-manager",
     "@jsenv/plugin-preact": "../../related/plugin-preact"
   },
   "engines": {

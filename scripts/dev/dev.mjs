@@ -1,7 +1,7 @@
 import { startDevServer } from "@jsenv/core";
 // import { requestCertificate } from "@jsenv/https-local";
+import { serverPluginDatabaseManager } from "@jsenv/database-manager";
 import { jsenvPluginCommonJs } from "@jsenv/plugin-commonjs";
-import { jsenvPluginDatabaseManager } from "@jsenv/plugin-database-manager";
 import { jsenvPluginExplorer } from "@jsenv/plugin-explorer";
 import { jsenvPluginPreact } from "@jsenv/plugin-preact";
 
@@ -73,9 +73,9 @@ await startDevServer({
         },
       },
     }),
-    jsenvPluginDatabaseManager(),
     jsenvPluginCommonJs({
       include: { "react-table/": true },
     }),
   ],
+  serverPlugins: [serverPluginDatabaseManager()],
 });
