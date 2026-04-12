@@ -42,11 +42,7 @@ export const serverPluginDatabaseManagerSpa = ({
         description: "Manage database using a Web interface",
         declarationSource: import.meta.url,
         fetch: (request) => {
-          if (request.pathname.startsWith(`${pathname}assets/`)) {
-            // let the static files be handled (by jsenv dev server or a static file service)
-            return undefined;
-          }
-          const apiServerUrl = new URL(`${pathname}api`, request.origin).href;
+          const apiServerUrl = new URL(`${pathname}/api`, request.origin).href;
           const htmlManagerRaw = readFileSync(
             new URL(databaseManagerHtmlFileUrl),
             "utf8",
@@ -60,7 +56,7 @@ export const serverPluginDatabaseManagerSpa = ({
                   apiUrl: apiServerUrl,
                 };
               },
-              __DB_MANAGER_ASSETS_URL__: () => `${pathname}assets`,
+              __DB_MANAGER_ASSETS_URL__: () => `${pathname}/assets`,
             },
           );
           return new Response(htmlManagerModified, {
