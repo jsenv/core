@@ -39,7 +39,7 @@ export const buildServer = await startBuildServer({
   serverLogLevel: "warn",
   https: { certificate, privateKey },
   buildDirectoryUrl: import.meta.resolve("./project/dist/"),
-  buildMainFilePath: "main.html",
+  buildDirectoryMainFileRelativeUrl: "main.html",
   routes: [
     {
       endpoint: "GET /build_no_error",

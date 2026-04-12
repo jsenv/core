@@ -32,7 +32,7 @@ import "node:url";
  */
 const startBuildServer = async ({
   buildDirectoryUrl,
-  buildMainFilePath = "index.html",
+  buildDirectoryMainFileRelativeUrl = "index.html",
   port = 9779,
   routes,
   serverPlugins = [],
@@ -62,26 +62,35 @@ const startBuildServer = async ({
       "buildDirectoryUrl",
     );
 
-    if (buildMainFilePath) {
-      if (typeof buildMainFilePath !== "string") {
+    if (buildDirectoryMainFileRelativeUrl) {
+      if (typeof buildDirectoryMainFileRelativeUrl !== "string") {
         throw new TypeError(
-          `buildMainFilePath must be a string, got ${buildMainFilePath}`,
+          `buildDirectoryMainFileRelativeUrl must be a string, got ${buildDirectoryMainFileRelativeUrl}`,
         );
       }
-      if (buildMainFilePath[0] === "/") {
-        buildMainFilePath = buildMainFilePath.slice(1);
+      if (buildDirectoryMainFileRelativeUrl[0] === "/") {
+        buildDirectoryMainFileRelativeUrl =
+          buildDirectoryMainFileRelativeUrl.slice(1);
       } else {
-        const buildMainFileUrl = new URL(buildMainFilePath, buildDirectoryUrl)
-          .href;
+        const buildMainFileUrl = new URL(
+          buildDirectoryMainFileRelativeUrl,
+          buildDirectoryUrl,
+        ).href;
         if (!buildMainFileUrl.startsWith(buildDirectoryUrl)) {
           throw new Error(
-            `buildMainFilePath must be relative, got ${buildMainFilePath}`,
+            `buildDirectoryMainFileRelativeUrl must be relative, got ${buildDirectoryMainFileRelativeUrl}`,
           );
         }
-        buildMainFilePath = buildMainFileUrl.slice(buildDirectoryUrl.length);
+        buildDirectoryMainFileRelativeUrl = buildMainFileUrl.slice(
+          buildDirectoryUrl.length,
+        );
       }
-      if (!existsSync(new URL(buildMainFilePath, buildDirectoryUrl))) {
-        buildMainFilePath = null;
+      if (
+        !existsSync(
+          new URL(buildDirectoryMainFileRelativeUrl, buildDirectoryUrl),
+        )
+      ) {
+        buildDirectoryMainFileRelativeUrl = null;
       }
     }
   }
@@ -130,8 +139,9 @@ const startBuildServer = async ({
       }),
       ...serverPlugins,
       serverPluginStaticFiles({
+        serverRelativeUrl: "/",
         directoryUrl: buildDirectoryUrl,
-        mainFilePath: buildMainFilePath,
+        directoryMainFileRelativeUrl: buildDirectoryMainFileRelativeUrl,
       }),
       serverPluginErrorHandler({
         sendErrorDetails: false,

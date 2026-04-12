@@ -5370,10 +5370,25 @@ const createResourcePattern = (pattern) => {
     });
   }
 
+  const patternEndsWithSlash =
+    pathnamePatternString.length > 1 && pathnamePatternString.endsWith("/");
+
   return {
     match: (resource) => {
       const [pathname, search, hash] = resourceToParts(resource);
-      let result = pathnamePattern.match(decodeURIComponent(pathname));
+      let decodedPathname = decodeURIComponent(pathname);
+      if (
+        patternEndsWithSlash &&
+        decodedPathname.startsWith(pathnamePatternString)
+      ) {
+        return {
+          named: {},
+          stars: [decodedPathname.slice(pathnamePatternString.length)],
+        };
+      }
+      let result = patternEndsWithSlash
+        ? null
+        : pathnamePattern.match(decodedPathname);
       if (!result) {
         return null;
       }
@@ -8606,19 +8621,23 @@ const asUrlString = (value) => {
   return null;
 };
 
-const serverPluginStaticFiles = ({ directoryUrl, mainFilePath }) => {
+const serverPluginStaticFiles = ({
+  serverRelativeUrl = "/",
+  directoryUrl,
+  directoryMainFileRelativeUrl = "index.html",
+}) => {
   return {
     name: "jsenv:static_files",
     routes: [
       {
-        endpoint: "GET *",
+        endpoint: `GET ${serverRelativeUrl}`,
         description: "Serve static files.",
         fetch: (request, helpers) => {
           const urlIsVersioned = new URL(request.url).searchParams.has("v");
-          if (mainFilePath && request.resource === "/") {
+          if (directoryMainFileRelativeUrl && request.resource === "/") {
             request = {
               ...request,
-              resource: `/${mainFilePath}`,
+              resource: `/${directoryMainFileRelativeUrl}`,
             };
           }
           const urlObject = new URL(request.resource.slice(1), directoryUrl);
@@ -8634,7 +8653,7 @@ const serverPluginStaticFiles = ({ directoryUrl, mainFilePath }) => {
                 !urlToExtension(urlObject) &&
                 !urlToPathname(urlObject).endsWith("/")
               ) {
-                return new URL(mainFilePath, directoryUrl);
+                return new URL(directoryMainFileRelativeUrl, directoryUrl);
               }
               return null;
             },

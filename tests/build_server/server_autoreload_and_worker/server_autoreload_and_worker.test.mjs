@@ -16,7 +16,7 @@ if (process.platform !== "win32") {
     logLevel: "warn",
     // serverLogLevel: "debug",
     buildDirectoryUrl: import.meta.resolve("./build/"),
-    buildMainFilePath: "./main.html",
+    buildDirectoryMainFileRelativeUrl: "./main.html",
     keepProcessAlive: false,
     port: 0,
   });
