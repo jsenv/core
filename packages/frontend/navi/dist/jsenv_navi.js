@@ -79,7 +79,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
     background: #fdd;
     border: 1px solid red;
   }
-`, "/src/action/action_renderer.jsx"];
+`, "@jsenv/navi/src/action/action_renderer.jsx"];
 const renderIdleDefault = () => null;
 const renderLoadingDefault = () => null;
 const renderAbortedDefault = () => null;
@@ -7522,7 +7522,7 @@ import.meta.css = [/* css */`
       grid-auto-flow: unset;
     }
   }
-`, "/src/box/box.jsx"];
+`, "@jsenv/navi/src/box/box.jsx"];
 const PSEUDO_CLASSES_DEFAULT = [];
 const PSEUDO_ELEMENTS_DEFAULT = [];
 const STYLE_CSS_VARS_DEFAULT = {};
@@ -8229,7 +8229,7 @@ import.meta.css = [/* css */`
   .ui_transition[data-transitioning] .ui_transition_target_slot_background {
     display: block;
   }
-`, "/src/ui_transition/ui_transition.js"];
+`, "@jsenv/navi/src/ui_transition/ui_transition.js"];
 const CONTENT_ID_ATTRIBUTE = "data-content-id";
 const CONTENT_PHASE_ATTRIBUTE = "data-content-phase";
 const UNSET = {
@@ -15690,7 +15690,7 @@ import.meta.css = [/* css */`
       }
     }
   }
-`, "/src/field/validation/callout/callout.js"];
+`, "@jsenv/navi/src/field/validation/callout/callout.js"];
 
 /**
  * Shows a callout attached to the specified element
@@ -18893,7 +18893,7 @@ import.meta.css = [/* css */`
       transition-timing-function: ease;
     }
   }
-`, "/src/text/text.jsx"];
+`, "@jsenv/navi/src/text/text.jsx"];
 
 // We could use <span data-navi-space=""> </span>
 // but we prefer to use zero width space as it has the nice side effects of
@@ -19234,7 +19234,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
     width: 100%;
     height: 100%;
   }
-`, "/src/graphic/icon.jsx"];
+`, "@jsenv/navi/src/graphic/icon.jsx"];
 const Icon = ({
   href,
   children,
@@ -19556,7 +19556,7 @@ import.meta.css = [/* css */`
   .navi_rectangle_loading[data-visible] {
     opacity: 1;
   }
-`, "/src/graphic/loader/rectangle_loading.jsx"];
+`, "@jsenv/navi/src/graphic/loader/rectangle_loading.jsx"];
 const RectangleLoading = ({
   shouldShowSpinner,
   color = "currentColor",
@@ -19758,7 +19758,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
       opacity: 1;
     }
   }
-`, "/src/graphic/loader/loader_background.jsx"];
+`, "@jsenv/navi/src/graphic/loader/loader_background.jsx"];
 const LoaderBackground = ({
   loading,
   containerRef,
@@ -21355,7 +21355,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
       --x-button-border-color: var(--callout-color);
     }
   }
-`, "/src/field/button.jsx"];
+`, "@jsenv/navi/src/field/button.jsx"];
 const Button = props => {
   return renderActionableComponent(props, {
     Basic: ButtonBasic,
@@ -21665,7 +21665,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
     border-top-left-radius: 6px;
     border-bottom-left-radius: 6px;
   }
-`, "/src/text/message_box.jsx"];
+`, "@jsenv/navi/src/text/message_box.jsx"];
 const MessageBoxPseudoClasses = [":-navi-status-info", ":-navi-status-success", ":-navi-status-warning", ":-navi-status-error"];
 const MessageBoxStatusContext = createContext();
 const MessageBoxReportTitleChildContext = createContext();
@@ -21741,7 +21741,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
       color: var(--x-message-color);
     }
   }
-`, "/src/text/title.jsx"];
+`, "@jsenv/navi/src/text/title.jsx"];
 const TitleLevelContext = createContext();
 const useTitleLevel = () => {
   return useContext(TitleLevelContext);
@@ -22191,7 +22191,7 @@ import.meta.css = [/* css */`
   .navi_title .navi_link[data-reveal-on-interaction] {
     top: 0.25em;
   }
-`, "/src/nav/link/link.jsx"];
+`, "@jsenv/navi/src/nav/link/link.jsx"];
 const LinkStyleCSSVars = {
   "outlineColor": "--link-outline-color",
   "borderRadius": "--link-border-radius",
@@ -22609,7 +22609,7 @@ import.meta.css = [/* css */`
       }
     }
   }
-`, "/src/nav/link/nav.jsx"];
+`, "@jsenv/navi/src/nav/link/nav.jsx"];
 const NavStyleCSSVars = {
   border: "--nav-border",
   borderRadius: "--nav-border-radius",
@@ -22761,7 +22761,7 @@ import.meta.css = [/* css */`
       d: path("${rightArrowPath}");
     }
   }
-`, "/src/field/details/summary_marker.jsx"];
+`, "@jsenv/navi/src/field/details/summary_marker.jsx"];
 const SummaryMarker = ({
   open,
   loading
@@ -22854,7 +22854,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
       }
     }
   }
-`, "/src/field/details/details.jsx"];
+`, "@jsenv/navi/src/field/details/details.jsx"];
 const Details = props => {
   const {
     value = "on",
@@ -23184,7 +23184,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
       }
     }
   }
-`, "/src/field/label.jsx"];
+`, "@jsenv/navi/src/field/label.jsx"];
 const ReportReadOnlyOnLabelContext = createContext();
 const ReportDisabledOnLabelContext = createContext();
 const ReportInteractiveOnLabelContext = createContext();
@@ -23560,7 +23560,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
       }
     }
   }
-`, "/src/field/input_checkbox.jsx"];
+`, "@jsenv/navi/src/field/input_checkbox.jsx"];
 const InputCheckbox = props => {
   const {
     value = "on"
@@ -23838,7 +23838,7 @@ import.meta.css = [/* css */`
       flex-direction: column;
     }
   }
-`, "/src/field/checkbox_list.jsx"];
+`, "@jsenv/navi/src/field/checkbox_list.jsx"];
 const CheckboxList = forwardRef((props, ref) => {
   const uiStateController = useUIGroupStateController(props, "checkbox_list", {
     childComponentType: "checkbox",
@@ -24275,7 +24275,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
       }
     }
   }
-`, "/src/field/input_radio.jsx"];
+`, "@jsenv/navi/src/field/input_radio.jsx"];
 const InputRadio = props => {
   const {
     value = "on"
@@ -24729,7 +24729,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
   .navi_input_range[data-callout] {
     /* What can we do? */
   }
-`, "/src/field/input_range.jsx"];
+`, "@jsenv/navi/src/field/input_range.jsx"];
 const InputRange = props => {
   const uiStateController = useUIStateController(props, "input");
   const uiState = useUIState(uiStateController);
@@ -25227,7 +25227,7 @@ import.meta.css = [/* css */`
     /* Fortunately we can override it as follow */
     -webkit-text-fill-color: var(--x-color) !important;
   }
-`, "/src/field/input_textual.jsx"];
+`, "@jsenv/navi/src/field/input_textual.jsx"];
 const InputTextual = props => {
   const uiStateController = useUIStateController(props, "input");
   const uiState = useUIState(uiStateController);
@@ -25623,7 +25623,7 @@ import.meta.css = [/* css */`
       pointer-events: auto;
     }
   }
-`, "/src/field/edition/editable.jsx"];
+`, "@jsenv/navi/src/field/edition/editable.jsx"];
 const useEditionController = () => {
   const [editing, editingSetter] = useState(null);
   const startEditing = useCallback(event => {
@@ -26146,7 +26146,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
       }
     }
   }
-`, "/src/field/group.jsx"];
+`, "@jsenv/navi/src/field/group.jsx"];
 const Group = ({
   children,
   borderWidth = 1,
@@ -26171,7 +26171,7 @@ const Group = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);import.meta.css = [/* css */``, "/src/field/radio_list.jsx"];
+installImportMetaCssBuild(import.meta);import.meta.css = [/* css */``, "@jsenv/navi/src/field/radio_list.jsx"];
 const RadioList = props => {
   const uiStateController = useUIGroupStateController(props, "radio_list", {
     childComponentType: "radio",
@@ -26357,7 +26357,7 @@ import.meta.css = [/* css */`
   .navi_select[data-readonly] {
     pointer-events: none;
   }
-`, "/src/field/select.jsx"];
+`, "@jsenv/navi/src/field/select.jsx"];
 const Select = forwardRef((props, ref) => {
   const select = renderActionableComponent(props, ref);
   return select;
@@ -26781,7 +26781,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
     width: 10px;
     height: 10px;
   }
-`, "/src/field/table/drag/table_drag.jsx"];
+`, "@jsenv/navi/src/field/table/drag/table_drag.jsx"];
 const TableDragContext = createContext();
 const useTableDragContextValue = ({
   tableDragCloneContainerRef,
@@ -27482,7 +27482,7 @@ import.meta.css = [/* css */`
   .navi_table_row_resizer[data-grabbed] .navi_table_row_resizer_line {
     opacity: 1;
   }
-`, "/src/field/table/resize/table_resize.jsx"];
+`, "@jsenv/navi/src/field/table/resize/table_resize.jsx"];
 
 // Column resize components
 const TableColumnResizer = forwardRef((props, ref) => {
@@ -28043,7 +28043,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
       inset 0 -1px 0 0 var(--selection-border-color),
       inset 1px 0 0 0 var(--selection-border-color);
   }
-`, "/src/field/table/selection/table_selection.jsx"];
+`, "@jsenv/navi/src/field/table/selection/table_selection.jsx"];
 const useTableSelectionController = ({
   tableRef,
   selection,
@@ -28759,7 +28759,7 @@ import.meta.css = [/* css */`
       inset -1px 0 0 0 var(--border-color),
       inset 0 -1px 0 0 var(--border-color);
   }
-`, "/src/field/table/sticky/table_sticky.jsx"];
+`, "@jsenv/navi/src/field/table/sticky/table_sticky.jsx"];
 const TableStickyFrontier = ({
   tableRef
 }) => {
@@ -28990,7 +28990,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
     overflow: hidden; /* Ensure UI elements cannot impact scrollbars of the document  */
     /* background: rgba(0, 255, 0, 0.2); */
   }
-`, "/src/field/table/table_ui.jsx"];
+`, "@jsenv/navi/src/field/table/table_ui.jsx"];
 const TableUI = forwardRef((props, ref) => {
   const {
     tableRef,
@@ -29939,7 +29939,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
     opacity: 0;
     pointer-events: none;
   }
-`, "/src/keyboard/active_keyboard_shortcuts.jsx"];
+`, "@jsenv/navi/src/keyboard/active_keyboard_shortcuts.jsx"];
 const ActiveKeyboardShortcuts = ({
   visible
 }) => {
@@ -30008,7 +30008,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
       transform: translateY(-100%);
     }
   }
-`, "/src/field/button_copy_to_clipboard.jsx"];
+`, "@jsenv/navi/src/field/button_copy_to_clipboard.jsx"];
 const ButtonCopyToClipboard = ({
   children,
   ...props
@@ -30121,7 +30121,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
       --x-color-contrasting: var(--navi-color-white);
     }
   }
-`, "/src/text/badge.jsx"];
+`, "@jsenv/navi/src/text/badge.jsx"];
 const BadgeStyleCSSVars$1 = {
   borderWidth: "--border-width",
   borderRadius: "--border-radius",
@@ -30305,7 +30305,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
       }
     }
   }
-`, "/src/text/badge_count.jsx"];
+`, "@jsenv/navi/src/text/badge_count.jsx"];
 const BadgeStyleCSSVars = {
   borderWidth: "--border-width",
   borderRadius: "--border-radius",
@@ -30480,7 +30480,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
   .navi_caption {
     color: var(--color);
   }
-`, "/src/text/caption.jsx"];
+`, "@jsenv/navi/src/text/caption.jsx"];
 const CaptionStyleCSSVars = {
   color: "--color"
 };
@@ -30921,7 +30921,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
       }
     }
   }
-`, "/src/text/quantity.jsx"];
+`, "@jsenv/navi/src/text/quantity.jsx"];
 const QuantityIntl = createIntl();
 const wellKnownUnitMap = new Map();
 /**
@@ -31175,7 +31175,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
       }
     }
   }
-`, "/src/text/meter.jsx"];
+`, "@jsenv/navi/src/text/meter.jsx"];
 const MeterStyleCSSVars = {
   trackColor: "--track-color",
   borderColor: "--border-color",
@@ -31343,7 +31343,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
       background-position: -200% 0;
     }
   }
-`, "/src/text/text_placeholder.jsx"];
+`, "@jsenv/navi/src/text/text_placeholder.jsx"];
 const TextPlaceholder = ({
   loading,
   ...props
@@ -31412,7 +31412,7 @@ import.meta.css = [/* css */`
     stroke: black !important;
     stroke-opacity: 1 !important;
   }
-`, "/src/graphic/svg_mask_overlay.jsx"];
+`, "@jsenv/navi/src/graphic/svg_mask_overlay.jsx"];
 const SVGMaskOverlay = ({
   viewBox,
   children
@@ -31528,7 +31528,7 @@ import.meta.css = [/* css */`
     border-color: var(--layout-border-color);
     border-radius: var(--layout-border-radius);
   }
-`, "/src/layout/dialog_layout.jsx"];
+`, "@jsenv/navi/src/layout/dialog_layout.jsx"];
 const DialogLayoutStyleCSSVars = {
   margin: "--layout-margin",
   marginTop: "--layout-margin-top",
@@ -31601,7 +31601,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
       vertical-align: bottom;
     }
   }
-`, "/src/layout/separator.jsx"];
+`, "@jsenv/navi/src/layout/separator.jsx"];
 const SeparatorStyleCSSVars = {
   color: "--color"
 };
@@ -31645,7 +31645,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
     );
     background: var(--layout-background);
   }
-`, "/src/layout/viewport_layout.jsx"];
+`, "@jsenv/navi/src/layout/viewport_layout.jsx"];
 const ViewportLayoutStyleCSSVars = {
   padding: "--layout-padding",
   paddingTop: "--layout-padding-top",
@@ -31762,7 +31762,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
       transform: translateX(100%);
     }
   }
-`, "/src/popover/side_panel.jsx"];
+`, "@jsenv/navi/src/popover/side_panel.jsx"];
 const SidePanelCloseContext = createContext(null);
 const useSidePanelClose = () => useContext(SidePanelCloseContext);
 const SidePanelStyleCSSVars = {

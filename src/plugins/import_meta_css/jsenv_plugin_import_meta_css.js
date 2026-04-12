@@ -51,10 +51,15 @@ export const jsenvPluginImportMetaCss = () => {
           return null;
         }
         if (urlInfo.context.build) {
-          const rootDirectoryUrl = urlInfo.context.rootDirectoryUrl;
-          const relativeUrl = urlInfo.originalUrl.slice(
-            rootDirectoryUrl.length - 1,
+          const packageName = urlInfo.packageName;
+          const packageDirectoryUrl =
+            urlInfo.packageDirectoryUrl || urlInfo.context.rootDirectoryUrl;
+          const relativePathInPackage = urlInfo.originalUrl.slice(
+            packageDirectoryUrl.length - 1,
           );
+          const relativeUrl = packageName
+            ? `${packageName}${relativePathInPackage}`
+            : relativePathInPackage;
           const { code } = await applyBabelPlugins({
             babelPlugins: [
               [babelPluginRewriteImportMetaCssAssignment, { relativeUrl }],

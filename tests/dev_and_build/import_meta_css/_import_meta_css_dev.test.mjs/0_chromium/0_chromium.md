@@ -4,7 +4,7 @@
 run({ browserLauncher: chromium })
 ```
 
-# 1/2 write 6 files into "./.jsenv/chrome@145.00/"
+# 1/2 write 7 files into "./.jsenv/chrome@145.00/"
 
 see [./.jsenv/chrome@145.00/](./.jsenv/chrome@145.00/)
 
@@ -14,16 +14,19 @@ see [./.jsenv/chrome@145.00/](./.jsenv/chrome@145.00/)
 {
   "at_start": {
     "bodyFontSize": "16px",
+    "bodyFontStyle": "normal",
     "bodyBackgroundColor": "rgba(0, 0, 0, 0)",
     "bodyColor": "rgb(0, 0, 0)"
   },
   "after_first_call": {
     "bodyFontSize": "42px",
+    "bodyFontStyle": "italic",
     "bodyBackgroundColor": "rgb(255, 0, 0)",
     "bodyColor": "rgb(0, 0, 255)"
   },
   "after_second_call": {
     "bodyFontSize": "42px",
+    "bodyFontStyle": "italic",
     "bodyBackgroundColor": "rgb(0, 128, 0)",
     "bodyColor": "rgb(0, 0, 255)"
   }

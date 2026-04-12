@@ -57,7 +57,7 @@ System.register([__v__("/jsenv_core_packages.js")], function (_export, _context)
     body {
       background-color: ${color};
     }
-  `, "/a.js"];
+  `, "@jsenv/core/tests/dev_and_build/import_meta_css/client/a.js"];
       };
       installImportMetaCssBuild$1(_context.meta);
       setBodyColor = color => {
@@ -65,7 +65,7 @@ System.register([__v__("/jsenv_core_packages.js")], function (_export, _context)
     body {
       color: ${color};
     }
-  `, "/b.js"];
+  `, "@jsenv/core/tests/dev_and_build/import_meta_css/client/b.js"];
       };
       installImportMetaCssBuild$1(_context.meta);
       setBodyFontSize = size => {
@@ -73,10 +73,9 @@ System.register([__v__("/jsenv_core_packages.js")], function (_export, _context)
     body {
       font-size: ${size};
     }
-  `, "/c.js"];
+  `, "@jsenv/core/tests/dev_and_build/import_meta_css/client/c.js"];
       };
       setBodyFontSize("16px");
-      installImportMetaCssBuild$1(_context.meta);
       installImportMetaCssBuild = importMeta => {
         const IMPORT_META_CSS_BUILD = "jsenv_import_meta_css_build";
         if (importMeta.css === IMPORT_META_CSS_BUILD) {
@@ -125,7 +124,7 @@ System.register([__v__("/jsenv_core_packages.js")], function (_export, _context)
       };
       installImportMetaCssBuild(_context.meta);
       setBodyFontStyle = style => {
-        _context.meta.css = [[`body { font-style: ${style}; }`, "/d.js"], "/d.js"];
+        _context.meta.css = [`body { font-style: ${style}; }`, "/d.js"];
       };
       getBodyFontSize = () => window.getComputedStyle(document.body).fontSize;
       getBodyFontStyle = () => window.getComputedStyle(document.body).fontStyle;
