@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 
 const databaseManagerHtmlFileUrl = import.meta
   .resolve("./client/database_manager.html");
+const assetDirectoryUrl = import.meta.resolve("./client/assets/");
 
 export const serverPluginDatabaseManagerSpa = ({
   pathname,
@@ -17,24 +18,7 @@ export const serverPluginDatabaseManagerSpa = ({
         endpoint: `GET ${pathname}/assets/*`,
         description: "Serve static files for database manager Web interface",
         declarationSource: import.meta.url,
-        fetch: sourceDirectoryUrl
-          ? (request) => {
-              const assetPathname = request.pathname.slice(
-                `${pathname}/assets`.length,
-              );
-              const assetFileUrl = new URL(
-                `.${assetPathname}`,
-                import.meta.resolve("./client/assets/"),
-              );
-              const assetRelativeToSourceDir = assetFileUrl.href.slice(
-                sourceDirectoryUrl.endsWith("/")
-                  ? sourceDirectoryUrl.length
-                  : sourceDirectoryUrl.length + 1,
-              );
-              const assetServerUrl = `${request.origin}/${assetRelativeToSourceDir}`;
-              return Response.redirect(assetServerUrl, 302);
-            }
-          : createFileSystemFetch(import.meta.resolve("./client/assets/")),
+        fetch: createFileSystemFetch(assetDirectoryUrl),
       },
 
       {
@@ -50,13 +34,20 @@ export const serverPluginDatabaseManagerSpa = ({
           const htmlManagerModified = replacePlaceholdersInHtml(
             htmlManagerRaw,
             {
-              __DB_MANAGER_CONFIG__: () => {
-                return {
-                  pathname,
-                  apiUrl: apiServerUrl,
-                };
+              __DB_MANAGER_CONFIG__: {
+                pathname,
+                apiUrl: apiServerUrl,
               },
-              __DB_MANAGER_ASSETS_URL__: () => `${pathname}/assets`,
+              ...(sourceDirectoryUrl
+                ? {
+                    "./assets/database_manager.jsx": () => {
+                      const sourceDir = sourceDirectoryUrl.endsWith("/")
+                        ? sourceDirectoryUrl
+                        : `${sourceDirectoryUrl}/`;
+                      return `/${assetDirectoryUrl.slice(sourceDir.length)}database_manager.jsx`;
+                    },
+                  }
+                : {}),
             },
           );
           return new Response(htmlManagerModified, {

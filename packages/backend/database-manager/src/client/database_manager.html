@@ -12,9 +12,7 @@
       // eslint-disable-next-line no-undef
       window.DB_MANAGER_CONFIG = __DB_MANAGER_CONFIG__;
     </script>
-    <script
-      type="module"
-      src="__DB_MANAGER_ASSETS_URL__/database_manager.jsx"
-    ></script>
+    <!-- During dev we replace this to make it absolute to the dev server -->
+    <script type="module" src="./assets/database_manager.jsx"></script>
   </body>
 </html>
