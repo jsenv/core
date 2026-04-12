@@ -41,6 +41,7 @@
   "devDependencies": {
     "@jsenv/core": "../../../",
     "@jsenv/plugin-preact": "../../related/plugin-preact",
+    "@jsenv/server": "../../server",
     "@preact/signals": "2.9.0",
     "preact": "11.0.0-beta.0"
   },
