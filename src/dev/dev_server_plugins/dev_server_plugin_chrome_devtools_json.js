@@ -9,7 +9,7 @@ import { urlToFileSystemPath } from "@jsenv/urls";
 import { randomUUID } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 
-export const jsenvPluginChromeDevtoolsJson = () => {
+export const devServerPluginChromeDevToolsJson = ({ sourceDirectoryUrl }) => {
   const getOrCreateUUID = (kitchen) => {
     const { outDirectoryUrl } = kitchen.context;
     const uuidFileUrl = new URL("./uuid.json", outDirectoryUrl);
@@ -23,17 +23,15 @@ export const jsenvPluginChromeDevtoolsJson = () => {
   };
 
   return {
-    name: "jsenv_plugin_chrome_devtools_json",
-    appliesDuring: "dev",
-    serverRoutes: [
+    name: "jsenv:chrome_devtools_json",
+    routes: [
       {
         endpoint: "GET /.well-known/appspecific/com.chrome.devtools.json",
         declarationSource: import.meta.url,
         fetch: (request, { kitchen }) => {
-          const { rootDirectoryUrl } = kitchen.context;
           return Response.json({
             workspace: {
-              root: urlToFileSystemPath(rootDirectoryUrl),
+              root: urlToFileSystemPath(sourceDirectoryUrl),
               uuid: getOrCreateUUID(kitchen),
             },
           });
