@@ -8,17 +8,19 @@ export const serverPluginDatabaseManagerSpa = ({
   pathname,
   sourceDirectoryUrl,
 }) => {
+  // ensure no trailing slash
+  pathname = pathname.endsWith("/") ? pathname.slice(0, -1) : pathname;
   return {
     name: "jsenv:database_manager_spa",
     routes: [
       {
-        endpoint: `GET ${pathname}assets/*`,
+        endpoint: `GET ${pathname}/assets/*`,
         description: "Serve static files for database manager Web interface",
         declarationSource: import.meta.url,
         fetch: sourceDirectoryUrl
           ? (request) => {
               const assetPathname = request.pathname.slice(
-                `${pathname}assets`.length,
+                `${pathname}/assets`.length,
               );
               const assetFileUrl = new URL(
                 `.${assetPathname}`,
@@ -36,7 +38,7 @@ export const serverPluginDatabaseManagerSpa = ({
       },
 
       {
-        endpoint: `GET ${pathname}`,
+        endpoint: `GET ${pathname}/`,
         description: "Manage database using a Web interface",
         declarationSource: import.meta.url,
         fetch: (request) => {

@@ -2,7 +2,7 @@ import { serverPluginDatabaseManagerSpa } from "./server_plugin_database_manager
 import { serverPluginDatabaseRestApi } from "./server_plugin_database_rest_api.js";
 
 export const serverPluginDatabaseManager = ({
-  pathname = "/.internal/database/",
+  pathname = "/.internal/database",
   sourceDirectoryUrl,
 } = {}) => {
   return [
