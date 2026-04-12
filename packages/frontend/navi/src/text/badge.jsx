@@ -4,7 +4,7 @@ import { withPropsClassName } from "../utils/with_props_class_name.js";
 import { Text } from "./text.jsx";
 import { useDarkBackgroundAttribute } from "./use_dark_background_attribute.js";
 
-import.meta.css = /* css */ `
+const css = /* css */ `
   @layer navi {
   }
   .navi_badge {
@@ -47,6 +47,8 @@ const BadgeStyleCSSVars = {
 };
 
 export const Badge = ({ children, className, ...props }) => {
+  import.meta.css = css;
+
   const defaultRef = useRef();
   const ref = props.ref || defaultRef;
   useDarkBackgroundAttribute(ref);

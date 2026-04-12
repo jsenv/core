@@ -2,7 +2,7 @@ import { Box } from "../box/box.jsx";
 import { Text } from "../text/text.jsx";
 import { withPropsClassName } from "../utils/with_props_class_name.js";
 
-import.meta.css = /* css */ `
+const css = /* css */ `
   @layer navi {
     /* Ensure data attributes from box.jsx can win to update display */
     .navi_icon {
@@ -40,7 +40,7 @@ import.meta.css = /* css */ `
     cursor: default;
     user-select: none;
   }
-  .navi_icon_foreground {
+  .navi_text.navi_icon_foreground {
     position: absolute;
     inset: 0;
     display: inline-flex;
@@ -91,6 +91,8 @@ export const Icon = ({
   onClick,
   ...props
 }) => {
+  import.meta.css = css;
+
   const innerChildren = href ? (
     <svg width="100%" height="100%">
       <use href={href} />

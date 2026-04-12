@@ -7,10 +7,10 @@ import { formatNumber } from "./format_number.js";
 import { Text } from "./text.jsx";
 import { useDarkBackgroundAttribute } from "./use_dark_background_attribute.js";
 
-import.meta.css = /* css */ `
+const css = /* css */ `
   @layer navi {
   }
-  .navi_badge_count {
+  .navi_text.navi_badge_count {
     --font-size: 0.7em;
     --x-background: var(--background);
     --x-background-color: var(--background-color, var(--x-background));
@@ -114,6 +114,7 @@ const BadgeCountOverflow = () => (
 );
 const MAX_CHAR_AS_CIRCLE = 3;
 const MAX_FOR_CIRCLE = 99;
+
 export const BadgeCount = ({
   children,
   maxElement = <BadgeCountOverflow />,
@@ -126,6 +127,8 @@ export const BadgeCount = ({
   loading,
   ...props
 }) => {
+  import.meta.css = css;
+
   const defaultRef = useRef();
   const ref = props.ref || defaultRef;
   useDarkBackgroundAttribute(ref, [loading]);
