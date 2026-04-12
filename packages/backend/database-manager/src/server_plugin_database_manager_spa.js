@@ -4,7 +4,10 @@ import { readFileSync } from "node:fs";
 const databaseManagerHtmlFileUrl = import.meta
   .resolve("./client/database_manager.html");
 
-export const serverPluginDatabaseManagerSpa = ({ pathname }) => {
+export const serverPluginDatabaseManagerSpa = ({
+  pathname,
+  redirectToSource,
+}) => {
   const apiUrl = new URL(`${pathname}api`, import.meta.url).href;
 
   return {
@@ -14,8 +17,21 @@ export const serverPluginDatabaseManagerSpa = ({ pathname }) => {
         endpoint: `GET ${pathname}assets/*`,
         description: "Serve static files for database manager Web interface",
         declarationSource: import.meta.url,
-        fetch: createFileSystemFetch(import.meta.resolve("./client/assets/")),
+        fetch: redirectToSource
+          ? (request) => {
+              return new Response(null, {
+                status: 302,
+                headers: {
+                  location: new URL(
+                    request.pathname,
+                    import.meta.resolve("./client/assets/"),
+                  ).href,
+                },
+              });
+            }
+          : createFileSystemFetch(import.meta.resolve("./client/assets/")),
       },
+
       {
         endpoint: `GET ${pathname}`,
         description: "Manage database using a Web interface",
