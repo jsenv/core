@@ -3,10 +3,11 @@ import { serverPluginDatabaseRestApi } from "./server_plugin_database_rest_api.j
 
 export const serverPluginDatabaseManager = ({
   pathname = "/.internal/database/",
+  sourceDirectoryUrl,
 } = {}) => {
   return [
     serverPluginDatabaseRestApi({ pathname }),
-    serverPluginDatabaseManagerSpa({ pathname }),
+    serverPluginDatabaseManagerSpa({ pathname, sourceDirectoryUrl }),
     serverPluginPostgresErrorHandler(),
     serverPluginJsonParseErrorHandler(),
   ];

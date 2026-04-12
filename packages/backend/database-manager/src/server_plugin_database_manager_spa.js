@@ -6,7 +6,7 @@ const databaseManagerHtmlFileUrl = import.meta
 
 export const serverPluginDatabaseManagerSpa = ({
   pathname,
-  redirectToSource,
+  sourceDirectoryUrl,
 }) => {
   const apiUrl = new URL(`${pathname}api`, import.meta.url).href;
 
@@ -17,13 +17,21 @@ export const serverPluginDatabaseManagerSpa = ({
         endpoint: `GET ${pathname}assets/*`,
         description: "Serve static files for database manager Web interface",
         declarationSource: import.meta.url,
-        fetch: redirectToSource
+        fetch: sourceDirectoryUrl
           ? (request) => {
+              const assetPathname = request.pathname.slice(
+                `${pathname}assets`.length,
+              );
               const assetFileUrl = new URL(
-                request.pathname,
+                `.${assetPathname}`,
                 import.meta.resolve("./client/assets/"),
-              ).href;
-              const assetServerUrl = new URL(assetFileUrl).pathname;
+              );
+              const assetRelativeToSourceDir = assetFileUrl.href.slice(
+                sourceDirectoryUrl.endsWith("/")
+                  ? sourceDirectoryUrl.length
+                  : sourceDirectoryUrl.length + 1,
+              );
+              const assetServerUrl = `${request.origin}/${assetRelativeToSourceDir}`;
               return Response.redirect(assetServerUrl, 302);
             }
           : createFileSystemFetch(import.meta.resolve("./client/assets/")),
