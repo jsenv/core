@@ -29,7 +29,7 @@ const tempDirectoryUrl = new URL("./temp/", import.meta.url).href;
     status: 200,
     statusText: "",
     headers: {
-      "cache-control": "no-store",
+      "cache-control": "private,max-age=0,must-revalidate",
       "content-length": `${fileContent.length}`,
       "content-type": "text/plain",
     },
@@ -83,7 +83,7 @@ const tempDirectoryUrl = new URL("./temp/", import.meta.url).href;
     status: 404,
     statusText: `ENOENT: File not found at ${urlToFileSystemPath(url)}`,
     headers: {
-      "cache-control": "no-store",
+      "cache-control": "private,max-age=0,must-revalidate",
     },
     body: "",
   };
