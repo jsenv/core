@@ -7731,6 +7731,10 @@ const jsenvPluginImportMetaCss = () => {
             inputUrl: urlInfo.originalUrl,
             outputUrl: urlInfo.generatedUrl,
           });
+          if (code === urlInfo.content) {
+            // all assignments were already in array form (pre-built file) — nothing to do
+            return null;
+          }
           return injectImportMetaCss(urlInfo, {
             content: code,
             importFrom: importMetaCssBuildClientFileUrl,
@@ -7770,6 +7774,10 @@ const babelPluginRewriteImportMetaCssAssignment = (
           return;
         }
         if (property.name !== "css") {
+          return;
+        }
+        // already transformed (e.g. pre-built file): leave as-is
+        if (right.type === "ArrayExpression") {
           return;
         }
         path.node.right = t.arrayExpression([
