@@ -8,8 +8,6 @@ export const serverPluginDatabaseManagerSpa = ({
   pathname,
   sourceDirectoryUrl,
 }) => {
-  const apiUrl = new URL(`${pathname}api`, import.meta.url).href;
-
   return {
     name: "jsenv:database_manager_spa",
     routes: [
@@ -46,6 +44,7 @@ export const serverPluginDatabaseManagerSpa = ({
             // let the static files be handled (by jsenv dev server or a static file service)
             return undefined;
           }
+          const apiServerUrl = new URL(`${pathname}api`, request.origin).href;
           const htmlManagerRaw = readFileSync(
             new URL(databaseManagerHtmlFileUrl),
             "utf8",
@@ -56,7 +55,7 @@ export const serverPluginDatabaseManagerSpa = ({
               __DB_MANAGER_CONFIG__: () => {
                 return {
                   pathname,
-                  apiUrl,
+                  apiUrl: apiServerUrl,
                 };
               },
             },

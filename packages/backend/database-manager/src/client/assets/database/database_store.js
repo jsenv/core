@@ -106,9 +106,7 @@ export const DATABASE = resource("database", {
 
 export const useDatabaseArrayInStore = DATABASE.useArray;
 
-const currentDatabaseIdSignal = signal(
-  window.DB_MANAGER_CONFIG.currentDatabase.oid,
-);
+const currentDatabaseIdSignal = signal(null);
 export const setCurrentDatabaseId = (id) => {
   currentDatabaseIdSignal.value = id;
 };

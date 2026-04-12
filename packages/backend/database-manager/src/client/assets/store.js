@@ -101,5 +101,3 @@ export const ROLE_TABLES = ROLE.many("tables", TABLE, {
 });
 
 export const DATABASE_OWNER = DATABASE.one("ownerRole", ROLE);
-
-ROLE.store.upsert(window.DB_MANAGER_CONFIG.currentRole);
