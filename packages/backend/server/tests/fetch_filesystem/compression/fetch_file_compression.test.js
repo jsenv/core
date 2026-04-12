@@ -15,6 +15,7 @@ await ensureEmptyDirectory(fixturesDirectoryUrl);
     {
       method: "GET",
       resource: "/file.js",
+      url: fileUrl,
       headers: {
         "accept-encoding": "gzip",
       },
@@ -38,7 +39,7 @@ await ensureEmptyDirectory(fixturesDirectoryUrl);
   const expect = {
     status: 200,
     headers: {
-      "cache-control": "no-store",
+      "cache-control": "private,max-age=0,must-revalidate",
       "content-type": "text/javascript",
       "content-encoding": "gzip",
       "vary": "accept-encoding",
