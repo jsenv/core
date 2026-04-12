@@ -12,6 +12,7 @@ import { createJsenvPluginsController } from "../../plugins/jsenv_plugins_contro
 import { parseUserAgentHeader } from "./user_agent.js";
 
 export const devServerPluginServeSourceFiles = ({
+  packageDirectory,
   sourceDirectoryUrl,
   sourceMainFilePath,
   ignore,
@@ -31,7 +32,6 @@ export const devServerPluginServeSourceFiles = ({
   serverStopCallbackSet,
   devServerJsenvPluginStore,
   kitchenCache,
-  packageDirectory,
 }) => {
   const { clientFileChangeEventEmitter, clientFileDereferencedEventEmitter } =
     clientAutoreload;

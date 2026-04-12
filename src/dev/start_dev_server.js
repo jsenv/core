@@ -167,9 +167,7 @@ export const startDevServer = async ({
   const serverStopAbortSignal = serverStopAbortController.signal;
 
   const kitchenCache = new Map();
-  const packageDirectory = createPackageDirectory({
-    sourceDirectoryUrl,
-  });
+  const packageDirectory = createPackageDirectory({ sourceDirectoryUrl });
   const clientFileChangeEventEmitter = createEventEmitter();
   const clientFileDereferencedEventEmitter = createEventEmitter();
   clientAutoreload = {
@@ -231,6 +229,7 @@ export const startDevServer = async ({
     devServerPluginChromeDevToolsJson({ sourceDirectoryUrl }),
     ...serverPlugins,
     devServerPluginServeSourceFiles({
+      packageDirectory,
       sourceDirectoryUrl,
       sourceMainFilePath,
       ignore,
