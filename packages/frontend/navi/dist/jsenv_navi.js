@@ -18955,10 +18955,7 @@ const applySpacingOnTextChildren = (children, spacing = REGULAR_SPACE) => {
     }
     const currentChild = childArray[i - 1];
     const nextChild = childArray[i];
-    if (!shouldInjectSpacingAfter(currentChild)) {
-      continue;
-    }
-    if (!shouldInjectSpacingBefore(nextChild)) {
+    if (!shouldInjectSpacingBetween(currentChild, nextChild)) {
       continue;
     }
     childrenWithGap.push(separator);
@@ -18972,29 +18969,29 @@ const markAsOutsideTextFlow = jsxElement => {
 const isMarkedAsOutsideTextFlow = jsxElement => {
   return outsideTextFlowSet.has(jsxElement.type);
 };
-const shouldInjectSpacingAfter = jsxChild => {
-  if (typeof jsxChild === "string") {
-    if (/\s$/.test(jsxChild)) {
-      return false;
-    }
-  }
-  if (isMarkedAsOutsideTextFlow(jsxChild)) {
-    // we can mark jsx element as "outsideFlow" to avoid spacing injection between it and surrounding text
-    return false;
-  }
-  return true;
+const isPreactNode = jsxChild => {
+  return jsxChild !== null && typeof jsxChild === "object" && jsxChild.type !== undefined;
 };
-const shouldInjectSpacingBefore = jsxChild => {
-  if (typeof jsxChild === "string") {
-    if (/^\s/.test(jsxChild)) {
-      return false;
-    }
-  }
-  if (isMarkedAsOutsideTextFlow(jsxChild)) {
-    // we can mark jsx element as "outsideFlow" to avoid spacing injection between it and surrounding text
+const shouldInjectSpacingBetween = (left, right) => {
+  const leftIsNode = isPreactNode(left);
+  const rightIsNode = isPreactNode(right);
+  // only inject spacing when at least one side is a preact node
+  if (!leftIsNode && !rightIsNode) {
     return false;
   }
-  if (jsxChild && jsxChild.props && jsxChild.props.overflowPinned) {
+  if (leftIsNode && isMarkedAsOutsideTextFlow(left)) {
+    return false;
+  }
+  if (rightIsNode && isMarkedAsOutsideTextFlow(right)) {
+    return false;
+  }
+  if (rightIsNode && right.props && right.props.overflowPinned) {
+    return false;
+  }
+  if (typeof left === "string" && /\s$/.test(left)) {
+    return false;
+  }
+  if (typeof right === "string" && /^\s/.test(right)) {
     return false;
   }
   return true;
