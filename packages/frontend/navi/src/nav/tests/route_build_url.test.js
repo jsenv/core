@@ -1147,21 +1147,12 @@ await snapshotTests(import.meta.url, ({ test }) => {
     const HOME_ROUTE = route("/");
     const MAP_ROUTE = route("/map/", { searchParams: { zone: zoneSignal } });
     const isochroneTabSignal = stateSignal("compare");
-
-    const isochroneTimeModeSignal = stateSignal("walk");
     const MAP_PANEL_ROUTE = route(`/map/:panel=${mapPanelSignal}/`);
     const MAP_TRANSIT_ROUTE = route(`/map/transit`);
     const MAP_FACILITIES_ROUTE = route(`/map/facilities/`);
     const MAP_ISOCHRONE_ROUTE = route(
       `/map/isochrone/:tab=${isochroneTabSignal}/`,
     );
-    const MAP_ISOCHRONE_COMPARE_ROUTE = route(`/map/isochrone/compare`);
-    const MAP_ISOCHRONE_TIME_ROUTE = route(
-      `/map/isochrone/time/:mode=${isochroneTimeModeSignal}/`,
-    );
-
-    isochroneTabSignal.value = "time";
-    isochroneTimeModeSignal.value = "transit";
     const { updateRoutes, clearRoutes } = setupRoutes([
       HOME_ROUTE,
       MAP_ROUTE,
@@ -1169,9 +1160,8 @@ await snapshotTests(import.meta.url, ({ test }) => {
       MAP_TRANSIT_ROUTE,
       MAP_FACILITIES_ROUTE,
       MAP_ISOCHRONE_ROUTE,
-      MAP_ISOCHRONE_COMPARE_ROUTE,
-      MAP_ISOCHRONE_TIME_ROUTE,
     ]);
+    isochroneTabSignal.value = "transit";
     try {
       updateRoutes(`${baseUrl}/map/facilities?zone=london`);
 
