@@ -78,17 +78,35 @@
             </p>
             <Box
               flex
-              padding="s"
               spacing="s"
               width={width}
               border="1px solid #ccc"
               alignY="center"
             >
-              <Box padding="xs" border="1px solid #4caf50" borderRadius="4px">
+              <Box
+                flex
+                padding="xs"
+                expandY
+                alignY="center"
+                border="1px solid #4caf50"
+                borderRadius="4px"
+              >
                 Fixed
               </Box>
-              <Box flex spacing="s" alignY="center" expandX minWidth="0">
-                <Text overflowEllipsis loading={isLoading} minWidth="0">
+              <Box
+                flex
+                height="4em"
+                spacing="s"
+                alignY="center"
+                expandX
+                minWidth="0"
+              >
+                <Text
+                  overflowEllipsis
+                  expandY
+                  alignY="center"
+                  loading={isLoading}
+                >
                   A very long label inside the inner flex that should truncate
                   before the trailing icon disappears
                 </Text>
