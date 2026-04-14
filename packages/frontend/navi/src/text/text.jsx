@@ -93,13 +93,17 @@ const css = /* css */ `
     }
 
     &[data-skeleton] {
-      display: inline-flex;
-      flex-grow: 1;
+      /* Keep layout space — children are hidden, skeleton overlays absolutely */
+      min-height: 1em;
+
+      & > *:not(.navi_text_skeleton) {
+        visibility: hidden;
+      }
 
       .navi_text_skeleton {
-        display: inherit;
-        height: 1em;
-        flex-grow: inherit;
+        position: absolute;
+        inset: 0;
+        min-height: 1em;
         background: linear-gradient(
           90deg,
           #e0e0e0 25%,
@@ -108,6 +112,7 @@ const css = /* css */ `
         );
         background-size: 200% 100%;
         border-radius: 4px;
+        visibility: visible;
       }
 
       &[data-loading] {
@@ -298,16 +303,20 @@ export const Text = (props) => {
   return <TextBasic {...props} />;
 };
 
-const TextSkeleton = ({ loading, ...props }) => {
+const TextSkeleton = ({ loading, children, ...props }) => {
+  const skeletonSpan = (
+    <span className="navi_text_skeleton" aria-hidden="true" />
+  );
   return (
     <Text
-      flex
+      data-has-absolute-child=""
       data-skeleton=""
       data-loading={loading ? "" : undefined}
       {...props}
       skeleton={undefined}
+      childrenOutsideFlow={skeletonSpan}
     >
-      <span className="navi_text_skeleton" aria-hidden="true" />
+      {children}
     </Text>
   );
 };
