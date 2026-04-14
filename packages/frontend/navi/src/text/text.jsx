@@ -94,7 +94,6 @@ const css = /* css */ `
 
     &[data-skeleton] {
       /* Keep layout space — children are hidden, skeleton overlays absolutely */
-      min-height: 1em;
 
       & > *:not(.navi_text_skeleton) {
         visibility: hidden;
@@ -103,7 +102,7 @@ const css = /* css */ `
       .navi_text_skeleton {
         position: absolute;
         inset: 0;
-        min-height: 1em;
+        /* top/bottom inset may not perfectly align with text bounds — acceptable */
         background: linear-gradient(
           90deg,
           #e0e0e0 25%,
@@ -307,6 +306,16 @@ const TextSkeleton = ({ loading, children, ...props }) => {
   const skeletonSpan = (
     <span className="navi_text_skeleton" aria-hidden="true" />
   );
+  // When there are no children we inject an invisible "W" so the element takes
+  // its natural text height (matching current font-size) instead of relying on
+  // min-height which can be off. The W is hidden via CSS visibility:hidden.
+  const hasChildren =
+    children !== null && children !== undefined && children !== false;
+  const innerChildren = hasChildren ? (
+    children
+  ) : (
+    <span aria-hidden="true">W</span>
+  );
   return (
     <Text
       data-has-absolute-child=""
@@ -316,7 +325,7 @@ const TextSkeleton = ({ loading, children, ...props }) => {
       skeleton={undefined}
       childrenOutsideFlow={skeletonSpan}
     >
-      {children}
+      {innerChildren}
     </Text>
   );
 };
