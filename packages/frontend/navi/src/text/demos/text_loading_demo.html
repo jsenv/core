@@ -144,7 +144,9 @@
             </p>
             <ToggleLoading loading={loading} setLoading={setLoading} />
             <div class="container-box" style="width: 300px;">
-              <Text loading={loading} />
+              <Text loading={loading}>
+                {loading ? undefined : "Hello world"}
+              </Text>
             </div>
           </div>
         );
@@ -350,14 +352,14 @@
       const App = () => (
         <div>
           <h1>Text Loading / Skeleton Demo</h1>
+          <NoChildrenDemo />
+          <ConditionalWidthDemo />
           <WithChildrenDemo />
           <InlineInSentenceDemo />
-          <NoChildrenDemo />
           <FlexRowWithIconDemo />
+          <FixedWidthTextDemo />
           <OverflowEllipsisDemo />
           <OverflowEllipsisWithIconDemo />
-          <FixedWidthTextDemo />
-          <ConditionalWidthDemo />
           <StaticSkeletonDemo />
         </div>
       );
