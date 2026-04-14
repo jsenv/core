@@ -382,10 +382,10 @@
           <div class="demo-section">
             <h2>preventBoldLayoutShift + loading</h2>
             <p>
-              <code>preventBoldLayoutShift</code> uses a hidden clone to
-              reserve bold-width space so toggling bold never shifts layout.
-              Verify that the skeleton still appears correctly and that
-              switching between loading ↔ bold ↔ both doesn't break anything.
+              <code>preventBoldLayoutShift</code> uses a hidden clone to reserve
+              bold-width space so toggling bold never shifts layout. Verify that
+              the skeleton still appears correctly and that switching between
+              loading ↔ bold ↔ both doesn't break anything.
             </p>
             <ToggleLoading loading={loading} setLoading={setLoading} />
             <label class="toggle-row">
@@ -397,17 +397,15 @@
               bold
             </label>
             <div class="container-box" style="display: inline-block;">
-              <Text
-                loading={loading}
-                bold={bold}
-                preventBoldLayoutShift
-                noWrap
-              >
+              <Text loading={loading} bold={bold} preventBoldLayoutShift noWrap>
                 Toggle me bold without layout shift
               </Text>
             </div>
-            <br /><br />
-            <div style="font-size: 12px; color: #999; margin-bottom: 4px;">Inside a flex row</div>
+            <br />
+            <br />
+            <div style="font-size: 12px; color: #999; margin-bottom: 4px;">
+              Inside a flex row
+            </div>
             <div class="container-box" style="width: 340px;">
               <Box flex spacing="s" alignY="center">
                 <Icon shrink={false} color="orange">
