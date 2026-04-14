@@ -142,11 +142,54 @@
               (dotted box). The container width should stay fixed; the skeleton
               grows to fill it.
             </p>
+            <p>
+              The skeleton height is driven by an invisible <code>"W"</code>{" "}
+              character, not <code>min-height: 1em</code>. This means it
+              automatically accounts for <code>line-height</code> and{" "}
+              <code>font-size</code> — toggle loading and verify the skeleton
+              and the real text have the exact same height in every row below.
+            </p>
             <ToggleLoading loading={loading} setLoading={setLoading} />
-            <div class="container-box" style="width: 300px;">
-              <Text loading={loading} width="100%">
-                {loading ? undefined : "Hello world"}
-              </Text>
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+              <div>
+                <div style="font-size: 12px; color: #999; margin-bottom: 4px;">
+                  default font-size, default line-height
+                </div>
+                <div class="container-box" style="width: 300px;">
+                  <Text loading={loading}>Hello world</Text>
+                </div>
+              </div>
+              <div>
+                <div style="font-size: 12px; color: #999; margin-bottom: 4px;">
+                  font-size: 1.5rem
+                </div>
+                <div class="container-box" style="width: 300px;">
+                  <Text loading={loading} fontSize="1.5rem">
+                    Hello world
+                  </Text>
+                </div>
+              </div>
+              <div>
+                <div style="font-size: 12px; color: #999; margin-bottom: 4px;">
+                  font-size: 2rem, line-height: 3 — min-height:1em would be way
+                  too short here
+                </div>
+                <div class="container-box" style="width: 300px;">
+                  <Text loading={loading} fontSize="2rem" lineHeight="3">
+                    Hello world
+                  </Text>
+                </div>
+              </div>
+              <div>
+                <div style="font-size: 12px; color: #999; margin-bottom: 4px;">
+                  font-size: 0.75rem — min-height:1em would be too tall here
+                </div>
+                <div class="container-box" style="width: 300px;">
+                  <Text loading={loading} fontSize="0.75rem">
+                    Hello world
+                  </Text>
+                </div>
+              </div>
             </div>
           </div>
         );
