@@ -318,46 +318,31 @@ export const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
         effectiveValue === literalValue && conn.isCustomValue(effectiveValue)
       );
     });
+    if (parentCanProvide) {
+      return true;
+    }
 
     // Check user-provided parameters
     const userCanProvide = Object.entries(params).some(
       ([, value]) => value === literalValue,
     );
+    if (userCanProvide) {
+      return true;
+    }
 
     // Check if any descendant path signal provides this literal value AT THE SAME position.
     // A signal from /map/isochrone/:tab can provide a literal at position 2 (tab position),
     // but NOT a literal at position 1 (panel position) — even if the signal value matches.
-    const getDescendantPathSignals = (patternObj) => {
-      const signals = [];
-      for (const conn of patternObj.connections) {
-        if (conn.paramType === "path") {
-          // Find what absolute index this param occupies in the pattern
-          const paramSegment = patternObj.pattern.segments.find(
-            (seg) => seg.type === "param" && seg.name === conn.paramName,
-          );
-          if (paramSegment) {
-            signals.push({ conn, segmentIndex: paramSegment.index });
-          }
-        }
-      }
-      for (const child of patternObj.children) {
-        signals.push(...getDescendantPathSignals(child));
-      }
-      return signals;
-    };
-
-    const descendantPathSignals = getDescendantPathSignals(patternObject);
-    const systemCanProvide = descendantPathSignals.some(
-      ({ conn, segmentIndex }) => {
-        if (segmentIndex !== literalPosition) {
-          return false;
-        }
-        const signalValue = conn.signal.value;
-        return signalValue === literalValue && conn.isCustomValue(signalValue);
-      },
-    );
-
-    return parentCanProvide || userCanProvide || systemCanProvide;
+    // descendantPathSignals is a Map<segmentIndex, conn[]> precomputed during setupPatterns.
+    const connsAtPosition =
+      patternObject.descendantPathSignals.get(literalPosition);
+    if (!connsAtPosition) {
+      return false;
+    }
+    return connsAtPosition.some((conn) => {
+      const signalValue = conn.signal.value;
+      return signalValue === literalValue && conn.isCustomValue(signalValue);
+    });
   };
   const checkChildRouteCompatibility = (childPatternObj, params) => {
     const childParams = {};
@@ -2060,6 +2045,7 @@ export const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
     children: [],
     parent: null,
     depth: 0, // Will be calculated after relationships are built
+    descendantPathSignals: new Map(), // Precomputed during setupPatterns (Map<segmentIndex, conn[]>)
 
     // Pattern methods (formerly patternObj methods)
     originalPattern: pattern,
@@ -3155,7 +3141,35 @@ export const setupRoutePatterns = (routePatterns) => {
       );
     }
   }
-  // Phase 5: Calculate depths for all patterns
+  // Phase 5: Precompute descendant path signals for each pattern (used by canReachLiteralValue)
+  // Stored as a Map<segmentIndex, conn[]> for O(1) lookup by position.
+  for (const routePattern of routePatternSet) {
+    const descendantPathSignalsByIndex = new Map();
+    const collectDescendantPathSignals = (patternObj) => {
+      for (const conn of patternObj.connections) {
+        if (conn.paramType === "path") {
+          const paramSegment = patternObj.pattern.segments.find(
+            (seg) => seg.type === "param" && seg.name === conn.paramName,
+          );
+          if (paramSegment) {
+            const { index } = paramSegment;
+            let conns = descendantPathSignalsByIndex.get(index);
+            if (!conns) {
+              conns = [];
+              descendantPathSignalsByIndex.set(index, conns);
+            }
+            conns.push(conn);
+          }
+        }
+      }
+      for (const child of patternObj.children) {
+        collectDescendantPathSignals(child);
+      }
+    };
+    collectDescendantPathSignals(routePattern);
+    routePattern.descendantPathSignals = descendantPathSignalsByIndex;
+  }
+  // Phase 6: Calculate depths for all patterns
   for (const routePattern of routePatternSet) {
     calculatePatternDepth(routePattern);
   }
