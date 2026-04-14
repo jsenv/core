@@ -110,6 +110,12 @@ const css = /* css */ `
         visibility: visible;
       }
 
+      &[data-empty] {
+        .navi_text_skeleton {
+          height: 1em;
+        }
+      }
+
       &[data-loading] {
         .navi_text_skeleton {
           animation: navi_text_skeleton_shimmer 1.5s infinite;
@@ -316,6 +322,7 @@ const TextSkeleton = ({ loading, children, ...props }) => {
     <Text
       data-skeleton=""
       data-loading={loading ? "" : undefined}
+      data-empty={!hasChildren ? "" : undefined}
       {...props}
       skeleton={undefined}
       childrenOutsideFlow={skeletonSpan}
@@ -324,7 +331,6 @@ const TextSkeleton = ({ loading, children, ...props }) => {
     </Text>
   );
 };
-
 const TextOverflow = ({ noWrap, spacing, children, ...rest }) => {
   const [OverflowPinnedElement, setOverflowPinnedElement] = useState(null);
 

@@ -76,6 +76,57 @@
       );
 
       /* ------------------------------------------------------------------ */
+      /* 0. All features — icon | overflowEllipsis + bold + loading | icon  */
+      /* ------------------------------------------------------------------ */
+      const AllFeaturesDemo = () => {
+        const [loading, setLoading] = useState(true);
+        const [bold, setBold] = useState(false);
+        return (
+          <div class="demo-section">
+            <h2>
+              All features: icon | overflowEllipsis + preventBoldLayoutShift +
+              loading | icon
+            </h2>
+            <p>
+              The most complex combination. The text expands to fill available
+              width (<code>expandX</code>), truncates with ellipsis, can toggle
+              bold without layout shift, and shows a skeleton while loading. The
+              two icons must stay in place in all combinations of states.
+            </p>
+            <ToggleLoading loading={loading} setLoading={setLoading} />
+            <label class="toggle-row">
+              <input
+                type="checkbox"
+                checked={bold}
+                onChange={(e) => setBold(e.target.checked)}
+              />
+              bold
+            </label>
+            <div class="container-box" style="width: 400px;">
+              <Box flex spacing="s" alignY="center">
+                <Icon shrink={false} color="orange">
+                  <StarSvg />
+                </Icon>
+                <Text
+                  overflowEllipsis
+                  preventBoldLayoutShift
+                  bold={bold}
+                  loading={loading}
+                  expandX
+                  minWidth="0"
+                >
+                  A very long label that truncates with ellipsis and can go bold
+                </Text>
+                <Icon shrink={false} color="steelblue">
+                  <StarSvg />
+                </Icon>
+              </Box>
+            </div>
+          </div>
+        );
+      };
+
+      /* ------------------------------------------------------------------ */
       /* 1. With children — skeleton takes natural text size                 */
       /* ------------------------------------------------------------------ */
       const WithChildrenDemo = () => {
@@ -449,6 +500,7 @@
       const App = () => (
         <div>
           <h1>Text Loading / Skeleton Demo</h1>
+          <AllFeaturesDemo />
           <NoChildrenDemo />
           <ConditionalWidthDemo />
           <WithChildrenDemo />

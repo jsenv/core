@@ -18830,10 +18830,6 @@ const css$3 = /* css */`
   .navi_text {
     position: relative;
 
-    &[data-has-absolute-child] {
-      display: inline-block;
-    }
-
     /* There is a chrome specific bug that prevents text-transform: capitalize to be applied in nested DOM structure */
     /* The CSS below ensure capitalize is propagated to the bold clones */
     &[data-capitalize] {
@@ -18865,6 +18861,7 @@ const css$3 = /* css */`
     }
 
     &[data-text-overflow] {
+      min-width: 0;
       flex-wrap: wrap;
       text-overflow: ellipsis;
       overflow: hidden;
@@ -18882,20 +18879,61 @@ const css$3 = /* css */`
         }
       }
     }
-  }
 
-  .navi_text_skeleton {
-    display: inline-block;
-    width: 100%;
-    height: 1em;
-    background: linear-gradient(90deg, #e0e0e0 25%, #f0f0f0 50%, #e0e0e0 75%);
-    background-size: 200% 100%;
-    border-radius: 4px;
+    /* When skeleton + overflow ellipsis: skeleton fills available space,
+       no text to clip so disable overflow machinery. */
+    &[data-text-overflow][data-skeleton] {
+      flex-wrap: nowrap;
+      text-overflow: clip;
+      /* overflow:hidden on [data-text-overflow] would clip the absolutely
+         positioned skeleton span — keep it visible */
+      overflow: visible;
 
-    &[data-loading] {
-      animation: navi_text_skeleton_shimmer 1.2s infinite;
+      .navi_text_overflow_wrapper {
+        display: contents;
+        .navi_text_overflow_text {
+          display: contents;
+
+          max-width: none;
+          text-overflow: clip;
+          overflow: visible;
+        }
+      }
+    }
+
+    &[data-skeleton] {
+      /* Keep layout space — children are hidden, skeleton overlays absolutely */
+      visibility: hidden;
+
+      .navi_text_skeleton {
+        position: absolute;
+        inset: 0;
+        /* top/bottom inset may not perfectly align with text bounds — acceptable */
+        background: linear-gradient(
+          90deg,
+          #e0e0e0 25%,
+          #f0f0f0 50%,
+          #e0e0e0 75%
+        );
+        background-size: 200% 100%;
+        border-radius: 4px;
+        visibility: visible;
+      }
+
+      &[data-empty] {
+        .navi_text_skeleton {
+          height: 1em;
+        }
+      }
+
+      &[data-loading] {
+        .navi_text_skeleton {
+          animation: navi_text_skeleton_shimmer 1.5s infinite;
+        }
+      }
     }
   }
+
   @keyframes navi_text_skeleton_shimmer {
     0% {
       background-position: 200% 0;
@@ -18903,9 +18941,6 @@ const css$3 = /* css */`
     100% {
       background-position: -200% 0;
     }
-  }
-
-  .navi_custom_space {
   }
 
   .navi_text_bold_wrapper {
@@ -19062,21 +19097,14 @@ const shouldInjectSpacingBetween = (left, right) => {
 const OverflowPinnedElementContext = createContext(null);
 const Text = props => {
   import.meta.css = [css$3, "@jsenv/navi/src/text/text.jsx"];
-  const {
-    overflowEllipsis,
-    loading,
-    skeleton,
-    ...rest
-  } = props;
-  if (loading || skeleton) {
+  if (props.loading || props.skeleton) {
     return jsx(TextSkeleton, {
-      loading: loading,
-      ...rest
+      ...props
     });
   }
-  if (overflowEllipsis) {
+  if (props.overflowEllipsis) {
     return jsx(TextOverflow, {
-      ...rest
+      ...props
     });
   }
   if (props.overflowPinned) {
@@ -19095,16 +19123,29 @@ const Text = props => {
 };
 const TextSkeleton = ({
   loading,
+  children,
   ...props
 }) => {
-  return jsx(Box, {
+  const skeletonSpan = jsx("span", {
+    className: "navi_text_skeleton",
+    "aria-hidden": "true"
+  });
+  // When there are no children we inject an invisible "W" so the element takes
+  // its natural text height (matching current font-size) instead of relying on
+  // min-height which can be off. The W is hidden via CSS visibility:hidden.
+  const hasChildren = children !== null && children !== undefined && children !== false;
+  const innerChildren = hasChildren ? children : jsx("span", {
+    "aria-hidden": "true",
+    children: "W"
+  });
+  return jsx(Text, {
+    "data-skeleton": "",
+    "data-loading": loading ? "" : undefined,
+    "data-empty": !hasChildren ? "" : undefined,
     ...props,
-    baseClassName: "navi_text_skeleton",
-    "data-loading": loading ? "" : undefined
-    // eslint-disable-next-line react/no-children-prop
-    ,
-
-    children: undefined
+    skeleton: undefined,
+    childrenOutsideFlow: skeletonSpan,
+    children: innerChildren
   });
 };
 const TextOverflow = ({
@@ -19125,7 +19166,8 @@ const TextOverflow = ({
 
     preLine: rest.as === "p",
     ...rest,
-    "data-text-overflow": true,
+    overflowEllipsis: undefined,
+    "data-text-overflow": "",
     spacing: "pre",
     children: jsxs("span", {
       className: "navi_text_overflow_wrapper",
@@ -19203,7 +19245,6 @@ const TextBasic = ({
       ...boxProps,
       bold: undefined,
       "data-bold": bold ? "" : undefined,
-      "data-has-absolute-child": "",
       children: [jsx("span", {
         className: "navi_text_bold_background",
         "aria-hidden": "true",
