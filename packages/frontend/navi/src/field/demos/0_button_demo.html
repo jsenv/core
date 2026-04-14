@@ -152,12 +152,104 @@
       const App = () => {
         return (
           <div>
+            <PaddingDemo />
             <BasicStatesDemo />
             <SizeVariationsDemo />
             <ColorVariationsDemo />
             <IconToggleDemo />
             <DiscreteVariantDemo />
             <InteractiveDemo />
+          </div>
+        );
+      };
+
+      // Helper to show padding as a visual label below the button
+      const PaddingRow = ({ label, children }) => (
+        <fieldset>
+          <legend>{label}</legend>
+          <div className="button-group">{children}</div>
+        </fieldset>
+      );
+
+      const PaddingDemo = () => {
+        return (
+          <div className="demo-section">
+            <h2>Padding Scenarios</h2>
+
+            {/* 1. Default */}
+            <PaddingRow label="Default (no padding prop)">
+              <Button>Default</Button>
+            </PaddingRow>
+
+            {/* 2. padding prop — should be a full override of all sides */}
+            <PaddingRow label='padding="0" — zero padding all sides'>
+              <Button padding="0">No padding</Button>
+            </PaddingRow>
+
+            <PaddingRow label='padding="20px" — large uniform padding'>
+              <Button padding="20px">Large</Button>
+            </PaddingRow>
+
+            {/* 3. paddingX / paddingY — axis override */}
+            <PaddingRow label='paddingX="20px" — wide horizontal, default vertical'>
+              <Button paddingX="20px">Wide X</Button>
+            </PaddingRow>
+
+            <PaddingRow label='paddingY="20px" — tall vertical, default horizontal'>
+              <Button paddingY="20px">Tall Y</Button>
+            </PaddingRow>
+
+            {/* 4. paddingLeft / paddingRight / paddingTop / paddingBottom — single side */}
+            <PaddingRow label='paddingLeft="40px" — large left padding only'>
+              <Button paddingLeft="40px">Left heavy</Button>
+            </PaddingRow>
+
+            <PaddingRow label='paddingRight="40px" — large right padding only'>
+              <Button paddingRight="40px">Right heavy</Button>
+            </PaddingRow>
+
+            {/* 5. Combinations — more specific should win */}
+            <PaddingRow label='padding="20px" paddingX="0" — paddingX should override horizontal'>
+              <Button padding="20px" paddingX="0">
+                X=0 wins
+              </Button>
+            </PaddingRow>
+
+            <PaddingRow label='padding="20px" paddingLeft="0" — paddingLeft should override left side'>
+              <Button padding="20px" paddingLeft="0">
+                Left=0 wins
+              </Button>
+            </PaddingRow>
+
+            <PaddingRow label='paddingX="20px" paddingLeft="0" — paddingLeft overrides paddingX on left'>
+              <Button paddingX="20px" paddingLeft="0">
+                Left=0 wins
+              </Button>
+            </PaddingRow>
+
+            {/* 6. CSS var override via style prop */}
+            <PaddingRow label="--button-padding=20px via style — CSS var override">
+              <Button style={{ "--button-padding": "20px" }}>CSS var</Button>
+            </PaddingRow>
+
+            <PaddingRow label="--button-padding=20px overridden by paddingX=0 prop">
+              <Button style={{ "--button-padding": "20px" }} paddingX="0">
+                paddingX prop wins on X
+              </Button>
+            </PaddingRow>
+
+            {/* 7. External CSS class sets padding, prop should still override */}
+            <PaddingRow label="External CSS class sets large padding, padding=0 prop should override">
+              <Button className="demo-large-padding" padding="0">
+                prop overrides CSS class
+              </Button>
+            </PaddingRow>
+
+            <style>{`
+              .demo-large-padding {
+                --button-padding: 30px;
+              }
+            `}</style>
           </div>
         );
       };
