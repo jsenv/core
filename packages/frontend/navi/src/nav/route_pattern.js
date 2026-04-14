@@ -308,7 +308,7 @@ export const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
   /**
    * Helper: Check if a literal value can be reached through available parameters
    */
-  const canReachLiteralValue = (literalValue, params) => {
+  const canReachLiteralValue = (literalValue, params, literalPosition) => {
     // Check parent's own parameters (signals and user params)
     const parentCanProvide = connections.some((conn) => {
       const signalValue = conn.signal.value;
@@ -324,23 +324,38 @@ export const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
       ([, value]) => value === literalValue,
     );
 
-    // Check if any descendant signal can provide this literal
-    // (ancestor signals are excluded since they operate on different path positions
-    // that the current pattern has already "passed")
-    const getDescendantSignals = (pattern) => {
-      const signals = [...pattern.connections];
-      for (const child of pattern.children) {
-        signals.push(...getDescendantSignals(child));
+    // Check if any descendant path signal provides this literal value AT THE SAME position.
+    // A signal from /map/isochrone/:tab can provide a literal at position 2 (tab position),
+    // but NOT a literal at position 1 (panel position) — even if the signal value matches.
+    const getDescendantPathSignals = (patternObj) => {
+      const signals = [];
+      for (const conn of patternObj.connections) {
+        if (conn.paramType === "path") {
+          // Find what absolute index this param occupies in the pattern
+          const paramSegment = patternObj.pattern.segments.find(
+            (seg) => seg.type === "param" && seg.name === conn.paramName,
+          );
+          if (paramSegment) {
+            signals.push({ conn, segmentIndex: paramSegment.index });
+          }
+        }
+      }
+      for (const child of patternObj.children) {
+        signals.push(...getDescendantPathSignals(child));
       }
       return signals;
     };
 
-    const descendantSignals = getDescendantSignals(patternObject);
-
-    const systemCanProvide = descendantSignals.some((conn) => {
-      const signalValue = conn.signal.value;
-      return signalValue === literalValue && conn.isCustomValue(signalValue);
-    });
+    const descendantPathSignals = getDescendantPathSignals(patternObject);
+    const systemCanProvide = descendantPathSignals.some(
+      ({ conn, segmentIndex }) => {
+        if (segmentIndex !== literalPosition) {
+          return false;
+        }
+        const signalValue = conn.signal.value;
+        return signalValue === literalValue && conn.isCustomValue(signalValue);
+      },
+    );
 
     return parentCanProvide || userCanProvide || systemCanProvide;
   };
@@ -412,7 +427,7 @@ export const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
       }
       // Parent doesn't have a segment at this position - child extends beyond parent
       // Check if any available parameter can produce this literal value
-      else if (!canReachLiteralValue(literalValue, params)) {
+      else if (!canReachLiteralValue(literalValue, params, childPosition)) {
         if (DEBUG) {
           console.debug(
             `[${pattern}] INCOMPATIBLE with ${childPatternObj.originalPattern}: cannot reach literal segment "${literalValue}" at position ${childPosition} - no viable parameter path`,
