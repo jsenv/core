@@ -570,6 +570,118 @@
               </Box>
             </section>
 
+            <h2>expandX / expandY avec flux perpendiculaire</h2>
+
+            <section className="demo-section">
+              <h3>15. expandX dans un parent flex-y (column)</h3>
+              <p style={{ fontSize: "14px", marginBottom: "10px" }}>
+                Chaque enfant a <code>expandX</code> et une hauteur fixe. Ils
+                doivent prendre toute la largeur et respecter leur hauteur.
+              </p>
+
+              <Box flex>
+                <Box>
+                  <h4>Largeur confortable (300px)</h4>
+                  <Box
+                    flex="y"
+                    spacing="sm"
+                    padding="sm"
+                    width="300"
+                    background="#e8f5e8"
+                  >
+                    <Box expandX height="2em" backgroundColor="#a5d6a7"></Box>
+                    <Box expandX height="2em" backgroundColor="#81c784"></Box>
+                    <Box expandX height="2em" backgroundColor="#66bb6a"></Box>
+                  </Box>
+                </Box>
+
+                <Box>
+                  <h4>Largeur réduite (150px)</h4>
+                  <Box
+                    flex="y"
+                    spacing="sm"
+                    padding="sm"
+                    width="150"
+                    background="#e8f5e8"
+                  >
+                    <Box expandX height="2em" backgroundColor="#a5d6a7"></Box>
+                    <Box expandX height="2em" backgroundColor="#81c784"></Box>
+                    <Box expandX height="2em" backgroundColor="#66bb6a"></Box>
+                  </Box>
+                </Box>
+
+                <Box>
+                  <h4>Largeur très étroite (60px)</h4>
+                  <Box
+                    flex="y"
+                    spacing="sm"
+                    padding="sm"
+                    width="60"
+                    background="#e8f5e8"
+                  >
+                    <Box expandX height="2em" backgroundColor="#a5d6a7"></Box>
+                    <Box expandX height="2em" backgroundColor="#81c784"></Box>
+                    <Box expandX height="2em" backgroundColor="#66bb6a"></Box>
+                  </Box>
+                </Box>
+              </Box>
+            </section>
+
+            <section className="demo-section">
+              <h3>16. expandY dans un parent flex-x (row)</h3>
+              <p style={{ fontSize: "14px", marginBottom: "10px" }}>
+                Chaque enfant a <code>expandY</code> et une largeur fixe. Ils
+                doivent prendre toute la hauteur et respecter leur largeur.
+              </p>
+
+              <Box flex>
+                <Box>
+                  <h4>Hauteur confortable (150px)</h4>
+                  <Box
+                    flex
+                    spacing="sm"
+                    padding="sm"
+                    height="150"
+                    background="#e3f2fd"
+                  >
+                    <Box expandY width="80px" backgroundColor="#90caf9"></Box>
+                    <Box expandY width="80px" backgroundColor="#64b5f6"></Box>
+                    <Box expandY width="80px" backgroundColor="#42a5f5"></Box>
+                  </Box>
+                </Box>
+
+                <Box>
+                  <h4>Hauteur réduite (80px)</h4>
+                  <Box
+                    flex
+                    spacing="sm"
+                    padding="sm"
+                    height="80"
+                    background="#e3f2fd"
+                  >
+                    <Box expandY width="80px" backgroundColor="#90caf9"></Box>
+                    <Box expandY width="80px" backgroundColor="#64b5f6"></Box>
+                    <Box expandY width="80px" backgroundColor="#42a5f5"></Box>
+                  </Box>
+                </Box>
+
+                <Box>
+                  <h4>Hauteur très petite (30px)</h4>
+                  <Box
+                    flex
+                    spacing="sm"
+                    padding="sm"
+                    height="30"
+                    background="#e3f2fd"
+                  >
+                    <Box expandY width="80px" backgroundColor="#90caf9"></Box>
+                    <Box expandY width="80px" backgroundColor="#64b5f6"></Box>
+                    <Box expandY width="80px" backgroundColor="#42a5f5"></Box>
+                  </Box>
+                </Box>
+              </Box>
+            </section>
+
             <section className="demo-section">
               <h3>15. When to Use Self Alignment</h3>
               <p style={{ marginBottom: "15px", fontSize: "14px" }}>

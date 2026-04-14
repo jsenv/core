@@ -42,6 +42,10 @@ const css = /* css */ `
     .navi_text_bold_clone,
     .navi_text_bold_foreground {
       display: inherit;
+      width: inherit;
+      min-width: inherit;
+      height: inherit;
+      min-height: inherit;
       flex-grow: inherit;
       align-items: inherit;
       justify-content: inherit;
@@ -337,7 +341,7 @@ const TextBasic = ({
     // La technique consiste a avoid un double gras qui force une taille
     // et la version light par dessus en position absolute
     // on la centre aussi pour donner l'impression que le gras s'applique depuis le centre
-    // ne fonctionne que sur une seul ligne de texte (donc lorsque noWrap est actif)
+    // ne fonctionne que sur une seule ligne de texte (donc lorsque noWrap est actif)
     // on pourrait auto-active cela sur une prop genre boldCanChange
     return (
       <Box {...boxProps}>

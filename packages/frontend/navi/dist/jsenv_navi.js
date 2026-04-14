@@ -6302,6 +6302,9 @@ const DIMENSION_PROPS = {
       boxFlow === "flex-x" || boxFlow === "inline-flex-x";
     if (selfHorizontalFlexFlow || inHorizontalFlexFlow) {
       if (!inHorizontalFlexFlow) {
+        if (parentBoxFlow === "flex-y" || parentBoxFlow === "inline-flex-y") {
+          return { minWidth: "100%", width: "auto" };
+        }
         return {
           flexGrow: 1,
           flexBasis: "0%",
@@ -6326,6 +6329,9 @@ const DIMENSION_PROPS = {
       boxFlow === "flex-y" || boxFlow === "inline-flex-y";
     if (selfVerticalFlexFlow || inVerticalFlexFlow) {
       if (!inVerticalFlexFlow) {
+        if (parentBoxFlow === "flex-x" || parentBoxFlow === "inline-flex-x") {
+          return { minHeight: "100%", height: "auto" };
+        }
         return {
           flexGrow: 1,
           flexBasis: "0%",
