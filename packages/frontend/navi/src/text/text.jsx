@@ -20,10 +20,6 @@ const css = /* css */ `
   .navi_text {
     position: relative;
 
-    &[data-has-absolute-child] {
-      display: inline-block;
-    }
-
     /* There is a chrome specific bug that prevents text-transform: capitalize to be applied in nested DOM structure */
     /* The CSS below ensure capitalize is propagated to the bold clones */
     &[data-capitalize] {
@@ -78,6 +74,8 @@ const css = /* css */ `
     &[data-text-overflow][data-skeleton] {
       flex-wrap: nowrap;
       text-overflow: clip;
+      /* overflow:hidden on [data-text-overflow] would clip the absolutely
+         positioned skeleton span — keep it visible */
       overflow: visible;
 
       .navi_text_overflow_wrapper {
@@ -94,10 +92,7 @@ const css = /* css */ `
 
     &[data-skeleton] {
       /* Keep layout space — children are hidden, skeleton overlays absolutely */
-
-      & > *:not(.navi_text_skeleton) {
-        visibility: hidden;
-      }
+      visibility: hidden;
 
       .navi_text_skeleton {
         position: absolute;
@@ -318,7 +313,6 @@ const TextSkeleton = ({ loading, children, ...props }) => {
   );
   return (
     <Text
-      data-has-absolute-child=""
       data-skeleton=""
       data-loading={loading ? "" : undefined}
       {...props}
@@ -407,12 +401,7 @@ const TextBasic = ({
   if (boldStable) {
     const { bold } = boxProps;
     return (
-      <Box
-        {...boxProps}
-        bold={undefined}
-        data-bold={bold ? "" : undefined}
-        data-has-absolute-child=""
-      >
+      <Box {...boxProps} bold={undefined} data-bold={bold ? "" : undefined}>
         <span className="navi_text_bold_background" aria-hidden="true">
           {children}
         </span>
