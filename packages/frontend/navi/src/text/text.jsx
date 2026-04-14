@@ -73,16 +73,47 @@ const css = /* css */ `
       }
     }
 
+    &[data-text-overflow] {
+      flex-wrap: wrap;
+      text-overflow: ellipsis;
+      overflow: hidden;
+
+      .navi_text_overflow_wrapper {
+        display: flex;
+        width: 100%;
+        flex-grow: 1;
+        gap: 0.3em;
+
+        .navi_text_overflow_text {
+          max-width: 100%;
+          text-overflow: ellipsis;
+          overflow: hidden;
+        }
+      }
+    }
+
     &[data-skeleton] {
-      display: inline-block;
-      width: 100%;
-      height: 1em;
-      background: linear-gradient(90deg, #e0e0e0 25%, #f0f0f0 50%, #e0e0e0 75%);
-      background-size: 200% 100%;
-      border-radius: 4px;
+      display: inline-flex;
+      flex-grow: 1;
+
+      .navi_text_skeleton {
+        display: inherit;
+        height: 1em;
+        flex-grow: inherit;
+        background: linear-gradient(
+          90deg,
+          #e0e0e0 25%,
+          #f0f0f0 50%,
+          #e0e0e0 75%
+        );
+        background-size: 200% 100%;
+        border-radius: 4px;
+      }
 
       &[data-loading] {
-        animation: navi_text_skeleton_shimmer 1.2s infinite;
+        .navi_text_skeleton {
+          animation: navi_text_skeleton_shimmer 1.5s infinite;
+        }
       }
     }
   }
@@ -94,9 +125,6 @@ const css = /* css */ `
     100% {
       background-position: -200% 0;
     }
-  }
-
-  .navi_custom_space {
   }
 
   .navi_text_bold_wrapper {
@@ -255,12 +283,11 @@ const OverflowPinnedElementContext = createContext(null);
 export const Text = (props) => {
   import.meta.css = css;
 
-  const { overflowEllipsis, loading, skeleton, ...rest } = props;
-  if (loading || skeleton) {
-    return <TextSkeleton loading={loading} {...rest} />;
+  if (props.loading || props.skeleton) {
+    return <TextSkeleton {...props} />;
   }
-  if (overflowEllipsis) {
-    return <TextOverflow {...rest} />;
+  if (props.overflowEllipsis) {
+    return <TextOverflow {...props} />;
   }
   if (props.overflowPinned) {
     return <TextOverflowPinned {...props} />;
@@ -274,12 +301,14 @@ export const Text = (props) => {
 const TextSkeleton = ({ loading, ...props }) => {
   return (
     <Text
-      {...props}
+      flex
       data-skeleton=""
       data-loading={loading ? "" : undefined}
-      // eslint-disable-next-line react/no-children-prop
-      children={undefined}
-    />
+      {...props}
+      skeleton={undefined}
+    >
+      <span className="navi_text_skeleton" aria-hidden="true" />
+    </Text>
   );
 };
 
@@ -296,7 +325,8 @@ const TextOverflow = ({ noWrap, spacing, children, ...rest }) => {
       // For paragraph we prefer to keep lines and only hide unbreakable long sections
       preLine={rest.as === "p"}
       {...rest}
-      data-text-overflow
+      overflowEllipsis={undefined}
+      data-text-overflow=""
       spacing="pre"
     >
       <span className="navi_text_overflow_wrapper">
