@@ -257,7 +257,78 @@
       };
 
       /* ------------------------------------------------------------------ */
-      /* 7. skeleton prop — static, no animation                            */
+      /* 7. Text with a given width — skeleton follows that width           */
+      /* ------------------------------------------------------------------ */
+      const FixedWidthTextDemo = () => {
+        const [loading, setLoading] = useState(true);
+        return (
+          <div class="demo-section">
+            <h2>Text with a given width — skeleton follows that width</h2>
+            <p>
+              When <code>width</code> is set on <code>&lt;Text&gt;</code>{" "}
+              itself, the skeleton should fill exactly that width — not the
+              container's full width. The dotted wrapper is wider than the text
+              to make this visible.
+            </p>
+            <ToggleLoading loading={loading} setLoading={setLoading} />
+            <div class="container-box" style="width: 400px;">
+              <Text loading={loading} width="200px">
+                A short label
+              </Text>
+            </div>
+            <br />
+            <div class="container-box" style="width: 400px;">
+              <Text loading={loading} width="60%">
+                Sixty percent width
+              </Text>
+            </div>
+          </div>
+        );
+      };
+
+      /* ------------------------------------------------------------------ */
+      /* 8. No children → explicit width; children → natural width          */
+      /* ------------------------------------------------------------------ */
+      const ConditionalWidthDemo = () => {
+        const [loading, setLoading] = useState(true);
+        return (
+          <div class="demo-section">
+            <h2>
+              Conditional width — explicit when no children, natural when
+              children
+            </h2>
+            <p>
+              When loading and there are no children yet, pass an explicit
+              <code>width</code> to give the skeleton a meaningful size. Once
+              data is available and children are rendered, remove the width so
+              the text takes its natural size. Toggle loading to see the
+              transition — the dotted container must not shift.
+            </p>
+            <ToggleLoading loading={loading} setLoading={setLoading} />
+            <div
+              class="container-box"
+              style="display: inline-block; min-width: 120px;"
+            >
+              <Text loading={loading} width={loading ? "120px" : undefined}>
+                {loading ? null : "John Doe"}
+              </Text>
+            </div>
+            <br />
+            <br />
+            <div
+              class="container-box"
+              style="display: inline-block; min-width: 60px;"
+            >
+              <Text loading={loading} width={loading ? "60px" : undefined}>
+                {loading ? null : "42"}
+              </Text>
+            </div>
+          </div>
+        );
+      };
+
+      /* ------------------------------------------------------------------ */
+      /* 9. skeleton prop — static, no animation                            */
       /* ------------------------------------------------------------------ */
       const StaticSkeletonDemo = () => (
         <div class="demo-section">
@@ -285,6 +356,8 @@
           <FlexRowWithIconDemo />
           <OverflowEllipsisDemo />
           <OverflowEllipsisWithIconDemo />
+          <FixedWidthTextDemo />
+          <ConditionalWidthDemo />
           <StaticSkeletonDemo />
         </div>
       );
