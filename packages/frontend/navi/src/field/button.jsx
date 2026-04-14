@@ -36,9 +36,6 @@ import.meta.css = /* css */ `
       --button-outline-width: 1px;
       --button-border-width: 1px;
       --button-border-radius: 2px;
-      /* padding defaults — can be overridden by user CSS via --button-padding, --button-padding-x, --button-padding-y */
-      --button-padding-x-default: 6px;
-      --button-padding-y-default: 1px;
       /* default */
       --button-outline-color: var(--navi-focus-outline-color);
       --button-loader-color: var(--navi-loader-color);
@@ -87,13 +84,28 @@ import.meta.css = /* css */ `
   }
 
   .navi_button {
-    /* Internal css vars are the one controlling final values */
-    /* allowing to override them on interactions (like hover, disabled, etc.) */
+    /* Internal vars — prefixed with --x- to signal they are private, do not use from outside */
     --x-button-outline-width: var(--button-outline-width);
     --x-button-border-radius: var(--button-border-radius);
     --x-button-border-width: var(--button-border-width);
     --x-button-outer-width: calc(
       var(--x-button-border-width) + var(--x-button-outline-width)
+    );
+    --x-button-padding-top: var(
+      --button-padding-top,
+      var(--button-padding-y, var(--button-padding, 1px))
+    );
+    --x-button-padding-right: var(
+      --button-padding-right,
+      var(--button-padding-x, var(--button-padding, 6px))
+    );
+    --x-button-padding-bottom: var(
+      --button-padding-bottom,
+      var(--button-padding-y, var(--button-padding, 1px))
+    );
+    --x-button-padding-left: var(
+      --button-padding-left,
+      var(--button-padding-x, var(--button-padding, 6px))
     );
     --x-button-outline-color: var(--button-outline-color);
     --x-button-border-color: var(--button-border-color);
@@ -124,34 +136,10 @@ import.meta.css = /* css */ `
       aspect-ratio: inherit;
       width: 100%;
       height: 100%;
-      padding-top: var(
-        --button-padding-top,
-        var(
-          --button-padding-y,
-          var(--button-padding, var(--button-padding-y-default))
-        )
-      );
-      padding-right: var(
-        --button-padding-right,
-        var(
-          --button-padding-x,
-          var(--button-padding, var(--button-padding-x-default))
-        )
-      );
-      padding-bottom: var(
-        --button-padding-bottom,
-        var(
-          --button-padding-y,
-          var(--button-padding, var(--button-padding-y-default))
-        )
-      );
-      padding-left: var(
-        --button-padding-left,
-        var(
-          --button-padding-x,
-          var(--button-padding, var(--button-padding-x-default))
-        )
-      );
+      padding-top: var(--x-button-padding-top);
+      padding-right: var(--x-button-padding-right);
+      padding-bottom: var(--x-button-padding-bottom);
+      padding-left: var(--x-button-padding-left);
       align-items: inherit;
       justify-content: inherit;
       color: var(--x-button-color);
