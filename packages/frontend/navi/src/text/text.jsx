@@ -49,6 +49,7 @@ const css = /* css */ `
       flex-grow: inherit;
       align-items: inherit;
       justify-content: inherit;
+      gap: inherit;
       text-align: inherit;
       border-radius: inherit;
     }
