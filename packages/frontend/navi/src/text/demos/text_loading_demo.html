@@ -1,0 +1,199 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Text Loading / Skeleton Demo</title>
+    <style>
+      body {
+        max-width: 700px;
+        padding: 20px;
+        font-family: system-ui, sans-serif;
+      }
+      section {
+        margin-bottom: 32px;
+      }
+      h2 {
+        margin-bottom: 12px;
+      }
+      .row {
+        display: flex;
+        margin-bottom: 8px;
+        align-items: center;
+        gap: 12px;
+        font-size: 14px;
+      }
+      label {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 14px;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useState } from "preact/hooks";
+      import { Box, Icon, Text } from "@jsenv/navi";
+
+      const StarSvg = () => (
+        <svg
+          viewBox="0 0 24 24"
+          width="100%"
+          height="100%"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+            fill="currentColor"
+          />
+        </svg>
+      );
+
+      const App = () => {
+        const [loading, setLoading] = useState(false);
+
+        return (
+          <div>
+            <h1>Text Loading / Skeleton Demo</h1>
+
+            <label style={{ marginBottom: "24px", display: "inline-flex" }}>
+              <input
+                type="checkbox"
+                checked={loading}
+                onChange={(e) => setLoading(e.target.checked)}
+              />
+              Toggle loading
+            </label>
+
+            <section>
+              <h2>loading prop — shows skeleton with shimmer animation</h2>
+              <p
+                style={{
+                  fontSize: "13px",
+                  color: "#555",
+                  marginBottom: "12px",
+                }}
+              >
+                When <code>loading</code> is true the text content is replaced
+                by an animated skeleton that takes the full width of its
+                container.
+              </p>
+              <Box border="1px solid #ddd" padding="sm" width="300">
+                <Text loading={loading}>Hello, world!</Text>
+              </Box>
+              <Box
+                border="1px solid #ddd"
+                padding="sm"
+                width="300"
+                marginTop="8px"
+              >
+                <Text loading={loading} fontSize="1.5rem">
+                  Larger text skeleton
+                </Text>
+              </Box>
+            </section>
+
+            <section>
+              <h2>skeleton prop — static skeleton (no animation)</h2>
+              <p
+                style={{
+                  fontSize: "13px",
+                  color: "#555",
+                  marginBottom: "12px",
+                }}
+              >
+                When <code>skeleton</code> is true the text is replaced by a
+                static (non-animated) skeleton shape. Useful for layout
+                placeholders that are not yet in a loading state.
+              </p>
+              <Box border="1px solid #ddd" padding="sm" width="300">
+                <Text skeleton>Hello, world!</Text>
+              </Box>
+            </section>
+
+            <section>
+              <h2>Inside a flex row with an icon</h2>
+              <p
+                style={{
+                  fontSize: "13px",
+                  color: "#555",
+                  marginBottom: "12px",
+                }}
+              >
+                The skeleton fills the remaining space next to the icon.
+              </p>
+              <Box
+                flex
+                spacing="s"
+                alignY="center"
+                border="1px solid #ddd"
+                padding="sm"
+                width="300"
+              >
+                <Icon shrink={false} color="orange">
+                  <StarSvg />
+                </Icon>
+                <Text loading={loading} minWidth="0">
+                  Some label next to an icon
+                </Text>
+              </Box>
+            </section>
+
+            <section>
+              <h2>Multiple lines of skeleton</h2>
+              <p
+                style={{
+                  fontSize: "13px",
+                  color: "#555",
+                  marginBottom: "12px",
+                }}
+              >
+                Render several <code>&lt;Text loading&gt;</code> rows to
+                simulate a paragraph placeholder.
+              </p>
+              <Box
+                flex="y"
+                spacing="xs"
+                border="1px solid #ddd"
+                padding="sm"
+                width="300"
+              >
+                <Text loading={loading}>Line one content</Text>
+                <Text loading={loading} width="80%">
+                  Line two shorter
+                </Text>
+                <Text loading={loading} width="60%">
+                  Line three
+                </Text>
+              </Box>
+            </section>
+
+            <section>
+              <h2>Controlled externally — real content vs skeleton</h2>
+              <p
+                style={{
+                  fontSize: "13px",
+                  color: "#555",
+                  marginBottom: "12px",
+                }}
+              >
+                Toggle the checkbox above to switch between real content and the
+                loading skeleton.
+              </p>
+              <Box border="1px solid #ddd" padding="sm" width="300">
+                <Text loading={loading}>
+                  This is the real content that shows when not loading.
+                </Text>
+              </Box>
+            </section>
+          </div>
+        );
+      };
+
+      render(<App />, document.getElementById("app"));
+    </script>
+  </body>
+</html>

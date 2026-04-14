@@ -13,27 +13,47 @@
 
       const IconTextDemo = () => {
         const [width, setWidth] = useState(300);
+        const [isLoading, setIsLoading] = useState(false);
         return (
           <div>
-            <label
+            <div
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: "12px",
+                gap: "20px",
                 marginBottom: "12px",
                 fontSize: "14px",
+                flexWrap: "wrap",
               }}
             >
-              Container width: <strong>{width}px</strong>
-              <input
-                type="range"
-                min="80"
-                max="500"
-                value={width}
-                onInput={(e) => setWidth(Number(e.target.value))}
-                style={{ width: "200px" }}
-              />
-            </label>
+              <label
+                style={{ display: "flex", alignItems: "center", gap: "8px" }}
+              >
+                Container width: <strong>{width}px</strong>
+                <input
+                  type="range"
+                  min="80"
+                  max="600"
+                  value={width}
+                  onInput={(e) => setWidth(Number(e.target.value))}
+                  style={{ width: "200px" }}
+                />
+              </label>
+              <label
+                style={{ display: "flex", alignItems: "center", gap: "6px" }}
+              >
+                <input
+                  type="checkbox"
+                  checked={isLoading}
+                  onChange={(e) => setIsLoading(e.target.checked)}
+                />
+                loading
+              </label>
+            </div>
+
+            <p style={{ fontSize: "13px", color: "#555", margin: "0 0 6px" }}>
+              Simple: icon + text
+            </p>
             <Box
               flex
               padding="s"
@@ -45,10 +65,37 @@
               <Icon shrink={false}>
                 <StarSvg />
               </Icon>
-              <Text overflowEllipsis minWidth="0">
+              <Text overflowEllipsis loading={isLoading} minWidth="0">
                 A very long label that will be truncated when the container is
                 too narrow to show it all
               </Text>
+            </Box>
+
+            <p
+              style={{ fontSize: "13px", color: "#555", margin: "12px 0 6px" }}
+            >
+              Nested: outer flex [fixed item | inner flex [text | icon]]
+            </p>
+            <Box
+              flex
+              padding="s"
+              spacing="s"
+              width={width}
+              border="1px solid #ccc"
+              alignY="center"
+            >
+              <Box padding="xs" border="1px solid #4caf50" borderRadius="4px">
+                Fixed
+              </Box>
+              <Box flex spacing="s" alignY="center" expandX minWidth="0">
+                <Text overflowEllipsis loading={isLoading} minWidth="0">
+                  A very long label inside the inner flex that should truncate
+                  before the trailing icon disappears
+                </Text>
+                <Icon shrink={false}>
+                  <StarSvg />
+                </Icon>
+              </Box>
             </Box>
           </div>
         );

@@ -74,6 +74,27 @@ const css = /* css */ `
     }
   }
 
+  .navi_text_skeleton {
+    display: inline-block;
+    width: 100%;
+    height: 1em;
+    background: linear-gradient(90deg, #e0e0e0 25%, #f0f0f0 50%, #e0e0e0 75%);
+    background-size: 200% 100%;
+    border-radius: 4px;
+
+    &[data-loading] {
+      animation: navi_text_skeleton_shimmer 1.2s infinite;
+    }
+  }
+  @keyframes navi_text_skeleton_shimmer {
+    0% {
+      background-position: 200% 0;
+    }
+    100% {
+      background-position: -200% 0;
+    }
+  }
+
   .navi_custom_space {
   }
 
@@ -233,7 +254,10 @@ const OverflowPinnedElementContext = createContext(null);
 export const Text = (props) => {
   import.meta.css = css;
 
-  const { overflowEllipsis, ...rest } = props;
+  const { overflowEllipsis, loading, skeleton, ...rest } = props;
+  if (loading || skeleton) {
+    return <TextSkeleton loading={loading} {...rest} />;
+  }
   if (overflowEllipsis) {
     return <TextOverflow {...rest} />;
   }
@@ -244,6 +268,18 @@ export const Text = (props) => {
     return <TextWithSelectRange {...props} />;
   }
   return <TextBasic {...props} />;
+};
+
+const TextSkeleton = ({ loading, ...props }) => {
+  return (
+    <Box
+      {...props}
+      baseClassName="navi_text_skeleton"
+      data-loading={loading ? "" : undefined}
+      // eslint-disable-next-line react/no-children-prop
+      children={undefined}
+    ></Box>
+  );
 };
 
 const TextOverflow = ({ noWrap, spacing, children, ...rest }) => {
