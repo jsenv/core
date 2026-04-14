@@ -138,6 +138,16 @@
         border-left: 4px solid #007bff;
         border-radius: 0 4px 4px 0;
       }
+
+      .demo-outer-padding .navi_button {
+        --button-padding: 30px;
+      }
+      .demo-outer-padding-x .navi_button {
+        --button-padding-x: 40px;
+      }
+      .demo-outer-padding-x-default .navi_button {
+        --button-padding-x-default: 40px;
+      }
     </style>
   </head>
   <body>
@@ -357,10 +367,104 @@
               </div>
             </PaddingScenario>
 
-            <style>{`
-              .demo-outer-padding { --button-padding: 30px; }
-              .demo-outer-padding-x { --button-padding-x: 40px; }
-            `}</style>
+            <p
+              style={{
+                margin: "8px 0 4px",
+                fontSize: "0.85rem",
+                color: "#c00",
+                fontStyle: "italic",
+              }}
+            >
+              ↑ broken: --button-padding-x inherited from parent wins over
+              padding="0" prop. Use --button-padding-x-default instead (see
+              below).
+            </p>
+
+            <PaddingScenario
+              considering={[
+                "CSS: .my-container { --button-padding-x-default: 40px }",
+                "Button is inside .my-container",
+                'padding="0"',
+              ]}
+              nativeStyle={{ padding: 0 }}
+            >
+              <div class="demo-outer-padding-x-default">
+                <Button padding="0">Button</Button>
+              </div>
+            </PaddingScenario>
+
+            <p
+              style={{
+                margin: "8px 0 4px",
+                fontSize: "0.85rem",
+                color: "#555",
+                fontStyle: "italic",
+              }}
+            >
+              ↑ works: --button-padding-x-default is the last fallback in the
+              chain, so padding="0" overrides it.
+            </p>
+
+            <PaddingScenario
+              considering={[
+                "CSS: .my-container { --button-padding-x-default: 40px }",
+                "Button is inside .my-container",
+                "(no prop — inherits the global default)",
+              ]}
+              nativeStyle={{ paddingInline: "40px", paddingBlock: "1px" }}
+            >
+              <div class="demo-outer-padding-x-default">
+                <Button>Button</Button>
+              </div>
+            </PaddingScenario>
+
+            <p
+              style={{
+                margin: "8px 0 4px",
+                fontSize: "0.85rem",
+                color: "#555",
+                fontStyle: "italic",
+              }}
+            >
+              ↑ also works: when no prop is passed, the global default is used
+              as expected.
+            </p>
+
+            <p
+              style={{
+                margin: "16px 0 4px",
+                fontSize: "0.85rem",
+                color: "#555",
+                background: "#f5f5f5",
+                padding: "10px",
+                borderRadius: "4px",
+              }}
+            >
+              <strong>
+                Why --button-padding-x-default and not --button-padding-x?
+              </strong>
+              <br />
+              CSS custom properties inherit. If a parent sets{" "}
+              <code>--button-padding-x</code>, that value travels down to the
+              button and sits at the same "level" as
+              <code>--button-padding</code> set inline — there is no cascade
+              between vars. So <code>--button-padding-x</code> inherited from a
+              parent would always win over <code>--button-padding</code> set as
+              a prop, regardless of order.
+              <br />
+              <br />
+              <code>--button-padding-x-default</code> is placed as the{" "}
+              <em>last</em> fallback in the chain:{" "}
+              <code>
+                --button-padding-left → --button-padding-x → --button-padding →
+                --button-padding-x-default
+              </code>
+              . This means any more-specific prop or var set closer to the
+              button will override it. If you want to set a global default that
+              can still be overridden per-button via props, always use{" "}
+              <code>--button-padding-x-default</code> /{" "}
+              <code>--button-padding-y-default</code>.
+            </p>
           </div>
         );
       };

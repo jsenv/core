@@ -36,7 +36,12 @@ import.meta.css = /* css */ `
       --button-outline-width: 1px;
       --button-border-width: 1px;
       --button-border-radius: 2px;
+      /* Global padding defaults — override these to change all button paddings. */
+      /* Use --button-padding, --button-padding-x, --button-padding-y for per-button overrides. */
+      --button-padding-x-default: 6px;
+      --button-padding-y-default: 1px;
       /* default */
+
       --button-outline-color: var(--navi-focus-outline-color);
       --button-loader-color: var(--navi-loader-color);
       --button-border-color: light-dark(#767676, #8e8e93);
@@ -91,22 +96,6 @@ import.meta.css = /* css */ `
     --x-button-outer-width: calc(
       var(--x-button-border-width) + var(--x-button-outline-width)
     );
-    --x-button-padding-top: var(
-      --button-padding-top,
-      var(--button-padding-y, var(--button-padding, 1px))
-    );
-    --x-button-padding-right: var(
-      --button-padding-right,
-      var(--button-padding-x, var(--button-padding, 6px))
-    );
-    --x-button-padding-bottom: var(
-      --button-padding-bottom,
-      var(--button-padding-y, var(--button-padding, 1px))
-    );
-    --x-button-padding-left: var(
-      --button-padding-left,
-      var(--button-padding-x, var(--button-padding, 6px))
-    );
     --x-button-outline-color: var(--button-outline-color);
     --x-button-border-color: var(--button-border-color);
     --x-button-background: var(--button-background);
@@ -136,10 +125,34 @@ import.meta.css = /* css */ `
       aspect-ratio: inherit;
       width: 100%;
       height: 100%;
-      padding-top: var(--x-button-padding-top);
-      padding-right: var(--x-button-padding-right);
-      padding-bottom: var(--x-button-padding-bottom);
-      padding-left: var(--x-button-padding-left);
+      padding-top: var(
+        --button-padding-top,
+        var(
+          --button-padding-y,
+          var(--button-padding, var(--button-padding-y-default))
+        )
+      );
+      padding-right: var(
+        --button-padding-right,
+        var(
+          --button-padding-x,
+          var(--button-padding, var(--button-padding-x-default))
+        )
+      );
+      padding-bottom: var(
+        --button-padding-bottom,
+        var(
+          --button-padding-y,
+          var(--button-padding, var(--button-padding-y-default))
+        )
+      );
+      padding-left: var(
+        --button-padding-left,
+        var(
+          --button-padding-x,
+          var(--button-padding, var(--button-padding-x-default))
+        )
+      );
       align-items: inherit;
       justify-content: inherit;
       color: var(--x-button-color);
