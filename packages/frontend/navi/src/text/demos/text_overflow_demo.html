@@ -11,6 +11,49 @@
       import { useState } from "preact/hooks";
       import { BadgeCount, Box, Icon, Text } from "@jsenv/navi";
 
+      const IconTextDemo = () => {
+        const [width, setWidth] = useState(300);
+        return (
+          <div>
+            <label
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "12px",
+                marginBottom: "12px",
+                fontSize: "14px",
+              }}
+            >
+              Container width: <strong>{width}px</strong>
+              <input
+                type="range"
+                min="80"
+                max="500"
+                value={width}
+                onInput={(e) => setWidth(Number(e.target.value))}
+                style={{ width: "200px" }}
+              />
+            </label>
+            <Box
+              flex
+              padding="s"
+              spacing="s"
+              width={width}
+              border="1px solid #ccc"
+              alignY="center"
+            >
+              <Icon shrink={false}>
+                <StarSvg />
+              </Icon>
+              <Text overflowEllipsis minWidth="0">
+                A very long label that will be truncated when the container is
+                too narrow to show it all
+              </Text>
+            </Box>
+          </div>
+        );
+      };
+
       const App = () => {
         return (
           <div
@@ -95,24 +138,7 @@
 
             <section>
               <h2 id="s-icon-text">Icon + overflowing text in a flex row</h2>
-              <Box flex="y" spacing="m">
-                <Box
-                  flex
-                  padding="s"
-                  spacing="s"
-                  width="200"
-                  border="1px solid #ccc"
-                  alignY="center"
-                >
-                  <Icon>
-                    <StarSvg />
-                  </Icon>
-                  <Text overflowEllipsis>
-                    A very long label that will be truncated when the container
-                    is too narrow to show it all
-                  </Text>
-                </Box>
-              </Box>
+              <IconTextDemo />
             </section>
 
             <section>
