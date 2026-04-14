@@ -6325,12 +6325,14 @@ const DIMENSION_PROPS = {
     }
     const inVerticalFlexFlow =
       parentBoxFlow === "flex-y" || parentBoxFlow === "inline-flex-y";
+    const inHorizontalFlexFlow =
+      parentBoxFlow === "flex-x" || parentBoxFlow === "inline-flex-x";
     const selfVerticalFlexFlow =
       boxFlow === "flex-y" || boxFlow === "inline-flex-y";
     if (selfVerticalFlexFlow || inVerticalFlexFlow) {
       if (!inVerticalFlexFlow) {
-        if (parentBoxFlow === "flex-x" || parentBoxFlow === "inline-flex-x") {
-          return { minHeight: "100%", height: "auto" };
+        if (inHorizontalFlexFlow) {
+          return { alignSelf: "stretch" };
         }
         return {
           flexGrow: 1,
@@ -6341,8 +6343,8 @@ const DIMENSION_PROPS = {
       }
       return { flexGrow: 1, flexBasis: "0%" }; // Grow vertically in row
     }
-    if (parentBoxFlow === "flex-x") {
-      return { minHeight: "100%", height: "auto" }; // Take full height in column
+    if (inHorizontalFlexFlow) {
+      return { alignSelf: "stretch" }; // Stretch to cross-axis height in flex-x
     }
     return { minHeight: "100%", height: "auto" }; // Take full height outside flex
   },

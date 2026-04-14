@@ -23,9 +23,66 @@
           >
             <h1>Text Overflow Demo</h1>
 
+            <nav
+              style={{
+                marginBottom: "40px",
+                padding: "20px",
+                background: "#f8f9fa",
+                borderRadius: "8px",
+                fontSize: "14px",
+              }}
+            >
+              <strong
+                style={{
+                  display: "block",
+                  marginBottom: "8px",
+                  fontSize: "16px",
+                }}
+              >
+                Table des matières
+              </strong>
+              <ol style={{ margin: 0, paddingLeft: "20px", lineHeight: "2" }}>
+                <li>
+                  <a href="#s-two-col-flex">Two-column flex layout</a>
+                </li>
+                <li>
+                  <a href="#s-icon-text">
+                    Icon + overflowing text in a flex row
+                  </a>
+                </li>
+                <li>
+                  <a href="#s-two-col-grid">Two-column grid layout</a>
+                </li>
+                <li>
+                  <a href="#s-basic">Basic</a>
+                </li>
+                <li>
+                  <a href="#s-pinned">Pinned Content</a>
+                </li>
+                <li>
+                  <a href="#s-icons-styled">Icons &amp; Styled Text</a>
+                </li>
+                <li>
+                  <a href="#s-widths">Container Widths</a>
+                </li>
+                <li>
+                  <a href="#s-html">HTML Elements</a>
+                </li>
+                <li>
+                  <a href="#s-complex-pinned">Complex Pinned Content</a>
+                </li>
+                <li>
+                  <a href="#s-interactive">Interactive Width</a>
+                </li>
+                <li>
+                  <a href="#s-multiline">Multiline Behavior</a>
+                </li>
+              </ol>
+            </nav>
+
             <section>
-              <h2>Two-column flex layout</h2>
-              <Box column spacing="0" width="300">
+              <h2 id="s-two-col-flex">Two-column flex layout</h2>
+              <Box flex spacing="0" width="300">
                 <Text overflowEllipsis border="1px solid #ccc">
                   This is a long text in the first column that should be
                   truncated with an ellipsis when there is not enough space.
@@ -37,7 +94,29 @@
             </section>
 
             <section>
-              <h2>Two-column grid layout</h2>
+              <h2 id="s-icon-text">Icon + overflowing text in a flex row</h2>
+              <Box flex="y" spacing="m">
+                <Box
+                  flex
+                  padding="s"
+                  spacing="s"
+                  width="200"
+                  border="1px solid #ccc"
+                  alignY="center"
+                >
+                  <Icon>
+                    <StarSvg />
+                  </Icon>
+                  <Text overflowEllipsis>
+                    A very long label that will be truncated when the container
+                    is too narrow to show it all
+                  </Text>
+                </Box>
+              </Box>
+            </section>
+
+            <section>
+              <h2 id="s-two-col-grid">Two-column grid layout</h2>
               {[
                 "fit-content(80px) 1fr",
                 "minmax(0, 1fr) 100px",
@@ -72,7 +151,7 @@
             </section>
 
             <section>
-              <h2>Basic</h2>
+              <h2 id="s-basic">Basic</h2>
               <Box width="220" border="1px solid #ccc" padding="sm">
                 <Text overflowEllipsis>
                   This is a very long text that should be truncated with
@@ -82,7 +161,7 @@
             </section>
 
             <section>
-              <h2>Pinned Content</h2>
+              <h2 id="s-pinned">Pinned Content</h2>
               <Box row spacing="16px">
                 <Box width="260" border="1px solid #ccc" padding="sm">
                   <Text overflowEllipsis>
@@ -106,7 +185,7 @@
             </section>
 
             <section>
-              <h2>Icons &amp; Styled Text</h2>
+              <h2 id="s-icons-styled">Icons &amp; Styled Text</h2>
               <p style={{ color: "#555", fontSize: "14px" }}>
                 Inline icons and styled fragments inside an overflow ellipsis
                 will auto-space correctly while the pinned part stays visible.
@@ -160,7 +239,7 @@
             </section>
 
             <section>
-              <h2>Container Widths</h2>
+              <h2 id="s-widths">Container Widths</h2>
               <Box row spacing="12px">
                 {[150, 200, 300, 400].map((width) => (
                   <div
@@ -190,7 +269,7 @@
             </section>
 
             <section>
-              <h2>HTML Elements</h2>
+              <h2 id="s-html">HTML Elements</h2>
               <Box row spacing="12px">
                 <div
                   style={{
@@ -258,7 +337,7 @@
             </section>
 
             <section>
-              <h2>Complex Pinned Content</h2>
+              <h2 id="s-complex-pinned">Complex Pinned Content</h2>
               <Box row spacing="12px">
                 <div
                   style={{
@@ -323,12 +402,12 @@
             </section>
 
             <section>
-              <h2>Interactive Width</h2>
+              <h2 id="s-interactive">Interactive Width</h2>
               <InteractiveWidthDemo />
             </section>
 
             <section>
-              <h2>Multiline Behavior</h2>
+              <h2 id="s-multiline">Multiline Behavior</h2>
               <Box row spacing="16px">
                 <div
                   style={{
