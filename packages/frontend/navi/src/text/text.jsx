@@ -73,21 +73,21 @@ const css = /* css */ `
       }
     }
 
-    &[data-text-overflow] {
-      flex-wrap: wrap;
-      text-overflow: ellipsis;
-      overflow: hidden;
+    /* When skeleton + overflow ellipsis: skeleton fills available space,
+       no text to clip so disable overflow machinery. */
+    &[data-text-overflow][data-skeleton] {
+      flex-wrap: nowrap;
+      text-overflow: clip;
+      overflow: visible;
 
       .navi_text_overflow_wrapper {
-        display: flex;
-        width: 100%;
-        flex-grow: 1;
-        gap: 0.3em;
-
+        display: contents;
         .navi_text_overflow_text {
-          max-width: 100%;
-          text-overflow: ellipsis;
-          overflow: hidden;
+          display: contents;
+
+          max-width: none;
+          text-overflow: clip;
+          overflow: visible;
         }
       }
     }
