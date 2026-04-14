@@ -1140,4 +1140,48 @@ await snapshotTests(import.meta.url, ({ test }) => {
       globalSignalRegistry.clear();
     }
   });
+
+  test("repro panel explicitely undefined", () => {
+    const zoneSignal = stateSignal(undefined);
+    const mapPanelSignal = stateSignal(undefined);
+    const HOME_ROUTE = route("/");
+    const MAP_ROUTE = route("/map/", { searchParams: { zone: zoneSignal } });
+    const isochroneTabSignal = stateSignal("compare");
+    const isochroneLongitudeSignal = stateSignal(undefined);
+    const isochroneTimeModeSignal = stateSignal("walk");
+    const MAP_PANEL_ROUTE = route(`/map/:panel=${mapPanelSignal}/`);
+    const MAP_TRANSIT_ROUTE = route(`/map/transit`);
+    const MAP_FACILITIES_ROUTE = route(`/map/facilities/`);
+    const MAP_ISOCHRONE_ROUTE = route(
+      `/map/isochrone/:tab=${isochroneTabSignal}/`,
+      { searchParams: { iso_lon: isochroneLongitudeSignal } },
+    );
+    const MAP_ISOCHRONE_COMPARE_ROUTE = route(`/map/isochrone/compare`);
+    const MAP_ISOCHRONE_TIME_ROUTE = route(
+      `/map/isochrone/time/:mode=${isochroneTimeModeSignal}/`,
+    );
+
+    isochroneTabSignal.value = "time";
+    isochroneTimeModeSignal.value = "transit";
+    const { updateRoutes, clearRoutes } = setupRoutes([
+      HOME_ROUTE,
+      MAP_ROUTE,
+      MAP_PANEL_ROUTE,
+      MAP_TRANSIT_ROUTE,
+      MAP_FACILITIES_ROUTE,
+      MAP_ISOCHRONE_ROUTE,
+      MAP_ISOCHRONE_COMPARE_ROUTE,
+      MAP_ISOCHRONE_TIME_ROUTE,
+    ]);
+    try {
+      updateRoutes(`${baseUrl}/map/facilities?zone=london`);
+
+      return {
+        map_root_url: MAP_ROUTE.buildUrl({ panel: undefined }),
+      };
+    } finally {
+      clearRoutes();
+      globalSignalRegistry.clear();
+    }
+  });
 });
