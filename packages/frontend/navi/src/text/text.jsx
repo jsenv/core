@@ -51,6 +51,7 @@ const css = /* css */ `
     }
 
     &[data-text-overflow] {
+      min-width: 0;
       flex-wrap: wrap;
       text-overflow: ellipsis;
       overflow: hidden;
