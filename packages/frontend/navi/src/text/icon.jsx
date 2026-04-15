@@ -1,6 +1,9 @@
+import { useRef } from "preact/hooks";
+
 import { Box } from "../box/box.jsx";
-import { Text } from "../text/text.jsx";
 import { withPropsClassName } from "../utils/with_props_class_name.js";
+import { SurroundingTextAligner } from "./surrounding_text_aligner.jsx";
+import { Text } from "./text.jsx";
 
 const css = /* css */ `
   @layer navi {
@@ -14,6 +17,8 @@ const css = /* css */ `
   }
 
   .navi_icon {
+    white-space: nowrap;
+
     &[data-flow-inline] {
       width: 1em;
       height: 1em;
@@ -124,6 +129,7 @@ export const Icon = ({
     decorative = true;
   }
   const ariaProps = decorative ? { "aria-hidden": "true" } : {};
+  const textRef = useRef();
 
   if (typeof children === "string") {
     return (
@@ -153,23 +159,26 @@ export const Icon = ({
 
   const invisibleText = baseChar.repeat(charWidth);
   return (
-    <Text
-      {...props}
-      {...ariaProps}
-      className={withPropsClassName("navi_icon", props.className)}
-      spacing="pre"
-      data-icon-char=""
-      data-width-fixed={widthFixed ? "" : undefined}
-      data-height-fixed={heightFixed ? "" : undefined}
-      data-interactive={onClick ? "" : undefined}
-      onClick={onClick}
-    >
-      <span className="navi_icon_char_slot" aria-hidden="true">
-        {invisibleText}
-      </span>
-      <Text className="navi_icon_foreground" spacing="pre">
-        {innerChildren}
+    <SurroundingTextAligner align="center" childRef={textRef}>
+      <Text
+        {...props}
+        {...ariaProps}
+        className={withPropsClassName("navi_icon", props.className)}
+        spacing="pre"
+        data-icon-char=""
+        data-width-fixed={widthFixed ? "" : undefined}
+        data-height-fixed={heightFixed ? "" : undefined}
+        data-interactive={onClick ? "" : undefined}
+        onClick={onClick}
+        ref={textRef}
+      >
+        <span className="navi_icon_char_slot" aria-hidden="true">
+          {invisibleText}
+        </span>
+        <Text className="navi_icon_foreground" spacing="pre">
+          {innerChildren}
+        </Text>
       </Text>
-    </Text>
+    </SurroundingTextAligner>
   );
 };

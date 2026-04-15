@@ -21,8 +21,7 @@ const css = /* css */ `
   }
 
   *[data-navi-space] {
-    /* user-select: none; */
-    padding-left: 0.25em;
+    /* padding-left: 0.25em; */
   }
 
   .navi_text {

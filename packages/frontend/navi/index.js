@@ -146,6 +146,7 @@ export { Badge } from "./src/text/badge.jsx";
 export { BadgeCount } from "./src/text/badge_count.jsx";
 export { Caption } from "./src/text/caption.jsx";
 export { Code } from "./src/text/code.jsx";
+export { Icon } from "./src/text/icon.jsx";
 export { createIntl } from "./src/text/intl.js";
 export { MessageBox } from "./src/text/message_box.jsx";
 export { Meter } from "./src/text/meter.jsx";
@@ -156,7 +157,6 @@ export { Title, useTitleLevel } from "./src/text/title.jsx";
 export { useDarkBackgroundAttribute } from "./src/text/use_dark_background_attribute.js";
 
 // Graphics
-export { Icon } from "./src/graphic/icon.jsx";
 export { Image } from "./src/graphic/image.jsx";
 export { Svg } from "./src/graphic/svg.jsx";
 export { SVGMaskOverlay } from "./src/graphic/svg_mask_overlay.jsx";
