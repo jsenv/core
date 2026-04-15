@@ -208,7 +208,8 @@ const css = /* css */ `
 // We could use <span data-navi-space=""> </span>
 // but we prefer to use zero width space as it has the nice side effects of
 // not being underlined by the browser (very cool because we typically don't want spaces to be underlined in links)
-const REGULAR_SPACE = <span data-navi-space="">&#8203;</span>;
+const REGULAR_SPACE = <span data-navi-space=""> </span>;
+// const REGULAR_SPACE = <span data-navi-space="">&#8203;</span>;
 const CustomWidthSpace = ({ value }) => {
   return (
     <span className="navi_custom_space" style={`padding-left: ${value}`}>

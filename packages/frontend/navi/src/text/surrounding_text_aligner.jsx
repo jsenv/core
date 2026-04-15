@@ -33,6 +33,14 @@ import { useLayoutEffect, useRef } from "preact/hooks";
 // This works for any child display type (inline, inline-block, inline-flex…) because
 // we measure the actual rendered box height via getBoundingClientRect
 
+const css = /* css */ `
+  .navi_text_aligner_anchor {
+    vertical-align: inherit;
+    user-select: none;
+    overflow: hidden;
+  }
+`;
+
 /**
  * Positions children vertically relative to the surrounding text, correcting for font-size differences.
  *
@@ -53,6 +61,8 @@ export const SurroundingTextAligner = ({
   align = "baseline",
   childRef,
 }) => {
+  import.meta.css = css;
+
   const anchorRef = useRef();
 
   useLayoutEffect(() => {
@@ -78,10 +88,7 @@ export const SurroundingTextAligner = ({
   return (
     <>
       {children}
-      <span
-        ref={anchorRef}
-        style="user-select: none; overflow: hidden; vertical-align: inherit"
-      >
+      <span ref={anchorRef} className="navi_text_aligner_anchor">
         &#8203;
       </span>
     </>

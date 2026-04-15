@@ -12,6 +12,8 @@ const css = /* css */ `
   @layer navi {
   }
   .navi_text.navi_badge_count {
+    /* Important to prevent anchor from breaking to a new line */
+    white-space: nowrap;
     --font-size: 0.7em;
     --x-background: var(--background);
     --x-background-color: var(--background-color, var(--x-background));
@@ -41,7 +43,6 @@ const css = /* css */ `
 
     /* Ellipse */
     &[data-ellipse] {
-      display: inline-block;
       padding-top: var(--padding-y);
       padding-right: var(--padding-x);
       padding-bottom: var(--padding-y);
@@ -53,6 +54,7 @@ const css = /* css */ `
 
       /* For ellipse + single char force the circle aspect as it's prettier */
       &[data-single-char] {
+        display: inline-block;
         aspect-ratio: 1/1;
         height: 1.6em;
         padding: 0;
@@ -240,9 +242,9 @@ const BadgeCountEllipse = ({
         <>
           {/* When we double click on count we don't want to eventually select surrounding text (in case) */}
           {/* the surrounding text has no spaces so we add "&#8203;" (zero-width space char) */}
-          <span style="user-select: none">&#8203;</span>
+          {/* <span style="user-select: none">&#8203;</span> */}
           {children}
-          <span style="user-select: none">&#8203;</span>
+          {/* <span style="user-select: none">&#8203;</span> */}
         </>
       )}
     </Text>
@@ -281,9 +283,9 @@ const BadgeCountCircle = ({
         <>
           {/* When we double click on count we don't want to eventually select surrounding text (in case) */}
           {/* the surrounding text has no spaces so we add "&#8203;" (zero-width space char) */}
-          <span style="user-select: none">&#8203;</span>
+          {/* <span style="user-select: none">&#8203;</span> */}
           <span className="navi_badge_count_text">{children}</span>
-          <span style="user-select: none">&#8203;</span>
+          {/* <span style="user-select: none">&#8203;</span> */}
         </>
       )}
     </Text>
