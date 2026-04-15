@@ -828,25 +828,45 @@
             tailles de police. Le badge maintient ses proportions relatives au
             texte.
           </Paragraph>
-          <Box row spacing="lg">
-            <div>
-              <Caption>font-size: 12px - Petit texte</Caption>
-              <div
-                style={{
-                  border: "2px dashed #9c27b0",
-                  backgroundColor: "rgba(156, 39, 176, 0.05)",
-                  padding: "8px",
-                  borderRadius: "4px",
-                }}
-              >
-                <Text style={{ fontSize: "12px" }} noWrap>
-                  Petits messages
-                  <BadgeCount background="#9c27b0" color="white">
-                    5
-                  </BadgeCount>
-                </Text>
-              </div>
-            </div>
+          <Box flex="y" spacing="l">
+            <Box flex spacing="m">
+              <Box width="250">
+                <Caption>font-size: s</Caption>
+                <div
+                  style={{
+                    border: "2px dashed #9c27b0",
+                    backgroundColor: "rgba(156, 39, 176, 0.05)",
+                    padding: "8px",
+                    borderRadius: "4px",
+                  }}
+                >
+                  <Text size="s" noWrap>
+                    Petits messages
+                    <BadgeCount background="#9c27b0" color="white">
+                      5
+                    </BadgeCount>
+                  </Text>
+                </div>
+              </Box>
+              <Box width="250">
+                <Caption>font-size: 7</Caption>
+                <div
+                  style={{
+                    border: "2px dashed #9c27b0",
+                    backgroundColor: "rgba(156, 39, 176, 0.05)",
+                    padding: "8px",
+                    borderRadius: "4px",
+                  }}
+                >
+                  <Text flex alignY="center" size="s" noWrap spacing="xs">
+                    Petits messages
+                    <BadgeCount background="#9c27b0" color="white" size="7">
+                      5
+                    </BadgeCount>
+                  </Text>
+                </div>
+              </Box>
+            </Box>
 
             <div>
               <Caption>font-size: 16px - Taille normale</Caption>

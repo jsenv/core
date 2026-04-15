@@ -52,10 +52,10 @@ const css = /* css */ `
       /* For ellipse + single char force the circle aspect as it's prettier */
       &[data-single-char] {
         aspect-ratio: 1/1;
-        height: 1.5em;
+        height: 1.6em;
         padding: 0;
         text-align: center;
-        line-height: 1.5em;
+        line-height: 1.6em;
       }
     }
 
@@ -75,19 +75,19 @@ const css = /* css */ `
       border-radius: 50%;
 
       &[data-single-char] {
-        --x-radius: 1.5em;
+        --x-radius: 1.6em;
         --x-number-font-size: unset;
       }
       &[data-two-chars] {
-        --x-radius: 1.8em;
-        --x-number-font-size: 0.9em;
+        --x-radius: 2em;
+        --x-number-font-size: unset;
       }
       &[data-three-chars] {
         --x-radius: 2.4em;
         --x-number-font-size: 0.8em;
       }
       &[data-four-chars] {
-        --x-radius: 2.6em;
+        --x-radius: 2.4em;
         --x-number-font-size: 0.8em;
       }
 
