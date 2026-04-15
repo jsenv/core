@@ -27,24 +27,23 @@ import { useLayoutEffect, useRef } from "preact/hooks";
  *   - `"start"`    — top of children's text aligns with top of surrounding text
  *   - `"end"`      — bottom of children's text aligns with bottom of surrounding text
  */
+
 export const SurroundingTextAligner = ({
   children,
   align = "center",
-  ...props
+  childRef,
 }) => {
   const anchorRef = useRef();
-  const childrenWrapperRef = useRef();
 
   useLayoutEffect(() => {
     const anchorEl = anchorRef.current;
-    const childEl = childrenWrapperRef.current;
+    const childEl = childRef.current;
     if (!anchorEl || !childEl) {
       return;
     }
-    const firstChild = childEl.firstElementChild || childEl;
     const topOffset = computeTopOffset({
       anchorEl,
-      childEl: firstChild,
+      childEl,
       align,
     });
     if (topOffset) {
@@ -64,9 +63,7 @@ export const SurroundingTextAligner = ({
       >
         &#8203;
       </span>
-      <span ref={childrenWrapperRef} style="vertical-align:inherit" {...props}>
-        {children}
-      </span>
+      {children}
     </>
   );
 };

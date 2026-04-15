@@ -23,6 +23,7 @@ const css = /* css */ `
     display: inline-block;
     color: var(--x-color);
     font-size: var(--font-size);
+    vertical-align: inherit;
 
     &[data-dark-background] {
       --x-color-contrasting: var(--navi-color-white);
@@ -126,7 +127,6 @@ export const BadgeCount = ({
   integer,
   lang,
   loading,
-  selfAlignX,
   ...props
 }) => {
   import.meta.css = css;
@@ -153,7 +153,7 @@ export const BadgeCount = ({
 
   if (circle) {
     return (
-      <SurroundingTextAligner align="center" selfAlignX={selfAlignX}>
+      <SurroundingTextAligner align="center" childRef={ref}>
         <BadgeCountCircle
           {...props}
           loading={loading}
@@ -172,7 +172,7 @@ export const BadgeCount = ({
       ? formatNumber(valueDisplayed, { lang })
       : valueDisplayed;
   return (
-    <SurroundingTextAligner align="center" selfAlignX={selfAlignX}>
+    <SurroundingTextAligner align="center" childRef={ref}>
       <BadgeCountEllipse
         {...props}
         loading={loading}
