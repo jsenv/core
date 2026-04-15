@@ -86,31 +86,43 @@ const computeTopOffset = ({ anchorEl, childEl, align }) => {
   const anchorActH = anchorABA + anchorABD;
   const childActH = childABA + childABD;
 
-  // Compute deltaTop = how far the child ink midpoint is below the anchor ink midpoint
-  // after browser layout (positive = child mid is lower on screen).
+  // Compute deltaTop = anchorInkTop_Y - childInkTop_Y after browser layout
+  // (positive = child top is above anchor top → add to move child down to match).
+  // Y axis: positive downward. baseline = Y=0.
   //
-  // The browser positions elements using fontBoundingBox metrics (the full font cell),
-  // not actualBoundingBox (ink bounds). We use FBBA/FBBD for deltaTop so our model
-  // matches what the browser actually does, then use actual ink metrics for centering.
+  // baseline: inkTop = -ABA (both at shared baseline)
+  //   → deltaTop = -anchorABA - (-childABA) = childABA - anchorABA
   //
-  // Derivation for each vertical-align (ink mid from shared reference, then diff):
-  //   baseline → both at shared baseline: ink mids differ by (childABA - anchorABA)
-  //   bottom   → both bottoms at line bottom: ink mid = lineBottom - FBBD - ABA + actH/2
-  //   top      → both tops at line top: ink mid = lineTop + FBBA - ABA + actH/2
-  //   middle   → both mids at ~x-height/2: ink mid ≈ (FBBA+FBBD)/2 - ABA + actH/2 from baseline
+  // super/sub: both baselines shifted by the same amount → same relative positions
+  //   → deltaTop = childABA - anchorABA (same as baseline)
+  //
+  // middle: both ink midpoints at the same midline M (e.g. x-height/2 above baseline)
+  //   → anchorInkTop_Y = M - anchorActH/2, childInkTop_Y = M - childActH/2
+  //   → deltaTop = (childActH - anchorActH) / 2
+  //
+  // top/text-top: both font-cell tops at line top T (font cell top = -FBBA from baseline)
+  //   → anchorInkTop_Y = T + anchorFBBA - anchorABA
+  //   → childInkTop_Y  = T + childFBBA  - childABA
+  //   → deltaTop = (anchorFBBA - anchorABA) - (childFBBA - childABA)
+  //
+  // bottom/text-bottom: both font-cell bottoms at line bottom B
+  //   → anchorInkTop_Y = B - anchorFBBD - anchorABA
+  //   → childInkTop_Y  = B - childFBBD  - childABA
+  //   → deltaTop = (childFBBD + childABA) - (anchorFBBD + anchorABA)
   let deltaTop = 0;
-  if (verticalAlign === "baseline" || verticalAlign === "") {
+  if (
+    verticalAlign === "baseline" ||
+    verticalAlign === "" ||
+    verticalAlign === "super" ||
+    verticalAlign === "sub"
+  ) {
     deltaTop = childABA - anchorABA;
   } else if (verticalAlign === "middle") {
-    deltaTop =
-      (anchorFBBA + anchorFBBD) / 2 -
-      (childFBBA + childFBBD) / 2 +
-      childABA -
-      anchorABA;
+    deltaTop = (childActH - anchorActH) / 2;
   } else if (verticalAlign === "top" || verticalAlign === "text-top") {
     deltaTop = anchorFBBA - anchorABA - (childFBBA - childABA);
   } else if (verticalAlign === "bottom" || verticalAlign === "text-bottom") {
-    deltaTop = childFBBD + childABA - anchorFBBD - anchorABA;
+    deltaTop = childFBBD + childABA - (anchorFBBD + anchorABA);
   }
 
   // offsetFactor determines where along the anchor's actual ink height we target:
