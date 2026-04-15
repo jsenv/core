@@ -22,8 +22,8 @@ import { useLayoutEffect, useRef } from "preact/hooks";
  *   regardless of which `vertical-align` is active on the parent.
  *
  * @param {"center"|"baseline"|"start"|"end"} [align="baseline"]
- *   - `"center"`   — visual midpoint of children matches visual midpoint of surrounding text (default)
- *   - `"baseline"` — children sit on the surrounding text baseline, no offset applied
+ *   - `"center"`   — visual midpoint of children matches visual midpoint of surrounding text
+ *   - `"baseline"` — children sit on the surrounding text baseline, no offset applied (default)
  *   - `"start"`    — top of children's text aligns with top of surrounding text
  *   - `"end"`      — bottom of children's text aligns with bottom of surrounding text
  */
