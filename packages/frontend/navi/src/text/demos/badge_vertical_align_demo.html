@@ -28,6 +28,14 @@
         backgroundColor: "green",
       };
 
+      const measureTextNodeHeight = (textNode) => {
+        const range = document.createRange();
+        range.setStart(textNode, 0);
+        range.setEnd(textNode, textNode.length);
+        const { height } = range.getBoundingClientRect();
+        return height;
+      };
+
       const Badge = ({ count, fontSize }) => {
         const anchorRef = useRef();
         const badgeRef = useRef();
@@ -46,12 +54,16 @@
             badgeEl.style.top = `0px`;
             return;
           }
-          const anchorRect = anchorEl.getBoundingClientRect();
-          const badgeRect = badgeEl.getBoundingClientRect();
-          const anchorHeight = anchorRect.height;
-          const badgeHeight = badgeRect.height;
-          const heightDiff = badgeHeight - anchorHeight;
+          const anchorTextHeight = measureTextNodeHeight(anchorEl.firstChild);
+          const badgeTextHeight = measureTextNodeHeight(badgeEl.firstChild);
+          const heightDiff = badgeTextHeight - anchorTextHeight;
           const topOffset = heightDiff / 2;
+          console.log({
+            anchorTextHeight,
+            badgeTextHeight,
+            heightDiff,
+            topOffset,
+          });
           badgeEl.style.top = `${topOffset}px`;
         }, [fontSize]);
 
@@ -72,6 +84,7 @@
                 padding: "0.4em 0.1em",
                 borderRadius: "3px",
                 position: "relative",
+                verticalAlign: "inherit",
               }}
             >
               {count}
