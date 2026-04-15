@@ -4,6 +4,7 @@ import { Icon } from "../graphic/icon.jsx";
 import { LoadingDots } from "../graphic/loader/loading_dots.jsx";
 import { withPropsClassName } from "../utils/with_props_class_name.js";
 import { formatNumber } from "./format_number.js";
+import { SurroundingTextAligner } from "./surrounding_text_aligner.jsx";
 import { Text } from "./text.jsx";
 import { useDarkBackgroundAttribute } from "./use_dark_background_attribute.js";
 
@@ -125,6 +126,7 @@ export const BadgeCount = ({
   integer,
   lang,
   loading,
+  selfAlignX,
   ...props
 }) => {
   import.meta.css = css;
@@ -151,16 +153,18 @@ export const BadgeCount = ({
 
   if (circle) {
     return (
-      <BadgeCountCircle
-        {...props}
-        loading={loading}
-        ref={ref}
-        hasOverflow={hasOverflow}
-        charCount={charCount}
-      >
-        {valueDisplayed}
-        {hasOverflow && maxElement}
-      </BadgeCountCircle>
+      <SurroundingTextAligner align="center" selfAlignX={selfAlignX}>
+        <BadgeCountCircle
+          {...props}
+          loading={loading}
+          ref={ref}
+          hasOverflow={hasOverflow}
+          charCount={charCount}
+        >
+          {valueDisplayed}
+          {hasOverflow && maxElement}
+        </BadgeCountCircle>
+      </SurroundingTextAligner>
     );
   }
   const valueFormatted =
@@ -168,16 +172,18 @@ export const BadgeCount = ({
       ? formatNumber(valueDisplayed, { lang })
       : valueDisplayed;
   return (
-    <BadgeCountEllipse
-      {...props}
-      loading={loading}
-      ref={ref}
-      hasOverflow={hasOverflow}
-      charCount={charCount}
-    >
-      {valueFormatted}
-      {hasOverflow && maxElement}
-    </BadgeCountEllipse>
+    <SurroundingTextAligner align="center" selfAlignX={selfAlignX}>
+      <BadgeCountEllipse
+        {...props}
+        loading={loading}
+        ref={ref}
+        hasOverflow={hasOverflow}
+        charCount={charCount}
+      >
+        {valueFormatted}
+        {hasOverflow && maxElement}
+      </BadgeCountEllipse>
+    </SurroundingTextAligner>
   );
 };
 const applyMaxToValue = (max, value) => {
