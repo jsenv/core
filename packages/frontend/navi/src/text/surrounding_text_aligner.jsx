@@ -80,7 +80,7 @@ export const SurroundingTextAligner = ({
       {children}
       <span
         ref={anchorRef}
-        style="width: 0; user-select: none; overflow: hidden; vertical-align: inherit"
+        style="user-select: none; overflow: hidden; vertical-align: inherit"
       >
         &#8203;
       </span>
