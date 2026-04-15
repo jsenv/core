@@ -12,8 +12,12 @@ import { useLayoutEffect, useRef } from "preact/hooks";
 // ## Solution
 //
 // We render a zero-width space (&#8203;) — the "anchor" — directly before the child.
-// The anchor inherits the surrounding text's font-size and vertical-align, so the browser
+// The anchor inherits the surrounding text's font-size and sits at baseline, so the browser
 // places it exactly where a character of the surrounding text would sit.
+// Using vertical-align: baseline (not inherit) is intentional: when the surrounding text has no
+// explicit vertical-align it sits at baseline of the line box. If we used inherit and a parent span
+// had vertical-align: middle/super/sub, the anchor would shift away from the text, making the
+// measurements wrong.
 //
 // After layout, we read:
 //   1. The anchor's bounding rect + canvas `fontBoundingBoxDescent` to derive the baseline Y.
