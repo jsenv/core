@@ -34,7 +34,8 @@ export const SurroundingTextAligner = ({
     }
 
     const anchorStyle = getComputedStyle(anchorEl);
-    const childStyle = getComputedStyle(childEl);
+    const firstChild = childEl.firstElementChild || childEl;
+    const childStyle = getComputedStyle(firstChild);
     const anchorFontSize = parseFloat(anchorStyle.fontSize);
     const childFontSize = parseFloat(childStyle.fontSize);
 
