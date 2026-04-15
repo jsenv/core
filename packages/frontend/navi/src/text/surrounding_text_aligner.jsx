@@ -76,11 +76,13 @@ const computeTopOffset = ({ anchorEl, childEl, align }) => {
   if (anchorFontSize === childFontSize || align === "baseline") {
     return 0;
   }
-  const anchorMetrics = measureTextMetrics("M", anchorStyle);
-  const childMetrics = measureTextMetrics("M", childStyle);
+  const anchorMetrics = measureFontAscDesc("M", anchorStyle);
+  const childMetrics = measureFontAscDesc("M", childStyle);
   const verticalAlign = anchorStyle.verticalAlign;
-  const anchorH = anchorMetrics.ascent + anchorMetrics.descent;
-  const childH = childMetrics.ascent + childMetrics.descent;
+  const [anchorAscent, anchorDescent] = anchorMetrics;
+  const [childAscent, childDescent] = childMetrics;
+  const anchorH = anchorAscent + anchorDescent;
+  const childH = childAscent + childDescent;
 
   // After browser layout, compute the difference between anchor top and child top.
   // This depends on which vertical-align the browser applied to both elements.
@@ -91,7 +93,7 @@ const computeTopOffset = ({ anchorEl, childEl, align }) => {
   //   bottom:   both bottoms at same line bottom  → deltaTop = childH - anchorH
   let deltaTop = 0;
   if (verticalAlign === "baseline" || verticalAlign === "") {
-    deltaTop = childMetrics.ascent - anchorMetrics.ascent;
+    deltaTop = childAscent - anchorAscent;
   } else if (verticalAlign === "middle") {
     deltaTop = (childH - anchorH) / 2;
   } else if (verticalAlign === "top" || verticalAlign === "text-top") {
@@ -115,12 +117,9 @@ const computeTopOffset = ({ anchorEl, childEl, align }) => {
 };
 
 const canvas = document.createElement("canvas");
-const measureTextMetrics = (text, computedStyle) => {
+const measureFontAscDesc = (text, computedStyle) => {
   const ctx = canvas.getContext("2d");
   ctx.font = `${computedStyle.fontWeight} ${computedStyle.fontSize} ${computedStyle.fontFamily}`;
   const metrics = ctx.measureText(text);
-  return {
-    ascent: metrics.actualBoundingBoxAscent,
-    descent: metrics.actualBoundingBoxDescent,
-  };
+  return [metrics.actualBoundingBoxAscent, metrics.actualBoundingBoxDescent];
 };
