@@ -24,28 +24,18 @@
       };
 
       const Badge = ({ count, fontSize }) => {
-        // Use inline-block with vertical-align: baseline so the badge baseline
-        // participates in inline layout exactly like sibling text does.
-        // This means the badge naturally follows any vertical-align applied to siblings —
-        // but only if they share the same line box (no wrapper shifting them independently).
-        // Visual centering is achieved with padding + line-height rather than flexbox,
-        // keeping the box model truly inline.
         return (
-          <span style="background:yellow;">
-            A
-            <span style="margin-top:0.5em;">
-              <span
-                style={{
-                  fontSize: `${fontSize}px`,
-                  padding: "0.8em 0.2em",
-                  backgroundColor: "#e74c3c",
-                  color: "white",
-                  borderRadius: "3px",
-                }}
-              >
-                {count}
-              </span>
-            </span>
+          <span
+            style={{
+              fontSize: `${fontSize}px`,
+              backgroundColor: "#e74c3c",
+              color: "white",
+              padding: "0.4em 0.1em",
+              borderRadius: "3px",
+              verticalAlign: "inherit",
+            }}
+          >
+            {count}
           </span>
         );
       };
