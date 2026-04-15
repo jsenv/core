@@ -35,7 +35,7 @@ import { useLayoutEffect, useRef } from "preact/hooks";
 
 const css = /* css */ `
   .navi_text_aligner_anchor {
-    vertical-align: inherit;
+    vertical-align: baseline;
     user-select: none;
     overflow: hidden;
   }
@@ -96,11 +96,7 @@ export const SurroundingTextAligner = ({
 };
 
 const computeTopOffset = ({ anchorEl, childEl, align }) => {
-  const anchorStyle = getComputedStyle(anchorEl);
-  const childStyle = getComputedStyle(childEl);
-  const anchorFontSize = parseFloat(anchorStyle.fontSize);
-  const childFontSize = parseFloat(childStyle.fontSize);
-  if (anchorFontSize === childFontSize || align === "baseline") {
+  if (align === "baseline") {
     return 0;
   }
   // Only correct when the anchor lives in an inline formatting context.
@@ -115,6 +111,7 @@ const computeTopOffset = ({ anchorEl, childEl, align }) => {
     return 0;
   }
 
+  const anchorStyle = getComputedStyle(anchorEl);
   const anchorMetrics = measureFontAscDesc("M", anchorStyle);
   const [anchorABA, anchorABD] = anchorMetrics.actual;
   const anchorActH = anchorABA + anchorABD;
