@@ -1,0 +1,152 @@
+<!doctype html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Badge Vertical Align Demo</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useState } from "preact/hooks";
+      import { BadgeCount, Text } from "@jsenv/navi";
+
+      const containerStyle = {
+        display: "inline-flex",
+        alignItems: "center",
+        gap: "8px",
+        fontSize: "16px",
+        border: "2px dotted #0984e3",
+        padding: "4px 8px",
+        backgroundColor: "#f0f8ff",
+      };
+
+      const textStyle = {
+        backgroundColor: "#dfe6e9",
+        border: "2px dotted #636e72",
+      };
+
+      const Badge = ({ count, fontSize }) => {
+        return (
+          <span
+            style={{
+              fontSize: `${fontSize}px`,
+              backgroundColor: "#e74c3c",
+              color: "white",
+              padding: "0 4px",
+              borderRadius: "3px",
+              lineHeight: "1",
+              display: "inline-flex",
+              alignItems: "center",
+              border: "2px dotted yellow",
+            }}
+          >
+            {count}
+          </span>
+        );
+      };
+
+      const Example = ({ label, badgeFontSize }) => {
+        return (
+          <div style={{ marginBottom: "20px" }}>
+            <div
+              style={{
+                fontSize: "13px",
+                color: "#636e72",
+                marginBottom: "6px",
+              }}
+            >
+              {label}
+            </div>
+            <div style={containerStyle}>
+              <span style={textStyle}>Notifications</span>
+              <Badge count={42} fontSize={badgeFontSize} />
+            </div>
+          </div>
+        );
+      };
+
+      const ControlledExample = () => {
+        const [fontSize, setFontSize] = useState(16);
+        return (
+          <div style={{ marginBottom: "20px" }}>
+            <div
+              style={{
+                fontSize: "13px",
+                color: "#636e72",
+                marginBottom: "6px",
+              }}
+            >
+              Contrôlable —{" "}
+              <label>
+                badge font-size:{" "}
+                <input
+                  type="range"
+                  min="8"
+                  max="48"
+                  value={fontSize}
+                  onInput={(e) => {
+                    setFontSize(Number(e.target.value));
+                  }}
+                />{" "}
+                {fontSize}px
+              </label>
+            </div>
+            <div style={containerStyle}>
+              <span style={textStyle}>Notifications</span>
+              <Badge count={42} fontSize={fontSize} />
+            </div>
+          </div>
+        );
+      };
+
+      const NaviExample = ({ label, badgeFontSize }) => {
+        return (
+          <div style={{ marginBottom: "20px" }}>
+            <div
+              style={{
+                fontSize: "13px",
+                color: "#636e72",
+                marginBottom: "6px",
+              }}
+            >
+              {label}
+            </div>
+            <div style={containerStyle}>
+              <span style={textStyle}>Notifications</span>
+              <BadgeCount background="#e74c3c" size={badgeFontSize}>
+                42
+              </BadgeCount>
+            </div>
+          </div>
+        );
+      };
+
+      const Demo = () => {
+        return (
+          <div style={{ padding: "20px", fontFamily: "system-ui, sans-serif" }}>
+            <h2 style={{ marginTop: 0 }}>Badge vertical align</h2>
+
+            <h3>Badge custom</h3>
+            <ControlledExample />
+            <Example label="Badge très petit (8px)" badgeFontSize={8} />
+            <Example label="Badge très grand (40px)" badgeFontSize={40} />
+
+            <h3>@jsenv/navi — BadgeCount</h3>
+            <NaviExample
+              label="BadgeCount très petit (8px)"
+              badgeFontSize={8}
+            />
+            <NaviExample
+              label="BadgeCount très grand (40px)"
+              badgeFontSize={40}
+            />
+          </div>
+        );
+      };
+
+      render(<Demo />, document.querySelector("#app"));
+    </script>
+  </body>
+</html>
