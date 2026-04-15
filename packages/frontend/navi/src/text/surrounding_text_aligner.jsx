@@ -79,33 +79,42 @@ const computeTopOffset = ({ anchorEl, childEl, align }) => {
   const anchorMetrics = measureFontAscDesc("M", anchorStyle);
   const childMetrics = measureFontAscDesc("M", childStyle);
   const verticalAlign = anchorStyle.verticalAlign;
-  const [anchorAscent, anchorDescent] = anchorMetrics;
-  const [childAscent, childDescent] = childMetrics;
-  const anchorH = anchorAscent + anchorDescent;
-  const childH = childAscent + childDescent;
+  const [anchorABA, anchorABD, anchorFBBA, anchorFBBD] = anchorMetrics;
+  const [childABA, childABD, childFBBA, childFBBD] = childMetrics;
+  const anchorActH = anchorABA + anchorABD;
+  const childActH = childABA + childABD;
 
-  // After browser layout, compute the difference between anchor top and child top.
-  // This depends on which vertical-align the browser applied to both elements.
-  // (y axis: positive = downward, baseline = 0)
-  //   baseline: anchor top = -anchorAscent, child top = -childAscent
-  //   middle:   both midpoints at same midline M → deltaTop = (childH - anchorH) / 2
-  //   top:      both tops at same line top       → deltaTop = 0
-  //   bottom:   both bottoms at same line bottom  → deltaTop = childH - anchorH
+  // Compute deltaTop = how far the child ink midpoint is below the anchor ink midpoint
+  // after browser layout (positive = child mid is lower on screen).
+  //
+  // The browser positions elements using fontBoundingBox metrics (the full font cell),
+  // not actualBoundingBox (ink bounds). We use FBBA/FBBD for deltaTop so our model
+  // matches what the browser actually does, then use actual ink metrics for centering.
+  //
+  // Derivation for each vertical-align (ink mid from shared reference, then diff):
+  //   baseline → both at shared baseline: ink mids differ by (childABA - anchorABA)
+  //   bottom   → both bottoms at line bottom: ink mid = lineBottom - FBBD - ABA + actH/2
+  //   top      → both tops at line top: ink mid = lineTop + FBBA - ABA + actH/2
+  //   middle   → both mids at ~x-height/2: ink mid ≈ (FBBA+FBBD)/2 - ABA + actH/2 from baseline
   let deltaTop = 0;
   if (verticalAlign === "baseline" || verticalAlign === "") {
-    deltaTop = childAscent - anchorAscent;
+    deltaTop = childABA - anchorABA;
   } else if (verticalAlign === "middle") {
-    deltaTop = (childH - anchorH) / 2;
+    deltaTop =
+      (anchorFBBA + anchorFBBD) / 2 -
+      (childFBBA + childFBBD) / 2 +
+      childABA -
+      anchorABA;
   } else if (verticalAlign === "top" || verticalAlign === "text-top") {
-    deltaTop = 0;
+    deltaTop = anchorFBBA - anchorABA - (childFBBA - childABA);
   } else if (verticalAlign === "bottom" || verticalAlign === "text-bottom") {
-    deltaTop = childH - anchorH;
+    deltaTop = childFBBD + childABA - anchorFBBD - anchorABA;
   }
 
-  // offsetFactor determines where along the anchor's height range we target:
-  //   0   → align tops   (start)
-  //   0.5 → align centers (center)
-  //   1   → align bottoms (end)
+  // offsetFactor determines where along the anchor's actual ink height we target:
+  //   0   → align ink tops   (start)
+  //   0.5 → align ink centers (center)
+  //   1   → align ink bottoms (end)
   let offsetFactor = 0;
   if (align === "center") {
     offsetFactor = 0.5;
@@ -113,7 +122,7 @@ const computeTopOffset = ({ anchorEl, childEl, align }) => {
     offsetFactor = 1;
   }
 
-  return deltaTop + offsetFactor * (anchorH - childH);
+  return deltaTop + offsetFactor * (anchorActH - childActH);
 };
 
 const canvas = document.createElement("canvas");
@@ -121,5 +130,10 @@ const measureFontAscDesc = (text, computedStyle) => {
   const ctx = canvas.getContext("2d");
   ctx.font = `${computedStyle.fontWeight} ${computedStyle.fontSize} ${computedStyle.fontFamily}`;
   const metrics = ctx.measureText(text);
-  return [metrics.actualBoundingBoxAscent, metrics.actualBoundingBoxDescent];
+  return [
+    metrics.actualBoundingBoxAscent,
+    metrics.actualBoundingBoxDescent,
+    metrics.fontBoundingBoxAscent,
+    metrics.fontBoundingBoxDescent,
+  ];
 };
