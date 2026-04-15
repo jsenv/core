@@ -5813,16 +5813,6 @@ const createRouter = (
 
   const match = async (request, fetchSecondArg) => {
     fetchSecondArg.router = router;
-    const wouldHaveMatched = {
-      // in case nothing matches we can produce a response with Allow: GET, POST, PUT for example
-      methodSet: new Set(),
-      requestMediaTypeSet: new Set(),
-      responseMediaTypeSet: new Set(),
-      responseLanguageSet: new Set(),
-      responseVersionSet: new Set(),
-      responseEncodingSet: new Set(),
-      upgrade: false,
-    };
 
     let currentServerPlugin;
     let currentRoutingTiming;
@@ -5897,7 +5887,6 @@ It should be set to one of route.${routePropertyName}: ${availableValues.join(",
           break;
         }
       }
-
       if (!matchesAnAvailableValue) {
         request.logger.warn(
           `The value "${responseHeaderValue}" found in response header ${responseHeaderName} is strange.
@@ -5912,6 +5901,82 @@ It should be should be one of route.${routePropertyName}: ${availableValues.join
       checkResponseContentHeader(route, responseHeaders, "version");
       checkResponseContentHeader(route, responseHeaders, "encoding");
     };
+
+    const resolveResponse = async (fetchReturnValue, { request, route }) => {
+      let status;
+      let statusText;
+      let statusMessage;
+      let headers;
+      let body;
+
+      if (fetchReturnValue instanceof Response) {
+        status = fetchReturnValue.status;
+        statusText = fetchReturnValue.statusText;
+        headers = Object.fromEntries(fetchReturnValue.headers);
+        body = fetchReturnValue.body;
+      } else if (
+        fetchReturnValue !== null &&
+        typeof fetchReturnValue === "object"
+      ) {
+        status = fetchReturnValue.status || 404;
+        statusText = fetchReturnValue.statusText;
+        statusMessage = fetchReturnValue.statusMessage;
+        headers = fetchReturnValue.headers || {};
+        body = fetchReturnValue.body;
+      } else {
+        throw new TypeError(
+          `response must be a Response, or an Object, received ${fetchReturnValue}`,
+        );
+      }
+
+      if (isRedirectStatus(status) && headers["location"]) {
+        const redirectedResponse = await followRedirect(request, status, headers["location"]);
+        onRouteMatch(route);
+        onResponseHeaders(request, route, redirectedResponse.headers || {});
+        return redirectedResponse;
+      }
+
+      onRouteMatch(route);
+      onResponseHeaders(request, route, headers);
+      return { status, statusText, statusMessage, headers, body };
+    };
+
+    const followRedirect = (originalRequest, redirectStatus, location) => {
+      const redirectUrl = new URL(location, originalRequest.url);
+      // Only follow same-origin redirects; external URLs cannot match any route
+      if (redirectUrl.origin !== new URL(originalRequest.url).origin) {
+        return Promise.resolve({
+          status: 404,
+          statusText: "Not Found",
+          statusMessage: `The redirect target "${location}" is external and cannot be resolved internally.`,
+          headers: {},
+        });
+      }
+      const redirectRequest = {
+        ...originalRequest,
+        url: redirectUrl.href,
+        resource: redirectUrl.pathname + redirectUrl.search + redirectUrl.hash,
+        // GET for 301/302/303, preserve method for 307/308
+        method:
+          redirectStatus === 307 || redirectStatus === 308
+            ? originalRequest.method
+            : "GET",
+        params: {},
+      };
+      return matchRoutes(redirectRequest);
+    };
+
+    const matchRoutes = async (request) => {
+      // in case nothing matches we can produce a response with Allow: GET, POST, PUT for example
+      const wouldHaveMatched = {
+        methodSet: new Set(),
+        requestMediaTypeSet: new Set(),
+        responseMediaTypeSet: new Set(),
+        responseLanguageSet: new Set(),
+        responseVersionSet: new Set(),
+        responseEncodingSet: new Set(),
+        upgrade: false,
+      };
 
     for (const route of routeSet) {
       onRouteMatchStart(route);
@@ -6057,31 +6122,7 @@ It should be should be one of route.${routePropertyName}: ${availableValues.join
       if (fetchReturnValue === null || fetchReturnValue === undefined) {
         continue;
       }
-      onRouteMatch(route);
-      if (fetchReturnValue instanceof Response) {
-        const headers = Object.fromEntries(fetchReturnValue.headers);
-        onResponseHeaders(request, route, headers);
-        return {
-          status: fetchReturnValue.status,
-          statusText: fetchReturnValue.statusText,
-          headers,
-          body: fetchReturnValue.body,
-        };
-      }
-      if (fetchReturnValue !== null && typeof fetchReturnValue === "object") {
-        const headers = fetchReturnValue.headers || {};
-        onResponseHeaders(request, route, headers);
-        return {
-          status: fetchReturnValue.status || 404,
-          statusText: fetchReturnValue.statusText,
-          statusMessage: fetchReturnValue.statusMessage,
-          headers,
-          body: fetchReturnValue.body,
-        };
-      }
-      throw new TypeError(
-        `response must be a Response, or an Object, received ${fetchReturnValue}`,
-      );
+      return resolveResponse(fetchReturnValue, { request, route });
     }
     // nothing has matched fully
     // if nothing matches at all we'll send 404
@@ -6118,6 +6159,9 @@ It should be should be one of route.${routePropertyName}: ${availableValues.join
     }
     constructAvailableEndpoints();
     return createRouteNotFoundResponse(request);
+    }; // end matchRoutes
+
+    return matchRoutes(request);
   };
   const inspect = () => {
     // I want all the info I can gather about the routes
@@ -6307,6 +6351,9 @@ const createRoute = ({
   };
   return route;
 };
+
+const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
+const isRedirectStatus = (status) => REDIRECT_STATUSES.has(status);
 
 const isRequestBodyMediaTypeSupported = (request, { acceptedMediaTypes }) => {
   const requestBodyContentType = request.headers["content-type"];

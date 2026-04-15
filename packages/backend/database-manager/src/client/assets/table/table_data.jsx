@@ -31,7 +31,6 @@ import {
   TableCell,
   Tbody,
   Text,
-  TextPlaceholder,
   Thead,
   Tr,
   useAsyncData,
@@ -66,7 +65,7 @@ export const TableData = ({ table }) => {
     rows = Array.from({ length: rowCount }, (_, i) => {
       const row = { id: i };
       for (const column of columns) {
-        row[column.column_name] = <TextPlaceholder loading />;
+        row[column.column_name] = <Text loading />;
       }
       return row;
     });

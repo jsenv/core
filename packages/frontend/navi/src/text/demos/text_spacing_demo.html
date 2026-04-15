@@ -358,6 +358,74 @@
                 </Example>
               ))}
             </Section>
+
+            <Section title="Dynamic children spacing">
+              <p style={{ color: "#666", marginBottom: "12px" }}>
+                When JS expressions are interpolated into text, preact splits
+                the content into multiple children. Auto-spacing checks whether
+                each child is a preact node, a string, or a primitive (number,
+                boolean) to decide whether to inject a space.
+              </p>
+
+              <h3 style={{ fontSize: "0.95rem", marginBottom: "8px" }}>
+                Primitives — no space injected
+              </h3>
+              <Example label="Number in parentheses: Items ({10})">
+                <Text>Items ({10})</Text>
+              </Example>
+              <Example label="Number inline: Page {3} of {20}">
+                <Text>
+                  Page {3} of {20}
+                </Text>
+              </Example>
+              <Example label="Boolean: Debug: {true}">
+                <Text>Debug: {true}</Text>
+              </Example>
+
+              <h3
+                style={{
+                  fontSize: "0.95rem",
+                  marginTop: "20px",
+                  marginBottom: "8px",
+                }}
+              >
+                Strings — space injected only when needed
+              </h3>
+              <Example label="String expression: {'hello'} {'world'}">
+                <Text>
+                  {"hello"} {"world"}
+                </Text>
+              </Example>
+              <Example label="String ending with space: {'hello '} {'world'}">
+                <Text>
+                  {"hello "} {"world"}
+                </Text>
+              </Example>
+
+              <h3
+                style={{
+                  fontSize: "0.95rem",
+                  marginTop: "20px",
+                  marginBottom: "8px",
+                }}
+              >
+                Nodes — space injected (unless marked outside flow)
+              </h3>
+              <Example label="Mixed: label + dynamic count + unit">
+                <Text>
+                  <strong>Files:</strong>
+                  {42}
+                  <span style={{ color: "#888" }}>items</span>
+                </Text>
+              </Example>
+              <Example label="Nested Text with dynamic value">
+                <Text>
+                  <Text bold>Score:</Text>
+                  {98}
+                  <Text color="green">/ 100</Text>
+                </Text>
+              </Example>
+            </Section>
           </div>
         );
       };

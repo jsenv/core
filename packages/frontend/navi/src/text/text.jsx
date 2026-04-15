@@ -11,7 +11,7 @@ import {
 import { withPropsClassName } from "../utils/with_props_class_name.js";
 import { useInitialTextSelection } from "./use_initial_text_selection.jsx";
 
-import.meta.css = /* css */ `
+const css = /* css */ `
   *[data-navi-space] {
     /* user-select: none; */
     padding-left: 0.25em;
@@ -19,11 +19,7 @@ import.meta.css = /* css */ `
 
   .navi_text {
     position: relative;
-    color: inherit;
-
-    &[data-has-absolute-child] {
-      display: inline-block;
-    }
+    border-radius: var(--x-border-radius);
 
     /* There is a chrome specific bug that prevents text-transform: capitalize to be applied in nested DOM structure */
     /* The CSS below ensure capitalize is propagated to the bold clones */
@@ -43,14 +39,20 @@ import.meta.css = /* css */ `
     .navi_text_bold_clone,
     .navi_text_bold_foreground {
       display: inherit;
+      width: inherit;
+      min-width: inherit;
+      height: inherit;
+      min-height: inherit;
       flex-grow: inherit;
       align-items: inherit;
       justify-content: inherit;
+      gap: inherit;
       text-align: inherit;
       border-radius: inherit;
     }
 
     &[data-text-overflow] {
+      min-width: 0;
       flex-wrap: wrap;
       text-overflow: ellipsis;
       overflow: hidden;
@@ -68,9 +70,85 @@ import.meta.css = /* css */ `
         }
       }
     }
+
+    &[data-skeleton] {
+      --x-border-radius: 0.2em;
+
+      /* Children stay in the DOM to preserve natural layout dimensions,
+         but are hidden so only the skeleton is visible. */
+      visibility: hidden;
+
+      /* When there are no children a placeholder "W" is injected (see JSX).
+         It must stretch to the full available width so the skeleton
+         fills the container rather than collapsing to a single character. */
+      .navi_text_skeleton_children_placeholder {
+        display: inline-flex;
+        width: 100%;
+      }
+
+      /* Three-level structure to respect padding AND border-radius:
+
+         1. navi_text_skeleton_container — absolutely fills the border box
+            (inset:0), then applies padding:inherit so its content box equals
+            the parent's content box. line-height:normal prevents the container
+            from inheriting a large line-height that would make it taller than
+            the border box. border-radius:inherit passes the radius down.
+            visibility:visible overrides the parent's visibility:hidden.
+
+         2. navi_text_skeleton_inset — a relative block that fills 100% of the
+            container's content box (= parent's content box). It is the
+            positioned ancestor for the absolutely placed skeleton bar.
+            border-radius:inherit chains the radius further down.
+
+         3. navi_text_skeleton — the visible gradient bar. position:absolute
+            inset:0 fills the inset box precisely. border-radius:inherit
+            finally applies the radius at this level, which is now correctly
+            sized to the content area. */
+      .navi_text_skeleton_container {
+        position: absolute;
+        inset: 0;
+        padding: inherit;
+        line-height: normal;
+        border-radius: inherit;
+        visibility: visible;
+      }
+
+      .navi_text_skeleton_inset {
+        position: relative;
+        display: inline-flex;
+        width: 100%;
+        height: 100%;
+        border-radius: inherit;
+      }
+
+      .navi_text_skeleton {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+          90deg,
+          #e0e0e0 25%,
+          #f0f0f0 50%,
+          #e0e0e0 75%
+        );
+        background-size: 200% 100%;
+        border-radius: inherit;
+      }
+
+      &[data-loading] {
+        .navi_text_skeleton {
+          animation: navi_text_skeleton_shimmer 1.5s infinite;
+        }
+      }
+    }
   }
 
-  .navi_custom_space {
+  @keyframes navi_text_skeleton_shimmer {
+    0% {
+      background-position: 200% 0;
+    }
+    100% {
+      background-position: -200% 0;
+    }
   }
 
   .navi_text_bold_wrapper {
@@ -178,10 +256,7 @@ export const applySpacingOnTextChildren = (
     }
     const currentChild = childArray[i - 1];
     const nextChild = childArray[i];
-    if (!shouldInjectSpacingAfter(currentChild)) {
-      continue;
-    }
-    if (!shouldInjectSpacingBefore(nextChild)) {
+    if (!shouldInjectSpacingBetween(currentChild, nextChild)) {
       continue;
     }
     childrenWithGap.push(separator);
@@ -196,29 +271,33 @@ const isMarkedAsOutsideTextFlow = (jsxElement) => {
   return outsideTextFlowSet.has(jsxElement.type);
 };
 
-const shouldInjectSpacingAfter = (jsxChild) => {
-  if (typeof jsxChild === "string") {
-    if (/\s$/.test(jsxChild)) {
-      return false;
-    }
-  }
-  if (isMarkedAsOutsideTextFlow(jsxChild)) {
-    // we can mark jsx element as "outsideFlow" to avoid spacing injection between it and surrounding text
-    return false;
-  }
-  return true;
+const isPreactNode = (jsxChild) => {
+  return (
+    jsxChild !== null &&
+    typeof jsxChild === "object" &&
+    jsxChild.type !== undefined
+  );
 };
-const shouldInjectSpacingBefore = (jsxChild) => {
-  if (typeof jsxChild === "string") {
-    if (/^\s/.test(jsxChild)) {
-      return false;
-    }
-  }
-  if (isMarkedAsOutsideTextFlow(jsxChild)) {
-    // we can mark jsx element as "outsideFlow" to avoid spacing injection between it and surrounding text
+const shouldInjectSpacingBetween = (left, right) => {
+  const leftIsNode = isPreactNode(left);
+  const rightIsNode = isPreactNode(right);
+  // only inject spacing when at least one side is a preact node
+  if (!leftIsNode && !rightIsNode) {
     return false;
   }
-  if (jsxChild && jsxChild.props && jsxChild.props.overflowPinned) {
+  if (leftIsNode && isMarkedAsOutsideTextFlow(left)) {
+    return false;
+  }
+  if (rightIsNode && isMarkedAsOutsideTextFlow(right)) {
+    return false;
+  }
+  if (rightIsNode && right.props && right.props.overflowPinned) {
+    return false;
+  }
+  if (typeof left === "string" && /\s$/.test(left)) {
+    return false;
+  }
+  if (typeof right === "string" && /^\s/.test(right)) {
     return false;
   }
   return true;
@@ -226,9 +305,13 @@ const shouldInjectSpacingBefore = (jsxChild) => {
 
 const OverflowPinnedElementContext = createContext(null);
 export const Text = (props) => {
-  const { overflowEllipsis, ...rest } = props;
-  if (overflowEllipsis) {
-    return <TextOverflow {...rest} />;
+  import.meta.css = css;
+
+  if (props.loading || props.skeleton) {
+    return <TextSkeleton {...props} />;
+  }
+  if (props.overflowEllipsis) {
+    return <TextOverflow {...props} />;
   }
   if (props.overflowPinned) {
     return <TextOverflowPinned {...props} />;
@@ -239,6 +322,42 @@ export const Text = (props) => {
   return <TextBasic {...props} />;
 };
 
+const TextSkeleton = ({ loading, children, ...props }) => {
+  // Three-level structure — see CSS comment on [data-skeleton] for details.
+  const skeletonOverlay = (
+    <span className="navi_text_skeleton_container" aria-hidden="true">
+      <span className="navi_text_skeleton_inset">
+        <span className="navi_text_skeleton" />
+      </span>
+    </span>
+  );
+  // When there are no children, inject a full-width placeholder so the element
+  // has measurable height driven by the current font-size/line-height, and the
+  // skeleton fills the available width instead of shrinking to a single char.
+  const hasChildren =
+    children !== null && children !== undefined && children !== false;
+  const innerChildren = hasChildren ? (
+    children
+  ) : (
+    <span
+      className="navi_text_skeleton_children_placeholder"
+      aria-hidden="true"
+    >
+      W
+    </span>
+  );
+  return (
+    <Text
+      data-skeleton=""
+      data-loading={loading ? "" : undefined}
+      {...props}
+      skeleton={undefined}
+      childrenOutsideFlow={skeletonOverlay}
+    >
+      {innerChildren}
+    </Text>
+  );
+};
 const TextOverflow = ({ noWrap, spacing, children, ...rest }) => {
   const [OverflowPinnedElement, setOverflowPinnedElement] = useState(null);
 
@@ -252,7 +371,8 @@ const TextOverflow = ({ noWrap, spacing, children, ...rest }) => {
       // For paragraph we prefer to keep lines and only hide unbreakable long sections
       preLine={rest.as === "p"}
       {...rest}
-      data-text-overflow
+      overflowEllipsis={undefined}
+      data-text-overflow=""
       spacing="pre"
     >
       <span className="navi_text_overflow_wrapper">
@@ -315,12 +435,7 @@ const TextBasic = ({
   if (boldStable) {
     const { bold } = boxProps;
     return (
-      <Box
-        {...boxProps}
-        bold={undefined}
-        data-bold={bold ? "" : undefined}
-        data-has-absolute-child=""
-      >
+      <Box {...boxProps} bold={undefined} data-bold={bold ? "" : undefined}>
         <span className="navi_text_bold_background" aria-hidden="true">
           {children}
         </span>
@@ -335,7 +450,7 @@ const TextBasic = ({
     // La technique consiste a avoid un double gras qui force une taille
     // et la version light par dessus en position absolute
     // on la centre aussi pour donner l'impression que le gras s'applique depuis le centre
-    // ne fonctionne que sur une seul ligne de texte (donc lorsque noWrap est actif)
+    // ne fonctionne que sur une seule ligne de texte (donc lorsque noWrap est actif)
     // on pourrait auto-active cela sur une prop genre boldCanChange
     return (
       <Box {...boxProps}>

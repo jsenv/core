@@ -2227,6 +2227,9 @@ const normalizeStyle = (
   if (propertyName === "lineHeight") {
     if (context === "js") {
       if (typeof value === "string") {
+        if (isCSSFunction(value)) {
+          return value;
+        }
         const unit = getUnit(value);
         if (unit === "px") {
           const float = parseFloat(value);
@@ -2271,6 +2274,9 @@ const normalizeStyle = (
   }
 
   if (colorPropertySet.has(propertyName)) {
+    if (typeof value === "string" && isCSSFunction(value)) {
+      return value;
+    }
     const rgba = parseCSSColor(value, element);
     if (context === "js") {
       return rgba;
@@ -2287,8 +2293,15 @@ const stringifyStyle = (value, propertyName, element) => {
   return normalizeStyle(value, propertyName, "css", element);
 };
 
+const isCSSFunction = (value) => {
+  return /^[a-z-]+\(/.test(value);
+};
 const normalizeNumber = (value, { unit, propertyName, preferedType }) => {
   if (typeof value === "string") {
+    // CSS variables and CSS functions like calc() must be passed through as-is
+    if (isCSSFunction(value)) {
+      return value;
+    }
     // Keep strings as-is (including %, em, rem, auto, none, etc.)
     if (preferedType === "string") {
       if (unit && isUnitless(value) && !unitlessKeywordSet.has(value)) {

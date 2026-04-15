@@ -37,7 +37,7 @@ import {
   tablenameSignal,
 } from "./table/table_state.js";
 
-setBaseUrl(window.DB_MANAGER_CONFIG.pathname);
+setBaseUrl(`${window.DB_MANAGER_CONFIG.pathname}/`);
 
 export const rolnameSignal = stateSignal(null);
 export const datnameSignal = stateSignal(null);

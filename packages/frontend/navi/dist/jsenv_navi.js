@@ -6302,6 +6302,9 @@ const DIMENSION_PROPS = {
       boxFlow === "flex-x" || boxFlow === "inline-flex-x";
     if (selfHorizontalFlexFlow || inHorizontalFlexFlow) {
       if (!inHorizontalFlexFlow) {
+        if (parentBoxFlow === "flex-y" || parentBoxFlow === "inline-flex-y") {
+          return { minWidth: "100%", width: "auto" };
+        }
         return {
           flexGrow: 1,
           flexBasis: "0%",
@@ -6322,10 +6325,15 @@ const DIMENSION_PROPS = {
     }
     const inVerticalFlexFlow =
       parentBoxFlow === "flex-y" || parentBoxFlow === "inline-flex-y";
+    const inHorizontalFlexFlow =
+      parentBoxFlow === "flex-x" || parentBoxFlow === "inline-flex-x";
     const selfVerticalFlexFlow =
       boxFlow === "flex-y" || boxFlow === "inline-flex-y";
     if (selfVerticalFlexFlow || inVerticalFlexFlow) {
       if (!inVerticalFlexFlow) {
+        if (inHorizontalFlexFlow) {
+          return { alignSelf: "stretch" };
+        }
         return {
           flexGrow: 1,
           flexBasis: "0%",
@@ -6335,8 +6343,8 @@ const DIMENSION_PROPS = {
       }
       return { flexGrow: 1, flexBasis: "0%" }; // Grow vertically in row
     }
-    if (parentBoxFlow === "flex-x") {
-      return { minHeight: "100%", height: "auto" }; // Take full height in column
+    if (inHorizontalFlexFlow) {
+      return { alignSelf: "stretch" }; // Stretch to cross-axis height in flex-x
     }
     return { minHeight: "100%", height: "auto" }; // Take full height outside flex
   },
@@ -9309,7 +9317,7 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
   /**
    * Helper: Check if a literal value can be reached through available parameters
    */
-  const canReachLiteralValue = (literalValue, params) => {
+  const canReachLiteralValue = (literalValue, params, literalPosition) => {
     // Check parent's own parameters (signals and user params)
     const parentCanProvide = connections.some((conn) => {
       const signalValue = conn.signal.value;
@@ -9319,31 +9327,31 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
         effectiveValue === literalValue && conn.isCustomValue(effectiveValue)
       );
     });
+    if (parentCanProvide) {
+      return true;
+    }
 
     // Check user-provided parameters
     const userCanProvide = Object.entries(params).some(
       ([, value]) => value === literalValue,
     );
+    if (userCanProvide) {
+      return true;
+    }
 
-    // Check if any descendant signal can provide this literal
-    // (ancestor signals are excluded since they operate on different path positions
-    // that the current pattern has already "passed")
-    const getDescendantSignals = (pattern) => {
-      const signals = [...pattern.connections];
-      for (const child of pattern.children) {
-        signals.push(...getDescendantSignals(child));
-      }
-      return signals;
-    };
-
-    const descendantSignals = getDescendantSignals(patternObject);
-
-    const systemCanProvide = descendantSignals.some((conn) => {
+    // Check if any descendant path signal provides this literal value AT THE SAME position.
+    // A signal from /map/isochrone/:tab can provide a literal at position 2 (tab position),
+    // but NOT a literal at position 1 (panel position) — even if the signal value matches.
+    // descendantPathSignals is a Map<segmentIndex, conn[]> precomputed during setupPatterns.
+    const connsAtPosition =
+      patternObject.descendantPathSignals.get(literalPosition);
+    if (!connsAtPosition) {
+      return false;
+    }
+    return connsAtPosition.some((conn) => {
       const signalValue = conn.signal.value;
       return signalValue === literalValue && conn.isCustomValue(signalValue);
     });
-
-    return parentCanProvide || userCanProvide || systemCanProvide;
   };
   const checkChildRouteCompatibility = (childPatternObj, params) => {
     const childParams = {};
@@ -9413,7 +9421,7 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
       }
       // Parent doesn't have a segment at this position - child extends beyond parent
       // Check if any available parameter can produce this literal value
-      else if (!canReachLiteralValue(literalValue, params)) {
+      else if (!canReachLiteralValue(literalValue, params, childPosition)) {
         if (DEBUG$2) {
           console.debug(
             `[${pattern}] INCOMPATIBLE with ${childPatternObj.originalPattern}: cannot reach literal segment "${literalValue}" at position ${childPosition} - no viable parameter path`,
@@ -11039,6 +11047,7 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
     children: [],
     parent: null,
     depth: 0, // Will be calculated after relationships are built
+    descendantPathSignals: new Map(), // Precomputed during setupPatterns (Map<segmentIndex, conn[]>)
 
     // Pattern methods (formerly patternObj methods)
     originalPattern: pattern,
@@ -12132,7 +12141,35 @@ const setupRoutePatterns = (routePatterns) => {
       );
     }
   }
-  // Phase 5: Calculate depths for all patterns
+  // Phase 5: Precompute descendant path signals for each pattern (used by canReachLiteralValue)
+  // Stored as a Map<segmentIndex, conn[]> for O(1) lookup by position.
+  for (const routePattern of routePatternSet) {
+    const descendantPathSignalsByIndex = new Map();
+    const collectDescendantPathSignals = (patternObj) => {
+      for (const conn of patternObj.connections) {
+        if (conn.paramType === "path") {
+          const paramSegment = patternObj.pattern.segments.find(
+            (seg) => seg.type === "param" && seg.name === conn.paramName,
+          );
+          if (paramSegment) {
+            const { index } = paramSegment;
+            let conns = descendantPathSignalsByIndex.get(index);
+            if (!conns) {
+              conns = [];
+              descendantPathSignalsByIndex.set(index, conns);
+            }
+            conns.push(conn);
+          }
+        }
+      }
+      for (const child of patternObj.children) {
+        collectDescendantPathSignals(child);
+      }
+    };
+    collectDescendantPathSignals(routePattern);
+    routePattern.descendantPathSignals = descendantPathSignalsByIndex;
+  }
+  // Phase 6: Calculate depths for all patterns
   for (const routePattern of routePatternSet) {
     calculatePatternDepth(routePattern);
   }
@@ -12352,10 +12389,23 @@ const route = (pattern, { searchParams } = {}) => {
 
       // If we found a more specific route, delegate to it; otherwise handle it ourselves
       if (!isMostSpecificRoute) {
-        // Check if this is a signal-originated call and there's a more specific route that will also handle it
-        // If so, skip the redirect to avoid duplicate navTo calls
+        // For signal-originated calls, only skip delegation if the more specific route
+        // has its own signal connection for the same params — meaning its own effect will
+        // fire and handle the redirect. If it doesn't have the connection, the signal
+        // change would be silently dropped, so we must delegate anyway.
         if (isSignalChange) {
-          return null;
+          const mostSpecificRoutePrivateProperties =
+            getRoutePrivateProperties(mostSpecificRoute);
+          const { pathConnectionMap, queryConnectionMap } =
+            mostSpecificRoutePrivateProperties.routePattern;
+          const willHandleItself = Object.keys(newParams).every(
+            (paramName) =>
+              pathConnectionMap.has(paramName) ||
+              queryConnectionMap.has(paramName),
+          );
+          if (willHandleItself) {
+            return null;
+          }
         }
         return mostSpecificRoute.redirectTo(newParams, {
           callReason: `replaceParams delegation from ${route} to ${mostSpecificRoute} (original reason: ${callReason})`,
@@ -18784,7 +18834,7 @@ const selectByTextStrings = (element, range, startText, endText) => {
 };
 
 installImportMetaCssBuild(import.meta);/* eslint-disable jsenv/no-unknown-params */
-import.meta.css = [/* css */`
+const css$3 = /* css */`
   *[data-navi-space] {
     /* user-select: none; */
     padding-left: 0.25em;
@@ -18792,11 +18842,7 @@ import.meta.css = [/* css */`
 
   .navi_text {
     position: relative;
-    color: inherit;
-
-    &[data-has-absolute-child] {
-      display: inline-block;
-    }
+    border-radius: var(--x-border-radius);
 
     /* There is a chrome specific bug that prevents text-transform: capitalize to be applied in nested DOM structure */
     /* The CSS below ensure capitalize is propagated to the bold clones */
@@ -18816,14 +18862,20 @@ import.meta.css = [/* css */`
     .navi_text_bold_clone,
     .navi_text_bold_foreground {
       display: inherit;
+      width: inherit;
+      min-width: inherit;
+      height: inherit;
+      min-height: inherit;
       flex-grow: inherit;
       align-items: inherit;
       justify-content: inherit;
+      gap: inherit;
       text-align: inherit;
       border-radius: inherit;
     }
 
     &[data-text-overflow] {
+      min-width: 0;
       flex-wrap: wrap;
       text-overflow: ellipsis;
       overflow: hidden;
@@ -18841,9 +18893,85 @@ import.meta.css = [/* css */`
         }
       }
     }
+
+    &[data-skeleton] {
+      --x-border-radius: 0.2em;
+
+      /* Children stay in the DOM to preserve natural layout dimensions,
+         but are hidden so only the skeleton is visible. */
+      visibility: hidden;
+
+      /* When there are no children a placeholder "W" is injected (see JSX).
+         It must stretch to the full available width so the skeleton
+         fills the container rather than collapsing to a single character. */
+      .navi_text_skeleton_children_placeholder {
+        display: inline-flex;
+        width: 100%;
+      }
+
+      /* Three-level structure to respect padding AND border-radius:
+
+         1. navi_text_skeleton_container — absolutely fills the border box
+            (inset:0), then applies padding:inherit so its content box equals
+            the parent's content box. line-height:normal prevents the container
+            from inheriting a large line-height that would make it taller than
+            the border box. border-radius:inherit passes the radius down.
+            visibility:visible overrides the parent's visibility:hidden.
+
+         2. navi_text_skeleton_inset — a relative block that fills 100% of the
+            container's content box (= parent's content box). It is the
+            positioned ancestor for the absolutely placed skeleton bar.
+            border-radius:inherit chains the radius further down.
+
+         3. navi_text_skeleton — the visible gradient bar. position:absolute
+            inset:0 fills the inset box precisely. border-radius:inherit
+            finally applies the radius at this level, which is now correctly
+            sized to the content area. */
+      .navi_text_skeleton_container {
+        position: absolute;
+        inset: 0;
+        padding: inherit;
+        line-height: normal;
+        border-radius: inherit;
+        visibility: visible;
+      }
+
+      .navi_text_skeleton_inset {
+        position: relative;
+        display: inline-flex;
+        width: 100%;
+        height: 100%;
+        border-radius: inherit;
+      }
+
+      .navi_text_skeleton {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+          90deg,
+          #e0e0e0 25%,
+          #f0f0f0 50%,
+          #e0e0e0 75%
+        );
+        background-size: 200% 100%;
+        border-radius: inherit;
+      }
+
+      &[data-loading] {
+        .navi_text_skeleton {
+          animation: navi_text_skeleton_shimmer 1.5s infinite;
+        }
+      }
+    }
   }
 
-  .navi_custom_space {
+  @keyframes navi_text_skeleton_shimmer {
+    0% {
+      background-position: 200% 0;
+    }
+    100% {
+      background-position: -200% 0;
+    }
   }
 
   .navi_text_bold_wrapper {
@@ -18893,7 +19021,7 @@ import.meta.css = [/* css */`
       transition-timing-function: ease;
     }
   }
-`, "@jsenv/navi/src/text/text.jsx"];
+`;
 
 // We could use <span data-navi-space=""> </span>
 // but we prefer to use zero width space as it has the nice side effects of
@@ -18956,10 +19084,7 @@ const applySpacingOnTextChildren = (children, spacing = REGULAR_SPACE) => {
     }
     const currentChild = childArray[i - 1];
     const nextChild = childArray[i];
-    if (!shouldInjectSpacingAfter(currentChild)) {
-      continue;
-    }
-    if (!shouldInjectSpacingBefore(nextChild)) {
+    if (!shouldInjectSpacingBetween(currentChild, nextChild)) {
       continue;
     }
     childrenWithGap.push(separator);
@@ -18973,42 +19098,44 @@ const markAsOutsideTextFlow = jsxElement => {
 const isMarkedAsOutsideTextFlow = jsxElement => {
   return outsideTextFlowSet.has(jsxElement.type);
 };
-const shouldInjectSpacingAfter = jsxChild => {
-  if (typeof jsxChild === "string") {
-    if (/\s$/.test(jsxChild)) {
-      return false;
-    }
-  }
-  if (isMarkedAsOutsideTextFlow(jsxChild)) {
-    // we can mark jsx element as "outsideFlow" to avoid spacing injection between it and surrounding text
-    return false;
-  }
-  return true;
+const isPreactNode = jsxChild => {
+  return jsxChild !== null && typeof jsxChild === "object" && jsxChild.type !== undefined;
 };
-const shouldInjectSpacingBefore = jsxChild => {
-  if (typeof jsxChild === "string") {
-    if (/^\s/.test(jsxChild)) {
-      return false;
-    }
-  }
-  if (isMarkedAsOutsideTextFlow(jsxChild)) {
-    // we can mark jsx element as "outsideFlow" to avoid spacing injection between it and surrounding text
+const shouldInjectSpacingBetween = (left, right) => {
+  const leftIsNode = isPreactNode(left);
+  const rightIsNode = isPreactNode(right);
+  // only inject spacing when at least one side is a preact node
+  if (!leftIsNode && !rightIsNode) {
     return false;
   }
-  if (jsxChild && jsxChild.props && jsxChild.props.overflowPinned) {
+  if (leftIsNode && isMarkedAsOutsideTextFlow(left)) {
+    return false;
+  }
+  if (rightIsNode && isMarkedAsOutsideTextFlow(right)) {
+    return false;
+  }
+  if (rightIsNode && right.props && right.props.overflowPinned) {
+    return false;
+  }
+  if (typeof left === "string" && /\s$/.test(left)) {
+    return false;
+  }
+  if (typeof right === "string" && /^\s/.test(right)) {
     return false;
   }
   return true;
 };
 const OverflowPinnedElementContext = createContext(null);
 const Text = props => {
-  const {
-    overflowEllipsis,
-    ...rest
-  } = props;
-  if (overflowEllipsis) {
+  import.meta.css = [css$3, "@jsenv/navi/src/text/text.jsx"];
+  if (props.loading || props.skeleton) {
+    return jsx(TextSkeleton, {
+      ...props
+    });
+  }
+  if (props.overflowEllipsis) {
     return jsx(TextOverflow, {
-      ...rest
+      ...props
     });
   }
   if (props.overflowPinned) {
@@ -19023,6 +19150,40 @@ const Text = props => {
   }
   return jsx(TextBasic, {
     ...props
+  });
+};
+const TextSkeleton = ({
+  loading,
+  children,
+  ...props
+}) => {
+  // Three-level structure — see CSS comment on [data-skeleton] for details.
+  const skeletonOverlay = jsx("span", {
+    className: "navi_text_skeleton_container",
+    "aria-hidden": "true",
+    children: jsx("span", {
+      className: "navi_text_skeleton_inset",
+      children: jsx("span", {
+        className: "navi_text_skeleton"
+      })
+    })
+  });
+  // When there are no children, inject a full-width placeholder so the element
+  // has measurable height driven by the current font-size/line-height, and the
+  // skeleton fills the available width instead of shrinking to a single char.
+  const hasChildren = children !== null && children !== undefined && children !== false;
+  const innerChildren = hasChildren ? children : jsx("span", {
+    className: "navi_text_skeleton_children_placeholder",
+    "aria-hidden": "true",
+    children: "W"
+  });
+  return jsx(Text, {
+    "data-skeleton": "",
+    "data-loading": loading ? "" : undefined,
+    ...props,
+    skeleton: undefined,
+    childrenOutsideFlow: skeletonOverlay,
+    children: innerChildren
   });
 };
 const TextOverflow = ({
@@ -19043,7 +19204,8 @@ const TextOverflow = ({
 
     preLine: rest.as === "p",
     ...rest,
-    "data-text-overflow": true,
+    overflowEllipsis: undefined,
+    "data-text-overflow": "",
     spacing: "pre",
     children: jsxs("span", {
       className: "navi_text_overflow_wrapper",
@@ -19121,7 +19283,6 @@ const TextBasic = ({
       ...boxProps,
       bold: undefined,
       "data-bold": bold ? "" : undefined,
-      "data-has-absolute-child": "",
       children: [jsx("span", {
         className: "navi_text_bold_background",
         "aria-hidden": "true",
@@ -19135,7 +19296,7 @@ const TextBasic = ({
     // La technique consiste a avoid un double gras qui force une taille
     // et la version light par dessus en position absolute
     // on la centre aussi pour donner l'impression que le gras s'applique depuis le centre
-    // ne fonctionne que sur une seul ligne de texte (donc lorsque noWrap est actif)
+    // ne fonctionne que sur une seule ligne de texte (donc lorsque noWrap est actif)
     // on pourrait auto-active cela sur une prop genre boldCanChange
     return jsxs(Box, {
       ...boxProps,
@@ -19159,7 +19320,7 @@ const TextBasic = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
+installImportMetaCssBuild(import.meta);const css$2 = /* css */`
   @layer navi {
     /* Ensure data attributes from box.jsx can win to update display */
     .navi_icon {
@@ -19197,7 +19358,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
     cursor: default;
     user-select: none;
   }
-  .navi_icon_foreground {
+  .navi_text.navi_icon_foreground {
     position: absolute;
     inset: 0;
     display: inline-flex;
@@ -19234,7 +19395,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
     width: 100%;
     height: 100%;
   }
-`, "@jsenv/navi/src/graphic/icon.jsx"];
+`;
 const Icon = ({
   href,
   children,
@@ -19247,6 +19408,7 @@ const Icon = ({
   onClick,
   ...props
 }) => {
+  import.meta.css = [css$2, "@jsenv/navi/src/graphic/icon.jsx"];
   const innerChildren = href ? jsx("svg", {
     width: "100%",
     height: "100%",
@@ -21126,9 +21288,12 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
       --button-outline-width: 1px;
       --button-border-width: 1px;
       --button-border-radius: 2px;
-      --button-padding-x: var(--button-padding, 6px);
-      --button-padding-y: var(--button-padding, 1px);
+      /* Global padding defaults — override these to change all button paddings. */
+      /* Use --button-padding, --button-padding-x, --button-padding-y for per-button overrides. */
+      --button-padding-x-default: 6px;
+      --button-padding-y-default: 1px;
       /* default */
+
       --button-outline-color: var(--navi-focus-outline-color);
       --button-loader-color: var(--navi-loader-color);
       --button-border-color: light-dark(#767676, #8e8e93);
@@ -21176,8 +21341,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
   }
 
   .navi_button {
-    /* Internal css vars are the one controlling final values */
-    /* allowing to override them on interactions (like hover, disabled, etc.) */
+    /* Internal vars — prefixed with --x- to signal they are private, do not use from outside */
     --x-button-outline-width: var(--button-outline-width);
     --x-button-border-radius: var(--button-border-radius);
     --x-button-border-width: var(--button-border-width);
@@ -21215,19 +21379,31 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
       height: 100%;
       padding-top: var(
         --button-padding-top,
-        var(--button-padding-y, var(--button-padding, unset))
+        var(
+          --button-padding-y,
+          var(--button-padding, var(--button-padding-y-default))
+        )
       );
       padding-right: var(
         --button-padding-right,
-        var(--button-padding-x, var(--button-padding, unset))
+        var(
+          --button-padding-x,
+          var(--button-padding, var(--button-padding-x-default))
+        )
       );
       padding-bottom: var(
         --button-padding-bottom,
-        var(--button-padding-y, var(--button-padding, unset))
+        var(
+          --button-padding-y,
+          var(--button-padding, var(--button-padding-y-default))
+        )
       );
       padding-left: var(
         --button-padding-left,
-        var(--button-padding-x, var(--button-padding, unset))
+        var(
+          --button-padding-x,
+          var(--button-padding, var(--button-padding-x-default))
+        )
       );
       align-items: inherit;
       justify-content: inherit;
@@ -30093,7 +30269,7 @@ const Address = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
+installImportMetaCssBuild(import.meta);const css$1 = /* css */`
   @layer navi {
   }
   .navi_badge {
@@ -30121,7 +30297,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
       --x-color-contrasting: var(--navi-color-white);
     }
   }
-`, "@jsenv/navi/src/text/badge.jsx"];
+`;
 const BadgeStyleCSSVars$1 = {
   borderWidth: "--border-width",
   borderRadius: "--border-radius",
@@ -30138,6 +30314,7 @@ const Badge = ({
   className,
   ...props
 }) => {
+  import.meta.css = [css$1, "@jsenv/navi/src/text/badge.jsx"];
   const defaultRef = useRef();
   const ref = props.ref || defaultRef;
   useDarkBackgroundAttribute(ref);
@@ -30216,10 +30393,10 @@ const formatNumber = (value, { lang } = {}) => {
   return new Intl.NumberFormat(lang).format(value);
 };
 
-installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
+installImportMetaCssBuild(import.meta);const css = /* css */`
   @layer navi {
   }
-  .navi_badge_count {
+  .navi_text.navi_badge_count {
     --font-size: 0.7em;
     --x-background: var(--background);
     --x-background-color: var(--background-color, var(--x-background));
@@ -30305,7 +30482,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
       }
     }
   }
-`, "@jsenv/navi/src/text/badge_count.jsx"];
+`;
 const BadgeStyleCSSVars = {
   borderWidth: "--border-width",
   borderRadius: "--border-radius",
@@ -30335,6 +30512,7 @@ const BadgeCount = ({
   loading,
   ...props
 }) => {
+  import.meta.css = [css, "@jsenv/navi/src/text/badge_count.jsx"];
   const defaultRef = useRef();
   const ref = props.ref || defaultRef;
   useDarkBackgroundAttribute(ref, [loading]);
@@ -31322,39 +31500,6 @@ const Paragraph = props => {
   });
 };
 
-installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
-  .navi_text_placeholder {
-    display: inline-block;
-    width: 100%;
-    height: 1em;
-    background: linear-gradient(90deg, #e0e0e0 25%, #f0f0f0 50%, #e0e0e0 75%);
-    background-size: 200% 100%;
-    border-radius: 4px;
-
-    &[data-loading] {
-      animation: shimmer 1.2s infinite;
-    }
-  }
-  @keyframes shimmer {
-    0% {
-      background-position: 200% 0;
-    }
-    100% {
-      background-position: -200% 0;
-    }
-  }
-`, "@jsenv/navi/src/text/text_placeholder.jsx"];
-const TextPlaceholder = ({
-  loading,
-  ...props
-}) => {
-  return jsx(Box, {
-    ...props,
-    baseClassName: "navi_text_placeholder",
-    "data-loading": loading ? "" : undefined
-  });
-};
-
 const Image = props => {
   return jsx(Box, {
     ...props,
@@ -31998,5 +32143,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, Box, Button, ButtonCopyToClipboard, Caption, CheckSvg, Checkbox, CheckboxList, Code, Col, Colgroup, ConstructionSvg, Details, DialogLayout, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, Loading, MessageBox, Meter, Nav, Paragraph, Quantity, QuantityIntl, Radio, RadioList, Route, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, SearchSvg, Select, SelectionContext, Separator, SettingsSvg, SidePanel, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextPlaceholder, Thead, Title, Tr, UITransition, UserSvg, ViewportLayout, actionIntegratedVia, actionRunEffect, addCustomMessage, arraySignalMembership, compareTwoJsValues, createAction, createAvailableConstraint, createIntl, createRequestCanceller, createSelectionKeyboardShortcuts, enableDebugActions, enableDebugOnDocumentLoading, filterTableSelection, forwardActionRequested, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, localStorageSignal, navBack, navForward, navTo, openCallout, rawUrlPart, reload, removeCustomMessage, requestAction, rerunActions, resource, route, routeAction, setBaseUrl, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, syncOwnedResourceToSignals, syncResourceToSignals, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutClose, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDarkBackgroundAttribute, useDependenciesDiff, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState$1 as useNavState, useOrderedColumns, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSidePanelClose, useSignalSync, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage };
+export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, Box, Button, ButtonCopyToClipboard, Caption, CheckSvg, Checkbox, CheckboxList, CloseSvg, Code, Col, Colgroup, ConstructionSvg, Details, DialogLayout, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, Loading, MessageBox, Meter, Nav, Paragraph, Quantity, QuantityIntl, Radio, RadioList, Route, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, SearchSvg, Select, SelectionContext, Separator, SettingsSvg, SidePanel, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, Thead, Title, Tr, UITransition, UserSvg, ViewportLayout, actionIntegratedVia, actionRunEffect, addCustomMessage, arraySignalMembership, compareTwoJsValues, createAction, createAvailableConstraint, createIntl, createRequestCanceller, createSelectionKeyboardShortcuts, enableDebugActions, enableDebugOnDocumentLoading, filterTableSelection, forwardActionRequested, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, localStorageSignal, navBack, navForward, navTo, openCallout, rawUrlPart, reload, removeCustomMessage, requestAction, rerunActions, resource, route, routeAction, setBaseUrl, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, syncOwnedResourceToSignals, syncResourceToSignals, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutClose, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDarkBackgroundAttribute, useDependenciesDiff, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState$1 as useNavState, useOrderedColumns, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSidePanelClose, useSignalSync, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage };
 //# sourceMappingURL=jsenv_navi.js.map

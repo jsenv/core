@@ -36,9 +36,12 @@ import.meta.css = /* css */ `
       --button-outline-width: 1px;
       --button-border-width: 1px;
       --button-border-radius: 2px;
-      --button-padding-x: var(--button-padding, 6px);
-      --button-padding-y: var(--button-padding, 1px);
+      /* Global padding defaults — override these to change all button paddings. */
+      /* Use --button-padding, --button-padding-x, --button-padding-y for per-button overrides. */
+      --button-padding-x-default: 6px;
+      --button-padding-y-default: 1px;
       /* default */
+
       --button-outline-color: var(--navi-focus-outline-color);
       --button-loader-color: var(--navi-loader-color);
       --button-border-color: light-dark(#767676, #8e8e93);
@@ -86,8 +89,7 @@ import.meta.css = /* css */ `
   }
 
   .navi_button {
-    /* Internal css vars are the one controlling final values */
-    /* allowing to override them on interactions (like hover, disabled, etc.) */
+    /* Internal vars — prefixed with --x- to signal they are private, do not use from outside */
     --x-button-outline-width: var(--button-outline-width);
     --x-button-border-radius: var(--button-border-radius);
     --x-button-border-width: var(--button-border-width);
@@ -125,19 +127,31 @@ import.meta.css = /* css */ `
       height: 100%;
       padding-top: var(
         --button-padding-top,
-        var(--button-padding-y, var(--button-padding, unset))
+        var(
+          --button-padding-y,
+          var(--button-padding, var(--button-padding-y-default))
+        )
       );
       padding-right: var(
         --button-padding-right,
-        var(--button-padding-x, var(--button-padding, unset))
+        var(
+          --button-padding-x,
+          var(--button-padding, var(--button-padding-x-default))
+        )
       );
       padding-bottom: var(
         --button-padding-bottom,
-        var(--button-padding-y, var(--button-padding, unset))
+        var(
+          --button-padding-y,
+          var(--button-padding, var(--button-padding-y-default))
+        )
       );
       padding-left: var(
         --button-padding-left,
-        var(--button-padding-x, var(--button-padding, unset))
+        var(
+          --button-padding-x,
+          var(--button-padding, var(--button-padding-x-default))
+        )
       );
       align-items: inherit;
       justify-content: inherit;

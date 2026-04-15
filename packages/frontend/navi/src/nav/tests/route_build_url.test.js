@@ -1140,4 +1140,37 @@ await snapshotTests(import.meta.url, ({ test }) => {
       globalSignalRegistry.clear();
     }
   });
+
+  test("repro panel explicitely undefined", () => {
+    const zoneSignal = stateSignal(undefined);
+    const mapPanelSignal = stateSignal(undefined);
+    const HOME_ROUTE = route("/");
+    const MAP_ROUTE = route("/map/", { searchParams: { zone: zoneSignal } });
+    const isochroneTabSignal = stateSignal("compare");
+    const MAP_PANEL_ROUTE = route(`/map/:panel=${mapPanelSignal}/`);
+    const MAP_TRANSIT_ROUTE = route(`/map/transit`);
+    const MAP_FACILITIES_ROUTE = route(`/map/facilities/`);
+    const MAP_ISOCHRONE_ROUTE = route(
+      `/map/isochrone/:tab=${isochroneTabSignal}/`,
+    );
+    const { updateRoutes, clearRoutes } = setupRoutes([
+      HOME_ROUTE,
+      MAP_ROUTE,
+      MAP_PANEL_ROUTE,
+      MAP_TRANSIT_ROUTE,
+      MAP_FACILITIES_ROUTE,
+      MAP_ISOCHRONE_ROUTE,
+    ]);
+    isochroneTabSignal.value = "transit";
+    try {
+      updateRoutes(`${baseUrl}/map/facilities?zone=london`);
+
+      return {
+        map_root_url: MAP_ROUTE.buildUrl({ panel: undefined }),
+      };
+    } finally {
+      clearRoutes();
+      globalSignalRegistry.clear();
+    }
+  });
 });

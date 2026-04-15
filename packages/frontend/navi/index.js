@@ -152,7 +152,6 @@ export { Meter } from "./src/text/meter.jsx";
 export { Paragraph } from "./src/text/paragraph.jsx";
 export { Quantity, QuantityIntl } from "./src/text/quantity.jsx";
 export { Text } from "./src/text/text.jsx";
-export { TextPlaceholder } from "./src/text/text_placeholder.jsx";
 export { Title, useTitleLevel } from "./src/text/title.jsx";
 export { useDarkBackgroundAttribute } from "./src/text/use_dark_background_attribute.js";
 
@@ -179,6 +178,7 @@ export { useKeyboardShortcuts } from "./src/keyboard/keyboard_shortcuts.js";
 
 // More graphic stuff
 export { CheckSvg } from "./src/graphic/icons/check_svg.jsx";
+export { CloseSvg } from "./src/graphic/icons/close_svg.jsx";
 export { ConstructionSvg } from "./src/graphic/icons/construction_svg.jsx";
 export { ExclamationSvg } from "./src/graphic/icons/exclamation_svg.jsx";
 export { EyeClosedSvg } from "./src/graphic/icons/eye_closed_svg.jsx";

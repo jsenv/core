@@ -30,6 +30,7 @@
 - [dynamic default ](26_dynamic_default/26_dynamic_default.md)
 - [url build](27_url_build/27_url_build.md)
 - [an other](28_an_other/28_an_other.md)
+- [repro panel explicitely undefined](29_repro_panel_explicitely_undefined/29_repro_panel_explicitely_undefined.md)
 
 ---
 

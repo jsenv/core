@@ -133,7 +133,7 @@
         Loading,
         ErrorBoundary,
         Button,
-        TextPlaceholder,
+        Text,
       } from "@jsenv/navi";
 
       const delay = (ms) => new Promise((res) => setTimeout(res, ms));
@@ -341,7 +341,7 @@
               {count !== null && count !== undefined ? (
                 count
               ) : (
-                <TextPlaceholder loading width="20" alignY="center" />
+                <Text loading width="20" alignY="center" />
               )}
             </button>
           </div>
@@ -607,8 +607,8 @@
       const UserCardSkeleton = () => {
         return (
           <UserCardFields
-            name={<TextPlaceholder loading width="80" />}
-            email={<TextPlaceholder loading width="140" />}
+            name={<Text loading width="80" />}
+            email={<Text loading width="140" />}
           />
         );
       };

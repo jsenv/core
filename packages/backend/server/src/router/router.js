@@ -28,7 +28,7 @@ const HTTP_METHODS = [
 
 export const createRouter = (
   routeDescriptionArray,
-  { optionsFallback, logLevel } = {},
+  { optionsFallback, logLevel, redirect = "manual" } = {},
 ) => {
   const logger = createLogger({ logLevel });
   const routeSet = new Set();
@@ -177,16 +177,6 @@ export const createRouter = (
 
   const match = async (request, fetchSecondArg) => {
     fetchSecondArg.router = router;
-    const wouldHaveMatched = {
-      // in case nothing matches we can produce a response with Allow: GET, POST, PUT for example
-      methodSet: new Set(),
-      requestMediaTypeSet: new Set(),
-      responseMediaTypeSet: new Set(),
-      responseLanguageSet: new Set(),
-      responseVersionSet: new Set(),
-      responseEncodingSet: new Set(),
-      upgrade: false,
-    };
 
     let currentServerPlugin;
     let currentRoutingTiming;
@@ -261,7 +251,6 @@ It should be set to one of route.${routePropertyName}: ${availableValues.join(",
           break;
         }
       }
-
       if (!matchesAnAvailableValue) {
         request.logger.warn(
           `The value "${responseHeaderValue}" found in response header ${responseHeaderName} is strange.
@@ -277,214 +266,264 @@ It should be should be one of route.${routePropertyName}: ${availableValues.join
       checkResponseContentHeader(route, responseHeaders, "encoding");
     };
 
-    for (const route of routeSet) {
-      onRouteMatchStart(route);
-      const resourceMatchResult = route.matchResource(request.resource);
-      if (!resourceMatchResult) {
-        continue;
-      }
-      if (!route.matchMethod(request.method)) {
-        if (!route.isFallback) {
-          wouldHaveMatched.methodSet.add(route.method);
-        }
-        continue;
-      }
-      if (
-        request.method === "POST" ||
-        request.method === "PATCH" ||
-        request.method === "PUT"
-      ) {
-        const { acceptedMediaTypes } = route;
-        if (
-          acceptedMediaTypes.length &&
-          !isRequestBodyMediaTypeSupported(request, { acceptedMediaTypes })
-        ) {
-          for (const acceptedMediaType of acceptedMediaTypes) {
-            wouldHaveMatched.requestMediaTypeSet.add(acceptedMediaType);
-          }
-          continue;
-        }
-      }
-      const headersMatchResult = route.matchHeaders(request.headers);
-      if (!headersMatchResult) {
-        continue;
-      }
-      if (route.isForWebSocket && request.headers["upgrade"] !== "websocket") {
-        wouldHaveMatched.upgrade = true;
-        continue;
-      }
-      // now we are "good", let's try to generate a response
-      const contentNegotiationResult = {};
-      content_negotiation: {
-        // when content nego fails
-        // we will check the remaining accept headers to properly inform client of all the things are failing
-        // Example:
-        // client says "I want text in french"
-        // but server only provide json in english
-        // we want to tell client both text and french are not available
-        let hasFailed = false;
-        const { availableMediaTypes } = route;
-        if (availableMediaTypes.length) {
-          fetchSecondArg.injectResponseHeader("vary", "accept");
-          if (request.headers["accept"]) {
-            const mediaTypeNegotiated = pickContentType(
-              request,
-              availableMediaTypes,
-            );
-            if (!mediaTypeNegotiated) {
-              for (const availableMediaType of availableMediaTypes) {
-                wouldHaveMatched.responseMediaTypeSet.add(availableMediaType);
-              }
-              hasFailed = true;
-            }
-            contentNegotiationResult.mediaType = mediaTypeNegotiated;
-          } else {
-            contentNegotiationResult.mediaType = availableMediaTypes[0];
-          }
-        }
-        const { availableLanguages } = route;
-        if (availableLanguages.length) {
-          fetchSecondArg.injectResponseHeader("vary", "accept-language");
-          if (request.headers["accept-language"]) {
-            const languageNegotiated = pickContentLanguage(
-              request,
-              availableLanguages,
-            );
-            if (!languageNegotiated) {
-              for (const availableLanguage of availableLanguages) {
-                wouldHaveMatched.responseLanguageSet.add(availableLanguage);
-              }
-              hasFailed = true;
-            }
-            contentNegotiationResult.language = languageNegotiated;
-          } else {
-            contentNegotiationResult.language = availableLanguages[0];
-          }
-        }
-        const { availableVersions } = route;
-        if (availableVersions.length) {
-          fetchSecondArg.injectResponseHeader("vary", "accept-version");
-          if (request.headers["accept-version"]) {
-            const versionNegotiated = pickContentVersion(
-              request,
-              availableVersions,
-            );
-            if (!versionNegotiated) {
-              for (const availableVersion of availableVersions) {
-                wouldHaveMatched.responseVersionSet.add(availableVersion);
-              }
-              hasFailed = true;
-            }
-            contentNegotiationResult.version = versionNegotiated;
-          } else {
-            contentNegotiationResult.version = availableVersions[0];
-          }
-        }
-        const { availableEncodings } = route;
-        if (availableEncodings.length) {
-          fetchSecondArg.injectResponseHeader("vary", "accept-encoding");
-          if (request.headers["accept-encoding"]) {
-            const encodingNegotiated = pickContentEncoding(
-              request,
-              availableEncodings,
-            );
-            if (!encodingNegotiated) {
-              for (const availableEncoding of availableEncodings) {
-                wouldHaveMatched.responseEncodingSet.add(availableEncoding);
-              }
-              hasFailed = true;
-            }
-            contentNegotiationResult.encoding = encodingNegotiated;
-          } else {
-            contentNegotiationResult.encoding = availableEncodings[0];
-          }
-        }
-        if (hasFailed) {
-          continue;
-        }
-      }
-      const { named, stars = [] } = PATTERN.composeTwoMatchResults(
-        resourceMatchResult,
-        headersMatchResult,
-      );
-      Object.assign(request.params, named, stars);
-      fetchSecondArg.contentNegotiation = contentNegotiationResult;
-      let fetchReturnValue = route.fetch(request, fetchSecondArg);
-      if (
-        fetchReturnValue !== null &&
-        typeof fetchReturnValue === "object" &&
-        typeof fetchReturnValue.then === "function"
-      ) {
-        fetchReturnValue = await fetchReturnValue;
-      }
-      // route decided not to handle in the end
-      if (fetchReturnValue === null || fetchReturnValue === undefined) {
-        continue;
-      }
-      onRouteMatch(route);
+    const resolveResponse = async (fetchReturnValue, { request, route }) => {
+      let status;
+      let statusText;
+      let statusMessage;
+      let headers;
+      let body;
+
       if (fetchReturnValue instanceof Response) {
-        const headers = Object.fromEntries(fetchReturnValue.headers);
-        onResponseHeaders(request, route, headers);
-        return {
-          status: fetchReturnValue.status,
-          statusText: fetchReturnValue.statusText,
-          headers,
-          body: fetchReturnValue.body,
-        };
+        status = fetchReturnValue.status;
+        statusText = fetchReturnValue.statusText;
+        headers = Object.fromEntries(fetchReturnValue.headers);
+        body = fetchReturnValue.body;
+      } else if (
+        fetchReturnValue !== null &&
+        typeof fetchReturnValue === "object"
+      ) {
+        status = fetchReturnValue.status || 404;
+        statusText = fetchReturnValue.statusText;
+        statusMessage = fetchReturnValue.statusMessage;
+        headers = fetchReturnValue.headers || {};
+        body = fetchReturnValue.body;
+      } else {
+        throw new TypeError(
+          `response must be a Response, or an Object, received ${fetchReturnValue}`,
+        );
       }
-      if (fetchReturnValue !== null && typeof fetchReturnValue === "object") {
-        const headers = fetchReturnValue.headers || {};
-        onResponseHeaders(request, route, headers);
-        return {
-          status: fetchReturnValue.status || 404,
-          statusText: fetchReturnValue.statusText,
-          statusMessage: fetchReturnValue.statusMessage,
-          headers,
-          body: fetchReturnValue.body,
-        };
+
+      if (
+        redirect === "follow" &&
+        isRedirectStatus(status) &&
+        headers["location"]
+      ) {
+        const redirectUrl = new URL(headers["location"], request.url);
+        if (redirectUrl.origin === new URL(request.url).origin) {
+          const redirectRequest = {
+            ...request,
+            url: redirectUrl.href,
+            resource:
+              redirectUrl.pathname + redirectUrl.search + redirectUrl.hash,
+            // GET for 301/302/303, preserve method for 307/308
+            method: status === 307 || status === 308 ? request.method : "GET",
+            params: {},
+          };
+          const redirectedResponse = await matchRoutes(redirectRequest);
+          onRouteMatch(route);
+          onResponseHeaders(request, route, redirectedResponse.headers || {});
+          return redirectedResponse;
+        }
+        // redirect to other origins are left to the client to handle
       }
-      throw new TypeError(
-        `response must be a Response, or an Object, received ${fetchReturnValue}`,
-      );
-    }
-    // nothing has matched fully
-    // if nothing matches at all we'll send 404
-    // but if url matched but METHOD was not supported we send 405
-    if (wouldHaveMatched.methodSet.size) {
-      return createMethodNotAllowedResponse(request, {
-        allowedMethods: [...wouldHaveMatched.methodSet],
-      });
-    }
-    if (wouldHaveMatched.requestMediaTypeSet.size) {
-      return createUnsupportedMediaTypeResponse(request, {
-        acceptedMediaTypes: [...wouldHaveMatched.requestMediaTypeSet],
-      });
-    }
-    if (
-      wouldHaveMatched.responseMediaTypeSet.size ||
-      wouldHaveMatched.responseLanguageSet.size ||
-      wouldHaveMatched.responseVersionSet.size ||
-      wouldHaveMatched.responseEncodingSet.size
-    ) {
-      return createNotAcceptableResponse(request, {
-        availableMediaTypes: [...wouldHaveMatched.responseMediaTypeSet],
-        availableLanguages: [...wouldHaveMatched.responseLanguageSet],
-        availableVersions: [...wouldHaveMatched.responseVersionSet],
-        availableEncodings: [...wouldHaveMatched.responseEncodingSet],
-      });
-    }
-    if (wouldHaveMatched.upgrade) {
-      return {
-        status: 426,
-        statusText: "Upgrade Required",
-        statusMessage: `The request requires the upgrade to a webSocket connection`,
+
+      onRouteMatch(route);
+      onResponseHeaders(request, route, headers);
+      return { status, statusText, statusMessage, headers, body };
+    };
+
+    const matchRoutes = async (request) => {
+      // in case nothing matches we can produce a response with Allow: GET, POST, PUT for example
+      const wouldHaveMatched = {
+        methodSet: new Set(),
+        requestMediaTypeSet: new Set(),
+        responseMediaTypeSet: new Set(),
+        responseLanguageSet: new Set(),
+        responseVersionSet: new Set(),
+        responseEncodingSet: new Set(),
+        upgrade: false,
       };
-    }
-    const availableEndpoints = constructAvailableEndpoints(
-      request,
-      fetchSecondArg,
-    );
-    return createRouteNotFoundResponse(request, { availableEndpoints });
+
+      for (const route of routeSet) {
+        onRouteMatchStart(route);
+        const resourceMatchResult = route.matchResource(request.resource);
+        if (!resourceMatchResult) {
+          continue;
+        }
+        if (!route.matchMethod(request.method)) {
+          if (!route.isFallback) {
+            wouldHaveMatched.methodSet.add(route.method);
+          }
+          continue;
+        }
+        if (
+          request.method === "POST" ||
+          request.method === "PATCH" ||
+          request.method === "PUT"
+        ) {
+          const { acceptedMediaTypes } = route;
+          if (
+            acceptedMediaTypes.length &&
+            !isRequestBodyMediaTypeSupported(request, { acceptedMediaTypes })
+          ) {
+            for (const acceptedMediaType of acceptedMediaTypes) {
+              wouldHaveMatched.requestMediaTypeSet.add(acceptedMediaType);
+            }
+            continue;
+          }
+        }
+        const headersMatchResult = route.matchHeaders(request.headers);
+        if (!headersMatchResult) {
+          continue;
+        }
+        if (
+          route.isForWebSocket &&
+          request.headers["upgrade"] !== "websocket"
+        ) {
+          wouldHaveMatched.upgrade = true;
+          continue;
+        }
+        // now we are "good", let's try to generate a response
+        const contentNegotiationResult = {};
+        content_negotiation: {
+          // when content nego fails
+          // we will check the remaining accept headers to properly inform client of all the things are failing
+          // Example:
+          // client says "I want text in french"
+          // but server only provide json in english
+          // we want to tell client both text and french are not available
+          let hasFailed = false;
+          const { availableMediaTypes } = route;
+          if (availableMediaTypes.length) {
+            fetchSecondArg.injectResponseHeader("vary", "accept");
+            if (request.headers["accept"]) {
+              const mediaTypeNegotiated = pickContentType(
+                request,
+                availableMediaTypes,
+              );
+              if (!mediaTypeNegotiated) {
+                for (const availableMediaType of availableMediaTypes) {
+                  wouldHaveMatched.responseMediaTypeSet.add(availableMediaType);
+                }
+                hasFailed = true;
+              }
+              contentNegotiationResult.mediaType = mediaTypeNegotiated;
+            } else {
+              contentNegotiationResult.mediaType = availableMediaTypes[0];
+            }
+          }
+          const { availableLanguages } = route;
+          if (availableLanguages.length) {
+            fetchSecondArg.injectResponseHeader("vary", "accept-language");
+            if (request.headers["accept-language"]) {
+              const languageNegotiated = pickContentLanguage(
+                request,
+                availableLanguages,
+              );
+              if (!languageNegotiated) {
+                for (const availableLanguage of availableLanguages) {
+                  wouldHaveMatched.responseLanguageSet.add(availableLanguage);
+                }
+                hasFailed = true;
+              }
+              contentNegotiationResult.language = languageNegotiated;
+            } else {
+              contentNegotiationResult.language = availableLanguages[0];
+            }
+          }
+          const { availableVersions } = route;
+          if (availableVersions.length) {
+            fetchSecondArg.injectResponseHeader("vary", "accept-version");
+            if (request.headers["accept-version"]) {
+              const versionNegotiated = pickContentVersion(
+                request,
+                availableVersions,
+              );
+              if (!versionNegotiated) {
+                for (const availableVersion of availableVersions) {
+                  wouldHaveMatched.responseVersionSet.add(availableVersion);
+                }
+                hasFailed = true;
+              }
+              contentNegotiationResult.version = versionNegotiated;
+            } else {
+              contentNegotiationResult.version = availableVersions[0];
+            }
+          }
+          const { availableEncodings } = route;
+          if (availableEncodings.length) {
+            fetchSecondArg.injectResponseHeader("vary", "accept-encoding");
+            if (request.headers["accept-encoding"]) {
+              const encodingNegotiated = pickContentEncoding(
+                request,
+                availableEncodings,
+              );
+              if (!encodingNegotiated) {
+                for (const availableEncoding of availableEncodings) {
+                  wouldHaveMatched.responseEncodingSet.add(availableEncoding);
+                }
+                hasFailed = true;
+              }
+              contentNegotiationResult.encoding = encodingNegotiated;
+            } else {
+              contentNegotiationResult.encoding = availableEncodings[0];
+            }
+          }
+          if (hasFailed) {
+            continue;
+          }
+        }
+        const { named, stars = [] } = PATTERN.composeTwoMatchResults(
+          resourceMatchResult,
+          headersMatchResult,
+        );
+        Object.assign(request.params, named, stars);
+        fetchSecondArg.contentNegotiation = contentNegotiationResult;
+        let fetchReturnValue = route.fetch(request, fetchSecondArg);
+        if (
+          fetchReturnValue !== null &&
+          typeof fetchReturnValue === "object" &&
+          typeof fetchReturnValue.then === "function"
+        ) {
+          fetchReturnValue = await fetchReturnValue;
+        }
+        // route decided not to handle in the end
+        if (fetchReturnValue === null || fetchReturnValue === undefined) {
+          continue;
+        }
+        return resolveResponse(fetchReturnValue, { request, route });
+      }
+      // nothing has matched fully
+      // if nothing matches at all we'll send 404
+      // but if url matched but METHOD was not supported we send 405
+      if (wouldHaveMatched.methodSet.size) {
+        return createMethodNotAllowedResponse(request, {
+          allowedMethods: [...wouldHaveMatched.methodSet],
+        });
+      }
+      if (wouldHaveMatched.requestMediaTypeSet.size) {
+        return createUnsupportedMediaTypeResponse(request, {
+          acceptedMediaTypes: [...wouldHaveMatched.requestMediaTypeSet],
+        });
+      }
+      if (
+        wouldHaveMatched.responseMediaTypeSet.size ||
+        wouldHaveMatched.responseLanguageSet.size ||
+        wouldHaveMatched.responseVersionSet.size ||
+        wouldHaveMatched.responseEncodingSet.size
+      ) {
+        return createNotAcceptableResponse(request, {
+          availableMediaTypes: [...wouldHaveMatched.responseMediaTypeSet],
+          availableLanguages: [...wouldHaveMatched.responseLanguageSet],
+          availableVersions: [...wouldHaveMatched.responseVersionSet],
+          availableEncodings: [...wouldHaveMatched.responseEncodingSet],
+        });
+      }
+      if (wouldHaveMatched.upgrade) {
+        return {
+          status: 426,
+          statusText: "Upgrade Required",
+          statusMessage: `The request requires the upgrade to a webSocket connection`,
+        };
+      }
+      const availableEndpoints = constructAvailableEndpoints(
+        request,
+        fetchSecondArg,
+      );
+      return createRouteNotFoundResponse(request, { availableEndpoints });
+    }; // end matchRoutes
+
+    return matchRoutes(request);
   };
   const inspect = () => {
     // I want all the info I can gather about the routes
@@ -674,6 +713,9 @@ const createRoute = ({
   };
   return route;
 };
+
+const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
+const isRedirectStatus = (status) => REDIRECT_STATUSES.has(status);
 
 const isRequestBodyMediaTypeSupported = (request, { acceptedMediaTypes }) => {
   const requestBodyContentType = request.headers["content-type"];

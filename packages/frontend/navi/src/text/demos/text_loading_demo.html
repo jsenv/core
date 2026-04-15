@@ -1,0 +1,546 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Text Loading / Skeleton Demo</title>
+    <style>
+      body {
+        max-width: 780px;
+        padding: 20px;
+        font-family: system-ui, sans-serif;
+      }
+      h1 {
+        margin-bottom: 24px;
+      }
+      .demo-section {
+        margin-bottom: 40px;
+        padding: 16px;
+        border: 1px solid #eee;
+        border-radius: 8px;
+      }
+      .demo-section h2 {
+        margin: 0 0 6px;
+        font-size: 1rem;
+      }
+      .demo-section p {
+        margin: 0 0 12px;
+        color: #666;
+        font-size: 13px;
+      }
+      .toggle-row {
+        display: flex;
+        margin-bottom: 12px;
+        align-items: center;
+        gap: 6px;
+        font-size: 13px;
+        cursor: pointer;
+      }
+      /* dotted border to make container boundaries visible */
+      .container-box {
+        padding: 8px;
+        border: 2px dotted #aaa;
+        border-radius: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useState } from "preact/hooks";
+      import { Box, Icon, Text } from "@jsenv/navi";
+
+      const StarSvg = () => (
+        <svg
+          viewBox="0 0 24 24"
+          width="100%"
+          height="100%"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+            fill="currentColor"
+          />
+        </svg>
+      );
+
+      const ToggleLoading = ({ loading, setLoading }) => (
+        <label class="toggle-row">
+          <input
+            type="checkbox"
+            checked={loading}
+            onChange={(e) => setLoading(e.target.checked)}
+          />
+          loading
+        </label>
+      );
+
+      /* ------------------------------------------------------------------ */
+      /* 0. All features — icon | overflowEllipsis + bold + loading | icon  */
+      /* ------------------------------------------------------------------ */
+      const AllFeaturesDemo = () => {
+        const [loading, setLoading] = useState(true);
+        const [bold, setBold] = useState(false);
+        return (
+          <div class="demo-section">
+            <h2>
+              All features: icon | overflowEllipsis + preventBoldLayoutShift +
+              loading | icon
+            </h2>
+            <p>
+              The most complex combination. The text expands to fill available
+              width (<code>expandX</code>), truncates with ellipsis, can toggle
+              bold without layout shift, and shows a skeleton while loading. The
+              two icons must stay in place in all combinations of states.
+            </p>
+            <ToggleLoading loading={loading} setLoading={setLoading} />
+            <label class="toggle-row">
+              <input
+                type="checkbox"
+                checked={bold}
+                onChange={(e) => setBold(e.target.checked)}
+              />
+              bold
+            </label>
+            <div class="container-box" style="width: 400px;">
+              <Box flex spacing="s" alignY="center">
+                <Icon color="orange">
+                  <StarSvg />
+                </Icon>
+                <Text
+                  overflowEllipsis
+                  preventBoldLayoutShift
+                  bold={bold}
+                  loading={loading}
+                  expandX
+                  minWidth="0"
+                >
+                  {loading
+                    ? undefined
+                    : "A very long label that truncates with ellipsis and can go bold"}
+                </Text>
+                <Icon color="steelblue">
+                  <StarSvg />
+                </Icon>
+              </Box>
+            </div>
+          </div>
+        );
+      };
+
+      /* ------------------------------------------------------------------ */
+      /* 1. With children — skeleton takes natural text size                 */
+      /* ------------------------------------------------------------------ */
+      const WithChildrenDemo = () => {
+        const [loading, setLoading] = useState(true);
+        return (
+          <div class="demo-section">
+            <h2>With children — skeleton takes the natural text size</h2>
+            <p>
+              Children stay in the DOM (hidden via{" "}
+              <code>visibility:hidden</code>) so their natural dimensions —
+              width, height, font-size, line-height — preserve the layout. The
+              dotted container should NOT grow or shrink when toggling loading.
+            </p>
+            <p>
+              The skeleton bar is drawn by a three-level absolute overlay:{" "}
+              <strong>container</strong> (<code>inset:0; padding:inherit</code>,
+              so its content box = the text's content box),{" "}
+              <strong>inset</strong> (fills that content box, acts as positioned
+              ancestor), <strong>skeleton</strong> (
+              <code>inset:0; border-radius:inherit</code> on the inset box).
+              This way padding is respected AND the rounded corners survive on
+              the gradient bar.
+            </p>
+            <ToggleLoading loading={loading} setLoading={setLoading} />
+            <div class="container-box" style="display: inline-block;">
+              <Text loading={loading}>No padding (default)</Text>
+            </div>
+            <br />
+            <br />
+            <div class="container-box" style="display: inline-block;">
+              <Text loading={loading} paddingX="s">
+                With paddingX="s" — skeleton stays inside the padding gap
+              </Text>
+            </div>
+            <br />
+            <br />
+            <div class="container-box" style="display: inline-block;">
+              <Text
+                loading={loading}
+                paddingX="m"
+                borderRadius="m"
+                fontSize="1.5rem"
+              >
+                Larger font + padding + border-radius — corners still rounded
+              </Text>
+            </div>
+          </div>
+        );
+      };
+
+      /* ------------------------------------------------------------------ */
+      /* 2. Loading text in the middle of a sentence                        */
+      /* ------------------------------------------------------------------ */
+      const InlineInSentenceDemo = () => {
+        const [loading, setLoading] = useState(true);
+        return (
+          <div class="demo-section">
+            <h2>Inline — loading in the middle of a sentence</h2>
+            <p>
+              Because the children are kept in the DOM, the skeleton sits inline
+              with surrounding text at the correct size. The sentence layout
+              should not shift when toggling loading.
+            </p>
+            <ToggleLoading loading={loading} setLoading={setLoading} />
+            <div class="container-box" style="display: inline-block;">
+              <span>
+                The user <Text loading={loading}>John Doe</Text> posted{" "}
+                <Text loading={loading}>42 comments</Text> last week.
+              </span>
+            </div>
+          </div>
+        );
+      };
+
+      /* ------------------------------------------------------------------ */
+      /* 3. No children — skeleton fills container width                    */
+      /* ------------------------------------------------------------------ */
+      const NoChildrenDemo = () => {
+        const [loading, setLoading] = useState(true);
+        return (
+          <div class="demo-section">
+            <h2>No children — skeleton fills container width</h2>
+            <p>
+              When no children are provided the element has no intrinsic size.
+              The skeleton fills the full available width of its container
+              (dotted box). The container width should stay fixed; the skeleton
+              grows to fill it.
+            </p>
+            <p>
+              The skeleton height is driven by an invisible <code>"W"</code>{" "}
+              character, not <code>min-height: 1em</code>. This means it
+              automatically accounts for <code>line-height</code> and{" "}
+              <code>font-size</code> — toggle loading and verify the skeleton
+              and the real text have the exact same height in every row below.
+            </p>
+            <ToggleLoading loading={loading} setLoading={setLoading} />
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+              <div>
+                <div style="font-size: 12px; color: #999; margin-bottom: 4px;">
+                  default font-size, default line-height
+                </div>
+                <div class="container-box" style="width: 300px;">
+                  <Text loading={loading}>
+                    {loading ? undefined : "Hello world"}
+                  </Text>
+                </div>
+              </div>
+              <div>
+                <div style="font-size: 12px; color: #999; margin-bottom: 4px;">
+                  font-size: 1.5rem
+                </div>
+                <div class="container-box" style="width: 300px;">
+                  <Text loading={loading} fontSize="1.5rem">
+                    {loading ? undefined : "Hello world"}
+                  </Text>
+                </div>
+              </div>
+              <div>
+                <div style="font-size: 12px; color: #999; margin-bottom: 4px;">
+                  font-size: 2rem, line-height: 3 — min-height:1em would be way
+                  too short here
+                </div>
+                <div class="container-box" style="width: 300px;">
+                  <Text loading={loading} fontSize="2rem" lineHeight="3">
+                    {loading ? undefined : "Hello world"}
+                  </Text>
+                </div>
+              </div>
+              <div>
+                <div style="font-size: 12px; color: #999; margin-bottom: 4px;">
+                  font-size: 0.75rem — min-height:1em would be too tall here
+                </div>
+                <div class="container-box" style="width: 300px;">
+                  <Text loading={loading} fontSize="0.75rem">
+                    {loading ? undefined : "Hello world"}
+                  </Text>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      /* ------------------------------------------------------------------ */
+      /* 4. Inside a flex row with icon                                     */
+      /* ------------------------------------------------------------------ */
+      const FlexRowWithIconDemo = () => {
+        const [loading, setLoading] = useState(true);
+        return (
+          <div class="demo-section">
+            <h2>Inside a flex row with icon</h2>
+            <p>
+              The skeleton fills the remaining space next to the icon via{" "}
+              <code>expandX</code>. The dotted container width should remain
+              stable.
+            </p>
+            <ToggleLoading loading={loading} setLoading={setLoading} />
+            <div class="container-box" style="width: 300px;">
+              <Box flex spacing="s" alignY="center">
+                <Icon shrink={false} color="orange">
+                  <StarSvg />
+                </Icon>
+                <Text loading={loading} expandX>
+                  Some label next to an icon
+                </Text>
+              </Box>
+            </div>
+          </div>
+        );
+      };
+
+      /* ------------------------------------------------------------------ */
+      /* 5. Inside overflowEllipsis                                         */
+      /* ------------------------------------------------------------------ */
+      const OverflowEllipsisDemo = () => {
+        const [loading, setLoading] = useState(true);
+        const [width, setWidth] = useState(300);
+        return (
+          <div class="demo-section">
+            <h2>Inside overflowEllipsis</h2>
+            <p>
+              When <code>overflowEllipsis</code> is also set, the overflow
+              machinery is disabled while skeleton is active. The skeleton fills
+              the dotted container width. Toggle loading to see the real
+              truncated text.
+            </p>
+            <ToggleLoading loading={loading} setLoading={setLoading} />
+            <label style="font-size: 13px; display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+              Container width: <strong>{width}px</strong>
+              <input
+                type="range"
+                min="100"
+                max="600"
+                value={width}
+                onInput={(e) => setWidth(Number(e.target.value))}
+                style="width: 160px;"
+              />
+            </label>
+            <div class="container-box" style={`width: ${width}px;`}>
+              <Text overflowEllipsis loading={loading}>
+                A very long label that would normally be truncated with an
+                ellipsis when the container is too narrow
+              </Text>
+            </div>
+          </div>
+        );
+      };
+
+      /* ------------------------------------------------------------------ */
+      /* 6. overflowEllipsis + icon in flex row                            */
+      /* ------------------------------------------------------------------ */
+      const OverflowEllipsisWithIconDemo = () => {
+        const [loading, setLoading] = useState(true);
+        const [width, setWidth] = useState(280);
+        return (
+          <div class="demo-section">
+            <h2>overflowEllipsis inside a flex row with icon</h2>
+            <p>
+              Combines overflow ellipsis, icon, and loading state. The skeleton
+              should fill the space between the icon and the right edge of the
+              dotted container.
+            </p>
+            <ToggleLoading loading={loading} setLoading={setLoading} />
+            <label style="font-size: 13px; display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+              Container width: <strong>{width}px</strong>
+              <input
+                type="range"
+                min="100"
+                max="600"
+                value={width}
+                onInput={(e) => setWidth(Number(e.target.value))}
+                style="width: 160px;"
+              />
+            </label>
+            <div class="container-box" style={`width: ${width}px;`}>
+              <Box flex spacing="s" alignY="center">
+                <Icon shrink={false}>
+                  <StarSvg />
+                </Icon>
+                <Text overflowEllipsis loading={loading} minWidth="0">
+                  A very long label that will be truncated when the container is
+                  too narrow
+                </Text>
+              </Box>
+            </div>
+          </div>
+        );
+      };
+
+      /* ------------------------------------------------------------------ */
+      /* 7. Text with a given width — skeleton follows that width           */
+      /* ------------------------------------------------------------------ */
+      const FixedWidthTextDemo = () => {
+        const [loading, setLoading] = useState(true);
+        return (
+          <div class="demo-section">
+            <h2>Text with a given width — skeleton follows that width</h2>
+            <p>
+              When <code>width</code> is set on <code>&lt;Text&gt;</code>{" "}
+              itself, the skeleton should fill exactly that width — not the
+              container's full width. The dotted wrapper is wider than the text
+              to make this visible.
+            </p>
+            <ToggleLoading loading={loading} setLoading={setLoading} />
+            <div class="container-box" style="width: 400px;">
+              <Text loading={loading} width="200px">
+                A short label
+              </Text>
+            </div>
+            <br />
+            <div class="container-box" style="width: 400px;">
+              <Text loading={loading} width="60%">
+                Sixty percent width
+              </Text>
+            </div>
+          </div>
+        );
+      };
+
+      /* ------------------------------------------------------------------ */
+      /* 8. No children → explicit width; children → natural width          */
+      /* ------------------------------------------------------------------ */
+      const ConditionalWidthDemo = () => {
+        const [loading, setLoading] = useState(true);
+        return (
+          <div class="demo-section">
+            <h2>
+              Conditional width — explicit when no children, natural when
+              children
+            </h2>
+            <p>
+              When loading and there are no children yet, pass an explicit
+              <code>width</code> to give the skeleton a meaningful size. Once
+              data is available and children are rendered, remove the width so
+              the text takes its natural size. Toggle loading to see the
+              transition — the dotted container must not shift.
+            </p>
+            <ToggleLoading loading={loading} setLoading={setLoading} />
+            <div
+              class="container-box"
+              style="display: inline-block; min-width: 120px;"
+            >
+              <Text loading={loading} width={loading ? "120px" : undefined}>
+                {loading ? null : "John Doe"}
+              </Text>
+            </div>
+            <br />
+            <br />
+            <div
+              class="container-box"
+              style="display: inline-block; min-width: 60px;"
+            >
+              <Text loading={loading} width={loading ? "60px" : undefined}>
+                {loading ? null : "42"}
+              </Text>
+            </div>
+          </div>
+        );
+      };
+
+      /* ------------------------------------------------------------------ */
+      /* 9. preventBoldLayoutShift + loading                                */
+      /* ------------------------------------------------------------------ */
+      const PreventBoldLayoutShiftDemo = () => {
+        const [loading, setLoading] = useState(true);
+        const [bold, setBold] = useState(false);
+        return (
+          <div class="demo-section">
+            <h2>preventBoldLayoutShift + loading</h2>
+            <p>
+              <code>preventBoldLayoutShift</code> uses a hidden clone to reserve
+              bold-width space so toggling bold never shifts layout. Verify that
+              the skeleton still appears correctly and that switching between
+              loading ↔ bold ↔ both doesn't break anything.
+            </p>
+            <ToggleLoading loading={loading} setLoading={setLoading} />
+            <label class="toggle-row">
+              <input
+                type="checkbox"
+                checked={bold}
+                onChange={(e) => setBold(e.target.checked)}
+              />
+              bold
+            </label>
+            <div class="container-box" style="display: inline-block;">
+              <Text loading={loading} bold={bold} preventBoldLayoutShift noWrap>
+                Toggle me bold without layout shift
+              </Text>
+            </div>
+            <br />
+            <br />
+            <div style="font-size: 12px; color: #999; margin-bottom: 4px;">
+              Inside a flex row
+            </div>
+            <div class="container-box" style="width: 340px;">
+              <Box flex spacing="s" alignY="center">
+                <Icon shrink={false} color="orange">
+                  <StarSvg />
+                </Icon>
+                <Text
+                  loading={loading}
+                  bold={bold}
+                  preventBoldLayoutShift
+                  noWrap
+                  expandX
+                >
+                  Label that can go bold
+                </Text>
+              </Box>
+            </div>
+          </div>
+        );
+      };
+
+      /* ------------------------------------------------------------------ */
+      /* 10. skeleton prop — static, no animation                           */
+      /* ------------------------------------------------------------------ */
+      const StaticSkeletonDemo = () => (
+        <div class="demo-section">
+          <h2>skeleton prop — static (no animation)</h2>
+          <p>
+            <code>skeleton</code> shows the same shape but without the shimmer
+            animation. The dotted container should stay the same size — children
+            are hidden but preserve layout.
+          </p>
+          <div class="container-box" style="display: inline-block;">
+            <Text skeleton>Hello, world!</Text>
+          </div>
+        </div>
+      );
+
+      /* ------------------------------------------------------------------ */
+      /* App                                                                 */
+      /* ------------------------------------------------------------------ */
+      const App = () => (
+        <div>
+          <h1>Text Loading / Skeleton Demo</h1>
+          <AllFeaturesDemo />
+          <NoChildrenDemo />
+          <ConditionalWidthDemo />
+          <WithChildrenDemo />
+          <InlineInSentenceDemo />
+          <FlexRowWithIconDemo />
+          <FixedWidthTextDemo />
+          <OverflowEllipsisDemo />
+          <OverflowEllipsisWithIconDemo />
+          <PreventBoldLayoutShiftDemo />
+          <StaticSkeletonDemo />
+        </div>
+      );
+
+      render(<App />, document.getElementById("app"));
+    </script>
+  </body>
+</html>

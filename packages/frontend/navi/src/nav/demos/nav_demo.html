@@ -699,8 +699,9 @@
                   <Box border="1px dashed violet" style={{ width: "200px" }}>
                     <Nav vertical spacing="xs" expandX>
                       <Link
-                        box
+                        flex
                         expandX
+                        spacing="xs"
                         appearance="tab"
                         paddingX="m"
                         alignY="center"
@@ -724,8 +725,9 @@
                         </BadgeCount>
                       </Link>
                       <Link
-                        column
+                        flex
                         expandX
+                        spacing="xs"
                         appearance="tab"
                         paddingX="m"
                         alignY="center"
@@ -755,7 +757,6 @@
                         paddingX="m"
                         onClick={() => setActiveIconTab("settings")}
                         aria-controls="icon-panel-settings"
-                        column
                         // boldWhenSelected={false}
                         current={activeIconTab === "settings"}
                       >
@@ -772,7 +773,6 @@
                         paddingY="s"
                         onClick={() => setActiveIconTab("settings_2")}
                         aria-controls="icon-panel-settings"
-                        column
                         lineHeight="normal"
                         current={activeIconTab === "settings_2"}
                       >
@@ -800,8 +800,9 @@
                           ":-navi-href-current": activeIconTab === "home",
                         }}
                         currentIndicator="right"
+                        padding="2"
                       >
-                        <Icon fontSize="lg">
+                        <Icon fontSize="l">
                           <HomeSvg />
                         </Icon>
                       </Link>
@@ -814,8 +815,9 @@
                           ":-navi-href-current": activeIconTab === "profile",
                         }}
                         currentIndicator="right"
+                        padding="2"
                       >
-                        <Icon fontSize="lg">
+                        <Icon fontSize="l">
                           <UserSvg />
                         </Icon>
                       </Link>
@@ -828,8 +830,9 @@
                           ":-navi-href-current": activeIconTab === "settings",
                         }}
                         currentIndicator="right"
+                        padding="2"
                       >
-                        <Icon fontSize="lg">
+                        <Icon fontSize="l">
                           <SettingsSvg />
                         </Icon>
                       </Link>
