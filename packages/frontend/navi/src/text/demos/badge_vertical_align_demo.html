@@ -214,6 +214,113 @@
 
             <h3>Contrôlable</h3>
             <ControlledRow />
+
+            <h3>Texte avec font-size et font-family différents</h3>
+            {[
+              {
+                label: "serif 12px",
+                style: { fontFamily: "serif", fontSize: "12px" },
+              },
+              {
+                label: "serif 24px",
+                style: { fontFamily: "serif", fontSize: "24px" },
+              },
+              {
+                label: "monospace 12px",
+                style: { fontFamily: "monospace", fontSize: "12px" },
+              },
+              {
+                label: "monospace 24px",
+                style: { fontFamily: "monospace", fontSize: "24px" },
+              },
+            ].map(({ label, style }) => (
+              <div key={label} style={{ marginBottom: "16px" }}>
+                <div
+                  style={{
+                    fontSize: "13px",
+                    color: "#999",
+                    marginBottom: "6px",
+                  }}
+                >
+                  {label}
+                </div>
+                <div style={rowStyle}>
+                  <div style={cellStyle}>
+                    <span style={labelStyle}>hardcode</span>
+                    <div style={{ ...containerStyle, ...style }}>
+                      <span style={textStyle}>Notifications</span>
+                      <Badge count={42} fontSize={16} />
+                    </div>
+                  </div>
+                  <div style={cellStyle}>
+                    <span style={labelStyle}>@jsenv/navi</span>
+                    <div style={{ ...containerStyle, ...style }}>
+                      <span style={textStyle}>Notifications</span>
+                      <BadgeCount background="#e74c3c" color="white">
+                        {42}
+                      </BadgeCount>
+                    </div>
+                  </div>
+                  <div style={cellStyle}>
+                    <span style={labelStyle}>@jsenv/navi circle</span>
+                    <div style={{ ...containerStyle, ...style }}>
+                      <span style={textStyle}>Notifications</span>
+                      <BadgeCount background="#e74c3c" color="white" circle>
+                        {42}
+                      </BadgeCount>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+
+            <h3>Texte avec vertical-align différent</h3>
+            {["bottom", "super", "sub", "middle"].map((va) => (
+              <div key={va} style={{ marginBottom: "16px" }}>
+                <div
+                  style={{
+                    fontSize: "13px",
+                    color: "#999",
+                    marginBottom: "6px",
+                  }}
+                >
+                  vertical-align: {va}
+                </div>
+                <div style={rowStyle}>
+                  <div style={cellStyle}>
+                    <span style={labelStyle}>hardcode</span>
+                    <div style={containerStyle}>
+                      <span style={{ ...textStyle, verticalAlign: va }}>
+                        Notifications
+                      </span>
+                      <Badge count={42} fontSize={16} />
+                    </div>
+                  </div>
+                  <div style={cellStyle}>
+                    <span style={labelStyle}>@jsenv/navi</span>
+                    <div style={containerStyle}>
+                      <span style={{ ...textStyle, verticalAlign: va }}>
+                        Notifications
+                      </span>
+                      <BadgeCount background="#e74c3c" color="white">
+                        {42}
+                      </BadgeCount>
+                    </div>
+                  </div>
+                  <div style={cellStyle}>
+                    <span style={labelStyle}>@jsenv/navi circle</span>
+                    <div style={containerStyle}>
+                      <span style={{ ...textStyle, verticalAlign: va }}>
+                        Notifications
+                      </span>
+                      <BadgeCount background="#e74c3c" color="white" circle>
+                        {42}
+                      </BadgeCount>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         );
       };
