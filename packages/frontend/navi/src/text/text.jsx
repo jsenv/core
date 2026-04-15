@@ -211,22 +211,22 @@ const FAKE_SPACE = (
     &#8203;
   </span>
 );
-const CustomWidthSpace = ({ value, noUnderlineSpaces }) => {
-  if (noUnderlineSpaces) {
-    return <span style={`padding-left: ${value}`}>&#8203;</span>;
+const CustomWidthSpace = ({ value, useRealSpaceChar }) => {
+  if (useRealSpaceChar) {
+    return (
+      <span>
+        <span style="font-size: 0"> </span>
+        <span style={`padding-left: ${value}`}>&#8203;</span>
+      </span>
+    );
   }
-  return (
-    <span>
-      <span style="font-size: 0"> </span>
-      <span style={`padding-left: ${value}`}>&#8203;</span>
-    </span>
-  );
+  return <span style={`padding-left: ${value}`}>&#8203;</span>;
 };
 
-export const applySpacingOnTextChildren = (
+const applySpacingOnTextChildren = (
   children,
-  spacing = REGULAR_SPACE,
-  preventSpaceUnderlines = false,
+  spacing,
+  defaultSpace = REGULAR_SPACE,
 ) => {
   if (spacing === "pre" || spacing === "0" || spacing === 0) {
     return children;
@@ -240,7 +240,7 @@ export const applySpacingOnTextChildren = (
     return children;
   }
 
-  const defaultSpace = preventSpaceUnderlines ? FAKE_SPACE : REGULAR_SPACE;
+  const useRealSpaceChar = defaultSpace !== FAKE_SPACE;
   let separator;
   if (
     spacing === undefined ||
@@ -253,14 +253,14 @@ export const applySpacingOnTextChildren = (
       separator = (
         <CustomWidthSpace
           value={resolveSpacingSize(spacing)}
-          preventSpaceUnderlines={preventSpaceUnderlines}
+          useRealSpaceChar={useRealSpaceChar}
         />
       );
     } else if (hasCSSSizeUnit(spacing)) {
       separator = (
         <CustomWidthSpace
           value={resolveSpacingSize(spacing)}
-          preventSpaceUnderlines={preventSpaceUnderlines}
+          useRealSpaceChar={useRealSpaceChar}
         />
       );
     } else {
@@ -270,7 +270,7 @@ export const applySpacingOnTextChildren = (
     separator = (
       <CustomWidthSpace
         value={`${spacing}px`}
-        preventSpaceUnderlines={preventSpaceUnderlines}
+        useRealSpaceChar={useRealSpaceChar}
       />
     );
   } else {
@@ -467,7 +467,7 @@ const TextBasic = ({
     children = applySpacingOnTextChildren(
       children,
       resolvedSpacing,
-      preventSpaceUnderlines,
+      defaultSpace,
     );
   }
 
