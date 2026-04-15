@@ -20,7 +20,6 @@ const css = /* css */ `
     --padding-x: 0.5em;
     --padding-y: 0.2em;
     position: relative;
-    display: inline-block;
     color: var(--x-color);
     font-size: var(--font-size);
     vertical-align: inherit;
@@ -42,6 +41,7 @@ const css = /* css */ `
 
     /* Ellipse */
     &[data-ellipse] {
+      display: inline-block;
       padding-top: var(--padding-y);
       padding-right: var(--padding-x);
       padding-bottom: var(--padding-y);
