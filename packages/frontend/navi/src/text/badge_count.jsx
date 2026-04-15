@@ -1,9 +1,9 @@
 import { useRef } from "preact/hooks";
 
-import { Icon } from "../graphic/icon.jsx";
 import { LoadingDots } from "../graphic/loader/loading_dots.jsx";
 import { withPropsClassName } from "../utils/with_props_class_name.js";
 import { formatNumber } from "./format_number.js";
+import { Icon } from "./icon.jsx";
 import { SurroundingTextAligner } from "./surrounding_text_aligner.jsx";
 import { Text } from "./text.jsx";
 import { useDarkBackgroundAttribute } from "./use_dark_background_attribute.js";

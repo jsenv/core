@@ -24,12 +24,12 @@ import { useActionStatus } from "../action/use_action_status.js";
 import { useExecuteAction } from "../action/use_execute_action.js";
 import { Box } from "../box/box.jsx";
 import { PSEUDO_CLASSES } from "../box/pseudo_styles.js";
-import { Icon } from "../graphic/icon.jsx";
 import { CloseSvg } from "../graphic/icons/close_svg.jsx";
 import { EmailSvg } from "../graphic/icons/email_svg.jsx";
 import { PhoneSvg } from "../graphic/icons/phone_svg.jsx";
 import { SearchSvg } from "../graphic/icons/search_svg.jsx";
 import { LoaderBackground } from "../graphic/loader/loader_background.jsx";
+import { Icon } from "../text/icon.jsx";
 import { useStableCallback } from "../utils/use_stable_callback.js";
 import { fieldPropSet } from "./field_prop_set.js";
 import {

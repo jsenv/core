@@ -1,6 +1,6 @@
-import { Icon } from "../graphic/icon.jsx";
 import { LoadingDots } from "../graphic/loader/loading_dots.jsx";
 import { formatNumber } from "./format_number.js";
+import { Icon } from "./icon.jsx";
 import { createIntl } from "./intl.js";
 import { Text } from "./text.jsx";
 

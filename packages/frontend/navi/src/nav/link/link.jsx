@@ -12,7 +12,6 @@ import { useRequestedActionStatus } from "../../field/use_action_events.js";
 import { useAutoFocus } from "../../field/use_auto_focus.js";
 import { closeValidationMessage } from "../../field/validation/custom_constraint_validation.js";
 import { useConstraints } from "../../field/validation/hooks/use_constraints.js";
-import { Icon } from "../../graphic/icon.jsx";
 import { EmailSvg } from "../../graphic/icons/email_svg.jsx";
 import {
   LinkAnchorSvg,
@@ -23,6 +22,7 @@ import {
 import { PhoneSvg } from "../../graphic/icons/phone_svg.jsx";
 import { LoaderBackground } from "../../graphic/loader/loader_background.jsx";
 import { useKeyboardShortcuts } from "../../keyboard/keyboard_shortcuts.js";
+import { Icon } from "../../text/icon.jsx";
 import { markAsOutsideTextFlow, Text } from "../../text/text.jsx";
 import { TitleLevelContext } from "../../text/title.jsx";
 import { useDarkBackgroundAttribute } from "../../text/use_dark_background_attribute.js";
