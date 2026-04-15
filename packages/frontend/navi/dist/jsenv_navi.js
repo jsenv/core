@@ -18834,7 +18834,15 @@ const selectByTextStrings = (element, range, startText, endText) => {
 };
 
 installImportMetaCssBuild(import.meta);/* eslint-disable jsenv/no-unknown-params */
-const css$3 = /* css */`
+const css$4 = /* css */`
+  @layer navi {
+    .navi_text {
+      &[data-skeleton] {
+        border-radius: 0.2em;
+      }
+    }
+  }
+
   *[data-navi-space] {
     /* user-select: none; */
     padding-left: 0.25em;
@@ -18842,7 +18850,6 @@ const css$3 = /* css */`
 
   .navi_text {
     position: relative;
-    border-radius: var(--x-border-radius);
 
     /* There is a chrome specific bug that prevents text-transform: capitalize to be applied in nested DOM structure */
     /* The CSS below ensure capitalize is propagated to the bold clones */
@@ -18895,8 +18902,6 @@ const css$3 = /* css */`
     }
 
     &[data-skeleton] {
-      --x-border-radius: 0.2em;
-
       /* Children stay in the DOM to preserve natural layout dimensions,
          but are hidden so only the skeleton is visible. */
       visibility: hidden;
@@ -19127,7 +19132,7 @@ const shouldInjectSpacingBetween = (left, right) => {
 };
 const OverflowPinnedElementContext = createContext(null);
 const Text = props => {
-  import.meta.css = [css$3, "@jsenv/navi/src/text/text.jsx"];
+  import.meta.css = [css$4, "@jsenv/navi/src/text/text.jsx"];
   if (props.loading || props.skeleton) {
     return jsx(TextSkeleton, {
       ...props
@@ -19320,7 +19325,7 @@ const TextBasic = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$2 = /* css */`
+installImportMetaCssBuild(import.meta);const css$3 = /* css */`
   @layer navi {
     /* Ensure data attributes from box.jsx can win to update display */
     .navi_icon {
@@ -19408,7 +19413,7 @@ const Icon = ({
   onClick,
   ...props
 }) => {
-  import.meta.css = [css$2, "@jsenv/navi/src/graphic/icon.jsx"];
+  import.meta.css = [css$3, "@jsenv/navi/src/graphic/icon.jsx"];
   const innerChildren = href ? jsx("svg", {
     width: "100%",
     height: "100%",
@@ -22676,7 +22681,7 @@ installImportMetaCssBuild(import.meta);/**
  * TabList component with support for horizontal and vertical layouts
  * https://dribbble.com/search/tabs
  */
-import.meta.css = [/* css */`
+const css$2 = /* css */`
   @layer navi {
     .navi_nav {
       --nav-border: none;
@@ -22785,7 +22790,7 @@ import.meta.css = [/* css */`
       }
     }
   }
-`, "@jsenv/navi/src/nav/link/nav.jsx"];
+`;
 const NavStyleCSSVars = {
   border: "--nav-border",
   borderRadius: "--nav-border-radius",
@@ -22810,6 +22815,7 @@ const Nav = ({
   panelBorderConnection,
   ...props
 }) => {
+  import.meta.css = [css$2, "@jsenv/navi/src/nav/link/nav.jsx"];
   children = toChildArray(children);
   return jsx(Box, {
     as: "nav",

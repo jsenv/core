@@ -12,6 +12,14 @@ import { withPropsClassName } from "../utils/with_props_class_name.js";
 import { useInitialTextSelection } from "./use_initial_text_selection.jsx";
 
 const css = /* css */ `
+  @layer navi {
+    .navi_text {
+      &[data-skeleton] {
+        border-radius: 0.2em;
+      }
+    }
+  }
+
   *[data-navi-space] {
     /* user-select: none; */
     padding-left: 0.25em;
@@ -19,7 +27,6 @@ const css = /* css */ `
 
   .navi_text {
     position: relative;
-    border-radius: var(--x-border-radius);
 
     /* There is a chrome specific bug that prevents text-transform: capitalize to be applied in nested DOM structure */
     /* The CSS below ensure capitalize is propagated to the bold clones */
@@ -72,8 +79,6 @@ const css = /* css */ `
     }
 
     &[data-skeleton] {
-      --x-border-radius: 0.2em;
-
       /* Children stay in the DOM to preserve natural layout dimensions,
          but are hidden so only the skeleton is visible. */
       visibility: hidden;

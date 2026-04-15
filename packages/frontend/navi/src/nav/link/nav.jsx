@@ -8,7 +8,7 @@ import { toChildArray } from "preact";
 import { Box } from "../../box/box.jsx";
 import { NavContext } from "./nav_context.js";
 
-import.meta.css = /* css */ `
+const css = /* css */ `
   @layer navi {
     .navi_nav {
       --nav-border: none;
@@ -142,6 +142,8 @@ export const Nav = ({
   panelBorderConnection,
   ...props
 }) => {
+  import.meta.css = css;
+
   children = toChildArray(children);
 
   return (

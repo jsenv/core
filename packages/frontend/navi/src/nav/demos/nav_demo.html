@@ -140,6 +140,7 @@
       const UnderlineInteractive = () => {
         const [active, setActive] = useState("overview");
         const tabs = ["overview", "activity", "reports", "billing"];
+
         return (
           <Box as="section" className="demo-section">
             <Title as="h2">Indicator + Click Selection</Title>
@@ -248,10 +249,10 @@
 
             <div className="example-block">
               <div className="caption">
-                Nav as icons with scaling when selected
+                Nav as icons with scaling when current
               </div>
               <Box
-                row
+                flex
                 alignX="start"
                 border="1px dashed violet"
                 width="fit-content"
@@ -282,7 +283,54 @@
                       transition="all 0.3s ease-in-out"
                       circle
                     >
-                      <Icon box size="32" align="center" padding="6">
+                      <Icon size="32" align="center" padding="6">
+                        <SettingsSvg />
+                      </Icon>
+                    </Link>
+                  ))}
+                </Nav>
+              </Box>
+              <div className="caption">
+                Nav with padding and border radius, link border radius not
+                specified
+              </div>
+              <Box
+                flex
+                alignX="start"
+                border="1px dashed violet"
+                width="fit-content"
+              >
+                <Nav
+                  spacing="s"
+                  borderRadius="m"
+                  background="lightblue"
+                  padding="s"
+                >
+                  {tabs.map((name) => (
+                    <Link
+                      key={name}
+                      onClick={() => setActive(name)}
+                      aria-controls={`panel-${name}`}
+                      padding="0"
+                      backgroundColor="orange"
+                      color="white"
+                      scale="1"
+                      style={{
+                        ":-navi-href-current": {
+                          scale: "1.3",
+                          backgroundColor:
+                            "color-mix(in srgb, var(--link-background-color) 80%, black)",
+                          color: "black",
+                        },
+                      }}
+                      pseudoState={{
+                        ":hover": name === "activity" || undefined,
+                        ":focus-visible": name === "activity",
+                        ":-navi-href-current": name === active,
+                      }}
+                      transition="all 0.3s ease-in-out"
+                    >
+                      <Icon size="32" align="center" padding="6">
                         <SettingsSvg />
                       </Icon>
                     </Link>
