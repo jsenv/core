@@ -284,7 +284,7 @@
                     <BadgeCount
                       background="#e74c3c"
                       color="white"
-                      style={{ fontSize: `${badgeFontSize}px` }}
+                      size={badgeFontSize}
                       textFontSize={textFontSize}
                     >
                       {count}
@@ -294,18 +294,22 @@
               </div>
               <div style={cellStyle}>
                 <span style={labelStyle}>@jsenv/navi circle</span>
-                <div style={containerStyle}>
+                <div
+                  style={{
+                    ...containerStyle,
+                    verticalAlign,
+                    fontSize: `${textFontSize}px`,
+                  }}
+                >
                   <span style={{ verticalAlign }}>
-                    <span
-                      style={{ ...textStyle, fontSize: `${textFontSize}px` }}
-                    >
-                      Notifications
+                    <span style={{ ...textStyle, verticalAlign: "inherit" }}>
+                      NotificationS
                     </span>
                     <BadgeCount
                       background="#e74c3c"
                       color="white"
                       circle
-                      style={{ fontSize: `${badgeFontSize}px` }}
+                      size={badgeFontSize}
                       textFontSize={textFontSize}
                     >
                       {count}
