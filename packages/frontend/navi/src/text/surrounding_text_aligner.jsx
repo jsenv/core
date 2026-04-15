@@ -41,6 +41,9 @@ export const SurroundingTextAligner = ({
     if (!anchorEl || !childEl) {
       return;
     }
+    // Reset any previous correction so getBoundingClientRect reflects natural position.
+    childEl.style.top = "";
+    childEl.style.position = "";
     const topOffset = computeTopOffset({
       anchorEl,
       childEl,
@@ -49,9 +52,6 @@ export const SurroundingTextAligner = ({
     if (topOffset) {
       childEl.style.position = "relative";
       childEl.style.top = `${topOffset}px`;
-    } else {
-      childEl.style.position = "";
-      childEl.style.top = "";
     }
   });
 
@@ -76,81 +76,35 @@ const computeTopOffset = ({ anchorEl, childEl, align }) => {
   if (anchorFontSize === childFontSize || align === "baseline") {
     return 0;
   }
+
   const anchorMetrics = measureFontAscDesc("M", anchorStyle);
-  const childMetrics = measureFontAscDesc("M", childStyle);
-  const verticalAlign = anchorStyle.verticalAlign;
   const [anchorABA, anchorABD] = anchorMetrics.actual;
-  const [anchorFBBA, anchorFBBD] = anchorMetrics.font;
   const anchorActH = anchorABA + anchorABD;
+  const [, anchorFBBD] = anchorMetrics.font;
 
-  // For non-inline children (inline-block, flex, etc.) the browser positions them by their
-  // rendered box, not by font metrics. Use the actual rendered height in that case.
-  const isChildInline = childStyle.display === "inline";
-  const childActH = isChildInline
-    ? childMetrics.actual[0] + childMetrics.actual[1]
-    : childEl.getBoundingClientRect().height;
+  // Estimate the baseline Y from the anchor's bounding rect.
+  // For an inline span, the font cell bottom is always at the element's bottom edge
+  // (regardless of vertical-align), so baseline = rect.bottom - fontBoundingBoxDescent.
+  const anchorRect = anchorEl.getBoundingClientRect();
+  const baselineY = anchorRect.bottom - anchorFBBD;
+  const anchorInkTopY = baselineY - anchorABA;
 
-  // Compute deltaTop = anchorInkTop_Y - childBoxTop_Y after browser layout
-  // (positive = add to topOffset to move child down; Y axis: positive downward; baseline = 0).
-  //
-  // For inline anchor (uses font cell metrics):
-  //   baseline  → anchorInkTop = -anchorABA
-  //   middle    → anchorInkTop = M - anchorActH/2
-  //   top       → anchorInkTop = T + anchorFBBA - anchorABA
-  //   bottom    → anchorInkTop = B - anchorFBBD - anchorABA
-  //
-  // For inline child: childBoxTop = childInkTop (same derivation, using child metrics)
-  // For non-inline child: browser uses rendered height for the box:
-  //   baseline  → childBoxTop = -childActH (box bottom at baseline)
-  //   middle    → childBoxTop = M - childActH/2
-  //   top       → childBoxTop = T
-  //   bottom    → childBoxTop = B - childActH
-  let deltaTop = 0;
-  if (
-    verticalAlign === "baseline" ||
-    verticalAlign === "" ||
-    verticalAlign === "super" ||
-    verticalAlign === "sub"
-  ) {
-    if (isChildInline) {
-      const [childABA] = childMetrics.actual;
-      deltaTop = childABA - anchorABA;
-    } else {
-      deltaTop = childActH - anchorABA;
-    }
-  } else if (verticalAlign === "middle") {
-    // M cancels: deltaTop = (childActH - anchorActH) / 2 in both cases
-    deltaTop = (childActH - anchorActH) / 2;
-  } else if (verticalAlign === "top" || verticalAlign === "text-top") {
-    if (isChildInline) {
-      const [childABA] = childMetrics.actual;
-      const [childFBBA] = childMetrics.font;
-      deltaTop = anchorFBBA - anchorABA - (childFBBA - childABA);
-    } else {
-      deltaTop = anchorFBBA - anchorABA; // childBoxTop = T → no child term
-    }
-  } else if (verticalAlign === "bottom" || verticalAlign === "text-bottom") {
-    if (isChildInline) {
-      const [childABA] = childMetrics.actual;
-      const [, childFBBD] = childMetrics.font;
-      deltaTop = childFBBD + childABA - (anchorFBBD + anchorABA);
-    } else {
-      deltaTop = childActH - anchorFBBD - anchorABA; // childBoxTop = B - childActH → B cancels
-    }
-  }
+  // Measure the child's natural top (reset was done before calling this function).
+  const childRect = childEl.getBoundingClientRect();
+  const childH = childRect.height;
 
-  // offsetFactor determines where along the anchor's actual ink height we target:
-  //   0   → align ink tops   (start)
-  //   0.5 → align ink centers (center)
-  //   1   → align ink bottoms (end)
-  let offsetFactor = 0;
+  // Compute desired child top Y based on align intention.
+  let desiredChildTopY = 0;
   if (align === "center") {
-    offsetFactor = 0.5;
+    const anchorInkCenterY = anchorInkTopY + anchorActH / 2;
+    desiredChildTopY = anchorInkCenterY - childH / 2;
+  } else if (align === "start") {
+    desiredChildTopY = anchorInkTopY;
   } else if (align === "end") {
-    offsetFactor = 1;
+    desiredChildTopY = anchorInkTopY + anchorActH - childH;
   }
 
-  return deltaTop + offsetFactor * (anchorActH - childActH);
+  return desiredChildTopY - childRect.top;
 };
 
 const canvas = document.createElement("canvas");
