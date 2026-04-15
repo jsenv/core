@@ -1,29 +1,4 @@
-import { Box } from "../box/box.jsx";
-
-const css = /* css */ `
-  .navi_surrounding_text_aligner_wrapper {
-    display: inline-flex;
-
-    &[data-align="start"] {
-      align-items: flex-start;
-    }
-    &[data-align="center"] {
-      align-items: center;
-    }
-    &[data-align="end"] {
-      align-items: flex-end;
-    }
-    &[data-align="baseline"] {
-      align-items: baseline;
-    }
-
-    .navi_surrounding_text_anchor {
-      width: 0;
-      user-select: none;
-      overflow: hidden;
-    }
-  }
-`;
+import { useLayoutEffect, useRef } from "preact/hooks";
 
 // SurroundingTextAligner aligns its children vertically relative to the surrounding
 // text — independently of the children's own font-size.
@@ -33,31 +8,93 @@ const css = /* css */ `
 // shifts it up or down relative to the surrounding text.
 //
 // Solution: a zero-width space (&#8203;) is rendered at the *surrounding* text's font-size
-// before the children. It participates in the inline line box with the surrounding text's
-// ascender/descender metrics, giving inline-flex a stable vertical reference that always
-// tracks the surrounding text — regardless of the children's font-size.
+// before the children. It participates in the inline line box and gives a stable
+// vertical reference at the surrounding text's baseline — regardless of the children's
+// font-size. Canvas measureText is used to get actual typographic ascent/descent metrics
+// (unaffected by line-height or padding) to compute the exact offset needed.
 //
-// The `align` prop controls how children are positioned against that reference:
-//   "baseline" (default) — aligns to the surrounding text baseline, most natural for badges/icons next to text
-//   "center"             — visual midpoint of the surrounding text line box
-//   "start"              — top of the surrounding text line box
-//   "end"                — bottom of the surrounding text line box
+// The `align` prop controls how children are positioned against the surrounding text:
+//   "center"   (default) — visual midpoint of children matches visual midpoint of surrounding text
+//   "baseline"           — children sit on the surrounding text baseline (no offset)
+//   "start"              — top of children's text aligns with top of surrounding text
+//   "end"                — bottom of children's text aligns with bottom of surrounding text
 export const SurroundingTextAligner = ({
   children,
-  align = "baseline",
+  align = "center",
   ...props
 }) => {
-  import.meta.css = css;
+  const anchorRef = useRef();
+  const childrenWrapperRef = useRef();
+
+  useLayoutEffect(() => {
+    const anchorEl = anchorRef.current;
+    const childEl = childrenWrapperRef.current;
+    if (!anchorEl || !childEl) {
+      return;
+    }
+
+    const anchorStyle = getComputedStyle(anchorEl);
+    const childStyle = getComputedStyle(childEl);
+    const anchorFontSize = parseFloat(anchorStyle.fontSize);
+    const childFontSize = parseFloat(childStyle.fontSize);
+
+    if (anchorFontSize === childFontSize || align === "baseline") {
+      childEl.style.position = "";
+      childEl.style.top = "";
+      return;
+    }
+
+    const anchorMetrics = measureTextMetrics("M", anchorStyle);
+    const childMetrics = measureTextMetrics("M", childStyle);
+
+    // After baseline alignment, positions are relative to the shared baseline.
+    // Anchor text top is at -anchorMetrics.ascent, bottom at +anchorMetrics.descent.
+    // Child  text top is at -childMetrics.ascent,  bottom at +childMetrics.descent.
+    let topOffset = 0;
+    if (align === "center") {
+      // midpoint from baseline: (descent - ascent) / 2
+      const anchorMid = (anchorMetrics.descent - anchorMetrics.ascent) / 2;
+      const childMid = (childMetrics.descent - childMetrics.ascent) / 2;
+      topOffset = anchorMid - childMid;
+    } else if (align === "start") {
+      // align tops: child needs to move by (childAscent - anchorAscent)
+      topOffset = childMetrics.ascent - anchorMetrics.ascent;
+    } else if (align === "end") {
+      // align bottoms: child needs to move by (anchorDescent - childDescent)
+      topOffset = anchorMetrics.descent - childMetrics.descent;
+    }
+
+    if (topOffset) {
+      childEl.style.position = "relative";
+      childEl.style.top = `${topOffset}px`;
+    } else {
+      childEl.style.position = "";
+      childEl.style.top = "";
+    }
+  });
 
   return (
-    <Box
-      as="span"
-      className="navi_surrounding_text_aligner_wrapper"
-      data-align={align}
-      {...props}
-    >
-      <span className="navi_surrounding_text_anchor">&#8203;</span>
-      {children}
-    </Box>
+    <>
+      <span
+        ref={anchorRef}
+        style={{ width: 0, userSelect: "none", overflow: "hidden" }}
+      >
+        &#8203;
+      </span>
+      <span ref={childrenWrapperRef} {...props}>
+        {children}
+      </span>
+    </>
   );
+};
+
+const canvas = document.createElement("canvas");
+const measureTextMetrics = (text, computedStyle) => {
+  const ctx = canvas.getContext("2d");
+  ctx.font = `${computedStyle.fontWeight} ${computedStyle.fontSize} ${computedStyle.fontFamily}`;
+  const metrics = ctx.measureText(text);
+  return {
+    ascent: metrics.actualBoundingBoxAscent,
+    descent: metrics.actualBoundingBoxDescent,
+  };
 };
