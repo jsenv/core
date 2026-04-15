@@ -353,12 +353,15 @@
                   >
                     NotificationS
                   </span>
-                  <Badge
-                    textFontSize={textFontSize}
-                    count={count}
-                    fontSize={badgeFontSize}
-                  />
-                  After
+                  <Badge count={count} fontSize={badgeFontSize} />
+                  <span
+                    style={{
+                      ...textStyle,
+                      verticalAlign: "inherit",
+                    }}
+                  >
+                    After
+                  </span>
                 </div>
               </div>
               <div style={cellStyle}>
