@@ -33,14 +33,12 @@
         return (
           <span
             style={{
-              // display: "inline-block",
               fontSize: `${fontSize}px`,
+              padding: "0.8em 0.2em",
               backgroundColor: "#e74c3c",
               color: "white",
-              padding: "0.8em 0.2em",
               borderRadius: "3px",
-              // lineHeight: "normal",
-              verticalAlign: "inherit",
+              verticalAlign: "bottom",
             }}
           >
             {count}
@@ -209,12 +207,12 @@
                     lineHeight: "100px",
                     boxSizing: "content-box",
                     verticalAlign,
+                    fontSize: `${textFontSize}px`,
                   }}
                 >
                   <span
                     style={{
                       ...textStyle,
-                      fontSize: `${textFontSize}px`,
                       verticalAlign: "inherit",
                     }}
                   >
