@@ -2169,4 +2169,62 @@ await snapshotTests(import.meta.url, ({ test }) => {
       setRouteIntegration(null);
     }
   });
+
+  test("updating signals on a route, document url should sync", () => {
+    const navToCalls = [];
+    const routeIntegrationMock = {
+      navTo: (url) => {
+        navToCalls.push(url);
+      },
+    };
+    setRouteIntegration(routeIntegrationMock);
+    const isochroneTabSignal = stateSignal("compare");
+    const isochroneLongitudeSignal = stateSignal(2, {
+      type: "number",
+    });
+    const MAP_ROUTE = route("/map/");
+    const MAP_ISOCHRONE_ROUTE = route(
+      `/map/isochrone/:tab=${isochroneTabSignal}/`,
+      {
+        searchParams: {
+          iso_lon: isochroneLongitudeSignal,
+        },
+      },
+    );
+    const MAP_ISOCHRONE_COMPARE_ROUTE = route(`/map/isochrone/compare`);
+    const { updateRoutes, clearRoutes } = setupRoutes([
+      MAP_ROUTE,
+      MAP_ISOCHRONE_ROUTE,
+      MAP_ISOCHRONE_COMPARE_ROUTE,
+    ]);
+
+    const captureState = () => {
+      return {
+        isochrone_lon_signal_value: isochroneLongitudeSignal.value,
+      };
+    };
+
+    try {
+      updateRoutes(`${baseUrl}/map/isochrone?zone=london`);
+      const initialState = captureState();
+      navToCalls.length = 0;
+
+      isochroneLongitudeSignal.value = 2.5;
+      const finalState = captureState();
+
+      return {
+        initial_state: initialState,
+        final_state: finalState,
+        redirect_calls: {
+          nav_to_calls: navToCalls,
+          total_calls: navToCalls.length,
+          any_redirects_occurred: navToCalls.length > 0,
+        },
+      };
+    } finally {
+      setRouteIntegration(undefined);
+      clearRoutes();
+      globalSignalRegistry.clear();
+    }
+  });
 });
