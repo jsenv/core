@@ -19,6 +19,7 @@ const css = /* css */ `
 
   .navi_text {
     position: relative;
+    border-radius: var(--x-border-radius);
 
     /* There is a chrome specific bug that prevents text-transform: capitalize to be applied in nested DOM structure */
     /* The CSS below ensure capitalize is propagated to the bold clones */
@@ -70,24 +71,54 @@ const css = /* css */ `
       }
     }
 
-    /* Background approach: gradient applied on the element itself fills the
-       padding box by default, so padding is automatically respected.
-       No absolutely positioned child needed. */
     &[data-skeleton] {
-      /* Direct text nodes are hidden by color:transparent;
-         child elements are hidden by > * below.
-         Both keep their layout space so the skeleton matches content size. */
-      color: transparent !important;
-      background: linear-gradient(90deg, #e0e0e0 25%, #f0f0f0 50%, #e0e0e0 75%);
-      background-size: 200% 100%;
-      background-clip: content-box;
-      border-radius: 4px;
-      & > * {
-        visibility: hidden;
+      --x-border-radius: 0.1em;
+
+      visibility: hidden;
+
+      .navi_text_skeleton_children_placeholder {
+        display: inline-flex;
+        width: 100%;
+      }
+
+      /* Two-level approach to respect padding AND keep border-radius:
+         - outer span fills the border box (inset:0) and has padding:inherit,
+           so its content box = the parent's content box (padding respected).
+         - inner span fills that content box with inset:0 and has
+           border-radius:inherit, which chains back to the parent's radius. */
+      .navi_text_skeleton_container {
+        position: absolute;
+        inset: 0;
+        padding: inherit;
+        line-height: normal;
+        border-radius: inherit;
+        visibility: visible;
+      }
+      .navi_text_skeleton_padding_box {
+        position: relative;
+        display: inline-flex;
+        width: 100%;
+        height: 100%;
+        border-radius: inherit;
+      }
+
+      .navi_text_skeleton {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+          90deg,
+          #e0e0e0 25%,
+          #f0f0f0 50%,
+          #e0e0e0 75%
+        );
+        background-size: 200% 100%;
+        border-radius: inherit;
       }
 
       &[data-loading] {
-        animation: navi_text_skeleton_shimmer 1.5s infinite;
+        .navi_text_skeleton {
+          animation: navi_text_skeleton_shimmer 1.5s infinite;
+        }
       }
     }
   }
@@ -273,23 +304,35 @@ export const Text = (props) => {
 };
 
 const TextSkeleton = ({ loading, children, ...props }) => {
+  const skeletonSpan = (
+    <span className="navi_text_skeleton_container" aria-hidden="true">
+      <span className="navi_text_skeleton_padding_box">
+        <span className="navi_text_skeleton" />
+      </span>
+    </span>
+  );
   // When there are no children we inject an invisible "W" so the element takes
-  // its natural text height (based on font-size/line-height) rather than
-  // collapsing to zero. It is hidden by color:transparent on [data-skeleton].
+  // its natural text height (based on font-size/line-height).
+  // It is hidden by color:transparent on [data-skeleton].
   const hasChildren =
     children !== null && children !== undefined && children !== false;
   const innerChildren = hasChildren ? (
     children
   ) : (
-    <span aria-hidden="true">W</span>
+    <span
+      className="navi_text_skeleton_children_placeholder"
+      aria-hidden="true"
+    >
+      W
+    </span>
   );
   return (
     <Text
       data-skeleton=""
       data-loading={loading ? "" : undefined}
-      aria-hidden={loading ? "true" : "false"}
       {...props}
       skeleton={undefined}
+      childrenOutsideFlow={skeletonSpan}
     >
       {innerChildren}
     </Text>

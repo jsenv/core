@@ -219,7 +219,9 @@
                   default font-size, default line-height
                 </div>
                 <div class="container-box" style="width: 300px;">
-                  <Text loading={loading}>Hello world</Text>
+                  <Text loading={loading}>
+                    {loading ? undefined : "Hello world"}
+                  </Text>
                 </div>
               </div>
               <div>
@@ -228,7 +230,7 @@
                 </div>
                 <div class="container-box" style="width: 300px;">
                   <Text loading={loading} fontSize="1.5rem">
-                    Hello world
+                    {loading ? undefined : "Hello world"}
                   </Text>
                 </div>
               </div>
@@ -239,7 +241,7 @@
                 </div>
                 <div class="container-box" style="width: 300px;">
                   <Text loading={loading} fontSize="2rem" lineHeight="3">
-                    Hello world
+                    {loading ? undefined : "Hello world"}
                   </Text>
                 </div>
               </div>
@@ -249,7 +251,7 @@
                 </div>
                 <div class="container-box" style="width: 300px;">
                   <Text loading={loading} fontSize="0.75rem">
-                    Hello world
+                    {loading ? undefined : "Hello world"}
                   </Text>
                 </div>
               </div>
