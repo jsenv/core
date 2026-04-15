@@ -31,17 +31,21 @@
         // Visual centering is achieved with padding + line-height rather than flexbox,
         // keeping the box model truly inline.
         return (
-          <span
-            style={{
-              fontSize: `${fontSize}px`,
-              padding: "0.8em 0.2em",
-              backgroundColor: "#e74c3c",
-              color: "white",
-              borderRadius: "3px",
-              verticalAlign: "bottom",
-            }}
-          >
-            {count}
+          <span style="background:yellow;">
+            A
+            <span style="margin-top:0.5em;">
+              <span
+                style={{
+                  fontSize: `${fontSize}px`,
+                  padding: "0.8em 0.2em",
+                  backgroundColor: "#e74c3c",
+                  color: "white",
+                  borderRadius: "3px",
+                }}
+              >
+                {count}
+              </span>
+            </span>
           </span>
         );
       };
@@ -203,9 +207,9 @@
                 <div
                   style={{
                     ...containerStyle,
-                    height: "100px",
-                    lineHeight: "100px",
-                    boxSizing: "content-box",
+                    // height: "100px",
+                    // lineHeight: "100px",
+                    // boxSizing: "content-box",
                     verticalAlign,
                     fontSize: `${textFontSize}px`,
                   }}
