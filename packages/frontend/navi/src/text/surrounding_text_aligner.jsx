@@ -96,6 +96,17 @@ const computeTopOffset = ({ anchorEl, childEl, align }) => {
   if (anchorFontSize === childFontSize || align === "baseline") {
     return 0;
   }
+  // Only correct when the anchor lives in an inline formatting context.
+  // If the parent is a flex/grid container, inline layout rules don't apply
+  // and our font-metrics model is invalid.
+  const parentDisplay = getComputedStyle(anchorEl.parentElement).display;
+  if (
+    parentDisplay !== "inline" &&
+    parentDisplay !== "inline-block" &&
+    parentDisplay !== "block"
+  ) {
+    return 0;
+  }
 
   const anchorMetrics = measureFontAscDesc("M", anchorStyle);
   const [anchorABA, anchorABD] = anchorMetrics.actual;

@@ -30,7 +30,7 @@ import { useConstraints } from "./validation/hooks/use_constraints.js";
  * rgb(0, 0, 0) while being visually grey in chrome
  * So we redefine chrome styles so that loader can keep up with the actual color visible to the user
  */
-import.meta.css = /* css */ `
+const css = /* css */ `
   @layer navi {
     .navi_button {
       --button-outline-width: 1px;
@@ -156,6 +156,7 @@ import.meta.css = /* css */ `
       align-items: inherit;
       justify-content: inherit;
       color: var(--x-button-color);
+      vertical-align: inherit;
       background: var(--x-button-background);
       background-color: var(
         --x-button-background-color,
@@ -282,6 +283,8 @@ import.meta.css = /* css */ `
 `;
 
 export const Button = (props) => {
+  import.meta.css = css;
+
   return renderActionableComponent(props, {
     Basic: ButtonBasic,
     WithAction: ButtonWithAction,
@@ -350,7 +353,7 @@ const ButtonBasic = (props) => {
     icon,
     revealOnInteraction = icon,
     discrete = icon && !revealOnInteraction,
-
+    spacing,
     children,
     ...rest
   } = props;
@@ -366,7 +369,7 @@ const ButtonBasic = (props) => {
 
   const renderButtonContent = (buttonProps) => {
     return (
-      <Text {...buttonProps} className="navi_button_content">
+      <Text {...buttonProps} spacing={spacing} className="navi_button_content">
         {children}
         <ButtonShadow />
       </Text>
@@ -374,6 +377,7 @@ const ButtonBasic = (props) => {
   };
   const renderButtonContentMemoized = useCallback(renderButtonContent, [
     children,
+    spacing,
   ]);
 
   return (
