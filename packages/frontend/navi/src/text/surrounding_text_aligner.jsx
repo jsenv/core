@@ -79,8 +79,10 @@ const computeTopOffset = ({ anchorEl, childEl, align }) => {
   const anchorMetrics = measureFontAscDesc("M", anchorStyle);
   const childMetrics = measureFontAscDesc("M", childStyle);
   const verticalAlign = anchorStyle.verticalAlign;
-  const [anchorABA, anchorABD, anchorFBBA, anchorFBBD] = anchorMetrics;
-  const [childABA, childABD, childFBBA, childFBBD] = childMetrics;
+  const [anchorABA, anchorABD] = anchorMetrics.actual;
+  const [anchorFBBA, anchorFBBD] = anchorMetrics.font;
+  const [childABA, childABD] = childMetrics.actual;
+  const [childFBBA, childFBBD] = childMetrics.font;
   const anchorActH = anchorABA + anchorABD;
   const childActH = childABA + childABD;
 
@@ -130,10 +132,8 @@ const measureFontAscDesc = (text, computedStyle) => {
   const ctx = canvas.getContext("2d");
   ctx.font = `${computedStyle.fontWeight} ${computedStyle.fontSize} ${computedStyle.fontFamily}`;
   const metrics = ctx.measureText(text);
-  return [
-    metrics.actualBoundingBoxAscent,
-    metrics.actualBoundingBoxDescent,
-    metrics.fontBoundingBoxAscent,
-    metrics.fontBoundingBoxDescent,
-  ];
+  return {
+    actual: [metrics.actualBoundingBoxAscent, metrics.actualBoundingBoxDescent],
+    font: [metrics.fontBoundingBoxAscent, metrics.fontBoundingBoxDescent],
+  };
 };
