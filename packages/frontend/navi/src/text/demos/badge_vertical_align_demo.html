@@ -6,10 +6,15 @@
     <title>Badge Vertical Align Demo</title>
   </head>
   <body>
+    <style>
+      /* * {
+        vertical-align: middle;
+      } */
+    </style>
     <div id="app"></div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useState } from "preact/hooks";
+      import { useLayoutEffect, useRef, useState } from "preact/hooks";
       import { BadgeCount, Text } from "@jsenv/navi";
 
       const containerStyle = {
@@ -24,19 +29,54 @@
       };
 
       const Badge = ({ count, fontSize }) => {
+        const anchorRef = useRef();
+        const badgeRef = useRef();
+
+        useLayoutEffect(() => {
+          const anchorEl = anchorRef.current;
+          const badgeEl = badgeRef.current;
+          if (!anchorEl || !badgeEl) {
+            return;
+          }
+          const anchorFontSize = parseFloat(
+            getComputedStyle(anchorEl).fontSize,
+          );
+          const badgeFontSize = parseFloat(getComputedStyle(badgeEl).fontSize);
+          if (anchorFontSize === badgeFontSize) {
+            badgeEl.style.top = `0px`;
+            return;
+          }
+          const anchorRect = anchorEl.getBoundingClientRect();
+          const badgeRect = badgeEl.getBoundingClientRect();
+          const anchorHeight = anchorRect.height;
+          const badgeHeight = badgeRect.height;
+          const heightDiff = badgeHeight - anchorHeight;
+          const topOffset = heightDiff / 2;
+          badgeEl.style.top = `${topOffset}px`;
+        }, [fontSize]);
+
         return (
-          <span
-            style={{
-              fontSize: `${fontSize}px`,
-              backgroundColor: "#e74c3c",
-              color: "white",
-              padding: "0.4em 0.1em",
-              borderRadius: "3px",
-              verticalAlign: "inherit",
-            }}
-          >
-            {count}
-          </span>
+          <>
+            <span
+              ref={anchorRef}
+              style={{ width: 0, userSelect: "none", overflow: "hidden" }}
+            >
+              &#8203;
+            </span>
+            <span
+              ref={badgeRef}
+              style={{
+                fontSize: `${fontSize}px`,
+                backgroundColor: "#e74c3c",
+                color: "white",
+                padding: "0.4em 0.1em",
+                borderRadius: "3px",
+                position: "relative",
+              }}
+            >
+              {count}
+            </span>
+          </>
         );
       };
 
@@ -210,7 +250,7 @@
                       verticalAlign: "inherit",
                     }}
                   >
-                    Notifications
+                    NotificationS
                   </span>
                   <Badge count={count} fontSize={badgeFontSize} />
                 </div>
