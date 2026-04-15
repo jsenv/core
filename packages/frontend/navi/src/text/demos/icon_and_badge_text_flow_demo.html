@@ -60,14 +60,21 @@
         return children;
       };
 
-      const InlineRow = ({ containerExtraStyle, innerSpanStyle }) => (
+      const InlineRow = ({
+        containerExtraStyle,
+        innerSpanStyle,
+        iconSize,
+        badgeSize,
+      }) => (
         <div style={rowStyle}>
           <div style={cellStyle}>
             <span style={labelStyle}>icon</span>
             <div style={{ ...containerStyle, ...containerExtraStyle }}>
               <InlineRowContent innerSpanStyle={innerSpanStyle}>
                 <span style={textStyle}>Notifications</span>
-                <Icon>
+                <Icon
+                  style={iconSize ? { fontSize: `${iconSize}px` } : undefined}
+                >
                   <StarSvg />
                 </Icon>
                 <span style={textStyle}>After</span>
@@ -79,7 +86,11 @@
             <div style={{ ...containerStyle, ...containerExtraStyle }}>
               <InlineRowContent innerSpanStyle={innerSpanStyle}>
                 <span style={textStyle}>Notifications</span>
-                <BadgeCount background="#e74c3c" color="white">
+                <BadgeCount
+                  background="#e74c3c"
+                  color="white"
+                  style={badgeSize ? { fontSize: `${badgeSize}px` } : undefined}
+                >
                   {42}
                 </BadgeCount>
                 <span style={textStyle}>After</span>
@@ -91,7 +102,12 @@
             <div style={{ ...containerStyle, ...containerExtraStyle }}>
               <InlineRowContent innerSpanStyle={innerSpanStyle}>
                 <span style={textStyle}>Notifications</span>
-                <BadgeCount background="#e74c3c" color="white" circle>
+                <BadgeCount
+                  background="#e74c3c"
+                  color="white"
+                  circle
+                  style={badgeSize ? { fontSize: `${badgeSize}px` } : undefined}
+                >
                   {42}
                 </BadgeCount>
                 <span style={textStyle}>After</span>
