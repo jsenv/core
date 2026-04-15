@@ -538,6 +538,7 @@ const LinkPlain = (props) => {
         e.detail.setValue(value);
       }}
       preventBoldLayoutShift={currentEffectBold}
+      preventSpaceUnderlines
       overflowEllipsis={overflowEllipsis}
       // Visual
       data-appearance={appearance}

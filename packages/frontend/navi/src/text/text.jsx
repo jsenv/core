@@ -21,7 +21,6 @@ const css = /* css */ `
   }
 
   *[data-navi-space] {
-    /* padding-left: 0.25em; */
   }
 
   .navi_text {
@@ -204,15 +203,22 @@ const css = /* css */ `
   }
 `;
 
-// We could use <span data-navi-space=""> </span>
-// but we prefer to use zero width space as it has the nice side effects of
-// not being underlined by the browser (very cool because we typically don't want spaces to be underlined in links)
 const REGULAR_SPACE = <span data-navi-space=""> </span>;
-// const REGULAR_SPACE = <span data-navi-space="">&#8203;</span>;
-const CustomWidthSpace = ({ value }) => {
+// A space that uses padding-left instead of a real space character.
+// This avoids the underline that browsers draw under spaces inside links.
+const FAKE_SPACE = (
+  <span data-navi-space="" style="padding-left: 0.25em">
+    &#8203;
+  </span>
+);
+const CustomWidthSpace = ({ value, noUnderlineSpaces }) => {
+  if (noUnderlineSpaces) {
+    return <span style={`padding-left: ${value}`}>&#8203;</span>;
+  }
   return (
-    <span className="navi_custom_space" style={`padding-left: ${value}`}>
-      &#8203;
+    <span>
+      <span style="font-size: 0"> </span>
+      <span style={`padding-left: ${value}`}>&#8203;</span>
     </span>
   );
 };
@@ -220,6 +226,7 @@ const CustomWidthSpace = ({ value }) => {
 export const applySpacingOnTextChildren = (
   children,
   spacing = REGULAR_SPACE,
+  preventSpaceUnderlines = false,
 ) => {
   if (spacing === "pre" || spacing === "0" || spacing === 0) {
     return children;
@@ -233,19 +240,39 @@ export const applySpacingOnTextChildren = (
     return children;
   }
 
+  const defaultSpace = preventSpaceUnderlines ? FAKE_SPACE : REGULAR_SPACE;
   let separator;
-  if (spacing === undefined) {
-    spacing = REGULAR_SPACE;
+  if (
+    spacing === undefined ||
+    spacing === REGULAR_SPACE ||
+    spacing === FAKE_SPACE
+  ) {
+    separator = defaultSpace;
   } else if (typeof spacing === "string") {
     if (isSizeSpacingScaleKey(spacing)) {
-      separator = <CustomWidthSpace value={resolveSpacingSize(spacing)} />;
+      separator = (
+        <CustomWidthSpace
+          value={resolveSpacingSize(spacing)}
+          preventSpaceUnderlines={preventSpaceUnderlines}
+        />
+      );
     } else if (hasCSSSizeUnit(spacing)) {
-      separator = <CustomWidthSpace value={resolveSpacingSize(spacing)} />;
+      separator = (
+        <CustomWidthSpace
+          value={resolveSpacingSize(spacing)}
+          preventSpaceUnderlines={preventSpaceUnderlines}
+        />
+      );
     } else {
       separator = spacing;
     }
   } else if (typeof spacing === "number") {
-    separator = <CustomWidthSpace value={`${spacing}px`} />;
+    separator = (
+      <CustomWidthSpace
+        value={`${spacing}px`}
+        preventSpaceUnderlines={preventSpaceUnderlines}
+      />
+    );
   } else {
     separator = spacing;
   }
@@ -414,7 +441,8 @@ const TextWithSelectRange = ({ selectRange, ...props }) => {
   return <Text ref={ref} {...props}></Text>;
 };
 const TextBasic = ({
-  spacing = REGULAR_SPACE,
+  spacing,
+  preventSpaceUnderlines = false,
   boldTransition,
   boldStable,
   preventBoldLayoutShift = boldTransition,
@@ -423,6 +451,8 @@ const TextBasic = ({
   childrenOutsideFlow,
   ...rest
 }) => {
+  const defaultSpace = preventSpaceUnderlines ? FAKE_SPACE : REGULAR_SPACE;
+  const resolvedSpacing = spacing ?? defaultSpace;
   const boxProps = {
     "as": "span",
     "data-bold-transition": boldTransition ? "" : undefined,
@@ -432,9 +462,13 @@ const TextBasic = ({
   };
   const shouldPreserveSpacing = rest.as === "pre" || rest.flex || rest.grid;
   if (shouldPreserveSpacing) {
-    boxProps.spacing = spacing;
+    boxProps.spacing = resolvedSpacing;
   } else {
-    children = applySpacingOnTextChildren(children, spacing);
+    children = applySpacingOnTextChildren(
+      children,
+      resolvedSpacing,
+      preventSpaceUnderlines,
+    );
   }
 
   if (boldStable) {
