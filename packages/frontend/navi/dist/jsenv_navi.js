@@ -3,7 +3,7 @@ import { isValidElement, h, createContext, toChildArray, render, createRef, clon
 import { useErrorBoundary, useLayoutEffect, useEffect, useMemo, useRef, useState, useCallback, useContext, useImperativeHandle, useId } from "preact/hooks";
 import { jsxs, jsx, Fragment } from "preact/jsx-runtime";
 import { signal, effect, computed, batch, useSignal } from "@preact/signals";
-import { createIterableWeakSet, mergeOneStyle, stringifyStyle, createPubSub, mergeTwoStyles, normalizeStyles, createGroupTransitionController, getElementSignature, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, findBefore, findAfter, createValueEffect, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, allowWheelThrough, resolveCSSColor, createStyleController, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, hasCSSSizeUnit, resolveCSSSize, activeElementSignal, canInterceptKeys, contrastColor, initFocusGroup, elementIsFocusable, resolveColorLuminance, dragAfterThreshold, getScrollContainer, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
+import { createIterableWeakSet, mergeOneStyle, stringifyStyle, createPubSub, mergeTwoStyles, normalizeStyles, createGroupTransitionController, getElementSignature, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, findBefore, findAfter, createValueEffect, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, allowWheelThrough, resolveCSSColor, createStyleController, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, resolveCSSSize, activeElementSignal, canInterceptKeys, hasCSSSizeUnit, contrastColor, initFocusGroup, elementIsFocusable, resolveColorLuminance, dragAfterThreshold, getScrollContainer, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
 export { contrastColor } from "@jsenv/dom";
 import { prefixFirstAndIndentRemainingLines } from "@jsenv/humanize";
 import { createValidity } from "@jsenv/validity";
@@ -18734,764 +18734,6 @@ const useConstraints = (elementRef, props, { targetSelector } = {}) => {
   return remainingProps;
 };
 
-const useInitialTextSelection = (ref, textSelection) => {
-  const deps = [];
-  if (Array.isArray(textSelection)) {
-    deps.push(...textSelection);
-  } else {
-    deps.push(textSelection);
-  }
-  useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el || !textSelection) {
-      return;
-    }
-    const range = document.createRange();
-    const selection = window.getSelection();
-    if (Array.isArray(textSelection)) {
-      if (textSelection.length === 2) {
-        const [start, end] = textSelection;
-        if (typeof start === "number" && typeof end === "number") {
-          // Format: [0, 10] - character indices
-          selectByCharacterIndices(el, range, start, end);
-        } else if (typeof start === "string" && typeof end === "string") {
-          // Format: ["Click on the", "button to return"] - text strings
-          selectByTextStrings(el, range, start, end);
-        }
-      }
-    } else if (typeof textSelection === "string") {
-      // Format: "some text" - select the entire string occurrence
-      selectSingleTextString(el, range, textSelection);
-    }
-    selection.removeAllRanges();
-    selection.addRange(range);
-  }, deps);
-};
-const selectByCharacterIndices = (element, range, startIndex, endIndex) => {
-  const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, null, false);
-  let currentIndex = 0;
-  let startNode = null;
-  let startOffset = 0;
-  let endNode = null;
-  let endOffset = 0;
-  while (walker.nextNode()) {
-    const textContent = walker.currentNode.textContent;
-    const nodeLength = textContent.length;
-
-    // Check if start position is in this text node
-    if (!startNode && currentIndex + nodeLength > startIndex) {
-      startNode = walker.currentNode;
-      startOffset = startIndex - currentIndex;
-    }
-
-    // Check if end position is in this text node
-    if (currentIndex + nodeLength >= endIndex) {
-      endNode = walker.currentNode;
-      endOffset = endIndex - currentIndex;
-      break;
-    }
-    currentIndex += nodeLength;
-  }
-  if (startNode && endNode) {
-    range.setStart(startNode, startOffset);
-    range.setEnd(endNode, endOffset);
-  }
-};
-const selectSingleTextString = (element, range, text) => {
-  const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, null, false);
-  while (walker.nextNode()) {
-    const textContent = walker.currentNode.textContent;
-    const index = textContent.indexOf(text);
-    if (index !== -1) {
-      range.setStart(walker.currentNode, index);
-      range.setEnd(walker.currentNode, index + text.length);
-      return;
-    }
-  }
-};
-const selectByTextStrings = (element, range, startText, endText) => {
-  const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, null, false);
-  let startNode = null;
-  let endNode = null;
-  let foundStart = false;
-  while (walker.nextNode()) {
-    const textContent = walker.currentNode.textContent;
-    if (!foundStart && textContent.includes(startText)) {
-      startNode = walker.currentNode;
-      foundStart = true;
-    }
-    if (foundStart && textContent.includes(endText)) {
-      endNode = walker.currentNode;
-      break;
-    }
-  }
-  if (startNode && endNode) {
-    const startOffset = startNode.textContent.indexOf(startText);
-    const endOffset = endNode.textContent.indexOf(endText) + endText.length;
-    range.setStart(startNode, startOffset);
-    range.setEnd(endNode, endOffset);
-  }
-};
-
-installImportMetaCssBuild(import.meta);/* eslint-disable jsenv/no-unknown-params */
-const css$4 = /* css */`
-  @layer navi {
-    .navi_text {
-      &[data-skeleton] {
-        border-radius: 0.2em;
-      }
-    }
-  }
-
-  *[data-navi-space] {
-    /* user-select: none; */
-    padding-left: 0.25em;
-  }
-
-  .navi_text {
-    position: relative;
-
-    /* There is a chrome specific bug that prevents text-transform: capitalize to be applied in nested DOM structure */
-    /* The CSS below ensure capitalize is propagated to the bold clones */
-    &[data-capitalize] {
-      &::first-letter {
-        text-transform: uppercase;
-      }
-      .navi_text_bold_clone::first-letter {
-        text-transform: uppercase;
-      }
-      .navi_text_bold_foreground::first-letter {
-        text-transform: uppercase;
-      }
-    }
-
-    .navi_text_bold_wrapper,
-    .navi_text_bold_clone,
-    .navi_text_bold_foreground {
-      display: inherit;
-      width: inherit;
-      min-width: inherit;
-      height: inherit;
-      min-height: inherit;
-      flex-grow: inherit;
-      align-items: inherit;
-      justify-content: inherit;
-      gap: inherit;
-      text-align: inherit;
-      border-radius: inherit;
-    }
-
-    &[data-text-overflow] {
-      min-width: 0;
-      flex-wrap: wrap;
-      text-overflow: ellipsis;
-      overflow: hidden;
-
-      .navi_text_overflow_wrapper {
-        display: flex;
-        width: 100%;
-        flex-grow: 1;
-        gap: 0.3em;
-
-        .navi_text_overflow_text {
-          max-width: 100%;
-          text-overflow: ellipsis;
-          overflow: hidden;
-        }
-      }
-    }
-
-    &[data-skeleton] {
-      /* Children stay in the DOM to preserve natural layout dimensions,
-         but are hidden so only the skeleton is visible. */
-      visibility: hidden;
-
-      /* When there are no children a placeholder "W" is injected (see JSX).
-         It must stretch to the full available width so the skeleton
-         fills the container rather than collapsing to a single character. */
-      .navi_text_skeleton_children_placeholder {
-        display: inline-flex;
-        width: 100%;
-      }
-
-      /* Three-level structure to respect padding AND border-radius:
-
-         1. navi_text_skeleton_container — absolutely fills the border box
-            (inset:0), then applies padding:inherit so its content box equals
-            the parent's content box. line-height:normal prevents the container
-            from inheriting a large line-height that would make it taller than
-            the border box. border-radius:inherit passes the radius down.
-            visibility:visible overrides the parent's visibility:hidden.
-
-         2. navi_text_skeleton_inset — a relative block that fills 100% of the
-            container's content box (= parent's content box). It is the
-            positioned ancestor for the absolutely placed skeleton bar.
-            border-radius:inherit chains the radius further down.
-
-         3. navi_text_skeleton — the visible gradient bar. position:absolute
-            inset:0 fills the inset box precisely. border-radius:inherit
-            finally applies the radius at this level, which is now correctly
-            sized to the content area. */
-      .navi_text_skeleton_container {
-        position: absolute;
-        inset: 0;
-        padding: inherit;
-        line-height: normal;
-        border-radius: inherit;
-        visibility: visible;
-      }
-
-      .navi_text_skeleton_inset {
-        position: relative;
-        display: inline-flex;
-        width: 100%;
-        height: 100%;
-        border-radius: inherit;
-      }
-
-      .navi_text_skeleton {
-        position: absolute;
-        inset: 0;
-        background: linear-gradient(
-          90deg,
-          #e0e0e0 25%,
-          #f0f0f0 50%,
-          #e0e0e0 75%
-        );
-        background-size: 200% 100%;
-        border-radius: inherit;
-      }
-
-      &[data-loading] {
-        .navi_text_skeleton {
-          animation: navi_text_skeleton_shimmer 1.5s infinite;
-        }
-      }
-    }
-  }
-
-  @keyframes navi_text_skeleton_shimmer {
-    0% {
-      background-position: 200% 0;
-    }
-    100% {
-      background-position: -200% 0;
-    }
-  }
-
-  .navi_text_bold_wrapper {
-    position: relative;
-    display: inline-block;
-
-    .navi_text_bold_clone {
-      font-weight: bold;
-      opacity: 0;
-    }
-    .navi_text_bold_foreground {
-      position: absolute;
-      inset: 0;
-    }
-  }
-
-  .navi_text_bold_background {
-    position: absolute;
-    top: 0;
-    left: 0;
-    color: currentColor;
-    font-weight: normal;
-    background: currentColor;
-    background-clip: text;
-    -webkit-background-clip: text;
-    transform-origin: center;
-    -webkit-text-fill-color: transparent;
-    opacity: 0;
-  }
-
-  .navi_text[data-bold] {
-    .navi_text_bold_background {
-      opacity: 1;
-    }
-  }
-
-  .navi_text[data-bold-transition] {
-    .navi_text_bold_foreground {
-      transition-property: font-weight;
-      transition-duration: 0.3s;
-      transition-timing-function: ease;
-    }
-
-    .navi_text_bold_background {
-      transition-property: opacity;
-      transition-duration: 0.3s;
-      transition-timing-function: ease;
-    }
-  }
-`;
-
-// We could use <span data-navi-space=""> </span>
-// but we prefer to use zero width space as it has the nice side effects of
-// not being underlined by the browser (very cool because we typically don't want spaces to be underlined in links)
-const REGULAR_SPACE = jsx("span", {
-  "data-navi-space": "",
-  children: "\u200B"
-});
-const CustomWidthSpace = ({
-  value
-}) => {
-  return jsx("span", {
-    className: "navi_custom_space",
-    style: `padding-left: ${value}`,
-    children: "\u200B"
-  });
-};
-const applySpacingOnTextChildren = (children, spacing = REGULAR_SPACE) => {
-  if (spacing === "pre" || spacing === "0" || spacing === 0) {
-    return children;
-  }
-  if (!children) {
-    return children;
-  }
-  const childArray = toChildArray(children);
-  const childCount = childArray.length;
-  if (childCount <= 1) {
-    return children;
-  }
-  let separator;
-  if (spacing === undefined) {
-    spacing = REGULAR_SPACE;
-  } else if (typeof spacing === "string") {
-    if (isSizeSpacingScaleKey(spacing)) {
-      separator = jsx(CustomWidthSpace, {
-        value: resolveSpacingSize(spacing)
-      });
-    } else if (hasCSSSizeUnit(spacing)) {
-      separator = jsx(CustomWidthSpace, {
-        value: resolveSpacingSize(spacing)
-      });
-    } else {
-      separator = spacing;
-    }
-  } else if (typeof spacing === "number") {
-    separator = jsx(CustomWidthSpace, {
-      value: `${spacing}px`
-    });
-  } else {
-    separator = spacing;
-  }
-  const childrenWithGap = [];
-  let i = 0;
-  while (true) {
-    const child = childArray[i];
-    childrenWithGap.push(child);
-    i++;
-    if (i === childCount) {
-      break;
-    }
-    const currentChild = childArray[i - 1];
-    const nextChild = childArray[i];
-    if (!shouldInjectSpacingBetween(currentChild, nextChild)) {
-      continue;
-    }
-    childrenWithGap.push(separator);
-  }
-  return childrenWithGap;
-};
-const outsideTextFlowSet = new Set();
-const markAsOutsideTextFlow = jsxElement => {
-  outsideTextFlowSet.add(jsxElement);
-};
-const isMarkedAsOutsideTextFlow = jsxElement => {
-  return outsideTextFlowSet.has(jsxElement.type);
-};
-const isPreactNode = jsxChild => {
-  return jsxChild !== null && typeof jsxChild === "object" && jsxChild.type !== undefined;
-};
-const shouldInjectSpacingBetween = (left, right) => {
-  const leftIsNode = isPreactNode(left);
-  const rightIsNode = isPreactNode(right);
-  // only inject spacing when at least one side is a preact node
-  if (!leftIsNode && !rightIsNode) {
-    return false;
-  }
-  if (leftIsNode && isMarkedAsOutsideTextFlow(left)) {
-    return false;
-  }
-  if (rightIsNode && isMarkedAsOutsideTextFlow(right)) {
-    return false;
-  }
-  if (rightIsNode && right.props && right.props.overflowPinned) {
-    return false;
-  }
-  if (typeof left === "string" && /\s$/.test(left)) {
-    return false;
-  }
-  if (typeof right === "string" && /^\s/.test(right)) {
-    return false;
-  }
-  return true;
-};
-const OverflowPinnedElementContext = createContext(null);
-const Text = props => {
-  import.meta.css = [css$4, "@jsenv/navi/src/text/text.jsx"];
-  if (props.loading || props.skeleton) {
-    return jsx(TextSkeleton, {
-      ...props
-    });
-  }
-  if (props.overflowEllipsis) {
-    return jsx(TextOverflow, {
-      ...props
-    });
-  }
-  if (props.overflowPinned) {
-    return jsx(TextOverflowPinned, {
-      ...props
-    });
-  }
-  if (props.selectRange) {
-    return jsx(TextWithSelectRange, {
-      ...props
-    });
-  }
-  return jsx(TextBasic, {
-    ...props
-  });
-};
-const TextSkeleton = ({
-  loading,
-  children,
-  ...props
-}) => {
-  // Three-level structure — see CSS comment on [data-skeleton] for details.
-  const skeletonOverlay = jsx("span", {
-    className: "navi_text_skeleton_container",
-    "aria-hidden": "true",
-    children: jsx("span", {
-      className: "navi_text_skeleton_inset",
-      children: jsx("span", {
-        className: "navi_text_skeleton"
-      })
-    })
-  });
-  // When there are no children, inject a full-width placeholder so the element
-  // has measurable height driven by the current font-size/line-height, and the
-  // skeleton fills the available width instead of shrinking to a single char.
-  const hasChildren = children !== null && children !== undefined && children !== false;
-  const innerChildren = hasChildren ? children : jsx("span", {
-    className: "navi_text_skeleton_children_placeholder",
-    "aria-hidden": "true",
-    children: "W"
-  });
-  return jsx(Text, {
-    "data-skeleton": "",
-    "data-loading": loading ? "" : undefined,
-    ...props,
-    skeleton: undefined,
-    childrenOutsideFlow: skeletonOverlay,
-    children: innerChildren
-  });
-};
-const TextOverflow = ({
-  noWrap,
-  spacing,
-  children,
-  ...rest
-}) => {
-  const [OverflowPinnedElement, setOverflowPinnedElement] = useState(null);
-  return jsx(Text, {
-    flex: true,
-    block: true,
-    as: "div",
-    nowWrap: noWrap,
-    pre: !noWrap
-    // For paragraph we prefer to keep lines and only hide unbreakable long sections
-    ,
-
-    preLine: rest.as === "p",
-    ...rest,
-    overflowEllipsis: undefined,
-    "data-text-overflow": "",
-    spacing: "pre",
-    children: jsxs("span", {
-      className: "navi_text_overflow_wrapper",
-      children: [jsx(OverflowPinnedElementContext.Provider, {
-        value: setOverflowPinnedElement,
-        children: jsx(Text, {
-          className: "navi_text_overflow_text",
-          spacing: spacing,
-          children: children
-        })
-      }), OverflowPinnedElement]
-    })
-  });
-};
-const TextOverflowPinned = ({
-  overflowPinned,
-  ...props
-}) => {
-  const setOverflowPinnedElement = useContext(OverflowPinnedElementContext);
-  const text = jsx(Text, {
-    ...props,
-    "data-overflow-pinned": ""
-  });
-  if (!setOverflowPinnedElement) {
-    console.warn("<Text overflowPinned> declared outside a <Text overflowEllipsis>");
-    return text;
-  }
-  if (overflowPinned) {
-    setOverflowPinnedElement(text);
-    return null;
-  }
-  setOverflowPinnedElement(null);
-  return text;
-};
-const TextWithSelectRange = ({
-  selectRange,
-  ...props
-}) => {
-  const defaultRef = useRef();
-  const ref = props.ref || defaultRef;
-  useInitialTextSelection(ref, selectRange);
-  return jsx(Text, {
-    ref: ref,
-    ...props
-  });
-};
-const TextBasic = ({
-  spacing = REGULAR_SPACE,
-  boldTransition,
-  boldStable,
-  preventBoldLayoutShift = boldTransition,
-  capitalize,
-  children,
-  childrenOutsideFlow,
-  ...rest
-}) => {
-  const boxProps = {
-    "as": "span",
-    "data-bold-transition": boldTransition ? "" : undefined,
-    "data-capitalize": capitalize ? "" : undefined,
-    ...rest,
-    "baseClassName": withPropsClassName("navi_text", rest.baseClassName)
-  };
-  const shouldPreserveSpacing = rest.as === "pre" || rest.flex || rest.grid;
-  if (shouldPreserveSpacing) {
-    boxProps.spacing = spacing;
-  } else {
-    children = applySpacingOnTextChildren(children, spacing);
-  }
-  if (boldStable) {
-    const {
-      bold
-    } = boxProps;
-    return jsxs(Box, {
-      ...boxProps,
-      bold: undefined,
-      "data-bold": bold ? "" : undefined,
-      children: [jsx("span", {
-        className: "navi_text_bold_background",
-        "aria-hidden": "true",
-        children: children
-      }), children, childrenOutsideFlow]
-    });
-  }
-  if (preventBoldLayoutShift) {
-    const alignX = rest.alignX || rest.align || "start";
-
-    // La technique consiste a avoid un double gras qui force une taille
-    // et la version light par dessus en position absolute
-    // on la centre aussi pour donner l'impression que le gras s'applique depuis le centre
-    // ne fonctionne que sur une seule ligne de texte (donc lorsque noWrap est actif)
-    // on pourrait auto-active cela sur une prop genre boldCanChange
-    return jsxs(Box, {
-      ...boxProps,
-      children: [jsxs("span", {
-        className: "navi_text_bold_wrapper",
-        children: [jsx("span", {
-          className: "navi_text_bold_clone",
-          "aria-hidden": "true",
-          children: children
-        }), jsx("span", {
-          className: "navi_text_bold_foreground",
-          "data-align": alignX,
-          children: children
-        })]
-      }), childrenOutsideFlow]
-    });
-  }
-  return jsxs(Box, {
-    ...boxProps,
-    children: [children, childrenOutsideFlow]
-  });
-};
-
-installImportMetaCssBuild(import.meta);const css$3 = /* css */`
-  @layer navi {
-    /* Ensure data attributes from box.jsx can win to update display */
-    .navi_icon {
-      display: inline-block;
-      box-sizing: border-box;
-      max-width: 100%;
-      max-height: 100%;
-    }
-  }
-
-  .navi_icon {
-    &[data-flow-inline] {
-      width: 1em;
-      height: 1em;
-    }
-    &[data-icon-char] {
-      flex-grow: 0 !important;
-
-      svg,
-      img {
-        width: 100%;
-        height: 100%;
-      }
-      svg {
-        overflow: visible;
-      }
-    }
-    &[data-interactive] {
-      cursor: pointer;
-    }
-  }
-
-  .navi_icon_char_slot {
-    opacity: 0;
-    cursor: default;
-    user-select: none;
-  }
-  .navi_text.navi_icon_foreground {
-    position: absolute;
-    inset: 0;
-    display: inline-flex;
-
-    & > .navi_text {
-      display: flex;
-      aspect-ratio: 1 / 1;
-      min-width: 0;
-      height: 100%;
-      max-height: 1em;
-      align-items: center;
-      justify-content: center;
-    }
-  }
-
-  .navi_icon > svg,
-  .navi_icon > img {
-    width: 100%;
-    height: 100%;
-    backface-visibility: hidden;
-  }
-  .navi_icon[data-width-fixed] > svg,
-  .navi_icon[data-width-fixed] > img {
-    width: 100%;
-    height: auto;
-  }
-  .navi_icon[data-height-fixed] > svg,
-  .navi_icon[data-height-fixed] > img {
-    width: auto;
-    height: 100%;
-  }
-  .navi_icon[data-width-fixed][data-height-fixed] > svg,
-  .navi_icon[data-width-fixed][data-height-fixed] > img {
-    width: 100%;
-    height: 100%;
-  }
-`;
-const Icon = ({
-  href,
-  children,
-  charWidth = 1,
-  // 0 (zéro) is the real char width
-  // but 2 zéros gives too big icons
-  // while 1 "W" gives a nice result
-  baseChar = "W",
-  decorative,
-  onClick,
-  ...props
-}) => {
-  import.meta.css = [css$3, "@jsenv/navi/src/graphic/icon.jsx"];
-  const innerChildren = href ? jsx("svg", {
-    width: "100%",
-    height: "100%",
-    children: jsx("use", {
-      href: href
-    })
-  }) : children;
-  let {
-    flex,
-    grid,
-    width,
-    height
-  } = props;
-  if (width === "auto") {
-    width = undefined;
-  }
-  if (height === "auto") {
-    height = undefined;
-  }
-  const hasExplicitWidth = width !== undefined;
-  const hasExplicitHeight = height !== undefined;
-  const widthFixed = hasExplicitWidth || hasExplicitHeight && (props.square || props.circle || props.aspectRatio);
-  const heightFixed = hasExplicitHeight || hasExplicitWidth && (props.square || props.circle || props.aspectRatio);
-  if (widthFixed || heightFixed) {
-    if (flex === undefined) {
-      flex = "x";
-    }
-  } else if (decorative === undefined && !onClick) {
-    decorative = true;
-  }
-  const ariaProps = decorative ? {
-    "aria-hidden": "true"
-  } : {};
-  if (typeof children === "string") {
-    return jsx(Text, {
-      ...props,
-      ...ariaProps,
-      "data-icon-text": "",
-      children: children
-    });
-  }
-  if (flex || grid) {
-    return jsx(Box, {
-      square: true,
-      ...props,
-      ...ariaProps,
-      flex: flex,
-      baseClassName: "navi_icon",
-      "data-width-fixed": widthFixed ? "" : undefined,
-      "data-height-fixed": heightFixed ? "" : undefined,
-      "data-interactive": onClick ? "" : undefined,
-      onClick: onClick,
-      children: innerChildren
-    });
-  }
-  const invisibleText = baseChar.repeat(charWidth);
-  return jsxs(Text, {
-    ...props,
-    ...ariaProps,
-    className: withPropsClassName("navi_icon", props.className),
-    spacing: "pre",
-    "data-icon-char": "",
-    "data-width-fixed": widthFixed ? "" : undefined,
-    "data-height-fixed": heightFixed ? "" : undefined,
-    "data-interactive": onClick ? "" : undefined,
-    onClick: onClick,
-    children: [jsx("span", {
-      className: "navi_icon_char_slot",
-      "aria-hidden": "true",
-      children: invisibleText
-    }), jsx(Text, {
-      className: "navi_icon_foreground",
-      spacing: "pre",
-      children: innerChildren
-    })]
-  });
-};
-
 const EmailSvg = () => {
   return jsxs("svg", {
     viewBox: "0 0 24 24",
@@ -20766,6 +20008,902 @@ const isSameKey = (browserEventKey, key) => {
   return false;
 };
 
+installImportMetaCssBuild(import.meta);const css$7 = /* css */`
+  .navi_text_aligner_anchor {
+    vertical-align: baseline;
+    user-select: none;
+    overflow: hidden;
+  }
+`;
+
+/**
+ * Positions children vertically relative to the surrounding text, correcting for font-size differences.
+ *
+ * Place this component around any inline element whose font-size differs from the surrounding text.
+ * It renders an invisible anchor that inherits the surrounding text's font metrics, then shifts
+ * the child so that its visual position matches the requested `align` value — regardless of
+ * font-size, display type (inline, inline-block, inline-flex…), or the active `vertical-align`.
+ *
+ * @param {"center"|"baseline"|"start"|"end"} [align="baseline"]
+ *   - `"center"`   — child is vertically centered on the surrounding text's ink bounds
+ *   - `"baseline"` — no correction applied; child sits wherever the browser places it (default)
+ *   - `"start"`    — child top aligns with the surrounding text's ink top
+ *   - `"end"`      — child bottom aligns with the surrounding text's ink bottom
+ * @param {import("ignore:preact").RefObject} childRef — ref on the child element to reposition
+ */
+const SurroundingTextAligner = ({
+  children,
+  align = "baseline",
+  childRef
+}) => {
+  import.meta.css = [css$7, "@jsenv/navi/src/text/surrounding_text_aligner.jsx"];
+  const anchorRef = useRef();
+  useLayoutEffect(() => {
+    const anchorEl = anchorRef.current;
+    const childEl = childRef.current;
+    if (!anchorEl || !childEl) {
+      return;
+    }
+    const topOffset = computeTopOffset({
+      anchorEl,
+      childEl,
+      align
+    });
+    if (topOffset) {
+      childEl.style.position = "relative";
+      childEl.style.top = `${topOffset}px`;
+    } else {
+      childEl.style.position = "";
+      childEl.style.top = "";
+    }
+  });
+  return jsxs(Fragment, {
+    children: [children, jsx("span", {
+      ref: anchorRef,
+      className: "navi_text_aligner_anchor",
+      children: "\u200B"
+    })]
+  });
+};
+const computeTopOffset = ({
+  anchorEl,
+  childEl,
+  align
+}) => {
+  if (align === "baseline") {
+    return 0;
+  }
+  // Only correct when the anchor lives in an inline formatting context.
+  // If the parent is a flex/grid container, inline layout rules don't apply
+  // and our font-metrics model is invalid.
+  const parentDisplay = getComputedStyle(anchorEl.parentElement).display;
+  if (parentDisplay !== "inline" && parentDisplay !== "inline-block" && parentDisplay !== "block") {
+    return 0;
+  }
+  const anchorStyle = getComputedStyle(anchorEl);
+  const anchorMetrics = measureFontAscDesc("M", anchorStyle);
+  const [anchorABA, anchorABD] = anchorMetrics.actual;
+  const anchorActH = anchorABA + anchorABD;
+  const [, anchorFBBD] = anchorMetrics.font;
+
+  // Estimate the baseline Y from the anchor's bounding rect.
+  // For an inline span, the font cell bottom is always at the element's bottom edge
+  // (regardless of vertical-align), so baseline = rect.bottom - fontBoundingBoxDescent.
+  const anchorRect = anchorEl.getBoundingClientRect();
+  const baselineY = anchorRect.bottom - anchorFBBD;
+  const anchorInkTopY = baselineY - anchorABA;
+
+  // Measure the child's current rect, then subtract any previously applied top correction
+  // to recover its natural position — avoiding a style reset + reflow.
+  const childRect = childEl.getBoundingClientRect();
+  const childH = childRect.height;
+  const previousTop = parseFloat(childEl.style.top) || 0;
+  const childNaturalTop = childRect.top - previousTop;
+
+  // Compute desired child top Y based on align intention.
+  let desiredChildTopY = 0;
+  if (align === "center") {
+    const anchorInkCenterY = anchorInkTopY + anchorActH / 2;
+    desiredChildTopY = anchorInkCenterY - childH / 2;
+  } else if (align === "start") {
+    desiredChildTopY = anchorInkTopY;
+  } else if (align === "end") {
+    desiredChildTopY = anchorInkTopY + anchorActH - childH;
+  }
+  return desiredChildTopY - childNaturalTop;
+};
+const canvas = document.createElement("canvas");
+const measureFontAscDesc = (text, computedStyle) => {
+  const ctx = canvas.getContext("2d");
+  ctx.font = `${computedStyle.fontWeight} ${computedStyle.fontSize} ${computedStyle.fontFamily}`;
+  const metrics = ctx.measureText(text);
+  return {
+    actual: [metrics.actualBoundingBoxAscent, metrics.actualBoundingBoxDescent],
+    font: [metrics.fontBoundingBoxAscent, metrics.fontBoundingBoxDescent]
+  };
+};
+
+const useInitialTextSelection = (ref, textSelection) => {
+  const deps = [];
+  if (Array.isArray(textSelection)) {
+    deps.push(...textSelection);
+  } else {
+    deps.push(textSelection);
+  }
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el || !textSelection) {
+      return;
+    }
+    const range = document.createRange();
+    const selection = window.getSelection();
+    if (Array.isArray(textSelection)) {
+      if (textSelection.length === 2) {
+        const [start, end] = textSelection;
+        if (typeof start === "number" && typeof end === "number") {
+          // Format: [0, 10] - character indices
+          selectByCharacterIndices(el, range, start, end);
+        } else if (typeof start === "string" && typeof end === "string") {
+          // Format: ["Click on the", "button to return"] - text strings
+          selectByTextStrings(el, range, start, end);
+        }
+      }
+    } else if (typeof textSelection === "string") {
+      // Format: "some text" - select the entire string occurrence
+      selectSingleTextString(el, range, textSelection);
+    }
+    selection.removeAllRanges();
+    selection.addRange(range);
+  }, deps);
+};
+const selectByCharacterIndices = (element, range, startIndex, endIndex) => {
+  const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, null, false);
+  let currentIndex = 0;
+  let startNode = null;
+  let startOffset = 0;
+  let endNode = null;
+  let endOffset = 0;
+  while (walker.nextNode()) {
+    const textContent = walker.currentNode.textContent;
+    const nodeLength = textContent.length;
+
+    // Check if start position is in this text node
+    if (!startNode && currentIndex + nodeLength > startIndex) {
+      startNode = walker.currentNode;
+      startOffset = startIndex - currentIndex;
+    }
+
+    // Check if end position is in this text node
+    if (currentIndex + nodeLength >= endIndex) {
+      endNode = walker.currentNode;
+      endOffset = endIndex - currentIndex;
+      break;
+    }
+    currentIndex += nodeLength;
+  }
+  if (startNode && endNode) {
+    range.setStart(startNode, startOffset);
+    range.setEnd(endNode, endOffset);
+  }
+};
+const selectSingleTextString = (element, range, text) => {
+  const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, null, false);
+  while (walker.nextNode()) {
+    const textContent = walker.currentNode.textContent;
+    const index = textContent.indexOf(text);
+    if (index !== -1) {
+      range.setStart(walker.currentNode, index);
+      range.setEnd(walker.currentNode, index + text.length);
+      return;
+    }
+  }
+};
+const selectByTextStrings = (element, range, startText, endText) => {
+  const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, null, false);
+  let startNode = null;
+  let endNode = null;
+  let foundStart = false;
+  while (walker.nextNode()) {
+    const textContent = walker.currentNode.textContent;
+    if (!foundStart && textContent.includes(startText)) {
+      startNode = walker.currentNode;
+      foundStart = true;
+    }
+    if (foundStart && textContent.includes(endText)) {
+      endNode = walker.currentNode;
+      break;
+    }
+  }
+  if (startNode && endNode) {
+    const startOffset = startNode.textContent.indexOf(startText);
+    const endOffset = endNode.textContent.indexOf(endText) + endText.length;
+    range.setStart(startNode, startOffset);
+    range.setEnd(endNode, endOffset);
+  }
+};
+
+installImportMetaCssBuild(import.meta);/* eslint-disable jsenv/no-unknown-params */
+const css$6 = /* css */`
+  @layer navi {
+    .navi_text {
+      &[data-skeleton] {
+        border-radius: 0.2em;
+      }
+    }
+  }
+
+  *[data-navi-space] {
+  }
+
+  .navi_text {
+    position: relative;
+
+    /* There is a chrome specific bug that prevents text-transform: capitalize to be applied in nested DOM structure */
+    /* The CSS below ensure capitalize is propagated to the bold clones */
+    &[data-capitalize] {
+      &::first-letter {
+        text-transform: uppercase;
+      }
+      .navi_text_bold_clone::first-letter {
+        text-transform: uppercase;
+      }
+      .navi_text_bold_foreground::first-letter {
+        text-transform: uppercase;
+      }
+    }
+
+    .navi_text_bold_wrapper,
+    .navi_text_bold_clone,
+    .navi_text_bold_foreground {
+      display: inherit;
+      width: inherit;
+      min-width: inherit;
+      height: inherit;
+      min-height: inherit;
+      flex-grow: inherit;
+      align-items: inherit;
+      justify-content: inherit;
+      gap: inherit;
+      text-align: inherit;
+      border-radius: inherit;
+    }
+
+    &[data-text-overflow] {
+      min-width: 0;
+      flex-wrap: wrap;
+      text-overflow: ellipsis;
+      overflow: hidden;
+
+      .navi_text_overflow_wrapper {
+        display: flex;
+        width: 100%;
+        flex-grow: 1;
+        gap: 0.3em;
+
+        .navi_text_overflow_text {
+          max-width: 100%;
+          text-overflow: ellipsis;
+          overflow: hidden;
+        }
+      }
+    }
+
+    &[data-skeleton] {
+      /* Children stay in the DOM to preserve natural layout dimensions,
+         but are hidden so only the skeleton is visible. */
+      visibility: hidden;
+
+      /* When there are no children a placeholder "W" is injected (see JSX).
+         It must stretch to the full available width so the skeleton
+         fills the container rather than collapsing to a single character. */
+      .navi_text_skeleton_children_placeholder {
+        display: inline-flex;
+        width: 100%;
+      }
+
+      /* Three-level structure to respect padding AND border-radius:
+
+         1. navi_text_skeleton_container — absolutely fills the border box
+            (inset:0), then applies padding:inherit so its content box equals
+            the parent's content box. line-height:normal prevents the container
+            from inheriting a large line-height that would make it taller than
+            the border box. border-radius:inherit passes the radius down.
+            visibility:visible overrides the parent's visibility:hidden.
+
+         2. navi_text_skeleton_inset — a relative block that fills 100% of the
+            container's content box (= parent's content box). It is the
+            positioned ancestor for the absolutely placed skeleton bar.
+            border-radius:inherit chains the radius further down.
+
+         3. navi_text_skeleton — the visible gradient bar. position:absolute
+            inset:0 fills the inset box precisely. border-radius:inherit
+            finally applies the radius at this level, which is now correctly
+            sized to the content area. */
+      .navi_text_skeleton_container {
+        position: absolute;
+        inset: 0;
+        padding: inherit;
+        line-height: normal;
+        border-radius: inherit;
+        visibility: visible;
+      }
+
+      .navi_text_skeleton_inset {
+        position: relative;
+        display: inline-flex;
+        width: 100%;
+        height: 100%;
+        border-radius: inherit;
+      }
+
+      .navi_text_skeleton {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+          90deg,
+          #e0e0e0 25%,
+          #f0f0f0 50%,
+          #e0e0e0 75%
+        );
+        background-size: 200% 100%;
+        border-radius: inherit;
+      }
+
+      &[data-loading] {
+        .navi_text_skeleton {
+          animation: navi_text_skeleton_shimmer 1.5s infinite;
+        }
+      }
+    }
+  }
+
+  @keyframes navi_text_skeleton_shimmer {
+    0% {
+      background-position: 200% 0;
+    }
+    100% {
+      background-position: -200% 0;
+    }
+  }
+
+  .navi_text_bold_wrapper {
+    position: relative;
+    display: inline-block;
+
+    .navi_text_bold_clone {
+      font-weight: bold;
+      opacity: 0;
+    }
+    .navi_text_bold_foreground {
+      position: absolute;
+      inset: 0;
+    }
+  }
+
+  .navi_text_bold_background {
+    position: absolute;
+    top: 0;
+    left: 0;
+    color: currentColor;
+    font-weight: normal;
+    background: currentColor;
+    background-clip: text;
+    -webkit-background-clip: text;
+    transform-origin: center;
+    -webkit-text-fill-color: transparent;
+    opacity: 0;
+  }
+
+  .navi_text[data-bold] {
+    .navi_text_bold_background {
+      opacity: 1;
+    }
+  }
+
+  .navi_text[data-bold-transition] {
+    .navi_text_bold_foreground {
+      transition-property: font-weight;
+      transition-duration: 0.3s;
+      transition-timing-function: ease;
+    }
+
+    .navi_text_bold_background {
+      transition-property: opacity;
+      transition-duration: 0.3s;
+      transition-timing-function: ease;
+    }
+  }
+`;
+const REGULAR_SPACE = jsx("span", {
+  "data-navi-space": "",
+  children: " "
+});
+// A space that uses padding-left instead of a real space character.
+// This avoids the underline that browsers draw under spaces inside links.
+const FAKE_SPACE = jsx("span", {
+  "data-navi-space": "",
+  style: "padding-left: 0.25em",
+  children: "\u200B"
+});
+const CustomWidthSpace = ({
+  value,
+  useRealSpaceChar
+}) => {
+  if (useRealSpaceChar) {
+    return jsxs("span", {
+      children: [jsx("span", {
+        style: "font-size: 0",
+        children: " "
+      }), jsx("span", {
+        style: `padding-left: ${value}`,
+        children: "\u200B"
+      })]
+    });
+  }
+  return jsx("span", {
+    style: `padding-left: ${value}`,
+    children: "\u200B"
+  });
+};
+const applySpacingOnTextChildren = (children, spacing, defaultSpace) => {
+  if (spacing === "pre" || spacing === "0" || spacing === 0) {
+    return children;
+  }
+  if (!children) {
+    return children;
+  }
+  const childArray = toChildArray(children);
+  const childCount = childArray.length;
+  if (childCount <= 1) {
+    return children;
+  }
+  const useRealSpaceChar = defaultSpace !== FAKE_SPACE;
+  let separator;
+  if (spacing === REGULAR_SPACE || spacing === FAKE_SPACE) {
+    separator = defaultSpace;
+  } else if (typeof spacing === "string") {
+    if (isSizeSpacingScaleKey(spacing) || hasCSSSizeUnit(spacing)) {
+      separator = jsx(CustomWidthSpace, {
+        value: resolveSpacingSize(spacing),
+        useRealSpaceChar: useRealSpaceChar
+      });
+    } else {
+      separator = spacing;
+    }
+  } else if (typeof spacing === "number") {
+    separator = jsx(CustomWidthSpace, {
+      value: `${spacing}px`,
+      useRealSpaceChar: useRealSpaceChar
+    });
+  } else {
+    separator = spacing;
+  }
+  const childrenWithGap = [];
+  let i = 0;
+  while (true) {
+    const child = childArray[i];
+    childrenWithGap.push(child);
+    i++;
+    if (i === childCount) {
+      break;
+    }
+    const currentChild = childArray[i - 1];
+    const nextChild = childArray[i];
+    if (!shouldInjectSpacingBetween(currentChild, nextChild)) {
+      continue;
+    }
+    childrenWithGap.push(separator);
+  }
+  return childrenWithGap;
+};
+const outsideTextFlowSet = new Set();
+const markAsOutsideTextFlow = jsxElement => {
+  outsideTextFlowSet.add(jsxElement);
+};
+const isMarkedAsOutsideTextFlow = jsxElement => {
+  return outsideTextFlowSet.has(jsxElement.type);
+};
+const isPreactNode = jsxChild => {
+  return jsxChild !== null && typeof jsxChild === "object" && jsxChild.type !== undefined;
+};
+const shouldInjectSpacingBetween = (left, right) => {
+  const leftIsNode = isPreactNode(left);
+  const rightIsNode = isPreactNode(right);
+  // only inject spacing when at least one side is a preact node
+  if (!leftIsNode && !rightIsNode) {
+    return false;
+  }
+  if (leftIsNode && isMarkedAsOutsideTextFlow(left)) {
+    return false;
+  }
+  if (rightIsNode && isMarkedAsOutsideTextFlow(right)) {
+    return false;
+  }
+  if (rightIsNode && right.props && right.props.overflowPinned) {
+    return false;
+  }
+  if (typeof left === "string" && /\s$/.test(left)) {
+    return false;
+  }
+  if (typeof right === "string" && /^\s/.test(right)) {
+    return false;
+  }
+  return true;
+};
+const OverflowPinnedElementContext = createContext(null);
+const Text = props => {
+  import.meta.css = [css$6, "@jsenv/navi/src/text/text.jsx"];
+  if (props.loading || props.skeleton) {
+    return jsx(TextSkeleton, {
+      ...props
+    });
+  }
+  if (props.overflowEllipsis) {
+    return jsx(TextOverflow, {
+      ...props
+    });
+  }
+  if (props.overflowPinned) {
+    return jsx(TextOverflowPinned, {
+      ...props
+    });
+  }
+  if (props.selectRange) {
+    return jsx(TextWithSelectRange, {
+      ...props
+    });
+  }
+  return jsx(TextBasic, {
+    ...props
+  });
+};
+const TextSkeleton = ({
+  loading,
+  children,
+  ...props
+}) => {
+  // Three-level structure — see CSS comment on [data-skeleton] for details.
+  const skeletonOverlay = jsx("span", {
+    className: "navi_text_skeleton_container",
+    "aria-hidden": "true",
+    children: jsx("span", {
+      className: "navi_text_skeleton_inset",
+      children: jsx("span", {
+        className: "navi_text_skeleton"
+      })
+    })
+  });
+  // When there are no children, inject a full-width placeholder so the element
+  // has measurable height driven by the current font-size/line-height, and the
+  // skeleton fills the available width instead of shrinking to a single char.
+  const hasChildren = children !== null && children !== undefined && children !== false;
+  const innerChildren = hasChildren ? children : jsx("span", {
+    className: "navi_text_skeleton_children_placeholder",
+    "aria-hidden": "true",
+    children: "W"
+  });
+  return jsx(Text, {
+    "data-skeleton": "",
+    "data-loading": loading ? "" : undefined,
+    ...props,
+    skeleton: undefined,
+    childrenOutsideFlow: skeletonOverlay,
+    children: innerChildren
+  });
+};
+const TextOverflow = ({
+  noWrap,
+  spacing,
+  children,
+  ...rest
+}) => {
+  const [OverflowPinnedElement, setOverflowPinnedElement] = useState(null);
+  return jsx(Text, {
+    flex: true,
+    block: true,
+    as: "div",
+    nowWrap: noWrap,
+    pre: !noWrap
+    // For paragraph we prefer to keep lines and only hide unbreakable long sections
+    ,
+
+    preLine: rest.as === "p",
+    ...rest,
+    overflowEllipsis: undefined,
+    "data-text-overflow": "",
+    spacing: "pre",
+    children: jsxs("span", {
+      className: "navi_text_overflow_wrapper",
+      children: [jsx(OverflowPinnedElementContext.Provider, {
+        value: setOverflowPinnedElement,
+        children: jsx(Text, {
+          className: "navi_text_overflow_text",
+          spacing: spacing,
+          children: children
+        })
+      }), OverflowPinnedElement]
+    })
+  });
+};
+const TextOverflowPinned = ({
+  overflowPinned,
+  ...props
+}) => {
+  const setOverflowPinnedElement = useContext(OverflowPinnedElementContext);
+  const text = jsx(Text, {
+    ...props,
+    "data-overflow-pinned": ""
+  });
+  if (!setOverflowPinnedElement) {
+    console.warn("<Text overflowPinned> declared outside a <Text overflowEllipsis>");
+    return text;
+  }
+  if (overflowPinned) {
+    setOverflowPinnedElement(text);
+    return null;
+  }
+  setOverflowPinnedElement(null);
+  return text;
+};
+const TextWithSelectRange = ({
+  selectRange,
+  ...props
+}) => {
+  const defaultRef = useRef();
+  const ref = props.ref || defaultRef;
+  useInitialTextSelection(ref, selectRange);
+  return jsx(Text, {
+    ref: ref,
+    ...props
+  });
+};
+const TextBasic = ({
+  spacing,
+  preventSpaceUnderlines = false,
+  boldTransition,
+  boldStable,
+  preventBoldLayoutShift = boldTransition,
+  capitalize,
+  children,
+  childrenOutsideFlow,
+  ...rest
+}) => {
+  const defaultSpace = preventSpaceUnderlines ? FAKE_SPACE : REGULAR_SPACE;
+  const resolvedSpacing = spacing ?? defaultSpace;
+  const boxProps = {
+    "as": "span",
+    "data-bold-transition": boldTransition ? "" : undefined,
+    "data-capitalize": capitalize ? "" : undefined,
+    ...rest,
+    "baseClassName": withPropsClassName("navi_text", rest.baseClassName)
+  };
+  const shouldPreserveSpacing = rest.as === "pre" || rest.flex || rest.grid;
+  if (shouldPreserveSpacing) {
+    boxProps.spacing = resolvedSpacing;
+  } else {
+    children = applySpacingOnTextChildren(children, resolvedSpacing, defaultSpace);
+  }
+  if (boldStable) {
+    const {
+      bold
+    } = boxProps;
+    return jsxs(Box, {
+      ...boxProps,
+      bold: undefined,
+      "data-bold": bold ? "" : undefined,
+      children: [jsx("span", {
+        className: "navi_text_bold_background",
+        "aria-hidden": "true",
+        children: children
+      }), children, childrenOutsideFlow]
+    });
+  }
+  if (preventBoldLayoutShift) {
+    const alignX = rest.alignX || rest.align || "start";
+
+    // La technique consiste a avoid un double gras qui force une taille
+    // et la version light par dessus en position absolute
+    // on la centre aussi pour donner l'impression que le gras s'applique depuis le centre
+    // ne fonctionne que sur une seule ligne de texte (donc lorsque noWrap est actif)
+    // on pourrait auto-active cela sur une prop genre boldCanChange
+    return jsxs(Box, {
+      ...boxProps,
+      children: [jsxs("span", {
+        className: "navi_text_bold_wrapper",
+        children: [jsx("span", {
+          className: "navi_text_bold_clone",
+          "aria-hidden": "true",
+          children: children
+        }), jsx("span", {
+          className: "navi_text_bold_foreground",
+          "data-align": alignX,
+          children: children
+        })]
+      }), childrenOutsideFlow]
+    });
+  }
+  return jsxs(Box, {
+    ...boxProps,
+    children: [children, childrenOutsideFlow]
+  });
+};
+
+installImportMetaCssBuild(import.meta);const css$5 = /* css */`
+  @layer navi {
+    /* Ensure data attributes from box.jsx can win to update display */
+    .navi_icon {
+      display: inline-block;
+      box-sizing: border-box;
+      max-width: 100%;
+      max-height: 100%;
+    }
+  }
+
+  .navi_icon {
+    white-space: nowrap;
+    vertical-align: inherit;
+
+    &[data-flow-inline] {
+      width: 1em;
+      height: 1em;
+    }
+    &[data-icon-char] {
+      flex-grow: 0 !important;
+
+      svg,
+      img {
+        width: 100%;
+        height: 100%;
+      }
+      svg {
+        overflow: visible;
+      }
+    }
+    &[data-interactive] {
+      cursor: pointer;
+    }
+  }
+
+  .navi_icon_char_slot {
+    opacity: 0;
+    cursor: default;
+    user-select: none;
+  }
+  .navi_text.navi_icon_foreground {
+    position: absolute;
+    inset: 0;
+    display: inline-flex;
+
+    & > .navi_text {
+      display: flex;
+      aspect-ratio: 1 / 1;
+      min-width: 0;
+      height: 100%;
+      max-height: 1em;
+      align-items: center;
+      justify-content: center;
+    }
+  }
+
+  .navi_icon > svg,
+  .navi_icon > img {
+    width: 100%;
+    height: 100%;
+    backface-visibility: hidden;
+  }
+  .navi_icon[data-width-fixed] > svg,
+  .navi_icon[data-width-fixed] > img {
+    width: 100%;
+    height: auto;
+  }
+  .navi_icon[data-height-fixed] > svg,
+  .navi_icon[data-height-fixed] > img {
+    width: auto;
+    height: 100%;
+  }
+  .navi_icon[data-width-fixed][data-height-fixed] > svg,
+  .navi_icon[data-width-fixed][data-height-fixed] > img {
+    width: 100%;
+    height: 100%;
+  }
+`;
+const Icon = ({
+  href,
+  children,
+  charWidth = 1,
+  // 0 (zéro) is the real char width
+  // but 2 zéros gives too big icons
+  // while 1 "W" gives a nice result
+  baseChar = "W",
+  decorative,
+  onClick,
+  ...props
+}) => {
+  import.meta.css = [css$5, "@jsenv/navi/src/text/icon.jsx"];
+  const innerChildren = href ? jsx("svg", {
+    width: "100%",
+    height: "100%",
+    children: jsx("use", {
+      href: href
+    })
+  }) : children;
+  let {
+    flex,
+    grid,
+    width,
+    height
+  } = props;
+  if (width === "auto") {
+    width = undefined;
+  }
+  if (height === "auto") {
+    height = undefined;
+  }
+  const hasExplicitWidth = width !== undefined;
+  const hasExplicitHeight = height !== undefined;
+  const widthFixed = hasExplicitWidth || hasExplicitHeight && (props.square || props.circle || props.aspectRatio);
+  const heightFixed = hasExplicitHeight || hasExplicitWidth && (props.square || props.circle || props.aspectRatio);
+  if (widthFixed || heightFixed) {
+    if (flex === undefined) {
+      flex = "x";
+    }
+  } else if (decorative === undefined && !onClick) {
+    decorative = true;
+  }
+  const ariaProps = decorative ? {
+    "aria-hidden": "true"
+  } : {};
+  const textRef = useRef();
+  if (typeof children === "string") {
+    return jsx(Text, {
+      ...props,
+      ...ariaProps,
+      "data-icon-text": "",
+      children: children
+    });
+  }
+  if (flex || grid) {
+    return jsx(Box, {
+      square: true,
+      ...props,
+      ...ariaProps,
+      flex: flex,
+      baseClassName: "navi_icon",
+      "data-width-fixed": widthFixed ? "" : undefined,
+      "data-height-fixed": heightFixed ? "" : undefined,
+      "data-interactive": onClick ? "" : undefined,
+      onClick: onClick,
+      children: innerChildren
+    });
+  }
+  const invisibleText = baseChar.repeat(charWidth);
+  return jsx(SurroundingTextAligner, {
+    align: "center",
+    childRef: textRef,
+    children: jsxs(Text, {
+      ...props,
+      ...ariaProps,
+      className: withPropsClassName("navi_icon", props.className),
+      spacing: "pre",
+      "data-icon-char": "",
+      "data-width-fixed": widthFixed ? "" : undefined,
+      "data-height-fixed": heightFixed ? "" : undefined,
+      "data-interactive": onClick ? "" : undefined,
+      onClick: onClick,
+      ref: textRef,
+      children: [jsx("span", {
+        className: "navi_icon_char_slot",
+        "aria-hidden": "true",
+        children: invisibleText
+      }), jsx(Text, {
+        className: "navi_icon_foreground",
+        spacing: "pre",
+        children: innerChildren
+      })]
+    })
+  });
+};
+
 const useFormEvents = (
   elementRef,
   {
@@ -21287,7 +21425,7 @@ const useUIState = (uiStateController) => {
   return trackedUIState;
 };
 
-installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
+installImportMetaCssBuild(import.meta);const css$4 = /* css */`
   @layer navi {
     .navi_button {
       --button-outline-width: 1px;
@@ -21413,6 +21551,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
       align-items: inherit;
       justify-content: inherit;
       color: var(--x-button-color);
+      vertical-align: inherit;
       background: var(--x-button-background);
       background-color: var(
         --x-button-background-color,
@@ -21536,8 +21675,9 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
       --x-button-border-color: var(--callout-color);
     }
   }
-`, "@jsenv/navi/src/field/button.jsx"];
+`;
 const Button = props => {
+  import.meta.css = [css$4, "@jsenv/navi/src/field/button.jsx"];
   return renderActionableComponent(props, {
     Basic: ButtonBasic,
     WithAction: ButtonWithAction,
@@ -21595,6 +21735,7 @@ const ButtonBasic = props => {
     icon,
     revealOnInteraction = icon,
     discrete = icon && !revealOnInteraction,
+    spacing,
     children,
     ...rest
   } = props;
@@ -21608,11 +21749,12 @@ const ButtonBasic = props => {
   const renderButtonContent = buttonProps => {
     return jsxs(Text, {
       ...buttonProps,
+      spacing: spacing,
       className: "navi_button_content",
       children: [children, jsx(ButtonShadow, {})]
     });
   };
-  const renderButtonContentMemoized = useCallback(renderButtonContent, [children]);
+  const renderButtonContentMemoized = useCallback(renderButtonContent, [children, spacing]);
   return jsxs(Box, {
     "data-readonly-silent": innerLoading ? "" : undefined,
     ...remainingProps,
@@ -22100,7 +22242,7 @@ const useDimColorWhen = (elementRef, shouldDim) => {
 };
 
 installImportMetaCssBuild(import.meta);/* eslint-disable jsenv/no-unknown-params */
-import.meta.css = [/* css */`
+const css$3 = /* css */`
   @layer navi {
     .navi_link {
       --link-border-radius: unset;
@@ -22372,7 +22514,7 @@ import.meta.css = [/* css */`
   .navi_title .navi_link[data-reveal-on-interaction] {
     top: 0.25em;
   }
-`, "@jsenv/navi/src/nav/link/link.jsx"];
+`;
 const LinkStyleCSSVars = {
   "outlineColor": "--link-outline-color",
   "borderRadius": "--link-border-radius",
@@ -22421,6 +22563,7 @@ Object.assign(PSEUDO_CLASSES, {
   }
 });
 const Link = props => {
+  import.meta.css = [css$3, "@jsenv/navi/src/nav/link/link.jsx"];
   return renderActionableComponent(props, {
     Basic: LinkBasic,
     WithAction: LinkWithAction
@@ -22569,6 +22712,7 @@ const LinkPlain = props => {
       e.detail.setValue(value);
     },
     preventBoldLayoutShift: currentEffectBold,
+    preventSpaceUnderlines: true,
     overflowEllipsis: overflowEllipsis
     // Visual
     ,
@@ -30403,6 +30547,8 @@ installImportMetaCssBuild(import.meta);const css = /* css */`
   @layer navi {
   }
   .navi_text.navi_badge_count {
+    /* Important to prevent anchor from breaking to a new line */
+    white-space: nowrap;
     --font-size: 0.7em;
     --x-background: var(--background);
     --x-background-color: var(--background-color, var(--x-background));
@@ -30411,9 +30557,9 @@ installImportMetaCssBuild(import.meta);const css = /* css */`
     --padding-x: 0.5em;
     --padding-y: 0.2em;
     position: relative;
-    display: inline-block;
     color: var(--x-color);
     font-size: var(--font-size);
+    vertical-align: inherit;
 
     &[data-dark-background] {
       --x-color-contrasting: var(--navi-color-white);
@@ -30443,11 +30589,12 @@ installImportMetaCssBuild(import.meta);const css = /* css */`
 
       /* For ellipse + single char force the circle aspect as it's prettier */
       &[data-single-char] {
+        display: inline-block;
         aspect-ratio: 1/1;
-        height: 1.5em;
+        height: 1.6em;
         padding: 0;
         text-align: center;
-        line-height: 1.5em;
+        line-height: 1.6em;
       }
     }
 
@@ -30467,19 +30614,19 @@ installImportMetaCssBuild(import.meta);const css = /* css */`
       border-radius: 50%;
 
       &[data-single-char] {
-        --x-radius: 1.5em;
+        --x-radius: 1.6em;
         --x-number-font-size: unset;
       }
       &[data-two-chars] {
-        --x-radius: 1.8em;
-        --x-number-font-size: 0.9em;
+        --x-radius: 2em;
+        --x-number-font-size: unset;
       }
       &[data-three-chars] {
         --x-radius: 2.4em;
         --x-number-font-size: 0.8em;
       }
       &[data-four-chars] {
-        --x-radius: 2.6em;
+        --x-radius: 2.4em;
         --x-number-font-size: 0.8em;
       }
 
@@ -30538,25 +30685,33 @@ const BadgeCount = ({
     circle = false;
   }
   if (circle) {
-    return jsxs(BadgeCountCircle, {
-      ...props,
-      loading: loading,
-      ref: ref,
-      hasOverflow: hasOverflow,
-      charCount: charCount,
-      children: [valueDisplayed, hasOverflow && maxElement]
+    return jsx(SurroundingTextAligner, {
+      align: "center",
+      childRef: ref,
+      children: jsxs(BadgeCountCircle, {
+        ...props,
+        loading: loading,
+        ref: ref,
+        hasOverflow: hasOverflow,
+        charCount: charCount,
+        children: [valueDisplayed, hasOverflow && maxElement]
+      })
     });
   }
   const valueFormatted = typeof valueDisplayed === "number" ? formatNumber(valueDisplayed, {
     lang
   }) : valueDisplayed;
-  return jsxs(BadgeCountEllipse, {
-    ...props,
-    loading: loading,
-    ref: ref,
-    hasOverflow: hasOverflow,
-    charCount: charCount,
-    children: [valueFormatted, hasOverflow && maxElement]
+  return jsx(SurroundingTextAligner, {
+    align: "center",
+    childRef: ref,
+    children: jsxs(BadgeCountEllipse, {
+      ...props,
+      loading: loading,
+      ref: ref,
+      hasOverflow: hasOverflow,
+      charCount: charCount,
+      children: [valueFormatted, hasOverflow && maxElement]
+    })
   });
 };
 const applyMaxToValue = (max, value) => {
@@ -30597,14 +30752,8 @@ const BadgeCountEllipse = ({
     spacing: "pre",
     children: loading ? jsx(Icon, {
       children: jsx(LoadingDots, {})
-    }) : jsxs(Fragment, {
-      children: [jsx("span", {
-        style: "user-select: none",
-        children: "\u200B"
-      }), children, jsx("span", {
-        style: "user-select: none",
-        children: "\u200B"
-      })]
+    }) : jsx(Fragment, {
+      children: children
     })
   });
 };
@@ -30633,17 +30782,11 @@ const BadgeCountCircle = ({
     spacing: "pre",
     children: loading ? jsx(Icon, {
       children: jsx(LoadingDots, {})
-    }) : jsxs(Fragment, {
-      children: [jsx("span", {
-        style: "user-select: none",
-        children: "\u200B"
-      }), jsx("span", {
+    }) : jsx(Fragment, {
+      children: jsx("span", {
         className: "navi_badge_count_text",
         children: children
-      }), jsx("span", {
-        style: "user-select: none",
-        children: "\u200B"
-      })]
+      })
     })
   });
 };
