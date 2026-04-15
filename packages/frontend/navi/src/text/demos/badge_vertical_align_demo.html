@@ -39,7 +39,7 @@
               color: "white",
               padding: "0.8em 0.2em",
               borderRadius: "3px",
-              //   lineHeight: "1.4",
+              lineHeight: "normal",
               verticalAlign: "inherit",
             }}
           >
@@ -203,7 +203,13 @@
               <div style={{ ...cellStyle }}>
                 <span style={labelStyle}>hardcode</span>
                 <div
-                  style={{ ...containerStyle, height: "80px", verticalAlign }}
+                  style={{
+                    ...containerStyle,
+                    height: "100px",
+                    lineHeight: "100px",
+                    boxSizing: "content-box",
+                    verticalAlign,
+                  }}
                 >
                   <span
                     style={{
