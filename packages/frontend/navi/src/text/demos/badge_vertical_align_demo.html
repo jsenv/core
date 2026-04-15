@@ -24,29 +24,26 @@
       };
 
       const Badge = ({ count, fontSize }) => {
+        // Use inline-block with vertical-align: baseline so the badge baseline
+        // participates in inline layout exactly like sibling text does.
+        // This means the badge naturally follows any vertical-align applied to siblings —
+        // but only if they share the same line box (no wrapper shifting them independently).
+        // Visual centering is achieved with padding + line-height rather than flexbox,
+        // keeping the box model truly inline.
         return (
-          <span style={{ display: "inline-flex", alignItems: "center" }}>
-            {/* zero-width space: invisible, no width, but establishes line metrics
-                at the parent font-size — gives us the vertical reference point
-                so align-items: center snaps the badge to the text midline
-                without the parent needing flex + align-items */}
-            <span style={{ width: 0, overflow: "hidden", userSelect: "none" }}>
-              {"\u200B"}
-            </span>
-            <span
-              style={{
-                fontSize: `${fontSize}px`,
-                backgroundColor: "#e74c3c",
-                color: "white",
-                padding: "8px 12px",
-                borderRadius: "3px",
-                lineHeight: "1",
-                display: "inline-flex",
-                alignItems: "center",
-              }}
-            >
-              {count}
-            </span>
+          <span
+            style={{
+              display: "inline-block",
+              fontSize: `${fontSize}px`,
+              backgroundColor: "#e74c3c",
+              color: "white",
+              padding: "0.8em 0.2em",
+              borderRadius: "3px",
+              //   lineHeight: "1.4",
+              verticalAlign: "middle",
+            }}
+          >
+            {count}
           </span>
         );
       };
@@ -290,32 +287,32 @@
                   <div style={cellStyle}>
                     <span style={labelStyle}>hardcode</span>
                     <div style={containerStyle}>
-                      <span style={{ ...textStyle, verticalAlign: va }}>
-                        Notifications
+                      <span style={{ verticalAlign: va }}>
+                        <span style={textStyle}>Notifications</span>
+                        <Badge count={42} fontSize={16} />
                       </span>
-                      <Badge count={42} fontSize={16} />
                     </div>
                   </div>
                   <div style={cellStyle}>
                     <span style={labelStyle}>@jsenv/navi</span>
                     <div style={containerStyle}>
-                      <span style={{ ...textStyle, verticalAlign: va }}>
-                        Notifications
+                      <span style={{ verticalAlign: va }}>
+                        <span style={textStyle}>Notifications</span>
+                        <BadgeCount background="#e74c3c" color="white">
+                          {42}
+                        </BadgeCount>
                       </span>
-                      <BadgeCount background="#e74c3c" color="white">
-                        {42}
-                      </BadgeCount>
                     </div>
                   </div>
                   <div style={cellStyle}>
                     <span style={labelStyle}>@jsenv/navi circle</span>
                     <div style={containerStyle}>
-                      <span style={{ ...textStyle, verticalAlign: va }}>
-                        Notifications
+                      <span style={{ verticalAlign: va }}>
+                        <span style={textStyle}>Notifications</span>
+                        <BadgeCount background="#e74c3c" color="white" circle>
+                          {42}
+                        </BadgeCount>
                       </span>
-                      <BadgeCount background="#e74c3c" color="white" circle>
-                        {42}
-                      </BadgeCount>
                     </div>
                   </div>
                 </div>
