@@ -104,7 +104,7 @@
             </label>
             <div class="container-box" style="width: 400px;">
               <Box flex spacing="s" alignY="center">
-                <Icon shrink={false} color="orange">
+                <Icon color="orange">
                   <StarSvg />
                 </Icon>
                 <Text
@@ -115,9 +115,11 @@
                   expandX
                   minWidth="0"
                 >
-                  A very long label that truncates with ellipsis and can go bold
+                  {loading
+                    ? undefined
+                    : "A very long label that truncates with ellipsis and can go bold"}
                 </Text>
-                <Icon shrink={false} color="steelblue">
+                <Icon color="steelblue">
                   <StarSvg />
                 </Icon>
               </Box>
@@ -135,15 +137,20 @@
           <div class="demo-section">
             <h2>With children — skeleton takes the natural text size</h2>
             <p>
-              Children are kept in the DOM (hidden via{" "}
-              <code>visibility:hidden</code>) so the skeleton inherits the
-              natural width of the hidden text. The dotted container should NOT
-              grow or shrink when toggling loading.
+              Children stay in the DOM (hidden via{" "}
+              <code>visibility:hidden</code>) so their natural dimensions —
+              width, height, font-size, line-height — preserve the layout. The
+              dotted container should NOT grow or shrink when toggling loading.
             </p>
             <p>
-              The skeleton respects the text's <code>padding</code> — it fills
-              the content box only, not the padding area. Check the padded rows
-              below: the skeleton must not overlap the surrounding gap.
+              The skeleton bar is drawn by a three-level absolute overlay:{" "}
+              <strong>container</strong> (<code>inset:0; padding:inherit</code>,
+              so its content box = the text's content box),{" "}
+              <strong>inset</strong> (fills that content box, acts as positioned
+              ancestor), <strong>skeleton</strong> (
+              <code>inset:0; border-radius:inherit</code> on the inset box).
+              This way padding is respected AND the rounded corners survive on
+              the gradient bar.
             </p>
             <ToggleLoading loading={loading} setLoading={setLoading} />
             <div class="container-box" style="display: inline-block;">
@@ -153,14 +160,19 @@
             <br />
             <div class="container-box" style="display: inline-block;">
               <Text loading={loading} paddingX="s">
-                With paddingX="s"
+                With paddingX="s" — skeleton stays inside the padding gap
               </Text>
             </div>
             <br />
             <br />
             <div class="container-box" style="display: inline-block;">
-              <Text loading={loading} paddingX="m" fontSize="1.5rem">
-                Larger font + padding
+              <Text
+                loading={loading}
+                paddingX="m"
+                borderRadius="m"
+                fontSize="1.5rem"
+              >
+                Larger font + padding + border-radius — corners still rounded
               </Text>
             </div>
           </div>

@@ -18829,6 +18829,7 @@ const css$3 = /* css */`
 
   .navi_text {
     position: relative;
+    border-radius: var(--x-border-radius);
 
     /* There is a chrome specific bug that prevents text-transform: capitalize to be applied in nested DOM structure */
     /* The CSS below ensure capitalize is propagated to the bold clones */
@@ -18880,35 +18881,59 @@ const css$3 = /* css */`
       }
     }
 
-    /* When skeleton + overflow ellipsis: skeleton fills available space,
-       no text to clip so disable overflow machinery. */
-    &[data-text-overflow][data-skeleton] {
-      flex-wrap: nowrap;
-      text-overflow: clip;
-      /* overflow:hidden on [data-text-overflow] would clip the absolutely
-         positioned skeleton span — keep it visible */
-      overflow: visible;
-
-      .navi_text_overflow_wrapper {
-        display: contents;
-        .navi_text_overflow_text {
-          display: contents;
-
-          max-width: none;
-          text-overflow: clip;
-          overflow: visible;
-        }
-      }
-    }
-
     &[data-skeleton] {
-      /* Keep layout space — children are hidden, skeleton overlays absolutely */
+      --x-border-radius: 0.2em;
+
+      /* Children stay in the DOM to preserve natural layout dimensions,
+         but are hidden so only the skeleton is visible. */
       visibility: hidden;
+
+      /* When there are no children a placeholder "W" is injected (see JSX).
+         It must stretch to the full available width so the skeleton
+         fills the container rather than collapsing to a single character. */
+      .navi_text_skeleton_children_placeholder {
+        display: inline-flex;
+        width: 100%;
+      }
+
+      /* Three-level structure to respect padding AND border-radius:
+
+         1. navi_text_skeleton_container — absolutely fills the border box
+            (inset:0), then applies padding:inherit so its content box equals
+            the parent's content box. line-height:normal prevents the container
+            from inheriting a large line-height that would make it taller than
+            the border box. border-radius:inherit passes the radius down.
+            visibility:visible overrides the parent's visibility:hidden.
+
+         2. navi_text_skeleton_inset — a relative block that fills 100% of the
+            container's content box (= parent's content box). It is the
+            positioned ancestor for the absolutely placed skeleton bar.
+            border-radius:inherit chains the radius further down.
+
+         3. navi_text_skeleton — the visible gradient bar. position:absolute
+            inset:0 fills the inset box precisely. border-radius:inherit
+            finally applies the radius at this level, which is now correctly
+            sized to the content area. */
+      .navi_text_skeleton_container {
+        position: absolute;
+        inset: 0;
+        padding: inherit;
+        line-height: normal;
+        border-radius: inherit;
+        visibility: visible;
+      }
+
+      .navi_text_skeleton_inset {
+        position: relative;
+        display: inline-flex;
+        width: 100%;
+        height: 100%;
+        border-radius: inherit;
+      }
 
       .navi_text_skeleton {
         position: absolute;
         inset: 0;
-        /* top/bottom inset may not perfectly align with text bounds — acceptable */
         background: linear-gradient(
           90deg,
           #e0e0e0 25%,
@@ -18916,14 +18941,7 @@ const css$3 = /* css */`
           #e0e0e0 75%
         );
         background-size: 200% 100%;
-        border-radius: 4px;
-        visibility: visible;
-      }
-
-      &[data-empty] {
-        .navi_text_skeleton {
-          height: 1em;
-        }
+        border-radius: inherit;
       }
 
       &[data-loading] {
@@ -19126,25 +19144,32 @@ const TextSkeleton = ({
   children,
   ...props
 }) => {
-  const skeletonSpan = jsx("span", {
-    className: "navi_text_skeleton",
-    "aria-hidden": "true"
+  // Three-level structure — see CSS comment on [data-skeleton] for details.
+  const skeletonOverlay = jsx("span", {
+    className: "navi_text_skeleton_container",
+    "aria-hidden": "true",
+    children: jsx("span", {
+      className: "navi_text_skeleton_inset",
+      children: jsx("span", {
+        className: "navi_text_skeleton"
+      })
+    })
   });
-  // When there are no children we inject an invisible "W" so the element takes
-  // its natural text height (matching current font-size) instead of relying on
-  // min-height which can be off. The W is hidden via CSS visibility:hidden.
+  // When there are no children, inject a full-width placeholder so the element
+  // has measurable height driven by the current font-size/line-height, and the
+  // skeleton fills the available width instead of shrinking to a single char.
   const hasChildren = children !== null && children !== undefined && children !== false;
   const innerChildren = hasChildren ? children : jsx("span", {
+    className: "navi_text_skeleton_children_placeholder",
     "aria-hidden": "true",
     children: "W"
   });
   return jsx(Text, {
     "data-skeleton": "",
     "data-loading": loading ? "" : undefined,
-    "data-empty": !hasChildren ? "" : undefined,
     ...props,
     skeleton: undefined,
-    childrenOutsideFlow: skeletonSpan,
+    childrenOutsideFlow: skeletonOverlay,
     children: innerChildren
   });
 };

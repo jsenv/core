@@ -72,20 +72,38 @@ const css = /* css */ `
     }
 
     &[data-skeleton] {
-      --x-border-radius: 0.1em;
+      --x-border-radius: 0.2em;
 
+      /* Children stay in the DOM to preserve natural layout dimensions,
+         but are hidden so only the skeleton is visible. */
       visibility: hidden;
 
+      /* When there are no children a placeholder "W" is injected (see JSX).
+         It must stretch to the full available width so the skeleton
+         fills the container rather than collapsing to a single character. */
       .navi_text_skeleton_children_placeholder {
         display: inline-flex;
         width: 100%;
       }
 
-      /* Two-level approach to respect padding AND keep border-radius:
-         - outer span fills the border box (inset:0) and has padding:inherit,
-           so its content box = the parent's content box (padding respected).
-         - inner span fills that content box with inset:0 and has
-           border-radius:inherit, which chains back to the parent's radius. */
+      /* Three-level structure to respect padding AND border-radius:
+
+         1. navi_text_skeleton_container — absolutely fills the border box
+            (inset:0), then applies padding:inherit so its content box equals
+            the parent's content box. line-height:normal prevents the container
+            from inheriting a large line-height that would make it taller than
+            the border box. border-radius:inherit passes the radius down.
+            visibility:visible overrides the parent's visibility:hidden.
+
+         2. navi_text_skeleton_inset — a relative block that fills 100% of the
+            container's content box (= parent's content box). It is the
+            positioned ancestor for the absolutely placed skeleton bar.
+            border-radius:inherit chains the radius further down.
+
+         3. navi_text_skeleton — the visible gradient bar. position:absolute
+            inset:0 fills the inset box precisely. border-radius:inherit
+            finally applies the radius at this level, which is now correctly
+            sized to the content area. */
       .navi_text_skeleton_container {
         position: absolute;
         inset: 0;
@@ -94,7 +112,8 @@ const css = /* css */ `
         border-radius: inherit;
         visibility: visible;
       }
-      .navi_text_skeleton_padding_box {
+
+      .navi_text_skeleton_inset {
         position: relative;
         display: inline-flex;
         width: 100%;
@@ -304,16 +323,17 @@ export const Text = (props) => {
 };
 
 const TextSkeleton = ({ loading, children, ...props }) => {
-  const skeletonSpan = (
+  // Three-level structure — see CSS comment on [data-skeleton] for details.
+  const skeletonOverlay = (
     <span className="navi_text_skeleton_container" aria-hidden="true">
-      <span className="navi_text_skeleton_padding_box">
+      <span className="navi_text_skeleton_inset">
         <span className="navi_text_skeleton" />
       </span>
     </span>
   );
-  // When there are no children we inject an invisible "W" so the element takes
-  // its natural text height (based on font-size/line-height).
-  // It is hidden by color:transparent on [data-skeleton].
+  // When there are no children, inject a full-width placeholder so the element
+  // has measurable height driven by the current font-size/line-height, and the
+  // skeleton fills the available width instead of shrinking to a single char.
   const hasChildren =
     children !== null && children !== undefined && children !== false;
   const innerChildren = hasChildren ? (
@@ -332,7 +352,7 @@ const TextSkeleton = ({ loading, children, ...props }) => {
       data-loading={loading ? "" : undefined}
       {...props}
       skeleton={undefined}
-      childrenOutsideFlow={skeletonSpan}
+      childrenOutsideFlow={skeletonOverlay}
     >
       {innerChildren}
     </Text>
