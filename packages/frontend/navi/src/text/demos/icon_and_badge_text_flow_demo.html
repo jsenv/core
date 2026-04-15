@@ -53,42 +53,49 @@
         "sub",
       ];
 
+      const InlineRowContent = ({ innerSpanStyle, children }) => {
+        if (innerSpanStyle) {
+          return <span style={innerSpanStyle}>{children}</span>;
+        }
+        return children;
+      };
+
       const InlineRow = ({ containerExtraStyle, innerSpanStyle }) => (
         <div style={rowStyle}>
           <div style={cellStyle}>
             <span style={labelStyle}>icon</span>
             <div style={{ ...containerStyle, ...containerExtraStyle }}>
-              <span style={innerSpanStyle}>
+              <InlineRowContent innerSpanStyle={innerSpanStyle}>
                 <span style={textStyle}>Notifications</span>
                 <Icon>
                   <StarSvg />
                 </Icon>
                 <span style={textStyle}>After</span>
-              </span>
+              </InlineRowContent>
             </div>
           </div>
           <div style={cellStyle}>
             <span style={labelStyle}>badge ellipse</span>
             <div style={{ ...containerStyle, ...containerExtraStyle }}>
-              <span style={innerSpanStyle}>
+              <InlineRowContent innerSpanStyle={innerSpanStyle}>
                 <span style={textStyle}>Notifications</span>
                 <BadgeCount background="#e74c3c" color="white">
                   {42}
                 </BadgeCount>
                 <span style={textStyle}>After</span>
-              </span>
+              </InlineRowContent>
             </div>
           </div>
           <div style={cellStyle}>
             <span style={labelStyle}>badge circle</span>
             <div style={{ ...containerStyle, ...containerExtraStyle }}>
-              <span style={innerSpanStyle}>
+              <InlineRowContent innerSpanStyle={innerSpanStyle}>
                 <span style={textStyle}>Notifications</span>
                 <BadgeCount background="#e74c3c" color="white" circle>
                   {42}
                 </BadgeCount>
                 <span style={textStyle}>After</span>
-              </span>
+              </InlineRowContent>
             </div>
           </div>
         </div>
