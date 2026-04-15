@@ -72,9 +72,7 @@
             <div style={{ ...containerStyle, ...containerExtraStyle }}>
               <InlineRowContent innerSpanStyle={innerSpanStyle}>
                 <span style={textStyle}>Notifications</span>
-                <Icon
-                  style={iconSize ? { fontSize: `${iconSize}px` } : undefined}
-                >
+                <Icon size={iconSize}>
                   <StarSvg />
                 </Icon>
                 <span style={textStyle}>After</span>
@@ -86,11 +84,7 @@
             <div style={{ ...containerStyle, ...containerExtraStyle }}>
               <InlineRowContent innerSpanStyle={innerSpanStyle}>
                 <span style={textStyle}>Notifications</span>
-                <BadgeCount
-                  background="#e74c3c"
-                  color="white"
-                  style={badgeSize ? { fontSize: `${badgeSize}px` } : undefined}
-                >
+                <BadgeCount background="#e74c3c" color="white" size={badgeSize}>
                   {42}
                 </BadgeCount>
                 <span style={textStyle}>After</span>
@@ -106,7 +100,7 @@
                   background="#e74c3c"
                   color="white"
                   circle
-                  style={badgeSize ? { fontSize: `${badgeSize}px` } : undefined}
+                  size={badgeSize}
                 >
                   {42}
                 </BadgeCount>
@@ -123,7 +117,7 @@
             <span style={labelStyle}>icon</span>
             <div style={{ ...containerStyle, fontSize: `${textSize}px` }}>
               <span style={textStyle}>Notifications</span>
-              <Icon style={{ fontSize: `${iconSize}px` }}>
+              <Icon size={iconSize} textSize={textSize}>
                 <StarSvg />
               </Icon>
               After
@@ -136,7 +130,8 @@
               <BadgeCount
                 background="#e74c3c"
                 color="white"
-                style={{ fontSize: `${badgeSize}px` }}
+                size={badgeSize}
+                textSize={textSize}
               >
                 {42}
               </BadgeCount>
@@ -151,7 +146,8 @@
                 background="#e74c3c"
                 color="white"
                 circle
-                style={{ fontSize: `${badgeSize}px` }}
+                size={badgeSize}
+                textSize={textSize}
               >
                 {42}
               </BadgeCount>
@@ -236,7 +232,7 @@
                 >
                   <span style={{ verticalAlign }}>
                     <span style={textStyle}>NotificationS</span>
-                    <Icon style={{ fontSize: `${itemSize}px` }}>
+                    <Icon size={itemSize}>
                       <StarSvg />
                     </Icon>
                     <span style={textStyle}>After</span>
@@ -256,7 +252,7 @@
                     <BadgeCount
                       background="#e74c3c"
                       color="white"
-                      style={{ fontSize: `${itemSize}px` }}
+                      size={itemSize}
                     >
                       {count}
                     </BadgeCount>
@@ -278,7 +274,7 @@
                       background="#e74c3c"
                       color="white"
                       circle
-                      style={{ fontSize: `${itemSize}px` }}
+                      size={itemSize}
                     >
                       {count}
                     </BadgeCount>

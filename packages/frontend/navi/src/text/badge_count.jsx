@@ -126,6 +126,7 @@ export const BadgeCount = ({
   // so that visually the interface do not suddently switch from circle to ellipse depending on the count
   circle,
   max = circle ? MAX_FOR_CIRCLE : Infinity,
+  textSize,
   integer,
   lang,
   loading,
@@ -155,7 +156,12 @@ export const BadgeCount = ({
 
   if (circle) {
     return (
-      <SurroundingTextAligner align="center" childRef={ref}>
+      <SurroundingTextAligner
+        align="center"
+        childRef={ref}
+        size={props.size}
+        textSize={textSize}
+      >
         <BadgeCountCircle
           {...props}
           loading={loading}
@@ -174,7 +180,12 @@ export const BadgeCount = ({
       ? formatNumber(valueDisplayed, { lang })
       : valueDisplayed;
   return (
-    <SurroundingTextAligner align="center" childRef={ref}>
+    <SurroundingTextAligner
+      align="center"
+      childRef={ref}
+      size={props.size}
+      textSize={textSize}
+    >
       <BadgeCountEllipse
         {...props}
         loading={loading}

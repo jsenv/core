@@ -160,7 +160,12 @@ export const Icon = ({
 
   const invisibleText = baseChar.repeat(charWidth);
   return (
-    <SurroundingTextAligner align="center" childRef={textRef}>
+    <SurroundingTextAligner
+      align="center"
+      childRef={textRef}
+      size={props.size}
+      textSize={props.textSize}
+    >
       <Text
         {...props}
         {...ariaProps}

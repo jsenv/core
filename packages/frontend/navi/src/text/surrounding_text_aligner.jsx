@@ -64,6 +64,8 @@ export const SurroundingTextAligner = ({
   children,
   align = "baseline",
   childRef,
+  textSize,
+  size,
 }) => {
   import.meta.css = css;
 
@@ -87,7 +89,7 @@ export const SurroundingTextAligner = ({
       childEl.style.position = "";
       childEl.style.top = "";
     }
-  });
+  }, [size, textSize]);
 
   return (
     <>
