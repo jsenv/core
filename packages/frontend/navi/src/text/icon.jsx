@@ -18,6 +18,7 @@ const css = /* css */ `
 
   .navi_icon {
     white-space: nowrap;
+    vertical-align: inherit;
 
     &[data-flow-inline] {
       width: 1em;
