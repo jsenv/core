@@ -70,56 +70,24 @@ const css = /* css */ `
       }
     }
 
-    /* When skeleton + overflow ellipsis: skeleton fills available space,
-       no text to clip so disable overflow machinery. */
-    &[data-text-overflow][data-skeleton] {
-      flex-wrap: nowrap;
-      text-overflow: clip;
-      /* overflow:hidden on [data-text-overflow] would clip the absolutely
-         positioned skeleton span — keep it visible */
-      overflow: visible;
-
-      .navi_text_overflow_wrapper {
-        display: contents;
-        .navi_text_overflow_text {
-          display: contents;
-
-          max-width: none;
-          text-overflow: clip;
-          overflow: visible;
-        }
-      }
-    }
-
+    /* Background approach: gradient applied on the element itself fills the
+       padding box by default, so padding is automatically respected.
+       No absolutely positioned child needed. */
     &[data-skeleton] {
-      /* Keep layout space — children are hidden, skeleton overlays absolutely */
-      visibility: hidden;
-
-      .navi_text_skeleton {
-        position: absolute;
-        inset: 0;
-        /* top/bottom inset may not perfectly align with text bounds — acceptable */
-        background: linear-gradient(
-          90deg,
-          #e0e0e0 25%,
-          #f0f0f0 50%,
-          #e0e0e0 75%
-        );
-        background-size: 200% 100%;
-        border-radius: 4px;
-        visibility: visible;
-      }
-
-      &[data-empty] {
-        .navi_text_skeleton {
-          height: 1em;
-        }
+      /* Direct text nodes are hidden by color:transparent;
+         child elements are hidden by > * below.
+         Both keep their layout space so the skeleton matches content size. */
+      color: transparent !important;
+      background: linear-gradient(90deg, #e0e0e0 25%, #f0f0f0 50%, #e0e0e0 75%);
+      background-size: 200% 100%;
+      background-clip: content-box;
+      border-radius: 4px;
+      & > * {
+        visibility: hidden;
       }
 
       &[data-loading] {
-        .navi_text_skeleton {
-          animation: navi_text_skeleton_shimmer 1.5s infinite;
-        }
+        animation: navi_text_skeleton_shimmer 1.5s infinite;
       }
     }
   }
@@ -305,12 +273,9 @@ export const Text = (props) => {
 };
 
 const TextSkeleton = ({ loading, children, ...props }) => {
-  const skeletonSpan = (
-    <span className="navi_text_skeleton" aria-hidden="true" />
-  );
   // When there are no children we inject an invisible "W" so the element takes
-  // its natural text height (matching current font-size) instead of relying on
-  // min-height which can be off. The W is hidden via CSS visibility:hidden.
+  // its natural text height (based on font-size/line-height) rather than
+  // collapsing to zero. It is hidden by color:transparent on [data-skeleton].
   const hasChildren =
     children !== null && children !== undefined && children !== false;
   const innerChildren = hasChildren ? (
@@ -322,10 +287,9 @@ const TextSkeleton = ({ loading, children, ...props }) => {
     <Text
       data-skeleton=""
       data-loading={loading ? "" : undefined}
-      data-empty={!hasChildren ? "" : undefined}
+      aria-hidden={loading ? "true" : "false"}
       {...props}
       skeleton={undefined}
-      childrenOutsideFlow={skeletonSpan}
     >
       {innerChildren}
     </Text>

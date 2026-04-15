@@ -140,15 +140,27 @@
               natural width of the hidden text. The dotted container should NOT
               grow or shrink when toggling loading.
             </p>
+            <p>
+              The skeleton respects the text's <code>padding</code> — it fills
+              the content box only, not the padding area. Check the padded rows
+              below: the skeleton must not overlap the surrounding gap.
+            </p>
             <ToggleLoading loading={loading} setLoading={setLoading} />
             <div class="container-box" style="display: inline-block;">
-              <Text loading={loading}>Hello, world!</Text>
+              <Text loading={loading}>No padding (default)</Text>
             </div>
             <br />
             <br />
             <div class="container-box" style="display: inline-block;">
-              <Text loading={loading} fontSize="1.5rem">
-                Larger font size
+              <Text loading={loading} paddingX="s">
+                With paddingX="s"
+              </Text>
+            </div>
+            <br />
+            <br />
+            <div class="container-box" style="display: inline-block;">
+              <Text loading={loading} paddingX="m" fontSize="1.5rem">
+                Larger font + padding
               </Text>
             </div>
           </div>
