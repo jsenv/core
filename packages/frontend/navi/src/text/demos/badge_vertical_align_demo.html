@@ -17,14 +17,13 @@
         alignItems: "center",
         gap: "8px",
         fontSize: "16px",
-        border: "2px dotted #0984e3",
         padding: "4px 8px",
         backgroundColor: "#f0f8ff",
+        border: "2px dotted black",
       };
 
       const textStyle = {
-        backgroundColor: "#dfe6e9",
-        border: "2px dotted #636e72",
+        backgroundColor: "green",
       };
 
       const Badge = ({ count, fontSize }) => {
@@ -39,7 +38,6 @@
               lineHeight: "1",
               display: "inline-flex",
               alignItems: "center",
-              border: "2px dotted yellow",
             }}
           >
             {count}
@@ -101,7 +99,7 @@
         );
       };
 
-      const NaviExample = ({ label, badgeFontSize }) => {
+      const NaviExample = ({ label, badgeFontSize, circle }) => {
         return (
           <div style={{ marginBottom: "20px" }}>
             <div
@@ -115,7 +113,12 @@
             </div>
             <div style={containerStyle}>
               <span style={textStyle}>Notifications</span>
-              <BadgeCount background="#e74c3c" size={badgeFontSize}>
+              <BadgeCount
+                background="#e74c3c"
+                color="white"
+                style={{ fontSize: `${badgeFontSize}px` }}
+                circle={circle}
+              >
                 42
               </BadgeCount>
             </div>
@@ -141,6 +144,18 @@
             <NaviExample
               label="BadgeCount très grand (40px)"
               badgeFontSize={40}
+            />
+
+            <h3>@jsenv/navi — BadgeCount circle</h3>
+            <NaviExample
+              label="BadgeCount circle très petit (8px)"
+              badgeFontSize={8}
+              circle
+            />
+            <NaviExample
+              label="BadgeCount circle très grand (40px)"
+              badgeFontSize={40}
+              circle
             />
           </div>
         );
