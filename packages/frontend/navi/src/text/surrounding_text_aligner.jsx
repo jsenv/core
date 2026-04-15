@@ -21,7 +21,7 @@ import { useLayoutEffect, useRef } from "preact/hooks";
  *   in the line box. Reading this lets us compute the correction needed to satisfy `align`,
  *   regardless of which `vertical-align` is active on the parent.
  *
- * @param {"center"|"baseline"|"start"|"end"} [align="center"]
+ * @param {"center"|"baseline"|"start"|"end"} [align="baseline"]
  *   - `"center"`   — visual midpoint of children matches visual midpoint of surrounding text (default)
  *   - `"baseline"` — children sit on the surrounding text baseline, no offset applied
  *   - `"start"`    — top of children's text aligns with top of surrounding text
@@ -30,7 +30,7 @@ import { useLayoutEffect, useRef } from "preact/hooks";
 
 export const SurroundingTextAligner = ({
   children,
-  align = "center",
+  align = "baseline",
   childRef,
 }) => {
   const anchorRef = useRef();
