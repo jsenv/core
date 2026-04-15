@@ -1,23 +1,26 @@
 import { useLayoutEffect, useRef } from "preact/hooks";
 
-// SurroundingTextAligner aligns its children vertically relative to the surrounding
-// text — independently of the children's own font-size.
-//
-// Problem: when you place inline content (e.g. a badge, an icon) next to text at a
-// different font-size, the browser aligns it using the child's own font metrics, which
-// shifts it up or down relative to the surrounding text.
-//
-// Solution: a zero-width space (&#8203;) is rendered at the *surrounding* text's font-size
-// before the children. It participates in the inline line box and gives a stable
-// vertical reference at the surrounding text's baseline — regardless of the children's
-// font-size. Canvas measureText is used to get actual typographic ascent/descent metrics
-// (unaffected by line-height or padding) to compute the exact offset needed.
-//
-// The `align` prop controls how children are positioned against the surrounding text:
-//   "center"   (default) — visual midpoint of children matches visual midpoint of surrounding text
-//   "baseline"           — children sit on the surrounding text baseline (no offset)
-//   "start"              — top of children's text aligns with top of surrounding text
-//   "end"                — bottom of children's text aligns with bottom of surrounding text
+/**
+ * Aligns children vertically relative to the surrounding text, regardless of font-size differences.
+ *
+ * When inline content (e.g. a badge, an icon) has a different font-size than the surrounding text,
+ * the browser aligns it using the child's own font metrics, which shifts it up or down visually.
+ *
+ * This component fixes that by:
+ * 1. Rendering a zero-width space (&#8203;) that inherits the surrounding text's font-size,
+ *    anchoring the baseline to the surrounding text context.
+ * 2. Using canvas `measureText` to read actual typographic ascent/descent metrics from the DOM
+ *    (unaffected by line-height or padding) and computing the exact `top` offset needed.
+ *
+ * The child's font-size is read from its first element child, so the badge/icon can declare
+ * its own font-size directly without passing it as a prop.
+ *
+ * @param {"center"|"baseline"|"start"|"end"} [align="center"]
+ *   - `"center"`   — visual midpoint of children matches visual midpoint of surrounding text (default)
+ *   - `"baseline"` — children sit on the surrounding text baseline, no offset applied
+ *   - `"start"`    — top of children's text aligns with top of surrounding text
+ *   - `"end"`      — bottom of children's text aligns with bottom of surrounding text
+ */
 export const SurroundingTextAligner = ({
   children,
   align = "center",
