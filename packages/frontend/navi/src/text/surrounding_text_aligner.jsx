@@ -79,35 +79,39 @@ const computeTopOffset = ({ anchorEl, childEl, align }) => {
   const anchorMetrics = measureTextMetrics("M", anchorStyle);
   const childMetrics = measureTextMetrics("M", childStyle);
   const verticalAlign = anchorStyle.verticalAlign;
+  const anchorH = anchorMetrics.ascent + anchorMetrics.descent;
+  const childH = childMetrics.ascent + childMetrics.descent;
 
-  // Step 1: compute the desired offset assuming baseline alignment (y=0 at baseline, positive downward).
-  // This is how much we need to shift the child so that `align` is respected
-  // when both elements share the same baseline.
-  let topOffset = 0;
-  if (align === "center") {
-    const anchorMid = (anchorMetrics.descent - anchorMetrics.ascent) / 2;
-    const childMid = (childMetrics.descent - childMetrics.ascent) / 2;
-    topOffset = anchorMid - childMid;
-  } else if (align === "start") {
-    topOffset = childMetrics.ascent - anchorMetrics.ascent;
-  } else if (align === "end") {
-    topOffset = anchorMetrics.descent - childMetrics.descent;
-  }
-
-  // Step 2: if the parent uses a non-baseline vertical-align, the browser has already
-  // shifted the anchor away from the baseline. The child wrapper inherits the same shift,
-  // so we need to subtract it from our offset to avoid double-counting it.
-  if (verticalAlign === "middle") {
-    const anchorShift = (anchorMetrics.ascent - anchorMetrics.descent) / 2;
-    const childShift = (childMetrics.ascent - childMetrics.descent) / 2;
-    topOffset -= anchorShift - childShift;
+  // After browser layout, compute the difference between anchor top and child top.
+  // This depends on which vertical-align the browser applied to both elements.
+  // (y axis: positive = downward, baseline = 0)
+  //   baseline: anchor top = -anchorAscent, child top = -childAscent
+  //   middle:   both midpoints at same midline M → deltaTop = (childH - anchorH) / 2
+  //   top:      both tops at same line top       → deltaTop = 0
+  //   bottom:   both bottoms at same line bottom  → deltaTop = childH - anchorH
+  let deltaTop = 0;
+  if (verticalAlign === "baseline" || verticalAlign === "") {
+    deltaTop = childMetrics.ascent - anchorMetrics.ascent;
+  } else if (verticalAlign === "middle") {
+    deltaTop = (childH - anchorH) / 2;
   } else if (verticalAlign === "top" || verticalAlign === "text-top") {
-    topOffset -= childMetrics.ascent - anchorMetrics.ascent;
+    deltaTop = 0;
   } else if (verticalAlign === "bottom" || verticalAlign === "text-bottom") {
-    topOffset -= anchorMetrics.descent - childMetrics.descent;
+    deltaTop = childH - anchorH;
   }
 
-  return topOffset;
+  // offsetFactor determines where along the anchor's height range we target:
+  //   0   → align tops   (start)
+  //   0.5 → align centers (center)
+  //   1   → align bottoms (end)
+  let offsetFactor = 0;
+  if (align === "center") {
+    offsetFactor = 0.5;
+  } else if (align === "end") {
+    offsetFactor = 1;
+  }
+
+  return deltaTop + offsetFactor * (anchorH - childH);
 };
 
 const canvas = document.createElement("canvas");
