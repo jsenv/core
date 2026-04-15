@@ -45,40 +45,85 @@
         );
       };
 
-      const Example = ({ label, badgeFontSize }) => {
+      const cellStyle = {
+        display: "flex",
+        flexDirection: "column",
+        gap: "6px",
+      };
+
+      const labelStyle = {
+        fontSize: "11px",
+        color: "#636e72",
+        textTransform: "uppercase",
+        letterSpacing: "0.05em",
+      };
+
+      const rowStyle = {
+        display: "flex",
+        gap: "32px",
+        alignItems: "flex-start",
+        marginBottom: "24px",
+      };
+
+      const Row = ({ title, count, fontSize }) => {
         return (
-          <div style={{ marginBottom: "20px" }}>
+          <div>
             <div
-              style={{
-                fontSize: "13px",
-                color: "#636e72",
-                marginBottom: "6px",
-              }}
+              style={{ fontSize: "13px", color: "#999", marginBottom: "8px" }}
             >
-              {label}
+              {title}
             </div>
-            <div style={containerStyle}>
-              <span style={textStyle}>Notifications</span>
-              <Badge count={42} fontSize={badgeFontSize} />
+            <div style={rowStyle}>
+              <div style={cellStyle}>
+                <span style={labelStyle}>hardcode</span>
+                <div style={containerStyle}>
+                  <span style={textStyle}>Notifications</span>
+                  <Badge count={count} fontSize={fontSize} />
+                </div>
+              </div>
+              <div style={cellStyle}>
+                <span style={labelStyle}>@jsenv/navi</span>
+                <div style={containerStyle}>
+                  <span style={textStyle}>Notifications</span>
+                  <BadgeCount
+                    background="#e74c3c"
+                    color="white"
+                    style={{ fontSize: `${fontSize}px` }}
+                  >
+                    {count}
+                  </BadgeCount>
+                </div>
+              </div>
+              <div style={cellStyle}>
+                <span style={labelStyle}>@jsenv/navi circle</span>
+                <div style={containerStyle}>
+                  <span style={textStyle}>Notifications</span>
+                  <BadgeCount
+                    background="#e74c3c"
+                    color="white"
+                    circle
+                    style={{ fontSize: `${fontSize}px` }}
+                  >
+                    {count}
+                  </BadgeCount>
+                </div>
+              </div>
             </div>
           </div>
         );
       };
 
-      const ControlledExample = () => {
+      const ControlledRow = () => {
         const [fontSize, setFontSize] = useState(16);
+        const [count, setCount] = useState(5);
         return (
-          <div style={{ marginBottom: "20px" }}>
+          <div>
             <div
-              style={{
-                fontSize: "13px",
-                color: "#636e72",
-                marginBottom: "6px",
-              }}
+              style={{ fontSize: "13px", color: "#999", marginBottom: "8px" }}
             >
               Contrôlable —{" "}
               <label>
-                badge font-size:{" "}
+                font-size:{" "}
                 <input
                   type="range"
                   min="8"
@@ -89,38 +134,56 @@
                   }}
                 />{" "}
                 {fontSize}px
+              </label>{" "}
+              <label>
+                count:{" "}
+                <input
+                  type="number"
+                  min="0"
+                  max="9999"
+                  value={count}
+                  style={{ width: "60px" }}
+                  onInput={(e) => {
+                    setCount(Number(e.target.value));
+                  }}
+                />
               </label>
             </div>
-            <div style={containerStyle}>
-              <span style={textStyle}>Notifications</span>
-              <Badge count={42} fontSize={fontSize} />
-            </div>
-          </div>
-        );
-      };
-
-      const NaviExample = ({ label, badgeFontSize, circle }) => {
-        return (
-          <div style={{ marginBottom: "20px" }}>
-            <div
-              style={{
-                fontSize: "13px",
-                color: "#636e72",
-                marginBottom: "6px",
-              }}
-            >
-              {label}
-            </div>
-            <div style={containerStyle}>
-              <span style={textStyle}>Notifications</span>
-              <BadgeCount
-                background="#e74c3c"
-                color="white"
-                style={{ fontSize: `${badgeFontSize}px` }}
-                circle={circle}
-              >
-                42
-              </BadgeCount>
+            <div style={rowStyle}>
+              <div style={cellStyle}>
+                <span style={labelStyle}>hardcode</span>
+                <div style={containerStyle}>
+                  <span style={textStyle}>Notifications</span>
+                  <Badge count={count} fontSize={fontSize} />
+                </div>
+              </div>
+              <div style={cellStyle}>
+                <span style={labelStyle}>@jsenv/navi</span>
+                <div style={containerStyle}>
+                  <span style={textStyle}>Notifications</span>
+                  <BadgeCount
+                    background="#e74c3c"
+                    color="white"
+                    style={{ fontSize: `${fontSize}px` }}
+                  >
+                    {count}
+                  </BadgeCount>
+                </div>
+              </div>
+              <div style={cellStyle}>
+                <span style={labelStyle}>@jsenv/navi circle</span>
+                <div style={containerStyle}>
+                  <span style={textStyle}>Notifications</span>
+                  <BadgeCount
+                    background="#e74c3c"
+                    color="white"
+                    circle
+                    style={{ fontSize: `${fontSize}px` }}
+                  >
+                    {count}
+                  </BadgeCount>
+                </div>
+              </div>
             </div>
           </div>
         );
@@ -131,32 +194,20 @@
           <div style={{ padding: "20px", fontFamily: "system-ui, sans-serif" }}>
             <h2 style={{ marginTop: 0 }}>Badge vertical align</h2>
 
-            <h3>Badge custom</h3>
-            <ControlledExample />
-            <Example label="Badge très petit (8px)" badgeFontSize={8} />
-            <Example label="Badge très grand (40px)" badgeFontSize={40} />
+            <h3>Très petit (8px) — 1 chiffre</h3>
+            <Row title="" count={5} fontSize={8} />
 
-            <h3>@jsenv/navi — BadgeCount</h3>
-            <NaviExample
-              label="BadgeCount très petit (8px)"
-              badgeFontSize={8}
-            />
-            <NaviExample
-              label="BadgeCount très grand (40px)"
-              badgeFontSize={40}
-            />
+            <h3>Très petit (8px) — 2 chiffres</h3>
+            <Row title="" count={42} fontSize={8} />
 
-            <h3>@jsenv/navi — BadgeCount circle</h3>
-            <NaviExample
-              label="BadgeCount circle très petit (8px)"
-              badgeFontSize={8}
-              circle
-            />
-            <NaviExample
-              label="BadgeCount circle très grand (40px)"
-              badgeFontSize={40}
-              circle
-            />
+            <h3>Très grand (40px) — 1 chiffre</h3>
+            <Row title="" count={5} fontSize={40} />
+
+            <h3>Très grand (40px) — 2 chiffres</h3>
+            <Row title="" count={42} fontSize={40} />
+
+            <h3>Contrôlable</h3>
+            <ControlledRow />
           </div>
         );
       };
