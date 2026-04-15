@@ -14,8 +14,9 @@
     <div id="app"></div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useLayoutEffect, useRef, useState } from "preact/hooks";
+      import { useRef, useState } from "preact/hooks";
       import { BadgeCount, Text } from "@jsenv/navi";
+      import { SurroundingTextAligner } from "../surrounding_text_aligner.jsx";
 
       const containerStyle = {
         fontSize: "16px",
@@ -28,67 +29,25 @@
         backgroundColor: "green",
       };
 
-      const measureTextHeight = (text, computedStyle) => {
-        const canvas = document.createElement("canvas");
-        const ctx = canvas.getContext("2d");
-        ctx.font = `${computedStyle.fontWeight} ${computedStyle.fontSize} ${computedStyle.fontFamily}`;
-        const metrics = ctx.measureText(text);
-        return (
-          metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent
-        );
-      };
-
-      const Badge = ({ textFontSize, count, fontSize }) => {
-        const anchorRef = useRef();
+      const Badge = ({ count, fontSize }) => {
         const badgeRef = useRef();
 
-        useLayoutEffect(() => {
-          const anchorEl = anchorRef.current;
-          const badgeEl = badgeRef.current;
-          if (!anchorEl || !badgeEl) {
-            return;
-          }
-          const anchorStyle = getComputedStyle(anchorEl);
-          const badgeStyle = getComputedStyle(badgeEl);
-          const anchorFontSize = parseFloat(anchorStyle.fontSize);
-          const badgeFontSize = parseFloat(badgeStyle.fontSize);
-          if (anchorFontSize === badgeFontSize) {
-            badgeEl.style.top = `0px`;
-            return;
-          }
-          const anchorTextHeight = measureTextHeight("M", anchorStyle);
-          const badgeTextHeight = measureTextHeight("M", badgeStyle);
-          const heightDiff = badgeTextHeight - anchorTextHeight;
-          const topOffset = heightDiff / 2;
-          console.debug(
-            `anchorTextHeight: ${anchorTextHeight}, badgeTextHeight: ${badgeTextHeight}, heightDiff: ${heightDiff}, topOffset: ${topOffset}`,
-          );
-          badgeEl.style.position = "relative";
-          badgeEl.style.top = `${topOffset}px`;
-        }, [textFontSize, fontSize, count]);
-
         return (
-          <>
-            <span
-              ref={anchorRef}
-              style={{ width: 0, userSelect: "none", overflow: "hidden" }}
-            >
-              &#8203;
-            </span>
+          <SurroundingTextAligner align="center" childRef={badgeRef}>
             <span
               ref={badgeRef}
               style={{
                 fontSize: `${fontSize}px`,
                 backgroundColor: "#e74c3c",
                 color: "white",
-                padding: "0.4em 0.1em",
-                borderRadius: "3px",
+                // padding: "0.4em 0.1em",
+                // borderRadius: "3px",
                 verticalAlign: "inherit",
               }}
             >
               {count}
             </span>
-          </>
+          </SurroundingTextAligner>
         );
       };
 
