@@ -116,28 +116,60 @@
         );
       };
 
+      const VERTICAL_ALIGN_VALUES = [
+        "baseline",
+        "middle",
+        "bottom",
+        "super",
+        "sub",
+        "text-top",
+        "text-bottom",
+      ];
+
       const ControlledRow = () => {
-        const [fontSize, setFontSize] = useState(32);
+        const [badgeFontSize, setBadgeFontSize] = useState(16);
+        const [textFontSize, setTextFontSize] = useState(48);
         const [count, setCount] = useState(5);
+        const [verticalAlign, setVerticalAlign] = useState("baseline");
         return (
           <div>
             <div
-              style={{ fontSize: "13px", color: "#999", marginBottom: "8px" }}
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "2px",
+                flexWrap: "wrap",
+                fontSize: "13px",
+                color: "#999",
+                marginBottom: "8px",
+              }}
             >
-              Contrôlable —{" "}
               <label>
-                font-size:{" "}
+                badge font-size:{" "}
                 <input
                   type="range"
-                  min="8"
+                  min="5"
                   max="48"
-                  value={fontSize}
+                  value={badgeFontSize}
                   onInput={(e) => {
-                    setFontSize(Number(e.target.value));
+                    setBadgeFontSize(Number(e.target.value));
                   }}
                 />{" "}
-                {fontSize}px
-              </label>{" "}
+                {badgeFontSize}px
+              </label>
+              <label>
+                text font-size:{" "}
+                <input
+                  type="range"
+                  min="5"
+                  max="48"
+                  value={textFontSize}
+                  onInput={(e) => {
+                    setTextFontSize(Number(e.target.value));
+                  }}
+                />{" "}
+                {textFontSize}px
+              </label>
               <label>
                 count:{" "}
                 <input
@@ -151,40 +183,77 @@
                   }}
                 />
               </label>
+              <label>
+                vertical-align:{" "}
+                <select
+                  value={verticalAlign}
+                  onChange={(e) => {
+                    setVerticalAlign(e.target.value);
+                  }}
+                >
+                  {VERTICAL_ALIGN_VALUES.map((va) => (
+                    <option key={va} value={va}>
+                      {va}
+                    </option>
+                  ))}
+                </select>
+              </label>
             </div>
             <div style={rowStyle}>
-              <div style={cellStyle}>
+              <div style={{ ...cellStyle }}>
                 <span style={labelStyle}>hardcode</span>
-                <div style={containerStyle}>
-                  <span style={textStyle}>Notifications</span>
-                  <Badge count={count} fontSize={fontSize} />
+                <div
+                  style={{ ...containerStyle, height: "80px", verticalAlign }}
+                >
+                  <span
+                    style={{
+                      ...textStyle,
+                      fontSize: `${textFontSize}px`,
+                      verticalAlign: "inherit",
+                    }}
+                  >
+                    Notifications
+                  </span>
+                  <Badge count={count} fontSize={badgeFontSize} />
                 </div>
               </div>
               <div style={cellStyle}>
                 <span style={labelStyle}>@jsenv/navi</span>
                 <div style={containerStyle}>
-                  <span style={textStyle}>Notifications</span>
-                  <BadgeCount
-                    background="#e74c3c"
-                    color="white"
-                    style={{ fontSize: `${fontSize}px` }}
-                  >
-                    {count}
-                  </BadgeCount>
+                  <span style={{ verticalAlign }}>
+                    <span
+                      style={{ ...textStyle, fontSize: `${textFontSize}px` }}
+                    >
+                      Notifications
+                    </span>
+                    <BadgeCount
+                      background="#e74c3c"
+                      color="white"
+                      style={{ fontSize: `${badgeFontSize}px` }}
+                    >
+                      {count}
+                    </BadgeCount>
+                  </span>
                 </div>
               </div>
               <div style={cellStyle}>
                 <span style={labelStyle}>@jsenv/navi circle</span>
                 <div style={containerStyle}>
-                  <span style={textStyle}>Notifications</span>
-                  <BadgeCount
-                    background="#e74c3c"
-                    color="white"
-                    circle
-                    style={{ fontSize: `${fontSize}px` }}
-                  >
-                    {count}
-                  </BadgeCount>
+                  <span style={{ verticalAlign }}>
+                    <span
+                      style={{ ...textStyle, fontSize: `${textFontSize}px` }}
+                    >
+                      Notifications
+                    </span>
+                    <BadgeCount
+                      background="#e74c3c"
+                      color="white"
+                      circle
+                      style={{ fontSize: `${badgeFontSize}px` }}
+                    >
+                      {count}
+                    </BadgeCount>
+                  </span>
                 </div>
               </div>
             </div>
