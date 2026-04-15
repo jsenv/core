@@ -67,9 +67,11 @@ try {
     "isochrone_lon_signal_value": 2.5
   },
   "redirect_calls": {
-    "nav_to_calls": [],
-    "total_calls": 0,
-    "any_redirects_occurred": false
+    "nav_to_calls": [
+      "http://127.0.0.1/map/isochrone?iso_lon=2.5"
+    ],
+    "total_calls": 1,
+    "any_redirects_occurred": true
   }
 }
 ```

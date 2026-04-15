@@ -12389,10 +12389,23 @@ const route = (pattern, { searchParams } = {}) => {
 
       // If we found a more specific route, delegate to it; otherwise handle it ourselves
       if (!isMostSpecificRoute) {
-        // Check if this is a signal-originated call and there's a more specific route that will also handle it
-        // If so, skip the redirect to avoid duplicate navTo calls
+        // For signal-originated calls, only skip delegation if the more specific route
+        // has its own signal connection for the same params — meaning its own effect will
+        // fire and handle the redirect. If it doesn't have the connection, the signal
+        // change would be silently dropped, so we must delegate anyway.
         if (isSignalChange) {
-          return null;
+          const mostSpecificRoutePrivateProperties =
+            getRoutePrivateProperties(mostSpecificRoute);
+          const { pathConnectionMap, queryConnectionMap } =
+            mostSpecificRoutePrivateProperties.routePattern;
+          const willHandleItself = Object.keys(newParams).every(
+            (paramName) =>
+              pathConnectionMap.has(paramName) ||
+              queryConnectionMap.has(paramName),
+          );
+          if (willHandleItself) {
+            return null;
+          }
         }
         return mostSpecificRoute.redirectTo(newParams, {
           callReason: `replaceParams delegation from ${route} to ${mostSpecificRoute} (original reason: ${callReason})`,
