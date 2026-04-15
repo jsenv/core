@@ -42,7 +42,7 @@ import { useDimColorWhen } from "./use_dim_color.js";
  *
  * This approach dims the content while preserving focus outline visibility.
  */
-import.meta.css = /* css */ `
+const css = /* css */ `
   @layer navi {
     .navi_link {
       --link-border-radius: unset;
@@ -380,6 +380,8 @@ Object.assign(PSEUDO_CLASSES, {
 });
 
 export const Link = (props) => {
+  import.meta.css = css;
+
   return renderActionableComponent(props, {
     Basic: LinkBasic,
     WithAction: LinkWithAction,
