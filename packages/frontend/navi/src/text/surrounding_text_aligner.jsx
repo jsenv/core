@@ -81,34 +81,30 @@ const computeTopOffset = ({ anchorEl, childEl, align }) => {
   const verticalAlign = anchorStyle.verticalAlign;
   const [anchorABA, anchorABD] = anchorMetrics.actual;
   const [anchorFBBA, anchorFBBD] = anchorMetrics.font;
-  const [childABA, childABD] = childMetrics.actual;
-  const [childFBBA, childFBBD] = childMetrics.font;
   const anchorActH = anchorABA + anchorABD;
-  const childActH = childABA + childABD;
 
-  // Compute deltaTop = anchorInkTop_Y - childInkTop_Y after browser layout
-  // (positive = child top is above anchor top → add to move child down to match).
-  // Y axis: positive downward. baseline = Y=0.
+  // For non-inline children (inline-block, flex, etc.) the browser positions them by their
+  // rendered box, not by font metrics. Use the actual rendered height in that case.
+  const isChildInline = childStyle.display === "inline";
+  const childActH = isChildInline
+    ? childMetrics.actual[0] + childMetrics.actual[1]
+    : childEl.getBoundingClientRect().height;
+
+  // Compute deltaTop = anchorInkTop_Y - childBoxTop_Y after browser layout
+  // (positive = add to topOffset to move child down; Y axis: positive downward; baseline = 0).
   //
-  // baseline: inkTop = -ABA (both at shared baseline)
-  //   → deltaTop = -anchorABA - (-childABA) = childABA - anchorABA
+  // For inline anchor (uses font cell metrics):
+  //   baseline  → anchorInkTop = -anchorABA
+  //   middle    → anchorInkTop = M - anchorActH/2
+  //   top       → anchorInkTop = T + anchorFBBA - anchorABA
+  //   bottom    → anchorInkTop = B - anchorFBBD - anchorABA
   //
-  // super/sub: both baselines shifted by the same amount → same relative positions
-  //   → deltaTop = childABA - anchorABA (same as baseline)
-  //
-  // middle: both ink midpoints at the same midline M (e.g. x-height/2 above baseline)
-  //   → anchorInkTop_Y = M - anchorActH/2, childInkTop_Y = M - childActH/2
-  //   → deltaTop = (childActH - anchorActH) / 2
-  //
-  // top/text-top: both font-cell tops at line top T (font cell top = -FBBA from baseline)
-  //   → anchorInkTop_Y = T + anchorFBBA - anchorABA
-  //   → childInkTop_Y  = T + childFBBA  - childABA
-  //   → deltaTop = (anchorFBBA - anchorABA) - (childFBBA - childABA)
-  //
-  // bottom/text-bottom: both font-cell bottoms at line bottom B
-  //   → anchorInkTop_Y = B - anchorFBBD - anchorABA
-  //   → childInkTop_Y  = B - childFBBD  - childABA
-  //   → deltaTop = (childFBBD + childABA) - (anchorFBBD + anchorABA)
+  // For inline child: childBoxTop = childInkTop (same derivation, using child metrics)
+  // For non-inline child: browser uses rendered height for the box:
+  //   baseline  → childBoxTop = -childActH (box bottom at baseline)
+  //   middle    → childBoxTop = M - childActH/2
+  //   top       → childBoxTop = T
+  //   bottom    → childBoxTop = B - childActH
   let deltaTop = 0;
   if (
     verticalAlign === "baseline" ||
@@ -116,13 +112,31 @@ const computeTopOffset = ({ anchorEl, childEl, align }) => {
     verticalAlign === "super" ||
     verticalAlign === "sub"
   ) {
-    deltaTop = childABA - anchorABA;
+    if (isChildInline) {
+      const [childABA] = childMetrics.actual;
+      deltaTop = childABA - anchorABA;
+    } else {
+      deltaTop = childActH - anchorABA;
+    }
   } else if (verticalAlign === "middle") {
+    // M cancels: deltaTop = (childActH - anchorActH) / 2 in both cases
     deltaTop = (childActH - anchorActH) / 2;
   } else if (verticalAlign === "top" || verticalAlign === "text-top") {
-    deltaTop = anchorFBBA - anchorABA - (childFBBA - childABA);
+    if (isChildInline) {
+      const [childABA] = childMetrics.actual;
+      const [childFBBA] = childMetrics.font;
+      deltaTop = anchorFBBA - anchorABA - (childFBBA - childABA);
+    } else {
+      deltaTop = anchorFBBA - anchorABA; // childBoxTop = T → no child term
+    }
   } else if (verticalAlign === "bottom" || verticalAlign === "text-bottom") {
-    deltaTop = childFBBD + childABA - (anchorFBBD + anchorABA);
+    if (isChildInline) {
+      const [childABA] = childMetrics.actual;
+      const [, childFBBD] = childMetrics.font;
+      deltaTop = childFBBD + childABA - (anchorFBBD + anchorABA);
+    } else {
+      deltaTop = childActH - anchorFBBD - anchorABA; // childBoxTop = B - childActH → B cancels
+    }
   }
 
   // offsetFactor determines where along the anchor's actual ink height we target:
