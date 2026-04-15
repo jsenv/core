@@ -1,33 +1,53 @@
 import { useLayoutEffect, useRef } from "preact/hooks";
 
+// # SurroundingTextAligner — how it works
+//
+// ## Problem
+//
+// When an inline element (badge, icon, …) has a different font-size than the surrounding text,
+// the browser aligns it using its own font metrics. This shifts it up or down relative to the
+// surrounding text in a way that looks visually wrong, and that CSS `vertical-align` alone
+// cannot fully compensate for.
+//
+// ## Solution
+//
+// We render a zero-width space (&#8203;) — the "anchor" — directly before the child.
+// The anchor inherits the surrounding text's font-size and vertical-align, so the browser
+// places it exactly where a character of the surrounding text would sit.
+//
+// After layout, we read:
+//   1. The anchor's bounding rect + canvas `fontBoundingBoxDescent` to derive the baseline Y.
+//      (For any inline span, the font cell bottom always coincides with rect.bottom, so
+//       baseline = rect.bottom - fontBoundingBoxDescent — this holds for all vertical-align values.)
+//   2. The anchor's `actualBoundingBox` ascent/descent via canvas to get the ink height.
+//   3. The child's bounding rect (minus any previously applied top correction) to get its
+//      natural rendered top, without triggering a style reset + reflow.
+//
+// We then compute `desiredChildTopY` based on the `align` intention:
+//   "center" → child midpoint aligns with anchor ink midpoint
+//   "start"  → child top aligns with anchor ink top
+//   "end"    → child bottom aligns with anchor ink bottom
+//
+// `topOffset = desiredChildTopY - childNaturalTop` is applied as `position:relative; top:`.
+//
+// This works for any child display type (inline, inline-block, inline-flex…) because
+// we measure the actual rendered box height via getBoundingClientRect
+
 /**
- * Aligns children vertically relative to the surrounding text, regardless of font-size differences.
+ * Positions children vertically relative to the surrounding text, correcting for font-size differences.
  *
- * When inline content (e.g. a badge, an icon) has a different font-size than the surrounding text,
- * the browser aligns it using the child's own font metrics, which shifts it up or down visually.
- *
- * This component fixes that by:
- * 1. Rendering a zero-width space (&#8203;) that inherits the surrounding text's font-size,
- *    anchoring the baseline to the surrounding text context.
- * 2. Using canvas `measureText` to read actual typographic ascent/descent metrics from the DOM
- *    (unaffected by line-height or padding) and computing the exact `top` offset needed.
- *
- * The child's font-size is read from its first element child, so the badge/icon can declare
- * its own font-size directly without passing it as a prop.
- *
- * Two inputs determine the final offset:
- * - `align` prop (intention): where to position children relative to the surrounding text
- * - `vertical-align` CSS on the anchor (situation): how the browser currently places the anchor
- *   in the line box. Reading this lets us compute the correction needed to satisfy `align`,
- *   regardless of which `vertical-align` is active on the parent.
+ * Place this component around any inline element whose font-size differs from the surrounding text.
+ * It renders an invisible anchor that inherits the surrounding text's font metrics, then shifts
+ * the child so that its visual position matches the requested `align` value — regardless of
+ * font-size, display type (inline, inline-block, inline-flex…), or the active `vertical-align`.
  *
  * @param {"center"|"baseline"|"start"|"end"} [align="baseline"]
- *   - `"center"`   — visual midpoint of children matches visual midpoint of surrounding text
- *   - `"baseline"` — children sit on the surrounding text baseline, no offset applied (default)
- *   - `"start"`    — top of children's text aligns with top of surrounding text
- *   - `"end"`      — bottom of children's text aligns with bottom of surrounding text
+ *   - `"center"`   — child is vertically centered on the surrounding text's ink bounds
+ *   - `"baseline"` — no correction applied; child sits wherever the browser places it (default)
+ *   - `"start"`    — child top aligns with the surrounding text's ink top
+ *   - `"end"`      — child bottom aligns with the surrounding text's ink bottom
+ * @param {import("preact").RefObject} childRef — ref on the child element to reposition
  */
-
 export const SurroundingTextAligner = ({
   children,
   align = "baseline",
@@ -41,9 +61,6 @@ export const SurroundingTextAligner = ({
     if (!anchorEl || !childEl) {
       return;
     }
-    // Reset any previous correction so getBoundingClientRect reflects natural position.
-    childEl.style.top = "";
-    childEl.style.position = "";
     const topOffset = computeTopOffset({
       anchorEl,
       childEl,
@@ -52,6 +69,9 @@ export const SurroundingTextAligner = ({
     if (topOffset) {
       childEl.style.position = "relative";
       childEl.style.top = `${topOffset}px`;
+    } else {
+      childEl.style.position = "";
+      childEl.style.top = "";
     }
   });
 
@@ -89,9 +109,12 @@ const computeTopOffset = ({ anchorEl, childEl, align }) => {
   const baselineY = anchorRect.bottom - anchorFBBD;
   const anchorInkTopY = baselineY - anchorABA;
 
-  // Measure the child's natural top (reset was done before calling this function).
+  // Measure the child's current rect, then subtract any previously applied top correction
+  // to recover its natural position — avoiding a style reset + reflow.
   const childRect = childEl.getBoundingClientRect();
   const childH = childRect.height;
+  const previousTop = parseFloat(childEl.style.top) || 0;
+  const childNaturalTop = childRect.top - previousTop;
 
   // Compute desired child top Y based on align intention.
   let desiredChildTopY = 0;
@@ -104,7 +127,7 @@ const computeTopOffset = ({ anchorEl, childEl, align }) => {
     desiredChildTopY = anchorInkTopY + anchorActH - childH;
   }
 
-  return desiredChildTopY - childRect.top;
+  return desiredChildTopY - childNaturalTop;
 };
 
 const canvas = document.createElement("canvas");
