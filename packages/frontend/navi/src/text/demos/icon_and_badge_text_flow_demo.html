@@ -58,67 +58,37 @@
           <div style={cellStyle}>
             <span style={labelStyle}>icon</span>
             <div style={{ ...containerStyle, ...containerExtraStyle }}>
-              {innerSpanStyle ? (
-                <span style={innerSpanStyle}>
-                  <span style={textStyle}>Notifications</span>
-                  <Icon>
-                    <StarSvg />
-                  </Icon>
-                  After
-                </span>
-              ) : (
-                <>
-                  <span style={textStyle}>Notifications</span>
-                  <Icon>
-                    <StarSvg />
-                  </Icon>
-                  After
-                </>
-              )}
+              <span style={innerSpanStyle}>
+                <span style={textStyle}>Notifications</span>
+                <Icon>
+                  <StarSvg />
+                </Icon>
+                <span style={textStyle}>After</span>
+              </span>
             </div>
           </div>
           <div style={cellStyle}>
             <span style={labelStyle}>badge ellipse</span>
             <div style={{ ...containerStyle, ...containerExtraStyle }}>
-              {innerSpanStyle ? (
-                <span style={innerSpanStyle}>
-                  <span style={textStyle}>Notifications</span>
-                  <BadgeCount background="#e74c3c" color="white">
-                    {42}
-                  </BadgeCount>
-                  After
-                </span>
-              ) : (
-                <>
-                  <span style={textStyle}>Notifications</span>
-                  <BadgeCount background="#e74c3c" color="white">
-                    {42}
-                  </BadgeCount>
-                  After
-                </>
-              )}
+              <span style={innerSpanStyle}>
+                <span style={textStyle}>Notifications</span>
+                <BadgeCount background="#e74c3c" color="white">
+                  {42}
+                </BadgeCount>
+                <span style={textStyle}>After</span>
+              </span>
             </div>
           </div>
           <div style={cellStyle}>
             <span style={labelStyle}>badge circle</span>
             <div style={{ ...containerStyle, ...containerExtraStyle }}>
-              {innerSpanStyle ? (
-                <span style={innerSpanStyle}>
-                  <span style={textStyle}>Notifications</span>
-                  <BadgeCount background="#e74c3c" color="white" circle>
-                    {42}
-                  </BadgeCount>
-                  After
-                </span>
-              ) : (
-                <>
-                  <span style={textStyle}>Notifications</span>
-                  <BadgeCount background="#e74c3c" color="white" circle>
-                    {42}
-                  </BadgeCount>
-                  After
-                </>
-              )}
+              <span style={innerSpanStyle}>
+                <span style={textStyle}>Notifications</span>
+                <BadgeCount background="#e74c3c" color="white" circle>
+                  {42}
+                </BadgeCount>
+                <span style={textStyle}>After</span>
+              </span>
             </div>
           </div>
         </div>
