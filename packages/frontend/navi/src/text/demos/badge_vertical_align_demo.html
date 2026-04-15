@@ -25,19 +25,28 @@
 
       const Badge = ({ count, fontSize }) => {
         return (
-          <span
-            style={{
-              fontSize: `${fontSize}px`,
-              backgroundColor: "#e74c3c",
-              color: "white",
-              padding: "0 4px",
-              borderRadius: "3px",
-              lineHeight: "1",
-              display: "inline-flex",
-              alignItems: "center",
-            }}
-          >
-            {count}
+          <span style={{ display: "inline-flex", alignItems: "center" }}>
+            {/* zero-width space: invisible, no width, but establishes line metrics
+                at the parent font-size — gives us the vertical reference point
+                so align-items: center snaps the badge to the text midline
+                without the parent needing flex + align-items */}
+            <span style={{ width: 0, overflow: "hidden", userSelect: "none" }}>
+              {"\u200B"}
+            </span>
+            <span
+              style={{
+                fontSize: `${fontSize}px`,
+                backgroundColor: "#e74c3c",
+                color: "white",
+                padding: "0 4px",
+                borderRadius: "3px",
+                lineHeight: "1",
+                display: "inline-flex",
+                alignItems: "center",
+              }}
+            >
+              {count}
+            </span>
           </span>
         );
       };
@@ -111,7 +120,7 @@
       };
 
       const ControlledRow = () => {
-        const [fontSize, setFontSize] = useState(16);
+        const [fontSize, setFontSize] = useState(32);
         const [count, setCount] = useState(5);
         return (
           <div>
