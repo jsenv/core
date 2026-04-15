@@ -223,11 +223,7 @@ const CustomWidthSpace = ({ value, useRealSpaceChar }) => {
   return <span style={`padding-left: ${value}`}>&#8203;</span>;
 };
 
-const applySpacingOnTextChildren = (
-  children,
-  spacing,
-  defaultSpace = REGULAR_SPACE,
-) => {
+const applySpacingOnTextChildren = (children, spacing, defaultSpace) => {
   if (spacing === "pre" || spacing === "0" || spacing === 0) {
     return children;
   }
@@ -242,21 +238,10 @@ const applySpacingOnTextChildren = (
 
   const useRealSpaceChar = defaultSpace !== FAKE_SPACE;
   let separator;
-  if (
-    spacing === undefined ||
-    spacing === REGULAR_SPACE ||
-    spacing === FAKE_SPACE
-  ) {
+  if (spacing === REGULAR_SPACE || spacing === FAKE_SPACE) {
     separator = defaultSpace;
   } else if (typeof spacing === "string") {
-    if (isSizeSpacingScaleKey(spacing)) {
-      separator = (
-        <CustomWidthSpace
-          value={resolveSpacingSize(spacing)}
-          useRealSpaceChar={useRealSpaceChar}
-        />
-      );
-    } else if (hasCSSSizeUnit(spacing)) {
+    if (isSizeSpacingScaleKey(spacing) || hasCSSSizeUnit(spacing)) {
       separator = (
         <CustomWidthSpace
           value={resolveSpacingSize(spacing)}
