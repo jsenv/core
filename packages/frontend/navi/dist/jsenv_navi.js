@@ -20034,7 +20034,9 @@ installImportMetaCssBuild(import.meta);const css$7 = /* css */`
 const SurroundingTextAligner = ({
   children,
   align = "baseline",
-  childRef
+  childRef,
+  textSize,
+  size
 }) => {
   import.meta.css = [css$7, "@jsenv/navi/src/text/surrounding_text_aligner.jsx"];
   const anchorRef = useRef();
@@ -20056,7 +20058,7 @@ const SurroundingTextAligner = ({
       childEl.style.position = "";
       childEl.style.top = "";
     }
-  });
+  }, [size, textSize]);
   return jsxs(Fragment, {
     children: [children, jsx("span", {
       ref: anchorRef,
@@ -20880,6 +20882,8 @@ const Icon = ({
   return jsx(SurroundingTextAligner, {
     align: "center",
     childRef: textRef,
+    size: props.size,
+    textSize: props.textSize,
     children: jsxs(Text, {
       ...props,
       ...ariaProps,
@@ -30660,6 +30664,7 @@ const BadgeCount = ({
   // so that visually the interface do not suddently switch from circle to ellipse depending on the count
   circle,
   max = circle ? MAX_FOR_CIRCLE : Infinity,
+  textSize,
   integer,
   lang,
   loading,
@@ -30688,6 +30693,8 @@ const BadgeCount = ({
     return jsx(SurroundingTextAligner, {
       align: "center",
       childRef: ref,
+      size: props.size,
+      textSize: textSize,
       children: jsxs(BadgeCountCircle, {
         ...props,
         loading: loading,
@@ -30704,6 +30711,8 @@ const BadgeCount = ({
   return jsx(SurroundingTextAligner, {
     align: "center",
     childRef: ref,
+    size: props.size,
+    textSize: textSize,
     children: jsxs(BadgeCountEllipse, {
       ...props,
       loading: loading,
