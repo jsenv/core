@@ -92,7 +92,7 @@ export const TextLineAligner = ({
       childEl.style.position = "";
       childEl.style.top = "";
     }
-  }, [size, lineLayout?.size, lineLayout?.verticalAlign]);
+  }, [size, lineAlign, lineLayout?.size, lineLayout?.verticalAlign]);
 
   return (
     <>
