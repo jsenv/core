@@ -29,8 +29,8 @@ import { useLayoutEffect, useRef } from "preact/hooks";
 //
 // We then compute `desiredChildTopY` based on the `align` intention:
 //   "center" → child midpoint aligns with anchor ink midpoint
-//   "start"  → child top aligns with anchor ink top
-//   "end"    → child bottom aligns with anchor ink bottom
+//   "top"    → child top aligns with anchor ink top
+//   "bottom" → child bottom aligns with anchor ink bottom
 //
 // `topOffset = desiredChildTopY - childNaturalTop` is applied as `position:relative; top:`.
 //
@@ -53,11 +53,11 @@ const css = /* css */ `
  * the child so that its visual position matches the requested `align` value — regardless of
  * font-size, display type (inline, inline-block, inline-flex…), or the active `vertical-align`.
  *
- * @param {"center"|"baseline"|"start"|"end"} [align="baseline"]
+ * @param {"center"|"baseline"|"top"|"bottom"} [align="baseline"]
  *   - `"center"`   — child is vertically centered on the surrounding text's ink bounds
  *   - `"baseline"` — no correction applied; child sits wherever the browser places it (default)
- *   - `"start"`    — child top aligns with the surrounding text's ink top
- *   - `"end"`      — child bottom aligns with the surrounding text's ink bottom
+ *   - `"top"`      — child top aligns with the surrounding text's ink top
+ *   - `"bottom"`   — child bottom aligns with the surrounding text's ink bottom
  * @param {import("preact").RefObject} childRef — ref on the child element to reposition
  */
 export const TextLineAligner = ({
@@ -142,9 +142,9 @@ const computeTopOffset = ({ anchorEl, childEl, align }) => {
   if (align === "center") {
     const anchorInkCenterY = anchorInkTopY + anchorActH / 2;
     desiredChildTopY = anchorInkCenterY - childH / 2;
-  } else if (align === "start") {
+  } else if (align === "top") {
     desiredChildTopY = anchorInkTopY;
-  } else if (align === "end") {
+  } else if (align === "bottom") {
     desiredChildTopY = anchorInkTopY + anchorActH - childH;
   }
 
