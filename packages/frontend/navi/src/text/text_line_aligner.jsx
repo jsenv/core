@@ -50,21 +50,24 @@ const css = /* css */ `
  *
  * Place this component around any inline element whose font-size differs from the surrounding text.
  * It renders an invisible anchor that inherits the surrounding text's font metrics, then shifts
- * the child so that its visual position matches the requested `align` value — regardless of
+ * the child so that its visual position matches the requested `lineAlign` value — regardless of
  * font-size, display type (inline, inline-block, inline-flex…), or the active `vertical-align`.
  *
- * @param {"center"|"baseline"|"top"|"bottom"} [align="baseline"]
+ * @param {"center"|"baseline"|"top"|"bottom"} [lineAlign="baseline"]
  *   - `"center"`   — child is vertically centered on the surrounding text's ink bounds
  *   - `"baseline"` — no correction applied; child sits wherever the browser places it (default)
  *   - `"top"`      — child top aligns with the surrounding text's ink top
  *   - `"bottom"`   — child bottom aligns with the surrounding text's ink bottom
+ * @param {{ size?: number, verticalAlign?: string }} [lineLayout]
+ *   Describes the surrounding line context. Used as layout-effect dependencies so the correction
+ *   reruns when the surrounding text's font-size or vertical-align changes.
  * @param {import("preact").RefObject} childRef — ref on the child element to reposition
  */
 export const TextLineAligner = ({
   children,
-  align = "baseline",
+  lineAlign = "baseline",
   childRef,
-  textSize,
+  lineLayout,
   size,
 }) => {
   import.meta.css = css;
@@ -80,7 +83,7 @@ export const TextLineAligner = ({
     const topOffset = computeTopOffset({
       anchorEl,
       childEl,
-      align,
+      lineAlign,
     });
     if (topOffset) {
       childEl.style.position = "relative";
@@ -89,7 +92,7 @@ export const TextLineAligner = ({
       childEl.style.position = "";
       childEl.style.top = "";
     }
-  }, [size, textSize]);
+  }, [size, lineLayout?.size, lineLayout?.verticalAlign]);
 
   return (
     <>
@@ -101,8 +104,8 @@ export const TextLineAligner = ({
   );
 };
 
-const computeTopOffset = ({ anchorEl, childEl, align }) => {
-  if (align === "baseline") {
+const computeTopOffset = ({ anchorEl, childEl, lineAlign }) => {
+  if (lineAlign === "baseline") {
     return 0;
   }
   // Only correct when the anchor lives in an inline formatting context.
@@ -139,12 +142,12 @@ const computeTopOffset = ({ anchorEl, childEl, align }) => {
 
   // Compute desired child top Y based on align intention.
   let desiredChildTopY = 0;
-  if (align === "center") {
+  if (lineAlign === "center") {
     const anchorInkCenterY = anchorInkTopY + anchorActH / 2;
     desiredChildTopY = anchorInkCenterY - childH / 2;
-  } else if (align === "top") {
+  } else if (lineAlign === "top") {
     desiredChildTopY = anchorInkTopY;
-  } else if (align === "bottom") {
+  } else if (lineAlign === "bottom") {
     desiredChildTopY = anchorInkTopY + anchorActH - childH;
   }
 

@@ -126,11 +126,11 @@ export const BadgeCount = ({
   // so that visually the interface do not suddently switch from circle to ellipse depending on the count
   circle,
   max = circle ? MAX_FOR_CIRCLE : Infinity,
-  textSize,
   integer,
   lang,
   loading,
   lineAlign = "center",
+  lineLayout,
   ...props
 }) => {
   import.meta.css = css;
@@ -158,10 +158,10 @@ export const BadgeCount = ({
   if (circle) {
     return (
       <TextLineAligner
-        align={lineAlign}
+        lineAlign={lineAlign}
+        lineLayout={lineLayout}
         childRef={ref}
         size={props.size}
-        textSize={textSize}
       >
         <BadgeCountCircle
           {...props}
@@ -182,10 +182,10 @@ export const BadgeCount = ({
       : valueDisplayed;
   return (
     <TextLineAligner
-      align={lineAlign}
+      lineAlign={lineAlign}
+      lineLayout={lineLayout}
       childRef={ref}
       size={props.size}
-      textSize={textSize}
     >
       <BadgeCountEllipse
         {...props}

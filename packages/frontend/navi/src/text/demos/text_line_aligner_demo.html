@@ -126,7 +126,11 @@
             <span style={labelStyle}>icon</span>
             <div style={{ ...containerStyle, fontSize: `${textSize}px` }}>
               <span style={textStyle}>Notifications</span>
-              <Icon size={iconSize} textSize={textSize} lineAlign={lineAlign}>
+              <Icon
+                size={iconSize}
+                lineLayout={{ size: textSize }}
+                lineAlign={lineAlign}
+              >
                 <StarSvg />
               </Icon>
               After
@@ -140,7 +144,7 @@
                 background="#e74c3c"
                 color="white"
                 size={badgeSize}
-                textSize={textSize}
+                lineLayout={{ size: textSize }}
                 lineAlign={lineAlign}
               >
                 {42}
@@ -157,7 +161,7 @@
                 color="white"
                 circle
                 size={badgeSize}
-                textSize={textSize}
+                lineLayout={{ size: textSize }}
                 lineAlign={lineAlign}
               >
                 {42}
@@ -257,7 +261,11 @@
                 >
                   <span style={{ verticalAlign }}>
                     <span style={textStyle}>NotificationS</span>
-                    <Icon size={itemSize} lineAlign={lineAlign}>
+                    <Icon
+                      size={itemSize}
+                      lineAlign={lineAlign}
+                      lineLayout={{ size: textSize, verticalAlign }}
+                    >
                       <StarSvg />
                     </Icon>
                     <span style={textStyle}>After</span>
@@ -279,6 +287,7 @@
                       color="white"
                       size={itemSize}
                       lineAlign={lineAlign}
+                      lineLayout={{ size: textSize, verticalAlign }}
                     >
                       {count}
                     </BadgeCount>
@@ -302,6 +311,7 @@
                       circle
                       size={itemSize}
                       lineAlign={lineAlign}
+                      lineLayout={{ size: textSize, verticalAlign }}
                     >
                       {count}
                     </BadgeCount>

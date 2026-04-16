@@ -96,6 +96,7 @@ export const Icon = ({
   decorative,
   onClick,
   lineAlign = "center",
+  lineLayout,
   ...props
 }) => {
   import.meta.css = css;
@@ -162,10 +163,10 @@ export const Icon = ({
   const invisibleText = baseChar.repeat(charWidth);
   return (
     <TextLineAligner
-      align={lineAlign}
+      lineAlign={lineAlign}
+      lineLayout={lineLayout}
       childRef={textRef}
       size={props.size}
-      textSize={props.textSize}
     >
       <Text
         {...props}
