@@ -17,6 +17,9 @@ const css = /* css */ `
   }
 
   .navi_icon {
+    display: inline-flex;
+    aspect-ratio: 1/1;
+    height: 1lh;
     white-space: nowrap;
     vertical-align: inherit;
 
@@ -41,16 +44,7 @@ const css = /* css */ `
     }
   }
 
-  .navi_icon_char_slot {
-    opacity: 0;
-    cursor: default;
-    user-select: none;
-  }
   .navi_text.navi_icon_foreground {
-    position: absolute;
-    inset: 0;
-    display: inline-flex;
-
     & > .navi_text {
       display: flex;
       aspect-ratio: 1 / 1;
@@ -88,11 +82,6 @@ const css = /* css */ `
 export const Icon = ({
   href,
   children,
-  charWidth = 1,
-  // 0 (zéro) is the real char width
-  // but 2 zéros gives too big icons
-  // while 1 "W" gives a nice result
-  baseChar = "W",
   decorative,
   onClick,
   textAnchor = "center",
@@ -160,7 +149,6 @@ export const Icon = ({
     );
   }
 
-  const invisibleText = baseChar.repeat(charWidth);
   return (
     <TextAnchor
       textAnchor={textAnchor}
@@ -180,12 +168,7 @@ export const Icon = ({
         onClick={onClick}
         ref={textRef}
       >
-        <span className="navi_icon_char_slot" aria-hidden="true">
-          {invisibleText}
-        </span>
-        <Text className="navi_icon_foreground" spacing="pre">
-          {innerChildren}
-        </Text>
+        {innerChildren}
       </Text>
     </TextAnchor>
   );
