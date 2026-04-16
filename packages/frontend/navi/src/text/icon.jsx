@@ -159,7 +159,7 @@ export const Icon = ({
         onClick={onClick}
         ref={textRef}
       >
-        <span>&#8203;</span>
+        <span style="user-select:none">&#8203;</span>
         {innerChildren}
       </Text>
     </TextAnchor>
