@@ -53,11 +53,13 @@ const css = /* css */ `
  * the child so that its visual position matches the requested `lineAlign` value — regardless of
  * font-size, display type (inline, inline-block, inline-flex…), or the active `vertical-align`.
  *
- * @param {"center"|"baseline"|"top"|"bottom"} [lineAlign="baseline"]
- *   - `"center"`   — child is vertically centered on the surrounding text's ink bounds
+ * @param {"center"|"baseline"|"top"|"bottom"|"above"|"below"} [lineAlign="baseline"]
+ *   - `"center"`   — child is vertically centered on the surrounding text
  *   - `"baseline"` — no correction applied; child sits wherever the browser places it (default)
- *   - `"top"`      — child top aligns with the surrounding text's ink top
- *   - `"bottom"`   — child bottom aligns with the surrounding text's ink bottom
+ *   - `"top"`      — child top aligns with the surrounding text top
+ *   - `"bottom"`   — child bottom aligns with the surrounding text bottom
+ *   - `"above"`    — child bottom sits just above the surrounding text (child is above the line)
+ *   - `"below"`    — child top sits just below the surrounding text (child is below the line)
  * @param {{ size?: number, verticalAlign?: string }} [lineLayout]
  *   Describes the surrounding line context. Used as layout-effect dependencies so the correction
  *   reruns when the surrounding text's font-size or vertical-align changes.
@@ -142,6 +144,10 @@ const computeTopOffset = ({ anchorEl, childEl, lineAlign }) => {
     desiredChildTopY = anchorRect.top;
   } else if (lineAlign === "bottom") {
     desiredChildTopY = anchorRect.bottom - childH;
+  } else if (lineAlign === "above") {
+    desiredChildTopY = anchorRect.top - childH;
+  } else if (lineAlign === "below") {
+    desiredChildTopY = anchorRect.bottom;
   }
 
   return desiredChildTopY - childNaturalTop;
