@@ -122,18 +122,9 @@ const computeTopOffset = ({ anchorEl, childEl, lineAlign }) => {
     return 0;
   }
 
-  const anchorStyle = getComputedStyle(anchorEl);
-  const anchorMetrics = measureFontAscDesc("M", anchorStyle);
-  const [anchorABA, anchorABD] = anchorMetrics.actual;
-  const anchorActH = anchorABA + anchorABD;
-  const [, anchorFBBD] = anchorMetrics.font;
-
-  // Estimate the baseline Y from the anchor's bounding rect.
-  // For an inline span, the font cell bottom is always at the element's bottom edge
-  // (regardless of vertical-align), so baseline = rect.bottom - fontBoundingBoxDescent.
+  // The anchor's rendered rect corresponds to the surrounding text's inline element box:
+  // its top and bottom match the visual bounds of the surrounding text (including line-height).
   const anchorRect = anchorEl.getBoundingClientRect();
-  const baselineY = anchorRect.bottom - anchorFBBD;
-  const anchorInkTopY = baselineY - anchorABA;
 
   // Measure the child's current rect, then subtract any previously applied top correction
   // to recover its natural position — avoiding a style reset + reflow.
@@ -145,24 +136,13 @@ const computeTopOffset = ({ anchorEl, childEl, lineAlign }) => {
   // Compute desired child top Y based on lineAlign intention.
   let desiredChildTopY = 0;
   if (lineAlign === "center") {
-    const anchorInkCenterY = anchorInkTopY + anchorActH / 2;
-    desiredChildTopY = anchorInkCenterY - childH / 2;
+    const anchorCenterY = (anchorRect.top + anchorRect.bottom) / 2;
+    desiredChildTopY = anchorCenterY - childH / 2;
   } else if (lineAlign === "top") {
-    desiredChildTopY = anchorInkTopY;
+    desiredChildTopY = anchorRect.top;
   } else if (lineAlign === "bottom") {
-    desiredChildTopY = anchorInkTopY + anchorActH - childH;
+    desiredChildTopY = anchorRect.bottom - childH;
   }
 
   return desiredChildTopY - childNaturalTop;
-};
-
-const canvas = document.createElement("canvas");
-const measureFontAscDesc = (text, computedStyle) => {
-  const ctx = canvas.getContext("2d");
-  ctx.font = `${computedStyle.fontWeight} ${computedStyle.fontSize} ${computedStyle.fontFamily}`;
-  const metrics = ctx.measureText(text);
-  return {
-    actual: [metrics.actualBoundingBoxAscent, metrics.actualBoundingBoxDescent],
-    font: [metrics.fontBoundingBoxAscent, metrics.fontBoundingBoxDescent],
-  };
 };
