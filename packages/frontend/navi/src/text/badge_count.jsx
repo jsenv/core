@@ -5,7 +5,7 @@ import { withPropsClassName } from "../utils/with_props_class_name.js";
 import { formatNumber } from "./format_number.js";
 import { Icon } from "./icon.jsx";
 import { Text } from "./text.jsx";
-import { TextLineAligner } from "./text_line_aligner.jsx";
+import { TextAnchor } from "./text_anchor.jsx";
 import { useDarkBackgroundAttribute } from "./use_dark_background_attribute.js";
 
 const css = /* css */ `
@@ -129,7 +129,7 @@ export const BadgeCount = ({
   integer,
   lang,
   loading,
-  lineAlign = "center",
+  textAnchor = "center",
   lineLayout,
   ...props
 }) => {
@@ -157,8 +157,8 @@ export const BadgeCount = ({
 
   if (circle) {
     return (
-      <TextLineAligner
-        lineAlign={lineAlign}
+      <TextAnchor
+        textAnchor={textAnchor}
         lineLayout={lineLayout}
         childRef={ref}
         size={props.size}
@@ -173,7 +173,7 @@ export const BadgeCount = ({
           {valueDisplayed}
           {hasOverflow && maxElement}
         </BadgeCountCircle>
-      </TextLineAligner>
+      </TextAnchor>
     );
   }
   const valueFormatted =
@@ -181,8 +181,8 @@ export const BadgeCount = ({
       ? formatNumber(valueDisplayed, { lang })
       : valueDisplayed;
   return (
-    <TextLineAligner
-      lineAlign={lineAlign}
+    <TextAnchor
+      textAnchor={textAnchor}
       lineLayout={lineLayout}
       childRef={ref}
       size={props.size}
@@ -197,7 +197,7 @@ export const BadgeCount = ({
         {valueFormatted}
         {hasOverflow && maxElement}
       </BadgeCountEllipse>
-    </TextLineAligner>
+    </TextAnchor>
   );
 };
 const applyMaxToValue = (max, value) => {

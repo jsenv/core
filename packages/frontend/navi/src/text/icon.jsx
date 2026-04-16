@@ -3,7 +3,7 @@ import { useRef } from "preact/hooks";
 import { Box } from "../box/box.jsx";
 import { withPropsClassName } from "../utils/with_props_class_name.js";
 import { Text } from "./text.jsx";
-import { TextLineAligner } from "./text_line_aligner.jsx";
+import { TextAnchor } from "./text_anchor.jsx";
 
 const css = /* css */ `
   @layer navi {
@@ -95,7 +95,7 @@ export const Icon = ({
   baseChar = "W",
   decorative,
   onClick,
-  lineAlign = "center",
+  textAnchor = "center",
   lineLayout,
   ...props
 }) => {
@@ -162,8 +162,8 @@ export const Icon = ({
 
   const invisibleText = baseChar.repeat(charWidth);
   return (
-    <TextLineAligner
-      lineAlign={lineAlign}
+    <TextAnchor
+      textAnchor={textAnchor}
       lineLayout={lineLayout}
       childRef={textRef}
       size={props.size}
@@ -187,6 +187,6 @@ export const Icon = ({
           {innerChildren}
         </Text>
       </Text>
-    </TextLineAligner>
+    </TextAnchor>
   );
 };

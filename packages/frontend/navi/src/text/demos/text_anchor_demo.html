@@ -3,7 +3,7 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>TextLineAligner Demo</title>
+    <title>TextAnchor Demo</title>
   </head>
   <body>
     <div id="app"></div>
@@ -60,13 +60,12 @@
         "sub",
       ];
 
-      const LINE_ALIGN_VALUES = [
-        "baseline",
+      const TEXT_ANCHOR_VALUES = [
+        "char-bottom",
         "center",
-        "top",
-        "bottom",
-        "above",
-        "below",
+        "line-top",
+        "line-bottom",
+        "char-top",
       ];
 
       const InlineRowContent = ({ innerSpanStyle, children }) => {
@@ -81,7 +80,7 @@
         innerSpanStyle,
         iconSize,
         badgeSize,
-        lineAlign,
+        textAnchor,
       }) => (
         <div style={rowStyle}>
           <div style={cellStyle}>
@@ -89,7 +88,7 @@
             <div style={{ ...containerStyle, ...containerExtraStyle }}>
               <InlineRowContent innerSpanStyle={innerSpanStyle}>
                 <span style={textStyle}>Notifications</span>
-                <Icon size={iconSize} lineAlign={lineAlign}>
+                <Icon size={iconSize} textAnchor={textAnchor}>
                   <RedSquareSvg />
                 </Icon>
                 <span style={textStyle}>After</span>
@@ -105,7 +104,7 @@
                   background="#e74c3c"
                   color="white"
                   size={badgeSize}
-                  lineAlign={lineAlign}
+                  textAnchor={textAnchor}
                 >
                   {42}
                 </BadgeCount>
@@ -123,7 +122,7 @@
                   color="white"
                   circle
                   size={badgeSize}
-                  lineAlign={lineAlign}
+                  textAnchor={textAnchor}
                 >
                   {42}
                 </BadgeCount>
@@ -134,7 +133,12 @@
         </div>
       );
 
-      const SizedInlineRow = ({ iconSize, badgeSize, textSize, lineAlign }) => (
+      const SizedInlineRow = ({
+        iconSize,
+        badgeSize,
+        textSize,
+        textAnchor,
+      }) => (
         <div style={rowStyle}>
           <div style={cellStyle}>
             <span style={labelStyle}>icon</span>
@@ -143,7 +147,7 @@
               <Icon
                 size={iconSize}
                 lineLayout={{ size: textSize }}
-                lineAlign={lineAlign}
+                textAnchor={textAnchor}
               >
                 <RedSquareSvg />
               </Icon>
@@ -159,7 +163,7 @@
                 color="white"
                 size={badgeSize}
                 lineLayout={{ size: textSize }}
-                lineAlign={lineAlign}
+                textAnchor={textAnchor}
               >
                 {42}
               </BadgeCount>
@@ -176,7 +180,7 @@
                 circle
                 size={badgeSize}
                 lineLayout={{ size: textSize }}
-                lineAlign={lineAlign}
+                textAnchor={textAnchor}
               >
                 {42}
               </BadgeCount>
@@ -191,7 +195,7 @@
         const [textSize, setTextSize] = useState(24);
         const [count, setCount] = useState(42);
         const [verticalAlign, setVerticalAlign] = useState("baseline");
-        const [lineAlign, setLineAlign] = useState("center");
+        const [textAnchor, setTextAnchor] = useState("center");
         const [lineHeight, setLineHeight] = useState("normal");
         return (
           <div>
@@ -252,12 +256,12 @@
                 </select>
               </label>
               <label>
-                lineAlign:{" "}
+                textAnchor:{" "}
                 <select
-                  value={lineAlign}
-                  onChange={(e) => setLineAlign(e.target.value)}
+                  value={textAnchor}
+                  onChange={(e) => setTextAnchor(e.target.value)}
                 >
-                  {LINE_ALIGN_VALUES.map((la) => (
+                  {TEXT_ANCHOR_VALUES.map((la) => (
                     <option key={la} value={la}>
                       {la}
                     </option>
@@ -291,7 +295,7 @@
                     <span style={textStyle}>NotificationS</span>
                     <Icon
                       size={itemSize}
-                      lineAlign={lineAlign}
+                      textAnchor={textAnchor}
                       lineLayout={{ size: textSize, verticalAlign }}
                     >
                       <RedSquareSvg />
@@ -315,7 +319,7 @@
                       background="#e74c3c"
                       color="white"
                       size={itemSize}
-                      lineAlign={lineAlign}
+                      textAnchor={textAnchor}
                       lineLayout={{ size: textSize, verticalAlign }}
                     >
                       {count}
@@ -340,7 +344,7 @@
                       color="white"
                       circle
                       size={itemSize}
-                      lineAlign={lineAlign}
+                      textAnchor={textAnchor}
                       lineLayout={{ size: textSize, verticalAlign }}
                     >
                       {count}
@@ -356,38 +360,38 @@
 
       const Demo = () => (
         <div style={{ padding: "20px", fontFamily: "system-ui, sans-serif" }}>
-          <h2 style={{ marginTop: 0 }}>TextLineAligner</h2>
+          <h2 style={{ marginTop: 0 }}>TextAnchor</h2>
 
-          <h3>lineAlign statiques — petit (8px) dans texte 16px</h3>
-          {LINE_ALIGN_VALUES.map((la) => (
+          <h3>textAnchor statiques — petit (8px) dans texte 16px</h3>
+          {TEXT_ANCHOR_VALUES.map((la) => (
             <div key={la} style={{ marginBottom: "12px" }}>
               <div
                 style={{ fontSize: "13px", color: "#999", marginBottom: "4px" }}
               >
-                lineAlign="{la}"
+                textAnchor="{la}"
               </div>
               <SizedInlineRow
                 iconSize={8}
                 badgeSize={8}
                 textSize={16}
-                lineAlign={la}
+                textAnchor={la}
               />
             </div>
           ))}
 
-          <h3>lineAlign statiques — grand (40px) dans texte 16px</h3>
-          {LINE_ALIGN_VALUES.map((la) => (
+          <h3>textAnchor statiques — grand (40px) dans texte 16px</h3>
+          {TEXT_ANCHOR_VALUES.map((la) => (
             <div key={la} style={{ marginBottom: "12px" }}>
               <div
                 style={{ fontSize: "13px", color: "#999", marginBottom: "4px" }}
               >
-                lineAlign="{la}"
+                textAnchor="{la}"
               </div>
               <SizedInlineRow
                 iconSize={40}
                 badgeSize={40}
                 textSize={16}
-                lineAlign={la}
+                textAnchor={la}
               />
             </div>
           ))}

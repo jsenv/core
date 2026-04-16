@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef } from "preact/hooks";
 
-// # TextLineAligner — how it works
+// # TextAnchor — how it works
 //
 // ## Problem
 //
@@ -19,26 +19,14 @@ import { useLayoutEffect, useRef } from "preact/hooks";
 // had vertical-align: middle/super/sub, the anchor would shift away from the text, making the
 // measurements wrong.
 //
-// After layout, we read:
-//   1. The anchor's bounding rect + canvas `fontBoundingBoxDescent` to derive the baseline Y.
-//      (For any inline span, the font cell bottom always coincides with rect.bottom, so
-//       baseline = rect.bottom - fontBoundingBoxDescent — this holds for all vertical-align values.)
-//   2. The anchor's `actualBoundingBox` ascent/descent via canvas to get the ink height.
-//   3. The child's bounding rect (minus any previously applied top correction) to get its
-//      natural rendered top, without triggering a style reset + reflow.
-//
-// We then compute `desiredChildTopY` based on the `align` intention:
-//   "center" → child midpoint aligns with anchor ink midpoint
-//   "top"    → child top aligns with anchor ink top
-//   "bottom" → child bottom aligns with anchor ink bottom
+// After layout, we read the anchor's bounding rect (top/bottom = the line box bounds) and
+// for char-top we also use canvas to measure the ink ascent of the surrounding font.
+// The child's rect (minus any previously applied correction) gives its natural position.
 //
 // `topOffset = desiredChildTopY - childNaturalTop` is applied as `position:relative; top:`.
-//
-// This works for any child display type (inline, inline-block, inline-flex…) because
-// we measure the actual rendered box height via getBoundingClientRect
 
 const css = /* css */ `
-  .navi_text_line_anchor {
+  .navi_text_anchor {
     vertical-align: baseline;
     user-select: none;
     overflow: hidden;
@@ -50,24 +38,23 @@ const css = /* css */ `
  *
  * Place this component around any inline element whose font-size differs from the surrounding text.
  * It renders an invisible anchor that inherits the surrounding text's font metrics, then shifts
- * the child so that its visual position matches the requested `lineAlign` value — regardless of
+ * the child so that its visual position matches the requested `textAnchor` value — regardless of
  * font-size, display type (inline, inline-block, inline-flex…), or the active `vertical-align`.
  *
- * @param {"center"|"baseline"|"top"|"bottom"|"above"|"below"} [lineAlign="baseline"]
- *   - `"center"`   — child is vertically centered on the surrounding text
- *   - `"baseline"` — no correction applied; child sits wherever the browser places it (default)
- *   - `"top"`      — child top aligns with the surrounding text top
- *   - `"bottom"`   — child bottom aligns with the surrounding text bottom
- *   - `"above"`    — child bottom sits just above the surrounding text (child is above the line)
- *   - `"below"`    — child top sits just below the surrounding text (child is below the line)
+ * @param {"line-top"|"char-top"|"center"|"char-bottom"|"line-bottom"} [textAnchor="char-bottom"]
+ *   - `"line-top"`    — child top aligns with the top of the surrounding line box
+ *   - `"char-top"`    — child top aligns with the top of visible characters (ink ascent)
+ *   - `"center"`      — child is vertically centered on the surrounding line box
+ *   - `"char-bottom"` — child bottom aligns to the text baseline (no correction, browser default)
+ *   - `"line-bottom"` — child bottom aligns with the bottom of the surrounding line box
  * @param {{ size?: number, verticalAlign?: string }} [lineLayout]
  *   Describes the surrounding line context. Used as layout-effect dependencies so the correction
  *   reruns when the surrounding text's font-size or vertical-align changes.
  * @param {import("preact").RefObject} childRef — ref on the child element to reposition
  */
-export const TextLineAligner = ({
+export const TextAnchor = ({
   children,
-  lineAlign = "baseline",
+  textAnchor = "char-bottom",
   childRef,
   lineLayout,
   size,
@@ -85,7 +72,7 @@ export const TextLineAligner = ({
     const topOffset = computeTopOffset({
       anchorEl,
       childEl,
-      lineAlign,
+      textAnchor,
     });
     if (topOffset) {
       childEl.style.position = "relative";
@@ -94,20 +81,20 @@ export const TextLineAligner = ({
       childEl.style.position = "";
       childEl.style.top = "";
     }
-  }, [size, lineAlign, lineLayout?.size, lineLayout?.verticalAlign]);
+  }, [size, textAnchor, lineLayout?.size, lineLayout?.verticalAlign]);
 
   return (
     <>
       {children}
-      <span ref={anchorRef} className="navi_text_line_anchor">
+      <span ref={anchorRef} className="navi_text_anchor">
         &#8203;
       </span>
     </>
   );
 };
 
-const computeTopOffset = ({ anchorEl, childEl, lineAlign }) => {
-  if (lineAlign === "baseline") {
+const computeTopOffset = ({ anchorEl, childEl, textAnchor }) => {
+  if (textAnchor === "char-bottom") {
     // The browser's natural CSS baseline alignment already places the element correctly:
     // the element's own baseline aligns to the line's baseline. No correction needed.
     return 0;
@@ -124,8 +111,8 @@ const computeTopOffset = ({ anchorEl, childEl, lineAlign }) => {
     return 0;
   }
 
-  // The anchor's rendered rect corresponds to the surrounding text's inline element box:
-  // its top and bottom match the visual bounds of the surrounding text (including line-height).
+  // The anchor's rendered rect corresponds to the surrounding text's line box:
+  // top and bottom are the visual bounds of the line (including line-height).
   const anchorRect = anchorEl.getBoundingClientRect();
 
   // Measure the child's current rect, then subtract any previously applied top correction
@@ -135,20 +122,25 @@ const computeTopOffset = ({ anchorEl, childEl, lineAlign }) => {
   const previousTop = parseFloat(childEl.style.top) || 0;
   const childNaturalTop = childRect.top - previousTop;
 
-  // Compute desired child top Y based on lineAlign intention.
+  // Compute desired child top Y based on textAnchor intention.
   let desiredChildTopY = 0;
-  if (lineAlign === "center") {
+  if (textAnchor === "center") {
     const anchorCenterY = (anchorRect.top + anchorRect.bottom) / 2;
     desiredChildTopY = anchorCenterY - childH / 2;
-  } else if (lineAlign === "top") {
+  } else if (textAnchor === "line-top") {
     desiredChildTopY = anchorRect.top;
-  } else if (lineAlign === "bottom") {
+  } else if (textAnchor === "line-bottom") {
     desiredChildTopY = anchorRect.bottom - childH;
-  } else if (lineAlign === "above") {
-    desiredChildTopY = anchorRect.top - childH;
-  } else if (lineAlign === "below") {
-    desiredChildTopY = anchorRect.bottom;
+  } else if (textAnchor === "char-top") {
+    const anchorStyle = getComputedStyle(anchorEl);
+    const ctx = charTopCanvas.getContext("2d");
+    ctx.font = `${anchorStyle.fontWeight} ${anchorStyle.fontSize} ${anchorStyle.fontFamily}`;
+    const m = ctx.measureText("M");
+    const baselineY = anchorRect.bottom - m.fontBoundingBoxDescent;
+    desiredChildTopY = baselineY - m.actualBoundingBoxAscent;
   }
 
   return desiredChildTopY - childNaturalTop;
 };
+
+const charTopCanvas = document.createElement("canvas");
