@@ -934,7 +934,7 @@
             <Link anchor href="#integration-composants" />
             Intégration dans différents composants
           </Title>
-          <Box row spacing="lg">
+          <Box flex="y" spacing="m">
             <div>
               <Caption>Avec Text</Caption>
               <br />
@@ -957,8 +957,8 @@
               </Paragraph>
             </div>
 
-            <Box column spacing="m">
-              <div>
+            <Box flex>
+              <Box width="120">
                 <Caption>Button with badge</Caption>
                 <br />
                 <Button>
@@ -967,17 +967,41 @@
                     5
                   </BadgeCount>
                 </Button>
-              </div>
-              <div>
-                <Caption>"m" spacing</Caption>
+              </Box>
+              <Box width="120">
+                <div>
+                  <Caption>Button with badge</Caption>
+                  <br />
+                  <Button>
+                    Tâches
+                    <BadgeCount background="#2196f3" color="white">
+                      42
+                    </BadgeCount>
+                  </Button>
+                </div>
+              </Box>
+            </Box>
+            <Box flex>
+              <Box width="120">
+                <Caption>Circle variant</Caption>
                 <br />
-                <Button spacing="m">
-                  <span>Tâches</span>
-                  <BadgeCount background="#2196f3" color="white">
+                <Button>
+                  Tâches
+                  <BadgeCount background="#2196f3" color="white" circle>
                     5
                   </BadgeCount>
                 </Button>
-              </div>
+              </Box>
+              <Box width="120">
+                <Caption>Circle variant</Caption>
+                <br />
+                <Button>
+                  Tâches
+                  <BadgeCount background="#2196f3" color="white" circle>
+                    42
+                  </BadgeCount>
+                </Button>
+              </Box>
             </Box>
 
             <div>

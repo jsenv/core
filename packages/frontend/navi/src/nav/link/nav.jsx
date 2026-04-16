@@ -45,6 +45,8 @@ const css = /* css */ `
     /* overflow-y: hidden; */
 
     .navi_link {
+      user-select: none;
+
       --x-nav-child-border-radius: calc(
         var(--nav-border-radius) - var(--nav-padding)
       );
