@@ -124,13 +124,8 @@ const computeTopOffset = ({ anchorEl, childEl, textAnchor }) => {
 
   // Compute desired child top Y based on textAnchor intention.
   let desiredChildTopY = 0;
-  if (textAnchor === "center") {
-    const anchorCenterY = (anchorRect.top + anchorRect.bottom) / 2;
-    desiredChildTopY = anchorCenterY - childH / 2;
-  } else if (textAnchor === "line-top") {
+  if (textAnchor === "line-top") {
     desiredChildTopY = anchorRect.top;
-  } else if (textAnchor === "line-bottom") {
-    desiredChildTopY = anchorRect.bottom - childH;
   } else if (textAnchor === "char-top") {
     const anchorStyle = getComputedStyle(anchorEl);
     const ctx = charTopCanvas.getContext("2d");
@@ -138,6 +133,14 @@ const computeTopOffset = ({ anchorEl, childEl, textAnchor }) => {
     const m = ctx.measureText("M");
     const baselineY = anchorRect.bottom - m.fontBoundingBoxDescent;
     desiredChildTopY = baselineY - m.actualBoundingBoxAscent;
+  } else if (textAnchor === "center") {
+    const anchorCenterY = (anchorRect.top + anchorRect.bottom) / 2;
+    desiredChildTopY = anchorCenterY - childH / 2;
+  } else if (textAnchor === "char-bottom") {
+    // Already handled above (early return 0), but guard here for completeness.
+    return 0;
+  } else if (textAnchor === "line-bottom") {
+    desiredChildTopY = anchorRect.bottom - childH;
   }
 
   return desiredChildTopY - childNaturalTop;
