@@ -17,21 +17,17 @@ const css = /* css */ `
   }
 
   .navi_icon {
-    aspect-ratio: 1/1;
-    min-width: 0;
-    height: 1em;
-    max-height: 1em;
-    align-items: center;
-    justify-content: center;
     white-space: nowrap;
     vertical-align: inherit;
 
-    &[data-flow-inline] {
-      width: 1em;
-      height: 1em;
-    }
     &[data-icon-char] {
+      aspect-ratio: 1/1;
+      min-width: 0;
+      height: 1em;
+      max-height: 1em;
       flex-grow: 0 !important;
+      align-items: center;
+      justify-content: center;
 
       svg,
       img {
@@ -41,6 +37,10 @@ const css = /* css */ `
       svg {
         overflow: visible;
       }
+    }
+    &[data-flow-inline] {
+      width: 1em;
+      height: 1em;
     }
     &[data-interactive] {
       cursor: pointer;
