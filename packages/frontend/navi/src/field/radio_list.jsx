@@ -69,10 +69,10 @@ const RadioListBasic = (props) => {
   return (
     <Box
       data-action={rest["data-action"]}
-      row
+      flex="y"
       {...rest}
       baseClassName="navi_radio_list"
-      data-radio-list
+      data-radio-list=""
       onresetuistate={(e) => {
         uiStateController.resetUIState(e);
       }}

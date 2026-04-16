@@ -9,6 +9,7 @@
     <div id="app"></div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
+      import { useState } from "preact/hooks";
       import {
         Text,
         Paragraph,
@@ -18,12 +19,15 @@
         Link,
         Button,
         Caption,
+        Label,
+        Input,
         HeartSvg,
         CheckSvg,
         StarSvg,
         SearchSvg,
         SettingsSvg,
         LinkBlankTargetSvg,
+        RadioList,
         UserSvg,
         HomeSvg,
       } from "@jsenv/navi";
@@ -352,74 +356,125 @@
       );
 
       // Text Flow Section
+      const TEXT_ANCHOR_VALUES = [
+        "char-bottom",
+        "center",
+        "line-top",
+        "line-bottom",
+        "char-top",
+      ];
       const InlineTextIconsSection = () => {
+        const [iconSize, setIconSize] = useState(16);
+        const [textAnchor, setTextAnchor] = useState("center");
+        const [fontSize, setFontSize] = useState(16);
+        const [lineHeight, setLineHeight] = useState(1.5);
+        const [fontColor, setFontColor] = useState("#000000");
         return (
           <Box as="section" marginBottom="xl">
             <Title as="h2">
               <Link anchor href="#inline-text-icons" />
               Text Flow
             </Title>
-            <Box
-              style={{
-                padding: "16px",
-                backgroundColor: "#fffbf0",
-                border: "2px solid #ffd700",
-                borderRadius: "8px",
-                marginBottom: "16px",
-              }}
-            >
-              <Text
-                style={{
-                  fontSize: "14px",
-                  color: "#b8860b",
-                  fontWeight: "bold",
-                  display: "block",
-                  marginBottom: "8px",
-                }}
-              >
-                💡 Text is auto-selected on page load to show icon selection
-                behavior
-              </Text>
-              <Text
-                style={{
-                  fontSize: "12px",
-                  color: "#8b6914",
-                  fontStyle: "italic",
-                }}
-              >
-                Notice how icons not selectable but maintain text flow and
-                proper spacing
-              </Text>
+            <Box flex="y" spacing="s" marginBottom="m">
+              <Label flex="x" alignY="center" spacing="s">
+                icon size
+                <Input
+                  type="range"
+                  min="8"
+                  max="64"
+                  value={iconSize}
+                  action={(v) => setIconSize(v)}
+                />
+                {iconSize}px
+              </Label>
+              <Label flex="x" alignY="center" spacing="s">
+                font-size
+                <Input
+                  type="range"
+                  min="8"
+                  max="48"
+                  value={fontSize}
+                  action={(v) => setFontSize(v)}
+                />
+                {fontSize}px
+              </Label>
+              <Label flex="x" alignY="center" spacing="s">
+                line-height
+                <Input
+                  type="range"
+                  min="0.8"
+                  max="4"
+                  step="0.1"
+                  value={lineHeight}
+                  action={(v) => setLineHeight(v)}
+                />
+                {lineHeight}
+              </Label>
+              <Box flex="x" alignY="center" spacing="s">
+                font color
+                <RadioList flex action={(v) => setFontColor(v)}>
+                  {[
+                    { label: "black", value: "#000000" },
+                    { label: "red", value: "#cc0000" },
+                  ].map(({ label, value }) => (
+                    <Label key={value} flex="x" alignY="center" spacing="xs">
+                      <Input
+                        type="radio"
+                        name="fontColor"
+                        value={value}
+                        checked={fontColor === value}
+                      />
+                      {label}
+                    </Label>
+                  ))}
+                </RadioList>
+              </Box>
+              <Box flex="x" alignY="center" spacing="s">
+                textAnchor
+                <RadioList flex action={(v) => setTextAnchor(v)}>
+                  {TEXT_ANCHOR_VALUES.map((v) => (
+                    <Label key={v} flex="x" alignY="center" spacing="xs">
+                      <Input
+                        type="radio"
+                        name="textAnchor"
+                        value={v}
+                        checked={textAnchor === v}
+                      />
+                      {v}
+                    </Label>
+                  ))}
+                </RadioList>
+              </Box>
             </Box>
             <Paragraph
-              selectRange={["Click on the", "button to return"]}
-              size="16"
-              lineHeight="1.6"
+              size={fontSize}
+              lineHeight={lineHeight}
+              color={fontColor}
             >
               Welcome to our platform! Click on the
               <Text noWrap>
-                <Icon>
+                <Icon size={iconSize} textAnchor={textAnchor}>
                   <HomeSvg />
                 </Icon>
                 <Text bold>home</Text>
               </Text>
               button to return to the dashboard, or visit your
               <Text noWrap>
-                <Icon>
+                <Icon size={iconSize} textAnchor={textAnchor}>
                   <UserSvg />
                 </Icon>
                 <Text italic>profile</Text>
               </Text>
               to update your settings. Don't forget to
               <Text noWrap>
-                <Icon>
+                <Icon size={iconSize} textAnchor={textAnchor}>
                   <StarSvg />
                 </Icon>
                 <Text underline>star</Text>
               </Text>
               your favorite items and
               <Text noWrap>
-                <Icon>
+                <Icon size={iconSize} textAnchor={textAnchor}>
                   <HeartSvg />
                 </Icon>
                 <Text bold italic>
@@ -428,7 +483,7 @@
               </Text>
               the content you enjoy. Use the
               <Text noWrap>
-                <Icon>
+                <Icon size={iconSize} textAnchor={textAnchor}>
                   <SearchSvg />
                 </Icon>
                 <Text bold underline>
@@ -1661,12 +1716,12 @@
             </Box>
 
             <TableOfContents />
+            <InlineTextIconsSection />
             <IconPositioningSection />
             <EmojiIconsSection />
             <DifferentFontSizesSection />
             <FontFamilySection />
             <LineHeightVariationsSection />
-            <InlineTextIconsSection />
             <SquarishIconDimensionsSection />
             <CustomIconDimensionsSection />
             <IconTransformationSection />
