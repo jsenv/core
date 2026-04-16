@@ -9,7 +9,7 @@ const css = /* css */ `
   @layer navi {
     /* Ensure data attributes from box.jsx can win to update display */
     .navi_icon {
-      display: inline-block;
+      display: inline-flex;
       box-sizing: border-box;
       max-width: 100%;
       max-height: 100%;
@@ -17,9 +17,12 @@ const css = /* css */ `
   }
 
   .navi_icon {
-    display: inline-flex;
     aspect-ratio: 1/1;
-    height: 1lh;
+    min-width: 0;
+    height: 1em;
+    max-height: 1em;
+    align-items: center;
+    justify-content: center;
     white-space: nowrap;
     vertical-align: inherit;
 
@@ -41,18 +44,6 @@ const css = /* css */ `
     }
     &[data-interactive] {
       cursor: pointer;
-    }
-  }
-
-  .navi_text.navi_icon_foreground {
-    & > .navi_text {
-      display: flex;
-      aspect-ratio: 1 / 1;
-      min-width: 0;
-      height: 100%;
-      max-height: 1em;
-      align-items: center;
-      justify-content: center;
     }
   }
 
