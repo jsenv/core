@@ -34,7 +34,7 @@ import {
 import { forwardActionRequested } from "./validation/custom_constraint_validation.js";
 import { useConstraints } from "./validation/hooks/use_constraints.js";
 
-import.meta.css = /* css */ `
+const css = /* css */ `
   @layer navi {
     .navi_input_range {
       --border-radius: 6px;
@@ -244,6 +244,8 @@ import.meta.css = /* css */ `
 `;
 
 export const InputRange = (props) => {
+  import.meta.css = css;
+
   const uiStateController = useUIStateController(props, "input");
   const uiState = useUIState(uiStateController);
 

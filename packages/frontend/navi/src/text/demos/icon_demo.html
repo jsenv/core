@@ -369,13 +369,14 @@
         const [fontSize, setFontSize] = useState(16);
         const [lineHeight, setLineHeight] = useState(1.5);
         const [fontColor, setFontColor] = useState("#000000");
+
         return (
           <Box as="section" marginBottom="xl">
             <Title as="h2">
               <Link anchor href="#inline-text-icons" />
               Text Flow
             </Title>
-            <Box flex="y" spacing="s" marginBottom="m">
+            <Box flex="y" spacing="s" marginBottom="m" alignX="start">
               <Label flex="x" alignY="center" spacing="s">
                 icon size
                 <Input
@@ -448,7 +449,7 @@
             </Box>
             <Paragraph
               size={fontSize}
-              lineHeight={lineHeight}
+              lineHeight={String(lineHeight)}
               color={fontColor}
             >
               Welcome to our platform! Click on the

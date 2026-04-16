@@ -1303,7 +1303,7 @@ const createActionProxyFromSignal = (
     };
   };
 
-  const nameSignal = signal();
+  const nameSignal = signal(action.name);
   const callSourceSignal = signal();
   let actionProxy;
   if (ACTION_AS_FUNCTION) {
