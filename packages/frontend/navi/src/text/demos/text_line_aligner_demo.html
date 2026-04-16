@@ -10,7 +10,14 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      import { Icon, StarSvg, BadgeCount } from "@jsenv/navi";
+      import { Icon, BadgeCount } from "@jsenv/navi";
+
+      const RedSquareSvg = () => (
+        <svg viewBox="0 0 10 10" xmlns="http://www.w3.org/2000/svg">
+          <rect x="0" y="0" width="10" height="5" fill="red" />
+          <rect x="0" y="5" width="10" height="5" fill="darkred" />
+        </svg>
+      );
 
       const containerStyle = {
         fontSize: "16px",
@@ -76,7 +83,7 @@
               <InlineRowContent innerSpanStyle={innerSpanStyle}>
                 <span style={textStyle}>Notifications</span>
                 <Icon size={iconSize} lineAlign={lineAlign}>
-                  <StarSvg />
+                  <RedSquareSvg />
                 </Icon>
                 <span style={textStyle}>After</span>
               </InlineRowContent>
@@ -131,7 +138,7 @@
                 lineLayout={{ size: textSize }}
                 lineAlign={lineAlign}
               >
-                <StarSvg />
+                <RedSquareSvg />
               </Icon>
               After
             </div>
@@ -178,6 +185,7 @@
         const [count, setCount] = useState(42);
         const [verticalAlign, setVerticalAlign] = useState("baseline");
         const [lineAlign, setLineAlign] = useState("center");
+        const [lineHeight, setLineHeight] = useState("normal");
         return (
           <div>
             <div
@@ -249,6 +257,18 @@
                   ))}
                 </select>
               </label>
+              <label>
+                line-height:{" "}
+                <input
+                  type="range"
+                  min="0.5"
+                  max="4"
+                  step="0.1"
+                  value={lineHeight === "normal" ? 1.2 : lineHeight}
+                  onInput={(e) => setLineHeight(Number(e.target.value))}
+                />{" "}
+                {lineHeight}
+              </label>
             </div>
             <div style={rowStyle}>
               <div style={cellStyle}>
@@ -257,6 +277,7 @@
                   style={{
                     ...containerStyle,
                     fontSize: `${textSize}px`,
+                    lineHeight,
                   }}
                 >
                   <span style={{ verticalAlign }}>
@@ -266,7 +287,7 @@
                       lineAlign={lineAlign}
                       lineLayout={{ size: textSize, verticalAlign }}
                     >
-                      <StarSvg />
+                      <RedSquareSvg />
                     </Icon>
                     <span style={textStyle}>After</span>
                   </span>
@@ -278,6 +299,7 @@
                   style={{
                     ...containerStyle,
                     fontSize: `${textSize}px`,
+                    lineHeight,
                   }}
                 >
                   <span style={{ verticalAlign }}>
@@ -301,6 +323,7 @@
                   style={{
                     ...containerStyle,
                     fontSize: `${textSize}px`,
+                    lineHeight,
                   }}
                 >
                   <span style={{ verticalAlign }}>
