@@ -107,7 +107,6 @@ const css = /* css */ `
     box-sizing: border-box;
     aspect-ratio: inherit;
     padding: 0;
-    vertical-align: middle;
     background: none;
     border: none;
     border-radius: var(--x-button-border-radius);
