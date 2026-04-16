@@ -95,8 +95,10 @@ export const TextAnchor = ({
 
 const computeTopOffset = ({ anchorEl, childEl, textAnchor }) => {
   if (textAnchor === "char-bottom") {
-    // The browser's natural CSS baseline alignment already places the element correctly:
-    // the element's own baseline aligns to the line's baseline. No correction needed.
+    // Align child's bottom with the char's bottom = the baseline.
+    // The CSS spec says an inline-block with no text content has its baseline at its bottom margin edge.
+    // So the browser's default placement already puts the child's bottom at the line's baseline.
+    // No correction needed.
     return 0;
   }
   // Only correct when the anchor lives in an inline formatting context.
