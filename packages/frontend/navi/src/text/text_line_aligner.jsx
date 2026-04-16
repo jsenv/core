@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef } from "preact/hooks";
 
-// # SurroundingTextAligner — how it works
+// # TextLineAligner — how it works
 //
 // ## Problem
 //
@@ -60,7 +60,7 @@ const css = /* css */ `
  *   - `"end"`      — child bottom aligns with the surrounding text's ink bottom
  * @param {import("preact").RefObject} childRef — ref on the child element to reposition
  */
-export const SurroundingTextAligner = ({
+export const TextLineAligner = ({
   children,
   align = "baseline",
   childRef,

@@ -2,8 +2,8 @@ import { useRef } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
 import { withPropsClassName } from "../utils/with_props_class_name.js";
-import { SurroundingTextAligner } from "./surrounding_text_aligner.jsx";
 import { Text } from "./text.jsx";
+import { TextLineAligner } from "./text_line_aligner.jsx";
 
 const css = /* css */ `
   @layer navi {
@@ -160,7 +160,7 @@ export const Icon = ({
 
   const invisibleText = baseChar.repeat(charWidth);
   return (
-    <SurroundingTextAligner
+    <TextLineAligner
       align="center"
       childRef={textRef}
       size={props.size}
@@ -185,6 +185,6 @@ export const Icon = ({
           {innerChildren}
         </Text>
       </Text>
-    </SurroundingTextAligner>
+    </TextLineAligner>
   );
 };

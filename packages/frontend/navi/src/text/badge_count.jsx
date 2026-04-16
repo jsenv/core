@@ -4,8 +4,8 @@ import { LoadingDots } from "../graphic/loader/loading_dots.jsx";
 import { withPropsClassName } from "../utils/with_props_class_name.js";
 import { formatNumber } from "./format_number.js";
 import { Icon } from "./icon.jsx";
-import { SurroundingTextAligner } from "./surrounding_text_aligner.jsx";
 import { Text } from "./text.jsx";
+import { TextLineAligner } from "./text_line_aligner.jsx";
 import { useDarkBackgroundAttribute } from "./use_dark_background_attribute.js";
 
 const css = /* css */ `
@@ -156,7 +156,7 @@ export const BadgeCount = ({
 
   if (circle) {
     return (
-      <SurroundingTextAligner
+      <TextLineAligner
         align="center"
         childRef={ref}
         size={props.size}
@@ -172,7 +172,7 @@ export const BadgeCount = ({
           {valueDisplayed}
           {hasOverflow && maxElement}
         </BadgeCountCircle>
-      </SurroundingTextAligner>
+      </TextLineAligner>
     );
   }
   const valueFormatted =
@@ -180,7 +180,7 @@ export const BadgeCount = ({
       ? formatNumber(valueDisplayed, { lang })
       : valueDisplayed;
   return (
-    <SurroundingTextAligner
+    <TextLineAligner
       align="center"
       childRef={ref}
       size={props.size}
@@ -196,7 +196,7 @@ export const BadgeCount = ({
         {valueFormatted}
         {hasOverflow && maxElement}
       </BadgeCountEllipse>
-    </SurroundingTextAligner>
+    </TextLineAligner>
   );
 };
 const applyMaxToValue = (max, value) => {
