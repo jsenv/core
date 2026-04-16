@@ -38,7 +38,7 @@ import { useLayoutEffect, useRef } from "preact/hooks";
 // we measure the actual rendered box height via getBoundingClientRect
 
 const css = /* css */ `
-  .navi_text_aligner_anchor {
+  .navi_text_line_anchor {
     vertical-align: baseline;
     user-select: none;
     overflow: hidden;
@@ -94,7 +94,7 @@ export const TextLineAligner = ({
   return (
     <>
       {children}
-      <span ref={anchorRef} className="navi_text_aligner_anchor">
+      <span ref={anchorRef} className="navi_text_line_anchor">
         &#8203;
       </span>
     </>

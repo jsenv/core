@@ -130,6 +130,7 @@ export const BadgeCount = ({
   integer,
   lang,
   loading,
+  lineAlign = "center",
   ...props
 }) => {
   import.meta.css = css;
@@ -157,7 +158,7 @@ export const BadgeCount = ({
   if (circle) {
     return (
       <TextLineAligner
-        align="center"
+        align={lineAlign}
         childRef={ref}
         size={props.size}
         textSize={textSize}
@@ -181,7 +182,7 @@ export const BadgeCount = ({
       : valueDisplayed;
   return (
     <TextLineAligner
-      align="center"
+      align={lineAlign}
       childRef={ref}
       size={props.size}
       textSize={textSize}
