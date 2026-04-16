@@ -105,9 +105,6 @@ export const TextLineAligner = ({
 };
 
 const computeTopOffset = ({ anchorEl, childEl, lineAlign }) => {
-  if (lineAlign === "baseline") {
-    return 0;
-  }
   // Only correct when the anchor lives in an inline formatting context.
   // If the parent is a flex/grid container, inline layout rules don't apply
   // and our font-metrics model is invalid.
@@ -140,9 +137,14 @@ const computeTopOffset = ({ anchorEl, childEl, lineAlign }) => {
   const previousTop = parseFloat(childEl.style.top) || 0;
   const childNaturalTop = childRect.top - previousTop;
 
-  // Compute desired child top Y based on align intention.
+  // Compute desired child top Y based on lineAlign intention.
   let desiredChildTopY = 0;
-  if (lineAlign === "center") {
+  if (lineAlign === "baseline") {
+    // Align child's bottom edge to the text baseline.
+    // The browser's default inline-block placement puts the child's bottom at the baseline,
+    // but font-size differences shift this. We correct it explicitly.
+    desiredChildTopY = baselineY - childH;
+  } else if (lineAlign === "center") {
     const anchorInkCenterY = anchorInkTopY + anchorActH / 2;
     desiredChildTopY = anchorInkCenterY - childH / 2;
   } else if (lineAlign === "top") {
