@@ -1,6 +1,6 @@
 import { Box } from "../box/box.jsx";
 
-import.meta.css = /* css */ `
+const css = /* css */ `
   @layer navi {
     .navi_separator {
       --size: 1px;
@@ -38,6 +38,7 @@ const SeparatorStyleCSSVars = {
   color: "--color",
 };
 export const Separator = ({ vertical, ...props }) => {
+  import.meta.css = css;
   return (
     <Box
       as={vertical ? "span" : "hr"}

@@ -95,7 +95,7 @@ import {
 } from "./sticky/table_sticky.js";
 import "./sticky/table_sticky.jsx";
 import { TableStickyFrontier } from "./sticky/table_sticky.jsx";
-import "./table_css.js";
+import { css } from "./table_css.js";
 import { TableUI } from "./table_ui.jsx";
 
 const [useColumnTrackerProviders, useRegisterColumn, useColumnByIndex] =
@@ -114,6 +114,7 @@ const TableSectionContext = createContext();
 const useIsInTableHead = () => useContext(TableSectionContext) === "head";
 
 export const Table = (props) => {
+  import.meta.css = css;
   const tableDefaultRef = useRef();
   const tableDefaultId = `table-${useId()}`;
   const {

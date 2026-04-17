@@ -5,7 +5,7 @@ import { useDebounceTrue } from "../../utils/use_debounce_true.js";
 const rightArrowPath = "M680-480L360-160l-80-80 240-240-240-240 80-80 320 320z";
 const downArrowPath = "M480-280L160-600l80-80 240 240 240-240 80 80-320 320z";
 
-import.meta.css = /* css */ `
+const css = /* css */ `
   .navi_summary_marker {
     width: 1em;
     height: 1em;
@@ -88,6 +88,7 @@ import.meta.css = /* css */ `
 `;
 
 export const SummaryMarker = ({ open, loading }) => {
+  import.meta.css = css;
   const showLoading = useDebounceTrue(loading, 300);
   const mountedRef = useRef(false);
   const prevOpenRef = useRef(open);

@@ -14,7 +14,7 @@ import { useCallback, useLayoutEffect, useRef, useState } from "preact/hooks";
 import { Box } from "../../box/box.jsx";
 import { Input } from "../input.jsx";
 
-import.meta.css = /* css */ `
+const css = /* css */ `
   .navi_editable_wrapper {
     --inset-top: 0px;
     --inset-right: 0px;
@@ -60,6 +60,7 @@ export const useEditionController = () => {
 };
 
 export const Editable = (props) => {
+  import.meta.css = css;
   let {
     children,
     action,

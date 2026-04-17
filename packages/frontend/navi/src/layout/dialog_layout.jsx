@@ -3,7 +3,7 @@
 
 import { Box } from "../box/box.jsx";
 
-import.meta.css = /* css */ `
+const css = /* css */ `
   @layer navi {
     .navi_dialog_layout {
       --layout-margin: 30px;
@@ -88,6 +88,7 @@ export const DialogLayout = ({
   alignY = "center",
   ...props
 }) => {
+  import.meta.css = css;
   return (
     <Box
       baseClassName="navi_dialog_layout"

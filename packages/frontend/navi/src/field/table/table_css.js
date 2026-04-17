@@ -10,7 +10,7 @@ import { Z_INDEX_EDITING } from "./z_indexes.js";
  *   inset 0 -1px 0 0 color;   // Bottom border
  */
 
-import.meta.css = /* css */ `
+export const css = /* css */ `
   .navi_table_root {
     position: relative;
     max-width: var(--table-max-width, none);

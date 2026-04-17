@@ -31,7 +31,7 @@ import {
 import { forwardActionRequested } from "./validation/custom_constraint_validation.js";
 import { useConstraints } from "./validation/hooks/use_constraints.js";
 
-import.meta.css = /* css */ `
+const css = /* css */ `
   @layer navi {
     .navi_checkbox {
       --margin: 3px 3px 3px 4px;
@@ -359,6 +359,8 @@ import.meta.css = /* css */ `
 `;
 
 export const InputCheckbox = (props) => {
+  import.meta.css = css;
+
   const { value = "on" } = props;
   const uiStateController = useUIStateController(props, "checkbox", {
     statePropName: "checked",

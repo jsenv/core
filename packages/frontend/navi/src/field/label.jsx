@@ -3,7 +3,7 @@ import { useContext, useState } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
 
-import.meta.css = /* css */ `
+const css = /* css */ `
   @layer navi {
     label {
       &[data-interactive] {
@@ -46,6 +46,7 @@ const LabelPseudoClasses = [
   ":-navi-loading",
 ];
 export const Label = (props) => {
+  import.meta.css = css;
   const { readOnly, disabled, children, ...rest } = props;
 
   const [interactive, setInteractive] = useState(false);

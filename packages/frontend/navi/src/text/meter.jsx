@@ -10,7 +10,7 @@ import { LoaderBackground } from "../graphic/loader/loader_background.jsx";
 import { Quantity } from "./quantity.jsx";
 import { useDarkBackgroundAttribute } from "./use_dark_background_attribute.js";
 
-import.meta.css = /* css */ `
+const css = /* css */ `
   @layer navi {
     .navi_meter {
       --loader-color: var(--navi-loader-color);
@@ -179,6 +179,7 @@ export const Meter = ({
   style,
   ...rest
 }) => {
+  import.meta.css = css;
   const defaultRef = useRef();
   const ref = rest.ref || defaultRef;
   value = Number(value);

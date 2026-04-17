@@ -33,7 +33,6 @@ import { BoxFlowContext } from "./box_flow_context.jsx";
 import {
   getHowToHandleStyleProp,
   getVisualChildStylePropStrategy,
-  isCSSVar,
   isStyleProp,
   prepareStyleValue,
 } from "./box_style_util.js";
@@ -392,7 +391,7 @@ export const Box = (props) => {
         addStyle(value, name, styleContext, boxStylesTarget, context);
         return;
       }
-      if (isCSSVar(name)) {
+      if (name.startsWith("--")) {
         addStyle(value, name, styleContext, boxStylesTarget, context);
         return;
       }

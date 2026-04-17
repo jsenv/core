@@ -22,8 +22,6 @@ import {
 } from "./use_ui_state_controller.js";
 import { requestAction } from "./validation/custom_constraint_validation.js";
 
-import.meta.css = /* css */ ``;
-
 export const RadioList = (props) => {
   const uiStateController = useUIGroupStateController(props, "radio_list", {
     childComponentType: "radio",

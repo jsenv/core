@@ -1,6 +1,6 @@
 import { Box } from "../box/box.jsx";
 
-import.meta.css = /* css */ `
+const css = /* css */ `
   @layer navi {
     .navi_viewport_layout {
       --layout-padding: 40px;
@@ -38,6 +38,7 @@ const ViewportLayoutStyleCSSVars = {
   background: "--layout-background",
 };
 export const ViewportLayout = (props) => {
+  import.meta.css = css;
   return (
     <Box
       row

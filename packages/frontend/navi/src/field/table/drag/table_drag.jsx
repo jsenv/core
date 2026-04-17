@@ -15,7 +15,7 @@ import { Z_INDEX_CELL_FOREGROUND, Z_INDEX_DROP_PREVIEW } from "../z_indexes.js";
 
 const DEBUG_VISUAL = false;
 
-import.meta.css = /* css */ `
+const css = /* css */ `
   .navi_table_drag_clone_container {
     position: absolute;
     top: var(--table-visual-top);
@@ -224,6 +224,7 @@ export const swapItem = (array, indexA, indexB) => {
 };
 
 export const TableDragCloneContainer = forwardRef((props, ref) => {
+  import.meta.css = css;
   const { tableId } = props;
 
   return (

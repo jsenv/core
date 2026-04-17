@@ -4,7 +4,7 @@ import { Box } from "../box/box.jsx";
 import { Icon } from "../text/icon.jsx";
 import { Button } from "./button.jsx";
 
-import.meta.css = /* css */ `
+const css = /* css */ `
   @layer navi {
     .navi_clipboard_container {
       --height: 1.5em;
@@ -34,6 +34,7 @@ import.meta.css = /* css */ `
 `;
 
 export const ButtonCopyToClipboard = ({ children, ...props }) => {
+  import.meta.css = css;
   const [copied, setCopied] = useState(false);
   const renderedRef = useRef();
 
@@ -45,7 +46,7 @@ export const ButtonCopyToClipboard = ({ children, ...props }) => {
   }, []);
 
   return (
-    <Box class="navi_clipboard_container" {...props}>
+    <Box className="navi_clipboard_container" {...props}>
       <Box
         className="navi_copied_notif"
         aria-hidden={copied ? "false" : "true"}
@@ -55,11 +56,11 @@ export const ButtonCopyToClipboard = ({ children, ...props }) => {
       </Box>
       <Button
         className="navi_copy_button"
-        row
+        flex="y"
+        alignY="center"
         icon
         revealOnInteraction
         square
-        alignY="center"
         expandY
         borderRadius="xs"
         action={async () => {

@@ -20,7 +20,7 @@ import {
 } from "../z_indexes.js";
 import { TableStickyContext } from "./table_sticky.js";
 
-import.meta.css = /* css */ `
+const css = /* css */ `
   @layer navi {
     .navi_table {
       --sticky-frontier-color: #c0c0c0;
@@ -262,6 +262,7 @@ import.meta.css = /* css */ `
 `;
 
 export const TableStickyFrontier = ({ tableRef }) => {
+  import.meta.css = css;
   const stickyLeftFrontierGhostRef = useRef();
   const stickyLeftFrontierPreviewRef = useRef();
   const stickyTopFrontierGhostRef = useRef();

@@ -26,7 +26,7 @@ import {
 } from "./use_ui_state_controller.js";
 import { useConstraints } from "./validation/hooks/use_constraints.js";
 
-import.meta.css = /* css */ `
+const css = /* css */ `
   @layer navi {
     .navi_radio {
       --margin: 3px 3px 0 5px;
@@ -320,6 +320,8 @@ import.meta.css = /* css */ `
 `;
 
 export const InputRadio = (props) => {
+  import.meta.css = css;
+
   const { value = "on" } = props;
   const uiStateController = useUIStateController(props, "radio", {
     statePropName: "checked",

@@ -1,6 +1,5 @@
 import { createDragToMoveGestureController } from "@jsenv/dom";
-import { forwardRef } from "preact/compat";
-import { useContext } from "preact/hooks";
+import { useContext, useRef } from "preact/hooks";
 
 import {
   Z_INDEX_RESIZER_BACKDROP,
@@ -13,7 +12,7 @@ const ROW_MAX_HEIGHT = 100;
 const COLUMN_MIN_WIDTH = 50;
 const COLUMN_MAX_WIDTH = 500;
 
-import.meta.css = /* css */ `
+const css = /* css */ `
   @layer navi {
     .navi_table {
       --table-resizer-handle-color: #063b7c;
@@ -172,7 +171,11 @@ import.meta.css = /* css */ `
 `;
 
 // Column resize components
-export const TableColumnResizer = forwardRef((props, ref) => {
+export const TableColumnResizer = (props) => {
+  import.meta.css = css;
+  const defaultRef = useRef();
+  const ref = props.ref || defaultRef;
+
   return (
     <div ref={ref} className="navi_table_column_resizer">
       <div className="navi_table_column_resize_handle_container">
@@ -182,7 +185,7 @@ export const TableColumnResizer = forwardRef((props, ref) => {
       <div className="navi_table_column_resizer_line"></div>
     </div>
   );
-});
+};
 export const TableCellColumnResizeHandles = ({
   columnIndex,
   columnMinWidth,
@@ -502,7 +505,10 @@ const initResizeTableRowViaPointer = (
 };
 
 // Row resize components
-export const TableRowResizer = forwardRef((props, ref) => {
+export const TableRowResizer = (props) => {
+  const defaultRef = useRef();
+  const ref = props.ref || defaultRef;
+
   return (
     <div ref={ref} className="navi_table_row_resizer">
       <div className="navi_table_row_resize_handle_container">
@@ -512,7 +518,7 @@ export const TableRowResizer = forwardRef((props, ref) => {
       <div className="navi_table_row_resizer_line"></div>
     </div>
   );
-});
+};
 export const TableCellRowResizeHandles = ({
   rowIndex,
   rowMinHeight,

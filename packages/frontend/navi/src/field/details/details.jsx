@@ -22,7 +22,7 @@ import {
 } from "../validation/custom_constraint_validation.js";
 import { SummaryMarker } from "./summary_marker.jsx";
 
-import.meta.css = /* css */ `
+const css = /* css */ `
   .navi_details {
     position: relative;
     z-index: 1;
@@ -60,6 +60,7 @@ import.meta.css = /* css */ `
 `;
 
 export const Details = (props) => {
+  import.meta.css = css;
   const { value = "on", persists } = props;
   const uiStateController = useUIStateController(props, "details", {
     statePropName: "open",

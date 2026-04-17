@@ -6166,12 +6166,12 @@ const withPropsClassName = (baseClassName, classNameFromProps) => {
 const BoxFlowContext = createContext();
 
 const normalizeSpacingStyle = (value, property = "padding") => {
-  const cssSize = sizeSpacingScale[value];
-  return cssSize || stringifyStyle(value, property);
+  const cssValue = SIZE_MAP[value];
+  return cssValue || stringifyStyle(value, property);
 };
 const normalizeTypoStyle = (value, property = "fontSize") => {
-  const cssSize = sizeTypoScale[value];
-  return cssSize || stringifyStyle(value, property);
+  const cssValue = TYPO_SIZE_MAP[value];
+  return cssValue || stringifyStyle(value, property);
 };
 
 const PASS_THROUGH = { name: "pass_through" };
@@ -6450,6 +6450,7 @@ const POSITION_PROPS = {
   relative: applyToCssPropWhenTruthy("position", "relative", "static"),
   fixed: applyToCssPropWhenTruthy("position", "fixed", "static"),
   sticky: applyToCssPropWhenTruthy("position", "sticky", "static"),
+  zIndex: PASS_THROUGH,
   left: (value) => {
     return { left: value === true ? 0 : value };
   },
@@ -6684,7 +6685,6 @@ const getVisualChildStylePropStrategy = (name) => {
 };
 
 const isStyleProp = (name) => STYLE_PROP_NAME_SET.has(name);
-const isCSSVar = (name) => name.startsWith("--");
 
 const getStylePropGroup = (name) => {
   if (FLOW_PROP_NAME_SET.has(name)) {
@@ -6756,38 +6756,31 @@ const prepareStyleValue = (
 // Unified design scale using t-shirt sizes with rem units for accessibility.
 // This scale is used for spacing to create visual harmony
 // and consistent proportions throughout the design system.
-const sizeSpacingScale = {
-  xxs: "0.125em", // 0.125 = 2px at 16px base
-  xs: "0.25em", // 0.25 = 4px at 16px base
-  sm: "0.5em", // 0.5 = 8px at 16px base
-  md: "1em", // 1 = 16px at 16px base (base font size)
-  lg: "1.5em", // 1.5 = 24px at 16px base
-  xl: "2em", // 2 = 32px at 16px base
-  xxl: "3em", // 3 = 48px at 16px base
+const SIZE_MAP = {
+  xxs: "var(--navi-xxs)",
+  xs: "var(--navi-xs)",
+  s: "var(--navi-s)",
+  m: "var(--navi-m)",
+  l: "var(--navi-l)",
+  xl: "var(--navi-xl)",
+  xxl: "var(--navi-xxl)",
 };
-sizeSpacingScale.s = sizeSpacingScale.sm;
-sizeSpacingScale.m = sizeSpacingScale.md;
-sizeSpacingScale.l = sizeSpacingScale.lg;
-const sizeSpacingScaleKeys = new Set(Object.keys(sizeSpacingScale));
+const TYPO_SIZE_MAP = {
+  xxs: "var(--navi-typo-xxs)",
+  xs: "var(--navi-typo-xs)",
+  s: "var(--navi-typo-s)",
+  m: "var(--navi-typo-m)",
+  l: "var(--navi-typo-l)",
+  xl: "var(--navi-typo-xl)",
+  xxl: "var(--navi-typo-xxl)",
+};
+const sizeSpacingScaleKeys = new Set(Object.keys(SIZE_MAP));
 const isSizeSpacingScaleKey = (key) => {
   return sizeSpacingScaleKeys.has(key);
 };
 const resolveSpacingSize = (size, property = "padding") => {
-  return stringifyStyle(sizeSpacingScale[size] || size, property);
+  return stringifyStyle(SIZE_MAP[size] || size, property);
 };
-
-const sizeTypoScale = {
-  xxs: "0.625rem", // 0.625 = 10px at 16px base (smaller than before for more range)
-  xs: "0.75rem", // 0.75 = 12px at 16px base
-  sm: "0.875rem", // 0.875 = 14px at 16px base
-  md: "1rem", // 1 = 16px at 16px base (base font size)
-  lg: "1.125rem", // 1.125 = 18px at 16px base
-  xl: "1.25rem", // 1.25 = 20px at 16px base
-  xxl: "1.5rem", // 1.5 = 24px at 16px base
-};
-sizeTypoScale.s = sizeTypoScale.sm;
-sizeTypoScale.m = sizeTypoScale.md;
-sizeTypoScale.l = sizeTypoScale.lg;
 
 const DEFAULT_DISPLAY_BY_TAG_NAME = {
   "inline": new Set([
@@ -7785,7 +7778,7 @@ const Box = props => {
         addStyle(value, name, styleContext, boxStylesTarget, context);
         return;
       }
-      if (isCSSVar(name)) {
+      if (name.startsWith("--")) {
         addStyle(value, name, styleContext, boxStylesTarget, context);
         return;
       }
@@ -20109,7 +20102,7 @@ const selectByTextStrings = (element, range, startText, endText) => {
 };
 
 installImportMetaCssBuild(import.meta);/* eslint-disable jsenv/no-unknown-params */
-const css$8 = /* css */`
+const css$u = /* css */`
   @layer navi {
     .navi_text {
       &[data-skeleton] {
@@ -20348,9 +20341,9 @@ const applySpacingOnTextChildren = (children, spacing, defaultSpace) => {
   if (spacing === REGULAR_SPACE || spacing === FAKE_SPACE) {
     separator = defaultSpace;
   } else if (typeof spacing === "string") {
-    if (isSizeSpacingScaleKey(spacing) || hasCSSSizeUnit(spacing)) {
+    if (isSizeSpacingScaleKey(spacing) || hasCSSSizeUnit(spacing) || spacing.startsWith("var(")) {
       separator = jsx(CustomWidthSpace, {
-        value: resolveSpacingSize(spacing),
+        value: spacing,
         useRealSpaceChar: useRealSpaceChar
       });
     } else {
@@ -20418,7 +20411,7 @@ const shouldInjectSpacingBetween = (left, right) => {
 };
 const OverflowPinnedElementContext = createContext(null);
 const Text = props => {
-  import.meta.css = [css$8, "@jsenv/navi/src/text/text.jsx"];
+  import.meta.css = [css$u, "@jsenv/navi/src/text/text.jsx"];
   if (props.loading || props.skeleton) {
     return jsx(TextSkeleton, {
       ...props
@@ -20614,7 +20607,7 @@ const TextBasic = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$7 = /* css */`
+installImportMetaCssBuild(import.meta);const css$t = /* css */`
   .navi_text_anchor {
     vertical-align: baseline;
     user-select: none;
@@ -20649,7 +20642,7 @@ const TextAnchor = ({
   textSize,
   lineLayout
 }) => {
-  import.meta.css = [css$7, "@jsenv/navi/src/text/text_anchor.jsx"];
+  import.meta.css = [css$t, "@jsenv/navi/src/text/text_anchor.jsx"];
   const anchorRef = useRef();
   useLayoutEffect(() => {
     const anchorEl = anchorRef.current;
@@ -20744,7 +20737,7 @@ const computeTopOffset = ({
 };
 const charTopCanvas = document.createElement("canvas");
 
-installImportMetaCssBuild(import.meta);const css$6 = /* css */`
+installImportMetaCssBuild(import.meta);const css$s = /* css */`
   @layer navi {
     /* Ensure data attributes from box.jsx can win to update display */
     .navi_icon {
@@ -20817,7 +20810,7 @@ const Icon = ({
   lineLayout,
   ...props
 }) => {
-  import.meta.css = [css$6, "@jsenv/navi/src/text/icon.jsx"];
+  import.meta.css = [css$s, "@jsenv/navi/src/text/icon.jsx"];
   const innerChildren = href ? jsx("svg", {
     width: "100%",
     height: "100%",
@@ -21419,7 +21412,7 @@ const useUIState = (uiStateController) => {
   return trackedUIState;
 };
 
-installImportMetaCssBuild(import.meta);const css$5 = /* css */`
+installImportMetaCssBuild(import.meta);const css$r = /* css */`
   @layer navi {
     .navi_button {
       --button-outline-width: 1px;
@@ -21673,7 +21666,7 @@ installImportMetaCssBuild(import.meta);const css$5 = /* css */`
   }
 `;
 const Button = props => {
-  import.meta.css = [css$5, "@jsenv/navi/src/field/button.jsx"];
+  import.meta.css = [css$r, "@jsenv/navi/src/field/button.jsx"];
   return renderActionableComponent(props, {
     Basic: ButtonBasic,
     WithAction: ButtonWithAction,
@@ -22238,7 +22231,7 @@ const useDimColorWhen = (elementRef, shouldDim) => {
 };
 
 installImportMetaCssBuild(import.meta);/* eslint-disable jsenv/no-unknown-params */
-const css$4 = /* css */`
+const css$q = /* css */`
   @layer navi {
     .navi_link {
       --link-border-radius: unset;
@@ -22559,7 +22552,7 @@ Object.assign(PSEUDO_CLASSES, {
   }
 });
 const Link = props => {
-  import.meta.css = [css$4, "@jsenv/navi/src/nav/link/link.jsx"];
+  import.meta.css = [css$q, "@jsenv/navi/src/nav/link/link.jsx"];
   return renderActionableComponent(props, {
     Basic: LinkBasic,
     WithAction: LinkWithAction
@@ -22821,7 +22814,7 @@ installImportMetaCssBuild(import.meta);/**
  * TabList component with support for horizontal and vertical layouts
  * https://dribbble.com/search/tabs
  */
-const css$3 = /* css */`
+const css$p = /* css */`
   @layer navi {
     .navi_nav {
       --nav-border: none;
@@ -22957,7 +22950,7 @@ const Nav = ({
   panelBorderConnection,
   ...props
 }) => {
-  import.meta.css = [css$3, "@jsenv/navi/src/nav/link/nav.jsx"];
+  import.meta.css = [css$p, "@jsenv/navi/src/nav/link/nav.jsx"];
   children = toChildArray(children);
   return jsx(Box, {
     as: "nav",
@@ -23005,7 +22998,7 @@ const useFocusGroup = (
 
 installImportMetaCssBuild(import.meta);const rightArrowPath = "M680-480L360-160l-80-80 240-240-240-240 80-80 320 320z";
 const downArrowPath = "M480-280L160-600l80-80 240 240 240-240 80 80-320 320z";
-import.meta.css = [/* css */`
+const css$o = /* css */`
   .navi_summary_marker {
     width: 1em;
     height: 1em;
@@ -23085,11 +23078,12 @@ import.meta.css = [/* css */`
       d: path("${rightArrowPath}");
     }
   }
-`, "@jsenv/navi/src/field/details/summary_marker.jsx"];
+`;
 const SummaryMarker = ({
   open,
   loading
 }) => {
+  import.meta.css = [css$o, "@jsenv/navi/src/field/details/summary_marker.jsx"];
   const showLoading = useDebounceTrue(loading, 300);
   const mountedRef = useRef(false);
   const prevOpenRef = useRef(open);
@@ -23143,7 +23137,7 @@ const SummaryMarker = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
+installImportMetaCssBuild(import.meta);const css$n = /* css */`
   .navi_details {
     position: relative;
     z-index: 1;
@@ -23178,8 +23172,9 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
       }
     }
   }
-`, "@jsenv/navi/src/field/details/details.jsx"];
+`;
 const Details = props => {
+  import.meta.css = [css$n, "@jsenv/navi/src/field/details/details.jsx"];
   const {
     value = "on",
     persists
@@ -23494,7 +23489,7 @@ const fieldPropSet = new Set([
   "data-testid",
 ]);
 
-installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
+installImportMetaCssBuild(import.meta);const css$m = /* css */`
   @layer navi {
     label {
       &[data-interactive] {
@@ -23508,7 +23503,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
       }
     }
   }
-`, "@jsenv/navi/src/field/label.jsx"];
+`;
 const ReportReadOnlyOnLabelContext = createContext();
 const ReportDisabledOnLabelContext = createContext();
 const ReportInteractiveOnLabelContext = createContext();
@@ -23526,6 +23521,7 @@ const reportDisabledToLabel = value => {
 };
 const LabelPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
 const Label = props => {
+  import.meta.css = [css$m, "@jsenv/navi/src/field/label.jsx"];
   const {
     readOnly,
     disabled,
@@ -23559,7 +23555,7 @@ const Label = props => {
   });
 };
 
-installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
+installImportMetaCssBuild(import.meta);const css$l = /* css */`
   @layer navi {
     .navi_checkbox {
       --margin: 3px 3px 3px 4px;
@@ -23884,8 +23880,9 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
       }
     }
   }
-`, "@jsenv/navi/src/field/input_checkbox.jsx"];
+`;
 const InputCheckbox = props => {
+  import.meta.css = [css$l, "@jsenv/navi/src/field/input_checkbox.jsx"];
   const {
     value = "on"
   } = props;
@@ -24154,15 +24151,8 @@ const InputCheckboxWithAction = props => {
   });
 };
 
-installImportMetaCssBuild(import.meta);// TOFIX: select in data then reset, it reset to red/blue instead of red/blue/green
-import.meta.css = [/* css */`
-  @layer navi {
-    .navi_checkbox_list {
-      display: flex;
-      flex-direction: column;
-    }
-  }
-`, "@jsenv/navi/src/field/checkbox_list.jsx"];
+// TOFIX: select in data then reset, it reset to red/blue instead of red/blue/green
+
 const CheckboxList = forwardRef((props, ref) => {
   const uiStateController = useUIGroupStateController(props, "checkbox_list", {
     childComponentType: "checkbox",
@@ -24206,15 +24196,13 @@ const CheckboxListBasic = forwardRef((props, ref) => {
   const innerLoading = loading || contextLoading;
   const innerReadOnly = readOnly || contextReadOnly || innerLoading || uiStateController.readOnly;
   const innerDisabled = disabled || contextDisabled;
-  return jsx("div", {
+  return jsx(Box, {
+    flex: true,
     ...rest,
     ref: innerRef,
     name: name,
-    className: "navi_checkbox_list",
-    "data-checkbox-list": true
-    // eslint-disable-next-line react/no-unknown-property
-    ,
-
+    baseClassName: "navi_checkbox_list",
+    "data-checkbox-list": "",
     onresetuistate: e => {
       uiStateController.resetUIState(e);
     },
@@ -24308,7 +24296,7 @@ forwardRef((props, ref) => {
   });
 });
 
-installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
+installImportMetaCssBuild(import.meta);const css$k = /* css */`
   @layer navi {
     .navi_radio {
       --margin: 3px 3px 0 5px;
@@ -24599,8 +24587,9 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
       }
     }
   }
-`, "@jsenv/navi/src/field/input_radio.jsx"];
+`;
 const InputRadio = props => {
+  import.meta.css = [css$k, "@jsenv/navi/src/field/input_radio.jsx"];
   const {
     value = "on"
   } = props;
@@ -24846,7 +24835,7 @@ const InputRadioWithAction = () => {
   throw new Error(`<Input type="radio" /> with an action make no sense. Use <RadioList action={something} /> instead`);
 };
 
-installImportMetaCssBuild(import.meta);const css$2 = /* css */`
+installImportMetaCssBuild(import.meta);const css$j = /* css */`
   @layer navi {
     .navi_input_range {
       --border-radius: 6px;
@@ -25055,7 +25044,7 @@ installImportMetaCssBuild(import.meta);const css$2 = /* css */`
   }
 `;
 const InputRange = props => {
-  import.meta.css = [css$2, "@jsenv/navi/src/field/input_range.jsx"];
+  import.meta.css = [css$j, "@jsenv/navi/src/field/input_range.jsx"];
   const uiStateController = useUIStateController(props, "input");
   const uiState = useUIState(uiStateController);
   const input = renderActionableComponent(props, {
@@ -25342,7 +25331,7 @@ installImportMetaCssBuild(import.meta);/**
  * - <InputCheckbox /> for type="checkbox"
  * - <InputRadio /> for type="radio"
  */
-import.meta.css = [/* css */`
+const css$i = /* css */`
   @layer navi {
     .navi_input {
       --border-radius: 2px;
@@ -25552,8 +25541,9 @@ import.meta.css = [/* css */`
     /* Fortunately we can override it as follow */
     -webkit-text-fill-color: var(--x-color) !important;
   }
-`, "@jsenv/navi/src/field/input_textual.jsx"];
+`;
 const InputTextual = props => {
+  import.meta.css = [css$i, "@jsenv/navi/src/field/input_textual.jsx"];
   const uiStateController = useUIStateController(props, "input");
   const uiState = useUIState(uiStateController);
   const input = renderActionableComponent(props, {
@@ -25923,7 +25913,7 @@ installImportMetaCssBuild(import.meta);/**
  * This means an editable thing MUST have a parent with position relative that wraps the content and the eventual editable input
  *
  */
-import.meta.css = [/* css */`
+const css$h = /* css */`
   .navi_editable_wrapper {
     --inset-top: 0px;
     --inset-right: 0px;
@@ -25948,7 +25938,7 @@ import.meta.css = [/* css */`
       pointer-events: auto;
     }
   }
-`, "@jsenv/navi/src/field/edition/editable.jsx"];
+`;
 const useEditionController = () => {
   const [editing, editingSetter] = useState(null);
   const startEditing = useCallback(event => {
@@ -25972,6 +25962,7 @@ const useEditionController = () => {
   };
 };
 const Editable = props => {
+  import.meta.css = [css$h, "@jsenv/navi/src/field/edition/editable.jsx"];
   let {
     children,
     action,
@@ -26382,7 +26373,7 @@ const FormWithAction = props => {
 //   form.dispatchEvent(customEvent);
 // };
 
-installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
+installImportMetaCssBuild(import.meta);const css$g = /* css */`
   .navi_group {
     --border-width: 1px;
 
@@ -26471,7 +26462,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
       }
     }
   }
-`, "@jsenv/navi/src/field/group.jsx"];
+`;
 const Group = ({
   children,
   borderWidth = 1,
@@ -26479,6 +26470,7 @@ const Group = ({
   vertical = row,
   ...props
 }) => {
+  import.meta.css = [css$g, "@jsenv/navi/src/field/group.jsx"];
   if (typeof borderWidth === "string") {
     borderWidth = parseFloat(borderWidth);
   }
@@ -26496,7 +26488,6 @@ const Group = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);import.meta.css = [/* css */``, "@jsenv/navi/src/field/radio_list.jsx"];
 const RadioList = props => {
   const uiStateController = useUIGroupStateController(props, "radio_list", {
     childComponentType: "radio",
@@ -26678,12 +26669,13 @@ const useRefArray = (items, keyFromItem) => {
 };
 
 installImportMetaCssBuild(import.meta);const useNavState = () => {};
-import.meta.css = [/* css */`
+const css$f = /* css */`
   .navi_select[data-readonly] {
     pointer-events: none;
   }
-`, "@jsenv/navi/src/field/select.jsx"];
+`;
 const Select = forwardRef((props, ref) => {
+  import.meta.css = [css$f, "@jsenv/navi/src/field/select.jsx"];
   const select = renderActionableComponent(props, ref);
   return select;
 });
@@ -26987,7 +26979,7 @@ const Z_INDEX_DROP_PREVIEW = Z_INDEX_STICKY_CORNER + 1;
 
 const Z_INDEX_TABLE_UI = Z_INDEX_STICKY_CORNER + 1;
 
-installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
+installImportMetaCssBuild(import.meta);const css$e = /* css */`
   .navi_table_drag_clone_container {
     position: absolute;
     top: var(--table-visual-top);
@@ -27106,7 +27098,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
     width: 10px;
     height: 10px;
   }
-`, "@jsenv/navi/src/field/table/drag/table_drag.jsx"];
+`;
 const TableDragContext = createContext();
 const useTableDragContextValue = ({
   tableDragCloneContainerRef,
@@ -27167,6 +27159,7 @@ const moveItem = (array, indexA, indexB) => {
   return newArray;
 };
 const TableDragCloneContainer = forwardRef((props, ref) => {
+  import.meta.css = [css$e, "@jsenv/navi/src/field/table/drag/table_drag.jsx"];
   const {
     tableId
   } = props;
@@ -27651,7 +27644,7 @@ installImportMetaCssBuild(import.meta);const ROW_MIN_HEIGHT = 30;
 const ROW_MAX_HEIGHT = 100;
 const COLUMN_MIN_WIDTH = 50;
 const COLUMN_MAX_WIDTH = 500;
-import.meta.css = [/* css */`
+const css$d = /* css */`
   @layer navi {
     .navi_table {
       --table-resizer-handle-color: #063b7c;
@@ -27807,10 +27800,13 @@ import.meta.css = [/* css */`
   .navi_table_row_resizer[data-grabbed] .navi_table_row_resizer_line {
     opacity: 1;
   }
-`, "@jsenv/navi/src/field/table/resize/table_resize.jsx"];
+`;
 
 // Column resize components
-const TableColumnResizer = forwardRef((props, ref) => {
+const TableColumnResizer = props => {
+  import.meta.css = [css$d, "@jsenv/navi/src/field/table/resize/table_resize.jsx"];
+  const defaultRef = useRef();
+  const ref = props.ref || defaultRef;
   return jsxs("div", {
     ref: ref,
     className: "navi_table_column_resizer",
@@ -27827,7 +27823,7 @@ const TableColumnResizer = forwardRef((props, ref) => {
       className: "navi_table_column_resizer_line"
     })]
   });
-});
+};
 const TableCellColumnResizeHandles = ({
   columnIndex,
   columnMinWidth,
@@ -28130,7 +28126,9 @@ const initResizeTableRowViaPointer = (pointerdownEvent, {
 };
 
 // Row resize components
-const TableRowResizer = forwardRef((props, ref) => {
+const TableRowResizer = props => {
+  const defaultRef = useRef();
+  const ref = props.ref || defaultRef;
   return jsxs("div", {
     ref: ref,
     className: "navi_table_row_resizer",
@@ -28147,7 +28145,7 @@ const TableRowResizer = forwardRef((props, ref) => {
       className: "navi_table_row_resizer_line"
     })]
   });
-});
+};
 const TableCellRowResizeHandles = ({
   rowIndex,
   rowMinHeight,
@@ -28273,7 +28271,7 @@ const findPreviousTableRow = currentRow => {
   return currentIndex > 0 ? allRows[currentIndex - 1] : null;
 };
 
-installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
+installImportMetaCssBuild(import.meta);const css$c = /* css */`
   @layer navi {
     .navi_table {
       --selection-border-color: var(--navi-selection-border-color, #0078d4);
@@ -28368,13 +28366,14 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
       inset 0 -1px 0 0 var(--selection-border-color),
       inset 1px 0 0 0 var(--selection-border-color);
   }
-`, "@jsenv/navi/src/field/table/selection/table_selection.jsx"];
+`;
 const useTableSelectionController = ({
   tableRef,
   selection,
   onSelectionChange,
   selectionColor
 }) => {
+  import.meta.css = [css$c, "@jsenv/navi/src/field/table/selection/table_selection.jsx"];
   const selectionController = useSelectionController({
     elementRef: tableRef,
     layout: "grid",
@@ -28845,7 +28844,7 @@ const useTableStickyContextValue = ({
 };
 
 installImportMetaCssBuild(import.meta);// TODO: sticky left/top frontier should likely use "followPosition"
-import.meta.css = [/* css */`
+const css$b = /* css */`
   @layer navi {
     .navi_table {
       --sticky-frontier-color: #c0c0c0;
@@ -29084,10 +29083,11 @@ import.meta.css = [/* css */`
       inset -1px 0 0 0 var(--border-color),
       inset 0 -1px 0 0 var(--border-color);
   }
-`, "@jsenv/navi/src/field/table/sticky/table_sticky.jsx"];
+`;
 const TableStickyFrontier = ({
   tableRef
 }) => {
+  import.meta.css = [css$b, "@jsenv/navi/src/field/table/sticky/table_sticky.jsx"];
   const stickyLeftFrontierGhostRef = useRef();
   const stickyLeftFrontierPreviewRef = useRef();
   const stickyTopFrontierGhostRef = useRef();
@@ -29306,7 +29306,220 @@ const initMoveStickyFrontierViaPointer = (pointerdownEvent, {
   });
 };
 
-installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
+/*
+ * Box-shadow border mapping template:
+ *
+ * box-shadow:
+ *   inset 0 1px 0 0 color,    // Top border
+ *   inset 1px 0 0 0 color,    // Left border
+ *   inset -1px 0 0 0 color,   // Right border
+ *   inset 0 -1px 0 0 color;   // Bottom border
+ */
+
+const css$a = /* css */ `
+  .navi_table_root {
+    position: relative;
+    max-width: var(--table-max-width, none);
+    max-height: var(--table-max-height, none);
+  }
+
+  .navi_table_container {
+    --border-color: #e1e1e1;
+    --focus-border-color: #0078d4;
+    position: relative;
+  }
+
+  .navi_table {
+    border-radius: 2px;
+    border-spacing: 0; /* Required for manual border collapse */
+  }
+  .navi_table_cell {
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    background-color: var(--background-color, transparent);
+    overflow: hidden;
+  }
+
+  .navi_table_cell[data-align-x="start"] {
+    text-align: left;
+  }
+  .navi_table_cell[data-align-x="center"] {
+    text-align: center;
+  }
+  .navi_table_cell[data-align-y="end"] {
+    text-align: right;
+  }
+  .navi_table_cell[data-align-x="start"] {
+    vertical-align: top;
+  }
+  .navi_table_cell[data-align-y="center"] {
+    vertical-align: middle;
+  }
+  .navi_table_cell[data-align-y="end"] {
+    vertical-align: bottom;
+  }
+
+  /* Table borders using ::before pseudo-elements */
+  /* Default: each cell draws all its own borders (no border-collapse) */
+  .navi_table_cell {
+    /* Required for pseudo-element positioning */
+    position: relative;
+    border: none; /* Remove default borders - we'll use pseudo-elements */
+  }
+
+  .navi_table_cell::before {
+    position: absolute;
+    inset: 0;
+    box-shadow:
+      inset 0 1px 0 0 var(--border-color),
+      inset 1px 0 0 0 var(--border-color),
+      inset -1px 0 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--border-color);
+    pointer-events: none;
+    content: "";
+  }
+  .navi_table_cell::after {
+    position: absolute;
+    /* Default: include bottom and right borders (owned by this cell) */
+    inset: 0;
+    pointer-events: none;
+    content: "";
+  }
+
+  /* padding */
+  .navi_table_cell {
+    --cell-padding-left: 12px;
+    --cell-padding-right: 12px;
+
+    padding-top: 8px;
+    padding-right: var(--cell-padding-right);
+    padding-bottom: 8px;
+    padding-left: var(--cell-padding-left);
+  }
+  .navi_table_cell[data-width-xxs] {
+    padding-right: 0;
+    padding-left: 0;
+  }
+  .navi_table_cell[data-height-xxs] {
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+  .navi_table_cell[data-editing] input {
+    padding-right: var(--cell-padding-right);
+    padding-left: var(--cell-padding-left);
+  }
+  .navi_table [data-sticky-left-frontier] {
+    /* padding-left: 12px; */
+    /* 12 px + 5px of the sticky frontier */
+    /* padding-right: 17px; */
+  }
+
+  .navi_table_cell {
+    user-select: none;
+  }
+
+  /* Number column specific styling */
+  .navi_row_number_cell {
+    color: #666;
+    font-weight: 500;
+    text-align: center;
+    background: #fafafa;
+    user-select: none;
+  }
+
+  .navi_table_cell_content_bold_clone {
+    display: block; /* in-flow so it contributes to width */
+    height: 0; /* zero height so it doesn't change layout height */
+    font-weight: bold; /* force bold to compute max width */
+    visibility: hidden; /* not visible */
+    pointer-events: none; /* inert */
+    overflow: hidden; /* avoid any accidental height */
+  }
+
+  /* Border-collapse mode: each cell only owns specific borders to avoid doubling */
+
+  /* Base rule: all cells get right and bottom borders */
+  .navi_table[data-border-collapse] .navi_table_cell::before {
+    box-shadow:
+      inset -1px 0 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--border-color);
+  }
+
+  /* Header cells (all th) get top border in addition to right and bottom */
+  .navi_table[data-border-collapse] .navi_table_cell[data-first-row]::before {
+    box-shadow:
+      inset 0 1px 0 0 var(--border-color),
+      inset -1px 0 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--border-color);
+  }
+
+  /* First column cells get left border in addition to right and bottom */
+  .navi_table[data-border-collapse]
+    .navi_table_cell[data-first-column]::before {
+    box-shadow:
+      inset 1px 0 0 0 var(--border-color),
+      inset -1px 0 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--border-color);
+  }
+
+  /* Header first column gets all four borders */
+  .navi_table[data-border-collapse]
+    .navi_table_cell[data-first-row][data-first-column]::before {
+    box-shadow:
+      inset 0 1px 0 0 var(--border-color),
+      inset 1px 0 0 0 var(--border-color),
+      inset -1px 0 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--border-color);
+  }
+
+  /* Focus styles */
+  .navi_table_cell[data-focus] {
+    outline: none; /* Remove default outline */
+  }
+
+  .navi_table_cell[data-focus]::after {
+    box-shadow:
+      inset 0 2px 0 0 var(--focus-border-color),
+      inset -2px 0 0 0 var(--focus-border-color),
+      inset 0 -2px 0 0 var(--focus-border-color),
+      inset 2px 0 0 0 var(--focus-border-color) !important;
+  }
+
+  .navi_table {
+    font-size: 16px;
+    font-family: Arial;
+
+    --editing-border-color: #a8c7fa;
+  }
+
+  .navi_table_cell[data-editing] .navi_table_cell_content {
+    outline: 2px solid #a8c7fa;
+    outline-offset: 0px;
+  }
+
+  .navi_table_cell[data-editing] input {
+    display: inline-flex;
+    width: 100%;
+    height: 100%;
+    flex-grow: 1;
+    font-size: 16px;
+    border: none;
+    border-radius: 0; /* match table cell border-radius */
+  }
+
+  .navi_table_cell[data-editing]
+    input[type="number"]::-webkit-inner-spin-button {
+    width: 14px;
+    height: 30px;
+  }
+
+  .navi_table_cell[data-editing] {
+    z-index: ${Z_INDEX_EDITING};
+    outline: 2px solid var(--editing-border-color);
+  }
+`;
+
+installImportMetaCssBuild(import.meta);const css$9 = /* css */`
   .navi_table_ui {
     position: fixed;
     inset: 0;
@@ -29315,8 +29528,9 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
     overflow: hidden; /* Ensure UI elements cannot impact scrollbars of the document  */
     /* background: rgba(0, 255, 0, 0.2); */
   }
-`, "@jsenv/navi/src/field/table/table_ui.jsx"];
+`;
 const TableUI = forwardRef((props, ref) => {
+  import.meta.css = [css$9, "@jsenv/navi/src/field/table/table_ui.jsx"];
   const {
     tableRef,
     tableId,
@@ -29352,7 +29566,7 @@ const TableUI = forwardRef((props, ref) => {
   }), document.body);
 });
 
-/**
+installImportMetaCssBuild(import.meta);/**
  * Table Component with Custom Border and Selection System
  *
  * PROBLEM: We want to draw selected table cells with a clear visual perimeter
@@ -29403,7 +29617,6 @@ const TableUI = forwardRef((props, ref) => {
  * - Delete a column (how?)
  * - Update table column info (I guess a down arrow icon which opens a meny when clicked for instance)
  */
-
 const [useColumnTrackerProviders, useRegisterColumn, useColumnByIndex] = createIsolatedItemTracker();
 const [useRowTrackerProvider, useRegisterRow, useRowByIndex] = createItemTracker();
 const ColumnProducerProviderContext = createContext();
@@ -29415,6 +29628,7 @@ const RowIndexContext = createContext();
 const TableSectionContext = createContext();
 const useIsInTableHead = () => useContext(TableSectionContext) === "head";
 const Table = props => {
+  import.meta.css = [css$a, "@jsenv/navi/src/field/table/table.jsx"];
   const tableDefaultRef = useRef();
   const tableDefaultId = `table-${useId()}`;
   const {
@@ -29897,6 +30111,7 @@ const TableCell = props => {
     // we use [data-focus] so that the attribute can be copied
     // to the dragged cell copies
     ,
+
     "data-focus": activeElement === ref.current ? "" : undefined,
     "data-first-row": isFirstRow ? "" : undefined,
     "data-first-column": isFirstColumn ? "" : undefined,
@@ -29984,6 +30199,7 @@ const RowNumberCol = ({
     // minWidth={minWidth}
     // maxWidth={maxWidth}
     ,
+
     immovable: immovable,
     ...rest
   });
@@ -30306,7 +30522,7 @@ const KeyboardShortcutAriaElement = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
+installImportMetaCssBuild(import.meta);const css$8 = /* css */`
   @layer navi {
     .navi_clipboard_container {
       --height: 1.5em;
@@ -30333,11 +30549,12 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
       transform: translateY(-100%);
     }
   }
-`, "@jsenv/navi/src/field/button_copy_to_clipboard.jsx"];
+`;
 const ButtonCopyToClipboard = ({
   children,
   ...props
 }) => {
+  import.meta.css = [css$8, "@jsenv/navi/src/field/button_copy_to_clipboard.jsx"];
   const [copied, setCopied] = useState(false);
   const renderedRef = useRef();
   useEffect(() => {
@@ -30347,7 +30564,7 @@ const ButtonCopyToClipboard = ({
     };
   }, []);
   return jsxs(Box, {
-    class: "navi_clipboard_container",
+    className: "navi_clipboard_container",
     ...props,
     children: [jsx(Box, {
       className: "navi_copied_notif",
@@ -30356,11 +30573,11 @@ const ButtonCopyToClipboard = ({
       children: "Copi\xE9 !"
     }), jsx(Button, {
       className: "navi_copy_button",
-      row: true,
+      flex: "y",
+      alignY: "center",
       icon: true,
       revealOnInteraction: true,
       square: true,
-      alignY: "center",
       expandY: true,
       borderRadius: "xs",
       action: async () => {
@@ -30418,7 +30635,7 @@ const Address = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$1 = /* css */`
+installImportMetaCssBuild(import.meta);const css$7 = /* css */`
   @layer navi {
   }
   .navi_badge {
@@ -30463,7 +30680,7 @@ const Badge = ({
   className,
   ...props
 }) => {
-  import.meta.css = [css$1, "@jsenv/navi/src/text/badge.jsx"];
+  import.meta.css = [css$7, "@jsenv/navi/src/text/badge.jsx"];
   const defaultRef = useRef();
   const ref = props.ref || defaultRef;
   useDarkBackgroundAttribute(ref);
@@ -30542,7 +30759,7 @@ const formatNumber = (value, { lang } = {}) => {
   return new Intl.NumberFormat(lang).format(value);
 };
 
-installImportMetaCssBuild(import.meta);const css = /* css */`
+installImportMetaCssBuild(import.meta);const css$6 = /* css */`
   @layer navi {
   }
   .navi_text.navi_badge_count {
@@ -30666,7 +30883,7 @@ const BadgeCount = ({
   lineLayout,
   ...props
 }) => {
-  import.meta.css = [css, "@jsenv/navi/src/text/badge_count.jsx"];
+  import.meta.css = [css$6, "@jsenv/navi/src/text/badge_count.jsx"];
   const defaultRef = useRef();
   const ref = props.ref || defaultRef;
   useDarkBackgroundAttribute(ref, [loading]);
@@ -31195,7 +31412,7 @@ const interpolate = (template, values) => {
   });
 };
 
-installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
+installImportMetaCssBuild(import.meta);const css$5 = /* css */`
   @layer navi {
     .navi_quantity {
       --unit-color: color-mix(in srgb, currentColor 50%, white);
@@ -31251,7 +31468,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
       }
     }
   }
-`, "@jsenv/navi/src/text/quantity.jsx"];
+`;
 const QuantityIntl = createIntl();
 const wellKnownUnitMap = new Map();
 /**
@@ -31305,6 +31522,7 @@ const Quantity = ({
   bold = true,
   ...props
 }) => {
+  import.meta.css = [css$5, "@jsenv/navi/src/text/quantity.jsx"];
   const value = parseQuantityValue(children);
   const valueRounded = integer && typeof value === "number" ? Math.round(value) : value;
   const valueFormatted = typeof valueRounded === "number" ? formatNumber(valueRounded, {
@@ -31388,7 +31606,7 @@ const parseQuantityValue = children => {
   return Number.isNaN(parsed) ? children : parsed;
 };
 
-installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
+installImportMetaCssBuild(import.meta);const css$4 = /* css */`
   @layer navi {
     .navi_meter {
       --loader-color: var(--navi-loader-color);
@@ -31505,7 +31723,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
       }
     }
   }
-`, "@jsenv/navi/src/text/meter.jsx"];
+`;
 const MeterStyleCSSVars = {
   trackColor: "--track-color",
   borderColor: "--border-color",
@@ -31544,6 +31762,7 @@ const Meter = ({
   style,
   ...rest
 }) => {
+  import.meta.css = [css$4, "@jsenv/navi/src/text/meter.jsx"];
   const defaultRef = useRef();
   const ref = rest.ref || defaultRef;
   value = Number(value);
@@ -31766,7 +31985,7 @@ const SVGMaskOverlay = ({
 };
 
 installImportMetaCssBuild(import.meta);// We HAVE TO put paddings around the dialog to ensure window resizing respects this space
-import.meta.css = [/* css */`
+const css$3 = /* css */`
   @layer navi {
     .navi_dialog_layout {
       --layout-margin: 30px;
@@ -31824,7 +32043,7 @@ import.meta.css = [/* css */`
     border-color: var(--layout-border-color);
     border-radius: var(--layout-border-radius);
   }
-`, "@jsenv/navi/src/layout/dialog_layout.jsx"];
+`;
 const DialogLayoutStyleCSSVars = {
   margin: "--layout-margin",
   marginTop: "--layout-margin-top",
@@ -31850,6 +32069,7 @@ const DialogLayout = ({
   alignY = "center",
   ...props
 }) => {
+  import.meta.css = [css$3, "@jsenv/navi/src/layout/dialog_layout.jsx"];
   return jsx(Box, {
     baseClassName: "navi_dialog_layout",
     styleCSSVars: DialogLayoutStyleCSSVars,
@@ -31865,7 +32085,7 @@ const DialogLayout = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
+installImportMetaCssBuild(import.meta);const css$2 = /* css */`
   @layer navi {
     .navi_separator {
       --size: 1px;
@@ -31897,7 +32117,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
       vertical-align: bottom;
     }
   }
-`, "@jsenv/navi/src/layout/separator.jsx"];
+`;
 const SeparatorStyleCSSVars = {
   color: "--color"
 };
@@ -31905,6 +32125,7 @@ const Separator = ({
   vertical,
   ...props
 }) => {
+  import.meta.css = [css$2, "@jsenv/navi/src/layout/separator.jsx"];
   return jsx(Box, {
     as: vertical ? "span" : "hr",
     ...props,
@@ -31914,7 +32135,7 @@ const Separator = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
+installImportMetaCssBuild(import.meta);const css$1 = /* css */`
   @layer navi {
     .navi_viewport_layout {
       --layout-padding: 40px;
@@ -31941,7 +32162,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
     );
     background: var(--layout-background);
   }
-`, "@jsenv/navi/src/layout/viewport_layout.jsx"];
+`;
 const ViewportLayoutStyleCSSVars = {
   padding: "--layout-padding",
   paddingTop: "--layout-padding-top",
@@ -31951,6 +32172,7 @@ const ViewportLayoutStyleCSSVars = {
   background: "--layout-background"
 };
 const ViewportLayout = props => {
+  import.meta.css = [css$1, "@jsenv/navi/src/layout/viewport_layout.jsx"];
   return jsx(Box, {
     row: true,
     width: "100%",
@@ -31961,7 +32183,7 @@ const ViewportLayout = props => {
   });
 };
 
-installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
+installImportMetaCssBuild(import.meta);const css = /* css */`
   @layer navi {
     .navi_side_panel {
       --side-panel-width: 400px;
@@ -32058,7 +32280,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
       transform: translateX(100%);
     }
   }
-`, "@jsenv/navi/src/popover/side_panel.jsx"];
+`;
 const SidePanelCloseContext = createContext(null);
 const useSidePanelClose = () => useContext(SidePanelCloseContext);
 const SidePanelStyleCSSVars = {
@@ -32073,6 +32295,7 @@ const SidePanel = ({
   width,
   ...rest
 }) => {
+  import.meta.css = [css, "@jsenv/navi/src/popover/side_panel.jsx"];
   onClose = useStableCallback(onClose);
   const panelDialogRef = useRef(null);
   const [phase, setPhase] = useState(isOpen ? "open" : "closed");

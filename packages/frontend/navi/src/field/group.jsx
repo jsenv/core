@@ -1,6 +1,6 @@
 import { Box } from "../box/box.jsx";
 
-import.meta.css = /* css */ `
+const css = /* css */ `
   .navi_group {
     --border-width: 1px;
 
@@ -98,6 +98,8 @@ export const Group = ({
   vertical = row,
   ...props
 }) => {
+  import.meta.css = css;
+
   if (typeof borderWidth === "string") {
     borderWidth = parseFloat(borderWidth);
   }

@@ -4,7 +4,7 @@ import { Icon } from "./icon.jsx";
 import { createIntl } from "./intl.js";
 import { Text } from "./text.jsx";
 
-import.meta.css = /* css */ `
+const css = /* css */ `
   @layer navi {
     .navi_quantity {
       --unit-color: color-mix(in srgb, currentColor 50%, white);
@@ -121,6 +121,7 @@ export const Quantity = ({
   bold = true,
   ...props
 }) => {
+  import.meta.css = css;
   const value = parseQuantityValue(children);
   const valueRounded =
     integer && typeof value === "number" ? Math.round(value) : value;

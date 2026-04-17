@@ -4,7 +4,7 @@ import { useLayoutEffect } from "preact/hooks";
 
 import { Z_INDEX_TABLE_UI } from "./z_indexes.js";
 
-import.meta.css = /* css */ `
+const css = /* css */ `
   .navi_table_ui {
     position: fixed;
     inset: 0;
@@ -16,6 +16,7 @@ import.meta.css = /* css */ `
 `;
 
 export const TableUI = forwardRef((props, ref) => {
+  import.meta.css = css;
   const { tableRef, tableId, children } = props;
 
   // ui positioning

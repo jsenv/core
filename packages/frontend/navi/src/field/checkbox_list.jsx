@@ -12,6 +12,7 @@ import { renderActionableComponent } from "../action/render_actionable_component
 import { useActionBoundToOneArrayParam } from "../action/use_action.js";
 import { useActionStatus } from "../action/use_action_status.js";
 import { useExecuteAction } from "../action/use_execute_action.js";
+import { Box } from "../box/box.jsx";
 import { InputCheckbox } from "./input_checkbox.jsx";
 import { useActionEvents } from "./use_action_events.js";
 import {
@@ -28,15 +29,6 @@ import {
   useUIState,
 } from "./use_ui_state_controller.js";
 import { requestAction } from "./validation/custom_constraint_validation.js";
-
-import.meta.css = /* css */ `
-  @layer navi {
-    .navi_checkbox_list {
-      display: flex;
-      flex-direction: column;
-    }
-  }
-`;
 
 export const CheckboxList = forwardRef((props, ref) => {
   const uiStateController = useUIGroupStateController(props, "checkbox_list", {
@@ -83,13 +75,13 @@ const CheckboxListBasic = forwardRef((props, ref) => {
   const innerDisabled = disabled || contextDisabled;
 
   return (
-    <div
+    <Box
+      flex
       {...rest}
       ref={innerRef}
       name={name}
-      className="navi_checkbox_list"
-      data-checkbox-list
-      // eslint-disable-next-line react/no-unknown-property
+      baseClassName="navi_checkbox_list"
+      data-checkbox-list=""
       onresetuistate={(e) => {
         uiStateController.resetUIState(e);
       }}
@@ -107,7 +99,7 @@ const CheckboxListBasic = forwardRef((props, ref) => {
           </ReadOnlyContext.Provider>
         </FieldNameContext.Provider>
       </ParentUIStateControllerContext.Provider>
-    </div>
+    </Box>
   );
 });
 

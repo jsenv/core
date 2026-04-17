@@ -1,12 +1,12 @@
 import { mergeOneStyle, stringifyStyle } from "@jsenv/dom";
 
 export const normalizeSpacingStyle = (value, property = "padding") => {
-  const cssSize = sizeSpacingScale[value];
-  return cssSize || stringifyStyle(value, property);
+  const cssValue = SIZE_MAP[value];
+  return cssValue || stringifyStyle(value, property);
 };
 export const normalizeTypoStyle = (value, property = "fontSize") => {
-  const cssSize = sizeTypoScale[value];
-  return cssSize || stringifyStyle(value, property);
+  const cssValue = TYPO_SIZE_MAP[value];
+  return cssValue || stringifyStyle(value, property);
 };
 
 const PASS_THROUGH = { name: "pass_through" };
@@ -285,6 +285,7 @@ const POSITION_PROPS = {
   relative: applyToCssPropWhenTruthy("position", "relative", "static"),
   fixed: applyToCssPropWhenTruthy("position", "fixed", "static"),
   sticky: applyToCssPropWhenTruthy("position", "sticky", "static"),
+  zIndex: PASS_THROUGH,
   left: (value) => {
     return { left: value === true ? 0 : value };
   },
@@ -519,7 +520,6 @@ export const getVisualChildStylePropStrategy = (name) => {
 };
 
 export const isStyleProp = (name) => STYLE_PROP_NAME_SET.has(name);
-export const isCSSVar = (name) => name.startsWith("--");
 
 const getStylePropGroup = (name) => {
   if (FLOW_PROP_NAME_SET.has(name)) {
@@ -591,38 +591,31 @@ export const prepareStyleValue = (
 // Unified design scale using t-shirt sizes with rem units for accessibility.
 // This scale is used for spacing to create visual harmony
 // and consistent proportions throughout the design system.
-const sizeSpacingScale = {
-  xxs: "0.125em", // 0.125 = 2px at 16px base
-  xs: "0.25em", // 0.25 = 4px at 16px base
-  sm: "0.5em", // 0.5 = 8px at 16px base
-  md: "1em", // 1 = 16px at 16px base (base font size)
-  lg: "1.5em", // 1.5 = 24px at 16px base
-  xl: "2em", // 2 = 32px at 16px base
-  xxl: "3em", // 3 = 48px at 16px base
+const SIZE_MAP = {
+  xxs: "var(--navi-xxs)",
+  xs: "var(--navi-xs)",
+  s: "var(--navi-s)",
+  m: "var(--navi-m)",
+  l: "var(--navi-l)",
+  xl: "var(--navi-xl)",
+  xxl: "var(--navi-xxl)",
 };
-sizeSpacingScale.s = sizeSpacingScale.sm;
-sizeSpacingScale.m = sizeSpacingScale.md;
-sizeSpacingScale.l = sizeSpacingScale.lg;
-const sizeSpacingScaleKeys = new Set(Object.keys(sizeSpacingScale));
+const TYPO_SIZE_MAP = {
+  xxs: "var(--navi-typo-xxs)",
+  xs: "var(--navi-typo-xs)",
+  s: "var(--navi-typo-s)",
+  m: "var(--navi-typo-m)",
+  l: "var(--navi-typo-l)",
+  xl: "var(--navi-typo-xl)",
+  xxl: "var(--navi-typo-xxl)",
+};
+const sizeSpacingScaleKeys = new Set(Object.keys(SIZE_MAP));
 export const isSizeSpacingScaleKey = (key) => {
   return sizeSpacingScaleKeys.has(key);
 };
 export const resolveSpacingSize = (size, property = "padding") => {
-  return stringifyStyle(sizeSpacingScale[size] || size, property);
+  return stringifyStyle(SIZE_MAP[size] || size, property);
 };
-
-const sizeTypoScale = {
-  xxs: "0.625rem", // 0.625 = 10px at 16px base (smaller than before for more range)
-  xs: "0.75rem", // 0.75 = 12px at 16px base
-  sm: "0.875rem", // 0.875 = 14px at 16px base
-  md: "1rem", // 1 = 16px at 16px base (base font size)
-  lg: "1.125rem", // 1.125 = 18px at 16px base
-  xl: "1.25rem", // 1.25 = 20px at 16px base
-  xxl: "1.5rem", // 1.5 = 24px at 16px base
-};
-sizeTypoScale.s = sizeTypoScale.sm;
-sizeTypoScale.m = sizeTypoScale.md;
-sizeTypoScale.l = sizeTypoScale.lg;
 export const resolveTypoSize = (size, property = "fontSize") => {
-  return stringifyStyle(sizeTypoScale[size] || size, property);
+  return stringifyStyle(TYPO_SIZE_MAP[size] || size, property);
 };

@@ -4,10 +4,7 @@ import { createContext, toChildArray } from "preact";
 import { useContext, useRef, useState } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
-import {
-  isSizeSpacingScaleKey,
-  resolveSpacingSize,
-} from "../box/box_style_util.js";
+import { isSizeSpacingScaleKey } from "../box/box_style_util.js";
 import { withPropsClassName } from "../utils/with_props_class_name.js";
 import { useInitialTextSelection } from "./use_initial_text_selection.jsx";
 
@@ -241,12 +238,13 @@ const applySpacingOnTextChildren = (children, spacing, defaultSpace) => {
   if (spacing === REGULAR_SPACE || spacing === FAKE_SPACE) {
     separator = defaultSpace;
   } else if (typeof spacing === "string") {
-    if (isSizeSpacingScaleKey(spacing) || hasCSSSizeUnit(spacing)) {
+    if (
+      isSizeSpacingScaleKey(spacing) ||
+      hasCSSSizeUnit(spacing) ||
+      spacing.startsWith("var(")
+    ) {
       separator = (
-        <CustomWidthSpace
-          value={resolveSpacingSize(spacing)}
-          useRealSpaceChar={useRealSpaceChar}
-        />
+        <CustomWidthSpace value={spacing} useRealSpaceChar={useRealSpaceChar} />
       );
     } else {
       separator = spacing;

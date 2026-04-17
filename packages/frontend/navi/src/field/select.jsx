@@ -12,13 +12,14 @@ import { requestAction } from "./validation/custom_constraint_validation.js";
 
 const useNavState = () => {};
 
-import.meta.css = /* css */ `
+const css = /* css */ `
   .navi_select[data-readonly] {
     pointer-events: none;
   }
 `;
 
 export const Select = forwardRef((props, ref) => {
+  import.meta.css = css;
   const select = renderActionableComponent(props, ref, {
     Basic: SelectBasic,
     WithAction: SelectWithAction,

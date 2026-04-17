@@ -2,7 +2,7 @@ import { useLayoutEffect } from "preact/hooks";
 
 import { useSelectionController } from "../../selection/selection.jsx";
 
-import.meta.css = /* css */ `
+const css = /* css */ `
   @layer navi {
     .navi_table {
       --selection-border-color: var(--navi-selection-border-color, #0078d4);
@@ -105,6 +105,8 @@ export const useTableSelectionController = ({
   onSelectionChange,
   selectionColor,
 }) => {
+  import.meta.css = css;
+
   const selectionController = useSelectionController({
     elementRef: tableRef,
     layout: "grid",

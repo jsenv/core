@@ -6,7 +6,7 @@ import { Box } from "../box/box.jsx";
 import { useKeyboardShortcuts } from "../keyboard/keyboard_shortcuts.js";
 import { useStableCallback } from "../utils/use_stable_callback.js";
 
-import.meta.css = /* css */ `
+const css = /* css */ `
   @layer navi {
     .navi_side_panel {
       --side-panel-width: 400px;
@@ -121,6 +121,7 @@ export const SidePanel = ({
   width,
   ...rest
 }) => {
+  import.meta.css = css;
   onClose = useStableCallback(onClose);
   const panelDialogRef = useRef(null);
   const [phase, setPhase] = useState(isOpen ? "open" : "closed");
