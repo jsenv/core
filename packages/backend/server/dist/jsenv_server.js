@@ -3863,7 +3863,7 @@ const serverPluginOpenFile = () => {
 const routeInspectorHtmlFileUrl = import.meta
   .resolve("./client/route_inspector/route_inspector.html");
 
-const serverPluginRouteInspector = () => {
+const serverPluginRouteInspector = ({ canExposeSensitiveData }) => {
   return {
     name: "jsenv:route_inspector",
     routes: [
@@ -3889,7 +3889,9 @@ const serverPluginRouteInspector = () => {
         description: "Get the routes available on this server in JSON.",
         declarationSource: import.meta.url,
         fetch: (request, helpers) => {
-          const routeJSON = helpers.router.inspect(request, helpers);
+          const routeJSON = helpers.router.inspect({
+            canExposeSensitiveData,
+          });
           return Response.json(routeJSON);
         },
       },
@@ -5378,13 +5380,18 @@ const createResourcePattern = (pattern) => {
       let decodedPathname = decodeURIComponent(pathname);
       let result;
       if (patternEndsWithSlash && !searchPattern && !hashPattern) {
-        if (!decodedPathname.startsWith(pathnamePatternString)) {
+        // also match the path without trailing slash (e.g. /foo matches /foo/)
+        const pathnamePatternWithoutSlash = pathnamePatternString.slice(0, -1);
+        if (decodedPathname === pathnamePatternWithoutSlash) {
+          result = { named: {}, stars: [""] };
+        } else if (!decodedPathname.startsWith(pathnamePatternString)) {
           return null;
+        } else {
+          result = {
+            named: {},
+            stars: [decodedPathname.slice(pathnamePatternString.length)],
+          };
         }
-        result = {
-          named: {},
-          stars: [decodedPathname.slice(pathnamePatternString.length)],
-        };
       } else {
         result = pathnamePattern.match(decodedPathname);
       }
@@ -5664,7 +5671,7 @@ const HTTP_METHODS = [
 
 const createRouter = (
   routeDescriptionArray,
-  { optionsFallback, logLevel } = {},
+  { optionsFallback, logLevel, redirect = "manual" } = {},
 ) => {
   const logger = createLogger({ logLevel });
   const routeSet = new Set();
@@ -5929,41 +5936,33 @@ It should be should be one of route.${routePropertyName}: ${availableValues.join
         );
       }
 
-      if (isRedirectStatus(status) && headers["location"]) {
-        const redirectedResponse = await followRedirect(request, status, headers["location"]);
-        onRouteMatch(route);
-        onResponseHeaders(request, route, redirectedResponse.headers || {});
-        return redirectedResponse;
+      if (
+        redirect === "follow" &&
+        isRedirectStatus(status) &&
+        headers["location"]
+      ) {
+        const redirectUrl = new URL(headers["location"], request.url);
+        if (redirectUrl.origin === new URL(request.url).origin) {
+          const redirectRequest = {
+            ...request,
+            url: redirectUrl.href,
+            resource:
+              redirectUrl.pathname + redirectUrl.search + redirectUrl.hash,
+            // GET for 301/302/303, preserve method for 307/308
+            method: status === 307 || status === 308 ? request.method : "GET",
+            params: {},
+          };
+          const redirectedResponse = await matchRoutes(redirectRequest);
+          onRouteMatch(route);
+          onResponseHeaders(request, route, redirectedResponse.headers || {});
+          return redirectedResponse;
+        }
+        // redirect to other origins are left to the client to handle
       }
 
       onRouteMatch(route);
       onResponseHeaders(request, route, headers);
       return { status, statusText, statusMessage, headers, body };
-    };
-
-    const followRedirect = (originalRequest, redirectStatus, location) => {
-      const redirectUrl = new URL(location, originalRequest.url);
-      // Only follow same-origin redirects; external URLs cannot match any route
-      if (redirectUrl.origin !== new URL(originalRequest.url).origin) {
-        return Promise.resolve({
-          status: 404,
-          statusText: "Not Found",
-          statusMessage: `The redirect target "${location}" is external and cannot be resolved internally.`,
-          headers: {},
-        });
-      }
-      const redirectRequest = {
-        ...originalRequest,
-        url: redirectUrl.href,
-        resource: redirectUrl.pathname + redirectUrl.search + redirectUrl.hash,
-        // GET for 301/302/303, preserve method for 307/308
-        method:
-          redirectStatus === 307 || redirectStatus === 308
-            ? originalRequest.method
-            : "GET",
-        params: {},
-      };
-      return matchRoutes(redirectRequest);
     };
 
     const matchRoutes = async (request) => {
@@ -5978,196 +5977,199 @@ It should be should be one of route.${routePropertyName}: ${availableValues.join
         upgrade: false,
       };
 
-    for (const route of routeSet) {
-      onRouteMatchStart(route);
-      const resourceMatchResult = route.matchResource(request.resource);
-      if (!resourceMatchResult) {
-        continue;
-      }
-      if (!route.matchMethod(request.method)) {
-        if (!route.isFallback) {
-          wouldHaveMatched.methodSet.add(route.method);
+      for (const route of routeSet) {
+        onRouteMatchStart(route);
+        const resourceMatchResult = route.matchResource(request.resource);
+        if (!resourceMatchResult) {
+          continue;
         }
-        continue;
-      }
-      if (
-        request.method === "POST" ||
-        request.method === "PATCH" ||
-        request.method === "PUT"
-      ) {
-        const { acceptedMediaTypes } = route;
+        if (!route.matchMethod(request.method)) {
+          if (!route.isFallback) {
+            wouldHaveMatched.methodSet.add(route.method);
+          }
+          continue;
+        }
         if (
-          acceptedMediaTypes.length &&
-          !isRequestBodyMediaTypeSupported(request, { acceptedMediaTypes })
+          request.method === "POST" ||
+          request.method === "PATCH" ||
+          request.method === "PUT"
         ) {
-          for (const acceptedMediaType of acceptedMediaTypes) {
-            wouldHaveMatched.requestMediaTypeSet.add(acceptedMediaType);
+          const { acceptedMediaTypes } = route;
+          if (
+            acceptedMediaTypes.length &&
+            !isRequestBodyMediaTypeSupported(request, { acceptedMediaTypes })
+          ) {
+            for (const acceptedMediaType of acceptedMediaTypes) {
+              wouldHaveMatched.requestMediaTypeSet.add(acceptedMediaType);
+            }
+            continue;
           }
+        }
+        const headersMatchResult = route.matchHeaders(request.headers);
+        if (!headersMatchResult) {
           continue;
         }
-      }
-      const headersMatchResult = route.matchHeaders(request.headers);
-      if (!headersMatchResult) {
-        continue;
-      }
-      if (route.isForWebSocket && request.headers["upgrade"] !== "websocket") {
-        wouldHaveMatched.upgrade = true;
-        continue;
-      }
-      // now we are "good", let's try to generate a response
-      const contentNegotiationResult = {};
-      {
-        // when content nego fails
-        // we will check the remaining accept headers to properly inform client of all the things are failing
-        // Example:
-        // client says "I want text in french"
-        // but server only provide json in english
-        // we want to tell client both text and french are not available
-        let hasFailed = false;
-        const { availableMediaTypes } = route;
-        if (availableMediaTypes.length) {
-          fetchSecondArg.injectResponseHeader("vary", "accept");
-          if (request.headers["accept"]) {
-            const mediaTypeNegotiated = pickContentType(
-              request,
-              availableMediaTypes,
-            );
-            if (!mediaTypeNegotiated) {
-              for (const availableMediaType of availableMediaTypes) {
-                wouldHaveMatched.responseMediaTypeSet.add(availableMediaType);
-              }
-              hasFailed = true;
-            }
-            contentNegotiationResult.mediaType = mediaTypeNegotiated;
-          } else {
-            contentNegotiationResult.mediaType = availableMediaTypes[0];
-          }
-        }
-        const { availableLanguages } = route;
-        if (availableLanguages.length) {
-          fetchSecondArg.injectResponseHeader("vary", "accept-language");
-          if (request.headers["accept-language"]) {
-            const languageNegotiated = pickContentLanguage(
-              request,
-              availableLanguages,
-            );
-            if (!languageNegotiated) {
-              for (const availableLanguage of availableLanguages) {
-                wouldHaveMatched.responseLanguageSet.add(availableLanguage);
-              }
-              hasFailed = true;
-            }
-            contentNegotiationResult.language = languageNegotiated;
-          } else {
-            contentNegotiationResult.language = availableLanguages[0];
-          }
-        }
-        const { availableVersions } = route;
-        if (availableVersions.length) {
-          fetchSecondArg.injectResponseHeader("vary", "accept-version");
-          if (request.headers["accept-version"]) {
-            const versionNegotiated = pickContentVersion(
-              request,
-              availableVersions,
-            );
-            if (!versionNegotiated) {
-              for (const availableVersion of availableVersions) {
-                wouldHaveMatched.responseVersionSet.add(availableVersion);
-              }
-              hasFailed = true;
-            }
-            contentNegotiationResult.version = versionNegotiated;
-          } else {
-            contentNegotiationResult.version = availableVersions[0];
-          }
-        }
-        const { availableEncodings } = route;
-        if (availableEncodings.length) {
-          fetchSecondArg.injectResponseHeader("vary", "accept-encoding");
-          if (request.headers["accept-encoding"]) {
-            const encodingNegotiated = pickContentEncoding(
-              request,
-              availableEncodings,
-            );
-            if (!encodingNegotiated) {
-              for (const availableEncoding of availableEncodings) {
-                wouldHaveMatched.responseEncodingSet.add(availableEncoding);
-              }
-              hasFailed = true;
-            }
-            contentNegotiationResult.encoding = encodingNegotiated;
-          } else {
-            contentNegotiationResult.encoding = availableEncodings[0];
-          }
-        }
-        if (hasFailed) {
+        if (
+          route.isForWebSocket &&
+          request.headers["upgrade"] !== "websocket"
+        ) {
+          wouldHaveMatched.upgrade = true;
           continue;
         }
+        // now we are "good", let's try to generate a response
+        const contentNegotiationResult = {};
+        {
+          // when content nego fails
+          // we will check the remaining accept headers to properly inform client of all the things are failing
+          // Example:
+          // client says "I want text in french"
+          // but server only provide json in english
+          // we want to tell client both text and french are not available
+          let hasFailed = false;
+          const { availableMediaTypes } = route;
+          if (availableMediaTypes.length) {
+            fetchSecondArg.injectResponseHeader("vary", "accept");
+            if (request.headers["accept"]) {
+              const mediaTypeNegotiated = pickContentType(
+                request,
+                availableMediaTypes,
+              );
+              if (!mediaTypeNegotiated) {
+                for (const availableMediaType of availableMediaTypes) {
+                  wouldHaveMatched.responseMediaTypeSet.add(availableMediaType);
+                }
+                hasFailed = true;
+              }
+              contentNegotiationResult.mediaType = mediaTypeNegotiated;
+            } else {
+              contentNegotiationResult.mediaType = availableMediaTypes[0];
+            }
+          }
+          const { availableLanguages } = route;
+          if (availableLanguages.length) {
+            fetchSecondArg.injectResponseHeader("vary", "accept-language");
+            if (request.headers["accept-language"]) {
+              const languageNegotiated = pickContentLanguage(
+                request,
+                availableLanguages,
+              );
+              if (!languageNegotiated) {
+                for (const availableLanguage of availableLanguages) {
+                  wouldHaveMatched.responseLanguageSet.add(availableLanguage);
+                }
+                hasFailed = true;
+              }
+              contentNegotiationResult.language = languageNegotiated;
+            } else {
+              contentNegotiationResult.language = availableLanguages[0];
+            }
+          }
+          const { availableVersions } = route;
+          if (availableVersions.length) {
+            fetchSecondArg.injectResponseHeader("vary", "accept-version");
+            if (request.headers["accept-version"]) {
+              const versionNegotiated = pickContentVersion(
+                request,
+                availableVersions,
+              );
+              if (!versionNegotiated) {
+                for (const availableVersion of availableVersions) {
+                  wouldHaveMatched.responseVersionSet.add(availableVersion);
+                }
+                hasFailed = true;
+              }
+              contentNegotiationResult.version = versionNegotiated;
+            } else {
+              contentNegotiationResult.version = availableVersions[0];
+            }
+          }
+          const { availableEncodings } = route;
+          if (availableEncodings.length) {
+            fetchSecondArg.injectResponseHeader("vary", "accept-encoding");
+            if (request.headers["accept-encoding"]) {
+              const encodingNegotiated = pickContentEncoding(
+                request,
+                availableEncodings,
+              );
+              if (!encodingNegotiated) {
+                for (const availableEncoding of availableEncodings) {
+                  wouldHaveMatched.responseEncodingSet.add(availableEncoding);
+                }
+                hasFailed = true;
+              }
+              contentNegotiationResult.encoding = encodingNegotiated;
+            } else {
+              contentNegotiationResult.encoding = availableEncodings[0];
+            }
+          }
+          if (hasFailed) {
+            continue;
+          }
+        }
+        const { named, stars = [] } = PATTERN.composeTwoMatchResults(
+          resourceMatchResult,
+          headersMatchResult,
+        );
+        Object.assign(request.params, named, stars);
+        fetchSecondArg.contentNegotiation = contentNegotiationResult;
+        let fetchReturnValue = route.fetch(request, fetchSecondArg);
+        if (
+          fetchReturnValue !== null &&
+          typeof fetchReturnValue === "object" &&
+          typeof fetchReturnValue.then === "function"
+        ) {
+          fetchReturnValue = await fetchReturnValue;
+        }
+        // route decided not to handle in the end
+        if (fetchReturnValue === null || fetchReturnValue === undefined) {
+          continue;
+        }
+        return resolveResponse(fetchReturnValue, { request, route });
       }
-      const { named, stars = [] } = PATTERN.composeTwoMatchResults(
-        resourceMatchResult,
-        headersMatchResult,
-      );
-      Object.assign(request.params, named, stars);
-      fetchSecondArg.contentNegotiation = contentNegotiationResult;
-      let fetchReturnValue = route.fetch(request, fetchSecondArg);
+      // nothing has matched fully
+      // if nothing matches at all we'll send 404
+      // but if url matched but METHOD was not supported we send 405
+      if (wouldHaveMatched.methodSet.size) {
+        return createMethodNotAllowedResponse(request, {
+          allowedMethods: [...wouldHaveMatched.methodSet],
+        });
+      }
+      if (wouldHaveMatched.requestMediaTypeSet.size) {
+        return createUnsupportedMediaTypeResponse(request, {
+          acceptedMediaTypes: [...wouldHaveMatched.requestMediaTypeSet],
+        });
+      }
       if (
-        fetchReturnValue !== null &&
-        typeof fetchReturnValue === "object" &&
-        typeof fetchReturnValue.then === "function"
+        wouldHaveMatched.responseMediaTypeSet.size ||
+        wouldHaveMatched.responseLanguageSet.size ||
+        wouldHaveMatched.responseVersionSet.size ||
+        wouldHaveMatched.responseEncodingSet.size
       ) {
-        fetchReturnValue = await fetchReturnValue;
+        return createNotAcceptableResponse(request, {
+          availableMediaTypes: [...wouldHaveMatched.responseMediaTypeSet],
+          availableLanguages: [...wouldHaveMatched.responseLanguageSet],
+          availableVersions: [...wouldHaveMatched.responseVersionSet],
+          availableEncodings: [...wouldHaveMatched.responseEncodingSet],
+        });
       }
-      // route decided not to handle in the end
-      if (fetchReturnValue === null || fetchReturnValue === undefined) {
-        continue;
+      if (wouldHaveMatched.upgrade) {
+        return {
+          status: 426,
+          statusText: "Upgrade Required",
+          statusMessage: `The request requires the upgrade to a webSocket connection`,
+        };
       }
-      return resolveResponse(fetchReturnValue, { request, route });
-    }
-    // nothing has matched fully
-    // if nothing matches at all we'll send 404
-    // but if url matched but METHOD was not supported we send 405
-    if (wouldHaveMatched.methodSet.size) {
-      return createMethodNotAllowedResponse(request, {
-        allowedMethods: [...wouldHaveMatched.methodSet],
-      });
-    }
-    if (wouldHaveMatched.requestMediaTypeSet.size) {
-      return createUnsupportedMediaTypeResponse(request, {
-        acceptedMediaTypes: [...wouldHaveMatched.requestMediaTypeSet],
-      });
-    }
-    if (
-      wouldHaveMatched.responseMediaTypeSet.size ||
-      wouldHaveMatched.responseLanguageSet.size ||
-      wouldHaveMatched.responseVersionSet.size ||
-      wouldHaveMatched.responseEncodingSet.size
-    ) {
-      return createNotAcceptableResponse(request, {
-        availableMediaTypes: [...wouldHaveMatched.responseMediaTypeSet],
-        availableLanguages: [...wouldHaveMatched.responseLanguageSet],
-        availableVersions: [...wouldHaveMatched.responseVersionSet],
-        availableEncodings: [...wouldHaveMatched.responseEncodingSet],
-      });
-    }
-    if (wouldHaveMatched.upgrade) {
-      return {
-        status: 426,
-        statusText: "Upgrade Required",
-        statusMessage: `The request requires the upgrade to a webSocket connection`,
-      };
-    }
-    constructAvailableEndpoints();
-    return createRouteNotFoundResponse(request);
+      constructAvailableEndpoints();
+      return createRouteNotFoundResponse(request);
     }; // end matchRoutes
 
     return matchRoutes(request);
   };
-  const inspect = () => {
+  const inspect = ({ canExposeSensitiveData }) => {
     // I want all the info I can gather about the routes
     const data = [];
     for (const route of routeSet) {
-      data.push(route.toJSON());
+      data.push(route.toJSON({ canExposeSensitiveData }));
     }
     return data;
   };
@@ -6292,10 +6294,10 @@ const createRoute = ({
     toString: () => {
       return `${method} ${resource}`;
     },
-    toJSON: () => {
+    toJSON: ({ canExposeSensitiveData }) => {
       const meta = {};
 
-      if (declarationSource) {
+      if (declarationSource && canExposeSensitiveData) {
         meta.declarationLink = {
           url: `javascript:window.fetch("/.internal/open_file/${encodeURIComponent(declarationSource)}")`,
           text: declarationSource,
@@ -6323,7 +6325,6 @@ const createRoute = ({
           } catch {}
         }
       }
-
       return {
         method,
         resource,
@@ -6340,7 +6341,9 @@ const createRoute = ({
             : typeof clientCodeExample === "string"
               ? clientCodeExample
               : undefined,
-        declarationSource,
+        declarationSource: canExposeSensitiveData
+          ? declarationSource
+          : undefined,
         meta,
       };
     },
@@ -6796,6 +6799,12 @@ const startServer = async ({
   keepProcessAlive = true,
   routes = [],
   plugins = [],
+  // When enabled, the server gives more power:
+  // - each route show the source where it was declared
+  // - server can be requested to open a file on the machine
+  // - client can subscribe to server to detect when it restarts
+  // This param should be enabled ONLY during development on your machine
+  canExposeSensitiveData = false,
   nagle = true,
   serverTiming = false,
   requestWaitingMs = 0,
@@ -6870,11 +6879,11 @@ const startServer = async ({
   }
 
   plugins = [
-    serverPluginOpenFile(),
+    ...(canExposeSensitiveData ? [serverPluginOpenFile()] : []),
     serverPluginDefaultBody4xx5xx(),
-    serverPluginRouteInspector(),
-    serverPluginInternalClientFiles(),
-    serverPluginAutoreloadOnRestart(),
+    serverPluginRouteInspector({ canExposeSensitiveData }),
+    ...(canExposeSensitiveData ? [serverPluginInternalClientFiles()] : []),
+    ...(canExposeSensitiveData ? [serverPluginAutoreloadOnRestart()] : []),
     ...plugins,
   ];
 

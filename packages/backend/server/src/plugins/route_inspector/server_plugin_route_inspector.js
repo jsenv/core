@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 const routeInspectorHtmlFileUrl = import.meta
   .resolve("./client/route_inspector.html");
 
-export const serverPluginRouteInspector = () => {
+export const serverPluginRouteInspector = ({ canExposeSensitiveData }) => {
   return {
     name: "jsenv:route_inspector",
     routes: [
@@ -29,7 +29,9 @@ export const serverPluginRouteInspector = () => {
         description: "Get the routes available on this server in JSON.",
         declarationSource: import.meta.url,
         fetch: (request, helpers) => {
-          const routeJSON = helpers.router.inspect(request, helpers);
+          const routeJSON = helpers.router.inspect({
+            canExposeSensitiveData,
+          });
           return Response.json(routeJSON);
         },
       },

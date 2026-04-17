@@ -79,6 +79,12 @@ export const startServer = async ({
   keepProcessAlive = true,
   routes = [],
   plugins = [],
+  // When enabled, the server gives more power:
+  // - each route show the source where it was declared
+  // - server can be requested to open a file on the machine
+  // - client can subscribe to server to detect when it restarts
+  // This param should be enabled ONLY during development on your machine
+  canExposeSensitiveData = false,
   nagle = true,
   serverTiming = false,
   requestWaitingMs = 0,
@@ -153,11 +159,11 @@ export const startServer = async ({
   }
 
   plugins = [
-    serverPluginOpenFile(),
+    ...(canExposeSensitiveData ? [serverPluginOpenFile()] : []),
     serverPluginDefaultBody4xx5xx(),
-    serverPluginRouteInspector(),
-    serverPluginInternalClientFiles(),
-    serverPluginAutoreloadOnRestart(),
+    serverPluginRouteInspector({ canExposeSensitiveData }),
+    ...(canExposeSensitiveData ? [serverPluginInternalClientFiles()] : []),
+    ...(canExposeSensitiveData ? [serverPluginAutoreloadOnRestart()] : []),
     ...plugins,
   ];
 

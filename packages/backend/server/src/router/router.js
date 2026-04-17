@@ -525,11 +525,11 @@ It should be should be one of route.${routePropertyName}: ${availableValues.join
 
     return matchRoutes(request);
   };
-  const inspect = () => {
+  const inspect = ({ canExposeSensitiveData }) => {
     // I want all the info I can gather about the routes
     const data = [];
     for (const route of routeSet) {
-      data.push(route.toJSON());
+      data.push(route.toJSON({ canExposeSensitiveData }));
     }
     return data;
   };
@@ -654,10 +654,10 @@ const createRoute = ({
     toString: () => {
       return `${method} ${resource}`;
     },
-    toJSON: () => {
+    toJSON: ({ canExposeSensitiveData }) => {
       const meta = {};
 
-      if (declarationSource) {
+      if (declarationSource && canExposeSensitiveData) {
         meta.declarationLink = {
           url: `javascript:window.fetch("/.internal/open_file/${encodeURIComponent(declarationSource)}")`,
           text: declarationSource,
@@ -685,7 +685,6 @@ const createRoute = ({
           } catch {}
         }
       }
-
       return {
         method,
         resource,
@@ -702,7 +701,9 @@ const createRoute = ({
             : typeof clientCodeExample === "string"
               ? clientCodeExample
               : undefined,
-        declarationSource,
+        declarationSource: canExposeSensitiveData
+          ? declarationSource
+          : undefined,
         meta,
       };
     },

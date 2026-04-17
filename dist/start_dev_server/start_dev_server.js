@@ -10226,6 +10226,8 @@ const startDevServer = async ({
     port,
     requestWaitingMs: 60_000,
     plugins: finalServerPlugins,
+    // will allow to open file, provide more context on each route
+    canExposeSensitiveData: true,
   });
   server.stoppedPromise.then((reason) => {
     onStop();
