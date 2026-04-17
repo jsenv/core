@@ -2107,7 +2107,7 @@ const createActionProxyFromSignal = (
     };
   };
 
-  const nameSignal = signal();
+  const nameSignal = signal(action.name);
   const callSourceSignal = signal();
   let actionProxy;
   {
@@ -20008,123 +20008,6 @@ const isSameKey = (browserEventKey, key) => {
   return false;
 };
 
-installImportMetaCssBuild(import.meta);const css$7 = /* css */`
-  .navi_text_aligner_anchor {
-    vertical-align: baseline;
-    user-select: none;
-    overflow: hidden;
-  }
-`;
-
-/**
- * Positions children vertically relative to the surrounding text, correcting for font-size differences.
- *
- * Place this component around any inline element whose font-size differs from the surrounding text.
- * It renders an invisible anchor that inherits the surrounding text's font metrics, then shifts
- * the child so that its visual position matches the requested `align` value — regardless of
- * font-size, display type (inline, inline-block, inline-flex…), or the active `vertical-align`.
- *
- * @param {"center"|"baseline"|"start"|"end"} [align="baseline"]
- *   - `"center"`   — child is vertically centered on the surrounding text's ink bounds
- *   - `"baseline"` — no correction applied; child sits wherever the browser places it (default)
- *   - `"start"`    — child top aligns with the surrounding text's ink top
- *   - `"end"`      — child bottom aligns with the surrounding text's ink bottom
- * @param {import("ignore:preact").RefObject} childRef — ref on the child element to reposition
- */
-const SurroundingTextAligner = ({
-  children,
-  align = "baseline",
-  childRef,
-  textSize,
-  size
-}) => {
-  import.meta.css = [css$7, "@jsenv/navi/src/text/surrounding_text_aligner.jsx"];
-  const anchorRef = useRef();
-  useLayoutEffect(() => {
-    const anchorEl = anchorRef.current;
-    const childEl = childRef.current;
-    if (!anchorEl || !childEl) {
-      return;
-    }
-    const topOffset = computeTopOffset({
-      anchorEl,
-      childEl,
-      align
-    });
-    if (topOffset) {
-      childEl.style.position = "relative";
-      childEl.style.top = `${topOffset}px`;
-    } else {
-      childEl.style.position = "";
-      childEl.style.top = "";
-    }
-  }, [size, textSize]);
-  return jsxs(Fragment, {
-    children: [children, jsx("span", {
-      ref: anchorRef,
-      className: "navi_text_aligner_anchor",
-      children: "\u200B"
-    })]
-  });
-};
-const computeTopOffset = ({
-  anchorEl,
-  childEl,
-  align
-}) => {
-  if (align === "baseline") {
-    return 0;
-  }
-  // Only correct when the anchor lives in an inline formatting context.
-  // If the parent is a flex/grid container, inline layout rules don't apply
-  // and our font-metrics model is invalid.
-  const parentDisplay = getComputedStyle(anchorEl.parentElement).display;
-  if (parentDisplay !== "inline" && parentDisplay !== "inline-block" && parentDisplay !== "block") {
-    return 0;
-  }
-  const anchorStyle = getComputedStyle(anchorEl);
-  const anchorMetrics = measureFontAscDesc("M", anchorStyle);
-  const [anchorABA, anchorABD] = anchorMetrics.actual;
-  const anchorActH = anchorABA + anchorABD;
-  const [, anchorFBBD] = anchorMetrics.font;
-
-  // Estimate the baseline Y from the anchor's bounding rect.
-  // For an inline span, the font cell bottom is always at the element's bottom edge
-  // (regardless of vertical-align), so baseline = rect.bottom - fontBoundingBoxDescent.
-  const anchorRect = anchorEl.getBoundingClientRect();
-  const baselineY = anchorRect.bottom - anchorFBBD;
-  const anchorInkTopY = baselineY - anchorABA;
-
-  // Measure the child's current rect, then subtract any previously applied top correction
-  // to recover its natural position — avoiding a style reset + reflow.
-  const childRect = childEl.getBoundingClientRect();
-  const childH = childRect.height;
-  const previousTop = parseFloat(childEl.style.top) || 0;
-  const childNaturalTop = childRect.top - previousTop;
-
-  // Compute desired child top Y based on align intention.
-  let desiredChildTopY = 0;
-  if (align === "center") {
-    const anchorInkCenterY = anchorInkTopY + anchorActH / 2;
-    desiredChildTopY = anchorInkCenterY - childH / 2;
-  } else if (align === "start") {
-    desiredChildTopY = anchorInkTopY;
-  } else if (align === "end") {
-    desiredChildTopY = anchorInkTopY + anchorActH - childH;
-  }
-  return desiredChildTopY - childNaturalTop;
-};
-const canvas = document.createElement("canvas");
-const measureFontAscDesc = (text, computedStyle) => {
-  const ctx = canvas.getContext("2d");
-  ctx.font = `${computedStyle.fontWeight} ${computedStyle.fontSize} ${computedStyle.fontFamily}`;
-  const metrics = ctx.measureText(text);
-  return {
-    actual: [metrics.actualBoundingBoxAscent, metrics.actualBoundingBoxDescent],
-    font: [metrics.fontBoundingBoxAscent, metrics.fontBoundingBoxDescent]
-  };
-};
-
 const useInitialTextSelection = (ref, textSelection) => {
   const deps = [];
   if (Array.isArray(textSelection)) {
@@ -20225,7 +20108,7 @@ const selectByTextStrings = (element, range, startText, endText) => {
 };
 
 installImportMetaCssBuild(import.meta);/* eslint-disable jsenv/no-unknown-params */
-const css$6 = /* css */`
+const css$8 = /* css */`
   @layer navi {
     .navi_text {
       &[data-skeleton] {
@@ -20534,7 +20417,7 @@ const shouldInjectSpacingBetween = (left, right) => {
 };
 const OverflowPinnedElementContext = createContext(null);
 const Text = props => {
-  import.meta.css = [css$6, "@jsenv/navi/src/text/text.jsx"];
+  import.meta.css = [css$8, "@jsenv/navi/src/text/text.jsx"];
   if (props.loading || props.skeleton) {
     return jsx(TextSkeleton, {
       ...props
@@ -20730,11 +20613,140 @@ const TextBasic = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$5 = /* css */`
+installImportMetaCssBuild(import.meta);const css$7 = /* css */`
+  .navi_text_anchor {
+    vertical-align: baseline;
+    user-select: none;
+    overflow: hidden;
+  }
+`;
+
+/**
+ * Positions children vertically relative to the surrounding text, correcting for font-size differences.
+ *
+ * Place this component around any inline element whose font-size differs from the surrounding text.
+ * It renders an invisible anchor that inherits the surrounding text's font metrics, then shifts
+ * the child so that its visual position matches the requested `textAnchor` value — regardless of
+ * font-size, display type (inline, inline-block, inline-flex…), or the active `vertical-align`.
+ *
+ * @param {"line-top"|"char-top"|"center"|"char-bottom"|"line-bottom"} [textAnchor="char-bottom"]
+ *   - `"line-top"`    — child top aligns with the top of the surrounding line box
+ *   - `"char-top"`    — child top aligns with the top of visible characters (ink ascent)
+ *   - `"center"`      — child is vertically centered on the surrounding line box
+ *   - `"char-bottom"` — child bottom aligns to the text baseline (no correction, browser default)
+ *   - `"line-bottom"` — child bottom aligns with the bottom of the surrounding line box
+ * @param {{ size?: number, verticalAlign?: string }} [lineLayout]
+ *   Describes the surrounding line context. Used as layout-effect dependencies so the correction
+ *   reruns when the surrounding text's font-size or vertical-align changes.
+ * @param {import("ignore:preact").RefObject} childRef — ref on the child element to reposition
+ */
+const TextAnchor = ({
+  children,
+  textAnchor = "char-bottom",
+  childRef,
+  lineLayout,
+  size
+}) => {
+  import.meta.css = [css$7, "@jsenv/navi/src/text/text_anchor.jsx"];
+  const anchorRef = useRef();
+  useLayoutEffect(() => {
+    const anchorEl = anchorRef.current;
+    const childEl = childRef.current;
+    if (!anchorEl || !childEl) {
+      return;
+    }
+    const topOffset = computeTopOffset({
+      anchorEl,
+      childEl,
+      textAnchor
+    });
+    if (topOffset) {
+      // position:relative + top shifts the element visually.
+      // marginTop: -topOffset makes the layout box follow the visual position, so any container
+      // (button, link, box…) computes its own padding/border/height based on the real final position
+      // rather than the original unshifted one. This means a badge inside a button will symmetrically
+      // expand the button height instead of overflowing or being clipped.
+      // marginBottom: topOffset compensates the marginTop so the line height stays unchanged —
+      // the shift is purely a repositioning, not an inflation of the line.
+      childEl.style.position = "relative";
+      childEl.style.top = `${topOffset}px`;
+      childEl.style.marginTop = `${-topOffset}px`;
+      childEl.style.marginBottom = `${topOffset}px`;
+    } else {
+      childEl.style.position = "";
+      childEl.style.top = "";
+      childEl.style.marginTop = "";
+      childEl.style.marginBottom = "";
+    }
+  }, [size, textAnchor, lineLayout?.size, lineLayout?.verticalAlign]);
+  return jsxs(Fragment, {
+    children: [children, jsx("span", {
+      ref: anchorRef,
+      className: "navi_text_anchor",
+      children: "\u200B"
+    })]
+  });
+};
+const computeTopOffset = ({
+  anchorEl,
+  childEl,
+  textAnchor
+}) => {
+  if (textAnchor === "char-bottom") {
+    // Align child's bottom with the char's bottom = the baseline.
+    // The CSS spec says an inline-block with no text content has its baseline at its bottom margin edge.
+    // So the browser's default placement already puts the child's bottom at the line's baseline.
+    // No correction needed.
+    return 0;
+  }
+  // Only correct when the anchor lives in an inline formatting context.
+  // If the parent is a flex/grid container, inline layout rules don't apply
+  // and our font-metrics model is invalid.
+  const parentDisplay = getComputedStyle(anchorEl.parentElement).display;
+  if (parentDisplay !== "inline" && parentDisplay !== "inline-block" && parentDisplay !== "block") {
+    return 0;
+  }
+
+  // The anchor's rendered rect corresponds to the surrounding text's line box:
+  // top and bottom are the visual bounds of the line (including line-height).
+  const anchorRect = anchorEl.getBoundingClientRect();
+
+  // Measure the child's current rect, then subtract any previously applied top correction
+  // to recover its natural position — avoiding a style reset + reflow.
+  const childRect = childEl.getBoundingClientRect();
+  const childH = childRect.height;
+  const previousTop = parseFloat(childEl.style.top) || 0;
+  const childNaturalTop = childRect.top - previousTop;
+
+  // Compute desired child top Y based on textAnchor intention.
+  let desiredChildTopY = 0;
+  if (textAnchor === "line-top") {
+    desiredChildTopY = anchorRect.top;
+  } else if (textAnchor === "char-top") {
+    const anchorStyle = getComputedStyle(anchorEl);
+    const ctx = charTopCanvas.getContext("2d");
+    ctx.font = `${anchorStyle.fontWeight} ${anchorStyle.fontSize} ${anchorStyle.fontFamily}`;
+    const m = ctx.measureText("M");
+    const baselineY = anchorRect.bottom - m.fontBoundingBoxDescent;
+    desiredChildTopY = baselineY - m.actualBoundingBoxAscent;
+  } else if (textAnchor === "center") {
+    const anchorCenterY = (anchorRect.top + anchorRect.bottom) / 2;
+    desiredChildTopY = anchorCenterY - childH / 2;
+  } else if (textAnchor === "char-bottom") {
+    // Already handled above (early return 0), but guard here for completeness.
+    return 0;
+  } else if (textAnchor === "line-bottom") {
+    desiredChildTopY = anchorRect.bottom - childH;
+  }
+  return desiredChildTopY - childNaturalTop;
+};
+const charTopCanvas = document.createElement("canvas");
+
+installImportMetaCssBuild(import.meta);const css$6 = /* css */`
   @layer navi {
     /* Ensure data attributes from box.jsx can win to update display */
     .navi_icon {
-      display: inline-block;
+      display: inline-flex;
       box-sizing: border-box;
       max-width: 100%;
       max-height: 100%;
@@ -20745,12 +20757,14 @@ installImportMetaCssBuild(import.meta);const css$5 = /* css */`
     white-space: nowrap;
     vertical-align: inherit;
 
-    &[data-flow-inline] {
-      width: 1em;
-      height: 1em;
-    }
     &[data-icon-char] {
+      aspect-ratio: 1/1;
+      min-width: 0;
+      height: 1em;
+      max-height: 1em;
       flex-grow: 0 !important;
+      align-items: center;
+      justify-content: center;
 
       svg,
       img {
@@ -20761,29 +20775,12 @@ installImportMetaCssBuild(import.meta);const css$5 = /* css */`
         overflow: visible;
       }
     }
+    &[data-flow-inline] {
+      width: 1em;
+      height: 1em;
+    }
     &[data-interactive] {
       cursor: pointer;
-    }
-  }
-
-  .navi_icon_char_slot {
-    opacity: 0;
-    cursor: default;
-    user-select: none;
-  }
-  .navi_text.navi_icon_foreground {
-    position: absolute;
-    inset: 0;
-    display: inline-flex;
-
-    & > .navi_text {
-      display: flex;
-      aspect-ratio: 1 / 1;
-      min-width: 0;
-      height: 100%;
-      max-height: 1em;
-      align-items: center;
-      justify-content: center;
     }
   }
 
@@ -20812,16 +20809,13 @@ installImportMetaCssBuild(import.meta);const css$5 = /* css */`
 const Icon = ({
   href,
   children,
-  charWidth = 1,
-  // 0 (zéro) is the real char width
-  // but 2 zéros gives too big icons
-  // while 1 "W" gives a nice result
-  baseChar = "W",
   decorative,
   onClick,
+  textAnchor = "center",
+  lineLayout,
   ...props
 }) => {
-  import.meta.css = [css$5, "@jsenv/navi/src/text/icon.jsx"];
+  import.meta.css = [css$6, "@jsenv/navi/src/text/icon.jsx"];
   const innerChildren = href ? jsx("svg", {
     width: "100%",
     height: "100%",
@@ -20878,12 +20872,11 @@ const Icon = ({
       children: innerChildren
     });
   }
-  const invisibleText = baseChar.repeat(charWidth);
-  return jsx(SurroundingTextAligner, {
-    align: "center",
+  return jsx(TextAnchor, {
+    textAnchor: textAnchor,
+    lineLayout: lineLayout,
     childRef: textRef,
     size: props.size,
-    textSize: props.textSize,
     children: jsxs(Text, {
       ...props,
       ...ariaProps,
@@ -20896,14 +20889,9 @@ const Icon = ({
       onClick: onClick,
       ref: textRef,
       children: [jsx("span", {
-        className: "navi_icon_char_slot",
-        "aria-hidden": "true",
-        children: invisibleText
-      }), jsx(Text, {
-        className: "navi_icon_foreground",
-        spacing: "pre",
-        children: innerChildren
-      })]
+        style: "user-select:none",
+        children: "\u200B"
+      }), innerChildren]
     })
   });
 };
@@ -21429,7 +21417,7 @@ const useUIState = (uiStateController) => {
   return trackedUIState;
 };
 
-installImportMetaCssBuild(import.meta);const css$4 = /* css */`
+installImportMetaCssBuild(import.meta);const css$5 = /* css */`
   @layer navi {
     .navi_button {
       --button-outline-width: 1px;
@@ -21506,7 +21494,6 @@ installImportMetaCssBuild(import.meta);const css$4 = /* css */`
     box-sizing: border-box;
     aspect-ratio: inherit;
     padding: 0;
-    vertical-align: middle;
     background: none;
     border: none;
     border-radius: var(--x-button-border-radius);
@@ -21681,7 +21668,7 @@ installImportMetaCssBuild(import.meta);const css$4 = /* css */`
   }
 `;
 const Button = props => {
-  import.meta.css = [css$4, "@jsenv/navi/src/field/button.jsx"];
+  import.meta.css = [css$5, "@jsenv/navi/src/field/button.jsx"];
   return renderActionableComponent(props, {
     Basic: ButtonBasic,
     WithAction: ButtonWithAction,
@@ -22246,7 +22233,7 @@ const useDimColorWhen = (elementRef, shouldDim) => {
 };
 
 installImportMetaCssBuild(import.meta);/* eslint-disable jsenv/no-unknown-params */
-const css$3 = /* css */`
+const css$4 = /* css */`
   @layer navi {
     .navi_link {
       --link-border-radius: unset;
@@ -22567,7 +22554,7 @@ Object.assign(PSEUDO_CLASSES, {
   }
 });
 const Link = props => {
-  import.meta.css = [css$3, "@jsenv/navi/src/nav/link/link.jsx"];
+  import.meta.css = [css$4, "@jsenv/navi/src/nav/link/link.jsx"];
   return renderActionableComponent(props, {
     Basic: LinkBasic,
     WithAction: LinkWithAction
@@ -22829,7 +22816,7 @@ installImportMetaCssBuild(import.meta);/**
  * TabList component with support for horizontal and vertical layouts
  * https://dribbble.com/search/tabs
  */
-const css$2 = /* css */`
+const css$3 = /* css */`
   @layer navi {
     .navi_nav {
       --nav-border: none;
@@ -22866,6 +22853,8 @@ const css$2 = /* css */`
     /* overflow-y: hidden; */
 
     .navi_link {
+      user-select: none;
+
       --x-nav-child-border-radius: calc(
         var(--nav-border-radius) - var(--nav-padding)
       );
@@ -22963,7 +22952,7 @@ const Nav = ({
   panelBorderConnection,
   ...props
 }) => {
-  import.meta.css = [css$2, "@jsenv/navi/src/nav/link/nav.jsx"];
+  import.meta.css = [css$3, "@jsenv/navi/src/nav/link/nav.jsx"];
   children = toChildArray(children);
   return jsx(Box, {
     as: "nav",
@@ -24852,7 +24841,7 @@ const InputRadioWithAction = () => {
   throw new Error(`<Input type="radio" /> with an action make no sense. Use <RadioList action={something} /> instead`);
 };
 
-installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
+installImportMetaCssBuild(import.meta);const css$2 = /* css */`
   @layer navi {
     .navi_input_range {
       --border-radius: 6px;
@@ -25059,8 +25048,9 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
   .navi_input_range[data-callout] {
     /* What can we do? */
   }
-`, "@jsenv/navi/src/field/input_range.jsx"];
+`;
 const InputRange = props => {
+  import.meta.css = [css$2, "@jsenv/navi/src/field/input_range.jsx"];
   const uiStateController = useUIStateController(props, "input");
   const uiState = useUIState(uiStateController);
   const input = renderActionableComponent(props, {
@@ -26549,10 +26539,10 @@ const RadioListBasic = props => {
   const innerDisabled = disabled || contextDisabled;
   return jsx(Box, {
     "data-action": rest["data-action"],
-    row: true,
+    flex: "y",
     ...rest,
     baseClassName: "navi_radio_list",
-    "data-radio-list": true,
+    "data-radio-list": "",
     onresetuistate: e => {
       uiStateController.resetUIState(e);
     },
@@ -30664,10 +30654,11 @@ const BadgeCount = ({
   // so that visually the interface do not suddently switch from circle to ellipse depending on the count
   circle,
   max = circle ? MAX_FOR_CIRCLE : Infinity,
-  textSize,
   integer,
   lang,
   loading,
+  textAnchor = "center",
+  lineLayout,
   ...props
 }) => {
   import.meta.css = [css, "@jsenv/navi/src/text/badge_count.jsx"];
@@ -30690,11 +30681,11 @@ const BadgeCount = ({
     circle = false;
   }
   if (circle) {
-    return jsx(SurroundingTextAligner, {
-      align: "center",
+    return jsx(TextAnchor, {
+      textAnchor: textAnchor,
+      lineLayout: lineLayout,
       childRef: ref,
       size: props.size,
-      textSize: textSize,
       children: jsxs(BadgeCountCircle, {
         ...props,
         loading: loading,
@@ -30708,11 +30699,11 @@ const BadgeCount = ({
   const valueFormatted = typeof valueDisplayed === "number" ? formatNumber(valueDisplayed, {
     lang
   }) : valueDisplayed;
-  return jsx(SurroundingTextAligner, {
-    align: "center",
+  return jsx(TextAnchor, {
+    textAnchor: textAnchor,
+    lineLayout: lineLayout,
     childRef: ref,
     size: props.size,
-    textSize: textSize,
     children: jsxs(BadgeCountEllipse, {
       ...props,
       loading: loading,
@@ -31651,10 +31642,9 @@ const getMeterLevel = (value, min, max, low, high, optimum) => {
 
 const Paragraph = props => {
   return jsx(Text, {
-    marginTop: "md",
+    marginTop: "m",
     ...props,
-    as: "p",
-    ...props
+    as: "p"
   });
 };
 
