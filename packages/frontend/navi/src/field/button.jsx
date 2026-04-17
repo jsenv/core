@@ -45,7 +45,10 @@ const css = /* css */ `
       --button-outline-color: var(--navi-focus-outline-color);
       --button-loader-color: var(--navi-loader-color);
       --button-border-color: light-dark(#767676, #8e8e93);
-      --button-background-color: light-dark(#f3f4f6, #2d3748);
+      --button-background-color: var(
+        --button-background,
+        light-dark(#f3f4f6, #2d3748)
+      );
       --button-color: currentColor;
       --button-cursor: pointer;
 

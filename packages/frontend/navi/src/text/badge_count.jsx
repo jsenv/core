@@ -158,10 +158,11 @@ export const BadgeCount = ({
   if (circle) {
     return (
       <TextAnchor
-        textAnchor={textAnchor}
-        lineLayout={lineLayout}
         childRef={ref}
-        size={props.size}
+        textAnchor={textAnchor}
+        textSize={props.size}
+        textKey={loading + valueDisplayed + hasOverflow}
+        lineLayout={lineLayout}
       >
         <BadgeCountCircle
           {...props}
@@ -182,10 +183,11 @@ export const BadgeCount = ({
       : valueDisplayed;
   return (
     <TextAnchor
-      textAnchor={textAnchor}
-      lineLayout={lineLayout}
       childRef={ref}
-      size={props.size}
+      textAnchor={textAnchor}
+      textSize={props.size}
+      textKey={loading + valueFormatted + hasOverflow}
+      lineLayout={lineLayout}
     >
       <BadgeCountEllipse
         {...props}
@@ -251,13 +253,7 @@ const BadgeCountEllipse = ({
           <LoadingDots />
         </Icon>
       ) : (
-        <>
-          {/* When we double click on count we don't want to eventually select surrounding text (in case) */}
-          {/* the surrounding text has no spaces so we add "&#8203;" (zero-width space char) */}
-          {/* <span style="user-select: none">&#8203;</span> */}
-          {children}
-          {/* <span style="user-select: none">&#8203;</span> */}
-        </>
+        children
       )}
     </Text>
   );
@@ -292,13 +288,7 @@ const BadgeCountCircle = ({
           <LoadingDots />
         </Icon>
       ) : (
-        <>
-          {/* When we double click on count we don't want to eventually select surrounding text (in case) */}
-          {/* the surrounding text has no spaces so we add "&#8203;" (zero-width space char) */}
-          {/* <span style="user-select: none">&#8203;</span> */}
-          <span className="navi_badge_count_text">{children}</span>
-          {/* <span style="user-select: none">&#8203;</span> */}
-        </>
+        <span className="navi_badge_count_text">{children}</span>
       )}
     </Text>
   );

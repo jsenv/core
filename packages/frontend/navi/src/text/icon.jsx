@@ -142,10 +142,10 @@ export const Icon = ({
 
   return (
     <TextAnchor
-      textAnchor={textAnchor}
-      lineLayout={lineLayout}
       childRef={textRef}
-      size={props.size}
+      textAnchor={textAnchor}
+      textSize={props.size}
+      lineLayout={lineLayout}
     >
       <Text
         {...props}

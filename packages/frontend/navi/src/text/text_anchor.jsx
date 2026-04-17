@@ -53,11 +53,12 @@ const css = /* css */ `
  * @param {import("preact").RefObject} childRef — ref on the child element to reposition
  */
 export const TextAnchor = ({
+  childRef,
   children,
   textAnchor = "char-bottom",
-  childRef,
+  textKey,
+  textSize,
   lineLayout,
-  size,
 }) => {
   import.meta.css = css;
 
@@ -92,7 +93,13 @@ export const TextAnchor = ({
       childEl.style.marginTop = "";
       childEl.style.marginBottom = "";
     }
-  }, [size, textAnchor, lineLayout?.size, lineLayout?.verticalAlign]);
+  }, [
+    textAnchor,
+    textKey,
+    textSize,
+    lineLayout?.size,
+    lineLayout?.verticalAlign,
+  ]);
 
   return (
     <>

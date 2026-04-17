@@ -496,9 +496,10 @@ const STYLE_PROP_NAME_SET = new Set(Object.keys(All_PROPS));
 const COPIED_ON_VISUAL_CHILD_PROP_SET = new Set([
   ...FLOW_PROP_NAME_SET,
   "expand",
-  "shrink",
   "expandX",
   "expandY",
+  "shrink",
+  "align",
   "alignX",
   "alignY",
 ]);

@@ -6661,9 +6661,10 @@ const STYLE_PROP_NAME_SET = new Set(Object.keys(All_PROPS));
 const COPIED_ON_VISUAL_CHILD_PROP_SET = new Set([
   ...FLOW_PROP_NAME_SET,
   "expand",
-  "shrink",
   "expandX",
   "expandY",
+  "shrink",
+  "align",
   "alignX",
   "alignY",
 ]);
@@ -20641,11 +20642,12 @@ installImportMetaCssBuild(import.meta);const css$7 = /* css */`
  * @param {import("ignore:preact").RefObject} childRef — ref on the child element to reposition
  */
 const TextAnchor = ({
+  childRef,
   children,
   textAnchor = "char-bottom",
-  childRef,
-  lineLayout,
-  size
+  textKey,
+  textSize,
+  lineLayout
 }) => {
   import.meta.css = [css$7, "@jsenv/navi/src/text/text_anchor.jsx"];
   const anchorRef = useRef();
@@ -20678,7 +20680,7 @@ const TextAnchor = ({
       childEl.style.marginTop = "";
       childEl.style.marginBottom = "";
     }
-  }, [size, textAnchor, lineLayout?.size, lineLayout?.verticalAlign]);
+  }, [textAnchor, textKey, textSize, lineLayout?.size, lineLayout?.verticalAlign]);
   return jsxs(Fragment, {
     children: [children, jsx("span", {
       ref: anchorRef,
@@ -20873,10 +20875,10 @@ const Icon = ({
     });
   }
   return jsx(TextAnchor, {
-    textAnchor: textAnchor,
-    lineLayout: lineLayout,
     childRef: textRef,
-    size: props.size,
+    textAnchor: textAnchor,
+    textSize: props.size,
+    lineLayout: lineLayout,
     children: jsxs(Text, {
       ...props,
       ...ariaProps,
@@ -21432,7 +21434,10 @@ installImportMetaCssBuild(import.meta);const css$5 = /* css */`
       --button-outline-color: var(--navi-focus-outline-color);
       --button-loader-color: var(--navi-loader-color);
       --button-border-color: light-dark(#767676, #8e8e93);
-      --button-background-color: light-dark(#f3f4f6, #2d3748);
+      --button-background-color: var(
+        --button-background,
+        light-dark(#f3f4f6, #2d3748)
+      );
       --button-color: currentColor;
       --button-cursor: pointer;
 
@@ -30682,10 +30687,11 @@ const BadgeCount = ({
   }
   if (circle) {
     return jsx(TextAnchor, {
-      textAnchor: textAnchor,
-      lineLayout: lineLayout,
       childRef: ref,
-      size: props.size,
+      textAnchor: textAnchor,
+      textSize: props.size,
+      textKey: loading + valueDisplayed + hasOverflow,
+      lineLayout: lineLayout,
       children: jsxs(BadgeCountCircle, {
         ...props,
         loading: loading,
@@ -30700,10 +30706,11 @@ const BadgeCount = ({
     lang
   }) : valueDisplayed;
   return jsx(TextAnchor, {
-    textAnchor: textAnchor,
-    lineLayout: lineLayout,
     childRef: ref,
-    size: props.size,
+    textAnchor: textAnchor,
+    textSize: props.size,
+    textKey: loading + valueFormatted + hasOverflow,
+    lineLayout: lineLayout,
     children: jsxs(BadgeCountEllipse, {
       ...props,
       loading: loading,
@@ -30752,9 +30759,7 @@ const BadgeCountEllipse = ({
     spacing: "pre",
     children: loading ? jsx(Icon, {
       children: jsx(LoadingDots, {})
-    }) : jsx(Fragment, {
-      children: children
-    })
+    }) : children
   });
 };
 const BadgeCountCircle = ({
@@ -30782,11 +30787,9 @@ const BadgeCountCircle = ({
     spacing: "pre",
     children: loading ? jsx(Icon, {
       children: jsx(LoadingDots, {})
-    }) : jsx(Fragment, {
-      children: jsx("span", {
-        className: "navi_badge_count_text",
-        children: children
-      })
+    }) : jsx("span", {
+      className: "navi_badge_count_text",
+      children: children
     })
   });
 };

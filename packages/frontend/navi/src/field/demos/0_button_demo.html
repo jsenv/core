@@ -166,6 +166,7 @@
             <BasicStatesDemo />
             <SizeVariationsDemo />
             <ColorVariationsDemo />
+            <FullWidthDemo />
             <IconToggleDemo />
             <DiscreteVariantDemo />
             <InteractiveDemo />
@@ -657,6 +658,64 @@
                 </Button>
               </div>
             </div>
+          </div>
+        );
+      };
+
+      const FullWidthDemo = () => {
+        return (
+          <div className="demo-section">
+            <h2>Full Width</h2>
+
+            <fieldset>
+              <legend>
+                Full width, centered text, custom background and border
+              </legend>
+              <Button
+                width="100%"
+                background="#1a1a2e"
+                borderColor="#4a90e2"
+                color="#ffffff"
+                align="center"
+              >
+                Full width dark button
+              </Button>
+            </fieldset>
+
+            <fieldset>
+              <legend>Variations</legend>
+              <div
+                style={{ display: "flex", flexDirection: "column", gap: "8px" }}
+              >
+                <Button
+                  flex
+                  width="100%"
+                  backgroundColor="#e8f5e9"
+                  borderColor="#4caf50"
+                  color="#2e7d32"
+                >
+                  Success — full width
+                </Button>
+                <Button
+                  width="100%"
+                  backgroundColor="#fff3e0"
+                  borderColor="#ff9800"
+                  color="#e65100"
+                  alignX="center"
+                >
+                  Warning — full width
+                </Button>
+                <Button
+                  width="100%"
+                  backgroundColor="#fce4ec"
+                  borderColor="#e91e63"
+                  color="#880e4f"
+                  alignX="end"
+                >
+                  Danger — full width
+                </Button>
+              </div>
+            </fieldset>
           </div>
         );
       };
