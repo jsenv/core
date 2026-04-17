@@ -6,6 +6,7 @@ const server = await startServer({
   keepProcessAlive: false,
   logLevel: "warn",
   serverTiming: true,
+  canExposeSensitiveData: true,
   plugins: [
     {
       name: "toto",

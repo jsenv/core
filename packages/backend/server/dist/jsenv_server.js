@@ -8005,17 +8005,32 @@ const generateAccessControlHeaders = ({
 } = {}) => {
   const vary = [];
 
-  const allowedOriginArray = [...accessControlAllowedOrigins];
-  if (accessControlAllowRequestOrigin) {
-    if ("origin" in headers && headers.origin !== "null") {
-      allowedOriginArray.push(headers.origin);
+  // Access-Control-Allow-Origin must be a single value (not a list).
+  // We reflect back the request's origin if it is in the allowed list.
+  // If no origin matches we fall back to "*" (only when not using credentials).
+  let allowOrigin = null;
+
+  const requestOrigin =
+    "origin" in headers && headers.origin !== "null"
+      ? headers.origin
+      : "referer" in headers
+        ? new URL(headers.referer).origin
+        : null;
+
+  if (requestOrigin) {
+    if (accessControlAllowedOrigins.includes(requestOrigin)) {
+      allowOrigin = requestOrigin;
       vary.push("origin");
-    } else if ("referer" in headers) {
-      allowedOriginArray.push(new URL(headers.referer).origin);
-      vary.push("referer");
-    } else {
-      allowedOriginArray.push("*");
+    } else if (accessControlAllowRequestOrigin) {
+      allowOrigin = requestOrigin;
+      vary.push("origin");
     }
+  } else if (accessControlAllowRequestOrigin) {
+    allowOrigin = "*";
+  }
+
+  if (allowOrigin === null) {
+    allowOrigin = accessControlAllowedOrigins[0] ?? "*";
   }
 
   const allowedMethodArray = [...accessControlAllowedMethods];
@@ -8049,16 +8064,14 @@ const generateAccessControlHeaders = ({
   }
 
   return {
-    "access-control-allow-origin": allowedOriginArray.join(", "),
+    "access-control-allow-origin": allowOrigin,
     "access-control-allow-methods": allowedMethodArray.join(", "),
     "access-control-allow-headers": allowedHeaderArray.join(", "),
     ...(accessControlAllowCredentials
       ? { "access-control-allow-credentials": true }
       : {}),
     "access-control-max-age": accessControlMaxAge,
-    ...(timingAllowOrigin
-      ? { "timing-allow-origin": allowedOriginArray.join(", ") }
-      : {}),
+    ...(timingAllowOrigin ? { "timing-allow-origin": allowOrigin } : {}),
     ...(vary.length ? { vary: vary.join(", ") } : {}),
   };
 };
