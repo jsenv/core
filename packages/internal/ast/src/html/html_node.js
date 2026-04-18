@@ -58,7 +58,6 @@ export const injectJsenvScript = (
   if (type === "module") {
     if (src) {
       if (initCall) {
-        const paramsSource = stringifyParams(initCall.params, "  ");
         const inlineScriptNode = createHtmlNode({
           "tagName": "script",
           "type": "module",
@@ -66,9 +65,7 @@ export const injectJsenvScript = (
           ...attributes,
           "children": `import { ${initCall.callee} } from ${JSON.stringify(src)};
     
-${initCall.callee}({
-  ${paramsSource}
-});`,
+${stringifyCall(initCall)};`,
         });
         insertHtmlNodeInside(inlineScriptNode, jsenvScriptsNode);
         return;
@@ -102,13 +99,10 @@ ${initCall.callee}({
     });
     insertHtmlNodeInside(remoteScriptNode, jsenvScriptsNode);
     if (initCall) {
-      const paramsSource = stringifyParams(initCall.params, "  ");
       const inlineScriptNode = createHtmlNode({
         "tagName": "script",
         "jsenv-injected-by": pluginName,
-        "children": `${initCall.callee}({
-  ${paramsSource}
-});`,
+        "children": `${stringifyCall(initCall)};`,
         ...attributes,
       });
       insertHtmlNodeInside(inlineScriptNode, jsenvScriptsNode);
@@ -170,17 +164,18 @@ const getJsenvScriptsNode = (htmlAst) => {
   injectHtmlNode(htmlAst, jsenvScripts);
   return jsenvScripts;
 };
-const stringifyParams = (params, prefix = "") => {
-  const source = JSON.stringify(params, null, prefix);
-  if (prefix.length) {
-    // remove leading "{\n"
-    // remove leading prefix
-    // remove trailing "\n}"
-    return source.slice(2 + prefix.length, -2);
+const stringifyCall = (initCall) => {
+  if (!Object.hasOwn(initCall, "params")) {
+    return `${initCall.callee}()`;
   }
-  // remove leading "{"
-  // remove trailing "}"
-  return source.slice(1, -1);
+  const prefix = "  ";
+  const source = JSON.stringify(initCall.params, null, prefix);
+  // remove leading "{\n  "
+  // remove trailing "\n}"
+  const paramsSource = source.slice(2 + prefix.length, -2);
+  return `${initCall.callee}({
+  ${paramsSource}
+})`;
 };
 
 export const injectHtmlNodeAsEarlyAsPossible = (

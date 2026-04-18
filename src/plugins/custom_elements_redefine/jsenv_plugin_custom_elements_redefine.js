@@ -22,7 +22,7 @@ export const jsenvPluginCustomElementsRedefine = () => {
           initCall: {
             callee: "allowCustomElementsRedefine",
           },
-          pluginName: "jsenv:toolbar",
+          pluginName: "jsenv:custom_elements_redefine",
         });
         const htmlModified = stringifyHtmlAst(htmlAst);
         return {
