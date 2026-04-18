@@ -164,18 +164,21 @@ const getJsenvScriptsNode = (htmlAst) => {
   injectHtmlNode(htmlAst, jsenvScripts);
   return jsenvScripts;
 };
-const stringifyCall = (initCall) => {
+const stringifyCall = (initCall, { pretty = true } = {}) => {
   if (!Object.hasOwn(initCall, "params")) {
     return `${initCall.callee}()`;
   }
-  const prefix = "  ";
-  const source = JSON.stringify(initCall.params, null, prefix);
-  // remove leading "{\n  "
-  // remove trailing "\n}"
-  const paramsSource = source.slice(2 + prefix.length, -2);
-  return `${initCall.callee}({
+  if (pretty) {
+    const prefix = "  ";
+    const source = JSON.stringify(initCall.params, null, prefix);
+    // remove leading "{\n  "
+    // remove trailing "\n}"
+    const paramsSource = source.slice(2 + prefix.length, -2);
+    return `${initCall.callee}({
   ${paramsSource}
 })`;
+  }
+  return `${initCall.callee}(${JSON.stringify(initCall.params)})`;
 };
 
 export const injectHtmlNodeAsEarlyAsPossible = (
