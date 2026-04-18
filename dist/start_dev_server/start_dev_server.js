@@ -9608,13 +9608,15 @@ const parseSecChUaHeader = (secChUa) => {
     brand = brands[0];
   }
   const runtimeName = brandNameToRuntimeName(brand.name);
-  const runtimeVersion = brand.version;
+  const runtimeVersion = `${brand.version}.0.0`;
   return { runtimeName, runtimeVersion };
 };
-
 const brandNameToRuntimeName = (brandName) => {
   const lower = brandName.toLowerCase();
   if (lower === "google chrome") {
+    return "chrome";
+  }
+  if (lower === "headlesschrome") {
     return "chrome";
   }
   if (lower === "microsoft edge") {
@@ -9629,7 +9631,8 @@ const brandNameToRuntimeName = (brandName) => {
   if (lower === "chromium") {
     return "chrome";
   }
-  return lower;
+  // other Chromium-based browsers share Chrome's compatibility
+  return "chrome";
 };
 
 const parseUserAgentHeader = (userAgent) => {
@@ -9673,7 +9676,9 @@ const parseUserAgentHeader = (userAgent) => {
     return { runtimeName: "firefox", runtimeVersion: `${major}.${minor}.0` };
   }
   // generic Chromium-based fallback (should normally be handled by sec-ch-ua)
-  const chromeMatch = userAgent.match(/\bChrome\/(\d+)\.(\d+)\b/);
+  const chromeMatch = userAgent.match(
+    /(?:HeadlessChrome|Chrome)\/(\d+)\.(\d+)\b/,
+  );
   if (chromeMatch) {
     const major = chromeMatch[1];
     const minor = chromeMatch[2] || "0";
