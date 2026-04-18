@@ -90,6 +90,7 @@ export const startDevServer = async ({
   cacheControl = true,
   ribbon = true,
   dropToOpen = true,
+  customElementsRedefine = true,
   // toolbar = false,
   onKitchenCreated = () => {},
   spa,
@@ -206,6 +207,7 @@ export const startDevServer = async ({
       cacheControl,
       ribbon,
       dropToOpen,
+      customElementsRedefine,
     }),
   ]);
 

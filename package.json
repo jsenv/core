@@ -93,6 +93,7 @@
     "@jsenv/assert": "workspace:*",
     "@jsenv/cli": "workspace:*",
     "@jsenv/core": "./",
+    "@jsenv/custom-elements-redefine": "workspace:*",
     "@jsenv/database-manager": "workspace:*",
     "@jsenv/eslint-config-relax": "workspace:*",
     "@jsenv/file-size-impact": "workspace:*",
