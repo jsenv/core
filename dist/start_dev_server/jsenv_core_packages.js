@@ -5897,6 +5897,7 @@ const featuresCompatMap = {
     safari: "10.1",
     opera: "48",
     ios: "10.3",
+    ios_safari: "10.3",
     android: "61",
     samsung: "8.2",
   },
@@ -5916,6 +5917,7 @@ const featuresCompatMap = {
     edge: "79",
     firefox: "62",
     ios: "12",
+    ios_safari: "12",
     opera: "51",
     safari: "11.1",
     samsung: "9.2",
@@ -5933,6 +5935,7 @@ const featuresCompatMap = {
     edge: "79",
     firefox: "67",
     ios: "11.3",
+    ios_safari: "11.3",
     opera: "50",
     safari: "11.3",
     samsung: "8.0",
@@ -5946,6 +5949,7 @@ const featuresCompatMap = {
     safari: "15",
     samsung: "15",
     ios: "15",
+    ios_safari: "15",
     node: "14.8",
   },
   // https://caniuse.com/import-maps
@@ -5981,6 +5985,7 @@ const featuresCompatMap = {
     opera: "11.5",
     safari: "4",
     ios: "5",
+    ios_safari: "5",
     android: "4.4",
   },
   // https://developer.mozilla.org/en-US/docs/Web/API/Worker/Worker#browser_compatibility
@@ -5998,6 +6003,7 @@ const featuresCompatMap = {
     safari: "11.1",
     opera: "27",
     ios: "11.3",
+    ios_safari: "11.3",
     android: "12.12",
   },
   service_worker_type_module: {
@@ -6027,6 +6033,7 @@ const featuresCompatMap = {
     safari: "12.1",
     opera: "58",
     ios: "12.2",
+    ios_safari: "12.2",
     android: "94",
     node: "12",
   },
@@ -6038,6 +6045,7 @@ const featuresCompatMap = {
     safari: "12",
     node: "10",
     ios: "12",
+    ios_safari: "12",
     samsung: "8",
     electron: "3",
   },
@@ -6049,6 +6057,7 @@ const featuresCompatMap = {
     opera: "28",
     safari: "9",
     ios: "9",
+    ios_safari: "9",
     android: "4",
     node: "4",
   },
@@ -6060,6 +6069,7 @@ const featuresCompatMap = {
     safari: "10",
     node: "6",
     ios: "10",
+    ios_safari: "10",
     samsung: "5",
     electron: "0.36",
   },
@@ -6072,6 +6082,7 @@ const featuresCompatMap = {
     node: "4",
     ie: "11",
     ios: "10",
+    ios_safari: "10",
     samsung: "3.4",
     electron: "0.22",
   },
@@ -6083,6 +6094,7 @@ const featuresCompatMap = {
     safari: "9",
     node: "4",
     ios: "9",
+    ios_safari: "9",
     samsung: "4",
     electron: "0.28",
   },
@@ -6096,6 +6108,7 @@ const featuresCompatMap = {
     ie: "9",
     android: "4.4",
     ios: "6",
+    ios_safari: "6",
     phantom: "2",
     samsung: "1",
     electron: "0.20",
@@ -6107,6 +6120,7 @@ const featuresCompatMap = {
     firefox: "36",
     safari: "9",
     ios: "9",
+    ios_safari: "9",
     samsung: "4",
     node: "0.12",
   },
@@ -6286,24 +6300,4 @@ const isResponseEligibleForIntegrityValidation = (response) => {
   return ["basic", "cors", "default"].includes(response.type);
 };
 
-const memoizeByFirstArgument = (compute) => {
-  const urlCache = new Map();
-
-  const fnWithMemoization = (url, ...args) => {
-    const valueFromCache = urlCache.get(url);
-    if (valueFromCache) {
-      return valueFromCache;
-    }
-    const value = compute(url, ...args);
-    urlCache.set(url, value);
-    return value;
-  };
-
-  fnWithMemoization.forget = () => {
-    urlCache.clear();
-  };
-
-  return fnWithMemoization;
-};
-
-export { ANSI, CONTENT_TYPE, DATA_URL, JS_QUOTES, RUNTIME_COMPAT, URL_META, applyFileSystemMagicResolution, applyNodeEsmResolution, asSpecifierWithoutSearch, asUrlWithoutSearch, assertAndNormalizeDirectoryUrl, bufferToEtag, compareFileUrls, composeTwoImportMaps, createDetailedMessage$1 as createDetailedMessage, createLogger, createTaskLog, ensurePathnameTrailingSlash, ensureWindowsDriveLetter, errorToHTML, formatError, generateContentFrame, getCallerPosition, getExtensionsToTry, injectQueryParams, injectQueryParamsIntoSpecifier, isFileSystemPath, isSpecifierForNodeBuiltin, lookupPackageDirectory, memoizeByFirstArgument, moveUrl, normalizeImportMap, normalizeUrl, readCustomConditionsFromProcessArgs, readEntryStatSync, readPackageAtOrNull, registerDirectoryLifecycle, resolveImport, setUrlBasename, setUrlExtension, setUrlFilename, stringifyUrlSite, urlIsOrIsInsideOf, urlToBasename, urlToExtension$1 as urlToExtension, urlToFileSystemPath, urlToFilename$1 as urlToFilename, urlToPathname$1 as urlToPathname, urlToRelativeUrl, validateResponseIntegrity, writeFileSync };
+export { ANSI, CONTENT_TYPE, DATA_URL, JS_QUOTES, RUNTIME_COMPAT, URL_META, applyFileSystemMagicResolution, applyNodeEsmResolution, asSpecifierWithoutSearch, asUrlWithoutSearch, assertAndNormalizeDirectoryUrl, bufferToEtag, compareFileUrls, composeTwoImportMaps, createDetailedMessage$1 as createDetailedMessage, createLogger, createTaskLog, ensurePathnameTrailingSlash, ensureWindowsDriveLetter, errorToHTML, formatError, generateContentFrame, getCallerPosition, getExtensionsToTry, injectQueryParams, injectQueryParamsIntoSpecifier, isFileSystemPath, isSpecifierForNodeBuiltin, lookupPackageDirectory, moveUrl, normalizeImportMap, normalizeUrl, readCustomConditionsFromProcessArgs, readEntryStatSync, readPackageAtOrNull, registerDirectoryLifecycle, resolveImport, setUrlBasename, setUrlExtension, setUrlFilename, stringifyUrlSite, urlIsOrIsInsideOf, urlToBasename, urlToExtension$1 as urlToExtension, urlToFileSystemPath, urlToFilename$1 as urlToFilename, urlToPathname$1 as urlToPathname, urlToRelativeUrl, validateResponseIntegrity, writeFileSync };

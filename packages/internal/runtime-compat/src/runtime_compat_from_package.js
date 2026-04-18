@@ -26,7 +26,7 @@ export const inferRuntimeCompatFromClosestPackage = async (
     for (const browserNameAndVersion of browserslistConfig) {
       let [name, version] = browserNameAndVersion.split(" ");
       if (name === "ios_saf") {
-        name = "ios";
+        name = "ios_safari";
       }
       if (Object.keys(browserDefaultRuntimeCompat).includes(name)) {
         runtimeCompat[name] = version;

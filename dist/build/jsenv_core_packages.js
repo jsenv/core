@@ -6595,6 +6595,7 @@ const browserDefaultRuntimeCompat = {
   edge: "79",
   firefox: "67",
   ios: "12",
+  ios_safari: "12",
   opera: "51",
   safari: "11.3",
   samsung: "9.2",
@@ -6696,6 +6697,7 @@ const featuresCompatMap = {
     safari: "10.1",
     opera: "48",
     ios: "10.3",
+    ios_safari: "10.3",
     android: "61",
     samsung: "8.2",
   },
@@ -6715,6 +6717,7 @@ const featuresCompatMap = {
     edge: "79",
     firefox: "62",
     ios: "12",
+    ios_safari: "12",
     opera: "51",
     safari: "11.1",
     samsung: "9.2",
@@ -6732,6 +6735,7 @@ const featuresCompatMap = {
     edge: "79",
     firefox: "67",
     ios: "11.3",
+    ios_safari: "11.3",
     opera: "50",
     safari: "11.3",
     samsung: "8.0",
@@ -6745,6 +6749,7 @@ const featuresCompatMap = {
     safari: "15",
     samsung: "15",
     ios: "15",
+    ios_safari: "15",
     node: "14.8",
   },
   // https://caniuse.com/import-maps
@@ -6780,6 +6785,7 @@ const featuresCompatMap = {
     opera: "11.5",
     safari: "4",
     ios: "5",
+    ios_safari: "5",
     android: "4.4",
   },
   // https://developer.mozilla.org/en-US/docs/Web/API/Worker/Worker#browser_compatibility
@@ -6797,6 +6803,7 @@ const featuresCompatMap = {
     safari: "11.1",
     opera: "27",
     ios: "11.3",
+    ios_safari: "11.3",
     android: "12.12",
   },
   service_worker_type_module: {
@@ -6826,6 +6833,7 @@ const featuresCompatMap = {
     safari: "12.1",
     opera: "58",
     ios: "12.2",
+    ios_safari: "12.2",
     android: "94",
     node: "12",
   },
@@ -6837,6 +6845,7 @@ const featuresCompatMap = {
     safari: "12",
     node: "10",
     ios: "12",
+    ios_safari: "12",
     samsung: "8",
     electron: "3",
   },
@@ -6848,6 +6857,7 @@ const featuresCompatMap = {
     opera: "28",
     safari: "9",
     ios: "9",
+    ios_safari: "9",
     android: "4",
     node: "4",
   },
@@ -6859,6 +6869,7 @@ const featuresCompatMap = {
     safari: "10",
     node: "6",
     ios: "10",
+    ios_safari: "10",
     samsung: "5",
     electron: "0.36",
   },
@@ -6871,6 +6882,7 @@ const featuresCompatMap = {
     node: "4",
     ie: "11",
     ios: "10",
+    ios_safari: "10",
     samsung: "3.4",
     electron: "0.22",
   },
@@ -6882,6 +6894,7 @@ const featuresCompatMap = {
     safari: "9",
     node: "4",
     ios: "9",
+    ios_safari: "9",
     samsung: "4",
     electron: "0.28",
   },
@@ -6895,6 +6908,7 @@ const featuresCompatMap = {
     ie: "9",
     android: "4.4",
     ios: "6",
+    ios_safari: "6",
     phantom: "2",
     samsung: "1",
     electron: "0.20",
@@ -6906,6 +6920,7 @@ const featuresCompatMap = {
     firefox: "36",
     safari: "9",
     ios: "9",
+    ios_safari: "9",
     samsung: "4",
     node: "0.12",
   },
@@ -6992,7 +7007,7 @@ const inferRuntimeCompatFromClosestPackage = async (
     for (const browserNameAndVersion of browserslistConfig) {
       let [name, version] = browserNameAndVersion.split(" ");
       if (name === "ios_saf") {
-        name = "ios";
+        name = "ios_safari";
       }
       if (Object.keys(browserDefaultRuntimeCompat).includes(name)) {
         runtimeCompat[name] = version;

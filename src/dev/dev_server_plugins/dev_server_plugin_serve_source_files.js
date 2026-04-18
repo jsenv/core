@@ -8,8 +8,7 @@ import { watchSourceFiles } from "../../helpers/watch_source_files.js";
 import { WEB_URL_CONVERTER } from "../../helpers/web_url_converter.js";
 import { createKitchen } from "../../kitchen/kitchen.js";
 import { createJsenvPluginsController } from "../../plugins/jsenv_plugins_controller.js";
-
-import { parseUserAgentHeader } from "./user_agent.js";
+import { getRuntimeFromRequest } from "./runtime_from_request.js";
 
 export const devServerPluginServeSourceFiles = ({
   packageDirectory,
@@ -50,9 +49,7 @@ export const devServerPluginServeSourceFiles = ({
   serverStopCallbackSet.add(stopWatchingSourceFiles);
 
   const getOrCreateKitchen = async (request) => {
-    const { runtimeName, runtimeVersion } = parseUserAgentHeader(
-      request.headers["user-agent"] || "",
-    );
+    const { runtimeName, runtimeVersion } = getRuntimeFromRequest(request);
     const runtimeId = `${runtimeName}@${runtimeVersion}`;
     const existing = kitchenCache.get(runtimeId);
     if (existing) {

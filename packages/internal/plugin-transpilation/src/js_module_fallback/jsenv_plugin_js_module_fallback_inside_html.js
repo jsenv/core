@@ -96,6 +96,9 @@ export const jsenvPluginJsModuleFallbackInsideHtml = ({
                 break;
               }
             }
+            if (!linkHintReference) {
+              return;
+            }
             if (rel === "modulepreload") {
               if (linkHintReference.expectedType === "js_classic") {
                 mutations.push(() => {
@@ -142,6 +145,9 @@ export const jsenvPluginJsModuleFallbackInsideHtml = ({
                   break;
                 }
               }
+            }
+            if (!scriptReference) {
+              return;
             }
             if (!wasConvertedFromJsModule(scriptReference)) {
               return;
