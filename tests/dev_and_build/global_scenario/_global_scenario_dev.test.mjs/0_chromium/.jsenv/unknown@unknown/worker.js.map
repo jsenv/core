@@ -1,0 +1,16 @@
+{
+  "version": 3,
+  "sources": [
+    "base/client/worker.js"
+  ],
+  "names": [
+    "console",
+    "log",
+    "dev",
+    "__DEV__"
+  ],
+  "mappings": "AAAA,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,IAAO,CAAC,CAAC;;AAEpBA,AAAA,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAACC,AAAA,CAAC,CAAC,CAAC,CAAC,CAAC,CAACC,AAAA,CAAC,CAAC,CAAC,CAAC,CAACC,AAAA,IAAO,CAAC,CAAC,CAAF,AAAG,CAAF,CAAC,CAAC",
+  "sourcesContent": [
+    "/* globals __DEV__ */\n\nconsole.log({ dev: __DEV__ });\n"
+  ]
+}
