@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf8">
+    <link rel="icon" href="data:,">
+  </head>
+  <body>
+    <jsenv-scripts>
+      <script src="/@fs@jsenv/core/packages/backend/server/src/plugins/autoreload_on_server_restart/client/autoreload_on_server_restart.js" jsenv-injected-by="jsenv:autoreload_on_server_restart" data-ws-endpoint="/.internal/events.websocket"></script>
+      <script type="module" jsenv-injected-by="jsenv:drop_to_open" content-indented="">
+        import { initDropToOpen } from "/@fs@jsenv/core/src/plugins/drop_to_open/client/drop_to_open.js";
+            
+        initDropToOpen({
+          "rootDirectoryUrl": "base/client/"
+        });
+      </script>
+      <script type="module" jsenv-injected-by="jsenv:custom_elements_redefine" content-indented="">
+        import { allowCustomElementsRedefine } from "/@fs@jsenv/core/packages/frontend/custom-elements-redefine/src/main.js";
+            
+        allowCustomElementsRedefine();
+      </script>
+      <script jsenv-injected-by="jsenv:inject_globals" content-indented="">
+        Object.assign(window, {
+          "HTML_ROOT_PATHNAME": "/main.html"
+        });
+      </script>
+    </jsenv-scripts>
+  
+  
+    <script src="/main.js"></script>
+    <script jsenv-cooked-by="jsenv:html_inline_content_analysis">
+      window.resultPromise = window.fetch("./main.js.map");
+    </script>
+  </body>
+</html>

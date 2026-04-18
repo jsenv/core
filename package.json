@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "41.1.1",
+  "version": "41.2.0",
   "description": "Tool to develop, test and build js projects",
   "repository": {
     "type": "git",
@@ -93,6 +93,7 @@
     "@jsenv/assert": "workspace:*",
     "@jsenv/cli": "workspace:*",
     "@jsenv/core": "./",
+    "@jsenv/custom-elements-redefine": "workspace:*",
     "@jsenv/database-manager": "workspace:*",
     "@jsenv/eslint-config-relax": "workspace:*",
     "@jsenv/file-size-impact": "workspace:*",

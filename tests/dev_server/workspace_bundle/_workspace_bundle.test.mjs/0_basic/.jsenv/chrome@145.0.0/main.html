@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8">
+    <link rel="icon" href="data:,">
+  </head>
+  <body>
+    <jsenv-scripts>
+      <script type="module" jsenv-injected-by="jsenv:custom_elements_redefine" content-indented="">
+        import { allowCustomElementsRedefine } from "/@fs@jsenv/core/packages/frontend/custom-elements-redefine/src/main.js?package_bundle";
+            
+        allowCustomElementsRedefine();
+      </script>
+      <script jsenv-injected-by="jsenv:inject_globals" content-indented="">
+        Object.assign(window, {
+          "HTML_ROOT_PATHNAME": "/main.html"
+        });
+      </script>
+    </jsenv-scripts>
+  
+
+  
+    <div id="app"></div>
+    <script jsenv-cooked-by="jsenv:html_inline_content_analysis">
+      window.resultPromise = new Promise((resolve) => {
+        window.resolveResultPromise = resolve;
+      });
+    </script>
+
+    <script type="module" src="/main.js"></script>
+  </body>
+</html>

@@ -113,7 +113,9 @@
     }
   }
 
-  customElements.define("clipboard-copy", ClipboardCopy);
+  if (!customElements.get("clipboard-copy")) {
+    customElements.define("clipboard-copy", ClipboardCopy);
+  }
 
   const addToClipboard = async (text) => {
     const type = "text/plain";

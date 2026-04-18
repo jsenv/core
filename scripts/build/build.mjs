@@ -92,5 +92,10 @@ await build({
         buildRelativeUrl: "./client/regenerator_runtime/regenerator_runtime.js",
         runtimeCompat: clientRuntimeCompat,
       },
+    "./packages/frontend/custom-elements-redefine/src/main.js": {
+      buildRelativeUrl:
+        "./client/custom_elements_redefine/custom_elements_redefine.js",
+      runtimeCompat: clientRuntimeCompat,
+    },
   },
 });

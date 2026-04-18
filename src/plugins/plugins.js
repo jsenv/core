@@ -21,6 +21,7 @@ import { jsenvPluginImportMetaCss } from "./import_meta_css/jsenv_plugin_import_
 import { jsenvPluginImportMetaHot } from "./import_meta_hot/jsenv_plugin_import_meta_hot.js";
 import { jsenvPluginAutoreload } from "./autoreload/jsenv_plugin_autoreload.js";
 import { jsenvPluginCacheControl } from "./cache_control/jsenv_plugin_cache_control.js";
+import { jsenvPluginCustomElementsRedefine } from "./custom_elements_redefine/jsenv_plugin_custom_elements_redefine.js";
 // other
 import { jsenvPluginRibbon } from "./ribbon/jsenv_plugin_ribbon.js";
 import { jsenvPluginDropToOpen } from "./drop_to_open/jsenv_plugin_drop_to_open.js";
@@ -58,6 +59,7 @@ export const getCorePlugins = ({
   scenarioPlaceholders = true,
   ribbon = true,
   dropToOpen = true,
+  customElementsRedefine = true,
   packageSideEffects = false,
 } = {}) => {
   if (cacheControl === true) {
@@ -154,6 +156,7 @@ export const getCorePlugins = ({
     ...(cacheControl ? [jsenvPluginCacheControl(cacheControl)] : []),
     ...(ribbon ? [jsenvPluginRibbon({ rootDirectoryUrl, ...ribbon })] : []),
     ...(dropToOpen ? [jsenvPluginDropToOpen()] : []),
+    ...(customElementsRedefine ? [jsenvPluginCustomElementsRedefine()] : []),
     jsenvPluginCleanHTML(),
     ...(packageSideEffects
       ? [jsenvPluginPackageSideEffects({ packageDirectory })]

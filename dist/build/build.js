@@ -8735,6 +8735,39 @@ const jsenvPluginCacheControl = ({
 
 const SECONDS_IN_30_DAYS = 60 * 60 * 24 * 30;
 
+const jsenvPluginCustomElementsRedefine = () => {
+  const customElementsRedefineClientFileUrl = import.meta
+    .resolve("../client/custom_elements_redefine/custom_elements_redefine.js");
+
+  return {
+    name: "jsenv:custom_elements_redefine",
+    appliesDuring: "dev",
+    transformUrlContent: {
+      html: (urlInfo) => {
+        const htmlAst = parseHtml({ html: urlInfo.content, url: urlInfo.url });
+        const reference = urlInfo.dependencies.inject({
+          type: "script",
+          subtype: "js_module",
+          expectedType: "js_module",
+          specifier: customElementsRedefineClientFileUrl,
+        });
+        injectJsenvScript(htmlAst, {
+          type: "module",
+          src: reference.generatedSpecifier,
+          initCall: {
+            callee: "allowCustomElementsRedefine",
+          },
+          pluginName: "jsenv:custom_elements_redefine",
+        });
+        const htmlModified = stringifyHtmlAst(htmlAst);
+        return {
+          content: htmlModified,
+        };
+      },
+    },
+  };
+};
+
 const jsenvPluginRibbon = ({
   rootDirectoryUrl,
   htmlInclude = "/**/*.html",
@@ -9206,6 +9239,7 @@ const getCorePlugins = ({
   scenarioPlaceholders = true,
   ribbon = true,
   dropToOpen = true,
+  customElementsRedefine = true,
   packageSideEffects = false,
 } = {}) => {
   if (cacheControl === true) {
@@ -9302,6 +9336,7 @@ const getCorePlugins = ({
     ...(cacheControl ? [jsenvPluginCacheControl(cacheControl)] : []),
     ...(ribbon ? [jsenvPluginRibbon({ rootDirectoryUrl, ...ribbon })] : []),
     ...(dropToOpen ? [jsenvPluginDropToOpen()] : []),
+    ...(customElementsRedefine ? [jsenvPluginCustomElementsRedefine()] : []),
     jsenvPluginCleanHTML(),
     ...(packageSideEffects
       ? [jsenvPluginPackageSideEffects({ packageDirectory })]

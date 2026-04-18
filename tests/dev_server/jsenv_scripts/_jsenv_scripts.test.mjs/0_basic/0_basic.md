@@ -4,11 +4,21 @@
 run()
 ```
 
-# 1/2 write 5 files into "./"
+# 1/4 write 3 files into "./.jsenv/chrome@145.0.0/"
 
-see [./](./)
+see [./.jsenv/chrome@145.0.0/](./.jsenv/chrome@145.0.0/)
 
-# 2/2 resolve
+# 2/4 console.error
+
+```console
+TypeError: Failed to construct 'HTMLElement': Illegal constructor
+```
+
+# 3/4 write file "./main_after_exec.html"
+
+see [./main_after_exec.html](./main_after_exec.html)
+
+# 4/4 resolve
 
 ```js
 undefined
