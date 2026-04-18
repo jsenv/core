@@ -56,6 +56,9 @@ const brandNameToRuntimeName = (brandName) => {
   if (lower === "google chrome") {
     return "chrome";
   }
+  if (lower === "headlesschrome") {
+    return "chrome";
+  }
   if (lower === "microsoft edge") {
     return "edge";
   }
@@ -68,7 +71,8 @@ const brandNameToRuntimeName = (brandName) => {
   if (lower === "chromium") {
     return "chrome";
   }
-  return lower;
+  // other Chromium-based browsers share Chrome's compatibility
+  return "chrome";
 };
 
 const parseUserAgentHeader = (userAgent) => {
