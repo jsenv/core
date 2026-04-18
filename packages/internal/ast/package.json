@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/ast",
-  "version": "6.7.21",
+  "version": "6.8.0",
   "description": "Parse and transform HTML, CSS and JS",
   "repository": {
     "type": "git",
@@ -26,7 +26,7 @@
   "dependencies": {
     "@babel/core": "7.29.0",
     "@babel/helper-module-imports": "7.28.6",
-    "@babel/parser": "7.29.0",
+    "@babel/parser": "7.29.2",
     "@jsenv/humanize": "1.7.6",
     "@jsenv/urls": "2.9.8",
     "@jsenv/utils": "2.3.1",
@@ -34,7 +34,7 @@
     "acorn-import-attributes": "1.9.5",
     "acorn-walk": "8.3.5",
     "parse5": "8.0.0",
-    "postcss": "8.5.8",
+    "postcss": "8.5.10",
     "postcss-value-parser": "4.2.0"
   },
   "devDependencies": {
