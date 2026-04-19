@@ -392,6 +392,16 @@ const ButtonBasic = (props) => {
       {...remainingProps}
       as="button"
       ref={ref}
+      onContextMenu={(e) => {
+        if (e.pointerType === "touch") {
+          // Suppress the native context menu triggered by long-press on touch devices.
+          // Buttons have no meaningful context menu (no text to copy/paste/search),
+          // and the long-press visual state would get stuck if we let the menu open.
+          // Note: e.button === -1 is equivalent — it means no physical button triggered
+          // the event, i.e. it was synthesized from a long-press gesture (right-click gives e.button === 2).
+          e.preventDefault();
+        }
+      }}
       data-icon={icon ? "" : undefined}
       data-reveal-on-interaction={revealOnInteraction ? "" : undefined}
       data-discrete={discrete ? "" : undefined}
