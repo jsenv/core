@@ -6303,21 +6303,16 @@ const DIMENSION_PROPS = {
     if (selfHorizontalFlexFlow || inHorizontalFlexFlow) {
       if (!inHorizontalFlexFlow) {
         if (parentBoxFlow === "flex-y" || parentBoxFlow === "inline-flex-y") {
-          return { minWidth: "100%", width: "auto" };
+          return { alignSelf: "stretch" };
         }
-        return {
-          flexGrow: 1,
-          flexBasis: "0%",
-          minWidth: "100%",
-          width: "auto",
-        };
+        return { flexGrow: 1, flexBasis: "0%" };
       }
       return { flexGrow: 1, flexBasis: "0%" }; // Grow horizontally in column
     }
-    if (parentBoxFlow === "flex-y") {
-      return { minWidth: "100%", width: "auto" }; // Take full width in row
+    if (parentBoxFlow === "flex-y" || parentBoxFlow === "inline-flex-y") {
+      return { alignSelf: "stretch" }; // Stretch to cross-axis width in flex-y
     }
-    return { minWidth: "100%", width: "auto" }; // Take full width outside flex
+    return { width: "100%" }; // Take full width outside flex
   },
   expandY: (value, { parentBoxFlow, boxFlow }) => {
     if (!value) {
@@ -6334,19 +6329,14 @@ const DIMENSION_PROPS = {
         if (inHorizontalFlexFlow) {
           return { alignSelf: "stretch" };
         }
-        return {
-          flexGrow: 1,
-          flexBasis: "0%",
-          minHeight: "100%",
-          height: "auto",
-        };
+        return { flexGrow: 1, flexBasis: "0%" };
       }
       return { flexGrow: 1, flexBasis: "0%" }; // Grow vertically in row
     }
     if (inHorizontalFlexFlow) {
       return { alignSelf: "stretch" }; // Stretch to cross-axis height in flex-x
     }
-    return { minHeight: "100%", height: "auto" }; // Take full height outside flex
+    return { height: "100%" }; // Take full height outside flex
   },
   shrinkX: (value) => {
     if (!value || value === "0") {
