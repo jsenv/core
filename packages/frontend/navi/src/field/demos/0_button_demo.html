@@ -162,6 +162,7 @@
       const App = () => {
         return (
           <div>
+            <HrefDemo />
             <PaddingDemo />
             <BasicStatesDemo />
             <SizeVariationsDemo />
@@ -170,6 +171,23 @@
             <IconToggleDemo />
             <DiscreteVariantDemo />
             <InteractiveDemo />
+          </div>
+        );
+      };
+
+      const HrefDemo = () => {
+        return (
+          <div class="demo-section">
+            <h2>Button as link (href)</h2>
+            <div class="button-group">
+              <Button href="https://github.com">GitHub (external)</Button>
+              <Button href="/some-page">Internal page</Button>
+              <Button href="/some-page" target="_blank">Internal, force blank</Button>
+            </div>
+            <div style={{ marginTop: "16px", fontSize: "0.85rem", color: "#555" }}>
+              Ces boutons rendent un <code>&lt;a&gt;</code> au lieu d'un <code>&lt;button&gt;</code>.
+              Les styles <code>--button-*</code> s'appliquent normalement, le scaling au clic aussi.
+            </div>
           </div>
         );
       };

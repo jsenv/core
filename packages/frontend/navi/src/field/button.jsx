@@ -1,3 +1,4 @@
+/* eslint-disable jsenv/no-unknown-params */
 import { useCallback, useContext, useRef } from "preact/hooks";
 
 import { renderActionableComponent } from "../action/render_actionable_component.jsx";
@@ -7,6 +8,8 @@ import { useExecuteAction } from "../action/use_execute_action.js";
 import { Box } from "../box/box.jsx";
 import { LoaderBackground } from "../graphic/loader/loader_background.jsx";
 import { Text, markAsOutsideTextFlow } from "../text/text.jsx";
+import { getHrefTargetInfo } from "../nav/browser_integration/href_target_info.js";
+import { assertRoute, useRouteStatus } from "../nav/route.js";
 import { FormActionContext } from "./form_context.js";
 import { useActionEvents } from "./use_action_events.js";
 import { useAutoFocus } from "./use_auto_focus.js";
@@ -89,6 +92,11 @@ const css = /* css */ `
       );
       --button-color-disabled: var(--button-color-readonly);
     }
+  }
+
+  a.navi_button {
+    color: inherit;
+    text-decoration: none;
   }
 
   .navi_button {
@@ -291,10 +299,33 @@ export const Button = (props) => {
   import.meta.css = css;
 
   return renderActionableComponent(props, {
-    Basic: ButtonBasic,
+    Basic: ButtonBasicDispatch,
     WithAction: ButtonWithAction,
     WithActionInsideForm: ButtonWithActionInsideForm,
   });
+};
+
+const ButtonBasicDispatch = (props) => {
+  if (props.route) {
+    return <ButtonWithRoute {...props} />;
+  }
+  return <ButtonBasic {...props} />;
+};
+
+const ButtonWithRoute = ({ route, routeParams, children, ...rest }) => {
+  if (import.meta.dev) {
+    assertRoute(route);
+  }
+  const url = route.buildUrl(routeParams);
+  const { matching } = useRouteStatus(route);
+  const paramsAreMatching = route.matchesParams(routeParams);
+  const linkMatching = matching && paramsAreMatching;
+
+  return (
+    <ButtonBasic href={url} data-href-current={linkMatching ? "" : undefined} {...rest}>
+      {children || route.buildRelativeUrl(routeParams)}
+    </ButtonBasic>
+  );
 };
 
 const ButtonStyleCSSVars = {
@@ -355,6 +386,11 @@ const ButtonBasic = (props) => {
     loading,
     autoFocus,
 
+    // href/link
+    href,
+    target,
+    rel,
+
     // visual
     icon,
     revealOnInteraction = icon,
@@ -373,6 +409,17 @@ const ButtonBasic = (props) => {
   const innerReadOnly = readOnly || contextReadOnly || innerLoading;
   const innerDisabled = disabled || contextDisabled;
 
+  const isLink = href !== undefined;
+  let as = "button";
+  let innerTarget;
+  let innerRel;
+  if (isLink) {
+    as = "a";
+    const { isSameSite } = getHrefTargetInfo(href);
+    innerTarget = target === undefined ? (isSameSite ? undefined : "_blank") : target;
+    innerRel = rel === undefined ? (isSameSite ? undefined : "noopener noreferrer") : rel;
+  }
+
   const renderButtonContent = (buttonProps) => {
     return (
       <Text {...buttonProps} spacing={spacing} className="navi_button_content">
@@ -390,7 +437,10 @@ const ButtonBasic = (props) => {
     <Box
       data-readonly-silent={innerLoading ? "" : undefined}
       {...remainingProps}
-      as="button"
+      as={as}
+      href={href}
+      target={innerTarget}
+      rel={innerRel}
       ref={ref}
       onContextMenu={(e) => {
         if (e.pointerType === "touch") {
@@ -467,7 +517,7 @@ const ButtonWithAction = (props) => {
   });
 
   return (
-    <ButtonBasic
+    <ButtonBasicDispatch
       // put data-action first to help find it in devtools
       data-action={boundAction.name}
       {...rest}
@@ -475,7 +525,7 @@ const ButtonWithAction = (props) => {
       loading={innerLoading}
     >
       {children}
-    </ButtonBasic>
+    </ButtonBasicDispatch>
   );
 };
 const ButtonWithActionInsideForm = (props) => {
@@ -535,7 +585,7 @@ const ButtonWithActionInsideForm = (props) => {
   });
 
   return (
-    <ButtonBasic
+    <ButtonBasicDispatch
       data-action={actionBoundToFormParams.name}
       {...rest}
       ref={ref}
@@ -546,6 +596,6 @@ const ButtonWithActionInsideForm = (props) => {
       }}
     >
       {children}
-    </ButtonBasic>
+    </ButtonBasicDispatch>
   );
 };

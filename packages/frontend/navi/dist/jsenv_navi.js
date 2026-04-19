@@ -21447,7 +21447,8 @@ const useUIState = (uiStateController) => {
   return trackedUIState;
 };
 
-installImportMetaCssBuild(import.meta);const css$r = /* css */`
+installImportMetaCssBuild(import.meta);/* eslint-disable jsenv/no-unknown-params */
+const css$r = /* css */`
   @layer navi {
     .navi_button {
       --button-outline-width: 1px;
@@ -21506,6 +21507,11 @@ installImportMetaCssBuild(import.meta);const css$r = /* css */`
       );
       --button-color-disabled: var(--button-color-readonly);
     }
+  }
+
+  a.navi_button {
+    color: inherit;
+    text-decoration: none;
   }
 
   .navi_button {
@@ -21706,9 +21712,38 @@ installImportMetaCssBuild(import.meta);const css$r = /* css */`
 const Button = props => {
   import.meta.css = [css$r, "@jsenv/navi/src/field/button.jsx"];
   return renderActionableComponent(props, {
-    Basic: ButtonBasic,
+    Basic: ButtonBasicDispatch,
     WithAction: ButtonWithAction,
     WithActionInsideForm: ButtonWithActionInsideForm
+  });
+};
+const ButtonBasicDispatch = props => {
+  if (props.route) {
+    return jsx(ButtonWithRoute, {
+      ...props
+    });
+  }
+  return jsx(ButtonBasic, {
+    ...props
+  });
+};
+const ButtonWithRoute = ({
+  route,
+  routeParams,
+  children,
+  ...rest
+}) => {
+  const url = route.buildUrl(routeParams);
+  const {
+    matching
+  } = useRouteStatus(route);
+  const paramsAreMatching = route.matchesParams(routeParams);
+  const linkMatching = matching && paramsAreMatching;
+  return jsx(ButtonBasic, {
+    href: url,
+    "data-href-current": linkMatching ? "" : undefined,
+    ...rest,
+    children: children || route.buildRelativeUrl(routeParams)
   });
 };
 const ButtonStyleCSSVars = {
@@ -21758,6 +21793,10 @@ const ButtonBasic = props => {
     disabled,
     loading,
     autoFocus,
+    // href/link
+    href,
+    target,
+    rel,
     // visual
     icon,
     revealOnInteraction = icon,
@@ -21773,6 +21812,18 @@ const ButtonBasic = props => {
   const innerLoading = loading || contextLoading && contextLoadingElement === ref.current;
   const innerReadOnly = readOnly || contextReadOnly || innerLoading;
   const innerDisabled = disabled || contextDisabled;
+  const isLink = href !== undefined;
+  let as = "button";
+  let innerTarget;
+  let innerRel;
+  if (isLink) {
+    as = "a";
+    const {
+      isSameSite
+    } = getHrefTargetInfo(href);
+    innerTarget = target === undefined ? isSameSite ? undefined : "_blank" : target;
+    innerRel = rel === undefined ? isSameSite ? undefined : "noopener noreferrer" : rel;
+  }
   const renderButtonContent = buttonProps => {
     return jsxs(Text, {
       ...buttonProps,
@@ -21785,7 +21836,10 @@ const ButtonBasic = props => {
   return jsxs(Box, {
     "data-readonly-silent": innerLoading ? "" : undefined,
     ...remainingProps,
-    as: "button",
+    as: as,
+    href: href,
+    target: innerTarget,
+    rel: innerRel,
     ref: ref,
     onContextMenu: e => {
       if (e.pointerType === "touch") {
@@ -21859,7 +21913,7 @@ const ButtonWithAction = props => {
     onError: onActionError,
     onEnd: onActionEnd
   });
-  return jsx(ButtonBasic
+  return jsx(ButtonBasicDispatch
   // put data-action first to help find it in devtools
   , {
     "data-action": boundAction.name,
@@ -21918,7 +21972,7 @@ const ButtonWithActionInsideForm = props => {
       }
     }
   });
-  return jsx(ButtonBasic, {
+  return jsx(ButtonBasicDispatch, {
     "data-action": actionBoundToFormParams.name,
     ...rest,
     ref: ref,
