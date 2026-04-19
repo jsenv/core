@@ -5568,20 +5568,22 @@ const applyLegacySubpathResolution = (packageSubpath, resolutionContext) => {
 
 const applyLegacyMainResolution = (packageSubpath, resolutionContext) => {
   const { conditions, packageDirectoryUrl, packageJson } = resolutionContext;
-  for (const condition of conditions) {
-    const conditionResolver = mainLegacyResolvers[condition];
-    if (!conditionResolver) {
-      continue;
-    }
-    const resolved = conditionResolver(resolutionContext);
-    if (resolved) {
-      return createResolutionResult({
-        type: resolved.type,
-        isMain: resolved.isMain,
-        packageDirectoryUrl,
-        packageJson,
-        url: new URL(resolved.path, packageDirectoryUrl).href,
-      });
+  if (packageJson) {
+    for (const condition of conditions) {
+      const conditionResolver = mainLegacyResolvers[condition];
+      if (!conditionResolver) {
+        continue;
+      }
+      const resolved = conditionResolver(resolutionContext);
+      if (resolved) {
+        return createResolutionResult({
+          type: resolved.type,
+          isMain: resolved.isMain,
+          packageDirectoryUrl,
+          packageJson,
+          url: new URL(resolved.path, packageDirectoryUrl).href,
+        });
+      }
     }
   }
   return createResolutionResult({

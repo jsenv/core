@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "41.2.1",
+  "version": "41.2.2",
   "description": "Tool to develop, test and build js projects",
   "repository": {
     "type": "git",
@@ -76,7 +76,7 @@
   "dependencies": {
     "@jsenv/ast": "6.8.0",
     "@jsenv/js-module-fallback": "1.4.30",
-    "@jsenv/plugin-bundling": "2.10.9",
+    "@jsenv/plugin-bundling": "2.10.10",
     "@jsenv/plugin-minification": "1.7.3",
     "@jsenv/plugin-supervisor": "1.8.1",
     "@jsenv/plugin-transpilation": "1.5.72",
