@@ -97,6 +97,8 @@ const css = /* css */ `
   a.navi_button {
     color: inherit;
     text-decoration: none;
+    display: inline-block;
+    text-align: center;
   }
 
   .navi_button {
