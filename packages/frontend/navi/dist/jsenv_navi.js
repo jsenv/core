@@ -22418,10 +22418,10 @@ const css$q = /* css */`
 
     position: relative;
     aspect-ratio: inherit;
-    padding-top: calc(var(--x-link-padding-top) + var(--link-loading-outline-size));
-    padding-right: calc(var(--x-link-padding-right) + var(--link-loading-outline-size));
-    padding-bottom: calc(var(--x-link-padding-bottom) + var(--link-loading-outline-size));
-    padding-left: calc(var(--x-link-padding-left) + var(--link-loading-outline-size));
+    padding-top: max(var(--x-link-padding-top), var(--link-loading-outline-size));
+    padding-right: max(var(--x-link-padding-right), var(--link-loading-outline-size));
+    padding-bottom: max(var(--x-link-padding-bottom), var(--link-loading-outline-size));
+    padding-left: max(var(--x-link-padding-left), var(--link-loading-outline-size));
     color: var(--x-link-color);
     text-decoration: var(--x-link-text-decoration);
     background: var(--x-link-background);
