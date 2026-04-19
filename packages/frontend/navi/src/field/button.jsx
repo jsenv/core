@@ -115,6 +115,7 @@ const css = /* css */ `
     border-radius: var(--x-button-border-radius);
     outline: none;
     cursor: var(--x-button-cursor);
+    -webkit-tap-highlight-color: transparent;
 
     &[data-icon] {
       --button-padding: 0;
