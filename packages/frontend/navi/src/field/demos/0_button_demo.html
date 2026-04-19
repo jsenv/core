@@ -249,7 +249,15 @@
               considering={['padding="20px"']}
               nativeStyle={{ padding: "20px" }}
             >
-              <Button padding="20px">Button</Button>
+              <Button
+                padding="20px"
+                action={() => {
+                  // eslint-disable-next-line no-alert
+                  window.alert("Warning button clicked!");
+                }}
+              >
+                Button
+              </Button>
             </PaddingScenario>
 
             <PaddingScenario
