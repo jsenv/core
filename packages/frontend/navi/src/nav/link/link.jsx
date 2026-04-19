@@ -94,10 +94,30 @@ const css = /* css */ `
     --x-link-text-decoration-hover: var(--link-text-decoration-hover);
     --x-link-cursor: var(--link-cursor);
 
+    /* Resolve padding shorthands into directional vars */
+    --x-link-padding-top: var(
+      --link-padding-top,
+      var(--link-padding-y, var(--link-padding, 0px))
+    );
+    --x-link-padding-right: var(
+      --link-padding-right,
+      var(--link-padding-x, var(--link-padding, 0px))
+    );
+    --x-link-padding-bottom: var(
+      --link-padding-bottom,
+      var(--link-padding-y, var(--link-padding, 0px))
+    );
+    --x-link-padding-left: var(
+      --link-padding-left,
+      var(--link-padding-x, var(--link-padding, 0px))
+    );
+
     position: relative;
     aspect-ratio: inherit;
-    /* Ensure the spacing for the loading outline is part of the <a> so that it does not create an overflow */
-    padding: var(--link-loading-outline-size);
+    padding-top: calc(var(--x-link-padding-top) + var(--link-loading-outline-size));
+    padding-right: calc(var(--x-link-padding-right) + var(--link-loading-outline-size));
+    padding-bottom: calc(var(--x-link-padding-bottom) + var(--link-loading-outline-size));
+    padding-left: calc(var(--x-link-padding-left) + var(--link-loading-outline-size));
     color: var(--x-link-color);
     text-decoration: var(--x-link-text-decoration);
     background: var(--x-link-background);
@@ -319,6 +339,13 @@ const css = /* css */ `
 const LinkStyleCSSVars = {
   "outlineColor": "--link-outline-color",
   "borderRadius": "--link-border-radius",
+  "padding": "--link-padding",
+  "paddingX": "--link-padding-x",
+  "paddingY": "--link-padding-y",
+  "paddingTop": "--link-padding-top",
+  "paddingRight": "--link-padding-right",
+  "paddingBottom": "--link-padding-bottom",
+  "paddingLeft": "--link-padding-left",
   "color": "--link-color",
   "cursor": "--link-cursor",
   "textDecoration": "--link-text-decoration",
