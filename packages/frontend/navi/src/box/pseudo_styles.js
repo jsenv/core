@@ -1,5 +1,7 @@
 import { createPubSub, mergeTwoStyles } from "@jsenv/dom";
 
+const pressedElements = new WeakSet();
+
 export const PSEUDO_CLASSES = {
   ":hover": {
     attribute: "data-hover",
@@ -57,14 +59,42 @@ export const PSEUDO_CLASSES = {
   ":active": {
     attribute: "data-active",
     setup: (el, callback) => {
-      el.addEventListener("mousedown", callback);
-      document.addEventListener("mouseup", callback);
+      const onPointerUp = () => {
+        callback();
+      };
+      el.addEventListener("pointerdown", callback);
+      document.addEventListener("pointerup", onPointerUp);
       return () => {
-        el.removeEventListener("mousedown", callback);
-        document.removeEventListener("mouseup", callback);
+        el.removeEventListener("pointerdown", callback);
+        document.removeEventListener("pointerup", onPointerUp);
       };
     },
     test: (el) => el.matches(":active"),
+  },
+  ":-navi-pressed": {
+    attribute: "data-pressed",
+    setup: (el, callback) => {
+      const onPointerDown = (e) => {
+        if (e.button !== 0) {
+          // only left pointer (mouse left click, touch, pen)
+          return;
+        }
+        pressedElements.add(el);
+        callback();
+      };
+      const onPointerUp = () => {
+        pressedElements.delete(el);
+        callback();
+      };
+      el.addEventListener("pointerdown", onPointerDown);
+      document.addEventListener("pointerup", onPointerUp);
+      return () => {
+        el.removeEventListener("pointerdown", onPointerDown);
+        document.removeEventListener("pointerup", onPointerUp);
+        pressedElements.delete(el);
+      };
+    },
+    test: (el) => pressedElements.has(el),
   },
   ":visited": {
     attribute: "data-visited",

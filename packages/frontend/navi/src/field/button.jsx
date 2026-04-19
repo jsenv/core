@@ -64,8 +64,8 @@ const css = /* css */ `
         black
       );
       --button-color-hover: var(--button-color);
-      /* Active */
-      --button-border-color-active: color-mix(
+      /* Pressed */
+      --button-border-color-pressed: color-mix(
         in srgb,
         var(--button-border-color) 90%,
         black
@@ -116,6 +116,8 @@ const css = /* css */ `
     outline: none;
     cursor: var(--x-button-cursor);
     -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    user-select: none;
 
     &[data-icon] {
       --button-padding: 0;
@@ -206,16 +208,16 @@ const css = /* css */ `
       --x-button-background-color: var(--button-background-color);
       --x-button-color: var(--button-color);
     }
-    /* Active */
-    &[data-active] {
-      --x-button-outline-color: var(--button-border-color-active);
+    /* Pressed */
+    &[data-pressed] {
+      --x-button-outline-color: var(--button-border-color-pressed);
     }
-    &[data-active] {
+    &[data-pressed] {
       .navi_button_content {
         transform: scale(0.9);
       }
     }
-    &[data-active] {
+    &[data-pressed] {
       .navi_button_shadow {
         box-shadow:
           inset 0 3px 6px rgba(0, 0, 0, 0.2),
@@ -251,7 +253,7 @@ const css = /* css */ `
 
       color: unset;
 
-      /* Remove active effects */
+      /* Remove pressed effects */
       .navi_button_content {
         transform: none;
 
@@ -316,8 +318,8 @@ const ButtonStyleCSSVars = {
     borderColor: "--button-border-color-hover",
     color: "--button-color-hover",
   },
-  ":active": {
-    borderColor: "--button-border-color-active",
+  ":-navi-pressed": {
+    borderColor: "--button-border-color-pressed",
   },
   ":read-only": {
     backgroundColor: "--button-background-color-readonly",
@@ -333,6 +335,7 @@ const ButtonStyleCSSVars = {
 const ButtonPseudoClasses = [
   ":hover",
   ":active",
+  ":-navi-pressed",
   ":focus",
   ":focus-visible",
   ":read-only",
