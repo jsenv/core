@@ -140,12 +140,7 @@ const DIMENSION_PROPS = {
         if (parentBoxFlow === "flex-y" || parentBoxFlow === "inline-flex-y") {
           return { minWidth: "100%", width: "auto" };
         }
-        return {
-          flexGrow: 1,
-          flexBasis: "0%",
-          minWidth: "100%",
-          width: "auto",
-        };
+        return { flexGrow: 1, flexBasis: "0%" };
       }
       return { flexGrow: 1, flexBasis: "0%" }; // Grow horizontally in column
     }
@@ -169,12 +164,7 @@ const DIMENSION_PROPS = {
         if (inHorizontalFlexFlow) {
           return { alignSelf: "stretch" };
         }
-        return {
-          flexGrow: 1,
-          flexBasis: "0%",
-          minHeight: "100%",
-          height: "auto",
-        };
+        return { flexGrow: 1, flexBasis: "0%" };
       }
       return { flexGrow: 1, flexBasis: "0%" }; // Grow vertically in row
     }
