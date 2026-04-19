@@ -6,7 +6,7 @@ plugins:
     "prettier-plugin-embed",
     "prettier-plugin-organize-imports",
     "prettier-plugin-css-order",
-    "prettier-plugin-packagejson",
+    "prettier-plugin-pkg",
   ]
 organizeImportsSkipDestructiveCodeActions: true
 # https://github.com/un-ts/prettier/tree/master/packages/sql#parser-options
@@ -17,3 +17,4 @@ keywordCase: "upper"
 embeddedSqlParser: "postgresql"
 # https://github.com/Siilwyn/css-declaration-sorter/?tab=readme-ov-file#built-in-sorting-orders
 cssDeclarationSorterOrder: "frakto"
+packageIgnoreSort: ["scripts"]
