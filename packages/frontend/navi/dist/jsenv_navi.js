@@ -6743,6 +6743,15 @@ const prepareStyleValue = (
   return mergedValue;
 };
 
+const negativeEntries = (map) => {
+  const result = {};
+  for (const key of Object.keys(map)) {
+    result[`-${key}`] = `calc(-1 * ${map[key]})`;
+  }
+  return result;
+};
+
+
 // Unified design scale using t-shirt sizes with rem units for accessibility.
 // This scale is used for spacing to create visual harmony
 // and consistent proportions throughout the design system.
@@ -6755,6 +6764,7 @@ const SIZE_MAP = {
   xl: "var(--navi-xl)",
   xxl: "var(--navi-xxl)",
 };
+Object.assign(SIZE_MAP, negativeEntries(SIZE_MAP));
 const TYPO_SIZE_MAP = {
   xxs: "var(--navi-typo-xxs)",
   xs: "var(--navi-typo-xs)",
@@ -6764,6 +6774,7 @@ const TYPO_SIZE_MAP = {
   xl: "var(--navi-typo-xl)",
   xxl: "var(--navi-typo-xxl)",
 };
+Object.assign(TYPO_SIZE_MAP, negativeEntries(TYPO_SIZE_MAP));
 const sizeSpacingScaleKeys = new Set(Object.keys(SIZE_MAP));
 const isSizeSpacingScaleKey = (key) => {
   return sizeSpacingScaleKeys.has(key);
