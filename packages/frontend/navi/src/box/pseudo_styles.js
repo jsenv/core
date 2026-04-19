@@ -59,14 +59,23 @@ export const PSEUDO_CLASSES = {
   ":active": {
     attribute: "data-active",
     setup: (el, callback) => {
-      const onPointerUp = () => {
+      const onPointerDown = (e) => {
+        el.setPointerCapture(e.pointerId);
+        const onRelease = () => {
+          el.releasePointerCapture(e.pointerId);
+          el.removeEventListener("lostpointercapture", onRelease);
+          el.removeEventListener("pointercancel", onRelease);
+          el.removeEventListener("pointerup", onRelease);
+          callback();
+        };
+        el.addEventListener("lostpointercapture", onRelease);
+        el.addEventListener("pointercancel", onRelease);
+        el.addEventListener("pointerup", onRelease);
         callback();
       };
-      el.addEventListener("pointerdown", callback);
-      document.addEventListener("pointerup", onPointerUp);
+      el.addEventListener("pointerdown", onPointerDown);
       return () => {
-        el.removeEventListener("pointerdown", callback);
-        document.removeEventListener("pointerup", onPointerUp);
+        el.removeEventListener("pointerdown", onPointerDown);
       };
     },
     test: (el) => el.matches(":active"),
@@ -80,17 +89,23 @@ export const PSEUDO_CLASSES = {
           return;
         }
         pressedElements.add(el);
-        callback();
-      };
-      const onPointerUp = () => {
-        pressedElements.delete(el);
+        el.setPointerCapture(e.pointerId);
+        const onRelease = () => {
+          pressedElements.delete(el);
+          el.releasePointerCapture(e.pointerId);
+          el.removeEventListener("lostpointercapture", onRelease);
+          el.removeEventListener("pointercancel", onRelease);
+          el.removeEventListener("pointerup", onRelease);
+          callback();
+        };
+        el.addEventListener("lostpointercapture", onRelease);
+        el.addEventListener("pointercancel", onRelease);
+        el.addEventListener("pointerup", onRelease);
         callback();
       };
       el.addEventListener("pointerdown", onPointerDown);
-      document.addEventListener("pointerup", onPointerUp);
       return () => {
         el.removeEventListener("pointerdown", onPointerDown);
-        document.removeEventListener("pointerup", onPointerUp);
         pressedElements.delete(el);
       };
     },
