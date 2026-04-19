@@ -69,20 +69,20 @@ const css = /* css */ `
       --track-color-hover: color-mix(in srgb, var(--fill-color) 95%, black);
       --fill-color-hover: color-mix(in srgb, var(--fill-color) 80%, black);
       --thumb-color-hover: color-mix(in srgb, var(--thumb-color) 80%, black);
-      /* Active */
-      --border-color-active: color-mix(
+      /* Pressed */
+      --border-color-pressed: color-mix(
         in srgb,
         var(--border-color) 50%,
         transparent
       );
-      --track-border-color-active: var(--border-color-active);
-      --background-color-active: color-mix(
+      --track-border-color-pressed: var(--border-color-pressed);
+      --background-color-pressed: color-mix(
         in srgb,
         var(--background-color) 75%,
         white
       );
-      --fill-color-active: color-mix(in srgb, var(--fill-color) 75%, white);
-      --thumb-color-active: color-mix(in srgb, var(--thumb-color) 75%, white);
+      --fill-color-pressed: color-mix(in srgb, var(--fill-color) 75%, white);
+      --thumb-color-pressed: color-mix(in srgb, var(--thumb-color) 75%, white);
       /* Readonly */
       --border-color-readonly: color-mix(
         in srgb,
@@ -200,13 +200,13 @@ const css = /* css */ `
       --x-fill-color: var(--fill-color-hover);
       --x-thumb-color: var(--thumb-color-hover);
     }
-    /* Active */
-    &[data-active] {
-      --x-border-color: var(--border-color-active);
-      --x-track-border-color: var(--track-border-color-active);
-      --x-background-color: var(--background-color-active);
-      --x-fill-color: var(--fill-color-active);
-      --x-thumb-color: var(--thumb-color-active);
+    /* Pressed */
+    &[data-pressed] {
+      --x-border-color: var(--border-color-pressed);
+      --x-track-border-color: var(--track-border-color-pressed);
+      --x-background-color: var(--background-color-pressed);
+      --x-fill-color: var(--fill-color-pressed);
+      --x-thumb-color: var(--thumb-color-pressed);
     }
     /* Focus */
     &[data-focus-visible] {
@@ -272,11 +272,11 @@ const RangeStyleCSSVars = {
     fillColor: "--fill-color-hover",
     thumbColor: "--thumb-color-hover",
   },
-  ":active": {
+  ":-navi-pressed": {
     borderColor: "--border-color-hover",
     backgroundColor: "--background-color-hover",
-    fillColor: "--fill-color-active",
-    thumbColor: "--thumb-color-active",
+    fillColor: "--fill-color-pressed",
+    thumbColor: "--thumb-color-pressed",
   },
   ":read-only": {
     borderColor: "--border-color-readonly",
@@ -294,6 +294,7 @@ const RangeStyleCSSVars = {
 const RangePseudoClasses = [
   ":hover",
   ":active",
+  ":-navi-pressed",
   ":focus",
   ":focus-visible",
   ":read-only",

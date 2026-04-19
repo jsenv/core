@@ -6919,6 +6919,8 @@ const getDefaultDisplay = (tagName) => {
   return TAG_NAME_TO_DEFAULT_DISPLAY.get(normalizedTagName) || "inline";
 };
 
+const pressedElements = new WeakSet();
+
 const PSEUDO_CLASSES = {
   ":hover": {
     attribute: "data-hover",
@@ -6976,14 +6978,57 @@ const PSEUDO_CLASSES = {
   ":active": {
     attribute: "data-active",
     setup: (el, callback) => {
-      el.addEventListener("mousedown", callback);
-      document.addEventListener("mouseup", callback);
+      const onPointerDown = (e) => {
+        el.setPointerCapture(e.pointerId);
+        const onRelease = () => {
+          el.releasePointerCapture(e.pointerId);
+          el.removeEventListener("lostpointercapture", onRelease);
+          el.removeEventListener("pointercancel", onRelease);
+          el.removeEventListener("pointerup", onRelease);
+          callback();
+        };
+        el.addEventListener("lostpointercapture", onRelease);
+        el.addEventListener("pointercancel", onRelease);
+        el.addEventListener("pointerup", onRelease);
+        callback();
+      };
+      el.addEventListener("pointerdown", onPointerDown);
       return () => {
-        el.removeEventListener("mousedown", callback);
-        document.removeEventListener("mouseup", callback);
+        el.removeEventListener("pointerdown", onPointerDown);
       };
     },
     test: (el) => el.matches(":active"),
+  },
+  ":-navi-pressed": {
+    attribute: "data-pressed",
+    setup: (el, callback) => {
+      const onPointerDown = (e) => {
+        if (e.button !== 0) {
+          // only left pointer (mouse left click, touch, pen)
+          return;
+        }
+        pressedElements.add(el);
+        el.setPointerCapture(e.pointerId);
+        const onRelease = () => {
+          pressedElements.delete(el);
+          el.releasePointerCapture(e.pointerId);
+          el.removeEventListener("lostpointercapture", onRelease);
+          el.removeEventListener("pointercancel", onRelease);
+          el.removeEventListener("pointerup", onRelease);
+          callback();
+        };
+        el.addEventListener("lostpointercapture", onRelease);
+        el.addEventListener("pointercancel", onRelease);
+        el.addEventListener("pointerup", onRelease);
+        callback();
+      };
+      el.addEventListener("pointerdown", onPointerDown);
+      return () => {
+        el.removeEventListener("pointerdown", onPointerDown);
+        pressedElements.delete(el);
+      };
+    },
+    test: (el) => pressedElements.has(el),
   },
   ":visited": {
     attribute: "data-visited",
@@ -21436,8 +21481,8 @@ installImportMetaCssBuild(import.meta);const css$r = /* css */`
         black
       );
       --button-color-hover: var(--button-color);
-      /* Active */
-      --button-border-color-active: color-mix(
+      /* Pressed */
+      --button-border-color-pressed: color-mix(
         in srgb,
         var(--button-border-color) 90%,
         black
@@ -21487,6 +21532,9 @@ installImportMetaCssBuild(import.meta);const css$r = /* css */`
     border-radius: var(--x-button-border-radius);
     outline: none;
     cursor: var(--x-button-cursor);
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    user-select: none;
 
     &[data-icon] {
       --button-padding: 0;
@@ -21577,16 +21625,16 @@ installImportMetaCssBuild(import.meta);const css$r = /* css */`
       --x-button-background-color: var(--button-background-color);
       --x-button-color: var(--button-color);
     }
-    /* Active */
-    &[data-active] {
-      --x-button-outline-color: var(--button-border-color-active);
+    /* Pressed */
+    &[data-pressed] {
+      --x-button-outline-color: var(--button-border-color-pressed);
     }
-    &[data-active] {
+    &[data-pressed] {
       .navi_button_content {
         transform: scale(0.9);
       }
     }
-    &[data-active] {
+    &[data-pressed] {
       .navi_button_shadow {
         box-shadow:
           inset 0 3px 6px rgba(0, 0, 0, 0.2),
@@ -21622,7 +21670,7 @@ installImportMetaCssBuild(import.meta);const css$r = /* css */`
 
       color: unset;
 
-      /* Remove active effects */
+      /* Remove pressed effects */
       .navi_button_content {
         transform: none;
 
@@ -21684,8 +21732,8 @@ const ButtonStyleCSSVars = {
     borderColor: "--button-border-color-hover",
     color: "--button-color-hover"
   },
-  ":active": {
-    borderColor: "--button-border-color-active"
+  ":-navi-pressed": {
+    borderColor: "--button-border-color-pressed"
   },
   ":read-only": {
     backgroundColor: "--button-background-color-readonly",
@@ -21698,7 +21746,7 @@ const ButtonStyleCSSVars = {
     color: "--button-color-disabled"
   }
 };
-const ButtonPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
+const ButtonPseudoClasses = [":hover", ":active", ":-navi-pressed", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
 const ButtonPseudoElements = ["::-navi-loader"];
 const ButtonBasic = props => {
   const contextLoading = useContext(LoadingContext);
@@ -21739,6 +21787,16 @@ const ButtonBasic = props => {
     ...remainingProps,
     as: "button",
     ref: ref,
+    onContextMenu: e => {
+      if (e.pointerType === "touch") {
+        // Suppress the native context menu triggered by long-press on touch devices.
+        // Buttons have no meaningful context menu (no text to copy/paste/search),
+        // and the long-press visual state would get stuck if we let the menu open.
+        // Note: e.button === -1 is equivalent — it means no physical button triggered
+        // the event, i.e. it was synthesized from a long-press gesture (right-click gives e.button === 2).
+        e.preventDefault();
+      }
+    },
     "data-icon": icon ? "" : undefined,
     "data-reveal-on-interaction": revealOnInteraction ? "" : undefined,
     "data-discrete": discrete ? "" : undefined,
@@ -22233,7 +22291,7 @@ const css$q = /* css */`
       --link-color: rgb(0, 0, 238);
       --link-color-visited: color-mix(in srgb, var(--link-color), black 40%);
 
-      --link-color-active: red;
+      --link-color-pressed: red;
       --link-text-decoration: underline;
       --link-text-decoration-hover: var(--link-text-decoration);
       --link-cursor: pointer;
@@ -22268,7 +22326,7 @@ const css$q = /* css */`
     --x-link-color-hover: var(--link-color-hover, var(--link-color));
     --x-link-color-visited: var(--link-color-visited);
     --x-link-color-current: var(--link-color-current);
-    --x-link-color-active: var(--link-color-active);
+    --x-link-color-pressed: var(--link-color-pressed);
     --x-link-text-decoration: var(--link-text-decoration);
     --x-link-text-decoration-hover: var(--link-text-decoration-hover);
     --x-link-cursor: var(--link-cursor);
@@ -22362,10 +22420,10 @@ const css$q = /* css */`
     &[data-focus-visible] {
       outline-width: 2px;
     }
-    /* Active */
-    &[data-active] {
+    /* Pressed */
+    &[data-pressed] {
       /* Redefine it otherwise [data-visited] prevails */
-      --x-link-color: var(--x-link-color-active);
+      --x-link-color: var(--x-link-color-pressed);
     }
     /* Current */
     &[data-href-current] {
@@ -22508,8 +22566,8 @@ const LinkStyleCSSVars = {
     color: "--link-color-hover",
     textDecoration: "--link-text-decoration-hover"
   },
-  ":active": {
-    color: "--link-color-active"
+  ":-navi-pressed": {
+    color: "--link-color-pressed"
   },
   ":-navi-href-current": {
     background: "--link-background-current",
@@ -22522,7 +22580,7 @@ const LinkStyleCSSVars = {
     color: "--link-color-selected"
   }
 };
-const LinkPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":visited", ":-navi-loading", ":-navi-href-internal", ":-navi-href-external", ":-navi-href-anchor", ":-navi-href-current", ":-navi-selected"];
+const LinkPseudoClasses = [":hover", ":active", ":-navi-pressed", ":focus", ":focus-visible", ":read-only", ":disabled", ":visited", ":-navi-loading", ":-navi-href-internal", ":-navi-href-external", ":-navi-href-anchor", ":-navi-href-current", ":-navi-selected"];
 const LinkPseudoElements = ["::-navi-loader", "::-navi-indicator"];
 Object.assign(PSEUDO_CLASSES, {
   ":-navi-href-internal": {
@@ -24860,20 +24918,20 @@ installImportMetaCssBuild(import.meta);const css$j = /* css */`
       --track-color-hover: color-mix(in srgb, var(--fill-color) 95%, black);
       --fill-color-hover: color-mix(in srgb, var(--fill-color) 80%, black);
       --thumb-color-hover: color-mix(in srgb, var(--thumb-color) 80%, black);
-      /* Active */
-      --border-color-active: color-mix(
+      /* Pressed */
+      --border-color-pressed: color-mix(
         in srgb,
         var(--border-color) 50%,
         transparent
       );
-      --track-border-color-active: var(--border-color-active);
-      --background-color-active: color-mix(
+      --track-border-color-pressed: var(--border-color-pressed);
+      --background-color-pressed: color-mix(
         in srgb,
         var(--background-color) 75%,
         white
       );
-      --fill-color-active: color-mix(in srgb, var(--fill-color) 75%, white);
-      --thumb-color-active: color-mix(in srgb, var(--thumb-color) 75%, white);
+      --fill-color-pressed: color-mix(in srgb, var(--fill-color) 75%, white);
+      --thumb-color-pressed: color-mix(in srgb, var(--thumb-color) 75%, white);
       /* Readonly */
       --border-color-readonly: color-mix(
         in srgb,
@@ -24991,13 +25049,13 @@ installImportMetaCssBuild(import.meta);const css$j = /* css */`
       --x-fill-color: var(--fill-color-hover);
       --x-thumb-color: var(--thumb-color-hover);
     }
-    /* Active */
-    &[data-active] {
-      --x-border-color: var(--border-color-active);
-      --x-track-border-color: var(--track-border-color-active);
-      --x-background-color: var(--background-color-active);
-      --x-fill-color: var(--fill-color-active);
-      --x-thumb-color: var(--thumb-color-active);
+    /* Pressed */
+    &[data-pressed] {
+      --x-border-color: var(--border-color-pressed);
+      --x-track-border-color: var(--track-border-color-pressed);
+      --x-background-color: var(--background-color-pressed);
+      --x-fill-color: var(--fill-color-pressed);
+      --x-thumb-color: var(--thumb-color-pressed);
     }
     /* Focus */
     &[data-focus-visible] {
@@ -25061,11 +25119,11 @@ const RangeStyleCSSVars = {
     fillColor: "--fill-color-hover",
     thumbColor: "--thumb-color-hover"
   },
-  ":active": {
+  ":-navi-pressed": {
     borderColor: "--border-color-hover",
     backgroundColor: "--background-color-hover",
-    fillColor: "--fill-color-active",
-    thumbColor: "--thumb-color-active"
+    fillColor: "--fill-color-pressed",
+    thumbColor: "--thumb-color-pressed"
   },
   ":read-only": {
     borderColor: "--border-color-readonly",
@@ -25080,7 +25138,7 @@ const RangeStyleCSSVars = {
     thumbColor: "--thumb-color-disabled"
   }
 };
-const RangePseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
+const RangePseudoClasses = [":hover", ":active", ":-navi-pressed", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
 const RangePseudoElements = ["::-navi-loader"];
 const RangeChildPropSet = new Set([...fieldPropSet]);
 const InputRangeBasic = props => {

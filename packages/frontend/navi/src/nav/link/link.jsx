@@ -54,7 +54,7 @@ const css = /* css */ `
       --link-color: rgb(0, 0, 238);
       --link-color-visited: color-mix(in srgb, var(--link-color), black 40%);
 
-      --link-color-active: red;
+      --link-color-pressed: red;
       --link-text-decoration: underline;
       --link-text-decoration-hover: var(--link-text-decoration);
       --link-cursor: pointer;
@@ -89,7 +89,7 @@ const css = /* css */ `
     --x-link-color-hover: var(--link-color-hover, var(--link-color));
     --x-link-color-visited: var(--link-color-visited);
     --x-link-color-current: var(--link-color-current);
-    --x-link-color-active: var(--link-color-active);
+    --x-link-color-pressed: var(--link-color-pressed);
     --x-link-text-decoration: var(--link-text-decoration);
     --x-link-text-decoration-hover: var(--link-text-decoration-hover);
     --x-link-cursor: var(--link-cursor);
@@ -183,10 +183,10 @@ const css = /* css */ `
     &[data-focus-visible] {
       outline-width: 2px;
     }
-    /* Active */
-    &[data-active] {
+    /* Pressed */
+    &[data-pressed] {
       /* Redefine it otherwise [data-visited] prevails */
-      --x-link-color: var(--x-link-color-active);
+      --x-link-color: var(--x-link-color-pressed);
     }
     /* Current */
     &[data-href-current] {
@@ -330,8 +330,8 @@ const LinkStyleCSSVars = {
     color: "--link-color-hover",
     textDecoration: "--link-text-decoration-hover",
   },
-  ":active": {
-    color: "--link-color-active",
+  ":-navi-pressed": {
+    color: "--link-color-pressed",
   },
   ":-navi-href-current": {
     background: "--link-background-current",
@@ -347,6 +347,7 @@ const LinkStyleCSSVars = {
 const LinkPseudoClasses = [
   ":hover",
   ":active",
+  ":-navi-pressed",
   ":focus",
   ":focus-visible",
   ":read-only",
