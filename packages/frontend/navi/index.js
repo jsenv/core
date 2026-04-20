@@ -80,7 +80,6 @@ export { SummaryMarker } from "./src/field/details/summary_marker.jsx";
 export { openCallout } from "./src/field/validation/callout/callout.js";
 export { useCalloutClose } from "./src/field/validation/callout/callout.jsx";
 export { createAvailableConstraint } from "./src/field/validation/constraints/create_available_constraint.js";
-export { SINGLE_SPACE_CONSTRAINT } from "./src/field/validation/constraints/single_space_constraint.js";
 export {
   forwardActionRequested,
   installCustomConstraintValidation,

@@ -7026,11 +7026,29 @@ const PSEUDO_CLASSES = {
           el.removeEventListener("lostpointercapture", onRelease);
           el.removeEventListener("pointercancel", onRelease);
           el.removeEventListener("pointerup", onRelease);
+          el.removeEventListener("contextmenu", onContextMenu);
           callback();
+        };
+        const onContextMenu = (e) => {
+          // On touch devices, a long-press triggers the context menu.
+          // If the context menu is not prevented, it means it will open and the
+          // pointer events (pointerup, lostpointercapture) won't fire normally,
+          // leaving the element stuck in pressed state. We clear it manually.
+          // e.button === -1 means the event was synthesized from a long-press (not a real mouse click).
+          if (e.button === -1 && !e.defaultPrevented) {
+            pressedElements.delete(el);
+            el.releasePointerCapture(e.pointerId);
+            el.removeEventListener("lostpointercapture", onRelease);
+            el.removeEventListener("pointercancel", onRelease);
+            el.removeEventListener("pointerup", onRelease);
+            el.removeEventListener("contextmenu", onContextMenu);
+            callback();
+          }
         };
         el.addEventListener("lostpointercapture", onRelease);
         el.addEventListener("pointercancel", onRelease);
         el.addEventListener("pointerup", onRelease);
+        el.addEventListener("contextmenu", onContextMenu);
         callback();
       };
       el.addEventListener("pointerdown", onPointerDown);
@@ -21521,10 +21539,10 @@ const css$r = /* css */`
   }
 
   a.navi_button {
-    color: inherit;
-    text-decoration: none;
     display: inline-block;
+    color: inherit;
     text-align: center;
+    text-decoration: none;
   }
 
   .navi_button {
@@ -21855,14 +21873,20 @@ const ButtonBasic = props => {
     rel: innerRel,
     ref: ref,
     onContextMenu: e => {
-      if (e.pointerType === "touch") {
-        // Suppress the native context menu triggered by long-press on touch devices.
-        // Buttons have no meaningful context menu (no text to copy/paste/search),
-        // and the long-press visual state would get stuck if we let the menu open.
-        // Note: e.button === -1 is equivalent — it means no physical button triggered
-        // the event, i.e. it was synthesized from a long-press gesture (right-click gives e.button === 2).
-        e.preventDefault();
+      if (as === "a") {
+        // For link we keep context menu to allow "open in new tab" and other browser features
+        return;
       }
+      if (e.pointerType !== "touch") {
+        // right click is allowed
+        return;
+      }
+      // Suppress the native context menu triggered by long-press on touch devices.
+      // Buttons have no meaningful context menu (no text to copy/paste/search),
+      // and the long-press visual state would get stuck if we let the menu open.
+      // Note: e.button === -1 is equivalent — it means no physical button triggered
+      // the event, i.e. it was synthesized from a long-press gesture (right-click gives e.button === 2).
+      e.preventDefault();
     },
     "data-icon": icon ? "" : undefined,
     "data-reveal-on-interaction": revealOnInteraction ? "" : undefined,
@@ -32661,5 +32685,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, Box, Button, ButtonCopyToClipboard, Caption, CheckSvg, Checkbox, CheckboxList, CloseSvg, Code, Col, Colgroup, ConstructionSvg, Details, DialogLayout, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, Loading, MessageBox, Meter, Nav, Paragraph, Quantity, QuantityIntl, Radio, RadioList, Route, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, SearchSvg, Select, SelectionContext, Separator, SettingsSvg, SidePanel, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, Thead, Title, Tr, UITransition, UserSvg, ViewportLayout, actionIntegratedVia, actionRunEffect, addCustomMessage, arraySignalMembership, compareTwoJsValues, createAction, createAvailableConstraint, createIntl, createRequestCanceller, createSelectionKeyboardShortcuts, enableDebugActions, enableDebugOnDocumentLoading, filterTableSelection, forwardActionRequested, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, localStorageSignal, navBack, navForward, navTo, openCallout, rawUrlPart, reload, removeCustomMessage, requestAction, rerunActions, resource, route, routeAction, setBaseUrl, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, syncOwnedResourceToSignals, syncResourceToSignals, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutClose, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDarkBackgroundAttribute, useDependenciesDiff, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState$1 as useNavState, useOrderedColumns, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSidePanelClose, useSignalSync, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage };
+export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, Box, Button, ButtonCopyToClipboard, Caption, CheckSvg, Checkbox, CheckboxList, CloseSvg, Code, Col, Colgroup, ConstructionSvg, Details, DialogLayout, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, Loading, MessageBox, Meter, Nav, Paragraph, Quantity, QuantityIntl, Radio, RadioList, Route, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectionContext, Separator, SettingsSvg, SidePanel, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, Thead, Title, Tr, UITransition, UserSvg, ViewportLayout, actionIntegratedVia, actionRunEffect, addCustomMessage, arraySignalMembership, compareTwoJsValues, createAction, createAvailableConstraint, createIntl, createRequestCanceller, createSelectionKeyboardShortcuts, enableDebugActions, enableDebugOnDocumentLoading, filterTableSelection, forwardActionRequested, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, localStorageSignal, navBack, navForward, navTo, openCallout, rawUrlPart, reload, removeCustomMessage, requestAction, rerunActions, resource, route, routeAction, setBaseUrl, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, syncOwnedResourceToSignals, syncResourceToSignals, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutClose, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDarkBackgroundAttribute, useDependenciesDiff, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState$1 as useNavState, useOrderedColumns, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSidePanelClose, useSignalSync, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage };
 //# sourceMappingURL=jsenv_navi.js.map

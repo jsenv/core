@@ -7,9 +7,9 @@ import { useActionStatus } from "../action/use_action_status.js";
 import { useExecuteAction } from "../action/use_execute_action.js";
 import { Box } from "../box/box.jsx";
 import { LoaderBackground } from "../graphic/loader/loader_background.jsx";
-import { Text, markAsOutsideTextFlow } from "../text/text.jsx";
 import { getHrefTargetInfo } from "../nav/browser_integration/href_target_info.js";
 import { assertRoute, useRouteStatus } from "../nav/route.js";
+import { Text, markAsOutsideTextFlow } from "../text/text.jsx";
 import { FormActionContext } from "./form_context.js";
 import { useActionEvents } from "./use_action_events.js";
 import { useAutoFocus } from "./use_auto_focus.js";
@@ -95,10 +95,10 @@ const css = /* css */ `
   }
 
   a.navi_button {
-    color: inherit;
-    text-decoration: none;
     display: inline-block;
+    color: inherit;
     text-align: center;
+    text-decoration: none;
   }
 
   .navi_button {
@@ -324,7 +324,11 @@ const ButtonWithRoute = ({ route, routeParams, children, ...rest }) => {
   const linkMatching = matching && paramsAreMatching;
 
   return (
-    <ButtonBasic href={url} data-href-current={linkMatching ? "" : undefined} {...rest}>
+    <ButtonBasic
+      href={url}
+      data-href-current={linkMatching ? "" : undefined}
+      {...rest}
+    >
       {children || route.buildRelativeUrl(routeParams)}
     </ButtonBasic>
   );
@@ -418,8 +422,14 @@ const ButtonBasic = (props) => {
   if (isLink) {
     as = "a";
     const { isSameSite } = getHrefTargetInfo(href);
-    innerTarget = target === undefined ? (isSameSite ? undefined : "_blank") : target;
-    innerRel = rel === undefined ? (isSameSite ? undefined : "noopener noreferrer") : rel;
+    innerTarget =
+      target === undefined ? (isSameSite ? undefined : "_blank") : target;
+    innerRel =
+      rel === undefined
+        ? isSameSite
+          ? undefined
+          : "noopener noreferrer"
+        : rel;
   }
 
   const renderButtonContent = (buttonProps) => {
@@ -445,14 +455,20 @@ const ButtonBasic = (props) => {
       rel={innerRel}
       ref={ref}
       onContextMenu={(e) => {
-        if (e.pointerType === "touch") {
-          // Suppress the native context menu triggered by long-press on touch devices.
-          // Buttons have no meaningful context menu (no text to copy/paste/search),
-          // and the long-press visual state would get stuck if we let the menu open.
-          // Note: e.button === -1 is equivalent — it means no physical button triggered
-          // the event, i.e. it was synthesized from a long-press gesture (right-click gives e.button === 2).
-          e.preventDefault();
+        if (as === "a") {
+          // For link we keep context menu to allow "open in new tab" and other browser features
+          return;
         }
+        if (e.pointerType !== "touch") {
+          // right click is allowed
+          return;
+        }
+        // Suppress the native context menu triggered by long-press on touch devices.
+        // Buttons have no meaningful context menu (no text to copy/paste/search),
+        // and the long-press visual state would get stuck if we let the menu open.
+        // Note: e.button === -1 is equivalent — it means no physical button triggered
+        // the event, i.e. it was synthesized from a long-press gesture (right-click gives e.button === 2).
+        e.preventDefault();
       }}
       data-icon={icon ? "" : undefined}
       data-reveal-on-interaction={revealOnInteraction ? "" : undefined}

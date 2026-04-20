@@ -149,7 +149,6 @@
       import { useState } from "preact/hooks";
       import { signal } from "@preact/signals";
       import {
-        SINGLE_SPACE_CONSTRAINT,
         useEditionController,
         Editable,
         createAction,
@@ -355,7 +354,7 @@
                     setValue(newText);
                     return `Updated to: "${newText}"`;
                   }}
-                  constraints={[SINGLE_SPACE_CONSTRAINT]}
+                 data-single-space=""
                 />
               </div>
             </div>
@@ -402,7 +401,7 @@
                     setValue(newText);
                     return `Saved: "${newText}"`;
                   }}
-                  constraints={[SINGLE_SPACE_CONSTRAINT]}
+                  data-single-space=""
                 />
               </div>
             </div>
@@ -455,7 +454,7 @@
                       `Cannot save "${newText}" - simulated error`,
                     );
                   }}
-                  constraints={[SINGLE_SPACE_CONSTRAINT]}
+               data-single-space=""
                 />
               </div>
             </div>
@@ -497,7 +496,7 @@
                     setValue(newText);
                     return `Updated styled text: "${newText}"`;
                   }}
-                  constraints={[SINGLE_SPACE_CONSTRAINT]}
+                data-single-space=""
                 >
                   <strong style={{ color: "#e74c3c", fontSize: "18px" }}>
                     {value}
@@ -553,7 +552,7 @@
                   onActionStart={() => {
                     setResult("Saving...");
                   }}
-                  constraints={[SINGLE_SPACE_CONSTRAINT]}
+                 data-single-space=""
                 >
                   <span
                     onClick={() => {

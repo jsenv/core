@@ -3,7 +3,6 @@ import {
   Editable,
   Icon,
   Input,
-  SINGLE_SPACE_CONSTRAINT,
   useEditionController,
 } from "@jsenv/navi";
 
@@ -94,7 +93,8 @@ const RenameInputOrName = ({
       value={itemName}
       action={(v) => renameItemAction(item, v)}
       required
-      constraints={[SINGLE_SPACE_CONSTRAINT, availableNameConstraint]}
+      data-single-space=""
+      constraints={[availableNameConstraint]}
     >
       {children}
     </Editable>
@@ -134,7 +134,8 @@ export const ExplorerNewItem = ({
         onActionEnd={onActionEnd}
         autoFocus
         required
-        constraints={[SINGLE_SPACE_CONSTRAINT, availableNameConstraint]}
+        data-single-space=""
+        constraints={[availableNameConstraint]}
       />
     </span>
   );

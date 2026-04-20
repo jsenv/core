@@ -96,11 +96,29 @@ export const PSEUDO_CLASSES = {
           el.removeEventListener("lostpointercapture", onRelease);
           el.removeEventListener("pointercancel", onRelease);
           el.removeEventListener("pointerup", onRelease);
+          el.removeEventListener("contextmenu", onContextMenu);
           callback();
+        };
+        const onContextMenu = (e) => {
+          // On touch devices, a long-press triggers the context menu.
+          // If the context menu is not prevented, it means it will open and the
+          // pointer events (pointerup, lostpointercapture) won't fire normally,
+          // leaving the element stuck in pressed state. We clear it manually.
+          // e.button === -1 means the event was synthesized from a long-press (not a real mouse click).
+          if (e.button === -1 && !e.defaultPrevented) {
+            pressedElements.delete(el);
+            el.releasePointerCapture(e.pointerId);
+            el.removeEventListener("lostpointercapture", onRelease);
+            el.removeEventListener("pointercancel", onRelease);
+            el.removeEventListener("pointerup", onRelease);
+            el.removeEventListener("contextmenu", onContextMenu);
+            callback();
+          }
         };
         el.addEventListener("lostpointercapture", onRelease);
         el.addEventListener("pointercancel", onRelease);
         el.addEventListener("pointerup", onRelease);
+        el.addEventListener("contextmenu", onContextMenu);
         callback();
       };
       el.addEventListener("pointerdown", onPointerDown);
