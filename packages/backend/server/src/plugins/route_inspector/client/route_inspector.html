@@ -46,6 +46,9 @@
         --forbidden-border-color: #cc8800;
         --forbidden-badge-bg: #fff3cc;
         --forbidden-badge-color: #7a5000;
+        --admin-badge-bg: #f0f4ff;
+        --admin-badge-border-color: #5c7cfa;
+        --admin-badge-color: #2a4bbf;
       }
       :root[data-theme="dark"] {
         --background-color: #121212;
@@ -57,6 +60,9 @@
         --forbidden-border-color: #8a6000;
         --forbidden-badge-bg: #3a2800;
         --forbidden-badge-color: #f0c060;
+        --admin-badge-bg: #0d1a3a;
+        --admin-badge-border-color: #3b5bdb;
+        --admin-badge-color: #91a7ff;
       }
 
       :root[data-theme="dark"] a {
@@ -493,6 +499,17 @@
         white-space: nowrap;
         background: var(--forbidden-badge-bg);
         border: 1px solid var(--forbidden-border-color);
+        border-radius: 4px;
+      }
+      .route_admin_badge {
+        margin-right: 6px;
+        padding: 3px 8px;
+        color: var(--admin-badge-color);
+        font-weight: 600;
+        font-size: 12px;
+        white-space: nowrap;
+        background: var(--admin-badge-bg);
+        border: 1px solid var(--admin-badge-border-color);
         border-radius: 4px;
       }
       .route_forbidden_content {
@@ -1422,6 +1439,7 @@
         clientCodeExample,
         declarationSource,
         forbidden,
+        visibleBecauseAdmin,
       }) => {
         const [selectedMethod] = useUrlStringParam("method");
         const [selectedPackageName] = usePackageUrlStringParam();
@@ -1438,6 +1456,7 @@
             class="route_details"
             data-method="${method}"
             data-forbidden="${forbidden || undefined}"
+            data-admin-visible="${visibleBecauseAdmin || undefined}"
           >
             <summary class="route_summary_container">
               <span class="route_method">${method}</span>
@@ -1450,9 +1469,16 @@
                     /></a>`
                 : null}
               <span style="flex:1"></span>
-              ${forbidden
+              ${visibleBecauseAdmin
+                ? html`<span
+                      class="route_admin_badge"
+                      title="This route is only visible because the server was started with canExposeSensitiveData"
+                      >&#128274; admin only</span
+                    >`
+                : null}
+              ${forbidden && !visibleBecauseAdmin
                 ? html`<span class="route_forbidden_badge"
-                      >🔒 access denied</span
+                      >&#128274; access denied</span
                     >`
                 : null}
               <${RouteBadge} meta="${meta}" />
@@ -1477,8 +1503,9 @@
                   />`
               : html`<div class="route_details_content route_forbidden_content">
                     <p>
-                      You do not have the required permissions to access this
-                      route.
+                      ${visibleBecauseAdmin
+                        ? "This route is only visible because the server was started with canExposeSensitiveData. Access is denied with the current permissions."
+                        : "You do not have the required permissions to access this route."}
                     </p>
                   </div>`}
           </details>`;
@@ -1611,26 +1638,26 @@
           const websocketScheme =
             self.location.protocol === "https:" ? "wss" : "ws";
           const websocketOrigin = `${websocketScheme}://${self.location.host}`;
-          jsSource = /*js */ `
-                const websocket = new WebSocket("${websocketOrigin}${resource}");
-                websocket.onerror = () => {
-                  console.error("Failed to connect to websocket endpoint");
-                };
-                websocket.onopen = () => {
-                  console.info("Connected to websocket endpoint")
-                };
-                websocket.onmessage = (event) => {
-                  console.log("Received message", event.data);
-                };
-                `;
+          jsSource = `
+const websocket = new WebSocket("${websocketOrigin}${resource}");
+websocket.onerror = () => {
+  console.error("Failed to connect to websocket endpoint");
+};
+websocket.onopen = () => {
+  console.info("Connected to websocket endpoint");
+};
+websocket.onmessage = (event) => {
+  console.log("Received message", event.data);
+};
+          `;
         } else {
           let fetchLine;
           if (method === "GET") {
             fetchLine = `const response = await window.fetch("${resource}");`;
           } else {
             fetchLine = `const response = await window.fetch("${resource}", {
-        method: "${method}",
-      }`;
+  method: "${method}",
+}`;
           }
           let readResponseLine;
           if (availableMediaTypes.includes("application/json")) {
@@ -1639,10 +1666,10 @@
             readResponseLine = `const text = await response.text();`;
           }
 
-          jsSource = /*js */ `
-      ${fetchLine}
-      ${readResponseLine}
-                `;
+          jsSource = `
+${fetchLine};
+${readResponseLine};
+          `;
         }
 
         return html`<code-block lang="js" data-escaped data-copy-button

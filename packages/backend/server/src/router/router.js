@@ -551,10 +551,17 @@ It should be should be one of route.${routePropertyName}: ${availableValues.join
       if (someRouteHasPermissions) {
         const { permissionsRequired, permissionsToSee } = route;
         // route has no permission config → hidden from inspector
+        // (unless canExposeSensitiveData is set, in which case we show it as admin-only visible)
         if (
           permissionsRequired === undefined &&
           permissionsToSee === undefined
         ) {
+          if (!canExposeSensitiveData) {
+            continue;
+          }
+          const routeData = route.toJSON({ canExposeSensitiveData });
+          routeData.visibleBecauseAdmin = true;
+          data.push(routeData);
           continue;
         }
         // anyone can access → always visible
@@ -566,25 +573,36 @@ It should be should be one of route.${routePropertyName}: ${availableValues.join
             const granted =
               await fetchSecondArg.hasPermissions(permissionsRequired);
             if (!granted) {
-              // access denied — check if route should be visible at all
+              // determine if route is normally visible (permissionsToSee satisfied)
+              let normallyCanSee;
               if (permissionsToSee === undefined) {
+                normallyCanSee = false;
+              } else {
+                const permsSet = await fetchSecondArg.getAllPermissions();
+                normallyCanSee =
+                  permissionsToSee.length === 0 ||
+                  permissionsSatisfy(permsSet, permissionsToSee);
+              }
+              if (!normallyCanSee && !canExposeSensitiveData) {
                 continue;
               }
-              const permsSet = await fetchSecondArg.getAllPermissions();
-              const canSee =
-                permissionsToSee.length === 0 ||
-                permissionsSatisfy(permsSet, permissionsToSee);
-              if (!canSee) {
-                continue;
-              }
-              // visible but forbidden — include with forbidden flag
               const routeData = route.toJSON({ canExposeSensitiveData });
               routeData.forbidden = true;
+              if (!normallyCanSee) {
+                routeData.visibleBecauseAdmin = true;
+              }
               data.push(routeData);
               continue;
             }
           } else if (permissionsToSee === undefined) {
-            // no request context and route is not publicly visible
+            if (!canExposeSensitiveData) {
+              // no request context and route is not publicly visible
+              continue;
+            }
+            const routeData = route.toJSON({ canExposeSensitiveData });
+            routeData.forbidden = true;
+            routeData.visibleBecauseAdmin = true;
+            data.push(routeData);
             continue;
           }
         }
