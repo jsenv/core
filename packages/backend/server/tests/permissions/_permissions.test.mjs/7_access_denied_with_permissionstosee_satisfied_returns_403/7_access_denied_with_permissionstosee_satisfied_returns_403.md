@@ -1,18 +1,19 @@
-# [access denied without visible returns 404](../../permissions.test.mjs)
+# [access denied with permissionsToSee satisfied returns 403](../../permissions.test.mjs)
 
 ```js
 const server = await startPermissionsServer({
   routes: [
     {
       endpoint: "GET /",
-      access: "admin",
+      permissionsRequired: ["admin"],
+      permissionsToSee: ["user"],
       fetch: () => new Response("ok"),
     },
   ],
   plugins: [
     {
       name: "test:permissions",
-      getPermissions: () => ["user"],
+      grantPermissions: () => ["user"],
     },
   ],
 });
@@ -29,8 +30,7 @@ return { status: response.status };
 
 ```console
 GET http://127.0.0.1/
-  404 The URL / does not exist on this server.
-  The list of existing endpoints is available at /.internal/route_inspector.
+  403 Forbidden
 ```
 
 </details>
@@ -40,7 +40,7 @@ GET http://127.0.0.1/
 
 ```js
 {
-  "status": 404
+  "status": 403
 }
 ```
 

@@ -1,12 +1,18 @@
-# [access string without getPermissions plugin returns 404](../../permissions.test.mjs)
+# [access denied without permissionsToSee returns 404](../../permissions.test.mjs)
 
 ```js
 const server = await startPermissionsServer({
   routes: [
     {
       endpoint: "GET /",
-      access: "admin",
+      permissionsRequired: ["admin"],
       fetch: () => new Response("ok"),
+    },
+  ],
+  plugins: [
+    {
+      name: "test:permissions",
+      grantPermissions: () => ["user"],
     },
   ],
 });

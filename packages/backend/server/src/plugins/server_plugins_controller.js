@@ -9,7 +9,7 @@ export const createServerPluginsController = async (serverPlugins) => {
         serverListening: { type: "hook" },
         redirectRequest: { type: "hook" },
         augmentRouteFetchSecondArg: { type: "hook" },
-        getPermissions: { type: "hook" },
+        grantPermissions: { type: "hook" },
         handleError: { type: "hook" },
         onResponsePush: { type: "hook" },
         injectResponseProperties: { type: "hook" },

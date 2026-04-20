@@ -1,18 +1,19 @@
-# [access array denied when only one permission present](../../permissions.test.mjs)
+# [access denied with permissionsToSee not satisfied returns 404](../../permissions.test.mjs)
 
 ```js
 const server = await startPermissionsServer({
   routes: [
     {
       endpoint: "GET /",
-      access: ["read", "write"],
+      permissionsRequired: ["admin"],
+      permissionsToSee: ["superuser"],
       fetch: () => new Response("ok"),
     },
   ],
   plugins: [
     {
       name: "test:permissions",
-      getPermissions: () => ["read"],
+      grantPermissions: () => ["user"],
     },
   ],
 });

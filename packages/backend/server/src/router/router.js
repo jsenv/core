@@ -32,7 +32,7 @@ export const createRouter = (
 ) => {
   const logger = createLogger({ logLevel });
   const routeSet = new Set();
-  let someRouteHasAccessOrVisible = false;
+  let someRouteHasPermissions = false;
 
   const constructAvailableEndpoints = () => {
     // TODO: memoize
@@ -174,8 +174,11 @@ export const createRouter = (
   for (const routeDescription of routeDescriptionArray) {
     const route = createRoute(routeDescription);
     routeSet.add(route);
-    if (route.access !== undefined || route.visible !== undefined) {
-      someRouteHasAccessOrVisible = true;
+    if (
+      route.permissionsRequired !== undefined ||
+      route.permissionsToSee !== undefined
+    ) {
+      someRouteHasPermissions = true;
     }
   }
 
@@ -473,12 +476,12 @@ It should be should be one of route.${routePropertyName}: ${availableValues.join
         );
         Object.assign(request.params, named, stars);
         fetchSecondArg.contentNegotiation = contentNegotiationResult;
-        // permissions check — only active if at least one route declares access or visible
-        if (someRouteHasAccessOrVisible) {
-          const { access, visible } = route;
+        // permissions check — only active if at least one route declares permissionsRequired or permissionsToSee
+        if (someRouteHasPermissions) {
+          const { permissionsRequired, permissionsToSee } = route;
           const denied = await checkRouteAccess(
-            access,
-            visible,
+            permissionsRequired,
+            permissionsToSee,
             request,
             fetchSecondArg,
           );
@@ -598,8 +601,8 @@ const createRoute = ({
   headers,
   service,
   serverPlugin,
-  access,
-  visible,
+  permissionsRequired,
+  permissionsToSee,
   availableMediaTypes = [],
   availableLanguages = [],
   availableVersions = [],
@@ -650,8 +653,8 @@ const createRoute = ({
     description,
     service,
     serverPlugin,
-    access,
-    visible,
+    permissionsRequired,
+    permissionsToSee,
     availableMediaTypes,
     availableLanguages,
     availableVersions,
@@ -741,48 +744,47 @@ const isRedirectStatus = (status) => REDIRECT_STATUSES.has(status);
 
 // Returns a denied response if the request does not satisfy route access/visible config.
 // Returns null if access is granted.
-const checkRouteAccess = async (access, visible, request, fetchSecondArg) => {
-  // No access declared → route is hidden by default
-  if (access === undefined) {
+const checkRouteAccess = async (
+  permissionsRequired,
+  permissionsToSee,
+  request,
+  fetchSecondArg,
+) => {
+  // No permissionsRequired declared → route is hidden by default
+  if (permissionsRequired === undefined) {
     return createRouteNotFoundResponse(request);
   }
-  // access: "all" → always granted
-  if (access === "all") {
+  // permissionsRequired: [] → anyone can access
+  if (permissionsRequired.length === 0) {
     return null;
   }
-  // access is an object → early-exit permission check (stops as soon as satisfied)
-  const granted = await fetchSecondArg.hasPermissions(access);
+  // early-exit permission check (stops as soon as rule is satisfied)
+  const granted = await fetchSecondArg.hasPermissions(permissionsRequired);
   if (granted) {
     return null;
   }
   // access denied — decide between 404 and 403
-  if (visible === undefined) {
+  if (permissionsToSee === undefined) {
     return createRouteNotFoundResponse(request);
   }
-  // visible check uses full permissions (already accumulated from hasPermissions call above)
+  // permissionsToSee check uses full permissions (already accumulated from hasPermissions call above)
   const permsSet = await fetchSecondArg.getAllPermissions();
-  if (visible === "all" || permissionsSatisfy(permsSet, visible)) {
+  if (
+    permissionsToSee.length === 0 ||
+    permissionsSatisfy(permsSet, permissionsToSee)
+  ) {
     return createForbiddenResponse(request);
   }
   return createRouteNotFoundResponse(request);
 };
 
-const permissionsSatisfy = (permissionsSet, rule) => {
-  if (rule === "all") {
-    return true;
-  }
-  if (typeof rule === "string") {
-    return permissionsSet.has(rule);
-  }
-  if (Array.isArray(rule)) {
-    for (const r of rule) {
-      if (!permissionsSet.has(r)) {
-        return false;
-      }
+const permissionsSatisfy = (permissionsSet, permissionsRequired) => {
+  for (const p of permissionsRequired) {
+    if (!permissionsSet.has(p)) {
+      return false;
     }
-    return true;
   }
-  return false;
+  return true;
 };
 
 const createForbiddenResponse = () => {

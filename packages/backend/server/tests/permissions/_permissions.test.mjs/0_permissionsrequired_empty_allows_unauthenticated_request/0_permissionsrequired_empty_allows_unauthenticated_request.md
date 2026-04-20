@@ -1,11 +1,11 @@
-# [access all allows unauthenticated request](../../permissions.test.mjs)
+# [permissionsRequired empty allows unauthenticated request](../../permissions.test.mjs)
 
 ```js
 const server = await startPermissionsServer({
   routes: [
     {
       endpoint: "GET /",
-      access: "all",
+      permissionsRequired: [],
       fetch: () => new Response("ok"),
     },
   ],

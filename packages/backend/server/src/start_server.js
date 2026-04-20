@@ -51,22 +51,13 @@ const TIMING_NOOP = () => {
   return { end: () => {} };
 };
 
-const permissionsSatisfy = (permissionsSet, rule) => {
-  if (rule === "all") {
-    return true;
-  }
-  if (typeof rule === "string") {
-    return permissionsSet.has(rule);
-  }
-  if (Array.isArray(rule)) {
-    for (const r of rule) {
-      if (!permissionsSet.has(r)) {
-        return false;
-      }
+const permissionsSatisfy = (permissionsSet, permissionsRequired) => {
+  for (const p of permissionsRequired) {
+    if (!permissionsSet.has(p)) {
+      return false;
     }
-    return true;
   }
-  return false;
+  return true;
 };
 
 export const startServer = async ({
@@ -598,14 +589,14 @@ export const startServer = async ({
         const permissionsSet = new Set();
         const nextPermissionsHook =
           serverPluginsController.createAsyncHookIterator(
-            "getPermissions",
+            "grantPermissions",
             request,
           );
-        const drainPermissionsUntil = async (rule) => {
+        const drainPermissionsUntil = async (permissionsRequired) => {
           for (;;) {
             if (
-              rule !== undefined &&
-              permissionsSatisfy(permissionsSet, rule)
+              permissionsRequired !== undefined &&
+              permissionsSatisfy(permissionsSet, permissionsRequired)
             ) {
               return true;
             }
@@ -625,11 +616,11 @@ export const startServer = async ({
           await drainPermissionsUntil(undefined);
           return permissionsSet;
         };
-        const hasPermissions = async (rule) => {
-          if (rule === "all") {
+        const hasPermissions = async (permissionsRequired) => {
+          if (permissionsRequired.length === 0) {
             return true;
           }
-          return drainPermissionsUntil(rule);
+          return drainPermissionsUntil(permissionsRequired);
         };
         fetchSecondArg.getAllPermissions = getAllPermissions;
         fetchSecondArg.hasPermissions = hasPermissions;

@@ -1,18 +1,18 @@
-# [access array granted when all permissions present](../../permissions.test.mjs)
+# [permissionsRequired array granted when all permissions present](../../permissions.test.mjs)
 
 ```js
 const server = await startPermissionsServer({
   routes: [
     {
       endpoint: "GET /",
-      access: ["read", "write"],
+      permissionsRequired: ["read", "write"],
       fetch: () => new Response("ok"),
     },
   ],
   plugins: [
     {
       name: "test:permissions",
-      getPermissions: () => ["read", "write"],
+      grantPermissions: () => ["read", "write"],
     },
   ],
 });

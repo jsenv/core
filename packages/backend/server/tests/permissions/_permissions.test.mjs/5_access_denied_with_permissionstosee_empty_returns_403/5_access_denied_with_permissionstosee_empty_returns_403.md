@@ -1,19 +1,19 @@
-# [access denied with visible permission satisfied returns 403](../../permissions.test.mjs)
+# [access denied with permissionsToSee empty returns 403](../../permissions.test.mjs)
 
 ```js
 const server = await startPermissionsServer({
   routes: [
     {
       endpoint: "GET /",
-      access: "admin",
-      visible: "user",
+      permissionsRequired: ["admin"],
+      permissionsToSee: [],
       fetch: () => new Response("ok"),
     },
   ],
   plugins: [
     {
       name: "test:permissions",
-      getPermissions: () => ["user"],
+      grantPermissions: () => ["user"],
     },
   ],
 });

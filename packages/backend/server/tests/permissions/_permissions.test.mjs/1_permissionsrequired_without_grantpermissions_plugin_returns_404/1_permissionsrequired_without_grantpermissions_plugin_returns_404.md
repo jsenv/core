@@ -1,19 +1,12 @@
-# [access denied with visible permission not satisfied returns 404](../../permissions.test.mjs)
+# [permissionsRequired without grantPermissions plugin returns 404](../../permissions.test.mjs)
 
 ```js
 const server = await startPermissionsServer({
   routes: [
     {
       endpoint: "GET /",
-      access: "admin",
-      visible: "superuser",
+      permissionsRequired: ["admin"],
       fetch: () => new Response("ok"),
-    },
-  ],
-  plugins: [
-    {
-      name: "test:permissions",
-      getPermissions: () => ["user"],
     },
   ],
 });

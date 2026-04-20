@@ -11,14 +11,14 @@ const startPermissionsServer = async ({ routes, plugins = [] }) => {
 };
 
 await snapshotServerTests(import.meta.url, ({ test }) => {
-  // --- access: "all" ---
+  // --- permissionsRequired: [] (empty = anyone) ---
 
-  test("access all allows unauthenticated request", async () => {
+  test("permissionsRequired empty allows unauthenticated request", async () => {
     const server = await startPermissionsServer({
       routes: [
         {
           endpoint: "GET /",
-          access: "all",
+          permissionsRequired: [],
           fetch: () => new Response("ok"),
         },
       ],
@@ -27,14 +27,14 @@ await snapshotServerTests(import.meta.url, ({ test }) => {
     return { status: response.status, body: await response.text() };
   });
 
-  // --- access without permission plugin → denied (404) ---
+  // --- permissionsRequired without grantPermissions plugin → denied (404) ---
 
-  test("access string without getPermissions plugin returns 404", async () => {
+  test("permissionsRequired without grantPermissions plugin returns 404", async () => {
     const server = await startPermissionsServer({
       routes: [
         {
           endpoint: "GET /",
-          access: "admin",
+          permissionsRequired: ["admin"],
           fetch: () => new Response("ok"),
         },
       ],
@@ -50,14 +50,14 @@ await snapshotServerTests(import.meta.url, ({ test }) => {
       routes: [
         {
           endpoint: "GET /",
-          access: "admin",
+          permissionsRequired: ["admin"],
           fetch: () => new Response("ok"),
         },
       ],
       plugins: [
         {
           name: "test:permissions",
-          getPermissions: () => ["admin"],
+          grantPermissions: () => ["admin"],
         },
       ],
     });
@@ -72,14 +72,14 @@ await snapshotServerTests(import.meta.url, ({ test }) => {
       routes: [
         {
           endpoint: "GET /",
-          access: "admin",
+          permissionsRequired: ["admin"],
           fetch: () => new Response("ok"),
         },
       ],
       plugins: [
         {
           name: "test:permissions",
-          getPermissions: () => ["user"],
+          grantPermissions: () => ["user"],
         },
       ],
     });
@@ -87,21 +87,21 @@ await snapshotServerTests(import.meta.url, ({ test }) => {
     return { status: response.status };
   });
 
-  // --- access denied, no visible → 404 ---
+  // --- access denied, no permissionsToSee → 404 ---
 
-  test("access denied without visible returns 404", async () => {
+  test("access denied without permissionsToSee returns 404", async () => {
     const server = await startPermissionsServer({
       routes: [
         {
           endpoint: "GET /",
-          access: "admin",
+          permissionsRequired: ["admin"],
           fetch: () => new Response("ok"),
         },
       ],
       plugins: [
         {
           name: "test:permissions",
-          getPermissions: () => ["user"],
+          grantPermissions: () => ["user"],
         },
       ],
     });
@@ -109,22 +109,22 @@ await snapshotServerTests(import.meta.url, ({ test }) => {
     return { status: response.status };
   });
 
-  // --- access denied, visible: "all" → 403 ---
+  // --- access denied, permissionsToSee: [] → 403 ---
 
-  test("access denied with visible all returns 403", async () => {
+  test("access denied with permissionsToSee empty returns 403", async () => {
     const server = await startPermissionsServer({
       routes: [
         {
           endpoint: "GET /",
-          access: "admin",
-          visible: "all",
+          permissionsRequired: ["admin"],
+          permissionsToSee: [],
           fetch: () => new Response("ok"),
         },
       ],
       plugins: [
         {
           name: "test:permissions",
-          getPermissions: () => ["user"],
+          grantPermissions: () => ["user"],
         },
       ],
     });
@@ -132,22 +132,22 @@ await snapshotServerTests(import.meta.url, ({ test }) => {
     return { status: response.status };
   });
 
-  // --- access denied, visible permission not satisfied → 404 ---
+  // --- access denied, permissionsToSee not satisfied → 404 ---
 
-  test("access denied with visible permission not satisfied returns 404", async () => {
+  test("access denied with permissionsToSee not satisfied returns 404", async () => {
     const server = await startPermissionsServer({
       routes: [
         {
           endpoint: "GET /",
-          access: "admin",
-          visible: "superuser",
+          permissionsRequired: ["admin"],
+          permissionsToSee: ["superuser"],
           fetch: () => new Response("ok"),
         },
       ],
       plugins: [
         {
           name: "test:permissions",
-          getPermissions: () => ["user"],
+          grantPermissions: () => ["user"],
         },
       ],
     });
@@ -155,22 +155,22 @@ await snapshotServerTests(import.meta.url, ({ test }) => {
     return { status: response.status };
   });
 
-  // --- access denied, visible permission satisfied → 403 ---
+  // --- access denied, permissionsToSee satisfied → 403 ---
 
-  test("access denied with visible permission satisfied returns 403", async () => {
+  test("access denied with permissionsToSee satisfied returns 403", async () => {
     const server = await startPermissionsServer({
       routes: [
         {
           endpoint: "GET /",
-          access: "admin",
-          visible: "user",
+          permissionsRequired: ["admin"],
+          permissionsToSee: ["user"],
           fetch: () => new Response("ok"),
         },
       ],
       plugins: [
         {
           name: "test:permissions",
-          getPermissions: () => ["user"],
+          grantPermissions: () => ["user"],
         },
       ],
     });
@@ -178,21 +178,21 @@ await snapshotServerTests(import.meta.url, ({ test }) => {
     return { status: response.status };
   });
 
-  // --- access array: all permissions required ---
+  // --- permissionsRequired array: all permissions required ---
 
-  test("access array granted when all permissions present", async () => {
+  test("permissionsRequired array granted when all permissions present", async () => {
     const server = await startPermissionsServer({
       routes: [
         {
           endpoint: "GET /",
-          access: ["read", "write"],
+          permissionsRequired: ["read", "write"],
           fetch: () => new Response("ok"),
         },
       ],
       plugins: [
         {
           name: "test:permissions",
-          getPermissions: () => ["read", "write"],
+          grantPermissions: () => ["read", "write"],
         },
       ],
     });
@@ -200,19 +200,19 @@ await snapshotServerTests(import.meta.url, ({ test }) => {
     return { status: response.status, body: await response.text() };
   });
 
-  test("access array denied when only one permission present", async () => {
+  test("permissionsRequired array denied when only one permission present", async () => {
     const server = await startPermissionsServer({
       routes: [
         {
           endpoint: "GET /",
-          access: ["read", "write"],
+          permissionsRequired: ["read", "write"],
           fetch: () => new Response("ok"),
         },
       ],
       plugins: [
         {
           name: "test:permissions",
-          getPermissions: () => ["read"],
+          grantPermissions: () => ["read"],
         },
       ],
     });
@@ -220,23 +220,23 @@ await snapshotServerTests(import.meta.url, ({ test }) => {
     return { status: response.status };
   });
 
-  // --- getPermissions called once per request (memoization) ---
+  // --- grantPermissions called once per request (memoization) ---
 
-  test("getPermissions plugin called once per request", async () => {
+  test("grantPermissions plugin called once per request", async () => {
     let callCount = 0;
     const server = await startPermissionsServer({
       routes: [
         {
           endpoint: "GET /",
-          access: "admin",
-          visible: "all",
+          permissionsRequired: ["admin"],
+          permissionsToSee: [],
           fetch: () => new Response("ok"),
         },
       ],
       plugins: [
         {
           name: "test:permissions",
-          getPermissions: () => {
+          grantPermissions: () => {
             callCount++;
             return ["user"];
           },
@@ -244,6 +244,6 @@ await snapshotServerTests(import.meta.url, ({ test }) => {
       ],
     });
     const response = await fetch(server.origin);
-    return { status: response.status, getPermissionsCallCount: callCount };
+    return { status: response.status, grantPermissionsCallCount: callCount };
   });
 });

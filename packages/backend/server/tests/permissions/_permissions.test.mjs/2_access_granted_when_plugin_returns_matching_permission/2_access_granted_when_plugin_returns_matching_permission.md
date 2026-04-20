@@ -5,14 +5,14 @@ const server = await startPermissionsServer({
   routes: [
     {
       endpoint: "GET /",
-      access: "admin",
+      permissionsRequired: ["admin"],
       fetch: () => new Response("ok"),
     },
   ],
   plugins: [
     {
       name: "test:permissions",
-      getPermissions: () => ["admin"],
+      grantPermissions: () => ["admin"],
     },
   ],
 });
