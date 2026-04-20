@@ -347,6 +347,26 @@ It should be should be one of route.${routePropertyName}: ${availableValues.join
         if (!resourceMatchResult) {
           continue;
         }
+        // permissions check — done before method/media-type/upgrade checks so that
+        // a hidden route does not leak its existence via 405/415/426 responses.
+        // If the route's method would not have matched anyway we skip silently (no
+        // wouldHaveMatched contribution). If the method would have matched we return
+        // the denied response so the caller gets 404 or 403.
+        if (someRouteHasPermissions) {
+          const { permissionsRequired, permissionsToSee } = route;
+          const denied = await checkRouteAccess(
+            permissionsRequired,
+            permissionsToSee,
+            request,
+            fetchSecondArg,
+          );
+          if (denied) {
+            if (route.matchMethod(request.method)) {
+              return denied;
+            }
+            continue;
+          }
+        }
         if (!route.matchMethod(request.method)) {
           if (!route.isFallback) {
             wouldHaveMatched.methodSet.add(route.method);
@@ -476,19 +496,6 @@ It should be should be one of route.${routePropertyName}: ${availableValues.join
         );
         Object.assign(request.params, named, stars);
         fetchSecondArg.contentNegotiation = contentNegotiationResult;
-        // permissions check — only active if at least one route declares permissionsRequired or permissionsToSee
-        if (someRouteHasPermissions) {
-          const { permissionsRequired, permissionsToSee } = route;
-          const denied = await checkRouteAccess(
-            permissionsRequired,
-            permissionsToSee,
-            request,
-            fetchSecondArg,
-          );
-          if (denied) {
-            return denied;
-          }
-        }
         let fetchReturnValue = route.fetch(request, fetchSecondArg);
         if (
           fetchReturnValue !== null &&

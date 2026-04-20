@@ -12,6 +12,8 @@
 - [permissionsRequired array granted when all permissions present](8_permissionsrequired_array_granted_when_all_permissions_present/8_permissionsrequired_array_granted_when_all_permissions_present.md)
 - [permissionsRequired array denied when only one permission present](9_permissionsrequired_array_denied_when_only_one_permission_present/9_permissionsrequired_array_denied_when_only_one_permission_present.md)
 - [grantPermissions plugin called once per request](10_grantpermissions_plugin_called_once_per_request/10_grantpermissions_plugin_called_once_per_request.md)
+- [hidden POST route does not appear in 405 Allow header when GET is used](11_hidden_post_route_does_not_appear_in_405_allow_header_when_get_is_used/11_hidden_post_route_does_not_appear_in_405_allow_header_when_get_is_used.md)
+- [hidden POST route does not cause 415 instead of 404](12_hidden_post_route_does_not_cause_415_instead_of_404/12_hidden_post_route_does_not_cause_415_instead_of_404.md)
 
 ---
 

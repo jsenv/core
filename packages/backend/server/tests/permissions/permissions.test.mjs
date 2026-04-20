@@ -248,4 +248,49 @@ await snapshotServerTests(import.meta.url, ({ test }) => {
     const response = await fetch(server.origin);
     return { status: response.status, grantPermissionsCallCount: callCount };
   });
+
+  // --- hidden routes must not leak via 405 / 415 ---
+
+  test("hidden POST route does not appear in 405 Allow header when GET is used", async () => {
+    const server = await startPermissionsServer({
+      routes: [
+        {
+          endpoint: "GET /",
+          permissionsRequired: [],
+          fetch: () => new Response("ok"),
+        },
+        {
+          endpoint: "POST /",
+          permissionsRequired: ["admin"],
+          fetch: () => new Response("ok"),
+        },
+      ],
+    });
+    const patchResponse = await fetch(server.origin, { method: "PATCH" });
+    const postResponse = await fetch(server.origin, { method: "POST" });
+    return {
+      patch_status: patchResponse.status,
+      patch_allow: patchResponse.headers.get("allow"),
+      post_status: postResponse.status,
+    };
+  });
+
+  test("hidden POST route does not cause 415 instead of 404", async () => {
+    const server = await startPermissionsServer({
+      routes: [
+        {
+          endpoint: "POST /",
+          permissionsRequired: ["admin"],
+          acceptedMediaTypes: ["application/json"],
+          fetch: () => new Response("ok"),
+        },
+      ],
+    });
+    const response = await fetch(server.origin, {
+      method: "POST",
+      headers: { "content-type": "text/plain" },
+      body: "hello",
+    });
+    return { status: response.status };
+  });
 });
