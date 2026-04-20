@@ -32,6 +32,7 @@ export const createRouter = (
 ) => {
   const logger = createLogger({ logLevel });
   const routeSet = new Set();
+  let someRouteHasPermissions = false;
 
   const constructAvailableEndpoints = () => {
     // TODO: memoize
@@ -173,6 +174,12 @@ export const createRouter = (
   for (const routeDescription of routeDescriptionArray) {
     const route = createRoute(routeDescription);
     routeSet.add(route);
+    if (
+      route.permissionsRequired !== undefined ||
+      route.permissionsToSee !== undefined
+    ) {
+      someRouteHasPermissions = true;
+    }
   }
 
   const match = async (request, fetchSecondArg) => {
@@ -339,6 +346,26 @@ It should be should be one of route.${routePropertyName}: ${availableValues.join
         const resourceMatchResult = route.matchResource(request.resource);
         if (!resourceMatchResult) {
           continue;
+        }
+        // permissions check — done before method/media-type/upgrade checks so that
+        // a hidden route does not leak its existence via 405/415/426 responses.
+        // If the route's method would not have matched anyway we skip silently (no
+        // wouldHaveMatched contribution). If the method would have matched we return
+        // the denied response so the caller gets 404 or 403.
+        if (someRouteHasPermissions) {
+          const { permissionsRequired, permissionsToSee } = route;
+          const denied = await checkRouteAccess(
+            permissionsRequired,
+            permissionsToSee,
+            request,
+            fetchSecondArg,
+          );
+          if (denied) {
+            if (route.matchMethod(request.method)) {
+              return denied;
+            }
+            continue;
+          }
         }
         if (!route.matchMethod(request.method)) {
           if (!route.isFallback) {
@@ -525,10 +552,68 @@ It should be should be one of route.${routePropertyName}: ${availableValues.join
 
     return matchRoutes(request);
   };
-  const inspect = ({ canExposeSensitiveData }) => {
-    // I want all the info I can gather about the routes
+  const inspect = async ({ canExposeSensitiveData, fetchSecondArg }) => {
     const data = [];
     for (const route of routeSet) {
+      if (someRouteHasPermissions) {
+        const { permissionsRequired, permissionsToSee } = route;
+        // route has no permission config → hidden from inspector
+        // (unless canExposeSensitiveData is set, in which case we show it as admin-only visible)
+        if (
+          permissionsRequired === undefined &&
+          permissionsToSee === undefined
+        ) {
+          if (!canExposeSensitiveData) {
+            continue;
+          }
+          const routeData = route.toJSON({ canExposeSensitiveData });
+          routeData.visibleBecauseAdmin = true;
+          data.push(routeData);
+          continue;
+        }
+        // anyone can access → always visible
+        if (
+          permissionsRequired !== undefined &&
+          permissionsRequired.length > 0
+        ) {
+          if (fetchSecondArg) {
+            const granted =
+              await fetchSecondArg.hasPermissions(permissionsRequired);
+            if (!granted) {
+              // determine if route is normally visible (permissionsToSee satisfied)
+              let normallyCanSee;
+              if (permissionsToSee === undefined) {
+                normallyCanSee = false;
+              } else {
+                const permsSet = await fetchSecondArg.getAllPermissions();
+                normallyCanSee =
+                  permissionsToSee.length === 0 ||
+                  permissionsSatisfy(permsSet, permissionsToSee);
+              }
+              if (!normallyCanSee && !canExposeSensitiveData) {
+                continue;
+              }
+              const routeData = route.toJSON({ canExposeSensitiveData });
+              routeData.forbidden = true;
+              if (!normallyCanSee) {
+                routeData.visibleBecauseAdmin = true;
+              }
+              data.push(routeData);
+              continue;
+            }
+          } else if (permissionsToSee === undefined) {
+            if (!canExposeSensitiveData) {
+              // no request context and route is not publicly visible
+              continue;
+            }
+            const routeData = route.toJSON({ canExposeSensitiveData });
+            routeData.forbidden = true;
+            routeData.visibleBecauseAdmin = true;
+            data.push(routeData);
+            continue;
+          }
+        }
+      }
       data.push(route.toJSON({ canExposeSensitiveData }));
     }
     return data;
@@ -581,6 +666,8 @@ const createRoute = ({
   headers,
   service,
   serverPlugin,
+  permissionsRequired,
+  permissionsToSee,
   availableMediaTypes = [],
   availableLanguages = [],
   availableVersions = [],
@@ -631,6 +718,8 @@ const createRoute = ({
     description,
     service,
     serverPlugin,
+    permissionsRequired,
+    permissionsToSee,
     availableMediaTypes,
     availableLanguages,
     availableVersions,
@@ -717,6 +806,59 @@ const createRoute = ({
 
 const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
 const isRedirectStatus = (status) => REDIRECT_STATUSES.has(status);
+
+// Returns a denied response if the request does not satisfy route access/visible config.
+// Returns null if access is granted.
+const checkRouteAccess = async (
+  permissionsRequired,
+  permissionsToSee,
+  request,
+  fetchSecondArg,
+) => {
+  // No permissionsRequired declared → route is hidden by default
+  if (permissionsRequired === undefined) {
+    return createRouteNotFoundResponse(request);
+  }
+  // permissionsRequired: [] → anyone can access
+  if (permissionsRequired.length === 0) {
+    return null;
+  }
+  // early-exit permission check (stops as soon as rule is satisfied)
+  const granted = await fetchSecondArg.hasPermissions(permissionsRequired);
+  if (granted) {
+    return null;
+  }
+  // access denied — decide between 404 and 403
+  if (permissionsToSee === undefined) {
+    return createRouteNotFoundResponse(request);
+  }
+  // permissionsToSee check uses full permissions (already accumulated from hasPermissions call above)
+  const permsSet = await fetchSecondArg.getAllPermissions();
+  if (
+    permissionsToSee.length === 0 ||
+    permissionsSatisfy(permsSet, permissionsToSee)
+  ) {
+    return createForbiddenResponse(request);
+  }
+  return createRouteNotFoundResponse(request);
+};
+
+const permissionsSatisfy = (permissionsSet, permissionsRequired) => {
+  for (const p of permissionsRequired) {
+    if (!permissionsSet.has(p)) {
+      return false;
+    }
+  }
+  return true;
+};
+
+const createForbiddenResponse = () => {
+  return {
+    status: 403,
+    statusText: "Forbidden",
+    headers: {},
+  };
+};
 
 const isRequestBodyMediaTypeSupported = (request, { acceptedMediaTypes }) => {
   const requestBodyContentType = request.headers["content-type"];

@@ -24,6 +24,7 @@ import { createPolyglotServer } from "./internal/server-polyglot.js";
 import { trackServerPendingConnections } from "./internal/trackServerPendingConnections.js";
 import { trackServerPendingRequests } from "./internal/trackServerPendingRequests.js";
 import { serverPluginAutoreloadOnRestart } from "./plugins/autoreload_on_server_restart/server_plugin_autoreload_on_server_restart.js";
+import { serverPluginResponseCookies } from "./plugins/cookies/server_plugin_response_cookies.js";
 import { serverPluginDefaultBody4xx5xx } from "./plugins/default_body_4xx_5xx/server_plugin_default_body_4xx_5xx.js";
 import { serverPluginInternalClientFiles } from "./plugins/internal_client_files/server_plugin_internal_client_files.js";
 import { serverPluginOpenFile } from "./plugins/open_file/server_plugin_open_file.js";
@@ -50,6 +51,68 @@ const TIMING_NOOP = () => {
   return { end: () => {} };
 };
 
+const permissionsSatisfy = (permissionsSet, permissionsRequired) => {
+  for (const p of permissionsRequired) {
+    if (!permissionsSet.has(p)) {
+      return false;
+    }
+  }
+  return true;
+};
+
+/**
+ * Starts an HTTP (or HTTPS/HTTP2) server.
+ *
+ * @param {Object} params
+ *
+ * @param {Array<Object>} [params.routes=[]] - Route definitions for the server.
+ *   Each route is an object with the following properties:
+ *   - `endpoint` {string} — Required. A string like `"GET /users/:id"` combining the HTTP method
+ *     and the resource path. Use `"*"` as the method to match all methods, and URL patterns
+ *     such as `:param` for named segments or `*` for wildcards.
+ *   - `fetch` {Function} — Required. `(request, helpers) => response`. Must return a `Response`,
+ *     a response-like object `{ status, headers, body }`, or `null`/`undefined` to skip the route.
+ *   - `description` {string} — Optional human-readable description shown in the route inspector.
+ *   - `permissionsRequired` {Array<string>} — Optional. Permissions the client must hold to
+ *     access the route. An empty array means anyone can access. When omitted the route is hidden
+ *     by default (404 for everyone).
+ *   - `permissionsToSee` {Array<string>} — Optional. Permissions needed to know the route exists
+ *     (403 instead of 404 when access is denied). An empty array means the route is visible to
+ *     everyone even when access is denied.
+ *   - `availableMediaTypes` {Array<string>} — Content-types this route can produce (drives
+ *     `Accept` content negotiation).
+ *   - `availableLanguages` {Array<string>} — Languages this route can respond with.
+ *   - `availableEncodings` {Array<string>} — Encodings this route supports.
+ *   - `acceptedMediaTypes` {Array<string>} — Content-types accepted for request bodies
+ *     (POST/PATCH/PUT).
+ *   - `clientCodeExample` {string|Function} — Optional code snippet displayed in the route
+ *     inspector as a usage example.
+ *   - `declarationSource` {string} — Optional file URL of where the route is declared, shown
+ *     in the route inspector when `canExposeSensitiveData` is enabled.
+ *   - `headers` {Object} — Optional header pattern that must match for the route to be selected.
+ *
+ * @param {Array<Object>} [params.plugins=[]] - Server plugins that extend behaviour (hooks such
+ *   as `grantPermissions`, `redirectRequest`, `handleError`, etc.). See plugin documentation for
+ *   the exact shape; plugins are not described here in detail.
+ *
+ * @param {number} [params.port=0] - Port to listen on. Defaults to `0` which lets the OS assign
+ *   a random available port — useful in tests to avoid port conflicts. A fixed port such as
+ *   `3000` can be passed for a predictable address.
+ *
+ * @param {boolean} [params.acceptAnyIp=false] - When `true` the server binds to all network
+ *   interfaces (`0.0.0.0` / `::`), making it reachable from other machines on the network.
+ *   When `false` (default) it only listens on the configured `hostname`.
+ *
+ * @param {boolean} [params.canExposeSensitiveData=false] - Unlocks developer-facing features that
+ *   should never be enabled in production:
+ *   - Declaration source links in the route inspector (shows where each route is defined).
+ *   - The `/.internal/open_file` endpoint that can open files on the server machine.
+ *   - Auto-reload client notification when the server restarts.
+ *   - All routes are visible in the route inspector regardless of permission configuration.
+ *   Set to `true` during local development for a better DX.
+ *
+ * @returns {Promise<Object>} Resolves to the running server object with `{ origin, port, stop, … }`.
+ */
 export const startServer = async ({
   signal = new AbortController().signal,
   logLevel,
@@ -160,6 +223,7 @@ export const startServer = async ({
 
   plugins = [
     ...(canExposeSensitiveData ? [serverPluginOpenFile()] : []),
+    serverPluginResponseCookies(),
     serverPluginDefaultBody4xx5xx(),
     serverPluginRouteInspector({ canExposeSensitiveData }),
     ...(canExposeSensitiveData ? [serverPluginInternalClientFiles()] : []),
@@ -571,6 +635,48 @@ export const startServer = async ({
             }
           },
         );
+        // Build permission helpers, lazily per request.
+        // A single shared iterator ensures each plugin is called at most once.
+        // hasPermissions stops early once the rule is satisfied;
+        // getAllPermissions drains all remaining plugins.
+        const permissionsSet = new Set();
+        const nextPermissionsHook =
+          serverPluginsController.createAsyncHookIterator(
+            "grantPermissions",
+            request,
+          );
+        const drainPermissionsUntil = async (permissionsRequired) => {
+          for (;;) {
+            if (
+              permissionsRequired !== undefined &&
+              permissionsSatisfy(permissionsSet, permissionsRequired)
+            ) {
+              return true;
+            }
+            const { done, value } = await nextPermissionsHook();
+            if (done) {
+              break;
+            }
+            if (Array.isArray(value)) {
+              for (const p of value) {
+                permissionsSet.add(p);
+              }
+            }
+          }
+          return false;
+        };
+        const getAllPermissions = async () => {
+          await drainPermissionsUntil(undefined);
+          return permissionsSet;
+        };
+        const hasPermissions = async (permissionsRequired) => {
+          if (permissionsRequired.length === 0) {
+            return true;
+          }
+          return drainPermissionsUntil(permissionsRequired);
+        };
+        fetchSecondArg.getAllPermissions = getAllPermissions;
+        fetchSecondArg.hasPermissions = hasPermissions;
         const routerResponseProperties = await router.match(
           request,
           fetchSecondArg,

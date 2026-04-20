@@ -1,21 +1,22 @@
 {
   "name": "@jsenv/server",
-  "version": "17.1.1",
+  "version": "17.2.0",
+  "type": "module",
   "description": "A modern Node.js HTTP server with declarative routing, content negotiation, and WebSocket support",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
     "directory": "packages/backend/server"
   },
-  "license": "MIT",
   "author": {
     "name": "dmail",
     "email": "dmaillard06@gmail.com"
   },
-  "sideEffects": [
-    "./dist/jsenv_server.js"
-  ],
-  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.13.1"
+  },
+  "main": "./index.js",
   "exports": {
     ".": {
       "import": {
@@ -25,11 +26,10 @@
     },
     "./*": "./*"
   },
-  "main": "./index.js",
   "files": [
     "/dist/",
-    "/src/",
-    "/index.js"
+    "/index.js",
+    "/src/"
   ],
   "scripts": {
     "build": "node --experimental-import-meta-resolve ./scripts/build.mjs",
@@ -60,10 +60,10 @@
     "undici": "7.24.2",
     "ws": "8.20.0"
   },
-  "engines": {
-    "node": ">=22.13.1"
-  },
   "publishConfig": {
     "access": "public"
-  }
+  },
+  "sideEffects": [
+    "./dist/jsenv_server.js"
+  ]
 }

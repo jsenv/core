@@ -47,6 +47,7 @@ export const fromNodeRequest = (
   });
 
   const headers = headersFromObject(nodeRequest.headers);
+  const cookies = parseRequestCookieHeader(headers["cookie"]);
   // pause the request body stream to let a chance for other parts of the code to subscribe to the stream
   // Without this the request body readable stream
   // might be closed when we'll try to attach "data" and "end" listeners to it
@@ -184,6 +185,7 @@ export const fromNodeRequest = (
     }),
     method: nodeRequest.method,
     headers,
+    cookies,
     body,
     buffer,
     formData,
@@ -385,6 +387,23 @@ export const readRequestBody = (request, { as }) => {
     return request.json();
   }
   throw new Error(`unsupported ${as}`);
+};
+
+const parseRequestCookieHeader = (cookieHeader) => {
+  const map = new Map();
+  if (!cookieHeader) {
+    return map;
+  }
+  for (const pair of cookieHeader.split(";")) {
+    const eqIndex = pair.indexOf("=");
+    if (eqIndex === -1) {
+      continue;
+    }
+    const name = pair.slice(0, eqIndex).trim();
+    const value = decodeURIComponent(pair.slice(eqIndex + 1).trim());
+    map.set(name, value);
+  }
+  return map;
 };
 
 export const applyRedirectionToRequest = (

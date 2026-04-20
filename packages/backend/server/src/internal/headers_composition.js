@@ -56,4 +56,16 @@ const HEADER_NAMES_COMPOSITION = {
   "server-timing": composeTwoCommaSeparatedValues,
   // 'content-type', // https://github.com/ninenines/cowboy/issues/1230
   "vary": composeTwoCommaSeparatedValues,
+  // set-cookie is special: multiple values must be kept as an array
+  "set-cookie": (leftValue, rightValue) => {
+    if (!leftValue) {
+      return rightValue;
+    }
+    if (!rightValue) {
+      return leftValue;
+    }
+    const left = Array.isArray(leftValue) ? leftValue : [leftValue];
+    const right = Array.isArray(rightValue) ? rightValue : [rightValue];
+    return [...left, ...right];
+  },
 };

@@ -36,5 +36,3 @@
 - Can move table column
 
 - Pagination
-
-- import.meta.css during build should use stylesheet to inject so that it puts an url instead of constructed stylesheet?
