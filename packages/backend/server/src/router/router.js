@@ -545,10 +545,50 @@ It should be should be one of route.${routePropertyName}: ${availableValues.join
 
     return matchRoutes(request);
   };
-  const inspect = ({ canExposeSensitiveData }) => {
-    // I want all the info I can gather about the routes
+  const inspect = async ({ canExposeSensitiveData, fetchSecondArg }) => {
     const data = [];
     for (const route of routeSet) {
+      if (someRouteHasPermissions) {
+        const { permissionsRequired, permissionsToSee } = route;
+        // route has no permission config → hidden from inspector
+        if (
+          permissionsRequired === undefined &&
+          permissionsToSee === undefined
+        ) {
+          continue;
+        }
+        // anyone can access → always visible
+        if (
+          permissionsRequired !== undefined &&
+          permissionsRequired.length > 0
+        ) {
+          if (fetchSecondArg) {
+            const granted =
+              await fetchSecondArg.hasPermissions(permissionsRequired);
+            if (!granted) {
+              // access denied — check if route should be visible at all
+              if (permissionsToSee === undefined) {
+                continue;
+              }
+              const permsSet = await fetchSecondArg.getAllPermissions();
+              const canSee =
+                permissionsToSee.length === 0 ||
+                permissionsSatisfy(permsSet, permissionsToSee);
+              if (!canSee) {
+                continue;
+              }
+              // visible but forbidden — include with forbidden flag
+              const routeData = route.toJSON({ canExposeSensitiveData });
+              routeData.forbidden = true;
+              data.push(routeData);
+              continue;
+            }
+          } else if (permissionsToSee === undefined) {
+            // no request context and route is not publicly visible
+            continue;
+          }
+        }
+      }
       data.push(route.toJSON({ canExposeSensitiveData }));
     }
     return data;

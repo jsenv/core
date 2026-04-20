@@ -21,23 +21,6 @@ const response = await fetch(server.origin);
 return { status: response.status };
 ```
 
-# 1/2 logs
-
-![img](log_group.svg)
-
-<details>
-  <summary>see without style</summary>
-
-```console
-GET http://127.0.0.1/
-  403 Forbidden
-```
-
-</details>
-
-
-# 2/2 resolve
-
 ```js
 {
   "status": 403

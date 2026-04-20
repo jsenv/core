@@ -3,8 +3,10 @@ import { snapshotServerTests } from "@jsenv/server/tests/test_helpers.mjs";
 
 const startPermissionsServer = async ({ routes, plugins = [] }) => {
   return startServer({
-    logLevel: "warn",
+    logLevel: "error",
     keepProcessAlive: false,
+    stopOnSIGINT: false,
+    stopOnExit: false,
     routes,
     plugins,
   });

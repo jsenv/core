@@ -28,9 +28,10 @@ export const serverPluginRouteInspector = ({ canExposeSensitiveData }) => {
         availableMediaTypes: ["application/json"],
         description: "Get the routes available on this server in JSON.",
         declarationSource: import.meta.url,
-        fetch: (request, helpers) => {
-          const routeJSON = helpers.router.inspect({
+        fetch: async (request, helpers) => {
+          const routeJSON = await helpers.router.inspect({
             canExposeSensitiveData,
+            fetchSecondArg: helpers,
           });
           return Response.json(routeJSON);
         },

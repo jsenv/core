@@ -21,24 +21,6 @@ const response = await fetch(server.origin);
 return { status: response.status };
 ```
 
-# 1/2 logs
-
-![img](log_group.svg)
-
-<details>
-  <summary>see without style</summary>
-
-```console
-GET http://127.0.0.1/
-  404 The URL / does not exist on this server.
-  The list of existing endpoints is available at /.internal/route_inspector.
-```
-
-</details>
-
-
-# 2/2 resolve
-
 ```js
 {
   "status": 404
