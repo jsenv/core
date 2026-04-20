@@ -750,16 +750,17 @@ const checkRouteAccess = async (access, visible, request, fetchSecondArg) => {
   if (access === "all") {
     return null;
   }
-  // access is an object → check permissions
-  const perms = await fetchSecondArg.getRequestPermissions();
-  if (permissionsSatisfy(perms, access)) {
+  // access is an object → early-exit permission check (stops as soon as satisfied)
+  const granted = await fetchSecondArg.hasPermissions(access);
+  if (granted) {
     return null;
   }
   // access denied — decide between 404 and 403
   if (visible === undefined) {
-    // route existence is hidden
     return createRouteNotFoundResponse(request);
   }
+  // visible check uses full permissions (already accumulated from hasPermissions call above)
+  const perms = await fetchSecondArg.getAllPermissions();
   if (visible === "all" || permissionsSatisfy(perms, visible)) {
     return createForbiddenResponse(request);
   }

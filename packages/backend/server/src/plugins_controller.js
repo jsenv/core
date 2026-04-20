@@ -297,6 +297,22 @@ export const createPluginsController = async ({
     callHooksUntil,
     callAsyncHooks,
     callAsyncHooksUntil,
+    // callAsyncHooksWhile(hookName, info, callback)
+    // Calls hooks one by one, passing each return value to callback.
+    // Stops as soon as callback returns false.
+    callAsyncHooksWhile: async (hookName, info, callback) => {
+      const hookSet = hookSetMap.get(hookName);
+      if (!hookSet) {
+        return;
+      }
+      for (const hook of hookSet) {
+        const returnValue = await callAsyncHook(hook, info);
+        const shouldContinue = await callback(returnValue);
+        if (!shouldContinue) {
+          return;
+        }
+      }
+    },
 
     getPluginMeta: (pluginName) => meta[pluginName],
     getMeta: () => meta,

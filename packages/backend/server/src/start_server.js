@@ -51,6 +51,21 @@ const TIMING_NOOP = () => {
   return { end: () => {} };
 };
 
+const permissionsSatisfy = (perms, rule) => {
+  if (rule === "all") {
+    return true;
+  }
+  if (rule && typeof rule === "object") {
+    for (const key of Object.keys(rule)) {
+      if (perms[key] !== rule[key]) {
+        return false;
+      }
+    }
+    return true;
+  }
+  return false;
+};
+
 export const startServer = async ({
   signal = new AbortController().signal,
   logLevel,
@@ -573,12 +588,12 @@ export const startServer = async ({
             }
           },
         );
-        // Build getRequestPermissions lazily (memoized per request) from plugin hooks
-        let permissionsPromise;
-        fetchSecondArg.getRequestPermissions = () => {
-          if (!permissionsPromise) {
-            permissionsPromise = (async () => {
-              let permissions = {};
+        // Build permission helpers, lazily per request
+        let allPermissionsPromise;
+        const getAllPermissions = () => {
+          if (!allPermissionsPromise) {
+            allPermissionsPromise = (async () => {
+              const permissions = {};
               await serverPluginsController.callAsyncHooks(
                 "getRequestPermissions",
                 request,
@@ -591,8 +606,31 @@ export const startServer = async ({
               return permissions;
             })();
           }
-          return permissionsPromise;
+          return allPermissionsPromise;
         };
+        // hasPermissions(rule) — early exit: stops calling plugins as soon as rule is satisfied
+        const hasPermissions = async (rule) => {
+          if (rule === "all") {
+            return true;
+          }
+          const partial = {};
+          let satisfied = false;
+          await serverPluginsController.callAsyncHooksWhile(
+            "getRequestPermissions",
+            request,
+            (result) => {
+              if (result && typeof result === "object") {
+                Object.assign(partial, result);
+              }
+              satisfied = permissionsSatisfy(partial, rule);
+              // return false to stop iterating once satisfied
+              return !satisfied;
+            },
+          );
+          return satisfied;
+        };
+        fetchSecondArg.getAllPermissions = getAllPermissions;
+        fetchSecondArg.hasPermissions = hasPermissions;
         const routerResponseProperties = await router.match(
           request,
           fetchSecondArg,
