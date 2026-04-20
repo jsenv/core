@@ -573,6 +573,26 @@ export const startServer = async ({
             }
           },
         );
+        // Build getRequestPermissions lazily (memoized per request) from plugin hooks
+        let permissionsPromise;
+        fetchSecondArg.getRequestPermissions = () => {
+          if (!permissionsPromise) {
+            permissionsPromise = (async () => {
+              let permissions = {};
+              await serverPluginsController.callAsyncHooks(
+                "getRequestPermissions",
+                request,
+                (result) => {
+                  if (result && typeof result === "object") {
+                    Object.assign(permissions, result);
+                  }
+                },
+              );
+              return permissions;
+            })();
+          }
+          return permissionsPromise;
+        };
         const routerResponseProperties = await router.match(
           request,
           fetchSecondArg,

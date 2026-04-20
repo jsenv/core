@@ -32,6 +32,7 @@ export const createRouter = (
 ) => {
   const logger = createLogger({ logLevel });
   const routeSet = new Set();
+  let someRouteHasAccessOrVisible = false;
 
   const constructAvailableEndpoints = () => {
     // TODO: memoize
@@ -173,6 +174,9 @@ export const createRouter = (
   for (const routeDescription of routeDescriptionArray) {
     const route = createRoute(routeDescription);
     routeSet.add(route);
+    if (route.access !== undefined || route.visible !== undefined) {
+      someRouteHasAccessOrVisible = true;
+    }
   }
 
   const match = async (request, fetchSecondArg) => {
@@ -469,6 +473,19 @@ It should be should be one of route.${routePropertyName}: ${availableValues.join
         );
         Object.assign(request.params, named, stars);
         fetchSecondArg.contentNegotiation = contentNegotiationResult;
+        // permissions check — only active if at least one route declares access or visible
+        if (someRouteHasAccessOrVisible) {
+          const { access, visible } = route;
+          const denied = await checkRouteAccess(
+            access,
+            visible,
+            request,
+            fetchSecondArg,
+          );
+          if (denied) {
+            return denied;
+          }
+        }
         let fetchReturnValue = route.fetch(request, fetchSecondArg);
         if (
           fetchReturnValue !== null &&
@@ -581,6 +598,8 @@ const createRoute = ({
   headers,
   service,
   serverPlugin,
+  access,
+  visible,
   availableMediaTypes = [],
   availableLanguages = [],
   availableVersions = [],
@@ -631,6 +650,8 @@ const createRoute = ({
     description,
     service,
     serverPlugin,
+    access,
+    visible,
     availableMediaTypes,
     availableLanguages,
     availableVersions,
@@ -717,6 +738,56 @@ const createRoute = ({
 
 const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
 const isRedirectStatus = (status) => REDIRECT_STATUSES.has(status);
+
+// Returns a denied response if the request does not satisfy route access/visible config.
+// Returns null if access is granted.
+const checkRouteAccess = async (access, visible, request, fetchSecondArg) => {
+  // No access declared → route is hidden by default
+  if (access === undefined) {
+    return createRouteNotFoundResponse(request);
+  }
+  // access: "all" → always granted
+  if (access === "all") {
+    return null;
+  }
+  // access is an object → check permissions
+  const perms = await fetchSecondArg.getRequestPermissions();
+  if (permissionsSatisfy(perms, access)) {
+    return null;
+  }
+  // access denied — decide between 404 and 403
+  if (visible === undefined) {
+    // route existence is hidden
+    return createRouteNotFoundResponse(request);
+  }
+  if (visible === "all" || permissionsSatisfy(perms, visible)) {
+    return createForbiddenResponse(request);
+  }
+  return createRouteNotFoundResponse(request);
+};
+
+const permissionsSatisfy = (perms, rule) => {
+  if (rule === "all") {
+    return true;
+  }
+  if (rule && typeof rule === "object") {
+    for (const key of Object.keys(rule)) {
+      if (perms[key] !== rule[key]) {
+        return false;
+      }
+    }
+    return true;
+  }
+  return false;
+};
+
+const createForbiddenResponse = () => {
+  return {
+    status: 403,
+    statusText: "Forbidden",
+    headers: {},
+  };
+};
 
 const isRequestBodyMediaTypeSupported = (request, { acceptedMediaTypes }) => {
   const requestBodyContentType = request.headers["content-type"];
