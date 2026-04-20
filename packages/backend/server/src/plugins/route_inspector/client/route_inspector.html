@@ -42,6 +42,10 @@
         --border-color: #e0e0e0;
         --primary-color: #1976d2;
         --secondary-color: #f5f5f5;
+        --forbidden-bg-color: #fff8f0;
+        --forbidden-border-color: #cc8800;
+        --forbidden-badge-bg: #fff3cc;
+        --forbidden-badge-color: #7a5000;
       }
       :root[data-theme="dark"] {
         --background-color: #121212;
@@ -49,6 +53,10 @@
         --border-color: #333;
         --primary-color: #4f9eff;
         --secondary-color: #1e1e1e;
+        --forbidden-bg-color: #1e1500;
+        --forbidden-border-color: #8a6000;
+        --forbidden-badge-bg: #3a2800;
+        --forbidden-badge-color: #f0c060;
       }
 
       :root[data-theme="dark"] a {
@@ -465,6 +473,31 @@
       .route_details[data-method="DELETE"],
       .route_group_details[data-method="DELETE"] {
         --method-color: var(--method-delete-color);
+      }
+
+      .route_details[data-forbidden] {
+        background: var(--forbidden-bg-color);
+        border-color: var(--forbidden-border-color);
+        opacity: 0.85;
+      }
+      .route_details[data-forbidden] .route_method {
+        opacity: 0.7;
+        filter: grayscale(60%);
+      }
+      .route_forbidden_badge {
+        margin-right: 6px;
+        padding: 3px 8px;
+        color: var(--forbidden-badge-color);
+        font-weight: 600;
+        font-size: 12px;
+        white-space: nowrap;
+        background: var(--forbidden-badge-bg);
+        border: 1px solid var(--forbidden-border-color);
+        border-radius: 4px;
+      }
+      .route_forbidden_content {
+        color: var(--forbidden-badge-color);
+        font-style: italic;
       }
 
       .route_owner_name {
@@ -1388,6 +1421,7 @@
         websocket,
         clientCodeExample,
         declarationSource,
+        forbidden,
       }) => {
         const [selectedMethod] = useUrlStringParam("method");
         const [selectedPackageName] = usePackageUrlStringParam();
@@ -1400,11 +1434,15 @@
           return null;
         }
 
-        return html`<details class="route_details" data-method="${method}">
+        return html`<details
+            class="route_details"
+            data-method="${method}"
+            data-forbidden="${forbidden || undefined}"
+          >
             <summary class="route_summary_container">
               <span class="route_method">${method}</span>
               <p class="route_resource">${resource}</p>
-              ${method === "GET"
+              ${method === "GET" && !forbidden
                 ? html`<a
                       style="display:inline-flex; margin-left: 5px;"
                       href="${resource}"
@@ -1412,25 +1450,37 @@
                     /></a>`
                 : null}
               <span style="flex:1"></span>
+              ${forbidden
+                ? html`<span class="route_forbidden_badge"
+                      >🔒 access denied</span
+                    >`
+                : null}
               <${RouteBadge} meta="${meta}" />
               <span class="summary_marker">
                 <${ArrowDown} />
               </span>
             </summary>
-            <${RouteDetailsContent}
-              method="${method}"
-              resource="${resource}"
-              description="${description}"
-              availableMediaTypes="${availableMediaTypes}"
-              availableLanguages="${availableLanguages}"
-              availableVersions="${availableVersions}"
-              availableEncodings="${availableEncodings}"
-              acceptedMediaTypes="${acceptedMediaTypes}"
-              websocket="${websocket}"
-              clientCodeExample="${clientCodeExample}"
-              declarationSource="${declarationSource}"
-              meta="${meta}"
-            />
+            ${!forbidden
+              ? html`<${RouteDetailsContent}
+                    method="${method}"
+                    resource="${resource}"
+                    description="${description}"
+                    availableMediaTypes="${availableMediaTypes}"
+                    availableLanguages="${availableLanguages}"
+                    availableVersions="${availableVersions}"
+                    availableEncodings="${availableEncodings}"
+                    acceptedMediaTypes="${acceptedMediaTypes}"
+                    websocket="${websocket}"
+                    clientCodeExample="${clientCodeExample}"
+                    declarationSource="${declarationSource}"
+                    meta="${meta}"
+                  />`
+              : html`<div class="route_details_content route_forbidden_content">
+                    <p>
+                      You do not have the required permissions to access this
+                      route.
+                    </p>
+                  </div>`}
           </details>`;
       };
 
