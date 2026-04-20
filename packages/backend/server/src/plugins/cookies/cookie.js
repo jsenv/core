@@ -15,7 +15,6 @@ export const COOKIE = {
         options.expires = new Date(val);
         continue;
       }
-
       if (key === "path") {
         options.path = val;
         continue;
@@ -37,6 +36,42 @@ export const COOKIE = {
     return { name, value, options };
   },
   stringify: ({ name, value, options }) => {
-    return `${name}=${value}${options.expires ? `; Expires=${options.expires.toUTCString()}` : ""}${options.path ? `; Path=${options.path}` : ""}${options.domain ? `; Domain=${options.domain}` : ""}${options.secure ? "; Secure" : ""}${options.httpOnly ? "; HttpOnly" : ""}`;
+    let str = `${name}=${value}`;
+    if (options.expires) {
+      str += `; Expires=${options.expires.toUTCString()}`;
+    }
+    if (options.maxAge !== undefined) {
+      str += `; Max-Age=${options.maxAge}`;
+    }
+    if (options.path) {
+      str += `; Path=${options.path}`;
+    }
+    if (options.domain) {
+      str += `; Domain=${options.domain}`;
+    }
+    if (options.sameSite) {
+      str += `; SameSite=${options.sameSite}`;
+    }
+    if (options.secure) {
+      str += "; Secure";
+    }
+    if (options.httpOnly) {
+      str += "; HttpOnly";
+    }
+    return str;
+  },
+  toSetCookieHeaders: (cookies) => {
+    const headers = {};
+    for (const cookie of cookies) {
+      const value = COOKIE.stringify(cookie);
+      if (headers["set-cookie"] === undefined) {
+        headers["set-cookie"] = value;
+      } else if (Array.isArray(headers["set-cookie"])) {
+        headers["set-cookie"].push(value);
+      } else {
+        headers["set-cookie"] = [headers["set-cookie"], value];
+      }
+    }
+    return headers;
   },
 };

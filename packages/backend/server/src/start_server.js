@@ -24,6 +24,7 @@ import { createPolyglotServer } from "./internal/server-polyglot.js";
 import { trackServerPendingConnections } from "./internal/trackServerPendingConnections.js";
 import { trackServerPendingRequests } from "./internal/trackServerPendingRequests.js";
 import { serverPluginAutoreloadOnRestart } from "./plugins/autoreload_on_server_restart/server_plugin_autoreload_on_server_restart.js";
+import { serverPluginCookies } from "./plugins/cookies/server_plugin_cookies.js";
 import { serverPluginDefaultBody4xx5xx } from "./plugins/default_body_4xx_5xx/server_plugin_default_body_4xx_5xx.js";
 import { serverPluginInternalClientFiles } from "./plugins/internal_client_files/server_plugin_internal_client_files.js";
 import { serverPluginOpenFile } from "./plugins/open_file/server_plugin_open_file.js";
@@ -160,6 +161,7 @@ export const startServer = async ({
 
   plugins = [
     ...(canExposeSensitiveData ? [serverPluginOpenFile()] : []),
+    serverPluginCookies(),
     serverPluginDefaultBody4xx5xx(),
     serverPluginRouteInspector({ canExposeSensitiveData }),
     ...(canExposeSensitiveData ? [serverPluginInternalClientFiles()] : []),
