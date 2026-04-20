@@ -1,8 +1,8 @@
 import { COOKIE } from "./cookie.js";
 
-export const serverPluginCookies = () => {
+export const serverPluginResponseCookies = () => {
   return {
-    name: "jsenv:cookies",
+    name: "jsenv:response_cookies",
     augmentRouteFetchSecondArg: (request, fetchSecondArg) => {
       const responseCookies = {
         set: (name, value, options = {}) => {
