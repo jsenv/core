@@ -285,12 +285,31 @@ await snapshotServerTests(import.meta.url, ({ test }) => {
           fetch: () => new Response("ok"),
         },
       ],
+      plugins: [
+        {
+          name: "test:permissions",
+          grantPermissions: (request) => {
+            if (request.headers["x-admin"] === "1") {
+              return ["admin"];
+            }
+            return [];
+          },
+        },
+      ],
     });
-    const response = await fetch(server.origin, {
+    const hiddenWrongType = await fetch(server.origin, {
       method: "POST",
       headers: { "content-type": "text/plain" },
       body: "hello",
     });
-    return { status: response.status };
+    const visibleWrongType = await fetch(server.origin, {
+      method: "POST",
+      headers: { "content-type": "text/plain", "x-admin": "1" },
+      body: "hello",
+    });
+    return {
+      hidden_wrong_content_type_status: hiddenWrongType.status,
+      visible_wrong_content_type_status: visibleWrongType.status,
+    };
   });
 });
