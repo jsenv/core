@@ -313,7 +313,7 @@ export const PSEUDO_CLASSES = {
   },
 };
 
-const NAVI_PSEUDO_STATE_CUSTOM_EVENT = "navi_pseudo_state";
+export const NAVI_PSEUDO_STATE_CUSTOM_EVENT = "navi_pseudo_state";
 const NAVI_CHECK_PSEUDO_STATE_CUSTOM_EVENT = "navi_check_pseudo_state";
 const dispatchNaviPseudoStateEvent = (element, value, oldValue) => {
   if (!element) {

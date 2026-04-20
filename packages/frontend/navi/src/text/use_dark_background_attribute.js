@@ -1,6 +1,8 @@
 import { contrastColor, resolveCSSColor } from "@jsenv/dom";
 import { useLayoutEffect } from "preact/hooks";
 
+import { NAVI_PSEUDO_STATE_CUSTOM_EVENT } from "../box/pseudo_styles.js";
+
 /**
  * Toggles a `data-dark-background` attribute on the referenced element based on its
  * computed background color. Pair it with a CSS variable to get automatic
@@ -61,33 +63,38 @@ export const useDarkBackgroundAttribute = (
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) {
-      return null;
+      return undefined;
     }
     let elementToCheck = el;
     if (backgroundElementSelector) {
       elementToCheck = el.querySelector(backgroundElementSelector);
       if (!elementToCheck) {
-        return null;
+        return undefined;
       }
     }
-    const computedStyle = getComputedStyle(elementToCheck);
-    const backgroundColor = computedStyle.backgroundColor;
-    if (!backgroundColor) {
-      el.removeAttribute(attributeName);
-      return null;
-    }
-    const backgroundColorString = normalizeColorString(backgroundColor, el);
-    const hardcodedContrast = hardcodedMap.get(backgroundColorString);
-    const contrastingColor =
-      hardcodedContrast || contrastColor(backgroundColor, el);
-    if (contrastingColor === "white") {
-      el.setAttribute(attributeName, "");
-      return () => {
+    const updateAttribute = () => {
+      const computedStyle = getComputedStyle(elementToCheck);
+      const backgroundColor = computedStyle.backgroundColor;
+      if (!backgroundColor) {
         el.removeAttribute(attributeName);
-      };
-    }
-    el.removeAttribute(attributeName);
-    return null;
+        return;
+      }
+      const backgroundColorString = normalizeColorString(backgroundColor, el);
+      const hardcodedContrast = hardcodedMap.get(backgroundColorString);
+      const contrastingColor =
+        hardcodedContrast || contrastColor(backgroundColor, el);
+      if (contrastingColor === "white") {
+        el.setAttribute(attributeName, "");
+      } else {
+        el.removeAttribute(attributeName);
+      }
+    };
+    updateAttribute();
+    el.addEventListener(NAVI_PSEUDO_STATE_CUSTOM_EVENT, updateAttribute);
+    return () => {
+      el.removeEventListener(NAVI_PSEUDO_STATE_CUSTOM_EVENT, updateAttribute);
+      el.removeAttribute(attributeName);
+    };
   }, innerDeps);
 };
 

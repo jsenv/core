@@ -10,6 +10,7 @@ import { LoaderBackground } from "../graphic/loader/loader_background.jsx";
 import { getHrefTargetInfo } from "../nav/browser_integration/href_target_info.js";
 import { assertRoute, useRouteStatus } from "../nav/route.js";
 import { Text, markAsOutsideTextFlow } from "../text/text.jsx";
+import { useDarkBackgroundAttribute } from "../text/use_dark_background_attribute.js";
 import { FormActionContext } from "./form_context.js";
 import { useActionEvents } from "./use_action_events.js";
 import { useAutoFocus } from "./use_auto_focus.js";
@@ -115,8 +116,6 @@ const css = /* css */ `
     --x-button-background-color: var(--button-background-color);
     --x-button-color: var(--button-color);
     --x-button-cursor: var(--button-cursor);
-
-    position: relative;
     box-sizing: border-box;
     aspect-ratio: inherit;
     padding: 0;
@@ -128,6 +127,10 @@ const css = /* css */ `
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
     user-select: none;
+
+    &[data-dark-background] {
+      --button-color: white;
+    }
 
     &[data-icon] {
       --button-padding: 0;
@@ -431,6 +434,8 @@ const ButtonBasic = (props) => {
           : "noopener noreferrer"
         : rel;
   }
+
+  useDarkBackgroundAttribute(ref, [innerLoading, innerDisabled, innerReadOnly]);
 
   const renderButtonContent = (buttonProps) => {
     return (
