@@ -51,13 +51,16 @@ const TIMING_NOOP = () => {
   return { end: () => {} };
 };
 
-const permissionsSatisfy = (perms, rule) => {
+const permissionsSatisfy = (permissionsSet, rule) => {
   if (rule === "all") {
     return true;
   }
-  if (rule && typeof rule === "object") {
-    for (const key of Object.keys(rule)) {
-      if (perms[key] !== rule[key]) {
+  if (typeof rule === "string") {
+    return permissionsSet.has(rule);
+  }
+  if (Array.isArray(rule)) {
+    for (const r of rule) {
+      if (!permissionsSet.has(r)) {
         return false;
       }
     }
@@ -588,46 +591,45 @@ export const startServer = async ({
             }
           },
         );
-        // Build permission helpers, lazily per request
-        let allPermissionsPromise;
-        const getAllPermissions = () => {
-          if (!allPermissionsPromise) {
-            allPermissionsPromise = (async () => {
-              const permissions = {};
-              await serverPluginsController.callAsyncHooks(
-                "getRequestPermissions",
-                request,
-                (result) => {
-                  if (result && typeof result === "object") {
-                    Object.assign(permissions, result);
-                  }
-                },
-              );
-              return permissions;
-            })();
+        // Build permission helpers, lazily per request.
+        // A single shared iterator ensures each plugin is called at most once.
+        // hasPermissions stops early once the rule is satisfied;
+        // getAllPermissions drains all remaining plugins.
+        const permissionsSet = new Set();
+        const nextPermissionsHook =
+          serverPluginsController.createAsyncHookIterator(
+            "getPermissions",
+            request,
+          );
+        const drainPermissionsUntil = async (rule) => {
+          for (;;) {
+            if (
+              rule !== undefined &&
+              permissionsSatisfy(permissionsSet, rule)
+            ) {
+              return true;
+            }
+            const { done, value } = await nextPermissionsHook();
+            if (done) {
+              break;
+            }
+            if (Array.isArray(value)) {
+              for (const p of value) {
+                permissionsSet.add(p);
+              }
+            }
           }
-          return allPermissionsPromise;
+          return false;
         };
-        // hasPermissions(rule) — early exit: stops calling plugins as soon as rule is satisfied
+        const getAllPermissions = async () => {
+          await drainPermissionsUntil(undefined);
+          return permissionsSet;
+        };
         const hasPermissions = async (rule) => {
           if (rule === "all") {
             return true;
           }
-          const partial = {};
-          let satisfied = false;
-          await serverPluginsController.callAsyncHooksWhile(
-            "getRequestPermissions",
-            request,
-            (result) => {
-              if (result && typeof result === "object") {
-                Object.assign(partial, result);
-              }
-              satisfied = permissionsSatisfy(partial, rule);
-              // return false to stop iterating once satisfied
-              return !satisfied;
-            },
-          );
-          return satisfied;
+          return drainPermissionsUntil(rule);
         };
         fetchSecondArg.getAllPermissions = getAllPermissions;
         fetchSecondArg.hasPermissions = hasPermissions;

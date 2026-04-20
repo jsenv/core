@@ -760,20 +760,23 @@ const checkRouteAccess = async (access, visible, request, fetchSecondArg) => {
     return createRouteNotFoundResponse(request);
   }
   // visible check uses full permissions (already accumulated from hasPermissions call above)
-  const perms = await fetchSecondArg.getAllPermissions();
-  if (visible === "all" || permissionsSatisfy(perms, visible)) {
+  const permsSet = await fetchSecondArg.getAllPermissions();
+  if (visible === "all" || permissionsSatisfy(permsSet, visible)) {
     return createForbiddenResponse(request);
   }
   return createRouteNotFoundResponse(request);
 };
 
-const permissionsSatisfy = (perms, rule) => {
+const permissionsSatisfy = (permissionsSet, rule) => {
   if (rule === "all") {
     return true;
   }
-  if (rule && typeof rule === "object") {
-    for (const key of Object.keys(rule)) {
-      if (perms[key] !== rule[key]) {
+  if (typeof rule === "string") {
+    return permissionsSet.has(rule);
+  }
+  if (Array.isArray(rule)) {
+    for (const r of rule) {
+      if (!permissionsSet.has(r)) {
         return false;
       }
     }

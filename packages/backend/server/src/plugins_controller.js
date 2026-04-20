@@ -314,6 +314,26 @@ export const createPluginsController = async ({
       }
     },
 
+    // createAsyncHookIterator(hookName, info)
+    // Returns an async function that calls the next hook on each invocation.
+    // Returns { done: true } when all hooks have been called.
+    // Allows callers to maintain a shared cursor across multiple consumers.
+    createAsyncHookIterator: (hookName, info) => {
+      const hookSet = hookSetMap.get(hookName);
+      if (!hookSet) {
+        return async () => ({ done: true, value: undefined });
+      }
+      const iterator = hookSet.values();
+      return async () => {
+        const { done, value: hook } = iterator.next();
+        if (done) {
+          return { done: true, value: undefined };
+        }
+        const value = await callAsyncHook(hook, info);
+        return { done: false, value };
+      };
+    },
+
     getPluginMeta: (pluginName) => meta[pluginName],
     getMeta: () => meta,
     getLastPluginUsed: () => lastPluginUsed,
