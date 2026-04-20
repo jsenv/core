@@ -1321,6 +1321,7 @@ const fromNodeRequest = (
   });
 
   const headers = headersFromObject(nodeRequest.headers);
+  const cookies = parseRequestCookieHeader(headers["cookie"]);
   // pause the request body stream to let a chance for other parts of the code to subscribe to the stream
   // Without this the request body readable stream
   // might be closed when we'll try to attach "data" and "end" listeners to it
@@ -1458,6 +1459,7 @@ const fromNodeRequest = (
     }),
     method: nodeRequest.method,
     headers,
+    cookies,
     body,
     buffer,
     formData,
@@ -1646,6 +1648,23 @@ const readBody = (body, { as }) => {
       },
     });
   });
+};
+
+const parseRequestCookieHeader = (cookieHeader) => {
+  const map = new Map();
+  if (!cookieHeader) {
+    return map;
+  }
+  for (const pair of cookieHeader.split(";")) {
+    const eqIndex = pair.indexOf("=");
+    if (eqIndex === -1) {
+      continue;
+    }
+    const name = pair.slice(0, eqIndex).trim();
+    const value = decodeURIComponent(pair.slice(eqIndex + 1).trim());
+    map.set(name, value);
+  }
+  return map;
 };
 
 const applyRedirectionToRequest = (
@@ -2307,6 +2326,18 @@ const HEADER_NAMES_COMPOSITION = {
   "server-timing": composeTwoCommaSeparatedValues,
   // 'content-type', // https://github.com/ninenines/cowboy/issues/1230
   "vary": composeTwoCommaSeparatedValues,
+  // set-cookie is special: multiple values must be kept as an array
+  "set-cookie": (leftValue, rightValue) => {
+    if (!leftValue) {
+      return rightValue;
+    }
+    if (!rightValue) {
+      return leftValue;
+    }
+    const left = Array.isArray(leftValue) ? leftValue : [leftValue];
+    const right = Array.isArray(rightValue) ? rightValue : [rightValue];
+    return [...left, ...right];
+  },
 };
 
 const listen = async ({
@@ -3380,6 +3411,113 @@ This endpoint exists mostly to demo eventsource as there is already the websocke
   };
 };
 
+// https://bun.sh/docs/api/cookie
+
+const COOKIE = {
+  from: (name, value, options = {}) => {
+    return { name, value, options };
+  },
+  parse: (cookieString) => {
+    const parts = cookieString.split("; ");
+    const [nameValue, ...attributes] = parts;
+    const [name, value] = nameValue.split("=");
+    const options = {};
+    for (const attr of attributes) {
+      const [key, val] = attr.split("=");
+      if (key === "expires") {
+        options.expires = new Date(val);
+        continue;
+      }
+      if (key === "path") {
+        options.path = val;
+        continue;
+      }
+      if (key === "domain") {
+        options.domain = val;
+        continue;
+      }
+      if (key === "secure") {
+        options.secure = true;
+        continue;
+      }
+      if (key === "httponly") {
+        options.httpOnly = true;
+        continue;
+      }
+    }
+
+    return { name, value, options };
+  },
+  stringify: ({ name, value, options }) => {
+    let str = `${name}=${value}`;
+    if (options.expires) {
+      str += `; Expires=${options.expires.toUTCString()}`;
+    }
+    if (options.maxAge !== undefined) {
+      str += `; Max-Age=${options.maxAge}`;
+    }
+    if (options.path) {
+      str += `; Path=${options.path}`;
+    }
+    if (options.domain) {
+      str += `; Domain=${options.domain}`;
+    }
+    if (options.sameSite) {
+      str += `; SameSite=${options.sameSite}`;
+    }
+    if (options.secure) {
+      str += "; Secure";
+    }
+    if (options.httpOnly) {
+      str += "; HttpOnly";
+    }
+    return str;
+  },
+  toSetCookieHeaders: (cookies) => {
+    const headers = {};
+    for (const cookie of cookies) {
+      const value = COOKIE.stringify(cookie);
+      if (headers["set-cookie"] === undefined) {
+        headers["set-cookie"] = value;
+      } else if (Array.isArray(headers["set-cookie"])) {
+        headers["set-cookie"].push(value);
+      } else {
+        headers["set-cookie"] = [headers["set-cookie"], value];
+      }
+    }
+    return headers;
+  },
+};
+
+const serverPluginResponseCookies = () => {
+  return {
+    name: "jsenv:response_cookies",
+    augmentRouteFetchSecondArg: (request, fetchSecondArg) => {
+      const responseCookies = {
+        set: (name, value, options = {}) => {
+          fetchSecondArg.injectResponseHeader(
+            "set-cookie",
+            COOKIE.stringify(COOKIE.from(name, value, options)),
+          );
+        },
+        delete: (name, options = {}) => {
+          fetchSecondArg.injectResponseHeader(
+            "set-cookie",
+            COOKIE.stringify(
+              COOKIE.from(name, "", {
+                ...options,
+                expires: new Date(0),
+              }),
+            ),
+          );
+        },
+      };
+
+      return { responseCookies };
+    },
+  };
+};
+
 const pickAcceptedContent = ({
   availables,
   accepteds,
@@ -3888,9 +4026,10 @@ const serverPluginRouteInspector = ({ canExposeSensitiveData }) => {
         availableMediaTypes: ["application/json"],
         description: "Get the routes available on this server in JSON.",
         declarationSource: import.meta.url,
-        fetch: (request, helpers) => {
-          const routeJSON = helpers.router.inspect({
+        fetch: async (request, helpers) => {
+          const routeJSON = await helpers.router.inspect({
             canExposeSensitiveData,
+            fetchSecondArg: helpers,
           });
           return Response.json(routeJSON);
         },
@@ -4196,6 +4335,42 @@ const createPluginsController = async ({
     callHooksUntil,
     callAsyncHooks,
     callAsyncHooksUntil,
+    // callAsyncHooksWhile(hookName, info, callback)
+    // Calls hooks one by one, passing each return value to callback.
+    // Stops as soon as callback returns false.
+    callAsyncHooksWhile: async (hookName, info, callback) => {
+      const hookSet = hookSetMap.get(hookName);
+      if (!hookSet) {
+        return;
+      }
+      for (const hook of hookSet) {
+        const returnValue = await callAsyncHook(hook, info);
+        const shouldContinue = await callback(returnValue);
+        if (!shouldContinue) {
+          return;
+        }
+      }
+    },
+
+    // createAsyncHookIterator(hookName, info)
+    // Returns an async function that calls the next hook on each invocation.
+    // Returns { done: true } when all hooks have been called.
+    // Allows callers to maintain a shared cursor across multiple consumers.
+    createAsyncHookIterator: (hookName, info) => {
+      const hookSet = hookSetMap.get(hookName);
+      if (!hookSet) {
+        return async () => ({ done: true, value: undefined });
+      }
+      const iterator = hookSet.values();
+      return async () => {
+        const { done, value: hook } = iterator.next();
+        if (done) {
+          return { done: true, value: undefined };
+        }
+        const value = await callAsyncHook(hook, info);
+        return { done: false, value };
+      };
+    },
 
     getPluginMeta: (pluginName) => meta[pluginName],
     getMeta: () => meta,
@@ -4248,6 +4423,7 @@ const createServerPluginsController = async (serverPlugins) => {
         serverListening: { type: "hook" },
         redirectRequest: { type: "hook" },
         augmentRouteFetchSecondArg: { type: "hook" },
+        grantPermissions: { type: "hook" },
         handleError: { type: "hook" },
         onResponsePush: { type: "hook" },
         injectResponseProperties: { type: "hook" },
@@ -5675,6 +5851,7 @@ const createRouter = (
 ) => {
   const logger = createLogger({ logLevel });
   const routeSet = new Set();
+  let someRouteHasPermissions = false;
 
   const constructAvailableEndpoints = () => {
     // TODO: memoize
@@ -5816,6 +5993,12 @@ const createRouter = (
   for (const routeDescription of routeDescriptionArray) {
     const route = createRoute(routeDescription);
     routeSet.add(route);
+    if (
+      route.permissionsRequired !== undefined ||
+      route.permissionsToSee !== undefined
+    ) {
+      someRouteHasPermissions = true;
+    }
   }
 
   const match = async (request, fetchSecondArg) => {
@@ -5982,6 +6165,26 @@ It should be should be one of route.${routePropertyName}: ${availableValues.join
         const resourceMatchResult = route.matchResource(request.resource);
         if (!resourceMatchResult) {
           continue;
+        }
+        // permissions check — done before method/media-type/upgrade checks so that
+        // a hidden route does not leak its existence via 405/415/426 responses.
+        // If the route's method would not have matched anyway we skip silently (no
+        // wouldHaveMatched contribution). If the method would have matched we return
+        // the denied response so the caller gets 404 or 403.
+        if (someRouteHasPermissions) {
+          const { permissionsRequired, permissionsToSee } = route;
+          const denied = await checkRouteAccess(
+            permissionsRequired,
+            permissionsToSee,
+            request,
+            fetchSecondArg,
+          );
+          if (denied) {
+            if (route.matchMethod(request.method)) {
+              return denied;
+            }
+            continue;
+          }
         }
         if (!route.matchMethod(request.method)) {
           if (!route.isFallback) {
@@ -6165,10 +6368,68 @@ It should be should be one of route.${routePropertyName}: ${availableValues.join
 
     return matchRoutes(request);
   };
-  const inspect = ({ canExposeSensitiveData }) => {
-    // I want all the info I can gather about the routes
+  const inspect = async ({ canExposeSensitiveData, fetchSecondArg }) => {
     const data = [];
     for (const route of routeSet) {
+      if (someRouteHasPermissions) {
+        const { permissionsRequired, permissionsToSee } = route;
+        // route has no permission config → hidden from inspector
+        // (unless canExposeSensitiveData is set, in which case we show it as admin-only visible)
+        if (
+          permissionsRequired === undefined &&
+          permissionsToSee === undefined
+        ) {
+          if (!canExposeSensitiveData) {
+            continue;
+          }
+          const routeData = route.toJSON({ canExposeSensitiveData });
+          routeData.visibleBecauseAdmin = true;
+          data.push(routeData);
+          continue;
+        }
+        // anyone can access → always visible
+        if (
+          permissionsRequired !== undefined &&
+          permissionsRequired.length > 0
+        ) {
+          if (fetchSecondArg) {
+            const granted =
+              await fetchSecondArg.hasPermissions(permissionsRequired);
+            if (!granted) {
+              // determine if route is normally visible (permissionsToSee satisfied)
+              let normallyCanSee;
+              if (permissionsToSee === undefined) {
+                normallyCanSee = false;
+              } else {
+                const permsSet = await fetchSecondArg.getAllPermissions();
+                normallyCanSee =
+                  permissionsToSee.length === 0 ||
+                  permissionsSatisfy$1(permsSet, permissionsToSee);
+              }
+              if (!normallyCanSee && !canExposeSensitiveData) {
+                continue;
+              }
+              const routeData = route.toJSON({ canExposeSensitiveData });
+              routeData.forbidden = true;
+              if (!normallyCanSee) {
+                routeData.visibleBecauseAdmin = true;
+              }
+              data.push(routeData);
+              continue;
+            }
+          } else if (permissionsToSee === undefined) {
+            if (!canExposeSensitiveData) {
+              // no request context and route is not publicly visible
+              continue;
+            }
+            const routeData = route.toJSON({ canExposeSensitiveData });
+            routeData.forbidden = true;
+            routeData.visibleBecauseAdmin = true;
+            data.push(routeData);
+            continue;
+          }
+        }
+      }
       data.push(route.toJSON({ canExposeSensitiveData }));
     }
     return data;
@@ -6221,6 +6482,8 @@ const createRoute = ({
   headers,
   service,
   serverPlugin,
+  permissionsRequired,
+  permissionsToSee,
   availableMediaTypes = [],
   availableLanguages = [],
   availableVersions = [],
@@ -6271,6 +6534,8 @@ const createRoute = ({
     description,
     service,
     serverPlugin,
+    permissionsRequired,
+    permissionsToSee,
     availableMediaTypes,
     availableLanguages,
     availableVersions,
@@ -6357,6 +6622,59 @@ const createRoute = ({
 
 const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
 const isRedirectStatus = (status) => REDIRECT_STATUSES.has(status);
+
+// Returns a denied response if the request does not satisfy route access/visible config.
+// Returns null if access is granted.
+const checkRouteAccess = async (
+  permissionsRequired,
+  permissionsToSee,
+  request,
+  fetchSecondArg,
+) => {
+  // No permissionsRequired declared → route is hidden by default
+  if (permissionsRequired === undefined) {
+    return createRouteNotFoundResponse(request);
+  }
+  // permissionsRequired: [] → anyone can access
+  if (permissionsRequired.length === 0) {
+    return null;
+  }
+  // early-exit permission check (stops as soon as rule is satisfied)
+  const granted = await fetchSecondArg.hasPermissions(permissionsRequired);
+  if (granted) {
+    return null;
+  }
+  // access denied — decide between 404 and 403
+  if (permissionsToSee === undefined) {
+    return createRouteNotFoundResponse(request);
+  }
+  // permissionsToSee check uses full permissions (already accumulated from hasPermissions call above)
+  const permsSet = await fetchSecondArg.getAllPermissions();
+  if (
+    permissionsToSee.length === 0 ||
+    permissionsSatisfy$1(permsSet, permissionsToSee)
+  ) {
+    return createForbiddenResponse();
+  }
+  return createRouteNotFoundResponse(request);
+};
+
+const permissionsSatisfy$1 = (permissionsSet, permissionsRequired) => {
+  for (const p of permissionsRequired) {
+    if (!permissionsSet.has(p)) {
+      return false;
+    }
+  }
+  return true;
+};
+
+const createForbiddenResponse = () => {
+  return {
+    status: 403,
+    statusText: "Forbidden",
+    headers: {},
+  };
+};
 
 const isRequestBodyMediaTypeSupported = (request, { acceptedMediaTypes }) => {
   const requestBodyContentType = request.headers["content-type"];
@@ -6770,6 +7088,68 @@ const TIMING_NOOP = () => {
   return { end: () => {} };
 };
 
+const permissionsSatisfy = (permissionsSet, permissionsRequired) => {
+  for (const p of permissionsRequired) {
+    if (!permissionsSet.has(p)) {
+      return false;
+    }
+  }
+  return true;
+};
+
+/**
+ * Starts an HTTP (or HTTPS/HTTP2) server.
+ *
+ * @param {Object} params
+ *
+ * @param {Array<Object>} [params.routes=[]] - Route definitions for the server.
+ *   Each route is an object with the following properties:
+ *   - `endpoint` {string} — Required. A string like `"GET /users/:id"` combining the HTTP method
+ *     and the resource path. Use `"*"` as the method to match all methods, and URL patterns
+ *     such as `:param` for named segments or `*` for wildcards.
+ *   - `fetch` {Function} — Required. `(request, helpers) => response`. Must return a `Response`,
+ *     a response-like object `{ status, headers, body }`, or `null`/`undefined` to skip the route.
+ *   - `description` {string} — Optional human-readable description shown in the route inspector.
+ *   - `permissionsRequired` {Array<string>} — Optional. Permissions the client must hold to
+ *     access the route. An empty array means anyone can access. When omitted the route is hidden
+ *     by default (404 for everyone).
+ *   - `permissionsToSee` {Array<string>} — Optional. Permissions needed to know the route exists
+ *     (403 instead of 404 when access is denied). An empty array means the route is visible to
+ *     everyone even when access is denied.
+ *   - `availableMediaTypes` {Array<string>} — Content-types this route can produce (drives
+ *     `Accept` content negotiation).
+ *   - `availableLanguages` {Array<string>} — Languages this route can respond with.
+ *   - `availableEncodings` {Array<string>} — Encodings this route supports.
+ *   - `acceptedMediaTypes` {Array<string>} — Content-types accepted for request bodies
+ *     (POST/PATCH/PUT).
+ *   - `clientCodeExample` {string|Function} — Optional code snippet displayed in the route
+ *     inspector as a usage example.
+ *   - `declarationSource` {string} — Optional file URL of where the route is declared, shown
+ *     in the route inspector when `canExposeSensitiveData` is enabled.
+ *   - `headers` {Object} — Optional header pattern that must match for the route to be selected.
+ *
+ * @param {Array<Object>} [params.plugins=[]] - Server plugins that extend behaviour (hooks such
+ *   as `grantPermissions`, `redirectRequest`, `handleError`, etc.). See plugin documentation for
+ *   the exact shape; plugins are not described here in detail.
+ *
+ * @param {number} [params.port=0] - Port to listen on. Defaults to `0` which lets the OS assign
+ *   a random available port — useful in tests to avoid port conflicts. A fixed port such as
+ *   `3000` can be passed for a predictable address.
+ *
+ * @param {boolean} [params.acceptAnyIp=false] - When `true` the server binds to all network
+ *   interfaces (`0.0.0.0` / `::`), making it reachable from other machines on the network.
+ *   When `false` (default) it only listens on the configured `hostname`.
+ *
+ * @param {boolean} [params.canExposeSensitiveData=false] - Unlocks developer-facing features that
+ *   should never be enabled in production:
+ *   - Declaration source links in the route inspector (shows where each route is defined).
+ *   - The `/.internal/open_file` endpoint that can open files on the server machine.
+ *   - Auto-reload client notification when the server restarts.
+ *   - All routes are visible in the route inspector regardless of permission configuration.
+ *   Set to `true` during local development for a better DX.
+ *
+ * @returns {Promise<Object>} Resolves to the running server object with `{ origin, port, stop, … }`.
+ */
 const startServer = async ({
   signal = new AbortController().signal,
   logLevel,
@@ -6880,6 +7260,7 @@ const startServer = async ({
 
   plugins = [
     ...(canExposeSensitiveData ? [serverPluginOpenFile()] : []),
+    serverPluginResponseCookies(),
     serverPluginDefaultBody4xx5xx(),
     serverPluginRouteInspector({ canExposeSensitiveData }),
     ...(canExposeSensitiveData ? [serverPluginInternalClientFiles()] : []),
@@ -7291,6 +7672,48 @@ const startServer = async ({
             }
           },
         );
+        // Build permission helpers, lazily per request.
+        // A single shared iterator ensures each plugin is called at most once.
+        // hasPermissions stops early once the rule is satisfied;
+        // getAllPermissions drains all remaining plugins.
+        const permissionsSet = new Set();
+        const nextPermissionsHook =
+          serverPluginsController.createAsyncHookIterator(
+            "grantPermissions",
+            request,
+          );
+        const drainPermissionsUntil = async (permissionsRequired) => {
+          for (;;) {
+            if (
+              permissionsRequired !== undefined &&
+              permissionsSatisfy(permissionsSet, permissionsRequired)
+            ) {
+              return true;
+            }
+            const { done, value } = await nextPermissionsHook();
+            if (done) {
+              break;
+            }
+            if (Array.isArray(value)) {
+              for (const p of value) {
+                permissionsSet.add(p);
+              }
+            }
+          }
+          return false;
+        };
+        const getAllPermissions = async () => {
+          await drainPermissionsUntil(undefined);
+          return permissionsSet;
+        };
+        const hasPermissions = async (permissionsRequired) => {
+          if (permissionsRequired.length === 0) {
+            return true;
+          }
+          return drainPermissionsUntil(permissionsRequired);
+        };
+        fetchSecondArg.getAllPermissions = getAllPermissions;
+        fetchSecondArg.hasPermissions = hasPermissions;
         const routerResponseProperties = await router.match(
           request,
           fetchSecondArg,
