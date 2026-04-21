@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/https-local",
-  "version": "3.5.0",
+  "version": "3.6.0",
   "type": "module",
   "description": "A programmatic way to generate locally trusted certificates",
   "repository": {
