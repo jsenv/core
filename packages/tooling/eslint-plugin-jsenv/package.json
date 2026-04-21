@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/eslint-plugin",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "type": "module",
   "description": "Custom ESLint rules for jsenv projects",
   "author": "jsenv",

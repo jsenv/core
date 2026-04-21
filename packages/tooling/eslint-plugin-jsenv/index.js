@@ -12,9 +12,9 @@ export default {
   },
   configs: {
     recommended: {
-      plugins: ["@jsenv"],
+      plugins: ["jsenv"],
       rules: {
-        "@jsenv/no-unknown-params": "warn",
+        "jsenv/no-unknown-params": "warn",
       },
     },
   },
