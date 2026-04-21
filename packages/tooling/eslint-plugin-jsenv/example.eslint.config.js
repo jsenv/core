@@ -3,10 +3,10 @@
 export default [
   {
     plugins: {
-      "@jsenv": await import("@jsenv/eslint-plugin"),
+      jsenv: await import("@jsenv/eslint-plugin"),
     },
     rules: {
-      "@jsenv/no-unknown-params": "warn",
+      "jsenv/no-unknown-params": "warn",
     },
   },
 ];

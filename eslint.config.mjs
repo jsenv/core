@@ -29,7 +29,7 @@ export default [
     rules: {
       "no-debugger": ["off"],
       "jsenv/no-unknown-params": process.env.CI
-        ? ["off"] // to oheavy for github actions
+        ? ["off"] // too heavy for github actions
         : ["warn", { maxImportDepth: 2, reportAllUnknownParams: true }],
     },
   },
