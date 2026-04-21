@@ -110,6 +110,8 @@ npx @jsenv/https-local generate
 
 Generates a server certificate signed by the local certificate authority and writes it to files. Requires `init` to have been run first.
 
+> **Note:** Certificate files are static — they are not renewed automatically. Re-run `generate` after one year to replace expired files.
+
 Options:
 
 | Option          | Description                       | Default           |
@@ -153,7 +155,7 @@ npm install --save-dev @jsenv/https-local
 
 ### requestCertificate
 
-The `requestCertificate` function returns a certificate and private key in memory, useful when you want to avoid writing files to disk.
+The `requestCertificate` function generates a fresh certificate each time it is called and returns it in memory. Because the certificate is generated on every server startup, it is always valid — as long as your server is restarted at least once a year.
 
 ```js
 import { createServer } from "node:https";
