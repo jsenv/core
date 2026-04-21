@@ -34,26 +34,31 @@ const { values, positionals } = parseArgs({
 if (values.help || positionals.length === 0) {
   console.log(`https-local: Generate https certificates to use on your machine.
 
-Usage: 
+Usage:
 
-npx @jsenv/https-local setup
-  Install root certificate, try to trust it and ensure localhost is mapped to 127.0.0.1
+npx @jsenv/https-local init
+  Install root certificate, trust it and ensure localhost is mapped to 127.0.0.1
 
-npx @jsenv/https-local install --trust
-  Install root certificate on the filesystem
-  - trust: Try to add root certificate to os and browser trusted stores.
-
-npx @jsenv/https-local uninstall
-  Uninstall root certificate from the filesystem
-
-npx @jsenv/https-local localhost-mapping
-  Ensure localhost mapping to 127.0.0.1 is set on the filesystem
+npx @jsenv/https-local cleanup
+  Uninstall root certificate and remove its trust from os and browsers
 
 npx @jsenv/https-local generate
   Generate a server certificate and write it to files
   - certificate: Path where to write the certificate file (default: certificate.pem)
   - private-key: Path where to write the private key file (default: private_key.pem)
   - hostnames: Comma-separated list of hostnames (default: localhost)
+
+Advanced commands:
+
+npx @jsenv/https-local install --trust
+  Install root certificate on the filesystem
+  - trust: Try to add root certificate to os and browser trusted stores
+
+npx @jsenv/https-local uninstall
+  Uninstall root certificate from the filesystem
+
+npx @jsenv/https-local localhost-mapping
+  Ensure localhost mapping to 127.0.0.1 is set on the filesystem
 
 https://github.com/jsenv/core/tree/main/packages/tooling/https-local
 
@@ -63,7 +68,7 @@ https://github.com/jsenv/core/tree/main/packages/tooling/https-local
 }
 
 const commandHandlers = {
-  setup: async () => {
+  init: async () => {
     await installCertificateAuthority({
       tryToTrust: true,
       NSSDynamicInstall: true,
@@ -73,6 +78,11 @@ const commandHandlers = {
         "127.0.0.1": ["localhost"],
       },
       tryToUpdateHostsFile: true,
+    });
+  },
+  cleanup: async () => {
+    await uninstallCertificateAuthority({
+      tryToUntrust: true,
     });
   },
   install: async ({ trust }) => {

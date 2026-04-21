@@ -1,21 +1,22 @@
 # HTTPS Local [![npm package](https://img.shields.io/npm/v/@jsenv/https-local.svg?logo=npm&label=package)](https://www.npmjs.com/package/@jsenv/https-local)
 
-A programmatic way to generate locally trusted certificates for HTTPS development.
+Generate locally trusted HTTPS certificates for local development.
 
-🔒 Generate certificates trusted by your operating system and browsers  
+🔒 Certificates trusted by your operating system and browsers  
 🌐 Perfect for local HTTPS development  
 🖥️ Works on macOS, Linux, and Windows  
-⚡ Simple API for certificate management
+⚡ Simple CLI and JavaScript API
 
 ## Table of Contents
 
 - [HTTPS Local ](#https-local-)
   - [Table of Contents](#table-of-contents)
   - [Quick Start](#quick-start)
-  - [How to Use](#how-to-use)
-    - [1. Install the Root Certificate](#1-install-the-root-certificate)
-    - [2. Request Certificate for Your Server](#2-request-certificate-for-your-server)
-    - [3. Start the Server](#3-start-the-server)
+  - [CLI](#cli)
+    - [init](#init)
+    - [cleanup](#cleanup)
+    - [generate](#generate)
+    - [Advanced commands](#advanced-commands)
   - [Certificate Expiration](#certificate-expiration)
   - [JavaScript API](#javascript-api)
     - [requestCertificate](#requestcertificate)
@@ -27,97 +28,93 @@ A programmatic way to generate locally trusted certificates for HTTPS developmen
 ## Quick Start
 
 ```console
-# Install the package
-npm install @jsenv/https-local
-
-# Install and trust the root certificate
-npx @jsenv/https-local install --trust
+npx @jsenv/https-local init
 ```
 
-```js
-// In your server file
-import { createServer } from "node:https";
-import { requestCertificate } from "@jsenv/https-local";
+That's it. Your machine is now ready to run local HTTPS servers.
 
-const { certificate, privateKey } = requestCertificate();
-const server = createServer(
-  {
-    cert: certificate,
-    key: privateKey,
-  },
-  (request, response) => {
-    response.end("Hello HTTPS world!");
-  },
-).listen(8443, () => {
-  console.log("HTTPS server running at https://localhost:8443");
-});
+## CLI
+
+### init
+
+```console
+npx @jsenv/https-local init
 ```
 
-## How to Use
+Installs a root certificate authority, trusts it in your OS and browsers, and ensures `localhost` is mapped to `127.0.0.1` in your hosts file. Safe to re-run — subsequent runs report the current status.
 
-The following steps can be taken to start a local server in HTTPS:
+### cleanup
 
-### 1. Install the Root Certificate
+```console
+npx @jsenv/https-local cleanup
+```
+
+Uninstalls the root certificate and removes its trust from your OS and browsers.
+
+### generate
+
+```console
+npx @jsenv/https-local generate
+```
+
+Generates a server certificate signed by the local certificate authority and writes it to files.
+
+Options:
+
+| Option          | Description                       | Default           |
+| --------------- | --------------------------------- | ----------------- |
+| `--certificate` | Path for the certificate file     | `certificate.pem` |
+| `--private-key` | Path for the private key file     | `private_key.pem` |
+| `--hostnames`   | Comma-separated list of hostnames | `localhost`       |
+
+Example:
+
+```console
+npx @jsenv/https-local generate --certificate server.pem --private-key server.key --hostnames localhost,myapp.local
+```
+
+Requires `init` to have been run first.
+
+### Advanced commands
+
+These commands are the individual steps that `init` and `cleanup` perform internally.
 
 ```console
 npx @jsenv/https-local install --trust
 ```
 
-This will install a root certificate valid for 20 years.
-
-- Re-executing this command will log the current root certificate validity and trust status
-- Re-executing this command 20 years later would reinstall a root certificate and re-trust it
-
-### 2. Request Certificate for Your Server
-
-_start_dev_server.mjs_
-
-```js
-import { createServer } from "node:https";
-import { requestCertificate } from "@jsenv/https-local";
-
-const { certificate, privateKey } = requestCertificate();
-const server = createServer(
-  {
-    cert: certificate,
-    key: privateKey,
-  },
-  (request, response) => {
-    const body = "Hello world";
-    response.writeHead(200, {
-      "content-type": "text/plain",
-      "content-length": Buffer.byteLength(body),
-    });
-    response.write(body);
-    response.end();
-  },
-);
-server.listen(8080);
-console.log(`Server listening at https://local.example:8080`);
-```
-
-### 3. Start the Server
+Installs the root certificate. Pass `--trust` to also add it to OS and browser trust stores.
 
 ```console
-node ./start_dev_server.mjs
+npx @jsenv/https-local uninstall
 ```
 
-At this stage you have a server running in HTTPS.
+Uninstalls the root certificate from the filesystem.
+
+```console
+npx @jsenv/https-local localhost-mapping
+```
+
+Ensures `localhost` is mapped to `127.0.0.1` in the hosts file.
 
 ## Certificate Expiration
 
-| Certificate | Expires after | How to renew?                        |
-| ----------- | ------------- | ------------------------------------ |
-| server      | 1 year        | Re-run _requestCertificate_          |
-| authority   | 20 years      | Re-run _installCertificateAuthority_ |
+| Certificate | Expires after | How to renew?     |
+| ----------- | ------------- | ----------------- |
+| server      | 1 year        | Re-run `generate` |
+| authority   | 20 years      | Re-run `init`     |
 
 The **server certificate** expires after one year, which is the maximum duration allowed by web browsers.
-In the unlikely scenario where a local server is running for more than a year without interruption, restart it to re-run requestCertificate.
 
-The **authority root certificate** expires after 20 years, which is close to the maximum allowed duration.
-In the very unlikely scenario where you are using the same machine for more than 20 years, re-execute [installCertificateAuthority](#installcertificateauthority) to update certificate authority then restart your server.
+The **authority root certificate** expires after 20 years. Re-running `init` after expiry will reinstall and re-trust a new one.
 
 ## JavaScript API
+
+To use the JavaScript API, add the package to your dev dependencies:
+
+```console
+npm install --save-dev @jsenv/https-local
+```
 
 ### requestCertificate
 
@@ -130,13 +127,21 @@ import { requestCertificate } from "@jsenv/https-local";
 const { certificate, privateKey } = requestCertificate({
   altNames: ["localhost", "local.example"],
 });
+const server = createServer(
+  { cert: certificate, key: privateKey },
+  (request, response) => {
+    response.end("Hello HTTPS world!");
+  },
+).listen(8443, () => {
+  console.log("HTTPS server running at https://localhost:8443");
+});
 ```
 
-[installCertificateAuthority](#installcertificateauthority) must be called before this function.
+[`init`](#init) (or `installCertificateAuthority`) must be called once before using this function.
 
 ### verifyHostsFile
 
-This function is not mandatory to obtain the HTTPS certificates, but it is useful to programmatically verify IP mappings that are important for your local server are present in hosts file.
+Verifies that IP mappings important for your local server are present in the hosts file.
 
 ```js
 import { verifyHostsFile } from "@jsenv/https-local";

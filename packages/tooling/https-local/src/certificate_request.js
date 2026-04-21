@@ -48,7 +48,7 @@ export const requestCertificate = ({
     throw new Error(
       `Certificate authority not found, "installCertificateAuthority" must be called before "requestServerCertificate".
 --- Suggested command to run ---
-npx @jsenv/https-local install --trust`,
+npx @jsenv/https-local init`,
     );
   }
   if (!rootCertificatePrivateKeyFileInfo.exists) {
