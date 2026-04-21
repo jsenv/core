@@ -3,6 +3,9 @@
 
 - [works](0_works/0_works.md)
 - [does not](1_does_not/1_does_not.md)
+- [inside array matching](2_inside_array_matching/2_inside_array_matching.md)
+- [inside array not matching](3_inside_array_not_matching/3_inside_array_not_matching.md)
+- [inside second array not matching](4_inside_second_array_not_matching/4_inside_second_array_not_matching.md)
 
 ---
 

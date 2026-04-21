@@ -664,6 +664,9 @@ export const createAssert = ({
             subcompareSolo,
             onSelfDiff,
           });
+          if (!actualNode.comparison) {
+            actualNode.comparison = comparison;
+          }
           break visit;
         }
         if (actualNode.category === expectNode.category) {
