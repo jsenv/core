@@ -16,10 +16,14 @@ assert({
 AssertionError: actual and expect are different
 
 actual: [
-  ↑ 2 values ↑ (1 modified)
+  "before",
+  "expired A seconds ago",
+  "after",
 ]
 expect: [
-  ↑ 2 values ↑
+  "before",
+  assert.matches(/expired \d seconds ago/),
+  "after",
 ]
 ```
 

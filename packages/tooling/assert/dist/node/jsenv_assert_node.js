@@ -1260,8 +1260,7 @@ const renderChildrenMultiline = (node, props) => {
     for (const childKeyToDisplay of childKeyToDisplaySet) {
       const childIndexToDisplay = childrenKeys.indexOf(childKeyToDisplay);
       if (firstDisplayedChildWithDiffIndex === -1) {
-        const childNode = node.childNodeMap.get(childKeyToDisplay);
-        if (childNode.comparison.hasAnyDiff) {
+        if (node.childComparisonDiffMap.has(childKeyToDisplay)) {
           firstDisplayedChildWithDiffIndex = childIndexToDisplay;
         }
       }
@@ -1611,7 +1610,7 @@ const setChildKeyToDisplaySetDuo = (actualNode, expectNode, props) => {
       if (childNode.maxDiffReached) {
         break;
       }
-      if (!childNode.comparison.hasAnyDiff) {
+      if (!referenceNode.childComparisonDiffMap.has(childKey)) {
         continue;
       }
       childKeyWithDiffSet.add(childKey);

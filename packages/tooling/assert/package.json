@@ -1,22 +1,22 @@
 {
   "name": "@jsenv/assert",
-  "version": "4.5.5",
+  "version": "4.5.6",
+  "type": "module",
   "description": "One assertion to test everything",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
     "directory": "packages/tooling/assert"
   },
-  "license": "MIT",
   "author": {
     "name": "dmail",
     "email": "dmaillard06@gmail.com"
   },
-  "sideEffects": [
-    "./dist/browser/jsenv_assert_node_modules.js",
-    "./dist/node/jsenv_assert_node_modules.js"
-  ],
-  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=16.13.0"
+  },
+  "main": "./dist/browser/jsenv_assert_browser.js",
   "exports": {
     ".": {
       "node": {
@@ -30,7 +30,6 @@
     },
     "./*": "./*"
   },
-  "main": "./dist/browser/jsenv_assert_browser.js",
   "files": [
     "/dist/",
     "/src/"
@@ -51,10 +50,11 @@
     "graphemer": "1.4.0",
     "strip-ansi": "7.2.0"
   },
-  "engines": {
-    "node": ">=16.13.0"
-  },
   "publishConfig": {
     "access": "public"
-  }
+  },
+  "sideEffects": [
+    "./dist/browser/jsenv_assert_node_modules.js",
+    "./dist/node/jsenv_assert_node_modules.js"
+  ]
 }
