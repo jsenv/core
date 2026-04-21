@@ -329,6 +329,7 @@ function parseContent(filePath, content, context) {
     parserOptions.loc = true;
     parserOptions.range = true;
     parserOptions.filePath = filePath;
+    parserOptions.regexpUnicodeSets = true;
 
     // Handle flat config ecmaVersion and sourceType
     parserOptions.ecmaVersion ??= context.languageOptions?.ecmaVersion || 2022;
