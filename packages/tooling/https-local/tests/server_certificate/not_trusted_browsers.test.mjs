@@ -80,7 +80,7 @@ if (process.platform !== "win32") {
     if (process.platform === "darwin") {
       assert({
         actual: e.errorText.includes(
-          "The certificate for this server is invalid. You might be connecting to",
+          "The certificate for this server is invalid.",
         ),
         expect: true,
       });

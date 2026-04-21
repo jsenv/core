@@ -1,12 +1,22 @@
 import { assert } from "@jsenv/assert";
+import { UNICODE } from "@jsenv/humanize";
+import { execSync } from "node:child_process";
+
 import {
   installCertificateAuthority,
   uninstallCertificateAuthority,
 } from "@jsenv/https-local";
 import { createLoggerForTest } from "@jsenv/https-local/tests/test_helpers.mjs";
-import { UNICODE } from "@jsenv/humanize";
 
-process.exit(0);
+const nssInstalledOnMac = () => {
+  try {
+    execSync("brew list --versions nss", { stdio: "pipe" });
+    return true;
+  } catch {
+    return false;
+  }
+};
+const darwinNssInstalled = process.platform === "darwin" && nssInstalledOnMac();
 
 await uninstallCertificateAuthority({
   logLevel: "warn",
@@ -53,10 +63,15 @@ const expect = {
           status: "not_trusted",
           reason: "certificate not found in mac keychain",
         },
-        firefox: {
-          status: "unknown",
-          reason: `"nss" is not installed`,
-        },
+        firefox: darwinNssInstalled
+          ? {
+              status: "not_trusted",
+              reason: `missing or outdated in firefox nss database file`,
+            }
+          : {
+              status: "unknown",
+              reason: `"nss" is not installed`,
+            },
         safari: {
           status: "not_trusted",
           reason: "certificate not found in mac keychain",
@@ -108,9 +123,11 @@ const expect = {
           "Check if certificate is in mac keychain...",
           `${UNICODE.INFO} certificate not found in mac keychain`,
           "Check if certificate is in firefox...",
-          `${UNICODE.FAILURE} cannot check if certificate is in firefox
---- reason ---
-"nss" is not installed`,
+          ...(darwinNssInstalled
+            ? [`${UNICODE.INFO} certificate not found in firefox`]
+            : [
+                `${UNICODE.FAILURE} cannot check if certificate is in firefox\n--- reason ---\n"nss" is not installed`,
+              ]),
         ],
         win32: [
           "Check if certificate is in windows...",
