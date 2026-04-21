@@ -64,8 +64,7 @@ const patternForEachExtension = (pattern, extensions) => {
  * // With custom browser directory and explicit settings
  * export default eslintConfigRelax({
  *   rootDirectoryUrl: import.meta.url,
- *   browserDirectoryUrl: new URL("./src/client/", import.meta.url),
- *   prettier: true,
+ *   browserDirectoryUrl: import.meta.resolve("./src/client/"),
  *   preact: true,
  *   browserFiles: ["src/frontend/**"]
  * });
@@ -138,10 +137,12 @@ export const eslintConfigRelax = ({
   }
   browserFiles = [...defaultBrowserFiles, ...browserFiles];
   browserAndNodeFiles = [...browserAndNodeFiles];
+  // https://babeljs.io/docs/babel-parser#options
   const parserOptions = {
     ecmaVersion: 2022,
     sourceType: "module",
     ecmaFeatures: { jsx: true },
+    regexpUnicodeSets: true,
   };
   const globalsForNodeModule = {
     ...globals.node,
