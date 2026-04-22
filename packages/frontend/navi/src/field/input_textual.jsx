@@ -479,6 +479,7 @@ const InputTextualCombobox = ({ combobox, ...rest }) => {
     <InputTextualPlain
       ref={ref}
       role="combobox"
+      autoComplete="off"
       aria-controls={combobox}
       aria-haspopup="listbox"
       aria-expanded={comboboxOpen}

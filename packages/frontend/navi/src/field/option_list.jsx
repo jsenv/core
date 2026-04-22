@@ -61,17 +61,6 @@ const css = /* css */ `
     }
   }
 
-  /* Popover reset — browser adds border, background, padding, margin by default */
-  .navi_option_list[popover] {
-    position: fixed;
-    inset: unset;
-    margin: 0;
-    padding: 0;
-    background: transparent;
-    border: none;
-    overflow: visible;
-  }
-
   .navi_option_list {
     --x-border-radius: var(--border-radius);
     --x-border-width: var(--border-width);
@@ -88,6 +77,15 @@ const css = /* css */ `
     border-radius: var(--x-border-radius);
     outline: none;
     overflow-y: auto;
+
+    /* Popover reset — browser adds border, background, padding, margin by default */
+    &[popover] {
+      inset: unset;
+      margin: 0;
+      padding: 0;
+      border: none;
+      overflow: visible;
+    }
   }
   .navi_option {
     --x-color: var(--color);
