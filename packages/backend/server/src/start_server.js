@@ -408,6 +408,7 @@ export const startServer = async ({
     stopCallbackSet.clear();
     await Promise.all(promises);
     serverPluginsController.callHooks("serverStopped", { reason });
+    await serverPluginsController.destroyAllPlugins();
     status = "stopped";
     stoppedResolve(reason);
   });

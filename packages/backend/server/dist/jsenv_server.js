@@ -4377,6 +4377,13 @@ const createPluginsController = async ({
     getLastPluginUsed: () => lastPluginUsed,
     getCurrentPlugin: () => currentPlugin,
     getCurrentHookName: () => currentHookName,
+    destroyAllPlugins: async () => {
+      for (const plugin of activePlugins) {
+        if (plugin.destroy) {
+          await plugin.destroy();
+        }
+      }
+    },
   };
 };
 
@@ -7445,6 +7452,7 @@ const startServer = async ({
     stopCallbackSet.clear();
     await Promise.all(promises);
     serverPluginsController.callHooks("serverStopped", { reason });
+    await serverPluginsController.destroyAllPlugins();
     status = "stopped";
     stoppedResolve(reason);
   });

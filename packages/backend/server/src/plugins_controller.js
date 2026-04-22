@@ -339,6 +339,13 @@ export const createPluginsController = async ({
     getLastPluginUsed: () => lastPluginUsed,
     getCurrentPlugin: () => currentPlugin,
     getCurrentHookName: () => currentHookName,
+    destroyAllPlugins: async () => {
+      for (const plugin of activePlugins) {
+        if (plugin.destroy) {
+          await plugin.destroy();
+        }
+      }
+    },
   };
 };
 

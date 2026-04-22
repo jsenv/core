@@ -37,7 +37,7 @@
     "@jsenv/validity": "0.0.3"
   },
   "devDependencies": {
-    "@jsenv/assert": "4.5.5",
+    "@jsenv/assert": "4.5.6",
     "@jsenv/core": "../../../",
     "@jsenv/filesystem": "../../tooling/filesystem",
     "@jsenv/plugin-preact": "../../related/plugin-preact",
