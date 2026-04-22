@@ -364,7 +364,13 @@ const InputTextualBasic = (props) => {
   return <InputTextualPlain {...props} />;
 };
 
-const InputTextualCombobox = ({ combobox, ...rest }) => {
+const InputTextualCombobox = ({
+  combobox,
+  onInput,
+  onFocus,
+  onBlur,
+  ...rest
+}) => {
   const defaultRef = useRef();
   const ref = rest.ref || defaultRef;
   const [comboboxOpen, setComboboxOpen] = useState(false);
@@ -422,7 +428,6 @@ const InputTextualCombobox = ({ combobox, ...rest }) => {
       key: "arrowdown",
       description: "Open popover and highlight next option",
       handler: () => {
-        debugger;
         showPopover();
         const popoverEl = document.getElementById(combobox);
         if (!popoverEl) {
@@ -529,11 +534,17 @@ const InputTextualCombobox = ({ combobox, ...rest }) => {
       aria-haspopup="listbox"
       aria-expanded={comboboxOpen}
       aria-autocomplete="list"
-      onFocus={() => {
+      onFocus={(e) => {
+        onFocus?.(e);
         showPopover();
       }}
-      onBlur={() => {
+      onBlur={(e) => {
+        onBlur?.(e);
         hidePopover();
+      }}
+      onInput={(e) => {
+        onInput?.(e);
+        showPopover();
       }}
       {...rest}
     />

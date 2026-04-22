@@ -150,7 +150,7 @@
               style={{ "--max-height": "220px" }}
             >
               {filtered.map((fruit) => (
-                <Option key={fruit} value={fruit}>
+                <Option key={fruit} value={fruit} selected={selected === fruit}>
                   {fruit}
                 </Option>
               ))}
@@ -197,7 +197,11 @@
               style={{ "--max-height": "220px" }}
             >
               {filtered.map((country) => (
-                <Option key={country.code} value={country.name}>
+                <Option
+                  key={country.code}
+                  value={country.name}
+                  selected={selected === country.code}
+                >
                   <span style={{ fontWeight: 500 }}>{country.name}</span>
                   <span className="option-secondary">{country.region}</span>
                 </Option>
