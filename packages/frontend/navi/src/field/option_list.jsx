@@ -358,6 +358,7 @@ export const OptionList = ({
 };
 
 const OPTION_PSEUDO_CLASSES = [":-navi-pointed", ":-navi-selected"];
+const OPTION_PSEUDO_ELEMENTS = ["::highlight"];
 export const Option = ({ value, selected, hidden, children, ...rest }) => {
   import.meta.css = css;
 
@@ -392,6 +393,7 @@ export const Option = ({ value, selected, hidden, children, ...rest }) => {
         ":-navi-selected": selected,
       }}
       pseudoClasses={OPTION_PSEUDO_CLASSES}
+      pseudoElements={OPTION_PSEUDO_ELEMENTS}
       styleCSSVars={OptionStyleCSSVars}
       onMouseEnter={() => {
         if (!hidden) {
