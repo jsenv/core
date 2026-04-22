@@ -534,9 +534,13 @@ const InputTextualCombobox = ({
       aria-haspopup="listbox"
       aria-expanded={comboboxOpen}
       aria-autocomplete="list"
+      oncalloutopen={() => {
+        hidePopover();
+      }}
       onFocus={(e) => {
         onFocus?.(e);
         showPopover();
+        console.log("show popover");
       }}
       onBlur={(e) => {
         onBlur?.(e);

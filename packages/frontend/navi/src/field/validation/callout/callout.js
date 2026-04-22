@@ -382,8 +382,14 @@ export const openCallout = (
 
     allowWheelThrough(calloutElement, anchorElement);
     anchorElement.setAttribute("data-callout", calloutId);
+    anchorElement.dispatchEvent(
+      new CustomEvent("calloutopen", { bubbles: true }),
+    );
     addTeardown(() => {
       anchorElement.removeAttribute("data-callout");
+      anchorElement.dispatchEvent(
+        new CustomEvent("calloutclose", { bubbles: true }),
+      );
     });
 
     addStatusEffect((status) => {
