@@ -130,7 +130,6 @@ const css = /* css */ `
 export const OptionListContext = createContext(null);
 
 export const OptionList = ({
-  id,
   popover,
   onChange: onChangeProp,
   hidden: hiddenProp,
@@ -146,7 +145,7 @@ export const OptionList = ({
   highlightedValueRef.current = highlightedValue;
 
   const ownId = useId();
-  const listboxId = id ?? ownId;
+  const id = rest.id ?? ownId;
 
   const listRef = useRef(null);
   const effectiveOnChange = popover
@@ -300,7 +299,7 @@ export const OptionList = ({
       <Box
         as="ul"
         ref={listRef}
-        id={listboxId}
+        id={id}
         role="listbox"
         tabIndex={popover ? -1 : 0}
         popover={popover ? "manual" : undefined}
@@ -315,20 +314,15 @@ export const OptionList = ({
 };
 
 const OPTION_PSEUDO_CLASSES = [":-navi-highlighted", ":-navi-selected"];
-export const Option = ({ value, children, ...rest }) => {
+export const Option = ({ value, selected, children, ...rest }) => {
   import.meta.css = css;
 
   const optionId = useId();
   const id = rest.id || optionId;
   useTrackOption({ value, optionId: id });
-  const {
-    value: selectedValue,
-    highlightedValue,
-    setHighlightedValue,
-    onSelect,
-  } = useContext(OptionListContext);
+  const { highlightedValue, setHighlightedValue, onSelect } =
+    useContext(OptionListContext);
 
-  const isSelected = selectedValue === value;
   const isHighlighted = highlightedValue === value;
   const optionRef = useRef(null);
 
@@ -346,10 +340,10 @@ export const Option = ({ value, children, ...rest }) => {
       baseClassName="navi_option"
       id={optionId}
       role="option"
-      aria-selected={isSelected}
+      aria-selected={selected}
       basePseudoState={{
         ":-navi-highlighted": isHighlighted,
-        ":-navi-selected": isSelected,
+        ":-navi-selected": selected,
       }}
       pseudoClasses={OPTION_PSEUDO_CLASSES}
       onMouseEnter={() => setHighlightedValue(value)}

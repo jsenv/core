@@ -124,11 +124,10 @@
             </p>
             <OptionList
               style={{ "--max-height": "220px" }}
-              value={selected}
               onChange={setSelected}
             >
               {FRUITS.map((fruit) => (
-                <Option key={fruit} value={fruit}>
+                <Option key={fruit} value={fruit} selected={selected === fruit}>
                   {fruit}
                 </Option>
               ))}
@@ -148,11 +147,14 @@
             <p>Each option renders the country name + region badge.</p>
             <OptionList
               style={{ "--max-height": "220px" }}
-              value={selected}
               onChange={setSelected}
             >
               {COUNTRIES.map((country) => (
-                <Option key={country.code} value={country.code}>
+                <Option
+                  key={country.code}
+                  value={country.code}
+                  selected={selected === country.code}
+                >
                   <span style={{ fontWeight: 500 }}>{country.name}</span>
                   <span
                     style={{
@@ -216,12 +218,11 @@
             />
             <OptionList
               style={{ "--max-height": "220px" }}
-              value={selected}
               onChange={setSelected}
               hidden={filtered.length === 0}
             >
               {filtered.map((fruit) => (
-                <Option key={fruit} value={fruit}>
+                <Option key={fruit} value={fruit} selected={selected === fruit}>
                   {fruit}
                 </Option>
               ))}
