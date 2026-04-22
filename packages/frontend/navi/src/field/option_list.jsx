@@ -16,10 +16,6 @@ const [useOptionItemTrackerProvider, useTrackOption] = createItemTracker();
  *     <Option value="b">Option B</Option>
  *   </OptionList>
  *
- * A parent component can control OptionList by providing OptionListControllerContext.
- * The controller can override: value, onChange, hidden, highlightedValue,
- * setHighlightedValue, highlightedValueRef, registeredValuesRef, registeredIdsRef.
- *
  * CSS vars on .navi_option_list:
  *   --border-radius, --border-width, --border-color, --background-color, --max-height
  *
@@ -129,25 +125,6 @@ const css = /* css */ `
 `;
 
 /**
- * Context a parent component (e.g. ComboBox) can provide to control OptionList.
- * Any key provided overrides OptionList's own local state/props.
- *
- * Shape:
- *   {
- *     value,               // controlled selected value
- *     onChange,            // selection handler
- *     hidden,              // visibility override
- *     highlightedValue,    // keyboard cursor value
- *     setHighlightedValue,
- *     highlightedValueRef, // ref holding current highlightedValue for stable closures
- *     registeredValuesRef, // shared ordered array of registered option values
- *     registeredIdsRef,    // shared Map<value, domId> for aria-activedescendant
- *     keyboardTargetRef,   // when provided, keyboard shortcuts are installed here instead of <ul>
- *   }
- */
-export const OptionListControllerContext = createContext(null);
-
-/**
  * Context OptionList provides downward to its Option children.
  */
 export const OptionListContext = createContext(null);
@@ -155,7 +132,6 @@ export const OptionListContext = createContext(null);
 export const OptionList = ({
   id,
   popover,
-  value: valueProp,
   onChange: onChangeProp,
   hidden: hiddenProp,
   children,
@@ -163,34 +139,16 @@ export const OptionList = ({
 }) => {
   import.meta.css = css;
 
-  const controller = useContext(OptionListControllerContext);
   const ItemTrackerProvider = useOptionItemTrackerProvider();
 
-  // Own state — used when no controller overrides them
-  const [ownHighlightedValue, setOwnHighlightedValue] = useState(null);
-  const ownHighlightedValueRef = useRef(null);
-  ownHighlightedValueRef.current = ownHighlightedValue;
-
-  // Resolve effective values: controller wins over own props/state
-  const value = controller ? controller.value : valueProp;
-  const onChange = controller ? controller.onChange : onChangeProp;
-  const hidden = controller ? controller.hidden : hiddenProp;
-  const highlightedValue = controller
-    ? controller.highlightedValue
-    : ownHighlightedValue;
-  const setHighlightedValue = controller
-    ? controller.setHighlightedValue
-    : setOwnHighlightedValue;
-  const highlightedValueRef = controller
-    ? controller.highlightedValueRef
-    : ownHighlightedValueRef;
-  const keyboardTargetRef = controller ? controller.keyboardTargetRef : null;
+  const [highlightedValue, setHighlightedValue] = useState(null);
+  const highlightedValueRef = useRef(null);
+  highlightedValueRef.current = highlightedValue;
 
   const ownId = useId();
   const listboxId = id ?? ownId;
 
   const listRef = useRef(null);
-  // When popover mode, dispatch a DOM event so the linked Input is notified
   const effectiveOnChange = popover
     ? (value) => {
         onChangeProp?.(value);
@@ -201,7 +159,7 @@ export const OptionList = ({
           }),
         );
       }
-    : onChange;
+    : onChangeProp;
   const onChangeRef = useRef(effectiveOnChange);
   onChangeRef.current = effectiveOnChange;
 
@@ -264,7 +222,7 @@ export const OptionList = ({
     }
   }, [highlightedValue]);
 
-  useKeyboardShortcuts(popover ? noopRef : (keyboardTargetRef ?? listRef), [
+  useKeyboardShortcuts(popover ? noopRef : listRef, [
     {
       key: "arrowdown",
       description: "Highlight next option",
@@ -343,7 +301,6 @@ export const OptionList = ({
   ]);
 
   const optionListContext = {
-    value,
     highlightedValue,
     setHighlightedValue,
     onSelect: effectiveOnChange,
@@ -351,21 +308,19 @@ export const OptionList = ({
 
   return (
     <OptionListContext.Provider value={optionListContext}>
-      <ItemTrackerProvider>
-        <Box
-          as="ul"
-          ref={listRef}
-          id={listboxId}
-          role="listbox"
-          tabIndex={keyboardTargetRef || popover ? -1 : 0}
-          popover={popover ? "manual" : undefined}
-          hidden={popover ? undefined : hidden}
-          {...rest}
-          baseClassName="navi_option_list"
-        >
-          {children}
-        </Box>
-      </ItemTrackerProvider>
+      <Box
+        as="ul"
+        ref={listRef}
+        id={listboxId}
+        role="listbox"
+        tabIndex={popover ? -1 : 0}
+        popover={popover ? "manual" : undefined}
+        hidden={popover ? undefined : hiddenProp}
+        {...rest}
+        baseClassName="navi_option_list"
+      >
+        <ItemTrackerProvider>{children}</ItemTrackerProvider>
+      </Box>
     </OptionListContext.Provider>
   );
 };
