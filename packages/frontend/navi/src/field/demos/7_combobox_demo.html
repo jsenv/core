@@ -75,10 +75,7 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      import { Input } from "../input.jsx";
-      import { Button } from "../button.jsx";
-      import { Form } from "../form.jsx";
-      import { Option, OptionList } from "../option_list.jsx";
+      import { Option, OptionList, Form, Button, Input } from "@jsenv/navi";
 
       const FRUITS = [
         "Apple",
@@ -297,68 +294,64 @@
               <code>action</code> is async. Submitting collects the selected
               values as form fields.
             </p>
-            <Form action={submitForm}>
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "12px",
-                }}
-              >
-                <label>
-                  Favourite fruit:
-                  <Input
-                    type="text"
-                    name="fruit"
-                    combobox="form-fruit-list"
-                    placeholder="Search a fruit…"
-                    uiAction={(v) => setFruitQuery(v)}
-                  />
-                  <OptionList
-                    id="form-fruit-list"
-                    popover
-                    style={{ "--max-height": "180px" }}
-                  >
-                    {filteredFruits.map((fruit) => (
-                      <Option
-                        key={fruit}
-                        value={fruit}
-                        selected={fruitQuery === fruit}
-                      >
-                        {fruit}
-                      </Option>
-                    ))}
-                  </OptionList>
-                </label>
+            <Form action={submitForm} flex="y" alignX="start" spacing="m">
+              <label>
+                Favourite fruit:
+                <Input
+                  type="text"
+                  name="fruit"
+                  combobox="form-fruit-list"
+                  placeholder="Search a fruit…"
+                  required
+                  data-one-of="#form-fruit-list"
+                  uiAction={(v) => setFruitQuery(v)}
+                />
+                <OptionList
+                  id="form-fruit-list"
+                  popover
+                  style={{ "--max-height": "180px" }}
+                >
+                  {filteredFruits.map((fruit) => (
+                    <Option
+                      key={fruit}
+                      value={fruit}
+                      selected={fruitQuery === fruit}
+                    >
+                      {fruit}
+                    </Option>
+                  ))}
+                </OptionList>
+              </label>
 
-                <label>
-                  Country:
-                  <Input
-                    type="text"
-                    name="country"
-                    combobox="form-country-list"
-                    placeholder="Search a country…"
-                    uiAction={(v) => setCountryQuery(v)}
-                  />
-                  <OptionList
-                    id="form-country-list"
-                    popover
-                    style={{ "--max-height": "180px" }}
-                  >
-                    {filteredCountries.map((c) => (
-                      <Option
-                        key={c.code}
-                        value={c.name}
-                        selected={countryQuery === c.name}
-                      >
-                        {c.name}
-                      </Option>
-                    ))}
-                  </OptionList>
-                </label>
+              <label>
+                Country:
+                <Input
+                  type="text"
+                  name="country"
+                  combobox="form-country-list"
+                  placeholder="Search a country…"
+                  required
+                  data-one-of="#form-country-list"
+                  uiAction={(v) => setCountryQuery(v)}
+                />
+                <OptionList
+                  id="form-country-list"
+                  popover
+                  style={{ "--max-height": "180px" }}
+                >
+                  {filteredCountries.map((c) => (
+                    <Option
+                      key={c.code}
+                      value={c.name}
+                      selected={countryQuery === c.name}
+                    >
+                      {c.name}
+                    </Option>
+                  ))}
+                </OptionList>
+              </label>
 
-                <Button type="submit">Submit</Button>
-              </div>
+              <Button type="submit">Submit</Button>
             </Form>
             {submitResult && (
               <div className="value-display">
