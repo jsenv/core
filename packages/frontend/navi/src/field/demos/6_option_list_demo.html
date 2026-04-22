@@ -219,6 +219,7 @@
             <OptionList
               style={{ "--max-height": "220px" }}
               onChange={setSelected}
+              highlight={filter}
               hidden={filtered.length === 0}
             >
               {filtered.map((fruit) => (

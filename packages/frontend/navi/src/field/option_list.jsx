@@ -87,6 +87,10 @@ const css = /* css */ `
       border: none;
     }
   }
+  ::highlight(navi-option-match) {
+    color: inherit;
+    background-color: var(--navi-option-highlight-color, #ffe066);
+  }
   .navi_option {
     --x-color: var(--color);
     --x-background-color: var(--background-color);
@@ -130,6 +134,7 @@ export const OptionListContext = createContext(null);
 export const OptionList = ({
   popover,
   onChange: onChangeProp,
+  highlight,
   children,
   ...rest
 }) => {
@@ -143,11 +148,52 @@ export const OptionList = ({
   const ownId = useId();
   const id = rest.id ?? ownId;
 
-  const listRef = useRef(null);
+  const defaultRef = useRef(null);
+  const ref = rest.ref || defaultRef;
+
+  useEffect(() => {
+    if (!CSS.highlights) {
+      return undefined;
+    }
+    if (!highlight) {
+      CSS.highlights.delete("navi-option-match");
+      return undefined;
+    }
+    const listEl = ref.current;
+    if (!listEl) {
+      return undefined;
+    }
+    const ranges = [];
+    const lowerHighlight = highlight.toLowerCase();
+    for (const optionEl of listEl.querySelectorAll("[role='option']")) {
+      const walker = document.createTreeWalker(optionEl, NodeFilter.SHOW_TEXT);
+      let node;
+      while ((node = walker.nextNode())) {
+        const text = node.textContent;
+        const lowerText = text.toLowerCase();
+        let index = lowerText.indexOf(lowerHighlight);
+        while (index !== -1) {
+          const range = new Range();
+          range.setStart(node, index);
+          range.setEnd(node, index + highlight.length);
+          ranges.push(range);
+          index = lowerText.indexOf(lowerHighlight, index + 1);
+        }
+      }
+    }
+    if (ranges.length === 0) {
+      CSS.highlights.delete("navi-option-match");
+    } else {
+      CSS.highlights.set("navi-option-match", new Highlight(...ranges));
+    }
+    return () => {
+      CSS.highlights.delete("navi-option-match");
+    };
+  }, [highlight, children]);
   const effectiveOnChange = popover
     ? (value) => {
         onChangeProp?.(value);
-        listRef.current?.dispatchEvent(
+        ref.current?.dispatchEvent(
           new CustomEvent("combobox-selected", {
             detail: { value },
             bubbles: true,
@@ -183,10 +229,10 @@ export const OptionList = ({
   // Listen for commands dispatched by a linked Input (combobox mode)
   const noopRef = useRef(null);
   useEffect(() => {
-    if (!popover || !listRef.current) {
+    if (!popover || !ref.current) {
       return undefined;
     }
-    const el = listRef.current;
+    const el = ref.current;
     const onNavigate = (e) => {
       navigate(e.detail.direction);
     };
@@ -210,7 +256,7 @@ export const OptionList = ({
     };
   }, [popover]);
 
-  useKeyboardShortcuts(popover ? noopRef : listRef, [
+  useKeyboardShortcuts(popover ? noopRef : ref, [
     {
       key: "arrowdown",
       description: "Highlight next option",
@@ -262,7 +308,7 @@ export const OptionList = ({
   return (
     <Box
       as="ul"
-      ref={listRef}
+      ref={ref}
       id={id}
       role="listbox"
       tabIndex={popover ? -1 : 0}
