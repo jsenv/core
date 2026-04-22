@@ -28,7 +28,7 @@
           }
           const parentBg = getComputedStyle(el.parentElement).backgroundColor;
           setReadColor(parentBg);
-        });
+        }, []);
 
         return (
           <div
