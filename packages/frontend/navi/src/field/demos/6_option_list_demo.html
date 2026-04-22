@@ -60,19 +60,6 @@
         font-style: italic;
         content: "(none selected)";
       }
-
-      .listbox {
-        max-height: 220px;
-        border: 1px solid #ccc;
-        border-radius: 6px;
-        overflow: hidden;
-        overflow-y: auto;
-      }
-
-      .listbox:focus {
-        outline: 2px solid #1a73e8;
-        outline-offset: 1px;
-      }
     </style>
   </head>
   <body>
@@ -136,7 +123,7 @@
               navigate, Enter to select, Escape to clear active).
             </p>
             <OptionList
-              className="listbox"
+              style={{ "--max-height": "220px" }}
               value={selected}
               onChange={setSelected}
             >
@@ -160,7 +147,7 @@
             <h2>Custom option content</h2>
             <p>Each option renders the country name + region badge.</p>
             <OptionList
-              className="listbox"
+              style={{ "--max-height": "220px" }}
               value={selected}
               onChange={setSelected}
             >
@@ -228,7 +215,7 @@
               }}
             />
             <OptionList
-              className="listbox"
+              style={{ "--max-height": "220px" }}
               value={selected}
               onChange={setSelected}
               hidden={filtered.length === 0}
