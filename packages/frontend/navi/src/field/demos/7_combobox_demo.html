@@ -76,6 +76,8 @@
       import { render } from "preact";
       import { useState } from "preact/hooks";
       import { Input } from "../input.jsx";
+      import { Button } from "../button.jsx";
+      import { Form } from "../form.jsx";
       import { Option, OptionList } from "../option_list.jsx";
 
       const FRUITS = [
@@ -114,6 +116,8 @@
         <div>
           <BasicDemo />
           <CustomRenderDemo />
+          <InputWithActionDemo />
+          <FormWithComboboxDemo />
         </div>
       );
 
@@ -212,6 +216,156 @@
                 ? `${selectedCountry.name} (${selectedCountry.code}) — ${selectedCountry.region}`
                 : ""}
             </div>
+          </div>
+        );
+      };
+
+      // --- 3. Input with async action ---
+
+      const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+      const InputWithActionDemo = () => {
+        const [query, setQuery] = useState("");
+        const [lastSaved, setLastSaved] = useState(null);
+
+        const filtered = FRUITS.filter((f) =>
+          f.toLowerCase().includes(query.toLowerCase()),
+        );
+
+        const saveFruit = async (value) => {
+          await delay(800);
+          setLastSaved(value);
+        };
+
+        return (
+          <div className="demo-section">
+            <h2>Combobox with async action on input</h2>
+            <p>
+              The <code>action</code> prop is called when the value changes
+              (blur / Enter). Shows loading state while the async action runs.
+            </p>
+            <Input
+              type="text"
+              combobox="fruit-action-list"
+              placeholder="Search a fruit…"
+              action={saveFruit}
+              actionAfterChange
+              uiAction={(v) => setQuery(v)}
+            />
+            <OptionList
+              id="fruit-action-list"
+              popover
+              style={{ "--max-height": "220px" }}
+            >
+              {filtered.map((fruit) => (
+                <Option key={fruit} value={fruit} selected={query === fruit}>
+                  {fruit}
+                </Option>
+              ))}
+            </OptionList>
+            <div className="value-display">
+              Last saved: {lastSaved ?? "(none)"}
+            </div>
+          </div>
+        );
+      };
+
+      // --- 4. Combobox inside a form with async action ---
+
+      const FormWithComboboxDemo = () => {
+        const [fruitQuery, setFruitQuery] = useState("");
+        const [countryQuery, setCountryQuery] = useState("");
+        const [submitResult, setSubmitResult] = useState(null);
+
+        const filteredFruits = FRUITS.filter((f) =>
+          f.toLowerCase().includes(fruitQuery.toLowerCase()),
+        );
+        const filteredCountries = COUNTRIES.filter((c) =>
+          c.name.toLowerCase().includes(countryQuery.toLowerCase()),
+        );
+
+        const submitForm = async ({ fruit, country }) => {
+          await delay(1000);
+          setSubmitResult({ fruit, country });
+        };
+
+        return (
+          <div className="demo-section">
+            <h2>Combobox inside a Form with async action</h2>
+            <p>
+              Both combobox inputs are inside a <code>Form</code> whose{" "}
+              <code>action</code> is async. Submitting collects the selected
+              values as form fields.
+            </p>
+            <Form action={submitForm}>
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "12px",
+                }}
+              >
+                <label>
+                  Favourite fruit:
+                  <Input
+                    type="text"
+                    name="fruit"
+                    combobox="form-fruit-list"
+                    placeholder="Search a fruit…"
+                    uiAction={(v) => setFruitQuery(v)}
+                  />
+                  <OptionList
+                    id="form-fruit-list"
+                    popover
+                    style={{ "--max-height": "180px" }}
+                  >
+                    {filteredFruits.map((fruit) => (
+                      <Option
+                        key={fruit}
+                        value={fruit}
+                        selected={fruitQuery === fruit}
+                      >
+                        {fruit}
+                      </Option>
+                    ))}
+                  </OptionList>
+                </label>
+
+                <label>
+                  Country:
+                  <Input
+                    type="text"
+                    name="country"
+                    combobox="form-country-list"
+                    placeholder="Search a country…"
+                    uiAction={(v) => setCountryQuery(v)}
+                  />
+                  <OptionList
+                    id="form-country-list"
+                    popover
+                    style={{ "--max-height": "180px" }}
+                  >
+                    {filteredCountries.map((c) => (
+                      <Option
+                        key={c.code}
+                        value={c.name}
+                        selected={countryQuery === c.name}
+                      >
+                        {c.name}
+                      </Option>
+                    ))}
+                  </OptionList>
+                </label>
+
+                <Button type="submit">Submit</Button>
+              </div>
+            </Form>
+            {submitResult && (
+              <div className="value-display">
+                Submitted — fruit: {submitResult.fruit ?? "(none)"}, country:{" "}
+                {submitResult.country ?? "(none)"}
+              </div>
+            )}
           </div>
         );
       };
