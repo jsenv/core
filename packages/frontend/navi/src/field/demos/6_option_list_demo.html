@@ -69,9 +69,7 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      import { Option, OptionList, OptGroup } from "../option_list.jsx";
-
-      const MAX_VISIBLE = 20;
+      import { Option, OptionList, OptGroup, Input } from "@jsenv/navi";
 
       // 200 auto-generated items
       const LARGE_LIST = Array.from({ length: 200 }, (_, i) => {
@@ -384,33 +382,55 @@
         const [filter, setFilter] = useState("");
         const [selected, setSelected] = useState(null);
 
-        const matching = filter
-          ? LARGE_LIST.filter((item) =>
-              item.toLowerCase().includes(filter.toLowerCase()),
-            )
+        const lowerFilter = filter.toLowerCase();
+        const sorted = filter
+          ? [
+              ...LARGE_LIST.filter((item) =>
+                item.toLowerCase().includes(lowerFilter),
+              ),
+              ...LARGE_LIST.filter(
+                (item) => !item.toLowerCase().includes(lowerFilter),
+              ),
+            ]
           : LARGE_LIST;
-        const visible = matching.slice(0, MAX_VISIBLE);
-        const hiddenCount = matching.length - visible.length;
+
+        // Group by first letter for table of contents
+        const groups = [];
+        for (const item of sorted) {
+          const letter = item[0].toUpperCase();
+          const last = groups[groups.length - 1];
+          if (last && last.letter === letter) {
+            last.items.push(item);
+          } else {
+            groups.push({ letter, items: [item] });
+          }
+        }
+
+        const matchCount = filter
+          ? LARGE_LIST.filter((item) =>
+              item.toLowerCase().includes(lowerFilter),
+            ).length
+          : LARGE_LIST.length;
 
         return (
           <div className="demo-section">
-            <h2>Large list (200 items)</h2>
+            <h2>Large list (200 items) — sort by match, show all</h2>
             <p>
-              Only the first {MAX_VISIBLE} matching items are rendered. A badge
-              at the bottom indicates how many are not shown.
+              Matching items rise to the top, grouped by initial letter. All
+              items remain visible.
             </p>
-            <input
-              type="text"
+            <Input
+              type="search"
               placeholder="Search…"
               value={filter}
-              onInput={(e) => {
-                setFilter(e.target.value);
+              uiAction={(v) => {
+                setFilter(v);
                 setSelected(null);
               }}
               style={{
                 display: "block",
                 width: "100%",
-                marginBottom: "8px",
+                marginBottom: "4px",
                 padding: "8px",
                 boxSizing: "border-box",
                 border: "1px solid #ccc",
@@ -418,32 +438,37 @@
                 fontSize: "1rem",
               }}
             />
+            {filter && (
+              <div
+                style={{
+                  marginBottom: "8px",
+                  fontSize: "0.85rem",
+                  color: "#555",
+                }}
+              >
+                {matchCount} match{matchCount !== 1 ? "es" : ""} out of{" "}
+                {LARGE_LIST.length}
+              </div>
+            )}
             <OptionList
-              style={{ maxHeight: "220px" }}
+              style={{ maxHeight: "280px" }}
               onChange={setSelected}
               highlight={filter}
             >
-              {visible.map((item) => (
-                <Option key={item} value={item} selected={selected === item}>
-                  {item}
-                </Option>
+              {groups.map((group) => (
+                <OptGroup key={group.letter} label={group.letter}>
+                  {group.items.map((item) => (
+                    <Option
+                      key={item}
+                      value={item}
+                      selected={selected === item}
+                    >
+                      {item}
+                    </Option>
+                  ))}
+                </OptGroup>
               ))}
             </OptionList>
-            {hiddenCount > 0 && (
-              <div
-                style={{
-                  marginTop: "6px",
-                  padding: "4px 8px",
-                  fontSize: "0.8rem",
-                  color: "#666",
-                  background: "#f0f0f0",
-                  borderRadius: "4px",
-                  display: "inline-block",
-                }}
-              >
-                And {hiddenCount} more items
-              </div>
-            )}
             <div className="value-display">{selected ?? ""}</div>
           </div>
         );
