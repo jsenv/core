@@ -1,5 +1,5 @@
 import { installImportMetaCssBuild } from "./jsenv_navi_side_effects.js";
-import { isValidElement, h, createContext, toChildArray, render, createRef, cloneElement } from "preact";
+import { isValidElement, h, createContext, options, toChildArray, render, createRef, cloneElement } from "preact";
 import { useErrorBoundary, useLayoutEffect, useEffect, useMemo, useRef, useState, useCallback, useContext, useImperativeHandle, useId } from "preact/hooks";
 import { jsxs, jsx, Fragment } from "preact/jsx-runtime";
 import { signal, effect, computed, batch, useSignal } from "@preact/signals";
@@ -7515,6 +7515,111 @@ const updateStyle = (element, style, preventInitialTransition) => {
   styleKeySetWeakMap.set(element, styleKeySet);
 };
 
+// Implementation notes:
+//
+// options.__r fires before each component render — we capture the current
+// component instance (vnode.__c) so useEarlyDOMEffect can register itself.
+//
+// options.__c (commitRoot) fires after refs are assigned and before any
+// useLayoutEffect runs. We flush all pending effects there.
+// The DOM node is read from component.__v.__e (vnode → root DOM node),
+// which Preact sets during diffing, before options.__c fires.
+//
+// stateMap (WeakMap) stores { cleanup, deps } per component instance.
+// It's auto-GC'd when a component is destroyed; options.unmount also
+// deletes entries eagerly to release cleanup functions sooner.
+//
+// pendingMap (Map) holds effects registered during the current render pass.
+// It is always fully cleared in options.__c — bounded to one commit, no leak.
+
+/**
+ * Like useLayoutEffect, but runs before any layout effect in the commit —
+ * including those of descendant components.
+ *
+ * Use this when a parent needs to mutate the DOM (e.g. apply styles) so that
+ * children can read those mutations in their own useLayoutEffect.
+ *
+ * The DOM node of the component is passed as the first argument to fn.
+ * The effect is skipped if no DOM node is found (e.g. on a fragment root).
+ *
+ * Supports deps and cleanup return, same as useLayoutEffect.
+ */
+const useEarlyDOMEffect = (fn, deps) => {
+  const component = _currentComponent;
+  if (component) {
+    pendingMap.set(component, { fn, deps });
+  }
+};
+
+// Populated during render, consumed + cleared in options.__c each commit.
+const pendingMap = new Map(); // component → { fn, deps, ref }
+
+// Persists across commits. WeakMap → no leak when component is destroyed.
+const stateMap = new WeakMap(); // component → { cleanup, deps }
+
+let _currentComponent = null;
+const _prevBeforeRender = options.__r;
+options.__r = (vnode) => {
+  _currentComponent = vnode.__c;
+  if (_prevBeforeRender) {
+    _prevBeforeRender(vnode);
+  }
+};
+
+const _prevCommit = options.__c;
+options.__c = (root, commitQueue) => {
+  for (const [component, { fn, deps }] of pendingMap) {
+    // component.__v is the component's vnode; __e is its root DOM node.
+    // Both are set during diff, before options.__c fires.
+    const element = component.__v && component.__v.__e;
+    if (!element) {
+      continue;
+    }
+    const prev = stateMap.get(component);
+    const prevDeps = prev ? prev.deps : undefined;
+    let depsChanged;
+    if (!prevDeps || !deps || prevDeps.length !== deps.length) {
+      depsChanged = true;
+    } else {
+      for (let i = 0; i < deps.length; i++) {
+        if (!Object.is(deps[i], prevDeps[i])) {
+          depsChanged = true;
+          break;
+        }
+      }
+    }
+    if (depsChanged) {
+      if (prev && prev.cleanup) {
+        prev.cleanup();
+      }
+      const result = fn(element);
+      const cleanup = typeof result === "function" ? result : undefined;
+      stateMap.set(component, { cleanup, deps });
+    }
+  }
+  pendingMap.clear();
+  if (_prevCommit) {
+    _prevCommit(root, commitQueue);
+  }
+};
+
+const _prevUnmount = options.unmount;
+options.unmount = (vnode) => {
+  const component = vnode.__c;
+  if (component) {
+    const state = stateMap.get(component);
+    if (state && state.cleanup) {
+      state.cleanup();
+    }
+    // stateMap is a WeakMap so the entry is GC'd automatically,
+    // but deleting explicitly releases the cleanup fn sooner.
+    stateMap.delete(component);
+  }
+  if (_prevUnmount) {
+    _prevUnmount(vnode);
+  }
+};
+
 installImportMetaCssBuild(import.meta);/**
  * Box - A Swiss Army Knife for Layout
  *
@@ -7539,6 +7644,33 @@ installImportMetaCssBuild(import.meta);/**
  * ## Spacing & Sizing
  *
  * Props for margin, padding, gap, width, height, expand, shrink, and more.
+ *
+ * ## Pseudo-class Styles
+ *
+ * The `style` prop supports pseudo-class keys alongside regular CSS properties.
+ * This lets you express hover, focus, and custom interaction states in one object,
+ * without writing CSS or adding class names:
+ *
+ * ```jsx
+ * <Box
+ *   style={{
+ *     backgroundColor: "blue",
+ *     ":-navi:pressed": {
+ *       backgroundColor: "darkblue",
+ *     },
+ *     ":hover": {
+ *       backgroundColor: "lightblue",
+ *     },
+ *   }}
+ * />
+ * ```
+ *
+ * Styles are applied directly to the DOM (not via Preact's style prop) for two reasons:
+ * 1. **Pseudo-class support**: reacting to `:hover`, `:focus`, or custom states like
+ *    `:-navi:pressed` without re-rendering the component on every pseudo state change.
+ * 2. **Correct initial render**: pseudo-class state must be read from the DOM node at
+ *    mount time. Preact's style prop runs before the DOM exists, so the right initial
+ *    style can only be determined once the node is available.
  */
 import.meta.css = [/* css */`
   [navi-box-flow="inline"] {
@@ -7930,42 +8062,36 @@ const Box = props => {
         visitProp(styleValue, styleName, styleContext, boxStyles, "style");
       }
     }
-    const updateStyle = useCallback(state => {
-      const boxEl = ref.current;
-      applyStyle(boxEl, boxStyles, state, boxPseudoNamedStyles, preventInitialTransition);
-    }, styleDeps);
-    const finalStyleDeps = [pseudoStateSelector, innerPseudoState, updateStyle];
+    styleDeps.push(pseudoStateSelector, innerPseudoState);
     let innerPseudoClasses;
     if (pseudoClassesFromStyleSet.size) {
       innerPseudoClasses = [...pseudoClasses];
       if (pseudoClasses !== PSEUDO_CLASSES_DEFAULT) {
-        finalStyleDeps.push(...pseudoClasses);
+        styleDeps.push(...pseudoClasses);
       }
       for (const key of pseudoClassesFromStyleSet) {
         innerPseudoClasses.push(key);
-        finalStyleDeps.push(key);
+        styleDeps.push(key);
       }
     } else {
       innerPseudoClasses = pseudoClasses;
       if (pseudoClasses !== PSEUDO_CLASSES_DEFAULT) {
-        finalStyleDeps.push(...pseudoClasses);
+        styleDeps.push(...pseudoClasses);
       }
     }
-    useLayoutEffect(() => {
-      const boxEl = ref.current;
-      if (!boxEl) {
-        return null;
-      }
+    useEarlyDOMEffect(boxEl => {
       const pseudoStateEl = pseudoStateSelector ? boxEl.querySelector(pseudoStateSelector) : boxEl;
       const visualEl = visualSelector ? boxEl.querySelector(visualSelector) : null;
       return initPseudoStyles(pseudoStateEl, {
         pseudoClasses: innerPseudoClasses,
         pseudoState: innerPseudoState,
-        effect: updateStyle,
+        effect: state => {
+          applyStyle(boxEl, boxStyles, state, boxPseudoNamedStyles, preventInitialTransition);
+        },
         elementToImpact: boxEl,
         elementListeningPseudoState: visualEl === pseudoStateEl ? null : visualEl
       });
-    }, finalStyleDeps);
+    }, styleDeps);
   }
 
   // When hasChildFunction is used it means
@@ -13884,7 +14010,7 @@ const RouteActive = ({
 const routeAction = (
   route,
   action,
-  paramsEffect = () => route.paramsSignal.value,
+  paramsEffect = () => true,
   options = {},
 ) => {
   const actionBoundToRoute = actionRunEffect(
@@ -20955,6 +21081,109 @@ const Icon = ({
   });
 };
 
+/**
+ * Toggles a `data-dark-background` attribute on the referenced element based on its
+ * computed background color. Pair it with a CSS variable to get automatic
+ * light/dark text without hard-coding colors:
+ *
+ * ```css
+ * .my-element {
+ *   --color-contrasting: black;
+ *   &[data-dark-background] {
+ *     --color-contrasting: white;
+ *   }
+ *   color: var(--color-contrasting);
+ * }
+ * ```
+ *
+ * - `data-dark-background` is **set** when the background is dark enough that white text
+ *   provides better (or equal) contrast.
+ * - `data-dark-background` is **absent** when black text is the better choice.
+ *
+ * @param {import("preact").RefObject} ref - Ref to the element that receives
+ *   the `data-dark-background` attribute and is also passed to `contrastColor` for
+ *   resolving CSS variables.
+ * @param {object} [options]
+ * @param {string} [options.backgroundElementSelector] - CSS selector relative
+ *   to `ref.current` pointing to a child element whose `background-color`
+ *   should be tested instead of the element itself. Useful when the element
+ *   has a transparent background but contains a coloured child (e.g. a fill
+ *   bar inside a track).
+ */
+
+const useDarkBackgroundAttribute = (
+  ref,
+  deps = [],
+  {
+    backgroundElementSelector,
+    attributeName = "data-dark-background",
+    hardcoded = {},
+  } = {},
+) => {
+  const innerDeps = [
+    ...deps,
+    // ref can change is the component pass a different ref on different render based on some logic
+    // (can be used to control which element backgroundColor is being checked by switching the ref to another element)
+    ref,
+    // backgroundElementSelector can change if the component pass a different selector on different render based on some logic
+    // (can be used to control which element backgroundColor is being checked by switching the selector to point to another element)
+    backgroundElementSelector,
+  ];
+
+  const hardcodedMap = new Map();
+  for (const key of Object.keys(hardcoded)) {
+    const value = hardcoded[key];
+    innerDeps.push(key, value);
+    const colorString = normalizeColorString(key);
+    hardcodedMap.set(colorString, value);
+  }
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) {
+      return undefined;
+    }
+    let elementToCheck = el;
+    if (backgroundElementSelector) {
+      elementToCheck = el.querySelector(backgroundElementSelector);
+      if (!elementToCheck) {
+        return undefined;
+      }
+    }
+    const updateAttribute = () => {
+      const computedStyle = getComputedStyle(elementToCheck);
+      const backgroundColor = computedStyle.backgroundColor;
+      if (!backgroundColor) {
+        el.removeAttribute(attributeName);
+        return;
+      }
+      const backgroundColorString = normalizeColorString(backgroundColor, el);
+      const hardcodedContrast = hardcodedMap.get(backgroundColorString);
+      const contrastingColor =
+        hardcodedContrast || contrastColor(backgroundColor, el);
+      if (contrastingColor === "white") {
+        el.setAttribute(attributeName, "");
+      } else {
+        el.removeAttribute(attributeName);
+      }
+    };
+    updateAttribute();
+    el.addEventListener(NAVI_PSEUDO_STATE_CUSTOM_EVENT, updateAttribute);
+    return () => {
+      el.removeEventListener(NAVI_PSEUDO_STATE_CUSTOM_EVENT, updateAttribute);
+      el.removeAttribute(attributeName);
+    };
+  }, innerDeps);
+};
+
+const normalizeColorString = (color, el) => {
+  const colorRgba = resolveCSSColor(color, el);
+  if (!colorRgba) {
+    return "";
+  }
+  return String(colorRgba);
+};
+
 const useFormEvents = (
   elementRef,
   {
@@ -21559,8 +21788,6 @@ const css$r = /* css */`
     --x-button-background-color: var(--button-background-color);
     --x-button-color: var(--button-color);
     --x-button-cursor: var(--button-cursor);
-
-    position: relative;
     box-sizing: border-box;
     aspect-ratio: inherit;
     padding: 0;
@@ -21572,6 +21799,10 @@ const css$r = /* css */`
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
     user-select: none;
+
+    &[data-dark-background] {
+      --button-color: white;
+    }
 
     &[data-icon] {
       --button-padding: 0;
@@ -21855,6 +22086,7 @@ const ButtonBasic = props => {
     innerTarget = target === undefined ? isSameSite ? undefined : "_blank" : target;
     innerRel = rel === undefined ? isSameSite ? undefined : "noopener noreferrer" : rel;
   }
+  useDarkBackgroundAttribute(ref, [innerLoading, innerDisabled, innerReadOnly]);
   const renderButtonContent = buttonProps => {
     return jsxs(Text, {
       ...buttonProps,
@@ -22215,104 +22447,6 @@ const Title = props => {
       children: props.children
     })
   });
-};
-
-/**
- * Toggles a `data-dark-background` attribute on the referenced element based on its
- * computed background color. Pair it with a CSS variable to get automatic
- * light/dark text without hard-coding colors:
- *
- * ```css
- * .my-element {
- *   --color-contrasting: black;
- *   &[data-dark-background] {
- *     --color-contrasting: white;
- *   }
- *   color: var(--color-contrasting);
- * }
- * ```
- *
- * - `data-dark-background` is **set** when the background is dark enough that white text
- *   provides better (or equal) contrast.
- * - `data-dark-background` is **absent** when black text is the better choice.
- *
- * @param {import("preact").RefObject} ref - Ref to the element that receives
- *   the `data-dark-background` attribute and is also passed to `contrastColor` for
- *   resolving CSS variables.
- * @param {object} [options]
- * @param {string} [options.backgroundElementSelector] - CSS selector relative
- *   to `ref.current` pointing to a child element whose `background-color`
- *   should be tested instead of the element itself. Useful when the element
- *   has a transparent background but contains a coloured child (e.g. a fill
- *   bar inside a track).
- */
-
-const useDarkBackgroundAttribute = (
-  ref,
-  deps = [],
-  {
-    backgroundElementSelector,
-    attributeName = "data-dark-background",
-    hardcoded = {},
-  } = {},
-) => {
-  const innerDeps = [
-    ...deps,
-    // ref can change is the component pass a different ref on different render based on some logic
-    // (can be used to control which element backgroundColor is being checked by switching the ref to another element)
-    ref,
-    // backgroundElementSelector can change if the component pass a different selector on different render based on some logic
-    // (can be used to control which element backgroundColor is being checked by switching the selector to point to another element)
-    backgroundElementSelector,
-  ];
-
-  const hardcodedMap = new Map();
-  for (const key of Object.keys(hardcoded)) {
-    const value = hardcoded[key];
-    innerDeps.push(key, value);
-    const colorString = normalizeColorString(key);
-    hardcodedMap.set(colorString, value);
-  }
-
-  useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el) {
-      return null;
-    }
-    let elementToCheck = el;
-    if (backgroundElementSelector) {
-      elementToCheck = el.querySelector(backgroundElementSelector);
-      if (!elementToCheck) {
-        return null;
-      }
-    }
-    const computedStyle = getComputedStyle(elementToCheck);
-    const backgroundColor = computedStyle.backgroundColor;
-    if (!backgroundColor) {
-      el.removeAttribute(attributeName);
-      return null;
-    }
-    const backgroundColorString = normalizeColorString(backgroundColor, el);
-    const hardcodedContrast = hardcodedMap.get(backgroundColorString);
-    const contrastingColor =
-      hardcodedContrast || contrastColor(backgroundColor, el);
-    if (contrastingColor === "white") {
-      el.setAttribute(attributeName, "");
-      return () => {
-        el.removeAttribute(attributeName);
-      };
-    }
-    el.removeAttribute(attributeName);
-    return null;
-  }, innerDeps);
-};
-
-const normalizeColorString = (color, el) => {
-  const colorRgba = resolveCSSColor(color, el);
-  if (!colorRgba) {
-    return "";
-  }
-  return String(colorRgba);
 };
 
 /**
