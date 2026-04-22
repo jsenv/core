@@ -359,14 +359,14 @@ Object.assign(PSEUDO_CLASSES, {
 const InputPseudoElements = ["::-navi-loader"];
 const InputChildPropSet = new Set([...fieldPropSet]);
 const InputTextualBasic = (props) => {
-  if (props.combobox) {
-    return <InputTextualCombobox {...props} />;
+  if (props.suggestions) {
+    return <InputTextualWithSuggestions {...props} />;
   }
   return <InputTextualPlain {...props} />;
 };
 
-const InputTextualCombobox = ({
-  combobox,
+const InputTextualWithSuggestions = ({
+  suggestions,
   onInput,
   onFocus,
   onBlur,
@@ -374,20 +374,20 @@ const InputTextualCombobox = ({
 }) => {
   const defaultRef = useRef();
   const ref = rest.ref || defaultRef;
-  const [comboboxOpen, setComboboxOpen] = useState(false);
-  const comboboxOpenRef = useRef(false);
-  comboboxOpenRef.current = comboboxOpen;
+  const [suggestionsOpen, setSuggestionsOpen] = useState(false);
+  const suggestionsOpenRef = useRef(false);
+  suggestionsOpenRef.current = suggestionsOpen;
 
   const showPopover = (e) => {
-    if (comboboxOpenRef.current) {
+    if (suggestionsOpenRef.current) {
       return;
     }
     console.debug(`showPopover (e.type:${e.type})`);
-    const popoverEl = document.getElementById(combobox);
+    const popoverEl = document.getElementById(suggestions);
     positionPopover();
     popoverEl.showPopover();
-    comboboxOpenRef.current = true;
-    setComboboxOpen(true);
+    suggestionsOpenRef.current = true;
+    setSuggestionsOpen(true);
     window.addEventListener("scroll", positionPopover, {
       capture: true,
       passive: true,
@@ -395,24 +395,24 @@ const InputTextualCombobox = ({
   };
 
   const hidePopover = (e) => {
-    if (!comboboxOpenRef.current) {
+    if (!suggestionsOpenRef.current) {
       return;
     }
     console.debug(`hidePopover (e.type:${e.type})`);
-    comboboxOpenRef.current = false;
-    setComboboxOpen(false);
+    suggestionsOpenRef.current = false;
+    setSuggestionsOpen(false);
     window.removeEventListener("scroll", positionPopover, { capture: true });
-    const popoverEl = document.getElementById(combobox);
+    const popoverEl = document.getElementById(suggestions);
     if (popoverEl) {
-      popoverEl.dispatchEvent(new CustomEvent("combobox-clear"));
+      popoverEl.dispatchEvent(new CustomEvent("navi_suggestion_list_clear"));
       popoverEl.hidePopover();
     }
-    setComboboxOpen(false);
+    setSuggestionsOpen(false);
   };
   const positionPopover = () => {
     const input = ref.current;
     const rect = input.getBoundingClientRect();
-    const popoverEl = document.getElementById(combobox);
+    const popoverEl = document.getElementById(suggestions);
     if (popoverEl) {
       popoverEl.style.top = `${rect.bottom + 2}px`;
       popoverEl.style.left = `${rect.left}px`;
@@ -420,8 +420,8 @@ const InputTextualCombobox = ({
     }
   };
 
-  const dispatchToOptionList = (customEvent) => {
-    const popoverEl = document.getElementById(combobox);
+  const dispatchToSuggestionList = (customEvent) => {
+    const popoverEl = document.getElementById(suggestions);
     if (!popoverEl) {
       return false;
     }
@@ -432,15 +432,15 @@ const InputTextualCombobox = ({
   useKeyboardShortcuts(ref, [
     {
       key: "arrowdown",
-      description: "Open popover and point to next option",
+      description: "Open popover and point to next suggestion",
       handler: (e) => {
         showPopover(e);
-        const popoverEl = document.getElementById(combobox);
+        const popoverEl = document.getElementById(suggestions);
         if (!popoverEl) {
           return false;
         }
         popoverEl.dispatchEvent(
-          new CustomEvent("navi_option_list_navigate", {
+          new CustomEvent("navi_suggestion_list_navigate", {
             detail: { direction: "down" },
           }),
         );
@@ -449,11 +449,11 @@ const InputTextualCombobox = ({
     },
     {
       key: "arrowup",
-      description: "Open popover and point to previous option",
+      description: "Open popover and point to previous suggestion",
       handler: (e) => {
         showPopover(e);
-        return dispatchToOptionList(
-          new CustomEvent("navi_option_list_navigate", {
+        return dispatchToSuggestionList(
+          new CustomEvent("navi_suggestion_list_navigate", {
             detail: { direction: "up" },
           }),
         );
@@ -461,13 +461,13 @@ const InputTextualCombobox = ({
     },
     {
       key: "home",
-      description: "Point to first option",
+      description: "Point to first suggestion",
       handler: () => {
-        if (!comboboxOpenRef.current) {
+        if (!suggestionsOpenRef.current) {
           return false;
         }
-        return dispatchToOptionList(
-          new CustomEvent("navi_option_list_navigate", {
+        return dispatchToSuggestionList(
+          new CustomEvent("navi_suggestion_list_navigate", {
             detail: { direction: "first" },
           }),
         );
@@ -475,13 +475,13 @@ const InputTextualCombobox = ({
     },
     {
       key: "end",
-      description: "Point to last option",
+      description: "Point to last suggestion",
       handler: () => {
-        if (!comboboxOpenRef.current) {
+        if (!suggestionsOpenRef.current) {
           return false;
         }
-        return dispatchToOptionList(
-          new CustomEvent("navi_option_list_navigate", {
+        return dispatchToSuggestionList(
+          new CustomEvent("navi_suggestion_list_navigate", {
             detail: { direction: "last" },
           }),
         );
@@ -489,13 +489,13 @@ const InputTextualCombobox = ({
     },
     {
       key: "enter",
-      description: "Confirm pointed option",
+      description: "Confirm pointed suggestion",
       handler: () => {
-        if (!comboboxOpenRef.current) {
+        if (!suggestionsOpenRef.current) {
           return false;
         }
-        return dispatchToOptionList(
-          new CustomEvent("navi_option_list_confirm", {
+        return dispatchToSuggestionList(
+          new CustomEvent("navi_suggestion_list_confirm", {
             cancelable: true,
           }),
         );
@@ -505,7 +505,7 @@ const InputTextualCombobox = ({
       key: "escape",
       description: "Close popover",
       handler: (e) => {
-        if (!comboboxOpenRef.current) {
+        if (!suggestionsOpenRef.current) {
           return false;
         }
         hidePopover(e);
@@ -516,7 +516,7 @@ const InputTextualCombobox = ({
 
   useEffect(() => {
     const inputEl = ref.current;
-    const popoverEl = document.getElementById(combobox);
+    const popoverEl = document.getElementById(suggestions);
     if (!popoverEl) {
       return undefined;
     }
@@ -525,20 +525,23 @@ const InputTextualCombobox = ({
       inputEl.dispatchEvent(new Event("input", { bubbles: true }));
       hidePopover(e);
     };
-    popoverEl.addEventListener("navi_option_list_selected", onSelected);
+    popoverEl.addEventListener("navi_suggestion_list_selected", onSelected);
     return () => {
-      popoverEl.removeEventListener("navi_option_list_selected", onSelected);
+      popoverEl.removeEventListener(
+        "navi_suggestion_list_selected",
+        onSelected,
+      );
     };
-  }, [combobox]);
+  }, [suggestions]);
 
   return (
     <InputTextualPlain
       ref={ref}
       role="combobox"
       autoComplete="off"
-      aria-controls={combobox}
+      aria-controls={suggestions}
       aria-haspopup="listbox"
-      aria-expanded={comboboxOpen}
+      aria-expanded={suggestionsOpen}
       aria-autocomplete="list"
       onnavi_callout_open={(e) => {
         hidePopover(e);

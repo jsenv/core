@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <link rel="icon" href="data:," />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>OptionList Demo</title>
+    <title>SuggestionList Demo</title>
     <style>
       body {
         max-width: 800px;
@@ -63,13 +63,13 @@
     </style>
   </head>
   <body>
-    <h1>OptionList Demo</h1>
+    <h1>SuggestionList Demo</h1>
     <div id="root"></div>
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      import { Option, OptionList, OptGroup, Input, Box } from "@jsenv/navi";
+      import { Suggestion, SuggestionList, SuggestionGroup, Input, Box } from "@jsenv/navi";
 
       // 200 auto-generated items
       const LARGE_LIST = Array.from({ length: 200 }, (_, i) => {
@@ -138,7 +138,7 @@
           <CustomStyleDemo />
           <SortedDemo />
           <LargeListDemo />
-          <OptGroupDemo />
+          <SuggestionGroupDemo />
           <SplitMatchDemo />
         </div>
       );
@@ -154,13 +154,13 @@
               Click an option or use keyboard (Tab to focus, Arrow keys to
               navigate, Enter to select, Escape to clear active).
             </p>
-            <OptionList style={{ maxHeight: "220px" }} onChange={setSelected}>
+            <SuggestionList style={{ maxHeight: "220px" }} onChange={setSelected}>
               {FRUITS.map((fruit) => (
-                <Option key={fruit} value={fruit} selected={selected === fruit}>
+                <Suggestion key={fruit} value={fruit} selected={selected === fruit}>
                   {fruit}
-                </Option>
+                </Suggestion>
               ))}
-            </OptionList>
+            </SuggestionList>
             <div className="value-display">{selected ?? ""}</div>
           </div>
         );
@@ -174,9 +174,9 @@
           <div className="demo-section">
             <h2>Custom option content</h2>
             <p>Each option renders the country name + region badge.</p>
-            <OptionList style={{ maxHeight: "220px" }} onChange={setSelected}>
+            <SuggestionList style={{ maxHeight: "220px" }} onChange={setSelected}>
               {COUNTRIES.map((country) => (
-                <Option
+                <Suggestion
                   key={country.code}
                   value={country.code}
                   selected={selected === country.code}
@@ -191,9 +191,9 @@
                   >
                     {country.region}
                   </span>
-                </Option>
+                </Suggestion>
               ))}
-            </OptionList>
+            </SuggestionList>
             <div className="value-display">
               {selected
                 ? (() => {
@@ -220,7 +220,7 @@
           <div className="demo-section">
             <h2>Controlled with external filter input</h2>
             <p>
-              The list is filtered by the input above it. Shows how OptionList
+              The list is filtered by the input above it. Shows how SuggestionList
               works with an external query source.
             </p>
             <input
@@ -242,18 +242,18 @@
                 fontSize: "1rem",
               }}
             />
-            <OptionList
+            <SuggestionList
               style={{ maxHeight: "220px" }}
               onChange={setSelected}
               highlight={filter}
               hidden={filtered.length === 0}
             >
               {filtered.map((fruit) => (
-                <Option key={fruit} value={fruit} selected={selected === fruit}>
+                <Suggestion key={fruit} value={fruit} selected={selected === fruit}>
                   {fruit}
-                </Option>
+                </Suggestion>
               ))}
-            </OptionList>
+            </SuggestionList>
             {filtered.length === 0 && (
               <p style={{ color: "#999", fontStyle: "italic" }}>
                 No results for "{filter}"
@@ -275,7 +275,7 @@
               The list and options have custom background/text colors, including
               for pointed and highlighted states.
             </p>
-            <OptionList
+            <SuggestionList
               style={{
                 backgroundColor: "#1a1a2e",
                 borderColor: "#e94560",
@@ -284,7 +284,7 @@
               highlight="a"
             >
               {FRUITS.map((fruit) => (
-                <Option
+                <Suggestion
                   key={fruit}
                   value={fruit}
                   selected={selected === fruit}
@@ -310,9 +310,9 @@
                   }}
                 >
                   {fruit}
-                </Option>
+                </Suggestion>
               ))}
-            </OptionList>
+            </SuggestionList>
             <div className="value-display">{selected ?? ""}</div>
           </div>
         );
@@ -361,17 +361,17 @@
                 fontSize: "1rem",
               }}
             />
-            <OptionList
+            <SuggestionList
               style={{ maxHeight: "220px" }}
               onChange={setSelected}
               highlight={filter}
             >
               {sorted.map((fruit) => (
-                <Option key={fruit} value={fruit} selected={selected === fruit}>
+                <Suggestion key={fruit} value={fruit} selected={selected === fruit}>
                   {fruit}
-                </Option>
+                </Suggestion>
               ))}
-            </OptionList>
+            </SuggestionList>
             <div className="value-display">{selected ?? ""}</div>
           </div>
         );
@@ -449,31 +449,31 @@
                 {LARGE_LIST.length}
               </div>
             )}
-            <OptionList
+            <SuggestionList
               style={{ maxHeight: "280px" }}
               onChange={setSelected}
               highlight={filter}
             >
               {groups.map((group) => (
-                <OptGroup key={group.letter} label={group.letter}>
+                <SuggestionGroup key={group.letter} label={group.letter}>
                   {group.items.map((item) => (
-                    <Option
+                    <Suggestion
                       key={item}
                       value={item}
                       selected={selected === item}
                     >
                       {item}
-                    </Option>
+                    </Suggestion>
                   ))}
-                </OptGroup>
+                </SuggestionGroup>
               ))}
-            </OptionList>
+            </SuggestionList>
             <div className="value-display">{selected ?? ""}</div>
           </Box>
         );
       };
 
-      // --- 7. Grouped options with OptGroup ---
+      // --- 7. Grouped options with SuggestionGroup ---
 
       const GROUPED_ITEMS = [
         {
@@ -490,27 +490,27 @@
         },
       ];
 
-      const OptGroupDemo = () => {
+      const SuggestionGroupDemo = () => {
         const [selected, setSelected] = useState(null);
         return (
           <div className="demo-section">
             <h2>Grouped options</h2>
-            <p>Options organized into labeled groups using OptGroup.</p>
-            <OptionList style={{ maxHeight: "280px" }} onChange={setSelected}>
+            <p>Options organized into labeled groups using SuggestionGroup.</p>
+            <SuggestionList style={{ maxHeight: "280px" }} onChange={setSelected}>
               {GROUPED_ITEMS.map((group) => (
-                <OptGroup key={group.label} label={group.label}>
+                <SuggestionGroup key={group.label} label={group.label}>
                   {group.items.map((item) => (
-                    <Option
+                    <Suggestion
                       key={item}
                       value={item}
                       selected={selected === item}
                     >
                       {item}
-                    </Option>
+                    </Suggestion>
                   ))}
-                </OptGroup>
+                </SuggestionGroup>
               ))}
-            </OptionList>
+            </SuggestionList>
             <div className="value-display">{selected ?? ""}</div>
           </div>
         );
@@ -561,16 +561,16 @@
                 fontSize: "1rem",
               }}
             />
-            <OptionList
+            <SuggestionList
               style={{ maxHeight: "300px" }}
               onChange={setSelected}
               highlight={filter}
             >
-              <OptGroup
+              <SuggestionGroup
                 style={{ backgroundColor: "#f0faf3" }}
                 label={
                   <Box
-                    className="navi_opt_group_label"
+                    className="navi_suggestion_group_label"
                     style={{
                       color: "#1a6b2f",
                       backgroundColor: "#e6f4ea",
@@ -582,17 +582,17 @@
                 }
               >
                 {matches.map((item) => (
-                  <Option key={item} value={item} selected={selected === item}>
+                  <Suggestion key={item} value={item} selected={selected === item}>
                     {item}
-                  </Option>
+                  </Suggestion>
                 ))}
-              </OptGroup>
+              </SuggestionGroup>
               {nonMatches.length > 0 && (
-                <OptGroup
+                <SuggestionGroup
                   style={{ backgroundColor: "#fef8f0" }}
                   label={
                     <Box
-                      className="navi_opt_group_label"
+                      className="navi_suggestion_group_label"
                       style={{
                         color: "#7a3a00",
                         backgroundColor: "#fdf0e0",
@@ -604,17 +604,17 @@
                   }
                 >
                   {nonMatches.map((item) => (
-                    <Option
+                    <Suggestion
                       key={item}
                       value={item}
                       selected={selected === item}
                     >
                       {item}
-                    </Option>
+                    </Suggestion>
                   ))}
-                </OptGroup>
+                </SuggestionGroup>
               )}
-            </OptionList>
+            </SuggestionList>
             <div className="value-display">{selected ?? ""}</div>
           </div>
         );

@@ -75,7 +75,7 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      import { Option, OptionList, Form, Button, Input } from "@jsenv/navi";
+      import { Suggestion, SuggestionList, Form, Button, Input } from "@jsenv/navi";
 
       const FRUITS = [
         "Apple",
@@ -135,7 +135,7 @@
             </p>
             <Input
               type="text"
-              combobox="fruit-list"
+              suggestions="fruit-list"
               placeholder="Search a fruit…"
               onInput={(e) => {
                 const val = e.target.value;
@@ -143,22 +143,22 @@
                 setSelected(FRUITS.includes(val) ? val : null);
               }}
             />
-            <OptionList
+            <SuggestionList
               id="fruit-list"
               popover
               style={{ "--max-height": "220px" }}
             >
               {FRUITS.map((fruit) => (
-                <Option
+                <Suggestion
                   key={fruit}
                   value={fruit}
                   selected={selected === fruit}
                   hidden={!matches(fruit)}
                 >
                   {fruit}
-                </Option>
+                </Suggestion>
               ))}
-            </OptionList>
+            </SuggestionList>
             <div className="value-display">{selected ?? ""}</div>
           </div>
         );
@@ -185,7 +185,7 @@
             </p>
             <Input
               type="text"
-              combobox="country-list"
+              suggestions="country-list"
               placeholder="Search a country…"
               onInput={(e) => {
                 setQuery(e.target.value);
@@ -193,13 +193,13 @@
                 setSelected(match ? match.code : null);
               }}
             />
-            <OptionList
+            <SuggestionList
               id="country-list"
               popover
               style={{ "--max-height": "220px" }}
             >
               {COUNTRIES.map((country) => (
-                <Option
+                <Suggestion
                   key={country.code}
                   value={country.name}
                   selected={selected === country.code}
@@ -207,9 +207,9 @@
                 >
                   <span style={{ fontWeight: 500 }}>{country.name}</span>
                   <span className="option-secondary">{country.region}</span>
-                </Option>
+                </Suggestion>
               ))}
-            </OptionList>
+            </SuggestionList>
             <div className="value-display">
               {selectedCountry
                 ? `${selectedCountry.name} (${selectedCountry.code}) — ${selectedCountry.region}`
@@ -243,28 +243,28 @@
             </p>
             <Input
               type="text"
-              combobox="fruit-action-list"
+              suggestions="fruit-action-list"
               placeholder="Search a fruit…"
               action={saveFruit}
               actionAfterChange
               uiAction={(v) => setQuery(v)}
             />
-            <OptionList
+            <SuggestionList
               id="fruit-action-list"
               popover
               style={{ "--max-height": "220px" }}
             >
               {FRUITS.map((fruit) => (
-                <Option
+                <Suggestion
                   key={fruit}
                   value={fruit}
                   selected={query === fruit}
                   hidden={!matches(fruit)}
                 >
                   {fruit}
-                </Option>
+                </Suggestion>
               ))}
-            </OptionList>
+            </SuggestionList>
             <div className="value-display">
               Last saved: {lastSaved ?? "(none)"}
             </div>
@@ -303,28 +303,28 @@
                 <Input
                   type="text"
                   name="fruit"
-                  combobox="form-fruit-list"
+                  suggestions="form-fruit-list"
                   placeholder="Search a fruit…"
                   required
                   data-one-of="#form-fruit-list"
                   uiAction={(v) => setFruitQuery(v)}
                 />
-                <OptionList
+                <SuggestionList
                   id="form-fruit-list"
                   popover
                   style={{ "--max-height": "180px" }}
                 >
                   {FRUITS.map((fruit) => (
-                    <Option
+                    <Suggestion
                       key={fruit}
                       value={fruit}
                       selected={fruitQuery === fruit}
                       hidden={!fruitMatches(fruit)}
                     >
                       {fruit}
-                    </Option>
+                    </Suggestion>
                   ))}
-                </OptionList>
+                </SuggestionList>
               </label>
 
               <label>
@@ -332,28 +332,28 @@
                 <Input
                   type="text"
                   name="country"
-                  combobox="form-country-list"
+                  suggestions="form-country-list"
                   placeholder="Search a country…"
                   required
                   data-one-of="#form-country-list"
                   uiAction={(v) => setCountryQuery(v)}
                 />
-                <OptionList
+                <SuggestionList
                   id="form-country-list"
                   popover
                   style={{ "--max-height": "180px" }}
                 >
                   {COUNTRIES.map((c) => (
-                    <Option
+                    <Suggestion
                       key={c.code}
                       value={c.name}
                       selected={countryQuery === c.name}
                       hidden={!countryMatches(c)}
                     >
                       {c.name}
-                    </Option>
+                    </Suggestion>
                   ))}
-                </OptionList>
+                </SuggestionList>
               </label>
 
               <Button type="submit">Submit</Button>
