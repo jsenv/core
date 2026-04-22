@@ -127,51 +127,37 @@ const DIMENSION_PROPS = {
   expand: applyOnTwoProps("expandX", "expandY"),
   shrink: applyOnTwoProps("shrinkX", "shrinkY"),
   // apply after width/height to override if both are set
-  expandX: (value, { parentBoxFlow, boxFlow }) => {
+  expandX: (value, { parentBoxFlow }) => {
     if (!value) {
       return null;
     }
     const inHorizontalFlexFlow =
       parentBoxFlow === "flex-x" || parentBoxFlow === "inline-flex-x";
-    const selfHorizontalFlexFlow =
-      boxFlow === "flex-x" || boxFlow === "inline-flex-x";
-    if (selfHorizontalFlexFlow || inHorizontalFlexFlow) {
-      if (!inHorizontalFlexFlow) {
-        if (parentBoxFlow === "flex-y" || parentBoxFlow === "inline-flex-y") {
-          return { alignSelf: "stretch" };
-        }
-        return { flexGrow: 1, flexBasis: "0%" };
+    if (!inHorizontalFlexFlow) {
+      // Can't use flexGrow — parent is not flex-x
+      if (parentBoxFlow === "flex-y" || parentBoxFlow === "inline-flex-y") {
+        return { alignSelf: "stretch" };
       }
-      return { flexGrow: 1, flexBasis: "0%" }; // Grow horizontally in column
+      return { width: "100%" };
     }
-    if (parentBoxFlow === "flex-y" || parentBoxFlow === "inline-flex-y") {
-      return { alignSelf: "stretch" }; // Stretch to cross-axis width in flex-y
-    }
-    return { width: "100%" }; // Take full width outside flex
+    // Parent is flex-x: grow as flex item
+    return { flexGrow: 1, flexBasis: "0%" };
   },
-  expandY: (value, { parentBoxFlow, boxFlow }) => {
+  expandY: (value, { parentBoxFlow }) => {
     if (!value) {
       return null;
     }
     const inVerticalFlexFlow =
       parentBoxFlow === "flex-y" || parentBoxFlow === "inline-flex-y";
-    const inHorizontalFlexFlow =
-      parentBoxFlow === "flex-x" || parentBoxFlow === "inline-flex-x";
-    const selfVerticalFlexFlow =
-      boxFlow === "flex-y" || boxFlow === "inline-flex-y";
-    if (selfVerticalFlexFlow || inVerticalFlexFlow) {
-      if (!inVerticalFlexFlow) {
-        if (inHorizontalFlexFlow) {
-          return { alignSelf: "stretch" };
-        }
-        return { flexGrow: 1, flexBasis: "0%" };
+    if (!inVerticalFlexFlow) {
+      // Can't use flexGrow — parent is not flex-y
+      if (parentBoxFlow === "flex-x" || parentBoxFlow === "inline-flex-x") {
+        return { alignSelf: "stretch" };
       }
-      return { flexGrow: 1, flexBasis: "0%" }; // Grow vertically in row
+      return { height: "100%" };
     }
-    if (inHorizontalFlexFlow) {
-      return { alignSelf: "stretch" }; // Stretch to cross-axis height in flex-x
-    }
-    return { height: "100%" }; // Take full height outside flex
+    // Parent is flex-y: grow as flex item
+    return { flexGrow: 1, flexBasis: "0%" };
   },
   shrinkX: (value) => {
     if (!value || value === "0") {
@@ -586,7 +572,6 @@ const negativeEntries = (map) => {
   return result;
 };
 
-
 // Unified design scale using t-shirt sizes with rem units for accessibility.
 // This scale is used for spacing to create visual harmony
 // and consistent proportions throughout the design system.
@@ -620,4 +605,3 @@ export const resolveSpacingSize = (size, property = "padding") => {
 export const resolveTypoSize = (size, property = "fontSize") => {
   return stringifyStyle(TYPO_SIZE_MAP[size] || size, property);
 };
-
