@@ -132,7 +132,6 @@ export const OptionListContext = createContext(null);
 export const OptionList = ({
   popover,
   onChange: onChangeProp,
-  hidden: hiddenProp,
   children,
   ...rest
 }) => {
@@ -161,6 +160,26 @@ export const OptionList = ({
   const onChangeRef = useRef(effectiveOnChange);
   onChangeRef.current = effectiveOnChange;
 
+  const navigate = (direction) => {
+    const values = ItemTrackerProvider.items.map((item) => item.value);
+    if (values.length === 0) {
+      return false;
+    }
+    const current = highlightedValueRef.current;
+    if (direction === "down") {
+      const idx = current === null ? -1 : values.indexOf(current);
+      setHighlightedValue(values[idx < values.length - 1 ? idx + 1 : idx]);
+    } else if (direction === "up") {
+      const idx = current === null ? -1 : values.indexOf(current);
+      setHighlightedValue(values[idx > 0 ? idx - 1 : 0]);
+    } else if (direction === "first") {
+      setHighlightedValue(values[0]);
+    } else if (direction === "last") {
+      setHighlightedValue(values[values.length - 1]);
+    }
+    return true;
+  };
+
   // Listen for commands dispatched by a linked Input (combobox mode)
   const noopRef = useRef(null);
   useEffect(() => {
@@ -169,25 +188,7 @@ export const OptionList = ({
     }
     const el = listRef.current;
     const onNavigate = (e) => {
-      const { direction } = e.detail;
-      const values = ItemTrackerProvider.items.map((item) => item.value);
-      if (values.length === 0) {
-        return;
-      }
-      const current = highlightedValueRef.current;
-      if (direction === "down") {
-        const idx = current === null ? -1 : values.indexOf(current);
-        const next = idx < values.length - 1 ? idx + 1 : idx;
-        setHighlightedValue(values[next]);
-      } else if (direction === "up") {
-        const idx = current === null ? -1 : values.indexOf(current);
-        const prev = idx > 0 ? idx - 1 : 0;
-        setHighlightedValue(values[prev]);
-      } else if (direction === "first") {
-        setHighlightedValue(values[0]);
-      } else if (direction === "last") {
-        setHighlightedValue(values[values.length - 1]);
-      }
+      navigate(e.detail.direction);
     };
     const onConfirm = (e) => {
       const current = highlightedValueRef.current;
@@ -213,57 +214,22 @@ export const OptionList = ({
     {
       key: "arrowdown",
       description: "Highlight next option",
-      handler: () => {
-        const values = ItemTrackerProvider.items.map((item) => item.value);
-        if (values.length === 0) {
-          return false;
-        }
-        const current = highlightedValueRef.current;
-        const currentIndex = current === null ? -1 : values.indexOf(current);
-        const nextIndex =
-          currentIndex < values.length - 1 ? currentIndex + 1 : currentIndex;
-        setHighlightedValue(values[nextIndex]);
-        return true;
-      },
+      handler: () => navigate("down"),
     },
     {
       key: "arrowup",
       description: "Highlight previous option",
-      handler: () => {
-        const values = ItemTrackerProvider.items.map((item) => item.value);
-        if (values.length === 0) {
-          return false;
-        }
-        const current = highlightedValueRef.current;
-        const currentIndex = current === null ? -1 : values.indexOf(current);
-        const prevIndex = currentIndex > 0 ? currentIndex - 1 : 0;
-        setHighlightedValue(values[prevIndex]);
-        return true;
-      },
+      handler: () => navigate("up"),
     },
     {
       key: "home",
       description: "Highlight first option",
-      handler: () => {
-        const values = ItemTrackerProvider.items.map((item) => item.value);
-        if (values.length === 0) {
-          return false;
-        }
-        setHighlightedValue(values[0]);
-        return true;
-      },
+      handler: () => navigate("first"),
     },
     {
       key: "end",
       description: "Highlight last option",
-      handler: () => {
-        const values = ItemTrackerProvider.items.map((item) => item.value);
-        if (values.length === 0) {
-          return false;
-        }
-        setHighlightedValue(values[values.length - 1]);
-        return true;
-      },
+      handler: () => navigate("last"),
     },
     {
       key: "enter",
@@ -301,7 +267,6 @@ export const OptionList = ({
       role="listbox"
       tabIndex={popover ? -1 : 0}
       popover={popover ? "manual" : undefined}
-      hidden={popover ? undefined : hiddenProp}
       {...rest}
       baseClassName="navi_option_list"
     >
