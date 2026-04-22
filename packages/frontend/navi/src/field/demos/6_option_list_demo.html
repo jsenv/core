@@ -69,7 +69,7 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      import { Option, OptionList, OptGroup, Input } from "@jsenv/navi";
+      import { Option, OptionList, OptGroup, Input, Box } from "@jsenv/navi";
 
       // 200 auto-generated items
       const LARGE_LIST = Array.from({ length: 200 }, (_, i) => {
@@ -413,7 +413,7 @@
           : LARGE_LIST.length;
 
         return (
-          <div className="demo-section">
+          <Box className="demo-section">
             <h2>Large list (200 items) — sort by match, show all</h2>
             <p>
               Matching items rise to the top, grouped by initial letter. All
@@ -427,16 +427,12 @@
                 setFilter(v);
                 setSelected(null);
               }}
-              style={{
-                display: "block",
-                width: "100%",
-                marginBottom: "4px",
-                padding: "8px",
-                boxSizing: "border-box",
-                border: "1px solid #ccc",
-                borderRadius: "6px",
-                fontSize: "1rem",
-              }}
+              expandX
+              border="1px solid #ccc"
+              borderRadius="6px"
+              padding="8"
+              marginBottom="s"
+              size="1rem"
             />
             {filter && (
               <div
@@ -470,7 +466,7 @@
               ))}
             </OptionList>
             <div className="value-display">{selected ?? ""}</div>
-          </div>
+          </Box>
         );
       };
 
