@@ -71,7 +71,6 @@ export const ComboBox = ({ children, ...rest }) => {
   highlightedValueRef.current = highlightedValue;
   const openRef = useRef(false);
   openRef.current = open;
-  const actionRef = useRef(null);
   const keyboardTargetRef = useRef(null);
 
   // Close on outside click
@@ -89,7 +88,11 @@ export const ComboBox = ({ children, ...rest }) => {
   }, []);
 
   const select = (optionValue) => {
-    actionRef.current?.(optionValue);
+    const inputEl = keyboardTargetRef.current;
+    if (inputEl) {
+      inputEl.value = optionValue;
+      inputEl.dispatchEvent(new Event("input", { bubbles: true }));
+    }
     setSelectedValue(optionValue);
     setOpen(false);
     setHighlightedValue(null);
@@ -105,7 +108,6 @@ export const ComboBox = ({ children, ...rest }) => {
     registeredIdsRef,
     selectedValue,
     setSelectedValue,
-    actionRef,
     onSelect: select,
     listboxId,
     openRef,
@@ -148,8 +150,6 @@ export const ComboBox = ({ children, ...rest }) => {
  * Arrow keys navigate the dropdown; Enter selects; Escape closes.
  */
 export const ComboBoxInput = ({
-  value,
-  action,
   onInput,
   onFocus,
   onBlur,
@@ -163,8 +163,6 @@ export const ComboBoxInput = ({
     highlightedValue,
     registeredIdsRef,
     setHighlightedValue,
-    setSelectedValue,
-    actionRef,
     listboxId,
     keyboardTargetRef,
   } = useContext(ComboBoxContext);
@@ -178,17 +176,6 @@ export const ComboBoxInput = ({
       keyboardTargetRef.current = null;
     };
   }, []);
-
-  // Sync value and action from props into ComboBox state/refs
-  useLayoutEffect(() => {
-    if (value !== undefined) {
-      setSelectedValue(value);
-    }
-  }, [value]);
-
-  useLayoutEffect(() => {
-    actionRef.current = action ?? null;
-  }, [action]);
 
   // Open dropdown on ArrowDown when closed — navigation itself is handled by OptionList shortcuts
   const handleKeyDown = (e) => {

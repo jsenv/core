@@ -136,14 +136,10 @@
             </p>
             <ComboBox>
               <ComboBoxInput
-                value={selected}
-                action={setSelected}
                 placeholder="Search a fruit…"
                 onInput={(e) => {
+                  setSelected(e.target.value || null);
                   setQuery(e.target.value);
-                  if (!e.target.value) {
-                    setSelected(null);
-                  }
                 }}
               />
               <OptionList style={{ "--max-height": "220px" }}>
@@ -182,14 +178,13 @@
             </p>
             <ComboBox>
               <ComboBoxInput
-                value={selected}
-                action={setSelected}
                 placeholder="Search a country…"
                 onInput={(e) => {
                   setQuery(e.target.value);
-                  if (!e.target.value) {
-                    setSelected(null);
-                  }
+                  const match = COUNTRIES.find(
+                    (c) => c.name === e.target.value,
+                  );
+                  setSelected(match ? match.code : null);
                 }}
               />
               <OptionList style={{ "--max-height": "220px" }}>
