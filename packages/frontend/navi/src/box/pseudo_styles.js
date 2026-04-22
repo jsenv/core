@@ -296,6 +296,12 @@ export const PSEUDO_CLASSES = {
     attribute: "data-invalid",
     test: (el) => el.matches(":invalid"),
   },
+  ":-navi-highlighted": {
+    attribute: "data-highlighted",
+  },
+  ":-navi-selected": {
+    attribute: "data-selected",
+  },
   ":-navi-loading": {
     attribute: "data-loading",
   },

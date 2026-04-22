@@ -1,3 +1,4 @@
+/* eslint-disable jsenv/no-unknown-params */
 /**
  * Input component for all textual input types.
  *
@@ -16,7 +17,14 @@
  * - <InputRadio /> for type="radio"
  */
 
-import { useCallback, useContext, useId, useRef } from "preact/hooks";
+import {
+  useCallback,
+  useContext,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from "preact/hooks";
 
 import { renderActionableComponent } from "../action/render_actionable_component.jsx";
 import { useActionBoundToOneParam } from "../action/use_action.js";
@@ -29,6 +37,7 @@ import { EmailSvg } from "../graphic/icons/email_svg.jsx";
 import { PhoneSvg } from "../graphic/icons/phone_svg.jsx";
 import { SearchSvg } from "../graphic/icons/search_svg.jsx";
 import { LoaderBackground } from "../graphic/loader/loader_background.jsx";
+import { useKeyboardShortcuts } from "../keyboard/keyboard_shortcuts.js";
 import { Icon } from "../text/icon.jsx";
 import { useStableCallback } from "../utils/use_stable_callback.js";
 import { fieldPropSet } from "./field_prop_set.js";
@@ -349,6 +358,208 @@ Object.assign(PSEUDO_CLASSES, {
 const InputPseudoElements = ["::-navi-loader"];
 const InputChildPropSet = new Set([...fieldPropSet]);
 const InputTextualBasic = (props) => {
+  if (props.combobox) {
+    return <InputTextualCombobox {...props} />;
+  }
+  return <InputTextualPlain {...props} />;
+};
+
+const InputTextualCombobox = ({
+  combobox,
+  onInput,
+  onFocus,
+  onBlur,
+  ...rest
+}) => {
+  const defaultRef = useRef();
+  const ref = rest.ref || defaultRef;
+  const [comboboxOpen, setComboboxOpen] = useState(false);
+  const comboboxOpenRef = useRef(false);
+  comboboxOpenRef.current = comboboxOpen;
+
+  const showPopover = (e) => {
+    if (comboboxOpenRef.current) {
+      return;
+    }
+    console.debug(`showPopover (e.type:${e.type})`);
+    const popoverEl = document.getElementById(combobox);
+    positionPopover();
+    popoverEl.showPopover();
+    comboboxOpenRef.current = true;
+    setComboboxOpen(true);
+    window.addEventListener("scroll", positionPopover, {
+      capture: true,
+      passive: true,
+    });
+  };
+
+  const hidePopover = (e) => {
+    if (!comboboxOpenRef.current) {
+      return;
+    }
+    console.debug(`hidePopover (e.type:${e.type})`);
+    comboboxOpenRef.current = false;
+    setComboboxOpen(false);
+    window.removeEventListener("scroll", positionPopover, { capture: true });
+    const popoverEl = document.getElementById(combobox);
+    if (popoverEl) {
+      popoverEl.dispatchEvent(new CustomEvent("combobox-clear"));
+      popoverEl.hidePopover();
+    }
+    setComboboxOpen(false);
+  };
+  const positionPopover = () => {
+    const input = ref.current;
+    const rect = input.getBoundingClientRect();
+    const popoverEl = document.getElementById(combobox);
+    if (popoverEl) {
+      popoverEl.style.top = `${rect.bottom + 2}px`;
+      popoverEl.style.left = `${rect.left}px`;
+      popoverEl.style.width = `${rect.width}px`;
+    }
+  };
+
+  const dispatchToOptionList = (customEvent) => {
+    const popoverEl = document.getElementById(combobox);
+    if (!popoverEl) {
+      return false;
+    }
+    popoverEl.dispatchEvent(customEvent);
+    return customEvent.defaultPrevented;
+  };
+
+  useKeyboardShortcuts(ref, [
+    {
+      key: "arrowdown",
+      description: "Open popover and highlight next option",
+      handler: (e) => {
+        showPopover(e);
+        const popoverEl = document.getElementById(combobox);
+        if (!popoverEl) {
+          return false;
+        }
+        popoverEl.dispatchEvent(
+          new CustomEvent("combobox-navigate", {
+            detail: { direction: "down" },
+          }),
+        );
+        return true;
+      },
+    },
+    {
+      key: "arrowup",
+      description: "Open popover and highlight previous option",
+      handler: (e) => {
+        showPopover(e);
+        return dispatchToOptionList(
+          new CustomEvent("combobox-navigate", {
+            detail: { direction: "up" },
+          }),
+        );
+      },
+    },
+    {
+      key: "home",
+      description: "Highlight first option",
+      handler: () => {
+        if (!comboboxOpenRef.current) {
+          return false;
+        }
+        return dispatchToOptionList(
+          new CustomEvent("combobox-navigate", {
+            detail: { direction: "first" },
+          }),
+        );
+      },
+    },
+    {
+      key: "end",
+      description: "Highlight last option",
+      handler: () => {
+        if (!comboboxOpenRef.current) {
+          return false;
+        }
+        return dispatchToOptionList(
+          new CustomEvent("combobox-navigate", {
+            detail: { direction: "last" },
+          }),
+        );
+      },
+    },
+    {
+      key: "enter",
+      description: "Confirm highlighted option",
+      handler: () => {
+        if (!comboboxOpenRef.current) {
+          return false;
+        }
+        return dispatchToOptionList(
+          new CustomEvent("combobox-confirm", {
+            cancelable: true,
+          }),
+        );
+      },
+    },
+    {
+      key: "escape",
+      description: "Close popover",
+      handler: (e) => {
+        if (!comboboxOpenRef.current) {
+          return false;
+        }
+        hidePopover(e);
+        return true;
+      },
+    },
+  ]);
+
+  useEffect(() => {
+    const inputEl = ref.current;
+    const popoverEl = document.getElementById(combobox);
+    if (!popoverEl) {
+      return undefined;
+    }
+    const onSelected = (e) => {
+      inputEl.value = e.detail.value;
+      inputEl.dispatchEvent(new Event("input", { bubbles: true }));
+      hidePopover(e);
+    };
+    popoverEl.addEventListener("combobox-selected", onSelected);
+    return () => {
+      popoverEl.removeEventListener("combobox-selected", onSelected);
+    };
+  }, [combobox]);
+
+  return (
+    <InputTextualPlain
+      ref={ref}
+      role="combobox"
+      autoComplete="off"
+      aria-controls={combobox}
+      aria-haspopup="listbox"
+      aria-expanded={comboboxOpen}
+      aria-autocomplete="list"
+      onnavi_callout_open={(e) => {
+        hidePopover(e);
+      }}
+      onFocus={(e) => {
+        onFocus?.(e);
+        showPopover(e);
+      }}
+      onBlur={(e) => {
+        onBlur?.(e);
+        hidePopover(e);
+      }}
+      onInput={(e) => {
+        onInput?.(e);
+        showPopover(e);
+      }}
+      {...rest}
+    />
+  );
+};
+
+const InputTextualPlain = (props) => {
   const contextReadOnly = useContext(ReadOnlyContext);
   const contextDisabled = useContext(DisabledContext);
   const contextLoading = useContext(LoadingContext);

@@ -64,6 +64,7 @@ import {
   MIN_SPECIAL_CHAR_CONSTRAINT,
   MIN_UPPER_LETTER_CONSTRAINT,
 } from "./constraints/min_char_constraint.js";
+import { ONE_OF_CONSTRAINT } from "./constraints/one_of_constraint.js";
 import { READONLY_CONSTRAINT } from "./constraints/readonly_constraint.js";
 import { SAME_AS_CONSTRAINT } from "./constraints/same_as_constraint.js";
 import { SINGLE_SPACE_CONSTRAINT } from "./constraints/single_space_constraint.js";
@@ -104,6 +105,7 @@ const NAVI_CONSTRAINT_SET = new Set([
   MIN_UPPER_LETTER_CONSTRAINT,
   MIN_LOWER_LETTER_CONSTRAINT,
   SAME_AS_CONSTRAINT,
+  ONE_OF_CONSTRAINT,
   READONLY_CONSTRAINT,
 ]);
 const DEFAULT_CONSTRAINT_SET = new Set([

@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OptionList Demo</title>
+    <style>
+      body {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: #f5f5f5;
+      }
+
+      h1 {
+        margin-bottom: 30px;
+        color: #333;
+        font-size: 2rem;
+        text-align: center;
+      }
+
+      .demo-section {
+        margin-bottom: 40px;
+        padding: 20px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      .demo-section h2 {
+        margin: 0 0 16px 0;
+        padding-bottom: 10px;
+        color: #333;
+        font-size: 1.4rem;
+        border-bottom: 2px solid #ddd;
+      }
+
+      .demo-section p {
+        margin: 0 0 16px 0;
+        color: #555;
+        font-size: 0.95rem;
+      }
+
+      .value-display {
+        min-height: 20px;
+        margin-top: 12px;
+        padding: 8px;
+        font-size: 0.85rem;
+        font-family: monospace;
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+      }
+
+      .value-display:empty::before {
+        color: #999;
+        font-style: italic;
+        content: "(none selected)";
+      }
+    </style>
+  </head>
+  <body>
+    <h1>OptionList Demo</h1>
+    <div id="root"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useState } from "preact/hooks";
+      import { Option, OptionList } from "../option_list.jsx";
+
+      const FRUITS = [
+        "Apple",
+        "Apricot",
+        "Banana",
+        "Blueberry",
+        "Cherry",
+        "Grape",
+        "Kiwi",
+        "Lemon",
+        "Mango",
+        "Orange",
+        "Peach",
+        "Pear",
+        "Pineapple",
+        "Raspberry",
+        "Strawberry",
+        "Watermelon",
+      ];
+
+      const COUNTRIES = [
+        { code: "au", name: "Australia", region: "Oceania" },
+        { code: "br", name: "Brazil", region: "South America" },
+        { code: "cn", name: "China", region: "Asia" },
+        { code: "fr", name: "France", region: "Europe" },
+        { code: "de", name: "Germany", region: "Europe" },
+        { code: "in", name: "India", region: "Asia" },
+        { code: "jp", name: "Japan", region: "Asia" },
+        { code: "mx", name: "Mexico", region: "North America" },
+        { code: "us", name: "United States", region: "North America" },
+        { code: "za", name: "South Africa", region: "Africa" },
+      ];
+
+      const App = () => (
+        <div>
+          <BasicDemo />
+          <CustomRenderDemo />
+          <ControlledDemo />
+        </div>
+      );
+
+      // --- 1. Basic string options ---
+
+      const BasicDemo = () => {
+        const [selected, setSelected] = useState(null);
+        return (
+          <div className="demo-section">
+            <h2>Basic string options</h2>
+            <p>
+              Click an option or use keyboard (Tab to focus, Arrow keys to
+              navigate, Enter to select, Escape to clear active).
+            </p>
+            <OptionList
+              style={{ "--max-height": "220px" }}
+              onChange={setSelected}
+            >
+              {FRUITS.map((fruit) => (
+                <Option key={fruit} value={fruit} selected={selected === fruit}>
+                  {fruit}
+                </Option>
+              ))}
+            </OptionList>
+            <div className="value-display">{selected ?? ""}</div>
+          </div>
+        );
+      };
+
+      // --- 2. Custom option rendering ---
+
+      const CustomRenderDemo = () => {
+        const [selected, setSelected] = useState(null);
+        return (
+          <div className="demo-section">
+            <h2>Custom option content</h2>
+            <p>Each option renders the country name + region badge.</p>
+            <OptionList
+              style={{ "--max-height": "220px" }}
+              onChange={setSelected}
+            >
+              {COUNTRIES.map((country) => (
+                <Option
+                  key={country.code}
+                  value={country.code}
+                  selected={selected === country.code}
+                >
+                  <span style={{ fontWeight: 500 }}>{country.name}</span>
+                  <span
+                    style={{
+                      marginLeft: "8px",
+                      fontSize: "0.8em",
+                      color: "#888",
+                    }}
+                  >
+                    {country.region}
+                  </span>
+                </Option>
+              ))}
+            </OptionList>
+            <div className="value-display">
+              {selected
+                ? (() => {
+                    const c = COUNTRIES.find((c) => c.code === selected);
+                    return c ? `${c.name} (${c.code}) — ${c.region}` : selected;
+                  })()
+                : ""}
+            </div>
+          </div>
+        );
+      };
+
+      // --- 3. Controlled / dynamic options ---
+
+      const ControlledDemo = () => {
+        const [filter, setFilter] = useState("");
+        const [selected, setSelected] = useState(null);
+
+        const filtered = FRUITS.filter((f) =>
+          f.toLowerCase().includes(filter.toLowerCase()),
+        );
+
+        return (
+          <div className="demo-section">
+            <h2>Controlled with external filter input</h2>
+            <p>
+              The list is filtered by the input above it. Shows how OptionList
+              works with an external query source.
+            </p>
+            <input
+              type="text"
+              placeholder="Filter fruits…"
+              value={filter}
+              onInput={(e) => {
+                setFilter(e.target.value);
+                setSelected(null);
+              }}
+              style={{
+                display: "block",
+                width: "100%",
+                marginBottom: "8px",
+                padding: "8px",
+                boxSizing: "border-box",
+                border: "1px solid #ccc",
+                borderRadius: "6px",
+                fontSize: "1rem",
+              }}
+            />
+            <OptionList
+              style={{ "--max-height": "220px" }}
+              onChange={setSelected}
+              hidden={filtered.length === 0}
+            >
+              {filtered.map((fruit) => (
+                <Option key={fruit} value={fruit} selected={selected === fruit}>
+                  {fruit}
+                </Option>
+              ))}
+            </OptionList>
+            {filtered.length === 0 && (
+              <p style={{ color: "#999", fontStyle: "italic" }}>
+                No results for "{filter}"
+              </p>
+            )}
+            <div className="value-display">{selected ?? ""}</div>
+          </div>
+        );
+      };
+
+      render(<App />, document.getElementById("root"));
+    </script>
+  </body>
+</html>

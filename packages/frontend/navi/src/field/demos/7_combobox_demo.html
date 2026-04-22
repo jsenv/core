@@ -1,0 +1,374 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ComboBox Demo</title>
+    <style>
+      body {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: #f5f5f5;
+      }
+
+      h1 {
+        margin-bottom: 30px;
+        color: #333;
+        font-size: 2rem;
+        text-align: center;
+      }
+
+      .demo-section {
+        margin-bottom: 40px;
+        padding: 20px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      .demo-section h2 {
+        margin: 0 0 16px 0;
+        padding-bottom: 10px;
+        color: #333;
+        font-size: 1.4rem;
+        border-bottom: 2px solid #ddd;
+      }
+
+      .demo-section p {
+        margin: 0 0 16px 0;
+        color: #555;
+        font-size: 0.95rem;
+      }
+
+      .value-display {
+        min-height: 20px;
+        margin-top: 12px;
+        padding: 8px;
+        font-size: 0.85rem;
+        font-family: monospace;
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+      }
+
+      .value-display:empty::before {
+        color: #999;
+        font-style: italic;
+        content: "(none selected)";
+      }
+
+      .option-secondary {
+        margin-left: 8px;
+        color: #888;
+        font-size: 0.85em;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>ComboBox Demo</h1>
+    <div id="root"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useState } from "preact/hooks";
+      import { Option, OptionList, Form, Button, Input } from "@jsenv/navi";
+
+      const FRUITS = [
+        "Apple",
+        "Apricot",
+        "Banana",
+        "Blueberry",
+        "Cherry",
+        "Grape",
+        "Kiwi",
+        "Lemon",
+        "Mango",
+        "Orange",
+        "Peach",
+        "Pear",
+        "Pineapple",
+        "Raspberry",
+        "Strawberry",
+        "Watermelon",
+      ];
+
+      const COUNTRIES = [
+        { code: "au", name: "Australia", region: "Oceania" },
+        { code: "br", name: "Brazil", region: "South America" },
+        { code: "cn", name: "China", region: "Asia" },
+        { code: "fr", name: "France", region: "Europe" },
+        { code: "de", name: "Germany", region: "Europe" },
+        { code: "in", name: "India", region: "Asia" },
+        { code: "jp", name: "Japan", region: "Asia" },
+        { code: "mx", name: "Mexico", region: "North America" },
+        { code: "us", name: "United States", region: "North America" },
+        { code: "za", name: "South Africa", region: "Africa" },
+      ];
+
+      const App = () => (
+        <div>
+          <BasicDemo />
+          <CustomRenderDemo />
+          <InputWithActionDemo />
+          <FormWithComboboxDemo />
+        </div>
+      );
+
+      // --- 1. Simple string combobox ---
+
+      const BasicDemo = () => {
+        const [selected, setSelected] = useState(null);
+        const [query, setQuery] = useState("");
+
+        const matches = (f) => f.toLowerCase().includes(query.toLowerCase());
+
+        return (
+          <div className="demo-section">
+            <h2>Basic combobox — strings</h2>
+            <p>
+              Type to filter. Arrow keys navigate, Enter selects, Escape closes.
+              Clicking outside closes.
+            </p>
+            <Input
+              type="text"
+              combobox="fruit-list"
+              placeholder="Search a fruit…"
+              onInput={(e) => {
+                const val = e.target.value;
+                setQuery(val);
+                setSelected(FRUITS.includes(val) ? val : null);
+              }}
+            />
+            <OptionList
+              id="fruit-list"
+              popover
+              style={{ "--max-height": "220px" }}
+            >
+              {FRUITS.map((fruit) => (
+                <Option
+                  key={fruit}
+                  value={fruit}
+                  selected={selected === fruit}
+                  hidden={!matches(fruit)}
+                >
+                  {fruit}
+                </Option>
+              ))}
+            </OptionList>
+            <div className="value-display">{selected ?? ""}</div>
+          </div>
+        );
+      };
+
+      // --- 2. Custom option render (countries) ---
+
+      const CustomRenderDemo = () => {
+        const [selected, setSelected] = useState(null);
+        const [query, setQuery] = useState("");
+
+        const matches = (c) =>
+          c.name.toLowerCase().includes(query.toLowerCase()) ||
+          c.region.toLowerCase().includes(query.toLowerCase());
+
+        const selectedCountry = COUNTRIES.find((c) => c.code === selected);
+
+        return (
+          <div className="demo-section">
+            <h2>Custom option content — countries</h2>
+            <p>
+              Filter by country name or region (try "asia" or "europe"). Each
+              option shows the region.
+            </p>
+            <Input
+              type="text"
+              combobox="country-list"
+              placeholder="Search a country…"
+              onInput={(e) => {
+                setQuery(e.target.value);
+                const match = COUNTRIES.find((c) => c.name === e.target.value);
+                setSelected(match ? match.code : null);
+              }}
+            />
+            <OptionList
+              id="country-list"
+              popover
+              style={{ "--max-height": "220px" }}
+            >
+              {COUNTRIES.map((country) => (
+                <Option
+                  key={country.code}
+                  value={country.name}
+                  selected={selected === country.code}
+                  hidden={!matches(country)}
+                >
+                  <span style={{ fontWeight: 500 }}>{country.name}</span>
+                  <span className="option-secondary">{country.region}</span>
+                </Option>
+              ))}
+            </OptionList>
+            <div className="value-display">
+              {selectedCountry
+                ? `${selectedCountry.name} (${selectedCountry.code}) — ${selectedCountry.region}`
+                : ""}
+            </div>
+          </div>
+        );
+      };
+
+      // --- 3. Input with async action ---
+
+      const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+      const InputWithActionDemo = () => {
+        const [query, setQuery] = useState("");
+        const [lastSaved, setLastSaved] = useState(null);
+
+        const matches = (f) => f.toLowerCase().includes(query.toLowerCase());
+
+        const saveFruit = async (value) => {
+          await delay(800);
+          setLastSaved(value);
+        };
+
+        return (
+          <div className="demo-section">
+            <h2>Combobox with async action on input</h2>
+            <p>
+              The <code>action</code> prop is called when the value changes
+              (blur / Enter). Shows loading state while the async action runs.
+            </p>
+            <Input
+              type="text"
+              combobox="fruit-action-list"
+              placeholder="Search a fruit…"
+              action={saveFruit}
+              actionAfterChange
+              uiAction={(v) => setQuery(v)}
+            />
+            <OptionList
+              id="fruit-action-list"
+              popover
+              style={{ "--max-height": "220px" }}
+            >
+              {FRUITS.map((fruit) => (
+                <Option
+                  key={fruit}
+                  value={fruit}
+                  selected={query === fruit}
+                  hidden={!matches(fruit)}
+                >
+                  {fruit}
+                </Option>
+              ))}
+            </OptionList>
+            <div className="value-display">
+              Last saved: {lastSaved ?? "(none)"}
+            </div>
+          </div>
+        );
+      };
+
+      // --- 4. Combobox inside a form with async action ---
+
+      const FormWithComboboxDemo = () => {
+        const [fruitQuery, setFruitQuery] = useState("");
+        const [countryQuery, setCountryQuery] = useState("");
+        const [submitResult, setSubmitResult] = useState(null);
+
+        const fruitMatches = (f) =>
+          f.toLowerCase().includes(fruitQuery.toLowerCase());
+        const countryMatches = (c) =>
+          c.name.toLowerCase().includes(countryQuery.toLowerCase());
+
+        const submitForm = async ({ fruit, country }) => {
+          await delay(1000);
+          setSubmitResult({ fruit, country });
+        };
+
+        return (
+          <div className="demo-section">
+            <h2>Combobox inside a Form with async action</h2>
+            <p>
+              Both combobox inputs are inside a <code>Form</code> whose{" "}
+              <code>action</code> is async. Submitting collects the selected
+              values as form fields.
+            </p>
+            <Form action={submitForm} flex="y" alignX="start" spacing="m">
+              <label>
+                Favourite fruit:
+                <Input
+                  type="text"
+                  name="fruit"
+                  combobox="form-fruit-list"
+                  placeholder="Search a fruit…"
+                  required
+                  data-one-of="#form-fruit-list"
+                  uiAction={(v) => setFruitQuery(v)}
+                />
+                <OptionList
+                  id="form-fruit-list"
+                  popover
+                  style={{ "--max-height": "180px" }}
+                >
+                  {FRUITS.map((fruit) => (
+                    <Option
+                      key={fruit}
+                      value={fruit}
+                      selected={fruitQuery === fruit}
+                      hidden={!fruitMatches(fruit)}
+                    >
+                      {fruit}
+                    </Option>
+                  ))}
+                </OptionList>
+              </label>
+
+              <label>
+                Country:
+                <Input
+                  type="text"
+                  name="country"
+                  combobox="form-country-list"
+                  placeholder="Search a country…"
+                  required
+                  data-one-of="#form-country-list"
+                  uiAction={(v) => setCountryQuery(v)}
+                />
+                <OptionList
+                  id="form-country-list"
+                  popover
+                  style={{ "--max-height": "180px" }}
+                >
+                  {COUNTRIES.map((c) => (
+                    <Option
+                      key={c.code}
+                      value={c.name}
+                      selected={countryQuery === c.name}
+                      hidden={!countryMatches(c)}
+                    >
+                      {c.name}
+                    </Option>
+                  ))}
+                </OptionList>
+              </label>
+
+              <Button type="submit">Submit</Button>
+            </Form>
+            {submitResult && (
+              <div className="value-display">
+                Submitted — fruit: {submitResult.fruit ?? "(none)"}, country:{" "}
+                {submitResult.country ?? "(none)"}
+              </div>
+            )}
+          </div>
+        );
+      };
+
+      render(<App />, document.getElementById("root"));
+    </script>
+  </body>
+</html>

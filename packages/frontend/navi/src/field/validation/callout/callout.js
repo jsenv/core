@@ -25,7 +25,7 @@ import { renderIntoCallout } from "./callout.jsx";
  * - Centers in viewport when no anchor element provided or anchor is too big
  */
 
-import.meta.css = /* css */ `
+const css = /* css */ `
   @layer navi {
     .navi_callout {
       --callout-success-color: #4caf50;
@@ -202,6 +202,8 @@ export const openCallout = (
     debug = false,
   } = {},
 ) => {
+  import.meta.css = css;
+
   const callout = {
     opened: true,
     close: null,
@@ -380,8 +382,16 @@ export const openCallout = (
 
     allowWheelThrough(calloutElement, anchorElement);
     anchorElement.setAttribute("data-callout", calloutId);
+    dispatchCalloutCustomElement(
+      anchorElement,
+      new CustomEvent("navi_callout_open", { bubbles: true }),
+    );
     addTeardown(() => {
       anchorElement.removeAttribute("data-callout");
+      dispatchCalloutCustomElement(
+        anchorElement,
+        new CustomEvent("navi_callout_close", { bubbles: true }),
+      );
     });
 
     addStatusEffect((status) => {
@@ -1081,4 +1091,21 @@ const generateSvgWithoutArrow = (width, height) => {
         ry="${Math.max(0, CORNER_RADIUS - BORDER_WIDTH)}"
       />
     </svg>`;
+};
+
+const dispatchCalloutCustomElement = (anchorElement, customEvent) => {
+  let targetElement;
+
+  const visualSelector = anchorElement.getAttribute("data-visual-selector");
+  if (visualSelector) {
+    const visualElement = anchorElement.querySelector(visualSelector);
+    if (visualElement) {
+      targetElement = visualElement;
+    }
+  } else {
+    targetElement = anchorElement;
+  }
+
+  console.log("dispatch on", targetElement, "event", customEvent);
+  targetElement.dispatchEvent(customEvent);
 };
