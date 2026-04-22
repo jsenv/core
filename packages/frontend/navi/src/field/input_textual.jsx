@@ -1,3 +1,4 @@
+/* eslint-disable jsenv/no-unknown-params */
 /**
  * Input component for all textual input types.
  *
@@ -16,7 +17,14 @@
  * - <InputRadio /> for type="radio"
  */
 
-import { useCallback, useContext, useId, useRef } from "preact/hooks";
+import {
+  useCallback,
+  useContext,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from "preact/hooks";
 
 import { renderActionableComponent } from "../action/render_actionable_component.jsx";
 import { useActionBoundToOneParam } from "../action/use_action.js";
@@ -349,6 +357,133 @@ Object.assign(PSEUDO_CLASSES, {
 const InputPseudoElements = ["::-navi-loader"];
 const InputChildPropSet = new Set([...fieldPropSet]);
 const InputTextualBasic = (props) => {
+  if (props.combobox) {
+    return <InputTextualCombobox {...props} />;
+  }
+  return <InputTextualPlain {...props} />;
+};
+
+const InputTextualCombobox = ({ combobox, ...rest }) => {
+  const defaultRef = useRef();
+  const ref = rest.ref || defaultRef;
+  const [comboboxOpen, setComboboxOpen] = useState(false);
+  const comboboxOpenRef = useRef(false);
+  comboboxOpenRef.current = comboboxOpen;
+
+  const showPopover = () => {
+    if (comboboxOpenRef.current) {
+      return;
+    }
+    const popoverEl = document.getElementById(combobox);
+    positionPopover();
+    popoverEl.showPopover();
+    setComboboxOpen(true);
+  };
+
+  const hidePopover = () => {
+    if (!comboboxOpenRef.current) {
+      return;
+    }
+    const popoverEl = document.getElementById(combobox);
+    popoverEl.hidePopover();
+    setComboboxOpen(false);
+    if (controller) {
+      controller.clearHighlight();
+    }
+  };
+  const positionPopover = () => {
+    const input = ref.current;
+    const rect = input.getBoundingClientRect();
+    const popoverEl = document.getElementById(combobox);
+    if (popoverEl) {
+      popoverEl.style.top = `${rect.bottom + 2}px`;
+      popoverEl.style.left = `${rect.left}px`;
+      popoverEl.style.width = `${rect.width}px`;
+    }
+  };
+
+  useEffect(() => {
+    const inputEl = ref.current;
+    const controller = getComboboxController(combobox);
+
+    const onKeydown = (e) => {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        showPopover();
+        if (controller) {
+          controller.navigate("down");
+        }
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        showPopover();
+        if (controller) {
+          controller.navigate("up");
+        }
+      } else if (e.key === "Home") {
+        if (comboboxOpenRef.current && controller) {
+          e.preventDefault();
+          controller.navigate("first");
+        }
+      } else if (e.key === "End") {
+        if (comboboxOpenRef.current && controller) {
+          e.preventDefault();
+          controller.navigate("last");
+        }
+      } else if (e.key === "Enter") {
+        if (comboboxOpenRef.current && controller) {
+          const selected = controller.selectHighlighted();
+          if (selected) {
+            e.preventDefault();
+          }
+        }
+      } else if (e.key === "Escape") {
+        if (comboboxOpenRef.current) {
+          e.preventDefault();
+          hidePopover();
+        }
+      }
+    };
+
+    if (controller) {
+      controller.onSelectRef.current = (value) => {
+        inputEl.value = value;
+        inputEl.dispatchEvent(new Event("input", { bubbles: true }));
+        hidePopover();
+      };
+    }
+
+    inputEl.addEventListener("keydown", onKeydown);
+
+    return () => {
+      inputEl.removeEventListener("keydown", onKeydown);
+      if (controller) {
+        controller.onSelectRef.current = null;
+      }
+    };
+  }, [combobox]);
+
+  return (
+    <InputTextualPlain
+      ref={ref}
+      role="combobox"
+      aria-controls={combobox}
+      aria-haspopup="listbox"
+      aria-expanded={comboboxOpen}
+      aria-autocomplete="list"
+      onFocus={() => {
+        showPopover();
+      }}
+      onBlur={() => {
+        setTimeout(() => {
+          hidePopover();
+        }, 150);
+      }}
+      {...rest}
+    />
+  );
+};
+
+const InputTextualPlain = (props) => {
   const contextReadOnly = useContext(ReadOnlyContext);
   const contextDisabled = useContext(DisabledContext);
   const contextLoading = useContext(LoadingContext);
@@ -394,10 +529,12 @@ const InputTextualBasic = (props) => {
   const innerOnInput = useStableCallback(onInput);
   const autoId = useId();
   const innerId = rest.id || autoId;
+  const { inputExtraProps = {}, ...remainingRest } = remainingProps;
   const renderInput = (inputProps) => {
     return (
       <Box
         {...inputProps}
+        {...inputExtraProps}
         as="input"
         id={innerId}
         ref={ref}
@@ -472,7 +609,7 @@ const InputTextualBasic = (props) => {
       baseChildPropSet={InputChildPropSet}
       data-start-icon={innerIcon ? "" : undefined}
       data-end-icon={cancelButton ? "" : undefined}
-      {...remainingProps}
+      {...remainingRest}
       ref={undefined}
     >
       <LoaderBackground
