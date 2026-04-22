@@ -1,6 +1,8 @@
 import { createContext } from "preact";
 import { useContext, useEffect, useId, useRef, useState } from "preact/hooks";
+
 import { Box } from "../box/box.jsx";
+import { useKeyboardShortcuts } from "../keyboard/keyboard_shortcuts.js";
 
 /**
  * OptionList + Option: a composable accessible listbox.
@@ -140,6 +142,11 @@ export const OptionList = ({
   // Ordered registry of option values — filled in by Option on mount
   const registeredValuesRef = useRef([]);
   const listRef = useRef(null);
+  // Refs for stable shortcut handler closures
+  const highlightedValueRef = useRef(null);
+  highlightedValueRef.current = highlightedValue;
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
 
   const register = (optionValue) => {
     registeredValuesRef.current = [...registeredValuesRef.current, optionValue];
@@ -161,38 +168,83 @@ export const OptionList = ({
     }
   }, [highlightedValue]);
 
-  const handleKeyDown = (e) => {
-    const values = registeredValuesRef.current;
-    if (values.length === 0) {
-      return;
-    }
-    const currentIndex =
-      highlightedValue === null ? -1 : values.indexOf(highlightedValue);
-
-    if (e.key === "ArrowDown") {
-      e.preventDefault();
-      const nextIndex =
-        currentIndex < values.length - 1 ? currentIndex + 1 : currentIndex;
-      setHighlightedValue(values[nextIndex]);
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault();
-      const prevIndex = currentIndex > 0 ? currentIndex - 1 : 0;
-      setHighlightedValue(values[prevIndex]);
-    } else if (e.key === "Home") {
-      e.preventDefault();
-      setHighlightedValue(values[0]);
-    } else if (e.key === "End") {
-      e.preventDefault();
-      setHighlightedValue(values[values.length - 1]);
-    } else if (e.key === "Enter") {
-      e.preventDefault();
-      if (highlightedValue !== null && onChange) {
-        onChange(highlightedValue);
-      }
-    } else if (e.key === "Escape") {
-      setHighlightedValue(null);
-    }
-  };
+  useKeyboardShortcuts(listRef, [
+    {
+      key: "arrowdown",
+      description: "Highlight next option",
+      handler: () => {
+        const values = registeredValuesRef.current;
+        if (values.length === 0) {
+          return false;
+        }
+        const current = highlightedValueRef.current;
+        const currentIndex = current === null ? -1 : values.indexOf(current);
+        const nextIndex =
+          currentIndex < values.length - 1 ? currentIndex + 1 : currentIndex;
+        setHighlightedValue(values[nextIndex]);
+        return true;
+      },
+    },
+    {
+      key: "arrowup",
+      description: "Highlight previous option",
+      handler: () => {
+        const values = registeredValuesRef.current;
+        if (values.length === 0) {
+          return false;
+        }
+        const current = highlightedValueRef.current;
+        const currentIndex = current === null ? -1 : values.indexOf(current);
+        const prevIndex = currentIndex > 0 ? currentIndex - 1 : 0;
+        setHighlightedValue(values[prevIndex]);
+        return true;
+      },
+    },
+    {
+      key: "home",
+      description: "Highlight first option",
+      handler: () => {
+        const values = registeredValuesRef.current;
+        if (values.length === 0) {
+          return false;
+        }
+        setHighlightedValue(values[0]);
+        return true;
+      },
+    },
+    {
+      key: "end",
+      description: "Highlight last option",
+      handler: () => {
+        const values = registeredValuesRef.current;
+        if (values.length === 0) {
+          return false;
+        }
+        setHighlightedValue(values[values.length - 1]);
+        return true;
+      },
+    },
+    {
+      key: "enter",
+      description: "Select highlighted option",
+      handler: () => {
+        const current = highlightedValueRef.current;
+        if (current === null) {
+          return false;
+        }
+        onChangeRef.current?.(current);
+        return true;
+      },
+    },
+    {
+      key: "escape",
+      description: "Clear highlighted option",
+      handler: () => {
+        setHighlightedValue(null);
+        return true;
+      },
+    },
+  ]);
 
   const contextValue = {
     selectedValue,
@@ -210,7 +262,6 @@ export const OptionList = ({
       role="listbox"
       tabIndex={0}
       hidden={hidden}
-      onKeyDown={handleKeyDown}
       {...rest}
       baseClassName="navi_option_list"
     >
@@ -221,6 +272,7 @@ export const OptionList = ({
   );
 };
 
+const OPTION_PSEUDO_CLASSES = [":-navi-highlighted"];
 export const Option = ({ value, children, ...rest }) => {
   import.meta.css = css;
 
@@ -247,7 +299,10 @@ export const Option = ({ value, children, ...rest }) => {
       id={optionId}
       role="option"
       aria-selected={isSelected}
-      data-highlighted={isHighlighted || undefined}
+      basePseudoState={{
+        ":-navi-highlighted": isHighlighted,
+      }}
+      pseudoClasses={OPTION_PSEUDO_CLASSES}
       onMouseEnter={() => setHighlightedValue(value)}
       onMouseLeave={() => setHighlightedValue(null)}
       onMouseDown={(e) => {
