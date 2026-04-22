@@ -109,6 +109,7 @@
           <CustomRenderDemo />
           <ControlledDemo />
           <CustomStyleDemo />
+          <SortedDemo />
         </div>
       );
 
@@ -278,6 +279,65 @@
                     },
                   }}
                 >
+                  {fruit}
+                </Option>
+              ))}
+            </OptionList>
+            <div className="value-display">{selected ?? ""}</div>
+          </div>
+        );
+      };
+
+      // --- 5. Sort by match, show all ---
+
+      const SortedDemo = () => {
+        const [filter, setFilter] = useState("");
+        const [selected, setSelected] = useState(null);
+
+        const sorted = filter
+          ? [
+              ...FRUITS.filter((f) =>
+                f.toLowerCase().includes(filter.toLowerCase()),
+              ),
+              ...FRUITS.filter(
+                (f) => !f.toLowerCase().includes(filter.toLowerCase()),
+              ),
+            ]
+          : FRUITS;
+
+        return (
+          <div className="demo-section">
+            <h2>Search without hiding</h2>
+            <p>
+              Matching options rise to the top to help the user find what they
+              are looking for. Non-matching options stay visible below.
+            </p>
+            <input
+              type="search"
+              placeholder="Search fruits…"
+              value={filter}
+              onInput={(e) => {
+                setFilter(e.target.value);
+                setSelected(null);
+              }}
+              style={{
+                display: "block",
+                width: "100%",
+                marginBottom: "8px",
+                padding: "8px",
+                boxSizing: "border-box",
+                border: "1px solid #ccc",
+                borderRadius: "6px",
+                fontSize: "1rem",
+              }}
+            />
+            <OptionList
+              style={{ maxHeight: "220px" }}
+              onChange={setSelected}
+              highlight={filter}
+            >
+              {sorted.map((fruit) => (
+                <Option key={fruit} value={fruit} selected={selected === fruit}>
                   {fruit}
                 </Option>
               ))}
