@@ -408,16 +408,25 @@ const InputTextualCombobox = ({ combobox, ...rest }) => {
     }
   };
 
+  const dispatchToOptionList = (customEvent) => {
+    const popoverEl = document.getElementById(combobox);
+    if (!popoverEl) {
+      return false;
+    }
+    popoverEl.dispatchEvent(customEvent);
+    return customEvent.defaultPrevented;
+  };
+
   useKeyboardShortcuts(ref, [
     {
       key: "arrowdown",
       description: "Open popover and highlight next option",
       handler: () => {
+        showPopover();
         const popoverEl = document.getElementById(combobox);
         if (!popoverEl) {
           return false;
         }
-        showPopover();
         popoverEl.dispatchEvent(
           new CustomEvent("combobox-navigate", {
             detail: { direction: "down" },
@@ -430,15 +439,12 @@ const InputTextualCombobox = ({ combobox, ...rest }) => {
       key: "arrowup",
       description: "Open popover and highlight previous option",
       handler: () => {
-        const popoverEl = document.getElementById(combobox);
-        if (!popoverEl) {
-          return false;
-        }
         showPopover();
-        popoverEl.dispatchEvent(
-          new CustomEvent("combobox-navigate", { detail: { direction: "up" } }),
+        return dispatchToOptionList(
+          new CustomEvent("combobox-navigate", {
+            detail: { direction: "up" },
+          }),
         );
-        return true;
       },
     },
     {
@@ -448,16 +454,11 @@ const InputTextualCombobox = ({ combobox, ...rest }) => {
         if (!comboboxOpenRef.current) {
           return false;
         }
-        const popoverEl = document.getElementById(combobox);
-        if (!popoverEl) {
-          return false;
-        }
-        popoverEl.dispatchEvent(
+        return dispatchToOptionList(
           new CustomEvent("combobox-navigate", {
             detail: { direction: "first" },
           }),
         );
-        return true;
       },
     },
     {
@@ -467,16 +468,11 @@ const InputTextualCombobox = ({ combobox, ...rest }) => {
         if (!comboboxOpenRef.current) {
           return false;
         }
-        const popoverEl = document.getElementById(combobox);
-        if (!popoverEl) {
-          return false;
-        }
-        popoverEl.dispatchEvent(
+        return dispatchToOptionList(
           new CustomEvent("combobox-navigate", {
             detail: { direction: "last" },
           }),
         );
-        return true;
       },
     },
     {
@@ -486,15 +482,11 @@ const InputTextualCombobox = ({ combobox, ...rest }) => {
         if (!comboboxOpenRef.current) {
           return false;
         }
-        const popoverEl = document.getElementById(combobox);
-        if (!popoverEl) {
-          return false;
-        }
-        const confirmEvent = new CustomEvent("combobox-confirm", {
-          cancelable: true,
-        });
-        popoverEl.dispatchEvent(confirmEvent);
-        return confirmEvent.defaultPrevented;
+        return dispatchToOptionList(
+          new CustomEvent("combobox-confirm", {
+            cancelable: true,
+          }),
+        );
       },
     },
     {
@@ -516,15 +508,12 @@ const InputTextualCombobox = ({ combobox, ...rest }) => {
     if (!popoverEl) {
       return undefined;
     }
-
     const onSelected = (e) => {
       inputEl.value = e.detail.value;
       inputEl.dispatchEvent(new Event("input", { bubbles: true }));
       hidePopover();
     };
-
     popoverEl.addEventListener("combobox-selected", onSelected);
-
     return () => {
       popoverEl.removeEventListener("combobox-selected", onSelected);
     };
