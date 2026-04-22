@@ -1,5 +1,6 @@
 import { createContext } from "preact";
 import { useContext, useEffect, useId, useRef, useState } from "preact/hooks";
+import { Box } from "../box/box.jsx";
 
 /**
  * OptionList + Option: a composable accessible listbox.
@@ -14,6 +15,15 @@ import { useContext, useEffect, useId, useRef, useState } from "preact/hooks";
  * and exposes active/selected state to each Option via context.
  */
 
+const optionListCss = /* css */ `
+  .navi_option_list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    outline: none;
+  }
+`;
+
 export const OptionListContext = createContext(null);
 
 export const OptionList = ({
@@ -22,9 +32,10 @@ export const OptionList = ({
   onChange,
   hidden,
   children,
-  style,
   ...rest
 }) => {
+  import.meta.css = optionListCss;
+
   const [activeValue, setActiveValue] = useState(null);
   // Ordered registry of option values — filled in by Option on mount
   const registeredValuesRef = useRef([]);
@@ -92,30 +103,33 @@ export const OptionList = ({
   };
 
   return (
-    <OptionListContext.Provider value={contextValue}>
-      <ul
-        ref={listRef}
-        id={id}
-        role="listbox"
-        tabIndex={0}
-        hidden={hidden}
-        onKeyDown={handleKeyDown}
-        style={{
-          margin: 0,
-          padding: 0,
-          listStyle: "none",
-          outline: "none",
-          ...style,
-        }}
-        {...rest}
-      >
+    <Box
+      as="ul"
+      baseClassName="navi_option_list"
+      ref={listRef}
+      id={id}
+      tabIndex={0}
+      hidden={hidden}
+      onKeyDown={handleKeyDown}
+      {...rest}
+    >
+      <OptionListContext.Provider value={contextValue}>
         {children}
-      </ul>
-    </OptionListContext.Provider>
+      </OptionListContext.Provider>
+    </Box>
   );
 };
 
+const optionCss = /* css */ `
+  .navi_option {
+    padding: 8px 12px;
+    cursor: pointer;
+    user-select: none;
+  }
+`;
 export const Option = ({ value, children, style, ...rest }) => {
+  import.meta.css = optionCss;
+
   const optionId = useId();
   const { selectedValue, activeValue, setActiveValue, onSelect, register } =
     useContext(OptionListContext);
@@ -128,7 +142,9 @@ export const Option = ({ value, children, style, ...rest }) => {
   const isActive = activeValue === value;
 
   return (
-    <li
+    <Box
+      as="li"
+      baseClassName="navi_option"
       id={optionId}
       role="option"
       aria-selected={isSelected}
@@ -142,9 +158,6 @@ export const Option = ({ value, children, style, ...rest }) => {
         }
       }}
       style={{
-        padding: "8px 12px",
-        cursor: "pointer",
-        userSelect: "none",
         background: isActive
           ? "var(--option-active-background, #f0f0f0)"
           : isSelected
@@ -157,6 +170,6 @@ export const Option = ({ value, children, style, ...rest }) => {
       {...rest}
     >
       {children}
-    </li>
+    </Box>
   );
 };
