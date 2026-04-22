@@ -95,7 +95,9 @@ import.meta.css = /* css */ `
 `;
 
 // Map from component instance to the applyStyle callback.
-// Populated during render, consumed in options.diffed.
+// Populated during render (via useApplyStyleBeforeLayoutEffects),
+// consumed in options.__c (commitRoot) which fires after refs are assigned
+// but before any useLayoutEffect runs.
 const pendingApplyStyleMap = new Map();
 
 // Capture the currently-rendering Preact component instance via options.__r,
@@ -110,25 +112,22 @@ options.__r = (vnode) => {
   }
 };
 
-const prevDiffed = options.diffed;
-options.diffed = (vnode) => {
-  const component = vnode.__c;
-  if (component) {
-    const applyStyleFn = pendingApplyStyleMap.get(component);
-    if (applyStyleFn) {
-      pendingApplyStyleMap.delete(component);
-      applyStyleFn();
-    }
+// options.__c fires in commitRoot after refs are assigned and before layout effects run.
+// In the minified dist this is options.__c; in Preact source it's options._commit.
+const prevCommit = options.__c;
+options.__c = (root, commitQueue) => {
+  for (const [, applyStyleFn] of pendingApplyStyleMap) {
+    applyStyleFn();
   }
-  if (prevDiffed) {
-    prevDiffed(vnode);
+  pendingApplyStyleMap.clear();
+  if (prevCommit) {
+    prevCommit(root, commitQueue);
   }
 };
 
-// Registers a callback to be called in options.diffed for the current Box instance,
-// i.e. after the DOM is updated but before any useLayoutEffect runs.
+// Registers a callback to be called before layout effects run for the current Box instance.
 // Must be called during render (not inside an effect).
-const useApplyStyleOnDiffed = (applyStyleFn) => {
+const useApplyStyleBeforeLayoutEffects = (applyStyleFn) => {
   const component = _currentComponent;
   if (component) {
     pendingApplyStyleMap.set(component, applyStyleFn);
@@ -571,7 +570,7 @@ export const Box = (props) => {
         finalStyleDeps.push(...pseudoClasses);
       }
     }
-    useApplyStyleOnDiffed(() => {
+    useApplyStyleBeforeLayoutEffects(() => {
       const boxEl = ref.current;
       if (!boxEl) {
         return;
