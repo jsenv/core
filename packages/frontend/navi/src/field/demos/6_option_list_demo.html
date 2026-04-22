@@ -69,7 +69,7 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      import { Option, OptionList } from "../option_list.jsx";
+      import { Option, OptionList, OptGroup } from "../option_list.jsx";
 
       const MAX_VISIBLE = 20;
 
@@ -140,6 +140,7 @@
           <CustomStyleDemo />
           <SortedDemo />
           <LargeListDemo />
+          <OptGroupDemo />
         </div>
       );
 
@@ -443,6 +444,49 @@
                 And {hiddenCount} more items
               </div>
             )}
+            <div className="value-display">{selected ?? ""}</div>
+          </div>
+        );
+      };
+
+      // --- 7. Grouped options with OptGroup ---
+
+      const GROUPED_ITEMS = [
+        {
+          label: "Fruits",
+          items: ["Apple", "Banana", "Cherry", "Mango", "Strawberry"],
+        },
+        {
+          label: "Vegetables",
+          items: ["Broccoli", "Carrot", "Cucumber", "Spinach", "Tomato"],
+        },
+        {
+          label: "Grains",
+          items: ["Barley", "Oats", "Quinoa", "Rice", "Wheat"],
+        },
+      ];
+
+      const OptGroupDemo = () => {
+        const [selected, setSelected] = useState(null);
+        return (
+          <div className="demo-section">
+            <h2>Grouped options</h2>
+            <p>Options organized into labeled groups using OptGroup.</p>
+            <OptionList style={{ maxHeight: "280px" }} onChange={setSelected}>
+              {GROUPED_ITEMS.map((group) => (
+                <OptGroup key={group.label} label={group.label}>
+                  {group.items.map((item) => (
+                    <Option
+                      key={item}
+                      value={item}
+                      selected={selected === item}
+                    >
+                      {item}
+                    </Option>
+                  ))}
+                </OptGroup>
+              ))}
+            </OptionList>
             <div className="value-display">{selected ?? ""}</div>
           </div>
         );

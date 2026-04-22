@@ -26,6 +26,9 @@ const [useOptionItemTrackerProvider, useTrackOption] = createItemTracker();
  *   --option-color-selected, --option-background-color-selected, --option-font-weight-selected
  *   --option-color-pointed-selected, --option-background-color-pointed-selected
  *   --option-color-highlight, --option-background-color-highlight
+ *
+ * CSS vars on .navi_opt_group_label:
+ *   --opt-group-label-padding, --opt-group-label-color, --opt-group-label-font-size, --opt-group-label-font-weight
  */
 
 const css = /* css */ `
@@ -36,6 +39,12 @@ const css = /* css */ `
       --option-list-border-color: light-dark(#ccc, #555);
       --option-list-background-color: light-dark(#fff, #1e1e1e);
       --option-list-max-height: 220px;
+    }
+    .navi_opt_group_label {
+      --opt-group-label-padding: 4px 12px 2px;
+      --opt-group-label-color: light-dark(#888, #aaa);
+      --opt-group-label-font-size: 0.75em;
+      --opt-group-label-font-weight: 600;
     }
     .navi_option {
       --option-padding: 8px 12px;
@@ -127,6 +136,15 @@ const css = /* css */ `
       --x-background-color: var(--option-background-color-pointed-selected);
     }
   }
+  .navi_opt_group_label {
+    padding: var(--opt-group-label-padding);
+    color: var(--opt-group-label-color);
+    font-weight: var(--opt-group-label-font-weight);
+    font-size: var(--opt-group-label-font-size);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    user-select: none;
+  }
 `;
 
 const OptionListStyleCSSVars = {
@@ -158,6 +176,12 @@ const OptionStyleCSSVars = {
     color: "--option-color-highlight",
     backgroundColor: "--option-background-color-highlight",
   },
+};
+const OptGroupLabelStyleCSSVars = {
+  padding: "--opt-group-label-padding",
+  color: "--opt-group-label-color",
+  fontSize: "--opt-group-label-font-size",
+  fontWeight: "--opt-group-label-font-weight",
 };
 
 /**
@@ -415,5 +439,31 @@ export const Option = ({ value, selected, hidden, children, ...rest }) => {
     >
       {children}
     </Box>
+  );
+};
+
+export const OptGroup = ({ label, children, ...rest }) => {
+  import.meta.css = css;
+  const groupId = useId();
+  return (
+    <li role="presentation" {...rest}>
+      <Box
+        as="span"
+        id={groupId}
+        role="presentation"
+        aria-hidden="true"
+        baseClassName="navi_opt_group_label"
+        styleCSSVars={OptGroupLabelStyleCSSVars}
+      >
+        {label}
+      </Box>
+      <ul
+        role="group"
+        aria-labelledby={groupId}
+        style={{ margin: 0, padding: 0, listStyle: "none" }}
+      >
+        {children}
+      </ul>
+    </li>
   );
 };
