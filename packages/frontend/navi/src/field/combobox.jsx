@@ -28,26 +28,26 @@ export const ComboBoxContext = createContext(null);
 const comboBoxCss = /* css */ `
   @layer navi {
     .navi_combobox {
-      --dropdown-z-index: 100;
       --dropdown-margin-top: 2px;
       --dropdown-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     }
   }
 
   .navi_combobox {
-    position: relative;
     display: inline-block;
     width: 100%;
   }
 
-  .navi_combobox_dropdown {
-    position: absolute;
-    top: 100%;
-    right: 0;
-    left: 0;
-    z-index: var(--dropdown-z-index, 100);
-    margin-top: var(--dropdown-margin-top, 2px);
+  /* Popover reset — browser adds border, background, padding by default */
+  .navi_combobox_dropdown[popover] {
+    position: fixed;
+    inset: unset;
+    margin: 0;
+    padding: 0;
+    background: transparent;
+    border: none;
     box-shadow: var(--dropdown-shadow, 0 4px 12px rgba(0, 0, 0, 0.1));
+    overflow: visible;
   }
 `;
 
@@ -107,12 +107,13 @@ export const ComboBox = ({ value, onChange, children, ...rest }) => {
     listboxId,
     // keyboard helpers used by ComboBoxInput
     openRef,
+    // positioning anchor for ComboBoxDropdown
+    containerRef,
   };
 
   const optionListController = {
     value,
     onChange: select,
-    hidden: !open,
     highlightedValue,
     setHighlightedValue,
     highlightedValueRef,
@@ -123,12 +124,76 @@ export const ComboBox = ({ value, onChange, children, ...rest }) => {
   return (
     <ComboBoxContext.Provider value={context}>
       <OptionListControllerContext.Provider value={optionListController}>
-        <div ref={containerRef} class="navi_combobox" {...rest}>
+        <div ref={containerRef} className="navi_combobox" {...rest}>
           {children}
         </div>
       </OptionListControllerContext.Provider>
     </ComboBoxContext.Provider>
   );
+};
+
+/**
+ * ComboBoxDropdown — renders children in a popover anchored below the ComboBox input.
+ * Uses the Popover API (popover="manual") so the dropdown escapes overflow/z-index constraints.
+ * Position is updated via JS whenever the popover opens or the window resizes.
+ */
+const ComboBoxDropdown = ({ children, ...rest }) => {
+  const { open, containerRef } = useContext(ComboBoxContext);
+  const popoverRef = useRef(null);
+
+  useEffect(() => {
+    const el = popoverRef.current;
+    if (!el) {
+      return;
+    }
+    if (open) {
+      positionDropdown(el, containerRef.current);
+      el.showPopover();
+    } else {
+      try {
+        el.hidePopover();
+      } catch {
+        // already hidden — ignore
+      }
+    }
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) {
+      return undefined;
+    }
+    const onResize = () => {
+      positionDropdown(popoverRef.current, containerRef.current);
+    };
+    window.addEventListener("resize", onResize);
+    return () => {
+      window.removeEventListener("resize", onResize);
+    };
+  }, [open]);
+
+  return (
+    <div
+      ref={popoverRef}
+      popover="manual"
+      className="navi_combobox_dropdown"
+      {...rest}
+    >
+      {children}
+    </div>
+  );
+};
+
+const positionDropdown = (el, anchor) => {
+  if (!el || !anchor) {
+    return;
+  }
+  const rect = anchor.getBoundingClientRect();
+  const marginTop = parseFloat(
+    getComputedStyle(el).getPropertyValue("--dropdown-margin-top") || "2",
+  );
+  el.style.left = `${rect.left}px`;
+  el.style.top = `${rect.bottom + marginTop}px`;
+  el.style.width = `${rect.width}px`;
 };
 
 /**
