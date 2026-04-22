@@ -25,6 +25,21 @@
       import { options, render } from "preact";
       import { useState, useLayoutEffect, useRef } from "preact/hooks";
 
+      const initBrightnessWhileHover = (el) => {
+        const onMouseEnter = () => {
+          el.style.filter = "brightness(1.1)";
+        };
+        const onMouseLeave = () => {
+          el.style.filter = "";
+        };
+        el.addEventListener("mouseenter", onMouseEnter);
+        el.addEventListener("mouseleave", onMouseLeave);
+        return () => {
+          el.removeEventListener("mouseenter", onMouseEnter);
+          el.removeEventListener("mouseleave", onMouseLeave);
+        };
+      };
+
       // ─── BROKEN version ────────────────────────────────────────────────────
       // Sets backgroundColor in useLayoutEffect — too late for children.
 
@@ -32,6 +47,7 @@
         const ref = useRef();
         useLayoutEffect(() => {
           ref.current.style.backgroundColor = background;
+          return initBrightnessWhileHover(ref.current);
         }, [background]);
         return (
           <div ref={ref} style={{ padding: "16px", borderRadius: "6px" }}>
@@ -40,11 +56,22 @@
         );
       };
 
-      // ─── FIX ───────────────────────────────────────────────────────────────
-      // options.__c fires in commitRoot, after refs are assigned but before
-      // any useLayoutEffect runs. We apply Box's style there instead.
+      // ─── useBeforeLayoutEffect ─────────────────────────────────────────────
+      // Like useLayoutEffect but fires BEFORE any layout effects run in this
+      // commit — including children's. Supports deps array and cleanup return.
+      //
+      // Implementation:
+      //   options.__r  → capture current component instance before each render
+      //   pendingMap   → populated during render; cleared after each commit
+      //                  (regular Map, iterable; bounded to one commit cycle → no leak)
+      //   stateMap     → WeakMap<component, {cleanup, deps}>; persists across
+      //                  commits; auto-GC'd when component is destroyed → no leak
+      //   options.__c  → commitRoot callback: fires after refs are assigned,
+      //                  before any useLayoutEffect. Runs pending effects here.
+      //   options.unmount → calls cleanup when component unmounts.
 
-      const pendingStyleMap = new Map(); // component instance → () => void
+      const pendingMap = new Map(); // component → { fn, deps } — cleared each commit
+      const stateMap = new WeakMap(); // component → { cleanup, deps }  — persists, WeakMap → no leak
 
       let _currentComponent = null;
       const _prevBeforeRender = options.__r;
@@ -57,47 +84,63 @@
 
       const _prevCommit = options.__c;
       options.__c = (root, commitQueue) => {
-        for (const [, fn] of pendingStyleMap) {
-          fn();
+        for (const [component, { fn, deps }] of pendingMap) {
+          const prev = stateMap.get(component);
+          const prevDeps = prev ? prev.deps : undefined;
+          let depsChanged;
+          if (!prevDeps || !deps || prevDeps.length !== deps.length) {
+            depsChanged = true;
+          } else {
+            depsChanged = deps.some((d, i) => !Object.is(d, prevDeps[i]));
+          }
+          if (depsChanged) {
+            if (prev && prev.cleanup) {
+              prev.cleanup();
+            }
+            const result = fn();
+            const cleanup = typeof result === "function" ? result : undefined;
+            stateMap.set(component, { cleanup, deps });
+          }
         }
-        pendingStyleMap.clear();
+        pendingMap.clear();
         if (_prevCommit) {
           _prevCommit(root, commitQueue);
         }
       };
 
-      const useApplyBeforeLayoutEffects = (fn) => {
+      const _prevUnmount = options.unmount;
+      options.unmount = (vnode) => {
+        const component = vnode.__c;
+        if (component) {
+          const state = stateMap.get(component);
+          if (state && state.cleanup) {
+            state.cleanup();
+          }
+          // stateMap is a WeakMap so entry is GC'd automatically,
+          // but deleting explicitly avoids holding cleanup fn longer than needed.
+          stateMap.delete(component);
+        }
+        if (_prevUnmount) {
+          _prevUnmount(vnode);
+        }
+      };
+
+      const useBeforeLayoutEffect = (fn, deps) => {
         const component = _currentComponent;
         if (component) {
-          pendingStyleMap.set(component, fn);
+          pendingMap.set(component, { fn, deps });
         }
       };
 
       const FixedBox = ({ background, children }) => {
         const ref = useRef();
-        // Apply style before any child's useLayoutEffect sees it.
-        useApplyBeforeLayoutEffects(() => {
+        useBeforeLayoutEffect(() => {
           const el = ref.current;
           if (!el) {
             return undefined;
           }
           el.style.backgroundColor = background;
-          const onMouseEnter = () => {
-            el.style.filter = "brightness(1.1)";
-          };
-          const onMouseLeave = () => {
-            el.style.filter = "";
-          };
-          el.addEventListener("mouseenter", onMouseEnter);
-          el.addEventListener("mouseleave", onMouseLeave);
-          return () => {
-            el.removeEventListener("mouseenter", onMouseEnter);
-            el.removeEventListener("mouseleave", onMouseLeave);
-          };
-        });
-        // Also keep useLayoutEffect for subsequent updates (when not mounting).
-        useLayoutEffect(() => {
-          ref.current.style.backgroundColor = background;
+          return initBrightnessWhileHover(el);
         }, [background]);
         return (
           <div ref={ref} style={{ padding: "16px", borderRadius: "6px" }}>
