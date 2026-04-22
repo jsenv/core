@@ -129,8 +129,7 @@ const css = /* css */ `
 /**
  * Context OptionList provides downward to its Option children.
  */
-export const OptionListContext = createContext(null);
-
+const OptionListContext = createContext(null);
 export const OptionList = ({
   popover,
   onChange: onChangeProp,
