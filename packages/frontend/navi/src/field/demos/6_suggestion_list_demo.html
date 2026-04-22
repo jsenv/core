@@ -143,15 +143,15 @@
         </div>
       );
 
-      // --- 1. Basic string options ---
+      // --- 1. Basic string suggestions ---
 
       const BasicDemo = () => {
         const [selected, setSelected] = useState(null);
         return (
           <div className="demo-section">
-            <h2>Basic string options</h2>
+            <h2>Basic string suggestions</h2>
             <p>
-              Click an option or use keyboard (Tab to focus, Arrow keys to
+              Click a suggestion or use keyboard (Tab to focus, Arrow keys to
               navigate, Enter to select, Escape to clear active).
             </p>
             <SuggestionList style={{ maxHeight: "220px" }} onChange={setSelected}>
@@ -172,8 +172,8 @@
         const [selected, setSelected] = useState(null);
         return (
           <div className="demo-section">
-            <h2>Custom option content</h2>
-            <p>Each option renders the country name + region badge.</p>
+            <h2>Custom suggestion content</h2>
+            <p>Each suggestion renders the country name + region badge.</p>
             <SuggestionList style={{ maxHeight: "220px" }} onChange={setSelected}>
               {COUNTRIES.map((country) => (
                 <Suggestion
@@ -272,7 +272,7 @@
           <div className="demo-section">
             <h2>Custom styles via CSS vars</h2>
             <p>
-              The list and options have custom background/text colors, including
+              The list and suggestions have custom background/text colors, including
               for pointed and highlighted states.
             </p>
             <SuggestionList
@@ -339,8 +339,8 @@
           <div className="demo-section">
             <h2>Search without hiding</h2>
             <p>
-              Matching options rise to the top to help the user find what they
-              are looking for. Non-matching options stay visible below.
+              Matching suggestions rise to the top to help the user find what they
+              are looking for. Non-matching suggestions stay visible below.
             </p>
             <input
               type="search"
@@ -473,7 +473,7 @@
         );
       };
 
-      // --- 7. Grouped options with SuggestionGroup ---
+      // --- 7. Grouped suggestions with SuggestionGroup ---
 
       const GROUPED_ITEMS = [
         {
@@ -494,7 +494,7 @@
         const [selected, setSelected] = useState(null);
         return (
           <div className="demo-section">
-            <h2>Grouped options</h2>
+            <h2>Grouped suggestions</h2>
             <p>Options organized into labeled groups using SuggestionGroup.</p>
             <SuggestionList style={{ maxHeight: "280px" }} onChange={setSelected}>
               {GROUPED_ITEMS.map((group) => (
