@@ -1,0 +1,111 @@
+<!doctype html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Box Style Timing Demo</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useState, useLayoutEffect, useRef } from "preact/hooks";
+      import { Box } from "@jsenv/navi";
+
+      /**
+       * Child reads the computed background-color of its parent in useLayoutEffect.
+       * If Box applies its style BEFORE children's useLayoutEffect runs, the child
+       * will read the correct color. Otherwise it reads the old/default color.
+       */
+      const ColorReader = () => {
+        const ref = useRef();
+        const [readColor, setReadColor] = useState("(not yet measured)");
+
+        useLayoutEffect(() => {
+          const el = ref.current;
+          if (!el) {
+            return;
+          }
+          const parentBg = getComputedStyle(el.parentElement).backgroundColor;
+          setReadColor(parentBg);
+        });
+
+        return (
+          <div
+            ref={ref}
+            style={{
+              padding: "8px",
+              border: "1px dashed #999",
+              display: "flex",
+              alignItems: "center",
+              gap: "10px",
+            }}
+          >
+            <strong>Parent backgroundColor read in useLayoutEffect:</strong>
+            <span
+              title={readColor}
+              style={{
+                display: "inline-block",
+                width: "32px",
+                height: "32px",
+                borderRadius: "4px",
+                border: "1px solid rgba(0,0,0,0.2)",
+                backgroundColor: readColor,
+                flexShrink: 0,
+              }}
+            />
+            <span style={{ fontFamily: "monospace", fontSize: "13px" }}>
+              {readColor}
+            </span>
+          </div>
+        );
+      };
+
+      const COLORS = ["#ff6b6b", "#4dabf7", "#69db7c", "#ffd43b", "#da77f2"];
+
+      const Demo = () => {
+        const [colorIndex, setColorIndex] = useState(0);
+        const bg = COLORS[colorIndex];
+
+        return (
+          <div style={{ fontFamily: "sans-serif", padding: "24px" }}>
+            <h2>Box style timing test</h2>
+            <p>
+              Click the button to change the Box background color. The child
+              reads the parent's computed background in its{" "}
+              <code>useLayoutEffect</code>. If the fix works, it always shows
+              the <strong>new</strong> color immediately.
+            </p>
+
+            <button
+              onClick={() => setColorIndex((i) => (i + 1) % COLORS.length)}
+              style={{
+                marginBottom: "16px",
+                padding: "6px 16px",
+                cursor: "pointer",
+              }}
+            >
+              Next color
+            </button>
+
+            <p>
+              Expected color:{" "}
+              <span style={{ fontFamily: "monospace", fontWeight: "bold" }}>
+                {bg}
+              </span>
+            </p>
+
+            <Box
+              background={bg}
+              style={{ padding: "16px", borderRadius: "6px" }}
+            >
+              <ColorReader />
+            </Box>
+          </div>
+        );
+      };
+
+      render(<Demo />, document.getElementById("app"));
+    </script>
+  </body>
+</html>

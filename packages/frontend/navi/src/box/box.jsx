@@ -25,7 +25,7 @@
  */
 
 import { normalizeStyles } from "@jsenv/dom";
-import { toChildArray } from "preact";
+import { options, toChildArray } from "preact";
 import { useCallback, useContext, useLayoutEffect, useRef } from "preact/hooks";
 
 import { withPropsClassName } from "../utils/with_props_class_name.js";
@@ -93,6 +93,47 @@ import.meta.css = /* css */ `
     }
   }
 `;
+
+// Map from component instance to the applyStyle callback.
+// Populated during render, consumed in options.diffed.
+const pendingApplyStyleMap = new Map();
+
+// Capture the currently-rendering Preact component instance via options.__r,
+// which fires once at the start of each component render with the vnode.
+// (In the minified dist, __r is the "before render" hook; __c on the vnode is the component instance.)
+let _currentComponent = null;
+const prevBeforeRender = options.__r;
+options.__r = (vnode) => {
+  _currentComponent = vnode.__c;
+  if (prevBeforeRender) {
+    prevBeforeRender(vnode);
+  }
+};
+
+const prevDiffed = options.diffed;
+options.diffed = (vnode) => {
+  const component = vnode.__c;
+  if (component) {
+    const applyStyleFn = pendingApplyStyleMap.get(component);
+    if (applyStyleFn) {
+      pendingApplyStyleMap.delete(component);
+      applyStyleFn();
+    }
+  }
+  if (prevDiffed) {
+    prevDiffed(vnode);
+  }
+};
+
+// Registers a callback to be called in options.diffed for the current Box instance,
+// i.e. after the DOM is updated but before any useLayoutEffect runs.
+// Must be called during render (not inside an effect).
+const useApplyStyleOnDiffed = (applyStyleFn) => {
+  const component = _currentComponent;
+  if (component) {
+    pendingApplyStyleMap.set(component, applyStyleFn);
+  }
+};
 
 const PSEUDO_CLASSES_DEFAULT = [];
 const PSEUDO_ELEMENTS_DEFAULT = [];
@@ -530,6 +571,19 @@ export const Box = (props) => {
         finalStyleDeps.push(...pseudoClasses);
       }
     }
+    useApplyStyleOnDiffed(() => {
+      const boxEl = ref.current;
+      if (!boxEl) {
+        return;
+      }
+      applyStyle(
+        boxEl,
+        boxStyles,
+        PSEUDO_STATE_DEFAULT,
+        PSEUDO_NAMED_STYLES_DEFAULT,
+        preventInitialTransition,
+      );
+    });
     useLayoutEffect(() => {
       const boxEl = ref.current;
       if (!boxEl) {

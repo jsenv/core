@@ -10,7 +10,7 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      import { Icon, BadgeCount } from "@jsenv/navi";
+      import { Icon, BadgeCount, Text } from "@jsenv/navi";
 
       const RedSquareSvg = () => (
         <svg viewBox="0 0 10 10" xmlns="http://www.w3.org/2000/svg">
@@ -358,6 +358,37 @@
         );
       };
 
+      const FontStateRow = () => {
+        return (
+          <div>
+            <div
+              style={{ marginBottom: "8px", fontSize: "13px", color: "#999" }}
+            >
+              <div style={{ marginTop: "4px", color: "#e17055" }}>
+                ⚠ Icon position is calculated when component renders. Changing
+                the font via state may update the font <em>after</em> the icon
+                has already measured the text metrics.
+              </div>
+            </div>
+            <div
+              style={{
+                ...containerStyle,
+
+                fontSize: "30px",
+              }}
+            >
+              <Text style="font-family: Papyrus, fantasy">
+                <span style={textStyle}>Notifications</span>
+                <Icon size={60} textAnchor="center">
+                  <RedSquareSvg />
+                </Icon>
+                <span style={textStyle}>After</span>
+              </Text>
+            </div>
+          </div>
+        );
+      };
+
       const Demo = () => (
         <div style={{ padding: "20px", fontFamily: "system-ui, sans-serif" }}>
           <h2 style={{ marginTop: 0 }}>TextAnchor</h2>
@@ -398,6 +429,9 @@
 
           <h3>Contrôlable</h3>
           <ControlledRow />
+
+          <h3>Font set via Preact state (timing issue)</h3>
+          <FontStateRow />
 
           <h3>Texte avec font-family différents</h3>
           {[
