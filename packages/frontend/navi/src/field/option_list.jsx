@@ -37,7 +37,7 @@ import { Box } from "../box/box.jsx";
  *   --background-color-highlighted-selected
  */
 
-const optionListCss = /* css */ `
+const css = /* css */ `
   @layer navi {
     .navi_option_list {
       --border-radius: 4px;
@@ -45,6 +45,29 @@ const optionListCss = /* css */ `
       --border-color: light-dark(#ccc, #555);
       --background-color: light-dark(#fff, #1e1e1e);
       --max-height: none;
+    }
+    .navi_option {
+      --padding: 8px 12px;
+      --color: inherit;
+      --background-color: transparent;
+      --font-weight: inherit;
+
+      /* Hover (mouse) */
+      --color-hover: var(--color);
+      --background-color-hover: light-dark(#f5f5f5, #2a2a2a);
+
+      /* Highlighted (keyboard navigation cursor) */
+      --color-highlighted: var(--color);
+      --background-color-highlighted: light-dark(#e8f0fe, #1c3a6e);
+
+      /* Selected */
+      --color-selected: light-dark(#1a73e8, #7baaf7);
+      --background-color-selected: light-dark(#e8f0fe, #1c3a6e);
+      --font-weight-selected: 500;
+
+      /* Highlighted + selected */
+      --color-highlighted-selected: var(--color-selected);
+      --background-color-highlighted-selected: light-dark(#d2e3fc, #174ea6);
     }
   }
 
@@ -65,6 +88,39 @@ const optionListCss = /* css */ `
     outline: none;
     overflow-y: auto;
   }
+  .navi_option {
+    --x-color: var(--color);
+    --x-background-color: var(--background-color);
+    --x-font-weight: var(--font-weight);
+
+    padding: var(--padding);
+    color: var(--x-color);
+    font-weight: var(--x-font-weight);
+    background-color: var(--x-background-color);
+    cursor: pointer;
+    user-select: none;
+
+    &:hover {
+      --x-color: var(--color-hover);
+      --x-background-color: var(--background-color-hover);
+    }
+
+    &[data-highlighted] {
+      --x-color: var(--color-highlighted);
+      --x-background-color: var(--background-color-highlighted);
+    }
+
+    &[aria-selected="true"] {
+      --x-color: var(--color-selected);
+      --x-background-color: var(--background-color-selected);
+      --x-font-weight: var(--font-weight-selected);
+    }
+
+    &[data-highlighted][aria-selected="true"] {
+      --x-color: var(--color-highlighted-selected);
+      --x-background-color: var(--background-color-highlighted-selected);
+    }
+  }
 `;
 
 export const OptionListContext = createContext(null);
@@ -77,7 +133,7 @@ export const OptionList = ({
   children,
   ...rest
 }) => {
-  import.meta.css = optionListCss;
+  import.meta.css = css;
 
   // "highlighted" = the option the keyboard cursor is on (not the mouse hover)
   const [highlightedValue, setHighlightedValue] = useState(null);
@@ -165,70 +221,8 @@ export const OptionList = ({
   );
 };
 
-const optionCss = /* css */ `
-  @layer navi {
-    .navi_option {
-      --padding: 8px 12px;
-      --color: inherit;
-      --background-color: transparent;
-      --font-weight: inherit;
-
-      /* Hover (mouse) */
-      --color-hover: var(--color);
-      --background-color-hover: light-dark(#f5f5f5, #2a2a2a);
-
-      /* Highlighted (keyboard navigation cursor) */
-      --color-highlighted: var(--color);
-      --background-color-highlighted: light-dark(#e8f0fe, #1c3a6e);
-
-      /* Selected */
-      --color-selected: light-dark(#1a73e8, #7baaf7);
-      --background-color-selected: light-dark(#e8f0fe, #1c3a6e);
-      --font-weight-selected: 500;
-
-      /* Highlighted + selected */
-      --color-highlighted-selected: var(--color-selected);
-      --background-color-highlighted-selected: light-dark(#d2e3fc, #174ea6);
-    }
-  }
-
-  .navi_option {
-    --x-color: var(--color);
-    --x-background-color: var(--background-color);
-    --x-font-weight: var(--font-weight);
-
-    padding: var(--padding);
-    color: var(--x-color);
-    font-weight: var(--x-font-weight);
-    background-color: var(--x-background-color);
-    cursor: pointer;
-    user-select: none;
-
-    &:hover {
-      --x-color: var(--color-hover);
-      --x-background-color: var(--background-color-hover);
-    }
-
-    &[data-highlighted] {
-      --x-color: var(--color-highlighted);
-      --x-background-color: var(--background-color-highlighted);
-    }
-
-    &[aria-selected="true"] {
-      --x-color: var(--color-selected);
-      --x-background-color: var(--background-color-selected);
-      --x-font-weight: var(--font-weight-selected);
-    }
-
-    &[data-highlighted][aria-selected="true"] {
-      --x-color: var(--color-highlighted-selected);
-      --x-background-color: var(--background-color-highlighted-selected);
-    }
-  }
-`;
-
 export const Option = ({ value, children, ...rest }) => {
-  import.meta.css = optionCss;
+  import.meta.css = css;
 
   const optionId = useId();
   const {
