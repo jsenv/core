@@ -22,6 +22,33 @@
  * ## Spacing & Sizing
  *
  * Props for margin, padding, gap, width, height, expand, shrink, and more.
+ *
+ * ## Pseudo-class Styles
+ *
+ * The `style` prop supports pseudo-class keys alongside regular CSS properties.
+ * This lets you express hover, focus, and custom interaction states in one object,
+ * without writing CSS or adding class names:
+ *
+ * ```jsx
+ * <Box
+ *   style={{
+ *     backgroundColor: "blue",
+ *     ":-navi:pressed": {
+ *       backgroundColor: "darkblue",
+ *     },
+ *     ":hover": {
+ *       backgroundColor: "lightblue",
+ *     },
+ *   }}
+ * />
+ * ```
+ *
+ * Styles are applied directly to the DOM (not via Preact's style prop) for two reasons:
+ * 1. **Pseudo-class support**: reacting to `:hover`, `:focus`, or custom states like
+ *    `:-navi:pressed` without re-rendering the component on every pseudo state change.
+ * 2. **Correct initial render**: pseudo-class state must be read from the DOM node at
+ *    mount time. Preact's style prop runs before the DOM exists, so the right initial
+ *    style can only be determined once the node is available.
  */
 
 import { normalizeStyles } from "@jsenv/dom";
