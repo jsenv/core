@@ -43,7 +43,7 @@ import {
   PSEUDO_NAMED_STYLES_DEFAULT,
   PSEUDO_STATE_DEFAULT,
 } from "./pseudo_styles.js";
-import { useBeforeLayoutEffect } from "./use_before_layout_effect.js";
+import { useEarlyDOMEffect } from "./use_early_dom_effect.js";
 
 import.meta.css = /* css */ `
   [navi-box-flow="inline"] {
@@ -521,7 +521,7 @@ export const Box = (props) => {
         styleDeps.push(...pseudoClasses);
       }
     }
-    useBeforeLayoutEffect(() => {
+    useEarlyDOMEffect(() => {
       const boxEl = ref.current;
       if (!boxEl) {
         return undefined;

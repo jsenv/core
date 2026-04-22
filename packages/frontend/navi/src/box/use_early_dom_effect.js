@@ -1,15 +1,17 @@
 /**
- * useBeforeLayoutEffect(fn, deps)
+ * useEarlyDOMEffect(fn, deps, ref?)
  *
- * Like useLayoutEffect but fires BEFORE any layout effect in the same commit —
- * including descendants'. Useful when a parent component sets DOM state (e.g.
- * styles) that children need to measure in their own useLayoutEffect.
+ * Mutates the DOM before any layout effect runs in the same commit —
+ * including descendants'. This ensures that children's useLayoutEffect can
+ * read the DOM state that this parent has written (e.g. styles, attributes).
  *
  * Timing guarantee:
  *   options.__c (commitRoot) fires after refs are assigned and before the
  *   layout-effects queue is flushed. We run pending callbacks there.
  *
- * Supports:
+ * API:
+ *   - ref (optional): if provided, fn receives ref.current as its first
+ *     argument. The effect is skipped if ref.current is null.
  *   - deps array: re-runs fn only when deps change (Object.is comparison)
  *   - cleanup: if fn returns a function, it is called before the next run
  *     and on unmount
