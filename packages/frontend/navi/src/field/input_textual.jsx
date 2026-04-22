@@ -534,7 +534,7 @@ const InputTextualCombobox = ({
       aria-haspopup="listbox"
       aria-expanded={comboboxOpen}
       aria-autocomplete="list"
-      oncalloutopen={() => {
+      onnavi_callout_open={() => {
         hidePopover();
       }}
       onFocus={(e) => {
@@ -601,12 +601,11 @@ const InputTextualPlain = (props) => {
   const innerOnInput = useStableCallback(onInput);
   const autoId = useId();
   const innerId = rest.id || autoId;
-  const { inputExtraProps = {}, ...remainingRest } = remainingProps;
+  const { ...remainingRest } = remainingProps;
   const renderInput = (inputProps) => {
     return (
       <Box
         {...inputProps}
-        {...inputExtraProps}
         as="input"
         id={innerId}
         ref={ref}

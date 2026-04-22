@@ -383,12 +383,12 @@ export const openCallout = (
     allowWheelThrough(calloutElement, anchorElement);
     anchorElement.setAttribute("data-callout", calloutId);
     anchorElement.dispatchEvent(
-      new CustomEvent("calloutopen", { bubbles: true }),
+      new CustomEvent("navi_callout_open", { bubbles: true }),
     );
     addTeardown(() => {
       anchorElement.removeAttribute("data-callout");
       anchorElement.dispatchEvent(
-        new CustomEvent("calloutclose", { bubbles: true }),
+        new CustomEvent("navi_callout_close", { bubbles: true }),
       );
     });
 
