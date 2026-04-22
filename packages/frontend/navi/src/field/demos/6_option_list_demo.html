@@ -395,16 +395,18 @@
           : LARGE_LIST;
 
         // Group by first letter for table of contents
-        const groups = [];
+        const groupMap = new Map();
         for (const item of sorted) {
           const letter = item[0].toUpperCase();
-          const last = groups[groups.length - 1];
-          if (last && last.letter === letter) {
-            last.items.push(item);
-          } else {
-            groups.push({ letter, items: [item] });
+          if (!groupMap.has(letter)) {
+            groupMap.set(letter, []);
           }
+          groupMap.get(letter).push(item);
         }
+        const groups = [...groupMap.entries()].map(([letter, items]) => ({
+          letter,
+          items,
+        }));
 
         const matchCount = filter
           ? LARGE_LIST.filter((item) =>
