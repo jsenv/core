@@ -75,11 +75,7 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      import {
-        ComboBox,
-        ComboBoxDropdown,
-        ComboBoxInput,
-      } from "../combobox.jsx";
+      import { ComboBox, ComboBoxInput } from "../combobox.jsx";
       import { Option, OptionList } from "../option_list.jsx";
 
       const FRUITS = [
@@ -138,10 +134,11 @@
               Type to filter. Arrow keys navigate, Enter selects, Escape closes.
               Clicking outside closes.
             </p>
-            <ComboBox value={selected} onChange={setSelected}>
+            <ComboBox>
               <ComboBoxInput
+                value={selected}
+                action={setSelected}
                 placeholder="Search a fruit…"
-                value={selected ?? query}
                 onInput={(e) => {
                   setQuery(e.target.value);
                   if (!e.target.value) {
@@ -149,15 +146,13 @@
                   }
                 }}
               />
-              <ComboBoxDropdown>
-                <OptionList style={{ "--max-height": "220px" }}>
-                  {filtered.map((fruit) => (
-                    <Option key={fruit} value={fruit}>
-                      {fruit}
-                    </Option>
-                  ))}
-                </OptionList>
-              </ComboBoxDropdown>
+              <OptionList style={{ "--max-height": "220px" }}>
+                {filtered.map((fruit) => (
+                  <Option key={fruit} value={fruit}>
+                    {fruit}
+                  </Option>
+                ))}
+              </OptionList>
             </ComboBox>
             <div className="value-display">{selected ?? ""}</div>
           </div>
@@ -185,10 +180,11 @@
               Filter by country name or region (try "asia" or "europe"). Each
               option shows the region.
             </p>
-            <ComboBox value={selected} onChange={setSelected}>
+            <ComboBox>
               <ComboBoxInput
+                value={selected}
+                action={setSelected}
                 placeholder="Search a country…"
-                value={selectedCountry ? selectedCountry.name : query}
                 onInput={(e) => {
                   setQuery(e.target.value);
                   if (!e.target.value) {
@@ -196,16 +192,14 @@
                   }
                 }}
               />
-              <ComboBoxDropdown>
-                <OptionList style={{ "--max-height": "220px" }}>
-                  {filtered.map((country) => (
-                    <Option key={country.code} value={country.code}>
-                      <span style={{ fontWeight: 500 }}>{country.name}</span>
-                      <span className="option-secondary">{country.region}</span>
-                    </Option>
-                  ))}
-                </OptionList>
-              </ComboBoxDropdown>
+              <OptionList style={{ "--max-height": "220px" }}>
+                {filtered.map((country) => (
+                  <Option key={country.code} value={country.code}>
+                    <span style={{ fontWeight: 500 }}>{country.name}</span>
+                    <span className="option-secondary">{country.region}</span>
+                  </Option>
+                ))}
+              </OptionList>
             </ComboBox>
             <div className="value-display">
               {selectedCountry

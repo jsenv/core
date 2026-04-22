@@ -1,5 +1,12 @@
-import { createContext } from "preact";
-import { useContext, useEffect, useId, useRef, useState } from "preact/hooks";
+import { createContext, toChildArray } from "preact";
+import {
+  useContext,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "preact/hooks";
 
 import { Input } from "./input.jsx";
 import { OptionListControllerContext } from "./option_list.jsx";
@@ -8,19 +15,17 @@ import { OptionListControllerContext } from "./option_list.jsx";
  * ComboBox: wraps a ComboBoxInput + OptionList to create an accessible combobox widget.
  *
  * Usage:
- *   <ComboBox value={selected} onChange={setSelected}>
- *     <ComboBoxInput placeholder="Search…" />
+ *   <ComboBox>
+ *     <ComboBoxInput value={selected} action={setSelected} placeholder="Search…" />
  *     <OptionList>
  *       <Option value="a">Option A</Option>
  *       <Option value="b">Option B</Option>
  *     </OptionList>
  *   </ComboBox>
  *
- * The OptionList renders as an absolute-positioned dropdown when inside a ComboBox.
+ * ComboBoxInput carries the selected value and action.
+ * The OptionList renders inside an auto-managed popover dropdown.
  * Keyboard navigation (ArrowDown/Up, Home, End, Enter, Escape) works from the input.
- *
- * ComboBox owns the open state and the shared highlighted value so that
- * the input and the dropdown stay in sync.
  */
 
 export const ComboBoxContext = createContext(null);
@@ -51,24 +56,22 @@ const comboBoxCss = /* css */ `
   }
 `;
 
-export const ComboBox = ({ value, onChange, children, ...rest }) => {
+export const ComboBox = ({ children, ...rest }) => {
   import.meta.css = comboBoxCss;
 
   const [open, setOpen] = useState(false);
-  // Highlighted value is lifted here so the input's keyboard shortcuts can drive it
+  const [selectedValue, setSelectedValue] = useState(null);
   const [highlightedValue, setHighlightedValue] = useState(null);
   const registeredValuesRef = useRef([]);
   const registeredIdsRef = useRef(new Map());
   const listboxId = useId();
   const containerRef = useRef(null);
 
-  // Refs for stable keyboard handler closures
   const highlightedValueRef = useRef(null);
   highlightedValueRef.current = highlightedValue;
   const openRef = useRef(false);
   openRef.current = open;
-  const onChangeRef = useRef(onChange);
-  onChangeRef.current = onChange;
+  const actionRef = useRef(null);
 
   // Close on outside click
   useEffect(() => {
@@ -85,34 +88,31 @@ export const ComboBox = ({ value, onChange, children, ...rest }) => {
   }, []);
 
   const select = (optionValue) => {
-    onChangeRef.current?.(optionValue);
+    actionRef.current?.(optionValue);
+    setSelectedValue(optionValue);
     setOpen(false);
     setHighlightedValue(null);
   };
 
   const context = {
-    // open state
     open,
     setOpen,
-    // shared keyboard navigation state
     highlightedValue,
     setHighlightedValue,
     highlightedValueRef,
     registeredValuesRef,
     registeredIdsRef,
-    // selection
-    selectedValue: value,
+    selectedValue,
+    setSelectedValue,
+    actionRef,
     onSelect: select,
-    // aria wiring
     listboxId,
-    // keyboard helpers used by ComboBoxInput
     openRef,
-    // positioning anchor for ComboBoxDropdown
     containerRef,
   };
 
   const optionListController = {
-    value,
+    value: selectedValue,
     onChange: select,
     highlightedValue,
     setHighlightedValue,
@@ -125,7 +125,7 @@ export const ComboBox = ({ value, onChange, children, ...rest }) => {
     <ComboBoxContext.Provider value={context}>
       <OptionListControllerContext.Provider value={optionListController}>
         <div ref={containerRef} className="navi_combobox" {...rest}>
-          {children}
+          <ComboBoxDropdownSplit>{children}</ComboBoxDropdownSplit>
         </div>
       </OptionListControllerContext.Provider>
     </ComboBoxContext.Provider>
@@ -134,12 +134,13 @@ export const ComboBox = ({ value, onChange, children, ...rest }) => {
 
 /**
  * ComboBoxInput — the text input for a ComboBox.
- * Renders a native <input> with role="combobox" and all ARIA wiring.
+ * Carries the selected value and action (onChange) for the combobox.
+ * Renders an <Input> with role="combobox" and all ARIA wiring.
  * Arrow keys navigate the dropdown; Enter selects; Escape closes.
- *
- * Pass any native input props (placeholder, onInput, value, etc.).
  */
 export const ComboBoxInput = ({
+  value,
+  action,
   onInput,
   onFocus,
   onBlur,
@@ -155,10 +156,22 @@ export const ComboBoxInput = ({
     registeredValuesRef,
     registeredIdsRef,
     setHighlightedValue,
-    selectedValue: _selectedValue,
+    setSelectedValue,
+    actionRef,
     onSelect,
     listboxId,
   } = useContext(ComboBoxContext);
+
+  // Sync value and action from props into ComboBox state/refs
+  useLayoutEffect(() => {
+    if (value !== undefined) {
+      setSelectedValue(value);
+    }
+  }, [value]);
+
+  useLayoutEffect(() => {
+    actionRef.current = action ?? null;
+  }, [action]);
 
   const handleKeyDown = (e) => {
     const values = registeredValuesRef.current;
@@ -247,10 +260,20 @@ export const ComboBoxInput = ({
   );
 };
 
+// Renders first child inline (the input), wraps remaining children in a ComboBoxDropdown.
+const ComboBoxDropdownSplit = ({ children }) => {
+  const childArray = toChildArray(children);
+  const [inputChild, ...dropdownChildren] = childArray;
+  return (
+    <>
+      {inputChild}
+      <ComboBoxDropdown>{dropdownChildren}</ComboBoxDropdown>
+    </>
+  );
+};
+
 /**
  * ComboBoxDropdown — renders children in a popover anchored below the ComboBox input.
- * Uses the Popover API (popover="manual") so the dropdown escapes overflow/z-index constraints.
- * Position is updated via JS whenever the popover opens or the window resizes.
  */
 const ComboBoxDropdown = ({ children, ...rest }) => {
   const { open, containerRef } = useContext(ComboBoxContext);
