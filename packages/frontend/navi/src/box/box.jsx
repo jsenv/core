@@ -25,8 +25,8 @@
  */
 
 import { normalizeStyles } from "@jsenv/dom";
-import { options, toChildArray } from "preact";
-import { useCallback, useContext, useLayoutEffect, useRef } from "preact/hooks";
+import { toChildArray } from "preact";
+import { useContext, useRef } from "preact/hooks";
 
 import { withPropsClassName } from "../utils/with_props_class_name.js";
 import { BoxFlowContext } from "./box_flow_context.jsx";
@@ -43,6 +43,7 @@ import {
   PSEUDO_NAMED_STYLES_DEFAULT,
   PSEUDO_STATE_DEFAULT,
 } from "./pseudo_styles.js";
+import { useBeforeLayoutEffect } from "./use_before_layout_effect.js";
 
 import.meta.css = /* css */ `
   [navi-box-flow="inline"] {
@@ -93,46 +94,6 @@ import.meta.css = /* css */ `
     }
   }
 `;
-
-// Map from component instance to the applyStyle callback.
-// Populated during render (via useApplyStyleBeforeLayoutEffects),
-// consumed in options.__c (commitRoot) which fires after refs are assigned
-// but before any useLayoutEffect runs.
-const pendingApplyStyleMap = new Map();
-
-// Capture the currently-rendering Preact component instance via options.__r,
-// which fires once at the start of each component render with the vnode.
-// (In the minified dist, __r is the "before render" hook; __c on the vnode is the component instance.)
-let _currentComponent = null;
-const prevBeforeRender = options.__r;
-options.__r = (vnode) => {
-  _currentComponent = vnode.__c;
-  if (prevBeforeRender) {
-    prevBeforeRender(vnode);
-  }
-};
-
-// options.__c fires in commitRoot after refs are assigned and before layout effects run.
-// In the minified dist this is options.__c; in Preact source it's options._commit.
-const prevCommit = options.__c;
-options.__c = (root, commitQueue) => {
-  for (const [, applyStyleFn] of pendingApplyStyleMap) {
-    applyStyleFn();
-  }
-  pendingApplyStyleMap.clear();
-  if (prevCommit) {
-    prevCommit(root, commitQueue);
-  }
-};
-
-// Registers a callback to be called before layout effects run for the current Box instance.
-// Must be called during render (not inside an effect).
-const useApplyStyleBeforeLayoutEffects = (applyStyleFn) => {
-  const component = _currentComponent;
-  if (component) {
-    pendingApplyStyleMap.set(component, applyStyleFn);
-  }
-};
 
 const PSEUDO_CLASSES_DEFAULT = [];
 const PSEUDO_ELEMENTS_DEFAULT = [];
@@ -543,50 +504,27 @@ export const Box = (props) => {
       }
     }
 
-    const updateStyle = useCallback((state) => {
-      const boxEl = ref.current;
-      applyStyle(
-        boxEl,
-        boxStyles,
-        state,
-        boxPseudoNamedStyles,
-        preventInitialTransition,
-      );
-    }, styleDeps);
-    const finalStyleDeps = [pseudoStateSelector, innerPseudoState, updateStyle];
+    styleDeps.push(pseudoStateSelector, innerPseudoState);
     let innerPseudoClasses;
     if (pseudoClassesFromStyleSet.size) {
       innerPseudoClasses = [...pseudoClasses];
       if (pseudoClasses !== PSEUDO_CLASSES_DEFAULT) {
-        finalStyleDeps.push(...pseudoClasses);
+        styleDeps.push(...pseudoClasses);
       }
       for (const key of pseudoClassesFromStyleSet) {
         innerPseudoClasses.push(key);
-        finalStyleDeps.push(key);
+        styleDeps.push(key);
       }
     } else {
       innerPseudoClasses = pseudoClasses;
       if (pseudoClasses !== PSEUDO_CLASSES_DEFAULT) {
-        finalStyleDeps.push(...pseudoClasses);
+        styleDeps.push(...pseudoClasses);
       }
     }
-    useApplyStyleBeforeLayoutEffects(() => {
+    useBeforeLayoutEffect(() => {
       const boxEl = ref.current;
       if (!boxEl) {
-        return;
-      }
-      applyStyle(
-        boxEl,
-        boxStyles,
-        PSEUDO_STATE_DEFAULT,
-        PSEUDO_NAMED_STYLES_DEFAULT,
-        preventInitialTransition,
-      );
-    });
-    useLayoutEffect(() => {
-      const boxEl = ref.current;
-      if (!boxEl) {
-        return null;
+        return undefined;
       }
       const pseudoStateEl = pseudoStateSelector
         ? boxEl.querySelector(pseudoStateSelector)
@@ -597,12 +535,20 @@ export const Box = (props) => {
       return initPseudoStyles(pseudoStateEl, {
         pseudoClasses: innerPseudoClasses,
         pseudoState: innerPseudoState,
-        effect: updateStyle,
+        effect: (state) => {
+          applyStyle(
+            boxEl,
+            boxStyles,
+            state,
+            boxPseudoNamedStyles,
+            preventInitialTransition,
+          );
+        },
         elementToImpact: boxEl,
         elementListeningPseudoState:
           visualEl === pseudoStateEl ? null : visualEl,
       });
-    }, finalStyleDeps);
+    }, styleDeps);
   }
 
   // When hasChildFunction is used it means
