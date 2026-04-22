@@ -123,10 +123,7 @@
               Click an option or use keyboard (Tab to focus, Arrow keys to
               navigate, Enter to select, Escape to clear active).
             </p>
-            <OptionList
-              style={{ "--max-height": "220px" }}
-              onChange={setSelected}
-            >
+            <OptionList style={{ maxHeight: "220px" }} onChange={setSelected}>
               {FRUITS.map((fruit) => (
                 <Option key={fruit} value={fruit} selected={selected === fruit}>
                   {fruit}
@@ -146,10 +143,7 @@
           <div className="demo-section">
             <h2>Custom option content</h2>
             <p>Each option renders the country name + region badge.</p>
-            <OptionList
-              style={{ "--max-height": "220px" }}
-              onChange={setSelected}
-            >
+            <OptionList style={{ maxHeight: "220px" }} onChange={setSelected}>
               {COUNTRIES.map((country) => (
                 <Option
                   key={country.code}
@@ -218,7 +212,7 @@
               }}
             />
             <OptionList
-              style={{ "--max-height": "220px" }}
+              style={{ maxHeight: "220px" }}
               onChange={setSelected}
               highlight={filter}
               hidden={filtered.length === 0}
@@ -252,10 +246,11 @@
             </p>
             <OptionList
               style={{
-                "--option-list-background-color": "#1a1a2e",
-                "--option-list-border-color": "#e94560",
+                backgroundColor: "#1a1a2e",
+                borderColor: "#e94560",
               }}
               onChange={setSelected}
+              highlight="a"
             >
               {FRUITS.map((fruit) => (
                 <Option
@@ -263,16 +258,20 @@
                   value={fruit}
                   selected={selected === fruit}
                   style={{
-                    "--option-color": "#eaeaea",
-                    "--option-background-color": "transparent",
-                    "--option-color-hover": "#fff",
-                    "--option-background-color-hover": "#16213e",
-                    "--option-color-pointed": "#1a1a2e",
-                    "--option-background-color-pointed": "#e94560",
-                    "--option-color-selected": "#e94560",
-                    "--option-background-color-selected": "#16213e",
-                    "--option-color-highlight": "#1a1a2e",
-                    "--option-background-color-highlight": "#f5a623",
+                    "color": "#eaeaea",
+                    "backgroundColor": "transparent",
+                    ":-navi-pointed": {
+                      color: "#1a1a2e",
+                      backgroundColor: "#e94560",
+                    },
+                    ":hover": {
+                      color: "#fff",
+                      backgroundColor: "#16213e",
+                    },
+                    ":-navi-selected": {
+                      color: "#e94560",
+                      backgroundColor: "#16213e",
+                    },
                   }}
                 >
                   {fruit}
