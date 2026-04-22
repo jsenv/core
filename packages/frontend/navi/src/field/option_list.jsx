@@ -80,6 +80,7 @@ const css = /* css */ `
 
     /* Popover reset — browser adds border, background, padding, margin by default */
     &[popover] {
+      position: fixed;
       inset: unset;
       margin: 0;
       padding: 0;
@@ -310,7 +311,10 @@ export const Option = ({ value, selected, children, ...rest }) => {
       pseudoClasses={OPTION_PSEUDO_CLASSES}
       onMouseEnter={() => setHighlightedValue(value)}
       onMouseLeave={() => setHighlightedValue(null)}
-      onMouseDown={() => {
+      onMouseDown={(e) => {
+        if (e.button !== 0) {
+          return;
+        }
         onSelect?.(value);
       }}
       {...rest}
