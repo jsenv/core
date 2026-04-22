@@ -215,7 +215,6 @@ export const OptionList = ({
       baseClassName="navi_option_list"
     >
       <OptionListContext.Provider value={contextValue}>
-        {" "}
         {children}
       </OptionListContext.Provider>
     </Box>
