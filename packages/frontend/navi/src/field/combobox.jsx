@@ -8,6 +8,7 @@ import {
   useState,
 } from "preact/hooks";
 
+import { Box } from "../box/box.jsx";
 import { Input } from "./input.jsx";
 import { OptionListControllerContext } from "./option_list.jsx";
 
@@ -127,7 +128,7 @@ export const ComboBox = ({ children, ...rest }) => {
   const [inputChild, ...dropdownChildren] = childArray;
 
   return (
-    <div ref={containerRef} className="navi_combobox" {...rest}>
+    <Box ref={containerRef} baseClassName="navi_combobox" {...rest}>
       <ComboBoxContext.Provider value={context}>
         {inputChild}
         <ComboBoxDropdown>
@@ -136,7 +137,7 @@ export const ComboBox = ({ children, ...rest }) => {
           </OptionListControllerContext.Provider>
         </ComboBoxDropdown>
       </ComboBoxContext.Provider>
-    </div>
+    </Box>
   );
 };
 
