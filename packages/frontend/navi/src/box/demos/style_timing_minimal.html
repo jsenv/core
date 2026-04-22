@@ -1,0 +1,207 @@
+<!doctype html>
+
+<!--
+  Minimal reproduction of the Box style timing issue.
+
+  The problem:
+    Box sets styles via useLayoutEffect. But Preact flushes layout effects
+    bottom-up (children first, then parents). So when a child's useLayoutEffect
+    runs, Box has not yet applied its styles — the child reads stale values.
+
+  The fix:
+    Hook into options.__c (Preact's commitRoot callback), which fires AFTER
+    refs are assigned but BEFORE any useLayoutEffect runs. Apply Box's styles
+    there instead of (or in addition to) useLayoutEffect.
+-->
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Box style timing — minimal repro</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { options, render } from "preact";
+      import { useState, useLayoutEffect, useRef } from "preact/hooks";
+
+      // ─── BROKEN version ────────────────────────────────────────────────────
+      // Sets backgroundColor in useLayoutEffect — too late for children.
+
+      const BrokenBox = ({ background, children }) => {
+        const ref = useRef();
+        useLayoutEffect(() => {
+          ref.current.style.backgroundColor = background;
+        }, [background]);
+        return (
+          <div ref={ref} style={{ padding: "16px", borderRadius: "6px" }}>
+            {children}
+          </div>
+        );
+      };
+
+      // ─── FIX ───────────────────────────────────────────────────────────────
+      // options.__c fires in commitRoot, after refs are assigned but before
+      // any useLayoutEffect runs. We apply Box's style there instead.
+
+      const pendingStyleMap = new Map(); // component instance → () => void
+
+      let _currentComponent = null;
+      const _prevBeforeRender = options.__r;
+      options.__r = (vnode) => {
+        _currentComponent = vnode.__c;
+        if (_prevBeforeRender) {
+          _prevBeforeRender(vnode);
+        }
+      };
+
+      const _prevCommit = options.__c;
+      options.__c = (root, commitQueue) => {
+        for (const [, fn] of pendingStyleMap) {
+          fn();
+        }
+        pendingStyleMap.clear();
+        if (_prevCommit) {
+          _prevCommit(root, commitQueue);
+        }
+      };
+
+      const useApplyBeforeLayoutEffects = (fn) => {
+        const component = _currentComponent;
+        if (component) {
+          pendingStyleMap.set(component, fn);
+        }
+      };
+
+      const FixedBox = ({ background, children }) => {
+        const ref = useRef();
+        // Apply style before any child's useLayoutEffect sees it.
+        useApplyBeforeLayoutEffects(() => {
+          if (ref.current) {
+            ref.current.style.backgroundColor = background;
+          }
+        });
+        // Also keep useLayoutEffect for subsequent updates (when not mounting).
+        useLayoutEffect(() => {
+          ref.current.style.backgroundColor = background;
+        }, [background]);
+        return (
+          <div ref={ref} style={{ padding: "16px", borderRadius: "6px" }}>
+            {children}
+          </div>
+        );
+      };
+
+      // ─── Child that reads parent's backgroundColor on mount ────────────────
+
+      const BgReader = ({ label }) => {
+        const ref = useRef();
+        const [color, setColor] = useState(null);
+        useLayoutEffect(() => {
+          const bg = getComputedStyle(
+            ref.current.parentElement,
+          ).backgroundColor;
+          setColor(bg);
+        }, []);
+        return (
+          <div
+            ref={ref}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              padding: "8px",
+              background: "rgba(255,255,255,0.6)",
+              borderRadius: "4px",
+              fontSize: "13px",
+            }}
+          >
+            <strong>{label}</strong>
+            <span
+              style={{
+                width: "24px",
+                height: "24px",
+                borderRadius: "3px",
+                border: "1px solid rgba(0,0,0,0.2)",
+                backgroundColor: color ?? "transparent",
+                flexShrink: 0,
+              }}
+            />
+            <span style={{ fontFamily: "monospace" }}>
+              {color ?? "measuring…"}
+            </span>
+          </div>
+        );
+      };
+
+      // ─── Demo ──────────────────────────────────────────────────────────────
+
+      const COLORS = ["#ff6b6b", "#4dabf7", "#69db7c", "#ffd43b", "#da77f2"];
+
+      const Demo = () => {
+        const [idx, setIdx] = useState(0);
+        const bg = COLORS[idx];
+
+        return (
+          <div
+            style={{
+              fontFamily: "sans-serif",
+              padding: "24px",
+              display: "flex",
+              flexDirection: "column",
+              gap: "20px",
+            }}
+          >
+            <h2 style={{ margin: 0 }}>Box style timing — minimal repro</h2>
+
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <button
+                onClick={() => setIdx((i) => (i + 1) % COLORS.length)}
+                style={{ padding: "6px 16px", cursor: "pointer" }}
+              >
+                Next color
+              </button>
+              <span>
+                Expected:{" "}
+                <span style={{ fontFamily: "monospace", fontWeight: "bold" }}>
+                  {bg}
+                </span>
+              </span>
+              <span
+                style={{
+                  width: "24px",
+                  height: "24px",
+                  borderRadius: "3px",
+                  border: "1px solid rgba(0,0,0,0.2)",
+                  backgroundColor: bg,
+                  display: "inline-block",
+                }}
+              />
+            </div>
+
+            <div style={{ display: "flex", gap: "24px" }}>
+              <div style={{ flex: 1 }}>
+                <h3 style={{ marginTop: 0 }}>
+                  ❌ Broken — background in useLayoutEffect
+                </h3>
+                <BrokenBox key={bg} background={bg}>
+                  <BgReader label="Read on mount:" />
+                </BrokenBox>
+              </div>
+              <div style={{ flex: 1 }}>
+                <h3 style={{ marginTop: 0 }}>
+                  ✅ Fixed — background in options.__c
+                </h3>
+                <FixedBox key={bg} background={bg}>
+                  <BgReader label="Read on mount:" />
+                </FixedBox>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      render(<Demo />, document.getElementById("app"));
+    </script>
+  </body>
+</html>
