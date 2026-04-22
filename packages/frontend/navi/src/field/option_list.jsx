@@ -203,21 +203,22 @@ export const OptionList = ({
   };
 
   return (
-    <OptionListContext.Provider value={contextValue}>
-      <Box
-        as="ul"
-        ref={listRef}
-        id={id}
-        role="listbox"
-        tabIndex={0}
-        hidden={hidden}
-        onKeyDown={handleKeyDown}
-        {...rest}
-        baseClassName="navi_option_list"
-      >
+    <Box
+      as="ul"
+      ref={listRef}
+      id={id}
+      role="listbox"
+      tabIndex={0}
+      hidden={hidden}
+      onKeyDown={handleKeyDown}
+      {...rest}
+      baseClassName="navi_option_list"
+    >
+      <OptionListContext.Provider value={contextValue}>
+        {" "}
         {children}
-      </Box>
-    </OptionListContext.Provider>
+      </OptionListContext.Provider>
+    </Box>
   );
 };
 
