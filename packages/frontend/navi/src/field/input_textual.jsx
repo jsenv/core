@@ -439,7 +439,7 @@ const InputTextualCombobox = ({
           return false;
         }
         popoverEl.dispatchEvent(
-          new CustomEvent("combobox-navigate", {
+          new CustomEvent("navi_option_list_navigate", {
             detail: { direction: "down" },
           }),
         );
@@ -452,7 +452,7 @@ const InputTextualCombobox = ({
       handler: (e) => {
         showPopover(e);
         return dispatchToOptionList(
-          new CustomEvent("combobox-navigate", {
+          new CustomEvent("navi_option_list_navigate", {
             detail: { direction: "up" },
           }),
         );
@@ -466,7 +466,7 @@ const InputTextualCombobox = ({
           return false;
         }
         return dispatchToOptionList(
-          new CustomEvent("combobox-navigate", {
+          new CustomEvent("navi_option_list_navigate", {
             detail: { direction: "first" },
           }),
         );
@@ -480,7 +480,7 @@ const InputTextualCombobox = ({
           return false;
         }
         return dispatchToOptionList(
-          new CustomEvent("combobox-navigate", {
+          new CustomEvent("navi_option_list_navigate", {
             detail: { direction: "last" },
           }),
         );
@@ -494,7 +494,7 @@ const InputTextualCombobox = ({
           return false;
         }
         return dispatchToOptionList(
-          new CustomEvent("combobox-confirm", {
+          new CustomEvent("navi_option_list_confirm", {
             cancelable: true,
           }),
         );
@@ -524,9 +524,9 @@ const InputTextualCombobox = ({
       inputEl.dispatchEvent(new Event("input", { bubbles: true }));
       hidePopover(e);
     };
-    popoverEl.addEventListener("combobox-selected", onSelected);
+    popoverEl.addEventListener("navi_option_list_selected", onSelected);
     return () => {
-      popoverEl.removeEventListener("combobox-selected", onSelected);
+      popoverEl.removeEventListener("navi_option_list_selected", onSelected);
     };
   }, [combobox]);
 

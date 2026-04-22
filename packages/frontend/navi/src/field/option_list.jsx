@@ -193,7 +193,7 @@ export const OptionList = ({
     ? (value) => {
         onChangeProp?.(value);
         ref.current?.dispatchEvent(
-          new CustomEvent("combobox-selected", {
+          new CustomEvent("navi_option_list_selected", {
             detail: { value },
             bubbles: true,
           }),
@@ -245,13 +245,13 @@ export const OptionList = ({
     const onClear = () => {
       setPointedValue(null);
     };
-    el.addEventListener("combobox-navigate", onNavigate);
-    el.addEventListener("combobox-confirm", onConfirm);
-    el.addEventListener("combobox-clear", onClear);
+    el.addEventListener("navi_option_list_navigate", onNavigate);
+    el.addEventListener("navi_option_list_confirm", onConfirm);
+    el.addEventListener("navi_option_list_clear", onClear);
     return () => {
-      el.removeEventListener("combobox-navigate", onNavigate);
-      el.removeEventListener("combobox-confirm", onConfirm);
-      el.removeEventListener("combobox-clear", onClear);
+      el.removeEventListener("navi_option_list_navigate", onNavigate);
+      el.removeEventListener("navi_option_list_confirm", onConfirm);
+      el.removeEventListener("navi_option_list_clear", onClear);
     };
   }, [popover]);
 
