@@ -154,7 +154,7 @@ const OptionStyleCSSVars = {
     backgroundColor: "--option-background-color-selected",
     fontWeight: "--option-font-weight-selected",
   },
-  ":highlight": {
+  "::highlight": {
     color: "--option-color-highlight",
     backgroundColor: "--option-background-color-highlight",
   },
