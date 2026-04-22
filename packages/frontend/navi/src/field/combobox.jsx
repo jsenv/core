@@ -133,70 +133,6 @@ export const ComboBox = ({ value, onChange, children, ...rest }) => {
 };
 
 /**
- * ComboBoxDropdown — renders children in a popover anchored below the ComboBox input.
- * Uses the Popover API (popover="manual") so the dropdown escapes overflow/z-index constraints.
- * Position is updated via JS whenever the popover opens or the window resizes.
- */
-const ComboBoxDropdown = ({ children, ...rest }) => {
-  const { open, containerRef } = useContext(ComboBoxContext);
-  const popoverRef = useRef(null);
-
-  useEffect(() => {
-    const el = popoverRef.current;
-    if (!el) {
-      return;
-    }
-    if (open) {
-      positionDropdown(el, containerRef.current);
-      el.showPopover();
-    } else {
-      try {
-        el.hidePopover();
-      } catch {
-        // already hidden — ignore
-      }
-    }
-  }, [open]);
-
-  useEffect(() => {
-    if (!open) {
-      return undefined;
-    }
-    const onResize = () => {
-      positionDropdown(popoverRef.current, containerRef.current);
-    };
-    window.addEventListener("resize", onResize);
-    return () => {
-      window.removeEventListener("resize", onResize);
-    };
-  }, [open]);
-
-  return (
-    <div
-      ref={popoverRef}
-      popover="manual"
-      className="navi_combobox_dropdown"
-      {...rest}
-    >
-      {children}
-    </div>
-  );
-};
-
-const positionDropdown = (el, anchor) => {
-  if (!el || !anchor) {
-    return;
-  }
-  const rect = anchor.getBoundingClientRect();
-  const marginTop = parseFloat(
-    getComputedStyle(el).getPropertyValue("--dropdown-margin-top") || "2",
-  );
-  el.style.left = `${rect.left}px`;
-  el.style.top = `${rect.bottom + marginTop}px`;
-  el.style.width = `${rect.width}px`;
-};
-
-/**
  * ComboBoxInput — the text input for a ComboBox.
  * Renders a native <input> with role="combobox" and all ARIA wiring.
  * Arrow keys navigate the dropdown; Enter selects; Escape closes.
@@ -309,4 +245,67 @@ export const ComboBoxInput = ({
       {...rest}
     />
   );
+};
+
+/**
+ * ComboBoxDropdown — renders children in a popover anchored below the ComboBox input.
+ * Uses the Popover API (popover="manual") so the dropdown escapes overflow/z-index constraints.
+ * Position is updated via JS whenever the popover opens or the window resizes.
+ */
+const ComboBoxDropdown = ({ children, ...rest }) => {
+  const { open, containerRef } = useContext(ComboBoxContext);
+  const popoverRef = useRef(null);
+
+  useEffect(() => {
+    const el = popoverRef.current;
+    if (!el) {
+      return;
+    }
+    if (open) {
+      positionDropdown(el, containerRef.current);
+      el.showPopover();
+    } else {
+      try {
+        el.hidePopover();
+      } catch {
+        // already hidden — ignore
+      }
+    }
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) {
+      return undefined;
+    }
+    const onResize = () => {
+      positionDropdown(popoverRef.current, containerRef.current);
+    };
+    window.addEventListener("resize", onResize);
+    return () => {
+      window.removeEventListener("resize", onResize);
+    };
+  }, [open]);
+
+  return (
+    <div
+      ref={popoverRef}
+      popover="manual"
+      className="navi_combobox_dropdown"
+      {...rest}
+    >
+      {children}
+    </div>
+  );
+};
+const positionDropdown = (el, anchor) => {
+  if (!el || !anchor) {
+    return;
+  }
+  const rect = anchor.getBoundingClientRect();
+  const marginTop = parseFloat(
+    getComputedStyle(el).getPropertyValue("--dropdown-margin-top") || "2",
+  );
+  el.style.left = `${rect.left}px`;
+  el.style.top = `${rect.bottom + marginTop}px`;
+  el.style.width = `${rect.width}px`;
 };
