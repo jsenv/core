@@ -159,7 +159,9 @@ export const OptionList = ({
   onChangeRef.current = effectiveOnChange;
 
   const navigate = (direction) => {
-    const values = ItemTrackerProvider.items.map((item) => item.value);
+    const values = ItemTrackerProvider.items
+      .filter((item) => !item.hidden)
+      .map((item) => item.value);
     if (values.length === 0) {
       return false;
     }
@@ -276,12 +278,12 @@ export const OptionList = ({
 };
 
 const OPTION_PSEUDO_CLASSES = [":-navi-highlighted", ":-navi-selected"];
-export const Option = ({ value, selected, children, ...rest }) => {
+export const Option = ({ value, selected, hidden, children, ...rest }) => {
   import.meta.css = css;
 
   const optionId = useId();
   const id = rest.id || optionId;
-  useTrackOption({ value, optionId: id });
+  useTrackOption({ value, optionId: id, hidden });
   const { highlightedValue, setHighlightedValue, onSelect } =
     useContext(OptionListContext);
 
@@ -303,15 +305,25 @@ export const Option = ({ value, selected, children, ...rest }) => {
       id={optionId}
       role="option"
       aria-selected={selected}
+      aria-hidden={hidden ? true : undefined}
+      hidden={hidden}
       basePseudoState={{
         ":-navi-highlighted": isHighlighted,
         ":-navi-selected": selected,
       }}
       pseudoClasses={OPTION_PSEUDO_CLASSES}
-      onMouseEnter={() => setHighlightedValue(value)}
-      onMouseLeave={() => setHighlightedValue(null)}
+      onMouseEnter={() => {
+        if (!hidden) {
+          setHighlightedValue(value);
+        }
+      }}
+      onMouseLeave={() => {
+        if (!hidden) {
+          setHighlightedValue(null);
+        }
+      }}
       onMouseDown={(e) => {
-        if (e.button !== 0) {
+        if (hidden || e.button !== 0) {
           return;
         }
         onSelect?.(value);

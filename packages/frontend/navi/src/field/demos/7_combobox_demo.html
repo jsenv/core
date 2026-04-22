@@ -124,9 +124,7 @@
         const [selected, setSelected] = useState(null);
         const [query, setQuery] = useState("");
 
-        const filtered = FRUITS.filter((f) =>
-          f.toLowerCase().includes(query.toLowerCase()),
-        );
+        const matches = (f) => f.toLowerCase().includes(query.toLowerCase());
 
         return (
           <div className="demo-section">
@@ -150,8 +148,13 @@
               popover
               style={{ "--max-height": "220px" }}
             >
-              {filtered.map((fruit) => (
-                <Option key={fruit} value={fruit} selected={selected === fruit}>
+              {FRUITS.map((fruit) => (
+                <Option
+                  key={fruit}
+                  value={fruit}
+                  selected={selected === fruit}
+                  hidden={!matches(fruit)}
+                >
                   {fruit}
                 </Option>
               ))}
@@ -167,11 +170,9 @@
         const [selected, setSelected] = useState(null);
         const [query, setQuery] = useState("");
 
-        const filtered = COUNTRIES.filter(
-          (c) =>
-            c.name.toLowerCase().includes(query.toLowerCase()) ||
-            c.region.toLowerCase().includes(query.toLowerCase()),
-        );
+        const matches = (c) =>
+          c.name.toLowerCase().includes(query.toLowerCase()) ||
+          c.region.toLowerCase().includes(query.toLowerCase());
 
         const selectedCountry = COUNTRIES.find((c) => c.code === selected);
 
@@ -197,11 +198,12 @@
               popover
               style={{ "--max-height": "220px" }}
             >
-              {filtered.map((country) => (
+              {COUNTRIES.map((country) => (
                 <Option
                   key={country.code}
                   value={country.name}
                   selected={selected === country.code}
+                  hidden={!matches(country)}
                 >
                   <span style={{ fontWeight: 500 }}>{country.name}</span>
                   <span className="option-secondary">{country.region}</span>
@@ -225,9 +227,7 @@
         const [query, setQuery] = useState("");
         const [lastSaved, setLastSaved] = useState(null);
 
-        const filtered = FRUITS.filter((f) =>
-          f.toLowerCase().includes(query.toLowerCase()),
-        );
+        const matches = (f) => f.toLowerCase().includes(query.toLowerCase());
 
         const saveFruit = async (value) => {
           await delay(800);
@@ -254,8 +254,13 @@
               popover
               style={{ "--max-height": "220px" }}
             >
-              {filtered.map((fruit) => (
-                <Option key={fruit} value={fruit} selected={query === fruit}>
+              {FRUITS.map((fruit) => (
+                <Option
+                  key={fruit}
+                  value={fruit}
+                  selected={query === fruit}
+                  hidden={!matches(fruit)}
+                >
                   {fruit}
                 </Option>
               ))}
@@ -274,12 +279,10 @@
         const [countryQuery, setCountryQuery] = useState("");
         const [submitResult, setSubmitResult] = useState(null);
 
-        const filteredFruits = FRUITS.filter((f) =>
-          f.toLowerCase().includes(fruitQuery.toLowerCase()),
-        );
-        const filteredCountries = COUNTRIES.filter((c) =>
-          c.name.toLowerCase().includes(countryQuery.toLowerCase()),
-        );
+        const fruitMatches = (f) =>
+          f.toLowerCase().includes(fruitQuery.toLowerCase());
+        const countryMatches = (c) =>
+          c.name.toLowerCase().includes(countryQuery.toLowerCase());
 
         const submitForm = async ({ fruit, country }) => {
           await delay(1000);
@@ -311,11 +314,12 @@
                   popover
                   style={{ "--max-height": "180px" }}
                 >
-                  {filteredFruits.map((fruit) => (
+                  {FRUITS.map((fruit) => (
                     <Option
                       key={fruit}
                       value={fruit}
                       selected={fruitQuery === fruit}
+                      hidden={!fruitMatches(fruit)}
                     >
                       {fruit}
                     </Option>
@@ -339,11 +343,12 @@
                   popover
                   style={{ "--max-height": "180px" }}
                 >
-                  {filteredCountries.map((c) => (
+                  {COUNTRIES.map((c) => (
                     <Option
                       key={c.code}
                       value={c.name}
                       selected={countryQuery === c.name}
+                      hidden={!countryMatches(c)}
                     >
                       {c.name}
                     </Option>
