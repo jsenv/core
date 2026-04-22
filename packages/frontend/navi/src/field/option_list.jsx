@@ -3,6 +3,9 @@ import { useContext, useEffect, useId, useRef, useState } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
 import { useKeyboardShortcuts } from "../keyboard/keyboard_shortcuts.js";
+import { createItemTracker } from "./item_tracker/item_tracker.jsx";
+
+const [useOptionItemTrackerProvider, useTrackOption] = createItemTracker();
 
 /**
  * OptionList + Option: a composable accessible listbox.
@@ -161,11 +164,10 @@ export const OptionList = ({
   import.meta.css = css;
 
   const controller = useContext(OptionListControllerContext);
+  const ItemTrackerProvider = useOptionItemTrackerProvider();
 
   // Own state — used when no controller overrides them
   const [ownHighlightedValue, setOwnHighlightedValue] = useState(null);
-  const ownRegisteredValuesRef = useRef([]);
-  const ownRegisteredIdsRef = useRef(new Map());
   const ownHighlightedValueRef = useRef(null);
   ownHighlightedValueRef.current = ownHighlightedValue;
 
@@ -182,12 +184,6 @@ export const OptionList = ({
   const highlightedValueRef = controller
     ? controller.highlightedValueRef
     : ownHighlightedValueRef;
-  const registeredValuesRef = controller
-    ? controller.registeredValuesRef
-    : ownRegisteredValuesRef;
-  const registeredIdsRef = controller
-    ? controller.registeredIdsRef
-    : ownRegisteredIdsRef;
   const keyboardTargetRef = controller ? controller.keyboardTargetRef : null;
 
   const ownId = useId();
@@ -209,17 +205,6 @@ export const OptionList = ({
   const onChangeRef = useRef(effectiveOnChange);
   onChangeRef.current = effectiveOnChange;
 
-  const register = (optionValue, optionId) => {
-    registeredValuesRef.current = [...registeredValuesRef.current, optionValue];
-    registeredIdsRef.current.set(optionValue, optionId);
-    return () => {
-      registeredValuesRef.current = registeredValuesRef.current.filter(
-        (v) => v !== optionValue,
-      );
-      registeredIdsRef.current.delete(optionValue);
-    };
-  };
-
   // Listen for commands dispatched by a linked Input (combobox mode)
   const noopRef = useRef(null);
   useEffect(() => {
@@ -229,7 +214,7 @@ export const OptionList = ({
     const el = listRef.current;
     const onNavigate = (e) => {
       const { direction } = e.detail;
-      const values = registeredValuesRef.current;
+      const values = ItemTrackerProvider.items.map((item) => item.value);
       if (values.length === 0) {
         return;
       }
@@ -284,7 +269,7 @@ export const OptionList = ({
       key: "arrowdown",
       description: "Highlight next option",
       handler: () => {
-        const values = registeredValuesRef.current;
+        const values = ItemTrackerProvider.items.map((item) => item.value);
         if (values.length === 0) {
           return false;
         }
@@ -300,7 +285,7 @@ export const OptionList = ({
       key: "arrowup",
       description: "Highlight previous option",
       handler: () => {
-        const values = registeredValuesRef.current;
+        const values = ItemTrackerProvider.items.map((item) => item.value);
         if (values.length === 0) {
           return false;
         }
@@ -315,7 +300,7 @@ export const OptionList = ({
       key: "home",
       description: "Highlight first option",
       handler: () => {
-        const values = registeredValuesRef.current;
+        const values = ItemTrackerProvider.items.map((item) => item.value);
         if (values.length === 0) {
           return false;
         }
@@ -327,7 +312,7 @@ export const OptionList = ({
       key: "end",
       description: "Highlight last option",
       handler: () => {
-        const values = registeredValuesRef.current;
+        const values = ItemTrackerProvider.items.map((item) => item.value);
         if (values.length === 0) {
           return false;
         }
@@ -362,24 +347,25 @@ export const OptionList = ({
     highlightedValue,
     setHighlightedValue,
     onSelect: effectiveOnChange,
-    register,
   };
 
   return (
     <OptionListContext.Provider value={optionListContext}>
-      <Box
-        as="ul"
-        ref={listRef}
-        id={listboxId}
-        role="listbox"
-        tabIndex={keyboardTargetRef || popover ? -1 : 0}
-        popover={popover ? "manual" : undefined}
-        hidden={popover ? undefined : hidden}
-        {...rest}
-        baseClassName="navi_option_list"
-      >
-        {children}
-      </Box>
+      <ItemTrackerProvider>
+        <Box
+          as="ul"
+          ref={listRef}
+          id={listboxId}
+          role="listbox"
+          tabIndex={keyboardTargetRef || popover ? -1 : 0}
+          popover={popover ? "manual" : undefined}
+          hidden={popover ? undefined : hidden}
+          {...rest}
+          baseClassName="navi_option_list"
+        >
+          {children}
+        </Box>
+      </ItemTrackerProvider>
     </OptionListContext.Provider>
   );
 };
@@ -394,13 +380,10 @@ export const Option = ({ value, children, ...rest }) => {
     highlightedValue,
     setHighlightedValue,
     onSelect,
-    register,
   } = useContext(OptionListContext);
   const optionId = useId();
 
-  useEffect(() => {
-    return register(value, optionId);
-  }, [value]);
+  useTrackOption({ value, optionId });
 
   const isSelected = selectedValue === value;
   const isHighlighted = highlightedValue === value;
