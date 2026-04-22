@@ -3,7 +3,7 @@ import { actionRunEffect } from "../action/action_run_effect.js";
 export const routeAction = (
   route,
   action,
-  paramsEffect = () => route.paramsSignal.value,
+  paramsEffect = () => true,
   options = {},
 ) => {
   const actionBoundToRoute = actionRunEffect(
