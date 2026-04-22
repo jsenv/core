@@ -17,60 +17,60 @@ const [useOptionItemTrackerProvider, useTrackOption] = createItemTracker();
  *   </OptionList>
  *
  * CSS vars on .navi_option_list:
- *   --border-radius, --border-width, --border-color, --background-color, --max-height
+ *   --option-list-border-radius, --option-list-border-width, --option-list-border-color, --option-list-background-color, --option-list-max-height
  *
  * CSS vars on .navi_option:
- *   --padding, --color, --background-color, --font-weight
- *   --color-hover, --background-color-hover
- *   --color-pointed, --background-color-pointed
- *   --color-selected, --background-color-selected, --font-weight-selected
- *   --color-pointed-selected, --background-color-pointed-selected
- *   --color-highlight, --background-color-highlight
+ *   --option-padding, --option-color, --option-background-color, --option-font-weight
+ *   --option-color-hover, --option-background-color-hover
+ *   --option-color-pointed, --option-background-color-pointed
+ *   --option-color-selected, --option-background-color-selected, --option-font-weight-selected
+ *   --option-color-pointed-selected, --option-background-color-pointed-selected
+ *   --option-color-highlight, --option-background-color-highlight
  */
 
 const css = /* css */ `
   @layer navi {
     .navi_option_list {
-      --border-radius: 4px;
-      --border-width: 1px;
-      --border-color: light-dark(#ccc, #555);
-      --background-color: light-dark(#fff, #1e1e1e);
-      --max-height: 220px;
+      --option-list-border-radius: 4px;
+      --option-list-border-width: 1px;
+      --option-list-border-color: light-dark(#ccc, #555);
+      --option-list-background-color: light-dark(#fff, #1e1e1e);
+      --option-list-max-height: 220px;
     }
     .navi_option {
-      --padding: 8px 12px;
-      --color: inherit;
-      --background-color: transparent;
-      --font-weight: inherit;
+      --option-padding: 8px 12px;
+      --option-color: inherit;
+      --option-background-color: transparent;
+      --option-font-weight: inherit;
 
       /* Hover (mouse) */
-      --color-hover: var(--color);
-      --background-color-hover: light-dark(#f5f5f5, #2a2a2a);
+      --option-color-hover: var(--option-color);
+      --option-background-color-hover: light-dark(#f5f5f5, #2a2a2a);
 
       /* Pointed (keyboard navigation position) */
-      --color-pointed: var(--color);
-      --background-color-pointed: light-dark(#e8f0fe, #1c3a6e);
+      --option-color-pointed: var(--option-color);
+      --option-background-color-pointed: light-dark(#e8f0fe, #1c3a6e);
 
       /* Selected */
-      --color-selected: light-dark(#1a73e8, #7baaf7);
-      --background-color-selected: light-dark(#e8f0fe, #1c3a6e);
-      --font-weight-selected: 500;
+      --option-color-selected: light-dark(#1a73e8, #7baaf7);
+      --option-background-color-selected: light-dark(#e8f0fe, #1c3a6e);
+      --option-font-weight-selected: 500;
 
       /* Highlight (CSS Highlight API match) */
-      --color-highlight: inherit;
-      --background-color-highlight: #ffe066;
-      --color-pointed-selected: var(--color-selected);
-      --background-color-pointed-selected: light-dark(#d2e3fc, #174ea6);
+      --option-color-highlight: inherit;
+      --option-background-color-highlight: #ffe066;
+      --option-color-pointed-selected: var(--option-color-selected);
+      --option-background-color-pointed-selected: light-dark(#d2e3fc, #174ea6);
     }
   }
 
   .navi_option_list {
-    --x-border-radius: var(--border-radius);
-    --x-border-width: var(--border-width);
-    --x-border-color: var(--border-color);
-    --x-background-color: var(--background-color);
+    --x-border-radius: var(--option-list-border-radius);
+    --x-border-width: var(--option-list-border-width);
+    --x-border-color: var(--option-list-border-color);
+    --x-background-color: var(--option-list-background-color);
     box-sizing: border-box;
-    max-height: var(--max-height);
+    max-height: var(--option-list-max-height);
 
     margin: 0;
     padding: 0;
@@ -91,15 +91,15 @@ const css = /* css */ `
     }
   }
   ::highlight(navi-option-match) {
-    color: var(--color-highlight);
-    background-color: var(--background-color-highlight);
+    color: var(--option-color-highlight);
+    background-color: var(--option-background-color-highlight);
   }
   .navi_option {
-    --x-color: var(--color);
-    --x-background-color: var(--background-color);
-    --x-font-weight: var(--font-weight);
+    --x-color: var(--option-color);
+    --x-background-color: var(--option-background-color);
+    --x-font-weight: var(--option-font-weight);
 
-    padding: var(--padding);
+    padding: var(--option-padding);
     color: var(--x-color);
     font-weight: var(--x-font-weight);
     background-color: var(--x-background-color);
@@ -107,56 +107,56 @@ const css = /* css */ `
     user-select: none;
 
     &:hover {
-      --x-color: var(--color-hover);
-      --x-background-color: var(--background-color-hover);
+      --x-color: var(--option-color-hover);
+      --x-background-color: var(--option-background-color-hover);
     }
 
     &[data-pointed] {
-      --x-color: var(--color-pointed);
-      --x-background-color: var(--background-color-pointed);
+      --x-color: var(--option-color-pointed);
+      --x-background-color: var(--option-background-color-pointed);
     }
 
     &[data-selected] {
-      --x-color: var(--color-selected);
-      --x-background-color: var(--background-color-selected);
-      --x-font-weight: var(--font-weight-selected);
+      --x-color: var(--option-color-selected);
+      --x-background-color: var(--option-background-color-selected);
+      --x-font-weight: var(--option-font-weight-selected);
     }
 
     &[data-pointed][data-selected] {
-      --x-color: var(--color-pointed-selected);
-      --x-background-color: var(--background-color-pointed-selected);
+      --x-color: var(--option-color-pointed-selected);
+      --x-background-color: var(--option-background-color-pointed-selected);
     }
   }
 `;
 
 const OptionListStyleCSSVars = {
-  borderRadius: "--border-radius",
-  borderWidth: "--border-width",
-  borderColor: "--border-color",
-  backgroundColor: "--background-color",
-  maxHeight: "--max-height",
+  borderRadius: "--option-list-border-radius",
+  borderWidth: "--option-list-border-width",
+  borderColor: "--option-list-border-color",
+  backgroundColor: "--option-list-background-color",
+  maxHeight: "--option-list-max-height",
 };
 const OptionStyleCSSVars = {
-  "padding": "--padding",
-  "color": "--color",
-  "backgroundColor": "--background-color",
-  "fontWeight": "--font-weight",
+  "padding": "--option-padding",
+  "color": "--option-color",
+  "backgroundColor": "--option-background-color",
+  "fontWeight": "--option-font-weight",
   ":-navi-pointed": {
-    color: "--color-pointed",
-    backgroundColor: "--background-color-pointed",
+    color: "--option-color-pointed",
+    backgroundColor: "--option-background-color-pointed",
   },
   ":hover": {
-    color: "--color-hover",
-    backgroundColor: "--background-color-hover",
+    color: "--option-color-hover",
+    backgroundColor: "--option-background-color-hover",
   },
   ":-navi-selected": {
-    color: "--color-selected",
-    backgroundColor: "--background-color-selected",
-    fontWeight: "--font-weight-selected",
+    color: "--option-color-selected",
+    backgroundColor: "--option-background-color-selected",
+    fontWeight: "--option-font-weight-selected",
   },
   ":highlight": {
-    color: "--color-highlight",
-    backgroundColor: "--background-color-highlight",
+    color: "--option-color-highlight",
+    backgroundColor: "--option-background-color-highlight",
   },
 };
 
