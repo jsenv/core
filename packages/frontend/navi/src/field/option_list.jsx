@@ -139,7 +139,6 @@ export const OptionList = ({
   import.meta.css = css;
 
   const ItemTrackerProvider = useOptionItemTrackerProvider();
-
   const [highlightedValue, setHighlightedValue] = useState(null);
   const highlightedValueRef = useRef(null);
   highlightedValueRef.current = highlightedValue;
@@ -295,21 +294,21 @@ export const OptionList = ({
   };
 
   return (
-    <OptionListContext.Provider value={optionListContext}>
-      <Box
-        as="ul"
-        ref={listRef}
-        id={id}
-        role="listbox"
-        tabIndex={popover ? -1 : 0}
-        popover={popover ? "manual" : undefined}
-        hidden={popover ? undefined : hiddenProp}
-        {...rest}
-        baseClassName="navi_option_list"
-      >
+    <Box
+      as="ul"
+      ref={listRef}
+      id={id}
+      role="listbox"
+      tabIndex={popover ? -1 : 0}
+      popover={popover ? "manual" : undefined}
+      hidden={popover ? undefined : hiddenProp}
+      {...rest}
+      baseClassName="navi_option_list"
+    >
+      <OptionListContext.Provider value={optionListContext}>
         <ItemTrackerProvider>{children}</ItemTrackerProvider>
-      </Box>
-    </OptionListContext.Provider>
+      </OptionListContext.Provider>
+    </Box>
   );
 };
 
