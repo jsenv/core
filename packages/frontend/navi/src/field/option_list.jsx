@@ -1,5 +1,12 @@
 import { createContext } from "preact";
-import { useContext, useEffect, useId, useRef, useState } from "preact/hooks";
+import {
+  useContext,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
 import { useKeyboardShortcuts } from "../keyboard/keyboard_shortcuts.js";
@@ -208,7 +215,7 @@ export const OptionList = ({
   const defaultRef = useRef(null);
   const ref = rest.ref || defaultRef;
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!CSS.highlights) {
       return undefined;
     }
