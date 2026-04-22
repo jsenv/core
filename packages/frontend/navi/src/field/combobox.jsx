@@ -71,6 +71,7 @@ export const ComboBox = ({ children, ...rest }) => {
   const openRef = useRef(false);
   openRef.current = open;
   const actionRef = useRef(null);
+  const keyboardTargetRef = useRef(null);
 
   // Close on outside click
   useEffect(() => {
@@ -108,6 +109,7 @@ export const ComboBox = ({ children, ...rest }) => {
     listboxId,
     openRef,
     containerRef,
+    keyboardTargetRef,
   };
 
   const optionListController = {
@@ -118,6 +120,7 @@ export const ComboBox = ({ children, ...rest }) => {
     highlightedValueRef,
     registeredValuesRef,
     registeredIdsRef,
+    keyboardTargetRef,
   };
 
   const childArray = toChildArray(children);
@@ -157,15 +160,23 @@ export const ComboBoxInput = ({
     setOpen,
     openRef,
     highlightedValue,
-    highlightedValueRef,
-    registeredValuesRef,
     registeredIdsRef,
     setHighlightedValue,
     setSelectedValue,
     actionRef,
-    onSelect,
     listboxId,
+    keyboardTargetRef,
   } = useContext(ComboBoxContext);
+
+  const inputRef = useRef(null);
+
+  // Point keyboardTargetRef to the native <input> so OptionList installs shortcuts there
+  useLayoutEffect(() => {
+    keyboardTargetRef.current = inputRef.current;
+    return () => {
+      keyboardTargetRef.current = null;
+    };
+  }, []);
 
   // Sync value and action from props into ComboBox state/refs
   useLayoutEffect(() => {
@@ -178,51 +189,11 @@ export const ComboBoxInput = ({
     actionRef.current = action ?? null;
   }, [action]);
 
+  // Open dropdown on ArrowDown when closed — navigation itself is handled by OptionList shortcuts
   const handleKeyDown = (e) => {
-    const values = registeredValuesRef.current;
-    const current = highlightedValueRef.current;
-
-    if (e.key === "ArrowDown") {
+    if (e.key === "ArrowDown" && !openRef.current) {
       e.preventDefault();
-      if (!openRef.current) {
-        setOpen(true);
-      }
-      if (values.length === 0) {
-        return;
-      }
-      const currentIndex = current === null ? -1 : values.indexOf(current);
-      const nextIndex =
-        currentIndex < values.length - 1 ? currentIndex + 1 : currentIndex;
-      setHighlightedValue(values[nextIndex]);
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault();
-      if (values.length === 0) {
-        return;
-      }
-      const currentIndex = current === null ? -1 : values.indexOf(current);
-      const prevIndex = currentIndex > 0 ? currentIndex - 1 : 0;
-      setHighlightedValue(values[prevIndex]);
-    } else if (e.key === "Home") {
-      e.preventDefault();
-      if (values.length > 0) {
-        setHighlightedValue(values[0]);
-      }
-    } else if (e.key === "End") {
-      e.preventDefault();
-      if (values.length > 0) {
-        setHighlightedValue(values[values.length - 1]);
-      }
-    } else if (e.key === "Enter") {
-      e.preventDefault();
-      if (current !== null) {
-        onSelect(current);
-      }
-    } else if (e.key === "Escape") {
-      e.preventDefault();
-      if (openRef.current) {
-        setOpen(false);
-        setHighlightedValue(null);
-      }
+      setOpen(true);
     }
     onKeyDown?.(e);
   };
@@ -249,6 +220,7 @@ export const ComboBoxInput = ({
 
   return (
     <Input
+      ref={inputRef}
       type="text"
       role="combobox"
       aria-expanded={open}

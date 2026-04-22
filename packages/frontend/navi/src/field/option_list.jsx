@@ -128,6 +128,7 @@ const css = /* css */ `
  *     highlightedValueRef, // ref holding current highlightedValue for stable closures
  *     registeredValuesRef, // shared ordered array of registered option values
  *     registeredIdsRef,    // shared Map<value, domId> for aria-activedescendant
+ *     keyboardTargetRef,   // when provided, keyboard shortcuts are installed here instead of <ul>
  *   }
  */
 export const OptionListControllerContext = createContext(null);
@@ -175,6 +176,7 @@ export const OptionList = ({
   const registeredIdsRef = controller
     ? controller.registeredIdsRef
     : ownRegisteredIdsRef;
+  const keyboardTargetRef = controller ? controller.keyboardTargetRef : null;
 
   const ownId = useId();
   const listboxId = id ?? ownId;
@@ -205,7 +207,7 @@ export const OptionList = ({
     }
   }, [highlightedValue]);
 
-  useKeyboardShortcuts(listRef, [
+  useKeyboardShortcuts(keyboardTargetRef ?? listRef, [
     {
       key: "arrowdown",
       description: "Highlight next option",
@@ -298,7 +300,7 @@ export const OptionList = ({
         ref={listRef}
         id={listboxId}
         role="listbox"
-        tabIndex={0}
+        tabIndex={keyboardTargetRef ? -1 : 0}
         hidden={hidden}
         {...rest}
         baseClassName="navi_option_list"
