@@ -7226,6 +7226,12 @@ const PSEUDO_CLASSES = {
     attribute: "data-invalid",
     test: (el) => el.matches(":invalid"),
   },
+  ":-navi-highlighted": {
+    attribute: "data-highlighted",
+  },
+  ":-navi-selected": {
+    attribute: "data-selected",
+  },
   ":-navi-loading": {
     attribute: "data-loading",
   },
@@ -15782,7 +15788,7 @@ installImportMetaCssBuild(import.meta);
  * - Centers in viewport when no anchor element provided or anchor is too big
  */
 
-import.meta.css = [/* css */`
+const css$w = /* css */`
   @layer navi {
     .navi_callout {
       --callout-success-color: #4caf50;
@@ -15924,7 +15930,7 @@ import.meta.css = [/* css */`
       }
     }
   }
-`, "@jsenv/navi/src/field/validation/callout/callout.js"];
+`;
 
 /**
  * Shows a callout attached to the specified element
@@ -15956,6 +15962,7 @@ const openCallout = (message, {
   showErrorStack,
   debug = false
 } = {}) => {
+  import.meta.css = [css$w, "@jsenv/navi/src/field/validation/callout/callout.js"];
   const callout = {
     opened: true,
     close: null,
@@ -16115,8 +16122,14 @@ const openCallout = (message, {
     }
     allowWheelThrough(calloutElement, anchorElement);
     anchorElement.setAttribute("data-callout", calloutId);
+    dispatchCalloutCustomElement(anchorElement, new CustomEvent("navi_callout_open", {
+      bubbles: true
+    }));
     addTeardown(() => {
       anchorElement.removeAttribute("data-callout");
+      dispatchCalloutCustomElement(anchorElement, new CustomEvent("navi_callout_close", {
+        bubbles: true
+      }));
     });
     addStatusEffect(status => {
       if (!status) {
@@ -16747,6 +16760,20 @@ const generateSvgWithoutArrow = (width, height) => {
       />
     </svg>`;
 };
+const dispatchCalloutCustomElement = (anchorElement, customEvent) => {
+  let targetElement;
+  const visualSelector = anchorElement.getAttribute("data-visual-selector");
+  if (visualSelector) {
+    const visualElement = anchorElement.querySelector(visualSelector);
+    if (visualElement) {
+      targetElement = visualElement;
+    }
+  } else {
+    targetElement = anchorElement;
+  }
+  console.log("dispatch on", targetElement, "event", customEvent);
+  targetElement.dispatchEvent(customEvent);
+};
 
 /**
  * Creates a live mirror of a source DOM element that automatically stays in sync.
@@ -17121,6 +17148,56 @@ const MIN_SPECIAL_CHAR_CONSTRAINT = {
 CONSTRAINT_ATTRIBUTE_SET.add("data-special-charset");
 CONSTRAINT_ATTRIBUTE_SET.add("data-min-special-char");
 CONSTRAINT_ATTRIBUTE_SET.add("data-min-special-char-message");
+
+const ONE_OF_CONSTRAINT = {
+  name: "one_of",
+  messageAttribute: "data-one-of-message",
+  check: (field) => {
+    const oneOf = field.getAttribute("data-one-of");
+    if (!oneOf) {
+      return null;
+    }
+    const fieldValue = field.value;
+    if (!fieldValue) {
+      return null;
+    }
+    const listEl = document.querySelector(oneOf);
+    if (!listEl) {
+      console.warn(
+        `One of constraint: could not find element for selector "${oneOf}"`,
+      );
+      return null;
+    }
+    const allowedValues = collectAllowedValues(listEl);
+    if (allowedValues.size === 0) {
+      return null;
+    }
+    if (allowedValues.has(fieldValue)) {
+      return null;
+    }
+    const message = field.getAttribute("data-one-of-message");
+    if (message) {
+      return message;
+    }
+    return `Veuillez choisir une valeur parmi les suggestions.`;
+  },
+};
+CONSTRAINT_ATTRIBUTE_SET.add("data-one-of");
+CONSTRAINT_ATTRIBUTE_SET.add("data-one-of-message");
+
+const collectAllowedValues = (listEl) => {
+  const values = new Set();
+  for (const optionEl of listEl.querySelectorAll("[role='option']")) {
+    const value =
+      optionEl.dataset.value ??
+      optionEl.getAttribute("value") ??
+      optionEl.textContent.trim();
+    if (value) {
+      values.add(value);
+    }
+  }
+  return values;
+};
 
 const READONLY_CONSTRAINT = {
   name: "readonly",
@@ -17874,6 +17951,7 @@ const NAVI_CONSTRAINT_SET = new Set([
   MIN_UPPER_LETTER_CONSTRAINT,
   MIN_LOWER_LETTER_CONSTRAINT,
   SAME_AS_CONSTRAINT,
+  ONE_OF_CONSTRAINT,
   READONLY_CONSTRAINT,
 ]);
 const DEFAULT_CONSTRAINT_SET = new Set([
@@ -20292,7 +20370,7 @@ const selectByTextStrings = (element, range, startText, endText) => {
 };
 
 installImportMetaCssBuild(import.meta);/* eslint-disable jsenv/no-unknown-params */
-const css$u = /* css */`
+const css$v = /* css */`
   @layer navi {
     .navi_text {
       &[data-skeleton] {
@@ -20601,7 +20679,7 @@ const shouldInjectSpacingBetween = (left, right) => {
 };
 const OverflowPinnedElementContext = createContext(null);
 const Text = props => {
-  import.meta.css = [css$u, "@jsenv/navi/src/text/text.jsx"];
+  import.meta.css = [css$v, "@jsenv/navi/src/text/text.jsx"];
   if (props.loading || props.skeleton) {
     return jsx(TextSkeleton, {
       ...props
@@ -20797,7 +20875,7 @@ const TextBasic = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$t = /* css */`
+installImportMetaCssBuild(import.meta);const css$u = /* css */`
   .navi_text_anchor {
     vertical-align: baseline;
     user-select: none;
@@ -20832,7 +20910,7 @@ const TextAnchor = ({
   textSize,
   lineLayout
 }) => {
-  import.meta.css = [css$t, "@jsenv/navi/src/text/text_anchor.jsx"];
+  import.meta.css = [css$u, "@jsenv/navi/src/text/text_anchor.jsx"];
   const anchorRef = useRef();
   useLayoutEffect(() => {
     const anchorEl = anchorRef.current;
@@ -20927,7 +21005,7 @@ const computeTopOffset = ({
 };
 const charTopCanvas = document.createElement("canvas");
 
-installImportMetaCssBuild(import.meta);const css$s = /* css */`
+installImportMetaCssBuild(import.meta);const css$t = /* css */`
   @layer navi {
     /* Ensure data attributes from box.jsx can win to update display */
     .navi_icon {
@@ -21000,7 +21078,7 @@ const Icon = ({
   lineLayout,
   ...props
 }) => {
-  import.meta.css = [css$s, "@jsenv/navi/src/text/icon.jsx"];
+  import.meta.css = [css$t, "@jsenv/navi/src/text/icon.jsx"];
   const innerChildren = href ? jsx("svg", {
     width: "100%",
     height: "100%",
@@ -21706,7 +21784,7 @@ const useUIState = (uiStateController) => {
 };
 
 installImportMetaCssBuild(import.meta);/* eslint-disable jsenv/no-unknown-params */
-const css$r = /* css */`
+const css$s = /* css */`
   @layer navi {
     .navi_button {
       --button-outline-width: 1px;
@@ -21972,7 +22050,7 @@ const css$r = /* css */`
   }
 `;
 const Button = props => {
-  import.meta.css = [css$r, "@jsenv/navi/src/field/button.jsx"];
+  import.meta.css = [css$s, "@jsenv/navi/src/field/button.jsx"];
   return renderActionableComponent(props, {
     Basic: ButtonBasicDispatch,
     WithAction: ButtonWithAction,
@@ -22504,7 +22582,7 @@ const useDimColorWhen = (elementRef, shouldDim) => {
 };
 
 installImportMetaCssBuild(import.meta);/* eslint-disable jsenv/no-unknown-params */
-const css$q = /* css */`
+const css$r = /* css */`
   @layer navi {
     .navi_link {
       --link-border-radius: unset;
@@ -22576,10 +22654,22 @@ const css$q = /* css */`
 
     position: relative;
     aspect-ratio: inherit;
-    padding-top: max(var(--x-link-padding-top), var(--link-loading-outline-size));
-    padding-right: max(var(--x-link-padding-right), var(--link-loading-outline-size));
-    padding-bottom: max(var(--x-link-padding-bottom), var(--link-loading-outline-size));
-    padding-left: max(var(--x-link-padding-left), var(--link-loading-outline-size));
+    padding-top: max(
+      var(--x-link-padding-top),
+      var(--link-loading-outline-size)
+    );
+    padding-right: max(
+      var(--x-link-padding-right),
+      var(--link-loading-outline-size)
+    );
+    padding-bottom: max(
+      var(--x-link-padding-bottom),
+      var(--link-loading-outline-size)
+    );
+    padding-left: max(
+      var(--x-link-padding-left),
+      var(--link-loading-outline-size)
+    );
     color: var(--x-link-color);
     text-decoration: var(--x-link-text-decoration);
     background: var(--x-link-background);
@@ -22846,13 +22936,10 @@ Object.assign(PSEUDO_CLASSES, {
   },
   ":-navi-href-current": {
     attribute: "data-href-current"
-  },
-  ":-navi-selected": {
-    attribute: "data-selected"
   }
 });
 const Link = props => {
-  import.meta.css = [css$q, "@jsenv/navi/src/nav/link/link.jsx"];
+  import.meta.css = [css$r, "@jsenv/navi/src/nav/link/link.jsx"];
   return renderActionableComponent(props, {
     Basic: LinkBasic,
     WithAction: LinkWithAction
@@ -23114,7 +23201,7 @@ installImportMetaCssBuild(import.meta);/**
  * TabList component with support for horizontal and vertical layouts
  * https://dribbble.com/search/tabs
  */
-const css$p = /* css */`
+const css$q = /* css */`
   @layer navi {
     .navi_nav {
       --nav-border: none;
@@ -23250,7 +23337,7 @@ const Nav = ({
   panelBorderConnection,
   ...props
 }) => {
-  import.meta.css = [css$p, "@jsenv/navi/src/nav/link/nav.jsx"];
+  import.meta.css = [css$q, "@jsenv/navi/src/nav/link/nav.jsx"];
   children = toChildArray(children);
   return jsx(Box, {
     as: "nav",
@@ -23298,7 +23385,7 @@ const useFocusGroup = (
 
 installImportMetaCssBuild(import.meta);const rightArrowPath = "M680-480L360-160l-80-80 240-240-240-240 80-80 320 320z";
 const downArrowPath = "M480-280L160-600l80-80 240 240 240-240 80 80-320 320z";
-const css$o = /* css */`
+const css$p = /* css */`
   .navi_summary_marker {
     width: 1em;
     height: 1em;
@@ -23383,7 +23470,7 @@ const SummaryMarker = ({
   open,
   loading
 }) => {
-  import.meta.css = [css$o, "@jsenv/navi/src/field/details/summary_marker.jsx"];
+  import.meta.css = [css$p, "@jsenv/navi/src/field/details/summary_marker.jsx"];
   const showLoading = useDebounceTrue(loading, 300);
   const mountedRef = useRef(false);
   const prevOpenRef = useRef(open);
@@ -23437,7 +23524,7 @@ const SummaryMarker = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$n = /* css */`
+installImportMetaCssBuild(import.meta);const css$o = /* css */`
   .navi_details {
     position: relative;
     z-index: 1;
@@ -23474,7 +23561,7 @@ installImportMetaCssBuild(import.meta);const css$n = /* css */`
   }
 `;
 const Details = props => {
-  import.meta.css = [css$n, "@jsenv/navi/src/field/details/details.jsx"];
+  import.meta.css = [css$o, "@jsenv/navi/src/field/details/details.jsx"];
   const {
     value = "on",
     persists
@@ -23789,7 +23876,7 @@ const fieldPropSet = new Set([
   "data-testid",
 ]);
 
-installImportMetaCssBuild(import.meta);const css$m = /* css */`
+installImportMetaCssBuild(import.meta);const css$n = /* css */`
   @layer navi {
     label {
       &[data-interactive] {
@@ -23821,7 +23908,7 @@ const reportDisabledToLabel = value => {
 };
 const LabelPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
 const Label = props => {
-  import.meta.css = [css$m, "@jsenv/navi/src/field/label.jsx"];
+  import.meta.css = [css$n, "@jsenv/navi/src/field/label.jsx"];
   const {
     readOnly,
     disabled,
@@ -23855,7 +23942,7 @@ const Label = props => {
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$l = /* css */`
+installImportMetaCssBuild(import.meta);const css$m = /* css */`
   @layer navi {
     .navi_checkbox {
       --margin: 3px 3px 3px 4px;
@@ -24182,7 +24269,7 @@ installImportMetaCssBuild(import.meta);const css$l = /* css */`
   }
 `;
 const InputCheckbox = props => {
-  import.meta.css = [css$l, "@jsenv/navi/src/field/input_checkbox.jsx"];
+  import.meta.css = [css$m, "@jsenv/navi/src/field/input_checkbox.jsx"];
   const {
     value = "on"
   } = props;
@@ -24596,7 +24683,7 @@ forwardRef((props, ref) => {
   });
 });
 
-installImportMetaCssBuild(import.meta);const css$k = /* css */`
+installImportMetaCssBuild(import.meta);const css$l = /* css */`
   @layer navi {
     .navi_radio {
       --margin: 3px 3px 0 5px;
@@ -24889,7 +24976,7 @@ installImportMetaCssBuild(import.meta);const css$k = /* css */`
   }
 `;
 const InputRadio = props => {
-  import.meta.css = [css$k, "@jsenv/navi/src/field/input_radio.jsx"];
+  import.meta.css = [css$l, "@jsenv/navi/src/field/input_radio.jsx"];
   const {
     value = "on"
   } = props;
@@ -25135,7 +25222,7 @@ const InputRadioWithAction = () => {
   throw new Error(`<Input type="radio" /> with an action make no sense. Use <RadioList action={something} /> instead`);
 };
 
-installImportMetaCssBuild(import.meta);const css$j = /* css */`
+installImportMetaCssBuild(import.meta);const css$k = /* css */`
   @layer navi {
     .navi_input_range {
       --border-radius: 6px;
@@ -25344,7 +25431,7 @@ installImportMetaCssBuild(import.meta);const css$j = /* css */`
   }
 `;
 const InputRange = props => {
-  import.meta.css = [css$j, "@jsenv/navi/src/field/input_range.jsx"];
+  import.meta.css = [css$k, "@jsenv/navi/src/field/input_range.jsx"];
   const uiStateController = useUIStateController(props, "input");
   const uiState = useUIState(uiStateController);
   const input = renderActionableComponent(props, {
@@ -25614,24 +25701,8 @@ const SearchSvg = () => jsx("svg", {
   })
 });
 
-installImportMetaCssBuild(import.meta);/**
- * Input component for all textual input types.
- *
- * Supports:
- * - text (default)
- * - password
- * - hidden
- * - email
- * - url
- * - search
- * - tel
- * - etc.
- *
- * For non-textual inputs, specialized components will be used:
- * - <InputCheckbox /> for type="checkbox"
- * - <InputRadio /> for type="radio"
- */
-const css$i = /* css */`
+installImportMetaCssBuild(import.meta);/* eslint-disable jsenv/no-unknown-params */
+const css$j = /* css */`
   @layer navi {
     .navi_input {
       --border-radius: 2px;
@@ -25843,7 +25914,7 @@ const css$i = /* css */`
   }
 `;
 const InputTextual = props => {
-  import.meta.css = [css$i, "@jsenv/navi/src/field/input_textual.jsx"];
+  import.meta.css = [css$j, "@jsenv/navi/src/field/input_textual.jsx"];
   const uiStateController = useUIStateController(props, "input");
   const uiState = useUIState(uiStateController);
   const input = renderActionableComponent(props, {
@@ -25916,6 +25987,197 @@ Object.assign(PSEUDO_CLASSES, {
 const InputPseudoElements = ["::-navi-loader"];
 const InputChildPropSet = new Set([...fieldPropSet]);
 const InputTextualBasic = props => {
+  if (props.combobox) {
+    return jsx(InputTextualCombobox, {
+      ...props
+    });
+  }
+  return jsx(InputTextualPlain, {
+    ...props
+  });
+};
+const InputTextualCombobox = ({
+  combobox,
+  onInput,
+  onFocus,
+  onBlur,
+  ...rest
+}) => {
+  const defaultRef = useRef();
+  const ref = rest.ref || defaultRef;
+  const [comboboxOpen, setComboboxOpen] = useState(false);
+  const comboboxOpenRef = useRef(false);
+  comboboxOpenRef.current = comboboxOpen;
+  const showPopover = e => {
+    if (comboboxOpenRef.current) {
+      return;
+    }
+    console.debug(`showPopover (e.type:${e.type})`);
+    const popoverEl = document.getElementById(combobox);
+    positionPopover();
+    popoverEl.showPopover();
+    comboboxOpenRef.current = true;
+    setComboboxOpen(true);
+    window.addEventListener("scroll", positionPopover, {
+      capture: true,
+      passive: true
+    });
+  };
+  const hidePopover = e => {
+    if (!comboboxOpenRef.current) {
+      return;
+    }
+    console.debug(`hidePopover (e.type:${e.type})`);
+    comboboxOpenRef.current = false;
+    setComboboxOpen(false);
+    window.removeEventListener("scroll", positionPopover, {
+      capture: true
+    });
+    const popoverEl = document.getElementById(combobox);
+    if (popoverEl) {
+      popoverEl.dispatchEvent(new CustomEvent("combobox-clear"));
+      popoverEl.hidePopover();
+    }
+    setComboboxOpen(false);
+  };
+  const positionPopover = () => {
+    const input = ref.current;
+    const rect = input.getBoundingClientRect();
+    const popoverEl = document.getElementById(combobox);
+    if (popoverEl) {
+      popoverEl.style.top = `${rect.bottom + 2}px`;
+      popoverEl.style.left = `${rect.left}px`;
+      popoverEl.style.width = `${rect.width}px`;
+    }
+  };
+  const dispatchToOptionList = customEvent => {
+    const popoverEl = document.getElementById(combobox);
+    if (!popoverEl) {
+      return false;
+    }
+    popoverEl.dispatchEvent(customEvent);
+    return customEvent.defaultPrevented;
+  };
+  useKeyboardShortcuts(ref, [{
+    key: "arrowdown",
+    description: "Open popover and highlight next option",
+    handler: e => {
+      showPopover(e);
+      const popoverEl = document.getElementById(combobox);
+      if (!popoverEl) {
+        return false;
+      }
+      popoverEl.dispatchEvent(new CustomEvent("combobox-navigate", {
+        detail: {
+          direction: "down"
+        }
+      }));
+      return true;
+    }
+  }, {
+    key: "arrowup",
+    description: "Open popover and highlight previous option",
+    handler: e => {
+      showPopover(e);
+      return dispatchToOptionList(new CustomEvent("combobox-navigate", {
+        detail: {
+          direction: "up"
+        }
+      }));
+    }
+  }, {
+    key: "home",
+    description: "Highlight first option",
+    handler: () => {
+      if (!comboboxOpenRef.current) {
+        return false;
+      }
+      return dispatchToOptionList(new CustomEvent("combobox-navigate", {
+        detail: {
+          direction: "first"
+        }
+      }));
+    }
+  }, {
+    key: "end",
+    description: "Highlight last option",
+    handler: () => {
+      if (!comboboxOpenRef.current) {
+        return false;
+      }
+      return dispatchToOptionList(new CustomEvent("combobox-navigate", {
+        detail: {
+          direction: "last"
+        }
+      }));
+    }
+  }, {
+    key: "enter",
+    description: "Confirm highlighted option",
+    handler: () => {
+      if (!comboboxOpenRef.current) {
+        return false;
+      }
+      return dispatchToOptionList(new CustomEvent("combobox-confirm", {
+        cancelable: true
+      }));
+    }
+  }, {
+    key: "escape",
+    description: "Close popover",
+    handler: e => {
+      if (!comboboxOpenRef.current) {
+        return false;
+      }
+      hidePopover(e);
+      return true;
+    }
+  }]);
+  useEffect(() => {
+    const inputEl = ref.current;
+    const popoverEl = document.getElementById(combobox);
+    if (!popoverEl) {
+      return undefined;
+    }
+    const onSelected = e => {
+      inputEl.value = e.detail.value;
+      inputEl.dispatchEvent(new Event("input", {
+        bubbles: true
+      }));
+      hidePopover(e);
+    };
+    popoverEl.addEventListener("combobox-selected", onSelected);
+    return () => {
+      popoverEl.removeEventListener("combobox-selected", onSelected);
+    };
+  }, [combobox]);
+  return jsx(InputTextualPlain, {
+    ref: ref,
+    role: "combobox",
+    autoComplete: "off",
+    "aria-controls": combobox,
+    "aria-haspopup": "listbox",
+    "aria-expanded": comboboxOpen,
+    "aria-autocomplete": "list",
+    onnavi_callout_open: e => {
+      hidePopover(e);
+    },
+    onFocus: e => {
+      onFocus?.(e);
+      showPopover(e);
+    },
+    onBlur: e => {
+      onBlur?.(e);
+      hidePopover(e);
+    },
+    onInput: e => {
+      onInput?.(e);
+      showPopover(e);
+    },
+    ...rest
+  });
+};
+const InputTextualPlain = props => {
   const contextReadOnly = useContext(ReadOnlyContext);
   const contextDisabled = useContext(DisabledContext);
   const contextLoading = useContext(LoadingContext);
@@ -26213,7 +26475,7 @@ installImportMetaCssBuild(import.meta);/**
  * This means an editable thing MUST have a parent with position relative that wraps the content and the eventual editable input
  *
  */
-const css$h = /* css */`
+const css$i = /* css */`
   .navi_editable_wrapper {
     --inset-top: 0px;
     --inset-right: 0px;
@@ -26262,7 +26524,7 @@ const useEditionController = () => {
   };
 };
 const Editable = props => {
-  import.meta.css = [css$h, "@jsenv/navi/src/field/edition/editable.jsx"];
+  import.meta.css = [css$i, "@jsenv/navi/src/field/edition/editable.jsx"];
   let {
     children,
     action,
@@ -26673,7 +26935,7 @@ const FormWithAction = props => {
 //   form.dispatchEvent(customEvent);
 // };
 
-installImportMetaCssBuild(import.meta);const css$g = /* css */`
+installImportMetaCssBuild(import.meta);const css$h = /* css */`
   .navi_group {
     --border-width: 1px;
 
@@ -26770,7 +27032,7 @@ const Group = ({
   vertical = row,
   ...props
 }) => {
-  import.meta.css = [css$g, "@jsenv/navi/src/field/group.jsx"];
+  import.meta.css = [css$h, "@jsenv/navi/src/field/group.jsx"];
   if (typeof borderWidth === "string") {
     borderWidth = parseFloat(borderWidth);
   }
@@ -26784,6 +27046,386 @@ const Group = ({
       "--border-width": borderWidthCssValue,
       ...props.style
     },
+    children: children
+  });
+};
+
+const createItemTracker = () => {
+  const ItemTrackerContext = createContext();
+  const useItemTrackerProvider = () => {
+    const itemsRef = useRef([]);
+    const items = itemsRef.current;
+    const itemCountRef = useRef(0);
+    const tracker = useMemo(() => {
+      const ItemTrackerProvider = ({
+        children
+      }) => {
+        // Reset on each render to start fresh
+        tracker.reset();
+        return jsx(ItemTrackerContext.Provider, {
+          value: tracker,
+          children: children
+        });
+      };
+      ItemTrackerProvider.items = items;
+      return {
+        ItemTrackerProvider,
+        items,
+        registerItem: data => {
+          const index = itemCountRef.current++;
+          items[index] = data;
+          return index;
+        },
+        getItem: index => {
+          return items[index];
+        },
+        getAllItems: () => {
+          return items;
+        },
+        reset: () => {
+          items.length = 0;
+          itemCountRef.current = 0;
+        }
+      };
+    }, []);
+    return tracker.ItemTrackerProvider;
+  };
+  const useTrackItem = data => {
+    const tracker = useContext(ItemTrackerContext);
+    if (!tracker) {
+      throw new Error("useTrackItem must be used within SimpleItemTrackerProvider");
+    }
+    return tracker.registerItem(data);
+  };
+  const useTrackedItem = index => {
+    const trackedItems = useTrackedItems();
+    const item = trackedItems[index];
+    return item;
+  };
+  const useTrackedItems = () => {
+    const tracker = useContext(ItemTrackerContext);
+    if (!tracker) {
+      throw new Error("useTrackedItems must be used within SimpleItemTrackerProvider");
+    }
+    return tracker.items;
+  };
+  return [useItemTrackerProvider, useTrackItem, useTrackedItem, useTrackedItems];
+};
+
+installImportMetaCssBuild(import.meta);const [useOptionItemTrackerProvider, useTrackOption] = createItemTracker();
+
+/**
+ * OptionList + Option: a composable accessible listbox.
+ *
+ * Usage:
+ *   <OptionList id="my-list" value={selected} onChange={setSelected}>
+ *     <Option value="a">Option A</Option>
+ *     <Option value="b">Option B</Option>
+ *   </OptionList>
+ *
+ * CSS vars on .navi_option_list:
+ *   --border-radius, --border-width, --border-color, --background-color, --max-height
+ *
+ * CSS vars on .navi_option:
+ *   --padding, --color, --background-color, --font-weight
+ *   --color-hover, --background-color-hover
+ *   --color-highlighted, --background-color-highlighted
+ *   --color-selected, --background-color-selected, --font-weight-selected
+ *   --color-highlighted-selected, --background-color-highlighted-selected
+ */
+
+const css$g = /* css */`
+  @layer navi {
+    .navi_option_list {
+      --border-radius: 4px;
+      --border-width: 1px;
+      --border-color: light-dark(#ccc, #555);
+      --background-color: light-dark(#fff, #1e1e1e);
+      --max-height: 220px;
+    }
+    .navi_option {
+      --padding: 8px 12px;
+      --color: inherit;
+      --background-color: transparent;
+      --font-weight: inherit;
+
+      /* Hover (mouse) */
+      --color-hover: var(--color);
+      --background-color-hover: light-dark(#f5f5f5, #2a2a2a);
+
+      /* Highlighted (keyboard navigation cursor) */
+      --color-highlighted: var(--color);
+      --background-color-highlighted: light-dark(#e8f0fe, #1c3a6e);
+
+      /* Selected */
+      --color-selected: light-dark(#1a73e8, #7baaf7);
+      --background-color-selected: light-dark(#e8f0fe, #1c3a6e);
+      --font-weight-selected: 500;
+
+      /* Highlighted + selected */
+      --color-highlighted-selected: var(--color-selected);
+      --background-color-highlighted-selected: light-dark(#d2e3fc, #174ea6);
+    }
+  }
+
+  .navi_option_list {
+    --x-border-radius: var(--border-radius);
+    --x-border-width: var(--border-width);
+    --x-border-color: var(--border-color);
+    --x-background-color: var(--background-color);
+    box-sizing: border-box;
+    max-height: var(--max-height);
+
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    background-color: var(--x-background-color);
+    border: var(--x-border-width) solid var(--x-border-color);
+    border-radius: var(--x-border-radius);
+    outline: none;
+    overflow-y: auto;
+
+    /* Popover reset — browser adds border, background, padding, margin by default */
+    &[popover] {
+      position: fixed;
+      inset: unset;
+      margin: 0;
+      padding: 0;
+      border: none;
+    }
+  }
+  .navi_option {
+    --x-color: var(--color);
+    --x-background-color: var(--background-color);
+    --x-font-weight: var(--font-weight);
+
+    padding: var(--padding);
+    color: var(--x-color);
+    font-weight: var(--x-font-weight);
+    background-color: var(--x-background-color);
+    cursor: pointer;
+    user-select: none;
+
+    &:hover {
+      --x-color: var(--color-hover);
+      --x-background-color: var(--background-color-hover);
+    }
+
+    &[data-highlighted] {
+      --x-color: var(--color-highlighted);
+      --x-background-color: var(--background-color-highlighted);
+    }
+
+    &[data-selected] {
+      --x-color: var(--color-selected);
+      --x-background-color: var(--background-color-selected);
+      --x-font-weight: var(--font-weight-selected);
+    }
+
+    &[data-highlighted][data-selected] {
+      --x-color: var(--color-highlighted-selected);
+      --x-background-color: var(--background-color-highlighted-selected);
+    }
+  }
+`;
+
+/**
+ * Context OptionList provides downward to its Option children.
+ */
+const OptionListContext = createContext(null);
+const OptionList = ({
+  popover,
+  onChange: onChangeProp,
+  children,
+  ...rest
+}) => {
+  import.meta.css = [css$g, "@jsenv/navi/src/field/option_list.jsx"];
+  const ItemTrackerProvider = useOptionItemTrackerProvider();
+  const [highlightedValue, setHighlightedValue] = useState(null);
+  const highlightedValueRef = useRef(null);
+  highlightedValueRef.current = highlightedValue;
+  const ownId = useId();
+  const id = rest.id ?? ownId;
+  const listRef = useRef(null);
+  const effectiveOnChange = popover ? value => {
+    onChangeProp?.(value);
+    listRef.current?.dispatchEvent(new CustomEvent("combobox-selected", {
+      detail: {
+        value
+      },
+      bubbles: true
+    }));
+  } : onChangeProp;
+  const onChangeRef = useRef(effectiveOnChange);
+  onChangeRef.current = effectiveOnChange;
+  const navigate = direction => {
+    const values = ItemTrackerProvider.items.filter(item => !item.hidden).map(item => item.value);
+    if (values.length === 0) {
+      return false;
+    }
+    const current = highlightedValueRef.current;
+    if (direction === "down") {
+      const idx = current === null ? -1 : values.indexOf(current);
+      setHighlightedValue(values[idx < values.length - 1 ? idx + 1 : idx]);
+    } else if (direction === "up") {
+      const idx = current === null ? -1 : values.indexOf(current);
+      setHighlightedValue(values[idx > 0 ? idx - 1 : 0]);
+    } else if (direction === "first") {
+      setHighlightedValue(values[0]);
+    } else if (direction === "last") {
+      setHighlightedValue(values[values.length - 1]);
+    }
+    return true;
+  };
+
+  // Listen for commands dispatched by a linked Input (combobox mode)
+  const noopRef = useRef(null);
+  useEffect(() => {
+    if (!popover || !listRef.current) {
+      return undefined;
+    }
+    const el = listRef.current;
+    const onNavigate = e => {
+      navigate(e.detail.direction);
+    };
+    const onConfirm = e => {
+      const current = highlightedValueRef.current;
+      if (current !== null) {
+        onChangeRef.current?.(current);
+        e.preventDefault();
+      }
+    };
+    const onClear = () => {
+      setHighlightedValue(null);
+    };
+    el.addEventListener("combobox-navigate", onNavigate);
+    el.addEventListener("combobox-confirm", onConfirm);
+    el.addEventListener("combobox-clear", onClear);
+    return () => {
+      el.removeEventListener("combobox-navigate", onNavigate);
+      el.removeEventListener("combobox-confirm", onConfirm);
+      el.removeEventListener("combobox-clear", onClear);
+    };
+  }, [popover]);
+  useKeyboardShortcuts(popover ? noopRef : listRef, [{
+    key: "arrowdown",
+    description: "Highlight next option",
+    handler: () => navigate("down")
+  }, {
+    key: "arrowup",
+    description: "Highlight previous option",
+    handler: () => navigate("up")
+  }, {
+    key: "home",
+    description: "Highlight first option",
+    handler: () => navigate("first")
+  }, {
+    key: "end",
+    description: "Highlight last option",
+    handler: () => navigate("last")
+  }, {
+    key: "enter",
+    description: "Select highlighted option",
+    handler: () => {
+      const current = highlightedValueRef.current;
+      if (current === null) {
+        return false;
+      }
+      onChangeRef.current?.(current);
+      return true;
+    }
+  }, {
+    key: "escape",
+    description: "Clear highlighted option",
+    handler: () => {
+      setHighlightedValue(null);
+      return true;
+    }
+  }]);
+  const optionListContext = {
+    highlightedValue,
+    setHighlightedValue,
+    onSelect: effectiveOnChange
+  };
+  return jsx(Box, {
+    as: "ul",
+    ref: listRef,
+    id: id,
+    role: "listbox",
+    tabIndex: popover ? -1 : 0,
+    popover: popover ? "manual" : undefined,
+    ...rest,
+    baseClassName: "navi_option_list",
+    children: jsx(OptionListContext.Provider, {
+      value: optionListContext,
+      children: jsx(ItemTrackerProvider, {
+        children: children
+      })
+    })
+  });
+};
+const OPTION_PSEUDO_CLASSES = [":-navi-highlighted", ":-navi-selected"];
+const Option = ({
+  value,
+  selected,
+  hidden,
+  children,
+  ...rest
+}) => {
+  import.meta.css = [css$g, "@jsenv/navi/src/field/option_list.jsx"];
+  const optionId = useId();
+  const id = rest.id || optionId;
+  useTrackOption({
+    value,
+    optionId: id,
+    hidden
+  });
+  const {
+    highlightedValue,
+    setHighlightedValue,
+    onSelect
+  } = useContext(OptionListContext);
+  const isHighlighted = highlightedValue === value;
+  const optionRef = useRef(null);
+  useEffect(() => {
+    const optionEl = optionRef.current;
+    if (isHighlighted && optionEl) {
+      optionEl.scrollIntoView({
+        block: "nearest"
+      });
+    }
+  }, [isHighlighted]);
+  return jsx(Box, {
+    as: "li",
+    ref: optionRef,
+    baseClassName: "navi_option",
+    id: optionId,
+    role: "option",
+    "aria-selected": selected,
+    "aria-hidden": hidden ? true : undefined,
+    hidden: hidden,
+    basePseudoState: {
+      ":-navi-highlighted": isHighlighted,
+      ":-navi-selected": selected
+    },
+    pseudoClasses: OPTION_PSEUDO_CLASSES,
+    onMouseEnter: () => {
+      if (!hidden) {
+        setHighlightedValue(value);
+      }
+    },
+    onMouseLeave: () => {
+      if (!hidden) {
+        setHighlightedValue(null);
+      }
+    },
+    onMouseDown: e => {
+      if (hidden || e.button !== 0) {
+        return;
+      }
+      onSelect?.(value);
+    },
+    ...rest,
     children: children
   });
 };
@@ -27258,6 +27900,131 @@ const filterTableSelection = (selection, predicate) => {
   return matching;
 };
 
+// https://github.com/reach/reach-ui/tree/b3d94d22811db6b5c0f272b9a7e2e3c1bb4699ae/packages/descendants
+// https://github.com/pacocoursey/use-descendants/tree/master
+
+const createIsolatedItemTracker = () => {
+  // Producer contexts (ref-based, no re-renders)
+  const ProducerTrackerContext = createContext();
+  const ProducerItemCountRefContext = createContext();
+  const ProducerListRenderIdContext = createContext();
+
+  // Consumer contexts (state-based, re-renders)
+  const ConsumerItemsContext = createContext();
+  const useIsolatedItemTrackerProvider = () => {
+    const itemsRef = useRef([]);
+    const items = itemsRef.current;
+    const itemCountRef = useRef();
+    const itemTracker = useMemo(() => {
+      // Snapshot taken by FlushSentinel after all producer children rendered.
+      // Consumers read from this — always up-to-date within the same render pass.
+      const itemsSnapshotRef = {
+        current: items
+      };
+      const registerItem = (index, value) => {
+        const hasValue = index in items;
+        if (hasValue) {
+          const currentValue = items[index];
+          if (compareTwoJsValues(currentValue, value)) {
+            return;
+          }
+        }
+        items[index] = value;
+      };
+      const getProducerItem = itemIndex => {
+        return items[itemIndex];
+      };
+      const ItemProducerProvider = ({
+        children
+      }) => {
+        items.length = 0;
+        itemCountRef.current = 0;
+        const listRenderId = {};
+        return jsx(ProducerItemCountRefContext.Provider, {
+          value: itemCountRef,
+          children: jsx(ProducerListRenderIdContext.Provider, {
+            value: listRenderId,
+            children: jsxs(ProducerTrackerContext.Provider, {
+              value: itemTracker,
+              children: [children, jsx(FlushSentinel, {})]
+            })
+          })
+        });
+      };
+
+      // Renders after all producer children (e.g. <Col>) have registered their
+      // items. Taking a snapshot here guarantees the consumer sees the correct
+      // item list within the same render pass, without any heuristic.
+      const FlushSentinel = () => {
+        itemsSnapshotRef.current = items;
+        return null;
+      };
+      const ItemConsumerProvider = ({
+        children
+      }) => {
+        // FlushSentinel (last child of ItemProducerProvider) already set
+        // itemsSnapshotRef.current to the up-to-date items array before any
+        // consumer rendered. Reading from the snapshot is always correct.
+        return jsx(ConsumerItemsContext.Provider, {
+          value: itemsSnapshotRef.current,
+          children: children
+        });
+      };
+      return {
+        registerItem,
+        getProducerItem,
+        ItemProducerProvider,
+        ItemConsumerProvider
+      };
+    }, []);
+    const {
+      ItemProducerProvider,
+      ItemConsumerProvider
+    } = itemTracker;
+    return [ItemProducerProvider, ItemConsumerProvider, items];
+  };
+
+  // Hook for producers to register items (ref-based, no re-renders)
+  const useTrackIsolatedItem = data => {
+    const listRenderId = useContext(ProducerListRenderIdContext);
+    const itemCountRef = useContext(ProducerItemCountRefContext);
+    const itemTracker = useContext(ProducerTrackerContext);
+    const listRenderIdRef = useRef();
+    const itemIndexRef = useRef();
+    const dataRef = useRef();
+    const prevListRenderId = listRenderIdRef.current;
+    if (prevListRenderId === listRenderId) {
+      const itemIndex = itemIndexRef.current;
+      itemTracker.registerItem(itemIndex, data);
+      dataRef.current = data;
+      return itemIndex;
+    }
+    listRenderIdRef.current = listRenderId;
+    const itemCount = itemCountRef.current;
+    const itemIndex = itemCount;
+    itemCountRef.current = itemIndex + 1;
+    itemIndexRef.current = itemIndex;
+    dataRef.current = data;
+    itemTracker.registerItem(itemIndex, data);
+    return itemIndex;
+  };
+  const useTrackedIsolatedItem = itemIndex => {
+    const items = useTrackedIsolatedItems();
+    const item = items[itemIndex];
+    return item;
+  };
+
+  // Hooks for consumers to read items (state-based, re-renders)
+  const useTrackedIsolatedItems = () => {
+    const consumerItems = useContext(ConsumerItemsContext);
+    if (!consumerItems) {
+      throw new Error("useTrackedIsolatedItems must be used within <ItemConsumerProvider />");
+    }
+    return consumerItems;
+  };
+  return [useIsolatedItemTrackerProvider, useTrackIsolatedItem, useTrackedIsolatedItem, useTrackedIsolatedItems];
+};
+
 const Z_INDEX_EDITING = 1; /* To go above neighbours, but should not be too big to stay under the sticky cells */
 
 /* needed because cell uses position:relative, sticky must win even if before in DOM order */
@@ -27712,193 +28479,6 @@ const createTableAttributeSync = (table, tableClone) => {
     });
   });
   return observer;
-};
-
-// https://github.com/reach/reach-ui/tree/b3d94d22811db6b5c0f272b9a7e2e3c1bb4699ae/packages/descendants
-// https://github.com/pacocoursey/use-descendants/tree/master
-
-const createIsolatedItemTracker = () => {
-  // Producer contexts (ref-based, no re-renders)
-  const ProducerTrackerContext = createContext();
-  const ProducerItemCountRefContext = createContext();
-  const ProducerListRenderIdContext = createContext();
-
-  // Consumer contexts (state-based, re-renders)
-  const ConsumerItemsContext = createContext();
-  const useIsolatedItemTrackerProvider = () => {
-    const itemsRef = useRef([]);
-    const items = itemsRef.current;
-    const itemCountRef = useRef();
-    const itemTracker = useMemo(() => {
-      // Snapshot taken by FlushSentinel after all producer children rendered.
-      // Consumers read from this — always up-to-date within the same render pass.
-      const itemsSnapshotRef = {
-        current: items
-      };
-      const registerItem = (index, value) => {
-        const hasValue = index in items;
-        if (hasValue) {
-          const currentValue = items[index];
-          if (compareTwoJsValues(currentValue, value)) {
-            return;
-          }
-        }
-        items[index] = value;
-      };
-      const getProducerItem = itemIndex => {
-        return items[itemIndex];
-      };
-      const ItemProducerProvider = ({
-        children
-      }) => {
-        items.length = 0;
-        itemCountRef.current = 0;
-        const listRenderId = {};
-        return jsx(ProducerItemCountRefContext.Provider, {
-          value: itemCountRef,
-          children: jsx(ProducerListRenderIdContext.Provider, {
-            value: listRenderId,
-            children: jsxs(ProducerTrackerContext.Provider, {
-              value: itemTracker,
-              children: [children, jsx(FlushSentinel, {})]
-            })
-          })
-        });
-      };
-
-      // Renders after all producer children (e.g. <Col>) have registered their
-      // items. Taking a snapshot here guarantees the consumer sees the correct
-      // item list within the same render pass, without any heuristic.
-      const FlushSentinel = () => {
-        itemsSnapshotRef.current = items;
-        return null;
-      };
-      const ItemConsumerProvider = ({
-        children
-      }) => {
-        // FlushSentinel (last child of ItemProducerProvider) already set
-        // itemsSnapshotRef.current to the up-to-date items array before any
-        // consumer rendered. Reading from the snapshot is always correct.
-        return jsx(ConsumerItemsContext.Provider, {
-          value: itemsSnapshotRef.current,
-          children: children
-        });
-      };
-      return {
-        registerItem,
-        getProducerItem,
-        ItemProducerProvider,
-        ItemConsumerProvider
-      };
-    }, []);
-    const {
-      ItemProducerProvider,
-      ItemConsumerProvider
-    } = itemTracker;
-    return [ItemProducerProvider, ItemConsumerProvider, items];
-  };
-
-  // Hook for producers to register items (ref-based, no re-renders)
-  const useTrackIsolatedItem = data => {
-    const listRenderId = useContext(ProducerListRenderIdContext);
-    const itemCountRef = useContext(ProducerItemCountRefContext);
-    const itemTracker = useContext(ProducerTrackerContext);
-    const listRenderIdRef = useRef();
-    const itemIndexRef = useRef();
-    const dataRef = useRef();
-    const prevListRenderId = listRenderIdRef.current;
-    if (prevListRenderId === listRenderId) {
-      const itemIndex = itemIndexRef.current;
-      itemTracker.registerItem(itemIndex, data);
-      dataRef.current = data;
-      return itemIndex;
-    }
-    listRenderIdRef.current = listRenderId;
-    const itemCount = itemCountRef.current;
-    const itemIndex = itemCount;
-    itemCountRef.current = itemIndex + 1;
-    itemIndexRef.current = itemIndex;
-    dataRef.current = data;
-    itemTracker.registerItem(itemIndex, data);
-    return itemIndex;
-  };
-  const useTrackedIsolatedItem = itemIndex => {
-    const items = useTrackedIsolatedItems();
-    const item = items[itemIndex];
-    return item;
-  };
-
-  // Hooks for consumers to read items (state-based, re-renders)
-  const useTrackedIsolatedItems = () => {
-    const consumerItems = useContext(ConsumerItemsContext);
-    if (!consumerItems) {
-      throw new Error("useTrackedIsolatedItems must be used within <ItemConsumerProvider />");
-    }
-    return consumerItems;
-  };
-  return [useIsolatedItemTrackerProvider, useTrackIsolatedItem, useTrackedIsolatedItem, useTrackedIsolatedItems];
-};
-
-const createItemTracker = () => {
-  const ItemTrackerContext = createContext();
-  const useItemTrackerProvider = () => {
-    const itemsRef = useRef([]);
-    const items = itemsRef.current;
-    const itemCountRef = useRef(0);
-    const tracker = useMemo(() => {
-      const ItemTrackerProvider = ({
-        children
-      }) => {
-        // Reset on each render to start fresh
-        tracker.reset();
-        return jsx(ItemTrackerContext.Provider, {
-          value: tracker,
-          children: children
-        });
-      };
-      ItemTrackerProvider.items = items;
-      return {
-        ItemTrackerProvider,
-        items,
-        registerItem: data => {
-          const index = itemCountRef.current++;
-          items[index] = data;
-          return index;
-        },
-        getItem: index => {
-          return items[index];
-        },
-        getAllItems: () => {
-          return items;
-        },
-        reset: () => {
-          items.length = 0;
-          itemCountRef.current = 0;
-        }
-      };
-    }, []);
-    return tracker.ItemTrackerProvider;
-  };
-  const useTrackItem = data => {
-    const tracker = useContext(ItemTrackerContext);
-    if (!tracker) {
-      throw new Error("useTrackItem must be used within SimpleItemTrackerProvider");
-    }
-    return tracker.registerItem(data);
-  };
-  const useTrackedItem = index => {
-    const trackedItems = useTrackedItems();
-    const item = trackedItems[index];
-    return item;
-  };
-  const useTrackedItems = () => {
-    const tracker = useContext(ItemTrackerContext);
-    if (!tracker) {
-      throw new Error("useTrackedItems must be used within SimpleItemTrackerProvider");
-    }
-    return tracker.items;
-  };
-  return [useItemTrackerProvider, useTrackItem, useTrackedItem, useTrackedItems];
 };
 
 const TableSizeContext = createContext();
@@ -32819,5 +33399,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, Box, Button, ButtonCopyToClipboard, Caption, CheckSvg, Checkbox, CheckboxList, CloseSvg, Code, Col, Colgroup, ConstructionSvg, Details, DialogLayout, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, Loading, MessageBox, Meter, Nav, Paragraph, Quantity, QuantityIntl, Radio, RadioList, Route, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectionContext, Separator, SettingsSvg, SidePanel, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, Thead, Title, Tr, UITransition, UserSvg, ViewportLayout, actionIntegratedVia, actionRunEffect, addCustomMessage, arraySignalMembership, compareTwoJsValues, createAction, createAvailableConstraint, createIntl, createRequestCanceller, createSelectionKeyboardShortcuts, enableDebugActions, enableDebugOnDocumentLoading, filterTableSelection, forwardActionRequested, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, localStorageSignal, navBack, navForward, navTo, openCallout, rawUrlPart, reload, removeCustomMessage, requestAction, rerunActions, resource, route, routeAction, setBaseUrl, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, syncOwnedResourceToSignals, syncResourceToSignals, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutClose, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDarkBackgroundAttribute, useDependenciesDiff, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState$1 as useNavState, useOrderedColumns, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSidePanelClose, useSignalSync, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage };
+export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, Box, Button, ButtonCopyToClipboard, Caption, CheckSvg, Checkbox, CheckboxList, CloseSvg, Code, Col, Colgroup, ConstructionSvg, Details, DialogLayout, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, Loading, MessageBox, Meter, Nav, Option, OptionList, Paragraph, Quantity, QuantityIntl, Radio, RadioList, Route, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectionContext, Separator, SettingsSvg, SidePanel, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, Thead, Title, Tr, UITransition, UserSvg, ViewportLayout, actionIntegratedVia, actionRunEffect, addCustomMessage, arraySignalMembership, compareTwoJsValues, createAction, createAvailableConstraint, createIntl, createRequestCanceller, createSelectionKeyboardShortcuts, enableDebugActions, enableDebugOnDocumentLoading, filterTableSelection, forwardActionRequested, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, localStorageSignal, navBack, navForward, navTo, openCallout, rawUrlPart, reload, removeCustomMessage, requestAction, rerunActions, resource, route, routeAction, setBaseUrl, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, syncOwnedResourceToSignals, syncResourceToSignals, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutClose, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDarkBackgroundAttribute, useDependenciesDiff, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState$1 as useNavState, useOrderedColumns, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSidePanelClose, useSignalSync, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage };
 //# sourceMappingURL=jsenv_navi.js.map

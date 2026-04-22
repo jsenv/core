@@ -605,7 +605,6 @@ const InputTextualPlain = (props) => {
   const innerOnInput = useStableCallback(onInput);
   const autoId = useId();
   const innerId = rest.id || autoId;
-  const { ...remainingRest } = remainingProps;
   const renderInput = (inputProps) => {
     return (
       <Box
@@ -684,7 +683,7 @@ const InputTextualPlain = (props) => {
       baseChildPropSet={InputChildPropSet}
       data-start-icon={innerIcon ? "" : undefined}
       data-end-icon={cancelButton ? "" : undefined}
-      {...remainingRest}
+      {...remainingProps}
       ref={undefined}
     >
       <LoaderBackground
