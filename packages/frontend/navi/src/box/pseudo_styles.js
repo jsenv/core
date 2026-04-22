@@ -299,6 +299,9 @@ export const PSEUDO_CLASSES = {
   ":-navi-highlighted": {
     attribute: "data-highlighted",
   },
+  ":-navi-selected": {
+    attribute: "data-selected",
+  },
   ":-navi-loading": {
     attribute: "data-loading",
   },

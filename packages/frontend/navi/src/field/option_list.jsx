@@ -112,13 +112,13 @@ const css = /* css */ `
       --x-background-color: var(--background-color-highlighted);
     }
 
-    &[aria-selected="true"] {
+    &[data-selected] {
       --x-color: var(--color-selected);
       --x-background-color: var(--background-color-selected);
       --x-font-weight: var(--font-weight-selected);
     }
 
-    &[data-highlighted][aria-selected="true"] {
+    &[data-highlighted][data-selected] {
       --x-color: var(--color-highlighted-selected);
       --x-background-color: var(--background-color-highlighted-selected);
     }
@@ -272,11 +272,10 @@ export const OptionList = ({
   );
 };
 
-const OPTION_PSEUDO_CLASSES = [":-navi-highlighted"];
+const OPTION_PSEUDO_CLASSES = [":-navi-highlighted", ":-navi-selected"];
 export const Option = ({ value, children, ...rest }) => {
   import.meta.css = css;
 
-  const optionId = useId();
   const {
     selectedValue,
     highlightedValue,
@@ -284,6 +283,7 @@ export const Option = ({ value, children, ...rest }) => {
     onSelect,
     register,
   } = useContext(OptionListContext);
+  const optionId = useId();
 
   useEffect(() => {
     return register(value);
@@ -301,15 +301,13 @@ export const Option = ({ value, children, ...rest }) => {
       aria-selected={isSelected}
       basePseudoState={{
         ":-navi-highlighted": isHighlighted,
+        ":-navi-selected": isSelected,
       }}
       pseudoClasses={OPTION_PSEUDO_CLASSES}
       onMouseEnter={() => setHighlightedValue(value)}
       onMouseLeave={() => setHighlightedValue(null)}
-      onMouseDown={(e) => {
-        e.preventDefault();
-        if (onSelect) {
-          onSelect(value);
-        }
+      onMouseDown={() => {
+        onSelect?.(value);
       }}
       {...rest}
     >
