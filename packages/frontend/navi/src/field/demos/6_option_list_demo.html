@@ -108,6 +108,7 @@
           <BasicDemo />
           <CustomRenderDemo />
           <ControlledDemo />
+          <CustomStyleDemo />
         </div>
       );
 
@@ -233,6 +234,45 @@
                 No results for "{filter}"
               </p>
             )}
+            <div className="value-display">{selected ?? ""}</div>
+          </div>
+        );
+      };
+
+      // --- 4. Custom styles via CSS vars ---
+
+      const CustomStyleDemo = () => {
+        const [selected, setSelected] = useState(null);
+        return (
+          <div className="demo-section">
+            <h2>Custom styles via CSS vars</h2>
+            <p>
+              The list and options have custom background/text colors, including
+              for pointed and highlighted states.
+            </p>
+            <OptionList
+              style={{
+                "--option-list-background-color": "#1a1a2e",
+                "--option-list-border-color": "#e94560",
+                "--option-color": "#eaeaea",
+                "--option-background-color": "transparent",
+                "--option-color-hover": "#fff",
+                "--option-background-color-hover": "#16213e",
+                "--option-color-pointed": "#1a1a2e",
+                "--option-background-color-pointed": "#e94560",
+                "--option-color-selected": "#e94560",
+                "--option-background-color-selected": "#16213e",
+                "--option-color-highlight": "#1a1a2e",
+                "--option-background-color-highlight": "#f5a623",
+              }}
+              onChange={setSelected}
+            >
+              {FRUITS.map((fruit) => (
+                <Option key={fruit} value={fruit} selected={selected === fruit}>
+                  {fruit}
+                </Option>
+              ))}
+            </OptionList>
             <div className="value-display">{selected ?? ""}</div>
           </div>
         );
