@@ -1,21 +1,18 @@
 {
   "name": "@jsenv/dom",
-  "version": "0.9.4",
+  "version": "0.9.5",
+  "type": "module",
   "description": "DOM utilities for writing frontend code",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
     "directory": "packages/frontend/dom"
   },
-  "license": "MIT",
   "author": {
     "name": "dmail",
     "email": "dmaillard06@gmail.com"
   },
-  "sideEffects": [
-    "./dist/jsenv_dom.js"
-  ],
-  "type": "module",
+  "license": "MIT",
   "exports": {
     ".": {
       "node": {
@@ -47,5 +44,8 @@
   },
   "publishConfig": {
     "access": "public"
-  }
+  },
+  "sideEffects": [
+    "./dist/jsenv_dom.js"
+  ]
 }

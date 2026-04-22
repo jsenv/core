@@ -422,6 +422,7 @@ const InputTextualCombobox = ({ combobox, ...rest }) => {
       key: "arrowdown",
       description: "Open popover and highlight next option",
       handler: () => {
+        debugger;
         showPopover();
         const popoverEl = document.getElementById(combobox);
         if (!popoverEl) {
