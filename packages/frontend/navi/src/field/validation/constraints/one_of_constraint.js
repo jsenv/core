@@ -30,6 +30,12 @@ export const ONE_OF_CONSTRAINT = {
     if (message) {
       return message;
     }
+    const visibleOptions = listEl.querySelectorAll(
+      "[role='option']:not([hidden])",
+    );
+    if (visibleOptions.length === 0) {
+      return `Aucune suggestion ne correspond à votre saisie.`;
+    }
     return `Veuillez choisir une valeur parmi les suggestions.`;
   },
 };
