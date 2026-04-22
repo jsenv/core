@@ -26,21 +26,23 @@ export const ONE_OF_CONSTRAINT = {
     if (allowedValues.has(fieldValue)) {
       return null;
     }
-    const message = field.getAttribute("data-one-of-message");
-    if (message) {
-      return message;
-    }
     const visibleOptions = listEl.querySelectorAll(
       "[role='option']:not([hidden])",
     );
-    if (visibleOptions.length === 0) {
-      return `Aucune suggestion ne correspond à votre saisie.`;
+    const isNoMatch = visibleOptions.length === 0;
+    const message = field.getAttribute("data-one-of-message");
+    const noMatchMessage = field.getAttribute("data-one-of-no-match-message");
+    if (isNoMatch) {
+      return (
+        noMatchMessage || `Aucune suggestion ne correspond à votre saisie.`
+      );
     }
-    return `Veuillez choisir une valeur parmi les suggestions.`;
+    return message || `Veuillez choisir une valeur parmi les suggestions.`;
   },
 };
 CONSTRAINT_ATTRIBUTE_SET.add("data-one-of");
 CONSTRAINT_ATTRIBUTE_SET.add("data-one-of-message");
+CONSTRAINT_ATTRIBUTE_SET.add("data-one-of-no-match-message");
 
 const collectAllowedValues = (listEl) => {
   const values = new Set();
