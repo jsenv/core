@@ -1,22 +1,18 @@
 {
   "name": "@jsenv/navi",
-  "version": "0.23.9",
+  "version": "0.24.0",
+  "type": "module",
   "description": "Library of components including navigation to create frontend applications",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
     "directory": "packages/frontend/navi"
   },
-  "license": "MIT",
   "author": {
     "name": "dmail",
     "email": "dmaillard06@gmail.com"
   },
-  "sideEffects": [
-    "./src/navi_css_vars.js",
-    "./dist/jsenv_navi_side_effects.js"
-  ],
-  "type": "module",
+  "license": "MIT",
   "exports": {
     ".": {
       "dev:jsenv": "./index.js",
@@ -49,5 +45,9 @@
   },
   "publishConfig": {
     "access": "public"
-  }
+  },
+  "sideEffects": [
+    "./src/navi_css_vars.js",
+    "./dist/jsenv_navi_side_effects.js"
+  ]
 }

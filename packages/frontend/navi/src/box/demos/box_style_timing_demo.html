@@ -1,0 +1,158 @@
+<!doctype html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Box Style Timing Demo</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useState, useLayoutEffect, useRef } from "preact/hooks";
+      import { Box } from "@jsenv/navi";
+
+      // Reads parent's backgroundColor once on mount ([] deps) in useLayoutEffect.
+      // This exposes whether the parent style is already applied when the child mounts.
+      const BgReader = ({ label }) => {
+        const ref = useRef();
+        const [readColor, setReadColor] = useState(null);
+
+        useLayoutEffect(() => {
+          const el = ref.current;
+          if (!el) {
+            return;
+          }
+          const parentBg = getComputedStyle(el.parentElement).backgroundColor;
+          setReadColor(parentBg);
+        }, []);
+
+        const swatch = readColor ? (
+          <span
+            title={readColor}
+            style={{
+              display: "inline-block",
+              width: "28px",
+              height: "28px",
+              borderRadius: "4px",
+              border: "1px solid rgba(0,0,0,0.25)",
+              backgroundColor: readColor,
+              verticalAlign: "middle",
+              marginRight: "6px",
+            }}
+          />
+        ) : null;
+
+        return (
+          <div
+            ref={ref}
+            style={{
+              padding: "8px 12px",
+              background: "rgba(255,255,255,0.6)",
+              borderRadius: "4px",
+              fontSize: "13px",
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+            }}
+          >
+            <span style={{ fontWeight: "bold" }}>{label}</span>
+            {swatch}
+            <span style={{ fontFamily: "monospace" }}>
+              {readColor ?? "(measuring…)"}
+            </span>
+          </div>
+        );
+      };
+
+      const COLORS = ["#ff6b6b", "#4dabf7", "#69db7c", "#ffd43b", "#da77f2"];
+
+      const Demo = () => {
+        const [colorIndex, setColorIndex] = useState(0);
+        const bg = COLORS[colorIndex];
+
+        return (
+          <div
+            style={{
+              fontFamily: "sans-serif",
+              padding: "24px",
+              display: "flex",
+              flexDirection: "column",
+              gap: "24px",
+            }}
+          >
+            <h2 style={{ margin: 0 }}>Box style timing test</h2>
+            <p style={{ margin: 0 }}>
+              The child reads{" "}
+              <code>getComputedStyle(parent).backgroundColor</code> in{" "}
+              <code>useLayoutEffect(fn, [])</code> (mount only).
+              <br />
+              If the parent style is applied <em>before</em> the child's layout
+              effect, the swatch matches the expected color.
+            </p>
+
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <button
+                onClick={() => setColorIndex((i) => (i + 1) % COLORS.length)}
+                style={{ padding: "6px 16px", cursor: "pointer" }}
+              >
+                Next color
+              </button>
+              <span>
+                Expected:{" "}
+                <span
+                  style={{
+                    display: "inline-block",
+                    width: "28px",
+                    height: "28px",
+                    borderRadius: "4px",
+                    border: "1px solid rgba(0,0,0,0.25)",
+                    backgroundColor: bg,
+                    verticalAlign: "middle",
+                    marginRight: "4px",
+                  }}
+                />
+                <span style={{ fontFamily: "monospace", fontWeight: "bold" }}>
+                  {bg}
+                </span>
+              </span>
+            </div>
+
+            <div style={{ display: "flex", gap: "24px" }}>
+              {/* Case 1: native Preact style prop — style is in the DOM before any useLayoutEffect */}
+              <div style={{ flex: 1 }}>
+                <h3 style={{ marginTop: 0 }}>
+                  Native Preact <code>style</code> prop
+                </h3>
+                <div
+                  style={{
+                    backgroundColor: bg,
+                    padding: "16px",
+                    borderRadius: "6px",
+                  }}
+                >
+                  <BgReader key={bg} label="Read on mount:" />
+                </div>
+              </div>
+
+              {/* Case 2: Box with its own style system — timing under test */}
+              <div style={{ flex: 1 }}>
+                <h3 style={{ marginTop: 0 }}>
+                  <code>{"<Box background>"}</code>
+                </h3>
+                <Box
+                  background={bg}
+                  style={{ padding: "16px", borderRadius: "6px" }}
+                >
+                  <BgReader key={bg} label="Read on mount:" />
+                </Box>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      render(<Demo />, document.getElementById("app"));
+    </script>
+  </body>
+</html>

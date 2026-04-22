@@ -22,11 +22,38 @@
  * ## Spacing & Sizing
  *
  * Props for margin, padding, gap, width, height, expand, shrink, and more.
+ *
+ * ## Pseudo-class Styles
+ *
+ * The `style` prop supports pseudo-class keys alongside regular CSS properties.
+ * This lets you express hover, focus, and custom interaction states in one object,
+ * without writing CSS or adding class names:
+ *
+ * ```jsx
+ * <Box
+ *   style={{
+ *     backgroundColor: "blue",
+ *     ":-navi:pressed": {
+ *       backgroundColor: "darkblue",
+ *     },
+ *     ":hover": {
+ *       backgroundColor: "lightblue",
+ *     },
+ *   }}
+ * />
+ * ```
+ *
+ * Styles are applied directly to the DOM (not via Preact's style prop) for two reasons:
+ * 1. **Pseudo-class support**: reacting to `:hover`, `:focus`, or custom states like
+ *    `:-navi:pressed` without re-rendering the component on every pseudo state change.
+ * 2. **Correct initial render**: pseudo-class state must be read from the DOM node at
+ *    mount time. Preact's style prop runs before the DOM exists, so the right initial
+ *    style can only be determined once the node is available.
  */
 
 import { normalizeStyles } from "@jsenv/dom";
 import { toChildArray } from "preact";
-import { useCallback, useContext, useLayoutEffect, useRef } from "preact/hooks";
+import { useContext, useRef } from "preact/hooks";
 
 import { withPropsClassName } from "../utils/with_props_class_name.js";
 import { BoxFlowContext } from "./box_flow_context.jsx";
@@ -43,6 +70,7 @@ import {
   PSEUDO_NAMED_STYLES_DEFAULT,
   PSEUDO_STATE_DEFAULT,
 } from "./pseudo_styles.js";
+import { useEarlyDOMEffect } from "./use_early_dom_effect.js";
 
 import.meta.css = /* css */ `
   [navi-box-flow="inline"] {
@@ -503,38 +531,24 @@ export const Box = (props) => {
       }
     }
 
-    const updateStyle = useCallback((state) => {
-      const boxEl = ref.current;
-      applyStyle(
-        boxEl,
-        boxStyles,
-        state,
-        boxPseudoNamedStyles,
-        preventInitialTransition,
-      );
-    }, styleDeps);
-    const finalStyleDeps = [pseudoStateSelector, innerPseudoState, updateStyle];
+    styleDeps.push(pseudoStateSelector, innerPseudoState);
     let innerPseudoClasses;
     if (pseudoClassesFromStyleSet.size) {
       innerPseudoClasses = [...pseudoClasses];
       if (pseudoClasses !== PSEUDO_CLASSES_DEFAULT) {
-        finalStyleDeps.push(...pseudoClasses);
+        styleDeps.push(...pseudoClasses);
       }
       for (const key of pseudoClassesFromStyleSet) {
         innerPseudoClasses.push(key);
-        finalStyleDeps.push(key);
+        styleDeps.push(key);
       }
     } else {
       innerPseudoClasses = pseudoClasses;
       if (pseudoClasses !== PSEUDO_CLASSES_DEFAULT) {
-        finalStyleDeps.push(...pseudoClasses);
+        styleDeps.push(...pseudoClasses);
       }
     }
-    useLayoutEffect(() => {
-      const boxEl = ref.current;
-      if (!boxEl) {
-        return null;
-      }
+    useEarlyDOMEffect((boxEl) => {
       const pseudoStateEl = pseudoStateSelector
         ? boxEl.querySelector(pseudoStateSelector)
         : boxEl;
@@ -544,12 +558,20 @@ export const Box = (props) => {
       return initPseudoStyles(pseudoStateEl, {
         pseudoClasses: innerPseudoClasses,
         pseudoState: innerPseudoState,
-        effect: updateStyle,
+        effect: (state) => {
+          applyStyle(
+            boxEl,
+            boxStyles,
+            state,
+            boxPseudoNamedStyles,
+            preventInitialTransition,
+          );
+        },
         elementToImpact: boxEl,
         elementListeningPseudoState:
           visualEl === pseudoStateEl ? null : visualEl,
       });
-    }, finalStyleDeps);
+    }, styleDeps);
   }
 
   // When hasChildFunction is used it means
