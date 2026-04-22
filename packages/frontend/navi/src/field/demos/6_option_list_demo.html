@@ -566,7 +566,20 @@
               onChange={setSelected}
               highlight={filter}
             >
-              <OptGroup label={`Matches (${matches.length})`}>
+              <OptGroup
+                label={
+                  <Box
+                    className="navi_opt_group_label"
+                    style={{
+                      color: "#1a6b2f",
+                      backgroundColor: "#e6f4ea",
+                      padding: "6px 12px 4px",
+                    }}
+                  >
+                    Matches ({matches.length})
+                  </Box>
+                }
+              >
                 {matches.map((item) => (
                   <Option key={item} value={item} selected={selected === item}>
                     {item}
@@ -574,7 +587,20 @@
                 ))}
               </OptGroup>
               {nonMatches.length > 0 && (
-                <OptGroup label={`No match (${nonMatches.length})`}>
+                <OptGroup
+                  label={
+                    <Box
+                      className="navi_opt_group_label"
+                      style={{
+                        color: "#7a3a00",
+                        backgroundColor: "#fdf0e0",
+                        padding: "6px 12px 4px",
+                      }}
+                    >
+                      No match ({nonMatches.length})
+                    </Box>
+                  }
+                >
                   {nonMatches.map((item) => (
                     <Option
                       key={item}

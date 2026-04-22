@@ -184,12 +184,6 @@ const OptionStyleCSSVars = {
     backgroundColor: "--option-background-color-highlight",
   },
 };
-const OptGroupLabelStyleCSSVars = {
-  padding: "--opt-group-label-padding",
-  color: "--opt-group-label-color",
-  fontSize: "--opt-group-label-font-size",
-  fontWeight: "--opt-group-label-font-weight",
-};
 
 /**
  * Context OptionList provides downward to its Option children.
@@ -454,16 +448,13 @@ export const OptGroup = ({ label, children, ...rest }) => {
   const groupId = useId();
   return (
     <li role="presentation" {...rest}>
-      <Box
-        as="span"
-        id={groupId}
-        role="presentation"
-        aria-hidden="true"
-        baseClassName="navi_opt_group_label"
-        styleCSSVars={OptGroupLabelStyleCSSVars}
-      >
-        {label}
-      </Box>
+      <span id={groupId} role="presentation" aria-hidden="true">
+        {typeof label === "string" ? (
+          <span className="navi_opt_group_label">{label}</span>
+        ) : (
+          label
+        )}
+      </span>
       <ul
         role="group"
         aria-labelledby={groupId}
