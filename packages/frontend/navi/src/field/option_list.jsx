@@ -25,6 +25,7 @@ const [useOptionItemTrackerProvider, useTrackOption] = createItemTracker();
  *   --color-pointed, --background-color-pointed
  *   --color-selected, --background-color-selected, --font-weight-selected
  *   --color-pointed-selected, --background-color-pointed-selected
+ *   --color-highlight, --background-color-highlight
  */
 
 const css = /* css */ `
@@ -55,7 +56,9 @@ const css = /* css */ `
       --background-color-selected: light-dark(#e8f0fe, #1c3a6e);
       --font-weight-selected: 500;
 
-      /* Pointed + selected */
+      /* Highlight (CSS Highlight API match) */
+      --color-highlight: inherit;
+      --background-color-highlight: #ffe066;
       --color-pointed-selected: var(--color-selected);
       --background-color-pointed-selected: light-dark(#d2e3fc, #174ea6);
     }
@@ -88,8 +91,8 @@ const css = /* css */ `
     }
   }
   ::highlight(navi-option-match) {
-    color: inherit;
-    background-color: var(--navi-option-highlight-color, #ffe066);
+    color: var(--color-highlight);
+    background-color: var(--background-color-highlight);
   }
   .navi_option {
     --x-color: var(--color);
@@ -125,6 +128,37 @@ const css = /* css */ `
     }
   }
 `;
+
+const OptionListStyleCSSVars = {
+  borderRadius: "--border-radius",
+  borderWidth: "--border-width",
+  borderColor: "--border-color",
+  backgroundColor: "--background-color",
+  maxHeight: "--max-height",
+};
+const OptionStyleCSSVars = {
+  "padding": "--padding",
+  "color": "--color",
+  "backgroundColor": "--background-color",
+  "fontWeight": "--font-weight",
+  ":-navi-pointed": {
+    color: "--color-pointed",
+    backgroundColor: "--background-color-pointed",
+  },
+  ":hover": {
+    color: "--color-hover",
+    backgroundColor: "--background-color-hover",
+  },
+  ":-navi-selected": {
+    color: "--color-selected",
+    backgroundColor: "--background-color-selected",
+    fontWeight: "--font-weight-selected",
+  },
+  ":highlight": {
+    color: "--color-highlight",
+    backgroundColor: "--background-color-highlight",
+  },
+};
 
 /**
  * Context OptionList provides downward to its Option children.
@@ -314,6 +348,7 @@ export const OptionList = ({
       popover={popover ? "manual" : undefined}
       {...rest}
       baseClassName="navi_option_list"
+      styleCSSVars={OptionListStyleCSSVars}
     >
       <OptionListContext.Provider value={optionListContext}>
         <ItemTrackerProvider>{children}</ItemTrackerProvider>
@@ -357,6 +392,7 @@ export const Option = ({ value, selected, hidden, children, ...rest }) => {
         ":-navi-selected": selected,
       }}
       pseudoClasses={OPTION_PSEUDO_CLASSES}
+      styleCSSVars={OptionStyleCSSVars}
       onMouseEnter={() => {
         if (!hidden) {
           setPointedValue(value);
