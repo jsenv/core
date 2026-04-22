@@ -521,11 +521,7 @@ export const Box = (props) => {
         styleDeps.push(...pseudoClasses);
       }
     }
-    useEarlyDOMEffect(() => {
-      const boxEl = ref.current;
-      if (!boxEl) {
-        return undefined;
-      }
+    useEarlyDOMEffect((boxEl) => {
       const pseudoStateEl = pseudoStateSelector
         ? boxEl.querySelector(pseudoStateSelector)
         : boxEl;
