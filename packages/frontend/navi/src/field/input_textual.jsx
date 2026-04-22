@@ -377,10 +377,11 @@ const InputTextualCombobox = ({
   const comboboxOpenRef = useRef(false);
   comboboxOpenRef.current = comboboxOpen;
 
-  const showPopover = () => {
+  const showPopover = (e) => {
     if (comboboxOpenRef.current) {
       return;
     }
+    console.debug(`showPopover (e.type:${e.type})`);
     const popoverEl = document.getElementById(combobox);
     positionPopover();
     popoverEl.showPopover();
@@ -391,10 +392,11 @@ const InputTextualCombobox = ({
     });
   };
 
-  const hidePopover = () => {
+  const hidePopover = (e) => {
     if (!comboboxOpenRef.current) {
       return;
     }
+    console.debug(`hidePopover (e.type:${e.type})`);
     window.removeEventListener("scroll", positionPopover, { capture: true });
     const popoverEl = document.getElementById(combobox);
     if (popoverEl) {
@@ -427,8 +429,8 @@ const InputTextualCombobox = ({
     {
       key: "arrowdown",
       description: "Open popover and highlight next option",
-      handler: () => {
-        showPopover();
+      handler: (e) => {
+        showPopover(e);
         const popoverEl = document.getElementById(combobox);
         if (!popoverEl) {
           return false;
@@ -444,8 +446,8 @@ const InputTextualCombobox = ({
     {
       key: "arrowup",
       description: "Open popover and highlight previous option",
-      handler: () => {
-        showPopover();
+      handler: (e) => {
+        showPopover(e);
         return dispatchToOptionList(
           new CustomEvent("combobox-navigate", {
             detail: { direction: "up" },
@@ -498,11 +500,11 @@ const InputTextualCombobox = ({
     {
       key: "escape",
       description: "Close popover",
-      handler: () => {
+      handler: (e) => {
         if (!comboboxOpenRef.current) {
           return false;
         }
-        hidePopover();
+        hidePopover(e);
         return true;
       },
     },
@@ -534,21 +536,20 @@ const InputTextualCombobox = ({
       aria-haspopup="listbox"
       aria-expanded={comboboxOpen}
       aria-autocomplete="list"
-      onnavi_callout_open={() => {
-        hidePopover();
+      onnavi_callout_open={(e) => {
+        hidePopover(e);
       }}
       onFocus={(e) => {
         onFocus?.(e);
-        showPopover();
-        console.log("show popover");
+        showPopover(e);
       }}
       onBlur={(e) => {
         onBlur?.(e);
-        hidePopover();
+        hidePopover(e);
       }}
       onInput={(e) => {
         onInput?.(e);
-        showPopover();
+        showPopover(e);
       }}
       {...rest}
     />

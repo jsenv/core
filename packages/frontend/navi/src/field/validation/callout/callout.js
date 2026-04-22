@@ -382,12 +382,14 @@ export const openCallout = (
 
     allowWheelThrough(calloutElement, anchorElement);
     anchorElement.setAttribute("data-callout", calloutId);
-    anchorElement.dispatchEvent(
+    dispatchCalloutCustomElement(
+      anchorElement,
       new CustomEvent("navi_callout_open", { bubbles: true }),
     );
     addTeardown(() => {
       anchorElement.removeAttribute("data-callout");
-      anchorElement.dispatchEvent(
+      dispatchCalloutCustomElement(
+        anchorElement,
         new CustomEvent("navi_callout_close", { bubbles: true }),
       );
     });
@@ -1089,4 +1091,21 @@ const generateSvgWithoutArrow = (width, height) => {
         ry="${Math.max(0, CORNER_RADIUS - BORDER_WIDTH)}"
       />
     </svg>`;
+};
+
+const dispatchCalloutCustomElement = (anchorElement, customEvent) => {
+  let targetElement;
+
+  const visualSelector = anchorElement.getAttribute("data-visual-selector");
+  if (visualSelector) {
+    const visualElement = anchorElement.querySelector(visualSelector);
+    if (visualElement) {
+      targetElement = visualElement;
+    }
+  } else {
+    targetElement = anchorElement;
+  }
+
+  console.log("dispatch on", targetElement, "event", customEvent);
+  targetElement.dispatchEvent(customEvent);
 };
