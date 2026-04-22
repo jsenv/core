@@ -12,14 +12,11 @@
       import { useState, useLayoutEffect, useRef } from "preact/hooks";
       import { Box } from "@jsenv/navi";
 
-      /**
-       * Child reads the computed background-color of its parent in useLayoutEffect.
-       * If Box applies its style BEFORE children's useLayoutEffect runs, the child
-       * will read the correct color. Otherwise it reads the old/default color.
-       */
-      const ColorReader = () => {
+      // Reads parent's backgroundColor once on mount ([] deps) in useLayoutEffect.
+      // This exposes whether the parent style is already applied when the child mounts.
+      const BgReader = ({ label }) => {
         const ref = useRef();
-        const [readColor, setReadColor] = useState("(not yet measured)");
+        const [readColor, setReadColor] = useState(null);
 
         useLayoutEffect(() => {
           const el = ref.current;
@@ -30,32 +27,39 @@
           setReadColor(parentBg);
         }, []);
 
+        const swatch = readColor ? (
+          <span
+            title={readColor}
+            style={{
+              display: "inline-block",
+              width: "28px",
+              height: "28px",
+              borderRadius: "4px",
+              border: "1px solid rgba(0,0,0,0.25)",
+              backgroundColor: readColor,
+              verticalAlign: "middle",
+              marginRight: "6px",
+            }}
+          />
+        ) : null;
+
         return (
           <div
             ref={ref}
             style={{
-              padding: "8px",
-              border: "1px dashed #999",
+              padding: "8px 12px",
+              background: "rgba(255,255,255,0.6)",
+              borderRadius: "4px",
+              fontSize: "13px",
               display: "flex",
               alignItems: "center",
-              gap: "10px",
+              gap: "6px",
             }}
           >
-            <strong>Parent backgroundColor read in useLayoutEffect:</strong>
-            <span
-              title={readColor}
-              style={{
-                display: "inline-block",
-                width: "32px",
-                height: "32px",
-                borderRadius: "4px",
-                border: "1px solid rgba(0,0,0,0.2)",
-                backgroundColor: readColor,
-                flexShrink: 0,
-              }}
-            />
-            <span style={{ fontFamily: "monospace", fontSize: "13px" }}>
-              {readColor}
+            <span style={{ fontWeight: "bold" }}>{label}</span>
+            {swatch}
+            <span style={{ fontFamily: "monospace" }}>
+              {readColor ?? "(measuring…)"}
             </span>
           </div>
         );
@@ -68,39 +72,82 @@
         const bg = COLORS[colorIndex];
 
         return (
-          <div style={{ fontFamily: "sans-serif", padding: "24px" }}>
-            <h2>Box style timing test</h2>
-            <p>
-              Click the button to change the Box background color. The child
-              reads the parent's computed background in its{" "}
-              <code>useLayoutEffect</code>. If the fix works, it always shows
-              the <strong>new</strong> color immediately.
+          <div
+            style={{
+              fontFamily: "sans-serif",
+              padding: "24px",
+              display: "flex",
+              flexDirection: "column",
+              gap: "24px",
+            }}
+          >
+            <h2 style={{ margin: 0 }}>Box style timing test</h2>
+            <p style={{ margin: 0 }}>
+              The child reads{" "}
+              <code>getComputedStyle(parent).backgroundColor</code> in{" "}
+              <code>useLayoutEffect(fn, [])</code> (mount only).
+              <br />
+              If the parent style is applied <em>before</em> the child's layout
+              effect, the swatch matches the expected color.
             </p>
 
-            <button
-              onClick={() => setColorIndex((i) => (i + 1) % COLORS.length)}
-              style={{
-                marginBottom: "16px",
-                padding: "6px 16px",
-                cursor: "pointer",
-              }}
-            >
-              Next color
-            </button>
-
-            <p>
-              Expected color:{" "}
-              <span style={{ fontFamily: "monospace", fontWeight: "bold" }}>
-                {bg}
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <button
+                onClick={() => setColorIndex((i) => (i + 1) % COLORS.length)}
+                style={{ padding: "6px 16px", cursor: "pointer" }}
+              >
+                Next color
+              </button>
+              <span>
+                Expected:{" "}
+                <span
+                  style={{
+                    display: "inline-block",
+                    width: "28px",
+                    height: "28px",
+                    borderRadius: "4px",
+                    border: "1px solid rgba(0,0,0,0.25)",
+                    backgroundColor: bg,
+                    verticalAlign: "middle",
+                    marginRight: "4px",
+                  }}
+                />
+                <span style={{ fontFamily: "monospace", fontWeight: "bold" }}>
+                  {bg}
+                </span>
               </span>
-            </p>
+            </div>
 
-            <Box
-              background={bg}
-              style={{ padding: "16px", borderRadius: "6px" }}
-            >
-              <ColorReader />
-            </Box>
+            <div style={{ display: "flex", gap: "24px" }}>
+              {/* Case 1: native Preact style prop — style is in the DOM before any useLayoutEffect */}
+              <div style={{ flex: 1 }}>
+                <h3 style={{ marginTop: 0 }}>
+                  Native Preact <code>style</code> prop
+                </h3>
+                <div
+                  style={{
+                    backgroundColor: bg,
+                    padding: "16px",
+                    borderRadius: "6px",
+                  }}
+                >
+                  <BgReader key={bg} label="Read on mount:" />
+                </div>
+              </div>
+
+              {/* Case 2: Box with its own style system — timing under test */}
+              <div style={{ flex: 1 }}>
+                <h3 style={{ marginTop: 0 }}>
+                  <code>{"<Box background>"}</code>
+                </h3>
+                <Box
+                  background={bg}
+                  style={{ padding: "16px", borderRadius: "6px" }}
+                >
+                  <BgReader key={bg} label="Read on mount:" />
+                </Box>
+              </div>
+            </div>
           </div>
         );
       };
