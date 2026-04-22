@@ -77,9 +77,23 @@
         const ref = useRef();
         // Apply style before any child's useLayoutEffect sees it.
         useApplyBeforeLayoutEffects(() => {
-          if (ref.current) {
-            ref.current.style.backgroundColor = background;
+          const el = ref.current;
+          if (!el) {
+            return undefined;
           }
+          el.style.backgroundColor = background;
+          const onMouseEnter = () => {
+            el.style.filter = "brightness(1.1)";
+          };
+          const onMouseLeave = () => {
+            el.style.filter = "";
+          };
+          el.addEventListener("mouseenter", onMouseEnter);
+          el.addEventListener("mouseleave", onMouseLeave);
+          return () => {
+            el.removeEventListener("mouseenter", onMouseEnter);
+            el.removeEventListener("mouseleave", onMouseLeave);
+          };
         });
         // Also keep useLayoutEffect for subsequent updates (when not mounting).
         useLayoutEffect(() => {
@@ -179,7 +193,13 @@
               />
             </div>
 
-            <div style={{ display: "flex", gap: "24px" }}>
+            <div
+              style={{
+                "display": "flex",
+                "flex-direction": "column",
+                "gap": "24px",
+              }}
+            >
               <div style={{ flex: 1 }}>
                 <h3 style={{ marginTop: 0 }}>
                   ❌ Broken — background in useLayoutEffect
