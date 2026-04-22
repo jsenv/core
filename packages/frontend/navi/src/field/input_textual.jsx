@@ -385,6 +385,7 @@ const InputTextualCombobox = ({
     const popoverEl = document.getElementById(combobox);
     positionPopover();
     popoverEl.showPopover();
+    comboboxOpenRef.current = true;
     setComboboxOpen(true);
     window.addEventListener("scroll", positionPopover, {
       capture: true,
@@ -397,6 +398,8 @@ const InputTextualCombobox = ({
       return;
     }
     console.debug(`hidePopover (e.type:${e.type})`);
+    comboboxOpenRef.current = false;
+    setComboboxOpen(false);
     window.removeEventListener("scroll", positionPopover, { capture: true });
     const popoverEl = document.getElementById(combobox);
     if (popoverEl) {
@@ -519,29 +522,13 @@ const InputTextualCombobox = ({
     const onSelected = (e) => {
       inputEl.value = e.detail.value;
       inputEl.dispatchEvent(new Event("input", { bubbles: true }));
-      hidePopover();
+      hidePopover(e);
     };
     popoverEl.addEventListener("combobox-selected", onSelected);
     return () => {
       popoverEl.removeEventListener("combobox-selected", onSelected);
     };
   }, [combobox]);
-
-  const onCalloutOpen = useCallback((e) => {
-    hidePopover(e);
-  }, []);
-  const onFocusLocal = useCallback((e) => {
-    onFocus?.(e);
-    showPopover(e);
-  }, []);
-  const onBlurLocal = useCallback((e) => {
-    onBlur?.(e);
-    hidePopover(e);
-  }, []);
-  const onInputLocal = useCallback((e) => {
-    onInput?.(e);
-    showPopover(e);
-  }, []);
 
   return (
     <InputTextualPlain
@@ -552,10 +539,21 @@ const InputTextualCombobox = ({
       aria-haspopup="listbox"
       aria-expanded={comboboxOpen}
       aria-autocomplete="list"
-      onnavi_callout_open={onCalloutOpen}
-      onFocus={onFocusLocal}
-      onBlur={onBlurLocal}
-      onInput={onInputLocal}
+      onnavi_callout_open={(e) => {
+        hidePopover(e);
+      }}
+      onFocus={(e) => {
+        onFocus?.(e);
+        showPopover(e);
+      }}
+      onBlur={(e) => {
+        onBlur?.(e);
+        hidePopover(e);
+      }}
+      onInput={(e) => {
+        onInput?.(e);
+        showPopover(e);
+      }}
       {...rest}
     />
   );
