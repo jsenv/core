@@ -25,7 +25,7 @@ import { renderIntoCallout } from "./callout.jsx";
  * - Centers in viewport when no anchor element provided or anchor is too big
  */
 
-import.meta.css = /* css */ `
+const css = /* css */ `
   @layer navi {
     .navi_callout {
       --callout-success-color: #4caf50;
@@ -202,6 +202,8 @@ export const openCallout = (
     debug = false,
   } = {},
 ) => {
+  import.meta.css = css;
+
   const callout = {
     opened: true,
     close: null,
