@@ -385,11 +385,11 @@ const InputTextualCombobox = ({ combobox, ...rest }) => {
       return;
     }
     const popoverEl = document.getElementById(combobox);
-    popoverEl.hidePopover();
-    setComboboxOpen(false);
-    if (controller) {
-      controller.clearHighlight();
+    if (popoverEl) {
+      popoverEl.dispatchEvent(new CustomEvent("combobox-clear"));
+      popoverEl.hidePopover();
     }
+    setComboboxOpen(false);
   };
   const positionPopover = () => {
     const input = ref.current;
@@ -404,35 +404,51 @@ const InputTextualCombobox = ({ combobox, ...rest }) => {
 
   useEffect(() => {
     const inputEl = ref.current;
-    const controller = getComboboxController(combobox);
+    const popoverEl = document.getElementById(combobox);
+    if (!popoverEl) {
+      return undefined;
+    }
 
     const onKeydown = (e) => {
       if (e.key === "ArrowDown") {
         e.preventDefault();
         showPopover();
-        if (controller) {
-          controller.navigate("down");
-        }
+        popoverEl.dispatchEvent(
+          new CustomEvent("combobox-navigate", {
+            detail: { direction: "down" },
+          }),
+        );
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
         showPopover();
-        if (controller) {
-          controller.navigate("up");
-        }
+        popoverEl.dispatchEvent(
+          new CustomEvent("combobox-navigate", { detail: { direction: "up" } }),
+        );
       } else if (e.key === "Home") {
-        if (comboboxOpenRef.current && controller) {
+        if (comboboxOpenRef.current) {
           e.preventDefault();
-          controller.navigate("first");
+          popoverEl.dispatchEvent(
+            new CustomEvent("combobox-navigate", {
+              detail: { direction: "first" },
+            }),
+          );
         }
       } else if (e.key === "End") {
-        if (comboboxOpenRef.current && controller) {
+        if (comboboxOpenRef.current) {
           e.preventDefault();
-          controller.navigate("last");
+          popoverEl.dispatchEvent(
+            new CustomEvent("combobox-navigate", {
+              detail: { direction: "last" },
+            }),
+          );
         }
       } else if (e.key === "Enter") {
-        if (comboboxOpenRef.current && controller) {
-          const selected = controller.selectHighlighted();
-          if (selected) {
+        if (comboboxOpenRef.current) {
+          const confirmEvent = new CustomEvent("combobox-confirm", {
+            cancelable: true,
+          });
+          popoverEl.dispatchEvent(confirmEvent);
+          if (confirmEvent.defaultPrevented) {
             e.preventDefault();
           }
         }
@@ -444,21 +460,18 @@ const InputTextualCombobox = ({ combobox, ...rest }) => {
       }
     };
 
-    if (controller) {
-      controller.onSelectRef.current = (value) => {
-        inputEl.value = value;
-        inputEl.dispatchEvent(new Event("input", { bubbles: true }));
-        hidePopover();
-      };
-    }
+    const onSelected = (e) => {
+      inputEl.value = e.detail.value;
+      inputEl.dispatchEvent(new Event("input", { bubbles: true }));
+      hidePopover();
+    };
 
     inputEl.addEventListener("keydown", onKeydown);
+    popoverEl.addEventListener("combobox-selected", onSelected);
 
     return () => {
       inputEl.removeEventListener("keydown", onKeydown);
-      if (controller) {
-        controller.onSelectRef.current = null;
-      }
+      popoverEl.removeEventListener("combobox-selected", onSelected);
     };
   }, [combobox]);
 

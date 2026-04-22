@@ -3,7 +3,6 @@ import { useContext, useEffect, useId, useRef, useState } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
 import { useKeyboardShortcuts } from "../keyboard/keyboard_shortcuts.js";
-import { registerComboboxController } from "./combobox_registry.js";
 
 /**
  * OptionList + Option: a composable accessible listbox.
@@ -194,15 +193,17 @@ export const OptionList = ({
   const ownId = useId();
   const listboxId = id ?? ownId;
 
-  // When popover mode, expose a ref that InputTextual sets its onSelect callback on
-  const comboboxOnSelectRef = useRef(null);
-
   const listRef = useRef(null);
-  // When popover mode, wrap onChange to also notify the linked Input
+  // When popover mode, dispatch a DOM event so the linked Input is notified
   const effectiveOnChange = popover
     ? (value) => {
         onChangeProp?.(value);
-        comboboxOnSelectRef.current?.(value);
+        listRef.current?.dispatchEvent(
+          new CustomEvent("combobox-selected", {
+            detail: { value },
+            bubbles: true,
+          }),
+        );
       }
     : onChange;
   const onChangeRef = useRef(effectiveOnChange);
@@ -219,48 +220,53 @@ export const OptionList = ({
     };
   };
 
-  // Register combobox controller in registry when used as popover
+  // Listen for commands dispatched by a linked Input (combobox mode)
   const noopRef = useRef(null);
   useEffect(() => {
-    if (!popover || !id) {
+    if (!popover || !listRef.current) {
       return undefined;
     }
-    const controller = {
-      navigate: (direction) => {
-        const values = registeredValuesRef.current;
-        if (values.length === 0) {
-          return;
-        }
-        const current = highlightedValueRef.current;
-        if (direction === "down") {
-          const idx = current === null ? -1 : values.indexOf(current);
-          const next = idx < values.length - 1 ? idx + 1 : idx;
-          setHighlightedValue(values[next]);
-        } else if (direction === "up") {
-          const idx = current === null ? -1 : values.indexOf(current);
-          const prev = idx > 0 ? idx - 1 : 0;
-          setHighlightedValue(values[prev]);
-        } else if (direction === "first") {
-          setHighlightedValue(values[0]);
-        } else if (direction === "last") {
-          setHighlightedValue(values[values.length - 1]);
-        }
-      },
-      selectHighlighted: () => {
-        const current = highlightedValueRef.current;
-        if (current === null) {
-          return false;
-        }
-        onChangeRef.current?.(current);
-        return true;
-      },
-      clearHighlight: () => {
-        setHighlightedValue(null);
-      },
-      onSelectRef: comboboxOnSelectRef,
+    const el = listRef.current;
+    const onNavigate = (e) => {
+      const { direction } = e.detail;
+      const values = registeredValuesRef.current;
+      if (values.length === 0) {
+        return;
+      }
+      const current = highlightedValueRef.current;
+      if (direction === "down") {
+        const idx = current === null ? -1 : values.indexOf(current);
+        const next = idx < values.length - 1 ? idx + 1 : idx;
+        setHighlightedValue(values[next]);
+      } else if (direction === "up") {
+        const idx = current === null ? -1 : values.indexOf(current);
+        const prev = idx > 0 ? idx - 1 : 0;
+        setHighlightedValue(values[prev]);
+      } else if (direction === "first") {
+        setHighlightedValue(values[0]);
+      } else if (direction === "last") {
+        setHighlightedValue(values[values.length - 1]);
+      }
     };
-    return registerComboboxController(id, controller);
-  }, [id, popover]);
+    const onConfirm = (e) => {
+      const current = highlightedValueRef.current;
+      if (current !== null) {
+        onChangeRef.current?.(current);
+        e.preventDefault();
+      }
+    };
+    const onClear = () => {
+      setHighlightedValue(null);
+    };
+    el.addEventListener("combobox-navigate", onNavigate);
+    el.addEventListener("combobox-confirm", onConfirm);
+    el.addEventListener("combobox-clear", onClear);
+    return () => {
+      el.removeEventListener("combobox-navigate", onNavigate);
+      el.removeEventListener("combobox-confirm", onConfirm);
+      el.removeEventListener("combobox-clear", onClear);
+    };
+  }, [popover]);
 
   // Scroll highlighted option into view
   useEffect(() => {
