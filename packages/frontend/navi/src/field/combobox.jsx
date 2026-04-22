@@ -28,8 +28,6 @@ import { OptionListControllerContext } from "./option_list.jsx";
  * Keyboard navigation (ArrowDown/Up, Home, End, Enter, Escape) works from the input.
  */
 
-export const ComboBoxContext = createContext(null);
-
 const comboBoxCss = /* css */ `
   @layer navi {
     .navi_combobox {
@@ -56,6 +54,7 @@ const comboBoxCss = /* css */ `
   }
 `;
 
+const ComboBoxContext = createContext(null);
 export const ComboBox = ({ children, ...rest }) => {
   import.meta.css = comboBoxCss;
 
@@ -121,14 +120,20 @@ export const ComboBox = ({ children, ...rest }) => {
     registeredIdsRef,
   };
 
+  const childArray = toChildArray(children);
+  const [inputChild, ...dropdownChildren] = childArray;
+
   return (
-    <ComboBoxContext.Provider value={context}>
-      <OptionListControllerContext.Provider value={optionListController}>
-        <div ref={containerRef} className="navi_combobox" {...rest}>
-          <ComboBoxDropdownSplit>{children}</ComboBoxDropdownSplit>
-        </div>
-      </OptionListControllerContext.Provider>
-    </ComboBoxContext.Provider>
+    <div ref={containerRef} className="navi_combobox" {...rest}>
+      <ComboBoxContext.Provider value={context}>
+        {inputChild}
+        <ComboBoxDropdown>
+          <OptionListControllerContext.Provider value={optionListController}>
+            {dropdownChildren}
+          </OptionListControllerContext.Provider>
+        </ComboBoxDropdown>
+      </ComboBoxContext.Provider>
+    </div>
   );
 };
 
@@ -257,18 +262,6 @@ export const ComboBoxInput = ({
       onKeyDown={handleKeyDown}
       {...rest}
     />
-  );
-};
-
-// Renders first child inline (the input), wraps remaining children in a ComboBoxDropdown.
-const ComboBoxDropdownSplit = ({ children }) => {
-  const childArray = toChildArray(children);
-  const [inputChild, ...dropdownChildren] = childArray;
-  return (
-    <>
-      {inputChild}
-      <ComboBoxDropdown>{dropdownChildren}</ComboBoxDropdown>
-    </>
   );
 };
 
