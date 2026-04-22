@@ -296,8 +296,8 @@ export const PSEUDO_CLASSES = {
     attribute: "data-invalid",
     test: (el) => el.matches(":invalid"),
   },
-  ":-navi-highlighted": {
-    attribute: "data-highlighted",
+  ":-navi-pointed": {
+    attribute: "data-pointed",
   },
   ":-navi-selected": {
     attribute: "data-selected",

@@ -22,9 +22,9 @@ const [useOptionItemTrackerProvider, useTrackOption] = createItemTracker();
  * CSS vars on .navi_option:
  *   --padding, --color, --background-color, --font-weight
  *   --color-hover, --background-color-hover
- *   --color-highlighted, --background-color-highlighted
+ *   --color-pointed, --background-color-pointed
  *   --color-selected, --background-color-selected, --font-weight-selected
- *   --color-highlighted-selected, --background-color-highlighted-selected
+ *   --color-pointed-selected, --background-color-pointed-selected
  */
 
 const css = /* css */ `
@@ -46,18 +46,18 @@ const css = /* css */ `
       --color-hover: var(--color);
       --background-color-hover: light-dark(#f5f5f5, #2a2a2a);
 
-      /* Highlighted (keyboard navigation cursor) */
-      --color-highlighted: var(--color);
-      --background-color-highlighted: light-dark(#e8f0fe, #1c3a6e);
+      /* Pointed (keyboard navigation position) */
+      --color-pointed: var(--color);
+      --background-color-pointed: light-dark(#e8f0fe, #1c3a6e);
 
       /* Selected */
       --color-selected: light-dark(#1a73e8, #7baaf7);
       --background-color-selected: light-dark(#e8f0fe, #1c3a6e);
       --font-weight-selected: 500;
 
-      /* Highlighted + selected */
-      --color-highlighted-selected: var(--color-selected);
-      --background-color-highlighted-selected: light-dark(#d2e3fc, #174ea6);
+      /* Pointed + selected */
+      --color-pointed-selected: var(--color-selected);
+      --background-color-pointed-selected: light-dark(#d2e3fc, #174ea6);
     }
   }
 
@@ -108,9 +108,9 @@ const css = /* css */ `
       --x-background-color: var(--background-color-hover);
     }
 
-    &[data-highlighted] {
-      --x-color: var(--color-highlighted);
-      --x-background-color: var(--background-color-highlighted);
+    &[data-pointed] {
+      --x-color: var(--color-pointed);
+      --x-background-color: var(--background-color-pointed);
     }
 
     &[data-selected] {
@@ -119,9 +119,9 @@ const css = /* css */ `
       --x-font-weight: var(--font-weight-selected);
     }
 
-    &[data-highlighted][data-selected] {
-      --x-color: var(--color-highlighted-selected);
-      --x-background-color: var(--background-color-highlighted-selected);
+    &[data-pointed][data-selected] {
+      --x-color: var(--color-pointed-selected);
+      --x-background-color: var(--background-color-pointed-selected);
     }
   }
 `;
@@ -140,9 +140,9 @@ export const OptionList = ({
   import.meta.css = css;
 
   const ItemTrackerProvider = useOptionItemTrackerProvider();
-  const [highlightedValue, setHighlightedValue] = useState(null);
-  const highlightedValueRef = useRef(null);
-  highlightedValueRef.current = highlightedValue;
+  const [pointedValue, setPointedValue] = useState(null);
+  const pointedValueRef = useRef(null);
+  pointedValueRef.current = pointedValue;
 
   const ownId = useId();
   const id = rest.id ?? ownId;
@@ -210,17 +210,17 @@ export const OptionList = ({
     if (values.length === 0) {
       return false;
     }
-    const current = highlightedValueRef.current;
+    const current = pointedValueRef.current;
     if (direction === "down") {
       const idx = current === null ? -1 : values.indexOf(current);
-      setHighlightedValue(values[idx < values.length - 1 ? idx + 1 : idx]);
+      setPointedValue(values[idx < values.length - 1 ? idx + 1 : idx]);
     } else if (direction === "up") {
       const idx = current === null ? -1 : values.indexOf(current);
-      setHighlightedValue(values[idx > 0 ? idx - 1 : 0]);
+      setPointedValue(values[idx > 0 ? idx - 1 : 0]);
     } else if (direction === "first") {
-      setHighlightedValue(values[0]);
+      setPointedValue(values[0]);
     } else if (direction === "last") {
-      setHighlightedValue(values[values.length - 1]);
+      setPointedValue(values[values.length - 1]);
     }
     return true;
   };
@@ -236,14 +236,14 @@ export const OptionList = ({
       navigate(e.detail.direction);
     };
     const onConfirm = (e) => {
-      const current = highlightedValueRef.current;
+      const current = pointedValueRef.current;
       if (current !== null) {
         onChangeRef.current?.(current);
         e.preventDefault();
       }
     };
     const onClear = () => {
-      setHighlightedValue(null);
+      setPointedValue(null);
     };
     el.addEventListener("combobox-navigate", onNavigate);
     el.addEventListener("combobox-confirm", onConfirm);
@@ -278,9 +278,9 @@ export const OptionList = ({
     },
     {
       key: "enter",
-      description: "Select highlighted option",
+      description: "Select option at pointer",
       handler: () => {
-        const current = highlightedValueRef.current;
+        const current = pointedValueRef.current;
         if (current === null) {
           return false;
         }
@@ -290,17 +290,17 @@ export const OptionList = ({
     },
     {
       key: "escape",
-      description: "Clear highlighted option",
+      description: "Clear pointed option",
       handler: () => {
-        setHighlightedValue(null);
+        setPointedValue(null);
         return true;
       },
     },
   ]);
 
   const optionListContext = {
-    highlightedValue,
-    setHighlightedValue,
+    pointedValue,
+    setPointedValue,
     onSelect: effectiveOnChange,
   };
 
@@ -322,25 +322,25 @@ export const OptionList = ({
   );
 };
 
-const OPTION_PSEUDO_CLASSES = [":-navi-highlighted", ":-navi-selected"];
+const OPTION_PSEUDO_CLASSES = [":-navi-pointed", ":-navi-selected"];
 export const Option = ({ value, selected, hidden, children, ...rest }) => {
   import.meta.css = css;
 
   const optionId = useId();
   const id = rest.id || optionId;
   useTrackOption({ value, optionId: id, hidden });
-  const { highlightedValue, setHighlightedValue, onSelect } =
+  const { pointedValue, setPointedValue, onSelect } =
     useContext(OptionListContext);
 
-  const isHighlighted = highlightedValue === value;
+  const isPointed = pointedValue === value;
   const optionRef = useRef(null);
 
   useEffect(() => {
     const optionEl = optionRef.current;
-    if (isHighlighted && optionEl) {
+    if (isPointed && optionEl) {
       optionEl.scrollIntoView({ block: "nearest" });
     }
-  }, [isHighlighted]);
+  }, [isPointed]);
 
   return (
     <Box
@@ -353,18 +353,18 @@ export const Option = ({ value, selected, hidden, children, ...rest }) => {
       aria-hidden={hidden ? true : undefined}
       hidden={hidden}
       basePseudoState={{
-        ":-navi-highlighted": isHighlighted,
+        ":-navi-pointed": isPointed,
         ":-navi-selected": selected,
       }}
       pseudoClasses={OPTION_PSEUDO_CLASSES}
       onMouseEnter={() => {
         if (!hidden) {
-          setHighlightedValue(value);
+          setPointedValue(value);
         }
       }}
       onMouseLeave={() => {
         if (!hidden) {
-          setHighlightedValue(null);
+          setPointedValue(null);
         }
       }}
       onMouseDown={(e) => {

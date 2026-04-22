@@ -431,7 +431,7 @@ const InputTextualCombobox = ({
   useKeyboardShortcuts(ref, [
     {
       key: "arrowdown",
-      description: "Open popover and highlight next option",
+      description: "Open popover and point to next option",
       handler: (e) => {
         showPopover(e);
         const popoverEl = document.getElementById(combobox);
@@ -448,7 +448,7 @@ const InputTextualCombobox = ({
     },
     {
       key: "arrowup",
-      description: "Open popover and highlight previous option",
+      description: "Open popover and point to previous option",
       handler: (e) => {
         showPopover(e);
         return dispatchToOptionList(
@@ -460,7 +460,7 @@ const InputTextualCombobox = ({
     },
     {
       key: "home",
-      description: "Highlight first option",
+      description: "Point to first option",
       handler: () => {
         if (!comboboxOpenRef.current) {
           return false;
@@ -474,7 +474,7 @@ const InputTextualCombobox = ({
     },
     {
       key: "end",
-      description: "Highlight last option",
+      description: "Point to last option",
       handler: () => {
         if (!comboboxOpenRef.current) {
           return false;
@@ -488,7 +488,7 @@ const InputTextualCombobox = ({
     },
     {
       key: "enter",
-      description: "Confirm highlighted option",
+      description: "Confirm pointed option",
       handler: () => {
         if (!comboboxOpenRef.current) {
           return false;
