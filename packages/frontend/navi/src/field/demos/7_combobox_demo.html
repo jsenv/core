@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ComboBox Demo</title>
+    <style>
+      body {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: #f5f5f5;
+      }
+
+      h1 {
+        margin-bottom: 30px;
+        color: #333;
+        font-size: 2rem;
+        text-align: center;
+      }
+
+      .demo-section {
+        margin-bottom: 40px;
+        padding: 20px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      .demo-section h2 {
+        margin: 0 0 16px 0;
+        padding-bottom: 10px;
+        color: #333;
+        font-size: 1.4rem;
+        border-bottom: 2px solid #ddd;
+      }
+
+      .demo-section p {
+        margin: 0 0 16px 0;
+        color: #555;
+        font-size: 0.95rem;
+      }
+
+      .value-display {
+        min-height: 20px;
+        margin-top: 12px;
+        padding: 8px;
+        font-size: 0.85rem;
+        font-family: monospace;
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+      }
+
+      .value-display:empty::before {
+        color: #999;
+        font-style: italic;
+        content: "(none selected)";
+      }
+
+      .option-secondary {
+        margin-left: 8px;
+        color: #888;
+        font-size: 0.85em;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>ComboBox Demo</h1>
+    <div id="root"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useState } from "preact/hooks";
+      import { ComboBox, ComboBoxInput } from "../input_combobox.jsx";
+      import { Option, OptionList } from "../option_list.jsx";
+
+      const FRUITS = [
+        "Apple",
+        "Apricot",
+        "Banana",
+        "Blueberry",
+        "Cherry",
+        "Grape",
+        "Kiwi",
+        "Lemon",
+        "Mango",
+        "Orange",
+        "Peach",
+        "Pear",
+        "Pineapple",
+        "Raspberry",
+        "Strawberry",
+        "Watermelon",
+      ];
+
+      const COUNTRIES = [
+        { code: "au", name: "Australia", region: "Oceania" },
+        { code: "br", name: "Brazil", region: "South America" },
+        { code: "cn", name: "China", region: "Asia" },
+        { code: "fr", name: "France", region: "Europe" },
+        { code: "de", name: "Germany", region: "Europe" },
+        { code: "in", name: "India", region: "Asia" },
+        { code: "jp", name: "Japan", region: "Asia" },
+        { code: "mx", name: "Mexico", region: "North America" },
+        { code: "us", name: "United States", region: "North America" },
+        { code: "za", name: "South Africa", region: "Africa" },
+      ];
+
+      const App = () => (
+        <div>
+          <BasicDemo />
+          <CustomRenderDemo />
+        </div>
+      );
+
+      // --- 1. Simple string combobox ---
+
+      const BasicDemo = () => {
+        const [selected, setSelected] = useState(null);
+        const [query, setQuery] = useState("");
+
+        const filtered = FRUITS.filter((f) =>
+          f.toLowerCase().includes(query.toLowerCase()),
+        );
+
+        return (
+          <div className="demo-section">
+            <h2>Basic combobox — strings</h2>
+            <p>
+              Type to filter. Arrow keys navigate, Enter selects, Escape closes.
+              Clicking outside closes.
+            </p>
+            <ComboBox value={selected} onChange={setSelected}>
+              <ComboBoxInput
+                placeholder="Search a fruit…"
+                value={selected ?? query}
+                onInput={(e) => {
+                  setQuery(e.target.value);
+                  if (!e.target.value) {
+                    setSelected(null);
+                  }
+                }}
+              />
+              <OptionList class="navi_combobox_dropdown" style={{ "--max-height": "220px" }}>
+                  <Option key={fruit} value={fruit}>
+                    {fruit}
+                  </Option>
+                ))}
+              </OptionList>
+            </ComboBox>
+            <div className="value-display">{selected ?? ""}</div>
+          </div>
+        );
+      };
+
+      // --- 2. Custom option render (countries) ---
+
+      const CustomRenderDemo = () => {
+        const [selected, setSelected] = useState(null);
+        const [query, setQuery] = useState("");
+
+        const filtered = COUNTRIES.filter(
+          (c) =>
+            c.name.toLowerCase().includes(query.toLowerCase()) ||
+            c.region.toLowerCase().includes(query.toLowerCase()),
+        );
+
+        const selectedCountry = COUNTRIES.find((c) => c.code === selected);
+
+        return (
+          <div className="demo-section">
+            <h2>Custom option content — countries</h2>
+            <p>
+              Filter by country name or region (try "asia" or "europe"). Each
+              option shows the region.
+            </p>
+            <ComboBox value={selected} onChange={setSelected}>
+              <ComboBoxInput
+                placeholder="Search a country…"
+                value={selectedCountry ? selectedCountry.name : query}
+                onInput={(e) => {
+                  setQuery(e.target.value);
+                  if (!e.target.value) {
+                    setSelected(null);
+                  }
+                }}
+              />
+              <OptionList class="navi_combobox_dropdown" style={{ "--max-height": "220px" }}>
+                  <Option key={country.code} value={country.code}>
+                    <span style={{ fontWeight: 500 }}>{country.name}</span>
+                    <span className="option-secondary">{country.region}</span>
+                  </Option>
+                ))}
+              </OptionList>
+            </ComboBox>
+            <div className="value-display">
+              {selectedCountry
+                ? `${selectedCountry.name} (${selectedCountry.code}) — ${selectedCountry.region}`
+                : ""}
+            </div>
+          </div>
+        );
+      };
+
+      render(<App />, document.getElementById("root"));
+    </script>
+  </body>
+</html>

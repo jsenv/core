@@ -13,30 +13,19 @@ import { useKeyboardShortcuts } from "../keyboard/keyboard_shortcuts.js";
  *     <Option value="b">Option B</Option>
  *   </OptionList>
  *
- * The list handles keyboard navigation (ArrowUp/Down, Home, End, Enter, Escape)
- * and exposes highlighted/selected state to each Option via context.
+ * A parent component can control OptionList by providing OptionListControllerContext.
+ * The controller can override: value, onChange, hidden, highlightedValue,
+ * setHighlightedValue, highlightedValueRef, registeredValuesRef, registeredIdsRef.
  *
  * CSS vars on .navi_option_list:
- *   --border-radius
- *   --border-width
- *   --border-color
- *   --background-color
- *   --max-height
+ *   --border-radius, --border-width, --border-color, --background-color, --max-height
  *
  * CSS vars on .navi_option:
- *   --padding
- *   --color
- *   --background-color
- *   --font-weight
- *   --color-hover                       mouse hover
- *   --background-color-hover
- *   --color-highlighted                 keyboard navigation cursor
- *   --background-color-highlighted
- *   --color-selected                    selected value
- *   --background-color-selected
- *   --font-weight-selected
- *   --color-highlighted-selected        highlighted AND selected
- *   --background-color-highlighted-selected
+ *   --padding, --color, --background-color, --font-weight
+ *   --color-hover, --background-color-hover
+ *   --color-highlighted, --background-color-highlighted
+ *   --color-selected, --background-color-selected, --font-weight-selected
+ *   --color-highlighted-selected, --background-color-highlighted-selected
  */
 
 const css = /* css */ `
@@ -125,35 +114,83 @@ const css = /* css */ `
   }
 `;
 
+/**
+ * Context a parent component (e.g. ComboBox) can provide to control OptionList.
+ * Any key provided overrides OptionList's own local state/props.
+ *
+ * Shape:
+ *   {
+ *     value,               // controlled selected value
+ *     onChange,            // selection handler
+ *     hidden,              // visibility override
+ *     highlightedValue,    // keyboard cursor value
+ *     setHighlightedValue,
+ *     highlightedValueRef, // ref holding current highlightedValue for stable closures
+ *     registeredValuesRef, // shared ordered array of registered option values
+ *     registeredIdsRef,    // shared Map<value, domId> for aria-activedescendant
+ *   }
+ */
+export const OptionListControllerContext = createContext(null);
+
+/**
+ * Context OptionList provides downward to its Option children.
+ */
 export const OptionListContext = createContext(null);
 
 export const OptionList = ({
   id,
-  value: selectedValue,
-  onChange,
-  hidden,
+  value: valueProp,
+  onChange: onChangeProp,
+  hidden: hiddenProp,
   children,
   ...rest
 }) => {
   import.meta.css = css;
 
-  // "highlighted" = the option the keyboard cursor is on (not the mouse hover)
-  const [highlightedValue, setHighlightedValue] = useState(null);
-  // Ordered registry of option values — filled in by Option on mount
-  const registeredValuesRef = useRef([]);
+  const controller = useContext(OptionListControllerContext);
+
+  // Own state — used when no controller overrides them
+  const [ownHighlightedValue, setOwnHighlightedValue] = useState(null);
+  const ownRegisteredValuesRef = useRef([]);
+  const ownRegisteredIdsRef = useRef(new Map());
+  const ownHighlightedValueRef = useRef(null);
+  ownHighlightedValueRef.current = ownHighlightedValue;
+
+  // Resolve effective values: controller wins over own props/state
+  const value = controller ? controller.value : valueProp;
+  const onChange = controller ? controller.onChange : onChangeProp;
+  const hidden = controller ? controller.hidden : hiddenProp;
+  const highlightedValue = controller
+    ? controller.highlightedValue
+    : ownHighlightedValue;
+  const setHighlightedValue = controller
+    ? controller.setHighlightedValue
+    : setOwnHighlightedValue;
+  const highlightedValueRef = controller
+    ? controller.highlightedValueRef
+    : ownHighlightedValueRef;
+  const registeredValuesRef = controller
+    ? controller.registeredValuesRef
+    : ownRegisteredValuesRef;
+  const registeredIdsRef = controller
+    ? controller.registeredIdsRef
+    : ownRegisteredIdsRef;
+
+  const ownId = useId();
+  const listboxId = id ?? ownId;
+
   const listRef = useRef(null);
-  // Refs for stable shortcut handler closures
-  const highlightedValueRef = useRef(null);
-  highlightedValueRef.current = highlightedValue;
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
 
-  const register = (optionValue) => {
+  const register = (optionValue, optionId) => {
     registeredValuesRef.current = [...registeredValuesRef.current, optionValue];
+    registeredIdsRef.current.set(optionValue, optionId);
     return () => {
       registeredValuesRef.current = registeredValuesRef.current.filter(
         (v) => v !== optionValue,
       );
+      registeredIdsRef.current.delete(optionValue);
     };
   };
 
@@ -246,8 +283,8 @@ export const OptionList = ({
     },
   ]);
 
-  const contextValue = {
-    selectedValue,
+  const optionListContext = {
+    value,
     highlightedValue,
     setHighlightedValue,
     onSelect: onChange,
@@ -255,29 +292,30 @@ export const OptionList = ({
   };
 
   return (
-    <Box
-      as="ul"
-      ref={listRef}
-      id={id}
-      role="listbox"
-      tabIndex={0}
-      hidden={hidden}
-      {...rest}
-      baseClassName="navi_option_list"
-    >
-      <OptionListContext.Provider value={contextValue}>
+    <OptionListContext.Provider value={optionListContext}>
+      <Box
+        as="ul"
+        ref={listRef}
+        id={listboxId}
+        role="listbox"
+        tabIndex={0}
+        hidden={hidden}
+        {...rest}
+        baseClassName="navi_option_list"
+      >
         {children}
-      </OptionListContext.Provider>
-    </Box>
+      </Box>
+    </OptionListContext.Provider>
   );
 };
 
 const OPTION_PSEUDO_CLASSES = [":-navi-highlighted", ":-navi-selected"];
+
 export const Option = ({ value, children, ...rest }) => {
   import.meta.css = css;
 
   const {
-    selectedValue,
+    value: selectedValue,
     highlightedValue,
     setHighlightedValue,
     onSelect,
@@ -286,7 +324,7 @@ export const Option = ({ value, children, ...rest }) => {
   const optionId = useId();
 
   useEffect(() => {
-    return register(value);
+    return register(value, optionId);
   }, [value]);
 
   const isSelected = selectedValue === value;
