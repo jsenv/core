@@ -1,6 +1,7 @@
 import { createContext } from "preact";
 import { useContext, useEffect, useId, useRef, useState } from "preact/hooks";
 
+import { Input } from "./input.jsx";
 import { OptionListControllerContext } from "./option_list.jsx";
 
 /**
@@ -47,11 +48,6 @@ const comboBoxCss = /* css */ `
     z-index: var(--dropdown-z-index, 100);
     margin-top: var(--dropdown-margin-top, 2px);
     box-shadow: var(--dropdown-shadow, 0 4px 12px rgba(0, 0, 0, 0.1));
-  }
-
-  .navi_combobox_input {
-    box-sizing: border-box;
-    width: 100%;
   }
 `;
 
@@ -233,8 +229,7 @@ export const ComboBoxInput = ({
       : undefined;
 
   return (
-    <input
-      class="navi_combobox_input"
+    <Input
       type="text"
       role="combobox"
       aria-expanded={open}
