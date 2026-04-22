@@ -139,6 +139,7 @@
           <SortedDemo />
           <LargeListDemo />
           <OptGroupDemo />
+          <SplitMatchDemo />
         </div>
       );
 
@@ -509,6 +510,82 @@
                   ))}
                 </OptGroup>
               ))}
+            </OptionList>
+            <div className="value-display">{selected ?? ""}</div>
+          </div>
+        );
+      };
+
+      // --- 8. Split matches / non-matches ---
+
+      const SplitMatchDemo = () => {
+        const [filter, setFilter] = useState("");
+        const [selected, setSelected] = useState(null);
+
+        const lowerFilter = filter.toLowerCase();
+        const matches = filter
+          ? LARGE_LIST.filter((item) =>
+              item.toLowerCase().includes(lowerFilter),
+            )
+          : LARGE_LIST;
+        const nonMatches = filter
+          ? LARGE_LIST.filter(
+              (item) => !item.toLowerCase().includes(lowerFilter),
+            )
+          : [];
+
+        return (
+          <div className="demo-section">
+            <h2>Split matches / non-matches</h2>
+            <p>
+              Matching items and non-matching items are shown in separate
+              groups, each with a count. When the search is empty, all items are
+              shown as matches.
+            </p>
+            <input
+              type="search"
+              placeholder="Search…"
+              value={filter}
+              onInput={(e) => {
+                setFilter(e.target.value);
+                setSelected(null);
+              }}
+              style={{
+                display: "block",
+                width: "100%",
+                boxSizing: "border-box",
+                marginBottom: "8px",
+                padding: "8px 12px",
+                border: "1px solid #ccc",
+                borderRadius: "6px",
+                fontSize: "1rem",
+              }}
+            />
+            <OptionList
+              style={{ maxHeight: "300px" }}
+              onChange={setSelected}
+              highlight={filter}
+            >
+              <OptGroup label={`Matches (${matches.length})`}>
+                {matches.map((item) => (
+                  <Option key={item} value={item} selected={selected === item}>
+                    {item}
+                  </Option>
+                ))}
+              </OptGroup>
+              {nonMatches.length > 0 && (
+                <OptGroup label={`No match (${nonMatches.length})`}>
+                  {nonMatches.map((item) => (
+                    <Option
+                      key={item}
+                      value={item}
+                      selected={selected === item}
+                    >
+                      {item}
+                    </Option>
+                  ))}
+                </OptGroup>
+              )}
             </OptionList>
             <div className="value-display">{selected ?? ""}</div>
           </div>

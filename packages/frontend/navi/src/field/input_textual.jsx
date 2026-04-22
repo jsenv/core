@@ -193,6 +193,7 @@ const css = /* css */ `
       display: inline-flex;
       margin: 0;
       padding: 0;
+      align-items: center;
       justify-content: center;
       font-size: var(--font-size);
       background: none;
