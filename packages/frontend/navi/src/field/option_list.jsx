@@ -211,17 +211,6 @@ export const OptionList = ({
     };
   }, [popover]);
 
-  // Scroll highlighted option into view
-  useEffect(() => {
-    if (highlightedValue === null || !listRef.current) {
-      return;
-    }
-    const el = listRef.current.querySelector("[data-highlighted]");
-    if (el) {
-      el.scrollIntoView({ block: "nearest" });
-    }
-  }, [highlightedValue]);
-
   useKeyboardShortcuts(popover ? noopRef : listRef, [
     {
       key: "arrowdown",
@@ -326,26 +315,34 @@ export const OptionList = ({
 };
 
 const OPTION_PSEUDO_CLASSES = [":-navi-highlighted", ":-navi-selected"];
-
 export const Option = ({ value, children, ...rest }) => {
   import.meta.css = css;
 
+  const optionId = useId();
+  const id = rest.id || optionId;
+  useTrackOption({ value, optionId: id });
   const {
     value: selectedValue,
     highlightedValue,
     setHighlightedValue,
     onSelect,
   } = useContext(OptionListContext);
-  const optionId = useId();
-
-  useTrackOption({ value, optionId });
 
   const isSelected = selectedValue === value;
   const isHighlighted = highlightedValue === value;
+  const optionRef = useRef(null);
+
+  useEffect(() => {
+    const optionEl = optionRef.current;
+    if (isHighlighted && optionEl) {
+      optionEl.scrollIntoView({ block: "nearest" });
+    }
+  }, [isHighlighted]);
 
   return (
     <Box
       as="li"
+      ref={optionRef}
       baseClassName="navi_option"
       id={optionId}
       role="option"
