@@ -378,12 +378,17 @@ const InputTextualCombobox = ({ combobox, ...rest }) => {
     positionPopover();
     popoverEl.showPopover();
     setComboboxOpen(true);
+    window.addEventListener("scroll", positionPopover, {
+      capture: true,
+      passive: true,
+    });
   };
 
   const hidePopover = () => {
     if (!comboboxOpenRef.current) {
       return;
     }
+    window.removeEventListener("scroll", positionPopover, { capture: true });
     const popoverEl = document.getElementById(combobox);
     if (popoverEl) {
       popoverEl.dispatchEvent(new CustomEvent("combobox-clear"));
@@ -488,9 +493,7 @@ const InputTextualCombobox = ({ combobox, ...rest }) => {
         showPopover();
       }}
       onBlur={() => {
-        setTimeout(() => {
-          hidePopover();
-        }, 150);
+        hidePopover();
       }}
       {...rest}
     />

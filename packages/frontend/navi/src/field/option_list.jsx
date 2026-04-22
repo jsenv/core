@@ -34,7 +34,7 @@ const css = /* css */ `
       --border-width: 1px;
       --border-color: light-dark(#ccc, #555);
       --background-color: light-dark(#fff, #1e1e1e);
-      --max-height: none;
+      --max-height: 220px;
     }
     .navi_option {
       --padding: 8px 12px;
@@ -85,7 +85,6 @@ const css = /* css */ `
       margin: 0;
       padding: 0;
       border: none;
-      overflow: visible;
     }
   }
   .navi_option {
