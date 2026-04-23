@@ -17,6 +17,7 @@
  * - <InputRadio /> for type="radio"
  */
 
+import { pickPositionRelativeTo, visibleRectEffect } from "@jsenv/dom";
 import {
   useCallback,
   useContext,
@@ -377,6 +378,24 @@ const InputTextualWithSuggestions = ({
   const [suggestionsOpen, setSuggestionsOpen] = useState(false);
   const suggestionsOpenRef = useRef(false);
   suggestionsOpenRef.current = suggestionsOpen;
+  const positionEffectRef = useRef(null);
+
+  const positionPopover = () => {
+    const inputEl = ref.current;
+    const popoverEl = document.getElementById(suggestions);
+    if (!popoverEl) {
+      return;
+    }
+    // Match input width before calling pickPositionRelativeTo so it can
+    // take the correct popover dimensions into account.
+    const inputRect = inputEl.getBoundingClientRect();
+    popoverEl.style.width = `${inputRect.width}px`;
+    const { left, top } = pickPositionRelativeTo(popoverEl, inputEl, {
+      positionPreference: "below",
+    });
+    popoverEl.style.top = `${top}px`;
+    popoverEl.style.left = `${left}px`;
+  };
 
   const showPopover = (e) => {
     if (suggestionsOpenRef.current) {
@@ -384,13 +403,13 @@ const InputTextualWithSuggestions = ({
     }
     console.debug(`showPopover (e.type:${e.type})`);
     const popoverEl = document.getElementById(suggestions);
+    const inputEl = ref.current;
     positionPopover();
     popoverEl.showPopover();
     suggestionsOpenRef.current = true;
     setSuggestionsOpen(true);
-    window.addEventListener("scroll", positionPopover, {
-      capture: true,
-      passive: true,
+    positionEffectRef.current = visibleRectEffect(inputEl, () => {
+      positionPopover();
     });
   };
 
@@ -401,23 +420,16 @@ const InputTextualWithSuggestions = ({
     console.debug(`hidePopover (e.type:${e.type})`);
     suggestionsOpenRef.current = false;
     setSuggestionsOpen(false);
-    window.removeEventListener("scroll", positionPopover, { capture: true });
+    if (positionEffectRef.current) {
+      positionEffectRef.current.disconnect();
+      positionEffectRef.current = null;
+    }
     const popoverEl = document.getElementById(suggestions);
     if (popoverEl) {
       popoverEl.dispatchEvent(new CustomEvent("navi_suggestion_list_clear"));
       popoverEl.hidePopover();
     }
     setSuggestionsOpen(false);
-  };
-  const positionPopover = () => {
-    const input = ref.current;
-    const rect = input.getBoundingClientRect();
-    const popoverEl = document.getElementById(suggestions);
-    if (popoverEl) {
-      popoverEl.style.top = `${rect.bottom + 2}px`;
-      popoverEl.style.left = `${rect.left}px`;
-      popoverEl.style.width = `${rect.width}px`;
-    }
   };
 
   const dispatchToSuggestionList = (customEvent) => {

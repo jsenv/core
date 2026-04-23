@@ -103,7 +103,7 @@ const css = /* css */ `
 
     /* Popover reset — browser adds border, background, padding, margin by default */
     &[popover] {
-      position: fixed;
+      position: absolute;
       inset: unset;
       margin: 0;
       padding: 0;
