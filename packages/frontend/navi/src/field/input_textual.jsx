@@ -447,8 +447,11 @@ const InputTextualWithSuggestions = ({
       "--suggestion-list-anchor-width",
       `${inputRect.width}px`,
     );
+    // when collé au bord, we can't distinguish popover border from browser border
+    const minLeft = 1;
     const { left, top } = pickPositionRelativeTo(popoverEl, inputEl, {
       positionPreference: "below",
+      minLeft,
     });
     popoverEl.style.top = `${top}px`;
     // If the popover is constrained by its max-width and ends up wider
@@ -458,9 +461,9 @@ const InputTextualWithSuggestions = ({
     if (!isNaN(maxWidth) && popoverRect.width >= maxWidth - 1) {
       const viewportWidth = document.documentElement.clientWidth;
       const centeredLeft = (viewportWidth - popoverRect.width) / 2;
-      popoverEl.style.left = `${centeredLeft}px`;
+      popoverEl.style.left = `${Math.max(centeredLeft, minLeft)}px`;
     } else {
-      popoverEl.style.left = `${left}px`;
+      popoverEl.style.left = `${Math.max(left, minLeft)}px`;
     }
   };
 
