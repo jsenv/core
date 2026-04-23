@@ -342,6 +342,7 @@ const InputPseudoClasses = [
   ":disabled",
   ":-navi-loading",
   ":navi-has-value",
+  ":navi-expanded",
 ];
 Object.assign(PSEUDO_CLASSES, {
   ":navi-has-value": {
@@ -375,9 +376,18 @@ const InputTextualWithSuggestions = ({
 }) => {
   const defaultRef = useRef();
   const ref = rest.ref || defaultRef;
-  const [suggestionsOpen, setSuggestionsOpen] = useState(false);
-  const suggestionsOpenRef = useRef(false);
-  suggestionsOpenRef.current = suggestionsOpen;
+  const [expanded, setExpanded] = useState(false);
+  const expandedRef = useRef(expanded);
+  expandedRef.current = expanded;
+  const expand = () => {
+    expandedRef.current = true;
+    setExpanded(true);
+  };
+  const collapse = () => {
+    expandedRef.current = false;
+    setExpanded(false);
+  };
+
   const positionEffectRef = useRef(null);
 
   const positionPopover = () => {
@@ -398,7 +408,7 @@ const InputTextualWithSuggestions = ({
   };
 
   const showPopover = (e) => {
-    if (suggestionsOpenRef.current) {
+    if (expandedRef.current) {
       return;
     }
     console.debug(`showPopover (e.type:${e.type})`);
@@ -406,20 +416,17 @@ const InputTextualWithSuggestions = ({
     const inputEl = ref.current;
     positionPopover();
     popoverEl.showPopover();
-    suggestionsOpenRef.current = true;
-    setSuggestionsOpen(true);
     positionEffectRef.current = visibleRectEffect(inputEl, () => {
       positionPopover();
     });
+    expand();
   };
 
   const hidePopover = (e) => {
-    if (!suggestionsOpenRef.current) {
+    if (!expandedRef.current) {
       return;
     }
     console.debug(`hidePopover (e.type:${e.type})`);
-    suggestionsOpenRef.current = false;
-    setSuggestionsOpen(false);
     if (positionEffectRef.current) {
       positionEffectRef.current.disconnect();
       positionEffectRef.current = null;
@@ -429,7 +436,7 @@ const InputTextualWithSuggestions = ({
       popoverEl.dispatchEvent(new CustomEvent("navi_suggestion_list_clear"));
       popoverEl.hidePopover();
     }
-    setSuggestionsOpen(false);
+    collapse();
   };
 
   const dispatchToSuggestionList = (customEvent) => {
@@ -475,7 +482,7 @@ const InputTextualWithSuggestions = ({
       key: "home",
       description: "Point to first suggestion",
       handler: () => {
-        if (!suggestionsOpenRef.current) {
+        if (!expandedRef.current) {
           return false;
         }
         return dispatchToSuggestionList(
@@ -489,7 +496,7 @@ const InputTextualWithSuggestions = ({
       key: "end",
       description: "Point to last suggestion",
       handler: () => {
-        if (!suggestionsOpenRef.current) {
+        if (!expandedRef.current) {
           return false;
         }
         return dispatchToSuggestionList(
@@ -503,7 +510,7 @@ const InputTextualWithSuggestions = ({
       key: "enter",
       description: "Confirm pointed suggestion",
       handler: () => {
-        if (!suggestionsOpenRef.current) {
+        if (!expandedRef.current) {
           return false;
         }
         return dispatchToSuggestionList(
@@ -517,7 +524,7 @@ const InputTextualWithSuggestions = ({
       key: "escape",
       description: "Close popover",
       handler: (e) => {
-        if (!suggestionsOpenRef.current) {
+        if (!expandedRef.current) {
           return false;
         }
         hidePopover(e);
@@ -553,8 +560,11 @@ const InputTextualWithSuggestions = ({
       autoComplete="off"
       aria-controls={suggestions}
       aria-haspopup="listbox"
-      aria-expanded={suggestionsOpen}
+      aria-expanded={expanded}
       aria-autocomplete="list"
+      basePseudoState={{
+        ":navi-expanded": expanded,
+      }}
       onnavi_callout_open={(e) => {
         hidePopover(e);
       }}
@@ -595,6 +605,7 @@ const InputTextualPlain = (props) => {
     autoSelect,
     icon,
     cancelButton = type === "search",
+    basePseudoState,
 
     ...rest
   } = props;
@@ -689,6 +700,7 @@ const InputTextualPlain = (props) => {
       pseudoStateSelector=".navi_native_input"
       visualSelector=".navi_native_input"
       basePseudoState={{
+        ...basePseudoState,
         ":read-only": innerReadOnly,
         ":disabled": innerDisabled,
         ":-navi-loading": innerLoading,

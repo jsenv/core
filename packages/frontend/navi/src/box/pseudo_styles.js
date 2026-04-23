@@ -318,6 +318,9 @@ export const PSEUDO_CLASSES = {
   ":-navi-status-error": {
     attribute: "data-status-error",
   },
+  ":navi-expanded": {
+    attribute: "data-expanded",
+  },
 };
 
 export const NAVI_PSEUDO_STATE_CUSTOM_EVENT = "navi_pseudo_state";
