@@ -179,7 +179,9 @@ const css = /* css */ `
     -webkit-text-fill-color: transparent;
     opacity: 0;
   }
-
+  .navi_text[data-contains-absolute-child] {
+    display: inline-block;
+  }
   .navi_text[data-bold] {
     .navi_text_bold_background {
       opacity: 1;
@@ -458,7 +460,12 @@ const TextBasic = ({
   if (boldStable) {
     const { bold } = boxProps;
     return (
-      <Box {...boxProps} bold={undefined} data-bold={bold ? "" : undefined}>
+      <Box
+        {...boxProps}
+        bold={undefined}
+        data-bold={bold ? "" : undefined}
+        data-contains-absolute-child=""
+      >
         <span className="navi_text_bold_background" aria-hidden="true">
           {children}
         </span>

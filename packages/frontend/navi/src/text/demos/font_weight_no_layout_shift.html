@@ -202,6 +202,7 @@
         const [lengthsBoldActive, setLengthsBoldActive] = useState(false);
         const [alignmentsBoldActive, setAlignmentsBoldActive] = useState(false);
         const [stableBoldActive, setStableBoldActive] = useState(false);
+        const [centeredSizeActive, setCenteredSizeActive] = useState(false);
 
         return (
           <div
@@ -713,6 +714,63 @@
                 that the bold effect applies from the center, regardless of
                 container alignment.
               </p>
+            </DemoSection>
+
+            <DemoSection
+              id="centered-size-change"
+              title="🔠 Centered: Bold + Font Size Change"
+            >
+              <p>
+                When a centered text becomes bold <em>and</em> larger, both the
+                weight and the size change at the same time. The sizer reserves
+                space for the largest/boldest version so surrounding elements
+                never move.
+              </p>
+
+              <div style={{ marginBottom: "20px" }}>
+                <label style={{ display: "block", marginBottom: "10px" }}>
+                  <input
+                    type="checkbox"
+                    checked={centeredSizeActive}
+                    onChange={(e) => setCenteredSizeActive(e.target.checked)}
+                    style={{ marginRight: "8px" }}
+                  />
+                  Toggle bold + larger font-size
+                </label>
+
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "20px",
+                  }}
+                >
+                  <div style={{ flex: 1, textAlign: "center" }}>
+                    <div
+                      style={{
+                        border: "1px solid #dee2e6",
+                        padding: "12px",
+                        backgroundColor: "#ffffff",
+                        borderRadius: "4px",
+                      }}
+                    >
+                      <Text width="16px" height="16px" background="cyan"></Text>
+                      <Text
+                        noWrap
+                        alignX="center"
+                        bold={centeredSizeActive}
+                        boldTransition
+                        style={{
+                          fontSize: centeredSizeActive ? "1.5em" : "1em",
+                          transition: "font-size 0.3s ease",
+                        }}
+                      >
+                        Centered label
+                      </Text>
+                      <Text width="16px" height="16px" background="cyan"></Text>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </DemoSection>
 
             <DemoSection id="how-it-works" title="⚙️ How it Works">
