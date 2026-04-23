@@ -6,6 +6,7 @@ import { useContext, useRef, useState } from "preact/hooks";
 import { Box } from "../box/box.jsx";
 import { isSizeSpacingScaleKey } from "../box/box_style_util.js";
 import { withPropsClassName } from "../utils/with_props_class_name.js";
+import { useDarkBackgroundAttribute } from "./use_dark_background_attribute.js";
 import { useInitialTextSelection } from "./use_initial_text_selection.jsx";
 
 const css = /* css */ `
@@ -22,6 +23,10 @@ const css = /* css */ `
 
   .navi_text {
     position: relative;
+
+    &[data-dark-background] {
+      color: white;
+    }
 
     /* There is a chrome specific bug that prevents text-transform: capitalize to be applied in nested DOM structure */
     /* The CSS below ensure capitalize is propagated to the bold clones */
@@ -474,14 +479,20 @@ const TextBasic = ({
   capitalize,
   children,
   childrenOutsideFlow,
+  basePseudoState,
   ...rest
 }) => {
+  const defaultRef = useRef();
+  const ref = rest.ref || defaultRef;
+  const bgDeps = basePseudoState ? Object.values(basePseudoState) : [];
+  useDarkBackgroundAttribute(ref, bgDeps);
   const defaultSpace = preventSpaceUnderlines ? FAKE_SPACE : REGULAR_SPACE;
   const resolvedSpacing = spacing ?? defaultSpace;
   const boxProps = {
     "as": "span",
     "data-capitalize": capitalize ? "" : undefined,
     ...rest,
+    ref,
     "baseClassName": withPropsClassName("navi_text", rest.baseClassName),
   };
   const shouldPreserveSpacing = rest.as === "pre" || rest.flex || rest.grid;

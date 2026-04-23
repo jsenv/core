@@ -25,7 +25,6 @@ import { useKeyboardShortcuts } from "../../keyboard/keyboard_shortcuts.js";
 import { Icon } from "../../text/icon.jsx";
 import { markAsOutsideTextFlow, Text } from "../../text/text.jsx";
 import { TitleLevelContext } from "../../text/title.jsx";
-import { useDarkBackgroundAttribute } from "../../text/use_dark_background_attribute.js";
 import { useDocumentUrl } from "../browser_integration/document_url_signal.js";
 import { getHrefTargetInfo } from "../browser_integration/href_target_info.js";
 import { useIsVisited } from "../browser_integration/use_is_visited.js";
@@ -188,7 +187,7 @@ const css = /* css */ `
     }
 
     /* Dark background */
-    &[data-dark-background] {
+    &[data-dark-background].navi_text {
       --x-link-contrasting-color: white;
       --x-link-color: var(--link-color, white);
     }
@@ -501,7 +500,6 @@ const LinkPlain = (props) => {
   useDocumentUrl();
   const { isSameSite, isAnchor, isCurrent } = getHrefTargetInfo(href);
   const innerCurrent = current || isCurrent;
-  useDarkBackgroundAttribute(ref, [selected, innerCurrent], {});
 
   const innerTarget =
     target === undefined ? (isSameSite ? "_self" : "_blank") : target;

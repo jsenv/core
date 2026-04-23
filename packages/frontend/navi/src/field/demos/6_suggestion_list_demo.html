@@ -74,6 +74,7 @@
         SuggestionList,
         SuggestionGroup,
         Input,
+        Text,
         Box,
       } from "@jsenv/navi";
 
@@ -515,11 +516,19 @@
 
       const GROUPED_ITEMS = [
         {
-          label: "Fruits",
+          label: (
+            <Text background="red" flex expand padding="s">
+              Fruits
+            </Text>
+          ),
           items: ["Apple", "Banana", "Cherry", "Mango", "Strawberry"],
         },
         {
-          label: "Vegetables",
+          label: (
+            <Text background="green" flex expand padding="s">
+              Vegetables
+            </Text>
+          ),
           items: ["Broccoli", "Carrot", "Cucumber", "Spinach", "Tomato"],
         },
         {
