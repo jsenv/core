@@ -264,7 +264,14 @@
               Without <code>whiteSpace: "nowrap"</code> the description wraps
               inside the popover. With it, the popover grows horizontally.
             </p>
-            <div style={{ display: "flex", gap: "32px", flexWrap: "wrap" }}>
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "2px",
+                flexWrap: "wrap",
+              }}
+            >
               <div>
                 <h3>Wrapping (default)</h3>
                 <Input
@@ -330,6 +337,7 @@
                   </Suggestion>
                 </SuggestionList>
               </div>
+              <div style="width: 1500px; height: 2px; background: violet"></div>
               <div>
                 <h3>No wrap</h3>
                 <Input

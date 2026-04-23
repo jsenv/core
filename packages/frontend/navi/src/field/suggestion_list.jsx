@@ -90,6 +90,7 @@ const css = /* css */ `
     --x-border-color: var(--suggestion-list-border-color);
     --x-background-color: var(--suggestion-list-background-color);
     box-sizing: border-box;
+    max-width: 95vw;
     max-height: var(--suggestion-list-max-height);
 
     margin: 0;

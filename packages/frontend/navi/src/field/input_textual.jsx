@@ -443,7 +443,7 @@ const InputTextualWithSuggestions = ({
     // Match input width before calling pickPositionRelativeTo so it can
     // take the correct popover dimensions into account.
     const inputRect = inputEl.getBoundingClientRect();
-    popoverEl.style.width = `${inputRect.width}px`;
+    popoverEl.style.minWidth = `${inputRect.width}px`;
     const { left, top } = pickPositionRelativeTo(popoverEl, inputEl, {
       positionPreference: "below",
     });
