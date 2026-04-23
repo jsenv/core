@@ -141,7 +141,7 @@
               Clicking outside closes.
             </p>
             <Input
-              type="text"
+              type="search"
               suggestions="fruit-list"
               placeholder="Search a fruit…"
               onInput={(e) => {
@@ -154,6 +154,7 @@
               id="fruit-list"
               popover
               style={{ "--max-height": "220px" }}
+              highlight={query}
             >
               {FRUITS.map((fruit) => (
                 <Suggestion
