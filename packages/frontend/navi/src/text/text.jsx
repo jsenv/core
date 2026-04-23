@@ -307,12 +307,63 @@ const shouldInjectSpacingBetween = (left, right) => {
 };
 
 const OverflowPinnedElementContext = createContext(null);
+/**
+ * Text component for rendering inline or block text with layout-stable style changes.
+ *
+ * Most props are forwarded to the underlying `Box` component (as, style, bold, noWrap, …).
+ * The props listed below are specific to Text.
+ *
+ * @param {object} props
+ *
+ * @param {boolean} [props.overflowEllipsis]
+ *   Truncates overflowing text with an ellipsis.
+ *
+ * @param {boolean} [props.overflowPinned]
+ *   Must be used inside a `<Text overflowEllipsis>` parent.
+ *   Pins this element outside the truncated text flow (e.g. a badge or icon).
+ *
+ * @param {string} [props.spacing]
+ *   Controls the separator injected between child nodes.
+ *   Accepts a size/spacing scale key, a CSS length, or `"pre"` / `0` to disable.
+ *   Defaults to a regular space character (or a padding-based fake space when
+ *   `preventSpaceUnderlines` is active).
+ *
+ * @param {boolean} [props.loading]
+ *   Renders a shimmer skeleton in place of the text.
+ *
+ * @param {boolean} [props.skeleton]
+ *   Same as `loading` but without the shimmer animation.
+ *
+ * @param {boolean} [props.preventSpaceUnderlines]
+ *   Replaces real space characters between children with padding-based spaces
+ *   to avoid the underline browsers draw under spaces inside links.
+ *
+ * @param {object} [props.holdSpaceForStyle]
+ *   Prevents layout shifts when text styles change (font-weight, font-size, …).
+ *   Pass an object of CSS-in-JS style properties representing the "maximum" state of the text.
+ *   An invisible placeholder is rendered with those styles to reserve the space,
+ *   and the real visible text is layered on top via `position: absolute`.
+ *   Only works reliably with single-line (`noWrap`) text.
+ *   Example: `holdSpaceForStyle={{ fontWeight: "bold", fontSize: "1.5rem" }}`
+ *
+ * @param {boolean} [props.boldStable]
+ *   Alternative to `holdSpaceForStyle` for multi-line text.
+ *   Keeps a consistent visual width regardless of font-weight by painting normal-weight
+ *   text on top of a bold background using `background-clip: text`.
+ *   Does not support font-size changes.
+ *
+ * @param {boolean} [props.capitalize]
+ *   Applies `text-transform: uppercase` to the first letter via CSS.
+ *
+ * @param {string|Array} [props.selectRange]
+ *   Selects a portion of the text on mount. Forwarded to `useInitialTextSelection`.
+ *
+ * @param {*} [props.childrenOutsideFlow]
+ *   Rendered after children but outside the text flow (useful for overlays
+ *   like the skeleton container).
+ */
 export const Text = (props) => {
   import.meta.css = css;
-
-  if (props.debug) {
-    debugger;
-  }
 
   if (props.loading || props.skeleton) {
     return <TextSkeleton {...props} />;
