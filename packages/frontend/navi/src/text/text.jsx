@@ -47,6 +47,7 @@ const css = /* css */ `
       min-height: inherit;
       flex-grow: inherit;
       align-items: inherit;
+      align-self: inherit;
       justify-content: inherit;
       gap: inherit;
       text-align: inherit;

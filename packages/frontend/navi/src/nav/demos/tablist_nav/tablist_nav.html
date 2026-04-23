@@ -13,8 +13,7 @@
         Box,
         Title,
         Text,
-        TabList,
-        Tab,
+        Nav,
         Link,
         Icon,
         HomeSvg,
@@ -39,16 +38,18 @@
                 Circular icon tabs with scale + color change
               </div>
               <Box border="1px dashed violet" padding="md" width="fit-content">
-                <TabList spacing="sm" indicator="none">
-                  <Tab
+                <Nav spacing="s">
+                  <Link
+                    appearance="tab"
                     route={A_ROUTE}
                     circle
+                    currentIndicator="none"
                     backgroundColor="orange"
                     color="white"
                     padding="8"
                     transition="all 0.8s ease-in-out"
                     style={{
-                      ":-navi-tab-selected": {
+                      ":-navi-href-current": {
                         scale: "1.3",
                         backgroundColor: "lightblue",
                       },
@@ -57,16 +58,18 @@
                     <Icon circle size="40">
                       <HomeSvg />
                     </Icon>
-                  </Tab>
-                  <Tab
+                  </Link>
+                  <Link
                     route={B_ROUTE}
+                    appearance="tab"
+                    currentIndicator="none"
                     circle
                     backgroundColor="green"
                     color="white"
                     padding="8"
                     transition="all 0.8s ease-in-out"
                     style={{
-                      ":-navi-tab-selected": {
+                      ":-navi-href-current": {
                         scale: "1.3",
                         backgroundColor: "lightblue",
                       },
@@ -75,8 +78,8 @@
                     <Icon circle size="40">
                       <UserSvg />
                     </Icon>
-                  </Tab>
-                </TabList>
+                  </Link>
+                </Nav>
               </Box>
             </div>
           </Box>
