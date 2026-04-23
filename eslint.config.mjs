@@ -41,6 +41,7 @@ export default [
       "**/babel_helpers/",
       "**/_*test.*/",
       "**/_*test_manual.*/",
+      "tests/dev_server/workspace_bundle/fixtures/**",
       "**/packages/tooling/eslint-plugin-jsenv/**/fixtures/**",
       "experiments/",
     ],
