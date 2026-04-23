@@ -58,7 +58,6 @@ const css = /* css */ `
     .navi_suggestion {
       --suggestion-padding: 8px 12px;
       --suggestion-color: inherit;
-      --suggestion-background-color: transparent;
       --suggestion-font-weight: inherit;
 
       /* Hover (mouse) */

@@ -152,6 +152,8 @@
 
       // --- 1. Basic string suggestions ---
 
+      const SUGGESTION_BG = "light-dark(#f0f4ff, #1a2040)";
+
       const BasicDemo = () => {
         const [selected, setSelected] = useState(null);
         return (
@@ -162,10 +164,7 @@
               navigate, Enter to select, Escape to clear active).
             </p>
             <SuggestionList
-              style={{
-                "maxHeight": "220px",
-                "--suggestion-background-color": "light-dark(#f0f4ff, #1a2040)",
-              }}
+              style={{ maxHeight: "220px" }}
               onChange={setSelected}
             >
               {FRUITS.map((fruit) => (
@@ -173,6 +172,7 @@
                   key={fruit}
                   value={fruit}
                   selected={selected === fruit}
+                  style={{ backgroundColor: SUGGESTION_BG }}
                 >
                   {fruit}
                 </Suggestion>
@@ -195,7 +195,7 @@
               style={{ maxHeight: "220px" }}
               onChange={setSelected}
             >
-              <Suggestion noWrap background="orange">
+              <Suggestion noWrap style={{ backgroundColor: SUGGESTION_BG }}>
                 A very large suggestion to test how it behaves when the text is
                 very large and exceeds the width of the list. It should be
                 visible
@@ -205,7 +205,7 @@
                   key={country.code}
                   value={country.code}
                   selected={selected === country.code}
-                  background="orange"
+                  style={{ backgroundColor: SUGGESTION_BG }}
                 >
                   <span style={{ fontWeight: 500 }}>{country.name}</span>
                   <span
@@ -277,10 +277,10 @@
             >
               {filtered.map((fruit) => (
                 <Suggestion
-                  background="orange"
                   key={fruit}
                   value={fruit}
                   selected={selected === fruit}
+                  style={{ backgroundColor: SUGGESTION_BG }}
                 >
                   {fruit}
                 </Suggestion>
@@ -403,6 +403,7 @@
                   key={fruit}
                   value={fruit}
                   selected={selected === fruit}
+                  style={{ backgroundColor: SUGGESTION_BG }}
                 >
                   {fruit}
                 </Suggestion>
@@ -497,6 +498,7 @@
                       key={item}
                       value={item}
                       selected={selected === item}
+                      style={{ backgroundColor: SUGGESTION_BG }}
                     >
                       {item}
                     </Suggestion>
@@ -543,6 +545,7 @@
                       key={item}
                       value={item}
                       selected={selected === item}
+                      style={{ backgroundColor: SUGGESTION_BG }}
                     >
                       {item}
                     </Suggestion>
@@ -625,6 +628,7 @@
                     key={item}
                     value={item}
                     selected={selected === item}
+                    style={{ backgroundColor: SUGGESTION_BG }}
                   >
                     {item}
                   </Suggestion>
@@ -651,6 +655,7 @@
                       key={item}
                       value={item}
                       selected={selected === item}
+                      style={{ backgroundColor: SUGGESTION_BG }}
                     >
                       {item}
                     </Suggestion>
@@ -683,11 +688,7 @@
             <SuggestionList
               ref={listRef}
               popover
-              style={{
-                "--suggestion-background-color": "light-dark(#f0f4ff, #1a2040)",
-                "top": "auto",
-                "left": "20px",
-              }}
+              style={{ top: "auto", left: "20px" }}
               onChange={(value) => {
                 setSelected(value);
                 hidePopover();
@@ -698,6 +699,7 @@
                   key={fruit}
                   value={fruit}
                   selected={selected === fruit}
+                  style={{ backgroundColor: SUGGESTION_BG }}
                 >
                   {fruit}
                 </Suggestion>
