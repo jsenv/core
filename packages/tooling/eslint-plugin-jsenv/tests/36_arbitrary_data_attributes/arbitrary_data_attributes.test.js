@@ -33,7 +33,7 @@ ruleTester.run(
   {
     valid: [
       {
-        name: "props passed to component with plain props param should not be flagged",
+        name: "JSX: props passed to component with plain props param should not be flagged",
         options: [{ reportAllUnknownParams: true }],
         code: `
 const Inner = (props) => {
@@ -51,6 +51,25 @@ const Top = (props) => {
 export const Usage = () => {
   return <Top a="x" loading={false} data-custom="value" />;
 };
+        `,
+      },
+      {
+        name: "JS: same chain without JSX does not trigger (baseline)",
+        options: [{ reportAllUnknownParams: true }],
+        code: `
+const Inner = (props) => {
+  console.log(props);
+};
+
+const Middle = ({ a, ...rest }) => {
+  Inner(rest);
+};
+
+const Top = (props) => {
+  Middle(props);
+};
+
+Top({ a: "x", loading: false, custom: "value" });
         `,
       },
     ],
