@@ -41,7 +41,7 @@ const [useSuggestionItemTrackerProvider, useTrackSuggestion] =
 
 const css = /* css */ `
   @layer navi {
-    .navi_suggestion_list {
+    .navi_suggestion_list_wrapper {
       --suggestion-list-border-radius: 4px;
       --suggestion-list-border-width: 1px;
       --suggestion-list-border-color: light-dark(#ccc, #555);
@@ -85,24 +85,21 @@ const css = /* css */ `
     }
   }
 
-  .navi_suggestion_list {
+  .navi_suggestion_list_wrapper {
     --x-border-radius: var(--suggestion-list-border-radius);
     --x-border-width: var(--suggestion-list-border-width);
     --x-border-color: var(--suggestion-list-border-color);
     --x-border-style: var(--suggestion-list-border-style);
     --x-background-color: var(--suggestion-list-background-color);
-    box-sizing: border-box;
     width: fit-content;
+    max-width: 100%;
+
     max-height: var(--suggestion-list-max-height);
-    margin: 0;
-    padding: 0;
-    list-style: none;
     background-color: var(--x-background-color);
     border: var(--x-border-width) var(--x-border-style) var(--x-border-color);
     border-radius: var(--x-border-radius);
     transition: opacity 0.2s ease;
-    overflow-x: auto;
-    overflow-y: auto;
+    overflow: auto;
 
     /* Popover reset — browser adds border, background, padding, margin by default */
     &[popover] {
@@ -119,11 +116,14 @@ const css = /* css */ `
       pointer-events: none;
     }
   }
-  .navi_suggestion_list_inner {
-    display: flex;
+
+  .navi_suggestion_list {
+    box-sizing: border-box;
     width: max-content;
     min-width: 100%;
-    flex-direction: column;
+    margin: 0;
+    padding: 0;
+    list-style: none;
   }
   ::highlight(navi-suggestion-match) {
     color: var(--suggestion-color-highlight);
@@ -133,9 +133,13 @@ const css = /* css */ `
     --x-color: var(--suggestion-color);
     --x-background-color: var(--suggestion-background-color);
     --x-font-weight: var(--suggestion-font-weight);
+    display: flex;
     box-sizing: border-box;
+    width: max-content;
+    min-width: 100%;
 
     padding: var(--suggestion-padding);
+    flex-direction: column;
     color: var(--x-color);
     font-weight: var(--x-font-weight);
     background-color: var(--x-background-color);
@@ -408,24 +412,26 @@ export const SuggestionList = ({
 
   return (
     <Box
-      as="ul"
       ref={ref}
       id={id}
-      role="listbox"
-      tabIndex={popover ? -1 : 0}
       popover={popover ? "manual" : undefined}
+      tabIndex={popover ? -1 : 0}
       {...rest}
-      baseClassName="navi_suggestion_list"
-      styleCSSVars={SuggestionListStyleCSSVars}
+      baseClassName="navi_suggestion_list_wrapper"
     >
-      <SuggestionListContext.Provider value={suggestionListContext}>
-        <div className="navi_suggestion_list_inner">
+      <Box
+        as="ul"
+        role="listbox"
+        baseClassName="navi_suggestion_list"
+        styleCSSVars={SuggestionListStyleCSSVars}
+      >
+        <SuggestionListContext.Provider value={suggestionListContext}>
           <ItemTrackerProvider>{children}</ItemTrackerProvider>
           {emptyState && (
             <li className="navi_suggestion_list_empty">{emptyState}</li>
           )}
-        </div>
-      </SuggestionListContext.Provider>
+        </SuggestionListContext.Provider>
+      </Box>
     </Box>
   );
 };

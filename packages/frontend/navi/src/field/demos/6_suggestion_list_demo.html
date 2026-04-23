@@ -190,9 +190,8 @@
             <SuggestionList
               style={{ maxHeight: "220px" }}
               onChange={setSelected}
-              expandX
             >
-              <Suggestion noWrap>
+              <Suggestion noWrap background="orange">
                 A very large suggestion to test how it behaves when the text is
                 very large and exceeds the width of the list. It should be
                 visible
@@ -202,6 +201,7 @@
                   key={country.code}
                   value={country.code}
                   selected={selected === country.code}
+                  background="orange"
                 >
                   <span style={{ fontWeight: 500 }}>{country.name}</span>
                   <span
@@ -269,9 +269,11 @@
               onChange={setSelected}
               highlight={filter}
               hidden={filtered.length === 0}
+              expandX
             >
               {filtered.map((fruit) => (
                 <Suggestion
+                  background="orange"
                   key={fruit}
                   value={fruit}
                   selected={selected === fruit}
