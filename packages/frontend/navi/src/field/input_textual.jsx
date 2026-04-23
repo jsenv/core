@@ -468,6 +468,7 @@ const InputTextualWithSuggestions = ({
     console.debug(`showPopover (e.type:${e.type})`);
     const popoverEl = document.getElementById(suggestions);
     const inputEl = ref.current;
+    popoverEl.showPopover();
     positionEffectRef.current = visibleRectEffect(
       inputEl,
       ({ visibilityRatio }) => {
@@ -484,7 +485,6 @@ const InputTextualWithSuggestions = ({
         positionPopover();
       },
     );
-    popoverEl.showPopover();
     expand();
   };
 
