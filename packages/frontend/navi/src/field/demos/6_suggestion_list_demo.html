@@ -673,22 +673,34 @@
       const PopoverDemo = () => {
         const [selected, setSelected] = useState(null);
         const listRef = useRef(null);
+        const buttonRef = useRef(null);
 
-        const showPopover = () => listRef.current?.showPopover();
-        const hidePopover = () => listRef.current?.hidePopover();
+        const showPopover = () => {
+          listRef.current?.dispatchEvent(
+            new CustomEvent("navi_suggestion_list_open", {
+              detail: { anchor: buttonRef.current },
+            }),
+          );
+        };
+        const hidePopover = () => {
+          listRef.current?.dispatchEvent(
+            new CustomEvent("navi_suggestion_list_close"),
+          );
+        };
 
         return (
           <div className="demo-section">
             <h2>Popover mode</h2>
             <p>The list is shown as a popover anchored to the buttons below.</p>
             <div style={{ display: "flex", gap: "8px", marginBottom: "12px" }}>
-              <button onClick={showPopover}>Show popover</button>
+              <button ref={buttonRef} onClick={showPopover}>
+                Show popover
+              </button>
               <button onClick={hidePopover}>Hide popover</button>
             </div>
             <SuggestionList
               ref={listRef}
               popover
-              style={{ top: "auto", left: "20px" }}
               onChange={(value) => {
                 setSelected(value);
                 hidePopover();

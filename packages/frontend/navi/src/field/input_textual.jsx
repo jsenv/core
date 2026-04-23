@@ -17,7 +17,6 @@
  * - <InputRadio /> for type="radio"
  */
 
-import { pickPositionRelativeTo, visibleRectEffect } from "@jsenv/dom";
 import { createContext } from "preact";
 import {
   useCallback,
@@ -432,64 +431,19 @@ const InputTextualWithSuggestions = ({
     setExpanded(false);
   };
 
-  const positionEffectRef = useRef(null);
-
-  const positionPopover = () => {
-    const inputEl = ref.current;
-    const popoverEl = document.getElementById(suggestions);
-    if (!popoverEl) {
-      return;
-    }
-    // Match input width before calling pickPositionRelativeTo so it can
-    // take the correct popover dimensions into account.
-    const inputRect = inputEl.getBoundingClientRect();
-    popoverEl.style.setProperty(
-      "--suggestion-list-anchor-width",
-      `${inputRect.width}px`,
-    );
-    // when collé au bord, we can't distinguish popover border from browser border
-    const minLeft = 1;
-    const { left, top } = pickPositionRelativeTo(popoverEl, inputEl, {
-      positionPreference: "below",
-      minLeft,
-    });
-    popoverEl.style.top = `${top}px`;
-    // If the popover is constrained by its max-width and ends up wider
-    // than the input, center it in the viewport instead of anchoring left.
-    const popoverRect = popoverEl.getBoundingClientRect();
-    const maxWidth = parseFloat(getComputedStyle(popoverEl).maxWidth);
-    if (!isNaN(maxWidth) && popoverRect.width >= maxWidth - 1) {
-      const viewportWidth = document.documentElement.clientWidth;
-      const centeredLeft = (viewportWidth - popoverRect.width) / 2;
-      popoverEl.style.left = `${Math.max(centeredLeft, minLeft)}px`;
-    } else {
-      popoverEl.style.left = `${Math.max(left, minLeft)}px`;
-    }
-  };
-
   const showSuggestions = (e) => {
     if (expandedRef.current) {
       return;
     }
     console.debug(`showPopover (e.type:${e.type})`);
     const popoverEl = document.getElementById(suggestions);
-    const inputEl = ref.current;
-    popoverEl.showPopover();
-    positionEffectRef.current = visibleRectEffect(
-      inputEl,
-      ({ visibilityRatio }) => {
-        const popoverEl = document.getElementById(suggestions);
-        if (visibilityRatio <= 0.2) {
-          if (popoverEl) {
-            popoverEl.setAttribute("data-anchor-hidden", "");
-          }
-          return;
-        }
-        if (popoverEl) {
-          popoverEl.removeAttribute("data-anchor-hidden");
-        }
-        positionPopover();
-      },
+    if (!popoverEl) {
+      return;
+    }
+    popoverEl.dispatchEvent(
+      new CustomEvent("navi_suggestion_list_open", {
+        detail: { anchor: ref.current },
+      }),
     );
     expand();
   };
@@ -499,15 +453,9 @@ const InputTextualWithSuggestions = ({
       return;
     }
     console.debug(`hidePopover (e.type:${e.type})`);
-    if (positionEffectRef.current) {
-      positionEffectRef.current.disconnect();
-      positionEffectRef.current = null;
-    }
     const popoverEl = document.getElementById(suggestions);
     if (popoverEl) {
-      popoverEl.removeAttribute("data-anchor-hidden");
-      popoverEl.dispatchEvent(new CustomEvent("navi_suggestion_list_clear"));
-      popoverEl.hidePopover();
+      popoverEl.dispatchEvent(new CustomEvent("navi_suggestion_list_close"));
     }
     collapse();
   };

@@ -1,3 +1,4 @@
+import { pickPositionRelativeTo, visibleRectEffect } from "@jsenv/dom";
 import { createContext } from "preact";
 import {
   useContext,
@@ -337,6 +338,59 @@ export const SuggestionList = ({
       return undefined;
     }
     const el = ref.current;
+    let positionEffectCleanup = null;
+
+    const positionPopover = (anchor) => {
+      const anchorRect = anchor.getBoundingClientRect();
+      el.style.setProperty(
+        "--suggestion-list-anchor-width",
+        `${anchorRect.width}px`,
+      );
+      const minLeft = 1;
+      const { left, top } = pickPositionRelativeTo(el, anchor, {
+        positionPreference: "below",
+        minLeft,
+      });
+      el.style.top = `${top}px`;
+      const popoverRect = el.getBoundingClientRect();
+      const maxWidth = parseFloat(getComputedStyle(el).maxWidth);
+      if (!isNaN(maxWidth) && popoverRect.width >= maxWidth - 1) {
+        const viewportWidth = document.documentElement.clientWidth;
+        const centeredLeft = (viewportWidth - popoverRect.width) / 2;
+        el.style.left = `${Math.max(centeredLeft, minLeft)}px`;
+      } else {
+        el.style.left = `${Math.max(left, minLeft)}px`;
+      }
+    };
+
+    const onOpen = (e) => {
+      const anchor = e.detail?.anchor;
+      el.showPopover();
+      if (anchor) {
+        positionEffectCleanup = visibleRectEffect(
+          anchor,
+          ({ visibilityRatio }) => {
+            if (visibilityRatio <= 0.2) {
+              el.setAttribute("data-anchor-hidden", "");
+              return;
+            }
+            el.removeAttribute("data-anchor-hidden");
+            positionPopover(anchor);
+          },
+        );
+      }
+    };
+
+    const onClose = () => {
+      if (positionEffectCleanup) {
+        positionEffectCleanup.disconnect();
+        positionEffectCleanup = null;
+      }
+      el.removeAttribute("data-anchor-hidden");
+      el.dispatchEvent(new CustomEvent("navi_suggestion_list_clear"));
+      el.hidePopover();
+    };
+
     const onNavigate = (e) => {
       navigate(e.detail.direction);
     };
@@ -350,13 +404,20 @@ export const SuggestionList = ({
     const onClear = () => {
       setPointedValue(null);
     };
+    el.addEventListener("navi_suggestion_list_open", onOpen);
+    el.addEventListener("navi_suggestion_list_close", onClose);
     el.addEventListener("navi_suggestion_list_navigate", onNavigate);
     el.addEventListener("navi_suggestion_list_confirm", onConfirm);
     el.addEventListener("navi_suggestion_list_clear", onClear);
     return () => {
+      el.removeEventListener("navi_suggestion_list_open", onOpen);
+      el.removeEventListener("navi_suggestion_list_close", onClose);
       el.removeEventListener("navi_suggestion_list_navigate", onNavigate);
       el.removeEventListener("navi_suggestion_list_confirm", onConfirm);
       el.removeEventListener("navi_suggestion_list_clear", onClear);
+      if (positionEffectCleanup) {
+        positionEffectCleanup.disconnect();
+      }
     };
   }, [popover]);
 
