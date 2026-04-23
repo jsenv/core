@@ -178,7 +178,10 @@ const css = /* css */ `
     font-size: var(--suggestion-group-label-font-size);
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    background-color: var(--suggestion-group-label-background-color);
+    background-color: var(
+      --suggestion-group-label-background-color,
+      var(--suggestion-list-background-color)
+    );
     user-select: none;
   }
   .navi_suggestion_list_empty {

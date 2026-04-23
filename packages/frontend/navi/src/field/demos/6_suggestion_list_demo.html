@@ -537,7 +537,13 @@
             <SuggestionList
               style={{ maxHeight: "280px" }}
               onChange={setSelected}
+              expandX
             >
+              <Suggestion>
+                A very large suggestion to test how it behaves when the text is
+                very large and exceeds the width of the list. It should be
+                visible
+              </Suggestion>
               {GROUPED_ITEMS.map((group) => (
                 <SuggestionGroup key={group.label} label={group.label}>
                   {group.items.map((item) => (
