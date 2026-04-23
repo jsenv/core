@@ -228,86 +228,191 @@
 
       // --- 3. Suggestion with large content ---
 
-      const LONG_DESCRIPTIONS = [
-        {
-          value: "option-a",
-          label: "Option A",
-          description:
-            "This is a very long description for option A that goes into extensive detail about what this option does and why you might want to choose it over the others available in the list.",
-        },
-        {
-          value: "option-b",
-          label: "Option B",
-          description:
-            "Option B comes with an equally detailed explanation covering edge cases, performance implications, and recommended use cases for advanced users who need full context.",
-        },
-        {
-          value: "option-c",
-          label: "Option C",
-          description:
-            "Option C is the simplest of the three, but its description is still intentionally verbose to demonstrate how the popover handles wide content without overflowing the viewport.",
-        },
-      ];
-
       const LargeSuggestionDemo = () => {
         const [selected, setSelected] = useState(null);
         const [query, setQuery] = useState("");
 
-        const matches = (opt) =>
-          opt.label.toLowerCase().includes(query.toLowerCase()) ||
-          opt.description.toLowerCase().includes(query.toLowerCase());
+        const matchesQuery = (label, description) =>
+          label.toLowerCase().includes(query.toLowerCase()) ||
+          description.toLowerCase().includes(query.toLowerCase());
+
+        const handleInput = (e) => {
+          setQuery(e.target.value);
+          if (e.target.value === "Option A") {
+            setSelected("option-a");
+          } else if (e.target.value === "Option B") {
+            setSelected("option-b");
+          } else if (e.target.value === "Option C") {
+            setSelected("option-c");
+          } else {
+            setSelected(null);
+          }
+        };
+
+        const descriptionA =
+          "This is a very long description for option A that goes into extensive detail about what this option does and why you might want to choose it over the others available in the list.";
+        const descriptionB =
+          "Option B comes with an equally detailed explanation covering edge cases, performance implications, and recommended use cases for advanced users who need full context.";
+        const descriptionC =
+          "Option C is the simplest of the three, but its description is still intentionally verbose to demonstrate how the popover handles wide content without overflowing the viewport.";
 
         return (
           <div className="demo-section">
             <h2>Large suggestion content</h2>
             <p>
-              Each suggestion contains a long description. The popover width
-              follows the input width; overflow wraps inside the suggestion.
+              Without <code>whiteSpace: "nowrap"</code> the description wraps
+              inside the popover. With it, the popover grows horizontally.
             </p>
-            <Input
-              type="text"
-              suggestions="large-list"
-              placeholder="Search an option…"
-              onInput={(e) => {
-                const val = e.target.value;
-                setQuery(val);
-                const match = LONG_DESCRIPTIONS.find((o) => o.label === val);
-                setSelected(match ? match.value : null);
-              }}
-            />
-            <SuggestionList
-              id="large-list"
-              popover
-              style={{ "--max-height": "300px" }}
-            >
-              {LONG_DESCRIPTIONS.map((opt) => (
-                <Suggestion
-                  key={opt.value}
-                  value={opt.label}
-                  selected={selected === opt.value}
-                  hidden={!matches(opt)}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: "4px",
-                    }}
+            <div style={{ display: "flex", gap: "32px", flexWrap: "wrap" }}>
+              <div>
+                <h3>Wrapping (default)</h3>
+                <Input
+                  type="text"
+                  suggestions="large-list-wrap"
+                  placeholder="Search an option…"
+                  onInput={handleInput}
+                />
+                <SuggestionList id="large-list-wrap" popover>
+                  <Suggestion
+                    value="Option A"
+                    selected={selected === "option-a"}
+                    hidden={!matchesQuery("Option A", descriptionA)}
                   >
-                    <span style={{ fontWeight: 600 }}>{opt.label}</span>
-                    <span
+                    <div
                       style={{
-                        fontSize: "0.85em",
-                        color: "#666",
-                        whiteSpace: "normal",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "4px",
                       }}
                     >
-                      {opt.description}
-                    </span>
-                  </div>
-                </Suggestion>
-              ))}
-            </SuggestionList>
+                      <span style={{ fontWeight: 600 }}>Option A</span>
+                      <span style={{ fontSize: "0.85em", color: "#666" }}>
+                        {descriptionA}
+                      </span>
+                    </div>
+                  </Suggestion>
+                  <Suggestion
+                    value="Option B"
+                    selected={selected === "option-b"}
+                    hidden={!matchesQuery("Option B", descriptionB)}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "4px",
+                      }}
+                    >
+                      <span style={{ fontWeight: 600 }}>Option B</span>
+                      <span style={{ fontSize: "0.85em", color: "#666" }}>
+                        {descriptionB}
+                      </span>
+                    </div>
+                  </Suggestion>
+                  <Suggestion
+                    value="Option C"
+                    selected={selected === "option-c"}
+                    hidden={!matchesQuery("Option C", descriptionC)}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "4px",
+                      }}
+                    >
+                      <span style={{ fontWeight: 600 }}>Option C</span>
+                      <span style={{ fontSize: "0.85em", color: "#666" }}>
+                        {descriptionC}
+                      </span>
+                    </div>
+                  </Suggestion>
+                </SuggestionList>
+              </div>
+              <div>
+                <h3>No wrap</h3>
+                <Input
+                  type="text"
+                  suggestions="large-list-nowrap"
+                  placeholder="Search an option…"
+                  onInput={handleInput}
+                />
+                <SuggestionList id="large-list-nowrap" popover>
+                  <Suggestion
+                    value="Option A"
+                    selected={selected === "option-a"}
+                    hidden={!matchesQuery("Option A", descriptionA)}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "4px",
+                      }}
+                    >
+                      <span style={{ fontWeight: 600 }}>Option A</span>
+                      <span
+                        style={{
+                          fontSize: "0.85em",
+                          color: "#666",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {descriptionA}
+                      </span>
+                    </div>
+                  </Suggestion>
+                  <Suggestion
+                    value="Option B"
+                    selected={selected === "option-b"}
+                    hidden={!matchesQuery("Option B", descriptionB)}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "4px",
+                      }}
+                    >
+                      <span style={{ fontWeight: 600 }}>Option B</span>
+                      <span
+                        style={{
+                          fontSize: "0.85em",
+                          color: "#666",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {descriptionB}
+                      </span>
+                    </div>
+                  </Suggestion>
+                  <Suggestion
+                    value="Option C"
+                    selected={selected === "option-c"}
+                    hidden={!matchesQuery("Option C", descriptionC)}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "4px",
+                      }}
+                    >
+                      <span style={{ fontWeight: 600 }}>Option C</span>
+                      <span
+                        style={{
+                          fontSize: "0.85em",
+                          color: "#666",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {descriptionC}
+                      </span>
+                    </div>
+                  </Suggestion>
+                </SuggestionList>
+              </div>
+            </div>
             <div className="value-display">{selected ?? ""}</div>
           </div>
         );
