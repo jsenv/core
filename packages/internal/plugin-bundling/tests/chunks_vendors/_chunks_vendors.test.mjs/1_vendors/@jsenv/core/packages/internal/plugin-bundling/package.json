@@ -1,18 +1,13 @@
 {
   "name": "@jsenv/plugin-bundling",
   "version": "2.10.10",
+  "type": "module",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
     "directory": "packages/related/plugin-bundling"
   },
   "license": "MIT",
-  "sideEffects": [
-    "./tests/chunks_vendors/snapshots/0_default/jsenv_plugin_bundling_node_modules.js",
-    "./tests/chunks_vendors/snapshots/1_vendors/vendors.js",
-    "./tests/chunks_vendors/build/vendors.js"
-  ],
-  "type": "module",
   "exports": {
     ".": {
       "import": "./src/main.js"
@@ -22,6 +17,9 @@
   "files": [
     "/src/"
   ],
+  "peerDependencies": {
+    "@jsenv/core": "*"
+  },
   "dependencies": {
     "@jsenv/humanize": "1.7.6",
     "@jsenv/node-esm-resolution": "1.2.17",
@@ -35,10 +33,12 @@
     "@jsenv/filesystem": "../../tooling/filesystem",
     "@jsenv/snapshot": "../../tooling/snapshot"
   },
-  "peerDependencies": {
-    "@jsenv/core": "*"
-  },
   "publishConfig": {
     "access": "public"
-  }
+  },
+  "sideEffects": [
+    "./tests/chunks_vendors/snapshots/0_default/jsenv_plugin_bundling_node_modules.js",
+    "./tests/chunks_vendors/snapshots/1_vendors/vendors.js",
+    "./tests/chunks_vendors/build/vendors.js"
+  ]
 }
