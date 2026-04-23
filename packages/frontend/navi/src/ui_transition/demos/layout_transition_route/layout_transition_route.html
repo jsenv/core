@@ -63,10 +63,8 @@
       import { useRef, useState } from "preact/hooks";
       import {
         Link,
-        Routes,
         Route,
         Box,
-        RouteLink,
         setupRoutes,
         UITransition,
         DialogLayout,
@@ -93,7 +91,7 @@
 
       const Router = ({ uiTransitionRef }) => {
         return (
-          <Routes element={<RootLayout uiTransitionRef={uiTransitionRef} />}>
+          <Route element={<RootLayout uiTransitionRef={uiTransitionRef} />}>
             <Route element={<ViewportPage />} route={VIEWPORT_ROUTE} />
             <Route
               element={<ViewportOverflowXPage />}
@@ -122,7 +120,7 @@
               element={<SmallPage />}
               fallback
             />
-          </Routes>
+          </Route>
         );
       };
 

@@ -91,14 +91,7 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import {
-        Link,
-        Routes,
-        Route,
-        RouteLink,
-        setupRoutes,
-        UITransition,
-      } from "@jsenv/navi";
+      import { Link, Route, setupRoutes, UITransition } from "@jsenv/navi";
 
       const { SMALL_ROUTE, LARGE_ROUTE } = setupRoutes({
         SMALL_ROUTE: "small",
@@ -133,8 +126,8 @@
             <div className="controls">
               <p>Test size transitions between routes:</p>
               <Link href="./size_transition_route.html">Coucou</Link>
-              <RouteLink route={SMALL_ROUTE}>Small Rectangle</RouteLink>
-              <RouteLink route={LARGE_ROUTE}>Large Rectangle</RouteLink>
+              <Link route={SMALL_ROUTE}>Small Rectangle</Link>
+              <Link route={LARGE_ROUTE}>Large Rectangle</Link>
             </div>
 
             <div className="demo-container">
@@ -156,11 +149,11 @@
 
       const Router = () => {
         return (
-          <Routes element={MainLayout}>
+          <Route element={MainLayout}>
             <Route element={<SmallRectangle />} route={SMALL_ROUTE} />
             <Route element={<LargeRectangle />} route={LARGE_ROUTE} />
             <Route element={"Coucou"} fallback />
-          </Routes>
+          </Route>
         );
       };
 

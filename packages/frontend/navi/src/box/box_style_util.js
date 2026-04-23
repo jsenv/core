@@ -138,7 +138,13 @@ const DIMENSION_PROPS = {
       return { flexGrow: 1, flexBasis: "0%" };
     }
     if (parentBoxFlow === "flex-y" || parentBoxFlow === "inline-flex-y") {
-      return { alignSelf: "stretch" };
+      return {
+        alignSelf: "stretch",
+        // Here flex grow is "useless" for the item itself
+        // buuut it would allow children (hello ".navi_text_bold_wrapper")
+        // to inherit expand behavior
+        flexGrow: 1,
+      };
     }
     // Can't use flexGrow — parent is not flex-x
     return { width: "100%" };
@@ -154,7 +160,13 @@ const DIMENSION_PROPS = {
       return { flexGrow: 1, flexBasis: "0%" };
     }
     if (parentBoxFlow === "flex-x" || parentBoxFlow === "inline-flex-x") {
-      return { alignSelf: "stretch" };
+      return {
+        alignSelf: "stretch",
+        // Here flex grow is "useless" for the item itself
+        // buuut it would allow children (hello ".navi_text_bold_wrapper")
+        // to inherit expand behavior
+        flexGrow: 1,
+      };
     }
     // Can't use flexGrow — parent is not flex-y
     return { height: "100%" };
