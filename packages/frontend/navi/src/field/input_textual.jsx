@@ -18,6 +18,7 @@
  */
 
 import { pickPositionRelativeTo, visibleRectEffect } from "@jsenv/dom";
+import { createContext } from "preact";
 import {
   useCallback,
   useContext,
@@ -33,6 +34,7 @@ import { useActionStatus } from "../action/use_action_status.js";
 import { useExecuteAction } from "../action/use_execute_action.js";
 import { Box } from "../box/box.jsx";
 import { PSEUDO_CLASSES } from "../box/pseudo_styles.js";
+import { ChevronUpDownSvg } from "../graphic/icons/chevron_updown_svg.jsx";
 import { CloseSvg } from "../graphic/icons/close_svg.jsx";
 import { EmailSvg } from "../graphic/icons/email_svg.jsx";
 import { PhoneSvg } from "../graphic/icons/phone_svg.jsx";
@@ -122,8 +124,8 @@ const css = /* css */ `
     border-radius: inherit;
     cursor: inherit;
 
-    --start-icon-size: 0px;
-    --end-icon-size: 0px;
+    --left-slot-size: 0px;
+    --right-slot-size: 0px;
     --x-outline-width: var(--outline-width);
     --x-border-radius: var(--border-radius);
     --x-border-width: var(--border-width);
@@ -154,9 +156,9 @@ const css = /* css */ `
     .navi_native_input {
       box-sizing: border-box;
       padding-top: var(--x-padding-top-base);
-      padding-right: calc(var(--x-padding-right-base) + var(--end-icon-size));
+      padding-right: calc(var(--x-padding-right-base) + var(--right-slot-size));
       padding-bottom: var(--x-padding-bottom-base);
-      padding-left: calc(var(--x-padding-left-base) + var(--start-icon-size));
+      padding-left: calc(var(--x-padding-left-base) + var(--left-slot-size));
       color: var(--x-color);
       font-size: var(--font-size);
       background-color: var(--x-background-color);
@@ -179,17 +181,9 @@ const css = /* css */ `
       }
     }
 
-    .navi_input_start_icon {
+    .navi_input_slot {
       position: absolute;
       top: 0;
-      bottom: 0;
-      left: var(--x-padding-left-base);
-      font-size: var(--font-size);
-    }
-    .navi_input_end_button {
-      position: absolute;
-      top: 0;
-      right: var(--x-padding-right-base);
       bottom: 0;
       display: inline-flex;
       margin: 0;
@@ -199,34 +193,43 @@ const css = /* css */ `
       font-size: var(--font-size);
       background: none;
       border: none;
-      opacity: 0;
-      pointer-events: none;
+
+      &[data-left] {
+        left: var(--x-padding-left-base);
+      }
+      &[data-right] {
+        right: var(--x-padding-right-base);
+      }
+      &[data-hide-while-empty] {
+        opacity: 0;
+        pointer-events: none;
+      }
     }
     &[data-has-value] {
-      .navi_input_end_button {
+      .navi_input_slot[data-hide-while-empty] {
         opacity: 1;
         cursor: pointer;
         pointer-events: auto;
       }
 
       &[data-readonly] {
-        .navi_input_end_button {
+        .navi_input_slot[data-hide-while-empty] {
           opacity: 0;
           pointer-events: none;
         }
       }
       &[data-disabled] {
-        .navi_input_end_button {
+        .navi_input_slot[data-hide-while-empty] {
           opacity: 0;
           pointer-events: none;
         }
       }
     }
-    &[data-start-icon] {
-      --start-icon-size: 1em;
+    &:has(.navi_input_slot[data-left]) {
+      --left-slot-size: 1em;
     }
-    &[data-end-icon] {
-      --end-icon-size: 1em;
+    &:has(.navi_input_slot[data-right]) {
+      --right-slot-size: 1em;
     }
 
     /* Hover */
@@ -360,6 +363,46 @@ Object.assign(PSEUDO_CLASSES, {
 });
 const InputPseudoElements = ["::-navi-loader"];
 const InputChildPropSet = new Set([...fieldPropSet]);
+
+const InputNativeContext = createContext(null);
+
+const InputSlot = ({ side, onClick, hideWhileEmpty, ...props }) => {
+  const ctx = useContext(InputNativeContext);
+  const { id, readOnly, disabled } = ctx;
+
+  return (
+    <Label
+      htmlFor={id}
+      className="navi_input_slot"
+      disabled={disabled}
+      readOnly={readOnly}
+      data-readonly={readOnly}
+      data-disabled={disabled}
+      data-left={side === "left" ? "" : undefined}
+      data-right={side === "right" ? "" : undefined}
+      data-hide-while-empty={hideWhileEmpty ? "" : undefined}
+      flex
+      alignY="center"
+      onMouseDown={(e) => {
+        e.preventDefault(); // keep focus in the input
+      }}
+      onClick={(e) => {
+        if (readOnly || disabled) {
+          return;
+        }
+        onClick?.(e);
+      }}
+      {...props}
+    />
+  );
+};
+export const InputLeftSlot = (props) => {
+  return <InputSlot {...props} side="left" />;
+};
+export const InputRightSlot = (props) => {
+  return <InputSlot {...props} side="right" />;
+};
+
 const InputTextualBasic = (props) => {
   if (props.suggestions) {
     return <InputTextualWithSuggestions {...props} />;
@@ -372,6 +415,7 @@ const InputTextualWithSuggestions = ({
   onInput,
   onFocus,
   onBlur,
+  children,
   ...rest
 }) => {
   const defaultRef = useRef();
@@ -581,7 +625,23 @@ const InputTextualWithSuggestions = ({
         showPopover(e);
       }}
       {...rest}
-    />
+    >
+      {children || (
+        <InputRightSlot
+          onClick={(e) => {
+            if (expanded) {
+              hidePopover(e);
+            } else {
+              showPopover(e);
+            }
+          }}
+        >
+          <Icon color="rgba(28, 43, 52, 0.5)">
+            <ChevronUpDownSvg />
+          </Icon>
+        </InputRightSlot>
+      )}
+    </InputTextualPlain>
   );
 };
 
@@ -603,9 +663,8 @@ const InputTextualPlain = (props) => {
     autoFocus,
     autoFocusVisible,
     autoSelect,
-    icon,
-    cancelButton = type === "search",
     basePseudoState,
+    children,
 
     ...rest
   } = props;
@@ -669,7 +728,6 @@ const InputTextualPlain = (props) => {
       />
     );
   };
-
   const renderInputMemoized = useCallback(renderInput, [
     type,
     uiState,
@@ -678,17 +736,47 @@ const InputTextualPlain = (props) => {
     innerId,
   ]);
 
-  let innerIcon;
-  if (icon === undefined) {
-    if (type === "search") {
-      innerIcon = <SearchSvg />;
-    } else if (type === "email") {
-      innerIcon = <EmailSvg />;
-    } else if (type === "tel") {
-      innerIcon = <PhoneSvg />;
-    }
-  } else {
-    innerIcon = icon;
+  let innerChildren;
+  if (children) {
+    innerChildren = children;
+  } else if (type === "search") {
+    innerChildren = (
+      <>
+        <InputLeftSlot>
+          <Icon color="rgba(28, 43, 52, 0.5)">
+            <SearchSvg />
+          </Icon>
+        </InputLeftSlot>
+        <InputRightSlot
+          hideWhileEmpty
+          onClick={() => {
+            uiStateController.setUIState("", { trigger: "cancel_button" });
+            ref.current.value = "";
+            ref.current.dispatchEvent(new Event("navi_delete_content"));
+          }}
+        >
+          <Icon color="rgba(28, 43, 52, 0.5)">
+            <CloseSvg />
+          </Icon>
+        </InputRightSlot>
+      </>
+    );
+  } else if (type === "email") {
+    innerChildren = (
+      <InputLeftSlot>
+        <Icon color="rgba(28, 43, 52, 0.5)">
+          <EmailSvg />
+        </Icon>
+      </InputLeftSlot>
+    );
+  } else if (type === "tel") {
+    innerChildren = (
+      <InputLeftSlot>
+        <Icon color="rgba(28, 43, 52, 0.5)">
+          <PhoneSvg />
+        </Icon>
+      </InputLeftSlot>
+    );
   }
 
   return (
@@ -709,8 +797,6 @@ const InputTextualPlain = (props) => {
       pseudoElements={InputPseudoElements}
       hasChildFunction
       baseChildPropSet={InputChildPropSet}
-      data-start-icon={innerIcon ? "" : undefined}
-      data-end-icon={cancelButton ? "" : undefined}
       {...remainingProps}
       ref={undefined}
     >
@@ -719,42 +805,18 @@ const InputTextualPlain = (props) => {
         color="var(--loader-color)"
         inset={-1}
       />
-      {innerIcon && (
-        <Label
-          htmlFor={innerId}
-          disabled={innerDisabled}
-          readOnly={innerReadOnly}
-          className="navi_input_start_icon"
-          flex
-          alignY="center"
-        >
-          <Icon color="rgba(28, 43, 52, 0.5)">{innerIcon}</Icon>
-        </Label>
-      )}
       {renderInputMemoized}
-      {cancelButton && (
-        <label
-          htmlFor={innerId}
-          data-readonly={innerReadOnly ? "" : undefined}
-          data-disabled={innerDisabled ? "" : undefined}
-          className="navi_input_end_button"
-          onMouseDown={(e) => {
-            e.preventDefault(); // keep focus in the input
-          }}
-          onClick={() => {
-            if (innerReadOnly || innerDisabled) {
-              return;
-            }
-            uiStateController.setUIState("", { trigger: "cancel_button" });
-            ref.current.value = "";
-            ref.current.dispatchEvent(new Event("navi_delete_content"));
+      {innerChildren ? (
+        <InputNativeContext.Provider
+          value={{
+            id: innerId,
+            readOnly: innerReadOnly,
+            disabled: innerDisabled,
           }}
         >
-          <Icon color="rgba(28, 43, 52, 0.5)">
-            <CloseSvg />
-          </Icon>
-        </label>
-      )}
+          {innerChildren}
+        </InputNativeContext.Provider>
+      ) : null}
     </Box>
   );
 };
