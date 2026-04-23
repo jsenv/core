@@ -161,6 +161,20 @@ const css = /* css */ `
     background-color: var(--suggestion-group-label-background-color);
     user-select: none;
   }
+  .navi_suggestion_list_empty {
+    display: none;
+    padding: var(--suggestion-padding);
+    color: var(--suggestion-group-label-color);
+    font-size: 0.9em;
+    text-align: center;
+    user-select: none;
+  }
+  /* Show the empty state only when there are no visible suggestions */
+  .navi_suggestion_list:not(:has([role="option"]:not([hidden]))) {
+    .navi_suggestion_list_empty {
+      display: block;
+    }
+  }
 `;
 
 const SuggestionListStyleCSSVars = {
@@ -202,6 +216,7 @@ export const SuggestionList = ({
   popover,
   onChange: onChangeProp,
   highlight,
+  emptyState = "No results",
   children,
   ...rest
 }) => {
@@ -389,6 +404,9 @@ export const SuggestionList = ({
     >
       <SuggestionListContext.Provider value={suggestionListContext}>
         <ItemTrackerProvider>{children}</ItemTrackerProvider>
+        {emptyState && (
+          <li className="navi_suggestion_list_empty">{emptyState}</li>
+        )}
       </SuggestionListContext.Provider>
     </Box>
   );
