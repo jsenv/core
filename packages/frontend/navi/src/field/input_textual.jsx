@@ -1,4 +1,3 @@
-/* eslint-disable jsenv/no-unknown-params */
 /**
  * Input component for all textual input types.
  *

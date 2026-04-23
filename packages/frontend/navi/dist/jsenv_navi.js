@@ -3,7 +3,7 @@ import { isValidElement, h, createContext, options, toChildArray, render, create
 import { useErrorBoundary, useLayoutEffect, useEffect, useMemo, useRef, useState, useCallback, useContext, useImperativeHandle, useId } from "preact/hooks";
 import { jsxs, jsx, Fragment } from "preact/jsx-runtime";
 import { signal, effect, computed, batch, useSignal } from "@preact/signals";
-import { createIterableWeakSet, mergeOneStyle, stringifyStyle, createPubSub, mergeTwoStyles, normalizeStyles, createGroupTransitionController, getElementSignature, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, findBefore, findAfter, createValueEffect, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, allowWheelThrough, resolveCSSColor, createStyleController, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, resolveCSSSize, activeElementSignal, canInterceptKeys, hasCSSSizeUnit, contrastColor, initFocusGroup, elementIsFocusable, resolveColorLuminance, dragAfterThreshold, getScrollContainer, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
+import { createIterableWeakSet, mergeOneStyle, stringifyStyle, createPubSub, mergeTwoStyles, normalizeStyles, createGroupTransitionController, getElementSignature, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, findBefore, findAfter, createValueEffect, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, allowWheelThrough, resolveCSSColor, createStyleController, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, resolveCSSSize, activeElementSignal, canInterceptKeys, contrastColor, hasCSSSizeUnit, initFocusGroup, elementIsFocusable, resolveColorLuminance, dragAfterThreshold, getScrollContainer, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
 export { contrastColor } from "@jsenv/dom";
 import { prefixFirstAndIndentRemainingLines } from "@jsenv/humanize";
 import { createValidity } from "@jsenv/validity";
@@ -6306,7 +6306,7 @@ const DIMENSION_PROPS = {
       return {
         alignSelf: "stretch",
         // Here flex grow is "useless" for the item itself
-        // buuut it would allow children (hello ".navi_text_bold_wrapper")
+        // buuut it would allow children (hello ".navi_text_sizer")
         // to inherit expand behavior
         flexGrow: 1,
       };
@@ -6328,7 +6328,7 @@ const DIMENSION_PROPS = {
       return {
         alignSelf: "stretch",
         // Here flex grow is "useless" for the item itself
-        // buuut it would allow children (hello ".navi_text_bold_wrapper")
+        // buuut it would allow children (hello ".navi_text_sizer")
         // to inherit expand behavior
         flexGrow: 1,
       };
@@ -7244,6 +7244,9 @@ const PSEUDO_CLASSES = {
   },
   ":-navi-status-error": {
     attribute: "data-status-error",
+  },
+  ":navi-expanded": {
+    attribute: "data-expanded",
   },
 };
 
@@ -16486,7 +16489,7 @@ const stickCalloutToAnchor = (calloutElement, anchorElement) => {
     }
     calloutElement.setAttribute("data-position", position);
     calloutStyleController.set(calloutElement, {
-      opacity: visibilityRatio ? 1 : 0,
+      opacity: visibilityRatio > 0 ? 1 : 0,
       transform: {
         translateX: calloutLeft,
         translateY: calloutTop
@@ -20276,6 +20279,109 @@ const isSameKey = (browserEventKey, key) => {
   return false;
 };
 
+/**
+ * Toggles a `data-dark-background` attribute on the referenced element based on its
+ * computed background color. Pair it with a CSS variable to get automatic
+ * light/dark text without hard-coding colors:
+ *
+ * ```css
+ * .my-element {
+ *   --color-contrasting: black;
+ *   &[data-dark-background] {
+ *     --color-contrasting: white;
+ *   }
+ *   color: var(--color-contrasting);
+ * }
+ * ```
+ *
+ * - `data-dark-background` is **set** when the background is dark enough that white text
+ *   provides better (or equal) contrast.
+ * - `data-dark-background` is **absent** when black text is the better choice.
+ *
+ * @param {import("preact").RefObject} ref - Ref to the element that receives
+ *   the `data-dark-background` attribute and is also passed to `contrastColor` for
+ *   resolving CSS variables.
+ * @param {object} [options]
+ * @param {string} [options.backgroundElementSelector] - CSS selector relative
+ *   to `ref.current` pointing to a child element whose `background-color`
+ *   should be tested instead of the element itself. Useful when the element
+ *   has a transparent background but contains a coloured child (e.g. a fill
+ *   bar inside a track).
+ */
+
+const useDarkBackgroundAttribute = (
+  ref,
+  deps = [],
+  {
+    backgroundElementSelector,
+    attributeName = "data-dark-background",
+    hardcoded = {},
+  } = {},
+) => {
+  const innerDeps = [
+    ...deps,
+    // ref can change is the component pass a different ref on different render based on some logic
+    // (can be used to control which element backgroundColor is being checked by switching the ref to another element)
+    ref,
+    // backgroundElementSelector can change if the component pass a different selector on different render based on some logic
+    // (can be used to control which element backgroundColor is being checked by switching the selector to point to another element)
+    backgroundElementSelector,
+  ];
+
+  const hardcodedMap = new Map();
+  for (const key of Object.keys(hardcoded)) {
+    const value = hardcoded[key];
+    innerDeps.push(key, value);
+    const colorString = normalizeColorString(key);
+    hardcodedMap.set(colorString, value);
+  }
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) {
+      return undefined;
+    }
+    let elementToCheck = el;
+    if (backgroundElementSelector) {
+      elementToCheck = el.querySelector(backgroundElementSelector);
+      if (!elementToCheck) {
+        return undefined;
+      }
+    }
+    const updateAttribute = () => {
+      const computedStyle = getComputedStyle(elementToCheck);
+      const backgroundColor = computedStyle.backgroundColor;
+      if (!backgroundColor) {
+        el.removeAttribute(attributeName);
+        return;
+      }
+      const backgroundColorString = normalizeColorString(backgroundColor, el);
+      const hardcodedContrast = hardcodedMap.get(backgroundColorString);
+      const contrastingColor =
+        hardcodedContrast || contrastColor(backgroundColor, el);
+      if (contrastingColor === "white") {
+        el.setAttribute(attributeName, "");
+      } else {
+        el.removeAttribute(attributeName);
+      }
+    };
+    updateAttribute();
+    el.addEventListener(NAVI_PSEUDO_STATE_CUSTOM_EVENT, updateAttribute);
+    return () => {
+      el.removeEventListener(NAVI_PSEUDO_STATE_CUSTOM_EVENT, updateAttribute);
+      el.removeAttribute(attributeName);
+    };
+  }, innerDeps);
+};
+
+const normalizeColorString = (color, el) => {
+  const colorRgba = resolveCSSColor(color, el);
+  if (!colorRgba) {
+    return "";
+  }
+  return String(colorRgba);
+};
+
 const useInitialTextSelection = (ref, textSelection) => {
   const deps = [];
   if (Array.isArray(textSelection)) {
@@ -20375,8 +20481,7 @@ const selectByTextStrings = (element, range, startText, endText) => {
   }
 };
 
-installImportMetaCssBuild(import.meta);/* eslint-disable jsenv/no-unknown-params */
-const css$v = /* css */`
+installImportMetaCssBuild(import.meta);const css$v = /* css */`
   @layer navi {
     .navi_text {
       &[data-skeleton] {
@@ -20391,23 +20496,27 @@ const css$v = /* css */`
   .navi_text {
     position: relative;
 
+    &[data-dark-background] {
+      color: white;
+    }
+
     /* There is a chrome specific bug that prevents text-transform: capitalize to be applied in nested DOM structure */
     /* The CSS below ensure capitalize is propagated to the bold clones */
     &[data-capitalize] {
       &::first-letter {
         text-transform: uppercase;
       }
-      .navi_text_bold_clone::first-letter {
+      .navi_text_sizer_placeholder::first-letter {
         text-transform: uppercase;
       }
-      .navi_text_bold_foreground::first-letter {
+      .navi_text_sizer_overlay::first-letter {
         text-transform: uppercase;
       }
     }
 
-    .navi_text_bold_wrapper,
-    .navi_text_bold_clone,
-    .navi_text_bold_foreground {
+    .navi_text_sizer,
+    .navi_text_sizer_placeholder,
+    .navi_text_sizer_overlay {
       display: inherit;
       width: inherit;
       min-width: inherit;
@@ -20520,15 +20629,14 @@ const css$v = /* css */`
     }
   }
 
-  .navi_text_bold_wrapper {
+  .navi_text_sizer {
     position: relative;
     display: inline-block;
 
-    .navi_text_bold_clone {
-      font-weight: bold;
+    .navi_text_sizer_placeholder {
       opacity: 0;
     }
-    .navi_text_bold_foreground {
+    .navi_text_sizer_overlay {
       position: absolute;
       inset: 0;
     }
@@ -20547,24 +20655,12 @@ const css$v = /* css */`
     -webkit-text-fill-color: transparent;
     opacity: 0;
   }
-
+  .navi_text[data-contains-absolute-child] {
+    display: inline-block;
+  }
   .navi_text[data-bold] {
     .navi_text_bold_background {
       opacity: 1;
-    }
-  }
-
-  .navi_text[data-bold-transition] {
-    .navi_text_bold_foreground {
-      transition-property: font-weight;
-      transition-duration: 0.3s;
-      transition-timing-function: ease;
-    }
-
-    .navi_text_bold_background {
-      transition-property: opacity;
-      transition-duration: 0.3s;
-      transition-timing-function: ease;
     }
   }
 `;
@@ -20685,6 +20781,61 @@ const shouldInjectSpacingBetween = (left, right) => {
   return true;
 };
 const OverflowPinnedElementContext = createContext(null);
+/**
+ * Text component for rendering inline or block text with layout-stable style changes.
+ *
+ * Most props are forwarded to the underlying `Box` component (as, style, bold, noWrap, …).
+ * The props listed below are specific to Text.
+ *
+ * @param {object} props
+ *
+ * @param {boolean} [props.overflowEllipsis]
+ *   Truncates overflowing text with an ellipsis.
+ *
+ * @param {boolean} [props.overflowPinned]
+ *   Must be used inside a `<Text overflowEllipsis>` parent.
+ *   Pins this element outside the truncated text flow (e.g. a badge or icon).
+ *
+ * @param {string} [props.spacing]
+ *   Controls the separator injected between child nodes.
+ *   Accepts a size/spacing scale key, a CSS length, or `"pre"` / `0` to disable.
+ *   Defaults to a regular space character (or a padding-based fake space when
+ *   `preventSpaceUnderlines` is active).
+ *
+ * @param {boolean} [props.loading]
+ *   Renders a shimmer skeleton in place of the text.
+ *
+ * @param {boolean} [props.skeleton]
+ *   Same as `loading` but without the shimmer animation.
+ *
+ * @param {boolean} [props.preventSpaceUnderlines]
+ *   Replaces real space characters between children with padding-based spaces
+ *   to avoid the underline browsers draw under spaces inside links.
+ *
+ * @param {object} [props.holdSpaceForStyle]
+ *   Prevents layout shifts when text styles change (font-weight, font-size, …).
+ *   Pass an object of CSS-in-JS style properties representing the "maximum" state of the text.
+ *   An invisible placeholder is rendered with those styles to reserve the space,
+ *   and the real visible text is layered on top via `position: absolute`.
+ *   Only works reliably with single-line (`noWrap`) text.
+ *   Example: `holdSpaceForStyle={{ fontWeight: "bold", fontSize: "1.5rem" }}`
+ *
+ * @param {boolean} [props.boldStable]
+ *   Alternative to `holdSpaceForStyle` for multi-line text.
+ *   Keeps a consistent visual width regardless of font-weight by painting normal-weight
+ *   text on top of a bold background using `background-clip: text`.
+ *   Does not support font-size changes.
+ *
+ * @param {boolean} [props.capitalize]
+ *   Applies `text-transform: uppercase` to the first letter via CSS.
+ *
+ * @param {string|Array} [props.selectRange]
+ *   Selects a portion of the text on mount. Forwarded to `useInitialTextSelection`.
+ *
+ * @param {*} [props.childrenOutsideFlow]
+ *   Rendered after children but outside the text flow (useful for overlays
+ *   like the skeleton container).
+ */
 const Text = props => {
   import.meta.css = [css$v, "@jsenv/navi/src/text/text.jsx"];
   if (props.loading || props.skeleton) {
@@ -20814,21 +20965,25 @@ const TextWithSelectRange = ({
 const TextBasic = ({
   spacing,
   preventSpaceUnderlines = false,
-  boldTransition,
   boldStable,
-  preventBoldLayoutShift = boldTransition,
+  holdSpaceForStyle,
   capitalize,
   children,
   childrenOutsideFlow,
+  basePseudoState,
   ...rest
 }) => {
+  const defaultRef = useRef();
+  const ref = rest.ref || defaultRef;
+  const bgDeps = basePseudoState ? Object.values(basePseudoState) : [];
+  useDarkBackgroundAttribute(ref, bgDeps);
   const defaultSpace = preventSpaceUnderlines ? FAKE_SPACE : REGULAR_SPACE;
   const resolvedSpacing = spacing ?? defaultSpace;
   const boxProps = {
     "as": "span",
-    "data-bold-transition": boldTransition ? "" : undefined,
     "data-capitalize": capitalize ? "" : undefined,
     ...rest,
+    ref,
     "baseClassName": withPropsClassName("navi_text", rest.baseClassName)
   };
   const shouldPreserveSpacing = rest.as === "pre" || rest.flex || rest.grid;
@@ -20845,6 +21000,7 @@ const TextBasic = ({
       ...boxProps,
       bold: undefined,
       "data-bold": bold ? "" : undefined,
+      "data-contains-absolute-child": "",
       children: [jsx("span", {
         className: "navi_text_bold_background",
         "aria-hidden": "true",
@@ -20852,25 +21008,23 @@ const TextBasic = ({
       }), children, childrenOutsideFlow]
     });
   }
-  if (preventBoldLayoutShift) {
-    const alignX = rest.alignX || rest.align || "start";
-
-    // La technique consiste a avoid un double gras qui force une taille
-    // et la version light par dessus en position absolute
-    // on la centre aussi pour donner l'impression que le gras s'applique depuis le centre
-    // ne fonctionne que sur une seule ligne de texte (donc lorsque noWrap est actif)
-    // on pourrait auto-active cela sur une prop genre boldCanChange
+  if (holdSpaceForStyle) {
+    // The sizer technique prevents layout shifts when styles that affect text dimensions change.
+    // - navi_text_sizer_placeholder: invisible, rendered with holdSpaceForStyle applied so it
+    //   always occupies the "maximum" dimensions (e.g. bold + larger font-size).
+    // - navi_text_sizer_overlay: absolutely positioned on top, renders the actual visible text
+    //   with its current style. Transitions can be applied on this element from the outside.
     return jsxs(Box, {
       ...boxProps,
       children: [jsxs("span", {
-        className: "navi_text_bold_wrapper",
+        className: "navi_text_sizer",
         children: [jsx("span", {
-          className: "navi_text_bold_clone",
+          className: "navi_text_sizer_placeholder",
           "aria-hidden": "true",
+          style: holdSpaceForStyle,
           children: children
         }), jsx("span", {
-          className: "navi_text_bold_foreground",
-          "data-align": alignX,
+          className: "navi_text_sizer_overlay",
           children: children
         })]
       }), childrenOutsideFlow]
@@ -21164,109 +21318,6 @@ const Icon = ({
       }), innerChildren]
     })
   });
-};
-
-/**
- * Toggles a `data-dark-background` attribute on the referenced element based on its
- * computed background color. Pair it with a CSS variable to get automatic
- * light/dark text without hard-coding colors:
- *
- * ```css
- * .my-element {
- *   --color-contrasting: black;
- *   &[data-dark-background] {
- *     --color-contrasting: white;
- *   }
- *   color: var(--color-contrasting);
- * }
- * ```
- *
- * - `data-dark-background` is **set** when the background is dark enough that white text
- *   provides better (or equal) contrast.
- * - `data-dark-background` is **absent** when black text is the better choice.
- *
- * @param {import("preact").RefObject} ref - Ref to the element that receives
- *   the `data-dark-background` attribute and is also passed to `contrastColor` for
- *   resolving CSS variables.
- * @param {object} [options]
- * @param {string} [options.backgroundElementSelector] - CSS selector relative
- *   to `ref.current` pointing to a child element whose `background-color`
- *   should be tested instead of the element itself. Useful when the element
- *   has a transparent background but contains a coloured child (e.g. a fill
- *   bar inside a track).
- */
-
-const useDarkBackgroundAttribute = (
-  ref,
-  deps = [],
-  {
-    backgroundElementSelector,
-    attributeName = "data-dark-background",
-    hardcoded = {},
-  } = {},
-) => {
-  const innerDeps = [
-    ...deps,
-    // ref can change is the component pass a different ref on different render based on some logic
-    // (can be used to control which element backgroundColor is being checked by switching the ref to another element)
-    ref,
-    // backgroundElementSelector can change if the component pass a different selector on different render based on some logic
-    // (can be used to control which element backgroundColor is being checked by switching the selector to point to another element)
-    backgroundElementSelector,
-  ];
-
-  const hardcodedMap = new Map();
-  for (const key of Object.keys(hardcoded)) {
-    const value = hardcoded[key];
-    innerDeps.push(key, value);
-    const colorString = normalizeColorString(key);
-    hardcodedMap.set(colorString, value);
-  }
-
-  useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el) {
-      return undefined;
-    }
-    let elementToCheck = el;
-    if (backgroundElementSelector) {
-      elementToCheck = el.querySelector(backgroundElementSelector);
-      if (!elementToCheck) {
-        return undefined;
-      }
-    }
-    const updateAttribute = () => {
-      const computedStyle = getComputedStyle(elementToCheck);
-      const backgroundColor = computedStyle.backgroundColor;
-      if (!backgroundColor) {
-        el.removeAttribute(attributeName);
-        return;
-      }
-      const backgroundColorString = normalizeColorString(backgroundColor, el);
-      const hardcodedContrast = hardcodedMap.get(backgroundColorString);
-      const contrastingColor =
-        hardcodedContrast || contrastColor(backgroundColor, el);
-      if (contrastingColor === "white") {
-        el.setAttribute(attributeName, "");
-      } else {
-        el.removeAttribute(attributeName);
-      }
-    };
-    updateAttribute();
-    el.addEventListener(NAVI_PSEUDO_STATE_CUSTOM_EVENT, updateAttribute);
-    return () => {
-      el.removeEventListener(NAVI_PSEUDO_STATE_CUSTOM_EVENT, updateAttribute);
-      el.removeAttribute(attributeName);
-    };
-  }, innerDeps);
-};
-
-const normalizeColorString = (color, el) => {
-  const colorRgba = resolveCSSColor(color, el);
-  if (!colorRgba) {
-    return "";
-  }
-  return String(colorRgba);
 };
 
 const useFormEvents = (
@@ -21790,8 +21841,7 @@ const useUIState = (uiStateController) => {
   return trackedUIState;
 };
 
-installImportMetaCssBuild(import.meta);/* eslint-disable jsenv/no-unknown-params */
-const css$s = /* css */`
+installImportMetaCssBuild(import.meta);const css$s = /* css */`
   @layer navi {
     .navi_button {
       --button-outline-width: 1px;
@@ -22588,8 +22638,7 @@ const useDimColorWhen = (elementRef, shouldDim) => {
   });
 };
 
-installImportMetaCssBuild(import.meta);/* eslint-disable jsenv/no-unknown-params */
-const css$r = /* css */`
+installImportMetaCssBuild(import.meta);const css$r = /* css */`
   @layer navi {
     .navi_link {
       --link-border-radius: unset;
@@ -22735,7 +22784,7 @@ const css$r = /* css */`
     }
 
     /* Dark background */
-    &[data-dark-background] {
+    &[data-dark-background].navi_text {
       --x-link-contrasting-color: white;
       --x-link-color: var(--link-color, white);
     }
@@ -23041,7 +23090,6 @@ const LinkPlain = props => {
     isCurrent
   } = getHrefTargetInfo(href);
   const innerCurrent = current || isCurrent;
-  useDarkBackgroundAttribute(ref, [selected, innerCurrent], {});
   const innerTarget = target === undefined ? isSameSite ? "_self" : "_blank" : target;
   const innerRel = rel === undefined ? isSameSite ? undefined : "noopener noreferrer" : rel;
   let innerEndIcon;
@@ -23094,7 +23142,9 @@ const LinkPlain = props => {
     onnavi_value: e => {
       e.detail.setValue(value);
     },
-    preventBoldLayoutShift: currentEffectBold,
+    holdSpaceForStyle: currentEffectBold ? {
+      fontWeight: "bold"
+    } : undefined,
     preventSpaceUnderlines: true,
     overflowEllipsis: overflowEllipsis
     // Visual
@@ -25699,6 +25749,16 @@ const InputRangeWithAction = props => {
   });
 };
 
+const ChevronDownSvg = () => {
+  return jsx("svg", {
+    viewBox: "0 0 16 16",
+    fill: "currentColor",
+    children: jsx("path", {
+      d: "M4.427 7.427l3.396 3.396a.25.25 0 0 0 .354 0l3.396-3.396A.25.25 0 0 0 11.396 7H4.604a.25.25 0 0 0-.177.427z"
+    })
+  });
+};
+
 const SearchSvg = () => jsx("svg", {
   viewBox: "0 0 24 24",
   xmlns: "http://www.w3.org/2000/svg",
@@ -25708,7 +25768,23 @@ const SearchSvg = () => jsx("svg", {
   })
 });
 
-installImportMetaCssBuild(import.meta);/* eslint-disable jsenv/no-unknown-params */
+installImportMetaCssBuild(import.meta);/**
+ * Input component for all textual input types.
+ *
+ * Supports:
+ * - text (default)
+ * - password
+ * - hidden
+ * - email
+ * - url
+ * - search
+ * - tel
+ * - etc.
+ *
+ * For non-textual inputs, specialized components will be used:
+ * - <InputCheckbox /> for type="checkbox"
+ * - <InputRadio /> for type="radio"
+ */
 const css$j = /* css */`
   @layer navi {
     .navi_input {
@@ -25767,8 +25843,8 @@ const css$j = /* css */`
     border-radius: inherit;
     cursor: inherit;
 
-    --start-icon-size: 0px;
-    --end-icon-size: 0px;
+    --left-slot-size: 0px;
+    --right-slot-size: 0px;
     --x-outline-width: var(--outline-width);
     --x-border-radius: var(--border-radius);
     --x-border-width: var(--border-width);
@@ -25799,9 +25875,9 @@ const css$j = /* css */`
     .navi_native_input {
       box-sizing: border-box;
       padding-top: var(--x-padding-top-base);
-      padding-right: calc(var(--x-padding-right-base) + var(--end-icon-size));
+      padding-right: calc(var(--x-padding-right-base) + var(--right-slot-size));
       padding-bottom: var(--x-padding-bottom-base);
-      padding-left: calc(var(--x-padding-left-base) + var(--start-icon-size));
+      padding-left: calc(var(--x-padding-left-base) + var(--left-slot-size));
       color: var(--x-color);
       font-size: var(--font-size);
       background-color: var(--x-background-color);
@@ -25824,17 +25900,9 @@ const css$j = /* css */`
       }
     }
 
-    .navi_input_start_icon {
+    .navi_input_slot {
       position: absolute;
       top: 0;
-      bottom: 0;
-      left: var(--x-padding-left-base);
-      font-size: var(--font-size);
-    }
-    .navi_input_end_button {
-      position: absolute;
-      top: 0;
-      right: var(--x-padding-right-base);
       bottom: 0;
       display: inline-flex;
       margin: 0;
@@ -25844,34 +25912,43 @@ const css$j = /* css */`
       font-size: var(--font-size);
       background: none;
       border: none;
-      opacity: 0;
-      pointer-events: none;
+
+      &[data-left] {
+        left: var(--x-padding-left-base);
+      }
+      &[data-right] {
+        right: var(--x-padding-right-base);
+      }
+      &[data-hide-while-empty] {
+        opacity: 0;
+        pointer-events: none;
+      }
     }
     &[data-has-value] {
-      .navi_input_end_button {
+      .navi_input_slot[data-hide-while-empty] {
         opacity: 1;
         cursor: pointer;
         pointer-events: auto;
       }
 
       &[data-readonly] {
-        .navi_input_end_button {
+        .navi_input_slot[data-hide-while-empty] {
           opacity: 0;
           pointer-events: none;
         }
       }
       &[data-disabled] {
-        .navi_input_end_button {
+        .navi_input_slot[data-hide-while-empty] {
           opacity: 0;
           pointer-events: none;
         }
       }
     }
-    &[data-start-icon] {
-      --start-icon-size: 1em;
+    &:has(.navi_input_slot[data-left]) {
+      --left-slot-size: 1em;
     }
-    &[data-end-icon] {
-      --end-icon-size: 1em;
+    &:has(.navi_input_slot[data-right]) {
+      --right-slot-size: 1em;
     }
 
     /* Hover */
@@ -25977,7 +26054,7 @@ const InputStyleCSSVars = {
     color: "--color-disabled"
   }
 };
-const InputPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading", ":navi-has-value"];
+const InputPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading", ":navi-has-value", ":navi-expanded"];
 Object.assign(PSEUDO_CLASSES, {
   ":navi-has-value": {
     attribute: "data-has-value",
@@ -25994,6 +26071,55 @@ Object.assign(PSEUDO_CLASSES, {
 });
 const InputPseudoElements = ["::-navi-loader"];
 const InputChildPropSet = new Set([...fieldPropSet]);
+const InputNativeContext = createContext(null);
+const InputSlot = ({
+  side,
+  onClick,
+  hideWhileEmpty,
+  ...props
+}) => {
+  const ctx = useContext(InputNativeContext);
+  const {
+    id,
+    readOnly,
+    disabled
+  } = ctx;
+  return jsx(Label, {
+    htmlFor: id,
+    className: "navi_input_slot",
+    disabled: disabled,
+    readOnly: readOnly,
+    "data-readonly": readOnly,
+    "data-disabled": disabled,
+    "data-left": side === "left" ? "" : undefined,
+    "data-right": side === "right" ? "" : undefined,
+    "data-hide-while-empty": hideWhileEmpty ? "" : undefined,
+    flex: true,
+    alignY: "center",
+    onMouseDown: e => {
+      e.preventDefault(); // keep focus in the input
+    },
+    onClick: e => {
+      if (readOnly || disabled) {
+        return;
+      }
+      onClick?.(e);
+    },
+    ...props
+  });
+};
+const InputLeftSlot = props => {
+  return jsx(InputSlot, {
+    ...props,
+    side: "left"
+  });
+};
+const InputRightSlot = props => {
+  return jsx(InputSlot, {
+    ...props,
+    side: "right"
+  });
+};
 const InputTextualBasic = props => {
   if (props.suggestions) {
     return jsx(InputTextualWithSuggestions, {
@@ -26009,54 +26135,48 @@ const InputTextualWithSuggestions = ({
   onInput,
   onFocus,
   onBlur,
+  children,
   ...rest
 }) => {
   const defaultRef = useRef();
   const ref = rest.ref || defaultRef;
-  const [suggestionsOpen, setSuggestionsOpen] = useState(false);
-  const suggestionsOpenRef = useRef(false);
-  suggestionsOpenRef.current = suggestionsOpen;
-  const showPopover = e => {
-    if (suggestionsOpenRef.current) {
+  const [expanded, setExpanded] = useState(false);
+  const expandedRef = useRef(expanded);
+  expandedRef.current = expanded;
+  const expand = () => {
+    expandedRef.current = true;
+    setExpanded(true);
+  };
+  const collapse = () => {
+    expandedRef.current = false;
+    setExpanded(false);
+  };
+  const showSuggestions = e => {
+    if (expandedRef.current) {
       return;
     }
     console.debug(`showPopover (e.type:${e.type})`);
     const popoverEl = document.getElementById(suggestions);
-    positionPopover();
-    popoverEl.showPopover();
-    suggestionsOpenRef.current = true;
-    setSuggestionsOpen(true);
-    window.addEventListener("scroll", positionPopover, {
-      capture: true,
-      passive: true
-    });
+    if (!popoverEl) {
+      return;
+    }
+    popoverEl.dispatchEvent(new CustomEvent("navi_suggestion_list_open", {
+      detail: {
+        anchor: ref.current
+      }
+    }));
+    expand();
   };
-  const hidePopover = e => {
-    if (!suggestionsOpenRef.current) {
+  const hideSuggestions = e => {
+    if (!expandedRef.current) {
       return;
     }
     console.debug(`hidePopover (e.type:${e.type})`);
-    suggestionsOpenRef.current = false;
-    setSuggestionsOpen(false);
-    window.removeEventListener("scroll", positionPopover, {
-      capture: true
-    });
     const popoverEl = document.getElementById(suggestions);
     if (popoverEl) {
-      popoverEl.dispatchEvent(new CustomEvent("navi_suggestion_list_clear"));
-      popoverEl.hidePopover();
+      popoverEl.dispatchEvent(new CustomEvent("navi_suggestion_list_close"));
     }
-    setSuggestionsOpen(false);
-  };
-  const positionPopover = () => {
-    const input = ref.current;
-    const rect = input.getBoundingClientRect();
-    const popoverEl = document.getElementById(suggestions);
-    if (popoverEl) {
-      popoverEl.style.top = `${rect.bottom + 2}px`;
-      popoverEl.style.left = `${rect.left}px`;
-      popoverEl.style.width = `${rect.width}px`;
-    }
+    collapse();
   };
   const dispatchToSuggestionList = customEvent => {
     const popoverEl = document.getElementById(suggestions);
@@ -26070,7 +26190,7 @@ const InputTextualWithSuggestions = ({
     key: "arrowdown",
     description: "Open popover and point to next suggestion",
     handler: e => {
-      showPopover(e);
+      showSuggestions(e);
       const popoverEl = document.getElementById(suggestions);
       if (!popoverEl) {
         return false;
@@ -26086,7 +26206,7 @@ const InputTextualWithSuggestions = ({
     key: "arrowup",
     description: "Open popover and point to previous suggestion",
     handler: e => {
-      showPopover(e);
+      showSuggestions(e);
       return dispatchToSuggestionList(new CustomEvent("navi_suggestion_list_navigate", {
         detail: {
           direction: "up"
@@ -26097,7 +26217,7 @@ const InputTextualWithSuggestions = ({
     key: "home",
     description: "Point to first suggestion",
     handler: () => {
-      if (!suggestionsOpenRef.current) {
+      if (!expandedRef.current) {
         return false;
       }
       return dispatchToSuggestionList(new CustomEvent("navi_suggestion_list_navigate", {
@@ -26110,7 +26230,7 @@ const InputTextualWithSuggestions = ({
     key: "end",
     description: "Point to last suggestion",
     handler: () => {
-      if (!suggestionsOpenRef.current) {
+      if (!expandedRef.current) {
         return false;
       }
       return dispatchToSuggestionList(new CustomEvent("navi_suggestion_list_navigate", {
@@ -26123,7 +26243,7 @@ const InputTextualWithSuggestions = ({
     key: "enter",
     description: "Confirm pointed suggestion",
     handler: () => {
-      if (!suggestionsOpenRef.current) {
+      if (!expandedRef.current) {
         return false;
       }
       return dispatchToSuggestionList(new CustomEvent("navi_suggestion_list_confirm", {
@@ -26134,10 +26254,10 @@ const InputTextualWithSuggestions = ({
     key: "escape",
     description: "Close popover",
     handler: e => {
-      if (!suggestionsOpenRef.current) {
+      if (!expandedRef.current) {
         return false;
       }
-      hidePopover(e);
+      hideSuggestions(e);
       return true;
     }
   }]);
@@ -26152,7 +26272,7 @@ const InputTextualWithSuggestions = ({
       inputEl.dispatchEvent(new Event("input", {
         bubbles: true
       }));
-      hidePopover(e);
+      hideSuggestions(e);
     };
     popoverEl.addEventListener("navi_suggestion_list_selected", onSelected);
     return () => {
@@ -26165,24 +26285,40 @@ const InputTextualWithSuggestions = ({
     autoComplete: "off",
     "aria-controls": suggestions,
     "aria-haspopup": "listbox",
-    "aria-expanded": suggestionsOpen,
+    "aria-expanded": expanded,
     "aria-autocomplete": "list",
+    basePseudoState: {
+      ":navi-expanded": expanded
+    },
     onnavi_callout_open: e => {
-      hidePopover(e);
+      hideSuggestions(e);
     },
     onFocus: e => {
       onFocus?.(e);
-      showPopover(e);
+      showSuggestions(e);
     },
     onBlur: e => {
       onBlur?.(e);
-      hidePopover(e);
+      hideSuggestions(e);
     },
     onInput: e => {
       onInput?.(e);
-      showPopover(e);
+      showSuggestions(e);
     },
-    ...rest
+    ...rest,
+    children: children || jsx(InputRightSlot, {
+      onClick: e => {
+        if (expanded) {
+          hideSuggestions(e);
+        } else {
+          showSuggestions(e);
+        }
+      },
+      children: jsx(Icon, {
+        color: "rgba(28, 43, 52, 0.5)",
+        children: jsx(ChevronDownSvg, {})
+      })
+    })
   });
 };
 const InputTextualPlain = props => {
@@ -26201,8 +26337,8 @@ const InputTextualPlain = props => {
     autoFocus,
     autoFocusVisible,
     autoSelect,
-    icon,
-    cancelButton = type === "search",
+    basePseudoState,
+    children,
     ...rest
   } = props;
   const defaultRef = useRef();
@@ -26261,17 +26397,45 @@ const InputTextualPlain = props => {
     });
   };
   const renderInputMemoized = useCallback(renderInput, [type, uiState, innerValue, innerOnInput, innerId]);
-  let innerIcon;
-  if (icon === undefined) {
-    if (type === "search") {
-      innerIcon = jsx(SearchSvg, {});
-    } else if (type === "email") {
-      innerIcon = jsx(EmailSvg, {});
-    } else if (type === "tel") {
-      innerIcon = jsx(PhoneSvg, {});
-    }
-  } else {
-    innerIcon = icon;
+  let innerChildren;
+  if (children) {
+    innerChildren = children;
+  } else if (type === "search") {
+    innerChildren = jsxs(Fragment, {
+      children: [jsx(InputLeftSlot, {
+        children: jsx(Icon, {
+          color: "rgba(28, 43, 52, 0.5)",
+          children: jsx(SearchSvg, {})
+        })
+      }), jsx(InputRightSlot, {
+        hideWhileEmpty: true,
+        onClick: () => {
+          uiStateController.setUIState("", {
+            trigger: "cancel_button"
+          });
+          ref.current.value = "";
+          ref.current.dispatchEvent(new Event("navi_delete_content"));
+        },
+        children: jsx(Icon, {
+          color: "rgba(28, 43, 52, 0.5)",
+          children: jsx(CloseSvg, {})
+        })
+      })]
+    });
+  } else if (type === "email") {
+    innerChildren = jsx(InputLeftSlot, {
+      children: jsx(Icon, {
+        color: "rgba(28, 43, 52, 0.5)",
+        children: jsx(EmailSvg, {})
+      })
+    });
+  } else if (type === "tel") {
+    innerChildren = jsx(InputLeftSlot, {
+      children: jsx(Icon, {
+        color: "rgba(28, 43, 52, 0.5)",
+        children: jsx(PhoneSvg, {})
+      })
+    });
   }
   return jsxs(Box, {
     as: "span",
@@ -26281,6 +26445,7 @@ const InputTextualPlain = props => {
     pseudoStateSelector: ".navi_native_input",
     visualSelector: ".navi_native_input",
     basePseudoState: {
+      ...basePseudoState,
       ":read-only": innerReadOnly,
       ":disabled": innerDisabled,
       ":-navi-loading": innerLoading
@@ -26289,48 +26454,20 @@ const InputTextualPlain = props => {
     pseudoElements: InputPseudoElements,
     hasChildFunction: true,
     baseChildPropSet: InputChildPropSet,
-    "data-start-icon": innerIcon ? "" : undefined,
-    "data-end-icon": cancelButton ? "" : undefined,
     ...remainingProps,
     ref: undefined,
     children: [jsx(LoaderBackground, {
       loading: innerLoading,
       color: "var(--loader-color)",
       inset: -1
-    }), innerIcon && jsx(Label, {
-      htmlFor: innerId,
-      disabled: innerDisabled,
-      readOnly: innerReadOnly,
-      className: "navi_input_start_icon",
-      flex: true,
-      alignY: "center",
-      children: jsx(Icon, {
-        color: "rgba(28, 43, 52, 0.5)",
-        children: innerIcon
-      })
-    }), renderInputMemoized, cancelButton && jsx("label", {
-      htmlFor: innerId,
-      "data-readonly": innerReadOnly ? "" : undefined,
-      "data-disabled": innerDisabled ? "" : undefined,
-      className: "navi_input_end_button",
-      onMouseDown: e => {
-        e.preventDefault(); // keep focus in the input
+    }), renderInputMemoized, innerChildren ? jsx(InputNativeContext.Provider, {
+      value: {
+        id: innerId,
+        readOnly: innerReadOnly,
+        disabled: innerDisabled
       },
-      onClick: () => {
-        if (innerReadOnly || innerDisabled) {
-          return;
-        }
-        uiStateController.setUIState("", {
-          trigger: "cancel_button"
-        });
-        ref.current.value = "";
-        ref.current.dispatchEvent(new Event("navi_delete_content"));
-      },
-      children: jsx(Icon, {
-        color: "rgba(28, 43, 52, 0.5)",
-        children: jsx(CloseSvg, {})
-      })
-    })]
+      children: innerChildren
+    }) : null]
   });
 };
 const InputTextualWithAction = props => {
@@ -27058,527 +27195,6 @@ const Group = ({
   });
 };
 
-const createItemTracker = () => {
-  const ItemTrackerContext = createContext();
-  const useItemTrackerProvider = () => {
-    const itemsRef = useRef([]);
-    const items = itemsRef.current;
-    const itemCountRef = useRef(0);
-    const tracker = useMemo(() => {
-      const ItemTrackerProvider = ({
-        children
-      }) => {
-        // Reset on each render to start fresh
-        tracker.reset();
-        return jsx(ItemTrackerContext.Provider, {
-          value: tracker,
-          children: children
-        });
-      };
-      ItemTrackerProvider.items = items;
-      return {
-        ItemTrackerProvider,
-        items,
-        registerItem: data => {
-          const index = itemCountRef.current++;
-          items[index] = data;
-          return index;
-        },
-        getItem: index => {
-          return items[index];
-        },
-        getAllItems: () => {
-          return items;
-        },
-        reset: () => {
-          items.length = 0;
-          itemCountRef.current = 0;
-        }
-      };
-    }, []);
-    return tracker.ItemTrackerProvider;
-  };
-  const useTrackItem = data => {
-    const tracker = useContext(ItemTrackerContext);
-    if (!tracker) {
-      throw new Error("useTrackItem must be used within SimpleItemTrackerProvider");
-    }
-    return tracker.registerItem(data);
-  };
-  const useTrackedItem = index => {
-    const trackedItems = useTrackedItems();
-    const item = trackedItems[index];
-    return item;
-  };
-  const useTrackedItems = () => {
-    const tracker = useContext(ItemTrackerContext);
-    if (!tracker) {
-      throw new Error("useTrackedItems must be used within SimpleItemTrackerProvider");
-    }
-    return tracker.items;
-  };
-  return [useItemTrackerProvider, useTrackItem, useTrackedItem, useTrackedItems];
-};
-
-installImportMetaCssBuild(import.meta);const [useSuggestionItemTrackerProvider, useTrackSuggestion] = createItemTracker();
-
-/**
- * SuggestionList + Suggestion: a composable accessible listbox.
- *
- * Usage:
- *   <SuggestionList id="my-list" value={selected} onChange={setSelected}>
- *     <Suggestion value="a">Option A</Suggestion>
- *     <Suggestion value="b">Option B</Suggestion>
- *   </SuggestionList>
- *
- * CSS vars on .navi_suggestion_list:
- *   --suggestion-list-border-radius, --suggestion-list-border-width, --suggestion-list-border-color, --suggestion-list-background-color, --suggestion-list-max-height
- *
- * CSS vars on .navi_suggestion:
- *   --suggestion-padding, --suggestion-color, --suggestion-background-color, --suggestion-font-weight
- *   --suggestion-color-hover, --suggestion-background-color-hover
- *   --suggestion-color-pointed, --suggestion-background-color-pointed
- *   --suggestion-color-selected, --suggestion-background-color-selected, --suggestion-font-weight-selected
- *   --suggestion-color-pointed-selected, --suggestion-background-color-pointed-selected
- *   --suggestion-color-highlight, --suggestion-background-color-highlight
- *
- * CSS vars on .navi_suggestion_group_label:
- *   --suggestion-group-label-padding, --suggestion-group-label-color, --suggestion-group-label-font-size, --suggestion-group-label-font-weight
- */
-
-const css$g = /* css */`
-  @layer navi {
-    .navi_suggestion_list {
-      --suggestion-list-border-radius: 4px;
-      --suggestion-list-border-width: 1px;
-      --suggestion-list-border-color: light-dark(#ccc, #555);
-      --suggestion-list-background-color: light-dark(#fff, #1e1e1e);
-      --suggestion-list-max-height: 220px;
-    }
-    .navi_suggestion_group_label {
-      --suggestion-group-label-padding: 4px 12px 2px;
-      --suggestion-group-label-color: light-dark(#888, #aaa);
-      --suggestion-group-label-font-size: 0.75em;
-      --suggestion-group-label-font-weight: 600;
-    }
-    .navi_suggestion {
-      --suggestion-padding: 8px 12px;
-      --suggestion-color: inherit;
-      --suggestion-background-color: transparent;
-      --suggestion-font-weight: inherit;
-
-      /* Hover (mouse) */
-      --suggestion-color-hover: var(--suggestion-color);
-      --suggestion-background-color-hover: light-dark(#f5f5f5, #2a2a2a);
-
-      /* Pointed (keyboard navigation position) */
-      --suggestion-color-pointed: var(--suggestion-color);
-      --suggestion-background-color-pointed: light-dark(#e8f0fe, #1c3a6e);
-
-      /* Selected */
-      --suggestion-color-selected: light-dark(#1a73e8, #7baaf7);
-      --suggestion-background-color-selected: light-dark(#e8f0fe, #1c3a6e);
-      --suggestion-font-weight-selected: 500;
-
-      /* Highlight (CSS Highlight API match) */
-      --suggestion-color-highlight: inherit;
-      --suggestion-background-color-highlight: #ffe066;
-      --suggestion-color-pointed-selected: var(--suggestion-color-selected);
-      --suggestion-background-color-pointed-selected: light-dark(
-        #d2e3fc,
-        #174ea6
-      );
-    }
-  }
-
-  .navi_suggestion_list {
-    --x-border-radius: var(--suggestion-list-border-radius);
-    --x-border-width: var(--suggestion-list-border-width);
-    --x-border-color: var(--suggestion-list-border-color);
-    --x-background-color: var(--suggestion-list-background-color);
-    box-sizing: border-box;
-    max-height: var(--suggestion-list-max-height);
-
-    margin: 0;
-    padding: 0;
-    list-style: none;
-    background-color: var(--x-background-color);
-    border: var(--x-border-width) solid var(--x-border-color);
-    border-radius: var(--x-border-radius);
-    outline: none;
-    overflow-y: auto;
-
-    /* Popover reset — browser adds border, background, padding, margin by default */
-    &[popover] {
-      position: fixed;
-      inset: unset;
-      margin: 0;
-      padding: 0;
-      border: none;
-    }
-  }
-  ::highlight(navi-suggestion-match) {
-    color: var(--suggestion-color-highlight);
-    background-color: var(--suggestion-background-color-highlight);
-  }
-  .navi_suggestion {
-    --x-color: var(--suggestion-color);
-    --x-background-color: var(--suggestion-background-color);
-    --x-font-weight: var(--suggestion-font-weight);
-
-    padding: var(--suggestion-padding);
-    color: var(--x-color);
-    font-weight: var(--x-font-weight);
-    background-color: var(--x-background-color);
-    cursor: pointer;
-    user-select: none;
-
-    &:hover {
-      --x-color: var(--suggestion-color-hover);
-      --x-background-color: var(--suggestion-background-color-hover);
-    }
-
-    &[data-pointed] {
-      --x-color: var(--suggestion-color-pointed);
-      --x-background-color: var(--suggestion-background-color-pointed);
-    }
-
-    &[data-selected] {
-      --x-color: var(--suggestion-color-selected);
-      --x-background-color: var(--suggestion-background-color-selected);
-      --x-font-weight: var(--suggestion-font-weight-selected);
-    }
-
-    &[data-pointed][data-selected] {
-      --x-color: var(--suggestion-color-pointed-selected);
-      --x-background-color: var(--suggestion-background-color-pointed-selected);
-    }
-  }
-  .navi_suggestion_group_label {
-    position: sticky;
-    top: 0;
-    z-index: 1;
-    display: block;
-    padding: var(--suggestion-group-label-padding);
-    color: var(--suggestion-group-label-color);
-    font-weight: var(--suggestion-group-label-font-weight);
-    font-size: var(--suggestion-group-label-font-size);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    background-color: var(--suggestion-group-label-background-color);
-    user-select: none;
-  }
-`;
-const SuggestionListStyleCSSVars = {
-  borderRadius: "--suggestion-list-border-radius",
-  borderWidth: "--suggestion-list-border-width",
-  borderColor: "--suggestion-list-border-color",
-  backgroundColor: "--suggestion-list-background-color",
-  maxHeight: "--suggestion-list-max-height"
-};
-const SuggestionStyleCSSVars = {
-  "padding": "--suggestion-padding",
-  "color": "--suggestion-color",
-  "backgroundColor": "--suggestion-background-color",
-  "fontWeight": "--suggestion-font-weight",
-  ":-navi-pointed": {
-    color: "--suggestion-color-pointed",
-    backgroundColor: "--suggestion-background-color-pointed"
-  },
-  ":hover": {
-    color: "--suggestion-color-hover",
-    backgroundColor: "--suggestion-background-color-hover"
-  },
-  ":-navi-selected": {
-    color: "--suggestion-color-selected",
-    backgroundColor: "--suggestion-background-color-selected",
-    fontWeight: "--suggestion-font-weight-selected"
-  },
-  "::highlight": {
-    color: "--suggestion-color-highlight",
-    backgroundColor: "--suggestion-background-color-highlight"
-  }
-};
-
-/**
- * Context OptionList provides downward to its Option children.
- */
-const SuggestionListContext = createContext(null);
-const SuggestionList = ({
-  popover,
-  onChange: onChangeProp,
-  highlight,
-  children,
-  ...rest
-}) => {
-  import.meta.css = [css$g, "@jsenv/navi/src/field/suggestion_list.jsx"];
-  const ItemTrackerProvider = useSuggestionItemTrackerProvider();
-  const [pointedValue, setPointedValue] = useState(null);
-  const pointedValueRef = useRef(null);
-  pointedValueRef.current = pointedValue;
-  const ownId = useId();
-  const id = rest.id ?? ownId;
-  const defaultRef = useRef(null);
-  const ref = rest.ref || defaultRef;
-  useLayoutEffect(() => {
-    if (!CSS.highlights) {
-      return undefined;
-    }
-    if (!highlight) {
-      CSS.highlights.delete("navi-suggestion-match");
-      return undefined;
-    }
-    const listEl = ref.current;
-    if (!listEl) {
-      return undefined;
-    }
-    const ranges = [];
-    const lowerHighlight = highlight.toLowerCase();
-    for (const suggestionEl of listEl.querySelectorAll("[role='option']")) {
-      const walker = document.createTreeWalker(suggestionEl, NodeFilter.SHOW_TEXT);
-      let node;
-      while (node = walker.nextNode()) {
-        const text = node.textContent;
-        const lowerText = text.toLowerCase();
-        let index = lowerText.indexOf(lowerHighlight);
-        while (index !== -1) {
-          const range = new Range();
-          range.setStart(node, index);
-          range.setEnd(node, index + highlight.length);
-          ranges.push(range);
-          index = lowerText.indexOf(lowerHighlight, index + 1);
-        }
-      }
-    }
-    if (ranges.length === 0) {
-      CSS.highlights.delete("navi-suggestion-match");
-    } else {
-      CSS.highlights.set("navi-suggestion-match", new Highlight(...ranges));
-    }
-    return () => {
-      CSS.highlights.delete("navi-suggestion-match");
-    };
-  }, [highlight, children]);
-  const effectiveOnChange = popover ? value => {
-    onChangeProp?.(value);
-    ref.current?.dispatchEvent(new CustomEvent("navi_suggestion_list_selected", {
-      detail: {
-        value
-      },
-      bubbles: true
-    }));
-  } : onChangeProp;
-  const onChangeRef = useRef(effectiveOnChange);
-  onChangeRef.current = effectiveOnChange;
-  const navigate = direction => {
-    const values = ItemTrackerProvider.items.filter(item => !item.hidden).map(item => item.value);
-    if (values.length === 0) {
-      return false;
-    }
-    const current = pointedValueRef.current;
-    if (direction === "down") {
-      const idx = current === null ? -1 : values.indexOf(current);
-      setPointedValue(values[idx < values.length - 1 ? idx + 1 : idx]);
-    } else if (direction === "up") {
-      const idx = current === null ? -1 : values.indexOf(current);
-      setPointedValue(values[idx > 0 ? idx - 1 : 0]);
-    } else if (direction === "first") {
-      setPointedValue(values[0]);
-    } else if (direction === "last") {
-      setPointedValue(values[values.length - 1]);
-    }
-    return true;
-  };
-
-  // Listen for commands dispatched by a linked Input (combobox mode)
-  const noopRef = useRef(null);
-  useEffect(() => {
-    if (!popover || !ref.current) {
-      return undefined;
-    }
-    const el = ref.current;
-    const onNavigate = e => {
-      navigate(e.detail.direction);
-    };
-    const onConfirm = e => {
-      const current = pointedValueRef.current;
-      if (current !== null) {
-        onChangeRef.current?.(current);
-        e.preventDefault();
-      }
-    };
-    const onClear = () => {
-      setPointedValue(null);
-    };
-    el.addEventListener("navi_suggestion_list_navigate", onNavigate);
-    el.addEventListener("navi_suggestion_list_confirm", onConfirm);
-    el.addEventListener("navi_suggestion_list_clear", onClear);
-    return () => {
-      el.removeEventListener("navi_suggestion_list_navigate", onNavigate);
-      el.removeEventListener("navi_suggestion_list_confirm", onConfirm);
-      el.removeEventListener("navi_suggestion_list_clear", onClear);
-    };
-  }, [popover]);
-  useKeyboardShortcuts(popover ? noopRef : ref, [{
-    key: "arrowdown",
-    description: "Point to next suggestion",
-    handler: () => navigate("down")
-  }, {
-    key: "arrowup",
-    description: "Point to previous suggestion",
-    handler: () => navigate("up")
-  }, {
-    key: "home",
-    description: "Point to first suggestion",
-    handler: () => navigate("first")
-  }, {
-    key: "end",
-    description: "Point to last suggestion",
-    handler: () => navigate("last")
-  }, {
-    key: "enter",
-    description: "Confirm pointed suggestion",
-    handler: () => {
-      const current = pointedValueRef.current;
-      if (current === null) {
-        return false;
-      }
-      onChangeRef.current?.(current);
-      return true;
-    }
-  }, {
-    key: "escape",
-    description: "Clear pointed suggestion",
-    handler: () => {
-      setPointedValue(null);
-      return true;
-    }
-  }]);
-  const suggestionListContext = {
-    pointedValue,
-    setPointedValue,
-    onSelect: effectiveOnChange
-  };
-  return jsx(Box, {
-    as: "ul",
-    ref: ref,
-    id: id,
-    role: "listbox",
-    tabIndex: popover ? -1 : 0,
-    popover: popover ? "manual" : undefined,
-    ...rest,
-    baseClassName: "navi_suggestion_list",
-    styleCSSVars: SuggestionListStyleCSSVars,
-    children: jsx(SuggestionListContext.Provider, {
-      value: suggestionListContext,
-      children: jsx(ItemTrackerProvider, {
-        children: children
-      })
-    })
-  });
-};
-const SUGGESTION_PSEUDO_CLASSES = [":-navi-pointed", ":-navi-selected"];
-const SUGGESTION_PSEUDO_ELEMENTS = ["::highlight"];
-const Suggestion = ({
-  value,
-  selected,
-  hidden,
-  children,
-  ...rest
-}) => {
-  import.meta.css = [css$g, "@jsenv/navi/src/field/suggestion_list.jsx"];
-  const suggestionId = useId();
-  const id = rest.id || suggestionId;
-  useTrackSuggestion({
-    value,
-    suggestionId: id,
-    hidden
-  });
-  const {
-    pointedValue,
-    setPointedValue,
-    onSelect
-  } = useContext(SuggestionListContext);
-  const isPointed = pointedValue === value;
-  const suggestionRef = useRef(null);
-  useEffect(() => {
-    const suggestionEl = suggestionRef.current;
-    if (isPointed && suggestionEl) {
-      suggestionEl.scrollIntoView({
-        block: "nearest"
-      });
-    }
-  }, [isPointed]);
-  return jsx(Box, {
-    as: "li",
-    ref: suggestionRef,
-    baseClassName: "navi_suggestion",
-    id: suggestionId,
-    role: "option",
-    "aria-selected": selected,
-    "aria-hidden": hidden ? true : undefined,
-    hidden: hidden,
-    basePseudoState: {
-      ":-navi-pointed": isPointed,
-      ":-navi-selected": selected
-    },
-    pseudoClasses: SUGGESTION_PSEUDO_CLASSES,
-    pseudoElements: SUGGESTION_PSEUDO_ELEMENTS,
-    styleCSSVars: SuggestionStyleCSSVars,
-    onMouseEnter: () => {
-      if (!hidden) {
-        setPointedValue(value);
-      }
-    },
-    onMouseLeave: () => {
-      if (!hidden) {
-        setPointedValue(null);
-      }
-    },
-    onMouseDown: e => {
-      if (hidden || e.button !== 0) {
-        return;
-      }
-      onSelect?.(value);
-    },
-    ...rest,
-    children: children
-  });
-};
-const SuggestionGroup = ({
-  label,
-  children,
-  ...rest
-}) => {
-  import.meta.css = [css$g, "@jsenv/navi/src/field/suggestion_list.jsx"];
-  const groupId = useId();
-  return jsxs("li", {
-    role: "presentation",
-    ...rest,
-    children: [jsx("span", {
-      id: groupId,
-      role: "presentation",
-      "aria-hidden": "true",
-      style: {
-        display: "contents"
-      },
-      children: typeof label === "string" ? jsx("span", {
-        className: "navi_suggestion_group_label",
-        children: label
-      }) : label
-    }), jsx("ul", {
-      role: "group",
-      "aria-labelledby": groupId,
-      style: {
-        margin: 0,
-        padding: 0,
-        listStyle: "none"
-      },
-      children: children
-    })]
-  });
-};
-
 const RadioList = props => {
   const uiStateController = useUIGroupStateController(props, "radio_list", {
     childComponentType: "radio",
@@ -27760,13 +27376,13 @@ const useRefArray = (items, keyFromItem) => {
 };
 
 installImportMetaCssBuild(import.meta);const useNavState = () => {};
-const css$f = /* css */`
+const css$g = /* css */`
   .navi_select[data-readonly] {
     pointer-events: none;
   }
 `;
 const Select = forwardRef((props, ref) => {
-  import.meta.css = [css$f, "@jsenv/navi/src/field/select.jsx"];
+  import.meta.css = [css$g, "@jsenv/navi/src/field/select.jsx"];
   const select = renderActionableComponent(props, ref);
   return select;
 });
@@ -27932,6 +27548,623 @@ forwardRef((props, ref) => {
     })
   });
 });
+
+const createItemTracker = () => {
+  const ItemTrackerContext = createContext();
+  const useItemTrackerProvider = () => {
+    const itemsRef = useRef([]);
+    const items = itemsRef.current;
+    const itemCountRef = useRef(0);
+    const tracker = useMemo(() => {
+      const ItemTrackerProvider = ({
+        children
+      }) => {
+        // Reset on each render to start fresh
+        tracker.reset();
+        return jsx(ItemTrackerContext.Provider, {
+          value: tracker,
+          children: children
+        });
+      };
+      ItemTrackerProvider.items = items;
+      return {
+        ItemTrackerProvider,
+        items,
+        registerItem: data => {
+          const index = itemCountRef.current++;
+          items[index] = data;
+          return index;
+        },
+        getItem: index => {
+          return items[index];
+        },
+        getAllItems: () => {
+          return items;
+        },
+        reset: () => {
+          items.length = 0;
+          itemCountRef.current = 0;
+        }
+      };
+    }, []);
+    return tracker.ItemTrackerProvider;
+  };
+  const useTrackItem = data => {
+    const tracker = useContext(ItemTrackerContext);
+    if (!tracker) {
+      throw new Error("useTrackItem must be used within SimpleItemTrackerProvider");
+    }
+    return tracker.registerItem(data);
+  };
+  const useTrackedItem = index => {
+    const trackedItems = useTrackedItems();
+    const item = trackedItems[index];
+    return item;
+  };
+  const useTrackedItems = () => {
+    const tracker = useContext(ItemTrackerContext);
+    if (!tracker) {
+      throw new Error("useTrackedItems must be used within SimpleItemTrackerProvider");
+    }
+    return tracker.items;
+  };
+  return [useItemTrackerProvider, useTrackItem, useTrackedItem, useTrackedItems];
+};
+
+installImportMetaCssBuild(import.meta);const [useSuggestionItemTrackerProvider, useTrackSuggestion] = createItemTracker();
+
+/**
+ * SuggestionList + Suggestion: a composable accessible listbox.
+ *
+ * Usage:
+ *   <SuggestionList id="my-list" value={selected} onChange={setSelected}>
+ *     <Suggestion value="a">Option A</Suggestion>
+ *     <Suggestion value="b">Option B</Suggestion>
+ *   </SuggestionList>
+ *
+ * CSS vars on .navi_suggestion_list:
+ *   --suggestion-list-border-radius, --suggestion-list-border-width, --suggestion-list-border-color, --suggestion-list-background-color, --suggestion-list-max-height
+ *
+ * CSS vars on .navi_suggestion:
+ *   --suggestion-padding, --suggestion-color, --suggestion-background-color, --suggestion-font-weight
+ *   --suggestion-color-hover, --suggestion-background-color-hover
+ *   --suggestion-color-pointed, --suggestion-background-color-pointed
+ *   --suggestion-color-selected, --suggestion-background-color-selected, --suggestion-font-weight-selected
+ *   --suggestion-color-pointed-selected, --suggestion-background-color-pointed-selected
+ *   --suggestion-color-highlight, --suggestion-background-color-highlight
+ *
+ * CSS vars on .navi_suggestion_group_label:
+ *   --suggestion-group-label-padding, --suggestion-group-label-color, --suggestion-group-label-font-size, --suggestion-group-label-font-weight
+ */
+
+const css$f = /* css */`
+  @layer navi {
+    .navi_suggestion_list {
+      --suggestion-list-border-radius: 4px;
+      --suggestion-list-border-width: 1px;
+      --suggestion-list-border-color: light-dark(#ccc, #555);
+      --suggestion-list-border-style: solid;
+      --suggestion-list-background-color: light-dark(#fff, #1e1e1e);
+      --suggestion-list-max-height: 220px;
+    }
+    .navi_suggestion {
+      --suggestion-padding: 8px 12px;
+      --suggestion-color: inherit;
+      --suggestion-font-weight: inherit;
+
+      /* Hover (mouse) */
+      --suggestion-color-hover: var(--suggestion-color);
+      --suggestion-background-color-hover: light-dark(#f5f5f5, #2a2a2a);
+
+      /* Pointed (keyboard navigation position) */
+      --suggestion-color-pointed: var(--suggestion-color);
+      --suggestion-background-color-pointed: light-dark(#e8f0fe, #1c3a6e);
+
+      /* Selected */
+      --suggestion-color-selected: light-dark(#1a73e8, #7baaf7);
+      --suggestion-background-color-selected: light-dark(#e8f0fe, #1c3a6e);
+      --suggestion-font-weight-selected: 500;
+
+      /* Highlight (CSS Highlight API match) */
+      --suggestion-color-highlight: inherit;
+      --suggestion-background-color-highlight: #ffe066;
+      --suggestion-color-pointed-selected: var(--suggestion-color-selected);
+      --suggestion-background-color-pointed-selected: light-dark(
+        #d2e3fc,
+        #174ea6
+      );
+    }
+  }
+
+  .navi_suggestion_list {
+    --x-border-radius: var(--suggestion-list-border-radius);
+    --x-border-width: var(--suggestion-list-border-width);
+    --x-border-color: var(--suggestion-list-border-color);
+    --x-border-style: var(--suggestion-list-border-style);
+    --x-background-color: var(--suggestion-list-background-color);
+    width: fit-content;
+    max-width: 100%;
+
+    max-height: var(--suggestion-list-max-height);
+    background-color: var(--x-background-color);
+    border: var(--x-border-width) var(--x-border-style) var(--x-border-color);
+    border-radius: var(--x-border-radius);
+    transition: opacity 0.2s ease;
+    overflow: auto;
+
+    /* Popover reset — browser adds border, background, padding, margin by default */
+    &[popover] {
+      position: absolute;
+      inset: unset;
+      min-width: var(--suggestion-list-anchor-width, 0px);
+      max-width: 95vw;
+      margin: 0;
+      padding: 0;
+      /* border: none; */
+    }
+    &[data-anchor-hidden] {
+      opacity: 0;
+      pointer-events: none;
+    }
+  }
+
+  .navi_suggestion_listbox {
+    box-sizing: border-box;
+    width: max-content;
+    min-width: 100%;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  ::highlight(navi-suggestion-match) {
+    color: var(--suggestion-color-highlight);
+    background-color: var(--suggestion-background-color-highlight);
+  }
+  .navi_suggestion {
+    --x-color: var(--suggestion-color);
+    --x-background-color: var(--suggestion-background-color);
+    --x-font-weight: var(--suggestion-font-weight);
+    display: flex;
+    box-sizing: border-box;
+    width: max-content;
+    min-width: 100%;
+
+    padding: var(--suggestion-padding);
+    flex-direction: column;
+    color: var(--x-color);
+    font-weight: var(--x-font-weight);
+    background-color: var(--x-background-color);
+    cursor: pointer;
+    user-select: none;
+
+    &:hover {
+      --x-color: var(--suggestion-color-hover);
+      --x-background-color: var(--suggestion-background-color-hover);
+    }
+
+    &[data-pointed] {
+      --x-color: var(--suggestion-color-pointed);
+      --x-background-color: var(--suggestion-background-color-pointed);
+    }
+
+    &[data-selected] {
+      --x-color: var(--suggestion-color-selected);
+      --x-background-color: var(--suggestion-background-color-selected);
+      --x-font-weight: var(--suggestion-font-weight-selected);
+    }
+
+    &[data-pointed][data-selected] {
+      --x-color: var(--suggestion-color-pointed-selected);
+      --x-background-color: var(--suggestion-background-color-pointed-selected);
+    }
+  }
+  .navi_suggestion_group_label {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    display: block;
+    background-color: var(
+      --suggestion-group-label-background-color,
+      var(--suggestion-list-background-color)
+    );
+    user-select: none;
+
+    &[data-default-label] {
+      padding: 4px 12px 2px;
+      color: light-dark(#888, #aaa);
+      font-weight: 600;
+      font-size: 0.75em;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+  }
+  .navi_suggestion_list_empty {
+    display: none;
+    padding: var(--suggestion-padding);
+    color: var(--suggestion-group-label-color);
+    font-size: 0.9em;
+    text-align: center;
+    user-select: none;
+  }
+  /* Show the empty state only when there are no visible suggestions */
+  .navi_suggestion_list:not(:has([role="option"]:not([hidden]))) {
+    .navi_suggestion_list_empty {
+      display: block;
+    }
+  }
+`;
+const SuggestionListStyleCSSVars = {
+  borderRadius: "--suggestion-list-border-radius",
+  borderWidth: "--suggestion-list-border-width",
+  borderColor: "--suggestion-list-border-color",
+  backgroundColor: "--suggestion-list-background-color",
+  maxHeight: "--suggestion-list-max-height"
+};
+const SuggestionStyleCSSVars = {
+  "padding": "--suggestion-padding",
+  "color": "--suggestion-color",
+  "backgroundColor": "--suggestion-background-color",
+  "fontWeight": "--suggestion-font-weight",
+  ":-navi-pointed": {
+    color: "--suggestion-color-pointed",
+    backgroundColor: "--suggestion-background-color-pointed"
+  },
+  ":hover": {
+    color: "--suggestion-color-hover",
+    backgroundColor: "--suggestion-background-color-hover"
+  },
+  ":-navi-selected": {
+    color: "--suggestion-color-selected",
+    backgroundColor: "--suggestion-background-color-selected",
+    fontWeight: "--suggestion-font-weight-selected"
+  },
+  "::highlight": {
+    color: "--suggestion-color-highlight",
+    backgroundColor: "--suggestion-background-color-highlight"
+  }
+};
+
+/**
+ * Context OptionList provides downward to its Option children.
+ */
+const SuggestionListContext = createContext(null);
+const SuggestionList = ({
+  popover,
+  onChange: onChangeProp,
+  highlight,
+  emptyState = "No results",
+  children,
+  ...rest
+}) => {
+  import.meta.css = [css$f, "@jsenv/navi/src/field/suggestion_list.jsx"];
+  const ItemTrackerProvider = useSuggestionItemTrackerProvider();
+  const [pointedValue, setPointedValue] = useState(null);
+  const pointedValueRef = useRef(null);
+  pointedValueRef.current = pointedValue;
+  const ownId = useId();
+  const id = rest.id ?? ownId;
+  const defaultRef = useRef(null);
+  const ref = rest.ref || defaultRef;
+  useLayoutEffect(() => {
+    if (!CSS.highlights) {
+      return undefined;
+    }
+    if (!highlight) {
+      CSS.highlights.delete("navi-suggestion-match");
+      return undefined;
+    }
+    const listEl = ref.current;
+    if (!listEl) {
+      return undefined;
+    }
+    const ranges = [];
+    const lowerHighlight = highlight.toLowerCase();
+    for (const suggestionEl of listEl.querySelectorAll("[role='option']")) {
+      const walker = document.createTreeWalker(suggestionEl, NodeFilter.SHOW_TEXT);
+      let node;
+      while (node = walker.nextNode()) {
+        const text = node.textContent;
+        const lowerText = text.toLowerCase();
+        let index = lowerText.indexOf(lowerHighlight);
+        while (index !== -1) {
+          const range = new Range();
+          range.setStart(node, index);
+          range.setEnd(node, index + highlight.length);
+          ranges.push(range);
+          index = lowerText.indexOf(lowerHighlight, index + 1);
+        }
+      }
+    }
+    if (ranges.length === 0) {
+      CSS.highlights.delete("navi-suggestion-match");
+    } else {
+      CSS.highlights.set("navi-suggestion-match", new Highlight(...ranges));
+    }
+    return () => {
+      CSS.highlights.delete("navi-suggestion-match");
+    };
+  }, [highlight, children]);
+  const effectiveOnChange = popover ? value => {
+    onChangeProp?.(value);
+    ref.current?.dispatchEvent(new CustomEvent("navi_suggestion_list_selected", {
+      detail: {
+        value
+      },
+      bubbles: true
+    }));
+  } : onChangeProp;
+  const onChangeRef = useRef(effectiveOnChange);
+  onChangeRef.current = effectiveOnChange;
+  const navigate = direction => {
+    const values = ItemTrackerProvider.items.filter(item => !item.hidden).map(item => item.value);
+    if (values.length === 0) {
+      return false;
+    }
+    const current = pointedValueRef.current;
+    if (direction === "down") {
+      const idx = current === null ? -1 : values.indexOf(current);
+      setPointedValue(values[idx < values.length - 1 ? idx + 1 : idx]);
+    } else if (direction === "up") {
+      const idx = current === null ? -1 : values.indexOf(current);
+      setPointedValue(values[idx > 0 ? idx - 1 : 0]);
+    } else if (direction === "first") {
+      setPointedValue(values[0]);
+    } else if (direction === "last") {
+      setPointedValue(values[values.length - 1]);
+    }
+    return true;
+  };
+
+  // Listen for commands dispatched by a linked Input (combobox mode)
+  const noopRef = useRef(null);
+  useEffect(() => {
+    if (!popover || !ref.current) {
+      return undefined;
+    }
+    const el = ref.current;
+    let positionEffectCleanup = null;
+    const positionPopover = anchor => {
+      const anchorRect = anchor.getBoundingClientRect();
+      el.style.setProperty("--suggestion-list-anchor-width", `${anchorRect.width}px`);
+      const minLeft = 1;
+      const {
+        left,
+        top
+      } = pickPositionRelativeTo(el, anchor, {
+        positionPreference: "below",
+        minLeft
+      });
+      el.style.top = `${top}px`;
+      const popoverRect = el.getBoundingClientRect();
+      const maxWidth = parseFloat(getComputedStyle(el).maxWidth);
+      if (!isNaN(maxWidth) && popoverRect.width >= maxWidth - 1) {
+        const viewportWidth = document.documentElement.clientWidth;
+        const centeredLeft = (viewportWidth - popoverRect.width) / 2;
+        el.style.left = `${Math.max(centeredLeft, minLeft)}px`;
+      } else {
+        el.style.left = `${Math.max(left, minLeft)}px`;
+      }
+    };
+    const onOpen = e => {
+      const anchor = e.detail?.anchor;
+      el.showPopover();
+      if (anchor) {
+        positionEffectCleanup = visibleRectEffect(anchor, ({
+          visibilityRatio
+        }) => {
+          if (visibilityRatio <= 0.2) {
+            el.setAttribute("data-anchor-hidden", "");
+            return;
+          }
+          el.removeAttribute("data-anchor-hidden");
+          positionPopover(anchor);
+        });
+      }
+    };
+    const onClose = () => {
+      if (positionEffectCleanup) {
+        positionEffectCleanup.disconnect();
+        positionEffectCleanup = null;
+      }
+      el.removeAttribute("data-anchor-hidden");
+      el.dispatchEvent(new CustomEvent("navi_suggestion_list_clear"));
+      el.hidePopover();
+    };
+    const onNavigate = e => {
+      navigate(e.detail.direction);
+    };
+    const onConfirm = e => {
+      const current = pointedValueRef.current;
+      if (current !== null) {
+        onChangeRef.current?.(current);
+        e.preventDefault();
+      }
+    };
+    const onClear = () => {
+      setPointedValue(null);
+    };
+    el.addEventListener("navi_suggestion_list_open", onOpen);
+    el.addEventListener("navi_suggestion_list_close", onClose);
+    el.addEventListener("navi_suggestion_list_navigate", onNavigate);
+    el.addEventListener("navi_suggestion_list_confirm", onConfirm);
+    el.addEventListener("navi_suggestion_list_clear", onClear);
+    return () => {
+      el.removeEventListener("navi_suggestion_list_open", onOpen);
+      el.removeEventListener("navi_suggestion_list_close", onClose);
+      el.removeEventListener("navi_suggestion_list_navigate", onNavigate);
+      el.removeEventListener("navi_suggestion_list_confirm", onConfirm);
+      el.removeEventListener("navi_suggestion_list_clear", onClear);
+      if (positionEffectCleanup) {
+        positionEffectCleanup.disconnect();
+      }
+    };
+  }, [popover]);
+  useKeyboardShortcuts(popover ? noopRef : ref, [{
+    key: "arrowdown",
+    description: "Point to next suggestion",
+    handler: () => navigate("down")
+  }, {
+    key: "arrowup",
+    description: "Point to previous suggestion",
+    handler: () => navigate("up")
+  }, {
+    key: "home",
+    description: "Point to first suggestion",
+    handler: () => navigate("first")
+  }, {
+    key: "end",
+    description: "Point to last suggestion",
+    handler: () => navigate("last")
+  }, {
+    key: "enter",
+    description: "Confirm pointed suggestion",
+    handler: () => {
+      const current = pointedValueRef.current;
+      if (current === null) {
+        return false;
+      }
+      onChangeRef.current?.(current);
+      return true;
+    }
+  }, {
+    key: "escape",
+    description: "Clear pointed suggestion",
+    handler: () => {
+      setPointedValue(null);
+      return true;
+    }
+  }]);
+  const suggestionListContext = {
+    pointedValue,
+    setPointedValue,
+    onSelect: effectiveOnChange
+  };
+  return jsx(Box, {
+    ref: ref,
+    id: id,
+    popover: popover ? "manual" : undefined,
+    tabIndex: popover ? -1 : 0,
+    ...rest,
+    baseClassName: "navi_suggestion_list",
+    children: jsx(Box, {
+      as: "ul",
+      role: "listbox",
+      baseClassName: "navi_suggestion_listbox",
+      styleCSSVars: SuggestionListStyleCSSVars,
+      children: jsxs(SuggestionListContext.Provider, {
+        value: suggestionListContext,
+        children: [jsx(ItemTrackerProvider, {
+          children: children
+        }), emptyState && jsx("li", {
+          className: "navi_suggestion_list_empty",
+          children: emptyState
+        })]
+      })
+    })
+  });
+};
+const SUGGESTION_PSEUDO_CLASSES = [":-navi-pointed", ":-navi-selected"];
+const SUGGESTION_PSEUDO_ELEMENTS = ["::highlight"];
+const Suggestion = ({
+  value,
+  selected,
+  hidden,
+  children,
+  ...rest
+}) => {
+  import.meta.css = [css$f, "@jsenv/navi/src/field/suggestion_list.jsx"];
+  const suggestionId = useId();
+  const id = rest.id || suggestionId;
+  useTrackSuggestion({
+    value,
+    suggestionId: id,
+    hidden
+  });
+  const {
+    pointedValue,
+    setPointedValue,
+    onSelect
+  } = useContext(SuggestionListContext);
+  const isPointed = pointedValue === value;
+  const suggestionRef = useRef(null);
+  useEffect(() => {
+    const suggestionEl = suggestionRef.current;
+    if (isPointed && suggestionEl) {
+      suggestionEl.scrollIntoView({
+        block: "nearest"
+      });
+    }
+  }, [isPointed]);
+  return jsx(Box, {
+    as: "li",
+    ref: suggestionRef,
+    baseClassName: "navi_suggestion",
+    id: suggestionId,
+    role: "option",
+    "aria-selected": selected,
+    "aria-hidden": hidden ? true : undefined,
+    hidden: hidden,
+    basePseudoState: {
+      ":-navi-pointed": isPointed,
+      ":-navi-selected": selected
+    },
+    pseudoClasses: SUGGESTION_PSEUDO_CLASSES,
+    pseudoElements: SUGGESTION_PSEUDO_ELEMENTS,
+    styleCSSVars: SuggestionStyleCSSVars,
+    onMouseEnter: () => {
+      if (!hidden) {
+        setPointedValue(value);
+      }
+    },
+    onMouseLeave: () => {
+      if (!hidden) {
+        setPointedValue(null);
+      }
+    },
+    onMouseDown: e => {
+      if (hidden || e.button !== 0) {
+        return;
+      }
+      onSelect?.(value);
+    },
+    ...rest,
+    children: children
+  });
+};
+const SuggestionGroup = ({
+  label,
+  children,
+  ...rest
+}) => {
+  import.meta.css = [css$f, "@jsenv/navi/src/field/suggestion_list.jsx"];
+  const groupId = useId();
+  return jsxs("li", {
+    role: "presentation",
+    ...rest,
+    children: [jsx("span", {
+      id: groupId,
+      role: "presentation",
+      "aria-hidden": "true",
+      style: {
+        display: "contents"
+      },
+      children: jsx("span", {
+        className: "navi_suggestion_group_label",
+        "data-default-label": typeof label === "string" ? "" : undefined,
+        children: label
+      })
+    }), jsx("ul", {
+      role: "group",
+      "aria-labelledby": groupId,
+      style: {
+        margin: 0,
+        padding: 0,
+        listStyle: "none"
+      },
+      children: children
+    })]
+  });
+};
 
 const TableSelectionContext = createContext();
 const useTableSelectionContextValue = (
