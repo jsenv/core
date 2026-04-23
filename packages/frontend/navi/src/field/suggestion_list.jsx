@@ -41,7 +41,7 @@ const [useSuggestionItemTrackerProvider, useTrackSuggestion] =
 
 const css = /* css */ `
   @layer navi {
-    .navi_suggestion_list_wrapper {
+    .navi_suggestion_list {
       --suggestion-list-border-radius: 4px;
       --suggestion-list-border-width: 1px;
       --suggestion-list-border-color: light-dark(#ccc, #555);
@@ -85,7 +85,7 @@ const css = /* css */ `
     }
   }
 
-  .navi_suggestion_list_wrapper {
+  .navi_suggestion_list {
     --x-border-radius: var(--suggestion-list-border-radius);
     --x-border-width: var(--suggestion-list-border-width);
     --x-border-color: var(--suggestion-list-border-color);
@@ -117,7 +117,7 @@ const css = /* css */ `
     }
   }
 
-  .navi_suggestion_list {
+  .navi_suggestion_listbox {
     box-sizing: border-box;
     width: max-content;
     min-width: 100%;
@@ -417,12 +417,12 @@ export const SuggestionList = ({
       popover={popover ? "manual" : undefined}
       tabIndex={popover ? -1 : 0}
       {...rest}
-      baseClassName="navi_suggestion_list_wrapper"
+      baseClassName="navi_suggestion_list"
     >
       <Box
         as="ul"
         role="listbox"
-        baseClassName="navi_suggestion_list"
+        baseClassName="navi_suggestion_listbox"
         styleCSSVars={SuggestionListStyleCSSVars}
       >
         <SuggestionListContext.Provider value={suggestionListContext}>
