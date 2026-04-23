@@ -100,6 +100,7 @@ const css = /* css */ `
     border: var(--x-border-width) solid var(--x-border-color);
     border-radius: var(--x-border-radius);
     outline: none;
+    transition: opacity 0.2s ease;
     overflow-y: auto;
 
     /* Popover reset — browser adds border, background, padding, margin by default */
@@ -109,6 +110,10 @@ const css = /* css */ `
       margin: 0;
       padding: 0;
       border: none;
+    }
+    &[data-anchor-hidden] {
+      opacity: 0;
+      pointer-events: none;
     }
   }
   ::highlight(navi-suggestion-match) {

@@ -460,9 +460,22 @@ const InputTextualWithSuggestions = ({
     const inputEl = ref.current;
     positionPopover();
     popoverEl.showPopover();
-    positionEffectRef.current = visibleRectEffect(inputEl, () => {
-      positionPopover();
-    });
+    positionEffectRef.current = visibleRectEffect(
+      inputEl,
+      ({ visibilityRatio }) => {
+        const popoverEl = document.getElementById(suggestions);
+        if (visibilityRatio <= 0.2) {
+          if (popoverEl) {
+            popoverEl.setAttribute("data-anchor-hidden", "");
+          }
+          return;
+        }
+        if (popoverEl) {
+          popoverEl.removeAttribute("data-anchor-hidden");
+        }
+        positionPopover();
+      },
+    );
     expand();
   };
 
@@ -477,6 +490,7 @@ const InputTextualWithSuggestions = ({
     }
     const popoverEl = document.getElementById(suggestions);
     if (popoverEl) {
+      popoverEl.removeAttribute("data-anchor-hidden");
       popoverEl.dispatchEvent(new CustomEvent("navi_suggestion_list_clear"));
       popoverEl.hidePopover();
     }

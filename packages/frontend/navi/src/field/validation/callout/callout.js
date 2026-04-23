@@ -797,7 +797,7 @@ const stickCalloutToAnchor = (calloutElement, anchorElement) => {
 
       calloutElement.setAttribute("data-position", position);
       calloutStyleController.set(calloutElement, {
-        opacity: visibilityRatio ? 1 : 0,
+        opacity: visibilityRatio > 0 ? 1 : 0,
         transform: {
           translateX: calloutLeft,
           translateY: calloutTop,
