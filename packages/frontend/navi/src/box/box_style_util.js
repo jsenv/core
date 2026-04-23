@@ -141,7 +141,7 @@ const DIMENSION_PROPS = {
       return {
         alignSelf: "stretch",
         // Here flex grow is "useless" for the item itself
-        // buuut it would allow children (hello ".navi_text_bold_wrapper")
+        // buuut it would allow children (hello ".navi_text_sizer")
         // to inherit expand behavior
         flexGrow: 1,
       };
@@ -163,7 +163,7 @@ const DIMENSION_PROPS = {
       return {
         alignSelf: "stretch",
         // Here flex grow is "useless" for the item itself
-        // buuut it would allow children (hello ".navi_text_bold_wrapper")
+        // buuut it would allow children (hello ".navi_text_sizer")
         // to inherit expand behavior
         flexGrow: 1,
       };

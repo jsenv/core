@@ -29,17 +29,17 @@ const css = /* css */ `
       &::first-letter {
         text-transform: uppercase;
       }
-      .navi_text_bold_clone::first-letter {
+      .navi_text_sizer_placeholder::first-letter {
         text-transform: uppercase;
       }
-      .navi_text_bold_foreground::first-letter {
+      .navi_text_sizer_overlay::first-letter {
         text-transform: uppercase;
       }
     }
 
-    .navi_text_bold_wrapper,
-    .navi_text_bold_clone,
-    .navi_text_bold_foreground {
+    .navi_text_sizer,
+    .navi_text_sizer_placeholder,
+    .navi_text_sizer_overlay {
       display: inherit;
       width: inherit;
       min-width: inherit;
@@ -152,15 +152,15 @@ const css = /* css */ `
     }
   }
 
-  .navi_text_bold_wrapper {
+  .navi_text_sizer {
     position: relative;
     display: inline-block;
 
-    .navi_text_bold_clone {
+    .navi_text_sizer_placeholder {
       font-weight: bold;
       opacity: 0;
     }
-    .navi_text_bold_foreground {
+    .navi_text_sizer_overlay {
       position: absolute;
       inset: 0;
     }
@@ -187,7 +187,7 @@ const css = /* css */ `
   }
 
   .navi_text[data-bold-transition] {
-    .navi_text_bold_foreground {
+    .navi_text_sizer_overlay {
       transition-property: font-weight;
       transition-duration: 0.3s;
       transition-timing-function: ease;
@@ -477,11 +477,11 @@ const TextBasic = ({
     // on pourrait auto-active cela sur une prop genre boldCanChange
     return (
       <Box {...boxProps}>
-        <span className="navi_text_bold_wrapper">
-          <span className="navi_text_bold_clone" aria-hidden="true">
+        <span className="navi_text_sizer">
+          <span className="navi_text_sizer_placeholder" aria-hidden="true">
             {children}
           </span>
-          <span className="navi_text_bold_foreground" data-align={alignX}>
+          <span className="navi_text_sizer_overlay" data-align={alignX}>
             {children}
           </span>
         </span>
