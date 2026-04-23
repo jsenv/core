@@ -91,13 +91,14 @@ const css = /* css */ `
     --x-border-color: var(--suggestion-list-border-color);
     --x-border-style: var(--suggestion-list-border-style);
     --x-background-color: var(--suggestion-list-background-color);
+    display: flex;
     box-sizing: border-box;
-    width: fit-content;
-    min-width: var(--suggestion-list-anchor-width, 0px);
-    max-width: 95vw;
+    width: max(var(--suggestion-list-anchor-width, 0px), max-content);
     max-height: var(--suggestion-list-max-height);
     margin: 0;
     padding: 0;
+    flex-direction: column;
+    align-items: stretch;
     list-style: none;
     background-color: var(--x-background-color);
     border: var(--x-border-width) var(--x-border-style) var(--x-border-color);
@@ -109,6 +110,7 @@ const css = /* css */ `
     &[popover] {
       position: absolute;
       inset: unset;
+      max-width: 95vw;
       margin: 0;
       padding: 0;
       /* border: none; */
@@ -127,6 +129,7 @@ const css = /* css */ `
     --x-background-color: var(--suggestion-background-color);
     --x-font-weight: var(--suggestion-font-weight);
     box-sizing: border-box;
+    width: 100%;
 
     padding: var(--suggestion-padding);
     color: var(--x-color);

@@ -190,7 +190,13 @@
             <SuggestionList
               style={{ maxHeight: "220px" }}
               onChange={setSelected}
+              expandX
             >
+              <Suggestion noWrap>
+                A very large suggestion to test how it behaves when the text is
+                very large and exceeds the width of the list. It should be
+                visible
+              </Suggestion>
               {COUNTRIES.map((country) => (
                 <Suggestion
                   key={country.code}
