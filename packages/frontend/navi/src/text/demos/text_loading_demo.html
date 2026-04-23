@@ -84,8 +84,8 @@
         return (
           <div class="demo-section">
             <h2>
-              All features: icon | overflowEllipsis + preventBoldLayoutShift +
-              loading | icon
+              All features: icon | overflowEllipsis + holdSpaceForBold + loading
+              | icon
             </h2>
             <p>
               The most complex combination. The text expands to fill available
@@ -109,7 +109,7 @@
                 </Icon>
                 <Text
                   overflowEllipsis
-                  preventBoldLayoutShift
+                  holdSpaceForStyle={{ fontWeight: "bold" }}
                   bold={bold}
                   loading={loading}
                   expandX
@@ -474,7 +474,12 @@
               bold
             </label>
             <div class="container-box" style="display: inline-block;">
-              <Text loading={loading} bold={bold} preventBoldLayoutShift noWrap>
+              <Text
+                loading={loading}
+                bold={bold}
+                holdSpaceForStyle={{ fontWeight: "bold" }}
+                noWrap
+              >
                 Toggle me bold without layout shift
               </Text>
             </div>
@@ -491,7 +496,7 @@
                 <Text
                   loading={loading}
                   bold={bold}
-                  preventBoldLayoutShift
+                  holdSpaceForStyle={{ fontWeight: "bold" }}
                   noWrap
                   expandX
                 >

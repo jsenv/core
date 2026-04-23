@@ -574,7 +574,7 @@ const LinkPlain = (props) => {
       onnavi_value={(e) => {
         e.detail.setValue(value);
       }}
-      preventBoldLayoutShift={currentEffectBold}
+      holdSpaceForStyle={currentEffectBold ? { fontWeight: "bold" } : undefined}
       preventSpaceUnderlines
       overflowEllipsis={overflowEllipsis}
       // Visual

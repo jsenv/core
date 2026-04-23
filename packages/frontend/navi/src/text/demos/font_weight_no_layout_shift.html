@@ -2,75 +2,46 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>Font Weight No Layout Shift Demo</title>
+    <title>holdSpaceForStyle Demo</title>
   </head>
   <body>
     <div id="app"></div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      import { Text, Link, Paragraph } from "@jsenv/navi";
+      import { Text } from "@jsenv/navi";
 
-      // Reusable Components
-      const SectionSeparator = () => (
-        <div
+      const Indicator = ({ color }) => (
+        <Text width="16px" height="16px" background={color} />
+      );
+
+      const DemoSection = ({ title, children }) => (
+        <section
           style={{
-            height: "1px",
-            background:
-              "linear-gradient(90deg, transparent, #e0e0e0 25%, #e0e0e0 75%, transparent)",
-            margin: "40px 0",
-            position: "relative",
+            marginBottom: "30px",
+            padding: "20px",
+            border: "1px solid #e9ecef",
+            borderRadius: "8px",
+            backgroundColor: "#fafbfc",
           }}
         >
-          <div
+          <h2
             style={{
-              position: "absolute",
-              left: "50%",
-              top: "-8px",
-              transform: "translateX(-50%)",
-              background: "white",
-              padding: "0 15px",
-              fontSize: "18px",
-              color: "#999",
+              margin: "0 0 16px 0",
+              paddingBottom: "12px",
+              borderBottom: "2px solid #e9ecef",
+              color: "#495057",
+              fontSize: "1.1rem",
             }}
           >
-            • • •
-          </div>
-        </div>
+            {title}
+          </h2>
+          {children}
+        </section>
       );
 
-      const DemoSection = ({ id, title, children, style = {} }) => (
-        <>
-          <SectionSeparator />
-          <section
-            id={id}
-            style={{
-              marginBottom: "30px",
-              padding: "25px",
-              border: "1px solid #e9ecef",
-              borderRadius: "8px",
-              backgroundColor: "#fafbfc",
-              boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
-              ...style,
-            }}
-          >
-            <h2
-              style={{
-                margin: "0 0 20px 0",
-                paddingBottom: "15px",
-                borderBottom: "2px solid #e9ecef",
-                color: "#495057",
-              }}
-            >
-              {title}
-            </h2>
-            {children}
-          </section>
-        </>
-      );
-
-      const BoldToggle = ({ checked, onChange, label }) => (
-        <label style={{ display: "block", marginBottom: "10px" }}>
+      const Toggle = ({ checked, onChange, label }) => (
+        <label style={{ display: "block", marginBottom: "12px" }}>
           <input
             type="checkbox"
             checked={checked}
@@ -81,841 +52,342 @@
         </label>
       );
 
+      const Box = ({ children, style = {} }) => (
+        <div
+          style={{
+            border: "1px solid #dee2e6",
+            padding: "12px",
+            backgroundColor: "#fff",
+            borderRadius: "4px",
+            ...style,
+          }}
+        >
+          {children}
+        </div>
+      );
+
       const Demo = () => {
-        const [basicBoldActive, setBasicBoldActive] = useState(false);
-        const [comparisonBoldActive, setComparisonBoldActive] = useState(false);
-        const [lengthsBoldActive, setLengthsBoldActive] = useState(false);
-        const [alignmentsBoldActive, setAlignmentsBoldActive] = useState(false);
-        const [stableBoldActive, setStableBoldActive] = useState(false);
-        const [centeredSizeActive, setCenteredSizeActive] = useState(false);
+        const [shiftActive, setShiftActive] = useState(false);
+        const [basicActive, setBasicActive] = useState(false);
+        const [lengthsActive, setLengthsActive] = useState(false);
+        const [alignmentsActive, setAlignmentsActive] = useState(false);
+        const [sizeActive, setSizeActive] = useState(false);
+        const [stableActive, setStableActive] = useState(false);
 
         return (
           <div
             style={{
               padding: "20px",
               fontFamily: "system-ui, sans-serif",
-              maxWidth: "1200px",
+              maxWidth: "900px",
               margin: "0 auto",
-              backgroundColor: "#ffffff",
             }}
           >
-            {/* Header Section */}
-            <div
-              style={{
-                textAlign: "center",
-                padding: "40px 20px",
-                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                borderRadius: "12px",
-                color: "white",
-                marginBottom: "20px",
-              }}
-            >
-              <h1 style={{ margin: "0 0 15px 0", fontSize: "2.5rem" }}>
-                Font Weight - No Layout Shift Demo
-              </h1>
-              <p style={{ margin: "0", fontSize: "1.1rem", opacity: "0.9" }}>
-                The{" "}
-                <code
-                  style={{
-                    background: "rgba(255,255,255,0.2)",
-                    padding: "2px 6px",
-                    borderRadius: "4px",
-                  }}
-                >
-                  boldTransition
-                </code>{" "}
-                prop on Text components prevents layout shifts when
-                transitioning to bold by using an invisible bold clone to
-                reserve space. As a bonus, it enables smooth bold transitions.
-                Only works with{" "}
-                <code
-                  style={{
-                    background: "rgba(255,255,255,0.2)",
-                    padding: "2px 6px",
-                    borderRadius: "4px",
-                  }}
-                >
-                  noWrap
-                </code>{" "}
-                text.
+            <h1 style={{ marginBottom: "8px" }}>holdSpaceForStyle</h1>
+            <p style={{ color: "#555", marginBottom: "30px" }}>
+              Prevents layout shifts when text style changes (font-weight,
+              font-size, …) by rendering an invisible placeholder with the
+              "maximum" style to reserve space, then layering the real visible
+              text on top via <code>position: absolute</code>.
+            </p>
+
+            {/* 1. The problem */}
+            <DemoSection title="The problem">
+              <p style={{ marginTop: 0 }}>
+                When text goes bold it widens, shifting surrounding elements.
               </p>
-            </div>
-
-            {/* Table of Contents */}
-            <section
-              style={{
-                marginBottom: "30px",
-                padding: "15px",
-                backgroundColor: "#f8f9fa",
-                borderRadius: "6px",
-                border: "1px solid #e9ecef",
-              }}
-            >
-              <h2 style={{ margin: "0 0 15px 0", fontSize: "1.2rem" }}>
-                📋 Table of Contents
-              </h2>
-              <nav>
-                <ol
-                  style={{
-                    margin: 0,
-                    paddingLeft: "20px",
-                    lineHeight: "1.6",
-                  }}
-                >
-                  <li>
-                    <Link href="#layout-shift-problem" textColor="#007bff">
-                      Layout Shift Problem
-                    </Link>
-                  </li>
-                  <li>
-                    <Link href="#basic-usage" textColor="#007bff">
-                      Basic boldTransition Usage
-                    </Link>
-                  </li>
-                  <li>
-                    <Link href="#different-lengths" textColor="#007bff">
-                      Different Text Lengths
-                    </Link>
-                  </li>
-                  <li>
-                    <Link href="#text-alignments" textColor="#007bff">
-                      Different Text Alignments
-                    </Link>
-                  </li>
-                </ol>
-              </nav>
-            </section>
-
-            <DemoSection
-              id="layout-shift-problem"
-              title="⚠️ The Layout Shift Problem"
-            >
-              <p>
-                When text changes from normal to bold weight, it becomes wider,
-                causing surrounding elements to shift. The{" "}
-                <code>preventBoldLayoutShift</code> prop solves this by
-                reserving space for the bold version upfront.
-              </p>
-
-              <div style={{ marginBottom: "20px" }}>
-                <label style={{ display: "block", marginBottom: "10px" }}>
-                  <input
-                    type="checkbox"
-                    checked={comparisonBoldActive}
-                    onChange={(e) => setComparisonBoldActive(e.target.checked)}
-                    style={{ marginRight: "8px" }}
-                  />
-                  Toggle bold to see the difference
-                </label>
-
-                <div style={{ display: "flex", gap: "20px" }}>
-                  <div style={{ flex: 1 }}>
-                    <h3
-                      style={{
-                        margin: "0 0 10px 0",
-                        fontSize: "14px",
-                        color: "#dc3545",
-                      }}
-                    >
-                      ❌ Normal behavior (layout shift)
-                    </h3>
-                    <div
-                      style={{
-                        border: "2px solid #f5c2c7",
-                        padding: "16px",
-                        backgroundColor: "#f8d7da",
-                        borderRadius: "6px",
-                      }}
-                    >
-                      <span
-                        style={{
-                          whiteSpace: "nowrap",
-                          fontWeight: comparisonBoldActive ? "bold" : "normal",
-                          //  transition: "font-weight 0.3s ease",
-                        }}
-                      >
-                        Text that shifts layout when bold
-                      </span>
-                      <Text width="16px" height="16px" background="red"></Text>
-                    </div>
-                  </div>
-
-                  <div style={{ flex: 1 }}>
-                    <h3
-                      style={{
-                        margin: "0 0 10px 0",
-                        fontSize: "14px",
-                        color: "#198754",
-                      }}
-                    >
-                      ✅ With preventBoldLayoutShift (stable)
-                    </h3>
-                    <div
-                      style={{
-                        border: "2px solid #badbcc",
-                        padding: "16px",
-                        backgroundColor: "#d1e7dd",
-                        borderRadius: "6px",
-                      }}
-                    >
-                      <Text
-                        holdSpaceForStyle={{ fontWeight: "bold" }}
-                        noWrap
-                        bold={comparisonBoldActive}
-                      >
-                        Text that shifts layout when bold
-                      </Text>
-                      <Text
-                        width="16px"
-                        height="16px"
-                        background="green"
-                      ></Text>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <p
-                style={{ fontSize: "14px", color: "#666", fontStyle: "italic" }}
-              >
-                <strong>Notice:</strong> The red indicator will shift when the
-                left example toggles bold, while the green indicator stays
-                stable with preventBoldLayoutShift. Watch how the colored
-                squares move!
-              </p>
-
-              <div
-                style={{
-                  padding: "15px",
-                  backgroundColor: "#e7f3ff",
-                  border: "1px solid #b3d9ff",
-                  borderRadius: "6px",
-                  marginBottom: "20px",
-                }}
-              >
-                <p style={{ margin: "0 0 10px 0", fontWeight: "600" }}>
-                  💡 Pro tip:
-                </p>
-                <Text style={{ margin: "0" }}>
-                  The <code>boldTransition</code> prop automatically enables
-                  <code>preventBoldLayoutShift</code> and adds smooth
-                  transitions. Use <code>preventBoldLayoutShift</code> alone
-                  when you only want to prevent layout shifts without
-                  transitions.
-                </Text>
-              </div>
-            </DemoSection>
-
-            <DemoSection id="basic-usage" title="🎯 Basic boldTransition Usage">
-              <p>
-                For the best experience, use <code>boldTransition</code> which
-                combines <code>preventBoldLayoutShift</code> with smooth
-                animations. Perfect for interactive elements like buttons and
-                links.
-              </p>
-
-              <div style={{ marginBottom: "20px" }}>
-                <label style={{ display: "block", marginBottom: "10px" }}>
-                  <input
-                    type="checkbox"
-                    checked={basicBoldActive}
-                    onChange={(e) => setBasicBoldActive(e.target.checked)}
-                    style={{ marginRight: "8px" }}
-                  />
-                  Make text bold
-                </label>
-
-                <div
-                  style={{
-                    border: "2px solid #e9ecef",
-                    padding: "16px",
-                    backgroundColor: "#f8f9fa",
-                    borderRadius: "6px",
-                  }}
-                >
-                  <Text
-                    style="transition: font-weight 0.3s ease"
-                    noWrap
-                    bold={basicBoldActive}
-                  >
-                    This text transitions smoothly to bold
-                  </Text>
-                  <Text width="16px" height="16px" background="violet"></Text>
-                </div>
-              </div>
-
-              <pre
-                style={{
-                  background: "#f7f7f7",
-                  padding: "10px",
-                  borderRadius: "4px",
-                  fontSize: "12px",
-                  overflowX: "auto",
-                }}
-              >
-                {`<Text
-        noWrap
-        bold={basicBoldActive}
-        boldTransition
-      >
-        This text transitions smoothly to bold
-      </Text>`}
-              </pre>
-            </DemoSection>
-
-            <DemoSection
-              id="different-lengths"
-              title="📏 Different Text Lengths"
-            >
-              <p>
-                Testing <code>boldTransition</code> behavior with various text
-                lengths to ensure it works consistently.
-              </p>
-
-              <div style={{ marginBottom: "20px" }}>
-                <label style={{ display: "block", marginBottom: "10px" }}>
-                  <input
-                    type="checkbox"
-                    checked={lengthsBoldActive}
-                    onChange={(e) => setLengthsBoldActive(e.target.checked)}
-                    style={{ marginRight: "8px" }}
-                  />
-                  Make all texts bold
-                </label>
-
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "15px",
-                  }}
-                >
-                  <div>
-                    <h4
-                      style={{
-                        margin: "0 0 8px 0",
-                        fontSize: "12px",
-                        color: "#666",
-                      }}
-                    >
-                      Short text
-                    </h4>
-                    <div
-                      style={{
-                        border: "1px solid #dee2e6",
-                        padding: "12px",
-                        backgroundColor: "#ffffff",
-                        borderRadius: "4px",
-                      }}
-                    >
-                      <Text
-                        style="transition: font-weight 0.3s ease"
-                        noWrap
-                        bold={lengthsBoldActive}
-                      >
-                        Short
-                      </Text>
-                      <Text
-                        width="16px"
-                        height="16px"
-                        background="violet"
-                      ></Text>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h4
-                      style={{
-                        margin: "0 0 8px 0",
-                        fontSize: "12px",
-                        color: "#666",
-                      }}
-                    >
-                      Medium text
-                    </h4>
-                    <div
-                      style={{
-                        border: "1px solid #dee2e6",
-                        padding: "12px",
-                        backgroundColor: "#ffffff",
-                        borderRadius: "4px",
-                      }}
-                    >
-                      <Text
-                        style="transition: font-weight 0.3s ease"
-                        noWrap
-                        bold={lengthsBoldActive}
-                      >
-                        A medium length text for testing
-                      </Text>
-                      <Text
-                        width="16px"
-                        height="16px"
-                        background="orange"
-                      ></Text>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h4
-                      style={{
-                        margin: "0 0 8px 0",
-                        fontSize: "12px",
-                        color: "#666",
-                      }}
-                    >
-                      Long text
-                    </h4>
-                    <div
-                      style={{
-                        border: "1px solid #dee2e6",
-                        padding: "12px",
-                        backgroundColor: "#ffffff",
-                        borderRadius: "4px",
-                      }}
-                    >
-                      <Text
-                        style="transition: font-weight 0.3s ease"
-                        noWrap
-                        bold={lengthsBoldActive}
-                      >
-                        This is a much longer text that tests the boldTransition
-                        behavior with extended content
-                      </Text>
-                      <Text width="16px" height="16px" background="blue"></Text>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </DemoSection>
-
-            {/* Text Alignments */}
-            <DemoSection id="text-alignments" style={{ marginBottom: "30px" }}>
-              <h2>🎯 Different Text Alignments</h2>
-              <p>
-                Testing how <code>boldTransition</code> works with different
-                text alignments. The technique includes automatic centering for
-                smooth transitions.
-              </p>
-
-              <div style={{ marginBottom: "20px" }}>
-                <label style={{ display: "block", marginBottom: "10px" }}>
-                  <input
-                    type="checkbox"
-                    checked={alignmentsBoldActive}
-                    onChange={(e) => setAlignmentsBoldActive(e.target.checked)}
-                    style={{ marginRight: "8px" }}
-                  />
-                  Toggle bold on all alignments
-                </label>
-
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "15px",
-                  }}
-                >
-                  <div>
-                    <h4
-                      style={{
-                        margin: "0 0 8px 0",
-                        fontSize: "12px",
-                        color: "#666",
-                      }}
-                    >
-                      Left aligned
-                    </h4>
-                    <div
-                      style={{
-                        border: "1px solid #dee2e6",
-                        padding: "12px",
-                        backgroundColor: "#ffffff",
-                        borderRadius: "4px",
-                        textAlign: "left",
-                      }}
-                    >
-                      <Text
-                        style="transition: font-weight 0.3s ease"
-                        noWrap
-                        bold={alignmentsBoldActive}
-                      >
-                        Left aligned text
-                      </Text>
-                      <Text width="16px" height="16px" background="cyan"></Text>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h4
-                      style={{
-                        margin: "0 0 8px 0",
-                        fontSize: "12px",
-                        color: "#666",
-                      }}
-                    >
-                      Center aligned
-                    </h4>
-                    <div
-                      style={{
-                        border: "1px solid #dee2e6",
-                        padding: "12px",
-                        backgroundColor: "#ffffff",
-                        borderRadius: "4px",
-                        textAlign: "center",
-                      }}
-                    >
-                      <Text width="16px" height="16px" background="cyan"></Text>
-                      <Text
-                        noWrap
-                        alignX="center"
-                        bold={alignmentsBoldActive}
-                        style="transition: font-weight 0.3s ease"
-                      >
-                        Center aligned text
-                      </Text>
-                      <Text width="16px" height="16px" background="cyan"></Text>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h4
-                      style={{
-                        margin: "0 0 8px 0",
-                        fontSize: "12px",
-                        color: "#666",
-                      }}
-                    >
-                      Right aligned
-                    </h4>
-                    <div
-                      style={{
-                        border: "1px solid #dee2e6",
-                        padding: "12px",
-                        backgroundColor: "#ffffff",
-                        borderRadius: "4px",
-                        textAlign: "right",
-                      }}
-                    >
-                      <Text width="16px" height="16px" background="cyan"></Text>
-                      <Text
-                        style="transition: font-weight 0.3s ease"
-                        noWrap
-                        alignX="end"
-                        bold={alignmentsBoldActive}
-                      >
-                        Right aligned text
-                      </Text>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <p
-                style={{ fontSize: "14px", color: "#666", fontStyle: "italic" }}
-              >
-                <strong>Note:</strong> The boldTransition technique
-                automatically centers the text overlay to give the impression
-                that the bold effect applies from the center, regardless of
-                container alignment.
-              </p>
-            </DemoSection>
-
-            <DemoSection
-              id="centered-size-change"
-              title="🔠 Centered: Bold + Font Size Change"
-            >
-              <p>
-                When a centered text becomes bold <em>and</em> larger, both the
-                weight and the size change at the same time. The sizer reserves
-                space for the largest/boldest version so surrounding elements
-                never move.
-              </p>
-
-              <div style={{ marginBottom: "20px" }}>
-                <label style={{ display: "block", marginBottom: "10px" }}>
-                  <input
-                    type="checkbox"
-                    checked={centeredSizeActive}
-                    onChange={(e) => setCenteredSizeActive(e.target.checked)}
-                    style={{ marginRight: "8px" }}
-                  />
-                  Toggle bold + larger font-size
-                </label>
-
-                <div
-                  style={{
-                    display: "flex",
-                    gap: "20px",
-                  }}
-                >
-                  <div style={{ flex: 1, textAlign: "center" }}>
-                    <div
-                      style={{
-                        border: "1px solid #dee2e6",
-                        padding: "12px",
-                        backgroundColor: "#ffffff",
-                        borderRadius: "4px",
-                      }}
-                    >
-                      <Text width="16px" height="16px" background="cyan"></Text>
-                      <Text
-                        noWrap
-                        flex
-                        align="center"
-                        bold={centeredSizeActive}
-                        holdSpaceForStyle={{
-                          fontWeight: "bold",
-                          fontSize: "1.5rem",
-                        }}
-                        size={centeredSizeActive ? "1.5rem" : "1rem"}
-                        style={{
-                          transition:
-                            "font-size 0.3s ease, font-weight 0.3s ease",
-                        }}
-                      >
-                        Centered label
-                      </Text>
-                      <Text width="16px" height="16px" background="cyan"></Text>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </DemoSection>
-
-            <DemoSection id="how-it-works" title="⚙️ How it Works">
-              <div
-                style={{
-                  padding: "20px",
-                  backgroundColor: "#f8f9fa",
-                  border: "1px solid #e9ecef",
-                  borderRadius: "6px",
-                }}
-              >
-                <p style={{ margin: "0 0 15px 0" }}>
-                  The technique uses a CSS approach:
-                </p>
-                <ol style={{ margin: "0 0 15px 20px", lineHeight: "1.6" }}>
-                  <li>
-                    <strong>reserveBoldSpace</strong>: Creates an invisible bold
-                    clone that reserves the space needed for bold text
-                  </li>
-                  <li>
-                    <strong>boldTransition</strong>: Automatically enables
-                    reserveBoldSpace and adds smooth transitions between normal
-                    and bold states
-                  </li>
-                  <li>
-                    Centers the overlay to make bold appear to apply from the
-                    center
-                  </li>
-                  <li>
-                    Only works with <code>noWrap</code> since multi-line would
-                    have different wrapping
-                  </li>
-                </ol>
-                <p style={{ margin: "0", fontSize: "14px", color: "#666" }}>
-                  This prevents layout shifts by ensuring the container always
-                  has the width of the bold version, while smoothly
-                  transitioning the visible text.
-                </p>
-              </div>
-            </DemoSection>
-
-            <DemoSection
-              id="boldstable-alternative"
-              title="🔒 boldStable Alternative"
-            >
-              <p>
-                The <code>boldStable</code> technique uses a different approach
-                to prevent layout shifts. Unlike <code>boldTransition</code>
-                which reserves space for bold text, <code>boldStable</code>
-                maintains consistent text width regardless of font-weight.
-              </p>
-
-              <BoldToggle
-                checked={stableBoldActive}
-                onChange={(e) => setStableBoldActive(e.target.checked)}
-                label="Toggle bold on all boldStable examples"
+              <Toggle
+                checked={shiftActive}
+                onChange={(e) => setShiftActive(e.target.checked)}
+                label="Toggle bold"
               />
-
-              {/* Long Text Example */}
-              <div style={{ marginBottom: "20px" }}>
-                <h3 style={{ fontSize: "16px", marginBottom: "10px" }}>
-                  📝 Long Text Stability
-                </h3>
-                <p
-                  style={{
-                    fontSize: "14px",
-                    color: "#666",
-                    marginBottom: "15px",
-                  }}
-                >
-                  Perfect for paragraphs and multi-line content where consistent
-                  width is crucial:
-                </p>
-                <div
-                  style={{
-                    border: "2px solid #fd7e14",
-                    padding: "16px",
-                    backgroundColor: "#fff3cd",
-                    borderRadius: "6px",
-                  }}
-                >
-                  <Text boldStable bold={stableBoldActive}>
-                    This is a much longer sentence that demonstrates how
-                    boldStable can be used with extended text content without
-                    causing any layout shifts or width changes, making it
-                    particularly useful for paragraphs, long labels, or any text
-                    that might wrap across multiple lines while maintaining
-                    perfect layout stability.
-                  </Text>
-                  <Text width="20px" height="20px" background="orange"></Text>
+              <div style={{ display: "flex", gap: "16px" }}>
+                <div style={{ flex: 1 }}>
+                  <p
+                    style={{
+                      margin: "0 0 6px",
+                      fontSize: "12px",
+                      color: "#dc3545",
+                    }}
+                  >
+                    ❌ Without holdSpaceForStyle
+                  </p>
+                  <Box
+                    style={{
+                      border: "2px solid #f5c2c7",
+                      backgroundColor: "#f8d7da",
+                    }}
+                  >
+                    <span
+                      style={{
+                        whiteSpace: "nowrap",
+                        fontWeight: shiftActive ? "bold" : "normal",
+                      }}
+                    >
+                      Text that shifts layout when bold
+                    </span>
+                    <Indicator color="red" />
+                  </Box>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <p
+                    style={{
+                      margin: "0 0 6px",
+                      fontSize: "12px",
+                      color: "#198754",
+                    }}
+                  >
+                    ✅ With holdSpaceForStyle
+                  </p>
+                  <Box
+                    style={{
+                      border: "2px solid #badbcc",
+                      backgroundColor: "#d1e7dd",
+                    }}
+                  >
+                    <Text
+                      noWrap
+                      bold={shiftActive}
+                      holdSpaceForStyle={{ fontWeight: "bold" }}
+                    >
+                      Text that shifts layout when bold
+                    </Text>
+                    <Indicator color="green" />
+                  </Box>
                 </div>
               </div>
+            </DemoSection>
 
-              {/* Alignment Tests */}
-              <div>
-                <h3 style={{ fontSize: "16px", marginBottom: "10px" }}>
-                  🎯 Alignment Tests
-                </h3>
-                <p
-                  style={{
-                    fontSize: "14px",
-                    color: "#666",
-                    marginBottom: "15px",
-                  }}
+            {/* 2. Basic usage */}
+            <DemoSection title="Basic usage — font-weight">
+              <Toggle
+                checked={basicActive}
+                onChange={(e) => setBasicActive(e.target.checked)}
+                label="Make text bold"
+              />
+              <Box>
+                <Text
+                  noWrap
+                  bold={basicActive}
+                  holdSpaceForStyle={{ fontWeight: "bold" }}
                 >
-                  Testing boldStable with different text alignments:
-                </p>
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "15px",
-                  }}
-                >
-                  <div>
-                    <h4
-                      style={{
-                        margin: "0 0 8px 0",
-                        fontSize: "12px",
-                        color: "#666",
-                      }}
-                    >
-                      Left aligned
-                    </h4>
-                    <div
-                      style={{
-                        border: "1px solid #dee2e6",
-                        padding: "12px",
-                        backgroundColor: "#ffffff",
-                        borderRadius: "4px",
-                        textAlign: "left",
-                      }}
-                    >
-                      <Text boldStable noWrap bold={stableBoldActive}>
-                        Left aligned text
-                      </Text>
-                      <Text
-                        width="16px"
-                        height="16px"
-                        background="orange"
-                      ></Text>
-                    </div>
-                  </div>
+                  This text stays stable when toggling bold
+                </Text>
+                <Indicator color="violet" />
+              </Box>
+              <p style={{ fontSize: "13px", color: "#555", marginBottom: 0 }}>
+                A CSS transition on <code>font-weight</code> can be added on the
+                overlay for a smooth visual effect — it is just a regular{" "}
+                <code>transition</code> property applied via <code>style</code>.
+              </p>
+            </DemoSection>
 
-                  <div>
-                    <h4
-                      style={{
-                        margin: "0 0 8px 0",
-                        fontSize: "12px",
-                        color: "#666",
-                      }}
-                    >
-                      Center aligned
-                    </h4>
-                    <div
-                      style={{
-                        border: "1px solid #dee2e6",
-                        padding: "12px",
-                        backgroundColor: "#ffffff",
-                        borderRadius: "4px",
-                        textAlign: "center",
-                      }}
-                    >
-                      <Text
-                        width="16px"
-                        height="16px"
-                        background="orange"
-                      ></Text>
-                      <Text
-                        boldStable
-                        noWrap
-                        alignX="center"
-                        bold={stableBoldActive}
-                        style="transition: font-weight 0.3s ease"
-                      >
-                        Center aligned text
-                      </Text>
-                      <Text
-                        width="16px"
-                        height="16px"
-                        background="orange"
-                      ></Text>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h4
-                      style={{
-                        margin: "0 0 8px 0",
-                        fontSize: "12px",
-                        color: "#666",
-                      }}
-                    >
-                      Right aligned
-                    </h4>
-                    <div
-                      style={{
-                        border: "1px solid #dee2e6",
-                        padding: "12px",
-                        backgroundColor: "#ffffff",
-                        borderRadius: "4px",
-                        textAlign: "right",
-                      }}
-                    >
-                      <Text
-                        width="16px"
-                        height="16px"
-                        background="orange"
-                      ></Text>
-                      <Text
-                        boldStable
-                        noWrap
-                        alignX="end"
-                        bold={stableBoldActive}
-                      >
-                        Right aligned text
-                      </Text>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <p
+            {/* 3. Different text lengths */}
+            <DemoSection title="Different text lengths">
+              <Toggle
+                checked={lengthsActive}
+                onChange={(e) => setLengthsActive(e.target.checked)}
+                label="Make all texts bold"
+              />
+              <div
                 style={{
-                  fontSize: "14px",
-                  color: "#666",
-                  fontStyle: "italic",
-                  marginTop: "20px",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "10px",
                 }}
               >
-                <strong>Key Difference:</strong> While{" "}
-                <code>boldTransition</code> reserves space for bold text,{" "}
-                <code>boldStable</code> maintains consistent visual width making
-                it ideal for longer content and multi-line text.
+                {[
+                  { label: "Short", color: "violet" },
+                  {
+                    label: "A medium length text for testing",
+                    color: "orange",
+                  },
+                  {
+                    label:
+                      "This is a much longer text that tests the behavior with extended content",
+                    color: "blue",
+                  },
+                ].map(({ label, color }) => (
+                  <Box key={label}>
+                    <Text
+                      noWrap
+                      bold={lengthsActive}
+                      holdSpaceForStyle={{ fontWeight: "bold" }}
+                    >
+                      {label}
+                    </Text>
+                    <Indicator color={color} />
+                  </Box>
+                ))}
+              </div>
+            </DemoSection>
+
+            {/* 4. Text alignments */}
+            <DemoSection title="Text alignments">
+              <p style={{ marginTop: 0 }}>
+                The overlay is stretched to fill the placeholder (
+                <code>inset: 0</code>) so the text alignment set on the parent
+                is naturally respected.
               </p>
+              <Toggle
+                checked={alignmentsActive}
+                onChange={(e) => setAlignmentsActive(e.target.checked)}
+                label="Toggle bold"
+              />
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "10px",
+                }}
+              >
+                <div>
+                  <p
+                    style={{
+                      margin: "0 0 4px",
+                      fontSize: "12px",
+                      color: "#666",
+                    }}
+                  >
+                    Left
+                  </p>
+                  <Box>
+                    <Text
+                      noWrap
+                      bold={alignmentsActive}
+                      holdSpaceForStyle={{ fontWeight: "bold" }}
+                    >
+                      Left aligned text
+                    </Text>
+                    <Indicator color="cyan" />
+                  </Box>
+                </div>
+                <div>
+                  <p
+                    style={{
+                      margin: "0 0 4px",
+                      fontSize: "12px",
+                      color: "#666",
+                    }}
+                  >
+                    Center
+                  </p>
+                  <Box>
+                    <Indicator color="cyan" />
+                    <Text
+                      noWrap
+                      alignX="center"
+                      bold={alignmentsActive}
+                      holdSpaceForStyle={{ fontWeight: "bold" }}
+                    >
+                      Center aligned text
+                    </Text>
+                    <Indicator color="cyan" />
+                  </Box>
+                </div>
+                <div>
+                  <p
+                    style={{
+                      margin: "0 0 4px",
+                      fontSize: "12px",
+                      color: "#666",
+                    }}
+                  >
+                    Right
+                  </p>
+                  <Box>
+                    <Indicator color="cyan" />
+                    <Text
+                      noWrap
+                      alignX="end"
+                      bold={alignmentsActive}
+                      holdSpaceForStyle={{ fontWeight: "bold" }}
+                    >
+                      Right aligned text
+                    </Text>
+                  </Box>
+                </div>
+              </div>
+            </DemoSection>
+
+            {/* 5. Bold + font-size */}
+            <DemoSection title="Bold + font-size change">
+              <p style={{ marginTop: 0 }}>
+                <code>holdSpaceForStyle</code> accepts any style properties, so
+                you can reserve space for both <code>fontWeight</code> and{" "}
+                <code>fontSize</code> at once.
+              </p>
+              <Toggle
+                checked={sizeActive}
+                onChange={(e) => setSizeActive(e.target.checked)}
+                label="Toggle bold + larger font-size"
+              />
+              <Box>
+                <Indicator color="cyan" />
+                <Text
+                  noWrap
+                  alignX="center"
+                  bold={sizeActive}
+                  holdSpaceForStyle={{ fontWeight: "bold", fontSize: "1.5rem" }}
+                  style={{
+                    fontSize: sizeActive ? "1.5rem" : "1rem",
+                    transition: "font-size 0.3s ease, font-weight 0.3s ease",
+                  }}
+                >
+                  Centered label
+                </Text>
+                <Indicator color="cyan" />
+              </Box>
+              <div
+                style={{
+                  marginTop: "12px",
+                  padding: "12px",
+                  backgroundColor: "#fff8e1",
+                  border: "1px solid #ffe082",
+                  borderRadius: "4px",
+                  fontSize: "13px",
+                  color: "#555",
+                }}
+              >
+                <strong>Note on transitions with font-size:</strong> Animating{" "}
+                <code>font-size</code> directly is not smooth — browsers step
+                through discrete pixel values. A visually nicer alternative is{" "}
+                <code>transform: scale()</code>, but scaling happens after
+                layout so the browser cannot reserve the right space for the
+                scaled size. That means <code>holdSpaceForStyle</code> cannot
+                help you there: you get smooth scaling but no layout-shift
+                prevention.
+              </div>
+            </DemoSection>
+
+            {/* 6. boldStable alternative */}
+            <DemoSection title="boldStable — alternative for multi-line text">
+              <p style={{ marginTop: 0 }}>
+                <code>holdSpaceForStyle</code> only works reliably with
+                single-line (<code>noWrap</code>) text. For multi-line content,
+                use <code>boldStable</code> instead: it paints the text at
+                normal weight on top of a bold background using{" "}
+                <code>background-clip: text</code>, so the visual width never
+                changes regardless of font-weight.
+              </p>
+              <Toggle
+                checked={stableActive}
+                onChange={(e) => setStableActive(e.target.checked)}
+                label="Toggle bold"
+              />
+              <Box
+                style={{
+                  border: "2px solid #fd7e14",
+                  backgroundColor: "#fff3cd",
+                }}
+              >
+                <Text boldStable bold={stableActive}>
+                  This longer sentence demonstrates boldStable on multi-line
+                  content. The layout never shifts because the visual width is
+                  always the bold width, even when the text is displayed normal.
+                </Text>
+                <Indicator color="orange" />
+              </Box>
             </DemoSection>
           </div>
         );
