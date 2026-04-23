@@ -50,12 +50,6 @@ const css = /* css */ `
       --suggestion-list-background-color: light-dark(#fff, #1e1e1e);
       --suggestion-list-max-height: 220px;
     }
-    .navi_suggestion_group_label {
-      --suggestion-group-label-padding: 4px 12px 2px;
-      --suggestion-group-label-color: light-dark(#888, #aaa);
-      --suggestion-group-label-font-size: 0.75em;
-      --suggestion-group-label-font-weight: 600;
-    }
     .navi_suggestion {
       --suggestion-padding: 8px 12px;
       --suggestion-color: inherit;
@@ -172,17 +166,20 @@ const css = /* css */ `
     top: 0;
     z-index: 1;
     display: block;
-    padding: var(--suggestion-group-label-padding);
-    color: var(--suggestion-group-label-color);
-    font-weight: var(--suggestion-group-label-font-weight);
-    font-size: var(--suggestion-group-label-font-size);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
     background-color: var(
       --suggestion-group-label-background-color,
       var(--suggestion-list-background-color)
     );
     user-select: none;
+
+    &[data-default-label] {
+      padding: 4px 12px 2px;
+      color: light-dark(#888, #aaa);
+      font-weight: 600;
+      font-size: 0.75em;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
   }
   .navi_suggestion_list_empty {
     display: none;
@@ -572,11 +569,12 @@ export const SuggestionGroup = ({ label, children, ...rest }) => {
         aria-hidden="true"
         style={{ display: "contents" }}
       >
-        {typeof label === "string" ? (
-          <span className="navi_suggestion_group_label">{label}</span>
-        ) : (
-          label
-        )}
+        <span
+          className="navi_suggestion_group_label"
+          data-default-label={typeof label === "string" ? "" : undefined}
+        >
+          {label}
+        </span>
       </span>
       <ul
         role="group"
