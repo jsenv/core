@@ -157,7 +157,6 @@ const css = /* css */ `
     display: inline-block;
 
     .navi_text_sizer_placeholder {
-      font-weight: bold;
       opacity: 0;
     }
     .navi_text_sizer_overlay {
@@ -185,20 +184,6 @@ const css = /* css */ `
   .navi_text[data-bold] {
     .navi_text_bold_background {
       opacity: 1;
-    }
-  }
-
-  .navi_text[data-bold-transition] {
-    .navi_text_sizer_overlay {
-      transition-property: font-weight;
-      transition-duration: 0.3s;
-      transition-timing-function: ease;
-    }
-
-    .navi_text_bold_background {
-      transition-property: opacity;
-      transition-duration: 0.3s;
-      transition-timing-function: ease;
     }
   }
 `;
@@ -325,6 +310,10 @@ const OverflowPinnedElementContext = createContext(null);
 export const Text = (props) => {
   import.meta.css = css;
 
+  if (props.debug) {
+    debugger;
+  }
+
   if (props.loading || props.skeleton) {
     return <TextSkeleton {...props} />;
   }
@@ -429,9 +418,8 @@ const TextWithSelectRange = ({ selectRange, ...props }) => {
 const TextBasic = ({
   spacing,
   preventSpaceUnderlines = false,
-  boldTransition,
   boldStable,
-  preventBoldLayoutShift = boldTransition,
+  holdSpaceForStyle,
   capitalize,
   children,
   childrenOutsideFlow,
@@ -441,7 +429,6 @@ const TextBasic = ({
   const resolvedSpacing = spacing ?? defaultSpace;
   const boxProps = {
     "as": "span",
-    "data-bold-transition": boldTransition ? "" : undefined,
     "data-capitalize": capitalize ? "" : undefined,
     ...rest,
     "baseClassName": withPropsClassName("navi_text", rest.baseClassName),
@@ -474,23 +461,23 @@ const TextBasic = ({
       </Box>
     );
   }
-  if (preventBoldLayoutShift) {
-    const alignX = rest.alignX || rest.align || "start";
-
-    // La technique consiste a avoid un double gras qui force une taille
-    // et la version light par dessus en position absolute
-    // on la centre aussi pour donner l'impression que le gras s'applique depuis le centre
-    // ne fonctionne que sur une seule ligne de texte (donc lorsque noWrap est actif)
-    // on pourrait auto-active cela sur une prop genre boldCanChange
+  if (holdSpaceForStyle) {
+    // The sizer technique prevents layout shifts when styles that affect text dimensions change.
+    // - navi_text_sizer_placeholder: invisible, rendered with holdSpaceForStyle applied so it
+    //   always occupies the "maximum" dimensions (e.g. bold + larger font-size).
+    // - navi_text_sizer_overlay: absolutely positioned on top, renders the actual visible text
+    //   with its current style. Transitions can be applied on this element from the outside.
     return (
       <Box {...boxProps}>
         <span className="navi_text_sizer">
-          <span className="navi_text_sizer_placeholder" aria-hidden="true">
+          <span
+            className="navi_text_sizer_placeholder"
+            aria-hidden="true"
+            style={holdSpaceForStyle}
+          >
             {children}
           </span>
-          <span className="navi_text_sizer_overlay" data-align={alignX}>
-            {children}
-          </span>
+          <span className="navi_text_sizer_overlay">{children}</span>
         </span>
         {childrenOutsideFlow}
       </Box>

@@ -81,121 +81,6 @@
         </label>
       );
 
-      // Demo Section Components
-      const LayoutShiftProblemSection = ({
-        comparisonBoldActive,
-        setComparisonBoldActive,
-      }) => (
-        <DemoSection
-          id="layout-shift-problem"
-          title="⚠️ The Layout Shift Problem"
-        >
-          <p>
-            When text changes from normal to bold weight, it becomes wider,
-            causing surrounding elements to shift. The{" "}
-            <code>preventBoldLayoutShift</code> prop solves this by reserving
-            space for the bold version upfront.
-          </p>
-
-          <div style={{ marginBottom: "20px" }}>
-            <label style={{ display: "block", marginBottom: "10px" }}>
-              <input
-                type="checkbox"
-                checked={comparisonBoldActive}
-                onChange={(e) => setComparisonBoldActive(e.target.checked)}
-                style={{ marginRight: "8px" }}
-              />
-              Toggle bold to see the difference
-            </label>
-
-            <div style={{ display: "flex", gap: "20px" }}>
-              <div style={{ flex: 1 }}>
-                <h3
-                  style={{
-                    margin: "0 0 10px 0",
-                    fontSize: "14px",
-                    color: "#dc3545",
-                  }}
-                >
-                  ❌ Without preventBoldLayoutShift (layout shift)
-                </h3>
-                <div
-                  style={{
-                    border: "2px solid #f5c2c7",
-                    padding: "16px",
-                    backgroundColor: "#f8d7da",
-                    borderRadius: "6px",
-                  }}
-                >
-                  <span
-                    style={{
-                      whiteSpace: "nowrap",
-                      fontWeight: comparisonBoldActive ? "bold" : "normal",
-                      transition: "font-weight 0.3s ease",
-                    }}
-                  >
-                    Text that shifts layout when bold
-                  </span>
-                  <Text width="16px" height="16px" background="red"></Text>
-                </div>
-              </div>
-
-              <div style={{ flex: 1 }}>
-                <h3
-                  style={{
-                    margin: "0 0 10px 0",
-                    fontSize: "14px",
-                    color: "#198754",
-                  }}
-                >
-                  ✅ With preventBoldLayoutShift (stable)
-                </h3>
-                <div
-                  style={{
-                    border: "2px solid #badbcc",
-                    padding: "16px",
-                    backgroundColor: "#d1e7dd",
-                    borderRadius: "6px",
-                  }}
-                >
-                  <Text
-                    preventBoldLayoutShift
-                    noWrap
-                    bold={comparisonBoldActive}
-                  >
-                    Text that shifts layout when bold
-                  </Text>
-                  <Text width="16px" height="16px" background="green"></Text>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <p style={{ fontSize: "14px", color: "#666", fontStyle: "italic" }}>
-            <strong>Notice:</strong> The red indicator will shift when the left
-            example toggles bold, while the green indicator stays stable with
-            preventBoldLayoutShift. Watch how the colored squares move!
-          </p>
-
-          <div
-            style={{
-              padding: "15px",
-              backgroundColor: "#e7f3ff",
-              border: "1px solid #b6d7ff",
-              borderRadius: "6px",
-              marginTop: "20px",
-            }}
-          >
-            <Text style={{ margin: "0" }}>
-              The <code>boldTransition</code> prop automatically enables
-              <code>preventBoldLayoutShift</code> and adds smooth transitions.
-              Use <code>preventBoldLayoutShift</code> alone when you only want
-              to prevent layout shifts without transitions.
-            </Text>
-          </div>
-        </DemoSection>
-      );
-
       const Demo = () => {
         const [basicBoldActive, setBasicBoldActive] = useState(false);
         const [comparisonBoldActive, setComparisonBoldActive] = useState(false);
@@ -374,7 +259,7 @@
                       }}
                     >
                       <Text
-                        preventBoldLayoutShift
+                        holdSpaceForStyle={{ fontWeight: "bold" }}
                         noWrap
                         bold={comparisonBoldActive}
                       >
@@ -448,7 +333,11 @@
                     borderRadius: "6px",
                   }}
                 >
-                  <Text boldTransition noWrap bold={basicBoldActive}>
+                  <Text
+                    style="transition: font-weight 0.3s ease"
+                    noWrap
+                    bold={basicBoldActive}
+                  >
                     This text transitions smoothly to bold
                   </Text>
                   <Text width="16px" height="16px" background="violet"></Text>
@@ -519,7 +408,11 @@
                         borderRadius: "4px",
                       }}
                     >
-                      <Text boldTransition noWrap bold={lengthsBoldActive}>
+                      <Text
+                        style="transition: font-weight 0.3s ease"
+                        noWrap
+                        bold={lengthsBoldActive}
+                      >
                         Short
                       </Text>
                       <Text
@@ -548,7 +441,11 @@
                         borderRadius: "4px",
                       }}
                     >
-                      <Text boldTransition noWrap bold={lengthsBoldActive}>
+                      <Text
+                        style="transition: font-weight 0.3s ease"
+                        noWrap
+                        bold={lengthsBoldActive}
+                      >
                         A medium length text for testing
                       </Text>
                       <Text
@@ -577,7 +474,11 @@
                         borderRadius: "4px",
                       }}
                     >
-                      <Text boldTransition noWrap bold={lengthsBoldActive}>
+                      <Text
+                        style="transition: font-weight 0.3s ease"
+                        noWrap
+                        bold={lengthsBoldActive}
+                      >
                         This is a much longer text that tests the boldTransition
                         behavior with extended content
                       </Text>
@@ -634,7 +535,11 @@
                         textAlign: "left",
                       }}
                     >
-                      <Text boldTransition noWrap bold={alignmentsBoldActive}>
+                      <Text
+                        style="transition: font-weight 0.3s ease"
+                        noWrap
+                        bold={alignmentsBoldActive}
+                      >
                         Left aligned text
                       </Text>
                       <Text width="16px" height="16px" background="cyan"></Text>
@@ -665,7 +570,7 @@
                         noWrap
                         alignX="center"
                         bold={alignmentsBoldActive}
-                        boldTransition
+                        style="transition: font-weight 0.3s ease"
                       >
                         Center aligned text
                       </Text>
@@ -694,7 +599,7 @@
                     >
                       <Text width="16px" height="16px" background="cyan"></Text>
                       <Text
-                        boldTransition
+                        style="transition: font-weight 0.3s ease"
                         noWrap
                         alignX="end"
                         bold={alignmentsBoldActive}
@@ -756,12 +661,17 @@
                       <Text width="16px" height="16px" background="cyan"></Text>
                       <Text
                         noWrap
-                        alignX="center"
+                        flex
+                        align="center"
                         bold={centeredSizeActive}
-                        boldTransition
+                        holdSpaceForStyle={{
+                          fontWeight: "bold",
+                          fontSize: "1.5rem",
+                        }}
+                        size={centeredSizeActive ? "1.5rem" : "1rem"}
                         style={{
-                          fontSize: centeredSizeActive ? "1.5em" : "1em",
-                          transition: "font-size 0.3s ease",
+                          transition:
+                            "font-size 0.3s ease, font-weight 0.3s ease",
                         }}
                       >
                         Centered label
@@ -944,7 +854,7 @@
                         noWrap
                         alignX="center"
                         bold={stableBoldActive}
-                        boldTransition
+                        style="transition: font-weight 0.3s ease"
                       >
                         Center aligned text
                       </Text>
