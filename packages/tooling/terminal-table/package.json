@@ -1,15 +1,14 @@
 {
   "name": "@jsenv/terminal-table",
   "version": "0.0.12",
-  "sideEffects": false,
   "type": "module",
+  "main": "./src/main.js",
   "exports": {
     ".": {
       "import": "./src/main.js"
     },
     "./*": "./*"
   },
-  "main": "./src/main.js",
   "scripts": {
     "build": "node ./scripts/build.mjs",
     "prepublishOnly": "npm run build"
@@ -27,5 +26,6 @@
   },
   "publishConfig": {
     "access": "public"
-  }
+  },
+  "sideEffects": false
 }

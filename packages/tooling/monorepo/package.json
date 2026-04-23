@@ -1,6 +1,7 @@
 {
   "name": "@jsenv/monorepo",
   "version": "0.3.14",
+  "type": "module",
   "description": "Helpers to manage packages in a monorepo",
   "repository": {
     "type": "git",
@@ -8,14 +9,16 @@
     "directory": "packages/tooling/monorepo"
   },
   "license": "MIT",
-  "type": "module",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "main": "./src/main.js",
   "exports": {
     ".": {
       "import": "./src/main.js"
     },
     "./*": "./*"
   },
-  "main": "./src/main.js",
   "files": [
     "/src/"
   ],
@@ -25,9 +28,6 @@
     "@jsenv/package-publish": "1.11.44",
     "@jsenv/urls": "2.9.8",
     "semver": "7.7.4"
-  },
-  "engines": {
-    "node": ">=20.0.0"
   },
   "publishConfig": {
     "access": "public"

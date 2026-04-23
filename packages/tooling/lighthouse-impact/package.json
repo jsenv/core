@@ -1,6 +1,7 @@
 {
   "name": "@jsenv/lighthouse-impact",
   "version": "4.2.47",
+  "type": "module",
   "description": "Package description",
   "repository": {
     "type": "git",
@@ -8,14 +9,16 @@
     "directory": "packages/tooling/lighthouse-impact"
   },
   "license": "MIT",
-  "type": "module",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "main": "./src/main.js",
   "exports": {
     ".": {
       "import": "./src/main.js"
     },
     "./*": "./*"
   },
-  "main": "./src/main.js",
   "files": [
     "/src/"
   ],
@@ -35,9 +38,6 @@
     "@jsenv/lighthouse-impact": "./",
     "@jsenv/server": "../../backend/server",
     "playwright": "1.58.1"
-  },
-  "engines": {
-    "node": ">=20.0.0"
   },
   "publishConfig": {
     "access": "public"

@@ -1,19 +1,22 @@
 {
   "name": "@jsenv/fetch",
   "version": "1.3.27",
+  "type": "module",
   "description": "Unified url fetcher (http, http, file, data)",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
     "directory": "packages/tooling/fetch"
   },
-  "license": "MIT",
   "author": {
     "name": "dmail",
     "email": "dmaillard06@gmail.com"
   },
-  "sideEffects": false,
-  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=16.13.0"
+  },
+  "main": "./src/node/fetch_url_node.js",
   "exports": {
     ".": {
       "node": "./src/node/fetch_url_node.js",
@@ -22,7 +25,6 @@
     "./browser": "./src/browser/fetch_url_browser.js",
     "./*": "./*"
   },
-  "main": "./src/node/fetch_url_node.js",
   "files": [
     "/src/"
   ],
@@ -37,10 +39,8 @@
     "@jsenv/filesystem": "../filesystem",
     "@jsenv/server": "../../backend/server"
   },
-  "engines": {
-    "node": ">=16.13.0"
-  },
   "publishConfig": {
     "access": "public"
-  }
+  },
+  "sideEffects": false
 }

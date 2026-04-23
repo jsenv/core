@@ -1,23 +1,32 @@
 {
   "name": "@jsenv/core",
   "version": "41.2.4",
+  "type": "module",
   "description": "Tool to develop, test and build js projects",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core"
   },
-  "license": "MIT",
   "author": {
     "name": "dmail",
     "email": "dmaillard06@gmail.com"
   },
-  "sideEffects": [
-    "./src/kitchen/client/inline_content.js",
-    "./dist/client/new_stylesheet/new_stylesheet.js",
-    "./dist/client/inline_content/inline_content.js",
-    "./dist/client/directory_listing/jsenv_core_node_modules.js"
+  "license": "MIT",
+  "workspaces": [
+    "./packages/backend/*",
+    "./packages/frontend/*",
+    "./packages/internal/*",
+    "./packages/private/*",
+    "./packages/private/oto/packages/*",
+    "./packages/related/*",
+    "./packages/related/cli/*",
+    "./packages/tooling/*"
   ],
-  "type": "module",
+  "packageManager": "npm@11.6.2",
+  "engines": {
+    "node": ">=20.8.0"
+  },
+  "main": "./src/main.js",
   "imports": {},
   "exports": {
     ".": {
@@ -28,20 +37,9 @@
     },
     "./*": "./*"
   },
-  "main": "./src/main.js",
   "files": [
     "/dist/",
     "/src/"
-  ],
-  "workspaces": [
-    "./packages/backend/*",
-    "./packages/frontend/*",
-    "./packages/internal/*",
-    "./packages/private/*",
-    "./packages/private/oto/packages/*",
-    "./packages/related/*",
-    "./packages/related/cli/*",
-    "./packages/tooling/*"
   ],
   "scripts": {
     "build": "node --conditions=dev:jsenv ./scripts/build/build.mjs",
@@ -136,15 +134,17 @@
     "prettier-plugin-sql": "0.19.2",
     "strip-ansi": "7.2.0"
   },
-  "packageManager": "npm@11.6.2",
-  "engines": {
-    "node": ">=20.8.0"
+  "publishConfig": {
+    "access": "public"
   },
+  "sideEffects": [
+    "./src/kitchen/client/inline_content.js",
+    "./dist/client/new_stylesheet/new_stylesheet.js",
+    "./dist/client/inline_content/inline_content.js",
+    "./dist/client/directory_listing/jsenv_core_node_modules.js"
+  ],
   "volta": {
     "node": "25.8.1",
     "npm": "11.6.2"
-  },
-  "publishConfig": {
-    "access": "public"
   }
 }

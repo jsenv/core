@@ -1,14 +1,13 @@
 {
   "name": "@jsenv/plugin-react",
   "version": "1.7.36",
+  "type": "module",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
     "directory": "packages/related/plugin-react"
   },
   "license": "MIT",
-  "sideEffects": false,
-  "type": "module",
   "exports": {
     ".": {
       "import": "./src/main.js"
@@ -18,6 +17,9 @@
   "files": [
     "/src/"
   ],
+  "peerDependencies": {
+    "@jsenv/core": "*"
+  },
   "dependencies": {
     "@babel/plugin-transform-react-jsx": "7.28.6",
     "@babel/plugin-transform-react-jsx-development": "7.27.1",
@@ -38,10 +40,8 @@
     "react": "19.2.4",
     "react-dom": "19.2.4"
   },
-  "peerDependencies": {
-    "@jsenv/core": "*"
-  },
   "publishConfig": {
     "access": "public"
-  }
+  },
+  "sideEffects": false
 }

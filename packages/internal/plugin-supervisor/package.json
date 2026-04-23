@@ -1,17 +1,14 @@
 {
   "name": "@jsenv/plugin-supervisor",
   "version": "1.8.1",
+  "type": "module",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
     "directory": "packages/internal/plugin-supervisor"
   },
   "license": "MIT",
-  "sideEffects": [
-    "./src/client/supervisor.js",
-    "./dist/js/supervisor.js"
-  ],
-  "type": "module",
+  "main": "./src/main.js",
   "exports": {
     ".": {
       "import": {
@@ -21,10 +18,9 @@
     },
     "./*": "./*"
   },
-  "main": "./src/main.js",
   "files": [
-    "/src/",
-    "/dist/"
+    "/dist/",
+    "/src/"
   ],
   "scripts": {
     "build": "node ./scripts/build.mjs",
@@ -43,5 +39,9 @@
   },
   "publishConfig": {
     "access": "public"
-  }
+  },
+  "sideEffects": [
+    "./src/client/supervisor.js",
+    "./dist/js/supervisor.js"
+  ]
 }

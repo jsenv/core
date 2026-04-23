@@ -1,6 +1,7 @@
 {
   "name": "@jsenv/dynamic-import-worker",
   "version": "1.2.1",
+  "type": "module",
   "description": "Bypass node cache on dynamic import thanks to worker",
   "repository": {
     "type": "git",
@@ -8,7 +9,9 @@
     "directory": "packages/tooling/dynamic-import-worker"
   },
   "license": "MIT",
-  "type": "module",
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "exports": {
     ".": {
       "import": "./src/main.js"
@@ -21,9 +24,6 @@
   "dependencies": {},
   "devDependencies": {
     "@jsenv/assert": "../"
-  },
-  "engines": {
-    "node": ">=20.0.0"
   },
   "publishConfig": {
     "access": "public"

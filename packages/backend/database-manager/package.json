@@ -1,14 +1,15 @@
 {
   "name": "@jsenv/database-manager",
   "version": "0.1.8",
-  "private": true,
+  "type": "module",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
     "directory": "packages/backend/database-manager"
   },
   "license": "MIT",
-  "type": "module",
+  "private": true,
+  "main": "./index.js",
   "exports": {
     ".": {
       "import": {
@@ -18,11 +19,10 @@
     },
     "./*": "./*"
   },
-  "main": "./index.js",
   "files": [
     "/dist/",
-    "/src/",
-    "/index.js"
+    "/index.js",
+    "/src/"
   ],
   "scripts": {
     "build": "node ./scripts/build.mjs",

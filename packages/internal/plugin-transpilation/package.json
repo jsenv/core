@@ -1,6 +1,7 @@
 {
   "name": "@jsenv/plugin-transpilation",
   "version": "1.5.72",
+  "type": "module",
   "description": "TODO",
   "repository": {
     "type": "git",
@@ -8,12 +9,9 @@
     "directory": "packages/internal/plugin-transpilation"
   },
   "license": "MIT",
-  "sideEffects": [
-    "./src/babel/new_stylesheet/client/new_stylesheet.js",
-    "./src/babel_helper_directory/babel_helpers/",
-    "./src/regenerator_runtime/client/regenerator_runtime.js"
-  ],
-  "type": "module",
+  "engines": {
+    "node": ">=16.13.0"
+  },
   "main": "./src/main.js",
   "files": [
     "/src/"
@@ -59,10 +57,12 @@
     "construct-style-sheets-polyfill": "3.1.0",
     "lightningcss": "1.32.0"
   },
-  "engines": {
-    "node": ">=16.13.0"
-  },
   "publishConfig": {
     "access": "public"
-  }
+  },
+  "sideEffects": [
+    "./src/babel/new_stylesheet/client/new_stylesheet.js",
+    "./src/babel_helper_directory/babel_helpers/",
+    "./src/regenerator_runtime/client/regenerator_runtime.js"
+  ]
 }

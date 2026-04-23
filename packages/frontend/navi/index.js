@@ -108,9 +108,13 @@ export { Form } from "./src/field/form.jsx";
 export { Group } from "./src/field/group.jsx";
 export { Input } from "./src/field/input.jsx";
 export { Label } from "./src/field/label.jsx";
-export { Suggestion, SuggestionGroup, SuggestionList } from "./src/field/suggestion_list.jsx";
 export { Radio, RadioList } from "./src/field/radio_list.jsx";
 export { Select } from "./src/field/select.jsx";
+export {
+  Suggestion,
+  SuggestionGroup,
+  SuggestionList,
+} from "./src/field/suggestion_list.jsx";
 // Table start
 export {
   filterTableSelection,

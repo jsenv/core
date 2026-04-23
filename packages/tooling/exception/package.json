@@ -1,26 +1,28 @@
 {
   "name": "@jsenv/exception",
   "version": "1.2.1",
+  "type": "module",
   "description": "Error and throw value wrapper",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
     "directory": "packages/tooling/exception"
   },
-  "license": "MIT",
   "author": {
     "name": "dmail",
     "email": "dmaillard06@gmail.com"
   },
-  "sideEffects": false,
-  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=16.13.0"
+  },
+  "main": "./src/main.js",
   "exports": {
     ".": {
       "import": "./src/main.js"
     },
     "./*": "./*"
   },
-  "main": "./src/main.js",
   "files": [
     "/src/"
   ],
@@ -28,10 +30,8 @@
     "@jsenv/url-meta": "8.5.7",
     "errorstacks": "2.4.1"
   },
-  "engines": {
-    "node": ">=16.13.0"
-  },
   "publishConfig": {
     "access": "public"
-  }
+  },
+  "sideEffects": false
 }

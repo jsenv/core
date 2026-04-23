@@ -1,18 +1,19 @@
 {
   "name": "@jsenv/terminal-recorder",
   "version": "1.5.45",
+  "type": "module",
   "description": "Record terminal output as .svg, .gif, .webm, .mp4",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
     "directory": "packages/tooling/terminal-recorder"
   },
-  "license": "MIT",
   "author": {
     "name": "dmail",
     "email": "dmaillard06@gmail.com"
   },
-  "type": "module",
+  "license": "MIT",
+  "main": "./dist/terminal_recorder_browser.js",
   "exports": {
     ".": {
       "node": "./src/main.js",
@@ -23,7 +24,6 @@
     },
     "./*": "./*"
   },
-  "main": "./dist/terminal_recorder_browser.js",
   "files": [
     "/dist/",
     "/src/"

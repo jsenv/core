@@ -1,19 +1,21 @@
 {
   "name": "@jsenv/ast",
   "version": "6.8.0",
+  "type": "module",
   "description": "Parse and transform HTML, CSS and JS",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
     "directory": "packages/internal/ast"
   },
-  "license": "MIT",
   "author": {
     "name": "dmail",
     "email": "dmaillard06@gmail.com"
   },
-  "sideEffects": false,
-  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=16.14.0"
+  },
   "exports": {
     ".": {
       "import": "./src/main.js"
@@ -43,10 +45,8 @@
     "@jsenv/filesystem": "../../tooling/filesystem",
     "@jsenv/snapshot": "../../tooling/snapshot"
   },
-  "engines": {
-    "node": ">=16.14.0"
-  },
   "publishConfig": {
     "access": "public"
-  }
+  },
+  "sideEffects": false
 }

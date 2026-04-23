@@ -1,29 +1,28 @@
 {
   "name": "@jsenv/service-worker",
   "version": "1.0.3",
+  "type": "module",
   "description": "Service worker that can be integrated with jsenv build",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
     "directory": "packages/frontend/service-worker"
   },
-  "license": "MIT",
   "author": {
     "name": "dmail",
     "email": "dmaillard06@gmail.com"
   },
-  "sideEffects": [
-    "./tests/errors/project/dist/jsenv_service_worker_node_modules.js",
-    "./tests/update/project/dist/jsenv_service_worker_node_modules.js"
-  ],
-  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=16.13.0"
+  },
+  "main": "./src/jsenv_service_worker.js",
   "exports": {
     ".": {
       "import": "./src/jsenv_service_worker.js"
     },
     "./*": "./*"
   },
-  "main": "./src/jsenv_service_worker.js",
   "files": [
     "/src/"
   ],
@@ -38,10 +37,11 @@
     "@jsenv/snapshot": "../../tooling/snapshot",
     "playwright": "1.58.1"
   },
-  "engines": {
-    "node": ">=16.13.0"
-  },
   "publishConfig": {
     "access": "public"
-  }
+  },
+  "sideEffects": [
+    "./tests/errors/project/dist/jsenv_service_worker_node_modules.js",
+    "./tests/update/project/dist/jsenv_service_worker_node_modules.js"
+  ]
 }

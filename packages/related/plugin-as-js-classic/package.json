@@ -1,14 +1,13 @@
 {
   "name": "@jsenv/plugin-as-js-classic",
   "version": "1.6.34",
+  "type": "module",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
     "directory": "packages/related/plugin-as-js-classic"
   },
   "license": "MIT",
-  "sideEffects": false,
-  "type": "module",
   "exports": {
     ".": {
       "import": "./src/main.js"
@@ -34,5 +33,6 @@
   },
   "publishConfig": {
     "access": "public"
-  }
+  },
+  "sideEffects": false
 }

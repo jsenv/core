@@ -1,25 +1,27 @@
 {
   "name": "@jsenv/database",
   "version": "0.0.10",
+  "type": "module",
   "description": "TODO",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
     "directory": "packages/backend/database"
   },
-  "license": "MIT",
   "author": {
     "name": "dmail",
     "email": "dmaillard06@gmail.com"
   },
-  "sideEffects": false,
-  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.13.1"
+  },
+  "bin": "./src/cli.mjs",
+  "main": "./src/main.js",
   "exports": {
     ".": "./src/main.js",
     "./*": "./*"
   },
-  "main": "./src/main.js",
-  "bin": "./src/cli.mjs",
   "files": [
     "/src/"
   ],
@@ -40,10 +42,8 @@
     "@jsenv/plugin-commonjs": "../../related/plugin-commonjs",
     "@jsenv/plugin-preact": "../../related/plugin-preact"
   },
-  "engines": {
-    "node": ">=22.13.1"
-  },
   "publishConfig": {
     "access": "public"
-  }
+  },
+  "sideEffects": false
 }

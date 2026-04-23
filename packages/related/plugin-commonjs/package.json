@@ -1,14 +1,13 @@
 {
   "name": "@jsenv/plugin-commonjs",
   "version": "2.11.14",
+  "type": "module",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
     "directory": "packages/related/plugin-commonjs"
   },
   "license": "MIT",
-  "sideEffects": false,
-  "type": "module",
   "exports": {
     ".": {
       "import": "./src/main.js"
@@ -41,5 +40,6 @@
   },
   "publishConfig": {
     "access": "public"
-  }
+  },
+  "sideEffects": false
 }

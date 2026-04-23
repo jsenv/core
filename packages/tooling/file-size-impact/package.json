@@ -1,6 +1,7 @@
 {
   "name": "@jsenv/file-size-impact",
   "version": "14.3.42",
+  "type": "module",
   "description": "Add files size impact into pull requests",
   "repository": {
     "type": "git",
@@ -8,16 +9,18 @@
     "directory": "packages/tooling/file-size-impact"
   },
   "license": "MIT",
-  "type": "module",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "bin": {
+    "filesize": "./bin/filesize.mjs"
+  },
+  "main": "./src/main.js",
   "exports": {
     ".": {
       "import": "./src/main.js"
     },
     "./*": "./*"
-  },
-  "main": "./src/main.js",
-  "bin": {
-    "filesize": "./bin/filesize.mjs"
   },
   "files": [
     "/src/"
@@ -36,9 +39,6 @@
   "devDependencies": {
     "@jsenv/assert": "../assert",
     "@jsenv/file-size-impact": "./"
-  },
-  "engines": {
-    "node": ">=20.0.0"
   },
   "publishConfig": {
     "access": "public"

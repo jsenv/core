@@ -1,14 +1,13 @@
 {
   "name": "@jsenv/plugin-preact",
   "version": "1.7.33",
+  "type": "module",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
     "directory": "packages/related/plugin-preact"
   },
   "license": "MIT",
-  "sideEffects": false,
-  "type": "module",
   "exports": {
     ".": {
       "import": "./src/main.js"
@@ -18,6 +17,9 @@
   "files": [
     "/src/"
   ],
+  "peerDependencies": {
+    "@jsenv/core": "*"
+  },
   "dependencies": {
     "@babel/plugin-transform-react-jsx": "7.28.6",
     "@babel/plugin-transform-react-jsx-development": "7.27.1",
@@ -40,10 +42,8 @@
     "react-redux": "9.2.0",
     "redux": "5.0.1"
   },
-  "peerDependencies": {
-    "@jsenv/core": "*"
-  },
   "publishConfig": {
     "access": "public"
-  }
+  },
+  "sideEffects": false
 }

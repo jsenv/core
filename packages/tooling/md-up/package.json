@@ -1,14 +1,14 @@
 {
   "name": "@jsenv/md-up",
   "version": "0.1.37",
-  "private": true,
+  "type": "module",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
     "directory": "packages/tooling/md-up"
   },
   "license": "MIT",
-  "type": "module",
+  "private": true,
   "exports": {
     ".": {
       "import": "./src/md_up.js"

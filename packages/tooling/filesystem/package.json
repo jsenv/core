@@ -1,25 +1,27 @@
 {
   "name": "@jsenv/filesystem",
   "version": "4.15.15",
+  "type": "module",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
     "directory": "packages/tooling/filesystem"
   },
-  "license": "MIT",
   "author": {
     "name": "dmail",
     "email": "dmaillard06@gmail.com"
   },
-  "sideEffects": false,
-  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=19.1.0"
+  },
+  "bin": "./src/cli.mjs",
   "exports": {
     ".": {
       "import": "./src/main.js"
     },
     "./*": "./*"
   },
-  "bin": "./src/cli.mjs",
   "files": [
     "/src/"
   ],
@@ -34,10 +36,8 @@
     "@jsenv/filesystem": "./",
     "@jsenv/snapshot": "../snapshot"
   },
-  "engines": {
-    "node": ">=19.1.0"
-  },
   "publishConfig": {
     "access": "public"
-  }
+  },
+  "sideEffects": false
 }

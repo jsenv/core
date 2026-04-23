@@ -1,16 +1,14 @@
 {
   "name": "@jsenv/js-module-fallback",
   "version": "1.4.30",
+  "type": "module",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
     "directory": "packages/internal/js-module-fallback"
   },
   "license": "MIT",
-  "sideEffects": [
-    "./src/clent/s.js"
-  ],
-  "type": "module",
+  "main": "./src/main.js",
   "exports": {
     ".": {
       "import": {
@@ -20,10 +18,9 @@
     },
     "./*": "./*"
   },
-  "main": "./src/main.js",
   "files": [
-    "/src/",
-    "/dist/"
+    "/dist/",
+    "/src/"
   ],
   "scripts": {
     "build": "node ./scripts/build.mjs",
@@ -46,5 +43,8 @@
   },
   "publishConfig": {
     "access": "public"
-  }
+  },
+  "sideEffects": [
+    "./src/clent/s.js"
+  ]
 }

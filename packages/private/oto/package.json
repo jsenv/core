@@ -1,14 +1,14 @@
 {
   "name": "oto",
   "version": "0.0.3",
-  "private": true,
   "type": "module",
-  "exports": {
-    "./*": "./*"
-  },
+  "private": true,
   "workspaces": [
     "./packages/*"
   ],
+  "exports": {
+    "./*": "./*"
+  },
   "scripts": {
     "build": "node ./scripts/build.mjs",
     "build:serve": "node ./scripts/build_serve.mjs --open",

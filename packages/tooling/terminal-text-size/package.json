@@ -1,7 +1,6 @@
 {
   "name": "@jsenv/terminal-text-size",
   "version": "0.0.3",
-  "sideEffects": false,
   "type": "module",
   "exports": {
     ".": {
@@ -22,5 +21,6 @@
   },
   "publishConfig": {
     "access": "public"
-  }
+  },
+  "sideEffects": false
 }

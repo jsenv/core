@@ -69,7 +69,13 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      import { Suggestion, SuggestionList, SuggestionGroup, Input, Box } from "@jsenv/navi";
+      import {
+        Suggestion,
+        SuggestionList,
+        SuggestionGroup,
+        Input,
+        Box,
+      } from "@jsenv/navi";
 
       // 200 auto-generated items
       const LARGE_LIST = Array.from({ length: 200 }, (_, i) => {
@@ -154,9 +160,16 @@
               Click a suggestion or use keyboard (Tab to focus, Arrow keys to
               navigate, Enter to select, Escape to clear active).
             </p>
-            <SuggestionList style={{ maxHeight: "220px" }} onChange={setSelected}>
+            <SuggestionList
+              style={{ maxHeight: "220px" }}
+              onChange={setSelected}
+            >
               {FRUITS.map((fruit) => (
-                <Suggestion key={fruit} value={fruit} selected={selected === fruit}>
+                <Suggestion
+                  key={fruit}
+                  value={fruit}
+                  selected={selected === fruit}
+                >
                   {fruit}
                 </Suggestion>
               ))}
@@ -174,7 +187,10 @@
           <div className="demo-section">
             <h2>Custom suggestion content</h2>
             <p>Each suggestion renders the country name + region badge.</p>
-            <SuggestionList style={{ maxHeight: "220px" }} onChange={setSelected}>
+            <SuggestionList
+              style={{ maxHeight: "220px" }}
+              onChange={setSelected}
+            >
               {COUNTRIES.map((country) => (
                 <Suggestion
                   key={country.code}
@@ -220,8 +236,8 @@
           <div className="demo-section">
             <h2>Controlled with external filter input</h2>
             <p>
-              The list is filtered by the input above it. Shows how SuggestionList
-              works with an external query source.
+              The list is filtered by the input above it. Shows how
+              SuggestionList works with an external query source.
             </p>
             <input
               type="text"
@@ -249,7 +265,11 @@
               hidden={filtered.length === 0}
             >
               {filtered.map((fruit) => (
-                <Suggestion key={fruit} value={fruit} selected={selected === fruit}>
+                <Suggestion
+                  key={fruit}
+                  value={fruit}
+                  selected={selected === fruit}
+                >
                   {fruit}
                 </Suggestion>
               ))}
@@ -272,8 +292,8 @@
           <div className="demo-section">
             <h2>Custom styles via CSS vars</h2>
             <p>
-              The list and suggestions have custom background/text colors, including
-              for pointed and highlighted states.
+              The list and suggestions have custom background/text colors,
+              including for pointed and highlighted states.
             </p>
             <SuggestionList
               style={{
@@ -339,8 +359,8 @@
           <div className="demo-section">
             <h2>Search without hiding</h2>
             <p>
-              Matching suggestions rise to the top to help the user find what they
-              are looking for. Non-matching suggestions stay visible below.
+              Matching suggestions rise to the top to help the user find what
+              they are looking for. Non-matching suggestions stay visible below.
             </p>
             <input
               type="search"
@@ -367,7 +387,11 @@
               highlight={filter}
             >
               {sorted.map((fruit) => (
-                <Suggestion key={fruit} value={fruit} selected={selected === fruit}>
+                <Suggestion
+                  key={fruit}
+                  value={fruit}
+                  selected={selected === fruit}
+                >
                   {fruit}
                 </Suggestion>
               ))}
@@ -496,7 +520,10 @@
           <div className="demo-section">
             <h2>Grouped suggestions</h2>
             <p>Options organized into labeled groups using SuggestionGroup.</p>
-            <SuggestionList style={{ maxHeight: "280px" }} onChange={setSelected}>
+            <SuggestionList
+              style={{ maxHeight: "280px" }}
+              onChange={setSelected}
+            >
               {GROUPED_ITEMS.map((group) => (
                 <SuggestionGroup key={group.label} label={group.label}>
                   {group.items.map((item) => (
@@ -582,7 +609,11 @@
                 }
               >
                 {matches.map((item) => (
-                  <Suggestion key={item} value={item} selected={selected === item}>
+                  <Suggestion
+                    key={item}
+                    value={item}
+                    selected={selected === item}
+                  >
                     {item}
                   </Suggestion>
                 ))}

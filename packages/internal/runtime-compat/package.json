@@ -1,14 +1,13 @@
 {
   "name": "@jsenv/runtime-compat",
   "version": "1.4.19",
+  "type": "module",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
     "directory": "packages/internal/runtime-compat"
   },
   "license": "MIT",
-  "sideEffects": false,
-  "type": "module",
   "main": "./src/main.js",
   "files": [
     "/src/"
@@ -17,5 +16,6 @@
     "@jsenv/filesystem": "4.15.15",
     "@jsenv/utils": "2.3.1",
     "browserslist": "4.28.2"
-  }
+  },
+  "sideEffects": false
 }

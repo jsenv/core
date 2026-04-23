@@ -1,14 +1,14 @@
 {
   "name": "@jsenv/plugin-explorer",
   "version": "1.0.83",
+  "type": "module",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
     "directory": "packages/related/plugin-explorer"
   },
   "license": "MIT",
-  "sideEffects": false,
-  "type": "module",
+  "main": "./src/main.js",
   "exports": {
     ".": {
       "import": {
@@ -18,7 +18,6 @@
     },
     "./*": "./*"
   },
-  "main": "./src/main.js",
   "files": [
     "/dist/",
     "/src/"
@@ -35,5 +34,6 @@
   },
   "publishConfig": {
     "access": "public"
-  }
+  },
+  "sideEffects": false
 }

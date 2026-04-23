@@ -1,25 +1,24 @@
 {
   "name": "@jsenv/node-esm-resolution",
   "version": "1.2.17",
+  "type": "module",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
     "directory": "packages/tooling/node-esm-resolution"
   },
   "license": "MIT",
-  "sideEffects": false,
-  "type": "module",
+  "main": "./main.js",
   "exports": {
     ".": {
       "import": "./main.js"
     },
     "./*": "./*"
   },
-  "main": "./main.js",
   "files": [
     "/dist/",
-    "/src/",
-    "/main.js"
+    "/main.js",
+    "/src/"
   ],
   "dependencies": {
     "@jsenv/filesystem": "4.15.15"
@@ -31,5 +30,6 @@
   },
   "publishConfig": {
     "access": "public"
-  }
+  },
+  "sideEffects": false
 }

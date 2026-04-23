@@ -1,8 +1,8 @@
 {
   "name": "@jsenv/url-pattern",
   "version": "0.0.1",
-  "private": true,
   "type": "module",
+  "private": true,
   "main": "./index.js",
   "dependencies": {
     "@jsenv/urls": "2.9.8",

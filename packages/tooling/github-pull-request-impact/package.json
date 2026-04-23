@@ -1,6 +1,7 @@
 {
   "name": "@jsenv/github-pull-request-impact",
   "version": "1.8.42",
+  "type": "module",
   "description": "Report pull request impact on something",
   "repository": {
     "type": "git",
@@ -8,14 +9,16 @@
     "directory": "packages/tooling/github-pull-request-impact"
   },
   "license": "MIT",
-  "type": "module",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "main": "./src/main.js",
   "exports": {
     ".": {
       "import": "./src/main.js"
     },
     "./*": "./*"
   },
-  "main": "./src/main.js",
   "files": [
     "/src/"
   ],
@@ -25,9 +28,6 @@
   },
   "devDependencies": {
     "@jsenv/assert": "../assert"
-  },
-  "engines": {
-    "node": ">=20.0.0"
   },
   "publishConfig": {
     "access": "public"

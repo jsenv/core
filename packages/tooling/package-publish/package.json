@@ -1,6 +1,7 @@
 {
   "name": "@jsenv/package-publish",
   "version": "1.11.44",
+  "type": "module",
   "description": "Publish package to one or many registry.",
   "repository": {
     "type": "git",
@@ -8,14 +9,16 @@
     "directory": "packages/tooling/package-publish"
   },
   "license": "MIT",
-  "type": "module",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "main": "./src/main.js",
   "exports": {
     ".": {
       "import": "./src/main.js"
     },
     "./*": "./*"
   },
-  "main": "./src/main.js",
   "files": [
     "/src/"
   ],
@@ -26,9 +29,6 @@
   },
   "devDependencies": {
     "@jsenv/assert": "../assert"
-  },
-  "engines": {
-    "node": ">=20.0.0"
   },
   "publishConfig": {
     "access": "public"

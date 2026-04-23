@@ -1,14 +1,13 @@
 {
   "name": "@jsenv/utils",
   "version": "2.3.1",
+  "type": "module",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
     "directory": "packages/tooling/utils"
   },
   "license": "MIT",
-  "sideEffects": false,
-  "type": "module",
   "exports": {
     "./*": "./*"
   },
@@ -17,5 +16,6 @@
   },
   "publishConfig": {
     "access": "public"
-  }
+  },
+  "sideEffects": false
 }
