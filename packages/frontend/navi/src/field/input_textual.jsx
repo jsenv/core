@@ -443,7 +443,10 @@ const InputTextualWithSuggestions = ({
     // Match input width before calling pickPositionRelativeTo so it can
     // take the correct popover dimensions into account.
     const inputRect = inputEl.getBoundingClientRect();
-    popoverEl.style.minWidth = `${inputRect.width}px`;
+    popoverEl.style.setProperty(
+      "--suggestion-list-anchor-width",
+      `${inputRect.width}px`,
+    );
     const { left, top } = pickPositionRelativeTo(popoverEl, inputEl, {
       positionPreference: "below",
     });
@@ -461,7 +464,7 @@ const InputTextualWithSuggestions = ({
     }
   };
 
-  const showPopover = (e) => {
+  const showSuggestions = (e) => {
     if (expandedRef.current) {
       return;
     }
@@ -488,7 +491,7 @@ const InputTextualWithSuggestions = ({
     expand();
   };
 
-  const hidePopover = (e) => {
+  const hideSuggestions = (e) => {
     if (!expandedRef.current) {
       return;
     }
@@ -520,7 +523,7 @@ const InputTextualWithSuggestions = ({
       key: "arrowdown",
       description: "Open popover and point to next suggestion",
       handler: (e) => {
-        showPopover(e);
+        showSuggestions(e);
         const popoverEl = document.getElementById(suggestions);
         if (!popoverEl) {
           return false;
@@ -537,7 +540,7 @@ const InputTextualWithSuggestions = ({
       key: "arrowup",
       description: "Open popover and point to previous suggestion",
       handler: (e) => {
-        showPopover(e);
+        showSuggestions(e);
         return dispatchToSuggestionList(
           new CustomEvent("navi_suggestion_list_navigate", {
             detail: { direction: "up" },
@@ -594,7 +597,7 @@ const InputTextualWithSuggestions = ({
         if (!expandedRef.current) {
           return false;
         }
-        hidePopover(e);
+        hideSuggestions(e);
         return true;
       },
     },
@@ -609,7 +612,7 @@ const InputTextualWithSuggestions = ({
     const onSelected = (e) => {
       inputEl.value = e.detail.value;
       inputEl.dispatchEvent(new Event("input", { bubbles: true }));
-      hidePopover(e);
+      hideSuggestions(e);
     };
     popoverEl.addEventListener("navi_suggestion_list_selected", onSelected);
     return () => {
@@ -633,19 +636,19 @@ const InputTextualWithSuggestions = ({
         ":navi-expanded": expanded,
       }}
       onnavi_callout_open={(e) => {
-        hidePopover(e);
+        hideSuggestions(e);
       }}
       onFocus={(e) => {
         onFocus?.(e);
-        showPopover(e);
+        showSuggestions(e);
       }}
       onBlur={(e) => {
         onBlur?.(e);
-        hidePopover(e);
+        hideSuggestions(e);
       }}
       onInput={(e) => {
         onInput?.(e);
-        showPopover(e);
+        showSuggestions(e);
       }}
       {...rest}
     >
@@ -653,9 +656,9 @@ const InputTextualWithSuggestions = ({
         <InputRightSlot
           onClick={(e) => {
             if (expanded) {
-              hidePopover(e);
+              hideSuggestions(e);
             } else {
-              showPopover(e);
+              showSuggestions(e);
             }
           }}
         >

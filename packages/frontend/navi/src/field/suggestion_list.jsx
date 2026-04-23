@@ -89,10 +89,12 @@ const css = /* css */ `
     --x-border-width: var(--suggestion-list-border-width);
     --x-border-color: var(--suggestion-list-border-color);
     --x-background-color: var(--suggestion-list-background-color);
+    display: flex;
     box-sizing: border-box;
+    width: fit-content;
+    min-width: var(--suggestion-list-anchor-width, 0px);
     max-width: 95vw;
     max-height: var(--suggestion-list-max-height);
-
     margin: 0;
     padding: 0;
     list-style: none;
@@ -124,6 +126,7 @@ const css = /* css */ `
     --x-color: var(--suggestion-color);
     --x-background-color: var(--suggestion-background-color);
     --x-font-weight: var(--suggestion-font-weight);
+    box-sizing: border-box;
 
     padding: var(--suggestion-padding);
     color: var(--x-color);
