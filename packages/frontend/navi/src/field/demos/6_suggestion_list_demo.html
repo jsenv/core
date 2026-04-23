@@ -68,7 +68,7 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useState } from "preact/hooks";
+      import { useState, useRef } from "preact/hooks";
       import {
         Suggestion,
         SuggestionList,
@@ -146,6 +146,7 @@
           <LargeListDemo />
           <SuggestionGroupDemo />
           <SplitMatchDemo />
+          <PopoverDemo />
         </div>
       );
 
@@ -161,7 +162,10 @@
               navigate, Enter to select, Escape to clear active).
             </p>
             <SuggestionList
-              style={{ maxHeight: "220px" }}
+              style={{
+                "maxHeight": "220px",
+                "--suggestion-background-color": "light-dark(#f0f4ff, #1a2040)",
+              }}
               onChange={setSelected}
             >
               {FRUITS.map((fruit) => (
@@ -653,6 +657,51 @@
                   ))}
                 </SuggestionGroup>
               )}
+            </SuggestionList>
+            <div className="value-display">{selected ?? ""}</div>
+          </div>
+        );
+      };
+
+      // --- 9. Popover mode ---
+
+      const PopoverDemo = () => {
+        const [selected, setSelected] = useState(null);
+        const listRef = useRef(null);
+
+        const showPopover = () => listRef.current?.showPopover();
+        const hidePopover = () => listRef.current?.hidePopover();
+
+        return (
+          <div className="demo-section">
+            <h2>Popover mode</h2>
+            <p>The list is shown as a popover anchored to the buttons below.</p>
+            <div style={{ display: "flex", gap: "8px", marginBottom: "12px" }}>
+              <button onClick={showPopover}>Show popover</button>
+              <button onClick={hidePopover}>Hide popover</button>
+            </div>
+            <SuggestionList
+              ref={listRef}
+              popover
+              style={{
+                "--suggestion-background-color": "light-dark(#f0f4ff, #1a2040)",
+                "top": "auto",
+                "left": "20px",
+              }}
+              onChange={(value) => {
+                setSelected(value);
+                hidePopover();
+              }}
+            >
+              {FRUITS.map((fruit) => (
+                <Suggestion
+                  key={fruit}
+                  value={fruit}
+                  selected={selected === fruit}
+                >
+                  {fruit}
+                </Suggestion>
+              ))}
             </SuggestionList>
             <div className="value-display">{selected ?? ""}</div>
           </div>
