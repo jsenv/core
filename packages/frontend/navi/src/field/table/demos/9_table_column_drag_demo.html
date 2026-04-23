@@ -81,42 +81,25 @@
     </style>
   </head>
   <body>
-    <div class="demo-container">
-      <h1>Table Column Drag Demo</h1>
-
-      <div class="info">
-        <h3>Column Drag & Drop Features</h3>
-        <ul>
-          <li>
-            <strong>Drag to Reorder:</strong> Grab any column header and drag it
-            to reorder columns
-          </li>
-          <li>
-            <strong>Visual Feedback:</strong> Drag clone provides visual
-            indication of the column being moved
-          </li>
-          <li>
-            <strong>Real Data:</strong> Table contains realistic user data with
-            ID, name, email, and dates
-          </li>
-          <li>
-            <strong>No Sticky Headers:</strong> Focus on drag behavior without
-            sticky positioning complexity
-          </li>
-        </ul>
-      </div>
-
-      <div class="table-container">
-        <div id="root"></div>
-      </div>
-    </div>
+    <div id="root"></div>
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useState, useRef } from "preact/hooks";
-      import { Table } from "@jsenv/navi";
+      import { useState } from "preact/hooks";
+      import {
+        Table,
+        TableCell,
+        Colgroup,
+        Col,
+        Thead,
+        Tbody,
+        Tr,
+        RowNumberCol,
+        RowNumberTableCell,
+        useCellGridFromRows,
+        useOrderedColumns,
+      } from "@jsenv/navi";
 
-      // Generate realistic user data
       const firstNames = [
         "John",
         "Jane",
@@ -180,7 +163,6 @@
           Math.floor(Math.random() * 12),
           Math.floor(Math.random() * 28) + 1,
         );
-
         return {
           id,
           name: `${firstName} ${lastName}`,
@@ -193,59 +175,43 @@
         };
       }
 
-      // Initial dataset
-      const initialData = [];
+      const initialRows = [];
       for (let i = 1; i <= 50; i++) {
-        initialData.push(generateRandomUser(i));
+        initialRows.push(generateRandomUser(i));
       }
 
-      const initialColumns = [
-        { accessorKey: "id", value: "ID", width: 80 },
-        { accessorKey: "name", value: "Full Name", width: 180 },
-        { accessorKey: "email", value: "Email Address", width: 220 },
-        { accessorKey: "creation_date", value: "Created", width: 120 },
+      const columnsConfig = [
+        { id: "id", header: "ID", width: 80 },
+        { id: "name", header: "Full Name", width: 180 },
+        { id: "email", header: "Email Address", width: 220 },
+        { id: "creation_date", header: "Created", width: 120 },
       ];
 
       const TableDemo = () => {
-        const tableRef = useRef(null);
-        const [data, setData] = useState(initialData);
-        const [columns, setColumns] = useState(initialColumns);
+        const [rows, setRows] = useState(initialRows);
         const [lastAction, setLastAction] = useState(
           "Ready for column dragging",
         );
+        const [orderedColumns, setColumnOrder] =
+          useOrderedColumns(columnsConfig);
+        const orderedColumnIds = orderedColumns.map((col) => col.id);
+        const cellGrid = useCellGridFromRows(rows, orderedColumnIds);
 
         const resetColumns = () => {
-          setColumns(initialColumns);
+          setColumnOrder(columnsConfig.map((c) => c.id));
           setLastAction("Column order reset to default");
         };
 
         const addRandomUser = () => {
-          const newId = Math.max(...data.map((u) => u.id)) + 1;
+          const newId = Math.max(...rows.map((u) => u.id)) + 1;
           const newUser = generateRandomUser(newId);
-          setData([...data, newUser]);
+          setRows([...rows, newUser]);
           setLastAction(`Added new user: ${newUser.name}`);
         };
 
         const clearTable = () => {
-          setData([]);
+          setRows([]);
           setLastAction("Table cleared");
-        };
-
-        const handleColumnDrag = (fromIndex, toIndex) => {
-          const newColumns = [...columns];
-          const [movedColumn] = newColumns.splice(fromIndex, 1);
-          newColumns.splice(toIndex, 0, movedColumn);
-          setColumns(newColumns);
-          setLastAction(
-            `Moved column from position ${fromIndex + 1} to position ${toIndex + 1}`,
-          );
-        };
-
-        const handleSelectionChange = (selection) => {
-          const count = Object.keys(selection).length;
-          if (count > 0) {
-            setLastAction(`Selected ${count} row${count !== 1 ? "s" : ""}`);
-          }
         };
 
         return (
@@ -267,29 +233,52 @@
                   <strong>Real Data:</strong> Table contains realistic user data
                   with ID, name, email, and dates
                 </li>
-                <li>
-                  <strong>No Sticky Headers:</strong> Focus on drag behavior
-                  without sticky positioning complexity
-                </li>
               </ul>
             </div>
 
             <div className="table-container">
               <Table
-                ref={tableRef}
-                data={data}
-                columns={columns}
-                // stickyColumn={false}
-                // stickyHeader={false}
-                onColumnDrag={handleColumnDrag}
-                onSelectionChange={handleSelectionChange}
-              />
+                onColumnOrderChange={(newColumnOrder) => {
+                  setColumnOrder(newColumnOrder);
+                  setLastAction(
+                    `Column order changed to: ${newColumnOrder.join(", ")}`,
+                  );
+                }}
+                borderCollapse
+              >
+                <Colgroup>
+                  <RowNumberCol />
+                  {orderedColumns.map((col) => (
+                    <Col key={col.id} id={col.id} width={col.width} />
+                  ))}
+                </Colgroup>
+                <Thead>
+                  <Tr id="head">
+                    <RowNumberTableCell />
+                    {orderedColumns.map((col) => (
+                      <TableCell key={col.id}>{col.header}</TableCell>
+                    ))}
+                  </Tr>
+                </Thead>
+                <Tbody>
+                  {cellGrid.map((rowCells, rowIndex) => (
+                    <Tr key={rows[rowIndex].id} id={rows[rowIndex].id}>
+                      <RowNumberTableCell />
+                      {rowCells.map((cellValue, columnIndex) => (
+                        <TableCell key={orderedColumns[columnIndex].id}>
+                          {cellValue}
+                        </TableCell>
+                      ))}
+                    </Tr>
+                  ))}
+                </Tbody>
+              </Table>
             </div>
 
             <div className="status">
               <div>
                 <strong>Column Order:</strong>{" "}
-                <span>{columns.map((col) => col.key).join(", ")}</span>
+                <span>{orderedColumnIds.join(", ")}</span>
               </div>
               <div>
                 <strong>Last Action:</strong> <span>{lastAction}</span>
@@ -311,13 +300,7 @@
         );
       };
 
-      // Render the app
       render(<TableDemo />, document.getElementById("root"));
-
-      console.log("Column drag demo loaded. Try:");
-      console.log("- Drag column headers to reorder columns");
-      console.log("- Click cells to select/deselect");
-      console.log("- Use the buttons to manipulate data");
     </script>
   </body>
 </html>

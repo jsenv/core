@@ -93,31 +93,31 @@
         Tr,
         RowNumberCol,
         RowNumberTableCell,
-        useCellsAndColumns,
+        useCellGridFromRows,
+        useOrderedColumns,
         stringifyTableSelectionValue,
       } from "@jsenv/navi";
 
       // Generate large dataset to force scrolling
-      const generateLargeDataset = (rows = 50, cols = 10) => {
+      const generateLargeDataset = (rowCount = 50, colCount = 10) => {
         const data = [];
-        for (let i = 1; i <= rows; i++) {
-          const rowCells = [];
-          rowCells.id = i;
-          for (let j = 1; j <= cols; j++) {
+        for (let i = 1; i <= rowCount; i++) {
+          const row = { id: i };
+          for (let j = 1; j <= colCount; j++) {
+            const key = `col${j}`;
             if (i === 1 && j === 1) {
-              // rowCells.push(`Cell ${i}-${j}`);
-              rowCells.push(`A text that is longer`);
+              row[key] = `A text that is longer`;
             } else {
-              rowCells.push(`Cell ${i}-${j}`);
+              row[key] = `Cell ${i}-${j}`;
             }
           }
-          data.push(rowCells);
+          data.push(row);
         }
         return data;
       };
 
       // Create large dataset (50 rows x 10 columns = 500 cells)
-      const data = generateLargeDataset(50, 10);
+      const initialData = generateLargeDataset(50, 10);
       const columnsConfig = Array.from({ length: 10 }, (_, i) => ({
         id: `col${i + 1}`,
         header: i === 7 ? "A larger header" : `Column ${i + 1}`,
@@ -126,14 +126,27 @@
 
       const FixedHeadersDemo = () => {
         const tableRef = useRef(null);
+        const [rows, setRows] = useState(initialData);
         const [selection, setSelection] = useState([]);
         const [columnWidths, setColumnWidths] = useState([]);
         const [rowHeights, setRowHeights] = useState([]);
+        const [orderedColumns, setColumnOrder] =
+          useOrderedColumns(columnsConfig);
+        const orderedColumnIds = orderedColumns.map((col) => col.id);
+        const cellGrid = useCellGridFromRows(rows, orderedColumnIds);
+        const setCellValue = (columnId, rowIndex, value) => {
+          setRows((prev) =>
+            prev.map((row, i) => {
+              if (i !== rowIndex) {
+                return row;
+              }
+              return { ...row, [columnId]: value };
+            }),
+          );
+        };
         const setColumnValue = (columnId, value) => {
           console.log(`Set column ${columnId} value to "${value}"`);
         };
-        const { cells, setCellValue, columns, setColumnOrder } =
-          useCellsAndColumns(data, columnsConfig);
         const [
           stickyLeftFrontierColumnIndex,
           setStickyLeftFrontierColumnIndex,
@@ -300,7 +313,7 @@
               >
                 <Colgroup>
                   <RowNumberCol width={columnWidths[0]} immovable={false} />
-                  {columns.map((column, columnIndex) => (
+                  {orderedColumns.map((column, columnIndex) => (
                     <Col
                       key={column.id}
                       id={column.id}
@@ -316,7 +329,7 @@
                       // and column ordering works only for columns controlled by a state
                       canDragColumn
                     />
-                    {columns.map((col) => (
+                    {orderedColumns.map((col) => (
                       <TableCell
                         key={col.id}
                         action={(value) => {
@@ -329,23 +342,23 @@
                   </Tr>
                 </Thead>
                 <Tbody>
-                  {cells.map((rowCells, dataRowIndex) => {
-                    const rowIndex = dataRowIndex + 1;
-                    const rowData = data[dataRowIndex];
+                  {cellGrid.map((rowCells, dataRowIndex) => {
+                    const rowData = rows[dataRowIndex];
                     return (
                       <Tr
                         id={rowData.id}
                         key={rowData.id}
-                        height={rowHeights[rowIndex]}
+                        height={rowHeights[dataRowIndex + 1]}
                       >
                         <RowNumberTableCell />
                         {rowCells.map((cellValue, columnIndex) => {
                           return (
                             <TableCell
-                              key={columns[columnIndex].id}
+                              key={orderedColumns[columnIndex].id}
                               action={(value) => {
                                 setCellValue(
-                                  { rowIndex: dataRowIndex, columnIndex },
+                                  orderedColumns[columnIndex].id,
+                                  dataRowIndex,
                                   value,
                                 );
                               }}
@@ -365,8 +378,8 @@
               <div>
                 Dataset size:{" "}
                 <span>
-                  {cells.length} rows × {cells[0]?.length || 0} columns ={" "}
-                  {cells.length * (cells[0]?.length || 0)} cells
+                  {cellGrid.length} rows × {orderedColumns.length} columns ={" "}
+                  {cellGrid.length * orderedColumns.length} cells
                 </span>
               </div>
               <div>
@@ -384,13 +397,12 @@
               <div>
                 Editable cells:{" "}
                 <span>
-                  {cells.length * (cells[0]?.length || 0)} cells with editing
+                  {cellGrid.length * orderedColumns.length} cells with editing
                   enabled
                 </span>
               </div>
               <div>
-                Column order:{" "}
-                <span>{JSON.stringify(columns.map((c) => c.id))}</span>
+                Column order: <span>{JSON.stringify(orderedColumnIds)}</span>
               </div>
               <div>
                 Column widths:{" "}
@@ -421,12 +433,12 @@
               <button
                 onClick={() => {
                   const allCells = [];
-                  for (let y = 0; y < cells.length; y++) {
-                    for (let x = 0; x < (cells[0]?.length || 0); x++) {
+                  for (const row of rows) {
+                    for (const col of orderedColumns) {
                       allCells.push(
                         stringifyTableSelectionValue("cell", {
-                          rowIndex: y + 1,
-                          columnIndex: x + 1,
+                          columnId: col.id,
+                          rowId: String(row.id),
                         }),
                       );
                     }
@@ -434,14 +446,14 @@
                   setSelection(allCells);
                 }}
               >
-                Select All ({cells.length * (cells[0]?.length || 0)} cells)
+                Select All ({cellGrid.length * orderedColumns.length} cells)
               </button>
               <button
                 onClick={() => {
-                  const firstRowCells = columns.map((_, columnIndex) =>
+                  const firstRowCells = orderedColumns.map((col) =>
                     stringifyTableSelectionValue("cell", {
-                      rowIndex: 0,
-                      columnIndex: columnIndex + 1,
+                      columnId: col.id,
+                      rowId: String(rows[0].id),
                     }),
                   );
                   setSelection(firstRowCells);
@@ -451,11 +463,10 @@
               </button>
               <button
                 onClick={() => {
-                  // Select first column
-                  const firstColCells = data.map((_, rowIndex) =>
+                  const firstColCells = rows.map((row) =>
                     stringifyTableSelectionValue("cell", {
-                      rowIndex,
-                      columnIndex: 0,
+                      columnId: orderedColumns[0].id,
+                      rowId: String(row.id),
                     }),
                   );
                   setSelection(firstColCells);
@@ -479,33 +490,14 @@
               </button>
               <button
                 onClick={() => {
-                  // Set a sample cell to demonstrate editing works
-                  // setBaseCellValues((prevValues) => {
-                  //   const newValues = prevValues.map((row, rowIdx) =>
-                  //     rowIdx === 0
-                  //       ? row.map((cell, colIdx) =>
-                  //           colIdx === 0
-                  //             ? `Edited at ${new Date().toLocaleTimeString()}`
-                  //             : cell,
-                  //         )
-                  //       : [...row],
-                  //   );
-                  //   return newValues;
-                  // });
-                }}
-              >
-                Demo Edit Cell (1,1)
-              </button>
-              <button
-                onClick={() => {
-                  setColumnOrder([...columns.map((c) => c.id)].reverse());
+                  setColumnOrder([...orderedColumnIds].reverse());
                 }}
               >
                 Reverse Column Order
               </button>
               <button
                 onClick={() => {
-                  const shuffled = [...columns.map((c) => c.id)];
+                  const shuffled = [...orderedColumnIds];
                   for (let i = shuffled.length - 1; i > 0; i--) {
                     const j = Math.floor(Math.random() * (i + 1));
                     [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
@@ -561,7 +553,7 @@
 
       console.log("Fixed Headers Demo loaded with large dataset:");
       console.log(
-        `- ${data.length} rows × 10 columns = ${data.length * 10} total cells`,
+        `- ${initialData.length} rows × 10 columns = ${initialData.length * 10} total cells`,
       );
       console.log("- Double-click data cells to edit values");
       console.log("- Scroll the table to test fixed header behavior");

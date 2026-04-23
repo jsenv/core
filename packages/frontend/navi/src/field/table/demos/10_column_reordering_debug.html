@@ -98,8 +98,9 @@
         Tr,
         TableCell,
         RowNumberTableCell,
-      } from "../table.jsx";
-      import { useCellsAndColumns } from "../use_cells_and_columns.js";
+        useCellGridFromRows,
+        useOrderedColumns,
+      } from "@jsenv/navi";
 
       window.clearLog = () => {
         document.getElementById("log").textContent = "";
@@ -115,51 +116,62 @@
 
       const ColumnReorderingDemo = () => {
         // Initial column configuration
-        const [columnConfig] = useState([
+        const columnConfig = [
           { id: "col1", name: "Column A", backgroundColor: "#ffebee" },
           { id: "col2", name: "Column B", backgroundColor: "#e8f5e8" },
           { id: "col3", name: "Column C", backgroundColor: "#e3f2fd" },
-        ]);
+        ];
 
         // Simple single row of data
-        const initialCellData = [["A1", "B1", "C1"]];
-        const { cells, setCellValue, columns, setColumnOrder } =
-          useCellsAndColumns(initialCellData, columnConfig);
+        const [rows, setRows] = useState([
+          { id: 1, col1: "A1", col2: "B1", col3: "C1" },
+        ]);
+        const [orderedColumns, setColumnOrder] = useOrderedColumns(
+          columnConfig,
+          undefined,
+          { columnIdKey: "id" },
+        );
+        const orderedColumnIds = orderedColumns.map((col) => col.id);
+        const cellGrid = useCellGridFromRows(rows, orderedColumnIds);
 
-        // Get current column order for logging and display
-        const columnOrderedIds = columns.map((col) => col.id);
-
-        log(`🎬 Demo render - columnOrder: [${columnOrderedIds.join(", ")}]`);
+        log(`🎬 Demo render - columnOrder: [${orderedColumnIds.join(", ")}]`);
 
         const handleColumnOrderChange = (newColumnOrder) => {
           log(
-            `🔄 Column order changing from [${columnOrderedIds.join(", ")}] to [${newColumnOrder.join(", ")}]`,
+            `🔄 Column order changing from [${orderedColumnIds.join(", ")}] to [${newColumnOrder.join(", ")}]`,
           );
           setColumnOrder(newColumnOrder);
         };
 
-        const handleCellEdit = ({ rowIndex, columnIndex }, value) => {
+        const handleCellEdit = (columnId, rowId, value) => {
           log(
-            `✏️ Cell edit: row=${rowIndex}, col=${columnIndex}, value="${value}"`,
+            `✏️ Cell edit: columnId=${columnId}, rowId=${rowId}, value="${value}"`,
           );
-          setCellValue({ rowIndex, columnIndex }, value);
+          setRows((prev) =>
+            prev.map((row) => {
+              if (row.id !== rowId) {
+                return row;
+              }
+              return { ...row, [columnId]: value };
+            }),
+          );
         };
 
         // Test buttons for manual reordering
         const moveFirstToLast = () => {
           const newOrder = [
-            columnOrderedIds[1],
-            columnOrderedIds[2],
-            columnOrderedIds[0],
+            orderedColumnIds[1],
+            orderedColumnIds[2],
+            orderedColumnIds[0],
           ];
           handleColumnOrderChange(newOrder);
         };
 
         const moveLastToFirst = () => {
           const newOrder = [
-            columnOrderedIds[2],
-            columnOrderedIds[0],
-            columnOrderedIds[1],
+            orderedColumnIds[2],
+            orderedColumnIds[0],
+            orderedColumnIds[1],
           ];
           handleColumnOrderChange(newOrder);
         };
@@ -185,12 +197,12 @@
             <div className="state-display">
               <h3>Current State</h3>
               <div>
-                <strong>Column Order:</strong> [{columnOrderedIds.join(", ")}]
+                <strong>Column Order:</strong> [{orderedColumnIds.join(", ")}]
               </div>
               <div>
                 <strong>Cell Values:</strong>
               </div>
-              <pre>{JSON.stringify(cells, null, 2)}</pre>
+              <pre>{JSON.stringify(cellGrid, null, 2)}</pre>
             </div>
 
             <Table
@@ -200,7 +212,7 @@
             >
               <Colgroup>
                 <RowNumberCol width={50} />
-                {columns.map((col) => {
+                {orderedColumns.map((col) => {
                   log(`🏗️ Rendering Col: id=${col.id}, width=${col?.width}`);
                   return (
                     <Col
@@ -214,15 +226,12 @@
               </Colgroup>
 
               <Thead>
-                <Tr>
+                <Tr id="head">
                   <RowNumberTableCell />
-                  {columns.map((col) => {
+                  {orderedColumns.map((col) => {
                     log(`🏗️ Rendering Header: id=${col.id}, name=${col?.name}`);
-                    const rowId = "header";
-                    const columnId = col.id;
-                    const tableCellKey = `${columnId}-${rowId}`;
                     return (
-                      <TableCell key={tableCellKey}>
+                      <TableCell key={col.id}>
                         {col?.name} (id: {col.id})
                       </TableCell>
                     );
@@ -231,22 +240,20 @@
               </Thead>
 
               <Tbody>
-                {cells.map((rowValues, rowIndex) => (
-                  <Tr key={rowIndex}>
+                {cellGrid.map((rowCells, rowIndex) => (
+                  <Tr key={rows[rowIndex].id} id={rows[rowIndex].id}>
                     <RowNumberTableCell />
-                    {rowValues.map((cellValue, columnIndex) => {
+                    {rowCells.map((cellValue, columnIndex) => {
+                      const col = orderedColumns[columnIndex];
+                      const row = rows[rowIndex];
                       log(
-                        `🏗️ Rendering Cell: rowIndex=${rowIndex}, columnIndex=${columnIndex},  value="${cellValue}"`,
+                        `🏗️ Rendering Cell: rowId=${row.id}, columnId=${col.id}, value="${cellValue}"`,
                       );
-                      const rowId = rowIndex;
-                      const columnId = columns[columnIndex].id;
-                      // const tableCellKey = columnId;
-                      const tableCellKey = `${columnId}-${rowId}`;
                       return (
                         <TableCell
-                          key={tableCellKey}
+                          key={col.id}
                           action={(value) =>
-                            handleCellEdit({ rowIndex, columnIndex }, value)
+                            handleCellEdit(col.id, row.id, value)
                           }
                         >
                           {cellValue}
