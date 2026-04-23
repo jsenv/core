@@ -116,8 +116,16 @@ export function checkParameterChaining(
           );
 
           debug(
-            `collectChainParameters returned: [${Array.from(chainParams).join(", ")}]`,
+            `collectChainParameters returned: ${chainParams === null ? "null (accepts all)" : `[${Array.from(chainParams).join(", ")}]`}`,
           );
+
+          // null means the chain accepts any prop
+          if (chainParams === null) {
+            debug(
+              `Parameter '${paramName}' accepted because chain ends with plain-props component`,
+            );
+            return { found: true, chain: currentChain };
+          }
 
           if (chainParams.has(paramName)) {
             debug(`Parameter '${paramName}' found in chain parameters`);
@@ -329,6 +337,10 @@ export function collectChainParameters(
             allParams.add(prop.key.name);
           }
         }
+      } else if (param.type === "Identifier") {
+        // Plain identifier param (e.g., props) — accepts any object property.
+        // Signal "accepts all" by returning null.
+        return null;
       }
     }
   }
@@ -364,6 +376,11 @@ export function collectChainParameters(
         visited,
         maxChainDepth,
       );
+
+      // null means the target chain accepts any property
+      if (targetParams === null) {
+        return null;
+      }
 
       // If we have simple param spread, add all target params
       // Otherwise, only add params that would be in rest elements (existing logic)

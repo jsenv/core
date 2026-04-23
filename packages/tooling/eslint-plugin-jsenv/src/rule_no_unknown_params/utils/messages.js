@@ -48,12 +48,14 @@ export function generateErrorMessage(
 ) {
   const { reportAllUnknownParams = false } = options;
   // Collect all available parameters in the function and its chain
-  const availableParams = collectChainParameters(
+  // collectChainParameters returns null when the chain accepts any prop (plain Identifier param)
+  const availableParamsRaw = collectChainParameters(
     functionDef,
     functionDefinitions,
     new Set(),
     maxChainDepth,
   );
+  const availableParams = availableParamsRaw ?? new Set();
   const availableParamsArray = Array.from(availableParams);
 
   // Find suggestions for potential typos

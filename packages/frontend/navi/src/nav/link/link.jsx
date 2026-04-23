@@ -1,5 +1,3 @@
-/* eslint-disable jsenv/no-unknown-params */
-
 import { useContext, useRef } from "preact/hooks";
 
 import { renderActionableComponent } from "../../action/render_actionable_component.jsx";
