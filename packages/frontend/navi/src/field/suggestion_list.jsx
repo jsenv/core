@@ -45,6 +45,7 @@ const css = /* css */ `
       --suggestion-list-border-radius: 4px;
       --suggestion-list-border-width: 1px;
       --suggestion-list-border-color: light-dark(#ccc, #555);
+      --suggestion-list-border-style: solid;
       --suggestion-list-background-color: light-dark(#fff, #1e1e1e);
       --suggestion-list-max-height: 220px;
     }
@@ -88,8 +89,8 @@ const css = /* css */ `
     --x-border-radius: var(--suggestion-list-border-radius);
     --x-border-width: var(--suggestion-list-border-width);
     --x-border-color: var(--suggestion-list-border-color);
+    --x-border-style: var(--suggestion-list-border-style);
     --x-background-color: var(--suggestion-list-background-color);
-    display: flex;
     box-sizing: border-box;
     width: fit-content;
     min-width: var(--suggestion-list-anchor-width, 0px);
@@ -99,9 +100,8 @@ const css = /* css */ `
     padding: 0;
     list-style: none;
     background-color: var(--x-background-color);
-    border: var(--x-border-width) solid var(--x-border-color);
+    border: var(--x-border-width) var(--x-border-style) var(--x-border-color);
     border-radius: var(--x-border-radius);
-    outline: none;
     transition: opacity 0.2s ease;
     overflow-y: auto;
 
@@ -111,7 +111,7 @@ const css = /* css */ `
       inset: unset;
       margin: 0;
       padding: 0;
-      border: none;
+      /* border: none; */
     }
     &[data-anchor-hidden] {
       opacity: 0;
