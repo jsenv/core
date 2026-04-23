@@ -1,4 +1,3 @@
-/* eslint-disable jsenv/no-unknown-params */
 import { hasCSSSizeUnit } from "@jsenv/dom";
 import { createContext, toChildArray } from "preact";
 import { useContext, useRef, useState } from "preact/hooks";
