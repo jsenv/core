@@ -448,7 +448,17 @@ const InputTextualWithSuggestions = ({
       positionPreference: "below",
     });
     popoverEl.style.top = `${top}px`;
-    popoverEl.style.left = `${left}px`;
+    // If the popover is constrained by its max-width and ends up wider
+    // than the input, center it in the viewport instead of anchoring left.
+    const popoverRect = popoverEl.getBoundingClientRect();
+    const maxWidth = parseFloat(getComputedStyle(popoverEl).maxWidth);
+    if (!isNaN(maxWidth) && popoverRect.width >= maxWidth - 1) {
+      const viewportWidth = document.documentElement.clientWidth;
+      const centeredLeft = (viewportWidth - popoverRect.width) / 2;
+      popoverEl.style.left = `${centeredLeft}px`;
+    } else {
+      popoverEl.style.left = `${left}px`;
+    }
   };
 
   const showPopover = (e) => {
@@ -458,8 +468,6 @@ const InputTextualWithSuggestions = ({
     console.debug(`showPopover (e.type:${e.type})`);
     const popoverEl = document.getElementById(suggestions);
     const inputEl = ref.current;
-    positionPopover();
-    popoverEl.showPopover();
     positionEffectRef.current = visibleRectEffect(
       inputEl,
       ({ visibilityRatio }) => {
@@ -476,6 +484,7 @@ const InputTextualWithSuggestions = ({
         positionPopover();
       },
     );
+    popoverEl.showPopover();
     expand();
   };
 
