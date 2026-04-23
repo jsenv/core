@@ -91,25 +91,24 @@ const css = /* css */ `
     --x-border-color: var(--suggestion-list-border-color);
     --x-border-style: var(--suggestion-list-border-style);
     --x-background-color: var(--suggestion-list-background-color);
-    display: flex;
     box-sizing: border-box;
-    width: max(var(--suggestion-list-anchor-width, 0px), max-content);
+    width: fit-content;
     max-height: var(--suggestion-list-max-height);
     margin: 0;
     padding: 0;
-    flex-direction: column;
-    align-items: stretch;
     list-style: none;
     background-color: var(--x-background-color);
     border: var(--x-border-width) var(--x-border-style) var(--x-border-color);
     border-radius: var(--x-border-radius);
     transition: opacity 0.2s ease;
+    overflow-x: auto;
     overflow-y: auto;
 
     /* Popover reset — browser adds border, background, padding, margin by default */
     &[popover] {
       position: absolute;
       inset: unset;
+      min-width: var(--suggestion-list-anchor-width, 0px);
       max-width: 95vw;
       margin: 0;
       padding: 0;
@@ -120,6 +119,12 @@ const css = /* css */ `
       pointer-events: none;
     }
   }
+  .navi_suggestion_list_inner {
+    display: flex;
+    width: max-content;
+    min-width: 100%;
+    flex-direction: column;
+  }
   ::highlight(navi-suggestion-match) {
     color: var(--suggestion-color-highlight);
     background-color: var(--suggestion-background-color-highlight);
@@ -129,7 +134,6 @@ const css = /* css */ `
     --x-background-color: var(--suggestion-background-color);
     --x-font-weight: var(--suggestion-font-weight);
     box-sizing: border-box;
-    width: 100%;
 
     padding: var(--suggestion-padding);
     color: var(--x-color);
@@ -415,10 +419,12 @@ export const SuggestionList = ({
       styleCSSVars={SuggestionListStyleCSSVars}
     >
       <SuggestionListContext.Provider value={suggestionListContext}>
-        <ItemTrackerProvider>{children}</ItemTrackerProvider>
-        {emptyState && (
-          <li className="navi_suggestion_list_empty">{emptyState}</li>
-        )}
+        <div className="navi_suggestion_list_inner">
+          <ItemTrackerProvider>{children}</ItemTrackerProvider>
+          {emptyState && (
+            <li className="navi_suggestion_list_empty">{emptyState}</li>
+          )}
+        </div>
       </SuggestionListContext.Provider>
     </Box>
   );
