@@ -15,3 +15,6 @@ Ca devient
 
 const svgUrl = "/path/sprite.svg#file";
 image.src = svgUrl;
+
+Et si on a un fichier html idéalement on l'embed dedans? Ca c'est si on le dit explicitement avec ?inline
+mais ce seras dans un second temps

@@ -6298,15 +6298,21 @@ const DIMENSION_PROPS = {
     }
     const inHorizontalFlexFlow =
       parentBoxFlow === "flex-x" || parentBoxFlow === "inline-flex-x";
-    if (!inHorizontalFlexFlow) {
-      // Can't use flexGrow — parent is not flex-x
-      if (parentBoxFlow === "flex-y" || parentBoxFlow === "inline-flex-y") {
-        return { alignSelf: "stretch" };
-      }
-      return { width: "100%" };
+    if (inHorizontalFlexFlow) {
+      // Parent is flex-x: grow as flex item
+      return { flexGrow: 1, flexBasis: "0%" };
     }
-    // Parent is flex-x: grow as flex item
-    return { flexGrow: 1, flexBasis: "0%" };
+    if (parentBoxFlow === "flex-y" || parentBoxFlow === "inline-flex-y") {
+      return {
+        alignSelf: "stretch",
+        // Here flex grow is "useless" for the item itself
+        // buuut it would allow children (hello ".navi_text_bold_wrapper")
+        // to inherit expand behavior
+        flexGrow: 1,
+      };
+    }
+    // Can't use flexGrow — parent is not flex-x
+    return { width: "100%" };
   },
   expandY: (value, { parentBoxFlow }) => {
     if (!value) {
@@ -6314,15 +6320,21 @@ const DIMENSION_PROPS = {
     }
     const inVerticalFlexFlow =
       parentBoxFlow === "flex-y" || parentBoxFlow === "inline-flex-y";
-    if (!inVerticalFlexFlow) {
-      // Can't use flexGrow — parent is not flex-y
-      if (parentBoxFlow === "flex-x" || parentBoxFlow === "inline-flex-x") {
-        return { alignSelf: "stretch" };
-      }
-      return { height: "100%" };
+    if (inVerticalFlexFlow) {
+      // Parent is flex-y: grow as flex item
+      return { flexGrow: 1, flexBasis: "0%" };
     }
-    // Parent is flex-y: grow as flex item
-    return { flexGrow: 1, flexBasis: "0%" };
+    if (parentBoxFlow === "flex-x" || parentBoxFlow === "inline-flex-x") {
+      return {
+        alignSelf: "stretch",
+        // Here flex grow is "useless" for the item itself
+        // buuut it would allow children (hello ".navi_text_bold_wrapper")
+        // to inherit expand behavior
+        flexGrow: 1,
+      };
+    }
+    // Can't use flexGrow — parent is not flex-y
+    return { height: "100%" };
   },
   shrinkX: (value) => {
     if (!value || value === "0") {
@@ -20403,6 +20415,7 @@ const css$v = /* css */`
       min-height: inherit;
       flex-grow: inherit;
       align-items: inherit;
+      align-self: inherit;
       justify-content: inherit;
       gap: inherit;
       text-align: inherit;

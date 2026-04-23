@@ -1,4 +1,4 @@
-import { u, O, A, u$1, y, j, g, n, _, useSignal, F, h, K, W, _$1, j$1, b, H, q, F$1, H$1, k, M, T, P, b$1, J } from "../jsenv_database_manager_node_modules.js";
+import { u, O, A, u$1, y, j, g, n, _, useSignal, F, h, K, W, _$1, j$1, n$1, H, q, F$1, H$1, k, b, M, T, P, b$1, J } from "../jsenv_database_manager_node_modules.js";
 
 const installImportMetaCssBuild = (importMeta) => {
   const IMPORT_META_CSS_BUILD = "jsenv_import_meta_css_build";
@@ -54,7 +54,7 @@ installImportMetaCssBuild(import.meta);/**
  * Regroup CSS vars that makes sense to share across all navi components.
  */
 
-import.meta.css = [/* css */`
+const css$o = /* css */`
   @layer navi {
     :root {
       --navi-focus-outline-color: light-dark(#4476ff, #3b82f6);
@@ -78,11 +78,20 @@ import.meta.css = [/* css */`
       --navi-s: 0.5em; /* = 8px at 16px base */
       --navi-m: 1em; /* = 16px at 16px base (base font size) */
       --navi-l: 1.5em; /* = 24px at 16px base */
-      --navi-xl: 2em;
-      --navi-xxl: 3em;
+      --navi-xl: 2em; /* = 32px at 16px base */
+      --navi-xxl: 3em; /* 48px at 16px base */
+
+      --navi-typo-xxs: 0.625rem; /* 10px at 16px base */
+      --navi-typo-xs: 0.75rem; /* 12px at 16px base */
+      --navi-typo-s: 0.875rem; /* 14px at 16px base */
+      --navi-typo-m: 1rem; /* 16px at 16px base (base font size) */
+      --navi-typo-l: 1.125rem; /* 18px at 16px base */
+      --navi-typo-xl: 1.25rem; /* 20px at 16px base */
+      --navi-typo-xxl: 1.5rem; /* 24px at 16px base */
     }
   }
-`, "@jsenv/navi/src/navi_css_vars.js"];
+`;
+import.meta.css = [css$o, "@jsenv/navi/src/navi_css_vars.js"];
 
 const actionPrivatePropertiesWeakMap = new WeakMap();
 const getActionPrivateProperties = (action) => {
@@ -2929,6 +2938,9 @@ const normalizeStyle = (
   if (propertyName === "lineHeight") {
     if (context === "js") {
       if (typeof value === "string") {
+        if (isCSSFunction(value)) {
+          return value;
+        }
         const unit = getUnit(value);
         if (unit === "px") {
           const float = parseFloat(value);
@@ -2973,6 +2985,9 @@ const normalizeStyle = (
   }
 
   if (colorPropertySet.has(propertyName)) {
+    if (typeof value === "string" && isCSSFunction(value)) {
+      return value;
+    }
     const rgba = parseCSSColor(value, element);
     if (context === "js") {
       return rgba;
@@ -2989,8 +3004,15 @@ const stringifyStyle = (value, propertyName, element) => {
   return normalizeStyle(value, propertyName, "css", element);
 };
 
+const isCSSFunction = (value) => {
+  return /^[a-z-]+\(/.test(value);
+};
 const normalizeNumber = (value, { unit, propertyName, preferedType }) => {
   if (typeof value === "string") {
+    // CSS variables and CSS functions like calc() must be passed through as-is
+    if (isCSSFunction(value)) {
+      return value;
+    }
     // Keep strings as-is (including %, em, rem, auto, none, etc.)
     if (preferedType === "string") {
       if (unit && isUnitless(value) && !unitlessKeywordSet.has(value)) {
@@ -4307,16 +4329,38 @@ const findFocusable = (element) => {
   return focusableDescendant;
 };
 
+// Input types where ArrowUp/Down natively change the value — don't intercept them
+const INPUT_TYPES_WITH_ARROW_MEANING = new Set([
+  "number",
+  "range",
+  "date",
+  "time",
+  "datetime-local",
+  "month",
+  "week",
+]);
+const INPUT_ALLOWED_KEYS = new Set(["Home", "End", "Escape", "Enter"]);
+const INPUT_ARROW_KEYS = new Set(["ArrowDown", "ArrowUp"]);
+const TEXTAREA_ALLOWED_KEYS = new Set(["Escape"]);
+
 const canInterceptKeys = (event) => {
   const target = event.target;
-  // Don't handle shortcuts when user is typing
+  // Allow specific keys on input/textarea/contenteditable elements
+  if (target.tagName === "INPUT") {
+    if (INPUT_ALLOWED_KEYS.has(event.key)) {
+      return true;
+    }
+    if (INPUT_ARROW_KEYS.has(event.key)) {
+      return !INPUT_TYPES_WITH_ARROW_MEANING.has(target.type);
+    }
+    return false;
+  }
   if (
-    target.tagName === "INPUT" ||
     target.tagName === "TEXTAREA" ||
     target.contentEditable === "true" ||
     target.isContentEditable
   ) {
-    return false;
+    return TEXTAREA_ALLOWED_KEYS.has(event.key);
   }
   // Don't handle shortcuts when select dropdown is open
   if (target.tagName === "SELECT") {
@@ -12894,7 +12938,7 @@ const createActionProxyFromSignal = (
     };
   };
 
-  const nameSignal = y();
+  const nameSignal = y(action.name);
   const callSourceSignal = y();
   let actionProxy;
   {
@@ -17302,12 +17346,12 @@ const withPropsClassName = (baseClassName, classNameFromProps) => {
 const BoxFlowContext = K();
 
 const normalizeSpacingStyle = (value, property = "padding") => {
-  const cssSize = sizeSpacingScale[value];
-  return cssSize || stringifyStyle(value, property);
+  const cssValue = SIZE_MAP[value];
+  return cssValue || stringifyStyle(value, property);
 };
 const normalizeTypoStyle = (value, property = "fontSize") => {
-  const cssSize = sizeTypoScale[value];
-  return cssSize || stringifyStyle(value, property);
+  const cssValue = TYPO_SIZE_MAP[value];
+  return cssValue || stringifyStyle(value, property);
 };
 
 const PASS_THROUGH = { name: "pass_through" };
@@ -17428,53 +17472,49 @@ const DIMENSION_PROPS = {
   expand: applyOnTwoProps("expandX", "expandY"),
   shrink: applyOnTwoProps("shrinkX", "shrinkY"),
   // apply after width/height to override if both are set
-  expandX: (value, { parentBoxFlow, boxFlow }) => {
+  expandX: (value, { parentBoxFlow }) => {
     if (!value) {
       return null;
     }
     const inHorizontalFlexFlow =
       parentBoxFlow === "flex-x" || parentBoxFlow === "inline-flex-x";
-    const selfHorizontalFlexFlow =
-      boxFlow === "flex-x" || boxFlow === "inline-flex-x";
-    if (selfHorizontalFlexFlow || inHorizontalFlexFlow) {
-      if (!inHorizontalFlexFlow) {
-        return {
-          flexGrow: 1,
-          flexBasis: "0%",
-          minWidth: "100%",
-          width: "auto",
-        };
-      }
-      return { flexGrow: 1, flexBasis: "0%" }; // Grow horizontally in column
+    if (inHorizontalFlexFlow) {
+      // Parent is flex-x: grow as flex item
+      return { flexGrow: 1, flexBasis: "0%" };
     }
-    if (parentBoxFlow === "flex-y") {
-      return { minWidth: "100%", width: "auto" }; // Take full width in row
+    if (parentBoxFlow === "flex-y" || parentBoxFlow === "inline-flex-y") {
+      return {
+        alignSelf: "stretch",
+        // Here flex grow is "useless" for the item itself
+        // buuut it would allow children (hello ".navi_text_bold_wrapper")
+        // to inherit expand behavior
+        flexGrow: 1,
+      };
     }
-    return { minWidth: "100%", width: "auto" }; // Take full width outside flex
+    // Can't use flexGrow — parent is not flex-x
+    return { width: "100%" };
   },
-  expandY: (value, { parentBoxFlow, boxFlow }) => {
+  expandY: (value, { parentBoxFlow }) => {
     if (!value) {
       return null;
     }
     const inVerticalFlexFlow =
       parentBoxFlow === "flex-y" || parentBoxFlow === "inline-flex-y";
-    const selfVerticalFlexFlow =
-      boxFlow === "flex-y" || boxFlow === "inline-flex-y";
-    if (selfVerticalFlexFlow || inVerticalFlexFlow) {
-      if (!inVerticalFlexFlow) {
-        return {
-          flexGrow: 1,
-          flexBasis: "0%",
-          minHeight: "100%",
-          height: "auto",
-        };
-      }
-      return { flexGrow: 1, flexBasis: "0%" }; // Grow vertically in row
+    if (inVerticalFlexFlow) {
+      // Parent is flex-y: grow as flex item
+      return { flexGrow: 1, flexBasis: "0%" };
     }
-    if (parentBoxFlow === "flex-x") {
-      return { minHeight: "100%", height: "auto" }; // Take full height in column
+    if (parentBoxFlow === "flex-x" || parentBoxFlow === "inline-flex-x") {
+      return {
+        alignSelf: "stretch",
+        // Here flex grow is "useless" for the item itself
+        // buuut it would allow children (hello ".navi_text_bold_wrapper")
+        // to inherit expand behavior
+        flexGrow: 1,
+      };
     }
-    return { minHeight: "100%", height: "auto" }; // Take full height outside flex
+    // Can't use flexGrow — parent is not flex-y
+    return { height: "100%" };
   },
   shrinkX: (value) => {
     if (!value || value === "0") {
@@ -17578,6 +17618,7 @@ const POSITION_PROPS = {
   relative: applyToCssPropWhenTruthy("position", "relative", "static"),
   fixed: applyToCssPropWhenTruthy("position", "fixed", "static"),
   sticky: applyToCssPropWhenTruthy("position", "sticky", "static"),
+  zIndex: PASS_THROUGH,
   left: (value) => {
     return { left: value === true ? 0 : value };
   },
@@ -17789,9 +17830,10 @@ const STYLE_PROP_NAME_SET = new Set(Object.keys(All_PROPS));
 const COPIED_ON_VISUAL_CHILD_PROP_SET = new Set([
   ...FLOW_PROP_NAME_SET,
   "expand",
-  "shrink",
   "expandX",
   "expandY",
+  "shrink",
+  "align",
   "alignX",
   "alignY",
 ]);
@@ -17811,7 +17853,6 @@ const getVisualChildStylePropStrategy = (name) => {
 };
 
 const isStyleProp = (name) => STYLE_PROP_NAME_SET.has(name);
-const isCSSVar = (name) => name.startsWith("--");
 
 const getStylePropGroup = (name) => {
   if (FLOW_PROP_NAME_SET.has(name)) {
@@ -17880,41 +17921,44 @@ const prepareStyleValue = (
   return mergedValue;
 };
 
+const negativeEntries = (map) => {
+  const result = {};
+  for (const key of Object.keys(map)) {
+    result[`-${key}`] = `calc(-1 * ${map[key]})`;
+  }
+  return result;
+};
+
 // Unified design scale using t-shirt sizes with rem units for accessibility.
 // This scale is used for spacing to create visual harmony
 // and consistent proportions throughout the design system.
-const sizeSpacingScale = {
-  xxs: "0.125em", // 0.125 = 2px at 16px base
-  xs: "0.25em", // 0.25 = 4px at 16px base
-  sm: "0.5em", // 0.5 = 8px at 16px base
-  md: "1em", // 1 = 16px at 16px base (base font size)
-  lg: "1.5em", // 1.5 = 24px at 16px base
-  xl: "2em", // 2 = 32px at 16px base
-  xxl: "3em", // 3 = 48px at 16px base
+const SIZE_MAP = {
+  xxs: "var(--navi-xxs)",
+  xs: "var(--navi-xs)",
+  s: "var(--navi-s)",
+  m: "var(--navi-m)",
+  l: "var(--navi-l)",
+  xl: "var(--navi-xl)",
+  xxl: "var(--navi-xxl)",
 };
-sizeSpacingScale.s = sizeSpacingScale.sm;
-sizeSpacingScale.m = sizeSpacingScale.md;
-sizeSpacingScale.l = sizeSpacingScale.lg;
-const sizeSpacingScaleKeys = new Set(Object.keys(sizeSpacingScale));
+Object.assign(SIZE_MAP, negativeEntries(SIZE_MAP));
+const TYPO_SIZE_MAP = {
+  xxs: "var(--navi-typo-xxs)",
+  xs: "var(--navi-typo-xs)",
+  s: "var(--navi-typo-s)",
+  m: "var(--navi-typo-m)",
+  l: "var(--navi-typo-l)",
+  xl: "var(--navi-typo-xl)",
+  xxl: "var(--navi-typo-xxl)",
+};
+Object.assign(TYPO_SIZE_MAP, negativeEntries(TYPO_SIZE_MAP));
+const sizeSpacingScaleKeys = new Set(Object.keys(SIZE_MAP));
 const isSizeSpacingScaleKey = (key) => {
   return sizeSpacingScaleKeys.has(key);
 };
 const resolveSpacingSize = (size, property = "padding") => {
-  return stringifyStyle(sizeSpacingScale[size] || size, property);
+  return stringifyStyle(SIZE_MAP[size] || size, property);
 };
-
-const sizeTypoScale = {
-  xxs: "0.625rem", // 0.625 = 10px at 16px base (smaller than before for more range)
-  xs: "0.75rem", // 0.75 = 12px at 16px base
-  sm: "0.875rem", // 0.875 = 14px at 16px base
-  md: "1rem", // 1 = 16px at 16px base (base font size)
-  lg: "1.125rem", // 1.125 = 18px at 16px base
-  xl: "1.25rem", // 1.25 = 20px at 16px base
-  xxl: "1.5rem", // 1.5 = 24px at 16px base
-};
-sizeTypoScale.s = sizeTypoScale.sm;
-sizeTypoScale.m = sizeTypoScale.md;
-sizeTypoScale.l = sizeTypoScale.lg;
 
 const DEFAULT_DISPLAY_BY_TAG_NAME = {
   "inline": new Set([
@@ -18063,6 +18107,8 @@ const getDefaultDisplay = (tagName) => {
   return TAG_NAME_TO_DEFAULT_DISPLAY.get(normalizedTagName) || "inline";
 };
 
+const pressedElements = new WeakSet();
+
 const PSEUDO_CLASSES = {
   ":hover": {
     attribute: "data-hover",
@@ -18120,14 +18166,75 @@ const PSEUDO_CLASSES = {
   ":active": {
     attribute: "data-active",
     setup: (el, callback) => {
-      el.addEventListener("mousedown", callback);
-      document.addEventListener("mouseup", callback);
+      const onPointerDown = (e) => {
+        el.setPointerCapture(e.pointerId);
+        const onRelease = () => {
+          el.releasePointerCapture(e.pointerId);
+          el.removeEventListener("lostpointercapture", onRelease);
+          el.removeEventListener("pointercancel", onRelease);
+          el.removeEventListener("pointerup", onRelease);
+          callback();
+        };
+        el.addEventListener("lostpointercapture", onRelease);
+        el.addEventListener("pointercancel", onRelease);
+        el.addEventListener("pointerup", onRelease);
+        callback();
+      };
+      el.addEventListener("pointerdown", onPointerDown);
       return () => {
-        el.removeEventListener("mousedown", callback);
-        document.removeEventListener("mouseup", callback);
+        el.removeEventListener("pointerdown", onPointerDown);
       };
     },
     test: (el) => el.matches(":active"),
+  },
+  ":-navi-pressed": {
+    attribute: "data-pressed",
+    setup: (el, callback) => {
+      const onPointerDown = (e) => {
+        if (e.button !== 0) {
+          // only left pointer (mouse left click, touch, pen)
+          return;
+        }
+        pressedElements.add(el);
+        el.setPointerCapture(e.pointerId);
+        const onRelease = () => {
+          pressedElements.delete(el);
+          el.releasePointerCapture(e.pointerId);
+          el.removeEventListener("lostpointercapture", onRelease);
+          el.removeEventListener("pointercancel", onRelease);
+          el.removeEventListener("pointerup", onRelease);
+          el.removeEventListener("contextmenu", onContextMenu);
+          callback();
+        };
+        const onContextMenu = (e) => {
+          // On touch devices, a long-press triggers the context menu.
+          // If the context menu is not prevented, it means it will open and the
+          // pointer events (pointerup, lostpointercapture) won't fire normally,
+          // leaving the element stuck in pressed state. We clear it manually.
+          // e.button === -1 means the event was synthesized from a long-press (not a real mouse click).
+          if (e.button === -1 && !e.defaultPrevented) {
+            pressedElements.delete(el);
+            el.releasePointerCapture(e.pointerId);
+            el.removeEventListener("lostpointercapture", onRelease);
+            el.removeEventListener("pointercancel", onRelease);
+            el.removeEventListener("pointerup", onRelease);
+            el.removeEventListener("contextmenu", onContextMenu);
+            callback();
+          }
+        };
+        el.addEventListener("lostpointercapture", onRelease);
+        el.addEventListener("pointercancel", onRelease);
+        el.addEventListener("pointerup", onRelease);
+        el.addEventListener("contextmenu", onContextMenu);
+        callback();
+      };
+      el.addEventListener("pointerdown", onPointerDown);
+      return () => {
+        el.removeEventListener("pointerdown", onPointerDown);
+        pressedElements.delete(el);
+      };
+    },
+    test: (el) => pressedElements.has(el),
   },
   ":visited": {
     attribute: "data-visited",
@@ -18295,6 +18402,13 @@ const PSEUDO_CLASSES = {
   ":invalid": {
     attribute: "data-invalid",
     test: (el) => el.matches(":invalid"),
+  },
+  "::highlight": {},
+  ":-navi-pointed": {
+    attribute: "data-pointed",
+  },
+  ":-navi-selected": {
+    attribute: "data-selected",
   },
   ":-navi-loading": {
     attribute: "data-loading",
@@ -18585,6 +18699,111 @@ const updateStyle = (element, style, preventInitialTransition) => {
   styleKeySetWeakMap.set(element, styleKeySet);
 };
 
+// Implementation notes:
+//
+// options.__r fires before each component render — we capture the current
+// component instance (vnode.__c) so useEarlyDOMEffect can register itself.
+//
+// options.__c (commitRoot) fires after refs are assigned and before any
+// useLayoutEffect runs. We flush all pending effects there.
+// The DOM node is read from component.__v.__e (vnode → root DOM node),
+// which Preact sets during diffing, before options.__c fires.
+//
+// stateMap (WeakMap) stores { cleanup, deps } per component instance.
+// It's auto-GC'd when a component is destroyed; options.unmount also
+// deletes entries eagerly to release cleanup functions sooner.
+//
+// pendingMap (Map) holds effects registered during the current render pass.
+// It is always fully cleared in options.__c — bounded to one commit, no leak.
+
+/**
+ * Like useLayoutEffect, but runs before any layout effect in the commit —
+ * including those of descendant components.
+ *
+ * Use this when a parent needs to mutate the DOM (e.g. apply styles) so that
+ * children can read those mutations in their own useLayoutEffect.
+ *
+ * The DOM node of the component is passed as the first argument to fn.
+ * The effect is skipped if no DOM node is found (e.g. on a fragment root).
+ *
+ * Supports deps and cleanup return, same as useLayoutEffect.
+ */
+const useEarlyDOMEffect = (fn, deps) => {
+  const component = _currentComponent;
+  if (component) {
+    pendingMap.set(component, { fn, deps });
+  }
+};
+
+// Populated during render, consumed + cleared in options.__c each commit.
+const pendingMap = new Map(); // component → { fn, deps, ref }
+
+// Persists across commits. WeakMap → no leak when component is destroyed.
+const stateMap = new WeakMap(); // component → { cleanup, deps }
+
+let _currentComponent = null;
+const _prevBeforeRender = n$1.__r;
+n$1.__r = (vnode) => {
+  _currentComponent = vnode.__c;
+  if (_prevBeforeRender) {
+    _prevBeforeRender(vnode);
+  }
+};
+
+const _prevCommit = n$1.__c;
+n$1.__c = (root, commitQueue) => {
+  for (const [component, { fn, deps }] of pendingMap) {
+    // component.__v is the component's vnode; __e is its root DOM node.
+    // Both are set during diff, before options.__c fires.
+    const element = component.__v && component.__v.__e;
+    if (!element) {
+      continue;
+    }
+    const prev = stateMap.get(component);
+    const prevDeps = prev ? prev.deps : undefined;
+    let depsChanged;
+    if (!prevDeps || !deps || prevDeps.length !== deps.length) {
+      depsChanged = true;
+    } else {
+      for (let i = 0; i < deps.length; i++) {
+        if (!Object.is(deps[i], prevDeps[i])) {
+          depsChanged = true;
+          break;
+        }
+      }
+    }
+    if (depsChanged) {
+      if (prev && prev.cleanup) {
+        prev.cleanup();
+      }
+      const result = fn(element);
+      const cleanup = typeof result === "function" ? result : undefined;
+      stateMap.set(component, { cleanup, deps });
+    }
+  }
+  pendingMap.clear();
+  if (_prevCommit) {
+    _prevCommit(root, commitQueue);
+  }
+};
+
+const _prevUnmount = n$1.unmount;
+n$1.unmount = (vnode) => {
+  const component = vnode.__c;
+  if (component) {
+    const state = stateMap.get(component);
+    if (state && state.cleanup) {
+      state.cleanup();
+    }
+    // stateMap is a WeakMap so the entry is GC'd automatically,
+    // but deleting explicitly releases the cleanup fn sooner.
+    stateMap.delete(component);
+  }
+  if (_prevUnmount) {
+    _prevUnmount(vnode);
+  }
+};
+
 installImportMetaCssBuild(import.meta);/**
  * Box - A Swiss Army Knife for Layout
  *
@@ -18609,6 +18828,33 @@ installImportMetaCssBuild(import.meta);/**
  * ## Spacing & Sizing
  *
  * Props for margin, padding, gap, width, height, expand, shrink, and more.
+ *
+ * ## Pseudo-class Styles
+ *
+ * The `style` prop supports pseudo-class keys alongside regular CSS properties.
+ * This lets you express hover, focus, and custom interaction states in one object,
+ * without writing CSS or adding class names:
+ *
+ * ```jsx
+ * <Box
+ *   style={{
+ *     backgroundColor: "blue",
+ *     ":-navi:pressed": {
+ *       backgroundColor: "darkblue",
+ *     },
+ *     ":hover": {
+ *       backgroundColor: "lightblue",
+ *     },
+ *   }}
+ * />
+ * ```
+ *
+ * Styles are applied directly to the DOM (not via Preact's style prop) for two reasons:
+ * 1. **Pseudo-class support**: reacting to `:hover`, `:focus`, or custom states like
+ *    `:-navi:pressed` without re-rendering the component on every pseudo state change.
+ * 2. **Correct initial render**: pseudo-class state must be read from the DOM node at
+ *    mount time. Preact's style prop runs before the DOM exists, so the right initial
+ *    style can only be determined once the node is available.
  */
 import.meta.css = [/* css */`
   [navi-box-flow="inline"] {
@@ -18912,7 +19158,7 @@ const Box = props => {
         addStyle(value, name, styleContext, boxStylesTarget, context);
         return;
       }
-      if (isCSSVar(name)) {
+      if (name.startsWith("--")) {
         addStyle(value, name, styleContext, boxStylesTarget, context);
         return;
       }
@@ -19000,42 +19246,36 @@ const Box = props => {
         visitProp(styleValue, styleName, styleContext, boxStyles, "style");
       }
     }
-    const updateStyle = b(state => {
-      const boxEl = ref.current;
-      applyStyle(boxEl, boxStyles, state, boxPseudoNamedStyles, preventInitialTransition);
-    }, styleDeps);
-    const finalStyleDeps = [pseudoStateSelector, innerPseudoState, updateStyle];
+    styleDeps.push(pseudoStateSelector, innerPseudoState);
     let innerPseudoClasses;
     if (pseudoClassesFromStyleSet.size) {
       innerPseudoClasses = [...pseudoClasses];
       if (pseudoClasses !== PSEUDO_CLASSES_DEFAULT) {
-        finalStyleDeps.push(...pseudoClasses);
+        styleDeps.push(...pseudoClasses);
       }
       for (const key of pseudoClassesFromStyleSet) {
         innerPseudoClasses.push(key);
-        finalStyleDeps.push(key);
+        styleDeps.push(key);
       }
     } else {
       innerPseudoClasses = pseudoClasses;
       if (pseudoClasses !== PSEUDO_CLASSES_DEFAULT) {
-        finalStyleDeps.push(...pseudoClasses);
+        styleDeps.push(...pseudoClasses);
       }
     }
-    A(() => {
-      const boxEl = ref.current;
-      if (!boxEl) {
-        return null;
-      }
+    useEarlyDOMEffect(boxEl => {
       const pseudoStateEl = pseudoStateSelector ? boxEl.querySelector(pseudoStateSelector) : boxEl;
       const visualEl = visualSelector ? boxEl.querySelector(visualSelector) : null;
       return initPseudoStyles(pseudoStateEl, {
         pseudoClasses: innerPseudoClasses,
         pseudoState: innerPseudoState,
-        effect: updateStyle,
+        effect: state => {
+          applyStyle(boxEl, boxStyles, state, boxPseudoNamedStyles, preventInitialTransition);
+        },
         elementToImpact: boxEl,
         elementListeningPseudoState: visualEl === pseudoStateEl ? null : visualEl
       });
-    }, finalStyleDeps);
+    }, styleDeps);
   }
 
   // When hasChildFunction is used it means
@@ -19630,7 +19870,7 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
   /**
    * Helper: Check if a literal value can be reached through available parameters
    */
-  const canReachLiteralValue = (literalValue, params) => {
+  const canReachLiteralValue = (literalValue, params, literalPosition) => {
     // Check parent's own parameters (signals and user params)
     const parentCanProvide = connections.some((conn) => {
       const signalValue = conn.signal.value;
@@ -19640,31 +19880,31 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
         effectiveValue === literalValue && conn.isCustomValue(effectiveValue)
       );
     });
+    if (parentCanProvide) {
+      return true;
+    }
 
     // Check user-provided parameters
     const userCanProvide = Object.entries(params).some(
       ([, value]) => value === literalValue,
     );
+    if (userCanProvide) {
+      return true;
+    }
 
-    // Check if any descendant signal can provide this literal
-    // (ancestor signals are excluded since they operate on different path positions
-    // that the current pattern has already "passed")
-    const getDescendantSignals = (pattern) => {
-      const signals = [...pattern.connections];
-      for (const child of pattern.children) {
-        signals.push(...getDescendantSignals(child));
-      }
-      return signals;
-    };
-
-    const descendantSignals = getDescendantSignals(patternObject);
-
-    const systemCanProvide = descendantSignals.some((conn) => {
+    // Check if any descendant path signal provides this literal value AT THE SAME position.
+    // A signal from /map/isochrone/:tab can provide a literal at position 2 (tab position),
+    // but NOT a literal at position 1 (panel position) — even if the signal value matches.
+    // descendantPathSignals is a Map<segmentIndex, conn[]> precomputed during setupPatterns.
+    const connsAtPosition =
+      patternObject.descendantPathSignals.get(literalPosition);
+    if (!connsAtPosition) {
+      return false;
+    }
+    return connsAtPosition.some((conn) => {
       const signalValue = conn.signal.value;
       return signalValue === literalValue && conn.isCustomValue(signalValue);
     });
-
-    return parentCanProvide || userCanProvide || systemCanProvide;
   };
   const checkChildRouteCompatibility = (childPatternObj, params) => {
     const childParams = {};
@@ -19734,7 +19974,7 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
       }
       // Parent doesn't have a segment at this position - child extends beyond parent
       // Check if any available parameter can produce this literal value
-      else if (!canReachLiteralValue(literalValue, params)) {
+      else if (!canReachLiteralValue(literalValue, params, childPosition)) {
         if (DEBUG$1) {
           console.debug(
             `[${pattern}] INCOMPATIBLE with ${childPatternObj.originalPattern}: cannot reach literal segment "${literalValue}" at position ${childPosition} - no viable parameter path`,
@@ -21360,6 +21600,7 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
     children: [],
     parent: null,
     depth: 0, // Will be calculated after relationships are built
+    descendantPathSignals: new Map(), // Precomputed during setupPatterns (Map<segmentIndex, conn[]>)
 
     // Pattern methods (formerly patternObj methods)
     originalPattern: pattern,
@@ -22447,7 +22688,35 @@ const setupRoutePatterns = (routePatterns) => {
       );
     }
   }
-  // Phase 5: Calculate depths for all patterns
+  // Phase 5: Precompute descendant path signals for each pattern (used by canReachLiteralValue)
+  // Stored as a Map<segmentIndex, conn[]> for O(1) lookup by position.
+  for (const routePattern of routePatternSet) {
+    const descendantPathSignalsByIndex = new Map();
+    const collectDescendantPathSignals = (patternObj) => {
+      for (const conn of patternObj.connections) {
+        if (conn.paramType === "path") {
+          const paramSegment = patternObj.pattern.segments.find(
+            (seg) => seg.type === "param" && seg.name === conn.paramName,
+          );
+          if (paramSegment) {
+            const { index } = paramSegment;
+            let conns = descendantPathSignalsByIndex.get(index);
+            if (!conns) {
+              conns = [];
+              descendantPathSignalsByIndex.set(index, conns);
+            }
+            conns.push(conn);
+          }
+        }
+      }
+      for (const child of patternObj.children) {
+        collectDescendantPathSignals(child);
+      }
+    };
+    collectDescendantPathSignals(routePattern);
+    routePattern.descendantPathSignals = descendantPathSignalsByIndex;
+  }
+  // Phase 6: Calculate depths for all patterns
   for (const routePattern of routePatternSet) {
     calculatePatternDepth(routePattern);
   }
@@ -22667,10 +22936,23 @@ const route = (pattern, { searchParams } = {}) => {
 
       // If we found a more specific route, delegate to it; otherwise handle it ourselves
       if (!isMostSpecificRoute) {
-        // Check if this is a signal-originated call and there's a more specific route that will also handle it
-        // If so, skip the redirect to avoid duplicate navTo calls
+        // For signal-originated calls, only skip delegation if the more specific route
+        // has its own signal connection for the same params — meaning its own effect will
+        // fire and handle the redirect. If it doesn't have the connection, the signal
+        // change would be silently dropped, so we must delegate anyway.
         if (isSignalChange) {
-          return null;
+          const mostSpecificRoutePrivateProperties =
+            getRoutePrivateProperties(mostSpecificRoute);
+          const { pathConnectionMap, queryConnectionMap } =
+            mostSpecificRoutePrivateProperties.routePattern;
+          const willHandleItself = Object.keys(newParams).every(
+            (paramName) =>
+              pathConnectionMap.has(paramName) ||
+              queryConnectionMap.has(paramName),
+          );
+          if (willHandleItself) {
+            return null;
+          }
         }
         return mostSpecificRoute.redirectTo(newParams, {
           callReason: `replaceParams delegation from ${route} to ${mostSpecificRoute} (original reason: ${callReason})`,
@@ -24016,7 +24298,7 @@ const RouteActive = ({
 const routeAction = (
   route,
   action,
-  paramsEffect = () => route.paramsSignal.value,
+  paramsEffect = () => true,
   options = {},
 ) => {
   const actionBoundToRoute = actionRunEffect(
@@ -25785,7 +26067,7 @@ installImportMetaCssBuild(import.meta);
  * - Centers in viewport when no anchor element provided or anchor is too big
  */
 
-import.meta.css = [/* css */`
+const css$n = /* css */`
   @layer navi {
     .navi_callout {
       --callout-success-color: #4caf50;
@@ -25927,7 +26209,7 @@ import.meta.css = [/* css */`
       }
     }
   }
-`, "@jsenv/navi/src/field/validation/callout/callout.js"];
+`;
 
 /**
  * Shows a callout attached to the specified element
@@ -25959,6 +26241,7 @@ const openCallout = (message, {
   showErrorStack,
   debug = false
 } = {}) => {
+  import.meta.css = [css$n, "@jsenv/navi/src/field/validation/callout/callout.js"];
   const callout = {
     opened: true,
     close: null,
@@ -26118,8 +26401,14 @@ const openCallout = (message, {
     }
     allowWheelThrough(calloutElement, anchorElement);
     anchorElement.setAttribute("data-callout", calloutId);
+    dispatchCalloutCustomElement(anchorElement, new CustomEvent("navi_callout_open", {
+      bubbles: true
+    }));
     addTeardown(() => {
       anchorElement.removeAttribute("data-callout");
+      dispatchCalloutCustomElement(anchorElement, new CustomEvent("navi_callout_close", {
+        bubbles: true
+      }));
     });
     addStatusEffect(status => {
       if (!status) {
@@ -26750,6 +27039,20 @@ const generateSvgWithoutArrow = (width, height) => {
       />
     </svg>`;
 };
+const dispatchCalloutCustomElement = (anchorElement, customEvent) => {
+  let targetElement;
+  const visualSelector = anchorElement.getAttribute("data-visual-selector");
+  if (visualSelector) {
+    const visualElement = anchorElement.querySelector(visualSelector);
+    if (visualElement) {
+      targetElement = visualElement;
+    }
+  } else {
+    targetElement = anchorElement;
+  }
+  console.log("dispatch on", targetElement, "event", customEvent);
+  targetElement.dispatchEvent(customEvent);
+};
 
 /**
  * Creates a live mirror of a source DOM element that automatically stays in sync.
@@ -27124,6 +27427,64 @@ const MIN_SPECIAL_CHAR_CONSTRAINT = {
 CONSTRAINT_ATTRIBUTE_SET.add("data-special-charset");
 CONSTRAINT_ATTRIBUTE_SET.add("data-min-special-char");
 CONSTRAINT_ATTRIBUTE_SET.add("data-min-special-char-message");
+
+const ONE_OF_CONSTRAINT = {
+  name: "one_of",
+  messageAttribute: "data-one-of-message",
+  check: (field) => {
+    const oneOf = field.getAttribute("data-one-of");
+    if (!oneOf) {
+      return null;
+    }
+    const fieldValue = field.value;
+    if (!fieldValue) {
+      return null;
+    }
+    const listEl = document.querySelector(oneOf);
+    if (!listEl) {
+      console.warn(
+        `One of constraint: could not find element for selector "${oneOf}"`,
+      );
+      return null;
+    }
+    const allowedValues = collectAllowedValues(listEl);
+    if (allowedValues.size === 0) {
+      return null;
+    }
+    if (allowedValues.has(fieldValue)) {
+      return null;
+    }
+    const visibleOptions = listEl.querySelectorAll(
+      "[role='option']:not([hidden])",
+    );
+    const isNoMatch = visibleOptions.length === 0;
+    const message = field.getAttribute("data-one-of-message");
+    const noMatchMessage = field.getAttribute("data-one-of-no-match-message");
+    if (isNoMatch) {
+      return (
+        noMatchMessage || `Aucune suggestion ne correspond à votre saisie.`
+      );
+    }
+    return message || `Veuillez choisir une valeur parmi les suggestions.`;
+  },
+};
+CONSTRAINT_ATTRIBUTE_SET.add("data-one-of");
+CONSTRAINT_ATTRIBUTE_SET.add("data-one-of-message");
+CONSTRAINT_ATTRIBUTE_SET.add("data-one-of-no-match-message");
+
+const collectAllowedValues = (listEl) => {
+  const values = new Set();
+  for (const optionEl of listEl.querySelectorAll("[role='option']")) {
+    const value =
+      optionEl.dataset.value ??
+      optionEl.getAttribute("value") ??
+      optionEl.textContent.trim();
+    if (value) {
+      values.add(value);
+    }
+  }
+  return values;
+};
 
 const READONLY_CONSTRAINT = {
   name: "readonly",
@@ -27877,6 +28238,7 @@ const NAVI_CONSTRAINT_SET = new Set([
   MIN_UPPER_LETTER_CONSTRAINT,
   MIN_LOWER_LETTER_CONSTRAINT,
   SAME_AS_CONSTRAINT,
+  ONE_OF_CONSTRAINT,
   READONLY_CONSTRAINT,
 ]);
 const DEFAULT_CONSTRAINT_SET = new Set([
@@ -28919,647 +29281,6 @@ const useConstraints = (elementRef, props, { targetSelector } = {}) => {
   ]);
 
   return remainingProps;
-};
-
-const useInitialTextSelection = (ref, textSelection) => {
-  const deps = [];
-  if (Array.isArray(textSelection)) {
-    deps.push(...textSelection);
-  } else {
-    deps.push(textSelection);
-  }
-  A(() => {
-    const el = ref.current;
-    if (!el || !textSelection) {
-      return;
-    }
-    const range = document.createRange();
-    const selection = window.getSelection();
-    if (Array.isArray(textSelection)) {
-      if (textSelection.length === 2) {
-        const [start, end] = textSelection;
-        if (typeof start === "number" && typeof end === "number") {
-          // Format: [0, 10] - character indices
-          selectByCharacterIndices(el, range, start, end);
-        } else if (typeof start === "string" && typeof end === "string") {
-          // Format: ["Click on the", "button to return"] - text strings
-          selectByTextStrings(el, range, start, end);
-        }
-      }
-    } else if (typeof textSelection === "string") {
-      // Format: "some text" - select the entire string occurrence
-      selectSingleTextString(el, range, textSelection);
-    }
-    selection.removeAllRanges();
-    selection.addRange(range);
-  }, deps);
-};
-const selectByCharacterIndices = (element, range, startIndex, endIndex) => {
-  const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, null, false);
-  let currentIndex = 0;
-  let startNode = null;
-  let startOffset = 0;
-  let endNode = null;
-  let endOffset = 0;
-  while (walker.nextNode()) {
-    const textContent = walker.currentNode.textContent;
-    const nodeLength = textContent.length;
-
-    // Check if start position is in this text node
-    if (!startNode && currentIndex + nodeLength > startIndex) {
-      startNode = walker.currentNode;
-      startOffset = startIndex - currentIndex;
-    }
-
-    // Check if end position is in this text node
-    if (currentIndex + nodeLength >= endIndex) {
-      endNode = walker.currentNode;
-      endOffset = endIndex - currentIndex;
-      break;
-    }
-    currentIndex += nodeLength;
-  }
-  if (startNode && endNode) {
-    range.setStart(startNode, startOffset);
-    range.setEnd(endNode, endOffset);
-  }
-};
-const selectSingleTextString = (element, range, text) => {
-  const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, null, false);
-  while (walker.nextNode()) {
-    const textContent = walker.currentNode.textContent;
-    const index = textContent.indexOf(text);
-    if (index !== -1) {
-      range.setStart(walker.currentNode, index);
-      range.setEnd(walker.currentNode, index + text.length);
-      return;
-    }
-  }
-};
-const selectByTextStrings = (element, range, startText, endText) => {
-  const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, null, false);
-  let startNode = null;
-  let endNode = null;
-  let foundStart = false;
-  while (walker.nextNode()) {
-    const textContent = walker.currentNode.textContent;
-    if (!foundStart && textContent.includes(startText)) {
-      startNode = walker.currentNode;
-      foundStart = true;
-    }
-    if (foundStart && textContent.includes(endText)) {
-      endNode = walker.currentNode;
-      break;
-    }
-  }
-  if (startNode && endNode) {
-    const startOffset = startNode.textContent.indexOf(startText);
-    const endOffset = endNode.textContent.indexOf(endText) + endText.length;
-    range.setStart(startNode, startOffset);
-    range.setEnd(endNode, endOffset);
-  }
-};
-
-installImportMetaCssBuild(import.meta);/* eslint-disable jsenv/no-unknown-params */
-import.meta.css = [/* css */`
-  *[data-navi-space] {
-    /* user-select: none; */
-    padding-left: 0.25em;
-  }
-
-  .navi_text {
-    position: relative;
-    color: inherit;
-
-    &[data-has-absolute-child] {
-      display: inline-block;
-    }
-
-    /* There is a chrome specific bug that prevents text-transform: capitalize to be applied in nested DOM structure */
-    /* The CSS below ensure capitalize is propagated to the bold clones */
-    &[data-capitalize] {
-      &::first-letter {
-        text-transform: uppercase;
-      }
-      .navi_text_bold_clone::first-letter {
-        text-transform: uppercase;
-      }
-      .navi_text_bold_foreground::first-letter {
-        text-transform: uppercase;
-      }
-    }
-
-    .navi_text_bold_wrapper,
-    .navi_text_bold_clone,
-    .navi_text_bold_foreground {
-      display: inherit;
-      flex-grow: inherit;
-      align-items: inherit;
-      justify-content: inherit;
-      text-align: inherit;
-      border-radius: inherit;
-    }
-
-    &[data-text-overflow] {
-      flex-wrap: wrap;
-      text-overflow: ellipsis;
-      overflow: hidden;
-
-      .navi_text_overflow_wrapper {
-        display: flex;
-        width: 100%;
-        flex-grow: 1;
-        gap: 0.3em;
-
-        .navi_text_overflow_text {
-          max-width: 100%;
-          text-overflow: ellipsis;
-          overflow: hidden;
-        }
-      }
-    }
-  }
-
-  .navi_custom_space {
-  }
-
-  .navi_text_bold_wrapper {
-    position: relative;
-    display: inline-block;
-
-    .navi_text_bold_clone {
-      font-weight: bold;
-      opacity: 0;
-    }
-    .navi_text_bold_foreground {
-      position: absolute;
-      inset: 0;
-    }
-  }
-
-  .navi_text_bold_background {
-    position: absolute;
-    top: 0;
-    left: 0;
-    color: currentColor;
-    font-weight: normal;
-    background: currentColor;
-    background-clip: text;
-    -webkit-background-clip: text;
-    transform-origin: center;
-    -webkit-text-fill-color: transparent;
-    opacity: 0;
-  }
-
-  .navi_text[data-bold] {
-    .navi_text_bold_background {
-      opacity: 1;
-    }
-  }
-
-  .navi_text[data-bold-transition] {
-    .navi_text_bold_foreground {
-      transition-property: font-weight;
-      transition-duration: 0.3s;
-      transition-timing-function: ease;
-    }
-
-    .navi_text_bold_background {
-      transition-property: opacity;
-      transition-duration: 0.3s;
-      transition-timing-function: ease;
-    }
-  }
-`, "@jsenv/navi/src/text/text.jsx"];
-
-// We could use <span data-navi-space=""> </span>
-// but we prefer to use zero width space as it has the nice side effects of
-// not being underlined by the browser (very cool because we typically don't want spaces to be underlined in links)
-const REGULAR_SPACE = u$1("span", {
-  "data-navi-space": "",
-  children: "\u200B"
-});
-const CustomWidthSpace = ({
-  value
-}) => {
-  return u$1("span", {
-    className: "navi_custom_space",
-    style: `padding-left: ${value}`,
-    children: "\u200B"
-  });
-};
-const applySpacingOnTextChildren = (children, spacing = REGULAR_SPACE) => {
-  if (spacing === "pre" || spacing === "0" || spacing === 0) {
-    return children;
-  }
-  if (!children) {
-    return children;
-  }
-  const childArray = H(children);
-  const childCount = childArray.length;
-  if (childCount <= 1) {
-    return children;
-  }
-  let separator;
-  if (spacing === undefined) {
-    spacing = REGULAR_SPACE;
-  } else if (typeof spacing === "string") {
-    if (isSizeSpacingScaleKey(spacing)) {
-      separator = u$1(CustomWidthSpace, {
-        value: resolveSpacingSize(spacing)
-      });
-    } else if (hasCSSSizeUnit(spacing)) {
-      separator = u$1(CustomWidthSpace, {
-        value: resolveSpacingSize(spacing)
-      });
-    } else {
-      separator = spacing;
-    }
-  } else if (typeof spacing === "number") {
-    separator = u$1(CustomWidthSpace, {
-      value: `${spacing}px`
-    });
-  } else {
-    separator = spacing;
-  }
-  const childrenWithGap = [];
-  let i = 0;
-  while (true) {
-    const child = childArray[i];
-    childrenWithGap.push(child);
-    i++;
-    if (i === childCount) {
-      break;
-    }
-    const currentChild = childArray[i - 1];
-    const nextChild = childArray[i];
-    if (!shouldInjectSpacingAfter(currentChild)) {
-      continue;
-    }
-    if (!shouldInjectSpacingBefore(nextChild)) {
-      continue;
-    }
-    childrenWithGap.push(separator);
-  }
-  return childrenWithGap;
-};
-const outsideTextFlowSet = new Set();
-const markAsOutsideTextFlow = jsxElement => {
-  outsideTextFlowSet.add(jsxElement);
-};
-const isMarkedAsOutsideTextFlow = jsxElement => {
-  return outsideTextFlowSet.has(jsxElement.type);
-};
-const shouldInjectSpacingAfter = jsxChild => {
-  if (typeof jsxChild === "string") {
-    if (/\s$/.test(jsxChild)) {
-      return false;
-    }
-  }
-  if (isMarkedAsOutsideTextFlow(jsxChild)) {
-    // we can mark jsx element as "outsideFlow" to avoid spacing injection between it and surrounding text
-    return false;
-  }
-  return true;
-};
-const shouldInjectSpacingBefore = jsxChild => {
-  if (typeof jsxChild === "string") {
-    if (/^\s/.test(jsxChild)) {
-      return false;
-    }
-  }
-  if (isMarkedAsOutsideTextFlow(jsxChild)) {
-    // we can mark jsx element as "outsideFlow" to avoid spacing injection between it and surrounding text
-    return false;
-  }
-  if (jsxChild && jsxChild.props && jsxChild.props.overflowPinned) {
-    return false;
-  }
-  return true;
-};
-const OverflowPinnedElementContext = K(null);
-const Text = props => {
-  const {
-    overflowEllipsis,
-    ...rest
-  } = props;
-  if (overflowEllipsis) {
-    return u$1(TextOverflow, {
-      ...rest
-    });
-  }
-  if (props.overflowPinned) {
-    return u$1(TextOverflowPinned, {
-      ...props
-    });
-  }
-  if (props.selectRange) {
-    return u$1(TextWithSelectRange, {
-      ...props
-    });
-  }
-  return u$1(TextBasic, {
-    ...props
-  });
-};
-const TextOverflow = ({
-  noWrap,
-  spacing,
-  children,
-  ...rest
-}) => {
-  const [OverflowPinnedElement, setOverflowPinnedElement] = h(null);
-  return u$1(Text, {
-    flex: true,
-    block: true,
-    as: "div",
-    nowWrap: noWrap,
-    pre: !noWrap
-    // For paragraph we prefer to keep lines and only hide unbreakable long sections
-    ,
-
-    preLine: rest.as === "p",
-    ...rest,
-    "data-text-overflow": true,
-    spacing: "pre",
-    children: u$1("span", {
-      className: "navi_text_overflow_wrapper",
-      children: [u$1(OverflowPinnedElementContext.Provider, {
-        value: setOverflowPinnedElement,
-        children: u$1(Text, {
-          className: "navi_text_overflow_text",
-          spacing: spacing,
-          children: children
-        })
-      }), OverflowPinnedElement]
-    })
-  });
-};
-const TextOverflowPinned = ({
-  overflowPinned,
-  ...props
-}) => {
-  const setOverflowPinnedElement = j$1(OverflowPinnedElementContext);
-  const text = u$1(Text, {
-    ...props,
-    "data-overflow-pinned": ""
-  });
-  if (!setOverflowPinnedElement) {
-    console.warn("<Text overflowPinned> declared outside a <Text overflowEllipsis>");
-    return text;
-  }
-  if (overflowPinned) {
-    setOverflowPinnedElement(text);
-    return null;
-  }
-  setOverflowPinnedElement(null);
-  return text;
-};
-const TextWithSelectRange = ({
-  selectRange,
-  ...props
-}) => {
-  const defaultRef = F();
-  const ref = props.ref || defaultRef;
-  useInitialTextSelection(ref, selectRange);
-  return u$1(Text, {
-    ref: ref,
-    ...props
-  });
-};
-const TextBasic = ({
-  spacing = REGULAR_SPACE,
-  boldTransition,
-  boldStable,
-  preventBoldLayoutShift = boldTransition,
-  capitalize,
-  children,
-  childrenOutsideFlow,
-  ...rest
-}) => {
-  const boxProps = {
-    "as": "span",
-    "data-bold-transition": boldTransition ? "" : undefined,
-    "data-capitalize": capitalize ? "" : undefined,
-    ...rest,
-    "baseClassName": withPropsClassName("navi_text", rest.baseClassName)
-  };
-  const shouldPreserveSpacing = rest.as === "pre" || rest.flex || rest.grid;
-  if (shouldPreserveSpacing) {
-    boxProps.spacing = spacing;
-  } else {
-    children = applySpacingOnTextChildren(children, spacing);
-  }
-  if (boldStable) {
-    const {
-      bold
-    } = boxProps;
-    return u$1(Box, {
-      ...boxProps,
-      bold: undefined,
-      "data-bold": bold ? "" : undefined,
-      "data-has-absolute-child": "",
-      children: [u$1("span", {
-        className: "navi_text_bold_background",
-        "aria-hidden": "true",
-        children: children
-      }), children, childrenOutsideFlow]
-    });
-  }
-  if (preventBoldLayoutShift) {
-    const alignX = rest.alignX || rest.align || "start";
-
-    // La technique consiste a avoid un double gras qui force une taille
-    // et la version light par dessus en position absolute
-    // on la centre aussi pour donner l'impression que le gras s'applique depuis le centre
-    // ne fonctionne que sur une seul ligne de texte (donc lorsque noWrap est actif)
-    // on pourrait auto-active cela sur une prop genre boldCanChange
-    return u$1(Box, {
-      ...boxProps,
-      children: [u$1("span", {
-        className: "navi_text_bold_wrapper",
-        children: [u$1("span", {
-          className: "navi_text_bold_clone",
-          "aria-hidden": "true",
-          children: children
-        }), u$1("span", {
-          className: "navi_text_bold_foreground",
-          "data-align": alignX,
-          children: children
-        })]
-      }), childrenOutsideFlow]
-    });
-  }
-  return u$1(Box, {
-    ...boxProps,
-    children: [children, childrenOutsideFlow]
-  });
-};
-
-installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
-  @layer navi {
-    /* Ensure data attributes from box.jsx can win to update display */
-    .navi_icon {
-      display: inline-block;
-      box-sizing: border-box;
-      max-width: 100%;
-      max-height: 100%;
-    }
-  }
-
-  .navi_icon {
-    &[data-flow-inline] {
-      width: 1em;
-      height: 1em;
-    }
-    &[data-icon-char] {
-      flex-grow: 0 !important;
-
-      svg,
-      img {
-        width: 100%;
-        height: 100%;
-      }
-      svg {
-        overflow: visible;
-      }
-    }
-    &[data-interactive] {
-      cursor: pointer;
-    }
-  }
-
-  .navi_icon_char_slot {
-    opacity: 0;
-    cursor: default;
-    user-select: none;
-  }
-  .navi_icon_foreground {
-    position: absolute;
-    inset: 0;
-    display: inline-flex;
-
-    & > .navi_text {
-      display: flex;
-      aspect-ratio: 1 / 1;
-      min-width: 0;
-      height: 100%;
-      max-height: 1em;
-      align-items: center;
-      justify-content: center;
-    }
-  }
-
-  .navi_icon > svg,
-  .navi_icon > img {
-    width: 100%;
-    height: 100%;
-    backface-visibility: hidden;
-  }
-  .navi_icon[data-width-fixed] > svg,
-  .navi_icon[data-width-fixed] > img {
-    width: 100%;
-    height: auto;
-  }
-  .navi_icon[data-height-fixed] > svg,
-  .navi_icon[data-height-fixed] > img {
-    width: auto;
-    height: 100%;
-  }
-  .navi_icon[data-width-fixed][data-height-fixed] > svg,
-  .navi_icon[data-width-fixed][data-height-fixed] > img {
-    width: 100%;
-    height: 100%;
-  }
-`, "@jsenv/navi/src/graphic/icon.jsx"];
-const Icon = ({
-  href,
-  children,
-  charWidth = 1,
-  // 0 (zéro) is the real char width
-  // but 2 zéros gives too big icons
-  // while 1 "W" gives a nice result
-  baseChar = "W",
-  decorative,
-  onClick,
-  ...props
-}) => {
-  const innerChildren = href ? u$1("svg", {
-    width: "100%",
-    height: "100%",
-    children: u$1("use", {
-      href: href
-    })
-  }) : children;
-  let {
-    flex,
-    grid,
-    width,
-    height
-  } = props;
-  if (width === "auto") {
-    width = undefined;
-  }
-  if (height === "auto") {
-    height = undefined;
-  }
-  const hasExplicitWidth = width !== undefined;
-  const hasExplicitHeight = height !== undefined;
-  const widthFixed = hasExplicitWidth || hasExplicitHeight && (props.square || props.circle || props.aspectRatio);
-  const heightFixed = hasExplicitHeight || hasExplicitWidth && (props.square || props.circle || props.aspectRatio);
-  if (widthFixed || heightFixed) {
-    if (flex === undefined) {
-      flex = "x";
-    }
-  } else if (decorative === undefined && !onClick) {
-    decorative = true;
-  }
-  const ariaProps = decorative ? {
-    "aria-hidden": "true"
-  } : {};
-  if (typeof children === "string") {
-    return u$1(Text, {
-      ...props,
-      ...ariaProps,
-      "data-icon-text": "",
-      children: children
-    });
-  }
-  if (flex || grid) {
-    return u$1(Box, {
-      square: true,
-      ...props,
-      ...ariaProps,
-      flex: flex,
-      baseClassName: "navi_icon",
-      "data-width-fixed": widthFixed ? "" : undefined,
-      "data-height-fixed": heightFixed ? "" : undefined,
-      "data-interactive": onClick ? "" : undefined,
-      onClick: onClick,
-      children: innerChildren
-    });
-  }
-  const invisibleText = baseChar.repeat(charWidth);
-  return u$1(Text, {
-    ...props,
-    ...ariaProps,
-    className: withPropsClassName("navi_icon", props.className),
-    spacing: "pre",
-    "data-icon-char": "",
-    "data-width-fixed": widthFixed ? "" : undefined,
-    "data-height-fixed": heightFixed ? "" : undefined,
-    "data-interactive": onClick ? "" : undefined,
-    onClick: onClick,
-    children: [u$1("span", {
-      className: "navi_icon_char_slot",
-      "aria-hidden": "true",
-      children: invisibleText
-    }), u$1(Text, {
-      className: "navi_icon_foreground",
-      spacing: "pre",
-      children: innerChildren
-    })]
-  });
 };
 
 const EmailSvg = () => {
@@ -30836,6 +30557,999 @@ const isSameKey = (browserEventKey, key) => {
   return false;
 };
 
+const useInitialTextSelection = (ref, textSelection) => {
+  const deps = [];
+  if (Array.isArray(textSelection)) {
+    deps.push(...textSelection);
+  } else {
+    deps.push(textSelection);
+  }
+  A(() => {
+    const el = ref.current;
+    if (!el || !textSelection) {
+      return;
+    }
+    const range = document.createRange();
+    const selection = window.getSelection();
+    if (Array.isArray(textSelection)) {
+      if (textSelection.length === 2) {
+        const [start, end] = textSelection;
+        if (typeof start === "number" && typeof end === "number") {
+          // Format: [0, 10] - character indices
+          selectByCharacterIndices(el, range, start, end);
+        } else if (typeof start === "string" && typeof end === "string") {
+          // Format: ["Click on the", "button to return"] - text strings
+          selectByTextStrings(el, range, start, end);
+        }
+      }
+    } else if (typeof textSelection === "string") {
+      // Format: "some text" - select the entire string occurrence
+      selectSingleTextString(el, range, textSelection);
+    }
+    selection.removeAllRanges();
+    selection.addRange(range);
+  }, deps);
+};
+const selectByCharacterIndices = (element, range, startIndex, endIndex) => {
+  const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, null, false);
+  let currentIndex = 0;
+  let startNode = null;
+  let startOffset = 0;
+  let endNode = null;
+  let endOffset = 0;
+  while (walker.nextNode()) {
+    const textContent = walker.currentNode.textContent;
+    const nodeLength = textContent.length;
+
+    // Check if start position is in this text node
+    if (!startNode && currentIndex + nodeLength > startIndex) {
+      startNode = walker.currentNode;
+      startOffset = startIndex - currentIndex;
+    }
+
+    // Check if end position is in this text node
+    if (currentIndex + nodeLength >= endIndex) {
+      endNode = walker.currentNode;
+      endOffset = endIndex - currentIndex;
+      break;
+    }
+    currentIndex += nodeLength;
+  }
+  if (startNode && endNode) {
+    range.setStart(startNode, startOffset);
+    range.setEnd(endNode, endOffset);
+  }
+};
+const selectSingleTextString = (element, range, text) => {
+  const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, null, false);
+  while (walker.nextNode()) {
+    const textContent = walker.currentNode.textContent;
+    const index = textContent.indexOf(text);
+    if (index !== -1) {
+      range.setStart(walker.currentNode, index);
+      range.setEnd(walker.currentNode, index + text.length);
+      return;
+    }
+  }
+};
+const selectByTextStrings = (element, range, startText, endText) => {
+  const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, null, false);
+  let startNode = null;
+  let endNode = null;
+  let foundStart = false;
+  while (walker.nextNode()) {
+    const textContent = walker.currentNode.textContent;
+    if (!foundStart && textContent.includes(startText)) {
+      startNode = walker.currentNode;
+      foundStart = true;
+    }
+    if (foundStart && textContent.includes(endText)) {
+      endNode = walker.currentNode;
+      break;
+    }
+  }
+  if (startNode && endNode) {
+    const startOffset = startNode.textContent.indexOf(startText);
+    const endOffset = endNode.textContent.indexOf(endText) + endText.length;
+    range.setStart(startNode, startOffset);
+    range.setEnd(endNode, endOffset);
+  }
+};
+
+installImportMetaCssBuild(import.meta);/* eslint-disable jsenv/no-unknown-params */
+const css$m = /* css */`
+  @layer navi {
+    .navi_text {
+      &[data-skeleton] {
+        border-radius: 0.2em;
+      }
+    }
+  }
+
+  *[data-navi-space] {
+  }
+
+  .navi_text {
+    position: relative;
+
+    /* There is a chrome specific bug that prevents text-transform: capitalize to be applied in nested DOM structure */
+    /* The CSS below ensure capitalize is propagated to the bold clones */
+    &[data-capitalize] {
+      &::first-letter {
+        text-transform: uppercase;
+      }
+      .navi_text_bold_clone::first-letter {
+        text-transform: uppercase;
+      }
+      .navi_text_bold_foreground::first-letter {
+        text-transform: uppercase;
+      }
+    }
+
+    .navi_text_bold_wrapper,
+    .navi_text_bold_clone,
+    .navi_text_bold_foreground {
+      display: inherit;
+      width: inherit;
+      min-width: inherit;
+      height: inherit;
+      min-height: inherit;
+      flex-grow: inherit;
+      align-items: inherit;
+      align-self: inherit;
+      justify-content: inherit;
+      gap: inherit;
+      text-align: inherit;
+      border-radius: inherit;
+    }
+
+    &[data-text-overflow] {
+      min-width: 0;
+      flex-wrap: wrap;
+      text-overflow: ellipsis;
+      overflow: hidden;
+
+      .navi_text_overflow_wrapper {
+        display: flex;
+        width: 100%;
+        flex-grow: 1;
+        gap: 0.3em;
+
+        .navi_text_overflow_text {
+          max-width: 100%;
+          text-overflow: ellipsis;
+          overflow: hidden;
+        }
+      }
+    }
+
+    &[data-skeleton] {
+      /* Children stay in the DOM to preserve natural layout dimensions,
+         but are hidden so only the skeleton is visible. */
+      visibility: hidden;
+
+      /* When there are no children a placeholder "W" is injected (see JSX).
+         It must stretch to the full available width so the skeleton
+         fills the container rather than collapsing to a single character. */
+      .navi_text_skeleton_children_placeholder {
+        display: inline-flex;
+        width: 100%;
+      }
+
+      /* Three-level structure to respect padding AND border-radius:
+
+         1. navi_text_skeleton_container — absolutely fills the border box
+            (inset:0), then applies padding:inherit so its content box equals
+            the parent's content box. line-height:normal prevents the container
+            from inheriting a large line-height that would make it taller than
+            the border box. border-radius:inherit passes the radius down.
+            visibility:visible overrides the parent's visibility:hidden.
+
+         2. navi_text_skeleton_inset — a relative block that fills 100% of the
+            container's content box (= parent's content box). It is the
+            positioned ancestor for the absolutely placed skeleton bar.
+            border-radius:inherit chains the radius further down.
+
+         3. navi_text_skeleton — the visible gradient bar. position:absolute
+            inset:0 fills the inset box precisely. border-radius:inherit
+            finally applies the radius at this level, which is now correctly
+            sized to the content area. */
+      .navi_text_skeleton_container {
+        position: absolute;
+        inset: 0;
+        padding: inherit;
+        line-height: normal;
+        border-radius: inherit;
+        visibility: visible;
+      }
+
+      .navi_text_skeleton_inset {
+        position: relative;
+        display: inline-flex;
+        width: 100%;
+        height: 100%;
+        border-radius: inherit;
+      }
+
+      .navi_text_skeleton {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+          90deg,
+          #e0e0e0 25%,
+          #f0f0f0 50%,
+          #e0e0e0 75%
+        );
+        background-size: 200% 100%;
+        border-radius: inherit;
+      }
+
+      &[data-loading] {
+        .navi_text_skeleton {
+          animation: navi_text_skeleton_shimmer 1.5s infinite;
+        }
+      }
+    }
+  }
+
+  @keyframes navi_text_skeleton_shimmer {
+    0% {
+      background-position: 200% 0;
+    }
+    100% {
+      background-position: -200% 0;
+    }
+  }
+
+  .navi_text_bold_wrapper {
+    position: relative;
+    display: inline-block;
+
+    .navi_text_bold_clone {
+      font-weight: bold;
+      opacity: 0;
+    }
+    .navi_text_bold_foreground {
+      position: absolute;
+      inset: 0;
+    }
+  }
+
+  .navi_text_bold_background {
+    position: absolute;
+    top: 0;
+    left: 0;
+    color: currentColor;
+    font-weight: normal;
+    background: currentColor;
+    background-clip: text;
+    -webkit-background-clip: text;
+    transform-origin: center;
+    -webkit-text-fill-color: transparent;
+    opacity: 0;
+  }
+
+  .navi_text[data-bold] {
+    .navi_text_bold_background {
+      opacity: 1;
+    }
+  }
+
+  .navi_text[data-bold-transition] {
+    .navi_text_bold_foreground {
+      transition-property: font-weight;
+      transition-duration: 0.3s;
+      transition-timing-function: ease;
+    }
+
+    .navi_text_bold_background {
+      transition-property: opacity;
+      transition-duration: 0.3s;
+      transition-timing-function: ease;
+    }
+  }
+`;
+const REGULAR_SPACE = u$1("span", {
+  "data-navi-space": "",
+  children: " "
+});
+// A space that uses padding-left instead of a real space character.
+// This avoids the underline that browsers draw under spaces inside links.
+const FAKE_SPACE = u$1("span", {
+  "data-navi-space": "",
+  style: "padding-left: 0.25em",
+  children: "\u200B"
+});
+const CustomWidthSpace = ({
+  value,
+  useRealSpaceChar
+}) => {
+  if (useRealSpaceChar) {
+    return u$1("span", {
+      children: [u$1("span", {
+        style: "font-size: 0",
+        children: " "
+      }), u$1("span", {
+        style: `padding-left: ${value}`,
+        children: "\u200B"
+      })]
+    });
+  }
+  return u$1("span", {
+    style: `padding-left: ${value}`,
+    children: "\u200B"
+  });
+};
+const applySpacingOnTextChildren = (children, spacing, defaultSpace) => {
+  if (spacing === "pre" || spacing === "0" || spacing === 0) {
+    return children;
+  }
+  if (!children) {
+    return children;
+  }
+  const childArray = H(children);
+  const childCount = childArray.length;
+  if (childCount <= 1) {
+    return children;
+  }
+  const useRealSpaceChar = defaultSpace !== FAKE_SPACE;
+  let separator;
+  if (spacing === REGULAR_SPACE || spacing === FAKE_SPACE) {
+    separator = defaultSpace;
+  } else if (typeof spacing === "string") {
+    if (isSizeSpacingScaleKey(spacing) || hasCSSSizeUnit(spacing) || spacing.startsWith("var(")) {
+      separator = u$1(CustomWidthSpace, {
+        value: spacing,
+        useRealSpaceChar: useRealSpaceChar
+      });
+    } else {
+      separator = spacing;
+    }
+  } else if (typeof spacing === "number") {
+    separator = u$1(CustomWidthSpace, {
+      value: `${spacing}px`,
+      useRealSpaceChar: useRealSpaceChar
+    });
+  } else {
+    separator = spacing;
+  }
+  const childrenWithGap = [];
+  let i = 0;
+  while (true) {
+    const child = childArray[i];
+    childrenWithGap.push(child);
+    i++;
+    if (i === childCount) {
+      break;
+    }
+    const currentChild = childArray[i - 1];
+    const nextChild = childArray[i];
+    if (!shouldInjectSpacingBetween(currentChild, nextChild)) {
+      continue;
+    }
+    childrenWithGap.push(separator);
+  }
+  return childrenWithGap;
+};
+const outsideTextFlowSet = new Set();
+const markAsOutsideTextFlow = jsxElement => {
+  outsideTextFlowSet.add(jsxElement);
+};
+const isMarkedAsOutsideTextFlow = jsxElement => {
+  return outsideTextFlowSet.has(jsxElement.type);
+};
+const isPreactNode = jsxChild => {
+  return jsxChild !== null && typeof jsxChild === "object" && jsxChild.type !== undefined;
+};
+const shouldInjectSpacingBetween = (left, right) => {
+  const leftIsNode = isPreactNode(left);
+  const rightIsNode = isPreactNode(right);
+  // only inject spacing when at least one side is a preact node
+  if (!leftIsNode && !rightIsNode) {
+    return false;
+  }
+  if (leftIsNode && isMarkedAsOutsideTextFlow(left)) {
+    return false;
+  }
+  if (rightIsNode && isMarkedAsOutsideTextFlow(right)) {
+    return false;
+  }
+  if (rightIsNode && right.props && right.props.overflowPinned) {
+    return false;
+  }
+  if (typeof left === "string" && /\s$/.test(left)) {
+    return false;
+  }
+  if (typeof right === "string" && /^\s/.test(right)) {
+    return false;
+  }
+  return true;
+};
+const OverflowPinnedElementContext = K(null);
+const Text = props => {
+  import.meta.css = [css$m, "@jsenv/navi/src/text/text.jsx"];
+  if (props.loading || props.skeleton) {
+    return u$1(TextSkeleton, {
+      ...props
+    });
+  }
+  if (props.overflowEllipsis) {
+    return u$1(TextOverflow, {
+      ...props
+    });
+  }
+  if (props.overflowPinned) {
+    return u$1(TextOverflowPinned, {
+      ...props
+    });
+  }
+  if (props.selectRange) {
+    return u$1(TextWithSelectRange, {
+      ...props
+    });
+  }
+  return u$1(TextBasic, {
+    ...props
+  });
+};
+const TextSkeleton = ({
+  loading,
+  children,
+  ...props
+}) => {
+  // Three-level structure — see CSS comment on [data-skeleton] for details.
+  const skeletonOverlay = u$1("span", {
+    className: "navi_text_skeleton_container",
+    "aria-hidden": "true",
+    children: u$1("span", {
+      className: "navi_text_skeleton_inset",
+      children: u$1("span", {
+        className: "navi_text_skeleton"
+      })
+    })
+  });
+  // When there are no children, inject a full-width placeholder so the element
+  // has measurable height driven by the current font-size/line-height, and the
+  // skeleton fills the available width instead of shrinking to a single char.
+  const hasChildren = children !== null && children !== undefined && children !== false;
+  const innerChildren = hasChildren ? children : u$1("span", {
+    className: "navi_text_skeleton_children_placeholder",
+    "aria-hidden": "true",
+    children: "W"
+  });
+  return u$1(Text, {
+    "data-skeleton": "",
+    "data-loading": loading ? "" : undefined,
+    ...props,
+    skeleton: undefined,
+    childrenOutsideFlow: skeletonOverlay,
+    children: innerChildren
+  });
+};
+const TextOverflow = ({
+  noWrap,
+  spacing,
+  children,
+  ...rest
+}) => {
+  const [OverflowPinnedElement, setOverflowPinnedElement] = h(null);
+  return u$1(Text, {
+    flex: true,
+    block: true,
+    as: "div",
+    nowWrap: noWrap,
+    pre: !noWrap
+    // For paragraph we prefer to keep lines and only hide unbreakable long sections
+    ,
+
+    preLine: rest.as === "p",
+    ...rest,
+    overflowEllipsis: undefined,
+    "data-text-overflow": "",
+    spacing: "pre",
+    children: u$1("span", {
+      className: "navi_text_overflow_wrapper",
+      children: [u$1(OverflowPinnedElementContext.Provider, {
+        value: setOverflowPinnedElement,
+        children: u$1(Text, {
+          className: "navi_text_overflow_text",
+          spacing: spacing,
+          children: children
+        })
+      }), OverflowPinnedElement]
+    })
+  });
+};
+const TextOverflowPinned = ({
+  overflowPinned,
+  ...props
+}) => {
+  const setOverflowPinnedElement = j$1(OverflowPinnedElementContext);
+  const text = u$1(Text, {
+    ...props,
+    "data-overflow-pinned": ""
+  });
+  if (!setOverflowPinnedElement) {
+    console.warn("<Text overflowPinned> declared outside a <Text overflowEllipsis>");
+    return text;
+  }
+  if (overflowPinned) {
+    setOverflowPinnedElement(text);
+    return null;
+  }
+  setOverflowPinnedElement(null);
+  return text;
+};
+const TextWithSelectRange = ({
+  selectRange,
+  ...props
+}) => {
+  const defaultRef = F();
+  const ref = props.ref || defaultRef;
+  useInitialTextSelection(ref, selectRange);
+  return u$1(Text, {
+    ref: ref,
+    ...props
+  });
+};
+const TextBasic = ({
+  spacing,
+  preventSpaceUnderlines = false,
+  boldTransition,
+  boldStable,
+  preventBoldLayoutShift = boldTransition,
+  capitalize,
+  children,
+  childrenOutsideFlow,
+  ...rest
+}) => {
+  const defaultSpace = preventSpaceUnderlines ? FAKE_SPACE : REGULAR_SPACE;
+  const resolvedSpacing = spacing ?? defaultSpace;
+  const boxProps = {
+    "as": "span",
+    "data-bold-transition": boldTransition ? "" : undefined,
+    "data-capitalize": capitalize ? "" : undefined,
+    ...rest,
+    "baseClassName": withPropsClassName("navi_text", rest.baseClassName)
+  };
+  const shouldPreserveSpacing = rest.as === "pre" || rest.flex || rest.grid;
+  if (shouldPreserveSpacing) {
+    boxProps.spacing = resolvedSpacing;
+  } else {
+    children = applySpacingOnTextChildren(children, resolvedSpacing, defaultSpace);
+  }
+  if (boldStable) {
+    const {
+      bold
+    } = boxProps;
+    return u$1(Box, {
+      ...boxProps,
+      bold: undefined,
+      "data-bold": bold ? "" : undefined,
+      children: [u$1("span", {
+        className: "navi_text_bold_background",
+        "aria-hidden": "true",
+        children: children
+      }), children, childrenOutsideFlow]
+    });
+  }
+  if (preventBoldLayoutShift) {
+    const alignX = rest.alignX || rest.align || "start";
+
+    // La technique consiste a avoid un double gras qui force une taille
+    // et la version light par dessus en position absolute
+    // on la centre aussi pour donner l'impression que le gras s'applique depuis le centre
+    // ne fonctionne que sur une seule ligne de texte (donc lorsque noWrap est actif)
+    // on pourrait auto-active cela sur une prop genre boldCanChange
+    return u$1(Box, {
+      ...boxProps,
+      children: [u$1("span", {
+        className: "navi_text_bold_wrapper",
+        children: [u$1("span", {
+          className: "navi_text_bold_clone",
+          "aria-hidden": "true",
+          children: children
+        }), u$1("span", {
+          className: "navi_text_bold_foreground",
+          "data-align": alignX,
+          children: children
+        })]
+      }), childrenOutsideFlow]
+    });
+  }
+  return u$1(Box, {
+    ...boxProps,
+    children: [children, childrenOutsideFlow]
+  });
+};
+
+installImportMetaCssBuild(import.meta);const css$l = /* css */`
+  .navi_text_anchor {
+    vertical-align: baseline;
+    user-select: none;
+    overflow: hidden;
+  }
+`;
+
+/**
+ * Positions children vertically relative to the surrounding text, correcting for font-size differences.
+ *
+ * Place this component around any inline element whose font-size differs from the surrounding text.
+ * It renders an invisible anchor that inherits the surrounding text's font metrics, then shifts
+ * the child so that its visual position matches the requested `textAnchor` value — regardless of
+ * font-size, display type (inline, inline-block, inline-flex…), or the active `vertical-align`.
+ *
+ * @param {"line-top"|"char-top"|"center"|"char-bottom"|"line-bottom"} [textAnchor="char-bottom"]
+ *   - `"line-top"`    — child top aligns with the top of the surrounding line box
+ *   - `"char-top"`    — child top aligns with the top of visible characters (ink ascent)
+ *   - `"center"`      — child is vertically centered on the surrounding line box
+ *   - `"char-bottom"` — child bottom aligns to the text baseline (no correction, browser default)
+ *   - `"line-bottom"` — child bottom aligns with the bottom of the surrounding line box
+ * @param {{ size?: number, verticalAlign?: string }} [lineLayout]
+ *   Describes the surrounding line context. Used as layout-effect dependencies so the correction
+ *   reruns when the surrounding text's font-size or vertical-align changes.
+ * @param {import("file:///Users/dmail/Documents/dev/jsenv/core/node_modules/preact/dist/preact.mjs").RefObject} childRef — ref on the child element to reposition
+ */
+const TextAnchor = ({
+  childRef,
+  children,
+  textAnchor = "char-bottom",
+  textKey,
+  textSize,
+  lineLayout
+}) => {
+  import.meta.css = [css$l, "@jsenv/navi/src/text/text_anchor.jsx"];
+  const anchorRef = F();
+  A(() => {
+    const anchorEl = anchorRef.current;
+    const childEl = childRef.current;
+    if (!anchorEl || !childEl) {
+      return;
+    }
+    const topOffset = computeTopOffset({
+      anchorEl,
+      childEl,
+      textAnchor
+    });
+    if (topOffset) {
+      // position:relative + top shifts the element visually.
+      // marginTop: -topOffset makes the layout box follow the visual position, so any container
+      // (button, link, box…) computes its own padding/border/height based on the real final position
+      // rather than the original unshifted one. This means a badge inside a button will symmetrically
+      // expand the button height instead of overflowing or being clipped.
+      // marginBottom: topOffset compensates the marginTop so the line height stays unchanged —
+      // the shift is purely a repositioning, not an inflation of the line.
+      childEl.style.position = "relative";
+      childEl.style.top = `${topOffset}px`;
+      childEl.style.marginTop = `${-topOffset}px`;
+      childEl.style.marginBottom = `${topOffset}px`;
+    } else {
+      childEl.style.position = "";
+      childEl.style.top = "";
+      childEl.style.marginTop = "";
+      childEl.style.marginBottom = "";
+    }
+  }, [textAnchor, textKey, textSize, lineLayout?.size, lineLayout?.verticalAlign]);
+  return u$1(k, {
+    children: [children, u$1("span", {
+      ref: anchorRef,
+      className: "navi_text_anchor",
+      children: "\u200B"
+    })]
+  });
+};
+const computeTopOffset = ({
+  anchorEl,
+  childEl,
+  textAnchor
+}) => {
+  if (textAnchor === "char-bottom") {
+    // Align child's bottom with the char's bottom = the baseline.
+    // The CSS spec says an inline-block with no text content has its baseline at its bottom margin edge.
+    // So the browser's default placement already puts the child's bottom at the line's baseline.
+    // No correction needed.
+    return 0;
+  }
+  // Only correct when the anchor lives in an inline formatting context.
+  // If the parent is a flex/grid container, inline layout rules don't apply
+  // and our font-metrics model is invalid.
+  const parentDisplay = getComputedStyle(anchorEl.parentElement).display;
+  if (parentDisplay !== "inline" && parentDisplay !== "inline-block" && parentDisplay !== "block") {
+    return 0;
+  }
+
+  // The anchor's rendered rect corresponds to the surrounding text's line box:
+  // top and bottom are the visual bounds of the line (including line-height).
+  const anchorRect = anchorEl.getBoundingClientRect();
+
+  // Measure the child's current rect, then subtract any previously applied top correction
+  // to recover its natural position — avoiding a style reset + reflow.
+  const childRect = childEl.getBoundingClientRect();
+  const childH = childRect.height;
+  const previousTop = parseFloat(childEl.style.top) || 0;
+  const childNaturalTop = childRect.top - previousTop;
+
+  // Compute desired child top Y based on textAnchor intention.
+  let desiredChildTopY = 0;
+  if (textAnchor === "line-top") {
+    desiredChildTopY = anchorRect.top;
+  } else if (textAnchor === "char-top") {
+    const anchorStyle = getComputedStyle(anchorEl);
+    const ctx = charTopCanvas.getContext("2d");
+    ctx.font = `${anchorStyle.fontWeight} ${anchorStyle.fontSize} ${anchorStyle.fontFamily}`;
+    const m = ctx.measureText("M");
+    const baselineY = anchorRect.bottom - m.fontBoundingBoxDescent;
+    desiredChildTopY = baselineY - m.actualBoundingBoxAscent;
+  } else if (textAnchor === "center") {
+    const anchorCenterY = (anchorRect.top + anchorRect.bottom) / 2;
+    desiredChildTopY = anchorCenterY - childH / 2;
+  } else if (textAnchor === "char-bottom") {
+    // Already handled above (early return 0), but guard here for completeness.
+    return 0;
+  } else if (textAnchor === "line-bottom") {
+    desiredChildTopY = anchorRect.bottom - childH;
+  }
+  return desiredChildTopY - childNaturalTop;
+};
+const charTopCanvas = document.createElement("canvas");
+
+installImportMetaCssBuild(import.meta);const css$k = /* css */`
+  @layer navi {
+    /* Ensure data attributes from box.jsx can win to update display */
+    .navi_icon {
+      display: inline-flex;
+      box-sizing: border-box;
+      max-width: 100%;
+      max-height: 100%;
+    }
+  }
+
+  .navi_icon {
+    white-space: nowrap;
+    vertical-align: inherit;
+
+    &[data-icon-char] {
+      aspect-ratio: 1/1;
+      min-width: 0;
+      height: 1em;
+      max-height: 1em;
+      flex-grow: 0 !important;
+      align-items: center;
+      justify-content: center;
+
+      svg,
+      img {
+        width: 100%;
+        height: 100%;
+      }
+      svg {
+        overflow: visible;
+      }
+    }
+    &[data-flow-inline] {
+      width: 1em;
+      height: 1em;
+    }
+    &[data-interactive] {
+      cursor: pointer;
+    }
+  }
+
+  .navi_icon > svg,
+  .navi_icon > img {
+    width: 100%;
+    height: 100%;
+    backface-visibility: hidden;
+  }
+  .navi_icon[data-width-fixed] > svg,
+  .navi_icon[data-width-fixed] > img {
+    width: 100%;
+    height: auto;
+  }
+  .navi_icon[data-height-fixed] > svg,
+  .navi_icon[data-height-fixed] > img {
+    width: auto;
+    height: 100%;
+  }
+  .navi_icon[data-width-fixed][data-height-fixed] > svg,
+  .navi_icon[data-width-fixed][data-height-fixed] > img {
+    width: 100%;
+    height: 100%;
+  }
+`;
+const Icon = ({
+  href,
+  children,
+  decorative,
+  onClick,
+  textAnchor = "center",
+  lineLayout,
+  ...props
+}) => {
+  import.meta.css = [css$k, "@jsenv/navi/src/text/icon.jsx"];
+  const innerChildren = href ? u$1("svg", {
+    width: "100%",
+    height: "100%",
+    children: u$1("use", {
+      href: href
+    })
+  }) : children;
+  let {
+    flex,
+    grid,
+    width,
+    height
+  } = props;
+  if (width === "auto") {
+    width = undefined;
+  }
+  if (height === "auto") {
+    height = undefined;
+  }
+  const hasExplicitWidth = width !== undefined;
+  const hasExplicitHeight = height !== undefined;
+  const widthFixed = hasExplicitWidth || hasExplicitHeight && (props.square || props.circle || props.aspectRatio);
+  const heightFixed = hasExplicitHeight || hasExplicitWidth && (props.square || props.circle || props.aspectRatio);
+  if (widthFixed || heightFixed) {
+    if (flex === undefined) {
+      flex = "x";
+    }
+  } else if (decorative === undefined && !onClick) {
+    decorative = true;
+  }
+  const ariaProps = decorative ? {
+    "aria-hidden": "true"
+  } : {};
+  const textRef = F();
+  if (typeof children === "string") {
+    return u$1(Text, {
+      ...props,
+      ...ariaProps,
+      "data-icon-text": "",
+      children: children
+    });
+  }
+  if (flex || grid) {
+    return u$1(Box, {
+      square: true,
+      ...props,
+      ...ariaProps,
+      flex: flex,
+      baseClassName: "navi_icon",
+      "data-width-fixed": widthFixed ? "" : undefined,
+      "data-height-fixed": heightFixed ? "" : undefined,
+      "data-interactive": onClick ? "" : undefined,
+      onClick: onClick,
+      children: innerChildren
+    });
+  }
+  return u$1(TextAnchor, {
+    childRef: textRef,
+    textAnchor: textAnchor,
+    textSize: props.size,
+    lineLayout: lineLayout,
+    children: u$1(Text, {
+      ...props,
+      ...ariaProps,
+      className: withPropsClassName("navi_icon", props.className),
+      spacing: "pre",
+      "data-icon-char": "",
+      "data-width-fixed": widthFixed ? "" : undefined,
+      "data-height-fixed": heightFixed ? "" : undefined,
+      "data-interactive": onClick ? "" : undefined,
+      onClick: onClick,
+      ref: textRef,
+      children: [u$1("span", {
+        style: "user-select:none",
+        children: "\u200B"
+      }), innerChildren]
+    })
+  });
+};
+
+/**
+ * Toggles a `data-dark-background` attribute on the referenced element based on its
+ * computed background color. Pair it with a CSS variable to get automatic
+ * light/dark text without hard-coding colors:
+ *
+ * ```css
+ * .my-element {
+ *   --color-contrasting: black;
+ *   &[data-dark-background] {
+ *     --color-contrasting: white;
+ *   }
+ *   color: var(--color-contrasting);
+ * }
+ * ```
+ *
+ * - `data-dark-background` is **set** when the background is dark enough that white text
+ *   provides better (or equal) contrast.
+ * - `data-dark-background` is **absent** when black text is the better choice.
+ *
+ * @param {import("preact").RefObject} ref - Ref to the element that receives
+ *   the `data-dark-background` attribute and is also passed to `contrastColor` for
+ *   resolving CSS variables.
+ * @param {object} [options]
+ * @param {string} [options.backgroundElementSelector] - CSS selector relative
+ *   to `ref.current` pointing to a child element whose `background-color`
+ *   should be tested instead of the element itself. Useful when the element
+ *   has a transparent background but contains a coloured child (e.g. a fill
+ *   bar inside a track).
+ */
+
+const useDarkBackgroundAttribute = (
+  ref,
+  deps = [],
+  {
+    backgroundElementSelector,
+    attributeName = "data-dark-background",
+    hardcoded = {},
+  } = {},
+) => {
+  const innerDeps = [
+    ...deps,
+    // ref can change is the component pass a different ref on different render based on some logic
+    // (can be used to control which element backgroundColor is being checked by switching the ref to another element)
+    ref,
+    // backgroundElementSelector can change if the component pass a different selector on different render based on some logic
+    // (can be used to control which element backgroundColor is being checked by switching the selector to point to another element)
+    backgroundElementSelector,
+  ];
+
+  const hardcodedMap = new Map();
+  for (const key of Object.keys(hardcoded)) {
+    const value = hardcoded[key];
+    innerDeps.push(key, value);
+    const colorString = normalizeColorString(key);
+    hardcodedMap.set(colorString, value);
+  }
+
+  A(() => {
+    const el = ref.current;
+    if (!el) {
+      return undefined;
+    }
+    let elementToCheck = el;
+    if (backgroundElementSelector) {
+      elementToCheck = el.querySelector(backgroundElementSelector);
+      if (!elementToCheck) {
+        return undefined;
+      }
+    }
+    const updateAttribute = () => {
+      const computedStyle = getComputedStyle(elementToCheck);
+      const backgroundColor = computedStyle.backgroundColor;
+      if (!backgroundColor) {
+        el.removeAttribute(attributeName);
+        return;
+      }
+      const backgroundColorString = normalizeColorString(backgroundColor, el);
+      const hardcodedContrast = hardcodedMap.get(backgroundColorString);
+      const contrastingColor =
+        hardcodedContrast || contrastColor(backgroundColor, el);
+      if (contrastingColor === "white") {
+        el.setAttribute(attributeName, "");
+      } else {
+        el.removeAttribute(attributeName);
+      }
+    };
+    updateAttribute();
+    el.addEventListener(NAVI_PSEUDO_STATE_CUSTOM_EVENT, updateAttribute);
+    return () => {
+      el.removeEventListener(NAVI_PSEUDO_STATE_CUSTOM_EVENT, updateAttribute);
+      el.removeAttribute(attributeName);
+    };
+  }, innerDeps);
+};
+
+const normalizeColorString = (color, el) => {
+  const colorRgba = resolveCSSColor(color, el);
+  if (!colorRgba) {
+    return "";
+  }
+  return String(colorRgba);
+};
+
 const useFormEvents = (
   elementRef,
   {
@@ -31357,19 +32071,26 @@ const useUIState = (uiStateController) => {
   return trackedUIState;
 };
 
-installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
+installImportMetaCssBuild(import.meta);/* eslint-disable jsenv/no-unknown-params */
+const css$j = /* css */`
   @layer navi {
     .navi_button {
       --button-outline-width: 1px;
       --button-border-width: 1px;
       --button-border-radius: 2px;
-      --button-padding-x: var(--button-padding, 6px);
-      --button-padding-y: var(--button-padding, 1px);
+      /* Global padding defaults — override these to change all button paddings. */
+      /* Use --button-padding, --button-padding-x, --button-padding-y for per-button overrides. */
+      --button-padding-x-default: 6px;
+      --button-padding-y-default: 1px;
       /* default */
+
       --button-outline-color: var(--navi-focus-outline-color);
       --button-loader-color: var(--navi-loader-color);
       --button-border-color: light-dark(#767676, #8e8e93);
-      --button-background-color: light-dark(#f3f4f6, #2d3748);
+      --button-background-color: var(
+        --button-background,
+        light-dark(#f3f4f6, #2d3748)
+      );
       --button-color: currentColor;
       --button-cursor: pointer;
 
@@ -31385,8 +32106,8 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
         black
       );
       --button-color-hover: var(--button-color);
-      /* Active */
-      --button-border-color-active: color-mix(
+      /* Pressed */
+      --button-border-color-pressed: color-mix(
         in srgb,
         var(--button-border-color) 90%,
         black
@@ -31412,9 +32133,15 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
     }
   }
 
+  a.navi_button {
+    display: inline-block;
+    color: inherit;
+    text-align: center;
+    text-decoration: none;
+  }
+
   .navi_button {
-    /* Internal css vars are the one controlling final values */
-    /* allowing to override them on interactions (like hover, disabled, etc.) */
+    /* Internal vars — prefixed with --x- to signal they are private, do not use from outside */
     --x-button-outline-width: var(--button-outline-width);
     --x-button-border-radius: var(--button-border-radius);
     --x-button-border-width: var(--button-border-width);
@@ -31427,17 +32154,21 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
     --x-button-background-color: var(--button-background-color);
     --x-button-color: var(--button-color);
     --x-button-cursor: var(--button-cursor);
-
-    position: relative;
     box-sizing: border-box;
     aspect-ratio: inherit;
     padding: 0;
-    vertical-align: middle;
     background: none;
     border: none;
     border-radius: var(--x-button-border-radius);
     outline: none;
     cursor: var(--x-button-cursor);
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    user-select: none;
+
+    &[data-dark-background] {
+      --button-color: white;
+    }
 
     &[data-icon] {
       --button-padding: 0;
@@ -31452,23 +32183,36 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
       height: 100%;
       padding-top: var(
         --button-padding-top,
-        var(--button-padding-y, var(--button-padding, unset))
+        var(
+          --button-padding-y,
+          var(--button-padding, var(--button-padding-y-default))
+        )
       );
       padding-right: var(
         --button-padding-right,
-        var(--button-padding-x, var(--button-padding, unset))
+        var(
+          --button-padding-x,
+          var(--button-padding, var(--button-padding-x-default))
+        )
       );
       padding-bottom: var(
         --button-padding-bottom,
-        var(--button-padding-y, var(--button-padding, unset))
+        var(
+          --button-padding-y,
+          var(--button-padding, var(--button-padding-y-default))
+        )
       );
       padding-left: var(
         --button-padding-left,
-        var(--button-padding-x, var(--button-padding, unset))
+        var(
+          --button-padding-x,
+          var(--button-padding, var(--button-padding-x-default))
+        )
       );
       align-items: inherit;
       justify-content: inherit;
       color: var(--x-button-color);
+      vertical-align: inherit;
       background: var(--x-button-background);
       background-color: var(
         --x-button-background-color,
@@ -31515,16 +32259,16 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
       --x-button-background-color: var(--button-background-color);
       --x-button-color: var(--button-color);
     }
-    /* Active */
-    &[data-active] {
-      --x-button-outline-color: var(--button-border-color-active);
+    /* Pressed */
+    &[data-pressed] {
+      --x-button-outline-color: var(--button-border-color-pressed);
     }
-    &[data-active] {
+    &[data-pressed] {
       .navi_button_content {
         transform: scale(0.9);
       }
     }
-    &[data-active] {
+    &[data-pressed] {
       .navi_button_shadow {
         box-shadow:
           inset 0 3px 6px rgba(0, 0, 0, 0.2),
@@ -31560,7 +32304,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
 
       color: unset;
 
-      /* Remove active effects */
+      /* Remove pressed effects */
       .navi_button_content {
         transform: none;
 
@@ -31592,12 +32336,42 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
       --x-button-border-color: var(--callout-color);
     }
   }
-`, "@jsenv/navi/src/field/button.jsx"];
+`;
 const Button = props => {
+  import.meta.css = [css$j, "@jsenv/navi/src/field/button.jsx"];
   return renderActionableComponent(props, {
-    Basic: ButtonBasic,
+    Basic: ButtonBasicDispatch,
     WithAction: ButtonWithAction,
     WithActionInsideForm: ButtonWithActionInsideForm
+  });
+};
+const ButtonBasicDispatch = props => {
+  if (props.route) {
+    return u$1(ButtonWithRoute, {
+      ...props
+    });
+  }
+  return u$1(ButtonBasic, {
+    ...props
+  });
+};
+const ButtonWithRoute = ({
+  route,
+  routeParams,
+  children,
+  ...rest
+}) => {
+  const url = route.buildUrl(routeParams);
+  const {
+    matching
+  } = useRouteStatus(route);
+  const paramsAreMatching = route.matchesParams(routeParams);
+  const linkMatching = matching && paramsAreMatching;
+  return u$1(ButtonBasic, {
+    href: url,
+    "data-href-current": linkMatching ? "" : undefined,
+    ...rest,
+    children: children || route.buildRelativeUrl(routeParams)
   });
 };
 const ButtonStyleCSSVars = {
@@ -31621,8 +32395,8 @@ const ButtonStyleCSSVars = {
     borderColor: "--button-border-color-hover",
     color: "--button-color-hover"
   },
-  ":active": {
-    borderColor: "--button-border-color-active"
+  ":-navi-pressed": {
+    borderColor: "--button-border-color-pressed"
   },
   ":read-only": {
     backgroundColor: "--button-background-color-readonly",
@@ -31635,7 +32409,7 @@ const ButtonStyleCSSVars = {
     color: "--button-color-disabled"
   }
 };
-const ButtonPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
+const ButtonPseudoClasses = [":hover", ":active", ":-navi-pressed", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
 const ButtonPseudoElements = ["::-navi-loader"];
 const ButtonBasic = props => {
   const contextLoading = j$1(LoadingContext);
@@ -31647,10 +32421,15 @@ const ButtonBasic = props => {
     disabled,
     loading,
     autoFocus,
+    // href/link
+    href,
+    target,
+    rel,
     // visual
     icon,
     revealOnInteraction = icon,
     discrete = icon && !revealOnInteraction,
+    spacing,
     children,
     ...rest
   } = props;
@@ -31661,19 +32440,52 @@ const ButtonBasic = props => {
   const innerLoading = loading || contextLoading && contextLoadingElement === ref.current;
   const innerReadOnly = readOnly || contextReadOnly || innerLoading;
   const innerDisabled = disabled || contextDisabled;
+  const isLink = href !== undefined;
+  let as = "button";
+  let innerTarget;
+  let innerRel;
+  if (isLink) {
+    as = "a";
+    const {
+      isSameSite
+    } = getHrefTargetInfo(href);
+    innerTarget = target === undefined ? isSameSite ? undefined : "_blank" : target;
+    innerRel = rel === undefined ? isSameSite ? undefined : "noopener noreferrer" : rel;
+  }
+  useDarkBackgroundAttribute(ref, [innerLoading, innerDisabled, innerReadOnly]);
   const renderButtonContent = buttonProps => {
     return u$1(Text, {
       ...buttonProps,
+      spacing: spacing,
       className: "navi_button_content",
       children: [children, u$1(ButtonShadow, {})]
     });
   };
-  const renderButtonContentMemoized = b(renderButtonContent, [children]);
+  const renderButtonContentMemoized = b(renderButtonContent, [children, spacing]);
   return u$1(Box, {
     "data-readonly-silent": innerLoading ? "" : undefined,
     ...remainingProps,
-    as: "button",
+    as: as,
+    href: href,
+    target: innerTarget,
+    rel: innerRel,
     ref: ref,
+    onContextMenu: e => {
+      if (as === "a") {
+        // For link we keep context menu to allow "open in new tab" and other browser features
+        return;
+      }
+      if (e.pointerType !== "touch") {
+        // right click is allowed
+        return;
+      }
+      // Suppress the native context menu triggered by long-press on touch devices.
+      // Buttons have no meaningful context menu (no text to copy/paste/search),
+      // and the long-press visual state would get stuck if we let the menu open.
+      // Note: e.button === -1 is equivalent — it means no physical button triggered
+      // the event, i.e. it was synthesized from a long-press gesture (right-click gives e.button === 2).
+      e.preventDefault();
+    },
     "data-icon": icon ? "" : undefined,
     "data-reveal-on-interaction": revealOnInteraction ? "" : undefined,
     "data-discrete": discrete ? "" : undefined,
@@ -31736,7 +32548,7 @@ const ButtonWithAction = props => {
     onError: onActionError,
     onEnd: onActionEnd
   });
-  return u$1(ButtonBasic
+  return u$1(ButtonBasicDispatch
   // put data-action first to help find it in devtools
   , {
     "data-action": boundAction.name,
@@ -31795,7 +32607,7 @@ const ButtonWithActionInsideForm = props => {
       }
     }
   });
-  return u$1(ButtonBasic, {
+  return u$1(ButtonBasicDispatch, {
     "data-action": actionBoundToFormParams.name,
     ...rest,
     ref: ref,
@@ -31881,104 +32693,6 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
 const TitleLevelContext = K();
 
 /**
- * Toggles a `data-dark-background` attribute on the referenced element based on its
- * computed background color. Pair it with a CSS variable to get automatic
- * light/dark text without hard-coding colors:
- *
- * ```css
- * .my-element {
- *   --color-contrasting: black;
- *   &[data-dark-background] {
- *     --color-contrasting: white;
- *   }
- *   color: var(--color-contrasting);
- * }
- * ```
- *
- * - `data-dark-background` is **set** when the background is dark enough that white text
- *   provides better (or equal) contrast.
- * - `data-dark-background` is **absent** when black text is the better choice.
- *
- * @param {import("preact").RefObject} ref - Ref to the element that receives
- *   the `data-dark-background` attribute and is also passed to `contrastColor` for
- *   resolving CSS variables.
- * @param {object} [options]
- * @param {string} [options.backgroundElementSelector] - CSS selector relative
- *   to `ref.current` pointing to a child element whose `background-color`
- *   should be tested instead of the element itself. Useful when the element
- *   has a transparent background but contains a coloured child (e.g. a fill
- *   bar inside a track).
- */
-
-const useDarkBackgroundAttribute = (
-  ref,
-  deps = [],
-  {
-    backgroundElementSelector,
-    attributeName = "data-dark-background",
-    hardcoded = {},
-  } = {},
-) => {
-  const innerDeps = [
-    ...deps,
-    // ref can change is the component pass a different ref on different render based on some logic
-    // (can be used to control which element backgroundColor is being checked by switching the ref to another element)
-    ref,
-    // backgroundElementSelector can change if the component pass a different selector on different render based on some logic
-    // (can be used to control which element backgroundColor is being checked by switching the selector to point to another element)
-    backgroundElementSelector,
-  ];
-
-  const hardcodedMap = new Map();
-  for (const key of Object.keys(hardcoded)) {
-    const value = hardcoded[key];
-    innerDeps.push(key, value);
-    const colorString = normalizeColorString(key);
-    hardcodedMap.set(colorString, value);
-  }
-
-  A(() => {
-    const el = ref.current;
-    if (!el) {
-      return null;
-    }
-    let elementToCheck = el;
-    if (backgroundElementSelector) {
-      elementToCheck = el.querySelector(backgroundElementSelector);
-      if (!elementToCheck) {
-        return null;
-      }
-    }
-    const computedStyle = getComputedStyle(elementToCheck);
-    const backgroundColor = computedStyle.backgroundColor;
-    if (!backgroundColor) {
-      el.removeAttribute(attributeName);
-      return null;
-    }
-    const backgroundColorString = normalizeColorString(backgroundColor, el);
-    const hardcodedContrast = hardcodedMap.get(backgroundColorString);
-    const contrastingColor =
-      hardcodedContrast || contrastColor(backgroundColor, el);
-    if (contrastingColor === "white") {
-      el.setAttribute(attributeName, "");
-      return () => {
-        el.removeAttribute(attributeName);
-      };
-    }
-    el.removeAttribute(attributeName);
-    return null;
-  }, innerDeps);
-};
-
-const normalizeColorString = (color, el) => {
-  const colorRgba = resolveCSSColor(color, el);
-  if (!colorRgba) {
-    return "";
-  }
-  return String(colorRgba);
-};
-
-/**
  * Hook that reactively checks if a URL is visited.
  * Re-renders when the visited URL set changes.
  *
@@ -32033,7 +32747,7 @@ const useDimColorWhen = (elementRef, shouldDim) => {
 };
 
 installImportMetaCssBuild(import.meta);/* eslint-disable jsenv/no-unknown-params */
-import.meta.css = [/* css */`
+const css$i = /* css */`
   @layer navi {
     .navi_link {
       --link-border-radius: unset;
@@ -32045,7 +32759,7 @@ import.meta.css = [/* css */`
       --link-color: rgb(0, 0, 238);
       --link-color-visited: color-mix(in srgb, var(--link-color), black 40%);
 
-      --link-color-active: red;
+      --link-color-pressed: red;
       --link-text-decoration: underline;
       --link-text-decoration-hover: var(--link-text-decoration);
       --link-cursor: pointer;
@@ -32080,15 +32794,47 @@ import.meta.css = [/* css */`
     --x-link-color-hover: var(--link-color-hover, var(--link-color));
     --x-link-color-visited: var(--link-color-visited);
     --x-link-color-current: var(--link-color-current);
-    --x-link-color-active: var(--link-color-active);
+    --x-link-color-pressed: var(--link-color-pressed);
     --x-link-text-decoration: var(--link-text-decoration);
     --x-link-text-decoration-hover: var(--link-text-decoration-hover);
     --x-link-cursor: var(--link-cursor);
 
+    /* Resolve padding shorthands into directional vars */
+    --x-link-padding-top: var(
+      --link-padding-top,
+      var(--link-padding-y, var(--link-padding, 0px))
+    );
+    --x-link-padding-right: var(
+      --link-padding-right,
+      var(--link-padding-x, var(--link-padding, 0px))
+    );
+    --x-link-padding-bottom: var(
+      --link-padding-bottom,
+      var(--link-padding-y, var(--link-padding, 0px))
+    );
+    --x-link-padding-left: var(
+      --link-padding-left,
+      var(--link-padding-x, var(--link-padding, 0px))
+    );
+
     position: relative;
     aspect-ratio: inherit;
-    /* Ensure the spacing for the loading outline is part of the <a> so that it does not create an overflow */
-    padding: var(--link-loading-outline-size);
+    padding-top: max(
+      var(--x-link-padding-top),
+      var(--link-loading-outline-size)
+    );
+    padding-right: max(
+      var(--x-link-padding-right),
+      var(--link-loading-outline-size)
+    );
+    padding-bottom: max(
+      var(--x-link-padding-bottom),
+      var(--link-loading-outline-size)
+    );
+    padding-left: max(
+      var(--x-link-padding-left),
+      var(--link-loading-outline-size)
+    );
     color: var(--x-link-color);
     text-decoration: var(--x-link-text-decoration);
     background: var(--x-link-background);
@@ -32174,10 +32920,10 @@ import.meta.css = [/* css */`
     &[data-focus-visible] {
       outline-width: 2px;
     }
-    /* Active */
-    &[data-active] {
+    /* Pressed */
+    &[data-pressed] {
       /* Redefine it otherwise [data-visited] prevails */
-      --x-link-color: var(--x-link-color-active);
+      --x-link-color: var(--x-link-color-pressed);
     }
     /* Current */
     &[data-href-current] {
@@ -32305,10 +33051,17 @@ import.meta.css = [/* css */`
   .navi_title .navi_link[data-reveal-on-interaction] {
     top: 0.25em;
   }
-`, "@jsenv/navi/src/nav/link/link.jsx"];
+`;
 const LinkStyleCSSVars = {
   "outlineColor": "--link-outline-color",
   "borderRadius": "--link-border-radius",
+  "padding": "--link-padding",
+  "paddingX": "--link-padding-x",
+  "paddingY": "--link-padding-y",
+  "paddingTop": "--link-padding-top",
+  "paddingRight": "--link-padding-right",
+  "paddingBottom": "--link-padding-bottom",
+  "paddingLeft": "--link-padding-left",
   "color": "--link-color",
   "cursor": "--link-cursor",
   "textDecoration": "--link-text-decoration",
@@ -32320,8 +33073,8 @@ const LinkStyleCSSVars = {
     color: "--link-color-hover",
     textDecoration: "--link-text-decoration-hover"
   },
-  ":active": {
-    color: "--link-color-active"
+  ":-navi-pressed": {
+    color: "--link-color-pressed"
   },
   ":-navi-href-current": {
     background: "--link-background-current",
@@ -32334,7 +33087,7 @@ const LinkStyleCSSVars = {
     color: "--link-color-selected"
   }
 };
-const LinkPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":visited", ":-navi-loading", ":-navi-href-internal", ":-navi-href-external", ":-navi-href-anchor", ":-navi-href-current", ":-navi-selected"];
+const LinkPseudoClasses = [":hover", ":active", ":-navi-pressed", ":focus", ":focus-visible", ":read-only", ":disabled", ":visited", ":-navi-loading", ":-navi-href-internal", ":-navi-href-external", ":-navi-href-anchor", ":-navi-href-current", ":-navi-selected"];
 const LinkPseudoElements = ["::-navi-loader", "::-navi-indicator"];
 Object.assign(PSEUDO_CLASSES, {
   ":-navi-href-internal": {
@@ -32348,12 +33101,10 @@ Object.assign(PSEUDO_CLASSES, {
   },
   ":-navi-href-current": {
     attribute: "data-href-current"
-  },
-  ":-navi-selected": {
-    attribute: "data-selected"
   }
 });
 const Link = props => {
+  import.meta.css = [css$i, "@jsenv/navi/src/nav/link/link.jsx"];
   return renderActionableComponent(props, {
     Basic: LinkBasic,
     WithAction: LinkWithAction
@@ -32502,6 +33253,7 @@ const LinkPlain = props => {
       e.detail.setValue(value);
     },
     preventBoldLayoutShift: currentEffectBold,
+    preventSpaceUnderlines: true,
     overflowEllipsis: overflowEllipsis
     // Visual
     ,
@@ -32614,7 +33366,7 @@ installImportMetaCssBuild(import.meta);/**
  * TabList component with support for horizontal and vertical layouts
  * https://dribbble.com/search/tabs
  */
-import.meta.css = [/* css */`
+const css$h = /* css */`
   @layer navi {
     .navi_nav {
       --nav-border: none;
@@ -32651,6 +33403,8 @@ import.meta.css = [/* css */`
     /* overflow-y: hidden; */
 
     .navi_link {
+      user-select: none;
+
       --x-nav-child-border-radius: calc(
         var(--nav-border-radius) - var(--nav-padding)
       );
@@ -32723,7 +33477,7 @@ import.meta.css = [/* css */`
       }
     }
   }
-`, "@jsenv/navi/src/nav/link/nav.jsx"];
+`;
 const NavStyleCSSVars = {
   border: "--nav-border",
   borderRadius: "--nav-border-radius",
@@ -32748,6 +33502,7 @@ const Nav = ({
   panelBorderConnection,
   ...props
 }) => {
+  import.meta.css = [css$h, "@jsenv/navi/src/nav/link/nav.jsx"];
   children = H(children);
   return u$1(Box, {
     as: "nav",
@@ -32795,7 +33550,7 @@ const useFocusGroup = (
 
 installImportMetaCssBuild(import.meta);const rightArrowPath = "M680-480L360-160l-80-80 240-240-240-240 80-80 320 320z";
 const downArrowPath = "M480-280L160-600l80-80 240 240 240-240 80 80-320 320z";
-import.meta.css = [/* css */`
+const css$g = /* css */`
   .navi_summary_marker {
     width: 1em;
     height: 1em;
@@ -32875,11 +33630,12 @@ import.meta.css = [/* css */`
       d: path("${rightArrowPath}");
     }
   }
-`, "@jsenv/navi/src/field/details/summary_marker.jsx"];
+`;
 const SummaryMarker = ({
   open,
   loading
 }) => {
+  import.meta.css = [css$g, "@jsenv/navi/src/field/details/summary_marker.jsx"];
   const showLoading = useDebounceTrue(loading, 300);
   const mountedRef = F(false);
   const prevOpenRef = F(open);
@@ -32933,7 +33689,7 @@ const SummaryMarker = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
+installImportMetaCssBuild(import.meta);const css$f = /* css */`
   .navi_details {
     position: relative;
     z-index: 1;
@@ -32968,8 +33724,9 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
       }
     }
   }
-`, "@jsenv/navi/src/field/details/details.jsx"];
+`;
 const Details = props => {
+  import.meta.css = [css$f, "@jsenv/navi/src/field/details/details.jsx"];
   const {
     value = "on",
     persists
@@ -33252,7 +34009,7 @@ const fieldPropSet = new Set([
   "data-testid",
 ]);
 
-installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
+installImportMetaCssBuild(import.meta);const css$e = /* css */`
   @layer navi {
     label {
       &[data-interactive] {
@@ -33266,7 +34023,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
       }
     }
   }
-`, "@jsenv/navi/src/field/label.jsx"];
+`;
 const ReportReadOnlyOnLabelContext = K();
 const ReportDisabledOnLabelContext = K();
 const ReportInteractiveOnLabelContext = K();
@@ -33284,6 +34041,7 @@ const reportDisabledToLabel = value => {
 };
 const LabelPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
 const Label = props => {
+  import.meta.css = [css$e, "@jsenv/navi/src/field/label.jsx"];
   const {
     readOnly,
     disabled,
@@ -33317,7 +34075,7 @@ const Label = props => {
   });
 };
 
-installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
+installImportMetaCssBuild(import.meta);const css$d = /* css */`
   @layer navi {
     .navi_checkbox {
       --margin: 3px 3px 3px 4px;
@@ -33642,8 +34400,9 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
       }
     }
   }
-`, "@jsenv/navi/src/field/input_checkbox.jsx"];
+`;
 const InputCheckbox = props => {
+  import.meta.css = [css$d, "@jsenv/navi/src/field/input_checkbox.jsx"];
   const {
     value = "on"
   } = props;
@@ -33912,15 +34671,8 @@ const InputCheckboxWithAction = props => {
   });
 };
 
-installImportMetaCssBuild(import.meta);// TOFIX: select in data then reset, it reset to red/blue instead of red/blue/green
-import.meta.css = [/* css */`
-  @layer navi {
-    .navi_checkbox_list {
-      display: flex;
-      flex-direction: column;
-    }
-  }
-`, "@jsenv/navi/src/field/checkbox_list.jsx"];
+// TOFIX: select in data then reset, it reset to red/blue instead of red/blue/green
+
 M((props, ref) => {
   const uiStateController = useUIGroupStateController(props, "checkbox_list", {
     childComponentType: "checkbox",
@@ -33964,15 +34716,13 @@ const CheckboxListBasic = M((props, ref) => {
   const innerLoading = loading || contextLoading;
   const innerReadOnly = readOnly || contextReadOnly || innerLoading || uiStateController.readOnly;
   const innerDisabled = disabled || contextDisabled;
-  return u$1("div", {
+  return u$1(Box, {
+    flex: true,
     ...rest,
     ref: innerRef,
     name: name,
-    className: "navi_checkbox_list",
-    "data-checkbox-list": true
-    // eslint-disable-next-line react/no-unknown-property
-    ,
-
+    baseClassName: "navi_checkbox_list",
+    "data-checkbox-list": "",
     onresetuistate: e => {
       uiStateController.resetUIState(e);
     },
@@ -34066,7 +34816,7 @@ M((props, ref) => {
   });
 });
 
-installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
+installImportMetaCssBuild(import.meta);const css$c = /* css */`
   @layer navi {
     .navi_radio {
       --margin: 3px 3px 0 5px;
@@ -34357,8 +35107,9 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
       }
     }
   }
-`, "@jsenv/navi/src/field/input_radio.jsx"];
+`;
 const InputRadio = props => {
+  import.meta.css = [css$c, "@jsenv/navi/src/field/input_radio.jsx"];
   const {
     value = "on"
   } = props;
@@ -34604,7 +35355,7 @@ const InputRadioWithAction = () => {
   throw new Error(`<Input type="radio" /> with an action make no sense. Use <RadioList action={something} /> instead`);
 };
 
-installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
+installImportMetaCssBuild(import.meta);const css$b = /* css */`
   @layer navi {
     .navi_input_range {
       --border-radius: 6px;
@@ -34639,20 +35390,20 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
       --track-color-hover: color-mix(in srgb, var(--fill-color) 95%, black);
       --fill-color-hover: color-mix(in srgb, var(--fill-color) 80%, black);
       --thumb-color-hover: color-mix(in srgb, var(--thumb-color) 80%, black);
-      /* Active */
-      --border-color-active: color-mix(
+      /* Pressed */
+      --border-color-pressed: color-mix(
         in srgb,
         var(--border-color) 50%,
         transparent
       );
-      --track-border-color-active: var(--border-color-active);
-      --background-color-active: color-mix(
+      --track-border-color-pressed: var(--border-color-pressed);
+      --background-color-pressed: color-mix(
         in srgb,
         var(--background-color) 75%,
         white
       );
-      --fill-color-active: color-mix(in srgb, var(--fill-color) 75%, white);
-      --thumb-color-active: color-mix(in srgb, var(--thumb-color) 75%, white);
+      --fill-color-pressed: color-mix(in srgb, var(--fill-color) 75%, white);
+      --thumb-color-pressed: color-mix(in srgb, var(--thumb-color) 75%, white);
       /* Readonly */
       --border-color-readonly: color-mix(
         in srgb,
@@ -34770,13 +35521,13 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
       --x-fill-color: var(--fill-color-hover);
       --x-thumb-color: var(--thumb-color-hover);
     }
-    /* Active */
-    &[data-active] {
-      --x-border-color: var(--border-color-active);
-      --x-track-border-color: var(--track-border-color-active);
-      --x-background-color: var(--background-color-active);
-      --x-fill-color: var(--fill-color-active);
-      --x-thumb-color: var(--thumb-color-active);
+    /* Pressed */
+    &[data-pressed] {
+      --x-border-color: var(--border-color-pressed);
+      --x-track-border-color: var(--track-border-color-pressed);
+      --x-background-color: var(--background-color-pressed);
+      --x-fill-color: var(--fill-color-pressed);
+      --x-thumb-color: var(--thumb-color-pressed);
     }
     /* Focus */
     &[data-focus-visible] {
@@ -34811,8 +35562,9 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
   .navi_input_range[data-callout] {
     /* What can we do? */
   }
-`, "@jsenv/navi/src/field/input_range.jsx"];
+`;
 const InputRange = props => {
+  import.meta.css = [css$b, "@jsenv/navi/src/field/input_range.jsx"];
   const uiStateController = useUIStateController(props, "input");
   const uiState = useUIState(uiStateController);
   const input = renderActionableComponent(props, {
@@ -34839,11 +35591,11 @@ const RangeStyleCSSVars = {
     fillColor: "--fill-color-hover",
     thumbColor: "--thumb-color-hover"
   },
-  ":active": {
+  ":-navi-pressed": {
     borderColor: "--border-color-hover",
     backgroundColor: "--background-color-hover",
-    fillColor: "--fill-color-active",
-    thumbColor: "--thumb-color-active"
+    fillColor: "--fill-color-pressed",
+    thumbColor: "--thumb-color-pressed"
   },
   ":read-only": {
     borderColor: "--border-color-readonly",
@@ -34858,7 +35610,7 @@ const RangeStyleCSSVars = {
     thumbColor: "--thumb-color-disabled"
   }
 };
-const RangePseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
+const RangePseudoClasses = [":hover", ":active", ":-navi-pressed", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
 const RangePseudoElements = ["::-navi-loader"];
 const RangeChildPropSet = new Set([...fieldPropSet]);
 const InputRangeBasic = props => {
@@ -35082,24 +35834,8 @@ const SearchSvg = () => u$1("svg", {
   })
 });
 
-installImportMetaCssBuild(import.meta);/**
- * Input component for all textual input types.
- *
- * Supports:
- * - text (default)
- * - password
- * - hidden
- * - email
- * - url
- * - search
- * - tel
- * - etc.
- *
- * For non-textual inputs, specialized components will be used:
- * - <InputCheckbox /> for type="checkbox"
- * - <InputRadio /> for type="radio"
- */
-import.meta.css = [/* css */`
+installImportMetaCssBuild(import.meta);/* eslint-disable jsenv/no-unknown-params */
+const css$a = /* css */`
   @layer navi {
     .navi_input {
       --border-radius: 2px;
@@ -35229,6 +35965,7 @@ import.meta.css = [/* css */`
       display: inline-flex;
       margin: 0;
       padding: 0;
+      align-items: center;
       justify-content: center;
       font-size: var(--font-size);
       background: none;
@@ -35309,8 +36046,9 @@ import.meta.css = [/* css */`
     /* Fortunately we can override it as follow */
     -webkit-text-fill-color: var(--x-color) !important;
   }
-`, "@jsenv/navi/src/field/input_textual.jsx"];
+`;
 const InputTextual = props => {
+  import.meta.css = [css$a, "@jsenv/navi/src/field/input_textual.jsx"];
   const uiStateController = useUIStateController(props, "input");
   const uiState = useUIState(uiStateController);
   const input = renderActionableComponent(props, {
@@ -35383,6 +36121,197 @@ Object.assign(PSEUDO_CLASSES, {
 const InputPseudoElements = ["::-navi-loader"];
 const InputChildPropSet = new Set([...fieldPropSet]);
 const InputTextualBasic = props => {
+  if (props.suggestions) {
+    return u$1(InputTextualWithSuggestions, {
+      ...props
+    });
+  }
+  return u$1(InputTextualPlain, {
+    ...props
+  });
+};
+const InputTextualWithSuggestions = ({
+  suggestions,
+  onInput,
+  onFocus,
+  onBlur,
+  ...rest
+}) => {
+  const defaultRef = F();
+  const ref = rest.ref || defaultRef;
+  const [suggestionsOpen, setSuggestionsOpen] = h(false);
+  const suggestionsOpenRef = F(false);
+  suggestionsOpenRef.current = suggestionsOpen;
+  const showPopover = e => {
+    if (suggestionsOpenRef.current) {
+      return;
+    }
+    console.debug(`showPopover (e.type:${e.type})`);
+    const popoverEl = document.getElementById(suggestions);
+    positionPopover();
+    popoverEl.showPopover();
+    suggestionsOpenRef.current = true;
+    setSuggestionsOpen(true);
+    window.addEventListener("scroll", positionPopover, {
+      capture: true,
+      passive: true
+    });
+  };
+  const hidePopover = e => {
+    if (!suggestionsOpenRef.current) {
+      return;
+    }
+    console.debug(`hidePopover (e.type:${e.type})`);
+    suggestionsOpenRef.current = false;
+    setSuggestionsOpen(false);
+    window.removeEventListener("scroll", positionPopover, {
+      capture: true
+    });
+    const popoverEl = document.getElementById(suggestions);
+    if (popoverEl) {
+      popoverEl.dispatchEvent(new CustomEvent("navi_suggestion_list_clear"));
+      popoverEl.hidePopover();
+    }
+    setSuggestionsOpen(false);
+  };
+  const positionPopover = () => {
+    const input = ref.current;
+    const rect = input.getBoundingClientRect();
+    const popoverEl = document.getElementById(suggestions);
+    if (popoverEl) {
+      popoverEl.style.top = `${rect.bottom + 2}px`;
+      popoverEl.style.left = `${rect.left}px`;
+      popoverEl.style.width = `${rect.width}px`;
+    }
+  };
+  const dispatchToSuggestionList = customEvent => {
+    const popoverEl = document.getElementById(suggestions);
+    if (!popoverEl) {
+      return false;
+    }
+    popoverEl.dispatchEvent(customEvent);
+    return customEvent.defaultPrevented;
+  };
+  useKeyboardShortcuts(ref, [{
+    key: "arrowdown",
+    description: "Open popover and point to next suggestion",
+    handler: e => {
+      showPopover(e);
+      const popoverEl = document.getElementById(suggestions);
+      if (!popoverEl) {
+        return false;
+      }
+      popoverEl.dispatchEvent(new CustomEvent("navi_suggestion_list_navigate", {
+        detail: {
+          direction: "down"
+        }
+      }));
+      return true;
+    }
+  }, {
+    key: "arrowup",
+    description: "Open popover and point to previous suggestion",
+    handler: e => {
+      showPopover(e);
+      return dispatchToSuggestionList(new CustomEvent("navi_suggestion_list_navigate", {
+        detail: {
+          direction: "up"
+        }
+      }));
+    }
+  }, {
+    key: "home",
+    description: "Point to first suggestion",
+    handler: () => {
+      if (!suggestionsOpenRef.current) {
+        return false;
+      }
+      return dispatchToSuggestionList(new CustomEvent("navi_suggestion_list_navigate", {
+        detail: {
+          direction: "first"
+        }
+      }));
+    }
+  }, {
+    key: "end",
+    description: "Point to last suggestion",
+    handler: () => {
+      if (!suggestionsOpenRef.current) {
+        return false;
+      }
+      return dispatchToSuggestionList(new CustomEvent("navi_suggestion_list_navigate", {
+        detail: {
+          direction: "last"
+        }
+      }));
+    }
+  }, {
+    key: "enter",
+    description: "Confirm pointed suggestion",
+    handler: () => {
+      if (!suggestionsOpenRef.current) {
+        return false;
+      }
+      return dispatchToSuggestionList(new CustomEvent("navi_suggestion_list_confirm", {
+        cancelable: true
+      }));
+    }
+  }, {
+    key: "escape",
+    description: "Close popover",
+    handler: e => {
+      if (!suggestionsOpenRef.current) {
+        return false;
+      }
+      hidePopover(e);
+      return true;
+    }
+  }]);
+  _(() => {
+    const inputEl = ref.current;
+    const popoverEl = document.getElementById(suggestions);
+    if (!popoverEl) {
+      return undefined;
+    }
+    const onSelected = e => {
+      inputEl.value = e.detail.value;
+      inputEl.dispatchEvent(new Event("input", {
+        bubbles: true
+      }));
+      hidePopover(e);
+    };
+    popoverEl.addEventListener("navi_suggestion_list_selected", onSelected);
+    return () => {
+      popoverEl.removeEventListener("navi_suggestion_list_selected", onSelected);
+    };
+  }, [suggestions]);
+  return u$1(InputTextualPlain, {
+    ref: ref,
+    role: "combobox",
+    autoComplete: "off",
+    "aria-controls": suggestions,
+    "aria-haspopup": "listbox",
+    "aria-expanded": suggestionsOpen,
+    "aria-autocomplete": "list",
+    onnavi_callout_open: e => {
+      hidePopover(e);
+    },
+    onFocus: e => {
+      onFocus?.(e);
+      showPopover(e);
+    },
+    onBlur: e => {
+      onBlur?.(e);
+      hidePopover(e);
+    },
+    onInput: e => {
+      onInput?.(e);
+      showPopover(e);
+    },
+    ...rest
+  });
+};
+const InputTextualPlain = props => {
   const contextReadOnly = j$1(ReadOnlyContext);
   const contextDisabled = j$1(DisabledContext);
   const contextLoading = j$1(LoadingContext);
@@ -35680,7 +36609,7 @@ installImportMetaCssBuild(import.meta);/**
  * This means an editable thing MUST have a parent with position relative that wraps the content and the eventual editable input
  *
  */
-import.meta.css = [/* css */`
+const css$9 = /* css */`
   .navi_editable_wrapper {
     --inset-top: 0px;
     --inset-right: 0px;
@@ -35705,7 +36634,7 @@ import.meta.css = [/* css */`
       pointer-events: auto;
     }
   }
-`, "@jsenv/navi/src/field/edition/editable.jsx"];
+`;
 const useEditionController = () => {
   const [editing, editingSetter] = h(null);
   const startEditing = b(event => {
@@ -35729,6 +36658,7 @@ const useEditionController = () => {
   };
 };
 const Editable = props => {
+  import.meta.css = [css$9, "@jsenv/navi/src/field/edition/editable.jsx"];
   let {
     children,
     action,
@@ -36139,98 +37069,77 @@ const FormWithAction = props => {
 //   form.dispatchEvent(customEvent);
 // };
 
-installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
-  .navi_group {
-    --border-width: 1px;
+installImportMetaCssBuild(import.meta);
 
-    > *:hover,
-    > *[data-hover] {
-      position: relative;
-      z-index: 1;
+const createItemTracker = () => {
+  const ItemTrackerContext = K();
+  const useItemTrackerProvider = () => {
+    const itemsRef = F([]);
+    const items = itemsRef.current;
+    const itemCountRef = F(0);
+    const tracker = q(() => {
+      const ItemTrackerProvider = ({
+        children
+      }) => {
+        // Reset on each render to start fresh
+        tracker.reset();
+        return u$1(ItemTrackerContext.Provider, {
+          value: tracker,
+          children: children
+        });
+      };
+      ItemTrackerProvider.items = items;
+      return {
+        ItemTrackerProvider,
+        items,
+        registerItem: data => {
+          const index = itemCountRef.current++;
+          items[index] = data;
+          return index;
+        },
+        getItem: index => {
+          return items[index];
+        },
+        getAllItems: () => {
+          return items;
+        },
+        reset: () => {
+          items.length = 0;
+          itemCountRef.current = 0;
+        }
+      };
+    }, []);
+    return tracker.ItemTrackerProvider;
+  };
+  const useTrackItem = data => {
+    const tracker = j$1(ItemTrackerContext);
+    if (!tracker) {
+      throw new Error("useTrackItem must be used within SimpleItemTrackerProvider");
     }
-    > *:focus-visible,
-    > *[data-focus-visible] {
-      position: relative;
-      z-index: 1;
+    return tracker.registerItem(data);
+  };
+  const useTrackedItem = index => {
+    const trackedItems = useTrackedItems();
+    const item = trackedItems[index];
+    return item;
+  };
+  const useTrackedItems = () => {
+    const tracker = j$1(ItemTrackerContext);
+    if (!tracker) {
+      throw new Error("useTrackedItems must be used within SimpleItemTrackerProvider");
     }
+    return tracker.items;
+  };
+  return [useItemTrackerProvider, useTrackItem, useTrackedItem, useTrackedItems];
+};
 
-    /* Horizontal (default): Cumulative margin for border overlap */
-    &:not([data-vertical]) {
-      > *:not(:first-child) {
-        margin-left: calc(var(--border-width) * -1);
-      }
-      > *:first-child:not(:only-child) {
-        border-top-right-radius: 0 !important;
-        border-bottom-right-radius: 0 !important;
+installImportMetaCssBuild(import.meta);createItemTracker();
 
-        .navi_button_content,
-        .navi_native_input {
-          border-top-right-radius: 0 !important;
-          border-bottom-right-radius: 0 !important;
-        }
-      }
+/**
+ * Context OptionList provides downward to its Option children.
+ */
+K(null);
 
-      > *:last-child:not(:only-child) {
-        border-top-left-radius: 0 !important;
-        border-bottom-left-radius: 0 !important;
-
-        .navi_button_content,
-        .navi_native_input {
-          border-top-left-radius: 0 !important;
-          border-bottom-left-radius: 0 !important;
-        }
-      }
-
-      > *:not(:first-child):not(:last-child) {
-        border-radius: 0 !important;
-
-        .navi_button_content,
-        .navi_native_input {
-          border-radius: 0 !important;
-        }
-      }
-    }
-
-    /* Vertical: Cumulative margin for border overlap */
-    &[data-vertical] {
-      > *:not(:first-child) {
-        margin-top: calc(var(--border-width) * -1);
-      }
-      > *:first-child:not(:only-child) {
-        border-bottom-right-radius: 0 !important;
-        border-bottom-left-radius: 0 !important;
-
-        .navi_button_content,
-        .navi_native_input {
-          border-bottom-right-radius: 0 !important;
-          border-bottom-left-radius: 0 !important;
-        }
-      }
-
-      > *:last-child:not(:only-child) {
-        border-top-left-radius: 0 !important;
-        border-top-right-radius: 0 !important;
-
-        .navi_button_content,
-        .navi_native_input {
-          border-top-left-radius: 0 !important;
-          border-top-right-radius: 0 !important;
-        }
-      }
-
-      > *:not(:first-child):not(:last-child) {
-        border-radius: 0 !important;
-
-        .navi_button_content,
-        .navi_native_input {
-          border-radius: 0 !important;
-        }
-      }
-    }
-  }
-`, "@jsenv/navi/src/field/group.jsx"];
-
-installImportMetaCssBuild(import.meta);import.meta.css = [/* css */``, "@jsenv/navi/src/field/radio_list.jsx"];
 const RadioList = props => {
   const uiStateController = useUIGroupStateController(props, "radio_list", {
     childComponentType: "radio",
@@ -36278,10 +37187,10 @@ const RadioListBasic = props => {
   const innerDisabled = disabled || contextDisabled;
   return u$1(Box, {
     "data-action": rest["data-action"],
-    row: true,
+    flex: "y",
     ...rest,
     baseClassName: "navi_radio_list",
-    "data-radio-list": true,
+    "data-radio-list": "",
     onresetuistate: e => {
       uiStateController.resetUIState(e);
     },
@@ -36412,12 +37321,13 @@ const useRefArray = (items, keyFromItem) => {
 };
 
 installImportMetaCssBuild(import.meta);const useNavState = () => {};
-import.meta.css = [/* css */`
+const css$8 = /* css */`
   .navi_select[data-readonly] {
     pointer-events: none;
   }
-`, "@jsenv/navi/src/field/select.jsx"];
+`;
 const Select = M((props, ref) => {
+  import.meta.css = [css$8, "@jsenv/navi/src/field/select.jsx"];
   const select = renderActionableComponent(props, ref, {
     Basic: SelectBasic,
     WithAction: SelectWithAction
@@ -36660,6 +37570,131 @@ const filterTableSelection = (selection, predicate) => {
   return matching;
 };
 
+// https://github.com/reach/reach-ui/tree/b3d94d22811db6b5c0f272b9a7e2e3c1bb4699ae/packages/descendants
+// https://github.com/pacocoursey/use-descendants/tree/master
+
+const createIsolatedItemTracker = () => {
+  // Producer contexts (ref-based, no re-renders)
+  const ProducerTrackerContext = K();
+  const ProducerItemCountRefContext = K();
+  const ProducerListRenderIdContext = K();
+
+  // Consumer contexts (state-based, re-renders)
+  const ConsumerItemsContext = K();
+  const useIsolatedItemTrackerProvider = () => {
+    const itemsRef = F([]);
+    const items = itemsRef.current;
+    const itemCountRef = F();
+    const itemTracker = q(() => {
+      // Snapshot taken by FlushSentinel after all producer children rendered.
+      // Consumers read from this — always up-to-date within the same render pass.
+      const itemsSnapshotRef = {
+        current: items
+      };
+      const registerItem = (index, value) => {
+        const hasValue = index in items;
+        if (hasValue) {
+          const currentValue = items[index];
+          if (compareTwoJsValues(currentValue, value)) {
+            return;
+          }
+        }
+        items[index] = value;
+      };
+      const getProducerItem = itemIndex => {
+        return items[itemIndex];
+      };
+      const ItemProducerProvider = ({
+        children
+      }) => {
+        items.length = 0;
+        itemCountRef.current = 0;
+        const listRenderId = {};
+        return u$1(ProducerItemCountRefContext.Provider, {
+          value: itemCountRef,
+          children: u$1(ProducerListRenderIdContext.Provider, {
+            value: listRenderId,
+            children: u$1(ProducerTrackerContext.Provider, {
+              value: itemTracker,
+              children: [children, u$1(FlushSentinel, {})]
+            })
+          })
+        });
+      };
+
+      // Renders after all producer children (e.g. <Col>) have registered their
+      // items. Taking a snapshot here guarantees the consumer sees the correct
+      // item list within the same render pass, without any heuristic.
+      const FlushSentinel = () => {
+        itemsSnapshotRef.current = items;
+        return null;
+      };
+      const ItemConsumerProvider = ({
+        children
+      }) => {
+        // FlushSentinel (last child of ItemProducerProvider) already set
+        // itemsSnapshotRef.current to the up-to-date items array before any
+        // consumer rendered. Reading from the snapshot is always correct.
+        return u$1(ConsumerItemsContext.Provider, {
+          value: itemsSnapshotRef.current,
+          children: children
+        });
+      };
+      return {
+        registerItem,
+        getProducerItem,
+        ItemProducerProvider,
+        ItemConsumerProvider
+      };
+    }, []);
+    const {
+      ItemProducerProvider,
+      ItemConsumerProvider
+    } = itemTracker;
+    return [ItemProducerProvider, ItemConsumerProvider, items];
+  };
+
+  // Hook for producers to register items (ref-based, no re-renders)
+  const useTrackIsolatedItem = data => {
+    const listRenderId = j$1(ProducerListRenderIdContext);
+    const itemCountRef = j$1(ProducerItemCountRefContext);
+    const itemTracker = j$1(ProducerTrackerContext);
+    const listRenderIdRef = F();
+    const itemIndexRef = F();
+    const dataRef = F();
+    const prevListRenderId = listRenderIdRef.current;
+    if (prevListRenderId === listRenderId) {
+      const itemIndex = itemIndexRef.current;
+      itemTracker.registerItem(itemIndex, data);
+      dataRef.current = data;
+      return itemIndex;
+    }
+    listRenderIdRef.current = listRenderId;
+    const itemCount = itemCountRef.current;
+    const itemIndex = itemCount;
+    itemCountRef.current = itemIndex + 1;
+    itemIndexRef.current = itemIndex;
+    dataRef.current = data;
+    itemTracker.registerItem(itemIndex, data);
+    return itemIndex;
+  };
+  const useTrackedIsolatedItem = itemIndex => {
+    const items = useTrackedIsolatedItems();
+    const item = items[itemIndex];
+    return item;
+  };
+
+  // Hooks for consumers to read items (state-based, re-renders)
+  const useTrackedIsolatedItems = () => {
+    const consumerItems = j$1(ConsumerItemsContext);
+    if (!consumerItems) {
+      throw new Error("useTrackedIsolatedItems must be used within <ItemConsumerProvider />");
+    }
+    return consumerItems;
+  };
+  return [useIsolatedItemTrackerProvider, useTrackIsolatedItem, useTrackedIsolatedItem, useTrackedIsolatedItems];
+};
+
 const Z_INDEX_EDITING = 1; /* To go above neighbours, but should not be too big to stay under the sticky cells */
 
 /* needed because cell uses position:relative, sticky must win even if before in DOM order */
@@ -36681,7 +37716,7 @@ const Z_INDEX_DROP_PREVIEW = Z_INDEX_STICKY_CORNER + 1;
 
 const Z_INDEX_TABLE_UI = Z_INDEX_STICKY_CORNER + 1;
 
-installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
+installImportMetaCssBuild(import.meta);const css$7 = /* css */`
   .navi_table_drag_clone_container {
     position: absolute;
     top: var(--table-visual-top);
@@ -36800,7 +37835,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
     width: 10px;
     height: 10px;
   }
-`, "@jsenv/navi/src/field/table/drag/table_drag.jsx"];
+`;
 const TableDragContext = K();
 const useTableDragContextValue = ({
   tableDragCloneContainerRef,
@@ -36861,6 +37896,7 @@ const moveItem = (array, indexA, indexB) => {
   return newArray;
 };
 const TableDragCloneContainer = M((props, ref) => {
+  import.meta.css = [css$7, "@jsenv/navi/src/field/table/drag/table_drag.jsx"];
   const {
     tableId
   } = props;
@@ -37115,193 +38151,6 @@ const createTableAttributeSync = (table, tableClone) => {
   return observer;
 };
 
-// https://github.com/reach/reach-ui/tree/b3d94d22811db6b5c0f272b9a7e2e3c1bb4699ae/packages/descendants
-// https://github.com/pacocoursey/use-descendants/tree/master
-
-const createIsolatedItemTracker = () => {
-  // Producer contexts (ref-based, no re-renders)
-  const ProducerTrackerContext = K();
-  const ProducerItemCountRefContext = K();
-  const ProducerListRenderIdContext = K();
-
-  // Consumer contexts (state-based, re-renders)
-  const ConsumerItemsContext = K();
-  const useIsolatedItemTrackerProvider = () => {
-    const itemsRef = F([]);
-    const items = itemsRef.current;
-    const itemCountRef = F();
-    const itemTracker = q(() => {
-      // Snapshot taken by FlushSentinel after all producer children rendered.
-      // Consumers read from this — always up-to-date within the same render pass.
-      const itemsSnapshotRef = {
-        current: items
-      };
-      const registerItem = (index, value) => {
-        const hasValue = index in items;
-        if (hasValue) {
-          const currentValue = items[index];
-          if (compareTwoJsValues(currentValue, value)) {
-            return;
-          }
-        }
-        items[index] = value;
-      };
-      const getProducerItem = itemIndex => {
-        return items[itemIndex];
-      };
-      const ItemProducerProvider = ({
-        children
-      }) => {
-        items.length = 0;
-        itemCountRef.current = 0;
-        const listRenderId = {};
-        return u$1(ProducerItemCountRefContext.Provider, {
-          value: itemCountRef,
-          children: u$1(ProducerListRenderIdContext.Provider, {
-            value: listRenderId,
-            children: u$1(ProducerTrackerContext.Provider, {
-              value: itemTracker,
-              children: [children, u$1(FlushSentinel, {})]
-            })
-          })
-        });
-      };
-
-      // Renders after all producer children (e.g. <Col>) have registered their
-      // items. Taking a snapshot here guarantees the consumer sees the correct
-      // item list within the same render pass, without any heuristic.
-      const FlushSentinel = () => {
-        itemsSnapshotRef.current = items;
-        return null;
-      };
-      const ItemConsumerProvider = ({
-        children
-      }) => {
-        // FlushSentinel (last child of ItemProducerProvider) already set
-        // itemsSnapshotRef.current to the up-to-date items array before any
-        // consumer rendered. Reading from the snapshot is always correct.
-        return u$1(ConsumerItemsContext.Provider, {
-          value: itemsSnapshotRef.current,
-          children: children
-        });
-      };
-      return {
-        registerItem,
-        getProducerItem,
-        ItemProducerProvider,
-        ItemConsumerProvider
-      };
-    }, []);
-    const {
-      ItemProducerProvider,
-      ItemConsumerProvider
-    } = itemTracker;
-    return [ItemProducerProvider, ItemConsumerProvider, items];
-  };
-
-  // Hook for producers to register items (ref-based, no re-renders)
-  const useTrackIsolatedItem = data => {
-    const listRenderId = j$1(ProducerListRenderIdContext);
-    const itemCountRef = j$1(ProducerItemCountRefContext);
-    const itemTracker = j$1(ProducerTrackerContext);
-    const listRenderIdRef = F();
-    const itemIndexRef = F();
-    const dataRef = F();
-    const prevListRenderId = listRenderIdRef.current;
-    if (prevListRenderId === listRenderId) {
-      const itemIndex = itemIndexRef.current;
-      itemTracker.registerItem(itemIndex, data);
-      dataRef.current = data;
-      return itemIndex;
-    }
-    listRenderIdRef.current = listRenderId;
-    const itemCount = itemCountRef.current;
-    const itemIndex = itemCount;
-    itemCountRef.current = itemIndex + 1;
-    itemIndexRef.current = itemIndex;
-    dataRef.current = data;
-    itemTracker.registerItem(itemIndex, data);
-    return itemIndex;
-  };
-  const useTrackedIsolatedItem = itemIndex => {
-    const items = useTrackedIsolatedItems();
-    const item = items[itemIndex];
-    return item;
-  };
-
-  // Hooks for consumers to read items (state-based, re-renders)
-  const useTrackedIsolatedItems = () => {
-    const consumerItems = j$1(ConsumerItemsContext);
-    if (!consumerItems) {
-      throw new Error("useTrackedIsolatedItems must be used within <ItemConsumerProvider />");
-    }
-    return consumerItems;
-  };
-  return [useIsolatedItemTrackerProvider, useTrackIsolatedItem, useTrackedIsolatedItem, useTrackedIsolatedItems];
-};
-
-const createItemTracker = () => {
-  const ItemTrackerContext = K();
-  const useItemTrackerProvider = () => {
-    const itemsRef = F([]);
-    const items = itemsRef.current;
-    const itemCountRef = F(0);
-    const tracker = q(() => {
-      const ItemTrackerProvider = ({
-        children
-      }) => {
-        // Reset on each render to start fresh
-        tracker.reset();
-        return u$1(ItemTrackerContext.Provider, {
-          value: tracker,
-          children: children
-        });
-      };
-      ItemTrackerProvider.items = items;
-      return {
-        ItemTrackerProvider,
-        items,
-        registerItem: data => {
-          const index = itemCountRef.current++;
-          items[index] = data;
-          return index;
-        },
-        getItem: index => {
-          return items[index];
-        },
-        getAllItems: () => {
-          return items;
-        },
-        reset: () => {
-          items.length = 0;
-          itemCountRef.current = 0;
-        }
-      };
-    }, []);
-    return tracker.ItemTrackerProvider;
-  };
-  const useTrackItem = data => {
-    const tracker = j$1(ItemTrackerContext);
-    if (!tracker) {
-      throw new Error("useTrackItem must be used within SimpleItemTrackerProvider");
-    }
-    return tracker.registerItem(data);
-  };
-  const useTrackedItem = index => {
-    const trackedItems = useTrackedItems();
-    const item = trackedItems[index];
-    return item;
-  };
-  const useTrackedItems = () => {
-    const tracker = j$1(ItemTrackerContext);
-    if (!tracker) {
-      throw new Error("useTrackedItems must be used within SimpleItemTrackerProvider");
-    }
-    return tracker.items;
-  };
-  return [useItemTrackerProvider, useTrackItem, useTrackedItem, useTrackedItems];
-};
-
 const TableSizeContext = K();
 
 const useTableSizeContextValue = ({
@@ -37345,7 +38194,7 @@ installImportMetaCssBuild(import.meta);const ROW_MIN_HEIGHT = 30;
 const ROW_MAX_HEIGHT = 100;
 const COLUMN_MIN_WIDTH = 50;
 const COLUMN_MAX_WIDTH = 500;
-import.meta.css = [/* css */`
+const css$6 = /* css */`
   @layer navi {
     .navi_table {
       --table-resizer-handle-color: #063b7c;
@@ -37501,10 +38350,13 @@ import.meta.css = [/* css */`
   .navi_table_row_resizer[data-grabbed] .navi_table_row_resizer_line {
     opacity: 1;
   }
-`, "@jsenv/navi/src/field/table/resize/table_resize.jsx"];
+`;
 
 // Column resize components
-const TableColumnResizer = M((props, ref) => {
+const TableColumnResizer = props => {
+  import.meta.css = [css$6, "@jsenv/navi/src/field/table/resize/table_resize.jsx"];
+  const defaultRef = F();
+  const ref = props.ref || defaultRef;
   return u$1("div", {
     ref: ref,
     className: "navi_table_column_resizer",
@@ -37521,7 +38373,7 @@ const TableColumnResizer = M((props, ref) => {
       className: "navi_table_column_resizer_line"
     })]
   });
-});
+};
 const TableCellColumnResizeHandles = ({
   columnIndex,
   columnMinWidth,
@@ -37824,7 +38676,9 @@ const initResizeTableRowViaPointer = (pointerdownEvent, {
 };
 
 // Row resize components
-const TableRowResizer = M((props, ref) => {
+const TableRowResizer = props => {
+  const defaultRef = F();
+  const ref = props.ref || defaultRef;
   return u$1("div", {
     ref: ref,
     className: "navi_table_row_resizer",
@@ -37841,7 +38695,7 @@ const TableRowResizer = M((props, ref) => {
       className: "navi_table_row_resizer_line"
     })]
   });
-});
+};
 const TableCellRowResizeHandles = ({
   rowIndex,
   rowMinHeight,
@@ -37967,7 +38821,7 @@ const findPreviousTableRow = currentRow => {
   return currentIndex > 0 ? allRows[currentIndex - 1] : null;
 };
 
-installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
+installImportMetaCssBuild(import.meta);const css$5 = /* css */`
   @layer navi {
     .navi_table {
       --selection-border-color: var(--navi-selection-border-color, #0078d4);
@@ -38062,13 +38916,14 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
       inset 0 -1px 0 0 var(--selection-border-color),
       inset 1px 0 0 0 var(--selection-border-color);
   }
-`, "@jsenv/navi/src/field/table/selection/table_selection.jsx"];
+`;
 const useTableSelectionController = ({
   tableRef,
   selection,
   onSelectionChange,
   selectionColor
 }) => {
+  import.meta.css = [css$5, "@jsenv/navi/src/field/table/selection/table_selection.jsx"];
   const selectionController = useSelectionController({
     elementRef: tableRef,
     layout: "grid",
@@ -38539,7 +39394,7 @@ const useTableStickyContextValue = ({
 };
 
 installImportMetaCssBuild(import.meta);// TODO: sticky left/top frontier should likely use "followPosition"
-import.meta.css = [/* css */`
+const css$4 = /* css */`
   @layer navi {
     .navi_table {
       --sticky-frontier-color: #c0c0c0;
@@ -38778,10 +39633,11 @@ import.meta.css = [/* css */`
       inset -1px 0 0 0 var(--border-color),
       inset 0 -1px 0 0 var(--border-color);
   }
-`, "@jsenv/navi/src/field/table/sticky/table_sticky.jsx"];
+`;
 const TableStickyFrontier = ({
   tableRef
 }) => {
+  import.meta.css = [css$4, "@jsenv/navi/src/field/table/sticky/table_sticky.jsx"];
   const stickyLeftFrontierGhostRef = F();
   const stickyLeftFrontierPreviewRef = F();
   const stickyTopFrontierGhostRef = F();
@@ -39000,7 +39856,6 @@ const initMoveStickyFrontierViaPointer = (pointerdownEvent, {
   });
 };
 
-installImportMetaCssBuild(import.meta);
 /*
  * Box-shadow border mapping template:
  *
@@ -39011,7 +39866,7 @@ installImportMetaCssBuild(import.meta);
  *   inset 0 -1px 0 0 color;   // Bottom border
  */
 
-import.meta.css = [/* css */`
+const css$3 = /* css */ `
   .navi_table_root {
     position: relative;
     max-width: var(--table-max-width, none);
@@ -39212,9 +40067,9 @@ import.meta.css = [/* css */`
     z-index: ${Z_INDEX_EDITING};
     outline: 2px solid var(--editing-border-color);
   }
-`, "@jsenv/navi/src/field/table/table_css.js"];
+`;
 
-installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
+installImportMetaCssBuild(import.meta);const css$2 = /* css */`
   .navi_table_ui {
     position: fixed;
     inset: 0;
@@ -39223,8 +40078,9 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
     overflow: hidden; /* Ensure UI elements cannot impact scrollbars of the document  */
     /* background: rgba(0, 255, 0, 0.2); */
   }
-`, "@jsenv/navi/src/field/table/table_ui.jsx"];
+`;
 const TableUI = M((props, ref) => {
+  import.meta.css = [css$2, "@jsenv/navi/src/field/table/table_ui.jsx"];
   const {
     tableRef,
     tableId,
@@ -39260,7 +40116,7 @@ const TableUI = M((props, ref) => {
   }), document.body);
 });
 
-/**
+installImportMetaCssBuild(import.meta);/**
  * Table Component with Custom Border and Selection System
  *
  * PROBLEM: We want to draw selected table cells with a clear visual perimeter
@@ -39311,7 +40167,6 @@ const TableUI = M((props, ref) => {
  * - Delete a column (how?)
  * - Update table column info (I guess a down arrow icon which opens a meny when clicked for instance)
  */
-
 const [useColumnTrackerProviders, useRegisterColumn, useColumnByIndex] = createIsolatedItemTracker();
 const [useRowTrackerProvider, useRegisterRow, useRowByIndex] = createItemTracker();
 const ColumnProducerProviderContext = K();
@@ -39323,6 +40178,7 @@ const RowIndexContext = K();
 const TableSectionContext = K();
 const useIsInTableHead = () => j$1(TableSectionContext) === "head";
 const Table = props => {
+  import.meta.css = [css$3, "@jsenv/navi/src/field/table/table.jsx"];
   const tableDefaultRef = F();
   const tableDefaultId = `table-${P()}`;
   const {
@@ -39805,6 +40661,7 @@ const TableCell = props => {
     // we use [data-focus] so that the attribute can be copied
     // to the dragged cell copies
     ,
+
     "data-focus": activeElement === ref.current ? "" : undefined,
     "data-first-row": isFirstRow ? "" : undefined,
     "data-first-column": isFirstColumn ? "" : undefined,
@@ -39892,6 +40749,7 @@ const RowNumberCol = ({
     // minWidth={minWidth}
     // maxWidth={maxWidth}
     ,
+
     immovable: immovable,
     ...rest
   });
@@ -40115,64 +40973,9 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
   }
 `, "@jsenv/navi/src/keyboard/active_keyboard_shortcuts.jsx"];
 
-installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
-  @layer navi {
-    .navi_clipboard_container {
-      --height: 1.5em;
-      --notif-spacing: 0.5em;
-    }
-  }
+installImportMetaCssBuild(import.meta);
 
-  .navi_clipboard_container {
-    position: relative;
-    display: inline-flex;
-    height: var(--height);
-    align-items: center;
-
-    .navi_copied_notif {
-      position: absolute;
-      top: calc(-1 * var(--notif-spacing));
-      right: 0;
-      padding: 0.2em 0.5em;
-      color: white;
-      font-size: 80%;
-      white-space: nowrap;
-      background: black;
-      border-radius: 3px;
-      transform: translateY(-100%);
-    }
-  }
-`, "@jsenv/navi/src/field/button_copy_to_clipboard.jsx"];
-
-installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
-  @layer navi {
-  }
-  .navi_badge {
-    --font-size: 0.7em;
-    --x-background: var(--background);
-    --x-background-color: var(--background-color, var(--x-background));
-    --x-color-contrasting: var(--navi-color-black);
-    --x-color: var(--color, var(--x-color-contrasting));
-    --padding-x: 0.8em;
-    --padding-y: 0.4em;
-    position: relative;
-    display: inline-block;
-    padding-top: var(--padding-y);
-    padding-right: var(--padding-x);
-    padding-bottom: var(--padding-y);
-    padding-left: var(--padding-x);
-    color: var(--x-color);
-    font-size: var(--font-size);
-    line-height: normal;
-    background: var(--x-background);
-    background-color: var(--x-background-color);
-    border-radius: 1em;
-
-    &[data-dark-background] {
-      --x-color-contrasting: var(--navi-color-white);
-    }
-  }
-`, "@jsenv/navi/src/text/badge.jsx"];
+installImportMetaCssBuild(import.meta);
 
 const LoadingDots = () => {
   return u$1("svg", {
@@ -40239,10 +41042,12 @@ const formatNumber = (value, { lang } = {}) => {
   return new Intl.NumberFormat(lang).format(value);
 };
 
-installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
+installImportMetaCssBuild(import.meta);const css$1 = /* css */`
   @layer navi {
   }
-  .navi_badge_count {
+  .navi_text.navi_badge_count {
+    /* Important to prevent anchor from breaking to a new line */
+    white-space: nowrap;
     --font-size: 0.7em;
     --x-background: var(--background);
     --x-background-color: var(--background-color, var(--x-background));
@@ -40251,9 +41056,9 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
     --padding-x: 0.5em;
     --padding-y: 0.2em;
     position: relative;
-    display: inline-block;
     color: var(--x-color);
     font-size: var(--font-size);
+    vertical-align: inherit;
 
     &[data-dark-background] {
       --x-color-contrasting: var(--navi-color-white);
@@ -40283,11 +41088,12 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
 
       /* For ellipse + single char force the circle aspect as it's prettier */
       &[data-single-char] {
+        display: inline-block;
         aspect-ratio: 1/1;
-        height: 1.5em;
+        height: 1.6em;
         padding: 0;
         text-align: center;
-        line-height: 1.5em;
+        line-height: 1.6em;
       }
     }
 
@@ -40307,19 +41113,19 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
       border-radius: 50%;
 
       &[data-single-char] {
-        --x-radius: 1.5em;
+        --x-radius: 1.6em;
         --x-number-font-size: unset;
       }
       &[data-two-chars] {
-        --x-radius: 1.8em;
-        --x-number-font-size: 0.9em;
+        --x-radius: 2em;
+        --x-number-font-size: unset;
       }
       &[data-three-chars] {
         --x-radius: 2.4em;
         --x-number-font-size: 0.8em;
       }
       &[data-four-chars] {
-        --x-radius: 2.6em;
+        --x-radius: 2.4em;
         --x-number-font-size: 0.8em;
       }
 
@@ -40328,7 +41134,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
       }
     }
   }
-`, "@jsenv/navi/src/text/badge_count.jsx"];
+`;
 const BadgeStyleCSSVars = {
   borderWidth: "--border-width",
   borderRadius: "--border-radius",
@@ -40356,8 +41162,11 @@ const BadgeCount = ({
   integer,
   lang,
   loading,
+  textAnchor = "center",
+  lineLayout,
   ...props
 }) => {
+  import.meta.css = [css$1, "@jsenv/navi/src/text/badge_count.jsx"];
   const defaultRef = F();
   const ref = props.ref || defaultRef;
   useDarkBackgroundAttribute(ref, [loading]);
@@ -40377,25 +41186,39 @@ const BadgeCount = ({
     circle = false;
   }
   if (circle) {
-    return u$1(BadgeCountCircle, {
-      ...props,
-      loading: loading,
-      ref: ref,
-      hasOverflow: hasOverflow,
-      charCount: charCount,
-      children: [valueDisplayed, hasOverflow && maxElement]
+    return u$1(TextAnchor, {
+      childRef: ref,
+      textAnchor: textAnchor,
+      textSize: props.size,
+      textKey: loading + valueDisplayed + hasOverflow,
+      lineLayout: lineLayout,
+      children: u$1(BadgeCountCircle, {
+        ...props,
+        loading: loading,
+        ref: ref,
+        hasOverflow: hasOverflow,
+        charCount: charCount,
+        children: [valueDisplayed, hasOverflow && maxElement]
+      })
     });
   }
   const valueFormatted = typeof valueDisplayed === "number" ? formatNumber(valueDisplayed, {
     lang
   }) : valueDisplayed;
-  return u$1(BadgeCountEllipse, {
-    ...props,
-    loading: loading,
-    ref: ref,
-    hasOverflow: hasOverflow,
-    charCount: charCount,
-    children: [valueFormatted, hasOverflow && maxElement]
+  return u$1(TextAnchor, {
+    childRef: ref,
+    textAnchor: textAnchor,
+    textSize: props.size,
+    textKey: loading + valueFormatted + hasOverflow,
+    lineLayout: lineLayout,
+    children: u$1(BadgeCountEllipse, {
+      ...props,
+      loading: loading,
+      ref: ref,
+      hasOverflow: hasOverflow,
+      charCount: charCount,
+      children: [valueFormatted, hasOverflow && maxElement]
+    })
   });
 };
 const applyMaxToValue = (max, value) => {
@@ -40436,15 +41259,7 @@ const BadgeCountEllipse = ({
     spacing: "pre",
     children: loading ? u$1(Icon, {
       children: u$1(LoadingDots, {})
-    }) : u$1(k, {
-      children: [u$1("span", {
-        style: "user-select: none",
-        children: "\u200B"
-      }), children, u$1("span", {
-        style: "user-select: none",
-        children: "\u200B"
-      })]
-    })
+    }) : children
   });
 };
 const BadgeCountCircle = ({
@@ -40472,17 +41287,9 @@ const BadgeCountCircle = ({
     spacing: "pre",
     children: loading ? u$1(Icon, {
       children: u$1(LoadingDots, {})
-    }) : u$1(k, {
-      children: [u$1("span", {
-        style: "user-select: none",
-        children: "\u200B"
-      }), u$1("span", {
-        className: "navi_badge_count_text",
-        children: children
-      }), u$1("span", {
-        style: "user-select: none",
-        children: "\u200B"
-      })]
+    }) : u$1("span", {
+      className: "navi_badge_count_text",
+      children: children
     })
   });
 };
@@ -40630,7 +41437,9 @@ const CodeBlock = ({
       };
     }
   }
-  customElements.define("clipboard-copy", ClipboardCopy);
+  if (!customElements.get("clipboard-copy")) {
+    customElements.define("clipboard-copy", ClipboardCopy);
+  }
   const addToClipboard = async text => {
     const type = "text/plain";
     const clipboardItemData = {
@@ -40871,64 +41680,7 @@ const interpolate = (template, values) => {
   });
 };
 
-installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
-  @layer navi {
-    .navi_quantity {
-      --unit-color: color-mix(in srgb, currentColor 50%, white);
-      --unit-size-ratio: 0.7;
-    }
-  }
-
-  .navi_quantity {
-    display: inline-flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.3em;
-    line-height: 1;
-
-    .navi_quantity_label {
-      font-weight: 600;
-      font-size: 0.75em;
-      text-transform: uppercase;
-      line-height: 1;
-      letter-spacing: 0.06em;
-    }
-    .navi_quantity_body {
-      .navi_quantity_unit {
-        color: var(--unit-color);
-        font-weight: normal;
-        font-size: calc(var(--unit-size-ratio) * 1em);
-      }
-    }
-
-    &[data-readonly] {
-      opacity: 0.7;
-      cursor: default;
-    }
-
-    &[data-disabled] {
-      opacity: 0.4;
-      cursor: not-allowed;
-      user-select: none;
-    }
-
-    &[data-unit-bottom] {
-      .navi_quantity_value {
-        display: inline-block;
-        width: 100%;
-        text-align: center;
-      }
-      .navi_quantity_body {
-        .navi_quantity_unit {
-          display: inline-block;
-          width: 100%;
-          text-align: center;
-        }
-      }
-    }
-  }
-`, "@jsenv/navi/src/text/quantity.jsx"];
-const QuantityIntl = createIntl();
+installImportMetaCssBuild(import.meta);const QuantityIntl = createIntl();
 const wellKnownUnitMap = new Map();
 /**
  * Registers a unit with its translations per language, making it a "well-known"
@@ -40963,125 +41715,7 @@ QuantityIntl.addUnit = (unitName, langTranslations) => {
   }
 };
 
-installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
-  @layer navi {
-    .navi_meter {
-      --loader-color: var(--navi-loader-color);
-      --track-color: #efefef;
-      --border-color: #cbcbcb;
-      --border-width: 1px;
-      --border-radius: 5px;
-      --height: 1em;
-      --width: 5em;
-
-      /* Semantic fill colors, matching native meter on Chrome/macOS */
-      --fill-color-optimum: light-dark(#0f7c0f, #4caf50);
-      --fill-color-suboptimum: light-dark(#fdb900, #ffc107);
-      --fill-color-even-less-good: light-dark(#d83b01, #f44336);
-
-      --x-color: var(--navi-color-black);
-      --x-shadow-color: white;
-      --shadow-size: 0.5em;
-      &[data-dark-background] {
-        --x-color: white;
-        --x-shadow-color: black;
-      }
-    }
-  }
-
-  .navi_meter {
-    position: relative;
-    display: inline-flex;
-    box-sizing: border-box;
-    width: var(--width);
-    height: var(--height);
-    align-items: center;
-    vertical-align: middle;
-
-    .navi_meter_track_container {
-      position: relative;
-      width: 100%;
-      height: calc(var(--height) * 0.5);
-      border-radius: var(--border-radius);
-
-      .navi_meter_track {
-        position: absolute;
-        inset: 0;
-        background-color: var(--track-color);
-        border: var(--border-width) solid var(--border-color);
-        border-radius: inherit;
-      }
-
-      .navi_meter_fill {
-        position: absolute;
-        inset: 0;
-        background-clip: content-box;
-        background-color: var(--x-fill-color);
-        border-width: var(--border-width);
-        border-style: solid;
-        border-color: transparent;
-        border-radius: inherit;
-        clip-path: inset(0 calc((1 - var(--x-fill-ratio, 0)) * 100%) 0 0);
-      }
-
-      .navi_meter_caption {
-        position: absolute;
-        inset: 0;
-        z-index: 1;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: var(--x-color);
-        font-size: calc(var(--height) * 0.55);
-        text-shadow:
-          0 0 var(--shadow-size) var(--x-shadow-color),
-          0 0 calc(var(--shadow-size) * 0.5) var(--x-shadow-color);
-        white-space: nowrap;
-        pointer-events: none;
-        user-select: none;
-      }
-    }
-
-    &[data-disabled] {
-      opacity: 0.4;
-    }
-
-    /* When caption is shown, the track takes the full height */
-    &[data-has-caption] {
-      .navi_meter_track_container {
-        height: var(--height);
-      }
-    }
-    /* fillOnly: hide the empty track background */
-    &[data-fill-only] {
-      .navi_meter_track {
-        background-color: transparent;
-        border-color: transparent;
-      }
-    }
-    &[data-fill-round] {
-      .navi_meter_fill {
-        width: calc(var(--x-fill-ratio) * 100%);
-        clip-path: unset;
-      }
-    }
-    /* borderless: remove border */
-    &[data-borderless] {
-      .navi_meter_track {
-        border-color: transparent;
-      }
-    }
-    &[data-transition] {
-      .navi_meter_fill {
-        transition: clip-path 0.4s ease;
-      }
-      &[data-fill-round] .navi_meter_fill {
-        transition: width 0.4s ease;
-      }
-    }
-  }
-`, "@jsenv/navi/src/text/meter.jsx"];
-Object.assign(PSEUDO_CLASSES, {
+installImportMetaCssBuild(import.meta);Object.assign(PSEUDO_CLASSES, {
   ":-navi-meter-optimum": {
     attribute: "data-optimum"
   },
@@ -41092,39 +41726,6 @@ Object.assign(PSEUDO_CLASSES, {
     attribute: "data-even-less-good"
   }
 });
-
-installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
-  .navi_text_placeholder {
-    display: inline-block;
-    width: 100%;
-    height: 1em;
-    background: linear-gradient(90deg, #e0e0e0 25%, #f0f0f0 50%, #e0e0e0 75%);
-    background-size: 200% 100%;
-    border-radius: 4px;
-
-    &[data-loading] {
-      animation: shimmer 1.2s infinite;
-    }
-  }
-  @keyframes shimmer {
-    0% {
-      background-position: 200% 0;
-    }
-    100% {
-      background-position: -200% 0;
-    }
-  }
-`, "@jsenv/navi/src/text/text_placeholder.jsx"];
-const TextPlaceholder = ({
-  loading,
-  ...props
-}) => {
-  return u$1(Box, {
-    ...props,
-    baseClassName: "navi_text_placeholder",
-    "data-loading": loading ? "" : undefined
-  });
-};
 
 installImportMetaCssBuild(import.meta);/**
  * SVGComposition Component
@@ -41227,130 +41828,12 @@ const SVGMaskOverlay = ({
 };
 
 installImportMetaCssBuild(import.meta);// We HAVE TO put paddings around the dialog to ensure window resizing respects this space
-import.meta.css = [/* css */`
-  @layer navi {
-    .navi_dialog_layout {
-      --layout-margin: 30px;
-      --layout-padding: 20px;
-      --layout-background: white;
-      --layout-border-width: 2px;
-      --layout-border-color: lightgrey;
-      --layout-border-radius: 10px;
-      --layout-min-width: 300px;
-      --layout-min-height: auto;
-    }
-  }
-  .navi_dialog_layout {
-    padding-top: var(
-      --layout-margin-top,
-      var(--layout-margin-y, var(--layout-margin))
-    );
-    padding-right: var(
-      --layout-margin-right,
-      var(--layout-margin-x, var(--layout-margin))
-    );
-    padding-bottom: var(
-      --layout-margin-bottom,
-      var(--layout-margin-y, var(--layout-margin))
-    );
-    padding-left: var(
-      --layout-margin-left,
-      var(--layout-margin-x, var(--layout-margin))
-    );
-  }
 
-  .navi_dialog_content {
-    min-width: var(--layout-min-width);
-    min-height: var(--layout-min-height);
-    padding-top: var(
-      --layout-padding-top,
-      var(--layout-padding-y, var(--layout-padding))
-    );
-    padding-right: var(
-      --layout-padding-right,
-      var(--layout-padding-x, var(--layout-padding))
-    );
-    padding-bottom: var(
-      --layout-padding-bottom,
-      var(--layout-padding-y, var(--layout-padding))
-    );
-    padding-left: var(
-      --layout-padding-left,
-      var(--layout-padding-x, var(--layout-padding))
-    );
-    background: var(--layout-background);
-    background-color: var(--layout-background-color, var(--layout-background));
-    border-width: var(--layout-border-width);
-    border-style: solid;
-    border-color: var(--layout-border-color);
-    border-radius: var(--layout-border-radius);
-  }
-`, "@jsenv/navi/src/layout/dialog_layout.jsx"];
+installImportMetaCssBuild(import.meta);
 
-installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
-  @layer navi {
-    .navi_separator {
-      --size: 1px;
-      --color: #e4e4e7;
-      --spacing: 0.5em;
-      --spacing-start: 0.5em;
-      --spacing-end: 0.5em;
-    }
-  }
+installImportMetaCssBuild(import.meta);
 
-  .navi_separator {
-    width: 100%;
-    height: var(--size);
-    margin-top: var(--spacing-start, var(--spacing));
-    margin-bottom: var(--spacing-end, var(--spacing));
-    flex-shrink: 0;
-    background: var(--color);
-    border: none;
-
-    &[data-vertical] {
-      display: inline-block;
-
-      width: var(--size);
-      height: 1lh;
-      margin-top: 0;
-      margin-right: var(--spacing-end, var(--spacing));
-      margin-bottom: 0;
-      margin-left: var(--spacing-start, var(--spacing));
-      vertical-align: bottom;
-    }
-  }
-`, "@jsenv/navi/src/layout/separator.jsx"];
-
-installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
-  @layer navi {
-    .navi_viewport_layout {
-      --layout-padding: 40px;
-      --layout-background: white;
-    }
-  }
-
-  .navi_viewport_layout {
-    padding-top: var(
-      --layout-padding-top,
-      var(--layout-padding-y, var(--layout-padding))
-    );
-    padding-right: var(
-      --layout-padding-right,
-      var(--layout-padding-x, var(--layout-padding))
-    );
-    padding-bottom: var(
-      --layout-padding-bottom,
-      var(--layout-padding-y, var(--layout-padding))
-    );
-    padding-left: var(
-      --layout-padding-left,
-      var(--layout-padding-x, var(--layout-padding))
-    );
-    background: var(--layout-background);
-  }
-`, "@jsenv/navi/src/layout/viewport_layout.jsx"];
-
-installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
+installImportMetaCssBuild(import.meta);const css = /* css */`
   @layer navi {
     .navi_side_panel {
       --side-panel-width: 400px;
@@ -41447,7 +41930,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
       transform: translateX(100%);
     }
   }
-`, "@jsenv/navi/src/popover/side_panel.jsx"];
+`;
 const SidePanelCloseContext = K(null);
 const useSidePanelClose = () => j$1(SidePanelCloseContext);
 const SidePanelStyleCSSVars = {
@@ -41462,6 +41945,7 @@ const SidePanel = ({
   width,
   ...rest
 }) => {
+  import.meta.css = [css, "@jsenv/navi/src/popover/side_panel.jsx"];
   onClose = useStableCallback(onClose);
   const panelDialogRef = F(null);
   const [phase, setPhase] = h(isOpen ? "open" : "closed");
@@ -41838,7 +42322,8 @@ const RenameInputOrName = ({
     value: itemName,
     action: v => renameItemAction(item, v),
     required: true,
-    constraints: [SINGLE_SPACE_CONSTRAINT, availableNameConstraint],
+    "data-single-space": "",
+    constraints: [availableNameConstraint],
     children: children
   });
 };
@@ -41869,7 +42354,8 @@ const ExplorerNewItem = ({
       onActionEnd: onActionEnd,
       autoFocus: true,
       required: true,
-      constraints: [SINGLE_SPACE_CONSTRAINT, availableNameConstraint]
+      "data-single-space": "",
+      constraints: [availableNameConstraint]
     })]
   });
 };
@@ -45330,7 +45816,7 @@ const TableData = ({
         id: i
       };
       for (const column of columns) {
-        row[column.column_name] = u$1(TextPlaceholder, {
+        row[column.column_name] = u$1(Text, {
           loading: true
         });
       }
