@@ -34,7 +34,7 @@ import { useActionStatus } from "../action/use_action_status.js";
 import { useExecuteAction } from "../action/use_execute_action.js";
 import { Box } from "../box/box.jsx";
 import { PSEUDO_CLASSES } from "../box/pseudo_styles.js";
-import { ChevronUpDownSvg } from "../graphic/icons/chevron_updown_svg.jsx";
+import { ChevronDownSvg } from "../graphic/icons/chevron_updown_svg.jsx";
 import { CloseSvg } from "../graphic/icons/close_svg.jsx";
 import { EmailSvg } from "../graphic/icons/email_svg.jsx";
 import { PhoneSvg } from "../graphic/icons/phone_svg.jsx";
@@ -637,7 +637,7 @@ const InputTextualWithSuggestions = ({
           }}
         >
           <Icon color="rgba(28, 43, 52, 0.5)">
-            <ChevronUpDownSvg />
+            <ChevronDownSvg />
           </Icon>
         </InputRightSlot>
       )}
