@@ -477,7 +477,6 @@ export const SuggestionList = ({
 
   return (
     <Box
-      ref={ref}
       id={id}
       popover={popover ? "manual" : undefined}
       tabIndex={popover ? -1 : 0}
@@ -498,6 +497,7 @@ export const SuggestionList = ({
         );
       }}
       {...rest}
+      ref={ref}
       baseClassName="navi_suggestion_list"
     >
       <SuggestionListBox
