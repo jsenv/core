@@ -1,6 +1,7 @@
 import { createContext } from "preact";
-import { useContext, useState } from "preact/hooks";
+import { useContext, useLayoutEffect, useRef, useState } from "preact/hooks";
 
+import { Box } from "../box/box.jsx";
 import {
   SuggestionFilterContext,
   SuggestionMatchContext,
@@ -28,16 +29,22 @@ const SetFilterContext = createContext();
  *
  * match: optional custom match function (value, filter) => boolean
  */
-export const SuggestionListCombo = ({ match = defaultMatch, children }) => {
+export const SuggestionListCombo = ({
+  match = defaultMatch,
+  children,
+  ...props
+}) => {
   const [filter, setFilter] = useState("");
   return (
-    <SuggestionMatchContext.Provider value={match}>
-      <SuggestionFilterContext.Provider value={filter}>
-        <SetFilterContext.Provider value={setFilter}>
-          {children}
-        </SetFilterContext.Provider>
-      </SuggestionFilterContext.Provider>
-    </SuggestionMatchContext.Provider>
+    <Box {...props} baseClassName="navi_suggestion_list_combo">
+      <SuggestionMatchContext.Provider value={match}>
+        <SuggestionFilterContext.Provider value={filter}>
+          <SetFilterContext.Provider value={setFilter}>
+            {children}
+          </SetFilterContext.Provider>
+        </SuggestionFilterContext.Provider>
+      </SuggestionMatchContext.Provider>
+    </Box>
   );
 };
 const defaultMatch = (v, filter) => String(v).toLowerCase().includes(filter);
