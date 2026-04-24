@@ -758,9 +758,7 @@ const SuggestionConcrete = ({
     useContext(SuggestionListboxContext);
 
   const isPointed =
-    keyboardPointedValue !== null
-      ? keyboardPointedValue === value
-      : mousePointedValue === value;
+    keyboardPointedValue === value || mousePointedValue === value;
   const isKeyboardPointed = keyboardPointedValue === value;
   const suggestionRef = useRef(null);
 
@@ -772,23 +770,7 @@ const SuggestionConcrete = ({
     if (!suggestionEl) {
       return;
     }
-    // Only scroll if the element is not fully visible in its scroll container.
-    // scrollIntoView would trigger a scroll event → onScroll → vsState update
-    // → re-render loop, so we manually adjust scrollTop instead.
-    const scrollContainer = suggestionEl.closest(".navi_suggestion_list");
-    if (!scrollContainer) {
-      suggestionEl.scrollIntoView({ block: "nearest" });
-      return;
-    }
-    const containerRect = scrollContainer.getBoundingClientRect();
-    const elRect = suggestionEl.getBoundingClientRect();
-    if (elRect.top < containerRect.top) {
-      const delta = containerRect.top - elRect.top;
-      scrollContainer.scrollTop -= delta;
-    } else if (elRect.bottom > containerRect.bottom) {
-      const delta = elRect.bottom - containerRect.bottom;
-      scrollContainer.scrollTop += delta;
-    }
+    suggestionEl.scrollIntoView({ block: "nearest" });
   }, [isKeyboardPointed]);
 
   return (
