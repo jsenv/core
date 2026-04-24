@@ -172,6 +172,10 @@ const css = /* css */ `
       --x-color: var(--suggestion-color-pointed-selected);
       --x-background-color: var(--suggestion-background-color-pointed-selected);
     }
+
+    &[hidden] {
+      display: none;
+    }
   }
   .navi_suggestion_group_label {
     position: sticky;
@@ -491,9 +495,16 @@ const SuggestionListControlled = ({
       const median = medianHeightRef.current;
       const itemsPerView = Math.ceil(listEl.clientHeight / median);
       const firstVisible = Math.floor(listEl.scrollTop / median);
-      const newStart = firstVisible > VIRTUAL_SCROLL_BUFFER ? firstVisible - VIRTUAL_SCROLL_BUFFER : 0;
+      const newStart =
+        firstVisible > VIRTUAL_SCROLL_BUFFER
+          ? firstVisible - VIRTUAL_SCROLL_BUFFER
+          : 0;
       const newEnd = firstVisible + itemsPerView + VIRTUAL_SCROLL_BUFFER;
-      setVirtualScrollState((prev) => ({ ...prev, start: newStart, end: newEnd }));
+      setVirtualScrollState((prev) => ({
+        ...prev,
+        start: newStart,
+        end: newEnd,
+      }));
     };
     onScroll();
     listEl.addEventListener("scroll", onScroll, { passive: true });
@@ -580,7 +591,9 @@ const SuggestionListbox = ({
     const median = medianHeightRef.current;
     const topHidden = virtualScrollState.start;
     const bottomHidden =
-      totalItems > virtualScrollState.end ? totalItems - virtualScrollState.end : 0;
+      totalItems > virtualScrollState.end
+        ? totalItems - virtualScrollState.end
+        : 0;
     if (fillerTopRef.current) {
       fillerTopRef.current.style.height = `${Math.round(topHidden * median)}px`;
     }
@@ -742,15 +755,22 @@ export const Suggestion = ({ value, hidden, index, ...rest }) => {
   // When inside SuggestionListCombo, compute hidden from the filter context
   // unless the caller explicitly passed hidden.
   const filterCtx = useContext(SuggestionFilterContext);
-  if (hidden === undefined && filterCtx && filterCtx.filter) {
+  let matches = true;
+  if (filterCtx && filterCtx.filter) {
     const { filter, match: matchFn } = filterCtx;
     const lowerFilter = filter.toLowerCase();
-    const defaultMatch = (v) => String(v).toLowerCase().includes(lowerFilter);
-    const match = matchFn ? (v) => matchFn(v, filter) : defaultMatch;
-    hidden = !match(value);
+    const match = matchFn || defaultMatch;
+    matches = match(value, lowerFilter);
+    hidden = !matches;
+  }
+  if (hidden === undefined && !matches) {
+    hidden = true;
   }
   index = useTrackSuggestion(id, { id, value, hidden }, index);
   const virtualScrollCtx = useContext(VirtualScrollContext);
+  // if (!matches) {
+  //   return null;
+  // }
   if (virtualScrollCtx && virtualScrollCtx.enabled) {
     if (index < virtualScrollCtx.start || index >= virtualScrollCtx.end) {
       return null;
@@ -758,6 +778,7 @@ export const Suggestion = ({ value, hidden, index, ...rest }) => {
   }
   return <SuggestionConcrete value={value} hidden={hidden} id={id} {...rest} />;
 };
+const defaultMatch = (v, filter) => String(v).toLowerCase().includes(filter);
 
 const SuggestionConcrete = ({
   value,
