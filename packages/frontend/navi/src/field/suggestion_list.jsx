@@ -544,7 +544,7 @@ const SuggestionListbox = ({
   const pointedByKeyboardRef = useRef(false);
 
   const onPointedBy = (value, event) => {
-    pointedByKeyboardRef.current = event.type === "navi_list_navigate";
+    pointedByKeyboardRef.current = event.type === "keydown";
     setPointedValue(value);
   };
   const select = (value, event) => {
@@ -646,14 +646,18 @@ const SuggestionListbox = ({
         const current = pointedValueRef.current;
         if (direction === "down") {
           const idx = current === null ? -1 : values.indexOf(current);
-          onPointedBy(values[idx < values.length - 1 ? idx + 1 : idx], event);
+          const value = values[idx < values.length - 1 ? idx + 1 : idx];
+          onPointedBy(value, event);
         } else if (direction === "up") {
           const idx = current === null ? -1 : values.indexOf(current);
-          onPointedBy(values[idx > 0 ? idx - 1 : 0], event);
+          const value = values[idx > 0 ? idx - 1 : 0];
+          onPointedBy(value, event);
         } else if (direction === "first") {
-          onPointedBy(values[0], event);
+          const value = values[0];
+          onPointedBy(value, event);
         } else if (direction === "last") {
-          onPointedBy(values[values.length - 1], event);
+          const value = values[values.length - 1];
+          onPointedBy(value, event);
         }
       }}
       onnavi_list_confirm={(e) => {
