@@ -144,6 +144,7 @@ const DIMENSION_PROPS = {
         // buuut it would allow children (hello ".navi_text_sizer")
         // to inherit expand behavior
         flexGrow: 1,
+        width: "auto", // ensure we override any with: 'fit-content' for instance
       };
     }
     // Can't use flexGrow — parent is not flex-x
@@ -166,6 +167,7 @@ const DIMENSION_PROPS = {
         // buuut it would allow children (hello ".navi_text_sizer")
         // to inherit expand behavior
         flexGrow: 1,
+        height: "auto", // ensure we override any with: 'fit-content' for instance
       };
     }
     // Can't use flexGrow — parent is not flex-y

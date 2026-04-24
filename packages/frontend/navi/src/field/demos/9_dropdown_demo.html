@@ -46,18 +46,9 @@
       // ── Reusable dialog header ────────────────────────────────────────────────
 
       const DialogHeader = ({ title }) => {
-        const close = useDropdownClose();
         return (
-          <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px 10px;border-bottom:1px solid #eee;">
+          <div style="padding:14px 16px 10px;border-bottom:1px solid #eee;">
             <span style="font-weight:600;font-size:15px;">{title}</span>
-            <button
-              type="button"
-              aria-label="Close"
-              onClick={close}
-              style="display:flex;align-items:center;justify-content:center;width:28px;height:28px;padding:0;border:none;background:none;cursor:pointer;border-radius:4px;font-size:18px;color:#555;line-height:1;"
-            >
-              ×
-            </button>
           </div>
         );
       };
@@ -127,8 +118,21 @@
         return (
           <div style="min-width: 300px;">
             <DialogHeader title="Please select a fruit" />
-            <SuggestionListCombo style="padding: 8px;">
-              <Input placeholder="Filter…" expandX autoFocus />
+            <SuggestionListCombo
+              padding="m"
+              flex="y"
+              spacing="s"
+              alignY="start"
+            >
+              <Input
+                placeholder="Filter…"
+                expandX
+                autoFocus
+                paddingX="10"
+                paddingY="6"
+                size="m"
+                borderRadius="6px"
+              />
               <SuggestionList
                 maxHeight="240px"
                 expandX
