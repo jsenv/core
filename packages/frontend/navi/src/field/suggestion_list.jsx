@@ -732,10 +732,10 @@ const SUGGESTION_PSEUDO_CLASSES = [":-navi-pointed", ":-navi-selected"];
 const SUGGESTION_PSEUDO_ELEMENTS = ["::highlight"];
 // Thin wrapper: tracks the suggestion (so all items register with ItemTracker
 // regardless of virtual scroll), then bails out early outside the visible window.
-export const Suggestion = ({ value, hidden, ...rest }) => {
+export const Suggestion = ({ value, hidden, index: indexProp, ...rest }) => {
   const idDefault = useId();
   const id = rest.id || idDefault;
-  const index = useTrackSuggestion({ id, value, hidden });
+  const index = useTrackSuggestion(indexProp, { id, value, hidden });
   const vsCtx = useContext(VirtualScrollContext);
   if (vsCtx && vsCtx.enabled) {
     if (index < vsCtx.start || index >= vsCtx.end) {

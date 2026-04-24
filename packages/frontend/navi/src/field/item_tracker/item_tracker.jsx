@@ -126,7 +126,7 @@ export const createItemTracker = () => {
     return tracker.ItemTrackerProvider;
   };
 
-  const useTrackItem = (data) => {
+  const useTrackItem = (explicitIndex, data) => {
     const tracker = useContext(ItemTrackerContext);
     if (!tracker) {
       throw new Error(
@@ -138,7 +138,12 @@ export const createItemTracker = () => {
     if (stableIdRef.current === null) {
       stableIdRef.current = Symbol();
     }
-    const index = tracker.registerItem(data);
+    // If an explicit index is provided, use it directly (required when items
+    // can be reordered, e.g. after filtering). Otherwise fall back to
+    // render-order index via registerItem (fine for static lists).
+    // Note: registerItem is always called to keep hook call count stable.
+    const renderOrderIndex = tracker.registerItem(data);
+    const index = explicitIndex !== undefined ? explicitIndex : renderOrderIndex;
     // Commit this item into the stable snapshot after every render.
     // Running without deps ensures the committed index and data are always
     // up to date when items re-render (e.g. index shifts after add/remove).

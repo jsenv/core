@@ -327,9 +327,10 @@
               highlight={filter}
               expandX
             >
-              {allItems.map((item) => (
+              {allItems.map((item, i) => (
                 <Suggestion
                   key={item}
+                  index={i}
                   value={item}
                   selected={selected === item}
                   style={{ backgroundColor: SUGGESTION_BG }}
