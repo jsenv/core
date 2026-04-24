@@ -63,7 +63,7 @@ import { useContext, useLayoutEffect, useMemo, useRef } from "preact/hooks";
  * ```
  */
 
-export const createItemTracker = () => {
+export const createItemTracker = ({ trackVisibility = false } = {}) => {
   const ItemTrackerContext = createContext();
 
   const useItemTrackerProvider = () => {
@@ -71,14 +71,13 @@ export const createItemTracker = () => {
     const renderItems = renderItemsRef.current;
     const renderCountRef = useRef(0);
 
-    // committedItems is the stable snapshot exposed via ItemTrackerProvider.items.
-    // It is maintained by per-item useLayoutEffect hooks (commitItem/decommitItem),
-    // so it stays correct even when Preact bails out on children:
-    //   - bailout → no item effects fire → committedItems unchanged (correct)
-    //   - genuine unmount → decommitItem cleanup fires → committedItems updated (correct)
     const committedItemsRef = useRef([]);
     const committedItems = committedItemsRef.current;
     const committedMapRef = useRef(new Map()); // stableId → { index, data }
+
+    // When trackVisibility is true, these refs count visible items per render.
+    const visibleCountRef = trackVisibility ? useRef(0) : null;
+    const visibleRegisteredRef = trackVisibility ? useRef(false) : null;
 
     const tracker = useMemo(() => {
       const ItemTrackerProvider = ({ children }) => {
@@ -93,6 +92,16 @@ export const createItemTracker = () => {
         );
       };
       ItemTrackerProvider.items = committedItems;
+      if (trackVisibility) {
+        // Expose visible count as getters so consumers read the current ref
+        // value after children have rendered (refs are always up to date).
+        Object.defineProperty(ItemTrackerProvider, "visibleCount", {
+          get: () => visibleCountRef.current,
+        });
+        Object.defineProperty(ItemTrackerProvider, "visibleRegistered", {
+          get: () => visibleRegisteredRef.current,
+        });
+      }
 
       return {
         ItemTrackerProvider,
@@ -119,7 +128,22 @@ export const createItemTracker = () => {
         reset: () => {
           renderItems.length = 0;
           renderCountRef.current = 0;
+          if (trackVisibility) {
+            visibleCountRef.current = 0;
+            visibleRegisteredRef.current = false;
+          }
         },
+        registerVisibleIndex: trackVisibility
+          ? (hidden) => {
+              visibleRegisteredRef.current = true;
+              if (hidden) {
+                return -1;
+              }
+              const idx = visibleCountRef.current;
+              visibleCountRef.current = idx + 1;
+              return idx;
+            }
+          : null,
       };
     }, []);
 
@@ -143,6 +167,9 @@ export const createItemTracker = () => {
     const renderOrderIndex = tracker.registerItem(data);
     const index =
       explicitIndex !== undefined ? explicitIndex : renderOrderIndex;
+    const visibleIndex = trackVisibility
+      ? tracker.registerVisibleIndex(data.hidden)
+      : undefined;
     // Commit this item into the stable snapshot after every render.
     // Running without deps ensures the committed index and data are always
     // up to date when items re-render (e.g. index shifts after add/remove).
@@ -154,7 +181,7 @@ export const createItemTracker = () => {
         tracker.decommitItem(id);
       };
     });
-    return index;
+    return trackVisibility ? [index, visibleIndex] : index;
   };
 
   const useTrackedItem = (index) => {
