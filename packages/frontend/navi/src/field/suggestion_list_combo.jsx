@@ -1,5 +1,5 @@
 import { createContext } from "preact";
-import { useId, useState } from "preact/hooks";
+import { useId, useLayoutEffect, useRef, useState } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
 import {
@@ -29,16 +29,48 @@ export const SetFilterContext = createContext();
  *   </SuggestionListCombo>
  *
  * match: optional custom match function (value, filter) => boolean
+ * lockSize: once the element first has non-zero dimensions, fix width+height so
+ *           filtering cannot shrink the container (useful inside a dialog).
  */
 export const SuggestionListCombo = ({
   match = defaultMatch,
+  lockSize,
   children,
   ...props
 }) => {
   const [filter, setFilter] = useState("");
   const listboxId = useId();
+  const boxRef = useRef(null);
+
+  useLayoutEffect(() => {
+    if (!lockSize) {
+      return undefined;
+    }
+    if (filter !== "") {
+      return undefined;
+    }
+    const el = boxRef.current;
+    if (!el) {
+      return undefined;
+    }
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      const { width, height } = entry.contentRect;
+      if (width === 0 && height === 0) {
+        return;
+      }
+      el.style.width = `${width}px`;
+      el.style.height = `${height}px`;
+      observer.disconnect();
+    });
+    observer.observe(el);
+    return () => {
+      observer.disconnect();
+    };
+  }, [lockSize, filter]);
+
   return (
-    <Box {...props} baseClassName="navi_suggestion_list_combo">
+    <Box {...props} ref={boxRef} baseClassName="navi_suggestion_list_combo">
       <SuggestionMatchContext.Provider value={match}>
         <SuggestionFilterContext.Provider value={filter}>
           <SetFilterContext.Provider value={setFilter}>
