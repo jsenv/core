@@ -497,7 +497,15 @@ const SuggestionListControlled = ({
     if (options.length === 0) {
       return;
     }
-    const heights = options.map((el) => el.getBoundingClientRect().height);
+    const heights = options
+      .map((el) => el.getBoundingClientRect().height)
+      // Heights are zero when the list is rendered inside a closed <dialog>
+      // (display:none makes getBoundingClientRect return 0 for all elements).
+      // Skip those to avoid corrupting the median with bogus values.
+      .filter((h) => h > 0);
+    if (heights.length === 0) {
+      return;
+    }
     heights.sort((a, b) => a - b);
     const mid = Math.floor(heights.length / 2);
     medianHeightRef.current =
@@ -530,7 +538,9 @@ const SuggestionListControlled = ({
         end: newEnd,
       }));
     };
-    onScroll();
+    if (listEl.clientHeight > 0) {
+      onScroll();
+    }
     listEl.addEventListener("scroll", onScroll, { passive: true });
     return () => {
       listEl.removeEventListener("scroll", onScroll);

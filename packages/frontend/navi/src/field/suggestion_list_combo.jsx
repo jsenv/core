@@ -29,8 +29,13 @@ export const SetFilterContext = createContext();
  *   </SuggestionListCombo>
  *
  * match: optional custom match function (value, filter) => boolean
- * lockSize: once the element first has non-zero dimensions, fix width+height so
- *           filtering cannot shrink the container (useful inside a dialog).
+ * lockSize: measures the container once it first has non-zero dimensions (i.e.
+ *           once it becomes visible, e.g. when a parent <dialog> opens), then
+ *           sets minWidth/minHeight so filtering cannot shrink the container —
+ *           the size is anchored to the fully-populated state. The container
+ *           can still grow if content happens to be taller, hence min* and not
+ *           a hard fixed size. sizeLocked ensures we only capture the size once,
+ *           so a subsequent filter→clear cycle does not re-measure a smaller box.
  */
 export const SuggestionListCombo = ({
   match = defaultMatch,
@@ -41,9 +46,13 @@ export const SuggestionListCombo = ({
   const [filter, setFilter] = useState("");
   const listboxId = useId();
   const boxRef = useRef(null);
+  const sizeLocked = useRef(false);
 
   useLayoutEffect(() => {
     if (!lockSize) {
+      return undefined;
+    }
+    if (sizeLocked.current) {
       return undefined;
     }
     if (filter !== "") {
@@ -59,8 +68,9 @@ export const SuggestionListCombo = ({
       if (width === 0 && height === 0) {
         return;
       }
-      el.style.width = `${width}px`;
-      el.style.height = `${height}px`;
+      el.style.minWidth = `${width}px`;
+      el.style.minHeight = `${height}px`;
+      sizeLocked.current = true;
       observer.disconnect();
     });
     observer.observe(el);
