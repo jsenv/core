@@ -114,7 +114,7 @@ export {
   Suggestion,
   SuggestionContainer,
   SuggestionGroup,
-} from "./src/field/suggestion_list.jsx";
+} from "./src/field/suggestion_container.jsx";
 // Table start
 export {
   filterTableSelection,

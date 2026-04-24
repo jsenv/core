@@ -17,16 +17,18 @@ const [useSuggestionItemTrackerProvider, useTrackSuggestion] =
   createItemTracker();
 
 /**
- * SuggestionList + Suggestion: a composable accessible listbox.
+ * SuggestionContainer + Suggestion: a composable accessible listbox.
  *
  * Usage:
- *   <SuggestionList id="my-list" value={selected} onChange={setSelected}>
+ *   <SuggestionContainer id="my-list" uiAction={setValue}>
  *     <Suggestion value="a">Option A</Suggestion>
  *     <Suggestion value="b">Option B</Suggestion>
- *   </SuggestionList>
+ *   </SuggestionContainer>
  *
- * CSS vars on .navi_suggestion_list:
- *   --suggestion-list-border-radius, --suggestion-list-border-width, --suggestion-list-border-color, --suggestion-list-background-color, --suggestion-list-max-height
+ * CSS vars on .navi_suggestion_container:
+ *   --suggestion-container-border-radius, --suggestion-container-border-width,
+ *   --suggestion-container-border-color, --suggestion-container-background-color,
+ *   --suggestion-container-max-height
  *
  * CSS vars on .navi_suggestion:
  *   --suggestion-padding, --suggestion-color, --suggestion-background-color, --suggestion-font-weight
@@ -37,18 +39,19 @@ const [useSuggestionItemTrackerProvider, useTrackSuggestion] =
  *   --suggestion-color-highlight, --suggestion-background-color-highlight
  *
  * CSS vars on .navi_suggestion_group_label:
- *   --suggestion-group-label-padding, --suggestion-group-label-color, --suggestion-group-label-font-size, --suggestion-group-label-font-weight
+ *   --suggestion-group-label-padding, --suggestion-group-label-color,
+ *   --suggestion-group-label-font-size, --suggestion-group-label-font-weight
  */
 
 const css = /* css */ `
   @layer navi {
-    .navi_suggestion_list {
-      --suggestion-list-border-radius: 4px;
-      --suggestion-list-border-width: 1px;
-      --suggestion-list-border-color: light-dark(#ccc, #555);
-      --suggestion-list-border-style: solid;
-      --suggestion-list-background-color: light-dark(#fff, #1e1e1e);
-      --suggestion-list-max-height: 220px;
+    .navi_suggestion_container {
+      --suggestion-container-border-radius: 4px;
+      --suggestion-container-border-width: 1px;
+      --suggestion-container-border-color: light-dark(#ccc, #555);
+      --suggestion-container-border-style: solid;
+      --suggestion-container-background-color: light-dark(#fff, #1e1e1e);
+      --suggestion-container-max-height: 220px;
     }
     .navi_suggestion {
       --suggestion-padding: 8px 12px;
@@ -79,16 +82,16 @@ const css = /* css */ `
     }
   }
 
-  .navi_suggestion_list {
-    --x-border-radius: var(--suggestion-list-border-radius);
-    --x-border-width: var(--suggestion-list-border-width);
-    --x-border-color: var(--suggestion-list-border-color);
-    --x-border-style: var(--suggestion-list-border-style);
-    --x-background-color: var(--suggestion-list-background-color);
+  .navi_suggestion_container {
+    --x-border-radius: var(--suggestion-container-border-radius);
+    --x-border-width: var(--suggestion-container-border-width);
+    --x-border-color: var(--suggestion-container-border-color);
+    --x-border-style: var(--suggestion-container-border-style);
+    --x-background-color: var(--suggestion-container-background-color);
     width: fit-content;
     max-width: 100%;
 
-    max-height: var(--suggestion-list-max-height);
+    max-height: var(--suggestion-container-max-height);
     background-color: var(--x-background-color);
     border: var(--x-border-width) var(--x-border-style) var(--x-border-color);
     border-radius: var(--x-border-radius);
@@ -99,7 +102,7 @@ const css = /* css */ `
     &[popover] {
       position: absolute;
       inset: unset;
-      min-width: var(--suggestion-list-anchor-width, 0px);
+      min-width: var(--suggestion-container-anchor-width, 0px);
       max-width: 95vw;
       margin: 0;
       padding: 0;
@@ -111,7 +114,7 @@ const css = /* css */ `
     }
   }
 
-  .navi_suggestion_listbox {
+  .navi_suggestion_list {
     box-sizing: border-box;
     width: max-content;
     min-width: 100%;
@@ -174,7 +177,7 @@ const css = /* css */ `
     display: block;
     background-color: var(
       --suggestion-group-label-background-color,
-      var(--suggestion-list-background-color)
+      var(--suggestion-container-background-color)
     );
     user-select: none;
 
@@ -196,7 +199,7 @@ const css = /* css */ `
     user-select: none;
   }
   /* Show the empty state only when there are no visible suggestions */
-  .navi_suggestion_list:not(:has([role="option"]:not([hidden]))) {
+  .navi_suggestion_container:not(:has([role="option"]:not([hidden]))) {
     .navi_suggestion_list_empty {
       display: block;
     }
@@ -213,79 +216,70 @@ export const SuggestionContainer = ({ popover, ...rest }) => {
   return <SuggestionContainerStandalone {...rest} />;
 };
 
-const dispatchCustomEventToListbox = (
-  listboxRef,
+const dispatchCustomEventToList = (
+  listRef,
   event,
   customEventName,
   customEventDetail,
 ) => {
-  debugger;
-  const listbox = listboxRef.current;
-  if (!listbox) {
+  const list = listRef.current;
+  if (!list) {
     return false;
   }
-  const customEvent = listbox.dispatchEvent(
-    new CustomEvent(customEventName, {
-      detail: {
-        event,
-        ...customEventDetail,
-      },
-    }),
-  );
+  const customEvent = new CustomEvent(customEventName, {
+    cancelable: true,
+    detail: {
+      event,
+      ...customEventDetail,
+    },
+  });
+  list.dispatchEvent(customEvent);
   return customEvent.defaultPrevented;
 };
 
-// Standalone variant: attaches keyboard shortcuts to the scroll container and
+// Standalone variant: attaches keyboard shortcuts to the container and
 // forwards them as custom events to the list.
 const SuggestionContainerStandalone = (props) => {
   const defaultRef = useRef();
   const ref = props.ref || defaultRef;
   const listRef = useRef(null);
   const forwardToList = (...args) =>
-    dispatchCustomEventToListbox(listRef, ...args);
+    dispatchCustomEventToList(listRef, ...args);
 
   useKeyboardShortcuts(ref, [
     {
       key: "arrowdown",
       description: "Point to next suggestion",
       handler: (e) =>
-        forwardToList(e, "navi_listbox_navigate", {
-          direction: "down",
-        }),
+        forwardToList(e, "navi_list_navigate", { direction: "down" }),
     },
     {
       key: "arrowup",
       description: "Point to previous suggestion",
       handler: (e) =>
-        forwardToList(e, "navi_listbox_navigate", {
-          direction: "up",
-        }),
+        forwardToList(e, "navi_list_navigate", { direction: "up" }),
     },
     {
       key: "home",
       description: "Point to first suggestion",
       handler: (e) =>
-        forwardToList(e, "navi_listbox_navigate", {
-          direction: "first",
-        }),
+        forwardToList(e, "navi_list_navigate", { direction: "first" }),
     },
     {
       key: "end",
       description: "Point to last suggestion",
       handler: (e) =>
-        forwardToList(e, "navi_listbox_navigate", {
-          direction: "last",
-        }),
+        forwardToList(e, "navi_list_navigate", { direction: "last" }),
     },
     {
       key: "enter",
       description: "Confirm pointed suggestion",
-      handler: (e) => forwardToList(e, "navi_listbox_confirm"),
+      handler: (e) => forwardToList(e, "navi_list_confirm"),
     },
     {
       key: "escape",
       description: "Clear pointed suggestion",
-      handler: (e) => forwardToList(e, "navi_listbox_clear"),
+      handler: (e) => forwardToList(e, "navi_list_clear"),
     },
   ]);
 
@@ -306,7 +300,7 @@ const SuggestionContainerWithPopover = (props) => {
   const ref = props.ref || defaultRef;
   const listRef = useRef(null);
   const forwardToList = (...args) =>
-    dispatchCustomEventToListbox(listRef, ...args);
+    dispatchCustomEventToList(listRef, ...args);
   const cleanupRef = useRef();
 
   return (
@@ -315,7 +309,7 @@ const SuggestionContainerWithPopover = (props) => {
       popover="manual"
       ref={ref}
       listRef={listRef}
-      onnavi_suggestion_list_open={(e) => {
+      onnavi_suggestion_container_open={(e) => {
         const el = ref.current;
         if (!el) {
           return;
@@ -326,7 +320,7 @@ const SuggestionContainerWithPopover = (props) => {
         const positionPopover = () => {
           const anchorRect = anchor.getBoundingClientRect();
           el.style.setProperty(
-            "--suggestion-list-anchor-width",
+            "--suggestion-container-anchor-width",
             `${anchorRect.width}px`,
           );
           const minLeft = 1;
@@ -355,35 +349,35 @@ const SuggestionContainerWithPopover = (props) => {
         });
         cleanupRef.current = () => cleanup.disconnect();
       }}
-      onnavi_suggestion_list_close={(e) => {
+      onnavi_suggestion_container_close={(e) => {
         const el = ref.current;
         if (!el) {
           return;
         }
         cleanupRef.current?.();
         el.removeAttribute("data-anchor-hidden");
-        forwardToList(e, "navi_listbox_clear", e.detail);
+        forwardToList(e, "navi_list_clear", e.detail);
         el.hidePopover();
       }}
-      onnavi_suggestion_list_navigate={(e) => {
-        forwardToList(e, "navi_listbox_navigate", e.detail);
+      onnavi_suggestion_container_navigate={(e) => {
+        forwardToList(e, "navi_list_navigate", e.detail);
       }}
-      onnavi_suggestion_list_confirm={(e) => {
-        forwardToList(e, "navi_listbox_confirm", e.detail);
+      onnavi_suggestion_container_confirm={(e) => {
+        forwardToList(e, "navi_list_confirm", e.detail);
       }}
-      onnavi_suggestion_list_clear={(e) => {
-        forwardToList(e, "navi_listbox_clear", e.detail);
+      onnavi_suggestion_container_clear={(e) => {
+        forwardToList(e, "navi_list_clear", e.detail);
       }}
     />
   );
 };
 
-const SuggestionListStyleCSSVars = {
-  borderRadius: "--suggestion-list-border-radius",
-  borderWidth: "--suggestion-list-border-width",
-  borderColor: "--suggestion-list-border-color",
-  backgroundColor: "--suggestion-list-background-color",
-  maxHeight: "--suggestion-list-max-height",
+const SuggestionContainerStyleCSSVars = {
+  borderRadius: "--suggestion-container-border-radius",
+  borderWidth: "--suggestion-container-border-width",
+  borderColor: "--suggestion-container-border-color",
+  backgroundColor: "--suggestion-container-background-color",
+  maxHeight: "--suggestion-container-max-height",
 };
 const SuggestionStyleCSSVars = {
   "padding": "--suggestion-padding",
@@ -410,11 +404,12 @@ const SuggestionStyleCSSVars = {
 };
 
 /**
- * Context OptionList provides downward to its Option children.
+ * Context provided by SuggestionContainer downward to Suggestion children.
  */
-const SuggestionListContext = createContext(null);
-// Carries the virtual scroll window (enabled, start, end) set by SuggestionList
-// and consumed by each Suggestion wrapper to decide whether to render.
+const SuggestionContext = createContext(null);
+// Carries the virtual scroll window (enabled, start, end) set by
+// SuggestionListControlled and consumed by each Suggestion wrapper to decide
+// whether to render.
 const VirtualScrollContext = createContext(null);
 const MIN_ITEM_HEIGHT = 20; // px — conservative lower bound for filler height estimation
 const VS_BUFFER = 5; // extra items to render above and below the visible window
@@ -517,10 +512,11 @@ const SuggestionListControlled = ({
       maxHeight={maxHeight}
       {...rest}
       ref={ref}
-      baseClassName="navi_suggestion_list"
+      baseClassName="navi_suggestion_container"
+      styleCSSVars={SuggestionContainerStyleCSSVars}
     >
       <SuggestionList
-        scrollRef={ref}
+        containerRef={ref}
         ref={listRef}
         vsState={vsState}
         medianHeightRef={medianHeightRef}
@@ -537,7 +533,7 @@ const SuggestionListControlled = ({
 // total scroll height when virtual scroll is active. Piloted by
 // SuggestionListControlled which detects max-height and sets vsState.
 const SuggestionList = ({
-  scrollRef,
+  containerRef,
   ref,
   vsState,
   medianHeightRef,
@@ -553,13 +549,13 @@ const SuggestionList = ({
   const pointedByKeyboardRef = useRef(false);
 
   const onPointedBy = (value, event) => {
-    pointedByKeyboardRef.current = event.type === "navi_listbox_navigate";
+    pointedByKeyboardRef.current = event.type === "navi_list_navigate";
     setPointedValue(value);
   };
 
   const select = (value) => {
-    listboxRef.current?.dispatchEvent(
-      new CustomEvent("navi_suggestion_list_selected", {
+    ref.current?.dispatchEvent(
+      new CustomEvent("navi_suggestion_container_selected", {
         detail: { value },
         bubbles: true,
       }),
@@ -596,7 +592,7 @@ const SuggestionList = ({
       CSS.highlights.delete("navi-suggestion-match");
       return undefined;
     }
-    const listEl = scrollRef.current;
+    const listEl = containerRef.current;
     if (!listEl) {
       return undefined;
     }
@@ -631,7 +627,7 @@ const SuggestionList = ({
     };
   }, [highlight, children]);
 
-  const suggestionListContext = {
+  const suggestionContext = {
     pointedValue,
     onHover: onPointedBy,
     pointedByKeyboardRef,
@@ -643,10 +639,10 @@ const SuggestionList = ({
       ref={ref}
       as="ul"
       role="listbox"
-      baseClassName="navi_suggestion_listbox"
-      styleCSSVars={SuggestionListStyleCSSVars}
-      // Listen for commands dispatched by SuggestionList (keyboard or popover mode).
-      onnavi_listbox_navigate={(e) => {
+      baseClassName="navi_suggestion_list"
+      // Listen for commands dispatched by SuggestionContainerStandalone (keyboard)
+      // or SuggestionContainerWithPopover (external events).
+      onnavi_list_navigate={(e) => {
         const { direction, event = e } = e.detail;
         const values = ItemTrackerProvider.items
           .filter((item) => !item.hidden)
@@ -667,14 +663,14 @@ const SuggestionList = ({
           onPointedBy(values[values.length - 1], event);
         }
       }}
-      onnavi_listbox_confirm={(e) => {
+      onnavi_list_confirm={(e) => {
         const current = pointedValueRef.current;
         if (current !== null) {
           selectRef.current(current);
           e.preventDefault();
         }
       }}
-      onnavi_listbox_clear={(e) => {
+      onnavi_list_clear={(e) => {
         onPointedBy(null, e);
       }}
     >
@@ -685,9 +681,9 @@ const SuggestionList = ({
         style={{ height: `${fillerTopHeight}px` }}
       />
       <VirtualScrollContext.Provider value={vsState}>
-        <SuggestionListContext.Provider value={suggestionListContext}>
+        <SuggestionContext.Provider value={suggestionContext}>
           <ItemTrackerProvider>{children}</ItemTrackerProvider>
-        </SuggestionListContext.Provider>
+        </SuggestionContext.Provider>
       </VirtualScrollContext.Provider>
 
       {emptyState && (
@@ -728,9 +724,8 @@ const SuggestionConcrete = ({
 }) => {
   import.meta.css = css;
 
-  const { pointedValue, onHover, pointedByKeyboardRef, onSelect } = useContext(
-    SuggestionListContext,
-  );
+  const { pointedValue, onHover, pointedByKeyboardRef, onSelect } =
+    useContext(SuggestionContext);
 
   const isPointed = pointedValue === value;
   const suggestionRef = useRef(null);
