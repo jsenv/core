@@ -547,8 +547,8 @@ const InputTextualWithSuggestions = ({
 
   useEffect(() => {
     const inputEl = ref.current;
-    const popoverEl = document.getElementById(suggestions);
-    if (!popoverEl) {
+    const suggestionEl = document.getElementById(suggestions);
+    if (!suggestionEl) {
       return undefined;
     }
     const onSelected = (e) => {
@@ -556,9 +556,9 @@ const InputTextualWithSuggestions = ({
       inputEl.dispatchEvent(new Event("input", { bubbles: true }));
       hideSuggestions(e);
     };
-    popoverEl.addEventListener("navi_suggestion_list_selected", onSelected);
+    suggestionEl.addEventListener("navi_suggestion_list_selected", onSelected);
     return () => {
-      popoverEl.removeEventListener(
+      suggestionEl.removeEventListener(
         "navi_suggestion_list_selected",
         onSelected,
       );
