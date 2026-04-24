@@ -1,5 +1,5 @@
 import { createContext } from "preact";
-import { useContext, useMemo, useRef } from "preact/hooks";
+import { useContext, useLayoutEffect, useMemo, useRef } from "preact/hooks";
 
 /*
  * Item Tracker - For colocated producer/consumer scenarios
@@ -67,13 +67,23 @@ export const createItemTracker = () => {
   const ItemTrackerContext = createContext();
 
   const useItemTrackerProvider = () => {
-    const itemsRef = useRef([]);
-    const items = itemsRef.current;
-    const itemCountRef = useRef(0);
+    const renderItemsRef = useRef([]);
+    const renderItems = renderItemsRef.current;
+    const renderCountRef = useRef(0);
+
+    // committedItems is the stable snapshot exposed via ItemTrackerProvider.items.
+    // It is maintained by per-item useLayoutEffect hooks (commitItem/decommitItem),
+    // so it stays correct even when Preact bails out on children:
+    //   - bailout → no item effects fire → committedItems unchanged (correct)
+    //   - genuine unmount → decommitItem cleanup fires → committedItems updated (correct)
+    const committedItemsRef = useRef([]);
+    const committedItems = committedItemsRef.current;
+    const committedMapRef = useRef(new Map()); // stableId → { index, data }
 
     const tracker = useMemo(() => {
       const ItemTrackerProvider = ({ children }) => {
-        // Reset on each render to start fresh
+        // Reset render items on each render to start fresh.
+        // Items re-register themselves during their render via registerItem().
         tracker.reset();
 
         return (
@@ -82,25 +92,33 @@ export const createItemTracker = () => {
           </ItemTrackerContext.Provider>
         );
       };
-      ItemTrackerProvider.items = items;
+      ItemTrackerProvider.items = committedItems;
 
       return {
         ItemTrackerProvider,
-        items,
+        items: committedItems,
         registerItem: (data) => {
-          const index = itemCountRef.current++;
-          items[index] = data;
+          const index = renderCountRef.current++;
+          renderItems[index] = data;
           return index;
         },
+        commitItem: (stableId, index, data) => {
+          committedMapRef.current.set(stableId, { index, data });
+          rebuildCommittedItems(committedItems, committedMapRef.current);
+        },
+        decommitItem: (stableId) => {
+          committedMapRef.current.delete(stableId);
+          rebuildCommittedItems(committedItems, committedMapRef.current);
+        },
         getItem: (index) => {
-          return items[index];
+          return committedItems[index];
         },
         getAllItems: () => {
-          return items;
+          return committedItems;
         },
         reset: () => {
-          items.length = 0;
-          itemCountRef.current = 0;
+          renderItems.length = 0;
+          renderCountRef.current = 0;
         },
       };
     }, []);
@@ -115,7 +133,24 @@ export const createItemTracker = () => {
         "useTrackItem must be used within SimpleItemTrackerProvider",
       );
     }
-    return tracker.registerItem(data);
+    // Stable identity per component instance — survives re-renders.
+    const stableIdRef = useRef(null);
+    if (stableIdRef.current === null) {
+      stableIdRef.current = Symbol();
+    }
+    const index = tracker.registerItem(data);
+    // Commit this item into the stable snapshot after every render.
+    // Running without deps ensures the committed index and data are always
+    // up to date when items re-render (e.g. index shifts after add/remove).
+    // When Preact bails out on this item, this effect does not fire at all,
+    // which is exactly what we want: committedItems stays unchanged.
+    useLayoutEffect(() => {
+      tracker.commitItem(stableIdRef.current, index, data);
+      return () => {
+        tracker.decommitItem(stableIdRef.current);
+      };
+    });
+    return index;
   };
 
   const useTrackedItem = (index) => {
@@ -140,4 +175,12 @@ export const createItemTracker = () => {
     useTrackedItem,
     useTrackedItems,
   ];
+};
+
+const rebuildCommittedItems = (committedItems, committedMap) => {
+  const entries = [...committedMap.values()].sort((a, b) => a.index - b.index);
+  committedItems.length = 0;
+  for (const { data } of entries) {
+    committedItems.push(data);
+  }
 };

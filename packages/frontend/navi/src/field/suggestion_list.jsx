@@ -537,10 +537,6 @@ const SuggestionListbox = ({
   children,
 }) => {
   const ItemTrackerProvider = useSuggestionItemTrackerProvider();
-  // ItemTrackerProvider resets items on each render, but Suggestion children
-  // may not re-register if Preact skips their re-render (stable children prop).
-  // Keep a snapshot of the last non-empty items list for navigation.
-  const itemsSnapshotRef = useRef([]);
   const [mousePointedValue, setMousePointedValue] = useState(null);
   const [keyboardPointedValue, setKeyboardPointedValue] = useState(null);
   // The anchor is the index we navigate FROM. Only keyboard nav and
@@ -572,11 +568,9 @@ const SuggestionListbox = ({
   const fillerTopRef = useRef(null);
   const fillerBottomRef = useRef(null);
   useLayoutEffect(() => {
-    const items = ItemTrackerProvider.items;
-    const count = items.length;
+    const count = ItemTrackerProvider.items.length;
     if (count > 0) {
       totalItemsRef.current = count;
-      itemsSnapshotRef.current = [...items];
     }
     const totalItems = totalItemsRef.current;
     const median = medianHeightRef.current;
@@ -640,11 +634,7 @@ const SuggestionListbox = ({
   const onNavigateRef = useRef(null);
   onNavigateRef.current = (e) => {
     const { direction, event = e } = e.detail;
-    const items =
-      ItemTrackerProvider.items.length > 0
-        ? ItemTrackerProvider.items
-        : itemsSnapshotRef.current;
-    const values = items
+    const values = ItemTrackerProvider.items
       .filter((item) => !item.hidden)
       .map((item) => item.value);
     if (values.length === 0) {
