@@ -343,7 +343,7 @@ export const SuggestionList = ({
       medianHeightRef.current = median;
     }
     const median = medianHeightRef.current;
-    const total = vsCounterRef.current.seen;
+    const total = ItemTrackerProvider.items.length;
     const topHidden = vsState.start;
     const bottomHidden = total > vsState.end ? total - vsState.end : 0;
     if (fillerTopRef.current) {
