@@ -591,17 +591,12 @@ const SuggestionListbox = ({
   const fillerTopRef = useRef(null);
   const fillerBottomRef = useRef(null);
   useLayoutEffect(() => {
-    // When a filter is active, use visibleItems.length: items that don't match
-    // are hidden and take no scroll space, so only visible items count.
-    // When no filter, use items.length (committed in children's layout effects,
-    // which always run before this parent effect — guaranteed bottom-up order).
-    // This avoids relying on visibleItems when filter clears, since committed
-    // items is the authoritative count for the full unfiltered list.
-    const totalItems = filter
-      ? ItemTrackerProvider.visibleItems.length
-      : ItemTrackerProvider.items.length;
-    if (totalItems > 0) {
-      totalItemsRef.current = totalItems;
+    // visibleItems is always up to date after render: every Suggestion calls
+    // registerVisibleIndex before its early return, so even items outside the
+    // virtual scroll window or items hidden by a filter are counted correctly.
+    const visibleItems = ItemTrackerProvider.visibleItems;
+    if (visibleItems.length > 0) {
+      totalItemsRef.current = visibleItems.length;
     }
     const count = totalItemsRef.current;
     const median = medianHeightRef.current;
