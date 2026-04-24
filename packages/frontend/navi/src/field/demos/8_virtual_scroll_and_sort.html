@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>Suggestion Sort Demo</title>
+    <title>Virtual Scroll + Sort Demo</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" href="data:," />
     <style>
@@ -23,19 +23,26 @@
       import { render } from "preact";
 
       /**
-       * Sort Demo — SuggestionList with a user-provided sort function.
+       * Virtual Scroll + Sort Demo
        *
-       * The sort function knows the full list of items and, given a filter string,
-       * returns the rank (0-based index) of each suggestion among the visible ones.
-       * Suggestions outside the virtual scroll window return null automatically
-       * based on that rank — no DOM reordering needed.
+       * 200 items — virtual scroll is always active (maxHeight="220px").
+       * Typing in the input re-sorts items in state (no items are hidden):
+       *   1. items that START with the query (alphabetically)
+       *   2. items that CONTAIN the query (alphabetically)
+       *   3. everything else at the end
        *
-       * Sort logic: items that START with the filter come first (sorted
-       * alphabetically), then items that CONTAIN the filter (sorted alphabetically).
-       * Items that don't match at all get rank -1 (hidden).
+       * SuggestionListCombo is used with match={() => true} so it never hides
+       * any suggestion. The combo's input (via ListboxIdContext) gets proper
+       * aria-controls and keyboard forwarding for free. Our onInput handler
+       * updates the sort state independently.
        */
 
-      import { Suggestion, SuggestionList } from "@jsenv/navi";
+      import {
+        Input,
+        Suggestion,
+        SuggestionList,
+        SuggestionListCombo,
+      } from "@jsenv/navi";
       import { useState } from "preact/hooks";
 
       const ALL_ITEMS = Array.from({ length: 200 }, (_, i) => {
@@ -101,29 +108,30 @@
 
         return (
           <div>
-            <h2>Suggestion Sort Demo</h2>
+            <h2>Virtual Scroll + Sort Demo</h2>
             <p style="font-size:13px;color:#555">
-              Items matching the filter bubble up to the top (sorted). Virtual
-              scroll is active (200 items).
+              200 items — virtual scroll active. Typing re-sorts: matching items
+              bubble up (starts-with first, then contains), nothing is hidden.
             </p>
             {selected && (
               <p style="font-size:13px;color:#1a73e8">
                 Selected: <b>{selected}</b>
               </p>
             )}
-            <input
-              placeholder="Sort suggestions…"
-              value={filter}
-              onInput={(e) => setFilter(e.target.value)}
-              style="display:block;width:100%;box-sizing:border-box;margin-bottom:4px;padding:6px 10px;font-size:14px;border:1px solid #ccc;border-radius:4px"
-            />
-            <SuggestionList maxHeight="220px" uiAction={setSelected}>
-              {items.map((item) => (
-                <Suggestion key={item} value={item}>
-                  {item}
-                </Suggestion>
-              ))}
-            </SuggestionList>
+            <SuggestionListCombo match={() => true}>
+              <Input
+                placeholder="Sort suggestions…"
+                expandX
+                onInput={(e) => setFilter(e.target.value)}
+              />
+              <SuggestionList maxHeight="220px" uiAction={setSelected} expandX>
+                {items.map((item) => (
+                  <Suggestion key={item} value={item}>
+                    {item}
+                  </Suggestion>
+                ))}
+              </SuggestionList>
+            </SuggestionListCombo>
           </div>
         );
       };
