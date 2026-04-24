@@ -63,7 +63,7 @@ import { useContext, useLayoutEffect, useMemo, useRef } from "preact/hooks";
  * ```
  */
 
-export const createItemTracker = ({ trackVisibility = false } = {}) => {
+export const createItemTracker = ({ filter: filterFn } = {}) => {
   const ItemTrackerContext = createContext();
 
   const useItemTrackerProvider = () => {
@@ -74,10 +74,6 @@ export const createItemTracker = ({ trackVisibility = false } = {}) => {
     const committedItemsRef = useRef([]);
     const committedItems = committedItemsRef.current;
     const committedMapRef = useRef(new Map()); // stableId → { index, data }
-
-    // When trackVisibility is true, these refs count visible items per render.
-    const visibleItemsRef = trackVisibility ? useRef([]) : null;
-    const visibleItems = trackVisibility ? visibleItemsRef.current : null;
 
     const tracker = useMemo(() => {
       const ItemTrackerProvider = ({ children }) => {
@@ -92,19 +88,22 @@ export const createItemTracker = ({ trackVisibility = false } = {}) => {
         );
       };
       ItemTrackerProvider.items = committedItems;
-      if (trackVisibility) {
-        ItemTrackerProvider.visibleItems = visibleItems;
-      }
 
       return {
         ItemTrackerProvider,
         items: committedItems,
         registerItem: (data) => {
+          if (filterFn && !filterFn(data)) {
+            return -1;
+          }
           const index = renderCountRef.current++;
           renderItems[index] = data;
           return index;
         },
         commitItem: (stableId, index, data) => {
+          if (index === -1) {
+            return;
+          }
           committedMapRef.current.set(stableId, { index, data });
           rebuildCommittedItems(committedItems, committedMapRef.current);
         },
@@ -121,20 +120,7 @@ export const createItemTracker = ({ trackVisibility = false } = {}) => {
         reset: () => {
           renderItems.length = 0;
           renderCountRef.current = 0;
-          if (trackVisibility) {
-            visibleItems.length = 0;
-          }
         },
-        registerVisibleIndex: trackVisibility
-          ? (hidden, data) => {
-              if (hidden) {
-                return -1;
-              }
-              const idx = visibleItems.length;
-              visibleItems[idx] = data;
-              return idx;
-            }
-          : null,
       };
     }, []);
 
@@ -151,16 +137,14 @@ export const createItemTracker = ({ trackVisibility = false } = {}) => {
         "useTrackItem must be used within SimpleItemTrackerProvider",
       );
     }
-    // If an explicit index is provided, use it directly (required when items
-    // can be reordered, e.g. after filtering). Otherwise fall back to
-    // render-order index via registerItem (fine for static lists).
+    // registerItem returns -1 when a filterFn is set and the item doesn't pass.
+    // Otherwise returns the sequential index among passing items.
     // Note: registerItem is always called to keep hook call count stable.
     const renderOrderIndex = tracker.registerItem(data);
     const index =
-      explicitIndex !== undefined ? explicitIndex : renderOrderIndex;
-    const visibleIndex = trackVisibility
-      ? tracker.registerVisibleIndex(data.hidden, data)
-      : undefined;
+      explicitIndex !== undefined && renderOrderIndex !== -1
+        ? explicitIndex
+        : renderOrderIndex;
     // Commit this item into the stable snapshot after every render.
     // Running without deps ensures the committed index and data are always
     // up to date when items re-render (e.g. index shifts after add/remove).
@@ -172,7 +156,7 @@ export const createItemTracker = ({ trackVisibility = false } = {}) => {
         tracker.decommitItem(id);
       };
     });
-    return trackVisibility ? [index, visibleIndex] : index;
+    return index;
   };
 
   const useTrackedItem = (index) => {

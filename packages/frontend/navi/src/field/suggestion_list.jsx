@@ -18,7 +18,9 @@ export const SuggestionFilterContext = createContext(null);
 export const SuggestionMatchContext = createContext(null);
 
 const [useSuggestionItemTrackerProvider, useTrackSuggestion] =
-  createItemTracker({ trackVisibility: true });
+  createItemTracker({
+    filter: (data) => !data.hidden,
+  });
 
 /**
  * SuggestionList + Suggestion: a composable accessible listbox.
@@ -591,18 +593,19 @@ const SuggestionListbox = ({
   const fillerTopRef = useRef(null);
   const fillerBottomRef = useRef(null);
   useLayoutEffect(() => {
-    // visibleItems is always up to date after render: every Suggestion calls
-    // registerVisibleIndex before its early return, so even items outside the
-    // virtual scroll window or items hidden by a filter are counted correctly.
-    const visibleItems = ItemTrackerProvider.visibleItems;
-    if (visibleItems.length > 0) {
-      totalItemsRef.current = visibleItems.length;
+    // items only contains non-hidden suggestions (the tracker filter excludes hidden ones).
+    // It is fully populated after children render, so its length is always accurate.
+    const count = ItemTrackerProvider.items.length;
+    if (count > 0) {
+      totalItemsRef.current = count;
     }
-    const count = totalItemsRef.current;
+    const totalItems = totalItemsRef.current;
     const median = medianHeightRef.current;
     const topHidden = virtualScrollState.start;
     const bottomHidden =
-      count > virtualScrollState.end ? count - virtualScrollState.end : 0;
+      totalItems > virtualScrollState.end
+        ? totalItems - virtualScrollState.end
+        : 0;
     if (fillerTopRef.current) {
       fillerTopRef.current.style.height = `${Math.round(topHidden * median)}px`;
     }
@@ -660,9 +663,7 @@ const SuggestionListbox = ({
   const onNavigateRef = useRef(null);
   onNavigateRef.current = (e) => {
     const { direction, event = e } = e.detail;
-    const values = ItemTrackerProvider.items
-      .filter((item) => !item.hidden)
-      .map((item) => item.value);
+    const values = ItemTrackerProvider.items.map((item) => item.value);
     if (values.length === 0) {
       return;
     }
@@ -774,18 +775,13 @@ export const Suggestion = ({ value, hidden, index: indexProp, ...rest }) => {
   if (hidden === undefined && !matches) {
     hidden = true;
   }
-  const [index, visibleIndex] = useTrackSuggestion(
-    id,
-    { id, value, hidden },
-    indexProp,
-  );
+  const index = useTrackSuggestion(id, { id, value, hidden }, indexProp);
   const virtualScrollCtx = useContext(VirtualScrollContext);
   if (virtualScrollCtx && virtualScrollCtx.enabled) {
-    const vsIndex = visibleIndex !== undefined ? visibleIndex : index;
     if (
-      vsIndex === -1 ||
-      vsIndex < virtualScrollCtx.start ||
-      vsIndex >= virtualScrollCtx.end
+      index === -1 ||
+      index < virtualScrollCtx.start ||
+      index >= virtualScrollCtx.end
     ) {
       return null;
     }
