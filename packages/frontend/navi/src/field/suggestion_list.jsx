@@ -560,23 +560,31 @@ const SuggestionListbox = ({
   const selectRef = useRef(select);
   selectRef.current = select;
 
-  // Track total registered items in state so we can derive filler heights
-  // declaratively. We only update when items.length > 0 — when Preact bails
-  // out on Suggestion wrappers the tracker resets but children don't
-  // re-register, so items.length === 0; in that case we keep the last known
-  // total so the filler heights remain correct.
-  const [totalItems, setTotalItems] = useState(0);
+  // Update filler heights directly in a layout effect to avoid the extra
+  // re-render that a totalItems state would cause. We only update when
+  // items.length > 0 — when Preact bails out on Suggestion wrappers the
+  // tracker resets but children don't re-register, so items.length === 0;
+  // in that case we keep the last known heights.
+  const totalItemsRef = useRef(0);
+  const fillerTopRef = useRef(null);
+  const fillerBottomRef = useRef(null);
   useLayoutEffect(() => {
     const count = ItemTrackerProvider.items.length;
     if (count > 0) {
-      setTotalItems(count);
+      totalItemsRef.current = count;
+    }
+    const totalItems = totalItemsRef.current;
+    const median = medianHeightRef.current;
+    const topHidden = vsState.start;
+    const bottomHidden =
+      totalItems > vsState.end ? totalItems - vsState.end : 0;
+    if (fillerTopRef.current) {
+      fillerTopRef.current.style.height = `${Math.round(topHidden * median)}px`;
+    }
+    if (fillerBottomRef.current) {
+      fillerBottomRef.current.style.height = `${Math.round(bottomHidden * median)}px`;
     }
   });
-  const median = medianHeightRef.current;
-  const topHidden = vsState.start;
-  const bottomHidden = totalItems > vsState.end ? totalItems - vsState.end : 0;
-  const fillerTopHeight = Math.round(topHidden * median);
-  const fillerBottomHeight = Math.round(bottomHidden * median);
 
   // Highlight matching text in visible suggestions.
   useLayoutEffect(() => {
@@ -670,10 +678,10 @@ const SuggestionListbox = ({
       }}
     >
       <li
+        ref={fillerTopRef}
         className="navi_suggestion_listbox_filler"
         data-top=""
         aria-hidden="true"
-        style={{ height: `${fillerTopHeight}px` }}
       />
       <VirtualScrollContext.Provider value={vsState}>
         <SuggestionListboxContext.Provider value={suggestionContext}>
@@ -685,9 +693,9 @@ const SuggestionListbox = ({
         <li className="navi_suggestion_listbox_empty">{emptyState}</li>
       )}
       <li
+        ref={fillerBottomRef}
         className="navi_suggestion_listbox_filler"
         aria-hidden="true"
-        style={{ height: `${fillerBottomHeight}px` }}
       />
     </Box>
   );
