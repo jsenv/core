@@ -584,29 +584,13 @@ const SuggestionListbox = ({
     uiAction?.(value, event);
   };
 
-  // Update filler heights directly in a layout effect to avoid the extra
-  // re-render that a totalItems state would cause. We only update when
-  // items.length > 0 — when Preact bails out on Suggestion wrappers the
-  // tracker resets but children don't re-register, so items.length === 0;
-  // in that case we keep the last known heights.
-  const totalItemsRef = useRef(0);
   const fillerTopRef = useRef(null);
   const fillerBottomRef = useRef(null);
-  console.log(
-    "total items",
-    ItemTrackerProvider.items.length,
-    "filter",
-    filter,
-  );
   useLayoutEffect(() => {
-    // items only contains non-hidden suggestions (the tracker filter excludes hidden ones).
-    // It is fully populated after children render, so its length is always accurate.
-    const count = ItemTrackerProvider.items.length;
-
-    if (count > 0) {
-      totalItemsRef.current = count;
-    }
-    const totalItems = totalItemsRef.current;
+    // items is a live array: by the time this effect fires (SuggestionListbox is
+    // an ancestor of ItemTrackerProvider), all Suggestion commit/decommit effects
+    // have already run (bottom-up order), so items.length is correct.
+    const totalItems = ItemTrackerProvider.items.length;
     const median = medianHeightRef.current;
     const topHidden = virtualScrollState.start;
     const bottomHidden =
@@ -619,7 +603,7 @@ const SuggestionListbox = ({
     if (fillerBottomRef.current) {
       fillerBottomRef.current.style.height = `${Math.round(bottomHidden * median)}px`;
     }
-  }, [virtualScrollState.start, virtualScrollState.end, filter]);
+  });
 
   useLayoutEffect(() => {
     if (!CSS.highlights) {

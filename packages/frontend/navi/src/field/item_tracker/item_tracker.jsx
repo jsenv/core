@@ -87,6 +87,8 @@ export const createItemTracker = ({ filter: filterFn } = {}) => {
           </ItemTrackerContext.Provider>
         );
       };
+      // committedItems is a live array: always up-to-date by the time any
+      // sibling or ancestor layoutEffect reads it (bottom-up effect ordering).
       ItemTrackerProvider.items = committedItems;
 
       return {
@@ -141,22 +143,23 @@ export const createItemTracker = ({ filter: filterFn } = {}) => {
     // Otherwise returns the sequential index among passing items.
     // Note: registerItem is always called to keep hook call count stable.
     const renderOrderIndex = tracker.registerItem(data);
-    const index =
+    // explicitIndex is used for stable committed ordering (e.g. keyboard nav),
+    // but the VS window check must use renderOrderIndex (rank among visible items).
+    const committedIndex =
       explicitIndex !== undefined && renderOrderIndex !== -1
         ? explicitIndex
         : renderOrderIndex;
-    // Commit this item into the stable snapshot after every render.
-    // Running without deps ensures the committed index and data are always
-    // up to date when items re-render (e.g. index shifts after add/remove).
-    // When Preact bails out on this item, this effect does not fire at all,
-    // which is exactly what we want: committedItems stays unchanged.
     useLayoutEffect(() => {
-      tracker.commitItem(id, index, data);
+      if (renderOrderIndex === -1) {
+        tracker.decommitItem(id);
+      } else {
+        tracker.commitItem(id, committedIndex, data);
+      }
       return () => {
         tracker.decommitItem(id);
       };
     });
-    return index;
+    return renderOrderIndex;
   };
 
   const useTrackedItem = (index) => {
@@ -185,7 +188,9 @@ export const createItemTracker = ({ filter: filterFn } = {}) => {
 
 const rebuildCommittedItems = (committedItems, committedMap) => {
   committedItems.length = 0;
-  for (const { index, data } of committedMap.values()) {
-    committedItems[index] = data;
+  const entries = [...committedMap.values()];
+  entries.sort((a, b) => a.index - b.index);
+  for (const { data } of entries) {
+    committedItems.push(data);
   }
 };

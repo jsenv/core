@@ -1,26 +1,13 @@
 /**
- * Item Tracker – Filter Two-Pass Demo
+ * Item Tracker – Filter Demo
  *
- * Reproduces the two-pass render problem that appears when:
- * 1. Items are passed as `children` props to the Provider (so Preact may bail
- *    out re-rendering them on a parent state change).
- * 2. A filter is applied that changes which items are visible.
+ * Verifies that visibleCount (read as ItemTrackerProvider.items.length) is
+ * always correct in the same render pass as the filter change.
  *
- * EXPECTED (ideal): after a filter change, the provider's `visibleCount` is
- * correct on the very first render pass.
- *
- * ACTUAL: `visibleCount` reads the old (stale) committed map in the first
- * pass, because the Suggestion/Item children haven't re-rendered yet — they
- * run their commit/decommit effects *after* the provider's own layoutEffect.
- * A second render pass then corrects everything.
- *
- * HOW TO OBSERVE:
- * - Open the browser console.
- * - Type "a" in the filter input.
- * - Watch the logs: you will see two passes. In pass 1 the "Stat" component
- *   reads a stale visibleCount. In pass 2 it reads the correct count.
- * - The `[STAT] visibleCount` value shown in the console on pass 1 will be
- *   wrong (e.g. "10" when only 3 items match "a").
+ * The fix: expose `items` as a live array reference. By the time any sibling
+ * or ancestor layoutEffect reads it, all Item children have already run their
+ * own commit/decommit effects (bottom-up ordering) — so items.length is
+ * already accurate. No snapshot ref needed.
  */
 
 import { useLayoutEffect, useState } from "preact/hooks";
@@ -62,8 +49,10 @@ const Item = ({ value, filter }) => {
 // ---------------------------------------------------------------------------
 const Stat = ({ ItemTrackerProvider }) => {
   useLayoutEffect(() => {
-    const count = ItemTrackerProvider.visibleCount;
-    console.debug(`[STAT] visibleCount=${count}`);
+    // items is a live array: by the time this effect fires (after Item effects,
+    // bottom-up), it already reflects the current filter.
+    const count = ItemTrackerProvider.items.length;
+    console.debug(`[STAT] items.length=${count}`);
     const el = document.getElementById("stat-count");
     if (el) {
       el.textContent = String(count);
@@ -104,8 +93,8 @@ export const App = () => {
     <div>
       <h2>Item Tracker – Filter Two-Pass Demo</h2>
       <p style="font-size:13px;color:#666">
-        Type in the filter to see the two-pass render in the console. The{" "}
-        <code>visibleCount</code> shown after pass 1 will be stale.
+        Type in the filter. The <code>items.length</code> in the console should
+        always match the displayed items — in a single render pass.
       </p>
       <input
         type="text"
