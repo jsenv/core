@@ -425,15 +425,12 @@ const SuggestionListControlled = ({
   const ownId = useId();
   const id = rest.id ?? ownId;
 
-  const medianHeightRef = useRef(MIN_ITEM_HEIGHT);
-
+  // Detect max-height on mount and enable virtual scroll when present.
   const [vsState, setVsState] = useState({
     enabled: false,
     start: 0,
     end: VS_BUFFER * 2,
   });
-
-  // Detect max-height on mount and enable virtual scroll when present.
   useLayoutEffect(() => {
     const listEl = ref.current;
     if (!listEl) {
@@ -456,6 +453,7 @@ const SuggestionListControlled = ({
   }, [maxHeight]);
 
   // Measure real item height once, right after the first VS window renders.
+  const medianHeightRef = useRef(MIN_ITEM_HEIGHT);
   useLayoutEffect(() => {
     if (!vsState.enabled) {
       return;
@@ -478,7 +476,7 @@ const SuggestionListControlled = ({
   }, [vsState.enabled]);
 
   // Scroll listener — also runs immediately to account for any initial scroll.
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!vsState.enabled) {
       return undefined;
     }
@@ -511,7 +509,7 @@ const SuggestionListControlled = ({
       styleCSSVars={SuggestionListStyleCSSVars}
     >
       <SuggestionListbox
-        containerRef={ref}
+        listRef={ref}
         ref={listboxRef}
         vsState={vsState}
         medianHeightRef={medianHeightRef}
@@ -530,7 +528,7 @@ const VirtualScrollContext = createContext(null);
 // total scroll height when virtual scroll is active. Piloted by
 // SuggestionListControlled which detects max-height and sets vsState.
 const SuggestionListbox = ({
-  containerRef,
+  listRef,
   ref,
   vsState,
   medianHeightRef,
@@ -589,7 +587,7 @@ const SuggestionListbox = ({
       CSS.highlights.delete("navi-suggestion-match");
       return undefined;
     }
-    const listEl = containerRef.current;
+    const listEl = listRef.current;
     if (!listEl) {
       return undefined;
     }
