@@ -52,21 +52,89 @@ const defaultMatch = (v, filter) => String(v).toLowerCase().includes(filter);
 /**
  * SuggestionSearch: a search input wired to the nearest SuggestionListCombo.
  * All props are forwarded to the underlying <input>.
+ *
+ * Automatically:
+ * - Reads/writes the filter from SuggestionFilterContext
+ * - Forwards keyboard shortcuts (arrows, enter, escape) to the listbox
+ * - Sets aria-controls / aria-autocomplete / aria-haspopup on itself
  */
-export const SuggestionSearch = ({ onInput, ...rest }) => {
+export const SuggestionSearch = ({ onInput, onKeyDown, ...rest }) => {
   const filter = useContext(SuggestionFilterContext);
   const setFilter = useContext(SetFilterContext);
   if (!setFilter) {
     throw new Error("SuggestionSearch must be used inside SuggestionListCombo");
   }
+  const inputRef = useRef(null);
+
+  useLayoutEffect(() => {
+    const inputEl = inputRef.current;
+    if (!inputEl) {
+      return undefined;
+    }
+    const combo = inputEl.closest(".navi_suggestion_list_combo");
+    const listbox = combo ? combo.querySelector("[role='listbox']") : null;
+    if (listbox) {
+      inputEl.setAttribute("aria-controls", listbox.id);
+      inputEl.setAttribute("aria-autocomplete", "list");
+      inputEl.setAttribute("aria-haspopup", "listbox");
+    }
+    const handleKeyDown = (e) => {
+      const comboEl = inputEl.closest(".navi_suggestion_list_combo");
+      const listboxEl = comboEl
+        ? comboEl.querySelector("[role='listbox']")
+        : null;
+      if (!listboxEl) {
+        return;
+      }
+      let eventName = null;
+      let detail = null;
+      if (e.key === "ArrowDown") {
+        eventName = "navi_list_navigate";
+        detail = { direction: "down", event: e };
+      } else if (e.key === "ArrowUp") {
+        eventName = "navi_list_navigate";
+        detail = { direction: "up", event: e };
+      } else if (e.key === "Home") {
+        eventName = "navi_list_navigate";
+        detail = { direction: "first", event: e };
+      } else if (e.key === "End") {
+        eventName = "navi_list_navigate";
+        detail = { direction: "last", event: e };
+      } else if (e.key === "Enter") {
+        eventName = "navi_list_confirm";
+        detail = { event: e };
+      } else if (e.key === "Escape") {
+        eventName = "navi_list_clear";
+        detail = { event: e };
+      }
+      if (!eventName) {
+        return;
+      }
+      const customEvent = new CustomEvent(eventName, {
+        cancelable: true,
+        detail,
+      });
+      listboxEl.dispatchEvent(customEvent);
+      if (customEvent.defaultPrevented) {
+        e.preventDefault();
+      }
+    };
+    inputEl.addEventListener("keydown", handleKeyDown);
+    return () => {
+      inputEl.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
+
   return (
     <input
+      ref={inputRef}
       type="search"
       value={filter}
       onInput={(e) => {
         setFilter(e.target.value);
         onInput?.(e);
       }}
+      onKeyDown={onKeyDown}
       {...rest}
     />
   );

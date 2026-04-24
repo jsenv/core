@@ -558,6 +558,7 @@ const SuggestionListbox = ({
   if (highlight === undefined) {
     highlight = filter;
   }
+  const listboxId = useId();
 
   const ItemTrackerProvider = useSuggestionItemTrackerProvider();
   const [mousePointedValue, setMousePointedValue] = useState(null);
@@ -674,6 +675,7 @@ const SuggestionListbox = ({
   return (
     <Box
       ref={ref}
+      id={listboxId}
       as="ul"
       role="listbox"
       baseClassName="navi_suggestion_listbox"
