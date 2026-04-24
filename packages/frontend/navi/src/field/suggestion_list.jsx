@@ -747,9 +747,11 @@ const SuggestionConcrete = ({
     const containerRect = scrollContainer.getBoundingClientRect();
     const elRect = suggestionEl.getBoundingClientRect();
     if (elRect.top < containerRect.top) {
-      scrollContainer.scrollTop -= containerRect.top - elRect.top;
+      const delta = containerRect.top - elRect.top;
+      scrollContainer.scrollTop -= delta;
     } else if (elRect.bottom > containerRect.bottom) {
-      scrollContainer.scrollTop += elRect.bottom - containerRect.bottom;
+      const delta = elRect.bottom - containerRect.bottom;
+      scrollContainer.scrollTop += delta;
     }
   }, [isPointed]);
 
@@ -771,14 +773,25 @@ const SuggestionConcrete = ({
       pseudoElements={SUGGESTION_PSEUDO_ELEMENTS}
       styleCSSVars={SuggestionStyleCSSVars}
       onMouseEnter={(e) => {
-        if (!hidden) {
-          onHover(value, e);
+        if (hidden) {
+          return;
         }
+        // Ignore hover when element moved under a static cursor (e.g. after
+        // keyboard navigation causes a re-render). Real mouse moves have non-zero
+        // movementX/Y; passive hover-from-DOM-change has both at 0.
+        if (e.movementX === 0 && e.movementY === 0) {
+          return;
+        }
+        onHover(value, e);
       }}
       onMouseLeave={(e) => {
-        if (!hidden) {
-          onHover(null, e);
+        if (hidden) {
+          return;
         }
+        if (e.movementX === 0 && e.movementY === 0) {
+          return;
+        }
+        onHover(null, e);
       }}
       onMouseDown={(e) => {
         if (hidden || e.button !== 0) {
