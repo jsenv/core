@@ -410,78 +410,68 @@ export const SuggestionList = ({
     };
   }, [popover]);
 
+  const dispatchListboxCustomEvent = (
+    keyboardEvent,
+    customEventName,
+    customEventDetail,
+  ) => {
+    const listbox = listboxRef.current;
+    if (!listbox) {
+      return false;
+    }
+    const customEvent = listbox.dispatchEvent(
+      new CustomEvent(customEventName, {
+        detail: { event: keyboardEvent, ...customEventDetail },
+      }),
+    );
+    return customEvent.defaultPrevented;
+  };
+
   useKeyboardShortcuts(popover ? noopRef : ref, [
     {
       key: "arrowdown",
       description: "Point to next suggestion",
-      handler: () => {
-        listboxRef.current?.dispatchEvent(
-          new CustomEvent("navi_listbox_navigate", {
-            detail: { direction: "down" },
-          }),
-        );
-        return true;
-      },
+      handler: (e) =>
+        dispatchListboxCustomEvent(e, "navi_listbox_navigate", {
+          direction: "down",
+        }),
     },
     {
       key: "arrowup",
       description: "Point to previous suggestion",
-      handler: () => {
-        listboxRef.current?.dispatchEvent(
-          new CustomEvent("navi_listbox_navigate", {
-            detail: { direction: "up" },
-          }),
-        );
-        return true;
-      },
+      handler: (e) =>
+        dispatchListboxCustomEvent(e, "navi_listbox_navigate", {
+          direction: "up",
+        }),
     },
     {
       key: "home",
       description: "Point to first suggestion",
-      handler: () => {
-        listboxRef.current?.dispatchEvent(
-          new CustomEvent("navi_listbox_navigate", {
-            detail: { direction: "first" },
-          }),
-        );
-        return true;
-      },
+      handler: (e) =>
+        dispatchListboxCustomEvent(e, "navi_listbox_navigate", {
+          direction: "first",
+        }),
     },
     {
       key: "end",
       description: "Point to last suggestion",
-      handler: () => {
-        listboxRef.current?.dispatchEvent(
-          new CustomEvent("navi_listbox_navigate", {
-            detail: { direction: "last" },
-          }),
-        );
-        return true;
-      },
+      handler: (e) =>
+        dispatchListboxCustomEvent(e, "navi_listbox_navigate", {
+          direction: "last",
+        }),
     },
     {
       key: "enter",
       description: "Confirm pointed suggestion",
-      handler: () => {
-        if (!listboxRef.current) {
-          return false;
-        }
-        const confirmEvent = new CustomEvent("navi_listbox_confirm", {
-          cancelable: true,
-        });
-        listboxRef.current.dispatchEvent(confirmEvent);
-        return confirmEvent.defaultPrevented;
-      },
+      handler: (e) =>
+        dispatchListboxCustomEvent(e, "navi_listbox_confirm", {
+          direction: "last",
+        }),
     },
     {
       key: "escape",
       description: "Clear pointed suggestion",
-      handler: () => {
-        listboxRef.current?.dispatchEvent(
-          new CustomEvent("navi_listbox_clear"),
-        );
-        return true;
-      },
+      handler: (e) => dispatchListboxCustomEvent(e, "navi_listbox_clear"),
     },
   ]);
 
@@ -544,6 +534,11 @@ const SuggestionListBox = ({
   const pointedValueRef = useRef(null);
   pointedValueRef.current = pointedValue;
   const pointedByKeyboardRef = useRef(false);
+
+  const onPointedBy = (value, event) => {
+    pointedByKeyboardRef.current = event.type === "navi_listbox_navigate";
+    setPointedValue(value);
+  };
 
   const select = (value) => {
     listboxRef.current?.dispatchEvent(
@@ -621,7 +616,7 @@ const SuggestionListBox = ({
 
   const suggestionListContext = {
     pointedValue,
-    setPointedValue,
+    onHover: onPointedBy,
     pointedByKeyboardRef,
     onSelect: select,
   };
@@ -635,7 +630,7 @@ const SuggestionListBox = ({
       styleCSSVars={SuggestionListStyleCSSVars}
       // Listen for commands dispatched by SuggestionList (keyboard or popover mode).
       onnavi_listbox_navigate={(e) => {
-        const direction = e.detail?.direction;
+        const { direction, event = e } = e.detail;
         const values = ItemTrackerProvider.items
           .filter((item) => !item.hidden)
           .map((item) => item.value);
@@ -643,17 +638,16 @@ const SuggestionListBox = ({
           return;
         }
         const current = pointedValueRef.current;
-        pointedByKeyboardRef.current = true;
         if (direction === "down") {
           const idx = current === null ? -1 : values.indexOf(current);
-          setPointedValue(values[idx < values.length - 1 ? idx + 1 : idx]);
+          onPointedBy(values[idx < values.length - 1 ? idx + 1 : idx], event);
         } else if (direction === "up") {
           const idx = current === null ? -1 : values.indexOf(current);
-          setPointedValue(values[idx > 0 ? idx - 1 : 0]);
+          onPointedBy(values[idx > 0 ? idx - 1 : 0], event);
         } else if (direction === "first") {
-          setPointedValue(values[0]);
+          onPointedBy(values[0], event);
         } else if (direction === "last") {
-          setPointedValue(values[values.length - 1]);
+          onPointedBy(values[values.length - 1], event);
         }
       }}
       onnavi_listbox_confirm={(e) => {
@@ -663,8 +657,8 @@ const SuggestionListBox = ({
           e.preventDefault();
         }
       }}
-      onnavi_listbox_clear={() => {
-        setPointedValue(null);
+      onnavi_listbox_clear={(e) => {
+        onPointedBy(null, e);
       }}
     >
       <li
@@ -718,8 +712,9 @@ const SuggestionConcrete = ({
 }) => {
   import.meta.css = css;
 
-  const { pointedValue, setPointedValue, pointedByKeyboardRef, onSelect } =
-    useContext(SuggestionListContext);
+  const { pointedValue, onHover, pointedByKeyboardRef, onSelect } = useContext(
+    SuggestionListContext,
+  );
 
   const isPointed = pointedValue === value;
   const suggestionRef = useRef(null);
@@ -748,16 +743,14 @@ const SuggestionConcrete = ({
       pseudoClasses={SUGGESTION_PSEUDO_CLASSES}
       pseudoElements={SUGGESTION_PSEUDO_ELEMENTS}
       styleCSSVars={SuggestionStyleCSSVars}
-      onMouseEnter={() => {
+      onMouseEnter={(e) => {
         if (!hidden) {
-          pointedByKeyboardRef.current = false;
-          setPointedValue(value);
+          onHover(value, e);
         }
       }}
-      onMouseLeave={() => {
+      onMouseLeave={(e) => {
         if (!hidden) {
-          pointedByKeyboardRef.current = false;
-          setPointedValue(null);
+          onHover(null, e);
         }
       }}
       onMouseDown={(e) => {
