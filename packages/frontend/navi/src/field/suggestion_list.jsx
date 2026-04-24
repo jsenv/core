@@ -118,6 +118,12 @@ const css = /* css */ `
     margin: 0;
     padding: 0;
     list-style: none;
+
+    .navi_suggestion_list_filler {
+      height: 0px;
+      list-style: none;
+      pointer-events: none;
+    }
   }
   ::highlight(navi-suggestion-match) {
     color: var(--suggestion-color-highlight);
@@ -259,6 +265,10 @@ export const SuggestionList = ({
   const defaultRef = useRef(null);
   const ref = rest.ref || defaultRef;
 
+  // Persists the last measured median item height across renders so the scroll
+  // handler can compute a new window without waiting for a layout effect.
+  const medianHeightRef = useRef(MIN_ITEM_HEIGHT);
+
   // Virtual scroll state. Disabled until a CSS max-height is detected.
   const [vsState, setVsState] = useState({
     enabled: false,
@@ -287,6 +297,29 @@ export const SuggestionList = ({
       end: VS_BUFFER + itemsPerView + VS_BUFFER,
     });
   }, []);
+
+  // Scroll listener — recomputes the visible window on scroll.
+  useEffect(() => {
+    if (!vsState.enabled) {
+      return undefined;
+    }
+    const listEl = ref.current;
+    if (!listEl) {
+      return undefined;
+    }
+    const onScroll = () => {
+      const median = medianHeightRef.current;
+      const itemsPerView = Math.ceil(listEl.clientHeight / median);
+      const firstVisible = Math.floor(listEl.scrollTop / median);
+      const newStart = firstVisible > VS_BUFFER ? firstVisible - VS_BUFFER : 0;
+      const newEnd = firstVisible + itemsPerView + VS_BUFFER;
+      setVsState((prev) => ({ ...prev, start: newStart, end: newEnd }));
+    };
+    listEl.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      listEl.removeEventListener("scroll", onScroll);
+    };
+  }, [vsState.enabled]);
 
   const select = (value) => {
     ref.current?.dispatchEvent(
@@ -474,7 +507,7 @@ export const SuggestionList = ({
           <SuggestionListBox
             listRef={ref}
             vsState={vsState}
-            setVsState={setVsState}
+            medianHeightRef={medianHeightRef}
             ItemTrackerProvider={ItemTrackerProvider}
             highlight={highlight}
             emptyState={emptyState}
@@ -494,7 +527,7 @@ export const SuggestionList = ({
 const SuggestionListBox = ({
   listRef,
   vsState,
-  setVsState,
+  medianHeightRef,
   ItemTrackerProvider,
   highlight,
   emptyState,
@@ -502,32 +535,6 @@ const SuggestionListBox = ({
 }) => {
   const fillerTopRef = useRef(null);
   const fillerBottomRef = useRef(null);
-  // Persists the last measured median across renders so the scroll handler can
-  // compute a new window without waiting for a layout effect.
-  const medianHeightRef = useRef(MIN_ITEM_HEIGHT);
-
-  // Scroll listener — recomputes the visible window on scroll.
-  useLayoutEffect(() => {
-    if (!vsState.enabled) {
-      return undefined;
-    }
-    const listEl = listRef.current;
-    if (!listEl) {
-      return undefined;
-    }
-    const onScroll = () => {
-      const median = medianHeightRef.current;
-      const itemsPerView = Math.ceil(listEl.clientHeight / median);
-      const firstVisible = Math.floor(listEl.scrollTop / median);
-      const newStart = firstVisible > VS_BUFFER ? firstVisible - VS_BUFFER : 0;
-      const newEnd = firstVisible + itemsPerView + VS_BUFFER;
-      setVsState((prev) => ({ ...prev, start: newStart, end: newEnd }));
-    };
-    listEl.addEventListener("scroll", onScroll, { passive: true });
-    return () => {
-      listEl.removeEventListener("scroll", onScroll);
-    };
-  }, [vsState.enabled]);
 
   // After every render: measure median option height, then update filler heights.
   useLayoutEffect(() => {
@@ -614,8 +621,9 @@ const SuggestionListBox = ({
     >
       <li
         ref={fillerTopRef}
+        className="navi_suggestion_list_filler"
+        data-top=""
         aria-hidden="true"
-        style={{ listStyle: "none", pointerEvents: "none", height: "0px" }}
       />
       <ItemTrackerProvider>{children}</ItemTrackerProvider>
       {emptyState && (
@@ -623,8 +631,8 @@ const SuggestionListBox = ({
       )}
       <li
         ref={fillerBottomRef}
+        className="navi_suggestion_list_filler"
         aria-hidden="true"
-        style={{ listStyle: "none", pointerEvents: "none", height: "0px" }}
       />
     </Box>
   );
