@@ -539,10 +539,11 @@ const SuggestionListbox = ({
   const ItemTrackerProvider = useSuggestionItemTrackerProvider();
   const [mousePointedValue, setMousePointedValue] = useState(null);
   const [keyboardPointedValue, setKeyboardPointedValue] = useState(null);
-  // For navigation, keyboard takes priority; fall back to mouse so that
-  // pressing ArrowDown after clicking an item navigates from there.
-  const navigateFromRef = useRef(null);
-  navigateFromRef.current = keyboardPointedValue ?? mousePointedValue;
+  // The anchor is the index we navigate FROM. Only keyboard nav and
+  // select (click/enter) update it — mouse hover does not.
+  const [anchorValue, setAnchorValue] = useState(null);
+  const anchorValueRef = useRef(null);
+  anchorValueRef.current = anchorValue;
 
   const onMouseHover = (value) => {
     setMousePointedValue(value);
@@ -550,8 +551,10 @@ const SuggestionListbox = ({
   const onKeyboardPoint = (value, event) => {
     event.preventDefault(); // prevent arrow keys from scrolling the page
     setKeyboardPointedValue(value);
+    setAnchorValue(value);
   };
   const select = (value, event) => {
+    setAnchorValue(value);
     uiAction?.(value, event);
   };
 
@@ -647,7 +650,7 @@ const SuggestionListbox = ({
         if (values.length === 0) {
           return;
         }
-        const current = navigateFromRef.current;
+        const current = anchorValueRef.current;
         if (direction === "down") {
           const idx = current === null ? -1 : values.indexOf(current);
           const value = values[idx < values.length - 1 ? idx + 1 : idx];
@@ -665,7 +668,7 @@ const SuggestionListbox = ({
         }
       }}
       onnavi_list_confirm={(e) => {
-        const current = navigateFromRef.current;
+        const current = anchorValueRef.current;
         if (current === null) {
           return;
         }
@@ -674,6 +677,7 @@ const SuggestionListbox = ({
       onnavi_list_clear={() => {
         setMousePointedValue(null);
         setKeyboardPointedValue(null);
+        setAnchorValue(null);
       }}
     >
       <li
