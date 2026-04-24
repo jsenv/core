@@ -29,10 +29,10 @@ import { options } from "preact";
  *
  * Supports deps and cleanup return, same as useLayoutEffect.
  */
-export const useEarlyDOMEffect = (fn, deps) => {
+export const useEarlyDOMEffect = (fn, deps, { needDOMNode = true } = {}) => {
   const component = _currentComponent;
   if (component) {
-    pendingMap.set(component, { fn, deps });
+    pendingMap.set(component, { fn, deps, needDOMNode });
   }
 };
 
@@ -53,11 +53,11 @@ options.__r = (vnode) => {
 
 const _prevCommit = options.__c;
 options.__c = (root, commitQueue) => {
-  for (const [component, { fn, deps }] of pendingMap) {
+  for (const [component, { fn, deps, needDOMNode }] of pendingMap) {
     // component.__v is the component's vnode; __e is its root DOM node.
     // Both are set during diff, before options.__c fires.
     const element = component.__v && component.__v.__e;
-    if (!element) {
+    if (needDOMNode && !element) {
       continue;
     }
     const prev = stateMap.get(component);
