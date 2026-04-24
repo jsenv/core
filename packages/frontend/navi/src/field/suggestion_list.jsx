@@ -203,6 +203,176 @@ const css = /* css */ `
   }
 `;
 
+// Single entry point. Renders either the popover variant or the standalone
+// variant depending on the `popover` prop.
+export const SuggestionList = ({ popover, ...rest }) => {
+  import.meta.css = css;
+  if (popover) {
+    return <SuggestionListWithPopover {...rest} />;
+  }
+  return <SuggestionListStandalone {...rest} />;
+};
+
+const dispatchCustomEventToListbox = (
+  listboxRef,
+  keyboardEvent,
+  customEventName,
+  customEventDetail,
+) => {
+  const listbox = listboxRef.current;
+  if (!listbox) {
+    return false;
+  }
+  const customEvent = listbox.dispatchEvent(
+    new CustomEvent(customEventName, {
+      detail: { event: keyboardEvent, ...customEventDetail },
+    }),
+  );
+  return customEvent.defaultPrevented;
+};
+
+// Standalone variant: attaches keyboard shortcuts to the scroll container and
+// forwards them as custom events to the listbox.
+const SuggestionListStandalone = (props) => {
+  const containerRef = useRef(null);
+  const listboxRef = useRef(null);
+  const forwardToListbox = (...args) =>
+    dispatchCustomEventToListbox(listboxRef, ...args);
+
+  useKeyboardShortcuts(containerRef, [
+    {
+      key: "arrowdown",
+      description: "Point to next suggestion",
+      handler: (e) =>
+        forwardToListbox(e, "navi_listbox_navigate", {
+          direction: "down",
+        }),
+    },
+    {
+      key: "arrowup",
+      description: "Point to previous suggestion",
+      handler: (e) =>
+        forwardToListbox(e, "navi_listbox_navigate", {
+          direction: "up",
+        }),
+    },
+    {
+      key: "home",
+      description: "Point to first suggestion",
+      handler: (e) =>
+        forwardToListbox(e, "navi_listbox_navigate", {
+          direction: "first",
+        }),
+    },
+    {
+      key: "end",
+      description: "Point to last suggestion",
+      handler: (e) =>
+        forwardToListbox(e, "navi_listbox_navigate", {
+          direction: "last",
+        }),
+    },
+    {
+      key: "enter",
+      description: "Confirm pointed suggestion",
+      handler: (e) => forwardToListbox(e, "navi_listbox_confirm"),
+    },
+    {
+      key: "escape",
+      description: "Clear pointed suggestion",
+      handler: (e) => forwardToListbox(e, "navi_listbox_clear"),
+    },
+  ]);
+
+  return (
+    <SuggestionListControlled
+      {...props}
+      containerRef={containerRef}
+      listboxRef={listboxRef}
+      tabIndex={0}
+    />
+  );
+};
+
+// Popover variant: handles open/close/positioning events and forwards
+// navigate/confirm/clear to the listbox.
+const SuggestionListWithPopover = (props) => {
+  const containerRef = useRef(null);
+  const listboxRef = useRef(null);
+  const forwardToListbox = (...args) =>
+    dispatchCustomEventToListbox(listboxRef, ...args);
+  const cleanupRef = useRef();
+
+  return (
+    <SuggestionListControlled
+      {...props}
+      containerRef={containerRef}
+      listboxRef={listboxRef}
+      popover="manual"
+      tabIndex={-1}
+      onnavi_suggestion_list_open={(e) => {
+        const el = containerRef.current;
+        if (!el) {
+          return;
+        }
+        const anchor = e.detail?.anchor;
+        el.showPopover();
+        // TODO: if there is no anchor position relative to document.body (at the center of the viewport)
+        const positionPopover = () => {
+          const anchorRect = anchor.getBoundingClientRect();
+          el.style.setProperty(
+            "--suggestion-list-anchor-width",
+            `${anchorRect.width}px`,
+          );
+          const minLeft = 1;
+          const { left, top } = pickPositionRelativeTo(el, anchor, {
+            positionPreference: "below",
+            minLeft,
+          });
+          el.style.top = `${top}px`;
+          const popoverRect = el.getBoundingClientRect();
+          const maxWidth = parseFloat(getComputedStyle(el).maxWidth);
+          if (!isNaN(maxWidth) && popoverRect.width >= maxWidth - 1) {
+            const viewportWidth = document.documentElement.clientWidth;
+            const centeredLeft = (viewportWidth - popoverRect.width) / 2;
+            el.style.left = `${Math.max(centeredLeft, minLeft)}px`;
+          } else {
+            el.style.left = `${Math.max(left, minLeft)}px`;
+          }
+        };
+        const cleanup = visibleRectEffect(anchor, ({ visibilityRatio }) => {
+          if (visibilityRatio <= 0.2) {
+            el.setAttribute("data-anchor-hidden", "");
+            return;
+          }
+          el.removeAttribute("data-anchor-hidden");
+          positionPopover();
+        });
+        cleanupRef.current = () => cleanup.disconnect();
+      }}
+      onnavi_suggestion_list_close={(e) => {
+        const el = containerRef.current;
+        if (!el) {
+          return;
+        }
+        cleanupRef.current?.();
+        el.removeAttribute("data-anchor-hidden");
+        forwardToListbox(e, "navi_listbox_clear");
+        el.hidePopover();
+      }}
+      onnavi_suggestion_list_navigate={(e) => {
+        forwardToListbox(e, "navi_listbox_navigate", e.detail);
+      }}
+      onnavi_suggestion_list_confirm={(e) => {
+        forwardToListbox(e, "navi_listbox_confirm", e.detail);
+      }}
+      onnavi_suggestion_list_clear={(e) => {
+        forwardToListbox(e, "navi_listbox_clear", e.detail);
+      }}
+    />
+  );
+};
+
 const SuggestionListStyleCSSVars = {
   borderRadius: "--suggestion-list-border-radius",
   borderWidth: "--suggestion-list-border-width",
@@ -244,8 +414,12 @@ const VirtualScrollContext = createContext(null);
 const MIN_ITEM_HEIGHT = 20; // px — conservative lower bound for filler height estimation
 const VS_BUFFER = 5; // extra items to render above and below the visible window
 
-export const SuggestionList = ({
-  popover,
+// Core: VS detection, scroll listener, median measurement, and the <Box>
+// scroll container + <SuggestionListBox>. Controlled by either
+// SuggestionListWithShortcuts or SuggestionListWithPopover.
+const SuggestionListControlled = ({
+  containerRef,
+  listboxRef,
   uiAction,
   highlight,
   emptyState = "No results",
@@ -253,20 +427,11 @@ export const SuggestionList = ({
   maxHeight,
   ...rest
 }) => {
-  import.meta.css = css;
-
   const ownId = useId();
   const id = rest.id ?? ownId;
 
-  const defaultRef = useRef(null);
-  const ref = rest.ref || defaultRef;
-  const listboxRef = useRef(null);
-
-  // Persists a one-time measured median item height so the scroll handler
-  // can use a real value instead of the conservative MIN_ITEM_HEIGHT floor.
   const medianHeightRef = useRef(MIN_ITEM_HEIGHT);
 
-  // Virtual scroll state. Disabled until a CSS max-height is detected.
   const [vsState, setVsState] = useState({
     enabled: false,
     start: 0,
@@ -275,7 +440,7 @@ export const SuggestionList = ({
 
   // Detect max-height on mount and enable virtual scroll when present.
   useLayoutEffect(() => {
-    const listEl = ref.current;
+    const listEl = containerRef.current;
     if (!listEl) {
       return;
     }
@@ -283,11 +448,11 @@ export const SuggestionList = ({
     if (!maxHeightStr || maxHeightStr === "none") {
       return;
     }
-    const maxHeight = parseFloat(maxHeightStr);
-    if (isNaN(maxHeight) || maxHeight <= 0) {
+    const maxHeightPx = parseFloat(maxHeightStr);
+    if (isNaN(maxHeightPx) || maxHeightPx <= 0) {
       return;
     }
-    const itemsPerView = Math.ceil(maxHeight / MIN_ITEM_HEIGHT);
+    const itemsPerView = Math.ceil(maxHeightPx / MIN_ITEM_HEIGHT);
     setVsState({
       enabled: true,
       start: 0,
@@ -296,12 +461,11 @@ export const SuggestionList = ({
   }, [maxHeight]);
 
   // Measure real item height once, right after the first VS window renders.
-  // A single measurement is enough — items are uniform in practice.
   useLayoutEffect(() => {
     if (!vsState.enabled) {
       return;
     }
-    const listEl = ref.current;
+    const listEl = containerRef.current;
     if (!listEl) {
       return;
     }
@@ -318,12 +482,12 @@ export const SuggestionList = ({
         : heights[mid];
   }, [vsState.enabled]);
 
-  // Scroll listener — recomputes the visible frame on scroll.
+  // Scroll listener — also runs immediately to account for any initial scroll.
   useEffect(() => {
     if (!vsState.enabled) {
       return undefined;
     }
-    const listEl = ref.current;
+    const listEl = containerRef.current;
     if (!listEl) {
       return undefined;
     }
@@ -342,168 +506,17 @@ export const SuggestionList = ({
     };
   }, [vsState.enabled]);
 
-  // Listen for commands dispatched by a linked Input (combobox mode)
-  const noopRef = useRef(null);
-  useEffect(() => {
-    if (!popover || !ref.current) {
-      return undefined;
-    }
-    const el = ref.current;
-    let positionEffectCleanup = null;
-
-    const positionPopover = (anchor) => {
-      const anchorRect = anchor.getBoundingClientRect();
-      el.style.setProperty(
-        "--suggestion-list-anchor-width",
-        `${anchorRect.width}px`,
-      );
-      const minLeft = 1;
-      const { left, top } = pickPositionRelativeTo(el, anchor, {
-        positionPreference: "below",
-        minLeft,
-      });
-      el.style.top = `${top}px`;
-      const popoverRect = el.getBoundingClientRect();
-      const maxWidth = parseFloat(getComputedStyle(el).maxWidth);
-      if (!isNaN(maxWidth) && popoverRect.width >= maxWidth - 1) {
-        const viewportWidth = document.documentElement.clientWidth;
-        const centeredLeft = (viewportWidth - popoverRect.width) / 2;
-        el.style.left = `${Math.max(centeredLeft, minLeft)}px`;
-      } else {
-        el.style.left = `${Math.max(left, minLeft)}px`;
-      }
-    };
-
-    const onOpen = (e) => {
-      const anchor = e.detail?.anchor;
-      el.showPopover();
-      if (anchor) {
-        positionEffectCleanup = visibleRectEffect(
-          anchor,
-          ({ visibilityRatio }) => {
-            if (visibilityRatio <= 0.2) {
-              el.setAttribute("data-anchor-hidden", "");
-              return;
-            }
-            el.removeAttribute("data-anchor-hidden");
-            positionPopover(anchor);
-          },
-        );
-      }
-    };
-    const onClose = () => {
-      if (positionEffectCleanup) {
-        positionEffectCleanup.disconnect();
-        positionEffectCleanup = null;
-      }
-      el.removeAttribute("data-anchor-hidden");
-      el.dispatchEvent(new CustomEvent("navi_suggestion_list_clear"));
-      el.hidePopover();
-    };
-    el.addEventListener("navi_suggestion_list_open", onOpen);
-    el.addEventListener("navi_suggestion_list_close", onClose);
-    return () => {
-      el.removeEventListener("navi_suggestion_list_open", onOpen);
-      el.removeEventListener("navi_suggestion_list_close", onClose);
-      if (positionEffectCleanup) {
-        positionEffectCleanup.disconnect();
-      }
-    };
-  }, [popover]);
-
-  const dispatchListboxCustomEvent = (
-    keyboardEvent,
-    customEventName,
-    customEventDetail,
-  ) => {
-    const listbox = listboxRef.current;
-    if (!listbox) {
-      return false;
-    }
-    const customEvent = listbox.dispatchEvent(
-      new CustomEvent(customEventName, {
-        detail: { event: keyboardEvent, ...customEventDetail },
-      }),
-    );
-    return customEvent.defaultPrevented;
-  };
-
-  useKeyboardShortcuts(popover ? noopRef : ref, [
-    {
-      key: "arrowdown",
-      description: "Point to next suggestion",
-      handler: (e) =>
-        dispatchListboxCustomEvent(e, "navi_listbox_navigate", {
-          direction: "down",
-        }),
-    },
-    {
-      key: "arrowup",
-      description: "Point to previous suggestion",
-      handler: (e) =>
-        dispatchListboxCustomEvent(e, "navi_listbox_navigate", {
-          direction: "up",
-        }),
-    },
-    {
-      key: "home",
-      description: "Point to first suggestion",
-      handler: (e) =>
-        dispatchListboxCustomEvent(e, "navi_listbox_navigate", {
-          direction: "first",
-        }),
-    },
-    {
-      key: "end",
-      description: "Point to last suggestion",
-      handler: (e) =>
-        dispatchListboxCustomEvent(e, "navi_listbox_navigate", {
-          direction: "last",
-        }),
-    },
-    {
-      key: "enter",
-      description: "Confirm pointed suggestion",
-      handler: (e) =>
-        dispatchListboxCustomEvent(e, "navi_listbox_confirm", {
-          direction: "last",
-        }),
-    },
-    {
-      key: "escape",
-      description: "Clear pointed suggestion",
-      handler: (e) => dispatchListboxCustomEvent(e, "navi_listbox_clear"),
-    },
-  ]);
-
   return (
     <Box
+      ref={containerRef}
       id={id}
-      popover={popover ? "manual" : undefined}
-      tabIndex={popover ? -1 : 0}
       maxHeight={maxHeight}
-      onnavi_suggestion_list_navigate={(e) => {
-        listboxRef.current?.dispatchEvent(
-          new CustomEvent("navi_listbox_navigate", { detail: e.detail }),
-        );
-      }}
-      onnavi_suggestion_list_confirm={(e) => {
-        listboxRef.current?.dispatchEvent(
-          new CustomEvent("navi_listbox_confirm", { detail: e }),
-        );
-      }}
-      onnavi_suggestion_list_clear={(e) => {
-        listboxRef.current?.dispatchEvent(
-          new CustomEvent("navi_listbox_clear", { detail: e }),
-        );
-      }}
       {...rest}
-      ref={ref}
       baseClassName="navi_suggestion_list"
     >
       <SuggestionListBox
         listboxRef={listboxRef}
-        listRef={ref}
+        listRef={containerRef}
         vsState={vsState}
         medianHeightRef={medianHeightRef}
         uiAction={uiAction}
@@ -515,7 +528,6 @@ export const SuggestionList = ({
     </Box>
   );
 };
-
 // Internal component: the <ul role="listbox"> with top and bottom filler <li>s
 // that maintain the total scroll height when virtual scroll is active.
 // Also owns the scroll listener, filler height updates, and highlight logic
@@ -688,7 +700,6 @@ const SuggestionListBox = ({
 
 const SUGGESTION_PSEUDO_CLASSES = [":-navi-pointed", ":-navi-selected"];
 const SUGGESTION_PSEUDO_ELEMENTS = ["::highlight"];
-
 // Thin wrapper: tracks the suggestion (so all items register with ItemTracker
 // regardless of virtual scroll), then bails out early outside the visible window.
 export const Suggestion = ({ value, hidden, ...rest }) => {
