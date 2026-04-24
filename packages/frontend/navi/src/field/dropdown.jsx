@@ -1,4 +1,5 @@
-import { useRef, useState } from "preact/hooks";
+import { createContext } from "preact";
+import { useContext, useRef, useState } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
 import { ChevronDownSvg } from "../graphic/icons/chevron_updown_svg.jsx";
@@ -93,6 +94,8 @@ const css = /* css */ `
   }
 `;
 
+const DropdownCloseContext = createContext(null);
+
 /**
  * Dropdown — a select-like trigger that opens a centered dialog.
  *
@@ -180,22 +183,17 @@ export const Dropdown = ({
         onClick={onDialogClick}
         onClose={closeDialog}
       >
-        <div className="navi_dropdown_dialog_content">{children}</div>
+        <DropdownCloseContext.Provider value={closeDialog}>
+          <div className="navi_dropdown_dialog_content">{children}</div>
+        </DropdownCloseContext.Provider>
       </dialog>
     </>
   );
 };
 
 /**
- * Hook to close the nearest Dropdown dialog from inside its content.
- * Returns a close() function.
+ * Hook to close the enclosing Dropdown dialog from inside its content.
  */
 export const useDropdownClose = () => {
-  return () => {
-    const el = document.activeElement;
-    const dialog = el?.closest?.("dialog.navi_dropdown_dialog");
-    if (dialog) {
-      dialog.close();
-    }
-  };
+  return useContext(DropdownCloseContext);
 };
