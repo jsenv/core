@@ -16,6 +16,9 @@ import { createItemTracker } from "./item_tracker/item_tracker.jsx";
 // uses it to inject index/hidden into Suggestion children automatically.
 export const SuggestionFilterContext = createContext(null);
 export const SuggestionMatchContext = createContext(null);
+// Provided by SuggestionListCombo so SuggestionListbox uses the same stable id
+// that the input's aria-controls points to.
+export const ListboxIdContext = createContext(null);
 
 const [useSuggestionItemTrackerProvider, useTrackSuggestion] =
   createItemTracker({
@@ -558,7 +561,7 @@ const SuggestionListbox = ({
   if (highlight === undefined) {
     highlight = filter;
   }
-  const listboxId = useId();
+  const listboxIdFromContext = useContext(ListboxIdContext);
 
   const ItemTrackerProvider = useSuggestionItemTrackerProvider();
   const [mousePointedValue, setMousePointedValue] = useState(null);
@@ -675,7 +678,7 @@ const SuggestionListbox = ({
   return (
     <Box
       ref={ref}
-      id={listboxId}
+      id={listboxIdFromContext}
       as="ul"
       role="listbox"
       baseClassName="navi_suggestion_listbox"

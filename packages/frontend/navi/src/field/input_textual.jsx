@@ -38,7 +38,10 @@ import { EmailSvg } from "../graphic/icons/email_svg.jsx";
 import { PhoneSvg } from "../graphic/icons/phone_svg.jsx";
 import { SearchSvg } from "../graphic/icons/search_svg.jsx";
 import { LoaderBackground } from "../graphic/loader/loader_background.jsx";
-import { useKeyboardShortcuts } from "../keyboard/keyboard_shortcuts.js";
+import {
+  createOnKeyDownForShortcuts,
+  useKeyboardShortcuts,
+} from "../keyboard/keyboard_shortcuts.js";
 import { Icon } from "../text/icon.jsx";
 import { useStableCallback } from "../utils/use_stable_callback.js";
 import { fieldPropSet } from "./field_prop_set.js";
@@ -48,6 +51,11 @@ import {
   reportInteractiveToLabel,
   reportReadOnlyToLabel,
 } from "./label.jsx";
+import {
+  ListboxIdContext,
+  SuggestionFilterContext,
+} from "./suggestion_list.jsx";
+import { SetFilterContext } from "./suggestion_list_combo.jsx";
 import { useActionEvents } from "./use_action_events.js";
 import { useAutoFocus } from "./use_auto_focus.js";
 import {
@@ -402,10 +410,103 @@ export const InputRightSlot = (props) => {
 };
 
 const InputTextualBasic = (props) => {
+  const listboxId = useContext(ListboxIdContext);
+  if (listboxId) {
+    return <InputInsideSuggestionListCombo {...props} listboxId={listboxId} />;
+  }
   if (props.suggestions) {
     return <InputTextualWithSuggestions {...props} />;
   }
   return <InputTextualPlain {...props} />;
+};
+
+const InputInsideSuggestionListCombo = ({
+  listboxId,
+  onInput,
+  onKeyDown,
+  ...props
+}) => {
+  const filter = useContext(SuggestionFilterContext);
+  const setFilter = useContext(SetFilterContext);
+
+  const forwardToListbox = (event, customEventName, customEventDetail) => {
+    const listbox = document.getElementById(listboxId);
+    if (!listbox) {
+      return false;
+    }
+    const customEvent = new CustomEvent(customEventName, {
+      detail: {
+        event,
+        ...customEventDetail,
+      },
+    });
+    listbox.dispatchEvent(customEvent);
+    return customEvent.defaultPrevented;
+  };
+  const onKeyDownForShortcuts = createOnKeyDownForShortcuts([
+    {
+      key: "arrowdown",
+      description: "Open popover and point to next suggestion",
+      handler: (e) => {
+        return forwardToListbox(e, "navi_list_navigate", {
+          direction: "down",
+        });
+      },
+    },
+    {
+      key: "arrowup",
+      description: "Open popover and point to previous suggestion",
+      handler: (e) => {
+        return forwardToListbox(e, "navi_list_navigate", {
+          direction: "up",
+        });
+      },
+    },
+    {
+      key: "home",
+      description: "Point to first suggestion",
+      handler: (e) => {
+        return forwardToListbox(e, "navi_list_navigate", {
+          direction: "first",
+        });
+      },
+    },
+    {
+      key: "end",
+      description: "Point to last suggestion",
+      handler: (e) => {
+        return forwardToListbox(e, "navi_list_navigate", {
+          direction: "last",
+        });
+      },
+    },
+    {
+      key: "enter",
+      description: "Confirm pointed suggestion",
+      handler: (e) => {
+        return forwardToListbox(e, "navi_list_confirm");
+      },
+    },
+  ]);
+
+  return (
+    <InputTextualPlain
+      aria-controls={listboxId}
+      aria-autocomplete="list"
+      aria-has-popup="listbox"
+      type="search"
+      value={filter}
+      onInput={(e) => {
+        setFilter(e.target.value);
+        onInput?.(e);
+      }}
+      onKeyDown={(e) => {
+        onKeyDownForShortcuts(e);
+        onKeyDown?.(e);
+      }}
+      {...props}
+    />
+  );
 };
 
 const InputTextualWithSuggestions = ({
