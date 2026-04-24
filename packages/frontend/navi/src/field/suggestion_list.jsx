@@ -232,6 +232,11 @@ const SuggestionStyleCSSVars = {
  * Context OptionList provides downward to its Option children.
  */
 const SuggestionListContext = createContext(null);
+// Counter object shared via context — reset each SuggestionList render so each
+// Suggestion thin wrapper can increment it and bail out early once the cap is hit.
+const VirtualScrollContext = createContext(null);
+const MAX_DOM_ITEMS = 50;
+
 export const SuggestionList = ({
   popover,
   onChange: onChangeProp,
@@ -252,6 +257,41 @@ export const SuggestionList = ({
 
   const defaultRef = useRef(null);
   const ref = rest.ref || defaultRef;
+  const fillerRef = useRef(null);
+
+  // Mutable counter reset on every render — children read and increment it.
+  // Using a ref so that mutations during children's render are visible here
+  // in the subsequent useLayoutEffect without triggering another render cycle.
+  const vsCounterRef = useRef({ seen: 0 });
+  vsCounterRef.current = { seen: 0 };
+
+  useLayoutEffect(() => {
+    if (!fillerRef.current) {
+      return;
+    }
+    const total = vsCounterRef.current.seen;
+    const hiddenCount = total > MAX_DOM_ITEMS ? total - MAX_DOM_ITEMS : 0;
+    if (hiddenCount === 0) {
+      fillerRef.current.style.height = "0px";
+      return;
+    }
+    const listEl = ref.current;
+    if (!listEl) {
+      return;
+    }
+    const options = Array.from(listEl.querySelectorAll("[role='option']"));
+    if (options.length === 0) {
+      return;
+    }
+    const heights = options.map((el) => el.getBoundingClientRect().height);
+    heights.sort((a, b) => a - b);
+    const mid = Math.floor(heights.length / 2);
+    const median =
+      heights.length % 2 === 0
+        ? (heights[mid - 1] + heights[mid]) / 2
+        : heights[mid];
+    fillerRef.current.style.height = `${Math.round(median * hiddenCount)}px`;
+  });
 
   useLayoutEffect(() => {
     if (!CSS.highlights) {
@@ -485,12 +525,19 @@ export const SuggestionList = ({
         baseClassName="navi_suggestion_listbox"
         styleCSSVars={SuggestionListStyleCSSVars}
       >
-        <SuggestionListContext.Provider value={suggestionListContext}>
-          <ItemTrackerProvider>{children}</ItemTrackerProvider>
-          {emptyState && (
-            <li className="navi_suggestion_list_empty">{emptyState}</li>
-          )}
-        </SuggestionListContext.Provider>
+        <VirtualScrollContext.Provider value={vsCounterRef.current}>
+          <SuggestionListContext.Provider value={suggestionListContext}>
+            <ItemTrackerProvider>{children}</ItemTrackerProvider>
+            {emptyState && (
+              <li className="navi_suggestion_list_empty">{emptyState}</li>
+            )}
+          </SuggestionListContext.Provider>
+        </VirtualScrollContext.Provider>
+        <li
+          ref={fillerRef}
+          aria-hidden="true"
+          style={{ listStyle: "none", pointerEvents: "none", height: "0px" }}
+        />
       </Box>
     </Box>
   );
@@ -498,7 +545,22 @@ export const SuggestionList = ({
 
 const SUGGESTION_PSEUDO_CLASSES = [":-navi-pointed", ":-navi-selected"];
 const SUGGESTION_PSEUDO_ELEMENTS = ["::highlight"];
-export const Suggestion = ({ value, selected, hidden, children, ...rest }) => {
+
+// Thin wrapper: reads the virtual scroll counter and bails out early if the
+// cap is exceeded. Only the first MAX_DOM_ITEMS suggestions instantiate the
+// real SuggestionInner (and thus run all its hooks).
+export const Suggestion = (props) => {
+  const vsCtx = useContext(VirtualScrollContext);
+  if (vsCtx) {
+    vsCtx.seen++;
+    if (vsCtx.seen > MAX_DOM_ITEMS) {
+      return null;
+    }
+  }
+  return <SuggestionInner {...props} />;
+};
+
+const SuggestionInner = ({ value, selected, hidden, children, ...rest }) => {
   import.meta.css = css;
 
   const suggestionId = useId();
