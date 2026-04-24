@@ -51,10 +51,7 @@ import {
   reportInteractiveToLabel,
   reportReadOnlyToLabel,
 } from "./label.jsx";
-import {
-  ListboxIdContext,
-  SuggestionFilterContext,
-} from "./suggestion_list.jsx";
+import { ListboxIdContext } from "./suggestion_list.jsx";
 import { SetFilterContext } from "./suggestion_list_combo.jsx";
 import { useActionEvents } from "./use_action_events.js";
 import { useAutoFocus } from "./use_auto_focus.js";
@@ -422,12 +419,16 @@ const InputTextualBasic = (props) => {
 
 const InputInsideSuggestionListCombo = ({
   listboxId,
-  onInput,
+  uiAction,
   onKeyDown,
   ...props
 }) => {
-  const filter = useContext(SuggestionFilterContext);
   const setFilter = useContext(SetFilterContext);
+  const uiStateController = useContext(UIStateControllerContext);
+  uiStateController.uiAction = (v, e) => {
+    setFilter(v);
+    uiAction?.(v, e);
+  };
 
   const forwardToSuggestionList = (
     event,
@@ -501,11 +502,6 @@ const InputInsideSuggestionListCombo = ({
       aria-has-popup="listbox"
       type="search"
       autoComplete="off"
-      value={filter}
-      onInput={(e) => {
-        setFilter(e.target.value);
-        onInput?.(e);
-      }}
       onKeyDown={(e) => {
         onKeyDownForShortcuts(e);
         onKeyDown?.(e);
