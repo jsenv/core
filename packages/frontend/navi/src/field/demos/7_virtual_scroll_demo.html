@@ -114,7 +114,6 @@
 
       const SUGGESTION_BG = "light-dark(#f0f4ff, #1a2040)";
 
-      // --- Generate 200 items ---
       const GREEK_NAMES = [
         "Alpha",
         "Beta",
@@ -146,52 +145,42 @@
         return `${name}-${num}`;
       });
 
-      // --- Stat bar ---
-      const StatsBar = ({
-        totalItems,
-        domItems,
-        savedFromDom,
-        fillerHeight,
-        medianHeight,
-      }) => (
-        <div className="stats-bar">
-          <div className="stat">
-            <span className="stat-label">Total items</span>
-            <span className="stat-value">{totalItems}</span>
+      const StatsBar = ({ totalItems, domItems }) => {
+        const savedFromDom = totalItems - domItems;
+        return (
+          <div className="stats-bar">
+            <div className="stat">
+              <span className="stat-label">Total items</span>
+              <span className="stat-value">{totalItems}</span>
+            </div>
+            <div className="stat">
+              <span className="stat-label">In DOM</span>
+              <span
+                className={`stat-value ${domItems < totalItems ? "highlight" : ""}`}
+              >
+                {domItems}
+              </span>
+            </div>
+            <div className="stat">
+              <span className="stat-label">Saved from DOM</span>
+              <span
+                className={`stat-value ${savedFromDom > 0 ? "warning" : ""}`}
+              >
+                {savedFromDom}
+              </span>
+            </div>
           </div>
-          <div className="stat">
-            <span className="stat-label">In DOM</span>
-            <span
-              className={`stat-value ${domItems < totalItems ? "highlight" : ""}`}
-            >
-              {domItems}
-            </span>
-          </div>
-          <div className="stat">
-            <span className="stat-label">Saved from DOM</span>
-            <span className={`stat-value ${savedFromDom > 0 ? "warning" : ""}`}>
-              {savedFromDom}
-            </span>
-          </div>
-          <div className="stat">
-            <span className="stat-label">Median height</span>
-            <span className="stat-value">
-              {medianHeight !== null ? `${medianHeight}px` : "–"}
-            </span>
-          </div>
-          <div className="stat">
-            <span className="stat-label">Filler height</span>
-            <span className="stat-value">
-              {fillerHeight !== null ? `${fillerHeight}px` : "–"}
-            </span>
-          </div>
-        </div>
-      );
+        );
+      };
 
-      // --- Virtual scroll demo ---
       const VirtualScrollDemo = () => {
         const [selected, setSelected] = useState(null);
         const [filter, setFilter] = useState("");
+        const [maxHeight, setMaxHeight] = useState(280);
+        const [maxHeightEnabled, setMaxHeightEnabled] = useState(true);
+        const [scrollToIndex, setScrollToIndex] = useState("");
+        const listRef = useRef(null);
+        const [domItems, setDomItems] = useState(0);
 
         const lowerFilter = filter.toLowerCase();
         const allItems = filter
@@ -205,24 +194,18 @@
             ]
           : LARGE_LIST;
 
-        const listRef = useRef(null);
-
-        // All stats derived from the real DOM via MutationObserver
-        const [domItems, setDomItems] = useState(0);
-        const [savedFromDom, setSavedFromDom] = useState(0);
-
+        // Track actual DOM option count via MutationObserver
         useEffect(() => {
-          const updateStats = () => {
+          const updateCount = () => {
             if (!listRef.current) {
               return;
             }
-            const options = listRef.current.querySelectorAll("[role='option']");
-            const inDom = options.length;
-            setDomItems(inDom);
-            setSavedFromDom(allItems.length - inDom);
+            setDomItems(
+              listRef.current.querySelectorAll("[role='option']").length,
+            );
           };
-          updateStats();
-          const observer = new MutationObserver(updateStats);
+          updateCount();
+          const observer = new MutationObserver(updateCount);
           if (listRef.current) {
             observer.observe(listRef.current, {
               childList: true,
@@ -234,22 +217,89 @@
           };
         }, [allItems.length]);
 
+        const scrollTo = (position) => {
+          const el = listRef.current;
+          if (!el) {
+            return;
+          }
+          if (position === "top") {
+            el.scrollTop = 0;
+          } else if (position === "middle") {
+            el.scrollTop = el.scrollHeight / 2;
+          } else if (position === "bottom") {
+            el.scrollTop = el.scrollHeight;
+          }
+        };
+
+        const scrollToItem = () => {
+          const idx = parseInt(scrollToIndex, 10);
+          if (isNaN(idx)) {
+            return;
+          }
+          const el = listRef.current;
+          if (!el) {
+            return;
+          }
+          // Estimate position: scrollHeight / totalItems * idx
+          const estimated = (el.scrollHeight / allItems.length) * idx;
+          el.scrollTop = estimated;
+        };
+
         return (
           <div className="demo-section">
-            <h2>200 items suggestion list</h2>
+            <h2>200 items — virtual scroll</h2>
             <p>
-              All {allItems.length} items are passed to SuggestionList. The
-              stats bar is driven by a MutationObserver watching the real DOM —
-              once virtual scroll is implemented in the component, "Saved from
-              DOM" will reflect it automatically.
+              The list passes all {allItems.length} items to{" "}
+              <code>SuggestionList</code>. Virtual scroll is automatically
+              enabled because a <code>max-height</code> is set. Scroll
+              programmatically below to verify the component renders the correct
+              DOM items at each scroll position.
             </p>
-            <StatsBar
-              totalItems={allItems.length}
-              domItems={domItems}
-              savedFromDom={savedFromDom}
-              medianHeight={null}
-              fillerHeight={null}
-            />
+
+            <StatsBar totalItems={allItems.length} domItems={domItems} />
+
+            {/* Programmatic scroll controls */}
+            <div
+              style={{
+                display: "flex",
+                gap: "8px",
+                flexWrap: "wrap",
+                marginBottom: "10px",
+                alignItems: "center",
+              }}
+            >
+              <strong style={{ fontSize: "0.85rem", color: "#555" }}>
+                Scroll to:
+              </strong>
+              <button onClick={() => scrollTo("top")}>Top</button>
+              <button onClick={() => scrollTo("middle")}>Middle</button>
+              <button onClick={() => scrollTo("bottom")}>Bottom</button>
+              <span
+                style={{ display: "flex", gap: "4px", alignItems: "center" }}
+              >
+                <span style={{ fontSize: "0.85rem", color: "#555" }}>
+                  Item index:
+                </span>
+                <input
+                  type="number"
+                  min="0"
+                  max={allItems.length - 1}
+                  value={scrollToIndex}
+                  onInput={(e) => {
+                    setScrollToIndex(e.target.value);
+                  }}
+                  style={{
+                    width: "70px",
+                    padding: "4px 6px",
+                    border: "1px solid #ccc",
+                    borderRadius: "4px",
+                  }}
+                />
+                <button onClick={scrollToItem}>Go</button>
+              </span>
+            </div>
+
+            {/* Search */}
             <input
               type="search"
               placeholder="Search to re-sort…"
@@ -269,9 +319,10 @@
                 fontSize: "1rem",
               }}
             />
+
             <div ref={listRef} style={{ display: "contents" }}>
               <SuggestionList
-                style={{ maxHeight: "280px" }}
+                style={maxHeightEnabled ? { maxHeight: `${maxHeight}px` } : {}}
                 onChange={setSelected}
                 highlight={filter}
               >
@@ -287,7 +338,70 @@
                 ))}
               </SuggestionList>
             </div>
+
             <div className="value-display">{selected ?? ""}</div>
+
+            {/* Advanced: max-height controls */}
+            <details style={{ marginTop: "16px" }}>
+              <summary
+                style={{
+                  cursor: "pointer",
+                  fontSize: "0.85rem",
+                  color: "#666",
+                }}
+              >
+                Advanced — max-height controls
+              </summary>
+              <div
+                style={{
+                  marginTop: "10px",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "8px",
+                }}
+              >
+                <label
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    fontSize: "0.9rem",
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={maxHeightEnabled}
+                    onChange={(e) => {
+                      setMaxHeightEnabled(e.target.checked);
+                    }}
+                  />
+                  Enable max-height (virtual scroll active only when set)
+                </label>
+                {maxHeightEnabled && (
+                  <label
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      fontSize: "0.9rem",
+                    }}
+                  >
+                    max-height: <strong>{maxHeight}px</strong>
+                    <input
+                      type="range"
+                      min="80"
+                      max="800"
+                      step="20"
+                      value={maxHeight}
+                      onInput={(e) => {
+                        setMaxHeight(Number(e.target.value));
+                      }}
+                      style={{ flex: 1 }}
+                    />
+                  </label>
+                )}
+              </div>
+            </details>
           </div>
         );
       };

@@ -236,7 +236,6 @@ const SuggestionListContext = createContext(null);
 // Suggestion thin wrapper can increment it and know its 0-based index.
 // Also carries the visible window (start/end) and enabled flag.
 const VirtualScrollContext = createContext(null);
-const MAX_DOM_ITEMS = 50;
 const MIN_ITEM_HEIGHT = 20; // px — conservative lower bound for filler height estimation
 const VS_BUFFER = 5; // extra items to render above and below the visible window
 
@@ -275,7 +274,7 @@ export const SuggestionList = ({
   const [vsState, setVsState] = useState({
     enabled: false,
     start: 0,
-    end: MAX_DOM_ITEMS,
+    end: VS_BUFFER * 2,
   });
 
   // Detect max-height on mount and enable virtual scroll when present.
@@ -633,8 +632,7 @@ const SUGGESTION_PSEUDO_CLASSES = [":-navi-pointed", ":-navi-selected"];
 const SUGGESTION_PSEUDO_ELEMENTS = ["::highlight"];
 
 // Thin wrapper: tracks the suggestion (so all items register with ItemTracker
-// regardless of virtual scroll), then bails out early if the cap is exceeded.
-// Only the first MAX_DOM_ITEMS suggestions mount SuggestionConcrete.
+// regardless of virtual scroll), then bails out early outside the visible window.
 export const Suggestion = ({ value, hidden, ...rest }) => {
   const suggestionId = useId();
   useTrackSuggestion({ value, suggestionId, hidden });
