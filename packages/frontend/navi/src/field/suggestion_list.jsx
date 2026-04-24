@@ -295,7 +295,7 @@ export const SuggestionList = ({
     });
   }, [maxHeight]);
 
-  // Scroll listener — recomputes the visible window on scroll.
+  // Scroll listener — recomputes the visible frame on scroll.
   useEffect(() => {
     if (!vsState.enabled) {
       return undefined;
@@ -367,7 +367,6 @@ export const SuggestionList = ({
         );
       }
     };
-
     const onClose = () => {
       if (positionEffectCleanup) {
         positionEffectCleanup.disconnect();
@@ -377,31 +376,11 @@ export const SuggestionList = ({
       el.dispatchEvent(new CustomEvent("navi_suggestion_list_clear"));
       el.hidePopover();
     };
-
-    const onNavigate = (e) => {
-      listboxRef.current?.dispatchEvent(
-        new CustomEvent("navi_listbox_navigate", { detail: e.detail }),
-      );
-    };
-    const onConfirm = () => {
-      listboxRef.current?.dispatchEvent(
-        new CustomEvent("navi_listbox_confirm"),
-      );
-    };
-    const onClear = () => {
-      listboxRef.current?.dispatchEvent(new CustomEvent("navi_listbox_clear"));
-    };
     el.addEventListener("navi_suggestion_list_open", onOpen);
     el.addEventListener("navi_suggestion_list_close", onClose);
-    el.addEventListener("navi_suggestion_list_navigate", onNavigate);
-    el.addEventListener("navi_suggestion_list_confirm", onConfirm);
-    el.addEventListener("navi_suggestion_list_clear", onClear);
     return () => {
       el.removeEventListener("navi_suggestion_list_open", onOpen);
       el.removeEventListener("navi_suggestion_list_close", onClose);
-      el.removeEventListener("navi_suggestion_list_navigate", onNavigate);
-      el.removeEventListener("navi_suggestion_list_confirm", onConfirm);
-      el.removeEventListener("navi_suggestion_list_clear", onClear);
       if (positionEffectCleanup) {
         positionEffectCleanup.disconnect();
       }
@@ -490,6 +469,21 @@ export const SuggestionList = ({
       popover={popover ? "manual" : undefined}
       tabIndex={popover ? -1 : 0}
       maxHeight={maxHeight}
+      onnavi_suggestion_list_navigate={(e) => {
+        listboxRef.current?.dispatchEvent(
+          new CustomEvent("navi_listbox_navigate", { detail: e.detail }),
+        );
+      }}
+      onnavi_suggestion_list_confirm={(e) => {
+        listboxRef.current?.dispatchEvent(
+          new CustomEvent("navi_listbox_confirm", { detail: e }),
+        );
+      }}
+      onnavi_suggestion_list_clear={(e) => {
+        listboxRef.current?.dispatchEvent(
+          new CustomEvent("navi_listbox_clear", { detail: e }),
+        );
+      }}
       {...rest}
       baseClassName="navi_suggestion_list"
     >
