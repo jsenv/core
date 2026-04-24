@@ -404,7 +404,7 @@ const SuggestionStyleCSSVars = {
 };
 
 // Carries the virtual scroll window (enabled, start, end) set by
-// SuggestionListControlled and consumed by each Suggestion wrapper to decide
+// SuggestionContainerControlled and consumed by each Suggestion wrapper to decide
 // whether to render.
 const MIN_ITEM_HEIGHT = 20; // px — conservative lower bound for filler height estimation
 const VS_BUFFER = 5; // extra items to render above and below the visible window
@@ -528,7 +528,7 @@ const SuggestionListContext = createContext(null);
 const VirtualScrollContext = createContext(null);
 // The <ul role="listbox"> with top and bottom filler <li>s that maintain the
 // total scroll height when virtual scroll is active. Piloted by
-// SuggestionListControlled which detects max-height and sets vsState.
+// SuggestionContainerControlled which detects max-height and sets vsState.
 const SuggestionList = ({
   containerRef,
   ref,
