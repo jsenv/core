@@ -320,25 +320,24 @@
               }}
             />
 
-            <div ref={listRef} style={{ display: "contents" }}>
-              <SuggestionList
-                style={maxHeightEnabled ? { maxHeight: `${maxHeight}px` } : {}}
-                uiAction={setSelected}
-                highlight={filter}
-                expandX
-              >
-                {allItems.map((item) => (
-                  <Suggestion
-                    key={item}
-                    value={item}
-                    selected={selected === item}
-                    style={{ backgroundColor: SUGGESTION_BG }}
-                  >
-                    {item}
-                  </Suggestion>
-                ))}
-              </SuggestionList>
-            </div>
+            <SuggestionList
+              ref={listRef}
+              style={maxHeightEnabled ? { maxHeight: `${maxHeight}px` } : {}}
+              uiAction={setSelected}
+              highlight={filter}
+              expandX
+            >
+              {allItems.map((item) => (
+                <Suggestion
+                  key={item}
+                  value={item}
+                  selected={selected === item}
+                  style={{ backgroundColor: SUGGESTION_BG }}
+                >
+                  {item}
+                </Suggestion>
+              ))}
+            </SuggestionList>
 
             <div className="value-display">{selected ?? ""}</div>
 
