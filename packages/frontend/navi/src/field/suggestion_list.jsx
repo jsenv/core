@@ -592,15 +592,13 @@ const SuggestionListbox = ({
   const fillerTopRef = useRef(null);
   const fillerBottomRef = useRef(null);
   useLayoutEffect(() => {
-    if (ItemTrackerProvider.visibleRegistered) {
-      // Filter mode: use the visible count (may be 0 when all items are hidden).
-      totalItemsRef.current = ItemTrackerProvider.visibleCount;
-    } else {
-      const count = ItemTrackerProvider.items.length;
-      if (count > 0) {
-        totalItemsRef.current = count;
-      }
-    }
+    // visibleItems is always up to date: all items (visible or hidden) call
+    // registerVisibleIndex during render, so its length equals the visible count.
+    // Fall back to items.length only when nothing rendered yet (initial mount).
+    const visibleCount = ItemTrackerProvider.visibleItems.length;
+    const totalCount = ItemTrackerProvider.items.length;
+    const count = totalCount > 0 ? visibleCount : totalItemsRef.current;
+    totalItemsRef.current = count;
     const totalItems = totalItemsRef.current;
     const median = medianHeightRef.current;
     const topHidden = virtualScrollState.start;

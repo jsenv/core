@@ -76,8 +76,8 @@ export const createItemTracker = ({ trackVisibility = false } = {}) => {
     const committedMapRef = useRef(new Map()); // stableId → { index, data }
 
     // When trackVisibility is true, these refs count visible items per render.
-    const visibleCountRef = trackVisibility ? useRef(0) : null;
-    const visibleRegisteredRef = trackVisibility ? useRef(false) : null;
+    const visibleItemsRef = trackVisibility ? useRef([]) : null;
+    const visibleItems = trackVisibility ? visibleItemsRef.current : null;
 
     const tracker = useMemo(() => {
       const ItemTrackerProvider = ({ children }) => {
@@ -93,14 +93,7 @@ export const createItemTracker = ({ trackVisibility = false } = {}) => {
       };
       ItemTrackerProvider.items = committedItems;
       if (trackVisibility) {
-        // Expose visible count as getters so consumers read the current ref
-        // value after children have rendered (refs are always up to date).
-        Object.defineProperty(ItemTrackerProvider, "visibleCount", {
-          get: () => visibleCountRef.current,
-        });
-        Object.defineProperty(ItemTrackerProvider, "visibleRegistered", {
-          get: () => visibleRegisteredRef.current,
-        });
+        ItemTrackerProvider.visibleItems = visibleItems;
       }
 
       return {
@@ -129,18 +122,16 @@ export const createItemTracker = ({ trackVisibility = false } = {}) => {
           renderItems.length = 0;
           renderCountRef.current = 0;
           if (trackVisibility) {
-            visibleCountRef.current = 0;
-            visibleRegisteredRef.current = false;
+            visibleItems.length = 0;
           }
         },
         registerVisibleIndex: trackVisibility
-          ? (hidden) => {
-              visibleRegisteredRef.current = true;
+          ? (hidden, data) => {
               if (hidden) {
                 return -1;
               }
-              const idx = visibleCountRef.current;
-              visibleCountRef.current = idx + 1;
+              const idx = visibleItems.length;
+              visibleItems[idx] = data;
               return idx;
             }
           : null,
@@ -168,7 +159,7 @@ export const createItemTracker = ({ trackVisibility = false } = {}) => {
     const index =
       explicitIndex !== undefined ? explicitIndex : renderOrderIndex;
     const visibleIndex = trackVisibility
-      ? tracker.registerVisibleIndex(data.hidden)
+      ? tracker.registerVisibleIndex(data.hidden, data)
       : undefined;
     // Commit this item into the stable snapshot after every render.
     // Running without deps ensures the committed index and data are always
