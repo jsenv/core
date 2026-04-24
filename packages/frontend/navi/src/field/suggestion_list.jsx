@@ -433,13 +433,6 @@ const SuggestionListControlled = ({
   const ownId = useId();
   const id = rest.id ?? ownId;
 
-  // When a filter is active, set highlight to the filter text so the listbox
-  // can highlight matching text.
-  const filterCtx = useContext(SuggestionFilterContext);
-  if (filterCtx && filterCtx.filter) {
-    highlight = filterCtx.filter;
-  }
-
   // Detect max-height on mount and enable virtual scroll when present.
   const [virtualScrollState, setVirtualScrollState] = useState({
     enabled: false,
@@ -559,6 +552,13 @@ const SuggestionListbox = ({
   emptyState,
   children,
 }) => {
+  // When a filter is active, set highlight to the filter text so the listbox
+  // can highlight matching text.
+  const filter = useContext(SuggestionFilterContext);
+  if (highlight === undefined) {
+    highlight = filter;
+  }
+
   const ItemTrackerProvider = useSuggestionItemTrackerProvider();
   const [mousePointedValue, setMousePointedValue] = useState(null);
   const [keyboardPointedValue, setKeyboardPointedValue] = useState(null);
