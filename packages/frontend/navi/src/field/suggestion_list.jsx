@@ -545,6 +545,7 @@ const SuggestionListbox = ({
 
   const onPointedBy = (value, event) => {
     pointedByKeyboardRef.current = event.type === "keydown";
+    event.preventDefault(); // prevent arrow keys from scrolling for instance
     setPointedValue(value);
   };
   const select = (value, event) => {
@@ -730,7 +731,10 @@ const SuggestionConcrete = ({
 
   useEffect(() => {
     const suggestionEl = suggestionRef.current;
-    if (isPointed && suggestionEl && pointedByKeyboardRef.current) {
+    if (!suggestionEl) {
+      return;
+    }
+    if (isPointed && pointedByKeyboardRef.current) {
       suggestionEl.scrollIntoView({ block: "nearest" });
     }
   }, [isPointed]);
