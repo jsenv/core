@@ -284,7 +284,7 @@ const SuggestionContainerStandalone = (props) => {
   ]);
 
   return (
-    <SuggestionListControlled
+    <SuggestionContainerControlled
       tabIndex={0}
       {...props}
       ref={ref}
@@ -304,7 +304,7 @@ const SuggestionContainerWithPopover = (props) => {
   const cleanupRef = useRef();
 
   return (
-    <SuggestionListControlled
+    <SuggestionContainerControlled
       {...props}
       popover="manual"
       ref={ref}
@@ -403,21 +403,16 @@ const SuggestionStyleCSSVars = {
   },
 };
 
-/**
- * Context provided by SuggestionContainer downward to Suggestion children.
- */
-const SuggestionContext = createContext(null);
 // Carries the virtual scroll window (enabled, start, end) set by
 // SuggestionListControlled and consumed by each Suggestion wrapper to decide
 // whether to render.
-const VirtualScrollContext = createContext(null);
 const MIN_ITEM_HEIGHT = 20; // px — conservative lower bound for filler height estimation
 const VS_BUFFER = 5; // extra items to render above and below the visible window
 
 // Core: VS detection, scroll listener, median measurement, and the <Box>
 // scroll container + <SuggestionList>. Controlled by either
 // SuggestionContainerStandalone or SuggestionContainerWithPopover.
-const SuggestionListControlled = ({
+const SuggestionContainerControlled = ({
   ref,
   listRef,
   uiAction,
@@ -529,6 +524,8 @@ const SuggestionListControlled = ({
     </Box>
   );
 };
+const SuggestionListContext = createContext(null);
+const VirtualScrollContext = createContext(null);
 // The <ul role="listbox"> with top and bottom filler <li>s that maintain the
 // total scroll height when virtual scroll is active. Piloted by
 // SuggestionListControlled which detects max-height and sets vsState.
@@ -681,9 +678,9 @@ const SuggestionList = ({
         style={{ height: `${fillerTopHeight}px` }}
       />
       <VirtualScrollContext.Provider value={vsState}>
-        <SuggestionContext.Provider value={suggestionContext}>
+        <SuggestionListContext.Provider value={suggestionContext}>
           <ItemTrackerProvider>{children}</ItemTrackerProvider>
-        </SuggestionContext.Provider>
+        </SuggestionListContext.Provider>
       </VirtualScrollContext.Provider>
 
       {emptyState && (
@@ -724,8 +721,9 @@ const SuggestionConcrete = ({
 }) => {
   import.meta.css = css;
 
-  const { pointedValue, onHover, pointedByKeyboardRef, onSelect } =
-    useContext(SuggestionContext);
+  const { pointedValue, onHover, pointedByKeyboardRef, onSelect } = useContext(
+    SuggestionListContext,
+  );
 
   const isPointed = pointedValue === value;
   const suggestionRef = useRef(null);
