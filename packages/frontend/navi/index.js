@@ -113,7 +113,7 @@ export { Select } from "./src/field/select.jsx";
 export {
   Suggestion,
   SuggestionGroup,
-  SuggestionList,
+  SuggestionContainer,
 } from "./src/field/suggestion_list.jsx";
 // Table start
 export {

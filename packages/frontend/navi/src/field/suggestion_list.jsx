@@ -205,12 +205,12 @@ const css = /* css */ `
 
 // Single entry point. Renders either the popover variant or the standalone
 // variant depending on the `popover` prop.
-export const SuggestionList = ({ popover, ...rest }) => {
+export const SuggestionContainer = ({ popover, ...rest }) => {
   import.meta.css = css;
   if (popover) {
-    return <SuggestionListWithPopover {...rest} />;
+    return <SuggestionContainerWithPopover {...rest} />;
   }
-  return <SuggestionListStandalone {...rest} />;
+  return <SuggestionContainerStandalone {...rest} />;
 };
 
 const dispatchCustomEventToListbox = (
@@ -236,20 +236,20 @@ const dispatchCustomEventToListbox = (
 };
 
 // Standalone variant: attaches keyboard shortcuts to the scroll container and
-// forwards them as custom events to the listbox.
-const SuggestionListStandalone = (props) => {
+// forwards them as custom events to the list.
+const SuggestionContainerStandalone = (props) => {
   const defaultRef = useRef();
   const ref = props.ref || defaultRef;
-  const listboxRef = useRef(null);
-  const forwardToListbox = (...args) =>
-    dispatchCustomEventToListbox(listboxRef, ...args);
+  const listRef = useRef(null);
+  const forwardToList = (...args) =>
+    dispatchCustomEventToListbox(listRef, ...args);
 
   useKeyboardShortcuts(ref, [
     {
       key: "arrowdown",
       description: "Point to next suggestion",
       handler: (e) =>
-        forwardToListbox(e, "navi_listbox_navigate", {
+        forwardToList(e, "navi_listbox_navigate", {
           direction: "down",
         }),
     },
@@ -257,7 +257,7 @@ const SuggestionListStandalone = (props) => {
       key: "arrowup",
       description: "Point to previous suggestion",
       handler: (e) =>
-        forwardToListbox(e, "navi_listbox_navigate", {
+        forwardToList(e, "navi_listbox_navigate", {
           direction: "up",
         }),
     },
@@ -265,7 +265,7 @@ const SuggestionListStandalone = (props) => {
       key: "home",
       description: "Point to first suggestion",
       handler: (e) =>
-        forwardToListbox(e, "navi_listbox_navigate", {
+        forwardToList(e, "navi_listbox_navigate", {
           direction: "first",
         }),
     },
@@ -273,19 +273,19 @@ const SuggestionListStandalone = (props) => {
       key: "end",
       description: "Point to last suggestion",
       handler: (e) =>
-        forwardToListbox(e, "navi_listbox_navigate", {
+        forwardToList(e, "navi_listbox_navigate", {
           direction: "last",
         }),
     },
     {
       key: "enter",
       description: "Confirm pointed suggestion",
-      handler: (e) => forwardToListbox(e, "navi_listbox_confirm"),
+      handler: (e) => forwardToList(e, "navi_listbox_confirm"),
     },
     {
       key: "escape",
       description: "Clear pointed suggestion",
-      handler: (e) => forwardToListbox(e, "navi_listbox_clear"),
+      handler: (e) => forwardToList(e, "navi_listbox_clear"),
     },
   ]);
 
@@ -294,19 +294,19 @@ const SuggestionListStandalone = (props) => {
       tabIndex={0}
       {...props}
       ref={ref}
-      listboxRef={listboxRef}
+      listRef={listRef}
     />
   );
 };
 
 // Popover variant: handles open/close/positioning events and forwards
-// navigate/confirm/clear to the listbox.
-const SuggestionListWithPopover = (props) => {
+// navigate/confirm/clear to the list.
+const SuggestionContainerWithPopover = (props) => {
   const defaultRef = useRef();
   const ref = props.ref || defaultRef;
-  const listboxRef = useRef(null);
-  const forwardToListbox = (...args) =>
-    dispatchCustomEventToListbox(listboxRef, ...args);
+  const listRef = useRef(null);
+  const forwardToList = (...args) =>
+    dispatchCustomEventToListbox(listRef, ...args);
   const cleanupRef = useRef();
 
   return (
@@ -314,7 +314,7 @@ const SuggestionListWithPopover = (props) => {
       {...props}
       popover="manual"
       ref={ref}
-      listboxRef={listboxRef}
+      listRef={listRef}
       onnavi_suggestion_list_open={(e) => {
         const el = ref.current;
         if (!el) {
@@ -362,17 +362,17 @@ const SuggestionListWithPopover = (props) => {
         }
         cleanupRef.current?.();
         el.removeAttribute("data-anchor-hidden");
-        forwardToListbox(e, "navi_listbox_clear", e.detail);
+        forwardToList(e, "navi_listbox_clear", e.detail);
         el.hidePopover();
       }}
       onnavi_suggestion_list_navigate={(e) => {
-        forwardToListbox(e, "navi_listbox_navigate", e.detail);
+        forwardToList(e, "navi_listbox_navigate", e.detail);
       }}
       onnavi_suggestion_list_confirm={(e) => {
-        forwardToListbox(e, "navi_listbox_confirm", e.detail);
+        forwardToList(e, "navi_listbox_confirm", e.detail);
       }}
       onnavi_suggestion_list_clear={(e) => {
-        forwardToListbox(e, "navi_listbox_clear", e.detail);
+        forwardToList(e, "navi_listbox_clear", e.detail);
       }}
     />
   );
@@ -420,11 +420,11 @@ const MIN_ITEM_HEIGHT = 20; // px — conservative lower bound for filler height
 const VS_BUFFER = 5; // extra items to render above and below the visible window
 
 // Core: VS detection, scroll listener, median measurement, and the <Box>
-// scroll container + <SuggestionListBox>. Controlled by either
-// SuggestionListWithShortcuts or SuggestionListWithPopover.
+// scroll container + <SuggestionList>. Controlled by either
+// SuggestionContainerStandalone or SuggestionContainerWithPopover.
 const SuggestionListControlled = ({
   ref,
-  listboxRef,
+  listRef,
   uiAction,
   highlight,
   emptyState = "No results",
@@ -519,9 +519,9 @@ const SuggestionListControlled = ({
       ref={ref}
       baseClassName="navi_suggestion_list"
     >
-      <SuggestionListBox
-        listRef={ref}
-        ref={listboxRef}
+      <SuggestionList
+        scrollRef={ref}
+        ref={listRef}
         vsState={vsState}
         medianHeightRef={medianHeightRef}
         uiAction={uiAction}
@@ -529,16 +529,15 @@ const SuggestionListControlled = ({
         emptyState={emptyState}
       >
         {children}
-      </SuggestionListBox>
+      </SuggestionList>
     </Box>
   );
 };
-// Internal component: the <ul role="listbox"> with top and bottom filler <li>s
-// that maintain the total scroll height when virtual scroll is active.
-// Also owns the scroll listener, filler height updates, and highlight logic
-// — piloted by SuggestionList which detects max-height and sets vsState.
-const SuggestionListBox = ({
-  listRef,
+// The <ul role="listbox"> with top and bottom filler <li>s that maintain the
+// total scroll height when virtual scroll is active. Piloted by
+// SuggestionListControlled which detects max-height and sets vsState.
+const SuggestionList = ({
+  scrollRef,
   ref,
   vsState,
   medianHeightRef,
@@ -597,7 +596,7 @@ const SuggestionListBox = ({
       CSS.highlights.delete("navi-suggestion-match");
       return undefined;
     }
-    const listEl = ref.current;
+    const listEl = scrollRef.current;
     if (!listEl) {
       return undefined;
     }

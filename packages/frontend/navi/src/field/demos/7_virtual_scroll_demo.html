@@ -110,7 +110,7 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState, useEffect, useRef } from "preact/hooks";
-      import { Suggestion, SuggestionList } from "@jsenv/navi";
+      import { Suggestion, SuggestionContainer } from "@jsenv/navi";
 
       const SUGGESTION_BG = "light-dark(#f0f4ff, #1a2040)";
 
@@ -320,7 +320,7 @@
               }}
             />
 
-            <SuggestionList
+            <SuggestionContainer
               ref={listRef}
               style={maxHeightEnabled ? { maxHeight: `${maxHeight}px` } : {}}
               uiAction={setSelected}
@@ -337,7 +337,7 @@
                   {item}
                 </Suggestion>
               ))}
-            </SuggestionList>
+            </SuggestionContainer>
 
             <div className="value-display">{selected ?? ""}</div>
 
