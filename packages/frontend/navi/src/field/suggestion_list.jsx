@@ -2,7 +2,6 @@ import { pickPositionRelativeTo, visibleRectEffect } from "@jsenv/dom";
 import { createContext } from "preact";
 import {
   useContext,
-  useEffect,
   useId,
   useLayoutEffect,
   useRef,
@@ -64,7 +63,7 @@ const css = /* css */ `
 
       /* Pointed (keyboard navigation position) */
       --suggestion-color-pointed: var(--suggestion-color);
-      --suggestion-background-color-pointed: light-dark(#e8f0fe, #1c3a6e);
+      --suggestion-background-color-pointed: light-dark(#c2d7fc, #1a4a9e);
 
       /* Selected */
       --suggestion-color-selected: light-dark(#1a73e8, #7baaf7);
@@ -729,13 +728,28 @@ const SuggestionConcrete = ({
   const isPointed = pointedValue === value;
   const suggestionRef = useRef(null);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const suggestionEl = suggestionRef.current;
     if (!suggestionEl) {
       return;
     }
-    if (isPointed && pointedByKeyboardRef.current) {
+    if (!isPointed || !pointedByKeyboardRef.current) {
+      return;
+    }
+    // Only scroll if the element is not fully visible in its scroll container.
+    // scrollIntoView would trigger a scroll event → onScroll → vsState update
+    // → re-render loop, so we manually adjust scrollTop instead.
+    const scrollContainer = suggestionEl.closest(".navi_suggestion_list");
+    if (!scrollContainer) {
       suggestionEl.scrollIntoView({ block: "nearest" });
+      return;
+    }
+    const containerRect = scrollContainer.getBoundingClientRect();
+    const elRect = suggestionEl.getBoundingClientRect();
+    if (elRect.top < containerRect.top) {
+      scrollContainer.scrollTop -= containerRect.top - elRect.top;
+    } else if (elRect.bottom > containerRect.bottom) {
+      scrollContainer.scrollTop += elRect.bottom - containerRect.bottom;
     }
   }, [isPointed]);
 
