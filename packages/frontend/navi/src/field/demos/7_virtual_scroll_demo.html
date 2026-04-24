@@ -1,0 +1,377 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Virtual Scroll Demo</title>
+    <style>
+      body {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: #f5f5f5;
+      }
+
+      h1 {
+        margin-bottom: 30px;
+        color: #333;
+        font-size: 2rem;
+        text-align: center;
+      }
+
+      .demo-section {
+        margin-bottom: 40px;
+        padding: 20px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      .demo-section h2 {
+        margin: 0 0 16px 0;
+        padding-bottom: 10px;
+        color: #333;
+        font-size: 1.4rem;
+        border-bottom: 2px solid #ddd;
+      }
+
+      .demo-section p {
+        margin: 0 0 16px 0;
+        color: #555;
+        font-size: 0.95rem;
+      }
+
+      .stats-bar {
+        display: flex;
+        margin-bottom: 12px;
+        padding: 10px 14px;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 16px;
+        color: #d4d4d4;
+        font-size: 0.85rem;
+        font-family: monospace;
+        background: #1e1e1e;
+        border-radius: 6px;
+      }
+
+      .stat {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2px;
+      }
+
+      .stat-label {
+        color: #888;
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      .stat-value {
+        font-weight: bold;
+        font-size: 1.1rem;
+      }
+
+      .stat-value.highlight {
+        color: #4ec9b0;
+      }
+
+      .stat-value.warning {
+        color: #ce9178;
+      }
+
+      .filler {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #6060cc;
+        font-size: 0.75rem;
+        font-family: monospace;
+        background: repeating-linear-gradient(
+          45deg,
+          rgba(100, 100, 255, 0.04),
+          rgba(100, 100, 255, 0.04) 4px,
+          transparent 4px,
+          transparent 12px
+        );
+        border-top: 1px dashed rgba(100, 100, 255, 0.3);
+      }
+
+      .value-display {
+        min-height: 20px;
+        margin-top: 12px;
+        padding: 8px;
+        font-size: 0.85rem;
+        font-family: monospace;
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+      }
+
+      .value-display:empty::before {
+        color: #999;
+        font-style: italic;
+        content: "(none selected)";
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Virtual Scroll Demo</h1>
+    <div id="root"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import {
+        useState,
+        useEffect,
+        useLayoutEffect,
+        useRef,
+      } from "preact/hooks";
+      import { Suggestion, SuggestionList } from "@jsenv/navi";
+
+      const SUGGESTION_BG = "light-dark(#f0f4ff, #1a2040)";
+
+      // --- Generate 200 items ---
+      const GREEK_NAMES = [
+        "Alpha",
+        "Beta",
+        "Gamma",
+        "Delta",
+        "Epsilon",
+        "Zeta",
+        "Eta",
+        "Theta",
+        "Iota",
+        "Kappa",
+        "Lambda",
+        "Mu",
+        "Nu",
+        "Xi",
+        "Omicron",
+        "Pi",
+        "Rho",
+        "Sigma",
+        "Tau",
+        "Upsilon",
+      ];
+      const LARGE_LIST = Array.from({ length: 200 }, (_, i) => {
+        const name = GREEK_NAMES[i % GREEK_NAMES.length];
+        const num = String(Math.floor(i / GREEK_NAMES.length) + 1).padStart(
+          2,
+          "0",
+        );
+        return `${name}-${num}`;
+      });
+
+      // How many DOM items we show at most before using a filler
+      const MAX_DOM_ITEMS = 50;
+
+      // --- Stat bar ---
+      const StatsBar = ({
+        totalItems,
+        domItems,
+        savedFromDom,
+        fillerHeight,
+        medianHeight,
+      }) => (
+        <div className="stats-bar">
+          <div className="stat">
+            <span className="stat-label">Total items</span>
+            <span className="stat-value">{totalItems}</span>
+          </div>
+          <div className="stat">
+            <span className="stat-label">In DOM</span>
+            <span
+              className={`stat-value ${domItems < totalItems ? "highlight" : ""}`}
+            >
+              {domItems}
+            </span>
+          </div>
+          <div className="stat">
+            <span className="stat-label">Saved from DOM</span>
+            <span className={`stat-value ${savedFromDom > 0 ? "warning" : ""}`}>
+              {savedFromDom}
+            </span>
+          </div>
+          <div className="stat">
+            <span className="stat-label">Median height</span>
+            <span className="stat-value">
+              {medianHeight != null ? `${medianHeight}px` : "–"}
+            </span>
+          </div>
+          <div className="stat">
+            <span className="stat-label">Filler height</span>
+            <span className="stat-value">
+              {fillerHeight != null ? `${fillerHeight}px` : "–"}
+            </span>
+          </div>
+        </div>
+      );
+
+      // --- Virtual scroll demo ---
+      const VirtualScrollDemo = () => {
+        const [selected, setSelected] = useState(null);
+        const [filter, setFilter] = useState("");
+
+        const lowerFilter = filter.toLowerCase();
+        const allItems = filter
+          ? [
+              ...LARGE_LIST.filter((item) =>
+                item.toLowerCase().includes(lowerFilter),
+              ),
+              ...LARGE_LIST.filter(
+                (item) => !item.toLowerCase().includes(lowerFilter),
+              ),
+            ]
+          : LARGE_LIST;
+
+        const visibleItems = allItems.slice(0, MAX_DOM_ITEMS);
+        const hiddenItems = allItems.slice(MAX_DOM_ITEMS);
+        const hasHiddenItems = hiddenItems.length > 0;
+
+        const listRef = useRef(null);
+        const fillerRef = useRef(null);
+
+        // All stats derived from the real DOM via MutationObserver
+        const [domItems, setDomItems] = useState(0);
+        const [savedFromDom, setSavedFromDom] = useState(0);
+        const [medianHeight, setMedianHeight] = useState(null);
+        const [fillerHeight, setFillerHeight] = useState(null);
+
+        useEffect(() => {
+          const updateStats = () => {
+            if (!listRef.current) {
+              return;
+            }
+            const options = listRef.current.querySelectorAll("[role='option']");
+            const inDom = options.length;
+            setDomItems(inDom);
+            setSavedFromDom(allItems.length - inDom);
+          };
+          updateStats();
+          const observer = new MutationObserver(updateStats);
+          if (listRef.current) {
+            observer.observe(listRef.current, {
+              childList: true,
+              subtree: true,
+            });
+          }
+          return () => {
+            observer.disconnect();
+          };
+        }, [allItems.length]);
+
+        useLayoutEffect(() => {
+          if (!hasHiddenItems) {
+            setMedianHeight(null);
+            setFillerHeight(null);
+            return;
+          }
+          if (!listRef.current) {
+            return;
+          }
+          const options = Array.from(
+            listRef.current.querySelectorAll("[role='option']"),
+          );
+          if (options.length === 0) {
+            return;
+          }
+
+          const heights = options.map(
+            (el) => el.getBoundingClientRect().height,
+          );
+          heights.sort((a, b) => a - b);
+          const mid = Math.floor(heights.length / 2);
+          const median =
+            heights.length % 2 === 0
+              ? (heights[mid - 1] + heights[mid]) / 2
+              : heights[mid];
+
+          const computed = Math.round(median * hiddenItems.length);
+          setMedianHeight(Math.round(median));
+          setFillerHeight(computed);
+          if (fillerRef.current) {
+            fillerRef.current.style.height = `${computed}px`;
+          }
+        }, [visibleItems.length, hasHiddenItems, hiddenItems.length]);
+
+        return (
+          <div className="demo-section">
+            <h2>Virtual scroll: first {MAX_DOM_ITEMS} items + filler</h2>
+            <p>
+              Only the first {MAX_DOM_ITEMS} out of {allItems.length} items are
+              rendered as DOM nodes. A filler element takes the estimated height
+              of the remaining items so the scrollbar stays proportional. All
+              stats below are computed from the live DOM via MutationObserver.
+            </p>
+            <StatsBar
+              totalItems={allItems.length}
+              domItems={domItems}
+              savedFromDom={savedFromDom}
+              medianHeight={medianHeight}
+              fillerHeight={fillerHeight}
+            />
+            <input
+              type="search"
+              placeholder="Search to re-sort…"
+              value={filter}
+              onInput={(e) => {
+                setFilter(e.target.value);
+                setSelected(null);
+              }}
+              style={{
+                display: "block",
+                width: "100%",
+                boxSizing: "border-box",
+                marginBottom: "8px",
+                padding: "8px 12px",
+                border: "1px solid #ccc",
+                borderRadius: "6px",
+                fontSize: "1rem",
+              }}
+            />
+            <div ref={listRef} style={{ display: "contents" }}>
+              <SuggestionList
+                style={{ maxHeight: "280px" }}
+                onChange={setSelected}
+                highlight={filter}
+              >
+                {visibleItems.map((item) => (
+                  <Suggestion
+                    key={item}
+                    value={item}
+                    selected={selected === item}
+                    style={{ backgroundColor: SUGGESTION_BG }}
+                  >
+                    {item}
+                  </Suggestion>
+                ))}
+                {hasHiddenItems && (
+                  <div
+                    ref={fillerRef}
+                    className="filler"
+                    aria-hidden="true"
+                    style={{
+                      height:
+                        fillerHeight != null ? `${fillerHeight}px` : "0px",
+                    }}
+                  >
+                    {hiddenItems.length} more items…
+                  </div>
+                )}
+              </SuggestionList>
+            </div>
+            <div className="value-display">{selected ?? ""}</div>
+          </div>
+        );
+      };
+
+      render(<VirtualScrollDemo />, document.getElementById("root"));
+    </script>
+  </body>
+</html>
