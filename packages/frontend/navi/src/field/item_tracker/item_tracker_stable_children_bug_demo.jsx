@@ -78,22 +78,64 @@ const ItemList = ({ ItemTrackerProvider, label }) => {
 // ---------------------------------------------------------------------------
 // App
 // ---------------------------------------------------------------------------
-export const App = () => {
+
+// Inner component: owns state and the tracker. Children come from its parent
+// (Outer), so when Inner re-renders due to its own state change, the children
+// vnode reference is the same → Preact skips re-rendering them.
+const Inner = ({ children }) => {
   const [counter, setCounter] = useState(0);
   const ItemTrackerProvider = useItemTrackerProvider();
 
-  // Build children OUTSIDE the JSX — so the reference is stable across
-  // re-renders caused by counter changes. This is what happens in
-  // SuggestionListbox: `children` comes from the parent and doesn't change
-  // when SuggestionListbox's own state changes.
-  const stableChildren = (
-    <ul>
-      <Item value="Alpha" />
-      <Item value="Beta" />
-      <Item value="Gamma" />
-    </ul>
-  );
+  return (
+    <div>
+      <p>
+        Counter: <strong>{counter}</strong>
+      </p>
+      <p>
+        Items seen in layout effect:{" "}
+        <span id="count-stable" className="ok">
+          ?
+        </span>{" "}
+        (expected: 3, becomes 0 after state change)
+      </p>
 
+      <ItemTrackerProvider>
+        {children}
+        <CountDisplay
+          ItemTrackerProvider={ItemTrackerProvider}
+          id="count-stable"
+        />
+      </ItemTrackerProvider>
+
+      <button onClick={() => setCounter((c) => c + 1)}>
+        Trigger Inner state change (counter++)
+      </button>
+
+      <p style={{ color: "#888", fontSize: "13px" }}>
+        After clicking, the count turns{" "}
+        <span style={{ color: "#f44747" }}>red and shows 0</span>. Inner
+        re-renders → tracker resets → children are skipped by Preact → items
+        empty.
+      </p>
+    </div>
+  );
+};
+
+// Outer component: renders the children JSX. It does NOT re-render when Inner's
+// state changes, so the children vnode reference passed to Inner is stable.
+const Outer = () => {
+  return (
+    <Inner>
+      <ul>
+        <Item value="Alpha" />
+        <Item value="Beta" />
+        <Item value="Gamma" />
+      </ul>
+    </Inner>
+  );
+};
+
+export const App = () => {
   return (
     <div>
       <h2>Setup</h2>
@@ -123,42 +165,15 @@ export const App = () => {
 
       <h2>Scenario B — stable children (THE BUG)</h2>
       <p>
-        Children are created once outside the render function (stable
-        reference). When the parent's <em>own</em> state changes, Preact
-        re-renders the parent and the provider, calls{" "}
+        Children are created in an outer component and passed as props to an
+        inner component that owns state + the tracker. When the inner
+        component's state changes, Preact re-renders it and calls{" "}
         <code>tracker.reset()</code>, but skips the children because their vnode
-        is the same object. No <code>registerItem()</code> calls happen →{" "}
+        reference is unchanged. No <code>registerItem()</code> calls happen →{" "}
         <code>items</code> is empty.
       </p>
-      <p>
-        Counter: <strong>{counter}</strong>
-      </p>
-      <p>
-        Items seen in layout effect:{" "}
-        <span id="count-stable" className="ok">
-          ?
-        </span>{" "}
-        (expected: 3, becomes 0 after state change)
-      </p>
 
-      <ItemTrackerProvider>
-        {stableChildren}
-        <CountDisplay
-          ItemTrackerProvider={ItemTrackerProvider}
-          id="count-stable"
-        />
-      </ItemTrackerProvider>
-
-      <button onClick={() => setCounter((c) => c + 1)}>
-        Trigger parent state change (counter++)
-      </button>
-
-      <p style={{ color: "#888", fontSize: "13px" }}>
-        After clicking the button, the count above turns{" "}
-        <span style={{ color: "#f44747" }}>red and shows 0</span>. This
-        demonstrates the bug: the DOM still has 3 items but the tracker thinks
-        there are none.
-      </p>
+      <Outer />
     </div>
   );
 };
