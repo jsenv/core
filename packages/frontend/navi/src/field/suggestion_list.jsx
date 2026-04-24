@@ -254,16 +254,12 @@ export const SuggestionList = ({
 }) => {
   import.meta.css = css;
 
-  const ItemTrackerProvider = useSuggestionItemTrackerProvider();
-  const [pointedValue, setPointedValue] = useState(null);
-  const pointedValueRef = useRef(null);
-  pointedValueRef.current = pointedValue;
-
   const ownId = useId();
   const id = rest.id ?? ownId;
 
   const defaultRef = useRef(null);
   const ref = rest.ref || defaultRef;
+  const listboxRef = useRef(null);
 
   // Persists the last measured median item height across renders so the scroll
   // handler can compute a new window without waiting for a layout effect.
@@ -320,38 +316,6 @@ export const SuggestionList = ({
       listEl.removeEventListener("scroll", onScroll);
     };
   }, [vsState.enabled]);
-
-  const select = (value) => {
-    ref.current?.dispatchEvent(
-      new CustomEvent("navi_suggestion_list_selected", {
-        detail: { value },
-        bubbles: true,
-      }),
-    );
-    uiAction?.(value);
-  };
-
-  const navigate = (direction) => {
-    const values = ItemTrackerProvider.items
-      .filter((item) => !item.hidden)
-      .map((item) => item.value);
-    if (values.length === 0) {
-      return false;
-    }
-    const current = pointedValueRef.current;
-    if (direction === "down") {
-      const idx = current === null ? -1 : values.indexOf(current);
-      setPointedValue(values[idx < values.length - 1 ? idx + 1 : idx]);
-    } else if (direction === "up") {
-      const idx = current === null ? -1 : values.indexOf(current);
-      setPointedValue(values[idx > 0 ? idx - 1 : 0]);
-    } else if (direction === "first") {
-      setPointedValue(values[0]);
-    } else if (direction === "last") {
-      setPointedValue(values[values.length - 1]);
-    }
-    return true;
-  };
 
   // Listen for commands dispatched by a linked Input (combobox mode)
   const noopRef = useRef(null);
@@ -414,17 +378,17 @@ export const SuggestionList = ({
     };
 
     const onNavigate = (e) => {
-      navigate(e.detail.direction);
+      listboxRef.current?.dispatchEvent(
+        new CustomEvent("navi_listbox_navigate", { detail: e.detail }),
+      );
     };
-    const onConfirm = (e) => {
-      const current = pointedValueRef.current;
-      if (current !== null) {
-        // e.preventDefault();
-        select(current, e);
-      }
+    const onConfirm = () => {
+      listboxRef.current?.dispatchEvent(
+        new CustomEvent("navi_listbox_confirm"),
+      );
     };
     const onClear = () => {
-      setPointedValue(null);
+      listboxRef.current?.dispatchEvent(new CustomEvent("navi_listbox_clear"));
     };
     el.addEventListener("navi_suggestion_list_open", onOpen);
     el.addEventListener("navi_suggestion_list_close", onClose);
@@ -447,51 +411,76 @@ export const SuggestionList = ({
     {
       key: "arrowdown",
       description: "Point to next suggestion",
-      handler: () => navigate("down"),
+      handler: () => {
+        listboxRef.current?.dispatchEvent(
+          new CustomEvent("navi_listbox_navigate", {
+            detail: { direction: "down" },
+          }),
+        );
+        return true;
+      },
     },
     {
       key: "arrowup",
       description: "Point to previous suggestion",
-      handler: () => navigate("up"),
+      handler: () => {
+        listboxRef.current?.dispatchEvent(
+          new CustomEvent("navi_listbox_navigate", {
+            detail: { direction: "up" },
+          }),
+        );
+        return true;
+      },
     },
     {
       key: "home",
       description: "Point to first suggestion",
-      handler: () => navigate("first"),
+      handler: () => {
+        listboxRef.current?.dispatchEvent(
+          new CustomEvent("navi_listbox_navigate", {
+            detail: { direction: "first" },
+          }),
+        );
+        return true;
+      },
     },
     {
       key: "end",
       description: "Point to last suggestion",
-      handler: () => navigate("last"),
+      handler: () => {
+        listboxRef.current?.dispatchEvent(
+          new CustomEvent("navi_listbox_navigate", {
+            detail: { direction: "last" },
+          }),
+        );
+        return true;
+      },
     },
     {
       key: "enter",
       description: "Confirm pointed suggestion",
-      handler: (e) => {
-        const current = pointedValueRef.current;
-        if (current === null) {
+      handler: () => {
+        if (!listboxRef.current) {
           return false;
         }
-        select(current, e);
-
-        return true;
+        const confirmEvent = new CustomEvent("navi_listbox_confirm", {
+          cancelable: true,
+        });
+        listboxRef.current.dispatchEvent(confirmEvent);
+        return confirmEvent.defaultPrevented;
       },
     },
     {
       key: "escape",
       description: "Clear pointed suggestion",
       handler: () => {
-        setPointedValue(null);
+        listboxRef.current?.dispatchEvent(
+          new CustomEvent("navi_listbox_clear"),
+        );
         return true;
       },
     },
   ]);
-
-  const suggestionListContext = {
-    pointedValue,
-    setPointedValue,
-    onSelect: select,
-  };
 
   return (
     <Box
@@ -503,18 +492,17 @@ export const SuggestionList = ({
       baseClassName="navi_suggestion_list"
     >
       <VirtualScrollContext.Provider value={vsState}>
-        <SuggestionListContext.Provider value={suggestionListContext}>
-          <SuggestionListBox
-            listRef={ref}
-            vsState={vsState}
-            medianHeightRef={medianHeightRef}
-            ItemTrackerProvider={ItemTrackerProvider}
-            highlight={highlight}
-            emptyState={emptyState}
-          >
-            {children}
-          </SuggestionListBox>
-        </SuggestionListContext.Provider>
+        <SuggestionListBox
+          listboxRef={listboxRef}
+          listRef={ref}
+          vsState={vsState}
+          medianHeightRef={medianHeightRef}
+          uiAction={uiAction}
+          highlight={highlight}
+          emptyState={emptyState}
+        >
+          {children}
+        </SuggestionListBox>
       </VirtualScrollContext.Provider>
     </Box>
   );
@@ -525,14 +513,84 @@ export const SuggestionList = ({
 // Also owns the scroll listener, filler height updates, and highlight logic
 // — piloted by SuggestionList which detects max-height and sets vsState.
 const SuggestionListBox = ({
+  listboxRef,
   listRef,
   vsState,
   medianHeightRef,
-  ItemTrackerProvider,
+  uiAction,
   highlight,
   emptyState,
   children,
 }) => {
+  const ItemTrackerProvider = useSuggestionItemTrackerProvider();
+  const [pointedValue, setPointedValue] = useState(null);
+  const pointedValueRef = useRef(null);
+  pointedValueRef.current = pointedValue;
+
+  const select = (value) => {
+    listboxRef.current?.dispatchEvent(
+      new CustomEvent("navi_suggestion_list_selected", {
+        detail: { value },
+        bubbles: true,
+      }),
+    );
+    uiAction?.(value);
+  };
+  const selectRef = useRef(select);
+  selectRef.current = select;
+
+  const navigate = (direction) => {
+    const values = ItemTrackerProvider.items
+      .filter((item) => !item.hidden)
+      .map((item) => item.value);
+    if (values.length === 0) {
+      return;
+    }
+    const current = pointedValueRef.current;
+    if (direction === "down") {
+      const idx = current === null ? -1 : values.indexOf(current);
+      setPointedValue(values[idx < values.length - 1 ? idx + 1 : idx]);
+    } else if (direction === "up") {
+      const idx = current === null ? -1 : values.indexOf(current);
+      setPointedValue(values[idx > 0 ? idx - 1 : 0]);
+    } else if (direction === "first") {
+      setPointedValue(values[0]);
+    } else if (direction === "last") {
+      setPointedValue(values[values.length - 1]);
+    }
+  };
+  const navigateRef = useRef(navigate);
+  navigateRef.current = navigate;
+
+  // Listen for commands dispatched by SuggestionList (keyboard or popover mode).
+  useEffect(() => {
+    const el = listboxRef.current;
+    if (!el) {
+      return undefined;
+    }
+    const onNavigate = (e) => {
+      navigateRef.current(e.detail.direction);
+    };
+    const onConfirm = (e) => {
+      const current = pointedValueRef.current;
+      if (current !== null) {
+        selectRef.current(current);
+        e.preventDefault();
+      }
+    };
+    const onClear = () => {
+      setPointedValue(null);
+    };
+    el.addEventListener("navi_listbox_navigate", onNavigate);
+    el.addEventListener("navi_listbox_confirm", onConfirm);
+    el.addEventListener("navi_listbox_clear", onClear);
+    return () => {
+      el.removeEventListener("navi_listbox_navigate", onNavigate);
+      el.removeEventListener("navi_listbox_confirm", onConfirm);
+      el.removeEventListener("navi_listbox_clear", onClear);
+    };
+  }, []);
+
   const fillerTopRef = useRef(null);
   const fillerBottomRef = useRef(null);
 
@@ -618,8 +676,15 @@ const SuggestionListBox = ({
     };
   }, [highlight, children]);
 
+  const suggestionListContext = {
+    pointedValue,
+    setPointedValue,
+    onSelect: select,
+  };
+
   return (
     <Box
+      ref={listboxRef}
       as="ul"
       role="listbox"
       baseClassName="navi_suggestion_listbox"
@@ -631,7 +696,10 @@ const SuggestionListBox = ({
         data-top=""
         aria-hidden="true"
       />
-      <ItemTrackerProvider>{children}</ItemTrackerProvider>
+      <SuggestionListContext.Provider value={suggestionListContext}>
+        <ItemTrackerProvider>{children}</ItemTrackerProvider>
+      </SuggestionListContext.Provider>
+
       {emptyState && (
         <li className="navi_suggestion_list_empty">{emptyState}</li>
       )}
