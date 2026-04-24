@@ -509,8 +509,8 @@ const SuggestionListControlled = ({
       styleCSSVars={SuggestionListStyleCSSVars}
     >
       <SuggestionListbox
-        listRef={ref}
         ref={listboxRef}
+        listRef={ref}
         vsState={vsState}
         medianHeightRef={medianHeightRef}
         uiAction={uiAction}
@@ -528,8 +528,8 @@ const VirtualScrollContext = createContext(null);
 // total scroll height when virtual scroll is active. Piloted by
 // SuggestionListControlled which detects max-height and sets vsState.
 const SuggestionListbox = ({
-  listRef,
   ref,
+  listRef,
   vsState,
   medianHeightRef,
   uiAction,
@@ -548,10 +548,10 @@ const SuggestionListbox = ({
     setPointedValue(value);
   };
 
-  const select = (value) => {
+  const select = (value, event) => {
     ref.current?.dispatchEvent(
       new CustomEvent("navi_suggestion_list_selected", {
-        detail: { value },
+        detail: { value, event },
         bubbles: true,
       }),
     );
@@ -584,9 +584,8 @@ const SuggestionListbox = ({
     if (fillerBottomRef.current) {
       fillerBottomRef.current.style.height = `${Math.round(bottomHidden * median)}px`;
     }
-  });
+  }, [vsState.start, vsState.end]);
 
-  // Highlight matching text in visible suggestions.
   useLayoutEffect(() => {
     if (!CSS.highlights) {
       return undefined;
