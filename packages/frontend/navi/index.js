@@ -100,6 +100,7 @@ export {
 // Form/Components
 export { Button } from "./src/field/button.jsx";
 export { Checkbox, CheckboxList } from "./src/field/checkbox_list.jsx";
+export { Dropdown, useDropdownClose } from "./src/field/dropdown.jsx";
 export {
   Editable,
   useEditionController,
@@ -108,7 +109,6 @@ export { Form } from "./src/field/form.jsx";
 export { Group } from "./src/field/group.jsx";
 export { Input } from "./src/field/input.jsx";
 export { Label } from "./src/field/label.jsx";
-export { Pick } from "./src/field/pick.jsx";
 export { Radio, RadioList } from "./src/field/radio_list.jsx";
 export { Select } from "./src/field/select.jsx";
 export {

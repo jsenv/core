@@ -6,7 +6,7 @@ import { Icon } from "../text/icon.jsx";
 
 const css = /* css */ `
   @layer navi {
-    .navi_pick_trigger {
+    .navi_dropdown_trigger {
       --border-radius: 2px;
       --border-width: 1px;
       --outline-width: 1px;
@@ -25,7 +25,7 @@ const css = /* css */ `
     }
   }
 
-  .navi_pick_trigger {
+  .navi_dropdown_trigger {
     display: inline-flex;
     box-sizing: border-box;
     padding: var(--padding);
@@ -54,7 +54,7 @@ const css = /* css */ `
     }
   }
 
-  .navi_pick_trigger_label {
+  .navi_dropdown_trigger_label {
     min-width: 0;
     flex: 1;
     text-overflow: ellipsis;
@@ -62,16 +62,16 @@ const css = /* css */ `
     overflow: hidden;
   }
 
-  .navi_pick_trigger_label[data-placeholder] {
+  .navi_dropdown_trigger_label[data-placeholder] {
     color: var(--placeholder-color);
   }
 
-  .navi_pick_trigger_icon {
+  .navi_dropdown_trigger_icon {
     flex-shrink: 0;
     opacity: 0.6;
   }
 
-  .navi_pick_dialog {
+  .navi_dropdown_dialog {
     margin: auto;
     padding: 0;
     background: transparent;
@@ -85,7 +85,7 @@ const css = /* css */ `
     }
   }
 
-  .navi_pick_dialog_content {
+  .navi_dropdown_dialog_content {
     background: white;
     border-radius: 8px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
@@ -94,22 +94,20 @@ const css = /* css */ `
 `;
 
 /**
- * Pick — a select-like trigger that opens a centered dialog.
+ * Dropdown — a select-like trigger that opens a centered dialog.
  *
  * Props:
  *   value       — the currently selected value (displayed in the trigger)
- *   placeholder — text shown when value is empty/null
- *   label       — custom render for the trigger label (overrides value/placeholder)
+ *   placeholder — text shown when value is null/undefined/empty
  *   disabled    — disable the trigger
- *   onOpen      — called when the dialog is opened
- *   onClose     — called when the dialog is closed
+ *   onOpen      — called when the dialog opens
+ *   onClose     — called when the dialog closes
  *   children    — content rendered inside the dialog
- *   ...rest     — forwarded to the trigger <button> (e.g. style, class, expandX)
+ *   ...rest     — forwarded to the trigger <button>
  */
-export const Pick = ({
+export const Dropdown = ({
   value,
   placeholder = "Select…",
-  label,
   disabled,
   onOpen,
   onClose,
@@ -152,25 +150,24 @@ export const Pick = ({
   };
 
   const hasValue = value !== null && value !== undefined && value !== "";
-  const triggerLabel = label ?? (hasValue ? String(value) : null);
 
   return (
     <>
       <Box
         as="button"
         type="button"
-        baseClassName="navi_pick_trigger"
+        baseClassName="navi_dropdown_trigger"
         disabled={disabled}
         onClick={openDialog}
         {...rest}
       >
         <span
-          className="navi_pick_trigger_label"
-          data-placeholder={triggerLabel === null ? "" : undefined}
+          className="navi_dropdown_trigger_label"
+          data-placeholder={hasValue ? undefined : ""}
         >
-          {triggerLabel ?? placeholder}
+          {hasValue ? String(value) : placeholder}
         </span>
-        <span className="navi_pick_trigger_icon">
+        <span className="navi_dropdown_trigger_icon">
           <Icon>
             <ChevronDownSvg />
           </Icon>
@@ -179,25 +176,24 @@ export const Pick = ({
 
       <dialog
         ref={dialogRef}
-        className="navi_pick_dialog"
+        className="navi_dropdown_dialog"
         onClick={onDialogClick}
         onClose={closeDialog}
       >
-        <div className="navi_pick_dialog_content">{children}</div>
+        <div className="navi_dropdown_dialog_content">{children}</div>
       </dialog>
     </>
   );
 };
 
 /**
- * Hook to close the nearest Pick dialog from inside its content.
+ * Hook to close the nearest Dropdown dialog from inside its content.
  * Returns a close() function.
  */
-export const usePickClose = () => {
+export const useDropdownClose = () => {
   return () => {
-    // Walk up the DOM to find the dialog and close it.
     const el = document.activeElement;
-    const dialog = el?.closest?.("dialog.navi_pick_dialog");
+    const dialog = el?.closest?.("dialog.navi_dropdown_dialog");
     if (dialog) {
       dialog.close();
     }
