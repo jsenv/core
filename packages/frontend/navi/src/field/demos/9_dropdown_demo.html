@@ -36,6 +36,33 @@
       import { render } from "preact";
       import { useState } from "preact/hooks";
       import { Dropdown, useDropdownClose } from "../dropdown.jsx";
+      import {
+        Input,
+        Suggestion,
+        SuggestionList,
+        SuggestionListCombo,
+      } from "@jsenv/navi";
+
+      // ── Reusable dialog header ────────────────────────────────────────────────
+
+      const DialogHeader = ({ title }) => {
+        const close = useDropdownClose();
+        return (
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px 10px;border-bottom:1px solid #eee;">
+            <span style="font-weight:600;font-size:15px;">{title}</span>
+            <button
+              type="button"
+              aria-label="Close"
+              onClick={close}
+              style="display:flex;align-items:center;justify-content:center;width:28px;height:28px;padding:0;border:none;background:none;cursor:pointer;border-radius:4px;font-size:18px;color:#555;line-height:1;"
+            >
+              ×
+            </button>
+          </div>
+        );
+      };
+
+      // ── Demo 1: arbitrary content ─────────────────────────────────────────────
 
       const COLORS = ["Red", "Green", "Blue", "Yellow", "Purple", "Orange"];
 
@@ -60,24 +87,103 @@
         );
       };
 
+      // ── Demo 2: filterable SuggestionListCombo ────────────────────────────────
+
+      const FRUITS = [
+        "Apple",
+        "Apricot",
+        "Avocado",
+        "Banana",
+        "Blackberry",
+        "Blueberry",
+        "Cherry",
+        "Coconut",
+        "Fig",
+        "Grape",
+        "Grapefruit",
+        "Guava",
+        "Kiwi",
+        "Lemon",
+        "Lime",
+        "Lychee",
+        "Mango",
+        "Melon",
+        "Nectarine",
+        "Orange",
+        "Papaya",
+        "Peach",
+        "Pear",
+        "Pineapple",
+        "Plum",
+        "Pomegranate",
+        "Raspberry",
+        "Strawberry",
+        "Tangerine",
+        "Watermelon",
+      ];
+
+      const FruitPicker = ({ onSelect }) => {
+        const close = useDropdownClose();
+        return (
+          <div style="min-width: 300px;">
+            <DialogHeader title="Please select a fruit" />
+            <SuggestionListCombo style="padding: 8px;">
+              <Input placeholder="Filter…" expandX autoFocus />
+              <SuggestionList
+                maxHeight="240px"
+                expandX
+                uiAction={(v) => {
+                  onSelect(v);
+                  close();
+                }}
+              >
+                {FRUITS.map((fruit) => (
+                  <Suggestion key={fruit} value={fruit}>
+                    {fruit}
+                  </Suggestion>
+                ))}
+              </SuggestionList>
+            </SuggestionListCombo>
+          </div>
+        );
+      };
+
+      // ── App ───────────────────────────────────────────────────────────────────
+
       const App = () => {
-        const [value, setValue] = useState(null);
+        const [color, setColor] = useState(null);
+        const [fruit, setFruit] = useState(null);
 
         return (
-          <div class="demo-section">
-            <h2>Dropdown Demo</h2>
-            <p>
-              Clicking the trigger opens a centered dialog. The content is fully
-              custom. Click the backdrop to close.
-            </p>
-            <Dropdown value={value} placeholder="Choose a color…">
-              <ColorList onSelect={setValue} />
-            </Dropdown>
-            {value && (
-              <p style="margin-top: 12px; font-size: 13px; color: #1a73e8;">
-                Selected: <b>{value}</b>
+          <div>
+            <div class="demo-section">
+              <h2>Demo 1 — Arbitrary content</h2>
+              <p>Custom list of buttons inside the dialog.</p>
+              <Dropdown value={color} placeholder="Choose a color…">
+                <ColorList onSelect={setColor} />
+              </Dropdown>
+              {color && (
+                <p style="margin-top:12px;font-size:13px;color:#1a73e8;">
+                  Selected: <b>{color}</b>
+                </p>
+              )}
+            </div>
+
+            <div class="demo-section">
+              <h2>Demo 2 — Filterable SuggestionListCombo</h2>
+              <p>
+                The dialog contains a search input and a suggestion list.
+                Selecting a fruit closes the dialog automatically.
               </p>
-            )}
+              <Dropdown value={fruit} placeholder="Pick a fruit…">
+                <FruitPicker onSelect={setFruit} />
+              </Dropdown>
+              {fruit && (
+                <p style="margin-top:12px;font-size:13px;color:#1a73e8;">
+                  Selected: <b>{fruit}</b>
+                </p>
+              )}
+            </div>
           </div>
         );
       };
