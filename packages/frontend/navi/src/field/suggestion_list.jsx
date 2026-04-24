@@ -250,6 +250,7 @@ export const SuggestionList = ({
   highlight,
   emptyState = "No results",
   children,
+  maxHeight,
   ...rest
 }) => {
   import.meta.css = css;
@@ -292,7 +293,7 @@ export const SuggestionList = ({
       start: 0,
       end: VS_BUFFER + itemsPerView + VS_BUFFER,
     });
-  }, []);
+  }, [maxHeight]);
 
   // Scroll listener — recomputes the visible window on scroll.
   useEffect(() => {
@@ -488,6 +489,7 @@ export const SuggestionList = ({
       id={id}
       popover={popover ? "manual" : undefined}
       tabIndex={popover ? -1 : 0}
+      maxHeight={maxHeight}
       {...rest}
       baseClassName="navi_suggestion_list"
     >
