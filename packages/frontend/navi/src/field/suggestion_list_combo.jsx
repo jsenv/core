@@ -1,6 +1,12 @@
+import { createContext } from "preact";
 import { useContext, useState } from "preact/hooks";
 
-import { SuggestionFilterContext } from "./suggestion_list.jsx";
+import {
+  SuggestionFilterContext,
+  SuggestionMatchContext,
+} from "./suggestion_list.jsx";
+
+const SetFilterContext = createContext();
 
 /**
  * SuggestionListCombo: wraps a SuggestionSearch + SuggestionList pair.
@@ -22,26 +28,30 @@ import { SuggestionFilterContext } from "./suggestion_list.jsx";
  *
  * match: optional custom match function (value, filter) => boolean
  */
-export const SuggestionListCombo = ({ match, children }) => {
+export const SuggestionListCombo = ({ match = defaultMatch, children }) => {
   const [filter, setFilter] = useState("");
-  const ctx = { filter, setFilter, match };
   return (
-    <SuggestionFilterContext.Provider value={ctx}>
-      {children}
-    </SuggestionFilterContext.Provider>
+    <SuggestionMatchContext.Provider value={match}>
+      <SuggestionFilterContext.Provider value={filter}>
+        <SetFilterContext.Provider value={setFilter}>
+          {children}
+        </SetFilterContext.Provider>
+      </SuggestionFilterContext.Provider>
+    </SuggestionMatchContext.Provider>
   );
 };
+const defaultMatch = (v, filter) => String(v).toLowerCase().includes(filter);
 
 /**
  * SuggestionSearch: a search input wired to the nearest SuggestionListCombo.
  * All props are forwarded to the underlying <input>.
  */
 export const SuggestionSearch = ({ onInput, ...rest }) => {
-  const filterCtx = useContext(SuggestionFilterContext);
-  if (!filterCtx) {
+  const filter = useContext(SuggestionFilterContext);
+  const setFilter = useContext(SetFilterContext);
+  if (!setFilter) {
     throw new Error("SuggestionSearch must be used inside SuggestionListCombo");
   }
-  const { filter, setFilter } = filterCtx;
   return (
     <input
       type="search"

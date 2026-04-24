@@ -15,6 +15,7 @@ import { createItemTracker } from "./item_tracker/item_tracker.jsx";
 // Provided by SuggestionListCombo. When present, SuggestionListControlled
 // uses it to inject index/hidden into Suggestion children automatically.
 export const SuggestionFilterContext = createContext(null);
+export const SuggestionMatchContext = createContext(null);
 
 const [useSuggestionItemTrackerProvider, useTrackSuggestion] =
   createItemTracker({ trackVisibility: true });
@@ -410,8 +411,6 @@ const SuggestionStyleCSSVars = {
   },
 };
 
-const defaultMatch = (v, filter) => String(v).toLowerCase().includes(filter);
-
 // Carries the virtual scroll window (enabled, start, end) set by
 // SuggestionContainerControlled and consumed by each Suggestion wrapper to decide
 // whether to render.
@@ -766,12 +765,11 @@ export const Suggestion = ({ value, hidden, index: indexProp, ...rest }) => {
   const id = rest.id || idDefault;
   // When inside SuggestionListCombo, compute hidden from the filter context
   // unless the caller explicitly passed hidden.
-  const filterCtx = useContext(SuggestionFilterContext);
+  const filter = useContext(SuggestionFilterContext);
   let matches = true;
-  if (filterCtx && filterCtx.filter) {
-    const { filter, match: matchFn } = filterCtx;
+  if (filter) {
+    const match = useContext(SuggestionMatchContext);
     const lowerFilter = filter.toLowerCase();
-    const match = matchFn || defaultMatch;
     matches = match(value, lowerFilter);
     hidden = !matches;
   }
