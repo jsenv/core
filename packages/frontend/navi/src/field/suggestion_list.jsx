@@ -537,17 +537,19 @@ const SuggestionListbox = ({
   children,
 }) => {
   const ItemTrackerProvider = useSuggestionItemTrackerProvider();
-  const [pointedValue, setPointedValue] = useState(null);
-  const pointedValueRef = useRef(null);
-  pointedValueRef.current = pointedValue;
-  const pointedByKeyboardRef = useRef(false);
+  const [mousePointedValue, setMousePointedValue] = useState(null);
+  const [keyboardPointedValue, setKeyboardPointedValue] = useState(null);
+  // For navigation, keyboard takes priority; fall back to mouse so that
+  // pressing ArrowDown after clicking an item navigates from there.
+  const navigateFromRef = useRef(null);
+  navigateFromRef.current = keyboardPointedValue ?? mousePointedValue;
 
-  const onPointedBy = (value, event) => {
-    pointedByKeyboardRef.current = event.type === "keydown";
-    if (event.type === "keydown") {
-      event.preventDefault(); // prevent arrow keys from scrolling for instance
-    }
-    setPointedValue(value);
+  const onMouseHover = (value) => {
+    setMousePointedValue(value);
+  };
+  const onKeyboardPoint = (value, event) => {
+    event.preventDefault(); // prevent arrow keys from scrolling the page
+    setKeyboardPointedValue(value);
   };
   const select = (value, event) => {
     uiAction?.(value, event);
@@ -623,9 +625,9 @@ const SuggestionListbox = ({
   }, [highlight, children]);
 
   const suggestionContext = {
-    pointedValue,
-    onHover: onPointedBy,
-    pointedByKeyboardRef,
+    mousePointedValue,
+    keyboardPointedValue,
+    onHover: onMouseHover,
     onSelect: select,
   };
 
@@ -645,32 +647,33 @@ const SuggestionListbox = ({
         if (values.length === 0) {
           return;
         }
-        const current = pointedValueRef.current;
+        const current = navigateFromRef.current;
         if (direction === "down") {
           const idx = current === null ? -1 : values.indexOf(current);
           const value = values[idx < values.length - 1 ? idx + 1 : idx];
-          onPointedBy(value, event);
+          onKeyboardPoint(value, event);
         } else if (direction === "up") {
           const idx = current === null ? -1 : values.indexOf(current);
           const value = values[idx > 0 ? idx - 1 : 0];
-          onPointedBy(value, event);
+          onKeyboardPoint(value, event);
         } else if (direction === "first") {
           const value = values[0];
-          onPointedBy(value, event);
+          onKeyboardPoint(value, event);
         } else if (direction === "last") {
           const value = values[values.length - 1];
-          onPointedBy(value, event);
+          onKeyboardPoint(value, event);
         }
       }}
       onnavi_list_confirm={(e) => {
-        const current = pointedValueRef.current;
+        const current = navigateFromRef.current;
         if (current === null) {
           return;
         }
         select(current, e);
       }}
-      onnavi_list_clear={(e) => {
-        onPointedBy(null, e);
+      onnavi_list_clear={() => {
+        setMousePointedValue(null);
+        setKeyboardPointedValue(null);
       }}
     >
       <li
@@ -723,19 +726,20 @@ const SuggestionConcrete = ({
 }) => {
   import.meta.css = css;
 
-  const { pointedValue, onHover, pointedByKeyboardRef, onSelect } = useContext(
-    SuggestionListboxContext,
-  );
+  const { mousePointedValue, keyboardPointedValue, onHover, onSelect } =
+    useContext(SuggestionListboxContext);
 
-  const isPointed = pointedValue === value;
+  const isPointed =
+    mousePointedValue === value || keyboardPointedValue === value;
+  const isKeyboardPointed = keyboardPointedValue === value;
   const suggestionRef = useRef(null);
 
   useLayoutEffect(() => {
-    const suggestionEl = suggestionRef.current;
-    if (!suggestionEl) {
+    if (!isKeyboardPointed) {
       return;
     }
-    if (!isPointed || !pointedByKeyboardRef.current) {
+    const suggestionEl = suggestionRef.current;
+    if (!suggestionEl) {
       return;
     }
     // Only scroll if the element is not fully visible in its scroll container.
@@ -755,7 +759,7 @@ const SuggestionConcrete = ({
       const delta = elRect.bottom - containerRect.bottom;
       scrollContainer.scrollTop += delta;
     }
-  }, [isPointed]);
+  }, [isKeyboardPointed]);
 
   return (
     <Box
@@ -778,20 +782,10 @@ const SuggestionConcrete = ({
         if (hidden) {
           return;
         }
-        console.log("enter", e);
-        // Ignore hover when element moved under a static cursor (e.g. after
-        // keyboard navigation causes a re-render). Real mouse moves have non-zero
-        // movementX/Y; passive hover-from-DOM-change has both at 0.
-        if (e.movementX === 0 && e.movementY === 0) {
-          return;
-        }
         onHover(value, e);
       }}
       onMouseLeave={(e) => {
         if (hidden) {
-          return;
-        }
-        if (e.movementX === 0 && e.movementY === 0) {
           return;
         }
         onHover(null, e);
