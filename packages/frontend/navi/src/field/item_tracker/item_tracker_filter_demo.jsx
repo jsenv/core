@@ -70,7 +70,7 @@ const Stat = ({ ItemTrackerProvider }) => {
     }
   });
   return (
-    <div class="stat">
+    <div className="stat">
       Visible count (read in layoutEffect): <b id="stat-count">?</b>
     </div>
   );
