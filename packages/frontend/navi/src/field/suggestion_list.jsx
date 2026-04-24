@@ -543,6 +543,7 @@ const SuggestionListBox = ({
   const [pointedValue, setPointedValue] = useState(null);
   const pointedValueRef = useRef(null);
   pointedValueRef.current = pointedValue;
+  const pointedByKeyboardRef = useRef(false);
 
   const select = (value) => {
     listboxRef.current?.dispatchEvent(
@@ -564,6 +565,7 @@ const SuggestionListBox = ({
       return;
     }
     const current = pointedValueRef.current;
+    pointedByKeyboardRef.current = true;
     if (direction === "down") {
       const idx = current === null ? -1 : values.indexOf(current);
       setPointedValue(values[idx < values.length - 1 ? idx + 1 : idx]);
@@ -674,6 +676,7 @@ const SuggestionListBox = ({
   const suggestionListContext = {
     pointedValue,
     setPointedValue,
+    pointedByKeyboardRef,
     onSelect: select,
   };
 
@@ -736,16 +739,15 @@ const SuggestionConcrete = ({
 }) => {
   import.meta.css = css;
 
-  const { pointedValue, setPointedValue, onSelect } = useContext(
-    SuggestionListContext,
-  );
+  const { pointedValue, setPointedValue, pointedByKeyboardRef, onSelect } =
+    useContext(SuggestionListContext);
 
   const isPointed = pointedValue === value;
   const suggestionRef = useRef(null);
 
   useEffect(() => {
     const suggestionEl = suggestionRef.current;
-    if (isPointed && suggestionEl) {
+    if (isPointed && suggestionEl && pointedByKeyboardRef.current) {
       suggestionEl.scrollIntoView({ block: "nearest" });
     }
   }, [isPointed]);
@@ -769,11 +771,13 @@ const SuggestionConcrete = ({
       styleCSSVars={SuggestionStyleCSSVars}
       onMouseEnter={() => {
         if (!hidden) {
+          pointedByKeyboardRef.current = false;
           setPointedValue(value);
         }
       }}
       onMouseLeave={() => {
         if (!hidden) {
+          pointedByKeyboardRef.current = false;
           setPointedValue(null);
         }
       }}
