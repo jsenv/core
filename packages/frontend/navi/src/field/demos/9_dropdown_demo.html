@@ -120,6 +120,7 @@
             <DialogHeader title="Please select a fruit" />
             <SuggestionListCombo
               padding="m"
+              paddingTop="s"
               flex="y"
               spacing="s"
               alignY="start"
@@ -131,11 +132,11 @@
                 paddingX="10"
                 paddingY="6"
                 size="m"
-                borderRadius="6px"
               />
               <SuggestionList
                 maxHeight="240px"
                 expandX
+                border="none"
                 uiAction={(v) => {
                   onSelect(v);
                   close();
