@@ -259,7 +259,7 @@
             <StatsBar totalItems={allItems.length} domItems={domItems} />
 
             {/* Programmatic scroll controls */}
-            <div
+            <fieldset
               style={{
                 display: "flex",
                 gap: "8px",
@@ -268,9 +268,9 @@
                 alignItems: "center",
               }}
             >
-              <strong style={{ fontSize: "0.85rem", color: "#555" }}>
-                Scroll to:
-              </strong>
+              <legend style={{ fontSize: "0.85rem", color: "#555" }}>
+                Scroll to
+              </legend>
               <button onClick={() => scrollTo("top")}>Top</button>
               <button onClick={() => scrollTo("middle")}>Middle</button>
               <button onClick={() => scrollTo("bottom")}>Bottom</button>
@@ -297,7 +297,7 @@
                 />
                 <button onClick={scrollToItem}>Go</button>
               </span>
-            </div>
+            </fieldset>
 
             {/* Search */}
             <input
