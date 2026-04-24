@@ -110,7 +110,11 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState, useEffect, useRef } from "preact/hooks";
-      import { Suggestion, SuggestionList } from "@jsenv/navi";
+      import { SuggestionList } from "@jsenv/navi";
+      import {
+        SuggestionListCombo,
+        SuggestionSearch,
+      } from "../suggestion_list_combo.jsx";
 
       const SUGGESTION_BG = "light-dark(#f0f4ff, #1a2040)";
 
@@ -175,24 +179,11 @@
 
       const VirtualScrollDemo = () => {
         const [selected, setSelected] = useState(null);
-        const [filter, setFilter] = useState("");
         const [maxHeight, setMaxHeight] = useState(280);
         const [maxHeightEnabled, setMaxHeightEnabled] = useState(true);
         const [scrollToIndex, setScrollToIndex] = useState("");
         const listRef = useRef(null);
         const [domItems, setDomItems] = useState(0);
-
-        const lowerFilter = filter.toLowerCase();
-        const allItems = filter
-          ? [
-              ...LARGE_LIST.filter((item) =>
-                item.toLowerCase().includes(lowerFilter),
-              ),
-              ...LARGE_LIST.filter(
-                (item) => !item.toLowerCase().includes(lowerFilter),
-              ),
-            ]
-          : LARGE_LIST;
 
         // Track actual DOM option count via MutationObserver
         useEffect(() => {
@@ -215,7 +206,7 @@
           return () => {
             observer.disconnect();
           };
-        }, [allItems.length]);
+        }, []);
 
         const scrollTo = (position) => {
           const el = listRef.current;
@@ -240,8 +231,7 @@
           if (!el) {
             return;
           }
-          // Estimate position: scrollHeight / totalItems * idx
-          const estimated = (el.scrollHeight / allItems.length) * idx;
+          const estimated = (el.scrollHeight / LARGE_LIST.length) * idx;
           el.scrollTop = estimated;
         };
 
@@ -249,14 +239,14 @@
           <div className="demo-section">
             <h2>200 items — virtual scroll</h2>
             <p>
-              The list passes all {allItems.length} items to{" "}
+              The list passes all {LARGE_LIST.length} items to{" "}
               <code>SuggestionList</code>. Virtual scroll is automatically
               enabled because a <code>max-height</code> is set. Scroll
               programmatically below to verify the component renders the correct
               DOM items at each scroll position.
             </p>
 
-            <StatsBar totalItems={allItems.length} domItems={domItems} />
+            <StatsBar totalItems={LARGE_LIST.length} domItems={domItems} />
 
             {/* Programmatic scroll controls */}
             <fieldset
@@ -283,7 +273,7 @@
                 <input
                   type="number"
                   min="0"
-                  max={allItems.length - 1}
+                  max={LARGE_LIST.length - 1}
                   value={scrollToIndex}
                   onInput={(e) => {
                     setScrollToIndex(e.target.value);
@@ -299,46 +289,40 @@
               </span>
             </fieldset>
 
-            {/* Search */}
-            <input
-              type="search"
-              placeholder="Search to re-sort…"
-              value={filter}
-              onInput={(e) => {
-                setFilter(e.target.value);
-                setSelected(null);
-              }}
-              style={{
-                display: "block",
-                width: "100%",
-                boxSizing: "border-box",
-                marginBottom: "8px",
-                padding: "8px 12px",
-                border: "1px solid #ccc",
-                borderRadius: "6px",
-                fontSize: "1rem",
-              }}
-            />
-
-            <SuggestionList
-              ref={listRef}
-              maxHeight={maxHeight}
-              uiAction={setSelected}
-              highlight={filter}
-              expandX
-            >
-              {allItems.map((item, i) => (
-                <Suggestion
-                  key={item}
-                  index={i}
-                  value={item}
-                  selected={selected === item}
-                  style={{ backgroundColor: SUGGESTION_BG }}
-                >
-                  {item}
-                </Suggestion>
-              ))}
-            </SuggestionList>
+            <SuggestionListCombo>
+              <SuggestionSearch
+                placeholder="Search to re-sort…"
+                onInput={() => setSelected(null)}
+                style={{
+                  display: "block",
+                  width: "100%",
+                  boxSizing: "border-box",
+                  marginBottom: "8px",
+                  padding: "8px 12px",
+                  border: "1px solid #ccc",
+                  borderRadius: "6px",
+                  fontSize: "1rem",
+                }}
+              />
+              <SuggestionList
+                ref={listRef}
+                maxHeight={maxHeight}
+                uiAction={setSelected}
+                expandX
+              >
+                {LARGE_LIST.map((item, index) => (
+                  <Suggestion
+                    key={item}
+                    index={index}
+                    value={item}
+                    selected={selected === item}
+                    style={{ backgroundColor: SUGGESTION_BG }}
+                  >
+                    {item}
+                  </Suggestion>
+                ))}
+              </SuggestionList>
+            </SuggestionListCombo>
 
             <div className="value-display">{selected ?? ""}</div>
 

@@ -12,6 +12,10 @@ import { Box } from "../box/box.jsx";
 import { useKeyboardShortcuts } from "../keyboard/keyboard_shortcuts.js";
 import { createItemTracker } from "./item_tracker/item_tracker.jsx";
 
+// Provided by SuggestionListCombo. When present, SuggestionListControlled
+// uses it to inject index/hidden into Suggestion children automatically.
+export const SuggestionFilterContext = createContext(null);
+
 const [useSuggestionItemTrackerProvider, useTrackSuggestion] =
   createItemTracker();
 
@@ -735,6 +739,16 @@ const SUGGESTION_PSEUDO_ELEMENTS = ["::highlight"];
 export const Suggestion = ({ value, hidden, index, ...rest }) => {
   const idDefault = useId();
   const id = rest.id || idDefault;
+  // When inside SuggestionListCombo, compute hidden from the filter context
+  // unless the caller explicitly passed hidden.
+  const filterCtx = useContext(SuggestionFilterContext);
+  if (hidden === undefined && filterCtx && filterCtx.filter) {
+    const { filter, match: matchFn } = filterCtx;
+    const lowerFilter = filter.toLowerCase();
+    const defaultMatch = (v) => String(v).toLowerCase().includes(lowerFilter);
+    const match = matchFn ? (v) => matchFn(v, filter) : defaultMatch;
+    hidden = !match(value);
+  }
   index = useTrackSuggestion(id, { id, value, hidden }, index);
   const vsCtx = useContext(VirtualScrollContext);
   if (vsCtx && vsCtx.enabled) {
@@ -744,6 +758,7 @@ export const Suggestion = ({ value, hidden, index, ...rest }) => {
   }
   return <SuggestionConcrete value={value} hidden={hidden} id={id} {...rest} />;
 };
+
 const SuggestionConcrete = ({
   value,
   selected,
