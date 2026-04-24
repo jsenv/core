@@ -507,7 +507,7 @@ const SuggestionListBox = ({
   const medianHeightRef = useRef(MIN_ITEM_HEIGHT);
 
   // Scroll listener — recomputes the visible window on scroll.
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!vsState.enabled) {
       return undefined;
     }
@@ -636,10 +636,10 @@ const SUGGESTION_PSEUDO_ELEMENTS = ["::highlight"];
 // Thin wrapper: tracks the suggestion (so all items register with ItemTracker
 // regardless of virtual scroll), then bails out early outside the visible window.
 export const Suggestion = ({ value, hidden, ...rest }) => {
-  const suggestionId = useId();
-  const index = useTrackSuggestion({ value, suggestionId, hidden });
+  const idDefault = useId();
+  const id = rest.id || idDefault;
+  const index = useTrackSuggestion({ id, value, hidden });
   const vsCtx = useContext(VirtualScrollContext);
-  const id = rest.id || suggestionId;
   if (vsCtx && vsCtx.enabled) {
     if (index < vsCtx.start || index >= vsCtx.end) {
       return null;
@@ -647,7 +647,6 @@ export const Suggestion = ({ value, hidden, ...rest }) => {
   }
   return <SuggestionConcrete value={value} hidden={hidden} id={id} {...rest} />;
 };
-
 const SuggestionConcrete = ({
   value,
   selected,
