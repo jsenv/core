@@ -232,16 +232,15 @@ const SuggestionStyleCSSVars = {
  * Context OptionList provides downward to its Option children.
  */
 const SuggestionListContext = createContext(null);
-// Counter object shared via context — reset each SuggestionList render so each
-// Suggestion thin wrapper can increment it and know its 0-based index.
-// Also carries the visible window (start/end) and enabled flag.
+// Carries the virtual scroll window (enabled, start, end) set by SuggestionList
+// and consumed by each Suggestion wrapper to decide whether to render.
 const VirtualScrollContext = createContext(null);
 const MIN_ITEM_HEIGHT = 20; // px — conservative lower bound for filler height estimation
 const VS_BUFFER = 5; // extra items to render above and below the visible window
 
 export const SuggestionList = ({
   popover,
-  onChange: onChangeProp,
+  uiAction,
   highlight,
   emptyState = "No results",
   children,
@@ -259,16 +258,6 @@ export const SuggestionList = ({
 
   const defaultRef = useRef(null);
   const ref = rest.ref || defaultRef;
-  const fillerTopRef = useRef(null);
-  const fillerBottomRef = useRef(null);
-
-  // Mutable counter reset each render — Suggestion wrappers increment it to
-  // determine their 0-based index without causing extra re-renders.
-  const vsCounterRef = useRef({ seen: 0 });
-  vsCounterRef.current = { seen: 0 };
-  // Persists the last measured median across renders so the scroll handler can
-  // compute a new window without waiting for a layout effect.
-  const medianHeightRef = useRef(MIN_ITEM_HEIGHT);
 
   // Virtual scroll state. Disabled until a CSS max-height is detected.
   const [vsState, setVsState] = useState({
@@ -299,116 +288,15 @@ export const SuggestionList = ({
     });
   }, []);
 
-  // Scroll listener — recomputes the visible window on scroll.
-  useEffect(() => {
-    if (!vsState.enabled) {
-      return undefined;
-    }
-    const listEl = ref.current;
-    if (!listEl) {
-      return undefined;
-    }
-    const onScroll = () => {
-      const median = medianHeightRef.current;
-      const itemsPerView = Math.ceil(listEl.clientHeight / median);
-      const firstVisible = Math.floor(listEl.scrollTop / median);
-      const newStart = firstVisible > VS_BUFFER ? firstVisible - VS_BUFFER : 0;
-      const newEnd = firstVisible + itemsPerView + VS_BUFFER;
-      setVsState((prev) => ({ ...prev, start: newStart, end: newEnd }));
-    };
-    listEl.addEventListener("scroll", onScroll, { passive: true });
-    return () => {
-      listEl.removeEventListener("scroll", onScroll);
-    };
-  }, [vsState.enabled]);
-
-  // After every render: measure median option height, then update filler heights.
-  useLayoutEffect(() => {
-    if (!vsState.enabled) {
-      return;
-    }
-    const listEl = ref.current;
-    if (!listEl) {
-      return;
-    }
-    const options = Array.from(listEl.querySelectorAll("[role='option']"));
-    if (options.length > 0) {
-      const heights = options.map((el) => el.getBoundingClientRect().height);
-      heights.sort((a, b) => a - b);
-      const mid = Math.floor(heights.length / 2);
-      const median =
-        heights.length % 2 === 0
-          ? (heights[mid - 1] + heights[mid]) / 2
-          : heights[mid];
-      medianHeightRef.current = median;
-    }
-    const median = medianHeightRef.current;
-    const total = ItemTrackerProvider.items.length;
-    const topHidden = vsState.start;
-    const bottomHidden = total > vsState.end ? total - vsState.end : 0;
-    if (fillerTopRef.current) {
-      fillerTopRef.current.style.height = `${Math.round(topHidden * median)}px`;
-    }
-    if (fillerBottomRef.current) {
-      fillerBottomRef.current.style.height = `${Math.round(bottomHidden * median)}px`;
-    }
-  });
-
-  useLayoutEffect(() => {
-    if (!CSS.highlights) {
-      return undefined;
-    }
-    if (!highlight) {
-      CSS.highlights.delete("navi-suggestion-match");
-      return undefined;
-    }
-    const listEl = ref.current;
-    if (!listEl) {
-      return undefined;
-    }
-    const ranges = [];
-    const lowerHighlight = highlight.toLowerCase();
-    for (const suggestionEl of listEl.querySelectorAll("[role='option']")) {
-      const walker = document.createTreeWalker(
-        suggestionEl,
-        NodeFilter.SHOW_TEXT,
-      );
-      let node;
-      while ((node = walker.nextNode())) {
-        const text = node.textContent;
-        const lowerText = text.toLowerCase();
-        let index = lowerText.indexOf(lowerHighlight);
-        while (index !== -1) {
-          const range = new Range();
-          range.setStart(node, index);
-          range.setEnd(node, index + highlight.length);
-          ranges.push(range);
-          index = lowerText.indexOf(lowerHighlight, index + 1);
-        }
-      }
-    }
-    if (ranges.length === 0) {
-      CSS.highlights.delete("navi-suggestion-match");
-    } else {
-      CSS.highlights.set("navi-suggestion-match", new Highlight(...ranges));
-    }
-    return () => {
-      CSS.highlights.delete("navi-suggestion-match");
-    };
-  }, [highlight, children]);
-  const effectiveOnChange = popover
-    ? (value) => {
-        onChangeProp?.(value);
-        ref.current?.dispatchEvent(
-          new CustomEvent("navi_suggestion_list_selected", {
-            detail: { value },
-            bubbles: true,
-          }),
-        );
-      }
-    : onChangeProp;
-  const onChangeRef = useRef(effectiveOnChange);
-  onChangeRef.current = effectiveOnChange;
+  const select = (value) => {
+    ref.current?.dispatchEvent(
+      new CustomEvent("navi_suggestion_list_selected", {
+        detail: { value },
+        bubbles: true,
+      }),
+    );
+    uiAction?.(value);
+  };
 
   const navigate = (direction) => {
     const values = ItemTrackerProvider.items
@@ -498,8 +386,8 @@ export const SuggestionList = ({
     const onConfirm = (e) => {
       const current = pointedValueRef.current;
       if (current !== null) {
-        onChangeRef.current?.(current);
-        e.preventDefault();
+        // e.preventDefault();
+        select(current, e);
       }
     };
     const onClear = () => {
@@ -546,12 +434,13 @@ export const SuggestionList = ({
     {
       key: "enter",
       description: "Confirm pointed suggestion",
-      handler: () => {
+      handler: (e) => {
         const current = pointedValueRef.current;
         if (current === null) {
           return false;
         }
-        onChangeRef.current?.(current);
+        select(current, e);
+
         return true;
       },
     },
@@ -568,7 +457,7 @@ export const SuggestionList = ({
   const suggestionListContext = {
     pointedValue,
     setPointedValue,
-    onSelect: effectiveOnChange,
+    onSelect: select,
   };
 
   return (
@@ -580,14 +469,14 @@ export const SuggestionList = ({
       {...rest}
       baseClassName="navi_suggestion_list"
     >
-      <VirtualScrollContext.Provider
-        value={{ counter: vsCounterRef.current, ...vsState }}
-      >
+      <VirtualScrollContext.Provider value={vsState}>
         <SuggestionListContext.Provider value={suggestionListContext}>
           <SuggestionListBox
-            fillerTopRef={fillerTopRef}
-            fillerBottomRef={fillerBottomRef}
+            listRef={ref}
+            vsState={vsState}
+            setVsState={setVsState}
             ItemTrackerProvider={ItemTrackerProvider}
+            highlight={highlight}
             emptyState={emptyState}
           >
             {children}
@@ -600,33 +489,146 @@ export const SuggestionList = ({
 
 // Internal component: the <ul role="listbox"> with top and bottom filler <li>s
 // that maintain the total scroll height when virtual scroll is active.
+// Also owns the scroll listener, filler height updates, and highlight logic
+// — piloted by SuggestionList which detects max-height and sets vsState.
 const SuggestionListBox = ({
-  fillerTopRef,
-  fillerBottomRef,
+  listRef,
+  vsState,
+  setVsState,
   ItemTrackerProvider,
+  highlight,
   emptyState,
   children,
-}) => (
-  <Box
-    as="ul"
-    role="listbox"
-    baseClassName="navi_suggestion_listbox"
-    styleCSSVars={SuggestionListStyleCSSVars}
-  >
-    <li
-      ref={fillerTopRef}
-      aria-hidden="true"
-      style={{ listStyle: "none", pointerEvents: "none", height: "0px" }}
-    />
-    <ItemTrackerProvider>{children}</ItemTrackerProvider>
-    {emptyState && <li className="navi_suggestion_list_empty">{emptyState}</li>}
-    <li
-      ref={fillerBottomRef}
-      aria-hidden="true"
-      style={{ listStyle: "none", pointerEvents: "none", height: "0px" }}
-    />
-  </Box>
-);
+}) => {
+  const fillerTopRef = useRef(null);
+  const fillerBottomRef = useRef(null);
+  // Persists the last measured median across renders so the scroll handler can
+  // compute a new window without waiting for a layout effect.
+  const medianHeightRef = useRef(MIN_ITEM_HEIGHT);
+
+  // Scroll listener — recomputes the visible window on scroll.
+  useEffect(() => {
+    if (!vsState.enabled) {
+      return undefined;
+    }
+    const listEl = listRef.current;
+    if (!listEl) {
+      return undefined;
+    }
+    const onScroll = () => {
+      const median = medianHeightRef.current;
+      const itemsPerView = Math.ceil(listEl.clientHeight / median);
+      const firstVisible = Math.floor(listEl.scrollTop / median);
+      const newStart = firstVisible > VS_BUFFER ? firstVisible - VS_BUFFER : 0;
+      const newEnd = firstVisible + itemsPerView + VS_BUFFER;
+      setVsState((prev) => ({ ...prev, start: newStart, end: newEnd }));
+    };
+    listEl.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      listEl.removeEventListener("scroll", onScroll);
+    };
+  }, [vsState.enabled]);
+
+  // After every render: measure median option height, then update filler heights.
+  useLayoutEffect(() => {
+    if (!vsState.enabled) {
+      return;
+    }
+    const listEl = listRef.current;
+    if (!listEl) {
+      return;
+    }
+    const options = Array.from(listEl.querySelectorAll("[role='option']"));
+    if (options.length > 0) {
+      const heights = options.map((el) => el.getBoundingClientRect().height);
+      heights.sort((a, b) => a - b);
+      const mid = Math.floor(heights.length / 2);
+      const median =
+        heights.length % 2 === 0
+          ? (heights[mid - 1] + heights[mid]) / 2
+          : heights[mid];
+      medianHeightRef.current = median;
+    }
+    const median = medianHeightRef.current;
+    const total = ItemTrackerProvider.items.length;
+    const topHidden = vsState.start;
+    const bottomHidden = total > vsState.end ? total - vsState.end : 0;
+    if (fillerTopRef.current) {
+      fillerTopRef.current.style.height = `${Math.round(topHidden * median)}px`;
+    }
+    if (fillerBottomRef.current) {
+      fillerBottomRef.current.style.height = `${Math.round(bottomHidden * median)}px`;
+    }
+  });
+
+  // Highlight matching text in visible suggestions.
+  useLayoutEffect(() => {
+    if (!CSS.highlights) {
+      return undefined;
+    }
+    if (!highlight) {
+      CSS.highlights.delete("navi-suggestion-match");
+      return undefined;
+    }
+    const listEl = listRef.current;
+    if (!listEl) {
+      return undefined;
+    }
+    const ranges = [];
+    const lowerHighlight = highlight.toLowerCase();
+    for (const suggestionEl of listEl.querySelectorAll("[role='option']")) {
+      const walker = document.createTreeWalker(
+        suggestionEl,
+        NodeFilter.SHOW_TEXT,
+      );
+      let node;
+      while ((node = walker.nextNode())) {
+        const text = node.textContent;
+        const lowerText = text.toLowerCase();
+        let index = lowerText.indexOf(lowerHighlight);
+        while (index !== -1) {
+          const range = new Range();
+          range.setStart(node, index);
+          range.setEnd(node, index + highlight.length);
+          ranges.push(range);
+          index = lowerText.indexOf(lowerHighlight, index + 1);
+        }
+      }
+    }
+    if (ranges.length === 0) {
+      CSS.highlights.delete("navi-suggestion-match");
+    } else {
+      CSS.highlights.set("navi-suggestion-match", new Highlight(...ranges));
+    }
+    return () => {
+      CSS.highlights.delete("navi-suggestion-match");
+    };
+  }, [highlight, children]);
+
+  return (
+    <Box
+      as="ul"
+      role="listbox"
+      baseClassName="navi_suggestion_listbox"
+      styleCSSVars={SuggestionListStyleCSSVars}
+    >
+      <li
+        ref={fillerTopRef}
+        aria-hidden="true"
+        style={{ listStyle: "none", pointerEvents: "none", height: "0px" }}
+      />
+      <ItemTrackerProvider>{children}</ItemTrackerProvider>
+      {emptyState && (
+        <li className="navi_suggestion_list_empty">{emptyState}</li>
+      )}
+      <li
+        ref={fillerBottomRef}
+        aria-hidden="true"
+        style={{ listStyle: "none", pointerEvents: "none", height: "0px" }}
+      />
+    </Box>
+  );
+};
 
 const SUGGESTION_PSEUDO_CLASSES = [":-navi-pointed", ":-navi-selected"];
 const SUGGESTION_PSEUDO_ELEMENTS = ["::highlight"];
@@ -635,12 +637,10 @@ const SUGGESTION_PSEUDO_ELEMENTS = ["::highlight"];
 // regardless of virtual scroll), then bails out early outside the visible window.
 export const Suggestion = ({ value, hidden, ...rest }) => {
   const suggestionId = useId();
-  useTrackSuggestion({ value, suggestionId, hidden });
+  const index = useTrackSuggestion({ value, suggestionId, hidden });
   const vsCtx = useContext(VirtualScrollContext);
   const id = rest.id || suggestionId;
   if (vsCtx && vsCtx.enabled) {
-    const index = vsCtx.counter.seen;
-    vsCtx.counter.seen++;
     if (index < vsCtx.start || index >= vsCtx.end) {
       return null;
     }
@@ -703,7 +703,7 @@ const SuggestionConcrete = ({
         if (hidden || e.button !== 0) {
           return;
         }
-        onSelect?.(value);
+        onSelect?.(value, e);
       }}
       {...rest}
     >

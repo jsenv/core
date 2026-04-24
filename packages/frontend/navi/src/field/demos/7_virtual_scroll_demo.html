@@ -323,7 +323,7 @@
             <div ref={listRef} style={{ display: "contents" }}>
               <SuggestionList
                 style={maxHeightEnabled ? { maxHeight: `${maxHeight}px` } : {}}
-                onChange={setSelected}
+                uiAction={setSelected}
                 highlight={filter}
               >
                 {allItems.map((item) => (
