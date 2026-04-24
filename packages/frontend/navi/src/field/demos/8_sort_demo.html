@@ -35,17 +35,10 @@
        * Items that don't match at all get rank -1 (hidden).
        */
 
-      import {
-        Input,
-        Suggestion,
-        SuggestionList,
-        SuggestionListCombo,
-      } from "@jsenv/navi";
+      import { Suggestion, SuggestionList } from "@jsenv/navi";
       import { useState } from "preact/hooks";
-      import { SortContext } from "../suggestion_list.jsx";
 
-      // 200 items so virtual scroll kicks in.
-      const ITEMS = Array.from({ length: 200 }, (_, i) => {
+      const ALL_ITEMS = Array.from({ length: 200 }, (_, i) => {
         const names = [
           "Alpha",
           "Bravo",
@@ -73,70 +66,64 @@
         return `${base}-${num}`;
       });
 
-      /**
-       * Build a sort function over the given item list.
-       * Returns getSortIndex(value, filter) => rank | -1.
-       *
-       * rank is the dense position of `value` among all matching items when sorted by:
-       *   1. items that start with the filter (alphabetically)
-       *   2. items that contain the filter (alphabetically)
-       */
-      const buildSortFn = (items) => (value, filter) => {
+      // Sort items based on a filter string:
+      //   1. items that START with the filter (alphabetically)
+      //   2. items that CONTAIN the filter (alphabetically)
+      //   3. everything else at the end
+      // No items are hidden — all 200 are always rendered, just reordered.
+      const sortItems = (items, filter) => {
         if (!filter) {
-          // No filter: original order.
-          return items.indexOf(value);
+          return items;
         }
         const lower = filter.toLowerCase();
         const starts = [];
         const contains = [];
+        const rest = [];
         for (const item of items) {
           const lowerItem = item.toLowerCase();
           if (lowerItem.startsWith(lower)) {
             starts.push(item);
           } else if (lowerItem.includes(lower)) {
             contains.push(item);
+          } else {
+            rest.push(item);
           }
         }
         starts.sort((a, b) => a.localeCompare(b));
         contains.sort((a, b) => a.localeCompare(b));
-        const ranked = [...starts, ...contains];
-        const idx = ranked.indexOf(value);
-        return idx; // -1 if not in ranked list (filtered out)
+        return [...starts, ...contains, ...rest];
       };
 
-      const getSortIndex = buildSortFn(ITEMS);
-
       export const App = () => {
+        const [filter, setFilter] = useState("");
         const [selected, setSelected] = useState(null);
+        const items = sortItems(ALL_ITEMS, filter);
 
         return (
           <div>
             <h2>Suggestion Sort Demo</h2>
             <p style="font-size:13px;color:#555">
-              Items starting with the filter appear first, then containing
-              items. Virtual scroll is active (200 items).
+              Items matching the filter bubble up to the top (sorted). Virtual
+              scroll is active (200 items).
             </p>
             {selected && (
               <p style="font-size:13px;color:#1a73e8">
                 Selected: <b>{selected}</b>
               </p>
             )}
-            <SortContext.Provider value={getSortIndex}>
-              <SuggestionListCombo>
-                <Input placeholder="Filter and sort…" expandX />
-                <SuggestionList
-                  maxHeight="220px"
-                  uiAction={setSelected}
-                  expandX
-                >
-                  {ITEMS.map((item) => (
-                    <Suggestion key={item} value={item}>
-                      {item}
-                    </Suggestion>
-                  ))}
-                </SuggestionList>
-              </SuggestionListCombo>
-            </SortContext.Provider>
+            <input
+              placeholder="Sort suggestions…"
+              value={filter}
+              onInput={(e) => setFilter(e.target.value)}
+              style="display:block;width:100%;box-sizing:border-box;margin-bottom:4px;padding:6px 10px;font-size:14px;border:1px solid #ccc;border-radius:4px"
+            />
+            <SuggestionList maxHeight="220px" uiAction={setSelected}>
+              {items.map((item) => (
+                <Suggestion key={item} value={item}>
+                  {item}
+                </Suggestion>
+              ))}
+            </SuggestionList>
           </div>
         );
       };
