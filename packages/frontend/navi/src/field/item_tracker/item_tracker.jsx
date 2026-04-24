@@ -187,10 +187,10 @@ export const createItemTracker = ({ filter: filterFn } = {}) => {
 };
 
 const rebuildCommittedItems = (committedItems, committedMap) => {
-  committedItems.length = 0;
-  const entries = [...committedMap.values()];
+  const entries = Array.from(committedMap.values());
   entries.sort((a, b) => a.index - b.index);
-  for (const { data } of entries) {
-    committedItems.push(data);
+  committedItems.length = entries.length;
+  for (let i = 0; i < entries.length; i++) {
+    committedItems[i] = entries[i].data;
   }
 };
