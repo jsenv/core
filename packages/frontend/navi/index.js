@@ -115,6 +115,7 @@ export {
   SuggestionGroup,
   SuggestionList,
 } from "./src/field/suggestion_list.jsx";
+export { SuggestionListCombo } from "./src/field/suggestion_list_combo.jsx";
 // Table start
 export {
   filterTableSelection,

@@ -110,11 +110,12 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState, useEffect, useRef } from "preact/hooks";
-      import { SuggestionList, Suggestion } from "@jsenv/navi";
       import {
+        SuggestionList,
+        Suggestion,
         SuggestionListCombo,
-        SuggestionSearch,
-      } from "../suggestion_list_combo.jsx";
+        Input,
+      } from "@jsenv/navi";
 
       const SUGGESTION_BG = "light-dark(#f0f4ff, #1a2040)";
 
@@ -290,7 +291,7 @@
             </fieldset>
 
             <SuggestionListCombo>
-              <SuggestionSearch
+              <Input
                 placeholder="Search to re-sort…"
                 onInput={() => setSelected(null)}
                 style={{
