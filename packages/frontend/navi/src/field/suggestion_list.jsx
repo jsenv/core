@@ -1,5 +1,5 @@
 import { pickPositionRelativeTo, visibleRectEffect } from "@jsenv/dom";
-import { cloneElement, createContext, toChildArray } from "preact";
+import { createContext } from "preact";
 import {
   useContext,
   useId,
@@ -434,27 +434,11 @@ const SuggestionListControlled = ({
   const ownId = useId();
   const id = rest.id ?? ownId;
 
-  // When a filter is active, inject a visibleIndex into each Suggestion child.
-  // visibleIndex is sequential among non-hidden items (-1 for hidden).
-  // This lets the virtual scroll window operate only over visible items,
-  // since hidden items take no scroll space.
+  // When a filter is active, set highlight to the filter text so the listbox
+  // can highlight matching text.
   const filterCtx = useContext(SuggestionFilterContext);
-  let visibleChildCount = undefined;
   if (filterCtx && filterCtx.filter) {
-    const { filter, match: matchFn } = filterCtx;
-    const lowerFilter = filter.toLowerCase();
-    const match = matchFn || defaultMatch;
-    let visibleCount = 0;
-    children = toChildArray(children).map((child) => {
-      if (child && child.props && child.props.value !== undefined) {
-        const matches = match(child.props.value, lowerFilter);
-        const visibleIndex = matches ? visibleCount++ : -1;
-        return cloneElement(child, { visibleIndex });
-      }
-      return child;
-    });
-    visibleChildCount = visibleCount;
-    highlight = filter;
+    highlight = filterCtx.filter;
   }
 
   // Detect max-height on mount and enable virtual scroll when present.
@@ -552,7 +536,6 @@ const SuggestionListControlled = ({
         listRef={ref}
         virtualScrollState={virtualScrollState}
         medianHeightRef={medianHeightRef}
-        visibleChildCount={visibleChildCount}
         uiAction={uiAction}
         highlight={highlight}
         emptyState={emptyState}
@@ -564,6 +547,10 @@ const SuggestionListControlled = ({
 };
 const SuggestionListboxContext = createContext(null);
 const VirtualScrollContext = createContext(null);
+// Render-time counter: each Suggestion calls registerVisible(hidden) during render
+// to get a sequential visible index (or -1 if hidden). The counter resets at the
+// start of SuggestionListbox's render, so the count is always up to date.
+const VisibleIndexContext = createContext(null);
 // The <ul role="listbox"> with top and bottom filler <li>s that maintain the
 // total scroll height when virtual scroll is active. Piloted by
 // SuggestionListControlled which detects max-height and sets virtualScrollState.
@@ -572,13 +559,31 @@ const SuggestionListbox = ({
   listRef,
   virtualScrollState,
   medianHeightRef,
-  visibleChildCount,
   uiAction,
   highlight,
   emptyState,
   children,
 }) => {
   const ItemTrackerProvider = useSuggestionItemTrackerProvider();
+  // Render-time visible index counter. Reset to 0 at the start of each render
+  // (before children render). Each Suggestion calls registerVisible(hidden)
+  // to get its sequential visible index. The ref value after children render
+  // equals the total visible item count, used for filler height calculations.
+  const visibleCountRef = useRef(0);
+  visibleCountRef.current = 0;
+  const visibleRegisteredRef = useRef(false);
+  visibleRegisteredRef.current = false;
+  const visibleIndexCtx = {
+    registerVisible: (hidden) => {
+      visibleRegisteredRef.current = true;
+      if (hidden) {
+        return -1;
+      }
+      const idx = visibleCountRef.current;
+      visibleCountRef.current = idx + 1;
+      return idx;
+    },
+  };
   const [mousePointedValue, setMousePointedValue] = useState(null);
   const [keyboardPointedValue, setKeyboardPointedValue] = useState(null);
   // The anchor is the index we navigate FROM. Only keyboard nav and
@@ -610,10 +615,9 @@ const SuggestionListbox = ({
   const fillerTopRef = useRef(null);
   const fillerBottomRef = useRef(null);
   useLayoutEffect(() => {
-    if (visibleChildCount !== undefined) {
-      // Filter is active: use visible item count so fillers reflect only
-      // items that actually take scroll space (hidden items take none).
-      totalItemsRef.current = visibleChildCount;
+    if (visibleRegisteredRef.current) {
+      // Filter mode: use the visible count (may be 0 when all items are hidden).
+      totalItemsRef.current = visibleCountRef.current;
     } else {
       const count = ItemTrackerProvider.items.length;
       if (count > 0) {
@@ -633,7 +637,7 @@ const SuggestionListbox = ({
     if (fillerBottomRef.current) {
       fillerBottomRef.current.style.height = `${Math.round(bottomHidden * median)}px`;
     }
-  }, [virtualScrollState.start, virtualScrollState.end, visibleChildCount]);
+  }, [virtualScrollState.start, virtualScrollState.end]);
 
   useLayoutEffect(() => {
     if (!CSS.highlights) {
@@ -762,7 +766,9 @@ const SuggestionListbox = ({
       />
       <VirtualScrollContext.Provider value={virtualScrollState}>
         <SuggestionListboxContext.Provider value={suggestionContext}>
-          <ItemTrackerProvider>{children}</ItemTrackerProvider>
+          <VisibleIndexContext.Provider value={visibleIndexCtx}>
+            <ItemTrackerProvider>{children}</ItemTrackerProvider>
+          </VisibleIndexContext.Provider>
         </SuggestionListboxContext.Provider>
       </VirtualScrollContext.Provider>
 
@@ -782,7 +788,7 @@ const SUGGESTION_PSEUDO_CLASSES = [":-navi-pointed", ":-navi-selected"];
 const SUGGESTION_PSEUDO_ELEMENTS = ["::highlight"];
 // Thin wrapper: tracks the suggestion (so all items register with ItemTracker
 // regardless of virtual scroll), then bails out early outside the visible window.
-export const Suggestion = ({ value, hidden, index, visibleIndex, ...rest }) => {
+export const Suggestion = ({ value, hidden, index, ...rest }) => {
   const idDefault = useId();
   const id = rest.id || idDefault;
   // When inside SuggestionListCombo, compute hidden from the filter context
@@ -800,12 +806,15 @@ export const Suggestion = ({ value, hidden, index, visibleIndex, ...rest }) => {
     hidden = true;
   }
   index = useTrackSuggestion(id, { id, value, hidden }, index);
+  // Get our sequential visible index from the render-time counter.
+  // Hidden items get -1 (always excluded from VS). Visible items get a
+  // sequential index among themselves — no gaps from hidden items.
+  const visibleIdxCtx = useContext(VisibleIndexContext);
+  const visibleIndex = visibleIdxCtx
+    ? visibleIdxCtx.registerVisible(hidden)
+    : undefined;
   const virtualScrollCtx = useContext(VirtualScrollContext);
   if (virtualScrollCtx && virtualScrollCtx.enabled) {
-    // When visibleIndex is injected by SuggestionListControlled (filter mode),
-    // use it: hidden items have visibleIndex=-1 (always excluded), and visible
-    // items are indexed sequentially among themselves (no gaps from hidden items).
-    // Without visibleIndex (no filter), fall back to the full array index.
     const vsIndex = visibleIndex !== undefined ? visibleIndex : index;
     if (
       vsIndex === -1 ||
