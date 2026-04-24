@@ -544,7 +544,9 @@ const SuggestionListbox = ({
 
   const onPointedBy = (value, event) => {
     pointedByKeyboardRef.current = event.type === "keydown";
-    event.preventDefault(); // prevent arrow keys from scrolling for instance
+    if (event.type === "keydown") {
+      event.preventDefault(); // prevent arrow keys from scrolling for instance
+    }
     setPointedValue(value);
   };
   const select = (value, event) => {
@@ -776,6 +778,7 @@ const SuggestionConcrete = ({
         if (hidden) {
           return;
         }
+        console.log("enter", e);
         // Ignore hover when element moved under a static cursor (e.g. after
         // keyboard navigation causes a re-render). Real mouse moves have non-zero
         // movementX/Y; passive hover-from-DOM-change has both at 0.
