@@ -429,18 +429,23 @@ const InputInsideSuggestionListCombo = ({
   const filter = useContext(SuggestionFilterContext);
   const setFilter = useContext(SetFilterContext);
 
-  const forwardToListbox = (event, customEventName, customEventDetail) => {
+  const forwardToSuggestionList = (
+    event,
+    customEventName,
+    customEventDetail,
+  ) => {
     const listbox = document.getElementById(listboxId);
     if (!listbox) {
       return false;
     }
+    const suggestionList = listbox.parentNode;
     const customEvent = new CustomEvent(customEventName, {
       detail: {
         event,
         ...customEventDetail,
       },
     });
-    listbox.dispatchEvent(customEvent);
+    suggestionList.dispatchEvent(customEvent);
     return customEvent.defaultPrevented;
   };
   const onKeyDownForShortcuts = createOnKeyDownForShortcuts([
@@ -448,7 +453,7 @@ const InputInsideSuggestionListCombo = ({
       key: "arrowdown",
       description: "Open popover and point to next suggestion",
       handler: (e) => {
-        return forwardToListbox(e, "navi_list_navigate", {
+        return forwardToSuggestionList(e, "navi_suggestion_list_navigate", {
           direction: "down",
         });
       },
@@ -457,7 +462,7 @@ const InputInsideSuggestionListCombo = ({
       key: "arrowup",
       description: "Open popover and point to previous suggestion",
       handler: (e) => {
-        return forwardToListbox(e, "navi_list_navigate", {
+        return forwardToSuggestionList(e, "navi_suggestion_list_navigate", {
           direction: "up",
         });
       },
@@ -466,7 +471,7 @@ const InputInsideSuggestionListCombo = ({
       key: "home",
       description: "Point to first suggestion",
       handler: (e) => {
-        return forwardToListbox(e, "navi_list_navigate", {
+        return forwardToSuggestionList(e, "navi_suggestion_list_navigate", {
           direction: "first",
         });
       },
@@ -475,7 +480,7 @@ const InputInsideSuggestionListCombo = ({
       key: "end",
       description: "Point to last suggestion",
       handler: (e) => {
-        return forwardToListbox(e, "navi_list_navigate", {
+        return forwardToSuggestionList(e, "navi_suggestion_list_navigate", {
           direction: "last",
         });
       },
@@ -484,7 +489,7 @@ const InputInsideSuggestionListCombo = ({
       key: "enter",
       description: "Confirm pointed suggestion",
       handler: (e) => {
-        return forwardToListbox(e, "navi_list_confirm");
+        return forwardToSuggestionList(e, "navi_suggestion_list_confirm");
       },
     },
   ]);

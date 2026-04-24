@@ -251,48 +251,66 @@ const dispatchCustomEventToListbox = (
 };
 
 // Standalone variant: attaches keyboard shortcuts to the container and
-// forwards them as custom events to the listbox.
+// forwards them as custom events to itself (navi_suggestion_list_* events),
+// which SuggestionListControlled then re-dispatches to the internal listbox.
 const SuggestionListStandalone = (props) => {
   const defaultRef = useRef();
   const ref = props.ref || defaultRef;
   const listboxRef = useRef(null);
-  const forwardToListbox = (...args) =>
-    dispatchCustomEventToListbox(listboxRef, ...args);
+
+  const dispatchToSelf = (event, customEventName, customEventDetail) => {
+    const el = ref.current;
+    if (!el) {
+      return false;
+    }
+    const customEvent = new CustomEvent(customEventName, {
+      cancelable: true,
+      detail: { event, ...customEventDetail },
+    });
+    el.dispatchEvent(customEvent);
+    return customEvent.defaultPrevented;
+  };
 
   useKeyboardShortcuts(ref, [
     {
       key: "arrowdown",
       description: "Point to next suggestion",
       handler: (e) =>
-        forwardToListbox(e, "navi_list_navigate", { direction: "down" }),
+        dispatchToSelf(e, "navi_suggestion_list_navigate", {
+          direction: "down",
+        }),
     },
     {
       key: "arrowup",
       description: "Point to previous suggestion",
       handler: (e) =>
-        forwardToListbox(e, "navi_list_navigate", { direction: "up" }),
+        dispatchToSelf(e, "navi_suggestion_list_navigate", { direction: "up" }),
     },
     {
       key: "home",
       description: "Point to first suggestion",
       handler: (e) =>
-        forwardToListbox(e, "navi_list_navigate", { direction: "first" }),
+        dispatchToSelf(e, "navi_suggestion_list_navigate", {
+          direction: "first",
+        }),
     },
     {
       key: "end",
       description: "Point to last suggestion",
       handler: (e) =>
-        forwardToListbox(e, "navi_list_navigate", { direction: "last" }),
+        dispatchToSelf(e, "navi_suggestion_list_navigate", {
+          direction: "last",
+        }),
     },
     {
       key: "enter",
       description: "Confirm pointed suggestion",
-      handler: (e) => forwardToListbox(e, "navi_list_confirm"),
+      handler: (e) => dispatchToSelf(e, "navi_suggestion_list_confirm"),
     },
     {
       key: "escape",
       description: "Clear pointed suggestion",
-      handler: (e) => forwardToListbox(e, "navi_list_clear"),
+      handler: (e) => dispatchToSelf(e, "navi_suggestion_list_clear"),
     },
   ]);
 
@@ -518,6 +536,35 @@ const SuggestionListControlled = ({
       listEl.removeEventListener("scroll", onScroll);
     };
   }, [virtualScrollState.enabled]);
+
+  // Forward navi_suggestion_list_* events (dispatched by input or standalone keyboard
+  // shortcuts) to the internal listbox as navi_list_* events.
+  useLayoutEffect(() => {
+    const el = ref.current;
+    const listbox = listboxRef.current;
+    if (!el || !listbox) {
+      return undefined;
+    }
+    const forward = (customEventName) => (e) => {
+      dispatchCustomEventToListbox(
+        { current: listbox },
+        e,
+        customEventName,
+        e.detail,
+      );
+    };
+    const onNavigate = forward("navi_list_navigate");
+    const onConfirm = forward("navi_list_confirm");
+    const onClear = forward("navi_list_clear");
+    el.addEventListener("navi_suggestion_list_navigate", onNavigate);
+    el.addEventListener("navi_suggestion_list_confirm", onConfirm);
+    el.addEventListener("navi_suggestion_list_clear", onClear);
+    return () => {
+      el.removeEventListener("navi_suggestion_list_navigate", onNavigate);
+      el.removeEventListener("navi_suggestion_list_confirm", onConfirm);
+      el.removeEventListener("navi_suggestion_list_clear", onClear);
+    };
+  });
 
   return (
     <Box
