@@ -459,31 +459,33 @@ const InputTextualWithSuggestions = ({
     collapse();
   };
 
-  const dispatchToSuggestionList = (customEvent) => {
-    const popoverEl = document.getElementById(suggestions);
-    if (!popoverEl) {
+  const forwardToSuggestionList = (
+    event,
+    customEventName,
+    customEventDetail,
+  ) => {
+    const suggestionList = document.getElementById(suggestions);
+    if (!suggestionList) {
       return false;
     }
-    popoverEl.dispatchEvent(customEvent);
+    const customEvent = new CustomEvent(customEventName, {
+      detail: {
+        event,
+        ...customEventDetail,
+      },
+    });
+    suggestionList.dispatchEvent(customEvent);
     return customEvent.defaultPrevented;
   };
-
   useKeyboardShortcuts(ref, [
     {
       key: "arrowdown",
       description: "Open popover and point to next suggestion",
       handler: (e) => {
         showSuggestions(e);
-        const popoverEl = document.getElementById(suggestions);
-        if (!popoverEl) {
-          return false;
-        }
-        popoverEl.dispatchEvent(
-          new CustomEvent("navi_suggestion_list_navigate", {
-            detail: { direction: "down" },
-          }),
-        );
-        return true;
+        return forwardToSuggestionList(e, "navi_suggestion_list_navigate", {
+          direction: "down",
+        });
       },
     },
     {
@@ -491,53 +493,43 @@ const InputTextualWithSuggestions = ({
       description: "Open popover and point to previous suggestion",
       handler: (e) => {
         showSuggestions(e);
-        return dispatchToSuggestionList(
-          new CustomEvent("navi_suggestion_list_navigate", {
-            detail: { direction: "up" },
-          }),
-        );
+        return forwardToSuggestionList(e, "navi_suggestion_list_navigate", {
+          direction: "up",
+        });
       },
     },
     {
       key: "home",
       description: "Point to first suggestion",
-      handler: () => {
+      handler: (e) => {
         if (!expandedRef.current) {
           return false;
         }
-        return dispatchToSuggestionList(
-          new CustomEvent("navi_suggestion_list_navigate", {
-            detail: { direction: "first" },
-          }),
-        );
+        return forwardToSuggestionList(e, "navi_suggestion_list_navigate", {
+          direction: "first",
+        });
       },
     },
     {
       key: "end",
       description: "Point to last suggestion",
-      handler: () => {
+      handler: (e) => {
         if (!expandedRef.current) {
           return false;
         }
-        return dispatchToSuggestionList(
-          new CustomEvent("navi_suggestion_list_navigate", {
-            detail: { direction: "last" },
-          }),
-        );
+        return forwardToSuggestionList(e, "navi_suggestion_list_navigate", {
+          direction: "last",
+        });
       },
     },
     {
       key: "enter",
       description: "Confirm pointed suggestion",
-      handler: () => {
+      handler: (e) => {
         if (!expandedRef.current) {
           return false;
         }
-        return dispatchToSuggestionList(
-          new CustomEvent("navi_suggestion_list_confirm", {
-            cancelable: true,
-          }),
-        );
+        return forwardToSuggestionList(e, "navi_suggestion_list_confirm");
       },
     },
     {
