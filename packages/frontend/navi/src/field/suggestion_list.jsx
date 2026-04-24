@@ -611,7 +611,7 @@ const SuggestionListbox = ({
     if (fillerBottomRef.current) {
       fillerBottomRef.current.style.height = `${Math.round(bottomHidden * median)}px`;
     }
-  }, [virtualScrollState.start, virtualScrollState.end, highlight]);
+  }, [virtualScrollState.start, virtualScrollState.end, filter]);
 
   useLayoutEffect(() => {
     if (!CSS.highlights) {
