@@ -262,8 +262,8 @@ export const SuggestionList = ({
   const ref = rest.ref || defaultRef;
   const listboxRef = useRef(null);
 
-  // Persists the last measured median item height across renders so the scroll
-  // handler can compute a new window without waiting for a layout effect.
+  // Persists a one-time measured median item height so the scroll handler
+  // can use a real value instead of the conservative MIN_ITEM_HEIGHT floor.
   const medianHeightRef = useRef(MIN_ITEM_HEIGHT);
 
   // Virtual scroll state. Disabled until a CSS max-height is detected.
@@ -294,6 +294,29 @@ export const SuggestionList = ({
       end: VS_BUFFER + itemsPerView + VS_BUFFER,
     });
   }, [maxHeight]);
+
+  // Measure real item height once, right after the first VS window renders.
+  // A single measurement is enough — items are uniform in practice.
+  useLayoutEffect(() => {
+    if (!vsState.enabled) {
+      return;
+    }
+    const listEl = ref.current;
+    if (!listEl) {
+      return;
+    }
+    const options = Array.from(listEl.querySelectorAll("[role='option']"));
+    if (options.length === 0) {
+      return;
+    }
+    const heights = options.map((el) => el.getBoundingClientRect().height);
+    heights.sort((a, b) => a - b);
+    const mid = Math.floor(heights.length / 2);
+    medianHeightRef.current =
+      heights.length % 2 === 0
+        ? (heights[mid - 1] + heights[mid]) / 2
+        : heights[mid];
+  }, [vsState.enabled]);
 
   // Scroll listener — recomputes the visible frame on scroll.
   useEffect(() => {
@@ -585,50 +608,24 @@ const SuggestionListBox = ({
     };
   }, []);
 
-  const fillerTopRef = useRef(null);
-  const fillerBottomRef = useRef(null);
-
+  // Track total registered items in state so we can derive filler heights
+  // declaratively. We only update when items.length > 0 — when Preact bails
+  // out on Suggestion wrappers the tracker resets but children don't
+  // re-register, so items.length === 0; in that case we keep the last known
+  // total so the filler heights remain correct.
+  const [totalItems, setTotalItems] = useState(0);
   useLayoutEffect(() => {
-    if (!vsState.enabled) {
-      return;
+    const count = ItemTrackerProvider.items.length;
+    if (count > 0) {
+      setTotalItems(count);
     }
-    const listEl = listRef.current;
-    if (!listEl) {
-      return;
-    }
-    const options = Array.from(listEl.querySelectorAll("[role='option']"));
-    if (options.length === 0) {
-      return;
-    }
-    const heights = options.map((el) => el.getBoundingClientRect().height);
-    heights.sort((a, b) => a - b);
-    const mid = Math.floor(heights.length / 2);
-    const median =
-      heights.length % 2 === 0
-        ? (heights[mid - 1] + heights[mid]) / 2
-        : heights[mid];
-    medianHeightRef.current = median;
-  }, [vsState.enabled]);
+  });
 
-  // After every render: update filler heights.
-  useLayoutEffect(() => {
-    const median = medianHeightRef.current;
-    const total = ItemTrackerProvider.items.length;
-    if (total === 0) {
-      // Preact bailed out on Suggestion wrappers this cycle (stable children +
-      // unchanged VirtualScrollContext) — tracker reset but no re-registration
-      // happened. Keep existing filler heights.
-      return;
-    }
-    const topHidden = vsState.start;
-    const bottomHidden = total > vsState.end ? total - vsState.end : 0;
-    if (fillerTopRef.current) {
-      fillerTopRef.current.style.height = `${Math.round(topHidden * median)}px`;
-    }
-    if (fillerBottomRef.current) {
-      fillerBottomRef.current.style.height = `${Math.round(bottomHidden * median)}px`;
-    }
-  }, [children]);
+  const median = medianHeightRef.current;
+  const topHidden = vsState.start;
+  const bottomHidden = totalItems > vsState.end ? totalItems - vsState.end : 0;
+  const fillerTopHeight = Math.round(topHidden * median);
+  const fillerBottomHeight = Math.round(bottomHidden * median);
 
   // Highlight matching text in visible suggestions.
   useLayoutEffect(() => {
@@ -689,10 +686,10 @@ const SuggestionListBox = ({
       styleCSSVars={SuggestionListStyleCSSVars}
     >
       <li
-        ref={fillerTopRef}
         className="navi_suggestion_list_filler"
         data-top=""
         aria-hidden="true"
+        style={{ height: `${fillerTopHeight}px` }}
       />
       <VirtualScrollContext.Provider value={vsState}>
         <SuggestionListContext.Provider value={suggestionListContext}>
@@ -704,9 +701,9 @@ const SuggestionListBox = ({
         <li className="navi_suggestion_list_empty">{emptyState}</li>
       )}
       <li
-        ref={fillerBottomRef}
         className="navi_suggestion_list_filler"
         aria-hidden="true"
+        style={{ height: `${fillerBottomHeight}px` }}
       />
     </Box>
   );
