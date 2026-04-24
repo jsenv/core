@@ -178,9 +178,8 @@ export const createItemTracker = () => {
 };
 
 const rebuildCommittedItems = (committedItems, committedMap) => {
-  const entries = [...committedMap.values()].sort((a, b) => a.index - b.index);
   committedItems.length = 0;
-  for (const { data } of entries) {
-    committedItems.push(data);
+  for (const { index, data } of committedMap.values()) {
+    committedItems[index] = data;
   }
 };

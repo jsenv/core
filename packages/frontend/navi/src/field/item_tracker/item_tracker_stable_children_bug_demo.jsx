@@ -1,30 +1,27 @@
 /**
- * ItemTracker – Stable Children Bug Demo
+ * ItemTracker – Stable Children Bug (regression test)
  *
- * WHAT THIS DEMONSTRATES:
+ * This file was created to reproduce and diagnose a bug in ItemTracker, and
+ * now serves as a regression test to ensure it stays fixed.
  *
- * The ItemTracker relies on every child calling tracker.registerItem() during
- * each render of their parent provider. The provider calls tracker.reset()
- * at the start of each render so that items are rebuilt fresh.
+ * THE BUG (was): when the Provider's parent re-renders due to its own state
+ * change but passes the same `children` prop reference, Preact skips
+ * re-rendering the children. They don't call registerItem() again. The tracker
+ * was therefore empty after reset(), even though the DOM still contained all
+ * the items. Reading ItemTrackerProvider.items in a layout effect would return
+ * [] instead of the actual items.
  *
- * THE BUG: when the Provider's parent re-renders (e.g. due to a state change)
- * but passes the *same* `children` prop reference, Preact skips re-rendering
- * the children. They don't call registerItem() again. The tracker is therefore
- * empty after reset(), even though the DOM still contains all the items.
+ * This is exactly what happened in SuggestionListbox: pressing ArrowDown
+ * called setKeyboardPointedValue() → SuggestionListbox re-rendered →
+ * ItemTrackerProvider rendered (reset) → Suggestion wrappers were skipped
+ * (their `children` JSX is stable) → ItemTrackerProvider.items === [] →
+ * keyboard navigation broke.
  *
- * This is exactly what happens in SuggestionListbox: pressing ArrowDown
- * calls setKeyboardPointedValue() → SuggestionListbox re-renders →
- * ItemTrackerProvider renders (reset) → Suggestion wrappers are skipped
- * (their `children` JSX is stable) → ItemTrackerProvider.items === [].
+ * THE FIX: per-item useLayoutEffect hooks maintain a `committedItems` snapshot
+ * independently of renderItems. Bailout → no item effects fire → committedItems
+ * unchanged. Genuine unmount → decommitItem cleanup → committedItems updated.
  *
- * HOW TO REPRODUCE:
- *  1. The app renders a Provider with 3 items as children.
- *  2. The parent has a counter state. Pressing "Trigger parent state change"
- *     increments the counter, which re-renders the parent and the provider,
- *     but the children list is built outside the render tree (stable reference),
- *     so Preact skips the children.
- *  3. After the state change the layout effect reads ItemTrackerProvider.items
- *     and shows 0 instead of 3.
+ * Scenario B below should always show 3 — even after clicking the button.
  */
 
 import { useLayoutEffect, useState } from "preact/hooks";
@@ -112,10 +109,8 @@ const Inner = ({ children }) => {
       </button>
 
       <p style={{ color: "#888", fontSize: "13px" }}>
-        After clicking, the count turns{" "}
-        <span style={{ color: "#f44747" }}>red and shows 0</span>. Inner
-        re-renders → tracker resets → children are skipped by Preact → items
-        empty.
+        Count should stay <strong>3</strong> after clicking. If it drops to 0
+        the bug has regressed.
       </p>
     </div>
   );
