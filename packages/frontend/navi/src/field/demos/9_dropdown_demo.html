@@ -155,42 +155,135 @@
         );
       };
 
+      // ── Demo 3: animal picker with radio inputs ───────────────────────────────
+
+      const ANIMALS = [
+        "Cat",
+        "Dog",
+        "Elephant",
+        "Fox",
+        "Giraffe",
+        "Horse",
+        "Lion",
+        "Monkey",
+        "Panda",
+        "Rabbit",
+        "Tiger",
+        "Wolf",
+        "Zebra",
+      ];
+
+      const AnimalPicker = ({ selected, onSelect }) => {
+        const close = useDropdownClose();
+        return (
+          <div style="min-width: 260px;">
+            <DialogHeader title="Pick an animal" />
+            <SuggestionList
+              border="none"
+              uiAction={(v) => {
+                onSelect(v);
+                close();
+              }}
+            >
+              {ANIMALS.map((animal, i) => (
+                <>
+                  {i > 0 && (
+                    <li
+                      role="presentation"
+                      style="margin:0;padding:0;list-style:none;"
+                    >
+                      <hr style="margin:0;border:none;border-top:1px solid #eee;" />
+                    </li>
+                  )}
+                  <Suggestion
+                    key={animal}
+                    value={animal}
+                    selected={selected === animal}
+                    style="display:flex;align-items:center;gap:10px;padding:10px 16px;"
+                  >
+                    <input
+                      type="radio"
+                      tabIndex="-1"
+                      checked={selected === animal}
+                      style="pointer-events:none;flex-shrink:0;"
+                    />
+                    {animal}
+                  </Suggestion>
+                </>
+              ))}
+            </SuggestionList>
+          </div>
+        );
+      };
+
       // ── App ───────────────────────────────────────────────────────────────────
 
-      const App = () => {
+      const Demo1 = () => {
         const [color, setColor] = useState(null);
-        const [fruit, setFruit] = useState(null);
+        return (
+          <div class="demo-section">
+            <h2>Demo 1 — Arbitrary content</h2>
+            <p>Custom list of buttons inside the dialog.</p>
+            <Dropdown value={color} placeholder="Choose a color…">
+              <ColorList onSelect={setColor} />
+            </Dropdown>
+            {color && (
+              <p style="margin-top:12px;font-size:13px;color:#1a73e8;">
+                Selected: <b>{color}</b>
+              </p>
+            )}
+          </div>
+        );
+      };
 
+      const Demo2 = () => {
+        const [fruit, setFruit] = useState(null);
+        return (
+          <div class="demo-section">
+            <h2>Demo 2 — Filterable SuggestionListCombo</h2>
+            <p>
+              The dialog contains a search input and a suggestion list.
+              Selecting a fruit closes the dialog automatically.
+            </p>
+            <Dropdown value={fruit} placeholder="Pick a fruit…">
+              <FruitPicker onSelect={setFruit} />
+            </Dropdown>
+            {fruit && (
+              <p style="margin-top:12px;font-size:13px;color:#1a73e8;">
+                Selected: <b>{fruit}</b>
+              </p>
+            )}
+          </div>
+        );
+      };
+
+      const Demo3 = () => {
+        const [animal, setAnimal] = useState(null);
+        return (
+          <div class="demo-section">
+            <h2>Demo 3 — Radio list picker</h2>
+            <p>
+              Each item shows a radio input. A separator sits between items.
+              Selecting an animal closes the dialog.
+            </p>
+            <Dropdown value={animal} placeholder="Pick an animal…">
+              <AnimalPicker selected={animal} onSelect={setAnimal} />
+            </Dropdown>
+            {animal && (
+              <p style="margin-top:12px;font-size:13px;color:#1a73e8;">
+                Selected: <b>{animal}</b>
+              </p>
+            )}
+          </div>
+        );
+      };
+
+      const App = () => {
         return (
           <div>
-            <div class="demo-section">
-              <h2>Demo 1 — Arbitrary content</h2>
-              <p>Custom list of buttons inside the dialog.</p>
-              <Dropdown value={color} placeholder="Choose a color…">
-                <ColorList onSelect={setColor} />
-              </Dropdown>
-              {color && (
-                <p style="margin-top:12px;font-size:13px;color:#1a73e8;">
-                  Selected: <b>{color}</b>
-                </p>
-              )}
-            </div>
-
-            <div class="demo-section">
-              <h2>Demo 2 — Filterable SuggestionListCombo</h2>
-              <p>
-                The dialog contains a search input and a suggestion list.
-                Selecting a fruit closes the dialog automatically.
-              </p>
-              <Dropdown value={fruit} placeholder="Pick a fruit…">
-                <FruitPicker onSelect={setFruit} />
-              </Dropdown>
-              {fruit && (
-                <p style="margin-top:12px;font-size:13px;color:#1a73e8;">
-                  Selected: <b>{fruit}</b>
-                </p>
-              )}
-            </div>
+            <Demo1 />
+            <Demo2 />
+            <Demo3 />
           </div>
         );
       };
