@@ -588,7 +588,6 @@ const SuggestionListBox = ({
   const fillerTopRef = useRef(null);
   const fillerBottomRef = useRef(null);
 
-  // After every render: measure median option height, then update filler heights.
   useLayoutEffect(() => {
     if (!vsState.enabled) {
       return;
@@ -598,16 +597,21 @@ const SuggestionListBox = ({
       return;
     }
     const options = Array.from(listEl.querySelectorAll("[role='option']"));
-    if (options.length > 0) {
-      const heights = options.map((el) => el.getBoundingClientRect().height);
-      heights.sort((a, b) => a - b);
-      const mid = Math.floor(heights.length / 2);
-      const median =
-        heights.length % 2 === 0
-          ? (heights[mid - 1] + heights[mid]) / 2
-          : heights[mid];
-      medianHeightRef.current = median;
+    if (options.length === 0) {
+      return;
     }
+    const heights = options.map((el) => el.getBoundingClientRect().height);
+    heights.sort((a, b) => a - b);
+    const mid = Math.floor(heights.length / 2);
+    const median =
+      heights.length % 2 === 0
+        ? (heights[mid - 1] + heights[mid]) / 2
+        : heights[mid];
+    medianHeightRef.current = median;
+  }, [vsState.enabled]);
+
+  // After every render: update filler heights.
+  useLayoutEffect(() => {
     const median = medianHeightRef.current;
     const total = ItemTrackerProvider.items.length;
     if (total === 0) {
@@ -624,7 +628,7 @@ const SuggestionListBox = ({
     if (fillerBottomRef.current) {
       fillerBottomRef.current.style.height = `${Math.round(bottomHidden * median)}px`;
     }
-  });
+  }, [children]);
 
   // Highlight matching text in visible suggestions.
   useLayoutEffect(() => {
