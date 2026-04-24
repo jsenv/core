@@ -547,18 +547,9 @@ const SuggestionListbox = ({
     pointedByKeyboardRef.current = event.type === "navi_list_navigate";
     setPointedValue(value);
   };
-
   const select = (value, event) => {
-    ref.current?.dispatchEvent(
-      new CustomEvent("navi_suggestion_list_selected", {
-        detail: { value, event },
-        bubbles: true,
-      }),
-    );
-    uiAction?.(value);
+    uiAction?.(value, event);
   };
-  const selectRef = useRef(select);
-  selectRef.current = select;
 
   // Update filler heights directly in a layout effect to avoid the extra
   // re-render that a totalItems state would cause. We only update when
@@ -667,10 +658,10 @@ const SuggestionListbox = ({
       }}
       onnavi_list_confirm={(e) => {
         const current = pointedValueRef.current;
-        if (current !== null) {
-          selectRef.current(current);
-          e.preventDefault();
+        if (current === null) {
+          return;
         }
+        select(current, e);
       }}
       onnavi_list_clear={(e) => {
         onPointedBy(null, e);
