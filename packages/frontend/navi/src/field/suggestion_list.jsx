@@ -592,10 +592,17 @@ const SuggestionListbox = ({
   const totalItemsRef = useRef(0);
   const fillerTopRef = useRef(null);
   const fillerBottomRef = useRef(null);
+  console.log(
+    "total items",
+    ItemTrackerProvider.items.length,
+    "filter",
+    filter,
+  );
   useLayoutEffect(() => {
     // items only contains non-hidden suggestions (the tracker filter excludes hidden ones).
     // It is fully populated after children render, so its length is always accurate.
     const count = ItemTrackerProvider.items.length;
+
     if (count > 0) {
       totalItemsRef.current = count;
     }
@@ -765,9 +772,9 @@ export const Suggestion = ({ value, hidden, index: indexProp, ...rest }) => {
   // When inside SuggestionListCombo, compute hidden from the filter context
   // unless the caller explicitly passed hidden.
   const filter = useContext(SuggestionFilterContext);
+  const match = useContext(SuggestionMatchContext);
   let matches = true;
   if (filter) {
-    const match = useContext(SuggestionMatchContext);
     const lowerFilter = filter.toLowerCase();
     matches = match(value, lowerFilter);
     hidden = !matches;
