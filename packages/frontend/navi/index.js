@@ -112,8 +112,8 @@ export { Radio, RadioList } from "./src/field/radio_list.jsx";
 export { Select } from "./src/field/select.jsx";
 export {
   Suggestion,
-  SuggestionGroup,
   SuggestionContainer,
+  SuggestionGroup,
 } from "./src/field/suggestion_list.jsx";
 // Table start
 export {
