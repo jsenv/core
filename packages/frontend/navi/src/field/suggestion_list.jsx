@@ -558,6 +558,12 @@ const SuggestionListBox = ({
     }
     const median = medianHeightRef.current;
     const total = ItemTrackerProvider.items.length;
+    if (total === 0) {
+      // Preact bailed out on Suggestion wrappers this cycle (stable children +
+      // unchanged VirtualScrollContext) — tracker reset but no re-registration
+      // happened. Keep existing filler heights.
+      return;
+    }
     const topHidden = vsState.start;
     const bottomHidden = total > vsState.end ? total - vsState.end : 0;
     if (fillerTopRef.current) {
