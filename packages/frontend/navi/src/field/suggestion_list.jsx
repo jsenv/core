@@ -335,6 +335,7 @@ export const SuggestionList = ({
       const newEnd = firstVisible + itemsPerView + VS_BUFFER;
       setVsState((prev) => ({ ...prev, start: newStart, end: newEnd }));
     };
+    onScroll();
     listEl.addEventListener("scroll", onScroll, { passive: true });
     return () => {
       listEl.removeEventListener("scroll", onScroll);
