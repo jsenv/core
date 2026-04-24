@@ -132,7 +132,7 @@ export const createItemTracker = ({ filter: filterFn } = {}) => {
   // id: stable identity for this item across re-renders — the same concept as
   // Preact's `key` prop (which is stripped from props and inaccessible here).
   // Callers must provide a unique id; for suggestions this is the value.
-  const useTrackItem = (id, data, explicitIndex) => {
+  const useTrackItem = (id, data) => {
     const tracker = useContext(ItemTrackerContext);
     if (!tracker) {
       throw new Error(
@@ -142,24 +142,18 @@ export const createItemTracker = ({ filter: filterFn } = {}) => {
     // registerItem returns -1 when a filterFn is set and the item doesn't pass.
     // Otherwise returns the sequential index among passing items.
     // Note: registerItem is always called to keep hook call count stable.
-    const renderOrderIndex = tracker.registerItem(data);
-    // explicitIndex is used for stable committed ordering (e.g. keyboard nav),
-    // but the VS window check must use renderOrderIndex (rank among visible items).
-    const committedIndex =
-      explicitIndex !== undefined && renderOrderIndex !== -1
-        ? explicitIndex
-        : renderOrderIndex;
+    const index = tracker.registerItem(data);
     useLayoutEffect(() => {
-      if (renderOrderIndex === -1) {
+      if (index === -1) {
         tracker.decommitItem(id);
       } else {
-        tracker.commitItem(id, committedIndex, data);
+        tracker.commitItem(id, index, data);
       }
       return () => {
         tracker.decommitItem(id);
       };
     });
-    return renderOrderIndex;
+    return index;
   };
 
   const useTrackedItem = (index) => {
