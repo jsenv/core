@@ -487,19 +487,17 @@ export const SuggestionList = ({
       {...rest}
       baseClassName="navi_suggestion_list"
     >
-      <VirtualScrollContext.Provider value={vsState}>
-        <SuggestionListBox
-          listboxRef={listboxRef}
-          listRef={ref}
-          vsState={vsState}
-          medianHeightRef={medianHeightRef}
-          uiAction={uiAction}
-          highlight={highlight}
-          emptyState={emptyState}
-        >
-          {children}
-        </SuggestionListBox>
-      </VirtualScrollContext.Provider>
+      <SuggestionListBox
+        listboxRef={listboxRef}
+        listRef={ref}
+        vsState={vsState}
+        medianHeightRef={medianHeightRef}
+        uiAction={uiAction}
+        highlight={highlight}
+        emptyState={emptyState}
+      >
+        {children}
+      </SuggestionListBox>
     </Box>
   );
 };
@@ -692,9 +690,11 @@ const SuggestionListBox = ({
         data-top=""
         aria-hidden="true"
       />
-      <SuggestionListContext.Provider value={suggestionListContext}>
-        <ItemTrackerProvider>{children}</ItemTrackerProvider>
-      </SuggestionListContext.Provider>
+      <VirtualScrollContext.Provider value={vsState}>
+        <SuggestionListContext.Provider value={suggestionListContext}>
+          <ItemTrackerProvider>{children}</ItemTrackerProvider>
+        </SuggestionListContext.Provider>
+      </VirtualScrollContext.Provider>
 
       {emptyState && (
         <li className="navi_suggestion_list_empty">{emptyState}</li>
