@@ -500,6 +500,7 @@ const InputInsideSuggestionListCombo = ({
       aria-autocomplete="list"
       aria-has-popup="listbox"
       type="search"
+      autoComplete="off"
       value={filter}
       onInput={(e) => {
         setFilter(e.target.value);
