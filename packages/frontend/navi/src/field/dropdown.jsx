@@ -90,7 +90,7 @@ const css = /* css */ `
     background: white;
     border-radius: 8px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
-    overflow: hidden;
+    overflow: auto;
   }
 `;
 
