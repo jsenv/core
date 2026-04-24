@@ -27,7 +27,7 @@
  *     and shows 0 instead of 3.
  */
 
-import { useLayoutEffect, useRef, useState } from "preact/hooks";
+import { useLayoutEffect, useState } from "preact/hooks";
 import { createItemTracker } from "./item_tracker.jsx";
 
 const [useItemTrackerProvider, useTrackItem] = createItemTracker();
@@ -41,25 +41,23 @@ const Item = ({ value }) => {
 };
 
 // ---------------------------------------------------------------------------
-// Consumer — reads ItemTrackerProvider.items in a layout effect
+// Consumer that lives inside the same component as the provider — reads
+// ItemTrackerProvider.items in a layout effect and shows the count.
 // ---------------------------------------------------------------------------
-const ItemList = ({ ItemTrackerProvider, label }) => {
-  const renderCount = useRef(0);
-  renderCount.current++;
-  const lastSeenRef = useRef([]);
-
+const CountDisplay = ({ ItemTrackerProvider, id }) => {
   useLayoutEffect(() => {
     const items = ItemTrackerProvider.items;
-    lastSeenRef.current = [...items];
-    // Force a DOM update to display the count
-    const el = document.getElementById(`count-${label}`);
+    const el = document.getElementById(id);
     if (el) {
       const count = items.length;
       el.textContent = String(count);
       el.className = count === 0 ? "bug" : "ok";
     }
   });
+  return null;
+};
 
+const ItemList = ({ ItemTrackerProvider, label }) => {
   return (
     <div>
       <ItemTrackerProvider>
@@ -68,6 +66,10 @@ const ItemList = ({ ItemTrackerProvider, label }) => {
           <Item value="Beta" />
           <Item value="Gamma" />
         </ul>
+        <CountDisplay
+          ItemTrackerProvider={ItemTrackerProvider}
+          id={`count-${label}`}
+        />
       </ItemTrackerProvider>
     </div>
   );
@@ -110,7 +112,7 @@ export const App = () => {
       </p>
       <p>
         Items seen in layout effect:{" "}
-        <span id="count-inline" class="ok">
+        <span id="count-inline" className="ok">
           ?
         </span>{" "}
         (expected: 3)
@@ -133,13 +135,19 @@ export const App = () => {
       </p>
       <p>
         Items seen in layout effect:{" "}
-        <span id="count-stable" class="ok">
+        <span id="count-stable" className="ok">
           ?
         </span>{" "}
         (expected: 3, becomes 0 after state change)
       </p>
 
-      <ItemTrackerProvider>{stableChildren}</ItemTrackerProvider>
+      <ItemTrackerProvider>
+        {stableChildren}
+        <CountDisplay
+          ItemTrackerProvider={ItemTrackerProvider}
+          id="count-stable"
+        />
+      </ItemTrackerProvider>
 
       <button onClick={() => setCounter((c) => c + 1)}>
         Trigger parent state change (counter++)
