@@ -233,9 +233,12 @@ const SuggestionStyleCSSVars = {
  */
 const SuggestionListContext = createContext(null);
 // Counter object shared via context — reset each SuggestionList render so each
-// Suggestion thin wrapper can increment it and bail out early once the cap is hit.
+// Suggestion thin wrapper can increment it and know its 0-based index.
+// Also carries the visible window (start/end) and enabled flag.
 const VirtualScrollContext = createContext(null);
 const MAX_DOM_ITEMS = 50;
+const MIN_ITEM_HEIGHT = 20; // px — conservative lower bound for filler height estimation
+const VS_BUFFER = 5; // extra items to render above and below the visible window
 
 export const SuggestionList = ({
   popover,
@@ -257,22 +260,72 @@ export const SuggestionList = ({
 
   const defaultRef = useRef(null);
   const ref = rest.ref || defaultRef;
-  const fillerRef = useRef(null);
+  const fillerTopRef = useRef(null);
+  const fillerBottomRef = useRef(null);
 
-  // Mutable counter reset on every render — children read and increment it.
-  // Using a ref so that mutations during children's render are visible here
-  // in the subsequent useLayoutEffect without triggering another render cycle.
+  // Mutable counter reset each render — Suggestion wrappers increment it to
+  // determine their 0-based index without causing extra re-renders.
   const vsCounterRef = useRef({ seen: 0 });
   vsCounterRef.current = { seen: 0 };
+  // Persists the last measured median across renders so the scroll handler can
+  // compute a new window without waiting for a layout effect.
+  const medianHeightRef = useRef(MIN_ITEM_HEIGHT);
 
+  // Virtual scroll state. Disabled until a CSS max-height is detected.
+  const [vsState, setVsState] = useState({
+    enabled: false,
+    start: 0,
+    end: MAX_DOM_ITEMS,
+  });
+
+  // Detect max-height on mount and enable virtual scroll when present.
   useLayoutEffect(() => {
-    if (!fillerRef.current) {
+    const listEl = ref.current;
+    if (!listEl) {
       return;
     }
-    const total = vsCounterRef.current.seen;
-    const hiddenCount = total > MAX_DOM_ITEMS ? total - MAX_DOM_ITEMS : 0;
-    if (hiddenCount === 0) {
-      fillerRef.current.style.height = "0px";
+    const maxHeightStr = getComputedStyle(listEl).maxHeight;
+    if (!maxHeightStr || maxHeightStr === "none") {
+      return;
+    }
+    const maxHeight = parseFloat(maxHeightStr);
+    if (isNaN(maxHeight) || maxHeight <= 0) {
+      return;
+    }
+    const itemsPerView = Math.ceil(maxHeight / MIN_ITEM_HEIGHT);
+    setVsState({
+      enabled: true,
+      start: 0,
+      end: VS_BUFFER + itemsPerView + VS_BUFFER,
+    });
+  }, []);
+
+  // Scroll listener — recomputes the visible window on scroll.
+  useEffect(() => {
+    if (!vsState.enabled) {
+      return undefined;
+    }
+    const listEl = ref.current;
+    if (!listEl) {
+      return undefined;
+    }
+    const onScroll = () => {
+      const median = medianHeightRef.current;
+      const itemsPerView = Math.ceil(listEl.clientHeight / median);
+      const firstVisible = Math.floor(listEl.scrollTop / median);
+      const newStart = firstVisible > VS_BUFFER ? firstVisible - VS_BUFFER : 0;
+      const newEnd = firstVisible + itemsPerView + VS_BUFFER;
+      setVsState((prev) => ({ ...prev, start: newStart, end: newEnd }));
+    };
+    listEl.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      listEl.removeEventListener("scroll", onScroll);
+    };
+  }, [vsState.enabled]);
+
+  // After every render: measure median option height, then update filler heights.
+  useLayoutEffect(() => {
+    if (!vsState.enabled) {
       return;
     }
     const listEl = ref.current;
@@ -280,17 +333,26 @@ export const SuggestionList = ({
       return;
     }
     const options = Array.from(listEl.querySelectorAll("[role='option']"));
-    if (options.length === 0) {
-      return;
+    if (options.length > 0) {
+      const heights = options.map((el) => el.getBoundingClientRect().height);
+      heights.sort((a, b) => a - b);
+      const mid = Math.floor(heights.length / 2);
+      const median =
+        heights.length % 2 === 0
+          ? (heights[mid - 1] + heights[mid]) / 2
+          : heights[mid];
+      medianHeightRef.current = median;
     }
-    const heights = options.map((el) => el.getBoundingClientRect().height);
-    heights.sort((a, b) => a - b);
-    const mid = Math.floor(heights.length / 2);
-    const median =
-      heights.length % 2 === 0
-        ? (heights[mid - 1] + heights[mid]) / 2
-        : heights[mid];
-    fillerRef.current.style.height = `${Math.round(median * hiddenCount)}px`;
+    const median = medianHeightRef.current;
+    const total = vsCounterRef.current.seen;
+    const topHidden = vsState.start;
+    const bottomHidden = total > vsState.end ? total - vsState.end : 0;
+    if (fillerTopRef.current) {
+      fillerTopRef.current.style.height = `${Math.round(topHidden * median)}px`;
+    }
+    if (fillerBottomRef.current) {
+      fillerBottomRef.current.style.height = `${Math.round(bottomHidden * median)}px`;
+    }
   });
 
   useLayoutEffect(() => {
@@ -519,29 +581,53 @@ export const SuggestionList = ({
       {...rest}
       baseClassName="navi_suggestion_list"
     >
-      <Box
-        as="ul"
-        role="listbox"
-        baseClassName="navi_suggestion_listbox"
-        styleCSSVars={SuggestionListStyleCSSVars}
+      <VirtualScrollContext.Provider
+        value={{ counter: vsCounterRef.current, ...vsState }}
       >
-        <VirtualScrollContext.Provider value={vsCounterRef.current}>
-          <SuggestionListContext.Provider value={suggestionListContext}>
-            <ItemTrackerProvider>{children}</ItemTrackerProvider>
-            {emptyState && (
-              <li className="navi_suggestion_list_empty">{emptyState}</li>
-            )}
-          </SuggestionListContext.Provider>
-        </VirtualScrollContext.Provider>
-        <li
-          ref={fillerRef}
-          aria-hidden="true"
-          style={{ listStyle: "none", pointerEvents: "none", height: "0px" }}
-        />
-      </Box>
+        <SuggestionListContext.Provider value={suggestionListContext}>
+          <SuggestionListBox
+            fillerTopRef={fillerTopRef}
+            fillerBottomRef={fillerBottomRef}
+            ItemTrackerProvider={ItemTrackerProvider}
+            emptyState={emptyState}
+          >
+            {children}
+          </SuggestionListBox>
+        </SuggestionListContext.Provider>
+      </VirtualScrollContext.Provider>
     </Box>
   );
 };
+
+// Internal component: the <ul role="listbox"> with top and bottom filler <li>s
+// that maintain the total scroll height when virtual scroll is active.
+const SuggestionListBox = ({
+  fillerTopRef,
+  fillerBottomRef,
+  ItemTrackerProvider,
+  emptyState,
+  children,
+}) => (
+  <Box
+    as="ul"
+    role="listbox"
+    baseClassName="navi_suggestion_listbox"
+    styleCSSVars={SuggestionListStyleCSSVars}
+  >
+    <li
+      ref={fillerTopRef}
+      aria-hidden="true"
+      style={{ listStyle: "none", pointerEvents: "none", height: "0px" }}
+    />
+    <ItemTrackerProvider>{children}</ItemTrackerProvider>
+    {emptyState && <li className="navi_suggestion_list_empty">{emptyState}</li>}
+    <li
+      ref={fillerBottomRef}
+      aria-hidden="true"
+      style={{ listStyle: "none", pointerEvents: "none", height: "0px" }}
+    />
+  </Box>
+);
 
 const SUGGESTION_PSEUDO_CLASSES = [":-navi-pointed", ":-navi-selected"];
 const SUGGESTION_PSEUDO_ELEMENTS = ["::highlight"];
@@ -554,9 +640,10 @@ export const Suggestion = ({ value, hidden, ...rest }) => {
   useTrackSuggestion({ value, suggestionId, hidden });
   const vsCtx = useContext(VirtualScrollContext);
   const id = rest.id || suggestionId;
-  if (vsCtx) {
-    vsCtx.seen++;
-    if (vsCtx.seen > MAX_DOM_ITEMS) {
+  if (vsCtx && vsCtx.enabled) {
+    const index = vsCtx.counter.seen;
+    vsCtx.counter.seen++;
+    if (index < vsCtx.start || index >= vsCtx.end) {
       return null;
     }
   }
