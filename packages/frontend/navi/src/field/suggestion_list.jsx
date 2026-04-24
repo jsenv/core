@@ -557,30 +557,6 @@ const SuggestionListBox = ({
   const selectRef = useRef(select);
   selectRef.current = select;
 
-  const navigate = (direction) => {
-    const values = ItemTrackerProvider.items
-      .filter((item) => !item.hidden)
-      .map((item) => item.value);
-    if (values.length === 0) {
-      return;
-    }
-    const current = pointedValueRef.current;
-    pointedByKeyboardRef.current = true;
-    if (direction === "down") {
-      const idx = current === null ? -1 : values.indexOf(current);
-      setPointedValue(values[idx < values.length - 1 ? idx + 1 : idx]);
-    } else if (direction === "up") {
-      const idx = current === null ? -1 : values.indexOf(current);
-      setPointedValue(values[idx > 0 ? idx - 1 : 0]);
-    } else if (direction === "first") {
-      setPointedValue(values[0]);
-    } else if (direction === "last") {
-      setPointedValue(values[values.length - 1]);
-    }
-  };
-  const navigateRef = useRef(navigate);
-  navigateRef.current = navigate;
-
   // Track total registered items in state so we can derive filler heights
   // declaratively. We only update when items.length > 0 — when Preact bails
   // out on Suggestion wrappers the tracker resets but children don't
@@ -593,7 +569,6 @@ const SuggestionListBox = ({
       setTotalItems(count);
     }
   });
-
   const median = medianHeightRef.current;
   const topHidden = vsState.start;
   const bottomHidden = totalItems > vsState.end ? totalItems - vsState.end : 0;
@@ -660,7 +635,26 @@ const SuggestionListBox = ({
       styleCSSVars={SuggestionListStyleCSSVars}
       // Listen for commands dispatched by SuggestionList (keyboard or popover mode).
       onnavi_listbox_navigate={(e) => {
-        navigateRef.current(e.detail.direction);
+        const direction = e.detail?.direction;
+        const values = ItemTrackerProvider.items
+          .filter((item) => !item.hidden)
+          .map((item) => item.value);
+        if (values.length === 0) {
+          return;
+        }
+        const current = pointedValueRef.current;
+        pointedByKeyboardRef.current = true;
+        if (direction === "down") {
+          const idx = current === null ? -1 : values.indexOf(current);
+          setPointedValue(values[idx < values.length - 1 ? idx + 1 : idx]);
+        } else if (direction === "up") {
+          const idx = current === null ? -1 : values.indexOf(current);
+          setPointedValue(values[idx > 0 ? idx - 1 : 0]);
+        } else if (direction === "first") {
+          setPointedValue(values[0]);
+        } else if (direction === "last") {
+          setPointedValue(values[values.length - 1]);
+        }
       }}
       onnavi_listbox_confirm={(e) => {
         const current = pointedValueRef.current;
