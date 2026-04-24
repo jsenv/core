@@ -581,35 +581,6 @@ const SuggestionListBox = ({
   const navigateRef = useRef(navigate);
   navigateRef.current = navigate;
 
-  // Listen for commands dispatched by SuggestionList (keyboard or popover mode).
-  useEffect(() => {
-    const el = listboxRef.current;
-    if (!el) {
-      return undefined;
-    }
-    const onNavigate = (e) => {
-      navigateRef.current(e.detail.direction);
-    };
-    const onConfirm = (e) => {
-      const current = pointedValueRef.current;
-      if (current !== null) {
-        selectRef.current(current);
-        e.preventDefault();
-      }
-    };
-    const onClear = () => {
-      setPointedValue(null);
-    };
-    el.addEventListener("navi_listbox_navigate", onNavigate);
-    el.addEventListener("navi_listbox_confirm", onConfirm);
-    el.addEventListener("navi_listbox_clear", onClear);
-    return () => {
-      el.removeEventListener("navi_listbox_navigate", onNavigate);
-      el.removeEventListener("navi_listbox_confirm", onConfirm);
-      el.removeEventListener("navi_listbox_clear", onClear);
-    };
-  }, []);
-
   // Track total registered items in state so we can derive filler heights
   // declaratively. We only update when items.length > 0 — when Preact bails
   // out on Suggestion wrappers the tracker resets but children don't
@@ -687,6 +658,20 @@ const SuggestionListBox = ({
       role="listbox"
       baseClassName="navi_suggestion_listbox"
       styleCSSVars={SuggestionListStyleCSSVars}
+      // Listen for commands dispatched by SuggestionList (keyboard or popover mode).
+      onnavi_listbox_navigate={(e) => {
+        navigateRef.current(e.detail.direction);
+      }}
+      onnavi_listbox_confirm={(e) => {
+        const current = pointedValueRef.current;
+        if (current !== null) {
+          selectRef.current(current);
+          e.preventDefault();
+        }
+      }}
+      onnavi_listbox_clear={() => {
+        setPointedValue(null);
+      }}
     >
       <li
         className="navi_suggestion_list_filler"
