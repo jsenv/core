@@ -527,7 +527,6 @@ const SuggestionListControlled = ({
     >
       <SuggestionListbox
         ref={listboxRef}
-        listRef={ref}
         virtualScrollState={virtualScrollState}
         medianHeightRef={medianHeightRef}
         uiAction={uiAction}
@@ -546,7 +545,6 @@ const VirtualScrollContext = createContext(null);
 // SuggestionListControlled which detects max-height and sets virtualScrollState.
 const SuggestionListbox = ({
   ref,
-  listRef,
   virtualScrollState,
   medianHeightRef,
   uiAction,
@@ -605,49 +603,6 @@ const SuggestionListbox = ({
     }
   });
 
-  useLayoutEffect(() => {
-    if (!CSS.highlights) {
-      return undefined;
-    }
-    if (!highlight) {
-      CSS.highlights.delete("navi-suggestion-match");
-      return undefined;
-    }
-    const listEl = listRef.current;
-    if (!listEl) {
-      return undefined;
-    }
-    const ranges = [];
-    const lowerHighlight = highlight.toLowerCase();
-    for (const suggestionEl of listEl.querySelectorAll("[role='option']")) {
-      const walker = document.createTreeWalker(
-        suggestionEl,
-        NodeFilter.SHOW_TEXT,
-      );
-      let node;
-      while ((node = walker.nextNode())) {
-        const text = node.textContent;
-        const lowerText = text.toLowerCase();
-        let index = lowerText.indexOf(lowerHighlight);
-        while (index !== -1) {
-          const range = new Range();
-          range.setStart(node, index);
-          range.setEnd(node, index + highlight.length);
-          ranges.push(range);
-          index = lowerText.indexOf(lowerHighlight, index + 1);
-        }
-      }
-    }
-    if (ranges.length === 0) {
-      CSS.highlights.delete("navi-suggestion-match");
-    } else {
-      CSS.highlights.set("navi-suggestion-match", new Highlight(...ranges));
-    }
-    return () => {
-      CSS.highlights.delete("navi-suggestion-match");
-    };
-  }, [highlight, children]);
-
   // Stable handler refs so the inline Preact event props (which re-create
   // their closure on every render) always read the latest state without
   // causing stale-closure bugs.
@@ -691,6 +646,7 @@ const SuggestionListbox = ({
   const suggestionContext = {
     mousePointedValue,
     keyboardPointedValue,
+    highlight,
     onHover: onMouseHover,
     onSelect: select,
   };
@@ -746,6 +702,20 @@ const SuggestionListbox = ({
   );
 };
 
+// Module-level shared Highlight instance — all visible SuggestionConcrete
+// components add/remove their own ranges to this single object.
+let naviSuggestionHighlight = null;
+const getNaviSuggestionHighlight = () => {
+  if (!CSS.highlights) {
+    return null;
+  }
+  if (!naviSuggestionHighlight) {
+    naviSuggestionHighlight = new Highlight();
+    CSS.highlights.set("navi-suggestion-match", naviSuggestionHighlight);
+  }
+  return naviSuggestionHighlight;
+};
+
 const SUGGESTION_PSEUDO_CLASSES = [":-navi-pointed", ":-navi-selected"];
 const SUGGESTION_PSEUDO_ELEMENTS = ["::highlight"];
 // Thin wrapper: tracks the suggestion (so all items register with ItemTracker
@@ -790,8 +760,13 @@ const SuggestionConcrete = ({
 }) => {
   import.meta.css = css;
 
-  const { mousePointedValue, keyboardPointedValue, onHover, onSelect } =
-    useContext(SuggestionListboxContext);
+  const {
+    mousePointedValue,
+    keyboardPointedValue,
+    highlight,
+    onHover,
+    onSelect,
+  } = useContext(SuggestionListboxContext);
 
   const isPointed =
     keyboardPointedValue === value || mousePointedValue === value;
@@ -808,6 +783,41 @@ const SuggestionConcrete = ({
     }
     suggestionEl.scrollIntoView({ block: "nearest" });
   }, [isKeyboardPointed]);
+
+  useLayoutEffect(() => {
+    const hl = getNaviSuggestionHighlight();
+    if (!hl) {
+      return undefined;
+    }
+    const suggestionEl = suggestionRef.current;
+    if (!suggestionEl || !highlight) {
+      return undefined;
+    }
+    const ownRanges = [];
+    const lowerHighlight = highlight.toLowerCase();
+    const walker = document.createTreeWalker(
+      suggestionEl,
+      NodeFilter.SHOW_TEXT,
+    );
+    let node;
+    while ((node = walker.nextNode())) {
+      const lowerText = node.textContent.toLowerCase();
+      let index = lowerText.indexOf(lowerHighlight);
+      while (index !== -1) {
+        const range = new Range();
+        range.setStart(node, index);
+        range.setEnd(node, index + highlight.length);
+        hl.add(range);
+        ownRanges.push(range);
+        index = lowerText.indexOf(lowerHighlight, index + 1);
+      }
+    }
+    return () => {
+      for (const range of ownRanges) {
+        hl.delete(range);
+      }
+    };
+  }, [highlight, children]);
 
   return (
     <Box
