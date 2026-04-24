@@ -546,26 +546,33 @@ export const SuggestionList = ({
 const SUGGESTION_PSEUDO_CLASSES = [":-navi-pointed", ":-navi-selected"];
 const SUGGESTION_PSEUDO_ELEMENTS = ["::highlight"];
 
-// Thin wrapper: reads the virtual scroll counter and bails out early if the
-// cap is exceeded. Only the first MAX_DOM_ITEMS suggestions instantiate the
-// real SuggestionInner (and thus run all its hooks).
-export const Suggestion = (props) => {
+// Thin wrapper: tracks the suggestion (so all items register with ItemTracker
+// regardless of virtual scroll), then bails out early if the cap is exceeded.
+// Only the first MAX_DOM_ITEMS suggestions mount SuggestionConcrete.
+export const Suggestion = ({ value, hidden, ...rest }) => {
+  const suggestionId = useId();
+  useTrackSuggestion({ value, suggestionId, hidden });
   const vsCtx = useContext(VirtualScrollContext);
+  const id = rest.id || suggestionId;
   if (vsCtx) {
     vsCtx.seen++;
     if (vsCtx.seen > MAX_DOM_ITEMS) {
       return null;
     }
   }
-  return <SuggestionInner {...props} />;
+  return <SuggestionConcrete value={value} hidden={hidden} id={id} {...rest} />;
 };
 
-const SuggestionInner = ({ value, selected, hidden, children, ...rest }) => {
+const SuggestionConcrete = ({
+  value,
+  selected,
+  hidden,
+  id,
+  children,
+  ...rest
+}) => {
   import.meta.css = css;
 
-  const suggestionId = useId();
-  const id = rest.id || suggestionId;
-  useTrackSuggestion({ value, suggestionId: id, hidden });
   const { pointedValue, setPointedValue, onSelect } = useContext(
     SuggestionListContext,
   );
@@ -585,7 +592,7 @@ const SuggestionInner = ({ value, selected, hidden, children, ...rest }) => {
       as="li"
       ref={suggestionRef}
       baseClassName="navi_suggestion"
-      id={suggestionId}
+      id={id}
       role="option"
       aria-selected={selected}
       aria-hidden={hidden ? true : undefined}
