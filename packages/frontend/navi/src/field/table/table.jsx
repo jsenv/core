@@ -322,13 +322,17 @@ export const Colgroup = ({ children }) => {
     </colgroup>
   );
 };
-export const Col = ({ id, width, immovable, backgroundColor }) => {
-  const columnIndex = useRegisterColumn({
+export const Col = ({ id, index, width, immovable, backgroundColor }) => {
+  const columnIndex = useRegisterColumn(
     id,
-    width,
-    immovable,
-    backgroundColor,
-  });
+    {
+      id,
+      width,
+      immovable,
+      backgroundColor,
+    },
+    index,
+  );
   const { stickyLeftFrontierColumnIndex } = useContext(TableStickyContext);
   const isStickyLeft = columnIndex <= stickyLeftFrontierColumnIndex;
 
@@ -364,7 +368,7 @@ export const Tbody = ({ children }) => {
     </tbody>
   );
 };
-export const Tr = ({ id, height, children }) => {
+export const Tr = ({ id, index, height, children }) => {
   const { selectedRowIds, selectionController } = useContext(
     TableSelectionContext,
   );
@@ -376,7 +380,7 @@ export const Tr = ({ id, height, children }) => {
     // we need strings as this value is going to be used in data attributes and when generating cell ids
     id = String(id);
   }
-  const rowIndex = useRegisterRow({ id, height });
+  const rowIndex = useRegisterRow(id, { id, height }, index);
   const row = useRowByIndex(rowIndex);
   const ColumnConsumerProvider = useContext(ColumnConsumerProviderContext);
 

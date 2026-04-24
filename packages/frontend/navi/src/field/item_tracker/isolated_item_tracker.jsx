@@ -117,8 +117,11 @@ export const createIsolatedItemTracker = () => {
     return [ItemProducerProvider, ItemConsumerProvider, items];
   };
 
-  // Hook for producers to register items (ref-based, no re-renders)
-  const useTrackIsolatedItem = (data) => {
+  // Hook for producers to register items (ref-based, no re-renders).
+  // id: stable identity across re-renders (same concept as Preact's key prop).
+  // explicitIndex: required when items can be reordered (e.g. after sort/filter),
+  // because Preact renders keyed components in old DOM order, not new array order.
+  const useTrackIsolatedItem = (id, data, explicitIndex) => {
     const listRenderId = useContext(ProducerListRenderIdContext);
     const itemCountRef = useContext(ProducerItemCountRefContext);
     const itemTracker = useContext(ProducerTrackerContext);
@@ -135,9 +138,11 @@ export const createIsolatedItemTracker = () => {
     }
 
     listRenderIdRef.current = listRenderId;
-    const itemCount = itemCountRef.current;
-    const itemIndex = itemCount;
-    itemCountRef.current = itemIndex + 1;
+    const itemIndex =
+      explicitIndex !== undefined ? explicitIndex : itemCountRef.current;
+    if (explicitIndex === undefined) {
+      itemCountRef.current = itemIndex + 1;
+    }
     itemIndexRef.current = itemIndex;
     dataRef.current = data;
     itemTracker.registerItem(itemIndex, data);

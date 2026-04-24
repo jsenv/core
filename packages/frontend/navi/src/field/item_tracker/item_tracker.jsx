@@ -26,8 +26,8 @@ import { useContext, useLayoutEffect, useMemo, useRef } from "preact/hooks";
  *     <RowTrackerProvider>
  *       <table>
  *         <tbody>
- *           {rows.map(({ id, name, color }) => (
- *             <TableRow key={id} name={name} color={color}>
+ *           {rows.map(({ id, name, color }, index) => (
+ *             <TableRow key={id} id={id} index={index} name={name} color={color}>
  *               <TableCell column="name" />
  *               <TableCell column="color" />
  *             </TableRow>
@@ -39,8 +39,8 @@ import { useContext, useLayoutEffect, useMemo, useRef } from "preact/hooks";
  *   );
  * }
  *
- * function TableRow({ name, color, children }) {
- *   const rowIndex = useRegisterRow({ name, color });
+ * function TableRow({ id, name, color, children }) {
+ *   const rowIndex = useRegisterRow(id, { name, color });
  *   return (
  *     <tr>
  *       <TableRowIndexContext.Provider value={rowIndex}>
@@ -126,17 +126,15 @@ export const createItemTracker = () => {
     return tracker.ItemTrackerProvider;
   };
 
-  const useTrackItem = (explicitIndex, data) => {
+  // id: stable identity for this item across re-renders — the same concept as
+  // Preact's `key` prop (which is stripped from props and inaccessible here).
+  // Callers must provide a unique id; for suggestions this is the value.
+  const useTrackItem = (id, data, explicitIndex) => {
     const tracker = useContext(ItemTrackerContext);
     if (!tracker) {
       throw new Error(
         "useTrackItem must be used within SimpleItemTrackerProvider",
       );
-    }
-    // Stable identity per component instance — survives re-renders.
-    const stableIdRef = useRef(null);
-    if (stableIdRef.current === null) {
-      stableIdRef.current = Symbol();
     }
     // If an explicit index is provided, use it directly (required when items
     // can be reordered, e.g. after filtering). Otherwise fall back to
@@ -151,9 +149,9 @@ export const createItemTracker = () => {
     // When Preact bails out on this item, this effect does not fire at all,
     // which is exactly what we want: committedItems stays unchanged.
     useLayoutEffect(() => {
-      tracker.commitItem(stableIdRef.current, index, data);
+      tracker.commitItem(id, index, data);
       return () => {
-        tracker.decommitItem(stableIdRef.current);
+        tracker.decommitItem(id);
       };
     });
     return index;
