@@ -68,6 +68,10 @@ const css = /* css */ `
         #d2e3fc,
         #174ea6
       );
+
+      /* Highlight (CSS Highlight API match) */
+      --list-item-color-highlight: inherit;
+      --list-item-background-color-highlight: #ffe066;
     }
     .navi_list_group_label {
       --list-group-label-background-color: var(--list-background-color);
@@ -464,6 +468,9 @@ export const ListItem = ({ itemId, hidden, children, ...rest }) => {
       <Box
         as="li"
         baseClassName="navi_list_item"
+        styleCSSVars={LIST_ITEM_STYLE_CSS_VARS}
+        pseudoClasses={LIST_ITEM_PSEUDO_CLASSES}
+        pseudoElements={LIST_ITEM_PSEUDO_ELEMENTS}
         {...{ [LIST_ITEM_ATTR]: "" }}
         {...rest}
       >
@@ -472,6 +479,31 @@ export const ListItem = ({ itemId, hidden, children, ...rest }) => {
     </>
   );
 };
+const LIST_ITEM_STYLE_CSS_VARS = {
+  "padding": "--list-item-padding",
+  "color": "--list-item-color",
+  "backgroundColor": "--list-item-background-color",
+  "fontWeight": "--list-item-font-weight",
+  ":-navi-pointed": {
+    color: "--list-item-color-pointed",
+    backgroundColor: "--list-item-background-color-pointed",
+  },
+  ":hover": {
+    color: "--list-item-color-hover",
+    backgroundColor: "--list-item-background-color-hover",
+  },
+  ":-navi-selected": {
+    color: "--list-item-color-selected",
+    backgroundColor: "--list-item-background-color-selected",
+    fontWeight: "--list-item-font-weight-selected",
+  },
+  "::highlight": {
+    color: "--suggestion-color-highlight",
+    backgroundColor: "--suggestion-background-color-highlight",
+  },
+};
+const LIST_ITEM_PSEUDO_CLASSES = [":-navi-pointed", ":-navi-selected"];
+const LIST_ITEM_PSEUDO_ELEMENTS = ["::highlight"];
 
 /**
  * ListItemPresentation — a non-tracked <li role="presentation"> for arbitrary

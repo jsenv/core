@@ -8,7 +8,6 @@ import {
   useState,
 } from "preact/hooks";
 
-import { Box } from "../box/box.jsx";
 import { useKeyboardShortcuts } from "../keyboard/keyboard_shortcuts.js";
 import { List, ListInteractionContext, ListItem } from "../list/list.jsx";
 
@@ -39,8 +38,8 @@ const css = /* css */ `
   }
 
   ::highlight(navi-suggestion-match) {
-    color: var(--suggestion-color-highlight);
-    background-color: var(--suggestion-background-color-highlight);
+    color: var(--list-item-color-highlight);
+    background-color: var(--list-item-background-color-highlight);
   }
 `;
 
@@ -311,77 +310,26 @@ const SuggestionListControlled = ({
   };
 
   return (
-    <Box
+    <List
       id={id}
       maxHeight={maxHeight}
       expandX={expandX}
       {...rest}
       ref={ref}
-      baseClassName="navi_suggestion_list"
-      onnavi_suggestion_list_navigate={forwardToListbox("navi_list_navigate")}
-      onnavi_suggestion_list_confirm={forwardToListbox("navi_list_confirm")}
-      onnavi_suggestion_list_clear={forwardToListbox("navi_list_clear")}
-    >
-      <SuggestionListbox
-        ref={listboxRef}
-        id={listboxIdFromContext}
-        renderBudget={renderBudget}
-        itemHeightEstimation={itemHeightEstimation}
-        itemHeightIsVariable={itemHeightIsVariable}
-        outerRef={ref}
-        interactionContext={interactionContext}
-        anchorValueRef={anchorValueRef}
-        onNavigateRef={onNavigateRef}
-        uiAction={uiAction}
-        emptyState={emptyState}
-        separator={separator}
-        expandX={expandX}
-        setMousePointedValue={setMousePointedValue}
-        setKeyboardPointedValue={setKeyboardPointedValue}
-        setAnchorValue={setAnchorValue}
-      >
-        {children}
-      </SuggestionListbox>
-    </Box>
-  );
-};
-
-// The inner <ul role="listbox"> — handles navi_list_* events and wires
-// the generic List with suggestion ARIA attributes.
-const SuggestionListbox = ({
-  ref,
-  id,
-  outerRef,
-  renderBudget,
-  itemHeightEstimation,
-  itemHeightIsVariable,
-  interactionContext,
-  anchorValueRef,
-  onNavigateRef,
-  uiAction,
-  emptyState,
-  separator,
-  expandX,
-  setMousePointedValue,
-  setKeyboardPointedValue,
-  setAnchorValue,
-  children,
-}) => {
-  return (
-    <List
-      ref={outerRef}
-      innerRef={ref}
+      innerRef={listboxRef}
+      className="navi_suggestion_list"
       renderBudget={renderBudget}
       itemHeightEstimation={itemHeightEstimation}
       itemHeightIsVariable={itemHeightIsVariable}
       emptyState={emptyState}
       separator={separator}
       interactionContext={interactionContext}
-      expandX={expandX}
+      onnavi_suggestion_list_navigate={forwardToListbox("navi_list_navigate")}
+      onnavi_suggestion_list_confirm={forwardToListbox("navi_list_confirm")}
+      onnavi_suggestion_list_clear={forwardToListbox("navi_list_clear")}
       listProps={{
-        id,
+        id: listboxIdFromContext,
         role: "listbox",
-        className: "navi_suggestion_listbox",
         onnavi_list_navigate: (e) => {
           onNavigateRef.current(e);
         },
@@ -418,29 +366,11 @@ const getNaviSuggestionHighlight = () => {
 };
 
 const SuggestionStyleCSSVars = {
-  "padding": "--list-item-padding",
-  "color": "--list-item-color",
-  "backgroundColor": "--list-item-background-color",
-  "fontWeight": "--list-item-font-weight",
-  ":-navi-pointed": {
-    color: "--list-item-color-pointed",
-    backgroundColor: "--list-item-background-color-pointed",
-  },
-  ":hover": {
-    color: "--list-item-color-hover",
-    backgroundColor: "--list-item-background-color-hover",
-  },
-  ":-navi-selected": {
-    color: "--list-item-color-selected",
-    backgroundColor: "--list-item-background-color-selected",
-    fontWeight: "--list-item-font-weight-selected",
-  },
   "::highlight": {
-    color: "--suggestion-color-highlight",
-    backgroundColor: "--suggestion-background-color-highlight",
+    color: "--list-item-color-highlight",
+    backgroundColor: "--list-item-background-color-highlight",
   },
 };
-const SUGGESTION_PSEUDO_CLASSES = [":-navi-pointed", ":-navi-selected"];
 const SUGGESTION_PSEUDO_ELEMENTS = ["::highlight"];
 
 /**
@@ -532,7 +462,7 @@ export const Suggestion = ({ value, hidden, selected, children, ...rest }) => {
       ref={suggestionRef}
       itemId={id}
       hidden={hidden}
-      baseClassName="navi_list_item navi_suggestion"
+      baseClassName="navi_suggestion"
       id={id}
       role="option"
       aria-selected={selected}
@@ -541,9 +471,8 @@ export const Suggestion = ({ value, hidden, selected, children, ...rest }) => {
         ":-navi-pointed": isPointed,
         ":-navi-selected": selected,
       }}
-      pseudoClasses={SUGGESTION_PSEUDO_CLASSES}
-      pseudoElements={SUGGESTION_PSEUDO_ELEMENTS}
       styleCSSVars={SuggestionStyleCSSVars}
+      pseudoElements={SUGGESTION_PSEUDO_ELEMENTS}
       onMouseEnter={(e) => {
         if (hidden) {
           return;
