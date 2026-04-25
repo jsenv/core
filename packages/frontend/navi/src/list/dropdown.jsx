@@ -74,27 +74,23 @@ const css = /* css */ `
   }
 
   .navi_dropdown_dialog {
+    max-height: 95dvh;
     margin: auto;
     padding: 0;
-    background: transparent;
+    background: white;
     border: none;
     border-radius: 8px;
-    overflow: visible;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+    overflow: hidden;
 
-    /* Center in viewport */
+    &[open] {
+      display: flex;
+      flex-direction: column;
+    }
+
     &::backdrop {
       background: rgba(0, 0, 0, 0.4);
     }
-  }
-
-  .navi_dropdown_dialog_content {
-    display: flex;
-    max-height: 95dvh;
-    flex-direction: column;
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
-    overflow: auto;
   }
 `;
 
@@ -202,7 +198,7 @@ export const Dropdown = ({
         onClose={closeDialog}
       >
         <DropdownCloseContext.Provider value={closeDialog}>
-          <div className="navi_dropdown_dialog_content">{children}</div>
+          {children}
         </DropdownCloseContext.Provider>
       </dialog>
     </>
