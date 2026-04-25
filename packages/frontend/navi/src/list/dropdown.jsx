@@ -91,6 +91,17 @@ const css = /* css */ `
     &::backdrop {
       background: rgba(0, 0, 0, 0.4);
     }
+
+    /* When the suggestion list inside the dialog has keyboard focus, show the
+       focus ring on the dialog itself and suppress it on the list container. 
+       It's visually better */
+    &:has(.navi_list_container:focus-visible) {
+      outline: 1px solid var(--navi-focus-outline-color, #005fcc);
+      outline-offset: 1px;
+    }
+    & .navi_list_container:focus-visible {
+      outline: none;
+    }
   }
 `;
 
