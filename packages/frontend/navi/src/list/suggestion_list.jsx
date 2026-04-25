@@ -1,4 +1,8 @@
-import { pickPositionRelativeTo, visibleRectEffect } from "@jsenv/dom";
+import {
+  pickPositionRelativeTo,
+  scrollIntoViewWithStickyAwareness,
+  visibleRectEffect,
+} from "@jsenv/dom";
 import { createContext } from "preact";
 import {
   useContext,
@@ -484,7 +488,7 @@ export const Suggestion = ({ value, hidden, selected, children, ...rest }) => {
     if (!suggestionEl) {
       return;
     }
-    suggestionEl.scrollIntoView({ block: "nearest" });
+    scrollIntoViewWithStickyAwareness(suggestionEl);
   }, [isKeyboardPointed]);
 
   useLayoutEffect(() => {
