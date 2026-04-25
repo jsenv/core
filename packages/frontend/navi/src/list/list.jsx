@@ -422,10 +422,10 @@ const UnorderedList = ({
  *   hidden  — when true, item is excluded from the visible count and not rendered
  *   ...rest — forwarded to the rendered <li> element
  */
-export const ListItem = ({ itemId, hidden, children, ...rest }) => {
+export const ListItem = ({ id, value, hidden, children, ...rest }) => {
   const idDefault = useId();
-  const id = itemId || idDefault;
-  const index = useTrackListItem(id, { id, hidden });
+  id = id || idDefault;
+  const index = useTrackListItem(id, { id, hidden, value });
   const renderWindow = useContext(RenderWindowContext);
   const separator = useContext(SeparatorContext);
 

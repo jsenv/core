@@ -194,7 +194,7 @@
             <p>Each suggestion renders the country name + region badge.</p>
             <SuggestionList
               style={{ maxHeight: "220px" }}
-              onChange={setSelected}
+              uiAction={setSelected}
             >
               <Suggestion noWrap style={{ backgroundColor: SUGGESTION_BG }}>
                 A very large suggestion to test how it behaves when the text is
@@ -271,7 +271,7 @@
             />
             <SuggestionList
               style={{ maxHeight: "220px" }}
-              onChange={setSelected}
+              uiAction={setSelected}
               highlight={filter}
               hidden={filtered.length === 0}
               expandX
@@ -313,7 +313,7 @@
                 backgroundColor: "#1a1a2e",
                 borderColor: "#e94560",
               }}
-              onChange={setSelected}
+              uiAction={setSelected}
               highlight="a"
             >
               {FRUITS.map((fruit) => (
@@ -396,7 +396,7 @@
             />
             <SuggestionList
               style={{ maxHeight: "220px" }}
-              onChange={setSelected}
+              uiAction={setSelected}
               highlight={filter}
             >
               {sorted.map((fruit) => (
@@ -489,7 +489,7 @@
             )}
             <SuggestionList
               style={{ maxHeight: "280px" }}
-              onChange={setSelected}
+              uiAction={setSelected}
               highlight={filter}
             >
               {groups.map((group) => (
@@ -545,7 +545,7 @@
             <p>Options organized into labeled groups using SuggestionGroup.</p>
             <SuggestionList
               style={{ maxHeight: "280px" }}
-              onChange={setSelected}
+              uiAction={setSelected}
               expandX
             >
               <Suggestion>
@@ -620,7 +620,7 @@
             />
             <SuggestionList
               style={{ maxHeight: "300px" }}
-              onChange={setSelected}
+              uiAction={setSelected}
               highlight={filter}
             >
               <ListItemGroup
@@ -716,7 +716,7 @@
             <SuggestionList
               ref={listRef}
               popover
-              onChange={(value) => {
+              uiAction={(value) => {
                 setSelected(value);
                 hidePopover();
               }}

@@ -245,8 +245,8 @@ const SuggestionListControlled = ({
       itemHeightIsVariable={itemHeightIsVariable}
       onnavi_list_nav={(e) => {
         const { direction, event = e } = e.detail;
-        const values = itemsRef.current;
-        if (values.length === 0) {
+        const items = itemsRef.current;
+        if (items.length === 0) {
           return;
         }
         const current = anchorValueRef.current;
@@ -256,6 +256,7 @@ const SuggestionListControlled = ({
           setKeyboardPointedValue(value);
           setAnchorValue(value);
         };
+        const values = items.map((item) => item.value);
         if (direction === "down") {
           const idx = current === null ? -1 : values.indexOf(current);
           const belowValue = values[idx < values.length - 1 ? idx + 1 : idx];
@@ -395,7 +396,8 @@ export const Suggestion = ({ value, hidden, selected, children, ...rest }) => {
       role="option"
       aria-selected={selected}
       hidden={hidden}
-      data-value={value}
+      id={value}
+      value={value}
       data-anchor={isKeyboardPointed ? "" : undefined}
       baseClassName="navi_list_item navi_suggestion"
       basePseudoState={{
