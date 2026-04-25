@@ -515,7 +515,6 @@ const SuggestionListControlled = ({
       bottomFillerRef.current.style.height = `${(totalItems - current.end) * itemHeight}px`;
     }
   });
-
   // Activate or deactivate the render window depending on item count.
   // Runs every render so it reacts to filter changes (items added/removed).
   useLayoutEffect(() => {
@@ -620,32 +619,9 @@ const SuggestionListControlled = ({
 
   // Forward navi_suggestion_list_* events (dispatched by input or standalone keyboard
   // shortcuts) to the internal listbox as navi_list_* events.
-  useLayoutEffect(() => {
-    const el = ref.current;
-    const listbox = listboxRef.current;
-    if (!el || !listbox) {
-      return undefined;
-    }
-    const forward = (customEventName) => (e) => {
-      dispatchCustomEventToListbox(
-        { current: listbox },
-        e,
-        customEventName,
-        e.detail,
-      );
-    };
-    const onNavigate = forward("navi_list_navigate");
-    const onConfirm = forward("navi_list_confirm");
-    const onClear = forward("navi_list_clear");
-    el.addEventListener("navi_suggestion_list_navigate", onNavigate);
-    el.addEventListener("navi_suggestion_list_confirm", onConfirm);
-    el.addEventListener("navi_suggestion_list_clear", onClear);
-    return () => {
-      el.removeEventListener("navi_suggestion_list_navigate", onNavigate);
-      el.removeEventListener("navi_suggestion_list_confirm", onConfirm);
-      el.removeEventListener("navi_suggestion_list_clear", onClear);
-    };
-  });
+  const forward = (customEventName) => (e) => {
+    dispatchCustomEventToListbox(listboxRef, e, customEventName, e.detail);
+  };
 
   return (
     <Box
@@ -655,6 +631,9 @@ const SuggestionListControlled = ({
       ref={ref}
       baseClassName="navi_suggestion_list"
       styleCSSVars={SuggestionListStyleCSSVars}
+      onnavi_suggestion_list_navigate={forward("navi_list_navigate")}
+      onnavi_suggestion_list_confirm={forward("navi_list_confirm")}
+      onnavi_suggestion_list_clear={forward("navi_list_clear")}
     >
       <SuggestionListbox
         ref={listboxRef}
