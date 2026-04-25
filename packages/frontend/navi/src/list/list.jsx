@@ -57,6 +57,30 @@ const css = /* css */ `
       letter-spacing: 0.05em;
     }
   }
+
+  /* Virtual scroll fillers — must remain invisible.
+     The browser may briefly flash them during scroll before the render window
+     updates, so giving them a visible background would cause visual glitches. */
+  .navi_list_virtual_filler {
+    height: 0px;
+    list-style: none;
+    /* background: pink; */
+  }
+
+  /* Empty state — hidden by default, shown when no list items are rendered. */
+  .navi_list_empty {
+    display: none;
+  }
+  .navi_list:not(:has([data-list-item])) {
+    .navi_list_empty {
+      display: block;
+    }
+  }
+
+  /* Hide groups that have no rendered items. */
+  li[role="presentation"]:not(:has([data-list-item])) {
+    display: none;
+  }
 `;
 
 /**
@@ -231,7 +255,7 @@ export const List = ({
   }, [renderBudget]);
 
   return (
-    <Box {...rest} ref={outerRef}>
+    <Box {...rest} ref={outerRef} baseClassName="navi_list">
       <Listbox
         ref={listboxRef}
         ItemTrackerProvider={ItemTrackerProvider}

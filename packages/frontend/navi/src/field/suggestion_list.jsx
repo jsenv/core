@@ -174,32 +174,15 @@ const css = /* css */ `
       display: none;
     }
   }
-  .navi_list_empty {
-    display: none;
+  /* Show the empty state with suggestion-specific appearance */
+  .navi_suggestion_list .navi_list_empty {
     padding: var(--suggestion-padding);
     color: var(--suggestion-group-label-color);
     font-size: 0.9em;
     text-align: center;
     user-select: none;
   }
-  /* Show the empty state only when there are no visible suggestions */
-  .navi_suggestion_list:not(:has([role="option"]:not([hidden]))) {
-    .navi_list_empty {
-      display: block;
-    }
-  }
-  /* Hide groups that have no rendered options (all their suggestions are filtered out). */
-  li[role="presentation"]:not(:has([role="option"])) {
-    display: none;
-  }
-  /* Virtual scroll fillers — must remain invisible.
-     The browser may briefly flash them during scroll before the render window
-     updates, so giving them a visible background would cause visual glitches. */
-  .navi_list_virtual_filler {
-    height: 0px;
-    list-style: none;
-    /* background: pink; */
-  }
+  /* Virtual scroll fillers and group hiding are handled by list.jsx */
 `;
 
 const dispatchCustomEventToListbox = (
