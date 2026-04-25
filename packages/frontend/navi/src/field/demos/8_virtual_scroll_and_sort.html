@@ -21,6 +21,7 @@
     <div id="app"></div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
+      import { useState, useRef, useEffect } from "preact/hooks";
 
       /**
        * Virtual Scroll + Sort Demo
@@ -43,7 +44,6 @@
         SuggestionList,
         SuggestionListCombo,
       } from "@jsenv/navi";
-      import { useState } from "preact/hooks";
 
       const ALL_ITEMS = Array.from({ length: 200 }, (_, i) => {
         const names = [
@@ -101,10 +101,132 @@
         return [...starts, ...contains, ...rest];
       };
 
+      const StatsBar = ({ totalItems, domItems }) => {
+        const savedFromDom = totalItems - domItems;
+        return (
+          <div
+            style={{
+              display: "flex",
+              gap: "16px",
+              marginBottom: "10px",
+              padding: "10px 14px",
+              color: "#d4d4d4",
+              fontSize: "0.85rem",
+              fontFamily: "monospace",
+              background: "#1e1e1e",
+              borderRadius: "6px",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: "2px",
+              }}
+            >
+              <span
+                style={{
+                  color: "#888",
+                  fontSize: "0.7rem",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                }}
+              >
+                Total items
+              </span>
+              <span style={{ fontWeight: "bold", fontSize: "1.1rem" }}>
+                {totalItems}
+              </span>
+            </div>
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: "2px",
+              }}
+            >
+              <span
+                style={{
+                  color: "#888",
+                  fontSize: "0.7rem",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                }}
+              >
+                In DOM
+              </span>
+              <span
+                style={{
+                  fontWeight: "bold",
+                  fontSize: "1.1rem",
+                  color: domItems < totalItems ? "#4ec9b0" : undefined,
+                }}
+              >
+                {domItems}
+              </span>
+            </div>
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: "2px",
+              }}
+            >
+              <span
+                style={{
+                  color: "#888",
+                  fontSize: "0.7rem",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                }}
+              >
+                Saved from DOM
+              </span>
+              <span
+                style={{
+                  fontWeight: "bold",
+                  fontSize: "1.1rem",
+                  color: savedFromDom > 0 ? "#ce9178" : undefined,
+                }}
+              >
+                {savedFromDom}
+              </span>
+            </div>
+          </div>
+        );
+      };
+
       export const App = () => {
         const [filter, setFilter] = useState("");
         const [selected, setSelected] = useState(null);
+        const [domItems, setDomItems] = useState(0);
+        const listRef = useRef(null);
         const items = sortItems(ALL_ITEMS, filter);
+
+        useEffect(() => {
+          const updateCount = () => {
+            if (!listRef.current) {
+              return;
+            }
+            setDomItems(
+              listRef.current.querySelectorAll("[role='option']").length,
+            );
+          };
+          updateCount();
+          const observer = new MutationObserver(updateCount);
+          if (listRef.current) {
+            observer.observe(listRef.current, {
+              childList: true,
+              subtree: true,
+            });
+          }
+          return () => {
+            observer.disconnect();
+          };
+        }, []);
 
         return (
           <div>
@@ -113,6 +235,7 @@
               200 items — virtual scroll active. Typing re-sorts: matching items
               bubble up (starts-with first, then contains), nothing is hidden.
             </p>
+            <StatsBar totalItems={ALL_ITEMS.length} domItems={domItems} />
             {selected && (
               <p style="font-size:13px;color:#1a73e8">
                 Selected: <b>{selected}</b>
@@ -122,9 +245,14 @@
               <Input
                 placeholder="Sort suggestions…"
                 expandX
-                onInput={(e) => setFilter(e.target.value)}
+                uiAction={(e) => setFilter(e.target.value)}
               />
-              <SuggestionList maxHeight="220px" uiAction={setSelected} expandX>
+              <SuggestionList
+                ref={listRef}
+                maxHeight="220px"
+                uiAction={setSelected}
+                expandX
+              >
                 {items.map((item) => (
                   <Suggestion key={item} value={item}>
                     {item}
