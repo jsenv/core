@@ -221,6 +221,7 @@ export const List = ({
   tabIndex,
   popover,
   expandX,
+  maxHeight,
   ...rest
 }) => {
   import.meta.css = css;
@@ -370,11 +371,18 @@ export const List = ({
   }, [renderBudget]);
 
   return (
-    <div
+    <Box
       className="navi_list_container"
       tabIndex={tabIndex}
       popover={popover}
       data-expand-x={expandX ? "" : undefined}
+      expandX={expandX}
+      maxHeight={maxHeight}
+      styleCssVars={LIST_STYLE_CSS_VARS}
+      pseudoClasses={LIST_PSEUDO_CLASSES}
+      basePseudoState={{
+        ":-navi-emtpy": false,
+      }}
     >
       <UnorderedList
         ref={ref}
@@ -389,10 +397,17 @@ export const List = ({
       >
         {children}
       </UnorderedList>
-    </div>
+    </Box>
   );
 };
-
+const LIST_STYLE_CSS_VARS = {
+  "maxHeight": "--list-max-height",
+  ":-navi-empty": {
+    color: "--list-item-color-hover",
+    backgroundColor: "--list-item-background-color-hover",
+  },
+};
+const LIST_PSEUDO_CLASSES = [":-navi-empty"];
 // Inner <ul> — hosts the fillers + items.
 const UnorderedList = ({
   ItemTrackerProvider,
