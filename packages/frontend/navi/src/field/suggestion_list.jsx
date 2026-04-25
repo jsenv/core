@@ -477,8 +477,9 @@ const SuggestionListControlled = ({
   });
 
   // Scroll listener — slides the render window to follow the user's scroll
-  // position using actual DOM element positions and scroll direction.
-  const prevScrollTopRef = useRef(0);
+  // position using scroll ratio to place the window around the proportional
+  // position in the full list. This is idempotent: any number of scroll events
+  // at the same scrollTop produce the same window, preventing runaway sliding.
   useLayoutEffect(() => {
     const listEl = ref.current;
     if (!listEl) {
@@ -493,65 +494,38 @@ const SuggestionListControlled = ({
       if (!current) {
         return;
       }
-      const newScrollTop = listEl.scrollTop;
-      const scrollingDown = newScrollTop >= prevScrollTopRef.current;
-      prevScrollTopRef.current = newScrollTop;
+      const scrollTop = listEl.scrollTop;
+      const maxScrollTop = listEl.scrollHeight - listEl.clientHeight;
 
-      // Edge case: snap to the absolute start or end of the full list.
-      // Without fillers the scrollHeight only reflects the renderBudget items,
-      // so the user can never naturally scroll to items outside the window.
-      // We detect "at top" / "at bottom" and jump the window to the boundary.
-      const atTop = newScrollTop === 0;
-      const atBottom =
-        newScrollTop >= listEl.scrollHeight - listEl.clientHeight - 1;
-
-      const options = Array.from(listEl.querySelectorAll("[role='option']"));
-      if (options.length === 0) {
+      // Snap to absolute boundaries when at the edges.
+      if (scrollTop <= 0) {
+        if (current.start === 0) {
+          return;
+        }
+        setRenderWindow({ start: 0, end: renderBudget });
         return;
       }
-      const listRect = listEl.getBoundingClientRect();
-      const buffer = Math.floor(renderBudget * 0.5);
+      if (scrollTop >= maxScrollTop - 1) {
+        if (current.end === totalItems) {
+          return;
+        }
+        setRenderWindow({
+          start: Math.max(0, totalItems - renderBudget),
+          end: totalItems,
+        });
+        return;
+      }
 
-      let newStart;
-      let newEnd;
-      if (atTop) {
-        newStart = 0;
-        newEnd = renderBudget;
-      } else if (atBottom) {
-        newEnd = totalItems;
+      // Use scroll ratio to find the center of the visible window in the full
+      // list, then centre the render window around it. This is a pure function
+      // of scrollTop, so multiple scroll events at the same position are stable.
+      const scrollRatio = scrollTop / maxScrollTop;
+      const centerAbsIndex = Math.round(scrollRatio * (totalItems - 1));
+      const half = Math.floor(renderBudget / 2);
+      let newStart = Math.max(0, centerAbsIndex - half);
+      let newEnd = Math.min(totalItems, newStart + renderBudget);
+      if (newEnd === totalItems) {
         newStart = Math.max(0, totalItems - renderBudget);
-      } else if (scrollingDown) {
-        // Anchor to last visible item: find last option whose top is above
-        // the list's bottom edge.
-        let lastVisibleRelIndex = options.length - 1;
-        for (let i = options.length - 1; i >= 0; i--) {
-          if (options[i].getBoundingClientRect().top < listRect.bottom) {
-            lastVisibleRelIndex = i;
-            break;
-          }
-        }
-        const lastVisibleAbsIndex = current.start + lastVisibleRelIndex;
-        // Keep 30% of budget ahead of the last visible item as a lookahead buffer.
-        const idealEnd = lastVisibleAbsIndex + buffer + 1;
-        newEnd = Math.min(totalItems, idealEnd);
-        newStart = Math.max(0, newEnd - renderBudget);
-      } else {
-        // Anchor to first visible item: find first option whose bottom edge
-        // is at or below the list's top edge.
-        let firstVisibleRelIndex = 0;
-        for (let i = 0; i < options.length; i++) {
-          if (options[i].getBoundingClientRect().bottom > listRect.top) {
-            firstVisibleRelIndex = i;
-            break;
-          }
-        }
-        const firstVisibleAbsIndex = current.start + firstVisibleRelIndex;
-        // Keep 30% of budget behind the first visible item as a lookbehind buffer.
-        newStart = Math.max(0, firstVisibleAbsIndex - buffer);
-        newEnd = Math.min(totalItems, newStart + renderBudget);
-        if (newEnd === totalItems) {
-          newStart = Math.max(0, totalItems - renderBudget);
-        }
       }
 
       if (current.start === newStart && current.end === newEnd) {
