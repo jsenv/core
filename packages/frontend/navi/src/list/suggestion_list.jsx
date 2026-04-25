@@ -9,6 +9,7 @@ import {
 } from "preact/hooks";
 
 import { useKeyboardShortcuts } from "../keyboard/keyboard_shortcuts.js";
+import { useIsInsideDropdown } from "./dropdown.jsx";
 import { List, ListItem, RenderWindowContext } from "./list.jsx";
 
 // Provided when SuggestionList has withFilter={true} (or by SuggestionListCombo).
@@ -71,22 +72,11 @@ const dispatchCustomEventToList = (
 // (e.g. in a <ListItemHeader>) auto-connects to the filter.
 // `lockSize` (only meaningful with `withFilter`) locks the container dimensions
 // once populated so filtering cannot shrink the layout.
-export const SuggestionList = ({
-  popover,
-  withFilter,
-  lockSize,
-  match,
-  ...rest
-}) => {
+export const SuggestionList = ({ popover, withFilter, match, ...rest }) => {
   import.meta.css = css;
   if (withFilter) {
     return (
-      <SuggestionListWithFilter
-        lockSize={lockSize}
-        match={match}
-        popover={popover}
-        {...rest}
-      />
+      <SuggestionListWithFilter match={match} popover={popover} {...rest} />
     );
   }
   if (popover) {
@@ -114,6 +104,11 @@ const SuggestionListWithFilter = ({
   lockSize,
   ...rest
 }) => {
+  const isInsideDropdown = useIsInsideDropdown();
+  if (lockSize === undefined && isInsideDropdown) {
+    lockSize = true;
+  }
+
   const [filter, setFilter] = useState("");
   const listboxId = useId();
   const defaultRef = useRef(null);

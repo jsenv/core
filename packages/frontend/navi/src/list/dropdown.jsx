@@ -99,6 +99,9 @@ const css = /* css */ `
 `;
 
 const DropdownCloseContext = createContext(null);
+export const useIsInsideDropdown = () => {
+  return typeof useContext(DropdownCloseContext) === "function";
+};
 
 /**
  * Dropdown — a select-like trigger that opens a centered dialog.
