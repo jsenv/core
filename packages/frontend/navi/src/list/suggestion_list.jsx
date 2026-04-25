@@ -15,8 +15,8 @@ import { List, ListItem, RenderWindowContext } from "./list.jsx";
 // Provided when SuggestionList has withFilter={true} (or by SuggestionListCombo).
 // When present, SuggestionList uses them to compute hidden state on each
 // Suggestion automatically and to sync the Input value.
-export const SuggestionFilterContext = createContext(null);
-export const SuggestionMatchContext = createContext(null);
+const SuggestionFilterContext = createContext(null);
+const SuggestionMatchContext = createContext(null);
 export const SetFilterContext = createContext(null);
 // Provided so the listbox uses the same stable id that the input's
 // aria-controls points to.
