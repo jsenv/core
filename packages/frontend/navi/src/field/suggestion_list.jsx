@@ -106,6 +106,7 @@ const css = /* css */ `
     border-radius: var(--x-border-radius);
     transition: opacity 0.2s ease;
     overflow: auto;
+    overflow-anchor: none;
 
     /* Popover reset — browser adds border, background, padding, margin by default */
     &[popover] {
