@@ -175,6 +175,90 @@
           name: "Théa Vincent",
           address: "1 place de la Comédie, 34000 Montpellier",
         },
+        {
+          name: "Ulysse Garnier",
+          address: "88 avenue de la Liberté, 67000 Strasbourg",
+        },
+        {
+          name: "Valérie Chevalier",
+          address: "15 rue des Jacobins, 80000 Amiens",
+        },
+        {
+          name: "William Lemaire",
+          address: "4 rue du Grand-Cerf, 76000 Rouen",
+        },
+        {
+          name: "Xénia Bonnet",
+          address: "72 boulevard de la Mer, 29200 Brest",
+        },
+        { name: "Yannick Perrin", address: "9 place du Marché, 35000 Rennes" },
+        { name: "Zoé Aubert", address: "3 rue des Tanneurs, 67000 Strasbourg" },
+        { name: "Antoine Girard", address: "21 rue Victor Hugo, 69002 Lyon" },
+        {
+          name: "Béatrice Leclercq",
+          address: "6 allée des Peupliers, 59000 Lille",
+        },
+        {
+          name: "Cédric Moulin",
+          address: "18 avenue du Président Wilson, 75016 Paris",
+        },
+        {
+          name: "Delphine Renard",
+          address: "44 rue Saint-Nicolas, 57000 Metz",
+        },
+        {
+          name: "Étienne Barbier",
+          address: "11 rue du Général Foy, 75008 Paris",
+        },
+        { name: "Fanny Colin", address: "30 rue de la Forge, 54000 Nancy" },
+        { name: "Guillaume Dufour", address: "7 place Stanislas, 54000 Nancy" },
+        { name: "Inès Gaillard", address: "2 rue du Palais, 21000 Dijon" },
+        {
+          name: "Julien Morin",
+          address: "16 rue de la Préfecture, 38000 Grenoble",
+        },
+        {
+          name: "Karen Noel",
+          address: "5 boulevard Gambetta, 63000 Clermont-Ferrand",
+        },
+        {
+          name: "Lionel Picard",
+          address: "28 avenue de la Gare, 87000 Limoges",
+        },
+        {
+          name: "Manon Schmitt",
+          address: "13 rue du Maréchal Foch, 67100 Strasbourg",
+        },
+        {
+          name: "Nicolas Bertrand",
+          address: "9 rue de la Cathédrale, 51100 Reims",
+        },
+        {
+          name: "Océane Rolland",
+          address: "55 avenue de la République, 86000 Poitiers",
+        },
+        {
+          name: "Pierre Fournier",
+          address: "3 place du Palais-Royal, 75001 Paris",
+        },
+        { name: "Quentin Vasseur", address: "19 rue du Temple, 75003 Paris" },
+        {
+          name: "Romain Carpentier",
+          address: "8 boulevard de la Victoire, 67000 Strasbourg",
+        },
+        { name: "Sophie Jacquet", address: "41 rue d'Alsace, 68100 Mulhouse" },
+        { name: "Tristan Muller", address: "7 rue du Sauvage, 68000 Colmar" },
+        { name: "Ursula Poirier", address: "22 avenue Foch, 57000 Metz" },
+        {
+          name: "Vincent Guillot",
+          address: "14 rue du Commerce, 45000 Orléans",
+        },
+        { name: "Wendy Legrand", address: "6 rue de la Croix, 76600 Le Havre" },
+        { name: "Xavier Brun", address: "33 rue du Port, 56100 Lorient" },
+        {
+          name: "Yvonne Caron",
+          address: "10 place de la Mairie, 49000 Angers",
+        },
       ];
 
       // Match on both name and address
@@ -262,6 +346,8 @@
                   ref={listRef}
                   uiAction={setSelected}
                   expandX
+                  maxHeight="320px"
+                  renderBudget={15}
                   separator={<Separator margin="0" />}
                 >
                   <li className="sticky-header" role="presentation">
