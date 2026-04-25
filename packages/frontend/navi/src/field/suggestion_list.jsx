@@ -213,9 +213,6 @@ const SuggestionListControlled = ({
   const anchorValueRef = useRef(null);
   anchorValueRef.current = anchorValue;
 
-  // Stable refs so navi_list_* event handlers always read latest state.
-  const itemsRef = useRef([]);
-
   // When a filter is active, fall back to filter text for highlight.
   const filter = useContext(SuggestionFilterContext);
   if (highlight === undefined) {
@@ -233,11 +230,9 @@ const SuggestionListControlled = ({
       setAnchorValue(value);
       uiAction?.(value, event);
     },
-    // Expose items setter so ListInner can update itemsRef after each render.
-    setItems: (items) => {
-      itemsRef.current = items;
-    },
   };
+
+  const itemsRef = useRef([]);
 
   return (
     <List
@@ -399,6 +394,8 @@ export const Suggestion = ({ value, hidden, selected, children, ...rest }) => {
       role="option"
       aria-selected={selected}
       hidden={hidden}
+      data-value={value}
+      data-anchor={isKeyboardPointed ? "" : undefined}
       baseClassName="navi_suggestion"
       basePseudoState={{
         ":-navi-pointed": isPointed,
