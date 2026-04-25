@@ -40,7 +40,6 @@
         Input,
         Suggestion,
         SuggestionList,
-        SuggestionListCombo,
         Separator,
         Text,
         Box,
@@ -122,39 +121,34 @@
         return (
           <div style="min-width: 300px;">
             <DialogHeader title="Please select a fruit" />
-            <SuggestionListCombo
+            <SuggestionList
+              withFilter
               lockSize
-              padding="m"
-              paddingTop="s"
-              flex="y"
-              spacing="s"
-              alignY="start"
-              minWidth="inherit"
+              maxHeight="240px"
+              expandX
+              border="none"
+              uiAction={(v) => {
+                onSelect(v);
+                close();
+              }}
             >
-              <Input
-                placeholder="Filter…"
-                expandX
-                autoFocus
-                paddingX="10"
-                paddingY="6"
-                size="m"
-              />
-              <SuggestionList
-                maxHeight="240px"
-                expandX
-                border="none"
-                uiAction={(v) => {
-                  onSelect(v);
-                  close();
-                }}
-              >
-                {FRUITS.map((fruit) => (
-                  <Suggestion key={fruit} value={fruit}>
-                    {fruit}
-                  </Suggestion>
-                ))}
-              </SuggestionList>
-            </SuggestionListCombo>
+              <ListItemHeader>
+                <Input
+                  placeholder="Filter…"
+                  expandX
+                  autoFocus
+                  paddingX="10"
+                  paddingY="6"
+                  size="m"
+                  style="border-bottom: 1px solid #eee; border-radius: 0;"
+                />
+              </ListItemHeader>
+              {FRUITS.map((fruit) => (
+                <Suggestion key={fruit} value={fruit}>
+                  {fruit}
+                </Suggestion>
+              ))}
+            </SuggestionList>
           </div>
         );
       };
@@ -221,52 +215,51 @@
         const close = useDropdownClose();
 
         return (
-          <SuggestionListCombo>
-            <SuggestionList
-              border="none"
-              maxHeight="none"
-              expand
-              uiAction={(v) => {
-                onSelect(v);
-                close();
-              }}
-            >
-              <ListItemHeader>
-                <div style="padding: 12px 12px 8px; border-bottom: 1px solid #eee;">
-                  <span style="display:block;font-weight:600;font-size:15px;margin-bottom:8px;">
-                    Pick a country
-                  </span>
-                  <Input
-                    placeholder="Filter countries…"
-                    expandX
-                    autoFocus
-                    paddingX="10"
-                    paddingY="6"
-                    size="m"
-                  />
-                </div>
-              </ListItemHeader>
-              {COUNTRIES.map((country) => (
-                <Suggestion
-                  key={country}
-                  value={country}
-                  selected={selected === country}
-                  height="64px"
-                  flex
-                  alignY="center"
-                  spacing="m"
-                >
-                  <span style="font-size:28px" role="img">
-                    🌍
-                  </span>
-                  <span style="flex:1">{country}</span>
-                  {selected === country && (
-                    <span style="color:#1a73e8;font-size:18px">✓</span>
-                  )}
-                </Suggestion>
-              ))}
-            </SuggestionList>
-          </SuggestionListCombo>
+          <SuggestionList
+            border="none"
+            maxHeight="none"
+            expand
+            withFilter
+            uiAction={(v) => {
+              onSelect(v);
+              close();
+            }}
+          >
+            <ListItemHeader>
+              <div style="padding: 12px 12px 8px; border-bottom: 1px solid #eee;">
+                <span style="display:block;font-weight:600;font-size:15px;margin-bottom:8px;">
+                  Pick a country
+                </span>
+                <Input
+                  placeholder="Filter countries…"
+                  expandX
+                  autoFocus
+                  paddingX="10"
+                  paddingY="6"
+                  size="m"
+                />
+              </div>
+            </ListItemHeader>
+            {COUNTRIES.map((country) => (
+              <Suggestion
+                key={country}
+                value={country}
+                selected={selected === country}
+                height="64px"
+                flex
+                alignY="center"
+                spacing="m"
+              >
+                <span style="font-size:28px" role="img">
+                  🌍
+                </span>
+                <span style="flex:1">{country}</span>
+                {selected === country && (
+                  <span style="color:#1a73e8;font-size:18px">✓</span>
+                )}
+              </Suggestion>
+            ))}
+          </SuggestionList>
         );
       };
 

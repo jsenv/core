@@ -76,7 +76,6 @@ export { Details } from "./src/field/details/details.jsx";
 export { SummaryMarker } from "./src/field/details/summary_marker.jsx";
 
 export { Suggestion, SuggestionList } from "./src/field/suggestion_list.jsx";
-export { SuggestionListCombo } from "./src/field/suggestion_list_combo.jsx";
 export {
   List,
   ListItem,

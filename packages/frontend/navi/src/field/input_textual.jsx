@@ -51,8 +51,7 @@ import {
   reportInteractiveToLabel,
   reportReadOnlyToLabel,
 } from "./label.jsx";
-import { ListboxIdContext } from "./suggestion_list.jsx";
-import { SetFilterContext } from "./suggestion_list_combo.jsx";
+import { ListboxIdContext, SetFilterContext } from "./suggestion_list.jsx";
 import { useActionEvents } from "./use_action_events.js";
 import { useAutoFocus } from "./use_auto_focus.js";
 import {

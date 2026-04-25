@@ -1,16 +1,24 @@
 import { pickPositionRelativeTo, visibleRectEffect } from "@jsenv/dom";
 import { createContext } from "preact";
-import { useContext, useLayoutEffect, useRef, useState } from "preact/hooks";
+import {
+  useContext,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "preact/hooks";
 
 import { useKeyboardShortcuts } from "../keyboard/keyboard_shortcuts.js";
 import { List, ListItem, RenderWindowContext } from "../list/list.jsx";
 
-// Provided by SuggestionListCombo. When present, SuggestionList uses it to
-// compute hidden state on each Suggestion automatically.
+// Provided when SuggestionList has withFilter={true} (or by SuggestionListCombo).
+// When present, SuggestionList uses them to compute hidden state on each
+// Suggestion automatically and to sync the Input value.
 export const SuggestionFilterContext = createContext(null);
 export const SuggestionMatchContext = createContext(null);
-// Provided by SuggestionListCombo so the listbox uses the same stable id
-// that the input's aria-controls points to.
+export const SetFilterContext = createContext(null);
+// Provided so the listbox uses the same stable id that the input's
+// aria-controls points to.
 export const ListboxIdContext = createContext(null);
 const ListInteractionContext = createContext(null);
 
@@ -58,12 +66,109 @@ const dispatchCustomEventToList = (
 
 // Single entry point. Renders either the popover variant or the standalone
 // variant depending on the `popover` prop.
-export const SuggestionList = ({ popover, ...rest }) => {
+// When `withFilter` is true, the list owns its filter state and provides
+// SuggestionFilterContext + SetFilterContext so that an <Input> inside
+// (e.g. in a <ListItemHeader>) auto-connects to the filter.
+// `lockSize` (only meaningful with `withFilter`) locks the container dimensions
+// once populated so filtering cannot shrink the layout.
+export const SuggestionList = ({
+  popover,
+  withFilter,
+  lockSize,
+  match,
+  ...rest
+}) => {
   import.meta.css = css;
+  if (withFilter) {
+    return (
+      <SuggestionListWithFilter
+        lockSize={lockSize}
+        match={match}
+        popover={popover}
+        {...rest}
+      />
+    );
+  }
   if (popover) {
     return <SuggestionListWithPopover {...rest} />;
   }
   return <SuggestionListStandalone {...rest} />;
+};
+
+const defaultMatch = (v, filter) => String(v).toLowerCase().includes(filter);
+
+// Owns filter state and provides all filter-related contexts.
+// Dispatches to SuggestionListWithPopover or SuggestionListStandalone.
+/*
+
+ * lockSize: measures the container once it first has non-zero dimensions (i.e.
+ *           once it becomes visible, e.g. when a parent <dialog> opens), then
+ *           sets minWidth/minHeight so filtering cannot shrink the container —
+ *           the size is anchored to the fully-populated state. The container
+ *           can still grow if content happens to be taller, hence min* and not
+ *           a hard fixed size. sizeLocked ensures we only capture the size once,
+ *           so a subsequent filter→clear cycle does not re-measure a smaller box.
+*/
+const SuggestionListWithFilter = ({
+  match = defaultMatch,
+  lockSize,
+  ...rest
+}) => {
+  const [filter, setFilter] = useState("");
+  const listboxId = useId();
+  const defaultRef = useRef(null);
+  const ref = rest.ref || defaultRef;
+  const sizeLocked = useRef(false);
+
+  useLayoutEffect(() => {
+    if (!lockSize) {
+      return undefined;
+    }
+    if (sizeLocked.current) {
+      return undefined;
+    }
+    if (filter !== "") {
+      return undefined;
+    }
+    const listEl = ref.current;
+    if (!listEl) {
+      return undefined;
+    }
+    // Observe the scroll container (parent of the <ul> = navi_list_container)
+    const containerEl = listEl.parentElement;
+    if (!containerEl) {
+      return undefined;
+    }
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      const { width, height } = entry.contentRect;
+      if (width === 0 && height === 0) {
+        return;
+      }
+      containerEl.style.minWidth = `${width}px`;
+      containerEl.style.minHeight = `${height}px`;
+      sizeLocked.current = true;
+      observer.disconnect();
+    });
+    observer.observe(containerEl);
+    return () => {
+      observer.disconnect();
+    };
+  }, [lockSize, filter]);
+
+  const inner = <SuggestionList {...rest} ref={ref} />;
+
+  return (
+    <SuggestionMatchContext.Provider value={match}>
+      <SuggestionFilterContext.Provider value={filter}>
+        <SetFilterContext.Provider value={setFilter}>
+          <ListboxIdContext.Provider value={listboxId}>
+            {inner}
+          </ListboxIdContext.Provider>
+        </SetFilterContext.Provider>
+      </SuggestionFilterContext.Provider>
+    </SuggestionMatchContext.Provider>
+  );
 };
 
 // Standalone variant: attaches keyboard shortcuts to the container and
