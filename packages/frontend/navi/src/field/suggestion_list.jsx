@@ -603,7 +603,6 @@ const SUGGESTION_PSEUDO_ELEMENTS = ["::highlight"];
  * - CSS Highlight API text matching
  */
 export const Suggestion = ({ value, hidden, ...rest }) => {
-  import.meta.css = css;
   const idDefault = useId();
   const id = rest.id || idDefault;
   // When inside SuggestionListCombo, compute hidden from the filter context.
