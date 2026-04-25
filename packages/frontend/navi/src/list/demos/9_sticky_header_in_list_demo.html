@@ -108,7 +108,6 @@
       import { useState, useEffect, useRef } from "preact/hooks";
       import {
         SuggestionList,
-        SuggestionListCombo,
         Suggestion,
         Input,
         Separator,
@@ -341,48 +340,48 @@
             <StatsBar totalItems={ITEMS.length} domItems={domItems} />
 
             <div className="scroll-container">
-              <SuggestionListCombo match={matchItem}>
-                <SuggestionList
-                  ref={listRef}
-                  uiAction={setSelected}
-                  expandX
-                  maxHeight="320px"
-                  renderBudget={15}
-                  separator={<Separator margin="0" />}
-                >
-                  <li className="sticky-header" role="presentation">
-                    <p className="sticky-header-title">
-                      Veuillez sélectionner une suggestion
-                    </p>
-                    <Input
-                      type="search"
-                      placeholder="Filtrer par nom ou adresse…"
-                      expandX
-                    />
-                  </li>
+              <SuggestionList
+                withFilter
+                ref={listRef}
+                match={matchItem}
+                uiAction={setSelected}
+                expandX
+                maxHeight="320px"
+                renderBudget={15}
+                separator={<Separator margin="0" />}
+              >
+                <li className="sticky-header" role="presentation">
+                  <p className="sticky-header-title">
+                    Veuillez sélectionner une suggestion
+                  </p>
+                  <Input
+                    type="search"
+                    placeholder="Filtrer par nom ou adresse…"
+                    expandX
+                  />
+                </li>
 
-                  {ITEMS.map((item) => (
-                    <Suggestion
-                      key={item.name}
-                      value={item}
-                      selected={selected === item}
+                {ITEMS.map((item) => (
+                  <Suggestion
+                    key={item.name}
+                    value={item}
+                    selected={selected === item}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "2px",
+                      }}
                     >
-                      <div
-                        style={{
-                          display: "flex",
-                          flexDirection: "column",
-                          gap: "2px",
-                        }}
-                      >
-                        <span>{item.name}</span>
-                        <span style={{ fontSize: "0.8em", opacity: 0.65 }}>
-                          {item.address}
-                        </span>
-                      </div>
-                    </Suggestion>
-                  ))}
-                </SuggestionList>
-              </SuggestionListCombo>
+                      <span>{item.name}</span>
+                      <span style={{ fontSize: "0.8em", opacity: 0.65 }}>
+                        {item.address}
+                      </span>
+                    </div>
+                  </Suggestion>
+                ))}
+              </SuggestionList>
             </div>
 
             <div className="value-display">

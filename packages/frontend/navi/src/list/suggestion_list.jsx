@@ -9,7 +9,7 @@ import {
 } from "preact/hooks";
 
 import { useKeyboardShortcuts } from "../keyboard/keyboard_shortcuts.js";
-import { List, ListItem, RenderWindowContext } from "../list/list.jsx";
+import { List, ListItem, RenderWindowContext } from "./list.jsx";
 
 // Provided when SuggestionList has withFilter={true} (or by SuggestionListCombo).
 // When present, SuggestionList uses them to compute hidden state on each
