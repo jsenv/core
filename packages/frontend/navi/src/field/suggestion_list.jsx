@@ -240,7 +240,7 @@ const SuggestionListControlled = ({
       ref={ref}
       innerRef={listboxRef}
       id={listboxIdFromContext}
-      className="navi_suggestion_list"
+      baseClassName="navi_list navi_suggestion_list"
       role="listbox"
       fallback={fallback}
       renderBudget={renderBudget}
@@ -396,7 +396,7 @@ export const Suggestion = ({ value, hidden, selected, children, ...rest }) => {
       hidden={hidden}
       data-value={value}
       data-anchor={isKeyboardPointed ? "" : undefined}
-      baseClassName="navi_suggestion"
+      baseClassName="navi_list_item navi_suggestion"
       basePseudoState={{
         ":-navi-pointed": isPointed,
         ":-navi-selected": selected,

@@ -72,7 +72,7 @@
       import {
         Suggestion,
         SuggestionList,
-        SuggestionGroup,
+        ListItemGroup,
         Input,
         Text,
         Box,
@@ -493,7 +493,7 @@
               highlight={filter}
             >
               {groups.map((group) => (
-                <SuggestionGroup key={group.letter} label={group.letter}>
+                <ListItemGroup key={group.letter} label={group.letter}>
                   {group.items.map((item) => (
                     <Suggestion
                       key={item}
@@ -504,7 +504,7 @@
                       {item}
                     </Suggestion>
                   ))}
-                </SuggestionGroup>
+                </ListItemGroup>
               ))}
             </SuggestionList>
             <div className="value-display">{selected ?? ""}</div>
@@ -554,7 +554,7 @@
                 visible
               </Suggestion>
               {GROUPED_ITEMS.map((group) => (
-                <SuggestionGroup key={group.label} label={group.label}>
+                <ListItemGroup key={group.label} label={group.label}>
                   {group.items.map((item) => (
                     <Suggestion
                       key={item}
@@ -565,7 +565,7 @@
                       {item}
                     </Suggestion>
                   ))}
-                </SuggestionGroup>
+                </ListItemGroup>
               ))}
             </SuggestionList>
             <div className="value-display">{selected ?? ""}</div>
@@ -623,7 +623,7 @@
               onChange={setSelected}
               highlight={filter}
             >
-              <SuggestionGroup
+              <ListItemGroup
                 style={{ backgroundColor: "#f0faf3" }}
                 label={
                   <Box
@@ -648,9 +648,9 @@
                     {item}
                   </Suggestion>
                 ))}
-              </SuggestionGroup>
+              </ListItemGroup>
               {nonMatches.length > 0 && (
-                <SuggestionGroup
+                <ListItemGroup
                   style={{ backgroundColor: "#fef8f0" }}
                   label={
                     <Box
@@ -675,7 +675,7 @@
                       {item}
                     </Suggestion>
                   ))}
-                </SuggestionGroup>
+                </ListItemGroup>
               )}
             </SuggestionList>
             <div className="value-display">{selected ?? ""}</div>
