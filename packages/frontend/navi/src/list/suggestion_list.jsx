@@ -89,76 +89,17 @@ const defaultMatch = (v, filter) => String(v).toLowerCase().includes(filter);
 
 // Owns filter state and provides all filter-related contexts.
 // Dispatches to SuggestionListWithPopover or SuggestionListStandalone.
-/*
-
- * lockSize: measures the container once it first has non-zero dimensions (i.e.
- *           once it becomes visible, e.g. when a parent <dialog> opens), then
- *           sets minWidth/minHeight so filtering cannot shrink the container —
- *           the size is anchored to the fully-populated state. The container
- *           can still grow if content happens to be taller, hence min* and not
- *           a hard fixed size. sizeLocked ensures we only capture the size once,
- *           so a subsequent filter→clear cycle does not re-measure a smaller box.
-*/
-const SuggestionListWithFilter = ({
-  match = defaultMatch,
-  lockSize,
-  ...rest
-}) => {
-  const isInsideDropdown = useIsInsideDropdown();
-  if (lockSize === undefined && isInsideDropdown) {
-    lockSize = true;
-  }
-
+// anchorSize defaults to true when inside a Dropdown (see SuggestionListControlled).
+const SuggestionListWithFilter = ({ match = defaultMatch, ...rest }) => {
   const [filter, setFilter] = useState("");
   const listboxId = useId();
-  const defaultRef = useRef(null);
-  const ref = rest.ref || defaultRef;
-  const sizeLocked = useRef(false);
-
-  useLayoutEffect(() => {
-    if (!lockSize) {
-      return undefined;
-    }
-    if (sizeLocked.current) {
-      return undefined;
-    }
-    if (filter !== "") {
-      return undefined;
-    }
-    const listEl = ref.current;
-    if (!listEl) {
-      return undefined;
-    }
-    // Observe the scroll container (parent of the <ul> = navi_list_container)
-    const containerEl = listEl.parentElement;
-    if (!containerEl) {
-      return undefined;
-    }
-    const observer = new ResizeObserver((entries) => {
-      const entry = entries[0];
-      const { width, height } = entry.contentRect;
-      if (width === 0 && height === 0) {
-        return;
-      }
-      containerEl.style.minWidth = `${width}px`;
-      containerEl.style.minHeight = `${height}px`;
-      sizeLocked.current = true;
-      observer.disconnect();
-    });
-    observer.observe(containerEl);
-    return () => {
-      observer.disconnect();
-    };
-  }, [lockSize, filter]);
-
-  const inner = <SuggestionList {...rest} ref={ref} />;
 
   return (
     <SuggestionMatchContext.Provider value={match}>
       <SuggestionFilterContext.Provider value={filter}>
         <SetFilterContext.Provider value={setFilter}>
           <ListboxIdContext.Provider value={listboxId}>
-            {inner}
+            <SuggestionList {...rest} />
           </ListboxIdContext.Provider>
         </SetFilterContext.Provider>
       </SuggestionFilterContext.Provider>
@@ -286,6 +227,19 @@ const SuggestionListWithPopover = (props) => {
 
 // Core controller: wires the generic List to the suggestion-specific
 // keyboard events, hover/selection state, and ARIA attributes.
+//
+// filter      — the current filter string. When provided together with
+//               anchorSize, the container dimensions are locked to the
+//               fully-populated state (measured once filter is empty)
+//               so that typing never shrinks the widget.
+// anchorSize  — when true, observes the list container with a ResizeObserver
+//               and captures its width/height the first time it has non-zero
+//               dimensions (i.e. once visible and fully populated). Those
+//               values become min-width/min-height on the container so that
+//               subsequent filtering cannot collapse the layout. The size is
+//               only captured once per mount; a filter→clear cycle will not
+//               re-measure. Useful both with withFilter and with a custom
+//               external filter state.
 const SuggestionListControlled = ({
   ref,
   uiAction,
@@ -293,8 +247,15 @@ const SuggestionListControlled = ({
   fallback = "No results",
   children,
   renderBudget,
+  filter: filterFromProp,
+  anchorSize,
   ...rest
 }) => {
+  const isInsideDropdown = useIsInsideDropdown();
+  if (anchorSize === undefined && isInsideDropdown) {
+    anchorSize = true;
+  }
+
   const listboxIdFromContext = useContext(ListboxIdContext);
 
   const [mousePointedValue, setMousePointedValue] = useState(null);
@@ -303,8 +264,53 @@ const SuggestionListControlled = ({
   const anchorValueRef = useRef(null);
   anchorValueRef.current = anchorValue;
 
+  const filterFromContext = useContext(SuggestionFilterContext);
+  const filter =
+    filterFromProp !== undefined ? filterFromProp : filterFromContext;
+
+  // anchorSize: lock container dimensions to the fully-populated state.
+  const defaultRef = useRef(null);
+  const resolvedRef = ref || defaultRef;
+  const sizeLocked = useRef(false);
+  useLayoutEffect(() => {
+    if (!anchorSize) {
+      return undefined;
+    }
+    if (sizeLocked.current) {
+      return undefined;
+    }
+    // Only lock when the filter is empty (fully populated).
+    if (filter) {
+      return undefined;
+    }
+    const listEl = resolvedRef.current;
+    if (!listEl) {
+      return undefined;
+    }
+    // The container is the navi_list_container div (parent of the <ul>).
+    const containerEl = listEl.parentElement;
+    if (!containerEl) {
+      return undefined;
+    }
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      const { width, height } = entry.contentRect;
+      if (width === 0 && height === 0) {
+        return;
+      }
+      containerEl.style.minWidth = `${width}px`;
+      containerEl.style.minHeight = `${height}px`;
+      sizeLocked.current = true;
+      observer.disconnect();
+    });
+    observer.observe(containerEl);
+    return () => {
+      observer.disconnect();
+    };
+  }, [anchorSize, filter]);
+
   // When a filter is active, fall back to filter text for highlight.
-  const filter = useContext(SuggestionFilterContext);
+
   if (highlight === undefined) {
     highlight = filter;
   }
@@ -327,7 +333,7 @@ const SuggestionListControlled = ({
   return (
     <List
       {...rest}
-      ref={ref}
+      ref={resolvedRef}
       listId={listboxIdFromContext}
       listRole="listbox"
       fallback={fallback}
