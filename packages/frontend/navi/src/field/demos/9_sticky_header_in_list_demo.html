@@ -64,39 +64,9 @@
       }
 
       .scroll-container {
-        height: 400px;
         background: white;
         border: 2px solid #ccc;
         border-radius: 8px;
-        overflow: auto;
-      }
-
-      .section-before,
-      .section-after {
-        padding: 20px;
-        background: #f0f4ff;
-      }
-
-      .section-before {
-        border-bottom: 2px dashed #b0c4f8;
-      }
-
-      .section-after {
-        border-top: 2px dashed #b0c4f8;
-      }
-
-      .section-before h3,
-      .section-after h3 {
-        margin: 0 0 6px;
-        color: #3a5bc7;
-        font-size: 1rem;
-      }
-
-      .section-before p,
-      .section-after p {
-        margin: 0;
-        color: #666;
-        font-size: 0.85rem;
       }
 
       .sticky-header {
@@ -109,19 +79,11 @@
         box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
       }
 
-      .sticky-header input {
-        box-sizing: border-box;
-        width: 100%;
-        padding: 6px 10px;
-        font-size: 14px;
-        border: 1px solid #ccc;
-        border-radius: 4px;
-      }
-
-      .sticky-header input:focus {
-        border-color: transparent;
-        outline: 2px solid #005fcc;
-        outline-offset: -1px;
+      .sticky-header-title {
+        margin: 0 0 6px;
+        color: #444;
+        font-weight: 600;
+        font-size: 0.85rem;
       }
 
       .value-display {
@@ -144,7 +106,12 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState, useEffect, useRef } from "preact/hooks";
-      import { SuggestionList, Suggestion } from "@jsenv/navi";
+      import {
+        SuggestionList,
+        SuggestionListCombo,
+        Suggestion,
+        Input,
+      } from "@jsenv/navi";
 
       // 100 items — every 5th is very wide to test horizontal scroll with sticky header
       const ITEMS = Array.from({ length: 100 }, (_, i) => {
@@ -202,16 +169,9 @@
       };
 
       const App = () => {
-        const [filter, setFilter] = useState("");
         const [selected, setSelected] = useState(null);
         const [domItems, setDomItems] = useState(0);
         const listRef = useRef(null);
-
-        const visible = filter
-          ? ITEMS.filter((item) =>
-              item.toLowerCase().includes(filter.toLowerCase()),
-            )
-          : ITEMS;
 
         // Track actual DOM option count via MutationObserver
         useEffect(() => {
@@ -254,59 +214,40 @@
 
             <StatsBar
               totalItems={ITEMS.length}
-              visibleItems={visible.length}
+              visibleItems={ITEMS.length}
               domItems={domItems}
             />
 
             {/* The parent handles scrolling */}
             <div className="scroll-container">
-              {/* Content before the list */}
-              <div className="section-before">
-                <h3>Section above the list</h3>
-                <p>
-                  This content sits above the suggestion list inside the same
-                  scroll container. Scroll down to reach the list.
-                </p>
-              </div>
+              {/* SuggestionListCombo with no max-height — parent scroll container scrolls.
+                   The sticky header (title + Input) lives inside the <ul> as a
+                   <li role="presentation"> so it inherits the list's scrollbar. */}
+              <SuggestionListCombo>
+                <SuggestionList
+                  ref={listRef}
+                  uiAction={setSelected}
+                  renderBudget={20}
+                  expandX
+                >
+                  <li className="sticky-header" role="presentation">
+                    <p className="sticky-header-title">
+                      Veuillez sélectionner une suggestion
+                    </p>
+                    <Input type="search" placeholder="Filtrer…" expandX />
+                  </li>
 
-              {/* SuggestionList with no max-height — parent scroll container scrolls */}
-              <SuggestionList
-                ref={listRef}
-                uiAction={setSelected}
-                renderBudget={20}
-                expandX
-              >
-                {/* Sticky filter header — rendered as a <li role="presentation"> inside the <ul> */}
-                <li className="sticky-header" role="presentation">
-                  <input
-                    type="search"
-                    placeholder="Filter…"
-                    value={filter}
-                    onInput={(e) => {
-                      setFilter(e.target.value);
-                    }}
-                  />
-                </li>
-
-                {visible.map((item) => (
-                  <Suggestion
-                    key={item}
-                    value={item}
-                    selected={selected === item}
-                  >
-                    {item}
-                  </Suggestion>
-                ))}
-              </SuggestionList>
-
-              {/* Content after the list */}
-              <div className="section-after">
-                <h3>Section below the list</h3>
-                <p>
-                  This content sits below the suggestion list inside the same
-                  scroll container.
-                </p>
-              </div>
+                  {ITEMS.map((item) => (
+                    <Suggestion
+                      key={item}
+                      value={item}
+                      selected={selected === item}
+                    >
+                      {item}
+                    </Suggestion>
+                  ))}
+                </SuggestionList>
+              </SuggestionListCombo>
             </div>
 
             <div className="value-display">
