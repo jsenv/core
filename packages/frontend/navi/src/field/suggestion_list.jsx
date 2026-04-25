@@ -3,7 +3,7 @@ import { createContext } from "preact";
 import { useContext, useLayoutEffect, useRef, useState } from "preact/hooks";
 
 import { useKeyboardShortcuts } from "../keyboard/keyboard_shortcuts.js";
-import { List, ListItem } from "../list/list.jsx";
+import { List, ListItem, RenderWindowContext } from "../list/list.jsx";
 
 // Provided by SuggestionListCombo. When present, SuggestionList uses it to
 // compute hidden state on each Suggestion automatically.
@@ -339,6 +339,7 @@ export const Suggestion = ({ value, hidden, selected, children, ...rest }) => {
   }
   const defaultRef = useRef(null);
   const ref = rest.ref || defaultRef;
+  const renderWindow = useContext(RenderWindowContext);
 
   useLayoutEffect(() => {
     if (!isKeyboardPointed) {
@@ -387,7 +388,7 @@ export const Suggestion = ({ value, hidden, selected, children, ...rest }) => {
         hl.delete(range);
       }
     };
-  }, [highlight, children, hidden]);
+  }, [highlight, children, hidden, renderWindow]);
 
   return (
     <ListItem
