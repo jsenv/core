@@ -12,7 +12,7 @@ import {
   useState,
 } from "preact/hooks";
 
-import { Box, applySeparatorOnChildren } from "../box/box.jsx";
+import { Box } from "../box/box.jsx";
 import { useKeyboardShortcuts } from "../keyboard/keyboard_shortcuts.js";
 import { createItemTracker } from "./item_tracker/item_tracker.jsx";
 
@@ -664,6 +664,9 @@ const SuggestionListboxContext = createContext(null);
 // Carries the render window {start, end} (or null = render all) from
 // SuggestionListControlled down to each Suggestion.
 const RenderWindowContext = createContext(null);
+// Carries the separator element/function down to each Suggestion so separators
+// are only rendered between items that actually mount (post-filter, post-window).
+const SeparatorContext = createContext(null);
 const SuggestionListbox = ({
   ref,
   ItemTrackerProvider,
@@ -765,13 +768,11 @@ const SuggestionListbox = ({
         aria-hidden
       />
       <RenderWindowContext.Provider value={renderWindow}>
-        <SuggestionListboxContext.Provider value={suggestionContext}>
-          <ItemTrackerProvider>
-            {separator
-              ? applySeparatorOnChildren(children, separator)
-              : children}
-          </ItemTrackerProvider>
-        </SuggestionListboxContext.Provider>
+        <SeparatorContext.Provider value={separator ?? null}>
+          <SuggestionListboxContext.Provider value={suggestionContext}>
+            <ItemTrackerProvider>{children}</ItemTrackerProvider>
+          </SuggestionListboxContext.Provider>
+        </SeparatorContext.Provider>
       </RenderWindowContext.Provider>
       <li
         ref={bottomFillerRef}
@@ -824,6 +825,7 @@ export const Suggestion = ({ value, hidden, ...rest }) => {
   }
   const index = useTrackSuggestion(id, { id, value, hidden });
   const renderWindow = useContext(RenderWindowContext);
+  const separator = useContext(SeparatorContext);
   if (hidden) {
     // Hidden items are never needed in the DOM — they are invisible to the user
     // and to assistive technology (aria-hidden). Skipping them here avoids
@@ -842,7 +844,18 @@ export const Suggestion = ({ value, hidden, ...rest }) => {
       return null;
     }
   }
-  return <SuggestionConcrete value={value} hidden={hidden} id={id} {...rest} />;
+  const separatorElement =
+    separator && index > 0
+      ? typeof separator === "function"
+        ? separator(index - 1)
+        : separator
+      : null;
+  return (
+    <>
+      {separatorElement}
+      <SuggestionConcrete value={value} hidden={hidden} id={id} {...rest} />
+    </>
+  );
 };
 
 const SuggestionConcrete = ({
