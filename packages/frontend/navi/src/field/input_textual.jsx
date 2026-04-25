@@ -411,7 +411,9 @@ export const InputRightSlot = (props) => {
 const InputTextualBasic = (props) => {
   const listboxId = useContext(ListboxIdContext);
   if (listboxId) {
-    return <InputInsideSuggestionListWithFilter {...props} listboxId={listboxId} />;
+    return (
+      <InputInsideSuggestionListWithFilter {...props} listboxId={listboxId} />
+    );
   }
   if (props.suggestions) {
     return <InputTextualWithSuggestions {...props} />;

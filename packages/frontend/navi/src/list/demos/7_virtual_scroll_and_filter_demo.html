@@ -314,23 +314,23 @@
                   }}
                 />
               </ListItemHeader>
-                {LARGE_LIST.map((item, index) => (
-                  <Suggestion
-                    key={item}
-                    index={index}
-                    value={item}
-                    selected={selected === item}
-                    style={{
-                      backgroundColor: SUGGESTION_BG,
-                      ...(itemHeight
-                        ? { minHeight: `${itemHeight}px`, alignItems: "center" }
-                        : {}),
-                    }}
-                  >
-                    {item}
-                  </Suggestion>
-                ))}
-              </SuggestionList>
+              {LARGE_LIST.map((item, index) => (
+                <Suggestion
+                  key={item}
+                  index={index}
+                  value={item}
+                  selected={selected === item}
+                  style={{
+                    backgroundColor: SUGGESTION_BG,
+                    ...(itemHeight
+                      ? { minHeight: `${itemHeight}px`, alignItems: "center" }
+                      : {}),
+                  }}
+                >
+                  {item}
+                </Suggestion>
+              ))}
+            </SuggestionList>
 
             <div className="value-display">{selected ?? ""}</div>
 
