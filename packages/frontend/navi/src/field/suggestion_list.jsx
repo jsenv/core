@@ -20,76 +20,7 @@ export const SuggestionMatchContext = createContext(null);
 // that the input's aria-controls points to.
 export const ListboxIdContext = createContext(null);
 
-/**
- * SuggestionList + Suggestion: a composable accessible listbox.
- *
- * Built on top of <List> / <ListItem> from src/list/list.jsx.
- * Adds: role="listbox"/role="option", keyboard navigation events,
- * hover/pointed/selected interactive state, CSS Highlight API, CSS vars.
- *
- * Usage:
- *   <SuggestionList id="my-list" uiAction={setValue}>
- *     <Suggestion value="a">Option A</Suggestion>
- *     <Suggestion value="b">Option B</Suggestion>
- *   </SuggestionList>
- *
- * CSS vars on .navi_suggestion_list:
- *   --suggestion-list-border-radius, --suggestion-list-border-width,
- *   --suggestion-list-border-color, --suggestion-list-background-color,
- *   --suggestion-list-max-height
- *
- * CSS vars on .navi_suggestion:
- *   --suggestion-padding, --suggestion-color, --suggestion-background-color, --suggestion-font-weight
- *   --suggestion-color-hover, --suggestion-background-color-hover
- *   --suggestion-color-pointed, --suggestion-background-color-pointed
- *   --suggestion-color-selected, --suggestion-background-color-selected, --suggestion-font-weight-selected
- *   --suggestion-color-pointed-selected, --suggestion-background-color-pointed-selected
- *   --suggestion-color-highlight, --suggestion-background-color-highlight
- *
- * CSS vars on .navi_suggestion_group_label:
- *   --suggestion-group-label-padding, --suggestion-group-label-color,
- *   --suggestion-group-label-font-size, --suggestion-group-label-font-weight
- */
-
 const css = /* css */ `
-  @layer navi {
-    .navi_suggestion_list {
-      --list-border-radius: 4px;
-      --list-border-width: 1px;
-      --list-border-color: light-dark(#ccc, #555);
-      --list-border-style: solid;
-      --list-background-color: light-dark(#fff, #1e1e1e);
-      --list-max-height: 220px;
-    }
-    .navi_suggestion {
-      --list-item-padding: 8px 12px;
-      --list-item-color: inherit;
-      --list-item-font-weight: inherit;
-
-      /* Hover (mouse) */
-      --list-item-color-hover: var(--list-item-color);
-      --list-item-background-color-hover: light-dark(#f5f5f5, #2a2a2a);
-
-      /* Pointed (keyboard navigation position) */
-      --list-item-color-pointed: var(--list-item-color);
-      --list-item-background-color-pointed: light-dark(#c2d7fc, #1a4a9e);
-
-      /* Selected */
-      --list-item-color-selected: light-dark(#1a73e8, #7baaf7);
-      --list-item-background-color-selected: light-dark(#e8f0fe, #1c3a6e);
-      --list-item-font-weight-selected: 500;
-      --list-item-color-pointed-selected: var(--list-item-color-selected);
-      --list-item-background-color-pointed-selected: light-dark(
-        #d2e3fc,
-        #174ea6
-      );
-
-      /* Highlight (CSS Highlight API match) — suggestion-specific */
-      --suggestion-color-highlight: inherit;
-      --suggestion-background-color-highlight: #ffe066;
-    }
-  }
-
   .navi_suggestion_list {
     /* Popover reset — browser adds border, background, padding, margin by default */
     &[popover] {
@@ -296,14 +227,6 @@ const SuggestionListWithPopover = (props) => {
   );
 };
 
-const SuggestionListStyleCSSVars = {
-  borderRadius: "--list-border-radius",
-  borderWidth: "--list-border-width",
-  borderColor: "--list-border-color",
-  backgroundColor: "--list-background-color",
-  maxHeight: "--list-max-height",
-};
-
 // Core controller: wires the generic List to the suggestion-specific
 // keyboard events, hover/selection state, and ARIA attributes.
 const SuggestionListControlled = ({
@@ -395,7 +318,6 @@ const SuggestionListControlled = ({
       {...rest}
       ref={ref}
       baseClassName="navi_suggestion_list"
-      styleCSSVars={SuggestionListStyleCSSVars}
       onnavi_suggestion_list_navigate={forwardToListbox("navi_list_navigate")}
       onnavi_suggestion_list_confirm={forwardToListbox("navi_list_confirm")}
       onnavi_suggestion_list_clear={forwardToListbox("navi_list_clear")}
@@ -531,7 +453,6 @@ const SUGGESTION_PSEUDO_ELEMENTS = ["::highlight"];
  * - CSS Highlight API text matching
  */
 export const Suggestion = ({ value, hidden, selected, children, ...rest }) => {
-  import.meta.css = css;
   const idDefault = useId();
   const id = rest.id || idDefault;
   // When inside SuggestionListCombo, compute hidden from the filter context.
