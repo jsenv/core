@@ -446,7 +446,7 @@ const SuggestionListControlled = ({
   maxHeight,
   renderBudget = RENDER_BUDGET_DEFAULT,
   itemHeightEstimation,
-  itemHeightIsVariable = false,
+  itemHeightIsVariable = true,
   separator,
   ...rest
 }) => {
@@ -549,20 +549,36 @@ const SuggestionListControlled = ({
         if (options.length === 0) {
           return;
         }
-        // Scan from the top of the list downward until we hit an option element.
+        // Scan from the top of the list downward until we hit an option or a filler.
         let hitEl = null;
+        let hitFiller = null;
         for (let y = listRect.top + 1; y < listRect.bottom; y += 4) {
           const el = document.elementFromPoint(listRect.left + 1, y);
-          if (el && listEl.contains(el)) {
-            const opt = el.closest("[role='option']");
-            if (opt) {
-              hitEl = opt;
-              break;
-            }
+          if (!el || !listEl.contains(el)) {
+            continue;
+          }
+          const opt = el.closest("[role='option']");
+          if (opt) {
+            hitEl = opt;
+            break;
+          }
+          // Check if we hit a filler li (aria-hidden, no role).
+          const filler = el.closest("li[aria-hidden]");
+          if (filler) {
+            hitFiller = filler;
+            break;
           }
         }
-        const relIndex = hitEl ? options.indexOf(hitEl) : 0;
-        firstVisibleIndex = current.start + (relIndex === -1 ? 0 : relIndex);
+        if (hitFiller === topFillerRef.current) {
+          // Scrolled into the top filler zone — window should start at 0.
+          firstVisibleIndex = 0;
+        } else if (hitFiller === bottomFillerRef.current) {
+          // Scrolled into the bottom filler zone — window should end at totalItems.
+          firstVisibleIndex = totalItems - renderBudget;
+        } else {
+          const relIndex = hitEl ? options.indexOf(hitEl) : 0;
+          firstVisibleIndex = current.start + (relIndex === -1 ? 0 : relIndex);
+        }
       } else {
         const itemHeight = measuredItemHeightRef.current;
         if (itemHeight === 0) {
