@@ -625,8 +625,13 @@ export const applySeparatorOnChildren = (children, separator) => {
     const child = flattenedChildren[i];
     childrenWithSeparators.push(child);
     i++;
-    if (i === flattenedChildren.length) {
+    const isLast = i === flattenedChildren.length;
+    if (isLast) {
       break;
+    }
+    const nextChild = flattenedChildren[i];
+    if (!shouldInjectSeparatorBetween(child, nextChild)) {
+      continue;
     }
     // Support function separators that receive separator index
     const separatorElement =
@@ -636,4 +641,20 @@ export const applySeparatorOnChildren = (children, separator) => {
     childrenWithSeparators.push(separatorElement);
   }
   return childrenWithSeparators;
+};
+const shouldInjectSeparatorBetween = (left, right) => {
+  if (isPreactNode(left) && left.props?.hidden) {
+    return false;
+  }
+  if (isPreactNode(right) && right.props?.hidden) {
+    return false;
+  }
+  return true;
+};
+const isPreactNode = (jsxChild) => {
+  return (
+    jsxChild !== null &&
+    typeof jsxChild === "object" &&
+    jsxChild.type !== undefined
+  );
 };
