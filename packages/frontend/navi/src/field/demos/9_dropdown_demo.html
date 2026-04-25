@@ -169,6 +169,7 @@
         "Algeria",
         "Andorra",
         "Angola",
+        "Fake very large country name to see what happens when an option is very large",
         "Argentina",
         "Armenia",
         "Australia",
@@ -218,55 +219,54 @@
 
       const CountryPicker = ({ selected, onSelect }) => {
         const close = useDropdownClose();
-        const [filter, setFilter] = useState("");
-        const lowerFilter = filter.toLowerCase();
-        const filtered = lowerFilter
-          ? COUNTRIES.filter((c) => c.toLowerCase().includes(lowerFilter))
-          : COUNTRIES;
+
         return (
-          <SuggestionList
-            border="none"
-            expandX
-            minWidth="340px"
-            uiAction={(v) => {
-              onSelect(v);
-              close();
-            }}
-          >
-            <ListItemHeader>
-              <div style="padding: 12px 12px 8px; border-bottom: 1px solid #eee;">
-                <span style="display:block;font-weight:600;font-size:15px;margin-bottom:8px;">
-                  Pick a country
-                </span>
-                <Input
-                  placeholder="Filter countries…"
-                  expandX
-                  autoFocus
-                  paddingX="10"
-                  paddingY="6"
-                  size="m"
-                  onInput={(e) => setFilter(e.target.value)}
-                />
-              </div>
-            </ListItemHeader>
-            {filtered.map((country) => (
-              <Suggestion
-                key={country}
-                value={country}
-                selected={selected === country}
-                height="64px"
-                style={{ alignItems: "center", gap: "12px", fontSize: "15px" }}
-              >
-                <span style="font-size:28px" role="img">
-                  🌍
-                </span>
-                <span style="flex:1">{country}</span>
-                {selected === country && (
-                  <span style="color:#1a73e8;font-size:18px">✓</span>
-                )}
-              </Suggestion>
-            ))}
-          </SuggestionList>
+          <SuggestionListCombo>
+            <SuggestionList
+              border="none"
+              maxHeight="none"
+              expand
+              uiAction={(v) => {
+                onSelect(v);
+                close();
+              }}
+            >
+              <ListItemHeader>
+                <div style="padding: 12px 12px 8px; border-bottom: 1px solid #eee;">
+                  <span style="display:block;font-weight:600;font-size:15px;margin-bottom:8px;">
+                    Pick a country
+                  </span>
+                  <Input
+                    placeholder="Filter countries…"
+                    expandX
+                    autoFocus
+                    paddingX="10"
+                    paddingY="6"
+                    size="m"
+                  />
+                </div>
+              </ListItemHeader>
+              {COUNTRIES.map((country) => (
+                <Suggestion
+                  key={country}
+                  value={country}
+                  selected={selected === country}
+                  height="64px"
+                  flex
+                  alignY="center"
+                  spacing="m"
+                >
+                  <span style="font-size:28px" role="img">
+                    🌍
+                  </span>
+                  <span style="flex:1">{country}</span>
+                  {selected === country && (
+                    <span style="color:#1a73e8;font-size:18px">✓</span>
+                  )}
+                </Suggestion>
+              ))}
+            </SuggestionList>
+          </SuggestionListCombo>
         );
       };
 

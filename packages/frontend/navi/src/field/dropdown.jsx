@@ -88,6 +88,9 @@ const css = /* css */ `
   }
 
   .navi_dropdown_dialog_content {
+    display: flex;
+    max-height: 95dvh;
+    flex-direction: column;
     background: white;
     border-radius: 8px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
