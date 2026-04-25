@@ -497,7 +497,7 @@ const SuggestionListControlled = ({
       const scrollTop = listEl.scrollTop;
       const maxScrollTop = listEl.scrollHeight - listEl.clientHeight;
 
-      // Snap to absolute boundaries when at the edges.
+      // Snap to absolute boundaries when at the edges — always instant, no throttle.
       if (scrollTop <= 0) {
         if (current.start === 0) {
           return;
@@ -516,10 +516,12 @@ const SuggestionListControlled = ({
         return;
       }
 
-      // Use scroll ratio to find the center of the visible window in the full
-      // list, then centre the render window around it. This is a pure function
-      // of scrollTop, so multiple scroll events at the same position are stable.
-      const scrollRatio = scrollTop / maxScrollTop;
+      // The DOM only has renderBudget items, so scrollHeight is renderBudget/totalItems
+      // of what it would be with all items rendered. Without correction, one mousewheel
+      // notch covers totalItems/renderBudget times more list than intended.
+      // We compensate by scaling maxScrollTop up to the "virtual" full-list height.
+      const virtualMaxScrollTop = maxScrollTop * (totalItems / renderBudget);
+      const scrollRatio = scrollTop / virtualMaxScrollTop;
       const centerAbsIndex = Math.round(scrollRatio * (totalItems - 1));
       const half = Math.floor(renderBudget / 2);
       let newStart = Math.max(0, centerAbsIndex - half);
