@@ -1,0 +1,330 @@
+import { getScrollContainer } from "@jsenv/dom";
+import { createContext } from "preact";
+import {
+  useContext,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "preact/hooks";
+
+import { Box } from "../box/box.jsx";
+import { createItemTracker } from "../utils/item_tracker/item_tracker.jsx";
+
+// When total rendered items exceeds renderBudget, a render window [start, end)
+// is activated to cap the number of DOM nodes. Items outside the window return
+// null. The window slides as the user scrolls, using actual DOM positions
+// (getBoundingClientRect) to find the first visible item — no height estimation.
+const RENDER_BUDGET_DEFAULT = 100;
+
+// Attribute used on <li> elements rendered by ListItem so the scroll listener
+// and filler-height calculation can find them without requiring a specific ARIA role.
+const LIST_ITEM_ATTR = "data-list-item";
+export const LIST_ITEM_SELECTOR = `[${LIST_ITEM_ATTR}]`;
+
+const [useListItemTrackerProvider, useTrackListItem] = createItemTracker({
+  filter: (data) => !data.hidden,
+});
+
+// Carries the render window {start, end} (or null = render all) from
+// List down to each ListItem.
+export const RenderWindowContext = createContext(null);
+// Carries the separator element/function down to each ListItem so separators
+// are only rendered between items that actually mount (post-filter, post-window).
+export const SeparatorContext = createContext(null);
+// Carries interactive state (hover, selection, etc.) provided by the List
+// consumer (e.g. SuggestionListbox) down to ListItem children.
+export const ListInteractionContext = createContext(null);
+
+/**
+ * List — generic virtualized scroll container.
+ *
+ * Renders children inside a scrollable container with an optional render budget
+ * for virtual scrolling. Items must use <ListItem> to participate in tracking.
+ *
+ * Props:
+ *   renderBudget         — max items in DOM at once (default 100, virtual scroll when exceeded)
+ *   itemHeightEstimation — fixed px height for uniform items (skips DOM measurement)
+ *   itemHeightIsVariable — set false for uniform-height items (faster scroll math)
+ *   emptyState           — content shown when no items are visible
+ *   separator            — element or function(index) inserted between visible items
+ *   interactionContext   — any value forwarded via ListInteractionContext to ListItem children
+ *   listProps            — props forwarded to the inner <ul> element
+ *   ...rest              — forwarded to the outer scroll container <Box>
+ */
+export const List = ({
+  ref,
+  innerRef,
+  renderBudget = RENDER_BUDGET_DEFAULT,
+  itemHeightEstimation,
+  itemHeightIsVariable = true,
+  emptyState,
+  separator,
+  interactionContext,
+  listProps,
+  children,
+  ...rest
+}) => {
+  const defaultOuterRef = useRef();
+  const outerRef = ref || defaultOuterRef;
+  const defaultInnerRef = useRef(null);
+  const listboxRef = innerRef || defaultInnerRef;
+
+  const ItemTrackerProvider = useListItemTrackerProvider();
+
+  const [renderWindow, setRenderWindow] = useState(null);
+  const renderWindowRef = useRef(null);
+  renderWindowRef.current = renderWindow;
+
+  const topFillerRef = useRef(null);
+  const bottomFillerRef = useRef(null);
+  const measuredItemHeightRef = useRef(itemHeightEstimation ?? 0);
+
+  // After every render, update filler heights to reflect the current window.
+  useLayoutEffect(() => {
+    const totalItems = ItemTrackerProvider.items.length;
+    const current = renderWindowRef.current;
+    if (!current || totalItems <= renderBudget) {
+      if (topFillerRef.current) {
+        topFillerRef.current.style.height = "0px";
+      }
+      if (bottomFillerRef.current) {
+        bottomFillerRef.current.style.height = "0px";
+      }
+      return;
+    }
+    const listEl = outerRef.current;
+    if (!listEl) {
+      return;
+    }
+    const items = listEl.querySelectorAll(LIST_ITEM_SELECTOR);
+    if (items.length === 0) {
+      return;
+    }
+    if (!itemHeightEstimation) {
+      measuredItemHeightRef.current = items[0].getBoundingClientRect().height;
+    }
+    const itemHeight = measuredItemHeightRef.current;
+    if (topFillerRef.current) {
+      topFillerRef.current.style.height = `${current.start * itemHeight}px`;
+    }
+    if (bottomFillerRef.current) {
+      bottomFillerRef.current.style.height = `${(totalItems - current.end) * itemHeight}px`;
+    }
+  });
+
+  // Activate or deactivate the render window depending on item count.
+  useLayoutEffect(() => {
+    const totalItems = ItemTrackerProvider.items.length;
+    if (totalItems > renderBudget) {
+      if (renderWindowRef.current === null) {
+        setRenderWindow({ start: 0, end: renderBudget });
+      }
+    } else if (renderWindowRef.current !== null) {
+      setRenderWindow(null);
+    }
+  });
+
+  // Scroll listener — slides the window as the user scrolls.
+  useLayoutEffect(() => {
+    const listEl = outerRef.current;
+    const listboxEl = listboxRef.current;
+    if (!listEl) {
+      return undefined;
+    }
+    const scrollContainer = getScrollContainer(listboxEl);
+    const onScroll = () => {
+      const totalItems = ItemTrackerProvider.items.length;
+      if (totalItems <= renderBudget) {
+        return;
+      }
+      const current = renderWindowRef.current;
+      if (!current) {
+        return;
+      }
+      const scrollTop = listEl.scrollTop;
+
+      let firstVisibleIndex;
+      if (itemHeightIsVariable) {
+        const listRect = listEl.getBoundingClientRect();
+        const items = Array.from(listEl.querySelectorAll(LIST_ITEM_SELECTOR));
+        if (items.length === 0) {
+          return;
+        }
+        let hitEl = null;
+        let hitFiller = null;
+        for (let y = listRect.top + 1; y < listRect.bottom; y += 4) {
+          const el = document.elementFromPoint(listRect.left + 1, y);
+          if (!el || !listEl.contains(el)) {
+            continue;
+          }
+          const item = el.closest(LIST_ITEM_SELECTOR);
+          if (item) {
+            hitEl = item;
+            break;
+          }
+          const filler = el.closest("li[aria-hidden]");
+          if (filler) {
+            hitFiller = filler;
+            break;
+          }
+        }
+        if (hitFiller) {
+          const itemHeight = measuredItemHeightRef.current;
+          if (itemHeight === 0) {
+            return;
+          }
+          firstVisibleIndex = Math.floor(scrollTop / itemHeight);
+        } else {
+          const relIndex = hitEl ? items.indexOf(hitEl) : 0;
+          firstVisibleIndex = current.start + (relIndex === -1 ? 0 : relIndex);
+        }
+      } else {
+        const itemHeight = measuredItemHeightRef.current;
+        if (itemHeight === 0) {
+          return;
+        }
+        firstVisibleIndex = Math.floor(scrollTop / itemHeight);
+      }
+
+      const half = Math.floor(renderBudget / 2);
+      let newStart = Math.max(0, firstVisibleIndex - half);
+      let newEnd = Math.min(totalItems, newStart + renderBudget);
+      if (newEnd === totalItems) {
+        newStart = Math.max(0, totalItems - renderBudget);
+      }
+
+      if (current.start === newStart && current.end === newEnd) {
+        return;
+      }
+      setRenderWindow({ start: newStart, end: newEnd });
+    };
+    scrollContainer.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      scrollContainer.removeEventListener("scroll", onScroll);
+    };
+  }, [renderBudget]);
+
+  return (
+    <Box {...rest} ref={outerRef}>
+      <ListInner
+        ref={listboxRef}
+        ItemTrackerProvider={ItemTrackerProvider}
+        renderWindow={renderWindow}
+        topFillerRef={topFillerRef}
+        bottomFillerRef={bottomFillerRef}
+        emptyState={emptyState}
+        separator={separator}
+        interactionContext={interactionContext}
+        listProps={listProps}
+      >
+        {children}
+      </ListInner>
+    </Box>
+  );
+};
+
+// Inner <ul> — hosts the fillers + items.
+const ListInner = ({
+  ref,
+  ItemTrackerProvider,
+  renderWindow,
+  topFillerRef,
+  bottomFillerRef,
+  emptyState,
+  separator,
+  interactionContext,
+  listProps = {},
+  children,
+}) => {
+  return (
+    <ul
+      ref={ref}
+      {...listProps}
+      style={{ margin: 0, padding: 0, listStyle: "none", ...listProps.style }}
+    >
+      <li
+        ref={topFillerRef}
+        className="navi_list_virtual_filler"
+        // eslint-disable-next-line react/no-unknown-property
+        navi-virtual-filler="top"
+        aria-hidden
+      />
+      <RenderWindowContext.Provider value={renderWindow}>
+        <SeparatorContext.Provider value={separator ?? null}>
+          <ListInteractionContext.Provider value={interactionContext ?? null}>
+            <ItemTrackerProvider>{children}</ItemTrackerProvider>
+          </ListInteractionContext.Provider>
+        </SeparatorContext.Provider>
+      </RenderWindowContext.Provider>
+      <li
+        ref={bottomFillerRef}
+        className="navi_list_virtual_filler"
+        // eslint-disable-next-line react/no-unknown-property
+        navi-virtual-filler="bottom"
+        aria-hidden
+      />
+      {emptyState && <li className="navi_list_empty">{emptyState}</li>}
+    </ul>
+  );
+};
+
+/**
+ * ListItem — a trackable item that participates in virtualization.
+ *
+ * Must be used inside <List>. Handles:
+ * - Registration with item tracker (always runs, even when hidden)
+ * - Early return when outside the render window
+ * - Separator rendering between visible items
+ *
+ * Props:
+ *   itemId  — stable string id for tracking (auto-generated if omitted)
+ *   hidden  — when true, item is excluded from the visible count and not rendered
+ *   ...rest — forwarded to the rendered <li> element
+ */
+export const ListItem = ({ itemId, hidden, children, ...rest }) => {
+  const idDefault = useId();
+  const id = itemId || idDefault;
+  const index = useTrackListItem(id, { id, hidden });
+  const renderWindow = useContext(RenderWindowContext);
+  const separator = useContext(SeparatorContext);
+
+  if (hidden) {
+    return null;
+  }
+  if (renderWindow !== null) {
+    if (
+      index === -1 ||
+      index < renderWindow.start ||
+      index >= renderWindow.end
+    ) {
+      return null;
+    }
+  }
+  const separatorElement =
+    separator && index > 0
+      ? typeof separator === "function"
+        ? separator(index - 1)
+        : separator
+      : null;
+  return (
+    <>
+      {separatorElement}
+      <li {...{ [LIST_ITEM_ATTR]: "" }} {...rest}>
+        {children}
+      </li>
+    </>
+  );
+};
+
+/**
+ * ListPresentation — a non-tracked <li role="presentation"> for arbitrary
+ * content inside the list (sticky headers, group labels, etc.).
+ */
+export const ListPresentation = ({ children, ...rest }) => {
+  return (
+    <li role="presentation" {...rest}>
+      {children}
+    </li>
+  );
+};

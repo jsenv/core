@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Isolated Item Tracker Demo</title>
+    <style>
+      body {
+        margin: 10px;
+        font-size: 12px;
+        font-family: Arial, sans-serif;
+        background: #f5f5f5;
+      }
+      .debug-panel {
+        margin: 5px 0;
+        padding: 10px;
+        background: white;
+        border-radius: 4px;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+      }
+      .item-data {
+        display: flex;
+        margin: 4px 0;
+        padding: 8px;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 11px;
+        background: #e3f2fd;
+        border-left: 3px solid #2196f3;
+        border-radius: 3px;
+      }
+      .item-info {
+        flex: 1;
+      }
+      .item-controls {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+      .item-consumer {
+        display: flex;
+        margin: 3px 0;
+        padding: 6px;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 11px;
+        background: #f3e5f5;
+        border-left: 3px solid #9c27b0;
+        border-radius: 3px;
+      }
+      button {
+        margin: 1px;
+        padding: 4px 8px;
+        color: white;
+        font-size: 10px;
+        background: #4caf50;
+        border: none;
+        border-radius: 3px;
+        cursor: pointer;
+      }
+      button:hover {
+        background: #45a049;
+      }
+      button.remove {
+        background: #f44336;
+      }
+      button.remove:hover {
+        background: #d32f2f;
+      }
+      button.add {
+        background: #2196f3;
+      }
+      button.add:hover {
+        background: #1976d2;
+      }
+      button.rerender {
+        background: #ff9800;
+      }
+      button.rerender:hover {
+        background: #f57c00;
+      }
+      select {
+        margin: 0 4px;
+        padding: 2px 4px;
+        font-size: 10px;
+        border: 1px solid #ddd;
+        border-radius: 3px;
+      }
+      .log {
+        max-height: 150px;
+        padding: 8px;
+        color: #00ff00;
+        font-size: 10px;
+        font-family: monospace;
+        white-space: pre-wrap;
+        background: #1e1e1e;
+        border-radius: 3px;
+        overflow-y: auto;
+      }
+      .section {
+        margin: 8px 0;
+      }
+      h1 {
+        margin: 5px 0;
+        font-size: 18px;
+      }
+      h2 {
+        margin: 5px 0;
+        font-size: 14px;
+      }
+      h3 {
+        margin: 4px 0;
+        font-size: 12px;
+      }
+      strong {
+        font-size: 11px;
+      }
+      small {
+        font-size: 9px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Isolated Item Tracker Demo</h1>
+
+    <div class="debug-panel">
+      <h2>Logs</h2>
+      <div id="logs" class="log"></div>
+      <button onclick="document.getElementById('logs').textContent = ''">
+        Clear Logs
+      </button>
+    </div>
+
+    <div class="debug-panel">
+      <h2>App</h2>
+      <div id="app"></div>
+    </div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { App } from "./isolated_item_tracker_demo.jsx";
+
+      // Initial render
+      render(<App />, document.getElementById("app"));
+    </script>
+  </body>
+</html>

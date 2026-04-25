@@ -1,8 +1,4 @@
-import {
-  getScrollContainer,
-  pickPositionRelativeTo,
-  visibleRectEffect,
-} from "@jsenv/dom";
+import { pickPositionRelativeTo, visibleRectEffect } from "@jsenv/dom";
 import { createContext } from "preact";
 import {
   useContext,
@@ -14,23 +10,27 @@ import {
 
 import { Box } from "../box/box.jsx";
 import { useKeyboardShortcuts } from "../keyboard/keyboard_shortcuts.js";
-import { createItemTracker } from "./item_tracker/item_tracker.jsx";
+import {
+  List,
+  ListInteractionContext,
+  ListItem,
+  ListPresentation,
+} from "../list/list.jsx";
 
-// Provided by SuggestionListCombo. When present, SuggestionListControlled
-// uses it to inject index/hidden into Suggestion children automatically.
+// Provided by SuggestionListCombo. When present, SuggestionList uses it to
+// compute hidden state on each Suggestion automatically.
 export const SuggestionFilterContext = createContext(null);
 export const SuggestionMatchContext = createContext(null);
-// Provided by SuggestionListCombo so SuggestionListbox uses the same stable id
+// Provided by SuggestionListCombo so the listbox uses the same stable id
 // that the input's aria-controls points to.
 export const ListboxIdContext = createContext(null);
 
-const [useSuggestionItemTrackerProvider, useTrackSuggestion] =
-  createItemTracker({
-    filter: (data) => !data.hidden,
-  });
-
 /**
  * SuggestionList + Suggestion: a composable accessible listbox.
+ *
+ * Built on top of <List> / <ListItem> from src/list/list.jsx.
+ * Adds: role="listbox"/role="option", keyboard navigation events,
+ * hover/pointed/selected interactive state, CSS Highlight API, CSS vars.
  *
  * Usage:
  *   <SuggestionList id="my-list" uiAction={setValue}>
@@ -145,7 +145,6 @@ const css = /* css */ `
     --x-font-weight: var(--suggestion-font-weight);
     display: flex;
     box-sizing: border-box;
-    width: inherit;
     min-width: 100%;
 
     padding: var(--suggestion-padding);
@@ -200,7 +199,7 @@ const css = /* css */ `
       letter-spacing: 0.05em;
     }
   }
-  .navi_suggestion_listbox_empty {
+  .navi_list_empty {
     display: none;
     padding: var(--suggestion-padding);
     color: var(--suggestion-group-label-color);
@@ -210,29 +209,23 @@ const css = /* css */ `
   }
   /* Show the empty state only when there are no visible suggestions */
   .navi_suggestion_list:not(:has([role="option"]:not([hidden]))) {
-    .navi_suggestion_listbox_empty {
+    .navi_list_empty {
       display: block;
     }
+  }
+  /* Hide groups that have no rendered options (all their suggestions are filtered out). */
+  li[role="presentation"]:not(:has([role="option"])) {
+    display: none;
   }
   /* Virtual scroll fillers — must remain invisible.
      The browser may briefly flash them during scroll before the render window
      updates, so giving them a visible background would cause visual glitches. */
-  .navi_suggestion_virtual_filler {
+  .navi_list_virtual_filler {
     height: 0px;
     list-style: none;
     /* background: pink; */
   }
 `;
-
-// Single entry point. Renders either the popover variant or the standalone
-// variant depending on the `popover` prop.
-export const SuggestionList = ({ popover, ...rest }) => {
-  import.meta.css = css;
-  if (popover) {
-    return <SuggestionListWithPopover {...rest} />;
-  }
-  return <SuggestionListStandalone {...rest} />;
-};
 
 const dispatchCustomEventToListbox = (
   listboxRef,
@@ -255,9 +248,18 @@ const dispatchCustomEventToListbox = (
   return customEvent.defaultPrevented;
 };
 
+// Single entry point. Renders either the popover variant or the standalone
+// variant depending on the `popover` prop.
+export const SuggestionList = ({ popover, ...rest }) => {
+  import.meta.css = css;
+  if (popover) {
+    return <SuggestionListWithPopover {...rest} />;
+  }
+  return <SuggestionListStandalone {...rest} />;
+};
+
 // Standalone variant: attaches keyboard shortcuts to the container and
-// forwards them as custom events to itself (navi_suggestion_list_* events),
-// which SuggestionListControlled then re-dispatches to the internal listbox.
+// forwards them as custom events to itself (navi_suggestion_list_* events).
 const SuggestionListStandalone = (props) => {
   const defaultRef = useRef();
   const ref = props.ref || defaultRef;
@@ -415,6 +417,200 @@ const SuggestionListStyleCSSVars = {
   backgroundColor: "--suggestion-list-background-color",
   maxHeight: "--suggestion-list-max-height",
 };
+
+// Core controller: wires the generic List to the suggestion-specific
+// keyboard events, hover/selection state, and ARIA attributes.
+const SuggestionListControlled = ({
+  ref,
+  listboxRef,
+  uiAction,
+  highlight,
+  emptyState = "No results",
+  children,
+  maxHeight,
+  renderBudget,
+  itemHeightEstimation,
+  itemHeightIsVariable,
+  separator,
+  expandX,
+  ...rest
+}) => {
+  const ownId = useId();
+  const id = rest.id ?? ownId;
+  const listboxIdFromContext = useContext(ListboxIdContext);
+
+  const [mousePointedValue, setMousePointedValue] = useState(null);
+  const [keyboardPointedValue, setKeyboardPointedValue] = useState(null);
+  const [anchorValue, setAnchorValue] = useState(null);
+  const anchorValueRef = useRef(null);
+  anchorValueRef.current = anchorValue;
+
+  // Stable refs so navi_list_* event handlers always read latest state.
+  const itemsRef = useRef([]);
+  const onNavigateRef = useRef(null);
+  onNavigateRef.current = (e) => {
+    const { direction, event = e } = e.detail;
+    const values = itemsRef.current;
+    if (values.length === 0) {
+      return;
+    }
+    const current = anchorValueRef.current;
+    const onNav = (value) => {
+      event.preventDefault();
+      anchorValueRef.current = value;
+      setKeyboardPointedValue(value);
+      setAnchorValue(value);
+    };
+    if (direction === "down") {
+      const idx = current === null ? -1 : values.indexOf(current);
+      onNav(values[idx < values.length - 1 ? idx + 1 : idx]);
+    } else if (direction === "up") {
+      const idx = current === null ? -1 : values.indexOf(current);
+      onNav(values[idx > 0 ? idx - 1 : 0]);
+    } else if (direction === "first") {
+      onNav(values[0]);
+    } else if (direction === "last") {
+      onNav(values[values.length - 1]);
+    }
+  };
+
+  // When a filter is active, fall back to filter text for highlight.
+  const filter = useContext(SuggestionFilterContext);
+  if (highlight === undefined) {
+    highlight = filter;
+  }
+
+  const interactionContext = {
+    mousePointedValue,
+    keyboardPointedValue,
+    highlight,
+    onHover: (value) => {
+      setMousePointedValue(value);
+    },
+    onSelect: (value, event) => {
+      setAnchorValue(value);
+      uiAction?.(value, event);
+    },
+    // Expose items setter so ListInner can update itemsRef after each render.
+    setItems: (items) => {
+      itemsRef.current = items;
+    },
+  };
+
+  const forwardToListbox = (customEventName) => (e) => {
+    dispatchCustomEventToListbox(listboxRef, e, customEventName, e.detail);
+  };
+
+  return (
+    <Box
+      id={id}
+      maxHeight={maxHeight}
+      expandX={expandX}
+      {...rest}
+      ref={ref}
+      baseClassName="navi_suggestion_list"
+      styleCSSVars={SuggestionListStyleCSSVars}
+      onnavi_suggestion_list_navigate={forwardToListbox("navi_list_navigate")}
+      onnavi_suggestion_list_confirm={forwardToListbox("navi_list_confirm")}
+      onnavi_suggestion_list_clear={forwardToListbox("navi_list_clear")}
+    >
+      <SuggestionListbox
+        ref={listboxRef}
+        id={listboxIdFromContext}
+        renderBudget={renderBudget}
+        itemHeightEstimation={itemHeightEstimation}
+        itemHeightIsVariable={itemHeightIsVariable}
+        outerRef={ref}
+        interactionContext={interactionContext}
+        anchorValueRef={anchorValueRef}
+        onNavigateRef={onNavigateRef}
+        itemsRef={itemsRef}
+        uiAction={uiAction}
+        emptyState={emptyState}
+        separator={separator}
+        expandX={expandX}
+        setMousePointedValue={setMousePointedValue}
+        setKeyboardPointedValue={setKeyboardPointedValue}
+        setAnchorValue={setAnchorValue}
+      >
+        {children}
+      </SuggestionListbox>
+    </Box>
+  );
+};
+
+// The inner <ul role="listbox"> — handles navi_list_* events and wires
+// the generic List with suggestion ARIA attributes.
+const SuggestionListbox = ({
+  ref,
+  id,
+  outerRef,
+  renderBudget,
+  itemHeightEstimation,
+  itemHeightIsVariable,
+  interactionContext,
+  anchorValueRef,
+  onNavigateRef,
+  itemsRef,
+  uiAction,
+  emptyState,
+  separator,
+  expandX,
+  setMousePointedValue,
+  setKeyboardPointedValue,
+  setAnchorValue,
+  children,
+}) => {
+  return (
+    <List
+      ref={outerRef}
+      innerRef={ref}
+      renderBudget={renderBudget}
+      itemHeightEstimation={itemHeightEstimation}
+      itemHeightIsVariable={itemHeightIsVariable}
+      emptyState={emptyState}
+      separator={separator}
+      interactionContext={interactionContext}
+      expandX={expandX}
+      listProps={{
+        id,
+        role: "listbox",
+        className: "navi_suggestion_listbox",
+        onnavi_list_navigate: (e) => {
+          onNavigateRef.current(e);
+        },
+        onnavi_list_clear: () => {
+          setMousePointedValue(null);
+          setKeyboardPointedValue(null);
+          setAnchorValue(null);
+        },
+        onnavi_list_confirm: (e) => {
+          const current = anchorValueRef.current;
+          if (current === null) {
+            return;
+          }
+          uiAction?.(current, e);
+        },
+      }}
+    >
+      {children}
+    </List>
+  );
+};
+
+// Module-level shared Highlight instance.
+let naviSuggestionHighlight = null;
+const getNaviSuggestionHighlight = () => {
+  if (!CSS.highlights) {
+    return null;
+  }
+  if (!naviSuggestionHighlight) {
+    naviSuggestionHighlight = new Highlight();
+    CSS.highlights.set("navi-suggestion-match", naviSuggestionHighlight);
+  }
+  return naviSuggestionHighlight;
+};
+
 const SuggestionStyleCSSVars = {
   "padding": "--suggestion-padding",
   "color": "--suggestion-color",
@@ -438,380 +634,23 @@ const SuggestionStyleCSSVars = {
     backgroundColor: "--suggestion-background-color-highlight",
   },
 };
-
-// When total rendered items exceeds renderBudget, a render window [start, end)
-// is activated to cap the number of DOM nodes. Items outside the window return
-// null. The window slides as the user scrolls, using actual DOM positions
-// (getBoundingClientRect) to find the first visible item — no height estimation.
-const RENDER_BUDGET_DEFAULT = 100;
-
-// Core: render budget windowing + scroll listener + the <Box> scroll container
-// + <SuggestionListbox>. Controlled by either SuggestionListStandalone or
-// SuggestionListWithPopover.
-const SuggestionListControlled = ({
-  ref,
-  listboxRef,
-  uiAction,
-  highlight,
-  emptyState = "No results",
-  children,
-  maxHeight,
-  renderBudget = RENDER_BUDGET_DEFAULT,
-  itemHeightEstimation,
-  itemHeightIsVariable = true,
-  separator,
-  expandX,
-  ...rest
-}) => {
-  const ownId = useId();
-  const id = rest.id ?? ownId;
-
-  // ItemTrackerProvider is created here (above the scroll listener) so the
-  // scroll handler can read ItemTrackerProvider.items.length to decide whether
-  // to activate/deactivate the render window.
-  const ItemTrackerProvider = useSuggestionItemTrackerProvider();
-
-  // renderWindow: null = render all items; {start, end} when active.
-  // Items outside [start, end) return null. The window slides on scroll.
-  const [renderWindow, setRenderWindow] = useState(null);
-  const renderWindowRef = useRef(null);
-  renderWindowRef.current = renderWindow;
-
-  // Refs to the invisible filler <li> elements above and below the rendered window.
-  // Their heights represent the space occupied by items outside the window, making
-  // scrollHeight equal to the full list height so the scrollbar is accurate.
-  const topFillerRef = useRef(null);
-  const bottomFillerRef = useRef(null);
-  // Cached item height so we don't re-measure every scroll event.
-  const measuredItemHeightRef = useRef(itemHeightEstimation ?? 0);
-
-  // After every render, update filler heights to reflect the current window.
-  // overflow-anchor: none prevents the browser from adjusting scrollTop when
-  // filler heights change, so the user's scroll position stays stable.
-  useLayoutEffect(() => {
-    const totalItems = ItemTrackerProvider.items.length;
-    const current = renderWindowRef.current;
-    if (!current || totalItems <= renderBudget) {
-      if (topFillerRef.current) {
-        topFillerRef.current.style.height = "0px";
-      }
-      if (bottomFillerRef.current) {
-        bottomFillerRef.current.style.height = "0px";
-      }
-      return;
-    }
-    const listEl = ref.current;
-    if (!listEl) {
-      return;
-    }
-    const options = listEl.querySelectorAll("[role='option']");
-    if (options.length === 0) {
-      return;
-    }
-    // Measure from first rendered option unless caller provided a fixed estimate.
-    if (!itemHeightEstimation) {
-      measuredItemHeightRef.current = options[0].getBoundingClientRect().height;
-    }
-    const itemHeight = measuredItemHeightRef.current;
-    if (topFillerRef.current) {
-      topFillerRef.current.style.height = `${current.start * itemHeight}px`;
-    }
-    if (bottomFillerRef.current) {
-      bottomFillerRef.current.style.height = `${(totalItems - current.end) * itemHeight}px`;
-    }
-  });
-  // Activate or deactivate the render window depending on item count.
-  // Runs every render so it reacts to filter changes (items added/removed).
-  useLayoutEffect(() => {
-    const totalItems = ItemTrackerProvider.items.length;
-    if (totalItems > renderBudget) {
-      if (renderWindowRef.current === null) {
-        setRenderWindow({ start: 0, end: renderBudget });
-      }
-    } else if (renderWindowRef.current !== null) {
-      setRenderWindow(null);
-    }
-  });
-
-  // Scroll listener — derives the window directly from scrollTop / itemHeight.
-  // Fillers make scrollHeight = full list height, so scrollTop is an accurate
-  // pixel offset into the virtual list. No amplification or virtual index needed.
-  useLayoutEffect(() => {
-    const listEl = ref.current;
-    const listboxEl = listboxRef.current;
-    if (!listEl) {
-      return undefined;
-    }
-    const scrollContainer = getScrollContainer(listboxEl);
-    const onScroll = () => {
-      const totalItems = ItemTrackerProvider.items.length;
-      if (totalItems <= renderBudget) {
-        return;
-      }
-      const current = renderWindowRef.current;
-      if (!current) {
-        return;
-      }
-      const scrollTop = listEl.scrollTop;
-
-      let firstVisibleIndex;
-      if (itemHeightIsVariable) {
-        // For variable-height items, use elementFromPoint to find the first
-        // visible option at the top edge of the list container.
-        const listRect = listEl.getBoundingClientRect();
-        const options = Array.from(listEl.querySelectorAll("[role='option']"));
-        if (options.length === 0) {
-          return;
-        }
-        // Scan from the top of the list downward until we hit an option or a filler.
-        let hitEl = null;
-        let hitFiller = null;
-        for (let y = listRect.top + 1; y < listRect.bottom; y += 4) {
-          const el = document.elementFromPoint(listRect.left + 1, y);
-          if (!el || !listEl.contains(el)) {
-            continue;
-          }
-          const opt = el.closest("[role='option']");
-          if (opt) {
-            hitEl = opt;
-            break;
-          }
-          // Check if we hit a filler li (aria-hidden, no role).
-          const filler = el.closest("li[aria-hidden]");
-          if (filler) {
-            hitFiller = filler;
-            break;
-          }
-        }
-        if (hitFiller) {
-          // We hit a filler — fall back to scrollTop / itemHeight which gives
-          // the correct proportional position within the filler zone.
-          const itemHeight = measuredItemHeightRef.current;
-          if (itemHeight === 0) {
-            return;
-          }
-          firstVisibleIndex = Math.floor(scrollTop / itemHeight);
-        } else {
-          const relIndex = hitEl ? options.indexOf(hitEl) : 0;
-          firstVisibleIndex = current.start + (relIndex === -1 ? 0 : relIndex);
-        }
-      } else {
-        const itemHeight = measuredItemHeightRef.current;
-        if (itemHeight === 0) {
-          return;
-        }
-        // Derive first visible absolute index directly from scrollTop.
-        // Fillers make scrollHeight = full list height, so this is exact for
-        // uniform-height items.
-        firstVisibleIndex = Math.floor(scrollTop / itemHeight);
-      }
-
-      const half = Math.floor(renderBudget / 2);
-      let newStart = Math.max(0, firstVisibleIndex - half);
-      let newEnd = Math.min(totalItems, newStart + renderBudget);
-      if (newEnd === totalItems) {
-        newStart = Math.max(0, totalItems - renderBudget);
-      }
-
-      if (current.start === newStart && current.end === newEnd) {
-        return;
-      }
-      setRenderWindow({ start: newStart, end: newEnd });
-    };
-    scrollContainer.addEventListener("scroll", onScroll, { passive: true });
-    return () => {
-      scrollContainer.removeEventListener("scroll", onScroll);
-    };
-  }, [renderBudget]);
-
-  // Forward navi_suggestion_list_* events (dispatched by input or standalone keyboard
-  // shortcuts) to the internal listbox as navi_list_* events.
-  const forwardToListbox = (customEventName) => (e) => {
-    dispatchCustomEventToListbox(listboxRef, e, customEventName, e.detail);
-  };
-
-  return (
-    <Box
-      id={id}
-      maxHeight={maxHeight}
-      expandX={expandX}
-      {...rest}
-      ref={ref}
-      baseClassName="navi_suggestion_list"
-      styleCSSVars={SuggestionListStyleCSSVars}
-      onnavi_suggestion_list_navigate={forwardToListbox("navi_list_navigate")}
-      onnavi_suggestion_list_confirm={forwardToListbox("navi_list_confirm")}
-      onnavi_suggestion_list_clear={forwardToListbox("navi_list_clear")}
-    >
-      <SuggestionListbox
-        ref={listboxRef}
-        ItemTrackerProvider={ItemTrackerProvider}
-        renderWindow={renderWindow}
-        topFillerRef={topFillerRef}
-        bottomFillerRef={bottomFillerRef}
-        uiAction={uiAction}
-        highlight={highlight}
-        emptyState={emptyState}
-        separator={separator}
-        expandX={expandX}
-      >
-        {children}
-      </SuggestionListbox>
-    </Box>
-  );
-};
-const SuggestionListboxContext = createContext(null);
-// Carries the render window {start, end} (or null = render all) from
-// SuggestionListControlled down to each Suggestion.
-const RenderWindowContext = createContext(null);
-// Carries the separator element/function down to each Suggestion so separators
-// are only rendered between items that actually mount (post-filter, post-window).
-const SeparatorContext = createContext(null);
-const SuggestionListbox = ({
-  ref,
-  ItemTrackerProvider,
-  renderWindow,
-  topFillerRef,
-  bottomFillerRef,
-  uiAction,
-  highlight,
-  emptyState,
-  separator,
-  expandX,
-  children,
-}) => {
-  // When a filter is active, set highlight to the filter text so the listbox
-  // can highlight matching text.
-  const filter = useContext(SuggestionFilterContext);
-  if (highlight === undefined) {
-    highlight = filter;
-  }
-  const listboxIdFromContext = useContext(ListboxIdContext);
-
-  const [mousePointedValue, setMousePointedValue] = useState(null);
-  const [keyboardPointedValue, setKeyboardPointedValue] = useState(null);
-  // The anchor is the index we navigate FROM. Only keyboard nav and
-  // select (click/enter) update it — mouse hover does not.
-  const [anchorValue, setAnchorValue] = useState(null);
-  const anchorValueRef = useRef(null);
-  anchorValueRef.current = anchorValue;
-
-  const onMouseHover = (value) => {
-    setMousePointedValue(value);
-  };
-  const onKeyboardNav = (value, event) => {
-    event.preventDefault(); // prevent arrow keys from scrolling the page
-    anchorValueRef.current = value; // update immediately so rapid keypresses read the correct anchor
-    setKeyboardPointedValue(value);
-    setAnchorValue(value);
-  };
-  const select = (value, event) => {
-    setAnchorValue(value);
-    uiAction?.(value, event);
-  };
-
-  const suggestionContext = {
-    mousePointedValue,
-    keyboardPointedValue,
-    highlight,
-    onHover: onMouseHover,
-    onSelect: select,
-  };
-
-  return (
-    <Box
-      ref={ref}
-      id={listboxIdFromContext}
-      as="ul"
-      role="listbox"
-      baseClassName="navi_suggestion_listbox"
-      onnavi_list_navigate={(e) => {
-        const { direction, event = e } = e.detail;
-        const values = ItemTrackerProvider.items.map((item) => item.value);
-        if (values.length === 0) {
-          return;
-        }
-        const current = anchorValueRef.current;
-        if (direction === "down") {
-          const idx = current === null ? -1 : values.indexOf(current);
-          const value = values[idx < values.length - 1 ? idx + 1 : idx];
-          onKeyboardNav(value, event);
-        } else if (direction === "up") {
-          const idx = current === null ? -1 : values.indexOf(current);
-          const value = values[idx > 0 ? idx - 1 : 0];
-          onKeyboardNav(value, event);
-        } else if (direction === "first") {
-          onKeyboardNav(values[0], event);
-        } else if (direction === "last") {
-          onKeyboardNav(values[values.length - 1], event);
-        }
-      }}
-      onnavi_list_clear={() => {
-        setMousePointedValue(null);
-        setKeyboardPointedValue(null);
-        setAnchorValue(null);
-      }}
-      onnavi_list_confirm={(e) => {
-        const current = anchorValueRef.current;
-        if (current === null) {
-          return;
-        }
-        uiAction?.(current, e);
-      }}
-      expandX={expandX}
-    >
-      <li
-        ref={topFillerRef}
-        className="navi_suggestion_virtual_filler"
-        // eslint-disable-next-line react/no-unknown-property
-        navi-virtual-filler="top"
-        aria-hidden
-      />
-      <RenderWindowContext.Provider value={renderWindow}>
-        <SeparatorContext.Provider value={separator ?? null}>
-          <SuggestionListboxContext.Provider value={suggestionContext}>
-            <ItemTrackerProvider>{children}</ItemTrackerProvider>
-          </SuggestionListboxContext.Provider>
-        </SeparatorContext.Provider>
-      </RenderWindowContext.Provider>
-      <li
-        ref={bottomFillerRef}
-        className="navi_suggestion_virtual_filler"
-        // eslint-disable-next-line react/no-unknown-property
-        navi-virtual-filler="bottom"
-        aria-hidden
-      />
-
-      {emptyState && (
-        <li className="navi_suggestion_listbox_empty">{emptyState}</li>
-      )}
-    </Box>
-  );
-};
-
-// Module-level shared Highlight instance — all visible SuggestionConcrete
-// components add/remove their own ranges to this single object.
-let naviSuggestionHighlight = null;
-const getNaviSuggestionHighlight = () => {
-  if (!CSS.highlights) {
-    return null;
-  }
-  if (!naviSuggestionHighlight) {
-    naviSuggestionHighlight = new Highlight();
-    CSS.highlights.set("navi-suggestion-match", naviSuggestionHighlight);
-  }
-  return naviSuggestionHighlight;
-};
-
 const SUGGESTION_PSEUDO_CLASSES = [":-navi-pointed", ":-navi-selected"];
 const SUGGESTION_PSEUDO_ELEMENTS = ["::highlight"];
-// Thin wrapper: tracks the suggestion (so all items register with ItemTracker
-// regardless of virtual scroll), then bails out early outside the visible window.
+
+/**
+ * Suggestion — a selectable option inside SuggestionList.
+ *
+ * Thin wrapper over <ListItem> that adds:
+ * - Filter context integration (hidden when filter doesn't match)
+ * - role="option" + aria-selected ARIA attributes
+ * - Hover / keyboard-pointed / selected interactive state
+ * - CSS Highlight API text matching
+ */
 export const Suggestion = ({ value, hidden, ...rest }) => {
+  import.meta.css = css;
   const idDefault = useId();
   const id = rest.id || idDefault;
-  // When inside SuggestionListCombo, compute hidden from the filter context
-  // unless the caller explicitly passed hidden.
+  // When inside SuggestionListCombo, compute hidden from the filter context.
   const filter = useContext(SuggestionFilterContext);
   const match = useContext(SuggestionMatchContext);
   let matches = true;
@@ -823,38 +662,12 @@ export const Suggestion = ({ value, hidden, ...rest }) => {
   if (hidden === undefined && !matches) {
     hidden = true;
   }
-  const index = useTrackSuggestion(id, { id, value, hidden });
-  const renderWindow = useContext(RenderWindowContext);
-  const separator = useContext(SeparatorContext);
-  if (hidden) {
-    // Hidden items are never needed in the DOM — they are invisible to the user
-    // and to assistive technology (aria-hidden). Skipping them here avoids
-    // inflating the DOM when a filter reduces visible items while the render
-    // window is inactive (e.g. typing "al" leaves 1 match but 199 hidden items
-    // that would otherwise all render as display:none nodes).
-    return null;
-  }
-  if (renderWindow !== null) {
-    // Render budget is active: only render items inside the window [start, end).
-    if (
-      index === -1 ||
-      index < renderWindow.start ||
-      index >= renderWindow.end
-    ) {
-      return null;
-    }
-  }
-  const separatorElement =
-    separator && index > 0
-      ? typeof separator === "function"
-        ? separator(index - 1)
-        : separator
-      : null;
+
+  // Always track (even when hidden), delegate virtualization to ListItem.
   return (
-    <>
-      {separatorElement}
+    <ListItem itemId={id} hidden={hidden}>
       <SuggestionConcrete value={value} hidden={hidden} id={id} {...rest} />
-    </>
+    </ListItem>
   );
 };
 
@@ -866,15 +679,13 @@ const SuggestionConcrete = ({
   children,
   ...rest
 }) => {
-  import.meta.css = css;
-
   const {
     mousePointedValue,
     keyboardPointedValue,
     highlight,
     onHover,
     onSelect,
-  } = useContext(SuggestionListboxContext);
+  } = useContext(ListInteractionContext) ?? {};
 
   const isPointed =
     keyboardPointedValue === value || mousePointedValue === value;
@@ -929,7 +740,7 @@ const SuggestionConcrete = ({
 
   return (
     <Box
-      as="li"
+      as="span"
       ref={suggestionRef}
       baseClassName="navi_suggestion"
       id={id}
@@ -948,13 +759,13 @@ const SuggestionConcrete = ({
         if (hidden) {
           return;
         }
-        onHover(value, e);
+        onHover?.(value, e);
       }}
       onMouseLeave={(e) => {
         if (hidden) {
           return;
         }
-        onHover(null, e);
+        onHover?.(null, e);
       }}
       onMouseDown={(e) => {
         if (hidden || e.button !== 0) {
@@ -973,7 +784,7 @@ export const SuggestionGroup = ({ label, children, ...rest }) => {
   import.meta.css = css;
   const groupId = useId();
   return (
-    <li role="presentation" {...rest}>
+    <ListPresentation {...rest}>
       <span
         id={groupId}
         role="presentation"
@@ -994,6 +805,6 @@ export const SuggestionGroup = ({ label, children, ...rest }) => {
       >
         {children}
       </ul>
-    </li>
+    </ListPresentation>
   );
 };
