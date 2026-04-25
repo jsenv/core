@@ -75,41 +75,48 @@ const SuggestionListStandalone = (props) => {
   const defaultRef = useRef();
   const ref = props.ref || defaultRef;
   const dispatchToList = (...args) => dispatchCustomEventToList(ref, ...args);
-  useKeyboardShortcuts(ref, [
-    {
-      key: "arrowdown",
-      description: "Point to next suggestion",
-      handler: (e) => {
-        dispatchToList(e, "navi_list_nav", { direction: "down" });
+  useKeyboardShortcuts(
+    ref,
+    [
+      {
+        key: "arrowdown",
+        description: "Point to next suggestion",
+        handler: (e) => {
+          dispatchToList(e, "navi_list_nav", { direction: "down" });
+        },
       },
-    },
+      {
+        key: "arrowup",
+        description: "Point to previous suggestion",
+        handler: (e) => dispatchToList(e, "navi_list_nav", { direction: "up" }),
+      },
+      {
+        key: "home",
+        description: "Point to first suggestion",
+        handler: (e) =>
+          dispatchToList(e, "navi_list_nav", { direction: "first" }),
+      },
+      {
+        key: "end",
+        description: "Point to last suggestion",
+        handler: (e) =>
+          dispatchToList(e, "navi_list_nav", { direction: "last" }),
+      },
+      {
+        key: "enter",
+        description: "Confirm pointed suggestion",
+        handler: (e) => dispatchToList(e, "navi_list_confirm"),
+      },
+      {
+        key: "escape",
+        description: "Clear pointed suggestion",
+        handler: (e) => dispatchToList(e, "navi_list_clear"),
+      },
+    ],
     {
-      key: "arrowup",
-      description: "Point to previous suggestion",
-      handler: (e) => dispatchToList(e, "navi_list_nav", { direction: "up" }),
+      closestFocusableSelector: ".navi_list_container",
     },
-    {
-      key: "home",
-      description: "Point to first suggestion",
-      handler: (e) =>
-        dispatchToList(e, "navi_list_nav", { direction: "first" }),
-    },
-    {
-      key: "end",
-      description: "Point to last suggestion",
-      handler: (e) => dispatchToList(e, "navi_list_nav", { direction: "last" }),
-    },
-    {
-      key: "enter",
-      description: "Confirm pointed suggestion",
-      handler: (e) => dispatchToList(e, "navi_list_confirm"),
-    },
-    {
-      key: "escape",
-      description: "Clear pointed suggestion",
-      handler: (e) => dispatchToList(e, "navi_list_clear"),
-    },
-  ]);
+  );
 
   return <SuggestionListControlled tabIndex={0} {...props} ref={ref} />;
 };
@@ -186,7 +193,6 @@ const SuggestionListWithPopover = (props) => {
 // keyboard events, hover/selection state, and ARIA attributes.
 const SuggestionListControlled = ({
   ref,
-  listboxRef,
   uiAction,
   highlight,
   fallback = "No results",
@@ -229,12 +235,12 @@ const SuggestionListControlled = ({
     <List
       {...rest}
       ref={ref}
-      innerRef={listboxRef}
       id={listboxIdFromContext}
       baseClassName="navi_list navi_suggestion_list"
       role="listbox"
       fallback={fallback}
       renderBudget={renderBudget}
+      itemsRef={itemsRef}
       itemHeightEstimation={itemHeightEstimation}
       itemHeightIsVariable={itemHeightIsVariable}
       onnavi_list_nav={(e) => {
@@ -252,14 +258,18 @@ const SuggestionListControlled = ({
         };
         if (direction === "down") {
           const idx = current === null ? -1 : values.indexOf(current);
-          onNav(values[idx < values.length - 1 ? idx + 1 : idx]);
+          const belowValue = values[idx < values.length - 1 ? idx + 1 : idx];
+          onNav(belowValue);
         } else if (direction === "up") {
           const idx = current === null ? -1 : values.indexOf(current);
-          onNav(values[idx > 0 ? idx - 1 : 0]);
+          const aboveValue = values[idx > 0 ? idx - 1 : idx];
+          onNav(aboveValue);
         } else if (direction === "first") {
-          onNav(values[0]);
+          const firstValue = values[0];
+          onNav(firstValue);
         } else if (direction === "last") {
-          onNav(values[values.length - 1]);
+          const lastValue = values[values.length - 1];
+          onNav(lastValue);
         }
       }}
       onnavi_list_clear={() => {

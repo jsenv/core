@@ -199,6 +199,7 @@ const css = /* css */ `
  */
 export const List = ({
   renderBudget = RENDER_BUDGET_DEFAULT,
+  itemsRef,
   itemHeightEstimation,
   itemHeightIsVariable = true,
   fallback,
@@ -224,6 +225,9 @@ export const List = ({
 
   // After every render, update filler heights to reflect the current window.
   useLayoutEffect(() => {
+    if (itemsRef) {
+      itemsRef.current = ItemTrackerProvider.items;
+    }
     const totalItems = ItemTrackerProvider.items.length;
     const current = renderWindowRef.current;
     if (!current || totalItems <= renderBudget) {

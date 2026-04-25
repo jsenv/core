@@ -73,6 +73,7 @@ export const useKeyboardShortcuts = (
     onActionError,
     onActionEnd,
     allowConcurrentActions,
+    closestFocusableSelector,
   } = {},
 ) => {
   if (!elementRef) {
@@ -158,11 +159,14 @@ export const useKeyboardShortcuts = (
     if (!element) {
       return null;
     }
-    element.addEventListener("keydown", onKeyDown);
-    addShortcuts(element, shortcuts);
+    const focusableElement = closestFocusableSelector
+      ? element.closest(closestFocusableSelector)
+      : element;
+    focusableElement.addEventListener("keydown", onKeyDown);
+    addShortcuts(focusableElement, shortcuts);
     return () => {
-      element.removeEventListener("keydown", onKeyDown);
-      removeShortcuts(element);
+      focusableElement.removeEventListener("keydown", onKeyDown);
+      removeShortcuts(focusableElement);
     };
   }, [shortcutDeps]);
 };
