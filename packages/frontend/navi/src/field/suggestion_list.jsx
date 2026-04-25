@@ -210,17 +210,13 @@ const css = /* css */ `
       display: block;
     }
   }
-  /* Virtual scroll fillers — not meant to be seen, styled for debugging */
+  /* Virtual scroll fillers — must remain invisible.
+     The browser may briefly flash them during scroll before the render window
+     updates, so giving them a visible background would cause visual glitches. */
   .navi_suggestion_virtual_filler {
     height: 0px;
     list-style: none;
-    background: repeating-linear-gradient(
-      45deg,
-      rgba(128, 0, 255, 0.07),
-      rgba(128, 0, 255, 0.07) 6px,
-      transparent 6px,
-      transparent 12px
-    );
+    /* background: pink; */
   }
 `;
 
@@ -799,11 +795,11 @@ const SuggestionListbox = ({
       baseClassName="navi_suggestion_listbox"
     >
       <li
-        aria-hidden
+        ref={topFillerRef}
         className="navi_suggestion_virtual_filler"
         // eslint-disable-next-line react/no-unknown-property
         navi-virtual-filler="top"
-        ref={topFillerRef}
+        aria-hidden
       />
       <RenderWindowContext.Provider value={renderWindow}>
         <SuggestionListboxContext.Provider value={suggestionContext}>
@@ -815,11 +811,11 @@ const SuggestionListbox = ({
         </SuggestionListboxContext.Provider>
       </RenderWindowContext.Provider>
       <li
-        aria-hidden
+        ref={bottomFillerRef}
         className="navi_suggestion_virtual_filler"
         // eslint-disable-next-line react/no-unknown-property
         navi-virtual-filler="bottom"
-        ref={bottomFillerRef}
+        aria-hidden
       />
 
       {emptyState && (
