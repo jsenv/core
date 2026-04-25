@@ -72,6 +72,9 @@ const css = /* css */ `
     .navi_list_item_group_label {
       --list-group-label-background-color: var(--list-background-color);
     }
+    .navi_list_item_header {
+      background: var(--list-background-color);
+    }
   }
 
   .navi_list_container {
@@ -184,6 +187,12 @@ const css = /* css */ `
   /* Hide groups that have no rendered items. */
   .navi_list_item_group[data-hidden-while-empty]:not(:has([navi-list-item])) {
     display: none;
+  }
+
+  .navi_list_item_header {
+    position: sticky;
+    top: 0;
+    z-index: 1;
   }
 `;
 
@@ -513,9 +522,9 @@ const LIST_ITEM_PSEUDO_ELEMENTS = ["::highlight"];
  */
 export const ListItemPresentation = ({ children, ...rest }) => {
   return (
-    <li role="presentation" {...rest}>
+    <Box as="li" role="presentation" {...rest}>
       {children}
-    </li>
+    </Box>
   );
 };
 /**
@@ -563,5 +572,11 @@ export const ListItemGroup = ({
         {children}
       </ul>
     </ListItemPresentation>
+  );
+};
+
+export const ListItemHeader = (props) => {
+  return (
+    <ListItemPresentation baseClassName="navi_list_item_header" {...props} />
   );
 };

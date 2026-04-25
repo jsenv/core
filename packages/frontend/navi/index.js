@@ -81,6 +81,7 @@ export {
   List,
   ListItem,
   ListItemGroup,
+  ListItemHeader,
   ListItemPresentation,
 } from "./src/list/list.jsx";
 

@@ -44,7 +44,7 @@
         Separator,
         Text,
         Box,
-        ListItemPresentation,
+        ListItemHeader,
       } from "@jsenv/navi";
 
       // ── Reusable dialog header ────────────────────────────────────────────────
@@ -161,66 +161,6 @@
 
       // ── Demo 3: animal picker with radio inputs ───────────────────────────────
 
-      const ANIMALS = [
-        "Cat",
-        "Dog",
-        "Elephant",
-        "Fox",
-        "Giraffe",
-        "Horse",
-        "Lion",
-        "Monkey",
-        "Panda",
-        "Rabbit",
-        "Tiger",
-        "Wolf",
-        "Zebra",
-      ];
-
-      const AnimalPicker = ({ selected, onSelect }) => {
-        const close = useDropdownClose();
-        return (
-          <SuggestionList
-            border="none"
-            uiAction={(v) => {
-              onSelect(v);
-              close();
-            }}
-            separator={<Separator margin="0" />}
-            expandX
-            minWidth="300"
-            renderBudget={10}
-          >
-            <ListItemPresentation>
-              <div style="padding:14px 16px 10px;border-bottom:1px solid #eee;">
-                <span style="font-weight:600;font-size:15px;">
-                  Pick an animal
-                </span>
-              </div>
-            </ListItemPresentation>
-            {ANIMALS.map((animal) => (
-              <Suggestion
-                flex
-                alignY="center"
-                key={animal}
-                value={animal}
-                selected={selected === animal}
-                height="60px"
-              >
-                <Text>{animal}</Text>
-                <Input
-                  selfAlignX="end"
-                  type="radio"
-                  tabIndex="-1"
-                  checked={selected === animal}
-                  style="pointer-events:none;flex-shrink:0;"
-                />
-              </Suggestion>
-            ))}
-          </SuggestionList>
-        );
-      };
-
       // ── App ───────────────────────────────────────────────────────────────────
 
       const Demo1 = () => {
@@ -259,6 +199,66 @@
               </p>
             )}
           </div>
+        );
+      };
+
+      const ANIMALS = [
+        "Cat",
+        "Dog",
+        "Elephant",
+        "Fox",
+        "Giraffe",
+        "Horse",
+        "Lion",
+        "Monkey",
+        "Panda",
+        "Rabbit",
+        "Tiger",
+        "Wolf",
+        "Zebra",
+      ];
+
+      const AnimalPicker = ({ selected, onSelect }) => {
+        const close = useDropdownClose();
+        return (
+          <SuggestionList
+            border="none"
+            uiAction={(v) => {
+              onSelect(v);
+              close();
+            }}
+            separator={<Separator margin="0" />}
+            expandX
+            minWidth="300"
+            renderBudget={10}
+          >
+            <ListItemHeader>
+              <div style="padding:14px 16px 10px;border-bottom:1px solid #eee;">
+                <span style="font-weight:600;font-size:15px;">
+                  Pick an animal
+                </span>
+              </div>
+            </ListItemHeader>
+            {ANIMALS.map((animal) => (
+              <Suggestion
+                flex
+                alignY="center"
+                key={animal}
+                value={animal}
+                selected={selected === animal}
+                height="60px"
+              >
+                <Text>{animal}</Text>
+                <Input
+                  selfAlignX="end"
+                  type="radio"
+                  tabIndex="-1"
+                  checked={selected === animal}
+                  style="pointer-events:none;flex-shrink:0;"
+                />
+              </Suggestion>
+            ))}
+          </SuggestionList>
         );
       };
 
