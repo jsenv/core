@@ -206,6 +206,7 @@ export const List = ({
   separator,
   children,
   tabIndex,
+  popover,
   ...rest
 }) => {
   import.meta.css = css;
@@ -351,7 +352,7 @@ export const List = ({
   }, [renderBudget]);
 
   return (
-    <div className="navi_list_container" tabIndex={tabIndex}>
+    <div className="navi_list_container" tabIndex={tabIndex} popover={popover}>
       <UnorderedList
         ref={ref}
         ItemTrackerProvider={ItemTrackerProvider}

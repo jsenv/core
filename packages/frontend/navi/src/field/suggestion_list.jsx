@@ -15,21 +15,18 @@ export const ListboxIdContext = createContext(null);
 const ListInteractionContext = createContext(null);
 
 const css = /* css */ `
-  .navi_suggestion_list {
-    /* Popover reset — browser adds border, background, padding, margin by default */
-    &[popover] {
-      position: absolute;
-      inset: unset;
-      min-width: var(--suggestion-list-anchor-width, 0px);
-      max-width: 95vw;
-      margin: 0;
-      padding: 0;
-      /* border: none; */
-    }
-    &[data-anchor-hidden] {
-      opacity: 0;
-      pointer-events: none;
-    }
+  .navi_list_container[popover] {
+    position: absolute;
+    inset: unset;
+    min-width: var(--suggestion-list-anchor-width, 0px);
+    max-width: 95vw;
+    margin: 0;
+    padding: 0;
+    /* border: none; */
+  }
+  &[data-anchor-hidden] {
+    opacity: 0;
+    pointer-events: none;
   }
 
   ::highlight(navi-suggestion-match) {
@@ -180,10 +177,11 @@ const SuggestionListWithPopover = (props) => {
         if (!listEl) {
           return;
         }
+        const containerEl = listEl.parentNode;
         cleanupRef.current?.();
-        listEl.removeAttribute("data-anchor-hidden");
+        containerEl.removeAttribute("data-anchor-hidden");
         dispatchToList(e, "navi_list_clear", e.detail);
-        listEl.hidePopover();
+        containerEl.hidePopover();
       }}
     />
   );
