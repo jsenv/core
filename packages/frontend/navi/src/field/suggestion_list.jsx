@@ -38,14 +38,14 @@ const css = /* css */ `
   }
 `;
 
-const dispatchCustomEventToListbox = (
-  listboxRef,
+const dispatchCustomEventToList = (
+  listRef,
   event,
   customEventName,
   customEventDetail,
 ) => {
-  const listbox = listboxRef.current;
-  if (!listbox) {
+  const listEl = listRef.current;
+  if (!listEl) {
     return false;
   }
   const customEvent = new CustomEvent(customEventName, {
@@ -55,7 +55,7 @@ const dispatchCustomEventToListbox = (
       ...customEventDetail,
     },
   });
-  listbox.dispatchEvent(customEvent);
+  listEl.dispatchEvent(customEvent);
   return customEvent.defaultPrevented;
 };
 
@@ -74,13 +74,14 @@ export const SuggestionList = ({ popover, ...rest }) => {
 const SuggestionListStandalone = (props) => {
   const defaultRef = useRef();
   const ref = props.ref || defaultRef;
-  const dispatchToList = (...args) =>
-    dispatchCustomEventToListbox(ref, ...args);
+  const dispatchToList = (...args) => dispatchCustomEventToList(ref, ...args);
   useKeyboardShortcuts(ref, [
     {
       key: "arrowdown",
       description: "Point to next suggestion",
-      handler: (e) => dispatchToList(e, "navi_list_nav", { direction: "down" }),
+      handler: (e) => {
+        dispatchToList(e, "navi_list_nav", { direction: "down" });
+      },
     },
     {
       key: "arrowup",
@@ -118,8 +119,7 @@ const SuggestionListStandalone = (props) => {
 const SuggestionListWithPopover = (props) => {
   const defaultRef = useRef();
   const ref = props.ref || defaultRef;
-  const dispatchToList = (...args) =>
-    dispatchCustomEventToListbox(ref, ...args);
+  const dispatchToList = (...args) => dispatchCustomEventToList(ref, ...args);
   const cleanupRef = useRef();
 
   return (
@@ -177,15 +177,6 @@ const SuggestionListWithPopover = (props) => {
         listEl.removeAttribute("data-anchor-hidden");
         dispatchToList(e, "navi_list_clear", e.detail);
         listEl.hidePopover();
-      }}
-      onnavi_list_nav={(e) => {
-        dispatchToList(e, "navi_list_nav", e.detail);
-      }}
-      onnavi_list_confirm={(e) => {
-        dispatchToList(e, "navi_list_confirm", e.detail);
-      }}
-      onnavi_list_clear={(e) => {
-        dispatchToList(e, "navi_list_clear", e.detail);
       }}
     />
   );

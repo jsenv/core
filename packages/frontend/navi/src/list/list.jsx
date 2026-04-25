@@ -171,14 +171,14 @@ const css = /* css */ `
     text-align: center;
     user-select: none;
   }
-  .navi_list:not(:has([data-list-item])) {
+  .navi_list:not(:has([navi-list-item])) {
     .navi_list_empty {
       display: block;
     }
   }
 
   /* Hide groups that have no rendered items. */
-  li[role="presentation"]:not(:has([data-list-item])) {
+  li[role="presentation"]:not(:has([navi-list-item])) {
     display: none;
   }
 `;
