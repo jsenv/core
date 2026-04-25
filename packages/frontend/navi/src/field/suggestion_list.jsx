@@ -445,6 +445,8 @@ const SuggestionListControlled = ({
   children,
   maxHeight,
   renderBudget = RENDER_BUDGET_DEFAULT,
+  itemHeightEstimation,
+  itemHeightIsVariable = false,
   separator,
   ...rest
 }) => {
@@ -467,6 +469,8 @@ const SuggestionListControlled = ({
   // scrollHeight equal to the full list height so the scrollbar is accurate.
   const topFillerRef = useRef(null);
   const bottomFillerRef = useRef(null);
+  // Cached item height so we don't re-measure every scroll event.
+  const measuredItemHeightRef = useRef(itemHeightEstimation ?? 0);
 
   // After every render, update filler heights to reflect the current window.
   // overflow-anchor: none prevents the browser from adjusting scrollTop when
@@ -491,7 +495,11 @@ const SuggestionListControlled = ({
     if (options.length === 0) {
       return;
     }
-    const itemHeight = options[0].getBoundingClientRect().height;
+    // Measure from first rendered option unless caller provided a fixed estimate.
+    if (!itemHeightEstimation) {
+      measuredItemHeightRef.current = options[0].getBoundingClientRect().height;
+    }
+    const itemHeight = measuredItemHeightRef.current;
     if (topFillerRef.current) {
       topFillerRef.current.style.height = `${current.start * itemHeight}px`;
     }
@@ -531,17 +539,41 @@ const SuggestionListControlled = ({
         return;
       }
       const scrollTop = listEl.scrollTop;
-      const options = listEl.querySelectorAll("[role='option']");
-      if (options.length === 0) {
-        return;
-      }
-      const itemHeight = options[0].getBoundingClientRect().height;
-      if (itemHeight === 0) {
-        return;
+
+      let firstVisibleIndex;
+      if (itemHeightIsVariable) {
+        // For variable-height items, use elementFromPoint to find the first
+        // visible option at the top edge of the list container.
+        const listRect = listEl.getBoundingClientRect();
+        const options = Array.from(listEl.querySelectorAll("[role='option']"));
+        if (options.length === 0) {
+          return;
+        }
+        // Scan from the top of the list downward until we hit an option element.
+        let hitEl = null;
+        for (let y = listRect.top + 1; y < listRect.bottom; y += 4) {
+          const el = document.elementFromPoint(listRect.left + 1, y);
+          if (el && listEl.contains(el)) {
+            const opt = el.closest("[role='option']");
+            if (opt) {
+              hitEl = opt;
+              break;
+            }
+          }
+        }
+        const relIndex = hitEl ? options.indexOf(hitEl) : 0;
+        firstVisibleIndex = current.start + (relIndex === -1 ? 0 : relIndex);
+      } else {
+        const itemHeight = measuredItemHeightRef.current;
+        if (itemHeight === 0) {
+          return;
+        }
+        // Derive first visible absolute index directly from scrollTop.
+        // Fillers make scrollHeight = full list height, so this is exact for
+        // uniform-height items.
+        firstVisibleIndex = Math.floor(scrollTop / itemHeight);
       }
 
-      // Derive first visible absolute index from scroll position.
-      const firstVisibleIndex = Math.floor(scrollTop / itemHeight);
       const half = Math.floor(renderBudget / 2);
       let newStart = Math.max(0, firstVisibleIndex - half);
       let newEnd = Math.min(totalItems, newStart + renderBudget);
