@@ -106,7 +106,6 @@ const css = /* css */ `
     border-radius: var(--x-border-radius);
     transition: opacity 0.2s ease;
     overflow: auto;
-    overflow-anchor: none;
 
     /* Popover reset — browser adds border, background, padding, margin by default */
     &[popover] {
@@ -463,6 +462,44 @@ const SuggestionListControlled = ({
   const renderWindowRef = useRef(null);
   renderWindowRef.current = renderWindow;
 
+  // Refs to the invisible filler <li> elements above and below the rendered window.
+  // Their heights represent the space occupied by items outside the window, making
+  // scrollHeight equal to the full list height so the scrollbar is accurate.
+  const topFillerRef = useRef(null);
+  const bottomFillerRef = useRef(null);
+
+  // After every render, update filler heights to reflect the current window.
+  // overflow-anchor: none prevents the browser from adjusting scrollTop when
+  // filler heights change, so the user's scroll position stays stable.
+  useLayoutEffect(() => {
+    const totalItems = ItemTrackerProvider.items.length;
+    const current = renderWindowRef.current;
+    if (!current || totalItems <= renderBudget) {
+      if (topFillerRef.current) {
+        topFillerRef.current.style.height = "0px";
+      }
+      if (bottomFillerRef.current) {
+        bottomFillerRef.current.style.height = "0px";
+      }
+      return;
+    }
+    const listEl = ref.current;
+    if (!listEl) {
+      return;
+    }
+    const options = listEl.querySelectorAll("[role='option']");
+    if (options.length === 0) {
+      return;
+    }
+    const itemHeight = options[0].getBoundingClientRect().height;
+    if (topFillerRef.current) {
+      topFillerRef.current.style.height = `${current.start * itemHeight}px`;
+    }
+    if (bottomFillerRef.current) {
+      bottomFillerRef.current.style.height = `${(totalItems - current.end) * itemHeight}px`;
+    }
+  });
+
   // Activate or deactivate the render window depending on item count.
   // Runs every render so it reacts to filter changes (items added/removed).
   useLayoutEffect(() => {
@@ -476,14 +513,9 @@ const SuggestionListControlled = ({
     }
   });
 
-  // virtualScrollIndexRef: our own floating-point position in the full list (0 → totalItems-1).
-  // We accumulate scroll deltas scaled to the full list so the window slides at the right pace
-  // regardless of how many items are actually rendered. After each window slide we remap
-  // DOM scrollTop to match the virtual ratio so the scrollbar reflects the true position.
-  const virtualScrollIndexRef = useRef(0);
-  const prevDomScrollTopRef = useRef(0);
-
-  // Scroll listener — slides the render window by accumulating virtual scroll position.
+  // Scroll listener — derives the window directly from scrollTop / itemHeight.
+  // Fillers make scrollHeight = full list height, so scrollTop is an accurate
+  // pixel offset into the virtual list. No amplification or virtual index needed.
   useLayoutEffect(() => {
     const listEl = ref.current;
     if (!listEl) {
@@ -498,56 +530,20 @@ const SuggestionListControlled = ({
       if (!current) {
         return;
       }
-      const domScrollTop = listEl.scrollTop;
-      const maxDomScrollTop = listEl.scrollHeight - listEl.clientHeight;
-      const delta = domScrollTop - prevDomScrollTopRef.current;
-      prevDomScrollTopRef.current = domScrollTop;
-
-      // Scale the pixel delta to virtual list indices.
-      // The DOM has renderBudget items; each pixel = 1/approxItemHeight rendered items.
-      // Multiply by totalItems/renderBudget to get the equivalent full-list displacement.
-      const approxItemHeight = listEl.scrollHeight / renderBudget;
-      const virtualDelta =
-        (delta / approxItemHeight) * (totalItems / renderBudget);
-      let virtualIndex = virtualScrollIndexRef.current + virtualDelta;
-      if (virtualIndex < 0) {
-        virtualIndex = 0;
-      }
-      if (virtualIndex > totalItems - 1) {
-        virtualIndex = totalItems - 1;
-      }
-      virtualScrollIndexRef.current = virtualIndex;
-
-      // Snap to absolute boundaries.
-      if (virtualIndex <= 0 || domScrollTop <= 0) {
-        virtualScrollIndexRef.current = 0;
-        prevDomScrollTopRef.current = 0;
-        listEl.scrollTop = 0;
-        if (current.start === 0) {
-          return;
-        }
-        setRenderWindow({ start: 0, end: renderBudget });
+      const scrollTop = listEl.scrollTop;
+      const options = listEl.querySelectorAll("[role='option']");
+      if (options.length === 0) {
         return;
       }
-      if (
-        virtualIndex >= totalItems - 1 ||
-        domScrollTop >= maxDomScrollTop - 1
-      ) {
-        virtualScrollIndexRef.current = totalItems - 1;
-        if (current.end === totalItems) {
-          return;
-        }
-        setRenderWindow({
-          start: Math.max(0, totalItems - renderBudget),
-          end: totalItems,
-        });
+      const itemHeight = options[0].getBoundingClientRect().height;
+      if (itemHeight === 0) {
         return;
       }
 
-      // Centre the render window around the virtual index.
-      const centerAbsIndex = Math.round(virtualIndex);
+      // Derive first visible absolute index from scroll position.
+      const firstVisibleIndex = Math.floor(scrollTop / itemHeight);
       const half = Math.floor(renderBudget / 2);
-      let newStart = Math.max(0, centerAbsIndex - half);
+      let newStart = Math.max(0, firstVisibleIndex - half);
       let newEnd = Math.min(totalItems, newStart + renderBudget);
       if (newEnd === totalItems) {
         newStart = Math.max(0, totalItems - renderBudget);
@@ -557,16 +553,6 @@ const SuggestionListControlled = ({
         return;
       }
       setRenderWindow({ start: newStart, end: newEnd });
-
-      // Remap DOM scrollTop so the scrollbar thumb sits at the correct proportional
-      // position for virtualIndex in the new scroll range.
-      // This makes the scrollbar move continuously across the full range as the
-      // user scrolls, instead of getting stuck at the midpoint.
-      const newMaxDomScrollTop = listEl.scrollHeight - listEl.clientHeight;
-      const ratio = virtualIndex / (totalItems - 1);
-      const newDomScrollTop = ratio * newMaxDomScrollTop;
-      listEl.scrollTop = newDomScrollTop;
-      prevDomScrollTopRef.current = newDomScrollTop;
     };
     listEl.addEventListener("scroll", onScroll, { passive: true });
     return () => {
@@ -616,6 +602,8 @@ const SuggestionListControlled = ({
         ref={listboxRef}
         ItemTrackerProvider={ItemTrackerProvider}
         renderWindow={renderWindow}
+        topFillerRef={topFillerRef}
+        bottomFillerRef={bottomFillerRef}
         uiAction={uiAction}
         highlight={highlight}
         emptyState={emptyState}
@@ -634,6 +622,8 @@ const SuggestionListbox = ({
   ref,
   ItemTrackerProvider,
   renderWindow,
+  topFillerRef,
+  bottomFillerRef,
   uiAction,
   highlight,
   emptyState,
@@ -746,6 +736,7 @@ const SuggestionListbox = ({
       role="listbox"
       baseClassName="navi_suggestion_listbox"
     >
+      <li aria-hidden ref={topFillerRef} style="height:0px" />
       <RenderWindowContext.Provider value={renderWindow}>
         <SuggestionListboxContext.Provider value={suggestionContext}>
           <ItemTrackerProvider>
@@ -755,6 +746,7 @@ const SuggestionListbox = ({
           </ItemTrackerProvider>
         </SuggestionListboxContext.Provider>
       </RenderWindowContext.Provider>
+      <li aria-hidden ref={bottomFillerRef} style="height:0px" />
 
       {emptyState && (
         <li className="navi_suggestion_listbox_empty">{emptyState}</li>
