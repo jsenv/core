@@ -72,48 +72,41 @@ const SuggestionListStandalone = (props) => {
   const defaultRef = useRef();
   const ref = props.ref || defaultRef;
   const dispatchToList = (...args) => dispatchCustomEventToList(ref, ...args);
-  useKeyboardShortcuts(
-    ref,
-    [
-      {
-        key: "arrowdown",
-        description: "Point to next suggestion",
-        handler: (e) => {
-          dispatchToList(e, "navi_list_nav", { direction: "down" });
-        },
-      },
-      {
-        key: "arrowup",
-        description: "Point to previous suggestion",
-        handler: (e) => dispatchToList(e, "navi_list_nav", { direction: "up" }),
-      },
-      {
-        key: "home",
-        description: "Point to first suggestion",
-        handler: (e) =>
-          dispatchToList(e, "navi_list_nav", { direction: "first" }),
-      },
-      {
-        key: "end",
-        description: "Point to last suggestion",
-        handler: (e) =>
-          dispatchToList(e, "navi_list_nav", { direction: "last" }),
-      },
-      {
-        key: "enter",
-        description: "Confirm pointed suggestion",
-        handler: (e) => dispatchToList(e, "navi_list_confirm"),
-      },
-      {
-        key: "escape",
-        description: "Clear pointed suggestion",
-        handler: (e) => dispatchToList(e, "navi_list_clear"),
-      },
-    ],
+  useKeyboardShortcuts(ref, [
     {
-      closestFocusableSelector: ".navi_list_container",
+      key: "arrowdown",
+      description: "Point to next suggestion",
+      handler: (e) => {
+        dispatchToList(e, "navi_list_nav", { direction: "down" });
+      },
     },
-  );
+    {
+      key: "arrowup",
+      description: "Point to previous suggestion",
+      handler: (e) => dispatchToList(e, "navi_list_nav", { direction: "up" }),
+    },
+    {
+      key: "home",
+      description: "Point to first suggestion",
+      handler: (e) =>
+        dispatchToList(e, "navi_list_nav", { direction: "first" }),
+    },
+    {
+      key: "end",
+      description: "Point to last suggestion",
+      handler: (e) => dispatchToList(e, "navi_list_nav", { direction: "last" }),
+    },
+    {
+      key: "enter",
+      description: "Confirm pointed suggestion",
+      handler: (e) => dispatchToList(e, "navi_list_confirm"),
+    },
+    {
+      key: "escape",
+      description: "Clear pointed suggestion",
+      handler: (e) => dispatchToList(e, "navi_list_clear"),
+    },
+  ]);
 
   return <SuggestionListControlled tabIndex={0} {...props} ref={ref} />;
 };
@@ -132,56 +125,60 @@ const SuggestionListWithPopover = (props) => {
       popover="manual"
       ref={ref}
       onnavi_list_open={(e) => {
-        const listEl = ref.current;
-        if (!listEl) {
+        const listContainerEl = ref.current;
+        if (!listContainerEl) {
           return;
         }
-        const containerEl = listEl.parentNode;
         const anchor = e.detail?.anchor;
-        containerEl.showPopover();
+        listContainerEl.showPopover();
         // TODO: if there is no anchor position relative to document.body (at the center of the viewport)
         const positionPopover = () => {
           const anchorRect = anchor.getBoundingClientRect();
-          containerEl.style.setProperty(
+          listContainerEl.style.setProperty(
             "--list-anchor-width",
             `${anchorRect.width}px`,
           );
           const minLeft = 1;
-          const { left, top } = pickPositionRelativeTo(containerEl, anchor, {
-            positionPreference: "below",
-            minLeft,
-          });
-          containerEl.style.top = `${top}px`;
-          const popoverRect = containerEl.getBoundingClientRect();
-          const maxWidth = parseFloat(getComputedStyle(containerEl).maxWidth);
+          const { left, top } = pickPositionRelativeTo(
+            listContainerEl,
+            anchor,
+            {
+              positionPreference: "below",
+              minLeft,
+            },
+          );
+          listContainerEl.style.top = `${top}px`;
+          const popoverRect = listContainerEl.getBoundingClientRect();
+          const maxWidth = parseFloat(
+            getComputedStyle(listContainerEl).maxWidth,
+          );
           if (!isNaN(maxWidth) && popoverRect.width >= maxWidth - 1) {
             const viewportWidth = document.documentElement.clientWidth;
             const centeredLeft = (viewportWidth - popoverRect.width) / 2;
-            containerEl.style.left = `${Math.max(centeredLeft, minLeft)}px`;
+            listContainerEl.style.left = `${Math.max(centeredLeft, minLeft)}px`;
           } else {
-            containerEl.style.left = `${Math.max(left, minLeft)}px`;
+            listContainerEl.style.left = `${Math.max(left, minLeft)}px`;
           }
         };
         const cleanup = visibleRectEffect(anchor, ({ visibilityRatio }) => {
           if (visibilityRatio <= 0.2) {
-            containerEl.setAttribute("data-anchor-hidden", "");
+            listContainerEl.setAttribute("data-anchor-hidden", "");
             return;
           }
-          containerEl.removeAttribute("data-anchor-hidden");
+          listContainerEl.removeAttribute("data-anchor-hidden");
           positionPopover();
         });
         cleanupRef.current = () => cleanup.disconnect();
       }}
       onnavi_list_close={(e) => {
-        const listEl = ref.current;
-        if (!listEl) {
+        const listContainerEl = ref.current;
+        if (!listContainerEl) {
           return;
         }
-        const containerEl = listEl.parentNode;
         cleanupRef.current?.();
-        containerEl.removeAttribute("data-anchor-hidden");
+        listContainerEl.removeAttribute("data-anchor-hidden");
         dispatchToList(e, "navi_list_clear", e.detail);
-        containerEl.hidePopover();
+        listContainerEl.hidePopover();
       }}
     />
   );
@@ -196,8 +193,6 @@ const SuggestionListControlled = ({
   fallback = "No results",
   children,
   renderBudget,
-  itemHeightEstimation,
-  itemHeightIsVariable,
   ...rest
 }) => {
   const listboxIdFromContext = useContext(ListboxIdContext);
@@ -233,14 +228,11 @@ const SuggestionListControlled = ({
     <List
       {...rest}
       ref={ref}
-      id={listboxIdFromContext}
-      baseClassName="navi_list navi_suggestion_list"
-      role="listbox"
+      listId={listboxIdFromContext}
+      listRole="listbox"
       fallback={fallback}
       renderBudget={renderBudget}
       itemsRef={itemsRef}
-      itemHeightEstimation={itemHeightEstimation}
-      itemHeightIsVariable={itemHeightIsVariable}
       onnavi_list_nav={(e) => {
         const { direction, event = e } = e.detail;
         const items = itemsRef.current;

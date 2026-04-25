@@ -1,6 +1,7 @@
 import { getScrollContainer } from "@jsenv/dom";
 import { createContext } from "preact";
 import {
+  useCallback,
   useContext,
   useId,
   useLayoutEffect,
@@ -178,6 +179,7 @@ const css = /* css */ `
     text-align: center;
     user-select: none;
   }
+  /* could also use [data-void] */
   .navi_list:not(:has([navi-list-item])) {
     .navi_list_empty {
       display: block;
@@ -212,9 +214,8 @@ const css = /* css */ `
  */
 export const List = ({
   renderBudget = RENDER_BUDGET_DEFAULT,
-  itemsRef,
-  itemHeightEstimation,
-  itemHeightIsVariable = true,
+  listId,
+  listRole,
   fallback,
   separator,
   children,
@@ -222,6 +223,9 @@ export const List = ({
   popover,
   expandX,
   maxHeight,
+  itemsRef,
+  itemHeightEstimation,
+  itemHeightIsVariable = true,
   ...rest
 }) => {
   import.meta.css = css;
@@ -255,10 +259,11 @@ export const List = ({
       }
       return;
     }
-    const listEl = ref.current;
-    if (!listEl) {
+    const listContainerEl = ref.current;
+    if (!listContainerEl) {
       return;
     }
+    const listEl = listContainerEl.querySelector(".navi_list");
     const items = listEl.querySelectorAll(LIST_ITEM_SELECTOR);
     if (items.length === 0) {
       return;
@@ -293,10 +298,11 @@ export const List = ({
 
   // Scroll listener — slides the window as the user scrolls.
   useLayoutEffect(() => {
-    const listEl = ref.current;
-    if (!listEl) {
+    const listContainerEl = ref.current;
+    if (!listContainerEl) {
       return undefined;
     }
+    const listEl = listContainerEl.querySelector(".navi_list");
     const scrollContainer = getScrollContainer(listEl);
     const onScroll = () => {
       const totalItems = ItemTrackerProvider.items.length;
@@ -370,44 +376,60 @@ export const List = ({
     };
   }, [renderBudget]);
 
+  const renderList = (listProps) => {
+    return (
+      <UnorderedList
+        id={listId}
+        role={listRole}
+        fallback={fallback}
+        separator={separator}
+        expandX={expandX}
+        {...listProps}
+        ItemTrackerProvider={ItemTrackerProvider}
+        renderWindow={renderWindow}
+        topFillerRef={topFillerRef}
+        bottomFillerRef={bottomFillerRef}
+      >
+        {children}
+      </UnorderedList>
+    );
+  };
+  const renderListMemoized = useCallback(renderList, [
+    listId,
+    listRole,
+    fallback,
+    separator,
+    expandX,
+    children,
+    renderWindow,
+  ]);
+
   return (
     <Box
-      className="navi_list_container"
+      {...rest}
+      ref={ref}
+      baseClassName="navi_list_container"
       tabIndex={tabIndex}
       popover={popover}
       data-expand-x={expandX ? "" : undefined}
       expandX={expandX}
       maxHeight={maxHeight}
-      styleCssVars={LIST_STYLE_CSS_VARS}
+      visualSelector=".navi_list"
+      styleCSSVars={LIST_STYLE_CSS_VARS}
       pseudoClasses={LIST_PSEUDO_CLASSES}
       basePseudoState={{
-        ":-navi-emtpy": false,
+        ":-navi-void": ItemTrackerProvider.items.length === 0,
       }}
+      hasChildFunction
     >
-      <UnorderedList
-        ref={ref}
-        ItemTrackerProvider={ItemTrackerProvider}
-        renderWindow={renderWindow}
-        topFillerRef={topFillerRef}
-        bottomFillerRef={bottomFillerRef}
-        fallback={fallback}
-        separator={separator}
-        expandX={expandX}
-        {...rest}
-      >
-        {children}
-      </UnorderedList>
+      {renderListMemoized}
     </Box>
   );
 };
 const LIST_STYLE_CSS_VARS = {
-  "maxHeight": "--list-max-height",
-  ":-navi-empty": {
-    color: "--list-item-color-hover",
-    backgroundColor: "--list-item-background-color-hover",
-  },
+  maxHeight: "--list-max-height",
 };
-const LIST_PSEUDO_CLASSES = [":-navi-empty"];
+const LIST_PSEUDO_CLASSES = [":-navi-void"];
 // Inner <ul> — hosts the fillers + items.
 const UnorderedList = ({
   ItemTrackerProvider,

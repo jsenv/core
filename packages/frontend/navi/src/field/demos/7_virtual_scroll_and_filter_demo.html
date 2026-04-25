@@ -211,11 +211,10 @@
         }, []);
 
         const scrollTo = (position) => {
-          const el = listRef.current;
-          if (!el) {
+          const containerEl = listRef.current;
+          if (!containerEl) {
             return;
           }
-          const containerEl = el.parentNode;
           if (position === "top") {
             containerEl.scrollTop = 0;
           } else if (position === "middle") {

@@ -321,6 +321,9 @@ export const PSEUDO_CLASSES = {
   ":navi-expanded": {
     attribute: "data-expanded",
   },
+  ":-navi-void": {
+    attribute: "data-void",
+  },
 };
 
 export const NAVI_PSEUDO_STATE_CUSTOM_EVENT = "navi_pseudo_state";
