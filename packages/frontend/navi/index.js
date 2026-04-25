@@ -75,6 +75,13 @@ export { enableDebugOnDocumentLoading } from "./src/nav/browser_integration/docu
 export { Details } from "./src/field/details/details.jsx";
 export { SummaryMarker } from "./src/field/details/summary_marker.jsx";
 
+export {
+  List,
+  ListItem,
+  ListItemGroup,
+  ListItemPresentation,
+} from "./src/list/list.jsx";
+
 // Form
 // Validation
 export { openCallout } from "./src/field/validation/callout/callout.js";
@@ -111,11 +118,7 @@ export { Input } from "./src/field/input.jsx";
 export { Label } from "./src/field/label.jsx";
 export { Radio, RadioList } from "./src/field/radio_list.jsx";
 export { Select } from "./src/field/select.jsx";
-export {
-  Suggestion,
-  SuggestionGroup,
-  SuggestionList,
-} from "./src/field/suggestion_list.jsx";
+export { Suggestion, SuggestionList } from "./src/field/suggestion_list.jsx";
 export { SuggestionListCombo } from "./src/field/suggestion_list_combo.jsx";
 // Table start
 export {

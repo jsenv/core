@@ -10,12 +10,7 @@ import {
 
 import { Box } from "../box/box.jsx";
 import { useKeyboardShortcuts } from "../keyboard/keyboard_shortcuts.js";
-import {
-  List,
-  ListInteractionContext,
-  ListItem,
-  ListPresentation,
-} from "../list/list.jsx";
+import { List, ListInteractionContext, ListItem } from "../list/list.jsx";
 
 // Provided by SuggestionListCombo. When present, SuggestionList uses it to
 // compute hidden state on each Suggestion automatically.
@@ -177,26 +172,6 @@ const css = /* css */ `
 
     &[hidden] {
       display: none;
-    }
-  }
-  .navi_suggestion_group_label {
-    position: sticky;
-    top: 0;
-    z-index: 1;
-    display: block;
-    background-color: var(
-      --suggestion-group-label-background-color,
-      var(--suggestion-list-background-color)
-    );
-    user-select: none;
-
-    &[data-default-label] {
-      padding: 4px 12px 2px;
-      color: light-dark(#888, #aaa);
-      font-weight: 600;
-      font-size: 0.75em;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
     }
   }
   .navi_list_empty {
@@ -524,7 +499,6 @@ const SuggestionListControlled = ({
         interactionContext={interactionContext}
         anchorValueRef={anchorValueRef}
         onNavigateRef={onNavigateRef}
-        itemsRef={itemsRef}
         uiAction={uiAction}
         emptyState={emptyState}
         separator={separator}
@@ -551,7 +525,6 @@ const SuggestionListbox = ({
   interactionContext,
   anchorValueRef,
   onNavigateRef,
-  itemsRef,
   uiAction,
   emptyState,
   separator,
@@ -777,34 +750,5 @@ const SuggestionConcrete = ({
     >
       {children}
     </Box>
-  );
-};
-
-export const SuggestionGroup = ({ label, children, ...rest }) => {
-  import.meta.css = css;
-  const groupId = useId();
-  return (
-    <ListPresentation {...rest}>
-      <span
-        id={groupId}
-        role="presentation"
-        aria-hidden="true"
-        style={{ display: "contents" }}
-      >
-        <span
-          className="navi_suggestion_group_label"
-          data-default-label={typeof label === "string" ? "" : undefined}
-        >
-          {label}
-        </span>
-      </span>
-      <ul
-        role="group"
-        aria-labelledby={groupId}
-        style={{ margin: 0, padding: 0, listStyle: "none" }}
-      >
-        {children}
-      </ul>
-    </ListPresentation>
   );
 };

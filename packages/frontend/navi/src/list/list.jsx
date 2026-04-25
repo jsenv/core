@@ -36,6 +36,29 @@ export const SeparatorContext = createContext(null);
 // consumer (e.g. SuggestionListbox) down to ListItem children.
 export const ListInteractionContext = createContext(null);
 
+const css = /* css */ `
+  .navi_suggestion_group_label {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    display: block;
+    background-color: var(
+      --suggestion-group-label-background-color,
+      var(--suggestion-list-background-color)
+    );
+    user-select: none;
+
+    &[data-default-label] {
+      padding: 4px 12px 2px;
+      color: light-dark(#888, #aaa);
+      font-weight: 600;
+      font-size: 0.75em;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+  }
+`;
+
 /**
  * List — generic virtualized scroll container.
  *
@@ -65,6 +88,8 @@ export const List = ({
   children,
   ...rest
 }) => {
+  import.meta.css = css;
+
   const defaultOuterRef = useRef();
   const outerRef = ref || defaultOuterRef;
   const defaultInnerRef = useRef(null);
@@ -207,7 +232,7 @@ export const List = ({
 
   return (
     <Box {...rest} ref={outerRef}>
-      <ListInner
+      <Listbox
         ref={listboxRef}
         ItemTrackerProvider={ItemTrackerProvider}
         renderWindow={renderWindow}
@@ -219,13 +244,13 @@ export const List = ({
         listProps={listProps}
       >
         {children}
-      </ListInner>
+      </Listbox>
     </Box>
   );
 };
 
 // Inner <ul> — hosts the fillers + items.
-const ListInner = ({
+const Listbox = ({
   ref,
   ItemTrackerProvider,
   renderWindow,
@@ -318,13 +343,46 @@ export const ListItem = ({ itemId, hidden, children, ...rest }) => {
 };
 
 /**
- * ListPresentation — a non-tracked <li role="presentation"> for arbitrary
+ * ListItemPresentation — a non-tracked <li role="presentation"> for arbitrary
  * content inside the list (sticky headers, group labels, etc.).
  */
-export const ListPresentation = ({ children, ...rest }) => {
+export const ListItemPresentation = ({ children, ...rest }) => {
   return (
     <li role="presentation" {...rest}>
       {children}
     </li>
+  );
+};
+/**
+ * ListGroup — a labeled group of list items.
+ *
+ * Renders a <li role="presentation"> wrapper containing a label span
+ * (accessible via aria-labelledby) and a <ul role="group"> for the items.
+ *
+ * Props:
+ *   label      — group label content
+ *   labelProps — props forwarded to the label <span>
+ *   ...rest    — forwarded to the outer <li role="presentation">
+ */
+export const ListItemGroup = ({ label, children, ...rest }) => {
+  const groupId = useId();
+  return (
+    <ListItemPresentation {...rest}>
+      <span
+        id={groupId}
+        role="presentation"
+        aria-hidden="true"
+        style={{ display: "contents" }}
+      >
+        {label}
+      </span>
+      <ul
+        role="group"
+        aria-labelledby={groupId}
+        style={{ margin: 0, padding: 0, listStyle: "none" }}
+      >
+        {children}
+      </ul>
+    </ListItemPresentation>
   );
 };
