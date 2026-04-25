@@ -54,58 +54,43 @@ export const ListboxIdContext = createContext(null);
 const css = /* css */ `
   @layer navi {
     .navi_suggestion_list {
-      --suggestion-list-border-radius: 4px;
-      --suggestion-list-border-width: 1px;
-      --suggestion-list-border-color: light-dark(#ccc, #555);
-      --suggestion-list-border-style: solid;
-      --suggestion-list-background-color: light-dark(#fff, #1e1e1e);
-      --suggestion-list-max-height: 220px;
+      --list-border-radius: 4px;
+      --list-border-width: 1px;
+      --list-border-color: light-dark(#ccc, #555);
+      --list-border-style: solid;
+      --list-background-color: light-dark(#fff, #1e1e1e);
+      --list-max-height: 220px;
     }
     .navi_suggestion {
-      --suggestion-padding: 8px 12px;
-      --suggestion-color: inherit;
-      --suggestion-font-weight: inherit;
+      --list-item-padding: 8px 12px;
+      --list-item-color: inherit;
+      --list-item-font-weight: inherit;
 
       /* Hover (mouse) */
-      --suggestion-color-hover: var(--suggestion-color);
-      --suggestion-background-color-hover: light-dark(#f5f5f5, #2a2a2a);
+      --list-item-color-hover: var(--list-item-color);
+      --list-item-background-color-hover: light-dark(#f5f5f5, #2a2a2a);
 
       /* Pointed (keyboard navigation position) */
-      --suggestion-color-pointed: var(--suggestion-color);
-      --suggestion-background-color-pointed: light-dark(#c2d7fc, #1a4a9e);
+      --list-item-color-pointed: var(--list-item-color);
+      --list-item-background-color-pointed: light-dark(#c2d7fc, #1a4a9e);
 
       /* Selected */
-      --suggestion-color-selected: light-dark(#1a73e8, #7baaf7);
-      --suggestion-background-color-selected: light-dark(#e8f0fe, #1c3a6e);
-      --suggestion-font-weight-selected: 500;
-
-      /* Highlight (CSS Highlight API match) */
-      --suggestion-color-highlight: inherit;
-      --suggestion-background-color-highlight: #ffe066;
-      --suggestion-color-pointed-selected: var(--suggestion-color-selected);
-      --suggestion-background-color-pointed-selected: light-dark(
+      --list-item-color-selected: light-dark(#1a73e8, #7baaf7);
+      --list-item-background-color-selected: light-dark(#e8f0fe, #1c3a6e);
+      --list-item-font-weight-selected: 500;
+      --list-item-color-pointed-selected: var(--list-item-color-selected);
+      --list-item-background-color-pointed-selected: light-dark(
         #d2e3fc,
         #174ea6
       );
+
+      /* Highlight (CSS Highlight API match) — suggestion-specific */
+      --suggestion-color-highlight: inherit;
+      --suggestion-background-color-highlight: #ffe066;
     }
   }
 
   .navi_suggestion_list {
-    --x-border-radius: var(--suggestion-list-border-radius);
-    --x-border-width: var(--suggestion-list-border-width);
-    --x-border-color: var(--suggestion-list-border-color);
-    --x-border-style: var(--suggestion-list-border-style);
-    --x-background-color: var(--suggestion-list-background-color);
-    width: fit-content;
-    max-width: 100%;
-
-    max-height: var(--suggestion-list-max-height);
-    background-color: var(--x-background-color);
-    border: var(--x-border-width) var(--x-border-style) var(--x-border-color);
-    border-radius: var(--x-border-radius);
-    transition: opacity 0.2s ease;
-    overflow: auto;
-
     /* Popover reset — browser adds border, background, padding, margin by default */
     &[popover] {
       position: absolute;
@@ -122,67 +107,10 @@ const css = /* css */ `
     }
   }
 
-  .navi_suggestion_listbox {
-    box-sizing: border-box;
-    width: max-content;
-    min-width: 100%;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
   ::highlight(navi-suggestion-match) {
     color: var(--suggestion-color-highlight);
     background-color: var(--suggestion-background-color-highlight);
   }
-  .navi_suggestion {
-    --x-color: var(--suggestion-color);
-    --x-background-color: var(--suggestion-background-color);
-    --x-font-weight: var(--suggestion-font-weight);
-    display: flex;
-    box-sizing: border-box;
-    min-width: 100%;
-
-    padding: var(--suggestion-padding);
-    color: var(--x-color);
-    font-weight: var(--x-font-weight);
-    background-color: var(--x-background-color);
-    cursor: pointer;
-    user-select: none;
-
-    &:hover {
-      --x-color: var(--suggestion-color-hover);
-      --x-background-color: var(--suggestion-background-color-hover);
-    }
-
-    &[data-pointed] {
-      --x-color: var(--suggestion-color-pointed);
-      --x-background-color: var(--suggestion-background-color-pointed);
-    }
-
-    &[data-selected] {
-      --x-color: var(--suggestion-color-selected);
-      --x-background-color: var(--suggestion-background-color-selected);
-      --x-font-weight: var(--suggestion-font-weight-selected);
-    }
-
-    &[data-pointed][data-selected] {
-      --x-color: var(--suggestion-color-pointed-selected);
-      --x-background-color: var(--suggestion-background-color-pointed-selected);
-    }
-
-    &[hidden] {
-      display: none;
-    }
-  }
-  /* Show the empty state with suggestion-specific appearance */
-  .navi_suggestion_list .navi_list_empty {
-    padding: var(--suggestion-padding);
-    color: var(--suggestion-group-label-color);
-    font-size: 0.9em;
-    text-align: center;
-    user-select: none;
-  }
-  /* Virtual scroll fillers and group hiding are handled by list.jsx */
 `;
 
 const dispatchCustomEventToListbox = (
@@ -369,11 +297,11 @@ const SuggestionListWithPopover = (props) => {
 };
 
 const SuggestionListStyleCSSVars = {
-  borderRadius: "--suggestion-list-border-radius",
-  borderWidth: "--suggestion-list-border-width",
-  borderColor: "--suggestion-list-border-color",
-  backgroundColor: "--suggestion-list-background-color",
-  maxHeight: "--suggestion-list-max-height",
+  borderRadius: "--list-border-radius",
+  borderWidth: "--list-border-width",
+  borderColor: "--list-border-color",
+  backgroundColor: "--list-background-color",
+  maxHeight: "--list-max-height",
 };
 
 // Core controller: wires the generic List to the suggestion-specific
@@ -568,22 +496,22 @@ const getNaviSuggestionHighlight = () => {
 };
 
 const SuggestionStyleCSSVars = {
-  "padding": "--suggestion-padding",
-  "color": "--suggestion-color",
-  "backgroundColor": "--suggestion-background-color",
-  "fontWeight": "--suggestion-font-weight",
+  "padding": "--list-item-padding",
+  "color": "--list-item-color",
+  "backgroundColor": "--list-item-background-color",
+  "fontWeight": "--list-item-font-weight",
   ":-navi-pointed": {
-    color: "--suggestion-color-pointed",
-    backgroundColor: "--suggestion-background-color-pointed",
+    color: "--list-item-color-pointed",
+    backgroundColor: "--list-item-background-color-pointed",
   },
   ":hover": {
-    color: "--suggestion-color-hover",
-    backgroundColor: "--suggestion-background-color-hover",
+    color: "--list-item-color-hover",
+    backgroundColor: "--list-item-background-color-hover",
   },
   ":-navi-selected": {
-    color: "--suggestion-color-selected",
-    backgroundColor: "--suggestion-background-color-selected",
-    fontWeight: "--suggestion-font-weight-selected",
+    color: "--list-item-color-selected",
+    backgroundColor: "--list-item-background-color-selected",
+    fontWeight: "--list-item-font-weight-selected",
   },
   "::highlight": {
     color: "--suggestion-color-highlight",
@@ -602,7 +530,8 @@ const SUGGESTION_PSEUDO_ELEMENTS = ["::highlight"];
  * - Hover / keyboard-pointed / selected interactive state
  * - CSS Highlight API text matching
  */
-export const Suggestion = ({ value, hidden, ...rest }) => {
+export const Suggestion = ({ value, hidden, selected, children, ...rest }) => {
+  import.meta.css = css;
   const idDefault = useId();
   const id = rest.id || idDefault;
   // When inside SuggestionListCombo, compute hidden from the filter context.
@@ -618,22 +547,6 @@ export const Suggestion = ({ value, hidden, ...rest }) => {
     hidden = true;
   }
 
-  // Always track (even when hidden), delegate virtualization to ListItem.
-  return (
-    <ListItem itemId={id} hidden={hidden}>
-      <SuggestionConcrete value={value} hidden={hidden} id={id} {...rest} />
-    </ListItem>
-  );
-};
-
-const SuggestionConcrete = ({
-  value,
-  selected,
-  hidden,
-  id,
-  children,
-  ...rest
-}) => {
   const {
     mousePointedValue,
     keyboardPointedValue,
@@ -694,15 +607,15 @@ const SuggestionConcrete = ({
   }, [highlight, children]);
 
   return (
-    <Box
-      as="span"
+    <ListItem
       ref={suggestionRef}
-      baseClassName="navi_suggestion"
+      itemId={id}
+      hidden={hidden}
+      baseClassName="navi_list_item navi_suggestion"
       id={id}
       role="option"
       aria-selected={selected}
       aria-hidden={hidden ? true : undefined}
-      hidden={hidden}
       basePseudoState={{
         ":-navi-pointed": isPointed,
         ":-navi-selected": selected,
@@ -731,6 +644,6 @@ const SuggestionConcrete = ({
       {...rest}
     >
       {children}
-    </Box>
+    </ListItem>
   );
 };

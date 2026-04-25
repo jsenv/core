@@ -37,15 +37,110 @@ export const SeparatorContext = createContext(null);
 export const ListInteractionContext = createContext(null);
 
 const css = /* css */ `
-  .navi_suggestion_group_label {
+  @layer navi {
+    .navi_list {
+      --list-border-radius: 4px;
+      --list-border-width: 1px;
+      --list-border-color: light-dark(#ccc, #555);
+      --list-border-style: solid;
+      --list-background-color: light-dark(#fff, #1e1e1e);
+      --list-max-height: 220px;
+    }
+    .navi_list_item {
+      --list-item-padding: 8px 12px;
+      --list-item-color: inherit;
+      --list-item-font-weight: inherit;
+
+      /* Hover (mouse) */
+      --list-item-color-hover: var(--list-item-color);
+      --list-item-background-color-hover: light-dark(#f5f5f5, #2a2a2a);
+
+      /* Pointed (keyboard navigation position) */
+      --list-item-color-pointed: var(--list-item-color);
+      --list-item-background-color-pointed: light-dark(#c2d7fc, #1a4a9e);
+
+      /* Selected */
+      --list-item-color-selected: light-dark(#1a73e8, #7baaf7);
+      --list-item-background-color-selected: light-dark(#e8f0fe, #1c3a6e);
+      --list-item-font-weight-selected: 500;
+      --list-item-color-pointed-selected: var(--list-item-color-selected);
+      --list-item-background-color-pointed-selected: light-dark(
+        #d2e3fc,
+        #174ea6
+      );
+    }
+    .navi_list_group_label {
+      --list-group-label-background-color: var(--list-background-color);
+    }
+  }
+
+  .navi_list {
+    --x-border-radius: var(--list-border-radius);
+    --x-border-width: var(--list-border-width);
+    --x-border-color: var(--list-border-color);
+    --x-border-style: var(--list-border-style);
+    --x-background-color: var(--list-background-color);
+    width: fit-content;
+    max-width: 100%;
+    max-height: var(--list-max-height);
+    background-color: var(--x-background-color);
+    border: var(--x-border-width) var(--x-border-style) var(--x-border-color);
+    border-radius: var(--x-border-radius);
+    transition: opacity 0.2s ease;
+    overflow: auto;
+  }
+
+  .navi_listbox {
+    box-sizing: border-box;
+    width: max-content;
+    min-width: 100%;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .navi_list_item {
+    --x-color: var(--list-item-color);
+    --x-background-color: var(--list-item-background-color);
+    --x-font-weight: var(--list-item-font-weight);
+    display: flex;
+    box-sizing: border-box;
+    min-width: 100%;
+    padding: var(--list-item-padding);
+    color: var(--x-color);
+    font-weight: var(--x-font-weight);
+    background-color: var(--x-background-color);
+    cursor: pointer;
+    user-select: none;
+
+    &:hover {
+      --x-color: var(--list-item-color-hover);
+      --x-background-color: var(--list-item-background-color-hover);
+    }
+    &[data-pointed] {
+      --x-color: var(--list-item-color-pointed);
+      --x-background-color: var(--list-item-background-color-pointed);
+    }
+    &[data-selected] {
+      --x-color: var(--list-item-color-selected);
+      --x-background-color: var(--list-item-background-color-selected);
+      --x-font-weight: var(--list-item-font-weight-selected);
+    }
+    &[data-pointed][data-selected] {
+      --x-color: var(--list-item-color-pointed-selected);
+      --x-background-color: var(--list-item-background-color-pointed-selected);
+    }
+    &[hidden] {
+      display: none;
+    }
+  }
+
+  .navi_list_group_label {
     position: sticky;
     top: 0;
     z-index: 1;
     display: block;
-    background-color: var(
-      --suggestion-group-label-background-color,
-      var(--suggestion-list-background-color)
-    );
+    background-color: var(--list-group-label-background-color);
     user-select: none;
 
     &[data-default-label] {
@@ -70,6 +165,11 @@ const css = /* css */ `
   /* Empty state — hidden by default, shown when no list items are rendered. */
   .navi_list_empty {
     display: none;
+    padding: var(--list-item-padding);
+    color: light-dark(#888, #aaa);
+    font-size: 0.9em;
+    text-align: center;
+    user-select: none;
   }
   .navi_list:not(:has([data-list-item])) {
     .navi_list_empty {
@@ -290,7 +390,9 @@ const Listbox = ({
     <ul
       ref={ref}
       {...listProps}
-      style={{ margin: 0, padding: 0, listStyle: "none", ...listProps.style }}
+      className={["navi_listbox", listProps.className]
+        .filter(Boolean)
+        .join(" ")}
     >
       <li
         ref={topFillerRef}
@@ -359,9 +461,14 @@ export const ListItem = ({ itemId, hidden, children, ...rest }) => {
   return (
     <>
       {separatorElement}
-      <li {...{ [LIST_ITEM_ATTR]: "" }} {...rest}>
+      <Box
+        as="li"
+        baseClassName="navi_list_item"
+        {...{ [LIST_ITEM_ATTR]: "" }}
+        {...rest}
+      >
         {children}
-      </li>
+      </Box>
     </>
   );
 };
@@ -398,7 +505,12 @@ export const ListItemGroup = ({ label, children, ...rest }) => {
         aria-hidden="true"
         style={{ display: "contents" }}
       >
-        {label}
+        <span
+          className="navi_list_group_label"
+          data-default-label={typeof label === "string" ? "" : undefined}
+        >
+          {label}
+        </span>
       </span>
       <ul
         role="group"
