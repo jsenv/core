@@ -569,12 +569,14 @@ const SuggestionListControlled = ({
             break;
           }
         }
-        if (hitFiller === topFillerRef.current) {
-          // Scrolled into the top filler zone — window should start at 0.
-          firstVisibleIndex = 0;
-        } else if (hitFiller === bottomFillerRef.current) {
-          // Scrolled into the bottom filler zone — window should end at totalItems.
-          firstVisibleIndex = totalItems - renderBudget;
+        if (hitFiller) {
+          // We hit a filler — fall back to scrollTop / itemHeight which gives
+          // the correct proportional position within the filler zone.
+          const itemHeight = measuredItemHeightRef.current;
+          if (itemHeight === 0) {
+            return;
+          }
+          firstVisibleIndex = Math.floor(scrollTop / itemHeight);
         } else {
           const relIndex = hitEl ? options.indexOf(hitEl) : 0;
           firstVisibleIndex = current.start + (relIndex === -1 ? 0 : relIndex);
@@ -784,7 +786,11 @@ const SuggestionListbox = ({
       role="listbox"
       baseClassName="navi_suggestion_listbox"
     >
-      <li aria-hidden ref={topFillerRef} style="height:0px" />
+      <li
+        aria-hidden
+        ref={topFillerRef}
+        style="height:0px;background:repeating-linear-gradient(45deg,rgba(128,0,255,0.08),rgba(128,0,255,0.08) 6px,transparent 6px,transparent 12px)"
+      />
       <RenderWindowContext.Provider value={renderWindow}>
         <SuggestionListboxContext.Provider value={suggestionContext}>
           <ItemTrackerProvider>
@@ -794,7 +800,11 @@ const SuggestionListbox = ({
           </ItemTrackerProvider>
         </SuggestionListboxContext.Provider>
       </RenderWindowContext.Provider>
-      <li aria-hidden ref={bottomFillerRef} style="height:0px" />
+      <li
+        aria-hidden
+        ref={bottomFillerRef}
+        style="height:0px;background:repeating-linear-gradient(45deg,rgba(128,0,255,0.08),rgba(128,0,255,0.08) 6px,transparent 6px,transparent 12px)"
+      />
 
       {emptyState && (
         <li className="navi_suggestion_listbox_empty">{emptyState}</li>
