@@ -43,6 +43,7 @@
         SuggestionListCombo,
         Separator,
         Text,
+        Box,
       } from "@jsenv/navi";
 
       // ── Reusable dialog header ────────────────────────────────────────────────
@@ -178,18 +179,20 @@
       const AnimalPicker = ({ selected, onSelect }) => {
         const close = useDropdownClose();
         return (
-          <div style="min-width: 260px;">
-            <DialogHeader title="Pick an animal" />
+          <Box overflow="auto">
             <SuggestionList
               border="none"
               uiAction={(v) => {
                 onSelect(v);
                 close();
               }}
-              separator={<Separator margin="0" />}
+              // separator={<Separator margin="0" />}
               expandX
               minWidth="inherit"
+              overflow="visible"
+              renderBudget={5}
             >
+              <DialogHeader title="Pick an animal" />
               {ANIMALS.map((animal) => (
                 <Suggestion
                   flex
@@ -210,7 +213,7 @@
                 </Suggestion>
               ))}
             </SuggestionList>
-          </div>
+          </Box>
         );
       };
 

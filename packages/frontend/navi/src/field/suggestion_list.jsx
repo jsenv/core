@@ -1,4 +1,8 @@
-import { pickPositionRelativeTo, visibleRectEffect } from "@jsenv/dom";
+import {
+  getScrollContainer,
+  pickPositionRelativeTo,
+  visibleRectEffect,
+} from "@jsenv/dom";
 import { createContext } from "preact";
 import {
   useContext,
@@ -533,9 +537,11 @@ const SuggestionListControlled = ({
   // pixel offset into the virtual list. No amplification or virtual index needed.
   useLayoutEffect(() => {
     const listEl = ref.current;
+    const listboxEl = listboxRef.current;
     if (!listEl) {
       return undefined;
     }
+    const scrollContainer = getScrollContainer(listboxEl);
     const onScroll = () => {
       const totalItems = ItemTrackerProvider.items.length;
       if (totalItems <= renderBudget) {
@@ -611,9 +617,9 @@ const SuggestionListControlled = ({
       }
       setRenderWindow({ start: newStart, end: newEnd });
     };
-    listEl.addEventListener("scroll", onScroll, { passive: true });
+    scrollContainer.addEventListener("scroll", onScroll, { passive: true });
     return () => {
-      listEl.removeEventListener("scroll", onScroll);
+      scrollContainer.removeEventListener("scroll", onScroll);
     };
   }, [renderBudget]);
 
