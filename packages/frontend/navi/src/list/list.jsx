@@ -19,8 +19,7 @@ const RENDER_BUDGET_DEFAULT = 100;
 
 // Attribute used on <li> elements rendered by ListItem so the scroll listener
 // and filler-height calculation can find them without requiring a specific ARIA role.
-const LIST_ITEM_ATTR = "data-list-item";
-export const LIST_ITEM_SELECTOR = `[${LIST_ITEM_ATTR}]`;
+const LIST_ITEM_SELECTOR = `.navi_list_item`;
 
 const [useListItemTrackerProvider, useTrackListItem] = createItemTracker({
   filter: (data) => !data.hidden,
@@ -32,9 +31,6 @@ export const RenderWindowContext = createContext(null);
 // Carries the separator element/function down to each ListItem so separators
 // are only rendered between items that actually mount (post-filter, post-window).
 export const SeparatorContext = createContext(null);
-// Carries interactive state (hover, selection, etc.) provided by the List
-// consumer (e.g. SuggestionListbox) down to ListItem children.
-export const ListInteractionContext = createContext(null);
 
 const css = /* css */ `
   @layer navi {
@@ -73,7 +69,7 @@ const css = /* css */ `
       --list-item-color-highlight: inherit;
       --list-item-background-color-highlight: #ffe066;
     }
-    .navi_list_group_label {
+    .navi_list_item_group_label {
       --list-group-label-background-color: var(--list-background-color);
     }
   }
@@ -139,7 +135,7 @@ const css = /* css */ `
     }
   }
 
-  .navi_list_group_label {
+  .navi_list_item_group_label {
     position: sticky;
     top: 0;
     z-index: 1;
@@ -199,28 +195,21 @@ const css = /* css */ `
  *   itemHeightIsVariable — set false for uniform-height items (faster scroll math)
  *   fallback           — content shown when no items are visible
  *   separator            — element or function(index) inserted between visible items
- *   interactionContext   — any value forwarded via ListInteractionContext to ListItem children
- *   listProps            — props forwarded to the inner <ul> element
  *   ...rest              — forwarded to the outer scroll container <Box>
  */
 export const List = ({
-  ref,
-  innerRef,
   renderBudget = RENDER_BUDGET_DEFAULT,
   itemHeightEstimation,
   itemHeightIsVariable = true,
   fallback,
   separator,
-  interactionContext,
   children,
   ...rest
 }) => {
   import.meta.css = css;
 
-  const defaultOuterRef = useRef();
-  const outerRef = ref || defaultOuterRef;
-  const defaultInnerRef = useRef(null);
-  const listboxRef = innerRef || defaultInnerRef;
+  const refDefault = useRef(null);
+  const ref = rest.ref || refDefault;
 
   const ItemTrackerProvider = useListItemTrackerProvider();
 
@@ -245,7 +234,7 @@ export const List = ({
       }
       return;
     }
-    const listEl = outerRef.current;
+    const listEl = ref.current;
     if (!listEl) {
       return;
     }
@@ -279,12 +268,11 @@ export const List = ({
 
   // Scroll listener — slides the window as the user scrolls.
   useLayoutEffect(() => {
-    const listEl = outerRef.current;
-    const listboxEl = listboxRef.current;
+    const listEl = ref.current;
     if (!listEl) {
       return undefined;
     }
-    const scrollContainer = getScrollContainer(listboxEl);
+    const scrollContainer = getScrollContainer(listEl);
     const onScroll = () => {
       const totalItems = ItemTrackerProvider.items.length;
       if (totalItems <= renderBudget) {
@@ -358,16 +346,15 @@ export const List = ({
   }, [renderBudget]);
 
   return (
-    <div ref={outerRef} className="navi_list_container">
+    <div className="navi_list_container">
       <UnorderedList
-        ref={listboxRef}
+        ref={ref}
         ItemTrackerProvider={ItemTrackerProvider}
         renderWindow={renderWindow}
         topFillerRef={topFillerRef}
         bottomFillerRef={bottomFillerRef}
         fallback={fallback}
         separator={separator}
-        interactionContext={interactionContext}
         {...rest}
       >
         {children}
@@ -384,7 +371,6 @@ const UnorderedList = ({
   bottomFillerRef,
   fallback,
   separator,
-  interactionContext,
   children,
   ...rest
 }) => {
@@ -399,9 +385,7 @@ const UnorderedList = ({
       />
       <RenderWindowContext.Provider value={renderWindow}>
         <SeparatorContext.Provider value={separator ?? null}>
-          <ListInteractionContext.Provider value={interactionContext ?? null}>
-            <ItemTrackerProvider>{children}</ItemTrackerProvider>
-          </ListInteractionContext.Provider>
+          <ItemTrackerProvider>{children}</ItemTrackerProvider>
         </SeparatorContext.Provider>
       </RenderWindowContext.Provider>
       <li
@@ -467,7 +451,8 @@ export const ListItem = ({ itemId, hidden, children, ...rest }) => {
         styleCSSVars={LIST_ITEM_STYLE_CSS_VARS}
         pseudoClasses={LIST_ITEM_PSEUDO_CLASSES}
         pseudoElements={LIST_ITEM_PSEUDO_ELEMENTS}
-        {...{ [LIST_ITEM_ATTR]: "" }}
+        aria-hidden={hidden ? true : undefined}
+        navi-list-item=""
         {...rest}
       >
         {children}
@@ -534,7 +519,7 @@ export const ListItemGroup = ({ label, children, ...rest }) => {
         style={{ display: "contents" }}
       >
         <span
-          className="navi_list_group_label"
+          className="navi_list_item_group_label"
           data-default-label={typeof label === "string" ? "" : undefined}
         >
           {label}
