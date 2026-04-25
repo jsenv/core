@@ -42,6 +42,10 @@ import {
   createOnKeyDownForShortcuts,
   useKeyboardShortcuts,
 } from "../keyboard/keyboard_shortcuts.js";
+import {
+  ListboxIdContext,
+  SetFilterContext,
+} from "../list/suggestion_list.jsx";
 import { Icon } from "../text/icon.jsx";
 import { useStableCallback } from "../utils/use_stable_callback.js";
 import { fieldPropSet } from "./field_prop_set.js";
@@ -51,7 +55,6 @@ import {
   reportInteractiveToLabel,
   reportReadOnlyToLabel,
 } from "./label.jsx";
-import { ListboxIdContext, SetFilterContext } from "./suggestion_list.jsx";
 import { useActionEvents } from "./use_action_events.js";
 import { useAutoFocus } from "./use_auto_focus.js";
 import {
@@ -453,7 +456,7 @@ const InputInsideSuggestionListCombo = ({
       key: "arrowdown",
       description: "Open popover and point to next suggestion",
       handler: (e) => {
-        return forwardToSuggestionList(e, "navi_suggestion_list_navigate", {
+        return forwardToSuggestionList(e, "navi_list_nav", {
           direction: "down",
         });
       },
@@ -462,7 +465,7 @@ const InputInsideSuggestionListCombo = ({
       key: "arrowup",
       description: "Open popover and point to previous suggestion",
       handler: (e) => {
-        return forwardToSuggestionList(e, "navi_suggestion_list_navigate", {
+        return forwardToSuggestionList(e, "navi_list_nav", {
           direction: "up",
         });
       },
@@ -471,7 +474,7 @@ const InputInsideSuggestionListCombo = ({
       key: "home",
       description: "Point to first suggestion",
       handler: (e) => {
-        return forwardToSuggestionList(e, "navi_suggestion_list_navigate", {
+        return forwardToSuggestionList(e, "navi_list_nav", {
           direction: "first",
         });
       },
@@ -480,7 +483,7 @@ const InputInsideSuggestionListCombo = ({
       key: "end",
       description: "Point to last suggestion",
       handler: (e) => {
-        return forwardToSuggestionList(e, "navi_suggestion_list_navigate", {
+        return forwardToSuggestionList(e, "navi_list_nav", {
           direction: "last",
         });
       },
@@ -489,7 +492,7 @@ const InputInsideSuggestionListCombo = ({
       key: "enter",
       description: "Confirm pointed suggestion",
       handler: (e) => {
-        return forwardToSuggestionList(e, "navi_suggestion_list_confirm");
+        return forwardToSuggestionList(e, "navi_list_confirm");
       },
     },
   ]);
@@ -585,7 +588,7 @@ const InputTextualWithSuggestions = ({
       description: "Open popover and point to next suggestion",
       handler: (e) => {
         showSuggestions(e);
-        return forwardToSuggestionList(e, "navi_suggestion_list_navigate", {
+        return forwardToSuggestionList(e, "navi_list_nav", {
           direction: "down",
         });
       },
@@ -595,7 +598,7 @@ const InputTextualWithSuggestions = ({
       description: "Open popover and point to previous suggestion",
       handler: (e) => {
         showSuggestions(e);
-        return forwardToSuggestionList(e, "navi_suggestion_list_navigate", {
+        return forwardToSuggestionList(e, "navi_list_nav", {
           direction: "up",
         });
       },
@@ -607,7 +610,7 @@ const InputTextualWithSuggestions = ({
         if (!expandedRef.current) {
           return false;
         }
-        return forwardToSuggestionList(e, "navi_suggestion_list_navigate", {
+        return forwardToSuggestionList(e, "navi_list_nav", {
           direction: "first",
         });
       },
@@ -619,7 +622,7 @@ const InputTextualWithSuggestions = ({
         if (!expandedRef.current) {
           return false;
         }
-        return forwardToSuggestionList(e, "navi_suggestion_list_navigate", {
+        return forwardToSuggestionList(e, "navi_list_nav", {
           direction: "last",
         });
       },
@@ -631,7 +634,7 @@ const InputTextualWithSuggestions = ({
         if (!expandedRef.current) {
           return false;
         }
-        return forwardToSuggestionList(e, "navi_suggestion_list_confirm");
+        return forwardToSuggestionList(e, "navi_list_confirm");
       },
     },
     {
@@ -658,12 +661,9 @@ const InputTextualWithSuggestions = ({
       inputEl.dispatchEvent(new Event("input", { bubbles: true }));
       hideSuggestions(e);
     };
-    suggestionEl.addEventListener("navi_suggestion_list_selected", onSelected);
+    suggestionEl.addEventListener("navi_list_selected", onSelected);
     return () => {
-      suggestionEl.removeEventListener(
-        "navi_suggestion_list_selected",
-        onSelected,
-      );
+      suggestionEl.removeEventListener("navi_list_selected", onSelected);
     };
   }, [suggestions]);
 

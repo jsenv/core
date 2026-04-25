@@ -75,7 +75,8 @@ export { enableDebugOnDocumentLoading } from "./src/nav/browser_integration/docu
 export { Details } from "./src/field/details/details.jsx";
 export { SummaryMarker } from "./src/field/details/summary_marker.jsx";
 
-export { Suggestion, SuggestionList } from "./src/field/suggestion_list.jsx";
+// list
+export { Dropdown, useDropdownClose } from "./src/list/dropdown.jsx";
 export {
   List,
   ListItem,
@@ -83,6 +84,7 @@ export {
   ListItemHeader,
   ListItemPresentation,
 } from "./src/list/list.jsx";
+export { Suggestion, SuggestionList } from "./src/list/suggestion_list.jsx";
 
 // Form
 // Validation
@@ -109,7 +111,6 @@ export {
 // Form/Components
 export { Button } from "./src/field/button.jsx";
 export { Checkbox, CheckboxList } from "./src/field/checkbox_list.jsx";
-export { Dropdown, useDropdownClose } from "./src/field/dropdown.jsx";
 export {
   Editable,
   useEditionController,
