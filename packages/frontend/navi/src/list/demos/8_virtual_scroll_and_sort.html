@@ -32,17 +32,14 @@
        *   2. items that CONTAIN the query (alphabetically)
        *   3. everything else at the end
        *
-       * SuggestionListCombo is used with match={() => true} so it never hides
-       * any suggestion. The combo's input (via ListboxIdContext) gets proper
-       * aria-controls and keyboard forwarding for free. Our onInput handler
-       * updates the sort state independently.
+       * No items are hidden — filter state drives sort only. The Input is
+       * a plain input; keyboard shortcuts are not wired to the list.
        */
 
       import {
         Input,
         Suggestion,
         SuggestionList,
-        SuggestionListCombo,
       } from "@jsenv/navi";
 
       const ALL_ITEMS = Array.from({ length: 200 }, (_, i) => {
@@ -241,25 +238,23 @@
                 Selected: <b>{selected}</b>
               </p>
             )}
-            <SuggestionListCombo match={() => true}>
-              <Input
-                placeholder="Sort suggestions…"
-                expandX
-                uiAction={(e) => setFilter(e.target.value)}
-              />
-              <SuggestionList
-                ref={listRef}
-                maxHeight="220px"
-                uiAction={setSelected}
-                expandX
-              >
-                {items.map((item) => (
-                  <Suggestion key={item} value={item}>
-                    {item}
-                  </Suggestion>
-                ))}
-              </SuggestionList>
-            </SuggestionListCombo>
+            <Input
+              placeholder="Sort suggestions…"
+              expandX
+              onInput={(e) => setFilter(e.target.value)}
+            />
+            <SuggestionList
+              ref={listRef}
+              maxHeight="220px"
+              uiAction={setSelected}
+              expandX
+            >
+              {items.map((item) => (
+                <Suggestion key={item} value={item}>
+                  {item}
+                </Suggestion>
+              ))}
+            </SuggestionList>
           </div>
         );
       };

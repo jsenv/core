@@ -113,8 +113,8 @@
       import {
         SuggestionList,
         Suggestion,
-        SuggestionListCombo,
         Input,
+        ListItemHeader,
       } from "@jsenv/navi";
 
       const SUGGESTION_BG = "light-dark(#f0f4ff, #1a2040)";
@@ -291,28 +291,29 @@
               </span>
             </fieldset>
 
-            <SuggestionListCombo>
-              <Input
-                placeholder="Filter…"
-                onInput={() => setSelected(null)}
-                paddingX="8px"
-                paddingY="12px"
-                expandX
-                border="1px solid #ccc"
-                style={{
-                  boxSizing: "border-box",
-                  marginBottom: "8px",
-                  borderRadius: "6px",
-                  fontSize: "1rem",
-                }}
-              />
-              <SuggestionList
-                ref={listRef}
-                maxHeight={maxHeight}
-                uiAction={setSelected}
-                expandX
-                renderBudget={30}
-              >
+            <SuggestionList
+              withFilter
+              ref={listRef}
+              maxHeight={maxHeight}
+              uiAction={setSelected}
+              expandX
+              renderBudget={30}
+            >
+              <ListItemHeader>
+                <Input
+                  placeholder="Filter…"
+                  onInput={() => setSelected(null)}
+                  paddingX="8px"
+                  paddingY="12px"
+                  expandX
+                  border="1px solid #ccc"
+                  style={{
+                    boxSizing: "border-box",
+                    borderRadius: "6px",
+                    fontSize: "1rem",
+                  }}
+                />
+              </ListItemHeader>
                 {LARGE_LIST.map((item, index) => (
                   <Suggestion
                     key={item}
@@ -330,7 +331,6 @@
                   </Suggestion>
                 ))}
               </SuggestionList>
-            </SuggestionListCombo>
 
             <div className="value-display">{selected ?? ""}</div>
 

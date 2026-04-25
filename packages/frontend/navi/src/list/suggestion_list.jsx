@@ -12,11 +12,6 @@ import { useKeyboardShortcuts } from "../keyboard/keyboard_shortcuts.js";
 import { useIsInsideDropdown } from "./dropdown.jsx";
 import { List, ListItem, RenderWindowContext } from "./list.jsx";
 
-// Provided when SuggestionList has withFilter={true} (or by SuggestionListCombo).
-// When present, SuggestionList uses them to compute hidden state on each
-// Suggestion automatically and to sync the Input value.
-const SuggestionFilterContext = createContext(null);
-const SuggestionMatchContext = createContext(null);
 export const SetFilterContext = createContext(null);
 // Provided so the listbox uses the same stable id that the input's
 // aria-controls points to.
@@ -65,13 +60,35 @@ const dispatchCustomEventToList = (
   return customEvent.defaultPrevented;
 };
 
-// Single entry point. Renders either the popover variant or the standalone
-// variant depending on the `popover` prop.
-// When `withFilter` is true, the list owns its filter state and provides
-// SuggestionFilterContext + SetFilterContext so that an <Input> inside
-// (e.g. in a <ListItemHeader>) auto-connects to the filter.
-// `lockSize` (only meaningful with `withFilter`) locks the container dimensions
-// once populated so filtering cannot shrink the layout.
+/**
+ * SuggestionList — a keyboard-navigable, filterable listbox.
+ *
+ * Props:
+ *   uiAction    — called with the selected value when the user confirms a suggestion
+ *   fallback    — content shown when no suggestions are visible (default: "No results")
+ *   popover     — when true, renders as a managed popover (positioned near an anchor)
+ *
+ *   withFilter  — when true, the list owns its filter state internally. An <Input>
+ *                 placed anywhere inside (e.g. in a <ListItemHeader>) auto-connects
+ *                 to the filter via SetFilterContext. Each <Suggestion> is
+ *                 automatically hidden when it doesn't match the filter.
+ *   match       — custom match function (value, lowerCaseFilter) => boolean.
+ *                 Only used when withFilter is true. Default: substring match.
+ *   filter      — external filter string. Use when you manage the filter state
+ *                 yourself (without withFilter). Suggestions whose value does not
+ *                 match are hidden. Also used as the default highlight string.
+ *
+ *   anchorSize  — when true, the list container's dimensions are captured
+ *                 (via ResizeObserver) the first time it has non-zero size and the
+ *                 filter is empty (i.e. fully populated). Those captured dimensions
+ *                 become min-width/min-height so that subsequent filtering never
+ *                 collapses the layout. The size is captured once per mount — a
+ *                 filter→clear cycle does not re-measure. Defaults to true when the
+ *                 list is inside a <Dropdown>.
+ *
+ *   renderBudget — max items kept in the DOM at once (virtual scroll). Default 100.
+ *   ...rest      — forwarded to the underlying <ul> element.
+ */
 export const SuggestionList = ({ popover, withFilter, match, ...rest }) => {
   import.meta.css = css;
   if (withFilter) {
@@ -87,23 +104,18 @@ export const SuggestionList = ({ popover, withFilter, match, ...rest }) => {
 
 const defaultMatch = (v, filter) => String(v).toLowerCase().includes(filter);
 
-// Owns filter state and provides all filter-related contexts.
-// Dispatches to SuggestionListWithPopover or SuggestionListStandalone.
-// anchorSize defaults to true when inside a Dropdown (see SuggestionListControlled).
+// Owns filter state and provides SetFilterContext + ListboxIdContext.
+// Passes filter and match as props down to the inner SuggestionList.
 const SuggestionListWithFilter = ({ match = defaultMatch, ...rest }) => {
   const [filter, setFilter] = useState("");
   const listboxId = useId();
 
   return (
-    <SuggestionMatchContext.Provider value={match}>
-      <SuggestionFilterContext.Provider value={filter}>
-        <SetFilterContext.Provider value={setFilter}>
-          <ListboxIdContext.Provider value={listboxId}>
-            <SuggestionList {...rest} />
-          </ListboxIdContext.Provider>
-        </SetFilterContext.Provider>
-      </SuggestionFilterContext.Provider>
-    </SuggestionMatchContext.Provider>
+    <SetFilterContext.Provider value={setFilter}>
+      <ListboxIdContext.Provider value={listboxId}>
+        <SuggestionList {...rest} filter={filter} match={match} />
+      </ListboxIdContext.Provider>
+    </SetFilterContext.Provider>
   );
 };
 
@@ -247,7 +259,8 @@ const SuggestionListControlled = ({
   fallback = "No results",
   children,
   renderBudget,
-  filter: filterFromProp,
+  filter,
+  match = defaultMatch,
   anchorSize,
   ...rest
 }) => {
@@ -263,10 +276,6 @@ const SuggestionListControlled = ({
   const [anchorValue, setAnchorValue] = useState(null);
   const anchorValueRef = useRef(null);
   anchorValueRef.current = anchorValue;
-
-  const filterFromContext = useContext(SuggestionFilterContext);
-  const filter =
-    filterFromProp !== undefined ? filterFromProp : filterFromContext;
 
   // anchorSize: lock container dimensions to the fully-populated state.
   const defaultRef = useRef(null);
@@ -319,6 +328,8 @@ const SuggestionListControlled = ({
     mousePointedValue,
     keyboardPointedValue,
     highlight,
+    filter,
+    match,
     onHover: (value) => {
       setMousePointedValue(value);
     },
@@ -416,6 +427,8 @@ export const Suggestion = ({ value, hidden, selected, children, ...rest }) => {
     mousePointedValue,
     keyboardPointedValue,
     highlight,
+    filter,
+    match,
     onHover,
     onSelect,
   } = useContext(ListInteractionContext);
@@ -423,17 +436,10 @@ export const Suggestion = ({ value, hidden, selected, children, ...rest }) => {
     keyboardPointedValue === value || mousePointedValue === value;
   const isKeyboardPointed = keyboardPointedValue === value;
 
-  // When inside SuggestionListCombo, compute hidden from the filter context.
-  const filter = useContext(SuggestionFilterContext);
-  const match = useContext(SuggestionMatchContext);
-  let matches = true;
   if (filter) {
     const lowerFilter = filter.toLowerCase();
-    matches = match(value, lowerFilter);
+    const matches = match(value, lowerFilter);
     hidden = !matches;
-  }
-  if (hidden === undefined && !matches) {
-    hidden = true;
   }
   const defaultRef = useRef(null);
   const ref = rest.ref || defaultRef;
