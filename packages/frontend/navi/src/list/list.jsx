@@ -293,19 +293,19 @@ export const List = ({
       if (!current) {
         return;
       }
-      const scrollTop = listEl.scrollTop;
+      const scrollTop = scrollContainer.scrollTop;
 
       let firstVisibleIndex;
       if (itemHeightIsVariable) {
-        const listRect = listEl.getBoundingClientRect();
+        const containerRect = scrollContainer.getBoundingClientRect();
         const items = Array.from(listEl.querySelectorAll(LIST_ITEM_SELECTOR));
         if (items.length === 0) {
           return;
         }
         let hitEl = null;
         let hitFiller = null;
-        for (let y = listRect.top + 1; y < listRect.bottom; y += 4) {
-          const el = document.elementFromPoint(listRect.left + 1, y);
+        for (let y = containerRect.top + 1; y < containerRect.bottom; y += 4) {
+          const el = document.elementFromPoint(containerRect.left + 1, y);
           if (!el || !listEl.contains(el)) {
             continue;
           }
