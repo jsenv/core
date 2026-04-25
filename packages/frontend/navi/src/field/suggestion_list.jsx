@@ -477,7 +477,8 @@ const SuggestionListControlled = ({
   });
 
   // Scroll listener — slides the render window to follow the user's scroll
-  // position using actual DOM element positions.
+  // position using actual DOM element positions and scroll direction.
+  const prevScrollTopRef = useRef(0);
   useLayoutEffect(() => {
     const listEl = ref.current;
     if (!listEl) {
@@ -492,27 +493,67 @@ const SuggestionListControlled = ({
       if (!current) {
         return;
       }
+      const newScrollTop = listEl.scrollTop;
+      const scrollingDown = newScrollTop >= prevScrollTopRef.current;
+      prevScrollTopRef.current = newScrollTop;
+
+      // Edge case: snap to the absolute start or end of the full list.
+      // Without fillers the scrollHeight only reflects the renderBudget items,
+      // so the user can never naturally scroll to items outside the window.
+      // We detect "at top" / "at bottom" and jump the window to the boundary.
+      const atTop = newScrollTop === 0;
+      const atBottom =
+        newScrollTop >= listEl.scrollHeight - listEl.clientHeight - 1;
+
       const options = Array.from(listEl.querySelectorAll("[role='option']"));
+      if (options.length === 0) {
+        return;
+      }
       const listRect = listEl.getBoundingClientRect();
-      // Find the first rendered option whose bottom edge is at or below the
-      // top of the visible area — that is the first (partially) visible item.
-      let firstVisibleRelIndex = 0;
-      for (let i = 0; i < options.length; i++) {
-        if (options[i].getBoundingClientRect().bottom > listRect.top) {
-          firstVisibleRelIndex = i;
-          break;
+      const buffer = Math.floor(renderBudget * 0.5);
+
+      let newStart;
+      let newEnd;
+      if (atTop) {
+        newStart = 0;
+        newEnd = renderBudget;
+      } else if (atBottom) {
+        newEnd = totalItems;
+        newStart = Math.max(0, totalItems - renderBudget);
+      } else if (scrollingDown) {
+        // Anchor to last visible item: find last option whose top is above
+        // the list's bottom edge.
+        let lastVisibleRelIndex = options.length - 1;
+        for (let i = options.length - 1; i >= 0; i--) {
+          if (options[i].getBoundingClientRect().top < listRect.bottom) {
+            lastVisibleRelIndex = i;
+            break;
+          }
+        }
+        const lastVisibleAbsIndex = current.start + lastVisibleRelIndex;
+        // Keep 30% of budget ahead of the last visible item as a lookahead buffer.
+        const idealEnd = lastVisibleAbsIndex + buffer + 1;
+        newEnd = Math.min(totalItems, idealEnd);
+        newStart = Math.max(0, newEnd - renderBudget);
+      } else {
+        // Anchor to first visible item: find first option whose bottom edge
+        // is at or below the list's top edge.
+        let firstVisibleRelIndex = 0;
+        for (let i = 0; i < options.length; i++) {
+          if (options[i].getBoundingClientRect().bottom > listRect.top) {
+            firstVisibleRelIndex = i;
+            break;
+          }
+        }
+        const firstVisibleAbsIndex = current.start + firstVisibleRelIndex;
+        // Keep 30% of budget behind the first visible item as a lookbehind buffer.
+        newStart = Math.max(0, firstVisibleAbsIndex - buffer);
+        newEnd = Math.min(totalItems, newStart + renderBudget);
+        if (newEnd === totalItems) {
+          newStart = Math.max(0, totalItems - renderBudget);
         }
       }
-      const firstVisibleAbsIndex = current.start + firstVisibleRelIndex;
-      // Keep 30% of the budget behind the visible anchor and 70% ahead.
-      const back = Math.floor(renderBudget * 0.3);
-      const idealStart = Math.max(0, firstVisibleAbsIndex - back);
-      const idealEnd = idealStart + renderBudget;
-      const newEnd = Math.min(totalItems, idealEnd);
-      const newStart =
-        newEnd === totalItems
-          ? Math.max(0, totalItems - renderBudget)
-          : idealStart;
+
       if (current.start === newStart && current.end === newEnd) {
         return;
       }
