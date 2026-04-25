@@ -456,42 +456,11 @@ const SuggestionListControlled = ({
   // to activate/deactivate the render window.
   const ItemTrackerProvider = useSuggestionItemTrackerProvider();
 
-  // renderWindow: null = render all items; {start, end, topFillerHeight, bottomFillerHeight}
-  // when active. topFillerHeight/bottomFillerHeight compensate for hidden items so the
-  // scrollbar accurately reflects the full list height.
+  // renderWindow: null = render all items; {start, end} when active.
+  // Items outside [start, end) return null. The window slides on scroll.
   const [renderWindow, setRenderWindow] = useState(null);
   const renderWindowRef = useRef(null);
   renderWindowRef.current = renderWindow;
-  // Measured heights by absolute item index. Populated from DOM as items scroll
-  // through the render window. Used to compute filler heights without estimation
-  // for items we've already seen, and falls back to average for unseen items.
-  const itemHeightsRef = useRef(new Map());
-
-  const computeFillerHeights = (newStart, newEnd, totalItems) => {
-    const heights = itemHeightsRef.current;
-    const known = Array.from(heights.values());
-    const avgHeight =
-      known.length > 0 ? known.reduce((a, b) => a + b, 0) / known.length : 40;
-    let topFillerHeight = 0;
-    for (let i = 0; i < newStart; i++) {
-      topFillerHeight += heights.get(i) ?? avgHeight;
-    }
-    let bottomFillerHeight = 0;
-    for (let i = newEnd; i < totalItems; i++) {
-      bottomFillerHeight += heights.get(i) ?? avgHeight;
-    }
-    return { topFillerHeight, bottomFillerHeight };
-  };
-
-  const measureOptions = (options, windowStart) => {
-    for (let i = 0; i < options.length; i++) {
-      const absIdx = windowStart + i;
-      const h = options[i].getBoundingClientRect().height;
-      if (h > 0) {
-        itemHeightsRef.current.set(absIdx, h);
-      }
-    }
-  };
 
   // Activate or deactivate the render window depending on item count.
   // Runs every render so it reacts to filter changes (items added/removed).
@@ -499,32 +468,15 @@ const SuggestionListControlled = ({
     const totalItems = ItemTrackerProvider.items.length;
     if (totalItems > renderBudget) {
       if (renderWindowRef.current === null) {
-        // Measure currently rendered items to bootstrap the heights map.
-        const listEl = ref.current;
-        const options = listEl
-          ? Array.from(listEl.querySelectorAll("[role='option']"))
-          : [];
-        measureOptions(options, 0);
-        const { topFillerHeight, bottomFillerHeight } = computeFillerHeights(
-          0,
-          renderBudget,
-          totalItems,
-        );
-        setRenderWindow({
-          start: 0,
-          end: renderBudget,
-          topFillerHeight,
-          bottomFillerHeight,
-        });
+        setRenderWindow({ start: 0, end: renderBudget });
       }
     } else if (renderWindowRef.current !== null) {
-      itemHeightsRef.current.clear();
       setRenderWindow(null);
     }
   });
 
   // Scroll listener — slides the render window to follow the user's scroll
-  // position using actual DOM element positions (no height estimation).
+  // position using actual DOM element positions.
   useLayoutEffect(() => {
     const listEl = ref.current;
     if (!listEl) {
@@ -536,11 +488,10 @@ const SuggestionListControlled = ({
         return;
       }
       const current = renderWindowRef.current;
-      const currentStart = current ? current.start : 0;
-      // Measure all currently rendered options before computing the new window.
+      if (!current) {
+        return;
+      }
       const options = Array.from(listEl.querySelectorAll("[role='option']"));
-      measureOptions(options, currentStart);
-
       const listRect = listEl.getBoundingClientRect();
       // Find the first rendered option whose bottom edge is at or below the
       // top of the visible area — that is the first (partially) visible item.
@@ -551,7 +502,7 @@ const SuggestionListControlled = ({
           break;
         }
       }
-      const firstVisibleAbsIndex = currentStart + firstVisibleRelIndex;
+      const firstVisibleAbsIndex = current.start + firstVisibleRelIndex;
       // Keep 30% of the budget behind the visible anchor and 70% ahead.
       const back = Math.floor(renderBudget * 0.3);
       const idealStart = Math.max(0, firstVisibleAbsIndex - back);
@@ -561,20 +512,10 @@ const SuggestionListControlled = ({
         newEnd === totalItems
           ? Math.max(0, totalItems - renderBudget)
           : idealStart;
-      if (current && current.start === newStart && current.end === newEnd) {
+      if (current.start === newStart && current.end === newEnd) {
         return;
       }
-      const { topFillerHeight, bottomFillerHeight } = computeFillerHeights(
-        newStart,
-        newEnd,
-        totalItems,
-      );
-      setRenderWindow({
-        start: newStart,
-        end: newEnd,
-        topFillerHeight,
-        bottomFillerHeight,
-      });
+      setRenderWindow({ start: newStart, end: newEnd });
     };
     listEl.addEventListener("scroll", onScroll, { passive: true });
     return () => {
@@ -754,15 +695,6 @@ const SuggestionListbox = ({
       role="listbox"
       baseClassName="navi_suggestion_listbox"
     >
-      {renderWindow && renderWindow.topFillerHeight > 0 && (
-        <li
-          aria-hidden="true"
-          style={{
-            height: `${renderWindow.topFillerHeight}px`,
-            listStyle: "none",
-          }}
-        />
-      )}
       <RenderWindowContext.Provider value={renderWindow}>
         <SuggestionListboxContext.Provider value={suggestionContext}>
           <ItemTrackerProvider>
@@ -772,15 +704,6 @@ const SuggestionListbox = ({
           </ItemTrackerProvider>
         </SuggestionListboxContext.Provider>
       </RenderWindowContext.Provider>
-      {renderWindow && renderWindow.bottomFillerHeight > 0 && (
-        <li
-          aria-hidden="true"
-          style={{
-            height: `${renderWindow.bottomFillerHeight}px`,
-            listStyle: "none",
-          }}
-        />
-      )}
 
       {emptyState && (
         <li className="navi_suggestion_listbox_empty">{emptyState}</li>
