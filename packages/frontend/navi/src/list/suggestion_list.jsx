@@ -32,6 +32,9 @@ const css = /* css */ `
     opacity: 0;
     pointer-events: none;
   }
+  &[data-lock-sizing] {
+    visibility: hidden;
+  }
 
   ::highlight(navi-suggestion-match) {
     color: var(--list-item-color-highlight);
@@ -78,13 +81,12 @@ const dispatchCustomEventToList = (
  *                 yourself (without withFilter). Suggestions whose value does not
  *                 match are hidden. Also used as the default highlight string.
  *
- *   anchorSize  — when true, the list container's dimensions are captured
- *                 (via ResizeObserver) the first time it has non-zero size and the
- *                 filter is empty (i.e. fully populated). Those captured dimensions
- *                 become min-width/min-height so that subsequent filtering never
- *                 collapses the layout. The size is captured once per mount — a
- *                 filter→clear cycle does not re-measure. Defaults to true when the
- *                 list is inside a <Dropdown>.
+ *   lockSize    — when true, captures the list container's dimensions the first
+ *                 time it renders (always in unfiltered state, even if a filter is
+ *                 already active on mount). Those captured dimensions become
+ *                 min-width/min-height so that subsequent filtering never collapses
+ *                 the layout. The size is captured once per mount. Defaults to true
+ *                 when the list is inside a <Dropdown>.
  *
  *   renderBudget — max items kept in the DOM at once (virtual scroll). Default 100.
  *   ...rest      — forwarded to the underlying <ul> element.
@@ -252,18 +254,15 @@ const SuggestionListWithPopover = (props) => {
 // Core controller: wires the generic List to the suggestion-specific
 // keyboard events, hover/selection state, and ARIA attributes.
 //
-// filter      — the current filter string. When provided together with
-//               anchorSize, the container dimensions are locked to the
-//               fully-populated state (measured once filter is empty)
-//               so that typing never shrinks the widget.
-// anchorSize  — when true, observes the list container with a ResizeObserver
-//               and captures its width/height the first time it has non-zero
-//               dimensions (i.e. once visible and fully populated). Those
-//               values become min-width/min-height on the container so that
-//               subsequent filtering cannot collapse the layout. The size is
-//               only captured once per mount; a filter→clear cycle will not
-//               re-measure. Useful both with withFilter and with a custom
-//               external filter state.
+// filter    — the current filter string. When lockSize is also enabled, the
+//             filter is bypassed on the first render so the container can be
+//             measured at its full (unfiltered) size before any hiding occurs.
+// lockSize  — when true, observes the list container with a ResizeObserver
+//             and captures its width/height once it has non-zero dimensions.
+//             The filter is bypassed during this first measurement so the size
+//             always reflects the fully-populated state. Those values become
+//             min-width/min-height so that subsequent filtering cannot collapse
+//             the layout. Size is captured once per mount.
 const SuggestionListControlled = ({
   ref,
   uiAction,
@@ -273,12 +272,12 @@ const SuggestionListControlled = ({
   renderBudget,
   filter,
   match = defaultMatch,
-  anchorSize,
+  lockSize,
   ...rest
 }) => {
   const isInsideDropdown = useIsInsideDropdown();
-  if (anchorSize === undefined && isInsideDropdown) {
-    anchorSize = true;
+  if (lockSize === undefined && isInsideDropdown) {
+    lockSize = true;
   }
 
   const listboxIdFromContext = useContext(ListboxIdContext);
@@ -289,19 +288,21 @@ const SuggestionListControlled = ({
   const anchorValueRef = useRef(null);
   anchorValueRef.current = anchorValue;
 
-  // anchorSize: lock container dimensions to the fully-populated state.
+  // lockSize: capture container dimensions in unfiltered state, then apply filter.
+  // filterBypassed starts true so the first render always shows all items.
   const defaultRef = useRef(null);
   const resolvedRef = ref || defaultRef;
   const sizeLocked = useRef(false);
+  const filterRef = useRef(filter);
+  filterRef.current = filter;
+  const [filterBypassed, setFilterBypassed] = useState(
+    () => Boolean(lockSize) && !sizeLocked.current,
+  );
   useLayoutEffect(() => {
-    if (!anchorSize) {
+    if (!lockSize) {
       return undefined;
     }
     if (sizeLocked.current) {
-      return undefined;
-    }
-    // Only lock when the filter is empty (fully populated).
-    if (filter) {
       return undefined;
     }
     const listContainerEl = resolvedRef.current;
@@ -330,24 +331,32 @@ const SuggestionListControlled = ({
       listContainerEl.style.minHeight = `${height}px`;
       sizeLocked.current = true;
       observer.disconnect();
+      listContainerEl.removeAttribute("data-lock-sizing");
+      if (filterRef.current) {
+        setFilterBypassed(false);
+      }
     });
     observer.observe(listContainerEl);
+    listContainerEl.setAttribute("data-lock-sizing", "");
     return () => {
       observer.disconnect();
+      listContainerEl.removeAttribute("data-lock-sizing");
     };
-  }, [anchorSize, filter]);
+  }, [lockSize]);
 
   // When a filter is active, fall back to filter text for highlight.
+  // While bypassing the filter (for lockSize measurement), treat as no filter.
+  const effectiveFilter = filterBypassed ? undefined : filter;
 
   if (highlight === undefined) {
-    highlight = filter;
+    highlight = effectiveFilter;
   }
 
   const interactionContext = {
     mousePointedValue,
     keyboardPointedValue,
     highlight,
-    filter,
+    filter: effectiveFilter,
     match,
     onHover: (value) => {
       setMousePointedValue(value);
