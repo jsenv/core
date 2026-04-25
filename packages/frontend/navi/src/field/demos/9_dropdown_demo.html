@@ -264,7 +264,11 @@
               Each item shows a radio input. A separator sits between items.
               Selecting an animal closes the dialog.
             </p>
-            <Dropdown value={animal} placeholder="Pick an animal…">
+            <Dropdown
+              value={animal}
+              placeholder="Pick an animal…"
+              // capturePointer
+            >
               <AnimalPicker selected={animal} onSelect={setAnimal} />
             </Dropdown>
             {animal && (

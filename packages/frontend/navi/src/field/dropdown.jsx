@@ -100,18 +100,20 @@ const DropdownCloseContext = createContext(null);
  * Dropdown — a select-like trigger that opens a centered dialog.
  *
  * Props:
- *   value       — the currently selected value (displayed in the trigger)
- *   placeholder — text shown when value is null/undefined/empty
- *   disabled    — disable the trigger
- *   onOpen      — called when the dialog opens
- *   onClose     — called when the dialog closes
- *   children    — content rendered inside the dialog
- *   ...rest     — forwarded to the trigger <button>
+ *   value          — the currently selected value (displayed in the trigger)
+ *   placeholder    — text shown when value is null/undefined/empty
+ *   disabled       — disable the trigger
+ *   capturePointer — when true, clicking the backdrop does NOT close the dialog
+ *   onOpen         — called when the dialog opens
+ *   onClose        — called when the dialog closes
+ *   children       — content rendered inside the dialog
+ *   ...rest        — forwarded to the trigger <button>
  */
 export const Dropdown = ({
   value,
   placeholder = "Select…",
   disabled,
+  capturePointer,
   onOpen,
   onClose,
   children,
@@ -146,8 +148,8 @@ export const Dropdown = ({
 
   const onDialogClick = (e) => {
     // The <dialog> element itself is the backdrop area. Clicking directly on it
-    // (not on its content child) closes the dialog.
-    if (e.target === dialogRef.current) {
+    // (not on its content child) closes the dialog — unless capturePointer is set.
+    if (!capturePointer && e.target === dialogRef.current) {
       closeDialog();
     }
   };
