@@ -619,7 +619,7 @@ const SuggestionListControlled = ({
 
   // Forward navi_suggestion_list_* events (dispatched by input or standalone keyboard
   // shortcuts) to the internal listbox as navi_list_* events.
-  const forward = (customEventName) => (e) => {
+  const forwardToListbox = (customEventName) => (e) => {
     dispatchCustomEventToListbox(listboxRef, e, customEventName, e.detail);
   };
 
@@ -631,9 +631,9 @@ const SuggestionListControlled = ({
       ref={ref}
       baseClassName="navi_suggestion_list"
       styleCSSVars={SuggestionListStyleCSSVars}
-      onnavi_suggestion_list_navigate={forward("navi_list_navigate")}
-      onnavi_suggestion_list_confirm={forward("navi_list_confirm")}
-      onnavi_suggestion_list_clear={forward("navi_list_clear")}
+      onnavi_suggestion_list_navigate={forwardToListbox("navi_list_navigate")}
+      onnavi_suggestion_list_confirm={forwardToListbox("navi_list_confirm")}
+      onnavi_suggestion_list_clear={forwardToListbox("navi_list_clear")}
     >
       <SuggestionListbox
         ref={listboxRef}
@@ -686,7 +686,7 @@ const SuggestionListbox = ({
   const onMouseHover = (value) => {
     setMousePointedValue(value);
   };
-  const onKeyboardPoint = (value, event) => {
+  const onKeyboardNav = (value, event) => {
     event.preventDefault(); // prevent arrow keys from scrolling the page
     anchorValueRef.current = value; // update immediately so rapid keypresses read the correct anchor
     setKeyboardPointedValue(value);
@@ -697,46 +697,6 @@ const SuggestionListbox = ({
     uiAction?.(value, event);
   };
 
-  // Stable handler refs so the inline Preact event props (which re-create
-  // their closure on every render) always read the latest state without
-  // causing stale-closure bugs.
-  const onNavigateRef = useRef(null);
-  onNavigateRef.current = (e) => {
-    const { direction, event = e } = e.detail;
-    const values = ItemTrackerProvider.items.map((item) => item.value);
-    if (values.length === 0) {
-      return;
-    }
-    const current = anchorValueRef.current;
-    if (direction === "down") {
-      const idx = current === null ? -1 : values.indexOf(current);
-      const value = values[idx < values.length - 1 ? idx + 1 : idx];
-      onKeyboardPoint(value, event);
-    } else if (direction === "up") {
-      const idx = current === null ? -1 : values.indexOf(current);
-      const value = values[idx > 0 ? idx - 1 : 0];
-      onKeyboardPoint(value, event);
-    } else if (direction === "first") {
-      onKeyboardPoint(values[0], event);
-    } else if (direction === "last") {
-      onKeyboardPoint(values[values.length - 1], event);
-    }
-  };
-  const onConfirmRef = useRef(null);
-  onConfirmRef.current = () => {
-    const current = anchorValueRef.current;
-    if (current === null) {
-      return;
-    }
-    uiAction?.(current);
-  };
-  const onClearRef = useRef(null);
-  onClearRef.current = () => {
-    setMousePointedValue(null);
-    setKeyboardPointedValue(null);
-    setAnchorValue(null);
-  };
-
   const suggestionContext = {
     mousePointedValue,
     keyboardPointedValue,
@@ -745,26 +705,6 @@ const SuggestionListbox = ({
     onSelect: select,
   };
 
-  // Preact's event diffing removes and re-adds listeners on re-render,
-  // which breaks custom events. Use stable direct addEventListener instead.
-  useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el) {
-      return undefined;
-    }
-    const onNavigate = (e) => onNavigateRef.current(e);
-    const onConfirm = () => onConfirmRef.current();
-    const onClear = () => onClearRef.current();
-    el.addEventListener("navi_list_navigate", onNavigate);
-    el.addEventListener("navi_list_confirm", onConfirm);
-    el.addEventListener("navi_list_clear", onClear);
-    return () => {
-      el.removeEventListener("navi_list_navigate", onNavigate);
-      el.removeEventListener("navi_list_confirm", onConfirm);
-      el.removeEventListener("navi_list_clear", onClear);
-    };
-  }, []);
-
   return (
     <Box
       ref={ref}
@@ -772,6 +712,39 @@ const SuggestionListbox = ({
       as="ul"
       role="listbox"
       baseClassName="navi_suggestion_listbox"
+      onnavi_list_navigate={(e) => {
+        const { direction, event = e } = e.detail;
+        const values = ItemTrackerProvider.items.map((item) => item.value);
+        if (values.length === 0) {
+          return;
+        }
+        const current = anchorValueRef.current;
+        if (direction === "down") {
+          const idx = current === null ? -1 : values.indexOf(current);
+          const value = values[idx < values.length - 1 ? idx + 1 : idx];
+          onKeyboardNav(value, event);
+        } else if (direction === "up") {
+          const idx = current === null ? -1 : values.indexOf(current);
+          const value = values[idx > 0 ? idx - 1 : 0];
+          onKeyboardNav(value, event);
+        } else if (direction === "first") {
+          onKeyboardNav(values[0], event);
+        } else if (direction === "last") {
+          onKeyboardNav(values[values.length - 1], event);
+        }
+      }}
+      onnavi_list_clear={() => {
+        setMousePointedValue(null);
+        setKeyboardPointedValue(null);
+        setAnchorValue(null);
+      }}
+      onnavi_list_confirm={(e) => {
+        const current = anchorValueRef.current;
+        if (current === null) {
+          return;
+        }
+        uiAction?.(current, e);
+      }}
     >
       <li
         ref={topFillerRef}
