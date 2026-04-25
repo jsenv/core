@@ -128,7 +128,10 @@ const SuggestionListWithFilter = ({ match = defaultMatch, ...rest }) => {
 
 // Standalone variant: attaches keyboard shortcuts to the container and
 // forwards them as custom events to itself (navi_suggestion_list_* events).
-const SuggestionListStandalone = ({ keyboardInteractions, ...props }) => {
+const SuggestionListStandalone = ({
+  keyboardInteractions = true,
+  ...props
+}) => {
   const defaultRef = useRef();
   const ref = props.ref || defaultRef;
   const dispatchToList = (...args) => dispatchCustomEventToList(ref, ...args);
@@ -171,7 +174,7 @@ const SuggestionListStandalone = ({ keyboardInteractions, ...props }) => {
 
   return (
     <SuggestionListControlled
-      tabIndex={props.keyboardInteractions ? 0 : undefined}
+      tabIndex={keyboardInteractions ? 0 : undefined}
       {...props}
       ref={ref}
     />
