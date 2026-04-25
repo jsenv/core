@@ -215,12 +215,13 @@
           if (!el) {
             return;
           }
+          const containerEl = el.parentNode;
           if (position === "top") {
-            el.scrollTop = 0;
+            containerEl.scrollTop = 0;
           } else if (position === "middle") {
-            el.scrollTop = el.scrollHeight / 2;
+            containerEl.scrollTop = containerEl.scrollHeight / 2;
           } else if (position === "bottom") {
-            el.scrollTop = el.scrollHeight;
+            containerEl.scrollTop = containerEl.scrollHeight;
           }
         };
 
