@@ -111,6 +111,7 @@
         SuggestionListCombo,
         Suggestion,
         Input,
+        Separator,
       } from "@jsenv/navi";
 
       // Each item has a name + address. Some addresses are long to test text wrapping.
@@ -257,7 +258,12 @@
 
             <div className="scroll-container">
               <SuggestionListCombo match={matchItem}>
-                <SuggestionList ref={listRef} uiAction={setSelected} expandX>
+                <SuggestionList
+                  ref={listRef}
+                  uiAction={setSelected}
+                  expandX
+                  separator={<Separator margin="0" />}
+                >
                   <li className="sticky-header" role="presentation">
                     <p className="sticky-header-title">
                       Veuillez sélectionner une suggestion
