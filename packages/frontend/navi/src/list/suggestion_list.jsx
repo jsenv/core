@@ -298,7 +298,19 @@ const SuggestionListControlled = ({
     }
     const observer = new ResizeObserver((entries) => {
       const entry = entries[0];
-      const { width, height } = entry.contentRect;
+      // Use borderBoxSize (outer width) not contentRect (which excludes the
+      // scrollbar width). If we used contentRect, min-width would be set to
+      // outerWidth - scrollbarWidth, and the container would shrink by exactly
+      // the scrollbar width when the scrollbar disappears.
+      const borderBoxEntry = entry.borderBoxSize
+        ? entry.borderBoxSize[0]
+        : null;
+      const width = borderBoxEntry
+        ? borderBoxEntry.inlineSize
+        : entry.contentRect.width;
+      const height = borderBoxEntry
+        ? borderBoxEntry.blockSize
+        : entry.contentRect.height;
       if (width === 0 && height === 0) {
         return;
       }
