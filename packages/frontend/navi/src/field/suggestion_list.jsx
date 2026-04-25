@@ -145,7 +145,7 @@ const css = /* css */ `
     --x-font-weight: var(--suggestion-font-weight);
     display: flex;
     box-sizing: border-box;
-    width: max-content;
+    width: inherit;
     min-width: 100%;
 
     padding: var(--suggestion-padding);
@@ -460,6 +460,7 @@ const SuggestionListControlled = ({
   itemHeightEstimation,
   itemHeightIsVariable = true,
   separator,
+  expandX,
   ...rest
 }) => {
   const ownId = useId();
@@ -633,6 +634,7 @@ const SuggestionListControlled = ({
     <Box
       id={id}
       maxHeight={maxHeight}
+      expandX={expandX}
       {...rest}
       ref={ref}
       baseClassName="navi_suggestion_list"
@@ -651,6 +653,7 @@ const SuggestionListControlled = ({
         highlight={highlight}
         emptyState={emptyState}
         separator={separator}
+        expandX={expandX}
       >
         {children}
       </SuggestionListbox>
@@ -671,6 +674,7 @@ const SuggestionListbox = ({
   highlight,
   emptyState,
   separator,
+  expandX,
   children,
 }) => {
   // When a filter is active, set highlight to the filter text so the listbox
@@ -751,6 +755,7 @@ const SuggestionListbox = ({
         }
         uiAction?.(current, e);
       }}
+      expandX={expandX}
     >
       <li
         ref={topFillerRef}
