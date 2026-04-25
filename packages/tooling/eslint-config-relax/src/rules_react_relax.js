@@ -28,7 +28,12 @@ export const rulesReactRelax = {
       forbid: ["<", ">", "{", "}"],
     },
   ],
-  "react/no-unknown-property": ["error"],
+  "react/no-unknown-property": [
+    "error",
+    // {
+    //   ignore: ["navi-virtual-filler"],
+    // },
+  ],
   "react/no-unsafe": ["off"],
   "react/prop-types": ["off"],
   "react/react-in-jsx-scope": ["error"],

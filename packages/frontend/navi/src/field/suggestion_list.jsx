@@ -210,6 +210,18 @@ const css = /* css */ `
       display: block;
     }
   }
+  /* Virtual scroll fillers — not meant to be seen, styled for debugging */
+  .navi_suggestion_virtual_filler {
+    height: 0px;
+    list-style: none;
+    background: repeating-linear-gradient(
+      45deg,
+      rgba(128, 0, 255, 0.07),
+      rgba(128, 0, 255, 0.07) 6px,
+      transparent 6px,
+      transparent 12px
+    );
+  }
 `;
 
 // Single entry point. Renders either the popover variant or the standalone
@@ -788,8 +800,10 @@ const SuggestionListbox = ({
     >
       <li
         aria-hidden
+        className="navi_suggestion_virtual_filler"
+        // eslint-disable-next-line react/no-unknown-property
+        navi-virtual-filler="top"
         ref={topFillerRef}
-        style="height:0px;background:repeating-linear-gradient(45deg,rgba(128,0,255,0.08),rgba(128,0,255,0.08) 6px,transparent 6px,transparent 12px)"
       />
       <RenderWindowContext.Provider value={renderWindow}>
         <SuggestionListboxContext.Provider value={suggestionContext}>
@@ -802,8 +816,10 @@ const SuggestionListbox = ({
       </RenderWindowContext.Provider>
       <li
         aria-hidden
+        className="navi_suggestion_virtual_filler"
+        // eslint-disable-next-line react/no-unknown-property
+        navi-virtual-filler="bottom"
         ref={bottomFillerRef}
-        style="height:0px;background:repeating-linear-gradient(45deg,rgba(128,0,255,0.08),rgba(128,0,255,0.08) 6px,transparent 6px,transparent 12px)"
       />
 
       {emptyState && (
