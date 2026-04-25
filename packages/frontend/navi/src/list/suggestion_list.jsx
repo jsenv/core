@@ -292,13 +292,8 @@ const SuggestionListControlled = ({
     if (filter) {
       return undefined;
     }
-    const listEl = resolvedRef.current;
-    if (!listEl) {
-      return undefined;
-    }
-    // The container is the navi_list_container div (parent of the <ul>).
-    const containerEl = listEl.parentElement;
-    if (!containerEl) {
+    const listContainerEl = resolvedRef.current;
+    if (!listContainerEl) {
       return undefined;
     }
     const observer = new ResizeObserver((entries) => {
@@ -307,12 +302,12 @@ const SuggestionListControlled = ({
       if (width === 0 && height === 0) {
         return;
       }
-      containerEl.style.minWidth = `${width}px`;
-      containerEl.style.minHeight = `${height}px`;
+      listContainerEl.style.minWidth = `${width}px`;
+      listContainerEl.style.minHeight = `${height}px`;
       sizeLocked.current = true;
       observer.disconnect();
     });
-    observer.observe(containerEl);
+    observer.observe(listContainerEl);
     return () => {
       observer.disconnect();
     };
