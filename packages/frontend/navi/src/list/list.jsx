@@ -182,7 +182,7 @@ const css = /* css */ `
   }
 
   /* Hide groups that have no rendered items. */
-  li[role="presentation"]:not(:has([navi-list-item])) {
+  .navi_list_item_group[data-hidden-while-empty]:not(:has([navi-list-item])) {
     display: none;
   }
 `;
@@ -529,10 +529,19 @@ export const ListItemPresentation = ({ children, ...rest }) => {
  *   labelProps — props forwarded to the label <span>
  *   ...rest    — forwarded to the outer <li role="presentation">
  */
-export const ListItemGroup = ({ label, children, ...rest }) => {
+export const ListItemGroup = ({
+  label,
+  hiddenWhileEmpty,
+  children,
+  ...rest
+}) => {
   const groupId = useId();
   return (
-    <ListItemPresentation {...rest}>
+    <ListItemPresentation
+      {...rest}
+      baseClassName="navi_list_item_group"
+      data-hidden-while-empty={hiddenWhileEmpty ? "" : undefined}
+    >
       <span
         id={groupId}
         role="presentation"

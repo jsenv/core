@@ -44,6 +44,7 @@
         Separator,
         Text,
         Box,
+        ListItemPresentation,
       } from "@jsenv/navi";
 
       // ── Reusable dialog header ────────────────────────────────────────────────
@@ -190,7 +191,13 @@
             minWidth="300"
             renderBudget={10}
           >
-            <DialogHeader title="Pick an animal" />
+            <ListItemPresentation>
+              <div style="padding:14px 16px 10px;border-bottom:1px solid #eee;">
+                <span style="font-weight:600;font-size:15px;">
+                  Pick an animal
+                </span>
+              </div>
+            </ListItemPresentation>
             {ANIMALS.map((animal) => (
               <Suggestion
                 flex
