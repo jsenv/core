@@ -269,7 +269,11 @@ export const List = ({
   useLayoutEffect(() => {
     const totalItems = ItemTrackerProvider.items.length;
     if (totalItems > renderBudget) {
-      if (renderWindowRef.current === null) {
+      const current = renderWindowRef.current;
+      if (current === null) {
+        setRenderWindow({ start: 0, end: renderBudget });
+      } else if (current.start >= totalItems) {
+        // Window is entirely out of range (e.g. after filtering) — reset to start.
         setRenderWindow({ start: 0, end: renderBudget });
       }
     } else if (renderWindowRef.current !== null) {
