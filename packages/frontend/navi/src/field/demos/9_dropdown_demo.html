@@ -41,6 +41,8 @@
         Suggestion,
         SuggestionList,
         SuggestionListCombo,
+        Separator,
+        Text,
       } from "@jsenv/navi";
 
       // ── Reusable dialog header ────────────────────────────────────────────────
@@ -184,32 +186,28 @@
                 onSelect(v);
                 close();
               }}
+              separator={<Separator margin="0" />}
+              expandX
+              minWidth="inherit"
             >
-              {ANIMALS.map((animal, i) => (
-                <>
-                  {i > 0 && (
-                    <li
-                      role="presentation"
-                      style="margin:0;padding:0;list-style:none;"
-                    >
-                      <hr style="margin:0;border:none;border-top:1px solid #eee;" />
-                    </li>
-                  )}
-                  <Suggestion
-                    key={animal}
-                    value={animal}
-                    selected={selected === animal}
-                    style="display:flex;align-items:center;gap:10px;padding:10px 16px;"
-                  >
-                    <input
-                      type="radio"
-                      tabIndex="-1"
-                      checked={selected === animal}
-                      style="pointer-events:none;flex-shrink:0;"
-                    />
-                    {animal}
-                  </Suggestion>
-                </>
+              {ANIMALS.map((animal) => (
+                <Suggestion
+                  flex
+                  alignY="center"
+                  key={animal}
+                  value={animal}
+                  selected={selected === animal}
+                  height="60px"
+                >
+                  <Text>{animal}</Text>
+                  <Input
+                    selfAlignX="end"
+                    type="radio"
+                    tabIndex="-1"
+                    checked={selected === animal}
+                    style="pointer-events:none;flex-shrink:0;"
+                  />
+                </Suggestion>
               ))}
             </SuggestionList>
           </div>

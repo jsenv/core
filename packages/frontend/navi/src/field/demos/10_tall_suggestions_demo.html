@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tall Suggestions Demo</title>
+    <style>
+      body {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: #f5f5f5;
+      }
+      .demo-section {
+        margin-bottom: 40px;
+        padding: 20px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      .demo-section h2 {
+        margin: 0 0 8px;
+        font-size: 1.1rem;
+      }
+      .demo-section p {
+        margin: 0 0 16px;
+        color: #555;
+        font-size: 0.9rem;
+      }
+    </style>
+  </head>
+  <body>
+    <h1 style="text-align: center; margin-bottom: 30px">
+      Tall Suggestions Demo
+    </h1>
+    <div id="root"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useState } from "preact/hooks";
+      import { Suggestion, SuggestionList } from "@jsenv/navi";
+
+      const ITEMS = Array.from({ length: 50 }, (_, i) => ({
+        id: i + 1,
+        label: `Item ${i + 1}`,
+        description: `This is a description for item ${i + 1}. Each suggestion has a fixed height of roughly 80px.`,
+      }));
+
+      const TallDemo = () => {
+        const [selected, setSelected] = useState(null);
+        return (
+          <div class="demo-section">
+            <h2>Tall suggestions (~80px each)</h2>
+            <p>
+              50 items, each about 80px tall. Virtual scroll should handle this
+              correctly — scrolling should not cause flicker or wrong windows.
+            </p>
+            <SuggestionList
+              maxHeight="320px"
+              uiAction={setSelected}
+              renderBudget={10}
+            >
+              {ITEMS.map((item) => (
+                <Suggestion
+                  key={item.id}
+                  value={item.label}
+                  selected={selected === item.label}
+                  style="display:flex;flex-direction:column;gap:4px;padding:16px;min-height:80px;justify-content:center;border-bottom:1px solid #eee;"
+                >
+                  <span style="font-weight:600;font-size:14px;">
+                    {item.label}
+                  </span>
+                  <span style="font-size:12px;color:#666;line-height:1.4;">
+                    {item.description}
+                  </span>
+                </Suggestion>
+              ))}
+            </SuggestionList>
+            {selected && (
+              <p style="margin-top:12px;font-size:13px;color:#1a73e8;">
+                Selected: <b>{selected}</b>
+              </p>
+            )}
+          </div>
+        );
+      };
+
+      render(<TallDemo />, document.getElementById("root"));
+    </script>
+  </body>
+</html>

@@ -594,28 +594,7 @@ export const Box = (props) => {
 
   if (separator) {
     // Flatten nested arrays (e.g., from .map()) to treat each element as individual child
-    const flattenedChildren = toChildArray(innerChildren);
-    if (flattenedChildren.length > 1) {
-      const childrenWithSeparators = [];
-      let i = 0;
-      while (true) {
-        const child = flattenedChildren[i];
-        childrenWithSeparators.push(child);
-        i++;
-        if (i === flattenedChildren.length) {
-          break;
-        }
-        // Support function separators that receive separator index
-        const separatorElement =
-          typeof separator === "function"
-            ? separator(i - 1) // i-1 because i was incremented after pushing child
-            : separator;
-        childrenWithSeparators.push(separatorElement);
-      }
-      innerChildren = childrenWithSeparators;
-    } else {
-      innerChildren = flattenedChildren;
-    }
+    innerChildren = applySeparatorOnChildren(innerChildren, separator);
   }
 
   return (
@@ -633,4 +612,28 @@ export const Box = (props) => {
       </BoxFlowContext.Provider>
     </TagName>
   );
+};
+
+export const applySeparatorOnChildren = (children, separator) => {
+  const flattenedChildren = toChildArray(children);
+  if (flattenedChildren.length <= 1) {
+    return children;
+  }
+  const childrenWithSeparators = [];
+  let i = 0;
+  while (true) {
+    const child = flattenedChildren[i];
+    childrenWithSeparators.push(child);
+    i++;
+    if (i === flattenedChildren.length) {
+      break;
+    }
+    // Support function separators that receive separator index
+    const separatorElement =
+      typeof separator === "function"
+        ? separator(i - 1) // i-1 because i was incremented after pushing child
+        : separator;
+    childrenWithSeparators.push(separatorElement);
+  }
+  return childrenWithSeparators;
 };

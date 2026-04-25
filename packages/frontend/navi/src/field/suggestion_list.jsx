@@ -8,7 +8,7 @@ import {
   useState,
 } from "preact/hooks";
 
-import { Box } from "../box/box.jsx";
+import { Box, applySeparatorOnChildren } from "../box/box.jsx";
 import { useKeyboardShortcuts } from "../keyboard/keyboard_shortcuts.js";
 import { createItemTracker } from "./item_tracker/item_tracker.jsx";
 
@@ -130,12 +130,6 @@ const css = /* css */ `
     margin: 0;
     padding: 0;
     list-style: none;
-
-    .navi_suggestion_listbox_filler {
-      height: 0px;
-      list-style: none;
-      pointer-events: none;
-    }
   }
   ::highlight(navi-suggestion-match) {
     color: var(--suggestion-color-highlight);
@@ -151,7 +145,6 @@ const css = /* css */ `
     min-width: 100%;
 
     padding: var(--suggestion-padding);
-    flex-direction: column;
     color: var(--x-color);
     font-weight: var(--x-font-weight);
     background-color: var(--x-background-color);
@@ -434,15 +427,15 @@ const SuggestionStyleCSSVars = {
   },
 };
 
-// Carries the virtual scroll window (enabled, start, end) set by
-// SuggestionContainerControlled and consumed by each Suggestion wrapper to decide
-// whether to render.
-const MIN_ITEM_HEIGHT = 20; // px — conservative lower bound for filler height estimation
-const VIRTUAL_SCROLL_BUFFER = 5; // extra items to render above and below the visible window
+// When total rendered items exceeds renderBudget, a render window [start, end)
+// is activated to cap the number of DOM nodes. Items outside the window return
+// null. The window slides as the user scrolls, using actual DOM positions
+// (getBoundingClientRect) to find the first visible item — no height estimation.
+const RENDER_BUDGET_DEFAULT = 100;
 
-// Core: virtual scroll detection, scroll listener, median measurement, and the <Box>
-// scroll container + <SuggestionListbox>. Controlled by either
-// SuggestionListStandalone or SuggestionListWithPopover.
+// Core: render budget windowing + scroll listener + the <Box> scroll container
+// + <SuggestionListbox>. Controlled by either SuggestionListStandalone or
+// SuggestionListWithPopover.
 const SuggestionListControlled = ({
   ref,
   listboxRef,
@@ -451,101 +444,143 @@ const SuggestionListControlled = ({
   emptyState = "No results",
   children,
   maxHeight,
+  renderBudget = RENDER_BUDGET_DEFAULT,
+  separator,
   ...rest
 }) => {
   const ownId = useId();
   const id = rest.id ?? ownId;
 
-  // Detect max-height on mount and enable virtual scroll when present.
-  const [virtualScrollState, setVirtualScrollState] = useState({
-    enabled: false,
-    start: 0,
-    end: VIRTUAL_SCROLL_BUFFER * 2,
+  // ItemTrackerProvider is created here (above the scroll listener) so the
+  // scroll handler can read ItemTrackerProvider.items.length to decide whether
+  // to activate/deactivate the render window.
+  const ItemTrackerProvider = useSuggestionItemTrackerProvider();
+
+  // renderWindow: null = render all items; {start, end, topFillerHeight, bottomFillerHeight}
+  // when active. topFillerHeight/bottomFillerHeight compensate for hidden items so the
+  // scrollbar accurately reflects the full list height.
+  const [renderWindow, setRenderWindow] = useState(null);
+  const renderWindowRef = useRef(null);
+  renderWindowRef.current = renderWindow;
+  // Measured heights by absolute item index. Populated from DOM as items scroll
+  // through the render window. Used to compute filler heights without estimation
+  // for items we've already seen, and falls back to average for unseen items.
+  const itemHeightsRef = useRef(new Map());
+
+  const computeFillerHeights = (newStart, newEnd, totalItems) => {
+    const heights = itemHeightsRef.current;
+    const known = Array.from(heights.values());
+    const avgHeight =
+      known.length > 0 ? known.reduce((a, b) => a + b, 0) / known.length : 40;
+    let topFillerHeight = 0;
+    for (let i = 0; i < newStart; i++) {
+      topFillerHeight += heights.get(i) ?? avgHeight;
+    }
+    let bottomFillerHeight = 0;
+    for (let i = newEnd; i < totalItems; i++) {
+      bottomFillerHeight += heights.get(i) ?? avgHeight;
+    }
+    return { topFillerHeight, bottomFillerHeight };
+  };
+
+  const measureOptions = (options, windowStart) => {
+    for (let i = 0; i < options.length; i++) {
+      const absIdx = windowStart + i;
+      const h = options[i].getBoundingClientRect().height;
+      if (h > 0) {
+        itemHeightsRef.current.set(absIdx, h);
+      }
+    }
+  };
+
+  // Activate or deactivate the render window depending on item count.
+  // Runs every render so it reacts to filter changes (items added/removed).
+  useLayoutEffect(() => {
+    const totalItems = ItemTrackerProvider.items.length;
+    if (totalItems > renderBudget) {
+      if (renderWindowRef.current === null) {
+        // Measure currently rendered items to bootstrap the heights map.
+        const listEl = ref.current;
+        const options = listEl
+          ? Array.from(listEl.querySelectorAll("[role='option']"))
+          : [];
+        measureOptions(options, 0);
+        const { topFillerHeight, bottomFillerHeight } = computeFillerHeights(
+          0,
+          renderBudget,
+          totalItems,
+        );
+        setRenderWindow({
+          start: 0,
+          end: renderBudget,
+          topFillerHeight,
+          bottomFillerHeight,
+        });
+      }
+    } else if (renderWindowRef.current !== null) {
+      itemHeightsRef.current.clear();
+      setRenderWindow(null);
+    }
   });
-  useLayoutEffect(() => {
-    const listEl = ref.current;
-    if (!listEl) {
-      return;
-    }
-    const maxHeightStr = getComputedStyle(listEl).maxHeight;
-    if (!maxHeightStr || maxHeightStr === "none") {
-      return;
-    }
-    const maxHeightPx = parseFloat(maxHeightStr);
-    if (isNaN(maxHeightPx) || maxHeightPx <= 0) {
-      return;
-    }
-    const itemsPerView = Math.ceil(maxHeightPx / MIN_ITEM_HEIGHT);
-    setVirtualScrollState({
-      enabled: true,
-      start: 0,
-      end: VIRTUAL_SCROLL_BUFFER + itemsPerView + VIRTUAL_SCROLL_BUFFER,
-    });
-  }, [maxHeight]);
 
-  // Measure real item height once, right after the first virtual scroll window renders.
-  const medianHeightRef = useRef(MIN_ITEM_HEIGHT);
+  // Scroll listener — slides the render window to follow the user's scroll
+  // position using actual DOM element positions (no height estimation).
   useLayoutEffect(() => {
-    if (!virtualScrollState.enabled) {
-      return;
-    }
-    const listEl = ref.current;
-    if (!listEl) {
-      return;
-    }
-    const options = Array.from(listEl.querySelectorAll("[role='option']"));
-    if (options.length === 0) {
-      return;
-    }
-    const heights = options
-      .map((el) => el.getBoundingClientRect().height)
-      // Heights are zero when the list is rendered inside a closed <dialog>
-      // (display:none makes getBoundingClientRect return 0 for all elements).
-      // Skip those to avoid corrupting the median with bogus values.
-      .filter((h) => h > 0);
-    if (heights.length === 0) {
-      return;
-    }
-    heights.sort((a, b) => a - b);
-    const mid = Math.floor(heights.length / 2);
-    medianHeightRef.current =
-      heights.length % 2 === 0
-        ? (heights[mid - 1] + heights[mid]) / 2
-        : heights[mid];
-  }, [virtualScrollState.enabled]);
-
-  // Scroll listener — also runs immediately to account for any initial scroll.
-  useLayoutEffect(() => {
-    if (!virtualScrollState.enabled) {
-      return undefined;
-    }
     const listEl = ref.current;
     if (!listEl) {
       return undefined;
     }
     const onScroll = () => {
-      const median = medianHeightRef.current;
-      const itemsPerView = Math.ceil(listEl.clientHeight / median);
-      const firstVisible = Math.floor(listEl.scrollTop / median);
+      const totalItems = ItemTrackerProvider.items.length;
+      if (totalItems <= renderBudget) {
+        return;
+      }
+      const current = renderWindowRef.current;
+      const currentStart = current ? current.start : 0;
+      // Measure all currently rendered options before computing the new window.
+      const options = Array.from(listEl.querySelectorAll("[role='option']"));
+      measureOptions(options, currentStart);
+
+      const listRect = listEl.getBoundingClientRect();
+      // Find the first rendered option whose bottom edge is at or below the
+      // top of the visible area — that is the first (partially) visible item.
+      let firstVisibleRelIndex = 0;
+      for (let i = 0; i < options.length; i++) {
+        if (options[i].getBoundingClientRect().bottom > listRect.top) {
+          firstVisibleRelIndex = i;
+          break;
+        }
+      }
+      const firstVisibleAbsIndex = currentStart + firstVisibleRelIndex;
+      // Keep 30% of the budget behind the visible anchor and 70% ahead.
+      const back = Math.floor(renderBudget * 0.3);
+      const idealStart = Math.max(0, firstVisibleAbsIndex - back);
+      const idealEnd = idealStart + renderBudget;
+      const newEnd = Math.min(totalItems, idealEnd);
       const newStart =
-        firstVisible > VIRTUAL_SCROLL_BUFFER
-          ? firstVisible - VIRTUAL_SCROLL_BUFFER
-          : 0;
-      const newEnd = firstVisible + itemsPerView + VIRTUAL_SCROLL_BUFFER;
-      setVirtualScrollState((prev) => ({
-        ...prev,
+        newEnd === totalItems
+          ? Math.max(0, totalItems - renderBudget)
+          : idealStart;
+      if (current && current.start === newStart && current.end === newEnd) {
+        return;
+      }
+      const { topFillerHeight, bottomFillerHeight } = computeFillerHeights(
+        newStart,
+        newEnd,
+        totalItems,
+      );
+      setRenderWindow({
         start: newStart,
         end: newEnd,
-      }));
+        topFillerHeight,
+        bottomFillerHeight,
+      });
     };
-    if (listEl.clientHeight > 0) {
-      onScroll();
-    }
     listEl.addEventListener("scroll", onScroll, { passive: true });
     return () => {
       listEl.removeEventListener("scroll", onScroll);
     };
-  }, [virtualScrollState.enabled]);
+  }, [renderBudget]);
 
   // Forward navi_suggestion_list_* events (dispatched by input or standalone keyboard
   // shortcuts) to the internal listbox as navi_list_* events.
@@ -587,11 +622,12 @@ const SuggestionListControlled = ({
     >
       <SuggestionListbox
         ref={listboxRef}
-        virtualScrollState={virtualScrollState}
-        medianHeightRef={medianHeightRef}
+        ItemTrackerProvider={ItemTrackerProvider}
+        renderWindow={renderWindow}
         uiAction={uiAction}
         highlight={highlight}
         emptyState={emptyState}
+        separator={separator}
       >
         {children}
       </SuggestionListbox>
@@ -599,17 +635,17 @@ const SuggestionListControlled = ({
   );
 };
 const SuggestionListboxContext = createContext(null);
-const VirtualScrollContext = createContext(null);
-// The <ul role="listbox"> with top and bottom filler <li>s that maintain the
-// total scroll height when virtual scroll is active. Piloted by
-// SuggestionListControlled which detects max-height and sets virtualScrollState.
+// Carries the render window {start, end} (or null = render all) from
+// SuggestionListControlled down to each Suggestion.
+const RenderWindowContext = createContext(null);
 const SuggestionListbox = ({
   ref,
-  virtualScrollState,
-  medianHeightRef,
+  ItemTrackerProvider,
+  renderWindow,
   uiAction,
   highlight,
   emptyState,
+  separator,
   children,
 }) => {
   // When a filter is active, set highlight to the filter text so the listbox
@@ -620,7 +656,6 @@ const SuggestionListbox = ({
   }
   const listboxIdFromContext = useContext(ListboxIdContext);
 
-  const ItemTrackerProvider = useSuggestionItemTrackerProvider();
   const [mousePointedValue, setMousePointedValue] = useState(null);
   const [keyboardPointedValue, setKeyboardPointedValue] = useState(null);
   // The anchor is the index we navigate FROM. Only keyboard nav and
@@ -642,27 +677,6 @@ const SuggestionListbox = ({
     setAnchorValue(value);
     uiAction?.(value, event);
   };
-
-  const fillerTopRef = useRef(null);
-  const fillerBottomRef = useRef(null);
-  useLayoutEffect(() => {
-    // items is a live array: by the time this effect fires (SuggestionListbox is
-    // an ancestor of ItemTrackerProvider), all Suggestion commit/decommit effects
-    // have already run (bottom-up order), so items.length is correct.
-    const totalItems = ItemTrackerProvider.items.length;
-    const median = medianHeightRef.current;
-    const topHidden = virtualScrollState.start;
-    const bottomHidden =
-      totalItems > virtualScrollState.end
-        ? totalItems - virtualScrollState.end
-        : 0;
-    if (fillerTopRef.current) {
-      fillerTopRef.current.style.height = `${Math.round(topHidden * median)}px`;
-    }
-    if (fillerBottomRef.current) {
-      fillerBottomRef.current.style.height = `${Math.round(bottomHidden * median)}px`;
-    }
-  });
 
   // Stable handler refs so the inline Preact event props (which re-create
   // their closure on every render) always read the latest state without
@@ -740,26 +754,37 @@ const SuggestionListbox = ({
       role="listbox"
       baseClassName="navi_suggestion_listbox"
     >
-      <li
-        ref={fillerTopRef}
-        className="navi_suggestion_listbox_filler"
-        data-top=""
-        aria-hidden="true"
-      />
-      <VirtualScrollContext.Provider value={virtualScrollState}>
+      {renderWindow && renderWindow.topFillerHeight > 0 && (
+        <li
+          aria-hidden="true"
+          style={{
+            height: `${renderWindow.topFillerHeight}px`,
+            listStyle: "none",
+          }}
+        />
+      )}
+      <RenderWindowContext.Provider value={renderWindow}>
         <SuggestionListboxContext.Provider value={suggestionContext}>
-          <ItemTrackerProvider>{children}</ItemTrackerProvider>
+          <ItemTrackerProvider>
+            {separator
+              ? applySeparatorOnChildren(children, separator)
+              : children}
+          </ItemTrackerProvider>
         </SuggestionListboxContext.Provider>
-      </VirtualScrollContext.Provider>
+      </RenderWindowContext.Provider>
+      {renderWindow && renderWindow.bottomFillerHeight > 0 && (
+        <li
+          aria-hidden="true"
+          style={{
+            height: `${renderWindow.bottomFillerHeight}px`,
+            listStyle: "none",
+          }}
+        />
+      )}
 
       {emptyState && (
         <li className="navi_suggestion_listbox_empty">{emptyState}</li>
       )}
-      <li
-        ref={fillerBottomRef}
-        className="navi_suggestion_listbox_filler"
-        aria-hidden="true"
-      />
     </Box>
   );
 };
@@ -799,12 +824,13 @@ export const Suggestion = ({ value, hidden, ...rest }) => {
     hidden = true;
   }
   const index = useTrackSuggestion(id, { id, value, hidden });
-  const virtualScrollCtx = useContext(VirtualScrollContext);
-  if (virtualScrollCtx && virtualScrollCtx.enabled) {
+  const renderWindow = useContext(RenderWindowContext);
+  if (renderWindow !== null) {
+    // Render budget is active: only render items inside the window [start, end).
     if (
       index === -1 ||
-      index < virtualScrollCtx.start ||
-      index >= virtualScrollCtx.end
+      index < renderWindow.start ||
+      index >= renderWindow.end
     ) {
       return null;
     }
