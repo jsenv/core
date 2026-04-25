@@ -476,10 +476,14 @@ const SuggestionListControlled = ({
     }
   });
 
-  // Scroll listener — slides the render window to follow the user's scroll
-  // position using scroll ratio to place the window around the proportional
-  // position in the full list. This is idempotent: any number of scroll events
-  // at the same scrollTop produce the same window, preventing runaway sliding.
+  // virtualScrollIndexRef: our own floating-point position in the full list (0 → totalItems-1).
+  // We accumulate scroll deltas scaled to the full list so the window slides at the right pace
+  // regardless of how many items are actually rendered. After each window slide we remap
+  // DOM scrollTop to match the virtual ratio so the scrollbar reflects the true position.
+  const virtualScrollIndexRef = useRef(0);
+  const prevDomScrollTopRef = useRef(0);
+
+  // Scroll listener — slides the render window by accumulating virtual scroll position.
   useLayoutEffect(() => {
     const listEl = ref.current;
     if (!listEl) {
@@ -494,18 +498,42 @@ const SuggestionListControlled = ({
       if (!current) {
         return;
       }
-      const scrollTop = listEl.scrollTop;
-      const maxScrollTop = listEl.scrollHeight - listEl.clientHeight;
+      const domScrollTop = listEl.scrollTop;
+      const maxDomScrollTop = listEl.scrollHeight - listEl.clientHeight;
+      const delta = domScrollTop - prevDomScrollTopRef.current;
+      prevDomScrollTopRef.current = domScrollTop;
 
-      // Snap to absolute boundaries when at the edges — always instant, no throttle.
-      if (scrollTop <= 0) {
+      // Scale the pixel delta to virtual list indices.
+      // The DOM has renderBudget items; each pixel = 1/approxItemHeight rendered items.
+      // Multiply by totalItems/renderBudget to get the equivalent full-list displacement.
+      const approxItemHeight = listEl.scrollHeight / renderBudget;
+      const virtualDelta =
+        (delta / approxItemHeight) * (totalItems / renderBudget);
+      let virtualIndex = virtualScrollIndexRef.current + virtualDelta;
+      if (virtualIndex < 0) {
+        virtualIndex = 0;
+      }
+      if (virtualIndex > totalItems - 1) {
+        virtualIndex = totalItems - 1;
+      }
+      virtualScrollIndexRef.current = virtualIndex;
+
+      // Snap to absolute boundaries.
+      if (virtualIndex <= 0 || domScrollTop <= 0) {
+        virtualScrollIndexRef.current = 0;
+        prevDomScrollTopRef.current = 0;
+        listEl.scrollTop = 0;
         if (current.start === 0) {
           return;
         }
         setRenderWindow({ start: 0, end: renderBudget });
         return;
       }
-      if (scrollTop >= maxScrollTop - 1) {
+      if (
+        virtualIndex >= totalItems - 1 ||
+        domScrollTop >= maxDomScrollTop - 1
+      ) {
+        virtualScrollIndexRef.current = totalItems - 1;
         if (current.end === totalItems) {
           return;
         }
@@ -516,13 +544,8 @@ const SuggestionListControlled = ({
         return;
       }
 
-      // The DOM only has renderBudget items, so scrollHeight is renderBudget/totalItems
-      // of what it would be with all items rendered. Without correction, one mousewheel
-      // notch covers totalItems/renderBudget times more list than intended.
-      // We compensate by scaling maxScrollTop up to the "virtual" full-list height.
-      const virtualMaxScrollTop = maxScrollTop * (totalItems / renderBudget);
-      const scrollRatio = scrollTop / virtualMaxScrollTop;
-      const centerAbsIndex = Math.round(scrollRatio * (totalItems - 1));
+      // Centre the render window around the virtual index.
+      const centerAbsIndex = Math.round(virtualIndex);
       const half = Math.floor(renderBudget / 2);
       let newStart = Math.max(0, centerAbsIndex - half);
       let newEnd = Math.min(totalItems, newStart + renderBudget);
@@ -534,6 +557,16 @@ const SuggestionListControlled = ({
         return;
       }
       setRenderWindow({ start: newStart, end: newEnd });
+
+      // Remap DOM scrollTop so the scrollbar thumb sits at the correct proportional
+      // position for virtualIndex in the new scroll range.
+      // This makes the scrollbar move continuously across the full range as the
+      // user scrolls, instead of getting stuck at the midpoint.
+      const newMaxDomScrollTop = listEl.scrollHeight - listEl.clientHeight;
+      const ratio = virtualIndex / (totalItems - 1);
+      const newDomScrollTop = ratio * newMaxDomScrollTop;
+      listEl.scrollTop = newDomScrollTop;
+      prevDomScrollTopRef.current = newDomScrollTop;
     };
     listEl.addEventListener("scroll", onScroll, { passive: true });
     return () => {
