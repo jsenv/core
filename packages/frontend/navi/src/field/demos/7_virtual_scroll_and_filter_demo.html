@@ -182,6 +182,7 @@
         const [selected, setSelected] = useState(null);
         const [maxHeight, setMaxHeight] = useState(280);
         const [maxHeightEnabled, setMaxHeightEnabled] = useState(true);
+        const [itemHeight, setItemHeight] = useState(null);
         const [scrollToIndex, setScrollToIndex] = useState("");
         const listRef = useRef(null);
         const [domItems, setDomItems] = useState(0);
@@ -318,7 +319,12 @@
                     index={index}
                     value={item}
                     selected={selected === item}
-                    style={{ backgroundColor: SUGGESTION_BG }}
+                    style={{
+                      backgroundColor: SUGGESTION_BG,
+                      ...(itemHeight
+                        ? { minHeight: `${itemHeight}px`, alignItems: "center" }
+                        : {}),
+                    }}
                   >
                     {item}
                   </Suggestion>
@@ -387,6 +393,29 @@
                     />
                   </label>
                 )}
+                <label
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    fontSize: "0.9rem",
+                  }}
+                >
+                  item height:{" "}
+                  <strong>{itemHeight ? `${itemHeight}px` : "auto"}</strong>
+                  <input
+                    type="range"
+                    min="0"
+                    max="200"
+                    step="4"
+                    value={itemHeight ?? 0}
+                    onInput={(e) => {
+                      const v = Number(e.target.value);
+                      setItemHeight(v === 0 ? null : v);
+                    }}
+                    style={{ flex: 1 }}
+                  />
+                </label>
               </div>
             </details>
           </div>
