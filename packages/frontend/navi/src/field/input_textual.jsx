@@ -773,6 +773,7 @@ const InputTextualPlain = (props) => {
         type={type}
         data-value={uiState}
         value={innerValue}
+        autoFocus={autoFocus}
         onInput={(e) => {
           let inputValue;
           if (type === "number") {

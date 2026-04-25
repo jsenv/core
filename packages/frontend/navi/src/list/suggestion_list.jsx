@@ -113,7 +113,12 @@ const SuggestionListWithFilter = ({ match = defaultMatch, ...rest }) => {
   return (
     <SetFilterContext.Provider value={setFilter}>
       <ListboxIdContext.Provider value={listboxId}>
-        <SuggestionList {...rest} filter={filter} match={match} />
+        <SuggestionList
+          {...rest}
+          filter={filter}
+          match={match}
+          keyboardInteractions={false}
+        />
       </ListboxIdContext.Provider>
     </SetFilterContext.Provider>
   );
@@ -121,11 +126,12 @@ const SuggestionListWithFilter = ({ match = defaultMatch, ...rest }) => {
 
 // Standalone variant: attaches keyboard shortcuts to the container and
 // forwards them as custom events to itself (navi_suggestion_list_* events).
-const SuggestionListStandalone = (props) => {
+const SuggestionListStandalone = ({ keyboardInteractions, ...props }) => {
   const defaultRef = useRef();
   const ref = props.ref || defaultRef;
   const dispatchToList = (...args) => dispatchCustomEventToList(ref, ...args);
-  useKeyboardShortcuts(ref, [
+
+  useKeyboardShortcuts(keyboardInteractions ? ref : { current: null }, [
     {
       key: "arrowdown",
       description: "Point to next suggestion",
@@ -161,7 +167,13 @@ const SuggestionListStandalone = (props) => {
     },
   ]);
 
-  return <SuggestionListControlled tabIndex={0} {...props} ref={ref} />;
+  return (
+    <SuggestionListControlled
+      tabIndex={props.keyboardInteractions ? 0 : undefined}
+      {...props}
+      ref={ref}
+    />
+  );
 };
 
 // Popover variant: handles open/close/positioning events and forwards
