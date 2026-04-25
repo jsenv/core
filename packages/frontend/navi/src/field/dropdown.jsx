@@ -1,3 +1,4 @@
+import { trapScrollInside } from "@jsenv/dom";
 import { createContext } from "preact";
 import { useContext, useRef, useState } from "preact/hooks";
 
@@ -114,6 +115,7 @@ export const Dropdown = ({
   placeholder = "Select…",
   disabled,
   capturePointer,
+  captureScroll,
   onOpen,
   onClose,
   children,
@@ -122,6 +124,7 @@ export const Dropdown = ({
   import.meta.css = css;
   const dialogRef = useRef(null);
   const [open, setOpen] = useState(false);
+  const scrollTrapCleanupRef = useRef(null);
 
   const openDialog = () => {
     if (disabled) {
@@ -133,6 +136,9 @@ export const Dropdown = ({
     }
     dialog.showModal();
     setOpen(true);
+    if (captureScroll) {
+      scrollTrapCleanupRef.current = trapScrollInside(dialog);
+    }
     onOpen?.();
   };
 
@@ -143,6 +149,10 @@ export const Dropdown = ({
     }
     dialog.close();
     setOpen(false);
+    if (captureScroll && scrollTrapCleanupRef.current) {
+      scrollTrapCleanupRef.current();
+      scrollTrapCleanupRef.current = null;
+    }
     onClose?.();
   };
 
