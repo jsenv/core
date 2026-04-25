@@ -113,31 +113,79 @@
         Input,
       } from "@jsenv/navi";
 
-      // 100 items — every 5th is very wide to test horizontal scroll with sticky header
-      const ITEMS = Array.from({ length: 100 }, (_, i) => {
-        const names = [
-          "Alpha",
-          "Bravo",
-          "Charlie",
-          "Delta",
-          "Echo",
-          "Foxtrot",
-          "Golf",
-          "Hotel",
-          "India",
-          "Juliet",
-        ];
-        const base = names[i % names.length];
-        const num = String(Math.floor(i / names.length) + 1).padStart(2, "0");
-        const isWide = i % 5 === 4;
-        const suffix = isWide
-          ? " — This is a deliberately very long label to force horizontal scroll and test sticky header behaviour"
-          : "";
-        return `${base}-${num}${suffix}`;
-      });
+      // Each item has a name + address. Some addresses are long to test text wrapping.
+      const ITEMS = [
+        { name: "Alice Dupont", address: "12 rue de la Paix, 75001 Paris" },
+        {
+          name: "Bob Martin",
+          address: "8 avenue des Champs-Élysées, 75008 Paris",
+        },
+        {
+          name: "Claire Bernard",
+          address: "3 boulevard Saint-Germain, 75005 Paris",
+        },
+        {
+          name: "David Leroy",
+          address: "47 rue du Faubourg Saint-Antoine, 75011 Paris",
+        },
+        { name: "Emma Petit", address: "2 place de la Bastille, 75012 Paris" },
+        { name: "François Moreau", address: "19 rue de Rivoli, 75004 Paris" },
+        { name: "Gabriel Simon", address: "5 allée des Roses, 69001 Lyon" },
+        {
+          name: "Hélène Laurent",
+          address: "31 cours Mirabeau, 13100 Aix-en-Provence",
+        },
+        {
+          name: "Ivan Thomas",
+          address: "14 rue de la République, 13001 Marseille",
+        },
+        {
+          name: "Julie Robert",
+          address: "22 grande rue de la Croix-de-Seguey, 33000 Bordeaux",
+        },
+        { name: "Kévin Richard", address: "9 rue du Capitole, 31000 Toulouse" },
+        {
+          name: "Laura Durand",
+          address: "6 place du Général de Gaulle, 59000 Lille",
+        },
+        { name: "Marc Lefebvre", address: "18 rue Nationale, 44000 Nantes" },
+        {
+          name: "Nadia Fontaine",
+          address: "27 avenue Jean Médecin, 06000 Nice",
+        },
+        { name: "Olivier Mercier", address: "4 place Bellecour, 69002 Lyon" },
+        {
+          name: "Pauline Rousseau",
+          address: "11 rue de la Monnaie, 59800 Lille",
+        },
+        {
+          name: "Quentin Blanc",
+          address: "33 impasse des Lilas, 33200 Bordeaux",
+        },
+        {
+          name: "Rachel Guerin",
+          address: "7 rue du Palais de Justice, 13002 Marseille",
+        },
+        {
+          name: "Samuel Faure",
+          address: "55 rue du Maréchal Joffre, 69003 Lyon",
+        },
+        {
+          name: "Théa Vincent",
+          address: "1 place de la Comédie, 34000 Montpellier",
+        },
+      ];
 
-      const StatsBar = ({ totalItems, visibleItems, domItems }) => {
-        const savedFromDom = visibleItems - domItems;
+      // Match on both name and address
+      const matchItem = (value, lowerFilter) => {
+        return (
+          value.name.toLowerCase().includes(lowerFilter) ||
+          value.address.toLowerCase().includes(lowerFilter)
+        );
+      };
+
+      const StatsBar = ({ totalItems, domItems }) => {
+        const savedFromDom = totalItems - domItems;
         return (
           <div className="stats-bar">
             <div className="stat">
@@ -145,13 +193,9 @@
               <span className="stat-value">{totalItems}</span>
             </div>
             <div className="stat">
-              <span className="stat-label">Visible (filter)</span>
-              <span className="stat-value">{visibleItems}</span>
-            </div>
-            <div className="stat">
               <span className="stat-label">In DOM</span>
               <span
-                className={`stat-value ${domItems < visibleItems ? "highlight" : ""}`}
+                className={`stat-value ${domItems < totalItems ? "highlight" : ""}`}
               >
                 {domItems}
               </span>
@@ -173,7 +217,6 @@
         const [domItems, setDomItems] = useState(0);
         const listRef = useRef(null);
 
-        // Track actual DOM option count via MutationObserver
         useEffect(() => {
           const updateCount = () => {
             if (!listRef.current) {
@@ -205,45 +248,45 @@
                 marginBottom: "12px",
               }}
             >
-              The filter input lives <em>inside</em> the suggestion list as a
-              sticky header. The list has no <code>max-height</code> — the
-              parent container scrolls instead. The render budget is 20 out of
-              100 items. Wide items (every 5th) test horizontal-scroll + sticky
-              interaction.
+              Sticky header inside the list. Each option shows a name + address
+              (address wraps on narrow containers). The filter matches both name
+              and address — highlights appear in both fields.
             </p>
 
-            <StatsBar
-              totalItems={ITEMS.length}
-              visibleItems={ITEMS.length}
-              domItems={domItems}
-            />
+            <StatsBar totalItems={ITEMS.length} domItems={domItems} />
 
-            {/* The parent handles scrolling */}
             <div className="scroll-container">
-              {/* SuggestionListCombo with no max-height — parent scroll container scrolls.
-                   The sticky header (title + Input) lives inside the <ul> as a
-                   <li role="presentation"> so it inherits the list's scrollbar. */}
-              <SuggestionListCombo>
-                <SuggestionList
-                  ref={listRef}
-                  uiAction={setSelected}
-                  renderBudget={20}
-                  expandX
-                >
+              <SuggestionListCombo match={matchItem}>
+                <SuggestionList ref={listRef} uiAction={setSelected} expandX>
                   <li className="sticky-header" role="presentation">
                     <p className="sticky-header-title">
                       Veuillez sélectionner une suggestion
                     </p>
-                    <Input type="search" placeholder="Filtrer…" expandX />
+                    <Input
+                      type="search"
+                      placeholder="Filtrer par nom ou adresse…"
+                      expandX
+                    />
                   </li>
 
                   {ITEMS.map((item) => (
                     <Suggestion
-                      key={item}
+                      key={item.name}
                       value={item}
                       selected={selected === item}
                     >
-                      {item}
+                      <div
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: "2px",
+                        }}
+                      >
+                        <span>{item.name}</span>
+                        <span style={{ fontSize: "0.8em", opacity: 0.65 }}>
+                          {item.address}
+                        </span>
+                      </div>
                     </Suggestion>
                   ))}
                 </SuggestionList>
@@ -251,7 +294,9 @@
             </div>
 
             <div className="value-display">
-              {selected ? `Selected: ${selected}` : "(none selected)"}
+              {selected
+                ? `${selected.name} — ${selected.address}`
+                : "(none selected)"}
             </div>
           </div>
         );
