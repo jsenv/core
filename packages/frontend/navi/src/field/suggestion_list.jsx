@@ -1,12 +1,6 @@
 import { pickPositionRelativeTo, visibleRectEffect } from "@jsenv/dom";
 import { createContext } from "preact";
-import {
-  useContext,
-  useId,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "preact/hooks";
+import { useContext, useLayoutEffect, useRef, useState } from "preact/hooks";
 
 import { useKeyboardShortcuts } from "../keyboard/keyboard_shortcuts.js";
 import { List, ListInteractionContext, ListItem } from "../list/list.jsx";
@@ -233,18 +227,13 @@ const SuggestionListControlled = ({
   listboxRef,
   uiAction,
   highlight,
-  emptyState = "No results",
+  fallback = "No results",
   children,
-  maxHeight,
   renderBudget,
   itemHeightEstimation,
   itemHeightIsVariable,
-  separator,
-  expandX,
   ...rest
 }) => {
-  const ownId = useId();
-  const id = rest.id ?? ownId;
   const listboxIdFromContext = useContext(ListboxIdContext);
 
   const [mousePointedValue, setMousePointedValue] = useState(null);
@@ -311,24 +300,20 @@ const SuggestionListControlled = ({
 
   return (
     <List
-      id={id}
-      maxHeight={maxHeight}
-      expandX={expandX}
       {...rest}
       ref={ref}
       innerRef={listboxRef}
       className="navi_suggestion_list"
+      fallback={fallback}
       renderBudget={renderBudget}
       itemHeightEstimation={itemHeightEstimation}
       itemHeightIsVariable={itemHeightIsVariable}
-      emptyState={emptyState}
-      separator={separator}
       interactionContext={interactionContext}
       onnavi_suggestion_list_navigate={forwardToListbox("navi_list_navigate")}
       onnavi_suggestion_list_confirm={forwardToListbox("navi_list_confirm")}
       onnavi_suggestion_list_clear={forwardToListbox("navi_list_clear")}
+      listboxId={listboxIdFromContext}
       listProps={{
-        id: listboxIdFromContext,
         role: "listbox",
         onnavi_list_navigate: (e) => {
           onNavigateRef.current(e);
@@ -365,14 +350,6 @@ const getNaviSuggestionHighlight = () => {
   return naviSuggestionHighlight;
 };
 
-const SuggestionStyleCSSVars = {
-  "::highlight": {
-    color: "--list-item-color-highlight",
-    backgroundColor: "--list-item-background-color-highlight",
-  },
-};
-const SUGGESTION_PSEUDO_ELEMENTS = ["::highlight"];
-
 /**
  * Suggestion — a selectable option inside SuggestionList.
  *
@@ -383,8 +360,13 @@ const SUGGESTION_PSEUDO_ELEMENTS = ["::highlight"];
  * - CSS Highlight API text matching
  */
 export const Suggestion = ({ value, hidden, selected, children, ...rest }) => {
-  const idDefault = useId();
-  const id = rest.id || idDefault;
+  const {
+    mousePointedValue,
+    keyboardPointedValue,
+    highlight,
+    onHover,
+    onSelect,
+  } = useContext(ListInteractionContext) ?? {};
   // When inside SuggestionListCombo, compute hidden from the filter context.
   const filter = useContext(SuggestionFilterContext);
   const match = useContext(SuggestionMatchContext);
@@ -397,14 +379,6 @@ export const Suggestion = ({ value, hidden, selected, children, ...rest }) => {
   if (hidden === undefined && !matches) {
     hidden = true;
   }
-
-  const {
-    mousePointedValue,
-    keyboardPointedValue,
-    highlight,
-    onHover,
-    onSelect,
-  } = useContext(ListInteractionContext) ?? {};
 
   const isPointed =
     keyboardPointedValue === value || mousePointedValue === value;
@@ -423,6 +397,9 @@ export const Suggestion = ({ value, hidden, selected, children, ...rest }) => {
   }, [isKeyboardPointed]);
 
   useLayoutEffect(() => {
+    if (hidden) {
+      return undefined;
+    }
     const hl = getNaviSuggestionHighlight();
     if (!hl) {
       return undefined;
@@ -455,15 +432,13 @@ export const Suggestion = ({ value, hidden, selected, children, ...rest }) => {
         hl.delete(range);
       }
     };
-  }, [highlight, children]);
+  }, [highlight, children, hidden]);
 
   return (
     <ListItem
       ref={suggestionRef}
-      itemId={id}
       hidden={hidden}
       baseClassName="navi_suggestion"
-      id={id}
       role="option"
       aria-selected={selected}
       aria-hidden={hidden ? true : undefined}
@@ -471,8 +446,6 @@ export const Suggestion = ({ value, hidden, selected, children, ...rest }) => {
         ":-navi-pointed": isPointed,
         ":-navi-selected": selected,
       }}
-      styleCSSVars={SuggestionStyleCSSVars}
-      pseudoElements={SUGGESTION_PSEUDO_ELEMENTS}
       onMouseEnter={(e) => {
         if (hidden) {
           return;

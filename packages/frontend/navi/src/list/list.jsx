@@ -38,7 +38,7 @@ export const ListInteractionContext = createContext(null);
 
 const css = /* css */ `
   @layer navi {
-    .navi_list {
+    .navi_list_container {
       --list-border-radius: 4px;
       --list-border-width: 1px;
       --list-border-color: light-dark(#ccc, #555);
@@ -78,7 +78,7 @@ const css = /* css */ `
     }
   }
 
-  .navi_list {
+  .navi_list_container {
     --x-border-radius: var(--list-border-radius);
     --x-border-width: var(--list-border-width);
     --x-border-color: var(--list-border-color);
@@ -94,7 +94,7 @@ const css = /* css */ `
     overflow: auto;
   }
 
-  .navi_listbox {
+  .navi_list {
     box-sizing: border-box;
     width: max-content;
     min-width: 100%;
@@ -197,7 +197,7 @@ const css = /* css */ `
  *   renderBudget         — max items in DOM at once (default 100, virtual scroll when exceeded)
  *   itemHeightEstimation — fixed px height for uniform items (skips DOM measurement)
  *   itemHeightIsVariable — set false for uniform-height items (faster scroll math)
- *   emptyState           — content shown when no items are visible
+ *   fallback           — content shown when no items are visible
  *   separator            — element or function(index) inserted between visible items
  *   interactionContext   — any value forwarded via ListInteractionContext to ListItem children
  *   listProps            — props forwarded to the inner <ul> element
@@ -209,10 +209,9 @@ export const List = ({
   renderBudget = RENDER_BUDGET_DEFAULT,
   itemHeightEstimation,
   itemHeightIsVariable = true,
-  emptyState,
+  fallback,
   separator,
   interactionContext,
-  listProps,
   children,
   ...rest
 }) => {
@@ -359,45 +358,38 @@ export const List = ({
   }, [renderBudget]);
 
   return (
-    <Box {...rest} ref={outerRef} baseClassName="navi_list">
-      <Listbox
+    <div ref={outerRef} className="navi_list_container">
+      <UnorderedList
         ref={listboxRef}
         ItemTrackerProvider={ItemTrackerProvider}
         renderWindow={renderWindow}
         topFillerRef={topFillerRef}
         bottomFillerRef={bottomFillerRef}
-        emptyState={emptyState}
+        fallback={fallback}
         separator={separator}
         interactionContext={interactionContext}
-        listProps={listProps}
+        {...rest}
       >
         {children}
-      </Listbox>
-    </Box>
+      </UnorderedList>
+    </div>
   );
 };
 
 // Inner <ul> — hosts the fillers + items.
-const Listbox = ({
-  ref,
+const UnorderedList = ({
   ItemTrackerProvider,
   renderWindow,
   topFillerRef,
   bottomFillerRef,
-  emptyState,
+  fallback,
   separator,
   interactionContext,
-  listProps = {},
   children,
+  ...rest
 }) => {
   return (
-    <ul
-      ref={ref}
-      {...listProps}
-      className={["navi_listbox", listProps.className]
-        .filter(Boolean)
-        .join(" ")}
-    >
+    <Box as="ul" {...rest} baseClassName="navi_list">
       <li
         ref={topFillerRef}
         className="navi_list_virtual_filler"
@@ -419,8 +411,12 @@ const Listbox = ({
         navi-virtual-filler="bottom"
         aria-hidden
       />
-      {emptyState && <li className="navi_list_empty">{emptyState}</li>}
-    </ul>
+      {fallback && (
+        <ListItemPresentation className="navi_list_empty">
+          {fallback}
+        </ListItemPresentation>
+      )}
+    </Box>
   );
 };
 
