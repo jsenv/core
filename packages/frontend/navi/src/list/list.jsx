@@ -88,6 +88,10 @@ const css = /* css */ `
     border-radius: var(--x-border-radius);
     transition: opacity 0.2s ease;
     overflow: auto;
+
+    &[data-expand-x] {
+      width: 100%;
+    }
   }
 
   .navi_list {
@@ -207,6 +211,7 @@ export const List = ({
   children,
   tabIndex,
   popover,
+  expandX,
   ...rest
 }) => {
   import.meta.css = css;
@@ -352,7 +357,12 @@ export const List = ({
   }, [renderBudget]);
 
   return (
-    <div className="navi_list_container" tabIndex={tabIndex} popover={popover}>
+    <div
+      className="navi_list_container"
+      tabIndex={tabIndex}
+      popover={popover}
+      data-expand-x={expandX ? "" : undefined}
+    >
       <UnorderedList
         ref={ref}
         ItemTrackerProvider={ItemTrackerProvider}
@@ -361,6 +371,7 @@ export const List = ({
         bottomFillerRef={bottomFillerRef}
         fallback={fallback}
         separator={separator}
+        expandX={expandX}
         {...rest}
       >
         {children}
