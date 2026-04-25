@@ -861,6 +861,14 @@ export const Suggestion = ({ value, hidden, ...rest }) => {
   }
   const index = useTrackSuggestion(id, { id, value, hidden });
   const renderWindow = useContext(RenderWindowContext);
+  if (hidden) {
+    // Hidden items are never needed in the DOM — they are invisible to the user
+    // and to assistive technology (aria-hidden). Skipping them here avoids
+    // inflating the DOM when a filter reduces visible items while the render
+    // window is inactive (e.g. typing "al" leaves 1 match but 199 hidden items
+    // that would otherwise all render as display:none nodes).
+    return null;
+  }
   if (renderWindow !== null) {
     // Render budget is active: only render items inside the window [start, end).
     if (
