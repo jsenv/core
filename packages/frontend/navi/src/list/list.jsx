@@ -221,32 +221,39 @@ const css = /* css */ `
 /**
  * List — generic virtualized scroll container.
  *
- * When uiAction is provided the list becomes interactive: it tracks hover and
- * keyboard-pointed state, handles navi_list_nav / navi_list_clear /
- * navi_list_confirm custom events, and exposes them via ListInteractionContext.
- * Without uiAction the list is presentation-only (ListPresentation).
+ * Renders children inside a scrollable container with an optional render budget
+ * for virtual scrolling. Items must use <ListItem> to participate in tracking.
  *
- * When popover is true the list renders as a managed popover that positions
- * itself relative to an anchor element via navi_list_open / navi_list_close
- * custom events.
+ * Props:
+ *   uiAction             — called with the selected value on confirm. When provided
+ *                          the list becomes interactive: tracks hover and keyboard-
+ *                          pointed state, handles navi_list_nav / navi_list_clear /
+ *                          navi_list_confirm custom events via ListInteractionContext.
+ *   popover              — when true, renders as a managed popover positioned near
+ *                          an anchor element via navi_list_open / navi_list_close events.
+ *   renderBudget         — max items in DOM at once (default 100, virtual scroll when exceeded)
+ *   itemHeightEstimation — fixed px height for uniform items (skips DOM measurement)
+ *   itemHeightIsVariable — set false for uniform-height items (faster scroll math)
+ *   fallback             — content shown when no items are visible
+ *   separator            — element or function(index) inserted between visible items
+ *   ...rest              — forwarded to the outer scroll container <Box>
  */
-export const List = ({ uiAction, popover, ...rest }) => {
-  if (popover) {
-    return <ListWithPopover uiAction={uiAction} {...rest} />;
+export const List = (props) => {
+  if (props.popover === true) {
+    return <ListWithPopover {...props} />;
   }
-  if (uiAction) {
-    return <ListInteractive uiAction={uiAction} {...rest} />;
+  if (props.uiAction) {
+    return <ListInteractive {...props} />;
   }
-  return <ListPresentation {...rest} />;
+  return <ListPresentation {...props} />;
 };
 
 // Popover variant: handles open/close/positioning events and forwards
 // navigate/confirm/clear to the underlying list.
-const ListWithPopover = ({ ...props }) => {
+const ListWithPopover = (props) => {
   const defaultRef = useRef();
   const ref = props.ref || defaultRef;
   const cleanupRef = useRef();
-
   const dispatchToList = (event, customEventName, customEventDetail) => {
     const listEl = ref.current;
     if (!listEl) {
@@ -260,7 +267,7 @@ const ListWithPopover = ({ ...props }) => {
   };
 
   return (
-    <ListInteractive
+    <List
       {...props}
       popover="manual"
       ref={ref}
@@ -325,7 +332,8 @@ const ListWithPopover = ({ ...props }) => {
 
 // Interactive variant: manages hover/keyboard/selection state and handles the
 // navi event protocol, then delegates rendering to ListControlled.
-const ListInteractive = ({ uiAction, ...rest }) => {
+const ListInteractive = (props) => {
+  const { uiAction } = props;
   const [mousePointedValue, setMousePointedValue] = useState(null);
   const [keyboardPointedValue, setKeyboardPointedValue] = useState(null);
   const [anchorValue, setAnchorValue] = useState(null);
@@ -347,8 +355,9 @@ const ListInteractive = ({ uiAction, ...rest }) => {
 
   return (
     <ListInteractionContext.Provider value={interactionContext}>
-      <ListControlled
-        {...rest}
+      <List
+        {...props}
+        uiAction={undefined}
         itemsRef={itemsRef}
         onnavi_list_nav={(e) => {
           const { direction, event = e } = e.detail;
@@ -400,20 +409,7 @@ const ListPresentation = (props) => {
   return <ListControlled {...props} />;
 };
 
-/**
- * ListControlled — generic virtualized scroll container.
- *
- * Renders children inside a scrollable container with an optional render budget
- * for virtual scrolling. Items must use <ListItem> to participate in tracking.
- *
- * Props:
- *   renderBudget         — max items in DOM at once (default 100, virtual scroll when exceeded)
- *   itemHeightEstimation — fixed px height for uniform items (skips DOM measurement)
- *   itemHeightIsVariable — set false for uniform-height items (faster scroll math)
- *   fallback           — content shown when no items are visible
- *   separator            — element or function(index) inserted between visible items
- *   ...rest              — forwarded to the outer scroll container <Box>
- */
+// Internal renderer shared by ListInteractive, ListPresentation, and ListWithPopover.
 const ListControlled = ({
   renderBudget = RENDER_BUDGET_DEFAULT,
   listId,
