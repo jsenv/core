@@ -17,6 +17,7 @@ import {
 import { Box } from "../box/box.jsx";
 import { createOnKeyDownForShortcuts } from "../keyboard/keyboard_shortcuts.js";
 import { createItemTracker } from "../utils/item_tracker/item_tracker.jsx";
+import { useIsInsideDropdown } from "./dropdown.jsx";
 
 // Provided by ListInteractive to give descendants (e.g. Suggestion) access
 // to hover/keyboard-pointed/selection state and the onHover/onSelect callbacks.
@@ -303,7 +304,7 @@ export const List = (props) => {
 // ListboxIdContext, then re-renders List with searchText as a prop.
 const defaultMatch = (v, searchText) =>
   String(v).toLowerCase().includes(searchText);
-const ListWithSearch = ({ match = defaultMatch, withSearch: _w, ...rest }) => {
+const ListWithSearch = (props) => {
   const [searchText, setSearchText] = useState(null);
   const listboxId = useId();
 
@@ -311,10 +312,12 @@ const ListWithSearch = ({ match = defaultMatch, withSearch: _w, ...rest }) => {
     <SetSearchTextContext.Provider value={setSearchText}>
       <ListboxIdContext.Provider value={listboxId}>
         <List
-          {...rest}
+          match={defaultMatch}
           searchText={searchText}
-          match={match}
+          // disable keyboard interactions because it's the input that will handle them
           keyboardInteractions={false}
+          {...props}
+          withSearch={undefined}
         />
       </ListboxIdContext.Provider>
     </SetSearchTextContext.Provider>
