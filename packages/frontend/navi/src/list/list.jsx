@@ -858,6 +858,7 @@ const ListControlled = ({
     expandX,
     children,
     renderWindow,
+    searchContext,
   ]);
 
   const box = (
