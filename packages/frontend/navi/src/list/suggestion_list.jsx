@@ -7,7 +7,6 @@ import {
   useState,
 } from "preact/hooks";
 
-import { useKeyboardShortcuts } from "../keyboard/keyboard_shortcuts.js";
 import { useIsInsideDropdown } from "./dropdown.jsx";
 import { List, ListItem, RenderWindowContext } from "./list.jsx";
 
@@ -28,27 +27,6 @@ const css = /* css */ `
     background-color: var(--list-item-background-color-highlight);
   }
 `;
-
-const dispatchCustomEventToList = (
-  listRef,
-  event,
-  customEventName,
-  customEventDetail,
-) => {
-  const listEl = listRef.current;
-  if (!listEl) {
-    return false;
-  }
-  const customEvent = new CustomEvent(customEventName, {
-    cancelable: true,
-    detail: {
-      event,
-      ...customEventDetail,
-    },
-  });
-  listEl.dispatchEvent(customEvent);
-  return customEvent.defaultPrevented;
-};
 
 /**
  * SuggestionList — a keyboard-navigable, filterable listbox.
@@ -111,59 +89,18 @@ const SuggestionListWithSearch = ({ match = defaultMatch, ...rest }) => {
   );
 };
 
-// Standalone variant: attaches keyboard shortcuts to the container and
-// forwards them as custom events to itself.
+// Standalone variant: attaches keyboard shortcuts to the container.
 const SuggestionListStandalone = ({
   keyboardInteractions = true,
   popover,
   ...props
 }) => {
-  const defaultRef = useRef();
-  const ref = props.ref || defaultRef;
-  const dispatchToList = (...args) => dispatchCustomEventToList(ref, ...args);
-
-  useKeyboardShortcuts(keyboardInteractions ? ref : { current: null }, [
-    {
-      key: "arrowdown",
-      description: "Point to next suggestion",
-      handler: (e) => {
-        dispatchToList(e, "navi_list_nav", { direction: "down" });
-      },
-    },
-    {
-      key: "arrowup",
-      description: "Point to previous suggestion",
-      handler: (e) => dispatchToList(e, "navi_list_nav", { direction: "up" }),
-    },
-    {
-      key: "home",
-      description: "Point to first suggestion",
-      handler: (e) =>
-        dispatchToList(e, "navi_list_nav", { direction: "first" }),
-    },
-    {
-      key: "end",
-      description: "Point to last suggestion",
-      handler: (e) => dispatchToList(e, "navi_list_nav", { direction: "last" }),
-    },
-    {
-      key: "enter",
-      description: "Confirm pointed suggestion",
-      handler: (e) => dispatchToList(e, "navi_list_confirm"),
-    },
-    {
-      key: "escape",
-      description: "Clear pointed suggestion",
-      handler: (e) => dispatchToList(e, "navi_list_clear"),
-    },
-  ]);
-
   return (
     <SuggestionListControlled
       tabIndex={keyboardInteractions ? 0 : undefined}
+      keyboardInteractions={keyboardInteractions}
       {...props}
       popover={popover}
-      ref={ref}
     />
   );
 };
