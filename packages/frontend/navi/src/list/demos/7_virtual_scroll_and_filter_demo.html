@@ -109,8 +109,27 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useState, useEffect, useRef } from "preact/hooks";
+      import { signal } from "@preact/signals";
+      import { useState, useRef } from "preact/hooks";
       import { List, ListItem, Input, ListItemHeader } from "@jsenv/navi";
+
+      const domItemsSignal = signal(0);
+      const peakDomItemsSignal = signal(0);
+      const observer = new MutationObserver(() => {
+        const root = document.getElementById("root");
+        if (!root) {
+          return;
+        }
+        const count = root.querySelectorAll(".navi_list_item").length;
+        domItemsSignal.value = count;
+        if (count > peakDomItemsSignal.value) {
+          peakDomItemsSignal.value = count;
+        }
+      });
+      observer.observe(document.getElementById("root"), {
+        childList: true,
+        subtree: true,
+      });
 
       const SUGGESTION_BG = "light-dark(#f0f4ff, #1a2040)";
 
@@ -145,7 +164,9 @@
         return `${name}-${num}`;
       });
 
-      const StatsBar = ({ totalItems, domItems, peakDomItems }) => {
+      const StatsBar = ({ totalItems }) => {
+        const domItems = domItemsSignal.value;
+        const peakDomItems = peakDomItemsSignal.value;
         const savedFromDom = totalItems - domItems;
         return (
           <div className="stats-bar">
@@ -188,37 +209,6 @@
         const [itemHeight, setItemHeight] = useState(null);
         const [scrollToIndex, setScrollToIndex] = useState("");
         const listRef = useRef(null);
-        const [domItems, setDomItems] = useState(0);
-        const [peakDomItems, setPeakDomItems] = useState(0);
-
-        // Track actual DOM item count via MutationObserver, keeping a peak max.
-        useEffect(() => {
-          const updateCount = () => {
-            if (!listRef.current) {
-              return;
-            }
-            const count =
-              listRef.current.querySelectorAll(".navi_list_item").length;
-            setDomItems(count);
-            setPeakDomItems((prev) => {
-              if (count > prev) {
-                return count;
-              }
-              return prev;
-            });
-          };
-          updateCount();
-          const observer = new MutationObserver(updateCount);
-          if (listRef.current) {
-            observer.observe(listRef.current, {
-              childList: true,
-              subtree: true,
-            });
-          }
-          return () => {
-            observer.disconnect();
-          };
-        }, []);
 
         const scrollTo = (position) => {
           const containerEl = listRef.current;
@@ -258,11 +248,7 @@
               DOM items at each scroll position.
             </p>
 
-            <StatsBar
-              totalItems={LARGE_LIST.length}
-              domItems={domItems}
-              peakDomItems={peakDomItems}
-            />
+            <StatsBar totalItems={LARGE_LIST.length} />
 
             {/* Programmatic scroll controls */}
             <fieldset
