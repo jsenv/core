@@ -177,12 +177,15 @@ const css = /* css */ `
     color: var(--x-color);
     font-weight: var(--x-font-weight);
     background-color: var(--x-background-color);
-    cursor: pointer;
-    user-select: none;
 
-    &:hover {
-      --x-color: var(--list-item-color-hover);
-      --x-background-color: var(--list-item-background-color-hover);
+    &[data-interactive] {
+      cursor: pointer;
+      user-select: none;
+
+      &:hover {
+        --x-color: var(--list-item-color-hover);
+        --x-background-color: var(--list-item-background-color-hover);
+      }
     }
     &[data-pointed] {
       --x-color: var(--list-item-color-pointed);
@@ -1081,6 +1084,7 @@ export const ListItem = ({
         aria-hidden={hidden ? true : undefined}
         aria-selected={selected}
         navi-list-item=""
+        data-interactive={interactionContext ? "" : undefined}
         data-anchor={isKeyboardPointed ? "" : undefined}
         {...mouseHandlers}
         {...rest}
