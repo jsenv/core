@@ -16,7 +16,7 @@ import { useKeyboardShortcuts } from "../keyboard/keyboard_shortcuts.js";
 import { useIsInsideDropdown } from "./dropdown.jsx";
 import { List, ListItem, RenderWindowContext } from "./list.jsx";
 
-export const SetFilterContext = createContext(null);
+export const SetSearchTextContext = createContext(null);
 // Provided so the listbox uses the same stable id that the input's
 // aria-controls points to.
 export const ListboxIdContext = createContext(null);
@@ -75,14 +75,14 @@ const dispatchCustomEventToList = (
  *   fallback    — content shown when no suggestions are visible (default: "No results")
  *   popover     — when true, renders as a managed popover (positioned near an anchor)
  *
- *   withFilter  — when true, the list owns its search text state internally. An <Input>
+ *   withSearch  — when true, the list owns its search text state internally. An <Input>
  *                 placed anywhere inside (e.g. in a <ListItemHeader>) auto-connects
- *                 to the search via SetFilterContext. Each <Suggestion> is
+ *                 to the search via SetSearchTextContext. Each <Suggestion> is
  *                 automatically hidden when it doesn't match the search text.
  *   match       — custom match function (value, lowerCaseSearchText) => boolean.
- *                 Only used when withFilter is true. Default: substring match.
+ *                 Only used when withSearch is true. Default: substring match.
  *   searchText  — external search string. Use when you manage the search state
- *                 yourself (without withFilter). Suggestions whose value does not
+ *                 yourself (without withSearch). Suggestions whose value does not
  *                 match are hidden and matching text is highlighted.
  *
  *   lockSize    — when true, captures the list container's dimensions the first
@@ -95,11 +95,11 @@ const dispatchCustomEventToList = (
  *   renderBudget — max items kept in the DOM at once (virtual scroll). Default 100.
  *   ...rest      — forwarded to the underlying <ul> element.
  */
-export const SuggestionList = ({ popover, withFilter, match, ...rest }) => {
+export const SuggestionList = ({ popover, withSearch, match, ...rest }) => {
   import.meta.css = css;
-  if (withFilter) {
+  if (withSearch) {
     return (
-      <SuggestionListWithFilter match={match} popover={popover} {...rest} />
+      <SuggestionListWithSearch match={match} popover={popover} {...rest} />
     );
   }
   if (popover) {
@@ -111,14 +111,14 @@ export const SuggestionList = ({ popover, withFilter, match, ...rest }) => {
 const defaultMatch = (v, searchText) =>
   String(v).toLowerCase().includes(searchText);
 
-// Owns searchText state and provides SetFilterContext + ListboxIdContext.
+// Owns searchText state and provides SetSearchTextContext + ListboxIdContext.
 // Passes searchText and match as props down to the inner SuggestionList.
-const SuggestionListWithFilter = ({ match = defaultMatch, ...rest }) => {
+const SuggestionListWithSearch = ({ match = defaultMatch, ...rest }) => {
   const [searchText, setSearchText] = useState("");
   const listboxId = useId();
 
   return (
-    <SetFilterContext.Provider value={setSearchText}>
+    <SetSearchTextContext.Provider value={setSearchText}>
       <ListboxIdContext.Provider value={listboxId}>
         <SuggestionList
           {...rest}
@@ -127,7 +127,7 @@ const SuggestionListWithFilter = ({ match = defaultMatch, ...rest }) => {
           keyboardInteractions={false}
         />
       </ListboxIdContext.Provider>
-    </SetFilterContext.Provider>
+    </SetSearchTextContext.Provider>
   );
 };
 

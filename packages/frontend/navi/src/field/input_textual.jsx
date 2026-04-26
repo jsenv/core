@@ -44,7 +44,7 @@ import {
 } from "../keyboard/keyboard_shortcuts.js";
 import {
   ListboxIdContext,
-  SetFilterContext,
+  SetSearchTextContext,
 } from "../list/suggestion_list.jsx";
 import { Icon } from "../text/icon.jsx";
 import { useStableCallback } from "../utils/use_stable_callback.js";
@@ -412,7 +412,7 @@ const InputTextualBasic = (props) => {
   const listboxId = useContext(ListboxIdContext);
   if (listboxId) {
     return (
-      <InputInsideSuggestionListWithFilter {...props} listboxId={listboxId} />
+      <InputInsideSuggestionListWithSearch {...props} listboxId={listboxId} />
     );
   }
   if (props.suggestions) {
@@ -421,16 +421,16 @@ const InputTextualBasic = (props) => {
   return <InputTextualPlain {...props} />;
 };
 
-const InputInsideSuggestionListWithFilter = ({
+const InputInsideSuggestionListWithSearch = ({
   listboxId,
   uiAction,
   onKeyDown,
   ...props
 }) => {
-  const setFilter = useContext(SetFilterContext);
+  const setSearchText = useContext(SetSearchTextContext);
   const uiStateController = useContext(UIStateControllerContext);
   uiStateController.uiAction = (v, e) => {
-    setFilter(v);
+    setSearchText(v);
     uiAction?.(v, e);
   };
 
