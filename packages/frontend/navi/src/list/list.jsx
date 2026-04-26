@@ -580,12 +580,74 @@ const UnorderedList = ({
  *   hidden  — when true, item is excluded from the visible count and not rendered
  *   ...rest — forwarded to the rendered <li> element
  */
-export const ListItem = ({ id, value, hidden, children, ...rest }) => {
+export const ListItem = ({
+  id,
+  value,
+  hidden,
+  selected,
+  children,
+  ...rest
+}) => {
   const idDefault = useId();
   id = id || idDefault;
   const index = useTrackListItem(id, { id, hidden, value });
   const renderWindow = useContext(RenderWindowContext);
   const separator = useContext(SeparatorContext);
+  const interactionContext = useContext(ListInteractionContext);
+  const { mousePointedValue, keyboardPointedValue, onHover, onSelect } =
+    interactionContext || {};
+  const isPointed =
+    keyboardPointedValue === value || mousePointedValue === value;
+  const isKeyboardPointed = keyboardPointedValue === value;
+
+  const defaultRef = useRef(null);
+  const ref = rest.ref || defaultRef;
+
+  useLayoutEffect(() => {
+    if (!isKeyboardPointed) {
+      return;
+    }
+    const itemEl = ref.current;
+    if (!itemEl) {
+      return;
+    }
+    const scrollContainer = getScrollContainer(itemEl);
+    if (!scrollContainer) {
+      itemEl.scrollIntoView({ block: "nearest" });
+      return;
+    }
+    itemEl.scrollIntoView({ block: "nearest" });
+    const itemRect = itemEl.getBoundingClientRect();
+    let topCover = 0;
+    let bottomCover = 0;
+    for (const sibling of itemEl.parentNode.children) {
+      const style = getComputedStyle(sibling);
+      if (style.position !== "sticky") {
+        continue;
+      }
+      const rect = sibling.getBoundingClientRect();
+      if (style.top !== "auto") {
+        const overlap = rect.bottom - itemRect.top;
+        if (overlap > topCover) {
+          topCover = overlap;
+        }
+      } else if (style.bottom !== "auto") {
+        const overlap = itemRect.bottom - rect.top;
+        if (overlap > bottomCover) {
+          bottomCover = overlap;
+        }
+      }
+      if (topCover > 0 && bottomCover > 0) {
+        break;
+      }
+    }
+    if (topCover > 0) {
+      scrollContainer.scrollTop -= topCover;
+    }
+    if (bottomCover > 0) {
+      scrollContainer.scrollTop += bottomCover;
+    }
+  }, [isKeyboardPointed]);
 
   if (hidden) {
     return null;
@@ -605,6 +667,24 @@ export const ListItem = ({ id, value, hidden, children, ...rest }) => {
         ? separator(index - 1)
         : separator
       : null;
+
+  const mouseHandlers = interactionContext
+    ? {
+        onMouseEnter: (e) => {
+          onHover?.(value, e);
+        },
+        onMouseLeave: (e) => {
+          onHover?.(null, e);
+        },
+        onMouseDown: (e) => {
+          if (e.button !== 0) {
+            return;
+          }
+          onSelect?.(value, e);
+        },
+      }
+    : {};
+
   return (
     <>
       {separatorElement}
@@ -615,8 +695,17 @@ export const ListItem = ({ id, value, hidden, children, ...rest }) => {
         pseudoClasses={LIST_ITEM_PSEUDO_CLASSES}
         pseudoElements={LIST_ITEM_PSEUDO_ELEMENTS}
         aria-hidden={hidden ? true : undefined}
+        aria-selected={selected}
         navi-list-item=""
+        data-anchor={isKeyboardPointed ? "" : undefined}
+        {...mouseHandlers}
         {...rest}
+        ref={ref}
+        basePseudoState={{
+          ":-navi-pointed": isPointed,
+          ":-navi-selected": selected,
+          ...rest.basePseudoState,
+        }}
       >
         {children}
       </Box>

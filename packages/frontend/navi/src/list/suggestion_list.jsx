@@ -1,8 +1,4 @@
-import {
-  pickPositionRelativeTo,
-  scrollIntoViewWithStickyAwareness,
-  visibleRectEffect,
-} from "@jsenv/dom";
+import { pickPositionRelativeTo, visibleRectEffect } from "@jsenv/dom";
 import { createContext } from "preact";
 import {
   useContext,
@@ -14,12 +10,7 @@ import {
 
 import { useKeyboardShortcuts } from "../keyboard/keyboard_shortcuts.js";
 import { useIsInsideDropdown } from "./dropdown.jsx";
-import {
-  List,
-  ListInteractionContext,
-  ListItem,
-  RenderWindowContext,
-} from "./list.jsx";
+import { List, ListItem, RenderWindowContext } from "./list.jsx";
 
 export const SetSearchTextContext = createContext(null);
 // Provided so the listbox uses the same stable id that the input's
@@ -396,33 +387,16 @@ const getNaviSuggestionHighlight = () => {
  * - CSS Highlight API text matching
  */
 export const Suggestion = ({ value, hidden, selected, children, ...rest }) => {
-  const interactionContext = useContext(ListInteractionContext);
-  const { mousePointedValue, keyboardPointedValue, onHover, onSelect } =
-    interactionContext || {};
   const { searchText, match } = useContext(SuggestionSearchContext) || {};
-  const isPointed =
-    keyboardPointedValue === value || mousePointedValue === value;
-  const isKeyboardPointed = keyboardPointedValue === value;
 
   if (searchText) {
     const lowerSearchText = searchText.toLowerCase();
-    const matches = match(value, lowerSearchText);
-    hidden = !matches;
+    hidden = !match(value, lowerSearchText);
   }
+
   const defaultRef = useRef(null);
   const ref = rest.ref || defaultRef;
   const renderWindow = useContext(RenderWindowContext);
-
-  useLayoutEffect(() => {
-    if (!isKeyboardPointed) {
-      return;
-    }
-    const suggestionEl = ref.current;
-    if (!suggestionEl) {
-      return;
-    }
-    scrollIntoViewWithStickyAwareness(suggestionEl);
-  }, [isKeyboardPointed]);
 
   useLayoutEffect(() => {
     if (hidden) {
@@ -465,34 +439,11 @@ export const Suggestion = ({ value, hidden, selected, children, ...rest }) => {
   return (
     <ListItem
       role="option"
-      aria-selected={selected}
       hidden={hidden}
       id={value}
       value={value}
-      data-anchor={isKeyboardPointed ? "" : undefined}
+      selected={selected}
       baseClassName="navi_list_item navi_suggestion"
-      basePseudoState={{
-        ":-navi-pointed": isPointed,
-        ":-navi-selected": selected,
-      }}
-      onMouseEnter={(e) => {
-        if (hidden) {
-          return;
-        }
-        onHover?.(value, e);
-      }}
-      onMouseLeave={(e) => {
-        if (hidden) {
-          return;
-        }
-        onHover?.(null, e);
-      }}
-      onMouseDown={(e) => {
-        if (hidden || e.button !== 0) {
-          return;
-        }
-        onSelect?.(value, e);
-      }}
       {...rest}
       ref={ref}
     >
