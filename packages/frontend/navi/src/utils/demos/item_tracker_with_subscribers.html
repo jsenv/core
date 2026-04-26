@@ -61,17 +61,24 @@
             .map(([id]) => id);
         };
 
-        // Register an item. Calls notify() after every commit so useTrackerItems()
-        // consumers re-render with the updated list.
-        // Two effects are used to avoid the cleanup-before-re-add race:
-        //   - [] effect: removes registration on unmount only
-        //   - no-deps effect: syncs data and notifies on every render (no cleanup)
+        // Register an item. Calls notify() only when the item's visibility changes
+        // (i.e. filter(data) flips) — not on every render.
+        // Two effects:
+        //   - [isVisible]: syncs data and notifies when visibility changes
+        //   - []: cleanup on unmount only (avoids cleanup-before-re-add race)
         const useTrackItem = (id, data) => {
           const orderRef = useRef(null);
           if (orderRef.current === null) {
             orderRef.current = orderCounter++;
           }
           registrations.set(id, { data, order: orderRef.current });
+
+          const isVisible = filter(data);
+
+          useLayoutEffect(() => {
+            registrations.set(id, { data, order: orderRef.current });
+            notify();
+          }, [isVisible]);
 
           useLayoutEffect(() => {
             return () => {
@@ -80,12 +87,7 @@
             };
           }, []);
 
-          useLayoutEffect(() => {
-            registrations.set(id, { data, order: orderRef.current });
-            notify();
-          });
-
-          if (!filter(data)) {
+          if (!isVisible) {
             return -1;
           }
           const visible = [...registrations.values()]
