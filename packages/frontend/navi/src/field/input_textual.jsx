@@ -42,10 +42,7 @@ import {
   createOnKeyDownForShortcuts,
   useKeyboardShortcuts,
 } from "../keyboard/keyboard_shortcuts.js";
-import {
-  ListboxIdContext,
-  SetSearchTextContext,
-} from "../list/suggestion_list.jsx";
+import { ListboxIdContext, SetSearchTextContext } from "../list/list.jsx";
 import { Icon } from "../text/icon.jsx";
 import { useStableCallback } from "../utils/use_stable_callback.js";
 import { fieldPropSet } from "./field_prop_set.js";
@@ -434,23 +431,19 @@ const InputInsideSuggestionListWithSearch = ({
     uiAction?.(v, e);
   };
 
-  const forwardToSuggestionList = (
-    event,
-    customEventName,
-    customEventDetail,
-  ) => {
+  const forwardToList = (event, customEventName, customEventDetail) => {
     const listbox = document.getElementById(listboxId);
     if (!listbox) {
       return false;
     }
-    const suggestionList = listbox.parentNode;
+    const listContainer = listbox.parentNode;
     const customEvent = new CustomEvent(customEventName, {
       detail: {
         event,
         ...customEventDetail,
       },
     });
-    suggestionList.dispatchEvent(customEvent);
+    listContainer.dispatchEvent(customEvent);
     return customEvent.defaultPrevented;
   };
   const onKeyDownForShortcuts = createOnKeyDownForShortcuts([
@@ -458,7 +451,7 @@ const InputInsideSuggestionListWithSearch = ({
       key: "arrowdown",
       description: "Open popover and point to next suggestion",
       handler: (e) => {
-        return forwardToSuggestionList(e, "navi_list_nav", {
+        return forwardToList(e, "navi_list_nav", {
           direction: "down",
         });
       },
@@ -467,7 +460,7 @@ const InputInsideSuggestionListWithSearch = ({
       key: "arrowup",
       description: "Open popover and point to previous suggestion",
       handler: (e) => {
-        return forwardToSuggestionList(e, "navi_list_nav", {
+        return forwardToList(e, "navi_list_nav", {
           direction: "up",
         });
       },
@@ -476,7 +469,7 @@ const InputInsideSuggestionListWithSearch = ({
       key: "home",
       description: "Point to first suggestion",
       handler: (e) => {
-        return forwardToSuggestionList(e, "navi_list_nav", {
+        return forwardToList(e, "navi_list_nav", {
           direction: "first",
         });
       },
@@ -485,7 +478,7 @@ const InputInsideSuggestionListWithSearch = ({
       key: "end",
       description: "Point to last suggestion",
       handler: (e) => {
-        return forwardToSuggestionList(e, "navi_list_nav", {
+        return forwardToList(e, "navi_list_nav", {
           direction: "last",
         });
       },
@@ -494,7 +487,7 @@ const InputInsideSuggestionListWithSearch = ({
       key: "enter",
       description: "Confirm pointed suggestion",
       handler: (e) => {
-        return forwardToSuggestionList(e, "navi_list_confirm");
+        return forwardToList(e, "navi_list_confirm");
       },
     },
   ]);
@@ -547,7 +540,7 @@ const InputTextualWithSuggestions = ({
       return;
     }
     popoverEl.dispatchEvent(
-      new CustomEvent("navi_suggestion_list_open", {
+      new CustomEvent("navi_list_open", {
         detail: { anchor: ref.current },
       }),
     );
@@ -561,7 +554,7 @@ const InputTextualWithSuggestions = ({
     console.debug(`hidePopover (e.type:${e.type})`);
     const popoverEl = document.getElementById(suggestions);
     if (popoverEl) {
-      popoverEl.dispatchEvent(new CustomEvent("navi_suggestion_list_close"));
+      popoverEl.dispatchEvent(new CustomEvent("navi_list_close"));
     }
     collapse();
   };
@@ -663,9 +656,9 @@ const InputTextualWithSuggestions = ({
       inputEl.dispatchEvent(new Event("input", { bubbles: true }));
       hideSuggestions(e);
     };
-    suggestionEl.addEventListener("navi_list_selected", onSelected);
+    suggestionEl.addEventListener("navi_list_confirm", onSelected);
     return () => {
-      suggestionEl.removeEventListener("navi_list_selected", onSelected);
+      suggestionEl.removeEventListener("navi_list_confirm", onSelected);
     };
   }, [suggestions]);
 
