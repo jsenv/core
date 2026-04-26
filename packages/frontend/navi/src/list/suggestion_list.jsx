@@ -40,7 +40,7 @@ const css = /* css */ `
     visibility: hidden;
   }
 
-  ::highlight(navi-suggestion-match) {
+  ::highlight(navi-search-match) {
     color: var(--list-item-color-highlight);
     background-color: var(--list-item-background-color-highlight);
   }
@@ -437,7 +437,7 @@ const getNaviSuggestionHighlight = () => {
   }
   if (!naviSuggestionHighlight) {
     naviSuggestionHighlight = new Highlight();
-    CSS.highlights.set("navi-suggestion-match", naviSuggestionHighlight);
+    CSS.highlights.set("navi-search-match", naviSuggestionHighlight);
   }
   return naviSuggestionHighlight;
 };
