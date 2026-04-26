@@ -122,10 +122,13 @@
           if (data.hidden) {
             return -1;
           }
-          const orderedVisible = [...registrations.values()].sort(
-            (a, b) => a.order - b.order,
-          );
-          return orderedVisible.findIndex((r) => r.order === orderRef.current);
+          let index = 0;
+          for (const r of registrations.values()) {
+            if (r.order < orderRef.current) {
+              index++;
+            }
+          }
+          return index;
         };
 
         return { useTrackItem, useTrackerItemProp, useTrackerItemCount };
