@@ -516,6 +516,15 @@ export const Box = (props) => {
         selfForwardedProps[propName] = propValue;
         continue;
       }
+      // At some point I'd like to transform all data-* attribute in the DOM
+      // into navi-* attribute so that when you look at the DOM you can easily understand which attributes
+      // where added by navi or your code.
+      // This help human to better scan the DOM
+      const isNaviAttribute = propName.startsWith("navi-");
+      if (isNaviAttribute) {
+        selfForwardedProps[propName] = propValue;
+        continue;
+      }
       visitProp(propValue, propName, styleContext, boxStyles, "prop");
     }
     if (typeof style === "string") {
