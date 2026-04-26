@@ -91,11 +91,9 @@
           const ok = totalItems === expected;
           effectLog = [];
           logEffect(
-            "[filler] totalItems=" +
-              totalItems +
-              " expected=" +
-              expected +
-              (ok ? " ✅" : " ❌ WRONG"),
+            `[filler] totalItems=${totalItems} expected=${
+              expected
+            }${ok ? " ✅" : " ❌ WRONG"}`,
           );
           document.getElementById("status").textContent = ok
             ? "✅ correct"
