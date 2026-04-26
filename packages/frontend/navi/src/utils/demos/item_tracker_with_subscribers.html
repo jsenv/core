@@ -26,46 +26,87 @@
       } from "preact/hooks";
 
       // createItemTracker: tracker where useTrackItem() notifies subscribers after
-      // every commit via queueMicrotask. Consumers call useTrackerItems() to subscribe
-      // and automatically re-render when the visible item list changes.
+      // visibility changes. Consumers call useTrackerItemProp(propName) or
+      // useTrackerItemCount() to subscribe with fine-grained re-render control.
       const createItemTracker = ({ filter }) => {
         const registrations = new Map(); // id → { data, order }
         let orderCounter = 0;
-        const subscribers = new Set();
+        const subscribers = new Set(); // { compute, equals, setState, lastValue }
         let notifyScheduled = false;
+
+        const visibleSorted = () =>
+          [...registrations.values()]
+            .filter((r) => filter(r.data))
+            .sort((a, b) => a.order - b.order);
 
         const notify = () => {
           if (!notifyScheduled) {
             notifyScheduled = true;
             queueMicrotask(() => {
               notifyScheduled = false;
-              for (const setState of subscribers) {
-                setState((n) => n + 1);
+              for (const sub of subscribers) {
+                const newValue = sub.compute();
+                if (!sub.equals(sub.lastValue, newValue)) {
+                  sub.lastValue = newValue;
+                  sub.setState((n) => n + 1);
+                }
               }
             });
           }
         };
 
-        // Subscribe to item list changes. Returns the current list of visible item ids.
-        const useTrackerItems = () => {
+        const useSubscriber = (compute, equals) => {
           const [, setState] = useState(0);
+          const subRef = useRef(null);
+          if (subRef.current === null) {
+            subRef.current = {
+              compute,
+              equals,
+              setState,
+              lastValue: compute(),
+            };
+          }
+          // Keep compute fresh (captures latest registrations closure).
+          subRef.current.compute = compute;
           useLayoutEffect(() => {
-            subscribers.add(setState);
+            subscribers.add(subRef.current);
             return () => {
-              subscribers.delete(setState);
+              subscribers.delete(subRef.current);
             };
           }, []);
-          return [...registrations.entries()]
-            .filter(([, r]) => filter(r.data))
-            .sort((a, b) => a[1].order - b[1].order)
-            .map(([id]) => id);
+          return compute();
         };
 
-        // Register an item. Calls notify() only when the item's visibility changes
-        // (i.e. filter(data) flips) — not on every render.
-        // Two effects:
-        //   - [isVisible]: syncs data and notifies when visibility changes
-        //   - []: cleanup on unmount only (avoids cleanup-before-re-add race)
+        // Subscribe to a single prop across all visible items (ordered).
+        // Re-renders only when the resulting array changes (length, order, or values).
+        const useTrackerItemProp = (propName) => {
+          const compute = () => visibleSorted().map((r) => r.data[propName]);
+          const equals = (a, b) => {
+            if (a === null) {
+              return false;
+            }
+            if (a.length !== b.length) {
+              return false;
+            }
+            for (let i = 0; i < a.length; i++) {
+              if (a[i] !== b[i]) {
+                return false;
+              }
+            }
+            return true;
+          };
+          return useSubscriber(compute, equals);
+        };
+
+        // Subscribe to the visible item count only.
+        // Re-renders only when the number of visible items changes.
+        const useTrackerItemCount = () => {
+          const compute = () => visibleSorted().length;
+          const equals = (a, b) => a === b;
+          return useSubscriber(compute, equals);
+        };
+
+        // Register an item. Calls notify() only when visibility (filter result) changes.
         const useTrackItem = (id, data) => {
           const orderRef = useRef(null);
           if (orderRef.current === null) {
@@ -90,13 +131,10 @@
           if (!isVisible) {
             return -1;
           }
-          const visible = [...registrations.values()]
-            .filter((r) => filter(r.data))
-            .sort((a, b) => a.order - b.order);
-          return visible.findIndex((r) => r.order === orderRef.current);
+          return visibleSorted().findIndex((r) => r.order === orderRef.current);
         };
 
-        return { useTrackItem, useTrackerItems };
+        return { useTrackItem, useTrackerItemProp, useTrackerItemCount };
       };
 
       // ── Render counter hook ───────────────────────────────────────────────────
@@ -124,9 +162,10 @@
         "b-5",
       ];
 
-      const { useTrackItem, useTrackerItems } = createItemTracker({
-        filter: (data) => !data.hidden,
-      });
+      const { useTrackItem, useTrackerItemProp, useTrackerItemCount } =
+        createItemTracker({
+          filter: (data) => !data.hidden,
+        });
 
       const Item = ({ value, id }) => {
         const renders = useRenderCount();
@@ -167,8 +206,6 @@
       const ListWithSearch = ({ children }) => {
         const renders = useRenderCount();
         const [searchText, setSearchText] = useState(null);
-        // Stable context object — only replaced when searchText actually changes.
-        // Avoids re-notifying items when useTrackerItems triggers a re-render here.
         const searchContextRef = useRef(null);
         if (
           !searchContextRef.current ||
@@ -177,7 +214,8 @@
           searchContextRef.current = { searchText: searchText || null };
         }
 
-        const visibleIds = useTrackerItems();
+        const visibleValues = useTrackerItemProp("value");
+        const visibleCount = useTrackerItemCount();
 
         return (
           <div>
@@ -189,7 +227,8 @@
               }}
             />
             <p style={{ fontSize: "12px", color: "#555" }}>
-              visible={visibleIds.length} | renders={renders}
+              count={visibleCount} | values=[{visibleValues.join(",")}] |
+              renders={renders}
             </p>
             <SearchContext.Provider value={searchContextRef.current}>
               <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
