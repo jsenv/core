@@ -6,19 +6,62 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" href="data:," />
     <style>
-      body { margin: 20px; font-family: system-ui, sans-serif; background: #f5f5f5; }
-      .demo { max-width: 500px; margin: 0 auto; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-      input { box-sizing: border-box; width: 100%; margin-bottom: 10px; padding: 6px 10px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px; }
-      ul { margin: 0; padding: 0; list-style: none; }
-      li { padding: 5px 10px; border-bottom: 1px solid #eee; }
-      .status { font-size: 13px; margin: 6px 0; }
-      pre { font-size: 11px; background: #1e1e1e; color: #ccc; padding: 8px; margin-top: 8px; min-height: 40px; white-space: pre-wrap; }
+      body {
+        margin: 20px;
+        font-family: system-ui, sans-serif;
+        background: #f5f5f5;
+      }
+      .demo {
+        max-width: 500px;
+        margin: 0 auto;
+        padding: 20px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+      input {
+        box-sizing: border-box;
+        width: 100%;
+        margin-bottom: 10px;
+        padding: 6px 10px;
+        font-size: 14px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+      }
+      ul {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+      li {
+        padding: 5px 10px;
+        border-bottom: 1px solid #eee;
+      }
+      .status {
+        margin: 6px 0;
+        font-size: 13px;
+      }
+      pre {
+        min-height: 40px;
+        margin-top: 8px;
+        padding: 8px;
+        color: #ccc;
+        font-size: 11px;
+        white-space: pre-wrap;
+        background: #1e1e1e;
+      }
     </style>
   </head>
   <body>
     <script type="module" jsenv-type="module/jsx">
       import { createContext, render } from "preact";
-      import { useCallback, useContext, useLayoutEffect, useRef, useState } from "preact/hooks";
+      import {
+        useCallback,
+        useContext,
+        useLayoutEffect,
+        useRef,
+        useState,
+      } from "preact/hooks";
       import { createItemTracker } from "../item_tracker/item_tracker.jsx";
       import { useEarlyDOMEffect } from "../../box/use_early_dom_effect.js";
 
@@ -26,24 +69,56 @@
       const SetSearchTextContext = createContext(null);
 
       const SearchContext = createContext(null);
+      const RenderWindowContext = createContext(null);
       const RENDER_BUDGET = 30;
-      const GREEK = ["Alpha","Beta","Gamma","Delta","Epsilon","Zeta","Eta","Theta","Iota","Kappa","Lambda","Mu","Nu","Xi","Omicron","Pi","Rho","Sigma","Tau","Upsilon"];
-      const ITEMS = Array.from({ length: 200 }, (_, i) =>
-        GREEK[i % GREEK.length] + "-" + String(Math.floor(i / GREEK.length) + 1).padStart(2, "0"),
+      const GREEK = [
+        "Alpha",
+        "Beta",
+        "Gamma",
+        "Delta",
+        "Epsilon",
+        "Zeta",
+        "Eta",
+        "Theta",
+        "Iota",
+        "Kappa",
+        "Lambda",
+        "Mu",
+        "Nu",
+        "Xi",
+        "Omicron",
+        "Pi",
+        "Rho",
+        "Sigma",
+        "Tau",
+        "Upsilon",
+      ];
+      const ITEMS = Array.from(
+        { length: 200 },
+        (_, i) =>
+          GREEK[i % GREEK.length] +
+          "-" +
+          String(Math.floor(i / GREEK.length) + 1).padStart(2, "0"),
       );
-      const [useTrackerProvider, useTrackItem] = createItemTracker({ filter: (data) => !data.hidden });
+      const [useTrackerProvider, useTrackItem] = createItemTracker({
+        filter: (data) => !data.hidden,
+      });
 
       let effectLog = [];
       const logEffect = (msg) => {
         effectLog.push(msg);
         const el = document.getElementById("effect-log");
-        if (el) { el.textContent = effectLog.join("\n"); }
+        if (el) {
+          el.textContent = effectLog.join("\n");
+        }
       };
 
       // BoxOuter: mirrors outer <Box hasChildFunction> in list.jsx
       const BoxOuter = ({ children }) => {
         useEarlyDOMEffect(() => {}, []);
-        return <div>{typeof children === "function" ? children() : children}</div>;
+        return (
+          <div>{typeof children === "function" ? children() : children}</div>
+        );
       };
 
       // BoxInner: mirrors <Box as="ul"> inside UnorderedList
@@ -56,30 +131,47 @@
       const InputLike = () => {
         const setSearchText = useContext(SetSearchTextContext);
         return (
-          <input type="text" placeholder="Filter (try: al, bravo)..."
-            onInput={(e) => setSearchText(e.currentTarget.value)} />
+          <input
+            type="text"
+            placeholder="Filter (try: al, bravo)..."
+            onInput={(e) => setSearchText(e.currentTarget.value)}
+          />
         );
       };
 
-      // Item: mirrors ListItem
-      const Item = ({ value, id, renderWindow }) => {
+      // Item: mirrors ListItem (reads renderWindow from context)
+      const Item = ({ value, id }) => {
         const searchContext = useContext(SearchContext);
+        const renderWindow = useContext(RenderWindowContext);
         let hidden = false;
         if (searchContext && searchContext.searchText) {
-          hidden = !searchContext.match(value, searchContext.searchText.toLowerCase());
+          hidden = !searchContext.match(
+            value,
+            searchContext.searchText.toLowerCase(),
+          );
         }
         const index = useTrackItem(id, { hidden, value });
         useLayoutEffect(() => {
-          logEffect("  [Item " + value + "] index=" + index + " hidden=" + hidden);
+          logEffect(
+            "  [Item " + value + "] index=" + index + " hidden=" + hidden,
+          );
         });
-        if (hidden) { return null; }
-        if (index === -1) { return null; }
-        const inWindow = index >= renderWindow.start && index < renderWindow.end;
-        if (!inWindow) { return null; }
+        if (hidden) {
+          return null;
+        }
+        if (index === -1) {
+          return null;
+        }
+        const inWindow =
+          index >= renderWindow.start && index < renderWindow.end;
+        if (!inWindow) {
+          return null;
+        }
         return <li>{value}</li>;
       };
 
-      const defaultMatch = (v, searchText) => String(v).toLowerCase().includes(searchText);
+      const defaultMatch = (v, searchText) =>
+        String(v).toLowerCase().includes(searchText);
 
       // ListLike: mirrors ListControlled — receives searchText as prop
       const ListLike = ({ children, searchText }) => {
@@ -88,33 +180,43 @@
         const renderWindowRef = useRef(renderWindow);
         // mirrors: searchContext = effectiveSearchText || match ? {searchText, match} : null
         // match is always defaultMatch so searchContext is never null
-        const searchContext = { searchText: searchText || null, match: defaultMatch };
+        const searchContext = {
+          searchText: searchText || null,
+          match: defaultMatch,
+        };
 
         // Filler effect: mirrors ListControlled filler useLayoutEffect
         useLayoutEffect(() => {
           const totalItems = ItemTrackerProvider.items.length;
           const expected = ITEMS.filter((v) =>
-            searchText ? v.toLowerCase().includes(searchText.toLowerCase()) : true,
+            searchText
+              ? v.toLowerCase().includes(searchText.toLowerCase())
+              : true,
           ).length;
           const ok = totalItems === expected;
           effectLog = [];
-          logEffect("[ListLike filler] totalItems=" + totalItems + " expected=" + expected + (ok ? " OK" : " WRONG"));
+          logEffect(
+            "[ListLike filler] totalItems=" +
+              totalItems +
+              " expected=" +
+              expected +
+              (ok ? " OK" : " WRONG"),
+          );
           document.getElementById("items-got").textContent = totalItems;
           document.getElementById("status").textContent = ok
-            ? "correct" : "WRONG: got " + totalItems + ", expected " + expected;
+            ? "correct"
+            : "WRONG: got " + totalItems + ", expected " + expected;
           document.getElementById("status").style.color = ok ? "green" : "red";
         });
 
         const renderList = useCallback(
           () => (
             <SearchContext.Provider value={searchContext}>
-              <BoxInner>
-                <ItemTrackerProvider>
-                  {children.map((c) => (
-                    <c.type key={c.key} {...c.props} renderWindow={renderWindow} />
-                  ))}
-                </ItemTrackerProvider>
-              </BoxInner>
+              <RenderWindowContext.Provider value={renderWindow}>
+                <BoxInner>
+                  <ItemTrackerProvider>{children}</ItemTrackerProvider>
+                </BoxInner>
+              </RenderWindowContext.Provider>
             </SearchContext.Provider>
           ),
           [children, renderWindow, searchContext],
@@ -123,7 +225,11 @@
         const box = <BoxOuter>{renderList}</BoxOuter>;
 
         // searchContext is never null (match is always set), mirrors list.jsx
-        return <SearchContext.Provider value={searchContext}>{box}</SearchContext.Provider>;
+        return (
+          <SearchContext.Provider value={searchContext}>
+            {box}
+          </SearchContext.Provider>
+        );
       };
 
       // ListWithSearchLike: mirrors ListWithSearch — owns searchText state,
@@ -131,18 +237,21 @@
       const ListWithSearchLike = ({ children }) => {
         const [searchText, setSearchText] = useState(null);
         const expected = ITEMS.filter((v) =>
-          searchText ? v.toLowerCase().includes(searchText.toLowerCase()) : true,
+          searchText
+            ? v.toLowerCase().includes(searchText.toLowerCase())
+            : true,
         ).length;
         return (
           <SetSearchTextContext.Provider value={setSearchText}>
             <p class="status">
               expected=<b>{expected}</b> got=<b id="items-got">?</b>
-              &nbsp; <span id="status" style={{ fontWeight: "bold" }}>-</span>
+              &nbsp;{" "}
+              <span id="status" style={{ fontWeight: "bold" }}>
+                -
+              </span>
             </p>
             <InputLike />
-            <ListLike searchText={searchText}>
-              {children}
-            </ListLike>
+            <ListLike searchText={searchText}>{children}</ListLike>
           </SetSearchTextContext.Provider>
         );
       };
@@ -153,7 +262,7 @@
             <h2 style={{ marginTop: 0 }}>list.jsx repro</h2>
             <ListWithSearchLike>
               {ITEMS.map((v) => (
-                <Item key={v} id={v} value={v} renderWindow={{ start: 0, end: RENDER_BUDGET }} />
+                <Item key={v} id={v} value={v} />
               ))}
             </ListWithSearchLike>
             <pre id="effect-log" />
