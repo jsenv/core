@@ -14,7 +14,7 @@ import {
 } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
-import { useKeyboardShortcuts } from "../keyboard/keyboard_shortcuts.js";
+import { createOnKeyDownForShortcuts } from "../keyboard/keyboard_shortcuts.js";
 import { createItemTracker } from "../utils/item_tracker/item_tracker.jsx";
 
 // Provided by ListInteractive to give descendants (e.g. Suggestion) access
@@ -414,10 +414,106 @@ const ListPresentation = (props) => {
   return <ListControlled {...props} />;
 };
 
+const ListControlled = (props) => {
+  if (props.keyboardInteractions) {
+    return <ListWithKeyboardInteractions {...props} />;
+  }
+  return <ListBase {...props} />;
+};
+
+const ListWithKeyboardInteractions = (props) => {
+  const onKeyDown = createOnKeyDownForShortcuts([
+    {
+      key: "arrowdown",
+      description: "Point to next item",
+      handler: (e) => {
+        const listEl = e.currentTarget;
+        listEl.dispatchEvent(
+          new CustomEvent("navi_list_nav", {
+            cancelable: true,
+            detail: { event: e, direction: "down" },
+          }),
+        );
+      },
+    },
+    {
+      key: "arrowup",
+      description: "Point to previous item",
+      handler: (e) => {
+        const listEl = e.currentTarget;
+        listEl.dispatchEvent(
+          new CustomEvent("navi_list_nav", {
+            cancelable: true,
+            detail: { event: e, direction: "up" },
+          }),
+        );
+      },
+    },
+    {
+      key: "home",
+      description: "Point to first item",
+      handler: (e) => {
+        const listEl = e.currentTarget;
+        listEl.dispatchEvent(
+          new CustomEvent("navi_list_nav", {
+            cancelable: true,
+            detail: { event: e, direction: "first" },
+          }),
+        );
+      },
+    },
+    {
+      key: "end",
+      description: "Point to last item",
+      handler: (e) => {
+        const listEl = e.currentTarget;
+        listEl.dispatchEvent(
+          new CustomEvent("navi_list_nav", {
+            cancelable: true,
+            detail: { event: e, direction: "last" },
+          }),
+        );
+      },
+    },
+    {
+      key: "enter",
+      description: "Confirm pointed item",
+      handler: (e) => {
+        const listEl = e.currentTarget;
+        listEl.dispatchEvent(
+          new CustomEvent("navi_list_confirm", {
+            cancelable: true,
+            detail: { event: e },
+          }),
+        );
+      },
+    },
+    {
+      key: "escape",
+      description: "Clear pointed item",
+      handler: (e) => {
+        const listEl = e.currentTarget;
+        listEl.dispatchEvent(
+          new CustomEvent("navi_list_clear", {
+            cancelable: true,
+            detail: { event: e },
+          }),
+        );
+      },
+    },
+  ]);
+  return (
+    <ListBase
+      {...props}
+      keyboardInteractions={undefined}
+      onKeyDown={onKeyDown}
+    />
+  );
+};
+
 // Internal renderer shared by ListInteractive, ListPresentation, and ListWithPopover.
-const ListControlled = ({
+const ListBase = ({
   renderBudget = RENDER_BUDGET_DEFAULT,
-  keyboardInteractions,
   listId,
   listRole,
   fallback,
@@ -436,81 +532,6 @@ const ListControlled = ({
 
   const refDefault = useRef(null);
   const ref = rest.ref || refDefault;
-
-  useKeyboardShortcuts(keyboardInteractions ? ref : { current: null }, [
-    {
-      key: "arrowdown",
-      description: "Point to next item",
-      handler: (e) => {
-        ref.current?.dispatchEvent(
-          new CustomEvent("navi_list_nav", {
-            cancelable: true,
-            detail: { event: e, direction: "down" },
-          }),
-        );
-      },
-    },
-    {
-      key: "arrowup",
-      description: "Point to previous item",
-      handler: (e) => {
-        ref.current?.dispatchEvent(
-          new CustomEvent("navi_list_nav", {
-            cancelable: true,
-            detail: { event: e, direction: "up" },
-          }),
-        );
-      },
-    },
-    {
-      key: "home",
-      description: "Point to first item",
-      handler: (e) => {
-        ref.current?.dispatchEvent(
-          new CustomEvent("navi_list_nav", {
-            cancelable: true,
-            detail: { event: e, direction: "first" },
-          }),
-        );
-      },
-    },
-    {
-      key: "end",
-      description: "Point to last item",
-      handler: (e) => {
-        ref.current?.dispatchEvent(
-          new CustomEvent("navi_list_nav", {
-            cancelable: true,
-            detail: { event: e, direction: "last" },
-          }),
-        );
-      },
-    },
-    {
-      key: "enter",
-      description: "Confirm pointed item",
-      handler: (e) => {
-        ref.current?.dispatchEvent(
-          new CustomEvent("navi_list_confirm", {
-            cancelable: true,
-            detail: { event: e },
-          }),
-        );
-      },
-    },
-    {
-      key: "escape",
-      description: "Clear pointed item",
-      handler: (e) => {
-        ref.current?.dispatchEvent(
-          new CustomEvent("navi_list_clear", {
-            cancelable: true,
-            detail: { event: e },
-          }),
-        );
-      },
-    },
-  ]);
 
   const ItemTrackerProvider = useListItemTrackerProvider();
 
