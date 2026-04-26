@@ -142,15 +142,18 @@
 
       const InteractiveDemo = () => {
         const [selected, setSelected] = useState(null);
+        // hoveredFruit: set when hovering a fruit row → highlights its category in the legend
+        const [hoveredFruit, setHoveredFruit] = useState(null);
+        // hoveredSugar: set when hovering a legend row → proxy-points matching fruits in the list
         const [hoveredSugar, setHoveredSugar] = useState(null);
         return (
           <div className="demo-section">
             <h2>2. Interactive — uiAction</h2>
             <p>
               Adding a <code>uiAction</code> prop makes the list interactive.
-              The legend below demonstrates <code>:-navi-pointed-by-proxy</code>
-              : hovering a sugar level sets <code>pointed</code> on the matching
-              fruits, lighting them up without mouse or keyboard involvement.
+              The legend demonstrates <code>:-navi-pointed-by-proxy</code>:
+              hovering a sugar level proxy-points matching fruits; hovering a
+              fruit highlights its category in the legend.
             </p>
             <div
               style={{ display: "flex", gap: "16px", alignItems: "flex-start" }}
@@ -170,10 +173,10 @@
                       FRUIT_SUGAR[fruit] === hoveredSugar
                     }
                     onMouseEnter={() => {
-                      setHoveredSugar(FRUIT_SUGAR[fruit]);
+                      setHoveredFruit(fruit);
                     }}
                     onMouseLeave={() => {
-                      setHoveredSugar(null);
+                      setHoveredFruit(null);
                     }}
                   >
                     {SUGAR_ICON[FRUIT_SUGAR[fruit]]} {fruit}
@@ -200,32 +203,37 @@
                 >
                   Teneur en sucre
                 </div>
-                {SUGAR_LEVELS.map(({ key, label }) => (
-                  <div
-                    key={key}
-                    onMouseEnter={() => {
-                      setHoveredSugar(key);
-                    }}
-                    onMouseLeave={() => {
-                      setHoveredSugar(null);
-                    }}
-                    style={{
-                      padding: "5px 10px",
-                      borderRadius: "4px",
-                      fontSize: "0.85rem",
-                      cursor: "default",
-                      userSelect: "none",
-                      background: hoveredSugar === key ? "#eef2ff" : "#f5f5f5",
-                      border:
-                        hoveredSugar === key
+                {SUGAR_LEVELS.map(({ key, label }) => {
+                  const isHoveredFromList =
+                    hoveredFruit !== null && FRUIT_SUGAR[hoveredFruit] === key;
+                  const isHoveredFromLegend = hoveredSugar === key;
+                  const isActive = isHoveredFromList || isHoveredFromLegend;
+                  return (
+                    <div
+                      key={key}
+                      onMouseEnter={() => {
+                        setHoveredSugar(key);
+                      }}
+                      onMouseLeave={() => {
+                        setHoveredSugar(null);
+                      }}
+                      style={{
+                        padding: "5px 10px",
+                        borderRadius: "4px",
+                        fontSize: "0.85rem",
+                        cursor: "default",
+                        userSelect: "none",
+                        background: isActive ? "#eef2ff" : "#f5f5f5",
+                        border: isActive
                           ? "1px solid #c7d2fe"
                           : "1px solid #e5e5e5",
-                      fontWeight: hoveredSugar === key ? 600 : "normal",
-                    }}
-                  >
-                    {label}
-                  </div>
-                ))}
+                        fontWeight: isActive ? 600 : "normal",
+                      }}
+                    >
+                      {label}
+                    </div>
+                  );
+                })}
               </div>
             </div>
             <div className="value-display">{selected ?? ""}</div>
