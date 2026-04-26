@@ -557,6 +557,8 @@ export const Box = (props) => {
         styleDeps.push(...pseudoClasses);
       }
     }
+    // TODO: just use ref function, it will be called same time as early dom effect + give the dom node + be standard
+    // we need to implent our styleDeps tracking but that's likely very easy
     useEarlyDOMEffect((boxEl) => {
       const pseudoStateEl = pseudoStateSelector
         ? boxEl.querySelector(pseudoStateSelector)
