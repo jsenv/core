@@ -42,7 +42,11 @@ import {
   createOnKeyDownForShortcuts,
   useKeyboardShortcuts,
 } from "../keyboard/keyboard_shortcuts.js";
-import { ListboxIdContext, SetSearchTextContext } from "../list/list.jsx";
+import {
+  ListIdContext,
+  SetSearchTextContext,
+  useIsInsideListWithSearch,
+} from "../list/list.jsx";
 import { Icon } from "../text/icon.jsx";
 import { useStableCallback } from "../utils/use_stable_callback.js";
 import { fieldPropSet } from "./field_prop_set.js";
@@ -406,11 +410,9 @@ export const InputRightSlot = (props) => {
 };
 
 const InputTextualBasic = (props) => {
-  const listboxId = useContext(ListboxIdContext);
-  if (listboxId) {
-    return (
-      <InputInsideSuggestionListWithSearch {...props} listboxId={listboxId} />
-    );
+  const isInsideListWithSearch = useIsInsideListWithSearch();
+  if (isInsideListWithSearch) {
+    return <InputInsideListWithSearch {...props} />;
   }
   if (props.suggestions) {
     return <InputTextualWithSuggestions {...props} />;
@@ -418,12 +420,8 @@ const InputTextualBasic = (props) => {
   return <InputTextualPlain {...props} />;
 };
 
-const InputInsideSuggestionListWithSearch = ({
-  listboxId,
-  uiAction,
-  onKeyDown,
-  ...props
-}) => {
+const InputInsideListWithSearch = ({ uiAction, onKeyDown, ...props }) => {
+  const listId = useContext(ListIdContext);
   const setSearchText = useContext(SetSearchTextContext);
   const uiStateController = useContext(UIStateControllerContext);
   uiStateController.uiAction = (v, e) => {
@@ -432,18 +430,18 @@ const InputInsideSuggestionListWithSearch = ({
   };
 
   const forwardToList = (event, customEventName, customEventDetail) => {
-    const listbox = document.getElementById(listboxId);
-    if (!listbox) {
+    const inputEl = event.currentTarget;
+    const listContainerEl = inputEl.closest(".navi_list_container");
+    if (!listContainerEl) {
       return false;
     }
-    const listContainer = listbox.parentNode;
     const customEvent = new CustomEvent(customEventName, {
       detail: {
         event,
         ...customEventDetail,
       },
     });
-    listContainer.dispatchEvent(customEvent);
+    listContainerEl.dispatchEvent(customEvent);
     return customEvent.defaultPrevented;
   };
   const onKeyDownForShortcuts = createOnKeyDownForShortcuts([
@@ -494,7 +492,7 @@ const InputInsideSuggestionListWithSearch = ({
 
   return (
     <InputTextualPlain
-      aria-controls={listboxId}
+      aria-controls={listId}
       aria-autocomplete="list"
       aria-has-popup="listbox"
       type="search"

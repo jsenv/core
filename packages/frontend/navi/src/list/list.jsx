@@ -22,7 +22,10 @@ import { useIsInsideDropdown } from "./dropdown.jsx";
 // Provided by ListWithSearch so descendants (e.g. an Input) can update the
 // search text, and so that the listbox id is stable across renders.
 export const SetSearchTextContext = createContext(null);
-export const ListboxIdContext = createContext(null);
+export const useIsInsideListWithSearch = () => {
+  return typeof useContext(SetSearchTextContext) === "function";
+};
+export const ListIdContext = createContext();
 
 // Provided by ListInteractive to give descendants (e.g. Suggestion) access
 // to hover/keyboard-pointed/selection state and the onHover/onSelect callbacks.
@@ -317,20 +320,19 @@ const defaultMatch = (v, searchText) =>
   String(v).toLowerCase().includes(searchText);
 const ListWithSearch = (props) => {
   const [searchText, setSearchText] = useState(null);
-  const listboxId = useId();
+  const listIdDefault = useId();
 
   return (
     <SetSearchTextContext.Provider value={setSearchText}>
-      <ListboxIdContext.Provider value={listboxId}>
-        <List
-          match={defaultMatch}
-          searchText={searchText}
-          // disable keyboard interactions because it's the input that will handle them
-          keyboardInteractions={false}
-          {...props}
-          withSearch={undefined}
-        />
-      </ListboxIdContext.Provider>
+      <List
+        listId={listIdDefault}
+        match={defaultMatch}
+        searchText={searchText}
+        // disable keyboard interactions because it's the input that will handle them
+        keyboardInteractions={false}
+        {...props}
+        withSearch={undefined}
+      />
     </SetSearchTextContext.Provider>
   );
 };
@@ -614,13 +616,6 @@ const ListControlled = ({
     lockSize = true;
   }
 
-  // If no explicit listId is given, fall back to whatever ListboxIdContext
-  // provides (set by ListWithSearch).
-  const listboxIdFromContext = useContext(ListboxIdContext);
-  if (!listId && listboxIdFromContext) {
-    listId = listboxIdFromContext;
-  }
-
   const refDefault = useRef(null);
   const ref = rest.ref || refDefault;
 
@@ -756,6 +751,10 @@ const ListControlled = ({
       return undefined;
     }
     const listEl = listContainerEl.querySelector(".navi_list");
+    if (!listEl) {
+      console.error("wtf");
+      return undefined;
+    }
     const scrollContainer = getScrollContainer(listEl);
     const onScroll = () => {
       const totalItems = ItemTrackerProvider.items.length;
@@ -843,7 +842,9 @@ const ListControlled = ({
         topFillerRef={topFillerRef}
         bottomFillerRef={bottomFillerRef}
       >
-        {children}
+        <ListIdContext.Provider value={listId}>
+          {children}
+        </ListIdContext.Provider>
       </UnorderedList>
     );
   };
@@ -857,7 +858,7 @@ const ListControlled = ({
     renderWindow,
   ]);
 
-  return (
+  const box = (
     <Box
       {...rest}
       ref={ref}
@@ -875,14 +876,15 @@ const ListControlled = ({
       }}
       hasChildFunction
     >
-      {searchContext ? (
-        <ListSearchContext.Provider value={searchContext}>
-          {renderListMemoized}
-        </ListSearchContext.Provider>
-      ) : (
-        renderListMemoized
-      )}
+      {renderListMemoized}
     </Box>
+  );
+  return searchContext ? (
+    <ListSearchContext.Provider value={searchContext}>
+      {box}
+    </ListSearchContext.Provider>
+  ) : (
+    box
   );
 };
 const LIST_STYLE_CSS_VARS = {
