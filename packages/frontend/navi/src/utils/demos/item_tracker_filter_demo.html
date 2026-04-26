@@ -6,11 +6,37 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" href="data:," />
     <style>
-      body { margin: 20px; font-family: system-ui, sans-serif; background: #f5f5f5; }
-      .demo { max-width: 600px; margin: 0 auto; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,.1); }
-      input { box-sizing: border-box; width: 100%; margin-bottom: 12px; padding: 6px 10px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px; }
-      ul { margin: 0; padding: 0; list-style: none; }
-      li { padding: 6px 10px; border-bottom: 1px solid #eee; }
+      body {
+        margin: 20px;
+        font-family: system-ui, sans-serif;
+        background: #f5f5f5;
+      }
+      .demo {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+      input {
+        box-sizing: border-box;
+        width: 100%;
+        margin-bottom: 12px;
+        padding: 6px 10px;
+        font-size: 14px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+      }
+      ul {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+      li {
+        padding: 6px 10px;
+        border-bottom: 1px solid #eee;
+      }
     </style>
   </head>
   <body>
@@ -140,15 +166,18 @@
 
         return (
           <div className="demo">
-            <h2>Item Tracker – Filter: parent effect reads stale committedItems</h2>
+            <h2>
+              Item Tracker – Filter: parent effect reads stale committedItems
+            </h2>
             <p style={{ fontSize: "13px", color: "#666" }}>
-              Children are stable (useMemo). Filter propagates via context. ListBox
-              re-renders on filter change but children bail out (no registerItem). The
-              Got count is read from committedItems.length in a parent layout effect —
-              always one render behind.
+              Children are stable (useMemo). Filter propagates via context.
+              ListBox re-renders on filter change but children bail out (no
+              registerItem). The Got count is read from committedItems.length in
+              a parent layout effect — always one render behind.
             </p>
             <p>
-              Expected: <b>{expectedCount}</b> | Got: <b id="visible-count">?</b>
+              Expected: <b>{expectedCount}</b> | Got:{" "}
+              <b id="visible-count">?</b>
             </p>
             <input
               type="text"
@@ -171,7 +200,7 @@
         );
       };
 
-            render(<App />, document.body);
+      render(<App />, document.body);
     </script>
   </body>
 </html>
