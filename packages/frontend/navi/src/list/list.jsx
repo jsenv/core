@@ -288,17 +288,25 @@ const css = /* css */ `
  *   ...rest              — forwarded to the outer scroll container <Box>
  */
 export const List = (props) => {
+  // withSearch must come first: it forces keyboardInteractions=false before any
+  // other variant inspects the props (the Input handles keyboard nav instead of
+  // the list itself). It also provides SetSearchTextContext and ListboxIdContext
+  // before re-rendering List with withSearch removed.
   if (props.withSearch) {
     return <ListWithSearch {...props} />;
   }
+  // Each of the variants below strips its own triggering prop and re-renders
+  // List, so remaining variants are still picked up correctly on the next pass.
+  // The order only matters in cases where one variant should suppress another —
+  // currently only withSearch has that role (see above).
   if (props.uiAction) {
     return <ListInteractive {...props} />;
   }
-  if (props.keyboardInteractions) {
-    return <ListWithKeyboardInteractions {...props} />;
-  }
   if (props.popover === true) {
     return <ListWithPopover {...props} />;
+  }
+  if (props.keyboardInteractions) {
+    return <ListWithKeyboardInteractions {...props} />;
   }
   return <ListPresentation {...props} />;
 };
