@@ -110,12 +110,7 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState, useEffect, useRef } from "preact/hooks";
-      import {
-        SuggestionList,
-        Suggestion,
-        Input,
-        ListItemHeader,
-      } from "@jsenv/navi";
+      import { List, ListItem, Input, ListItemHeader } from "@jsenv/navi";
 
       const SUGGESTION_BG = "light-dark(#f0f4ff, #1a2040)";
 
@@ -150,7 +145,7 @@
         return `${name}-${num}`;
       });
 
-      const StatsBar = ({ totalItems, domItems }) => {
+      const StatsBar = ({ totalItems, domItems, peakDomItems }) => {
         const savedFromDom = totalItems - domItems;
         return (
           <div className="stats-bar">
@@ -164,6 +159,14 @@
                 className={`stat-value ${domItems < totalItems ? "highlight" : ""}`}
               >
                 {domItems}
+              </span>
+            </div>
+            <div className="stat">
+              <span className="stat-label">Peak DOM</span>
+              <span
+                className={`stat-value ${peakDomItems >= totalItems ? "warning" : "highlight"}`}
+              >
+                {peakDomItems}
               </span>
             </div>
             <div className="stat">
@@ -186,16 +189,23 @@
         const [scrollToIndex, setScrollToIndex] = useState("");
         const listRef = useRef(null);
         const [domItems, setDomItems] = useState(0);
+        const [peakDomItems, setPeakDomItems] = useState(0);
 
-        // Track actual DOM option count via MutationObserver
+        // Track actual DOM item count via MutationObserver, keeping a peak max.
         useEffect(() => {
           const updateCount = () => {
             if (!listRef.current) {
               return;
             }
-            setDomItems(
-              listRef.current.querySelectorAll("[role='option']").length,
-            );
+            const count =
+              listRef.current.querySelectorAll(".navi_list_item").length;
+            setDomItems(count);
+            setPeakDomItems((prev) => {
+              if (count > prev) {
+                return count;
+              }
+              return prev;
+            });
           };
           updateCount();
           const observer = new MutationObserver(updateCount);
@@ -248,7 +258,11 @@
               DOM items at each scroll position.
             </p>
 
-            <StatsBar totalItems={LARGE_LIST.length} domItems={domItems} />
+            <StatsBar
+              totalItems={LARGE_LIST.length}
+              domItems={domItems}
+              peakDomItems={peakDomItems}
+            />
 
             {/* Programmatic scroll controls */}
             <fieldset
@@ -291,13 +305,14 @@
               </span>
             </fieldset>
 
-            <SuggestionList
+            <List
               withSearch
               ref={listRef}
               maxHeight={maxHeight}
               uiAction={setSelected}
               expandX
               renderBudget={30}
+              fallback="No results"
             >
               <ListItemHeader>
                 <Input
@@ -314,10 +329,9 @@
                   }}
                 />
               </ListItemHeader>
-              {LARGE_LIST.map((item, index) => (
-                <Suggestion
+              {LARGE_LIST.map((item) => (
+                <ListItem
                   key={item}
-                  index={index}
                   value={item}
                   selected={selected === item}
                   style={{
@@ -328,9 +342,9 @@
                   }}
                 >
                   {item}
-                </Suggestion>
+                </ListItem>
               ))}
-            </SuggestionList>
+            </List>
 
             <div className="value-display">{selected ?? ""}</div>
 
