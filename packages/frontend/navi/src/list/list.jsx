@@ -1055,23 +1055,6 @@ export const ListItem = ({
         : separator
       : null;
 
-  const mouseHandlers = interactionContext
-    ? {
-        onMouseEnter: (e) => {
-          onHover?.(value, e);
-        },
-        onMouseLeave: (e) => {
-          onHover?.(null, e);
-        },
-        onMouseDown: (e) => {
-          if (e.button !== 0) {
-            return;
-          }
-          onSelect?.(value, e);
-        },
-      }
-    : {};
-
   return (
     <>
       {separatorElement}
@@ -1086,7 +1069,21 @@ export const ListItem = ({
         navi-list-item=""
         data-interactive={interactionContext ? "" : undefined}
         data-anchor={isKeyboardPointed ? "" : undefined}
-        {...mouseHandlers}
+        onMouseEnter={(e) => {
+          onHover?.(value, e);
+          rest.onMouseEnter?.(e);
+        }}
+        onMouseLeave={(e) => {
+          onHover?.(null, e);
+          rest.onMouseLeave?.(e);
+        }}
+        onMouseDown={(e) => {
+          if (e.button !== 0) {
+            return;
+          }
+          onSelect?.(value, e);
+          rest.onMouseDown?.(e);
+        }}
         {...rest}
         ref={ref}
         basePseudoState={{

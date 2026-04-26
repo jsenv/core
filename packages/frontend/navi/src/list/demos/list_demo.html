@@ -169,6 +169,12 @@
                       hoveredSugar !== null &&
                       FRUIT_SUGAR[fruit] === hoveredSugar
                     }
+                    onMouseEnter={() => {
+                      setHoveredSugar(FRUIT_SUGAR[fruit]);
+                    }}
+                    onMouseLeave={() => {
+                      setHoveredSugar(null);
+                    }}
                   >
                     {SUGAR_ICON[FRUIT_SUGAR[fruit]]} {fruit}
                   </ListItem>
