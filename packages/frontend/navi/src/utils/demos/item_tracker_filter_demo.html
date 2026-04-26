@@ -7,17 +7,28 @@
     <link rel="icon" href="data:," />
     <style>
       body {
+        display: flex;
         margin: 20px;
+        gap: 20px;
         font-family: system-ui, sans-serif;
         background: #f5f5f5;
       }
       .demo {
-        max-width: 600px;
-        margin: 0 auto;
         padding: 20px;
+        flex: 1;
         background: white;
         border-radius: 8px;
         box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+      .demo h2 {
+        margin-top: 0;
+        font-size: 16px;
+      }
+      .demo.broken {
+        border-top: 4px solid #f44;
+      }
+      .demo.fixed {
+        border-top: 4px solid #4a4;
       }
       input {
         box-sizing: border-box;
@@ -37,39 +48,25 @@
         padding: 6px 10px;
         border-bottom: 1px solid #eee;
       }
+      pre {
+        min-height: 60px;
+        margin-top: 12px;
+        padding: 10px;
+        color: #ccc;
+        font-size: 12px;
+        background: #1e1e1e;
+        border-radius: 4px;
+      }
+      .key {
+        margin-bottom: 10px;
+        color: #555;
+        font-size: 12px;
+        line-height: 1.6;
+      }
     </style>
   </head>
   <body>
     <script type="module" jsenv-type="module/jsx">
-      /**
-       * Item Tracker – Filter Demo
-       *
-       * Reproduces the one-render-behind bug:
-       *
-       * THE BUG: in Preact, layout effects fire TOP-DOWN (parent before children).
-       * When the ancestor of ItemTrackerProvider reads committedItems.length in its
-       * layoutEffect, child effects have not yet run — so committedItems still
-       * reflects the PREVIOUS render's filter state.
-       *
-       * This is exactly the list.jsx filler bug: filler heights are one render late.
-       *
-       * The scenario:
-       *   - ListBox owns ItemTrackerProvider + reads committedItems in a layout effect
-       *   - ListBox re-renders when filter changes (receives filter as prop)
-       *   - BUT its children (Item elements) are created once with useMemo in App
-       *     → same vnode reference → Preact bails out (no registerItem calls)
-       *   - Filter is propagated to Item via context (not props) — so Item re-renders
-       *     happen in a SEPARATE batch after the current render+commit cycle
-       *   - Result: ListBox's layout effect sees the stale committedItems
-       *
-       * Structure:
-       *   App (useMemo for stable children)
-       *     ListBox (re-renders on filter change, has the layout effect)
-       *       ItemTrackerProvider (resets on ListBox render)
-       *         {stableChildren} ← bails out, no registerItem
-       *         [FilterContext change → Item re-renders scheduled for next batch]
-       */
-
       import { createContext, render } from "preact";
       import {
         useContext,
@@ -79,8 +76,6 @@
         useState,
       } from "preact/hooks";
       import { createItemTracker } from "../item_tracker/item_tracker.jsx";
-
-      const FilterContext = createContext("");
 
       const ITEMS = [
         "Alpha",
@@ -95,112 +90,158 @@
         "Juliet",
       ];
 
-      const [useItemTrackerProvider, useTrackItem] = createItemTracker({
+      // ─── Broken ───────────────────────────────────────────────────────────────
+      // useMemo(children, []) → same vnode refs → Preact bails out on children
+      // → registerItem never called during filter render cycle
+      // → parent layout effect reads stale committedItems (one render behind)
+      //
+      // Note: filter propagates via context, not props, so Item re-renders
+      // happen in a separate batch AFTER the current commit.
+
+      const FilterContextBroken = createContext("");
+      const [useProviderBroken, useTrackBroken] = createItemTracker({
         filter: (data) => !data.hidden,
       });
 
-      // ---------------------------------------------------------------------------
-      // Item — reads filter from context (not from props)
-      // This makes its re-render context-driven, decoupled from the parent's render.
-      // ---------------------------------------------------------------------------
-      const Item = ({ value }) => {
-        const filter = useContext(FilterContext);
+      const ItemBroken = ({ value }) => {
+        const filter = useContext(FilterContextBroken);
         const hidden = filter
           ? !value.toLowerCase().includes(filter.toLowerCase())
           : false;
-        useTrackItem(value, { value, hidden });
+        useTrackBroken(value, { value, hidden });
         if (hidden) {
           return null;
         }
         return <li>{value}</li>;
       };
 
-      // ---------------------------------------------------------------------------
-      // ListBox — receives filter as a prop so it re-renders when filter changes.
-      // Receives children as stable prop from App (useMemo).
-      // Has the layout effect that reads committedItems BEFORE child effects run.
-      // ---------------------------------------------------------------------------
-      const ListBox = ({ children, filter, ItemTrackerProvider, logRef }) => {
-        // This effect fires BEFORE item effects (parent before children in Preact).
-        // committedItems reflects the PREVIOUS render — the bug.
-        useLayoutEffect(() => {
-          const count = ItemTrackerProvider.items.length;
-          const entry = `filter="${filter}" → got ${count}\n`;
-          logRef.current = [...logRef.current.slice(-9), entry];
-          const logEl = document.getElementById("log");
-          if (logEl) {
-            logEl.textContent = logRef.current.join("");
-          }
-          const countEl = document.getElementById("visible-count");
-          if (countEl) {
-            countEl.textContent = String(count);
-          }
-        });
-
-        return (
-          <FilterContext.Provider value={filter}>
-            <ItemTrackerProvider>{children}</ItemTrackerProvider>
-          </FilterContext.Provider>
-        );
-      };
-
-      // ---------------------------------------------------------------------------
-      // App — creates stable children via useMemo, owns filter state.
-      // ---------------------------------------------------------------------------
-      const App = () => {
+      const BrokenDemo = () => {
         const [filter, setFilter] = useState("");
-        const ItemTrackerProvider = useItemTrackerProvider();
+        const Provider = useProviderBroken();
         const logRef = useRef([]);
 
-        // Stable JSX — same vnode references across renders.
-        // When filter changes, ListBox re-renders but these children are unchanged
-        // → Preact bails out → registerItem is NOT called in that render cycle.
         const stableChildren = useMemo(
-          () => ITEMS.map((value) => <Item key={value} value={value} />),
-          [],
+          () => ITEMS.map((v) => <ItemBroken key={v} value={v} />),
+          [], // ← no filter dep → bail-out → registerItem not called → BUG
         );
 
-        const expectedCount = ITEMS.filter((v) =>
+        const expected = ITEMS.filter((v) =>
           filter ? v.toLowerCase().includes(filter.toLowerCase()) : true,
         ).length;
 
+        useLayoutEffect(() => {
+          // fires before child effects (Preact: top-down) → stale count
+          const count = Provider.items.length;
+          logRef.current = [
+            ...logRef.current.slice(-7),
+            `filter="${filter}" → got ${count} (expected ${expected})\n`,
+          ];
+          document.getElementById("broken-log").textContent =
+            logRef.current.join("");
+          document.getElementById("broken-got").textContent = count;
+        });
+
         return (
-          <div className="demo">
-            <h2>
-              Item Tracker – Filter: parent effect reads stale committedItems
-            </h2>
-            <p style={{ fontSize: "13px", color: "#666" }}>
-              Children are stable (useMemo). Filter propagates via context.
-              ListBox re-renders on filter change but children bail out (no
-              registerItem). The Got count is read from committedItems.length in
-              a parent layout effect — always one render behind.
+          <div class="demo broken">
+            <h2>❌ Broken — stale committedItems</h2>
+            <p class="key">
+              <code>useMemo(children, [])</code> — children never recreated when
+              filter changes. Preact bails out → <code>registerItem</code> not
+              called → parent effect reads count from previous render.
             </p>
             <p>
-              Expected: <b>{expectedCount}</b> | Got:{" "}
-              <b id="visible-count">?</b>
+              Expected: <b>{expected}</b> | Got: <b id="broken-got">?</b>
             </p>
             <input
               type="text"
-              placeholder="Filter items (try: a, al, b)..."
+              placeholder="Filter (try: a, al, b)…"
               value={filter}
               onInput={(e) => setFilter(e.currentTarget.value)}
             />
-            <ListBox
-              filter={filter}
-              ItemTrackerProvider={ItemTrackerProvider}
-              logRef={logRef}
-            >
-              {stableChildren}
-            </ListBox>
-            <pre
-              id="log"
-              style={{ background: "#1e1e1e", padding: "10px", color: "#ccc" }}
-            />
+            <FilterContextBroken.Provider value={filter}>
+              <Provider>{stableChildren}</Provider>
+            </FilterContextBroken.Provider>
+            <pre id="broken-log" />
           </div>
         );
       };
 
-      render(<App />, document.body);
+      // ─── Fixed ────────────────────────────────────────────────────────────────
+      // useMemo(children, [filter]) → children recreated on each filter change
+      // → registerItem called every render → committedItems up to date
+      // → parent effect reads correct count
+
+      const [useProviderFixed, useTrackFixed] = createItemTracker({
+        filter: (data) => !data.hidden,
+      });
+
+      const ItemFixed = ({ value, filter }) => {
+        const hidden = filter
+          ? !value.toLowerCase().includes(filter.toLowerCase())
+          : false;
+        useTrackFixed(value, { value, hidden });
+        if (hidden) {
+          return null;
+        }
+        return <li>{value}</li>;
+      };
+
+      const FixedDemo = () => {
+        const [filter, setFilter] = useState("");
+        const Provider = useProviderFixed();
+        const logRef = useRef([]);
+
+        const children = useMemo(
+          () =>
+            ITEMS.map((v) => <ItemFixed key={v} value={v} filter={filter} />),
+          [filter], // ← filter dep → children recreated → registerItem called → OK
+        );
+
+        const expected = ITEMS.filter((v) =>
+          filter ? v.toLowerCase().includes(filter.toLowerCase()) : true,
+        ).length;
+
+        useLayoutEffect(() => {
+          const count = Provider.items.length;
+          logRef.current = [
+            ...logRef.current.slice(-7),
+            `filter="${filter}" → got ${count} (expected ${expected})\n`,
+          ];
+          document.getElementById("fixed-log").textContent =
+            logRef.current.join("");
+          document.getElementById("fixed-got").textContent = count;
+        });
+
+        return (
+          <div class="demo fixed">
+            <h2>✅ Fixed — filter as useMemo dep</h2>
+            <p class="key">
+              <code>useMemo(children, [filter])</code> — children recreated when
+              filter changes. <code>registerItem</code> is called every render →
+              <code>committedItems</code> is always current.
+            </p>
+            <p>
+              Expected: <b>{expected}</b> | Got: <b id="fixed-got">?</b>
+            </p>
+            <input
+              type="text"
+              placeholder="Filter (try: a, al, b)…"
+              value={filter}
+              onInput={(e) => setFilter(e.currentTarget.value)}
+            />
+            <Provider>{children}</Provider>
+            <pre id="fixed-log" />
+          </div>
+        );
+      };
+
+      render(
+        <>
+          <BrokenDemo />
+          <FixedDemo />
+        </>,
+        document.body,
+      );
     </script>
   </body>
 </html>
