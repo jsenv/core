@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>List Demo</title>
+    <style>
+      body {
+        max-width: 700px;
+        margin: 0 auto;
+        padding: 40px 20px;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: #f5f5f5;
+      }
+
+      h1 {
+        margin-bottom: 32px;
+        color: #333;
+        font-size: 1.8rem;
+        text-align: center;
+      }
+
+      .demo-section {
+        margin-bottom: 32px;
+        padding: 24px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      .demo-section h2 {
+        margin: 0 0 8px;
+        padding-bottom: 10px;
+        color: #333;
+        font-size: 1.1rem;
+        border-bottom: 2px solid #eee;
+      }
+
+      .demo-section p {
+        margin: 0 0 16px;
+        color: #555;
+        font-size: 0.9rem;
+        line-height: 1.5;
+      }
+
+      .value-display {
+        min-height: 24px;
+        margin-top: 12px;
+        padding: 8px 10px;
+        font-size: 0.85rem;
+        font-family: monospace;
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+      }
+
+      .value-display:empty::before {
+        color: #999;
+        font-style: italic;
+        content: "(none selected)";
+      }
+    </style>
+  </head>
+  <body>
+    <h1>List Demo</h1>
+    <div id="app"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useState, useRef } from "preact/hooks";
+      import { List, ListItem, ListItemHeader, Input } from "@jsenv/navi";
+
+      const FRUITS = [
+        "Apple",
+        "Banana",
+        "Cherry",
+        "Date",
+        "Elderberry",
+        "Fig",
+        "Grape",
+        "Honeydew",
+        "Kiwi",
+        "Lemon",
+        "Mango",
+        "Nectarine",
+        "Orange",
+        "Papaya",
+        "Quince",
+      ];
+
+      // ── 1. Display-only list ───────────────────────────────────────────────────
+
+      const DisplayOnlyDemo = () => {
+        return (
+          <div className="demo-section">
+            <h2>1. Display only</h2>
+            <p>
+              By default a <code>List</code> is purely presentational — no hover
+              state, no selection, no keyboard navigation. Items render as
+              read-only content.
+            </p>
+            <List>
+              {FRUITS.slice(0, 5).map((fruit) => (
+                <ListItem key={fruit} value={fruit}>
+                  {fruit}
+                </ListItem>
+              ))}
+            </List>
+          </div>
+        );
+      };
+
+      // ── 2. Interactive list (uiAction) ─────────────────────────────────────────
+
+      const InteractiveDemo = () => {
+        const [selected, setSelected] = useState(null);
+        return (
+          <div className="demo-section">
+            <h2>2. Interactive — uiAction</h2>
+            <p>
+              Adding a <code>uiAction</code> prop makes the list interactive:
+              items highlight on hover, keyboard arrow keys navigate up/down,
+              Enter confirms and Escape clears. Click or press Enter to select.
+            </p>
+            <List
+              uiAction={(value) => {
+                setSelected(value);
+              }}
+            >
+              {FRUITS.slice(0, 5).map((fruit) => (
+                <ListItem
+                  key={fruit}
+                  value={fruit}
+                  selected={selected === fruit}
+                >
+                  {fruit}
+                </ListItem>
+              ))}
+            </List>
+            <div className="value-display">{selected ?? ""}</div>
+          </div>
+        );
+      };
+
+      // ── 3. Searchable list (withSearch) ────────────────────────────────────────
+
+      const SearchableDemo = () => {
+        const [selected, setSelected] = useState(null);
+        return (
+          <div className="demo-section">
+            <h2>3. Search — withSearch</h2>
+            <p>
+              The <code>withSearch</code> prop makes the list own its search
+              state internally. Place an <code>Input</code> inside a{" "}
+              <code>ListItemHeader</code>: it auto-connects via{" "}
+              <code>SetSearchTextContext</code>. Items that don't match are
+              hidden; matching text is highlighted.
+            </p>
+            <List
+              withSearch
+              uiAction={(value) => {
+                setSelected(value);
+              }}
+            >
+              <ListItemHeader>
+                <Input
+                  placeholder="Search fruits…"
+                  expandX
+                  autoFocus
+                  paddingX="10"
+                  paddingY="6"
+                  size="m"
+                  style="border-bottom: 1px solid #eee; border-radius: 0;"
+                />
+              </ListItemHeader>
+              {FRUITS.map((fruit) => (
+                <ListItem
+                  key={fruit}
+                  value={fruit}
+                  selected={selected === fruit}
+                >
+                  {fruit}
+                </ListItem>
+              ))}
+            </List>
+            <div className="value-display">{selected ?? ""}</div>
+          </div>
+        );
+      };
+
+      // ── 4. Popover list ────────────────────────────────────────────────────────
+
+      const PopoverDemo = () => {
+        const [selected, setSelected] = useState(null);
+        const listRef = useRef(null);
+        const buttonRef = useRef(null);
+
+        const openList = () => {
+          listRef.current?.dispatchEvent(
+            new CustomEvent("navi_list_open", {
+              detail: { anchor: buttonRef.current },
+            }),
+          );
+        };
+        const closeList = () => {
+          listRef.current?.dispatchEvent(new CustomEvent("navi_list_close"));
+        };
+
+        return (
+          <div className="demo-section">
+            <h2>4. Popover</h2>
+            <p>
+              Pass <code>popover</code> to render the list as a managed popover.
+              Dispatch <code>navi_list_open</code> with an anchor element to
+              show it; <code>navi_list_close</code> to hide it. The list
+              positions itself below the anchor automatically.
+            </p>
+            <div style={{ display: "flex", gap: "8px", marginBottom: "12px" }}>
+              <button ref={buttonRef} onClick={openList}>
+                Open list
+              </button>
+              <button onClick={closeList}>Close list</button>
+            </div>
+            <List
+              ref={listRef}
+              popover
+              uiAction={(value) => {
+                setSelected(value);
+                closeList();
+              }}
+            >
+              {FRUITS.slice(0, 8).map((fruit) => (
+                <ListItem
+                  key={fruit}
+                  value={fruit}
+                  selected={selected === fruit}
+                >
+                  {fruit}
+                </ListItem>
+              ))}
+            </List>
+            <div className="value-display">{selected ?? ""}</div>
+          </div>
+        );
+      };
+
+      // ── App ────────────────────────────────────────────────────────────────────
+
+      const App = () => {
+        return (
+          <>
+            <DisplayOnlyDemo />
+            <InteractiveDemo />
+            <SearchableDemo />
+            <PopoverDemo />
+          </>
+        );
+      };
+
+      render(<App />, document.getElementById("app"));
+    </script>
+  </body>
+</html>
