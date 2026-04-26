@@ -272,7 +272,7 @@
             <SuggestionList
               style={{ maxHeight: "220px" }}
               uiAction={setSelected}
-              highlight={filter}
+              searchText={filter}
               hidden={filtered.length === 0}
               expandX
             >
@@ -314,7 +314,7 @@
                 borderColor: "#e94560",
               }}
               uiAction={setSelected}
-              highlight="a"
+              searchText="a"
             >
               {FRUITS.map((fruit) => (
                 <Suggestion
@@ -397,7 +397,7 @@
             <SuggestionList
               style={{ maxHeight: "220px" }}
               uiAction={setSelected}
-              highlight={filter}
+              searchText={filter}
             >
               {sorted.map((fruit) => (
                 <Suggestion
@@ -490,7 +490,7 @@
             <SuggestionList
               style={{ maxHeight: "280px" }}
               uiAction={setSelected}
-              highlight={filter}
+              searchText={filter}
             >
               {groups.map((group) => (
                 <ListItemGroup key={group.letter} label={group.letter}>
@@ -621,7 +621,7 @@
             <SuggestionList
               style={{ maxHeight: "300px" }}
               uiAction={setSelected}
-              highlight={filter}
+              searchText={filter}
             >
               <ListItemGroup
                 style={{ backgroundColor: "#f0faf3" }}

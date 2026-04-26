@@ -75,15 +75,15 @@ const dispatchCustomEventToList = (
  *   fallback    — content shown when no suggestions are visible (default: "No results")
  *   popover     — when true, renders as a managed popover (positioned near an anchor)
  *
- *   withFilter  — when true, the list owns its filter state internally. An <Input>
+ *   withFilter  — when true, the list owns its search text state internally. An <Input>
  *                 placed anywhere inside (e.g. in a <ListItemHeader>) auto-connects
- *                 to the filter via SetFilterContext. Each <Suggestion> is
- *                 automatically hidden when it doesn't match the filter.
- *   match       — custom match function (value, lowerCaseFilter) => boolean.
+ *                 to the search via SetFilterContext. Each <Suggestion> is
+ *                 automatically hidden when it doesn't match the search text.
+ *   match       — custom match function (value, lowerCaseSearchText) => boolean.
  *                 Only used when withFilter is true. Default: substring match.
- *   filter      — external filter string. Use when you manage the filter state
+ *   searchText  — external search string. Use when you manage the search state
  *                 yourself (without withFilter). Suggestions whose value does not
- *                 match are hidden. Also used as the default highlight string.
+ *                 match are hidden and matching text is highlighted.
  *
  *   lockSize    — when true, captures the list container's dimensions the first
  *                 time it renders (always in unfiltered state, even if a filter is
@@ -108,20 +108,21 @@ export const SuggestionList = ({ popover, withFilter, match, ...rest }) => {
   return <SuggestionListStandalone {...rest} />;
 };
 
-const defaultMatch = (v, filter) => String(v).toLowerCase().includes(filter);
+const defaultMatch = (v, searchText) =>
+  String(v).toLowerCase().includes(searchText);
 
-// Owns filter state and provides SetFilterContext + ListboxIdContext.
-// Passes filter and match as props down to the inner SuggestionList.
+// Owns searchText state and provides SetFilterContext + ListboxIdContext.
+// Passes searchText and match as props down to the inner SuggestionList.
 const SuggestionListWithFilter = ({ match = defaultMatch, ...rest }) => {
-  const [filter, setFilter] = useState("");
+  const [searchText, setSearchText] = useState("");
   const listboxId = useId();
 
   return (
-    <SetFilterContext.Provider value={setFilter}>
+    <SetFilterContext.Provider value={setSearchText}>
       <ListboxIdContext.Provider value={listboxId}>
         <SuggestionList
           {...rest}
-          filter={filter}
+          searchText={searchText}
           match={match}
           keyboardInteractions={false}
         />
@@ -261,23 +262,22 @@ const SuggestionListWithPopover = (props) => {
 // Core controller: wires the generic List to the suggestion-specific
 // keyboard events, hover/selection state, and ARIA attributes.
 //
-// filter    — the current filter string. When lockSize is also enabled, the
-//             filter is bypassed on the first render so the container can be
-//             measured at its full (unfiltered) size before any hiding occurs.
-// lockSize  — when true, observes the list container with a ResizeObserver
-//             and captures its width/height once it has non-zero dimensions.
-//             The filter is bypassed during this first measurement so the size
-//             always reflects the fully-populated state. Those values become
-//             min-width/min-height so that subsequent filtering cannot collapse
-//             the layout. Size is captured once per mount.
+// searchText — the current search string. When lockSize is also enabled, the
+//              searchText is bypassed on the first render so the container can
+//              be measured at its full (unfiltered) size before any hiding occurs.
+// lockSize   — when true, observes the list container with a ResizeObserver
+//              and captures its width/height once it has non-zero dimensions.
+//              The searchText is bypassed during this first measurement so the
+//              size always reflects the fully-populated state. Those values become
+//              min-width/min-height so that subsequent filtering cannot collapse
+//              the layout. Size is captured once per mount.
 const SuggestionListControlled = ({
   ref,
   uiAction,
-  highlight,
   fallback = "No results",
   children,
   renderBudget,
-  filter,
+  searchText,
   match = defaultMatch,
   lockSize,
   ...rest
@@ -300,8 +300,8 @@ const SuggestionListControlled = ({
   const defaultRef = useRef(null);
   const resolvedRef = ref || defaultRef;
   const sizeLocked = useRef(false);
-  const filterRef = useRef(filter);
-  filterRef.current = filter;
+  const filterRef = useRef(searchText);
+  filterRef.current = searchText;
   const [filterBypassed, setFilterBypassed] = useState(
     () => Boolean(lockSize) && !sizeLocked.current,
   );
@@ -351,19 +351,13 @@ const SuggestionListControlled = ({
     };
   }, [lockSize]);
 
-  // When a filter is active, fall back to filter text for highlight.
-  // While bypassing the filter (for lockSize measurement), treat as no filter.
-  const effectiveFilter = filterBypassed ? undefined : filter;
-
-  if (highlight === undefined) {
-    highlight = effectiveFilter;
-  }
+  // While bypassing the searchText (for lockSize measurement), treat as empty.
+  const effectiveSearchText = filterBypassed ? undefined : searchText;
 
   const interactionContext = {
     mousePointedValue,
     keyboardPointedValue,
-    highlight,
-    filter: effectiveFilter,
+    searchText: effectiveSearchText,
     match,
     onHover: (value) => {
       setMousePointedValue(value);
@@ -461,8 +455,7 @@ export const Suggestion = ({ value, hidden, selected, children, ...rest }) => {
   const {
     mousePointedValue,
     keyboardPointedValue,
-    highlight,
-    filter,
+    searchText,
     match,
     onHover,
     onSelect,
@@ -471,9 +464,9 @@ export const Suggestion = ({ value, hidden, selected, children, ...rest }) => {
     keyboardPointedValue === value || mousePointedValue === value;
   const isKeyboardPointed = keyboardPointedValue === value;
 
-  if (filter) {
-    const lowerFilter = filter.toLowerCase();
-    const matches = match(value, lowerFilter);
+  if (searchText) {
+    const lowerSearchText = searchText.toLowerCase();
+    const matches = match(value, lowerSearchText);
     hidden = !matches;
   }
   const defaultRef = useRef(null);
@@ -500,11 +493,11 @@ export const Suggestion = ({ value, hidden, selected, children, ...rest }) => {
       return undefined;
     }
     const suggestionEl = ref.current;
-    if (!suggestionEl || !highlight) {
+    if (!suggestionEl || !searchText) {
       return undefined;
     }
     const ownRanges = [];
-    const lowerHighlight = highlight.toLowerCase();
+    const lowerSearchText = searchText.toLowerCase();
     const walker = document.createTreeWalker(
       suggestionEl,
       NodeFilter.SHOW_TEXT,
@@ -512,14 +505,14 @@ export const Suggestion = ({ value, hidden, selected, children, ...rest }) => {
     let node;
     while ((node = walker.nextNode())) {
       const lowerText = node.textContent.toLowerCase();
-      let index = lowerText.indexOf(lowerHighlight);
+      let index = lowerText.indexOf(lowerSearchText);
       while (index !== -1) {
         const range = new Range();
         range.setStart(node, index);
-        range.setEnd(node, index + highlight.length);
+        range.setEnd(node, index + searchText.length);
         hl.add(range);
         ownRanges.push(range);
-        index = lowerText.indexOf(lowerHighlight, index + 1);
+        index = lowerText.indexOf(lowerSearchText, index + 1);
       }
     }
     return () => {
@@ -527,7 +520,7 @@ export const Suggestion = ({ value, hidden, selected, children, ...rest }) => {
         hl.delete(range);
       }
     };
-  }, [highlight, children, hidden, renderWindow]);
+  }, [searchText, children, hidden, renderWindow]);
 
   return (
     <ListItem
