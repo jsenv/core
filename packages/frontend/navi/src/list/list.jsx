@@ -157,6 +157,13 @@ const css = /* css */ `
     margin: 0;
     padding: 0;
     list-style: none;
+
+    /* Would create scrollbars, for now just hide the loader here */
+    .navi_input {
+      .navi_loading_rectangle_wrapper {
+        display: none;
+      }
+    }
   }
 
   .navi_list_item {
@@ -751,10 +758,6 @@ const ListControlled = ({
       return undefined;
     }
     const listEl = listContainerEl.querySelector(".navi_list");
-    if (!listEl) {
-      console.error("wtf");
-      return undefined;
-    }
     const scrollContainer = getScrollContainer(listEl);
     const onScroll = () => {
       const totalItems = ItemTrackerProvider.items.length;
