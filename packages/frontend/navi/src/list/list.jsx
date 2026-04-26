@@ -1,6 +1,7 @@
 import {
   getScrollContainer,
   pickPositionRelativeTo,
+  scrollIntoViewWithStickyAwareness,
   visibleRectEffect,
 } from "@jsenv/dom";
 import { createContext } from "preact";
@@ -983,42 +984,7 @@ export const ListItem = ({
     if (!itemEl) {
       return;
     }
-    const scrollContainer = getScrollContainer(itemEl);
-    if (!scrollContainer) {
-      itemEl.scrollIntoView({ block: "nearest" });
-      return;
-    }
-    itemEl.scrollIntoView({ block: "nearest" });
-    const itemRect = itemEl.getBoundingClientRect();
-    let topCover = 0;
-    let bottomCover = 0;
-    for (const sibling of itemEl.parentNode.children) {
-      const style = getComputedStyle(sibling);
-      if (style.position !== "sticky") {
-        continue;
-      }
-      const rect = sibling.getBoundingClientRect();
-      if (style.top !== "auto") {
-        const overlap = rect.bottom - itemRect.top;
-        if (overlap > topCover) {
-          topCover = overlap;
-        }
-      } else if (style.bottom !== "auto") {
-        const overlap = itemRect.bottom - rect.top;
-        if (overlap > bottomCover) {
-          bottomCover = overlap;
-        }
-      }
-      if (topCover > 0 && bottomCover > 0) {
-        break;
-      }
-    }
-    if (topCover > 0) {
-      scrollContainer.scrollTop -= topCover;
-    }
-    if (bottomCover > 0) {
-      scrollContainer.scrollTop += bottomCover;
-    }
+    scrollIntoViewWithStickyAwareness(itemEl);
   }, [isKeyboardPointed]);
 
   // CSS Highlight API: mark matching text ranges when a search context is active.
