@@ -29,22 +29,18 @@
       // createItemTracker with Preact signals and incremental maintenance.
       //
       // Core idea:
-      //   - registrations: raw Map of all items (visible or not)
-      //   - orderedVisible: sorted visible array, recomputed once per batch in notify()
-      //   - countSignal: signal(number), bumped only when count changes (=== check)
-      //   - propSignals: Map of propName → signal(array), bumped only when the array
-      //     content changes (element-by-element check)
-      //
-      // useTrackItem only needs filter(data) at render time — no full sort.
-      // The sort happens once per batch in notify(), not per item per render.
-      const createItemTracker = ({ filter }) => {
+      //   - registrations: Map of currently-visible items only
+      //   - The caller decides visibility and passes isVisible to useTrackItem
+      //   - orderedVisible: sorted array, recomputed once per batch in notify()
+      //   - countSignal: signal(number), bumped only when count changes
+      //   - propSignals: Map propName → signal(array), bumped only on content change
+      // Items always call useTrackItem with all their data including hidden.
+      // useTrackItem decides internally: hidden → remove from registrations, return -1.
+      // Not hidden → register and return current index among visible items.
+      const createItemTracker = () => {
         const registrations = new Map(); // id → { data, order }
         let orderCounter = 0;
 
-        // Maintained in notify() batch — do not read during render.
-        let orderedVisible = [];
-
-        // Signals updated only when their derived value actually changes.
         const countSignal = signal(0);
         const propSignals = new Map(); // propName → signal(array)
 
@@ -64,18 +60,15 @@
           queueMicrotask(() => {
             notifyScheduled = false;
 
-            // Recompute sorted visible list once for this batch.
-            orderedVisible = [...registrations.values()]
-              .filter((r) => filter(r.data))
-              .sort((a, b) => a.order - b.order);
+            const orderedVisible = [...registrations.values()].sort(
+              (a, b) => a.order - b.order,
+            );
 
-            // Update count signal only if count changed.
             const newCount = orderedVisible.length;
             if (countSignal.peek() !== newCount) {
               countSignal.value = newCount;
             }
 
-            // Update each prop signal only if its array content changed.
             for (const [propName, sig] of propSignals) {
               const prev = sig.peek();
               const next = orderedVisible.map((r) => r.data[propName]);
@@ -95,25 +88,27 @@
           });
         };
 
-        // Reading signal.value in a component body auto-subscribes.
-        // Component only re-renders when the signal value changes.
         const useTrackerItemProp = (propName) => getPropSignal(propName).value;
         const useTrackerItemCount = () => countSignal.value;
 
-        // Register an item.
-        // Index at render time: filter(data) tells us if visible, then find position
-        // in registrations (not orderedVisible which is stale until next batch).
-        // notify() is called in useLayoutEffect — no [isVisible] dep needed since
-        // subscribers do their own equality checks.
         const useTrackItem = (id, data) => {
           const orderRef = useRef(null);
           if (orderRef.current === null) {
             orderRef.current = orderCounter++;
           }
-          registrations.set(id, { data, order: orderRef.current });
+
+          if (data.hidden) {
+            registrations.delete(id);
+          } else {
+            registrations.set(id, { data, order: orderRef.current });
+          }
 
           useLayoutEffect(() => {
-            registrations.set(id, { data, order: orderRef.current });
+            if (data.hidden) {
+              registrations.delete(id);
+            } else {
+              registrations.set(id, { data, order: orderRef.current });
+            }
             notify();
           });
 
@@ -124,15 +119,13 @@
             };
           }, []);
 
-          if (!filter(data)) {
+          if (data.hidden) {
             return -1;
           }
-          // Sort only the visible subset at render time to get this item's index.
-          // This is render-local and does not update orderedVisible.
-          const visible = [...registrations.values()]
-            .filter((r) => filter(r.data))
-            .sort((a, b) => a.order - b.order);
-          return visible.findIndex((r) => r.order === orderRef.current);
+          const orderedVisible = [...registrations.values()].sort(
+            (a, b) => a.order - b.order,
+          );
+          return orderedVisible.findIndex((r) => r.order === orderRef.current);
         };
 
         return { useTrackItem, useTrackerItemProp, useTrackerItemCount };
@@ -164,9 +157,7 @@
       ];
 
       const { useTrackItem, useTrackerItemProp, useTrackerItemCount } =
-        createItemTracker({
-          filter: (data) => !data.hidden,
-        });
+        createItemTracker();
 
       const Item = ({ value, id }) => {
         const renders = useRenderCount();
@@ -176,7 +167,7 @@
           ? !value.startsWith(searchContext.searchText)
           : false;
         const index = useTrackItem(id, { hidden, value });
-        if (hidden || index === -1) {
+        if (index === -1) {
           return null;
         }
         return (
