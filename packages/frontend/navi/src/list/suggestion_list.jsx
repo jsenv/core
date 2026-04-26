@@ -8,23 +8,16 @@ import {
 } from "preact/hooks";
 
 import { useIsInsideDropdown } from "./dropdown.jsx";
-import { List, ListItem, RenderWindowContext } from "./list.jsx";
+import { List, ListItem, ListSearchContext } from "./list.jsx";
 
 export const SetSearchTextContext = createContext(null);
 // Provided so the listbox uses the same stable id that the input's
 // aria-controls points to.
 export const ListboxIdContext = createContext(null);
-// Provides searchText + match to Suggestion descendants.
-const SuggestionSearchContext = createContext(null);
 
 const css = /* css */ `
   &[data-lock-sizing] {
     visibility: hidden;
-  }
-
-  ::highlight(navi-search-match) {
-    color: var(--list-item-color-highlight);
-    background-color: var(--list-item-background-color-highlight);
   }
 `;
 
@@ -197,7 +190,7 @@ const SuggestionListControlled = ({
   const searchContext = { searchText: effectiveSearchText, match };
 
   return (
-    <SuggestionSearchContext.Provider value={searchContext}>
+    <ListSearchContext.Provider value={searchContext}>
       <List
         {...rest}
         ref={resolvedRef}
@@ -209,82 +202,18 @@ const SuggestionListControlled = ({
       >
         {children}
       </List>
-    </SuggestionSearchContext.Provider>
+    </ListSearchContext.Provider>
   );
-};
-
-// Module-level shared Highlight instance.
-let naviSuggestionHighlight = null;
-const getNaviSuggestionHighlight = () => {
-  if (!CSS.highlights) {
-    return null;
-  }
-  if (!naviSuggestionHighlight) {
-    naviSuggestionHighlight = new Highlight();
-    CSS.highlights.set("navi-search-match", naviSuggestionHighlight);
-  }
-  return naviSuggestionHighlight;
 };
 
 /**
  * Suggestion — a selectable option inside SuggestionList.
  *
- * Thin wrapper over <ListItem> that adds:
- * - Filter context integration (hidden when filter doesn't match)
- * - role="option" + aria-selected ARIA attributes
- * - Hover / keyboard-pointed / selected interactive state
- * - CSS Highlight API text matching
+ * Thin wrapper over <ListItem> that adds role="option" and ARIA attributes.
+ * Search-based hiding and text highlighting are handled by <ListItem> via
+ * ListSearchContext.
  */
 export const Suggestion = ({ value, hidden, selected, children, ...rest }) => {
-  const { searchText, match } = useContext(SuggestionSearchContext) || {};
-
-  if (searchText) {
-    const lowerSearchText = searchText.toLowerCase();
-    hidden = !match(value, lowerSearchText);
-  }
-
-  const defaultRef = useRef(null);
-  const ref = rest.ref || defaultRef;
-  const renderWindow = useContext(RenderWindowContext);
-
-  useLayoutEffect(() => {
-    if (hidden) {
-      return undefined;
-    }
-    const hl = getNaviSuggestionHighlight();
-    if (!hl) {
-      return undefined;
-    }
-    const suggestionEl = ref.current;
-    if (!suggestionEl || !searchText) {
-      return undefined;
-    }
-    const ownRanges = [];
-    const lowerSearchText = searchText.toLowerCase();
-    const walker = document.createTreeWalker(
-      suggestionEl,
-      NodeFilter.SHOW_TEXT,
-    );
-    let node;
-    while ((node = walker.nextNode())) {
-      const lowerText = node.textContent.toLowerCase();
-      let index = lowerText.indexOf(lowerSearchText);
-      while (index !== -1) {
-        const range = new Range();
-        range.setStart(node, index);
-        range.setEnd(node, index + searchText.length);
-        hl.add(range);
-        ownRanges.push(range);
-        index = lowerText.indexOf(lowerSearchText, index + 1);
-      }
-    }
-    return () => {
-      for (const range of ownRanges) {
-        hl.delete(range);
-      }
-    };
-  }, [searchText, children, hidden, renderWindow]);
-
   return (
     <ListItem
       role="option"
@@ -294,7 +223,6 @@ export const Suggestion = ({ value, hidden, selected, children, ...rest }) => {
       selected={selected}
       baseClassName="navi_list_item navi_suggestion"
       {...rest}
-      ref={ref}
     >
       {children}
     </ListItem>

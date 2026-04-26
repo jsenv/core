@@ -21,6 +21,24 @@ import { createItemTracker } from "../utils/item_tracker/item_tracker.jsx";
 // to hover/keyboard-pointed/selection state and the onHover/onSelect callbacks.
 export const ListInteractionContext = createContext(null);
 
+// Provided to give descendants access to a search string and match function.
+// When present, ListItem automatically hides itself if the value doesn't match
+// and highlights matching text via the CSS Highlight API.
+export const ListSearchContext = createContext(null);
+
+// Module-level shared Highlight instance for navi-search-match.
+let naviSearchHighlight = null;
+const getNaviSearchHighlight = () => {
+  if (!CSS.highlights) {
+    return null;
+  }
+  if (!naviSearchHighlight) {
+    naviSearchHighlight = new Highlight();
+    CSS.highlights.set("navi-search-match", naviSearchHighlight);
+  }
+  return naviSearchHighlight;
+};
+
 // When total rendered items exceeds renderBudget, a render window [start, end)
 // is activated to cap the number of DOM nodes. Items outside the window return
 // null. The window slides as the user scrolls, using actual DOM positions
@@ -216,6 +234,11 @@ const css = /* css */ `
     position: sticky;
     top: 0;
     z-index: 1;
+  }
+
+  ::highlight(navi-search-match) {
+    color: var(--list-item-color-highlight);
+    background-color: var(--list-item-background-color-highlight);
   }
 `;
 
@@ -794,12 +817,23 @@ export const ListItem = ({
 }) => {
   const idDefault = useId();
   id = id || idDefault;
-  const index = useTrackListItem(id, { id, hidden, value });
   const renderWindow = useContext(RenderWindowContext);
   const separator = useContext(SeparatorContext);
   const interactionContext = useContext(ListInteractionContext);
   const { mousePointedValue, keyboardPointedValue, onHover, onSelect } =
     interactionContext || {};
+  const searchContext = useContext(ListSearchContext);
+
+  // Search-based hidden: if a search context is active and value doesn't match,
+  // override hidden regardless of the explicit prop.
+  if (!hidden && searchContext && value !== undefined) {
+    const { searchText, match } = searchContext;
+    if (searchText) {
+      hidden = !match(value, searchText.toLowerCase());
+    }
+  }
+
+  const index = useTrackListItem(id, { id, hidden, value });
   const isPointed =
     keyboardPointedValue === value || mousePointedValue === value;
   const isKeyboardPointed = keyboardPointedValue === value;
@@ -852,6 +886,43 @@ export const ListItem = ({
       scrollContainer.scrollTop += bottomCover;
     }
   }, [isKeyboardPointed]);
+
+  // CSS Highlight API: mark matching text ranges when a search context is active.
+  const searchText = searchContext ? searchContext.searchText : null;
+  useLayoutEffect(() => {
+    if (hidden) {
+      return undefined;
+    }
+    const hl = getNaviSearchHighlight();
+    if (!hl) {
+      return undefined;
+    }
+    const itemEl = ref.current;
+    if (!itemEl || !searchText) {
+      return undefined;
+    }
+    const ownRanges = [];
+    const lowerSearchText = searchText.toLowerCase();
+    const walker = document.createTreeWalker(itemEl, NodeFilter.SHOW_TEXT);
+    let node;
+    while ((node = walker.nextNode())) {
+      const lowerText = node.textContent.toLowerCase();
+      let idx = lowerText.indexOf(lowerSearchText);
+      while (idx !== -1) {
+        const range = new Range();
+        range.setStart(node, idx);
+        range.setEnd(node, idx + searchText.length);
+        hl.add(range);
+        ownRanges.push(range);
+        idx = lowerText.indexOf(lowerSearchText, idx + 1);
+      }
+    }
+    return () => {
+      for (const range of ownRanges) {
+        hl.delete(range);
+      }
+    };
+  }, [searchText, children, hidden, renderWindow]);
 
   if (hidden) {
     return null;
