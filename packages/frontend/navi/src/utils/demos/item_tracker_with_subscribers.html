@@ -24,27 +24,36 @@
         useRef,
         useState,
       } from "preact/hooks";
-      import { signal, computed } from "@preact/signals";
+      import { signal } from "@preact/signals";
 
-      // createItemTracker with Preact signals.
-      // A single version signal bumps when visibility changes.
-      // computed() signals derive from it — Preact handles subscriptions,
-      // batching, and re-render triggering automatically.
+      // createItemTracker with Preact signals and incremental maintenance.
+      //
+      // Core idea:
+      //   - registrations: raw Map of all items (visible or not)
+      //   - orderedVisible: sorted visible array, recomputed once per batch in notify()
+      //   - countSignal: signal(number), bumped only when count changes (=== check)
+      //   - propSignals: Map of propName → signal(array), bumped only when the array
+      //     content changes (element-by-element check)
+      //
+      // useTrackItem only needs filter(data) at render time — no full sort.
+      // The sort happens once per batch in notify(), not per item per render.
       const createItemTracker = ({ filter }) => {
         const registrations = new Map(); // id → { data, order }
         let orderCounter = 0;
 
-        // Bumped by useTrackItem when filter(data) changes.
-        const version = signal(0);
+        // Maintained in notify() batch — do not read during render.
+        let orderedVisible = [];
 
-        // Base computed: sorted visible registrations.
-        // Re-evaluated only when version changes.
-        const visibleSorted = computed(() => {
-          version.value; // subscribe to version
-          return [...registrations.values()]
-            .filter((r) => filter(r.data))
-            .sort((a, b) => a.order - b.order);
-        });
+        // Signals updated only when their derived value actually changes.
+        const countSignal = signal(0);
+        const propSignals = new Map(); // propName → signal(array)
+
+        const getPropSignal = (propName) => {
+          if (!propSignals.has(propName)) {
+            propSignals.set(propName, signal([]));
+          }
+          return propSignals.get(propName);
+        };
 
         let notifyScheduled = false;
         const notify = () => {
@@ -52,27 +61,49 @@
             notifyScheduled = true;
             queueMicrotask(() => {
               notifyScheduled = false;
-              version.value++;
+
+              // Recompute sorted visible list once for this batch.
+              orderedVisible = [...registrations.values()]
+                .filter((r) => filter(r.data))
+                .sort((a, b) => a.order - b.order);
+
+              // Update count signal only if count changed.
+              const newCount = orderedVisible.length;
+              if (countSignal.peek() !== newCount) {
+                countSignal.value = newCount;
+              }
+
+              // Update each prop signal only if its array content changed.
+              for (const [propName, sig] of propSignals) {
+                const prev = sig.peek();
+                const next = orderedVisible.map((r) => r.data[propName]);
+                let changed = prev.length !== next.length;
+                if (!changed) {
+                  for (let i = 0; i < next.length; i++) {
+                    if (prev[i] !== next[i]) {
+                      changed = true;
+                      break;
+                    }
+                  }
+                }
+                if (changed) {
+                  sig.value = next;
+                }
+              }
             });
           }
         };
 
-        // Reading signal.value inside a component body auto-subscribes.
-        // Re-renders only when the computed value changes.
-
-        // Returns an array of prop values for all visible items (ordered).
-        // Re-renders when the visible list changes (visibleSorted recomputes).
-        const useTrackerItemProp = (propName) =>
-          visibleSorted.value.map((r) => r.data[propName]);
-
-        // Returns the count of visible items.
-        // Backed by a dedicated computed so it only re-renders when count changes
-        // (number equality — Preact signals skip re-render if value === previous).
-        const countSignal = computed(() => visibleSorted.value.length);
+        // Reading signal.value in a component body auto-subscribes.
+        // Component only re-renders when the signal value changes.
+        const useTrackerItemProp = (propName) => getPropSignal(propName).value;
         const useTrackerItemCount = () => countSignal.value;
 
-        // Register an item. Calls notify() on every render — subscribers decide
-        // whether to re-render based on what they're watching (count, prop, etc).
+        // Register an item.
+        // Index at render time: filter(data) tells us if visible, then find position
+        // in registrations (not orderedVisible which is stale until next batch).
+        // notify() is called in useLayoutEffect — no [isVisible] dep needed since
+        // subscribers do their own equality checks.
         const useTrackItem = (id, data) => {
           const orderRef = useRef(null);
           if (orderRef.current === null) {
@@ -95,8 +126,8 @@
           if (!filter(data)) {
             return -1;
           }
-          // Compute index directly from registrations (not via signal) to avoid
-          // subscribing Item to visibleSorted, which would cause an infinite loop.
+          // Sort only the visible subset at render time to get this item's index.
+          // This is render-local and does not update orderedVisible.
           const visible = [...registrations.values()]
             .filter((r) => filter(r.data))
             .sort((a, b) => a.order - b.order);
