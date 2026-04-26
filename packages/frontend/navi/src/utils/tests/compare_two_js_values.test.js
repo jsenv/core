@@ -1,5 +1,5 @@
 import { snapshotTests } from "@jsenv/snapshot";
-import { compareTwoJsValues } from "./compare_two_js_values.js";
+import { compareTwoJsValues } from "../compare_two_js_values.js";
 
 await snapshotTests(import.meta.url, ({ test }) => {
   test("array comparison - ordered (default behavior)", () => {
