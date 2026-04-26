@@ -1,5 +1,5 @@
 import { createContext } from "preact";
-import { useContext, useLayoutEffect, useMemo, useRef } from "preact/hooks";
+import { useContext, useMemo, useRef } from "preact/hooks";
 
 /*
  * Item Tracker - For colocated producer/consumer scenarios
@@ -68,12 +68,7 @@ export const createItemTracker = ({ filter: filterFn } = {}) => {
 
   const useItemTrackerProvider = () => {
     const renderItemsRef = useRef([]);
-    const renderItems = renderItemsRef.current;
     const renderCountRef = useRef(0);
-
-    const committedItemsRef = useRef([]);
-    const committedItems = committedItemsRef.current;
-    const committedMapRef = useRef(new Map()); // stableId → { index, data }
 
     const tracker = useMemo(() => {
       const ItemTrackerProvider = ({ children }) => {
@@ -87,40 +82,25 @@ export const createItemTracker = ({ filter: filterFn } = {}) => {
           </ItemTrackerContext.Provider>
         );
       };
-      // committedItems is a live array: always up-to-date by the time any
-      // sibling or ancestor layoutEffect reads it (bottom-up effect ordering).
-      ItemTrackerProvider.items = committedItems;
+      // items is computed from renderItems which is populated during the render
+      // phase — so by the time any layout effect runs (parent or child), this
+      // getter already reflects the current render's visible items.
+      Object.defineProperty(ItemTrackerProvider, "items", {
+        get: () => renderItemsRef.current.slice(0, renderCountRef.current),
+        enumerable: true,
+      });
 
       return {
         ItemTrackerProvider,
-        items: committedItems,
         registerItem: (data) => {
           if (filterFn && !filterFn(data)) {
             return -1;
           }
           const index = renderCountRef.current++;
-          renderItems[index] = data;
+          renderItemsRef.current[index] = data;
           return index;
         },
-        commitItem: (stableId, index, data) => {
-          if (index === -1) {
-            return;
-          }
-          committedMapRef.current.set(stableId, { index, data });
-          rebuildCommittedItems(committedItems, committedMapRef.current);
-        },
-        decommitItem: (stableId) => {
-          committedMapRef.current.delete(stableId);
-          rebuildCommittedItems(committedItems, committedMapRef.current);
-        },
-        getItem: (index) => {
-          return committedItems[index];
-        },
-        getAllItems: () => {
-          return committedItems;
-        },
         reset: () => {
-          renderItems.length = 0;
           renderCountRef.current = 0;
         },
       };
@@ -129,9 +109,6 @@ export const createItemTracker = ({ filter: filterFn } = {}) => {
     return tracker.ItemTrackerProvider;
   };
 
-  // id: stable identity for this item across re-renders — the same concept as
-  // Preact's `key` prop (which is stripped from props and inaccessible here).
-  // Callers must provide a unique id; for suggestions this is the value.
   const useTrackItem = (id, data) => {
     const tracker = useContext(ItemTrackerContext);
     if (!tracker) {
@@ -139,21 +116,7 @@ export const createItemTracker = ({ filter: filterFn } = {}) => {
         "useTrackItem must be used within SimpleItemTrackerProvider",
       );
     }
-    // registerItem returns -1 when a filterFn is set and the item doesn't pass.
-    // Otherwise returns the sequential index among passing items.
-    // Note: registerItem is always called to keep hook call count stable.
-    const index = tracker.registerItem(data);
-    useLayoutEffect(() => {
-      if (index === -1) {
-        tracker.decommitItem(id);
-      } else {
-        tracker.commitItem(id, index, data);
-      }
-      return () => {
-        tracker.decommitItem(id);
-      };
-    });
-    return index;
+    return tracker.registerItem(data);
   };
 
   const useTrackedItem = (index) => {
@@ -169,7 +132,7 @@ export const createItemTracker = ({ filter: filterFn } = {}) => {
         "useTrackedItems must be used within SimpleItemTrackerProvider",
       );
     }
-    return tracker.items;
+    return tracker.ItemTrackerProvider.items;
   };
 
   return [
@@ -178,13 +141,4 @@ export const createItemTracker = ({ filter: filterFn } = {}) => {
     useTrackedItem,
     useTrackedItems,
   ];
-};
-
-const rebuildCommittedItems = (committedItems, committedMap) => {
-  const entries = Array.from(committedMap.values());
-  entries.sort((a, b) => a.index - b.index);
-  committedItems.length = entries.length;
-  for (let i = 0; i < entries.length; i++) {
-    committedItems[i] = entries[i].data;
-  }
 };
