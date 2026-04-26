@@ -710,7 +710,6 @@ const ListControlled = ({
       itemsRef.current = ItemTrackerProvider.items;
     }
     const totalItems = ItemTrackerProvider.items.length;
-    console.log("totalItems", totalItems);
     const current = renderWindowRef.current;
     if (!current || totalItems <= renderBudget) {
       if (topFillerRef.current) {
