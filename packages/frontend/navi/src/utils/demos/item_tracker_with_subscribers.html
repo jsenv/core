@@ -37,9 +37,40 @@
       // Items always call useTrackItem with all their data including hidden.
       // useTrackItem decides internally: hidden → remove from registrations, return -1.
       // Not hidden → register and return current index among visible items.
+      //
+      // sortedOrders: number[] of visible item orders, kept sorted at all times.
+      // Index = bisect(order) — O(log n), no linear scan.
+      // notify() uses sortedOrders directly — no sort needed there either.
       const createItemTracker = () => {
-        const registrations = new Map(); // id → { data, order }
+        const registrations = new Map(); // order → data
+        const idToOrder = new Map(); // id → order
         let orderCounter = 0;
+        const sortedOrders = []; // visible item orders, kept sorted
+
+        const bisect = (order) => {
+          let lo = 0;
+          let hi = sortedOrders.length;
+          while (lo < hi) {
+            const mid = (lo + hi) >> 1;
+            if (sortedOrders[mid] < order) {
+              lo = mid + 1;
+            } else {
+              hi = mid;
+            }
+          }
+          return lo;
+        };
+
+        const insertOrder = (order) => {
+          sortedOrders.splice(bisect(order), 0, order);
+        };
+
+        const removeOrder = (order) => {
+          const pos = bisect(order);
+          if (sortedOrders[pos] === order) {
+            sortedOrders.splice(pos, 1);
+          }
+        };
 
         const countSignal = signal(0);
         const propSignals = new Map(); // propName → signal(array)
@@ -60,18 +91,17 @@
           queueMicrotask(() => {
             notifyScheduled = false;
 
-            const orderedVisible = [...registrations.values()].sort(
-              (a, b) => a.order - b.order,
-            );
-
-            const newCount = orderedVisible.length;
+            // sortedOrders is already sorted — no sort needed here
+            const newCount = sortedOrders.length;
             if (countSignal.peek() !== newCount) {
               countSignal.value = newCount;
             }
 
             for (const [propName, sig] of propSignals) {
               const prev = sig.peek();
-              const next = orderedVisible.map((r) => r.data[propName]);
+              const next = sortedOrders.map(
+                (order) => registrations.get(order)[propName],
+              );
               let changed = prev.length !== next.length;
               if (!changed) {
                 for (let i = 0; i < next.length; i++) {
@@ -92,29 +122,39 @@
         const useTrackerItemCount = () => countSignal.value;
 
         const useTrackItem = (id, data) => {
-          const orderRef = useRef(null);
-          if (orderRef.current === null) {
-            orderRef.current = orderCounter++;
+          if (!idToOrder.has(id)) {
+            idToOrder.set(id, orderCounter++);
           }
+          const order = idToOrder.get(id);
 
+          // sync update so index is correct during this render
           if (data.hidden) {
-            registrations.delete(id);
+            registrations.delete(order);
+            removeOrder(order);
           } else {
-            registrations.set(id, { data, order: orderRef.current });
+            registrations.set(order, data);
+            if (sortedOrders[bisect(order)] !== order) {
+              insertOrder(order);
+            }
           }
 
           useLayoutEffect(() => {
             if (data.hidden) {
-              registrations.delete(id);
+              registrations.delete(order);
+              removeOrder(order);
             } else {
-              registrations.set(id, { data, order: orderRef.current });
+              registrations.set(order, data);
+              if (sortedOrders[bisect(order)] !== order) {
+                insertOrder(order);
+              }
             }
             notify();
           });
 
           useLayoutEffect(() => {
             return () => {
-              registrations.delete(id);
+              registrations.delete(order);
+              removeOrder(order);
               notify();
             };
           }, []);
@@ -122,13 +162,7 @@
           if (data.hidden) {
             return -1;
           }
-          let index = 0;
-          for (const r of registrations.values()) {
-            if (r.order < orderRef.current) {
-              index++;
-            }
-          }
-          return index;
+          return bisect(order);
         };
 
         return { useTrackItem, useTrackerItemProp, useTrackerItemCount };
