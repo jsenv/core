@@ -191,7 +191,14 @@
       };
 
       // Case: owns searchText state, receives children from outside (stable vnodes).
-      const Case = ({ ListComponent, statusId, logId, label, children }) => {
+      const Case = ({
+        // eslint-disable-next-line no-unused-vars
+        ListComponent,
+        statusId,
+        logId,
+        label,
+        children,
+      }) => {
         const [searchText, setSearchText] = useState(null);
         return (
           <div style={{ flex: 1 }}>
