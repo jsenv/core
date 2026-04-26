@@ -24,87 +24,52 @@
         useRef,
         useState,
       } from "preact/hooks";
+      import { signal, computed } from "@preact/signals";
 
-      // createItemTracker: tracker where useTrackItem() notifies subscribers after
-      // visibility changes. Consumers call useTrackerItemProp(propName) or
-      // useTrackerItemCount() to subscribe with fine-grained re-render control.
+      // createItemTracker with Preact signals.
+      // A single version signal bumps when visibility changes.
+      // computed() signals derive from it — Preact handles subscriptions,
+      // batching, and re-render triggering automatically.
       const createItemTracker = ({ filter }) => {
         const registrations = new Map(); // id → { data, order }
         let orderCounter = 0;
-        const subscribers = new Set(); // { compute, equals, setState, lastValue }
-        let notifyScheduled = false;
 
-        const visibleSorted = () =>
-          [...registrations.values()]
+        // Bumped by useTrackItem when filter(data) changes.
+        const version = signal(0);
+
+        // Base computed: sorted visible registrations.
+        // Re-evaluated only when version changes.
+        const visibleSorted = computed(() => {
+          version.value; // subscribe to version
+          return [...registrations.values()]
             .filter((r) => filter(r.data))
             .sort((a, b) => a.order - b.order);
+        });
 
+        let notifyScheduled = false;
         const notify = () => {
           if (!notifyScheduled) {
             notifyScheduled = true;
             queueMicrotask(() => {
               notifyScheduled = false;
-              for (const sub of subscribers) {
-                const newValue = sub.compute();
-                if (!sub.equals(sub.lastValue, newValue)) {
-                  sub.lastValue = newValue;
-                  sub.setState((n) => n + 1);
-                }
-              }
+              version.value++;
             });
           }
         };
 
-        const useSubscriber = (compute, equals) => {
-          const [, setState] = useState(0);
-          const subRef = useRef(null);
-          if (subRef.current === null) {
-            subRef.current = {
-              compute,
-              equals,
-              setState,
-              lastValue: compute(),
-            };
-          }
-          // Keep compute fresh (captures latest registrations closure).
-          subRef.current.compute = compute;
-          useLayoutEffect(() => {
-            subscribers.add(subRef.current);
-            return () => {
-              subscribers.delete(subRef.current);
-            };
-          }, []);
-          return compute();
-        };
+        // Reading signal.value inside a component body auto-subscribes.
+        // Re-renders only when the computed value changes.
 
-        // Subscribe to a single prop across all visible items (ordered).
-        // Re-renders only when the resulting array changes (length, order, or values).
-        const useTrackerItemProp = (propName) => {
-          const compute = () => visibleSorted().map((r) => r.data[propName]);
-          const equals = (a, b) => {
-            if (a === null) {
-              return false;
-            }
-            if (a.length !== b.length) {
-              return false;
-            }
-            for (let i = 0; i < a.length; i++) {
-              if (a[i] !== b[i]) {
-                return false;
-              }
-            }
-            return true;
-          };
-          return useSubscriber(compute, equals);
-        };
+        // Returns an array of prop values for all visible items (ordered).
+        // Re-renders when the visible list changes (visibleSorted recomputes).
+        const useTrackerItemProp = (propName) =>
+          visibleSorted.value.map((r) => r.data[propName]);
 
-        // Subscribe to the visible item count only.
-        // Re-renders only when the number of visible items changes.
-        const useTrackerItemCount = () => {
-          const compute = () => visibleSorted().length;
-          const equals = (a, b) => a === b;
-          return useSubscriber(compute, equals);
-        };
+        // Returns the count of visible items.
+        // Backed by a dedicated computed so it only re-renders when count changes
+        // (number equality — Preact signals skip re-render if value === previous).
+        const countSignal = computed(() => visibleSorted.value.length);
+        const useTrackerItemCount = () => countSignal.value;
 
         // Register an item. Calls notify() only when visibility (filter result) changes.
         const useTrackItem = (id, data) => {
@@ -131,7 +96,9 @@
           if (!isVisible) {
             return -1;
           }
-          return visibleSorted().findIndex((r) => r.order === orderRef.current);
+          return visibleSorted.value.findIndex(
+            (r) => r.order === orderRef.current,
+          );
         };
 
         return { useTrackItem, useTrackerItemProp, useTrackerItemCount };
