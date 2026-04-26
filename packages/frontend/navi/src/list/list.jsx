@@ -741,17 +741,15 @@ const ListControlled = ({
     }
   });
 
-  // Activate or deactivate the render window depending on item count.
+  // Keep the render window in range: if items shifted (e.g. after filtering),
+  // reset to start. Never deactivate — keeping the window always active prevents
+  // a flash where all items mount when the count temporarily exceeds renderBudget.
   useLayoutEffect(() => {
     const totalItems = ItemTrackerProvider.items.length;
-    if (totalItems > renderBudget) {
-      const current = renderWindowRef.current;
-      if (current !== null && current.start >= totalItems) {
-        // Window is entirely out of range (e.g. after filtering) — reset to start.
-        setRenderWindow({ start: 0, end: renderBudget });
-      }
-    } else if (renderWindowRef.current !== null) {
-      setRenderWindow(null);
+    const current = renderWindowRef.current;
+    if (current !== null && current.start >= totalItems && totalItems > 0) {
+      // Window is entirely out of range (e.g. after filtering) — reset to start.
+      setRenderWindow({ start: 0, end: renderBudget });
     }
   });
 
@@ -769,9 +767,6 @@ const ListControlled = ({
         return;
       }
       const current = renderWindowRef.current;
-      if (!current) {
-        return;
-      }
       const scrollTop = scrollContainer.scrollTop;
 
       let firstVisibleIndex;
@@ -1040,14 +1035,8 @@ export const ListItem = ({
   if (hidden) {
     return null;
   }
-  if (renderWindow !== null) {
-    if (
-      index === -1 ||
-      index < renderWindow.start ||
-      index >= renderWindow.end
-    ) {
-      return null;
-    }
+  if (index === -1 || index < renderWindow.start || index >= renderWindow.end) {
+    return null;
   }
   const separatorElement =
     separator && index > 0
