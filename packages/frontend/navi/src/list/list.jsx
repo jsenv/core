@@ -1,4 +1,8 @@
-import { getScrollContainer } from "@jsenv/dom";
+import {
+  getScrollContainer,
+  pickPositionRelativeTo,
+  visibleRectEffect,
+} from "@jsenv/dom";
 import { createContext } from "preact";
 import {
   useCallback,
@@ -99,6 +103,18 @@ const css = /* css */ `
 
     &[data-expand-x] {
       width: 100%;
+    }
+    &[popover] {
+      position: absolute;
+      inset: unset;
+      min-width: var(--list-anchor-width, 0px);
+      max-width: 95vw;
+      margin: 0;
+      padding: 0;
+    }
+    &[data-anchor-hidden] {
+      opacity: 0;
+      pointer-events: none;
     }
   }
 
@@ -209,12 +225,102 @@ const css = /* css */ `
  * keyboard-pointed state, handles navi_list_nav / navi_list_clear /
  * navi_list_confirm custom events, and exposes them via ListInteractionContext.
  * Without uiAction the list is presentation-only (ListPresentation).
+ *
+ * When popover is true the list renders as a managed popover that positions
+ * itself relative to an anchor element via navi_list_open / navi_list_close
+ * custom events.
  */
-export const List = ({ uiAction, ...rest }) => {
+export const List = ({ uiAction, popover, ...rest }) => {
+  if (popover) {
+    return <ListWithPopover uiAction={uiAction} {...rest} />;
+  }
   if (uiAction) {
     return <ListInteractive uiAction={uiAction} {...rest} />;
   }
   return <ListPresentation {...rest} />;
+};
+
+// Popover variant: handles open/close/positioning events and forwards
+// navigate/confirm/clear to the underlying list.
+const ListWithPopover = ({ ...props }) => {
+  const defaultRef = useRef();
+  const ref = props.ref || defaultRef;
+  const cleanupRef = useRef();
+
+  const dispatchToList = (event, customEventName, customEventDetail) => {
+    const listEl = ref.current;
+    if (!listEl) {
+      return;
+    }
+    const customEvent = new CustomEvent(customEventName, {
+      cancelable: true,
+      detail: { event, ...customEventDetail },
+    });
+    listEl.dispatchEvent(customEvent);
+  };
+
+  return (
+    <ListInteractive
+      {...props}
+      popover="manual"
+      ref={ref}
+      onnavi_list_open={(e) => {
+        const listContainerEl = ref.current;
+        if (!listContainerEl) {
+          return;
+        }
+        const anchor = e.detail?.anchor;
+        listContainerEl.showPopover();
+        const positionPopover = () => {
+          const anchorRect = anchor.getBoundingClientRect();
+          listContainerEl.style.setProperty(
+            "--list-anchor-width",
+            `${anchorRect.width}px`,
+          );
+          const minLeft = 1;
+          const { left, top } = pickPositionRelativeTo(
+            listContainerEl,
+            anchor,
+            {
+              positionPreference: "below",
+              minLeft,
+            },
+          );
+          listContainerEl.style.top = `${top}px`;
+          const popoverRect = listContainerEl.getBoundingClientRect();
+          const maxWidth = parseFloat(
+            getComputedStyle(listContainerEl).maxWidth,
+          );
+          if (!isNaN(maxWidth) && popoverRect.width >= maxWidth - 1) {
+            const viewportWidth = document.documentElement.clientWidth;
+            const centeredLeft = (viewportWidth - popoverRect.width) / 2;
+            listContainerEl.style.left = `${Math.max(centeredLeft, minLeft)}px`;
+          } else {
+            listContainerEl.style.left = `${Math.max(left, minLeft)}px`;
+          }
+        };
+        const cleanup = visibleRectEffect(anchor, ({ visibilityRatio }) => {
+          if (visibilityRatio <= 0.2) {
+            listContainerEl.setAttribute("data-anchor-hidden", "");
+            return;
+          }
+          listContainerEl.removeAttribute("data-anchor-hidden");
+          positionPopover();
+        });
+        cleanupRef.current = () => cleanup.disconnect();
+      }}
+      onnavi_list_close={(e) => {
+        const listContainerEl = ref.current;
+        if (!listContainerEl) {
+          return;
+        }
+        cleanupRef.current?.();
+        listContainerEl.removeAttribute("data-anchor-hidden");
+        dispatchToList(e, "navi_list_clear", e.detail);
+        listContainerEl.hidePopover();
+      }}
+    />
+  );
 };
 
 // Interactive variant: manages hover/keyboard/selection state and handles the

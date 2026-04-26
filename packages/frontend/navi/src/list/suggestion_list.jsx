@@ -1,4 +1,3 @@
-import { pickPositionRelativeTo, visibleRectEffect } from "@jsenv/dom";
 import { createContext } from "preact";
 import {
   useContext,
@@ -20,19 +19,6 @@ export const ListboxIdContext = createContext(null);
 const SuggestionSearchContext = createContext(null);
 
 const css = /* css */ `
-  .navi_list_container[popover] {
-    position: absolute;
-    inset: unset;
-    min-width: var(--suggestion-list-anchor-width, 0px);
-    max-width: 95vw;
-    margin: 0;
-    padding: 0;
-    /* border: none; */
-  }
-  &[data-anchor-hidden] {
-    opacity: 0;
-    pointer-events: none;
-  }
   &[data-lock-sizing] {
     visibility: hidden;
   }
@@ -99,10 +85,7 @@ export const SuggestionList = ({ popover, withSearch, match, ...rest }) => {
       <SuggestionListWithSearch match={match} popover={popover} {...rest} />
     );
   }
-  if (popover) {
-    return <SuggestionListWithPopover {...rest} />;
-  }
-  return <SuggestionListStandalone {...rest} />;
+  return <SuggestionListStandalone popover={popover} {...rest} />;
 };
 
 const defaultMatch = (v, searchText) =>
@@ -129,9 +112,10 @@ const SuggestionListWithSearch = ({ match = defaultMatch, ...rest }) => {
 };
 
 // Standalone variant: attaches keyboard shortcuts to the container and
-// forwards them as custom events to itself (navi_suggestion_list_* events).
+// forwards them as custom events to itself.
 const SuggestionListStandalone = ({
   keyboardInteractions = true,
+  popover,
   ...props
 }) => {
   const defaultRef = useRef();
@@ -178,80 +162,8 @@ const SuggestionListStandalone = ({
     <SuggestionListControlled
       tabIndex={keyboardInteractions ? 0 : undefined}
       {...props}
+      popover={popover}
       ref={ref}
-    />
-  );
-};
-
-// Popover variant: handles open/close/positioning events and forwards
-// navigate/confirm/clear to the listbox.
-const SuggestionListWithPopover = (props) => {
-  const defaultRef = useRef();
-  const ref = props.ref || defaultRef;
-  const dispatchToList = (...args) => dispatchCustomEventToList(ref, ...args);
-  const cleanupRef = useRef();
-
-  return (
-    <SuggestionListControlled
-      {...props}
-      popover="manual"
-      ref={ref}
-      onnavi_list_open={(e) => {
-        const listContainerEl = ref.current;
-        if (!listContainerEl) {
-          return;
-        }
-        const anchor = e.detail?.anchor;
-        listContainerEl.showPopover();
-        // TODO: if there is no anchor position relative to document.body (at the center of the viewport)
-        const positionPopover = () => {
-          const anchorRect = anchor.getBoundingClientRect();
-          listContainerEl.style.setProperty(
-            "--list-anchor-width",
-            `${anchorRect.width}px`,
-          );
-          const minLeft = 1;
-          const { left, top } = pickPositionRelativeTo(
-            listContainerEl,
-            anchor,
-            {
-              positionPreference: "below",
-              minLeft,
-            },
-          );
-          listContainerEl.style.top = `${top}px`;
-          const popoverRect = listContainerEl.getBoundingClientRect();
-          const maxWidth = parseFloat(
-            getComputedStyle(listContainerEl).maxWidth,
-          );
-          if (!isNaN(maxWidth) && popoverRect.width >= maxWidth - 1) {
-            const viewportWidth = document.documentElement.clientWidth;
-            const centeredLeft = (viewportWidth - popoverRect.width) / 2;
-            listContainerEl.style.left = `${Math.max(centeredLeft, minLeft)}px`;
-          } else {
-            listContainerEl.style.left = `${Math.max(left, minLeft)}px`;
-          }
-        };
-        const cleanup = visibleRectEffect(anchor, ({ visibilityRatio }) => {
-          if (visibilityRatio <= 0.2) {
-            listContainerEl.setAttribute("data-anchor-hidden", "");
-            return;
-          }
-          listContainerEl.removeAttribute("data-anchor-hidden");
-          positionPopover();
-        });
-        cleanupRef.current = () => cleanup.disconnect();
-      }}
-      onnavi_list_close={(e) => {
-        const listContainerEl = ref.current;
-        if (!listContainerEl) {
-          return;
-        }
-        cleanupRef.current?.();
-        listContainerEl.removeAttribute("data-anchor-hidden");
-        dispatchToList(e, "navi_list_clear", e.detail);
-        listContainerEl.hidePopover();
-      }}
     />
   );
 };
