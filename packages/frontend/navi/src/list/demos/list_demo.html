@@ -114,31 +114,113 @@
 
       // ── 2. Interactive list (uiAction) ─────────────────────────────────────────
 
+      // Sugar level for each fruit: low / medium / high
+      const FRUIT_SUGAR = {
+        Apple: "medium",
+        Banana: "high",
+        Cherry: "high",
+        Date: "high",
+        Elderberry: "low",
+        Fig: "high",
+        Grape: "high",
+        Honeydew: "medium",
+        Kiwi: "medium",
+        Lemon: "low",
+        Mango: "high",
+        Nectarine: "medium",
+        Orange: "medium",
+        Papaya: "medium",
+        Quince: "low",
+      };
+
+      const SUGAR_LEVELS = [
+        { key: "low", label: "🟢 Peu sucré" },
+        { key: "medium", label: "🟡 Moyennement sucré" },
+        { key: "high", label: "🔴 Très sucré" },
+      ];
+
       const InteractiveDemo = () => {
         const [selected, setSelected] = useState(null);
+        const [hoveredSugar, setHoveredSugar] = useState(null);
         return (
           <div className="demo-section">
             <h2>2. Interactive — uiAction</h2>
             <p>
-              Adding a <code>uiAction</code> prop makes the list interactive:
-              items highlight on hover, keyboard arrow keys navigate up/down,
-              Enter confirms and Escape clears. Click or press Enter to select.
+              Adding a <code>uiAction</code> prop makes the list interactive.
+              The legend below demonstrates <code>:-navi-pointed-by-proxy</code>
+              : hovering a sugar level sets <code>pointed</code> on the matching
+              fruits, lighting them up without mouse or keyboard involvement.
             </p>
-            <List
-              uiAction={(value) => {
-                setSelected(value);
-              }}
+            <div
+              style={{ display: "flex", gap: "16px", alignItems: "flex-start" }}
             >
-              {FRUITS.slice(0, 5).map((fruit) => (
-                <ListItem
-                  key={fruit}
-                  value={fruit}
-                  selected={selected === fruit}
+              <List
+                uiAction={(value) => {
+                  setSelected(value);
+                }}
+              >
+                {FRUITS.map((fruit) => (
+                  <ListItem
+                    key={fruit}
+                    value={fruit}
+                    selected={selected === fruit}
+                    pointed={
+                      hoveredSugar !== null &&
+                      FRUIT_SUGAR[fruit] === hoveredSugar
+                    }
+                  >
+                    {fruit}
+                  </ListItem>
+                ))}
+              </List>
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "6px",
+                  paddingTop: "4px",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: "0.8rem",
+                    color: "#888",
+                    marginBottom: "2px",
+                    fontWeight: 600,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.04em",
+                  }}
                 >
-                  {fruit}
-                </ListItem>
-              ))}
-            </List>
+                  Teneur en sucre
+                </div>
+                {SUGAR_LEVELS.map(({ key, label }) => (
+                  <div
+                    key={key}
+                    onMouseEnter={() => {
+                      setHoveredSugar(key);
+                    }}
+                    onMouseLeave={() => {
+                      setHoveredSugar(null);
+                    }}
+                    style={{
+                      padding: "5px 10px",
+                      borderRadius: "4px",
+                      fontSize: "0.85rem",
+                      cursor: "default",
+                      userSelect: "none",
+                      background: hoveredSugar === key ? "#eef2ff" : "#f5f5f5",
+                      border:
+                        hoveredSugar === key
+                          ? "1px solid #c7d2fe"
+                          : "1px solid #e5e5e5",
+                      fontWeight: hoveredSugar === key ? 600 : "normal",
+                    }}
+                  >
+                    {label}
+                  </div>
+                ))}
+              </div>
+            </div>
             <div className="value-display">{selected ?? ""}</div>
           </div>
         );
