@@ -29,13 +29,18 @@
   <body>
     <script type="module" jsenv-type="module/jsx">
       import { createContext, render } from "preact";
-      import { useContext, useLayoutEffect, useState } from "preact/hooks";
+      import {
+        useContext,
+        useLayoutEffect,
+        useRef,
+        useState,
+      } from "preact/hooks";
       import { createItemTracker } from "../item_tracker/item_tracker.jsx";
 
       const SearchContext = createContext(null);
+      // Provides a "notify filler" callback — only set in the fixed case
+      const NotifyFillerContext = createContext(null);
 
-      // 10 items: "a-1".."a-5" and "b-1".."b-5"
-      // filter "a" → 5 items, filter "b" → 5 items
       const ITEMS = [
         "a-1",
         "b-1",
@@ -60,7 +65,7 @@
           el.textContent = effectLogs[logId].join("\n");
         }
       };
-      const clearLog = (logId) => {
+      const resetLog = (logId) => {
         effectLogs[logId] = [];
         const el = document.getElementById(logId);
         if (el) {
@@ -68,40 +73,45 @@
         }
       };
 
-      // makeCase: creates an entirely independent set of components for one demo case.
-      // Each case has its own tracker so the two cases don't interfere.
+      // makeCase: independent set of components per demo case (separate tracker)
       const makeCase = (logId) => {
         const [useTrackerProvider, useTrackItem] = createItemTracker({
           filter: (data) => !data.hidden,
         });
 
-        // Item: subscribes to SearchContext → triggers separate enqueueRender on context change
+        // Item: subscribes to SearchContext → re-enqueued separately on context change.
+        // Also reads NotifyFillerContext to optionally call the fixed-case callback.
         const Item = ({ value, id }) => {
           const searchContext = useContext(SearchContext);
+          const notifyFiller = useContext(NotifyFillerContext);
           const hidden = searchContext?.searchText
             ? !value.startsWith(searchContext.searchText)
             : false;
           const index = useTrackItem(id, { hidden, value });
           useLayoutEffect(() => {
             logEffect(logId, `  [Item ${value}] index=${index}`);
-          });
+            // Fixed case: after committing, tell the parent to re-read the count
+            if (notifyFiller) {
+              notifyFiller();
+            }
+          }, [index]);
           if (hidden || index === -1) {
             return null;
           }
           return <li>{value}</li>;
         };
 
-        // Stable vnodes created once — never re-created when searchText changes.
-        // This is the key: same _original → Preact bails them out during the parent
-        // re-render → they are re-enqueued via context subscription → separate commit.
+        // Stable vnodes — never re-created when searchText changes in Case.
+        // Same _original → bail-out → re-enqueued via context subscription → separate commit.
         const itemVnodes = ITEMS.map((v) => <Item key={v} id={v} value={v} />);
 
-        return { useTrackerProvider, Item, itemVnodes };
+        return { useTrackerProvider, itemVnodes };
       };
 
-      // ── BROKEN ───────────────────────────────────────────────────────────────
-      // Filler lives OUTSIDE ItemTrackerProvider (in the parent component).
-      // Commit order: ListLikeBroken filler runs first (stale count), then items commit.
+      // ── BROKEN ─────────────────────────────────────────────────────────────────
+      // Filler lives in ListLikeBroken, OUTSIDE ItemTrackerProvider.
+      // When searchText changes: ListLikeBroken commits first → filler reads stale count.
+      // Items then commit separately (via context subscription) — too late for filler.
       const {
         useTrackerProvider: useTrackerProviderBroken,
         itemVnodes: ITEMS_BROKEN,
@@ -138,22 +148,39 @@
         );
       };
 
-      // ── FIXED ────────────────────────────────────────────────────────────────
-      // Filler is a component rendered INSIDE ItemTrackerProvider.
-      // Commit order (bottom-up): items commit first, then Filler, then ListLikeFixed.
+      // ── FIXED ──────────────────────────────────────────────────────────────────
+      // Items call notifyFiller() in their useLayoutEffect.
+      // This triggers a setState in ListLikeFixed, adding it to rerenderQueue.
+      // After ALL items have committed, ListLikeFixed re-renders and the filler
+      // reads the correct (updated) count from ItemTrackerProvider.items.
       const {
         useTrackerProvider: useTrackerProviderFixed,
         itemVnodes: ITEMS_FIXED,
       } = makeCase("log-fixed");
 
-      const FillerFixed = ({ tracker, searchText }) => {
-        // Subscribe to SearchContext — this is the key fix.
-        // When SearchContext changes, both items and Filler are enqueued via the
-        // Provider's subscriber set. Items were subscribed first (mounted before Filler)
-        // so they process first → commit first → Filler reads the correct count.
-        useContext(SearchContext);
+      const ListLikeFixed = ({ children, searchText }) => {
+        const ItemTrackerProvider = useTrackerProviderFixed();
+        const searchContext = { searchText: searchText || null };
+        const [, setTick] = useState(0);
+        // isMountedRef: prevent calling setTick during the initial synchronous render
+        // notifyScheduledRef: debounce — only one microtask-scheduled setTick per flush
+        const notifyScheduledRef = useRef(false);
+        const setTickRef = useRef(setTick);
+        setTickRef.current = setTick;
+        // Stable callback: items call this in their useLayoutEffect (separate commit pass).
+        // We schedule a microtask to batch all item notifications into one re-render.
+        const notifyStableRef = useRef(() => {
+          if (!notifyScheduledRef.current) {
+            notifyScheduledRef.current = true;
+            queueMicrotask(() => {
+              notifyScheduledRef.current = false;
+              setTickRef.current((n) => n + 1);
+            });
+          }
+        });
+
         useLayoutEffect(() => {
-          const totalItems = tracker.items.length;
+          const totalItems = ItemTrackerProvider.items.length;
           const expected = ITEMS.filter((v) =>
             searchText ? v.startsWith(searchText) : true,
           ).length;
@@ -169,28 +196,20 @@
             ? "green"
             : "red";
         });
-        return null;
-      };
 
-      const ListLikeFixed = ({ children, searchText }) => {
-        const ItemTrackerProvider = useTrackerProviderFixed();
-        const searchContext = { searchText: searchText || null };
         return (
-          <SearchContext.Provider value={searchContext}>
-            <ul>
-              <ItemTrackerProvider>
-                {children}
-                <FillerFixed
-                  tracker={ItemTrackerProvider}
-                  searchText={searchText}
-                />
-              </ItemTrackerProvider>
-            </ul>
-          </SearchContext.Provider>
+          <NotifyFillerContext.Provider value={notifyStableRef.current}>
+            <SearchContext.Provider value={searchContext}>
+              <ul>
+                <ItemTrackerProvider>{children}</ItemTrackerProvider>
+              </ul>
+            </SearchContext.Provider>
+          </NotifyFillerContext.Provider>
         );
       };
 
-      // Case: owns searchText state, receives children from outside (stable vnodes).
+      // Case: owns searchText, receives stable children from outside.
+      // Items are NOT re-created when searchText changes → they bail-out → separate commit.
       const Case = ({
         // eslint-disable-next-line no-unused-vars
         ListComponent,
@@ -210,7 +229,7 @@
               type="text"
               placeholder='Filter: "a" or "b"'
               onInput={(e) => {
-                clearLog(logId);
+                resetLog(logId);
                 setSearchText(e.currentTarget.value || null);
               }}
             />
@@ -226,7 +245,7 @@
             ListComponent={ListLikeBroken}
             statusId="status-broken"
             logId="log-broken"
-            label="❌ Broken — filler outside ItemTrackerProvider"
+            label="❌ Broken — filler outside ItemTrackerProvider, no notify"
           >
             {ITEMS_BROKEN}
           </Case>
@@ -234,7 +253,7 @@
             ListComponent={ListLikeFixed}
             statusId="status-fixed"
             logId="log-fixed"
-            label="✅ Fixed — filler inside ItemTrackerProvider"
+            label="✅ Fixed — items call notifyFiller() to trigger re-render after commit"
           >
             {ITEMS_FIXED}
           </Case>
