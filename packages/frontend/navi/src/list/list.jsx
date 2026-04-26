@@ -291,11 +291,14 @@ export const List = (props) => {
   if (props.withSearch) {
     return <ListWithSearch {...props} />;
   }
-  if (props.popover === true) {
-    return <ListWithPopover {...props} />;
-  }
   if (props.uiAction) {
     return <ListInteractive {...props} />;
+  }
+  if (props.keyboardInteractions) {
+    return <ListWithKeyboardInteractions {...props} />;
+  }
+  if (props.popover === true) {
+    return <ListWithPopover {...props} />;
   }
   return <ListPresentation {...props} />;
 };
@@ -327,31 +330,20 @@ const ListWithSearch = (props) => {
 // Popover variant: handles open/close/positioning events and forwards
 // navigate/confirm/clear to the underlying list.
 const ListWithPopover = (props) => {
-  const defaultRef = useRef();
-  const ref = props.ref || defaultRef;
   const cleanupRef = useRef();
-  const dispatchToList = (event, customEventName, customEventDetail) => {
-    const listEl = ref.current;
-    if (!listEl) {
-      return;
-    }
-    const customEvent = new CustomEvent(customEventName, {
-      cancelable: true,
-      detail: { event, ...customEventDetail },
-    });
-    listEl.dispatchEvent(customEvent);
-  };
+
+  useLayoutEffect(() => {
+    return () => {
+      cleanupRef.current?.();
+    };
+  }, []);
 
   return (
     <List
       {...props}
       popover="manual"
-      ref={ref}
       onnavi_list_open={(e) => {
-        const listContainerEl = ref.current;
-        if (!listContainerEl) {
-          return;
-        }
+        const listContainerEl = e.currentTarget;
         const anchor = e.detail?.anchor;
         listContainerEl.showPopover();
         const positionPopover = () => {
@@ -393,13 +385,12 @@ const ListWithPopover = (props) => {
         cleanupRef.current = () => cleanup.disconnect();
       }}
       onnavi_list_close={(e) => {
-        const listContainerEl = ref.current;
-        if (!listContainerEl) {
-          return;
-        }
+        const listContainerEl = e.currentTarget;
         cleanupRef.current?.();
         listContainerEl.removeAttribute("data-anchor-hidden");
-        dispatchToList(e, "navi_list_clear", e.detail);
+        listContainerEl.dispatchEvent(
+          new CustomEvent("navi_list_closed", { detail: e.detail }),
+        );
         listContainerEl.hidePopover();
       }}
     />
@@ -432,6 +423,7 @@ const ListInteractive = (props) => {
   return (
     <ListInteractionContext.Provider value={interactionContext}>
       <List
+        keyboardInteractions
         {...props}
         uiAction={undefined}
         itemsRef={itemsRef}
@@ -485,15 +477,8 @@ const ListPresentation = (props) => {
   return <ListControlled {...props} />;
 };
 
-const ListControlled = (props) => {
-  if (props.keyboardInteractions) {
-    return <ListWithKeyboardInteractions {...props} />;
-  }
-  return <ListBase {...props} />;
-};
-
 const ListWithKeyboardInteractions = (props) => {
-  const onKeyDown = createOnKeyDownForShortcuts([
+  const onKeyDownForShortcuts = createOnKeyDownForShortcuts([
     {
       key: "arrowdown",
       description: "Point to next item",
@@ -573,17 +558,21 @@ const ListWithKeyboardInteractions = (props) => {
       },
     },
   ]);
+
   return (
-    <ListBase
+    <List
       {...props}
       keyboardInteractions={undefined}
-      onKeyDown={onKeyDown}
+      onKeyDown={(e) => {
+        onKeyDownForShortcuts(e);
+        props.onKeyDown?.(e);
+      }}
     />
   );
 };
 
 // Internal renderer shared by ListInteractive, ListPresentation, and ListWithPopover.
-const ListBase = ({
+const ListControlled = ({
   renderBudget = RENDER_BUDGET_DEFAULT,
   listId,
   listRole,
@@ -604,6 +593,7 @@ const ListBase = ({
   ...rest
 }) => {
   import.meta.css = css;
+
   // When keyboard interactions are enabled, make the container focusable so
   // arrow keys work without the user having to click first.
   if (keyboardInteractions && tabIndex === undefined) {
