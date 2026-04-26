@@ -300,6 +300,15 @@ export const PSEUDO_CLASSES = {
   ":-navi-pointed": {
     attribute: "data-pointed",
   },
+  ":-navi-pointed-by-mouse": {
+    attribute: "data-pointed-by-mouse",
+  },
+  ":-navi-pointed-by-keyboard": {
+    attribute: "data-pointed-by-keyboard",
+  },
+  ":-navi-pointed-by-proxy": {
+    attribute: "data-pointed-by-proxy",
+  },
   ":-navi-selected": {
     attribute: "data-selected",
   },

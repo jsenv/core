@@ -950,6 +950,7 @@ export const ListItem = ({
   value,
   hidden,
   selected,
+  pointed,
   children,
   ...rest
 }) => {
@@ -972,9 +973,11 @@ export const ListItem = ({
   }
 
   const index = useTrackListItem(id, { id, hidden, value });
-  const isPointed =
-    keyboardPointedValue === value || mousePointedValue === value;
-  const isKeyboardPointed = keyboardPointedValue === value;
+  const isPointedByMouse = mousePointedValue === value;
+  const isPointedByKeyboard = keyboardPointedValue === value;
+  const isPointedByProxy = Boolean(pointed);
+  const isPointed = isPointedByMouse || isPointedByKeyboard || isPointedByProxy;
+  const isKeyboardPointed = isPointedByKeyboard;
 
   const defaultRef = useRef(null);
   const ref = rest.ref || defaultRef;
@@ -1081,6 +1084,9 @@ export const ListItem = ({
         ref={ref}
         basePseudoState={{
           ":-navi-pointed": isPointed,
+          ":-navi-pointed-by-mouse": isPointedByMouse,
+          ":-navi-pointed-by-keyboard": isPointedByKeyboard,
+          ":-navi-pointed-by-proxy": isPointedByProxy,
           ":-navi-selected": selected,
           ...rest.basePseudoState,
         }}
@@ -1113,7 +1119,13 @@ const LIST_ITEM_STYLE_CSS_VARS = {
     backgroundColor: "--suggestion-background-color-highlight",
   },
 };
-const LIST_ITEM_PSEUDO_CLASSES = [":-navi-pointed", ":-navi-selected"];
+const LIST_ITEM_PSEUDO_CLASSES = [
+  ":-navi-pointed",
+  ":-navi-pointed-by-mouse",
+  ":-navi-pointed-by-keyboard",
+  ":-navi-pointed-by-proxy",
+  ":-navi-selected",
+];
 const LIST_ITEM_PSEUDO_ELEMENTS = ["::highlight"];
 
 /**
