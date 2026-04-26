@@ -57,41 +57,42 @@
 
         let notifyScheduled = false;
         const notify = () => {
-          if (!notifyScheduled) {
-            notifyScheduled = true;
-            queueMicrotask(() => {
-              notifyScheduled = false;
+          if (notifyScheduled) {
+            return;
+          }
+          notifyScheduled = true;
+          queueMicrotask(() => {
+            notifyScheduled = false;
 
-              // Recompute sorted visible list once for this batch.
-              orderedVisible = [...registrations.values()]
-                .filter((r) => filter(r.data))
-                .sort((a, b) => a.order - b.order);
+            // Recompute sorted visible list once for this batch.
+            orderedVisible = [...registrations.values()]
+              .filter((r) => filter(r.data))
+              .sort((a, b) => a.order - b.order);
 
-              // Update count signal only if count changed.
-              const newCount = orderedVisible.length;
-              if (countSignal.peek() !== newCount) {
-                countSignal.value = newCount;
-              }
+            // Update count signal only if count changed.
+            const newCount = orderedVisible.length;
+            if (countSignal.peek() !== newCount) {
+              countSignal.value = newCount;
+            }
 
-              // Update each prop signal only if its array content changed.
-              for (const [propName, sig] of propSignals) {
-                const prev = sig.peek();
-                const next = orderedVisible.map((r) => r.data[propName]);
-                let changed = prev.length !== next.length;
-                if (!changed) {
-                  for (let i = 0; i < next.length; i++) {
-                    if (prev[i] !== next[i]) {
-                      changed = true;
-                      break;
-                    }
+            // Update each prop signal only if its array content changed.
+            for (const [propName, sig] of propSignals) {
+              const prev = sig.peek();
+              const next = orderedVisible.map((r) => r.data[propName]);
+              let changed = prev.length !== next.length;
+              if (!changed) {
+                for (let i = 0; i < next.length; i++) {
+                  if (prev[i] !== next[i]) {
+                    changed = true;
+                    break;
                   }
                 }
-                if (changed) {
-                  sig.value = next;
-                }
               }
-            });
-          }
+              if (changed) {
+                sig.value = next;
+              }
+            }
+          });
         };
 
         // Reading signal.value in a component body auto-subscribes.
