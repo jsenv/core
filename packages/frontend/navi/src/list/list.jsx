@@ -26,6 +26,11 @@ export const ListInteractionContext = createContext(null);
 // and highlights matching text via the CSS Highlight API.
 export const ListSearchContext = createContext(null);
 
+// Provided by ListWithSearch so descendants (e.g. an Input) can update the
+// search text, and so that the listbox id is stable across renders.
+export const SetSearchTextContext = createContext(null);
+export const ListboxIdContext = createContext(null);
+
 // Module-level shared Highlight instance for navi-search-match.
 let naviSearchHighlight = null;
 const getNaviSearchHighlight = () => {
@@ -252,6 +257,10 @@ const css = /* css */ `
  * for virtual scrolling. Items must use <ListItem> to participate in tracking.
  *
  * Props:
+ *   withSearch           — when true, the list owns its search text state internally.
+ *                          An <Input> placed inside auto-connects via SetSearchTextContext.
+ *                          Each item is hidden when it doesn't match and matching text
+ *                          is highlighted.
  *   keyboardInteractions  — when true, attaches arrow/enter/escape keyboard shortcuts
  *                          that dispatch navi_list_nav / navi_list_confirm / navi_list_clear
  *                          to the list container. Pair with uiAction for a full keyboard-
@@ -277,6 +286,9 @@ const css = /* css */ `
  *   ...rest              — forwarded to the outer scroll container <Box>
  */
 export const List = (props) => {
+  if (props.withSearch) {
+    return <ListWithSearch {...props} />;
+  }
   if (props.popover === true) {
     return <ListWithPopover {...props} />;
   }
@@ -284,6 +296,28 @@ export const List = (props) => {
     return <ListInteractive {...props} />;
   }
   return <ListPresentation {...props} />;
+};
+
+// withSearch variant: owns searchText state, provides SetSearchTextContext +
+// ListboxIdContext, then re-renders List with searchText as a prop.
+const defaultMatch = (v, searchText) =>
+  String(v).toLowerCase().includes(searchText);
+const ListWithSearch = ({ match = defaultMatch, withSearch: _w, ...rest }) => {
+  const [searchText, setSearchText] = useState(null);
+  const listboxId = useId();
+
+  return (
+    <SetSearchTextContext.Provider value={setSearchText}>
+      <ListboxIdContext.Provider value={listboxId}>
+        <List
+          {...rest}
+          searchText={searchText}
+          match={match}
+          keyboardInteractions={false}
+        />
+      </ListboxIdContext.Provider>
+    </SetSearchTextContext.Provider>
+  );
 };
 
 // Popover variant: handles open/close/positioning events and forwards
@@ -562,9 +596,28 @@ const ListBase = ({
   lockSize,
   searchText,
   match,
+  keyboardInteractions,
   ...rest
 }) => {
   import.meta.css = css;
+  // When keyboard interactions are enabled, make the container focusable so
+  // arrow keys work without the user having to click first.
+  if (keyboardInteractions && tabIndex === undefined) {
+    tabIndex = 0;
+  }
+
+  // Default lockSize to true when rendered inside a Dropdown.
+  const isInsideDropdown = useIsInsideDropdown();
+  if (lockSize === undefined && isInsideDropdown) {
+    lockSize = true;
+  }
+
+  // If no explicit listId is given, fall back to whatever ListboxIdContext
+  // provides (set by ListWithSearch).
+  const listboxIdFromContext = useContext(ListboxIdContext);
+  if (!listId && listboxIdFromContext) {
+    listId = listboxIdFromContext;
+  }
 
   const refDefault = useRef(null);
   const ref = rest.ref || refDefault;

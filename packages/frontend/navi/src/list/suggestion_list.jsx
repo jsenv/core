@@ -1,23 +1,11 @@
-import { createContext } from "preact";
 import {
-  useContext,
-  useId,
-  useState,
-} from "preact/hooks";
+  List,
+  ListItem,
+  ListboxIdContext,
+  SetSearchTextContext,
+} from "./list.jsx";
 
-import { useIsInsideDropdown } from "./dropdown.jsx";
-import { List, ListItem } from "./list.jsx";
-
-export const SetSearchTextContext = createContext(null);
-// Provided so the listbox uses the same stable id that the input's
-// aria-controls points to.
-export const ListboxIdContext = createContext(null);
-
-const css = /* css */ `
-  &[data-lock-sizing] {
-    visibility: hidden;
-  }
-`;
+export { ListboxIdContext, SetSearchTextContext };
 
 /**
  * SuggestionList — a keyboard-navigable, filterable listbox.
@@ -47,90 +35,14 @@ const css = /* css */ `
  *   renderBudget — max items kept in the DOM at once (virtual scroll). Default 100.
  *   ...rest      — forwarded to the underlying <ul> element.
  */
-export const SuggestionList = ({ popover, withSearch, match, ...rest }) => {
-  import.meta.css = css;
-  if (withSearch) {
-    return (
-      <SuggestionListWithSearch match={match} popover={popover} {...rest} />
-    );
-  }
-  return <SuggestionListStandalone popover={popover} {...rest} />;
-};
-
-const defaultMatch = (v, searchText) =>
-  String(v).toLowerCase().includes(searchText);
-
-// Owns searchText state and provides SetSearchTextContext + ListboxIdContext.
-// Passes searchText and match as props down to the inner SuggestionList.
-const SuggestionListWithSearch = ({ match = defaultMatch, ...rest }) => {
-  const [searchText, setSearchText] = useState("");
-  const listboxId = useId();
-
-  return (
-    <SetSearchTextContext.Provider value={setSearchText}>
-      <ListboxIdContext.Provider value={listboxId}>
-        <SuggestionList
-          {...rest}
-          searchText={searchText}
-          match={match}
-          keyboardInteractions={false}
-        />
-      </ListboxIdContext.Provider>
-    </SetSearchTextContext.Provider>
-  );
-};
-
-// Standalone variant: attaches keyboard shortcuts to the container.
-const SuggestionListStandalone = ({
-  keyboardInteractions = true,
-  popover,
-  ...props
-}) => {
-  return (
-    <SuggestionListControlled
-      tabIndex={keyboardInteractions ? 0 : undefined}
-      keyboardInteractions={keyboardInteractions}
-      {...props}
-      popover={popover}
-    />
-  );
-};
-
-// Core controller: provides listbox ARIA role, reads listbox id from context,
-// and defaults lockSize to true when inside a Dropdown.
-const SuggestionListControlled = ({
-  ref,
-  uiAction,
-  fallback = "No results",
-  children,
-  renderBudget,
-  searchText,
-  match = defaultMatch,
-  lockSize,
-  ...rest
-}) => {
-  const isInsideDropdown = useIsInsideDropdown();
-  if (lockSize === undefined && isInsideDropdown) {
-    lockSize = true;
-  }
-
-  const listboxIdFromContext = useContext(ListboxIdContext);
-
+export const SuggestionList = (props) => {
   return (
     <List
-      {...rest}
-      ref={ref}
-      listId={listboxIdFromContext}
+      keyboardInteractions={true}
       listRole="listbox"
-      fallback={fallback}
-      renderBudget={renderBudget}
-      uiAction={uiAction}
-      searchText={searchText}
-      match={match}
-      lockSize={lockSize}
-    >
-      {children}
-    </List>
+      fallback="No results"
+      {...props}
+    />
   );
 };
 
