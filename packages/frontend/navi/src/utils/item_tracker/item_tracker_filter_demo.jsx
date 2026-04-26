@@ -1,17 +1,43 @@
 /**
  * Item Tracker – Filter Demo
  *
- * Verifies that visibleCount (read as ItemTrackerProvider.items.length) is
- * always correct in the same render pass as the filter change.
+ * Reproduces the one-render-behind bug:
  *
- * The fix: expose `items` as a live array reference. By the time any sibling
- * or ancestor layoutEffect reads it, all Item children have already run their
- * own commit/decommit effects (bottom-up ordering) — so items.length is
- * already accurate. No snapshot ref needed.
+ * THE BUG: in Preact, layout effects fire TOP-DOWN (parent before children).
+ * When the ancestor of ItemTrackerProvider reads committedItems.length in its
+ * layoutEffect, child effects have not yet run — so committedItems still
+ * reflects the PREVIOUS render's filter state.
+ *
+ * This is exactly the list.jsx filler bug: filler heights are one render late.
+ *
+ * The scenario:
+ *   - ListBox owns ItemTrackerProvider + reads committedItems in a layout effect
+ *   - ListBox re-renders when filter changes (receives filter as prop)
+ *   - BUT its children (Item elements) are created once with useMemo in App
+ *     → same vnode reference → Preact bails out (no registerItem calls)
+ *   - Filter is propagated to Item via context (not props) — so Item re-renders
+ *     happen in a SEPARATE batch after the current render+commit cycle
+ *   - Result: ListBox's layout effect sees the stale committedItems
+ *
+ * Structure:
+ *   App (useMemo for stable children)
+ *     ListBox (re-renders on filter change, has the layout effect)
+ *       ItemTrackerProvider (resets on ListBox render)
+ *         {stableChildren} ← bails out, no registerItem
+ *         [FilterContext change → Item re-renders scheduled for next batch]
  */
 
-import { useLayoutEffect, useState } from "preact/hooks";
+import { createContext } from "preact";
+import {
+  useContext,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "preact/hooks";
 import { createItemTracker } from "./item_tracker.jsx";
+
+const FilterContext = createContext("");
 
 const ITEMS = [
   "Alpha",
@@ -31,9 +57,11 @@ const [useItemTrackerProvider, useTrackItem] = createItemTracker({
 });
 
 // ---------------------------------------------------------------------------
-// Item — hides itself when it doesn't match the filter
+// Item — reads filter from context (not from props)
+// This makes its re-render context-driven, decoupled from the parent's render.
 // ---------------------------------------------------------------------------
-const Item = ({ value, filter }) => {
+const Item = ({ value }) => {
+  const filter = useContext(FilterContext);
   const hidden = filter
     ? !value.toLowerCase().includes(filter.toLowerCase())
     : false;
@@ -45,68 +73,83 @@ const Item = ({ value, filter }) => {
 };
 
 // ---------------------------------------------------------------------------
-// Stat — reads visibleCount in a layoutEffect (same as SuggestionListbox filler)
+// ListBox — receives filter as a prop so it re-renders when filter changes.
+// Receives children as stable prop from App (useMemo).
+// Has the layout effect that reads committedItems BEFORE child effects run.
 // ---------------------------------------------------------------------------
-const Stat = ({ ItemTrackerProvider }) => {
+const ListBox = ({ children, filter, ItemTrackerProvider, logRef }) => {
+  // This effect fires BEFORE item effects (parent before children in Preact).
+  // committedItems reflects the PREVIOUS render — the bug.
   useLayoutEffect(() => {
-    // items is a live array: by the time this effect fires (after Item effects,
-    // bottom-up), it already reflects the current filter.
     const count = ItemTrackerProvider.items.length;
-    console.debug(`[STAT] items.length=${count}`);
-    const el = document.getElementById("stat-count");
-    if (el) {
-      el.textContent = String(count);
+    const entry = `filter="${filter}" → got ${count}\n`;
+    logRef.current = [...logRef.current.slice(-9), entry];
+    const logEl = document.getElementById("log");
+    if (logEl) {
+      logEl.textContent = logRef.current.join("");
+    }
+    const countEl = document.getElementById("visible-count");
+    if (countEl) {
+      countEl.textContent = String(count);
     }
   });
+
   return (
-    <div className="stat">
-      Visible count (read in layoutEffect): <b id="stat-count">?</b>
-    </div>
+    <FilterContext.Provider value={filter}>
+      <ItemTrackerProvider>{children}</ItemTrackerProvider>
+    </FilterContext.Provider>
   );
 };
 
 // ---------------------------------------------------------------------------
-// ListWrapper — owns the Provider and passes items as children props.
-// This is the key: children are passed as props from App, so Preact may bail
-// out on their re-render when only ListWrapper state changes.
-// ---------------------------------------------------------------------------
-const ListWrapper = ({ children, ItemTrackerProvider }) => {
-  console.debug("[ListWrapper] render");
-  return (
-    <ItemTrackerProvider>
-      <ul>{children}</ul>
-      <Stat ItemTrackerProvider={ItemTrackerProvider} />
-    </ItemTrackerProvider>
-  );
-};
-
-// ---------------------------------------------------------------------------
-// App
+// App — creates stable children via useMemo, owns filter state.
 // ---------------------------------------------------------------------------
 export const App = () => {
   const [filter, setFilter] = useState("");
   const ItemTrackerProvider = useItemTrackerProvider();
+  const logRef = useRef([]);
 
-  console.debug(`[App] render filter="${filter}"`);
+  // Stable JSX — same vnode references across renders.
+  // When filter changes, ListBox re-renders but these children are unchanged
+  // → Preact bails out → registerItem is NOT called in that render cycle.
+  const stableChildren = useMemo(
+    () => ITEMS.map((value) => <Item key={value} value={value} />),
+    [],
+  );
+
+  const expectedCount = ITEMS.filter((v) =>
+    filter ? v.toLowerCase().includes(filter.toLowerCase()) : true,
+  ).length;
 
   return (
-    <div>
-      <h2>Item Tracker – Filter Two-Pass Demo</h2>
-      <p style="font-size:13px;color:#666">
-        Type in the filter. The <code>items.length</code> in the console should
-        always match the displayed items — in a single render pass.
+    <div className="demo">
+      <h2>Item Tracker – Filter: parent effect reads stale committedItems</h2>
+      <p style={{ fontSize: "13px", color: "#666" }}>
+        Children are stable (useMemo). Filter propagates via context. ListBox
+        re-renders on filter change but children bail out (no registerItem). The
+        Got count is read from committedItems.length in a parent layout effect —
+        always one render behind.
+      </p>
+      <p>
+        Expected: <b>{expectedCount}</b> | Got: <b id="visible-count">?</b>
       </p>
       <input
         type="text"
-        placeholder="Filter items…"
+        placeholder="Filter items (try: a, al, b)..."
         value={filter}
         onInput={(e) => setFilter(e.currentTarget.value)}
       />
-      <ListWrapper ItemTrackerProvider={ItemTrackerProvider}>
-        {ITEMS.map((value) => (
-          <Item key={value} value={value} filter={filter} />
-        ))}
-      </ListWrapper>
+      <ListBox
+        filter={filter}
+        ItemTrackerProvider={ItemTrackerProvider}
+        logRef={logRef}
+      >
+        {stableChildren}
+      </ListBox>
+      <pre
+        id="log"
+        style={{ background: "#1e1e1e", padding: "10px", color: "#ccc" }}
+      />
     </div>
   );
 };

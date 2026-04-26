@@ -1,27 +1,21 @@
 /**
- * ItemTracker – Stable Children Bug (regression test)
+ * ItemTracker – Stable Children Bug
  *
- * This file was created to reproduce and diagnose a bug in ItemTracker, and
- * now serves as a regression test to ensure it stays fixed.
+ * THE BUG: when the tracker's parent re-renders but passes the same `children`
+ * prop reference, Preact skips re-rendering those children (bailout). They
+ * don't call registerItem() again. After reset(), renderCount is 0 and
+ * committedItems is only updated later in child effects.
  *
- * THE BUG (was): when the Provider's parent re-renders due to its own state
- * change but passes the same `children` prop reference, Preact skips
- * re-rendering the children. They don't call registerItem() again. The tracker
- * was therefore empty after reset(), even though the DOM still contained all
- * the items. Reading ItemTrackerProvider.items in a layout effect would return
- * [] instead of the actual items.
+ * Reading committedItems.length in a parent layout effect returns 0 (stale)
+ * even though the items are still in the DOM.
  *
- * This is exactly what happened in SuggestionListbox: pressing ArrowDown
- * called setKeyboardPointedValue() → SuggestionListbox re-rendered →
- * ItemTrackerProvider rendered (reset) → Suggestion wrappers were skipped
- * (their `children` JSX is stable) → ItemTrackerProvider.items === [] →
- * keyboard navigation broke.
+ * This is the EXACT scenario in list.jsx when renderWindow state changes
+ * (e.g. scrolling): ListControlled re-renders, passes the same children prop
+ * to UnorderedList → ItemTrackerProvider → stable children bail out.
+ * The filler effect in ListControlled reads committedItems.length = 0 (stale).
  *
- * THE FIX: per-item useLayoutEffect hooks maintain a `committedItems` snapshot
- * independently of renderItems. Bailout → no item effects fire → committedItems
- * unchanged. Genuine unmount → decommitItem cleanup → committedItems updated.
- *
- * Scenario B below should always show 3 — even after clicking the button.
+ * Scenario B below shows the bug: after clicking the button, the count
+ * should stay 3 but drops to 0 (renderCount) then recovers to 3 next render.
  */
 
 import { useLayoutEffect, useState } from "preact/hooks";
