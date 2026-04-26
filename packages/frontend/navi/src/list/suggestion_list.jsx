@@ -14,13 +14,19 @@ import {
 
 import { useKeyboardShortcuts } from "../keyboard/keyboard_shortcuts.js";
 import { useIsInsideDropdown } from "./dropdown.jsx";
-import { List, ListItem, RenderWindowContext } from "./list.jsx";
+import {
+  List,
+  ListInteractionContext,
+  ListItem,
+  RenderWindowContext,
+} from "./list.jsx";
 
 export const SetSearchTextContext = createContext(null);
 // Provided so the listbox uses the same stable id that the input's
 // aria-controls points to.
 export const ListboxIdContext = createContext(null);
-const ListInteractionContext = createContext(null);
+// Provides searchText + match to Suggestion descendants.
+const SuggestionSearchContext = createContext(null);
 
 const css = /* css */ `
   .navi_list_container[popover] {
@@ -259,8 +265,8 @@ const SuggestionListWithPopover = (props) => {
   );
 };
 
-// Core controller: wires the generic List to the suggestion-specific
-// keyboard events, hover/selection state, and ARIA attributes.
+// Core controller: wires the generic List to suggestion-specific concerns:
+// search text filtering/highlighting and optional size locking.
 //
 // searchText — the current search string. When lockSize is also enabled, the
 //              searchText is bypassed on the first render so the container can
@@ -289,20 +295,14 @@ const SuggestionListControlled = ({
 
   const listboxIdFromContext = useContext(ListboxIdContext);
 
-  const [mousePointedValue, setMousePointedValue] = useState(null);
-  const [keyboardPointedValue, setKeyboardPointedValue] = useState(null);
-  const [anchorValue, setAnchorValue] = useState(null);
-  const anchorValueRef = useRef(null);
-  anchorValueRef.current = anchorValue;
-
-  // lockSize: capture container dimensions in unfiltered state, then apply filter.
-  // filterBypassed starts true so the first render always shows all items.
+  // lockSize: capture container dimensions in unfiltered state, then apply searchText.
+  // searchTextBypassed starts true so the first render always shows all items.
   const defaultRef = useRef(null);
   const resolvedRef = ref || defaultRef;
   const sizeLocked = useRef(false);
-  const filterRef = useRef(searchText);
-  filterRef.current = searchText;
-  const [filterBypassed, setFilterBypassed] = useState(
+  const searchTextRef = useRef(searchText);
+  searchTextRef.current = searchText;
+  const [searchTextBypassed, setSearchTextBypassed] = useState(
     () => Boolean(lockSize) && !sizeLocked.current,
   );
   useLayoutEffect(() => {
@@ -339,8 +339,8 @@ const SuggestionListControlled = ({
       sizeLocked.current = true;
       observer.disconnect();
       listContainerEl.removeAttribute("data-lock-sizing");
-      if (filterRef.current) {
-        setFilterBypassed(false);
+      if (searchTextRef.current) {
+        setSearchTextBypassed(false);
       }
     });
     observer.observe(listContainerEl);
@@ -352,80 +352,24 @@ const SuggestionListControlled = ({
   }, [lockSize]);
 
   // While bypassing the searchText (for lockSize measurement), treat as empty.
-  const effectiveSearchText = filterBypassed ? undefined : searchText;
+  const effectiveSearchText = searchTextBypassed ? undefined : searchText;
 
-  const interactionContext = {
-    mousePointedValue,
-    keyboardPointedValue,
-    searchText: effectiveSearchText,
-    match,
-    onHover: (value) => {
-      setMousePointedValue(value);
-    },
-    onSelect: (value, event) => {
-      setAnchorValue(value);
-      uiAction?.(value, event);
-    },
-  };
-
-  const itemsRef = useRef([]);
+  const searchContext = { searchText: effectiveSearchText, match };
 
   return (
-    <List
-      {...rest}
-      ref={resolvedRef}
-      listId={listboxIdFromContext}
-      listRole="listbox"
-      fallback={fallback}
-      renderBudget={renderBudget}
-      itemsRef={itemsRef}
-      onnavi_list_nav={(e) => {
-        const { direction, event = e } = e.detail;
-        const items = itemsRef.current;
-        if (items.length === 0) {
-          return;
-        }
-        const current = anchorValueRef.current;
-        const onNav = (value) => {
-          event.preventDefault();
-          anchorValueRef.current = value;
-          setKeyboardPointedValue(value);
-          setAnchorValue(value);
-        };
-        const values = items.map((item) => item.value);
-        if (direction === "down") {
-          const idx = current === null ? -1 : values.indexOf(current);
-          const belowValue = values[idx < values.length - 1 ? idx + 1 : idx];
-          onNav(belowValue);
-        } else if (direction === "up") {
-          const idx = current === null ? -1 : values.indexOf(current);
-          const aboveValue = values[idx > 0 ? idx - 1 : idx];
-          onNav(aboveValue);
-        } else if (direction === "first") {
-          const firstValue = values[0];
-          onNav(firstValue);
-        } else if (direction === "last") {
-          const lastValue = values[values.length - 1];
-          onNav(lastValue);
-        }
-      }}
-      onnavi_list_clear={() => {
-        setMousePointedValue(null);
-        setKeyboardPointedValue(null);
-        setAnchorValue(null);
-      }}
-      onnavi_list_confirm={(e) => {
-        const current = anchorValueRef.current;
-        if (current === null) {
-          return;
-        }
-        uiAction?.(current, e);
-      }}
-    >
-      <ListInteractionContext.Provider value={interactionContext}>
+    <SuggestionSearchContext.Provider value={searchContext}>
+      <List
+        {...rest}
+        ref={resolvedRef}
+        listId={listboxIdFromContext}
+        listRole="listbox"
+        fallback={fallback}
+        renderBudget={renderBudget}
+        uiAction={uiAction}
+      >
         {children}
-      </ListInteractionContext.Provider>
-    </List>
+      </List>
+    </SuggestionSearchContext.Provider>
   );
 };
 
@@ -452,14 +396,10 @@ const getNaviSuggestionHighlight = () => {
  * - CSS Highlight API text matching
  */
 export const Suggestion = ({ value, hidden, selected, children, ...rest }) => {
-  const {
-    mousePointedValue,
-    keyboardPointedValue,
-    searchText,
-    match,
-    onHover,
-    onSelect,
-  } = useContext(ListInteractionContext);
+  const interactionContext = useContext(ListInteractionContext);
+  const { mousePointedValue, keyboardPointedValue, onHover, onSelect } =
+    interactionContext || {};
+  const { searchText, match } = useContext(SuggestionSearchContext) || {};
   const isPointed =
     keyboardPointedValue === value || mousePointedValue === value;
   const isKeyboardPointed = keyboardPointedValue === value;

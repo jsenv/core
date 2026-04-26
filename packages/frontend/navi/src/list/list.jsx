@@ -12,6 +12,10 @@ import {
 import { Box } from "../box/box.jsx";
 import { createItemTracker } from "../utils/item_tracker/item_tracker.jsx";
 
+// Provided by ListInteractive to give descendants (e.g. Suggestion) access
+// to hover/keyboard-pointed/selection state and the onHover/onSelect callbacks.
+export const ListInteractionContext = createContext(null);
+
 // When total rendered items exceeds renderBudget, a render window [start, end)
 // is activated to cap the number of DOM nodes. Items outside the window return
 // null. The window slides as the user scrolls, using actual DOM positions
@@ -201,6 +205,98 @@ const css = /* css */ `
 /**
  * List — generic virtualized scroll container.
  *
+ * When uiAction is provided the list becomes interactive: it tracks hover and
+ * keyboard-pointed state, handles navi_list_nav / navi_list_clear /
+ * navi_list_confirm custom events, and exposes them via ListInteractionContext.
+ * Without uiAction the list is presentation-only (ListPresentation).
+ */
+export const List = ({ uiAction, ...rest }) => {
+  if (uiAction) {
+    return <ListInteractive uiAction={uiAction} {...rest} />;
+  }
+  return <ListPresentation {...rest} />;
+};
+
+// Interactive variant: manages hover/keyboard/selection state and handles the
+// navi event protocol, then delegates rendering to ListControlled.
+const ListInteractive = ({ uiAction, ...rest }) => {
+  const [mousePointedValue, setMousePointedValue] = useState(null);
+  const [keyboardPointedValue, setKeyboardPointedValue] = useState(null);
+  const [anchorValue, setAnchorValue] = useState(null);
+  const anchorValueRef = useRef(null);
+  anchorValueRef.current = anchorValue;
+  const itemsRef = useRef([]);
+
+  const interactionContext = {
+    mousePointedValue,
+    keyboardPointedValue,
+    onHover: (value) => {
+      setMousePointedValue(value);
+    },
+    onSelect: (value, event) => {
+      setAnchorValue(value);
+      uiAction(value, event);
+    },
+  };
+
+  return (
+    <ListInteractionContext.Provider value={interactionContext}>
+      <ListControlled
+        {...rest}
+        itemsRef={itemsRef}
+        onnavi_list_nav={(e) => {
+          const { direction, event = e } = e.detail;
+          const items = itemsRef.current;
+          if (items.length === 0) {
+            return;
+          }
+          const current = anchorValueRef.current;
+          const onNav = (value) => {
+            event.preventDefault();
+            anchorValueRef.current = value;
+            setKeyboardPointedValue(value);
+            setAnchorValue(value);
+          };
+          const values = items.map((item) => item.value);
+          if (direction === "down") {
+            const idx = current === null ? -1 : values.indexOf(current);
+            const belowValue = values[idx < values.length - 1 ? idx + 1 : idx];
+            onNav(belowValue);
+          } else if (direction === "up") {
+            const idx = current === null ? -1 : values.indexOf(current);
+            const aboveValue = values[idx > 0 ? idx - 1 : idx];
+            onNav(aboveValue);
+          } else if (direction === "first") {
+            onNav(values[0]);
+          } else if (direction === "last") {
+            onNav(values[values.length - 1]);
+          }
+        }}
+        onnavi_list_clear={() => {
+          setMousePointedValue(null);
+          setKeyboardPointedValue(null);
+          setAnchorValue(null);
+        }}
+        onnavi_list_confirm={(e) => {
+          const current = anchorValueRef.current;
+          if (current === null) {
+            return;
+          }
+          uiAction(current, e);
+        }}
+      />
+    </ListInteractionContext.Provider>
+  );
+};
+
+// Presentation-only variant: no interaction state, no navi event handling.
+const ListPresentation = (props) => {
+  return <ListControlled {...props} />;
+};
+
+/**
+ * ListControlled — generic virtualized scroll container.
+ *
  * Renders children inside a scrollable container with an optional render budget
  * for virtual scrolling. Items must use <ListItem> to participate in tracking.
  *
@@ -212,7 +308,7 @@ const css = /* css */ `
  *   separator            — element or function(index) inserted between visible items
  *   ...rest              — forwarded to the outer scroll container <Box>
  */
-export const List = ({
+const ListControlled = ({
   renderBudget = RENDER_BUDGET_DEFAULT,
   listId,
   listRole,
