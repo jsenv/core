@@ -19,19 +19,19 @@ import { createOnKeyDownForShortcuts } from "../keyboard/keyboard_shortcuts.js";
 import { createItemTracker } from "../utils/item_tracker/item_tracker.jsx";
 import { useIsInsideDropdown } from "./dropdown.jsx";
 
-// Provided by ListInteractive to give descendants (e.g. Suggestion) access
-// to hover/keyboard-pointed/selection state and the onHover/onSelect callbacks.
-export const ListInteractionContext = createContext(null);
-
-// Provided to give descendants access to a search string and match function.
-// When present, ListItem automatically hides itself if the value doesn't match
-// and highlights matching text via the CSS Highlight API.
-export const ListSearchContext = createContext(null);
-
 // Provided by ListWithSearch so descendants (e.g. an Input) can update the
 // search text, and so that the listbox id is stable across renders.
 export const SetSearchTextContext = createContext(null);
 export const ListboxIdContext = createContext(null);
+
+// Provided by ListInteractive to give descendants (e.g. Suggestion) access
+// to hover/keyboard-pointed/selection state and the onHover/onSelect callbacks.
+const ListInteractionContext = createContext(null);
+
+// Provided to give descendants access to a search string and match function.
+// When present, ListItem automatically hides itself if the value doesn't match
+// and highlights matching text via the CSS Highlight API.
+const ListSearchContext = createContext(null);
 
 // Module-level shared Highlight instance for navi-search-match.
 let naviSearchHighlight = null;
