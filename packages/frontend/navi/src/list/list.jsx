@@ -135,6 +135,9 @@ const css = /* css */ `
       opacity: 0;
       pointer-events: none;
     }
+    &[data-lock-sizing] {
+      visibility: hidden;
+    }
   }
 
   .navi_list {
@@ -264,6 +267,13 @@ const css = /* css */ `
  *   itemHeightIsVariable — set false for uniform-height items (faster scroll math)
  *   fallback             — content shown when no items are visible
  *   separator            — element or function(index) inserted between visible items
+ *   searchText           — when provided, items with a non-matching value are hidden
+ *                          and matching text is highlighted via the CSS Highlight API.
+ *   match                — custom match function (value, lowerCaseSearchText) => boolean.
+ *                          Default: substring match.
+ *   lockSize             — when true, captures the container's dimensions on first render
+ *                          (always in unfiltered state). Those values become min-width/\
+ *                          min-height so filtering cannot collapse the layout.
  *   ...rest              — forwarded to the outer scroll container <Box>
  */
 export const List = (props) => {
@@ -549,12 +559,77 @@ const ListBase = ({
   itemsRef,
   itemHeightEstimation,
   itemHeightIsVariable = true,
+  lockSize,
+  searchText,
+  match,
   ...rest
 }) => {
   import.meta.css = css;
 
   const refDefault = useRef(null);
   const ref = rest.ref || refDefault;
+
+  // lockSize: capture the container's dimensions in unfiltered state, then
+  // apply searchText. searchTextBypassed starts true so the first render always
+  // shows all items, giving the ResizeObserver a full-size measurement.
+  const sizeLocked = useRef(false);
+  const searchTextRef = useRef(searchText);
+  searchTextRef.current = searchText;
+  const [searchTextBypassed, setSearchTextBypassed] = useState(
+    () => Boolean(lockSize) && !sizeLocked.current,
+  );
+  useLayoutEffect(() => {
+    if (!lockSize) {
+      return undefined;
+    }
+    if (sizeLocked.current) {
+      return undefined;
+    }
+    const listContainerEl = ref.current;
+    if (!listContainerEl) {
+      return undefined;
+    }
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      // Use borderBoxSize (outer width) not contentRect (which excludes the
+      // scrollbar width). If we used contentRect, min-width would be set to
+      // outerWidth − scrollbarWidth, and the container would shrink by exactly
+      // the scrollbar width when the scrollbar disappears.
+      const borderBoxEntry = entry.borderBoxSize
+        ? entry.borderBoxSize[0]
+        : null;
+      const width = borderBoxEntry
+        ? borderBoxEntry.inlineSize
+        : entry.contentRect.width;
+      const height = borderBoxEntry
+        ? borderBoxEntry.blockSize
+        : entry.contentRect.height;
+      if (width === 0 && height === 0) {
+        return;
+      }
+      listContainerEl.style.minWidth = `${width}px`;
+      listContainerEl.style.minHeight = `${height}px`;
+      sizeLocked.current = true;
+      observer.disconnect();
+      listContainerEl.removeAttribute("data-lock-sizing");
+      if (searchTextRef.current) {
+        setSearchTextBypassed(false);
+      }
+    });
+    observer.observe(listContainerEl);
+    listContainerEl.setAttribute("data-lock-sizing", "");
+    return () => {
+      observer.disconnect();
+      listContainerEl.removeAttribute("data-lock-sizing");
+    };
+  }, [lockSize]);
+
+  // While bypassing for lockSize measurement, treat searchText as absent.
+  const effectiveSearchText = searchTextBypassed ? undefined : searchText;
+  const searchContext =
+    effectiveSearchText || match
+      ? { searchText: effectiveSearchText, match }
+      : null;
 
   const ItemTrackerProvider = useListItemTrackerProvider();
 
@@ -745,7 +820,13 @@ const ListBase = ({
       }}
       hasChildFunction
     >
-      {renderListMemoized}
+      {searchContext ? (
+        <ListSearchContext.Provider value={searchContext}>
+          {renderListMemoized}
+        </ListSearchContext.Provider>
+      ) : (
+        renderListMemoized
+      )}
     </Box>
   );
 };
