@@ -71,7 +71,8 @@
         const countSignal = computed(() => visibleSorted.value.length);
         const useTrackerItemCount = () => countSignal.value;
 
-        // Register an item. Calls notify() only when visibility (filter result) changes.
+        // Register an item. Calls notify() on every render — subscribers decide
+        // whether to re-render based on what they're watching (count, prop, etc).
         const useTrackItem = (id, data) => {
           const orderRef = useRef(null);
           if (orderRef.current === null) {
@@ -79,12 +80,10 @@
           }
           registrations.set(id, { data, order: orderRef.current });
 
-          const isVisible = filter(data);
-
           useLayoutEffect(() => {
             registrations.set(id, { data, order: orderRef.current });
             notify();
-          }, [isVisible]);
+          });
 
           useLayoutEffect(() => {
             return () => {
@@ -93,12 +92,15 @@
             };
           }, []);
 
-          if (!isVisible) {
+          if (!filter(data)) {
             return -1;
           }
-          return visibleSorted.value.findIndex(
-            (r) => r.order === orderRef.current,
-          );
+          // Compute index directly from registrations (not via signal) to avoid
+          // subscribing Item to visibleSorted, which would cause an infinite loop.
+          const visible = [...registrations.values()]
+            .filter((r) => filter(r.data))
+            .sort((a, b) => a.order - b.order);
+          return visible.findIndex((r) => r.order === orderRef.current);
         };
 
         return { useTrackItem, useTrackerItemProp, useTrackerItemCount };
