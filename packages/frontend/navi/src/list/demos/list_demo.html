@@ -133,6 +133,7 @@
         Quince: "low",
       };
 
+      const SUGAR_ICON = { low: "🟢", medium: "🟡", high: "🔴" };
       const SUGAR_LEVELS = [
         { key: "low", label: "🟢 Peu sucré" },
         { key: "medium", label: "🟡 Moyennement sucré" },
@@ -169,7 +170,7 @@
                       FRUIT_SUGAR[fruit] === hoveredSugar
                     }
                   >
-                    {fruit}
+                    {SUGAR_ICON[FRUIT_SUGAR[fruit]]} {fruit}
                   </ListItem>
                 ))}
               </List>
