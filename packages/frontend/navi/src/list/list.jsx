@@ -396,14 +396,12 @@ const ListWithPopover = (props) => {
         });
         cleanupRef.current = () => cleanup.disconnect();
       }}
-      onnavi_list_close={(e) => {
+      onnavi_list_request_close={(e) => {
         const listContainerEl = e.currentTarget;
         cleanupRef.current?.();
         listContainerEl.removeAttribute("data-anchor-hidden");
-        listContainerEl.dispatchEvent(
-          new CustomEvent("navi_list_closed", { detail: e.detail }),
-        );
         listContainerEl.hidePopover();
+        dispatchCustomEvent(e, "navi_list_close");
       }}
     />
   );
@@ -433,15 +431,6 @@ const ListInteractive = (props) => {
   const interactionContext = {
     mousePointedIndex,
     keyboardPointedIndex,
-  };
-
-  const dispatchCustomEvent = (e, customEventName, customEventDetail) => {
-    return e.currentTarget.dispatchEvent(
-      new CustomEvent(customEventName, {
-        detail: { ...e.detail, ...customEventDetail },
-        cancelable: true,
-      }),
-    );
   };
 
   return (
@@ -523,25 +512,12 @@ const ListInteractive = (props) => {
 };
 
 const ListWithKeyboardInteractions = (props) => {
-  const dispatchToList = (event, customEventName, customEventDetail) => {
-    const listEl = event.currentTarget;
-    const customEvent = new CustomEvent(customEventName, {
-      cancelable: true,
-      detail: {
-        event,
-        ...customEventDetail,
-      },
-    });
-    listEl.dispatchEvent(customEvent);
-    return customEvent.defaultPrevented;
-  };
-
   const onKeyDownForShortcuts = createOnKeyDownForShortcuts([
     {
       key: "arrowdown",
       description: "Point to next item",
       handler: (e) => {
-        return dispatchToList(e, "navi_list_request_nav", {
+        return dispatchCustomEvent(e, "navi_list_request_nav", {
           direction: "down",
         });
       },
@@ -550,7 +526,7 @@ const ListWithKeyboardInteractions = (props) => {
       key: "arrowup",
       description: "Point to previous item",
       handler: (e) => {
-        return dispatchToList(e, "navi_list_request_nav", {
+        return dispatchCustomEvent(e, "navi_list_request_nav", {
           direction: "up",
         });
       },
@@ -559,7 +535,7 @@ const ListWithKeyboardInteractions = (props) => {
       key: "home",
       description: "Point to first item",
       handler: (e) => {
-        return dispatchToList(e, "navi_list_request_nav", {
+        return dispatchCustomEvent(e, "navi_list_request_nav", {
           direction: "first",
         });
       },
@@ -568,7 +544,7 @@ const ListWithKeyboardInteractions = (props) => {
       key: "end",
       description: "Point to last item",
       handler: (e) => {
-        return dispatchToList(e, "navi_list_request_nav", {
+        return dispatchCustomEvent(e, "navi_list_request_nav", {
           direction: "last",
         });
       },
@@ -577,14 +553,14 @@ const ListWithKeyboardInteractions = (props) => {
       key: "enter",
       description: "Confirm pointed item",
       handler: (e) => {
-        return dispatchToList(e, "navi_list_request_select");
+        return dispatchCustomEvent(e, "navi_list_request_select");
       },
     },
     {
       key: "escape",
       description: "Clear pointed item",
       handler: (e) => {
-        return dispatchToList(e, "navi_list_request_clear");
+        return dispatchCustomEvent(e, "navi_list_request_clear");
       },
     },
   ]);
@@ -863,15 +839,6 @@ const ListControlled = ({
     renderWindow,
     virtualItemHeight,
   ]);
-
-  const dispatchCustomEvent = (e, customEventName, customEventDetail) => {
-    return e.currentTarget.dispatchEvent(
-      new CustomEvent(customEventName, {
-        detail: { ...e.detail, ...customEventDetail },
-        cancelable: true,
-      }),
-    );
-  };
 
   return (
     <Box
@@ -1183,15 +1150,6 @@ const ListItemReal = ({
     };
   }, [highlight, children, hidden]);
 
-  const dispatchBubblingEvent = (e, customEventName, customEventDetail) => {
-    return e.currentTarget.dispatchEvent(
-      new CustomEvent(customEventName, {
-        bubbles: true,
-        detail: customEventDetail,
-      }),
-    );
-  };
-
   return (
     <Box
       as="li"
@@ -1216,10 +1174,7 @@ const ListItemReal = ({
         if (e.button !== 0) {
           return;
         }
-        dispatchBubblingEvent(e, "navi_list_request_select_at", {
-          index,
-          event: e,
-        });
+        dispatchBubblingEvent(e, "navi_list_request_select_at", { index });
         rest.onMouseDown?.(e);
       }}
       {...rest}
@@ -1327,4 +1282,19 @@ export const ListItemHeader = (props) => {
       baseClassName="navi_list_item_header"
     />
   );
+};
+
+const dispatchCustomEvent = (e, customEventName, customEventDetail) => {
+  const customEvent = new CustomEvent(customEventName, {
+    detail: { event: e, ...e.detail, ...customEventDetail },
+    cancelable: true,
+  });
+  return e.currentTarget.dispatchEvent(customEvent);
+};
+const dispatchBubblingEvent = (e, customEventName, customEventDetail) => {
+  const customEvent = new CustomEvent(customEventName, {
+    detail: { event: e, ...e.detail, ...customEventDetail },
+    bubbles: true,
+  });
+  return e.currentTarget.dispatchEvent(customEvent);
 };

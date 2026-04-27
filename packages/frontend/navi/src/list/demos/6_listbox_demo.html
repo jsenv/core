@@ -725,13 +725,15 @@
 
         const showPopover = () => {
           listRef.current?.dispatchEvent(
-            new CustomEvent("navi_list_open", {
+            new CustomEvent("navi_list_request_open", {
               detail: { anchor: buttonRef.current },
             }),
           );
         };
         const hidePopover = () => {
-          listRef.current?.dispatchEvent(new CustomEvent("navi_list_close"));
+          listRef.current?.dispatchEvent(
+            new CustomEvent("navi_list_request_close"),
+          );
         };
 
         return (

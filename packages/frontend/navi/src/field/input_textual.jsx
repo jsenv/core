@@ -567,7 +567,7 @@ const InputTextualWithSuggestions = ({
     console.debug(`hidePopover (e.type:${e.type})`);
     const popoverEl = document.getElementById(suggestions);
     if (popoverEl) {
-      popoverEl.dispatchEvent(new CustomEvent("navi_list_close"));
+      popoverEl.dispatchEvent(new CustomEvent("navi_list_request_close"));
     }
     collapse();
   };
