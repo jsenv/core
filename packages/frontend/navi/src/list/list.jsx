@@ -354,7 +354,7 @@ const ListWithPopover = (props) => {
     <List
       {...props}
       popover="manual"
-      onnavi_list_open={(e) => {
+      onnavi_list_request_open={(e) => {
         const listContainerEl = e.currentTarget;
         const anchor = e.detail?.anchor;
         listContainerEl.showPopover();
@@ -395,6 +395,7 @@ const ListWithPopover = (props) => {
           positionPopover();
         });
         cleanupRef.current = () => cleanup.disconnect();
+        dispatchCustomEvent(e, "navi_list_open");
       }}
       onnavi_list_request_close={(e) => {
         const listContainerEl = e.currentTarget;
