@@ -47,35 +47,58 @@ export const applySearchText = (searchText, value) => {
  */
 export const useSearchText = (items, searchText, matchFn) => {
   const matchInfoMap = useMemo(() => {
-    const map = new Map();
-    const infos = items.map((item, naturalIndex) => {
+    // Single pass: separate matched vs non-matched, inserting matched items
+    // in score-desc order via binary search (bisect) to avoid a separate sort step.
+    // Non-matched items accumulate in natural order at the end.
+    const matched = []; // sorted desc by score as we build it
+    const nonMatched = [];
+
+    for (const item of items) {
       const result = matchFn(searchText, item);
-      return {
-        item,
-        naturalIndex,
-        match: result.match,
-        score: result.matchScore,
-        ranges: result.matchRanges,
-      };
-    });
+      if (!result.match) {
+        nonMatched.push({
+          item,
+          score: result.matchScore,
+          ranges: result.matchRanges,
+        });
+        continue;
+      }
+      // Binary search for insertion point (desc order: higher score first).
+      // Equal scores go at the end of their group (preserves natural order).
+      const score = result.matchScore;
+      let lo = 0;
+      let hi = matched.length;
+      while (lo < hi) {
+        const mid = (lo + hi) >> 1;
+        if (matched[mid].score > score) {
+          lo = mid + 1;
+        } else {
+          hi = mid;
+        }
+      }
+      matched.splice(lo, 0, { item, score, ranges: result.matchRanges });
+    }
 
-    // Stable sort: matched items by score desc, then non-matched in natural order.
-    // Array.sort is stable in JS (ES2019+), so equal scores preserve naturalIndex order.
-    const matched = infos.filter((info) => info.match);
-    matched.sort((a, b) => b.score - a.score);
-    const nonMatched = infos.filter((info) => !info.match);
-
-    const ordered = [...matched, ...nonMatched];
-    for (let order = 0; order < ordered.length; order++) {
-      const info = ordered[order];
+    const map = new Map();
+    let order = 0;
+    for (const info of matched) {
       map.set(info.item, {
-        match: info.match,
+        match: true,
         score: info.score,
         order,
         ranges: info.ranges,
       });
+      order++;
     }
-
+    for (const info of nonMatched) {
+      map.set(info.item, {
+        match: false,
+        score: info.score,
+        order,
+        ranges: info.ranges,
+      });
+      order++;
+    }
     return map;
   }, [items, searchText, matchFn]);
 
