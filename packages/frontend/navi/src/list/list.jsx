@@ -726,7 +726,9 @@ const ListControlled = ({
 
         if (current.start >= itemCount) {
           // We can't see the item anymore, better scroll to the top of the list
-          // when removing the filter the scroll will stay on top and that's ok
+          // when removing the filter the scroll will stay on top
+          // ideally it should move back to the selected item if it becomes visible again
+          // but this might come unexpected as user starts to scroll the list
           updateRenderWindow(0, renderBudget);
           scrollToIndex(0);
         }
