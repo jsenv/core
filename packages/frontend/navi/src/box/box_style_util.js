@@ -272,6 +272,7 @@ const POSITION_PROPS = {
   fixed: applyToCssPropWhenTruthy("position", "fixed", "static"),
   sticky: applyToCssPropWhenTruthy("position", "sticky", "static"),
   zIndex: PASS_THROUGH,
+  order: PASS_THROUGH,
   left: (value) => {
     return { left: value === true ? 0 : value };
   },
