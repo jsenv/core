@@ -674,7 +674,7 @@ const ListControlled = ({
     const listEl = listContainerEl.querySelector(".navi_list");
     const scrollContainer = getScrollContainer(listEl);
     const onScroll = () => {
-      const totalItems = tracker.getCount();
+      const totalItems = tracker.countSignal.peek();
       if (totalItems <= renderBudget) {
         return;
       }
