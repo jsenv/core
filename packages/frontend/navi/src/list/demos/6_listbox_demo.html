@@ -170,7 +170,7 @@
               uiAction={setSelected}
             >
               {FRUITS.map((fruit) => (
-                <Suggestion
+                <ListItem role="option"
                   key={fruit}
                   value={fruit}
                   selected={selected === fruit}
@@ -203,7 +203,7 @@
                 visible
               </ListItem>
               {COUNTRIES.map((country) => (
-                <Suggestion
+                <ListItem role="option"
                   key={country.code}
                   value={country.code}
                   selected={selected === country.code}
@@ -277,7 +277,7 @@
               expandX
             >
               {filtered.map((fruit) => (
-                <Suggestion
+                <ListItem role="option"
                   key={fruit}
                   value={fruit}
                   selected={selected === fruit}
@@ -318,7 +318,7 @@
               {FRUITS.map((fruit) => {
                 const match = applySearchText(fruit, "a");
                 return (
-                  <Suggestion
+                  <ListItem role="option"
                     key={fruit}
                     value={fruit}
                     selected={selected === fruit}
@@ -404,7 +404,7 @@
               {sorted.map((fruit) => {
                 const match = applySearchText(fruit, filter);
                 return (
-                  <Suggestion
+                  <ListItem role="option"
                     key={fruit}
                     value={fruit}
                     selected={selected === fruit}
@@ -502,7 +502,7 @@
                   {group.items.map((item) => {
                     const match = applySearchText(item, filter);
                     return (
-                      <Suggestion
+                      <ListItem role="option"
                         key={item}
                         value={item}
                         selected={selected === item}
@@ -565,7 +565,7 @@
               {GROUPED_ITEMS.map((group) => (
                 <ListItemGroup key={group.label} label={group.label}>
                   {group.items.map((item) => (
-                    <Suggestion
+                    <ListItem role="option"
                       key={item}
                       value={item}
                       selected={selected === item}
@@ -649,7 +649,7 @@
                 {matches.map((item) => {
                   const match = applySearchText(item, filter);
                   return (
-                    <Suggestion
+                    <ListItem role="option"
                       key={item}
                       value={item}
                       selected={selected === item}
@@ -678,7 +678,7 @@
                   }
                 >
                   {nonMatches.map((item) => (
-                    <Suggestion
+                    <ListItem role="option"
                       key={item}
                       value={item}
                       selected={selected === item}
@@ -732,7 +732,7 @@
               }}
             >
               {FRUITS.map((fruit) => (
-                <Suggestion
+                <ListItem role="option"
                   key={fruit}
                   value={fruit}
                   selected={selected === fruit}
