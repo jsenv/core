@@ -108,7 +108,7 @@ const useRegisterRow = (id, data) => {
 };
 const useRowByIndex = (index) => {
   const tracker = useContext(TableRowTrackerContext);
-  return tracker.getItems()[index];
+  return tracker.getTrackedItemByIndex(index);
 };
 
 const ColumnProducerProviderContext = createContext();

@@ -705,7 +705,7 @@ const ListControlled = ({
   // reset to start. Never deactivate — keeping the window always active prevents
   // a flash where all items mount when the count temporarily exceeds renderBudget.
   useLayoutEffect(() => {
-    const totalItems = tracker.getVisibleCount();
+    const totalItems = tracker.countSignal.peek();
     const current = renderWindowRef.current;
     if (current !== null && current.start >= totalItems && totalItems > 0) {
       // Window is entirely out of range (e.g. after filtering) — reset to start.
