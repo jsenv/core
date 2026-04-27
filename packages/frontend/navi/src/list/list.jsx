@@ -441,9 +441,12 @@ const ListInteractive = (props) => {
         keyboardInteractions
         {...props}
         uiAction={undefined}
-        onListChange={(items) => {
-          props.onListChange?.(items);
+        onListItemsChange={(items, meta) => {
+          props.onListItemsChange?.(items, meta);
           itemsRef.current = items;
+          if (meta.isInit) {
+            anchorIndexRef.current = meta.firstSelectedIndex;
+          }
         }}
         onnavi_list_nav={(e) => {
           const { direction, event = e } = e.detail;
@@ -596,7 +599,7 @@ const ListControlled = ({
   popover,
   expandX,
   maxHeight,
-  onListChange,
+  onListItemsChange,
   virtualItemHeight,
   lockSize,
   ...rest
@@ -679,7 +682,7 @@ const ListControlled = ({
     setRenderWindow({ start: newStart, end: newEnd });
   };
 
-  const initialScrollRef = useRef(false);
+  const isInitRef = useRef(true);
   const itemsRef = useRef([]);
   const itemToScrollOnMountRef = useRef(null);
   const scrollToIndex = (index) => {
@@ -707,19 +710,25 @@ const ListControlled = ({
       // When item count changes (e.g. after filtering), check if the render
       // window is still in range. If not, reset to start.
       const itemCount = items.length;
-      const current = renderWindowRef.current;
-      if (current.start >= itemCount && itemCount > 0) {
-        updateRenderWindow(0, renderBudget);
+      const isInit = isInitRef.current;
+      let firstSelectedIndex;
+      if (itemCount > 0) {
         const listContainerEl = ref.current;
-        listContainerEl.scrollTop = 0;
-      } else if (initialScrollRef.current === false) {
-        initialScrollRef.current = true;
-        const firstSelectedIndex = items.findIndex((i) => i.selected);
-        if (firstSelectedIndex !== -1) {
-          scrollToIndex(firstSelectedIndex);
+        if (isInit) {
+          // on the first render we want to scroll selected item into view
+          isInitRef.current = false;
+          firstSelectedIndex = items.findIndex((i) => i.selected);
+          if (firstSelectedIndex !== -1) {
+            scrollToIndex(firstSelectedIndex);
+          }
+        }
+        const current = renderWindowRef.current;
+        if (current.start >= itemCount) {
+          updateRenderWindow(0, renderBudget);
+          listContainerEl?.scrollTop = 0;
         }
       }
-      onListChange(items);
+      onListItemsChange(items, { isInit, firstSelectedIndex });
     },
   });
   // Scroll listener — slides the window as the user scrolls.
