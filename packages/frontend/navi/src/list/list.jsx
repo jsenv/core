@@ -225,6 +225,12 @@ const css = /* css */ `
     height: 0px;
     list-style: none;
     /* background: pink; */
+    &[navi-virtual-filler="top"] {
+      order: -1;
+    }
+    &[navi-virtual-filler="bottom"] {
+      order: 9999999;
+    }
   }
 
   /* Empty state — hidden by default, shown when no list items are rendered. */

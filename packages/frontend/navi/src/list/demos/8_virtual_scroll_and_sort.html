@@ -42,6 +42,7 @@
         ListItem,
         ListItemHeader,
         useSearch,
+        Separator,
       } from "@jsenv/navi";
 
       const ALL_ITEMS = Array.from({ length: 200 }, (_, i) => {
@@ -222,6 +223,7 @@
               uiAction={setSelected}
               expandX
               withSearch
+              separator={<Separator margin="0" />}
             >
               <ListItemHeader>
                 <Input
