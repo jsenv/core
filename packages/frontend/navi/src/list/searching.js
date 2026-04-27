@@ -47,10 +47,10 @@ export const applySearchText = (searchText, value) => {
  */
 export const useSearchText = (items, searchText, matchFn) => {
   const matchInfoMap = useMemo(() => {
-    // Group matched items by score (O(1) push per item, no splice/shifting).
-    // Non-matched items accumulate in natural order — their order is assigned
-    // after all matched items, so we need matchedCount first anyway.
-    const matchedByScore = new Map(); // score → { item, ranges }[]
+    // scoreEntries: [score, bucket][] kept sorted desc by score.
+    // New distinct score values are inserted via bisect — O(1) in practice
+    // since there are very few distinct scores (today just 0 and 1).
+    const scoreEntries = []; // [score, bucket][]
     const nonMatched = [];
 
     for (const item of items) {
@@ -64,22 +64,34 @@ export const useSearchText = (items, searchText, matchFn) => {
         continue;
       }
       const score = result.matchScore;
-      let bucket = matchedByScore.get(score);
-      if (!bucket) {
-        bucket = [];
-        matchedByScore.set(score, bucket);
+      // Find existing bucket or insert a new entry in desc order.
+      let lo = 0;
+      let hi = scoreEntries.length;
+      while (lo < hi) {
+        const mid = (lo + hi) >> 1;
+        if (scoreEntries[mid][0] > score) {
+          lo = mid + 1;
+        } else if (scoreEntries[mid][0] < score) {
+          hi = mid;
+        } else {
+          lo = mid;
+          hi = mid; // exact match — found the bucket
+        }
       }
-      bucket.push({ item, ranges: result.matchRanges });
+      if (lo < scoreEntries.length && scoreEntries[lo][0] === score) {
+        scoreEntries[lo][1].push({ item, ranges: result.matchRanges });
+      } else {
+        scoreEntries.splice(lo, 0, [
+          score,
+          [{ item, ranges: result.matchRanges }],
+        ]);
+      }
     }
-
-    // Sort the few distinct score values desc. Natural order within each bucket
-    // is preserved because items were pushed in iteration order.
-    const sortedScores = [...matchedByScore.keys()].sort((a, b) => b - a);
 
     const map = new Map();
     let order = 0;
-    for (const score of sortedScores) {
-      for (const info of matchedByScore.get(score)) {
+    for (const [score, bucket] of scoreEntries) {
+      for (const info of bucket) {
         map.set(info.item, { match: true, score, order, ranges: info.ranges });
         order++;
       }
