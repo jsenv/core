@@ -433,15 +433,12 @@ const ListInteractive = (props) => {
   const interactionContext = {
     mousePointedIndex,
     keyboardPointedIndex,
-    onHover: (index) => {
-      setMousePointedIndex(index);
-    },
   };
 
   const dispatchCustomEvent = (e, customEventName, customEventDetail) => {
     return e.currentTarget.dispatchEvent(
       new CustomEvent(customEventName, {
-        detail: { ...e.detail, customEventDetail },
+        detail: { ...e.detail, ...customEventDetail },
         cancelable: true,
       }),
     );
@@ -459,6 +456,10 @@ const ListInteractive = (props) => {
           if (meta.isInit) {
             anchorIndexRef.current = meta.firstSelectedIndex;
           }
+        }}
+        onnavi_list_request_hover={(e) => {
+          const { index } = e.detail;
+          setMousePointedIndex(index);
         }}
         onnavi_list_request_nav={(e) => {
           const { direction, event = e } = e.detail;
@@ -866,7 +867,7 @@ const ListControlled = ({
   const dispatchCustomEvent = (e, customEventName, customEventDetail) => {
     return e.currentTarget.dispatchEvent(
       new CustomEvent(customEventName, {
-        detail: { ...e.detail, customEventDetail },
+        detail: { ...e.detail, ...customEventDetail },
         cancelable: true,
       }),
     );
@@ -1123,8 +1124,7 @@ const ListItemReal = ({
   const defaultRef = useRef(null);
   const ref = rest.ref || defaultRef;
   const interactionContext = useContext(ListInteractionContext);
-  const { mousePointedIndex, keyboardPointedIndex, onHover } =
-    interactionContext || {};
+  const { mousePointedIndex, keyboardPointedIndex } = interactionContext || {};
   const itemToScrollOnMountRef = useContext(ItemToScrollOnMountRefContext);
 
   const isPointedByMouse = index === mousePointedIndex;
@@ -1183,11 +1183,11 @@ const ListItemReal = ({
     };
   }, [highlight, children, hidden]);
 
-  const dipatchCustomEvent = (e, customEventName, customEventDetail) => {
+  const dispatchBubblingEvent = (e, customEventName, customEventDetail) => {
     return e.currentTarget.dispatchEvent(
       new CustomEvent(customEventName, {
-        detail: { ...e.detail, customEventDetail },
-        cancelable: true,
+        bubbles: true,
+        detail: customEventDetail,
       }),
     );
   };
@@ -1205,18 +1205,21 @@ const ListItemReal = ({
       data-interactive={interactionContext ? "" : undefined}
       data-anchor={isPointedByKeyboard ? "" : undefined}
       onMouseEnter={(e) => {
-        onHover?.(index, e);
+        dispatchBubblingEvent(e, "navi_list_request_hover", { index });
         rest.onMouseEnter?.(e);
       }}
       onMouseLeave={(e) => {
-        onHover?.(-1, e);
+        dispatchBubblingEvent(e, "navi_list_request_hover", { index: -1 });
         rest.onMouseLeave?.(e);
       }}
       onMouseDown={(e) => {
         if (e.button !== 0) {
           return;
         }
-        dipatchCustomEvent(e, "navi_list_request_select_at", { index });
+        dispatchBubblingEvent(e, "navi_list_request_select_at", {
+          index,
+          event: e,
+        });
         rest.onMouseDown?.(e);
       }}
       {...rest}
