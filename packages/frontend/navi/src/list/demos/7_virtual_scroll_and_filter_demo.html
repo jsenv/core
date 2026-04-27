@@ -116,8 +116,7 @@
         ListItem,
         Input,
         ListItemHeader,
-        applySearchText,
-        useSearchText,
+        useSearch,
       } from "@jsenv/navi";
 
       const domItemsSignal = signal(0);
@@ -214,11 +213,7 @@
         // render window (0–30), to verify that the window shifts on mount.
         const [selected, setSelected] = useState(LARGE_LIST[150]);
         const [searchText, setSearchText] = useState(null);
-        const [getItemMatchInfo] = useSearchText(
-          LARGE_LIST,
-          searchText,
-          applySearchText,
-        );
+        const [getItemMatchInfo] = useSearch(searchText, LARGE_LIST);
         const [maxHeight, setMaxHeight] = useState(280);
         const [maxHeightEnabled, setMaxHeightEnabled] = useState(true);
         const [itemHeight, setItemHeight] = useState(null);

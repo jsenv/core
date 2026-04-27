@@ -1,7 +1,7 @@
 import { useMemo } from "preact/hooks";
 
 /**
- * applySearchText — matches value against searchText.
+ * applySearch — matches value against searchText.
  * Returns { match, matchScore, matchRanges }:
  *   - match: true when value contains searchText (or searchText is empty), false otherwise
  *   - matchScore: 0 to 1 (currently 0 = no searchText or no match, 1 = match found)
@@ -9,7 +9,7 @@ import { useMemo } from "preact/hooks";
  *
  * Intended to be passed to useSearchText as the matchFn parameter.
  */
-export const applySearchText = (searchText, value) => {
+export const applySearch = (searchText, value) => {
   if (!searchText) {
     return { match: true, matchScore: 0, matchRanges: [] };
   }
@@ -29,7 +29,7 @@ export const applySearchText = (searchText, value) => {
 };
 
 /**
- * useSearchText — applies matchFn to each item and assigns a stable ordering.
+ * useSearch — applies matchFn to each item and assigns a stable ordering.
  * Returns [getItemMatchInfo] where getItemMatchInfo(item) returns { match, score, order, ranges }.
  *   - match: whether the item matches the search
  *   - score: 0 to 1 match quality
@@ -45,7 +45,7 @@ export const applySearchText = (searchText, value) => {
  *   const { match, score, order, ranges } = getItemMatchInfo(item);
  *   <ListItem hidden={!match} highlight={ranges} />
  */
-export const useSearchText = (items, searchText, matchFn) => {
+export const useSearch = (searchText, items, matchFn = applySearch) => {
   const matchInfoMap = useMemo(() => {
     // scoreEntries: [score, bucket][] kept sorted desc by score.
     // New distinct score values are inserted via bisect — O(1) in practice
