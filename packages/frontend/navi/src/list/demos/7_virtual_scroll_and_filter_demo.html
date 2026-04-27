@@ -327,7 +327,7 @@
                 />
               </ListItemHeader>
               {LARGE_LIST.map((item) => {
-                const match = applySearchText(item, searchText);
+                const match = applySearchText(searchText, item);
                 return (
                   <ListItem
                     key={item}
