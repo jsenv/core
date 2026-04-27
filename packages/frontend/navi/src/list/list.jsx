@@ -677,10 +677,11 @@ const ListControlled = ({
   };
 
   const initialScrollRef = useRef(false);
-  const latestItemsRef = useRef([]);
+  const fallbackItemsRef = useRef([]);
+  const localItemsRef = itemsRef ?? fallbackItemsRef;
   const itemToScrollOnMountRef = useRef(null);
   const scrollToIndex = (index) => {
-    const items = latestItemsRef.current;
+    const items = localItemsRef.current;
     const { start, end } = renderWindowRef.current;
     const isInWindow = index >= start && index < end;
     if (isInWindow) {
@@ -700,10 +701,7 @@ const ListControlled = ({
   };
   const tracker = useItemTracker({
     onChange: (items) => {
-      latestItemsRef.current = items;
-      if (itemsRef) {
-        itemsRef.current = items;
-      }
+      localItemsRef.current = items;
       // When item count changes (e.g. after filtering), check if the render
       // window is still in range. If not, reset to start.
       const itemCount = items.length;
