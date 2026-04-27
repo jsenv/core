@@ -434,9 +434,6 @@ const InputInsideListWithSearch = ({ uiAction, onKeyDown, ...props }) => {
       return undefined;
     }
     const onListSelect = (e) => {
-      if (document.activeElement === inputEl) {
-        return;
-      }
       const { event } = e.detail;
       if (event.type === "mousedown") {
         event.preventDefault();
@@ -456,27 +453,27 @@ const InputInsideListWithSearch = ({ uiAction, onKeyDown, ...props }) => {
       return false;
     }
     const customEvent = new CustomEvent(customEventName, {
-      detail: {
-        event,
-        ...customEventDetail,
-      },
+      detail: { event, ...customEventDetail },
     });
-    listContainerEl.dispatchEvent(customEvent);
-    return customEvent.defaultPrevented;
+    return listContainerEl.dispatchEvent(customEvent);
   };
   const onKeyDownForShortcuts = createOnKeyDownForShortcuts([
     {
       key: "arrowdown",
       description: "Point to next suggestion",
       handler: (e) => {
-        return forwardToList(e, "navi_list_request_nav", { direction: "down" });
+        return forwardToList(e, "navi_list_request_nav", {
+          direction: "down",
+        });
       },
     },
     {
       key: "arrowup",
       description: "Point to previous suggestion",
       handler: (e) => {
-        return forwardToList(e, "navi_list_request_nav", { direction: "up" });
+        return forwardToList(e, "navi_list_request_nav", {
+          direction: "up",
+        });
       },
     },
     {
@@ -492,7 +489,9 @@ const InputInsideListWithSearch = ({ uiAction, onKeyDown, ...props }) => {
       key: "end",
       description: "Point to last suggestion",
       handler: (e) => {
-        return forwardToList(e, "navi_list_request_nav", { direction: "last" });
+        return forwardToList(e, "navi_list_request_nav", {
+          direction: "last",
+        });
       },
     },
     {
@@ -572,23 +571,15 @@ const InputTextualWithSuggestions = ({
     collapse();
   };
 
-  const forwardToSuggestionList = (
-    event,
-    customEventName,
-    customEventDetail,
-  ) => {
+  const forwardToList = (event, customEventName, customEventDetail) => {
     const suggestionList = document.getElementById(suggestions);
     if (!suggestionList) {
       return false;
     }
     const customEvent = new CustomEvent(customEventName, {
-      detail: {
-        event,
-        ...customEventDetail,
-      },
+      detail: { event, ...customEventDetail },
     });
-    suggestionList.dispatchEvent(customEvent);
-    return customEvent.defaultPrevented;
+    return suggestionList.dispatchEvent(customEvent);
   };
   useKeyboardShortcuts(ref, [
     {
@@ -596,7 +587,7 @@ const InputTextualWithSuggestions = ({
       description: "Open popover and point to next suggestion",
       handler: (e) => {
         showSuggestions(e);
-        return forwardToSuggestionList(e, "navi_list_request_nav", {
+        return forwardToList(e, "navi_list_request_nav", {
           direction: "down",
         });
       },
@@ -606,7 +597,7 @@ const InputTextualWithSuggestions = ({
       description: "Open popover and point to previous suggestion",
       handler: (e) => {
         showSuggestions(e);
-        return forwardToSuggestionList(e, "navi_list_request_nav", {
+        return forwardToList(e, "navi_list_request_nav", {
           direction: "up",
         });
       },
@@ -618,7 +609,7 @@ const InputTextualWithSuggestions = ({
         if (!expandedRef.current) {
           return false;
         }
-        return forwardToSuggestionList(e, "navi_list_request_nav", {
+        return forwardToList(e, "navi_list_request_nav", {
           direction: "first",
         });
       },
@@ -630,7 +621,7 @@ const InputTextualWithSuggestions = ({
         if (!expandedRef.current) {
           return false;
         }
-        return forwardToSuggestionList(e, "navi_list_request_nav", {
+        return forwardToList(e, "navi_list_request_nav", {
           direction: "last",
         });
       },
@@ -642,7 +633,7 @@ const InputTextualWithSuggestions = ({
         if (!expandedRef.current) {
           return false;
         }
-        return forwardToSuggestionList(e, "navi_list_request_select");
+        return forwardToList(e, "navi_list_request_select");
       },
     },
     {
