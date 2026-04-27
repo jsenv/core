@@ -411,9 +411,11 @@ const ListInteractive = (props) => {
   const { uiAction } = props;
   const [mousePointedIndex, setMousePointedIndex] = useState(-1);
   const [keyboardPointedIndex, setKeyboardPointedIndex] = useState(-1);
-  const [anchorIndex, setAnchorIndex] = useState(-1);
-  const anchorIndexRef = useRef(anchorIndex);
-  anchorIndexRef.current = anchorIndex;
+  const anchorIndexRef = useRef(-1);
+  const setAnchorIndex = (value) => {
+    anchorIndexRef.current = value;
+  };
+
   const itemsRef = useRef([]);
 
   const getValueByIndex = (index) => {
@@ -438,7 +440,7 @@ const ListInteractive = (props) => {
               props.onListItemsChange?.(items, meta);
               itemsRef.current = items;
               if (meta.isInit) {
-                anchorIndexRef.current = meta.firstSelectedIndex;
+                setAnchorIndex(meta.firstSelectedIndex);
               }
             }}
             onnavi_list_request_hover={(e) => {
@@ -499,7 +501,6 @@ const ListInteractive = (props) => {
             }}
             onnavi_list_nav={(e) => {
               const { index, event } = e.detail;
-              anchorIndexRef.current = index;
               setAnchorIndex(index);
               if (event.type === "keydown") {
                 setKeyboardPointedIndex(index);
@@ -509,7 +510,6 @@ const ListInteractive = (props) => {
             }}
             onnavi_list_select={(e) => {
               const { index, event } = e.detail;
-              anchorIndexRef.current = index;
               setAnchorIndex(index);
               if (event.type === "keydown") {
                 setKeyboardPointedIndex(index);
