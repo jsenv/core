@@ -580,6 +580,12 @@ const ListControlled = ({
   const refDefault = useRef(null);
   const ref = rest.ref || refDefault;
 
+  const ulRef = useRef(null);
+  const virtualItemHeightSignal = useVirtualItemHeightSignal(
+    ulRef,
+    virtualItemHeight,
+  );
+
   // lockSize: capture the container's dimensions on first render so filtering
   // cannot collapse the layout. Measurement happens on the initial (unfiltered)
   // state because the parent controls hidden props before any search is applied.
@@ -646,23 +652,27 @@ const ListControlled = ({
     const newEnd = newStart + renderBudget;
     updateRenderWindow(newStart, newEnd);
   };
-  const scrollToItemIndex = (index) => {
+  const scrollItemIntoView = (item, index) => {
     const listContainerEl = ref.current;
     if (!listContainerEl) {
       return;
     }
     const listEl = listContainerEl.querySelector(".navi_list");
     const scrollContainer = getScrollContainer(listEl);
-    // Read item height from the top filler's data attribute — same source the
-    // scroll listener uses, so the estimate is consistent.
-    const topFiller = listEl.querySelector('[navi-virtual-filler="top"]');
-    const itemHeight = topFiller
-      ? parseFloat(topFiller.dataset.itemHeight || "0")
-      : 0;
+    // If the item is already in the DOM, use sticky-aware scroll directly.
+    const itemEl = item.id
+      ? listEl.querySelector(`#${CSS.escape(item.id)}`)
+      : null;
+    if (itemEl) {
+      scrollIntoViewWithStickyAwareness(itemEl);
+      return;
+    }
+    // Item is outside the render window (not in DOM).
+    // Set scrollTop to the estimated position: the scroll event will shift the
+    // render window, mounting the item, and its layout effect will call
+    // scrollIntoViewWithStickyAwareness to fine-tune.
+    const itemHeight = virtualItemHeightSignal.peek();
     if (itemHeight > 0) {
-      // Set scrollTop directly. The scroll event handler will shift the render
-      // window, mount the item, and scrollIntoViewWithStickyAwareness will
-      // fine-tune if needed (keyboard-pointed case).
       scrollContainer.scrollTop = index * itemHeight;
       return;
     }
@@ -682,18 +692,15 @@ const ListControlled = ({
         updateRenderWindow(0, renderBudget);
         return;
       }
-      // Scroll to the first selected item if it is outside the render window.
-      // By this point item heights have been measured (onChange fires on the
-      // second commit at the earliest), so scrollToItemIndex can set scrollTop
-      // precisely, which shifts the window and mounts the item.
+      // Scroll the first selected item into view if needed.
+      // scrollItemIntoView checks if it's in the DOM: if yes, calls
+      // scrollIntoViewWithStickyAwareness directly; if not, sets scrollTop
+      // so the scroll event shifts the window and the item's layout effect
+      // handles fine-tuning once it mounts.
       const selectedIndex = items.findIndex((item) => item.selected);
-      if (selectedIndex === -1) {
-        return;
+      if (selectedIndex !== -1) {
+        scrollItemIntoView(items[selectedIndex], selectedIndex);
       }
-      if (selectedIndex >= current.start && selectedIndex < current.end) {
-        return; // already visible
-      }
-      scrollToItemIndex(selectedIndex);
     },
   });
   // Scroll listener — slides the window as the user scrolls.
@@ -766,6 +773,7 @@ const ListControlled = ({
   const renderList = (listProps) => {
     return (
       <UnorderedList
+        ref={ulRef}
         id={listId}
         role={listRole}
         fallback={fallback}
@@ -774,7 +782,7 @@ const ListControlled = ({
         {...listProps}
         tracker={tracker}
         renderWindow={renderWindow}
-        virtualItemHeight={virtualItemHeight}
+        virtualItemHeightSignal={virtualItemHeightSignal}
       >
         <ListIdContext.Provider value={listId}>
           {children}
@@ -825,20 +833,14 @@ const LIST_PSEUDO_CLASSES = [":-navi-void"];
 const UnorderedList = ({
   tracker,
   renderWindow,
-  virtualItemHeight,
+  virtualItemHeightSignal,
   fallback,
   separator,
   children,
   ...rest
 }) => {
-  const ulRef = useRef(null);
-  const virtualItemHeightSignal = useVirtualItemHeightSignal(
-    ulRef,
-    virtualItemHeight,
-  );
-
   return (
-    <Box as="ul" {...rest} ref={ulRef} baseClassName="navi_list">
+    <Box as="ul" {...rest} baseClassName="navi_list">
       <TopFiller
         virtualItemHeightSignal={virtualItemHeightSignal}
         renderWindowStart={renderWindow.start}
