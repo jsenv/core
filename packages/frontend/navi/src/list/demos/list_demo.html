@@ -76,6 +76,7 @@
         ListItemHeader,
         Input,
         applySearchText,
+        useSearchText,
       } from "@jsenv/navi";
 
       const FRUITS = [
@@ -252,6 +253,11 @@
       const SearchableDemo = () => {
         const [selected, setSelected] = useState(null);
         const [searchText, setSearchText] = useState("");
+        const [getItemMatchInfo] = useSearchText(
+          FRUITS,
+          searchText,
+          applySearchText,
+        );
         return (
           <div className="demo-section">
             <h2>3. Search — withSearch</h2>
@@ -283,14 +289,14 @@
                 />
               </ListItemHeader>
               {FRUITS.map((fruit) => {
-                const match = applySearchText(searchText, fruit);
+                const { match, ranges } = getItemMatchInfo(fruit);
                 return (
                   <ListItem
                     key={fruit}
                     value={fruit}
                     selected={selected === fruit}
                     hidden={!match}
-                    highlight={match?.ranges}
+                    highlight={ranges}
                   >
                     {fruit}
                   </ListItem>

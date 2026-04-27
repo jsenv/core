@@ -84,7 +84,7 @@ export {
   ListItemHeader,
 } from "./src/list/list.jsx";
 
-export { applySearchText } from "./src/list/searching.js";
+export { applySearchText, useSearchText } from "./src/list/searching.js";
 
 // Form
 // Validation

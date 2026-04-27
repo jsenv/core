@@ -77,6 +77,7 @@
         Text,
         Box,
         applySearchText,
+        useSearchText,
       } from "@jsenv/navi";
 
       // 200 auto-generated items
@@ -165,12 +166,15 @@
               Click a suggestion or use keyboard (Tab to focus, Arrow keys to
               navigate, Enter to select, Escape to clear active).
             </p>
-            <List listRole="listbox" fallback="No results"
+            <List
+              listRole="listbox"
+              fallback="No results"
               style={{ maxHeight: "220px" }}
               uiAction={setSelected}
             >
               {FRUITS.map((fruit) => (
-                <ListItem role="option"
+                <ListItem
+                  role="option"
                   key={fruit}
                   value={fruit}
                   selected={selected === fruit}
@@ -193,17 +197,24 @@
           <div className="demo-section">
             <h2>Custom suggestion content</h2>
             <p>Each suggestion renders the country name + region badge.</p>
-            <List listRole="listbox" fallback="No results"
+            <List
+              listRole="listbox"
+              fallback="No results"
               style={{ maxHeight: "220px" }}
               uiAction={setSelected}
             >
-              <ListItem role="option" noWrap style={{ backgroundColor: SUGGESTION_BG }}>
+              <ListItem
+                role="option"
+                noWrap
+                style={{ backgroundColor: SUGGESTION_BG }}
+              >
                 A very large suggestion to test how it behaves when the text is
                 very large and exceeds the width of the list. It should be
                 visible
               </ListItem>
               {COUNTRIES.map((country) => (
-                <ListItem role="option"
+                <ListItem
+                  role="option"
                   key={country.code}
                   value={country.code}
                   selected={selected === country.code}
@@ -248,8 +259,8 @@
           <div className="demo-section">
             <h2>Controlled with external filter input</h2>
             <p>
-              The list is filtered by the input above it. Shows how
-              List works with an external query source.
+              The list is filtered by the input above it. Shows how List works
+              with an external query source.
             </p>
             <input
               type="text"
@@ -270,14 +281,17 @@
                 fontSize: "1rem",
               }}
             />
-            <List listRole="listbox" fallback="No results"
+            <List
+              listRole="listbox"
+              fallback="No results"
               style={{ maxHeight: "220px" }}
               uiAction={setSelected}
               hidden={filtered.length === 0}
               expandX
             >
               {filtered.map((fruit) => (
-                <ListItem role="option"
+                <ListItem
+                  role="option"
                   key={fruit}
                   value={fruit}
                   selected={selected === fruit}
@@ -301,6 +315,7 @@
 
       const CustomStyleDemo = () => {
         const [selected, setSelected] = useState("Apple");
+        const [getItemMatchInfo] = useSearchText(FRUITS, "a", applySearchText);
         return (
           <div className="demo-section">
             <h2>Custom styles via CSS vars</h2>
@@ -308,7 +323,9 @@
               The list and suggestions have custom background/text colors,
               including for pointed and highlighted states.
             </p>
-            <List listRole="listbox" fallback="No results"
+            <List
+              listRole="listbox"
+              fallback="No results"
               style={{
                 backgroundColor: "#1a1a2e",
                 borderColor: "#e94560",
@@ -316,13 +333,14 @@
               uiAction={setSelected}
             >
               {FRUITS.map((fruit) => {
-                const match = applySearchText(fruit, "a");
+                const { ranges } = getItemMatchInfo(fruit);
                 return (
-                  <ListItem role="option"
+                  <ListItem
+                    role="option"
                     key={fruit}
                     value={fruit}
                     selected={selected === fruit}
-                    highlight={match?.ranges}
+                    highlight={ranges}
                     style={{
                       "color": "#eaeaea",
                       "backgroundColor": "transparent",
@@ -359,17 +377,14 @@
       const SortedDemo = () => {
         const [filter, setFilter] = useState("");
         const [selected, setSelected] = useState(null);
-
-        const sorted = filter
-          ? [
-              ...FRUITS.filter((f) =>
-                f.toLowerCase().includes(filter.toLowerCase()),
-              ),
-              ...FRUITS.filter(
-                (f) => !f.toLowerCase().includes(filter.toLowerCase()),
-              ),
-            ]
-          : FRUITS;
+        const [getItemMatchInfo] = useSearchText(
+          FRUITS,
+          filter,
+          applySearchText,
+        );
+        const sorted = [...FRUITS].sort(
+          (a, b) => getItemMatchInfo(a).order - getItemMatchInfo(b).order,
+        );
 
         return (
           <div className="demo-section">
@@ -397,18 +412,21 @@
                 fontSize: "1rem",
               }}
             />
-            <List listRole="listbox" fallback="No results"
+            <List
+              listRole="listbox"
+              fallback="No results"
               style={{ maxHeight: "220px" }}
               uiAction={setSelected}
             >
               {sorted.map((fruit) => {
-                const match = applySearchText(fruit, filter);
+                const { ranges } = getItemMatchInfo(fruit);
                 return (
-                  <ListItem role="option"
+                  <ListItem
+                    role="option"
                     key={fruit}
                     value={fruit}
                     selected={selected === fruit}
-                    highlight={match?.ranges}
+                    highlight={ranges}
                     style={{ backgroundColor: SUGGESTION_BG }}
                   >
                     {fruit}
@@ -426,18 +444,14 @@
       const LargeListDemo = () => {
         const [filter, setFilter] = useState("");
         const [selected, setSelected] = useState(null);
-
-        const lowerFilter = filter.toLowerCase();
-        const sorted = filter
-          ? [
-              ...LARGE_LIST.filter((item) =>
-                item.toLowerCase().includes(lowerFilter),
-              ),
-              ...LARGE_LIST.filter(
-                (item) => !item.toLowerCase().includes(lowerFilter),
-              ),
-            ]
-          : LARGE_LIST;
+        const [getItemMatchInfo] = useSearchText(
+          LARGE_LIST,
+          filter,
+          applySearchText,
+        );
+        const sorted = [...LARGE_LIST].sort(
+          (a, b) => getItemMatchInfo(a).order - getItemMatchInfo(b).order,
+        );
 
         // Group by first letter for table of contents
         const groupMap = new Map();
@@ -453,11 +467,9 @@
           items,
         }));
 
-        const matchCount = filter
-          ? LARGE_LIST.filter((item) =>
-              item.toLowerCase().includes(lowerFilter),
-            ).length
-          : LARGE_LIST.length;
+        const matchCount = LARGE_LIST.filter(
+          (item) => getItemMatchInfo(item).match,
+        ).length;
 
         return (
           <Box className="demo-section">
@@ -493,20 +505,23 @@
                 {LARGE_LIST.length}
               </div>
             )}
-            <List listRole="listbox" fallback="No results"
+            <List
+              listRole="listbox"
+              fallback="No results"
               style={{ maxHeight: "280px" }}
               uiAction={setSelected}
             >
               {groups.map((group) => (
                 <ListItemGroup key={group.letter} label={group.letter}>
                   {group.items.map((item) => {
-                    const match = applySearchText(item, filter);
+                    const { ranges } = getItemMatchInfo(item);
                     return (
-                      <ListItem role="option"
+                      <ListItem
+                        role="option"
                         key={item}
                         value={item}
                         selected={selected === item}
-                        highlight={match?.ranges}
+                        highlight={ranges}
                         style={{ backgroundColor: SUGGESTION_BG }}
                       >
                         {item}
@@ -552,7 +567,9 @@
           <div className="demo-section">
             <h2>Grouped suggestions</h2>
             <p>Options organized into labeled groups using ListItemGroup.</p>
-            <List listRole="listbox" fallback="No results"
+            <List
+              listRole="listbox"
+              fallback="No results"
               style={{ maxHeight: "280px" }}
               uiAction={setSelected}
               expandX
@@ -565,7 +582,8 @@
               {GROUPED_ITEMS.map((group) => (
                 <ListItemGroup key={group.label} label={group.label}>
                   {group.items.map((item) => (
-                    <ListItem role="option"
+                    <ListItem
+                      role="option"
                       key={item}
                       value={item}
                       selected={selected === item}
@@ -587,18 +605,17 @@
       const SplitMatchDemo = () => {
         const [filter, setFilter] = useState("");
         const [selected, setSelected] = useState(null);
-
-        const lowerFilter = filter.toLowerCase();
-        const matches = filter
-          ? LARGE_LIST.filter((item) =>
-              item.toLowerCase().includes(lowerFilter),
-            )
-          : LARGE_LIST;
-        const nonMatches = filter
-          ? LARGE_LIST.filter(
-              (item) => !item.toLowerCase().includes(lowerFilter),
-            )
-          : [];
+        const [getItemMatchInfo] = useSearchText(
+          LARGE_LIST,
+          filter,
+          applySearchText,
+        );
+        const matches = LARGE_LIST.filter(
+          (item) => getItemMatchInfo(item).match,
+        );
+        const nonMatches = LARGE_LIST.filter(
+          (item) => !getItemMatchInfo(item).match,
+        );
 
         return (
           <div className="demo-section">
@@ -627,7 +644,9 @@
                 fontSize: "1rem",
               }}
             />
-            <List listRole="listbox" fallback="No results"
+            <List
+              listRole="listbox"
+              fallback="No results"
               style={{ maxHeight: "300px" }}
               uiAction={setSelected}
             >
@@ -647,13 +666,14 @@
                 }
               >
                 {matches.map((item) => {
-                  const match = applySearchText(item, filter);
+                  const { ranges } = getItemMatchInfo(item);
                   return (
-                    <ListItem role="option"
+                    <ListItem
+                      role="option"
                       key={item}
                       value={item}
                       selected={selected === item}
-                      highlight={match?.ranges}
+                      highlight={ranges}
                       style={{ backgroundColor: SUGGESTION_BG }}
                     >
                       {item}
@@ -678,7 +698,8 @@
                   }
                 >
                   {nonMatches.map((item) => (
-                    <ListItem role="option"
+                    <ListItem
+                      role="option"
                       key={item}
                       value={item}
                       selected={selected === item}
@@ -723,7 +744,9 @@
               </button>
               <button onClick={hidePopover}>Hide popover</button>
             </div>
-            <List listRole="listbox" fallback="No results"
+            <List
+              listRole="listbox"
+              fallback="No results"
               ref={listRef}
               popover
               uiAction={(value) => {
@@ -732,7 +755,8 @@
               }}
             >
               {FRUITS.map((fruit) => (
-                <ListItem role="option"
+                <ListItem
+                  role="option"
                   key={fruit}
                   value={fruit}
                   selected={selected === fruit}
