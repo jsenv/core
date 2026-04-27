@@ -299,11 +299,6 @@
             </fieldset>
 
             <List
-              withSearch
-              onSearchTextChange={(text) => {
-                setSearchText(text);
-                setSelected(null);
-              }}
               ref={listRef}
               maxHeight={maxHeight}
               uiAction={setSelected}
@@ -318,6 +313,9 @@
                   paddingY="12px"
                   expandX
                   border="1px solid #ccc"
+                  uiAction={(text) => {
+                    setSearchText(text || null);
+                  }}
                   style={{
                     boxSizing: "border-box",
                     borderRadius: "6px",
@@ -332,7 +330,7 @@
                     key={item}
                     value={item}
                     hidden={!match}
-                    highlight={match ? searchText : null}
+                    highlight={match}
                     selected={selected === item}
                     style={{
                       backgroundColor: SUGGESTION_BG,

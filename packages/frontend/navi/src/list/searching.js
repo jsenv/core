@@ -1,15 +1,32 @@
 /**
- * applySearchText — returns truthy when value matches searchText, falsy otherwise.
+ * applySearchText — matches value against searchText.
+ * Returns a match object { ranges } when value matches, or null when it does not.
+ * Returns { ranges: [] } (no highlight, visible) when searchText is empty/null.
+ *
  * Use with ListItem to drive hidden and highlight props explicitly:
  *
  *   const match = applySearchText(item.value, searchText);
- *   <ListItem hidden={!match} highlight={match ? searchText : null}>
+ *   <ListItem hidden={!match} highlight={match}>
  *
- * Returns true (no filtering) when searchText is empty/null.
+ * The ranges array contains [start, end] pairs (exclusive end) indicating
+ * which character positions in value are matching. ListItem uses these to
+ * highlight the corresponding text in the DOM via the CSS Highlight API.
  */
 export const applySearchText = (value, searchText) => {
   if (!searchText) {
-    return true;
+    return { ranges: [] };
   }
-  return String(value).toLowerCase().includes(searchText.toLowerCase());
+  const str = String(value);
+  const lowerStr = str.toLowerCase();
+  const lowerSearch = searchText.toLowerCase();
+  const ranges = [];
+  let idx = lowerStr.indexOf(lowerSearch);
+  while (idx !== -1) {
+    ranges.push([idx, idx + searchText.length]);
+    idx = lowerStr.indexOf(lowerSearch, idx + 1);
+  }
+  if (ranges.length === 0) {
+    return null;
+  }
+  return { ranges };
 };

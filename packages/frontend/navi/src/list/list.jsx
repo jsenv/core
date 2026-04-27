@@ -22,13 +22,11 @@ import { useIsInsideDropdown } from "./dropdown.jsx";
 
 const ListItemTrackerContext = createContext(null);
 
-// Provided by ListWithSearch so descendants (e.g. an Input) can update the
-// search text. When present, Input auto-connects and calls the setter on change.
-export const SetSearchTextContext = createContext(null);
-export const useIsInsideListWithSearch = () => {
-  return typeof useContext(SetSearchTextContext) === "function";
-};
 export const ListIdContext = createContext();
+// Provided by ListWithSearch so a descendant Input knows it controls this list.
+export const useIsInsideListWithSearch = () => {
+  return useContext(ListIdContext) !== undefined;
+};
 
 // Provided by ListInteractive to give descendants (e.g. Suggestion) access
 // to hover/keyboard-pointed/selection state and the onHover/onSelect callbacks.
@@ -266,12 +264,6 @@ const css = /* css */ `
  * for virtual scrolling. Items must use <ListItem> to participate in tracking.
  *
  * Props:
- *   withSearch           — when true, wraps an Input inside the list that auto-connects
- *                          via SetSearchTextContext and calls onSearchTextChange.
- *                          Keyboard interactions are disabled (the Input handles them).
- *   onSearchTextChange   — callback(searchText) called by the Input when search changes.
- *                          The parent uses this + applySearchText() to control item
- *                          visibility via hidden={!match} and highlight={match ? searchText : null}.
  *   keyboardInteractions  — when true, attaches arrow/enter/escape keyboard shortcuts
  *                          that dispatch navi_list_nav / navi_list_confirm / navi_list_clear
  *                          to the list container. Pair with uiAction for a full keyboard-
@@ -318,21 +310,21 @@ export const List = (props) => {
   return <ListPresentation {...props} />;
 };
 
-// withSearch variant: provides SetSearchTextContext so Input auto-connects.
-// The parent owns the searchText state and passes onSearchTextChange.
-const ListWithSearch = ({ onSearchTextChange, ...props }) => {
+// withSearch variant: provides ListIdContext so a descendant Input knows it
+// controls this list (aria-controls) and can forward keyboard events to it.
+// Also disables keyboardInteractions — the Input handles keyboard navigation.
+const ListWithSearch = (props) => {
   const listIdDefault = useId();
-
+  const listId = props.listId || listIdDefault;
   return (
-    <SetSearchTextContext.Provider value={onSearchTextChange ?? null}>
+    <ListIdContext.Provider value={listId}>
       <List
-        listId={listIdDefault}
-        // disable keyboard interactions because it's the input that will handle them
-        keyboardInteractions={false}
         {...props}
+        listId={listId}
+        keyboardInteractions={false}
         withSearch={undefined}
       />
-    </SetSearchTextContext.Provider>
+    </ListIdContext.Provider>
   );
 };
 
@@ -996,23 +988,29 @@ export const ListItem = ({
       return undefined;
     }
     const itemEl = ref.current;
-    if (!itemEl || !highlight) {
+    if (!itemEl || !highlight || highlight.ranges.length === 0) {
       return undefined;
     }
+    const valueStr = String(value);
     const ownRanges = [];
-    const lowerHighlight = highlight.toLowerCase();
-    const walker = document.createTreeWalker(itemEl, NodeFilter.SHOW_TEXT);
-    let node;
-    while ((node = walker.nextNode())) {
-      const lowerText = node.textContent.toLowerCase();
-      let idx = lowerText.indexOf(lowerHighlight);
-      while (idx !== -1) {
-        const range = new Range();
-        range.setStart(node, idx);
-        range.setEnd(node, idx + highlight.length);
-        hl.add(range);
-        ownRanges.push(range);
-        idx = lowerText.indexOf(lowerHighlight, idx + 1);
+    for (const [start, end] of highlight.ranges) {
+      const matchText = valueStr.slice(start, end).toLowerCase();
+      if (!matchText) {
+        continue;
+      }
+      const walker = document.createTreeWalker(itemEl, NodeFilter.SHOW_TEXT);
+      let node;
+      while ((node = walker.nextNode())) {
+        const lowerText = node.textContent.toLowerCase();
+        let idx = lowerText.indexOf(matchText);
+        while (idx !== -1) {
+          const range = new Range();
+          range.setStart(node, idx);
+          range.setEnd(node, idx + matchText.length);
+          hl.add(range);
+          ownRanges.push(range);
+          idx = lowerText.indexOf(matchText, idx + 1);
+        }
       }
     }
     return () => {

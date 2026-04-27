@@ -42,11 +42,7 @@ import {
   createOnKeyDownForShortcuts,
   useKeyboardShortcuts,
 } from "../keyboard/keyboard_shortcuts.js";
-import {
-  ListIdContext,
-  SetSearchTextContext,
-  useIsInsideListWithSearch,
-} from "../list/list.jsx";
+import { ListIdContext, useIsInsideListWithSearch } from "../list/list.jsx";
 import { Icon } from "../text/icon.jsx";
 import { useStableCallback } from "../utils/use_stable_callback.js";
 import { fieldPropSet } from "./field_prop_set.js";
@@ -422,10 +418,8 @@ const InputTextualBasic = (props) => {
 
 const InputInsideListWithSearch = ({ uiAction, onKeyDown, ...props }) => {
   const listId = useContext(ListIdContext);
-  const setSearchText = useContext(SetSearchTextContext);
   const uiStateController = useContext(UIStateControllerContext);
   uiStateController.uiAction = (v, e) => {
-    setSearchText(v);
     uiAction?.(v, e);
   };
 
@@ -447,38 +441,30 @@ const InputInsideListWithSearch = ({ uiAction, onKeyDown, ...props }) => {
   const onKeyDownForShortcuts = createOnKeyDownForShortcuts([
     {
       key: "arrowdown",
-      description: "Open popover and point to next suggestion",
+      description: "Point to next suggestion",
       handler: (e) => {
-        return forwardToList(e, "navi_list_nav", {
-          direction: "down",
-        });
+        return forwardToList(e, "navi_list_nav", { direction: "down" });
       },
     },
     {
       key: "arrowup",
-      description: "Open popover and point to previous suggestion",
+      description: "Point to previous suggestion",
       handler: (e) => {
-        return forwardToList(e, "navi_list_nav", {
-          direction: "up",
-        });
+        return forwardToList(e, "navi_list_nav", { direction: "up" });
       },
     },
     {
       key: "home",
       description: "Point to first suggestion",
       handler: (e) => {
-        return forwardToList(e, "navi_list_nav", {
-          direction: "first",
-        });
+        return forwardToList(e, "navi_list_nav", { direction: "first" });
       },
     },
     {
       key: "end",
       description: "Point to last suggestion",
       handler: (e) => {
-        return forwardToList(e, "navi_list_nav", {
-          direction: "last",
-        });
+        return forwardToList(e, "navi_list_nav", { direction: "last" });
       },
     },
     {
