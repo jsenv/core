@@ -142,9 +142,6 @@ const css = /* css */ `
       opacity: 0;
       pointer-events: none;
     }
-    &[data-lock-sizing] {
-      visibility: hidden;
-    }
   }
 
   .navi_list {
@@ -669,13 +666,10 @@ const ListControlled = ({
       listContainerEl.style.minHeight = `${height}px`;
       sizeLocked.current = true;
       observer.disconnect();
-      listContainerEl.removeAttribute("data-lock-sizing");
     });
     observer.observe(listContainerEl);
-    listContainerEl.setAttribute("data-lock-sizing", "");
     return () => {
       observer.disconnect();
-      listContainerEl.removeAttribute("data-lock-sizing");
     };
   }, [lockSize]);
 
