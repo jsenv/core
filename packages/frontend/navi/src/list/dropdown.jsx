@@ -148,10 +148,10 @@ export const Dropdown = ({
       return;
     }
     dialog.showModal();
-    setOpen(true);
     if (captureScroll) {
       scrollTrapCleanupRef.current = trapScrollInside(dialog);
     }
+    setOpen(true);
     onOpen?.();
   };
 
