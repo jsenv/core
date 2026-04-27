@@ -177,11 +177,10 @@ const css = /* css */ `
     &[data-interactive] {
       cursor: pointer;
       user-select: none;
-
-      &:hover {
+      /* &:hover {
         --x-color: var(--list-item-color-hover);
         --x-background-color: var(--list-item-background-color-hover);
-      }
+      } */
     }
     &[data-pointed] {
       --x-color: var(--list-item-color-pointed);
