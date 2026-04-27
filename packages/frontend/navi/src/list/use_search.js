@@ -4,10 +4,13 @@ import { useMemo } from "preact/hooks";
  * applySearch — matches value against searchText.
  * Returns { match, matchScore, matchRanges }:
  *   - match: true when value contains searchText (or searchText is empty), false otherwise
- *   - matchScore: 0 to 1 (currently 0 = no searchText or no match, 1 = match found)
+ *   - matchScore: 0 to 1 match quality:
+ *       0   — no searchText or no match
+ *       0.5 — searchText found somewhere in value (contains)
+ *       1   — value starts with searchText (highest priority)
  *   - matchRanges: [start, end] pairs (exclusive end) for CSS Highlight API
  *
- * Intended to be passed to useSearchText as the matchFn parameter.
+ * Intended to be passed to useSearch as the matchFn parameter.
  */
 export const applySearch = (searchText, value) => {
   if (!searchText) {
@@ -25,7 +28,8 @@ export const applySearch = (searchText, value) => {
   if (matchRanges.length === 0) {
     return { match: false, matchScore: 0, matchRanges: [] };
   }
-  return { match: true, matchScore: 1, matchRanges };
+  const matchScore = lowerStr.startsWith(lowerSearch) ? 1 : 0.5;
+  return { match: true, matchScore, matchRanges };
 };
 
 /**
