@@ -44,6 +44,7 @@
         Text,
         Box,
         ListItemHeader,
+        useSearchOrder,
       } from "@jsenv/navi";
 
       // ── Reusable dialog header ────────────────────────────────────────────────
@@ -118,6 +119,11 @@
 
       const FruitPicker = ({ onSelect }) => {
         const close = useDropdownClose();
+        const [search, setSearch] = useState("");
+        const [orderedFruits, getItemMatchInfo] = useSearchOrder(
+          search,
+          FRUITS,
+        );
         return (
           <div style="min-width: 300px;">
             <DialogHeader title="Please select a fruit" />
@@ -136,20 +142,29 @@
             >
               <ListItemHeader>
                 <Input
-                  placeholder="Filter…"
+                  placeholder="Sort…"
                   expandX
                   autoFocus
                   paddingX="10"
                   paddingY="6"
                   size="m"
                   style="border-bottom: 1px solid #eee; border-radius: 0;"
+                  uiAction={(v) => setSearch(v)}
                 />
               </ListItemHeader>
-              {FRUITS.map((fruit) => (
-                <ListItem role="option" key={fruit} value={fruit}>
-                  {fruit}
-                </ListItem>
-              ))}
+              {orderedFruits.map((fruit) => {
+                const { ranges } = getItemMatchInfo(fruit);
+                return (
+                  <ListItem
+                    role="option"
+                    key={fruit}
+                    value={fruit}
+                    highlight={ranges}
+                  >
+                    {fruit}
+                  </ListItem>
+                );
+              })}
             </List>
           </div>
         );
@@ -215,6 +230,11 @@
 
       const CountryPicker = ({ selected, onSelect }) => {
         const close = useDropdownClose();
+        const [search, setSearch] = useState("");
+        const [orderedCountries, getItemMatchInfo] = useSearchOrder(
+          search,
+          COUNTRIES,
+        );
 
         return (
           <List
@@ -236,35 +256,40 @@
                   Pick a country
                 </span>
                 <Input
-                  placeholder="Filter countries…"
+                  placeholder="Sort countries…"
                   expandX
                   autoFocus
                   paddingX="10"
                   paddingY="6"
                   size="m"
+                  uiAction={(v) => setSearch(v)}
                 />
               </div>
             </ListItemHeader>
-            {COUNTRIES.map((country) => (
-              <ListItem
-                role="option"
-                key={country}
-                value={country}
-                selected={selected === country}
-                height="64px"
-                flex
-                alignY="center"
-                spacing="m"
-              >
-                <span style="font-size:28px" role="img">
-                  🌍
-                </span>
-                <span style="flex:1">{country}</span>
-                {selected === country && (
-                  <span style="color:#1a73e8;font-size:18px">✓</span>
-                )}
-              </ListItem>
-            ))}
+            {orderedCountries.map((country) => {
+              const { ranges } = getItemMatchInfo(country);
+              return (
+                <ListItem
+                  role="option"
+                  key={country}
+                  value={country}
+                  selected={selected === country}
+                  highlight={ranges}
+                  height="64px"
+                  flex
+                  alignY="center"
+                  spacing="m"
+                >
+                  <span style="font-size:28px" role="img">
+                    🌍
+                  </span>
+                  <span style="flex:1">{country}</span>
+                  {selected === country && (
+                    <span style="color:#1a73e8;font-size:18px">✓</span>
+                  )}
+                </ListItem>
+              );
+            })}
           </List>
         );
       };
