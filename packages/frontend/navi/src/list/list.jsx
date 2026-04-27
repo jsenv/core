@@ -482,15 +482,15 @@ const ListInteractive = (props) => {
 const ListWithKeyboardInteractions = (props) => {
   const dispatchToList = (event, customEventName, customEventDetail) => {
     const listEl = event.currentTarget;
-    listEl.dispatchEvent(
-      new CustomEvent(customEventName, {
-        cancelable: true,
-        detail: {
-          event,
-          ...customEventDetail,
-        },
-      }),
-    );
+    const customEvent = new CustomEvent(customEventName, {
+      cancelable: true,
+      detail: {
+        event,
+        ...customEventDetail,
+      },
+    });
+    listEl.dispatchEvent(customEvent);
+    return customEvent.defaultPrevented;
   };
 
   const onKeyDownForShortcuts = createOnKeyDownForShortcuts([
