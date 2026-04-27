@@ -5,7 +5,7 @@ import {
   visibleRectEffect,
 } from "@jsenv/dom";
 import { signal } from "@preact/signals";
-import { createContext } from "preact";
+import { cloneElement, createContext } from "preact";
 import {
   useCallback,
   useContext,
@@ -1066,9 +1066,15 @@ const ListItemRealOrVoid = (props) => {
   }
   const separatorVnode =
     typeof separator === "function" ? separator(index - 1) : separator;
+  const separatorWithOrder =
+    order !== undefined
+      ? cloneElement(separatorVnode, {
+          style: { order, ...separatorVnode.props?.style },
+        })
+      : separatorVnode;
   return (
     <>
-      {separatorVnode}
+      {separatorWithOrder}
       {listItemVnode}
     </>
   );
