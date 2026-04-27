@@ -1,38 +1,6 @@
 import { useMemo } from "preact/hooks";
 
 /**
- * applySearch — matches value against searchText.
- * Returns { match, matchScore, matchRanges }:
- *   - match: true when value contains searchText (or searchText is empty), false otherwise
- *   - matchScore: 0 to 1 match quality:
- *       0   — no searchText or no match
- *       0.5 — searchText found somewhere in value (contains)
- *       1   — value starts with searchText (highest priority)
- *   - matchRanges: [start, end] pairs (exclusive end) for CSS Highlight API
- *
- * Intended to be passed to useSearch as the matchFn parameter.
- */
-export const applySearch = (searchText, value) => {
-  if (!searchText) {
-    return { match: true, matchScore: 0, matchRanges: [] };
-  }
-  const str = String(value);
-  const lowerStr = str.toLowerCase();
-  const lowerSearch = searchText.toLowerCase();
-  const matchRanges = [];
-  let idx = lowerStr.indexOf(lowerSearch);
-  while (idx !== -1) {
-    matchRanges.push([idx, idx + searchText.length]);
-    idx = lowerStr.indexOf(lowerSearch, idx + 1);
-  }
-  if (matchRanges.length === 0) {
-    return { match: false, matchScore: 0, matchRanges: [] };
-  }
-  const matchScore = lowerStr.startsWith(lowerSearch) ? 1 : 0.5;
-  return { match: true, matchScore, matchRanges };
-};
-
-/**
  * useSearch — applies matchFn to each item and assigns a stable ordering.
  * Returns [getItemMatchInfo] where getItemMatchInfo(item) returns { match, score, order, ranges }.
  *   - match: whether the item matches the search
@@ -117,4 +85,36 @@ export const useSearch = (searchText, items, matchFn = applySearch) => {
   };
 
   return [getItemMatchInfo];
+};
+
+/**
+ * applySearch — matches value against searchText.
+ * Returns { match, matchScore, matchRanges }:
+ *   - match: true when value contains searchText (or searchText is empty), false otherwise
+ *   - matchScore: 0 to 1 match quality:
+ *       0   — no searchText or no match
+ *       0.5 — searchText found somewhere in value (contains)
+ *       1   — value starts with searchText (highest priority)
+ *   - matchRanges: [start, end] pairs (exclusive end) for CSS Highlight API
+ *
+ * Intended to be passed to useSearch as the matchFn parameter.
+ */
+export const applySearch = (searchText, value) => {
+  if (!searchText) {
+    return { match: true, matchScore: 0, matchRanges: [] };
+  }
+  const str = String(value);
+  const lowerStr = str.toLowerCase();
+  const lowerSearch = searchText.toLowerCase();
+  const matchRanges = [];
+  let idx = lowerStr.indexOf(lowerSearch);
+  while (idx !== -1) {
+    matchRanges.push([idx, idx + searchText.length]);
+    idx = lowerStr.indexOf(lowerSearch, idx + 1);
+  }
+  if (matchRanges.length === 0) {
+    return { match: false, matchScore: 0, matchRanges: [] };
+  }
+  const matchScore = lowerStr.startsWith(lowerSearch) ? 1 : 0.5;
+  return { match: true, matchScore, matchRanges };
 };
