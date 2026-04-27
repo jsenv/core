@@ -479,89 +479,61 @@ const ListInteractive = (props) => {
   );
 };
 
-// Presentation-only variant: no interaction state, no navi event handling.
-const ListPresentation = (props) => {
-  return <ListControlled {...props} />;
-};
-
 const ListWithKeyboardInteractions = (props) => {
+  const dispatchToList = (event, customEventName, customEventDetail) => {
+    const listEl = event.currentTarget;
+    listEl.dispatchEvent(
+      new CustomEvent(customEventName, {
+        cancelable: true,
+        detail: {
+          event,
+          ...customEventDetail,
+        },
+      }),
+    );
+  };
+
   const onKeyDownForShortcuts = createOnKeyDownForShortcuts([
     {
       key: "arrowdown",
       description: "Point to next item",
       handler: (e) => {
-        const listEl = e.currentTarget;
-        listEl.dispatchEvent(
-          new CustomEvent("navi_list_nav", {
-            cancelable: true,
-            detail: { event: e, direction: "down" },
-          }),
-        );
+        return dispatchToList(e, "navi_list_nav", { direction: "down" });
       },
     },
     {
       key: "arrowup",
       description: "Point to previous item",
       handler: (e) => {
-        const listEl = e.currentTarget;
-        listEl.dispatchEvent(
-          new CustomEvent("navi_list_nav", {
-            cancelable: true,
-            detail: { event: e, direction: "up" },
-          }),
-        );
+        return dispatchToList(e, "navi_list_nav", { direction: "up" });
       },
     },
     {
       key: "home",
       description: "Point to first item",
       handler: (e) => {
-        const listEl = e.currentTarget;
-        listEl.dispatchEvent(
-          new CustomEvent("navi_list_nav", {
-            cancelable: true,
-            detail: { event: e, direction: "first" },
-          }),
-        );
+        return dispatchToList(e, "navi_list_nav", { direction: "first" });
       },
     },
     {
       key: "end",
       description: "Point to last item",
       handler: (e) => {
-        const listEl = e.currentTarget;
-        listEl.dispatchEvent(
-          new CustomEvent("navi_list_nav", {
-            cancelable: true,
-            detail: { event: e, direction: "last" },
-          }),
-        );
+        return dispatchToList(e, "navi_list_nav", { direction: "last" });
       },
     },
     {
       key: "enter",
       description: "Confirm pointed item",
       handler: (e) => {
-        const listEl = e.currentTarget;
-        listEl.dispatchEvent(
-          new CustomEvent("navi_list_confirm", {
-            cancelable: true,
-            detail: { event: e },
-          }),
-        );
+        return dispatchToList(e, "navi_list_confirm");
       },
     },
     {
       key: "escape",
       description: "Clear pointed item",
       handler: (e) => {
-        const listEl = e.currentTarget;
-        listEl.dispatchEvent(
-          new CustomEvent("navi_list_clear", {
-            cancelable: true,
-            detail: { event: e },
-          }),
-        );
+        return dispatchToList(e, "navi_list_clear");
       },
     },
   ]);
@@ -570,12 +542,18 @@ const ListWithKeyboardInteractions = (props) => {
     <List
       {...props}
       keyboardInteractions={undefined}
+      tabIndex="0"
       onKeyDown={(e) => {
         onKeyDownForShortcuts(e);
         props.onKeyDown?.(e);
       }}
     />
   );
+};
+
+// Presentation-only variant: no interaction state, no navi event handling.
+const ListPresentation = (props) => {
+  return <ListControlled {...props} />;
 };
 
 // Internal renderer shared by ListInteractive, ListPresentation, and ListWithPopover.
@@ -593,16 +571,9 @@ const ListControlled = ({
   itemsRef,
   virtualItemHeight,
   lockSize,
-  keyboardInteractions,
   ...rest
 }) => {
   import.meta.css = css;
-
-  // When keyboard interactions are enabled, make the container focusable so
-  // arrow keys work without the user having to click first.
-  if (keyboardInteractions && tabIndex === undefined) {
-    tabIndex = 0;
-  }
 
   // Default lockSize to true when rendered inside a Dropdown.
   const isInsideDropdown = useIsInsideDropdown();
