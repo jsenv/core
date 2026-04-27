@@ -1173,18 +1173,18 @@ const ListItemReal = ({
       data-interactive={interactionContext ? "" : undefined}
       data-anchor={isPointedByKeyboard ? "" : undefined}
       onMouseEnter={(e) => {
-        onHover?.(value, e);
+        onHover?.(index, e);
         rest.onMouseEnter?.(e);
       }}
       onMouseLeave={(e) => {
-        onHover?.(null, e);
+        onHover?.(-1, e);
         rest.onMouseLeave?.(e);
       }}
       onMouseDown={(e) => {
         if (e.button !== 0) {
           return;
         }
-        onSelect?.(value, e);
+        onSelect?.(index, e);
         rest.onMouseDown?.(e);
       }}
       {...rest}
