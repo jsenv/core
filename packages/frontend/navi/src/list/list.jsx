@@ -954,9 +954,12 @@ export const ListItem = (props) => {
   if (props.role === "presentation") {
     return <ListItemPresentation {...props} />;
   }
-  return <ListItemOrVoid {...props} />;
+  return <ListItemRealOrVoid {...props} />;
 };
-const ListItemOrVoid = (props) => {
+const ListItemPresentation = (props) => {
+  return <Box as="li" {...props} />;
+};
+const ListItemRealOrVoid = (props) => {
   let { id, value, hidden, selected, ...rest } = props;
   const idDefault = useId();
   id = id || idDefault;
@@ -1003,16 +1006,7 @@ const ListItemOrVoid = (props) => {
     </>
   );
 };
-const ListItemReal = (props) => {
-  if (props.role === "presentation") {
-    return <ListItemPresentation {...props} />;
-  }
-  return <ListItemData {...props} />;
-};
-const ListItemPresentation = (props) => {
-  return <Box as="li" {...props} />;
-};
-const ListItemData = ({
+const ListItemReal = ({
   value,
   hidden,
   highlight,
