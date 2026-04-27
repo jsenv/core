@@ -1028,7 +1028,7 @@ const ListItemReal = ({
   const isKeyboardPointed = isPointedByKeyboard;
 
   useLayoutEffect(() => {
-    if (!isKeyboardPointed) {
+    if (!isKeyboardPointed && !selected) {
       return;
     }
     const itemEl = ref.current;
@@ -1036,7 +1036,7 @@ const ListItemReal = ({
       return;
     }
     scrollIntoViewWithStickyAwareness(itemEl);
-  }, [isKeyboardPointed]);
+  }, [isKeyboardPointed, selected]);
 
   // CSS Highlight API: mark matching text ranges when highlight prop is set.
   useLayoutEffect(() => {
