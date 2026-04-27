@@ -804,6 +804,7 @@ const InputTextualPlain = (props) => {
     innerValue,
     innerOnInput,
     innerId,
+    autoFocus,
   ]);
 
   let innerChildren;
