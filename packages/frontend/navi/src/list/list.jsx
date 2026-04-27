@@ -64,10 +64,10 @@ const LIST_ITEM_SELECTOR = `.navi_list_item`;
 
 // Carries the render window {start, end} (or null = render all) from
 // List down to each ListItem.
-export const RenderWindowContext = createContext(null);
+const RenderWindowContext = createContext(null);
 // Carries the separator element/function down to each ListItem so separators
 // are only rendered between items that actually mount (post-filter, post-window).
-export const SeparatorContext = createContext(null);
+const SeparatorContext = createContext(null);
 
 const css = /* css */ `
   @layer navi {
