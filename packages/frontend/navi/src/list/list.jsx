@@ -866,43 +866,16 @@ const UnorderedList = ({
   children,
   ...rest
 }) => {
-  const heightSignalRef = useRef(null);
-  if (!heightSignalRef.current) {
-    // eslint-disable-next-line signals/no-signal-in-component-body
-    heightSignalRef.current = signal(virtualItemHeight || 0);
-  }
-  if (
-    virtualItemHeight &&
-    heightSignalRef.current.peek() !== virtualItemHeight
-  ) {
-    heightSignalRef.current.value = virtualItemHeight;
-  }
-  const useVirtualItemHeight = useRef(
-    () => heightSignalRef.current.value,
-  ).current;
-
   const ulRef = useRef(null);
-  useLayoutEffect(() => {
-    if (virtualItemHeight) {
-      return;
-    }
-    if (heightSignalRef.current.peek() !== 0) {
-      return;
-    }
-    const ulEl = ulRef.current;
-    if (!ulEl) {
-      return;
-    }
-    const listItem = ulEl.querySelector(LIST_ITEM_SELECTOR);
-    if (listItem) {
-      heightSignalRef.current.value = listItem.getBoundingClientRect().height;
-    }
-  }, [virtualItemHeight]);
+  const virtualItemHeightSignal = useVirtualItemHeightSignal(
+    ulRef,
+    virtualItemHeight,
+  );
 
   return (
     <Box as="ul" {...rest} ref={ulRef} baseClassName="navi_list">
       <TopFiller
-        useVirtualItemHeight={useVirtualItemHeight}
+        virtualItemHeightSignal={virtualItemHeightSignal}
         renderWindowStart={renderWindow.start}
       />
       <RenderWindowContext.Provider value={renderWindow}>
@@ -913,7 +886,7 @@ const UnorderedList = ({
         </SeparatorContext.Provider>
       </RenderWindowContext.Provider>
       <BottomFiller
-        useVirtualItemHeight={useVirtualItemHeight}
+        virtualItemHeightSignal={virtualItemHeightSignal}
         renderWindowEnd={renderWindow.end}
         tracker={tracker}
       />
@@ -925,16 +898,43 @@ const UnorderedList = ({
     </Box>
   );
 };
-
-const TopFiller = ({ useVirtualItemHeight, renderWindowStart }) => {
-  const ref = useRef(null);
-  const virtualItemHeight = useVirtualItemHeight();
+const useVirtualItemHeightSignal = (ulRef, virtualItemHeightProp = 0) => {
+  const virtualHeightSignalRef = useRef(null);
+  if (!virtualHeightSignalRef.current) {
+    virtualHeightSignalRef.current = signal(virtualItemHeightProp);
+  }
+  const virtualHeightSignal = virtualHeightSignalRef.current;
+  // propagate prop changes to the signal
+  if (
+    virtualItemHeightProp &&
+    virtualHeightSignal.peek() !== virtualItemHeightProp
+  ) {
+    virtualHeightSignal.value = virtualItemHeightProp;
+  }
+  useLayoutEffect(() => {
+    if (virtualHeightSignal.peek() !== 0) {
+      return;
+    }
+    const ulEl = ulRef.current;
+    if (!ulEl) {
+      return;
+    }
+    const firstListItem = ulEl.querySelector(LIST_ITEM_SELECTOR);
+    if (!firstListItem) {
+      return;
+    }
+    const measuredHeight = firstListItem.getBoundingClientRect().height;
+    virtualHeightSignal.value = measuredHeight;
+  });
+  return virtualHeightSignal;
+};
+const TopFiller = ({ virtualItemHeightSignal, renderWindowStart }) => {
+  const virtualItemHeight = virtualItemHeightSignal.value;
   const numberOfItemsAbove = renderWindowStart;
   const heightToFillAbove = numberOfItemsAbove * virtualItemHeight;
 
   return (
     <li
-      ref={ref}
       className="navi_list_virtual_filler"
       // eslint-disable-next-line react/no-unknown-property
       navi-virtual-filler="top"
@@ -945,9 +945,13 @@ const TopFiller = ({ useVirtualItemHeight, renderWindowStart }) => {
     />
   );
 };
-const BottomFiller = ({ useVirtualItemHeight, renderWindowEnd, tracker }) => {
+const BottomFiller = ({
+  virtualItemHeightSignal,
+  renderWindowEnd,
+  tracker,
+}) => {
   const itemCount = tracker.useItemCount();
-  const virtualItemHeight = useVirtualItemHeight();
+  const virtualItemHeight = virtualItemHeightSignal.value;
   const numberOfItemsBelow = Math.max(itemCount - renderWindowEnd, 0);
   const heightToFillBelow = numberOfItemsBelow * virtualItemHeight;
 
