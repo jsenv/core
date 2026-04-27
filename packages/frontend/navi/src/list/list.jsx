@@ -21,6 +21,7 @@ import { useItemTracker } from "../utils/item_tracker/item_tracker.jsx";
 import { useIsInsideDropdown } from "./dropdown.jsx";
 
 const ListItemTrackerContext = createContext(null);
+const ItemToScrollOnMountRefContext = createContext(null);
 
 export const ListIdContext = createContext();
 export const ListWithSearchContext = createContext(false);
@@ -404,21 +405,32 @@ const ListWithPopover = (props) => {
 // navi event protocol, then delegates rendering to ListControlled.
 const ListInteractive = (props) => {
   const { uiAction } = props;
-  const [mousePointedValue, setMousePointedValue] = useState(null);
-  const [keyboardPointedValue, setKeyboardPointedValue] = useState(null);
-  const [anchorValue, setAnchorValue] = useState(null);
-  const anchorValueRef = useRef(null);
-  anchorValueRef.current = anchorValue;
+  const [mousePointedIndex, setMousePointedIndex] = useState(-1);
+  const [keyboardPointedIndex, setKeyboardPointedIndex] = useState(-1);
+  const [anchorIndex, setAnchorIndex] = useState(-1);
+  const anchorIndexRef = useRef(anchorIndex);
+  anchorIndexRef.current = anchorIndex;
   const itemsRef = useRef([]);
 
+  const getValueByIndex = (index) => {
+    if (index === -1) {
+      return undefined;
+    }
+    const items = itemsRef.current;
+    const item = items[index];
+    const value = item?.value;
+    return value;
+  };
+
   const interactionContext = {
-    mousePointedValue,
-    keyboardPointedValue,
-    onHover: (value) => {
-      setMousePointedValue(value);
+    mousePointedIndex,
+    keyboardPointedIndex,
+    onHover: (index) => {
+      setMousePointedIndex(index);
     },
-    onSelect: (value, event) => {
-      setAnchorValue(value);
+    onSelect: (index, event) => {
+      setAnchorIndex(index);
+      const value = getValueByIndex(index);
       uiAction(value, event);
     },
   };
@@ -433,47 +445,59 @@ const ListInteractive = (props) => {
         onnavi_list_nav={(e) => {
           const { direction, event = e } = e.detail;
           const items = itemsRef.current;
-          if (items.length === 0) {
+          const itemCount = items.length;
+          if (itemCount === 0) {
             return;
           }
-          const values = items.map((item) => item.value);
-          const current = anchorValueRef.current;
-          const onNavTo = (targetIndex) => {
-            const targetValue = values[targetIndex];
-            event.preventDefault();
-            anchorValueRef.current = targetValue;
-            setKeyboardPointedValue(targetValue);
-            setAnchorValue(targetValue);
-            // TODO: find the DOM element connected to this value
-            // (likely document.querrySelector(items[targetIndex].id))
-            // scrollIntoViewWithStickyAwareness(itemEl);
+          const anchorIndex = anchorIndexRef.current;
+          const resolveIndex = (direction) => {
+            if (direction === "down") {
+              const belowIndex =
+                anchorIndex < itemCount - 1 ? anchorIndex + 1 : anchorIndex;
+              return belowIndex;
+            }
+            if (direction === "up") {
+              const aboveIndex =
+                anchorIndex > 0 ? anchorIndex - 1 : anchorIndex;
+              return aboveIndex;
+            }
+            if (direction === "first") {
+              return 0;
+            }
+            if (direction === "last") {
+              return itemCount - 1;
+            }
+            return index;
           };
-
-          if (direction === "down") {
-            const idx = current === null ? -1 : values.indexOf(current);
-            const belowIndex = idx < values.length - 1 ? idx + 1 : idx;
-            onNavTo(belowIndex);
-          } else if (direction === "up") {
-            const idx = current === null ? -1 : values.indexOf(current);
-            const aboveIndex = idx > 0 ? idx - 1 : idx;
-            onNavTo(aboveIndex);
-          } else if (direction === "first") {
-            onNavTo(0);
-          } else if (direction === "last") {
-            onNavTo(values.length - 1);
+          const index = resolveIndex(direction);
+          if (index === anchorIndex) {
+            return;
           }
+          event.preventDefault();
+          anchorIndexRef.current = index;
+          setKeyboardPointedIndex(index);
+          setAnchorIndex(index);
+          e.currentTarget.dispatchEvent(
+            new CustomEvent("navi_list_scroll_to_item", {
+              detail: {
+                event: e,
+                index,
+              },
+            }),
+          );
         }}
         onnavi_list_clear={() => {
-          setMousePointedValue(null);
-          setKeyboardPointedValue(null);
-          setAnchorValue(null);
+          setMousePointedIndex(-1);
+          setKeyboardPointedIndex(-1);
+          setAnchorIndex(-1);
         }}
         onnavi_list_confirm={(e) => {
-          const current = anchorValueRef.current;
-          if (current === null) {
+          const anchorIndex = anchorIndexRef.current;
+          if (anchorIndex === -1) {
             return;
           }
-          uiAction(current, e);
+          const anchorValue = getValueByIndex(anchorIndex);
+          uiAction(anchorValue, e);
         }}
       />
     </ListInteractionContext.Provider>
@@ -653,9 +677,30 @@ const ListControlled = ({
   };
 
   const initialScrollRef = useRef(false);
-
+  const latestItemsRef = useRef([]);
+  const itemToScrollOnMountRef = useRef(null);
+  const scrollToIndex = (index) => {
+    const items = latestItemsRef.current;
+    const { start, end } = renderWindowRef.current;
+    const isInWindow = index >= start && index < end;
+    if (isInWindow) {
+      const item = items[index];
+      const itemEl = document.getElementById(item.id);
+      if (itemEl) {
+        scrollIntoViewWithStickyAwareness(itemEl);
+        return;
+      }
+    }
+    // Not in DOM — shift the render window. The item will read
+    // itemToScrollOnMountRef on mount and call scrollIntoViewWithStickyAwareness.
+    itemToScrollOnMountRef.current = index;
+    const half = Math.floor(renderBudget / 2);
+    const newStart = Math.max(0, index - half);
+    updateRenderWindow(newStart, newStart + renderBudget);
+  };
   const tracker = useItemTracker({
     onChange: (items) => {
+      latestItemsRef.current = items;
       if (itemsRef) {
         itemsRef.current = items;
       }
@@ -670,12 +715,9 @@ const ListControlled = ({
       } else if (initialScrollRef.current === false) {
         initialScrollRef.current = true;
         const firstSelectedIndex = items.findIndex((i) => i.selected);
-        if (firstSelectedIndex) {
-          const half = Math.floor(renderBudget / 2);
-          const newStart = Math.max(0, firstSelectedIndex - half);
-          updateRenderWindow(newStart, newStart + renderBudget);
+        if (firstSelectedIndex !== -1) {
+          scrollToIndex(firstSelectedIndex);
         }
-        // TODO: scrollIntoview sticky aware
       }
     },
   });
@@ -760,9 +802,11 @@ const ListControlled = ({
         renderWindow={renderWindow}
         virtualItemHeightSignal={virtualItemHeightSignal}
       >
-        <ListIdContext.Provider value={listId}>
-          {children}
-        </ListIdContext.Provider>
+        <ItemToScrollOnMountRefContext.Provider value={itemToScrollOnMountRef}>
+          <ListIdContext.Provider value={listId}>
+            {children}
+          </ListIdContext.Provider>
+        </ItemToScrollOnMountRefContext.Provider>
       </UnorderedList>
     );
   };
@@ -791,6 +835,22 @@ const ListControlled = ({
       styleCSSVars={LIST_STYLE_CSS_VARS}
       pseudoClasses={LIST_PSEUDO_CLASSES}
       hasChildFunction
+      onnavi_list_scroll_to={(e) => {
+        const { index } = e.detail;
+        scrollToIndex(index, e.detail.event);
+      }}
+      onnavi_list_nav_to={(e) => {
+        const { index, event } = e.detail;
+        const items = itemsRef.current;
+        if (items.length === 0) {
+          return;
+        }
+        e.currentTarget.dispatchEvent(
+          new CustomEvent("navi_list_scroll_to", {
+            detail: { event, index },
+          }),
+        );
+      }}
     >
       {renderListMemoized}
     </Box>
@@ -987,6 +1047,7 @@ const ListItemReal = ({
   hidden,
   highlight,
   selected,
+  index,
   pointed,
   children,
   ...rest
@@ -994,13 +1055,26 @@ const ListItemReal = ({
   const defaultRef = useRef(null);
   const ref = rest.ref || defaultRef;
   const interactionContext = useContext(ListInteractionContext);
-  const { mousePointedValue, keyboardPointedValue, onHover, onSelect } =
+  const { mousePointedIndex, keyboardPointedIndex, onHover, onSelect } =
     interactionContext || {};
+  const itemToScrollOnMountRef = useContext(ItemToScrollOnMountRefContext);
 
-  const isPointedByMouse = mousePointedValue === value;
-  const isPointedByKeyboard = keyboardPointedValue === value;
+  const isPointedByMouse = index === mousePointedIndex;
+  const isPointedByKeyboard = index === keyboardPointedIndex;
   const isPointedByProxy = Boolean(pointed);
   const isPointed = isPointedByMouse || isPointedByKeyboard || isPointedByProxy;
+
+  useLayoutEffect(() => {
+    if (itemToScrollOnMountRef.current !== index) {
+      return;
+    }
+    const itemEl = ref.current;
+    if (!itemEl) {
+      return;
+    }
+    itemToScrollOnMountRef.current = null;
+    scrollIntoViewWithStickyAwareness(itemEl);
+  }, []);
 
   // CSS Highlight API: mark matching text ranges when highlight prop is set.
   useLayoutEffect(() => {
