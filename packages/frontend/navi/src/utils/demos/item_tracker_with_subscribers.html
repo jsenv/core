@@ -63,155 +63,8 @@
   <body>
     <script type="module" jsenv-type="module/jsx">
       import { createContext, render } from "preact";
-      import {
-        useContext,
-        useLayoutEffect,
-        useRef,
-        useState,
-      } from "preact/hooks";
-      import { signal } from "@preact/signals";
-
-      // createItemTracker with Preact signals and incremental maintenance.
-      //
-      // Core idea:
-      //   - registrations: Map of currently-visible items only
-      //   - The caller decides visibility and passes isVisible to useTrackItem
-      //   - orderedVisible: sorted array, recomputed once per batch in notify()
-      //   - countSignal: signal(number), bumped only when count changes
-      //   - propSignals: Map propName → signal(array), bumped only on content change
-      // Items always call useTrackItem with all their data including hidden.
-      // useTrackItem decides internally: hidden → remove from registrations, return -1.
-      // Not hidden → register and return current index among visible items.
-      //
-      // sortedOrders: number[] of visible item orders, kept sorted at all times.
-      // Index = bisect(order) — O(log n), no linear scan.
-      // notify() uses sortedOrders directly — no sort needed there either.
-      const createItemTracker = () => {
-        const registrations = new Map(); // order → data
-        const idToOrder = new Map(); // id → order
-        let orderCounter = 0;
-        const sortedOrders = []; // visible item orders, kept sorted
-
-        const bisect = (order) => {
-          let lo = 0;
-          let hi = sortedOrders.length;
-          while (lo < hi) {
-            const mid = (lo + hi) >> 1;
-            if (sortedOrders[mid] < order) {
-              lo = mid + 1;
-            } else {
-              hi = mid;
-            }
-          }
-          return lo;
-        };
-
-        const insertOrder = (order) => {
-          sortedOrders.splice(bisect(order), 0, order);
-        };
-
-        const removeOrder = (order) => {
-          const pos = bisect(order);
-          if (sortedOrders[pos] === order) {
-            sortedOrders.splice(pos, 1);
-          }
-        };
-
-        const countSignal = signal(0);
-        const propSignals = new Map(); // propName → signal(array)
-
-        const getPropSignal = (propName) => {
-          if (!propSignals.has(propName)) {
-            propSignals.set(propName, signal([]));
-          }
-          return propSignals.get(propName);
-        };
-
-        let notifyScheduled = false;
-        const notify = () => {
-          if (notifyScheduled) {
-            return;
-          }
-          notifyScheduled = true;
-          queueMicrotask(() => {
-            notifyScheduled = false;
-
-            // sortedOrders is already sorted — no sort needed here
-            const newCount = sortedOrders.length;
-            if (countSignal.peek() !== newCount) {
-              countSignal.value = newCount;
-            }
-
-            for (const [propName, sig] of propSignals) {
-              const prev = sig.peek();
-              const next = sortedOrders.map(
-                (order) => registrations.get(order)[propName],
-              );
-              let changed = prev.length !== next.length;
-              if (!changed) {
-                for (let i = 0; i < next.length; i++) {
-                  if (prev[i] !== next[i]) {
-                    changed = true;
-                    break;
-                  }
-                }
-              }
-              if (changed) {
-                sig.value = next;
-              }
-            }
-          });
-        };
-
-        const useTrackerItemProp = (propName) => getPropSignal(propName).value;
-        const useTrackerItemCount = () => countSignal.value;
-
-        const useTrackItem = (id, data) => {
-          if (!idToOrder.has(id)) {
-            idToOrder.set(id, orderCounter++);
-          }
-          const order = idToOrder.get(id);
-
-          // sync update so index is correct during this render
-          if (data.hidden) {
-            registrations.delete(order);
-            removeOrder(order);
-          } else {
-            registrations.set(order, data);
-            if (sortedOrders[bisect(order)] !== order) {
-              insertOrder(order);
-            }
-          }
-
-          useLayoutEffect(() => {
-            if (data.hidden) {
-              registrations.delete(order);
-              removeOrder(order);
-            } else {
-              registrations.set(order, data);
-              if (sortedOrders[bisect(order)] !== order) {
-                insertOrder(order);
-              }
-            }
-            notify();
-          });
-
-          useLayoutEffect(() => {
-            return () => {
-              registrations.delete(order);
-              removeOrder(order);
-              notify();
-            };
-          }, []);
-
-          if (data.hidden) {
-            return -1;
-          }
-          return bisect(order);
-        };
-
-        return { useTrackItem, useTrackerItemProp, useTrackerItemCount };
-      };
+      import { useContext, useRef, useState } from "preact/hooks";
+      import { useItemTracker } from "../item_tracker/item_tracker.jsx";
 
       // ── Render counter hook ───────────────────────────────────────────────────
 
@@ -248,17 +101,58 @@
         "b-5",
       ];
 
-      const { useTrackItem, useTrackerItemProp, useTrackerItemCount } =
-        createItemTracker();
+      const ListWithSearch = ({ children }) => {
+        const renders = useRenderCount();
+        const [searchText, setSearchText] = useState(null);
+        const searchContextRef = useRef(null);
+        if (
+          !searchContextRef.current ||
+          searchContextRef.current.searchText !== (searchText || null)
+        ) {
+          searchContextRef.current = { searchText: searchText || null };
+        }
 
+        const tracker = useItemTracker();
+
+        return (
+          <div class="component-box">
+            <div class="component-header">
+              <span class="component-name">ListWithSearch</span>
+              <RenderBadge count={renders} />
+            </div>
+            <div class="component-body">
+              <input
+                type="text"
+                placeholder='Filter: "a" or "b"'
+                onInput={(e) => {
+                  setSearchText(e.currentTarget.value || null);
+                }}
+              />
+              <VisibleCount tracker={tracker} />
+              <VisibleValues tracker={tracker} />
+              <SearchContext.Provider value={searchContextRef.current}>
+                <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+                  <TrackerContext.Provider value={tracker}>
+                    {children}
+                  </TrackerContext.Provider>
+                </ul>
+              </SearchContext.Provider>
+            </div>
+          </div>
+        );
+      };
+
+      const TrackerContext = createContext();
       const Item = ({ value, id }) => {
+        const tracker = useContext(TrackerContext);
+
         const renders = useRenderCount();
         const [counter, setCounter] = useState(0);
         const searchContext = useContext(SearchContext);
         const hidden = searchContext?.searchText
           ? !value.startsWith(searchContext.searchText)
           : false;
-        const index = useTrackItem(id, { hidden, value });
+        const index = tracker.useTrackItem(id, { hidden, value });
         if (index === -1) {
           return null;
         }
@@ -288,9 +182,9 @@
 
       const ITEM_VNODES = ITEMS.map((v) => <Item key={v} id={v} value={v} />);
 
-      const VisibleCount = () => {
+      const VisibleCount = ({ tracker }) => {
         const renders = useRenderCount();
-        const count = useTrackerItemCount();
+        const count = tracker.useItemCount();
         return (
           <div class="component-box">
             <div class="component-header">
@@ -302,9 +196,9 @@
         );
       };
 
-      const VisibleValues = () => {
+      const VisibleValues = ({ tracker }) => {
         const renders = useRenderCount();
-        const values = useTrackerItemProp("value");
+        const values = tracker.useItemValues("value");
         return (
           <div class="component-box">
             <div class="component-header">
@@ -312,43 +206,6 @@
               <RenderBadge count={renders} />
             </div>
             <div class="component-body">values=[{values.join(",")}]</div>
-          </div>
-        );
-      };
-
-      const ListWithSearch = ({ children }) => {
-        const renders = useRenderCount();
-        const [searchText, setSearchText] = useState(null);
-        const searchContextRef = useRef(null);
-        if (
-          !searchContextRef.current ||
-          searchContextRef.current.searchText !== (searchText || null)
-        ) {
-          searchContextRef.current = { searchText: searchText || null };
-        }
-
-        return (
-          <div class="component-box">
-            <div class="component-header">
-              <span class="component-name">ListWithSearch</span>
-              <RenderBadge count={renders} />
-            </div>
-            <div class="component-body">
-              <input
-                type="text"
-                placeholder='Filter: "a" or "b"'
-                onInput={(e) => {
-                  setSearchText(e.currentTarget.value || null);
-                }}
-              />
-              <VisibleCount />
-              <VisibleValues />
-              <SearchContext.Provider value={searchContextRef.current}>
-                <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-                  {children}
-                </ul>
-              </SearchContext.Provider>
-            </div>
           </div>
         );
       };
