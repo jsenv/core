@@ -673,7 +673,7 @@ const ListControlled = ({
       const itemCount = items.length;
       const current = renderWindowRef.current;
       if (current.start >= itemCount && itemCount > 0) {
-        // updateRenderWindow(0, renderBudget);
+        updateRenderWindow(0, renderBudget);
       }
     },
   });
