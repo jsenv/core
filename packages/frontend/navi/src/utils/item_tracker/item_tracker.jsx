@@ -216,7 +216,6 @@ const createItemTracker = (onChange) => {
     useItemCount,
     useItemValues,
     getTrackedItemByIndex,
-    getCount: () => sortedOrders.length,
     countSignal,
   };
 };

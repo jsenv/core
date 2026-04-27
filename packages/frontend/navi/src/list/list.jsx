@@ -630,14 +630,6 @@ const ListControlled = ({
     };
   }, [lockSize]);
 
-  const tracker = useItemTracker({
-    onChange: (items) => {
-      if (itemsRef) {
-        itemsRef.current = items;
-      }
-    },
-  });
-
   const [renderWindow, setRenderWindow] = useState({
     start: 0,
     end: renderBudget,
@@ -657,16 +649,21 @@ const ListControlled = ({
     const newEnd = newStart + renderBudget;
     updateRenderWindow(newStart, newEnd);
   };
-  // Keep the render window in range: if items shifted (e.g. after filtering),
-  // reset to start. Uses tracker.getCount() which reads sortedOrders.length
-  // synchronously — unlike countSignal which is deferred via queueMicrotask.
-  useLayoutEffect(() => {
-    const totalItems = tracker.getCount();
-    const current = renderWindowRef.current;
-    if (current !== null && current.start >= totalItems && totalItems > 0) {
-      // Window is entirely out of range (e.g. after filtering) — reset to start.
-      updateRenderWindow(0, renderBudget);
-    }
+  const tracker = useItemTracker({
+    onChange: (items) => {
+      if (itemsRef) {
+        itemsRef.current = items;
+      }
+      // When item count changes (e.g. after filtering), check if the render
+      // window is still in range. If not, reset to start.
+      // This runs in the tracker's microtask batch — no extra render cycle,
+      // no explicit useLayoutEffect dependency on item count.
+      const totalItems = items.length;
+      const current = renderWindowRef.current;
+      if (current.start >= totalItems && totalItems > 0) {
+        updateRenderWindow(0, renderBudget);
+      }
+    },
   });
   // Scroll listener — slides the window as the user scrolls.
   useLayoutEffect(() => {
