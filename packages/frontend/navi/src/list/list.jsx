@@ -939,6 +939,7 @@ const TopFiller = ({ virtualItemHeightSignal, renderWindowStart }) => {
       // eslint-disable-next-line react/no-unknown-property
       navi-virtual-filler="top"
       aria-hidden
+      data-item-height={virtualItemHeight}
       style={{
         height: `${heightToFillAbove}px`,
       }}
@@ -961,6 +962,7 @@ const BottomFiller = ({
       // eslint-disable-next-line react/no-unknown-property
       navi-virtual-filler="bottom"
       aria-hidden
+      data-item-height={virtualItemHeight}
       style={{
         height: `${heightToFillBelow}px`,
       }}
