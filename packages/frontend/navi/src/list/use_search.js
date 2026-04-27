@@ -1,90 +1,124 @@
 import { useMemo } from "preact/hooks";
 
 /**
- * useSearch — applies matchFn to each item and assigns a stable ordering.
- * Returns [getItemMatchInfo] where getItemMatchInfo(item) returns { match, score, order, ranges }.
- *   - match: whether the item matches the search
- *   - score: 0 to 1 match quality
- *   - order: integer index for sorting in the UI (matched items first, sorted by score desc)
- *   - ranges: [start, end] pairs for highlight
+ * useSearchOrder — reorders items so matched ones come first (sorted by score desc),
+ * followed by non-matched items in their natural order. No item is hidden.
+ * Returns [orderedItems, getItemMatchInfo].
+ *   - orderedItems: all items, reordered
+ *   - getItemMatchInfo(item): { match, score, ranges }
  *
- * When scores are equal, natural order of items is preserved (stable sort).
- * When searchText is empty, all items match with score 0 (natural order preserved).
- *
- * Usage:
- *   const [getItemMatchInfo] = useSearchText(items, searchText, applySearchText);
- *   // in render loop:
- *   const { match, score, order, ranges } = getItemMatchInfo(item);
- *   <ListItem hidden={!match} highlight={ranges} />
+ * When searchText is empty, natural order is preserved and all items match with score 0.
  */
-export const useSearch = (searchText, items, matchFn = applySearch) => {
-  const matchInfoMap = useMemo(() => {
-    // scoreEntries: [score, bucket][] kept sorted desc by score.
-    // New distinct score values are inserted via bisect — O(1) in practice
-    // since there are very few distinct scores (today just 0 and 1).
-    const scoreEntries = []; // [score, bucket][]
-    const nonMatched = [];
-
-    for (const item of items) {
-      const result = matchFn(searchText, item);
-      if (!result.match) {
-        nonMatched.push({
-          item,
-          score: result.matchScore,
-          ranges: result.matchRanges,
-        });
-        continue;
-      }
-      const score = result.matchScore;
-      // Find existing bucket or insert a new entry in desc order.
-      let lo = 0;
-      let hi = scoreEntries.length;
-      while (lo < hi) {
-        const mid = (lo + hi) >> 1;
-        if (scoreEntries[mid][0] > score) {
-          lo = mid + 1;
-        } else if (scoreEntries[mid][0] < score) {
-          hi = mid;
-        } else {
-          lo = mid;
-          hi = mid; // exact match — found the bucket
-        }
-      }
-      if (lo < scoreEntries.length && scoreEntries[lo][0] === score) {
-        scoreEntries[lo][1].push({ item, ranges: result.matchRanges });
-      } else {
-        scoreEntries.splice(lo, 0, [
-          score,
-          [{ item, ranges: result.matchRanges }],
-        ]);
+export const useSearchOrder = (searchText, items, matchFn = applySearch) => {
+  const { orderedItems, matchInfoMap } = useMemo(() => {
+    const { scoreEntries, nonMatched, matchInfoMap } = buildMatchInfo(
+      searchText,
+      items,
+      matchFn,
+    );
+    const orderedItems = [];
+    for (const [, bucket] of scoreEntries) {
+      for (const { item } of bucket) {
+        orderedItems.push(item);
       }
     }
-
-    const map = new Map();
-    let order = 0;
-    for (const [score, bucket] of scoreEntries) {
-      for (const info of bucket) {
-        map.set(info.item, { match: true, score, order, ranges: info.ranges });
-        order++;
-      }
+    for (const { item } of nonMatched) {
+      orderedItems.push(item);
     }
-    for (const info of nonMatched) {
-      map.set(info.item, {
-        match: false,
-        score: info.score,
-        order,
-        ranges: info.ranges,
-      });
-      order++;
-    }
-    return map;
+    return { orderedItems, matchInfoMap };
   }, [items, searchText, matchFn]);
 
   const getItemMatchInfo = (item) => {
     return matchInfoMap.get(item);
   };
 
-  return [getItemMatchInfo];
+  return [orderedItems, getItemMatchInfo];
+};
+
+/**
+ * useSearchFilter — filters items to only matched ones, ordered by score desc.
+ * Returns [filteredItems, getItemMatchInfo].
+ *   - filteredItems: subset of items that match, sorted by score desc
+ *   - getItemMatchInfo(item): { match, score, ranges }
+ *
+ * When searchText is empty, all items are returned in natural order.
+ */
+export const useSearchFilter = (searchText, items, matchFn = applySearch) => {
+  const { filteredItems, matchInfoMap } = useMemo(() => {
+    const { scoreEntries, matchInfoMap } = buildMatchInfo(
+      searchText,
+      items,
+      matchFn,
+    );
+    const filteredItems = [];
+    for (const [, bucket] of scoreEntries) {
+      for (const { item } of bucket) {
+        filteredItems.push(item);
+      }
+    }
+    return { filteredItems, matchInfoMap };
+  }, [items, searchText, matchFn]);
+
+  const getItemMatchInfo = (item) => {
+    return matchInfoMap.get(item);
+  };
+
+  return [filteredItems, getItemMatchInfo];
+};
+
+const buildMatchInfo = (searchText, items, matchFn) => {
+  // scoreEntries: [score, bucket][] kept sorted desc by score.
+  // New distinct score values are inserted via bisect — O(1) in practice
+  // since there are very few distinct scores (today just 0 and 1).
+  const scoreEntries = []; // [score, bucket][]
+  const nonMatched = [];
+
+  for (const item of items) {
+    const result = matchFn(searchText, item);
+    if (!result.match) {
+      nonMatched.push({
+        item,
+        score: result.matchScore,
+        ranges: result.matchRanges,
+      });
+      continue;
+    }
+    const score = result.matchScore;
+    // Find existing bucket or insert a new entry in desc order.
+    let lo = 0;
+    let hi = scoreEntries.length;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (scoreEntries[mid][0] > score) {
+        lo = mid + 1;
+      } else if (scoreEntries[mid][0] < score) {
+        hi = mid;
+      } else {
+        lo = mid;
+        hi = mid; // exact match — found the bucket
+      }
+    }
+    if (lo < scoreEntries.length && scoreEntries[lo][0] === score) {
+      scoreEntries[lo][1].push({ item, ranges: result.matchRanges });
+    } else {
+      scoreEntries.splice(lo, 0, [
+        score,
+        [{ item, ranges: result.matchRanges }],
+      ]);
+    }
+  }
+
+  const matchInfoMap = new Map();
+  for (const [score, bucket] of scoreEntries) {
+    for (const { item, ranges } of bucket) {
+      matchInfoMap.set(item, { match: true, score, ranges });
+    }
+  }
+  for (const { item, score, ranges } of nonMatched) {
+    matchInfoMap.set(item, { match: false, score, ranges });
+  }
+
+  return { scoreEntries, nonMatched, matchInfoMap };
 };
 
 /**
