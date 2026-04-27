@@ -59,9 +59,6 @@ const LIST_ITEM_SELECTOR = `.navi_list_item`;
 // Carries the render window {start, end} (or null = render all) from
 // List down to each ListItem.
 const RenderWindowContext = createContext(null);
-// Callback provided by ListControlled so ListItem can request to be included
-// in the render window (e.g. when it is selected but outside the window).
-const RequestVisibleContext = createContext(null);
 // Carries the separator element/function down to each ListItem so separators
 // are only rendered between items that actually mount (post-filter, post-window).
 const SeparatorContext = createContext(null);
@@ -649,6 +646,29 @@ const ListControlled = ({
     const newEnd = newStart + renderBudget;
     updateRenderWindow(newStart, newEnd);
   };
+  const scrollToItemIndex = (index) => {
+    const listContainerEl = ref.current;
+    if (!listContainerEl) {
+      return;
+    }
+    const listEl = listContainerEl.querySelector(".navi_list");
+    const scrollContainer = getScrollContainer(listEl);
+    // Read item height from the top filler's data attribute — same source the
+    // scroll listener uses, so the estimate is consistent.
+    const topFiller = listEl.querySelector('[navi-virtual-filler="top"]');
+    const itemHeight = topFiller
+      ? parseFloat(topFiller.dataset.itemHeight || "0")
+      : 0;
+    if (itemHeight > 0) {
+      // Set scrollTop directly. The scroll event handler will shift the render
+      // window, mount the item, and scrollIntoViewWithStickyAwareness will
+      // fine-tune if needed (keyboard-pointed case).
+      scrollContainer.scrollTop = index * itemHeight;
+      return;
+    }
+    // Item height not yet measured — fall back to window shift.
+    requestVisible(index);
+  };
   const tracker = useItemTracker({
     onChange: (items) => {
       if (itemsRef) {
@@ -656,13 +676,24 @@ const ListControlled = ({
       }
       // When item count changes (e.g. after filtering), check if the render
       // window is still in range. If not, reset to start.
-      // This runs in the tracker's microtask batch — no extra render cycle,
-      // no explicit useLayoutEffect dependency on item count.
-      const totalItems = items.length;
+      const itemCount = items.length;
       const current = renderWindowRef.current;
-      if (current.start >= totalItems && totalItems > 0) {
+      if (current.start >= itemCount && itemCount > 0) {
         updateRenderWindow(0, renderBudget);
+        return;
       }
+      // Scroll to the first selected item if it is outside the render window.
+      // By this point item heights have been measured (onChange fires on the
+      // second commit at the earliest), so scrollToItemIndex can set scrollTop
+      // precisely, which shifts the window and mounts the item.
+      const selectedIndex = items.findIndex((item) => item.selected);
+      if (selectedIndex === -1) {
+        return;
+      }
+      if (selectedIndex >= current.start && selectedIndex < current.end) {
+        return; // already visible
+      }
+      scrollToItemIndex(selectedIndex);
     },
   });
   // Scroll listener — slides the window as the user scrolls.
@@ -745,11 +776,9 @@ const ListControlled = ({
         renderWindow={renderWindow}
         virtualItemHeight={virtualItemHeight}
       >
-        <RequestVisibleContext.Provider value={requestVisible}>
-          <ListIdContext.Provider value={listId}>
-            {children}
-          </ListIdContext.Provider>
-        </RequestVisibleContext.Provider>
+        <ListIdContext.Provider value={listId}>
+          {children}
+        </ListIdContext.Provider>
       </UnorderedList>
     );
   };
@@ -935,19 +964,8 @@ const ListItemRealOrVoid = (props) => {
   id = id || idDefault;
   const renderWindow = useContext(RenderWindowContext);
   const tracker = useContext(ListItemTrackerContext);
-  const index = tracker.useTrackItem(id, { id, hidden, value });
+  const index = tracker.useTrackItem(id, { id, hidden, value, selected });
   const separator = useContext(SeparatorContext);
-  const requestVisible = useContext(RequestVisibleContext);
-
-  useLayoutEffect(() => {
-    if (!selected || index === -1) {
-      return;
-    }
-    if (index >= renderWindow.start && index < renderWindow.end) {
-      return;
-    }
-    requestVisible(index);
-  }, [selected, index]);
 
   if (hidden) {
     return null;
