@@ -4,6 +4,7 @@ import {
   scrollIntoViewWithStickyAwareness,
   visibleRectEffect,
 } from "@jsenv/dom";
+import { signal } from "@preact/signals";
 import { createContext } from "preact";
 import {
   useCallback,
@@ -285,7 +286,10 @@ const css = /* css */ `
  *   popover              — when true, renders as a managed popover positioned near
  *                          an anchor element via navi_list_open / navi_list_close events.
  *   renderBudget         — max items in DOM at once (default 100, virtual scroll when exceeded)
- *   itemHeightEstimation — fixed px height for uniform items (skips DOM measurement)
+ *   virtualItemHeight    — fixed px height per item when all items have the same height.
+ *                          Enables precise virtual-scroll filler sizing without a DOM
+ *                          measurement pass. Required when renderBudget is active and
+ *                          item height is known up-front.
  *   itemHeightIsVariable — set false for uniform-height items (faster scroll math)
  *   fallback             — content shown when no items are visible
  *   separator            — element or function(index) inserted between visible items
@@ -602,7 +606,7 @@ const ListControlled = ({
   expandX,
   maxHeight,
   itemsRef,
-  itemHeight: itemHeightProp,
+  virtualItemHeight,
   lockSize,
   searchText,
   match,
@@ -690,7 +694,9 @@ const ListControlled = ({
 
   const tracker = useItemTracker({
     onChange: (items) => {
-      itemsRef.current = items.map((item) => item.value);
+      if (itemsRef) {
+        itemsRef.current = items.map((item) => item.value);
+      }
     },
   });
 
@@ -712,23 +718,6 @@ const ListControlled = ({
       setRenderWindow({ start: 0, end: renderBudget });
     }
   });
-
-  const [itemHeight, setItemHeight] = useState(itemHeightProp || 0);
-  useLayoutEffect(() => {
-    const containerEl = ref.current;
-    if (!containerEl) {
-      return;
-    }
-    if (itemHeight !== 0) {
-      return;
-    }
-    const listEl = containerEl.querySelector(".navi_list");
-    const firstListItem = listEl.querySelector(LIST_ITEM_SELECTOR);
-    if (firstListItem) {
-      const measuredHeight = firstListItem.getBoundingClientRect().height;
-      setItemHeight(measuredHeight);
-    }
-  }, []);
 
   // Scroll listener — slides the window as the user scrolls.
   useLayoutEffect(() => {
@@ -771,10 +760,13 @@ const ListControlled = ({
         }
       }
       if (hitFiller) {
-        if (itemHeight === 0) {
+        const measuredItemHeight = parseFloat(
+          hitFiller.dataset.itemHeight || "0",
+        );
+        if (measuredItemHeight === 0) {
           return;
         }
-        firstVisibleIndex = Math.floor(scrollTop / itemHeight);
+        firstVisibleIndex = Math.floor(scrollTop / measuredItemHeight);
       } else {
         const relIndex = hitEl ? items.indexOf(hitEl) : 0;
         firstVisibleIndex = current.start + (relIndex === -1 ? 0 : relIndex);
@@ -796,7 +788,7 @@ const ListControlled = ({
     return () => {
       scrollContainer.removeEventListener("scroll", onScroll);
     };
-  }, [renderBudget, itemHeight]);
+  }, [renderBudget]);
 
   const renderList = (listProps) => {
     return (
@@ -809,7 +801,7 @@ const ListControlled = ({
         {...listProps}
         tracker={tracker}
         renderWindow={renderWindow}
-        renderBudget={renderBudget}
+        virtualItemHeight={virtualItemHeight}
       >
         <ListIdContext.Provider value={listId}>
           {children}
@@ -825,6 +817,7 @@ const ListControlled = ({
     expandX,
     children,
     renderWindow,
+    virtualItemHeight,
     searchContext,
   ]);
 
@@ -859,18 +852,59 @@ const LIST_STYLE_CSS_VARS = {
 };
 const LIST_PSEUDO_CLASSES = [":-navi-void"];
 // Inner <ul> — hosts the fillers + items.
+// Creates a virtualItemHeight signal so TopFiller and BottomFiller can
+// subscribe to it independently. When virtualItemHeight is passed as a prop it
+// initialises the signal directly; otherwise UnorderedList measures a rendered
+// item after each commit and writes to the signal, causing only the fillers to
+// re-render.
 const UnorderedList = ({
   tracker,
   renderWindow,
-  itemHeight,
+  virtualItemHeight,
   fallback,
   separator,
   children,
   ...rest
 }) => {
+  const heightSignalRef = useRef(null);
+  if (!heightSignalRef.current) {
+    // eslint-disable-next-line signals/no-signal-in-component-body
+    heightSignalRef.current = signal(virtualItemHeight || 0);
+  }
+  if (
+    virtualItemHeight &&
+    heightSignalRef.current.peek() !== virtualItemHeight
+  ) {
+    heightSignalRef.current.value = virtualItemHeight;
+  }
+  const useVirtualItemHeight = useRef(
+    () => heightSignalRef.current.value,
+  ).current;
+
+  const ulRef = useRef(null);
+  useLayoutEffect(() => {
+    if (virtualItemHeight) {
+      return;
+    }
+    if (heightSignalRef.current.peek() !== 0) {
+      return;
+    }
+    const ulEl = ulRef.current;
+    if (!ulEl) {
+      return;
+    }
+    const listItem = ulEl.querySelector(LIST_ITEM_SELECTOR);
+    if (listItem) {
+      heightSignalRef.current.value = listItem.getBoundingClientRect().height;
+    }
+  }, [virtualItemHeight]);
+
   return (
-    <Box as="ul" {...rest} baseClassName="navi_list">
-      <TopFiller renderWindow={renderWindow} itemHeight={itemHeight} />
+    <Box as="ul" {...rest} ref={ulRef} baseClassName="navi_list">
+      <TopFiller
+        useVirtualItemHeight={useVirtualItemHeight}
+        renderWindowStart={renderWindow.start}
+      />
       <RenderWindowContext.Provider value={renderWindow}>
         <SeparatorContext.Provider value={separator ?? null}>
           <ListItemTrackerContext.Provider value={tracker}>
@@ -879,8 +913,8 @@ const UnorderedList = ({
         </SeparatorContext.Provider>
       </RenderWindowContext.Provider>
       <BottomFiller
-        renderWindow={renderWindow}
-        itemHeight={itemHeight}
+        useVirtualItemHeight={useVirtualItemHeight}
+        renderWindowEnd={renderWindow.end}
         tracker={tracker}
       />
       {fallback && (
@@ -891,8 +925,12 @@ const UnorderedList = ({
     </Box>
   );
 };
-const TopFiller = ({ renderWindow, itemHeight }) => {
+
+const TopFiller = ({ useVirtualItemHeight, renderWindowStart }) => {
   const ref = useRef(null);
+  const virtualItemHeight = useVirtualItemHeight();
+  const numberOfItemsAbove = renderWindowStart;
+  const heightToFillAbove = numberOfItemsAbove * virtualItemHeight;
 
   return (
     <li
@@ -902,13 +940,16 @@ const TopFiller = ({ renderWindow, itemHeight }) => {
       navi-virtual-filler="top"
       aria-hidden
       style={{
-        height: `${renderWindow.start * itemHeight}px`,
+        height: `${heightToFillAbove}px`,
       }}
     />
   );
 };
-const BottomFiller = ({ tracker, renderWindow, itemHeight }) => {
+const BottomFiller = ({ useVirtualItemHeight, renderWindowEnd, tracker }) => {
   const itemCount = tracker.useItemCount();
+  const virtualItemHeight = useVirtualItemHeight();
+  const numberOfItemsBelow = Math.max(itemCount - renderWindowEnd, 0);
+  const heightToFillBelow = numberOfItemsBelow * virtualItemHeight;
 
   return (
     <li
@@ -917,7 +958,7 @@ const BottomFiller = ({ tracker, renderWindow, itemHeight }) => {
       navi-virtual-filler="bottom"
       aria-hidden
       style={{
-        height: `${(itemCount - renderWindow.end) * itemHeight}px`,
+        height: `${heightToFillBelow}px`,
       }}
     />
   );
