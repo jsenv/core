@@ -978,7 +978,7 @@ const ListItemOrVoid = (props) => {
     if (index >= renderWindow.start && index < renderWindow.end) {
       return;
     }
-    requestVisible?.(index);
+    requestVisible(index);
   }, [selected, index]);
 
   if (hidden) {
