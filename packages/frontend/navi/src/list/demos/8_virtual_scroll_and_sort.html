@@ -239,7 +239,9 @@
               expandX
               onInput={(e) => setFilter(e.target.value)}
             />
-            <List listRole="listbox" fallback="No results"
+            <List
+              listRole="listbox"
+              fallback="No results"
               ref={listRef}
               maxHeight="220px"
               uiAction={setSelected}

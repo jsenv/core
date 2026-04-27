@@ -75,13 +75,7 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      import {
-        List,
-        ListItem,
-        Form,
-        Button,
-        Input,
-      } from "@jsenv/navi";
+      import { List, ListItem, Form, Button, Input } from "@jsenv/navi";
 
       const FRUITS = [
         "Apple",
@@ -150,14 +144,17 @@
                 setSelected(FRUITS.includes(val) ? val : null);
               }}
             />
-            <List listRole="listbox" fallback="No results"
+            <List
+              listRole="listbox"
+              fallback="No results"
               id="fruit-list"
               popover
               style={{ "--max-height": "220px" }}
               searchText={query}
             >
               {FRUITS.map((fruit) => (
-                <ListItem role="option"
+                <ListItem
+                  role="option"
                   key={fruit}
                   value={fruit}
                   selected={selected === fruit}
@@ -201,13 +198,16 @@
                 setSelected(match ? match.code : null);
               }}
             />
-            <List listRole="listbox" fallback="No results"
+            <List
+              listRole="listbox"
+              fallback="No results"
               id="country-list"
               popover
               style={{ "--max-height": "220px" }}
             >
               {COUNTRIES.map((country) => (
-                <ListItem role="option"
+                <ListItem
+                  role="option"
                   key={country.code}
                   value={country.name}
                   selected={selected === country.code}
@@ -280,8 +280,14 @@
                   placeholder="Search an option…"
                   onInput={handleInput}
                 />
-                <List listRole="listbox" fallback="No results" id="large-list-wrap" popover>
-                  <ListItem role="option"
+                <List
+                  listRole="listbox"
+                  fallback="No results"
+                  id="large-list-wrap"
+                  popover
+                >
+                  <ListItem
+                    role="option"
                     value="Option A"
                     selected={selected === "option-a"}
                     hidden={!matchesQuery("Option A", descriptionA)}
@@ -299,7 +305,8 @@
                       </span>
                     </div>
                   </ListItem>
-                  <ListItem role="option"
+                  <ListItem
+                    role="option"
                     value="Option B"
                     selected={selected === "option-b"}
                     hidden={!matchesQuery("Option B", descriptionB)}
@@ -317,7 +324,8 @@
                       </span>
                     </div>
                   </ListItem>
-                  <ListItem role="option"
+                  <ListItem
+                    role="option"
                     value="Option C"
                     selected={selected === "option-c"}
                     hidden={!matchesQuery("Option C", descriptionC)}
@@ -346,8 +354,14 @@
                   placeholder="Search an option…"
                   onInput={handleInput}
                 />
-                <List listRole="listbox" fallback="No results" id="large-list-nowrap" popover>
-                  <ListItem role="option"
+                <List
+                  listRole="listbox"
+                  fallback="No results"
+                  id="large-list-nowrap"
+                  popover
+                >
+                  <ListItem
+                    role="option"
                     value="Option A"
                     selected={selected === "option-a"}
                     hidden={!matchesQuery("Option A", descriptionA)}
@@ -371,7 +385,8 @@
                       </span>
                     </div>
                   </ListItem>
-                  <ListItem role="option"
+                  <ListItem
+                    role="option"
                     value="Option B"
                     selected={selected === "option-b"}
                     hidden={!matchesQuery("Option B", descriptionB)}
@@ -395,7 +410,8 @@
                       </span>
                     </div>
                   </ListItem>
-                  <ListItem role="option"
+                  <ListItem
+                    role="option"
                     value="Option C"
                     selected={selected === "option-c"}
                     hidden={!matchesQuery("Option C", descriptionC)}
@@ -457,13 +473,16 @@
               actionAfterChange
               uiAction={(v) => setQuery(v)}
             />
-            <List listRole="listbox" fallback="No results"
+            <List
+              listRole="listbox"
+              fallback="No results"
               id="fruit-action-list"
               popover
               style={{ "--max-height": "220px" }}
             >
               {FRUITS.map((fruit) => (
-                <ListItem role="option"
+                <ListItem
+                  role="option"
                   key={fruit}
                   value={fruit}
                   selected={query === fruit}
@@ -517,13 +536,16 @@
                   data-one-of="#form-fruit-list"
                   uiAction={(v) => setFruitQuery(v)}
                 />
-                <List listRole="listbox" fallback="No results"
+                <List
+                  listRole="listbox"
+                  fallback="No results"
                   id="form-fruit-list"
                   popover
                   style={{ "--max-height": "180px" }}
                 >
                   {FRUITS.map((fruit) => (
-                    <ListItem role="option"
+                    <ListItem
+                      role="option"
                       key={fruit}
                       value={fruit}
                       selected={fruitQuery === fruit}
@@ -546,13 +568,16 @@
                   data-one-of="#form-country-list"
                   uiAction={(v) => setCountryQuery(v)}
                 />
-                <List listRole="listbox" fallback="No results"
+                <List
+                  listRole="listbox"
+                  fallback="No results"
                   id="form-country-list"
                   popover
                   style={{ "--max-height": "180px" }}
                 >
                   {COUNTRIES.map((c) => (
-                    <ListItem role="option"
+                    <ListItem
+                      role="option"
                       key={c.code}
                       value={c.name}
                       selected={countryQuery === c.name}

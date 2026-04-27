@@ -106,12 +106,7 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState, useEffect, useRef } from "preact/hooks";
-      import {
-        List,
-        ListItem,
-        Input,
-        Separator,
-      } from "@jsenv/navi";
+      import { List, ListItem, Input, Separator } from "@jsenv/navi";
 
       // Each item has a name + address. Some addresses are long to test text wrapping.
       const ITEMS = [
@@ -340,7 +335,9 @@
             <StatsBar totalItems={ITEMS.length} domItems={domItems} />
 
             <div className="scroll-container">
-              <List listRole="listbox" fallback="No results"
+              <List
+                listRole="listbox"
+                fallback="No results"
                 withSearch
                 ref={listRef}
                 match={matchItem}
@@ -362,7 +359,8 @@
                 </li>
 
                 {ITEMS.map((item) => (
-                  <ListItem role="option"
+                  <ListItem
+                    role="option"
                     key={item.name}
                     value={item}
                     selected={selected === item}

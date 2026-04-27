@@ -121,7 +121,9 @@
         return (
           <div style="min-width: 300px;">
             <DialogHeader title="Please select a fruit" />
-            <List listRole="listbox" fallback="No results"
+            <List
+              listRole="listbox"
+              fallback="No results"
               withSearch
               lockSize
               maxHeight="240px"
@@ -215,7 +217,9 @@
         const close = useDropdownClose();
 
         return (
-          <List listRole="listbox" fallback="No results"
+          <List
+            listRole="listbox"
+            fallback="No results"
             border="none"
             maxHeight="none"
             expand
@@ -242,7 +246,8 @@
               </div>
             </ListItemHeader>
             {COUNTRIES.map((country) => (
-              <ListItem role="option"
+              <ListItem
+                role="option"
                 key={country}
                 value={country}
                 selected={selected === country}
@@ -349,7 +354,9 @@
       const AnimalPicker = ({ selected, onSelect }) => {
         const close = useDropdownClose();
         return (
-          <List listRole="listbox" fallback="No results"
+          <List
+            listRole="listbox"
+            fallback="No results"
             border="none"
             uiAction={(v) => {
               onSelect(v);
@@ -368,7 +375,8 @@
               </div>
             </ListItemHeader>
             {ANIMALS.map((animal) => (
-              <ListItem role="option"
+              <ListItem
+                role="option"
                 flex
                 alignY="center"
                 key={animal}
