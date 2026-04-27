@@ -75,35 +75,9 @@ const createItemTracker = (onChange) => {
   const registrations = new Map(); // key → data (visible items only)
   const idToKey = new Map(); // id → insertion key (stable, auto-incremented)
   let keyCounter = 0;
-  // sortedKeys: sorted by each item's visual sort value.
-  // The visual sort value is data.order when provided, otherwise the insertion key.
-  // Storing { sortValue, key } pairs so we can bisect by sortValue.
-  const sortedKeys = []; // { sortValue: number, key: number }[]
-
-  const bisect = (sortValue) => {
-    let lo = 0;
-    let hi = sortedKeys.length;
-    while (lo < hi) {
-      const mid = (lo + hi) >> 1;
-      if (sortedKeys[mid].sortValue < sortValue) {
-        lo = mid + 1;
-      } else {
-        hi = mid;
-      }
-    }
-    return lo;
-  };
-
-  const insertKey = (sortValue, key) => {
-    sortedKeys.splice(bisect(sortValue), 0, { sortValue, key });
-  };
-
-  const removeKey = (key) => {
-    const idx = sortedKeys.findIndex((entry) => entry.key === key);
-    if (idx !== -1) {
-      sortedKeys.splice(idx, 1);
-    }
-  };
+  // orderedKeys: visible item keys in natural (JSX declaration) order.
+  // Each entry is { insertionKey } so we can find and splice by key.
+  const orderedKeys = []; // number[]
 
   const countSignal = signal(0);
   const propSignals = new Map(); // propName → signal(array)
@@ -124,16 +98,14 @@ const createItemTracker = (onChange) => {
     queueMicrotask(() => {
       notifyScheduled = false;
 
-      const newCount = sortedKeys.length;
+      const newCount = orderedKeys.length;
       if (countSignal.peek() !== newCount) {
         countSignal.value = newCount;
       }
 
       for (const [propName, sig] of propSignals) {
         const prev = sig.peek();
-        const next = sortedKeys.map(
-          (entry) => registrations.get(entry.key)[propName],
-        );
+        const next = orderedKeys.map((key) => registrations.get(key)[propName]);
         let changed = prev.length !== next.length;
         if (!changed) {
           for (let i = 0; i < next.length; i++) {
@@ -148,7 +120,7 @@ const createItemTracker = (onChange) => {
         }
       }
 
-      onChange?.(sortedKeys.map((entry) => registrations.get(entry.key)));
+      onChange?.(orderedKeys.map((key) => registrations.get(key)));
     });
   };
 
@@ -162,24 +134,18 @@ const createItemTracker = (onChange) => {
 
   // Register an item. data.hidden controls visibility.
   // Returns the item's index among visible items, or -1 when hidden.
-  // sortedOrders is updated synchronously so the index is accurate for this
+  // orderedKeys is updated synchronously so the index is accurate for this
   // commit; signals are deferred to a microtask batch.
   const syncItem = (key, data) => {
     if (data.hidden || data.role === "presentation") {
       registrations.delete(key);
-      removeKey(key);
+      const idx = orderedKeys.indexOf(key);
+      if (idx !== -1) {
+        orderedKeys.splice(idx, 1);
+      }
     } else {
-      const newSortValue = data.order !== undefined ? data.order : key;
-      // Remove and re-insert when sort value changed or not yet present.
-      const existingIdx = sortedKeys.findIndex((e) => e.key === key);
-      if (
-        existingIdx !== -1 &&
-        sortedKeys[existingIdx].sortValue !== newSortValue
-      ) {
-        sortedKeys.splice(existingIdx, 1);
-        insertKey(newSortValue, key);
-      } else if (existingIdx === -1) {
-        insertKey(newSortValue, key);
+      if (!orderedKeys.includes(key)) {
+        orderedKeys.push(key);
       }
       registrations.set(key, data);
     }
@@ -202,7 +168,10 @@ const createItemTracker = (onChange) => {
     useLayoutEffect(() => {
       return () => {
         registrations.delete(key);
-        removeKey(key);
+        const idx = orderedKeys.indexOf(key);
+        if (idx !== -1) {
+          orderedKeys.splice(idx, 1);
+        }
         notify();
       };
     }, []);
@@ -210,15 +179,15 @@ const createItemTracker = (onChange) => {
     if (data.hidden || data.role === "presentation") {
       return -1;
     }
-    return sortedKeys.findIndex((e) => e.key === key);
+    return orderedKeys.indexOf(key);
   };
 
   const getTrackedItemByIndex = (index) => {
-    const entry = sortedKeys[index];
-    if (entry === undefined) {
+    const key = orderedKeys[index];
+    if (key === undefined) {
       return undefined;
     }
-    return registrations.get(entry.key);
+    return registrations.get(key);
   };
 
   return {

@@ -5,7 +5,7 @@ import {
   visibleRectEffect,
 } from "@jsenv/dom";
 import { signal } from "@preact/signals";
-import { cloneElement, createContext } from "preact";
+import { createContext } from "preact";
 import {
   useCallback,
   useContext,
@@ -228,12 +228,6 @@ const css = /* css */ `
     height: 0px;
     list-style: none;
     /* background: pink; */
-    &[navi-virtual-filler="top"] {
-      order: -1;
-    }
-    &[navi-virtual-filler="bottom"] {
-      order: 9999999;
-    }
   }
 
   /* Empty state — hidden by default, shown when no list items are rendered. */
@@ -1040,7 +1034,7 @@ const ListItemPresentation = (props) => {
   return <Box as="li" {...props} />;
 };
 const ListItemRealOrVoid = (props) => {
-  let { id, value, hidden, selected, order, ...rest } = props;
+  let { id, value, hidden, selected, ...rest } = props;
   const idDefault = useId();
   id = id || idDefault;
   const renderWindow = useContext(RenderWindowContext);
@@ -1050,7 +1044,6 @@ const ListItemRealOrVoid = (props) => {
     hidden,
     value,
     selected,
-    order,
   });
   const separator = useContext(SeparatorContext);
 
@@ -1069,7 +1062,6 @@ const ListItemRealOrVoid = (props) => {
       value={value}
       index={index}
       selected={selected}
-      order={order}
       {...rest}
     />
   );
@@ -1078,15 +1070,9 @@ const ListItemRealOrVoid = (props) => {
   }
   const separatorVnode =
     typeof separator === "function" ? separator(index - 1) : separator;
-  const separatorWithOrder =
-    order !== undefined
-      ? cloneElement(separatorVnode, {
-          style: { order, ...separatorVnode.props?.style },
-        })
-      : separatorVnode;
   return (
     <>
-      {separatorWithOrder}
+      {separatorVnode}
       {listItemVnode}
     </>
   );
@@ -1103,7 +1089,6 @@ const ListItemReal = ({
   hidden,
   highlight,
   selected,
-  order,
   index,
   pointed,
   children,
@@ -1201,7 +1186,6 @@ const ListItemReal = ({
       }}
       {...rest}
       ref={ref}
-      order={order}
       basePseudoState={{
         ":-navi-pointed": isPointed,
         ":-navi-pointed-by-mouse": isPointedByMouse,

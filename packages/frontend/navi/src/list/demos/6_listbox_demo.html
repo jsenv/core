@@ -76,7 +76,8 @@
         Input,
         Text,
         Box,
-        useSearch,
+        useSearchOrder,
+        useSearchFilter,
       } from "@jsenv/navi";
 
       // 200 auto-generated items
@@ -314,7 +315,7 @@
 
       const CustomStyleDemo = () => {
         const [selected, setSelected] = useState("Apple");
-        const [getItemMatchInfo] = useSearch("a", FRUITS);
+        const [getItemMatchInfo] = useSearchFilter("a", FRUITS);
         return (
           <div className="demo-section">
             <h2>Custom styles via CSS vars</h2>
@@ -376,10 +377,7 @@
       const SortedDemo = () => {
         const [filter, setFilter] = useState("");
         const [selected, setSelected] = useState(null);
-        const [getItemMatchInfo] = useSearch(filter, FRUITS);
-        const sorted = [...FRUITS].sort(
-          (a, b) => getItemMatchInfo(a).order - getItemMatchInfo(b).order,
-        );
+        const [sorted, getItemMatchInfo] = useSearchOrder(filter, FRUITS);
 
         return (
           <div className="demo-section">
@@ -439,10 +437,7 @@
       const LargeListDemo = () => {
         const [filter, setFilter] = useState("");
         const [selected, setSelected] = useState(null);
-        const [getItemMatchInfo] = useSearch(filter, LARGE_LIST);
-        const sorted = [...LARGE_LIST].sort(
-          (a, b) => getItemMatchInfo(a).order - getItemMatchInfo(b).order,
-        );
+        const [sorted, getItemMatchInfo] = useSearchOrder(filter, LARGE_LIST);
 
         // Group by first letter for table of contents
         const groupMap = new Map();
@@ -458,7 +453,7 @@
           items,
         }));
 
-        const matchCount = LARGE_LIST.filter(
+        const matchCount = sorted.filter(
           (item) => getItemMatchInfo(item).match,
         ).length;
 
@@ -596,11 +591,14 @@
       const SplitMatchDemo = () => {
         const [filter, setFilter] = useState("");
         const [selected, setSelected] = useState(null);
-        const [getItemMatchInfo] = useSearch(filter, LARGE_LIST);
-        const matches = LARGE_LIST.filter(
+        const [orderedItems, getItemMatchInfo] = useSearchOrder(
+          filter,
+          LARGE_LIST,
+        );
+        const matches = orderedItems.filter(
           (item) => getItemMatchInfo(item).match,
         );
-        const nonMatches = LARGE_LIST.filter(
+        const nonMatches = orderedItems.filter(
           (item) => !getItemMatchInfo(item).match,
         );
 

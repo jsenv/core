@@ -41,7 +41,7 @@
         List,
         ListItem,
         ListItemHeader,
-        useSearch,
+        useSearchOrder,
         Separator,
       } from "@jsenv/navi";
 
@@ -362,7 +362,10 @@
         const [selected, setSelected] = useState(null);
         const [domItems, setDomItems] = useState(0);
         const listRef = useRef(null);
-        const [getItemMatchInfo] = useSearch(search, ALL_ITEMS);
+        const [orderedItems, getItemMatchInfo] = useSearchOrder(
+          search,
+          ALL_ITEMS,
+        );
 
         useEffect(() => {
           const updateCount = () => {
@@ -417,14 +420,13 @@
                   uiAction={(v) => setSearch(v)}
                 />
               </ListItemHeader>
-              {ALL_ITEMS.map((item) => {
-                const { order, ranges } = getItemMatchInfo(item);
+              {orderedItems.map((item) => {
+                const { ranges } = getItemMatchInfo(item);
                 return (
                   <ListItem
                     role="option"
                     key={item}
                     value={item}
-                    order={order}
                     highlight={ranges}
                     selected={selected === item}
                   >
