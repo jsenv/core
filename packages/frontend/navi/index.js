@@ -83,9 +83,10 @@ export {
   ListItemGroup,
   ListItemHeader,
   ListItemPresentation,
-  applySearchText,
 } from "./src/list/list.jsx";
 export { Suggestion, SuggestionList } from "./src/list/suggestion_list.jsx";
+
+export { applySearchText } from "./src/list/searching.js";
 
 // Form
 // Validation

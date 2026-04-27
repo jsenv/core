@@ -1113,22 +1113,6 @@ const LIST_ITEM_PSEUDO_CLASSES = [
 const LIST_ITEM_PSEUDO_ELEMENTS = ["::highlight"];
 
 /**
- * applySearchText — returns truthy when value matches searchText, falsy otherwise.
- * Use with ListItem to drive hidden and highlight props explicitly:
- *
- *   const match = applySearchText(item.value, searchText);
- *   <ListItem hidden={!match} highlight={match ? searchText : null}>
- *
- * Returns true (no filtering) when searchText is empty/null.
- */
-export const applySearchText = (value, searchText) => {
-  if (!searchText) {
-    return true;
-  }
-  return String(value).toLowerCase().includes(searchText.toLowerCase());
-};
-
-/**
  * ListItemPresentation — a non-tracked <li role="presentation"> for arbitrary
  * content inside the list (sticky headers, group labels, etc.).
  */
