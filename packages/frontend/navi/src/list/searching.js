@@ -47,10 +47,10 @@ export const applySearchText = (searchText, value) => {
  */
 export const useSearchText = (items, searchText, matchFn) => {
   const matchInfoMap = useMemo(() => {
-    // Single pass: separate matched vs non-matched, inserting matched items
-    // in score-desc order via binary search (bisect) to avoid a separate sort step.
-    // Non-matched items accumulate in natural order at the end.
-    const matched = []; // sorted desc by score as we build it
+    // Group matched items by score (O(1) push per item, no splice/shifting).
+    // Non-matched items accumulate in natural order — their order is assigned
+    // after all matched items, so we need matchedCount first anyway.
+    const matchedByScore = new Map(); // score → { item, ranges }[]
     const nonMatched = [];
 
     for (const item of items) {
@@ -63,32 +63,26 @@ export const useSearchText = (items, searchText, matchFn) => {
         });
         continue;
       }
-      // Binary search for insertion point (desc order: higher score first).
-      // Equal scores go at the end of their group (preserves natural order).
       const score = result.matchScore;
-      let lo = 0;
-      let hi = matched.length;
-      while (lo < hi) {
-        const mid = (lo + hi) >> 1;
-        if (matched[mid].score > score) {
-          lo = mid + 1;
-        } else {
-          hi = mid;
-        }
+      let bucket = matchedByScore.get(score);
+      if (!bucket) {
+        bucket = [];
+        matchedByScore.set(score, bucket);
       }
-      matched.splice(lo, 0, { item, score, ranges: result.matchRanges });
+      bucket.push({ item, ranges: result.matchRanges });
     }
+
+    // Sort the few distinct score values desc. Natural order within each bucket
+    // is preserved because items were pushed in iteration order.
+    const sortedScores = [...matchedByScore.keys()].sort((a, b) => b - a);
 
     const map = new Map();
     let order = 0;
-    for (const info of matched) {
-      map.set(info.item, {
-        match: true,
-        score: info.score,
-        order,
-        ranges: info.ranges,
-      });
-      order++;
+    for (const score of sortedScores) {
+      for (const info of matchedByScore.get(score)) {
+        map.set(info.item, { match: true, score, order, ranges: info.ranges });
+        order++;
+      }
     }
     for (const info of nonMatched) {
       map.set(info.item, {
