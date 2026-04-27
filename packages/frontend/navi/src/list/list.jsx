@@ -872,8 +872,7 @@ const ListControlled = ({
           return;
         }
         const { index } = e.detail;
-        console.log("request nav at", index);
-        dispatchCustomEvent(e, "navi_list_request_scroll_at", { index });
+        dispatchCustomEvent(e, "navi_list_nav", { index });
       }}
       onnavi_list_request_select_at={(e) => {
         const { index } = e.detail;
