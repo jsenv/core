@@ -23,7 +23,7 @@ import { useIsInsideDropdown } from "./dropdown.jsx";
 const ListItemTrackerContext = createContext(null);
 
 // Provided by ListWithSearch so descendants (e.g. an Input) can update the
-// search text, and so that the listbox id is stable across renders.
+// search text. When present, Input auto-connects and calls the setter on change.
 export const SetSearchTextContext = createContext(null);
 export const useIsInsideListWithSearch = () => {
   return typeof useContext(SetSearchTextContext) === "function";
@@ -33,11 +33,6 @@ export const ListIdContext = createContext();
 // Provided by ListInteractive to give descendants (e.g. Suggestion) access
 // to hover/keyboard-pointed/selection state and the onHover/onSelect callbacks.
 const ListInteractionContext = createContext(null);
-
-// Provided to give descendants access to a search string and match function.
-// When present, ListItem automatically hides itself if the value doesn't match
-// and highlights matching text via the CSS Highlight API.
-const ListSearchContext = createContext(null);
 
 // Module-level shared Highlight instance for navi-search-match.
 let naviSearchHighlight = null;
@@ -271,10 +266,12 @@ const css = /* css */ `
  * for virtual scrolling. Items must use <ListItem> to participate in tracking.
  *
  * Props:
- *   withSearch           — when true, the list owns its search text state internally.
- *                          An <Input> placed inside auto-connects via SetSearchTextContext.
- *                          Each item is hidden when it doesn't match and matching text
- *                          is highlighted.
+ *   withSearch           — when true, wraps an Input inside the list that auto-connects
+ *                          via SetSearchTextContext and calls onSearchTextChange.
+ *                          Keyboard interactions are disabled (the Input handles them).
+ *   onSearchTextChange   — callback(searchText) called by the Input when search changes.
+ *                          The parent uses this + applySearchText() to control item
+ *                          visibility via hidden={!match} and highlight={match ? searchText : null}.
  *   keyboardInteractions  — when true, attaches arrow/enter/escape keyboard shortcuts
  *                          that dispatch navi_list_nav / navi_list_confirm / navi_list_clear
  *                          to the list container. Pair with uiAction for a full keyboard-
@@ -290,15 +287,10 @@ const css = /* css */ `
  *                          Enables precise virtual-scroll filler sizing without a DOM
  *                          measurement pass. Required when renderBudget is active and
  *                          item height is known up-front.
- *   itemHeightIsVariable — set false for uniform-height items (faster scroll math)
  *   fallback             — content shown when no items are visible
  *   separator            — element or function(index) inserted between visible items
- *   searchText           — when provided, items with a non-matching value are hidden
- *                          and matching text is highlighted via the CSS Highlight API.
- *   match                — custom match function (value, lowerCaseSearchText) => boolean.
- *                          Default: substring match.
  *   lockSize             — when true, captures the container's dimensions on first render
- *                          (always in unfiltered state). Those values become min-width/\
+ *                          (always in unfiltered state). Those values become min-width/
  *                          min-height so filtering cannot collapse the layout.
  *   ...rest              — forwarded to the outer scroll container <Box>
  */
@@ -326,20 +318,15 @@ export const List = (props) => {
   return <ListPresentation {...props} />;
 };
 
-// withSearch variant: owns searchText state, provides SetSearchTextContext +
-// ListboxIdContext, then re-renders List with searchText as a prop.
-const defaultMatch = (v, searchText) =>
-  String(v).toLowerCase().includes(searchText);
-const ListWithSearch = (props) => {
-  const [searchText, setSearchText] = useState(null);
+// withSearch variant: provides SetSearchTextContext so Input auto-connects.
+// The parent owns the searchText state and passes onSearchTextChange.
+const ListWithSearch = ({ onSearchTextChange, ...props }) => {
   const listIdDefault = useId();
 
   return (
-    <SetSearchTextContext.Provider value={setSearchText}>
+    <SetSearchTextContext.Provider value={onSearchTextChange ?? null}>
       <List
         listId={listIdDefault}
-        match={defaultMatch}
-        searchText={searchText}
         // disable keyboard interactions because it's the input that will handle them
         keyboardInteractions={false}
         {...props}
@@ -608,8 +595,6 @@ const ListControlled = ({
   itemsRef,
   virtualItemHeight,
   lockSize,
-  searchText,
-  match,
   keyboardInteractions,
   ...rest
 }) => {
@@ -630,15 +615,10 @@ const ListControlled = ({
   const refDefault = useRef(null);
   const ref = rest.ref || refDefault;
 
-  // lockSize: capture the container's dimensions in unfiltered state, then
-  // apply searchText. searchTextBypassed starts true so the first render always
-  // shows all items, giving the ResizeObserver a full-size measurement.
+  // lockSize: capture the container's dimensions on first render so filtering
+  // cannot collapse the layout. Measurement happens on the initial (unfiltered)
+  // state because the parent controls hidden props before any search is applied.
   const sizeLocked = useRef(false);
-  const searchTextRef = useRef(searchText);
-  searchTextRef.current = searchText;
-  const [searchTextBypassed, setSearchTextBypassed] = useState(
-    () => Boolean(lockSize) && !sizeLocked.current,
-  );
   useLayoutEffect(() => {
     if (!lockSize) {
       return undefined;
@@ -673,9 +653,6 @@ const ListControlled = ({
       sizeLocked.current = true;
       observer.disconnect();
       listContainerEl.removeAttribute("data-lock-sizing");
-      if (searchTextRef.current) {
-        setSearchTextBypassed(false);
-      }
     });
     observer.observe(listContainerEl);
     listContainerEl.setAttribute("data-lock-sizing", "");
@@ -684,13 +661,6 @@ const ListControlled = ({
       listContainerEl.removeAttribute("data-lock-sizing");
     };
   }, [lockSize]);
-
-  // While bypassing for lockSize measurement, treat searchText as absent.
-  const effectiveSearchText = searchTextBypassed ? undefined : searchText;
-  const searchContext =
-    effectiveSearchText || match
-      ? { searchText: effectiveSearchText, match }
-      : null;
 
   const tracker = useItemTracker({
     onChange: (items) => {
@@ -818,10 +788,9 @@ const ListControlled = ({
     children,
     renderWindow,
     virtualItemHeight,
-    searchContext,
   ]);
 
-  const box = (
+  return (
     <Box
       {...rest}
       ref={ref}
@@ -838,13 +807,6 @@ const ListControlled = ({
     >
       {renderListMemoized}
     </Box>
-  );
-  return searchContext ? (
-    <ListSearchContext.Provider value={searchContext}>
-      {box}
-    </ListSearchContext.Provider>
-  ) : (
-    box
   );
 };
 const LIST_STYLE_CSS_VARS = {
@@ -979,14 +941,16 @@ const BottomFiller = ({
  * - Separator rendering between visible items
  *
  * Props:
- *   itemId  — stable string id for tracking (auto-generated if omitted)
- *   hidden  — when true, item is excluded from the visible count and not rendered
- *   ...rest — forwarded to the rendered <li> element
+ *   itemId    — stable string id for tracking (auto-generated if omitted)
+ *   hidden    — when true, item is excluded from the visible count and not rendered
+ *   highlight — search string to highlight within the item via CSS Highlight API
+ *   ...rest   — forwarded to the rendered <li> element
  */
 export const ListItem = ({
   id,
   value,
   hidden,
+  highlight,
   selected,
   pointed,
   children,
@@ -999,16 +963,6 @@ export const ListItem = ({
   const interactionContext = useContext(ListInteractionContext);
   const { mousePointedValue, keyboardPointedValue, onHover, onSelect } =
     interactionContext || {};
-  const searchContext = useContext(ListSearchContext);
-
-  // Search-based hidden: if a search context is active and value doesn't match,
-  // override hidden regardless of the explicit prop.
-  if (!hidden && searchContext && value !== undefined) {
-    const { searchText, match } = searchContext;
-    if (searchText) {
-      hidden = !match(value, searchText.toLowerCase());
-    }
-  }
 
   const tracker = useContext(ListItemTrackerContext);
   const index = tracker.useTrackItem(id, { id, hidden, value });
@@ -1032,8 +986,7 @@ export const ListItem = ({
     scrollIntoViewWithStickyAwareness(itemEl);
   }, [isKeyboardPointed]);
 
-  // CSS Highlight API: mark matching text ranges when a search context is active.
-  const searchText = searchContext ? searchContext.searchText : null;
+  // CSS Highlight API: mark matching text ranges when highlight prop is set.
   useLayoutEffect(() => {
     if (hidden) {
       return undefined;
@@ -1043,23 +996,23 @@ export const ListItem = ({
       return undefined;
     }
     const itemEl = ref.current;
-    if (!itemEl || !searchText) {
+    if (!itemEl || !highlight) {
       return undefined;
     }
     const ownRanges = [];
-    const lowerSearchText = searchText.toLowerCase();
+    const lowerHighlight = highlight.toLowerCase();
     const walker = document.createTreeWalker(itemEl, NodeFilter.SHOW_TEXT);
     let node;
     while ((node = walker.nextNode())) {
       const lowerText = node.textContent.toLowerCase();
-      let idx = lowerText.indexOf(lowerSearchText);
+      let idx = lowerText.indexOf(lowerHighlight);
       while (idx !== -1) {
         const range = new Range();
         range.setStart(node, idx);
-        range.setEnd(node, idx + searchText.length);
+        range.setEnd(node, idx + highlight.length);
         hl.add(range);
         ownRanges.push(range);
-        idx = lowerText.indexOf(lowerSearchText, idx + 1);
+        idx = lowerText.indexOf(lowerHighlight, idx + 1);
       }
     }
     return () => {
@@ -1067,7 +1020,7 @@ export const ListItem = ({
         hl.delete(range);
       }
     };
-  }, [searchText, children, hidden, renderWindow]);
+  }, [highlight, children, hidden, renderWindow]);
 
   if (hidden) {
     return null;
@@ -1158,6 +1111,22 @@ const LIST_ITEM_PSEUDO_CLASSES = [
   ":-navi-selected",
 ];
 const LIST_ITEM_PSEUDO_ELEMENTS = ["::highlight"];
+
+/**
+ * applySearchText — returns truthy when value matches searchText, falsy otherwise.
+ * Use with ListItem to drive hidden and highlight props explicitly:
+ *
+ *   const match = applySearchText(item.value, searchText);
+ *   <ListItem hidden={!match} highlight={match ? searchText : null}>
+ *
+ * Returns true (no filtering) when searchText is empty/null.
+ */
+export const applySearchText = (value, searchText) => {
+  if (!searchText) {
+    return true;
+  }
+  return String(value).toLowerCase().includes(searchText.toLowerCase());
+};
 
 /**
  * ListItemPresentation — a non-tracked <li role="presentation"> for arbitrary

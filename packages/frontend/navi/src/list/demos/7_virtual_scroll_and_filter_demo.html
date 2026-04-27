@@ -111,7 +111,13 @@
       import { render } from "preact";
       import { signal } from "@preact/signals";
       import { useState, useRef } from "preact/hooks";
-      import { List, ListItem, Input, ListItemHeader } from "@jsenv/navi";
+      import {
+        List,
+        ListItem,
+        Input,
+        ListItemHeader,
+        applySearchText,
+      } from "@jsenv/navi";
 
       const domItemsSignal = signal(0);
       const peakDomItemsSignal = signal(0);
@@ -204,6 +210,7 @@
 
       const VirtualScrollDemo = () => {
         const [selected, setSelected] = useState(null);
+        const [searchText, setSearchText] = useState(null);
         const [maxHeight, setMaxHeight] = useState(280);
         const [maxHeightEnabled, setMaxHeightEnabled] = useState(true);
         const [itemHeight, setItemHeight] = useState(null);
@@ -293,6 +300,10 @@
 
             <List
               withSearch
+              onSearchTextChange={(text) => {
+                setSearchText(text);
+                setSelected(null);
+              }}
               ref={listRef}
               maxHeight={maxHeight}
               uiAction={setSelected}
@@ -303,7 +314,6 @@
               <ListItemHeader>
                 <Input
                   placeholder="Filter…"
-                  onInput={() => setSelected(null)}
                   paddingX="8px"
                   paddingY="12px"
                   expandX
@@ -315,21 +325,26 @@
                   }}
                 />
               </ListItemHeader>
-              {LARGE_LIST.map((item) => (
-                <ListItem
-                  key={item}
-                  value={item}
-                  selected={selected === item}
-                  style={{
-                    backgroundColor: SUGGESTION_BG,
-                    ...(itemHeight
-                      ? { minHeight: `${itemHeight}px`, alignItems: "center" }
-                      : {}),
-                  }}
-                >
-                  {item}
-                </ListItem>
-              ))}
+              {LARGE_LIST.map((item) => {
+                const match = applySearchText(item, searchText);
+                return (
+                  <ListItem
+                    key={item}
+                    value={item}
+                    hidden={!match}
+                    highlight={match ? searchText : null}
+                    selected={selected === item}
+                    style={{
+                      backgroundColor: SUGGESTION_BG,
+                      ...(itemHeight
+                        ? { minHeight: `${itemHeight}px`, alignItems: "center" }
+                        : {}),
+                    }}
+                  >
+                    {item}
+                  </ListItem>
+                );
+              })}
             </List>
 
             <div className="value-display">{selected ?? ""}</div>
