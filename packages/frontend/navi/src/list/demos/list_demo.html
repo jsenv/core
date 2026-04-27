@@ -258,9 +258,9 @@
             <p>
               The <code>withSearch</code> prop makes the list own its search
               state internally. Place an <code>Input</code> inside a{" "}
-              <code>ListItemHeader</code>: it auto-connects via{" "}
-              <code>SetSearchTextContext</code>. Items that don't match are
-              hidden; matching text is highlighted.
+              <code>ListItemHeader</code>: it auto-connects via keyboard
+              forwarding and ARIA. Items that don't match are hidden; matching
+              text is highlighted.
             </p>
             <List
               withSearch

@@ -107,8 +107,8 @@
       import { render } from "preact";
       import { useState, useEffect, useRef } from "preact/hooks";
       import {
-        SuggestionList,
-        Suggestion,
+        List,
+        ListItem,
         Input,
         Separator,
       } from "@jsenv/navi";
@@ -340,7 +340,7 @@
             <StatsBar totalItems={ITEMS.length} domItems={domItems} />
 
             <div className="scroll-container">
-              <SuggestionList
+              <List listRole="listbox" fallback="No results"
                 withSearch
                 ref={listRef}
                 match={matchItem}
@@ -362,7 +362,7 @@
                 </li>
 
                 {ITEMS.map((item) => (
-                  <Suggestion
+                  <ListItem role="option"
                     key={item.name}
                     value={item}
                     selected={selected === item}
@@ -379,9 +379,9 @@
                         {item.address}
                       </span>
                     </div>
-                  </Suggestion>
+                  </ListItem>
                 ))}
-              </SuggestionList>
+              </List>
             </div>
 
             <div className="value-display">

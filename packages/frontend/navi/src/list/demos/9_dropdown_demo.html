@@ -38,8 +38,8 @@
       import { Dropdown, useDropdownClose } from "../dropdown.jsx";
       import {
         Input,
-        Suggestion,
-        SuggestionList,
+        List,
+        ListItem,
         Separator,
         Text,
         Box,
@@ -81,7 +81,7 @@
         );
       };
 
-      // ── Demo 2: filterable SuggestionList ──────────────────────────────────────
+      // ── Demo 2: filterable List ──────────────────────────────────────────────
 
       const FRUITS = [
         "Apple",
@@ -121,7 +121,7 @@
         return (
           <div style="min-width: 300px;">
             <DialogHeader title="Please select a fruit" />
-            <SuggestionList
+            <List listRole="listbox" fallback="No results"
               withSearch
               lockSize
               maxHeight="240px"
@@ -144,11 +144,11 @@
                 />
               </ListItemHeader>
               {FRUITS.map((fruit) => (
-                <Suggestion key={fruit} value={fruit}>
+                <ListItem role="option" key={fruit} value={fruit}>
                   {fruit}
-                </Suggestion>
+                </ListItem>
               ))}
-            </SuggestionList>
+            </List>
           </div>
         );
       };
@@ -215,7 +215,7 @@
         const close = useDropdownClose();
 
         return (
-          <SuggestionList
+          <List listRole="listbox" fallback="No results"
             border="none"
             maxHeight="none"
             expand
@@ -242,7 +242,7 @@
               </div>
             </ListItemHeader>
             {COUNTRIES.map((country) => (
-              <Suggestion
+              <ListItem role="option"
                 key={country}
                 value={country}
                 selected={selected === country}
@@ -258,9 +258,9 @@
                 {selected === country && (
                   <span style="color:#1a73e8;font-size:18px">✓</span>
                 )}
-              </Suggestion>
+              </ListItem>
             ))}
-          </SuggestionList>
+          </List>
         );
       };
 
@@ -313,7 +313,7 @@
         const [fruit, setFruit] = useState(null);
         return (
           <div class="demo-section">
-            <h2>Demo 2 — Filterable SuggestionList</h2>
+            <h2>Demo 2 — Filterable List</h2>
             <p>
               The dialog contains a search input and a suggestion list.
               Selecting a fruit closes the dialog automatically.
@@ -349,7 +349,7 @@
       const AnimalPicker = ({ selected, onSelect }) => {
         const close = useDropdownClose();
         return (
-          <SuggestionList
+          <List listRole="listbox" fallback="No results"
             border="none"
             uiAction={(v) => {
               onSelect(v);
@@ -368,7 +368,7 @@
               </div>
             </ListItemHeader>
             {ANIMALS.map((animal) => (
-              <Suggestion
+              <ListItem role="option"
                 flex
                 alignY="center"
                 key={animal}
@@ -385,9 +385,9 @@
                   uiAction={() => {}}
                   style="pointer-events:none;flex-shrink:0;"
                 />
-              </Suggestion>
+              </ListItem>
             ))}
-          </SuggestionList>
+          </List>
         );
       };
 

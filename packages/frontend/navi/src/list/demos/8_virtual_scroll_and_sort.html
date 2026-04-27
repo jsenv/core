@@ -36,7 +36,7 @@
        * a plain input; keyboard shortcuts are not wired to the list.
        */
 
-      import { Input, Suggestion, SuggestionList } from "@jsenv/navi";
+      import { Input, List, ListItem } from "@jsenv/navi";
 
       const ALL_ITEMS = Array.from({ length: 200 }, (_, i) => {
         const names = [
@@ -239,18 +239,18 @@
               expandX
               onInput={(e) => setFilter(e.target.value)}
             />
-            <SuggestionList
+            <List listRole="listbox" fallback="No results"
               ref={listRef}
               maxHeight="220px"
               uiAction={setSelected}
               expandX
             >
               {items.map((item) => (
-                <Suggestion key={item} value={item}>
+                <ListItem role="option" key={item} value={item}>
                   {item}
-                </Suggestion>
+                </ListItem>
               ))}
-            </SuggestionList>
+            </List>
           </div>
         );
       };

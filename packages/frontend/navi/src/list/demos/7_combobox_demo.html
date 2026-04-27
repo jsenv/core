@@ -76,8 +76,8 @@
       import { render } from "preact";
       import { useState } from "preact/hooks";
       import {
-        Suggestion,
-        SuggestionList,
+        List,
+        ListItem,
         Form,
         Button,
         Input,
@@ -150,23 +150,23 @@
                 setSelected(FRUITS.includes(val) ? val : null);
               }}
             />
-            <SuggestionList
+            <List listRole="listbox" fallback="No results"
               id="fruit-list"
               popover
               style={{ "--max-height": "220px" }}
               searchText={query}
             >
               {FRUITS.map((fruit) => (
-                <Suggestion
+                <ListItem role="option"
                   key={fruit}
                   value={fruit}
                   selected={selected === fruit}
                   hidden={!matches(fruit)}
                 >
                   {fruit}
-                </Suggestion>
+                </ListItem>
               ))}
-            </SuggestionList>
+            </List>
             <div className="value-display">{selected ?? ""}</div>
           </div>
         );
@@ -201,13 +201,13 @@
                 setSelected(match ? match.code : null);
               }}
             />
-            <SuggestionList
+            <List listRole="listbox" fallback="No results"
               id="country-list"
               popover
               style={{ "--max-height": "220px" }}
             >
               {COUNTRIES.map((country) => (
-                <Suggestion
+                <ListItem role="option"
                   key={country.code}
                   value={country.name}
                   selected={selected === country.code}
@@ -215,9 +215,9 @@
                 >
                   <span style={{ fontWeight: 500 }}>{country.name}</span>
                   <span className="option-secondary">{country.region}</span>
-                </Suggestion>
+                </ListItem>
               ))}
-            </SuggestionList>
+            </List>
             <div className="value-display">
               {selectedCountry
                 ? `${selectedCountry.name} (${selectedCountry.code}) — ${selectedCountry.region}`
@@ -280,8 +280,8 @@
                   placeholder="Search an option…"
                   onInput={handleInput}
                 />
-                <SuggestionList id="large-list-wrap" popover>
-                  <Suggestion
+                <List listRole="listbox" fallback="No results" id="large-list-wrap" popover>
+                  <ListItem role="option"
                     value="Option A"
                     selected={selected === "option-a"}
                     hidden={!matchesQuery("Option A", descriptionA)}
@@ -298,8 +298,8 @@
                         {descriptionA}
                       </span>
                     </div>
-                  </Suggestion>
-                  <Suggestion
+                  </ListItem>
+                  <ListItem role="option"
                     value="Option B"
                     selected={selected === "option-b"}
                     hidden={!matchesQuery("Option B", descriptionB)}
@@ -316,8 +316,8 @@
                         {descriptionB}
                       </span>
                     </div>
-                  </Suggestion>
-                  <Suggestion
+                  </ListItem>
+                  <ListItem role="option"
                     value="Option C"
                     selected={selected === "option-c"}
                     hidden={!matchesQuery("Option C", descriptionC)}
@@ -334,8 +334,8 @@
                         {descriptionC}
                       </span>
                     </div>
-                  </Suggestion>
-                </SuggestionList>
+                  </ListItem>
+                </List>
               </div>
               <div style="width: 1500px; height: 2px; background: violet"></div>
               <div>
@@ -346,8 +346,8 @@
                   placeholder="Search an option…"
                   onInput={handleInput}
                 />
-                <SuggestionList id="large-list-nowrap" popover>
-                  <Suggestion
+                <List listRole="listbox" fallback="No results" id="large-list-nowrap" popover>
+                  <ListItem role="option"
                     value="Option A"
                     selected={selected === "option-a"}
                     hidden={!matchesQuery("Option A", descriptionA)}
@@ -370,8 +370,8 @@
                         {descriptionA}
                       </span>
                     </div>
-                  </Suggestion>
-                  <Suggestion
+                  </ListItem>
+                  <ListItem role="option"
                     value="Option B"
                     selected={selected === "option-b"}
                     hidden={!matchesQuery("Option B", descriptionB)}
@@ -394,8 +394,8 @@
                         {descriptionB}
                       </span>
                     </div>
-                  </Suggestion>
-                  <Suggestion
+                  </ListItem>
+                  <ListItem role="option"
                     value="Option C"
                     selected={selected === "option-c"}
                     hidden={!matchesQuery("Option C", descriptionC)}
@@ -418,8 +418,8 @@
                         {descriptionC}
                       </span>
                     </div>
-                  </Suggestion>
-                </SuggestionList>
+                  </ListItem>
+                </List>
               </div>
             </div>
             <div className="value-display">{selected ?? ""}</div>
@@ -457,22 +457,22 @@
               actionAfterChange
               uiAction={(v) => setQuery(v)}
             />
-            <SuggestionList
+            <List listRole="listbox" fallback="No results"
               id="fruit-action-list"
               popover
               style={{ "--max-height": "220px" }}
             >
               {FRUITS.map((fruit) => (
-                <Suggestion
+                <ListItem role="option"
                   key={fruit}
                   value={fruit}
                   selected={query === fruit}
                   hidden={!matches(fruit)}
                 >
                   {fruit}
-                </Suggestion>
+                </ListItem>
               ))}
-            </SuggestionList>
+            </List>
             <div className="value-display">
               Last saved: {lastSaved ?? "(none)"}
             </div>
@@ -517,22 +517,22 @@
                   data-one-of="#form-fruit-list"
                   uiAction={(v) => setFruitQuery(v)}
                 />
-                <SuggestionList
+                <List listRole="listbox" fallback="No results"
                   id="form-fruit-list"
                   popover
                   style={{ "--max-height": "180px" }}
                 >
                   {FRUITS.map((fruit) => (
-                    <Suggestion
+                    <ListItem role="option"
                       key={fruit}
                       value={fruit}
                       selected={fruitQuery === fruit}
                       hidden={!fruitMatches(fruit)}
                     >
                       {fruit}
-                    </Suggestion>
+                    </ListItem>
                   ))}
-                </SuggestionList>
+                </List>
               </label>
 
               <label>
@@ -546,22 +546,22 @@
                   data-one-of="#form-country-list"
                   uiAction={(v) => setCountryQuery(v)}
                 />
-                <SuggestionList
+                <List listRole="listbox" fallback="No results"
                   id="form-country-list"
                   popover
                   style={{ "--max-height": "180px" }}
                 >
                   {COUNTRIES.map((c) => (
-                    <Suggestion
+                    <ListItem role="option"
                       key={c.code}
                       value={c.name}
                       selected={countryQuery === c.name}
                       hidden={!countryMatches(c)}
                     >
                       {c.name}
-                    </Suggestion>
+                    </ListItem>
                   ))}
-                </SuggestionList>
+                </List>
               </label>
 
               <Button type="submit">Submit</Button>
