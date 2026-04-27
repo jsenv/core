@@ -488,29 +488,40 @@ const ListInteractive = (props) => {
           if (index === anchorIndex) {
             return;
           }
-          event.preventDefault();
-          setKeyboardPointedIndex(index);
+          if (event.type === "keydown") {
+            event.preventDefault();
+          }
           dispatchCustomEvent(e, "navi_list_request_scroll_at", { index });
           dispatchCustomEvent(e, "navi_list_request_nav_at", { index });
         }}
         onnavi_list_request_clear={() => {
-          setMousePointedIndex(-1);
-          setKeyboardPointedIndex(-1);
           setAnchorIndex(-1);
+          setKeyboardPointedIndex(-1);
+          setMousePointedIndex(-1);
         }}
         onnavi_list_request_select={(e) => {
           const { index } = e.detail;
-          setAnchorIndex(index);
-          anchorIndexRef.current = index;
           dispatchCustomEvent(e, "navi_list_request_select_at", { index });
         }}
         onnavi_list_nav={(e) => {
-          const { index } = e.detail;
+          const { index, event } = e.detail;
           anchorIndexRef.current = index;
           setAnchorIndex(index);
+          if (event.type === "keydown") {
+            setKeyboardPointedIndex(index);
+          } else {
+            setKeyboardPointedIndex(-1);
+          }
         }}
         onnavi_list_select={(e) => {
           const { index, event } = e.detail;
+          anchorIndexRef.current = index;
+          setAnchorIndex(index);
+          if (event.type === "keydown") {
+            setKeyboardPointedIndex(index);
+          } else {
+            setKeyboardPointedIndex(-1);
+          }
           const value = getValueByIndex(index);
           uiAction(value, event);
         }}
