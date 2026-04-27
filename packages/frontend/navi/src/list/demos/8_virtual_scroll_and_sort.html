@@ -36,7 +36,13 @@
        * a plain input; keyboard shortcuts are not wired to the list.
        */
 
-      import { Input, List, ListItem } from "@jsenv/navi";
+      import {
+        Input,
+        List,
+        ListItem,
+        ListItemHeader,
+        useSearch,
+      } from "@jsenv/navi";
 
       const ALL_ITEMS = Array.from({ length: 200 }, (_, i) => {
         const names = [
@@ -66,33 +72,7 @@
         return `${base}-${num}`;
       });
 
-      // Sort items based on a filter string:
-      //   1. items that START with the filter (alphabetically)
-      //   2. items that CONTAIN the filter (alphabetically)
-      //   3. everything else at the end
-      // No items are hidden — all 200 are always rendered, just reordered.
-      const sortItems = (items, filter) => {
-        if (!filter) {
-          return items;
-        }
-        const lower = filter.toLowerCase();
-        const starts = [];
-        const contains = [];
-        const rest = [];
-        for (const item of items) {
-          const lowerItem = item.toLowerCase();
-          if (lowerItem.startsWith(lower)) {
-            starts.push(item);
-          } else if (lowerItem.includes(lower)) {
-            contains.push(item);
-          } else {
-            rest.push(item);
-          }
-        }
-        starts.sort((a, b) => a.localeCompare(b));
-        contains.sort((a, b) => a.localeCompare(b));
-        return [...starts, ...contains, ...rest];
-      };
+      // Sort items based on a filter string — now handled by useSearch.
 
       const StatsBar = ({ totalItems, domItems }) => {
         const savedFromDom = totalItems - domItems;
@@ -193,11 +173,11 @@
       };
 
       export const App = () => {
-        const [filter, setFilter] = useState("");
+        const [search, setSearch] = useState("");
         const [selected, setSelected] = useState(null);
         const [domItems, setDomItems] = useState(0);
         const listRef = useRef(null);
-        const items = sortItems(ALL_ITEMS, filter);
+        const [getItemMatchInfo] = useSearch(search, ALL_ITEMS);
 
         useEffect(() => {
           const updateCount = () => {
@@ -234,11 +214,6 @@
                 Selected: <b>{selected}</b>
               </p>
             )}
-            <Input
-              placeholder="Sort suggestions…"
-              expandX
-              onInput={(e) => setFilter(e.target.value)}
-            />
             <List
               listRole="listbox"
               fallback="No results"
@@ -246,12 +221,29 @@
               maxHeight="220px"
               uiAction={setSelected}
               expandX
+              withSearch
             >
-              {items.map((item) => (
-                <ListItem role="option" key={item} value={item}>
-                  {item}
-                </ListItem>
-              ))}
+              <ListItemHeader>
+                <Input
+                  placeholder="Sort suggestions…"
+                  expandX
+                  uiAction={(v) => setSearch(v)}
+                />
+              </ListItemHeader>
+              {ALL_ITEMS.map((item) => {
+                const { order, ranges } = getItemMatchInfo(item);
+                return (
+                  <ListItem
+                    role="option"
+                    key={item}
+                    value={item}
+                    order={order}
+                    highlight={ranges}
+                  >
+                    {item}
+                  </ListItem>
+                );
+              })}
             </List>
           </div>
         );
