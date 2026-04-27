@@ -496,7 +496,7 @@ const ListInteractive = (props) => {
               setMousePointedIndex(-1);
             }}
             onnavi_list_request_select={(e) => {
-              const { index } = e.detail;
+              const index = anchorIndexRef.current;
               dispatchCustomEvent(e, "navi_list_request_select_at", { index });
             }}
             onnavi_list_nav={(e) => {
