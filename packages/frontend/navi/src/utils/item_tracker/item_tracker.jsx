@@ -1,190 +1,199 @@
-import { createContext } from "preact";
-import { useContext, useLayoutEffect, useMemo, useRef } from "preact/hooks";
+import { signal } from "@preact/signals";
+import { useLayoutEffect, useRef } from "preact/hooks";
 
 /*
- * Item Tracker - For colocated producer/consumer scenarios
- *
- * USE CASE:
- * This is for scenarios where producers and consumers are in the same
- * component tree, such as:
- * - TableRow components registering themselves
- * - TableCell components accessing row data by index
- * - Both happen within the same table structure
- *
- * Unlike the isolated producer/consumer system, this doesn't need complex
- * synchronization because everything happens in the same render cycle.
+ * Item Tracker — tracks a set of visible items and exposes reactive signals.
  *
  * USAGE:
  * ```jsx
- * // Create domain-specific tracker hooks
- * const [useRowTrackerProvider, useRegisterRow, useRow, useRows] = createItemTracker();
+ * const tracker = createItemTracker();
  *
- * function App() {
- *   const RowTrackerProvider = useRowTrackerProvider();
- *
- *   return (
- *     <RowTrackerProvider>
- *       <table>
- *         <tbody>
- *           {rows.map(({ id, name, color }, index) => (
- *             <TableRow key={id} id={id} index={index} name={name} color={color}>
- *               <TableCell column="name" />
- *               <TableCell column="color" />
- *             </TableRow>
- *           ))}
- *         </tbody>
- *       </table>
- *       <TrackedRowsList />
- *     </RowTrackerProvider>
- *   );
+ * function Row({ id, hidden, value }) {
+ *   const index = tracker.useTrackItem(id, { hidden, value });
+ *   if (index === -1) return null;
+ *   return <li>{value}</li>;
  * }
  *
- * function TableRow({ id, name, color, children }) {
- *   const rowIndex = useRegisterRow(id, { name, color });
- *   return (
- *     <tr>
- *       <TableRowIndexContext.Provider value={rowIndex}>
- *         {children}
- *       </TableRowIndexContext.Provider>
- *     </tr>
- *   );
+ * function Count() {
+ *   const count = tracker.useTrackerItemCount(); // re-renders only when count changes
+ *   return <span>{count} items</span>;
  * }
  *
- * function TableCell({ column }) {
- *   const rowIndex = useContext(TableRowIndexContext);
- *   const rowData = useRow(rowIndex);
- *   return <td>{rowData[column]}</td>;
- * }
- *
- * function TrackedRowsList() {
- *   const rows = useRows();
- *   return <div>Total rows: {rows.length}</div>;
+ * function Values() {
+ *   const values = tracker.useTrackerItemProp("value"); // re-renders only when values change
+ *   return <span>{values.join(", ")}</span>;
  * }
  * ```
+ *
+ * INTERNALS:
+ *   - registrations: Map order → data, contains only visible items
+ *   - idToOrder: Map id → order, stable across renders
+ *   - sortedOrders: number[] of visible item orders, kept sorted via bisect insert/remove
+ *   - countSignal: signal(number), updated in microtask batch, only when count changes
+ *   - propSignals: Map propName → signal(array), updated in microtask batch with element equality
+ *
+ *   useTrackItem: updates registrations + sortedOrders synchronously during the
+ *   layout-effect phase so index (= bisect position) is correct for the same commit.
+ *   Signals are deferred to a microtask so multiple items updating in one batch
+ *   cause only one signal update.
  */
 
-export const createItemTracker = ({ filter: filterFn } = {}) => {
-  const ItemTrackerContext = createContext();
+export const useItemTracker = () => {
+  const trackerRef = useRef(null);
+  let tracker = trackerRef.current;
+  if (!tracker) {
+    tracker = createItemTracker();
+    trackerRef.current = tracker;
+  }
+  return tracker;
+};
 
-  const useItemTrackerProvider = () => {
-    const renderItemsRef = useRef([]);
-    const renderItems = renderItemsRef.current;
-    const renderCountRef = useRef(0);
+const createItemTracker = () => {
+  const registrations = new Map(); // order → data (visible items only)
+  const idToOrder = new Map(); // id → order
+  let orderCounter = 0;
+  const sortedOrders = []; // visible item orders, kept sorted
 
-    const committedItemsRef = useRef([]);
-    const committedItems = committedItemsRef.current;
-    const committedMapRef = useRef(new Map()); // stableId → { index, data }
+  const bisect = (order) => {
+    let lo = 0;
+    let hi = sortedOrders.length;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (sortedOrders[mid] < order) {
+        lo = mid + 1;
+      } else {
+        hi = mid;
+      }
+    }
+    return lo;
+  };
 
-    const tracker = useMemo(() => {
-      const ItemTrackerProvider = ({ children }) => {
-        // Reset render items on each render to start fresh.
-        // Items re-register themselves during their render via registerItem().
-        tracker.reset();
+  const insertOrder = (order) => {
+    sortedOrders.splice(bisect(order), 0, order);
+  };
 
-        return (
-          <ItemTrackerContext.Provider value={tracker}>
-            {children}
-          </ItemTrackerContext.Provider>
+  const removeOrder = (order) => {
+    const pos = bisect(order);
+    if (sortedOrders[pos] === order) {
+      sortedOrders.splice(pos, 1);
+    }
+  };
+
+  const countSignal = signal(0);
+  const propSignals = new Map(); // propName → signal(array)
+
+  const getPropSignal = (propName) => {
+    if (!propSignals.has(propName)) {
+      propSignals.set(propName, signal([]));
+    }
+    return propSignals.get(propName);
+  };
+
+  let notifyScheduled = false;
+  const notify = () => {
+    if (notifyScheduled) {
+      return;
+    }
+    notifyScheduled = true;
+    queueMicrotask(() => {
+      notifyScheduled = false;
+
+      // sortedOrders is already sorted — no sort needed
+      const newCount = sortedOrders.length;
+      if (countSignal.peek() !== newCount) {
+        countSignal.value = newCount;
+      }
+
+      for (const [propName, sig] of propSignals) {
+        const prev = sig.peek();
+        const next = sortedOrders.map(
+          (order) => registrations.get(order)[propName],
         );
-      };
-      // committedItems is a live array: always up-to-date by the time any
-      // sibling or ancestor layoutEffect reads it (bottom-up effect ordering).
-      ItemTrackerProvider.items = committedItems;
+        let changed = prev.length !== next.length;
+        if (!changed) {
+          for (let i = 0; i < next.length; i++) {
+            if (prev[i] !== next[i]) {
+              changed = true;
+              break;
+            }
+          }
+        }
+        if (changed) {
+          sig.value = next;
+        }
+      }
+    });
+  };
 
-      return {
-        ItemTrackerProvider,
-        items: committedItems,
-        registerItem: (data) => {
-          if (filterFn && !filterFn(data)) {
-            return -1;
-          }
-          const index = renderCountRef.current++;
-          renderItems[index] = data;
-          return index;
-        },
-        commitItem: (stableId, index, data) => {
-          if (index === -1) {
-            return;
-          }
-          committedMapRef.current.set(stableId, { index, data });
-          rebuildCommittedItems(committedItems, committedMapRef.current);
-        },
-        decommitItem: (stableId) => {
-          committedMapRef.current.delete(stableId);
-          rebuildCommittedItems(committedItems, committedMapRef.current);
-        },
-        getItem: (index) => {
-          return committedItems[index];
-        },
-        getAllItems: () => {
-          return committedItems;
-        },
-        reset: () => {
-          renderItems.length = 0;
-          renderCountRef.current = 0;
-        },
+  // Subscribes the calling component to the count signal.
+  // Only re-renders when the visible item count changes.
+  const useTrackerItemCount = () => countSignal.value;
+
+  // Subscribes the calling component to a per-prop signal.
+  // Only re-renders when the array of values for that prop changes.
+  const useTrackerItemProp = (propName) => getPropSignal(propName).value;
+
+  // Register an item. data.hidden controls visibility.
+  // Returns the item's index among visible items, or -1 when hidden.
+  // sortedOrders is updated synchronously so the index is accurate for this
+  // commit; signals are deferred to a microtask batch.
+  const useTrackItem = (id, data) => {
+    if (!idToOrder.has(id)) {
+      idToOrder.set(id, orderCounter++);
+    }
+    const order = idToOrder.get(id);
+
+    // Sync update so index is correct during this render
+    if (data.hidden) {
+      registrations.delete(order);
+      removeOrder(order);
+    } else {
+      registrations.set(order, data);
+      if (sortedOrders[bisect(order)] !== order) {
+        insertOrder(order);
+      }
+    }
+
+    useLayoutEffect(() => {
+      if (data.hidden) {
+        registrations.delete(order);
+        removeOrder(order);
+      } else {
+        registrations.set(order, data);
+        if (sortedOrders[bisect(order)] !== order) {
+          insertOrder(order);
+        }
+      }
+      notify();
+    });
+
+    useLayoutEffect(() => {
+      return () => {
+        registrations.delete(order);
+        removeOrder(order);
+        notify();
       };
     }, []);
 
-    return tracker.ItemTrackerProvider;
-  };
-
-  // id: stable identity for this item across re-renders — the same concept as
-  // Preact's `key` prop (which is stripped from props and inaccessible here).
-  // Callers must provide a unique id; for suggestions this is the value.
-  const useTrackItem = (id, data) => {
-    const tracker = useContext(ItemTrackerContext);
-    if (!tracker) {
-      throw new Error(
-        "useTrackItem must be used within SimpleItemTrackerProvider",
-      );
+    if (data.hidden) {
+      return -1;
     }
-    // registerItem returns -1 when a filterFn is set and the item doesn't pass.
-    // Otherwise returns the sequential index among passing items.
-    // Note: registerItem is always called to keep hook call count stable.
-    const index = tracker.registerItem(data);
-    useLayoutEffect(() => {
-      if (index === -1) {
-        tracker.decommitItem(id);
-      } else {
-        tracker.commitItem(id, index, data);
-      }
-      return () => {
-        tracker.decommitItem(id);
-      };
-    });
-    return index;
+    return bisect(order);
   };
 
-  const useTrackedItem = (index) => {
-    const trackedItems = useTrackedItems();
-    const item = trackedItems[index];
-    return item;
-  };
+  // Direct access for effects that need the count synchronously
+  // (e.g. filler height calculations), without subscribing to the signal.
+  const getVisibleCount = () => sortedOrders.length;
 
-  const useTrackedItems = () => {
-    const tracker = useContext(ItemTrackerContext);
-    if (!tracker) {
-      throw new Error(
-        "useTrackedItems must be used within SimpleItemTrackerProvider",
-      );
-    }
-    return tracker.items;
-  };
+  // Returns current visible items as an array ordered by insertion order.
+  const getItems = () => sortedOrders.map((order) => registrations.get(order));
 
-  return [
-    useItemTrackerProvider,
+  return {
     useTrackItem,
-    useTrackedItem,
-    useTrackedItems,
-  ];
-};
-
-const rebuildCommittedItems = (committedItems, committedMap) => {
-  const entries = Array.from(committedMap.values());
-  entries.sort((a, b) => a.index - b.index);
-  committedItems.length = entries.length;
-  for (let i = 0; i < entries.length; i++) {
-    committedItems[i] = entries[i].data;
-  }
+    useTrackerItemProp,
+    useTrackerItemCount,
+    countSignal,
+    getVisibleCount,
+    getItems,
+  };
 };

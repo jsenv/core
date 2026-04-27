@@ -16,8 +16,10 @@ import {
 
 import { Box } from "../box/box.jsx";
 import { createOnKeyDownForShortcuts } from "../keyboard/keyboard_shortcuts.js";
-import { createItemTracker } from "../utils/item_tracker/item_tracker.jsx";
+import { useItemTracker } from "../utils/item_tracker/item_tracker.jsx";
 import { useIsInsideDropdown } from "./dropdown.jsx";
+
+const ListItemTrackerContext = createContext(null);
 
 // Provided by ListWithSearch so descendants (e.g. an Input) can update the
 // search text, and so that the listbox id is stable across renders.
@@ -58,10 +60,6 @@ const RENDER_BUDGET_DEFAULT = 100;
 // Attribute used on <li> elements rendered by ListItem so the scroll listener
 // and filler-height calculation can find them without requiring a specific ARIA role.
 const LIST_ITEM_SELECTOR = `.navi_list_item`;
-
-const [useListItemTrackerProvider, useTrackListItem] = createItemTracker({
-  filter: (data) => !data.hidden,
-});
 
 // Carries the render window {start, end} (or null = render all) from
 // List down to each ListItem.
@@ -691,7 +689,7 @@ const ListControlled = ({
       ? { searchText: effectiveSearchText, match }
       : null;
 
-  const ItemTrackerProvider = useListItemTrackerProvider();
+  const tracker = useItemTracker();
 
   const [renderWindow, setRenderWindow] = useState({
     start: 0,
@@ -707,9 +705,9 @@ const ListControlled = ({
   // After every render, update filler heights to reflect the current window.
   useLayoutEffect(() => {
     if (itemsRef) {
-      itemsRef.current = ItemTrackerProvider.items;
+      itemsRef.current = tracker.getItems();
     }
-    const totalItems = ItemTrackerProvider.items.length;
+    const totalItems = tracker.getVisibleCount();
     const current = renderWindowRef.current;
     if (!current || totalItems <= renderBudget) {
       if (topFillerRef.current) {
@@ -745,7 +743,7 @@ const ListControlled = ({
   // reset to start. Never deactivate — keeping the window always active prevents
   // a flash where all items mount when the count temporarily exceeds renderBudget.
   useLayoutEffect(() => {
-    const totalItems = ItemTrackerProvider.items.length;
+    const totalItems = tracker.getVisibleCount();
     const current = renderWindowRef.current;
     if (current !== null && current.start >= totalItems && totalItems > 0) {
       // Window is entirely out of range (e.g. after filtering) — reset to start.
@@ -762,7 +760,7 @@ const ListControlled = ({
     const listEl = listContainerEl.querySelector(".navi_list");
     const scrollContainer = getScrollContainer(listEl);
     const onScroll = () => {
-      const totalItems = ItemTrackerProvider.items.length;
+      const totalItems = tracker.getVisibleCount();
       if (totalItems <= renderBudget) {
         return;
       }
@@ -839,7 +837,7 @@ const ListControlled = ({
         separator={separator}
         expandX={expandX}
         {...listProps}
-        ItemTrackerProvider={ItemTrackerProvider}
+        tracker={tracker}
         renderWindow={renderWindow}
         topFillerRef={topFillerRef}
         bottomFillerRef={bottomFillerRef}
@@ -875,7 +873,7 @@ const ListControlled = ({
       styleCSSVars={LIST_STYLE_CSS_VARS}
       pseudoClasses={LIST_PSEUDO_CLASSES}
       basePseudoState={{
-        ":-navi-void": ItemTrackerProvider.items.length === 0,
+        ":-navi-void": tracker.useTrackerItemCount() === 0,
       }}
       hasChildFunction
     >
@@ -896,7 +894,7 @@ const LIST_STYLE_CSS_VARS = {
 const LIST_PSEUDO_CLASSES = [":-navi-void"];
 // Inner <ul> — hosts the fillers + items.
 const UnorderedList = ({
-  ItemTrackerProvider,
+  tracker,
   renderWindow,
   topFillerRef,
   bottomFillerRef,
@@ -916,7 +914,9 @@ const UnorderedList = ({
       />
       <RenderWindowContext.Provider value={renderWindow}>
         <SeparatorContext.Provider value={separator ?? null}>
-          <ItemTrackerProvider>{children}</ItemTrackerProvider>
+          <ListItemTrackerContext.Provider value={tracker}>
+            {children}
+          </ListItemTrackerContext.Provider>
         </SeparatorContext.Provider>
       </RenderWindowContext.Provider>
       <li
@@ -975,7 +975,8 @@ export const ListItem = ({
     }
   }
 
-  const index = useTrackListItem(id, { id, hidden, value });
+  const tracker = useContext(ListItemTrackerContext);
+  const index = tracker.useTrackItem(id, { id, hidden, value });
   const isPointedByMouse = mousePointedValue === value;
   const isPointedByKeyboard = keyboardPointedValue === value;
   const isPointedByProxy = Boolean(pointed);

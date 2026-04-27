@@ -56,7 +56,7 @@ import { useContext, useId, useRef } from "preact/hooks";
 
 import { useKeyboardShortcuts } from "../../keyboard/keyboard_shortcuts.js";
 import { createIsolatedItemTracker } from "../../utils/item_tracker/isolated_item_tracker.jsx";
-import { createItemTracker } from "../../utils/item_tracker/item_tracker.jsx";
+import { useItemTracker } from "../../utils/item_tracker/item_tracker.jsx";
 import { withPropsClassName } from "../../utils/with_props_class_name.js";
 import { Editable, useEditionController } from "../edition/editable.jsx";
 import {
@@ -100,8 +100,16 @@ import { TableUI } from "./table_ui.jsx";
 
 const [useColumnTrackerProviders, useRegisterColumn, useColumnByIndex] =
   createIsolatedItemTracker();
-const [useRowTrackerProvider, useRegisterRow, useRowByIndex] =
-  createItemTracker();
+
+const TableRowTrackerContext = createContext(null);
+const useRegisterRow = (id, data) => {
+  const tracker = useContext(TableRowTrackerContext);
+  return tracker.useTrackItem(id, data);
+};
+const useRowByIndex = (index) => {
+  const tracker = useContext(TableRowTrackerContext);
+  return tracker.getItems()[index];
+};
 
 const ColumnProducerProviderContext = createContext();
 const ColumnConsumerProviderContext = createContext();
@@ -141,8 +149,8 @@ export const Table = (props) => {
 
   const [ColumnProducerProvider, ColumnConsumerProvider, columns] =
     useColumnTrackerProviders();
-  const RowTrackerProvider = useRowTrackerProvider();
-  const rows = RowTrackerProvider.items;
+  const rowTracker = useItemTracker();
+  const rows = rowTracker.getItems();
 
   // selection
   const selectionController = useTableSelectionController({
@@ -290,7 +298,9 @@ export const Table = (props) => {
                     <ColumnConsumerProviderContext.Provider
                       value={ColumnConsumerProvider}
                     >
-                      <RowTrackerProvider>{children}</RowTrackerProvider>
+                      <TableRowTrackerContext.Provider value={rowTracker}>
+                        {children}
+                      </TableRowTrackerContext.Provider>
                     </ColumnConsumerProviderContext.Provider>
                   </ColumnProducerProviderContext.Provider>
                 </TableStickyContext.Provider>
