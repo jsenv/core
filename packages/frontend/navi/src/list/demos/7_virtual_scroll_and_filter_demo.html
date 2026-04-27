@@ -209,7 +209,9 @@
       };
 
       const VirtualScrollDemo = () => {
-        const [selected, setSelected] = useState(null);
+        // Start with an item selected at index 150, well outside the initial
+        // render window (0–30), to verify that the window shifts on mount.
+        const [selected, setSelected] = useState(LARGE_LIST[150]);
         const [searchText, setSearchText] = useState(null);
         const [maxHeight, setMaxHeight] = useState(280);
         const [maxHeightEnabled, setMaxHeightEnabled] = useState(true);

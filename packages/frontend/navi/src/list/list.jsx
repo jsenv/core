@@ -58,6 +58,9 @@ const LIST_ITEM_SELECTOR = `.navi_list_item`;
 // Carries the render window {start, end} (or null = render all) from
 // List down to each ListItem.
 const RenderWindowContext = createContext(null);
+// Callback provided by ListControlled so ListItem can request to be included
+// in the render window (e.g. when it is selected but outside the window).
+const RequestVisibleContext = createContext(null);
 // Carries the separator element/function down to each ListItem so separators
 // are only rendered between items that actually mount (post-filter, post-window).
 const SeparatorContext = createContext(null);
@@ -752,6 +755,18 @@ const ListControlled = ({
     };
   }, [renderBudget]);
 
+  const requestVisible = (index) => {
+    const totalItems = tracker.countSignal.peek();
+    const half = Math.floor(renderBudget / 2);
+    let newStart = Math.max(0, index - half);
+    let newEnd = newStart + renderBudget;
+    if (newEnd > totalItems) {
+      newEnd = totalItems;
+      newStart = Math.max(0, newEnd - renderBudget);
+    }
+    setRenderWindow({ start: newStart, end: newEnd });
+  };
+
   const renderList = (listProps) => {
     return (
       <UnorderedList
@@ -765,9 +780,11 @@ const ListControlled = ({
         renderWindow={renderWindow}
         virtualItemHeight={virtualItemHeight}
       >
-        <ListIdContext.Provider value={listId}>
-          {children}
-        </ListIdContext.Provider>
+        <RequestVisibleContext.Provider value={requestVisible}>
+          <ListIdContext.Provider value={listId}>
+            {children}
+          </ListIdContext.Provider>
+        </RequestVisibleContext.Provider>
       </UnorderedList>
     );
   };
@@ -945,13 +962,24 @@ export const ListItem = (props) => {
   return <ListItemOrVoid {...props} />;
 };
 const ListItemOrVoid = (props) => {
-  let { id, value, hidden, ...rest } = props;
+  let { id, value, hidden, selected, ...rest } = props;
   const idDefault = useId();
   id = id || idDefault;
   const renderWindow = useContext(RenderWindowContext);
   const tracker = useContext(ListItemTrackerContext);
   const index = tracker.useTrackItem(id, { id, hidden, value });
   const separator = useContext(SeparatorContext);
+  const requestVisible = useContext(RequestVisibleContext);
+
+  useLayoutEffect(() => {
+    if (!selected || index === -1) {
+      return;
+    }
+    if (index >= renderWindow.start && index < renderWindow.end) {
+      return;
+    }
+    requestVisible?.(index);
+  }, [selected, index]);
 
   if (hidden) {
     return null;
@@ -960,7 +988,13 @@ const ListItemOrVoid = (props) => {
     return null;
   }
   const listItemVnode = (
-    <ListItemReal id={id} value={value} index={index} {...rest} />
+    <ListItemReal
+      id={id}
+      value={value}
+      index={index}
+      selected={selected}
+      {...rest}
+    />
   );
   if (!separator || index === 0) {
     return listItemVnode;
