@@ -756,14 +756,9 @@ const ListControlled = ({
   }, [renderBudget]);
 
   const requestVisible = (index) => {
-    const totalItems = tracker.countSignal.peek();
     const half = Math.floor(renderBudget / 2);
-    let newStart = Math.max(0, index - half);
-    let newEnd = newStart + renderBudget;
-    if (newEnd > totalItems) {
-      newEnd = totalItems;
-      newStart = Math.max(0, newEnd - renderBudget);
-    }
+    const newStart = Math.max(0, index - half);
+    const newEnd = newStart + renderBudget;
     setRenderWindow({ start: newStart, end: newEnd });
   };
 
