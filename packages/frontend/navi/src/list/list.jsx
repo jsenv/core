@@ -698,46 +698,13 @@ const ListControlled = ({
   const renderWindowRef = useRef(null);
   renderWindowRef.current = renderWindow;
 
-  const topFillerRef = useRef(null);
-  const bottomFillerRef = useRef(null);
-  const measuredItemHeightRef = useRef(itemHeightEstimation ?? 0);
-
-  // After every render, update filler heights to reflect the current window.
+  // Update itemsRef when renderWindow changes so ListInteractive always has
+  // the current visible items for keyboard navigation.
   useLayoutEffect(() => {
     if (itemsRef) {
       itemsRef.current = tracker.getItems();
     }
-    const totalItems = tracker.getVisibleCount();
-    const current = renderWindowRef.current;
-    if (!current || totalItems <= renderBudget) {
-      if (topFillerRef.current) {
-        topFillerRef.current.style.height = "0px";
-      }
-      if (bottomFillerRef.current) {
-        bottomFillerRef.current.style.height = "0px";
-      }
-      return;
-    }
-    const listContainerEl = ref.current;
-    if (!listContainerEl) {
-      return;
-    }
-    const listEl = listContainerEl.querySelector(".navi_list");
-    const items = listEl.querySelectorAll(LIST_ITEM_SELECTOR);
-    if (items.length === 0) {
-      return;
-    }
-    if (!itemHeightEstimation) {
-      measuredItemHeightRef.current = items[0].getBoundingClientRect().height;
-    }
-    const itemHeight = measuredItemHeightRef.current;
-    if (topFillerRef.current) {
-      topFillerRef.current.style.height = `${current.start * itemHeight}px`;
-    }
-    if (bottomFillerRef.current) {
-      bottomFillerRef.current.style.height = `${(totalItems - current.end) * itemHeight}px`;
-    }
-  });
+  }, [renderWindow]);
 
   // Keep the render window in range: if items shifted (e.g. after filtering),
   // reset to start. Never deactivate — keeping the window always active prevents
@@ -839,8 +806,9 @@ const ListControlled = ({
         {...listProps}
         tracker={tracker}
         renderWindow={renderWindow}
-        topFillerRef={topFillerRef}
-        bottomFillerRef={bottomFillerRef}
+        renderBudget={renderBudget}
+        measuredItemHeightRef={measuredItemHeightRef}
+        itemHeightEstimation={itemHeightEstimation}
       >
         <ListIdContext.Provider value={listId}>
           {children}
@@ -896,8 +864,9 @@ const LIST_PSEUDO_CLASSES = [":-navi-void"];
 const UnorderedList = ({
   tracker,
   renderWindow,
-  topFillerRef,
-  bottomFillerRef,
+  renderBudget,
+  measuredItemHeightRef,
+  itemHeightEstimation,
   fallback,
   separator,
   children,
@@ -905,12 +874,12 @@ const UnorderedList = ({
 }) => {
   return (
     <Box as="ul" {...rest} baseClassName="navi_list">
-      <li
-        ref={topFillerRef}
-        className="navi_list_virtual_filler"
-        // eslint-disable-next-line react/no-unknown-property
-        navi-virtual-filler="top"
-        aria-hidden
+      <TopFiller
+        tracker={tracker}
+        renderWindow={renderWindow}
+        renderBudget={renderBudget}
+        measuredItemHeightRef={measuredItemHeightRef}
+        itemHeightEstimation={itemHeightEstimation}
       />
       <RenderWindowContext.Provider value={renderWindow}>
         <SeparatorContext.Provider value={separator ?? null}>
@@ -919,12 +888,11 @@ const UnorderedList = ({
           </ListItemTrackerContext.Provider>
         </SeparatorContext.Provider>
       </RenderWindowContext.Provider>
-      <li
-        ref={bottomFillerRef}
-        className="navi_list_virtual_filler"
-        // eslint-disable-next-line react/no-unknown-property
-        navi-virtual-filler="bottom"
-        aria-hidden
+      <BottomFiller
+        tracker={tracker}
+        renderWindow={renderWindow}
+        renderBudget={renderBudget}
+        measuredItemHeightRef={measuredItemHeightRef}
       />
       {fallback && (
         <ListItemPresentation className="navi_list_empty">
@@ -932,6 +900,80 @@ const UnorderedList = ({
         </ListItemPresentation>
       )}
     </Box>
+  );
+};
+
+const TopFiller = ({
+  tracker,
+  renderWindow,
+  renderBudget,
+  measuredItemHeightRef,
+  itemHeightEstimation,
+}) => {
+  const totalItems = tracker.useTrackerItemCount();
+  const ref = useRef(null);
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) {
+      return;
+    }
+    if (totalItems <= renderBudget) {
+      el.style.height = "0px";
+      return;
+    }
+    if (!itemHeightEstimation) {
+      const listEl = el.closest(".navi_list");
+      const item = listEl?.querySelector(LIST_ITEM_SELECTOR);
+      if (item) {
+        measuredItemHeightRef.current = item.getBoundingClientRect().height;
+      }
+    }
+    const itemHeight = measuredItemHeightRef.current;
+    el.style.height = `${renderWindow.start * itemHeight}px`;
+  }, [renderWindow, totalItems]);
+
+  return (
+    <li
+      ref={ref}
+      className="navi_list_virtual_filler"
+      // eslint-disable-next-line react/no-unknown-property
+      navi-virtual-filler="top"
+      aria-hidden
+    />
+  );
+};
+
+const BottomFiller = ({
+  tracker,
+  renderWindow,
+  renderBudget,
+  measuredItemHeightRef,
+}) => {
+  const totalItems = tracker.useTrackerItemCount();
+  const ref = useRef(null);
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) {
+      return;
+    }
+    if (totalItems <= renderBudget) {
+      el.style.height = "0px";
+      return;
+    }
+    const itemHeight = measuredItemHeightRef.current;
+    el.style.height = `${(totalItems - renderWindow.end) * itemHeight}px`;
+  }, [renderWindow, totalItems]);
+
+  return (
+    <li
+      ref={ref}
+      className="navi_list_virtual_filler"
+      // eslint-disable-next-line react/no-unknown-property
+      navi-virtual-filler="bottom"
+      aria-hidden
+    />
   );
 };
 
