@@ -485,6 +485,7 @@ const ListInteractive = (props) => {
           event.preventDefault();
           setKeyboardPointedIndex(index);
           dispatchCustomEvent(e, "navi_list_request_scroll_at", { index });
+          dispatchCustomEvent(e, "navi_list_request_nav_at", { index });
         }}
         onnavi_list_request_clear={() => {
           setMousePointedIndex(-1);
@@ -865,6 +866,7 @@ const ListControlled = ({
           return;
         }
         const { index } = e.detail;
+        console.log("request nav at", index);
         dispatchCustomEvent(e, "navi_list_request_scroll_at", { index });
       }}
       onnavi_list_request_select_at={(e) => {
