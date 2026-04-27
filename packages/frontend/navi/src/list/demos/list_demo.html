@@ -282,16 +282,20 @@
                   }}
                 />
               </ListItemHeader>
-              {FRUITS.map((fruit) => (
-                <ListItem
-                  key={fruit}
-                  value={fruit}
-                  selected={selected === fruit}
-                  hidden={!applySearchText(searchText, fruit)}
-                >
-                  {fruit}
-                </ListItem>
-              ))}
+              {FRUITS.map((fruit) => {
+                const match = applySearchText(searchText, fruit);
+                return (
+                  <ListItem
+                    key={fruit}
+                    value={fruit}
+                    selected={selected === fruit}
+                    hidden={!match}
+                    highlight={match?.ranges}
+                  >
+                    {fruit}
+                  </ListItem>
+                );
+              })}
             </List>
             <div className="value-display">{selected ?? ""}</div>
           </div>
