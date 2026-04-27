@@ -657,7 +657,6 @@ const ListControlled = ({
     const newEnd = newStart + renderBudget;
     updateRenderWindow(newStart, newEnd);
   };
-
   // Keep the render window in range: if items shifted (e.g. after filtering),
   // reset to start. Uses tracker.getCount() which reads sortedOrders.length
   // synchronously — unlike countSignal which is deferred via queueMicrotask.
@@ -669,7 +668,6 @@ const ListControlled = ({
       updateRenderWindow(0, renderBudget);
     }
   });
-
   // Scroll listener — slides the window as the user scrolls.
   useLayoutEffect(() => {
     const listContainerEl = ref.current;
