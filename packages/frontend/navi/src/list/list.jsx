@@ -461,11 +461,17 @@ const ListInteractive = (props) => {
           const anchorIndex = anchorIndexRef.current;
           const resolveIndex = (direction) => {
             if (direction === "down") {
+              if (anchorIndex === -1) {
+                return 0;
+              }
               const belowIndex =
                 anchorIndex < itemCount - 1 ? anchorIndex + 1 : anchorIndex;
               return belowIndex;
             }
             if (direction === "up") {
+              if (anchorIndex === -1) {
+                return itemCount - 1;
+              }
               const aboveIndex =
                 anchorIndex > 0 ? anchorIndex - 1 : anchorIndex;
               return aboveIndex;
@@ -476,7 +482,7 @@ const ListInteractive = (props) => {
             if (direction === "last") {
               return itemCount - 1;
             }
-            return index;
+            return anchorIndex;
           };
           const index = resolveIndex(direction);
           if (index === anchorIndex) {
