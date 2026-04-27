@@ -644,16 +644,29 @@ const ListControlled = ({
   });
   const renderWindowRef = useRef(null);
   renderWindowRef.current = renderWindow;
+  const updateRenderWindow = (newStart, newEnd) => {
+    const { start, end } = renderWindowRef.current;
+    if (newStart === start && newEnd === end) {
+      return;
+    }
+    setRenderWindow({ start: newStart, end: newEnd });
+  };
+  const requestVisible = (index) => {
+    const half = Math.floor(renderBudget / 2);
+    const newStart = Math.max(0, index - half);
+    const newEnd = newStart + renderBudget;
+    updateRenderWindow(newStart, newEnd);
+  };
 
   // Keep the render window in range: if items shifted (e.g. after filtering),
-  // reset to start. Never deactivate — keeping the window always active prevents
-  // a flash where all items mount when the count temporarily exceeds renderBudget.
+  // reset to start. Uses tracker.getCount() which reads sortedOrders.length
+  // synchronously — unlike countSignal which is deferred via queueMicrotask.
   useLayoutEffect(() => {
-    const totalItems = tracker.countSignal.peek();
+    const totalItems = tracker.getCount();
     const current = renderWindowRef.current;
     if (current !== null && current.start >= totalItems && totalItems > 0) {
       // Window is entirely out of range (e.g. after filtering) — reset to start.
-      setRenderWindow({ start: 0, end: renderBudget });
+      updateRenderWindow(0, renderBudget);
     }
   });
 
@@ -666,7 +679,7 @@ const ListControlled = ({
     const listEl = listContainerEl.querySelector(".navi_list");
     const scrollContainer = getScrollContainer(listEl);
     const onScroll = () => {
-      const totalItems = tracker.countSignal.peek();
+      const totalItems = tracker.getCount();
       if (totalItems <= renderBudget) {
         return;
       }
@@ -716,24 +729,13 @@ const ListControlled = ({
       if (newEnd === totalItems) {
         newStart = Math.max(0, totalItems - renderBudget);
       }
-
-      if (current.start === newStart && current.end === newEnd) {
-        return;
-      }
-      setRenderWindow({ start: newStart, end: newEnd });
+      updateRenderWindow(newStart, newEnd);
     };
     scrollContainer.addEventListener("scroll", onScroll, { passive: true });
     return () => {
       scrollContainer.removeEventListener("scroll", onScroll);
     };
   }, [renderBudget]);
-
-  const requestVisible = (index) => {
-    const half = Math.floor(renderBudget / 2);
-    const newStart = Math.max(0, index - half);
-    const newEnd = newStart + renderBudget;
-    setRenderWindow({ start: newStart, end: newEnd });
-  };
 
   const renderList = (listProps) => {
     return (
