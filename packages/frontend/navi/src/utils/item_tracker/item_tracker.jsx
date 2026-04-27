@@ -40,14 +40,17 @@ import { useLayoutEffect, useRef } from "preact/hooks";
  * ```
  *
  * INTERNALS:
- *   - registrations: Map order → data, contains only visible items
- *   - idToOrder: Map id → order, stable across renders
- *   - sortedOrders: number[] of visible item orders, kept sorted via bisect insert/remove
+ *   - registrations: Map key → data, contains only visible items
+ *   - idToKey: Map id → key, stable across renders
+ *   - sortedKeys: number[] of visible item keys kept sorted by visual order:
+ *       when data.order is provided it is used as the sort key;
+ *       otherwise the auto-incremented insertion key is used so natural
+ *       (JSX declaration) order is preserved.
  *   - countSignal: signal(number), updated in microtask batch, only when count changes
  *   - propSignals: Map propName → signal(array), updated in microtask batch with element equality
  *   - onChangeRef: holds the latest onChange callback, called once per microtask batch
  *
- *   useTrackItem: updates registrations + sortedOrders synchronously during the
+ *   useTrackItem: updates registrations + sortedKeys synchronously during the
  *   render phase so index (= bisect position) is correct for the same commit.
  *   Signals and onChange are deferred to a microtask so multiple items updating
  *   in one commit cause only one notification.
@@ -69,17 +72,20 @@ export const useItemTracker = ({ onChange } = {}) => {
 };
 
 const createItemTracker = (onChange) => {
-  const registrations = new Map(); // order → data (visible items only)
-  const idToOrder = new Map(); // id → order
-  let orderCounter = 0;
-  const sortedOrders = []; // visible item orders, kept sorted
+  const registrations = new Map(); // key → data (visible items only)
+  const idToKey = new Map(); // id → insertion key (stable, auto-incremented)
+  let keyCounter = 0;
+  // sortedKeys: sorted by each item's visual sort value.
+  // The visual sort value is data.order when provided, otherwise the insertion key.
+  // Storing { sortValue, key } pairs so we can bisect by sortValue.
+  const sortedKeys = []; // { sortValue: number, key: number }[]
 
-  const bisect = (order) => {
+  const bisect = (sortValue) => {
     let lo = 0;
-    let hi = sortedOrders.length;
+    let hi = sortedKeys.length;
     while (lo < hi) {
       const mid = (lo + hi) >> 1;
-      if (sortedOrders[mid] < order) {
+      if (sortedKeys[mid].sortValue < sortValue) {
         lo = mid + 1;
       } else {
         hi = mid;
@@ -88,14 +94,14 @@ const createItemTracker = (onChange) => {
     return lo;
   };
 
-  const insertOrder = (order) => {
-    sortedOrders.splice(bisect(order), 0, order);
+  const insertKey = (sortValue, key) => {
+    sortedKeys.splice(bisect(sortValue), 0, { sortValue, key });
   };
 
-  const removeOrder = (order) => {
-    const pos = bisect(order);
-    if (sortedOrders[pos] === order) {
-      sortedOrders.splice(pos, 1);
+  const removeKey = (key) => {
+    const idx = sortedKeys.findIndex((entry) => entry.key === key);
+    if (idx !== -1) {
+      sortedKeys.splice(idx, 1);
     }
   };
 
@@ -118,16 +124,15 @@ const createItemTracker = (onChange) => {
     queueMicrotask(() => {
       notifyScheduled = false;
 
-      // sortedOrders is already sorted — no sort needed
-      const newCount = sortedOrders.length;
+      const newCount = sortedKeys.length;
       if (countSignal.peek() !== newCount) {
         countSignal.value = newCount;
       }
 
       for (const [propName, sig] of propSignals) {
         const prev = sig.peek();
-        const next = sortedOrders.map(
-          (order) => registrations.get(order)[propName],
+        const next = sortedKeys.map(
+          (entry) => registrations.get(entry.key)[propName],
         );
         let changed = prev.length !== next.length;
         if (!changed) {
@@ -143,7 +148,7 @@ const createItemTracker = (onChange) => {
         }
       }
 
-      onChange?.(sortedOrders.map((order) => registrations.get(order)));
+      onChange?.(sortedKeys.map((entry) => registrations.get(entry.key)));
     });
   };
 
@@ -159,40 +164,45 @@ const createItemTracker = (onChange) => {
   // Returns the item's index among visible items, or -1 when hidden.
   // sortedOrders is updated synchronously so the index is accurate for this
   // commit; signals are deferred to a microtask batch.
-  const useTrackItem = (id, data) => {
-    if (!idToOrder.has(id)) {
-      idToOrder.set(id, orderCounter++);
+  const syncItem = (key, data) => {
+    if (data.hidden || data.role === "presentation") {
+      registrations.delete(key);
+      removeKey(key);
+    } else {
+      const newSortValue = data.order !== undefined ? data.order : key;
+      // Remove and re-insert when sort value changed or not yet present.
+      const existingIdx = sortedKeys.findIndex((e) => e.key === key);
+      if (
+        existingIdx !== -1 &&
+        sortedKeys[existingIdx].sortValue !== newSortValue
+      ) {
+        sortedKeys.splice(existingIdx, 1);
+        insertKey(newSortValue, key);
+      } else if (existingIdx === -1) {
+        insertKey(newSortValue, key);
+      }
+      registrations.set(key, data);
     }
-    const order = idToOrder.get(id);
+  };
+
+  const useTrackItem = (id, data) => {
+    if (!idToKey.has(id)) {
+      idToKey.set(id, keyCounter++);
+    }
+    const key = idToKey.get(id);
 
     // Sync update so index is correct during this render
-    if (data.hidden || data.role === "presentation") {
-      registrations.delete(order);
-      removeOrder(order);
-    } else {
-      registrations.set(order, data);
-      if (sortedOrders[bisect(order)] !== order) {
-        insertOrder(order);
-      }
-    }
+    syncItem(key, data);
 
     useLayoutEffect(() => {
-      if (data.hidden || data.role === "presentation") {
-        registrations.delete(order);
-        removeOrder(order);
-      } else {
-        registrations.set(order, data);
-        if (sortedOrders[bisect(order)] !== order) {
-          insertOrder(order);
-        }
-      }
+      syncItem(key, data);
       notify();
     });
 
     useLayoutEffect(() => {
       return () => {
-        registrations.delete(order);
-        removeOrder(order);
+        registrations.delete(key);
+        removeKey(key);
         notify();
       };
     }, []);
@@ -200,15 +210,15 @@ const createItemTracker = (onChange) => {
     if (data.hidden || data.role === "presentation") {
       return -1;
     }
-    return bisect(order);
+    return sortedKeys.findIndex((e) => e.key === key);
   };
 
   const getTrackedItemByIndex = (index) => {
-    const order = sortedOrders[index];
-    if (order === undefined) {
+    const entry = sortedKeys[index];
+    if (entry === undefined) {
       return undefined;
     }
-    return registrations.get(order);
+    return registrations.get(entry.key);
   };
 
   return {

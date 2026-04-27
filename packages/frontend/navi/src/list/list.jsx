@@ -145,11 +145,13 @@ const css = /* css */ `
   }
 
   .navi_list {
+    display: flex;
     box-sizing: border-box;
     width: max-content;
     min-width: 100%;
     margin: 0;
     padding: 0;
+    flex-direction: column;
     list-style: none;
 
     /* Would create scrollbars, for now just hide the loader here */
@@ -784,9 +786,17 @@ const ListControlled = ({
           return;
         }
         firstVisibleIndex = Math.floor(scrollTop / measuredItemHeight);
+      }
+      // Map the hit DOM element to its visual index via itemsRef
+      // (DOM order and visual order diverge when items have CSS `order`).
+      else if (hitEl) {
+        const hitId = hitEl.id;
+        const visualIndex = itemsRef.current.findIndex(
+          (item) => item.id === hitId,
+        );
+        firstVisibleIndex = visualIndex === -1 ? current.start : visualIndex;
       } else {
-        const relIndex = hitEl ? items.indexOf(hitEl) : 0;
-        firstVisibleIndex = current.start + (relIndex === -1 ? 0 : relIndex);
+        firstVisibleIndex = current.start;
       }
 
       const half = Math.floor(renderBudget / 2);
@@ -1012,12 +1022,18 @@ const ListItemPresentation = (props) => {
   return <Box as="li" {...props} />;
 };
 const ListItemRealOrVoid = (props) => {
-  let { id, value, hidden, selected, ...rest } = props;
+  let { id, value, hidden, selected, order, ...rest } = props;
   const idDefault = useId();
   id = id || idDefault;
   const renderWindow = useContext(RenderWindowContext);
   const tracker = useContext(ListItemTrackerContext);
-  const index = tracker.useTrackItem(id, { id, hidden, value, selected });
+  const index = tracker.useTrackItem(id, {
+    id,
+    hidden,
+    value,
+    selected,
+    order,
+  });
   const separator = useContext(SeparatorContext);
 
   if (hidden) {
@@ -1035,6 +1051,7 @@ const ListItemRealOrVoid = (props) => {
       value={value}
       index={index}
       selected={selected}
+      order={order}
       {...rest}
     />
   );
@@ -1062,6 +1079,7 @@ const ListItemReal = ({
   hidden,
   highlight,
   selected,
+  order,
   index,
   pointed,
   children,
@@ -1159,6 +1177,7 @@ const ListItemReal = ({
       }}
       {...rest}
       ref={ref}
+      order={order}
       basePseudoState={{
         ":-navi-pointed": isPointed,
         ":-navi-pointed-by-mouse": isPointedByMouse,
