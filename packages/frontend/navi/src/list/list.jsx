@@ -602,8 +602,7 @@ const ListControlled = ({
   expandX,
   maxHeight,
   itemsRef,
-  itemHeightEstimation,
-  itemHeightIsVariable = true,
+  itemHeight: itemHeightProp,
   lockSize,
   searchText,
   match,
@@ -689,7 +688,11 @@ const ListControlled = ({
       ? { searchText: effectiveSearchText, match }
       : null;
 
-  const tracker = useItemTracker();
+  const tracker = useItemTracker({
+    onChange: (items) => {
+      itemsRef.current = items.map((item) => item.value);
+    },
+  });
 
   const [renderWindow, setRenderWindow] = useState({
     start: 0,
@@ -697,14 +700,6 @@ const ListControlled = ({
   });
   const renderWindowRef = useRef(null);
   renderWindowRef.current = renderWindow;
-
-  // Update itemsRef when renderWindow changes so ListInteractive always has
-  // the current visible items for keyboard navigation.
-  useLayoutEffect(() => {
-    if (itemsRef) {
-      itemsRef.current = tracker.getItems();
-    }
-  }, [renderWindow]);
 
   // Keep the render window in range: if items shifted (e.g. after filtering),
   // reset to start. Never deactivate — keeping the window always active prevents
@@ -718,6 +713,23 @@ const ListControlled = ({
     }
   });
 
+  const [itemHeight, setItemHeight] = useState(itemHeightProp || 0);
+  useLayoutEffect(() => {
+    const containerEl = ref.current;
+    if (!containerEl) {
+      return;
+    }
+    if (itemHeight !== 0) {
+      return;
+    }
+    const listEl = containerEl.querySelector(".navi_list");
+    const firstListItem = listEl.querySelector(LIST_ITEM_SELECTOR);
+    if (firstListItem) {
+      const measuredHeight = firstListItem.getBoundingClientRect().height;
+      setItemHeight(measuredHeight);
+    }
+  }, []);
+
   // Scroll listener — slides the window as the user scrolls.
   useLayoutEffect(() => {
     const listContainerEl = ref.current;
@@ -727,7 +739,7 @@ const ListControlled = ({
     const listEl = listContainerEl.querySelector(".navi_list");
     const scrollContainer = getScrollContainer(listEl);
     const onScroll = () => {
-      const totalItems = tracker.getVisibleCount();
+      const totalItems = tracker.countSignal.peek();
       if (totalItems <= renderBudget) {
         return;
       }
@@ -735,46 +747,37 @@ const ListControlled = ({
       const scrollTop = scrollContainer.scrollTop;
 
       let firstVisibleIndex;
-      if (itemHeightIsVariable) {
-        const containerRect = scrollContainer.getBoundingClientRect();
-        const items = Array.from(listEl.querySelectorAll(LIST_ITEM_SELECTOR));
-        if (items.length === 0) {
-          return;
+      const containerRect = scrollContainer.getBoundingClientRect();
+      const items = Array.from(listEl.querySelectorAll(LIST_ITEM_SELECTOR));
+      if (items.length === 0) {
+        return;
+      }
+      let hitEl = null;
+      let hitFiller = null;
+      for (let y = containerRect.top + 1; y < containerRect.bottom; y += 4) {
+        const el = document.elementFromPoint(containerRect.left + 1, y);
+        if (!el || !listEl.contains(el)) {
+          continue;
         }
-        let hitEl = null;
-        let hitFiller = null;
-        for (let y = containerRect.top + 1; y < containerRect.bottom; y += 4) {
-          const el = document.elementFromPoint(containerRect.left + 1, y);
-          if (!el || !listEl.contains(el)) {
-            continue;
-          }
-          const item = el.closest(LIST_ITEM_SELECTOR);
-          if (item) {
-            hitEl = item;
-            break;
-          }
-          const filler = el.closest("li[aria-hidden]");
-          if (filler) {
-            hitFiller = filler;
-            break;
-          }
+        const item = el.closest(LIST_ITEM_SELECTOR);
+        if (item) {
+          hitEl = item;
+          break;
         }
-        if (hitFiller) {
-          const itemHeight = measuredItemHeightRef.current;
-          if (itemHeight === 0) {
-            return;
-          }
-          firstVisibleIndex = Math.floor(scrollTop / itemHeight);
-        } else {
-          const relIndex = hitEl ? items.indexOf(hitEl) : 0;
-          firstVisibleIndex = current.start + (relIndex === -1 ? 0 : relIndex);
+        const filler = el.closest("li[aria-hidden]");
+        if (filler) {
+          hitFiller = filler;
+          break;
         }
-      } else {
-        const itemHeight = measuredItemHeightRef.current;
+      }
+      if (hitFiller) {
         if (itemHeight === 0) {
           return;
         }
         firstVisibleIndex = Math.floor(scrollTop / itemHeight);
+      } else {
+        const relIndex = hitEl ? items.indexOf(hitEl) : 0;
+        firstVisibleIndex = current.start + (relIndex === -1 ? 0 : relIndex);
       }
 
       const half = Math.floor(renderBudget / 2);
@@ -793,7 +796,7 @@ const ListControlled = ({
     return () => {
       scrollContainer.removeEventListener("scroll", onScroll);
     };
-  }, [renderBudget]);
+  }, [renderBudget, itemHeight]);
 
   const renderList = (listProps) => {
     return (
@@ -807,8 +810,6 @@ const ListControlled = ({
         tracker={tracker}
         renderWindow={renderWindow}
         renderBudget={renderBudget}
-        measuredItemHeightRef={measuredItemHeightRef}
-        itemHeightEstimation={itemHeightEstimation}
       >
         <ListIdContext.Provider value={listId}>
           {children}
@@ -840,9 +841,6 @@ const ListControlled = ({
       visualSelector=".navi_list"
       styleCSSVars={LIST_STYLE_CSS_VARS}
       pseudoClasses={LIST_PSEUDO_CLASSES}
-      basePseudoState={{
-        ":-navi-void": tracker.useTrackerItemCount() === 0,
-      }}
       hasChildFunction
     >
       {renderListMemoized}
@@ -864,9 +862,7 @@ const LIST_PSEUDO_CLASSES = [":-navi-void"];
 const UnorderedList = ({
   tracker,
   renderWindow,
-  renderBudget,
-  measuredItemHeightRef,
-  itemHeightEstimation,
+  itemHeight,
   fallback,
   separator,
   children,
@@ -874,13 +870,7 @@ const UnorderedList = ({
 }) => {
   return (
     <Box as="ul" {...rest} baseClassName="navi_list">
-      <TopFiller
-        tracker={tracker}
-        renderWindow={renderWindow}
-        renderBudget={renderBudget}
-        measuredItemHeightRef={measuredItemHeightRef}
-        itemHeightEstimation={itemHeightEstimation}
-      />
+      <TopFiller renderWindow={renderWindow} itemHeight={itemHeight} />
       <RenderWindowContext.Provider value={renderWindow}>
         <SeparatorContext.Provider value={separator ?? null}>
           <ListItemTrackerContext.Provider value={tracker}>
@@ -889,10 +879,9 @@ const UnorderedList = ({
         </SeparatorContext.Provider>
       </RenderWindowContext.Provider>
       <BottomFiller
-        tracker={tracker}
         renderWindow={renderWindow}
-        renderBudget={renderBudget}
-        measuredItemHeightRef={measuredItemHeightRef}
+        itemHeight={itemHeight}
+        tracker={tracker}
       />
       {fallback && (
         <ListItemPresentation className="navi_list_empty">
@@ -902,36 +891,8 @@ const UnorderedList = ({
     </Box>
   );
 };
-
-const TopFiller = ({
-  tracker,
-  renderWindow,
-  renderBudget,
-  measuredItemHeightRef,
-  itemHeightEstimation,
-}) => {
-  const totalItems = tracker.useTrackerItemCount();
+const TopFiller = ({ renderWindow, itemHeight }) => {
   const ref = useRef(null);
-
-  useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el) {
-      return;
-    }
-    if (totalItems <= renderBudget) {
-      el.style.height = "0px";
-      return;
-    }
-    if (!itemHeightEstimation) {
-      const listEl = el.closest(".navi_list");
-      const item = listEl?.querySelector(LIST_ITEM_SELECTOR);
-      if (item) {
-        measuredItemHeightRef.current = item.getBoundingClientRect().height;
-      }
-    }
-    const itemHeight = measuredItemHeightRef.current;
-    el.style.height = `${renderWindow.start * itemHeight}px`;
-  }, [renderWindow, totalItems]);
 
   return (
     <li
@@ -940,39 +901,24 @@ const TopFiller = ({
       // eslint-disable-next-line react/no-unknown-property
       navi-virtual-filler="top"
       aria-hidden
+      style={{
+        height: `${renderWindow.start * itemHeight}px`,
+      }}
     />
   );
 };
-
-const BottomFiller = ({
-  tracker,
-  renderWindow,
-  renderBudget,
-  measuredItemHeightRef,
-}) => {
-  const totalItems = tracker.useTrackerItemCount();
-  const ref = useRef(null);
-
-  useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el) {
-      return;
-    }
-    if (totalItems <= renderBudget) {
-      el.style.height = "0px";
-      return;
-    }
-    const itemHeight = measuredItemHeightRef.current;
-    el.style.height = `${(totalItems - renderWindow.end) * itemHeight}px`;
-  }, [renderWindow, totalItems]);
+const BottomFiller = ({ tracker, renderWindow, itemHeight }) => {
+  const itemCount = tracker.useItemCount();
 
   return (
     <li
-      ref={ref}
       className="navi_list_virtual_filler"
       // eslint-disable-next-line react/no-unknown-property
       navi-virtual-filler="bottom"
       aria-hidden
+      style={{
+        height: `${(itemCount - renderWindow.end) * itemHeight}px`,
+      }}
     />
   );
 };

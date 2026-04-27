@@ -127,11 +127,11 @@ const createItemTracker = () => {
 
   // Subscribes the calling component to the count signal.
   // Only re-renders when the visible item count changes.
-  const useTrackerItemCount = () => countSignal.value;
+  const useItemCount = () => countSignal.value;
 
   // Subscribes the calling component to a per-prop signal.
   // Only re-renders when the array of values for that prop changes.
-  const useTrackerItemProp = (propName) => getPropSignal(propName).value;
+  const useItemValues = (propName) => getPropSignal(propName).value;
 
   // Register an item. data.hidden controls visibility.
   // Returns the item's index among visible items, or -1 when hidden.
@@ -181,19 +181,10 @@ const createItemTracker = () => {
     return bisect(order);
   };
 
-  // Direct access for effects that need the count synchronously
-  // (e.g. filler height calculations), without subscribing to the signal.
-  const getVisibleCount = () => sortedOrders.length;
-
-  // Returns current visible items as an array ordered by insertion order.
-  const getItems = () => sortedOrders.map((order) => registrations.get(order));
-
   return {
     useTrackItem,
-    useTrackerItemProp,
-    useTrackerItemCount,
+    useItemCount,
+    useItemValues,
     countSignal,
-    getVisibleCount,
-    getItems,
   };
 };
