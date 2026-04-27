@@ -76,6 +76,7 @@
         Input,
         Text,
         Box,
+        applySearchText,
       } from "@jsenv/navi";
 
       // 200 auto-generated items
@@ -272,7 +273,6 @@
             <SuggestionList
               style={{ maxHeight: "220px" }}
               uiAction={setSelected}
-              searchText={filter}
               hidden={filtered.length === 0}
               expandX
             >
@@ -314,13 +314,15 @@
                 borderColor: "#e94560",
               }}
               uiAction={setSelected}
-              searchText="a"
             >
-              {FRUITS.map((fruit) => (
+              {FRUITS.map((fruit) => {
+                const match = applySearchText(fruit, "a");
+                return (
                 <Suggestion
                   key={fruit}
                   value={fruit}
                   selected={selected === fruit}
+                  highlight={match?.ranges}
                   style={{
                     "color": "#eaeaea",
                     "backgroundColor": "transparent",
@@ -344,7 +346,8 @@
                 >
                   {fruit}
                 </Suggestion>
-              ))}
+                );
+              })}
             </SuggestionList>
             <div className="value-display">{selected ?? ""}</div>
           </div>
@@ -397,18 +400,21 @@
             <SuggestionList
               style={{ maxHeight: "220px" }}
               uiAction={setSelected}
-              searchText={filter}
             >
-              {sorted.map((fruit) => (
-                <Suggestion
-                  key={fruit}
-                  value={fruit}
-                  selected={selected === fruit}
-                  style={{ backgroundColor: SUGGESTION_BG }}
-                >
-                  {fruit}
-                </Suggestion>
-              ))}
+              {sorted.map((fruit) => {
+                const match = applySearchText(fruit, filter);
+                return (
+                  <Suggestion
+                    key={fruit}
+                    value={fruit}
+                    selected={selected === fruit}
+                    highlight={match?.ranges}
+                    style={{ backgroundColor: SUGGESTION_BG }}
+                  >
+                    {fruit}
+                  </Suggestion>
+                );
+              })}
             </SuggestionList>
             <div className="value-display">{selected ?? ""}</div>
           </div>
@@ -490,20 +496,23 @@
             <SuggestionList
               style={{ maxHeight: "280px" }}
               uiAction={setSelected}
-              searchText={filter}
             >
               {groups.map((group) => (
                 <ListItemGroup key={group.letter} label={group.letter}>
-                  {group.items.map((item) => (
-                    <Suggestion
-                      key={item}
-                      value={item}
-                      selected={selected === item}
-                      style={{ backgroundColor: SUGGESTION_BG }}
-                    >
-                      {item}
-                    </Suggestion>
-                  ))}
+                  {group.items.map((item) => {
+                    const match = applySearchText(item, filter);
+                    return (
+                      <Suggestion
+                        key={item}
+                        value={item}
+                        selected={selected === item}
+                        highlight={match?.ranges}
+                        style={{ backgroundColor: SUGGESTION_BG }}
+                      >
+                        {item}
+                      </Suggestion>
+                    );
+                  })}
                 </ListItemGroup>
               ))}
             </SuggestionList>
@@ -621,7 +630,6 @@
             <SuggestionList
               style={{ maxHeight: "300px" }}
               uiAction={setSelected}
-              searchText={filter}
             >
               <ListItemGroup
                 style={{ backgroundColor: "#f0faf3" }}
@@ -638,16 +646,20 @@
                   </Box>
                 }
               >
-                {matches.map((item) => (
-                  <Suggestion
-                    key={item}
-                    value={item}
-                    selected={selected === item}
-                    style={{ backgroundColor: SUGGESTION_BG }}
-                  >
-                    {item}
-                  </Suggestion>
-                ))}
+                {matches.map((item) => {
+                  const match = applySearchText(item, filter);
+                  return (
+                    <Suggestion
+                      key={item}
+                      value={item}
+                      selected={selected === item}
+                      highlight={match?.ranges}
+                      style={{ backgroundColor: SUGGESTION_BG }}
+                    >
+                      {item}
+                    </Suggestion>
+                  );
+                })}
               </ListItemGroup>
               {nonMatches.length > 0 && (
                 <ListItemGroup
