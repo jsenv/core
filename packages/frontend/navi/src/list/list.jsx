@@ -441,7 +441,10 @@ const ListInteractive = (props) => {
         keyboardInteractions
         {...props}
         uiAction={undefined}
-        itemsRef={itemsRef}
+        onListChange={(items) => {
+          props.onListChange?.(items);
+          itemsRef.current = items;
+        }}
         onnavi_list_nav={(e) => {
           const { direction, event = e } = e.detail;
           const items = itemsRef.current;
@@ -478,7 +481,7 @@ const ListInteractive = (props) => {
           setKeyboardPointedIndex(index);
           setAnchorIndex(index);
           e.currentTarget.dispatchEvent(
-            new CustomEvent("navi_list_scroll_to_item", {
+            new CustomEvent("navi_list_scroll_to", {
               detail: {
                 event: e,
                 index,
@@ -593,7 +596,7 @@ const ListControlled = ({
   popover,
   expandX,
   maxHeight,
-  itemsRef,
+  onListChange,
   virtualItemHeight,
   lockSize,
   ...rest
@@ -677,11 +680,10 @@ const ListControlled = ({
   };
 
   const initialScrollRef = useRef(false);
-  const fallbackItemsRef = useRef([]);
-  const localItemsRef = itemsRef ?? fallbackItemsRef;
+  const itemsRef = useRef([]);
   const itemToScrollOnMountRef = useRef(null);
   const scrollToIndex = (index) => {
-    const items = localItemsRef.current;
+    const items = itemsRef.current;
     const { start, end } = renderWindowRef.current;
     const isInWindow = index >= start && index < end;
     if (isInWindow) {
@@ -701,7 +703,7 @@ const ListControlled = ({
   };
   const tracker = useItemTracker({
     onChange: (items) => {
-      localItemsRef.current = items;
+      itemsRef.current = items;
       // When item count changes (e.g. after filtering), check if the render
       // window is still in range. If not, reset to start.
       const itemCount = items.length;
@@ -717,6 +719,7 @@ const ListControlled = ({
           scrollToIndex(firstSelectedIndex);
         }
       }
+      onListChange(items);
     },
   });
   // Scroll listener — slides the window as the user scrolls.
