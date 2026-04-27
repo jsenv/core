@@ -836,6 +836,11 @@ const UnorderedList = ({
         <SeparatorContext.Provider value={separator ?? null}>
           <ListItemTrackerContext.Provider value={tracker}>
             {children}
+            {fallback && (
+              <ListItem role="presentation" className="navi_list_empty">
+                {fallback}
+              </ListItem>
+            )}
           </ListItemTrackerContext.Provider>
         </SeparatorContext.Provider>
       </RenderWindowContext.Provider>
@@ -844,11 +849,6 @@ const UnorderedList = ({
         renderWindowEnd={renderWindow.end}
         tracker={tracker}
       />
-      {fallback && (
-        <ListItemPresentation className="navi_list_empty">
-          {fallback}
-        </ListItemPresentation>
-      )}
     </Box>
   );
 };
@@ -935,11 +935,55 @@ const BottomFiller = ({
  * Props:
  *   itemId    — stable string id for tracking (auto-generated if omitted)
  *   hidden    — when true, item is excluded from the visible count and not rendered
- *   highlight — search string to highlight within the item via CSS Highlight API
+ *   highlight — array of [start, end] ranges to highlight via CSS Highlight API
  *   ...rest   — forwarded to the rendered <li> element
  */
-export const ListItem = ({
-  id,
+export const ListItem = (props) => {
+  if (props.role === "presentation") {
+    return <ListItemPresentation {...props} />;
+  }
+  return <ListItemOrVoid {...props} />;
+};
+const ListItemOrVoid = (props) => {
+  let { id, value, hidden, ...rest } = props;
+  const idDefault = useId();
+  id = id || idDefault;
+  const renderWindow = useContext(RenderWindowContext);
+  const tracker = useContext(ListItemTrackerContext);
+  const index = tracker.useTrackItem(id, { id, hidden, value });
+  const separator = useContext(SeparatorContext);
+
+  if (hidden) {
+    return null;
+  }
+  if (index === -1 || index < renderWindow.start || index >= renderWindow.end) {
+    return null;
+  }
+  const listItemVnode = (
+    <ListItemReal id={id} value={value} index={index} {...rest} />
+  );
+  if (!separator || index === 0) {
+    return listItemVnode;
+  }
+  const separatorVnode =
+    typeof separator === "function" ? separator(index - 1) : separator;
+  return (
+    <>
+      {separatorVnode}
+      {listItemVnode}
+    </>
+  );
+};
+const ListItemReal = (props) => {
+  if (props.role === "presentation") {
+    return <ListItemPresentation {...props} />;
+  }
+  return <ListItemData {...props} />;
+};
+const ListItemPresentation = (props) => {
+  return <Box as="li" {...props} />;
+};
+const ListItemData = ({
   value,
   hidden,
   highlight,
@@ -948,24 +992,17 @@ export const ListItem = ({
   children,
   ...rest
 }) => {
-  const idDefault = useId();
-  id = id || idDefault;
-  const renderWindow = useContext(RenderWindowContext);
-  const separator = useContext(SeparatorContext);
+  const defaultRef = useRef(null);
+  const ref = rest.ref || defaultRef;
   const interactionContext = useContext(ListInteractionContext);
   const { mousePointedValue, keyboardPointedValue, onHover, onSelect } =
     interactionContext || {};
 
-  const tracker = useContext(ListItemTrackerContext);
-  const index = tracker.useTrackItem(id, { id, hidden, value });
   const isPointedByMouse = mousePointedValue === value;
   const isPointedByKeyboard = keyboardPointedValue === value;
   const isPointedByProxy = Boolean(pointed);
   const isPointed = isPointedByMouse || isPointedByKeyboard || isPointedByProxy;
   const isKeyboardPointed = isPointedByKeyboard;
-
-  const defaultRef = useRef(null);
-  const ref = rest.ref || defaultRef;
 
   useLayoutEffect(() => {
     if (!isKeyboardPointed) {
@@ -980,20 +1017,17 @@ export const ListItem = ({
 
   // CSS Highlight API: mark matching text ranges when highlight prop is set.
   useLayoutEffect(() => {
-    if (hidden) {
-      return undefined;
-    }
     const hl = getNaviSearchHighlight();
     if (!hl) {
       return undefined;
     }
     const itemEl = ref.current;
-    if (!itemEl || !highlight || highlight.ranges.length === 0) {
+    if (!itemEl || !highlight || highlight.length === 0) {
       return undefined;
     }
     const valueStr = String(value);
     const ownRanges = [];
-    for (const [start, end] of highlight.ranges) {
+    for (const [start, end] of highlight) {
       const matchText = valueStr.slice(start, end).toLowerCase();
       if (!matchText) {
         continue;
@@ -1018,64 +1052,48 @@ export const ListItem = ({
         hl.delete(range);
       }
     };
-  }, [highlight, children, hidden, renderWindow]);
-
-  if (hidden) {
-    return null;
-  }
-  if (index === -1 || index < renderWindow.start || index >= renderWindow.end) {
-    return null;
-  }
-  const separatorElement =
-    separator && index > 0
-      ? typeof separator === "function"
-        ? separator(index - 1)
-        : separator
-      : null;
+  }, [highlight, children, hidden]);
 
   return (
-    <>
-      {separatorElement}
-      <Box
-        as="li"
-        baseClassName="navi_list_item"
-        styleCSSVars={LIST_ITEM_STYLE_CSS_VARS}
-        pseudoClasses={LIST_ITEM_PSEUDO_CLASSES}
-        pseudoElements={LIST_ITEM_PSEUDO_ELEMENTS}
-        aria-hidden={hidden ? true : undefined}
-        aria-selected={selected}
-        navi-list-item=""
-        data-interactive={interactionContext ? "" : undefined}
-        data-anchor={isKeyboardPointed ? "" : undefined}
-        onMouseEnter={(e) => {
-          onHover?.(value, e);
-          rest.onMouseEnter?.(e);
-        }}
-        onMouseLeave={(e) => {
-          onHover?.(null, e);
-          rest.onMouseLeave?.(e);
-        }}
-        onMouseDown={(e) => {
-          if (e.button !== 0) {
-            return;
-          }
-          onSelect?.(value, e);
-          rest.onMouseDown?.(e);
-        }}
-        {...rest}
-        ref={ref}
-        basePseudoState={{
-          ":-navi-pointed": isPointed,
-          ":-navi-pointed-by-mouse": isPointedByMouse,
-          ":-navi-pointed-by-keyboard": isPointedByKeyboard,
-          ":-navi-pointed-by-proxy": isPointedByProxy,
-          ":-navi-selected": selected,
-          ...rest.basePseudoState,
-        }}
-      >
-        {children}
-      </Box>
-    </>
+    <Box
+      as="li"
+      baseClassName="navi_list_item"
+      styleCSSVars={LIST_ITEM_STYLE_CSS_VARS}
+      pseudoClasses={LIST_ITEM_PSEUDO_CLASSES}
+      pseudoElements={LIST_ITEM_PSEUDO_ELEMENTS}
+      aria-hidden={hidden ? true : undefined}
+      aria-selected={selected}
+      navi-list-item=""
+      data-interactive={interactionContext ? "" : undefined}
+      data-anchor={isKeyboardPointed ? "" : undefined}
+      onMouseEnter={(e) => {
+        onHover?.(value, e);
+        rest.onMouseEnter?.(e);
+      }}
+      onMouseLeave={(e) => {
+        onHover?.(null, e);
+        rest.onMouseLeave?.(e);
+      }}
+      onMouseDown={(e) => {
+        if (e.button !== 0) {
+          return;
+        }
+        onSelect?.(value, e);
+        rest.onMouseDown?.(e);
+      }}
+      {...rest}
+      ref={ref}
+      basePseudoState={{
+        ":-navi-pointed": isPointed,
+        ":-navi-pointed-by-mouse": isPointedByMouse,
+        ":-navi-pointed-by-keyboard": isPointedByKeyboard,
+        ":-navi-pointed-by-proxy": isPointedByProxy,
+        ":-navi-selected": selected,
+        ...rest.basePseudoState,
+      }}
+    >
+      {children}
+    </Box>
   );
 };
 const LIST_ITEM_STYLE_CSS_VARS = {
@@ -1111,17 +1129,6 @@ const LIST_ITEM_PSEUDO_CLASSES = [
 const LIST_ITEM_PSEUDO_ELEMENTS = ["::highlight"];
 
 /**
- * ListItemPresentation — a non-tracked <li role="presentation"> for arbitrary
- * content inside the list (sticky headers, group labels, etc.).
- */
-export const ListItemPresentation = ({ children, ...rest }) => {
-  return (
-    <Box as="li" role="presentation" {...rest}>
-      {children}
-    </Box>
-  );
-};
-/**
  * ListGroup — a labeled group of list items.
  *
  * Renders a <li role="presentation"> wrapper containing a label span
@@ -1140,8 +1147,9 @@ export const ListItemGroup = ({
 }) => {
   const groupId = useId();
   return (
-    <ListItemPresentation
+    <ListItem
       {...rest}
+      role="presentation"
       baseClassName="navi_list_item_group"
       data-hidden-while-empty={hiddenWhileEmpty ? "" : undefined}
     >
@@ -1165,12 +1173,16 @@ export const ListItemGroup = ({
       >
         {children}
       </ul>
-    </ListItemPresentation>
+    </ListItem>
   );
 };
 
 export const ListItemHeader = (props) => {
   return (
-    <ListItemPresentation baseClassName="navi_list_item_header" {...props} />
+    <ListItem
+      {...props}
+      role="presentation"
+      baseClassName="navi_list_item_header"
+    />
   );
 };

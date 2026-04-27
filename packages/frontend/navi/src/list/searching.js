@@ -6,7 +6,7 @@
  * Use with ListItem to drive hidden and highlight props explicitly:
  *
  *   const match = applySearchText(item.value, searchText);
- *   <ListItem hidden={!match} highlight={match}>
+ *   <ListItem hidden={!match} highlight={match?.ranges}>
  *
  * The ranges array contains [start, end] pairs (exclusive end) indicating
  * which character positions in value are matching. ListItem uses these to

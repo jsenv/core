@@ -166,7 +166,7 @@ const createItemTracker = (onChange) => {
     const order = idToOrder.get(id);
 
     // Sync update so index is correct during this render
-    if (data.hidden) {
+    if (data.hidden || data.role === "presentation") {
       registrations.delete(order);
       removeOrder(order);
     } else {
@@ -177,7 +177,7 @@ const createItemTracker = (onChange) => {
     }
 
     useLayoutEffect(() => {
-      if (data.hidden) {
+      if (data.hidden || data.role === "presentation") {
         registrations.delete(order);
         removeOrder(order);
       } else {
@@ -197,7 +197,7 @@ const createItemTracker = (onChange) => {
       };
     }, []);
 
-    if (data.hidden) {
+    if (data.hidden || data.role === "presentation") {
       return -1;
     }
     return bisect(order);
