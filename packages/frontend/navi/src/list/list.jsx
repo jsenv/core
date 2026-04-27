@@ -713,9 +713,9 @@ const ListControlled = ({
       const isInit = isInitRef.current;
       let firstSelectedIndex;
       if (itemCount > 0) {
-        const listContainerEl = ref.current;
+        // When list is initiliazed (first render but not only, like every time a dialog opens for instance)
+        // -> we want to scroll selected item into view
         if (isInit) {
-          // on the first render we want to scroll selected item into view
           isInitRef.current = false;
           firstSelectedIndex = items.findIndex((i) => i.selected);
           if (firstSelectedIndex !== -1) {
@@ -723,9 +723,12 @@ const ListControlled = ({
           }
         }
         const current = renderWindowRef.current;
+
         if (current.start >= itemCount) {
+          // We can't see the item anymore, better scroll to the top of the list
+          // when removing the filter the scroll will stay on top and that's ok
           updateRenderWindow(0, renderBudget);
-          listContainerEl?.scrollTop = 0;
+          scrollToIndex(0);
         }
       }
       onListItemsChange(items, { isInit, firstSelectedIndex });
