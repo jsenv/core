@@ -31,8 +31,11 @@ export const useIsInsideListWithSearch = () => {
 };
 
 // Provided by ListInteractive to give descendants (e.g. Suggestion) access
-// to hover/keyboard-pointed/selection state and the onHover/onSelect callbacks.
-const ListInteractionContext = createContext(null);
+// to hover/keyboard-pointed/selection state.
+const ListMousePointedIndexContext = createContext(-1);
+const ListKeyboardPointedIndexContext = createContext(-1);
+// Non-null when inside a ListInteractive (used to render data-interactive).
+const ListInteractiveContext = createContext(false);
 
 // Module-level shared Highlight instance for navi-search-match.
 let naviSearchHighlight = null;
@@ -429,104 +432,103 @@ const ListInteractive = (props) => {
     return value;
   };
 
-  const interactionContext = {
-    mousePointedIndex,
-    keyboardPointedIndex,
-  };
-
   return (
-    <ListInteractionContext.Provider value={interactionContext}>
-      <List
-        keyboardInteractions
-        {...props}
-        uiAction={undefined}
-        onListItemsChange={(items, meta) => {
-          props.onListItemsChange?.(items, meta);
-          itemsRef.current = items;
-          if (meta.isInit) {
-            anchorIndexRef.current = meta.firstSelectedIndex;
-          }
-        }}
-        onnavi_list_request_hover={(e) => {
-          const { index } = e.detail;
-          setMousePointedIndex(index);
-        }}
-        onnavi_list_request_nav={(e) => {
-          const { direction, event = e } = e.detail;
-          const items = itemsRef.current;
-          const itemCount = items.length;
-          if (itemCount === 0) {
-            return;
-          }
-          const anchorIndex = anchorIndexRef.current;
-          const resolveIndex = (direction) => {
-            if (direction === "down") {
-              if (anchorIndex === -1) {
-                return 0;
+    <ListInteractiveContext.Provider value={true}>
+      <ListMousePointedIndexContext.Provider value={mousePointedIndex}>
+        <ListKeyboardPointedIndexContext.Provider value={keyboardPointedIndex}>
+          <List
+            keyboardInteractions
+            {...props}
+            uiAction={undefined}
+            onListItemsChange={(items, meta) => {
+              props.onListItemsChange?.(items, meta);
+              itemsRef.current = items;
+              if (meta.isInit) {
+                anchorIndexRef.current = meta.firstSelectedIndex;
               }
-              const belowIndex =
-                anchorIndex < itemCount - 1 ? anchorIndex + 1 : anchorIndex;
-              return belowIndex;
-            }
-            if (direction === "up") {
-              if (anchorIndex === -1) {
-                return itemCount - 1;
+            }}
+            onnavi_list_request_hover={(e) => {
+              const { index } = e.detail;
+              setMousePointedIndex(index);
+            }}
+            onnavi_list_request_nav={(e) => {
+              const { direction, event = e } = e.detail;
+              const items = itemsRef.current;
+              const itemCount = items.length;
+              if (itemCount === 0) {
+                return;
               }
-              const aboveIndex =
-                anchorIndex > 0 ? anchorIndex - 1 : anchorIndex;
-              return aboveIndex;
-            }
-            if (direction === "first") {
-              return 0;
-            }
-            if (direction === "last") {
-              return itemCount - 1;
-            }
-            return anchorIndex;
-          };
-          const index = resolveIndex(direction);
-          if (index === anchorIndex) {
-            return;
-          }
-          if (event.type === "keydown") {
-            event.preventDefault();
-          }
-          dispatchCustomEvent(e, "navi_list_request_scroll_at", { index });
-          dispatchCustomEvent(e, "navi_list_request_nav_at", { index });
-        }}
-        onnavi_list_request_clear={() => {
-          setAnchorIndex(-1);
-          setKeyboardPointedIndex(-1);
-          setMousePointedIndex(-1);
-        }}
-        onnavi_list_request_select={(e) => {
-          const { index } = e.detail;
-          dispatchCustomEvent(e, "navi_list_request_select_at", { index });
-        }}
-        onnavi_list_nav={(e) => {
-          const { index, event } = e.detail;
-          anchorIndexRef.current = index;
-          setAnchorIndex(index);
-          if (event.type === "keydown") {
-            setKeyboardPointedIndex(index);
-          } else {
-            setKeyboardPointedIndex(-1);
-          }
-        }}
-        onnavi_list_select={(e) => {
-          const { index, event } = e.detail;
-          anchorIndexRef.current = index;
-          setAnchorIndex(index);
-          if (event.type === "keydown") {
-            setKeyboardPointedIndex(index);
-          } else {
-            setKeyboardPointedIndex(-1);
-          }
-          const value = getValueByIndex(index);
-          uiAction(value, event);
-        }}
-      />
-    </ListInteractionContext.Provider>
+              const anchorIndex = anchorIndexRef.current;
+              const resolveIndex = (direction) => {
+                if (direction === "down") {
+                  if (anchorIndex === -1) {
+                    return 0;
+                  }
+                  const belowIndex =
+                    anchorIndex < itemCount - 1 ? anchorIndex + 1 : anchorIndex;
+                  return belowIndex;
+                }
+                if (direction === "up") {
+                  if (anchorIndex === -1) {
+                    return itemCount - 1;
+                  }
+                  const aboveIndex =
+                    anchorIndex > 0 ? anchorIndex - 1 : anchorIndex;
+                  return aboveIndex;
+                }
+                if (direction === "first") {
+                  return 0;
+                }
+                if (direction === "last") {
+                  return itemCount - 1;
+                }
+                return anchorIndex;
+              };
+              const index = resolveIndex(direction);
+              if (index === anchorIndex) {
+                return;
+              }
+              if (event.type === "keydown") {
+                event.preventDefault();
+              }
+              dispatchCustomEvent(e, "navi_list_request_scroll_at", { index });
+              dispatchCustomEvent(e, "navi_list_request_nav_at", { index });
+            }}
+            onnavi_list_request_clear={() => {
+              setAnchorIndex(-1);
+              setKeyboardPointedIndex(-1);
+              setMousePointedIndex(-1);
+            }}
+            onnavi_list_request_select={(e) => {
+              const { index } = e.detail;
+              dispatchCustomEvent(e, "navi_list_request_select_at", { index });
+            }}
+            onnavi_list_nav={(e) => {
+              const { index, event } = e.detail;
+              anchorIndexRef.current = index;
+              setAnchorIndex(index);
+              if (event.type === "keydown") {
+                setKeyboardPointedIndex(index);
+              } else {
+                setKeyboardPointedIndex(-1);
+              }
+            }}
+            onnavi_list_select={(e) => {
+              const { index, event } = e.detail;
+              anchorIndexRef.current = index;
+              setAnchorIndex(index);
+              if (event.type === "keydown") {
+                setKeyboardPointedIndex(index);
+              } else {
+                setKeyboardPointedIndex(-1);
+              }
+              const value = getValueByIndex(index);
+              uiAction(value, event);
+            }}
+          />
+        </ListKeyboardPointedIndexContext.Provider>
+      </ListMousePointedIndexContext.Provider>
+    </ListInteractiveContext.Provider>
   );
 };
 
@@ -1109,8 +1111,9 @@ const ListItemReal = ({
 }) => {
   const defaultRef = useRef(null);
   const ref = rest.ref || defaultRef;
-  const interactionContext = useContext(ListInteractionContext);
-  const { mousePointedIndex, keyboardPointedIndex } = interactionContext || {};
+  const isInteractive = useContext(ListInteractiveContext);
+  const mousePointedIndex = useContext(ListMousePointedIndexContext);
+  const keyboardPointedIndex = useContext(ListKeyboardPointedIndexContext);
   const itemToScrollOnMountRef = useContext(ItemToScrollOnMountRefContext);
 
   const isPointedByMouse = index === mousePointedIndex;
@@ -1179,7 +1182,7 @@ const ListItemReal = ({
       aria-hidden={hidden ? true : undefined}
       aria-selected={selected}
       navi-list-item=""
-      data-interactive={interactionContext ? "" : undefined}
+      data-interactive={isInteractive ? "" : undefined}
       data-anchor={isPointedByKeyboard ? "" : undefined}
       onMouseEnter={(e) => {
         dispatchBubblingEvent(e, "navi_list_request_hover", { index });
