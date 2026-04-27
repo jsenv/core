@@ -634,7 +634,7 @@ const ListControlled = ({
   const tracker = useItemTracker({
     onChange: (items) => {
       if (itemsRef) {
-        itemsRef.current = items.map((item) => item.value);
+        itemsRef.current = items;
       }
     },
   });
