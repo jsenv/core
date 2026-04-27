@@ -23,9 +23,10 @@ import { useIsInsideDropdown } from "./dropdown.jsx";
 const ListItemTrackerContext = createContext(null);
 
 export const ListIdContext = createContext();
+export const ListWithSearchContext = createContext(false);
 // Provided by ListWithSearch so a descendant Input knows it controls this list.
 export const useIsInsideListWithSearch = () => {
-  return useContext(ListIdContext) !== undefined;
+  return useContext(ListWithSearchContext) === true;
 };
 
 // Provided by ListInteractive to give descendants (e.g. Suggestion) access
@@ -320,14 +321,16 @@ const ListWithSearch = (props) => {
   const listIdDefault = useId();
   const listId = props.listId || listIdDefault;
   return (
-    <ListIdContext.Provider value={listId}>
-      <List
-        {...props}
-        listId={listId}
-        keyboardInteractions={false}
-        withSearch={undefined}
-      />
-    </ListIdContext.Provider>
+    <ListWithSearchContext.Provider value={true}>
+      <ListIdContext.Provider value={listId}>
+        <List
+          {...props}
+          listId={listId}
+          keyboardInteractions={false}
+          withSearch={undefined}
+        />
+      </ListIdContext.Provider>
+    </ListWithSearchContext.Provider>
   );
 };
 
