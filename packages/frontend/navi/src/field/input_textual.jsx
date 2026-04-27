@@ -422,6 +422,32 @@ const InputInsideListWithSearch = ({ uiAction, onKeyDown, ...props }) => {
   uiStateController.uiAction = (v, e) => {
     uiAction?.(v, e);
   };
+  const defaultRef = useRef(null);
+  const ref = props.ref || defaultRef;
+  useEffect(() => {
+    const inputEl = ref.current;
+    if (!inputEl) {
+      return undefined;
+    }
+    const listContainerEl = inputEl.closest(".navi_list_container");
+    if (!listContainerEl) {
+      return undefined;
+    }
+    const onListSelect = (e) => {
+      if (document.activeElement === inputEl) {
+        return;
+      }
+      const { event } = e.detail;
+      if (event.type === "mousedown") {
+        event.preventDefault();
+        inputEl.focus({ preventScroll: true });
+      }
+    };
+    listContainerEl.addEventListener("navi_list_select", onListSelect);
+    return () => {
+      listContainerEl.removeEventListener("navi_list_select", onListSelect);
+    };
+  }, []);
 
   const forwardToList = (event, customEventName, customEventDetail) => {
     const inputEl = event.currentTarget;
@@ -443,35 +469,37 @@ const InputInsideListWithSearch = ({ uiAction, onKeyDown, ...props }) => {
       key: "arrowdown",
       description: "Point to next suggestion",
       handler: (e) => {
-        return forwardToList(e, "navi_list_nav", { direction: "down" });
+        return forwardToList(e, "navi_list_request_nav", { direction: "down" });
       },
     },
     {
       key: "arrowup",
       description: "Point to previous suggestion",
       handler: (e) => {
-        return forwardToList(e, "navi_list_nav", { direction: "up" });
+        return forwardToList(e, "navi_list_request_nav", { direction: "up" });
       },
     },
     {
       key: "home",
       description: "Point to first suggestion",
       handler: (e) => {
-        return forwardToList(e, "navi_list_nav", { direction: "first" });
+        return forwardToList(e, "navi_list_request_nav", {
+          direction: "first",
+        });
       },
     },
     {
       key: "end",
       description: "Point to last suggestion",
       handler: (e) => {
-        return forwardToList(e, "navi_list_nav", { direction: "last" });
+        return forwardToList(e, "navi_list_request_nav", { direction: "last" });
       },
     },
     {
       key: "enter",
       description: "Confirm pointed suggestion",
       handler: (e) => {
-        return forwardToList(e, "navi_list_confirm");
+        return forwardToList(e, "navi_list_request_select");
       },
     },
   ]);
@@ -488,6 +516,7 @@ const InputInsideListWithSearch = ({ uiAction, onKeyDown, ...props }) => {
         onKeyDown?.(e);
       }}
       {...props}
+      ref={ref}
     />
   );
 };
@@ -567,7 +596,7 @@ const InputTextualWithSuggestions = ({
       description: "Open popover and point to next suggestion",
       handler: (e) => {
         showSuggestions(e);
-        return forwardToSuggestionList(e, "navi_list_nav", {
+        return forwardToSuggestionList(e, "navi_list_request_nav", {
           direction: "down",
         });
       },
@@ -577,7 +606,7 @@ const InputTextualWithSuggestions = ({
       description: "Open popover and point to previous suggestion",
       handler: (e) => {
         showSuggestions(e);
-        return forwardToSuggestionList(e, "navi_list_nav", {
+        return forwardToSuggestionList(e, "navi_list_request_nav", {
           direction: "up",
         });
       },
@@ -589,7 +618,7 @@ const InputTextualWithSuggestions = ({
         if (!expandedRef.current) {
           return false;
         }
-        return forwardToSuggestionList(e, "navi_list_nav", {
+        return forwardToSuggestionList(e, "navi_list_request_nav", {
           direction: "first",
         });
       },
@@ -601,7 +630,7 @@ const InputTextualWithSuggestions = ({
         if (!expandedRef.current) {
           return false;
         }
-        return forwardToSuggestionList(e, "navi_list_nav", {
+        return forwardToSuggestionList(e, "navi_list_request_nav", {
           direction: "last",
         });
       },
@@ -613,7 +642,7 @@ const InputTextualWithSuggestions = ({
         if (!expandedRef.current) {
           return false;
         }
-        return forwardToSuggestionList(e, "navi_list_confirm");
+        return forwardToSuggestionList(e, "navi_list_request_select");
       },
     },
     {
@@ -635,14 +664,14 @@ const InputTextualWithSuggestions = ({
     if (!suggestionEl) {
       return undefined;
     }
-    const onSelected = (e) => {
+    const onSelect = (e) => {
       inputEl.value = e.detail.value;
       inputEl.dispatchEvent(new Event("input", { bubbles: true }));
       hideSuggestions(e);
     };
-    suggestionEl.addEventListener("navi_list_confirm", onSelected);
+    suggestionEl.addEventListener("navi_list_select", onSelect);
     return () => {
-      suggestionEl.removeEventListener("navi_list_confirm", onSelected);
+      suggestionEl.removeEventListener("navi_list_select", onSelect);
     };
   }, [suggestions]);
 

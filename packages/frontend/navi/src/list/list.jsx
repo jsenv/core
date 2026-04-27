@@ -436,11 +436,15 @@ const ListInteractive = (props) => {
     onHover: (index) => {
       setMousePointedIndex(index);
     },
-    onSelect: (index, event) => {
-      setAnchorIndex(index);
-      const value = getValueByIndex(index);
-      uiAction(value, event);
-    },
+  };
+
+  const dispatchCustomEvent = (e, customEventName, customEventDetail) => {
+    return e.currentTarget.dispatchEvent(
+      new CustomEvent(customEventName, {
+        detail: { ...e.detail, customEventDetail },
+        cancelable: true,
+      }),
+    );
   };
 
   return (
@@ -456,7 +460,7 @@ const ListInteractive = (props) => {
             anchorIndexRef.current = meta.firstSelectedIndex;
           }
         }}
-        onnavi_list_nav={(e) => {
+        onnavi_list_request_nav={(e) => {
           const { direction, event = e } = e.detail;
           const items = itemsRef.current;
           const itemCount = items.length;
@@ -488,30 +492,29 @@ const ListInteractive = (props) => {
             return;
           }
           event.preventDefault();
-          anchorIndexRef.current = index;
           setKeyboardPointedIndex(index);
-          setAnchorIndex(index);
-          e.currentTarget.dispatchEvent(
-            new CustomEvent("navi_list_scroll_to", {
-              detail: {
-                event: e,
-                index,
-              },
-            }),
-          );
+          dispatchCustomEvent(e, "navi_list_request_scroll_at", { index });
         }}
-        onnavi_list_clear={() => {
+        onnavi_list_request_clear={() => {
           setMousePointedIndex(-1);
           setKeyboardPointedIndex(-1);
           setAnchorIndex(-1);
         }}
-        onnavi_list_confirm={(e) => {
-          const anchorIndex = anchorIndexRef.current;
-          if (anchorIndex === -1) {
-            return;
-          }
-          const anchorValue = getValueByIndex(anchorIndex);
-          uiAction(anchorValue, e);
+        onnavi_list_request_select={(e) => {
+          const { index } = e.detail;
+          setAnchorIndex(index);
+          anchorIndexRef.current = index;
+          dispatchCustomEvent(e, "navi_list_request_select_at", { index });
+        }}
+        onnavi_list_nav={(e) => {
+          const { index } = e.detail;
+          anchorIndexRef.current = index;
+          setAnchorIndex(index);
+        }}
+        onnavi_list_select={(e) => {
+          const { index, event } = e.detail;
+          const value = getValueByIndex(index);
+          uiAction(value, event);
         }}
       />
     </ListInteractionContext.Provider>
@@ -537,42 +540,50 @@ const ListWithKeyboardInteractions = (props) => {
       key: "arrowdown",
       description: "Point to next item",
       handler: (e) => {
-        return dispatchToList(e, "navi_list_nav", { direction: "down" });
+        return dispatchToList(e, "navi_list_request_nav", {
+          direction: "down",
+        });
       },
     },
     {
       key: "arrowup",
       description: "Point to previous item",
       handler: (e) => {
-        return dispatchToList(e, "navi_list_nav", { direction: "up" });
+        return dispatchToList(e, "navi_list_request_nav", {
+          direction: "up",
+        });
       },
     },
     {
       key: "home",
       description: "Point to first item",
       handler: (e) => {
-        return dispatchToList(e, "navi_list_nav", { direction: "first" });
+        return dispatchToList(e, "navi_list_request_nav", {
+          direction: "first",
+        });
       },
     },
     {
       key: "end",
       description: "Point to last item",
       handler: (e) => {
-        return dispatchToList(e, "navi_list_nav", { direction: "last" });
+        return dispatchToList(e, "navi_list_request_nav", {
+          direction: "last",
+        });
       },
     },
     {
       key: "enter",
       description: "Confirm pointed item",
       handler: (e) => {
-        return dispatchToList(e, "navi_list_confirm");
+        return dispatchToList(e, "navi_list_request_select");
       },
     },
     {
       key: "escape",
       description: "Clear pointed item",
       handler: (e) => {
-        return dispatchToList(e, "navi_list_clear");
+        return dispatchToList(e, "navi_list_request_clear");
       },
     },
   ]);
@@ -852,6 +863,15 @@ const ListControlled = ({
     virtualItemHeight,
   ]);
 
+  const dispatchCustomEvent = (e, customEventName, customEventDetail) => {
+    return e.currentTarget.dispatchEvent(
+      new CustomEvent(customEventName, {
+        detail: { ...e.detail, customEventDetail },
+        cancelable: true,
+      }),
+    );
+  };
+
   return (
     <Box
       {...rest}
@@ -866,21 +886,24 @@ const ListControlled = ({
       styleCSSVars={LIST_STYLE_CSS_VARS}
       pseudoClasses={LIST_PSEUDO_CLASSES}
       hasChildFunction
-      onnavi_list_scroll_to={(e) => {
+      onnavi_list_request_scroll_at={(e) => {
         const { index } = e.detail;
         scrollToIndex(index, e.detail.event);
       }}
-      onnavi_list_nav_to={(e) => {
-        const { index, event } = e.detail;
+      onnavi_list_request_nav_at={(e) => {
         const items = itemsRef.current;
         if (items.length === 0) {
           return;
         }
-        e.currentTarget.dispatchEvent(
-          new CustomEvent("navi_list_scroll_to", {
-            detail: { event, index },
-          }),
-        );
+        const { index } = e.detail;
+        dispatchCustomEvent(e, "navi_list_request_scroll_at", { index });
+      }}
+      onnavi_list_request_select_at={(e) => {
+        const { index } = e.detail;
+        if (index < 0) {
+          return;
+        }
+        dispatchCustomEvent(e, "navi_list_select", { index });
       }}
     >
       {renderListMemoized}
@@ -1100,7 +1123,7 @@ const ListItemReal = ({
   const defaultRef = useRef(null);
   const ref = rest.ref || defaultRef;
   const interactionContext = useContext(ListInteractionContext);
-  const { mousePointedIndex, keyboardPointedIndex, onHover, onSelect } =
+  const { mousePointedIndex, keyboardPointedIndex, onHover } =
     interactionContext || {};
   const itemToScrollOnMountRef = useContext(ItemToScrollOnMountRefContext);
 
@@ -1160,6 +1183,15 @@ const ListItemReal = ({
     };
   }, [highlight, children, hidden]);
 
+  const dipatchCustomEvent = (e, customEventName, customEventDetail) => {
+    return e.currentTarget.dispatchEvent(
+      new CustomEvent(customEventName, {
+        detail: { ...e.detail, customEventDetail },
+        cancelable: true,
+      }),
+    );
+  };
+
   return (
     <Box
       as="li"
@@ -1184,7 +1216,7 @@ const ListItemReal = ({
         if (e.button !== 0) {
           return;
         }
-        onSelect?.(index, e);
+        dipatchCustomEvent(e, "navi_list_request_select_at", { index });
         rest.onMouseDown?.(e);
       }}
       {...rest}
