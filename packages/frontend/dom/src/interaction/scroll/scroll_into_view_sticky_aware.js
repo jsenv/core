@@ -17,8 +17,11 @@ import { getScrollContainer } from "./scroll_container.js";
  *
  * @param {Element} el - The element to scroll into view.
  */
-export const scrollIntoViewWithStickyAwareness = (el) => {
-  el.scrollIntoView({ block: "nearest" });
+export const scrollIntoViewWithStickyAwareness = (
+  el,
+  { behavior, block = "nearest", inline, container } = {},
+) => {
+  el.scrollIntoView({ behavior, block, inline, container });
   const scrollContainer = getScrollContainer(el);
   if (!scrollContainer) {
     return;
