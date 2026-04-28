@@ -763,11 +763,12 @@ const ListControlled = ({
   });
   const renderWindowRef = useRef(null);
   renderWindowRef.current = renderWindow;
-  const updateRenderWindow = (newStart, newEnd) => {
+  const updateRenderWindow = (newStart, newEnd, reason) => {
     const { start, end } = renderWindowRef.current;
     if (newStart === start && newEnd === end) {
       return;
     }
+    debugScroll(`updateRenderWindow(${newStart}, ${newEnd}, "${reason}")`);
     const renderWindow = { start: newStart, end: newEnd };
     renderWindowRef.current = renderWindow;
     setRenderWindow(renderWindow);
@@ -789,22 +790,25 @@ const ListControlled = ({
       if (item) {
         const itemEl = document.getElementById(item.id);
         if (itemEl) {
+          debugScroll(
+            `scrollToIndex(${index}) is in render window, scrolling element right away`,
+          );
           scrollIntoViewWithStickyAwareness(itemEl);
-          debugScroll("Scrolled to index", index);
           return;
         }
       }
     }
-    debugScroll(
-      "Index out of render window, shifting window to scroll to index",
-      index,
-    );
     // Not in DOM — shift the render window. The item will read
     // itemToScrollOnMountRef on mount and call scrollIntoViewWithStickyAwareness.
     itemToScrollOnMountRef.current = index;
     const half = Math.floor(renderBudget / 2);
     const newStart = Math.max(0, index - half);
-    updateRenderWindow(newStart, newStart + renderBudget);
+    const newEnd = newStart + renderBudget;
+    updateRenderWindow(
+      newStart,
+      newEnd,
+      `scrollToIndex(${index}) is out of render window`,
+    );
   };
 
   const searchTextRef = useRef();
@@ -971,8 +975,7 @@ const ListControlled = ({
       if (newEnd === itemCount) {
         newStart = Math.max(0, itemCount - renderBudget);
       }
-      debugScroll(`updateRenderWindow(${newStart}, ${newEnd}, "${reason}")`);
-      updateRenderWindow(newStart, newEnd);
+      updateRenderWindow(newStart, newEnd, reason);
     };
     scrollContainer.addEventListener("scroll", onScroll, { passive: true });
     return () => {
