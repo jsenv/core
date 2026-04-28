@@ -754,12 +754,16 @@ const ListControlled = ({
     if (newStart === start && newEnd === end) {
       return;
     }
+    renderWindowRef.current = { start: newStart, end: newEnd };
     setRenderWindow({ start: newStart, end: newEnd });
   };
 
-  const tracker = useItemTracker();
+  const tracker = useItemTracker({
+    onChange: (items) => {
+      onListItemsChange(items);
+    },
+  });
 
-  // scroll at start + scroll when item match score changes
   const itemToScrollOnMountRef = useRef(null);
   const scrollToIndex = (index) => {
     const items = tracker.itemsSignal.peek();
@@ -781,73 +785,66 @@ const ListControlled = ({
     updateRenderWindow(newStart, newStart + renderBudget);
   };
 
-  const isInitRef = useRef(true);
-  const windowMatchScoresKeyRef = useRef("");
-  const searchTextRef = useRef(searchText);
-  searchTextRef.current = searchText;
-  const wasSearchActiveRef = useRef(false);
+  // scroll at selected logic
+  const needScrollAtSelectedRef = useRef(undefined);
+  const searchTextRef = useRef(undefined);
+  if (searchTextRef.current === undefined) {
+    searchTextRef.current = searchText;
+    if (!searchText) {
+      // no search text and first mount -> try to scroll at selected
+      needScrollAtSelectedRef.current = true;
+    }
+  } else {
+    const prevSearchText = searchTextRef.current;
+    if (prevSearchText && !searchText) {
+      // search text becomes empty -> try to scroll at selected
+      needScrollAtSelectedRef.current = true;
+    }
+    searchTextRef.current = searchText;
+  }
+  const needScrollAtSelected = needScrollAtSelectedRef.current;
+  useLayoutEffect(() => {
+    if (!needScrollAtSelected) {
+      return;
+    }
+    // no need to reset the ref, it can be true only for one render
+    const items = tracker.itemsSignal.peek();
+    const firstSelectedIndex = items.findIndex((i) => i.selected);
+    if (firstSelectedIndex !== -1) {
+      scrollToIndex(firstSelectedIndex);
+    }
+  }, [needScrollAtSelected]);
 
+  // Scroll top when top visible items match score changes
+  // (the idea is that when more relevant items are displayed on top we want to scroll to them)
+  const windowMatchScoresKeyRef = useRef("");
   useSignalEffect(() => {
     const items = tracker.itemsSignal.peek();
     const itemCount = items.length;
-    const isInit = isInitRef.current;
-    let firstSelectedIndex;
-    if (itemCount === 0) {
-      // All items are hidden (e.g. no search matches) — reset the render window so the
-      // top filler collapses to zero rather than keeping the old scrolled position.
-      if (!isInit) {
-        updateRenderWindow(0, renderBudget);
-        wasSearchActiveRef.current =
-          searchTextRef.current !== undefined &&
-          searchTextRef.current !== null &&
-          searchTextRef.current !== "";
-      }
-      onListItemsChange(items, { isInit, firstSelectedIndex });
+    const currentSearchText = searchTextRef.current;
+    const isSearchActive =
+      currentSearchText !== undefined &&
+      currentSearchText !== null &&
+      currentSearchText !== "";
+    if (!isSearchActive) {
+      windowMatchScoresKeyRef.current = "";
       return;
     }
-    // When list is initiliazed (first render but not only, like every time a dialog opens for instance)
-    // -> we want to scroll selected item into view
-    if (isInit) {
-      isInitRef.current = false;
-      firstSelectedIndex = items.findIndex((i) => i.selected);
-      if (firstSelectedIndex !== -1) {
-        scrollToIndex(firstSelectedIndex);
-      }
-    } else {
-      const current = renderWindowRef.current;
-      const currentSearchText = searchTextRef.current;
-      const isSearchActive =
-        currentSearchText !== undefined &&
-        currentSearchText !== null &&
-        currentSearchText !== "";
-      const wasSearchActive = wasSearchActiveRef.current;
-      if (current.start >= itemCount) {
-        // Render window is out of range (e.g. filter reduced the list) — reset to top.
-        updateRenderWindow(0, renderBudget);
-        scrollToIndex(0);
-      } else if (!isSearchActive && wasSearchActive) {
-        // Search was just cleared — scroll back to the selected item so it's visible.
-        firstSelectedIndex = items.findIndex((i) => i.selected);
-        if (firstSelectedIndex !== -1) {
-          scrollToIndex(firstSelectedIndex);
-        }
-        windowMatchScoresKeyRef.current = "";
-      } else if (isSearchActive) {
-        // If they did, something sorted/filtered the visible area — scroll to top so
-        // the most relevant items are visible.
-        const windowItems = items.slice(current.start, current.end);
-        const windowMatchScoresKey = windowItems
-          .map((i) => `${i.id}:${i.matchScore ?? ""}`)
-          .join(",");
-        if (windowMatchScoresKey !== windowMatchScoresKeyRef.current) {
-          updateRenderWindow(0, renderBudget);
-          scrollToIndex(0);
-        }
-        windowMatchScoresKeyRef.current = windowMatchScoresKey;
-      }
-      wasSearchActiveRef.current = isSearchActive;
+    const current = renderWindowRef.current;
+    const windowItems = items.slice(current.start, current.end);
+    const windowMatchScoresKey = windowItems
+      .map((i) => `${i.id}:${i.matchScore ?? ""}`)
+      .join(",");
+    if (windowMatchScoresKey !== windowMatchScoresKeyRef.current) {
+      windowMatchScoresKeyRef.current = windowMatchScoresKey;
+      updateRenderWindow(0, renderBudget);
+      scrollToIndex(0);
     }
-    onListItemsChange(items, { isInit, firstSelectedIndex });
+    // Keep render window in range when item count shrinks during search.
+    if (itemCount > 0 && current.start >= itemCount) {
+      updateRenderWindow(0, renderBudget);
+      scrollToIndex(0);
+    }
   });
 
   // Scroll listener — slides the window as the user scrolls.
