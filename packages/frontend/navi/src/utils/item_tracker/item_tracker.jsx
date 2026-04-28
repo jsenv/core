@@ -181,6 +181,17 @@ const createItemTracker = (onChange) => {
       if (!renderPhaseKeys.includes(key)) {
         renderPhaseKeys.push(key);
       }
+      // Sort orderedKeys immediately so that indexOf() returns the correct
+      // position during this render — not a stale position from the previous
+      // render. Items not yet seen in this pass stay at the end in their
+      // previous relative order.
+      orderedKeys.sort((a, b) => {
+        const ai = renderPhaseKeys.indexOf(a);
+        const bi = renderPhaseKeys.indexOf(b);
+        const aIdx = ai === -1 ? Infinity : ai;
+        const bIdx = bi === -1 ? Infinity : bi;
+        return aIdx - bIdx;
+      });
     }
   };
 
