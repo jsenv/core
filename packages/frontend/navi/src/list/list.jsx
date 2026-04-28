@@ -18,6 +18,7 @@ import {
 import { Box } from "../box/box.jsx";
 import { createOnKeyDownForShortcuts } from "../keyboard/keyboard_shortcuts.js";
 import { useItemTracker } from "../utils/item_tracker/use_item_tracker.js";
+import { useOpenedLayoutEffect } from "../utils/use_opened_layout_effect.js";
 import { useIsInsideDropdown } from "./dropdown.jsx";
 
 const ListItemTrackerContext = createContext(null);
@@ -827,10 +828,8 @@ const ListControlled = ({
   };
 
   const searchTextRef = useRef();
-  let searchTextBecomesDefined = false;
   let searchTextBecomesActive = false;
   if (searchTextRef.current === undefined) {
-    searchTextBecomesDefined = true;
     searchTextRef.current = searchText;
   } else {
     const searchTextPrevious = searchTextRef.current;
@@ -840,22 +839,18 @@ const ListControlled = ({
     }
   }
 
-  // On first mount, scroll to the selected item (or to top as fallback).
-  const needScrollAtSelectedRef = useRef(searchTextBecomesDefined);
-  const needScrollAtSelected = needScrollAtSelectedRef.current;
-  useLayoutEffect(() => {
-    if (!needScrollAtSelected) {
-      return;
-    }
-    needScrollAtSelectedRef.current = false;
+  // Scroll to the selected item when the list is first presented on screen.
+  // Skipped when inside a closed <dialog>/<details> (scrollIntoView is a no-op
+  // on hidden elements); re-runs automatically every time the ancestor opens.
+  useOpenedLayoutEffect(ref, () => {
     const items = tracker.itemsSignal.peek();
     const firstSelectedIndex = items.findIndex((i) => i.selected);
     if (firstSelectedIndex !== -1) {
-      scrollToIndex(firstSelectedIndex, `initial scroll to selected`);
+      scrollToIndex(firstSelectedIndex, "scroll to selected");
     } else {
-      scrollToIndex(0, "initial scroll to top because no selected item");
+      scrollToIndex(0, "scroll to top (no selected item)");
     }
-  }, [searchTextBecomesDefined]);
+  }, []);
 
   // Watch scores of the top renderBudget items.
   // When scores change during an active search, scroll to top to reveal the most relevant items.
