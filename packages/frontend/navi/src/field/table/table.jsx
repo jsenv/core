@@ -56,7 +56,7 @@ import { useContext, useId, useRef } from "preact/hooks";
 
 import { useKeyboardShortcuts } from "../../keyboard/keyboard_shortcuts.js";
 import { createIsolatedItemTracker } from "../../utils/item_tracker/isolated_item_tracker.jsx";
-import { useItemTracker } from "../../utils/item_tracker/item_tracker.jsx";
+import { useItemTracker } from "../../utils/item_tracker/use_item_tracker.js";
 import { withPropsClassName } from "../../utils/with_props_class_name.js";
 import { Editable, useEditionController } from "../edition/editable.jsx";
 import {
@@ -150,7 +150,6 @@ export const Table = (props) => {
   const [ColumnProducerProvider, ColumnConsumerProvider, columns] =
     useColumnTrackerProviders();
   const rowTracker = useItemTracker();
-  const rows = rowTracker.getItems();
 
   // selection
   const selectionController = useTableSelectionController({
@@ -263,7 +262,7 @@ export const Table = (props) => {
     onColumnSizeChange,
     onRowSizeChange,
     columns,
-    rows,
+    rowTracker,
     columnResizerRef,
     rowResizerRef,
   });

@@ -17,7 +17,7 @@ import {
 
 import { Box } from "../box/box.jsx";
 import { createOnKeyDownForShortcuts } from "../keyboard/keyboard_shortcuts.js";
-import { useItemTracker } from "../utils/item_tracker/item_tracker.jsx";
+import { useItemTracker } from "../utils/item_tracker/use_item_tracker.js";
 import { useIsInsideDropdown } from "./dropdown.jsx";
 
 const ListItemTrackerContext = createContext(null);

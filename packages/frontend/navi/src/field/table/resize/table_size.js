@@ -9,7 +9,7 @@ export const useTableSizeContextValue = ({
   onColumnSizeChange,
   onRowSizeChange,
   columns,
-  rows,
+  rowTracker,
   columnResizerRef,
   rowResizerRef,
 }) => {
@@ -26,7 +26,7 @@ export const useTableSizeContextValue = ({
 
     const onRowSizeChangeWithRow = onRowSizeChange
       ? (height, rowIndex) => {
-          const row = rows[rowIndex];
+          const row = rowTracker.getTrackedItemByIndex(rowIndex);
           return onRowSizeChange(height, rowIndex, row);
         }
       : onRowSizeChange;
