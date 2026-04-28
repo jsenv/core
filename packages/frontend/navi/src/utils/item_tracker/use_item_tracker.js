@@ -59,12 +59,19 @@ export const useItemTracker = ({ onChange } = {}) => {
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
   const trackerRef = useRef(null);
-  if (!trackerRef.current) {
-    trackerRef.current = createItemTracker((items) => {
+  let tracker = trackerRef.current;
+  if (!tracker) {
+    trackerRef.current = tracker = createItemTracker((items) => {
       onChangeRef.current?.(items);
     });
   }
-  return trackerRef.current;
+  // When code in useLayoutEffect of the caller wants to run the tracker must be in sync
+  // without this layout effect the tracker might not have been synced yet and preact would call layout effect
+  // before we had time to sync
+  useLayoutEffect(() => {
+    tracker._flushSync();
+  });
+  return tracker;
 };
 
 const createItemTracker = (onChange) => {
@@ -83,47 +90,61 @@ const createItemTracker = (onChange) => {
   const totalCountSignal = signal(0);
 
   let notifyScheduled = false;
+  const runNotify = () => {
+    batch(() => {
+      const newTotalCount = allKeys.size;
+      if (totalCountSignal.peek() !== newTotalCount) {
+        totalCountSignal.value = newTotalCount;
+      }
+      const newCount = orderedKeys.length;
+      const countModified = countSignal.peek() !== newCount;
+      if (countModified) {
+        countSignal.value = newCount;
+      }
+
+      const prevItems = itemsSignal.peek();
+      let itemsChanged = countModified;
+      const items = [];
+      for (let i = 0; i < orderedKeys.length; i++) {
+        const key = orderedKeys[i];
+        const item = registrations.get(key);
+        items.push(item);
+        if (!itemsChanged) {
+          const id = item.id;
+          const prevId = prevItems[i].id;
+          if (id !== prevId) {
+            itemsChanged = true;
+          }
+        }
+      }
+
+      if (itemsChanged) {
+        itemsSignal.value = items;
+        onChange?.(items);
+      }
+    });
+  };
+
   const notify = () => {
     if (notifyScheduled) {
       return;
     }
     notifyScheduled = true;
     queueMicrotask(() => {
+      if (!notifyScheduled) {
+        return; // was already flushed synchronously
+      }
       notifyScheduled = false;
-
-      batch(() => {
-        const newTotalCount = allKeys.size;
-        if (totalCountSignal.peek() !== newTotalCount) {
-          totalCountSignal.value = newTotalCount;
-        }
-        const newCount = orderedKeys.length;
-        const countModified = countSignal.peek() !== newCount;
-        if (countModified) {
-          countSignal.value = newCount;
-        }
-
-        const prevItems = itemsSignal.peek();
-        let itemsChanged = countModified;
-        const items = [];
-        for (let i = 0; i < orderedKeys.length; i++) {
-          const key = orderedKeys[i];
-          const item = registrations.get(key);
-          items.push(item);
-          if (!itemsChanged) {
-            const id = item.id;
-            const prevId = prevItems[i].id;
-            if (id !== prevId) {
-              itemsChanged = true;
-            }
-          }
-        }
-
-        if (itemsChanged) {
-          itemsSignal.value = items;
-          onChange?.(items);
-        }
-      });
+      runNotify();
     });
+  };
+
+  const _flushSync = () => {
+    if (!notifyScheduled) {
+      return;
+    }
+    notifyScheduled = false;
+    runNotify();
   };
 
   // Insert key into orderedKeys at the correct position based on explicitOrder.
@@ -243,5 +264,6 @@ const createItemTracker = (onChange) => {
     itemsSignal,
     countSignal,
     totalCountSignal,
+    _flushSync,
   };
 };
