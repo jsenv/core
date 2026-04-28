@@ -1,15 +1,18 @@
 import { useMemo } from "preact/hooks";
 
 /**
- * useSearchOrder — reorders items so matched ones come first (sorted by score desc),
+ * useSearch — reorders items so matched ones come first (sorted by score desc),
  * followed by non-matched items in their natural order. No item is hidden.
  * Returns [orderedItems, getItemMatchInfo].
  *   - orderedItems: all items, reordered
  *   - getItemMatchInfo(item): { match, score, ranges }
  *
  * When searchText is empty, natural order is preserved and all items match with score 0.
+ *
+ * To filter (hide non-matching items), pass hidden={!getItemMatchInfo(item).match}
+ * to each ListItem. The list's matchFallback will be shown when all items are hidden.
  */
-export const useSearchOrder = (searchText, items, matchFn = applySearch) => {
+export const useSearch = (searchText, items, matchFn = applySearch) => {
   const { orderedItems, matchInfoMap } = useMemo(() => {
     const { scoreEntries, nonMatched, matchInfoMap } = buildMatchInfo(
       searchText,
@@ -33,37 +36,6 @@ export const useSearchOrder = (searchText, items, matchFn = applySearch) => {
   };
 
   return [orderedItems, getItemMatchInfo];
-};
-
-/**
- * useSearchFilter — filters items to only matched ones, ordered by score desc.
- * Returns [filteredItems, getItemMatchInfo].
- *   - filteredItems: subset of items that match, sorted by score desc
- *   - getItemMatchInfo(item): { match, score, ranges }
- *
- * When searchText is empty, all items are returned in natural order.
- */
-export const useSearchFilter = (searchText, items, matchFn = applySearch) => {
-  const { filteredItems, matchInfoMap } = useMemo(() => {
-    const { scoreEntries, matchInfoMap } = buildMatchInfo(
-      searchText,
-      items,
-      matchFn,
-    );
-    const filteredItems = [];
-    for (const [, bucket] of scoreEntries) {
-      for (const { item } of bucket) {
-        filteredItems.push(item);
-      }
-    }
-    return { filteredItems, matchInfoMap };
-  }, [items, searchText, matchFn]);
-
-  const getItemMatchInfo = (item) => {
-    return matchInfoMap.get(item);
-  };
-
-  return [filteredItems, getItemMatchInfo];
 };
 
 const buildMatchInfo = (searchText, items, matchFn) => {

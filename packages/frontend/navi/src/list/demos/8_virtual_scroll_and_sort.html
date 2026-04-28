@@ -41,7 +41,7 @@
         List,
         ListItem,
         ListItemHeader,
-        useSearchOrder,
+        useSearch,
         Separator,
       } from "@jsenv/navi";
 
@@ -364,10 +364,7 @@
         );
         const [domItems, setDomItems] = useState(0);
         const listRef = useRef(null);
-        const [orderedItems, getItemMatchInfo] = useSearchOrder(
-          search,
-          ALL_ITEMS,
-        );
+        const [orderedItems, getItemMatchInfo] = useSearch(search, ALL_ITEMS);
 
         useEffect(() => {
           const updateCount = () => {

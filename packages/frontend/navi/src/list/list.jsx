@@ -246,12 +246,6 @@ const css = /* css */ `
     text-align: center;
     user-select: none;
   }
-  /* could also use [data-void] */
-  .navi_list:not(:has([navi-list-item])) {
-    .navi_list_empty {
-      display: block;
-    }
-  }
 
   /* Hide groups that have no rendered items. */
   .navi_list_item_group[data-hidden-while-empty]:not(:has([navi-list-item])) {
@@ -292,7 +286,8 @@ const css = /* css */ `
  *                          Enables precise virtual-scroll filler sizing without a DOM
  *                          measurement pass. Required when renderBudget is active and
  *                          item height is known up-front.
- *   fallback             — content shown when no items are visible
+ *   fallback             — content shown when no items exist at all
+ *   matchFallback         — content shown when items exist but all are hidden (e.g. no search match)
  *   separator            — element or function(index) inserted between visible items
  *   lockSize             — when true, captures the container's dimensions on first render
  *                          (always in unfiltered state). Those values become min-width/
@@ -645,6 +640,7 @@ const ListControlled = ({
   virtualItemHeight,
   lockSize,
   searchText,
+  matchFallback,
   ...rest
 }) => {
   import.meta.css = css;
@@ -747,6 +743,7 @@ const ListControlled = ({
   const windowMatchScoresKeyRef = useRef("");
   const searchTextRef = useRef(searchText);
   searchTextRef.current = searchText;
+  const wasSearchActiveRef = useRef(false);
   const tracker = useItemTracker({
     onChange: (items) => {
       itemsRef.current = items;
@@ -771,19 +768,19 @@ const ListControlled = ({
             currentSearchText !== undefined &&
             currentSearchText !== null &&
             currentSearchText !== "";
+          const wasSearchActive = wasSearchActiveRef.current;
           if (current.start >= itemCount) {
             // Render window is out of range (e.g. filter reduced the list) — reset to top.
             updateRenderWindow(0, renderBudget);
             scrollToIndex(0);
-          } else if (!isSearchActive) {
-            // Search was cleared — scroll back to the selected item so it's visible.
+          } else if (!isSearchActive && wasSearchActive) {
+            // Search was just cleared — scroll back to the selected item so it's visible.
             const selectedIndex = items.findIndex((i) => i.selected);
             if (selectedIndex !== -1) {
               scrollToIndex(selectedIndex);
             }
             windowMatchScoresKeyRef.current = "";
-          } else {
-            // Check whether the matchScores of items in the current render window changed.
+          } else if (isSearchActive) {
             // If they did, something sorted/filtered the visible area — scroll to top so
             // the most relevant items are visible.
             const windowItems = items.slice(current.start, current.end);
@@ -796,6 +793,7 @@ const ListControlled = ({
             }
             windowMatchScoresKeyRef.current = windowMatchScoresKey;
           }
+          wasSearchActiveRef.current = isSearchActive;
         }
       }
       onListItemsChange(items, { isInit, firstSelectedIndex });
@@ -883,6 +881,7 @@ const ListControlled = ({
         id={listId}
         role={listRole}
         fallback={fallback}
+        matchFallback={matchFallback}
         separator={separator}
         expandX={expandX}
         {...listProps}
@@ -902,6 +901,7 @@ const ListControlled = ({
     listId,
     listRole,
     fallback,
+    matchFallback,
     separator,
     expandX,
     children,
@@ -962,10 +962,16 @@ const UnorderedList = ({
   renderWindow,
   virtualItemHeightSignal,
   fallback,
+  matchFallback,
   separator,
   children,
   ...rest
 }) => {
+  const visibleCount = tracker.countSignal.value;
+  const totalCount = tracker.totalCountSignal.value;
+  const showMatchFallback =
+    matchFallback && totalCount > 0 && visibleCount === 0;
+  const showFallback = fallback && totalCount === 0;
   return (
     <Box as="ul" {...rest} baseClassName="navi_list">
       <TopFiller
@@ -975,12 +981,21 @@ const UnorderedList = ({
       <RenderWindowContext.Provider value={renderWindow}>
         <SeparatorContext.Provider value={separator ?? null}>
           <ListItemTrackerContext.Provider value={tracker}>
+            <ListItem
+              role="presentation"
+              className="navi_list_empty"
+              hidden={!showMatchFallback}
+            >
+              {matchFallback}
+            </ListItem>
             {children}
-            {fallback && (
-              <ListItem role="presentation" className="navi_list_empty">
-                {fallback}
-              </ListItem>
-            )}
+            <ListItem
+              role="presentation"
+              className="navi_list_empty"
+              hidden={!showFallback}
+            >
+              {fallback}
+            </ListItem>
           </ListItemTrackerContext.Provider>
         </SeparatorContext.Provider>
       </RenderWindowContext.Provider>

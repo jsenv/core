@@ -116,7 +116,7 @@
         ListItem,
         Input,
         ListItemHeader,
-        useSearchFilter,
+        useSearch,
       } from "@jsenv/navi";
 
       const domItemsSignal = signal(0);
@@ -213,7 +213,7 @@
         // render window (0–30), to verify that the window shifts on mount.
         const [selected, setSelected] = useState(LARGE_LIST[150]);
         const [searchText, setSearchText] = useState(null);
-        const [filteredItems, getItemMatchInfo] = useSearchFilter(
+        const [orderedItems, getItemMatchInfo] = useSearch(
           searchText,
           LARGE_LIST,
         );
@@ -310,7 +310,8 @@
               uiAction={setSelected}
               expandX
               renderBudget={30}
-              fallback="No results"
+              fallback="No items"
+              matchFallback="No results"
               withSearch
               searchText={searchText}
             >
@@ -331,14 +332,15 @@
                   }}
                 />
               </ListItemHeader>
-              {filteredItems.map((item) => {
-                const { score, ranges } = getItemMatchInfo(item);
+              {orderedItems.map((item) => {
+                const { match, score, ranges } = getItemMatchInfo(item);
                 return (
                   <ListItem
                     key={item}
                     value={item}
                     highlight={ranges}
                     matchScore={score}
+                    hidden={!match}
                     selected={selected === item}
                     style={{
                       backgroundColor: SUGGESTION_BG,

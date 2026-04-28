@@ -78,8 +78,10 @@ const createItemTracker = (onChange) => {
   // orderedKeys: visible item keys in natural (JSX declaration) order.
   // Each entry is { insertionKey } so we can find and splice by key.
   const orderedKeys = []; // number[]
+  const allKeys = new Set(); // all registered keys including hidden
 
   const countSignal = signal(0);
+  const totalCountSignal = signal(0);
   const propSignals = new Map(); // propName → signal(array)
 
   const getPropSignal = (propName) => {
@@ -101,6 +103,11 @@ const createItemTracker = (onChange) => {
       const newCount = orderedKeys.length;
       if (countSignal.peek() !== newCount) {
         countSignal.value = newCount;
+      }
+
+      const newTotalCount = allKeys.size;
+      if (totalCountSignal.peek() !== newTotalCount) {
+        totalCountSignal.value = newTotalCount;
       }
 
       for (const [propName, sig] of propSignals) {
@@ -143,11 +150,17 @@ const createItemTracker = (onChange) => {
       if (idx !== -1) {
         orderedKeys.splice(idx, 1);
       }
+      if (data.role !== "presentation") {
+        allKeys.add(key);
+      } else {
+        allKeys.delete(key);
+      }
     } else {
       if (!orderedKeys.includes(key)) {
         orderedKeys.push(key);
       }
       registrations.set(key, data);
+      allKeys.add(key);
     }
   };
 
@@ -172,6 +185,7 @@ const createItemTracker = (onChange) => {
         if (idx !== -1) {
           orderedKeys.splice(idx, 1);
         }
+        allKeys.delete(key);
         notify();
       };
     }, []);
@@ -196,5 +210,6 @@ const createItemTracker = (onChange) => {
     useItemValues,
     getTrackedItemByIndex,
     countSignal,
+    totalCountSignal,
   };
 };

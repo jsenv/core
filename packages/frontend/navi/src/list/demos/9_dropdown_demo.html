@@ -44,7 +44,7 @@
         Text,
         Box,
         ListItemHeader,
-        useSearchOrder,
+        useSearch,
       } from "@jsenv/navi";
 
       // ── Reusable dialog header ────────────────────────────────────────────────
@@ -122,10 +122,7 @@
       const FruitPicker = ({ onSelect }) => {
         const close = useDropdownClose();
         const [search, setSearch] = useState("");
-        const [orderedFruits, getItemMatchInfo] = useSearchOrder(
-          search,
-          FRUITS,
-        );
+        const [orderedFruits, getItemMatchInfo] = useSearch(search, FRUITS);
         return (
           <div style="min-width: 300px;">
             <DialogHeader title="Please select a fruit" />
@@ -155,13 +152,14 @@
                 />
               </ListItemHeader>
               {orderedFruits.map((fruit) => {
-                const { ranges } = getItemMatchInfo(fruit);
+                const { score, ranges } = getItemMatchInfo(fruit);
                 return (
                   <ListItem
                     role="option"
                     key={fruit}
                     value={fruit}
                     highlight={ranges}
+                    matchScore={score}
                   >
                     {fruit}
                   </ListItem>
@@ -233,7 +231,7 @@
       const CountryPicker = ({ selected, onSelect }) => {
         const close = useDropdownClose();
         const [search, setSearch] = useState("");
-        const [orderedCountries, getItemMatchInfo] = useSearchOrder(
+        const [orderedCountries, getItemMatchInfo] = useSearch(
           search,
           COUNTRIES,
         );
@@ -269,7 +267,7 @@
               </div>
             </ListItemHeader>
             {orderedCountries.map((country) => {
-              const { ranges } = getItemMatchInfo(country);
+              const { score, ranges } = getItemMatchInfo(country);
               return (
                 <ListItem
                   role="option"
@@ -277,6 +275,7 @@
                   value={country}
                   selected={selected === country}
                   highlight={ranges}
+                  matchScore={score}
                   height="64px"
                   flex
                   alignY="center"
