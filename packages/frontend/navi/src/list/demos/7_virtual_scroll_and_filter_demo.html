@@ -311,7 +311,32 @@
               expandX
               renderBudget={30}
               fallback="No items"
-              matchFallback="No results"
+              matchFallback={
+                <span
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: "6px",
+                    flexGrow: 1,
+                  }}
+                >
+                  <span
+                    style={{
+                      color: "light-dark(#888, #aaa)",
+                      fontSize: "0.9em",
+                    }}
+                  >
+                    No results for <em>"{searchText}"</em>
+                  </span>
+                  <button
+                    onClick={() => setSearchText(null)}
+                    style={{ fontSize: "0.8em", cursor: "pointer" }}
+                  >
+                    Clear search
+                  </button>
+                </span>
+              }
               withSearch
               searchText={searchText}
             >

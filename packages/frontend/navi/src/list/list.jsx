@@ -236,7 +236,6 @@ const css = /* css */ `
   */
   .navi_list_fallback,
   .navi_list_match_fallback {
-    display: contents;
     order: 1;
     &[navi-default] {
       display: inline;
@@ -792,7 +791,17 @@ const ListControlled = ({
       const itemCount = items.length;
       const isInit = isInitRef.current;
       let firstSelectedIndex;
-      if (itemCount > 0) {
+      if (itemCount === 0) {
+        // All items are hidden (e.g. no search matches) — reset the render window so the
+        // top filler collapses to zero rather than keeping the old scrolled position.
+        if (!isInit) {
+          updateRenderWindow(0, renderBudget);
+          wasSearchActiveRef.current =
+            searchTextRef.current !== undefined &&
+            searchTextRef.current !== null &&
+            searchTextRef.current !== "";
+        }
+      } else if (itemCount > 0) {
         // When list is initiliazed (first render but not only, like every time a dialog opens for instance)
         // -> we want to scroll selected item into view
         if (isInit) {
