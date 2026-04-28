@@ -238,8 +238,14 @@ const css = /* css */ `
   }
 
   /* Empty state — hidden by default, shown when no list items are rendered. */
-  .navi_list_empty {
-    display: none;
+  .navi_list_fallback {
+    padding: var(--list-item-padding);
+    color: light-dark(#888, #aaa);
+    font-size: 0.9em;
+    text-align: center;
+    user-select: none;
+  }
+  .navi_list_match_fallback {
     padding: var(--list-item-padding);
     color: light-dark(#888, #aaa);
     font-size: 0.9em;
@@ -983,7 +989,7 @@ const UnorderedList = ({
           <ListItemTrackerContext.Provider value={tracker}>
             <ListItem
               role="presentation"
-              className="navi_list_empty"
+              className="navi_list_match_fallback"
               hidden={!showMatchFallback}
             >
               {matchFallback}
@@ -991,7 +997,7 @@ const UnorderedList = ({
             {children}
             <ListItem
               role="presentation"
-              className="navi_list_empty"
+              className="navi_list_fallback"
               hidden={!showFallback}
             >
               {fallback}
