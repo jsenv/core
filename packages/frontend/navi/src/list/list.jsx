@@ -478,6 +478,13 @@ const ListInteractive = (props) => {
     }
     return itemsRef.current.findIndex((i) => i.id === anchorId);
   };
+  const getAnchorItem = () => {
+    const anchorId = anchorIdRef.current;
+    if (!anchorId) {
+      return null;
+    }
+    return itemsRef.current.find((i) => i.id === anchorId);
+  };
 
   const firstRenderRef = useRef(true);
   useLayoutEffect(() => {
@@ -578,8 +585,8 @@ const ListInteractive = (props) => {
               setMousePointedId(null);
             }}
             onnavi_list_request_select={(e) => {
-              const index = getAnchorIndex();
-              dispatchCustomEvent(e, "navi_list_request_select_at", { index });
+              const item = getAnchorItem();
+              dispatchCustomEvent(e, "navi_list_request_select_at", { item });
             }}
             onnavi_list_scroll={(e) => {
               // When the list scrolls to an item (keyboard nav or restore),
@@ -887,22 +894,27 @@ const ListControlled = ({
   // Watch scores of the top renderBudget items.
   // When scores change during an active search, scroll to top to reveal the most relevant items.
   // When search becomes empty, restore the scroll position from before the search started.
-  // We save the first-visible item index (not raw scrollTop) so restoration is item-precise
+  // We save the first-visible item ID so restoration is item-precise
   // and survives render-window shifts or item reordering.
-  const savedScrollItemIndexRef = useRef(-1);
+  const savedScrollItemIdRef = useRef(null);
   const topMatchScoresKeyRef = useRef("");
   useLayoutEffect(() => {
     if (!searchText) {
       // no search -> try to restore scroll position
       topMatchScoresKeyRef.current = "";
-      const savedScrollItemIndex = savedScrollItemIndexRef.current;
-      if (savedScrollItemIndex === -1) {
+      const savedScrollItemId = savedScrollItemIdRef.current;
+      if (!savedScrollItemId) {
         // nothing to restore
         return;
       }
-      savedScrollItemIndexRef.current = -1;
-      debugScroll("Restoring scroll to item index", savedScrollItemIndex);
-      scrollToIndex(savedScrollItemIndex, "restore scroll");
+      savedScrollItemIdRef.current = null;
+      const items = tracker.itemsSignal.peek();
+      const index = items.findIndex((i) => i.id === savedScrollItemId);
+      if (index === -1) {
+        return;
+      }
+      debugScroll("Restoring scroll to item id", savedScrollItemId);
+      scrollToIndex(index, "restore scroll");
       return;
     }
 
@@ -924,42 +936,18 @@ const ListControlled = ({
       if (listContainerEl) {
         const listEl = listContainerEl.querySelector(".navi_list");
         const scrollContainer = getScrollContainer(listEl);
-        const scrollTop = scrollContainer.scrollTop;
         const items = tracker.itemsSignal.peek();
-        const containerRect = scrollContainer.getBoundingClientRect();
-        let hitEl = null;
-        let hitFiller = null;
-        for (let y = containerRect.top + 1; y < containerRect.bottom; y += 4) {
-          const el = document.elementFromPoint(containerRect.left + 1, y);
-          if (!el || !listEl.contains(el)) {
-            continue;
-          }
-          const realItem = el.closest(REAL_LIST_ITEM_SELECTOR);
-          if (realItem) {
-            hitEl = realItem;
-            break;
-          }
-          const filler = el.closest("li[aria-hidden]");
-          if (filler) {
-            hitFiller = filler;
-            break;
-          }
+        const firstVisible = findFirstVisibleItem(
+          listEl,
+          scrollContainer,
+          items,
+          virtualItemHeightSignal,
+          renderWindowRef,
+        );
+        if (firstVisible) {
+          debugScroll("Saving scroll item id", firstVisible.item.id);
+          savedScrollItemIdRef.current = firstVisible.item.id;
         }
-        let firstVisibleIndex = renderWindowRef.current.start;
-        if (hitFiller) {
-          const virtualItemHeight = virtualItemHeightSignal.peek();
-          if (virtualItemHeight > 0) {
-            firstVisibleIndex = Math.floor(scrollTop / virtualItemHeight);
-          }
-        } else if (hitEl) {
-          const hitId = hitEl.id;
-          const index = items.findIndex((i) => i.id === hitId);
-          if (index !== -1) {
-            firstVisibleIndex = index;
-          }
-        }
-        debugScroll("Saving scroll item index", firstVisibleIndex);
-        savedScrollItemIndexRef.current = firstVisibleIndex;
       }
     }
     // -> scroll to the top
