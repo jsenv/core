@@ -576,8 +576,12 @@ const ListInteractive = (props) => {
               if (event.type === "keydown") {
                 event.preventDefault();
               }
-              dispatchCustomEvent(e, "navi_list_request_scroll_at", { index });
-              dispatchCustomEvent(e, "navi_list_request_nav_at", { index });
+              dispatchCustomEvent(e, "navi_list_request_scroll_at", {
+                item: items[index],
+              });
+              dispatchCustomEvent(e, "navi_list_request_nav_at", {
+                item: items[index],
+              });
             }}
             onnavi_list_request_clear={() => {
               setAnchorId(null);
@@ -809,10 +813,17 @@ const ListControlled = ({
   });
 
   const pendingScrollRef = useRef();
-  const scrollToIndex = (index, reason) => {
+  const scrollToItem = (item, reason) => {
+    if (!item) {
+      return;
+    }
     const items = tracker.itemsSignal.peek();
     const itemCount = items.length;
     if (itemCount === 0) {
+      return;
+    }
+    let index = items.findIndex((i) => i.id === item.id);
+    if (index === -1) {
       return;
     }
     if (index >= itemCount) {
@@ -821,29 +832,25 @@ const ListControlled = ({
     const { start, end } = renderWindowRef.current;
     const isInWindow = index >= start && index < end;
     if (isInWindow) {
-      const item = items[index];
-      if (item) {
-        const itemEl = document.getElementById(item.id);
-        if (itemEl) {
-          debugScroll(
-            `scrollToIndex(${index}, "${reason}") is in render window, scrolling "${item.value}" right away`,
-          );
-          scrollIntoViewWithStickyAwareness(itemEl);
-          // Dispatch after scroll so listeners see the final scroll position.
-          const listContainerEl = ref.current;
-          if (listContainerEl) {
-            dispatchEventFromElement(listContainerEl, "navi_list_scroll", {
-              item,
-            });
-          }
-          return;
+      const itemEl = document.getElementById(item.id);
+      if (itemEl) {
+        debugScroll(
+          `scrollToItem("${item.value}", "${reason}") is in render window, scrolling "${item.value}" right away`,
+        );
+        scrollIntoViewWithStickyAwareness(itemEl);
+        // Dispatch after scroll so listeners see the final scroll position.
+        const listContainerEl = ref.current;
+        if (listContainerEl) {
+          dispatchEventFromElement(listContainerEl, "navi_list_scroll", {
+            item,
+          });
         }
+        return;
       }
     }
     // Not in DOM — shift the render window. The item will read
     // pendingScrollRef on mount and call scrollIntoViewWithStickyAwareness,
     // then call onScrolled so we can dispatch navi_list_scroll.
-    const item = items[index];
     pendingScrollRef.current = {
       id: item.id,
       onScrolled: (scrolledItem) => {
@@ -862,7 +869,7 @@ const ListControlled = ({
     updateRenderWindow(
       newStart,
       newEnd,
-      `scrollToIndex(${index}, "${reason}") is out of render window`,
+      `scrollToItem("${item.value}", "${reason}") is out of render window`,
     );
   };
 
@@ -883,11 +890,11 @@ const ListControlled = ({
   // on hidden elements); re-runs automatically every time the ancestor opens.
   useOpenedLayoutEffect(ref, () => {
     const items = tracker.itemsSignal.peek();
-    const firstSelectedIndex = items.findIndex((i) => i.selected);
-    if (firstSelectedIndex !== -1) {
-      scrollToIndex(firstSelectedIndex, "scroll to selected");
+    const firstSelected = items.find((i) => i.selected);
+    if (firstSelected) {
+      scrollToItem(firstSelected, "scroll to selected");
     } else {
-      scrollToIndex(0, "scroll to top (no selected item)");
+      scrollToItem(items[0], "scroll to top (no selected item)");
     }
   }, []);
 
@@ -909,12 +916,12 @@ const ListControlled = ({
       }
       savedScrollItemIdRef.current = null;
       const items = tracker.itemsSignal.peek();
-      const index = items.findIndex((i) => i.id === savedScrollItemId);
-      if (index === -1) {
+      const item = items.find((i) => i.id === savedScrollItemId);
+      if (!item) {
         return;
       }
       debugScroll("Restoring scroll to item id", savedScrollItemId);
-      scrollToIndex(index, "restore scroll");
+      scrollToItem(item, "restore scroll");
       return;
     }
 
@@ -951,7 +958,8 @@ const ListControlled = ({
       }
     }
     // -> scroll to the top
-    scrollToIndex(0, "search changed top matches, scrolling to top");
+    const items = tracker.itemsSignal.peek();
+    scrollToItem(items[0], "search changed top matches, scrolling to top");
   });
 
   // Scroll listener — slides the window as the user scrolls.
@@ -1057,32 +1065,23 @@ const ListControlled = ({
         if (!item) {
           return;
         }
-        const items = tracker.itemsSignal.peek();
-        const index = items.findIndex((i) => i.id === item.id);
-        if (index === -1) {
-          return;
-        }
-        // navi_list_scroll is dispatched by scrollToIndex after the scroll
-        // completes (including the async path via itemIdToScrollOnMountRef).
-        scrollToIndex(index, "navi_list_request_scroll_at");
+        // navi_list_scroll is dispatched by scrollToItem after the scroll
+        // completes (including the async path via pendingScrollRef).
+        scrollToItem(item, "navi_list_request_scroll_at");
       }}
       onnavi_list_request_nav_at={(e) => {
-        const items = tracker.itemsSignal.peek();
-        if (items.length === 0) {
+        const { item } = e.detail;
+        if (!item) {
           return;
         }
-        const { index } = e.detail;
-        const item = items[index];
-        dispatchCustomEvent(e, "navi_list_nav", { index, item });
+        dispatchCustomEvent(e, "navi_list_nav", { item });
       }}
       onnavi_list_request_select_at={(e) => {
-        const { index } = e.detail;
-        if (index < 0) {
+        const { item } = e.detail;
+        if (!item) {
           return;
         }
-        const items = tracker.itemsSignal.peek();
-        const item = items[index];
-        dispatchCustomEvent(e, "navi_list_select", { index, item });
+        dispatchCustomEvent(e, "navi_list_select", { item });
       }}
     >
       {renderListMemoized}
