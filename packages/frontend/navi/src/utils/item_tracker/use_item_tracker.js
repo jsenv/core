@@ -85,6 +85,7 @@ const createItemTracker = (onChange) => {
 
   const countSignal = signal(0);
   const totalCountSignal = signal(0);
+  const itemsSignal = signal([]);
   const propSignals = new Map(); // propName → signal(array)
 
   const getPropSignal = (propName) => {
@@ -130,7 +131,9 @@ const createItemTracker = (onChange) => {
         }
       }
 
-      onChange?.(orderedKeys.map((key) => registrations.get(key)));
+      const items = orderedKeys.map((key) => registrations.get(key));
+      itemsSignal.value = items;
+      onChange?.(items);
     });
   };
 
@@ -259,6 +262,7 @@ const createItemTracker = (onChange) => {
 
   return {
     useTrackItem,
+    useItems: () => itemsSignal.value,
     useItemCount,
     useItemValues,
     getTrackedItemByIndex,

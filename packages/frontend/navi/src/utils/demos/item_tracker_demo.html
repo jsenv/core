@@ -6,7 +6,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" href="data:," />
     <style>
-
       body {
         margin: 20px;
         font-family: system-ui, sans-serif;
@@ -166,27 +165,34 @@
         border-radius: 4px;
         overflow-y: auto;
       }
-    
     </style>
   </head>
   <body>
     <div class="demo-container">
       <h1>Simple Item Tracker Demo</h1>
-      <p><strong>Use Case:</strong> TableRow components register themselves, TableCell components access row data by index.</p>
+      <p>
+        <strong>Use Case:</strong> TableRow components register themselves,
+        TableCell components access row data by index.
+      </p>
       <div id="app-root"></div>
       <div class="section">
         <h3>Debug Log</h3>
         <div id="log" class="log"></div>
-        <button class="btn btn--small" onclick="document.getElementById('log').textContent=''">Clear Log</button>
+        <button
+          class="btn btn--small"
+          onclick="document.getElementById('log').textContent = ''"
+        >
+          Clear Log
+        </button>
       </div>
     </div>
     <script type="module" jsenv-type="module/jsx">
       import { createContext, render } from "preact";
       import { useContext, useState } from "preact/hooks";
-      import { createItemTracker } from "../item_tracker/item_tracker.jsx";
+      import { useItemTracker } from "../item_tracker/use_item_tracker.js";
 
-      const [useRowTrackerProvider, useRegisterRow, useRow, useRows] =
-        createItemTracker();
+      const RowTrackerContext = createContext();
+      const RowContext = createContext();
 
       // Main demo app
       const App = () => {
@@ -210,7 +216,7 @@
 
         log(`🎬 App render #${renderKey}`);
 
-        const RowTrackerProvider = useRowTrackerProvider();
+        const rowTracker = useItemTracker();
 
         const addRow = () => {
           const colors = ["red", "blue", "green", "yellow"];
@@ -259,41 +265,53 @@
               </div>
             </div>
 
-            <RowTrackerProvider>
-              <div className="section">
-                <h3>📋 Table with Tracked Rows</h3>
-                <p style={{ fontSize: "12px", margin: "0 0 10px 0", color: "#666" }}>
-                  💡 Change colors using the dropdown in each row to trigger
-                  individual row re-renders. Notice how only that specific row
-                  re-renders and updates its tracked data.
-                </p>
-                <div className="table-container">
-                  <table className="table">
-                    <thead>
-                      <tr>
-                        <th>Name</th>
-                        <th>Color</th>
-                        <th>Color Override</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {rows.map(({ id, name, color }) => (
-                        <TableRow key={id} name={name} color={color}>
+            <div className="section">
+              <h3>📋 Table with Tracked Rows</h3>
+              <p
+                style={{
+                  fontSize: "12px",
+                  margin: "0 0 10px 0",
+                  color: "#666",
+                }}
+              >
+                💡 Change colors using the dropdown in each row to trigger
+                individual row re-renders. Notice how only that specific row
+                re-renders and updates its tracked data.
+              </p>
+              <div className="table-container">
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Color</th>
+                      <th>Color Override</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <RowTrackerContext.Provider value={rowTracker}>
+                      {rows.map(({ id, name, color }, index) => (
+                        <TableRow
+                          key={id}
+                          id={id}
+                          index={index}
+                          name={name}
+                          color={color}
+                        >
                           <TableCell column="name" />
                           <TableCell column="color" />
                           {/* Color selector is rendered directly in TableRow */}
                         </TableRow>
                       ))}
-                    </tbody>
-                  </table>
-                </div>
+                    </RowTrackerContext.Provider>
+                  </tbody>
+                </table>
               </div>
+            </div>
 
-              <div className="section">
-                <h3>🔍 Tracked Items Debug</h3>
-                <TrackedRowsList />
-              </div>
-            </RowTrackerProvider>
+            <div className="section">
+              <h3>🔍 Tracked Items Debug</h3>
+              <TrackedRowsList rowTracker={rowTracker} />
+            </div>
           </div>
         );
       };
@@ -309,15 +327,22 @@
       const TableRowIndexContext = createContext();
 
       // Demo components
-      const TableRow = ({ children, name, color: initialColor }) => {
+      const TableRow = ({ id, index, children, name, color: initialColor }) => {
         // Local state for color override
         const [localColor, setLocalColor] = useState(initialColor);
 
         // Use local color if it differs from initial, otherwise use initial
-        const currentColor = localColor !== initialColor ? localColor : initialColor;
+        const currentColor =
+          localColor !== initialColor ? localColor : initialColor;
 
+        const rowTracker = useContext(RowTrackerContext);
         // Register this row and get its index
-        const rowIndex = useRegisterRow({ name, color: currentColor });
+        const rowIndex = rowTracker.useTrackItem({
+          id,
+          index,
+          name,
+          color: currentColor,
+        });
 
         log(`🎬 TableRow ${rowIndex} render (${name}, color: ${currentColor})`);
 
@@ -354,8 +379,9 @@
       };
 
       const TableCell = ({ column }) => {
+        const rowTracker = useContext(RowTrackerContext);
         const rowIndex = useContext(TableRowIndexContext);
-        const rowData = useRow(rowIndex);
+        const rowData = rowTracker.getTrackedItemByIndex(rowIndex);
 
         if (!rowData) {
           return <td>❌ Row {rowIndex} not found</td>;
@@ -373,8 +399,8 @@
         );
       };
 
-      const TrackedRowsList = () => {
-        const rows = useRows();
+      const TrackedRowsList = ({ rowTracker }) => {
+        const rows = rowTracker.useItems();
 
         return (
           <div className="tracked-rows">
@@ -398,7 +424,7 @@
         );
       };
 
-            render(<App />, document.getElementById("app-root"));
+      render(<App />, document.getElementById("app-root"));
     </script>
   </body>
 </html>
