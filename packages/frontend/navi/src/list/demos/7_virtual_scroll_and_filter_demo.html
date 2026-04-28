@@ -212,7 +212,7 @@
         // Start with an item selected at index 150, well outside the initial
         // render window (0–30), to verify that the window shifts on mount.
         const [selected, setSelected] = useState(LARGE_LIST[150]);
-        const [searchText, setSearchText] = useState(null);
+        const [searchText, setSearchText] = useState("");
         const [orderedItems, getItemMatchInfo] = useSearch(
           searchText,
           LARGE_LIST,
@@ -330,7 +330,7 @@
                     No results for <em>"{searchText}"</em>
                   </span>
                   <button
-                    onClick={() => setSearchText(null)}
+                    onClick={() => setSearchText("")}
                     style={{ fontSize: "0.8em", cursor: "pointer" }}
                   >
                     Clear search
@@ -347,8 +347,9 @@
                   paddingY="12px"
                   expandX
                   border="1px solid #ccc"
+                  value={searchText}
                   uiAction={(text) => {
-                    setSearchText(text || null);
+                    setSearchText(text);
                   }}
                   style={{
                     boxSizing: "border-box",
