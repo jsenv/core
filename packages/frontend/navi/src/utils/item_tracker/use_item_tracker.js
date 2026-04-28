@@ -114,12 +114,20 @@ const createItemTracker = (onChange) => {
         countSignal.value = newCount;
       }
 
+      const prevItems = itemsSignal.peek();
+      let itemsChanged = countModified;
       const items = [];
-      for (const key of orderedKeys) {
+      for (let i = 0; i < orderedKeys.length; i++) {
+        const key = orderedKeys[i];
         const item = registrations.get(key);
         items.push(item);
+        if (!itemsChanged && prevItems[i].id !== item.id) {
+          itemsChanged = true;
+        }
       }
-      itemsSignal.value = items;
+      if (itemsChanged) {
+        itemsSignal.value = items;
+      }
 
       for (const [propName, sig] of propSignals) {
         const prev = sig.peek();
