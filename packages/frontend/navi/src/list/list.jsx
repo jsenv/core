@@ -1065,74 +1065,6 @@ const ListControlled = ({
     </Box>
   );
 };
-const LIST_STYLE_CSS_VARS = {
-  maxHeight: "--list-max-height",
-};
-const LIST_PSEUDO_CLASSES = [":-navi-void"];
-// Inner <ul> — hosts the fillers + items.
-// Creates a virtualItemHeight signal so TopFiller and BottomFiller can
-// subscribe to it independently. When virtualItemHeight is passed as a prop it
-// initialises the signal directly; otherwise UnorderedList measures a rendered
-// item after each commit and writes to the signal, causing only the fillers to
-// re-render.
-const UnorderedList = ({
-  tracker,
-  renderWindow,
-  virtualItemHeightSignal,
-  fallback,
-  matchFallback,
-  separator,
-  children,
-  ...rest
-}) => {
-  const itemCount = tracker.countSignal.value;
-  const itemTotalCount = tracker.totalCountSignal.value;
-  const showMatchFallback = itemTotalCount > 0 && itemCount === 0;
-  const showFallback = itemTotalCount === 0;
-  return (
-    <Box as="ul" {...rest} baseClassName="navi_list">
-      <TopFiller
-        virtualItemHeightSignal={virtualItemHeightSignal}
-        renderWindowStart={renderWindow.start}
-      />
-      <RenderWindowContext.Provider value={renderWindow}>
-        <SeparatorContext.Provider value={separator ?? null}>
-          <ListItemTrackerContext.Provider value={tracker}>
-            {matchFallback && (
-              <ListItem
-                role="presentation"
-                className="navi_list_item navi_list_match_fallback"
-                hidden={!showMatchFallback}
-                navi-default={
-                  typeof matchFallback === "string" ? "" : undefined
-                }
-              >
-                {matchFallback}
-              </ListItem>
-            )}
-            {fallback && (
-              <ListItem
-                role="presentation"
-                className="navi_list_item navi_list_fallback"
-                hidden={!showFallback}
-                navi-default={typeof fallback === "string" ? "" : undefined}
-              >
-                {fallback}
-              </ListItem>
-            )}
-            {children}
-          </ListItemTrackerContext.Provider>
-        </SeparatorContext.Provider>
-      </RenderWindowContext.Provider>
-      <BottomFiller
-        virtualItemHeightSignal={virtualItemHeightSignal}
-        renderWindowEnd={renderWindow.end}
-        tracker={tracker}
-      />
-    </Box>
-  );
-};
-
 const useVirtualItemHeightSignal = (ulRef, virtualItemHeightProp = 0) => {
   const virtualHeightSignalRef = useRef(null);
   if (!virtualHeightSignalRef.current) {
@@ -1162,6 +1094,84 @@ const useVirtualItemHeightSignal = (ulRef, virtualItemHeightProp = 0) => {
     virtualHeightSignal.value = measuredHeight;
   });
   return virtualHeightSignal;
+};
+
+const LIST_STYLE_CSS_VARS = {
+  maxHeight: "--list-max-height",
+};
+const LIST_PSEUDO_CLASSES = [":-navi-void"];
+// Inner <ul> — hosts the fillers + items.
+// Creates a virtualItemHeight signal so TopFiller and BottomFiller can
+// subscribe to it independently. When virtualItemHeight is passed as a prop it
+// initialises the signal directly; otherwise UnorderedList measures a rendered
+// item after each commit and writes to the signal, causing only the fillers to
+// re-render.
+const UnorderedList = ({
+  tracker,
+  renderWindow,
+  virtualItemHeightSignal,
+  fallback,
+  matchFallback,
+  separator,
+  children,
+  ...rest
+}) => {
+  return (
+    <Box as="ul" {...rest} baseClassName="navi_list">
+      <TopFiller
+        virtualItemHeightSignal={virtualItemHeightSignal}
+        renderWindowStart={renderWindow.start}
+      />
+      {matchFallback && (
+        <MatchFallback matchFallback={matchFallback} tracker={tracker} />
+      )}
+      {fallback && <Fallback fallback={fallback} tracker={tracker} />}
+      <RenderWindowContext.Provider value={renderWindow}>
+        <SeparatorContext.Provider value={separator ?? null}>
+          <ListItemTrackerContext.Provider value={tracker}>
+            {children}
+          </ListItemTrackerContext.Provider>
+        </SeparatorContext.Provider>
+      </RenderWindowContext.Provider>
+
+      <BottomFiller
+        virtualItemHeightSignal={virtualItemHeightSignal}
+        renderWindowEnd={renderWindow.end}
+        tracker={tracker}
+      />
+    </Box>
+  );
+};
+
+const MatchFallback = ({ tracker, matchFallback }) => {
+  const itemCount = tracker.countSignal.value;
+  const itemTotalCount = tracker.totalCountSignal.value;
+  const showMatchFallback = itemTotalCount > 0 && itemCount === 0;
+
+  return (
+    <ListItem
+      role="presentation"
+      className="navi_list_item navi_list_match_fallback"
+      hidden={!showMatchFallback}
+      navi-default={typeof matchFallback === "string" ? "" : undefined}
+    >
+      {matchFallback}
+    </ListItem>
+  );
+};
+const Fallback = ({ tracker, fallback }) => {
+  const itemTotalCount = tracker.totalCountSignal.value;
+  const showFallback = itemTotalCount === 0;
+  return (
+    <ListItem
+      role="presentation"
+      className="navi_list_item navi_list_fallback"
+      hidden={!showFallback}
+      navi-default={typeof fallback === "string" ? "" : undefined}
+    >
+      {fallback}
+    </ListItem>
+  );
 };
 const TopFiller = ({ virtualItemHeightSignal, renderWindowStart }) => {
   const virtualItemHeight = virtualItemHeightSignal.value;
