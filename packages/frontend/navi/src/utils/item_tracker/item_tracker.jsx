@@ -42,16 +42,20 @@ import { useLayoutEffect, useRef } from "preact/hooks";
  * INTERNALS:
  *   - registrations: Map key → data, contains only visible items
  *   - idToKey: Map id → key, stable across renders
- *   - sortedKeys: number[] of visible item keys kept sorted by visual order:
- *       when data.order is provided it is used as the sort key;
- *       otherwise the auto-incremented insertion key is used so natural
- *       (JSX declaration) order is preserved.
+ *   - orderedKeys: number[] of visible item keys in JSX render order
+ *   - keyToOrderedIndex: Map key → orderedKeys index, gives O(1) indexOf equivalent
+ *   - renderPhaseOrder: Map key → render index for the current pass (Map for O(1) has/get/set)
+ *       Built incrementally as items call syncItem in JSX order.
+ *       Cleared in the notify microtask after all layout effects have run.
+ *       First occurrence wins — layout-effect re-calls are skipped.
  *   - countSignal: signal(number), updated in microtask batch, only when count changes
  *   - propSignals: Map propName → signal(array), updated in microtask batch with element equality
  *   - onChangeRef: holds the latest onChange callback, called once per microtask batch
  *
- *   useTrackItem: updates registrations + sortedKeys synchronously during the
- *   render phase so index (= bisect position) is correct for the same commit.
+ *   useTrackItem: updates registrations + orderedKeys synchronously during the
+ *   render phase so index is correct for the same commit.
+ *   When an item changes position (e.g. useSearch reorders), it is moved with
+ *   two splices and only the affected keyToOrderedIndex range is updated.
  *   Signals and onChange are deferred to a microtask so multiple items updating
  *   in one commit cause only one notification.
  *
@@ -75,16 +79,18 @@ const createItemTracker = (onChange) => {
   const registrations = new Map(); // key → data (visible items only)
   const idToKey = new Map(); // id → insertion key (stable, auto-incremented)
   let keyCounter = 0;
-  // orderedKeys: visible item keys in natural (JSX declaration) order.
-  // Each entry is { insertionKey } so we can find and splice by key.
+  // orderedKeys: visible item keys in JSX render order.
   const orderedKeys = []; // number[]
+  // keyToOrderedIndex: O(1) equivalent of orderedKeys.indexOf(key).
+  // Kept in sync on every structural change (insert / remove / move).
+  const keyToOrderedIndex = new Map(); // key → index in orderedKeys
   const allKeys = new Set(); // all registered keys including hidden
-  // Tracks the JSX render order of visible items across the current render pass
-  // (both the synchronous render-time syncItem and the layout-effect syncItem run
-  // top-to-bottom in JSX order). notify() uses this to sort orderedKeys so that
-  // items reordered by the caller (e.g. useSearch re-sorts) are reflected in the
-  // tracker order, which drives scroll targets and separator positioning.
-  const renderPhaseKeys = [];
+  // renderPhaseOrder: key → render index for the current pass.
+  // Built incrementally as items call syncItem in JSX order.
+  // Map gives O(1) has/set/get vs the O(n) includes on a plain array.
+  // First occurrence wins — layout-effect re-calls are skipped via has().
+  // Cleared in the notify microtask after all layout effects have run.
+  const renderPhaseOrder = new Map();
 
   const countSignal = signal(0);
   const totalCountSignal = signal(0);
@@ -105,16 +111,9 @@ const createItemTracker = (onChange) => {
     notifyScheduled = true;
     queueMicrotask(() => {
       notifyScheduled = false;
+      // orderedKeys is kept correct synchronously — just clear the render pass map.
+      renderPhaseOrder.clear();
 
-      // Sort orderedKeys to match the JSX render order captured during this pass.
-      if (renderPhaseKeys.length > 0) {
-        const phaseMap = new Map(renderPhaseKeys.map((k, i) => [k, i]));
-        orderedKeys.sort(
-          (a, b) =>
-            (phaseMap.get(a) ?? Infinity) - (phaseMap.get(b) ?? Infinity),
-        );
-        renderPhaseKeys.length = 0;
-      }
       const newCount = orderedKeys.length;
       if (countSignal.peek() !== newCount) {
         countSignal.value = newCount;
@@ -161,9 +160,14 @@ const createItemTracker = (onChange) => {
   const syncItem = (key, data) => {
     if (data.hidden || data.role === "presentation") {
       registrations.delete(key);
-      const idx = orderedKeys.indexOf(key);
-      if (idx !== -1) {
+      const idx = keyToOrderedIndex.get(key);
+      if (idx !== undefined) {
         orderedKeys.splice(idx, 1);
+        keyToOrderedIndex.delete(key);
+        // Shift down indices for all keys after the removed position.
+        for (let i = idx; i < orderedKeys.length; i++) {
+          keyToOrderedIndex.set(orderedKeys[i], i);
+        }
       }
       if (data.role !== "presentation") {
         allKeys.add(key);
@@ -171,27 +175,32 @@ const createItemTracker = (onChange) => {
         allKeys.delete(key);
       }
     } else {
-      if (!orderedKeys.includes(key)) {
+      if (!keyToOrderedIndex.has(key)) {
+        keyToOrderedIndex.set(key, orderedKeys.length);
         orderedKeys.push(key);
       }
       registrations.set(key, data);
       allKeys.add(key);
-      // Record render order (first occurrence per pass wins, since both render-time
-      // and layout-effect calls run top-to-bottom in JSX order).
-      if (!renderPhaseKeys.includes(key)) {
-        renderPhaseKeys.push(key);
+      // Record render index for this pass (first occurrence wins;
+      // layout-effect re-calls are skipped because the entry already exists).
+      if (!renderPhaseOrder.has(key)) {
+        renderPhaseOrder.set(key, renderPhaseOrder.size);
       }
-      // Sort orderedKeys immediately so that indexOf() returns the correct
-      // position during this render — not a stale position from the previous
-      // render. Items not yet seen in this pass stay at the end in their
-      // previous relative order.
-      orderedKeys.sort((a, b) => {
-        const ai = renderPhaseKeys.indexOf(a);
-        const bi = renderPhaseKeys.indexOf(b);
-        const aIdx = ai === -1 ? Infinity : ai;
-        const bIdx = bi === -1 ? Infinity : bi;
-        return aIdx - bIdx;
-      });
+      // Move key to its render-order position so that keyToOrderedIndex is
+      // accurate within this render pass. targetIdx equals the number of items
+      // seen before this one in the current pass.
+      const targetIdx = renderPhaseOrder.get(key);
+      const currentIdx = keyToOrderedIndex.get(key);
+      if (currentIdx !== targetIdx) {
+        orderedKeys.splice(currentIdx, 1);
+        orderedKeys.splice(targetIdx, 0, key);
+        // Update keyToOrderedIndex only for the range that shifted.
+        const lo = currentIdx < targetIdx ? currentIdx : targetIdx;
+        const hi = currentIdx < targetIdx ? targetIdx : currentIdx;
+        for (let i = lo; i <= hi; i++) {
+          keyToOrderedIndex.set(orderedKeys[i], i);
+        }
+      }
     }
   };
 
@@ -212,9 +221,13 @@ const createItemTracker = (onChange) => {
     useLayoutEffect(() => {
       return () => {
         registrations.delete(key);
-        const idx = orderedKeys.indexOf(key);
-        if (idx !== -1) {
+        const idx = keyToOrderedIndex.get(key);
+        if (idx !== undefined) {
           orderedKeys.splice(idx, 1);
+          keyToOrderedIndex.delete(key);
+          for (let i = idx; i < orderedKeys.length; i++) {
+            keyToOrderedIndex.set(orderedKeys[i], i);
+          }
         }
         allKeys.delete(key);
         notify();
@@ -224,7 +237,7 @@ const createItemTracker = (onChange) => {
     if (data.hidden || data.role === "presentation") {
       return -1;
     }
-    return orderedKeys.indexOf(key);
+    return keyToOrderedIndex.get(key) ?? -1;
   };
 
   const getTrackedItemByIndex = (index) => {
