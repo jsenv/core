@@ -242,15 +242,15 @@
           if (!el) {
             return;
           }
-          el.dispatchEvent(
-            new CustomEvent("navi_list_request_scroll_at", {
-              detail: {
-                index: parseInt(scrollToIndex, 10),
-              },
-            }),
-          );
-          // const estimated = (el.scrollHeight / LARGE_LIST.length) * idx;
-          // el.scrollTop = estimated;
+          const index = parseInt(scrollToIndex, 10);
+          // el.dispatchEvent(
+          //   new CustomEvent("navi_list_request_scroll_at", {
+          //     detail: { index },
+          //   }),
+          // );
+          const estimated = (el.scrollHeight / LARGE_LIST.length) * index;
+          console.log("scroll to", estimated);
+          el.scrollTop = estimated;
         };
 
         return (
