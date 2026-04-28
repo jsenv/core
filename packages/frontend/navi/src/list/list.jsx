@@ -813,7 +813,7 @@ const ListControlled = ({
   });
 
   const pendingScrollRef = useRef();
-  const scrollToItem = (item, reason) => {
+  const scrollToItem = (item, reason, { block = "nearest" } = {}) => {
     if (!item) {
       return;
     }
@@ -837,8 +837,7 @@ const ListControlled = ({
         debugScroll(
           `scrollToItem("${item.value}", "${reason}") is in render window, scrolling "${item.value}" right away`,
         );
-        scrollIntoViewWithStickyAwareness(itemEl);
-        // Dispatch after scroll so listeners see the final scroll position.
+        scrollIntoViewWithStickyAwareness(itemEl, { block });
         const listContainerEl = ref.current;
         if (listContainerEl) {
           dispatchEventFromElement(listContainerEl, "navi_list_scroll", {
@@ -853,6 +852,7 @@ const ListControlled = ({
     // then call onScrolled so we can dispatch navi_list_scroll.
     pendingScrollRef.current = {
       id: item.id,
+      block,
       onScrolled: (scrolledItem) => {
         pendingScrollRef.current = null;
         const listContainerEl = ref.current;
@@ -892,9 +892,11 @@ const ListControlled = ({
     const items = tracker.itemsSignal.peek();
     const firstSelected = items.find((i) => i.selected);
     if (firstSelected) {
-      scrollToItem(firstSelected, "scroll to selected");
+      scrollToItem(firstSelected, "scroll to selected", { block: "center" });
     } else {
-      scrollToItem(items[0], "scroll to top (no selected item)");
+      scrollToItem(items[0], "scroll to top (no selected item)", {
+        block: "center",
+      });
     }
   }, []);
 
@@ -922,7 +924,7 @@ const ListControlled = ({
         return;
       }
       debugScroll("Restoring scroll to item id", savedScrollItemId);
-      scrollToItem(item, "restore scroll");
+      scrollToItem(item, "restore scroll", { block: "center" });
       return;
     }
 
@@ -1359,8 +1361,9 @@ const ListItemReal = ({
     if (!itemEl) {
       return;
     }
-    scrollIntoViewWithStickyAwareness(itemEl);
-    pendingScroll.onScrolled(item);
+    scrollIntoViewWithStickyAwareness(itemEl, {
+      block: pendingScroll.block ?? "nearest",
+    });
   }, [needScrollOnMount]);
 
   // CSS Highlight API: mark matching text ranges when highlight prop is set.
