@@ -491,7 +491,25 @@
               withSearch
               renderBudget={30}
               searchText={search}
-              separator={<Separator margin="0" />}
+              separator={(index) => {
+                if (!search) {
+                  // No search: separator between every item (original behavior).
+                  return <Separator margin="0" />;
+                }
+                // Search active: separator only between score groups
+                // (e.g. "starts with" score=1 vs "contains" score=0.5).
+                const currentItem = orderedItems[index];
+                const nextItem = orderedItems[index + 1];
+                if (!currentItem || !nextItem) {
+                  return null;
+                }
+                const { score: currentScore } = getItemMatchInfo(currentItem);
+                const { score: nextScore } = getItemMatchInfo(nextItem);
+                if (currentScore !== nextScore) {
+                  return <Separator margin="0" />;
+                }
+                return null;
+              }}
             >
               <ListItemHeader>
                 <Input

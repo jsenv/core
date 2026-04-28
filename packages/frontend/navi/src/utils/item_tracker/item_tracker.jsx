@@ -79,6 +79,12 @@ const createItemTracker = (onChange) => {
   // Each entry is { insertionKey } so we can find and splice by key.
   const orderedKeys = []; // number[]
   const allKeys = new Set(); // all registered keys including hidden
+  // Tracks the JSX render order of visible items across the current render pass
+  // (both the synchronous render-time syncItem and the layout-effect syncItem run
+  // top-to-bottom in JSX order). notify() uses this to sort orderedKeys so that
+  // items reordered by the caller (e.g. useSearch re-sorts) are reflected in the
+  // tracker order, which drives scroll targets and separator positioning.
+  const renderPhaseKeys = [];
 
   const countSignal = signal(0);
   const totalCountSignal = signal(0);
@@ -100,6 +106,15 @@ const createItemTracker = (onChange) => {
     queueMicrotask(() => {
       notifyScheduled = false;
 
+      // Sort orderedKeys to match the JSX render order captured during this pass.
+      if (renderPhaseKeys.length > 0) {
+        const phaseMap = new Map(renderPhaseKeys.map((k, i) => [k, i]));
+        orderedKeys.sort(
+          (a, b) =>
+            (phaseMap.get(a) ?? Infinity) - (phaseMap.get(b) ?? Infinity),
+        );
+        renderPhaseKeys.length = 0;
+      }
       const newCount = orderedKeys.length;
       if (countSignal.peek() !== newCount) {
         countSignal.value = newCount;
@@ -161,6 +176,11 @@ const createItemTracker = (onChange) => {
       }
       registrations.set(key, data);
       allKeys.add(key);
+      // Record render order (first occurrence per pass wins, since both render-time
+      // and layout-effect calls run top-to-bottom in JSX order).
+      if (!renderPhaseKeys.includes(key)) {
+        renderPhaseKeys.push(key);
+      }
     }
   };
 
