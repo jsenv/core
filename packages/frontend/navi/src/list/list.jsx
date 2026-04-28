@@ -928,9 +928,17 @@ const ListControlled = ({
       else if (hitEl) {
         const hitId = hitEl.id;
         const items = tracker.itemsSignal.peek();
-        const visualIndex = items.findIndex((item) => item.id === hitId);
-        firstVisibleIndex = visualIndex === -1 ? current.start : visualIndex;
-        reason = "hit item";
+        let item;
+        let index = -1;
+        for (const i of items) {
+          index++;
+          if (i.id === hitId) {
+            item = i;
+            break;
+          }
+        }
+        firstVisibleIndex = index === -1 ? current.start : index;
+        reason = `hit item ${index} ${item.value}`;
       } else {
         firstVisibleIndex = current.start;
         reason = "no hit";
