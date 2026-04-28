@@ -828,6 +828,7 @@ const ListControlled = ({
   // When scores change during an active search, scroll to top to reveal the most relevant items.
   // When search becomes empty, restore the scroll position from before the search started.
   const savedScrollTopRef = useRef(-1);
+  const savedRenderWindowRef = useRef(null);
   const topMatchScoresKeyRef = useRef("");
   useLayoutEffect(() => {
     if (!searchText) {
@@ -839,9 +840,18 @@ const ListControlled = ({
         return;
       }
       savedScrollTopRef.current = -1;
+      const savedRenderWindow = savedRenderWindowRef.current;
+      savedRenderWindowRef.current = null;
       const listContainerEl = ref.current;
       if (!listContainerEl) {
         return;
+      }
+      // Restore the render window first so the correct items are in the DOM
+      // before setting scrollTop. Without this, Preact inserts the newly
+      // visible items after BottomFiller because all their preceding siblings
+      // are null, losing the insertion anchor point.
+      if (savedRenderWindow) {
+        updateRenderWindow(savedRenderWindow.start, savedRenderWindow.end);
       }
       console.debug("Restoring scrollTop", savedScrollTop);
       listContainerEl.scrollTop = savedScrollTop;
@@ -861,12 +871,13 @@ const ListControlled = ({
     // n items are now more important to see, scrollTop to show them
     topMatchScoresKeyRef.current = topMatchScoresKey;
     if (searchTextBecomesActive) {
-      // search just started -> save scroll position to restore it in case it's cleared
+      // search just started -> save scroll position and render window to restore them if cleared
       const listContainerEl = ref.current;
       if (listContainerEl) {
         const scrollTopToSave = listContainerEl.scrollTop;
         console.debug("Saving scrollTop", scrollTopToSave);
         savedScrollTopRef.current = scrollTopToSave;
+        savedRenderWindowRef.current = renderWindowRef.current;
       }
     }
     // -> scroll to the top
