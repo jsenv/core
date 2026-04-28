@@ -944,7 +944,7 @@ const ListControlled = ({
         const listEl = listContainerEl.querySelector(".navi_list");
         const scrollContainer = getScrollContainer(listEl);
         const items = tracker.itemsSignal.peek();
-        const firstVisible = findFirstVisibleItem(
+        const firstVisible = findFirstVisible(
           listEl,
           scrollContainer,
           items,
@@ -983,7 +983,7 @@ const ListControlled = ({
       }
       const items = tracker.itemsSignal.peek();
       let reason = "";
-      const firstVisible = findFirstVisibleItem(
+      const firstVisible = findFirstVisible(
         listEl,
         scrollContainer,
         items,
@@ -1362,7 +1362,7 @@ const ListItemReal = ({
   const isPointedByProxy = Boolean(pointed);
   const isPointed = isPointedByMouse || isPointedByKeyboard || isPointedByProxy;
   const pendingScroll = pendingScrollRef.current;
-  const needScrollOnMount = pendingScroll !== null && pendingScroll.id === id;
+  const needScrollOnMount = pendingScroll && pendingScroll.id === id;
 
   useLayoutEffect(() => {
     if (!needScrollOnMount) {
@@ -1586,7 +1586,7 @@ const dispatchEventFromElement = (el, eventName, detail) => {
 // Returns { index, item, reason } or null if no item can be found.
 // Used both by the scroll listener (to slide the render window) and by the
 // search effect (to save the scroll position before searching).
-const findFirstVisibleItem = (
+const findFirstVisible = (
   listEl,
   scrollContainer,
   items,
@@ -1620,8 +1620,8 @@ const findFirstVisibleItem = (
     }
     const index = Math.floor(scrollTop / virtualItemHeight);
     return {
-      index,
       item: items[index],
+      index,
       reason: `hit filler, estimated at ${index} (${items[index]?.value})`,
     };
   }
@@ -1632,15 +1632,15 @@ const findFirstVisibleItem = (
       return null;
     }
     return {
-      index,
       item: items[index],
+      index,
       reason: `hit item at ${index} (${items[index].value})`,
     };
   }
   const fallbackIndex = renderWindowRef.current.start;
   return {
-    index: fallbackIndex,
     item: items[fallbackIndex],
+    index: fallbackIndex,
     reason: "no hit",
   };
 };
