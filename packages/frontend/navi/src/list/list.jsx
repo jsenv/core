@@ -939,6 +939,7 @@ const ListControlled = ({
       if (newEnd === itemCount) {
         newStart = Math.max(0, itemCount - renderBudget);
       }
+      console.debug("Updating render window", { newStart, newEnd });
       updateRenderWindow(newStart, newEnd);
     };
     scrollContainer.addEventListener("scroll", onScroll, { passive: true });
