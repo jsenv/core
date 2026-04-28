@@ -104,15 +104,21 @@ const createItemTracker = (onChange) => {
     queueMicrotask(() => {
       notifyScheduled = false;
 
+      const newTotalCount = allKeys.size;
+      if (totalCountSignal.peek() !== newTotalCount) {
+        totalCountSignal.value = newTotalCount;
+      }
       const newCount = orderedKeys.length;
       if (countSignal.peek() !== newCount) {
         countSignal.value = newCount;
       }
 
-      const newTotalCount = allKeys.size;
-      if (totalCountSignal.peek() !== newTotalCount) {
-        totalCountSignal.value = newTotalCount;
+      const items = [];
+      for (const key of orderedKeys) {
+        const item = registrations.get(key);
+        items.push(item);
       }
+      itemsSignal.value = items;
 
       for (const [propName, sig] of propSignals) {
         const prev = sig.peek();
@@ -130,9 +136,6 @@ const createItemTracker = (onChange) => {
           sig.value = next;
         }
       }
-
-      const items = orderedKeys.map((key) => registrations.get(key));
-      itemsSignal.value = items;
       onChange?.(items);
     });
   };
