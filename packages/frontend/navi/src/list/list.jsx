@@ -230,13 +230,23 @@ const css = /* css */ `
      matchFallback intentionally shares the same order as fallback so it appears
      at the same visual position — after an input if present but before any items
      still displayed (non-matching items remain in DOM with hidden prop):
-       1. Input (sticky header, order: 0)
-       2. matchFallback (order: 1)
+       1. Input (sticky header, order: -2)
+       2. matchFallback (order: -1)
        3. hidden items (regular order, after DOM flow)
+       4. HOT FIX OF THE DEAD for bottom filler + preact issue: order: 1
+       5. sticky footer (order: 2)
   */
+  /* order: 0 keeps the header pinned before fallbacks (order: 1) in flex order,
+     ensuring the header (e.g. a search input) always appears above them. */
+  .navi_list_item_header {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    order: -2;
+  }
   .navi_list_fallback,
   .navi_list_no_match_fallback {
-    order: 1;
+    order: -1;
     &[navi-default] {
       display: inline;
       padding: var(--list-item-padding);
@@ -249,16 +259,14 @@ const css = /* css */ `
       display: none;
     }
   }
-
-  /* order: 0 keeps the header pinned before fallbacks (order: 1) in flex order,
-     ensuring the header (e.g. a search input) always appears above them. */
-  .navi_list_item_header {
-    position: sticky;
-    top: 0;
-    z-index: 1;
-    order: 0;
+  [navi-virtual-filler="bottom"] {
+    /* for some reason preact ends up puttin this element before the list items in some scenarios
+     I've noticed that removing the ItemIndexToScrollOnMountRefContext.Provider
+     does fix this issue (I suppose it's because it cause on less render of the list which is the problematic one)
+     this order ENSURE that even when preact hallucinates we are still correctly putting the bottom filler
+     after the list items */
+    order: 1;
   }
-
   /* order: 2 pins the footer after fallbacks (order: 1) and all items. */
   .navi_list_item_footer {
     position: sticky;
@@ -1206,12 +1214,6 @@ const BottomFiller = ({
       aria-hidden
       style={{
         height: `${heightToFillBelow}px`,
-        // for some reason preact ends up puttin this element before the list items in some scenarios
-        // I've noticed that removing the ItemIndexToScrollOnMountRefContext.Provider
-        // does fix this issue (I suppose it's because it cause on less render of the list which is the problematic one)
-        // this order ENSURE that even when preact hallucinates we are still correctly putting the bottom filler
-        // after the list items
-        order: 4,
       }}
     />
   );
