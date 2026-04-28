@@ -687,9 +687,16 @@ const ListControlled = ({
   lockSize,
   searchText,
   matchFallback,
+  debugScroll,
   ...rest
 }) => {
   import.meta.css = css;
+
+  debugScroll = debugScroll
+    ? (...args) => {
+        console.debug(...args);
+      }
+    : () => {};
 
   // Default lockSize to true when rendered inside a Dropdown.
   const isInsideDropdown = useIsInsideDropdown();
@@ -779,12 +786,19 @@ const ListControlled = ({
     const isInWindow = index >= start && index < end;
     if (isInWindow) {
       const item = items[index];
-      const itemEl = document.getElementById(item.id);
-      if (itemEl) {
-        scrollIntoViewWithStickyAwareness(itemEl);
-        return;
+      if (item) {
+        const itemEl = document.getElementById(item.id);
+        if (itemEl) {
+          scrollIntoViewWithStickyAwareness(itemEl);
+          debugScroll("Scrolled to index", index);
+          return;
+        }
       }
     }
+    debugScroll(
+      "Index out of render window, shifting window to scroll to index",
+      index,
+    );
     // Not in DOM — shift the render window. The item will read
     // itemToScrollOnMountRef on mount and call scrollIntoViewWithStickyAwareness.
     itemToScrollOnMountRef.current = index;
@@ -853,7 +867,7 @@ const ListControlled = ({
       if (savedRenderWindow) {
         updateRenderWindow(savedRenderWindow.start, savedRenderWindow.end);
       }
-      console.debug("Restoring scrollTop", savedScrollTop);
+      debugScroll("Restoring scrollTop", savedScrollTop);
 
       // Reset the flag after the browser has processed the scroll event.
       requestAnimationFrame(() => {
@@ -879,7 +893,7 @@ const ListControlled = ({
       const listContainerEl = ref.current;
       if (listContainerEl) {
         const scrollTopToSave = listContainerEl.scrollTop;
-        console.debug("Saving scrollTop", scrollTopToSave);
+        debugScroll("Saving scrollTop", scrollTopToSave);
         savedScrollTopRef.current = scrollTopToSave;
         savedRenderWindowRef.current = renderWindowRef.current;
       }
@@ -957,7 +971,7 @@ const ListControlled = ({
       if (newEnd === itemCount) {
         newStart = Math.max(0, itemCount - renderBudget);
       }
-      console.debug(`updateRenderWindow(${newStart}, ${newEnd}, "${reason}")`);
+      debugScroll(`updateRenderWindow(${newStart}, ${newEnd}, "${reason}")`);
       updateRenderWindow(newStart, newEnd);
     };
     scrollContainer.addEventListener("scroll", onScroll, { passive: true });
