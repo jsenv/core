@@ -824,9 +824,9 @@ const ListControlled = ({
             scrollToIndex(0);
           } else if (!isSearchActive && wasSearchActive) {
             // Search was just cleared — scroll back to the selected item so it's visible.
-            const selectedIndex = items.findIndex((i) => i.selected);
-            if (selectedIndex !== -1) {
-              scrollToIndex(selectedIndex);
+            firstSelectedIndex = items.findIndex((i) => i.selected);
+            if (firstSelectedIndex !== -1) {
+              scrollToIndex(firstSelectedIndex);
             }
             windowMatchScoresKeyRef.current = "";
           } else if (isSearchActive) {
