@@ -411,6 +411,7 @@
               expandX
               withSearch
               renderBudget={30}
+              searchText={search}
               separator={<Separator margin="0" />}
             >
               <ListItemHeader>
@@ -421,13 +422,14 @@
                 />
               </ListItemHeader>
               {orderedItems.map((item) => {
-                const { ranges } = getItemMatchInfo(item);
+                const { score, ranges } = getItemMatchInfo(item);
                 return (
                   <ListItem
                     role="option"
                     key={item}
                     value={item}
                     highlight={ranges}
+                    matchScore={score}
                     selected={selected === item}
                   >
                     {item}

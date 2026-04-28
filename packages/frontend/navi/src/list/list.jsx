@@ -610,6 +610,7 @@ const ListControlled = ({
   onListItemsChange,
   virtualItemHeight,
   lockSize,
+  searchText,
   ...rest
 }) => {
   import.meta.css = css;
@@ -689,7 +690,6 @@ const ListControlled = ({
 
   const isInitRef = useRef(true);
   const itemsRef = useRef([]);
-  const firstItemIdRef = useRef(undefined);
   const itemToScrollOnMountRef = useRef(null);
   const scrollToIndex = (index) => {
     const items = itemsRef.current;
@@ -710,6 +710,9 @@ const ListControlled = ({
     const newStart = Math.max(0, index - half);
     updateRenderWindow(newStart, newStart + renderBudget);
   };
+  const windowMatchScoresKeyRef = useRef("");
+  const searchTextRef = useRef(searchText);
+  searchTextRef.current = searchText;
   const tracker = useItemTracker({
     onChange: (items) => {
       itemsRef.current = items;
@@ -719,11 +722,6 @@ const ListControlled = ({
       const isInit = isInitRef.current;
       let firstSelectedIndex;
       if (itemCount > 0) {
-        const firstItemId = items[0].id;
-        const firstItemIdChanged =
-          !isInit && firstItemId !== firstItemIdRef.current;
-        firstItemIdRef.current = firstItemId;
-
         // When list is initiliazed (first render but not only, like every time a dialog opens for instance)
         // -> we want to scroll selected item into view
         if (isInit) {
@@ -732,11 +730,38 @@ const ListControlled = ({
           if (firstSelectedIndex !== -1) {
             scrollToIndex(firstSelectedIndex);
           }
-        } else if (firstItemIdChanged) {
-          // First item changed — the list was reordered (sort or filter).
-          // Scroll to top so the most relevant items are visible.
-          updateRenderWindow(0, renderBudget);
-          scrollToIndex(0);
+        } else {
+          const current = renderWindowRef.current;
+          const currentSearchText = searchTextRef.current;
+          const isSearchActive =
+            currentSearchText !== undefined &&
+            currentSearchText !== null &&
+            currentSearchText !== "";
+          if (current.start >= itemCount) {
+            // Render window is out of range (e.g. filter reduced the list) — reset to top.
+            updateRenderWindow(0, renderBudget);
+            scrollToIndex(0);
+          } else if (!isSearchActive) {
+            // Search was cleared — scroll back to the selected item so it's visible.
+            const selectedIndex = items.findIndex((i) => i.selected);
+            if (selectedIndex !== -1) {
+              scrollToIndex(selectedIndex);
+            }
+            windowMatchScoresKeyRef.current = "";
+          } else {
+            // Check whether the matchScores of items in the current render window changed.
+            // If they did, something sorted/filtered the visible area — scroll to top so
+            // the most relevant items are visible.
+            const windowItems = items.slice(current.start, current.end);
+            const windowMatchScoresKey = windowItems
+              .map((i) => `${i.id}:${i.matchScore ?? ""}`)
+              .join(",");
+            if (windowMatchScoresKey !== windowMatchScoresKeyRef.current) {
+              updateRenderWindow(0, renderBudget);
+              scrollToIndex(0);
+            }
+            windowMatchScoresKeyRef.current = windowMatchScoresKey;
+          }
         }
       }
       onListItemsChange(items, { isInit, firstSelectedIndex });
@@ -1029,7 +1054,7 @@ const ListItemPresentation = (props) => {
   return <Box as="li" {...props} />;
 };
 const ListItemRealOrVoid = (props) => {
-  let { id, value, hidden, selected, ...rest } = props;
+  let { id, value, hidden, selected, matchScore, ...rest } = props;
   const idDefault = useId();
   id = id || idDefault;
   const renderWindow = useContext(RenderWindowContext);
@@ -1039,6 +1064,7 @@ const ListItemRealOrVoid = (props) => {
     hidden,
     value,
     selected,
+    matchScore,
   });
   const separator = useContext(SeparatorContext);
 

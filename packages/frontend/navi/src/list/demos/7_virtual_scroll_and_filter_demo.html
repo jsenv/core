@@ -312,6 +312,7 @@
               renderBudget={30}
               fallback="No results"
               withSearch
+              searchText={searchText}
             >
               <ListItemHeader>
                 <Input
@@ -331,12 +332,13 @@
                 />
               </ListItemHeader>
               {filteredItems.map((item) => {
-                const { ranges } = getItemMatchInfo(item);
+                const { score, ranges } = getItemMatchInfo(item);
                 return (
                   <ListItem
                     key={item}
                     value={item}
                     highlight={ranges}
+                    matchScore={score}
                     selected={selected === item}
                     style={{
                       backgroundColor: SUGGESTION_BG,
