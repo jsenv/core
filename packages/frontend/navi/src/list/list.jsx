@@ -459,6 +459,16 @@ const ListInteractive = (props) => {
 
   const itemsRef = useRef([]);
 
+  const firstRenderRef = useRef(true);
+  useLayoutEffect(() => {
+    if (!firstRenderRef.current) {
+      return;
+    }
+    firstRenderRef.current = false;
+    const selectedIndex = itemsRef.current.findIndex((i) => i.selected);
+    setAnchorIndex(selectedIndex);
+  }, []);
+
   const getValueByIndex = (index) => {
     if (index === -1) {
       return undefined;
@@ -477,12 +487,9 @@ const ListInteractive = (props) => {
             keyboardInteractions
             {...props}
             uiAction={undefined}
-            onListItemsChange={(items, meta) => {
-              props.onListItemsChange?.(items, meta);
+            onListItemsChange={(items) => {
+              props.onListItemsChange?.(items);
               itemsRef.current = items;
-              if (meta.isInit) {
-                setAnchorIndex(meta.firstSelectedIndex);
-              }
             }}
             onnavi_list_request_hover={(e) => {
               const { index } = e.detail;
@@ -788,7 +795,6 @@ const ListControlled = ({
   const searchTextRef = useRef();
   let searchTextBecomesDefined = false;
   let searchTextBecomesActive = false;
-  let searchTextBecomesEmpty = false;
   if (searchTextRef.current === undefined) {
     searchTextBecomesDefined = true;
     searchTextRef.current = searchText;
@@ -797,8 +803,6 @@ const ListControlled = ({
     searchTextRef.current = searchText;
     if (!searchTextPrevious && searchText) {
       searchTextBecomesActive = true;
-    } else if (!searchText) {
-      searchTextBecomesEmpty = true;
     }
   }
 
@@ -825,35 +829,45 @@ const ListControlled = ({
   const savedScrollTopRef = useRef(-1);
   const topMatchScoresKeyRef = useRef("");
   useLayoutEffect(() => {
-    // Watch top renderBudget items regardless of current render window.
+    if (!searchText) {
+      // no search -> try to restore scroll position
+      topMatchScoresKeyRef.current = "";
+      const savedScrollTop = savedScrollTopRef.current;
+      if (savedScrollTop === -1) {
+        // nothing to restore
+        return;
+      }
+      savedScrollTopRef.current = -1;
+      const listContainerEl = ref.current;
+      if (!listContainerEl) {
+        return;
+      }
+      listContainerEl.scrollTop = savedScrollTop;
+      return;
+    }
+
+    // During search -> watch for changes in the top items or their scores.
     const topItems = tracker.itemsSignal.peek().slice(0, renderBudget);
     const topMatchScoresKey = topItems
       .map((i) => `${i.id}:${i.matchScore ?? ""}`)
       .join(",");
     const currentTopMatchScore = topMatchScoresKeyRef.current;
-    if (topMatchScoresKey !== currentTopMatchScore) {
-      topMatchScoresKeyRef.current = topMatchScoresKey;
-      // Save scroll position before search starts.
-      if (searchTextBecomesActive) {
-        const listContainerEl = ref.current;
-        if (listContainerEl) {
-          savedScrollTopRef.current = listContainerEl.scrollTop;
-        }
-      }
-      scrollToIndex(0);
+    if (topMatchScoresKey === currentTopMatchScore) {
+      // no changes in top matches -> no need to scroll
+      return;
     }
-  });
-  // Restore scroll position when search is cleared.
-  useLayoutEffect(() => {
-    if (searchTextBecomesEmpty) {
+    // n items are now more important to see, scrollTop to show them
+    topMatchScoresKeyRef.current = topMatchScoresKey;
+    if (searchTextBecomesActive) {
+      // search just started -> save scroll position to restore it in case it's cleared
       const listContainerEl = ref.current;
-      if (listContainerEl && savedScrollTopRef.current !== -1) {
-        listContainerEl.scrollTop = savedScrollTopRef.current;
-        savedScrollTopRef.current = -1;
+      if (listContainerEl) {
+        savedScrollTopRef.current = listContainerEl.scrollTop;
       }
-      topMatchScoresKeyRef.current = "";
     }
-  }, [searchTextBecomesEmpty]);
+    // -> scroll to the top
+    scrollToIndex(0);
+  });
 
   // Scroll listener — slides the window as the user scrolls.
   useLayoutEffect(() => {
