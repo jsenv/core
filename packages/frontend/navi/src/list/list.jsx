@@ -886,7 +886,6 @@ const ListControlled = ({
       if (itemCount <= renderBudget) {
         return;
       }
-
       const oneRealListItemInDom = Boolean(
         listEl.querySelector(REAL_LIST_ITEM_SELECTOR),
       );
@@ -915,12 +914,14 @@ const ListControlled = ({
           break;
         }
       }
+      let reason = "";
       if (hitFiller) {
         const virtualItemHeight = virtualItemHeightSignal.peek();
         if (virtualItemHeight === 0) {
           return;
         }
         firstVisibleIndex = Math.floor(scrollTop / virtualItemHeight);
+        reason = "hit filler";
       }
       // Map the hit DOM element to its visual index via itemsRef
       // (DOM order and visual order diverge when items have CSS `order`).
@@ -929,8 +930,10 @@ const ListControlled = ({
         const items = tracker.itemsSignal.peek();
         const visualIndex = items.findIndex((item) => item.id === hitId);
         firstVisibleIndex = visualIndex === -1 ? current.start : visualIndex;
+        reason = "hit item";
       } else {
         firstVisibleIndex = current.start;
+        reason = "no hit";
       }
 
       const half = Math.floor(renderBudget / 2);
@@ -939,7 +942,7 @@ const ListControlled = ({
       if (newEnd === itemCount) {
         newStart = Math.max(0, itemCount - renderBudget);
       }
-      console.debug("Updating render window", { newStart, newEnd });
+      console.debug(`updateRenderWindow(${newStart}, ${newEnd}, "${reason}")`);
       updateRenderWindow(newStart, newEnd);
     };
     scrollContainer.addEventListener("scroll", onScroll, { passive: true });
