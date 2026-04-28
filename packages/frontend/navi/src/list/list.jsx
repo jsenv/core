@@ -4,7 +4,7 @@ import {
   scrollIntoViewWithStickyAwareness,
   visibleRectEffect,
 } from "@jsenv/dom";
-import { signal, useSignalEffect } from "@preact/signals";
+import { signal } from "@preact/signals";
 import { createContext } from "preact";
 import {
   useCallback,
@@ -785,67 +785,75 @@ const ListControlled = ({
     updateRenderWindow(newStart, newStart + renderBudget);
   };
 
-  // scroll at selected logic
-  const needScrollAtSelectedRef = useRef(undefined);
-  const searchTextRef = useRef(undefined);
+  const searchTextRef = useRef();
+  let searchTextBecomesDefined = false;
+  let searchTextBecomesActive = false;
+  let searchTextBecomesEmpty = false;
   if (searchTextRef.current === undefined) {
+    searchTextBecomesDefined = true;
     searchTextRef.current = searchText;
-    if (!searchText) {
-      // no search text and first mount -> try to scroll at selected
-      needScrollAtSelectedRef.current = true;
-    }
   } else {
-    const prevSearchText = searchTextRef.current;
-    if (prevSearchText && !searchText) {
-      // search text becomes empty -> try to scroll at selected
-      needScrollAtSelectedRef.current = true;
-    }
+    const searchTextPrevious = searchTextRef.current;
     searchTextRef.current = searchText;
+    if (!searchTextPrevious && searchText) {
+      searchTextBecomesActive = true;
+    } else if (!searchText) {
+      searchTextBecomesEmpty = true;
+    }
   }
+
+  // On first mount, scroll to the selected item (or to top as fallback).
+  const needScrollAtSelectedRef = useRef(searchTextBecomesDefined);
   const needScrollAtSelected = needScrollAtSelectedRef.current;
   useLayoutEffect(() => {
     if (!needScrollAtSelected) {
       return;
     }
-    // no need to reset the ref, it can be true only for one render
+    needScrollAtSelectedRef.current = false;
     const items = tracker.itemsSignal.peek();
     const firstSelectedIndex = items.findIndex((i) => i.selected);
     if (firstSelectedIndex !== -1) {
       scrollToIndex(firstSelectedIndex);
-    }
-  }, [needScrollAtSelected]);
-
-  // Scroll top when top visible items match score changes
-  // (the idea is that when more relevant items are displayed on top we want to scroll to them)
-  const windowMatchScoresKeyRef = useRef("");
-  useSignalEffect(() => {
-    const items = tracker.itemsSignal.peek();
-    const itemCount = items.length;
-    const currentSearchText = searchTextRef.current;
-    const isSearchActive =
-      currentSearchText !== undefined &&
-      currentSearchText !== null &&
-      currentSearchText !== "";
-    if (!isSearchActive) {
-      windowMatchScoresKeyRef.current = "";
-      return;
-    }
-    const current = renderWindowRef.current;
-    const windowItems = items.slice(current.start, current.end);
-    const windowMatchScoresKey = windowItems
-      .map((i) => `${i.id}:${i.matchScore ?? ""}`)
-      .join(",");
-    if (windowMatchScoresKey !== windowMatchScoresKeyRef.current) {
-      windowMatchScoresKeyRef.current = windowMatchScoresKey;
-      updateRenderWindow(0, renderBudget);
+    } else {
       scrollToIndex(0);
     }
-    // Keep render window in range when item count shrinks during search.
-    if (itemCount > 0 && current.start >= itemCount) {
-      updateRenderWindow(0, renderBudget);
+  }, [searchTextBecomesDefined]);
+
+  // Watch scores of the top renderBudget items.
+  // When scores change during an active search, scroll to top to reveal the most relevant items.
+  // When search becomes empty, restore the scroll position from before the search started.
+  const savedScrollTopRef = useRef(-1);
+  const topMatchScoresKeyRef = useRef("");
+  useLayoutEffect(() => {
+    // Watch top renderBudget items regardless of current render window.
+    const topItems = tracker.itemsSignal.peek().slice(0, renderBudget);
+    const topMatchScoresKey = topItems
+      .map((i) => `${i.id}:${i.matchScore ?? ""}`)
+      .join(",");
+    const currentTopMatchScore = topMatchScoresKeyRef.current;
+    if (topMatchScoresKey !== currentTopMatchScore) {
+      topMatchScoresKeyRef.current = topMatchScoresKey;
+      // Save scroll position before search starts.
+      if (searchTextBecomesActive) {
+        const listContainerEl = ref.current;
+        if (listContainerEl) {
+          savedScrollTopRef.current = listContainerEl.scrollTop;
+        }
+      }
       scrollToIndex(0);
     }
   });
+  // Restore scroll position when search is cleared.
+  useLayoutEffect(() => {
+    if (searchTextBecomesEmpty) {
+      const listContainerEl = ref.current;
+      if (listContainerEl && savedScrollTopRef.current !== -1) {
+        listContainerEl.scrollTop = savedScrollTopRef.current;
+        savedScrollTopRef.current = -1;
+      }
+      topMatchScoresKeyRef.current = "";
+    }
+  }, [searchTextBecomesEmpty]);
 
   // Scroll listener — slides the window as the user scrolls.
   useLayoutEffect(() => {
