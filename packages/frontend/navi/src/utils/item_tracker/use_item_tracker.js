@@ -1,4 +1,4 @@
-import { signal } from "@preact/signals";
+import { batch, signal } from "@preact/signals";
 import { useLayoutEffect, useRef } from "preact/hooks";
 
 /*
@@ -91,35 +91,38 @@ const createItemTracker = (onChange) => {
     queueMicrotask(() => {
       notifyScheduled = false;
 
-      const newTotalCount = allKeys.size;
-      if (totalCountSignal.peek() !== newTotalCount) {
-        totalCountSignal.value = newTotalCount;
-      }
-      const newCount = orderedKeys.length;
-      const countModified = countSignal.peek() !== newCount;
-      if (countModified) {
-        countSignal.value = newCount;
-      }
+      batch(() => {
+        const newTotalCount = allKeys.size;
+        if (totalCountSignal.peek() !== newTotalCount) {
+          totalCountSignal.value = newTotalCount;
+        }
+        const newCount = orderedKeys.length;
+        const countModified = countSignal.peek() !== newCount;
+        if (countModified) {
+          countSignal.value = newCount;
+        }
 
-      const prevItems = itemsSignal.peek();
-      let itemsChanged = countModified;
-      const items = [];
-      for (let i = 0; i < orderedKeys.length; i++) {
-        const key = orderedKeys[i];
-        const item = registrations.get(key);
-        items.push(item);
-        if (!itemsChanged) {
-          const id = item.id;
-          const prevId = prevItems[i].id;
-          if (id !== prevId) {
-            itemsChanged = true;
+        const prevItems = itemsSignal.peek();
+        let itemsChanged = countModified;
+        const items = [];
+        for (let i = 0; i < orderedKeys.length; i++) {
+          const key = orderedKeys[i];
+          const item = registrations.get(key);
+          items.push(item);
+          if (!itemsChanged) {
+            const id = item.id;
+            const prevId = prevItems[i].id;
+            if (id !== prevId) {
+              itemsChanged = true;
+            }
           }
         }
-      }
-      if (itemsChanged) {
-        itemsSignal.value = items;
-        onChange?.(items);
-      }
+
+        if (itemsChanged) {
+          itemsSignal.value = items;
+          onChange?.(items);
+        }
+      });
     });
   };
 
