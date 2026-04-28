@@ -783,6 +783,13 @@ const ListControlled = ({
   const itemToScrollOnMountRef = useRef(null);
   const scrollToIndex = (index) => {
     const items = tracker.itemsSignal.peek();
+    const itemCount = items.length;
+    if (itemCount === 0) {
+      return;
+    }
+    if (index >= itemCount) {
+      index = itemCount - 1;
+    }
     const { start, end } = renderWindowRef.current;
     const isInWindow = index >= start && index < end;
     if (isInWindow) {
