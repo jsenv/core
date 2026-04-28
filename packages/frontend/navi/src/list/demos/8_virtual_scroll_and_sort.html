@@ -21,21 +21,8 @@
     <div id="app"></div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useState, useRef, useEffect } from "preact/hooks";
-
-      /**
-       * Virtual Scroll + Sort Demo
-       *
-       * 200 items — virtual scroll is always active (maxHeight="220px").
-       * Typing in the input re-sorts items in state (no items are hidden):
-       *   1. items that START with the query (alphabetically)
-       *   2. items that CONTAIN the query (alphabetically)
-       *   3. everything else at the end
-       *
-       * No items are hidden — filter state drives sort only. The Input is
-       * a plain input; keyboard shortcuts are not wired to the list.
-       */
-
+      import { signal } from "@preact/signals";
+      import { useState, useRef } from "preact/hooks";
       import {
         Input,
         List,
@@ -44,6 +31,24 @@
         useSearch,
         Separator,
       } from "@jsenv/navi";
+
+      const domItemsSignal = signal(0);
+      const peakDomItemsSignal = signal(0);
+      const observer = new MutationObserver(() => {
+        const app = document.getElementById("app");
+        if (!app) {
+          return;
+        }
+        const count = app.querySelectorAll("[navi-list-item-real]").length;
+        domItemsSignal.value = count;
+        if (count > peakDomItemsSignal.value) {
+          peakDomItemsSignal.value = count;
+        }
+      });
+      observer.observe(document.getElementById("app"), {
+        childList: true,
+        subtree: true,
+      });
 
       const ALL_ITEMS = [
         "JavaScript",
@@ -259,7 +264,9 @@
 
       // Sort items based on a filter string — now handled by useSearch.
 
-      const StatsBar = ({ totalItems, domItems }) => {
+      const StatsBar = ({ totalItems }) => {
+        const domItems = domItemsSignal.value;
+        const peakDomItems = peakDomItemsSignal.value;
         const savedFromDom = totalItems - domItems;
         return (
           <div
@@ -341,6 +348,34 @@
                   letterSpacing: "0.05em",
                 }}
               >
+                Peak DOM
+              </span>
+              <span
+                style={{
+                  fontWeight: "bold",
+                  fontSize: "1.1rem",
+                  color: peakDomItems >= totalItems ? "#ce9178" : "#4ec9b0",
+                }}
+              >
+                {peakDomItems}
+              </span>
+            </div>
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: "2px",
+              }}
+            >
+              <span
+                style={{
+                  color: "#888",
+                  fontSize: "0.7rem",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                }}
+              >
                 Saved from DOM
               </span>
               <span
@@ -362,31 +397,36 @@
         const [selected, setSelected] = useState(
           ALL_ITEMS[ALL_ITEMS.length - 1],
         );
-        const [domItems, setDomItems] = useState(0);
+        const [scrollToIndex, setScrollToIndex] = useState("");
         const listRef = useRef(null);
         const [orderedItems, getItemMatchInfo] = useSearch(search, ALL_ITEMS);
 
-        useEffect(() => {
-          const updateCount = () => {
-            if (!listRef.current) {
-              return;
-            }
-            setDomItems(
-              listRef.current.querySelectorAll("[role='option']").length,
-            );
-          };
-          updateCount();
-          const observer = new MutationObserver(updateCount);
-          if (listRef.current) {
-            observer.observe(listRef.current, {
-              childList: true,
-              subtree: true,
-            });
+        const scrollTo = (position) => {
+          const containerEl = listRef.current;
+          if (!containerEl) {
+            return;
           }
-          return () => {
-            observer.disconnect();
-          };
-        }, []);
+          if (position === "top") {
+            containerEl.scrollTop = 0;
+          } else if (position === "middle") {
+            containerEl.scrollTop = containerEl.scrollHeight / 2;
+          } else if (position === "bottom") {
+            containerEl.scrollTop = containerEl.scrollHeight;
+          }
+        };
+
+        const scrollToItem = () => {
+          const idx = parseInt(scrollToIndex, 10);
+          if (isNaN(idx)) {
+            return;
+          }
+          const el = listRef.current;
+          if (!el) {
+            return;
+          }
+          const estimated = (el.scrollHeight / ALL_ITEMS.length) * idx;
+          el.scrollTop = estimated;
+        };
 
         return (
           <div>
@@ -395,12 +435,52 @@
               ~200 real tech names — virtual scroll active. Typing re-sorts:
               starts-with matches first, then contains, nothing is hidden.
             </p>
-            <StatsBar totalItems={ALL_ITEMS.length} domItems={domItems} />
+            <StatsBar totalItems={ALL_ITEMS.length} />
             {selected && (
               <p style="font-size:13px;color:#1a73e8">
                 Selected: <b>{selected}</b>
               </p>
             )}
+            {/* Programmatic scroll controls */}
+            <fieldset
+              style={{
+                display: "flex",
+                gap: "8px",
+                flexWrap: "wrap",
+                marginBottom: "10px",
+                alignItems: "center",
+              }}
+            >
+              <legend style={{ fontSize: "0.85rem", color: "#555" }}>
+                Scroll to
+              </legend>
+              <button onClick={() => scrollTo("top")}>Top</button>
+              <button onClick={() => scrollTo("middle")}>Middle</button>
+              <button onClick={() => scrollTo("bottom")}>Bottom</button>
+              <span
+                style={{ display: "flex", gap: "4px", alignItems: "center" }}
+              >
+                <span style={{ fontSize: "0.85rem", color: "#555" }}>
+                  Item index:
+                </span>
+                <input
+                  type="number"
+                  min="0"
+                  max={ALL_ITEMS.length - 1}
+                  value={scrollToIndex}
+                  onInput={(e) => {
+                    setScrollToIndex(e.target.value);
+                  }}
+                  style={{
+                    width: "70px",
+                    padding: "4px 6px",
+                    border: "1px solid #ccc",
+                    borderRadius: "4px",
+                  }}
+                />
+                <button onClick={scrollToItem}>Go</button>
+              </span>
+            </fieldset>
             <List
               listRole="listbox"
               fallback="No results"
@@ -416,8 +496,16 @@
               <ListItemHeader>
                 <Input
                   placeholder="Sort suggestions…"
+                  paddingX="8px"
+                  paddingY="12px"
                   expandX
+                  border="1px solid #ccc"
                   uiAction={(v) => setSearch(v)}
+                  style={{
+                    boxSizing: "border-box",
+                    borderRadius: "6px",
+                    fontSize: "1rem",
+                  }}
                 />
               </ListItemHeader>
               {orderedItems.map((item) => {

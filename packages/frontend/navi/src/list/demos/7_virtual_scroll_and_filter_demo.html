@@ -126,7 +126,7 @@
         if (!root) {
           return;
         }
-        const count = root.querySelectorAll(".navi_list_item").length;
+        const count = root.querySelectorAll("[navi-list-item-real]").length;
         domItemsSignal.value = count;
         if (count > peakDomItemsSignal.value) {
           peakDomItemsSignal.value = count;
