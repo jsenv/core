@@ -359,7 +359,9 @@
 
       export const App = () => {
         const [search, setSearch] = useState("");
-        const [selected, setSelected] = useState(null);
+        const [selected, setSelected] = useState(
+          ALL_ITEMS[ALL_ITEMS.length - 1],
+        );
         const [domItems, setDomItems] = useState(0);
         const listRef = useRef(null);
         const [orderedItems, getItemMatchInfo] = useSearchOrder(

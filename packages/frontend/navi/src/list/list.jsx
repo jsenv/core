@@ -100,6 +100,10 @@ const css = /* css */ `
         #174ea6
       );
 
+      /* Disabled */
+      --list-item-color-disabled: light-dark(#aaa, #555);
+      --list-item-background-color-disabled: var(--list-item-background-color);
+
       /* Highlight (CSS Highlight API match) */
       --list-item-color-highlight: inherit;
       --list-item-background-color-highlight: #ffe066;
@@ -194,6 +198,12 @@ const css = /* css */ `
     &[data-pointed][data-selected] {
       --x-color: var(--list-item-color-pointed-selected);
       --x-background-color: var(--list-item-background-color-pointed-selected);
+    }
+    &[data-disabled] {
+      --x-color: var(--list-item-color-disabled);
+      --x-background-color: var(--list-item-background-color-disabled);
+      cursor: not-allowed;
+      pointer-events: none;
     }
     &[hidden] {
       display: none;
@@ -452,28 +462,52 @@ const ListInteractive = (props) => {
                 return;
               }
               const anchorIndex = anchorIndexRef.current;
+              const isDisabledIndex = (i) => Boolean(items[i]?.disabled);
               const resolveIndex = (direction) => {
                 if (direction === "down") {
                   if (anchorIndex === -1) {
-                    return 0;
+                    let i = 0;
+                    while (i < itemCount && isDisabledIndex(i)) {
+                      i++;
+                    }
+                    return i < itemCount ? i : anchorIndex;
                   }
-                  const belowIndex =
-                    anchorIndex < itemCount - 1 ? anchorIndex + 1 : anchorIndex;
-                  return belowIndex;
+                  let belowIndex = anchorIndex + 1;
+                  while (
+                    belowIndex < itemCount &&
+                    isDisabledIndex(belowIndex)
+                  ) {
+                    belowIndex++;
+                  }
+                  return belowIndex < itemCount ? belowIndex : anchorIndex;
                 }
                 if (direction === "up") {
                   if (anchorIndex === -1) {
-                    return itemCount - 1;
+                    let i = itemCount - 1;
+                    while (i >= 0 && isDisabledIndex(i)) {
+                      i--;
+                    }
+                    return i >= 0 ? i : anchorIndex;
                   }
-                  const aboveIndex =
-                    anchorIndex > 0 ? anchorIndex - 1 : anchorIndex;
-                  return aboveIndex;
+                  let aboveIndex = anchorIndex - 1;
+                  while (aboveIndex >= 0 && isDisabledIndex(aboveIndex)) {
+                    aboveIndex--;
+                  }
+                  return aboveIndex >= 0 ? aboveIndex : anchorIndex;
                 }
                 if (direction === "first") {
-                  return 0;
+                  let i = 0;
+                  while (i < itemCount && isDisabledIndex(i)) {
+                    i++;
+                  }
+                  return i < itemCount ? i : anchorIndex;
                 }
                 if (direction === "last") {
-                  return itemCount - 1;
+                  let i = itemCount - 1;
+                  while (i >= 0 && isDisabledIndex(i)) {
+                    i--;
+                  }
+                  return i >= 0 ? i : anchorIndex;
                 }
                 return anchorIndex;
               };
@@ -1054,7 +1088,7 @@ const ListItemPresentation = (props) => {
   return <Box as="li" {...props} />;
 };
 const ListItemRealOrVoid = (props) => {
-  let { id, value, hidden, selected, matchScore, ...rest } = props;
+  let { id, value, hidden, selected, matchScore, disabled, ...rest } = props;
   const idDefault = useId();
   id = id || idDefault;
   const renderWindow = useContext(RenderWindowContext);
@@ -1065,6 +1099,7 @@ const ListItemRealOrVoid = (props) => {
     value,
     selected,
     matchScore,
+    disabled,
   });
   const separator = useContext(SeparatorContext);
 
@@ -1083,6 +1118,7 @@ const ListItemRealOrVoid = (props) => {
       value={value}
       index={index}
       selected={selected}
+      disabled={disabled}
       {...rest}
     />
   );
@@ -1110,6 +1146,7 @@ const ListItemReal = ({
   hidden,
   highlight,
   selected,
+  disabled,
   index,
   pointed,
   children,
@@ -1187,18 +1224,29 @@ const ListItemReal = ({
       pseudoElements={LIST_ITEM_PSEUDO_ELEMENTS}
       aria-hidden={hidden ? true : undefined}
       aria-selected={selected}
+      aria-disabled={disabled ? true : undefined}
       navi-list-item=""
       data-interactive={isInteractive ? "" : undefined}
       data-anchor={isPointedByKeyboard ? "" : undefined}
+      data-disabled={disabled ? "" : undefined}
       onMouseEnter={(e) => {
+        if (disabled) {
+          return;
+        }
         dispatchBubblingEvent(e, "navi_list_request_hover", { index });
         rest.onMouseEnter?.(e);
       }}
       onMouseLeave={(e) => {
+        if (disabled) {
+          return;
+        }
         dispatchBubblingEvent(e, "navi_list_request_hover", { index: -1 });
         rest.onMouseLeave?.(e);
       }}
       onMouseDown={(e) => {
+        if (disabled) {
+          return;
+        }
         if (e.button !== 0) {
           return;
         }
@@ -1213,6 +1261,7 @@ const ListItemReal = ({
         ":-navi-pointed-by-keyboard": isPointedByKeyboard,
         ":-navi-pointed-by-proxy": isPointedByProxy,
         ":-navi-selected": selected,
+        ":disabled": Boolean(disabled),
         ...rest.basePseudoState,
       }}
     >
@@ -1238,6 +1287,10 @@ const LIST_ITEM_STYLE_CSS_VARS = {
     backgroundColor: "--list-item-background-color-selected",
     fontWeight: "--list-item-font-weight-selected",
   },
+  ":disabled": {
+    color: "--list-item-color-disabled",
+    backgroundColor: "--list-item-background-color-disabled",
+  },
   "::highlight": {
     color: "--suggestion-color-highlight",
     backgroundColor: "--suggestion-background-color-highlight",
@@ -1249,6 +1302,7 @@ const LIST_ITEM_PSEUDO_CLASSES = [
   ":-navi-pointed-by-keyboard",
   ":-navi-pointed-by-proxy",
   ":-navi-selected",
+  ":disabled",
 ];
 const LIST_ITEM_PSEUDO_ELEMENTS = ["::highlight"];
 
