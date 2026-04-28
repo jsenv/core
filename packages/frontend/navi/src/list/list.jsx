@@ -854,7 +854,11 @@ const ListControlled = ({
         updateRenderWindow(savedRenderWindow.start, savedRenderWindow.end);
       }
       console.debug("Restoring scrollTop", savedScrollTop);
-      listContainerEl.scrollTop = savedScrollTop;
+
+      // Reset the flag after the browser has processed the scroll event.
+      requestAnimationFrame(() => {
+        listContainerEl.scrollTop = savedScrollTop;
+      });
       return;
     }
 
