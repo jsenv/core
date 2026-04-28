@@ -1062,6 +1062,7 @@ const ListControlled = ({
       onnavi_list_request_scroll_at={(e) => {
         const { index } = e.detail;
         scrollToIndex(index, e.detail.event);
+        dispatchCustomEvent(e, "navi_list_scroll", { index });
       }}
       onnavi_list_request_nav_at={(e) => {
         const items = tracker.itemsSignal.peek();
