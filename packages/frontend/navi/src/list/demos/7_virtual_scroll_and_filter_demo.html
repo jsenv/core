@@ -220,7 +220,7 @@
         const [maxHeight, setMaxHeight] = useState(280);
         const [maxHeightEnabled, setMaxHeightEnabled] = useState(true);
         const [itemHeight, setItemHeight] = useState(null);
-        const [scrollToIndex, setScrollToIndex] = useState(50);
+        const [scrollToIndex, setScrollToIndex] = useState(54);
         const listRef = useRef(null);
 
         const scrollTo = (position) => {
@@ -238,16 +238,19 @@
         };
 
         const scrollToItem = () => {
-          const idx = parseInt(scrollToIndex, 10);
-          if (isNaN(idx)) {
-            return;
-          }
           const el = listRef.current;
           if (!el) {
             return;
           }
-          const estimated = (el.scrollHeight / LARGE_LIST.length) * idx;
-          el.scrollTop = estimated;
+          el.dispatchEvent(
+            new CustomEvent("navi_list_request_scroll_at", {
+              detail: {
+                index: parseInt(scrollToIndex, 10),
+              },
+            }),
+          );
+          // const estimated = (el.scrollHeight / LARGE_LIST.length) * idx;
+          // el.scrollTop = estimated;
         };
 
         return (
@@ -377,7 +380,7 @@
                         : {}),
                     }}
                   >
-                    {item}
+                    {item} #{i}
                   </ListItem>
                 );
               })}
