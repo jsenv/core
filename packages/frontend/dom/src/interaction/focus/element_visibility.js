@@ -1,6 +1,7 @@
 import { getStyle } from "../../style/dom_styles.js";
 import {
   elementIsDetails,
+  elementIsDialog,
   elementIsSummary,
   isDocumentElement,
 } from "../../utils.js";
@@ -37,6 +38,9 @@ export const getFocusVisibilityInfo = (node) => {
         return { visible: false, reason: "inside closed details element" };
       }
       // Continue checking ancestors
+    }
+    if (elementIsDialog(nodeOrAncestor) && !nodeOrAncestor.open) {
+      return { visible: false, reason: "inside closed dialog element" };
     }
     nodeOrAncestor = nodeOrAncestor.parentNode;
   }

@@ -42,6 +42,7 @@ export const elementIsDocument = (a) => a.nodeType === 9;
 export const elementIsIframe = ({ nodeName }) => nodeName === "IFRAME";
 export const elementIsDetails = ({ nodeName }) => nodeName === "DETAILS";
 export const elementIsSummary = ({ nodeName }) => nodeName === "SUMMARY";
+export const elementIsDialog = ({ nodeName }) => nodeName === "DIALOG";
 
 // should be used ONLY when an element is related to other elements that are not descendants of this element
 export const getAssociatedElements = (element) => {
