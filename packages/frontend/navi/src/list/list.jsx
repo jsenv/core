@@ -1022,9 +1022,8 @@ const ListControlled = ({
     noMatchFallback,
     separator,
     expandX,
-    children,
     renderWindow,
-    virtualItemHeight,
+    children,
   ]);
 
   return (
@@ -1207,6 +1206,12 @@ const BottomFiller = ({
       aria-hidden
       style={{
         height: `${heightToFillBelow}px`,
+        // for some reason preact ends up puttin this element before the list items in some scenarios
+        // I've noticed that removing the ItemIndexToScrollOnMountRefContext.Provider
+        // does fix this issue (I suppose it's because it cause on less render of the list which is the problematic one)
+        // this order ENSURE that even when preact hallucinates we are still correctly putting the bottom filler
+        // after the list items
+        order: 4,
       }}
     />
   );
