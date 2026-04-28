@@ -56,9 +56,9 @@ const getNaviSearchHighlight = () => {
 // (getBoundingClientRect) to find the first visible item — no height estimation.
 const RENDER_BUDGET_DEFAULT = 100;
 
-// Attribute used on <li> elements rendered by ListItem so the scroll listener
-// and filler-height calculation can find them without requiring a specific ARIA role.
-const LIST_ITEM_SELECTOR = `.navi_list_item`;
+// Attribute used on <li> elements rendered by ListItemReal so the scroll listener
+// and filler-height calculation can find real items without matching presentation ones.
+const REAL_LIST_ITEM_SELECTOR = `[navi-list-item-real]`;
 
 // Carries the render window {start, end} (or null = render all) from
 // List down to each ListItem.
@@ -219,7 +219,18 @@ const css = /* css */ `
     /* background: pink; */
   }
 
-  /* Empty state — hidden by default, shown when no list items are rendered. */
+  /* Empty state — hidden by default, shown when no list items are rendered.
+     order: 1 pushes fallbacks after all regular items in flex column layout.
+     The list children are open-ended (headers, presentation items, real items),
+     so we cannot control where the consumer places the fallback nodes in the DOM.
+     Using order ensures fallbacks always appear after items regardless of DOM order.
+     matchFallback intentionally shares the same order as fallback so it appears
+     at the same visual position — after an input if present but before any items
+     still displayed (non-matching items remain in DOM with hidden prop):
+       1. Input (sticky header, order: 0)
+       2. matchFallback (order: 1)
+       3. hidden items (regular order, after DOM flow)
+  */
   .navi_list_fallback,
   .navi_list_match_fallback {
     display: contents;
@@ -237,6 +248,8 @@ const css = /* css */ `
     }
   }
 
+  /* order: 0 keeps the header pinned before fallbacks (order: 1) in flex order,
+     ensuring the header (e.g. a search input) always appears above them. */
   .navi_list_item_header {
     position: sticky;
     top: 0;
@@ -251,7 +264,7 @@ const css = /* css */ `
 
   /* Hide groups that have no rendered items. */
   .navi_list_item_group {
-    &[data-hidden-while-empty]:not(:has([navi-list-item])) {
+    &[data-hidden-while-empty]:not(:has([navi-list-item-real])) {
       display: none;
     }
 
@@ -833,7 +846,9 @@ const ListControlled = ({
 
       let firstVisibleIndex;
       const containerRect = scrollContainer.getBoundingClientRect();
-      const items = Array.from(listEl.querySelectorAll(LIST_ITEM_SELECTOR));
+      const items = Array.from(
+        listEl.querySelectorAll(REAL_LIST_ITEM_SELECTOR),
+      );
       if (items.length === 0) {
         return;
       }
@@ -844,7 +859,7 @@ const ListControlled = ({
         if (!el || !listEl.contains(el)) {
           continue;
         }
-        const item = el.closest(LIST_ITEM_SELECTOR);
+        const item = el.closest(REAL_LIST_ITEM_SELECTOR);
         if (item) {
           hitEl = item;
           break;
@@ -1047,7 +1062,7 @@ const useVirtualItemHeightSignal = (ulRef, virtualItemHeightProp = 0) => {
     if (!ulEl) {
       return;
     }
-    const firstListItem = ulEl.querySelector(LIST_ITEM_SELECTOR);
+    const firstListItem = ulEl.querySelector(REAL_LIST_ITEM_SELECTOR);
     if (!firstListItem) {
       return;
     }
@@ -1259,7 +1274,7 @@ const ListItemReal = ({
       aria-hidden={hidden ? true : undefined}
       aria-selected={selected}
       aria-disabled={disabled ? true : undefined}
-      navi-list-item=""
+      navi-list-item-real=""
       data-interactive={isInteractive ? "" : undefined}
       data-anchor={isPointedByKeyboard ? "" : undefined}
       data-disabled={disabled ? "" : undefined}
