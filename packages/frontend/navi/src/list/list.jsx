@@ -761,8 +761,9 @@ const ListControlled = ({
     if (newStart === start && newEnd === end) {
       return;
     }
-    renderWindowRef.current = { start: newStart, end: newEnd };
-    setRenderWindow({ start: newStart, end: newEnd });
+    const renderWindow = { start: newStart, end: newEnd };
+    renderWindowRef.current = renderWindow;
+    setRenderWindow(renderWindow);
   };
 
   const tracker = useItemTracker({
