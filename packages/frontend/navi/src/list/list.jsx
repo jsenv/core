@@ -223,6 +223,7 @@ const css = /* css */ `
   .navi_list_fallback,
   .navi_list_match_fallback {
     display: contents;
+    order: 1;
     &[navi-default] {
       display: inline;
       padding: var(--list-item-padding);
@@ -240,6 +241,7 @@ const css = /* css */ `
     position: sticky;
     top: 0;
     z-index: 1;
+    order: 0;
   }
 
   ::highlight(navi-search-match) {
