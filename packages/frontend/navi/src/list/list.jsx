@@ -1153,13 +1153,15 @@ const ListItemPresentation = (props) => {
   return <Box as="li" {...props} />;
 };
 const ListItemRealOrVoid = (props) => {
-  let { id, value, hidden, selected, matchScore, disabled, ...rest } = props;
+  let { id, value, hidden, selected, matchScore, disabled, index, ...rest } =
+    props;
   const idDefault = useId();
   id = id || idDefault;
   const renderWindow = useContext(RenderWindowContext);
   const tracker = useContext(ListItemTrackerContext);
-  const index = tracker.useTrackItem(id, {
+  const visibleIndex = tracker.useTrackItem({
     id,
+    index,
     hidden,
     value,
     selected,
@@ -1171,30 +1173,30 @@ const ListItemRealOrVoid = (props) => {
   if (hidden) {
     return null;
   }
-  if (index === -1) {
+  if (visibleIndex === -1) {
     return null;
   }
-  if (index < renderWindow.start || index >= renderWindow.end) {
+  if (visibleIndex < renderWindow.start || visibleIndex >= renderWindow.end) {
     return <ListItemVoid />;
   }
   const listItemVnode = (
     <ListItemReal
       id={id}
       value={value}
-      index={index}
+      index={visibleIndex}
       selected={selected}
       disabled={disabled}
       {...rest}
     />
   );
-  if (!separator || index === 0) {
+  if (!separator || visibleIndex === 0) {
     return listItemVnode;
   }
-  const previousItem = tracker.getTrackedItemByIndex(index - 1);
-  const currentItem = tracker.getTrackedItemByIndex(index);
+  const previousItem = tracker.getTrackedItemByIndex(visibleIndex - 1);
+  const currentItem = tracker.getTrackedItemByIndex(visibleIndex);
   const separatorVnode =
     typeof separator === "function"
-      ? separator(index - 1, { previousItem, currentItem })
+      ? separator(visibleIndex - 1, { previousItem, currentItem })
       : separator;
   return (
     <>

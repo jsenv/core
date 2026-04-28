@@ -109,8 +109,8 @@
               read-only content.
             </p>
             <List>
-              {FRUITS.slice(0, 5).map((fruit) => (
-                <ListItem key={fruit} value={fruit}>
+              {FRUITS.slice(0, 5).map((fruit, i) => (
+                <ListItem key={fruit} index={i} value={fruit}>
                   {fruit}
                 </ListItem>
               ))}
@@ -170,9 +170,10 @@
                   setSelected(value);
                 }}
               >
-                {FRUITS.map((fruit) => (
+                {FRUITS.map((fruit, i) => (
                   <ListItem
                     key={fruit}
+                    index={i}
                     value={fruit}
                     selected={selected === fruit}
                     pointed={
@@ -288,11 +289,12 @@
                   }}
                 />
               </ListItemHeader>
-              {FRUITS.map((fruit) => {
+              {FRUITS.map((fruit, i) => {
                 const { match, ranges } = getItemMatchInfo(fruit);
                 return (
                   <ListItem
                     key={fruit}
+                    index={i}
                     value={fruit}
                     selected={selected === fruit}
                     hidden={!match}
@@ -349,9 +351,10 @@
                 closeList();
               }}
             >
-              {FRUITS.slice(0, 8).map((fruit) => (
+              {FRUITS.slice(0, 8).map((fruit, i) => (
                 <ListItem
                   key={fruit}
+                  index={i}
                   value={fruit}
                   selected={selected === fruit}
                 >

@@ -152,10 +152,11 @@
               style={{ "--max-height": "220px" }}
               searchText={query}
             >
-              {FRUITS.map((fruit) => (
+              {FRUITS.map((fruit, i) => (
                 <ListItem
                   role="option"
                   key={fruit}
+                  index={i}
                   value={fruit}
                   selected={selected === fruit}
                   hidden={!matches(fruit)}
@@ -205,10 +206,11 @@
               popover
               style={{ "--max-height": "220px" }}
             >
-              {COUNTRIES.map((country) => (
+              {COUNTRIES.map((country, i) => (
                 <ListItem
                   role="option"
                   key={country.code}
+                  index={i}
                   value={country.name}
                   selected={selected === country.code}
                   hidden={!matches(country)}
@@ -288,6 +290,7 @@
                 >
                   <ListItem
                     role="option"
+                    index={0}
                     value="Option A"
                     selected={selected === "option-a"}
                     hidden={!matchesQuery("Option A", descriptionA)}
@@ -307,6 +310,7 @@
                   </ListItem>
                   <ListItem
                     role="option"
+                    index={1}
                     value="Option B"
                     selected={selected === "option-b"}
                     hidden={!matchesQuery("Option B", descriptionB)}
@@ -326,6 +330,7 @@
                   </ListItem>
                   <ListItem
                     role="option"
+                    index={2}
                     value="Option C"
                     selected={selected === "option-c"}
                     hidden={!matchesQuery("Option C", descriptionC)}
@@ -362,6 +367,7 @@
                 >
                   <ListItem
                     role="option"
+                    index={0}
                     value="Option A"
                     selected={selected === "option-a"}
                     hidden={!matchesQuery("Option A", descriptionA)}
@@ -387,6 +393,7 @@
                   </ListItem>
                   <ListItem
                     role="option"
+                    index={1}
                     value="Option B"
                     selected={selected === "option-b"}
                     hidden={!matchesQuery("Option B", descriptionB)}
@@ -412,6 +419,7 @@
                   </ListItem>
                   <ListItem
                     role="option"
+                    index={2}
                     value="Option C"
                     selected={selected === "option-c"}
                     hidden={!matchesQuery("Option C", descriptionC)}
@@ -480,10 +488,11 @@
               popover
               style={{ "--max-height": "220px" }}
             >
-              {FRUITS.map((fruit) => (
+              {FRUITS.map((fruit, i) => (
                 <ListItem
                   role="option"
                   key={fruit}
+                  index={i}
                   value={fruit}
                   selected={query === fruit}
                   hidden={!matches(fruit)}
@@ -543,10 +552,11 @@
                   popover
                   style={{ "--max-height": "180px" }}
                 >
-                  {FRUITS.map((fruit) => (
+                  {FRUITS.map((fruit, i) => (
                     <ListItem
                       role="option"
                       key={fruit}
+                      index={i}
                       value={fruit}
                       selected={fruitQuery === fruit}
                       hidden={!fruitMatches(fruit)}
@@ -575,10 +585,11 @@
                   popover
                   style={{ "--max-height": "180px" }}
                 >
-                  {COUNTRIES.map((c) => (
+                  {COUNTRIES.map((c, i) => (
                     <ListItem
                       role="option"
                       key={c.code}
+                      index={i}
                       value={c.name}
                       selected={countryQuery === c.name}
                       hidden={!countryMatches(c)}

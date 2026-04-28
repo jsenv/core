@@ -358,10 +358,11 @@
                   />
                 </li>
 
-                {ITEMS.map((item) => (
+                {ITEMS.map((item, i) => (
                   <ListItem
                     role="option"
                     key={item.name}
+                    index={i}
                     value={item}
                     selected={selected === item}
                   >

@@ -31,7 +31,7 @@
 import { createContext } from "preact";
 import { useContext, useMemo, useRef } from "preact/hooks";
 
-import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
+import { compareTwoJsValues } from "../compare_two_js_values.js";
 
 export const createIsolatedItemTracker = () => {
   // Producer contexts (ref-based, no re-renders)

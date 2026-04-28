@@ -151,12 +151,13 @@
                   uiAction={(v) => setSearch(v)}
                 />
               </ListItemHeader>
-              {orderedFruits.map((fruit) => {
+              {orderedFruits.map((fruit, i) => {
                 const { score, ranges } = getItemMatchInfo(fruit);
                 return (
                   <ListItem
                     role="option"
                     key={fruit}
+                    index={i}
                     value={fruit}
                     highlight={ranges}
                     matchScore={score}
@@ -266,12 +267,13 @@
                 />
               </div>
             </ListItemHeader>
-            {orderedCountries.map((country) => {
+            {orderedCountries.map((country, i) => {
               const { score, ranges } = getItemMatchInfo(country);
               return (
                 <ListItem
                   role="option"
                   key={country}
+                  index={i}
                   value={country}
                   selected={selected === country}
                   highlight={ranges}
@@ -400,12 +402,13 @@
                 </span>
               </div>
             </ListItemHeader>
-            {ANIMALS.map((animal) => (
+            {ANIMALS.map((animal, i) => (
               <ListItem
                 role="option"
                 flex
                 alignY="center"
                 key={animal}
+                index={i}
                 value={animal}
                 selected={selected === animal}
                 height="60px"

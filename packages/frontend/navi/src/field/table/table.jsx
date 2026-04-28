@@ -102,9 +102,9 @@ const [useColumnTrackerProviders, useRegisterColumn, useColumnByIndex] =
   createIsolatedItemTracker();
 
 const TableRowTrackerContext = createContext(null);
-const useRegisterRow = (id, data) => {
+const useRegisterRow = (rowItem) => {
   const tracker = useContext(TableRowTrackerContext);
-  return tracker.useTrackItem(id, data);
+  return tracker.useTrackItem(rowItem);
 };
 const useRowByIndex = (index) => {
   const tracker = useContext(TableRowTrackerContext);
@@ -390,7 +390,7 @@ export const Tr = ({ id, index, height, children }) => {
     // we need strings as this value is going to be used in data attributes and when generating cell ids
     id = String(id);
   }
-  const rowIndex = useRegisterRow(id, { id, height }, index);
+  const rowIndex = useRegisterRow({ id, index, height });
   const row = useRowByIndex(rowIndex);
   const ColumnConsumerProvider = useContext(ColumnConsumerProviderContext);
 

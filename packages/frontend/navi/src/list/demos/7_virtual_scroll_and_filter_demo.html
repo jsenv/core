@@ -358,11 +358,12 @@
                   }}
                 />
               </ListItemHeader>
-              {orderedItems.map((item) => {
+              {orderedItems.map((item, i) => {
                 const { match, score, ranges } = getItemMatchInfo(item);
                 return (
                   <ListItem
                     key={item}
+                    index={i}
                     value={item}
                     highlight={ranges}
                     matchScore={score}
