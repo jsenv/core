@@ -121,8 +121,12 @@ const createItemTracker = (onChange) => {
         const key = orderedKeys[i];
         const item = registrations.get(key);
         items.push(item);
-        if (!itemsChanged && prevItems[i].id !== item.id) {
-          itemsChanged = true;
+        if (!itemsChanged) {
+          const id = item.id;
+          const prevId = prevItems[i].id;
+          if (id !== prevId) {
+            itemsChanged = true;
+          }
         }
       }
       if (itemsChanged) {
@@ -131,13 +135,15 @@ const createItemTracker = (onChange) => {
 
       for (const [propName, sig] of propSignals) {
         const prev = sig.peek();
-        const next = orderedKeys.map((key) => registrations.get(key)[propName]);
         let changed = countModified;
-        if (!changed) {
-          for (let i = 0; i < next.length; i++) {
-            if (prev[i] !== next[i]) {
+        const next = [];
+        for (let i = 0; i < orderedKeys.length; i++) {
+          const value = registrations.get(orderedKeys[i])[propName];
+          next.push(value);
+          if (!changed) {
+            const prevValue = prev[i];
+            if (value !== prevValue) {
               changed = true;
-              break;
             }
           }
         }
