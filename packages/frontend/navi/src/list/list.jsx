@@ -758,10 +758,9 @@ const ListControlled = ({
   };
 
   const isInitRef = useRef(true);
-  const itemsRef = useRef([]);
   const itemToScrollOnMountRef = useRef(null);
   const scrollToIndex = (index) => {
-    const items = itemsRef.current;
+    const items = tracker.itemsSignal.peek();
     const { start, end } = renderWindowRef.current;
     const isInWindow = index >= start && index < end;
     if (isInWindow) {
@@ -785,7 +784,6 @@ const ListControlled = ({
   const wasSearchActiveRef = useRef(false);
   const tracker = useItemTracker({
     onChange: (items) => {
-      itemsRef.current = items;
       // When item count changes (e.g. after filtering), check if the render
       // window is still in range. If not, reset to start.
       const itemCount = items.length;
@@ -861,17 +859,17 @@ const ListControlled = ({
       if (itemCount <= renderBudget) {
         return;
       }
-      const current = renderWindowRef.current;
-      const scrollTop = scrollContainer.scrollTop;
 
-      let firstVisibleIndex;
-      const containerRect = scrollContainer.getBoundingClientRect();
-      const items = Array.from(
-        listEl.querySelectorAll(REAL_LIST_ITEM_SELECTOR),
+      const oneRealListItemInDom = Boolean(
+        listEl.querySelector(REAL_LIST_ITEM_SELECTOR),
       );
-      if (items.length === 0) {
+      if (!oneRealListItemInDom) {
         return;
       }
+      const current = renderWindowRef.current;
+      const scrollTop = scrollContainer.scrollTop;
+      let firstVisibleIndex;
+      const containerRect = scrollContainer.getBoundingClientRect();
       let hitEl = null;
       let hitFiller = null;
       for (let y = containerRect.top + 1; y < containerRect.bottom; y += 4) {
@@ -901,9 +899,8 @@ const ListControlled = ({
       // (DOM order and visual order diverge when items have CSS `order`).
       else if (hitEl) {
         const hitId = hitEl.id;
-        const visualIndex = itemsRef.current.findIndex(
-          (item) => item.id === hitId,
-        );
+        const items = tracker.itemsSignal.peek();
+        const visualIndex = items.findIndex((item) => item.id === hitId);
         firstVisibleIndex = visualIndex === -1 ? current.start : visualIndex;
       } else {
         firstVisibleIndex = current.start;
@@ -977,7 +974,7 @@ const ListControlled = ({
         scrollToIndex(index, e.detail.event);
       }}
       onnavi_list_request_nav_at={(e) => {
-        const items = itemsRef.current;
+        const items = tracker.itemsSignal.peek();
         if (items.length === 0) {
           return;
         }
