@@ -806,7 +806,7 @@ const ListControlled = ({
         const itemEl = document.getElementById(item.id);
         if (itemEl) {
           debugScroll(
-            `scrollToIndex(${index}, "${reason}") is in render window, scrolling element right away`,
+            `scrollToIndex(${index}, "${reason}") is in render window, scrolling "${item.value}" right away`,
           );
           scrollIntoViewWithStickyAwareness(itemEl);
           return;
