@@ -891,13 +891,11 @@ const ListControlled = ({
         }
       }
       if (hitFiller) {
-        const measuredItemHeight = parseFloat(
-          hitFiller.dataset.itemHeight || "0",
-        );
-        if (measuredItemHeight === 0) {
+        const virtualItemHeight = virtualItemHeightSignal.peek();
+        if (virtualItemHeight === 0) {
           return;
         }
-        firstVisibleIndex = Math.floor(scrollTop / measuredItemHeight);
+        firstVisibleIndex = Math.floor(scrollTop / virtualItemHeight);
       }
       // Map the hit DOM element to its visual index via itemsRef
       // (DOM order and visual order diverge when items have CSS `order`).
