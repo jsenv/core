@@ -781,7 +781,7 @@ const ListControlled = ({
   });
 
   const itemIndexToScrollOnMountRef = useRef(null);
-  const scrollToIndex = (index) => {
+  const scrollToIndex = (index, reason) => {
     const items = tracker.itemsSignal.peek();
     const itemCount = items.length;
     if (itemCount === 0) {
@@ -798,7 +798,7 @@ const ListControlled = ({
         const itemEl = document.getElementById(item.id);
         if (itemEl) {
           debugScroll(
-            `scrollToIndex(${index}) is in render window, scrolling element right away`,
+            `scrollToIndex(${index}, "${reason}") is in render window, scrolling element right away`,
           );
           scrollIntoViewWithStickyAwareness(itemEl);
           return;
@@ -814,7 +814,7 @@ const ListControlled = ({
     updateRenderWindow(
       newStart,
       newEnd,
-      `scrollToIndex(${index}) is out of render window`,
+      `scrollToIndex(${index}, "${reason}") is out of render window`,
     );
   };
 
@@ -843,9 +843,9 @@ const ListControlled = ({
     const items = tracker.itemsSignal.peek();
     const firstSelectedIndex = items.findIndex((i) => i.selected);
     if (firstSelectedIndex !== -1) {
-      scrollToIndex(firstSelectedIndex);
+      scrollToIndex(firstSelectedIndex, `initial scroll to selected`);
     } else {
-      scrollToIndex(0);
+      scrollToIndex(0, "initial scroll to top because no selected item");
     }
   }, [searchTextBecomesDefined]);
 
@@ -910,7 +910,7 @@ const ListControlled = ({
       }
     }
     // -> scroll to the top
-    scrollToIndex(0);
+    scrollToIndex(0, "search changed top matches, scrolling to top");
   });
 
   // Scroll listener — slides the window as the user scrolls.
