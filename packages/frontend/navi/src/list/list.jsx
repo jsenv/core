@@ -683,7 +683,8 @@ const ListControlled = ({
   renderBudget = RENDER_BUDGET_DEFAULT,
   listId,
   listRole,
-  fallback,
+  fallback = "Aucun élément",
+  noMatchFallback = "Aucun résultat",
   separator,
   children,
   tabIndex,
@@ -694,7 +695,6 @@ const ListControlled = ({
   virtualItemHeight,
   lockSize,
   searchText,
-  noMatchFallback,
   debugScroll,
   ...rest
 }) => {
