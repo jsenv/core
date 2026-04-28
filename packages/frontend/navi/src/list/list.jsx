@@ -1006,6 +1006,7 @@ const ListControlled = ({
         role={listRole}
         fallback={fallback}
         noMatchFallback={noMatchFallback}
+        searchText={searchText}
         separator={separator}
         expandX={expandX}
         {...listProps}
@@ -1028,6 +1029,7 @@ const ListControlled = ({
     listRole,
     fallback,
     noMatchFallback,
+    searchText,
     separator,
     expandX,
     renderWindow,
@@ -1119,6 +1121,7 @@ const UnorderedList = ({
   virtualItemHeightSignal,
   fallback,
   noMatchFallback,
+  searchText,
   separator,
   children,
   ...rest
@@ -1130,7 +1133,11 @@ const UnorderedList = ({
         renderWindowStart={renderWindow.start}
       />
       {noMatchFallback && (
-        <NoMatchFallback noMatchFallback={noMatchFallback} tracker={tracker} />
+        <NoMatchFallback
+          noMatchFallback={noMatchFallback}
+          tracker={tracker}
+          searchText={searchText}
+        />
       )}
       {fallback && <Fallback fallback={fallback} tracker={tracker} />}
       <RenderWindowContext.Provider value={renderWindow}>
@@ -1149,10 +1156,15 @@ const UnorderedList = ({
   );
 };
 
-const NoMatchFallback = ({ tracker, noMatchFallback }) => {
+const NoMatchFallback = ({ tracker, noMatchFallback, searchText }) => {
   const itemCount = tracker.countSignal.value;
   const itemTotalCount = tracker.totalCountSignal.value;
-  const showMatchFallback = itemTotalCount > 0 && itemCount === 0;
+  const matchCount = tracker.matchCountSignal.value;
+  // Show when all items are filtered out (hidden prop), or when search is
+  // active but no visible item has a positive match score.
+  const allHidden = itemTotalCount > 0 && itemCount === 0;
+  const noneMatch = searchText && itemCount > 0 && matchCount === 0;
+  const showMatchFallback = allHidden || noneMatch;
 
   return (
     <ListItem

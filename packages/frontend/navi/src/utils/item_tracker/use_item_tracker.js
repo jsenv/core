@@ -88,6 +88,7 @@ const createItemTracker = (onChange) => {
   const itemsSignal = signal([]);
   const countSignal = signal(0);
   const totalCountSignal = signal(0);
+  const matchCountSignal = signal(0);
 
   let notifyScheduled = false;
   const runNotify = () => {
@@ -121,6 +122,16 @@ const createItemTracker = (onChange) => {
       if (itemsChanged) {
         itemsSignal.value = items;
         onChange?.(items);
+      }
+
+      let newMatchCount = 0;
+      for (const item of items) {
+        if (item.matchScore > 0) {
+          newMatchCount++;
+        }
+      }
+      if (matchCountSignal.peek() !== newMatchCount) {
+        matchCountSignal.value = newMatchCount;
       }
     });
   };
@@ -264,6 +275,7 @@ const createItemTracker = (onChange) => {
     itemsSignal,
     countSignal,
     totalCountSignal,
+    matchCountSignal,
     _flushSync,
   };
 };
