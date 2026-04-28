@@ -941,15 +941,15 @@ const ListControlled = ({
       // search just started -> find the first visible item to restore later
       const listContainerEl = ref.current;
       if (listContainerEl) {
-        const itemAtScroll = findItemForCurrentScrollPosition(
+        const scrollInfo = getScrollInfo(
           listContainerEl,
           tracker,
           virtualItemHeightSignal,
           renderWindowRef,
         );
-        if (itemAtScroll) {
-          debugScroll("Saving scroll item id", itemAtScroll.item.id);
-          savedScrollItemIdRef.current = itemAtScroll.item.id;
+        if (scrollInfo) {
+          debugScroll(`Saving scrolled item ${scrollInfo.item.value}`);
+          savedScrollItemIdRef.current = scrollInfo.item.id;
         }
       }
     }
@@ -981,16 +981,16 @@ const ListControlled = ({
         return;
       }
       let reason = "";
-      const itemAtScroll = findItemForCurrentScrollPosition(
+      const scrollInfo = getScrollInfo(
         listContainerEl,
         tracker,
         virtualItemHeightSignal,
         renderWindowRef,
       );
-      if (!itemAtScroll) {
+      if (!scrollInfo) {
         return;
       }
-      const { index, reason: hitReason } = itemAtScroll;
+      const { index, reason: hitReason } = scrollInfo;
       reason = hitReason;
       const half = Math.floor(renderBudget / 2);
       let newStart = Math.max(0, index - half);
@@ -1582,7 +1582,7 @@ const dispatchEventFromElement = (el, eventName, detail) => {
 // Uses DOM hit-testing to find visible items/fillers; falls back to index
 // estimation via virtualItemHeight or renderWindow.start.
 // Returns { index, item, reason } or null if nothing can be determined.
-const findItemForCurrentScrollPosition = (
+const getScrollInfo = (
   listContainerEl,
   tracker,
   virtualItemHeightSignal,
