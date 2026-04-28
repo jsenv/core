@@ -926,7 +926,7 @@ const ListControlled = ({
     }
 
     // During search -> watch for changes in the top items or their scores.
-    const topItems = tracker.itemsSignal.peek().slice(0, renderBudget);
+    const topItems = tracker.visibleItemsSignal.peek().slice(0, renderBudget);
     const topMatchScoresKey = topItems
       .map((i) => `${i.id}:${i.matchScore ?? ""}`)
       .join(",");
@@ -941,25 +941,24 @@ const ListControlled = ({
       // search just started -> find the first visible item to restore later
       const listContainerEl = ref.current;
       if (listContainerEl) {
-        const listEl = listContainerEl.querySelector(".navi_list");
-        const scrollContainer = getScrollContainer(listEl);
-        const items = tracker.itemsSignal.peek();
-        const firstVisible = findItemAtScrollTop(
-          listEl,
-          scrollContainer,
-          items,
+        const itemAtScroll = findItemForCurrentScrollPosition(
+          listContainerEl,
+          tracker,
           virtualItemHeightSignal,
           renderWindowRef,
         );
-        if (firstVisible) {
-          debugScroll("Saving scroll item id", firstVisible.item.id);
-          savedScrollItemIdRef.current = firstVisible.item.id;
+        if (itemAtScroll) {
+          debugScroll("Saving scroll item id", itemAtScroll.item.id);
+          savedScrollItemIdRef.current = itemAtScroll.item.id;
         }
       }
     }
     // -> scroll to the top
-    const items = tracker.itemsSignal.peek();
-    scrollToItem(items[0], "search changed top matches, scrolling to top");
+    const visibleItems = tracker.visibleItemsSignal.peek();
+    scrollToItem(
+      visibleItems[0],
+      "search changed top matches, scrolling to top",
+    );
   });
 
   // Scroll listener — slides the window as the user scrolls.
@@ -971,8 +970,8 @@ const ListControlled = ({
     const listEl = listContainerEl.querySelector(".navi_list");
     const scrollContainer = getScrollContainer(listEl);
     const onScroll = () => {
-      const itemCount = tracker.countSignal.peek();
-      if (itemCount <= renderBudget) {
+      const visibleItemCount = tracker.visibleCountSignal.peek();
+      if (visibleItemCount <= renderBudget) {
         return;
       }
       const oneRealListItemInDom = Boolean(
@@ -981,26 +980,23 @@ const ListControlled = ({
       if (!oneRealListItemInDom) {
         return;
       }
-      const items = tracker.itemsSignal.peek();
       let reason = "";
-      const firstVisible = findItemAtScrollTop(
-        listEl,
-        scrollContainer,
-        items,
+      const itemAtScroll = findItemForCurrentScrollPosition(
+        listContainerEl,
+        tracker,
         virtualItemHeightSignal,
         renderWindowRef,
       );
-      if (!firstVisible) {
+      if (!itemAtScroll) {
         return;
       }
-      const { index: firstVisibleIndex, reason: hitReason } = firstVisible;
+      const { index, reason: hitReason } = itemAtScroll;
       reason = hitReason;
-
       const half = Math.floor(renderBudget / 2);
-      let newStart = Math.max(0, firstVisibleIndex - half);
-      let newEnd = Math.min(itemCount, newStart + renderBudget);
-      if (newEnd === itemCount) {
-        newStart = Math.max(0, itemCount - renderBudget);
+      let newStart = Math.max(0, index - half);
+      let newEnd = Math.min(visibleItemCount, newStart + renderBudget);
+      if (newEnd === visibleItemCount) {
+        newStart = Math.max(0, visibleItemCount - renderBudget);
       }
       updateRenderWindow(newStart, newEnd, reason);
     };
@@ -1172,12 +1168,12 @@ const UnorderedList = ({
 
 const NoMatchFallback = ({ tracker, noMatchFallback, searchText }) => {
   const itemCount = tracker.countSignal.value;
-  const itemTotalCount = tracker.totalCountSignal.value;
+  const visibleItemCount = tracker.visibleCountSignal.value;
   const matchCount = tracker.matchCountSignal.value;
   // Show when all items are filtered out (hidden prop), or when search is
   // active but no visible item has a positive match score.
-  const allHidden = itemTotalCount > 0 && itemCount === 0;
-  const noneMatch = searchText && itemCount > 0 && matchCount === 0;
+  const allHidden = itemCount > 0 && visibleItemCount === 0;
+  const noneMatch = searchText && visibleItemCount > 0 && matchCount === 0;
   const showMatchFallback = allHidden || noneMatch;
 
   return (
@@ -1192,8 +1188,8 @@ const NoMatchFallback = ({ tracker, noMatchFallback, searchText }) => {
   );
 };
 const Fallback = ({ tracker, fallback }) => {
-  const itemTotalCount = tracker.totalCountSignal.value;
-  const showFallback = itemTotalCount === 0;
+  const itemCount = tracker.countSignal.value;
+  const showFallback = itemCount === 0;
   return (
     <ListItem
       role="presentation"
@@ -1227,9 +1223,9 @@ const BottomFiller = ({
   renderWindowEnd,
   tracker,
 }) => {
-  const itemCount = tracker.countSignal.value;
+  const visibleItemCount = tracker.visibleCountSignal.value;
   const virtualItemHeight = virtualItemHeightSignal.value;
-  const numberOfItemsBelow = Math.max(itemCount - renderWindowEnd, 0);
+  const numberOfItemsBelow = Math.max(visibleItemCount - renderWindowEnd, 0);
   const heightToFillBelow = numberOfItemsBelow * virtualItemHeight;
 
   return (
@@ -1586,13 +1582,15 @@ const dispatchEventFromElement = (el, eventName, detail) => {
 // Uses DOM hit-testing to find visible items/fillers; falls back to index
 // estimation via virtualItemHeight or renderWindow.start.
 // Returns { index, item, reason } or null if nothing can be determined.
-const findItemAtScrollTop = (
-  listEl,
-  scrollContainer,
-  items,
+const findItemForCurrentScrollPosition = (
+  listContainerEl,
+  tracker,
   virtualItemHeightSignal,
   renderWindowRef,
 ) => {
+  const listEl = listContainerEl.querySelector(".navi_list");
+  const scrollContainer = getScrollContainer(listEl);
+  const items = tracker.itemsSignal.peek();
   const scrollTop = scrollContainer.scrollTop;
   const containerRect = scrollContainer.getBoundingClientRect();
   let hitEl = null;

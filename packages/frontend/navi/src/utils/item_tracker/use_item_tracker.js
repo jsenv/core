@@ -29,7 +29,7 @@ import { useLayoutEffect, useRef } from "preact/hooks";
  * }
  *
  * function Count({ tracker }) {
- *   const count = tracker.countSignal.value; // re-renders only when count changes
+ *   const count = tracker.visibleCountSignal.value; // re-renders only when count changes
  *   return <span>{count} items</span>;
  * }
  * ```
@@ -40,7 +40,10 @@ import { useLayoutEffect, useRef } from "preact/hooks";
  *   - orderedKeys: number[] of visible item keys sorted by explicit order
  *   - keyToOrderedIndex: Map key → orderedKeys index, gives O(1) indexOf equivalent
  *   - keyToExplicitOrder: Map key → explicitly passed index, used to maintain sort order
- *   - countSignal: signal(number), updated in microtask batch, only when count changes
+ *   - allItemsSignal: signal(array), all items including hidden, ordered by explicit index
+ *   - visibleItemsSignal: signal(array), non-hidden items only
+ *   - countSignal: signal(number), count of all items including hidden
+ *   - visibleCountSignal: signal(number), updated in microtask batch, only when count changes
  *   - propSignals: Map propName → signal(array), updated in microtask batch with element equality
  *   - onChangeRef: holds the latest onChange callback, called once per microtask batch
  *
@@ -85,47 +88,72 @@ const createItemTracker = (onChange) => {
   const allKeys = new Set(); // all registered keys including hidden
   const keyToExplicitOrder = new Map(); // key → explicitly passed index
 
+  const allRegistrations = new Map(); // key → data (all items including hidden)
+  const allOrderedKeys = []; // all item keys sorted by explicit order
+  const keyToAllOrderedIndex = new Map(); // key → index in allOrderedKeys
+
   const itemsSignal = signal([]);
+  const visibleItemsSignal = signal([]);
   const countSignal = signal(0);
-  const totalCountSignal = signal(0);
+  const visibleCountSignal = signal(0);
   const matchCountSignal = signal(0);
 
   let notifyScheduled = false;
   const runNotify = () => {
     batch(() => {
-      const newTotalCount = allKeys.size;
-      if (totalCountSignal.peek() !== newTotalCount) {
-        totalCountSignal.value = newTotalCount;
-      }
-      const newCount = orderedKeys.length;
+      const newCount = allKeys.size;
       const countModified = countSignal.peek() !== newCount;
       if (countModified) {
         countSignal.value = newCount;
       }
 
-      const prevItems = itemsSignal.peek();
-      let itemsChanged = countModified;
-      const items = [];
+      const newVisibleCount = orderedKeys.length;
+      const visibleCountModified =
+        visibleCountSignal.peek() !== newVisibleCount;
+      if (visibleCountModified) {
+        visibleCountSignal.value = newVisibleCount;
+      }
+
+      // Update allItemsSignal (all items including hidden, ordered by explicit index).
+      const prevAllItems = itemsSignal.peek();
+      let allItemsChanged =
+        countModified || prevAllItems.length !== allOrderedKeys.length;
+      const allItems = [];
+      for (let i = 0; i < allOrderedKeys.length; i++) {
+        const key = allOrderedKeys[i];
+        const item = allRegistrations.get(key);
+        allItems.push(item);
+        if (!allItemsChanged && allItems[i].id !== prevAllItems[i]?.id) {
+          allItemsChanged = true;
+        }
+      }
+      if (allItemsChanged) {
+        itemsSignal.value = allItems;
+      }
+
+      // Update visibleItemsSignal (non-hidden items only).
+      const prevVisibleItems = visibleItemsSignal.peek();
+      let visibleItemsChanged = visibleCountModified;
+      const visibleItems = [];
       for (let i = 0; i < orderedKeys.length; i++) {
         const key = orderedKeys[i];
         const item = registrations.get(key);
-        items.push(item);
-        if (!itemsChanged) {
+        visibleItems.push(item);
+        if (!visibleItemsChanged) {
           const id = item.id;
-          const prevId = prevItems[i].id;
+          const prevId = prevVisibleItems[i]?.id;
           if (id !== prevId) {
-            itemsChanged = true;
+            visibleItemsChanged = true;
           }
         }
       }
-
-      if (itemsChanged) {
-        itemsSignal.value = items;
-        onChange?.(items);
+      if (visibleItemsChanged) {
+        visibleItemsSignal.value = visibleItems;
+        onChange?.(visibleItems);
       }
 
       let newMatchCount = 0;
-      for (const item of items) {
+      for (const item of visibleItems) {
         if (item.matchScore > 0) {
           newMatchCount++;
         }
@@ -177,45 +205,93 @@ const createItemTracker = (onChange) => {
     }
   };
 
+  const insertAllKey = (key, explicitOrder) => {
+    let lo = 0;
+    let hi = allOrderedKeys.length;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (keyToExplicitOrder.get(allOrderedKeys[mid]) <= explicitOrder) {
+        lo = mid + 1;
+      } else {
+        hi = mid;
+      }
+    }
+    allOrderedKeys.splice(lo, 0, key);
+    for (let i = lo; i < allOrderedKeys.length; i++) {
+      keyToAllOrderedIndex.set(allOrderedKeys[i], i);
+    }
+  };
+
+  const removeAllKey = (key) => {
+    const idx = keyToAllOrderedIndex.get(key);
+    if (idx !== undefined) {
+      allOrderedKeys.splice(idx, 1);
+      keyToAllOrderedIndex.delete(key);
+      for (let i = idx; i < allOrderedKeys.length; i++) {
+        keyToAllOrderedIndex.set(allOrderedKeys[i], i);
+      }
+    }
+  };
+
   // Register or update an item. data.hidden controls visibility.
   // explicitOrder is the caller-provided index that determines sort position.
   const syncItem = (key, index, data) => {
-    if (data.hidden || data.role === "presentation") {
+    if (data.role === "presentation") {
       registrations.delete(key);
       const idx = keyToOrderedIndex.get(key);
       if (idx !== undefined) {
         orderedKeys.splice(idx, 1);
         keyToOrderedIndex.delete(key);
-        // Shift down indices for all keys after the removed position.
         for (let i = idx; i < orderedKeys.length; i++) {
           keyToOrderedIndex.set(orderedKeys[i], i);
         }
       }
       keyToExplicitOrder.delete(key);
-      if (data.role !== "presentation") {
-        allKeys.add(key);
-      } else {
-        allKeys.delete(key);
+      allRegistrations.delete(key);
+      removeAllKey(key);
+      allKeys.delete(key);
+      return;
+    }
+
+    // Maintain allRegistrations and allOrderedKeys for all non-presentation items.
+    allRegistrations.set(key, data);
+    allKeys.add(key);
+    const currentAllIdx = keyToAllOrderedIndex.get(key);
+    const previousOrder = keyToExplicitOrder.get(key);
+    keyToExplicitOrder.set(key, index);
+    if (currentAllIdx === undefined) {
+      insertAllKey(key, index);
+    } else if (previousOrder !== index) {
+      allOrderedKeys.splice(currentAllIdx, 1);
+      keyToAllOrderedIndex.delete(key);
+      for (let i = currentAllIdx; i < allOrderedKeys.length; i++) {
+        keyToAllOrderedIndex.set(allOrderedKeys[i], i);
+      }
+      insertAllKey(key, index);
+    }
+
+    if (data.hidden) {
+      registrations.delete(key);
+      const idx = keyToOrderedIndex.get(key);
+      if (idx !== undefined) {
+        orderedKeys.splice(idx, 1);
+        keyToOrderedIndex.delete(key);
+        for (let i = idx; i < orderedKeys.length; i++) {
+          keyToOrderedIndex.set(orderedKeys[i], i);
+        }
       }
       return;
     }
+
     registrations.set(key, data);
-    allKeys.add(key);
-
     const currentIdx = keyToOrderedIndex.get(key);
-    const previousOrder = keyToExplicitOrder.get(key);
-    keyToExplicitOrder.set(key, index);
-
     if (currentIdx === undefined) {
-      // New item: insert at the position matching its explicit order.
       insertKey(key, index);
       return;
     }
     if (previousOrder === index) {
-      // Same order, data updated in place — no repositioning needed.
       return;
     }
-    // Order changed: remove from current position and reinsert.
     orderedKeys.splice(currentIdx, 1);
     keyToOrderedIndex.delete(key);
     for (let i = currentIdx; i < orderedKeys.length; i++) {
@@ -250,6 +326,8 @@ const createItemTracker = (onChange) => {
           }
         }
         keyToExplicitOrder.delete(key);
+        allRegistrations.delete(key);
+        removeAllKey(key);
         allKeys.delete(key);
         notify();
       };
@@ -273,8 +351,9 @@ const createItemTracker = (onChange) => {
     useTrackItem,
     getTrackedItemByIndex,
     itemsSignal,
+    visibleItemsSignal,
     countSignal,
-    totalCountSignal,
+    visibleCountSignal,
     matchCountSignal,
     _flushSync,
   };
