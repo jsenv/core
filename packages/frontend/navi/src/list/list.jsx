@@ -904,6 +904,7 @@ const ListControlled = ({
   // We save the first-visible item ID so restoration is item-precise
   // and survives render-window shifts or item reordering.
   const savedScrollItemIdRef = useRef(null);
+  const currentScrollItemIdRef = useRef(null);
   const topMatchScoresKeyRef = useRef("");
   useLayoutEffect(() => {
     if (!searchText) {
@@ -938,20 +939,9 @@ const ListControlled = ({
     // n items are now more important to see, scrollTop to show them
     topMatchScoresKeyRef.current = topMatchScoresKey;
     if (searchTextBecomesActive) {
-      // search just started -> find the first visible item to restore later
-      const listContainerEl = ref.current;
-      if (listContainerEl) {
-        const scrollInfo = getScrollInfo(
-          listContainerEl,
-          tracker,
-          virtualItemHeightSignal,
-          renderWindowRef,
-        );
-        if (scrollInfo) {
-          debugScroll(`Saving scrolled item ${scrollInfo.item.value}`);
-          savedScrollItemIdRef.current = scrollInfo.item.id;
-        }
-      }
+      // search just started -> save the currently scrolled item id to restore later
+      savedScrollItemIdRef.current = currentScrollItemIdRef.current;
+      debugScroll(`Saving scrolled item id ${currentScrollItemIdRef.current}`);
     }
     // -> scroll to the top
     const visibleItems = tracker.visibleItemsSignal.peek();
@@ -990,7 +980,8 @@ const ListControlled = ({
       if (!scrollInfo) {
         return;
       }
-      const { index, reason: hitReason } = scrollInfo;
+      const { index, item, reason: hitReason } = scrollInfo;
+      currentScrollItemIdRef.current = item ? item.id : null;
       reason = hitReason;
       const half = Math.floor(renderBudget / 2);
       let newStart = Math.max(0, index - half);
