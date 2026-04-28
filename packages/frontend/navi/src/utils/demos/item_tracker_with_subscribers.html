@@ -143,7 +143,7 @@
       };
 
       const TrackerContext = createContext();
-      const Item = ({ value, id }) => {
+      const Item = ({ value, id, index }) => {
         const tracker = useContext(TrackerContext);
 
         const renders = useRenderCount();
@@ -152,8 +152,8 @@
         const hidden = searchContext?.searchText
           ? !value.startsWith(searchContext.searchText)
           : false;
-        const index = tracker.useTrackItem(id, { hidden, value });
-        if (index === -1) {
+        const visibleIndex = tracker.useTrackItem({ id, index, hidden, value });
+        if (visibleIndex === -1) {
           return null;
         }
         return (
@@ -180,7 +180,9 @@
         );
       };
 
-      const ITEM_VNODES = ITEMS.map((v) => <Item key={v} id={v} value={v} />);
+      const ITEM_VNODES = ITEMS.map((v, i) => (
+        <Item key={v} id={v} value={v} index={i} />
+      ));
 
       const VisibleCount = ({ tracker }) => {
         const renders = useRenderCount();

@@ -23,7 +23,7 @@ import { useLayoutEffect, useRef } from "preact/hooks";
  * }
  *
  * function Row({ id, index, hidden, value, tracker }) {
- *   const visibleIndex = tracker.useTrackItem(id, { hidden, value }, index);
+ *   const visibleIndex = tracker.useTrackItem({ id, index, hidden, value });
  *   if (visibleIndex === -1) return null;
  *   return <li>{value}</li>;
  * }

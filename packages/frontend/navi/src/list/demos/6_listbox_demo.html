@@ -573,26 +573,33 @@
               uiAction={setSelected}
               expandX
             >
-              <ListItem role="option">
+              <ListItem role="option" index={0}>
                 A very large suggestion to test how it behaves when the text is
                 very large and exceeds the width of the list. It should be
                 visible
               </ListItem>
-              {GROUPED_ITEMS.map((group) => (
-                <ListItemGroup key={group.label} label={group.label}>
-                  {group.items.map((item) => (
-                    <ListItem
-                      role="option"
-                      key={item}
-                      value={item}
-                      selected={selected === item}
-                      style={{ backgroundColor: SUGGESTION_BG }}
-                    >
-                      {item}
-                    </ListItem>
-                  ))}
-                </ListItemGroup>
-              ))}
+              {(() => {
+                let globalIndex = 1;
+                return GROUPED_ITEMS.map((group) => (
+                  <ListItemGroup key={group.label} label={group.label}>
+                    {group.items.map((item) => {
+                      const i = globalIndex++;
+                      return (
+                        <ListItem
+                          role="option"
+                          key={item}
+                          index={i}
+                          value={item}
+                          selected={selected === item}
+                          style={{ backgroundColor: SUGGESTION_BG }}
+                        >
+                          {item}
+                        </ListItem>
+                      );
+                    })}
+                  </ListItemGroup>
+                ));
+              })()}
             </List>
             <div className="value-display">{selected ?? ""}</div>
           </div>
@@ -660,12 +667,13 @@
                   </Box>
                 }
               >
-                {matches.map((item) => {
+                {matches.map((item, i) => {
                   const { score, ranges } = getItemMatchInfo(item);
                   return (
                     <ListItem
                       role="option"
                       key={item}
+                      index={i}
                       value={item}
                       selected={selected === item}
                       highlight={ranges}
@@ -693,10 +701,11 @@
                     </Box>
                   }
                 >
-                  {nonMatches.map((item) => (
+                  {nonMatches.map((item, i) => (
                     <ListItem
                       role="option"
                       key={item}
+                      index={matches.length + i}
                       value={item}
                       selected={selected === item}
                       style={{ backgroundColor: SUGGESTION_BG }}
