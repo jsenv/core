@@ -843,6 +843,7 @@ const ListControlled = ({
       if (!listContainerEl) {
         return;
       }
+      console.debug("Restoring scrollTop", savedScrollTop);
       listContainerEl.scrollTop = savedScrollTop;
       return;
     }
@@ -863,7 +864,9 @@ const ListControlled = ({
       // search just started -> save scroll position to restore it in case it's cleared
       const listContainerEl = ref.current;
       if (listContainerEl) {
-        savedScrollTopRef.current = listContainerEl.scrollTop;
+        const scrollTopToSave = listContainerEl.scrollTop;
+        console.debug("Saving scrollTop", scrollTopToSave);
+        savedScrollTopRef.current = scrollTopToSave;
       }
     }
     // -> scroll to the top
