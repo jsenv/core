@@ -29,13 +29,8 @@ import { useLayoutEffect, useRef } from "preact/hooks";
  * }
  *
  * function Count({ tracker }) {
- *   const count = tracker.useItemCount(); // re-renders only when count changes
+ *   const count = tracker.countSignal.value; // re-renders only when count changes
  *   return <span>{count} items</span>;
- * }
- *
- * function Values({ tracker }) {
- *   const values = tracker.useItemValues("value"); // re-renders only when values change
- *   return <span>{values.join(", ")}</span>;
  * }
  * ```
  *
@@ -83,17 +78,9 @@ const createItemTracker = (onChange) => {
   const allKeys = new Set(); // all registered keys including hidden
   const keyToExplicitOrder = new Map(); // key → explicitly passed index
 
+  const itemsSignal = signal([]);
   const countSignal = signal(0);
   const totalCountSignal = signal(0);
-  const itemsSignal = signal([]);
-  const propSignals = new Map(); // propName → signal(array)
-
-  const getPropSignal = (propName) => {
-    if (!propSignals.has(propName)) {
-      propSignals.set(propName, signal([]));
-    }
-    return propSignals.get(propName);
-  };
 
   let notifyScheduled = false;
   const notify = () => {
@@ -131,37 +118,10 @@ const createItemTracker = (onChange) => {
       }
       if (itemsChanged) {
         itemsSignal.value = items;
+        onChange?.(items);
       }
-
-      for (const [propName, sig] of propSignals) {
-        const prev = sig.peek();
-        let changed = countModified;
-        const next = [];
-        for (let i = 0; i < orderedKeys.length; i++) {
-          const value = registrations.get(orderedKeys[i])[propName];
-          next.push(value);
-          if (!changed) {
-            const prevValue = prev[i];
-            if (value !== prevValue) {
-              changed = true;
-            }
-          }
-        }
-        if (changed) {
-          sig.value = next;
-        }
-      }
-      onChange?.(items);
     });
   };
-
-  // Subscribes the calling component to the count signal.
-  // Only re-renders when the visible item count changes.
-  const useItemCount = () => countSignal.value;
-
-  // Subscribes the calling component to a per-prop signal.
-  // Only re-renders when the array of values for that prop changes.
-  const useItemValues = (propName) => getPropSignal(propName).value;
 
   // Insert key into orderedKeys at the correct position based on explicitOrder.
   // Uses binary search for O(log n) insertion.
@@ -280,10 +240,8 @@ const createItemTracker = (onChange) => {
 
   return {
     useTrackItem,
-    useItems: () => itemsSignal.value,
-    useItemCount,
-    useItemValues,
     getTrackedItemByIndex,
+    itemsSignal,
     countSignal,
     totalCountSignal,
   };

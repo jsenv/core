@@ -857,8 +857,8 @@ const ListControlled = ({
     const listEl = listContainerEl.querySelector(".navi_list");
     const scrollContainer = getScrollContainer(listEl);
     const onScroll = () => {
-      const totalItems = tracker.countSignal.peek();
-      if (totalItems <= renderBudget) {
+      const itemCount = tracker.countSignal.peek();
+      if (itemCount <= renderBudget) {
         return;
       }
       const current = renderWindowRef.current;
@@ -911,9 +911,9 @@ const ListControlled = ({
 
       const half = Math.floor(renderBudget / 2);
       let newStart = Math.max(0, firstVisibleIndex - half);
-      let newEnd = Math.min(totalItems, newStart + renderBudget);
-      if (newEnd === totalItems) {
-        newStart = Math.max(0, totalItems - renderBudget);
+      let newEnd = Math.min(itemCount, newStart + renderBudget);
+      if (newEnd === itemCount) {
+        newStart = Math.max(0, itemCount - renderBudget);
       }
       updateRenderWindow(newStart, newEnd);
     };
@@ -1016,11 +1016,10 @@ const UnorderedList = ({
   children,
   ...rest
 }) => {
-  const visibleCount = tracker.countSignal.value;
-  const totalCount = tracker.totalCountSignal.value;
-  const showMatchFallback =
-    matchFallback && totalCount > 0 && visibleCount === 0;
-  const showFallback = fallback && totalCount === 0;
+  const itemCount = tracker.countSignal.value;
+  const itemTotalCount = tracker.totalCountSignal.value;
+  const showMatchFallback = itemTotalCount > 0 && itemCount === 0;
+  const showFallback = itemTotalCount === 0;
   return (
     <Box as="ul" {...rest} baseClassName="navi_list">
       <TopFiller
@@ -1030,22 +1029,28 @@ const UnorderedList = ({
       <RenderWindowContext.Provider value={renderWindow}>
         <SeparatorContext.Provider value={separator ?? null}>
           <ListItemTrackerContext.Provider value={tracker}>
-            <ListItem
-              role="presentation"
-              className="navi_list_item navi_list_match_fallback"
-              hidden={!showMatchFallback}
-              navi-default={typeof matchFallback === "string" ? "" : undefined}
-            >
-              {matchFallback}
-            </ListItem>
-            <ListItem
-              role="presentation"
-              className="navi_list_item navi_list_fallback"
-              hidden={!showFallback}
-              navi-default={typeof fallback === "string" ? "" : undefined}
-            >
-              {fallback}
-            </ListItem>
+            {matchFallback && (
+              <ListItem
+                role="presentation"
+                className="navi_list_item navi_list_match_fallback"
+                hidden={!showMatchFallback}
+                navi-default={
+                  typeof matchFallback === "string" ? "" : undefined
+                }
+              >
+                {matchFallback}
+              </ListItem>
+            )}
+            {fallback && (
+              <ListItem
+                role="presentation"
+                className="navi_list_item navi_list_fallback"
+                hidden={!showFallback}
+                navi-default={typeof fallback === "string" ? "" : undefined}
+              >
+                {fallback}
+              </ListItem>
+            )}
             {children}
           </ListItemTrackerContext.Provider>
         </SeparatorContext.Provider>
@@ -1111,7 +1116,7 @@ const BottomFiller = ({
   renderWindowEnd,
   tracker,
 }) => {
-  const itemCount = tracker.useItemCount();
+  const itemCount = tracker.countSignal.value;
   const virtualItemHeight = virtualItemHeightSignal.value;
   const numberOfItemsBelow = Math.max(itemCount - renderWindowEnd, 0);
   const heightToFillBelow = numberOfItemsBelow * virtualItemHeight;
@@ -1192,12 +1197,9 @@ const ListItemRealOrVoid = (props) => {
   if (!separator || visibleIndex === 0) {
     return listItemVnode;
   }
-  const previousItem = tracker.getTrackedItemByIndex(visibleIndex - 1);
-  const currentItem = tracker.getTrackedItemByIndex(visibleIndex);
+
   const separatorVnode =
-    typeof separator === "function"
-      ? separator(visibleIndex - 1, { previousItem, currentItem })
-      : separator;
+    typeof separator === "function" ? separator(visibleIndex - 1) : separator;
   return (
     <>
       {separatorVnode}

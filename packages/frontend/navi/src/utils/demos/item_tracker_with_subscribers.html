@@ -200,7 +200,8 @@
 
       const VisibleValues = ({ tracker }) => {
         const renders = useRenderCount();
-        const values = tracker.useItemValues("value");
+        const items = tracker.useItems();
+        const values = items.map((item) => item.value);
         return (
           <div class="component-box">
             <div class="component-header">
