@@ -944,7 +944,7 @@ const ListControlled = ({
         const listEl = listContainerEl.querySelector(".navi_list");
         const scrollContainer = getScrollContainer(listEl);
         const items = tracker.itemsSignal.peek();
-        const firstVisible = findFirstVisible(
+        const firstVisible = findItemAtScrollTop(
           listEl,
           scrollContainer,
           items,
@@ -983,7 +983,7 @@ const ListControlled = ({
       }
       const items = tracker.itemsSignal.peek();
       let reason = "";
-      const firstVisible = findFirstVisible(
+      const firstVisible = findItemAtScrollTop(
         listEl,
         scrollContainer,
         items,
@@ -1582,11 +1582,11 @@ const dispatchEventFromElement = (el, eventName, detail) => {
   return el.dispatchEvent(customEvent);
 };
 
-// Finds the first item visible at the top of a scrollable list container.
-// Returns { index, item, reason } or null if no item can be found.
-// Used both by the scroll listener (to slide the render window) and by the
-// search effect (to save the scroll position before searching).
-const findFirstVisible = (
+// Returns the item located at the current scroll position of a list container.
+// Uses DOM hit-testing to find visible items/fillers; falls back to index
+// estimation via virtualItemHeight or renderWindow.start.
+// Returns { index, item, reason } or null if nothing can be determined.
+const findItemAtScrollTop = (
   listEl,
   scrollContainer,
   items,
