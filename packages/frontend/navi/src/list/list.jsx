@@ -925,6 +925,7 @@ const ListControlled = ({
           break;
         }
       }
+      const items = tracker.itemsSignal.peek();
       let reason = "";
       if (hitFiller) {
         const virtualItemHeight = virtualItemHeightSignal.peek();
@@ -932,24 +933,15 @@ const ListControlled = ({
           return;
         }
         firstVisibleIndex = Math.floor(scrollTop / virtualItemHeight);
-        reason = "hit filler";
+        reason = `hit filler, estimated at ${firstVisibleIndex} (${items[firstVisibleIndex].value})`;
       }
       // Map the hit DOM element to its visual index via itemsRef
       // (DOM order and visual order diverge when items have CSS `order`).
       else if (hitEl) {
         const hitId = hitEl.id;
-        const items = tracker.itemsSignal.peek();
-        let item;
-        let index = -1;
-        for (const i of items) {
-          index++;
-          if (i.id === hitId) {
-            item = i;
-            break;
-          }
-        }
+        const index = items.findIndex((i) => i.id === hitId);
         firstVisibleIndex = index === -1 ? current.start : index;
-        reason = `hit item ${index} ${item.value}`;
+        reason = `hit item at ${index} (${items[index].value})`;
       } else {
         firstVisibleIndex = current.start;
         reason = "no hit";
