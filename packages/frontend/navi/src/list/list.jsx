@@ -33,8 +33,10 @@ export const useIsInsideListWithSearch = () => {
 
 // Provided by ListInteractive to give descendants (e.g. Suggestion) access
 // to hover/keyboard-pointed/selection state.
-const ListMousePointedIndexContext = createContext(-1);
-const ListKeyboardPointedIndexContext = createContext(-1);
+// Values are item IDs (strings) or null — not indices — so they survive
+// index changes caused by search reordering.
+const ListMousePointedIdContext = createContext(null);
+const ListKeyboardPointedIdContext = createContext(null);
 // Non-null when inside a ListInteractive (used to render data-interactive).
 const ListInteractiveContext = createContext(false);
 
@@ -459,14 +461,23 @@ const ListWithPopover = (props) => {
 // navi event protocol, then delegates rendering to ListControlled.
 const ListInteractive = (props) => {
   const { uiAction } = props;
-  const [mousePointedIndex, setMousePointedIndex] = useState(-1);
-  const [keyboardPointedIndex, setKeyboardPointedIndex] = useState(-1);
-  const anchorIndexRef = useRef(-1);
-  const setAnchorIndex = (value) => {
-    anchorIndexRef.current = value;
+  const [mousePointedId, setMousePointedId] = useState(null);
+  const [keyboardPointedId, setKeyboardPointedId] = useState(null);
+  const anchorIdRef = useRef(null);
+  const setAnchorId = (id) => {
+    anchorIdRef.current = id;
   };
 
   const itemsRef = useRef([]);
+
+  // Resolve the stored anchor ID to its current index (items may have reordered).
+  const getAnchorIndex = () => {
+    const anchorId = anchorIdRef.current;
+    if (!anchorId) {
+      return -1;
+    }
+    return itemsRef.current.findIndex((i) => i.id === anchorId);
+  };
 
   const firstRenderRef = useRef(true);
   useLayoutEffect(() => {
@@ -474,24 +485,23 @@ const ListInteractive = (props) => {
       return;
     }
     firstRenderRef.current = false;
-    const selectedIndex = itemsRef.current.findIndex((i) => i.selected);
-    setAnchorIndex(selectedIndex);
+    const selectedItem = itemsRef.current.find((i) => i.selected);
+    setAnchorId(selectedItem ? selectedItem.id : null);
   }, []);
 
-  const getValueByIndex = (index) => {
-    if (index === -1) {
+  const getValueById = (id) => {
+    if (!id) {
       return undefined;
     }
     const items = itemsRef.current;
-    const item = items[index];
-    const value = item?.value;
-    return value;
+    const item = items.find((i) => i.id === id);
+    return item ? item.value : undefined;
   };
 
   return (
     <ListInteractiveContext.Provider value={true}>
-      <ListMousePointedIndexContext.Provider value={mousePointedIndex}>
-        <ListKeyboardPointedIndexContext.Provider value={keyboardPointedIndex}>
+      <ListMousePointedIdContext.Provider value={mousePointedId}>
+        <ListKeyboardPointedIdContext.Provider value={keyboardPointedId}>
           <List
             keyboardInteractions
             {...props}
@@ -502,7 +512,9 @@ const ListInteractive = (props) => {
             }}
             onnavi_list_request_hover={(e) => {
               const { index } = e.detail;
-              setMousePointedIndex(index);
+              const id =
+                index === -1 ? null : (itemsRef.current[index]?.id ?? null);
+              setMousePointedId(id);
             }}
             onnavi_list_request_nav={(e) => {
               const { direction, event = e } = e.detail;
@@ -511,7 +523,7 @@ const ListInteractive = (props) => {
               if (itemCount === 0) {
                 return;
               }
-              const anchorIndex = anchorIndexRef.current;
+              const anchorIndex = getAnchorIndex();
               const isDisabledIndex = (i) => Boolean(items[i]?.disabled);
               const resolveIndex = (direction) => {
                 if (direction === "down") {
@@ -572,37 +584,39 @@ const ListInteractive = (props) => {
               dispatchCustomEvent(e, "navi_list_request_nav_at", { index });
             }}
             onnavi_list_request_clear={() => {
-              setAnchorIndex(-1);
-              setKeyboardPointedIndex(-1);
-              setMousePointedIndex(-1);
+              setAnchorId(null);
+              setKeyboardPointedId(null);
+              setMousePointedId(null);
             }}
             onnavi_list_request_select={(e) => {
-              const index = anchorIndexRef.current;
+              const index = getAnchorIndex();
               dispatchCustomEvent(e, "navi_list_request_select_at", { index });
             }}
             onnavi_list_nav={(e) => {
               const { index, event } = e.detail;
-              setAnchorIndex(index);
+              const id = itemsRef.current[index]?.id ?? null;
+              setAnchorId(id);
               if (event.type === "keydown") {
-                setKeyboardPointedIndex(index);
+                setKeyboardPointedId(id);
               } else {
-                setKeyboardPointedIndex(-1);
+                setKeyboardPointedId(null);
               }
             }}
             onnavi_list_select={(e) => {
               const { index, event } = e.detail;
-              setAnchorIndex(index);
+              const id = itemsRef.current[index]?.id ?? null;
+              setAnchorId(id);
               if (event.type === "keydown") {
-                setKeyboardPointedIndex(index);
+                setKeyboardPointedId(id);
               } else {
-                setKeyboardPointedIndex(-1);
+                setKeyboardPointedId(null);
               }
-              const value = getValueByIndex(index);
+              const value = getValueById(id);
               uiAction(value, event);
             }}
           />
-        </ListKeyboardPointedIndexContext.Provider>
-      </ListMousePointedIndexContext.Provider>
+        </ListKeyboardPointedIdContext.Provider>
+      </ListMousePointedIdContext.Provider>
     </ListInteractiveContext.Provider>
   );
 };
@@ -1252,6 +1266,18 @@ const ListItemPresentation = (props) => {
 const ListItemRealOrVoid = (props) => {
   let { id, value, hidden, selected, matchScore, disabled, index, ...rest } =
     props;
+  if (id === undefined) {
+    console.warn(
+      "ListItem is missing an explicit id prop. Provide a stable id so pointed/selected state survives search reordering.",
+      { value },
+    );
+  }
+  if (index === undefined) {
+    console.warn(
+      "ListItem is missing an explicit index prop. Provide an index so item ordering is stable regardless of render order.",
+      { value },
+    );
+  }
   const idDefault = useId();
   id = id || idDefault;
   const renderWindow = useContext(RenderWindowContext);
@@ -1307,6 +1333,7 @@ const ListItemVoid = () => {
   return null;
 };
 const ListItemReal = ({
+  id,
   value,
   hidden,
   highlight,
@@ -1320,14 +1347,14 @@ const ListItemReal = ({
   const defaultRef = useRef(null);
   const ref = rest.ref || defaultRef;
   const isInteractive = useContext(ListInteractiveContext);
-  const mousePointedIndex = useContext(ListMousePointedIndexContext);
-  const keyboardPointedIndex = useContext(ListKeyboardPointedIndexContext);
+  const mousePointedId = useContext(ListMousePointedIdContext);
+  const keyboardPointedId = useContext(ListKeyboardPointedIdContext);
   const itemIndexToScrollOnMountRef = useContext(
     ItemIndexToScrollOnMountRefContext,
   );
 
-  const isPointedByMouse = visibleIndex === mousePointedIndex;
-  const isPointedByKeyboard = visibleIndex === keyboardPointedIndex;
+  const isPointedByMouse = id === mousePointedId;
+  const isPointedByKeyboard = id === keyboardPointedId;
   const isPointedByProxy = Boolean(pointed);
   const isPointed = isPointedByMouse || isPointedByKeyboard || isPointedByProxy;
   const needScrollOnMount =
@@ -1394,6 +1421,7 @@ const ListItemReal = ({
       aria-hidden={hidden ? true : undefined}
       aria-selected={selected}
       aria-disabled={disabled ? true : undefined}
+      id={id}
       navi-list-item-real=""
       data-interactive={isInteractive ? "" : undefined}
       data-anchor={isPointedByKeyboard ? "" : undefined}
