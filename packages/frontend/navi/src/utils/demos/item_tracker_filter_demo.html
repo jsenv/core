@@ -71,7 +71,7 @@
 
       const Item = ({ value, index }) => {
         const tracker = useContext(TrackerContext);
-        const [filter, setFilter] = useContext(FilterContext);
+        const [filter] = useContext(FilterContext);
         const hidden = filter
           ? !value.toLowerCase().includes(filter.toLowerCase())
           : false;
