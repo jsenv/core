@@ -327,7 +327,7 @@ const css = /* css */ `
  *                          item height is known up-front.
  *   fallback             — content shown when no items exist at all
  *   matchFallback         — content shown when items exist but all are hidden (e.g. no search match)
- *   separator            — element or function(index) inserted between visible items
+ *   separator            — element or function(index, { previousItem, currentItem }) inserted between visible items
  *   lockSize             — when true, captures the container's dimensions on first render
  *                          (always in unfiltered state). Those values become min-width/
  *                          min-height so filtering cannot collapse the layout.
@@ -1190,8 +1190,12 @@ const ListItemRealOrVoid = (props) => {
   if (!separator || index === 0) {
     return listItemVnode;
   }
+  const previousItem = tracker.getTrackedItemByIndex(index - 1);
+  const currentItem = tracker.getTrackedItemByIndex(index);
   const separatorVnode =
-    typeof separator === "function" ? separator(index - 1) : separator;
+    typeof separator === "function"
+      ? separator(index - 1, { previousItem, currentItem })
+      : separator;
   return (
     <>
       {separatorVnode}
