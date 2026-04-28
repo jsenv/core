@@ -21,7 +21,7 @@ import { useItemTracker } from "../utils/item_tracker/use_item_tracker.js";
 import { useIsInsideDropdown } from "./dropdown.jsx";
 
 const ListItemTrackerContext = createContext(null);
-const ItemToScrollOnMountRefContext = createContext(null);
+const ItemIndexToScrollOnMountRefContext = createContext(null);
 
 export const ListIdContext = createContext();
 export const ListWithSearchContext = createContext(false);
@@ -780,7 +780,7 @@ const ListControlled = ({
     },
   });
 
-  const itemToScrollOnMountRef = useRef(null);
+  const itemIndexToScrollOnMountRef = useRef(null);
   const scrollToIndex = (index) => {
     const items = tracker.itemsSignal.peek();
     const itemCount = items.length;
@@ -807,7 +807,7 @@ const ListControlled = ({
     }
     // Not in DOM — shift the render window. The item will read
     // itemToScrollOnMountRef on mount and call scrollIntoViewWithStickyAwareness.
-    itemToScrollOnMountRef.current = index;
+    itemIndexToScrollOnMountRef.current = index;
     const half = Math.floor(renderBudget / 2);
     const newStart = Math.max(0, index - half);
     const newEnd = newStart + renderBudget;
@@ -1005,11 +1005,13 @@ const ListControlled = ({
         renderWindow={renderWindow}
         virtualItemHeightSignal={virtualItemHeightSignal}
       >
-        <ItemToScrollOnMountRefContext.Provider value={itemToScrollOnMountRef}>
+        <ItemIndexToScrollOnMountRefContext.Provider
+          value={itemIndexToScrollOnMountRef}
+        >
           <ListIdContext.Provider value={listId}>
             {children}
           </ListIdContext.Provider>
-        </ItemToScrollOnMountRefContext.Provider>
+        </ItemIndexToScrollOnMountRefContext.Provider>
       </UnorderedList>
     );
   };
@@ -1255,7 +1257,7 @@ const ListItemRealOrVoid = (props) => {
     <ListItemReal
       id={id}
       value={value}
-      index={visibleIndex}
+      visibleIndex={visibleIndex}
       selected={selected}
       disabled={disabled}
       {...rest}
@@ -1287,7 +1289,7 @@ const ListItemReal = ({
   highlight,
   selected,
   disabled,
-  index,
+  visibleIndex,
   pointed,
   children,
   ...rest
@@ -1297,24 +1299,28 @@ const ListItemReal = ({
   const isInteractive = useContext(ListInteractiveContext);
   const mousePointedIndex = useContext(ListMousePointedIndexContext);
   const keyboardPointedIndex = useContext(ListKeyboardPointedIndexContext);
-  const itemToScrollOnMountRef = useContext(ItemToScrollOnMountRefContext);
+  const itemIndexToScrollOnMountRef = useContext(
+    ItemIndexToScrollOnMountRefContext,
+  );
 
-  const isPointedByMouse = index === mousePointedIndex;
-  const isPointedByKeyboard = index === keyboardPointedIndex;
+  const isPointedByMouse = visibleIndex === mousePointedIndex;
+  const isPointedByKeyboard = visibleIndex === keyboardPointedIndex;
   const isPointedByProxy = Boolean(pointed);
   const isPointed = isPointedByMouse || isPointedByKeyboard || isPointedByProxy;
+  const needScrollOnMount =
+    itemIndexToScrollOnMountRef.current === visibleIndex;
 
   useLayoutEffect(() => {
-    if (itemToScrollOnMountRef.current !== index) {
+    if (!needScrollOnMount) {
       return;
     }
     const itemEl = ref.current;
     if (!itemEl) {
       return;
     }
-    itemToScrollOnMountRef.current = null;
+    itemIndexToScrollOnMountRef.current = -1;
     scrollIntoViewWithStickyAwareness(itemEl);
-  }, []);
+  }, [needScrollOnMount]);
 
   // CSS Highlight API: mark matching text ranges when highlight prop is set.
   useLayoutEffect(() => {
@@ -1373,7 +1379,9 @@ const ListItemReal = ({
         if (disabled) {
           return;
         }
-        dispatchBubblingEvent(e, "navi_list_request_hover", { index });
+        dispatchBubblingEvent(e, "navi_list_request_hover", {
+          index: visibleIndex,
+        });
         rest.onMouseEnter?.(e);
       }}
       onMouseLeave={(e) => {
@@ -1390,7 +1398,9 @@ const ListItemReal = ({
         if (e.button !== 0) {
           return;
         }
-        dispatchBubblingEvent(e, "navi_list_request_select_at", { index });
+        dispatchBubblingEvent(e, "navi_list_request_select_at", {
+          index: visibleIndex,
+        });
         rest.onMouseDown?.(e);
       }}
       {...rest}
