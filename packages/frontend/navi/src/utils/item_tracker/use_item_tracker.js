@@ -109,7 +109,8 @@ const createItemTracker = (onChange) => {
         totalCountSignal.value = newTotalCount;
       }
       const newCount = orderedKeys.length;
-      if (countSignal.peek() !== newCount) {
+      const countModified = countSignal.peek() !== newCount;
+      if (countModified) {
         countSignal.value = newCount;
       }
 
@@ -123,7 +124,7 @@ const createItemTracker = (onChange) => {
       for (const [propName, sig] of propSignals) {
         const prev = sig.peek();
         const next = orderedKeys.map((key) => registrations.get(key)[propName]);
-        let changed = prev.length !== next.length;
+        let changed = countModified;
         if (!changed) {
           for (let i = 0; i < next.length; i++) {
             if (prev[i] !== next[i]) {
