@@ -397,7 +397,7 @@
         const [selected, setSelected] = useState(
           ALL_ITEMS[ALL_ITEMS.length - 1],
         );
-        const [scrollToIndex, setScrollToIndex] = useState("");
+        const [scrollToIndex, setScrollToIndex] = useState(50);
         const listRef = useRef(null);
         const [orderedItems, getItemMatchInfo] = useSearch(search, ALL_ITEMS);
 
@@ -520,7 +520,7 @@
                     matchScore={score}
                     selected={selected === item}
                   >
-                    {item}
+                    {item} #{i}
                   </ListItem>
                 );
               })}
