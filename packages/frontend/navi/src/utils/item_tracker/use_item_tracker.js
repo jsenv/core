@@ -201,11 +201,7 @@ const createItemTracker = (onChange) => {
     const key = idToKey.get(id);
 
     syncItem(key, index, data);
-
-    useLayoutEffect(() => {
-      syncItem(key, index, data);
-      notify();
-    });
+    notify();
 
     useLayoutEffect(() => {
       return () => {
