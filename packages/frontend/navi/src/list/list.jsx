@@ -235,7 +235,7 @@ const css = /* css */ `
        3. hidden items (regular order, after DOM flow)
   */
   .navi_list_fallback,
-  .navi_list_match_fallback {
+  .navi_list_no_match_fallback {
     order: 1;
     &[navi-default] {
       display: inline;
@@ -686,7 +686,7 @@ const ListControlled = ({
   virtualItemHeight,
   lockSize,
   searchText,
-  matchFallback,
+  noMatchFallback,
   debugScroll,
   ...rest
 }) => {
@@ -997,7 +997,7 @@ const ListControlled = ({
         id={listId}
         role={listRole}
         fallback={fallback}
-        matchFallback={matchFallback}
+        noMatchFallback={noMatchFallback}
         separator={separator}
         expandX={expandX}
         {...listProps}
@@ -1019,7 +1019,7 @@ const ListControlled = ({
     listId,
     listRole,
     fallback,
-    matchFallback,
+    noMatchFallback,
     separator,
     expandX,
     children,
@@ -1111,7 +1111,7 @@ const UnorderedList = ({
   renderWindow,
   virtualItemHeightSignal,
   fallback,
-  matchFallback,
+  noMatchFallback,
   separator,
   children,
   ...rest
@@ -1122,8 +1122,8 @@ const UnorderedList = ({
         virtualItemHeightSignal={virtualItemHeightSignal}
         renderWindowStart={renderWindow.start}
       />
-      {matchFallback && (
-        <MatchFallback matchFallback={matchFallback} tracker={tracker} />
+      {noMatchFallback && (
+        <NoMatchFallback noMatchFallback={noMatchFallback} tracker={tracker} />
       )}
       {fallback && <Fallback fallback={fallback} tracker={tracker} />}
       <RenderWindowContext.Provider value={renderWindow}>
@@ -1133,7 +1133,6 @@ const UnorderedList = ({
           </ListItemTrackerContext.Provider>
         </SeparatorContext.Provider>
       </RenderWindowContext.Provider>
-
       <BottomFiller
         virtualItemHeightSignal={virtualItemHeightSignal}
         renderWindowEnd={renderWindow.end}
@@ -1143,7 +1142,7 @@ const UnorderedList = ({
   );
 };
 
-const MatchFallback = ({ tracker, matchFallback }) => {
+const NoMatchFallback = ({ tracker, noMatchFallback }) => {
   const itemCount = tracker.countSignal.value;
   const itemTotalCount = tracker.totalCountSignal.value;
   const showMatchFallback = itemTotalCount > 0 && itemCount === 0;
@@ -1151,11 +1150,11 @@ const MatchFallback = ({ tracker, matchFallback }) => {
   return (
     <ListItem
       role="presentation"
-      className="navi_list_item navi_list_match_fallback"
+      className="navi_list_item navi_list_no_match_fallback"
       hidden={!showMatchFallback}
-      navi-default={typeof matchFallback === "string" ? "" : undefined}
+      navi-default={typeof noMatchFallback === "string" ? "" : undefined}
     >
-      {matchFallback}
+      {noMatchFallback}
     </ListItem>
   );
 };
