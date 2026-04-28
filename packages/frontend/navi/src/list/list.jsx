@@ -114,6 +114,9 @@ const css = /* css */ `
     .navi_list_item_header {
       background: var(--list-background-color);
     }
+    .navi_list_item_footer {
+      background: var(--list-background-color);
+    }
   }
 
   .navi_list_container {
@@ -255,6 +258,14 @@ const css = /* css */ `
     top: 0;
     z-index: 1;
     order: 0;
+  }
+
+  /* order: 2 pins the footer after fallbacks (order: 1) and all items. */
+  .navi_list_item_footer {
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+    order: 2;
   }
 
   ::highlight(navi-search-match) {
@@ -1404,6 +1415,16 @@ export const ListItemHeader = (props) => {
       {...props}
       role="presentation"
       baseClassName="navi_list_item_header"
+    />
+  );
+};
+
+export const ListItemFooter = (props) => {
+  return (
+    <ListItem
+      {...props}
+      role="presentation"
+      baseClassName="navi_list_item_footer"
     />
   );
 };

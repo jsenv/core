@@ -80,6 +80,7 @@ export { Dropdown, useDropdownClose } from "./src/list/dropdown.jsx";
 export {
   List,
   ListItem,
+  ListItemFooter,
   ListItemGroup,
   ListItemHeader,
 } from "./src/list/list.jsx";
