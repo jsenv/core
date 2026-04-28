@@ -210,24 +210,6 @@ const css = /* css */ `
     }
   }
 
-  .navi_list_item_group_label {
-    position: sticky;
-    top: 0;
-    z-index: 1;
-    display: block;
-    background-color: var(--list-group-label-background-color);
-    user-select: none;
-
-    &[data-default-label] {
-      padding: 4px 12px 2px;
-      color: light-dark(#888, #aaa);
-      font-weight: 600;
-      font-size: 0.75em;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-  }
-
   /* Virtual scroll fillers — must remain invisible.
      The browser may briefly flash them during scroll before the render window
      updates, so giving them a visible background would cause visual glitches. */
@@ -238,24 +220,20 @@ const css = /* css */ `
   }
 
   /* Empty state — hidden by default, shown when no list items are rendered. */
-  .navi_list_fallback {
-    padding: var(--list-item-padding);
-    color: light-dark(#888, #aaa);
-    font-size: 0.9em;
-    text-align: center;
-    user-select: none;
-  }
+  .navi_list_fallback,
   .navi_list_match_fallback {
-    padding: var(--list-item-padding);
-    color: light-dark(#888, #aaa);
-    font-size: 0.9em;
-    text-align: center;
-    user-select: none;
-  }
-
-  /* Hide groups that have no rendered items. */
-  .navi_list_item_group[data-hidden-while-empty]:not(:has([navi-list-item])) {
-    display: none;
+    display: contents;
+    &[navi-default] {
+      display: inline;
+      padding: var(--list-item-padding);
+      color: light-dark(#888, #aaa);
+      font-size: 0.9em;
+      text-align: center;
+      user-select: none;
+    }
+    &[hidden] {
+      display: none;
+    }
   }
 
   .navi_list_item_header {
@@ -267,6 +245,36 @@ const css = /* css */ `
   ::highlight(navi-search-match) {
     color: var(--list-item-color-highlight);
     background-color: var(--list-item-background-color-highlight);
+  }
+
+  /* Hide groups that have no rendered items. */
+  .navi_list_item_group {
+    &[data-hidden-while-empty]:not(:has([navi-list-item])) {
+      display: none;
+    }
+
+    .navi_list_item_group_label {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      display: block;
+      background-color: var(--list-group-label-background-color);
+      user-select: none;
+
+      &[navi-default] {
+        padding: 4px 12px 2px;
+        color: light-dark(#888, #aaa);
+        font-weight: 600;
+        font-size: 0.75em;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+    }
+    .navi_list_item_group_list {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
   }
 `;
 
@@ -989,19 +997,21 @@ const UnorderedList = ({
           <ListItemTrackerContext.Provider value={tracker}>
             <ListItem
               role="presentation"
-              className="navi_list_match_fallback"
+              className="navi_list_item navi_list_match_fallback"
               hidden={!showMatchFallback}
+              navi-default={typeof matchFallback === "string" ? "" : undefined}
             >
               {matchFallback}
             </ListItem>
-            {children}
             <ListItem
               role="presentation"
-              className="navi_list_fallback"
+              className="navi_list_item navi_list_fallback"
               hidden={!showFallback}
+              navi-default={typeof fallback === "string" ? "" : undefined}
             >
               {fallback}
             </ListItem>
+            {children}
           </ListItemTrackerContext.Provider>
         </SeparatorContext.Provider>
       </RenderWindowContext.Provider>
@@ -1013,6 +1023,7 @@ const UnorderedList = ({
     </Box>
   );
 };
+
 const useVirtualItemHeightSignal = (ulRef, virtualItemHeightProp = 0) => {
   const virtualHeightSignalRef = useRef(null);
   if (!virtualHeightSignalRef.current) {
@@ -1348,27 +1359,23 @@ export const ListItemGroup = ({
   return (
     <ListItem
       {...rest}
-      role="presentation"
       baseClassName="navi_list_item_group"
+      role="presentation"
       data-hidden-while-empty={hiddenWhileEmpty ? "" : undefined}
     >
       <span
         id={groupId}
+        className="navi_list_item_group_label"
         role="presentation"
-        aria-hidden="true"
-        style={{ display: "contents" }}
+        // eslint-disable-next-line react/no-unknown-property
+        navi-default={typeof label === "string" ? "" : undefined}
       >
-        <span
-          className="navi_list_item_group_label"
-          data-default-label={typeof label === "string" ? "" : undefined}
-        >
-          {label}
-        </span>
+        {label}
       </span>
       <ul
+        className="navi_list_item_group_list"
         role="group"
         aria-labelledby={groupId}
-        style={{ margin: 0, padding: 0, listStyle: "none" }}
       >
         {children}
       </ul>
