@@ -1,6 +1,7 @@
 import { pickPositionRelativeTo, visibleRectEffect } from "@jsenv/dom";
 import { createContext } from "preact";
 import {
+  useCallback,
   useContext,
   useId,
   useLayoutEffect,
@@ -21,6 +22,7 @@ import {
   reportInteractiveToLabel,
   reportReadOnlyToLabel,
 } from "./label.jsx";
+import { SelectUIActionContext } from "./select_context.js";
 import { useActionEvents } from "./use_action_events.js";
 import {
   DisabledContext,
@@ -204,7 +206,6 @@ const SelectUI = (props) => {
   const contextLoading = useContext(LoadingContext);
   const contextLoadingElement = useContext(LoadingElementContext);
   const uiStateController = useContext(UIStateControllerContext);
-  const uiState = useContext(UIStateContext);
   const defaultRef = useRef();
   const ref = rest.ref || defaultRef;
 
@@ -217,6 +218,10 @@ const SelectUI = (props) => {
   reportReadOnlyToLabel(innerReadOnly);
   reportDisabledToLabel(innerDisabled);
   reportInteractiveToLabel(true);
+
+  const uiAction = useCallback((value, e) => {
+    uiStateController.setUIState(value, e);
+  }, []);
 
   if (trigger === undefined) {
     trigger = <SelectTrigger />;
@@ -255,7 +260,9 @@ const SelectUI = (props) => {
         </SelectValueContext.Provider>
       </SelectPlaceholderContext.Provider>
       <input type="hidden" name={name} value={value} />
-      {children}
+      <SelectUIActionContext.Provider value={uiAction}>
+        {children}
+      </SelectUIActionContext.Provider>
     </Box>
   );
 };
