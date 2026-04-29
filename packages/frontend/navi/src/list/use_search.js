@@ -151,12 +151,18 @@ export const createSearch = (fields) => {
 
 /**
  * applySearch — matches value against searchText.
- *   - match: true when value contains searchText (or searchText is empty), false otherwise
- *   - matchScore: 0 to 1 match quality:
- *       0   — no searchText or no match
- *       0.5 — searchText found somewhere in value (contains)
- *       1   — value starts with searchText (highest priority)
- *   - matchRanges: [start, end] pairs (exclusive end) for CSS Highlight API
+ *
+ * Multi-word: if searchText contains spaces, each word must appear somewhere in
+ * the value for it to match. Ranges for all words are returned. Score:
+ *   1   — value starts with the full searchText phrase
+ *   0.75 — all words match and one of them is at the start
+ *   0.5  — all words match somewhere (contains)
+ *
+ * Single-word (no spaces): same as before.
+ *   1   — value starts with searchText
+ *   0.5 — value contains searchText
+ *
+ * - matchRanges: [start, end] pairs (exclusive end) for CSS Highlight API
  *
  * Intended to be passed to useSearch as the matchFn parameter.
  */
@@ -167,15 +173,43 @@ export const applySearch = (searchText, value) => {
   const str = String(value);
   const lowerStr = str.toLowerCase();
   const lowerSearch = searchText.toLowerCase();
-  const matchRanges = [];
-  let idx = lowerStr.indexOf(lowerSearch);
-  while (idx !== -1) {
-    matchRanges.push([idx, idx + searchText.length]);
-    idx = lowerStr.indexOf(lowerSearch, idx + 1);
+
+  // Try exact phrase match first (gives best score).
+  const phraseRanges = [];
+  let phraseIdx = lowerStr.indexOf(lowerSearch);
+  while (phraseIdx !== -1) {
+    phraseRanges.push([phraseIdx, phraseIdx + lowerSearch.length]);
+    phraseIdx = lowerStr.indexOf(lowerSearch, phraseIdx + 1);
   }
-  if (matchRanges.length === 0) {
+  if (phraseRanges.length > 0) {
+    const matchScore = lowerStr.startsWith(lowerSearch) ? 1 : 0.5;
+    return { match: true, matchScore, matchRanges: phraseRanges };
+  }
+
+  // Multi-word: split on whitespace and require each word to be present.
+  const words = lowerSearch.split(/\s+/).filter(Boolean);
+  if (words.length < 2) {
     return { match: false, matchScore: 0, matchRanges: [] };
   }
-  const matchScore = lowerStr.startsWith(lowerSearch) ? 1 : 0.5;
+  const matchRanges = [];
+  let anyWordAtStart = false;
+  for (const word of words) {
+    const wordRanges = [];
+    let idx = lowerStr.indexOf(word);
+    if (idx === -1) {
+      return { match: false, matchScore: 0, matchRanges: [] };
+    }
+    while (idx !== -1) {
+      wordRanges.push([idx, idx + word.length]);
+      if (idx === 0) {
+        anyWordAtStart = true;
+      }
+      idx = lowerStr.indexOf(word, idx + 1);
+    }
+    for (const range of wordRanges) {
+      matchRanges.push(range);
+    }
+  }
+  const matchScore = anyWordAtStart ? 0.75 : 0.5;
   return { match: true, matchScore, matchRanges };
 };
