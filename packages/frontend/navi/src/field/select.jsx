@@ -408,9 +408,9 @@ const SelectBasicPopover = (props) => {
       return;
     }
     if (expandedRef.current) {
+      debugPopover("Popover already open, skipping");
       return;
     }
-
     const anchor = ref.current;
     const popover = popoverRef.current;
     if (!anchor || !popover) {
@@ -448,7 +448,6 @@ const SelectBasicPopover = (props) => {
           return;
         }
         popover.removeAttribute("data-anchor-hidden");
-        debugger;
         positionPopover(event);
       },
     );
@@ -497,7 +496,13 @@ const SelectBasicPopover = (props) => {
       aria-haspopup="listbox"
       aria-expanded={expanded}
       aria-controls={popoverId}
-      onClick={openPopover}
+      onClick={(e) => {
+        if (expandedRef.current) {
+          closePopover(e);
+        } else {
+          openPopover(e);
+        }
+      }}
       // When a list item is interacted via mousedown, return focus to the select.
       onnavi_list_select={(e) => {
         const { event } = e.detail;
