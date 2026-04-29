@@ -1,7 +1,7 @@
 // autoFocus does not work so we focus in a useLayoutEffect,
 // see https://github.com/preactjs/preact/issues/1255
 
-import { useEffect, useLayoutEffect } from "preact/hooks";
+import { useDisplayedLayoutEffect } from "../utils/use_displayed_layout_effect.js";
 
 let blurEvent = null;
 let timeout;
@@ -30,8 +30,17 @@ export const useAutoFocus = (
   { autoFocusVisible, autoSelect } = {},
 ) => {
   const triggerAutofocus = () => {
-    const activeElement = document.activeElement;
     const focusableElement = focusableElementRef.current;
+    if (!focusableElement) {
+      return () => {};
+    }
+    const isWithinDialog = focusableElement.closest("dialog");
+    if (isWithinDialog && focusableElement.hasAttribute("autofocus")) {
+      // let dialog manage autofocus
+      return () => {};
+    }
+
+    const activeElement = document.activeElement;
     focusableElement.focus({ focusVisible: autoFocusVisible });
     if (autoSelect) {
       focusableElement.select();
@@ -82,19 +91,19 @@ export const useAutoFocus = (
     };
   };
 
-  useLayoutEffect(() => {
+  useDisplayedLayoutEffect(() => {
     if (!autoFocus) {
       return null;
     }
     return triggerAutofocus();
   }, [autoFocus]);
 
-  useEffect(() => {
-    if (autoFocus) {
-      const focusableElement = focusableElementRef.current;
-      focusableElement.scrollIntoView({ inline: "nearest", block: "nearest" });
-    }
-  }, []);
+  // useEffect(() => {
+  //   if (autoFocus) {
+  //     const focusableElement = focusableElementRef.current;
+  //     focusableElement.scrollIntoView({ inline: "nearest", block: "nearest" });
+  //   }
+  // }, []);
 
   return triggerAutofocus;
 };

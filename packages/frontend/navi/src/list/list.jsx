@@ -16,6 +16,7 @@ import {
 
 import { Box } from "../box/box.jsx";
 import { SelectUIActionContext } from "../field/select_context.js";
+import { useAutoFocus } from "../field/use_auto_focus.js";
 import { createOnKeyDownForShortcuts } from "../keyboard/keyboard_shortcuts.js";
 import { useItemTracker } from "../utils/item_tracker/use_item_tracker.js";
 import { useDisplayedLayoutEffect } from "../utils/use_displayed_layout_effect.js";
@@ -393,7 +394,11 @@ export const List = (props) => {
   const selectUIAction = useContext(SelectUIActionContext);
   if (props.uiAction || selectUIAction) {
     return (
-      <ListInteractive {...props} uiAction={props.uiAction || selectUIAction} />
+      <ListInteractive
+        autoFocus={Boolean(selectUIAction)}
+        {...props}
+        uiAction={props.uiAction || selectUIAction}
+      />
     );
   }
   if (props.popover === true) {
@@ -422,11 +427,14 @@ const ListUI = (props) => {
     lockSize,
     searchText,
     debugScroll,
+    autoFocus,
     ...rest
   } = props;
   import.meta.css = css;
   const refDefault = useRef(null);
   const ref = rest.ref || refDefault;
+
+  useAutoFocus(ref, autoFocus);
 
   // lockSize: capture the container's dimensions on first render so filtering
   // cannot collapse the layout. Measurement happens on the initial (unfiltered)
@@ -533,6 +541,7 @@ const ListUI = (props) => {
       ref={ref}
       baseClassName="navi_list_container"
       tabIndex={tabIndex}
+      autoFocus={autoFocus ? "" : undefined}
       popover={popover}
       data-expand-x={expandX ? "" : undefined}
       expandX={expandX}
