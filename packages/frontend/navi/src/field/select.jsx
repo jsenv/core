@@ -136,7 +136,7 @@ const css = /* css */ `
     .navi_select_popover {
       position: absolute;
       inset: unset;
-      min-width: var(--select-anchor-width, 0px);
+      /* min-width: var(--select-anchor-width, 0px); */
       max-width: 95vw;
       max-height: 95dvh;
       margin: 0;
