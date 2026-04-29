@@ -1003,6 +1003,11 @@ const useListScrollSync = ({
   // When search becomes empty, restore the scroll position from before the search started.
   // We save the first-visible item ID so restoration is item-precise
   // and survives render-window shifts or item reordering.
+
+  // NOTE POUR LE JOUR OU ON A LE MULTISELECT:
+  // Lorsqu'on selectionne quelque chose pendant une recherche, alors ensuite meme si on clear
+  // on veut pas revenir a la position scroll précédente car on veut garde l'item qu'on a selectionné visible
+  // (pour l'instant pas grave car on travaille pour le mode select qui fermera le dialog au select)
   const savedScrollRef = useRef(null);
   const topMatchScoresKeyRef = useRef("");
   useLayoutEffect(() => {

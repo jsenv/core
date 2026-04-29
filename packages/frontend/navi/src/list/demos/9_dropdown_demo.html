@@ -158,6 +158,7 @@
                     role="option"
                     key={fruit}
                     index={i}
+                    id={fruit}
                     value={fruit}
                     highlight={ranges}
                     matchScore={score}
@@ -407,11 +408,12 @@
             </ListItemHeader>
             {ANIMALS.map((animal, i) => (
               <ListItem
+                key={animal}
+                index={i}
+                id={animal}
                 role="option"
                 flex
                 alignY="center"
-                key={animal}
-                index={i}
                 value={animal}
                 selected={selected === animal}
                 height="60px"
