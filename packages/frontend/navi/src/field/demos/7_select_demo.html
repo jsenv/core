@@ -98,7 +98,13 @@
             >
               <List listRole="listbox" border="none" expandX>
                 {COLORS.map((c, i) => (
-                  <ListItem key={c} index={i} value={c} selected={color === c}>
+                  <ListItem
+                    key={c}
+                    index={i}
+                    id={c}
+                    value={c}
+                    selected={color === c}
+                  >
                     {c}
                   </ListItem>
                 ))}
@@ -222,7 +228,13 @@
               >
                 <List listRole="listbox" border="none" expandX>
                   {SIZES.map((s, i) => (
-                    <ListItem key={s} index={i} value={s} selected={size === s}>
+                    <ListItem
+                      key={s}
+                      index={i}
+                      id={s}
+                      value={s}
+                      selected={size === s}
+                    >
                       {s}
                     </ListItem>
                   ))}
@@ -231,7 +243,7 @@
               <Select name="size_empty" placeholder="No value…">
                 <List listRole="listbox" border="none" expandX>
                   {SIZES.map((s, i) => (
-                    <ListItem key={s} index={i} value={s}>
+                    <ListItem key={s} index={i} id={s} value={s}>
                       {s}
                     </ListItem>
                   ))}
@@ -240,7 +252,13 @@
               <Select name="size_disabled" value="L" disabled>
                 <List listRole="listbox" border="none" expandX>
                   {SIZES.map((s, i) => (
-                    <ListItem key={s} index={i} value={s} selected={s === "L"}>
+                    <ListItem
+                      key={s}
+                      index={i}
+                      id={s}
+                      value={s}
+                      selected={s === "L"}
+                    >
                       {s}
                     </ListItem>
                   ))}
@@ -276,7 +294,7 @@
                 <Select name="country" placeholder="Pick a country…">
                   <List listRole="listbox" border="none" expandX>
                     {["France", "Germany", "Japan", "USA"].map((c, i) => (
-                      <ListItem key={c} index={i} value={c}>
+                      <ListItem key={c} index={i} id={c} value={c}>
                         {c}
                       </ListItem>
                     ))}

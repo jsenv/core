@@ -389,13 +389,23 @@ const SelectBasicPopover = (props) => {
   const popoverRef = useRef(null);
   const cleanupRef = useRef(null);
   const popoverId = useId();
-  const [open, setOpen] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const expandedRef = useRef(expanded);
+  expandedRef.current = expanded;
+  const expand = () => {
+    expandedRef.current = true;
+    setExpanded(true);
+  };
+  const collapse = () => {
+    expandedRef.current = false;
+    setExpanded(false);
+  };
 
   const openPopover = () => {
     if (disabled) {
       return;
     }
-    if (open) {
+    if (expandedRef.current) {
       closePopover();
       return;
     }
@@ -437,13 +447,13 @@ const SelectBasicPopover = (props) => {
       positionPopover();
     });
     cleanupRef.current = () => cleanup.disconnect();
-    setOpen(true);
+    expand();
   };
   const closePopover = () => {
     cleanupRef.current?.();
     cleanupRef.current = null;
     popoverRef.current?.hidePopover();
-    setOpen(false);
+    collapse();
   };
 
   useLayoutEffect(() => {
@@ -452,9 +462,9 @@ const SelectBasicPopover = (props) => {
     };
   }, []);
 
-  // Close on outside click while popover is open.
+  // Close on outside click while popover is expanded.
   useLayoutEffect(() => {
-    if (!open) {
+    if (!expanded) {
       return undefined;
     }
     const onPointerDown = (e) => {
@@ -472,13 +482,13 @@ const SelectBasicPopover = (props) => {
     return () => {
       document.removeEventListener("pointerdown", onPointerDown);
     };
-  }, [open]);
+  }, [expanded]);
 
   return (
     <SelectUI
       disabled={disabled}
       aria-haspopup="listbox"
-      aria-expanded={open}
+      aria-expanded={expanded}
       aria-controls={popoverId}
       onClick={openPopover}
       // When a list item is interacted via mousedown, return focus to the select.
@@ -502,7 +512,7 @@ const SelectBasicPopover = (props) => {
             openPopover(e);
           },
           escape: (e) => {
-            if (open) {
+            if (expandedRef.current) {
               e.preventDefault();
               closePopover(e);
               ref.current.focus({ preventScroll: true });
@@ -523,7 +533,7 @@ const SelectBasicPopover = (props) => {
           if (e.newState === "closed") {
             cleanupRef.current?.();
             cleanupRef.current = null;
-            setOpen(false);
+            collapse();
           }
         }}
       >
