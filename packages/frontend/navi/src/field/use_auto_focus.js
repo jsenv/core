@@ -48,6 +48,7 @@ export const useAutoFocus = (
 
     const activeElement = document.activeElement;
     debugFocus(`triggerAutofocus("${e.type}")`, {
+      element: focusableElement,
       preventScroll: autoFocusPreventScroll,
     });
     focusableElement.focus({
