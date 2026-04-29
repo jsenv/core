@@ -969,6 +969,23 @@ const useListScrollSync = ({
       `${scrollToItemCall} is out of render window`,
     );
   };
+
+  const currentScrollRef = useRef(null);
+  const updateCurrentScroll = () => {
+    const listContainerEl = ref.current;
+    const currentScrollLeft = listContainerEl.scrollLeft;
+    const currentScrollTop = listContainerEl.scrollTop;
+    const renderWindow = renderWindowRef.current;
+    currentScrollRef.current = {
+      left: currentScrollLeft,
+      top: currentScrollTop,
+      renderWindow: { ...renderWindow },
+    };
+    debugScroll(
+      `store currentScroll: scrollTop=${currentScrollTop}, renderWindow=[${renderWindow.start}, ${renderWindow.end})`,
+    );
+  };
+
   const searchTextRef = useRef();
   let searchTextBecomesActive = false;
   if (searchTextRef.current === undefined) {
@@ -986,6 +1003,7 @@ const useListScrollSync = ({
   useOpenedLayoutEffect(
     ref,
     (el, openEvent) => {
+      updateCurrentScroll();
       const items = tracker.itemsSignal.peek();
       const firstSelected = items.find((i) => i.selected);
       if (firstSelected) {
@@ -1034,7 +1052,10 @@ const useListScrollSync = ({
       );
       requestAnimationFrame(() => {
         // use scrollTo to respect eventual css scroll-behavior: smooth;
-        listContainerEl.scrollTo({ top: savedScroll.scrollTop });
+        listContainerEl.scrollTo({
+          left: savedScroll.left,
+          top: savedScroll.top,
+        });
         // The reliable way to restore scroll is to use scrollTop because otherwise we will estimate the item to scroll
         // based on virtual item height which can wrongly restore the scroll.
         // However we have a contract with outside to inside which item is scrolled
@@ -1069,14 +1090,10 @@ const useListScrollSync = ({
     topMatchScoresKeyRef.current = topMatchScoresKey;
     if (searchTextBecomesActive) {
       // search just started -> save the currently scrolled item id to restore later
-      const scrollTopToSave = listContainerEl ? listContainerEl.scrollTop : -1;
-      const renderWindow = renderWindowRef.current;
-      savedScrollRef.current = {
-        renderWindow: { ...renderWindow },
-        scrollTop: scrollTopToSave,
-      };
+      const currentScroll = currentScrollRef.current;
+      savedScrollRef.current = currentScroll;
       debugScroll(
-        `Saving scroll: { top: ${scrollTopToSave}, renderWindowStart: ${renderWindow.start}, renderWindowEnd: ${renderWindow.end} }`,
+        `Saving scroll: { top: ${currentScroll.top}, renderWindowStart: ${currentScroll.renderWindow.start}, renderWindowEnd: ${currentScroll.renderWindow.end} }`,
       );
     }
     // -> scroll to the top
@@ -1092,9 +1109,11 @@ const useListScrollSync = ({
     if (!listContainerEl) {
       return undefined;
     }
+
     const listEl = listContainerEl.querySelector(".navi_list");
     const scrollContainer = getScrollContainer(listEl);
     const onScroll = () => {
+      updateCurrentScroll();
       const visibleItemCount = tracker.visibleCountSignal.peek();
       if (visibleItemCount <= renderBudget) {
         return;
