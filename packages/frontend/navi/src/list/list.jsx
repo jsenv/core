@@ -567,7 +567,10 @@ const ListUI = (props) => {
         if (!item) {
           return;
         }
-        dispatchCustomEvent(e, "navi_list_select", { item });
+        dispatchPublicEvent(e.currentTarget, "navi_list_select", {
+          item,
+          event: e,
+        });
       }}
     >
       {renderListMemoized}
@@ -629,7 +632,7 @@ const useListScrollSync = ({
       itemEl.scrollIntoView({
         block: event.type === "keydown" ? "nearest" : "center",
       });
-      dispatchEventFromElement(itemEl, "navi_list_nav", { item, event });
+      dispatchPublicEvent(itemEl, "navi_list_nav", { item, event });
     };
 
     const scrollToItemCall = `scrollToItem("${item.value}", { event: "${event.type}", reason: "${reason}" })`;
@@ -764,7 +767,7 @@ const useListScrollSync = ({
           virtualItemHeightSignal,
           renderWindowRef,
         );
-        dispatchEventFromElement(listContainerEl, "navi_list_nav", {
+        dispatchPublicEvent(listContainerEl, "navi_list_nav", {
           item,
           event: new CustomEvent("navi_scroll_restore"),
         });
@@ -1154,14 +1157,14 @@ const ListWithPopover = (props) => {
           positionPopover();
         });
         cleanupRef.current = () => cleanup.disconnect();
-        dispatchCustomEvent(e, "navi_list_open");
+        dispatchPublicEvent(listContainerEl, "navi_list_open", { event: e });
       }}
       onnavi_list_request_close={(e) => {
         const listContainerEl = e.currentTarget;
         cleanupRef.current?.();
         listContainerEl.removeAttribute("data-anchor-hidden");
         listContainerEl.hidePopover();
-        dispatchCustomEvent(e, "navi_list_close");
+        dispatchPublicEvent(listContainerEl, "navi_list_close", { event: e });
       }}
     />
   );
@@ -1279,7 +1282,10 @@ const ListInteractive = (props) => {
                   event.preventDefault();
                 }
                 const item = visibleItems[index];
-                dispatchCustomEvent(e, "navi_list_request_nav", { item });
+                dispatchCustomEvent(e.currentTarget, "navi_list_request_nav", {
+                  item,
+                  event: e,
+                });
               }}
               onnavi_list_request_interaction_state_reset={() => {
                 setAnchorId(null);
@@ -1288,7 +1294,11 @@ const ListInteractive = (props) => {
               }}
               onnavi_list_request_select_current={(e) => {
                 const item = getAnchorItem();
-                dispatchCustomEvent(e, "navi_list_request_select", { item });
+                dispatchCustomEvent(
+                  e.currentTarget,
+                  "navi_list_request_select",
+                  { item, event: e },
+                );
               }}
               onnavi_list_nav={(e) => {
                 const { item, event } = e.detail;
@@ -1599,14 +1609,20 @@ const ListItemReal = ({
         if (disabled) {
           return;
         }
-        dispatchBubblingEvent(e, "navi_list_request_hover", { item });
+        dispatchBubblingEvent(e.currentTarget, "navi_list_request_hover", {
+          item,
+          event: e,
+        });
         rest.onMouseEnter?.(e);
       }}
       onMouseLeave={(e) => {
         if (disabled) {
           return;
         }
-        dispatchBubblingEvent(e, "navi_list_request_hover", { item: null });
+        dispatchBubblingEvent(e.currentTarget, "navi_list_request_hover", {
+          item: null,
+          event: e,
+        });
         rest.onMouseLeave?.(e);
       }}
       onMouseDown={(e) => {
@@ -1616,7 +1632,10 @@ const ListItemReal = ({
         if (e.button !== 0) {
           return;
         }
-        dispatchBubblingEvent(e, "navi_list_request_select", { item });
+        dispatchBubblingEvent(e.currentTarget, "navi_list_request_select", {
+          item,
+          event: e,
+        });
         rest.onMouseDown?.(e);
       }}
       {...rest}
@@ -1794,28 +1813,24 @@ export const requestListInteractionStateReset = (listElement, { event }) => {
   );
 };
 
-// Dispatches a navi event from an element without a source event.
-const dispatchEventFromElement = (el, eventName, detail) => {
-  const customEvent = new CustomEvent(eventName, {
-    detail,
-    bubbles: true,
+// Dispatches a navi event bubbling from the current event target element.
+const dispatchCustomEvent = (el, customEventName, customEventDetail) => {
+  const customEvent = new CustomEvent(customEventName, {
+    detail: {
+      ...customEventDetail,
+    },
     cancelable: true,
+  });
+  return el.currentTarget.dispatchEvent(customEvent);
+};
+// Dispatches a navi event bubbling from a list item's element.
+const dispatchBubblingEvent = (el, customEventName, customEventDetail) => {
+  const customEvent = new CustomEvent(customEventName, {
+    detail: {
+      ...customEventDetail,
+    },
+    bubbles: true,
   });
   return el.dispatchEvent(customEvent);
 };
-// Dispatches a navi event bubbling from the current event target element.
-const dispatchCustomEvent = (e, customEventName, customEventDetail) => {
-  const customEvent = new CustomEvent(customEventName, {
-    detail: { event: e, ...e.detail, ...customEventDetail },
-    cancelable: true,
-  });
-  return e.currentTarget.dispatchEvent(customEvent);
-};
-// Dispatches a navi event bubbling from a list item's element.
-const dispatchBubblingEvent = (e, customEventName, customEventDetail) => {
-  const customEvent = new CustomEvent(customEventName, {
-    detail: { event: e, ...e.detail, ...customEventDetail },
-    bubbles: true,
-  });
-  return e.currentTarget.dispatchEvent(customEvent);
-};
+const dispatchPublicEvent = dispatchBubblingEvent;

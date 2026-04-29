@@ -483,12 +483,14 @@ const SelectBasicPopover = (props) => {
       onClick={openPopover}
       // When a list item is interacted via mousedown, return focus to the select.
       onnavi_list_select={(e) => {
+        debugger;
         const { event } = e.detail;
         if (event.type === "mousedown") {
           event.preventDefault();
           event.stopPropagation();
-          ref.current?.focus({ preventScroll: true });
         }
+        closePopover(e);
+        ref.current?.focus({ preventScroll: true });
       }}
       onKeyDown={shortcutsViaOnKeyDown(
         {
@@ -496,6 +498,7 @@ const SelectBasicPopover = (props) => {
             if (open) {
               e.preventDefault();
               closePopover(e);
+              ref.current.focus({ preventScroll: true });
             }
           },
         },
