@@ -418,7 +418,6 @@ const ListUI = (props) => {
     noMatchFallback = "Aucun élément ne correspond à cette recherche",
     separator,
     children,
-    tabIndex,
     popover,
     expandX,
     maxHeight,
@@ -427,14 +426,11 @@ const ListUI = (props) => {
     lockSize,
     searchText,
     debugScroll,
-    autoFocus,
     ...rest
   } = props;
   import.meta.css = css;
   const refDefault = useRef(null);
   const ref = rest.ref || refDefault;
-
-  useAutoFocus(ref, autoFocus);
 
   // lockSize: capture the container's dimensions on first render so filtering
   // cannot collapse the layout. Measurement happens on the initial (unfiltered)
@@ -540,8 +536,6 @@ const ListUI = (props) => {
       {...rest}
       ref={ref}
       baseClassName="navi_list_container"
-      tabIndex={tabIndex}
-      autoFocus={autoFocus ? "" : undefined}
       popover={popover}
       data-expand-x={expandX ? "" : undefined}
       expandX={expandX}
@@ -1331,6 +1325,10 @@ const ListInteractive = (props) => {
 };
 
 const ListWithKeyboardInteractions = (props) => {
+  const { autoFocus } = props;
+  const defaultRef = useRef(null);
+  const ref = props.ref || defaultRef;
+
   const onKeyDown = shortcutsViaOnKeyDown(
     {
       arrowdown: (e) => {
@@ -1374,13 +1372,16 @@ const ListWithKeyboardInteractions = (props) => {
     },
     props.onKeyDown,
   );
+  useAutoFocus(ref, autoFocus);
 
   return (
     <List
       {...props}
+      ref={ref}
       keyboardInteractions={undefined}
       tabIndex="0"
       onKeyDown={onKeyDown}
+      autoFocus={autoFocus ? "" : undefined}
     />
   );
 };
