@@ -488,6 +488,9 @@ const SelectWithPopover = (props) => {
               closePopover(e);
               moveFocusToSelect(e);
             }}
+            onClick={(e) => {
+              e.preventDefault();
+            }}
           />,
           document.body,
         )}
@@ -578,6 +581,9 @@ const SelectWithPopover = (props) => {
             // mousedown inside popover should not bubble to the select (would re-open it if that mousedown closes it)
             e.stopPropagation();
           }}
+          onClick={(e) => {
+            e.preventDefault();
+          }}
           onToggle={(e) => {
             if (e.newState === "closed") {
               cleanupRef.current?.();
@@ -653,7 +659,6 @@ const SelectWithDialog = (props) => {
         if (disabled) {
           return;
         }
-
         if (expandedRef.current) {
           closeDialog(e);
         } else {

@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Select — Focus Management Demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:," />
+    <style>
+      body {
+        margin: 40px;
+        font-family: system-ui, sans-serif;
+        background: #f5f5f5;
+      }
+      .demo-section {
+        max-width: 700px;
+        margin: 0 auto 40px;
+        padding: 24px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      h1 {
+        max-width: 700px;
+        margin: 0 auto 32px;
+        color: #333;
+        font-size: 1.6rem;
+        text-align: center;
+      }
+      h2 {
+        margin: 0 0 8px;
+        color: #222;
+        font-size: 1.1rem;
+      }
+      p {
+        margin: 0 0 16px;
+        color: #555;
+        font-size: 13px;
+      }
+      .row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-start;
+        gap: 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Select — Focus Management</h1>
+    <div id="app"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useState } from "preact/hooks";
+      import { Select } from "@jsenv/navi";
+
+      const FocusDemo = () => {
+        const [focusLog, setFocusLog] = useState([]);
+        const log = (msg) => {
+          const time = new Date().toLocaleTimeString("fr-FR", {
+            hour12: false,
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+            fractionalSecondDigits: 3,
+          });
+          setFocusLog((prev) => [`${time} ${msg}`, ...prev].slice(0, 30));
+        };
+
+        return (
+          <div className="demo-section">
+            <h2>Popover with a plain text input</h2>
+            <p>
+              Click the select, tab around, and watch where focus lands. The
+              popover contains only a bare{" "}
+              <code>&lt;input type="text"&gt;</code> with <code>autofocus</code>{" "}
+              — no List.
+            </p>
+            <div className="row">
+              <div>
+                <input
+                  placeholder="Before (tab target)"
+                  style={{ display: "block", marginBottom: "8px" }}
+                  onFocus={() => log("focus → input[before]")}
+                  onBlur={() => log("blur  ← input[before]")}
+                />
+                <Select
+                  name="focus_demo"
+                  placeholder="Click me…"
+                  uiAction={() => {}}
+                  debugPopover
+                  debugFocus
+                  onFocus={(e) =>
+                    log(
+                      `focus → select (relatedTarget: ${e.relatedTarget ? e.relatedTarget.tagName.toLowerCase() : "null"})`,
+                    )
+                  }
+                  onBlur={(e) =>
+                    log(
+                      `blur  ← select (relatedTarget: ${e.relatedTarget ? e.relatedTarget.tagName.toLowerCase() : "null"})`,
+                    )
+                  }
+                >
+                  <div
+                    style={{
+                      padding: "12px",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "8px",
+                      minWidth: "220px",
+                    }}
+                  >
+                    <label style={{ fontSize: "13px", color: "#555" }}>
+                      Text inside popover
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Focus should land here"
+                      autofocus
+                      onFocus={() => log("focus → popover input")}
+                      onBlur={() => log("blur  ← popover input")}
+                    />
+                  </div>
+                </Select>
+                <input
+                  placeholder="After (tab target)"
+                  style={{ display: "block", marginTop: "8px" }}
+                  onFocus={() => log("focus → input[after]")}
+                  onBlur={() => log("blur  ← input[after]")}
+                />
+              </div>
+              <div style={{ flex: 1, minWidth: "240px" }}>
+                <div
+                  style={{
+                    fontSize: "12px",
+                    color: "#666",
+                    marginBottom: "6px",
+                  }}
+                >
+                  Focus log (newest first)
+                </div>
+                <div
+                  style={{
+                    fontFamily: "monospace",
+                    fontSize: "11px",
+                    background: "#f8f9fa",
+                    border: "1px solid #dee2e6",
+                    borderRadius: "4px",
+                    padding: "8px",
+                    minHeight: "180px",
+                    maxHeight: "320px",
+                    overflowY: "auto",
+                  }}
+                >
+                  {focusLog.length === 0 ? (
+                    <span style={{ color: "#999", fontStyle: "italic" }}>
+                      (no events yet)
+                    </span>
+                  ) : (
+                    focusLog.map((entry, i) => (
+                      <div
+                        key={i}
+                        style={{
+                          borderBottom:
+                            i < focusLog.length - 1 ? "1px solid #eee" : "none",
+                          padding: "2px 0",
+                        }}
+                      >
+                        {entry}
+                      </div>
+                    ))
+                  )}
+                </div>
+                <button
+                  style={{
+                    marginTop: "6px",
+                    fontSize: "12px",
+                    padding: "2px 8px",
+                  }}
+                  onClick={() => setFocusLog([])}
+                >
+                  Clear log
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      render(<FocusDemo />, document.getElementById("app"));
+    </script>
+  </body>
+</html>
