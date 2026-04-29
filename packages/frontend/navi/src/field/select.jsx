@@ -12,7 +12,6 @@ import { renderActionableComponent } from "../action/render_actionable_component
 import { Box } from "../box/box.jsx";
 import { ChevronDownSvg } from "../graphic/icons/chevron_updown_svg.jsx";
 import { Icon } from "../text/icon.jsx";
-import { SelectUIActionContext } from "./select_context.js";
 
 const css = /* css */ `
   @layer navi {
@@ -146,7 +145,6 @@ const css = /* css */ `
  * but does NOT submit a parent form. Use a separate submit button for that.
  */
 export const Select = (props) => {
-  import.meta.css = css;
   return renderActionableComponent(props, {
     Basic: SelectBasic,
     WithAction: SelectWithAction,
@@ -178,73 +176,13 @@ const SelectBasic = (props) => {
 };
 // SelectBasicPopover — trigger + popover anchored below the trigger.
 const SelectBasicPopover = (props) => {
-  const { disabled, uiAction, children, ...rest } = props;
-  const triggerRef = useRef(null);
+  const { disabled, onKeyDown, children, ...rest } = props;
+  const defaultRef = useRef();
+  const ref = rest.ref || defaultRef;
   const popoverRef = useRef(null);
   const cleanupRef = useRef(null);
   const popoverId = useId();
   const [open, setOpen] = useState(false);
-
-  const closePopover = () => {
-    cleanupRef.current?.();
-    cleanupRef.current = null;
-    popoverRef.current?.hidePopover();
-    setOpen(false);
-  };
-
-  useLayoutEffect(() => {
-    return () => {
-      cleanupRef.current?.();
-    };
-  }, []);
-
-  // Close on outside click while popover is open.
-  useLayoutEffect(() => {
-    if (!open) {
-      return undefined;
-    }
-    const onPointerDown = (e) => {
-      const trigger = triggerRef.current;
-      const popover = popoverRef.current;
-      if (!trigger || !popover) {
-        return;
-      }
-      if (trigger.contains(e.target) || popover.contains(e.target)) {
-        return;
-      }
-      closePopover();
-    };
-    document.addEventListener("pointerdown", onPointerDown);
-    return () => {
-      document.removeEventListener("pointerdown", onPointerDown);
-    };
-  }, [open]);
-
-  // When a list item is confirmed via mousedown, return focus to the trigger.
-  useLayoutEffect(() => {
-    const popover = popoverRef.current;
-    if (!popover) {
-      return undefined;
-    }
-    const onListSelect = (e) => {
-      const { event } = e.detail;
-      if (event.type === "mousedown") {
-        event.preventDefault();
-        triggerRef.current?.focus({ preventScroll: true });
-      }
-    };
-    popover.addEventListener("navi_list_select", onListSelect);
-    return () => {
-      popover.removeEventListener("navi_list_select", onListSelect);
-    };
-  }, []);
-
-  const onKeyDown = (e) => {
-    if (e.key === "Escape" && open) {
-      e.preventDefault();
-      closePopover();
-    }
-  };
 
   const openPopover = () => {
     if (disabled) {
@@ -254,7 +192,7 @@ const SelectBasicPopover = (props) => {
       closePopover();
       return;
     }
-    const anchor = triggerRef.current;
+    const anchor = ref.current;
     const popover = popoverRef.current;
     if (!anchor || !popover) {
       return;
@@ -294,37 +232,141 @@ const SelectBasicPopover = (props) => {
     cleanupRef.current = () => cleanup.disconnect();
     setOpen(true);
   };
+  const closePopover = () => {
+    cleanupRef.current?.();
+    cleanupRef.current = null;
+    popoverRef.current?.hidePopover();
+    setOpen(false);
+  };
+
+  useLayoutEffect(() => {
+    return () => {
+      cleanupRef.current?.();
+    };
+  }, []);
+
+  // Close on outside click while popover is open.
+  useLayoutEffect(() => {
+    if (!open) {
+      return undefined;
+    }
+    const onPointerDown = (e) => {
+      const select = ref.current;
+      const popover = popoverRef.current;
+      if (!select || !popover) {
+        return;
+      }
+      if (select.contains(e.target) || popover.contains(e.target)) {
+        return;
+      }
+      closePopover(e);
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+    };
+  }, [open]);
 
   return (
-    <SelectUIActionContext.Provider value={uiAction}>
-      <SelectUI
-        disabled={disabled}
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        aria-controls={popoverId}
-        onClick={openPopover}
-        onKeyDown={onKeyDown}
-        {...rest}
+    <SelectUI
+      disabled={disabled}
+      aria-haspopup="listbox"
+      aria-expanded={open}
+      aria-controls={popoverId}
+      onClick={openPopover}
+      // When a list item is interacted via mousedown, return focus to the select.
+      onnavi_list_select={(e) => {
+        const { event } = e.detail;
+        if (event.type === "mousedown") {
+          event.preventDefault();
+          event.stopPropagation();
+          ref.current?.focus({ preventScroll: true });
+        }
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Escape" && open) {
+          e.preventDefault();
+          closePopover(e);
+        }
+        onKeyDown?.(e);
+      }}
+      {...rest}
+      ref={ref}
+    >
+      <div
+        ref={popoverRef}
+        id={popoverId}
+        className="navi_select_popover"
+        popover="manual"
+        onToggle={(e) => {
+          if (e.newState === "closed") {
+            cleanupRef.current?.();
+            cleanupRef.current = null;
+            setOpen(false);
+          }
+        }}
       >
-        <div
-          id={popoverId}
-          ref={popoverRef}
-          className="navi_select_popover"
-          popover="manual"
-          onToggle={(e) => {
-            if (e.newState === "closed") {
-              cleanupRef.current?.();
-              cleanupRef.current = null;
-              setOpen(false);
-            }
-          }}
-        >
-          {children}
-        </div>
-      </SelectUI>
-    </SelectUIActionContext.Provider>
+        {children}
+      </div>
+    </SelectUI>
   );
 };
+// SelectBasicDialog — trigger + centered modal dialog.
+const SelectBasicDialog = (props) => {
+  const { disabled, onClick, children, ...rest } = props;
+  const dialogRef = useRef(null);
+  const dialogId = useId();
+  const [open, setOpen] = useState(false);
+
+  const openDialog = () => {
+    if (disabled) {
+      return;
+    }
+    if (open) {
+      closeDialog();
+      return;
+    }
+    const dialog = dialogRef.current;
+    if (!dialog) {
+      return;
+    }
+    dialog.showModal();
+    setOpen(true);
+  };
+  const closeDialog = () => {
+    const dialog = dialogRef.current;
+    if (!dialog || !open) {
+      return;
+    }
+    dialog.close();
+    setOpen(false);
+  };
+
+  return (
+    <SelectUI
+      aria-haspopup="dialog"
+      aria-expanded={open}
+      aria-controls={dialogId}
+      {...rest}
+      onClick={(e) => {
+        openDialog(e);
+        onClick?.();
+      }}
+    >
+      <dialog
+        ref={dialogRef}
+        id={dialogId}
+        className="navi_select_dialog"
+        onClose={() => {
+          setOpen(false);
+        }}
+      >
+        {children}
+      </dialog>
+    </SelectUI>
+  );
+};
+
 const SelectValueContext = createContext(null);
 const SelectPlaceholderContext = createContext("Select…");
 const SelectUI = ({
@@ -335,6 +377,8 @@ const SelectUI = ({
   children,
   ...rest
 }) => {
+  import.meta.css = css;
+
   if (trigger === undefined) {
     trigger = <SelectTrigger />;
   }
@@ -370,118 +414,6 @@ const SelectTrigger = () => {
         </Icon>
       </span>
     </>
-  );
-};
-
-// SelectBasicDialog — trigger + centered modal dialog.
-const SelectBasicDialog = (props) => {
-  const {
-    name,
-    value,
-    placeholder = "Select…",
-    triggerContent: triggerContentProp,
-    disabled,
-    uiAction,
-    children,
-    ...rest
-  } = props;
-
-  const triggerRef = useRef(null);
-  const dialogRef = useRef(null);
-  const dialogId = useId();
-  const [open, setOpen] = useState(false);
-
-  const closeDialog = () => {
-    const dialog = dialogRef.current;
-    if (!dialog || !open) {
-      return;
-    }
-    dialog.close();
-    setOpen(false);
-  };
-
-  const openDialog = () => {
-    if (disabled) {
-      return;
-    }
-    if (open) {
-      closeDialog();
-      return;
-    }
-    const dialog = dialogRef.current;
-    if (!dialog) {
-      return;
-    }
-    dialog.showModal();
-    setOpen(true);
-  };
-
-  const onKeyDown = (e) => {
-    if (e.key === "Escape" && open) {
-      e.preventDefault();
-      closeDialog();
-    }
-  };
-
-  const hasValue = value !== null && value !== undefined && value !== "";
-  const triggerContent =
-    triggerContentProp !== undefined
-      ? triggerContentProp
-      : hasValue
-        ? String(value)
-        : null;
-  const isPlaceholder = triggerContent === null;
-
-  return (
-    <SelectUIActionContext.Provider value={uiAction}>
-      <Box
-        as="button"
-        type="button"
-        ref={triggerRef}
-        baseClassName="navi_select_trigger"
-        disabled={disabled}
-        aria-haspopup="dialog"
-        aria-expanded={open}
-        aria-controls={dialogId}
-        onClick={openDialog}
-        onKeyDown={onKeyDown}
-        {...rest}
-      >
-        <span
-          className="navi_select_trigger_label"
-          data-placeholder={isPlaceholder ? "" : undefined}
-        >
-          {isPlaceholder ? placeholder : triggerContent}
-        </span>
-        <span className="navi_select_trigger_icon">
-          <Icon>
-            <ChevronDownSvg />
-          </Icon>
-        </span>
-      </Box>
-      {name && (
-        <input
-          type="hidden"
-          name={name}
-          value={hasValue ? String(value) : ""}
-        />
-      )}
-      <dialog
-        id={dialogId}
-        ref={dialogRef}
-        className="navi_select_dialog"
-        onClick={(e) => {
-          if (e.target === dialogRef.current) {
-            closeDialog();
-          }
-        }}
-        onClose={() => {
-          setOpen(false);
-        }}
-      >
-        {children}
-      </dialog>
-    </SelectUIActionContext.Provider>
   );
 };
 
