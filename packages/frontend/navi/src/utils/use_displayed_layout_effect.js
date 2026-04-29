@@ -2,21 +2,20 @@ import { useLayoutEffect, useRef } from "preact/hooks";
 
 /**
  * A variant of useLayoutEffect that accounts for ancestor <dialog>/<details>
- * visibility.
+ * or popover visibility.
  *
  * Motivation: some effects (auto-scroll, measurement, focus) only make sense
  * when the element is actually presented on screen. A plain useLayoutEffect
- * fires on mount even when the component is inside a closed <dialog> or a
- * collapsed <details>, where scroll and layout operations are no-ops.
+ * fires on mount even when the component is inside a closed <dialog>, a
+ * collapsed <details>, or a hidden popover, where scroll and layout operations
+ * are no-ops.
  *
  * Behavior:
- *   - No <dialog>/<details> ancestor → runs like a normal useLayoutEffect with
- *     the provided deps (callback is only skipped when the element is not yet
- *     in the DOM, which should not happen).
- *   - Inside a closed <dialog>/<details> → skips the initial run; instead runs
+ *   - No <dialog>/<details>/[popover] ancestor → runs like a normal
+ *     useLayoutEffect with the provided deps.
+ *   - Inside a closed/hidden ancestor → skips the initial run; instead runs
  *     the callback every time the ancestor opens (toggle event, newState=open).
- *   - Inside an open <dialog>/<details> → runs on mount AND every subsequent
- *     time the ancestor opens.
+ *   - Inside an open ancestor → runs on mount AND every subsequent open.
  *
  * Usage:
  *   useVisibleLayoutEffect(ref, () => {
@@ -35,12 +34,12 @@ export const useDisplayedLayoutEffect = (ref, callback, deps) => {
     if (!el) {
       return;
     }
-    const ancestor = el.closest("dialog, details");
+    const ancestor = el.closest("dialog, details, [popover]");
     if (!ancestor) {
       callbackRef.current(el, new CustomEvent("navi_opened"));
       return;
     }
-    if (!ancestor.open) {
+    if (!isAncestorOpen(ancestor)) {
       // Ancestor is closed — skip now; the toggle listener below will fire.
       return;
     }
@@ -53,14 +52,12 @@ export const useDisplayedLayoutEffect = (ref, callback, deps) => {
     if (!el) {
       return undefined;
     }
-    const ancestor = el.closest("dialog, details");
+    const ancestor = el.closest("dialog, details, [popover]");
     if (!ancestor) {
       return undefined;
     }
     const onToggle = (e) => {
-      const isOpen =
-        e.target.tagName === "DIALOG" ? e.newState === "open" : e.target.open;
-      if (!isOpen) {
+      if (e.newState !== "open") {
         return;
       }
       callbackRef.current(el, e);
@@ -70,4 +67,12 @@ export const useDisplayedLayoutEffect = (ref, callback, deps) => {
       ancestor.removeEventListener("toggle", onToggle);
     };
   }, []);
+};
+
+const isAncestorOpen = (ancestor) => {
+  if (ancestor.tagName === "DIALOG" || ancestor.hasAttribute("popover")) {
+    return ancestor.matches(":popover-open, [open]");
+  }
+  // details
+  return ancestor.open;
 };
