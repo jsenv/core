@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Select Demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:," />
+    <style>
+      body {
+        margin: 40px;
+        font-family: system-ui, sans-serif;
+        background: #f5f5f5;
+      }
+      .demo-section {
+        max-width: 560px;
+        margin: 0 auto 40px;
+        padding: 24px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      h1 {
+        max-width: 560px;
+        margin: 0 auto 32px;
+        color: #333;
+        font-size: 1.6rem;
+        text-align: center;
+      }
+      h2 {
+        margin: 0 0 8px;
+        color: #222;
+        font-size: 1.1rem;
+      }
+      p {
+        margin: 0 0 16px;
+        color: #555;
+        font-size: 13px;
+      }
+      .value-display {
+        min-height: 20px;
+        margin-top: 12px;
+        padding: 8px;
+        font-size: 0.8rem;
+        font-family: monospace;
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+      }
+      .value-display:empty::before {
+        color: #999;
+        font-style: italic;
+        content: "(no value selected)";
+      }
+      .row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Select Demo</h1>
+    <div id="app"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useState } from "preact/hooks";
+      import {
+        Select,
+        List,
+        ListItem,
+        Separator,
+        ListItemHeader,
+        useSearch,
+        Input,
+      } from "@jsenv/navi";
+
+      // ── Demo 1: Simple list ───────────────────────────────────────────────────
+
+      const COLORS = ["Red", "Green", "Blue", "Yellow", "Purple", "Orange"];
+
+      const Demo1 = () => {
+        const [color, setColor] = useState(null);
+        return (
+          <div className="demo-section">
+            <h2>Demo 1 — Simple list</h2>
+            <p>
+              Basic color picker. The <code>uiAction</code> on Select flows down
+              to the List automatically via context.
+            </p>
+            <Select
+              name="color"
+              value={color}
+              placeholder="Pick a color…"
+              uiAction={(v) => {
+                setColor(v);
+              }}
+            >
+              <List listRole="listbox" border="none" expandX>
+                {COLORS.map((c, i) => (
+                  <ListItem key={c} index={i} value={c} selected={color === c}>
+                    {c}
+                  </ListItem>
+                ))}
+              </List>
+            </Select>
+            <div className="value-display">{color ?? ""}</div>
+          </div>
+        );
+      };
+
+      // ── Demo 2: List with search ──────────────────────────────────────────────
+
+      const FRUITS = [
+        "Apple",
+        "Apricot",
+        "Avocado",
+        "Banana",
+        "Blueberry",
+        "Cherry",
+        "Coconut",
+        "Fig",
+        "Grape",
+        "Guava",
+        "Kiwi",
+        "Lemon",
+        "Lime",
+        "Mango",
+        "Melon",
+        "Orange",
+        "Papaya",
+        "Peach",
+        "Pear",
+        "Pineapple",
+        "Plum",
+        "Pomegranate",
+        "Raspberry",
+        "Strawberry",
+        "Watermelon",
+      ];
+
+      const Demo2 = () => {
+        const [fruit, setFruit] = useState(null);
+        const { searchText, setSearchText, getItemMatchInfo } = useSearch();
+
+        return (
+          <div className="demo-section">
+            <h2>Demo 2 — List with search</h2>
+            <p>
+              The popover contains a search input and a filterable list.
+              Selecting a fruit closes the popover automatically.
+            </p>
+            <Select
+              name="fruit"
+              value={fruit}
+              placeholder="Pick a fruit…"
+              uiAction={(v) => {
+                setFruit(v);
+                setSearchText("");
+              }}
+            >
+              <List listRole="listbox" border="none" expandX minWidth="240">
+                <ListItemHeader>
+                  <div
+                    style={{
+                      padding: "8px",
+                      borderBottom: "1px solid #eee",
+                    }}
+                  >
+                    <Input
+                      type="search"
+                      placeholder="Search…"
+                      value={searchText}
+                      uiAction={(v) => setSearchText(v)}
+                      autofocus
+                      style={{ width: "100%" }}
+                    />
+                  </div>
+                </ListItemHeader>
+                {FRUITS.map((f, i) => {
+                  const { match, ranges } = getItemMatchInfo(f);
+                  return (
+                    <ListItem
+                      key={f}
+                      index={i}
+                      value={f}
+                      selected={fruit === f}
+                      hidden={!match}
+                      highlight={ranges}
+                    >
+                      {f}
+                    </ListItem>
+                  );
+                })}
+              </List>
+            </Select>
+            <div className="value-display">{fruit ?? ""}</div>
+          </div>
+        );
+      };
+
+      // ── Demo 3: Placeholder and disabled states ───────────────────────────────
+
+      const SIZES = ["XS", "S", "M", "L", "XL", "XXL"];
+
+      const Demo3 = () => {
+        const [size, setSize] = useState("M");
+        return (
+          <div className="demo-section">
+            <h2>Demo 3 — States</h2>
+            <p>
+              Default (with pre-selected value), placeholder only, and disabled.
+            </p>
+            <div className="row">
+              <Select
+                name="size"
+                value={size}
+                placeholder="Pick a size…"
+                uiAction={(v) => setSize(v)}
+              >
+                <List listRole="listbox" border="none" expandX>
+                  {SIZES.map((s, i) => (
+                    <ListItem key={s} index={i} value={s} selected={size === s}>
+                      {s}
+                    </ListItem>
+                  ))}
+                </List>
+              </Select>
+              <Select name="size_empty" placeholder="No value…">
+                <List listRole="listbox" border="none" expandX>
+                  {SIZES.map((s, i) => (
+                    <ListItem key={s} index={i} value={s}>
+                      {s}
+                    </ListItem>
+                  ))}
+                </List>
+              </Select>
+              <Select name="size_disabled" value="L" disabled>
+                <List listRole="listbox" border="none" expandX>
+                  {SIZES.map((s, i) => (
+                    <ListItem key={s} index={i} value={s} selected={s === "L"}>
+                      {s}
+                    </ListItem>
+                  ))}
+                </List>
+              </Select>
+            </div>
+            <div className="value-display">{size}</div>
+          </div>
+        );
+      };
+
+      // ── Demo 4: Inside a form ─────────────────────────────────────────────────
+
+      const Demo4 = () => {
+        const [submitted, setSubmitted] = useState(null);
+        return (
+          <div className="demo-section">
+            <h2>Demo 4 — Form integration</h2>
+            <p>
+              A hidden <code>&lt;input type="hidden"&gt;</code> is rendered with
+              the selected value so the Select participates in form submission.
+            </p>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const data = new FormData(e.currentTarget);
+                setSubmitted(Object.fromEntries(data));
+              }}
+            >
+              <div
+                style={{ display: "flex", gap: "12px", alignItems: "center" }}
+              >
+                <Select name="country" placeholder="Pick a country…">
+                  <List listRole="listbox" border="none" expandX>
+                    {["France", "Germany", "Japan", "USA"].map((c, i) => (
+                      <ListItem key={c} index={i} value={c}>
+                        {c}
+                      </ListItem>
+                    ))}
+                  </List>
+                </Select>
+                <button type="submit">Submit</button>
+              </div>
+            </form>
+            {submitted && (
+              <div className="value-display">{JSON.stringify(submitted)}</div>
+            )}
+          </div>
+        );
+      };
+
+      // ── App ───────────────────────────────────────────────────────────────────
+
+      const App = () => {
+        return (
+          <div>
+            <Demo1 />
+            <Demo2 />
+            <Demo3 />
+            <Demo4 />
+          </div>
+        );
+      };
+
+      render(<App />, document.getElementById("app"));
+    </script>
+  </body>
+</html>

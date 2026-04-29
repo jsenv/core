@@ -1,215 +1,348 @@
-import { forwardRef } from "preact/compat";
-import { useEffect, useImperativeHandle, useRef, useState } from "preact/hooks";
+import { pickPositionRelativeTo, visibleRectEffect } from "@jsenv/dom";
+import { useLayoutEffect, useRef, useState } from "preact/hooks";
 
 import { renderActionableComponent } from "../action/render_actionable_component.jsx";
-import { useActionBoundToOneParam } from "../action/use_action.js";
-import { useActionStatus } from "../action/use_action_status.js";
-import { useExecuteAction } from "../action/use_execute_action.js";
-import { LoaderBackground } from "../graphic/loader/loader_background.jsx";
-import { useRefArray } from "../utils/use_ref_array.js";
-import { useActionEvents } from "./use_action_events.js";
-import { requestAction } from "./validation/custom_constraint_validation.js";
-
-const useNavState = () => {};
+import { Box } from "../box/box.jsx";
+import { ChevronDownSvg } from "../graphic/icons/chevron_updown_svg.jsx";
+import { Icon } from "../text/icon.jsx";
+import { SelectUIActionContext } from "./select_context.js";
 
 const css = /* css */ `
-  .navi_select[data-readonly] {
-    pointer-events: none;
+  @layer navi {
+    .navi_select_trigger {
+      --border-radius: 2px;
+      --border-width: 1px;
+      --outline-width: 1px;
+      --font-size: 14px;
+      --padding: 5px 8px;
+      --border-color: light-dark(#767676, #8e8e93);
+      --background-color: white;
+      --color: currentColor;
+      --placeholder-color: color-mix(in srgb, currentColor 60%, transparent);
+      --border-color-hover: color-mix(in srgb, var(--border-color) 70%, black);
+      --background-color-hover: color-mix(
+        in srgb,
+        var(--background-color) 95%,
+        black
+      );
+    }
+  }
+
+  .navi_select_trigger {
+    display: inline-flex;
+    box-sizing: border-box;
+    padding: var(--padding);
+    align-items: center;
+    gap: 6px;
+    color: var(--color);
+    font-size: var(--font-size);
+    text-align: left;
+    background-color: var(--background-color);
+    border: var(--border-width) solid transparent;
+    border-radius: var(--border-radius);
+    outline: var(--outline-width) solid var(--border-color);
+    outline-offset: calc(-1 * var(--outline-width));
+    cursor: pointer;
+    user-select: none;
+
+    &:hover {
+      background-color: var(--background-color-hover);
+      outline-color: var(--border-color-hover);
+    }
+
+    &:focus-visible {
+      outline-width: calc(var(--border-width) + var(--outline-width));
+      outline-color: var(--navi-focus-outline-color, #005fcc);
+      outline-offset: calc(-1 * (var(--border-width) + var(--outline-width)));
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: default;
+    }
+  }
+
+  .navi_select_trigger_label {
+    min-width: 0;
+    flex: 1;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+
+  .navi_select_trigger_label[data-placeholder] {
+    color: var(--placeholder-color);
+  }
+
+  .navi_select_trigger_icon {
+    flex-shrink: 0;
+    opacity: 0.6;
+  }
+
+  .navi_select_popover {
+    position: absolute;
+    inset: unset;
+    min-width: var(--select-anchor-width, 0px);
+    max-width: 95vw;
+    max-height: 95dvh;
+    margin: 0;
+    padding: 0;
+    background: white;
+    border: none;
+    border-radius: 8px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+    overflow: auto;
+
+    &[data-anchor-hidden] {
+      opacity: 0;
+      pointer-events: none;
+    }
   }
 `;
 
-export const Select = forwardRef((props, ref) => {
+/**
+ * Select — a trigger button that opens a popover containing arbitrary children.
+ *
+ * Props:
+ *   name        — form field name (renders a hidden input for form submission)
+ *   value       — currently selected value (displayed in the trigger)
+ *   placeholder — text shown when value is null/undefined/""
+ *   disabled    — disable the trigger
+ *   uiAction    — called with the selected value when an item is confirmed
+ *   action      — server action (switches to WithAction variant)
+ *   children    — content rendered inside the popover (e.g. a <List>)
+ *
+ * The uiAction is also provided via SelectUIActionContext so that a <List>
+ * placed inside Select automatically receives it without explicit prop passing.
+ *
+ * mode="popover" (default) — content opens in a popover anchored below trigger.
+ * mode="dialog" — reserved for future use.
+ */
+export const Select = (props) => {
   import.meta.css = css;
-  const select = renderActionableComponent(props, ref, {
+  return renderActionableComponent(props, {
     Basic: SelectBasic,
     WithAction: SelectWithAction,
   });
-  return select;
-});
+};
 
-const SelectControlled = forwardRef((props, ref) => {
-  const { name, value, loading, disabled, readOnly, children, ...rest } = props;
+const openPopoverBelow = (anchor, popover, cleanupRef) => {
+  popover.showPopover();
+  const positionPopover = () => {
+    const anchorRect = anchor.getBoundingClientRect();
+    popover.style.setProperty("--select-anchor-width", `${anchorRect.width}px`);
+    const minLeft = 1;
+    const { left, top } = pickPositionRelativeTo(popover, anchor, {
+      positionPreference: "below",
+      minLeft,
+    });
+    popover.style.top = `${top}px`;
+    const popoverRect = popover.getBoundingClientRect();
+    const maxWidth = parseFloat(getComputedStyle(popover).maxWidth);
+    if (!isNaN(maxWidth) && popoverRect.width >= maxWidth - 1) {
+      const viewportWidth = document.documentElement.clientWidth;
+      const centeredLeft = (viewportWidth - popoverRect.width) / 2;
+      popover.style.left = `${Math.max(centeredLeft, minLeft)}px`;
+    } else {
+      popover.style.left = `${Math.max(left, minLeft)}px`;
+    }
+  };
+  positionPopover();
+  const cleanup = visibleRectEffect(anchor, ({ visibilityRatio }) => {
+    if (visibilityRatio <= 0.2) {
+      popover.setAttribute("data-anchor-hidden", "");
+      return;
+    }
+    popover.removeAttribute("data-anchor-hidden");
+    positionPopover();
+  });
+  cleanupRef.current = () => cleanup.disconnect();
+};
 
-  const innerRef = useRef();
-  useImperativeHandle(ref, () => innerRef.current);
-
-  const selectElement = (
-    <select
-      className="navi_select"
-      ref={innerRef}
-      data-readonly={readOnly && !disabled ? "" : undefined}
-      onKeyDown={(e) => {
-        if (readOnly) {
-          e.preventDefault();
-        }
-      }}
-      {...rest}
-    >
-      {children.map((child) => {
-        const {
-          label,
-          readOnly: childReadOnly,
-          disabled: childDisabled,
-          loading: childLoading,
-          value: childValue,
-          ...childRest
-        } = child;
-
-        return (
-          <option
-            key={childValue}
-            name={name}
-            value={childValue}
-            selected={childValue === value}
-            readOnly={readOnly || childReadOnly}
-            disabled={disabled || childDisabled}
-            loading={loading || childLoading}
-            {...childRest}
-          >
-            {label}
-          </option>
-        );
-      })}
-    </select>
-  );
-
-  return (
-    <LoaderBackground
-      loading={loading}
-      color="light-dark(#355fcc, #3b82f6)"
-      inset={-1}
-    >
-      {selectElement}
-    </LoaderBackground>
-  );
-});
-
-const SelectBasic = forwardRef((props, ref) => {
-  const { value: initialValue, id, children, ...rest } = props;
-
-  const innerRef = useRef();
-  useImperativeHandle(ref, () => innerRef.current);
-
-  const [navState, setNavState] = useNavState(id);
-  const valueAtStart = navState === undefined ? initialValue : navState;
-  const [value, setValue] = useState(valueAtStart);
-  useEffect(() => {
-    setNavState(value);
-  }, [value]);
-
-  return (
-    <SelectControlled
-      ref={innerRef}
-      value={value}
-      onChange={(event) => {
-        const select = event.target;
-        const selectedValue = select.value;
-        setValue(selectedValue);
-      }}
-      {...rest}
-    >
-      {children}
-    </SelectControlled>
-  );
-});
-
-const SelectWithAction = forwardRef((props, ref) => {
+const SelectBasic = (props) => {
   const {
-    id,
     name,
-    value: externalValue,
-    valueSignal,
-    action,
+    value: initialValue = null,
+    placeholder = "Select…",
+    disabled,
+    uiAction: uiActionProp,
     children,
-    onCancel,
-    onActionPrevented,
-    onActionStart,
-    onActionAbort,
-    onActionError,
-    onActionEnd,
-    actionErrorEffect,
     ...rest
   } = props;
 
-  const innerRef = useRef();
-  useImperativeHandle(ref, () => innerRef.current);
+  const [value, setValue] = useState(initialValue);
+  const triggerRef = useRef(null);
+  const popoverRef = useRef(null);
+  const cleanupRef = useRef(null);
 
-  const [navState, setNavState, resetNavState] = useNavState(id);
-  const [boundAction, value, setValue, initialValue] = useActionBoundToOneParam(
-    action,
-    name,
-    valueSignal ? valueSignal : externalValue,
-    navState,
-  );
-  const { loading: actionLoading } = useActionStatus(boundAction);
-  const executeAction = useExecuteAction(innerRef, {
-    errorEffect: actionErrorEffect,
-  });
-  useEffect(() => {
-    setNavState(value);
-  }, [value]);
+  const closePopover = () => {
+    cleanupRef.current?.();
+    cleanupRef.current = null;
+    popoverRef.current?.hidePopover();
+  };
 
-  const actionRequesterRef = useRef(null);
-  useActionEvents(innerRef, {
-    onCancel: (e, reason) => {
-      resetNavState();
-      setValue(initialValue);
-      onCancel?.(e, reason);
-    },
-    onPrevented: onActionPrevented,
-    onAction: (actionEvent) => {
-      actionRequesterRef.current = actionEvent.detail.requester;
-      executeAction(actionEvent);
-    },
-    onStart: onActionStart,
-    onAbort: (e) => {
-      setValue(initialValue);
-      onActionAbort?.(e);
-    },
-    onError: (error) => {
-      setValue(initialValue);
-      onActionError?.(error);
-    },
-    onEnd: () => {
-      resetNavState();
-      onActionEnd?.();
-    },
-  });
+  const compositeUIAction = (selectedValue) => {
+    setValue(selectedValue);
+    closePopover();
+    uiActionProp?.(selectedValue);
+  };
 
-  const childRefArray = useRefArray(children, (child) => child.value);
+  useLayoutEffect(() => {
+    return () => {
+      cleanupRef.current?.();
+    };
+  }, []);
+
+  const hasValue = value !== null && value !== undefined && value !== "";
 
   return (
-    <SelectControlled
-      ref={innerRef}
-      name={name}
-      value={value}
-      data-action={boundAction}
-      onChange={(event) => {
-        const select = event.target;
-        const selectedValue = select.value;
-        setValue(selectedValue);
-        const radioListContainer = innerRef.current;
-        const optionSelected = select.querySelector(
-          `option[value="${selectedValue}"]`,
-        );
-        requestAction(radioListContainer, boundAction, {
-          event,
-          requester: optionSelected,
-        });
-      }}
-      {...rest}
-    >
-      {children.map((child, i) => {
-        const childRef = childRefArray[i];
-        return {
-          ...child,
-          ref: childRef,
-          loading:
-            child.loading ||
-            (actionLoading && actionRequesterRef.current === childRef.current),
-          readOnly: child.readOnly || actionLoading,
-        };
-      })}
-    </SelectControlled>
+    <SelectUIActionContext.Provider value={compositeUIAction}>
+      <Box
+        as="button"
+        type="button"
+        ref={triggerRef}
+        baseClassName="navi_select_trigger"
+        disabled={disabled}
+        onClick={() => {
+          if (disabled) {
+            return;
+          }
+          const anchor = triggerRef.current;
+          const popover = popoverRef.current;
+          if (!anchor || !popover) {
+            return;
+          }
+          openPopoverBelow(anchor, popover, cleanupRef);
+        }}
+        {...rest}
+      >
+        <span
+          className="navi_select_trigger_label"
+          data-placeholder={hasValue ? undefined : ""}
+        >
+          {hasValue ? String(value) : placeholder}
+        </span>
+        <span className="navi_select_trigger_icon">
+          <Icon>
+            <ChevronDownSvg />
+          </Icon>
+        </span>
+      </Box>
+      {name && (
+        <input
+          type="hidden"
+          name={name}
+          value={hasValue ? String(value) : ""}
+        />
+      )}
+      <div
+        ref={popoverRef}
+        className="navi_select_popover"
+        popover="manual"
+        onToggle={(e) => {
+          if (e.newState === "closed") {
+            cleanupRef.current?.();
+            cleanupRef.current = null;
+          }
+        }}
+      >
+        {children}
+      </div>
+    </SelectUIActionContext.Provider>
   );
-});
+};
+
+const SelectWithAction = (props) => {
+  const {
+    name,
+    value: externalValue = null,
+    placeholder = "Select…",
+    disabled,
+    action,
+    uiAction: uiActionProp,
+    children,
+    ...rest
+  } = props;
+
+  const [value, setValue] = useState(externalValue);
+  const triggerRef = useRef(null);
+  const popoverRef = useRef(null);
+  const cleanupRef = useRef(null);
+
+  const closePopover = () => {
+    cleanupRef.current?.();
+    cleanupRef.current = null;
+    popoverRef.current?.hidePopover();
+  };
+
+  const compositeUIAction = (selectedValue) => {
+    setValue(selectedValue);
+    closePopover();
+    uiActionProp?.(selectedValue);
+    action?.(selectedValue);
+  };
+
+  useLayoutEffect(() => {
+    return () => {
+      cleanupRef.current?.();
+    };
+  }, []);
+
+  const hasValue = value !== null && value !== undefined && value !== "";
+
+  return (
+    <SelectUIActionContext.Provider value={compositeUIAction}>
+      <Box
+        as="button"
+        type="button"
+        ref={triggerRef}
+        baseClassName="navi_select_trigger"
+        disabled={disabled}
+        onClick={() => {
+          if (disabled) {
+            return;
+          }
+          const anchor = triggerRef.current;
+          const popover = popoverRef.current;
+          if (!anchor || !popover) {
+            return;
+          }
+          openPopoverBelow(anchor, popover, cleanupRef);
+        }}
+        {...rest}
+      >
+        <span
+          className="navi_select_trigger_label"
+          data-placeholder={hasValue ? undefined : ""}
+        >
+          {hasValue ? String(value) : placeholder}
+        </span>
+        <span className="navi_select_trigger_icon">
+          <Icon>
+            <ChevronDownSvg />
+          </Icon>
+        </span>
+      </Box>
+      {name && (
+        <input
+          type="hidden"
+          name={name}
+          value={hasValue ? String(value) : ""}
+        />
+      )}
+      <div
+        ref={popoverRef}
+        className="navi_select_popover"
+        popover="manual"
+        onToggle={(e) => {
+          if (e.newState === "closed") {
+            cleanupRef.current?.();
+            cleanupRef.current = null;
+          }
+        }}
+      >
+        {children}
+      </div>
+    </SelectUIActionContext.Provider>
+  );
+};

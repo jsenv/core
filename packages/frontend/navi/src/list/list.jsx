@@ -15,6 +15,7 @@ import {
 } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
+import { SelectUIActionContext } from "../field/select_context.js";
 import { createOnKeyDownForShortcuts } from "../keyboard/keyboard_shortcuts.js";
 import { useItemTracker } from "../utils/item_tracker/use_item_tracker.js";
 import { useOpenedLayoutEffect } from "../utils/use_opened_layout_effect.js";
@@ -389,8 +390,11 @@ export const List = (props) => {
   // List, so remaining variants are still picked up correctly on the next pass.
   // The order only matters in cases where one variant should suppress another —
   // currently only withSearch has that role (see above).
-  if (props.uiAction) {
-    return <ListInteractive {...props} />;
+  const selectUIAction = useContext(SelectUIActionContext);
+  if (props.uiAction || selectUIAction) {
+    return (
+      <ListInteractive {...props} uiAction={props.uiAction || selectUIAction} />
+    );
   }
   if (props.popover === true) {
     return <ListWithPopover {...props} />;
