@@ -79,7 +79,8 @@
 
       // ── Demo 1: Simple list ───────────────────────────────────────────────────
 
-      const COLORS = ["Red", "Green", "Blue", "Yellow", "Purple", "Orange"];
+      const WARM_COLORS = ["Red", "Orange", "Yellow"];
+      const COOL_COLORS = ["Green", "Blue", "Purple"];
 
       const Demo1 = () => {
         const [color, setColor] = useState(null);
@@ -89,7 +90,8 @@
             <h2>Demo 1 — Simple list</h2>
             <p>
               Basic color picker. The <code>uiAction</code> on Select flows down
-              to the List automatically via context.
+              to the List automatically via context. Items are grouped with
+              separators.
             </p>
             <Box flex spacing="m">
               <fieldset>
@@ -111,10 +113,24 @@
                     debugFocus
                     debugScroll
                   >
-                    {COLORS.map((c, i) => (
+                    <ListItemHeader>Warm</ListItemHeader>
+                    {WARM_COLORS.map((c, i) => (
                       <ListItem
                         key={c}
                         index={i}
+                        id={c}
+                        value={c}
+                        selected={color === c}
+                      >
+                        {c}
+                      </ListItem>
+                    ))}
+                    <Separator />
+                    <ListItemHeader>Cool</ListItemHeader>
+                    {COOL_COLORS.map((c, i) => (
+                      <ListItem
+                        key={c}
+                        index={WARM_COLORS.length + i}
                         id={c}
                         value={c}
                         selected={color === c}
@@ -133,11 +149,20 @@
                   onChange={(e) => setColorNative(e.target.value)}
                 >
                   <option value="">Pick a color…</option>
-                  {COLORS.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
+                  <optgroup label="Warm">
+                    {WARM_COLORS.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="Cool">
+                    {COOL_COLORS.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </optgroup>
                 </select>
                 <div className="value-display">{colorNative || ""}</div>
               </fieldset>
@@ -247,9 +272,7 @@
         return (
           <div className="demo-section">
             <h2>Demo 3 — States</h2>
-            <p>
-              Default (with pre-selected value), placeholder only, and disabled.
-            </p>
+            <p>Pre-selected value and disabled state.</p>
             <div className="row">
               <Select
                 name="size"
@@ -266,19 +289,6 @@
                       value={s}
                       selected={size === s}
                     >
-                      {s}
-                    </ListItem>
-                  ))}
-                </List>
-              </Select>
-              <Select
-                uiAction={() => {}}
-                name="size_empty"
-                placeholder="No value…"
-              >
-                <List listRole="listbox" border="none" expandX>
-                  {SIZES.map((s, i) => (
-                    <ListItem key={s} index={i} id={s} value={s}>
                       {s}
                     </ListItem>
                   ))}
@@ -312,37 +322,81 @@
 
       // ── Demo 4: Inside a form ─────────────────────────────────────────────────
 
+      const COUNTRIES = ["France", "Germany", "Japan", "USA"];
+
       const Demo4 = () => {
         const [submitted, setSubmitted] = useState(null);
+        const [country, setCountry] = useState(null);
+        const [role, setRole] = useState(null);
         return (
           <div className="demo-section">
             <h2>Demo 4 — Form integration</h2>
             <p>
-              A hidden <code>&lt;input type="hidden"&gt;</code> is rendered with
-              the selected value so the Select participates in form submission.
+              Hidden <code>&lt;input type="hidden"&gt;</code> fields carry the
+              selected values on form submission.
             </p>
             <Form
-              action={(v) => {
-                setSubmitted(v);
+              action={(formData) => {
+                setSubmitted(Object.fromEntries(formData));
               }}
-              flex
-              spacing="m"
-              alignY="center"
             >
-              <Select name="country" placeholder="Pick a country…">
-                <List listRole="listbox" border="none" expandX>
-                  {["France", "Germany", "Japan", "USA"].map((c, i) => (
-                    <ListItem key={c} index={i} id={c} value={c}>
-                      {c}
-                    </ListItem>
-                  ))}
-                </List>
-              </Select>
-              <button type="submit">Submit</button>
+              <Box column spacing="m">
+                <Box flex spacing="m" alignY="end">
+                  <Box column spacing="xs">
+                    <label>Country</label>
+                    <Select
+                      name="country"
+                      value={country}
+                      placeholder="Pick a country…"
+                      uiAction={(v) => setCountry(v)}
+                    >
+                      <List listRole="listbox" border="none" expandX>
+                        {COUNTRIES.map((c, i) => (
+                          <ListItem
+                            key={c}
+                            index={i}
+                            id={c}
+                            value={c}
+                            selected={country === c}
+                          >
+                            {c}
+                          </ListItem>
+                        ))}
+                      </List>
+                    </Select>
+                  </Box>
+                  <Box column spacing="xs">
+                    <label>Role</label>
+                    <Select
+                      name="role"
+                      value={role}
+                      placeholder="Pick a role…"
+                      uiAction={(v) => setRole(v)}
+                    >
+                      <List listRole="listbox" border="none" expandX>
+                        {["Admin", "Editor", "Viewer"].map((r, i) => (
+                          <ListItem
+                            key={r}
+                            index={i}
+                            id={r}
+                            value={r}
+                            selected={role === r}
+                          >
+                            {r}
+                          </ListItem>
+                        ))}
+                      </List>
+                    </Select>
+                  </Box>
+                  <button type="submit">Submit</button>
+                </Box>
+                {submitted && (
+                  <div className="value-display">
+                    {JSON.stringify(submitted, null, 2)}
+                  </div>
+                )}
+              </Box>
             </Form>
-            {submitted && (
-              <div className="value-display">{JSON.stringify(submitted)}</div>
-            )}
           </div>
         );
       };
