@@ -468,8 +468,6 @@ const ListInteractive = (props) => {
   };
 
   const visibleItemsRef = useRef([]);
-
-  // Resolve the stored anchor ID to its current index (items may have reordered).
   const getAnchorIndex = () => {
     const anchorId = anchorIdRef.current;
     if (!anchorId) {
@@ -484,16 +482,6 @@ const ListInteractive = (props) => {
     }
     return visibleItemsRef.current.find((i) => i.id === anchorId);
   };
-
-  const firstRenderRef = useRef(true);
-  useLayoutEffect(() => {
-    if (!firstRenderRef.current) {
-      return;
-    }
-    firstRenderRef.current = false;
-    const selectedItem = visibleItemsRef.current.find((i) => i.selected);
-    setAnchorId(selectedItem ? selectedItem.id : null);
-  }, []);
 
   return (
     <ListInteractiveContext.Provider value={true}>
@@ -594,9 +582,9 @@ const ListInteractive = (props) => {
               dispatchCustomEvent(e, "navi_list_request_select_at", { item });
             }}
             onnavi_list_scroll={(e) => {
-              // When the list scrolls to an item (keyboard nav or restore),
+              // When the list scrolls to an item (on mount/opened, keyboard nav or restore),
               // make it the new anchor so the next arrow-key press starts from
-              // the scrolled-to item rather than the previously selected one.
+              // the scrolled-to item rather than the previously selected one that woul dbe out of view
               const { item } = e.detail;
               if (item) {
                 setAnchorId(item.id);
@@ -1020,7 +1008,7 @@ const useListScrollSync = ({
       const savedScroll = savedScrollRef.current;
       if (!savedScroll) {
         // nothing to restore
-        return;
+        return undefined;
       }
       savedScrollRef.current = null;
       debugScroll("Restoring scroll to", savedScroll);
@@ -1029,10 +1017,12 @@ const useListScrollSync = ({
         savedScroll.renderWindow.end,
         "restore scroll window",
       );
-      requestAnimationFrame(() => {
+      const frame = requestAnimationFrame(() => {
         listContainerEl.scrollTop = savedScroll.scrollTop;
       });
-      return;
+      return () => {
+        cancelAnimationFrame(frame);
+      };
     }
 
     // During search -> watch for changes in the top items or their scores.
@@ -1044,7 +1034,7 @@ const useListScrollSync = ({
     const currentTopMatchScore = topMatchScoresKeyRef.current;
     if (topMatchScoresKey === currentTopMatchScore) {
       // no changes in top matches -> no need to scroll
-      return;
+      return undefined;
     }
     // n items are now more important to see, scrollTop to show them
     topMatchScoresKeyRef.current = topMatchScoresKey;
@@ -1061,7 +1051,9 @@ const useListScrollSync = ({
     scrollToItem(visibleItems[0], {
       event: new CustomEvent("navi_list_top_match_change"),
     });
+    return undefined;
   });
+
   // Scroll listener — slides the window as the user scrolls.
   useLayoutEffect(() => {
     const listContainerEl = ref.current;
