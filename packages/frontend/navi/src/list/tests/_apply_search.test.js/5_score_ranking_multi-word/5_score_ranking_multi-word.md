@@ -2,19 +2,25 @@
 
 ```js
 return rank("bob mar", [
-  "Bob Martin",       // first word at start
-  "Mar Bob",          // second word at start
-  "Jean Bob du Mar",  // both words inside
-  "Bob xyz",          // one word missing → no match
+  "Bob Martin", // first word at start
+  "Mar Bob", // second word at start
+  "Jean Bob du Mar", // both words inside
+  "Bob xyz", // one word missing → no match
 ]);
 ```
 
 ```js
- Query      String             Result                
- "bob mar"  "Bob Martin"       "[Bob Mar]tin"        
- "bob mar"  "Mar Bob"          "[Mar] [Bob]"         
- "bob mar"  "Jean Bob du Mar"  "Jean [Bob] du [Mar]" 
- "bob mar"  "Bob xyz"          null                  
+┌───────────┬───────────────────┬───────────────────────┐
+│ Query     │ String            │ Result                │
+├───────────┼───────────────────┼───────────────────────┤
+│ "bob mar" │ "Bob Martin"      │ "[Bob Mar]tin"        │
+├───────────┼───────────────────┼───────────────────────┤
+│ "bob mar" │ "Mar Bob"         │ "[Mar] [Bob]"         │
+├───────────┼───────────────────┼───────────────────────┤
+│ "bob mar" │ "Jean Bob du Mar" │ "Jean [Bob] du [Mar]" │
+├───────────┼───────────────────┼───────────────────────┤
+│ "bob mar" │ "Bob xyz"         │ null                  │
+└───────────┴───────────────────┴───────────────────────┘
 ```
 
 ---

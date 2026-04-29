@@ -2,23 +2,31 @@
 
 ```js
 return displayTable([
-  ["bob mar", "Bob Martin"],        // first word at start
-  ["mar bob", "Bob Martin"],        // second word at start
-  ["rachel gue", "Rachel Guérin"],  // with accent folding
-  ["martin bob", "Bob Martin"],     // words in reverse order
-  ["Bob Mar", "Bob Martin"],        // case-exact multi-word
-  ["bob xyz", "Bob Martin"],        // one word missing → no match
+  ["bob mar", "Bob Martin"], // first word at start
+  ["mar bob", "Bob Martin"], // second word at start
+  ["rachel gue", "Rachel Guérin"], // with accent folding
+  ["martin bob", "Bob Martin"], // words in reverse order
+  ["Bob Mar", "Bob Martin"], // case-exact multi-word
+  ["bob xyz", "Bob Martin"], // one word missing → no match
 ]);
 ```
 
 ```js
- Query         String           Result            
- "bob mar"     "Bob Martin"     "[Bob Mar]tin"    
- "mar bob"     "Bob Martin"     "[Bob] [Mar]tin"  
- "rachel gue"  "Rachel Guérin"  "[Rachel Gué]rin" 
- "martin bob"  "Bob Martin"     "[Bob] [Martin]"  
- "Bob Mar"     "Bob Martin"     "[Bob Mar]tin"    
- "bob xyz"     "Bob Martin"     null              
+┌──────────────┬─────────────────┬───────────────────┐
+│ Query        │ String          │ Result            │
+├──────────────┼─────────────────┼───────────────────┤
+│ "bob mar"    │ "Bob Martin"    │ "[Bob Mar]tin"    │
+├──────────────┼─────────────────┼───────────────────┤
+│ "mar bob"    │ "Bob Martin"    │ "[Bob] [Mar]tin"  │
+├──────────────┼─────────────────┼───────────────────┤
+│ "rachel gue" │ "Rachel Guérin" │ "[Rachel Gué]rin" │
+├──────────────┼─────────────────┼───────────────────┤
+│ "martin bob" │ "Bob Martin"    │ "[Bob] [Martin]"  │
+├──────────────┼─────────────────┼───────────────────┤
+│ "Bob Mar"    │ "Bob Martin"    │ "[Bob Mar]tin"    │
+├──────────────┼─────────────────┼───────────────────┤
+│ "bob xyz"    │ "Bob Martin"    │ null              │
+└──────────────┴─────────────────┴───────────────────┘
 ```
 
 ---

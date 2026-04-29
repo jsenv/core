@@ -8,9 +8,13 @@ return displayTable([
 ```
 
 ```js
- Query  String        Result       
- ""     "Bob Martin"  "Bob Martin" 
- ""     "Guérin"      "Guérin"     
+┌───────┬──────────────┬──────────────┐
+│ Query │ String       │ Result       │
+├───────┼──────────────┼──────────────┤
+│ ""    │ "Bob Martin" │ "Bob Martin" │
+├───────┼──────────────┼──────────────┤
+│ ""    │ "Guérin"     │ "Guérin"     │
+└───────┴──────────────┴──────────────┘
 ```
 
 ---

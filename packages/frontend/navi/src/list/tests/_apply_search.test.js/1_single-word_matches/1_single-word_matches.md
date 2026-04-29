@@ -2,23 +2,31 @@
 
 ```js
 return displayTable([
-  ["bob", "Bob Martin"],      // at start, case-insensitive
-  ["Bob", "Bob Martin"],      // at start, case-exact
-  ["mar", "Bob Martin"],      // in middle, case-insensitive
-  ["Mar", "Bob Martin"],      // in middle, case-exact
-  ["a", "banana"],            // multiple occurrences
-  ["xyz", "Bob Martin"],      // no match
+  ["bob", "Bob Martin"], // at start, case-insensitive
+  ["Bob", "Bob Martin"], // at start, case-exact
+  ["mar", "Bob Martin"], // in middle, case-insensitive
+  ["Mar", "Bob Martin"], // in middle, case-exact
+  ["a", "banana"], // multiple occurrences
+  ["xyz", "Bob Martin"], // no match
 ]);
 ```
 
 ```js
- Query  String        Result         
- "bob"  "Bob Martin"  "[Bob] Martin" 
- "Bob"  "Bob Martin"  "[Bob] Martin" 
- "mar"  "Bob Martin"  "Bob [Mar]tin" 
- "Mar"  "Bob Martin"  "Bob [Mar]tin" 
- "a"    "banana"      "b[a]n[a]n[a]" 
- "xyz"  "Bob Martin"  null           
+┌───────┬──────────────┬────────────────┐
+│ Query │ String       │ Result         │
+├───────┼──────────────┼────────────────┤
+│ "bob" │ "Bob Martin" │ "[Bob] Martin" │
+├───────┼──────────────┼────────────────┤
+│ "Bob" │ "Bob Martin" │ "[Bob] Martin" │
+├───────┼──────────────┼────────────────┤
+│ "mar" │ "Bob Martin" │ "Bob [Mar]tin" │
+├───────┼──────────────┼────────────────┤
+│ "Mar" │ "Bob Martin" │ "Bob [Mar]tin" │
+├───────┼──────────────┼────────────────┤
+│ "a"   │ "banana"     │ "b[a]n[a]n[a]" │
+├───────┼──────────────┼────────────────┤
+│ "xyz" │ "Bob Martin" │ null           │
+└───────┴──────────────┴────────────────┘
 ```
 
 ---

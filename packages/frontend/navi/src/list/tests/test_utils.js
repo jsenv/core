@@ -1,5 +1,7 @@
-import { renderTable } from "@jsenv/terminal-table";
+import { COLORS, renderTable } from "@jsenv/terminal-table";
 import { applySearch } from "../apply_search.js";
+
+const BORDER = { color: COLORS.GREY };
 
 // Returns a string with matched ranges wrapped in [...].
 // Returns null when there is no match.
@@ -24,13 +26,14 @@ export const display = (searchText, value) => {
 // Renders a table of (query, string, result) rows using @jsenv/terminal-table.
 // Rows are sorted by score descending when a single query is used.
 export const displayTable = (rows) => {
-  const grid = [[{ value: "Query" }, { value: "String" }, { value: "Result" }]];
+  const cell = (value) => ({ value, border: BORDER });
+  const grid = [[cell("Query"), cell("String"), cell("Result")]];
   for (const [searchText, value] of rows) {
     const result = display(searchText, value);
     grid.push([
-      { value: `"${searchText}"` },
-      { value: `"${value}"` },
-      { value: result === null ? "null" : `"${result}"` },
+      cell(`"${searchText}"`),
+      cell(`"${value}"`),
+      cell(result === null ? "null" : `"${result}"`),
     ]);
   }
   return renderTable(grid, { borderCollapse: true, cellMaxWidth: 80 });

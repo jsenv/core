@@ -2,21 +2,28 @@
 
 ```js
 return displayTable([
-  ["elie", "Élie Dupont"],    // unaccented search → accented value at start
-  ["gue", "Rachel Guérin"],   // unaccented search → accented value in middle
-  ["é", "Elise"],             // accented search → unaccented value
-  ["é", "Élie"],              // accented search → accented value
-  ["elie", "Elise Dupont"],   // no accent involved
+  ["elie", "Élie Dupont"], // unaccented search → accented value at start
+  ["gue", "Rachel Guérin"], // unaccented search → accented value in middle
+  ["é", "Elise"], // accented search → unaccented value
+  ["é", "Élie"], // accented search → accented value
+  ["elie", "Elise Dupont"], // no accent involved
 ]);
 ```
 
 ```js
- Query   String           Result            
- "elie"  "Élie Dupont"    "[Élie] Dupont"   
- "gue"   "Rachel Guérin"  "Rachel [Gué]rin" 
- "é"     "Elise"          "[E]lis[e]"       
- "é"     "Élie"           "[É]li[e]"        
- "elie"  "Elise Dupont"   null              
+┌────────┬─────────────────┬───────────────────┐
+│ Query  │ String          │ Result            │
+├────────┼─────────────────┼───────────────────┤
+│ "elie" │ "Élie Dupont"   │ "[Élie] Dupont"   │
+├────────┼─────────────────┼───────────────────┤
+│ "gue"  │ "Rachel Guérin" │ "Rachel [Gué]rin" │
+├────────┼─────────────────┼───────────────────┤
+│ "é"    │ "Elise"         │ "[E]lis[e]"       │
+├────────┼─────────────────┼───────────────────┤
+│ "é"    │ "Élie"          │ "[É]li[e]"        │
+├────────┼─────────────────┼───────────────────┤
+│ "elie" │ "Elise Dupont"  │ null              │
+└────────┴─────────────────┴───────────────────┘
 ```
 
 ---
