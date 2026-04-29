@@ -401,6 +401,70 @@
         );
       };
 
+      // ── Demo 5: Dialog mode ───────────────────────────────────────────────────
+
+      const Demo5 = () => {
+        const [fruit, setFruit] = useState(null);
+        const [searchText, setSearchText] = useState("");
+        const [items, getItemMatchInfo] = useSearchText(searchText, FRUITS);
+
+        return (
+          <div className="demo-section">
+            <h2>Demo 5 — Dialog mode</h2>
+            <p>
+              Using <code>mode="dialog"</code> opens a centered modal instead of
+              an anchored popover. The native <code>Escape</code> key closes the
+              dialog for free. Backdrop is provided by <code>::backdrop</code>.
+            </p>
+            <Select
+              name="fruit_dialog"
+              value={fruit}
+              placeholder="Pick a fruit…"
+              mode="dialog"
+              uiAction={(v) => {
+                setFruit(v);
+                setSearchText("");
+              }}
+              debugFocus
+            >
+              <List listRole="listbox" border="none" expandX minWidth="300">
+                <ListItemHeader>
+                  <div
+                    style={{ padding: "8px", borderBottom: "1px solid #eee" }}
+                  >
+                    <Input
+                      type="search"
+                      placeholder="Search…"
+                      value={searchText}
+                      uiAction={(v) => setSearchText(v)}
+                      autofocus
+                      style={{ width: "100%" }}
+                    />
+                  </div>
+                </ListItemHeader>
+                {items.map((f, i) => {
+                  const { match, ranges } = getItemMatchInfo(f);
+                  return (
+                    <ListItem
+                      key={f}
+                      index={i}
+                      id={f}
+                      value={f}
+                      selected={fruit === f}
+                      hidden={!match}
+                      highlight={ranges}
+                    >
+                      {f}
+                    </ListItem>
+                  );
+                })}
+              </List>
+            </Select>
+            <div className="value-display">{fruit ?? ""}</div>
+          </div>
+        );
+      };
+
       // ── App ───────────────────────────────────────────────────────────────────
 
       const App = () => {
@@ -410,6 +474,7 @@
             <Demo2 />
             <Demo3 />
             <Demo4 />
+            <Demo5 />
           </div>
         );
       };

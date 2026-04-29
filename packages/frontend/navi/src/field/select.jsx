@@ -375,12 +375,12 @@ const SelectTrigger = () => {
 const SelectBasic = (props) => {
   const { mode = "popover" } = props;
   if (mode === "dialog") {
-    return <SelectBasicDialog {...props} />;
+    return <SelectWithDialog {...props} />;
   }
-  return <SelectBasicPopover {...props} />;
+  return <SelectWithPopover {...props} />;
 };
-// SelectBasicPopover — trigger + popover anchored below the trigger.
-const SelectBasicPopover = (props) => {
+// SelectWithPopover — trigger + popover anchored below the trigger.
+const SelectWithPopover = (props) => {
   let { disabled, onKeyDown, children, debugPopover, debugFocus, ...rest } =
     props;
   debugPopover = debugPopover ? (...args) => console.debug(...args) : () => {};
@@ -560,19 +560,31 @@ const SelectBasicPopover = (props) => {
     </>
   );
 };
-// SelectBasicDialog — trigger + centered modal dialog.
-const SelectBasicDialog = (props) => {
-  const { disabled, onClick, children, ...rest } = props;
+// SelectWithDialog — trigger + centered modal dialog.
+const SelectWithDialog = (props) => {
+  let { disabled, onKeyDown, children, debugFocus, ...rest } = props;
+  debugFocus = debugFocus ? console.debug : () => {};
+  const defaultRef = useRef();
+  const ref = rest.ref || defaultRef;
   const dialogRef = useRef(null);
   const dialogId = useId();
-  const [open, setOpen] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const expandedRef = useRef(expanded);
+  expandedRef.current = expanded;
+  const expand = () => {
+    expandedRef.current = true;
+    setExpanded(true);
+  };
+  const collapse = () => {
+    expandedRef.current = false;
+    setExpanded(false);
+  };
 
   const openDialog = () => {
     if (disabled) {
       return;
     }
-    if (open) {
-      closeDialog();
+    if (expandedRef.current) {
       return;
     }
     const dialog = dialogRef.current;
@@ -580,34 +592,69 @@ const SelectBasicDialog = (props) => {
       return;
     }
     dialog.showModal();
-    setOpen(true);
+    expand();
   };
   const closeDialog = () => {
     const dialog = dialogRef.current;
-    if (!dialog || !open) {
+    if (!dialog) {
       return;
     }
     dialog.close();
-    setOpen(false);
+    collapse();
+  };
+
+  const moveFocusToSelect = () => {
+    debugFocus("moveFocusToSelect");
+    ref.current.focus({ preventScroll: true, focusVisible: true });
   };
 
   return (
     <SelectUI
+      disabled={disabled}
       aria-haspopup="dialog"
-      aria-expanded={open}
+      aria-expanded={expanded}
       aria-controls={dialogId}
-      {...rest}
-      onClick={(e) => {
-        openDialog(e);
-        onClick?.();
+      onMouseDown={(e) => {
+        if (disabled) {
+          return;
+        }
+        if (expandedRef.current) {
+          closeDialog(e);
+        } else {
+          openDialog(e);
+        }
       }}
+      onnavi_list_select={(e) => {
+        const { event } = e.detail;
+        if (event.type === "mousedown") {
+          event.preventDefault();
+        }
+        closeDialog(e);
+        moveFocusToSelect();
+      }}
+      onKeyDown={shortcutsViaOnKeyDown(
+        {
+          arrowdown: (e) => {
+            e.preventDefault();
+            openDialog(e);
+          },
+          arrowup: (e) => {
+            e.preventDefault();
+            openDialog(e);
+          },
+        },
+        onKeyDown,
+      )}
+      {...rest}
+      ref={ref}
     >
       <dialog
         ref={dialogRef}
         id={dialogId}
         className="navi_select_dialog"
         onClose={() => {
-          setOpen(false);
+          collapse();
+          moveFocusToSelect();
         }}
       >
         {children}
