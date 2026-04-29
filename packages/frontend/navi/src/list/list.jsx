@@ -1816,9 +1816,7 @@ export const requestListInteractionStateReset = (listElement, { event }) => {
 // Dispatches a navi event bubbling from the current event target element.
 const dispatchCustomEvent = (el, customEventName, customEventDetail) => {
   const customEvent = new CustomEvent(customEventName, {
-    detail: {
-      ...customEventDetail,
-    },
+    detail: resolveEventDetail(customEventDetail),
     cancelable: true,
   });
   return el.currentTarget.dispatchEvent(customEvent);
@@ -1826,11 +1824,20 @@ const dispatchCustomEvent = (el, customEventName, customEventDetail) => {
 // Dispatches a navi event bubbling from a list item's element.
 const dispatchBubblingEvent = (el, customEventName, customEventDetail) => {
   const customEvent = new CustomEvent(customEventName, {
-    detail: {
-      ...customEventDetail,
-    },
+    detail: resolveEventDetail(customEventDetail),
     bubbles: true,
   });
   return el.dispatchEvent(customEvent);
+};
+
+const resolveEventDetail = (customEventDetail) => {
+  const { event, ...rest } = customEventDetail ?? {};
+  let resolvedEvent;
+  if (event?.detail?.event !== undefined) {
+    resolvedEvent = event.detail.event;
+  } else if (event !== undefined) {
+    resolvedEvent = event;
+  }
+  return { ...rest, event: resolvedEvent };
 };
 const dispatchPublicEvent = dispatchBubblingEvent;
