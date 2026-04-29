@@ -1,5 +1,5 @@
 import { pickPositionRelativeTo, visibleRectEffect } from "@jsenv/dom";
-import { useLayoutEffect, useRef, useState } from "preact/hooks";
+import { useId, useLayoutEffect, useRef, useState } from "preact/hooks";
 
 import { renderActionableComponent } from "../action/render_actionable_component.jsx";
 import { Box } from "../box/box.jsx";
@@ -159,6 +159,98 @@ const openPopoverBelow = (anchor, popover, cleanupRef) => {
   cleanupRef.current = () => cleanup.disconnect();
 };
 
+// Hook that wires up close-on-outside-click, Escape to close, and
+// focus-back-to-trigger when a list item is selected via mouse.
+const useSelectBehavior = ({
+  triggerRef,
+  popoverRef,
+  cleanupRef,
+  closePopover,
+}) => {
+  const [open, setOpen] = useState(false);
+
+  const openPopover = (disabled) => {
+    if (disabled) {
+      return;
+    }
+    if (open) {
+      close();
+      return;
+    }
+    const anchor = triggerRef.current;
+    const popover = popoverRef.current;
+    if (!anchor || !popover) {
+      return;
+    }
+    openPopoverBelow(anchor, popover, cleanupRef);
+    setOpen(true);
+  };
+
+  const close = () => {
+    closePopover();
+    setOpen(false);
+  };
+
+  useLayoutEffect(() => {
+    if (!open) {
+      return undefined;
+    }
+    const onPointerDown = (e) => {
+      const trigger = triggerRef.current;
+      const popover = popoverRef.current;
+      if (!trigger || !popover) {
+        return;
+      }
+      if (trigger.contains(e.target) || popover.contains(e.target)) {
+        return;
+      }
+      close();
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+    };
+  }, [open]);
+
+  useLayoutEffect(() => {
+    const popover = popoverRef.current;
+    if (!popover) {
+      return undefined;
+    }
+    // When a list item is confirmed via mousedown, the focus would naturally go
+    // to the clicked element inside the popover. We intercept and return it to
+    // the trigger button instead.
+    const onListSelect = (e) => {
+      const { event } = e.detail;
+      if (event.type === "mousedown") {
+        event.preventDefault();
+        triggerRef.current?.focus({ preventScroll: true });
+      }
+    };
+    popover.addEventListener("navi_list_select", onListSelect);
+    return () => {
+      popover.removeEventListener("navi_list_select", onListSelect);
+    };
+  }, []);
+
+  const onToggle = (e) => {
+    if (e.newState === "closed") {
+      cleanupRef.current?.();
+      cleanupRef.current = null;
+      setOpen(false);
+    }
+  };
+
+  const onKeyDown = (e) => {
+    if (e.key === "Escape" && open) {
+      e.preventDefault();
+      close();
+    }
+  };
+
+  return { open, openPopover, close, onToggle, onKeyDown };
+};
+
 const SelectBasic = (props) => {
   const {
     name,
@@ -174,12 +266,20 @@ const SelectBasic = (props) => {
   const triggerRef = useRef(null);
   const popoverRef = useRef(null);
   const cleanupRef = useRef(null);
+  const popoverId = useId();
 
   const closePopover = () => {
     cleanupRef.current?.();
     cleanupRef.current = null;
     popoverRef.current?.hidePopover();
   };
+
+  const { open, openPopover, onToggle, onKeyDown } = useSelectBehavior({
+    triggerRef,
+    popoverRef,
+    cleanupRef,
+    closePopover,
+  });
 
   const compositeUIAction = (selectedValue) => {
     setValue(selectedValue);
@@ -203,17 +303,13 @@ const SelectBasic = (props) => {
         ref={triggerRef}
         baseClassName="navi_select_trigger"
         disabled={disabled}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-controls={popoverId}
         onClick={() => {
-          if (disabled) {
-            return;
-          }
-          const anchor = triggerRef.current;
-          const popover = popoverRef.current;
-          if (!anchor || !popover) {
-            return;
-          }
-          openPopoverBelow(anchor, popover, cleanupRef);
+          openPopover(disabled);
         }}
+        onKeyDown={onKeyDown}
         {...rest}
       >
         <span
@@ -236,15 +332,12 @@ const SelectBasic = (props) => {
         />
       )}
       <div
+        id={popoverId}
         ref={popoverRef}
         className="navi_select_popover"
+        role="listbox"
         popover="manual"
-        onToggle={(e) => {
-          if (e.newState === "closed") {
-            cleanupRef.current?.();
-            cleanupRef.current = null;
-          }
-        }}
+        onToggle={onToggle}
       >
         {children}
       </div>
@@ -268,12 +361,20 @@ const SelectWithAction = (props) => {
   const triggerRef = useRef(null);
   const popoverRef = useRef(null);
   const cleanupRef = useRef(null);
+  const popoverId = useId();
 
   const closePopover = () => {
     cleanupRef.current?.();
     cleanupRef.current = null;
     popoverRef.current?.hidePopover();
   };
+
+  const { open, openPopover, onToggle, onKeyDown } = useSelectBehavior({
+    triggerRef,
+    popoverRef,
+    cleanupRef,
+    closePopover,
+  });
 
   const compositeUIAction = (selectedValue) => {
     setValue(selectedValue);
@@ -298,17 +399,13 @@ const SelectWithAction = (props) => {
         ref={triggerRef}
         baseClassName="navi_select_trigger"
         disabled={disabled}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-controls={popoverId}
         onClick={() => {
-          if (disabled) {
-            return;
-          }
-          const anchor = triggerRef.current;
-          const popover = popoverRef.current;
-          if (!anchor || !popover) {
-            return;
-          }
-          openPopoverBelow(anchor, popover, cleanupRef);
+          openPopover(disabled);
         }}
+        onKeyDown={onKeyDown}
         {...rest}
       >
         <span
@@ -331,15 +428,12 @@ const SelectWithAction = (props) => {
         />
       )}
       <div
+        id={popoverId}
         ref={popoverRef}
         className="navi_select_popover"
+        role="listbox"
         popover="manual"
-        onToggle={(e) => {
-          if (e.newState === "closed") {
-            cleanupRef.current?.();
-            cleanupRef.current = null;
-          }
-        }}
+        onToggle={onToggle}
       >
         {children}
       </div>
