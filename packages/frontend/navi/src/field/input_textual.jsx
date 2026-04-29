@@ -39,7 +39,7 @@ import { PhoneSvg } from "../graphic/icons/phone_svg.jsx";
 import { SearchSvg } from "../graphic/icons/search_svg.jsx";
 import { LoaderBackground } from "../graphic/loader/loader_background.jsx";
 import {
-  createOnKeyDownForShortcuts,
+  shortcutsViaOnKeyDown,
   useKeyboardShortcuts,
 } from "../keyboard/keyboard_shortcuts.js";
 import {
@@ -637,53 +637,6 @@ const InputInsideListWithSearch = ({ uiAction, onKeyDown, ...props }) => {
     }
     return requestList(listContainerEl, { event, ...customEventDetail });
   };
-  const onKeyDownForShortcuts = createOnKeyDownForShortcuts([
-    {
-      key: "arrowdown",
-      description: "Point to next suggestion",
-      handler: (e) => {
-        return forwardToList(e, requestListNavFromCurrent, { goal: "down" });
-      },
-    },
-    {
-      key: "arrowup",
-      description: "Point to previous suggestion",
-      handler: (e) => {
-        return forwardToList(e, requestListNavFromCurrent, { goal: "up" });
-      },
-    },
-    {
-      key: "home",
-      description: "Point to first suggestion",
-      handler: (e) => {
-        return forwardToList(e, requestListNavFromCurrent, { goal: "first" });
-      },
-    },
-    {
-      key: "end",
-      description: "Point to last suggestion",
-      handler: (e) => {
-        return forwardToList(e, requestListNavFromCurrent, { goal: "last" });
-      },
-    },
-    {
-      key: "enter",
-      description: "Confirm pointed suggestion",
-      handler: (e) => {
-        return forwardToList(e, requestListSelectCurrent);
-      },
-    },
-    {
-      key: "escape",
-      handler: (e) => {
-        // If we where to dispatch right away it would re-render the input
-        // and prevent the native browser behavior on escape inside search input (clearing input content)
-        queueMicrotask(() => {
-          forwardToList(e, requestListInteractionStateReset);
-        });
-      },
-    },
-  ]);
 
   return (
     <InputTextualUI
@@ -692,10 +645,41 @@ const InputInsideListWithSearch = ({ uiAction, onKeyDown, ...props }) => {
       aria-has-popup="listbox"
       type="search"
       autoComplete="off"
-      onKeyDown={(e) => {
-        onKeyDownForShortcuts(e);
-        onKeyDown?.(e);
-      }}
+      onKeyDown={shortcutsViaOnKeyDown(
+        {
+          arrowdown: (e) => {
+            return forwardToList(e, requestListNavFromCurrent, {
+              goal: "down",
+            });
+          },
+          arrowup: (e) => {
+            return forwardToList(e, requestListNavFromCurrent, {
+              goal: "up",
+            });
+          },
+          home: (e) => {
+            return forwardToList(e, requestListNavFromCurrent, {
+              goal: "first",
+            });
+          },
+          end: (e) => {
+            return forwardToList(e, requestListNavFromCurrent, {
+              goal: "last",
+            });
+          },
+          enter: (e) => {
+            return forwardToList(e, requestListSelectCurrent);
+          },
+          escape: (e) => {
+            // If we where to dispatch right away it would re-render the input
+            // and prevent the native browser behavior on escape inside search input (clearing input content)
+            queueMicrotask(() => {
+              forwardToList(e, requestListInteractionStateReset);
+            });
+          },
+        },
+        onKeyDown,
+      )}
       {...props}
       ref={ref}
     />

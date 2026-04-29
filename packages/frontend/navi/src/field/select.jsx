@@ -16,6 +16,7 @@ import { useExecuteAction } from "../action/use_execute_action.js";
 import { Box } from "../box/box.jsx";
 import { ChevronDownSvg } from "../graphic/icons/chevron_updown_svg.jsx";
 import { LoaderBackground } from "../graphic/loader/loader_background.jsx";
+import { shortcutsViaOnKeyDown } from "../keyboard/keyboard_shortcuts.js";
 import { Icon } from "../text/icon.jsx";
 import {
   reportDisabledToLabel,
@@ -489,13 +490,17 @@ const SelectBasicPopover = (props) => {
           ref.current?.focus({ preventScroll: true });
         }
       }}
-      onKeyDown={(e) => {
-        if (e.key === "Escape" && open) {
-          e.preventDefault();
-          closePopover(e);
-        }
-        onKeyDown?.(e);
-      }}
+      onKeyDown={shortcutsViaOnKeyDown(
+        {
+          escape: (e) => {
+            if (open) {
+              e.preventDefault();
+              closePopover(e);
+            }
+          },
+        },
+        onKeyDown,
+      )}
       {...rest}
       ref={ref}
     >

@@ -17,7 +17,7 @@ import {
 import { Box } from "../box/box.jsx";
 import { SelectUIActionContext } from "../field/select_context.js";
 import { useAutoFocus } from "../field/use_auto_focus.js";
-import { createOnKeyDownForShortcuts } from "../keyboard/keyboard_shortcuts.js";
+import { shortcutsViaOnKeyDown } from "../keyboard/keyboard_shortcuts.js";
 import { useItemTracker } from "../utils/item_tracker/use_item_tracker.js";
 import { useDisplayedLayoutEffect } from "../utils/use_displayed_layout_effect.js";
 
@@ -1321,60 +1321,38 @@ const ListInteractive = (props) => {
 };
 
 const ListWithKeyboardInteractions = (props) => {
-  const onKeyDownForShortcuts = createOnKeyDownForShortcuts([
+  const onKeyDown = shortcutsViaOnKeyDown(
     {
-      key: "arrowdown",
-      description: "Point to next item",
-      handler: (e) => {
+      arrowdown: (e) => {
         return requestListNavFromCurrent(e.currentTarget, {
           event: e,
           goal: "down",
         });
       },
-    },
-    {
-      key: "arrowup",
-      description: "Point to previous item",
-      handler: (e) => {
+      arrowup: (e) => {
         return requestListNavFromCurrent(e.currentTarget, {
           event: e,
           goal: "up",
         });
       },
-    },
-    {
-      key: "home",
-      description: "Point to first item",
-      handler: (e) => {
+      home: (e) => {
         return requestListNavFromCurrent(e.currentTarget, {
           event: e,
           goal: "first",
         });
       },
-    },
-    {
-      key: "end",
-      description: "Point to last item",
-      handler: (e) => {
+      end: (e) => {
         return requestListNavFromCurrent(e.currentTarget, {
           event: e,
           goal: "last",
         });
       },
-    },
-    {
-      key: "enter",
-      description: "Confirm pointed item",
-      handler: (e) => {
+      enter: (e) => {
         return requestListSelectCurrent(e.currentTarget, {
           event: e,
         });
       },
-    },
-    {
-      key: "escape",
-      description: "Clear pointed item",
-      handler: (e) => {
+      escape: (e) => {
         // Use queueMicrotask to ensure the navi_list_request_interaction_state_reset event does not prevent
         // escape to close dialog behavior (otherwise the re-rendering of the list prevent it for some reason)
         queueMicrotask(() => {
@@ -1384,17 +1362,15 @@ const ListWithKeyboardInteractions = (props) => {
         });
       },
     },
-  ]);
+    props.onKeyDown,
+  );
 
   return (
     <List
       {...props}
       keyboardInteractions={undefined}
       tabIndex="0"
-      onKeyDown={(e) => {
-        onKeyDownForShortcuts(e);
-        props.onKeyDown?.(e);
-      }}
+      onKeyDown={onKeyDown}
     />
   );
 };

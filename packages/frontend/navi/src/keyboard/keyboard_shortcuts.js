@@ -203,6 +203,24 @@ export const createOnKeyDownForShortcuts = (shortcuts, busyRef) => {
     applyKeyboardShortcuts(shortcutsCopy, keyboardEvent);
   };
 };
+export const shortcutsViaOnKeyDown = (shortcuts, onKeyDown) => {
+  const shortcutsArray = [];
+  for (const key of Object.keys(shortcuts)) {
+    const value = shortcuts[key];
+    const shortcut = { key };
+    if (typeof value === "function") {
+      shortcut.handler = value;
+    } else if (typeof value === "object" && value !== null) {
+      Object.assign(shortcut, value);
+    }
+    shortcutsArray.push(shortcut);
+  }
+  const onKeyDownForShortcuts = createOnKeyDownForShortcuts(shortcutsArray);
+  return (e) => {
+    onKeyDownForShortcuts(e);
+    onKeyDown?.(e);
+  };
+};
 
 const applyKeyboardShortcuts = (shortcuts, keyboardEvent) => {
   if (!canInterceptKeys(keyboardEvent)) {
