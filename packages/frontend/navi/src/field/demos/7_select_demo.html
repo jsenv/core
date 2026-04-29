@@ -74,6 +74,7 @@
         useSearchText,
         Input,
         Form,
+        Box,
       } from "@jsenv/navi";
 
       // ── Demo 1: Simple list ───────────────────────────────────────────────────
@@ -82,6 +83,7 @@
 
       const Demo1 = () => {
         const [color, setColor] = useState(null);
+        const [colorNative, setColorNative] = useState("");
         return (
           <div className="demo-section">
             <h2>Demo 1 — Simple list</h2>
@@ -89,30 +91,50 @@
               Basic color picker. The <code>uiAction</code> on Select flows down
               to the List automatically via context.
             </p>
-            <Select
-              name="color"
-              value={color}
-              placeholder="Pick a color…"
-              uiAction={(v) => {
-                setColor(v);
-              }}
-              debugPopover
-            >
-              <List listRole="listbox" border="none" expandX>
-                {COLORS.map((c, i) => (
-                  <ListItem
-                    key={c}
-                    index={i}
-                    id={c}
-                    value={c}
-                    selected={color === c}
-                  >
-                    {c}
-                  </ListItem>
-                ))}
-              </List>
-            </Select>
-            <div className="value-display">{color ?? ""}</div>
+            <Box flex spacing="m">
+              <fieldset>
+                <legend>Navi</legend>
+                <Select
+                  name="color"
+                  value={color}
+                  placeholder="Pick a color…"
+                  uiAction={(v) => {
+                    setColor(v);
+                  }}
+                  debugPopover
+                >
+                  <List listRole="listbox" border="none" expandX>
+                    {COLORS.map((c, i) => (
+                      <ListItem
+                        key={c}
+                        index={i}
+                        id={c}
+                        value={c}
+                        selected={color === c}
+                      >
+                        {c}
+                      </ListItem>
+                    ))}
+                  </List>
+                </Select>
+                <div className="value-display">{color ?? ""}</div>
+              </fieldset>
+              <fieldset>
+                <legend>Native</legend>
+                <select
+                  value={colorNative}
+                  onChange={(e) => setColorNative(e.target.value)}
+                >
+                  <option value="">Pick a color…</option>
+                  {COLORS.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+                <div className="value-display">{colorNative || ""}</div>
+              </fieldset>
+            </Box>
           </div>
         );
       };

@@ -81,6 +81,7 @@ const css = /* css */ `
       outline-color: var(--border-color-hover);
     }
 
+    &:focus,
     &:focus-visible {
       outline-width: calc(var(--border-width) + var(--outline-width));
       outline-color: var(--navi-focus-outline-color, #005fcc);
@@ -496,7 +497,7 @@ const SelectBasicPopover = (props) => {
       aria-haspopup="listbox"
       aria-expanded={expanded}
       aria-controls={popoverId}
-      onClick={(e) => {
+      onMouseDown={(e) => {
         if (expandedRef.current) {
           closePopover(e);
         } else {
@@ -511,7 +512,7 @@ const SelectBasicPopover = (props) => {
           event.stopPropagation();
         }
         closePopover(e);
-        ref.current?.focus({ preventScroll: true });
+        ref.current?.focus({ preventScroll: true, focusVisible: true });
       }}
       onKeyDown={shortcutsViaOnKeyDown(
         {
@@ -527,7 +528,7 @@ const SelectBasicPopover = (props) => {
             if (expandedRef.current) {
               e.preventDefault();
               closePopover(e);
-              ref.current.focus({ preventScroll: true });
+              ref.current.focus({ preventScroll: true, focusVisible: true });
             }
           },
         },
@@ -541,6 +542,10 @@ const SelectBasicPopover = (props) => {
         id={popoverId}
         className="navi_select_popover"
         popover="manual"
+        onMouseDown={(e) => {
+          // mousedown inside popover should not bubble to the select (would re-open it if that mousedown closes it)
+          e.stopPropagation();
+        }}
         onToggle={(e) => {
           if (e.newState === "closed") {
             cleanupRef.current?.();
