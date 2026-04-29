@@ -111,6 +111,18 @@ const css = /* css */ `
       opacity: 0.6;
     }
 
+    /* When the suggestion list inside the dialog has keyboard focus, show the
+       focus ring on the dialog itself and suppress it on the list container. 
+       It's visually better */
+    &:has(.navi_list_container:focus-visible) {
+      outline-width: calc(var(--border-width) + var(--outline-width));
+      outline-color: var(--navi-focus-outline-color, #005fcc);
+      outline-offset: calc(-1 * (var(--border-width) + var(--outline-width)));
+    }
+    .navi_list_container:focus-visible {
+      outline: none;
+    }
+
     .navi_select_popover {
       position: absolute;
       inset: unset;
