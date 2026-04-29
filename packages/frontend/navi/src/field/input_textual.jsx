@@ -290,7 +290,6 @@ const css = /* css */ `
 `;
 
 export const InputTextual = (props) => {
-  import.meta.css = css;
   const uiStateController = useUIStateController(props, "input");
   const uiState = useUIState(uiStateController);
 
@@ -305,112 +304,7 @@ export const InputTextual = (props) => {
   );
 };
 
-const InputStyleCSSVars = {
-  "outlineWidth": "--outline-width",
-  "borderWidth": "--border-width",
-  "borderRadius": "--border-radius",
-  "padding": "--padding",
-  "paddingX": "--padding-x",
-  "paddingY": "--padding-y",
-  "paddingTop": "--padding-top",
-  "paddingRight": "--padding-right",
-  "paddingBottom": "--padding-bottom",
-  "paddingLeft": "--padding-left",
-  "background": "--background",
-  "backgroundColor": "--background-color",
-  "borderColor": "--border-color",
-  "color": "--color",
-  "fontSize": "--font-size",
-  ":hover": {
-    backgroundColor: "--background-color-hover",
-    borderColor: "--border-color-hover",
-    color: "--color-hover",
-  },
-  ":focus": {
-    backgroundColor: "--background-color-focus",
-    borderColor: "--border-color-focus",
-  },
-  ":active": {
-    backgroundColor: "--background-color-active",
-    borderColor: "--border-color-active",
-  },
-  ":read-only": {
-    backgroundColor: "--background-color-readonly",
-    borderColor: "--border-color-readonly",
-    color: "--color-readonly",
-  },
-  ":disabled": {
-    backgroundColor: "--background-color-disabled",
-    borderColor: "--border-color-disabled",
-    color: "--color-disabled",
-  },
-};
-const InputPseudoClasses = [
-  ":hover",
-  ":active",
-  ":focus",
-  ":focus-visible",
-  ":read-only",
-  ":disabled",
-  ":-navi-loading",
-  ":navi-has-value",
-  ":navi-expanded",
-];
-Object.assign(PSEUDO_CLASSES, {
-  ":navi-has-value": {
-    attribute: "data-has-value",
-    setup: (el, callback) => {
-      return listenInputValue(el, callback);
-    },
-    test: (el) => {
-      if (el.value === "") {
-        return false;
-      }
-      return true;
-    },
-  },
-});
-const InputPseudoElements = ["::-navi-loader"];
-const InputChildPropSet = new Set([...fieldPropSet]);
-
 const InputNativeContext = createContext(null);
-
-const InputSlot = ({ side, onClick, hideWhileEmpty, ...props }) => {
-  const ctx = useContext(InputNativeContext);
-  const { id, readOnly, disabled } = ctx;
-
-  return (
-    <Label
-      htmlFor={id}
-      className="navi_input_slot"
-      disabled={disabled}
-      readOnly={readOnly}
-      data-readonly={readOnly}
-      data-disabled={disabled}
-      data-left={side === "left" ? "" : undefined}
-      data-right={side === "right" ? "" : undefined}
-      data-hide-while-empty={hideWhileEmpty ? "" : undefined}
-      flex
-      alignY="center"
-      onMouseDown={(e) => {
-        e.preventDefault(); // keep focus in the input
-      }}
-      onClick={(e) => {
-        if (readOnly || disabled) {
-          return;
-        }
-        onClick?.(e);
-      }}
-      {...props}
-    />
-  );
-};
-export const InputLeftSlot = (props) => {
-  return <InputSlot {...props} side="left" />;
-};
-export const InputRightSlot = (props) => {
-  return <InputSlot {...props} side="right" />;
-};
 
 const InputTextualBasic = (props) => {
   const isInsideListWithSearch = useIsInsideListWithSearch();
@@ -420,303 +314,9 @@ const InputTextualBasic = (props) => {
   if (props.suggestions) {
     return <InputTextualWithSuggestions {...props} />;
   }
-  return <InputTextualPlain {...props} />;
+  return <InputTextualUI {...props} />;
 };
-
-const InputInsideListWithSearch = ({ uiAction, onKeyDown, ...props }) => {
-  const listId = useContext(ListIdContext);
-  const uiStateController = useContext(UIStateControllerContext);
-  uiStateController.uiAction = (v, e) => {
-    uiAction?.(v, e);
-  };
-  const defaultRef = useRef(null);
-  const ref = props.ref || defaultRef;
-  useEffect(() => {
-    const inputEl = ref.current;
-    if (!inputEl) {
-      return undefined;
-    }
-    const listContainerEl = inputEl.closest(".navi_list_container");
-    if (!listContainerEl) {
-      return undefined;
-    }
-    const onListSelect = (e) => {
-      const { event } = e.detail;
-      if (event.type === "mousedown") {
-        event.preventDefault();
-        inputEl.focus({ preventScroll: true });
-      }
-    };
-    listContainerEl.addEventListener("navi_list_select", onListSelect);
-    return () => {
-      listContainerEl.removeEventListener("navi_list_select", onListSelect);
-    };
-  }, []);
-
-  const forwardToList = (event, requestList, customEventDetail) => {
-    const inputEl = event.currentTarget;
-    const listContainerEl = inputEl.closest(".navi_list_container");
-    if (!listContainerEl) {
-      return false;
-    }
-    return requestList(listContainerEl, { event, ...customEventDetail });
-  };
-  const onKeyDownForShortcuts = createOnKeyDownForShortcuts([
-    {
-      key: "arrowdown",
-      description: "Point to next suggestion",
-      handler: (e) => {
-        return forwardToList(e, requestListNavFromCurrent, { goal: "down" });
-      },
-    },
-    {
-      key: "arrowup",
-      description: "Point to previous suggestion",
-      handler: (e) => {
-        return forwardToList(e, requestListNavFromCurrent, { goal: "up" });
-      },
-    },
-    {
-      key: "home",
-      description: "Point to first suggestion",
-      handler: (e) => {
-        return forwardToList(e, requestListNavFromCurrent, { goal: "first" });
-      },
-    },
-    {
-      key: "end",
-      description: "Point to last suggestion",
-      handler: (e) => {
-        return forwardToList(e, requestListNavFromCurrent, { goal: "last" });
-      },
-    },
-    {
-      key: "enter",
-      description: "Confirm pointed suggestion",
-      handler: (e) => {
-        return forwardToList(e, requestListSelectCurrent);
-      },
-    },
-    {
-      key: "escape",
-      handler: (e) => {
-        // If we where to dispatch right away it would re-render the input
-        // and prevent the native browser behavior on escape inside search input (clearing input content)
-        queueMicrotask(() => {
-          forwardToList(e, requestListInteractionStateReset);
-        });
-      },
-    },
-  ]);
-
-  return (
-    <InputTextualPlain
-      aria-controls={listId}
-      aria-autocomplete="list"
-      aria-has-popup="listbox"
-      type="search"
-      autoComplete="off"
-      onKeyDown={(e) => {
-        onKeyDownForShortcuts(e);
-        onKeyDown?.(e);
-      }}
-      {...props}
-      ref={ref}
-    />
-  );
-};
-
-const InputTextualWithSuggestions = ({
-  suggestions,
-  onInput,
-  onFocus,
-  onBlur,
-  children,
-  ...rest
-}) => {
-  const defaultRef = useRef();
-  const ref = rest.ref || defaultRef;
-  const [expanded, setExpanded] = useState(false);
-  const expandedRef = useRef(expanded);
-  expandedRef.current = expanded;
-  const expand = () => {
-    expandedRef.current = true;
-    setExpanded(true);
-  };
-  const collapse = () => {
-    expandedRef.current = false;
-    setExpanded(false);
-  };
-
-  const showSuggestions = (e) => {
-    if (expandedRef.current) {
-      return;
-    }
-    console.debug(`showPopover (e.type:${e.type})`);
-    const popoverEl = document.getElementById(suggestions);
-    if (!popoverEl) {
-      return;
-    }
-    popoverEl.dispatchEvent(
-      new CustomEvent("navi_list_open", {
-        detail: { anchor: ref.current },
-      }),
-    );
-    expand();
-  };
-
-  const hideSuggestions = (e) => {
-    if (!expandedRef.current) {
-      return;
-    }
-    console.debug(`hidePopover (e.type:${e.type})`);
-    const popoverEl = document.getElementById(suggestions);
-    if (popoverEl) {
-      popoverEl.dispatchEvent(new CustomEvent("navi_list_request_close"));
-    }
-    collapse();
-  };
-
-  const forwardToList = (event, requestList, customEventDetail) => {
-    const suggestionList = document.getElementById(suggestions);
-    if (!suggestionList) {
-      return false;
-    }
-    return requestList(suggestionList, { event, ...customEventDetail });
-  };
-
-  useKeyboardShortcuts(ref, [
-    {
-      key: "arrowdown",
-      description: "Open popover and point to next suggestion",
-      handler: (e) => {
-        showSuggestions(e);
-        return forwardToList(e, requestListNavFromCurrent, { goal: "down" });
-      },
-    },
-    {
-      key: "arrowup",
-      description: "Open popover and point to previous suggestion",
-      handler: (e) => {
-        showSuggestions(e);
-        return forwardToList(e, requestListNavFromCurrent, { goal: "up" });
-      },
-    },
-    {
-      key: "home",
-      description: "Point to first suggestion",
-      handler: (e) => {
-        if (!expandedRef.current) {
-          return false;
-        }
-        return forwardToList(e, requestListNavFromCurrent, { goal: "first" });
-      },
-    },
-    {
-      key: "end",
-      description: "Point to last suggestion",
-      handler: (e) => {
-        if (!expandedRef.current) {
-          return false;
-        }
-        return forwardToList(e, requestListNavFromCurrent, { goal: "last" });
-      },
-    },
-    {
-      key: "enter",
-      description: "Confirm pointed suggestion",
-      handler: (e) => {
-        if (!expandedRef.current) {
-          return false;
-        }
-        return forwardToList(e, requestListSelectCurrent);
-      },
-    },
-    {
-      key: "escape",
-      description: "Close popover",
-      handler: (e) => {
-        if (!expandedRef.current) {
-          return false;
-        }
-        hideSuggestions(e);
-        return true;
-      },
-    },
-  ]);
-
-  useEffect(() => {
-    const inputEl = ref.current;
-    const suggestionEl = document.getElementById(suggestions);
-    if (!suggestionEl) {
-      return undefined;
-    }
-    const onSelect = (e) => {
-      inputEl.value = e.detail.item.value;
-      inputEl.dispatchEvent(new Event("input", { bubbles: true }));
-      hideSuggestions(e);
-    };
-    suggestionEl.addEventListener("navi_list_select", onSelect);
-    return () => {
-      suggestionEl.removeEventListener("navi_list_select", onSelect);
-    };
-  }, [suggestions]);
-
-  return (
-    <InputTextualPlain
-      ref={ref}
-      role="combobox"
-      autoComplete="off"
-      aria-controls={suggestions}
-      aria-haspopup="listbox"
-      aria-expanded={expanded}
-      aria-autocomplete="list"
-      basePseudoState={{
-        ":navi-expanded": expanded,
-      }}
-      onnavi_callout_open={(e) => {
-        hideSuggestions(e);
-      }}
-      onFocus={(e) => {
-        onFocus?.(e);
-        showSuggestions(e);
-      }}
-      onBlur={(e) => {
-        onBlur?.(e);
-        hideSuggestions(e);
-      }}
-      onInput={(e) => {
-        onInput?.(e);
-        showSuggestions(e);
-      }}
-      {...rest}
-    >
-      {children || (
-        <InputRightSlot
-          onClick={(e) => {
-            if (expanded) {
-              hideSuggestions(e);
-            } else {
-              showSuggestions(e);
-            }
-          }}
-        >
-          <Icon color="rgba(28, 43, 52, 0.5)">
-            <ChevronDownSvg />
-          </Icon>
-        </InputRightSlot>
-      )}
-    </InputTextualPlain>
-  );
-};
-
-const InputTextualPlain = (props) => {
-  const contextReadOnly = useContext(ReadOnlyContext);
-  const contextDisabled = useContext(DisabledContext);
-  const contextLoading = useContext(LoadingContext);
-  const contextLoadingElement = useContext(LoadingElementContext);
-  const uiStateController = useContext(UIStateControllerContext);
-  const uiState = useContext(UIStateContext);
+const InputTextualUI = (props) => {
   const {
     type,
     onInput,
@@ -733,6 +333,14 @@ const InputTextualPlain = (props) => {
 
     ...rest
   } = props;
+
+  import.meta.css = css;
+  const contextReadOnly = useContext(ReadOnlyContext);
+  const contextDisabled = useContext(DisabledContext);
+  const contextLoading = useContext(LoadingContext);
+  const contextLoadingElement = useContext(LoadingElementContext);
+  const uiStateController = useContext(UIStateControllerContext);
+  const uiState = useContext(UIStateContext);
   const defaultRef = useRef();
   const ref = rest.ref || defaultRef;
 
@@ -885,6 +493,396 @@ const InputTextualPlain = (props) => {
         </InputNativeContext.Provider>
       ) : null}
     </Box>
+  );
+};
+const InputStyleCSSVars = {
+  "outlineWidth": "--outline-width",
+  "borderWidth": "--border-width",
+  "borderRadius": "--border-radius",
+  "padding": "--padding",
+  "paddingX": "--padding-x",
+  "paddingY": "--padding-y",
+  "paddingTop": "--padding-top",
+  "paddingRight": "--padding-right",
+  "paddingBottom": "--padding-bottom",
+  "paddingLeft": "--padding-left",
+  "background": "--background",
+  "backgroundColor": "--background-color",
+  "borderColor": "--border-color",
+  "color": "--color",
+  "fontSize": "--font-size",
+  ":hover": {
+    backgroundColor: "--background-color-hover",
+    borderColor: "--border-color-hover",
+    color: "--color-hover",
+  },
+  ":focus": {
+    backgroundColor: "--background-color-focus",
+    borderColor: "--border-color-focus",
+  },
+  ":active": {
+    backgroundColor: "--background-color-active",
+    borderColor: "--border-color-active",
+  },
+  ":read-only": {
+    backgroundColor: "--background-color-readonly",
+    borderColor: "--border-color-readonly",
+    color: "--color-readonly",
+  },
+  ":disabled": {
+    backgroundColor: "--background-color-disabled",
+    borderColor: "--border-color-disabled",
+    color: "--color-disabled",
+  },
+};
+const InputPseudoClasses = [
+  ":hover",
+  ":active",
+  ":focus",
+  ":focus-visible",
+  ":read-only",
+  ":disabled",
+  ":-navi-loading",
+  ":navi-has-value",
+  ":navi-expanded",
+];
+Object.assign(PSEUDO_CLASSES, {
+  ":navi-has-value": {
+    attribute: "data-has-value",
+    setup: (el, callback) => {
+      return listenInputValue(el, callback);
+    },
+    test: (el) => {
+      if (el.value === "") {
+        return false;
+      }
+      return true;
+    },
+  },
+});
+const InputPseudoElements = ["::-navi-loader"];
+const InputChildPropSet = new Set([...fieldPropSet]);
+const InputSlot = ({ side, onClick, hideWhileEmpty, ...props }) => {
+  const ctx = useContext(InputNativeContext);
+  const { id, readOnly, disabled } = ctx;
+
+  return (
+    <Label
+      htmlFor={id}
+      className="navi_input_slot"
+      disabled={disabled}
+      readOnly={readOnly}
+      data-readonly={readOnly}
+      data-disabled={disabled}
+      data-left={side === "left" ? "" : undefined}
+      data-right={side === "right" ? "" : undefined}
+      data-hide-while-empty={hideWhileEmpty ? "" : undefined}
+      flex
+      alignY="center"
+      onMouseDown={(e) => {
+        e.preventDefault(); // keep focus in the input
+      }}
+      onClick={(e) => {
+        if (readOnly || disabled) {
+          return;
+        }
+        onClick?.(e);
+      }}
+      {...props}
+    />
+  );
+};
+export const InputLeftSlot = (props) => {
+  return <InputSlot {...props} side="left" />;
+};
+export const InputRightSlot = (props) => {
+  return <InputSlot {...props} side="right" />;
+};
+
+const InputInsideListWithSearch = ({ uiAction, onKeyDown, ...props }) => {
+  const listId = useContext(ListIdContext);
+  const uiStateController = useContext(UIStateControllerContext);
+  uiStateController.uiAction = (v, e) => {
+    uiAction?.(v, e);
+  };
+  const defaultRef = useRef(null);
+  const ref = props.ref || defaultRef;
+  useEffect(() => {
+    const inputEl = ref.current;
+    if (!inputEl) {
+      return undefined;
+    }
+    const listContainerEl = inputEl.closest(".navi_list_container");
+    if (!listContainerEl) {
+      return undefined;
+    }
+    const onListSelect = (e) => {
+      const { event } = e.detail;
+      if (event.type === "mousedown") {
+        event.preventDefault();
+        inputEl.focus({ preventScroll: true });
+      }
+    };
+    listContainerEl.addEventListener("navi_list_select", onListSelect);
+    return () => {
+      listContainerEl.removeEventListener("navi_list_select", onListSelect);
+    };
+  }, []);
+
+  const forwardToList = (event, requestList, customEventDetail) => {
+    const inputEl = event.currentTarget;
+    const listContainerEl = inputEl.closest(".navi_list_container");
+    if (!listContainerEl) {
+      return false;
+    }
+    return requestList(listContainerEl, { event, ...customEventDetail });
+  };
+  const onKeyDownForShortcuts = createOnKeyDownForShortcuts([
+    {
+      key: "arrowdown",
+      description: "Point to next suggestion",
+      handler: (e) => {
+        return forwardToList(e, requestListNavFromCurrent, { goal: "down" });
+      },
+    },
+    {
+      key: "arrowup",
+      description: "Point to previous suggestion",
+      handler: (e) => {
+        return forwardToList(e, requestListNavFromCurrent, { goal: "up" });
+      },
+    },
+    {
+      key: "home",
+      description: "Point to first suggestion",
+      handler: (e) => {
+        return forwardToList(e, requestListNavFromCurrent, { goal: "first" });
+      },
+    },
+    {
+      key: "end",
+      description: "Point to last suggestion",
+      handler: (e) => {
+        return forwardToList(e, requestListNavFromCurrent, { goal: "last" });
+      },
+    },
+    {
+      key: "enter",
+      description: "Confirm pointed suggestion",
+      handler: (e) => {
+        return forwardToList(e, requestListSelectCurrent);
+      },
+    },
+    {
+      key: "escape",
+      handler: (e) => {
+        // If we where to dispatch right away it would re-render the input
+        // and prevent the native browser behavior on escape inside search input (clearing input content)
+        queueMicrotask(() => {
+          forwardToList(e, requestListInteractionStateReset);
+        });
+      },
+    },
+  ]);
+
+  return (
+    <InputTextualUI
+      aria-controls={listId}
+      aria-autocomplete="list"
+      aria-has-popup="listbox"
+      type="search"
+      autoComplete="off"
+      onKeyDown={(e) => {
+        onKeyDownForShortcuts(e);
+        onKeyDown?.(e);
+      }}
+      {...props}
+      ref={ref}
+    />
+  );
+};
+
+const InputTextualWithSuggestions = ({
+  suggestions,
+  onInput,
+  onFocus,
+  onBlur,
+  children,
+  ...rest
+}) => {
+  const defaultRef = useRef();
+  const ref = rest.ref || defaultRef;
+  const [expanded, setExpanded] = useState(false);
+  const expandedRef = useRef(expanded);
+  expandedRef.current = expanded;
+  const expand = () => {
+    expandedRef.current = true;
+    setExpanded(true);
+  };
+  const collapse = () => {
+    expandedRef.current = false;
+    setExpanded(false);
+  };
+
+  const showSuggestions = (e) => {
+    if (expandedRef.current) {
+      return;
+    }
+    console.debug(`showPopover (e.type:${e.type})`);
+    const popoverEl = document.getElementById(suggestions);
+    if (!popoverEl) {
+      return;
+    }
+    popoverEl.dispatchEvent(
+      new CustomEvent("navi_list_open", {
+        detail: { anchor: ref.current },
+      }),
+    );
+    expand();
+  };
+
+  const hideSuggestions = (e) => {
+    if (!expandedRef.current) {
+      return;
+    }
+    console.debug(`hidePopover (e.type:${e.type})`);
+    const popoverEl = document.getElementById(suggestions);
+    if (popoverEl) {
+      popoverEl.dispatchEvent(new CustomEvent("navi_list_request_close"));
+    }
+    collapse();
+  };
+
+  const forwardToList = (event, requestList, customEventDetail) => {
+    const suggestionList = document.getElementById(suggestions);
+    if (!suggestionList) {
+      return false;
+    }
+    return requestList(suggestionList, { event, ...customEventDetail });
+  };
+
+  useKeyboardShortcuts(ref, [
+    {
+      key: "arrowdown",
+      description: "Open popover and point to next suggestion",
+      handler: (e) => {
+        showSuggestions(e);
+        return forwardToList(e, requestListNavFromCurrent, { goal: "down" });
+      },
+    },
+    {
+      key: "arrowup",
+      description: "Open popover and point to previous suggestion",
+      handler: (e) => {
+        showSuggestions(e);
+        return forwardToList(e, requestListNavFromCurrent, { goal: "up" });
+      },
+    },
+    {
+      key: "home",
+      description: "Point to first suggestion",
+      handler: (e) => {
+        if (!expandedRef.current) {
+          return false;
+        }
+        return forwardToList(e, requestListNavFromCurrent, { goal: "first" });
+      },
+    },
+    {
+      key: "end",
+      description: "Point to last suggestion",
+      handler: (e) => {
+        if (!expandedRef.current) {
+          return false;
+        }
+        return forwardToList(e, requestListNavFromCurrent, { goal: "last" });
+      },
+    },
+    {
+      key: "enter",
+      description: "Confirm pointed suggestion",
+      handler: (e) => {
+        if (!expandedRef.current) {
+          return false;
+        }
+        return forwardToList(e, requestListSelectCurrent);
+      },
+    },
+    {
+      key: "escape",
+      description: "Close popover",
+      handler: (e) => {
+        if (!expandedRef.current) {
+          return false;
+        }
+        hideSuggestions(e);
+        return true;
+      },
+    },
+  ]);
+
+  useEffect(() => {
+    const inputEl = ref.current;
+    const suggestionEl = document.getElementById(suggestions);
+    if (!suggestionEl) {
+      return undefined;
+    }
+    const onSelect = (e) => {
+      inputEl.value = e.detail.item.value;
+      inputEl.dispatchEvent(new Event("input", { bubbles: true }));
+      hideSuggestions(e);
+    };
+    suggestionEl.addEventListener("navi_list_select", onSelect);
+    return () => {
+      suggestionEl.removeEventListener("navi_list_select", onSelect);
+    };
+  }, [suggestions]);
+
+  return (
+    <InputTextualUI
+      ref={ref}
+      role="combobox"
+      autoComplete="off"
+      aria-controls={suggestions}
+      aria-haspopup="listbox"
+      aria-expanded={expanded}
+      aria-autocomplete="list"
+      basePseudoState={{
+        ":navi-expanded": expanded,
+      }}
+      onnavi_callout_open={(e) => {
+        hideSuggestions(e);
+      }}
+      onFocus={(e) => {
+        onFocus?.(e);
+        showSuggestions(e);
+      }}
+      onBlur={(e) => {
+        onBlur?.(e);
+        hideSuggestions(e);
+      }}
+      onInput={(e) => {
+        onInput?.(e);
+        showSuggestions(e);
+      }}
+      {...rest}
+    >
+      {children || (
+        <InputRightSlot
+          onClick={(e) => {
+            if (expanded) {
+              hideSuggestions(e);
+            } else {
+              showSuggestions(e);
+            }
+          }}
+        >
+          <Icon color="rgba(28, 43, 52, 0.5)">
+            <ChevronDownSvg />
+          </Icon>
+        </InputRightSlot>
+      )}
+    </InputTextualUI>
   );
 };
 

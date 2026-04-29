@@ -9,9 +9,30 @@ import {
 } from "preact/hooks";
 
 import { renderActionableComponent } from "../action/render_actionable_component.jsx";
+import { useActionBoundToOneParam } from "../action/use_action.js";
+import { useActionStatus } from "../action/use_action_status.js";
+import { useExecuteAction } from "../action/use_execute_action.js";
 import { Box } from "../box/box.jsx";
 import { ChevronDownSvg } from "../graphic/icons/chevron_updown_svg.jsx";
+import { LoaderBackground } from "../graphic/loader/loader_background.jsx";
 import { Icon } from "../text/icon.jsx";
+import {
+  reportDisabledToLabel,
+  reportInteractiveToLabel,
+  reportReadOnlyToLabel,
+} from "./label.jsx";
+import { useActionEvents } from "./use_action_events.js";
+import {
+  DisabledContext,
+  LoadingContext,
+  LoadingElementContext,
+  ReadOnlyContext,
+  UIStateContext,
+  UIStateControllerContext,
+  useUIState,
+  useUIStateController,
+} from "./use_ui_state_controller.js";
+import { forwardActionRequested } from "./validation/custom_constraint_validation.js";
 
 const css = /* css */ `
   @layer navi {
@@ -145,10 +166,171 @@ const css = /* css */ `
  * but does NOT submit a parent form. Use a separate submit button for that.
  */
 export const Select = (props) => {
-  return renderActionableComponent(props, {
+  const uiStateController = useUIStateController(props, "select");
+  const uiState = useUIState(uiStateController);
+
+  const select = renderActionableComponent(props, {
     Basic: SelectBasic,
     WithAction: SelectWithAction,
   });
+  return (
+    <UIStateControllerContext.Provider value={uiStateController}>
+      <UIStateContext.Provider value={uiState}>
+        {select}
+      </UIStateContext.Provider>
+    </UIStateControllerContext.Provider>
+  );
+};
+
+const SelectValueContext = createContext(null);
+const SelectPlaceholderContext = createContext("Select…");
+const SelectUI = (props) => {
+  let {
+    placeholder = "Select…",
+    trigger = SelectTrigger,
+    name,
+    value,
+    readOnly,
+    disabled,
+    loading,
+    children,
+    autoFocus,
+    ...rest
+  } = props;
+
+  import.meta.css = css;
+  const contextReadOnly = useContext(ReadOnlyContext);
+  const contextDisabled = useContext(DisabledContext);
+  const contextLoading = useContext(LoadingContext);
+  const contextLoadingElement = useContext(LoadingElementContext);
+  const uiStateController = useContext(UIStateControllerContext);
+  const uiState = useContext(UIStateContext);
+  const defaultRef = useRef();
+  const ref = rest.ref || defaultRef;
+
+  const innerLoading =
+    loading || (contextLoading && contextLoadingElement === ref.current);
+  const innerReadOnly =
+    readOnly || contextReadOnly || innerLoading || uiStateController.readOnly;
+  const innerDisabled = disabled || contextDisabled;
+
+  reportReadOnlyToLabel(innerReadOnly);
+  reportDisabledToLabel(innerDisabled);
+  reportInteractiveToLabel(true);
+
+  if (trigger === undefined) {
+    trigger = <SelectTrigger />;
+  }
+  return (
+    <Box
+      as="button"
+      type="button"
+      {...rest}
+      baseClassName="navi_select"
+      autoFocus={autoFocus ? "" : undefined}
+      onresetuistate={(e) => {
+        uiStateController.resetUIState(e);
+      }}
+      onsetuistate={(e) => {
+        uiStateController.setUIState(e.detail.value, e);
+      }}
+      styleCSSVars={SelectStyleCSSVars}
+      basePseudoState={{
+        ...rest.basePseudoState,
+        ":read-only": innerReadOnly,
+        ":disabled": innerDisabled,
+        ":-navi-loading": innerLoading,
+      }}
+      pseudoClasses={SelectPseudoClasses}
+      pseudoElements={SelectPseudoElements}
+    >
+      <LoaderBackground
+        loading={innerLoading}
+        color="var(--loader-color)"
+        inset={-1}
+      />
+      <SelectPlaceholderContext.Provider value={placeholder}>
+        <SelectValueContext.Provider value={value}>
+          {trigger}
+        </SelectValueContext.Provider>
+      </SelectPlaceholderContext.Provider>
+      <input type="hidden" name={name} value={value} />
+      {children}
+    </Box>
+  );
+};
+const SelectStyleCSSVars = {
+  "borderWidth": "--border-width",
+  "borderRadius": "--border-radius",
+  "padding": "--padding",
+  "paddingX": "--padding-x",
+  "paddingY": "--padding-y",
+  "paddingTop": "--padding-top",
+  "paddingRight": "--padding-right",
+  "paddingBottom": "--padding-bottom",
+  "paddingLeft": "--padding-left",
+  "background": "--background",
+  "backgroundColor": "--background-color",
+  "borderColor": "--border-color",
+  "color": "--color",
+  "fontSize": "--font-size",
+  ":hover": {
+    backgroundColor: "--background-color-hover",
+    borderColor: "--border-color-hover",
+    color: "--color-hover",
+  },
+  ":focus": {
+    backgroundColor: "--background-color-focus",
+    borderColor: "--border-color-focus",
+  },
+  ":active": {
+    backgroundColor: "--background-color-active",
+    borderColor: "--border-color-active",
+  },
+  ":read-only": {
+    backgroundColor: "--background-color-readonly",
+    borderColor: "--border-color-readonly",
+    color: "--color-readonly",
+  },
+  ":disabled": {
+    backgroundColor: "--background-color-disabled",
+    borderColor: "--border-color-disabled",
+    color: "--color-disabled",
+  },
+};
+const SelectPseudoClasses = [
+  ":hover",
+  ":active",
+  ":focus",
+  ":focus-visible",
+  ":read-only",
+  ":disabled",
+  ":-navi-loading",
+  ":navi-expanded",
+];
+const SelectPseudoElements = ["::-navi-loader"];
+
+const SelectTrigger = () => {
+  const placeholder = useContext(SelectPlaceholderContext);
+  const value = useContext(SelectValueContext);
+  const hasValue = value !== null && value !== undefined && value !== "";
+  const isPlaceholder = !hasValue;
+
+  return (
+    <>
+      <span
+        className="navi_select_trigger_text"
+        data-placeholder={isPlaceholder ? "" : undefined}
+      >
+        {isPlaceholder ? placeholder : String(value)}
+      </span>
+      <span className="navi_select_trigger_icon">
+        <Icon>
+          <ChevronDownSvg />
+        </Icon>
+      </span>
+    </>
+  );
 };
 
 // SelectBasic manages uncontrolled value state and routes to the mode variant.
@@ -367,72 +549,51 @@ const SelectBasicDialog = (props) => {
   );
 };
 
-const SelectValueContext = createContext(null);
-const SelectPlaceholderContext = createContext("Select…");
-const SelectUI = ({
-  placeholder = "Select…",
-  trigger = SelectTrigger,
-  name,
-  value,
-  children,
-  ...rest
-}) => {
-  import.meta.css = css;
-
-  if (trigger === undefined) {
-    trigger = <SelectTrigger />;
-  }
-  return (
-    <Box as="button" type="button" {...rest} baseClassName="navi_select">
-      <SelectPlaceholderContext.Provider value={placeholder}>
-        <SelectValueContext.Provider value={value}>
-          {trigger}
-        </SelectValueContext.Provider>
-      </SelectPlaceholderContext.Provider>
-      <input type="hidden" name={name} value={value} />
-      {children}
-    </Box>
-  );
-};
-const SelectTrigger = () => {
-  const placeholder = useContext(SelectPlaceholderContext);
-  const value = useContext(SelectValueContext);
-  const hasValue = value !== null && value !== undefined && value !== "";
-  const isPlaceholder = !hasValue;
-
-  return (
-    <>
-      <span
-        className="navi_select_trigger_text"
-        data-placeholder={isPlaceholder ? "" : undefined}
-      >
-        {isPlaceholder ? placeholder : String(value)}
-      </span>
-      <span className="navi_select_trigger_icon">
-        <Icon>
-          <ChevronDownSvg />
-        </Icon>
-      </span>
-    </>
-  );
-};
-
 // SelectWithAction sets up action-aware state and delegates UI entirely to SelectBasic.
 const SelectWithAction = (props) => {
   const {
-    value: externalValue = null,
     action,
-    uiAction: uiActionProp,
+    actionDebounce,
+    actionAfterChange,
+    loading,
+    onCancel,
+    onActionPrevented,
+    onActionStart,
+    onActionError,
+    onActionEnd,
+    actionErrorEffect,
     ...rest
   } = props;
+  const uiState = useContext(UIStateContext);
+  const defaultRef = useRef();
+  const ref = props.ref || defaultRef;
+  const [boundAction] = useActionBoundToOneParam(action, uiState);
+  const { loading: actionLoading } = useActionStatus(boundAction);
+  const executeAction = useExecuteAction(ref, {
+    errorEffect: actionErrorEffect,
+  });
+  useActionEvents(ref, {
+    onCancel: (e, reason) => {
+      onCancel?.(e, reason);
+    },
+    onRequested: (e) => {
+      forwardActionRequested(e, boundAction);
+    },
+    onPrevented: onActionPrevented,
+    onAction: executeAction,
+    onStart: onActionStart,
+    onError: onActionError,
+    onEnd: onActionEnd,
+  });
 
-  const [value, setValue] = useState(externalValue);
-
-  const compositeUIAction = (selectedValue) => {
-    setValue(selectedValue);
-    uiActionProp?.(selectedValue);
-    action?.(selectedValue);
-  };
-
-  return <SelectBasic {...rest} value={value} uiAction={compositeUIAction} />;
+  return (
+    <SelectUI
+      data-action={boundAction.name || "anonymous"}
+      data-action-debounce={actionDebounce}
+      data-action-after-change={actionAfterChange ? "" : undefined}
+      {...rest}
+      ref={ref}
+      loading={loading || actionLoading}
+    />
+  );
 };
