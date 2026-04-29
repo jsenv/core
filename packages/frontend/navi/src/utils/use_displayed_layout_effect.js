@@ -23,6 +23,10 @@ import { useLayoutEffect, useRef } from "preact/hooks";
  *   }, []);
  */
 export const useDisplayedLayoutEffect = (ref, callback, deps) => {
+  if (typeof callback !== "function") {
+    throw new TypeError("useDisplayedLayoutEffect: callback is not a function");
+  }
+
   // Keep a stable ref so the toggle listener always calls the latest callback
   // without needing to be re-registered when deps change.
   const callbackRef = useRef(callback);

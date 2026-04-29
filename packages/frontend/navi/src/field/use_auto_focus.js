@@ -27,11 +27,13 @@ document.body.addEventListener(
 export const useAutoFocus = (
   focusableElementRef,
   autoFocus,
-  { autoFocusPreventScroll, autoFocusVisible, autoSelect } = {},
+  { autoFocusPreventScroll, autoFocusVisible, autoSelect, debugAutoFocus } = {},
 ) => {
-  const triggerAutofocus = () => {
+  debugAutoFocus = debugAutoFocus ? console.debug : () => {};
+
+  const triggerAutofocus = (e) => {
     const focusableElement = focusableElementRef.current;
-    console.log("trigger autofocus on", focusableElement);
+    debugAutoFocus(`triggerAutofocus("${e.type}")`, focusableElement);
     if (!focusableElement) {
       return () => {};
     }
@@ -95,12 +97,16 @@ export const useAutoFocus = (
     };
   };
 
-  useDisplayedLayoutEffect(() => {
-    if (!autoFocus) {
-      return null;
-    }
-    return triggerAutofocus();
-  }, [autoFocus]);
+  useDisplayedLayoutEffect(
+    focusableElementRef,
+    (el, e) => {
+      if (!autoFocus) {
+        return null;
+      }
+      return triggerAutofocus(e);
+    },
+    [autoFocus],
+  );
 
   // useEffect(() => {
   //   if (autoFocus) {

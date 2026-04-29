@@ -1333,7 +1333,7 @@ const ListInteractive = (props) => {
 };
 
 const ListWithKeyboardInteractions = (props) => {
-  const { autoFocus, autoFocusPreventScroll } = props;
+  const { autoFocus, autoFocusPreventScroll, debugAutoFocus } = props;
   const defaultRef = useRef(null);
   const ref = props.ref || defaultRef;
 
@@ -1380,17 +1380,18 @@ const ListWithKeyboardInteractions = (props) => {
     },
     props.onKeyDown,
   );
-  useAutoFocus(ref, autoFocus, { autoFocusPreventScroll });
+  useAutoFocus(ref, autoFocus, { autoFocusPreventScroll, debugAutoFocus });
 
   return (
     <List
       {...props}
       ref={ref}
-      autoFocusPreventScroll={undefined}
       keyboardInteractions={undefined}
       tabIndex="0"
       onKeyDown={onKeyDown}
       autoFocus={autoFocus ? "" : undefined}
+      autoFocusPreventScroll={undefined}
+      debugAutoFocus={undefined}
     />
   );
 };
