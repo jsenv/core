@@ -106,7 +106,8 @@ const css = /* css */ `
  * Props:
  *   name        — form field name (renders a hidden input for form submission)
  *   value       — currently selected value (displayed in the trigger)
- *   placeholder — text shown when value is null/undefined/""
+ *   placeholder — text shown when value is null/undefined/"" and label is not set
+ *   label       — custom ReactNode for the trigger, bypasses value/placeholder display
  *   disabled    — disable the trigger
  *   uiAction    — called with the selected value when an item is confirmed
  *   action      — server action (switches to WithAction variant)
@@ -114,6 +115,9 @@ const css = /* css */ `
  *
  * The uiAction is also provided via SelectUIActionContext so that a <List>
  * placed inside Select automatically receives it without explicit prop passing.
+ *
+ * Note: the trigger is type="button" — pressing Enter opens/closes the popover
+ * but does NOT submit a parent form. Use a submit button separately for that.
  *
  * mode="popover" (default) — content opens in a popover anchored below trigger.
  * mode="dialog" — reserved for future use.
@@ -256,6 +260,7 @@ const SelectBasic = (props) => {
     name,
     value: initialValue = null,
     placeholder = "Select…",
+    label,
     disabled,
     uiAction: uiActionProp,
     children,
@@ -294,6 +299,9 @@ const SelectBasic = (props) => {
   }, []);
 
   const hasValue = value !== null && value !== undefined && value !== "";
+  const triggerContent =
+    label !== undefined ? label : hasValue ? String(value) : null;
+  const isPlaceholder = triggerContent === null;
 
   return (
     <SelectUIActionContext.Provider value={compositeUIAction}>
@@ -314,9 +322,9 @@ const SelectBasic = (props) => {
       >
         <span
           className="navi_select_trigger_label"
-          data-placeholder={hasValue ? undefined : ""}
+          data-placeholder={isPlaceholder ? "" : undefined}
         >
-          {hasValue ? String(value) : placeholder}
+          {isPlaceholder ? placeholder : triggerContent}
         </span>
         <span className="navi_select_trigger_icon">
           <Icon>
@@ -350,6 +358,7 @@ const SelectWithAction = (props) => {
     name,
     value: externalValue = null,
     placeholder = "Select…",
+    label,
     disabled,
     action,
     uiAction: uiActionProp,
@@ -390,6 +399,9 @@ const SelectWithAction = (props) => {
   }, []);
 
   const hasValue = value !== null && value !== undefined && value !== "";
+  const triggerContent =
+    label !== undefined ? label : hasValue ? String(value) : null;
+  const isPlaceholder = triggerContent === null;
 
   return (
     <SelectUIActionContext.Provider value={compositeUIAction}>
@@ -410,9 +422,9 @@ const SelectWithAction = (props) => {
       >
         <span
           className="navi_select_trigger_label"
-          data-placeholder={hasValue ? undefined : ""}
+          data-placeholder={isPlaceholder ? "" : undefined}
         >
-          {hasValue ? String(value) : placeholder}
+          {isPlaceholder ? placeholder : triggerContent}
         </span>
         <span className="navi_select_trigger_icon">
           <Icon>
