@@ -361,26 +361,11 @@ const SelectTrigger = () => {
 
 // SelectBasic manages uncontrolled value state and routes to the mode variant.
 const SelectBasic = (props) => {
-  const {
-    mode = "popover",
-    value: initialValue = null,
-    uiAction: uiActionProp,
-    ...rest
-  } = props;
-  const [value, setValue] = useState(initialValue);
-  const compositeUIAction = (selectedValue) => {
-    setValue(selectedValue);
-    uiActionProp?.(selectedValue);
-  };
-
+  const { mode = "popover" } = props;
   if (mode === "dialog") {
-    return (
-      <SelectBasicDialog value={value} uiAction={compositeUIAction} {...rest} />
-    );
+    return <SelectBasicDialog {...props} />;
   }
-  return (
-    <SelectBasicPopover value={value} uiAction={compositeUIAction} {...rest} />
-  );
+  return <SelectBasicPopover {...props} />;
 };
 // SelectBasicPopover — trigger + popover anchored below the trigger.
 const SelectBasicPopover = (props) => {
@@ -491,6 +476,11 @@ const SelectBasicPopover = (props) => {
     };
   }, [expanded]);
 
+  const moveFocusToSelect = () => {
+    const select = ref.current;
+    select.focus({ preventScroll: true, focusVisible: true });
+  };
+
   return (
     <SelectUI
       disabled={disabled}
@@ -498,9 +488,13 @@ const SelectBasicPopover = (props) => {
       aria-expanded={expanded}
       aria-controls={popoverId}
       onMouseDown={(e) => {
+        if (disabled) {
+          return;
+        }
         if (expandedRef.current) {
           closePopover(e);
         } else {
+          // e.preventDefault();
           openPopover(e);
         }
       }}
@@ -512,7 +506,7 @@ const SelectBasicPopover = (props) => {
           event.stopPropagation();
         }
         closePopover(e);
-        ref.current?.focus({ preventScroll: true, focusVisible: true });
+        moveFocusToSelect();
       }}
       onKeyDown={shortcutsViaOnKeyDown(
         {
@@ -525,11 +519,12 @@ const SelectBasicPopover = (props) => {
             openPopover(e);
           },
           escape: (e) => {
-            if (expandedRef.current) {
-              e.preventDefault();
-              closePopover(e);
-              ref.current.focus({ preventScroll: true, focusVisible: true });
+            if (!expandedRef.current) {
+              return;
             }
+            e.preventDefault();
+            closePopover(e);
+            moveFocusToSelect();
           },
         },
         onKeyDown,

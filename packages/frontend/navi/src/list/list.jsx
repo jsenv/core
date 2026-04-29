@@ -396,6 +396,7 @@ export const List = (props) => {
     return (
       <ListInteractive
         autoFocus={Boolean(selectUIAction)}
+        autoFocusPreventScroll={Boolean(selectUIAction)}
         {...props}
         uiAction={props.uiAction || selectUIAction}
       />
@@ -1332,7 +1333,7 @@ const ListInteractive = (props) => {
 };
 
 const ListWithKeyboardInteractions = (props) => {
-  const { autoFocus } = props;
+  const { autoFocus, autoFocusPreventScroll } = props;
   const defaultRef = useRef(null);
   const ref = props.ref || defaultRef;
 
@@ -1379,12 +1380,13 @@ const ListWithKeyboardInteractions = (props) => {
     },
     props.onKeyDown,
   );
-  useAutoFocus(ref, autoFocus);
+  useAutoFocus(ref, autoFocus, { autoFocusPreventScroll });
 
   return (
     <List
       {...props}
       ref={ref}
+      autoFocusPreventScroll={undefined}
       keyboardInteractions={undefined}
       tabIndex="0"
       onKeyDown={onKeyDown}

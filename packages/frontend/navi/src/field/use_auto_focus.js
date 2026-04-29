@@ -27,10 +27,11 @@ document.body.addEventListener(
 export const useAutoFocus = (
   focusableElementRef,
   autoFocus,
-  { autoFocusVisible, autoSelect } = {},
+  { autoFocusPreventScroll, autoFocusVisible, autoSelect } = {},
 ) => {
   const triggerAutofocus = () => {
     const focusableElement = focusableElementRef.current;
+    console.log("trigger autofocus on", focusableElement);
     if (!focusableElement) {
       return () => {};
     }
@@ -41,7 +42,10 @@ export const useAutoFocus = (
     }
 
     const activeElement = document.activeElement;
-    focusableElement.focus({ focusVisible: autoFocusVisible });
+    focusableElement.focus({
+      preventScroll: autoFocusPreventScroll,
+      focusVisible: autoFocusVisible,
+    });
     if (autoSelect) {
       focusableElement.select();
       // Keep the beginning of the text visible instead of scrolling to the end
