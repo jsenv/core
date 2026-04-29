@@ -706,7 +706,9 @@ const useListScrollSync = ({
         });
       } else {
         scrollToItem(items[0], {
-          event: openEvent,
+          event: new CustomEvent("navi_list_nav_top_on_displayed", {
+            detail: { originalEvent: openEvent },
+          }),
           reason: "scroll to top (no selected item)",
         });
       }
@@ -1297,7 +1299,12 @@ const ListInteractive = (props) => {
               onnavi_list_nav={(e) => {
                 const { item, event } = e.detail;
                 const id = item.id;
-                setAnchorId(id);
+                if (event.type === "navi_list_nav_top_on_displayed") {
+                  // arrow down should focus first item for instance
+                  setAnchorId(null);
+                } else {
+                  setAnchorId(id);
+                }
                 if (event.type === "keydown") {
                   setKeyboardPointedId(id);
                 } else {
