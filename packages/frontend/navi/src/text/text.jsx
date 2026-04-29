@@ -63,6 +63,7 @@ const css = /* css */ `
       flex-wrap: wrap;
       text-overflow: ellipsis;
       overflow: hidden;
+      overflow-wrap: normal;
 
       .navi_text_overflow_wrapper {
         display: flex;
