@@ -25,6 +25,7 @@ import {
 } from "./label.jsx";
 import { SelectUIActionContext } from "./select_context.js";
 import { useActionEvents } from "./use_action_events.js";
+import { useAutoFocus } from "./use_auto_focus.js";
 import {
   DisabledContext,
   LoadingContext,
@@ -216,6 +217,7 @@ const SelectUI = (props) => {
     loading,
     children,
     autoFocus,
+    autoFocusPreventScroll,
     ...rest
   } = props;
 
@@ -237,6 +239,7 @@ const SelectUI = (props) => {
   reportReadOnlyToLabel(innerReadOnly);
   reportDisabledToLabel(innerDisabled);
   reportInteractiveToLabel(true);
+  useAutoFocus(ref, autoFocus, { autoFocusPreventScroll });
 
   const uiAction = useCallback((value, e) => {
     uiStateController.setUIState(value, e);
@@ -369,8 +372,10 @@ const SelectBasic = (props) => {
 };
 // SelectBasicPopover — trigger + popover anchored below the trigger.
 const SelectBasicPopover = (props) => {
-  let { disabled, onKeyDown, children, debugPopover, ...rest } = props;
+  let { disabled, onKeyDown, children, debugPopover, debugFocus, ...rest } =
+    props;
   debugPopover = debugPopover ? (...args) => console.debug(...args) : () => {};
+  debugFocus = debugFocus ? console.debug : () => {};
   const defaultRef = useRef();
   const ref = rest.ref || defaultRef;
   const popoverRef = useRef(null);
@@ -478,6 +483,7 @@ const SelectBasicPopover = (props) => {
 
   const moveFocusToSelect = () => {
     const select = ref.current;
+    debugFocus("moveFocusToSelect");
     select.focus({ preventScroll: true, focusVisible: true });
   };
 
