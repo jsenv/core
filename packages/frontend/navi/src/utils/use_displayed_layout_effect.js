@@ -18,7 +18,7 @@ import { useLayoutEffect, useRef } from "preact/hooks";
  *   - Inside an open ancestor → runs on mount AND every subsequent open.
  *
  * Usage:
- *   useVisibleLayoutEffect(ref, () => {
+ *   useDisplayedLayoutEffect(ref, () => {
  *     scrollToSelected();
  *   }, []);
  */
@@ -36,14 +36,14 @@ export const useDisplayedLayoutEffect = (ref, callback, deps) => {
     }
     const ancestor = el.closest("dialog, details, [popover]");
     if (!ancestor) {
-      callbackRef.current(el, new CustomEvent("navi_opened"));
+      callbackRef.current(el, new CustomEvent("navi_displayed_on_document"));
       return;
     }
     if (!isAncestorOpen(ancestor)) {
       // Ancestor is closed — skip now; the toggle listener below will fire.
       return;
     }
-    callbackRef.current(el, new CustomEvent("navi_opened"));
+    callbackRef.current(el, new CustomEvent("navi_displayed_on_document"));
   }, deps);
 
   // Re-run every time the ancestor opens.
@@ -57,7 +57,11 @@ export const useDisplayedLayoutEffect = (ref, callback, deps) => {
       return undefined;
     }
     const onToggle = (e) => {
-      if (e.newState !== "open") {
+      // <dialog> and [popover] fire toggle with newState; <details> uses the
+      // older toggle event without newState — fall back to checking .open.
+      const isOpen =
+        e.newState !== undefined ? e.newState === "open" : e.target.open;
+      if (!isOpen) {
         return;
       }
       callbackRef.current(el, e);
