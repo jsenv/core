@@ -18,7 +18,6 @@ import { Box } from "../box/box.jsx";
 import { createOnKeyDownForShortcuts } from "../keyboard/keyboard_shortcuts.js";
 import { useItemTracker } from "../utils/item_tracker/use_item_tracker.js";
 import { useOpenedLayoutEffect } from "../utils/use_opened_layout_effect.js";
-import { useIsInsideDropdown } from "./dropdown.jsx";
 
 const ListItemTrackerContext = createContext(null);
 const PendingScrollRefContext = createContext(null);
@@ -733,11 +732,6 @@ const ListControlled = ({
   const refDefault = useRef(null);
   const ref = rest.ref || refDefault;
 
-  // Default lockSize to true when rendered inside a Dropdown.
-  const isInsideDropdown = useIsInsideDropdown();
-  if (lockSize === undefined && isInsideDropdown) {
-    lockSize = true;
-  }
   // lockSize: capture the container's dimensions on first render so filtering
   // cannot collapse the layout. Measurement happens on the initial (unfiltered)
   // state because the parent controls hidden props before any search is applied.
@@ -745,6 +739,9 @@ const ListControlled = ({
   useOpenedLayoutEffect(
     ref,
     (listContainerEl) => {
+      if (!lockSize) {
+        return undefined;
+      }
       const observer = new ResizeObserver((entries) => {
         const entry = entries[0];
         // Use borderBoxSize (outer width) not contentRect (which excludes the

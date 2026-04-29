@@ -163,6 +163,7 @@ const css = /* css */ `
 
     .navi_native_input {
       box-sizing: border-box;
+      min-width: 50px;
       padding-top: var(--x-padding-top-base);
       padding-right: calc(var(--x-padding-right-base) + var(--right-slot-size));
       padding-bottom: var(--x-padding-bottom-base);
