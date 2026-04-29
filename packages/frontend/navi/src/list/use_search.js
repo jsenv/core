@@ -152,15 +152,17 @@ export const createSearch = (fields) => {
 /**
  * applySearch — matches value against searchText.
  *
- * Multi-word: if searchText contains spaces, each word must appear somewhere in
- * the value for it to match. Ranges for all words are returned. Score:
- *   1   — value starts with the full searchText phrase
- *   0.75 — all words match and one of them is at the start
- *   0.5  — all words match somewhere (contains)
+ * Matching is always case-insensitive (so "bob" matches "Bob"), but a case-exact
+ * match gives a +0.125 bonus to the score.
  *
- * Single-word (no spaces): same as before.
- *   1   — value starts with searchText
- *   0.5 — value contains searchText
+ * Multi-word: if searchText contains spaces, each word must appear somewhere in
+ * the value for it to match. Ranges for all words are returned.
+ *
+ * Score (before case bonus):
+ *   1    — value starts with the full searchText phrase
+ *   0.75 — all words match and one of them is at the start
+ *   0.5  — all words / phrase match somewhere (contains)
+ * +0.125 bonus when the match is also case-exact.
  *
  * - matchRanges: [start, end] pairs (exclusive end) for CSS Highlight API
  *
@@ -182,7 +184,9 @@ export const applySearch = (searchText, value) => {
     phraseIdx = lowerStr.indexOf(lowerSearch, phraseIdx + 1);
   }
   if (phraseRanges.length > 0) {
-    const matchScore = lowerStr.startsWith(lowerSearch) ? 1 : 0.5;
+    const atStart = lowerStr.startsWith(lowerSearch);
+    const caseExact = str.includes(searchText);
+    const matchScore = (atStart ? 1 : 0.5) + (caseExact ? 0.125 : 0);
     return { match: true, matchScore, matchRanges: phraseRanges };
   }
 
@@ -193,23 +197,35 @@ export const applySearch = (searchText, value) => {
   }
   const matchRanges = [];
   let anyWordAtStart = false;
+  let allWordsExact = true;
   for (const word of words) {
+    const originalWord = searchText.split(/\s+/).filter(Boolean)[
+      words.indexOf(word)
+    ];
     const wordRanges = [];
     let idx = lowerStr.indexOf(word);
     if (idx === -1) {
       return { match: false, matchScore: 0, matchRanges: [] };
     }
+    let wordHasExactMatch = false;
     while (idx !== -1) {
       wordRanges.push([idx, idx + word.length]);
       if (idx === 0) {
         anyWordAtStart = true;
       }
+      if (str.slice(idx, idx + word.length) === originalWord) {
+        wordHasExactMatch = true;
+      }
       idx = lowerStr.indexOf(word, idx + 1);
+    }
+    if (!wordHasExactMatch) {
+      allWordsExact = false;
     }
     for (const range of wordRanges) {
       matchRanges.push(range);
     }
   }
-  const matchScore = anyWordAtStart ? 0.75 : 0.5;
+  const matchScore =
+    (anyWordAtStart ? 0.75 : 0.5) + (allWordsExact ? 0.125 : 0);
   return { match: true, matchScore, matchRanges };
 };
