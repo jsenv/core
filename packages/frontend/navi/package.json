@@ -38,6 +38,7 @@
     "@jsenv/filesystem": "../../tooling/filesystem",
     "@jsenv/plugin-preact": "../../related/plugin-preact",
     "@jsenv/snapshot": "../../tooling/snapshot",
+    "@jsenv/terminal-table": "../../tooling/terminal-table",
     "@jsenv/urls": "../../tooling/urls",
     "@preact/signals": "2.9.0",
     "playwright": "1.58.1",

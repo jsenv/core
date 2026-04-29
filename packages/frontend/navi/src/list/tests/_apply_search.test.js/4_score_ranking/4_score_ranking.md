@@ -2,22 +2,21 @@
 
 ```js
 return rank("bob", [
-  "bob smith", // starts with (case-exact) → best
-  "Bob Martin", // starts with (case-insensitive)
-  "Jean-bob Dupont", // contains (case-exact)
-  "Jean-Bob Dupont", // contains (case-insensitive)
-  "Alice", // no match
+  "bob smith",        // starts with (case-exact) → best
+  "Bob Martin",       // starts with (case-insensitive)
+  "Jean-bob Dupont",  // contains (case-exact)
+  "Jean-Bob Dupont",  // contains (case-insensitive)
+  "Alice",            // no match
 ]);
 ```
 
 ```js
-[
-  "[bob] smith",
-  "[Bob] Martin",
-  "Jean-[bob] Dupont",
-  "Jean-[Bob] Dupont",
-  "Alice  (no match)"
-]
+ Query  String             Result              
+ "bob"  "bob smith"        "[bob] smith"       
+ "bob"  "Bob Martin"       "[Bob] Martin"      
+ "bob"  "Jean-bob Dupont"  "Jean-[bob] Dupont" 
+ "bob"  "Jean-Bob Dupont"  "Jean-[Bob] Dupont" 
+ "bob"  "Alice"            null                
 ```
 
 ---

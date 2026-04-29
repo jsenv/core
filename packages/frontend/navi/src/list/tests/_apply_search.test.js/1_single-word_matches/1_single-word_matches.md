@@ -1,25 +1,24 @@
 # [single-word matches](../../apply_search.test.js)
 
 ```js
-return [
-  display("bob", "Bob Martin"), // at start, case-insensitive
-  display("Bob", "Bob Martin"), // at start, case-exact
-  display("mar", "Bob Martin"), // in middle, case-insensitive
-  display("Mar", "Bob Martin"), // in middle, case-exact
-  display("a", "banana"), // multiple occurrences
-  display("xyz", "Bob Martin"), // no match
-];
+return displayTable([
+  ["bob", "Bob Martin"],      // at start, case-insensitive
+  ["Bob", "Bob Martin"],      // at start, case-exact
+  ["mar", "Bob Martin"],      // in middle, case-insensitive
+  ["Mar", "Bob Martin"],      // in middle, case-exact
+  ["a", "banana"],            // multiple occurrences
+  ["xyz", "Bob Martin"],      // no match
+]);
 ```
 
 ```js
-[
-  "[Bob] Martin",
-  "[Bob] Martin",
-  "Bob [Mar]tin",
-  "Bob [Mar]tin",
-  "b[a]n[a]n[a]",
-  "Bob Martin  (no match)"
-]
+ Query  String        Result         
+ "bob"  "Bob Martin"  "[Bob] Martin" 
+ "Bob"  "Bob Martin"  "[Bob] Martin" 
+ "mar"  "Bob Martin"  "Bob [Mar]tin" 
+ "Mar"  "Bob Martin"  "Bob [Mar]tin" 
+ "a"    "banana"      "b[a]n[a]n[a]" 
+ "xyz"  "Bob Martin"  null           
 ```
 
 ---

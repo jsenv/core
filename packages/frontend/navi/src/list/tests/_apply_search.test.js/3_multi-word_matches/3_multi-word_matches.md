@@ -1,25 +1,24 @@
 # [multi-word matches](../../apply_search.test.js)
 
 ```js
-return [
-  display("bob mar", "Bob Martin"), // first word at start
-  display("mar bob", "Bob Martin"), // second word at start
-  display("rachel gue", "Rachel Guérin"), // with accent folding
-  display("martin bob", "Bob Martin"), // words in reverse order
-  display("Bob Mar", "Bob Martin"), // case-exact multi-word
-  display("bob xyz", "Bob Martin"), // one word missing → no match
-];
+return displayTable([
+  ["bob mar", "Bob Martin"],        // first word at start
+  ["mar bob", "Bob Martin"],        // second word at start
+  ["rachel gue", "Rachel Guérin"],  // with accent folding
+  ["martin bob", "Bob Martin"],     // words in reverse order
+  ["Bob Mar", "Bob Martin"],        // case-exact multi-word
+  ["bob xyz", "Bob Martin"],        // one word missing → no match
+]);
 ```
 
 ```js
-[
-  "[Bob Mar]tin",
-  "[Bob] [Mar]tin",
-  "[Rachel Gué]rin",
-  "[Bob] [Martin]",
-  "[Bob Mar]tin",
-  "Bob Martin  (no match)"
-]
+ Query         String           Result            
+ "bob mar"     "Bob Martin"     "[Bob Mar]tin"    
+ "mar bob"     "Bob Martin"     "[Bob] [Mar]tin"  
+ "rachel gue"  "Rachel Guérin"  "[Rachel Gué]rin" 
+ "martin bob"  "Bob Martin"     "[Bob] [Martin]"  
+ "Bob Mar"     "Bob Martin"     "[Bob Mar]tin"    
+ "bob xyz"     "Bob Martin"     null              
 ```
 
 ---

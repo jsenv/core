@@ -1,23 +1,22 @@
 # [accent folding](../../apply_search.test.js)
 
 ```js
-return [
-  display("elie", "Élie Dupont"), // unaccented search → accented value at start
-  display("gue", "Rachel Guérin"), // unaccented search → accented value in middle
-  display("é", "Elise"), // accented search → unaccented value
-  display("é", "Élie"), // accented search → accented value
-  display("elie", "Elise Dupont"), // no accent involved
-];
+return displayTable([
+  ["elie", "Élie Dupont"],    // unaccented search → accented value at start
+  ["gue", "Rachel Guérin"],   // unaccented search → accented value in middle
+  ["é", "Elise"],             // accented search → unaccented value
+  ["é", "Élie"],              // accented search → accented value
+  ["elie", "Elise Dupont"],   // no accent involved
+]);
 ```
 
 ```js
-[
-  "[Élie] Dupont",
-  "Rachel [Gué]rin",
-  "[E]lis[e]",
-  "[É]li[e]",
-  "Elise Dupont  (no match)"
-]
+ Query   String           Result            
+ "elie"  "Élie Dupont"    "[Élie] Dupont"   
+ "gue"   "Rachel Guérin"  "Rachel [Gué]rin" 
+ "é"     "Elise"          "[E]lis[e]"       
+ "é"     "Élie"           "[É]li[e]"        
+ "elie"  "Elise Dupont"   null              
 ```
 
 ---

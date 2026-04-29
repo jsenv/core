@@ -1,14 +1,16 @@
 # [empty searchText](../../apply_search.test.js)
 
 ```js
-return [display("", "Bob Martin"), display("", "Guérin")];
+return displayTable([
+  ["", "Bob Martin"],
+  ["", "Guérin"],
+]);
 ```
 
 ```js
-[
-  "Bob Martin",
-  "Guérin"
-]
+ Query  String        Result       
+ ""     "Bob Martin"  "Bob Martin" 
+ ""     "Guérin"      "Guérin"     
 ```
 
 ---
