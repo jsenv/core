@@ -1390,7 +1390,10 @@ const ListWithKeyboardInteractions = (props) => {
       keyboardInteractions={undefined}
       tabIndex="0"
       onKeyDown={onKeyDown}
-      autoFocus={autoFocus ? "" : undefined}
+      // chrome does trigger an autofocus that is not reliable, we don't want to let browser handle the focus
+      // otherwise it tries to scroll it into view before we have the chance to position it correctly, causing unwanted scrolls
+      autoFocus={undefined}
+      // autoFocus={autoFocus ? "" : undefined}
       autoFocusPreventScroll={undefined}
       debugFocus={undefined}
     />
