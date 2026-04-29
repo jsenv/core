@@ -124,12 +124,12 @@ const css = /* css */ `
     /* When the suggestion list inside the dialog has keyboard focus, show the
        focus ring on the dialog itself and suppress it on the list container. 
        It's visually better */
-    &:has(.navi_list_container:focus-visible) {
+    &:has(.navi_list_container:focus) {
       outline-width: calc(var(--border-width) + var(--outline-width));
       outline-color: var(--navi-focus-outline-color, #005fcc);
       outline-offset: calc(-1 * (var(--border-width) + var(--outline-width)));
     }
-    .navi_list_container:focus-visible {
+    .navi_list_container:focus {
       outline: none;
     }
 
@@ -507,6 +507,7 @@ const SelectWithPopover = (props) => {
         onFocus={(e) => {
           // When a label is clicked it transfers focus to the select (relatedTarget is null).
           // Tab focus has a relatedTarget — in that case we don't open.
+          // When tabbing from outside window however relatedTarget is also null so ideally there is something to do here
           if (!e.relatedTarget && !expandedRef.current) {
             openPopover(e);
           }
@@ -516,6 +517,10 @@ const SelectWithPopover = (props) => {
           const { event } = e.detail;
           if (event.type === "mousedown") {
             event.preventDefault(); // prevent browser trying to give focus to the list item
+          }
+          if (event.key === " ") {
+            // space can open the popover we don't want space to propagate to the select otherwise it would open it back immediatly
+            event.stopPropagation();
           }
           closePopover(e);
           moveFocusToSelect();
