@@ -1,6 +1,8 @@
 // autoFocus does not work so we focus in a useLayoutEffect,
 // see https://github.com/preactjs/preact/issues/1255
 
+import { getElementSignature } from "@jsenv/dom";
+
 import { useDisplayedLayoutEffect } from "../utils/use_displayed_layout_effect.js";
 
 let blurEvent = null;
@@ -47,10 +49,9 @@ export const useAutoFocus = (
     }
 
     const activeElement = document.activeElement;
-    debugFocus(`triggerAutofocus("${e.type}")`, {
-      element: focusableElement,
-      preventScroll: autoFocusPreventScroll,
-    });
+    debugFocus(
+      `autoFocus after "${e.type}" -> ${getElementSignature(e.target)}.focus({ preventScroll: ${autoFocusPreventScroll} })`,
+    );
     focusableElement.focus({
       preventScroll: autoFocusPreventScroll,
       focusVisible: autoFocusVisible,
@@ -100,7 +101,9 @@ export const useAutoFocus = (
         }
       }
 
-      debugFocus("restore focus to previously active element", activeElement);
+      debugFocus(
+        `restore focus to previously active element ${getElementSignature(activeElement)}.focus()`,
+      );
       activeElement.focus();
     };
   };
