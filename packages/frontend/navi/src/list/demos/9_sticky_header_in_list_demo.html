@@ -22,61 +22,10 @@
         text-align: center;
       }
 
-      .stats-bar {
-        display: flex;
-        margin-bottom: 12px;
-        padding: 10px 14px;
-        flex-wrap: wrap;
-        align-items: center;
-        gap: 16px;
-        color: #d4d4d4;
-        font-size: 0.85rem;
-        font-family: monospace;
-        background: #1e1e1e;
-        border-radius: 6px;
-      }
-
-      .stat {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 2px;
-      }
-
-      .stat-label {
-        color: #888;
-        font-size: 0.7rem;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-      }
-
-      .stat-value {
-        font-weight: bold;
-        font-size: 1.1rem;
-      }
-
-      .stat-value.highlight {
-        color: #4ec9b0;
-      }
-
-      .stat-value.warning {
-        color: #ce9178;
-      }
-
       .scroll-container {
         background: white;
         border: 2px solid #ccc;
         border-radius: 8px;
-      }
-
-      .sticky-header {
-        position: sticky;
-        top: 0;
-        z-index: 10;
-        padding: 8px;
-        background: white;
-        border-bottom: 1px solid #e0e0e0;
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
       }
 
       .sticky-header-title {
@@ -105,8 +54,15 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useState, useEffect, useRef } from "preact/hooks";
-      import { List, ListItem, Input, Separator } from "@jsenv/navi";
+      import { useState } from "preact/hooks";
+      import {
+        List,
+        ListItem,
+        ListItemHeader,
+        Input,
+        Separator,
+        useSearch,
+      } from "@jsenv/navi";
 
       // Each item has a name + address. Some addresses are long to test text wrapping.
       const ITEMS = [
@@ -256,11 +212,15 @@
       ];
 
       // Match on both name and address
-      const matchItem = (value, lowerFilter) => {
-        return (
-          value.name.toLowerCase().includes(lowerFilter) ||
-          value.address.toLowerCase().includes(lowerFilter)
-        );
+      const matchItem = (searchText, item) => {
+        if (!searchText) {
+          return { match: true, score: 0, ranges: [] };
+        }
+        const lower = searchText.toLowerCase();
+        const matched =
+          item.name.toLowerCase().includes(lower) ||
+          item.address.toLowerCase().includes(lower);
+        return { match: matched, score: matched ? 1 : 0, ranges: [] };
       };
 
       const StatsBar = ({ totalItems, domItems }) => {
@@ -293,30 +253,12 @@
 
       const App = () => {
         const [selected, setSelected] = useState(null);
-        const [domItems, setDomItems] = useState(0);
-        const listRef = useRef(null);
-
-        useEffect(() => {
-          const updateCount = () => {
-            if (!listRef.current) {
-              return;
-            }
-            setDomItems(
-              listRef.current.querySelectorAll("[role='option']").length,
-            );
-          };
-          updateCount();
-          const observer = new MutationObserver(updateCount);
-          if (listRef.current) {
-            observer.observe(listRef.current, {
-              childList: true,
-              subtree: true,
-            });
-          }
-          return () => {
-            observer.disconnect();
-          };
-        }, []);
+        const [search, setSearch] = useState("");
+        const [orderedItems, getItemMatchInfo] = useSearch(
+          search,
+          ITEMS,
+          matchItem,
+        );
 
         return (
           <div>
@@ -332,22 +274,19 @@
               and address — highlights appear in both fields.
             </p>
 
-            <StatsBar totalItems={ITEMS.length} domItems={domItems} />
-
             <div className="scroll-container">
               <List
                 listRole="listbox"
                 fallback="No results"
                 withSearch
-                ref={listRef}
-                match={matchItem}
+                searchText={search}
                 uiAction={setSelected}
                 expandX
                 maxHeight="320px"
                 renderBudget={15}
                 separator={<Separator margin="0" />}
               >
-                <li className="sticky-header" role="presentation">
+                <ListItemHeader>
                   <p className="sticky-header-title">
                     Veuillez sélectionner une suggestion
                   </p>
@@ -355,31 +294,37 @@
                     type="search"
                     placeholder="Filtrer par nom ou adresse…"
                     expandX
+                    uiAction={(v) => setSearch(v)}
                   />
-                </li>
+                </ListItemHeader>
 
-                {ITEMS.map((item, i) => (
-                  <ListItem
-                    role="option"
-                    key={item.name}
-                    index={i}
-                    value={item}
-                    selected={selected === item}
-                  >
-                    <div
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: "2px",
-                      }}
+                {orderedItems.map((item, i) => {
+                  const { score, match } = getItemMatchInfo(item);
+                  return (
+                    <ListItem
+                      role="option"
+                      key={item.name}
+                      index={i}
+                      value={item}
+                      matchScore={score}
+                      hidden={!match}
+                      selected={selected === item}
                     >
-                      <span>{item.name}</span>
-                      <span style={{ fontSize: "0.8em", opacity: 0.65 }}>
-                        {item.address}
-                      </span>
-                    </div>
-                  </ListItem>
-                ))}
+                      <div
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: "2px",
+                        }}
+                      >
+                        <span>{item.name}</span>
+                        <span style={{ fontSize: "0.8em", opacity: 0.65 }}>
+                          {item.address}
+                        </span>
+                      </div>
+                    </ListItem>
+                  );
+                })}
               </List>
             </div>
 
