@@ -1819,7 +1819,7 @@ const dispatchCustomEvent = (el, customEventName, customEventDetail) => {
     detail: resolveEventDetail(customEventDetail),
     cancelable: true,
   });
-  return el.currentTarget.dispatchEvent(customEvent);
+  return el.dispatchEvent(customEvent);
 };
 // Dispatches a navi event bubbling from a list item's element.
 const dispatchBubblingEvent = (el, customEventName, customEventDetail) => {
