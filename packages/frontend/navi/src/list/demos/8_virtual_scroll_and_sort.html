@@ -394,9 +394,7 @@
 
       export const App = () => {
         const [search, setSearch] = useState("");
-        const [selected, setSelected] = useState(
-          ALL_ITEMS[ALL_ITEMS.length / 2],
-        );
+        const [selected, setSelected] = useState(ALL_ITEMS[70]);
         const [scrollToIndex, setScrollToIndex] = useState(50);
         const listRef = useRef(null);
         const [orderedItems, getItemMatchInfo] = useSearch(search, ALL_ITEMS);
@@ -491,6 +489,7 @@
               renderBudget={30}
               searchText={search}
               separator={<Separator margin="0" />}
+              debugScroll
             >
               <ListItemHeader>
                 <Input
