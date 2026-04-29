@@ -1,5 +1,6 @@
 import { pickPositionRelativeTo, visibleRectEffect } from "@jsenv/dom";
 import { createContext } from "preact";
+import { createPortal } from "preact/compat";
 import {
   useCallback,
   useContext,
@@ -40,6 +41,12 @@ import { forwardActionRequested } from "./validation/custom_constraint_validatio
 
 const css = /* css */ `
   @layer navi {
+    .navi_select_backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      background: transparent;
+    }
     .navi_select {
       --border-radius: 2px;
       --border-width: 1px;
@@ -124,13 +131,6 @@ const css = /* css */ `
     }
     .navi_list_container:focus-visible {
       outline: none;
-    }
-
-    .navi_select_backdrop {
-      position: fixed;
-      inset: 0;
-      z-index: 1000;
-      background: transparent;
     }
 
     .navi_select_popover {
@@ -476,15 +476,18 @@ const SelectBasicPopover = (props) => {
 
   return (
     <>
-      {expanded && (
-        <div
-          className="navi_select_backdrop"
-          onMouseDown={(e) => {
-            closePopover(e);
-            moveFocusToSelect(e);
-          }}
-        />
-      )}
+      {expanded &&
+        createPortal(
+          <div
+            className="navi_select_backdrop"
+            onMouseDown={(e) => {
+              e.preventDefault(); // prevent browser trying to give focus to this backdrop
+              closePopover(e);
+              moveFocusToSelect(e);
+            }}
+          />,
+          document.body,
+        )}
       <SelectUI
         disabled={disabled}
         aria-haspopup="listbox"
@@ -505,8 +508,7 @@ const SelectBasicPopover = (props) => {
         onnavi_list_select={(e) => {
           const { event } = e.detail;
           if (event.type === "mousedown") {
-            event.preventDefault();
-            event.stopPropagation();
+            event.preventDefault(); // prevent browser trying to give focus to the list item
           }
           closePopover(e);
           moveFocusToSelect();
