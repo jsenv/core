@@ -108,6 +108,9 @@ const css = /* css */ `
       /* Highlight (CSS Highlight API match) */
       --list-item-color-highlight: inherit;
       --list-item-background-color-highlight: #ffe066;
+
+      /* Here to be overridable by box layout props such as flex */
+      display: inline-block;
     }
     .navi_list_item_group_label {
       --list-group-label-background-color: var(--list-background-color);
@@ -188,14 +191,28 @@ const css = /* css */ `
     --x-color: var(--list-item-color);
     --x-background-color: var(--list-item-background-color);
     --x-font-weight: var(--list-item-font-weight);
-    display: flex;
     box-sizing: border-box;
     min-width: 100%;
     padding: var(--list-item-padding);
     color: var(--x-color);
     font-weight: var(--x-font-weight);
     background-color: var(--x-background-color);
-
+    /*
+    CSS impossible d'obtenir un layout qui ferait en gros:
+    width = max(min(max-content, 100%), unbreakable-content)
+    Donc 3 options:
+    - Laisser le contenu overflow
+      - moche, background ne suit pas
+      -> NOPE
+    - Force overflow hidden + ellipsis
+      - casse la lisibilité des mots insécables
+      - possible d'optin en utilisant overflowEllipsis sur le ListItem
+      -> Bien mais pas par défaut
+    - Forcer le retour a la ligne des mot inécables
+      - Aucun des inconvénient ci dessus 
+      -> Comportement par défaut
+    */
+    overflow-wrap: anywhere;
     /* When list has sticky header/footer, put a scroll padding */
     scroll-margin-top: var(--x-list-scroll-spacing-top);
     scroll-margin-bottom: var(--x-list-scroll-spacing-bottom);

@@ -378,6 +378,13 @@ const VISUAL_PROPS = {
   overflow: PASS_THROUGH,
   overflowX: PASS_THROUGH,
   overflowY: PASS_THROUGH,
+  overflowEllipsis: () => {
+    return {
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      overflowWrap: "normal",
+    };
+  },
   accentColor: PASS_THROUGH,
 };
 const CONTENT_PROPS = {
