@@ -679,8 +679,12 @@ const ListWithKeyboardInteractions = (props) => {
       key: "escape",
       description: "Clear pointed item",
       handler: (e) => {
-        return requestListInteractionStateReset(e.currentTarget, {
-          event: e,
+        // Use queueMicrotask to ensure the navi_list_request_interaction_state_reset event does not prevent
+        // escape to close dialog behavior (otherwise the re-rendering of the list prevent it for some reason)
+        queueMicrotask(() => {
+          requestListInteractionStateReset(e.currentTarget, {
+            event: e,
+          });
         });
       },
     },
