@@ -522,125 +522,128 @@ const ListInteractive = (props) => {
   };
 
   return (
-    <ListInteractiveContext.Provider value={true}>
-      <ListMousePointedIdContext.Provider value={mousePointedId}>
-        <ListKeyboardPointedIdContext.Provider value={keyboardPointedId}>
-          <List
-            keyboardInteractions
-            {...props}
-            uiAction={undefined}
-            onListVisibleItemsChange={(visibleItems) => {
-              props.onListVisibleItemsChange?.(visibleItems);
-              visibleItemsRef.current = visibleItems;
-            }}
-            onnavi_list_request_hover={(e) => {
-              const { item } = e.detail;
-              setMousePointedId(item ? item.id : null);
-            }}
-            onnavi_list_request_nav_from_current={(e) => {
-              const { goal, event = e } = e.detail;
-              const visibleItems = visibleItemsRef.current;
-              const visibleItemCount = visibleItems.length;
-              if (visibleItemCount === 0) {
-                return;
-              }
-              const anchorIndex = getAnchorIndex();
-              const isDisabledIndex = (i) => Boolean(visibleItems[i]?.disabled);
-              const resolveIndex = () => {
-                if (goal === "down") {
-                  if (anchorIndex === -1) {
+    <SelectUIActionContext.Provider value={null}>
+      <ListInteractiveContext.Provider value={true}>
+        <ListMousePointedIdContext.Provider value={mousePointedId}>
+          <ListKeyboardPointedIdContext.Provider value={keyboardPointedId}>
+            <List
+              keyboardInteractions
+              {...props}
+              uiAction={undefined}
+              onListVisibleItemsChange={(visibleItems) => {
+                props.onListVisibleItemsChange?.(visibleItems);
+                visibleItemsRef.current = visibleItems;
+              }}
+              onnavi_list_request_hover={(e) => {
+                const { item } = e.detail;
+                setMousePointedId(item ? item.id : null);
+              }}
+              onnavi_list_request_nav_from_current={(e) => {
+                const { goal, event = e } = e.detail;
+                const visibleItems = visibleItemsRef.current;
+                const visibleItemCount = visibleItems.length;
+                if (visibleItemCount === 0) {
+                  return;
+                }
+                const anchorIndex = getAnchorIndex();
+                const isDisabledIndex = (i) =>
+                  Boolean(visibleItems[i]?.disabled);
+                const resolveIndex = () => {
+                  if (goal === "down") {
+                    if (anchorIndex === -1) {
+                      let i = 0;
+                      while (i < visibleItemCount && isDisabledIndex(i)) {
+                        i++;
+                      }
+                      return i < visibleItemCount ? i : anchorIndex;
+                    }
+                    let belowIndex = anchorIndex + 1;
+                    while (
+                      belowIndex < visibleItemCount &&
+                      isDisabledIndex(belowIndex)
+                    ) {
+                      belowIndex++;
+                    }
+                    return belowIndex < visibleItemCount
+                      ? belowIndex
+                      : anchorIndex;
+                  }
+                  if (goal === "up") {
+                    if (anchorIndex === -1) {
+                      let i = visibleItemCount - 1;
+                      while (i >= 0 && isDisabledIndex(i)) {
+                        i--;
+                      }
+                      return i >= 0 ? i : anchorIndex;
+                    }
+                    let aboveIndex = anchorIndex - 1;
+                    while (aboveIndex >= 0 && isDisabledIndex(aboveIndex)) {
+                      aboveIndex--;
+                    }
+                    return aboveIndex >= 0 ? aboveIndex : anchorIndex;
+                  }
+                  if (goal === "first") {
                     let i = 0;
                     while (i < visibleItemCount && isDisabledIndex(i)) {
                       i++;
                     }
                     return i < visibleItemCount ? i : anchorIndex;
                   }
-                  let belowIndex = anchorIndex + 1;
-                  while (
-                    belowIndex < visibleItemCount &&
-                    isDisabledIndex(belowIndex)
-                  ) {
-                    belowIndex++;
-                  }
-                  return belowIndex < visibleItemCount
-                    ? belowIndex
-                    : anchorIndex;
-                }
-                if (goal === "up") {
-                  if (anchorIndex === -1) {
+                  if (goal === "last") {
                     let i = visibleItemCount - 1;
                     while (i >= 0 && isDisabledIndex(i)) {
                       i--;
                     }
                     return i >= 0 ? i : anchorIndex;
                   }
-                  let aboveIndex = anchorIndex - 1;
-                  while (aboveIndex >= 0 && isDisabledIndex(aboveIndex)) {
-                    aboveIndex--;
-                  }
-                  return aboveIndex >= 0 ? aboveIndex : anchorIndex;
+                  return anchorIndex;
+                };
+                const index = resolveIndex();
+                if (index === anchorIndex) {
+                  return;
                 }
-                if (goal === "first") {
-                  let i = 0;
-                  while (i < visibleItemCount && isDisabledIndex(i)) {
-                    i++;
-                  }
-                  return i < visibleItemCount ? i : anchorIndex;
+                if (event.type === "keydown") {
+                  event.preventDefault();
                 }
-                if (goal === "last") {
-                  let i = visibleItemCount - 1;
-                  while (i >= 0 && isDisabledIndex(i)) {
-                    i--;
-                  }
-                  return i >= 0 ? i : anchorIndex;
-                }
-                return anchorIndex;
-              };
-              const index = resolveIndex();
-              if (index === anchorIndex) {
-                return;
-              }
-              if (event.type === "keydown") {
-                event.preventDefault();
-              }
-              const item = visibleItems[index];
-              dispatchCustomEvent(e, "navi_list_request_nav", { item });
-            }}
-            onnavi_list_request_interaction_state_reset={() => {
-              setAnchorId(null);
-              setKeyboardPointedId(null);
-              setMousePointedId(null);
-            }}
-            onnavi_list_request_select_current={(e) => {
-              const item = getAnchorItem();
-              dispatchCustomEvent(e, "navi_list_request_select", { item });
-            }}
-            onnavi_list_nav={(e) => {
-              const { item, event } = e.detail;
-              const id = item.id;
-              setAnchorId(id);
-              if (event.type === "keydown") {
-                setKeyboardPointedId(id);
-              } else {
+                const item = visibleItems[index];
+                dispatchCustomEvent(e, "navi_list_request_nav", { item });
+              }}
+              onnavi_list_request_interaction_state_reset={() => {
+                setAnchorId(null);
                 setKeyboardPointedId(null);
-              }
-            }}
-            onnavi_list_select={(e) => {
-              const { item, event } = e.detail;
-              const id = item.id;
-              setAnchorId(id);
-              if (event.type === "keydown") {
-                setKeyboardPointedId(id);
-              } else {
-                setKeyboardPointedId(null);
-              }
-              const value = item.value;
-              uiAction(value, event);
-            }}
-          />
-        </ListKeyboardPointedIdContext.Provider>
-      </ListMousePointedIdContext.Provider>
-    </ListInteractiveContext.Provider>
+                setMousePointedId(null);
+              }}
+              onnavi_list_request_select_current={(e) => {
+                const item = getAnchorItem();
+                dispatchCustomEvent(e, "navi_list_request_select", { item });
+              }}
+              onnavi_list_nav={(e) => {
+                const { item, event } = e.detail;
+                const id = item.id;
+                setAnchorId(id);
+                if (event.type === "keydown") {
+                  setKeyboardPointedId(id);
+                } else {
+                  setKeyboardPointedId(null);
+                }
+              }}
+              onnavi_list_select={(e) => {
+                const { item, event } = e.detail;
+                const id = item.id;
+                setAnchorId(id);
+                if (event.type === "keydown") {
+                  setKeyboardPointedId(id);
+                } else {
+                  setKeyboardPointedId(null);
+                }
+                const value = item.value;
+                uiAction(value, event);
+              }}
+            />
+          </ListKeyboardPointedIdContext.Provider>
+        </ListMousePointedIdContext.Provider>
+      </ListInteractiveContext.Provider>
+    </SelectUIActionContext.Provider>
   );
 };
 

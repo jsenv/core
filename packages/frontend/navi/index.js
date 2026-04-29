@@ -86,7 +86,8 @@ export {
 } from "./src/list/list.jsx";
 
 export { applySearch } from "./src/list/apply_search.js";
-export { createSearch, useSearch } from "./src/list/use_search.js";
+export { createSearch } from "./src/list/create_search.js";
+export { useSearchText } from "./src/list/use_search_text.js";
 
 // Form
 // Validation
