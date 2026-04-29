@@ -18,7 +18,7 @@ import { Box } from "../box/box.jsx";
 import { SelectUIActionContext } from "../field/select_context.js";
 import { createOnKeyDownForShortcuts } from "../keyboard/keyboard_shortcuts.js";
 import { useItemTracker } from "../utils/item_tracker/use_item_tracker.js";
-import { useOpenedLayoutEffect } from "../utils/use_opened_layout_effect.js";
+import { useDisplayedLayoutEffect } from "../utils/use_displayed_layout_effect.js";
 
 const ListItemTrackerContext = createContext(null);
 const PendingScrollRefContext = createContext(null);
@@ -760,7 +760,7 @@ const ListControlled = ({
   // cannot collapse the layout. Measurement happens on the initial (unfiltered)
   // state because the parent controls hidden props before any search is applied.
   const sizeLocked = useRef(false);
-  useOpenedLayoutEffect(
+  useDisplayedLayoutEffect(
     ref,
     (listContainerEl) => {
       if (!lockSize) {
@@ -1015,7 +1015,7 @@ const useListScrollSync = ({
   // Scroll to the selected item when the list is first presented on screen.
   // Skipped when inside a closed <dialog>/<details> (scrollIntoView is a no-op
   // on hidden elements); re-runs automatically every time the ancestor opens.
-  useOpenedLayoutEffect(
+  useDisplayedLayoutEffect(
     ref,
     (el, openEvent) => {
       updateCurrentScroll();
@@ -1737,7 +1737,7 @@ export const ListItemGroup = ({
 export const ListItemHeader = (props) => {
   const defaultRef = useRef(null);
   const ref = props.ref || defaultRef;
-  useOpenedLayoutEffect(
+  useDisplayedLayoutEffect(
     ref,
     (headerEl) => {
       const scrollContainer = getScrollContainer(headerEl);
@@ -1763,7 +1763,7 @@ export const ListItemHeader = (props) => {
 export const ListItemFooter = (props) => {
   const defaultRef = useRef(null);
   const ref = props.ref || defaultRef;
-  useOpenedLayoutEffect(
+  useDisplayedLayoutEffect(
     ref,
     (headerEl) => {
       const scrollContainer = getScrollContainer(headerEl);
