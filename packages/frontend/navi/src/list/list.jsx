@@ -713,8 +713,8 @@ const ListControlled = ({
   renderBudget = RENDER_BUDGET_DEFAULT,
   listId,
   listRole,
-  fallback = "Aucun élément",
-  noMatchFallback = "Aucun résultat",
+  fallback = "Aucun élément dans cette liste",
+  noMatchFallback = "Pas de résultat pour cette recherche",
   separator,
   children,
   tabIndex,
@@ -1322,7 +1322,9 @@ const NoMatchFallback = ({ tracker, noMatchFallback, searchText }) => {
       hidden={!showMatchFallback}
       navi-default={typeof noMatchFallback === "string" ? "" : undefined}
     >
-      {noMatchFallback}
+      {allHidden
+        ? "Aucun élément ne correspond à cette recherche"
+        : "Aucun élément ne correspond à cette recherche. Le reste est affiché ci-dessous"}
     </ListItem>
   );
 };
