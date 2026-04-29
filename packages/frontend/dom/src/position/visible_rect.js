@@ -22,9 +22,9 @@ export const visibleRectEffect = (element, update) => {
     scrollContainer === document.documentElement;
   let lastMeasuredWidth;
   let lastMeasuredHeight;
-  const check = (reason) => {
+  const check = (event) => {
     if (DEBUG) {
-      console.group(`visibleRect.check("${reason}")`);
+      console.group(`visibleRect.check("${event.type}")`);
     }
 
     // 1. Calculate element position relative to scrollable parent
@@ -158,18 +158,19 @@ export const visibleRectEffect = (element, update) => {
       console.groupEnd();
     }
     update(visibleRect, {
+      event,
       width,
       height,
     });
   };
 
-  check("initialization");
+  check(new CustomEvent("initialization"));
 
   const [publishBeforeAutoCheck, onBeforeAutoCheck] = createPubSub();
   auto_check: {
-    const autoCheck = (reason) => {
-      const beforeCheckResults = publishBeforeAutoCheck(reason);
-      check(reason);
+    const autoCheck = (event) => {
+      const beforeCheckResults = publishBeforeAutoCheck(event);
+      check(event);
       for (const beforeCheckResult of beforeCheckResults) {
         if (typeof beforeCheckResult === "function") {
           beforeCheckResult();
@@ -190,8 +191,8 @@ export const visibleRectEffect = (element, update) => {
     on_scroll: {
       // If scrollable parent is not document, also listen to document scroll
       // to update UI position when the scrollable parent moves in viewport
-      const onDocumentScroll = () => {
-        autoCheck("document_scroll");
+      const onDocumentScroll = (e) => {
+        autoCheck(e);
       };
       document.addEventListener("scroll", onDocumentScroll, {
         passive: true,
@@ -202,8 +203,8 @@ export const visibleRectEffect = (element, update) => {
         });
       });
       if (!scrollContainerIsDocument) {
-        const onScroll = () => {
-          autoCheck("scrollable_parent_scroll");
+        const onScroll = (e) => {
+          autoCheck(e);
         };
         scrollContainer.addEventListener("scroll", onScroll, {
           passive: true,
@@ -216,8 +217,8 @@ export const visibleRectEffect = (element, update) => {
       }
     }
     on_window_resize: {
-      const onWindowResize = () => {
-        autoCheck("window_size_change");
+      const onWindowResize = (e) => {
+        autoCheck(e);
       };
       window.addEventListener("resize", onWindowResize);
       addTeardown(() => {
@@ -242,7 +243,9 @@ export const visibleRectEffect = (element, update) => {
           return;
         }
         handlingResize = true;
-        autoCheck(`element_size_change (${width}x${height})`);
+        autoCheck(
+          new CustomEvent("element_size_change", { detail: { width, height } }),
+        );
         handlingResize = false;
       });
       resizeObserver.observe(element);
@@ -262,7 +265,9 @@ export const visibleRectEffect = (element, update) => {
     on_intersection_change: {
       const documentIntersectionObserver = new IntersectionObserver(
         () => {
-          autoCheck("element_intersection_with_document_change");
+          autoCheck(
+            new CustomEvent("element_intersection_with_document_change"),
+          );
         },
         {
           root: null,
@@ -277,7 +282,9 @@ export const visibleRectEffect = (element, update) => {
       if (!scrollContainerIsDocument) {
         const scrollIntersectionObserver = new IntersectionObserver(
           () => {
-            autoCheck("element_intersection_with_scroll_change");
+            autoCheck(
+              new CustomEvent("element_intersection_with_scroll_change"),
+            );
           },
           {
             root: scrollContainer,
@@ -292,8 +299,8 @@ export const visibleRectEffect = (element, update) => {
       }
     }
     on_window_touchmove: {
-      const onWindowTouchMove = () => {
-        autoCheck("window_touchmove");
+      const onWindowTouchMove = (e) => {
+        autoCheck(e);
       };
       window.addEventListener("touchmove", onWindowTouchMove, {
         passive: true,

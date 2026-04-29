@@ -383,7 +383,8 @@ const SelectBasic = (props) => {
 };
 // SelectBasicPopover — trigger + popover anchored below the trigger.
 const SelectBasicPopover = (props) => {
-  const { disabled, onKeyDown, children, ...rest } = props;
+  let { disabled, onKeyDown, children, debugPopover, ...rest } = props;
+  debugPopover = debugPopover ? (...args) => console.debug(...args) : () => {};
   const defaultRef = useRef();
   const ref = rest.ref || defaultRef;
   const popoverRef = useRef(null);
@@ -401,21 +402,23 @@ const SelectBasicPopover = (props) => {
     setExpanded(false);
   };
 
-  const openPopover = () => {
+  const openPopover = (e) => {
+    debugPopover(`openPopover("${e.type}")`);
     if (disabled) {
       return;
     }
     if (expandedRef.current) {
-      closePopover();
       return;
     }
+
     const anchor = ref.current;
     const popover = popoverRef.current;
     if (!anchor || !popover) {
       return;
     }
     popover.showPopover();
-    const positionPopover = () => {
+    const positionPopover = (event) => {
+      debugPopover(`positionPopover("${event.type}")`);
       const anchorRect = anchor.getBoundingClientRect();
       popover.style.setProperty(
         "--select-anchor-width",
@@ -437,19 +440,23 @@ const SelectBasicPopover = (props) => {
         popover.style.left = `${Math.max(left, minLeft)}px`;
       }
     };
-    positionPopover();
-    const cleanup = visibleRectEffect(anchor, ({ visibilityRatio }) => {
-      if (visibilityRatio <= 0.2) {
-        popover.setAttribute("data-anchor-hidden", "");
-        return;
-      }
-      popover.removeAttribute("data-anchor-hidden");
-      positionPopover();
-    });
+    const cleanup = visibleRectEffect(
+      anchor,
+      ({ visibilityRatio }, { event }) => {
+        if (visibilityRatio <= 0.2) {
+          popover.setAttribute("data-anchor-hidden", "");
+          return;
+        }
+        popover.removeAttribute("data-anchor-hidden");
+        debugger;
+        positionPopover(event);
+      },
+    );
     cleanupRef.current = () => cleanup.disconnect();
     expand();
   };
-  const closePopover = () => {
+  const closePopover = (e) => {
+    debugPopover(`closePopover("${e.type}")`);
     cleanupRef.current?.();
     cleanupRef.current = null;
     popoverRef.current?.hidePopover();
