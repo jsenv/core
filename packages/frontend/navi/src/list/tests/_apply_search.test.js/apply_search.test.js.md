@@ -2,23 +2,11 @@
 
 
 - [empty searchText](0_empty_searchtext/0_empty_searchtext.md)
-- [phrase match at start (case-insensitive)](1_phrase_match_at_start_(case-insensitive)/1_phrase_match_at_start_(case-insensitive).md)
-- [phrase match in middle (case-insensitive)](2_phrase_match_in_middle_(case-insensitive)/2_phrase_match_in_middle_(case-insensitive).md)
-- [phrase match at start (case-exact)](3_phrase_match_at_start_(case-exact)/3_phrase_match_at_start_(case-exact).md)
-- [phrase match in middle (case-exact)](4_phrase_match_in_middle_(case-exact)/4_phrase_match_in_middle_(case-exact).md)
-- [no match](5_no_match/5_no_match.md)
-- [multiple occurrences](6_multiple_occurrences/6_multiple_occurrences.md)
-- [accent-insensitive match at start](7_accent-insensitive_match_at_start/7_accent-insensitive_match_at_start.md)
-- [accent-insensitive match in middle](8_accent-insensitive_match_in_middle/8_accent-insensitive_match_in_middle.md)
-- [accented searchText matches unaccented value](9_accented_searchtext_matches_unaccented_value/9_accented_searchtext_matches_unaccented_value.md)
-- [accented searchText matches accented value](10_accented_searchtext_matches_accented_value/10_accented_searchtext_matches_accented_value.md)
-- [multi-word all words match](11_multi-word_all_words_match/11_multi-word_all_words_match.md)
-- [multi-word first word at start](12_multi-word_first_word_at_start/12_multi-word_first_word_at_start.md)
-- [multi-word second word at start](13_multi-word_second_word_at_start/13_multi-word_second_word_at_start.md)
-- [multi-word one word missing](14_multi-word_one_word_missing/14_multi-word_one_word_missing.md)
-- [multi-word all words match with case-exact](15_multi-word_all_words_match_with_case-exact/15_multi-word_all_words_match_with_case-exact.md)
-- [multi-word words match in different order](16_multi-word_words_match_in_different_order/16_multi-word_words_match_in_different_order.md)
-- [phrase beats multi-word (same characters)](17_phrase_beats_multi-word_(same_characters)/17_phrase_beats_multi-word_(same_characters).md)
+- [single-word matches](1_single-word_matches/1_single-word_matches.md)
+- [accent folding](2_accent_folding/2_accent_folding.md)
+- [multi-word matches](3_multi-word_matches/3_multi-word_matches.md)
+- [score ranking](4_score_ranking/4_score_ranking.md)
+- [score ranking multi-word](5_score_ranking_multi-word/5_score_ranking_multi-word.md)
 
 ---
 

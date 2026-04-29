@@ -1,15 +1,14 @@
 # [empty searchText](../../apply_search.test.js)
 
 ```js
-return applySearch("", "Bob Martin");
+return [display("", "Bob Martin"), display("", "Guérin")];
 ```
 
 ```js
-{
-  "match": true,
-  "matchScore": 0,
-  "matchRanges": []
-}
+[
+  "Bob Martin",
+  "Guérin"
+]
 ```
 
 ---
