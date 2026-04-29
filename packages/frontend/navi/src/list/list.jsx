@@ -987,7 +987,7 @@ const useListScrollSync = ({
   // on hidden elements); re-runs automatically every time the ancestor opens.
   useOpenedLayoutEffect(
     ref,
-    (openEvent) => {
+    (el, openEvent) => {
       const items = tracker.itemsSignal.peek();
       const firstSelected = items.find((i) => i.selected);
       if (firstSelected) {
@@ -1637,9 +1637,24 @@ export const ListItemGroup = ({
 };
 
 export const ListItemHeader = (props) => {
+  const defaultRef = useRef(null);
+  const ref = props.ref || defaultRef;
+  useOpenedLayoutEffect(
+    ref,
+    (headerEl) => {
+      const scrollContainer = getScrollContainer(headerEl);
+      const headerHeight = headerEl.getBoundingClientRect().height;
+      scrollContainer.style.scrollPaddingTop = headerHeight
+        ? `${headerHeight}px`
+        : undefined;
+    },
+    [],
+  );
+
   return (
     <ListItem
       {...props}
+      ref={ref}
       role="presentation"
       baseClassName="navi_list_item_header"
     />
@@ -1647,9 +1662,24 @@ export const ListItemHeader = (props) => {
 };
 
 export const ListItemFooter = (props) => {
+  const defaultRef = useRef(null);
+  const ref = props.ref || defaultRef;
+  useOpenedLayoutEffect(
+    ref,
+    (headerEl) => {
+      const scrollContainer = getScrollContainer(headerEl);
+      const headerHeight = headerEl.getBoundingClientRect().height;
+      scrollContainer.style.scrollPaddingBottom = headerHeight
+        ? `${headerHeight}px`
+        : undefined;
+    },
+    [],
+  );
+
   return (
     <ListItem
       {...props}
+      ref={ref}
       role="presentation"
       baseClassName="navi_list_item_footer"
     />
