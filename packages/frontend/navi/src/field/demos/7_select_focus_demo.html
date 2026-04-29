@@ -50,7 +50,7 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState, useRef } from "preact/hooks";
-      import { Select, useDisplayedLayoutEffect } from "@jsenv/navi";
+      import { Select, useDisplayedLayoutEffect, Label } from "@jsenv/navi";
 
       const FocusDemo = () => {
         const [focusLog, setFocusLog] = useState([]);
@@ -82,38 +82,41 @@
                   onFocus={() => log("focus → input[before]")}
                   onBlur={() => log("blur  ← input[before]")}
                 />
-                <Select
-                  name="focus_demo"
-                  placeholder="Click me…"
-                  uiAction={() => {}}
-                  debugPopover
-                  debugFocus
-                  onFocus={(e) =>
-                    log(
-                      `focus → select (relatedTarget: ${e.relatedTarget ? e.relatedTarget.tagName.toLowerCase() : "null"})`,
-                    )
-                  }
-                  onBlur={(e) =>
-                    log(
-                      `blur  ← select (relatedTarget: ${e.relatedTarget ? e.relatedTarget.tagName.toLowerCase() : "null"})`,
-                    )
-                  }
-                >
-                  <div
-                    style={{
-                      padding: "12px",
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: "8px",
-                      minWidth: "220px",
-                    }}
+                <Label>
+                  Click
+                  <Select
+                    name="focus_demo"
+                    placeholder="Click me…"
+                    uiAction={() => {}}
+                    debugPopover
+                    debugFocus
+                    onFocus={(e) =>
+                      log(
+                        `focus → select (relatedTarget: ${e.relatedTarget ? e.relatedTarget.tagName.toLowerCase() : "null"})`,
+                      )
+                    }
+                    onBlur={(e) =>
+                      log(
+                        `blur  ← select (relatedTarget: ${e.relatedTarget ? e.relatedTarget.tagName.toLowerCase() : "null"})`,
+                      )
+                    }
                   >
-                    <label style={{ fontSize: "13px", color: "#555" }}>
-                      Text inside popover
-                    </label>
-                    <ElementToAutofocus log={log} />
-                  </div>
-                </Select>
+                    <div
+                      style={{
+                        padding: "12px",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "8px",
+                        minWidth: "220px",
+                      }}
+                    >
+                      <label style={{ fontSize: "13px", color: "#555" }}>
+                        Text inside popover
+                      </label>
+                      <InputToAutofocus log={log} />
+                    </div>
+                  </Select>
+                </Label>
                 <input
                   placeholder="After (tab target)"
                   style={{ display: "block", marginTop: "8px" }}
@@ -179,7 +182,7 @@
         );
       };
 
-      const ElementToAutofocus = ({ log }) => {
+      const InputToAutofocus = ({ log }) => {
         const ref = useRef();
         useDisplayedLayoutEffect(ref, () => {
           ref.current.focus({
@@ -196,6 +199,27 @@
             onFocus={() => log("focus → popover input")}
             onBlur={() => log("blur  ← popover input")}
           />
+        );
+      };
+
+      const FocusableToAutofocus = ({ log }) => {
+        const ref = useRef();
+        useDisplayedLayoutEffect(ref, () => {
+          ref.current.focus({
+            preventScroll: true,
+            focusVisible: true,
+          });
+        }, []);
+
+        return (
+          <div
+            ref={ref}
+            tabIndex="0"
+            onFocus={() => log("focus → popover input")}
+            onBlur={() => log("blur  ← popover input")}
+          >
+            Focus should land here
+          </div>
         );
       };
 
