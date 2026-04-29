@@ -45,8 +45,9 @@ await snapshotTests(import.meta.url, ({ test }) => {
     return rank("bob", [
       "bob smith", // starts with (case-exact) → best
       "Bob Martin", // starts with (case-insensitive)
-      "Jean-bob Dupont", // contains (case-exact)
-      "Jean-Bob Dupont", // contains (case-insensitive)
+      "Jean-bob Dupont", // after word boundary (case-exact)
+      "Jean-Bob Dupont", // after word boundary (case-insensitive)
+      "Jacobin", // mid-word → lowest match
       "Alice", // no match
     ]);
   });

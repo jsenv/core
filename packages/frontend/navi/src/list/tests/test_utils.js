@@ -39,14 +39,23 @@ export const displayTable = (rows) => {
   return renderTable(grid, { borderCollapse: true, cellMaxWidth: 80 });
 };
 
-// Sort values by score descending and return a displayTable.
+// Sort values by score descending and return a table with String, Score, Result columns.
 export const rank = (searchText, values) => {
   const sorted = values
     .map((value) => {
       const result = applySearch(searchText, value);
-      return { value, score: result.matchScore };
+      return { value, score: result.matchScore, match: result.match };
     })
-    .sort((a, b) => b.score - a.score)
-    .map(({ value }) => [searchText, value]);
-  return displayTable(sorted);
+    .sort((a, b) => b.score - a.score);
+  const cell = (value) => ({ value, border: BORDER });
+  const grid = [[cell("String"), cell("Result"), cell("Score")]];
+  for (const { value, score, match } of sorted) {
+    const result = match ? display(searchText, value) : null;
+    grid.push([
+      cell(`"${value}"`),
+      cell(result === null ? "null" : `"${result}"`),
+      cell(match ? String(score) : "-"),
+    ]);
+  }
+  return renderTable(grid, { borderCollapse: true, cellMaxWidth: 80 });
 };

@@ -4,26 +4,29 @@
 return rank("bob", [
   "bob smith", // starts with (case-exact) → best
   "Bob Martin", // starts with (case-insensitive)
-  "Jean-bob Dupont", // contains (case-exact)
-  "Jean-Bob Dupont", // contains (case-insensitive)
+  "Jean-bob Dupont", // after word boundary (case-exact)
+  "Jean-Bob Dupont", // after word boundary (case-insensitive)
+  "Jacobin", // mid-word → lowest match
   "Alice", // no match
 ]);
 ```
 
 ```js
-┌───────┬───────────────────┬─────────────────────┐
-│ Query │ String            │ Result              │
-├───────┼───────────────────┼─────────────────────┤
-│ "bob" │ "bob smith"       │ "[bob] smith"       │
-├───────┼───────────────────┼─────────────────────┤
-│ "bob" │ "Bob Martin"      │ "[Bob] Martin"      │
-├───────┼───────────────────┼─────────────────────┤
-│ "bob" │ "Jean-bob Dupont" │ "Jean-[bob] Dupont" │
-├───────┼───────────────────┼─────────────────────┤
-│ "bob" │ "Jean-Bob Dupont" │ "Jean-[Bob] Dupont" │
-├───────┼───────────────────┼─────────────────────┤
-│ "bob" │ "Alice"           │ null                │
-└───────┴───────────────────┴─────────────────────┘
+┌───────────────────┬─────────────────────┬───────┐
+│ String            │ Result              │ Score │
+├───────────────────┼─────────────────────┼───────┤
+│ "bob smith"       │ "[bob] smith"       │ 1.125 │
+├───────────────────┼─────────────────────┼───────┤
+│ "Bob Martin"      │ "[Bob] Martin"      │ 1     │
+├───────────────────┼─────────────────────┼───────┤
+│ "Jean-bob Dupont" │ "Jean-[bob] Dupont" │ 0.75  │
+├───────────────────┼─────────────────────┼───────┤
+│ "Jean-Bob Dupont" │ "Jean-[Bob] Dupont" │ 0.625 │
+├───────────────────┼─────────────────────┼───────┤
+│ "Jacobin"         │ null                │ -     │
+├───────────────────┼─────────────────────┼───────┤
+│ "Alice"           │ null                │ -     │
+└───────────────────┴─────────────────────┴───────┘
 ```
 
 ---

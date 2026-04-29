@@ -2,19 +2,21 @@
  * applySearch — matches value against searchText.
  *
  * Accent-insensitive: "gue" matches "Guérin", "e" matches "é".
- * Case-insensitive: "bob" matches "Bob", with a +0.125 score bonus for case-exact matches.
- *
+ * Case-insensitive: "bob" matches "Bob", with a score bonus for case-exact matches.
  * Multi-word: if searchText contains spaces, each word must appear somewhere in
  * the value for it to match. Ranges for all words are returned.
  *
- * Score (before case bonus):
- *   1    — value starts with the full searchText phrase
- *   0.75 — all words match and one of them is at the start
- *   0.5  — all words / phrase match somewhere (contains)
- * +0.125 bonus when the match is also case-exact.
+ * Score table:
  *
- * - matchRanges: [start, end] pairs (exclusive end) for CSS Highlight API
+ *   Situation                          Score
+ *   ─────────────────────────────────  ─────
+ *   phrase at start of value           1
+ *   multi-word, one word at start      0.75
+ *   phrase / word at word boundary     0.625
+ *   phrase / words mid-word            0.5
+ *   + case-exact bonus                 +0.125
  *
+ * matchRanges: [start, end] pairs (exclusive end) for CSS Highlight API.
  * Intended to be passed to useSearch as the matchFn parameter.
  */
 export const applySearch = (searchText, value) => {
@@ -34,8 +36,19 @@ export const applySearch = (searchText, value) => {
   }
   if (phraseRanges.length > 0) {
     const atStart = foldedStr.startsWith(foldedSearch);
+    const atWordBoundary = phraseRanges.some(([start]) =>
+      isWordBoundary(foldedStr, start),
+    );
     const caseExact = str.includes(searchText);
-    const matchScore = (atStart ? 1 : 0.5) + (caseExact ? 0.125 : 0);
+    let baseScore;
+    if (atStart) {
+      baseScore = SCORE_PHRASE_AT_START;
+    } else if (atWordBoundary) {
+      baseScore = SCORE_AT_WORD_BOUNDARY;
+    } else {
+      baseScore = SCORE_MID_WORD;
+    }
+    const matchScore = baseScore + (caseExact ? SCORE_BONUS_CASE_EXACT : 0);
     return { match: true, matchScore, matchRanges: phraseRanges };
   }
 
@@ -47,6 +60,7 @@ export const applySearch = (searchText, value) => {
   }
   const matchRanges = [];
   let anyWordAtStart = false;
+  let anyWordAtWordBoundary = false;
   let allWordsExact = true;
   for (let w = 0; w < words.length; w++) {
     const word = words[w];
@@ -61,6 +75,9 @@ export const applySearch = (searchText, value) => {
       wordRanges.push([idx, idx + word.length]);
       if (idx === 0) {
         anyWordAtStart = true;
+        anyWordAtWordBoundary = true;
+      } else if (isWordBoundary(foldedStr, idx)) {
+        anyWordAtWordBoundary = true;
       }
       if (str.slice(idx, idx + word.length) === originalWord) {
         wordHasExactMatch = true;
@@ -74,9 +91,26 @@ export const applySearch = (searchText, value) => {
       matchRanges.push(range);
     }
   }
-  const matchScore =
-    (anyWordAtStart ? 0.75 : 0.5) + (allWordsExact ? 0.125 : 0);
+  let baseScore;
+  if (anyWordAtStart) {
+    baseScore = SCORE_MULTI_WORD_AT_START;
+  } else if (anyWordAtWordBoundary) {
+    baseScore = SCORE_AT_WORD_BOUNDARY;
+  } else {
+    baseScore = SCORE_MID_WORD;
+  }
+  const matchScore = baseScore + (allWordsExact ? SCORE_BONUS_CASE_EXACT : 0);
   return { match: true, matchScore, matchRanges };
+};
+
+// Returns true when position idx in str is at a word boundary,
+// meaning it is either the start of the string or the preceding character
+// is not a Unicode letter or digit.
+const isWordBoundary = (str, idx) => {
+  if (idx === 0) {
+    return true;
+  }
+  return !/[\p{L}\p{N}]/u.test(str[idx - 1]);
 };
 
 // Strip diacritics for accent-insensitive matching.
@@ -89,3 +123,9 @@ const foldAccents = (str) => {
     .normalize("NFD")
     .replace(/\p{Mn}/gu, "");
 };
+
+const SCORE_PHRASE_AT_START = 1;
+const SCORE_MULTI_WORD_AT_START = 0.75;
+const SCORE_AT_WORD_BOUNDARY = 0.625;
+const SCORE_MID_WORD = 0.5;
+const SCORE_BONUS_CASE_EXACT = 0.125;
