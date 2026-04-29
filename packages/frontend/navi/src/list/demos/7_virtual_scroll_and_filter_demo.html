@@ -117,6 +117,7 @@
         Input,
         ListItemHeader,
         useSearch,
+        Separator,
       } from "@jsenv/navi";
 
       const domItemsSignal = signal(0);
@@ -313,7 +314,6 @@
               uiAction={setSelected}
               expandX
               renderBudget={30}
-              fallback="No items"
               matchFallback={
                 <span
                   style={{
@@ -342,6 +342,7 @@
               }
               withSearch
               searchText={searchText}
+              separator={<Separator margin="0" />}
               debugScroll
             >
               <ListItemHeader>

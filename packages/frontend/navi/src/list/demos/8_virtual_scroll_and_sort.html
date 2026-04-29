@@ -483,8 +483,6 @@
             </fieldset>
             <List
               listRole="listbox"
-              fallback="No results"
-              noMatchFallback="No match"
               ref={listRef}
               maxHeight="220px"
               uiAction={setSelected}
@@ -516,6 +514,7 @@
                     role="option"
                     key={item}
                     index={i}
+                    id={item}
                     value={item}
                     highlight={ranges}
                     matchScore={score}
