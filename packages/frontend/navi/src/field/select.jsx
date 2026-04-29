@@ -126,6 +126,13 @@ const css = /* css */ `
       outline: none;
     }
 
+    .navi_select_backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      background: transparent;
+    }
+
     .navi_select_popover {
       position: absolute;
       inset: unset;
@@ -461,28 +468,6 @@ const SelectBasicPopover = (props) => {
     };
   }, []);
 
-  // Close on outside click while popover is expanded.
-  useLayoutEffect(() => {
-    if (!expanded) {
-      return undefined;
-    }
-    const onPointerDown = (e) => {
-      const select = ref.current;
-      const popover = popoverRef.current;
-      if (!select || !popover) {
-        return;
-      }
-      if (select.contains(e.target) || popover.contains(e.target)) {
-        return;
-      }
-      closePopover(e);
-    };
-    document.addEventListener("pointerdown", onPointerDown);
-    return () => {
-      document.removeEventListener("pointerdown", onPointerDown);
-    };
-  }, [expanded]);
-
   const moveFocusToSelect = () => {
     const select = ref.current;
     debugFocus("moveFocusToSelect");
@@ -490,76 +475,87 @@ const SelectBasicPopover = (props) => {
   };
 
   return (
-    <SelectUI
-      disabled={disabled}
-      aria-haspopup="listbox"
-      aria-expanded={expanded}
-      aria-controls={popoverId}
-      onMouseDown={(e) => {
-        if (disabled) {
-          return;
-        }
-        if (expandedRef.current) {
-          closePopover(e);
-        } else {
-          // e.preventDefault();
-          openPopover(e);
-        }
-      }}
-      // When a list item is interacted via mousedown, return focus to the select.
-      onnavi_list_select={(e) => {
-        const { event } = e.detail;
-        if (event.type === "mousedown") {
-          event.preventDefault();
-          event.stopPropagation();
-        }
-        closePopover(e);
-        moveFocusToSelect();
-      }}
-      onKeyDown={shortcutsViaOnKeyDown(
-        {
-          arrowdown: (e) => {
-            e.preventDefault(); // prevent container scroll
-            openPopover(e);
-          },
-          arrowup: (e) => {
-            e.preventDefault(); // prevent container scroll
-            openPopover(e);
-          },
-          escape: (e) => {
-            if (!expandedRef.current) {
-              return;
-            }
-            e.preventDefault();
+    <>
+      {expanded && (
+        <div
+          className="navi_select_backdrop"
+          onMouseDown={(e) => {
             closePopover(e);
-            moveFocusToSelect();
-          },
-        },
-        onKeyDown,
+            moveFocusToSelect(e);
+          }}
+        />
       )}
-      {...rest}
-      ref={ref}
-    >
-      <div
-        ref={popoverRef}
-        id={popoverId}
-        className="navi_select_popover"
-        popover="manual"
+      <SelectUI
+        disabled={disabled}
+        aria-haspopup="listbox"
+        aria-expanded={expanded}
+        aria-controls={popoverId}
         onMouseDown={(e) => {
-          // mousedown inside popover should not bubble to the select (would re-open it if that mousedown closes it)
-          e.stopPropagation();
-        }}
-        onToggle={(e) => {
-          if (e.newState === "closed") {
-            cleanupRef.current?.();
-            cleanupRef.current = null;
-            collapse();
+          if (disabled) {
+            return;
+          }
+          if (expandedRef.current) {
+            closePopover(e);
+          } else {
+            // e.preventDefault();
+            openPopover(e);
           }
         }}
+        // When a list item is interacted via mousedown, return focus to the select.
+        onnavi_list_select={(e) => {
+          const { event } = e.detail;
+          if (event.type === "mousedown") {
+            event.preventDefault();
+            event.stopPropagation();
+          }
+          closePopover(e);
+          moveFocusToSelect();
+        }}
+        onKeyDown={shortcutsViaOnKeyDown(
+          {
+            arrowdown: (e) => {
+              e.preventDefault(); // prevent container scroll
+              openPopover(e);
+            },
+            arrowup: (e) => {
+              e.preventDefault(); // prevent container scroll
+              openPopover(e);
+            },
+            escape: (e) => {
+              if (!expandedRef.current) {
+                return;
+              }
+              e.preventDefault();
+              closePopover(e);
+              moveFocusToSelect();
+            },
+          },
+          onKeyDown,
+        )}
+        {...rest}
+        ref={ref}
       >
-        {children}
-      </div>
-    </SelectUI>
+        <div
+          ref={popoverRef}
+          id={popoverId}
+          className="navi_select_popover"
+          popover="manual"
+          onMouseDown={(e) => {
+            // mousedown inside popover should not bubble to the select (would re-open it if that mousedown closes it)
+            e.stopPropagation();
+          }}
+          onToggle={(e) => {
+            if (e.newState === "closed") {
+              cleanupRef.current?.();
+              cleanupRef.current = null;
+              collapse();
+            }
+          }}
+        >
+          {children}
+        </div>
+      </SelectUI>
+    </>
   );
 };
 // SelectBasicDialog — trigger + centered modal dialog.
