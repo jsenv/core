@@ -8,13 +8,14 @@
  *
  * Score table:
  *
- *   Situation                          Score
- *   ─────────────────────────────────  ─────
- *   phrase at start of value           1
- *   multi-word, one word at start      0.75
- *   phrase / word at word boundary     0.625
- *   phrase / words mid-word            0.5
- *   + case-exact bonus                 +0.125
+ *   Situation                                Score
+ *   ───────────────────────────────────────  ───────────────────────────
+ *   phrase at start of value                 1
+ *   multi-word, one word at start (all match)  0.75
+ *   phrase / word at word boundary           0.625
+ *   phrase / words mid-word                  0.5
+ *   + case-exact bonus                       +0.125
+ *   multi-word partial: score × (matched/total)
  *
  * matchRanges: [start, end] pairs (exclusive end) for CSS Highlight API.
  * Intended to be passed to useSearch as the matchFn parameter.
@@ -52,27 +53,29 @@ export const applySearch = (searchText, value) => {
     return { match: true, matchScore, matchRanges: phraseRanges };
   }
 
-  // Multi-word: split on whitespace and require each word to be present.
+  // Multi-word OR: split on whitespace, any word matching contributes to the score.
+  // Items where all words match rank higher than partial matches.
   const words = foldedSearch.split(/\s+/).filter(Boolean);
   const originalWords = searchText.split(/\s+/).filter(Boolean);
   if (words.length < 2) {
     return { match: false, matchScore: 0, matchRanges: [] };
   }
   const matchRanges = [];
+  let matchedWordCount = 0;
   let anyWordAtStart = false;
   let anyWordAtWordBoundary = false;
-  let allWordsExact = true;
+  let allMatchedWordsExact = true;
   for (let w = 0; w < words.length; w++) {
     const word = words[w];
     const originalWord = originalWords[w];
-    const wordRanges = [];
     let idx = foldedStr.indexOf(word);
     if (idx === -1) {
-      return { match: false, matchScore: 0, matchRanges: [] };
+      continue;
     }
+    matchedWordCount++;
     let wordHasExactMatch = false;
     while (idx !== -1) {
-      wordRanges.push([idx, idx + word.length]);
+      matchRanges.push([idx, idx + word.length]);
       if (idx === 0) {
         anyWordAtStart = true;
         anyWordAtWordBoundary = true;
@@ -85,12 +88,13 @@ export const applySearch = (searchText, value) => {
       idx = foldedStr.indexOf(word, idx + 1);
     }
     if (!wordHasExactMatch) {
-      allWordsExact = false;
-    }
-    for (const range of wordRanges) {
-      matchRanges.push(range);
+      allMatchedWordsExact = false;
     }
   }
+  if (matchedWordCount === 0) {
+    return { match: false, matchScore: 0, matchRanges: [] };
+  }
+  const wordRatio = matchedWordCount / words.length;
   let baseScore;
   if (anyWordAtStart) {
     baseScore = SCORE_MULTI_WORD_AT_START;
@@ -99,7 +103,9 @@ export const applySearch = (searchText, value) => {
   } else {
     baseScore = SCORE_MID_WORD;
   }
-  const matchScore = baseScore + (allWordsExact ? SCORE_BONUS_CASE_EXACT : 0);
+  const matchScore =
+    (baseScore + (allMatchedWordsExact ? SCORE_BONUS_CASE_EXACT : 0)) *
+    wordRatio;
   return { match: true, matchScore, matchRanges };
 };
 
