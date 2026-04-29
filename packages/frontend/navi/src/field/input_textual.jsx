@@ -42,7 +42,13 @@ import {
   createOnKeyDownForShortcuts,
   useKeyboardShortcuts,
 } from "../keyboard/keyboard_shortcuts.js";
-import { ListIdContext, useIsInsideListWithSearch } from "../list/list.jsx";
+import {
+  ListIdContext,
+  requestListInteractionStateReset,
+  requestListNavFromCurrent,
+  requestListSelectCurrent,
+  useIsInsideListWithSearch,
+} from "../list/list.jsx";
 import { Icon } from "../text/icon.jsx";
 import { useStableCallback } from "../utils/use_stable_callback.js";
 import { fieldPropSet } from "./field_prop_set.js";
@@ -446,59 +452,54 @@ const InputInsideListWithSearch = ({ uiAction, onKeyDown, ...props }) => {
     };
   }, []);
 
-  const forwardToList = (event, customEventName, customEventDetail) => {
+  const forwardToList = (event, requestList, customEventDetail) => {
     const inputEl = event.currentTarget;
     const listContainerEl = inputEl.closest(".navi_list_container");
     if (!listContainerEl) {
       return false;
     }
-    const customEvent = new CustomEvent(customEventName, {
-      detail: { event, ...customEventDetail },
-    });
-    return listContainerEl.dispatchEvent(customEvent);
+    return requestList(listContainerEl, { event, ...customEventDetail });
   };
   const onKeyDownForShortcuts = createOnKeyDownForShortcuts([
     {
       key: "arrowdown",
       description: "Point to next suggestion",
       handler: (e) => {
-        return forwardToList(e, "navi_list_request_nav", {
-          direction: "down",
-        });
+        return forwardToList(e, requestListNavFromCurrent, { goal: "down" });
       },
     },
     {
       key: "arrowup",
       description: "Point to previous suggestion",
       handler: (e) => {
-        return forwardToList(e, "navi_list_request_nav", {
-          direction: "up",
-        });
+        return forwardToList(e, requestListNavFromCurrent, { goal: "up" });
       },
     },
     {
       key: "home",
       description: "Point to first suggestion",
       handler: (e) => {
-        return forwardToList(e, "navi_list_request_nav", {
-          direction: "first",
-        });
+        return forwardToList(e, requestListNavFromCurrent, { goal: "first" });
       },
     },
     {
       key: "end",
       description: "Point to last suggestion",
       handler: (e) => {
-        return forwardToList(e, "navi_list_request_nav", {
-          direction: "last",
-        });
+        return forwardToList(e, requestListNavFromCurrent, { goal: "last" });
       },
     },
     {
       key: "enter",
       description: "Confirm pointed suggestion",
       handler: (e) => {
-        return forwardToList(e, "navi_list_request_select");
+        return forwardToList(e, requestListSelectCurrent);
+      },
+    },
+    {
+      key: "escape",
+      handler: (e) => {
+        return forwardToList(e, requestListInteractionStateReset);
       },
     },
   ]);
@@ -571,25 +572,21 @@ const InputTextualWithSuggestions = ({
     collapse();
   };
 
-  const forwardToList = (event, customEventName, customEventDetail) => {
+  const forwardToList = (event, requestList, customEventDetail) => {
     const suggestionList = document.getElementById(suggestions);
     if (!suggestionList) {
       return false;
     }
-    const customEvent = new CustomEvent(customEventName, {
-      detail: { event, ...customEventDetail },
-    });
-    return suggestionList.dispatchEvent(customEvent);
+    return requestList(suggestionList, { event, ...customEventDetail });
   };
+
   useKeyboardShortcuts(ref, [
     {
       key: "arrowdown",
       description: "Open popover and point to next suggestion",
       handler: (e) => {
         showSuggestions(e);
-        return forwardToList(e, "navi_list_request_nav", {
-          direction: "down",
-        });
+        return forwardToList(e, requestListNavFromCurrent, { goal: "down" });
       },
     },
     {
@@ -597,9 +594,7 @@ const InputTextualWithSuggestions = ({
       description: "Open popover and point to previous suggestion",
       handler: (e) => {
         showSuggestions(e);
-        return forwardToList(e, "navi_list_request_nav", {
-          direction: "up",
-        });
+        return forwardToList(e, requestListNavFromCurrent, { goal: "up" });
       },
     },
     {
@@ -609,9 +604,7 @@ const InputTextualWithSuggestions = ({
         if (!expandedRef.current) {
           return false;
         }
-        return forwardToList(e, "navi_list_request_nav", {
-          direction: "first",
-        });
+        return forwardToList(e, requestListNavFromCurrent, { goal: "first" });
       },
     },
     {
@@ -621,9 +614,7 @@ const InputTextualWithSuggestions = ({
         if (!expandedRef.current) {
           return false;
         }
-        return forwardToList(e, "navi_list_request_nav", {
-          direction: "last",
-        });
+        return forwardToList(e, requestListNavFromCurrent, { goal: "last" });
       },
     },
     {
@@ -633,7 +624,7 @@ const InputTextualWithSuggestions = ({
         if (!expandedRef.current) {
           return false;
         }
-        return forwardToList(e, "navi_list_request_select");
+        return forwardToList(e, requestListSelectCurrent);
       },
     },
     {
@@ -656,7 +647,7 @@ const InputTextualWithSuggestions = ({
       return undefined;
     }
     const onSelect = (e) => {
-      inputEl.value = e.detail.value;
+      inputEl.value = e.detail.item.value;
       inputEl.dispatchEvent(new Event("input", { bubbles: true }));
       hideSuggestions(e);
     };

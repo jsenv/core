@@ -499,8 +499,8 @@ const ListInteractive = (props) => {
               const { item } = e.detail;
               setMousePointedId(item ? item.id : null);
             }}
-            onnavi_list_request_nav={(e) => {
-              const { direction, event = e } = e.detail;
+            onnavi_list_request_nav_from_current={(e) => {
+              const { goal, event = e } = e.detail;
               const visibleItems = visibleItemsRef.current;
               const visibleItemCount = visibleItems.length;
               if (visibleItemCount === 0) {
@@ -508,8 +508,8 @@ const ListInteractive = (props) => {
               }
               const anchorIndex = getAnchorIndex();
               const isDisabledIndex = (i) => Boolean(visibleItems[i]?.disabled);
-              const resolveIndex = (direction) => {
-                if (direction === "down") {
+              const resolveIndex = () => {
+                if (goal === "down") {
                   if (anchorIndex === -1) {
                     let i = 0;
                     while (i < visibleItemCount && isDisabledIndex(i)) {
@@ -528,7 +528,7 @@ const ListInteractive = (props) => {
                     ? belowIndex
                     : anchorIndex;
                 }
-                if (direction === "up") {
+                if (goal === "up") {
                   if (anchorIndex === -1) {
                     let i = visibleItemCount - 1;
                     while (i >= 0 && isDisabledIndex(i)) {
@@ -542,14 +542,14 @@ const ListInteractive = (props) => {
                   }
                   return aboveIndex >= 0 ? aboveIndex : anchorIndex;
                 }
-                if (direction === "first") {
+                if (goal === "first") {
                   let i = 0;
                   while (i < visibleItemCount && isDisabledIndex(i)) {
                     i++;
                   }
                   return i < visibleItemCount ? i : anchorIndex;
                 }
-                if (direction === "last") {
+                if (goal === "last") {
                   let i = visibleItemCount - 1;
                   while (i >= 0 && isDisabledIndex(i)) {
                     i--;
@@ -558,37 +558,24 @@ const ListInteractive = (props) => {
                 }
                 return anchorIndex;
               };
-              const index = resolveIndex(direction);
+              const index = resolveIndex();
               if (index === anchorIndex) {
                 return;
               }
               if (event.type === "keydown") {
                 event.preventDefault();
               }
-              dispatchCustomEvent(e, "navi_list_request_scroll_at", {
-                item: visibleItems[index],
-              });
-              dispatchCustomEvent(e, "navi_list_request_nav_at", {
-                item: visibleItems[index],
-              });
+              const item = visibleItems[index];
+              dispatchCustomEvent(e, "navi_list_request_nav", { item });
             }}
-            onnavi_list_request_clear={() => {
+            onnavi_list_request_interaction_state_reset={() => {
               setAnchorId(null);
               setKeyboardPointedId(null);
               setMousePointedId(null);
             }}
-            onnavi_list_request_select={(e) => {
+            onnavi_list_request_select_current={(e) => {
               const item = getAnchorItem();
-              dispatchCustomEvent(e, "navi_list_request_select_at", { item });
-            }}
-            onnavi_list_scroll={(e) => {
-              // When the list scrolls to an item (on mount/opened, keyboard nav or restore),
-              // make it the new anchor so the next arrow-key press starts from
-              // the scrolled-to item rather than the previously selected one that woul dbe out of view
-              const { item } = e.detail;
-              if (item) {
-                setAnchorId(item.id);
-              }
+              dispatchCustomEvent(e, "navi_list_request_select", { item });
             }}
             onnavi_list_nav={(e) => {
               const { item, event } = e.detail;
@@ -625,8 +612,9 @@ const ListWithKeyboardInteractions = (props) => {
       key: "arrowdown",
       description: "Point to next item",
       handler: (e) => {
-        return dispatchCustomEvent(e, "navi_list_request_nav", {
-          direction: "down",
+        return requestListNavFromCurrent(e.currentTarget, {
+          event: e,
+          goal: "down",
         });
       },
     },
@@ -634,8 +622,9 @@ const ListWithKeyboardInteractions = (props) => {
       key: "arrowup",
       description: "Point to previous item",
       handler: (e) => {
-        return dispatchCustomEvent(e, "navi_list_request_nav", {
-          direction: "up",
+        return requestListNavFromCurrent(e.currentTarget, {
+          event: e,
+          goal: "up",
         });
       },
     },
@@ -643,8 +632,9 @@ const ListWithKeyboardInteractions = (props) => {
       key: "home",
       description: "Point to first item",
       handler: (e) => {
-        return dispatchCustomEvent(e, "navi_list_request_nav", {
-          direction: "first",
+        return requestListNavFromCurrent(e.currentTarget, {
+          event: e,
+          goal: "first",
         });
       },
     },
@@ -652,8 +642,9 @@ const ListWithKeyboardInteractions = (props) => {
       key: "end",
       description: "Point to last item",
       handler: (e) => {
-        return dispatchCustomEvent(e, "navi_list_request_nav", {
-          direction: "last",
+        return requestListNavFromCurrent(e.currentTarget, {
+          event: e,
+          goal: "last",
         });
       },
     },
@@ -661,14 +652,18 @@ const ListWithKeyboardInteractions = (props) => {
       key: "enter",
       description: "Confirm pointed item",
       handler: (e) => {
-        return dispatchCustomEvent(e, "navi_list_request_select");
+        return requestListSelectCurrent(e.currentTarget, {
+          event: e,
+        });
       },
     },
     {
       key: "escape",
       description: "Clear pointed item",
       handler: (e) => {
-        return dispatchCustomEvent(e, "navi_list_request_clear");
+        return requestListInteractionStateReset(e.currentTarget, {
+          event: e,
+        });
       },
     },
   ]);
@@ -837,26 +832,19 @@ const ListControlled = ({
       styleCSSVars={LIST_STYLE_CSS_VARS}
       pseudoClasses={LIST_PSEUDO_CLASSES}
       hasChildFunction
-      onnavi_list_request_scroll_at={(e) => {
+      onnavi_list_request_nav={(e) => {
         const { item } = e.detail;
         if (!item) {
           return;
         }
-        // navi_list_scroll is dispatched by scrollToItem after the scroll
+        // navi_list_nav is dispatched by scrollToItem after the scroll
         // completes (including the async path via pendingScrollRef).
         scrollToItem(item, {
-          reason: "navi_list_request_scroll_at",
+          reason: "navi_list_request_nav",
           event: e.detail.event,
         });
       }}
-      onnavi_list_request_nav_at={(e) => {
-        const { item } = e.detail;
-        if (!item) {
-          return;
-        }
-        dispatchCustomEvent(e, "navi_list_nav", { item });
-      }}
-      onnavi_list_request_select_at={(e) => {
+      onnavi_list_request_select={(e) => {
         const { item } = e.detail;
         if (!item) {
           return;
@@ -923,7 +911,7 @@ const useListScrollSync = ({
       itemEl.scrollIntoView({
         block: event.type === "keydown" ? "nearest" : "center",
       });
-      dispatchEventFromElement(itemEl, "navi_list_scroll", { item });
+      dispatchEventFromElement(itemEl, "navi_list_nav", { item, event });
     };
 
     const scrollToItemCall = `scrollToItem("${item.value}", { event: "${event.type}", reason: "${reason}" })`;
@@ -1008,7 +996,7 @@ const useListScrollSync = ({
       const savedScroll = savedScrollRef.current;
       if (!savedScroll) {
         // nothing to restore
-        return undefined;
+        return;
       }
       savedScrollRef.current = null;
       debugScroll("Restoring scroll to", savedScroll);
@@ -1017,13 +1005,26 @@ const useListScrollSync = ({
         savedScroll.renderWindow.end,
         "restore scroll window",
       );
-      const frame = requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
         // use scrollTo to respect eventual css scroll-behavior: smooth;
         listContainerEl.scrollTo({ top: savedScroll.scrollTop });
+        // The reliable way to restore scroll is to use scrollTop because otherwise we will estimate the item to scroll
+        // based on virtual item height which can wrongly restore the scroll.
+        // However we have a contract with outside to inside which item is scrolled
+        // (used by keyboard nav to enable anchoring the item for list item nav with arrow keys)
+        // so we do our best to give that item back
+        const { item } = getScrollInfo(
+          { scrollTop: savedScroll.scrollTop },
+          listContainerEl,
+          tracker,
+          virtualItemHeightSignal,
+          renderWindowRef,
+        );
+        dispatchEventFromElement(listContainerEl, "navi_list_nav", {
+          item,
+          event: new CustomEvent("navi_scroll_restore"),
+        });
       });
-      return () => {
-        cancelAnimationFrame(frame);
-      };
     }
 
     // During search -> watch for changes in the top items or their scores.
@@ -1035,7 +1036,7 @@ const useListScrollSync = ({
     const currentTopMatchScore = topMatchScoresKeyRef.current;
     if (topMatchScoresKey === currentTopMatchScore) {
       // no changes in top matches -> no need to scroll
-      return undefined;
+      return;
     }
     // n items are now more important to see, scrollTop to show them
     topMatchScoresKeyRef.current = topMatchScoresKey;
@@ -1052,7 +1053,7 @@ const useListScrollSync = ({
     scrollToItem(visibleItems[0], {
       event: new CustomEvent("navi_list_top_match_change"),
     });
-    return undefined;
+    return;
   });
 
   // Scroll listener — slides the window as the user scrolls.
@@ -1076,6 +1077,7 @@ const useListScrollSync = ({
       }
       let reason = "";
       const scrollInfo = getScrollInfo(
+        { scrollTop: listContainerEl.scrollTop },
         listContainerEl,
         tracker,
         virtualItemHeightSignal,
@@ -1112,16 +1114,15 @@ const useListScrollSync = ({
 // estimation via virtualItemHeight or renderWindow.start.
 // Returns { index, item, reason } or null if nothing can be determined.
 const getScrollInfo = (
+  { scrollTop },
   listContainerEl,
   tracker,
   virtualItemHeightSignal,
   renderWindowRef,
 ) => {
   const listEl = listContainerEl.querySelector(".navi_list");
-  const scrollContainer = getScrollContainer(listEl);
   const items = tracker.itemsSignal.peek();
-  const scrollTop = scrollContainer.scrollTop;
-  const containerRect = scrollContainer.getBoundingClientRect();
+  const containerRect = listContainerEl.getBoundingClientRect();
   let hitEl = null;
   let hitFiller = null;
   for (let y = containerRect.top + 1; y < containerRect.bottom; y += 4) {
@@ -1134,7 +1135,7 @@ const getScrollInfo = (
       hitEl = realItem;
       break;
     }
-    const filler = el.closest("li[aria-hidden]");
+    const filler = el.closest("[navi-virtual-filler]");
     if (filler) {
       hitFiller = filler;
       break;
@@ -1534,7 +1535,7 @@ const ListItemReal = ({
         if (e.button !== 0) {
           return;
         }
-        dispatchBubblingEvent(e, "navi_list_request_select_at", { item });
+        dispatchBubblingEvent(e, "navi_list_request_select", { item });
         rest.onMouseDown?.(e);
       }}
       {...rest}
@@ -1682,6 +1683,31 @@ export const ListItemFooter = (props) => {
       role="presentation"
       baseClassName="navi_list_item_footer"
     />
+  );
+};
+
+export const requestListNavFromCurrent = (listElement, { goal, event }) => {
+  return listElement.dispatchEvent(
+    new CustomEvent("navi_list_request_nav_from_current", {
+      detail: {
+        event,
+        goal,
+      },
+    }),
+  );
+};
+export const requestListSelectCurrent = (listElement, { event }) => {
+  return listElement.dispatchEvent(
+    new CustomEvent("navi_list_request_select_current", {
+      detail: { event },
+    }),
+  );
+};
+export const requestListInteractionStateReset = (listElement, { event }) => {
+  return listElement.dispatchEvent(
+    new CustomEvent("navi_list_request_interaction_state_reset", {
+      detail: { event },
+    }),
   );
 };
 
