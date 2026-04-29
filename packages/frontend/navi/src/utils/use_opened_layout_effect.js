@@ -36,11 +36,15 @@ export const useOpenedLayoutEffect = (ref, callback, deps) => {
       return;
     }
     const ancestor = el.closest("dialog, details");
-    if (ancestor && !ancestor.open) {
+    if (!ancestor) {
+      callbackRef.current(new CustomEvent("navi_opened"));
+      return;
+    }
+    if (!ancestor.open) {
       // Ancestor is closed — skip now; the toggle listener below will fire.
       return;
     }
-    callbackRef.current();
+    callbackRef.current(new CustomEvent("navi_opened"));
   }, deps);
 
   // Re-run every time the ancestor opens.
@@ -59,7 +63,7 @@ export const useOpenedLayoutEffect = (ref, callback, deps) => {
       if (!isOpen) {
         return;
       }
-      callbackRef.current();
+      callbackRef.current(e);
     };
     ancestor.addEventListener("toggle", onToggle);
     return () => {

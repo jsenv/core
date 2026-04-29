@@ -1,7 +1,6 @@
 import {
   getScrollContainer,
   pickPositionRelativeTo,
-  scrollIntoViewWithStickyAwareness,
   visibleRectEffect,
 } from "@jsenv/dom";
 import { signal } from "@preact/signals";
@@ -468,7 +467,7 @@ const ListInteractive = (props) => {
     anchorIdRef.current = id;
   };
 
-  const itemsRef = useRef([]);
+  const visibleItemsRef = useRef([]);
 
   // Resolve the stored anchor ID to its current index (items may have reordered).
   const getAnchorIndex = () => {
@@ -476,14 +475,14 @@ const ListInteractive = (props) => {
     if (!anchorId) {
       return -1;
     }
-    return itemsRef.current.findIndex((i) => i.id === anchorId);
+    return visibleItemsRef.current.findIndex((i) => i.id === anchorId);
   };
   const getAnchorItem = () => {
     const anchorId = anchorIdRef.current;
     if (!anchorId) {
       return null;
     }
-    return itemsRef.current.find((i) => i.id === anchorId);
+    return visibleItemsRef.current.find((i) => i.id === anchorId);
   };
 
   const firstRenderRef = useRef(true);
@@ -492,7 +491,7 @@ const ListInteractive = (props) => {
       return;
     }
     firstRenderRef.current = false;
-    const selectedItem = itemsRef.current.find((i) => i.selected);
+    const selectedItem = visibleItemsRef.current.find((i) => i.selected);
     setAnchorId(selectedItem ? selectedItem.id : null);
   }, []);
 
@@ -504,9 +503,9 @@ const ListInteractive = (props) => {
             keyboardInteractions
             {...props}
             uiAction={undefined}
-            onListItemsChange={(items) => {
-              props.onListItemsChange?.(items);
-              itemsRef.current = items;
+            onListVisibleItemsChange={(visibleItems) => {
+              props.onListVisibleItemsChange?.(visibleItems);
+              visibleItemsRef.current = visibleItems;
             }}
             onnavi_list_request_hover={(e) => {
               const { item } = e.detail;
@@ -514,34 +513,36 @@ const ListInteractive = (props) => {
             }}
             onnavi_list_request_nav={(e) => {
               const { direction, event = e } = e.detail;
-              const items = itemsRef.current;
-              const itemCount = items.length;
-              if (itemCount === 0) {
+              const visibleItems = visibleItemsRef.current;
+              const visibleItemCount = visibleItems.length;
+              if (visibleItemCount === 0) {
                 return;
               }
               const anchorIndex = getAnchorIndex();
-              const isDisabledIndex = (i) => Boolean(items[i]?.disabled);
+              const isDisabledIndex = (i) => Boolean(visibleItems[i]?.disabled);
               const resolveIndex = (direction) => {
                 if (direction === "down") {
                   if (anchorIndex === -1) {
                     let i = 0;
-                    while (i < itemCount && isDisabledIndex(i)) {
+                    while (i < visibleItemCount && isDisabledIndex(i)) {
                       i++;
                     }
-                    return i < itemCount ? i : anchorIndex;
+                    return i < visibleItemCount ? i : anchorIndex;
                   }
                   let belowIndex = anchorIndex + 1;
                   while (
-                    belowIndex < itemCount &&
+                    belowIndex < visibleItemCount &&
                     isDisabledIndex(belowIndex)
                   ) {
                     belowIndex++;
                   }
-                  return belowIndex < itemCount ? belowIndex : anchorIndex;
+                  return belowIndex < visibleItemCount
+                    ? belowIndex
+                    : anchorIndex;
                 }
                 if (direction === "up") {
                   if (anchorIndex === -1) {
-                    let i = itemCount - 1;
+                    let i = visibleItemCount - 1;
                     while (i >= 0 && isDisabledIndex(i)) {
                       i--;
                     }
@@ -555,13 +556,13 @@ const ListInteractive = (props) => {
                 }
                 if (direction === "first") {
                   let i = 0;
-                  while (i < itemCount && isDisabledIndex(i)) {
+                  while (i < visibleItemCount && isDisabledIndex(i)) {
                     i++;
                   }
-                  return i < itemCount ? i : anchorIndex;
+                  return i < visibleItemCount ? i : anchorIndex;
                 }
                 if (direction === "last") {
-                  let i = itemCount - 1;
+                  let i = visibleItemCount - 1;
                   while (i >= 0 && isDisabledIndex(i)) {
                     i--;
                   }
@@ -577,10 +578,10 @@ const ListInteractive = (props) => {
                 event.preventDefault();
               }
               dispatchCustomEvent(e, "navi_list_request_scroll_at", {
-                item: items[index],
+                item: visibleItems[index],
               });
               dispatchCustomEvent(e, "navi_list_request_nav_at", {
-                item: items[index],
+                item: visibleItems[index],
               });
             }}
             onnavi_list_request_clear={() => {
@@ -715,7 +716,7 @@ const ListControlled = ({
   popover,
   expandX,
   maxHeight,
-  onListItemsChange,
+  onListVisibleItemsChange,
   virtualItemHeight,
   lockSize,
   searchText,
@@ -724,27 +725,14 @@ const ListControlled = ({
 }) => {
   import.meta.css = css;
 
-  debugScroll = debugScroll
-    ? (...args) => {
-        console.debug(...args);
-      }
-    : () => {};
+  const refDefault = useRef(null);
+  const ref = rest.ref || refDefault;
 
   // Default lockSize to true when rendered inside a Dropdown.
   const isInsideDropdown = useIsInsideDropdown();
   if (lockSize === undefined && isInsideDropdown) {
     lockSize = true;
   }
-
-  const refDefault = useRef(null);
-  const ref = rest.ref || refDefault;
-
-  const ulRef = useRef(null);
-  const virtualItemHeightSignal = useVirtualItemHeightSignal(
-    ulRef,
-    virtualItemHeight,
-  );
-
   // lockSize: capture the container's dimensions on first render so filtering
   // cannot collapse the layout. Measurement happens on the initial (unfiltered)
   // state because the parent controls hidden props before any search is applied.
@@ -789,215 +777,27 @@ const ListControlled = ({
     };
   }, [lockSize]);
 
-  const [renderWindow, setRenderWindow] = useState({
-    start: 0,
-    end: renderBudget,
-  });
-  const renderWindowRef = useRef(null);
-  renderWindowRef.current = renderWindow;
-  const updateRenderWindow = (newStart, newEnd, reason) => {
-    const { start, end } = renderWindowRef.current;
-    if (newStart === start && newEnd === end) {
-      return;
-    }
-    debugScroll(`updateRenderWindow(${newStart}, ${newEnd}, "${reason}")`);
-    const renderWindow = { start: newStart, end: newEnd };
-    renderWindowRef.current = renderWindow;
-    setRenderWindow(renderWindow);
-  };
-
   const tracker = useItemTracker({
-    onChange: (items) => {
-      onListItemsChange(items);
+    onChange: () => {
+      onListVisibleItemsChange?.(tracker.visibleItemsSignal.peek());
     },
   });
 
-  const pendingScrollRef = useRef();
-  const scrollToItem = (item, reason, { block = "nearest" } = {}) => {
-    if (!item) {
-      return;
-    }
-    const items = tracker.itemsSignal.peek();
-    const itemCount = items.length;
-    if (itemCount === 0) {
-      return;
-    }
-    let index = items.findIndex((i) => i.id === item.id);
-    if (index === -1) {
-      return;
-    }
-    if (index >= itemCount) {
-      index = itemCount - 1;
-    }
-    const { start, end } = renderWindowRef.current;
-    const isInWindow = index >= start && index < end;
-    if (isInWindow) {
-      const itemEl = document.getElementById(item.id);
-      if (itemEl) {
-        debugScroll(
-          `scrollToItem("${item.value}", "${reason}") is in render window, scrolling "${item.value}" right away`,
-        );
-        scrollIntoViewWithStickyAwareness(itemEl, { block });
-        const listContainerEl = ref.current;
-        if (listContainerEl) {
-          dispatchEventFromElement(listContainerEl, "navi_list_scroll", {
-            item,
-          });
-        }
-        return;
-      }
-    }
-    // Not in DOM — shift the render window. The item will read
-    // pendingScrollRef on mount and call scrollIntoViewWithStickyAwareness,
-    // then call onScrolled so we can dispatch navi_list_scroll.
-    pendingScrollRef.current = {
-      id: item.id,
-      block,
-      onScrolled: (scrolledItem) => {
-        pendingScrollRef.current = null;
-        const listContainerEl = ref.current;
-        if (listContainerEl) {
-          dispatchEventFromElement(listContainerEl, "navi_list_scroll", {
-            item: scrolledItem,
-          });
-        }
-      },
-    };
-    const half = Math.floor(renderBudget / 2);
-    const newStart = Math.max(0, index - half);
-    const newEnd = newStart + renderBudget;
-    updateRenderWindow(
-      newStart,
-      newEnd,
-      `scrollToItem("${item.value}", "${reason}") is out of render window`,
-    );
-  };
-
-  const searchTextRef = useRef();
-  let searchTextBecomesActive = false;
-  if (searchTextRef.current === undefined) {
-    searchTextRef.current = searchText;
-  } else {
-    const searchTextPrevious = searchTextRef.current;
-    searchTextRef.current = searchText;
-    if (!searchTextPrevious && searchText) {
-      searchTextBecomesActive = true;
-    }
-  }
-
-  // Scroll to the selected item when the list is first presented on screen.
-  // Skipped when inside a closed <dialog>/<details> (scrollIntoView is a no-op
-  // on hidden elements); re-runs automatically every time the ancestor opens.
-  useOpenedLayoutEffect(ref, () => {
-    const items = tracker.itemsSignal.peek();
-    const firstSelected = items.find((i) => i.selected);
-    if (firstSelected) {
-      scrollToItem(firstSelected, "scroll to selected", { block: "center" });
-    } else {
-      scrollToItem(items[0], "scroll to top (no selected item)", {
-        block: "center",
-      });
-    }
-  }, []);
-
-  // Watch scores of the top renderBudget items.
-  // When scores change during an active search, scroll to top to reveal the most relevant items.
-  // When search becomes empty, restore the scroll position from before the search started.
-  // We save the first-visible item ID so restoration is item-precise
-  // and survives render-window shifts or item reordering.
-  const savedScrollItemIdRef = useRef(null);
-  const currentScrollItemIdRef = useRef(null);
-  const topMatchScoresKeyRef = useRef("");
-  useLayoutEffect(() => {
-    if (!searchText) {
-      // no search -> try to restore scroll position
-      topMatchScoresKeyRef.current = "";
-      const savedScrollItemId = savedScrollItemIdRef.current;
-      if (!savedScrollItemId) {
-        // nothing to restore
-        return;
-      }
-      savedScrollItemIdRef.current = null;
-      const items = tracker.itemsSignal.peek();
-      const item = items.find((i) => i.id === savedScrollItemId);
-      if (!item) {
-        return;
-      }
-      debugScroll("Restoring scroll to item id", savedScrollItemId);
-      scrollToItem(item, "restore scroll", { block: "center" });
-      return;
-    }
-
-    // During search -> watch for changes in the top items or their scores.
-    const topItems = tracker.visibleItemsSignal.peek().slice(0, renderBudget);
-    const topMatchScoresKey = topItems
-      .map((i) => `${i.id}:${i.matchScore ?? ""}`)
-      .join(",");
-    const currentTopMatchScore = topMatchScoresKeyRef.current;
-    if (topMatchScoresKey === currentTopMatchScore) {
-      // no changes in top matches -> no need to scroll
-      return;
-    }
-    // n items are now more important to see, scrollTop to show them
-    topMatchScoresKeyRef.current = topMatchScoresKey;
-    if (searchTextBecomesActive) {
-      // search just started -> save the currently scrolled item id to restore later
-      savedScrollItemIdRef.current = currentScrollItemIdRef.current;
-      debugScroll(`Saving scrolled item id ${currentScrollItemIdRef.current}`);
-    }
-    // -> scroll to the top
-    const visibleItems = tracker.visibleItemsSignal.peek();
-    scrollToItem(
-      visibleItems[0],
-      "search changed top matches, scrolling to top",
-    );
+  const ulRef = useRef(null);
+  const {
+    virtualItemHeightSignal,
+    renderWindow,
+    scrollToItem,
+    pendingScrollRef,
+  } = useListScrollSync({
+    ref,
+    ulRef,
+    tracker,
+    renderBudget,
+    virtualItemHeight,
+    searchText,
+    debugScroll,
   });
-
-  // Scroll listener — slides the window as the user scrolls.
-  useLayoutEffect(() => {
-    const listContainerEl = ref.current;
-    if (!listContainerEl) {
-      return undefined;
-    }
-    const listEl = listContainerEl.querySelector(".navi_list");
-    const scrollContainer = getScrollContainer(listEl);
-    const onScroll = () => {
-      const visibleItemCount = tracker.visibleCountSignal.peek();
-      if (visibleItemCount <= renderBudget) {
-        return;
-      }
-      const oneRealListItemInDom = Boolean(
-        listEl.querySelector(REAL_LIST_ITEM_SELECTOR),
-      );
-      if (!oneRealListItemInDom) {
-        return;
-      }
-      let reason = "";
-      const scrollInfo = getScrollInfo(
-        listContainerEl,
-        tracker,
-        virtualItemHeightSignal,
-        renderWindowRef,
-      );
-      if (!scrollInfo) {
-        return;
-      }
-      const { index, item, reason: hitReason } = scrollInfo;
-      currentScrollItemIdRef.current = item ? item.id : null;
-      reason = hitReason;
-      const half = Math.floor(renderBudget / 2);
-      let newStart = Math.max(0, index - half);
-      let newEnd = Math.min(visibleItemCount, newStart + renderBudget);
-      if (newEnd === visibleItemCount) {
-        newStart = Math.max(0, visibleItemCount - renderBudget);
-      }
-      updateRenderWindow(newStart, newEnd, reason);
-    };
-    scrollContainer.addEventListener("scroll", onScroll, { passive: true });
-    return () => {
-      scrollContainer.removeEventListener("scroll", onScroll);
-    };
-  }, [renderBudget]);
 
   const renderList = (listProps) => {
     return (
@@ -1056,7 +856,10 @@ const ListControlled = ({
         }
         // navi_list_scroll is dispatched by scrollToItem after the scroll
         // completes (including the async path via pendingScrollRef).
-        scrollToItem(item, "navi_list_request_scroll_at");
+        scrollToItem(item, {
+          reason: "navi_list_request_scroll_at",
+          event: e.detail.event,
+        });
       }}
       onnavi_list_request_nav_at={(e) => {
         const { item } = e.detail;
@@ -1077,6 +880,299 @@ const ListControlled = ({
     </Box>
   );
 };
+const useListScrollSync = ({
+  ref,
+  ulRef,
+  tracker,
+  renderBudget,
+  virtualItemHeight,
+  searchText,
+  debugScroll,
+}) => {
+  debugScroll = debugScroll ? (...args) => console.debug(...args) : () => {};
+
+  const virtualItemHeightSignal = useVirtualItemHeightSignal(
+    ulRef,
+    virtualItemHeight,
+  );
+
+  const [renderWindow, setRenderWindow] = useState({
+    start: 0,
+    end: renderBudget,
+  });
+  const renderWindowRef = useRef(null);
+  renderWindowRef.current = renderWindow;
+  const updateRenderWindow = (newStart, newEnd, reason) => {
+    const { start, end } = renderWindowRef.current;
+    if (newStart === start && newEnd === end) {
+      return;
+    }
+    debugScroll(`updateRenderWindow(${newStart}, ${newEnd}, "${reason}")`);
+    const renderWindow = { start: newStart, end: newEnd };
+    renderWindowRef.current = renderWindow;
+    setRenderWindow(renderWindow);
+  };
+
+  const pendingScrollRef = useRef();
+  const scrollToItem = (item, { event, reason }) => {
+    if (!item) {
+      return;
+    }
+    const items = tracker.itemsSignal.peek();
+    const itemCount = items.length;
+    if (itemCount === 0) {
+      return;
+    }
+    let index = items.findIndex((i) => i.id === item.id);
+    if (index === -1) {
+      return;
+    }
+    if (index >= itemCount) {
+      index = itemCount - 1;
+    }
+
+    const srollItemIntoView = (itemEl) => {
+      itemEl.scrollIntoView({
+        block: event.type === "keydown" ? "nearest" : "center",
+      });
+      dispatchEventFromElement(itemEl, "navi_list_scroll", { item });
+    };
+
+    const scrollToItemCall = `scrollToItem("${item.value}", { event: "${event.type}", reason: "${reason}" })`;
+
+    const { start, end } = renderWindowRef.current;
+    const isInWindow = index >= start && index < end;
+    if (isInWindow) {
+      const itemEl = document.getElementById(item.id);
+      if (itemEl) {
+        debugScroll(
+          `${scrollToItemCall} is in render window, scrolling "${item.value}" right away`,
+        );
+        srollItemIntoView(itemEl);
+        return;
+      }
+    }
+    // Not in DOM — shift the render window. The item will read
+    // pendingScrollRef on mount and call scrollIntoViewWithStickyAwareness,
+    // then call onScrolled so we can dispatch navi_list_scroll.
+    pendingScrollRef.current = {
+      id: item.id,
+      resolve: (itemEl) => {
+        pendingScrollRef.current = null;
+        srollItemIntoView(itemEl);
+      },
+    };
+    const half = Math.floor(renderBudget / 2);
+    const newStart = Math.max(0, index - half);
+    const newEnd = newStart + renderBudget;
+    updateRenderWindow(
+      newStart,
+      newEnd,
+      `${scrollToItemCall} is out of render window`,
+    );
+  };
+  const searchTextRef = useRef();
+  let searchTextBecomesActive = false;
+  if (searchTextRef.current === undefined) {
+    searchTextRef.current = searchText;
+  } else {
+    const searchTextPrevious = searchTextRef.current;
+    searchTextRef.current = searchText;
+    if (!searchTextPrevious && searchText) {
+      searchTextBecomesActive = true;
+    }
+  }
+  // Scroll to the selected item when the list is first presented on screen.
+  // Skipped when inside a closed <dialog>/<details> (scrollIntoView is a no-op
+  // on hidden elements); re-runs automatically every time the ancestor opens.
+  useOpenedLayoutEffect(
+    ref,
+    (openEvent) => {
+      const items = tracker.itemsSignal.peek();
+      const firstSelected = items.find((i) => i.selected);
+      if (firstSelected) {
+        scrollToItem(firstSelected, {
+          event: openEvent,
+          reason: "scroll to selected",
+        });
+      } else {
+        scrollToItem(items[0], {
+          event: openEvent,
+          reason: "scroll to top (no selected item)",
+        });
+      }
+    },
+    [],
+  );
+  // Watch scores of the top renderBudget items.
+  // When scores change during an active search, scroll to top to reveal the most relevant items.
+  // When search becomes empty, restore the scroll position from before the search started.
+  // We save the first-visible item ID so restoration is item-precise
+  // and survives render-window shifts or item reordering.
+  const savedScrollTopRef = useRef(-1);
+  const topMatchScoresKeyRef = useRef("");
+  useLayoutEffect(() => {
+    const listContainerEl = ref.current;
+
+    if (!searchText) {
+      // no search -> try to restore scroll position
+      topMatchScoresKeyRef.current = "";
+      const savedScrollTop = savedScrollTopRef.current;
+      if (savedScrollTop === -1) {
+        // nothing to restore
+        return;
+      }
+      savedScrollTopRef.current = -1;
+      if (!listContainerEl) {
+        return;
+      }
+      debugScroll("Restoring scroll to", savedScrollTop);
+      listContainerEl.scrollTop = savedScrollTop;
+      return;
+    }
+
+    // During search -> watch for changes in the top items or their scores.
+    const topItems = tracker.visibleItemsSignal.peek().slice(0, renderBudget);
+    const topMatchScoresKey = topItems
+      .map((i) => `${i.id}:${i.matchScore ?? ""}`)
+      .join(",");
+    const currentTopMatchScore = topMatchScoresKeyRef.current;
+    if (topMatchScoresKey === currentTopMatchScore) {
+      // no changes in top matches -> no need to scroll
+      return;
+    }
+    // n items are now more important to see, scrollTop to show them
+    topMatchScoresKeyRef.current = topMatchScoresKey;
+    if (searchTextBecomesActive) {
+      // search just started -> save the currently scrolled item id to restore later
+      const scrollTopToSave = listContainerEl ? listContainerEl.scrollTop : -1;
+      savedScrollTopRef.current = scrollTopToSave;
+      debugScroll(`Saving scroll top ${scrollTopToSave}`);
+    }
+    // -> scroll to the top
+    const visibleItems = tracker.visibleItemsSignal.peek();
+    scrollToItem(
+      visibleItems[0],
+      "search changed top matches, scrolling to top",
+    );
+  });
+  // Scroll listener — slides the window as the user scrolls.
+  useLayoutEffect(() => {
+    const listContainerEl = ref.current;
+    if (!listContainerEl) {
+      return undefined;
+    }
+    const listEl = listContainerEl.querySelector(".navi_list");
+    const scrollContainer = getScrollContainer(listEl);
+    const onScroll = () => {
+      const visibleItemCount = tracker.visibleCountSignal.peek();
+      if (visibleItemCount <= renderBudget) {
+        return;
+      }
+      const oneRealListItemInDom = Boolean(
+        listEl.querySelector(REAL_LIST_ITEM_SELECTOR),
+      );
+      if (!oneRealListItemInDom) {
+        return;
+      }
+      let reason = "";
+      const scrollInfo = getScrollInfo(
+        listContainerEl,
+        tracker,
+        virtualItemHeightSignal,
+        renderWindowRef,
+      );
+      if (!scrollInfo) {
+        return;
+      }
+      const { index, reason: hitReason } = scrollInfo;
+      reason = hitReason;
+      const half = Math.floor(renderBudget / 2);
+      let newStart = Math.max(0, index - half);
+      let newEnd = Math.min(visibleItemCount, newStart + renderBudget);
+      if (newEnd === visibleItemCount) {
+        newStart = Math.max(0, visibleItemCount - renderBudget);
+      }
+      updateRenderWindow(newStart, newEnd, reason);
+    };
+    scrollContainer.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      scrollContainer.removeEventListener("scroll", onScroll);
+    };
+  }, [renderBudget]);
+
+  return {
+    virtualItemHeightSignal,
+    renderWindow,
+    pendingScrollRef,
+    scrollToItem,
+  };
+};
+// Returns the item located at the current scroll position of a list container.
+// Uses DOM hit-testing to find visible items/fillers; falls back to index
+// estimation via virtualItemHeight or renderWindow.start.
+// Returns { index, item, reason } or null if nothing can be determined.
+const getScrollInfo = (
+  listContainerEl,
+  tracker,
+  virtualItemHeightSignal,
+  renderWindowRef,
+) => {
+  const listEl = listContainerEl.querySelector(".navi_list");
+  const scrollContainer = getScrollContainer(listEl);
+  const items = tracker.itemsSignal.peek();
+  const scrollTop = scrollContainer.scrollTop;
+  const containerRect = scrollContainer.getBoundingClientRect();
+  let hitEl = null;
+  let hitFiller = null;
+  for (let y = containerRect.top + 1; y < containerRect.bottom; y += 4) {
+    const el = document.elementFromPoint(containerRect.left + 1, y);
+    if (!el || !listEl.contains(el)) {
+      continue;
+    }
+    const realItem = el.closest(REAL_LIST_ITEM_SELECTOR);
+    if (realItem) {
+      hitEl = realItem;
+      break;
+    }
+    const filler = el.closest("li[aria-hidden]");
+    if (filler) {
+      hitFiller = filler;
+      break;
+    }
+  }
+  if (hitFiller) {
+    const virtualItemHeight = virtualItemHeightSignal.peek();
+    if (virtualItemHeight === 0) {
+      return null;
+    }
+    const index = Math.floor(scrollTop / virtualItemHeight);
+    return {
+      item: items[index],
+      index,
+      reason: `hit filler, estimated at ${index} (${items[index]?.value})`,
+    };
+  }
+  if (hitEl) {
+    const hitId = hitEl.id;
+    const index = items.findIndex((i) => i.id === hitId);
+    if (index === -1) {
+      return null;
+    }
+    return {
+      item: items[index],
+      index,
+      reason: `hit item at ${index} (${items[index].value})`,
+    };
+  }
+  const fallbackIndex = renderWindowRef.current.start;
+  return {
+    item: items[fallbackIndex],
+    index: fallbackIndex,
+    reason: "no hit",
+  };
+};
+
 const useVirtualItemHeightSignal = (ulRef, virtualItemHeightProp = 0) => {
   const virtualHeightSignalRef = useRef(null);
   if (!virtualHeightSignalRef.current) {
@@ -1361,9 +1457,7 @@ const ListItemReal = ({
     if (!itemEl) {
       return;
     }
-    scrollIntoViewWithStickyAwareness(itemEl, {
-      block: pendingScroll.block ?? "nearest",
-    });
+    pendingScroll.resolve(itemEl);
   }, [needScrollOnMount]);
 
   // CSS Highlight API: mark matching text ranges when highlight prop is set.
@@ -1570,71 +1664,6 @@ const dispatchEventFromElement = (el, eventName, detail) => {
     cancelable: true,
   });
   return el.dispatchEvent(customEvent);
-};
-
-// Returns the item located at the current scroll position of a list container.
-// Uses DOM hit-testing to find visible items/fillers; falls back to index
-// estimation via virtualItemHeight or renderWindow.start.
-// Returns { index, item, reason } or null if nothing can be determined.
-const getScrollInfo = (
-  listContainerEl,
-  tracker,
-  virtualItemHeightSignal,
-  renderWindowRef,
-) => {
-  const listEl = listContainerEl.querySelector(".navi_list");
-  const scrollContainer = getScrollContainer(listEl);
-  const items = tracker.itemsSignal.peek();
-  const scrollTop = scrollContainer.scrollTop;
-  const containerRect = scrollContainer.getBoundingClientRect();
-  let hitEl = null;
-  let hitFiller = null;
-  for (let y = containerRect.top + 1; y < containerRect.bottom; y += 4) {
-    const el = document.elementFromPoint(containerRect.left + 1, y);
-    if (!el || !listEl.contains(el)) {
-      continue;
-    }
-    const realItem = el.closest(REAL_LIST_ITEM_SELECTOR);
-    if (realItem) {
-      hitEl = realItem;
-      break;
-    }
-    const filler = el.closest("li[aria-hidden]");
-    if (filler) {
-      hitFiller = filler;
-      break;
-    }
-  }
-  if (hitFiller) {
-    const virtualItemHeight = virtualItemHeightSignal.peek();
-    if (virtualItemHeight === 0) {
-      return null;
-    }
-    const index = Math.floor(scrollTop / virtualItemHeight);
-    return {
-      item: items[index],
-      index,
-      reason: `hit filler, estimated at ${index} (${items[index]?.value})`,
-    };
-  }
-  if (hitEl) {
-    const hitId = hitEl.id;
-    const index = items.findIndex((i) => i.id === hitId);
-    if (index === -1) {
-      return null;
-    }
-    return {
-      item: items[index],
-      index,
-      reason: `hit item at ${index} (${items[index].value})`,
-    };
-  }
-  const fallbackIndex = renderWindowRef.current.start;
-  return {
-    item: items[fallbackIndex],
-    index: fallbackIndex,
-    reason: "no hit",
-  };
 };
 // Dispatches a navi event bubbling from the current event target element.
 const dispatchCustomEvent = (e, customEventName, customEventDetail) => {

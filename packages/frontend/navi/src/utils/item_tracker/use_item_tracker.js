@@ -101,10 +101,13 @@ const createItemTracker = (onChange) => {
   let notifyScheduled = false;
   const runNotify = () => {
     batch(() => {
+      let someChange = false;
+
       const newCount = allKeys.size;
       const countModified = countSignal.peek() !== newCount;
       if (countModified) {
         countSignal.value = newCount;
+        someChange = true;
       }
 
       const newVisibleCount = orderedKeys.length;
@@ -112,6 +115,7 @@ const createItemTracker = (onChange) => {
         visibleCountSignal.peek() !== newVisibleCount;
       if (visibleCountModified) {
         visibleCountSignal.value = newVisibleCount;
+        someChange = true;
       }
 
       // Update allItemsSignal (all items including hidden, ordered by explicit index).
@@ -129,16 +133,21 @@ const createItemTracker = (onChange) => {
       }
       if (allItemsChanged) {
         itemsSignal.value = allItems;
+        someChange = true;
       }
 
       // Update visibleItemsSignal (non-hidden items only).
       const prevVisibleItems = visibleItemsSignal.peek();
       let visibleItemsChanged = visibleCountModified;
       const visibleItems = [];
+      let newMatchCount = 0;
       for (let i = 0; i < orderedKeys.length; i++) {
         const key = orderedKeys[i];
         const item = registrations.get(key);
         visibleItems.push(item);
+        if (item.matchScore > 0) {
+          newMatchCount++;
+        }
         if (!visibleItemsChanged) {
           const id = item.id;
           const prevId = prevVisibleItems[i]?.id;
@@ -149,17 +158,15 @@ const createItemTracker = (onChange) => {
       }
       if (visibleItemsChanged) {
         visibleItemsSignal.value = visibleItems;
-        onChange?.(visibleItems);
+        someChange = true;
       }
-
-      let newMatchCount = 0;
-      for (const item of visibleItems) {
-        if (item.matchScore > 0) {
-          newMatchCount++;
-        }
-      }
-      if (matchCountSignal.peek() !== newMatchCount) {
+      const matchCountModified = matchCountSignal.peek() !== newMatchCount;
+      if (matchCountModified) {
         matchCountSignal.value = newMatchCount;
+        someChange = true;
+      }
+      if (someChange) {
+        onChange?.();
       }
     });
   };

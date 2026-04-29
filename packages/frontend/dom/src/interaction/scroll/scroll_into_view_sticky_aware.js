@@ -1,3 +1,8 @@
+/**
+ * DON'T USE THIS, use scroll-padding-top/bottom in CSS instead
+ * better in every aspect
+ */
+
 import { getScrollContainer } from "./scroll_container.js";
 
 /**
@@ -56,9 +61,14 @@ export const scrollIntoViewWithStickyAwareness = (
     }
   }
   if (topCover > 0) {
-    scrollContainer.scrollTop -= topCover;
+    // For block="center" the element is visually centered in the full viewport.
+    // A sticky header of height H shifts the available center upward by H/2,
+    // so we only need to correct by half the overlap to keep the element
+    // centered in the visible (uncovered) area.
+    scrollContainer.scrollTop -= block === "center" ? topCover / 2 : topCover;
   }
   if (bottomCover > 0) {
-    scrollContainer.scrollTop += bottomCover;
+    scrollContainer.scrollTop +=
+      block === "center" ? bottomCover / 2 : bottomCover;
   }
 };
