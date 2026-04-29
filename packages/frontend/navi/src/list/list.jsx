@@ -714,7 +714,7 @@ const ListControlled = ({
   listId,
   listRole,
   fallback = "Aucun élément dans cette liste",
-  noMatchFallback = "Pas de résultat pour cette recherche",
+  noMatchFallback = "Aucun élément ne correspond à cette recherche",
   separator,
   children,
   tabIndex,
