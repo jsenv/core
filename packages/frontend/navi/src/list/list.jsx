@@ -626,6 +626,7 @@ const useListScrollSync = ({
     const srollItemIntoView = (itemEl) => {
       itemEl.scrollIntoView({
         block: event.type === "keydown" ? "nearest" : "center",
+        // inline: "nearest",
       });
       dispatchPublicEvent(itemEl, "navi_list_nav", { item, event });
     };

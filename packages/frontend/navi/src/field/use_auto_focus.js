@@ -99,6 +99,7 @@ export const useAutoFocus = (
         }
       }
 
+      debugFocus("restore focus to previously active element", activeElement);
       activeElement.focus();
     };
   };
