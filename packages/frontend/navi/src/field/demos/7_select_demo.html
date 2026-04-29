@@ -75,6 +75,7 @@
         Input,
         Form,
         Box,
+        ListItemGroup,
       } from "@jsenv/navi";
 
       // ── Demo 1: Simple list ───────────────────────────────────────────────────
@@ -112,32 +113,34 @@
                     expandX
                     debugFocus
                     debugScroll
+                    separator={<Separator margin="0" />}
                   >
-                    <ListItemHeader>Warm</ListItemHeader>
-                    {WARM_COLORS.map((c, i) => (
-                      <ListItem
-                        key={c}
-                        index={i}
-                        id={c}
-                        value={c}
-                        selected={color === c}
-                      >
-                        {c}
-                      </ListItem>
-                    ))}
-                    <Separator />
-                    <ListItemHeader>Cool</ListItemHeader>
-                    {COOL_COLORS.map((c, i) => (
-                      <ListItem
-                        key={c}
-                        index={WARM_COLORS.length + i}
-                        id={c}
-                        value={c}
-                        selected={color === c}
-                      >
-                        {c}
-                      </ListItem>
-                    ))}
+                    <ListItemGroup label="Warm">
+                      {WARM_COLORS.map((c, i) => (
+                        <ListItem
+                          key={c}
+                          index={i}
+                          id={c}
+                          value={c}
+                          selected={color === c}
+                        >
+                          {c}
+                        </ListItem>
+                      ))}
+                    </ListItemGroup>
+                    <ListItemGroup label="Cool">
+                      {COOL_COLORS.map((c, i) => (
+                        <ListItem
+                          key={c}
+                          index={WARM_COLORS.length + i}
+                          id={c}
+                          value={c}
+                          selected={color === c}
+                        >
+                          {c}
+                        </ListItem>
+                      ))}
+                    </ListItemGroup>
                   </List>
                 </Select>
                 <div className="value-display">{color ?? ""}</div>
