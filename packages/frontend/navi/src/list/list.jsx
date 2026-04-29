@@ -1009,7 +1009,7 @@ const useListScrollSync = ({
   // When search becomes empty, restore the scroll position from before the search started.
   // We save the first-visible item ID so restoration is item-precise
   // and survives render-window shifts or item reordering.
-  const savedScrollTopRef = useRef(-1);
+  const savedScrollRef = useRef(null);
   const topMatchScoresKeyRef = useRef("");
   useLayoutEffect(() => {
     const listContainerEl = ref.current;
@@ -1017,22 +1017,27 @@ const useListScrollSync = ({
     if (!searchText) {
       // no search -> try to restore scroll position
       topMatchScoresKeyRef.current = "";
-      const savedScrollTop = savedScrollTopRef.current;
-      if (savedScrollTop === -1) {
+      const savedScroll = savedScrollRef.current;
+      if (!savedScroll) {
         // nothing to restore
         return;
       }
-      savedScrollTopRef.current = -1;
-      if (!listContainerEl) {
-        return;
-      }
-      debugScroll("Restoring scroll to", savedScrollTop);
-      listContainerEl.scrollTop = savedScrollTop;
+      savedScrollRef.current = null;
+      debugScroll("Restoring scroll to", savedScroll);
+      updateRenderWindow(
+        savedScroll.renderWindow.start,
+        savedScroll.renderWindow.end,
+        "restore scroll window",
+      );
+      requestAnimationFrame(() => {
+        listContainerEl.scrollTop = savedScroll.scrollTop;
+      });
       return;
     }
 
     // During search -> watch for changes in the top items or their scores.
-    const topItems = tracker.visibleItemsSignal.peek().slice(0, renderBudget);
+    const visibleItems = tracker.visibleItemsSignal.peek();
+    const topItems = visibleItems.slice(0, renderBudget);
     const topMatchScoresKey = topItems
       .map((i) => `${i.id}:${i.matchScore ?? ""}`)
       .join(",");
@@ -1046,15 +1051,16 @@ const useListScrollSync = ({
     if (searchTextBecomesActive) {
       // search just started -> save the currently scrolled item id to restore later
       const scrollTopToSave = listContainerEl ? listContainerEl.scrollTop : -1;
-      savedScrollTopRef.current = scrollTopToSave;
+      savedScrollRef.current = {
+        renderWindow: { ...renderWindowRef.current },
+        scrollTop: scrollTopToSave,
+      };
       debugScroll(`Saving scroll top ${scrollTopToSave}`);
     }
     // -> scroll to the top
-    const visibleItems = tracker.visibleItemsSignal.peek();
-    scrollToItem(
-      visibleItems[0],
-      "search changed top matches, scrolling to top",
-    );
+    scrollToItem(visibleItems[0], {
+      event: new CustomEvent("navi_list_top_match_change"),
+    });
   });
   // Scroll listener — slides the window as the user scrolls.
   useLayoutEffect(() => {
