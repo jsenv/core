@@ -73,6 +73,7 @@
         ListItemHeader,
         useSearchText,
         Input,
+        Form,
       } from "@jsenv/navi";
 
       // ── Demo 1: Simple list ───────────────────────────────────────────────────
@@ -240,7 +241,11 @@
                   ))}
                 </List>
               </Select>
-              <Select name="size_empty" placeholder="No value…">
+              <Select
+                uiAction={() => {}}
+                name="size_empty"
+                placeholder="No value…"
+              >
                 <List listRole="listbox" border="none" expandX>
                   {SIZES.map((s, i) => (
                     <ListItem key={s} index={i} id={s} value={s}>
@@ -249,7 +254,12 @@
                   ))}
                 </List>
               </Select>
-              <Select name="size_disabled" value="L" disabled>
+              <Select
+                uiAction={() => {}}
+                name="size_disabled"
+                value="L"
+                disabled
+              >
                 <List listRole="listbox" border="none" expandX>
                   {SIZES.map((s, i) => (
                     <ListItem
@@ -281,28 +291,25 @@
               A hidden <code>&lt;input type="hidden"&gt;</code> is rendered with
               the selected value so the Select participates in form submission.
             </p>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                const data = new FormData(e.currentTarget);
-                setSubmitted(Object.fromEntries(data));
+            <Form
+              action={(v) => {
+                setSubmitted(v);
               }}
+              flex
+              spacing="m"
+              alignY="center"
             >
-              <div
-                style={{ display: "flex", gap: "12px", alignItems: "center" }}
-              >
-                <Select name="country" placeholder="Pick a country…">
-                  <List listRole="listbox" border="none" expandX>
-                    {["France", "Germany", "Japan", "USA"].map((c, i) => (
-                      <ListItem key={c} index={i} id={c} value={c}>
-                        {c}
-                      </ListItem>
-                    ))}
-                  </List>
-                </Select>
-                <button type="submit">Submit</button>
-              </div>
-            </form>
+              <Select name="country" placeholder="Pick a country…">
+                <List listRole="listbox" border="none" expandX>
+                  {["France", "Germany", "Japan", "USA"].map((c, i) => (
+                    <ListItem key={c} index={i} id={c} value={c}>
+                      {c}
+                    </ListItem>
+                  ))}
+                </List>
+              </Select>
+              <button type="submit">Submit</button>
+            </Form>
             {submitted && (
               <div className="value-display">{JSON.stringify(submitted)}</div>
             )}
