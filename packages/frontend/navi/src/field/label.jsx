@@ -8,6 +8,8 @@ const css = /* css */ `
     label {
       &[data-interactive] {
         cursor: pointer;
+        /* When label is interactive ability to select text oftens conflicts with other click interactions */
+        user-select: none;
       }
 
       &[data-readonly],

@@ -1372,6 +1372,12 @@ const ListWithKeyboardInteractions = (props) => {
           event: e,
         });
       },
+      space: (e) => {
+        e.preventDefault(); // prevent page scroll
+        return requestListSelectCurrent(e.currentTarget, {
+          event: e,
+        });
+      },
       escape: (e) => {
         // Use queueMicrotask to ensure the navi_list_request_interaction_state_reset event does not prevent
         // escape to close dialog behavior (otherwise the re-rendering of the list prevent it for some reason)

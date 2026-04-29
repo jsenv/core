@@ -504,6 +504,13 @@ const SelectWithPopover = (props) => {
             openPopover(e);
           }
         }}
+        onFocus={(e) => {
+          // When a label is clicked it transfers focus to the select (relatedTarget is null).
+          // Tab focus has a relatedTarget — in that case we don't open.
+          if (!e.relatedTarget && !expandedRef.current) {
+            openPopover(e);
+          }
+        }}
         // When a list item is interacted via mousedown, return focus to the select.
         onnavi_list_select={(e) => {
           const { event } = e.detail;
@@ -521,6 +528,10 @@ const SelectWithPopover = (props) => {
             },
             arrowup: (e) => {
               e.preventDefault(); // prevent container scroll
+              openPopover(e);
+            },
+            space: (e) => {
+              e.preventDefault(); // prevent scroll
               openPopover(e);
             },
             escape: (e) => {
@@ -641,6 +652,12 @@ const SelectWithDialog = (props) => {
           arrowup: (e) => {
             e.preventDefault();
             openDialog(e);
+          },
+          space: (e) => {
+            e.preventDefault();
+            if (!expandedRef.current) {
+              openDialog(e);
+            }
           },
         },
         onKeyDown,

@@ -98,76 +98,82 @@
             <Box flex spacing="m">
               <fieldset>
                 <legend>Navi</legend>
-                <Select
-                  name="color"
-                  value={color}
-                  placeholder="Pick a color…"
-                  uiAction={(v) => {
-                    setColor(v);
-                  }}
-                  debugPopover
-                  debugFocus
-                >
-                  <List
-                    listRole="listbox"
-                    border="none"
-                    expandX
+                <Label>
+                  Color
+                  <Select
+                    name="color"
+                    value={color}
+                    placeholder="Pick a color…"
+                    uiAction={(v) => {
+                      setColor(v);
+                    }}
+                    debugPopover
                     debugFocus
-                    debugScroll
-                    separator={<Separator margin="0" />}
                   >
-                    <ListItemGroup label="Warm">
-                      {WARM_COLORS.map((c, i) => (
-                        <ListItem
-                          key={c}
-                          index={i}
-                          id={c}
-                          value={c}
-                          selected={color === c}
-                        >
-                          {c}
-                        </ListItem>
-                      ))}
-                    </ListItemGroup>
-                    <ListItemGroup label="Cool">
-                      {COOL_COLORS.map((c, i) => (
-                        <ListItem
-                          key={c}
-                          index={WARM_COLORS.length + i}
-                          id={c}
-                          value={c}
-                          selected={color === c}
-                        >
-                          {c}
-                        </ListItem>
-                      ))}
-                    </ListItemGroup>
-                  </List>
-                </Select>
+                    <List
+                      listRole="listbox"
+                      border="none"
+                      expandX
+                      debugFocus
+                      debugScroll
+                      separator={<Separator margin="0" />}
+                    >
+                      <ListItemGroup label="Warm">
+                        {WARM_COLORS.map((c, i) => (
+                          <ListItem
+                            key={c}
+                            index={i}
+                            id={c}
+                            value={c}
+                            selected={color === c}
+                          >
+                            {c}
+                          </ListItem>
+                        ))}
+                      </ListItemGroup>
+                      <ListItemGroup label="Cool">
+                        {COOL_COLORS.map((c, i) => (
+                          <ListItem
+                            key={c}
+                            index={WARM_COLORS.length + i}
+                            id={c}
+                            value={c}
+                            selected={color === c}
+                          >
+                            {c}
+                          </ListItem>
+                        ))}
+                      </ListItemGroup>
+                    </List>
+                  </Select>
+                </Label>
                 <div className="value-display">{color ?? ""}</div>
               </fieldset>
               <fieldset>
                 <legend>Native</legend>
-                <select
-                  value={colorNative}
-                  onChange={(e) => setColorNative(e.target.value)}
-                >
-                  <option value="">Pick a color…</option>
-                  <optgroup label="Warm">
-                    {WARM_COLORS.map((c) => (
-                      <option key={c} value={c}>
-                        {c}
-                      </option>
-                    ))}
-                  </optgroup>
-                  <optgroup label="Cool">
-                    {COOL_COLORS.map((c) => (
-                      <option key={c} value={c}>
-                        {c}
-                      </option>
-                    ))}
-                  </optgroup>
-                </select>
+                <label>
+                  Color
+                  <select
+                    value={colorNative}
+                    onChange={(e) => setColorNative(e.target.value)}
+                  >
+                    <option value="">Pick a color…</option>
+                    <optgroup label="Warm">
+                      {WARM_COLORS.map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="Cool">
+                      {COOL_COLORS.map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
+                    </optgroup>
+                  </select>
+                </label>
                 <div className="value-display">{colorNative || ""}</div>
               </fieldset>
             </Box>
