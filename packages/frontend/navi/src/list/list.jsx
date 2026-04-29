@@ -1,6 +1,7 @@
 import {
   getScrollContainer,
   pickPositionRelativeTo,
+  scrollIntoViewScoped,
   visibleRectEffect,
 } from "@jsenv/dom";
 import { signal } from "@preact/signals";
@@ -625,9 +626,9 @@ const useListScrollSync = ({
     }
 
     const srollItemIntoView = (itemEl) => {
-      itemEl.scrollIntoView({
+      scrollIntoViewScoped(itemEl, {
+        container: ref.current,
         block: event.type === "keydown" ? "nearest" : "center",
-        // inline: "nearest",
       });
       dispatchPublicEvent(itemEl, "navi_list_nav", { item, event });
     };

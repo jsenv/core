@@ -87,6 +87,7 @@ export {
   getScrollContainerSet,
   getSelfAndAncestorScrolls,
 } from "./src/interaction/scroll/scroll_container.js";
+export { scrollIntoViewScoped } from "./src/interaction/scroll/scroll_into_view_scoped.js";
 export { scrollIntoViewWithStickyAwareness } from "./src/interaction/scroll/scroll_into_view_sticky_aware.js";
 export { trapScrollInside } from "./src/interaction/scroll/scroll_trap.js";
 export { measureScrollbar } from "./src/interaction/scroll/scrollbar_size.js";
