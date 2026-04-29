@@ -500,7 +500,8 @@ const SelectWithPopover = (props) => {
           if (expandedRef.current) {
             closePopover(e);
           } else {
-            // e.preventDefault();
+            e.preventDefault(); // prevent browser trying to give focus to the select (popover will take focus)
+            debugFocus(`select mousedown.preventDefault()`);
             openPopover(e);
           }
         }}
@@ -517,10 +518,12 @@ const SelectWithPopover = (props) => {
           const { event } = e.detail;
           if (event.type === "mousedown") {
             event.preventDefault(); // prevent browser trying to give focus to the list item
+            debugFocus(`listItem mousedown.preventDefault()`);
           }
           if (event.key === " ") {
             // space can open the popover we don't want space to propagate to the select otherwise it would open it back immediatly
             event.stopPropagation();
+            debugPopover(`listItem spacekey.stopPropagation()`);
           }
           closePopover(e);
           moveFocusToSelect(e);
