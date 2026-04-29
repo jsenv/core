@@ -58,6 +58,7 @@ const css = /* css */ `
   }
 
   .navi_select {
+    position: relative;
     display: inline-flex;
     box-sizing: border-box;
     padding: var(--padding);
@@ -90,6 +91,10 @@ const css = /* css */ `
       cursor: default;
     }
 
+    .navi_list_container {
+      --list-border-radius: 0;
+    }
+
     .navi_select_trigger_text {
       min-width: 0;
       flex: 1;
@@ -116,7 +121,7 @@ const css = /* css */ `
       padding: 0;
       background: white;
       border: none;
-      border-radius: 8px;
+      border-radius: 0;
       box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
       overflow: auto;
 
@@ -189,7 +194,7 @@ const SelectPlaceholderContext = createContext("Select…");
 const SelectUI = (props) => {
   let {
     placeholder = "Select…",
-    trigger = SelectTrigger,
+    trigger,
     name,
     value,
     readOnly,
