@@ -1485,7 +1485,6 @@ const ListItemVoid = () => {
 };
 const ListItemReal = ({
   id,
-  value,
   hidden,
   highlight,
   selected,
@@ -1552,24 +1551,35 @@ const ListItemReal = ({
 
     const ownRanges = [];
     for (const { root, ranges } of entries) {
+      // Collect text nodes under root and their cumulative offsets so that
+      // [start, end] ranges (character positions in the field string) map
+      // directly to the correct text node positions without re-searching.
+      const textNodes = [];
+      let totalLength = 0;
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+      let node;
+      while ((node = walker.nextNode())) {
+        textNodes.push({ node, offset: totalLength });
+        totalLength += node.textContent.length;
+      }
       for (const [start, end] of ranges) {
-        const matchText = String(value).slice(start, end).toLowerCase();
-        if (!matchText) {
-          continue;
-        }
-        const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-        let node;
-        while ((node = walker.nextNode())) {
-          const lowerText = node.textContent.toLowerCase();
-          let idx = lowerText.indexOf(matchText);
-          while (idx !== -1) {
-            const range = new Range();
-            range.setStart(node, idx);
-            range.setEnd(node, idx + matchText.length);
-            hl.add(range);
-            ownRanges.push(range);
-            idx = lowerText.indexOf(matchText, idx + 1);
+        for (const { node: textNode, offset: nodeOffset } of textNodes) {
+          const nodeEnd = nodeOffset + textNode.textContent.length;
+          if (nodeEnd <= start || nodeOffset >= end) {
+            continue;
           }
+          const rangeStart = start - nodeOffset;
+          const rangeEnd = end - nodeOffset;
+          const range = new Range();
+          range.setStart(textNode, rangeStart < 0 ? 0 : rangeStart);
+          range.setEnd(
+            textNode,
+            rangeEnd > textNode.textContent.length
+              ? textNode.textContent.length
+              : rangeEnd,
+          );
+          hl.add(range);
+          ownRanges.push(range);
         }
       }
     }
