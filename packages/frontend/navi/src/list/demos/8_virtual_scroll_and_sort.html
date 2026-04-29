@@ -499,7 +499,10 @@
                   paddingY="12px"
                   expandX
                   border="1px solid #ccc"
-                  uiAction={(v) => setSearch(v)}
+                  value={search}
+                  uiAction={(v) => {
+                    setSearch(v);
+                  }}
                   style={{
                     boxSizing: "border-box",
                     borderRadius: "6px",

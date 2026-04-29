@@ -127,6 +127,20 @@ const css = /* css */ `
     --x-border-color: var(--list-border-color);
     --x-border-style: var(--list-border-style);
     --x-background-color: var(--list-background-color);
+    /* When typing inside an input browser tries to keep caret visible */
+    /* For input within a sticky element inside a scrollable container */
+    /* Browser will try to scroll that input into view */
+    /* When that scrollable container has a scroll padding it causes scroll on each keystroke */
+    /* Even putting a scroll margin on the input won't fix */
+    /* The only solution is to use scroll-margins on each item that can scroll */
+    /* This is why these props are named list-scroll-spacing-top and applied via scroll-margin on items */
+    --x-list-scroll-spacing-top: calc(
+      var(--list-header-height, 0px) + var(--list-scroll-padding-top, 0px)
+    );
+    --x-list-scroll-spacing-bottom: calc(
+      var(--list-footer-height, 0px) + var(--list-scroll-padding-bottom, 0px)
+    );
+
     width: fit-content;
     max-width: 100%;
     max-height: var(--list-max-height);
@@ -182,6 +196,10 @@ const css = /* css */ `
     color: var(--x-color);
     font-weight: var(--x-font-weight);
     background-color: var(--x-background-color);
+
+    /* When list has sticky header/footer, put a scroll padding */
+    scroll-margin-top: var(--x-list-scroll-spacing-top);
+    scroll-margin-bottom: var(--x-list-scroll-spacing-bottom);
 
     &[data-interactive] {
       cursor: pointer;
@@ -1146,7 +1164,8 @@ const getScrollInfo = (
     if (virtualItemHeight === 0) {
       return null;
     }
-    const index = Math.floor(scrollTop / virtualItemHeight);
+    const estimatedIndex = Math.floor(scrollTop / virtualItemHeight);
+    const index = Math.min(items.length - 1, estimatedIndex);
     return {
       item: items[index],
       index,
@@ -1644,9 +1663,10 @@ export const ListItemHeader = (props) => {
     (headerEl) => {
       const scrollContainer = getScrollContainer(headerEl);
       const headerHeight = headerEl.getBoundingClientRect().height;
-      scrollContainer.style.scrollPaddingTop = headerHeight
-        ? `${headerHeight}px`
-        : undefined;
+      scrollContainer.style.setProperty(
+        "--list-header-height",
+        `${headerHeight}px`,
+      );
     },
     [],
   );
@@ -1669,9 +1689,10 @@ export const ListItemFooter = (props) => {
     (headerEl) => {
       const scrollContainer = getScrollContainer(headerEl);
       const headerHeight = headerEl.getBoundingClientRect().height;
-      scrollContainer.style.scrollPaddingBottom = headerHeight
-        ? `${headerHeight}px`
-        : undefined;
+      scrollContainer.style.setProperty(
+        "--list-footer-height",
+        `${headerHeight}px`,
+      );
     },
     [],
   );

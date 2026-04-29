@@ -499,7 +499,11 @@ const InputInsideListWithSearch = ({ uiAction, onKeyDown, ...props }) => {
     {
       key: "escape",
       handler: (e) => {
-        return forwardToList(e, requestListInteractionStateReset);
+        // If we where to dispatch right away it would re-render the input
+        // and prevent the native browser behavior on escape inside search input (clearing input content)
+        queueMicrotask(() => {
+          forwardToList(e, requestListInteractionStateReset);
+        });
       },
     },
   ]);
