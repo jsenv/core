@@ -1,5 +1,12 @@
 import { pickPositionRelativeTo, visibleRectEffect } from "@jsenv/dom";
-import { useId, useLayoutEffect, useRef, useState } from "preact/hooks";
+import { createContext } from "preact";
+import {
+  useContext,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "preact/hooks";
 
 import { renderActionableComponent } from "../action/render_actionable_component.jsx";
 import { Box } from "../box/box.jsx";
@@ -9,7 +16,7 @@ import { SelectUIActionContext } from "./select_context.js";
 
 const css = /* css */ `
   @layer navi {
-    .navi_select_trigger {
+    .navi_select {
       --border-radius: 2px;
       --border-width: 1px;
       --outline-width: 1px;
@@ -28,7 +35,7 @@ const css = /* css */ `
     }
   }
 
-  .navi_select_trigger {
+  .navi_select {
     display: inline-flex;
     box-sizing: border-box;
     padding: var(--padding);
@@ -60,61 +67,60 @@ const css = /* css */ `
       opacity: 0.5;
       cursor: default;
     }
-  }
 
-  .navi_select_trigger_label {
-    min-width: 0;
-    flex: 1;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    overflow: hidden;
-  }
+    .navi_select_trigger_text {
+      min-width: 0;
+      flex: 1;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      overflow: hidden;
 
-  .navi_select_trigger_label[data-placeholder] {
-    color: var(--placeholder-color);
-  }
-
-  .navi_select_trigger_icon {
-    flex-shrink: 0;
-    opacity: 0.6;
-  }
-
-  .navi_select_popover {
-    position: absolute;
-    inset: unset;
-    min-width: var(--select-anchor-width, 0px);
-    max-width: 95vw;
-    max-height: 95dvh;
-    margin: 0;
-    padding: 0;
-    background: white;
-    border: none;
-    border-radius: 8px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
-    overflow: auto;
-
-    &[data-anchor-hidden] {
-      opacity: 0;
-      pointer-events: none;
+      &[data-placeholder] {
+        color: var(--placeholder-color);
+      }
     }
-  }
-
-  .navi_select_dialog {
-    max-height: 95dvh;
-    margin: auto;
-    padding: 0;
-    background: white;
-    border: none;
-    border-radius: 8px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
-
-    &[open] {
-      display: flex;
-      flex-direction: column;
+    .navi_select_trigger_icon {
+      flex-shrink: 0;
+      opacity: 0.6;
     }
 
-    &::backdrop {
-      background: rgba(0, 0, 0, 0.4);
+    .navi_select_popover {
+      position: absolute;
+      inset: unset;
+      min-width: var(--select-anchor-width, 0px);
+      max-width: 95vw;
+      max-height: 95dvh;
+      margin: 0;
+      padding: 0;
+      background: white;
+      border: none;
+      border-radius: 8px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+      overflow: auto;
+
+      &[data-anchor-hidden] {
+        opacity: 0;
+        pointer-events: none;
+      }
+    }
+
+    .navi_select_dialog {
+      max-height: 95dvh;
+      margin: auto;
+      padding: 0;
+      background: white;
+      border: none;
+      border-radius: 8px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+
+      &[open] {
+        display: flex;
+        flex-direction: column;
+      }
+
+      &::backdrop {
+        background: rgba(0, 0, 0, 0.4);
+      }
     }
   }
 `;
@@ -155,9 +161,7 @@ const SelectBasic = (props) => {
     uiAction: uiActionProp,
     ...rest
   } = props;
-
   const [value, setValue] = useState(initialValue);
-
   const compositeUIAction = (selectedValue) => {
     setValue(selectedValue);
     uiActionProp?.(selectedValue);
@@ -172,40 +176,9 @@ const SelectBasic = (props) => {
     <SelectBasicPopover value={value} uiAction={compositeUIAction} {...rest} />
   );
 };
-
-// SelectWithAction sets up action-aware state and delegates UI entirely to SelectBasic.
-const SelectWithAction = (props) => {
-  const {
-    value: externalValue = null,
-    action,
-    uiAction: uiActionProp,
-    ...rest
-  } = props;
-
-  const [value, setValue] = useState(externalValue);
-
-  const compositeUIAction = (selectedValue) => {
-    setValue(selectedValue);
-    uiActionProp?.(selectedValue);
-    action?.(selectedValue);
-  };
-
-  return <SelectBasic {...rest} value={value} uiAction={compositeUIAction} />;
-};
-
 // SelectBasicPopover — trigger + popover anchored below the trigger.
 const SelectBasicPopover = (props) => {
-  const {
-    name,
-    value,
-    placeholder = "Select…",
-    triggerContent: triggerContentProp,
-    disabled,
-    uiAction,
-    children,
-    ...rest
-  } = props;
-
+  const { disabled, uiAction, children, ...rest } = props;
   const triggerRef = useRef(null);
   const popoverRef = useRef(null);
   const cleanupRef = useRef(null);
@@ -322,22 +295,9 @@ const SelectBasicPopover = (props) => {
     setOpen(true);
   };
 
-  const hasValue = value !== null && value !== undefined && value !== "";
-  const triggerContent =
-    triggerContentProp !== undefined
-      ? triggerContentProp
-      : hasValue
-        ? String(value)
-        : null;
-  const isPlaceholder = triggerContent === null;
-
   return (
     <SelectUIActionContext.Provider value={uiAction}>
-      <Box
-        as="button"
-        type="button"
-        ref={triggerRef}
-        baseClassName="navi_select_trigger"
+      <SelectUI
         disabled={disabled}
         aria-haspopup="listbox"
         aria-expanded={open}
@@ -346,41 +306,70 @@ const SelectBasicPopover = (props) => {
         onKeyDown={onKeyDown}
         {...rest}
       >
-        <span
-          className="navi_select_trigger_label"
-          data-placeholder={isPlaceholder ? "" : undefined}
+        <div
+          id={popoverId}
+          ref={popoverRef}
+          className="navi_select_popover"
+          popover="manual"
+          onToggle={(e) => {
+            if (e.newState === "closed") {
+              cleanupRef.current?.();
+              cleanupRef.current = null;
+              setOpen(false);
+            }
+          }}
         >
-          {isPlaceholder ? placeholder : triggerContent}
-        </span>
-        <span className="navi_select_trigger_icon">
-          <Icon>
-            <ChevronDownSvg />
-          </Icon>
-        </span>
-      </Box>
-      {name && (
-        <input
-          type="hidden"
-          name={name}
-          value={hasValue ? String(value) : ""}
-        />
-      )}
-      <div
-        id={popoverId}
-        ref={popoverRef}
-        className="navi_select_popover"
-        popover="manual"
-        onToggle={(e) => {
-          if (e.newState === "closed") {
-            cleanupRef.current?.();
-            cleanupRef.current = null;
-            setOpen(false);
-          }
-        }}
-      >
-        {children}
-      </div>
+          {children}
+        </div>
+      </SelectUI>
     </SelectUIActionContext.Provider>
+  );
+};
+const SelectValueContext = createContext(null);
+const SelectPlaceholderContext = createContext("Select…");
+const SelectUI = ({
+  placeholder = "Select…",
+  trigger = SelectTrigger,
+  name,
+  value,
+  children,
+  ...rest
+}) => {
+  if (trigger === undefined) {
+    trigger = <SelectTrigger />;
+  }
+  return (
+    <Box as="button" type="button" {...rest} baseClassName="navi_select">
+      <SelectPlaceholderContext.Provider value={placeholder}>
+        <SelectValueContext.Provider value={value}>
+          {trigger}
+        </SelectValueContext.Provider>
+      </SelectPlaceholderContext.Provider>
+      <input type="hidden" name={name} value={value} />
+      {children}
+    </Box>
+  );
+};
+const SelectTrigger = () => {
+  const placeholder = useContext(SelectPlaceholderContext);
+  const value = useContext(SelectValueContext);
+  const hasValue = value !== null && value !== undefined && value !== "";
+  const isPlaceholder = !hasValue;
+
+  return (
+    <>
+      <span
+        className="navi_select_trigger_text"
+        data-placeholder={isPlaceholder ? "" : undefined}
+      >
+        {isPlaceholder ? placeholder : String(value)}
+      </span>
+      <span className="navi_select_trigger_icon">
+        <Icon>
+          <ChevronDownSvg />
+        </Icon>
+      </span>
+    </>
   );
 };
 
@@ -494,4 +483,24 @@ const SelectBasicDialog = (props) => {
       </dialog>
     </SelectUIActionContext.Provider>
   );
+};
+
+// SelectWithAction sets up action-aware state and delegates UI entirely to SelectBasic.
+const SelectWithAction = (props) => {
+  const {
+    value: externalValue = null,
+    action,
+    uiAction: uiActionProp,
+    ...rest
+  } = props;
+
+  const [value, setValue] = useState(externalValue);
+
+  const compositeUIAction = (selectedValue) => {
+    setValue(selectedValue);
+    uiActionProp?.(selectedValue);
+    action?.(selectedValue);
+  };
+
+  return <SelectBasic {...rest} value={value} uiAction={compositeUIAction} />;
 };
