@@ -4,11 +4,11 @@ import { getScrollContainer } from "./scroll_container.js";
  * Scrolls el into view within a specific container only — does NOT scroll
  * any ancestor beyond that container (document, popover backdrop, etc.).
  *
- * Why not just use scrollIntoView({ block: "nearest" })?
- * Despite the name, the native "nearest" behavior still walks up ALL scrollable
- * ancestors. Even when a parent has overflow:auto but no visible scrollbar
- * (because content fits), browsers may still treat it as a scroll container
- * and adjust its scroll position — and the document scroll along with it.
+ * Why not just use scrollIntoView({ container: "nearest" })?
+ * It finds the nearest scrollable ancestor and stops there ONLY IF that
+ * ancestor has visible scrollbar, otherwise browser walks further up,
+ * potentially scrolling the document.
+ * This is exactly the wrong behavior inside a popover or fixed panel.
  * scrollIntoViewScoped avoids this by targeting one container explicitly.
  *
  * Uses scrollTo() so CSS scroll-behavior:smooth on the container is respected.
