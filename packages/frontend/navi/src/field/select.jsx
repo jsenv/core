@@ -523,7 +523,7 @@ const SelectWithPopover = (props) => {
             event.stopPropagation();
           }
           closePopover(e);
-          moveFocusToSelect();
+          moveFocusToSelect(e);
         }}
         onKeyDown={shortcutsViaOnKeyDown(
           {
@@ -545,7 +545,7 @@ const SelectWithPopover = (props) => {
               }
               e.preventDefault();
               closePopover(e);
-              moveFocusToSelect();
+              moveFocusToSelect(e);
             },
           },
           onKeyDown,
@@ -619,8 +619,8 @@ const SelectWithDialog = (props) => {
     collapse();
   };
 
-  const moveFocusToSelect = () => {
-    debugFocus("moveFocusToSelect");
+  const moveFocusToSelect = (e) => {
+    debugFocus(`moveFocusToSelect("${e.type}")`);
     ref.current.focus({ preventScroll: true, focusVisible: true });
   };
 
@@ -646,7 +646,7 @@ const SelectWithDialog = (props) => {
           event.preventDefault();
         }
         closeDialog(e);
-        moveFocusToSelect();
+        moveFocusToSelect(e);
       }}
       onKeyDown={shortcutsViaOnKeyDown(
         {
