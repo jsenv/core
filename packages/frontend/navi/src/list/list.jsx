@@ -1018,7 +1018,8 @@ const useListScrollSync = ({
         "restore scroll window",
       );
       const frame = requestAnimationFrame(() => {
-        listContainerEl.scrollTop = savedScroll.scrollTop;
+        // use scrollTo to respect eventual css scroll-behavior: smooth;
+        listContainerEl.scrollTo({ top: savedScroll.scrollTop });
       });
       return () => {
         cancelAnimationFrame(frame);
