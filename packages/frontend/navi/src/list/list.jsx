@@ -153,6 +153,7 @@ const css = /* css */ `
     border-radius: var(--x-border-radius);
     transition: opacity 0.2s ease;
     overflow: auto;
+    overscroll-behavior: contain;
 
     &[data-expand-x] {
       width: 100%;
