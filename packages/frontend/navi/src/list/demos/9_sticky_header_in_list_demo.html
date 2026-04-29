@@ -62,6 +62,7 @@
         Input,
         Separator,
         useSearch,
+        createSearch,
       } from "@jsenv/navi";
 
       // Each item has a name + address. Some addresses are long to test text wrapping.
@@ -211,17 +212,17 @@
         },
       ];
 
-      // Match on both name and address
-      const matchItem = (searchText, item) => {
-        if (!searchText) {
-          return { match: true, score: 0, ranges: [] };
-        }
-        const lower = searchText.toLowerCase();
-        const matched =
-          item.name.toLowerCase().includes(lower) ||
-          item.address.toLowerCase().includes(lower);
-        return { match: matched, score: matched ? 1 : 0, ranges: [] };
-      };
+      const searchPerson = createSearch({
+        name: {
+          getter: (item) => item.name,
+          domSelector: ".item-name",
+        },
+        address: {
+          getter: (item) => item.address,
+          domSelector: ".item-address",
+          priority: 0.5,
+        },
+      });
 
       const StatsBar = ({ totalItems, domItems }) => {
         const savedFromDom = totalItems - domItems;
@@ -257,7 +258,7 @@
         const [orderedItems, getItemMatchInfo] = useSearch(
           search,
           ITEMS,
-          matchItem,
+          searchPerson,
         );
 
         return (
@@ -299,7 +300,7 @@
                 </ListItemHeader>
 
                 {orderedItems.map((item, i) => {
-                  const { score, match } = getItemMatchInfo(item);
+                  const { score, match, ranges } = getItemMatchInfo(item);
                   return (
                     <ListItem
                       role="option"
@@ -308,6 +309,7 @@
                       value={item}
                       matchScore={score}
                       hidden={!match}
+                      highlight={ranges}
                       selected={selected === item}
                     >
                       <div
@@ -317,8 +319,11 @@
                           gap: "2px",
                         }}
                       >
-                        <span>{item.name}</span>
-                        <span style={{ fontSize: "0.8em", opacity: 0.65 }}>
+                        <span className="item-name">{item.name}</span>
+                        <span
+                          className="item-address"
+                          style={{ fontSize: "0.8em", opacity: 0.65 }}
+                        >
                           {item.address}
                         </span>
                       </div>

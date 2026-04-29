@@ -1521,34 +1521,55 @@ const ListItemReal = ({
   }, [needScrollOnMount]);
 
   // CSS Highlight API: mark matching text ranges when highlight prop is set.
+  // highlight can be:
+  //   - an array of [start, end] pairs — applied to all text nodes under itemEl
+  //   - an object { [domSelector]: [[start, end], …] } — applied to each
+  //     matching sub-element found by the selector (from createSearch)
   useLayoutEffect(() => {
     const hl = getNaviSearchHighlight();
     if (!hl) {
       return undefined;
     }
     const itemEl = ref.current;
-    if (!itemEl || !highlight || highlight.length === 0) {
+    if (!itemEl || !highlight) {
       return undefined;
     }
-    const valueStr = String(value);
+
+    // Normalise highlight to { rootOrSelector: ranges[] } entries.
+    // Flat array → single entry scoped to the whole item element.
+    const entries = Array.isArray(highlight)
+      ? highlight.length === 0
+        ? []
+        : [{ root: itemEl, ranges: highlight }]
+      : Object.entries(highlight).map(([selector, ranges]) => ({
+          root: itemEl.querySelector(selector) ?? itemEl,
+          ranges,
+        }));
+
+    if (entries.length === 0) {
+      return undefined;
+    }
+
     const ownRanges = [];
-    for (const [start, end] of highlight) {
-      const matchText = valueStr.slice(start, end).toLowerCase();
-      if (!matchText) {
-        continue;
-      }
-      const walker = document.createTreeWalker(itemEl, NodeFilter.SHOW_TEXT);
-      let node;
-      while ((node = walker.nextNode())) {
-        const lowerText = node.textContent.toLowerCase();
-        let idx = lowerText.indexOf(matchText);
-        while (idx !== -1) {
-          const range = new Range();
-          range.setStart(node, idx);
-          range.setEnd(node, idx + matchText.length);
-          hl.add(range);
-          ownRanges.push(range);
-          idx = lowerText.indexOf(matchText, idx + 1);
+    for (const { root, ranges } of entries) {
+      for (const [start, end] of ranges) {
+        const matchText = String(value).slice(start, end).toLowerCase();
+        if (!matchText) {
+          continue;
+        }
+        const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+        let node;
+        while ((node = walker.nextNode())) {
+          const lowerText = node.textContent.toLowerCase();
+          let idx = lowerText.indexOf(matchText);
+          while (idx !== -1) {
+            const range = new Range();
+            range.setStart(node, idx);
+            range.setEnd(node, idx + matchText.length);
+            hl.add(range);
+            ownRanges.push(range);
+            idx = lowerText.indexOf(matchText, idx + 1);
+          }
         }
       }
     }
