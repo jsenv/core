@@ -23,6 +23,7 @@ import { useItemTracker } from "../utils/item_tracker/use_item_tracker.js";
 import { useDisplayedLayoutEffect } from "../utils/use_displayed_layout_effect.js";
 
 const ListItemTrackerContext = createContext(null);
+const GroupItemTrackerContext = createContext(null);
 const PendingScrollRefContext = createContext(null);
 
 export const ListIdContext = createContext();
@@ -1459,6 +1460,10 @@ const ListItemRealOrVoid = (props) => {
     disabled,
   };
   const visibleIndex = tracker.useTrackItem(item);
+  const groupTracker = useContext(GroupItemTrackerContext);
+  const groupVisibleIndex = groupTracker
+    ? groupTracker.useTrackItem(item)
+    : null;
   const separator = useContext(SeparatorContext);
 
   if (hidden) {
@@ -1480,12 +1485,16 @@ const ListItemRealOrVoid = (props) => {
       {...rest}
     />
   );
-  if (!separator || visibleIndex === 0) {
+  // Use group-scoped visible index for separator when inside a group,
+  // so separators are only rendered between items within the same group.
+  const separatorIndex =
+    groupVisibleIndex !== null ? groupVisibleIndex : visibleIndex;
+  if (!separator || separatorIndex === 0) {
     return listItemVnode;
   }
 
   const separatorVnode =
-    typeof separator === "function" ? separator(visibleIndex - 1) : separator;
+    typeof separator === "function" ? separator(separatorIndex - 1) : separator;
   return (
     <>
       {separatorVnode}
@@ -1726,6 +1735,7 @@ export const ListItemGroup = ({
   ...rest
 }) => {
   const groupId = useId();
+  const groupTracker = useItemTracker();
   return (
     <ListItem
       {...rest}
@@ -1747,7 +1757,9 @@ export const ListItemGroup = ({
         role="group"
         aria-labelledby={groupId}
       >
-        {children}
+        <GroupItemTrackerContext.Provider value={groupTracker}>
+          {children}
+        </GroupItemTrackerContext.Provider>
       </ul>
     </ListItem>
   );
