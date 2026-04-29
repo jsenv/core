@@ -24,9 +24,12 @@ export const applySearch = (searchText, value) => {
   if (!searchText) {
     return { match: true, matchScore: 0, matchRanges: [] };
   }
+  if (searchText.length > 100) {
+    searchText = searchText.slice(0, 100);
+  }
   const str = String(value);
   const foldedStr = foldAccents(str).toLowerCase();
-  const foldedSearch = foldAccents(searchText).toLowerCase();
+  const { foldedSearch, words, originalWords } = getSearchInfo(searchText);
 
   // Try exact phrase match first (gives best score).
   const phraseRanges = [];
@@ -50,13 +53,11 @@ export const applySearch = (searchText, value) => {
       baseScore = SCORE_MID_WORD;
     }
     const matchScore = baseScore + (caseExact ? SCORE_BONUS_CASE_EXACT : 0);
-    return { match: true, matchScore, matchRanges: phraseRanges };
+    return { match: true, matchScore, matchRanges: mergeRanges(phraseRanges) };
   }
 
   // Multi-word OR: split on whitespace, any word matching contributes to the score.
   // Items where all words match rank higher than partial matches.
-  const words = foldedSearch.split(/\s+/).filter(Boolean);
-  const originalWords = searchText.split(/\s+/).filter(Boolean);
   if (words.length < 2) {
     return { match: false, matchScore: 0, matchRanges: [] };
   }
@@ -106,7 +107,7 @@ export const applySearch = (searchText, value) => {
   const matchScore =
     (baseScore + (allMatchedWordsExact ? SCORE_BONUS_CASE_EXACT : 0)) *
     wordRatio;
-  return { match: true, matchScore, matchRanges };
+  return { match: true, matchScore, matchRanges: mergeRanges(matchRanges) };
 };
 
 // Returns true when position idx in str is at a word boundary,
@@ -135,3 +136,46 @@ const SCORE_MULTI_WORD_AT_START = 0.75;
 const SCORE_AT_WORD_BOUNDARY = 0.625;
 const SCORE_MID_WORD = 0.5;
 const SCORE_BONUS_CASE_EXACT = 0.125;
+
+// LRU cache for pre-computed search info, avoids recomputing foldAccents/toLowerCase
+// for the same searchText across all items in a list render.
+const searchCache = new Map();
+const SEARCH_CACHE_MAX_SIZE = 20;
+const getSearchInfo = (searchText) => {
+  if (searchCache.has(searchText)) {
+    const cached = searchCache.get(searchText);
+    searchCache.delete(searchText);
+    searchCache.set(searchText, cached);
+    return cached;
+  }
+  const foldedSearch = foldAccents(searchText).toLowerCase();
+  const words = foldedSearch.split(/\s+/).filter(Boolean);
+  const originalWords = searchText.split(/\s+/).filter(Boolean);
+  const info = { foldedSearch, words, originalWords };
+  searchCache.set(searchText, info);
+  if (searchCache.size > SEARCH_CACHE_MAX_SIZE) {
+    searchCache.delete(searchCache.keys().next().value);
+  }
+  return info;
+};
+
+// Merge overlapping or adjacent [start, end] ranges (sorted by start).
+const mergeRanges = (ranges) => {
+  if (ranges.length < 2) {
+    return ranges;
+  }
+  const sorted = [...ranges].sort((a, b) => a[0] - b[0]);
+  const merged = [sorted[0]];
+  for (let i = 1; i < sorted.length; i++) {
+    const last = merged[merged.length - 1];
+    const current = sorted[i];
+    if (current[0] <= last[1]) {
+      if (current[1] > last[1]) {
+        last[1] = current[1];
+      }
+    } else {
+      merged.push(current);
+    }
+  }
+  return merged;
+};

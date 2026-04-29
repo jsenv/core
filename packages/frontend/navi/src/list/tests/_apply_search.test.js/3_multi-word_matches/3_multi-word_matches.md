@@ -7,7 +7,7 @@ return displayTable([
   ["rachel gue", "Rachel Guérin"], // with accent folding
   ["martin bob", "Bob Martin"], // words in reverse order
   ["Bob Mar", "Bob Martin"], // case-exact multi-word
-  ["bob xyz", "Bob Martin"],        // one word matches (OR) → partial match
+  ["bob xyz", "Bob Martin"], // one word matches (OR) → partial match
 ]);
 ```
 
