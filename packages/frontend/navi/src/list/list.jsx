@@ -1066,11 +1066,14 @@ const useListScrollSync = ({
     if (searchTextBecomesActive) {
       // search just started -> save the currently scrolled item id to restore later
       const scrollTopToSave = listContainerEl ? listContainerEl.scrollTop : -1;
+      const renderWindow = renderWindowRef.current;
       savedScrollRef.current = {
-        renderWindow: { ...renderWindowRef.current },
+        renderWindow: { ...renderWindow },
         scrollTop: scrollTopToSave,
       };
-      debugScroll(`Saving scroll top ${scrollTopToSave}`);
+      debugScroll(
+        `Saving scroll: { top: ${scrollTopToSave}, renderWindowStart: ${renderWindow.start}, renderWindowEnd: ${renderWindow.end} }`,
+      );
     }
     // -> scroll to the top
     scrollToItem(visibleItems[0], {

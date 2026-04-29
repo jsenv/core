@@ -395,7 +395,7 @@
       export const App = () => {
         const [search, setSearch] = useState("");
         const [selected, setSelected] = useState(
-          ALL_ITEMS[ALL_ITEMS.length - 1],
+          ALL_ITEMS[ALL_ITEMS.length / 2],
         );
         const [scrollToIndex, setScrollToIndex] = useState(50);
         const listRef = useRef(null);
