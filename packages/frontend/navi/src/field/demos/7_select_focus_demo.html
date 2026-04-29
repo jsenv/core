@@ -49,8 +49,8 @@
     <div id="app"></div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useState } from "preact/hooks";
-      import { Select } from "@jsenv/navi";
+      import { useState, useRef } from "preact/hooks";
+      import { Select, useDisplayedLayoutEffect } from "@jsenv/navi";
 
       const FocusDemo = () => {
         const [focusLog, setFocusLog] = useState([]);
@@ -111,13 +111,7 @@
                     <label style={{ fontSize: "13px", color: "#555" }}>
                       Text inside popover
                     </label>
-                    <input
-                      type="text"
-                      placeholder="Focus should land here"
-                      autofocus
-                      onFocus={() => log("focus → popover input")}
-                      onBlur={() => log("blur  ← popover input")}
-                    />
+                    <ElementToAutofocus log={log} />
                   </div>
                 </Select>
                 <input
@@ -182,6 +176,26 @@
               </div>
             </div>
           </div>
+        );
+      };
+
+      const ElementToAutofocus = ({ log }) => {
+        const ref = useRef();
+        useDisplayedLayoutEffect(ref, () => {
+          ref.current.focus({
+            preventScroll: true,
+            focusVisible: true,
+          });
+        }, []);
+
+        return (
+          <input
+            ref={ref}
+            type="text"
+            placeholder="Focus should land here"
+            onFocus={() => log("focus → popover input")}
+            onBlur={() => log("blur  ← popover input")}
+          />
         );
       };
 

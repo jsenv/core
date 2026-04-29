@@ -179,6 +179,7 @@ export { SVGMaskOverlay } from "./src/graphic/svg_mask_overlay.jsx";
 export { DialogLayout } from "./src/layout/dialog_layout.jsx";
 export { Separator } from "./src/layout/separator.jsx";
 export { ViewportLayout } from "./src/layout/viewport_layout.jsx";
+export { useDisplayedLayoutEffect } from "./src/utils/use_displayed_layout_effect.js";
 
 // Popover (callout, dialogs, ...)
 export { SidePanel, useSidePanelClose } from "./src/popover/side_panel.jsx";
