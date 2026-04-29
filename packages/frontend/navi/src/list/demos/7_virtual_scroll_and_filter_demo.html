@@ -116,7 +116,7 @@
         ListItem,
         Input,
         ListItemHeader,
-        useSearch,
+        useSearchText,
         Separator,
       } from "@jsenv/navi";
 
@@ -214,7 +214,7 @@
         // render window (0–30), to verify that the window shifts on mount.
         const [selected, setSelected] = useState(LARGE_LIST[150]);
         const [searchText, setSearchText] = useState("");
-        const [orderedItems, getItemMatchInfo] = useSearch(
+        const [orderedItems, getItemMatchInfo] = useSearchText(
           searchText,
           LARGE_LIST,
         );
