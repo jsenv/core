@@ -468,9 +468,9 @@ const SelectWithPopover = (props) => {
     };
   }, []);
 
-  const moveFocusToSelect = () => {
+  const moveFocusToSelect = (e) => {
     const select = ref.current;
-    debugFocus("moveFocusToSelect");
+    debugFocus(`moveFocusToSelect("${e.type}")`);
     select.focus({ preventScroll: true, focusVisible: true });
   };
 
@@ -481,6 +481,9 @@ const SelectWithPopover = (props) => {
           <div
             className="navi_select_backdrop"
             onMouseDown={(e) => {
+              if (e.button !== 0) {
+                return;
+              }
               e.preventDefault(); // prevent browser trying to give focus to this backdrop
               closePopover(e);
               moveFocusToSelect(e);
@@ -494,6 +497,9 @@ const SelectWithPopover = (props) => {
         aria-expanded={expanded}
         aria-controls={popoverId}
         onMouseDown={(e) => {
+          if (e.button !== 0) {
+            return;
+          }
           if (disabled) {
             return;
           }
@@ -562,6 +568,9 @@ const SelectWithPopover = (props) => {
           className="navi_select_popover"
           popover="manual"
           onMouseDown={(e) => {
+            if (e.button !== 0) {
+              return;
+            }
             // mousedown inside popover should not bubble to the select (would re-open it if that mousedown closes it)
             e.stopPropagation();
           }}
@@ -634,9 +643,13 @@ const SelectWithDialog = (props) => {
       aria-expanded={expanded}
       aria-controls={dialogId}
       onMouseDown={(e) => {
+        if (e.button !== 0) {
+          return;
+        }
         if (disabled) {
           return;
         }
+
         if (expandedRef.current) {
           closeDialog(e);
         } else {
