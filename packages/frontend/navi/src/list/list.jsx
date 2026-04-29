@@ -347,6 +347,14 @@ const css = /* css */ `
       margin: 0;
       padding: 0;
       list-style: none;
+
+      /* Items inside a group must account for the sticky group label height
+         on top of the list's global header/scroll-padding spacing. */
+      .navi_list_item {
+        scroll-margin-top: calc(
+          var(--x-list-scroll-spacing-top) + var(--list-group-label-height, 0px)
+        );
+      }
     }
   }
 `;
@@ -1741,14 +1749,33 @@ export const ListItemGroup = ({
 }) => {
   const groupId = useId();
   const groupTracker = useItemTracker();
+  const groupRef = useRef(null);
+  const labelRef = useRef(null);
+  useDisplayedLayoutEffect(
+    labelRef,
+    (labelEl) => {
+      const groupEl = groupRef.current;
+      if (!groupEl) {
+        return;
+      }
+      const labelHeight = labelEl.getBoundingClientRect().height;
+      groupEl.style.setProperty(
+        "--list-group-label-height",
+        `${labelHeight}px`,
+      );
+    },
+    [],
+  );
   return (
     <ListItem
       {...rest}
+      ref={groupRef}
       baseClassName="navi_list_item_group"
       role="presentation"
       data-hidden-while-empty={hiddenWhileEmpty ? "" : undefined}
     >
       <span
+        ref={labelRef}
         id={groupId}
         className="navi_list_item_group_label"
         role="presentation"
