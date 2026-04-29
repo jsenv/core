@@ -76,6 +76,7 @@
         Form,
         Box,
         ListItemGroup,
+        Label,
       } from "@jsenv/navi";
 
       // ── Demo 1: Simple list ───────────────────────────────────────────────────
@@ -345,8 +346,8 @@
             >
               <Box column spacing="m">
                 <Box flex spacing="m" alignY="end">
-                  <Box column spacing="xs">
-                    <label>Country</label>
+                  <Label flex spacing="s" alignY="center">
+                    Country
                     <Select
                       name="country"
                       value={country}
@@ -367,7 +368,8 @@
                         ))}
                       </List>
                     </Select>
-                  </Box>
+                  </Label>
+
                   <Box column spacing="xs">
                     <label>Role</label>
                     <Select
