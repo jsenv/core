@@ -56,6 +56,12 @@ export const useAutoFocus = (
       preventScroll: autoFocusPreventScroll,
       focusVisible: autoFocusVisible,
     });
+    // requestAnimationFrame(() => {
+    //   focusableElement.focus({
+    //     preventScroll: autoFocusPreventScroll,
+    //     focusVisible: autoFocusVisible,
+    //   });
+    // });
     if (autoSelect) {
       focusableElement.select();
       // Keep the beginning of the text visible instead of scrolling to the end

@@ -511,13 +511,17 @@ const SelectWithPopover = (props) => {
             openPopover(e);
           }
         }}
-        onFocus={(e) => {
+        onClick={(e) => {
+          e.preventDefault();
+          debugFocus(`select click.preventDefault()`, document.activeElement);
+        }}
+        onFocus={() => {
           // When a label is clicked it transfers focus to the select (relatedTarget is null).
           // Tab focus has a relatedTarget — in that case we don't open.
           // When tabbing from outside window however relatedTarget is also null so ideally there is something to do here
-          if (!e.relatedTarget && !expandedRef.current) {
-            openPopover(e);
-          }
+          // if (!e.relatedTarget && !expandedRef.current) {
+          //   openPopover(e);
+          // }
         }}
         // When a list item is interacted via mousedown, return focus to the select.
         onnavi_list_select={(e) => {
