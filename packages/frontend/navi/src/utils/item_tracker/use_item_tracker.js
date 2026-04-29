@@ -110,51 +110,45 @@ const createItemTracker = (onChange) => {
         someChange = true;
       }
 
-      const newVisibleCount = orderedKeys.length;
+      // Build allItems and visibleItems in a single pass over allOrderedKeys.
+      // Visible items are those without data.hidden — same relative order as orderedKeys.
+      const prevAllItems = itemsSignal.peek();
+      const prevVisibleItems = visibleItemsSignal.peek();
+      let allItemsChanged = prevAllItems.length !== allOrderedKeys.length;
+      let visibleItemsChanged = false;
+      const allItems = [];
+      const visibleItems = [];
+      let newMatchCount = 0;
+      for (let i = 0; i < allOrderedKeys.length; i++) {
+        const key = allOrderedKeys[i];
+        const item = allRegistrations.get(key);
+        allItems.push(item);
+        // Compare by reference: catches any prop change (id, selected, disabled, …)
+        if (!allItemsChanged && item !== prevAllItems[i]) {
+          allItemsChanged = true;
+        }
+        if (!item.hidden) {
+          const visibleIdx = visibleItems.length;
+          visibleItems.push(item);
+          if (item.matchScore > 0) {
+            newMatchCount++;
+          }
+          if (!visibleItemsChanged && item !== prevVisibleItems[visibleIdx]) {
+            visibleItemsChanged = true;
+          }
+        }
+      }
+
+      const newVisibleCount = visibleItems.length;
       const visibleCountModified =
         visibleCountSignal.peek() !== newVisibleCount;
       if (visibleCountModified) {
         visibleCountSignal.value = newVisibleCount;
         someChange = true;
       }
-
-      // Update allItemsSignal (all items including hidden, ordered by explicit index).
-      const prevAllItems = itemsSignal.peek();
-      let allItemsChanged =
-        countModified || prevAllItems.length !== allOrderedKeys.length;
-      const allItems = [];
-      for (let i = 0; i < allOrderedKeys.length; i++) {
-        const key = allOrderedKeys[i];
-        const item = allRegistrations.get(key);
-        allItems.push(item);
-        if (!allItemsChanged && allItems[i].id !== prevAllItems[i]?.id) {
-          allItemsChanged = true;
-        }
-      }
       if (allItemsChanged) {
         itemsSignal.value = allItems;
         someChange = true;
-      }
-
-      // Update visibleItemsSignal (non-hidden items only).
-      const prevVisibleItems = visibleItemsSignal.peek();
-      let visibleItemsChanged = visibleCountModified;
-      const visibleItems = [];
-      let newMatchCount = 0;
-      for (let i = 0; i < orderedKeys.length; i++) {
-        const key = orderedKeys[i];
-        const item = registrations.get(key);
-        visibleItems.push(item);
-        if (item.matchScore > 0) {
-          newMatchCount++;
-        }
-        if (!visibleItemsChanged) {
-          const id = item.id;
-          const prevId = prevVisibleItems[i]?.id;
-          if (id !== prevId) {
-            visibleItemsChanged = true;
-          }
-        }
       }
       if (visibleItemsChanged) {
         visibleItemsSignal.value = visibleItems;

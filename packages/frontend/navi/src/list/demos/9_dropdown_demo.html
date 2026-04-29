@@ -119,7 +119,7 @@
         "Watermelon",
       ];
 
-      const FruitPicker = ({ onSelect }) => {
+      const FruitPicker = ({ selectedFruit, onSelect }) => {
         const close = useDropdownClose();
         const [search, setSearch] = useState("");
         const [orderedFruits, getItemMatchInfo] = useSearch(search, FRUITS);
@@ -128,9 +128,7 @@
             <DialogHeader title="Please select a fruit" />
             <List
               listRole="listbox"
-              fallback="No results"
               withSearch
-              lockSize
               maxHeight="240px"
               expandX
               border="none"
@@ -138,6 +136,7 @@
                 onSelect(v);
                 close();
               }}
+              debugScroll
             >
               <ListItemHeader>
                 <Input
@@ -152,6 +151,7 @@
                 />
               </ListItemHeader>
               {orderedFruits.map((fruit, i) => {
+                const selected = selectedFruit === fruit;
                 const { score, ranges } = getItemMatchInfo(fruit);
                 return (
                   <ListItem
@@ -162,6 +162,7 @@
                     value={fruit}
                     highlight={ranges}
                     matchScore={score}
+                    selected={selected}
                   >
                     {fruit}
                   </ListItem>
@@ -241,7 +242,6 @@
         return (
           <List
             listRole="listbox"
-            fallback="No results"
             border="none"
             maxHeight="none"
             expand
@@ -347,7 +347,7 @@
       };
 
       const Demo2 = () => {
-        const [fruit, setFruit] = useState(null);
+        const [fruit, setFruit] = useState(FRUITS[15]);
         return (
           <div class="demo-section">
             <h2>Demo 2 — Filterable List</h2>
@@ -356,7 +356,12 @@
               Selecting a fruit closes the dialog automatically.
             </p>
             <Dropdown value={fruit} placeholder="Pick a fruit…">
-              <FruitPicker onSelect={setFruit} />
+              <FruitPicker
+                selectedFruit={fruit}
+                onSelect={(v) => {
+                  setFruit(v);
+                }}
+              />
             </Dropdown>
             {fruit && (
               <p style="margin-top:12px;font-size:13px;color:#1a73e8;">
