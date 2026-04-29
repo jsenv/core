@@ -742,45 +742,39 @@ const ListControlled = ({
   // cannot collapse the layout. Measurement happens on the initial (unfiltered)
   // state because the parent controls hidden props before any search is applied.
   const sizeLocked = useRef(false);
-  useLayoutEffect(() => {
-    if (!lockSize) {
-      return undefined;
-    }
-    if (sizeLocked.current) {
-      return undefined;
-    }
-    const listContainerEl = ref.current;
-    if (!listContainerEl) {
-      return undefined;
-    }
-    const observer = new ResizeObserver((entries) => {
-      const entry = entries[0];
-      // Use borderBoxSize (outer width) not contentRect (which excludes the
-      // scrollbar width). If we used contentRect, min-width would be set to
-      // outerWidth − scrollbarWidth, and the container would shrink by exactly
-      // the scrollbar width when the scrollbar disappears.
-      const borderBoxEntry = entry.borderBoxSize
-        ? entry.borderBoxSize[0]
-        : null;
-      const width = borderBoxEntry
-        ? borderBoxEntry.inlineSize
-        : entry.contentRect.width;
-      const height = borderBoxEntry
-        ? borderBoxEntry.blockSize
-        : entry.contentRect.height;
-      if (width === 0 && height === 0) {
-        return;
-      }
-      listContainerEl.style.minWidth = `${width}px`;
-      listContainerEl.style.minHeight = `${height}px`;
-      sizeLocked.current = true;
-      observer.disconnect();
-    });
-    observer.observe(listContainerEl);
-    return () => {
-      observer.disconnect();
-    };
-  }, [lockSize]);
+  useOpenedLayoutEffect(
+    ref,
+    (listContainerEl) => {
+      const observer = new ResizeObserver((entries) => {
+        const entry = entries[0];
+        // Use borderBoxSize (outer width) not contentRect (which excludes the
+        // scrollbar width). If we used contentRect, min-width would be set to
+        // outerWidth − scrollbarWidth, and the container would shrink by exactly
+        // the scrollbar width when the scrollbar disappears.
+        const borderBoxEntry = entry.borderBoxSize
+          ? entry.borderBoxSize[0]
+          : null;
+        const width = borderBoxEntry
+          ? borderBoxEntry.inlineSize
+          : entry.contentRect.width;
+        const height = borderBoxEntry
+          ? borderBoxEntry.blockSize
+          : entry.contentRect.height;
+        if (width === 0 && height === 0) {
+          return;
+        }
+        listContainerEl.style.minWidth = `${width}px`;
+        listContainerEl.style.minHeight = `${height}px`;
+        sizeLocked.current = true;
+        observer.disconnect();
+      });
+      observer.observe(listContainerEl);
+      return () => {
+        observer.disconnect();
+      };
+    },
+    [lockSize],
+  );
 
   const tracker = useItemTracker({
     onChange: () => {
