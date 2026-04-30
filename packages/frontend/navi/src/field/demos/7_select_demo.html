@@ -107,12 +107,11 @@
                       name="color"
                       value={color}
                       placeholder="Pick a color…"
-                      uiAction={(v) => {
-                        setColor(v);
-                      }}
-                      debugPopover
                     >
                       <List
+                        uiAction={(v) => {
+                          setColor(v);
+                        }}
                         listRole="listbox"
                         border="none"
                         expandX
@@ -226,17 +225,12 @@
               Selecting a fruit closes the popover automatically.
             </p>
             <NaviDebug debugFocus debugScroll>
-              <Select
-                name="fruit"
-                value={fruit}
-                placeholder="Pick a fruit…"
-                uiAction={(v) => {
-                  setFruit(v);
-                  setSearchText("");
-                }}
-                debugPopover
-              >
+              <Select name="fruit" value={fruit} placeholder="Pick a fruit…">
                 <List
+                  uiAction={(v) => {
+                    setFruit(v);
+                    setSearchText("");
+                  }}
                   listRole="listbox"
                   border="none"
                   expandX
@@ -245,10 +239,10 @@
                 >
                   <ListItemHeader padding="m" borderBottom="1px solid #eee">
                     <Input
+                      uiAction={(v) => setSearchText(v)}
                       type="search"
                       placeholder="Search…"
                       value={searchText}
-                      uiAction={(v) => setSearchText(v)}
                       autoFocus
                       expandX
                     />
@@ -288,13 +282,13 @@
             <h2>Demo 3 — States</h2>
             <p>Pre-selected value and disabled state.</p>
             <div className="row">
-              <Select
-                name="size"
-                value={size}
-                placeholder="Pick a size…"
-                uiAction={(v) => setSize(v)}
-              >
-                <List listRole="listbox" border="none" expandX>
+              <Select name="size" value={size} placeholder="Pick a size…">
+                <List
+                  uiAction={(v) => setSize(v)}
+                  listRole="listbox"
+                  border="none"
+                  expandX
+                >
                   {SIZES.map((s, i) => (
                     <ListItem
                       key={s}
@@ -308,13 +302,13 @@
                   ))}
                 </List>
               </Select>
-              <Select
-                uiAction={() => {}}
-                name="size_disabled"
-                value="L"
-                disabled
-              >
-                <List listRole="listbox" border="none" expandX>
+              <Select name="size_disabled" value="L" disabled>
+                <List
+                  uiAction={() => {}}
+                  listRole="listbox"
+                  border="none"
+                  expandX
+                >
                   {SIZES.map((s, i) => (
                     <ListItem
                       key={s}
@@ -362,9 +356,13 @@
                       name="country"
                       value={country}
                       placeholder="Pick a country…"
-                      uiAction={(v) => setCountry(v)}
                     >
-                      <List listRole="listbox" border="none" expandX>
+                      <List
+                        uiAction={(v) => setCountry(v)}
+                        listRole="listbox"
+                        border="none"
+                        expandX
+                      >
                         {COUNTRIES.map((c, i) => (
                           <ListItem
                             key={c}
@@ -382,13 +380,13 @@
 
                   <Label flex spacing="s" alignY="center">
                     Role
-                    <Select
-                      name="role"
-                      value={role}
-                      placeholder="Pick a role…"
-                      uiAction={(v) => setRole(v)}
-                    >
-                      <List listRole="listbox" border="none" expandX>
+                    <Select name="role" value={role} placeholder="Pick a role…">
+                      <List
+                        uiAction={(v) => setRole(v)}
+                        listRole="listbox"
+                        border="none"
+                        expandX
+                      >
                         {["Admin", "Editor", "Viewer"].map((r, i) => (
                           <ListItem
                             key={r}
@@ -433,27 +431,31 @@
               dialog for free. Backdrop is provided by <code>::backdrop</code>.
             </p>
             <Select
-              name="fruit_dialog"
               value={fruit}
+              name="fruit_dialog"
               placeholder="Pick a fruit…"
               mode="dialog"
-              uiAction={(v) => {
-                setFruit(v);
-                setSearchText("");
-              }}
-              debugFocus
             >
-              <List listRole="listbox" border="none" expandX minWidth="300">
+              <List
+                uiAction={(v) => {
+                  setFruit(v);
+                  setSearchText("");
+                }}
+                listRole="listbox"
+                border="none"
+                expandX
+                minWidth="300"
+                withSearch
+              >
                 <ListItemHeader>
                   <div
                     style={{ padding: "8px", borderBottom: "1px solid #eee" }}
                   >
                     <Input
+                      uiAction={(v) => setSearchText(v)}
                       type="search"
                       placeholder="Search…"
                       value={searchText}
-                      uiAction={(v) => setSearchText(v)}
-                      autofocus
                       style={{ width: "100%" }}
                     />
                   </div>

@@ -17,7 +17,6 @@ import {
 } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
-import { SelectUIActionContext } from "../field/select.jsx";
 import { shortcutsViaOnKeyDown } from "../keyboard/keyboard_shortcuts.js";
 import { useDebugScroll } from "../navi_debug.jsx";
 import { useAutoFocus } from "../utils/focus/use_auto_focus.js";
@@ -28,6 +27,7 @@ const ListItemTrackerContext = createContext(null);
 const GroupItemTrackerContext = createContext(null);
 const PendingScrollRefContext = createContext(null);
 
+export const ListAutoFocusContext = createContext(false);
 export const ListIdContext = createContext();
 export const ListWithSearchContext = createContext(false);
 // Provided by ListWithSearch so a descendant Input knows it controls this list.
@@ -410,16 +410,8 @@ export const List = (props) => {
   // List, so remaining variants are still picked up correctly on the next pass.
   // The order only matters in cases where one variant should suppress another —
   // currently only withSearch has that role (see above).
-  const selectUIAction = useContext(SelectUIActionContext);
-  if (props.uiAction || selectUIAction) {
-    return (
-      <ListInteractive
-        autoFocus={Boolean(selectUIAction)}
-        autoFocusPreventScroll={Boolean(selectUIAction)}
-        {...props}
-        uiAction={props.uiAction || selectUIAction}
-      />
-    );
+  if (props.uiAction) {
+    return <ListInteractive {...props} uiAction={props.uiAction} />;
   }
   if (props.popover === true) {
     return <ListWithPopover {...props} />;
@@ -1215,147 +1207,145 @@ const ListInteractive = (props) => {
   };
 
   return (
-    <SelectUIActionContext.Provider value={null}>
-      <ListInteractiveContext.Provider value={true}>
-        <ListMousePointedIdContext.Provider value={mousePointedId}>
-          <ListKeyboardPointedIdContext.Provider value={keyboardPointedId}>
-            <List
-              keyboardInteractions
-              {...props}
-              uiAction={undefined}
-              onListVisibleItemsChange={(visibleItems) => {
-                props.onListVisibleItemsChange?.(visibleItems);
-                visibleItemsRef.current = visibleItems;
-              }}
-              onnavi_list_request_hover={(e) => {
-                const { item } = e.detail;
-                setMousePointedId(item ? item.id : null);
-              }}
-              onnavi_list_request_nav_from_current={(e) => {
-                const { goal, event = e } = e.detail;
-                const visibleItems = visibleItemsRef.current;
-                const visibleItemCount = visibleItems.length;
-                if (visibleItemCount === 0) {
-                  return;
-                }
-                const anchorIndex = getAnchorIndex();
-                const isDisabledIndex = (i) =>
-                  Boolean(visibleItems[i]?.disabled);
-                const resolveIndex = () => {
-                  if (goal === "down") {
-                    if (anchorIndex === -1) {
-                      let i = 0;
-                      while (i < visibleItemCount && isDisabledIndex(i)) {
-                        i++;
-                      }
-                      return i < visibleItemCount ? i : anchorIndex;
-                    }
-                    let belowIndex = anchorIndex + 1;
-                    while (
-                      belowIndex < visibleItemCount &&
-                      isDisabledIndex(belowIndex)
-                    ) {
-                      belowIndex++;
-                    }
-                    return belowIndex < visibleItemCount
-                      ? belowIndex
-                      : anchorIndex;
-                  }
-                  if (goal === "up") {
-                    if (anchorIndex === -1) {
-                      let i = visibleItemCount - 1;
-                      while (i >= 0 && isDisabledIndex(i)) {
-                        i--;
-                      }
-                      return i >= 0 ? i : anchorIndex;
-                    }
-                    let aboveIndex = anchorIndex - 1;
-                    while (aboveIndex >= 0 && isDisabledIndex(aboveIndex)) {
-                      aboveIndex--;
-                    }
-                    return aboveIndex >= 0 ? aboveIndex : anchorIndex;
-                  }
-                  if (goal === "first") {
+    <ListInteractiveContext.Provider value={true}>
+      <ListMousePointedIdContext.Provider value={mousePointedId}>
+        <ListKeyboardPointedIdContext.Provider value={keyboardPointedId}>
+          <List
+            keyboardInteractions
+            {...props}
+            uiAction={undefined}
+            onListVisibleItemsChange={(visibleItems) => {
+              props.onListVisibleItemsChange?.(visibleItems);
+              visibleItemsRef.current = visibleItems;
+            }}
+            onnavi_list_request_hover={(e) => {
+              const { item } = e.detail;
+              setMousePointedId(item ? item.id : null);
+            }}
+            onnavi_list_request_nav_from_current={(e) => {
+              const { goal, event = e } = e.detail;
+              const visibleItems = visibleItemsRef.current;
+              const visibleItemCount = visibleItems.length;
+              if (visibleItemCount === 0) {
+                return;
+              }
+              const anchorIndex = getAnchorIndex();
+              const isDisabledIndex = (i) => Boolean(visibleItems[i]?.disabled);
+              const resolveIndex = () => {
+                if (goal === "down") {
+                  if (anchorIndex === -1) {
                     let i = 0;
                     while (i < visibleItemCount && isDisabledIndex(i)) {
                       i++;
                     }
                     return i < visibleItemCount ? i : anchorIndex;
                   }
-                  if (goal === "last") {
+                  let belowIndex = anchorIndex + 1;
+                  while (
+                    belowIndex < visibleItemCount &&
+                    isDisabledIndex(belowIndex)
+                  ) {
+                    belowIndex++;
+                  }
+                  return belowIndex < visibleItemCount
+                    ? belowIndex
+                    : anchorIndex;
+                }
+                if (goal === "up") {
+                  if (anchorIndex === -1) {
                     let i = visibleItemCount - 1;
                     while (i >= 0 && isDisabledIndex(i)) {
                       i--;
                     }
                     return i >= 0 ? i : anchorIndex;
                   }
-                  return anchorIndex;
-                };
-                const index = resolveIndex();
-                if (index === anchorIndex) {
-                  return;
+                  let aboveIndex = anchorIndex - 1;
+                  while (aboveIndex >= 0 && isDisabledIndex(aboveIndex)) {
+                    aboveIndex--;
+                  }
+                  return aboveIndex >= 0 ? aboveIndex : anchorIndex;
                 }
-                if (event.type === "keydown") {
-                  event.preventDefault();
+                if (goal === "first") {
+                  let i = 0;
+                  while (i < visibleItemCount && isDisabledIndex(i)) {
+                    i++;
+                  }
+                  return i < visibleItemCount ? i : anchorIndex;
                 }
-                const item = visibleItems[index];
-                dispatchCustomEvent(e.currentTarget, "navi_list_request_nav", {
-                  item,
-                  event: e,
-                });
-              }}
-              onnavi_list_request_interaction_state_reset={() => {
+                if (goal === "last") {
+                  let i = visibleItemCount - 1;
+                  while (i >= 0 && isDisabledIndex(i)) {
+                    i--;
+                  }
+                  return i >= 0 ? i : anchorIndex;
+                }
+                return anchorIndex;
+              };
+              const index = resolveIndex();
+              if (index === anchorIndex) {
+                return;
+              }
+              if (event.type === "keydown") {
+                event.preventDefault();
+              }
+              const item = visibleItems[index];
+              dispatchCustomEvent(e.currentTarget, "navi_list_request_nav", {
+                item,
+                event: e,
+              });
+            }}
+            onnavi_list_request_interaction_state_reset={() => {
+              setAnchorId(null);
+              setKeyboardPointedId(null);
+              setMousePointedId(null);
+            }}
+            onnavi_list_request_select_current={(e) => {
+              const item = getAnchorItem();
+              dispatchCustomEvent(e.currentTarget, "navi_list_request_select", {
+                item,
+                event: e,
+              });
+            }}
+            onnavi_list_nav={(e) => {
+              const { item, event } = e.detail;
+              const id = item.id;
+              if (event.type === "navi_list_nav_top_on_displayed") {
+                // arrow down should focus first item for instance
                 setAnchorId(null);
-                setKeyboardPointedId(null);
-                setMousePointedId(null);
-              }}
-              onnavi_list_request_select_current={(e) => {
-                const item = getAnchorItem();
-                dispatchCustomEvent(
-                  e.currentTarget,
-                  "navi_list_request_select",
-                  { item, event: e },
-                );
-              }}
-              onnavi_list_nav={(e) => {
-                const { item, event } = e.detail;
-                const id = item.id;
-                if (event.type === "navi_list_nav_top_on_displayed") {
-                  // arrow down should focus first item for instance
-                  setAnchorId(null);
-                } else {
-                  setAnchorId(id);
-                }
-                if (event.type === "keydown") {
-                  setKeyboardPointedId(id);
-                } else {
-                  setKeyboardPointedId(null);
-                }
-              }}
-              onnavi_list_select={(e) => {
-                const { item, event } = e.detail;
-                const id = item.id;
+              } else {
                 setAnchorId(id);
-                if (event.type === "keydown") {
-                  setKeyboardPointedId(id);
-                } else {
-                  setKeyboardPointedId(null);
-                }
-                const value = item.value;
-                uiAction(value, event);
-              }}
-            />
-          </ListKeyboardPointedIdContext.Provider>
-        </ListMousePointedIdContext.Provider>
-      </ListInteractiveContext.Provider>
-    </SelectUIActionContext.Provider>
+              }
+              if (event.type === "keydown") {
+                setKeyboardPointedId(id);
+              } else {
+                setKeyboardPointedId(null);
+              }
+            }}
+            onnavi_list_select={(e) => {
+              const { item, event } = e.detail;
+              const id = item.id;
+              setAnchorId(id);
+              if (event.type === "keydown") {
+                setKeyboardPointedId(id);
+              } else {
+                setKeyboardPointedId(null);
+              }
+              const value = item.value;
+              uiAction(value, event);
+            }}
+          />
+        </ListKeyboardPointedIdContext.Provider>
+      </ListMousePointedIdContext.Provider>
+    </ListInteractiveContext.Provider>
   );
 };
 
 const ListWithKeyboardInteractions = (props) => {
   const { autoFocus, autoFocusPreventScroll } = props;
+  const autoFocusContext = useContext(ListAutoFocusContext);
   const defaultRef = useRef(null);
   const ref = props.ref || defaultRef;
+  const innerAutoFocus = autoFocus === undefined ? autoFocusContext : autoFocus;
 
   const onKeyDown = shortcutsViaOnKeyDown(
     {
@@ -1406,7 +1396,7 @@ const ListWithKeyboardInteractions = (props) => {
     },
     props.onKeyDown,
   );
-  useAutoFocus(ref, autoFocus, { autoFocusPreventScroll });
+  useAutoFocus(ref, innerAutoFocus, { preventScroll: autoFocusPreventScroll });
 
   return (
     <List

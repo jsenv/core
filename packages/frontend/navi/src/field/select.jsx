@@ -2,7 +2,6 @@ import { pickPositionRelativeTo, visibleRectEffect } from "@jsenv/dom";
 import { createContext } from "preact";
 import { createPortal } from "preact/compat";
 import {
-  useCallback,
   useContext,
   useId,
   useLayoutEffect,
@@ -10,14 +9,11 @@ import {
   useState,
 } from "preact/hooks";
 
-import { renderActionableComponent } from "../action/render_actionable_component.jsx";
-import { useActionBoundToOneParam } from "../action/use_action.js";
-import { useActionStatus } from "../action/use_action_status.js";
-import { useExecuteAction } from "../action/use_execute_action.js";
 import { Box } from "../box/box.jsx";
 import { ChevronDownSvg } from "../graphic/icons/chevron_updown_svg.jsx";
 import { LoaderBackground } from "../graphic/loader/loader_background.jsx";
 import { shortcutsViaOnKeyDown } from "../keyboard/keyboard_shortcuts.js";
+import { ListAutoFocusContext } from "../list/list.jsx";
 import { useDebugFocus } from "../navi_debug.jsx";
 import { Icon } from "../text/icon.jsx";
 import { useAutoFocus } from "../utils/focus/use_auto_focus.js";
@@ -26,18 +22,12 @@ import {
   reportInteractiveToLabel,
   reportReadOnlyToLabel,
 } from "./label.jsx";
-import { useActionEvents } from "./use_action_events.js";
 import {
   DisabledContext,
   LoadingContext,
   LoadingElementContext,
   ReadOnlyContext,
-  UIStateContext,
-  UIStateControllerContext,
-  useUIState,
-  useUIStateController,
 } from "./use_ui_state_controller.js";
-import { forwardActionRequested } from "./validation/custom_constraint_validation.js";
 
 const css = /* css */ `
   @layer navi {
@@ -240,20 +230,7 @@ const css = /* css */ `
  * but does NOT submit a parent form. Use a separate submit button for that.
  */
 export const Select = (props) => {
-  const uiStateController = useUIStateController(props, "select");
-  const uiState = useUIState(uiStateController);
-
-  const select = renderActionableComponent(props, {
-    Basic: SelectBasic,
-    WithAction: SelectWithAction,
-  });
-  return (
-    <UIStateControllerContext.Provider value={uiStateController}>
-      <UIStateContext.Provider value={uiState}>
-        {select}
-      </UIStateContext.Provider>
-    </UIStateControllerContext.Provider>
-  );
+  return <SelectBasic {...props} />;
 };
 
 export const SelectUIActionContext = createContext(null);
@@ -281,14 +258,12 @@ const SelectUI = (props) => {
   const contextDisabled = useContext(DisabledContext);
   const contextLoading = useContext(LoadingContext);
   const contextLoadingElement = useContext(LoadingElementContext);
-  const uiStateController = useContext(UIStateControllerContext);
   const defaultRef = useRef();
   const ref = rest.ref || defaultRef;
 
   const innerLoading =
     loading || (contextLoading && contextLoadingElement === ref.current);
-  const innerReadOnly =
-    readOnly || contextReadOnly || innerLoading || uiStateController.readOnly;
+  const innerReadOnly = readOnly || contextReadOnly || innerLoading;
   const innerDisabled = disabled || contextDisabled;
 
   reportReadOnlyToLabel(innerReadOnly);
@@ -297,10 +272,6 @@ const SelectUI = (props) => {
   useAutoFocus(ref, autoFocus, {
     preventScroll: autoFocusPreventScroll,
   });
-
-  const uiAction = useCallback((value, e) => {
-    uiStateController.setUIState(value, e);
-  }, []);
 
   if (trigger === undefined) {
     trigger = <SelectTrigger />;
@@ -312,12 +283,6 @@ const SelectUI = (props) => {
       {...rest}
       baseClassName="navi_select"
       autoFocus={undefined} // See use_auto_focus.js
-      onresetuistate={(e) => {
-        uiStateController.resetUIState(e);
-      }}
-      onsetuistate={(e) => {
-        uiStateController.setUIState(e.detail.value, e);
-      }}
       styleCSSVars={SelectStyleCSSVars}
       basePseudoState={{
         ...rest.basePseudoState,
@@ -338,9 +303,9 @@ const SelectUI = (props) => {
         <SelectValueContext.Provider value={value}>
           {trigger}
         </SelectValueContext.Provider>
-        <SelectUIActionContext.Provider value={uiAction}>
+        <ListAutoFocusContext.Provider value={true}>
           {children}
-        </SelectUIActionContext.Provider>
+        </ListAutoFocusContext.Provider>
       </SelectPlaceholderContext.Provider>
     </Box>
   );
@@ -733,54 +698,5 @@ const SelectWithDialog = (props) => {
         {children}
       </dialog>
     </SelectUI>
-  );
-};
-
-// SelectWithAction sets up action-aware state and delegates UI entirely to SelectBasic.
-const SelectWithAction = (props) => {
-  const {
-    action,
-    actionDebounce,
-    actionAfterChange,
-    loading,
-    onCancel,
-    onActionPrevented,
-    onActionStart,
-    onActionError,
-    onActionEnd,
-    actionErrorEffect,
-    ...rest
-  } = props;
-  const uiState = useContext(UIStateContext);
-  const defaultRef = useRef();
-  const ref = props.ref || defaultRef;
-  const [boundAction] = useActionBoundToOneParam(action, uiState);
-  const { loading: actionLoading } = useActionStatus(boundAction);
-  const executeAction = useExecuteAction(ref, {
-    errorEffect: actionErrorEffect,
-  });
-  useActionEvents(ref, {
-    onCancel: (e, reason) => {
-      onCancel?.(e, reason);
-    },
-    onRequested: (e) => {
-      forwardActionRequested(e, boundAction);
-    },
-    onPrevented: onActionPrevented,
-    onAction: executeAction,
-    onStart: onActionStart,
-    onError: onActionError,
-    onEnd: onActionEnd,
-  });
-
-  return (
-    <SelectUI
-      data-action={boundAction.name || "anonymous"}
-      data-action-debounce={actionDebounce}
-      data-action-after-change={actionAfterChange ? "" : undefined}
-      {...rest}
-      ref={ref}
-      loading={loading || actionLoading}
-    />
   );
 };
