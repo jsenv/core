@@ -674,6 +674,11 @@ const InputInsideListWithSearch = ({ uiAction, onKeyDown, ...props }) => {
             queueMicrotask(() => {
               forwardToList(e, requestListInteractionStateReset);
             });
+            // prevent escape from reaching eventual <select> ancestor
+            // when the escape is meant to clear the search input (otherwise it would close the select too)
+            if (e.currentTarget.value !== "") {
+              e.stopPropagation();
+            }
           },
         },
         onKeyDown,
