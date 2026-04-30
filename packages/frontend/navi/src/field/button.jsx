@@ -1,6 +1,5 @@
 import { useCallback, useContext, useRef } from "preact/hooks";
 
-import { renderActionableComponent } from "../action/render_actionable_component.jsx";
 import { useAction } from "../action/use_action.js";
 import { useActionStatus } from "../action/use_action_status.js";
 import { useExecuteAction } from "../action/use_execute_action.js";
@@ -301,14 +300,16 @@ const css = /* css */ `
 `;
 
 export const Button = (props) => {
-  return renderActionableComponent(props, {
-    Basic: ButtonBasicDispatch,
-    WithAction: ButtonWithAction,
-    WithActionInsideForm: ButtonWithActionInsideForm,
-  });
-};
-
-const ButtonBasicDispatch = (props) => {
+  const formContext = useContext(FormActionContext);
+  const hasAction = Boolean(
+    props.action || (props.shortcuts && props.shortcuts.length > 0),
+  );
+  if (hasAction) {
+    if (formContext && props.action) {
+      return <ButtonWithActionInsideForm {...props} />;
+    }
+    return <ButtonWithAction {...props} />;
+  }
   if (props.route) {
     return <ButtonWithRoute {...props} />;
   }
@@ -324,13 +325,15 @@ const ButtonWithRoute = ({ route, routeParams, children, ...rest }) => {
   const linkMatching = matching && paramsAreMatching;
 
   return (
-    <ButtonUI
+    <Button
       href={url}
       data-href-current={linkMatching ? "" : undefined}
       {...rest}
+      route={undefined}
+      routeParams={undefined}
     >
       {children || route.buildRelativeUrl(routeParams)}
-    </ButtonUI>
+    </Button>
   );
 };
 
@@ -539,15 +542,16 @@ const ButtonWithAction = (props) => {
   });
 
   return (
-    <ButtonBasicDispatch
+    <Button
       // put data-action first to help find it in devtools
       data-action={boundAction.name}
       {...rest}
       ref={ref}
+      action={undefined}
       loading={innerLoading}
     >
       {children}
-    </ButtonBasicDispatch>
+    </Button>
   );
 };
 const ButtonWithActionInsideForm = (props) => {
@@ -607,10 +611,11 @@ const ButtonWithActionInsideForm = (props) => {
   });
 
   return (
-    <ButtonBasicDispatch
+    <Button
       data-action={actionBoundToFormParams.name}
       {...rest}
       ref={ref}
+      action={undefined}
       type={type}
       loading={innerLoading}
       onactionrequested={(e) => {
@@ -618,6 +623,6 @@ const ButtonWithActionInsideForm = (props) => {
       }}
     >
       {children}
-    </ButtonBasicDispatch>
+    </Button>
   );
 };
