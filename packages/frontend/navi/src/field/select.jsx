@@ -292,7 +292,10 @@ const SelectUI = (props) => {
   reportReadOnlyToLabel(innerReadOnly);
   reportDisabledToLabel(innerDisabled);
   reportInteractiveToLabel(true);
-  useAutoFocus(ref, autoFocus, { autoFocusPreventScroll, debugFocus });
+  useAutoFocus(ref, autoFocus, {
+    preventScroll: autoFocusPreventScroll,
+    debugFocus,
+  });
 
   const uiAction = useCallback((value, e) => {
     uiStateController.setUIState(value, e);

@@ -48,7 +48,7 @@ import { useDisplayedLayoutEffect } from "../utils/use_displayed_layout_effect.j
 export const useAutoFocus = (
   focusableElementRef,
   autoFocus,
-  { autoFocusPreventScroll, autoFocusVisible, autoSelect, debugFocus } = {},
+  { preventScroll = true, focusVisible, autoSelect, debugFocus } = {},
 ) => {
   debugFocus = debugFocus ? console.debug : () => {};
 
@@ -69,11 +69,11 @@ export const useAutoFocus = (
 
     const activeElement = document.activeElement;
     debugFocus(
-      `autoFocus after "${e.type}" -> ${getElementSignature(e.target)}.focus({ preventScroll: ${autoFocusPreventScroll} })`,
+      `autoFocus after "${e.type}" -> ${getElementSignature(e.target)}.focus({ preventScroll: ${preventScroll} })`,
     );
     focusableElement.focus({
-      preventScroll: autoFocusPreventScroll,
-      focusVisible: autoFocusVisible,
+      preventScroll,
+      focusVisible,
     });
     // requestAnimationFrame(() => {
     //   focusableElement.focus({

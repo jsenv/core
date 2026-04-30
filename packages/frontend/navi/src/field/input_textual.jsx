@@ -353,7 +353,7 @@ const InputTextualUI = (props) => {
   reportDisabledToLabel(innerDisabled);
   reportInteractiveToLabel(true);
   useAutoFocus(ref, autoFocus, {
-    autoFocusVisible,
+    focusVisible: autoFocusVisible,
     autoSelect,
   });
   const remainingProps = useConstraints(ref, rest);
