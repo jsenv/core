@@ -363,6 +363,9 @@ const css = /* css */ `
 
   .navi_list_select_placeholder {
     height: 0;
+    padding-block: 0;
+    line-height: 0;
+    overflow: hidden;
   }
 `;
 
