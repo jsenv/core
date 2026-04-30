@@ -119,6 +119,7 @@ const css = /* css */ `
       color: var(--placeholder-color);
 
       &[hidden] {
+        /* We keep placeholder in the dom in case it dictates the select width, this way select wont shrink once a value is selected */
         display: inline-block;
         height: 0;
         padding-block: 0;
