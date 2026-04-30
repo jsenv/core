@@ -19,13 +19,14 @@ import { ChevronDownSvg } from "../graphic/icons/chevron_updown_svg.jsx";
 import { LoaderBackground } from "../graphic/loader/loader_background.jsx";
 import { shortcutsViaOnKeyDown } from "../keyboard/keyboard_shortcuts.js";
 import { Icon } from "../text/icon.jsx";
+import { useDebugFocus } from "../utils/focus/focus.jsx";
+import { useAutoFocus } from "../utils/focus/use_auto_focus.js";
 import {
   reportDisabledToLabel,
   reportInteractiveToLabel,
   reportReadOnlyToLabel,
 } from "./label.jsx";
 import { useActionEvents } from "./use_action_events.js";
-import { useAutoFocus } from "./use_auto_focus.js";
 import {
   DisabledContext,
   LoadingContext,
@@ -270,7 +271,7 @@ const SelectUI = (props) => {
     children,
     autoFocus,
     autoFocusPreventScroll,
-    debugFocus,
+
     ...rest
   } = props;
 
@@ -294,7 +295,6 @@ const SelectUI = (props) => {
   reportInteractiveToLabel(true);
   useAutoFocus(ref, autoFocus, {
     preventScroll: autoFocusPreventScroll,
-    debugFocus,
   });
 
   const uiAction = useCallback((value, e) => {
@@ -428,10 +428,9 @@ const SelectBasic = (props) => {
 };
 // SelectWithPopover — trigger + popover anchored below the trigger.
 const SelectWithPopover = (props) => {
-  let { disabled, onKeyDown, children, debugPopover, debugFocus, ...rest } =
-    props;
+  let { disabled, onKeyDown, children, debugPopover, ...rest } = props;
   debugPopover = debugPopover ? (...args) => console.debug(...args) : () => {};
-  debugFocus = debugFocus ? console.debug : () => {};
+  const debugFocus = useDebugFocus();
   const defaultRef = useRef();
   const ref = rest.ref || defaultRef;
   const popoverRef = useRef(null);
@@ -627,8 +626,8 @@ const SelectWithPopover = (props) => {
 };
 // SelectWithDialog — trigger + centered modal dialog.
 const SelectWithDialog = (props) => {
-  let { disabled, onKeyDown, children, debugFocus, ...rest } = props;
-  debugFocus = debugFocus ? console.debug : () => {};
+  let { disabled, onKeyDown, children, ...rest } = props;
+  const debugFocus = useDebugFocus();
   const defaultRef = useRef();
   const ref = rest.ref || defaultRef;
   const dialogRef = useRef(null);

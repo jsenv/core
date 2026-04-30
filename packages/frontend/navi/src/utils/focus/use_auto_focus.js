@@ -3,6 +3,7 @@
 import { getElementSignature } from "@jsenv/dom";
 
 import { useDisplayedLayoutEffect } from "../use_displayed_layout_effect.js";
+import { useDebugFocus } from "./focus.jsx";
 
 /**
  * Programmatic autofocus that runs after Preact layout effects are flushed.
@@ -48,9 +49,9 @@ import { useDisplayedLayoutEffect } from "../use_displayed_layout_effect.js";
 export const useAutoFocus = (
   focusableElementRef,
   autoFocus,
-  { preventScroll = true, focusVisible, autoSelect, debugFocus } = {},
+  { preventScroll = true, focusVisible, autoSelect } = {},
 ) => {
-  debugFocus = debugFocus ? console.debug : () => {};
+  const debugFocus = useDebugFocus();
 
   const triggerAutofocus = (e) => {
     if (!autoFocus) {

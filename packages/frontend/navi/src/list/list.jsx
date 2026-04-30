@@ -17,8 +17,8 @@ import {
 
 import { Box } from "../box/box.jsx";
 import { SelectUIActionContext } from "../field/select.jsx";
-import { useAutoFocus } from "../field/use_auto_focus.js";
 import { shortcutsViaOnKeyDown } from "../keyboard/keyboard_shortcuts.js";
+import { useAutoFocus } from "../utils/focus/use_auto_focus.js";
 import { useItemTracker } from "../utils/item_tracker/use_item_tracker.js";
 import { useDisplayedLayoutEffect } from "../utils/use_displayed_layout_effect.js";
 
@@ -1351,7 +1351,7 @@ const ListInteractive = (props) => {
 };
 
 const ListWithKeyboardInteractions = (props) => {
-  const { autoFocus, autoFocusPreventScroll, debugFocus } = props;
+  const { autoFocus, autoFocusPreventScroll } = props;
   const defaultRef = useRef(null);
   const ref = props.ref || defaultRef;
 
@@ -1404,7 +1404,7 @@ const ListWithKeyboardInteractions = (props) => {
     },
     props.onKeyDown,
   );
-  useAutoFocus(ref, autoFocus, { autoFocusPreventScroll, debugFocus });
+  useAutoFocus(ref, autoFocus, { autoFocusPreventScroll });
 
   return (
     <List
@@ -1415,7 +1415,6 @@ const ListWithKeyboardInteractions = (props) => {
       onKeyDown={onKeyDown}
       autoFocus={undefined} // See use_auto_focus.js
       autoFocusPreventScroll={undefined}
-      debugFocus={undefined}
     />
   );
 };
