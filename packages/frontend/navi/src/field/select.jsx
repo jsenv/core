@@ -94,10 +94,10 @@ const css = /* css */ `
       --select-padding-left,
       var(--select-padding-x, var(--select-padding-x-default))
     );
-    gap: 6px; /* Space between placeholder and icon */
     color: var(--select-color);
     font-size: var(--select-font-size);
     text-align: inherit; /* override browser defaults on button which is center */
+    white-space: nowrap; /* Prevent icon from going next line */
     background-color: var(--select-background-color);
     border: var(--select-border-width) solid transparent;
     border-radius: var(--select-border-radius);
@@ -156,6 +156,7 @@ const css = /* css */ `
       }
     }
     .navi_select_trigger_icon {
+      margin-left: 6px;
       flex-shrink: 0;
       opacity: 0.6;
     }
@@ -410,7 +411,6 @@ const SelectTrigger = () => {
           {value}
         </span>
       </span>
-
       <Icon className="navi_select_trigger_icon">
         <ChevronDownSvg />
       </Icon>

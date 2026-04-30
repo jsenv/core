@@ -78,6 +78,7 @@
         ListItemGroup,
         Label,
         NaviDebug,
+        Button,
       } from "@jsenv/navi";
 
       // ── Demo 1: Simple list ───────────────────────────────────────────────────
@@ -349,12 +350,12 @@
               selected values on form submission.
             </p>
             <Form
-              action={(formData) => {
-                setSubmitted(Object.fromEntries(formData));
+              action={(data) => {
+                setSubmitted(data);
               }}
             >
-              <Box column spacing="m">
-                <Box flex spacing="m" alignY="end">
+              <Box flex spacing="m">
+                <Box flex="y" spacing="m" alignX="start">
                   <Label flex spacing="s" alignY="center">
                     Country
                     <Select
@@ -379,8 +380,8 @@
                     </Select>
                   </Label>
 
-                  <Box column spacing="xs">
-                    <label>Role</label>
+                  <Label flex spacing="s" alignY="center">
+                    Role
                     <Select
                       name="role"
                       value={role}
@@ -401,8 +402,9 @@
                         ))}
                       </List>
                     </Select>
-                  </Box>
-                  <button type="submit">Submit</button>
+                  </Label>
+
+                  <Button type="submit">Submit</Button>
                 </Box>
                 {submitted && (
                   <div className="value-display">
