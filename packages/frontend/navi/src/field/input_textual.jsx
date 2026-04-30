@@ -642,6 +642,7 @@ const InputInsideListWithSearch = ({ uiAction, onKeyDown, ...props }) => {
       aria-has-popup="listbox"
       type="search"
       autoComplete="off"
+      {...props}
       onKeyDown={shortcutsViaOnKeyDown(
         {
           arrowdown: (e) => {
@@ -677,7 +678,6 @@ const InputInsideListWithSearch = ({ uiAction, onKeyDown, ...props }) => {
         },
         onKeyDown,
       )}
-      {...props}
       ref={ref}
     />
   );
