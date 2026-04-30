@@ -16,10 +16,7 @@ import {
 } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
-import {
-  SelectPlaceholderContext,
-  SelectUIActionContext,
-} from "../field/select.jsx";
+import { SelectUIActionContext } from "../field/select.jsx";
 import { useAutoFocus } from "../field/use_auto_focus.js";
 import { shortcutsViaOnKeyDown } from "../keyboard/keyboard_shortcuts.js";
 import { useItemTracker } from "../utils/item_tracker/use_item_tracker.js";
@@ -992,8 +989,6 @@ const UnorderedList = ({
   children,
   ...rest
 }) => {
-  const selectPlaceholder = useContext(SelectPlaceholderContext);
-
   return (
     <Box as="ul" {...rest} baseClassName="navi_list">
       <TopFiller
@@ -1008,9 +1003,6 @@ const UnorderedList = ({
         />
       )}
       {fallback && <Fallback fallback={fallback} tracker={tracker} />}
-      {selectPlaceholder && (
-        <SelectPlaceholderAsListItem placeholder={selectPlaceholder} />
-      )}
       <RenderWindowContext.Provider value={renderWindow}>
         <SeparatorContext.Provider value={separator ?? null}>
           <ListItemTrackerContext.Provider value={tracker}>
@@ -1024,16 +1016,6 @@ const UnorderedList = ({
         tracker={tracker}
       />
     </Box>
-  );
-};
-const SelectPlaceholderAsListItem = ({ placeholder }) => {
-  return (
-    <ListItem
-      role="presentation"
-      className="navi_list_item navi_list_select_placeholder"
-    >
-      {placeholder}
-    </ListItem>
   );
 };
 

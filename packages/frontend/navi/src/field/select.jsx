@@ -110,9 +110,20 @@ const css = /* css */ `
       text-overflow: ellipsis;
       white-space: nowrap;
       overflow: hidden;
+    }
 
-      &[data-placeholder] {
-        color: var(--placeholder-color);
+    .navi_select_trigger_placeholder,
+    .navi_select_trigger_value {
+    }
+    .navi_select_trigger_placeholder {
+      color: var(--placeholder-color);
+
+      &[hidden] {
+        display: block;
+        height: 0;
+        padding-block: 0;
+        line-height: 0;
+        overflow: hidden;
       }
     }
     .navi_select_trigger_icon {
@@ -135,7 +146,7 @@ const css = /* css */ `
     .navi_select_popover {
       position: absolute;
       inset: unset;
-      /* min-width: var(--select-anchor-width, 0px); */
+      min-width: var(--select-anchor-width, 0px);
       max-width: 95vw;
       max-height: 95dvh;
       margin: 0;
@@ -357,17 +368,18 @@ const SelectTrigger = () => {
 
   return (
     <>
-      <span
-        className="navi_select_trigger_text"
-        data-placeholder={isPlaceholder ? "" : undefined}
-      >
-        {isPlaceholder ? placeholder : String(value)}
+      <span className="navi_select_trigger_text">
+        <span className="navi_select_trigger_placeholder" hidden={hasValue}>
+          {placeholder}
+        </span>
+        <span className="navi_select_trigger_value" hidden={isPlaceholder}>
+          {value}
+        </span>
       </span>
-      <span className="navi_select_trigger_icon">
-        <Icon>
-          <ChevronDownSvg />
-        </Icon>
-      </span>
+
+      <Icon className="navi_select_trigger_icon">
+        <ChevronDownSvg />
+      </Icon>
     </>
   );
 };
