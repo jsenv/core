@@ -51,7 +51,8 @@ const css = /* css */ `
       --select-border-width: 1px;
       --select-outline-width: 1px;
       --select-font-size: 14px;
-      --select-padding: 5px 8px;
+      --select-padding-x-default: 8px;
+      --select-padding-y-default: 5px;
       --select-border-color: light-dark(#767676, #8e8e93);
       --select-background-color: white;
       --select-color: currentColor;
@@ -76,7 +77,22 @@ const css = /* css */ `
   .navi_select {
     position: relative;
     box-sizing: border-box;
-    padding: var(--select-padding);
+    padding-top: var(
+      --select-padding-top,
+      var(--select-padding-y, var(--select-padding-y-default))
+    );
+    padding-right: var(
+      --select-padding-right,
+      var(--select-padding-x, var(--select-padding-x-default))
+    );
+    padding-bottom: var(
+      --select-padding-bottom,
+      var(--select-padding-y, var(--select-padding-y-default))
+    );
+    padding-left: var(
+      --select-padding-left,
+      var(--select-padding-x, var(--select-padding-x-default))
+    );
     gap: 6px; /* Space between placeholder and icon */
     color: var(--select-color);
     font-size: var(--select-font-size);
@@ -328,7 +344,6 @@ const SelectUI = (props) => {
 const SelectStyleCSSVars = {
   "borderWidth": "--select-border-width",
   "borderRadius": "--select-border-radius",
-  "padding": "--select-padding",
   "paddingX": "--select-padding-x",
   "paddingY": "--select-padding-y",
   "paddingTop": "--select-padding-top",
