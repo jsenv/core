@@ -47,19 +47,27 @@ const css = /* css */ `
       background: transparent;
     }
     .navi_select {
-      --border-radius: 2px;
-      --border-width: 1px;
-      --outline-width: 1px;
-      --font-size: 14px;
-      --padding: 5px 8px;
-      --border-color: light-dark(#767676, #8e8e93);
-      --background-color: white;
-      --color: currentColor;
-      --placeholder-color: color-mix(in srgb, currentColor 60%, transparent);
-      --border-color-hover: color-mix(in srgb, var(--border-color) 70%, black);
-      --background-color-hover: color-mix(
+      --select-border-radius: 2px;
+      --select-border-width: 1px;
+      --select-outline-width: 1px;
+      --select-font-size: 14px;
+      --select-padding: 5px 8px;
+      --select-border-color: light-dark(#767676, #8e8e93);
+      --select-background-color: white;
+      --select-color: currentColor;
+      --select-placeholder-color: color-mix(
         in srgb,
-        var(--background-color) 95%,
+        currentColor 60%,
+        transparent
+      );
+      --select-border-color-hover: color-mix(
+        in srgb,
+        var(--select-border-color) 70%,
+        black
+      );
+      --select-background-color-hover: color-mix(
+        in srgb,
+        var(--select-background-color) 95%,
         black
       );
     }
@@ -68,29 +76,33 @@ const css = /* css */ `
   .navi_select {
     position: relative;
     box-sizing: border-box;
-    padding: var(--padding);
+    padding: var(--select-padding);
     gap: 6px; /* Space between placeholder and icon */
-    color: var(--color);
-    font-size: var(--font-size);
+    color: var(--select-color);
+    font-size: var(--select-font-size);
     text-align: inherit; /* override browser defaults on button which is center */
-    background-color: var(--background-color);
-    border: var(--border-width) solid transparent;
-    border-radius: var(--border-radius);
-    outline: var(--outline-width) solid var(--border-color);
-    outline-offset: calc(-1 * var(--outline-width));
+    background-color: var(--select-background-color);
+    border: var(--select-border-width) solid transparent;
+    border-radius: var(--select-border-radius);
+    outline: var(--select-outline-width) solid var(--select-border-color);
+    outline-offset: calc(-1 * var(--select-outline-width));
     cursor: pointer;
     user-select: none;
 
     &:hover {
-      background-color: var(--background-color-hover);
-      outline-color: var(--border-color-hover);
+      background-color: var(--select-background-color-hover);
+      outline-color: var(--select-border-color-hover);
     }
 
     &:focus,
     &:focus-visible {
-      outline-width: calc(var(--border-width) + var(--outline-width));
+      outline-width: calc(
+        var(--select-border-width) + var(--select-outline-width)
+      );
       outline-color: var(--navi-focus-outline-color, #005fcc);
-      outline-offset: calc(-1 * (var(--border-width) + var(--outline-width)));
+      outline-offset: calc(
+        -1 * (var(--select-border-width) + var(--select-outline-width))
+      );
     }
 
     &:disabled {
@@ -116,7 +128,7 @@ const css = /* css */ `
     .navi_select_trigger_value {
     }
     .navi_select_trigger_placeholder {
-      color: var(--placeholder-color);
+      color: var(--select-placeholder-color);
 
       &[hidden] {
         /* We keep placeholder in the dom in case it dictates the select width, this way select wont shrink once a value is selected */
@@ -135,9 +147,13 @@ const css = /* css */ `
        focus ring on the dialog itself and suppress it on the list container. 
        It's visually better */
     &:has(.navi_list_container:focus) {
-      outline-width: calc(var(--border-width) + var(--outline-width));
+      outline-width: calc(
+        var(--select-border-width) + var(--select-outline-width)
+      );
       outline-color: var(--navi-focus-outline-color, #005fcc);
-      outline-offset: calc(-1 * (var(--border-width) + var(--outline-width)));
+      outline-offset: calc(
+        -1 * (var(--select-border-width) + var(--select-outline-width))
+      );
     }
     .navi_list_container:focus {
       outline: none;
@@ -310,42 +326,42 @@ const SelectUI = (props) => {
   );
 };
 const SelectStyleCSSVars = {
-  "borderWidth": "--border-width",
-  "borderRadius": "--border-radius",
-  "padding": "--padding",
-  "paddingX": "--padding-x",
-  "paddingY": "--padding-y",
-  "paddingTop": "--padding-top",
-  "paddingRight": "--padding-right",
-  "paddingBottom": "--padding-bottom",
-  "paddingLeft": "--padding-left",
-  "background": "--background",
-  "backgroundColor": "--background-color",
-  "borderColor": "--border-color",
-  "color": "--color",
-  "fontSize": "--font-size",
+  "borderWidth": "--select-border-width",
+  "borderRadius": "--select-border-radius",
+  "padding": "--select-padding",
+  "paddingX": "--select-padding-x",
+  "paddingY": "--select-padding-y",
+  "paddingTop": "--select-padding-top",
+  "paddingRight": "--select-padding-right",
+  "paddingBottom": "--select-padding-bottom",
+  "paddingLeft": "--select-padding-left",
+  "background": "--select-background",
+  "backgroundColor": "--select-background-color",
+  "borderColor": "--select-border-color",
+  "color": "--select-color",
+  "fontSize": "--select-font-size",
   ":hover": {
-    backgroundColor: "--background-color-hover",
-    borderColor: "--border-color-hover",
-    color: "--color-hover",
+    backgroundColor: "--select-background-color-hover",
+    borderColor: "--select-border-color-hover",
+    color: "--select-color-hover",
   },
   ":focus": {
-    backgroundColor: "--background-color-focus",
-    borderColor: "--border-color-focus",
+    backgroundColor: "--select-background-color-focus",
+    borderColor: "--select-border-color-focus",
   },
   ":active": {
-    backgroundColor: "--background-color-active",
-    borderColor: "--border-color-active",
+    backgroundColor: "--select-background-color-active",
+    borderColor: "--select-border-color-active",
   },
   ":read-only": {
-    backgroundColor: "--background-color-readonly",
-    borderColor: "--border-color-readonly",
-    color: "--color-readonly",
+    backgroundColor: "--select-background-color-readonly",
+    borderColor: "--select-border-color-readonly",
+    color: "--select-color-readonly",
   },
   ":disabled": {
-    backgroundColor: "--background-color-disabled",
-    borderColor: "--border-color-disabled",
-    color: "--color-disabled",
+    backgroundColor: "--select-background-color-disabled",
+    borderColor: "--select-border-color-disabled",
+    color: "--select-color-disabled",
   },
 };
 const SelectPseudoClasses = [
