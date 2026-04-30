@@ -28,6 +28,7 @@ import {
   LoadingElementContext,
   ReadOnlyContext,
 } from "./use_ui_state_controller.js";
+import { useConstraints } from "./validation/hooks/use_constraints.js";
 
 const css = /* css */ `
   @layer navi {
@@ -260,6 +261,7 @@ const SelectUI = (props) => {
   const contextLoadingElement = useContext(LoadingElementContext);
   const defaultRef = useRef();
   const ref = rest.ref || defaultRef;
+  const remainingProps = useConstraints(ref, rest);
 
   const innerLoading =
     loading || (contextLoading && contextLoadingElement === ref.current);
@@ -280,12 +282,12 @@ const SelectUI = (props) => {
     <Box
       as="button"
       type="button"
-      {...rest}
+      {...remainingProps}
       baseClassName="navi_select"
       autoFocus={undefined} // See use_auto_focus.js
       styleCSSVars={SelectStyleCSSVars}
       basePseudoState={{
-        ...rest.basePseudoState,
+        ...remainingProps.basePseudoState,
         ":read-only": innerReadOnly,
         ":disabled": innerDisabled,
         ":-navi-loading": innerLoading,
