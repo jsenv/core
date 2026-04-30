@@ -38,10 +38,7 @@ import { EmailSvg } from "../graphic/icons/email_svg.jsx";
 import { PhoneSvg } from "../graphic/icons/phone_svg.jsx";
 import { SearchSvg } from "../graphic/icons/search_svg.jsx";
 import { LoaderBackground } from "../graphic/loader/loader_background.jsx";
-import {
-  shortcutsViaOnKeyDown,
-  useKeyboardShortcuts,
-} from "../keyboard/keyboard_shortcuts.js";
+import { shortcutsViaOnKeyDown } from "../keyboard/keyboard_shortcuts.js";
 import {
   ListIdContext,
   requestListInteractionStateReset,
@@ -745,66 +742,6 @@ const InputTextualWithSuggestions = ({
     return requestList(suggestionList, { event, ...customEventDetail });
   };
 
-  useKeyboardShortcuts(ref, [
-    {
-      key: "arrowdown",
-      description: "Open popover and point to next suggestion",
-      handler: (e) => {
-        showSuggestions(e);
-        return forwardToList(e, requestListNavFromCurrent, { goal: "down" });
-      },
-    },
-    {
-      key: "arrowup",
-      description: "Open popover and point to previous suggestion",
-      handler: (e) => {
-        showSuggestions(e);
-        return forwardToList(e, requestListNavFromCurrent, { goal: "up" });
-      },
-    },
-    {
-      key: "home",
-      description: "Point to first suggestion",
-      handler: (e) => {
-        if (!expandedRef.current) {
-          return false;
-        }
-        return forwardToList(e, requestListNavFromCurrent, { goal: "first" });
-      },
-    },
-    {
-      key: "end",
-      description: "Point to last suggestion",
-      handler: (e) => {
-        if (!expandedRef.current) {
-          return false;
-        }
-        return forwardToList(e, requestListNavFromCurrent, { goal: "last" });
-      },
-    },
-    {
-      key: "enter",
-      description: "Confirm pointed suggestion",
-      handler: (e) => {
-        if (!expandedRef.current) {
-          return false;
-        }
-        return forwardToList(e, requestListSelectCurrent);
-      },
-    },
-    {
-      key: "escape",
-      description: "Close popover",
-      handler: (e) => {
-        if (!expandedRef.current) {
-          return false;
-        }
-        hideSuggestions(e);
-        return true;
-      },
-    },
-  ]);
-
   useEffect(() => {
     const inputEl = ref.current;
     const suggestionEl = document.getElementById(suggestions);
@@ -824,7 +761,6 @@ const InputTextualWithSuggestions = ({
 
   return (
     <InputTextualUI
-      ref={ref}
       role="combobox"
       autoComplete="off"
       aria-controls={suggestions}
@@ -837,6 +773,7 @@ const InputTextualWithSuggestions = ({
       onnavi_callout_open={(e) => {
         hideSuggestions(e);
       }}
+      {...rest}
       onFocus={(e) => {
         onFocus?.(e);
         showSuggestions(e);
@@ -849,7 +786,51 @@ const InputTextualWithSuggestions = ({
         onInput?.(e);
         showSuggestions(e);
       }}
-      {...rest}
+      onKeyDown={shortcutsViaOnKeyDown(
+        {
+          arrowdown: (e) => {
+            showSuggestions(e);
+            return forwardToList(e, requestListNavFromCurrent, {
+              goal: "down",
+            });
+          },
+          arrowup: (e) => {
+            showSuggestions(e);
+            return forwardToList(e, requestListNavFromCurrent, { goal: "up" });
+          },
+          home: (e) => {
+            if (!expandedRef.current) {
+              return false;
+            }
+            return forwardToList(e, requestListNavFromCurrent, {
+              goal: "first",
+            });
+          },
+          end: (e) => {
+            if (!expandedRef.current) {
+              return false;
+            }
+            return forwardToList(e, requestListNavFromCurrent, {
+              goal: "last",
+            });
+          },
+          enter: (e) => {
+            if (!expandedRef.current) {
+              return false;
+            }
+            return forwardToList(e, requestListSelectCurrent);
+          },
+          escape: (e) => {
+            if (!expandedRef.current) {
+              return false;
+            }
+            hideSuggestions(e);
+            return true;
+          },
+        },
+        rest.onKeyDown,
+      )}
+      ref={ref}
     >
       {children || (
         <InputRightSlot
