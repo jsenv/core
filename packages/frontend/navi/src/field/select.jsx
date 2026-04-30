@@ -307,7 +307,7 @@ const SelectUI = (props) => {
       type="button"
       {...rest}
       baseClassName="navi_select"
-      autoFocus={autoFocus ? "" : undefined}
+      autoFocus={undefined} // See use_auto_focus.js
       onresetuistate={(e) => {
         uiStateController.resetUIState(e);
       }}

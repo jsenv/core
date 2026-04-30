@@ -371,7 +371,7 @@ const InputTextualUI = (props) => {
         type={type}
         data-value={uiState}
         value={innerValue}
-        autoFocus={autoFocus ? "" : undefined}
+        autoFocus={undefined} // See use_auto_focus.js
         onInput={(e) => {
           let inputValue;
           if (type === "number") {

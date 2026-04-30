@@ -1,30 +1,49 @@
-// autoFocus does not work so we focus in a useLayoutEffect,
-// see https://github.com/preactjs/preact/issues/1255
+// see also https://github.com/preactjs/preact/issues/1255
 
 import { getElementSignature } from "@jsenv/dom";
 
 import { useDisplayedLayoutEffect } from "../utils/use_displayed_layout_effect.js";
 
-let blurEvent = null;
-let timeout;
-document.body.addEventListener(
-  "blur",
-  (e) => {
-    blurEvent = e;
-    setTimeout(() => {
-      blurEvent = null;
-    });
-  },
-  { capture: true },
-);
-document.body.addEventListener(
-  "focus",
-  () => {
-    clearTimeout(timeout);
-    blurEvent = null;
-  },
-  { capture: true },
-);
+/**
+ * Programmatic autofocus that runs after Preact layout effects are flushed.
+ *
+ * WHY NOT USE THE NATIVE `autofocus` ATTRIBUTE?
+ *
+ * The browser fires autofocus before JavaScript layout effects have run. This
+ * means the element may not be correctly positioned yet — for example a popover
+ * that is still being placed by our own positioning logic. When the browser then
+ * calls scrollIntoView internally as part of focusing, it reads stale geometry
+ * and may scroll the page even though the popover content is already fully on
+ * screen (or will be once layout settles). There is no way to hook into the
+ * browser's autofocus timing or suppress just its scroll side-effect while
+ * keeping the focus itself.
+ *
+ * Also browser is just bad at scrolling into view something in a popover
+ *
+ * For that reason, components that use `useAutoFocus` must NOT set the
+ * `autofocus`|`autoFocus` attribute on the underlying DOM node. The hook
+ * takes over the focus call entirely, fires it inside a `useDisplayedLayoutEffect`
+ * (so Preact layout work is done and the element is correctly positioned), and
+ * exposes `autoFocusPreventScroll` to let the caller decide whether any
+ * scroll-into-view should happen at all.
+ *
+ * @param {import("preact/hooks").Ref<HTMLElement>} focusableElementRef
+ *   Ref to the element to focus.
+ * @param {boolean} autoFocus
+ *   When false the hook is a no-op.
+ * @param {object} [options]
+ * @param {boolean} [options.autoFocusPreventScroll]
+ *   Passed as `preventScroll` to `element.focus()`. Set to true to suppress
+ *   the browser's built-in scroll-into-view that accompanies focus.
+ * @param {boolean} [options.autoFocusVisible]
+ *   Passed as `focusVisible` to `element.focus()`.
+ * @param {boolean} [options.autoSelect]
+ *   When true, also calls `element.select()` after focusing (useful for text inputs).
+ * @param {boolean} [options.debugFocus]
+ *   When true, logs focus decisions to the console.
+ * @returns {Function} triggerAutofocus — can be called manually with a synthetic
+ *   event to re-run the focus logic outside of the layout-effect lifecycle.
+ */
 
 export const useAutoFocus = (
   focusableElementRef,
@@ -131,3 +150,24 @@ export const useAutoFocus = (
 
   return triggerAutofocus;
 };
+
+let blurEvent = null;
+let timeout;
+document.body.addEventListener(
+  "blur",
+  (e) => {
+    blurEvent = e;
+    setTimeout(() => {
+      blurEvent = null;
+    });
+  },
+  { capture: true },
+);
+document.body.addEventListener(
+  "focus",
+  () => {
+    clearTimeout(timeout);
+    blurEvent = null;
+  },
+  { capture: true },
+);
