@@ -17,6 +17,10 @@ import {
 } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
+import {
+  ParentUIStateControllerContext,
+  useUIStateController,
+} from "../field/use_ui_state_controller.js";
 import { shortcutsViaOnKeyDown } from "../keyboard/keyboard_shortcuts.js";
 import { useDebugScroll } from "../navi_debug.jsx";
 import { useAutoFocus } from "../utils/focus/use_auto_focus.js";
@@ -399,6 +403,8 @@ const css = /* css */ `
  *   ...rest              — forwarded to the outer scroll container <Box>
  */
 export const List = (props) => {
+  const alreadyInteractive = useContext(ListInteractiveContext);
+  const parentUIStateController = useContext(ParentUIStateControllerContext);
   // withSearch must come first: it forces keyboardInteractions=false before any
   // other variant inspects the props (the Input handles keyboard nav instead of
   // the list itself). It also provides SetSearchTextContext and ListboxIdContext
@@ -410,8 +416,8 @@ export const List = (props) => {
   // List, so remaining variants are still picked up correctly on the next pass.
   // The order only matters in cases where one variant should suppress another —
   // currently only withSearch has that role (see above).
-  if (props.uiAction) {
-    return <ListInteractive {...props} uiAction={props.uiAction} />;
+  if (!alreadyInteractive && (props.uiAction || parentUIStateController)) {
+    return <ListInteractive {...props} />;
   }
   if (props.popover === true) {
     return <ListWithPopover {...props} />;
@@ -1182,7 +1188,7 @@ const ListWithPopover = (props) => {
 // Interactive variant: manages hover/keyboard/selection state and handles the
 // navi event protocol, then delegates rendering to ListUI.
 const ListInteractive = (props) => {
-  const { uiAction } = props;
+  const uiStateController = useUIStateController(props, "list");
   const [mousePointedId, setMousePointedId] = useState(null);
   const [keyboardPointedId, setKeyboardPointedId] = useState(null);
   const anchorIdRef = useRef(null);
@@ -1331,7 +1337,7 @@ const ListInteractive = (props) => {
                 setKeyboardPointedId(null);
               }
               const value = item.value;
-              uiAction(value, event);
+              uiStateController.setUIState(value, event);
             }}
           />
         </ListKeyboardPointedIdContext.Provider>

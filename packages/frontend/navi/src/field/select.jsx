@@ -26,7 +26,10 @@ import {
   DisabledContext,
   LoadingContext,
   LoadingElementContext,
+  ParentUIStateControllerContext,
   ReadOnlyContext,
+  useUIGroupStateController,
+  useUIState,
 } from "./use_ui_state_controller.js";
 import { useConstraints } from "./validation/hooks/use_constraints.js";
 
@@ -219,22 +222,41 @@ const css = /* css */ `
  *   placeholder — text shown when value is null/undefined/"" and triggerContent is not set
  *   triggerContent — custom ReactNode for the trigger, bypasses value/placeholder display
  *   disabled    — disable the trigger
- *   uiAction    — called with the selected value when an item is confirmed
+ *   uiAction    — called with the selected value when an item confirms a selection
  *   action      — server action (switches to WithAction variant)
  *   mode        — "popover" (default, anchored below trigger) | "dialog" (centered modal)
  *   children    — content rendered inside the popover/dialog (e.g. a <List>)
  *
- * The uiAction is also provided via SelectUIActionContext so that a <List>
- * placed inside Select automatically receives it without explicit prop passing.
+ * Select exposes a ParentUIStateControllerContext so that a <List> placed inside
+ * automatically reports its selected value to Select without explicit prop wiring.
+ * Select in turn reports to a parent Form if one is present.
  *
  * Note: the trigger is type="button" — pressing Enter opens/closes the content
  * but does NOT submit a parent form. Use a separate submit button for that.
  */
 export const Select = (props) => {
-  return <SelectBasic {...props} />;
+  const uiStateController = useUIGroupStateController(props, "select", {
+    childComponentType: "list",
+    aggregateChildStates: (childControllers) => {
+      if (childControllers.length === 0) {
+        return undefined;
+      }
+      return childControllers[0].uiState;
+    },
+    emptyState: undefined,
+  });
+  uiStateController.onUIStateChange = (value, e) => {
+    uiStateController.uiAction?.(value, e);
+  };
+  const uiState = useUIState(uiStateController);
+  const value = Object.hasOwn(props, "value") ? props.value : uiState;
+  return (
+    <ParentUIStateControllerContext.Provider value={uiStateController}>
+      <SelectBasic {...props} value={value} />
+    </ParentUIStateControllerContext.Provider>
+  );
 };
 
-export const SelectUIActionContext = createContext(null);
 export const SelectPlaceholderContext = createContext();
 const SelectValueContext = createContext(null);
 
