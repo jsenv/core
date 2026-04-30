@@ -18,6 +18,7 @@ import {
 import { Box } from "../box/box.jsx";
 import { SelectUIActionContext } from "../field/select.jsx";
 import { shortcutsViaOnKeyDown } from "../keyboard/keyboard_shortcuts.js";
+import { useDebugScroll } from "../utils/focus/focus.jsx";
 import { useAutoFocus } from "../utils/focus/use_auto_focus.js";
 import { useItemTracker } from "../utils/item_tracker/use_item_tracker.js";
 import { useDisplayedLayoutEffect } from "../utils/use_displayed_layout_effect.js";
@@ -443,7 +444,6 @@ const ListUI = (props) => {
     virtualItemHeight,
     lockSize,
     searchText,
-    debugScroll,
     ...rest
   } = props;
   import.meta.css = css;
@@ -510,7 +510,6 @@ const ListUI = (props) => {
     renderBudget,
     virtualItemHeight,
     searchText,
-    debugScroll,
   });
 
   const renderList = (listProps) => {
@@ -596,10 +595,8 @@ const useListScrollSync = ({
   renderBudget,
   virtualItemHeight,
   searchText,
-  debugScroll,
 }) => {
-  debugScroll = debugScroll ? (...args) => console.debug(...args) : () => {};
-
+  const debugScroll = useDebugScroll();
   const virtualItemHeightSignal = useVirtualItemHeightSignal(
     ulRef,
     virtualItemHeight,
