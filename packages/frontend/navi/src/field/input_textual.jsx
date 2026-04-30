@@ -47,6 +47,7 @@ import {
   useIsInsideListWithSearch,
 } from "../list/list.jsx";
 import { Icon } from "../text/icon.jsx";
+import { useAutoFocus } from "../utils/focus/use_auto_focus.js";
 import { useStableCallback } from "../utils/use_stable_callback.js";
 import { fieldPropSet } from "./field_prop_set.js";
 import {
@@ -56,7 +57,6 @@ import {
   reportReadOnlyToLabel,
 } from "./label.jsx";
 import { useActionEvents } from "./use_action_events.js";
-import { useAutoFocus } from "./use_auto_focus.js";
 import {
   DisabledContext,
   LoadingContext,
@@ -371,7 +371,6 @@ const InputTextualUI = (props) => {
         type={type}
         data-value={uiState}
         value={innerValue}
-        autoFocus={undefined} // See use_auto_focus.js
         onInput={(e) => {
           let inputValue;
           if (type === "number") {
@@ -471,6 +470,7 @@ const InputTextualUI = (props) => {
       baseChildPropSet={InputChildPropSet}
       {...remainingProps}
       ref={undefined}
+      autoFocus={undefined} // See use_auto_focus.js
     >
       <LoaderBackground
         loading={innerLoading}
