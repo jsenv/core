@@ -232,23 +232,22 @@
                 setSearchText("");
               }}
             >
-              <List listRole="listbox" border="none" expandX minWidth="240">
-                <ListItemHeader>
-                  <div
-                    style={{
-                      padding: "8px",
-                      borderBottom: "1px solid #eee",
-                    }}
-                  >
-                    <Input
-                      type="search"
-                      placeholder="Search…"
-                      value={searchText}
-                      uiAction={(v) => setSearchText(v)}
-                      autofocus
-                      style={{ width: "100%" }}
-                    />
-                  </div>
+              <List
+                listRole="listbox"
+                border="none"
+                expandX
+                minWidth="240"
+                withSearch
+              >
+                <ListItemHeader padding="m" borderBottom="1px solid #eee">
+                  <Input
+                    type="search"
+                    placeholder="Search…"
+                    value={searchText}
+                    uiAction={(v) => setSearchText(v)}
+                    autoFocus
+                    expandX
+                  />
                 </ListItemHeader>
                 {items.map((f, i) => {
                   const { match, ranges } = getItemMatchInfo(f);
