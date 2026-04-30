@@ -543,11 +543,11 @@ const InputPseudoClasses = [
   ":read-only",
   ":disabled",
   ":-navi-loading",
-  ":navi-has-value",
-  ":navi-expanded",
+  ":-navi-has-value",
+  ":-navi-expanded",
 ];
 Object.assign(PSEUDO_CLASSES, {
-  ":navi-has-value": {
+  ":-navi-has-value": {
     attribute: "data-has-value",
     setup: (el, callback) => {
       return listenInputValue(el, callback);
@@ -832,7 +832,7 @@ const InputTextualWithSuggestions = ({
       aria-expanded={expanded}
       aria-autocomplete="list"
       basePseudoState={{
-        ":navi-expanded": expanded,
+        ":-navi-expanded": expanded,
       }}
       onnavi_callout_open={(e) => {
         hideSuggestions(e);

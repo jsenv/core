@@ -344,7 +344,7 @@ const SelectPseudoClasses = [
   ":read-only",
   ":disabled",
   ":-navi-loading",
-  ":navi-expanded",
+  ":-navi-expanded",
 ];
 const SelectPseudoElements = ["::-navi-loader"];
 
@@ -417,6 +417,7 @@ const SelectWithPopover = (props) => {
       return;
     }
     popover.showPopover();
+    expand();
     const positionPopover = (event) => {
       debugPopover(`positionPopover("${event.type}")`);
       const anchorRect = anchor.getBoundingClientRect();
@@ -452,7 +453,6 @@ const SelectWithPopover = (props) => {
       },
     );
     cleanupRef.current = () => cleanup.disconnect();
-    expand();
   };
   const closePopover = (e) => {
     debugPopover(`closePopover("${e.type}")`);
@@ -484,12 +484,9 @@ const SelectWithPopover = (props) => {
               if (e.button !== 0) {
                 return;
               }
-              e.preventDefault(); // prevent browser trying to give focus to this backdrop
+              // e.preventDefault(); // prevent browser trying to give focus to this backdrop
               closePopover(e);
               moveFocusToSelect(e);
-            }}
-            onClick={(e) => {
-              e.preventDefault();
             }}
           />,
           document.body,
@@ -515,16 +512,9 @@ const SelectWithPopover = (props) => {
           }
         }}
         onClick={(e) => {
-          e.preventDefault();
           debugFocus(`select click.preventDefault()`, document.activeElement);
-        }}
-        onFocus={() => {
-          // When a label is clicked it transfers focus to the select (relatedTarget is null).
-          // Tab focus has a relatedTarget — in that case we don't open.
-          // When tabbing from outside window however relatedTarget is also null so ideally there is something to do here
-          // if (!e.relatedTarget && !expandedRef.current) {
-          //   openPopover(e);
-          // }
+          // When a label is clicked it transfers focus to the select, in that case we want to open it
+          openPopover(e);
         }}
         // When a list item is interacted via mousedown, return focus to the select.
         onnavi_list_select={(e) => {
@@ -580,16 +570,6 @@ const SelectWithPopover = (props) => {
             }
             // mousedown inside popover should not bubble to the select (would re-open it if that mousedown closes it)
             e.stopPropagation();
-          }}
-          onClick={(e) => {
-            e.preventDefault();
-          }}
-          onToggle={(e) => {
-            if (e.newState === "closed") {
-              cleanupRef.current?.();
-              cleanupRef.current = null;
-              collapse();
-            }
           }}
         >
           {children}
