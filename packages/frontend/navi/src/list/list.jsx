@@ -1,4 +1,5 @@
 import {
+  getElementSignature,
   getScrollContainer,
   pickPositionRelativeTo,
   scrollIntoViewScoped,
@@ -666,6 +667,9 @@ const useListScrollSync = ({
       id: item.id,
       resolve: (itemEl) => {
         pendingScrollRef.current = null;
+        debugScroll(
+          `${scrollToItemCall} is now in DOM, scrolling "${item.value}"`,
+        );
         srollItemIntoView(itemEl);
       },
     };
@@ -762,7 +766,12 @@ const useListScrollSync = ({
         "restore scroll window",
       );
       requestAnimationFrame(() => {
+        const left = savedScroll.left;
+        const top = savedScroll.top;
         // use scrollTo to respect eventual css scroll-behavior: smooth;
+        debugScroll(
+          `restore scroll: ${getElementSignature(listContainerEl)}.scrollTo({ left: ${left}, top: ${top} })`,
+        );
         listContainerEl.scrollTo({
           left: savedScroll.left,
           top: savedScroll.top,
