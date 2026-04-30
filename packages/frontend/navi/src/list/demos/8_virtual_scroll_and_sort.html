@@ -28,7 +28,7 @@
         List,
         ListItem,
         ListItemHeader,
-        useSearch,
+        useSearchText,
         Separator,
       } from "@jsenv/navi";
 
@@ -397,7 +397,10 @@
         const [selected, setSelected] = useState(ALL_ITEMS[70]);
         const [scrollToIndex, setScrollToIndex] = useState(50);
         const listRef = useRef(null);
-        const [orderedItems, getItemMatchInfo] = useSearch(search, ALL_ITEMS);
+        const [orderedItems, getItemMatchInfo] = useSearchText(
+          search,
+          ALL_ITEMS,
+        );
 
         const scrollTo = (position) => {
           const containerEl = listRef.current;

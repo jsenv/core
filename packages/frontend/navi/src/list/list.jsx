@@ -776,7 +776,7 @@ const useListScrollSync = ({
         // (used by keyboard nav to enable anchoring the item for list item nav with arrow keys)
         // so we do our best to give that item back
         const { item } = getScrollInfo(
-          { scrollTop: savedScroll.scrollTop },
+          { scrollTop: savedScroll.top },
           listContainerEl,
           tracker,
           virtualItemHeightSignal,
