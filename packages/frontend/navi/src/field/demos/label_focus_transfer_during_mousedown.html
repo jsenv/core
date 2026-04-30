@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>Select — Focus Management Demo</title>
+    <title>Label — Focus transfer during mousedown</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" href="data:," />
     <style>
@@ -40,20 +40,48 @@
         display: flex;
         flex-wrap: wrap;
         align-items: flex-start;
-        gap: 16px;
+        gap: 24px;
+      }
+      .trigger {
+        display: inline-block;
+        padding: 6px 14px;
+        background: white;
+        border: 1px solid #999;
+        border-radius: 3px;
+        cursor: pointer;
+        user-select: none;
+      }
+      .trigger:focus {
+        outline: 2px solid #005fcc;
+      }
+      .focus-target {
+        padding: 8px 12px;
+        color: #333;
+        font-size: 13px;
+        background: #fafafa;
+        border: 1px solid #ccc;
+        border-radius: 3px;
+      }
+      .focus-target:focus {
+        background: #e8f0fe;
+        outline: 2px solid #005fcc;
       }
     </style>
   </head>
   <body>
-    <h1>Select — Focus Management</h1>
+    <h1>Label — Focus transfer during mousedown</h1>
     <div id="app"></div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState, useRef } from "preact/hooks";
-      import { Select, useDisplayedLayoutEffect } from "@jsenv/navi";
 
-      const FocusDemo = () => {
+      // Minimal Label wrapper — just renders <label> with children, nothing else.
+      const Label = ({ children }) => <label>{children}</label>;
+
+      const Demo = () => {
         const [focusLog, setFocusLog] = useState([]);
+        const focusTargetRef = useRef(null);
+
         const log = (msg) => {
           const time = new Date().toLocaleTimeString("fr-FR", {
             hour12: false,
@@ -62,73 +90,71 @@
             second: "2-digit",
             fractionalSecondDigits: 3,
           });
-          setFocusLog((prev) => [`${time} ${msg}`, ...prev].slice(0, 30));
-        };
-
-        const Label = ({ children }) => {
-          return <label>{children}</label>;
+          setFocusLog((prev) => [`${time} ${msg}`, ...prev].slice(0, 40));
         };
 
         return (
           <div className="demo-section">
-            <h2>Popover with a plain text input</h2>
+            <h2>
+              mousedown inside label → focus transfer to an element elsewhere
+            </h2>
             <p>
-              Click the select, tab around, and watch where focus lands. The
-              popover contains only a bare{" "}
-              <code>&lt;input type="text"&gt;</code> with <code>autofocus</code>{" "}
-              — no List.
+              Clicking the trigger calls <code>focusTarget.focus()</code> on{" "}
+              <code>mousedown</code>. The label wraps the trigger so the browser
+              will also try to delegate focus to it via the native label click
+              behavior. Observe where focus actually lands.
             </p>
             <div className="row">
-              <div>
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "12px",
+                }}
+              >
                 <input
                   placeholder="Before (tab target)"
-                  style={{ display: "block", marginBottom: "8px" }}
                   onFocus={() => log("focus → input[before]")}
                   onBlur={() => log("blur  ← input[before]")}
                 />
+
                 <Label>
-                  Click
-                  <Select
-                    name="focus_demo"
-                    placeholder="Click me…"
-                    uiAction={() => {}}
-                    debugPopover
-                    debugFocus
-                    onFocus={(e) =>
-                      log(
-                        `focus → select (relatedTarget: ${e.relatedTarget ? e.relatedTarget.tagName.toLowerCase() : "null"})`,
-                      )
-                    }
-                    onBlur={(e) =>
-                      log(
-                        `blur  ← select (relatedTarget: ${e.relatedTarget ? e.relatedTarget.tagName.toLowerCase() : "null"})`,
-                      )
-                    }
+                  Label text —
+                  <button
+                    className="trigger"
+                    onMouseDown={(e) => {
+                      log("mousedown on trigger → calling focusTarget.focus()");
+                      e.preventDefault();
+                      document.querySelector(".focus-target").focus({
+                        preventScroll: true,
+                        focusVisible: true,
+                      });
+                    }}
+                    onFocus={() => log("focus → trigger")}
+                    onBlur={() => log("blur  ← trigger")}
                   >
-                    <div
-                      style={{
-                        padding: "12px",
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: "8px",
-                        minWidth: "220px",
-                      }}
-                    >
-                      <label style={{ fontSize: "13px", color: "#555" }}>
-                        Text inside popover
-                      </label>
-                      <InputToAutofocus log={log} />
-                    </div>
-                  </Select>
+                    Trigger (div[tabIndex=0])
+                  </button>
                 </Label>
+
+                <div
+                  ref={focusTargetRef}
+                  tabIndex="0"
+                  className="focus-target"
+                  onFocus={() => log("focus → focusTarget ✓")}
+                  onBlur={() => log("blur  ← focusTarget")}
+                >
+                  Focus target (should receive focus)
+                </div>
+
                 <input
                   placeholder="After (tab target)"
-                  style={{ display: "block", marginTop: "8px" }}
                   onFocus={() => log("focus → input[after]")}
                   onBlur={() => log("blur  ← input[after]")}
                 />
               </div>
-              <div style={{ flex: 1, minWidth: "240px" }}>
+
+              <div style={{ flex: 1, minWidth: "260px" }}>
                 <div
                   style={{
                     fontSize: "12px",
@@ -136,7 +162,7 @@
                     marginBottom: "6px",
                   }}
                 >
-                  Focus log (newest first)
+                  Event log (newest first)
                 </div>
                 <div
                   style={{
@@ -146,14 +172,14 @@
                     border: "1px solid #dee2e6",
                     borderRadius: "4px",
                     padding: "8px",
-                    minHeight: "180px",
-                    maxHeight: "320px",
+                    minHeight: "200px",
+                    maxHeight: "360px",
                     overflowY: "auto",
                   }}
                 >
                   {focusLog.length === 0 ? (
                     <span style={{ color: "#999", fontStyle: "italic" }}>
-                      (no events yet)
+                      (no events yet — click the trigger)
                     </span>
                   ) : (
                     focusLog.map((entry, i) => (
@@ -186,48 +212,7 @@
         );
       };
 
-      const InputToAutofocus = ({ log }) => {
-        const ref = useRef();
-        useDisplayedLayoutEffect(ref, () => {
-          ref.current.focus({
-            preventScroll: true,
-            focusVisible: true,
-          });
-        }, []);
-
-        return (
-          <input
-            ref={ref}
-            type="text"
-            placeholder="Focus should land here"
-            onFocus={() => log("focus → popover input")}
-            onBlur={() => log("blur  ← popover input")}
-          />
-        );
-      };
-
-      const FocusableToAutofocus = ({ log }) => {
-        const ref = useRef();
-        useDisplayedLayoutEffect(ref, () => {
-          ref.current.focus({
-            preventScroll: true,
-            focusVisible: true,
-          });
-        }, []);
-
-        return (
-          <div
-            ref={ref}
-            tabIndex="0"
-            onFocus={() => log("focus → popover input")}
-            onBlur={() => log("blur  ← popover input")}
-          >
-            Focus should land here
-          </div>
-        );
-      };
-
-      render(<FocusDemo />, document.getElementById("app"));
+      render(<Demo />, document.getElementById("app"));
     </script>
   </body>
 </html>
