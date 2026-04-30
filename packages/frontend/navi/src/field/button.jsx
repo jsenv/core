@@ -124,6 +124,7 @@ const css = /* css */ `
     outline: none;
     cursor: var(--x-button-cursor);
     -webkit-tap-highlight-color: transparent;
+    position: relative;
     touch-action: manipulation;
     user-select: none;
 
@@ -300,8 +301,6 @@ const css = /* css */ `
 `;
 
 export const Button = (props) => {
-  import.meta.css = css;
-
   return renderActionableComponent(props, {
     Basic: ButtonBasicDispatch,
     WithAction: ButtonWithAction,
@@ -313,9 +312,8 @@ const ButtonBasicDispatch = (props) => {
   if (props.route) {
     return <ButtonWithRoute {...props} />;
   }
-  return <ButtonBasic {...props} />;
+  return <ButtonUI {...props} />;
 };
-
 const ButtonWithRoute = ({ route, routeParams, children, ...rest }) => {
   if (import.meta.dev) {
     assertRoute(route);
@@ -326,68 +324,17 @@ const ButtonWithRoute = ({ route, routeParams, children, ...rest }) => {
   const linkMatching = matching && paramsAreMatching;
 
   return (
-    <ButtonBasic
+    <ButtonUI
       href={url}
       data-href-current={linkMatching ? "" : undefined}
       {...rest}
     >
       {children || route.buildRelativeUrl(routeParams)}
-    </ButtonBasic>
+    </ButtonUI>
   );
 };
 
-const ButtonStyleCSSVars = {
-  "outlineWidth": "--button-outline-width",
-  "borderWidth": "--button-border-width",
-  "borderRadius": "--button-border-radius",
-  "border": "--button-border",
-  "padding": "--button-padding",
-  "paddingX": "--button-padding-x",
-  "paddingY": "--button-padding-y",
-  "paddingTop": "--button-padding-top",
-  "paddingRight": "--button-padding-right",
-  "paddingBottom": "--button-padding-bottom",
-  "paddingLeft": "--button-padding-left",
-  "borderColor": "--button-border-color",
-  "background": "--button-background",
-  "backgroundColor": "--button-background-color",
-  "color": "--button-color",
-  ":hover": {
-    backgroundColor: "--button-background-color-hover",
-    borderColor: "--button-border-color-hover",
-    color: "--button-color-hover",
-  },
-  ":-navi-pressed": {
-    borderColor: "--button-border-color-pressed",
-  },
-  ":read-only": {
-    backgroundColor: "--button-background-color-readonly",
-    borderColor: "--button-border-color-readonly",
-    color: "--button-color-readonly",
-  },
-  ":disabled": {
-    backgroundColor: "--button-background-color-disabled",
-    borderColor: "--button-border-color-disabled",
-    color: "--button-color-disabled",
-  },
-};
-const ButtonPseudoClasses = [
-  ":hover",
-  ":active",
-  ":-navi-pressed",
-  ":focus",
-  ":focus-visible",
-  ":read-only",
-  ":disabled",
-  ":-navi-loading",
-];
-const ButtonPseudoElements = ["::-navi-loader"];
-
-const ButtonBasic = (props) => {
-  const contextLoading = useContext(LoadingContext);
-  const contextLoadingElement = useContext(LoadingElementContext);
-  const contextReadOnly = useContext(ReadOnlyContext);
-  const contextDisabled = useContext(DisabledContext);
+const ButtonUI = (props) => {
   const {
     readOnly,
     disabled,
@@ -407,6 +354,13 @@ const ButtonBasic = (props) => {
     children,
     ...rest
   } = props;
+
+  import.meta.css = css;
+  const contextLoading = useContext(LoadingContext);
+  const contextLoadingElement = useContext(LoadingElementContext);
+  const contextReadOnly = useContext(ReadOnlyContext);
+  const contextDisabled = useContext(DisabledContext);
+
   const defaultRef = useRef();
   const ref = props.ref || defaultRef;
 
@@ -502,7 +456,52 @@ const ButtonBasic = (props) => {
     </Box>
   );
 };
-
+const ButtonStyleCSSVars = {
+  "outlineWidth": "--button-outline-width",
+  "borderWidth": "--button-border-width",
+  "borderRadius": "--button-border-radius",
+  "border": "--button-border",
+  "padding": "--button-padding",
+  "paddingX": "--button-padding-x",
+  "paddingY": "--button-padding-y",
+  "paddingTop": "--button-padding-top",
+  "paddingRight": "--button-padding-right",
+  "paddingBottom": "--button-padding-bottom",
+  "paddingLeft": "--button-padding-left",
+  "borderColor": "--button-border-color",
+  "background": "--button-background",
+  "backgroundColor": "--button-background-color",
+  "color": "--button-color",
+  ":hover": {
+    backgroundColor: "--button-background-color-hover",
+    borderColor: "--button-border-color-hover",
+    color: "--button-color-hover",
+  },
+  ":-navi-pressed": {
+    borderColor: "--button-border-color-pressed",
+  },
+  ":read-only": {
+    backgroundColor: "--button-background-color-readonly",
+    borderColor: "--button-border-color-readonly",
+    color: "--button-color-readonly",
+  },
+  ":disabled": {
+    backgroundColor: "--button-background-color-disabled",
+    borderColor: "--button-border-color-disabled",
+    color: "--button-color-disabled",
+  },
+};
+const ButtonPseudoClasses = [
+  ":hover",
+  ":active",
+  ":-navi-pressed",
+  ":focus",
+  ":focus-visible",
+  ":read-only",
+  ":disabled",
+  ":-navi-loading",
+];
+const ButtonPseudoElements = ["::-navi-loader"];
 const ButtonShadow = () => {
   return <span className="navi_button_shadow"></span>;
 };
