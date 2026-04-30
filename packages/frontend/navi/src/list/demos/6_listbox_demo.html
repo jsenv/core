@@ -76,7 +76,7 @@
         Input,
         Text,
         Box,
-        useSearch,
+        useSearchText,
       } from "@jsenv/navi";
 
       // 200 auto-generated items
@@ -318,7 +318,7 @@
 
       const CustomStyleDemo = () => {
         const [selected, setSelected] = useState("Apple");
-        const [, getItemMatchInfo] = useSearch("a", FRUITS);
+        const [, getItemMatchInfo] = useSearchText("a", FRUITS);
         return (
           <div className="demo-section">
             <h2>Custom styles via CSS vars</h2>
@@ -382,7 +382,7 @@
       const SortedDemo = () => {
         const [filter, setFilter] = useState("");
         const [selected, setSelected] = useState(null);
-        const [sorted, getItemMatchInfo] = useSearch(filter, FRUITS);
+        const [sorted, getItemMatchInfo] = useSearchText(filter, FRUITS);
 
         return (
           <div className="demo-section">
@@ -444,7 +444,7 @@
       const LargeListDemo = () => {
         const [filter, setFilter] = useState("");
         const [selected, setSelected] = useState(null);
-        const [sorted, getItemMatchInfo] = useSearch(filter, LARGE_LIST);
+        const [sorted, getItemMatchInfo] = useSearchText(filter, LARGE_LIST);
 
         // Group by first letter for table of contents
         const groupMap = new Map();
@@ -611,7 +611,10 @@
       const SplitMatchDemo = () => {
         const [filter, setFilter] = useState("");
         const [selected, setSelected] = useState(null);
-        const [orderedItems, getItemMatchInfo] = useSearch(filter, LARGE_LIST);
+        const [orderedItems, getItemMatchInfo] = useSearchText(
+          filter,
+          LARGE_LIST,
+        );
         const matches = orderedItems.filter(
           (item) => getItemMatchInfo(item).match,
         );
