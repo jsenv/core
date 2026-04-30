@@ -77,6 +77,7 @@
         Box,
         ListItemGroup,
         Label,
+        Focus,
       } from "@jsenv/navi";
 
       // ── Demo 1: Simple list ───────────────────────────────────────────────────
@@ -98,55 +99,55 @@
             <Box flex spacing="m">
               <fieldset>
                 <legend>Navi</legend>
-                <Label flex spacing="s" alignY="center">
-                  Color
-                  <Select
-                    name="color"
-                    value={color}
-                    placeholder="Pick a color…"
-                    uiAction={(v) => {
-                      setColor(v);
-                    }}
-                    debugPopover
-                    debugFocus
-                  >
-                    <List
-                      listRole="listbox"
-                      border="none"
-                      expandX
-                      debugFocus
-                      // debugScroll
-                      separator={<Separator margin="0" />}
+                <Focus debug>
+                  <Label flex spacing="s" alignY="center">
+                    Color
+                    <Select
+                      name="color"
+                      value={color}
+                      placeholder="Pick a color…"
+                      uiAction={(v) => {
+                        setColor(v);
+                      }}
+                      debugPopover
                     >
-                      <ListItemGroup label="Warm">
-                        {WARM_COLORS.map((c, i) => (
-                          <ListItem
-                            key={c}
-                            index={i}
-                            id={c}
-                            value={c}
-                            selected={color === c}
-                          >
-                            {c}
-                          </ListItem>
-                        ))}
-                      </ListItemGroup>
-                      <ListItemGroup label="Cool">
-                        {COOL_COLORS.map((c, i) => (
-                          <ListItem
-                            key={c}
-                            index={WARM_COLORS.length + i}
-                            id={c}
-                            value={c}
-                            selected={color === c}
-                          >
-                            {c}
-                          </ListItem>
-                        ))}
-                      </ListItemGroup>
-                    </List>
-                  </Select>
-                </Label>
+                      <List
+                        listRole="listbox"
+                        border="none"
+                        expandX
+                        // debugScroll
+                        separator={<Separator margin="0" />}
+                      >
+                        <ListItemGroup label="Warm">
+                          {WARM_COLORS.map((c, i) => (
+                            <ListItem
+                              key={c}
+                              index={i}
+                              id={c}
+                              value={c}
+                              selected={color === c}
+                            >
+                              {c}
+                            </ListItem>
+                          ))}
+                        </ListItemGroup>
+                        <ListItemGroup label="Cool">
+                          {COOL_COLORS.map((c, i) => (
+                            <ListItem
+                              key={c}
+                              index={WARM_COLORS.length + i}
+                              id={c}
+                              value={c}
+                              selected={color === c}
+                            >
+                              {c}
+                            </ListItem>
+                          ))}
+                        </ListItemGroup>
+                      </List>
+                    </Select>
+                  </Label>
+                </Focus>
                 <div className="value-display">{color ?? ""}</div>
               </fieldset>
               <fieldset>
@@ -223,54 +224,53 @@
               The popover contains a search input and a filterable list.
               Selecting a fruit closes the popover automatically.
             </p>
-            <Select
-              name="fruit"
-              value={fruit}
-              placeholder="Pick a fruit…"
-              uiAction={(v) => {
-                setFruit(v);
-                setSearchText("");
-              }}
-              debugFocus
-              debugPopover
-            >
-              <List
-                listRole="listbox"
-                border="none"
-                expandX
-                minWidth="240"
-                withSearch
-                debugFocus
+            <Focus debug>
+              <Select
+                name="fruit"
+                value={fruit}
+                placeholder="Pick a fruit…"
+                uiAction={(v) => {
+                  setFruit(v);
+                  setSearchText("");
+                }}
+                debugPopover
               >
-                <ListItemHeader padding="m" borderBottom="1px solid #eee">
-                  <Input
-                    type="search"
-                    placeholder="Search…"
-                    value={searchText}
-                    uiAction={(v) => setSearchText(v)}
-                    autoFocus
-                    expandX
-                    debugFocus
-                  />
-                </ListItemHeader>
-                {items.map((f, i) => {
-                  const { match, ranges } = getItemMatchInfo(f);
-                  return (
-                    <ListItem
-                      key={f}
-                      index={i}
-                      id={f}
-                      value={f}
-                      selected={fruit === f}
-                      hidden={!match}
-                      highlight={ranges}
-                    >
-                      {f}
-                    </ListItem>
-                  );
-                })}
-              </List>
-            </Select>
+                <List
+                  listRole="listbox"
+                  border="none"
+                  expandX
+                  minWidth="240"
+                  withSearch
+                >
+                  <ListItemHeader padding="m" borderBottom="1px solid #eee">
+                    <Input
+                      type="search"
+                      placeholder="Search…"
+                      value={searchText}
+                      uiAction={(v) => setSearchText(v)}
+                      autoFocus
+                      expandX
+                    />
+                  </ListItemHeader>
+                  {items.map((f, i) => {
+                    const { match, ranges } = getItemMatchInfo(f);
+                    return (
+                      <ListItem
+                        key={f}
+                        index={i}
+                        id={f}
+                        value={f}
+                        selected={fruit === f}
+                        hidden={!match}
+                        highlight={ranges}
+                      >
+                        {f}
+                      </ListItem>
+                    );
+                  })}
+                </List>
+              </Select>
+            </Focus>
             <div className="value-display">{fruit ?? ""}</div>
           </div>
         );

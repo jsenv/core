@@ -12,6 +12,7 @@ import { useActionStatus } from "../action/use_action_status.js";
 import { useExecuteAction } from "../action/use_execute_action.js";
 import { Box } from "../box/box.jsx";
 import { LoaderBackground } from "../graphic/loader/loader_background.jsx";
+import { useAutoFocus } from "../utils/focus/use_auto_focus.js";
 import { useStableCallback } from "../utils/use_stable_callback.js";
 import { fieldPropSet } from "./field_prop_set.js";
 import {
@@ -20,7 +21,6 @@ import {
   reportReadOnlyToLabel,
 } from "./label.jsx";
 import { useActionEvents } from "./use_action_events.js";
-import { useAutoFocus } from "./use_auto_focus.js";
 import {
   DisabledContext,
   LoadingContext,
@@ -443,6 +443,7 @@ const InputRangeBasic = (props) => {
       baseChildPropSet={RangeChildPropSet}
       {...remainingProps}
       ref={undefined}
+      autoFocus={undefined} // See use_auto_focus.js
     >
       <LoaderBackground
         loading={innerLoading}

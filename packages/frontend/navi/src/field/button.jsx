@@ -10,9 +10,9 @@ import { getHrefTargetInfo } from "../nav/browser_integration/href_target_info.j
 import { assertRoute, useRouteStatus } from "../nav/route.js";
 import { Text, markAsOutsideTextFlow } from "../text/text.jsx";
 import { useDarkBackgroundAttribute } from "../text/use_dark_background_attribute.js";
+import { useAutoFocus } from "../utils/focus/use_auto_focus.js";
 import { FormActionContext } from "./form_context.js";
 import { useActionEvents } from "./use_action_events.js";
-import { useAutoFocus } from "./use_auto_focus.js";
 import { useFormEvents } from "./use_form_events.js";
 import {
   DisabledContext,
@@ -453,6 +453,7 @@ const ButtonBasic = (props) => {
     <Box
       data-readonly-silent={innerLoading ? "" : undefined}
       {...remainingProps}
+      autFocus={undefined} // See use_auto_focus.js
       as={as}
       href={href}
       target={innerTarget}
