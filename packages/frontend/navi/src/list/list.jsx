@@ -639,23 +639,22 @@ const useListScrollSync = ({
     }
 
     const srollItemIntoView = (itemEl) => {
+      const trigger = `"${event.type}" on ${getElementSignature(event.target)} (${reason})`;
+      const block = event.type === "keydown" ? "nearest" : "center";
+      const scrollToItemCall = `${getElementSignature(itemEl)}.scrollIntoView({ block: "${block}", container: "nearest" })`;
+      debugScroll(`${trigger} -> ${scrollToItemCall}`);
       scrollIntoViewScoped(itemEl, {
         container: ref.current,
-        block: event.type === "keydown" ? "nearest" : "center",
+        block,
       });
       dispatchPublicEvent(itemEl, "navi_list_nav", { item, event });
     };
-
-    const scrollToItemCall = `scrollToItem("${item.value}", { event: "${event.type}", reason: "${reason}" })`;
 
     const { start, end } = renderWindowRef.current;
     const isInWindow = index >= start && index < end;
     if (isInWindow) {
       const itemEl = document.getElementById(item.id);
       if (itemEl) {
-        debugScroll(
-          `${scrollToItemCall} is in render window, scrolling "${item.value}" right away`,
-        );
         srollItemIntoView(itemEl);
         return;
       }
@@ -667,20 +666,13 @@ const useListScrollSync = ({
       id: item.id,
       resolve: (itemEl) => {
         pendingScrollRef.current = null;
-        debugScroll(
-          `${scrollToItemCall} is now in DOM, scrolling "${item.value}"`,
-        );
         srollItemIntoView(itemEl);
       },
     };
     const half = Math.floor(renderBudget / 2);
     const newStart = Math.max(0, index - half);
     const newEnd = newStart + renderBudget;
-    updateRenderWindow(
-      newStart,
-      newEnd,
-      `${scrollToItemCall} is out of render window`,
-    );
+    updateRenderWindow(newStart, newEnd, `item to scroll out of render window`);
   };
 
   const currentScrollRef = useRef(null);
@@ -1116,6 +1108,10 @@ const ListWithSearch = (props) => {
           listId={listId}
           keyboardInteractions={false}
           withSearch={undefined}
+          // keyboard interactions are disabled in this variant because the search input handles them instead
+          // so we don't want autofocus on the list neither (that would be enabled by uiAction)
+          autoFocus={undefined}
+          autoFocusPreventScroll={undefined}
         />
       </ListIdContext.Provider>
     </ListWithSearchContext.Provider>

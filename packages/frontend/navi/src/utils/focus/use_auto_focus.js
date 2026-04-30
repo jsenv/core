@@ -77,16 +77,7 @@ export const useAutoFocus = (
         `[autofocus] "${e.type}" ${getElementSignature(e.target)} -> ${focusDebugCall}`,
       );
     }
-    focusableElement.focus({
-      preventScroll,
-      focusVisible,
-    });
-    // requestAnimationFrame(() => {
-    //   focusableElement.focus({
-    //     preventScroll: autoFocusPreventScroll,
-    //     focusVisible: autoFocusVisible,
-    //   });
-    // });
+    focusableElement.focus({ preventScroll, focusVisible });
     if (autoSelect) {
       focusableElement.select();
       // Keep the beginning of the text visible instead of scrolling to the end
