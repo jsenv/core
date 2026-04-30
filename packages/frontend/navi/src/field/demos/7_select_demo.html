@@ -77,7 +77,7 @@
         Box,
         ListItemGroup,
         Label,
-        Focus,
+        NaviDebug,
       } from "@jsenv/navi";
 
       // ── Demo 1: Simple list ───────────────────────────────────────────────────
@@ -99,7 +99,7 @@
             <Box flex spacing="m">
               <fieldset>
                 <legend>Navi</legend>
-                <Focus debug>
+                <NaviDebug debugFocus>
                   <Label flex spacing="s" alignY="center">
                     Color
                     <Select
@@ -147,7 +147,7 @@
                       </List>
                     </Select>
                   </Label>
-                </Focus>
+                </NaviDebug>
                 <div className="value-display">{color ?? ""}</div>
               </fieldset>
               <fieldset>
@@ -224,7 +224,7 @@
               The popover contains a search input and a filterable list.
               Selecting a fruit closes the popover automatically.
             </p>
-            <Focus debug debugScroll>
+            <NaviDebug debugFocus debugScroll>
               <Select
                 name="fruit"
                 value={fruit}
@@ -270,7 +270,7 @@
                   })}
                 </List>
               </Select>
-            </Focus>
+            </NaviDebug>
             <div className="value-display">{fruit ?? ""}</div>
           </div>
         );

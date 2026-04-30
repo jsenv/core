@@ -13,6 +13,7 @@ export { useRunOnMount } from "./src/action/use_run_on_mount.js";
 
 // for debug/testing purposes
 export { enableDebugActions } from "./src/action/actions.js";
+export { NaviDebug } from "./src/navi_debug.jsx";
 
 // state management
 export {
@@ -184,7 +185,6 @@ export { useDisplayedLayoutEffect } from "./src/utils/use_displayed_layout_effec
 export { SidePanel, useSidePanelClose } from "./src/popover/side_panel.jsx";
 
 // Focus helpers
-export { Focus } from "./src/utils/focus/focus.jsx";
 export { useFocusGroup } from "./src/utils/focus/use_focus_group.js";
 
 // Other

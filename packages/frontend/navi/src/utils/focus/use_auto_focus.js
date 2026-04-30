@@ -2,8 +2,8 @@
 
 import { getElementSignature } from "@jsenv/dom";
 
+import { useDebugFocus } from "../../navi_debug.jsx";
 import { useDisplayedLayoutEffect } from "../use_displayed_layout_effect.js";
-import { useDebugFocus } from "./focus.jsx";
 
 /**
  * Programmatic autofocus that runs after Preact layout effects are flushed.

@@ -18,8 +18,8 @@ import { Box } from "../box/box.jsx";
 import { ChevronDownSvg } from "../graphic/icons/chevron_updown_svg.jsx";
 import { LoaderBackground } from "../graphic/loader/loader_background.jsx";
 import { shortcutsViaOnKeyDown } from "../keyboard/keyboard_shortcuts.js";
+import { useDebugFocus } from "../navi_debug.jsx";
 import { Icon } from "../text/icon.jsx";
-import { useDebugFocus } from "../utils/focus/focus.jsx";
 import { useAutoFocus } from "../utils/focus/use_auto_focus.js";
 import {
   reportDisabledToLabel,
