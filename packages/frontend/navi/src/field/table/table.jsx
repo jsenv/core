@@ -55,6 +55,7 @@ import { createContext, toChildArray } from "preact";
 import { useContext, useId, useRef } from "preact/hooks";
 
 import { useKeyboardShortcuts } from "../../keyboard/keyboard_shortcuts.js";
+import { useFocusGroup } from "../../utils/focus/use_focus_group.js";
 import { createIsolatedItemTracker } from "../../utils/item_tracker/isolated_item_tracker.jsx";
 import { useItemTracker } from "../../utils/item_tracker/use_item_tracker.js";
 import { withPropsClassName } from "../../utils/with_props_class_name.js";
@@ -63,7 +64,6 @@ import {
   createSelectionKeyboardShortcuts,
   useSelectableElement,
 } from "../selection/selection.jsx";
-import { useFocusGroup } from "../use_focus_group.js";
 import {
   initDragTableColumnViaPointer,
   TableColumnDropPreview,

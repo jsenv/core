@@ -184,7 +184,7 @@ export { useDisplayedLayoutEffect } from "./src/utils/use_displayed_layout_effec
 export { SidePanel, useSidePanelClose } from "./src/popover/side_panel.jsx";
 
 // Other
-export { useFocusGroup } from "./src/field/use_focus_group.js";
+export { useFocusGroup } from "./src/utils/focus/use_focus_group.js";
 export { useDependenciesDiff } from "./src/utils/use_dependencies_diff.js";
 
 // Keyboard

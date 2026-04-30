@@ -2,7 +2,7 @@
 
 import { getElementSignature } from "@jsenv/dom";
 
-import { useDisplayedLayoutEffect } from "../utils/use_displayed_layout_effect.js";
+import { useDisplayedLayoutEffect } from "../use_displayed_layout_effect.js";
 
 /**
  * Programmatic autofocus that runs after Preact layout effects are flushed.
