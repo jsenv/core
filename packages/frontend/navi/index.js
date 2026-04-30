@@ -124,7 +124,6 @@ export { Input } from "./src/field/input.jsx";
 export { Label } from "./src/field/label.jsx";
 export { Radio, RadioList } from "./src/field/radio_list.jsx";
 export { Select } from "./src/field/select.jsx";
-export { SelectUIActionContext } from "./src/field/select_context.js";
 // Table start
 export {
   filterTableSelection,

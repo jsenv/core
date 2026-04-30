@@ -24,7 +24,6 @@ import {
   reportInteractiveToLabel,
   reportReadOnlyToLabel,
 } from "./label.jsx";
-import { SelectUIActionContext } from "./select_context.js";
 import { useActionEvents } from "./use_action_events.js";
 import { useAutoFocus } from "./use_auto_focus.js";
 import {
@@ -212,8 +211,10 @@ export const Select = (props) => {
   );
 };
 
+export const SelectUIActionContext = createContext(null);
+export const SelectPlaceholderContext = createContext();
 const SelectValueContext = createContext(null);
-const SelectPlaceholderContext = createContext("Select…");
+
 const SelectUI = (props) => {
   let {
     placeholder = "Select…",
@@ -285,15 +286,15 @@ const SelectUI = (props) => {
         color="var(--loader-color)"
         inset={-1}
       />
+      <input type="hidden" name={name} value={value} />
       <SelectPlaceholderContext.Provider value={placeholder}>
         <SelectValueContext.Provider value={value}>
           {trigger}
         </SelectValueContext.Provider>
+        <SelectUIActionContext.Provider value={uiAction}>
+          {children}
+        </SelectUIActionContext.Provider>
       </SelectPlaceholderContext.Provider>
-      <input type="hidden" name={name} value={value} />
-      <SelectUIActionContext.Provider value={uiAction}>
-        {children}
-      </SelectUIActionContext.Provider>
     </Box>
   );
 };
