@@ -67,14 +67,12 @@ const css = /* css */ `
 
   .navi_select {
     position: relative;
-    display: inline-flex;
     box-sizing: border-box;
     padding: var(--padding);
-    align-items: center;
-    gap: 6px;
+    gap: 6px; /* Space between placeholder and icon */
     color: var(--color);
     font-size: var(--font-size);
-    text-align: left;
+    text-align: inherit; /* override browser defaults on button which is center */
     background-color: var(--background-color);
     border: var(--border-width) solid transparent;
     border-radius: var(--border-radius);
@@ -105,8 +103,10 @@ const css = /* css */ `
     }
 
     .navi_select_trigger_text {
+      display: inline-flex;
       min-width: 0;
       flex: 1;
+      flex-direction: column;
       text-overflow: ellipsis;
       white-space: nowrap;
       overflow: hidden;
@@ -119,11 +119,10 @@ const css = /* css */ `
       color: var(--placeholder-color);
 
       &[hidden] {
-        display: block;
+        display: inline-block;
         height: 0;
         padding-block: 0;
-        line-height: 0;
-        overflow: hidden;
+        visibility: hidden;
       }
     }
     .navi_select_trigger_icon {
