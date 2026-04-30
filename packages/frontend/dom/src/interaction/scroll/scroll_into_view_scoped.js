@@ -62,12 +62,21 @@ export const scrollIntoViewScoped = (
   } else if (block === "center") {
     newScrollTop = elTop + (elRect.height - containerHeight) / 2;
   } else {
-    // nearest: scroll only if partially or fully out of view
+    // nearest: scroll only if partially or fully out of view.
+    // When the element is taller than the container, only scroll if it is
+    // completely out of view — otherwise it is already as visible as possible.
     const scrollBottom = currentScrollTop + containerHeight;
-    if (elTop < currentScrollTop) {
-      newScrollTop = elTop;
-    } else if (elBottom > scrollBottom) {
+    const elHeight = elBottom - elTop;
+    if (elHeight <= containerHeight) {
+      if (elTop < currentScrollTop) {
+        newScrollTop = elTop;
+      } else if (elBottom > scrollBottom) {
+        newScrollTop = elBottom - containerHeight;
+      }
+    } else if (elBottom < currentScrollTop) {
       newScrollTop = elBottom - containerHeight;
+    } else if (elTop > scrollBottom) {
+      newScrollTop = elTop;
     }
   }
 
@@ -79,12 +88,21 @@ export const scrollIntoViewScoped = (
   } else if (inline === "center") {
     newScrollLeft = elLeft + (elRect.width - containerWidth) / 2;
   } else {
-    // nearest
+    // nearest: scroll only if partially or fully out of view.
+    // When the element is wider than the container, only scroll if it is
+    // completely out of view — otherwise it is already as visible as possible.
     const scrollRight = currentScrollLeft + containerWidth;
-    if (elLeft < currentScrollLeft) {
-      newScrollLeft = elLeft;
-    } else if (elRight > scrollRight) {
+    const elWidth = elRight - elLeft;
+    if (elWidth <= containerWidth) {
+      if (elLeft < currentScrollLeft) {
+        newScrollLeft = elLeft;
+      } else if (elRight > scrollRight) {
+        newScrollLeft = elRight - containerWidth;
+      }
+    } else if (elRight < currentScrollLeft) {
       newScrollLeft = elRight - containerWidth;
+    } else if (elLeft > scrollRight) {
+      newScrollLeft = elLeft;
     }
   }
 
