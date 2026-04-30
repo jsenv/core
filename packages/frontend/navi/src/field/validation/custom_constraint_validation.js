@@ -610,7 +610,9 @@ export const installCustomConstraintValidation = (
   }
 
   request_on_enter: {
-    if (element.tagName !== "INPUT") {
+    const isNaviSelect =
+      element.tagName === "BUTTON" && element.classList.contains("navi_select");
+    if (element.tagName !== "INPUT" && !isNaviSelect) {
       // maybe we want it too for checkboxes etc, we'll see
       break request_on_enter;
     }
@@ -640,6 +642,11 @@ export const installCustomConstraintValidation = (
             keydownTarget.type !== "submit" &&
             keydownTarget.type !== "image"
           ) {
+            // navi_select acts like a native <select>: Enter on the closed select
+            // triggers form submission rather than toggling the popover.
+            if (isNaviSelect) {
+              return getFirstButtonSubmittingForm(form) || keydownTarget;
+            }
             return null;
           }
           return keydownTarget;
@@ -668,6 +675,8 @@ export const installCustomConstraintValidation = (
       const formSubmitTarget =
         determineClosestFormSubmitTargetForEnterKeyEvent();
       if (formSubmitTarget) {
+        // preventDefault on keydown prevents the browser from firing a synthetic
+        // click on the button, so request_on_button_click won't double-fire.
         keydownEvent.preventDefault();
       }
       dispatchActionRequestedCustomEvent(elementWithAction, {
@@ -707,14 +716,6 @@ export const installCustomConstraintValidation = (
           button.type === "submit" || button.type === "image";
         if (wouldSubmitFormByType) {
           return button;
-        }
-        // A navi_select acts like a native <select>: pressing Enter on a closed
-        // select triggers form submission. The browser fires a click event with
-        // detail === 0 (keyboard-triggered) for Enter on a button.
-        const isNaviSelect = button.classList.contains("navi_select");
-        const isEnterTriggeredClick = clickEvent.detail === 0;
-        if (isNaviSelect && isEnterTriggeredClick) {
-          return getFirstButtonSubmittingForm(form) || button;
         }
         if (button.type) {
           // "reset", "button" or any other non submit type, it won't submit the form

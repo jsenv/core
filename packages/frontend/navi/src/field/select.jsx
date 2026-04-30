@@ -539,7 +539,10 @@ const SelectWithPopover = (props) => {
           }
         }}
         onClick={(e) => {
-          debugFocus(`select click.preventDefault()`, document.activeElement);
+          if (e.detail === 0) {
+            // click triggered by enter won't open the popover
+            return;
+          }
           // When a label is clicked it transfers focus to the select, in that case we want to open it
           openPopover(e);
         }}
