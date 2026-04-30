@@ -708,6 +708,14 @@ export const installCustomConstraintValidation = (
         if (wouldSubmitFormByType) {
           return button;
         }
+        // A navi_select acts like a native <select>: pressing Enter on a closed
+        // select triggers form submission. The browser fires a click event with
+        // detail === 0 (keyboard-triggered) for Enter on a button.
+        const isNaviSelect = button.classList.contains("navi_select");
+        const isEnterTriggeredClick = clickEvent.detail === 0;
+        if (isNaviSelect && isEnterTriggeredClick) {
+          return getFirstButtonSubmittingForm(form) || button;
+        }
         if (button.type) {
           // "reset", "button" or any other non submit type, it won't submit the form
           return null;

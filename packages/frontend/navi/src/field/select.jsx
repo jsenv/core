@@ -275,6 +275,19 @@ const SelectUI = (props) => {
     preventScroll: autoFocusPreventScroll,
   });
 
+  // Re-run constraint validation when value changes (e.g. required constraint reads data-navi-value)
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) {
+      return;
+    }
+    const validationInterface = el.__validationInterface__;
+    if (!validationInterface) {
+      return;
+    }
+    validationInterface.checkValidity();
+  }, [value]);
+
   if (trigger === undefined) {
     trigger = <SelectTrigger />;
   }
@@ -285,6 +298,7 @@ const SelectUI = (props) => {
       {...remainingProps}
       baseClassName="navi_select"
       autoFocus={undefined} // See use_auto_focus.js
+      data-navi-value={value || undefined}
       styleCSSVars={SelectStyleCSSVars}
       basePseudoState={{
         ...remainingProps.basePseudoState,

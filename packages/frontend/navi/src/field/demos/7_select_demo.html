@@ -483,6 +483,65 @@
         );
       };
 
+      // ── Demo 6: Constraint validation (required) ─────────────────────────────
+
+      const Demo6 = () => {
+        const [country, setCountry] = useState(null);
+        const [submitted, setSubmitted] = useState(null);
+        return (
+          <div className="demo-section">
+            <h2>Demo 6 — Required constraint</h2>
+            <p>
+              A <code>required</code> select blocks form submission until a
+              value is picked. Pressing Enter on the closed select also triggers
+              form validation (just like a native <code>&lt;select&gt;</code>).
+            </p>
+            <Form
+              action={(data) => {
+                setSubmitted(data);
+              }}
+            >
+              <Box flex="y" spacing="m" alignX="start">
+                <Label flex spacing="s" alignY="center">
+                  Country
+                  <Select
+                    name="country"
+                    value={country}
+                    placeholder="Pick a country…"
+                    required
+                  >
+                    <List
+                      uiAction={(v) => setCountry(v)}
+                      listRole="listbox"
+                      border="none"
+                      expandX
+                    >
+                      {COUNTRIES.map((c, i) => (
+                        <ListItem
+                          key={c}
+                          index={i}
+                          id={c}
+                          value={c}
+                          selected={country === c}
+                        >
+                          {c}
+                        </ListItem>
+                      ))}
+                    </List>
+                  </Select>
+                </Label>
+                <Button type="submit">Submit</Button>
+              </Box>
+              {submitted && (
+                <div className="value-display">
+                  {JSON.stringify(submitted, null, 2)}
+                </div>
+              )}
+            </Form>
+          </div>
+        );
+      };
+
       // ── App ───────────────────────────────────────────────────────────────────
 
       const App = () => {
@@ -493,6 +552,7 @@
             <Demo3 />
             <Demo4 />
             <Demo5 />
+            <Demo6 />
           </div>
         );
       };
