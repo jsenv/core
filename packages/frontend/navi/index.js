@@ -182,8 +182,10 @@ export { Separator } from "./src/layout/separator.jsx";
 export { ViewportLayout } from "./src/layout/viewport_layout.jsx";
 export { useDisplayedLayoutEffect } from "./src/utils/use_displayed_layout_effect.js";
 
-// Popover (callout, dialogs, ...)
-export { SidePanel, useSidePanelClose } from "./src/popover/side_panel.jsx";
+// popup (popover, dialog, tooltip, side panel ...)
+export { Dialog } from "./src/popup/dialog.jsx";
+export { Popover } from "./src/popup/popover.jsx";
+export { SidePanel, useSidePanelClose } from "./src/popup/side_panel.jsx";
 
 // Focus helpers
 export { useFocusGroup } from "./src/utils/focus/use_focus_group.js";

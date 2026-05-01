@@ -16,12 +16,12 @@ import {
   Dialog,
   requestDialogClose,
   requestDialogOpen,
-} from "../popover/dialog.jsx";
+} from "../popup/dialog.jsx";
 import {
   Popover,
   requestPopoverClose,
   requestPopoverOpen,
-} from "../popover/popover.jsx";
+} from "../popup/popover.jsx";
 import { Icon } from "../text/icon.jsx";
 import { useAutoFocus } from "../utils/focus/use_auto_focus.js";
 import {
@@ -621,7 +621,9 @@ const SelectWithDialog = (props) => {
     });
   };
   const requestClose = (e) => {
-    return requestDialogClose(dialogRef.current, { event: e });
+    return requestDialogClose(dialogRef.current, {
+      event: e,
+    });
   };
   const moveFocusToSelect = (e) => {
     debugFocus(`moveFocusToSelect("${e.type}")`);
@@ -659,16 +661,11 @@ const SelectWithDialog = (props) => {
       }}
       onnavi_list_select={(e) => {
         const { event } = e.detail;
-        if (event.type === "mousedown") {
-          event.preventDefault(); // prevent browser trying to give focus to the list item
-          debugFocus(`listItem mousedown.preventDefault()`);
-        }
         if (event.key === " ") {
           // space can open the dialog, we don't want space to propagate to the select otherwise it would open it back immediately
           event.stopPropagation();
         }
         requestClose(e);
-        moveFocusToSelect(e);
       }}
       {...rest}
       onKeyDown={shortcutsViaOnKeyDown(
