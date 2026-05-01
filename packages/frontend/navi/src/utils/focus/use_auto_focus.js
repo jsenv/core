@@ -62,11 +62,6 @@ export const useAutoFocus = (
     if (!focusableElement) {
       return () => {};
     }
-    const isWithinDialog = focusableElement.closest("dialog");
-    if (isWithinDialog && focusableElement.hasAttribute("autofocus")) {
-      // let dialog manage autofocus
-      return () => {};
-    }
 
     const activeElement = document.activeElement;
     const focusDebugCall = `${getElementSignature(focusableElement)}.focus({ preventScroll: ${preventScroll} })`;
