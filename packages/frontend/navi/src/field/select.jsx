@@ -252,6 +252,7 @@ export const SelectPlaceholderContext = createContext();
 const SelectValueContext = createContext(null);
 
 const SelectUI = (props) => {
+  import.meta.css = css;
   let {
     placeholder = "Select…",
     trigger,
@@ -266,8 +267,6 @@ const SelectUI = (props) => {
 
     ...rest
   } = props;
-
-  import.meta.css = css;
   const contextReadOnly = useContext(ReadOnlyContext);
   const contextDisabled = useContext(DisabledContext);
   const contextLoading = useContext(LoadingContext);
