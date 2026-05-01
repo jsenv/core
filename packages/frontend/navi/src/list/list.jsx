@@ -1874,6 +1874,20 @@ export const requestListInteractionStateReset = (listElement, { event }) => {
     }),
   );
 };
+export const requestListOpen = (listElement, { anchor, event }) => {
+  return listElement.dispatchEvent(
+    new CustomEvent("navi_list_request_open", {
+      detail: { anchor, event },
+    }),
+  );
+};
+export const requestListClose = (listElement, { event }) => {
+  return listElement.dispatchEvent(
+    new CustomEvent("navi_list_request_close", {
+      detail: { event },
+    }),
+  );
+};
 
 // Dispatches a navi event bubbling from the current event target element.
 const dispatchCustomEvent = (el, customEventName, customEventDetail) => {

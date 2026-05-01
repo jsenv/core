@@ -41,8 +41,10 @@ import { LoaderBackground } from "../graphic/loader/loader_background.jsx";
 import { shortcutsViaOnKeyDown } from "../keyboard/keyboard_shortcuts.js";
 import {
   ListIdContext,
+  requestListClose,
   requestListInteractionStateReset,
   requestListNavFromCurrent,
+  requestListOpen,
   requestListSelectCurrent,
   useIsInsideListWithSearch,
 } from "../list/list.jsx";
@@ -714,55 +716,46 @@ const InputTextualWithSuggestions = ({
     expandedRef.current = false;
     setExpanded(false);
   };
-
   const getListEl = () => {
     return document.getElementById(suggestions);
   };
-  const dispatchToList = (event, customEventName, customEventDetail) => {
-    const listEl = getListEl();
-    if (!listEl) {
-      return false;
-    }
-    return listEl.dispatchEvent(
-      new CustomEvent(customEventName, {
-        detail: { event, anchor: ref.current },
-        ...customEventDetail,
-      }),
-    );
-  };
-
   const showSuggestions = (e) => {
     if (expandedRef.current) {
       return;
     }
-    dispatchToList(e, "navi_list_request_open", {
-      detail: { anchor: ref.current },
-    });
-    expand();
+    const listEl = getListEl();
+    if (listEl) {
+      requestListOpen(listEl, { event: e, anchor: ref.current });
+      expand();
+    }
   };
-
   const hideSuggestions = (e) => {
     if (!expandedRef.current) {
       return;
     }
-    dispatchToList(e, "navi_list_request_close");
-    collapse();
+    const listEl = getListEl();
+    if (!listEl) {
+      requestListClose(listEl, { event: e });
+      collapse();
+    }
   };
 
   useEffect(() => {
     const inputEl = ref.current;
-    const suggestionEl = document.getElementById(suggestions);
-    if (!suggestionEl) {
+    const listEl = getListEl();
+    if (!listEl) {
       return undefined;
     }
     const onSelect = (e) => {
-      inputEl.value = e.detail.item.value;
+      const { item } = e.detail;
+      const { value } = item;
+      inputEl.value = value;
       inputEl.dispatchEvent(new Event("input", { bubbles: true }));
       hideSuggestions(e);
     };
-    suggestionEl.addEventListener("navi_list_select", onSelect);
+    listEl.addEventListener("navi_list_select", onSelect);
     return () => {
-      suggestionEl.removeEventListener("navi_list_select", onSelect);
+      listEl.removeEventListener("navi_list_select", onSelect);
     };
   }, [suggestions]);
 
