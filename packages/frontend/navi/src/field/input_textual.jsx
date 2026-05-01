@@ -26,7 +26,6 @@ import {
   useState,
 } from "preact/hooks";
 
-import { renderActionableComponent } from "../action/render_actionable_component.jsx";
 import { useActionBoundToOneParam } from "../action/use_action.js";
 import { useActionStatus } from "../action/use_action_status.js";
 import { useExecuteAction } from "../action/use_execute_action.js";
@@ -290,11 +289,21 @@ const css = /* css */ `
 export const InputTextual = (props) => {
   const uiStateController = useUIStateController(props, "input");
   const uiState = useUIState(uiStateController);
+  const listIdFromContext = useContext(ListIdContext);
 
-  const input = renderActionableComponent(props, {
-    Basic: InputTextualBasic,
-    WithAction: InputTextualWithAction,
-  });
+  let input;
+  if (props.action) {
+    input = <InputTextualWithAction {...props} />;
+  } else if (listIdFromContext) {
+    input = <InputControllingList listId={listIdFromContext} {...props} />;
+  } else if (props.listId) {
+    input = <InputControllingList {...props} />;
+  } else if (props.suggestions) {
+    input = <InputTextualWithSuggestions {...props} />;
+  } else {
+    input = <InputTextualUI {...props} />;
+  }
+
   return (
     <UIStateControllerContext.Provider value={uiStateController}>
       <UIStateContext.Provider value={uiState}>{input}</UIStateContext.Provider>
@@ -303,17 +312,6 @@ export const InputTextual = (props) => {
 };
 
 const InputNativeContext = createContext(null);
-
-const InputTextualBasic = (props) => {
-  const listId = useContext(ListIdContext);
-  if (listId) {
-    return <InputControllingList listId={listId} {...props} />;
-  }
-  if (props.suggestions) {
-    return <InputTextualWithSuggestions {...props} />;
-  }
-  return <InputTextualUI {...props} />;
-};
 const InputTextualUI = (props) => {
   const {
     type,
@@ -637,56 +635,58 @@ const InputControllingList = ({ listId, onKeyDown, ...props }) => {
   };
 
   return (
-    <InputTextualUI
-      aria-controls={listId}
-      aria-autocomplete="list"
-      aria-has-popup="listbox"
-      type="search"
-      autoComplete="off"
-      {...props}
-      listId={undefined}
-      onKeyDown={shortcutsViaOnKeyDown(
-        {
-          arrowdown: (e) => {
-            return forwardToList(e, requestListNavFromCurrent, {
-              goal: "down",
-            });
+    <ListIdContext.Provider value={null}>
+      <InputTextual
+        aria-controls={listId}
+        aria-autocomplete="list"
+        aria-has-popup="listbox"
+        type="search"
+        autoComplete="off"
+        {...props}
+        listId={undefined}
+        onKeyDown={shortcutsViaOnKeyDown(
+          {
+            arrowdown: (e) => {
+              return forwardToList(e, requestListNavFromCurrent, {
+                goal: "down",
+              });
+            },
+            arrowup: (e) => {
+              return forwardToList(e, requestListNavFromCurrent, {
+                goal: "up",
+              });
+            },
+            home: (e) => {
+              return forwardToList(e, requestListNavFromCurrent, {
+                goal: "first",
+              });
+            },
+            end: (e) => {
+              return forwardToList(e, requestListNavFromCurrent, {
+                goal: "last",
+              });
+            },
+            enter: (e) => {
+              return forwardToList(e, requestListSelectCurrent);
+            },
+            escape: (e) => {
+              // prevent escape from reaching eventual <select> ancestor
+              // when the escape is meant to clear the search input (otherwise it would close the select too)
+              debugger;
+              if (
+                e.currentTarget.type === "search" &&
+                e.currentTarget.value !== ""
+              ) {
+                e.stopPropagation();
+              }
+              return forwardToList(e, requestListInteractionStateReset);
+            },
           },
-          arrowup: (e) => {
-            return forwardToList(e, requestListNavFromCurrent, {
-              goal: "up",
-            });
-          },
-          home: (e) => {
-            return forwardToList(e, requestListNavFromCurrent, {
-              goal: "first",
-            });
-          },
-          end: (e) => {
-            return forwardToList(e, requestListNavFromCurrent, {
-              goal: "last",
-            });
-          },
-          enter: (e) => {
-            return forwardToList(e, requestListSelectCurrent);
-          },
-          escape: (e) => {
-            // prevent escape from reaching eventual <select> ancestor
-            // when the escape is meant to clear the search input (otherwise it would close the select too)
-            debugger;
-            if (
-              e.currentTarget.type === "search" &&
-              e.currentTarget.value !== ""
-            ) {
-              e.stopPropagation();
-            }
-            return forwardToList(e, requestListInteractionStateReset);
-          },
-        },
-        onKeyDown,
-      )}
-      ref={ref}
-    />
+          onKeyDown,
+        )}
+        ref={ref}
+      />
+    </ListIdContext.Provider>
   );
 };
 
@@ -756,8 +756,7 @@ const InputTextualWithSuggestions = ({
   }, [suggestions]);
 
   return (
-    <InputControllingList
-      listId={suggestions}
+    <InputTextual
       role="combobox"
       aria-haspopup="listbox"
       aria-expanded={expanded}
@@ -769,6 +768,8 @@ const InputTextualWithSuggestions = ({
         hideSuggestions(e);
       }}
       {...rest}
+      listId={suggestions}
+      suggestions={undefined}
       onFocus={(e) => {
         onFocus?.(e);
         showSuggestions(e);
@@ -816,7 +817,7 @@ const InputTextualWithSuggestions = ({
           </Icon>
         </InputRightSlot>
       )}
-    </InputControllingList>
+    </InputTextual>
   );
 };
 
@@ -880,12 +881,13 @@ const InputTextualWithAction = (props) => {
   });
 
   return (
-    <InputTextualBasic
+    <InputTextual
       data-action={boundAction.name || "anonymous"}
       data-action-debounce={actionDebounce}
       data-action-after-change={actionAfterChange ? "" : undefined}
       {...rest}
       ref={ref}
+      action={undefined}
       loading={loading || actionLoading}
     />
   );
