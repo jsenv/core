@@ -425,10 +425,8 @@ const SelectTrigger = () => {
 
 // SelectWithPopover — trigger + popover anchored below the trigger.
 const SelectWithPopover = (props) => {
-  let { disabled, onKeyDown, children, ...rest } = props;
+  const { ref, disabled, onKeyDown, children, scrollTrap, ...rest } = props;
   const debugFocus = useDebugFocus();
-  const defaultRef = useRef();
-  const ref = rest.ref || defaultRef;
   const popoverRef = useRef(null);
   const popoverId = useId();
   const [expanded, setExpanded] = useState(false);
@@ -501,6 +499,7 @@ const SelectWithPopover = (props) => {
         requestClose(e);
         moveFocusToSelect(e);
       }}
+      {...rest}
       onKeyDown={shortcutsViaOnKeyDown(
         {
           arrowdown: (e) => {
@@ -526,7 +525,6 @@ const SelectWithPopover = (props) => {
         },
         onKeyDown,
       )}
-      {...rest}
       ref={ref}
       mode="ui"
     >
@@ -546,6 +544,7 @@ const SelectWithPopover = (props) => {
           onClose(e);
           moveFocusToSelect(e);
         }}
+        scrollTrap={scrollTrap}
       >
         {children}
       </Popover>
@@ -554,10 +553,8 @@ const SelectWithPopover = (props) => {
 };
 // SelectWithDialog — trigger + centered modal dialog.
 const SelectWithDialog = (props) => {
-  let { disabled, onKeyDown, children, ...rest } = props;
+  let { ref, disabled, onKeyDown, children, ...rest } = props;
   const debugFocus = useDebugFocus();
-  const defaultRef = useRef();
-  const ref = rest.ref || defaultRef;
   const dialogRef = useRef(null);
   const dialogId = useId();
   const [expanded, setExpanded] = useState(false);
@@ -642,6 +639,7 @@ const SelectWithDialog = (props) => {
         closeDialog(e);
         moveFocusToSelect(e);
       }}
+      {...rest}
       onKeyDown={shortcutsViaOnKeyDown(
         {
           arrowdown: (e) => {
@@ -668,7 +666,6 @@ const SelectWithDialog = (props) => {
         },
         onKeyDown,
       )}
-      {...rest}
       ref={ref}
       mode="ui"
     >
