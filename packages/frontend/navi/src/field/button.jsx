@@ -510,7 +510,7 @@ const ButtonWithRoute = ({ route, routeParams, children, ...rest }) => {
       routeParams={undefined}
     >
       {children || route.buildRelativeUrl(routeParams)}
-    </Button>
+    </ButtonDispatcher>
   );
 };
 const ButtonWithAction = (props) => {
@@ -626,6 +626,6 @@ const ButtonWithActionInsideForm = (props) => {
       }}
     >
       {children}
-    </Button>
+    </ButtonDispatcher>
   );
 };
