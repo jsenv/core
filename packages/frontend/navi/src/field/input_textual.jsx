@@ -289,26 +289,32 @@ const css = /* css */ `
 export const InputTextual = (props) => {
   const uiStateController = useUIStateController(props, "input");
   const uiState = useUIState(uiStateController);
-  const listIdFromContext = useContext(ListIdContext);
-
-  let input;
-  if (props.action) {
-    input = <InputTextualWithAction {...props} />;
-  } else if (listIdFromContext) {
-    input = <InputControllingList listId={listIdFromContext} {...props} />;
-  } else if (props.listId) {
-    input = <InputControllingList {...props} />;
-  } else if (props.suggestions) {
-    input = <InputTextualWithSuggestions {...props} />;
-  } else {
-    input = <InputTextualUI {...props} />;
-  }
 
   return (
     <UIStateControllerContext.Provider value={uiStateController}>
-      <UIStateContext.Provider value={uiState}>{input}</UIStateContext.Provider>
+      <UIStateContext.Provider value={uiState}>
+        <InputTextualDispatcher {...props} />
+      </UIStateContext.Provider>
     </UIStateControllerContext.Provider>
   );
+};
+
+const InputTextualDispatcher = (props) => {
+  const listIdFromContext = useContext(ListIdContext);
+
+  if (props.action) {
+    return <InputTextualWithAction {...props} />;
+  }
+  if (listIdFromContext) {
+    return <InputControllingList listId={listIdFromContext} {...props} />;
+  }
+  if (props.listId) {
+    return <InputControllingList {...props} />;
+  }
+  if (props.suggestions) {
+    return <InputTextualWithSuggestions {...props} />;
+  }
+  return <InputTextualUI {...props} />;
 };
 
 const InputNativeContext = createContext(null);
@@ -636,7 +642,7 @@ const InputControllingList = ({ listId, onKeyDown, ...props }) => {
 
   return (
     <ListIdContext.Provider value={null}>
-      <InputTextual
+      <InputTextualDispatcher
         aria-controls={listId}
         aria-autocomplete="list"
         aria-has-popup="listbox"
@@ -756,68 +762,69 @@ const InputTextualWithSuggestions = ({
   }, [suggestions]);
 
   return (
-    <InputTextual
-      role="combobox"
-      aria-haspopup="listbox"
-      aria-expanded={expanded}
-      aria-autocomplete="list"
-      basePseudoState={{
-        ":-navi-expanded": expanded,
-      }}
-      onnavi_callout_open={(e) => {
-        hideSuggestions(e);
-      }}
-      {...rest}
-      listId={suggestions}
-      suggestions={undefined}
-      onFocus={(e) => {
-        onFocus?.(e);
-        showSuggestions(e);
-      }}
-      onBlur={(e) => {
-        onBlur?.(e);
-        hideSuggestions(e);
-      }}
-      onInput={(e) => {
-        onInput?.(e);
-        showSuggestions(e);
-      }}
-      onKeyDown={shortcutsViaOnKeyDown(
-        {
-          arrowdown: (e) => {
-            showSuggestions(e);
-          },
-          arrowup: (e) => {
-            showSuggestions(e);
-          },
-          escape: (e) => {
-            if (!expandedRef.current) {
-              return false;
-            }
-            hideSuggestions(e);
-            return true;
-          },
-        },
-        onKeyDown,
-      )}
-      ref={ref}
-    >
-      {children || (
-        <InputRightSlot
-          onClick={(e) => {
-            if (expanded) {
-              hideSuggestions(e);
-            } else {
+    <ListIdContext.Provider value={suggestions}>
+      <InputTextualDispatcher
+        role="combobox"
+        aria-haspopup="listbox"
+        aria-expanded={expanded}
+        aria-autocomplete="list"
+        basePseudoState={{
+          ":-navi-expanded": expanded,
+        }}
+        onnavi_callout_open={(e) => {
+          hideSuggestions(e);
+        }}
+        {...rest}
+        suggestions={undefined}
+        onFocus={(e) => {
+          onFocus?.(e);
+          showSuggestions(e);
+        }}
+        onBlur={(e) => {
+          onBlur?.(e);
+          hideSuggestions(e);
+        }}
+        onInput={(e) => {
+          onInput?.(e);
+          showSuggestions(e);
+        }}
+        onKeyDown={shortcutsViaOnKeyDown(
+          {
+            arrowdown: (e) => {
               showSuggestions(e);
-            }
-          }}
-        >
-          <Icon color="rgba(28, 43, 52, 0.5)">
-            <ChevronDownSvg />
-          </Icon>
-        </InputRightSlot>
-      )}
-    </InputTextual>
+            },
+            arrowup: (e) => {
+              showSuggestions(e);
+            },
+            escape: (e) => {
+              if (!expandedRef.current) {
+                return false;
+              }
+              hideSuggestions(e);
+              return true;
+            },
+          },
+          onKeyDown,
+        )}
+        ref={ref}
+      >
+        {children || (
+          <InputRightSlot
+            onClick={(e) => {
+              if (expanded) {
+                hideSuggestions(e);
+              } else {
+                showSuggestions(e);
+              }
+            }}
+          >
+            <Icon color="rgba(28, 43, 52, 0.5)">
+              <ChevronDownSvg />
+            </Icon>
+          </InputRightSlot>
+        )}
+      </InputTextualDispatcher>
+    </ListIdContext.Provider>
   );
 };
 
@@ -881,7 +888,7 @@ const InputTextualWithAction = (props) => {
   });
 
   return (
-    <InputTextual
+    <InputTextualDispatcher
       data-action={boundAction.name || "anonymous"}
       data-action-debounce={actionDebounce}
       data-action-after-change={actionAfterChange ? "" : undefined}

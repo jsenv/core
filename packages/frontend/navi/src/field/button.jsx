@@ -315,28 +315,6 @@ export const Button = (props) => {
   }
   return <ButtonUI {...props} />;
 };
-const ButtonWithRoute = ({ route, routeParams, children, ...rest }) => {
-  if (import.meta.dev) {
-    assertRoute(route);
-  }
-  const url = route.buildUrl(routeParams);
-  const { matching } = useRouteStatus(route);
-  const paramsAreMatching = route.matchesParams(routeParams);
-  const linkMatching = matching && paramsAreMatching;
-
-  return (
-    <Button
-      href={url}
-      data-href-current={linkMatching ? "" : undefined}
-      {...rest}
-      route={undefined}
-      routeParams={undefined}
-    >
-      {children || route.buildRelativeUrl(routeParams)}
-    </Button>
-  );
-};
-
 const ButtonUI = (props) => {
   const {
     readOnly,
@@ -510,6 +488,27 @@ const ButtonShadow = () => {
 };
 markAsOutsideTextFlow(ButtonShadow);
 
+const ButtonWithRoute = ({ route, routeParams, children, ...rest }) => {
+  if (import.meta.dev) {
+    assertRoute(route);
+  }
+  const url = route.buildUrl(routeParams);
+  const { matching } = useRouteStatus(route);
+  const paramsAreMatching = route.matchesParams(routeParams);
+  const linkMatching = matching && paramsAreMatching;
+
+  return (
+    <Button
+      href={url}
+      data-href-current={linkMatching ? "" : undefined}
+      {...rest}
+      route={undefined}
+      routeParams={undefined}
+    >
+      {children || route.buildRelativeUrl(routeParams)}
+    </Button>
+  );
+};
 const ButtonWithAction = (props) => {
   const {
     action,
