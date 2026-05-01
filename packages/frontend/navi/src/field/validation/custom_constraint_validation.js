@@ -283,9 +283,6 @@ export const installCustomConstraintValidation = (
   if (debug) {
     console.debug(`installCustomConstraintValidation on`, element);
   }
-  if (element.tagName === "INPUT" && element.type === "hidden") {
-    elementReceivingValidationMessage = element.form || document.body;
-  }
 
   const validationInterface = {
     uninstall: undefined,
@@ -516,10 +513,17 @@ export const installCustomConstraintValidation = (
         failedConstraintInfo.target || elementReceivingValidationMessage;
       const renderedBy = base.getAttribute("data-rendered-by");
       if (renderedBy) {
-        return base.closest(renderedBy) || base;
+        const renderedByElement = base.closest(renderedBy);
+        if (renderedByElement) {
+          return renderedByElement;
+        }
+      }
+      if (base.tagName === "INPUT" && base.type === "hidden") {
+        return base.form || document.body;
       }
       return base;
     })();
+
     validationInterface.validationMessage = openCallout(
       failedConstraintInfo.message,
       {

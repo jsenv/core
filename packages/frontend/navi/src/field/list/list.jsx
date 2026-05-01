@@ -181,6 +181,10 @@ const css = /* css */ `
       opacity: 0;
       pointer-events: none;
     }
+    &[data-callout] {
+      --x-border-color: var(--callout-color);
+      --x-outline-color: var(--callout-color);
+    }
   }
 
   .navi_list {
@@ -503,7 +507,6 @@ const ListUI = (props) => {
   });
 
   const ulRef = useRef(null);
-  const remainingProps = useConstraints(ref, rest);
   const {
     virtualItemHeightSignal,
     renderWindow,
@@ -557,6 +560,9 @@ const ListUI = (props) => {
     children,
   ]);
 
+  const inputRef = useRef(null);
+  const remainingProps = useConstraints(inputRef, rest);
+
   return (
     <Box
       {...remainingProps}
@@ -597,11 +603,13 @@ const ListUI = (props) => {
     >
       {name && (
         <input
+          ref={inputRef}
           id={hiddenInputId}
           type="hidden"
           name={name}
           value={value}
           required={required}
+          data-rendered-by=".navi_list_container"
         />
       )}
       {renderListMemoized}
