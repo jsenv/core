@@ -1212,12 +1212,10 @@ const ListWithAction = (props) => {
     uiAction?.(value, event);
     // Dispatch action request so useActionEvents can pick it up
     if (ref && ref.current) {
-      ref.current.dispatchEvent(
-        new CustomEvent("navi_action_requested", {
-          bubbles: true,
-          detail: { value },
-        }),
-      );
+      dispatchCustomEvent(ref.current, "navi_action_requested", {
+        bubbles: true,
+        detail: { value },
+      });
     }
   };
 
@@ -1892,41 +1890,48 @@ export const ListItemFooter = (props) => {
   );
 };
 
-export const requestListNavFromCurrent = (listElement, { event, goal }) => {
-  return listElement.dispatchEvent(
-    new CustomEvent("navi_list_request_nav_from_current", {
-      detail: {
-        event,
-        goal,
-      },
-    }),
+export const requestListNavFromCurrent = (
+  listContainerElement,
+  { event, goal },
+) => {
+  return dispatchCustomEvent(
+    listContainerElement,
+    "navi_list_request_nav_from_current",
+    {
+      event,
+      goal,
+    },
   );
 };
-export const requestListSelectCurrent = (listElement, { event }) => {
-  return listElement.dispatchEvent(
-    new CustomEvent("navi_list_request_select_current", {
-      detail: { event },
-    }),
+export const requestListSelectCurrent = (listContainerElement, { event }) => {
+  return dispatchCustomEvent(
+    listContainerElement,
+    "navi_list_request_select_current",
+    {
+      event,
+    },
   );
 };
-export const requestListInteractionStateReset = (listElement, { event }) => {
-  return listElement.dispatchEvent(
-    new CustomEvent("navi_list_request_interaction_state_reset", {
-      detail: { event },
-    }),
+export const requestListInteractionStateReset = (
+  listContainerElement,
+  { event },
+) => {
+  return dispatchCustomEvent(
+    listContainerElement,
+    "navi_list_request_interaction_state_reset",
+    {
+      event,
+    },
   );
 };
-export const requestListOpen = (listElement, { event, anchor }) => {
-  return listElement.dispatchEvent(
-    new CustomEvent("navi_list_request_open", {
-      detail: { anchor, event },
-    }),
-  );
+export const requestListOpen = (listContainerElement, { event, anchor }) => {
+  return dispatchCustomEvent(listContainerElement, "navi_list_request_open", {
+    event,
+    anchor,
+  });
 };
-export const requestListClose = (listElement, { event }) => {
-  return listElement.dispatchEvent(
-    new CustomEvent("navi_list_request_close", {
-      detail: { event },
-    }),
-  );
+export const requestListClose = (listContainerElement, { event }) => {
+  return dispatchCustomEvent(listContainerElement, "navi_list_request_close", {
+    event,
+  });
 };

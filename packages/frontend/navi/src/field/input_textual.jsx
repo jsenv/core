@@ -609,8 +609,10 @@ const InputControllingList = (props) => {
     const onListSelect = (e) => {
       const { event } = e.detail;
       if (event.type === "mousedown") {
-        event.preventDefault();
-        inputEl.focus({ preventScroll: true });
+        if (!inputEl.hidden) {
+          event.preventDefault();
+          inputEl.focus({ preventScroll: true });
+        }
       }
     };
     listContainerEl.addEventListener("navi_list_select", onListSelect);
