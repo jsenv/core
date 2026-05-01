@@ -131,16 +131,11 @@ const css = /* css */ `
     &[data-dark] {
       --color-mix: var(--color-mix-dark);
     }
-    /* When accent color is very light (e.g. white), the border and radiomark
-       must be dark so they remain visible against the light fill */
+    /* When accent color is very light (e.g. white), fall back to grey so
+       the border and radiomark remain visible against the light fill */
     &[data-light] {
-      --background-color-mix: black;
-      --border-color-checked: color-mix(
-        in srgb,
-        var(--accent-color) 60%,
-        #767676
-      );
-      --radiomark-color: color-mix(in srgb, var(--accent-color) 20%, #333333);
+      --border-color-checked: var(--border-color);
+      --radiomark-color: var(--border-color);
     }
 
     .navi_native_field {
