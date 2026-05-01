@@ -63,6 +63,7 @@ export const useUIStateController = (
     getPropFromState = (state) => state,
     getStateFromParent,
     persists,
+    allowNameless = false,
   } = {},
 ) => {
   const parentUIStateController = useContext(ParentUIStateControllerContext);
@@ -185,6 +186,7 @@ export const useUIStateController = (
     },
 
     componentType,
+    allowNameless,
     readOnly,
     name,
     hasStateProp,

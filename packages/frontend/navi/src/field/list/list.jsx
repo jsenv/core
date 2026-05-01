@@ -1236,7 +1236,9 @@ const ListWithAction = (props) => {
 // Interactive variant: manages hover/keyboard/selection state and handles the
 // navi event protocol, then delegates rendering to ListUI.
 const ListInteractive = (props) => {
-  const uiStateController = useUIStateController(props, "list");
+  const uiStateController = useUIStateController(props, "list", {
+    allowNameless: true,
+  });
   const [mousePointedId, setMousePointedId] = useState(null);
   const [keyboardPointedId, setKeyboardPointedId] = useState(null);
   const anchorIdRef = useRef(null);

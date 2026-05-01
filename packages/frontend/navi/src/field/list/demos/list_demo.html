@@ -75,7 +75,6 @@
         ListItem,
         ListItemHeader,
         Input,
-        applySearchText,
         useSearchText,
       } from "@jsenv/navi";
 
@@ -110,7 +109,7 @@
             </p>
             <List>
               {FRUITS.slice(0, 5).map((fruit, i) => (
-                <ListItem key={fruit} index={i} value={fruit}>
+                <ListItem key={fruit} index={i} id={fruit} value={fruit}>
                   {fruit}
                 </ListItem>
               ))}
@@ -174,6 +173,7 @@
                   <ListItem
                     key={fruit}
                     index={i}
+                    id={fruit}
                     value={fruit}
                     selected={selected === fruit}
                     pointed={
@@ -254,11 +254,7 @@
       const SearchableDemo = () => {
         const [selected, setSelected] = useState(null);
         const [searchText, setSearchText] = useState("");
-        const [getItemMatchInfo] = useSearchText(
-          FRUITS,
-          searchText,
-          applySearchText,
-        );
+        const [fruits, getItemMatchInfo] = useSearchText(searchText, FRUITS);
         return (
           <div className="demo-section">
             <h2>3. Search — withSearch</h2>
@@ -289,12 +285,13 @@
                   }}
                 />
               </ListItemHeader>
-              {FRUITS.map((fruit, i) => {
+              {fruits.map((fruit, i) => {
                 const { match, ranges } = getItemMatchInfo(fruit);
                 return (
                   <ListItem
                     key={fruit}
                     index={i}
+                    id={fruit}
                     value={fruit}
                     selected={selected === fruit}
                     hidden={!match}
@@ -367,6 +364,127 @@
         );
       };
 
+      // ── 5. List inside a form ──────────────────────────────────────────────────
+
+      const FormDemo = () => {
+        const [submittedValues, setSubmittedValues] = useState(null);
+        const [selected, setSelected] = useState(null);
+        return (
+          <div className="demo-section">
+            <h2>5. List inside a form</h2>
+            <p>
+              A <code>List</code> with a <code>name</code> prop registers its
+              selected value with the parent <code>Form</code>. Submitting the
+              form collects the list value alongside other fields.
+            </p>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const data = new FormData(e.currentTarget);
+                setSubmittedValues(Object.fromEntries(data.entries()));
+              }}
+            >
+              <label
+                style={{
+                  display: "block",
+                  marginBottom: "4px",
+                  fontWeight: 600,
+                }}
+              >
+                Choose a fruit:
+              </label>
+              <List
+                name="fruit"
+                value={selected}
+                uiAction={(value) => {
+                  setSelected(value);
+                }}
+              >
+                {FRUITS.slice(0, 6).map((fruit, i) => (
+                  <ListItem
+                    key={fruit}
+                    index={i}
+                    value={fruit}
+                    selected={selected === fruit}
+                  >
+                    {fruit}
+                  </ListItem>
+                ))}
+              </List>
+              <button type="submit" style={{ marginTop: "12px" }}>
+                Submit
+              </button>
+            </form>
+            {submittedValues && (
+              <div className="value-display">
+                {JSON.stringify(submittedValues)}
+              </div>
+            )}
+          </div>
+        );
+      };
+
+      // ── 6. List required inside a form ─────────────────────────────────────────
+
+      const RequiredFormDemo = () => {
+        const [submittedValues, setSubmittedValues] = useState(null);
+        const [selected, setSelected] = useState(null);
+        return (
+          <div className="demo-section">
+            <h2>6. Required list inside a form</h2>
+            <p>
+              Adding <code>required</code> makes the hidden input required.
+              Submitting without selecting a value triggers native browser
+              validation.
+            </p>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const data = new FormData(e.currentTarget);
+                setSubmittedValues(Object.fromEntries(data.entries()));
+              }}
+            >
+              <label
+                style={{
+                  display: "block",
+                  marginBottom: "4px",
+                  fontWeight: 600,
+                }}
+              >
+                Choose a fruit (required):
+              </label>
+              <List
+                name="fruit"
+                value={selected}
+                required
+                uiAction={(value) => {
+                  setSelected(value);
+                }}
+              >
+                {FRUITS.slice(0, 6).map((fruit, i) => (
+                  <ListItem
+                    key={fruit}
+                    index={i}
+                    value={fruit}
+                    selected={selected === fruit}
+                  >
+                    {fruit}
+                  </ListItem>
+                ))}
+              </List>
+              <button type="submit" style={{ marginTop: "12px" }}>
+                Submit
+              </button>
+            </form>
+            {submittedValues && (
+              <div className="value-display">
+                {JSON.stringify(submittedValues)}
+              </div>
+            )}
+          </div>
+        );
+      };
+
       // ── App ────────────────────────────────────────────────────────────────────
 
       const App = () => {
@@ -376,6 +494,8 @@
             <InteractiveDemo />
             <SearchableDemo />
             <PopoverDemo />
+            <FormDemo />
+            <RequiredFormDemo />
           </>
         );
       };
