@@ -35,14 +35,6 @@ export const REQUIRED_CONSTRAINT = {
       }
       return null;
     }
-    // navi_select: value is stored in data-navi-value (the button itself has no .value)
-    if (field.classList.contains("navi_select")) {
-      const selectedValue = field.getAttribute("data-navi-value");
-      if (selectedValue) {
-        return null;
-      }
-      return `Veuillez sélectionner une option.`;
-    }
     if (field.type === "radio") {
       // For radio buttons, check if any radio with the same name is selected
       const name = field.name;

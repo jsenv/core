@@ -288,6 +288,7 @@ const SelectUI = (props) => {
   const contextLoadingElement = useContext(LoadingElementContext);
   const defaultRef = useRef();
   const ref = rest.ref || defaultRef;
+  const hiddenInputId = useId();
   const remainingProps = useConstraints(ref, rest);
 
   const innerLoading =
@@ -326,6 +327,7 @@ const SelectUI = (props) => {
       baseClassName="navi_select"
       autoFocus={undefined} // See use_auto_focus.js
       data-navi-value={value || undefined}
+      data-input-proxy={name ? `#${CSS.escape(hiddenInputId)}` : undefined}
       styleCSSVars={SelectStyleCSSVars}
       basePseudoState={{
         ...remainingProps.basePseudoState,
@@ -341,7 +343,13 @@ const SelectUI = (props) => {
         color="var(--loader-color)"
         inset={-1}
       />
-      <input type="hidden" name={name} value={value} />
+      <input
+        id={hiddenInputId}
+        type="hidden"
+        name={name}
+        value={value}
+        required={rest.required}
+      />
       <SelectPlaceholderContext.Provider value={placeholder}>
         <SelectValueContext.Provider value={value}>
           {trigger}

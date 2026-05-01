@@ -382,6 +382,14 @@ export const installCustomConstraintValidation = (
 
     resetValidity({ fromRequestAction });
     for (const constraint of constraintSet) {
+      // Some components (Select, List) proxy their value through a hidden <input>
+      // identified by data-input-proxy. When present, constraints run against
+      // that proxy element so they can read standard properties like .value,
+      // .required, .name without needing to know about each component's internals.
+      const inputProxySelector = element.getAttribute("data-input-proxy");
+      const fieldForConstraint = inputProxySelector
+        ? (element.ownerDocument.querySelector(inputProxySelector) ?? element)
+        : element;
       const constraintCleanupSet = new Set();
       const registerChange = (register) => {
         const registerResult = register(() => {
@@ -398,7 +406,7 @@ export const installCustomConstraintValidation = (
         constraintCleanupSet.clear();
       };
 
-      const checkResult = constraint.check(element, {
+      const checkResult = constraint.check(fieldForConstraint, {
         fromRequestAction,
         skipReadonly,
         registerChange,

@@ -449,8 +449,11 @@ const ListUI = (props) => {
     searchText,
     name,
     value,
+    required,
     ...rest
   } = props;
+
+  const hiddenInputId = useId();
 
   // lockSize: capture the container's dimensions on first render so filtering
   // cannot collapse the layout. Measurement happens on the initial (unfiltered)
@@ -568,6 +571,7 @@ const ListUI = (props) => {
       pseudoClasses={LIST_PSEUDO_CLASSES}
       hasChildFunction
       data-navi-value={value || undefined}
+      data-input-proxy={name ? `#${CSS.escape(hiddenInputId)}` : undefined}
       onnavi_list_request_nav={(e) => {
         const { item } = e.detail;
         if (!item) {
@@ -591,7 +595,15 @@ const ListUI = (props) => {
         });
       }}
     >
-      {name && <input type="hidden" name={name} value={value} />}
+      {name && (
+        <input
+          id={hiddenInputId}
+          type="hidden"
+          name={name}
+          value={value}
+          required={required}
+        />
+      )}
       {renderListMemoized}
     </Box>
   );
