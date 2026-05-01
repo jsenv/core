@@ -320,8 +320,6 @@ const css = /* css */ `
 `;
 
 export const InputRadio = (props) => {
-  import.meta.css = css;
-
   const { value = "on" } = props;
   const uiStateController = useUIStateController(props, "radio", {
     statePropName: "checked",
@@ -338,7 +336,7 @@ export const InputRadio = (props) => {
   const uiState = useUIState(uiStateController);
 
   const radio = renderActionableComponent(props, {
-    Basic: InputRadioBasic,
+    Basic: InputRadioUI,
     WithAction: InputRadioWithAction,
   });
   return (
@@ -348,64 +346,9 @@ export const InputRadio = (props) => {
   );
 };
 
-const RadioStyleCSSVars = {
-  "width": "--width",
-  "height": "--height",
-  "borderRadius": "--border-radius",
-  "outlineWidth": "--outline-width",
-  "borderWidth": "--border-width",
-  "backgroundColor": "--background-color",
-  "borderColor": "--border-color",
-  "accentColor": "--accent-color",
-  ":hover": {
-    backgroundColor: "--background-color-hover",
-    borderColor: "--border-color-hover",
-  },
-  ":active": {
-    borderColor: "--border-color-active",
-  },
-  ":read-only": {
-    backgroundColor: "--background-color-readonly",
-    borderColor: "--border-color-readonly",
-  },
-  ":disabled": {
-    backgroundColor: "--background-color-disabled",
-    borderColor: "--border-color-disabled",
-  },
-};
-const RadioButtonStyleCSSVars = {
-  ...RadioStyleCSSVars,
-  "padding": "--padding",
-  "borderRadius": "--button-border-radius",
-  "borderWidth": "--button-border-width",
-  "borderColor": "--button-border-color",
-  "backgroundColor": "--button-background-color",
-  ":hover": {
-    backgroundColor: "--button-background-color-hover",
-    borderColor: "--button-border-color-hover",
-  },
-  ":read-only": {
-    backgroundColor: "--button-background-color-readonly",
-    borderColor: "--button-border-color-readonly",
-  },
-  ":disabled": {
-    backgroundColor: "--button-background-color-disabled",
-    borderColor: "--button-border-color-disabled",
-  },
-};
-const RadioPseudoClasses = [
-  ":hover",
-  ":active",
-  ":focus",
-  ":focus-visible",
-  ":read-only",
-  ":disabled",
-  ":checked",
-  ":-navi-loading",
-];
-const RadioPseudoElements = ["::-navi-loader", "::-navi-radiomark"];
-const RadioChildPropSet = new Set([...fieldPropSet]);
-const InputRadioBasic = (props) => {
+const InputRadioUI = (props) => {
+  import.meta.css = css;
+
   const contextName = useContext(FieldNameContext);
   const contextReadOnly = useContext(ReadOnlyContext);
   const contextDisabled = useContext(DisabledContext);
@@ -598,6 +541,63 @@ const InputRadioBasic = (props) => {
     </Box>
   );
 };
+const RadioStyleCSSVars = {
+  "width": "--width",
+  "height": "--height",
+  "borderRadius": "--border-radius",
+  "outlineWidth": "--outline-width",
+  "borderWidth": "--border-width",
+  "backgroundColor": "--background-color",
+  "borderColor": "--border-color",
+  "accentColor": "--accent-color",
+  ":hover": {
+    backgroundColor: "--background-color-hover",
+    borderColor: "--border-color-hover",
+  },
+  ":active": {
+    borderColor: "--border-color-active",
+  },
+  ":read-only": {
+    backgroundColor: "--background-color-readonly",
+    borderColor: "--border-color-readonly",
+  },
+  ":disabled": {
+    backgroundColor: "--background-color-disabled",
+    borderColor: "--border-color-disabled",
+  },
+};
+const RadioButtonStyleCSSVars = {
+  ...RadioStyleCSSVars,
+  "padding": "--padding",
+  "borderRadius": "--button-border-radius",
+  "borderWidth": "--button-border-width",
+  "borderColor": "--button-border-color",
+  "backgroundColor": "--button-background-color",
+  ":hover": {
+    backgroundColor: "--button-background-color-hover",
+    borderColor: "--button-border-color-hover",
+  },
+  ":read-only": {
+    backgroundColor: "--button-background-color-readonly",
+    borderColor: "--button-border-color-readonly",
+  },
+  ":disabled": {
+    backgroundColor: "--button-background-color-disabled",
+    borderColor: "--button-border-color-disabled",
+  },
+};
+const RadioPseudoClasses = [
+  ":hover",
+  ":active",
+  ":focus",
+  ":focus-visible",
+  ":read-only",
+  ":disabled",
+  ":checked",
+  ":-navi-loading",
+];
+const RadioPseudoElements = ["::-navi-loader", "::-navi-radiomark"];
+const RadioChildPropSet = new Set([...fieldPropSet]);
 
 const InputRadioWithAction = () => {
   throw new Error(
