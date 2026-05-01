@@ -444,10 +444,10 @@ const SelectWithPopover = (props) => {
     disabled,
     onKeyDown,
     children,
-    scrollTrap = true,
-    pointerTrap,
-    focusTrap = true,
     positionTry,
+    pointerTrap,
+    scrollTrap = true,
+    focusTrap = true,
     ...rest
   } = props;
   const debugFocus = useDebugFocus();
@@ -505,7 +505,8 @@ const SelectWithPopover = (props) => {
           // click triggered by enter won't open the popover
           return;
         }
-        // When a label is clicked it transfers focus to the select, in that case we want to open it
+        // When a label is clicked it transfers focus to the select
+        // in that case we want to open it (otherwise we have already opened on mousedown interaction)
         requestOpen(e);
       }}
       // When a list item is interacted via mousedown, return focus to the select.

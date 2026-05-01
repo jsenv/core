@@ -129,7 +129,7 @@ export const Popover = (props) => {
     });
   };
 
-  const openPopover = (e, { anchor }) => {
+  const onRequestOpen = (e, { anchor }) => {
     const popoverEl = ref.current;
     if (!popoverEl) {
       return;
@@ -139,7 +139,7 @@ export const Popover = (props) => {
     }
     open(e, { anchor });
   };
-  const closePopover = (e) => {
+  const onRequestClose = (e) => {
     const popoverEl = ref.current;
     if (!popoverEl) {
       return;
@@ -159,10 +159,12 @@ export const Popover = (props) => {
               if (e.button !== 0) {
                 return;
               }
+              debugger;
               if (pointerTrap) {
+                e.preventDefault();
                 return;
               }
-              closePopover(e);
+              onRequestClose(e);
             }}
           />,
           document.body,
@@ -175,11 +177,11 @@ export const Popover = (props) => {
         baseClassName="navi_popover"
         onnavi_popover_request_open={(e) => {
           const { event = e, anchor } = e.detail;
-          openPopover(event, { anchor });
+          onRequestOpen(event, { anchor });
         }}
         onnavi_popover_request_close={(e) => {
           const { event = e } = e.detail;
-          closePopover(event);
+          onRequestClose(event);
         }}
       >
         {children}
