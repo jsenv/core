@@ -1,5 +1,6 @@
-import { resolveColorLuminance } from "@jsenv/dom";
 import { useCallback, useContext, useLayoutEffect, useRef } from "preact/hooks";
+
+import { useDarkBackgroundAttribute } from "../text/use_dark_background_attribute.js";
 
 import { Box } from "../box/box.jsx";
 import { LoaderBackground } from "../graphic/loader/loader_background.jsx";
@@ -128,7 +129,7 @@ const css = /* css */ `
     box-sizing: content-box;
     margin: var(--margin);
 
-    &[data-dark] {
+    &[data-dark-background] {
       --color-mix: var(--color-mix-dark);
     }
     /* When accent color is very light (e.g. white), keep the accent color
@@ -486,20 +487,16 @@ const InputRadioUI = (props) => {
   ]);
 
   const boxRef = useRef();
-  useLayoutEffect(() => {
-    const naviRadio = boxRef.current;
-    const luminance = resolveColorLuminance("var(--accent-color)", naviRadio);
-    if (luminance < 0.3) {
-      naviRadio.setAttribute("data-dark", "");
-    } else {
-      naviRadio.removeAttribute("data-dark");
-    }
-    if (luminance > 0.7) {
-      naviRadio.setAttribute("data-light", "");
-    } else {
-      naviRadio.removeAttribute("data-light");
-    }
-  }, [color]);
+  useDarkBackgroundAttribute(boxRef, [color], {
+    backgroundElementSelector: ".navi_radio_border",
+    colorProperty: "fill",
+  });
+  useDarkBackgroundAttribute(boxRef, [color], {
+    backgroundElementSelector: ".navi_radio_border",
+    colorProperty: "fill",
+    attributeName: "data-light",
+    invert: true,
+  });
 
   return (
     <Box

@@ -31,25 +31,30 @@ import { NAVI_PSEUDO_STATE_CUSTOM_EVENT } from "../box/pseudo_styles.js";
  *   should be tested instead of the element itself. Useful when the element
  *   has a transparent background but contains a coloured child (e.g. a fill
  *   bar inside a track).
+ * @param {string} [options.colorProperty] - CSS property to read instead of
+ *   `background-color`. Useful for SVG elements where the color is expressed
+ *   as `fill` or `stroke`.
  */
-
 export const useDarkBackgroundAttribute = (
   ref,
   deps = [],
   {
     backgroundElementSelector,
+    colorProperty = "backgroundColor",
     attributeName = "data-dark-background",
+    invert = false,
     hardcoded = {},
   } = {},
 ) => {
   const innerDeps = [
     ...deps,
-    // ref can change is the component pass a different ref on different render based on some logic
-    // (can be used to control which element backgroundColor is being checked by switching the ref to another element)
+    // ref can change if the component passes a different ref on different renders
+    // (e.g. to control which element's color is being checked by switching the ref)
     ref,
-    // backgroundElementSelector can change if the component pass a different selector on different render based on some logic
-    // (can be used to control which element backgroundColor is being checked by switching the selector to point to another element)
+    // backgroundElementSelector can change if the component passes a different selector on different renders
+    // (e.g. to control which child element's color is being checked by switching the selector)
     backgroundElementSelector,
+    colorProperty,
   ];
 
   const hardcodedMap = new Map();
@@ -74,16 +79,16 @@ export const useDarkBackgroundAttribute = (
     }
     const updateAttribute = () => {
       const computedStyle = getComputedStyle(elementToCheck);
-      const backgroundColor = computedStyle.backgroundColor;
-      if (!backgroundColor) {
+      const color = computedStyle[colorProperty];
+      if (!color) {
         el.removeAttribute(attributeName);
         return;
       }
-      const backgroundColorString = normalizeColorString(backgroundColor, el);
-      const hardcodedContrast = hardcodedMap.get(backgroundColorString);
-      const contrastingColor =
-        hardcodedContrast || contrastColor(backgroundColor, el);
-      if (contrastingColor === "white") {
+      const colorString = normalizeColorString(color, el);
+      const hardcodedContrast = hardcodedMap.get(colorString);
+      const contrastingColor = hardcodedContrast || contrastColor(color, el);
+      const isDark = contrastingColor === "white";
+      if (invert ? !isDark : isDark) {
         el.setAttribute(attributeName, "");
       } else {
         el.removeAttribute(attributeName);
