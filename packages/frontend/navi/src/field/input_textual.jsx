@@ -617,48 +617,46 @@ const InputControllingList = (props) => {
     };
   }, []);
 
-  const forwardToList = (event, requestList, customEventDetail) => {
-    const listContainerEl = getListEl();
-    if (!listContainerEl) {
-      return false;
-    }
-    event.stopPropagation(); // when within a list, prevent list from handling it twice
-    return requestList(listContainerEl, { event, ...customEventDetail });
-  };
-
   const onKeyDownWithShortcuts = shortcutsViaOnKeyDown(
     {
       arrowdown: (e) => {
-        return forwardToList(e, requestListNavFromCurrent, {
-          goal: "down",
-        });
+        const listEl = getListEl();
+        e.stopPropagation(); // when within a list, prevent list from handling it twice
+        return requestListNavFromCurrent(listEl, { event: e, goal: "down" });
       },
       arrowup: (e) => {
-        return forwardToList(e, requestListNavFromCurrent, {
-          goal: "up",
-        });
+        const listEl = getListEl();
+        e.stopPropagation(); // when within a list, prevent list from handling it twice
+        return requestListNavFromCurrent(listEl, { event: e, goal: "up" });
       },
       home: (e) => {
-        return forwardToList(e, requestListNavFromCurrent, {
-          goal: "first",
-        });
+        const listEl = getListEl();
+        e.stopPropagation(); // when within a list, prevent list from handling it twice
+        return requestListNavFromCurrent(listEl, { event: e, goal: "first" });
       },
       end: (e) => {
-        return forwardToList(e, requestListNavFromCurrent, {
-          goal: "last",
-        });
+        const listEl = getListEl();
+        e.stopPropagation(); // when within a list, prevent list from handling it twice
+        return requestListNavFromCurrent(listEl, { event: e, goal: "last" });
       },
       enter: (e) => {
-        return forwardToList(e, requestListSelectCurrent);
+        const listEl = getListEl();
+        e.stopPropagation(); // when within a list, prevent list from handling it twice
+        return requestListSelectCurrent(listEl, { event: e });
       },
       escape: (e) => {
         // prevent escape from reaching eventual <select> ancestor
         // when the escape is meant to clear the search input (otherwise it would close the select too)
-        debugger;
         if (e.currentTarget.type === "search" && e.currentTarget.value !== "") {
           e.stopPropagation();
+          return false;
         }
-        return forwardToList(e, requestListInteractionStateReset);
+        const listEl = getListEl();
+        // here we allow propagation of escape up to the <select> to allow closing if within a select
+        // it also means list might catch escape and reset again but it's ok to reset twice here as it won't cause side effects
+        // (if we need the same pattern for other events where it could be problematic we would have to mark
+        // event as handled somehow to prevent list containing input to react to it)
+        return requestListInteractionStateReset(listEl, { event: e });
       },
     },
     onKeyDown,

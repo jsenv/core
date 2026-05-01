@@ -506,11 +506,12 @@ const ListUI = (props) => {
 
   const renderList = (listProps) => {
     const listIdDefault = useId();
+    const innerListid = listId || listIdDefault;
 
     return (
       <UnorderedList
         ref={ulRef}
-        id={listId || listIdDefault}
+        id={innerListid}
         role={listRole}
         fallback={fallback}
         noMatchFallback={noMatchFallback}
@@ -523,7 +524,7 @@ const ListUI = (props) => {
         virtualItemHeightSignal={virtualItemHeightSignal}
       >
         <PendingScrollRefContext.Provider value={pendingScrollRef}>
-          <ListIdContext.Provider value={listId}>
+          <ListIdContext.Provider value={innerListid}>
             {children}
           </ListIdContext.Provider>
         </PendingScrollRefContext.Provider>
@@ -1813,7 +1814,7 @@ export const ListItemFooter = (props) => {
   );
 };
 
-export const requestListNavFromCurrent = (listElement, { goal, event }) => {
+export const requestListNavFromCurrent = (listElement, { event, goal }) => {
   return listElement.dispatchEvent(
     new CustomEvent("navi_list_request_nav_from_current", {
       detail: {
@@ -1837,7 +1838,7 @@ export const requestListInteractionStateReset = (listElement, { event }) => {
     }),
   );
 };
-export const requestListOpen = (listElement, { anchor, event }) => {
+export const requestListOpen = (listElement, { event, anchor }) => {
   return listElement.dispatchEvent(
     new CustomEvent("navi_list_request_open", {
       detail: { anchor, event },
