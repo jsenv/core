@@ -11,6 +11,7 @@ import { Box } from "../box/box.jsx";
 import { ChevronDownSvg } from "../graphic/icons/chevron_updown_svg.jsx";
 import { LoaderBackground } from "../graphic/loader/loader_background.jsx";
 import { shortcutsViaOnKeyDown } from "../keyboard/keyboard_shortcuts.js";
+import { windowWidthSignal } from "../layout/responsive.js";
 import { useDebugFocus } from "../navi_debug.jsx";
 import {
   Dialog,
@@ -257,8 +258,9 @@ export const Select = (props) => {
 };
 
 const SelectDispatcher = (props) => {
-  const narrowScreen = window.innerWidth <= 600;
-  const { mode = narrowScreen ? "dialog" : "popover" } = props;
+  const isSmallScreen = windowWidthSignal.value <= 600;
+  const defaultMode = isSmallScreen ? "dialog" : "popover";
+  const { mode = defaultMode } = props;
   if (mode === "dialog") {
     return <SelectWithDialog {...props} />;
   }
