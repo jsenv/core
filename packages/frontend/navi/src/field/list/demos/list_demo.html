@@ -78,6 +78,9 @@
         useSearchText,
         requestListOpen,
         requestListClose,
+        Label,
+        Form,
+        Button,
       } from "@jsenv/navi";
 
       const FRUITS = [
@@ -487,46 +490,38 @@
               Submitting without selecting a value triggers native browser
               validation.
             </p>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                const data = new FormData(e.currentTarget);
-                setSubmittedValues(Object.fromEntries(data.entries()));
+            <Form
+              action={(value) => {
+                setSubmittedValues(value);
               }}
             >
-              <label
-                style={{
-                  display: "block",
-                  marginBottom: "4px",
-                  fontWeight: 600,
-                }}
-              >
+              <Label>
                 Choose a fruit (required):
-              </label>
-              <List
-                name="fruit"
-                value={selected}
-                required
-                uiAction={(value) => {
-                  setSelected(value);
-                }}
-              >
-                {FRUITS.slice(0, 6).map((fruit, i) => (
-                  <ListItem
-                    key={fruit}
-                    index={i}
-                    id={fruit}
-                    value={fruit}
-                    selected={selected === fruit}
-                  >
-                    {fruit}
-                  </ListItem>
-                ))}
-              </List>
-              <button type="submit" style={{ marginTop: "12px" }}>
+                <List
+                  name="fruit"
+                  value={selected}
+                  required
+                  uiAction={(value) => {
+                    setSelected(value);
+                  }}
+                >
+                  {FRUITS.slice(0, 6).map((fruit, i) => (
+                    <ListItem
+                      key={fruit}
+                      index={i}
+                      id={fruit}
+                      value={fruit}
+                      selected={selected === fruit}
+                    >
+                      {fruit}
+                    </ListItem>
+                  ))}
+                </List>
+              </Label>
+              <Button type="submit" style={{ marginTop: "12px" }}>
                 Submit
-              </button>
-            </form>
+              </Button>
+            </Form>
             {submittedValues && (
               <div className="value-display">
                 {JSON.stringify(submittedValues)}
