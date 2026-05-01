@@ -23,6 +23,10 @@ import {
 } from "../field/use_ui_state_controller.js";
 import { shortcutsViaOnKeyDown } from "../keyboard/keyboard_shortcuts.js";
 import { useDebugScroll } from "../navi_debug.jsx";
+import {
+  dispatchCustomEvent,
+  dispatchPublicCustomEvent,
+} from "../utils/custom_event.js";
 import { useAutoFocus } from "../utils/focus/use_auto_focus.js";
 import { useItemTracker } from "../utils/item_tracker/use_item_tracker.js";
 import { useDisplayedLayoutEffect } from "../utils/use_displayed_layout_effect.js";
@@ -573,7 +577,7 @@ const ListUI = (props) => {
         if (!item) {
           return;
         }
-        dispatchPublicEvent(e.currentTarget, "navi_list_select", {
+        dispatchPublicCustomEvent(e.currentTarget, "navi_list_select", {
           item,
           event: e,
         });
@@ -641,7 +645,7 @@ const useListScrollSync = ({
         container: ref.current,
         block,
       });
-      dispatchPublicEvent(itemEl, "navi_list_nav", { item, event });
+      dispatchPublicCustomEvent(itemEl, "navi_list_nav", { item, event });
     };
 
     const { start, end } = renderWindowRef.current;
@@ -774,7 +778,7 @@ const useListScrollSync = ({
           virtualItemHeightSignal,
           renderWindowRef,
         );
-        dispatchPublicEvent(listContainerEl, "navi_list_nav", {
+        dispatchPublicCustomEvent(listContainerEl, "navi_list_nav", {
           item,
           event: new CustomEvent("navi_scroll_restore"),
         });
@@ -1144,14 +1148,18 @@ const ListWithPopover = (props) => {
           positionPopover();
         });
         cleanupRef.current = () => cleanup.disconnect();
-        dispatchPublicEvent(listContainerEl, "navi_list_open", { event: e });
+        dispatchPublicCustomEvent(listContainerEl, "navi_list_open", {
+          event: e,
+        });
       }}
       onnavi_list_request_close={(e) => {
         const listContainerEl = e.currentTarget;
         cleanupRef.current?.();
         listContainerEl.removeAttribute("data-anchor-hidden");
         listContainerEl.hidePopover();
-        dispatchPublicEvent(listContainerEl, "navi_list_close", { event: e });
+        dispatchPublicCustomEvent(listContainerEl, "navi_list_close", {
+          event: e,
+        });
       }}
     />
   );
@@ -1612,7 +1620,8 @@ const ListItemReal = ({
         if (disabled) {
           return;
         }
-        dispatchBubblingEvent(e.currentTarget, "navi_list_request_hover", {
+        const listContainerEl = e.currentTarget.closest(".navi_list_container");
+        dispatchCustomEvent(listContainerEl, "navi_list_request_hover", {
           item,
           event: e,
         });
@@ -1622,7 +1631,8 @@ const ListItemReal = ({
         if (disabled) {
           return;
         }
-        dispatchBubblingEvent(e.currentTarget, "navi_list_request_hover", {
+        const listContainerEl = e.currentTarget.closest(".navi_list_container");
+        dispatchCustomEvent(listContainerEl, "navi_list_request_hover", {
           item: null,
           event: e,
         });
@@ -1635,7 +1645,8 @@ const ListItemReal = ({
         if (e.button !== 0) {
           return;
         }
-        dispatchBubblingEvent(e.currentTarget, "navi_list_request_select", {
+        const listContainerEl = e.currentTarget.closest(".navi_list_container");
+        dispatchCustomEvent(listContainerEl, "navi_list_request_select", {
           item,
           event: e,
         });
@@ -1851,32 +1862,3 @@ export const requestListClose = (listElement, { event }) => {
     }),
   );
 };
-
-// Dispatches a navi event bubbling from the current event target element.
-const dispatchCustomEvent = (el, customEventName, customEventDetail) => {
-  const customEvent = new CustomEvent(customEventName, {
-    detail: resolveEventDetail(customEventDetail),
-    cancelable: true,
-  });
-  return el.dispatchEvent(customEvent);
-};
-// Dispatches a navi event bubbling from a list item's element.
-const dispatchBubblingEvent = (el, customEventName, customEventDetail) => {
-  const customEvent = new CustomEvent(customEventName, {
-    detail: resolveEventDetail(customEventDetail),
-    bubbles: true,
-  });
-  return el.dispatchEvent(customEvent);
-};
-
-const resolveEventDetail = (customEventDetail) => {
-  const { event, ...rest } = customEventDetail ?? {};
-  let resolvedEvent;
-  if (event?.detail?.event !== undefined) {
-    resolvedEvent = event.detail.event;
-  } else if (event !== undefined) {
-    resolvedEvent = event;
-  }
-  return { ...rest, event: resolvedEvent };
-};
-const dispatchPublicEvent = dispatchBubblingEvent;
