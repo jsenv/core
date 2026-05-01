@@ -300,6 +300,10 @@ const css = /* css */ `
 `;
 
 export const Button = (props) => {
+  return <ButtonDispatcher {...props} />;
+};
+
+const ButtonDispatcher = (props) => {
   const formContext = useContext(FormActionContext);
   const hasAction = Boolean(
     props.action || (props.shortcuts && props.shortcuts.length > 0),
@@ -498,7 +502,7 @@ const ButtonWithRoute = ({ route, routeParams, children, ...rest }) => {
   const linkMatching = matching && paramsAreMatching;
 
   return (
-    <Button
+    <ButtonDispatcher
       href={url}
       data-href-current={linkMatching ? "" : undefined}
       {...rest}
@@ -541,7 +545,7 @@ const ButtonWithAction = (props) => {
   });
 
   return (
-    <Button
+    <ButtonDispatcher
       // put data-action first to help find it in devtools
       data-action={boundAction.name}
       {...rest}
@@ -550,7 +554,7 @@ const ButtonWithAction = (props) => {
       loading={innerLoading}
     >
       {children}
-    </Button>
+    </ButtonDispatcher>
   );
 };
 const ButtonWithActionInsideForm = (props) => {
@@ -610,7 +614,7 @@ const ButtonWithActionInsideForm = (props) => {
   });
 
   return (
-    <Button
+    <ButtonDispatcher
       data-action={actionBoundToFormParams.name}
       {...rest}
       ref={ref}
