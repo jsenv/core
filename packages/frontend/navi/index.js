@@ -121,6 +121,8 @@ export {
   ListItemFooter,
   ListItemGroup,
   ListItemHeader,
+  requestListClose,
+  requestListOpen,
 } from "./src/field/list/list.jsx";
 export { useSearchText } from "./src/field/list/use_search_text.js";
 // --- List end ---

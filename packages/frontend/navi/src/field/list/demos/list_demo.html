@@ -76,6 +76,8 @@
         ListItemHeader,
         Input,
         useSearchText,
+        requestListOpen,
+        requestListClose,
       } from "@jsenv/navi";
 
       const FRUITS = [
@@ -313,14 +315,10 @@
         const buttonRef = useRef(null);
 
         const openList = () => {
-          listRef.current?.dispatchEvent(
-            new CustomEvent("navi_list_open", {
-              detail: { anchor: buttonRef.current },
-            }),
-          );
+          requestListOpen(listRef.current, { anchor: buttonRef.current });
         };
         const closeList = () => {
-          listRef.current?.dispatchEvent(new CustomEvent("navi_list_close"));
+          requestListClose(listRef.current, {});
         };
 
         return (
@@ -328,9 +326,9 @@
             <h2>4. Popover</h2>
             <p>
               Pass <code>popover</code> to render the list as a managed popover.
-              Dispatch <code>navi_list_open</code> with an anchor element to
-              show it; <code>navi_list_close</code> to hide it. The list
-              positions itself below the anchor automatically.
+              Call <code>requestListOpen</code> with an anchor element to show
+              it; <code>requestListClose</code> to hide it. The list positions
+              itself below the anchor automatically.
             </p>
             <div style={{ display: "flex", gap: "8px", marginBottom: "12px" }}>
               <button ref={buttonRef} onClick={openList}>
@@ -343,7 +341,7 @@
               popover
               uiAction={(value) => {
                 setSelected(value);
-                closeList();
+                requestListClose(listRef.current, {});
               }}
             >
               {FRUITS.slice(0, 8).map((fruit, i) => (
