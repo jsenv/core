@@ -1201,7 +1201,7 @@ const ListInteractive = (props) => {
               setMousePointedId(item ? item.id : null);
             }}
             onnavi_list_request_nav_from_current={(e) => {
-              const { goal, event = e } = e.detail;
+              const { event = e, goal } = e.detail;
               const visibleItems = visibleItemsRef.current;
               const visibleItemCount = visibleItems.length;
               if (visibleItemCount === 0) {
@@ -1363,7 +1363,6 @@ const ListWithKeyboardInteractions = (props) => {
         });
       },
       escape: (e) => {
-        debugger;
         return requestListInteractionStateReset(e.currentTarget, {
           event: e,
         });

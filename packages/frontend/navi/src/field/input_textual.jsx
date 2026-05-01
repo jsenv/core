@@ -591,8 +591,10 @@ export const InputRightSlot = (props) => {
 const InputControllingList = (props) => {
   const { ref, listId, onKeyDown, ...rest } = props;
 
-  const getListEl = () => {
-    return document.getElementById(listId);
+  const getListContainerEl = () => {
+    const listEl = document.getElementById(listId);
+    const listContainerEl = listEl.parentNode;
+    return listContainerEl;
   };
 
   useEffect(() => {
@@ -600,7 +602,7 @@ const InputControllingList = (props) => {
     if (!inputEl) {
       return undefined;
     }
-    const listContainerEl = getListEl();
+    const listContainerEl = getListContainerEl();
     if (!listContainerEl) {
       return undefined;
     }
@@ -620,29 +622,41 @@ const InputControllingList = (props) => {
   const onKeyDownWithShortcuts = shortcutsViaOnKeyDown(
     {
       arrowdown: (e) => {
-        const listEl = getListEl();
+        const listContainerEl = getListContainerEl();
         e.stopPropagation(); // when within a list, prevent list from handling it twice
-        return requestListNavFromCurrent(listEl, { event: e, goal: "down" });
+        return requestListNavFromCurrent(listContainerEl, {
+          event: e,
+          goal: "down",
+        });
       },
       arrowup: (e) => {
-        const listEl = getListEl();
+        const listContainerEl = getListContainerEl();
         e.stopPropagation(); // when within a list, prevent list from handling it twice
-        return requestListNavFromCurrent(listEl, { event: e, goal: "up" });
+        return requestListNavFromCurrent(listContainerEl, {
+          event: e,
+          goal: "up",
+        });
       },
       home: (e) => {
-        const listEl = getListEl();
+        const listContainerEl = getListContainerEl();
         e.stopPropagation(); // when within a list, prevent list from handling it twice
-        return requestListNavFromCurrent(listEl, { event: e, goal: "first" });
+        return requestListNavFromCurrent(listContainerEl, {
+          event: e,
+          goal: "first",
+        });
       },
       end: (e) => {
-        const listEl = getListEl();
+        const listContainerEl = getListContainerEl();
         e.stopPropagation(); // when within a list, prevent list from handling it twice
-        return requestListNavFromCurrent(listEl, { event: e, goal: "last" });
+        return requestListNavFromCurrent(listContainerEl, {
+          event: e,
+          goal: "last",
+        });
       },
       enter: (e) => {
-        const listEl = getListEl();
+        const listContainerEl = getListContainerEl();
         e.stopPropagation(); // when within a list, prevent list from handling it twice
-        return requestListSelectCurrent(listEl, { event: e });
+        return requestListSelectCurrent(listContainerEl, { event: e });
       },
       escape: (e) => {
         // prevent escape from reaching eventual <select> ancestor
@@ -651,12 +665,12 @@ const InputControllingList = (props) => {
           e.stopPropagation();
           return false;
         }
-        const listEl = getListEl();
+        const listContainerEl = getListContainerEl();
         // here we allow propagation of escape up to the <select> to allow closing if within a select
         // it also means list might catch escape and reset again but it's ok to reset twice here as it won't cause side effects
         // (if we need the same pattern for other events where it could be problematic we would have to mark
         // event as handled somehow to prevent list containing input to react to it)
-        return requestListInteractionStateReset(listEl, { event: e });
+        return requestListInteractionStateReset(listContainerEl, { event: e });
       },
     },
     onKeyDown,
@@ -699,16 +713,18 @@ const InputTextualWithSuggestions = (props) => {
     expandedRef.current = false;
     setExpanded(false);
   };
-  const getListEl = () => {
-    return document.getElementById(suggestions);
+  const getListContainerEl = () => {
+    const listEl = document.getElementById(suggestions);
+    const listContainerEl = listEl.parentNode;
+    return listContainerEl;
   };
   const showSuggestions = (e) => {
     if (expandedRef.current) {
       return;
     }
-    const listEl = getListEl();
-    if (listEl) {
-      requestListOpen(listEl, { event: e, anchor: ref.current });
+    const listContainerEl = getListContainerEl();
+    if (listContainerEl) {
+      requestListOpen(listContainerEl, { event: e, anchor: ref.current });
       expand();
     }
   };
@@ -716,17 +732,17 @@ const InputTextualWithSuggestions = (props) => {
     if (!expandedRef.current) {
       return;
     }
-    const listEl = getListEl();
-    if (!listEl) {
-      requestListClose(listEl, { event: e });
+    const listContainerEl = getListContainerEl();
+    if (!listContainerEl) {
+      requestListClose(listContainerEl, { event: e });
       collapse();
     }
   };
 
   useEffect(() => {
     const inputEl = ref.current;
-    const listEl = getListEl();
-    if (!listEl) {
+    const listContainerEl = getListContainerEl();
+    if (!listContainerEl) {
       return undefined;
     }
     const onSelect = (e) => {
@@ -736,9 +752,9 @@ const InputTextualWithSuggestions = (props) => {
       inputEl.dispatchEvent(new Event("input", { bubbles: true }));
       hideSuggestions(e);
     };
-    listEl.addEventListener("navi_list_select", onSelect);
+    listContainerEl.addEventListener("navi_list_select", onSelect);
     return () => {
-      listEl.removeEventListener("navi_list_select", onSelect);
+      listContainerEl.removeEventListener("navi_list_select", onSelect);
     };
   }, [suggestions]);
 
