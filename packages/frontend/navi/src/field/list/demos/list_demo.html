@@ -266,7 +266,6 @@
               text is highlighted.
             </p>
             <List
-              withSearch
               uiAction={(value) => {
                 setSelected(value);
               }}
@@ -275,7 +274,6 @@
                 <Input
                   placeholder="Search fruits…"
                   expandX
-                  autoFocus
                   paddingX="10"
                   paddingY="6"
                   size="m"
@@ -353,6 +351,7 @@
                   key={fruit}
                   index={i}
                   value={fruit}
+                  id={fruit}
                   selected={selected === fruit}
                 >
                   {fruit}
@@ -404,6 +403,7 @@
                   <ListItem
                     key={fruit}
                     index={i}
+                    id={fruit}
                     value={fruit}
                     selected={selected === fruit}
                   >
@@ -465,6 +465,7 @@
                   <ListItem
                     key={fruit}
                     index={i}
+                    id={fruit}
                     value={fruit}
                     selected={selected === fruit}
                   >
