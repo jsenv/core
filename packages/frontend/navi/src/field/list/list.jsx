@@ -109,10 +109,13 @@ const css = /* css */ `
       --list-item-color-selected: light-dark(#1a73e8, #7baaf7);
       --list-item-background-color-selected: light-dark(#e8f0fe, #1c3a6e);
       --list-item-font-weight-selected: 500;
+
+      /* Pointed+selected: darken the selected background slightly */
       --list-item-color-pointed-selected: var(--list-item-color-selected);
-      --list-item-background-color-pointed-selected: light-dark(
-        #d2e3fc,
-        #174ea6
+      --list-item-background-color-pointed-selected: color-mix(
+        in srgb,
+        var(--list-item-background-color-selected) 80%,
+        black
       );
 
       /* Disabled */
