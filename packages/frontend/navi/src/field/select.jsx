@@ -252,7 +252,8 @@ export const Select = (props) => {
 };
 
 const SelectDispatcher = (props) => {
-  const { mode = "popover" } = props;
+  const narrowScreen = window.innerWidth <= 600;
+  const { mode = narrowScreen ? "dialog" : "popover" } = props;
   if (mode === "dialog") {
     return <SelectWithDialog {...props} />;
   }
