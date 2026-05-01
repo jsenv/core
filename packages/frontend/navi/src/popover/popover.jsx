@@ -2,6 +2,7 @@ import {
   findFocusable,
   getElementSignature,
   pickPositionRelativeTo,
+  trapFocusInside,
   trapScrollInside,
   visibleRectEffect,
 } from "@jsenv/dom";
@@ -37,6 +38,7 @@ export const Popover = (props) => {
     disabled,
     scrollTrap,
     pointerTrap,
+    focusTrap,
     children,
     positionTry = "bottom",
     ...rest
@@ -113,6 +115,10 @@ export const Popover = (props) => {
     if (scrollTrap) {
       cleanupScrollTrap = trapScrollInside(popoverEl);
     }
+    let cleanupFocusTrap;
+    if (focusTrap) {
+      cleanupFocusTrap = trapFocusInside(popoverEl);
+    }
     const rectEffect = visibleRectEffect(
       effectiveAnchor,
       ({ visibilityRatio }, { event }) => {
@@ -127,6 +133,7 @@ export const Popover = (props) => {
     cleanupRef.current = () => {
       rectEffect.disconnect();
       cleanupScrollTrap?.();
+      cleanupFocusTrap?.();
     };
     dispatchPublicCustomEvent(popoverEl, "navi_popover_open", {
       event: e,

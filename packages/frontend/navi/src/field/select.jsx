@@ -425,7 +425,17 @@ const SelectTrigger = () => {
 
 // SelectWithPopover — trigger + popover anchored below the trigger.
 const SelectWithPopover = (props) => {
-  const { ref, disabled, onKeyDown, children, scrollTrap, ...rest } = props;
+  const {
+    ref,
+    disabled,
+    onKeyDown,
+    children,
+    scrollTrap,
+    pointerTrap,
+    focusTrap,
+    positionTry,
+    ...rest
+  } = props;
   const debugFocus = useDebugFocus();
   const popoverRef = useRef(null);
   const popoverId = useId();
@@ -499,6 +509,19 @@ const SelectWithPopover = (props) => {
         requestClose(e);
         moveFocusToSelect(e);
       }}
+      onFocusOut={(e) => {
+        // Close when focus leaves the select entirely (not just moving between internal elements).
+        // relatedTarget is the element receiving focus; if it's inside the select or the popover, keep open.
+        const relatedTarget = e.relatedTarget;
+        const selectEl = ref.current;
+        const popoverEl = popoverRef.current;
+        const focusStaysInside =
+          (selectEl && selectEl.contains(relatedTarget)) ||
+          (popoverEl && popoverEl.contains(relatedTarget));
+        if (!focusStaysInside) {
+          requestClose(e);
+        }
+      }}
       {...rest}
       onKeyDown={shortcutsViaOnKeyDown(
         {
@@ -545,7 +568,10 @@ const SelectWithPopover = (props) => {
           onClose(e);
           moveFocusToSelect(e);
         }}
+        positionTry={positionTry}
         scrollTrap={scrollTrap}
+        pointerTrap={pointerTrap}
+        focusTrap={focusTrap}
       >
         {children}
       </Popover>
