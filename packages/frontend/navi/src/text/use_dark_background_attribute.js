@@ -1,4 +1,8 @@
-import { contrastColor, resolveCSSColor } from "@jsenv/dom";
+import {
+  contrastColor,
+  resolveCSSColor,
+  resolveColorLuminance,
+} from "@jsenv/dom";
 import { useLayoutEffect } from "preact/hooks";
 
 import { NAVI_PSEUDO_STATE_CUSTOM_EVENT } from "../box/pseudo_styles.js";
@@ -43,6 +47,7 @@ export const useDarkBackgroundAttribute = (
     colorProperty = "backgroundColor",
     attributeName = "data-dark-background",
     invert = false,
+    luminanceThreshold,
     hardcoded = {},
   } = {},
 ) => {
@@ -86,8 +91,15 @@ export const useDarkBackgroundAttribute = (
       }
       const colorString = normalizeColorString(color, el);
       const hardcodedContrast = hardcodedMap.get(colorString);
-      const contrastingColor = hardcodedContrast || contrastColor(color, el);
-      const isDark = contrastingColor === "white";
+      let isDark;
+      if (hardcodedContrast) {
+        isDark = hardcodedContrast === "white";
+      } else if (luminanceThreshold !== undefined) {
+        const luminance = resolveColorLuminance(color, el);
+        isDark = luminance !== undefined && luminance <= luminanceThreshold;
+      } else {
+        isDark = contrastColor(color, el) === "white";
+      }
       if (invert ? !isDark : isDark) {
         el.setAttribute(attributeName, "");
       } else {
