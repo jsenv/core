@@ -9,7 +9,10 @@ import { useId, useLayoutEffect, useRef, useState } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
 import { useDebugPopover } from "../navi_debug.jsx";
-import { dispatchPublicCustomEvent } from "../utils/custom_event.js";
+import {
+  dispatchCustomEvent,
+  dispatchPublicCustomEvent,
+} from "../utils/custom_event.js";
 
 const css = /* css */ `
   .navi_popover {
@@ -175,16 +178,13 @@ export const Popover = (props) => {
 };
 
 export const requestPopoverOpen = (popoverElement, { event, anchor }) => {
-  return popoverElement.dispatchEvent(
-    new CustomEvent("navi_popover_request_open", {
-      detail: { event, anchor },
-    }),
-  );
+  return dispatchCustomEvent(popoverElement, "navi_popover_request_open", {
+    event,
+    anchor,
+  });
 };
 export const requestPopoverClose = (popoverElement, { event } = {}) => {
-  return popoverElement.dispatchEvent(
-    new CustomEvent("navi_popover_request_close", {
-      detail: { event },
-    }),
-  );
+  return dispatchCustomEvent(popoverElement, "navi_popover_request_close", {
+    event,
+  });
 };
