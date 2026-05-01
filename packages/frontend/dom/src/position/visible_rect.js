@@ -3,21 +3,21 @@ import { createPubSub } from "../pub_sub.js";
 
 const DEBUG = false;
 
-// Tracks how much of an element is visible within its scrollable parent and within the
-// document viewport. Calls update() on initialization and whenever visibility changes
-// (scroll, resize, intersection changes).
-//
-// The update callback receives a visibleRect object with:
-// - left, top, right, bottom, width, height: the visible portion of the element
-// - visibilityRatio: fraction visible relative to the document viewport (0–1)
-// - scrollVisibilityRatio: fraction visible relative to the scrollable parent (0–1)
-//
-// When the scrollable parent is the document, both ratios are identical.
-// When the scrollable parent is a custom container:
-//   - scrollVisibilityRatio can be 1.0 (fully visible inside the container)
-//   - while visibilityRatio can be 0.0 (the container itself is scrolled out of the viewport)
-//
-// A bit like https://tetherjs.dev/ but different
+/**
+ * Tracks how much of an element is visible within its scrollable parent and within the
+ * document viewport. Calls update() on initialization and whenever visibility changes
+ * (scroll, resize, intersection changes).
+ *
+ * The update callback receives a visibleRect object with:
+ * - left, top, right, bottom, width, height: the visible portion of the element,
+ *   clipped to its scroll container's bounds and expressed in overlay coordinates
+ * - visibilityRatio: fraction of the element's area that is truly visible on screen (0–1).
+ *   For document scroll containers this is the viewport-clipped fraction.
+ *   For custom containers this is the fraction clipped by both the container AND the viewport
+ *   (so an element scrolled out of its container correctly reports 0, not 1).
+ *
+ * A bit like https://tetherjs.dev/ but different
+ */
 export const visibleRectEffect = (element, update) => {
   const [teardown, addTeardown] = createPubSub();
   const scrollContainer = getScrollContainer(element);
@@ -122,27 +122,36 @@ export const visibleRectEffect = (element, update) => {
       }
     }
 
-    // Calculate visibility ratios
-    const scrollVisibilityRatio =
-      (widthVisible * heightVisible) / (width * height);
-    // Calculate visibility ratio relative to document viewport
-    let documentVisibilityRatio;
+    // Calculate visibilityRatio: fraction of element area truly visible on screen.
+    // For custom containers we intersect the container-clipped visible size (widthVisible x
+    // heightVisible) with the viewport bounds, so an element scrolled out of its container
+    // correctly reports 0 rather than the raw viewport intersection of its bounding rect.
+    let visibilityRatio;
     if (scrollContainerIsDocument) {
-      documentVisibilityRatio = scrollVisibilityRatio;
+      visibilityRatio = (widthVisible * heightVisible) / (width * height);
     } else {
-      // For custom containers, calculate visibility relative to document viewport
+      // widthVisible/heightVisible are already clipped to the scroll container.
+      // Now clip their viewport-relative counterparts against the viewport.
       const elementRect = element.getBoundingClientRect();
       const viewportWidth = window.innerWidth;
       const viewportHeight = window.innerHeight;
-      // Calculate how much of the element is visible in the document viewport
-      const elementLeft = Math.max(0, elementRect.left);
-      const elementTop = Math.max(0, elementRect.top);
-      const elementRight = Math.min(viewportWidth, elementRect.right);
-      const elementBottom = Math.min(viewportHeight, elementRect.bottom);
-      const documentVisibleWidth = Math.max(0, elementRight - elementLeft);
-      const documentVisibleHeight = Math.max(0, elementBottom - elementTop);
-      documentVisibilityRatio =
-        (documentVisibleWidth * documentVisibleHeight) / (width * height);
+      // Container-clipped visible rect in viewport coordinates
+      const visibleLeft = overlayLeft;
+      const visibleTop = overlayTop;
+      const visibleRight = overlayLeft + widthVisible;
+      const visibleBottom = overlayTop + heightVisible;
+      // Intersect with viewport
+      const clippedLeft = visibleLeft < 0 ? 0 : visibleLeft;
+      const clippedTop = visibleTop < 0 ? 0 : visibleTop;
+      const clippedRight =
+        visibleRight > viewportWidth ? viewportWidth : visibleRight;
+      const clippedBottom =
+        visibleBottom > viewportHeight ? viewportHeight : visibleBottom;
+      const clippedWidth =
+        clippedRight > clippedLeft ? clippedRight - clippedLeft : 0;
+      const clippedHeight =
+        clippedBottom > clippedTop ? clippedBottom - clippedTop : 0;
+      visibilityRatio = (clippedWidth * clippedHeight) / (width * height);
     }
 
     const visibleRect = {
@@ -152,8 +161,7 @@ export const visibleRectEffect = (element, update) => {
       bottom: overlayTop + heightVisible,
       width: widthVisible,
       height: heightVisible,
-      visibilityRatio: documentVisibilityRatio,
-      scrollVisibilityRatio,
+      visibilityRatio,
     };
 
     if (DEBUG) {
