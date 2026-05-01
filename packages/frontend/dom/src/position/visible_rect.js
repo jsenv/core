@@ -3,17 +3,20 @@ import { createPubSub } from "../pub_sub.js";
 
 const DEBUG = false;
 
-// Creates a visible rect effect that tracks how much of an element is visible within its scrollable parent
-// and within the document viewport. This is useful for implementing overlays, lazy loading, or any UI
-// that needs to react to element visibility changes.
+// Tracks how much of an element is visible within its scrollable parent and within the
+// document viewport. Calls update() on initialization and whenever visibility changes
+// (scroll, resize, intersection changes).
 //
-// The function returns two visibility ratios:
-// - scrollVisibilityRatio: Visibility ratio relative to the scrollable parent (0-1)
-// - visibilityRatio: Visibility ratio relative to the document viewport (0-1)
+// The update callback receives a visibleRect object with:
+// - left, top, right, bottom, width, height: the visible portion of the element
+// - visibilityRatio: fraction visible relative to the document viewport (0–1)
+// - scrollVisibilityRatio: fraction visible relative to the scrollable parent (0–1)
 //
-// When scrollable parent is the document, both ratios will be the same.
-// When scrollable parent is a custom container, scrollVisibilityRatio might be 1.0 (fully visible
-// within the container) while visibilityRatio could be 0.0 (container is scrolled out of viewport).
+// When the scrollable parent is the document, both ratios are identical.
+// When the scrollable parent is a custom container:
+//   - scrollVisibilityRatio can be 1.0 (fully visible inside the container)
+//   - while visibilityRatio can be 0.0 (the container itself is scrolled out of the viewport)
+//
 // A bit like https://tetherjs.dev/ but different
 export const visibleRectEffect = (element, update) => {
   const [teardown, addTeardown] = createPubSub();
