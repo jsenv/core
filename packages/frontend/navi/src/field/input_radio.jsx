@@ -1,7 +1,6 @@
 import { resolveColorLuminance } from "@jsenv/dom";
 import { useCallback, useContext, useLayoutEffect, useRef } from "preact/hooks";
 
-import { renderActionableComponent } from "../action/render_actionable_component.jsx";
 import { Box } from "../box/box.jsx";
 import { LoaderBackground } from "../graphic/loader/loader_background.jsx";
 import { useAutoFocus } from "../utils/focus/use_auto_focus.js";
@@ -320,6 +319,8 @@ const css = /* css */ `
 `;
 
 export const InputRadio = (props) => {
+  const defaultRef = useRef();
+  const ref = props.ref || defaultRef;
   const { value = "on" } = props;
   const uiStateController = useUIStateController(props, "radio", {
     statePropName: "checked",
@@ -335,29 +336,26 @@ export const InputRadio = (props) => {
   });
   const uiState = useUIState(uiStateController);
 
-  const radio = renderActionableComponent(props, {
-    Basic: InputRadioUI,
-    WithAction: InputRadioWithAction,
-  });
   return (
     <UIStateControllerContext.Provider value={uiStateController}>
-      <UIStateContext.Provider value={uiState}>{radio}</UIStateContext.Provider>
+      <UIStateContext.Provider value={uiState}>
+        <InputRadioDispatcher {...props} ref={ref} />
+      </UIStateContext.Provider>
     </UIStateControllerContext.Provider>
   );
 };
 
+const InputRadioDispatcher = (props) => {
+  if (props.action) {
+    return <InputRadioWithAction />;
+  }
+  return <InputRadioUI {...props} />;
+};
+
 const InputRadioUI = (props) => {
   import.meta.css = css;
-
-  const contextName = useContext(FieldNameContext);
-  const contextReadOnly = useContext(ReadOnlyContext);
-  const contextDisabled = useContext(DisabledContext);
-  const contextRequired = useContext(RequiredContext);
-  const contextLoading = useContext(LoadingContext);
-  const contextLoadingElement = useContext(LoadingElementContext);
-  const uiStateController = useContext(UIStateControllerContext);
-  const uiState = useContext(UIStateContext);
   const {
+    ref,
     /* eslint-disable no-unused-vars */
     type,
     /* eslint-enable no-unused-vars */
@@ -376,8 +374,14 @@ const InputRadioUI = (props) => {
     color,
     ...rest
   } = props;
-  const defaultRef = useRef();
-  const ref = rest.ref || defaultRef;
+  const contextName = useContext(FieldNameContext);
+  const contextReadOnly = useContext(ReadOnlyContext);
+  const contextDisabled = useContext(DisabledContext);
+  const contextRequired = useContext(RequiredContext);
+  const contextLoading = useContext(LoadingContext);
+  const contextLoadingElement = useContext(LoadingElementContext);
+  const uiStateController = useContext(UIStateControllerContext);
+  const uiState = useContext(UIStateContext);
 
   const innerName = name || contextName;
   const innerDisabled = disabled || contextDisabled;
