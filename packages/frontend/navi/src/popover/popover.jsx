@@ -7,7 +7,7 @@ import {
   visibleRectEffect,
 } from "@jsenv/dom";
 import { createPortal } from "preact/compat";
-import { useId, useLayoutEffect, useRef, useState } from "preact/hooks";
+import { useId, useRef, useState } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
 import { useDebugFocus, useDebugPopover } from "../navi_debug.jsx";
@@ -15,6 +15,7 @@ import {
   dispatchCustomEvent,
   dispatchPublicCustomEvent,
 } from "../utils/custom_event.js";
+import { useCleanup } from "../utils/use_cleanup.js";
 
 const css = /* css */ `
   .navi_popover_backdrop {
@@ -35,7 +36,6 @@ const css = /* css */ `
 export const Popover = (props) => {
   import.meta.css = css;
   const {
-    disabled,
     scrollTrap,
     pointerTrap,
     focusTrap,
@@ -51,34 +51,14 @@ export const Popover = (props) => {
   const debugPopover = useDebugPopover();
   const debugFocus = useDebugFocus();
 
-  const [expanded, setExpanded] = useState(false);
-  const expandedRef = useRef(expanded);
-  expandedRef.current = expanded;
-  const expand = () => {
-    expandedRef.current = true;
-    setExpanded(true);
-  };
-  const collapse = () => {
-    expandedRef.current = false;
-    setExpanded(false);
-  };
-
-  const cleanupRef = useRef(null);
-  const openPopover = (e, { anchor }) => {
+  const [opened, setOpened] = useState(false);
+  const openedRef = useRef(opened);
+  openedRef.current = opened;
+  const [addCleanup, cleanup] = useCleanup();
+  const open = (e, { anchor }) => {
     debugPopover(`openPopover("${e.type}")`);
-    if (disabled) {
-      return;
-    }
-    if (expandedRef.current) {
-      debugPopover("Popover already open, skipping");
-      return;
-    }
     const popoverEl = ref.current;
-    if (!popoverEl) {
-      return;
-    }
     popoverEl.showPopover();
-    expand();
     const firstFocusable = findFocusable(popoverEl);
     if (firstFocusable) {
       debugFocus(
@@ -111,13 +91,11 @@ export const Popover = (props) => {
       }
     };
 
-    let cleanupScrollTrap;
     if (scrollTrap) {
-      cleanupScrollTrap = trapScrollInside(popoverEl);
+      addCleanup(trapScrollInside(popoverEl));
     }
-    let cleanupFocusTrap;
     if (focusTrap) {
-      cleanupFocusTrap = trapFocusInside(popoverEl, { debug: debugFocus });
+      addCleanup(trapFocusInside(popoverEl, { debug: debugFocus }));
     }
     const rectEffect = visibleRectEffect(
       effectiveAnchor,
@@ -130,39 +108,50 @@ export const Popover = (props) => {
         positionPopover(event);
       },
     );
-    cleanupRef.current = () => {
+    addCleanup(() => {
       rectEffect.disconnect();
-      cleanupScrollTrap?.();
-      cleanupFocusTrap?.();
-    };
+    });
+    openedRef.current = true;
+    setOpened(true);
     dispatchPublicCustomEvent(popoverEl, "navi_popover_open", {
       event: e,
     });
   };
-  const closePopover = (e) => {
-    if (!expandedRef.current) {
-      debugPopover("Popover already closed, skipping");
-      return;
-    }
-    const popoverEl = ref.current;
+  const close = (e) => {
     debugPopover(`closePopover("${e.type}")`);
-    cleanupRef.current?.();
-    cleanupRef.current = null;
+    const popoverEl = ref.current;
     popoverEl.hidePopover();
-    collapse();
+    cleanup();
+    openedRef.current = false;
+    setOpened(false);
     dispatchPublicCustomEvent(popoverEl, "navi_popover_close", {
       event: e,
     });
   };
-  useLayoutEffect(() => {
-    return () => {
-      cleanupRef.current?.();
-    };
-  }, []);
 
+  const openPopover = (e, { anchor }) => {
+    const popoverEl = ref.current;
+    if (!popoverEl) {
+      return;
+    }
+    if (openedRef.current) {
+      return;
+    }
+    open(e, { anchor });
+  };
+  const closePopover = (e) => {
+    const popoverEl = ref.current;
+    if (!popoverEl) {
+      return;
+    }
+    if (!openedRef.current) {
+      return;
+    }
+    close(e);
+  };
   return (
     <>
-      {expanded &&
+      {opened &&
         createPortal(
           <div
             className="navi_popover_backdrop"
@@ -179,10 +168,10 @@ export const Popover = (props) => {
           document.body,
         )}
       <Box
-        ref={ref}
         id={id}
         popover="manual"
         {...rest}
+        ref={ref}
         baseClassName="navi_popover"
         onnavi_popover_request_open={(e) => {
           const { event = e, anchor } = e.detail;

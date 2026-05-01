@@ -13,6 +13,11 @@ import { LoaderBackground } from "../graphic/loader/loader_background.jsx";
 import { shortcutsViaOnKeyDown } from "../keyboard/keyboard_shortcuts.js";
 import { useDebugFocus } from "../navi_debug.jsx";
 import {
+  Dialog,
+  requestDialogClose,
+  requestDialogOpen,
+} from "../popover/dialog.jsx";
+import {
   Popover,
   requestPopoverClose,
   requestPopoverOpen,
@@ -459,7 +464,6 @@ const SelectWithPopover = (props) => {
     expandedRef.current = false;
     setExpanded(false);
   };
-
   const requestOpen = (e) => {
     return requestPopoverOpen(popoverRef.current, {
       event: e,
@@ -595,45 +599,30 @@ const SelectWithPopover = (props) => {
 };
 // SelectWithDialog — trigger + centered modal dialog.
 const SelectWithDialog = (props) => {
-  let { ref, disabled, onKeyDown, children, ...rest } = props;
+  let { ref, disabled, onKeyDown, children, scrollTrap, pointerTrap, ...rest } =
+    props;
   const debugFocus = useDebugFocus();
   const dialogRef = useRef(null);
   const dialogId = useId();
   const [expanded, setExpanded] = useState(false);
   const expandedRef = useRef(expanded);
   expandedRef.current = expanded;
-  const expand = () => {
+  const onOpen = () => {
     expandedRef.current = true;
     setExpanded(true);
   };
-  const collapse = () => {
+  const onClose = () => {
     expandedRef.current = false;
     setExpanded(false);
   };
-
-  const openDialog = () => {
-    if (disabled) {
-      return;
-    }
-    if (expandedRef.current) {
-      return;
-    }
-    const dialog = dialogRef.current;
-    if (!dialog) {
-      return;
-    }
-    dialog.showModal();
-    expand();
+  const requestOpen = (e) => {
+    return requestDialogOpen(dialogRef.current, {
+      event: e,
+    });
   };
-  const closeDialog = () => {
-    const dialog = dialogRef.current;
-    if (!dialog) {
-      return;
-    }
-    dialog.close();
-    collapse();
+  const requestClose = (e) => {
+    return requestDialogClose(dialogRef.current, { event: e });
   };
-
   const moveFocusToSelect = (e) => {
     debugFocus(`moveFocusToSelect("${e.type}")`);
     ref.current.focus({ preventScroll: true, focusVisible: true });
@@ -653,11 +642,11 @@ const SelectWithDialog = (props) => {
           return;
         }
         if (expandedRef.current) {
-          closeDialog(e);
+          requestClose(e);
         } else {
           e.preventDefault(); // prevent browser trying to give focus to the select (dialog will take focus)
           debugFocus(`select mousedown.preventDefault()`);
-          openDialog(e);
+          requestOpen(e);
         }
       }}
       onClick={(e) => {
@@ -666,7 +655,7 @@ const SelectWithDialog = (props) => {
           return;
         }
         // When a label is clicked it transfers focus to the select, in that case we want to open it
-        openDialog(e);
+        requestOpen(e);
       }}
       onnavi_list_select={(e) => {
         const { event } = e.detail;
@@ -678,7 +667,7 @@ const SelectWithDialog = (props) => {
           // space can open the dialog, we don't want space to propagate to the select otherwise it would open it back immediately
           event.stopPropagation();
         }
-        closeDialog(e);
+        requestClose(e);
         moveFocusToSelect(e);
       }}
       {...rest}
@@ -686,16 +675,16 @@ const SelectWithDialog = (props) => {
         {
           arrowdown: (e) => {
             e.preventDefault();
-            openDialog(e);
+            requestOpen(e);
           },
           arrowup: (e) => {
             e.preventDefault();
-            openDialog(e);
+            requestOpen(e);
           },
           space: (e) => {
             e.preventDefault();
             if (!expandedRef.current) {
-              openDialog(e);
+              requestOpen(e);
             }
           },
           escape: () => {
@@ -711,17 +700,21 @@ const SelectWithDialog = (props) => {
       ref={ref}
       mode="ui"
     >
-      <dialog
+      <Dialog
         ref={dialogRef}
-        id={dialogId}
         className="navi_select_dialog"
-        onClose={(e) => {
-          collapse();
+        onnavi_dialog_open={(e) => {
+          onOpen(e);
+        }}
+        onnavi_dialog_close={(e) => {
+          onClose(e);
           moveFocusToSelect(e);
         }}
+        scrollTrap={scrollTrap}
+        pointerTrap={pointerTrap}
       >
         {children}
-      </dialog>
+      </Dialog>
     </SelectDispatcher>
   );
 };
