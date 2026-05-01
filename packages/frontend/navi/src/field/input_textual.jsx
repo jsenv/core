@@ -322,6 +322,7 @@ const InputTextualUI = (props) => {
     ref,
     type,
     onInput,
+    onKeyDown,
 
     readOnly,
     disabled,
@@ -361,7 +362,8 @@ const InputTextualUI = (props) => {
   });
   const remainingProps = useConstraints(ref, rest);
 
-  const innerOnInput = useStableCallback(onInput);
+  const onInputStable = useStableCallback(onInput);
+  const onKeyDownStable = useStableCallback(onKeyDown);
   const autoId = useId();
   const innerId = rest.id || autoId;
   const renderInput = (inputProps) => {
@@ -387,7 +389,10 @@ const InputTextualUI = (props) => {
             inputValue = e.target.value;
           }
           uiStateController.setUIState(inputValue, e);
-          innerOnInput?.(e);
+          onInputStable?.(e);
+        }}
+        onKeyDown={(e) => {
+          onKeyDownStable?.(e);
         }}
         onresetuistate={(e) => {
           uiStateController.resetUIState(e);
@@ -405,7 +410,6 @@ const InputTextualUI = (props) => {
     type,
     uiState,
     innerValue,
-    innerOnInput,
     innerId,
     autoFocus,
   ]);
@@ -623,6 +627,43 @@ const InputControllingList = (props) => {
     return requestList(listContainerEl, { event, ...customEventDetail });
   };
 
+  const onKeyDownWithShortcuts = shortcutsViaOnKeyDown(
+    {
+      arrowdown: (e) => {
+        return forwardToList(e, requestListNavFromCurrent, {
+          goal: "down",
+        });
+      },
+      arrowup: (e) => {
+        return forwardToList(e, requestListNavFromCurrent, {
+          goal: "up",
+        });
+      },
+      home: (e) => {
+        return forwardToList(e, requestListNavFromCurrent, {
+          goal: "first",
+        });
+      },
+      end: (e) => {
+        return forwardToList(e, requestListNavFromCurrent, {
+          goal: "last",
+        });
+      },
+      enter: (e) => {
+        return forwardToList(e, requestListSelectCurrent);
+      },
+      escape: (e) => {
+        // prevent escape from reaching eventual <select> ancestor
+        // when the escape is meant to clear the search input (otherwise it would close the select too)
+        debugger;
+        if (e.currentTarget.type === "search" && e.currentTarget.value !== "") {
+          e.stopPropagation();
+        }
+        return forwardToList(e, requestListInteractionStateReset);
+      },
+    },
+    onKeyDown,
+  );
   return (
     <ListIdContext.Provider value={null}>
       <InputTextualDispatcher
@@ -634,46 +675,7 @@ const InputControllingList = (props) => {
         {...rest}
         ref={ref}
         listId={undefined}
-        onKeyDown={shortcutsViaOnKeyDown(
-          {
-            arrowdown: (e) => {
-              return forwardToList(e, requestListNavFromCurrent, {
-                goal: "down",
-              });
-            },
-            arrowup: (e) => {
-              return forwardToList(e, requestListNavFromCurrent, {
-                goal: "up",
-              });
-            },
-            home: (e) => {
-              return forwardToList(e, requestListNavFromCurrent, {
-                goal: "first",
-              });
-            },
-            end: (e) => {
-              return forwardToList(e, requestListNavFromCurrent, {
-                goal: "last",
-              });
-            },
-            enter: (e) => {
-              return forwardToList(e, requestListSelectCurrent);
-            },
-            escape: (e) => {
-              // prevent escape from reaching eventual <select> ancestor
-              // when the escape is meant to clear the search input (otherwise it would close the select too)
-              debugger;
-              if (
-                e.currentTarget.type === "search" &&
-                e.currentTarget.value !== ""
-              ) {
-                e.stopPropagation();
-              }
-              return forwardToList(e, requestListInteractionStateReset);
-            },
-          },
-          onKeyDown,
-        )}
+        onKeyDown={onKeyDownWithShortcuts}
       />
     </ListIdContext.Provider>
   );

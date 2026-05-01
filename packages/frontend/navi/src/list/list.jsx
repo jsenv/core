@@ -398,6 +398,9 @@ const css = /* css */ `
  *   ...rest              — forwarded to the outer scroll container <Box>
  */
 export const List = (props) => {
+  return <ListDispatcher {...props} />;
+};
+const ListDispatcher = (props) => {
   const alreadyInteractive = useContext(ListInteractiveContext);
   const parentUIStateController = useContext(ParentUIStateControllerContext);
   // Each of the variants below strips its own triggering prop and re-renders
@@ -413,7 +416,7 @@ export const List = (props) => {
   if (props.keyboardInteractions) {
     return <ListWithKeyboardInteractions {...props} />;
   }
-  return <ListPresentation {...props} />;
+  return <ListUI {...props} />;
 };
 const ListUI = (props) => {
   const {
@@ -500,10 +503,12 @@ const ListUI = (props) => {
   });
 
   const renderList = (listProps) => {
+    const listIdDefault = useId();
+
     return (
       <UnorderedList
         ref={ulRef}
-        id={listId}
+        id={listId || listIdDefault}
         role={listRole}
         fallback={fallback}
         noMatchFallback={noMatchFallback}
@@ -1376,11 +1381,6 @@ const ListWithKeyboardInteractions = (props) => {
       autoFocusPreventScroll={undefined}
     />
   );
-};
-
-// Presentation-only variant: no interaction state, no navi event handling.
-const ListPresentation = (props) => {
-  return <ListUI {...props} />;
 };
 
 /**
