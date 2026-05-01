@@ -318,6 +318,7 @@ const InputTextualDispatcher = (props) => {
 
 const InputNativeContext = createContext(null);
 const InputTextualUI = (props) => {
+  import.meta.css = css;
   const {
     ref,
     type,
@@ -336,8 +337,6 @@ const InputTextualUI = (props) => {
 
     ...rest
   } = props;
-
-  import.meta.css = css;
   const contextReadOnly = useContext(ReadOnlyContext);
   const contextDisabled = useContext(DisabledContext);
   const contextLoading = useContext(LoadingContext);
@@ -812,7 +811,6 @@ const InputTextualWithSuggestions = (props) => {
   );
 };
 const InputTextualWithAction = (props) => {
-  const uiState = useContext(UIStateContext);
   const {
     ref,
     action,
@@ -829,6 +827,7 @@ const InputTextualWithAction = (props) => {
     actionErrorEffect,
     ...rest
   } = props;
+  const uiState = useContext(UIStateContext);
   const [boundAction] = useActionBoundToOneParam(action, uiState);
   const { loading: actionLoading } = useActionStatus(boundAction);
   const executeAction = useExecuteAction(ref, {
