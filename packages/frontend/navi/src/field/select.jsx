@@ -256,7 +256,10 @@ const SelectDispatcher = (props) => {
   if (mode === "dialog") {
     return <SelectWithDialog {...props} />;
   }
-  return <SelectWithPopover {...props} />;
+  if (mode === "popover") {
+    return <SelectWithPopover {...props} />;
+  }
+  return <SelectUI {...props} />;
 };
 
 export const SelectPlaceholderContext = createContext();
@@ -456,7 +459,7 @@ const SelectWithPopover = (props) => {
   };
 
   return (
-    <SelectUI
+    <SelectDispatcher
       disabled={disabled}
       aria-haspopup="listbox"
       aria-expanded={expanded}
@@ -525,9 +528,9 @@ const SelectWithPopover = (props) => {
       )}
       {...rest}
       ref={ref}
+      mode="ui"
     >
       <Popover
-        ref={popoverRef}
         className="navi_select_popover"
         onMouseDown={(e) => {
           if (e.button !== 0) {
@@ -546,7 +549,7 @@ const SelectWithPopover = (props) => {
       >
         {children}
       </Popover>
-    </SelectUI>
+    </SelectDispatcher>
   );
 };
 // SelectWithDialog — trigger + centered modal dialog.
@@ -598,7 +601,7 @@ const SelectWithDialog = (props) => {
   };
 
   return (
-    <SelectUI
+    <SelectDispatcher
       disabled={disabled}
       aria-haspopup="dialog"
       aria-expanded={expanded}
@@ -667,6 +670,7 @@ const SelectWithDialog = (props) => {
       )}
       {...rest}
       ref={ref}
+      mode="ui"
     >
       <dialog
         ref={dialogRef}
@@ -679,6 +683,6 @@ const SelectWithDialog = (props) => {
       >
         {children}
       </dialog>
-    </SelectUI>
+    </SelectDispatcher>
   );
 };
