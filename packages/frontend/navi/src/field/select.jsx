@@ -442,7 +442,10 @@ const SelectWithPopover = (props) => {
   };
 
   const requestOpen = (e) => {
-    return requestPopoverOpen(popoverRef.current, { event: e });
+    return requestPopoverOpen(popoverRef.current, {
+      event: e,
+      anchor: ref.current,
+    });
   };
   const requestClose = (e) => {
     return requestPopoverClose(popoverRef.current, { event: e });
