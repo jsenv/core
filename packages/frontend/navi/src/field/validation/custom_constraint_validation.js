@@ -837,8 +837,14 @@ export const installCustomConstraintValidation = (
   close_on_escape: {
     const onkeydown = (e) => {
       if (e.key === "Escape") {
-        if (!closeElementValidationMessage("escape_key")) {
-          dispatchCancelCustomEvent({ detail: { reason: "escape_key" } });
+        if (closeElementValidationMessage("escape_key")) {
+          // closing the callout should prevent anything else from hapenning
+          e.stopPropagation();
+          e.preventDefault();
+        } else {
+          dispatchCancelCustomEvent({
+            detail: { reason: "escape_key" },
+          });
         }
       }
     };
