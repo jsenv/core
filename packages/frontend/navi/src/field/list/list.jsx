@@ -999,6 +999,9 @@ const useVirtualItemHeightSignal = (ulRef, virtualItemHeightProp = 0) => {
 
 const LIST_STYLE_CSS_VARS = {
   maxHeight: "--list-max-height",
+  borderColor: "--list-border-color",
+  borderRadius: "--list-border-radius",
+  borderWidth: "--list-border-width",
 };
 const LIST_PSEUDO_CLASSES = [":-navi-void"];
 // Inner <ul> — hosts the fillers + items.

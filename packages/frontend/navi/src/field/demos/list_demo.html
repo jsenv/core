@@ -81,6 +81,7 @@
         Label,
         Form,
         Button,
+        Box,
       } from "@jsenv/navi";
 
       const FRUITS = [
@@ -322,41 +323,53 @@
               the <code>Input</code> pointing to the list's <code>id</code>.
               Keyboard forwarding and ARIA still wire up automatically.
             </p>
-            <Input
-              placeholder="Search fruits…"
-              expandX
-              paddingX="10"
-              paddingY="6"
-              size="m"
-              listId="searchable-fruits-list"
-              uiAction={(value) => {
-                setSearchText(value);
-              }}
-            />
-            <List
-              listId="searchable-fruits-list"
-              uiAction={(value) => {
-                setSelected(value);
-              }}
-              expandX
-            >
-              {fruits.map((fruit, i) => {
-                const { match, ranges } = getItemMatchInfo(fruit);
-                return (
-                  <ListItem
-                    key={fruit}
-                    index={i}
-                    id={fruit}
-                    value={fruit}
-                    selected={selected === fruit}
-                    hidden={!match}
-                    highlight={ranges}
-                  >
-                    {fruit}
-                  </ListItem>
-                );
-              })}
-            </List>
+            <Box flex="y" spacing="s">
+              <Input
+                placeholder="Search fruits…"
+                expandX
+                paddingX="10"
+                paddingY="6"
+                size="m"
+                listId="searchable-fruits-list"
+                borderColor="#7c3aed"
+                borderRadius="m"
+                uiAction={(value) => {
+                  setSearchText(value);
+                }}
+              />
+              <Box
+                borderStyle="solid"
+                borderWidth="1"
+                borderColor="#7c3aed"
+                borderRadius="m"
+                overflow="hidden"
+              >
+                <List
+                  listId="searchable-fruits-list"
+                  uiAction={(value) => {
+                    setSelected(value);
+                  }}
+                  expandX
+                >
+                  {fruits.map((fruit, i) => {
+                    const { match, ranges } = getItemMatchInfo(fruit);
+                    return (
+                      <ListItem
+                        key={fruit}
+                        index={i}
+                        id={fruit}
+                        value={fruit}
+                        selected={selected === fruit}
+                        hidden={!match}
+                        highlight={ranges}
+                      >
+                        {fruit}
+                      </ListItem>
+                    );
+                  })}
+                </List>
+              </Box>
+            </Box>
             <div className="value-display">{selected ?? ""}</div>
           </div>
         );

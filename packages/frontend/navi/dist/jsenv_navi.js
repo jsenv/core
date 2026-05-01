@@ -27086,7 +27086,6 @@ const ListUI = props => {
     "data-expand-x": expandX ? "" : undefined,
     expandX: expandX,
     maxHeight: maxHeight,
-    visualSelector: ".navi_list",
     styleCSSVars: LIST_STYLE_CSS_VARS,
     pseudoClasses: LIST_PSEUDO_CLASSES,
     hasChildFunction: true,
@@ -27487,7 +27486,10 @@ const useVirtualItemHeightSignal = (ulRef, virtualItemHeightProp = 0) => {
   return virtualHeightSignal;
 };
 const LIST_STYLE_CSS_VARS = {
-  maxHeight: "--list-max-height"
+  maxHeight: "--list-max-height",
+  borderColor: "--list-border-color",
+  borderRadius: "--list-border-radius",
+  borderWidth: "--list-border-width"
 };
 const LIST_PSEUDO_CLASSES = [":-navi-void"];
 // Inner <ul> — hosts the fillers + items.
@@ -28539,9 +28541,11 @@ const css$l = /* css */`
 
       &[data-left] {
         left: var(--x-padding-left-base);
+        width: var(--left-slot-size);
       }
       &[data-right] {
         right: var(--x-padding-right-base);
+        width: var(--right-slot-size);
       }
       &[data-hide-while-empty] {
         opacity: 0;
