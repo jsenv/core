@@ -34,18 +34,22 @@ const css = /* css */ `
       --width: 0.815em;
       --height: 0.815em;
 
+      --color-mix-light: black;
+      --color-mix-dark: white;
+      --color-mix: var(--color-mix-light);
+
+      --background-color-light: white;
+      --background-color-dark: black;
+      --background-color-mix: var(--background-color-light);
+
       --outline-color: var(--navi-focus-outline-color);
       --loader-color: var(--navi-loader-color);
       --border-color: light-dark(#767676, #8e8e93);
-      --background-color: white;
+      --background-color: var(--background-color-mix);
       --accent-color: light-dark(#4476ff, #3b82f6);
       --radiomark-color: var(--accent-color);
       --border-color-checked: var(--accent-color);
       --cursor: pointer;
-
-      --color-mix-light: black;
-      --color-mix-dark: white;
-      --color-mix: var(--color-mix-light);
 
       /* Hover */
       --border-color-hover: color-mix(in srgb, var(--border-color) 60%, black);
@@ -105,10 +109,6 @@ const css = /* css */ `
       --button-border-color-disabled: var(--border-color-readonly);
       --button-background-color-disabled: var(--background-color-readonly);
     }
-
-    &[data-dark] {
-      --color-mix: var(--color-mix-dark);
-    }
   }
 
   .navi_radio {
@@ -127,6 +127,21 @@ const css = /* css */ `
     display: inline-flex;
     box-sizing: content-box;
     margin: var(--margin);
+
+    &[data-dark] {
+      --color-mix: var(--color-mix-dark);
+    }
+    /* When accent color is very light (e.g. white), the border and radiomark
+       must be dark so they remain visible against the light fill */
+    &[data-light] {
+      --background-color-mix: black;
+      --border-color-checked: color-mix(
+        in srgb,
+        var(--accent-color) 60%,
+        #767676
+      );
+      --radiomark-color: color-mix(in srgb, var(--accent-color) 20%, #333333);
+    }
 
     .navi_native_field {
       position: absolute;
@@ -476,6 +491,11 @@ const InputRadioUI = (props) => {
       naviRadio.setAttribute("data-dark", "");
     } else {
       naviRadio.removeAttribute("data-dark");
+    }
+    if (luminance > 0.7) {
+      naviRadio.setAttribute("data-light", "");
+    } else {
+      naviRadio.removeAttribute("data-light");
     }
   }, [color]);
 
