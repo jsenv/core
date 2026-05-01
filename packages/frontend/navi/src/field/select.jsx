@@ -11,7 +11,6 @@ import { Box } from "../box/box.jsx";
 import { ChevronDownSvg } from "../graphic/icons/chevron_updown_svg.jsx";
 import { LoaderBackground } from "../graphic/loader/loader_background.jsx";
 import { shortcutsViaOnKeyDown } from "../keyboard/keyboard_shortcuts.js";
-import { ListAutoFocusContext } from "../list/list.jsx";
 import { useDebugFocus } from "../navi_debug.jsx";
 import {
   Popover,
@@ -333,9 +332,7 @@ const SelectUI = (props) => {
         <SelectValueContext.Provider value={value}>
           {trigger}
         </SelectValueContext.Provider>
-        <ListAutoFocusContext.Provider value={true}>
-          {children}
-        </ListAutoFocusContext.Provider>
+        {children}
       </SelectPlaceholderContext.Provider>
     </Box>
   );

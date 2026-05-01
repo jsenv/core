@@ -1,5 +1,6 @@
 import {
   findFocusable,
+  getElementSignature,
   pickPositionRelativeTo,
   trapScrollInside,
   visibleRectEffect,
@@ -8,7 +9,7 @@ import { createPortal } from "preact/compat";
 import { useId, useLayoutEffect, useRef, useState } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
-import { useDebugPopover } from "../navi_debug.jsx";
+import { useDebugFocus, useDebugPopover } from "../navi_debug.jsx";
 import {
   dispatchCustomEvent,
   dispatchPublicCustomEvent,
@@ -45,6 +46,7 @@ export const Popover = (props) => {
   const defaultId = useId();
   const id = rest.id || defaultId;
   const debugPopover = useDebugPopover();
+  const debugFocus = useDebugFocus();
 
   const [expanded, setExpanded] = useState(false);
   const expandedRef = useRef(expanded);
@@ -76,6 +78,9 @@ export const Popover = (props) => {
     expand();
     const firstFocusable = findFocusable(popoverEl);
     if (firstFocusable) {
+      debugFocus(
+        `Moving focus to first focusable element in popover: ${getElementSignature(firstFocusable)}.focus({ preventScroll: true })`,
+      );
       firstFocusable.focus({ preventScroll: true });
     }
     const effectiveAnchor = anchor || document.documentElement;

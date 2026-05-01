@@ -225,24 +225,21 @@
               Selecting a fruit closes the popover automatically.
             </p>
             <NaviDebug debugFocus debugScroll>
-              <Select name="fruit" value={fruit} placeholder="Pick a fruit…">
-                <List
-                  uiAction={(v) => {
-                    setFruit(v);
-                    setSearchText("");
-                  }}
-                  listRole="listbox"
-                  border="none"
-                  expandX
-                  minWidth="240"
-                >
+              <Select
+                name="fruit"
+                value={fruit}
+                uiAction={(v) => {
+                  setFruit(v);
+                }}
+                placeholder="Pick a fruit…"
+              >
+                <List listRole="listbox" border="none" expandX minWidth="240">
                   <ListItemHeader padding="m" borderBottom="1px solid #eee">
                     <Input
                       uiAction={(v) => setSearchText(v)}
                       type="search"
                       placeholder="Search…"
                       value={searchText}
-                      autoFocus
                       expandX
                     />
                   </ListItemHeader>

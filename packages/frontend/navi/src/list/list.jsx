@@ -35,7 +35,6 @@ const ListItemTrackerContext = createContext(null);
 const GroupItemTrackerContext = createContext(null);
 const PendingScrollRefContext = createContext(null);
 
-export const ListAutoFocusContext = createContext(false);
 export const ListIdContext = createContext();
 
 // Provided by ListInteractive to give descendants (e.g. Suggestion) access
@@ -1328,10 +1327,8 @@ const ListInteractive = (props) => {
 
 const ListWithKeyboardInteractions = (props) => {
   const { autoFocus, autoFocusPreventScroll } = props;
-  const autoFocusContext = useContext(ListAutoFocusContext);
   const defaultRef = useRef(null);
   const ref = props.ref || defaultRef;
-  const innerAutoFocus = autoFocus === undefined ? autoFocusContext : autoFocus;
 
   const onKeyDown = shortcutsViaOnKeyDown(
     {
@@ -1378,7 +1375,7 @@ const ListWithKeyboardInteractions = (props) => {
     },
     props.onKeyDown,
   );
-  useAutoFocus(ref, innerAutoFocus, { preventScroll: autoFocusPreventScroll });
+  useAutoFocus(ref, autoFocus, { preventScroll: autoFocusPreventScroll });
 
   return (
     <List
