@@ -405,13 +405,6 @@ const css = /* css */ `
 export const List = (props) => {
   const alreadyInteractive = useContext(ListInteractiveContext);
   const parentUIStateController = useContext(ParentUIStateControllerContext);
-  // withSearch must come first: it forces keyboardInteractions=false before any
-  // other variant inspects the props (the Input handles keyboard nav instead of
-  // the list itself). It also provides SetSearchTextContext and ListboxIdContext
-  // before re-rendering List with withSearch removed.
-  if (props.withSearch) {
-    return <ListWithSearch {...props} />;
-  }
   // Each of the variants below strips its own triggering prop and re-renders
   // List, so remaining variants are still picked up correctly on the next pass.
   // The order only matters in cases where one variant should suppress another —
@@ -1089,30 +1082,6 @@ const BottomFiller = ({
         height: `${heightToFillBelow}px`,
       }}
     />
-  );
-};
-
-// withSearch variant: provides ListIdContext so a descendant Input knows it
-// controls this list (aria-controls) and can forward keyboard events to it.
-// Also disables keyboardInteractions — the Input handles keyboard navigation.
-const ListWithSearch = (props) => {
-  const listIdDefault = useId();
-  const listId = props.listId || listIdDefault;
-  return (
-    <ListWithSearchContext.Provider value={true}>
-      <ListIdContext.Provider value={listId}>
-        <List
-          {...props}
-          listId={listId}
-          keyboardInteractions={false}
-          withSearch={undefined}
-          // keyboard interactions are disabled in this variant because the search input handles them instead
-          // so we don't want autofocus on the list either (that would be enabled by uiAction)
-          autoFocus={undefined}
-          autoFocusPreventScroll={undefined}
-        />
-      </ListIdContext.Provider>
-    </ListWithSearchContext.Provider>
   );
 };
 

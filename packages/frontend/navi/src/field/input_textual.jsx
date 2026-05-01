@@ -307,8 +307,7 @@ const InputNativeContext = createContext(null);
 
 const InputTextualBasic = (props) => {
   const listId = useContext(ListIdContext);
-  const isInsideListWithSearch = useIsInsideListWithSearch();
-  if (isInsideListWithSearch) {
+  if (listId) {
     return <InputControllingList listId={listId} {...props} />;
   }
   if (props.suggestions) {
