@@ -1,6 +1,5 @@
 import { useCallback, useContext, useRef } from "preact/hooks";
 
-import { renderActionableComponent } from "../action/render_actionable_component.jsx";
 import { useActionBoundToOneParam } from "../action/use_action.js";
 import { useActionStatus } from "../action/use_action_status.js";
 import { useExecuteAction } from "../action/use_execute_action.js";
@@ -359,8 +358,8 @@ const css = /* css */ `
 `;
 
 export const InputCheckbox = (props) => {
-  import.meta.css = css;
-
+  const defaultRef = useRef();
+  const ref = props.ref || defaultRef;
   const { value = "on" } = props;
   const uiStateController = useUIStateController(props, "checkbox", {
     statePropName: "checked",
@@ -371,81 +370,26 @@ export const InputCheckbox = (props) => {
   });
   const uiState = useUIState(uiStateController);
 
-  const checkbox = renderActionableComponent(props, {
-    Basic: InputCheckboxBasic,
-    WithAction: InputCheckboxWithAction,
-  });
   return (
     <UIStateControllerContext.Provider value={uiStateController}>
       <UIStateContext.Provider value={uiState}>
-        {checkbox}
+        <InputCheckboxDispatcher {...props} ref={ref} />
       </UIStateContext.Provider>
     </UIStateControllerContext.Provider>
   );
 };
 
-const CheckboxStyleCSSVars = {
-  "width": "--width",
-  "height": "--height",
-  "outlineWidth": "--outline-width",
-  "borderWidth": "--border-width",
-  "backgroundColor": "--background-color",
-  "borderColor": "--border-color",
-  "accentColor": "--accent-color",
-  ":hover": {
-    backgroundColor: "--background-color-hover",
-    borderColor: "--border-color-hover",
-  },
-  ":active": {
-    borderColor: "--border-color-active",
-  },
-  ":read-only": {
-    backgroundColor: "--background-color-readonly",
-    borderColor: "--border-color-readonly",
-  },
-  ":disabled": {
-    backgroundColor: "--background-color-disabled",
-    borderColor: "--border-color-disabled",
-  },
+const InputCheckboxDispatcher = (props) => {
+  if (props.action) {
+    return <InputCheckboxWithAction {...props} />;
+  }
+  return <InputCheckboxUI {...props} />;
 };
-const CheckboxToggleStyleCSSVars = {
-  ...CheckboxStyleCSSVars,
-  width: "--toggle-width",
-  height: "--toggle-height",
-  borderRadius: "--border-radius",
-};
-const CheckboxButtonStyleCSSVars = {
-  ...CheckboxStyleCSSVars,
-  paddingTop: "--padding-top",
-  paddingRight: "--padding-right",
-  paddingBottom: "--padding-bottom",
-  paddingLeft: "--padding-left",
-  paddingX: "--padding-x",
-  paddingY: "--padding-y",
-  padding: "--padding",
-};
-const CheckboxPseudoClasses = [
-  ":hover",
-  ":active",
-  ":focus",
-  ":focus-visible",
-  ":read-only",
-  ":disabled",
-  ":checked",
-  ":-navi-loading",
-];
-const CheckboxPseudoElements = ["::-navi-loader", "::-navi-checkmark"];
-const CheckboxChildPropSet = new Set([...fieldPropSet]);
-const InputCheckboxBasic = (props) => {
-  const contextFieldName = useContext(FieldNameContext);
-  const contextReadOnly = useContext(ReadOnlyContext);
-  const contextDisabled = useContext(DisabledContext);
-  const contextRequired = useContext(RequiredContext);
-  const contextLoading = useContext(LoadingContext);
-  const loadingElement = useContext(LoadingElementContext);
-  const uiStateController = useContext(UIStateControllerContext);
-  const uiState = useContext(UIStateContext);
+
+const InputCheckboxUI = (props) => {
+  import.meta.css = css;
   const {
+    ref,
     /* eslint-disable no-unused-vars */
     type,
     defaultChecked,
@@ -467,8 +411,15 @@ const InputCheckboxBasic = (props) => {
     appearance = icon ? "icon" : "checkbox", // "checkbox", "toggle", "icon", "button"
     ...rest
   } = props;
-  const defaultRef = useRef();
-  const ref = rest.ref || defaultRef;
+  const contextFieldName = useContext(FieldNameContext);
+  const contextReadOnly = useContext(ReadOnlyContext);
+  const contextDisabled = useContext(DisabledContext);
+  const contextRequired = useContext(RequiredContext);
+  const contextLoading = useContext(LoadingContext);
+  const loadingElement = useContext(LoadingElementContext);
+  const uiStateController = useContext(UIStateControllerContext);
+  const uiState = useContext(UIStateContext);
+
   const innerName = name || contextFieldName;
   const innerDisabled = disabled || contextDisabled;
   const innerRequired = required || contextRequired;
@@ -599,11 +550,64 @@ const InputCheckboxBasic = (props) => {
     </Box>
   );
 };
+const CheckboxStyleCSSVars = {
+  "width": "--width",
+  "height": "--height",
+  "outlineWidth": "--outline-width",
+  "borderWidth": "--border-width",
+  "backgroundColor": "--background-color",
+  "borderColor": "--border-color",
+  "accentColor": "--accent-color",
+  ":hover": {
+    backgroundColor: "--background-color-hover",
+    borderColor: "--border-color-hover",
+  },
+  ":active": {
+    borderColor: "--border-color-active",
+  },
+  ":read-only": {
+    backgroundColor: "--background-color-readonly",
+    borderColor: "--border-color-readonly",
+  },
+  ":disabled": {
+    backgroundColor: "--background-color-disabled",
+    borderColor: "--border-color-disabled",
+  },
+};
+const CheckboxToggleStyleCSSVars = {
+  ...CheckboxStyleCSSVars,
+  width: "--toggle-width",
+  height: "--toggle-height",
+  borderRadius: "--border-radius",
+};
+const CheckboxButtonStyleCSSVars = {
+  ...CheckboxStyleCSSVars,
+  paddingTop: "--padding-top",
+  paddingRight: "--padding-right",
+  paddingBottom: "--padding-bottom",
+  paddingLeft: "--padding-left",
+  paddingX: "--padding-x",
+  paddingY: "--padding-y",
+  padding: "--padding",
+};
+const CheckboxPseudoClasses = [
+  ":hover",
+  ":active",
+  ":focus",
+  ":focus-visible",
+  ":read-only",
+  ":disabled",
+  ":checked",
+  ":-navi-loading",
+];
+const CheckboxPseudoElements = ["::-navi-loader", "::-navi-checkmark"];
+const CheckboxChildPropSet = new Set([...fieldPropSet]);
 
 const InputCheckboxWithAction = (props) => {
   const uiStateController = useContext(UIStateControllerContext);
   const uiState = useContext(UIStateContext);
   const {
+    ref,
     action,
     onCancel,
     actionErrorEffect,
@@ -615,8 +619,6 @@ const InputCheckboxWithAction = (props) => {
     loading,
     ...rest
   } = props;
-  const defaultRef = useRef();
-  const ref = props.ref || defaultRef;
   const [actionBoundToUIState] = useActionBoundToOneParam(action, uiState);
   const actionStatus = useActionStatus(actionBoundToUIState);
   const { loading: actionLoading } = actionStatus;
@@ -653,7 +655,7 @@ const InputCheckboxWithAction = (props) => {
   });
 
   return (
-    <InputCheckboxBasic
+    <InputCheckboxUI
       data-action={actionBoundToUIState.name}
       {...rest}
       ref={ref}
