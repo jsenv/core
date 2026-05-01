@@ -304,9 +304,10 @@ export const InputTextual = (props) => {
 const InputNativeContext = createContext(null);
 
 const InputTextualBasic = (props) => {
+  const listId = useContext(ListIdContext);
   const isInsideListWithSearch = useIsInsideListWithSearch();
   if (isInsideListWithSearch) {
-    return <InputInsideListWithSearch {...props} />;
+    return <InputControllingList listId={listId} {...props} />;
   }
   if (props.suggestions) {
     return <InputTextualWithSuggestions {...props} />;
@@ -596,20 +597,20 @@ export const InputRightSlot = (props) => {
   return <InputSlot {...props} side="right" />;
 };
 
-const InputInsideListWithSearch = ({ uiAction, onKeyDown, ...props }) => {
-  const listId = useContext(ListIdContext);
-  const uiStateController = useContext(UIStateControllerContext);
-  uiStateController.uiAction = (v, e) => {
-    uiAction?.(v, e);
-  };
+const InputControllingList = ({ listId, onKeyDown, ...props }) => {
   const defaultRef = useRef(null);
   const ref = props.ref || defaultRef;
+
+  const getListEl = () => {
+    return document.getElementById(listId);
+  };
+
   useEffect(() => {
     const inputEl = ref.current;
     if (!inputEl) {
       return undefined;
     }
-    const listContainerEl = inputEl.closest(".navi_list_container");
+    const listContainerEl = getListEl();
     if (!listContainerEl) {
       return undefined;
     }
@@ -627,11 +628,11 @@ const InputInsideListWithSearch = ({ uiAction, onKeyDown, ...props }) => {
   }, []);
 
   const forwardToList = (event, requestList, customEventDetail) => {
-    const inputEl = event.currentTarget;
-    const listContainerEl = inputEl.closest(".navi_list_container");
+    const listContainerEl = getListEl();
     if (!listContainerEl) {
       return false;
     }
+    event.stopPropagation(); // when within a list, prevent list from handling it twice
     return requestList(listContainerEl, { event, ...customEventDetail });
   };
 
@@ -669,16 +670,19 @@ const InputInsideListWithSearch = ({ uiAction, onKeyDown, ...props }) => {
             return forwardToList(e, requestListSelectCurrent);
           },
           escape: (e) => {
+            // prevent escape from reaching eventual <select> ancestor
+            // when the escape is meant to clear the search input (otherwise it would close the select too)
+            if (
+              e.currentTarget.type === "search" &&
+              e.currentTarget.value !== ""
+            ) {
+              e.stopPropagation();
+            }
             // If we where to dispatch right away it would re-render the input
             // and prevent the native browser behavior on escape inside search input (clearing input content)
             queueMicrotask(() => {
               forwardToList(e, requestListInteractionStateReset);
             });
-            // prevent escape from reaching eventual <select> ancestor
-            // when the escape is meant to clear the search input (otherwise it would close the select too)
-            if (e.currentTarget.value !== "") {
-              e.stopPropagation();
-            }
           },
         },
         onKeyDown,

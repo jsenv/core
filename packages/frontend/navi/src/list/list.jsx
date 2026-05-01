@@ -1107,7 +1107,7 @@ const ListWithSearch = (props) => {
           keyboardInteractions={false}
           withSearch={undefined}
           // keyboard interactions are disabled in this variant because the search input handles them instead
-          // so we don't want autofocus on the list neither (that would be enabled by uiAction)
+          // so we don't want autofocus on the list either (that would be enabled by uiAction)
           autoFocus={undefined}
           autoFocusPreventScroll={undefined}
         />
