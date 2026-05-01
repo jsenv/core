@@ -655,7 +655,7 @@ const InputCheckboxWithAction = (props) => {
   });
 
   return (
-    <InputCheckboxUI
+    <InputCheckboxDispatcher
       data-action={actionBoundToUIState.name}
       {...rest}
       ref={ref}
