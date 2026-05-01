@@ -3,7 +3,9 @@ import { useCallback } from "preact/hooks";
 import { useCustomValidationRef } from "./use_custom_validation_ref.js";
 
 export const useValidationMessage = (inputRef, key, target, options = {}) => {
-  const customValidationRef = useCustomValidationRef(inputRef, target);
+  const customValidationRef = useCustomValidationRef(inputRef, {
+    targetSelector: target,
+  });
 
   const addCustomMessage = useCallback(
     (message) => {

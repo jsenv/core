@@ -561,7 +561,7 @@ const ListUI = (props) => {
   ]);
 
   const inputRef = useRef(null);
-  const remainingProps = useConstraints(inputRef, rest);
+  const remainingProps = useConstraints(inputRef, rest, { disabled: !name });
 
   return (
     <Box

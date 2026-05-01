@@ -2,10 +2,16 @@ import { useLayoutEffect, useRef } from "preact/hooks";
 
 import { installCustomConstraintValidation } from "../custom_constraint_validation.js";
 
-export const useCustomValidationRef = (elementRef, targetSelector) => {
+export const useCustomValidationRef = (
+  elementRef,
+  { targetSelector, disabled },
+) => {
   const customValidationRef = useRef();
 
   useLayoutEffect(() => {
+    if (disabled) {
+      return undefined;
+    }
     const element = elementRef.current;
     if (!element) {
       console.warn(
@@ -23,7 +29,7 @@ export const useCustomValidationRef = (elementRef, targetSelector) => {
 
       usually it's better to split the component in two but hey 
       */
-      return null;
+      return undefined;
     }
     let target;
     if (targetSelector) {
@@ -32,7 +38,7 @@ export const useCustomValidationRef = (elementRef, targetSelector) => {
         console.warn(
           `useCustomValidationRef: targetSelector "${targetSelector}" did not match in element`,
         );
-        return null;
+        return undefined;
       }
     } else {
       target = element;
@@ -43,7 +49,7 @@ export const useCustomValidationRef = (elementRef, targetSelector) => {
     return () => {
       unsubscribe();
     };
-  }, [targetSelector]);
+  }, [targetSelector, disabled]);
 
   return customValidationRef;
 };

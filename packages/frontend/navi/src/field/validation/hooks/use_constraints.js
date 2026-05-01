@@ -3,7 +3,11 @@ import { useLayoutEffect } from "preact/hooks";
 import { useCustomValidationRef } from "./use_custom_validation_ref.js";
 
 const NO_CONSTRAINTS = [];
-export const useConstraints = (elementRef, props, { targetSelector } = {}) => {
+export const useConstraints = (
+  elementRef,
+  props,
+  { targetSelector, disabled } = {},
+) => {
   const {
     constraints = NO_CONSTRAINTS,
     disabledMessage,
@@ -24,10 +28,10 @@ export const useConstraints = (elementRef, props, { targetSelector } = {}) => {
     ...remainingProps
   } = props;
 
-  const customValidationRef = useCustomValidationRef(
-    elementRef,
+  const customValidationRef = useCustomValidationRef(elementRef, {
     targetSelector,
-  );
+    disabled,
+  });
   useLayoutEffect(() => {
     const customValidation = customValidationRef.current;
     const cleanupCallbackSet = new Set();
