@@ -33,11 +33,6 @@ const PendingScrollRefContext = createContext(null);
 
 export const ListAutoFocusContext = createContext(false);
 export const ListIdContext = createContext();
-export const ListWithSearchContext = createContext(false);
-// Provided by ListWithSearch so a descendant Input knows it controls this list.
-export const useIsInsideListWithSearch = () => {
-  return useContext(ListWithSearchContext) === true;
-};
 
 // Provided by ListInteractive to give descendants (e.g. Suggestion) access
 // to hover/keyboard-pointed/selection state.
@@ -1360,12 +1355,9 @@ const ListWithKeyboardInteractions = (props) => {
         });
       },
       escape: (e) => {
-        // Use queueMicrotask to ensure the navi_list_request_interaction_state_reset event does not prevent
-        // escape to close dialog behavior (otherwise the re-rendering of the list prevent it for some reason)
-        queueMicrotask(() => {
-          requestListInteractionStateReset(e.currentTarget, {
-            event: e,
-          });
+        debugger;
+        return requestListInteractionStateReset(e.currentTarget, {
+          event: e,
         });
       },
     },

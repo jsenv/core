@@ -46,7 +46,6 @@ import {
   requestListNavFromCurrent,
   requestListOpen,
   requestListSelectCurrent,
-  useIsInsideListWithSearch,
 } from "../list/list.jsx";
 import { Icon } from "../text/icon.jsx";
 import { useAutoFocus } from "../utils/focus/use_auto_focus.js";
@@ -645,6 +644,7 @@ const InputControllingList = ({ listId, onKeyDown, ...props }) => {
       type="search"
       autoComplete="off"
       {...props}
+      listId={undefined}
       onKeyDown={shortcutsViaOnKeyDown(
         {
           arrowdown: (e) => {
@@ -673,17 +673,14 @@ const InputControllingList = ({ listId, onKeyDown, ...props }) => {
           escape: (e) => {
             // prevent escape from reaching eventual <select> ancestor
             // when the escape is meant to clear the search input (otherwise it would close the select too)
+            debugger;
             if (
               e.currentTarget.type === "search" &&
               e.currentTarget.value !== ""
             ) {
               e.stopPropagation();
             }
-            // If we where to dispatch right away it would re-render the input
-            // and prevent the native browser behavior on escape inside search input (clearing input content)
-            queueMicrotask(() => {
-              forwardToList(e, requestListInteractionStateReset);
-            });
+            return forwardToList(e, requestListInteractionStateReset);
           },
         },
         onKeyDown,
