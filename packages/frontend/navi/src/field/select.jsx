@@ -1,6 +1,4 @@
-import { pickPositionRelativeTo, visibleRectEffect } from "@jsenv/dom";
 import { createContext } from "preact";
-import { createPortal } from "preact/compat";
 import {
   useContext,
   useId,
@@ -15,6 +13,11 @@ import { LoaderBackground } from "../graphic/loader/loader_background.jsx";
 import { shortcutsViaOnKeyDown } from "../keyboard/keyboard_shortcuts.js";
 import { ListAutoFocusContext } from "../list/list.jsx";
 import { useDebugFocus } from "../navi_debug.jsx";
+import {
+  Popover,
+  requestPopoverClose,
+  requestPopoverOpen,
+} from "../popover/popover.jsx";
 import { Icon } from "../text/icon.jsx";
 import { useAutoFocus } from "../utils/focus/use_auto_focus.js";
 import {
@@ -35,12 +38,6 @@ import { useConstraints } from "./validation/hooks/use_constraints.js";
 
 const css = /* css */ `
   @layer navi {
-    .navi_select_backdrop {
-      position: fixed;
-      inset: 0;
-      z-index: 1000;
-      background: transparent;
-    }
     .navi_select {
       --select-border-radius: 2px;
       --select-border-width: 1px;
@@ -185,11 +182,6 @@ const css = /* css */ `
       box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
       overflow: auto;
       overscroll-behavior: contain;
-
-      &[data-anchor-hidden] {
-        opacity: 0;
-        pointer-events: none;
-      }
     }
 
     .navi_select_dialog {
@@ -431,92 +423,30 @@ const SelectBasic = (props) => {
 };
 // SelectWithPopover — trigger + popover anchored below the trigger.
 const SelectWithPopover = (props) => {
-  let { disabled, onKeyDown, children, debugPopover, ...rest } = props;
-  debugPopover = debugPopover ? (...args) => console.debug(...args) : () => {};
+  let { disabled, onKeyDown, children, ...rest } = props;
   const debugFocus = useDebugFocus();
   const defaultRef = useRef();
   const ref = rest.ref || defaultRef;
   const popoverRef = useRef(null);
-  const cleanupRef = useRef(null);
   const popoverId = useId();
   const [expanded, setExpanded] = useState(false);
   const expandedRef = useRef(expanded);
   expandedRef.current = expanded;
-  const expand = () => {
+  const onOpen = () => {
     expandedRef.current = true;
     setExpanded(true);
   };
-  const collapse = () => {
+  const onClose = () => {
     expandedRef.current = false;
     setExpanded(false);
   };
 
-  const openPopover = (e) => {
-    debugPopover(`openPopover("${e.type}")`);
-    if (disabled) {
-      return;
-    }
-    if (expandedRef.current) {
-      debugPopover("Popover already open, skipping");
-      return;
-    }
-    const anchor = ref.current;
-    const popover = popoverRef.current;
-    if (!anchor || !popover) {
-      return;
-    }
-    popover.showPopover();
-    expand();
-    const positionPopover = (event) => {
-      debugPopover(`positionPopover("${event.type}")`);
-      const anchorRect = anchor.getBoundingClientRect();
-      popover.style.setProperty(
-        "--select-anchor-width",
-        `${anchorRect.width}px`,
-      );
-      const minLeft = 1;
-      const { left, top } = pickPositionRelativeTo(popover, anchor, {
-        positionPreference: "below",
-        minLeft,
-      });
-      popover.style.top = `${top}px`;
-      const popoverRect = popover.getBoundingClientRect();
-      const maxWidth = parseFloat(getComputedStyle(popover).maxWidth);
-      if (!isNaN(maxWidth) && popoverRect.width >= maxWidth - 1) {
-        const viewportWidth = document.documentElement.clientWidth;
-        const centeredLeft = (viewportWidth - popoverRect.width) / 2;
-        popover.style.left = `${Math.max(centeredLeft, minLeft)}px`;
-      } else {
-        popover.style.left = `${Math.max(left, minLeft)}px`;
-      }
-    };
-    const cleanup = visibleRectEffect(
-      anchor,
-      ({ visibilityRatio }, { event }) => {
-        if (visibilityRatio <= 0.2) {
-          popover.setAttribute("data-anchor-hidden", "");
-          return;
-        }
-        popover.removeAttribute("data-anchor-hidden");
-        positionPopover(event);
-      },
-    );
-    cleanupRef.current = () => cleanup.disconnect();
+  const requestOpen = (e) => {
+    return requestPopoverOpen(popoverRef.current, { event: e });
   };
-  const closePopover = (e) => {
-    debugPopover(`closePopover("${e.type}")`);
-    cleanupRef.current?.();
-    cleanupRef.current = null;
-    popoverRef.current?.hidePopover();
-    collapse();
+  const requestClose = (e) => {
+    return requestPopoverClose(popoverRef.current, { event: e });
   };
-
-  useLayoutEffect(() => {
-    return () => {
-      cleanupRef.current?.();
-    };
-  }, []);
-
   const moveFocusToSelect = (e) => {
     const select = ref.current;
     debugFocus(`moveFocusToSelect("${e.type}")`);
@@ -525,21 +455,6 @@ const SelectWithPopover = (props) => {
 
   return (
     <>
-      {expanded &&
-        createPortal(
-          <div
-            className="navi_select_backdrop"
-            onMouseDown={(e) => {
-              if (e.button !== 0) {
-                return;
-              }
-              // e.preventDefault(); // prevent browser trying to give focus to this backdrop
-              closePopover(e);
-              moveFocusToSelect(e);
-            }}
-          />,
-          document.body,
-        )}
       <SelectUI
         disabled={disabled}
         aria-haspopup="listbox"
@@ -553,11 +468,11 @@ const SelectWithPopover = (props) => {
             return;
           }
           if (expandedRef.current) {
-            closePopover(e);
+            requestClose(e);
           } else {
             e.preventDefault(); // prevent browser trying to give focus to the select (popover will take focus)
             debugFocus(`select mousedown.preventDefault()`);
-            openPopover(e);
+            requestOpen(e);
           }
         }}
         onClick={(e) => {
@@ -566,7 +481,7 @@ const SelectWithPopover = (props) => {
             return;
           }
           // When a label is clicked it transfers focus to the select, in that case we want to open it
-          openPopover(e);
+          requestOpen(e);
         }}
         // When a list item is interacted via mousedown, return focus to the select.
         onnavi_list_select={(e) => {
@@ -578,31 +493,30 @@ const SelectWithPopover = (props) => {
           if (event.key === " ") {
             // space can open the popover we don't want space to propagate to the select otherwise it would open it back immediatly
             event.stopPropagation();
-            debugPopover(`listItem spacekey.stopPropagation()`);
           }
-          closePopover(e);
+          requestClose(e);
           moveFocusToSelect(e);
         }}
         onKeyDown={shortcutsViaOnKeyDown(
           {
             arrowdown: (e) => {
               e.preventDefault(); // prevent container scroll
-              openPopover(e);
+              requestOpen(e);
             },
             arrowup: (e) => {
               e.preventDefault(); // prevent container scroll
-              openPopover(e);
+              requestOpen(e);
             },
             space: (e) => {
               e.preventDefault(); // prevent scroll
-              openPopover(e);
+              requestOpen(e);
             },
             escape: (e) => {
               if (!expandedRef.current) {
                 return;
               }
               e.preventDefault();
-              closePopover(e);
+              requestClose(e);
               moveFocusToSelect(e);
             },
           },
@@ -611,11 +525,9 @@ const SelectWithPopover = (props) => {
         {...rest}
         ref={ref}
       >
-        <div
+        <Popover
           ref={popoverRef}
-          id={popoverId}
           className="navi_select_popover"
-          popover="manual"
           onMouseDown={(e) => {
             if (e.button !== 0) {
               return;
@@ -623,9 +535,16 @@ const SelectWithPopover = (props) => {
             // mousedown inside popover should not bubble to the select (would re-open it if that mousedown closes it)
             e.stopPropagation();
           }}
+          onnavi_popover_open={(e) => {
+            onOpen(e);
+          }}
+          onnavi_popover_close={(e) => {
+            onClose(e);
+            moveFocusToSelect(e);
+          }}
         >
           {children}
-        </div>
+        </Popover>
       </SelectUI>
     </>
   );

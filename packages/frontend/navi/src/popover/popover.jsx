@@ -2,14 +2,21 @@ import { pickPositionRelativeTo, visibleRectEffect } from "@jsenv/dom";
 import { createPortal } from "preact/compat";
 import { useId, useLayoutEffect, useRef, useState } from "preact/hooks";
 
-import { useDebugFocus, useDebugPopover } from "../navi_debug.jsx";
+import { Box } from "../box/box.jsx";
+import { useDebugPopover } from "../navi_debug.jsx";
+import { dispatchPublicCustomEvent } from "../utils/custom_event.js";
 
 const css = /* css */ `
-  .navi_select_popover {
+  .navi_popover {
     position: fixed;
     inset: 0;
     z-index: 1000;
     background: transparent;
+
+    &[data-anchor-hidden] {
+      opacity: 0;
+      pointer-events: none;
+    }
   }
 `;
 
@@ -21,6 +28,8 @@ export const Popover = (props) => {
   const ref = rest.ref || defaultRef;
   const defaultId = useId();
   const id = rest.id || defaultId;
+  const debugPopover = useDebugPopover();
+
   const [expanded, setExpanded] = useState(false);
   const expandedRef = useRef(expanded);
   expandedRef.current = expanded;
@@ -32,11 +41,9 @@ export const Popover = (props) => {
     expandedRef.current = false;
     setExpanded(false);
   };
-  const debugFocus = useDebugFocus();
-  const cleanupRef = useRef(null);
-  const debugPopover = useDebugPopover();
 
-  const openPopover = (e) => {
+  const cleanupRef = useRef(null);
+  const openPopover = (e, { anchor }) => {
     debugPopover(`openPopover("${e.type}")`);
     if (disabled) {
       return;
@@ -45,15 +52,14 @@ export const Popover = (props) => {
       debugPopover("Popover already open, skipping");
       return;
     }
-    const anchor = ref.current;
     const popoverEl = ref.current;
     if (!anchor || !popoverEl) {
       return;
     }
     popoverEl.showPopover();
     expand();
-    const positionPopover = (event) => {
-      debugPopover(`positionPopover("${event.type}")`);
+    const positionPopover = (positionEvent) => {
+      debugPopover(`positionPopover("${positionEvent.type}")`);
       const anchorRect = anchor.getBoundingClientRect();
       popoverEl.style.setProperty("--anchor-width", `${anchorRect.width}px`);
       const minLeft = 1;
@@ -84,25 +90,30 @@ export const Popover = (props) => {
       },
     );
     cleanupRef.current = () => cleanup.disconnect();
+    dispatchPublicCustomEvent(popoverEl, "navi_popover_open", {
+      event: e,
+    });
   };
   const closePopover = (e) => {
+    if (!expandedRef.current) {
+      debugPopover("Popover already closed, skipping");
+      return;
+    }
+    const popoverEl = ref.current;
     debugPopover(`closePopover("${e.type}")`);
     cleanupRef.current?.();
     cleanupRef.current = null;
-    ref.current?.hidePopover();
+    popoverEl.hidePopover();
     collapse();
+    dispatchPublicCustomEvent(popoverEl, "navi_popover_close", {
+      event: e,
+    });
   };
   useLayoutEffect(() => {
     return () => {
       cleanupRef.current?.();
     };
   }, []);
-
-  const moveFocusToSelect = (e) => {
-    const select = ref.current;
-    debugFocus(`moveFocusToSelect("${e.type}")`);
-    select.focus({ preventScroll: true, focusVisible: true });
-  };
 
   return (
     <>
@@ -115,35 +126,42 @@ export const Popover = (props) => {
                 return;
               }
               closePopover(e);
-              moveFocusToSelect(e);
             }}
           />,
           document.body,
         )}
-      <div
+      <Box
         ref={ref}
         id={id}
-        className="navi_popover"
         popover="manual"
         {...rest}
-        onMouseDown={(e) => {
-          if (e.button !== 0) {
-            return;
-          }
-          // mousedown inside popover should not bubble to the select (would re-open it if that mousedown closes it)
-          e.stopPropagation();
+        baseClassName="navi_popover"
+        onnavi_popover_request_open={(e) => {
+          const { event = e, anchor } = e.detail;
+          openPopover(event, { anchor });
         }}
-        // eslint-disable-next-line react/no-unknown-property
-        onnavi_request_open={(e) => {
-          openPopover(e.detail.event);
-        }}
-        // eslint-disable-next-line react/no-unknown-property
-        onnavi_request_close={(e) => {
-          closePopover(e.detail.event);
+        onnavi_popover_request_close={(e) => {
+          const { event = e } = e.detail;
+          closePopover(event);
         }}
       >
         {children}
-      </div>
+      </Box>
     </>
+  );
+};
+
+export const requestPopoverOpen = (popoverElement, { event, anchor }) => {
+  return popoverElement.dispatchEvent(
+    new CustomEvent("navi_popover_request_open", {
+      detail: { event, anchor },
+    }),
+  );
+};
+export const requestPopoverClose = (popoverElement, { event } = {}) => {
+  return popoverElement.dispatchEvent(
+    new CustomEvent("navi_popover_request_close", {
+      detail: { event },
+    }),
   );
 };
