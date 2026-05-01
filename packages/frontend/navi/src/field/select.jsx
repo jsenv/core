@@ -694,13 +694,28 @@ const SelectWithDialog = (props) => {
         if (expandedRef.current) {
           closeDialog(e);
         } else {
+          e.preventDefault(); // prevent browser trying to give focus to the select (dialog will take focus)
+          debugFocus(`select mousedown.preventDefault()`);
           openDialog(e);
         }
+      }}
+      onClick={(e) => {
+        if (e.detail === 0) {
+          // click triggered by enter won't open the dialog
+          return;
+        }
+        // When a label is clicked it transfers focus to the select, in that case we want to open it
+        openDialog(e);
       }}
       onnavi_list_select={(e) => {
         const { event } = e.detail;
         if (event.type === "mousedown") {
-          event.preventDefault();
+          event.preventDefault(); // prevent browser trying to give focus to the list item
+          debugFocus(`listItem mousedown.preventDefault()`);
+        }
+        if (event.key === " ") {
+          // space can open the dialog, we don't want space to propagate to the select otherwise it would open it back immediately
+          event.stopPropagation();
         }
         closeDialog(e);
         moveFocusToSelect(e);
@@ -721,6 +736,13 @@ const SelectWithDialog = (props) => {
               openDialog(e);
             }
           },
+          escape: () => {
+            if (!expandedRef.current) {
+              return;
+            }
+            // native <dialog> handles closing on Escape; we just need focus back
+            // (the onClose handler also calls moveFocusToSelect but escape fires before it)
+          },
         },
         onKeyDown,
       )}
@@ -731,9 +753,9 @@ const SelectWithDialog = (props) => {
         ref={dialogRef}
         id={dialogId}
         className="navi_select_dialog"
-        onClose={() => {
+        onClose={(e) => {
           collapse();
-          moveFocusToSelect();
+          moveFocusToSelect(e);
         }}
       >
         {children}
