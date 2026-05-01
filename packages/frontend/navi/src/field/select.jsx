@@ -430,9 +430,9 @@ const SelectWithPopover = (props) => {
     disabled,
     onKeyDown,
     children,
-    scrollTrap,
+    scrollTrap = true,
     pointerTrap,
-    focusTrap,
+    focusTrap = true,
     positionTry,
     ...rest
   } = props;
