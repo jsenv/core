@@ -251,7 +251,7 @@
         );
       };
 
-      // ── 3. Searchable list (withSearch) ────────────────────────────────────────
+      // ── 3. Searchable list — input inside list ─────────────────────────────────
 
       const SearchableDemo = () => {
         const [selected, setSelected] = useState(null);
@@ -259,13 +259,12 @@
         const [fruits, getItemMatchInfo] = useSearchText(searchText, FRUITS);
         return (
           <div className="demo-section">
-            <h2>3. Search — withSearch</h2>
+            <h2>3. Search — input inside list</h2>
             <p>
-              The <code>withSearch</code> prop makes the list own its search
-              state internally. Place an <code>Input</code> inside a{" "}
-              <code>ListItemHeader</code>: it auto-connects via keyboard
-              forwarding and ARIA. Items that don't match are hidden; matching
-              text is highlighted.
+              Placing an <code>Input</code> inside a <code>ListItemHeader</code>{" "}
+              auto-connects it to the list via context. Keyboard events
+              (arrows, enter, escape) forward from the input to the list
+              automatically.
             </p>
             <List
               uiAction={(value) => {
@@ -285,6 +284,60 @@
                   }}
                 />
               </ListItemHeader>
+              {fruits.map((fruit, i) => {
+                const { match, ranges } = getItemMatchInfo(fruit);
+                return (
+                  <ListItem
+                    key={fruit}
+                    index={i}
+                    id={fruit}
+                    value={fruit}
+                    selected={selected === fruit}
+                    hidden={!match}
+                    highlight={ranges}
+                  >
+                    {fruit}
+                  </ListItem>
+                );
+              })}
+            </List>
+            <div className="value-display">{selected ?? ""}</div>
+          </div>
+        );
+      };
+
+      // ── 3b. Searchable list — input outside list (listId) ──────────────────────
+
+      const SearchableExternalInputDemo = () => {
+        const [selected, setSelected] = useState(null);
+        const [searchText, setSearchText] = useState("");
+        const [fruits, getItemMatchInfo] = useSearchText(searchText, FRUITS);
+        return (
+          <div className="demo-section">
+            <h2>3b. Search — input outside list (listId)</h2>
+            <p>
+              When the input lives outside the list, pass{" "}
+              <code>listId</code> on the <code>Input</code> pointing to the
+              list's <code>id</code>. Keyboard forwarding and ARIA still wire
+              up automatically.
+            </p>
+            <Input
+              placeholder="Search fruits…"
+              expandX
+              paddingX="10"
+              paddingY="6"
+              size="m"
+              listId="searchable-fruits-list"
+              uiAction={(value) => {
+                setSearchText(value);
+              }}
+            />
+            <List
+              id="searchable-fruits-list"
+              uiAction={(value) => {
+                setSelected(value);
+              }}
+            >
               {fruits.map((fruit, i) => {
                 const { match, ranges } = getItemMatchInfo(fruit);
                 return (
@@ -492,6 +545,7 @@
             <DisplayOnlyDemo />
             <InteractiveDemo />
             <SearchableDemo />
+            <SearchableExternalInputDemo />
             <PopoverDemo />
             <FormDemo />
             <RequiredFormDemo />
