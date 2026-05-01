@@ -529,6 +529,7 @@ const SelectWithPopover = (props) => {
       mode="ui"
     >
       <Popover
+        ref={popoverRef}
         className="navi_select_popover"
         onMouseDown={(e) => {
           if (e.button !== 0) {
