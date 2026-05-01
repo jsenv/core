@@ -524,6 +524,10 @@ const SelectWithPopover = (props) => {
         moveFocusToSelect(e);
       }}
       onFocusOut={(e) => {
+        if (import.meta.dev) {
+          // during dev disable to allow inspecting the select (hot fix for now to ease life during dev)
+          return;
+        }
         // Close when focus leaves the select entirely (not just moving between internal elements).
         // relatedTarget is the element receiving focus; if it's inside the select or the popover, keep open.
         const relatedTarget = e.relatedTarget;
