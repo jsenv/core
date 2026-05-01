@@ -155,11 +155,11 @@ export const Popover = (props) => {
         createPortal(
           <div
             className="navi_popover_backdrop"
+            aria-hidden="true"
             onMouseDown={(e) => {
               if (e.button !== 0) {
                 return;
               }
-              debugger;
               if (pointerTrap) {
                 e.preventDefault();
                 return;
