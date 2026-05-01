@@ -13,6 +13,7 @@ export { useRunOnMount } from "./src/action/use_run_on_mount.js";
 
 // for debug/testing purposes
 export { enableDebugActions } from "./src/action/actions.js";
+export { NaviDebug } from "./src/navi_debug.jsx";
 
 // state management
 export {
@@ -110,12 +111,22 @@ export { Input } from "./src/field/input.jsx";
 export { Label } from "./src/field/label.jsx";
 export { Radio, RadioList } from "./src/field/radio_list.jsx";
 export { Select } from "./src/field/select.jsx";
+// --- List start ---
+export { applySearch } from "./src/field/list/apply_search.js";
+export { createSearch } from "./src/field/list/create_search.js";
+export { Dropdown, useDropdownClose } from "./src/field/list/dropdown.jsx";
 export {
-  Suggestion,
-  SuggestionGroup,
-  SuggestionList,
-} from "./src/field/suggestion_list.jsx";
-// Table start
+  List,
+  ListItem,
+  ListItemFooter,
+  ListItemGroup,
+  ListItemHeader,
+  requestListClose,
+  requestListOpen,
+} from "./src/field/list/list.jsx";
+export { useSearchText } from "./src/field/list/use_search_text.js";
+// --- List end ---
+// --- Table start---
 export {
   filterTableSelection,
   isCellSelected,
@@ -136,7 +147,7 @@ export {
 } from "./src/field/table/table.jsx";
 export { useCellGridFromRows } from "./src/field/table/use_cell_grid_from_rows.js";
 export { useOrderedColumns } from "./src/field/table/use_ordered_columns.js";
-// Table end
+// --- Table end ---
 
 // Components
 export { ErrorBoundaryContext } from "./src/error_boundary_context.js";
@@ -169,12 +180,20 @@ export { SVGMaskOverlay } from "./src/graphic/svg_mask_overlay.jsx";
 export { DialogLayout } from "./src/layout/dialog_layout.jsx";
 export { Separator } from "./src/layout/separator.jsx";
 export { ViewportLayout } from "./src/layout/viewport_layout.jsx";
+export { useDisplayedLayoutEffect } from "./src/utils/use_displayed_layout_effect.js";
 
-// Popover (callout, dialogs, ...)
-export { SidePanel, useSidePanelClose } from "./src/popover/side_panel.jsx";
+// popup (popover, dialog, tooltip, side panel ...)
+export { Dialog } from "./src/popup/dialog.jsx";
+export { Popover } from "./src/popup/popover.jsx";
+export { SidePanel, useSidePanelClose } from "./src/popup/side_panel.jsx";
+
+// Responsivness
+export { windowWidthSignal } from "./src/layout/responsive.js";
+
+// Focus helpers
+export { useFocusGroup } from "./src/utils/focus/use_focus_group.js";
 
 // Other
-export { useFocusGroup } from "./src/field/use_focus_group.js";
 export { useDependenciesDiff } from "./src/utils/use_dependencies_diff.js";
 
 // Keyboard

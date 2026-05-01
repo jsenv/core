@@ -140,10 +140,9 @@ const DIMENSION_PROPS = {
     if (parentBoxFlow === "flex-y" || parentBoxFlow === "inline-flex-y") {
       return {
         alignSelf: "stretch",
-        // Here flex grow is "useless" for the item itself
-        // buuut it would allow children (hello ".navi_text_sizer")
-        // to inherit expand behavior
-        flexGrow: 1,
+        // ensure we override any with: 'fit-content' for instance
+        // also useful for ".navi_text_sizer" to inherit the full size
+        width: "100%",
       };
     }
     // Can't use flexGrow — parent is not flex-x
@@ -162,10 +161,9 @@ const DIMENSION_PROPS = {
     if (parentBoxFlow === "flex-x" || parentBoxFlow === "inline-flex-x") {
       return {
         alignSelf: "stretch",
-        // Here flex grow is "useless" for the item itself
-        // buuut it would allow children (hello ".navi_text_sizer")
-        // to inherit expand behavior
-        flexGrow: 1,
+        // ensure we override any with: 'fit-content' for instance
+        // also useful for ".navi_text_sizer" to inherit the full size
+        height: "100%",
       };
     }
     // Can't use flexGrow — parent is not flex-y
@@ -274,6 +272,7 @@ const POSITION_PROPS = {
   fixed: applyToCssPropWhenTruthy("position", "fixed", "static"),
   sticky: applyToCssPropWhenTruthy("position", "sticky", "static"),
   zIndex: PASS_THROUGH,
+  order: PASS_THROUGH,
   left: (value) => {
     return { left: value === true ? 0 : value };
   },
@@ -379,6 +378,13 @@ const VISUAL_PROPS = {
   overflow: PASS_THROUGH,
   overflowX: PASS_THROUGH,
   overflowY: PASS_THROUGH,
+  overflowEllipsis: () => {
+    return {
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      overflowWrap: "normal",
+    };
+  },
   accentColor: PASS_THROUGH,
 };
 const CONTENT_PROPS = {

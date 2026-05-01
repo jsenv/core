@@ -516,6 +516,15 @@ export const Box = (props) => {
         selfForwardedProps[propName] = propValue;
         continue;
       }
+      // At some point I'd like to transform all data-* attribute in the DOM
+      // into navi-* attribute so that when you look at the DOM you can easily understand which attributes
+      // where added by navi or your code.
+      // This help human to better scan the DOM
+      const isNaviAttribute = propName.startsWith("navi-");
+      if (isNaviAttribute) {
+        selfForwardedProps[propName] = propValue;
+        continue;
+      }
       visitProp(propValue, propName, styleContext, boxStyles, "prop");
     }
     if (typeof style === "string") {
@@ -548,6 +557,8 @@ export const Box = (props) => {
         styleDeps.push(...pseudoClasses);
       }
     }
+    // TODO: just use ref function, it will be called same time as early dom effect + give the dom node + be standard
+    // we need to implent our styleDeps tracking but that's likely very easy
     useEarlyDOMEffect((boxEl) => {
       const pseudoStateEl = pseudoStateSelector
         ? boxEl.querySelector(pseudoStateSelector)
@@ -594,28 +605,7 @@ export const Box = (props) => {
 
   if (separator) {
     // Flatten nested arrays (e.g., from .map()) to treat each element as individual child
-    const flattenedChildren = toChildArray(innerChildren);
-    if (flattenedChildren.length > 1) {
-      const childrenWithSeparators = [];
-      let i = 0;
-      while (true) {
-        const child = flattenedChildren[i];
-        childrenWithSeparators.push(child);
-        i++;
-        if (i === flattenedChildren.length) {
-          break;
-        }
-        // Support function separators that receive separator index
-        const separatorElement =
-          typeof separator === "function"
-            ? separator(i - 1) // i-1 because i was incremented after pushing child
-            : separator;
-        childrenWithSeparators.push(separatorElement);
-      }
-      innerChildren = childrenWithSeparators;
-    } else {
-      innerChildren = flattenedChildren;
-    }
+    innerChildren = applySeparatorOnChildren(innerChildren, separator);
   }
 
   return (
@@ -632,5 +622,50 @@ export const Box = (props) => {
         {innerChildren}
       </BoxFlowContext.Provider>
     </TagName>
+  );
+};
+
+export const applySeparatorOnChildren = (children, separator) => {
+  const flattenedChildren = toChildArray(children);
+  if (flattenedChildren.length <= 1) {
+    return children;
+  }
+  const childrenWithSeparators = [];
+  let i = 0;
+  while (true) {
+    const child = flattenedChildren[i];
+    childrenWithSeparators.push(child);
+    i++;
+    const isLast = i === flattenedChildren.length;
+    if (isLast) {
+      break;
+    }
+    const nextChild = flattenedChildren[i];
+    if (!shouldInjectSeparatorBetween(child, nextChild)) {
+      continue;
+    }
+    // Support function separators that receive separator index
+    const separatorElement =
+      typeof separator === "function"
+        ? separator(i - 1) // i-1 because i was incremented after pushing child
+        : separator;
+    childrenWithSeparators.push(separatorElement);
+  }
+  return childrenWithSeparators;
+};
+const shouldInjectSeparatorBetween = (left, right) => {
+  if (isPreactNode(left) && left.props?.hidden) {
+    return false;
+  }
+  if (isPreactNode(right) && right.props?.hidden) {
+    return false;
+  }
+  return true;
+};
+const isPreactNode = (jsxChild) => {
+  return (
+    jsxChild !== null &&
+    typeof jsxChild === "object" &&
+    jsxChild.type !== undefined
   );
 };

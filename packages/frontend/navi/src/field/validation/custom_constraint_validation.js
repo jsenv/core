@@ -283,9 +283,6 @@ export const installCustomConstraintValidation = (
   if (debug) {
     console.debug(`installCustomConstraintValidation on`, element);
   }
-  if (element.tagName === "INPUT" && element.type === "hidden") {
-    elementReceivingValidationMessage = element.form || document.body;
-  }
 
   const validationInterface = {
     uninstall: undefined,
@@ -382,6 +379,14 @@ export const installCustomConstraintValidation = (
 
     resetValidity({ fromRequestAction });
     for (const constraint of constraintSet) {
+      // Some components (Select, List) proxy their value through a hidden <input>
+      // identified by data-input-proxy. When present, constraints run against
+      // that proxy element so they can read standard properties like .value,
+      // .required, .name without needing to know about each component's internals.
+      const inputProxySelector = element.getAttribute("data-input-proxy");
+      const fieldForConstraint = inputProxySelector
+        ? (element.ownerDocument.querySelector(inputProxySelector) ?? element)
+        : element;
       const constraintCleanupSet = new Set();
       const registerChange = (register) => {
         const registerResult = register(() => {
@@ -398,7 +403,7 @@ export const installCustomConstraintValidation = (
         constraintCleanupSet.clear();
       };
 
-      const checkResult = constraint.check(element, {
+      const checkResult = constraint.check(fieldForConstraint, {
         fromRequestAction,
         skipReadonly,
         registerChange,
@@ -508,10 +513,17 @@ export const installCustomConstraintValidation = (
         failedConstraintInfo.target || elementReceivingValidationMessage;
       const renderedBy = base.getAttribute("data-rendered-by");
       if (renderedBy) {
-        return base.closest(renderedBy) || base;
+        const renderedByElement = base.closest(renderedBy);
+        if (renderedByElement) {
+          return renderedByElement;
+        }
+      }
+      if (base.tagName === "INPUT" && base.type === "hidden") {
+        return base.form || document.body;
       }
       return base;
     })();
+
     validationInterface.validationMessage = openCallout(
       failedConstraintInfo.message,
       {
@@ -610,7 +622,9 @@ export const installCustomConstraintValidation = (
   }
 
   request_on_enter: {
-    if (element.tagName !== "INPUT") {
+    const isNaviSelect =
+      element.tagName === "BUTTON" && element.classList.contains("navi_select");
+    if (element.tagName !== "INPUT" && !isNaviSelect) {
       // maybe we want it too for checkboxes etc, we'll see
       break request_on_enter;
     }
@@ -640,6 +654,11 @@ export const installCustomConstraintValidation = (
             keydownTarget.type !== "submit" &&
             keydownTarget.type !== "image"
           ) {
+            // navi_select acts like a native <select>: Enter on the closed select
+            // triggers form submission rather than toggling the popover.
+            if (isNaviSelect) {
+              return getFirstButtonSubmittingForm(form) || keydownTarget;
+            }
             return null;
           }
           return keydownTarget;
@@ -668,6 +687,8 @@ export const installCustomConstraintValidation = (
       const formSubmitTarget =
         determineClosestFormSubmitTargetForEnterKeyEvent();
       if (formSubmitTarget) {
+        // preventDefault on keydown prevents the browser from firing a synthetic
+        // click on the button, so request_on_button_click won't double-fire.
         keydownEvent.preventDefault();
       }
       dispatchActionRequestedCustomEvent(elementWithAction, {
@@ -828,8 +849,14 @@ export const installCustomConstraintValidation = (
   close_on_escape: {
     const onkeydown = (e) => {
       if (e.key === "Escape") {
-        if (!closeElementValidationMessage("escape_key")) {
-          dispatchCancelCustomEvent({ detail: { reason: "escape_key" } });
+        if (closeElementValidationMessage("escape_key")) {
+          // closing the callout should prevent anything else from hapenning
+          e.stopPropagation();
+          e.preventDefault();
+        } else {
+          dispatchCancelCustomEvent({
+            detail: { reason: "escape_key" },
+          });
         }
       }
     };

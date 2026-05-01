@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/navi",
-  "version": "0.25.2",
+  "version": "0.25.3",
   "type": "module",
   "description": "Library of components including navigation to create frontend applications",
   "repository": {
@@ -28,7 +28,7 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@jsenv/dom": "0.9.5",
+    "@jsenv/dom": "0.10.1",
     "@jsenv/humanize": "1.7.6",
     "@jsenv/validity": "0.0.3"
   },
@@ -38,10 +38,11 @@
     "@jsenv/filesystem": "../../tooling/filesystem",
     "@jsenv/plugin-preact": "../../related/plugin-preact",
     "@jsenv/snapshot": "../../tooling/snapshot",
+    "@jsenv/terminal-table": "../../tooling/terminal-table",
     "@jsenv/urls": "../../tooling/urls",
     "@preact/signals": "2.9.0",
     "playwright": "1.58.1",
-    "preact": "11.0.0-beta.0"
+    "preact": "11.0.0-beta.1"
   },
   "publishConfig": {
     "access": "public"

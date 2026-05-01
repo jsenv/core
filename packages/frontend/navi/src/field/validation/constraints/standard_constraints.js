@@ -28,7 +28,6 @@ export const REQUIRED_CONSTRAINT = {
     if (!field.required) {
       return null;
     }
-
     if (field.type === "checkbox") {
       if (!field.checked) {
         return `Veuillez cocher cette case.`;
@@ -81,12 +80,19 @@ export const REQUIRED_CONSTRAINT = {
     }
     if (field.type === "email") {
       return field.hasAttribute("data-same-as")
-        ? `Veuillez confirmer l'adresse e-mail`
+        ? `Veuillez confirmer l'adresse e-mail.`
         : `Veuillez saisir une adresse e-mail.`;
     }
-    return field.hasAttribute("data-same-as")
-      ? `Veuillez confirmer le champ précédent`
-      : `Veuillez remplir ce champ.`;
+    if (field.hasAttribute("data-same-as")) {
+      return `Veuillez confirmer le champ précédent.`;
+    }
+    if (field.getAttribute("data-rendered-by") === ".navi_list_container") {
+      return `Veuillez sélectionner une option.`;
+    }
+    if (field.getAttribute("data-rendered-by") === ".navi_select") {
+      return `Veuillez sélectionner une option.`;
+    }
+    return `Veuillez remplir ce champ.`;
   },
 };
 CONSTRAINT_ATTRIBUTE_SET.add("required");

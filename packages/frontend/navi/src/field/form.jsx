@@ -44,12 +44,14 @@ export const Form = (props) => {
     aggregateChildStates: (childUIStateControllers) => {
       const formValues = {};
       for (const childUIStateController of childUIStateControllers) {
-        const { name, uiState } = childUIStateController;
+        const { name, uiState, allowNameless } = childUIStateController;
         if (!name) {
-          console.warn(
-            "A form child component is missing a name property, its state won't be included in the form state",
-            childUIStateController,
-          );
+          if (!allowNameless) {
+            console.warn(
+              "A form child component is missing a name property, its state won't be included in the form state",
+              childUIStateController,
+            );
+          }
           continue;
         }
         formValues[name] = uiState;

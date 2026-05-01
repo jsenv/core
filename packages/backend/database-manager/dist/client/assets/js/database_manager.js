@@ -1,4 +1,4 @@
-import { u, O, A, u$1, y, j, g, n, _, useSignal, F, h, K, W, _$1, j$1, n$1, H, q, F$1, H$1, k, b, M, T, P, b$1, J } from "../jsenv_database_manager_node_modules.js";
+import { u, O, A, u$1, y, j, g, n, _, Q, j$1, useSignal, F, y$1, W, _$1, n$1, H, q, G, H$1, k, b, M, T, P, K } from "../jsenv_database_manager_node_modules.js";
 
 const installImportMetaCssBuild = (importMeta) => {
   const IMPORT_META_CSS_BUILD = "jsenv_import_meta_css_build";
@@ -54,7 +54,7 @@ installImportMetaCssBuild(import.meta);/**
  * Regroup CSS vars that makes sense to share across all navi components.
  */
 
-const css$o = /* css */`
+const css$q = /* css */`
   @layer navi {
     :root {
       --navi-focus-outline-color: light-dark(#4476ff, #3b82f6);
@@ -91,7 +91,7 @@ const css$o = /* css */`
     }
   }
 `;
-import.meta.css = [css$o, "@jsenv/navi/src/navi_css_vars.js"];
+import.meta.css = [css$q, "@jsenv/navi/src/navi_css_vars.js"];
 
 const actionPrivatePropertiesWeakMap = new WeakMap();
 const getActionPrivateProperties = (action) => {
@@ -852,18 +852,28 @@ const getElementSignature = (element) => {
       return "<html>";
     }
     const elementId = element.id;
-    if (elementId) {
+    const className = element.className;
+    if (elementId && !looksLikeGeneratedId(elementId)) {
       return `${tagName}#${elementId}`;
     }
-    const className = element.className;
     if (className) {
       return `${tagName}.${className.split(" ").join(".")}`;
+    }
+    if (elementId) {
+      return `${tagName}#${elementId}`;
     }
 
     const parentSignature = getElementSignature(element.parentElement);
     return `${parentSignature} > ${tagName}`;
   }
   return String(element);
+};
+
+// Generated ids from frameworks (Preact useId, React useId, etc.) look like
+// "P0-0", ":r0:", "P1-3" — short alphanumeric tokens with dashes or colons.
+// If an id matches this pattern we prefer className over it.
+const looksLikeGeneratedId = (id) => {
+  return /^[A-Z][0-9]+-[0-9]+$|^:[a-z][0-9]*:$/.test(id);
 };
 
 const createIterableWeakSet = () => {
@@ -1044,6 +1054,7 @@ const elementIsWindow = (a) => a.window === a;
 const elementIsDocument = (a) => a.nodeType === 9;
 const elementIsDetails = ({ nodeName }) => nodeName === "DETAILS";
 const elementIsSummary = ({ nodeName }) => nodeName === "SUMMARY";
+const elementIsDialog = ({ nodeName }) => nodeName === "DIALOG";
 
 // should be used ONLY when an element is related to other elements that are not descendants of this element
 const getAssociatedElements = (element) => {
@@ -4187,6 +4198,16 @@ const getFocusVisibilityInfo = (node) => {
       }
       // Continue checking ancestors
     }
+    if (elementIsDialog(nodeOrAncestor) && !nodeOrAncestor.open) {
+      return { visible: false, reason: "inside closed dialog element" };
+    }
+    if (
+      nodeOrAncestor.popover !== null &&
+      nodeOrAncestor.popover !== undefined &&
+      !nodeOrAncestor.matches(":popover-open")
+    ) {
+      return { visible: false, reason: "inside closed popover element" };
+    }
     nodeOrAncestor = nodeOrAncestor.parentNode;
   }
   return { visible: true, reason: "no reason to be hidden" };
@@ -4991,9 +5012,13 @@ const getNextTablePosition = (
 
 const performTabNavigation = (
   event,
-  { rootElement = document.body, outsideOfElement = null } = {},
+  {
+    rootElement = document.body,
+    outsideOfElement = null,
+    debug = () => {},
+  } = {},
 ) => {
-  if (!isTabEvent(event)) {
+  if (!isTabEvent$1(event)) {
     return false;
   }
   const activeElement = document.activeElement;
@@ -5003,29 +5028,20 @@ const performTabNavigation = (
   }
   const isForward = !event.shiftKey;
   const onTargetToFocus = (targetToFocus) => {
-    console.debug(
+    debug(
       `Tab navigation: ${isForward ? "forward" : "backward"} from`,
-      activeElement,
+      getElementSignature(activeElement),
       "to",
-      targetToFocus,
+      getElementSignature(targetToFocus),
     );
     event.preventDefault();
     markFocusNav(event);
     targetToFocus.focus();
   };
 
-  {
-    console.debug(
-      `Tab navigation: ${isForward ? "forward" : "backward"} from,`,
-      activeElement,
-    );
-  }
-
   const predicate = (candidate) => {
     const canBeFocusedByTab = isFocusableByTab(candidate);
-    {
-      console.debug(`Testing`, candidate, `${canBeFocusedByTab ? "✓" : "✗"}`);
-    }
+    // debug(`Testing`, candidate, `${canBeFocusedByTab ? "✓" : "✗"}`);
     return canBeFocusedByTab;
   };
 
@@ -5050,7 +5066,8 @@ const performTabNavigation = (
     if (nextFocusableElement) {
       return onTargetToFocus(nextFocusableElement);
     }
-    const firstFocusableElement = findDescendant(activeElement, predicate, {
+    // Wrap around: go back to the first focusable element in root.
+    const firstFocusableElement = findDescendant(rootElement, predicate, {
       skipRoot: outsideOfElement,
     });
     if (firstFocusableElement) {
@@ -5081,7 +5098,8 @@ const performTabNavigation = (
     if (previousFocusableElement) {
       return onTargetToFocus(previousFocusableElement);
     }
-    const lastFocusableElement = findLastDescendant(activeElement, predicate, {
+    // Wrap around: go back to the last focusable element in root.
+    const lastFocusableElement = findLastDescendant(rootElement, predicate, {
       skipRoot: outsideOfElement,
     });
     if (lastFocusableElement) {
@@ -5091,7 +5109,7 @@ const performTabNavigation = (
   }
 };
 
-const isTabEvent = (event) => event.key === "Tab" || event.keyCode === 9;
+const isTabEvent$1 = (event) => event.key === "Tab" || event.keyCode === 9;
 
 const isFocusableByTab = (element) => {
   if (hasNegativeTabIndex(element)) {
@@ -5193,6 +5211,166 @@ const initFocusGroup = (
   }
 
   return { cleanup };
+};
+
+/**
+ * Traps keyboard focus and mouse clicks inside `element`.
+ *
+ * Once active:
+ * - **Tab / Shift+Tab** cycle through focusable descendants of `element`,
+ *   wrapping from last → first and first → last. If no focusable element
+ *   exists, the default browser Tab action is suppressed so focus cannot
+ *   escape.
+ * - **Mouse clicks** outside `element` are only blocked when `pointerTrap`
+ *   is `true`. Backdrop clicks (on `<dialog>` elements) still propagate even
+ *   then, so the dialog can close itself.
+ *
+ * Multiple traps can be stacked. When a new trap is activated the previous
+ * one is paused; when the new trap is released the previous one resumes.
+ * Traps must be released in LIFO order (the reverse of activation order).
+ *
+ * @param {HTMLElement} element - The root element to trap focus inside.
+ * @param {object} [options]
+ * @param {boolean} [options.pointerTrap=false] - When true, mouse clicks outside `element`
+ *   are cancelled so the user cannot move focus away by clicking the backdrop.
+ *   Backdrop clicks (target is a `<dialog>` element) only receive `preventDefault`
+ *   and still propagate, allowing the dialog to react to them (e.g. close itself).
+ * @param {Function} [options.debug] - Optional debug logger passed to tab navigation.
+ * @returns {() => void} Cleanup function — call it to release the trap.
+ */
+const trapFocusInside = (
+  element,
+  { debug, pointerTrap = false } = {},
+) => {
+  if (element.nodeType === 3) {
+    console.warn("cannot trap focus inside a text node");
+    return () => {};
+  }
+
+  const trappedElement = activeTraps.find(
+    (activeTrap) => activeTrap.element === element,
+  );
+  if (trappedElement) {
+    console.warn("focus already trapped inside this element");
+    return () => {};
+  }
+
+  const isEventOutside = (event) => {
+    if (event.target === element) {
+      return false;
+    }
+    if (element.contains(event.target)) {
+      return false;
+    }
+    return true;
+  };
+
+  const lock = () => {
+    const onmousedown = pointerTrap
+      ? (event) => {
+          if (!isEventOutside(event)) {
+            return;
+          }
+          event.preventDefault();
+          // Backdrop clicks (e.g. clicking a <dialog>'s ::backdrop) must still
+          // propagate so the dialog/popover can react to them (e.g. close itself).
+          // A backdrop click is detected when the target is a <dialog> element —
+          // the ::backdrop pseudo-element is not in the DOM, so the event target
+          // becomes the dialog element itself when its content area is not hit.
+          const isBackdropClick =
+            event.target.tagName === "DIALOG" ||
+            event.target.className.includes("backdrop");
+          if (!isBackdropClick) {
+            event.stopImmediatePropagation();
+          }
+        }
+      : null;
+
+    const onkeydown = (event) => {
+      if (isTabEvent(event)) {
+        const handled = performTabNavigation(event, {
+          rootElement: element,
+          debug,
+        });
+        if (!handled) {
+          // No focusable target found — prevent the browser from moving focus outside the trap.
+          event.preventDefault();
+        }
+      }
+    };
+
+    if (onmousedown) {
+      document.addEventListener("mousedown", onmousedown, {
+        capture: true,
+        passive: false,
+      });
+    }
+    document.addEventListener("keydown", onkeydown, {
+      capture: true,
+      passive: false,
+    });
+
+    return () => {
+      if (onmousedown) {
+        document.removeEventListener("mousedown", onmousedown, {
+          capture: true,
+          passive: false,
+        });
+      }
+      document.removeEventListener("keydown", onkeydown, {
+        capture: true,
+        passive: false,
+      });
+    };
+  };
+
+  const deactivate = activate({
+    // element
+    lock,
+  });
+
+  const untrap = () => {
+    deactivate();
+  };
+
+  return untrap;
+};
+
+const isTabEvent = (event) => event.key === "Tab" || event.keyCode === 9;
+
+const activeTraps = [];
+const activate = ({ lock }) => {
+  // unlock any trap currently activated
+  let previousTrap;
+  if (activeTraps.length > 0) {
+    previousTrap = activeTraps[activeTraps.length - 1];
+    previousTrap.unlock();
+  }
+
+  // store trap methods to lock/unlock as traps are acivated/deactivated
+  const trap = { lock, unlock: lock() };
+  activeTraps.push(trap);
+
+  return () => {
+    if (activeTraps.length === 0) {
+      console.warn("cannot deactivate an already deactivated trap");
+      return;
+    }
+    const lastTrap = activeTraps[activeTraps.length - 1];
+    if (trap !== lastTrap) {
+      // TODO: investigate this and maybe remove this requirment
+      console.warn(
+        "you must deactivate trap in the same order they were activated",
+      );
+      return;
+    }
+    activeTraps.pop();
+    trap.unlock();
+    // if any,reactivate the previous trap
+    if (previousTrap) {
+      previousTrap.unlock = previousTrap.lock();
+    }
+  };
 };
 
 // Helper to create scroll state capture/restore function for an element
@@ -5458,6 +5636,33 @@ const findScrollContainer = (element, { includeHidden } = {}) => {
     parent = parent.parentNode;
   }
   return null;
+};
+
+const getSelfAndAncestorScrolls = (element, startOnParent) => {
+  let scrollX = 0;
+  let scrollY = 0;
+  const ancestorScrolls = [];
+  const visitElement = (elementOrScrollContainer) => {
+    const scrollContainer = getScrollContainer(elementOrScrollContainer);
+    if (scrollContainer) {
+      ancestorScrolls.push({
+        element: elementOrScrollContainer,
+        scrollContainer,
+      });
+      scrollX += scrollContainer.scrollLeft;
+      scrollY += scrollContainer.scrollTop;
+      if (scrollContainer === document.documentElement) {
+        return;
+      }
+      visitElement(scrollContainer);
+    }
+  };
+  {
+    visitElement(element);
+  }
+  ancestorScrolls.scrollX = scrollX;
+  ancestorScrolls.scrollY = scrollY;
+  return ancestorScrolls;
 };
 
 const getBorderSizes = (element) => {
@@ -5804,6 +6009,96 @@ const getScrollport = (scrollBox, scrollContainer) => {
     top: topWithScroll,
     right: rightWithScroll,
     bottom: bottomWithScroll,
+  };
+};
+
+// https://davidwalsh.name/detect-scrollbar-width
+const measureScrollbar = (scrollableElement) => {
+  const hasXScrollbar =
+    scrollableElement.scrollHeight > scrollableElement.clientHeight;
+  const hasYScrollbar =
+    scrollableElement.scrollWidth > scrollableElement.clientWidth;
+  if (!hasXScrollbar && !hasYScrollbar) {
+    return [0, 0];
+  }
+  const scrollDiv = document.createElement("div");
+  scrollDiv.style.cssText = `position: absolute; width: 100px; height: 100px; overflow: scroll; pointer-events: none; visibility: hidden;`;
+  scrollableElement.appendChild(scrollDiv);
+  const scrollbarWidth = scrollDiv.offsetWidth - scrollDiv.clientWidth;
+  const scrollbarHeight = scrollDiv.offsetHeight - scrollDiv.clientHeight;
+  scrollableElement.removeChild(scrollDiv);
+  return [
+    hasXScrollbar ? scrollbarWidth : 0,
+    hasYScrollbar ? scrollbarHeight : 0,
+  ];
+};
+
+/**
+ * Prevents scrolling on all scrollable containers that are ancestors of (or
+ * siblings preceding) `element`. Used when an overlay (popover, dialog) is
+ * open and background scroll should be disabled.
+ *
+ * **Why padding instead of scrollbar-gutter?**
+ * `scrollbar-gutter: stable` would be the modern, CSS-native way to reserve
+ * the scrollbar lane before hiding overflow so the layout doesn't shift.
+ * However it only works well when the element's design already accounts for
+ * that reserved space. On arbitrary containers we can't assume that, so we
+ * measure the actual scrollbar size and compensate with padding — a technique
+ * that works regardless of how the element is styled.
+ *
+ * **What if the element already uses scrollbar-gutter?**
+ * A non-"auto" `scrollbar-gutter` value signals that the element has its own
+ * scrollbar-gutter strategy in place. In that case we skip the padding
+ * compensation and rely on that strategy instead — adding padding on top of an
+ * already-reserved gutter would double-count the space.
+ *
+ * @param {HTMLElement} element - The overlay element being shown. Its preceding
+ *   siblings and all ancestor scroll containers will be scroll-locked.
+ * @returns {() => void} Cleanup function that restores all modified styles.
+ */
+const trapScrollInside = (element) => {
+  const cleanupCallbackSet = new Set();
+  const lockScroll = (el) => {
+    const scrollbarGutter = getStyle(el, "scrollbar-gutter");
+    const hasScrollbarGutterStrategy =
+      scrollbarGutter && scrollbarGutter !== "auto";
+    if (hasScrollbarGutterStrategy) {
+      // The element manages its own gutter — just hide overflow, no padding needed.
+      const removeScrollLockStyles = setStyles(el, { overflow: "hidden" });
+      cleanupCallbackSet.add(removeScrollLockStyles);
+      return;
+    }
+    const [scrollbarWidth, scrollbarHeight] = measureScrollbar(el);
+    const paddingRight = parseInt(getStyle(el, "padding-right"), 0);
+    const paddingTop = parseInt(getStyle(el, "padding-top"), 0);
+    const removeScrollLockStyles = setStyles(el, {
+      "padding-right": `${paddingRight + scrollbarWidth}px`,
+      "padding-top": `${paddingTop + scrollbarHeight}px`,
+      "overflow": "hidden",
+    });
+    cleanupCallbackSet.add(removeScrollLockStyles);
+  };
+  let previous = element.previousSibling;
+  while (previous) {
+    if (previous.nodeType === 1) {
+      if (isScrollable(previous)) {
+        lockScroll(previous);
+      }
+    }
+    previous = previous.previousSibling;
+  }
+
+  const selfAndAncestorScrolls = getSelfAndAncestorScrolls(element);
+  for (const selfOrAncestorScroll of selfAndAncestorScrolls) {
+    const elementToScrollLock = selfOrAncestorScroll.scrollContainer;
+    lockScroll(elementToScrollLock);
+  }
+
+  return () => {
+    for (const cleanupCallback of cleanupCallbackSet) {
+      cleanupCallback();
+    }
+    cleanupCallbackSet.clear();
   };
 };
 
@@ -8934,24 +9229,27 @@ const stickyAsRelativeCoords = (
   return [leftPosition, topPosition];
 };
 
-// Creates a visible rect effect that tracks how much of an element is visible within its scrollable parent
-// and within the document viewport. This is useful for implementing overlays, lazy loading, or any UI
-// that needs to react to element visibility changes.
-//
-// The function returns two visibility ratios:
-// - scrollVisibilityRatio: Visibility ratio relative to the scrollable parent (0-1)
-// - visibilityRatio: Visibility ratio relative to the document viewport (0-1)
-//
-// When scrollable parent is the document, both ratios will be the same.
-// When scrollable parent is a custom container, scrollVisibilityRatio might be 1.0 (fully visible
-// within the container) while visibilityRatio could be 0.0 (container is scrolled out of viewport).
-// A bit like https://tetherjs.dev/ but different
+/**
+ * Tracks how much of an element is visible within its scrollable parent and within the
+ * document viewport. Calls update() on initialization and whenever visibility changes
+ * (scroll, resize, intersection changes).
+ *
+ * The update callback receives a visibleRect object with:
+ * - left, top, right, bottom, width, height: the visible portion of the element,
+ *   clipped to its scroll container's bounds and expressed in overlay coordinates
+ * - visibilityRatio: fraction of the element's area that is truly visible on screen (0–1).
+ *   For document scroll containers this is the viewport-clipped fraction.
+ *   For custom containers this is the fraction clipped by both the container AND the viewport
+ *   (so an element scrolled out of its container correctly reports 0, not 1).
+ *
+ * A bit like https://tetherjs.dev/ but different
+ */
 const visibleRectEffect = (element, update) => {
   const [teardown, addTeardown] = createPubSub();
   const scrollContainer = getScrollContainer(element);
   const scrollContainerIsDocument =
     scrollContainer === document.documentElement;
-  const check = (reason) => {
+  const check = (event) => {
 
     // 1. Calculate element position relative to scrollable parent
     const { scrollLeft, scrollTop } = scrollContainer;
@@ -9043,27 +9341,35 @@ const visibleRectEffect = (element, update) => {
       }
     }
 
-    // Calculate visibility ratios
-    const scrollVisibilityRatio =
-      (widthVisible * heightVisible) / (width * height);
-    // Calculate visibility ratio relative to document viewport
-    let documentVisibilityRatio;
+    // Calculate visibilityRatio: fraction of element area truly visible on screen.
+    // For custom containers we intersect the container-clipped visible size (widthVisible x
+    // heightVisible) with the viewport bounds, so an element scrolled out of its container
+    // correctly reports 0 rather than the raw viewport intersection of its bounding rect.
+    let visibilityRatio;
     if (scrollContainerIsDocument) {
-      documentVisibilityRatio = scrollVisibilityRatio;
+      visibilityRatio = (widthVisible * heightVisible) / (width * height);
     } else {
-      // For custom containers, calculate visibility relative to document viewport
-      const elementRect = element.getBoundingClientRect();
+      // widthVisible/heightVisible are already clipped to the scroll container.
+      // Now clip their viewport-relative counterparts against the viewport.
       const viewportWidth = window.innerWidth;
       const viewportHeight = window.innerHeight;
-      // Calculate how much of the element is visible in the document viewport
-      const elementLeft = Math.max(0, elementRect.left);
-      const elementTop = Math.max(0, elementRect.top);
-      const elementRight = Math.min(viewportWidth, elementRect.right);
-      const elementBottom = Math.min(viewportHeight, elementRect.bottom);
-      const documentVisibleWidth = Math.max(0, elementRight - elementLeft);
-      const documentVisibleHeight = Math.max(0, elementBottom - elementTop);
-      documentVisibilityRatio =
-        (documentVisibleWidth * documentVisibleHeight) / (width * height);
+      // Container-clipped visible rect in viewport coordinates
+      const visibleLeft = overlayLeft;
+      const visibleTop = overlayTop;
+      const visibleRight = overlayLeft + widthVisible;
+      const visibleBottom = overlayTop + heightVisible;
+      // Intersect with viewport
+      const clippedLeft = visibleLeft < 0 ? 0 : visibleLeft;
+      const clippedTop = visibleTop < 0 ? 0 : visibleTop;
+      const clippedRight =
+        visibleRight > viewportWidth ? viewportWidth : visibleRight;
+      const clippedBottom =
+        visibleBottom > viewportHeight ? viewportHeight : visibleBottom;
+      const clippedWidth =
+        clippedRight > clippedLeft ? clippedRight - clippedLeft : 0;
+      const clippedHeight =
+        clippedBottom > clippedTop ? clippedBottom - clippedTop : 0;
+      visibilityRatio = (clippedWidth * clippedHeight) / (width * height);
     }
 
     const visibleRect = {
@@ -9073,22 +9379,22 @@ const visibleRectEffect = (element, update) => {
       bottom: overlayTop + heightVisible,
       width: widthVisible,
       height: heightVisible,
-      visibilityRatio: documentVisibilityRatio,
-      scrollVisibilityRatio,
+      visibilityRatio,
     };
     update(visibleRect, {
+      event,
       width,
       height,
     });
   };
 
-  check();
+  check(new CustomEvent("initialization"));
 
   const [publishBeforeAutoCheck, onBeforeAutoCheck] = createPubSub();
   {
-    const autoCheck = (reason) => {
-      const beforeCheckResults = publishBeforeAutoCheck(reason);
-      check();
+    const autoCheck = (event) => {
+      const beforeCheckResults = publishBeforeAutoCheck(event);
+      check(event);
       for (const beforeCheckResult of beforeCheckResults) {
         if (typeof beforeCheckResult === "function") {
           beforeCheckResult();
@@ -9109,8 +9415,8 @@ const visibleRectEffect = (element, update) => {
     {
       // If scrollable parent is not document, also listen to document scroll
       // to update UI position when the scrollable parent moves in viewport
-      const onDocumentScroll = () => {
-        autoCheck("document_scroll");
+      const onDocumentScroll = (e) => {
+        autoCheck(e);
       };
       document.addEventListener("scroll", onDocumentScroll, {
         passive: true,
@@ -9121,8 +9427,8 @@ const visibleRectEffect = (element, update) => {
         });
       });
       if (!scrollContainerIsDocument) {
-        const onScroll = () => {
-          autoCheck("scrollable_parent_scroll");
+        const onScroll = (e) => {
+          autoCheck(e);
         };
         scrollContainer.addEventListener("scroll", onScroll, {
           passive: true,
@@ -9135,8 +9441,8 @@ const visibleRectEffect = (element, update) => {
       }
     }
     {
-      const onWindowResize = () => {
-        autoCheck("window_size_change");
+      const onWindowResize = (e) => {
+        autoCheck(e);
       };
       window.addEventListener("resize", onWindowResize);
       addTeardown(() => {
@@ -9166,7 +9472,9 @@ const visibleRectEffect = (element, update) => {
     {
       const documentIntersectionObserver = new IntersectionObserver(
         () => {
-          autoCheck("element_intersection_with_document_change");
+          autoCheck(
+            new CustomEvent("element_intersection_with_document_change"),
+          );
         },
         {
           root: null,
@@ -9181,7 +9489,9 @@ const visibleRectEffect = (element, update) => {
       if (!scrollContainerIsDocument) {
         const scrollIntersectionObserver = new IntersectionObserver(
           () => {
-            autoCheck("element_intersection_with_scroll_change");
+            autoCheck(
+              new CustomEvent("element_intersection_with_scroll_change"),
+            );
           },
           {
             root: scrollContainer,
@@ -9196,8 +9506,8 @@ const visibleRectEffect = (element, update) => {
       }
     }
     {
-      const onWindowTouchMove = () => {
-        autoCheck("window_touchmove");
+      const onWindowTouchMove = (e) => {
+        autoCheck(e);
       };
       window.addEventListener("touchmove", onWindowTouchMove, {
         passive: true,
@@ -9219,14 +9529,50 @@ const visibleRectEffect = (element, update) => {
   };
 };
 
+/**
+ * Places element adjacent to anchor using one of 9 compass positions.
+ *
+ * ```
+ *   top-left  |   top   | top-right
+ *   ----------+---------+----------
+ *     left    |  center |   right
+ *   ----------+---------+----------
+ *  bottom-left|  bottom |bottom-right
+ * ```
+ *
+ * All positions except "center" place element outside the anchor:
+ *   - "top"          → element.bottom = anchor.top,    horizontally centered
+ *   - "bottom"       → element.top    = anchor.bottom, horizontally centered  (default)
+ *   - "left"         → element.right  = anchor.left,   vertically centered
+ *   - "right"        → element.left   = anchor.right,  vertically centered
+ *   - "top-left"     → element.bottom = anchor.top,    element.right = anchor.left
+ *   - "top-right"    → element.bottom = anchor.top,    element.left  = anchor.right
+ *   - "bottom-left"  → element.top    = anchor.bottom, element.right = anchor.left
+ *   - "bottom-right" → element.top    = anchor.bottom, element.left  = anchor.right
+ *   - "center"       → element centered on anchor (overlapping)
+ *
+ * @param {HTMLElement} element - The element to position (must be document-relative)
+ * @param {HTMLElement} anchor - The anchor element to position against
+ * @param {object} [options]
+ * @param {string} [options.positionTry="bottom"] - Preferred position. Mimics CSS position-try.
+ *   If it does not fit, the logical opposite is tried automatically:
+ *   top↔bottom, left↔right, top-left↔bottom-right, top-right↔bottom-left.
+ *   The element's data-position-try attribute takes precedence over this param;
+ *   the last resolved position is persisted as data-position-current to avoid flickering.
+ * @param {string} [options.position] - Force a specific position, skipping the fit-check.
+ * @param {number} [options.alignToViewportEdgeWhenAnchorNearEdge=0] - Snap to viewport left
+ *   edge when anchor is within this many px of the left edge and element is wider than anchor.
+ * @param {number} [options.minLeft=0] - Minimum left coordinate (document-relative).
+ * @returns {{ position, left, top, width, height, anchorLeft, anchorTop, anchorRight, anchorBottom, spaceAbove, spaceBelow }}
+ */
 const pickPositionRelativeTo = (
   element,
-  target,
+  anchor,
   {
-    alignToViewportEdgeWhenTargetNearEdge = 0,
+    positionTry = "bottom",
+    position,
+    alignToViewportEdgeWhenAnchorNearEdge = 0,
     minLeft = 0,
-    positionPreference,
-    forcePosition,
   } = {},
 ) => {
 
@@ -9234,7 +9580,7 @@ const pickPositionRelativeTo = (
   const viewportHeight = document.documentElement.clientHeight;
   // Get viewport-relative positions
   const elementRect = element.getBoundingClientRect();
-  const targetRect = target.getBoundingClientRect();
+  const anchorRect = anchor.getBoundingClientRect();
   const {
     left: elementLeft,
     right: elementRight,
@@ -9242,50 +9588,97 @@ const pickPositionRelativeTo = (
     bottom: elementBottom,
   } = elementRect;
   const {
-    left: targetLeft,
-    right: targetRight,
-    top: targetTop,
-    bottom: targetBottom,
-  } = targetRect;
+    left: anchorLeft,
+    right: anchorRight,
+    top: anchorTop,
+    bottom: anchorBottom,
+  } = anchorRect;
   const elementWidth = elementRight - elementLeft;
   const elementHeight = elementBottom - elementTop;
-  const targetWidth = targetRight - targetLeft;
+  const anchorWidth = anchorRight - anchorLeft;
+  const anchorHeight = anchorBottom - anchorTop;
+
+  // Determine the active position: position wins, then data-position-current (last resolved),
+  // then data-position-try attribute (user preference), then positionTry param
+  let activePosition;
+  if (position) {
+    activePosition = position;
+  } else {
+    const positionCurrentFromAttribute = element.getAttribute(
+      "data-position-current",
+    );
+    const positionTryFromAttribute = element.getAttribute("data-position-try");
+    activePosition =
+      positionCurrentFromAttribute || positionTryFromAttribute || positionTry;
+  }
+
+  const spaceAbove = anchorTop;
+  const spaceBelow = viewportHeight - anchorBottom;
+
+  // Resolve vertical axis, falling back to opposite if the tried position does not fit
+  const { isTop, isBottom, isLeft, isRight, isCenter } =
+    decomposePosition(activePosition);
+  const isCenterX = !isLeft && !isRight; // top / bottom / center
+  const isCenterY = !isTop && !isBottom; // left / right / center
+
+  let resolvedVertical; // "top" | "bottom" | "center-y"
+  if (isCenter || isCenterY) {
+    resolvedVertical = "center-y";
+  } else if (position) {
+    resolvedVertical = isTop ? "top" : "bottom";
+  } else if (isTop) {
+    const minContentVisibilityRatio = 0.6;
+    const fitsAbove = spaceAbove / elementHeight >= minContentVisibilityRatio;
+    if (fitsAbove) {
+      resolvedVertical = "top";
+    } else {
+      resolvedVertical = "bottom"; // opposite of top
+    }
+  } else {
+    // isBottom
+    const elementFitsBelow = spaceBelow >= elementHeight;
+    if (elementFitsBelow) {
+      resolvedVertical = "bottom";
+    } else {
+      resolvedVertical = "top"; // opposite of bottom
+    }
+  }
 
   // Calculate horizontal position (viewport-relative)
   let elementPositionLeft;
   {
-    // Check if target element is wider than viewport
-    const targetIsWiderThanViewport = targetWidth > viewportWidth;
-    if (targetIsWiderThanViewport) {
-      const targetLeftIsVisible = targetLeft >= 0;
-      const targetRightIsVisible = targetRight <= viewportWidth;
-
-      if (!targetLeftIsVisible && targetRightIsVisible) {
-        // Target extends beyond left edge but right side is visible
-        const viewportCenter = viewportWidth / 2;
-        const distanceFromRightEdge = viewportWidth - targetRight;
-        elementPositionLeft =
-          viewportCenter - distanceFromRightEdge / 2 - elementWidth / 2;
-      } else if (targetLeftIsVisible && !targetRightIsVisible) {
-        // Target extends beyond right edge but left side is visible
-        const viewportCenter = viewportWidth / 2;
-        const distanceFromLeftEdge = -targetLeft;
-        elementPositionLeft =
-          viewportCenter - distanceFromLeftEdge / 2 - elementWidth / 2;
-      } else {
-        // Target extends beyond both edges or is fully visible (center in viewport)
-        elementPositionLeft = viewportWidth / 2 - elementWidth / 2;
-      }
+    if (isLeft) {
+      elementPositionLeft = anchorLeft - elementWidth;
+    } else if (isRight) {
+      elementPositionLeft = anchorRight;
     } else {
-      // Target fits within viewport width - center element relative to target
-      elementPositionLeft = targetLeft + targetWidth / 2 - elementWidth / 2;
-      // Special handling when element is wider than target
-      if (alignToViewportEdgeWhenTargetNearEdge) {
-        const elementIsWiderThanTarget = elementWidth > targetWidth;
-        const targetIsNearLeftEdge =
-          targetLeft < alignToViewportEdgeWhenTargetNearEdge;
-        if (elementIsWiderThanTarget && targetIsNearLeftEdge) {
-          elementPositionLeft = minLeft; // Left edge of viewport
+      // centered horizontally on anchor
+      const anchorIsWiderThanViewport = anchorWidth > viewportWidth;
+      if (anchorIsWiderThanViewport) {
+        const anchorLeftIsVisible = anchorLeft >= 0;
+        const anchorRightIsVisible = anchorRight <= viewportWidth;
+        if (!anchorLeftIsVisible && anchorRightIsVisible) {
+          const viewportCenter = viewportWidth / 2;
+          const distanceFromRightEdge = viewportWidth - anchorRight;
+          elementPositionLeft =
+            viewportCenter - distanceFromRightEdge / 2 - elementWidth / 2;
+        } else if (anchorLeftIsVisible && !anchorRightIsVisible) {
+          const viewportCenter = viewportWidth / 2;
+          const distanceFromLeftEdge = -anchorLeft;
+          elementPositionLeft =
+            viewportCenter - distanceFromLeftEdge / 2 - elementWidth / 2;
+        } else {
+          elementPositionLeft = viewportWidth / 2 - elementWidth / 2;
+        }
+      } else {
+        elementPositionLeft = anchorLeft + anchorWidth / 2 - elementWidth / 2;
+        if (alignToViewportEdgeWhenAnchorNearEdge) {
+          const elementIsWiderThanAnchor = elementWidth > anchorWidth;
+          const anchorIsNearLeftEdge =
+            anchorLeft < alignToViewportEdgeWhenAnchorNearEdge;
+          if (elementIsWiderThanAnchor && anchorIsNearLeftEdge) {
+            elementPositionLeft = minLeft;
+          }
         }
       }
     }
@@ -9298,83 +9691,76 @@ const pickPositionRelativeTo = (
   }
 
   // Calculate vertical position (viewport-relative)
-  let position;
-  const spaceAboveTarget = targetTop;
-  const spaceBelowTarget = viewportHeight - targetBottom;
-  determine_position: {
-    if (forcePosition) {
-      position = forcePosition;
-      break determine_position;
-    }
-    const elementPreferredPosition = element.getAttribute("data-position");
-    const minContentVisibilityRatio = 0.6; // 60% minimum visibility to keep position
-
-    // Check positionPreference parameter first, then element attribute
-    const preferredPosition = positionPreference || elementPreferredPosition;
-
-    if (preferredPosition) {
-      // Element has a preferred position - try to keep it unless we really struggle
-      const visibleRatio =
-        preferredPosition === "above"
-          ? spaceAboveTarget / elementHeight
-          : spaceBelowTarget / elementHeight;
-      const canShowMinimumContent = visibleRatio >= minContentVisibilityRatio;
-      if (canShowMinimumContent) {
-        position = preferredPosition;
-        break determine_position;
-      }
-    }
-    // No preferred position - use original logic (prefer below, fallback to above if more space)
-    const elementFitsBelow = spaceBelowTarget >= elementHeight;
-    if (elementFitsBelow) {
-      position = "below";
-      break determine_position;
-    }
-    const hasMoreSpaceBelow = spaceBelowTarget >= spaceAboveTarget;
-    position = hasMoreSpaceBelow ? "below" : "above";
-  }
-
   let elementPositionTop;
   {
-    if (position === "below") {
-      // Calculate top position when placing below target (ensure whole pixels)
-      const idealTopWhenBelow = targetBottom;
+    if (resolvedVertical === "center-y") {
+      elementPositionTop = anchorTop + anchorHeight / 2 - elementHeight / 2;
+    } else if (resolvedVertical === "bottom") {
+      const idealTop = anchorBottom;
       elementPositionTop =
-        idealTopWhenBelow % 1 === 0
-          ? idealTopWhenBelow
-          : Math.floor(idealTopWhenBelow) + 1;
+        idealTop % 1 === 0 ? idealTop : Math.floor(idealTop) + 1;
     } else {
-      // Calculate top position when placing above target
-      const idealTopWhenAbove = targetTop - elementHeight;
-      const minimumTopInViewport = 0;
-      elementPositionTop =
-        idealTopWhenAbove < minimumTopInViewport
-          ? minimumTopInViewport
-          : idealTopWhenAbove;
+      // "top"
+      const idealTop = anchorTop - elementHeight;
+      elementPositionTop = idealTop < 0 ? 0 : idealTop;
     }
+  }
+
+  let finalPosition;
+  {
+    const vertPart = resolvedVertical === "center-y" ? "" : resolvedVertical;
+    const horzPart = isCenterX ? "" : isLeft ? "left" : "right";
+    if (vertPart && horzPart) {
+      finalPosition = `${vertPart}-${horzPart}`;
+    } else if (vertPart) {
+      finalPosition = vertPart;
+    } else if (horzPart) {
+      finalPosition = horzPart;
+    } else {
+      finalPosition = "center";
+    }
+  }
+
+  // Persist the resolved position on the element so subsequent calls start from it
+  // (avoids flickering between positions when the element is near the threshold).
+  // position is not persisted — it is always explicit.
+
+  if (!position) {
+    element.setAttribute("data-position-current", finalPosition);
   }
 
   // Get document scroll for final coordinate conversion
   const { scrollLeft, scrollTop } = document.documentElement;
   const elementDocumentLeft = elementPositionLeft + scrollLeft;
   const elementDocumentTop = elementPositionTop + scrollTop;
-  const targetDocumentLeft = targetLeft + scrollLeft;
-  const targetDocumentTop = targetTop + scrollTop;
-  const targetDocumentRight = targetRight + scrollLeft;
-  const targetDocumentBottom = targetBottom + scrollTop;
+  const anchorDocumentLeft = anchorLeft + scrollLeft;
+  const anchorDocumentTop = anchorTop + scrollTop;
+  const anchorDocumentRight = anchorRight + scrollLeft;
+  const anchorDocumentBottom = anchorBottom + scrollTop;
 
   return {
-    position,
+    position: finalPosition,
     left: elementDocumentLeft,
     top: elementDocumentTop,
     width: elementWidth,
     height: elementHeight,
-    targetLeft: targetDocumentLeft,
-    targetTop: targetDocumentTop,
-    targetRight: targetDocumentRight,
-    targetBottom: targetDocumentBottom,
-    spaceAboveTarget,
-    spaceBelowTarget,
+    anchorLeft: anchorDocumentLeft,
+    anchorTop: anchorDocumentTop,
+    anchorRight: anchorDocumentRight,
+    anchorBottom: anchorDocumentBottom,
+    spaceAbove,
+    spaceBelow,
+  };
+};
+// Decompose position flags
+const decomposePosition = (pos) => {
+  return {
+    isTop: pos === "top" || pos === "top-left" || pos === "top-right",
+    isBottom:
+      pos === "bottom" || pos === "bottom-left" || pos === "bottom-right",
+    isLeft: pos === "left" || pos === "top-left" || pos === "bottom-left",
+    isRight: pos === "right" || pos === "top-right" || pos === "bottom-right",
+    isCenter: pos === "center",
   };
 };
 
@@ -13279,6 +13665,19 @@ const useRunOnMount = (action, Component) => {
   }, []);
 };
 
+const DebugFocusContext = Q(false);
+Q(false);
+const DebugPopoverContext = Q(false);
+const debugNoop = () => {};
+const useDebugFocus = () => {
+  const debug = j$1(DebugFocusContext);
+  return debug || debugNoop;
+};
+const useDebugPopover = () => {
+  const debug = j$1(DebugPopoverContext);
+  return debug || debugNoop;
+};
+
 const addIntoArray = (array, ...valuesToAdd) => {
   if (valuesToAdd.length === 1) {
     const [valueToAdd] = valuesToAdd;
@@ -17084,7 +17483,7 @@ const usePromiseAsyncData = (
 };
 
 const useForceRender = () => {
-  const [, setState] = h(null);
+  const [, setState] = y$1(null);
   return () => {
     setState({});
   };
@@ -17117,7 +17516,7 @@ const useAsyncData = (promiseOrAction, {
 
 // ─── useAction ────────────────────────────────────────────────────────────────
 
-const LoadingContext$1 = K(null);
+const LoadingContext$1 = Q(null);
 const actionPendingPromiseWeakMap = new WeakMap();
 const dismissedActionWeakSet = new WeakSet();
 const dismissedActionPendingPromiseWeakMap = new WeakMap();
@@ -17139,7 +17538,7 @@ const useActionAsyncData = (action, {
   // re-renders only happen after the pending promise resolves, at which point Suspense
   // has already processed the settlement and the detached DOM is discarded.
   const runningState = action.runningStateSignal.peek();
-  const [, setTick] = h(0);
+  const [, setTick] = y$1(0);
   _(() => {
     return action.runningStateSignal.subscribe(state => {
       if (state === RUNNING) {
@@ -17249,7 +17648,7 @@ const LoadingFallback = ({
   loadingRef,
   fallback
 }) => {
-  const [, setTick] = h(0);
+  const [, setTick] = y$1(0);
   const {
     action
   } = loadingRef.current;
@@ -17343,7 +17742,7 @@ const withPropsClassName = (baseClassName, classNameFromProps) => {
   return `${baseClassName} ${normalizedPropsClassName}`;
 };
 
-const BoxFlowContext = K();
+const BoxFlowContext = Q();
 
 const normalizeSpacingStyle = (value, property = "padding") => {
   const cssValue = SIZE_MAP[value];
@@ -17485,10 +17884,9 @@ const DIMENSION_PROPS = {
     if (parentBoxFlow === "flex-y" || parentBoxFlow === "inline-flex-y") {
       return {
         alignSelf: "stretch",
-        // Here flex grow is "useless" for the item itself
-        // buuut it would allow children (hello ".navi_text_bold_wrapper")
-        // to inherit expand behavior
-        flexGrow: 1,
+        // ensure we override any with: 'fit-content' for instance
+        // also useful for ".navi_text_sizer" to inherit the full size
+        width: "100%",
       };
     }
     // Can't use flexGrow — parent is not flex-x
@@ -17507,10 +17905,9 @@ const DIMENSION_PROPS = {
     if (parentBoxFlow === "flex-x" || parentBoxFlow === "inline-flex-x") {
       return {
         alignSelf: "stretch",
-        // Here flex grow is "useless" for the item itself
-        // buuut it would allow children (hello ".navi_text_bold_wrapper")
-        // to inherit expand behavior
-        flexGrow: 1,
+        // ensure we override any with: 'fit-content' for instance
+        // also useful for ".navi_text_sizer" to inherit the full size
+        height: "100%",
       };
     }
     // Can't use flexGrow — parent is not flex-y
@@ -17619,6 +18016,7 @@ const POSITION_PROPS = {
   fixed: applyToCssPropWhenTruthy("position", "fixed", "static"),
   sticky: applyToCssPropWhenTruthy("position", "sticky", "static"),
   zIndex: PASS_THROUGH,
+  order: PASS_THROUGH,
   left: (value) => {
     return { left: value === true ? 0 : value };
   },
@@ -17724,6 +18122,13 @@ const VISUAL_PROPS = {
   overflow: PASS_THROUGH,
   overflowX: PASS_THROUGH,
   overflowY: PASS_THROUGH,
+  overflowEllipsis: () => {
+    return {
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      overflowWrap: "normal",
+    };
+  },
   accentColor: PASS_THROUGH,
 };
 const CONTENT_PROPS = {
@@ -18107,6 +18512,221 @@ const getDefaultDisplay = (tagName) => {
   return TAG_NAME_TO_DEFAULT_DISPLAY.get(normalizedTagName) || "inline";
 };
 
+const listenInputValue = (
+  input,
+  callback,
+  { waitForChange = false, debounce = 0 } = {},
+) => {
+  if (waitForChange) {
+    return listenInputValueChange(input, callback);
+  }
+  const [teardown, addTeardown] = createPubSub();
+  let currentValue = input.value;
+  let timeout;
+  let debounceTimeout;
+
+  const onAsyncEvent = (e, options) => {
+    timeout = setTimeout(() => {
+      onEvent(e, options);
+    }, 0);
+  };
+
+  let onEvent;
+  if (debounce) {
+    onEvent = (e, { skipDebounce } = {}) => {
+      clearTimeout(timeout);
+      clearTimeout(debounceTimeout);
+
+      const value = input.value;
+      if (value === currentValue) {
+        return;
+      }
+
+      if (skipDebounce) {
+        currentValue = value;
+        callback(e);
+      } else {
+        debounceTimeout = setTimeout(() => {
+          currentValue = value;
+          callback(e);
+        }, debounce);
+      }
+    };
+    // no need to wait for change events (blur, enter key)
+    // we consider this as strong interactions requesting an immediate response
+    const stop = listenInputValueChange(input, (e) => {
+      onEvent(e, { skipDebounce: true });
+    });
+    addTeardown(() => {
+      stop();
+    });
+  } else {
+    onEvent = (e) => {
+      clearTimeout(timeout);
+      const value = input.value;
+      if (value === currentValue) {
+        return;
+      }
+      currentValue = value;
+      callback(e);
+    };
+    // Autocomplete, programmatic changes, form restoration
+    input.addEventListener("change", onEvent);
+    addTeardown(() => {
+      input.removeEventListener("change", onEvent);
+    });
+  }
+
+  // Standard user input (typing)
+  input.addEventListener("input", onEvent);
+  addTeardown(() => {
+    input.removeEventListener("input", onEvent);
+  });
+
+  // Form reset - need to check the form
+  const form = input.form;
+  if (form) {
+    // Form reset happens asynchronously, check value after reset completes
+    form.addEventListener("reset", onAsyncEvent);
+    addTeardown(() => {
+      form.removeEventListener("reset", onAsyncEvent);
+    });
+  }
+
+  // Paste events (some browsers need special handling)
+  input.addEventListener("paste", onEvent);
+  addTeardown(() => {
+    input.removeEventListener("paste", onEvent);
+  });
+
+  // Focus events to catch programmatic changes that don't fire other events
+  // (like when value is set before user interaction)
+  input.addEventListener("focus", onEvent);
+  addTeardown(() => {
+    input.removeEventListener("focus", onEvent);
+  });
+
+  const onNaviDeleteContent = (e) => {
+    // "navi_delete_content" behaves like an async event
+    // a bit like form reset because
+    // our action will be updated async after the component re-renders
+    // and we need to wait that to happen to properly call action with the right value
+    onAsyncEvent(e, { skipDebounce: true });
+  };
+  input.addEventListener("navi_delete_content", onNaviDeleteContent);
+  addTeardown(() => {
+    input.removeEventListener("navi_delete_content", onNaviDeleteContent);
+  });
+  return () => {
+    teardown();
+  };
+};
+
+const listenInputValueChange = (input, callback) => {
+  const [teardown, addTeardown] = createPubSub();
+
+  let valueAtInteraction;
+  const oninput = () => {
+    valueAtInteraction = undefined;
+  };
+  const onkeydown = (e) => {
+    if (e.key === "Enter") {
+      /**
+       * Browser trigger a "change" event right after the enter is pressed
+       * if the input value has changed.
+       * We need to prevent the next change event otherwise we would request action twice
+       */
+      valueAtInteraction = input.value;
+    }
+    if (e.key === "Escape") {
+      /**
+       * Browser trigger a "change" event right after the escape is pressed
+       * if the input value has changed.
+       * We need to prevent the next change event otherwise we would request action when
+       * we actually want to cancel
+       */
+      valueAtInteraction = input.value;
+    }
+  };
+  const onchange = (e) => {
+    if (
+      valueAtInteraction !== undefined &&
+      e.target.value === valueAtInteraction
+    ) {
+      valueAtInteraction = undefined;
+      return;
+    }
+    callback(e);
+  };
+  input.addEventListener("input", oninput);
+  input.addEventListener("keydown", onkeydown);
+  input.addEventListener("change", onchange);
+  addTeardown(() => {
+    input.removeEventListener("input", oninput);
+    input.removeEventListener("keydown", onkeydown);
+    input.removeEventListener("change", onchange);
+  });
+
+  {
+    // Handle programmatic value changes that don't trigger browser change events
+    //
+    // Problem: When input values are set programmatically (not by user typing),
+    // browsers don't fire the 'change' event. However, our application logic
+    // still needs to detect these changes.
+    //
+    // Example scenario:
+    // 1. User starts editing (letter key pressed, value set programmatically)
+    // 2. User doesn't type anything additional (this is the key part)
+    // 3. User clicks outside to finish editing
+    // 4. Without this code, no change event would fire despite the fact that the input value did change from its original state
+    //
+    // This distinction is crucial because:
+    //
+    // - If the user typed additional text after the initial programmatic value,
+    //   the browser would fire change events normally
+    // - But when they don't type anything else, the browser considers it as "no user interaction"
+    //   even though the programmatic initial value represents a meaningful change
+    //
+    // We achieve this by checking if the input value has changed between focus and blur without any user interaction
+    // if yes we fire the callback because input value did change
+    let valueAtStart = input.value;
+    let interacted = false;
+
+    const onfocus = () => {
+      interacted = false;
+      valueAtStart = input.value;
+    };
+    const oninput = (e) => {
+      if (!e.isTrusted) {
+        // non trusted "input" events will be ignored by the browser when deciding to fire "change" event
+        // we ignore them too
+        return;
+      }
+      interacted = true;
+    };
+    const onblur = (e) => {
+      if (interacted) {
+        return;
+      }
+      if (valueAtStart === input.value) {
+        return;
+      }
+      callback(e);
+    };
+
+    input.addEventListener("focus", onfocus);
+    input.addEventListener("input", oninput);
+    input.addEventListener("blur", onblur);
+    addTeardown(() => {
+      input.removeEventListener("focus", onfocus);
+      input.removeEventListener("input", oninput);
+      input.removeEventListener("blur", onblur);
+    });
+  }
+
+  return teardown;
+};
+
 const pressedElements = new WeakSet();
 
 const PSEUDO_CLASSES = {
@@ -18166,18 +18786,25 @@ const PSEUDO_CLASSES = {
   ":active": {
     attribute: "data-active",
     setup: (el, callback) => {
-      const onPointerDown = (e) => {
-        el.setPointerCapture(e.pointerId);
+      // It might be tempting to use el.setPointerCapture() here so that pointerup
+      // always fires on el regardless of where the pointer is released. However,
+      // pointer capture routes all subsequent pointer events to the capturing element,
+      // which means any other element in the tree that expects to receive pointerup,
+      // mouseup, click, etc. after a pointerdown will silently not get them.
+      // For example a <label> that reacts to mousedown + click, or a third-party
+      // library that attaches its own listeners, would break because an ancestor
+      // grabbed the pointer out from under them.
+      // To avoid forcing every such element to declare an opt-out attribute
+      // (e.g. navi-own-pointer-capture) we simply listen on document instead,
+      // which is safe and does not interfere with anyone else's event flow.
+      const onPointerDown = () => {
         const onRelease = () => {
-          el.releasePointerCapture(e.pointerId);
-          el.removeEventListener("lostpointercapture", onRelease);
-          el.removeEventListener("pointercancel", onRelease);
-          el.removeEventListener("pointerup", onRelease);
+          document.removeEventListener("pointercancel", onRelease, true);
+          document.removeEventListener("pointerup", onRelease, true);
           callback();
         };
-        el.addEventListener("lostpointercapture", onRelease);
-        el.addEventListener("pointercancel", onRelease);
-        el.addEventListener("pointerup", onRelease);
+        document.addEventListener("pointercancel", onRelease, true);
+        document.addEventListener("pointerup", onRelease, true);
         callback();
       };
       el.addEventListener("pointerdown", onPointerDown);
@@ -18190,20 +18817,22 @@ const PSEUDO_CLASSES = {
   ":-navi-pressed": {
     attribute: "data-pressed",
     setup: (el, callback) => {
+      // Same reasoning as :active above: setPointerCapture is avoided because it
+      // hijacks all subsequent pointer events and can break elements that rely on
+      // receiving their own pointerup/mouseup/click after a pointerdown, including
+      // <label> elements and third-party code. Listening on document is the safe
+      // alternative.
       const onPointerDown = (e) => {
         if (e.button !== 0) {
           // only left pointer (mouse left click, touch, pen)
           return;
         }
         pressedElements.add(el);
-        el.setPointerCapture(e.pointerId);
         const onRelease = () => {
           pressedElements.delete(el);
-          el.releasePointerCapture(e.pointerId);
-          el.removeEventListener("lostpointercapture", onRelease);
-          el.removeEventListener("pointercancel", onRelease);
-          el.removeEventListener("pointerup", onRelease);
-          el.removeEventListener("contextmenu", onContextMenu);
+          document.removeEventListener("pointercancel", onRelease, true);
+          document.removeEventListener("pointerup", onRelease, true);
+          document.removeEventListener("contextmenu", onContextMenu, true);
           callback();
         };
         const onContextMenu = (e) => {
@@ -18214,18 +18843,15 @@ const PSEUDO_CLASSES = {
           // e.button === -1 means the event was synthesized from a long-press (not a real mouse click).
           if (e.button === -1 && !e.defaultPrevented) {
             pressedElements.delete(el);
-            el.releasePointerCapture(e.pointerId);
-            el.removeEventListener("lostpointercapture", onRelease);
-            el.removeEventListener("pointercancel", onRelease);
-            el.removeEventListener("pointerup", onRelease);
-            el.removeEventListener("contextmenu", onContextMenu);
+            document.removeEventListener("pointercancel", onRelease, true);
+            document.removeEventListener("pointerup", onRelease, true);
+            document.removeEventListener("contextmenu", onContextMenu, true);
             callback();
           }
         };
-        el.addEventListener("lostpointercapture", onRelease);
-        el.addEventListener("pointercancel", onRelease);
-        el.addEventListener("pointerup", onRelease);
-        el.addEventListener("contextmenu", onContextMenu);
+        document.addEventListener("pointercancel", onRelease, true);
+        document.addEventListener("pointerup", onRelease, true);
+        document.addEventListener("contextmenu", onContextMenu, true);
         callback();
       };
       el.addEventListener("pointerdown", onPointerDown);
@@ -18407,6 +19033,15 @@ const PSEUDO_CLASSES = {
   ":-navi-pointed": {
     attribute: "data-pointed",
   },
+  ":-navi-pointed-by-mouse": {
+    attribute: "data-pointed-by-mouse",
+  },
+  ":-navi-pointed-by-keyboard": {
+    attribute: "data-pointed-by-keyboard",
+  },
+  ":-navi-pointed-by-proxy": {
+    attribute: "data-pointed-by-proxy",
+  },
   ":-navi-selected": {
     attribute: "data-selected",
   },
@@ -18424,6 +19059,24 @@ const PSEUDO_CLASSES = {
   },
   ":-navi-status-error": {
     attribute: "data-status-error",
+  },
+  ":-navi-expanded": {
+    attribute: "data-expanded",
+  },
+  ":-navi-void": {
+    attribute: "data-void",
+  },
+  ":-navi-has-value": {
+    attribute: "data-has-value",
+    setup: (el, callback) => {
+      return listenInputValue(el, callback);
+    },
+    test: (el) => {
+      if (el.value === "") {
+        return false;
+      }
+      return true;
+    },
   },
 };
 
@@ -18728,10 +19381,10 @@ const updateStyle = (element, style, preventInitialTransition) => {
  *
  * Supports deps and cleanup return, same as useLayoutEffect.
  */
-const useEarlyDOMEffect = (fn, deps) => {
+const useEarlyDOMEffect = (fn, deps, { needDOMNode = true } = {}) => {
   const component = _currentComponent;
   if (component) {
-    pendingMap.set(component, { fn, deps });
+    pendingMap.set(component, { fn, deps, needDOMNode });
   }
 };
 
@@ -18752,11 +19405,11 @@ n$1.__r = (vnode) => {
 
 const _prevCommit = n$1.__c;
 n$1.__c = (root, commitQueue) => {
-  for (const [component, { fn, deps }] of pendingMap) {
+  for (const [component, { fn, deps, needDOMNode }] of pendingMap) {
     // component.__v is the component's vnode; __e is its root DOM node.
     // Both are set during diff, before options.__c fires.
     const element = component.__v && component.__v.__e;
-    if (!element) {
+    if (needDOMNode && !element) {
       continue;
     }
     const prev = stateMap.get(component);
@@ -19232,6 +19885,15 @@ const Box = props => {
         selfForwardedProps[propName] = propValue;
         continue;
       }
+      // At some point I'd like to transform all data-* attribute in the DOM
+      // into navi-* attribute so that when you look at the DOM you can easily understand which attributes
+      // where added by navi or your code.
+      // This help human to better scan the DOM
+      const isNaviAttribute = propName.startsWith("navi-");
+      if (isNaviAttribute) {
+        selfForwardedProps[propName] = propValue;
+        continue;
+      }
       visitProp(propValue, propName, styleContext, boxStyles, "prop");
     }
     if (typeof style === "string") {
@@ -19263,6 +19925,8 @@ const Box = props => {
         styleDeps.push(...pseudoClasses);
       }
     }
+    // TODO: just use ref function, it will be called same time as early dom effect + give the dom node + be standard
+    // we need to implent our styleDeps tracking but that's likely very easy
     useEarlyDOMEffect(boxEl => {
       const pseudoStateEl = pseudoStateSelector ? boxEl.querySelector(pseudoStateSelector) : boxEl;
       const visualEl = visualSelector ? boxEl.querySelector(visualSelector) : null;
@@ -19295,26 +19959,7 @@ const Box = props => {
   }
   if (separator) {
     // Flatten nested arrays (e.g., from .map()) to treat each element as individual child
-    const flattenedChildren = H(innerChildren);
-    if (flattenedChildren.length > 1) {
-      const childrenWithSeparators = [];
-      let i = 0;
-      while (true) {
-        const child = flattenedChildren[i];
-        childrenWithSeparators.push(child);
-        i++;
-        if (i === flattenedChildren.length) {
-          break;
-        }
-        // Support function separators that receive separator index
-        const separatorElement = typeof separator === "function" ? separator(i - 1) // i-1 because i was incremented after pushing child
-        : separator;
-        childrenWithSeparators.push(separatorElement);
-      }
-      innerChildren = childrenWithSeparators;
-    } else {
-      innerChildren = flattenedChildren;
-    }
+    innerChildren = applySeparatorOnChildren(innerChildren, separator);
   }
   return u$1(TagName, {
     ref: ref,
@@ -19329,6 +19974,44 @@ const Box = props => {
       children: innerChildren
     })
   });
+};
+const applySeparatorOnChildren = (children, separator) => {
+  const flattenedChildren = H(children);
+  if (flattenedChildren.length <= 1) {
+    return children;
+  }
+  const childrenWithSeparators = [];
+  let i = 0;
+  while (true) {
+    const child = flattenedChildren[i];
+    childrenWithSeparators.push(child);
+    i++;
+    const isLast = i === flattenedChildren.length;
+    if (isLast) {
+      break;
+    }
+    const nextChild = flattenedChildren[i];
+    if (!shouldInjectSeparatorBetween(child, nextChild)) {
+      continue;
+    }
+    // Support function separators that receive separator index
+    const separatorElement = typeof separator === "function" ? separator(i - 1) // i-1 because i was incremented after pushing child
+    : separator;
+    childrenWithSeparators.push(separatorElement);
+  }
+  return childrenWithSeparators;
+};
+const shouldInjectSeparatorBetween = (left, right) => {
+  if (isPreactNode$1(left) && left.props?.hidden) {
+    return false;
+  }
+  if (isPreactNode$1(right) && right.props?.hidden) {
+    return false;
+  }
+  return true;
+};
+const isPreactNode$1 = jsxChild => {
+  return jsxChild !== null && typeof jsxChild === "object" && jsxChild.type !== undefined;
 };
 
 installImportMetaCssBuild(import.meta);/**
@@ -19527,7 +20210,7 @@ import.meta.css = [/* css */`
  * When `data-content-phase` changes for the same key, it animates phase transitions.
  */
 
-const UITransitionContentIdContext = K();
+const UITransitionContentIdContext = Q();
 
 /**
  * The goal of this hook is to allow a component to set a "content key"
@@ -24049,7 +24732,7 @@ const useNavStateBasic = (id, initialValue, { debug } = {}) => {
   ];
 };
 
-const useNavState$1 = useNavStateBasic;
+const useNavState = useNavStateBasic;
 
 const Head = ({
   children
@@ -24317,9 +25000,9 @@ const routeAction = (
   return actionBoundToRoute;
 };
 
-const FormContext = K();
+const FormContext = Q();
 
-const FormActionContext = K();
+const FormActionContext = Q();
 
 const renderActionableComponent = (props, {
   Basic,
@@ -24436,7 +25119,7 @@ const debug = (category, ...args) => {
     console.debug(`[selection:${category}]`, ...args);
   }
 };
-const SelectionContext = K();
+const SelectionContext = Q();
 const useSelectionController = ({
   elementRef,
   layout,
@@ -25312,7 +25995,7 @@ const useSelectableElement = (elementRef, {
       element.removeAttribute("data-selectable");
     };
   }, [selectionController]);
-  const [selected, setSelected] = h(false);
+  const [selected, setSelected] = y$1(false);
   debug("selection", "useSelectableElement: initial selected state:", selected);
   // Update selected state when selection value changes
   A(() => {
@@ -25909,10 +26592,10 @@ const useActionEvents = (
 };
 
 const useRequestedActionStatus = (elementRef, { actionOrigin } = {}) => {
-  const [actionRequester, setActionRequester] = h(null);
-  const [actionPending, setActionPending] = h(false);
-  const [actionAborted, setActionAborted] = h(false);
-  const [actionError, setActionError] = h(null);
+  const [actionRequester, setActionRequester] = y$1(null);
+  const [actionPending, setActionPending] = y$1(false);
+  const [actionAborted, setActionAborted] = y$1(false);
+  const [actionError, setActionError] = y$1(null);
 
   useActionEvents(elementRef, {
     actionOrigin,
@@ -25945,107 +26628,7 @@ const useRequestedActionStatus = (elementRef, { actionOrigin } = {}) => {
   };
 };
 
-// autoFocus does not work so we focus in a useLayoutEffect,
-// see https://github.com/preactjs/preact/issues/1255
-
-
-let blurEvent = null;
-let timeout;
-document.body.addEventListener(
-  "blur",
-  (e) => {
-    blurEvent = e;
-    setTimeout(() => {
-      blurEvent = null;
-    });
-  },
-  { capture: true },
-);
-document.body.addEventListener(
-  "focus",
-  () => {
-    clearTimeout(timeout);
-    blurEvent = null;
-  },
-  { capture: true },
-);
-
-const useAutoFocus = (
-  focusableElementRef,
-  autoFocus,
-  { autoFocusVisible, autoSelect } = {},
-) => {
-  const triggerAutofocus = () => {
-    const activeElement = document.activeElement;
-    const focusableElement = focusableElementRef.current;
-    focusableElement.focus({ focusVisible: autoFocusVisible });
-    if (autoSelect) {
-      focusableElement.select();
-      // Keep the beginning of the text visible instead of scrolling to the end
-      focusableElement.scrollLeft = 0;
-    }
-    return () => {
-      const focusIsOnSelfOrInsideSelf =
-        document.activeElement === focusableElement ||
-        focusableElement.contains(document.activeElement);
-      if (
-        !focusIsOnSelfOrInsideSelf &&
-        document.activeElement !== document.body
-      ) {
-        // focus is not on our element (or body) anymore
-        // keep it where it is
-        return;
-      }
-
-      // We have focus but we are unmounted
-      // -> try to move focus back to something more meaningful that what browser would do
-      // (browser would put it to document.body)
-      // -> We'll try to move focus back to the element that had focus before we moved it to this element
-
-      if (!document.body.contains(activeElement)) {
-        // previously active element is no longer in the document
-        return;
-      }
-
-      if (blurEvent) {
-        // But if this element is unmounted during a blur, the element that is about to receive focus should prevail
-        const elementAboutToReceiveFocus = blurEvent.relatedTarget;
-        const isSelfOrInsideSelf =
-          elementAboutToReceiveFocus === focusableElement ||
-          focusableElement.contains(elementAboutToReceiveFocus);
-        const isPreviouslyActiveElementOrInsideIt =
-          elementAboutToReceiveFocus === activeElement ||
-          (activeElement && activeElement.contains(elementAboutToReceiveFocus));
-        if (!isSelfOrInsideSelf && !isPreviouslyActiveElementOrInsideIt) {
-          // the element about to receive focus is not the input itself or inside it
-          // and is not the previously active element or inside it
-          // -> the element about to receive focus should prevail
-          return;
-        }
-      }
-
-      activeElement.focus();
-    };
-  };
-
-  A(() => {
-    if (!autoFocus) {
-      return null;
-    }
-    return triggerAutofocus();
-  }, [autoFocus]);
-
-  _(() => {
-    if (autoFocus) {
-      const focusableElement = focusableElementRef.current;
-      focusableElement.scrollIntoView({ inline: "nearest", block: "nearest" });
-    }
-  }, []);
-
-  return triggerAutofocus;
-};
-
-const CalloutCloseContext = K();
+const CalloutCloseContext = Q();
 const renderIntoCallout = (jsx, calloutMessageElement, {
   close
 }) => {
@@ -26053,7 +26636,7 @@ const renderIntoCallout = (jsx, calloutMessageElement, {
     value: close,
     children: jsx
   });
-  F$1(calloutJsx, calloutMessageElement);
+  G(calloutJsx, calloutMessageElement);
 };
 
 installImportMetaCssBuild(import.meta);
@@ -26067,7 +26650,7 @@ installImportMetaCssBuild(import.meta);
  * - Centers in viewport when no anchor element provided or anchor is too big
  */
 
-const css$n = /* css */`
+const css$p = /* css */`
   @layer navi {
     .navi_callout {
       --callout-success-color: #4caf50;
@@ -26241,7 +26824,7 @@ const openCallout = (message, {
   showErrorStack,
   debug = false
 } = {}) => {
-  import.meta.css = [css$n, "@jsenv/navi/src/field/validation/callout/callout.js"];
+  import.meta.css = [css$p, "@jsenv/navi/src/field/validation/callout/callout.js"];
   const callout = {
     opened: true,
     close: null,
@@ -26670,28 +27253,29 @@ const stickCalloutToAnchor = (calloutElement, anchorElement) => {
     visibilityRatio
   }) => {
     const calloutElementClone = cloneCalloutToMeasureNaturalSize(calloutElement);
-    // Check for preferred and forced position from anchor element
-    const preferredPosition = anchorElement.getAttribute("data-callout-position");
-    const forcedPosition = anchorElement.getAttribute("data-callout-position-force");
     const {
       position,
       left: calloutLeft,
       top: calloutTop,
       width: calloutWidth,
       height: calloutHeight,
-      spaceAboveTarget,
-      spaceBelowTarget
+      spaceAbove,
+      spaceBelow
     } = pickPositionRelativeTo(calloutElementClone, anchorElement, {
-      alignToViewportEdgeWhenTargetNearEdge: 20,
       // when fully to the left, the border color is collé to the browser window making it hard to see
       minLeft: 1,
-      positionPreference:
-      // we want to avoid the callout to switch position when it can still fit so
-      // we start with preferredPosition if given but once a position is picked we stick to it
-      // This is implemented by favoring the data attribute of the callout then of the anchor
-      calloutElement.getAttribute("data-position") || preferredPosition,
-      forcePosition: forcedPosition
+      // Check for preferred and forced position from anchor element
+      positionTry: anchorElement.getAttribute("data-callout-position-try") || "bottom",
+      position: anchorElement.getAttribute("data-callout-position")
     });
+    // data-position-current is written to the clone by pickPositionRelativeTo,
+    // copy it back to the real element so stickiness works on next call
+    const positionCurrent = calloutElementClone.getAttribute("data-position-current");
+    if (positionCurrent) {
+      calloutElement.setAttribute("data-position-current", positionCurrent);
+    } else {
+      calloutElement.removeAttribute("data-position-current");
+    }
     calloutElementClone.remove();
 
     // Calculate arrow position to point at anchorElement element
@@ -26732,7 +27316,7 @@ const stickCalloutToAnchor = (calloutElement, anchorElement) => {
 
     // Force content overflow when there is not enough space to display
     // the entirety of the callout
-    const spaceAvailable = position === "below" ? spaceBelowTarget : spaceAboveTarget;
+    const spaceAvailable = position === "bottom" ? spaceBelow : spaceAbove;
     const paddingSizes = getPaddingSizes(calloutBodyElement);
     const paddingY = paddingSizes.top + paddingSizes.bottom;
     const spaceNeededAroundContent = ARROW_HEIGHT + BORDER_WIDTH * 2 + paddingY;
@@ -26751,7 +27335,7 @@ const stickCalloutToAnchor = (calloutElement, anchorElement) => {
       width,
       height
     } = calloutElement.getBoundingClientRect();
-    if (position === "above") {
+    if (position === "top") {
       // Position above target element
       calloutBoxElement.style.marginTop = "";
       calloutBoxElement.style.marginBottom = `${ARROW_HEIGHT}px`;
@@ -26765,9 +27349,8 @@ const stickCalloutToAnchor = (calloutElement, anchorElement) => {
       calloutFrameElement.style.bottom = `-${BORDER_WIDTH}px`;
       calloutFrameElement.innerHTML = generateSvgWithTopArrow(width, height, arrowLeftPosOnCallout);
     }
-    calloutElement.setAttribute("data-position", position);
     calloutStyleController.set(calloutElement, {
-      opacity: visibilityRatio ? 1 : 0,
+      opacity: visibilityRatio > 0 ? 1 : 0,
       transform: {
         translateX: calloutLeft,
         translateY: calloutTop
@@ -27050,7 +27633,8 @@ const dispatchCalloutCustomElement = (anchorElement, customEvent) => {
   } else {
     targetElement = anchorElement;
   }
-  console.log("dispatch on", targetElement, "event", customEvent);
+
+  // console.log("dispatch on", targetElement, "event", customEvent);
   targetElement.dispatchEvent(customEvent);
 };
 
@@ -27630,7 +28214,6 @@ const REQUIRED_CONSTRAINT = {
     if (!field.required) {
       return null;
     }
-
     if (field.type === "checkbox") {
       if (!field.checked) {
         return `Veuillez cocher cette case.`;
@@ -27683,12 +28266,19 @@ const REQUIRED_CONSTRAINT = {
     }
     if (field.type === "email") {
       return field.hasAttribute("data-same-as")
-        ? `Veuillez confirmer l'adresse e-mail`
+        ? `Veuillez confirmer l'adresse e-mail.`
         : `Veuillez saisir une adresse e-mail.`;
     }
-    return field.hasAttribute("data-same-as")
-      ? `Veuillez confirmer le champ précédent`
-      : `Veuillez remplir ce champ.`;
+    if (field.hasAttribute("data-same-as")) {
+      return `Veuillez confirmer le champ précédent.`;
+    }
+    if (field.getAttribute("data-rendered-by") === ".navi_list_container") {
+      return `Veuillez sélectionner une option.`;
+    }
+    if (field.getAttribute("data-rendered-by") === ".navi_select") {
+      return `Veuillez sélectionner une option.`;
+    }
+    return `Veuillez remplir ce champ.`;
   },
 };
 CONSTRAINT_ATTRIBUTE_SET.add("required");
@@ -27958,221 +28548,6 @@ const MAX_CONSTRAINT = {
 CONSTRAINT_ATTRIBUTE_SET.add("max");
 CONSTRAINT_ATTRIBUTE_SET.add("data-max-message");
 
-const listenInputValue = (
-  input,
-  callback,
-  { waitForChange = false, debounce = 0 } = {},
-) => {
-  if (waitForChange) {
-    return listenInputValueChange(input, callback);
-  }
-  const [teardown, addTeardown] = createPubSub();
-  let currentValue = input.value;
-  let timeout;
-  let debounceTimeout;
-
-  const onAsyncEvent = (e, options) => {
-    timeout = setTimeout(() => {
-      onEvent(e, options);
-    }, 0);
-  };
-
-  let onEvent;
-  if (debounce) {
-    onEvent = (e, { skipDebounce } = {}) => {
-      clearTimeout(timeout);
-      clearTimeout(debounceTimeout);
-
-      const value = input.value;
-      if (value === currentValue) {
-        return;
-      }
-
-      if (skipDebounce) {
-        currentValue = value;
-        callback(e);
-      } else {
-        debounceTimeout = setTimeout(() => {
-          currentValue = value;
-          callback(e);
-        }, debounce);
-      }
-    };
-    // no need to wait for change events (blur, enter key)
-    // we consider this as strong interactions requesting an immediate response
-    const stop = listenInputValueChange(input, (e) => {
-      onEvent(e, { skipDebounce: true });
-    });
-    addTeardown(() => {
-      stop();
-    });
-  } else {
-    onEvent = (e) => {
-      clearTimeout(timeout);
-      const value = input.value;
-      if (value === currentValue) {
-        return;
-      }
-      currentValue = value;
-      callback(e);
-    };
-    // Autocomplete, programmatic changes, form restoration
-    input.addEventListener("change", onEvent);
-    addTeardown(() => {
-      input.removeEventListener("change", onEvent);
-    });
-  }
-
-  // Standard user input (typing)
-  input.addEventListener("input", onEvent);
-  addTeardown(() => {
-    input.removeEventListener("input", onEvent);
-  });
-
-  // Form reset - need to check the form
-  const form = input.form;
-  if (form) {
-    // Form reset happens asynchronously, check value after reset completes
-    form.addEventListener("reset", onAsyncEvent);
-    addTeardown(() => {
-      form.removeEventListener("reset", onAsyncEvent);
-    });
-  }
-
-  // Paste events (some browsers need special handling)
-  input.addEventListener("paste", onEvent);
-  addTeardown(() => {
-    input.removeEventListener("paste", onEvent);
-  });
-
-  // Focus events to catch programmatic changes that don't fire other events
-  // (like when value is set before user interaction)
-  input.addEventListener("focus", onEvent);
-  addTeardown(() => {
-    input.removeEventListener("focus", onEvent);
-  });
-
-  const onNaviDeleteContent = (e) => {
-    // "navi_delete_content" behaves like an async event
-    // a bit like form reset because
-    // our action will be updated async after the component re-renders
-    // and we need to wait that to happen to properly call action with the right value
-    onAsyncEvent(e, { skipDebounce: true });
-  };
-  input.addEventListener("navi_delete_content", onNaviDeleteContent);
-  addTeardown(() => {
-    input.removeEventListener("navi_delete_content", onNaviDeleteContent);
-  });
-  return () => {
-    teardown();
-  };
-};
-
-const listenInputValueChange = (input, callback) => {
-  const [teardown, addTeardown] = createPubSub();
-
-  let valueAtInteraction;
-  const oninput = () => {
-    valueAtInteraction = undefined;
-  };
-  const onkeydown = (e) => {
-    if (e.key === "Enter") {
-      /**
-       * Browser trigger a "change" event right after the enter is pressed
-       * if the input value has changed.
-       * We need to prevent the next change event otherwise we would request action twice
-       */
-      valueAtInteraction = input.value;
-    }
-    if (e.key === "Escape") {
-      /**
-       * Browser trigger a "change" event right after the escape is pressed
-       * if the input value has changed.
-       * We need to prevent the next change event otherwise we would request action when
-       * we actually want to cancel
-       */
-      valueAtInteraction = input.value;
-    }
-  };
-  const onchange = (e) => {
-    if (
-      valueAtInteraction !== undefined &&
-      e.target.value === valueAtInteraction
-    ) {
-      valueAtInteraction = undefined;
-      return;
-    }
-    callback(e);
-  };
-  input.addEventListener("input", oninput);
-  input.addEventListener("keydown", onkeydown);
-  input.addEventListener("change", onchange);
-  addTeardown(() => {
-    input.removeEventListener("input", oninput);
-    input.removeEventListener("keydown", onkeydown);
-    input.removeEventListener("change", onchange);
-  });
-
-  {
-    // Handle programmatic value changes that don't trigger browser change events
-    //
-    // Problem: When input values are set programmatically (not by user typing),
-    // browsers don't fire the 'change' event. However, our application logic
-    // still needs to detect these changes.
-    //
-    // Example scenario:
-    // 1. User starts editing (letter key pressed, value set programmatically)
-    // 2. User doesn't type anything additional (this is the key part)
-    // 3. User clicks outside to finish editing
-    // 4. Without this code, no change event would fire despite the fact that the input value did change from its original state
-    //
-    // This distinction is crucial because:
-    //
-    // - If the user typed additional text after the initial programmatic value,
-    //   the browser would fire change events normally
-    // - But when they don't type anything else, the browser considers it as "no user interaction"
-    //   even though the programmatic initial value represents a meaningful change
-    //
-    // We achieve this by checking if the input value has changed between focus and blur without any user interaction
-    // if yes we fire the callback because input value did change
-    let valueAtStart = input.value;
-    let interacted = false;
-
-    const onfocus = () => {
-      interacted = false;
-      valueAtStart = input.value;
-    };
-    const oninput = (e) => {
-      if (!e.isTrusted) {
-        // non trusted "input" events will be ignored by the browser when deciding to fire "change" event
-        // we ignore them too
-        return;
-      }
-      interacted = true;
-    };
-    const onblur = (e) => {
-      if (interacted) {
-        return;
-      }
-      if (valueAtStart === input.value) {
-        return;
-      }
-      callback(e);
-    };
-
-    input.addEventListener("focus", onfocus);
-    input.addEventListener("input", oninput);
-    input.addEventListener("blur", onblur);
-    addTeardown(() => {
-      input.removeEventListener("focus", onfocus);
-      input.removeEventListener("input", oninput);
-      input.removeEventListener("blur", onblur);
-    });
-  }
-
-  return teardown;
-};
-
 /**
  * Custom form validation implementation
  *
@@ -28388,9 +28763,6 @@ const installCustomConstraintValidation = (
   element,
   elementReceivingValidationMessage = element,
 ) => {
-  if (element.tagName === "INPUT" && element.type === "hidden") {
-    elementReceivingValidationMessage = element.form || document.body;
-  }
 
   const validationInterface = {
     uninstall: undefined,
@@ -28487,6 +28859,14 @@ const installCustomConstraintValidation = (
 
     resetValidity({ fromRequestAction });
     for (const constraint of constraintSet) {
+      // Some components (Select, List) proxy their value through a hidden <input>
+      // identified by data-input-proxy. When present, constraints run against
+      // that proxy element so they can read standard properties like .value,
+      // .required, .name without needing to know about each component's internals.
+      const inputProxySelector = element.getAttribute("data-input-proxy");
+      const fieldForConstraint = inputProxySelector
+        ? (element.ownerDocument.querySelector(inputProxySelector) ?? element)
+        : element;
       const constraintCleanupSet = new Set();
       const registerChange = (register) => {
         const registerResult = register(() => {
@@ -28503,7 +28883,7 @@ const installCustomConstraintValidation = (
         constraintCleanupSet.clear();
       };
 
-      const checkResult = constraint.check(element, {
+      const checkResult = constraint.check(fieldForConstraint, {
         fromRequestAction,
         skipReadonly,
         registerChange,
@@ -28611,10 +28991,17 @@ const installCustomConstraintValidation = (
         failedConstraintInfo.target || elementReceivingValidationMessage;
       const renderedBy = base.getAttribute("data-rendered-by");
       if (renderedBy) {
-        return base.closest(renderedBy) || base;
+        const renderedByElement = base.closest(renderedBy);
+        if (renderedByElement) {
+          return renderedByElement;
+        }
+      }
+      if (base.tagName === "INPUT" && base.type === "hidden") {
+        return base.form || document.body;
       }
       return base;
     })();
+
     validationInterface.validationMessage = openCallout(
       failedConstraintInfo.message,
       {
@@ -28713,7 +29100,9 @@ const installCustomConstraintValidation = (
   }
 
   request_on_enter: {
-    if (element.tagName !== "INPUT") {
+    const isNaviSelect =
+      element.tagName === "BUTTON" && element.classList.contains("navi_select");
+    if (element.tagName !== "INPUT" && !isNaviSelect) {
       // maybe we want it too for checkboxes etc, we'll see
       break request_on_enter;
     }
@@ -28743,6 +29132,11 @@ const installCustomConstraintValidation = (
             keydownTarget.type !== "submit" &&
             keydownTarget.type !== "image"
           ) {
+            // navi_select acts like a native <select>: Enter on the closed select
+            // triggers form submission rather than toggling the popover.
+            if (isNaviSelect) {
+              return getFirstButtonSubmittingForm(form) || keydownTarget;
+            }
             return null;
           }
           return keydownTarget;
@@ -28771,6 +29165,8 @@ const installCustomConstraintValidation = (
       const formSubmitTarget =
         determineClosestFormSubmitTargetForEnterKeyEvent();
       if (formSubmitTarget) {
+        // preventDefault on keydown prevents the browser from firing a synthetic
+        // click on the button, so request_on_button_click won't double-fire.
         keydownEvent.preventDefault();
       }
       dispatchActionRequestedCustomEvent(elementWithAction, {
@@ -28928,8 +29324,14 @@ const installCustomConstraintValidation = (
   {
     const onkeydown = (e) => {
       if (e.key === "Escape") {
-        if (!closeElementValidationMessage("escape_key")) {
-          dispatchCancelCustomEvent({ detail: { reason: "escape_key" } });
+        if (closeElementValidationMessage("escape_key")) {
+          // closing the callout should prevent anything else from hapenning
+          e.stopPropagation();
+          e.preventDefault();
+        } else {
+          dispatchCancelCustomEvent({
+            detail: { reason: "escape_key" },
+          });
         }
       }
     };
@@ -29082,10 +29484,16 @@ const addEventListener = (element, event, callback) => {
   };
 };
 
-const useCustomValidationRef = (elementRef, targetSelector) => {
+const useCustomValidationRef = (
+  elementRef,
+  { targetSelector, disabled },
+) => {
   const customValidationRef = F();
 
   A(() => {
+    if (disabled) {
+      return undefined;
+    }
     const element = elementRef.current;
     if (!element) {
       console.warn(
@@ -29103,7 +29511,7 @@ const useCustomValidationRef = (elementRef, targetSelector) => {
 
       usually it's better to split the component in two but hey 
       */
-      return null;
+      return undefined;
     }
     let target;
     if (targetSelector) {
@@ -29112,7 +29520,7 @@ const useCustomValidationRef = (elementRef, targetSelector) => {
         console.warn(
           `useCustomValidationRef: targetSelector "${targetSelector}" did not match in element`,
         );
-        return null;
+        return undefined;
       }
     } else {
       target = element;
@@ -29123,7 +29531,7 @@ const useCustomValidationRef = (elementRef, targetSelector) => {
     return () => {
       unsubscribe();
     };
-  }, [targetSelector]);
+  }, [targetSelector, disabled]);
 
   return customValidationRef;
 };
@@ -29153,7 +29561,11 @@ const unsubscribe = (element) => {
 };
 
 const NO_CONSTRAINTS = [];
-const useConstraints = (elementRef, props, { targetSelector } = {}) => {
+const useConstraints = (
+  elementRef,
+  props,
+  { targetSelector, disabled } = {},
+) => {
   const {
     constraints = NO_CONSTRAINTS,
     disabledMessage,
@@ -29174,10 +29586,10 @@ const useConstraints = (elementRef, props, { targetSelector } = {}) => {
     ...remainingProps
   } = props;
 
-  const customValidationRef = useCustomValidationRef(
-    elementRef,
+  const customValidationRef = useCustomValidationRef(elementRef, {
     targetSelector,
-  );
+    disabled,
+  });
   A(() => {
     const customValidation = customValidationRef.current;
     const cleanupCallbackSet = new Set();
@@ -29375,7 +29787,7 @@ const PhoneSvg = () => {
 };
 
 const useDebounceTrue = (value, delay = 300) => {
-  const [debouncedTrue, setDebouncedTrue] = h(false);
+  const [debouncedTrue, setDebouncedTrue] = y$1(false);
   const timerRef = F(null);
 
   A(() => {
@@ -29522,8 +29934,8 @@ const RectangleLoading = ({
   size = 2
 }) => {
   const containerRef = F(null);
-  const [containerWidth, setContainerWidth] = h(0);
-  const [containerHeight, setContainerHeight] = h(0);
+  const [containerWidth, setContainerWidth] = y$1(0);
+  const [containerHeight, setContainerHeight] = y$1(0);
   A(() => {
     const container = containerRef.current;
     if (!container) {
@@ -29963,7 +30375,7 @@ const isFunctionButNotAnActionFunction = (action) => {
   return typeof action === "function" && !action.isAction;
 };
 
-const ErrorBoundaryContext = K(null);
+const ErrorBoundaryContext = Q(null);
 
 const useResetErrorBoundary = () => {
   const resetErrorBoundary = j$1(ErrorBoundaryContext);
@@ -29997,7 +30409,7 @@ const useExecuteAction = (
   // see https://medium.com/trabe/catching-asynchronous-errors-in-react-using-error-boundaries-5e8a5fd7b971
   // and https://codepen.io/dmail/pen/XJJqeGp?editors=0010
   // To change if https://github.com/preactjs/preact/issues/4754 lands
-  const [error, setError] = h(null);
+  const [error, setError] = y$1(null);
   const resetErrorBoundary = useResetErrorBoundary();
   A(() => {
     if (error) {
@@ -30256,6 +30668,7 @@ const useKeyboardShortcuts = (
     onActionError,
     onActionEnd,
     allowConcurrentActions,
+    closestFocusableSelector,
   } = {},
 ) => {
   if (!elementRef) {
@@ -30332,49 +30745,76 @@ const useKeyboardShortcuts = (
     );
     shortcut.action = useAction(shortcut.action);
   }
-
+  const onKeyDown = createOnKeyDownForShortcuts(
+    shortcuts,
+    shortcutActionIsBusyRef,
+  );
   _(() => {
     const element = elementRef.current;
     if (!element) {
       return null;
     }
-    const shortcutsCopy = [];
-    for (const shortcutCandidate of shortcuts) {
-      shortcutsCopy.push({
-        ...shortcutCandidate,
-        handler: (keyboardEvent) => {
-          if (shortcutCandidate.handler) {
-            return shortcutCandidate.handler(keyboardEvent);
-          }
-          if (shortcutActionIsBusyRef.current) {
-            return false;
-          }
-          const { action } = shortcutCandidate;
-          const actionWithEvent = action.bindParams(keyboardEvent);
-          return requestAction(element, actionWithEvent, {
-            actionOrigin: "keyboard_shortcut",
-            event: keyboardEvent,
-            requester: document.activeElement,
-            confirmMessage: shortcutCandidate.confirmMessage,
-            meta: {
-              shortcut: shortcutCandidate,
-            },
-          });
-        },
-      });
-    }
-
-    addShortcuts(element, shortcuts);
-
-    const onKeydown = (event) => {
-      applyKeyboardShortcuts(shortcutsCopy, event);
-    };
-    element.addEventListener("keydown", onKeydown);
+    const focusableElement = closestFocusableSelector
+      ? element.closest(closestFocusableSelector)
+      : element;
+    focusableElement.addEventListener("keydown", onKeyDown);
+    addShortcuts(focusableElement, shortcuts);
     return () => {
-      element.removeEventListener("keydown", onKeydown);
-      removeShortcuts(element);
+      focusableElement.removeEventListener("keydown", onKeyDown);
+      removeShortcuts(focusableElement);
     };
   }, [shortcutDeps]);
+};
+
+const createOnKeyDownForShortcuts = (shortcuts, busyRef) => {
+  const shortcutsCopy = [];
+  for (const shortcutCandidate of shortcuts) {
+    shortcutsCopy.push({
+      ...shortcutCandidate,
+      handler: (keyboardEvent) => {
+        if (shortcutCandidate.handler) {
+          return shortcutCandidate.handler(keyboardEvent);
+        }
+        if (busyRef?.current) {
+          return false;
+        }
+        const { action } = shortcutCandidate;
+        const actionWithEvent = action.bindParams(keyboardEvent);
+        const element = keyboardEvent.currentTarget;
+        return requestAction(element, actionWithEvent, {
+          actionOrigin: "keyboard_shortcut",
+          event: keyboardEvent,
+          requester: document.activeElement,
+          confirmMessage: shortcutCandidate.confirmMessage,
+          meta: {
+            shortcut: shortcutCandidate,
+          },
+        });
+      },
+    });
+  }
+
+  return (keyboardEvent) => {
+    applyKeyboardShortcuts(shortcutsCopy, keyboardEvent);
+  };
+};
+const shortcutsViaOnKeyDown = (shortcuts, onKeyDown) => {
+  const shortcutsArray = [];
+  for (const key of Object.keys(shortcuts)) {
+    const value = shortcuts[key];
+    const shortcut = { key };
+    if (typeof value === "function") {
+      shortcut.handler = value;
+    } else if (typeof value === "object" && value !== null) {
+      Object.assign(shortcut, value);
+    }
+    shortcutsArray.push(shortcut);
+  }
+  const onKeyDownForShortcuts = createOnKeyDownForShortcuts(shortcutsArray);
+  return (e) => {
+    onKeyDownForShortcuts(e);
+    onKeyDown?.(e);
+  };
 };
 
 const applyKeyboardShortcuts = (shortcuts, keyboardEvent) => {
@@ -30557,6 +30997,109 @@ const isSameKey = (browserEventKey, key) => {
   return false;
 };
 
+/**
+ * Toggles a `data-dark-background` attribute on the referenced element based on its
+ * computed background color. Pair it with a CSS variable to get automatic
+ * light/dark text without hard-coding colors:
+ *
+ * ```css
+ * .my-element {
+ *   --color-contrasting: black;
+ *   &[data-dark-background] {
+ *     --color-contrasting: white;
+ *   }
+ *   color: var(--color-contrasting);
+ * }
+ * ```
+ *
+ * - `data-dark-background` is **set** when the background is dark enough that white text
+ *   provides better (or equal) contrast.
+ * - `data-dark-background` is **absent** when black text is the better choice.
+ *
+ * @param {import("preact").RefObject} ref - Ref to the element that receives
+ *   the `data-dark-background` attribute and is also passed to `contrastColor` for
+ *   resolving CSS variables.
+ * @param {object} [options]
+ * @param {string} [options.backgroundElementSelector] - CSS selector relative
+ *   to `ref.current` pointing to a child element whose `background-color`
+ *   should be tested instead of the element itself. Useful when the element
+ *   has a transparent background but contains a coloured child (e.g. a fill
+ *   bar inside a track).
+ */
+
+const useDarkBackgroundAttribute = (
+  ref,
+  deps = [],
+  {
+    backgroundElementSelector,
+    attributeName = "data-dark-background",
+    hardcoded = {},
+  } = {},
+) => {
+  const innerDeps = [
+    ...deps,
+    // ref can change is the component pass a different ref on different render based on some logic
+    // (can be used to control which element backgroundColor is being checked by switching the ref to another element)
+    ref,
+    // backgroundElementSelector can change if the component pass a different selector on different render based on some logic
+    // (can be used to control which element backgroundColor is being checked by switching the selector to point to another element)
+    backgroundElementSelector,
+  ];
+
+  const hardcodedMap = new Map();
+  for (const key of Object.keys(hardcoded)) {
+    const value = hardcoded[key];
+    innerDeps.push(key, value);
+    const colorString = normalizeColorString(key);
+    hardcodedMap.set(colorString, value);
+  }
+
+  A(() => {
+    const el = ref.current;
+    if (!el) {
+      return undefined;
+    }
+    let elementToCheck = el;
+    if (backgroundElementSelector) {
+      elementToCheck = el.querySelector(backgroundElementSelector);
+      if (!elementToCheck) {
+        return undefined;
+      }
+    }
+    const updateAttribute = () => {
+      const computedStyle = getComputedStyle(elementToCheck);
+      const backgroundColor = computedStyle.backgroundColor;
+      if (!backgroundColor) {
+        el.removeAttribute(attributeName);
+        return;
+      }
+      const backgroundColorString = normalizeColorString(backgroundColor, el);
+      const hardcodedContrast = hardcodedMap.get(backgroundColorString);
+      const contrastingColor =
+        hardcodedContrast || contrastColor(backgroundColor, el);
+      if (contrastingColor === "white") {
+        el.setAttribute(attributeName, "");
+      } else {
+        el.removeAttribute(attributeName);
+      }
+    };
+    updateAttribute();
+    el.addEventListener(NAVI_PSEUDO_STATE_CUSTOM_EVENT, updateAttribute);
+    return () => {
+      el.removeEventListener(NAVI_PSEUDO_STATE_CUSTOM_EVENT, updateAttribute);
+      el.removeAttribute(attributeName);
+    };
+  }, innerDeps);
+};
+
+const normalizeColorString = (color, el) => {
+  const colorRgba = resolveCSSColor(color, el);
+  if (!colorRgba) {
+    return "";
+  }
+  return String(colorRgba);
+};
+
 const useInitialTextSelection = (ref, textSelection) => {
   const deps = [];
   if (Array.isArray(textSelection)) {
@@ -30656,8 +31199,7 @@ const selectByTextStrings = (element, range, startText, endText) => {
   }
 };
 
-installImportMetaCssBuild(import.meta);/* eslint-disable jsenv/no-unknown-params */
-const css$m = /* css */`
+installImportMetaCssBuild(import.meta);const css$o = /* css */`
   @layer navi {
     .navi_text {
       &[data-skeleton] {
@@ -30672,23 +31214,27 @@ const css$m = /* css */`
   .navi_text {
     position: relative;
 
+    &[data-dark-background] {
+      color: white;
+    }
+
     /* There is a chrome specific bug that prevents text-transform: capitalize to be applied in nested DOM structure */
     /* The CSS below ensure capitalize is propagated to the bold clones */
     &[data-capitalize] {
       &::first-letter {
         text-transform: uppercase;
       }
-      .navi_text_bold_clone::first-letter {
+      .navi_text_sizer_placeholder::first-letter {
         text-transform: uppercase;
       }
-      .navi_text_bold_foreground::first-letter {
+      .navi_text_sizer_overlay::first-letter {
         text-transform: uppercase;
       }
     }
 
-    .navi_text_bold_wrapper,
-    .navi_text_bold_clone,
-    .navi_text_bold_foreground {
+    .navi_text_sizer,
+    .navi_text_sizer_placeholder,
+    .navi_text_sizer_overlay {
       display: inherit;
       width: inherit;
       min-width: inherit;
@@ -30708,6 +31254,7 @@ const css$m = /* css */`
       flex-wrap: wrap;
       text-overflow: ellipsis;
       overflow: hidden;
+      overflow-wrap: normal;
 
       .navi_text_overflow_wrapper {
         display: flex;
@@ -30801,15 +31348,14 @@ const css$m = /* css */`
     }
   }
 
-  .navi_text_bold_wrapper {
+  .navi_text_sizer {
     position: relative;
     display: inline-block;
 
-    .navi_text_bold_clone {
-      font-weight: bold;
+    .navi_text_sizer_placeholder {
       opacity: 0;
     }
-    .navi_text_bold_foreground {
+    .navi_text_sizer_overlay {
       position: absolute;
       inset: 0;
     }
@@ -30828,24 +31374,12 @@ const css$m = /* css */`
     -webkit-text-fill-color: transparent;
     opacity: 0;
   }
-
+  .navi_text[data-contains-absolute-child] {
+    display: inline-block;
+  }
   .navi_text[data-bold] {
     .navi_text_bold_background {
       opacity: 1;
-    }
-  }
-
-  .navi_text[data-bold-transition] {
-    .navi_text_bold_foreground {
-      transition-property: font-weight;
-      transition-duration: 0.3s;
-      transition-timing-function: ease;
-    }
-
-    .navi_text_bold_background {
-      transition-property: opacity;
-      transition-duration: 0.3s;
-      transition-timing-function: ease;
     }
   }
 `;
@@ -30965,9 +31499,64 @@ const shouldInjectSpacingBetween = (left, right) => {
   }
   return true;
 };
-const OverflowPinnedElementContext = K(null);
+const OverflowPinnedElementContext = Q(null);
+/**
+ * Text component for rendering inline or block text with layout-stable style changes.
+ *
+ * Most props are forwarded to the underlying `Box` component (as, style, bold, noWrap, …).
+ * The props listed below are specific to Text.
+ *
+ * @param {object} props
+ *
+ * @param {boolean} [props.overflowEllipsis]
+ *   Truncates overflowing text with an ellipsis.
+ *
+ * @param {boolean} [props.overflowPinned]
+ *   Must be used inside a `<Text overflowEllipsis>` parent.
+ *   Pins this element outside the truncated text flow (e.g. a badge or icon).
+ *
+ * @param {string} [props.spacing]
+ *   Controls the separator injected between child nodes.
+ *   Accepts a size/spacing scale key, a CSS length, or `"pre"` / `0` to disable.
+ *   Defaults to a regular space character (or a padding-based fake space when
+ *   `preventSpaceUnderlines` is active).
+ *
+ * @param {boolean} [props.loading]
+ *   Renders a shimmer skeleton in place of the text.
+ *
+ * @param {boolean} [props.skeleton]
+ *   Same as `loading` but without the shimmer animation.
+ *
+ * @param {boolean} [props.preventSpaceUnderlines]
+ *   Replaces real space characters between children with padding-based spaces
+ *   to avoid the underline browsers draw under spaces inside links.
+ *
+ * @param {object} [props.holdSpaceForStyle]
+ *   Prevents layout shifts when text styles change (font-weight, font-size, …).
+ *   Pass an object of CSS-in-JS style properties representing the "maximum" state of the text.
+ *   An invisible placeholder is rendered with those styles to reserve the space,
+ *   and the real visible text is layered on top via `position: absolute`.
+ *   Only works reliably with single-line (`noWrap`) text.
+ *   Example: `holdSpaceForStyle={{ fontWeight: "bold", fontSize: "1.5rem" }}`
+ *
+ * @param {boolean} [props.boldStable]
+ *   Alternative to `holdSpaceForStyle` for multi-line text.
+ *   Keeps a consistent visual width regardless of font-weight by painting normal-weight
+ *   text on top of a bold background using `background-clip: text`.
+ *   Does not support font-size changes.
+ *
+ * @param {boolean} [props.capitalize]
+ *   Applies `text-transform: uppercase` to the first letter via CSS.
+ *
+ * @param {string|Array} [props.selectRange]
+ *   Selects a portion of the text on mount. Forwarded to `useInitialTextSelection`.
+ *
+ * @param {*} [props.childrenOutsideFlow]
+ *   Rendered after children but outside the text flow (useful for overlays
+ *   like the skeleton container).
+ */
 const Text = props => {
-  import.meta.css = [css$m, "@jsenv/navi/src/text/text.jsx"];
+  import.meta.css = [css$o, "@jsenv/navi/src/text/text.jsx"];
   if (props.loading || props.skeleton) {
     return u$1(TextSkeleton, {
       ...props
@@ -31032,7 +31621,7 @@ const TextOverflow = ({
   children,
   ...rest
 }) => {
-  const [OverflowPinnedElement, setOverflowPinnedElement] = h(null);
+  const [OverflowPinnedElement, setOverflowPinnedElement] = y$1(null);
   return u$1(Text, {
     flex: true,
     block: true,
@@ -31095,21 +31684,25 @@ const TextWithSelectRange = ({
 const TextBasic = ({
   spacing,
   preventSpaceUnderlines = false,
-  boldTransition,
   boldStable,
-  preventBoldLayoutShift = boldTransition,
+  holdSpaceForStyle,
   capitalize,
   children,
   childrenOutsideFlow,
+  basePseudoState,
   ...rest
 }) => {
+  const defaultRef = F();
+  const ref = rest.ref || defaultRef;
+  const bgDeps = basePseudoState ? Object.values(basePseudoState) : [];
+  useDarkBackgroundAttribute(ref, bgDeps);
   const defaultSpace = preventSpaceUnderlines ? FAKE_SPACE : REGULAR_SPACE;
   const resolvedSpacing = spacing ?? defaultSpace;
   const boxProps = {
     "as": "span",
-    "data-bold-transition": boldTransition ? "" : undefined,
     "data-capitalize": capitalize ? "" : undefined,
     ...rest,
+    ref,
     "baseClassName": withPropsClassName("navi_text", rest.baseClassName)
   };
   const shouldPreserveSpacing = rest.as === "pre" || rest.flex || rest.grid;
@@ -31126,6 +31719,7 @@ const TextBasic = ({
       ...boxProps,
       bold: undefined,
       "data-bold": bold ? "" : undefined,
+      "data-contains-absolute-child": "",
       children: [u$1("span", {
         className: "navi_text_bold_background",
         "aria-hidden": "true",
@@ -31133,25 +31727,23 @@ const TextBasic = ({
       }), children, childrenOutsideFlow]
     });
   }
-  if (preventBoldLayoutShift) {
-    const alignX = rest.alignX || rest.align || "start";
-
-    // La technique consiste a avoid un double gras qui force une taille
-    // et la version light par dessus en position absolute
-    // on la centre aussi pour donner l'impression que le gras s'applique depuis le centre
-    // ne fonctionne que sur une seule ligne de texte (donc lorsque noWrap est actif)
-    // on pourrait auto-active cela sur une prop genre boldCanChange
+  if (holdSpaceForStyle) {
+    // The sizer technique prevents layout shifts when styles that affect text dimensions change.
+    // - navi_text_sizer_placeholder: invisible, rendered with holdSpaceForStyle applied so it
+    //   always occupies the "maximum" dimensions (e.g. bold + larger font-size).
+    // - navi_text_sizer_overlay: absolutely positioned on top, renders the actual visible text
+    //   with its current style. Transitions can be applied on this element from the outside.
     return u$1(Box, {
       ...boxProps,
       children: [u$1("span", {
-        className: "navi_text_bold_wrapper",
+        className: "navi_text_sizer",
         children: [u$1("span", {
-          className: "navi_text_bold_clone",
+          className: "navi_text_sizer_placeholder",
           "aria-hidden": "true",
+          style: holdSpaceForStyle,
           children: children
         }), u$1("span", {
-          className: "navi_text_bold_foreground",
-          "data-align": alignX,
+          className: "navi_text_sizer_overlay",
           children: children
         })]
       }), childrenOutsideFlow]
@@ -31163,7 +31755,7 @@ const TextBasic = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$l = /* css */`
+installImportMetaCssBuild(import.meta);const css$n = /* css */`
   .navi_text_anchor {
     vertical-align: baseline;
     user-select: none;
@@ -31198,13 +31790,23 @@ const TextAnchor = ({
   textSize,
   lineLayout
 }) => {
-  import.meta.css = [css$l, "@jsenv/navi/src/text/text_anchor.jsx"];
+  import.meta.css = [css$n, "@jsenv/navi/src/text/text_anchor.jsx"];
   const anchorRef = F();
   A(() => {
     const anchorEl = anchorRef.current;
     const childEl = childRef.current;
     if (!anchorEl || !childEl) {
       return;
+    }
+    // Only correct when the anchor lives in an inline formatting context.
+    // If the parent is a flex/grid container, inline layout rules don't apply
+    // and our font-metrics model is invalid.
+    const parentDisplay = getComputedStyle(anchorEl.parentElement).display;
+    if (parentDisplay !== "inline" && parentDisplay !== "inline-block" && parentDisplay !== "block") {
+      // we must hide the anchor otherwise it would affect layout without providing any benefit (would trigger flex gap for instance)
+      anchorEl.setAttribute("hidden", "");
+    } else {
+      anchorEl.removeAttribute("hidden");
     }
     const topOffset = computeTopOffset({
       anchorEl,
@@ -31234,6 +31836,7 @@ const TextAnchor = ({
     children: [children, u$1("span", {
       ref: anchorRef,
       className: "navi_text_anchor",
+      "aria-hidden": "true",
       children: "\u200B"
     })]
   });
@@ -31250,14 +31853,6 @@ const computeTopOffset = ({
     // No correction needed.
     return 0;
   }
-  // Only correct when the anchor lives in an inline formatting context.
-  // If the parent is a flex/grid container, inline layout rules don't apply
-  // and our font-metrics model is invalid.
-  const parentDisplay = getComputedStyle(anchorEl.parentElement).display;
-  if (parentDisplay !== "inline" && parentDisplay !== "inline-block" && parentDisplay !== "block") {
-    return 0;
-  }
-
   // The anchor's rendered rect corresponds to the surrounding text's line box:
   // top and bottom are the visual bounds of the line (including line-height).
   const anchorRect = anchorEl.getBoundingClientRect();
@@ -31293,7 +31888,7 @@ const computeTopOffset = ({
 };
 const charTopCanvas = document.createElement("canvas");
 
-installImportMetaCssBuild(import.meta);const css$k = /* css */`
+installImportMetaCssBuild(import.meta);const css$m = /* css */`
   @layer navi {
     /* Ensure data attributes from box.jsx can win to update display */
     .navi_icon {
@@ -31366,7 +31961,7 @@ const Icon = ({
   lineLayout,
   ...props
 }) => {
-  import.meta.css = [css$k, "@jsenv/navi/src/text/icon.jsx"];
+  import.meta.css = [css$m, "@jsenv/navi/src/text/icon.jsx"];
   const innerChildren = href ? u$1("svg", {
     width: "100%",
     height: "100%",
@@ -31448,107 +32043,251 @@ const Icon = ({
 };
 
 /**
- * Toggles a `data-dark-background` attribute on the referenced element based on its
- * computed background color. Pair it with a CSS variable to get automatic
- * light/dark text without hard-coding colors:
+ * A variant of useLayoutEffect that accounts for ancestor <dialog>/<details>
+ * or popover visibility.
  *
- * ```css
- * .my-element {
- *   --color-contrasting: black;
- *   &[data-dark-background] {
- *     --color-contrasting: white;
- *   }
- *   color: var(--color-contrasting);
- * }
- * ```
+ * Motivation: some effects (auto-scroll, measurement, focus) only make sense
+ * when the element is actually presented on screen. A plain useLayoutEffect
+ * fires on mount even when the component is inside a closed <dialog>, a
+ * collapsed <details>, or a hidden popover, where scroll and layout operations
+ * are no-ops.
  *
- * - `data-dark-background` is **set** when the background is dark enough that white text
- *   provides better (or equal) contrast.
- * - `data-dark-background` is **absent** when black text is the better choice.
+ * Behavior:
+ *   - No <dialog>/<details>/[popover] ancestor → runs like a normal
+ *     useLayoutEffect with the provided deps.
+ *   - Inside a closed/hidden ancestor → skips the initial run; instead runs
+ *     the callback every time the ancestor opens (toggle event, newState=open).
+ *   - Inside an open ancestor → runs on mount AND every subsequent open.
  *
- * @param {import("preact").RefObject} ref - Ref to the element that receives
- *   the `data-dark-background` attribute and is also passed to `contrastColor` for
- *   resolving CSS variables.
- * @param {object} [options]
- * @param {string} [options.backgroundElementSelector] - CSS selector relative
- *   to `ref.current` pointing to a child element whose `background-color`
- *   should be tested instead of the element itself. Useful when the element
- *   has a transparent background but contains a coloured child (e.g. a fill
- *   bar inside a track).
+ * Usage:
+ *   useDisplayedLayoutEffect(ref, () => {
+ *     scrollToSelected();
+ *   }, []);
  */
-
-const useDarkBackgroundAttribute = (
-  ref,
-  deps = [],
-  {
-    backgroundElementSelector,
-    attributeName = "data-dark-background",
-    hardcoded = {},
-  } = {},
-) => {
-  const innerDeps = [
-    ...deps,
-    // ref can change is the component pass a different ref on different render based on some logic
-    // (can be used to control which element backgroundColor is being checked by switching the ref to another element)
-    ref,
-    // backgroundElementSelector can change if the component pass a different selector on different render based on some logic
-    // (can be used to control which element backgroundColor is being checked by switching the selector to point to another element)
-    backgroundElementSelector,
-  ];
-
-  const hardcodedMap = new Map();
-  for (const key of Object.keys(hardcoded)) {
-    const value = hardcoded[key];
-    innerDeps.push(key, value);
-    const colorString = normalizeColorString(key);
-    hardcodedMap.set(colorString, value);
+const useDisplayedLayoutEffect = (ref, callback, deps) => {
+  if (typeof callback !== "function") {
+    throw new TypeError("useDisplayedLayoutEffect: callback is not a function");
   }
 
+  // Keep a stable ref so the toggle listener always calls the latest callback
+  // without needing to be re-registered when deps change.
+  const callbackRef = F(callback);
+  callbackRef.current = callback;
+
+  // Run on mount (or when deps change) — but only if the element is visible.
+  A(() => {
+    const el = ref.current;
+    if (!el) {
+      return;
+    }
+    const ancestor = el.closest("dialog, details, [popover]");
+    if (!ancestor) {
+      callbackRef.current(el, new CustomEvent("navi_displayed_on_document"));
+      return;
+    }
+    if (!isAncestorOpen(ancestor)) {
+      // Ancestor is closed — skip now; the toggle listener below will fire.
+      return;
+    }
+    callbackRef.current(el, new CustomEvent("navi_displayed_on_document"));
+  }, deps);
+
+  // Re-run every time the ancestor opens.
   A(() => {
     const el = ref.current;
     if (!el) {
       return undefined;
     }
-    let elementToCheck = el;
-    if (backgroundElementSelector) {
-      elementToCheck = el.querySelector(backgroundElementSelector);
-      if (!elementToCheck) {
-        return undefined;
-      }
+    const ancestor = el.closest("dialog, details, [popover]");
+    if (!ancestor) {
+      return undefined;
     }
-    const updateAttribute = () => {
-      const computedStyle = getComputedStyle(elementToCheck);
-      const backgroundColor = computedStyle.backgroundColor;
-      if (!backgroundColor) {
-        el.removeAttribute(attributeName);
+    const onToggle = (e) => {
+      // <dialog> and [popover] fire toggle with newState; <details> uses the
+      // older toggle event without newState — fall back to checking .open.
+      const isOpen =
+        e.newState !== undefined ? e.newState === "open" : e.target.open;
+      if (!isOpen) {
         return;
       }
-      const backgroundColorString = normalizeColorString(backgroundColor, el);
-      const hardcodedContrast = hardcodedMap.get(backgroundColorString);
-      const contrastingColor =
-        hardcodedContrast || contrastColor(backgroundColor, el);
-      if (contrastingColor === "white") {
-        el.setAttribute(attributeName, "");
-      } else {
-        el.removeAttribute(attributeName);
-      }
+      callbackRef.current(el, e);
     };
-    updateAttribute();
-    el.addEventListener(NAVI_PSEUDO_STATE_CUSTOM_EVENT, updateAttribute);
+    ancestor.addEventListener("toggle", onToggle);
     return () => {
-      el.removeEventListener(NAVI_PSEUDO_STATE_CUSTOM_EVENT, updateAttribute);
-      el.removeAttribute(attributeName);
+      ancestor.removeEventListener("toggle", onToggle);
     };
-  }, innerDeps);
+  }, []);
 };
 
-const normalizeColorString = (color, el) => {
-  const colorRgba = resolveCSSColor(color, el);
-  if (!colorRgba) {
-    return "";
+const isAncestorOpen = (ancestor) => {
+  if (ancestor.tagName === "DIALOG" || ancestor.hasAttribute("popover")) {
+    return ancestor.matches(":popover-open, [open]");
   }
-  return String(colorRgba);
+  // details
+  return ancestor.open;
 };
+
+// see also https://github.com/preactjs/preact/issues/1255
+
+
+/**
+ * Programmatic autofocus that runs after Preact layout effects are flushed.
+ *
+ * WHY NOT USE THE NATIVE `autofocus` ATTRIBUTE?
+ *
+ * The browser fires autofocus before JavaScript layout effects have run. This
+ * means the element may not be correctly positioned yet — for example a popover
+ * that is still being placed by our own positioning logic. When the browser then
+ * calls scrollIntoView internally as part of focusing, it reads stale geometry
+ * and may scroll the page even though the popover content is already fully on
+ * screen (or will be once layout settles). There is no way to hook into the
+ * browser's autofocus timing or suppress just its scroll side-effect while
+ * keeping the focus itself.
+ *
+ * Also browser is just bad at scrolling into view something in a popover
+ *
+ * For that reason, components that use `useAutoFocus` must NOT set the
+ * `autofocus`|`autoFocus` attribute on the underlying DOM node. The hook
+ * takes over the focus call entirely, fires it inside a `useDisplayedLayoutEffect`
+ * (so Preact layout work is done and the element is correctly positioned), and
+ * exposes `autoFocusPreventScroll` to let the caller decide whether any
+ * scroll-into-view should happen at all.
+ *
+ * @param {import("preact/hooks").Ref<HTMLElement>} focusableElementRef
+ *   Ref to the element to focus.
+ * @param {boolean} autoFocus
+ *   When false the hook is a no-op.
+ * @param {object} [options]
+ * @param {boolean} [options.autoFocusPreventScroll]
+ *   Passed as `preventScroll` to `element.focus()`. Set to true to suppress
+ *   the browser's built-in scroll-into-view that accompanies focus.
+ * @param {boolean} [options.autoFocusVisible]
+ *   Passed as `focusVisible` to `element.focus()`.
+ * @param {boolean} [options.autoSelect]
+ *   When true, also calls `element.select()` after focusing (useful for text inputs).
+ * @param {boolean} [options.debugFocus]
+ *   When true, logs focus decisions to the console.
+ * @returns {Function} triggerAutofocus — can be called manually with a synthetic
+ *   event to re-run the focus logic outside of the layout-effect lifecycle.
+ */
+
+const useAutoFocus = (
+  focusableElementRef,
+  autoFocus,
+  { preventScroll = true, focusVisible, autoSelect } = {},
+) => {
+  const debugFocus = useDebugFocus();
+
+  const triggerAutofocus = (e) => {
+    if (!autoFocus) {
+      return () => {};
+    }
+
+    const focusableElement = focusableElementRef.current;
+    if (!focusableElement) {
+      return () => {};
+    }
+
+    const activeElement = document.activeElement;
+    const focusDebugCall = `${getElementSignature(focusableElement)}.focus({ preventScroll: ${preventScroll} })`;
+    if (e.type === "navi_displayed_on_document") {
+      debugFocus(`[autofocus] mount -> ${focusDebugCall}`);
+    } else {
+      debugFocus(
+        `[autofocus] "${e.type}" ${getElementSignature(e.target)} -> ${focusDebugCall}`,
+      );
+    }
+    focusableElement.focus({ preventScroll, focusVisible });
+    if (autoSelect) {
+      focusableElement.select();
+      // Keep the beginning of the text visible instead of scrolling to the end
+      focusableElement.scrollLeft = 0;
+    }
+    return () => {
+      const focusIsOnSelfOrInsideSelf =
+        document.activeElement === focusableElement ||
+        focusableElement.contains(document.activeElement);
+      if (
+        !focusIsOnSelfOrInsideSelf &&
+        document.activeElement !== document.body
+      ) {
+        // focus is not on our element (or body) anymore
+        // keep it where it is
+        return;
+      }
+
+      // We have focus but we are unmounted
+      // -> try to move focus back to something more meaningful that what browser would do
+      // (browser would put it to document.body)
+      // -> We'll try to move focus back to the element that had focus before we moved it to this element
+
+      if (!document.body.contains(activeElement)) {
+        // previously active element is no longer in the document
+        return;
+      }
+
+      if (blurEvent) {
+        // But if this element is unmounted during a blur, the element that is about to receive focus should prevail
+        const elementAboutToReceiveFocus = blurEvent.relatedTarget;
+        const isSelfOrInsideSelf =
+          elementAboutToReceiveFocus === focusableElement ||
+          focusableElement.contains(elementAboutToReceiveFocus);
+        const isPreviouslyActiveElementOrInsideIt =
+          elementAboutToReceiveFocus === activeElement ||
+          (activeElement && activeElement.contains(elementAboutToReceiveFocus));
+        if (!isSelfOrInsideSelf && !isPreviouslyActiveElementOrInsideIt) {
+          // the element about to receive focus is not the input itself or inside it
+          // and is not the previously active element or inside it
+          // -> the element about to receive focus should prevail
+          return;
+        }
+      }
+
+      debugFocus(
+        `restore focus to previously active element ${getElementSignature(activeElement)}.focus()`,
+      );
+      activeElement.focus();
+    };
+  };
+
+  useDisplayedLayoutEffect(
+    focusableElementRef,
+    (el, e) => {
+      return triggerAutofocus(e);
+    },
+    [],
+  );
+
+  // useEffect(() => {
+  //   if (autoFocus) {
+  //     const focusableElement = focusableElementRef.current;
+  //     focusableElement.scrollIntoView({ inline: "nearest", block: "nearest" });
+  //   }
+  // }, []);
+
+  return triggerAutofocus;
+};
+
+let blurEvent = null;
+let timeout;
+document.body.addEventListener(
+  "blur",
+  (e) => {
+    blurEvent = e;
+    setTimeout(() => {
+      blurEvent = null;
+    });
+  },
+  { capture: true },
+);
+document.body.addEventListener(
+  "focus",
+  () => {
+    clearTimeout(timeout);
+    blurEvent = null;
+  },
+  { capture: true },
+);
 
 const useFormEvents = (
   elementRef,
@@ -31610,16 +32349,16 @@ const debugUIState = (...args) => {
 const debugUIGroup = (...args) => {
 };
 
-const UIStateControllerContext = K();
-const UIStateContext = K();
-const ParentUIStateControllerContext = K();
+const UIStateControllerContext = Q();
+const UIStateContext = Q();
+const ParentUIStateControllerContext = Q();
 
-const FieldNameContext = K();
-const ReadOnlyContext = K();
-const DisabledContext = K();
-const RequiredContext = K();
-const LoadingContext = K();
-const LoadingElementContext = K();
+const FieldNameContext = Q();
+const ReadOnlyContext = Q();
+const DisabledContext = Q();
+const RequiredContext = Q();
+const LoadingContext = Q();
+const LoadingElementContext = Q();
 
 /**
  * UI State Controller Hook
@@ -31648,6 +32387,7 @@ const useUIStateController = (
     getPropFromState = (state) => state,
     getStateFromParent,
     persists,
+    allowNameless = false,
   } = {},
 ) => {
   const parentUIStateController = j$1(ParentUIStateControllerContext);
@@ -31656,7 +32396,7 @@ const useUIStateController = (
   if (persists === undefined && formContext) {
     persists = true;
   }
-  const [navState, setNavState] = useNavState$1(id);
+  const [navState, setNavState] = useNavState(id);
 
   const uiStateControllerRef = F();
   const hasStateProp = Object.hasOwn(props, statePropName);
@@ -31763,6 +32503,7 @@ const useUIStateController = (
     },
 
     componentType,
+    allowNameless,
     readOnly,
     name,
     hasStateProp,
@@ -32054,7 +32795,7 @@ const useUIGroupStateController = (
  * @returns {any} The current UI state
  */
 const useUIState = (uiStateController) => {
-  const [trackedUIState, setTrackedUIState] = h(
+  const [trackedUIState, setTrackedUIState] = y$1(
     uiStateController.uiState,
   );
 
@@ -32071,8 +32812,7 @@ const useUIState = (uiStateController) => {
   return trackedUIState;
 };
 
-installImportMetaCssBuild(import.meta);/* eslint-disable jsenv/no-unknown-params */
-const css$j = /* css */`
+installImportMetaCssBuild(import.meta);const css$l = /* css */`
   @layer navi {
     .navi_button {
       --button-outline-width: 1px;
@@ -32163,6 +32903,7 @@ const css$j = /* css */`
     outline: none;
     cursor: var(--x-button-cursor);
     -webkit-tap-highlight-color: transparent;
+    position: relative;
     touch-action: manipulation;
     user-select: none;
 
@@ -32338,84 +33079,36 @@ const css$j = /* css */`
   }
 `;
 const Button = props => {
-  import.meta.css = [css$j, "@jsenv/navi/src/field/button.jsx"];
-  return renderActionableComponent(props, {
-    Basic: ButtonBasicDispatch,
-    WithAction: ButtonWithAction,
-    WithActionInsideForm: ButtonWithActionInsideForm
+  const defaultRef = F(null);
+  const ref = props.ref || defaultRef;
+  return u$1(ButtonDispatcher, {
+    ...props,
+    ref: ref
   });
 };
-const ButtonBasicDispatch = props => {
+const ButtonDispatcher = props => {
+  const formContext = j$1(FormActionContext);
+  const hasAction = Boolean(props.action || props.shortcuts && props.shortcuts.length > 0);
+  if (hasAction) {
+    if (formContext && props.action) {
+      return u$1(ButtonWithActionInsideForm, {
+        ...props
+      });
+    }
+    return u$1(ButtonWithAction, {
+      ...props
+    });
+  }
   if (props.route) {
     return u$1(ButtonWithRoute, {
       ...props
     });
   }
-  return u$1(ButtonBasic, {
+  return u$1(ButtonUI, {
     ...props
   });
 };
-const ButtonWithRoute = ({
-  route,
-  routeParams,
-  children,
-  ...rest
-}) => {
-  const url = route.buildUrl(routeParams);
-  const {
-    matching
-  } = useRouteStatus(route);
-  const paramsAreMatching = route.matchesParams(routeParams);
-  const linkMatching = matching && paramsAreMatching;
-  return u$1(ButtonBasic, {
-    href: url,
-    "data-href-current": linkMatching ? "" : undefined,
-    ...rest,
-    children: children || route.buildRelativeUrl(routeParams)
-  });
-};
-const ButtonStyleCSSVars = {
-  "outlineWidth": "--button-outline-width",
-  "borderWidth": "--button-border-width",
-  "borderRadius": "--button-border-radius",
-  "border": "--button-border",
-  "padding": "--button-padding",
-  "paddingX": "--button-padding-x",
-  "paddingY": "--button-padding-y",
-  "paddingTop": "--button-padding-top",
-  "paddingRight": "--button-padding-right",
-  "paddingBottom": "--button-padding-bottom",
-  "paddingLeft": "--button-padding-left",
-  "borderColor": "--button-border-color",
-  "background": "--button-background",
-  "backgroundColor": "--button-background-color",
-  "color": "--button-color",
-  ":hover": {
-    backgroundColor: "--button-background-color-hover",
-    borderColor: "--button-border-color-hover",
-    color: "--button-color-hover"
-  },
-  ":-navi-pressed": {
-    borderColor: "--button-border-color-pressed"
-  },
-  ":read-only": {
-    backgroundColor: "--button-background-color-readonly",
-    borderColor: "--button-border-color-readonly",
-    color: "--button-color-readonly"
-  },
-  ":disabled": {
-    backgroundColor: "--button-background-color-disabled",
-    borderColor: "--button-border-color-disabled",
-    color: "--button-color-disabled"
-  }
-};
-const ButtonPseudoClasses = [":hover", ":active", ":-navi-pressed", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
-const ButtonPseudoElements = ["::-navi-loader"];
-const ButtonBasic = props => {
-  const contextLoading = j$1(LoadingContext);
-  const contextLoadingElement = j$1(LoadingElementContext);
-  const contextReadOnly = j$1(ReadOnlyContext);
-  const contextDisabled = j$1(DisabledContext);
+const ButtonUI = props => {
   const {
     readOnly,
     disabled,
@@ -32433,6 +33126,11 @@ const ButtonBasic = props => {
     children,
     ...rest
   } = props;
+  import.meta.css = [css$l, "@jsenv/navi/src/field/button.jsx"];
+  const contextLoading = j$1(LoadingContext);
+  const contextLoadingElement = j$1(LoadingElementContext);
+  const contextReadOnly = j$1(ReadOnlyContext);
+  const contextDisabled = j$1(DisabledContext);
   const defaultRef = F();
   const ref = props.ref || defaultRef;
   useAutoFocus(ref, autoFocus);
@@ -32465,6 +33163,9 @@ const ButtonBasic = props => {
   return u$1(Box, {
     "data-readonly-silent": innerLoading ? "" : undefined,
     ...remainingProps,
+    autFocus: undefined // See use_auto_focus.js
+    ,
+
     as: as,
     href: href,
     target: innerTarget,
@@ -32512,14 +33213,74 @@ const ButtonBasic = props => {
     }), renderButtonContentMemoized]
   });
 };
+const ButtonStyleCSSVars = {
+  "outlineWidth": "--button-outline-width",
+  "borderWidth": "--button-border-width",
+  "borderRadius": "--button-border-radius",
+  "border": "--button-border",
+  "padding": "--button-padding",
+  "paddingX": "--button-padding-x",
+  "paddingY": "--button-padding-y",
+  "paddingTop": "--button-padding-top",
+  "paddingRight": "--button-padding-right",
+  "paddingBottom": "--button-padding-bottom",
+  "paddingLeft": "--button-padding-left",
+  "borderColor": "--button-border-color",
+  "background": "--button-background",
+  "backgroundColor": "--button-background-color",
+  "color": "--button-color",
+  ":hover": {
+    backgroundColor: "--button-background-color-hover",
+    borderColor: "--button-border-color-hover",
+    color: "--button-color-hover"
+  },
+  ":-navi-pressed": {
+    borderColor: "--button-border-color-pressed"
+  },
+  ":read-only": {
+    backgroundColor: "--button-background-color-readonly",
+    borderColor: "--button-border-color-readonly",
+    color: "--button-color-readonly"
+  },
+  ":disabled": {
+    backgroundColor: "--button-background-color-disabled",
+    borderColor: "--button-border-color-disabled",
+    color: "--button-color-disabled"
+  }
+};
+const ButtonPseudoClasses = [":hover", ":active", ":-navi-pressed", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
+const ButtonPseudoElements = ["::-navi-loader"];
 const ButtonShadow = () => {
   return u$1("span", {
     className: "navi_button_shadow"
   });
 };
 markAsOutsideTextFlow(ButtonShadow);
+const ButtonWithRoute = props => {
+  const {
+    route,
+    routeParams,
+    children,
+    ...rest
+  } = props;
+  const url = route.buildUrl(routeParams);
+  const {
+    matching
+  } = useRouteStatus(route);
+  const paramsAreMatching = route.matchesParams(routeParams);
+  const linkMatching = matching && paramsAreMatching;
+  return u$1(ButtonDispatcher, {
+    href: url,
+    "data-href-current": linkMatching ? "" : undefined,
+    ...rest,
+    route: undefined,
+    routeParams: undefined,
+    children: children || route.buildRelativeUrl(routeParams)
+  });
+};
 const ButtonWithAction = props => {
   const {
+    ref,
     action,
     loading,
     actionErrorEffect,
@@ -32530,8 +33291,6 @@ const ButtonWithAction = props => {
     children,
     ...rest
   } = props;
-  const defaultRef = F();
-  const ref = props.ref || defaultRef;
   const boundAction = useAction(action);
   const {
     loading: actionLoading
@@ -32548,19 +33307,20 @@ const ButtonWithAction = props => {
     onError: onActionError,
     onEnd: onActionEnd
   });
-  return u$1(ButtonBasicDispatch
+  return u$1(ButtonDispatcher
   // put data-action first to help find it in devtools
   , {
     "data-action": boundAction.name,
     ...rest,
     ref: ref,
+    action: undefined,
     loading: innerLoading,
     children: children
   });
 };
 const ButtonWithActionInsideForm = props => {
-  const formAction = j$1(FormActionContext);
   const {
+    ref,
     type,
     action,
     loading,
@@ -32572,8 +33332,7 @@ const ButtonWithActionInsideForm = props => {
     onActionEnd,
     ...rest
   } = props;
-  const defaultRef = F();
-  const ref = props.ref || defaultRef;
+  const formAction = j$1(FormActionContext);
   const formParamsSignal = formAction.paramsSignal;
   const actionBoundToFormParams = useAction(action, formParamsSignal);
   const {
@@ -32607,10 +33366,11 @@ const ButtonWithActionInsideForm = props => {
       }
     }
   });
-  return u$1(ButtonBasicDispatch, {
+  return u$1(ButtonDispatcher, {
     "data-action": actionBoundToFormParams.name,
     ...rest,
     ref: ref,
+    action: undefined,
     type: type,
     loading: innerLoading,
     onactionrequested: e => {
@@ -32678,8 +33438,8 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
     border-bottom-left-radius: 6px;
   }
 `, "@jsenv/navi/src/text/message_box.jsx"];
-K();
-K();
+Q();
+Q();
 
 installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
   .navi_message_box {
@@ -32690,7 +33450,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
     }
   }
 `, "@jsenv/navi/src/text/title.jsx"];
-const TitleLevelContext = K();
+const TitleLevelContext = Q();
 
 /**
  * Hook that reactively checks if a URL is visited.
@@ -32746,8 +33506,7 @@ const useDimColorWhen = (elementRef, shouldDim) => {
   });
 };
 
-installImportMetaCssBuild(import.meta);/* eslint-disable jsenv/no-unknown-params */
-const css$i = /* css */`
+installImportMetaCssBuild(import.meta);const css$k = /* css */`
   @layer navi {
     .navi_link {
       --link-border-radius: unset;
@@ -32893,7 +33652,7 @@ const css$i = /* css */`
     }
 
     /* Dark background */
-    &[data-dark-background] {
+    &[data-dark-background].navi_text {
       --x-link-contrasting-color: white;
       --x-link-color: var(--link-color, white);
     }
@@ -33104,7 +33863,7 @@ Object.assign(PSEUDO_CLASSES, {
   }
 });
 const Link = props => {
-  import.meta.css = [css$i, "@jsenv/navi/src/nav/link/link.jsx"];
+  import.meta.css = [css$k, "@jsenv/navi/src/nav/link/link.jsx"];
   return renderActionableComponent(props, {
     Basic: LinkBasic,
     WithAction: LinkWithAction
@@ -33199,7 +33958,6 @@ const LinkPlain = props => {
     isCurrent
   } = getHrefTargetInfo(href);
   const innerCurrent = current || isCurrent;
-  useDarkBackgroundAttribute(ref, [selected, innerCurrent], {});
   const innerTarget = target === undefined ? isSameSite ? "_self" : "_blank" : target;
   const innerRel = rel === undefined ? isSameSite ? undefined : "noopener noreferrer" : rel;
   let innerEndIcon;
@@ -33240,6 +33998,9 @@ const LinkPlain = props => {
     color: anchor && !innerChildren ? "inherit" : undefined,
     id: anchor ? href.slice(1) : undefined,
     ...remainingProps,
+    autoFocus: undefined // See use_auto_focus.js
+    ,
+
     ref: ref,
     href: href,
     rel: innerRel,
@@ -33252,7 +34013,9 @@ const LinkPlain = props => {
     onnavi_value: e => {
       e.detail.setValue(value);
     },
-    preventBoldLayoutShift: currentEffectBold,
+    holdSpaceForStyle: currentEffectBold ? {
+      fontWeight: "bold"
+    } : undefined,
     preventSpaceUnderlines: true,
     overflowEllipsis: overflowEllipsis
     // Visual
@@ -33359,14 +34122,14 @@ const LinkWithAction = props => {
   });
 };
 
-const NavContext = K();
-K();
+const NavContext = Q();
+Q();
 
 installImportMetaCssBuild(import.meta);/**
  * TabList component with support for horizontal and vertical layouts
  * https://dribbble.com/search/tabs
  */
-const css$h = /* css */`
+const css$j = /* css */`
   @layer navi {
     .navi_nav {
       --nav-border: none;
@@ -33502,7 +34265,7 @@ const Nav = ({
   panelBorderConnection,
   ...props
 }) => {
-  import.meta.css = [css$h, "@jsenv/navi/src/nav/link/nav.jsx"];
+  import.meta.css = [css$j, "@jsenv/navi/src/nav/link/nav.jsx"];
   children = H(children);
   return u$1(Box, {
     as: "nav",
@@ -33550,7 +34313,7 @@ const useFocusGroup = (
 
 installImportMetaCssBuild(import.meta);const rightArrowPath = "M680-480L360-160l-80-80 240-240-240-240 80-80 320 320z";
 const downArrowPath = "M480-280L160-600l80-80 240 240 240-240 80 80-320 320z";
-const css$g = /* css */`
+const css$i = /* css */`
   .navi_summary_marker {
     width: 1em;
     height: 1em;
@@ -33635,7 +34398,7 @@ const SummaryMarker = ({
   open,
   loading
 }) => {
-  import.meta.css = [css$g, "@jsenv/navi/src/field/details/summary_marker.jsx"];
+  import.meta.css = [css$i, "@jsenv/navi/src/field/details/summary_marker.jsx"];
   const showLoading = useDebounceTrue(loading, 300);
   const mountedRef = F(false);
   const prevOpenRef = F(open);
@@ -33689,7 +34452,7 @@ const SummaryMarker = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$f = /* css */`
+installImportMetaCssBuild(import.meta);const css$h = /* css */`
   .navi_details {
     position: relative;
     z-index: 1;
@@ -33726,7 +34489,7 @@ installImportMetaCssBuild(import.meta);const css$f = /* css */`
   }
 `;
 const Details = props => {
-  import.meta.css = [css$f, "@jsenv/navi/src/field/details/details.jsx"];
+  import.meta.css = [css$h, "@jsenv/navi/src/field/details/details.jsx"];
   const {
     value = "on",
     persists
@@ -34009,11 +34772,13 @@ const fieldPropSet = new Set([
   "data-testid",
 ]);
 
-installImportMetaCssBuild(import.meta);const css$e = /* css */`
+installImportMetaCssBuild(import.meta);const css$g = /* css */`
   @layer navi {
     label {
       &[data-interactive] {
         cursor: pointer;
+        /* When label is interactive ability to select text oftens conflicts with other click interactions */
+        user-select: none;
       }
 
       &[data-readonly],
@@ -34024,9 +34789,9 @@ installImportMetaCssBuild(import.meta);const css$e = /* css */`
     }
   }
 `;
-const ReportReadOnlyOnLabelContext = K();
-const ReportDisabledOnLabelContext = K();
-const ReportInteractiveOnLabelContext = K();
+const ReportReadOnlyOnLabelContext = Q();
+const ReportDisabledOnLabelContext = Q();
+const ReportInteractiveOnLabelContext = Q();
 const reportReadOnlyToLabel = value => {
   const reportReadOnly = j$1(ReportReadOnlyOnLabelContext);
   reportReadOnly?.(value);
@@ -34041,17 +34806,17 @@ const reportDisabledToLabel = value => {
 };
 const LabelPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
 const Label = props => {
-  import.meta.css = [css$e, "@jsenv/navi/src/field/label.jsx"];
+  import.meta.css = [css$g, "@jsenv/navi/src/field/label.jsx"];
   const {
     readOnly,
     disabled,
     children,
     ...rest
   } = props;
-  const [interactive, setInteractive] = h(false);
-  const [inputReadOnly, setInputReadOnly] = h(false);
+  const [interactive, setInteractive] = y$1(false);
+  const [inputReadOnly, setInputReadOnly] = y$1(false);
   const innerReadOnly = readOnly || inputReadOnly;
-  const [inputDisabled, setInputDisabled] = h(false);
+  const [inputDisabled, setInputDisabled] = y$1(false);
   const innerDisabled = disabled || inputDisabled;
   return u$1(Box, {
     ...rest,
@@ -34075,7 +34840,7 @@ const Label = props => {
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$d = /* css */`
+installImportMetaCssBuild(import.meta);const css$f = /* css */`
   @layer navi {
     .navi_checkbox {
       --margin: 3px 3px 3px 4px;
@@ -34402,7 +35167,7 @@ installImportMetaCssBuild(import.meta);const css$d = /* css */`
   }
 `;
 const InputCheckbox = props => {
-  import.meta.css = [css$d, "@jsenv/navi/src/field/input_checkbox.jsx"];
+  import.meta.css = [css$f, "@jsenv/navi/src/field/input_checkbox.jsx"];
   const {
     value = "on"
   } = props;
@@ -34557,6 +35322,9 @@ const InputCheckboxBasic = props => {
   return u$1(Box, {
     as: "span",
     ...remainingProps,
+    autoFocus: undefined // See use_auto_focus.js
+    ,
+
     ref: boxRef,
     "data-appearance": appearance,
     baseClassName: "navi_checkbox",
@@ -34772,7 +35540,7 @@ M((props, ref) => {
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect
   });
-  const [actionRequester, setActionRequester] = h(null);
+  const [actionRequester, setActionRequester] = y$1(null);
   useActionEvents(innerRef, {
     onCancel: (e, reason) => {
       uiStateController.resetUIState(e);
@@ -34816,7 +35584,7 @@ M((props, ref) => {
   });
 });
 
-installImportMetaCssBuild(import.meta);const css$c = /* css */`
+installImportMetaCssBuild(import.meta);const css$e = /* css */`
   @layer navi {
     .navi_radio {
       --margin: 3px 3px 0 5px;
@@ -35109,7 +35877,7 @@ installImportMetaCssBuild(import.meta);const css$c = /* css */`
   }
 `;
 const InputRadio = props => {
-  import.meta.css = [css$c, "@jsenv/navi/src/field/input_radio.jsx"];
+  import.meta.css = [css$e, "@jsenv/navi/src/field/input_radio.jsx"];
   const {
     value = "on"
   } = props;
@@ -35300,6 +36068,9 @@ const InputRadioBasic = props => {
   return u$1(Box, {
     as: "span",
     ...remainingProps,
+    autoFocus: undefined // See use_auto_focus.js
+    ,
+
     ref: boxRef,
     "data-appearance": appearance,
     baseClassName: "navi_radio",
@@ -35355,7 +36126,7 @@ const InputRadioWithAction = () => {
   throw new Error(`<Input type="radio" /> with an action make no sense. Use <RadioList action={something} /> instead`);
 };
 
-installImportMetaCssBuild(import.meta);const css$b = /* css */`
+installImportMetaCssBuild(import.meta);const css$d = /* css */`
   @layer navi {
     .navi_input_range {
       --border-radius: 6px;
@@ -35564,7 +36335,7 @@ installImportMetaCssBuild(import.meta);const css$b = /* css */`
   }
 `;
 const InputRange = props => {
-  import.meta.css = [css$b, "@jsenv/navi/src/field/input_range.jsx"];
+  import.meta.css = [css$d, "@jsenv/navi/src/field/input_range.jsx"];
   const uiStateController = useUIStateController(props, "input");
   const uiState = useUIState(uiStateController);
   const input = renderActionableComponent(props, {
@@ -35641,7 +36412,7 @@ const InputRangeBasic = props => {
   reportDisabledToLabel(innerDisabled);
   reportInteractiveToLabel(true);
   useAutoFocus(ref, autoFocus, {
-    autoFocusVisible,
+    focusVisible: autoFocusVisible,
     autoSelect
   });
   const remainingProps = useConstraints(ref, rest);
@@ -35738,6 +36509,9 @@ const InputRangeBasic = props => {
     baseChildPropSet: RangeChildPropSet,
     ...remainingProps,
     ref: undefined,
+    autoFocus: undefined // See use_auto_focus.js
+    ,
+
     children: [u$1(LoaderBackground, {
       loading: innerLoading,
       color: "var(--loader-color)",
@@ -35825,6 +36599,16 @@ const InputRangeWithAction = props => {
   });
 };
 
+const ChevronDownSvg = () => {
+  return u$1("svg", {
+    viewBox: "0 0 16 16",
+    fill: "currentColor",
+    children: u$1("path", {
+      d: "M4.427 7.427l3.396 3.396a.25.25 0 0 0 .354 0l3.396-3.396A.25.25 0 0 0 11.396 7H4.604a.25.25 0 0 0-.177.427z"
+    })
+  });
+};
+
 const SearchSvg = () => u$1("svg", {
   viewBox: "0 0 24 24",
   xmlns: "http://www.w3.org/2000/svg",
@@ -35834,8 +36618,503 @@ const SearchSvg = () => u$1("svg", {
   })
 });
 
-installImportMetaCssBuild(import.meta);/* eslint-disable jsenv/no-unknown-params */
-const css$a = /* css */`
+/**
+ * Navi uses three categories of custom events:
+ *
+ * 1. **Internal events** (`dispatchInternalCustomEvent`) — a component communicates
+ *    with other navi components internally. Not meant to be observed from outside.
+ *    They do not bubble so they stay contained within the subtree that handles them.
+ *    Names often reflect their internal nature (e.g. `navi_check_pseudo_state`).
+ *
+ * 2. **Public events** (`dispatchPublicCustomEvent`) — a component exposes information
+ *    about something that happened (e.g. `navi_list_select`). They bubble so any
+ *    ancestor can observe them. These are part of the public API and should be documented.
+ *
+ * 3. **Request events** (`dispatchCustomEvent`) — code *outside* a component asks it
+ *    to perform an action (e.g. `navi_list_request_open`). They are cancelable so the
+ *    component can signal whether it handled the request. Names are prefixed
+ *    with `request_` by convention.
+ */
+
+
+/**
+ * Dispatches a public event from `el`, announcing something that happened.
+ * Bubbles so any ancestor can observe it.
+ */
+const dispatchPublicCustomEvent = (
+  el,
+  customEventName,
+  customEventDetail,
+) => {
+  const customEvent = new CustomEvent(customEventName, {
+    detail: resolveEventDetail(customEventDetail),
+    bubbles: true,
+  });
+  return el.dispatchEvent(customEvent);
+};
+
+/**
+ * Dispatches a request event *at* `el`, asking it to perform an action.
+ * Cancelable — returns `false` if the component called `preventDefault()`,
+ * indicating it did not (or could not) handle the request.
+ * Names are conventionally prefixed with `request_` (e.g. `navi_list_request_open`).
+ */
+const dispatchCustomEvent = (el, customEventName, customEventDetail) => {
+  const customEvent = new CustomEvent(customEventName, {
+    detail: resolveEventDetail(customEventDetail),
+    cancelable: true,
+  });
+  return el.dispatchEvent(customEvent);
+};
+
+const resolveEventDetail = (customEventDetail) => {
+  const { event, ...rest } = customEventDetail ?? {};
+  let resolvedEvent;
+  if (event?.detail?.event !== undefined) {
+    resolvedEvent = event.detail.event;
+  } else if (event !== undefined) {
+    resolvedEvent = event;
+  }
+  return { ...rest, event: resolvedEvent };
+};
+
+/*
+ * useItemTracker() — hook that creates a stable item tracker for the lifetime
+ * of the host component.
+ *
+ * USAGE:
+ * ```jsx
+ * function ListControlled({ items }) {
+ *   const tracker = useItemTracker({
+ *     onChange: () => console.log("items changed"),
+ *   });
+ *
+ *   return (
+ *     <ul>
+ *       {items.map((item, i) => (
+ *         <Row key={item.id} id={item.id} index={i} hidden={item.hidden} value={item.value} tracker={tracker} />
+ *       ))}
+ *       <Count tracker={tracker} />
+ *     </ul>
+ *   );
+ * }
+ *
+ * function Row({ id, index, hidden, value, tracker }) {
+ *   const visibleIndex = tracker.useTrackItem({ id, index, hidden, value });
+ *   if (visibleIndex === -1) return null;
+ *   return <li>{value}</li>;
+ * }
+ *
+ * function Count({ tracker }) {
+ *   const count = tracker.visibleCountSignal.value; // re-renders only when count changes
+ *   return <span>{count} items</span>;
+ * }
+ * ```
+ *
+ * INTERNALS:
+ *   - registrations: Map key → data, contains only visible items
+ *   - idToKey: Map id → key, stable across renders
+ *   - orderedKeys: number[] of visible item keys sorted by explicit order
+ *   - keyToOrderedIndex: Map key → orderedKeys index, gives O(1) indexOf equivalent
+ *   - keyToExplicitOrder: Map key → explicitly passed index, used to maintain sort order
+ *   - allItemsSignal: signal(array), all items including hidden, ordered by explicit index
+ *   - visibleItemsSignal: signal(array), non-hidden items only
+ *   - countSignal: signal(number), count of all items including hidden
+ *   - visibleCountSignal: signal(number), updated in microtask batch, only when count changes
+ *   - propSignals: Map propName → signal(array), updated in microtask batch with element equality
+ *   - onChangeRef: holds the latest onChange callback, called once per microtask batch
+ *
+ *   useTrackItem(id, data, index): registers the item with an explicitly provided index
+ *   that determines its position among siblings. The caller (e.g. items.map) knows the
+ *   correct order and passes it directly — no render-sequence deduction needed.
+ *   Returns the visible rank (position among non-hidden items), or -1 when hidden.
+ *   Signals and onChange are deferred to a microtask so multiple items updating
+ *   in one commit cause only one notification.
+ *
+ *   getTrackedItemByIndex(index): synchronous O(1) lookup of a visible item by
+ *   its visible rank. Returns undefined when index is out of range.
+ */
+
+const useItemTracker = ({ onChange } = {}) => {
+  const onChangeRef = F(onChange);
+  onChangeRef.current = onChange;
+  const trackerRef = F(null);
+  let tracker = trackerRef.current;
+  if (!tracker) {
+    trackerRef.current = tracker = createItemTracker((items) => {
+      onChangeRef.current?.(items);
+    });
+  }
+  // When code in useLayoutEffect of the caller wants to run the tracker must be in sync
+  // without this layout effect the tracker might not have been synced yet and preact would call layout effect
+  // before we had time to sync
+  A(() => {
+    tracker._flushSync();
+  });
+  return tracker;
+};
+
+const createItemTracker = (onChange) => {
+  const registrations = new Map(); // key → data (visible items only)
+  const idToKey = new Map(); // id → insertion key (stable, auto-incremented)
+  let keyCounter = 0;
+  // orderedKeys: visible item keys sorted by their explicitly provided index.
+  const orderedKeys = []; // number[]
+  // keyToOrderedIndex: O(1) equivalent of orderedKeys.indexOf(key).
+  const keyToOrderedIndex = new Map(); // key → index in orderedKeys
+  const allKeys = new Set(); // all registered keys including hidden
+  const keyToExplicitOrder = new Map(); // key → explicitly passed index
+
+  const allRegistrations = new Map(); // key → data (all items including hidden)
+  const allOrderedKeys = []; // all item keys sorted by explicit order
+  const keyToAllOrderedIndex = new Map(); // key → index in allOrderedKeys
+
+  const itemsSignal = y([]);
+  const visibleItemsSignal = y([]);
+  const countSignal = y(0);
+  const visibleCountSignal = y(0);
+  const matchCountSignal = y(0);
+
+  let notifyScheduled = false;
+  const runNotify = () => {
+    n(() => {
+      let someChange = false;
+
+      const newCount = allKeys.size;
+      const countModified = countSignal.peek() !== newCount;
+      if (countModified) {
+        countSignal.value = newCount;
+        someChange = true;
+      }
+
+      // Build allItems and visibleItems in a single pass over allOrderedKeys.
+      // Visible items are those without data.hidden — same relative order as orderedKeys.
+      const prevAllItems = itemsSignal.peek();
+      const prevVisibleItems = visibleItemsSignal.peek();
+      let allItemsChanged = prevAllItems.length !== allOrderedKeys.length;
+      let visibleItemsChanged = false;
+      const allItems = [];
+      const visibleItems = [];
+      let newMatchCount = 0;
+      for (let i = 0; i < allOrderedKeys.length; i++) {
+        const key = allOrderedKeys[i];
+        const item = allRegistrations.get(key);
+        allItems.push(item);
+        // Compare by reference: catches any prop change (id, selected, disabled, …)
+        if (!allItemsChanged && item !== prevAllItems[i]) {
+          allItemsChanged = true;
+        }
+        if (!item.hidden) {
+          const visibleIdx = visibleItems.length;
+          visibleItems.push(item);
+          if (item.matchScore > 0) {
+            newMatchCount++;
+          }
+          if (!visibleItemsChanged && item !== prevVisibleItems[visibleIdx]) {
+            visibleItemsChanged = true;
+          }
+        }
+      }
+
+      const newVisibleCount = visibleItems.length;
+      const visibleCountModified =
+        visibleCountSignal.peek() !== newVisibleCount;
+      if (visibleCountModified) {
+        visibleCountSignal.value = newVisibleCount;
+        someChange = true;
+      }
+      if (allItemsChanged) {
+        itemsSignal.value = allItems;
+        someChange = true;
+      }
+      if (visibleItemsChanged) {
+        visibleItemsSignal.value = visibleItems;
+        someChange = true;
+      }
+      const matchCountModified = matchCountSignal.peek() !== newMatchCount;
+      if (matchCountModified) {
+        matchCountSignal.value = newMatchCount;
+        someChange = true;
+      }
+      if (someChange) {
+        onChange?.();
+      }
+    });
+  };
+
+  const notify = () => {
+    if (notifyScheduled) {
+      return;
+    }
+    notifyScheduled = true;
+    queueMicrotask(() => {
+      if (!notifyScheduled) {
+        return; // was already flushed synchronously
+      }
+      notifyScheduled = false;
+      runNotify();
+    });
+  };
+
+  const _flushSync = () => {
+    if (!notifyScheduled) {
+      return;
+    }
+    notifyScheduled = false;
+    runNotify();
+  };
+
+  // Insert key into orderedKeys at the correct position based on explicitOrder.
+  // Uses binary search for O(log n) insertion.
+  const insertKey = (key, explicitOrder) => {
+    let lo = 0;
+    let hi = orderedKeys.length;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (keyToExplicitOrder.get(orderedKeys[mid]) <= explicitOrder) {
+        lo = mid + 1;
+      } else {
+        hi = mid;
+      }
+    }
+    orderedKeys.splice(lo, 0, key);
+    for (let i = lo; i < orderedKeys.length; i++) {
+      keyToOrderedIndex.set(orderedKeys[i], i);
+    }
+  };
+
+  const insertAllKey = (key, explicitOrder) => {
+    let lo = 0;
+    let hi = allOrderedKeys.length;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (keyToExplicitOrder.get(allOrderedKeys[mid]) <= explicitOrder) {
+        lo = mid + 1;
+      } else {
+        hi = mid;
+      }
+    }
+    allOrderedKeys.splice(lo, 0, key);
+    for (let i = lo; i < allOrderedKeys.length; i++) {
+      keyToAllOrderedIndex.set(allOrderedKeys[i], i);
+    }
+  };
+
+  const removeAllKey = (key) => {
+    const idx = keyToAllOrderedIndex.get(key);
+    if (idx !== undefined) {
+      allOrderedKeys.splice(idx, 1);
+      keyToAllOrderedIndex.delete(key);
+      for (let i = idx; i < allOrderedKeys.length; i++) {
+        keyToAllOrderedIndex.set(allOrderedKeys[i], i);
+      }
+    }
+  };
+
+  // Register or update an item. data.hidden controls visibility.
+  // explicitOrder is the caller-provided index that determines sort position.
+  const syncItem = (key, index, data) => {
+    if (data.role === "presentation") {
+      registrations.delete(key);
+      const idx = keyToOrderedIndex.get(key);
+      if (idx !== undefined) {
+        orderedKeys.splice(idx, 1);
+        keyToOrderedIndex.delete(key);
+        for (let i = idx; i < orderedKeys.length; i++) {
+          keyToOrderedIndex.set(orderedKeys[i], i);
+        }
+      }
+      keyToExplicitOrder.delete(key);
+      allRegistrations.delete(key);
+      removeAllKey(key);
+      allKeys.delete(key);
+      return;
+    }
+
+    // Maintain allRegistrations and allOrderedKeys for all non-presentation items.
+    allRegistrations.set(key, data);
+    allKeys.add(key);
+    const currentAllIdx = keyToAllOrderedIndex.get(key);
+    const previousOrder = keyToExplicitOrder.get(key);
+    keyToExplicitOrder.set(key, index);
+    if (currentAllIdx === undefined) {
+      insertAllKey(key, index);
+    } else if (previousOrder !== index) {
+      allOrderedKeys.splice(currentAllIdx, 1);
+      keyToAllOrderedIndex.delete(key);
+      for (let i = currentAllIdx; i < allOrderedKeys.length; i++) {
+        keyToAllOrderedIndex.set(allOrderedKeys[i], i);
+      }
+      insertAllKey(key, index);
+    }
+
+    if (data.hidden) {
+      registrations.delete(key);
+      const idx = keyToOrderedIndex.get(key);
+      if (idx !== undefined) {
+        orderedKeys.splice(idx, 1);
+        keyToOrderedIndex.delete(key);
+        for (let i = idx; i < orderedKeys.length; i++) {
+          keyToOrderedIndex.set(orderedKeys[i], i);
+        }
+      }
+      return;
+    }
+
+    registrations.set(key, data);
+    const currentIdx = keyToOrderedIndex.get(key);
+    if (currentIdx === undefined) {
+      insertKey(key, index);
+      return;
+    }
+    if (previousOrder === index) {
+      return;
+    }
+    orderedKeys.splice(currentIdx, 1);
+    keyToOrderedIndex.delete(key);
+    for (let i = currentIdx; i < orderedKeys.length; i++) {
+      keyToOrderedIndex.set(orderedKeys[i], i);
+    }
+    insertKey(key, index);
+  };
+
+  // Register an item. data.hidden controls visibility.
+  // explicitOrder is the caller-provided index (e.g. from items.map((item, i) => ...))
+  // that determines this item's position among siblings.
+  // Returns the item's visible rank among non-hidden items, or -1 when hidden.
+  const useTrackItem = (data) => {
+    const { id, index } = data;
+    if (!idToKey.has(id)) {
+      idToKey.set(id, keyCounter++);
+    }
+    const key = idToKey.get(id);
+
+    syncItem(key, index, data);
+    notify();
+
+    A(() => {
+      return () => {
+        registrations.delete(key);
+        const idx = keyToOrderedIndex.get(key);
+        if (idx !== undefined) {
+          orderedKeys.splice(idx, 1);
+          keyToOrderedIndex.delete(key);
+          for (let i = idx; i < orderedKeys.length; i++) {
+            keyToOrderedIndex.set(orderedKeys[i], i);
+          }
+        }
+        keyToExplicitOrder.delete(key);
+        allRegistrations.delete(key);
+        removeAllKey(key);
+        allKeys.delete(key);
+        notify();
+      };
+    }, []);
+
+    if (data.hidden || data.role === "presentation") {
+      return -1;
+    }
+    return keyToOrderedIndex.get(key) ?? -1;
+  };
+
+  const getTrackedItemByIndex = (index) => {
+    const key = orderedKeys[index];
+    if (key === undefined) {
+      return undefined;
+    }
+    return registrations.get(key);
+  };
+
+  return {
+    useTrackItem,
+    getTrackedItemByIndex,
+    itemsSignal,
+    visibleItemsSignal,
+    countSignal,
+    visibleCountSignal,
+    matchCountSignal,
+    _flushSync,
+  };
+};
+
+installImportMetaCssBuild(import.meta);Q(null);
+Q(null);
+Q(null);
+const ListIdContext = Q();
+
+// Provided by ListInteractive to give descendants (e.g. Suggestion) access
+// to hover/keyboard-pointed/selection state.
+// Values are item IDs (strings) or null — not indices — so they survive
+// index changes caused by search reordering.
+Q(null);
+Q(null);
+// Non-null when inside a ListInteractive (used to render data-interactive).
+Q(false);
+
+// Carries the render window {start, end} (or null = render all) from
+// List down to each ListItem.
+Q(null);
+// Carries the separator element/function down to each ListItem so separators
+// are only rendered between items that actually mount (post-filter, post-window).
+Q(null);
+const requestListNavFromCurrent = (listContainerElement, {
+  event,
+  goal
+}) => {
+  return dispatchCustomEvent(listContainerElement, "navi_list_request_nav_from_current", {
+    event,
+    goal
+  });
+};
+const requestListSelectCurrent = (listContainerElement, {
+  event
+}) => {
+  return dispatchCustomEvent(listContainerElement, "navi_list_request_select_current", {
+    event
+  });
+};
+const requestListInteractionStateReset = (listContainerElement, {
+  event
+}) => {
+  return dispatchCustomEvent(listContainerElement, "navi_list_request_interaction_state_reset", {
+    event
+  });
+};
+const requestListOpen = (listContainerElement, {
+  event,
+  anchor
+}) => {
+  return dispatchCustomEvent(listContainerElement, "navi_list_request_open", {
+    event,
+    anchor
+  });
+};
+const requestListClose = (listContainerElement, {
+  event
+}) => {
+  return dispatchCustomEvent(listContainerElement, "navi_list_request_close", {
+    event
+  });
+};
+
+installImportMetaCssBuild(import.meta);/**
+ * Input component for all textual input types.
+ *
+ * Supports:
+ * - text (default)
+ * - password
+ * - hidden
+ * - email
+ * - url
+ * - search
+ * - tel
+ * - etc.
+ *
+ * For non-textual inputs, specialized components will be used:
+ * - <InputCheckbox /> for type="checkbox"
+ * - <InputRadio /> for type="radio"
+ */
+const css$c = /* css */`
   @layer navi {
     .navi_input {
       --border-radius: 2px;
@@ -35893,8 +37172,8 @@ const css$a = /* css */`
     border-radius: inherit;
     cursor: inherit;
 
-    --start-icon-size: 0px;
-    --end-icon-size: 0px;
+    --left-slot-size: 0px;
+    --right-slot-size: 0px;
     --x-outline-width: var(--outline-width);
     --x-border-radius: var(--border-radius);
     --x-border-width: var(--border-width);
@@ -35924,10 +37203,11 @@ const css$a = /* css */`
 
     .navi_native_input {
       box-sizing: border-box;
+      min-width: 50px;
       padding-top: var(--x-padding-top-base);
-      padding-right: calc(var(--x-padding-right-base) + var(--end-icon-size));
+      padding-right: calc(var(--x-padding-right-base) + var(--right-slot-size));
       padding-bottom: var(--x-padding-bottom-base);
-      padding-left: calc(var(--x-padding-left-base) + var(--start-icon-size));
+      padding-left: calc(var(--x-padding-left-base) + var(--left-slot-size));
       color: var(--x-color);
       font-size: var(--font-size);
       background-color: var(--x-background-color);
@@ -35950,17 +37230,9 @@ const css$a = /* css */`
       }
     }
 
-    .navi_input_start_icon {
+    .navi_input_slot {
       position: absolute;
       top: 0;
-      bottom: 0;
-      left: var(--x-padding-left-base);
-      font-size: var(--font-size);
-    }
-    .navi_input_end_button {
-      position: absolute;
-      top: 0;
-      right: var(--x-padding-right-base);
       bottom: 0;
       display: inline-flex;
       margin: 0;
@@ -35970,34 +37242,43 @@ const css$a = /* css */`
       font-size: var(--font-size);
       background: none;
       border: none;
-      opacity: 0;
-      pointer-events: none;
+
+      &[data-left] {
+        left: var(--x-padding-left-base);
+      }
+      &[data-right] {
+        right: var(--x-padding-right-base);
+      }
+      &[data-hide-while-empty] {
+        opacity: 0;
+        pointer-events: none;
+      }
     }
     &[data-has-value] {
-      .navi_input_end_button {
+      .navi_input_slot[data-hide-while-empty] {
         opacity: 1;
         cursor: pointer;
         pointer-events: auto;
       }
 
       &[data-readonly] {
-        .navi_input_end_button {
+        .navi_input_slot[data-hide-while-empty] {
           opacity: 0;
           pointer-events: none;
         }
       }
       &[data-disabled] {
-        .navi_input_end_button {
+        .navi_input_slot[data-hide-while-empty] {
           opacity: 0;
           pointer-events: none;
         }
       }
     }
-    &[data-start-icon] {
-      --start-icon-size: 1em;
+    &:has(.navi_input_slot[data-left]) {
+      --left-slot-size: 1em;
     }
-    &[data-end-icon] {
-      --end-icon-size: 1em;
+    &:has(.navi_input_slot[data-right]) {
+      --right-slot-size: 1em;
     }
 
     /* Hover */
@@ -36048,19 +37329,204 @@ const css$a = /* css */`
   }
 `;
 const InputTextual = props => {
-  import.meta.css = [css$a, "@jsenv/navi/src/field/input_textual.jsx"];
+  const defaultRef = F(null);
+  const ref = props.ref || defaultRef;
   const uiStateController = useUIStateController(props, "input");
   const uiState = useUIState(uiStateController);
-  const input = renderActionableComponent(props, {
-    Basic: InputTextualBasic,
-    WithAction: InputTextualWithAction
-  });
   return u$1(UIStateControllerContext.Provider, {
     value: uiStateController,
     children: u$1(UIStateContext.Provider, {
       value: uiState,
-      children: input
+      children: u$1(InputTextualDispatcher, {
+        ...props,
+        ref: ref
+      })
     })
+  });
+};
+const InputTextualDispatcher = props => {
+  const listIdFromContext = j$1(ListIdContext);
+  if (props.action) {
+    return u$1(InputTextualWithAction, {
+      ...props
+    });
+  }
+  if (listIdFromContext) {
+    return u$1(InputControllingList, {
+      listId: listIdFromContext,
+      ...props
+    });
+  }
+  if (props.listId) {
+    return u$1(InputControllingList, {
+      ...props
+    });
+  }
+  if (props.suggestions) {
+    return u$1(InputTextualWithSuggestions, {
+      ...props
+    });
+  }
+  return u$1(InputTextualUI, {
+    ...props
+  });
+};
+const InputNativeContext = Q(null);
+const InputTextualUI = props => {
+  import.meta.css = [css$c, "@jsenv/navi/src/field/input_textual.jsx"];
+  const {
+    ref,
+    type,
+    onInput,
+    onKeyDown,
+    readOnly,
+    disabled,
+    loading,
+    autoFocus,
+    autoFocusVisible,
+    autoSelect,
+    basePseudoState,
+    children,
+    ...rest
+  } = props;
+  const contextReadOnly = j$1(ReadOnlyContext);
+  const contextDisabled = j$1(DisabledContext);
+  const contextLoading = j$1(LoadingContext);
+  const contextLoadingElement = j$1(LoadingElementContext);
+  const uiStateController = j$1(UIStateControllerContext);
+  const uiState = j$1(UIStateContext);
+  const innerValue = type === "datetime-local" ? convertToLocalTimezone(uiState) : uiState;
+  const innerLoading = loading || contextLoading && contextLoadingElement === ref.current;
+  const innerReadOnly = readOnly || contextReadOnly || innerLoading || uiStateController.readOnly;
+  const innerDisabled = disabled || contextDisabled;
+  // infom any <label> parent of our readOnly state + that we are interactive
+  reportReadOnlyToLabel(innerReadOnly);
+  reportDisabledToLabel(innerDisabled);
+  reportInteractiveToLabel(true);
+  useAutoFocus(ref, autoFocus, {
+    focusVisible: autoFocusVisible,
+    autoSelect
+  });
+  const remainingProps = useConstraints(ref, rest);
+  const onInputStable = useStableCallback(onInput);
+  const onKeyDownStable = useStableCallback(onKeyDown);
+  const autoId = P();
+  const innerId = rest.id || autoId;
+  const renderInput = inputProps => {
+    return u$1(Box, {
+      ...inputProps,
+      as: "input",
+      id: innerId,
+      ref: ref,
+      type: type,
+      "data-value": uiState,
+      value: innerValue,
+      onInput: e => {
+        let inputValue;
+        if (type === "number") {
+          inputValue = e.target.valueAsNumber;
+          if (isNaN(inputValue)) {
+            inputValue = e.target.value;
+          }
+        } else if (type === "datetime-local") {
+          inputValue = convertToUTCTimezone(e.target.value);
+        } else {
+          inputValue = e.target.value;
+        }
+        uiStateController.setUIState(inputValue, e);
+        onInputStable?.(e);
+      },
+      onKeyDown: e => {
+        onKeyDownStable?.(e);
+      },
+      onresetuistate: e => {
+        uiStateController.resetUIState(e);
+      },
+      onsetuistate: e => {
+        uiStateController.setUIState(e.detail.value, e);
+      }
+      // style management
+      ,
+
+      baseClassName: "navi_native_input",
+      "data-rendered-by": ".navi_input"
+    });
+  };
+  const renderInputMemoized = b(renderInput, [type, uiState, innerValue, innerId, autoFocus]);
+  let innerChildren;
+  if (children) {
+    innerChildren = children;
+  } else if (type === "search") {
+    innerChildren = u$1(k, {
+      children: [u$1(InputLeftSlot, {
+        children: u$1(Icon, {
+          color: "rgba(28, 43, 52, 0.5)",
+          children: u$1(SearchSvg, {})
+        })
+      }), u$1(InputRightSlot, {
+        hideWhileEmpty: true,
+        onClick: () => {
+          uiStateController.setUIState("", {
+            trigger: "cancel_button"
+          });
+          ref.current.value = "";
+          ref.current.dispatchEvent(new Event("navi_delete_content"));
+        },
+        children: u$1(Icon, {
+          color: "rgba(28, 43, 52, 0.5)",
+          children: u$1(CloseSvg, {})
+        })
+      })]
+    });
+  } else if (type === "email") {
+    innerChildren = u$1(InputLeftSlot, {
+      children: u$1(Icon, {
+        color: "rgba(28, 43, 52, 0.5)",
+        children: u$1(EmailSvg, {})
+      })
+    });
+  } else if (type === "tel") {
+    innerChildren = u$1(InputLeftSlot, {
+      children: u$1(Icon, {
+        color: "rgba(28, 43, 52, 0.5)",
+        children: u$1(PhoneSvg, {})
+      })
+    });
+  }
+  return u$1(Box, {
+    as: "span",
+    flex: true,
+    baseClassName: "navi_input",
+    styleCSSVars: InputStyleCSSVars,
+    pseudoStateSelector: ".navi_native_input",
+    visualSelector: ".navi_native_input",
+    basePseudoState: {
+      ...basePseudoState,
+      ":read-only": innerReadOnly,
+      ":disabled": innerDisabled,
+      ":-navi-loading": innerLoading
+    },
+    pseudoClasses: InputPseudoClasses,
+    pseudoElements: InputPseudoElements,
+    hasChildFunction: true,
+    baseChildPropSet: InputChildPropSet,
+    ...remainingProps,
+    ref: undefined,
+    autoFocus: undefined // See use_auto_focus.js
+    ,
+
+    children: [u$1(LoaderBackground, {
+      loading: innerLoading,
+      color: "var(--loader-color)",
+      inset: -1
+    }), renderInputMemoized, innerChildren ? u$1(InputNativeContext.Provider, {
+      value: {
+        id: innerId,
+        readOnly: innerReadOnly,
+        disabled: innerDisabled
+      },
+      children: innerChildren
+    }) : null]
   });
 };
 const InputStyleCSSVars = {
@@ -36103,365 +37569,306 @@ const InputStyleCSSVars = {
     color: "--color-disabled"
   }
 };
-const InputPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading", ":navi-has-value"];
-Object.assign(PSEUDO_CLASSES, {
-  ":navi-has-value": {
-    attribute: "data-has-value",
-    setup: (el, callback) => {
-      return listenInputValue(el, callback);
-    },
-    test: el => {
-      if (el.value === "") {
-        return false;
-      }
-      return true;
-    }
-  }
-});
+const InputPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading", ":-navi-has-value", ":-navi-expanded"];
 const InputPseudoElements = ["::-navi-loader"];
 const InputChildPropSet = new Set([...fieldPropSet]);
-const InputTextualBasic = props => {
-  if (props.suggestions) {
-    return u$1(InputTextualWithSuggestions, {
-      ...props
-    });
-  }
-  return u$1(InputTextualPlain, {
+const InputSlot = ({
+  side,
+  onClick,
+  hideWhileEmpty,
+  ...props
+}) => {
+  const ctx = j$1(InputNativeContext);
+  const {
+    id,
+    readOnly,
+    disabled
+  } = ctx;
+  return u$1(Label, {
+    htmlFor: id,
+    className: "navi_input_slot",
+    disabled: disabled,
+    readOnly: readOnly,
+    "data-readonly": readOnly,
+    "data-disabled": disabled,
+    "data-left": side === "left" ? "" : undefined,
+    "data-right": side === "right" ? "" : undefined,
+    "data-hide-while-empty": hideWhileEmpty ? "" : undefined,
+    flex: true,
+    alignY: "center",
+    onMouseDown: e => {
+      e.preventDefault(); // keep focus in the input
+    },
+    onClick: e => {
+      if (readOnly || disabled) {
+        return;
+      }
+      onClick?.(e);
+    },
     ...props
   });
 };
-const InputTextualWithSuggestions = ({
-  suggestions,
-  onInput,
-  onFocus,
-  onBlur,
-  ...rest
-}) => {
-  const defaultRef = F();
-  const ref = rest.ref || defaultRef;
-  const [suggestionsOpen, setSuggestionsOpen] = h(false);
-  const suggestionsOpenRef = F(false);
-  suggestionsOpenRef.current = suggestionsOpen;
-  const showPopover = e => {
-    if (suggestionsOpenRef.current) {
-      return;
-    }
-    console.debug(`showPopover (e.type:${e.type})`);
-    const popoverEl = document.getElementById(suggestions);
-    positionPopover();
-    popoverEl.showPopover();
-    suggestionsOpenRef.current = true;
-    setSuggestionsOpen(true);
-    window.addEventListener("scroll", positionPopover, {
-      capture: true,
-      passive: true
-    });
+const InputLeftSlot = props => {
+  return u$1(InputSlot, {
+    ...props,
+    side: "left"
+  });
+};
+const InputRightSlot = props => {
+  return u$1(InputSlot, {
+    ...props,
+    side: "right"
+  });
+};
+const InputControllingList = props => {
+  const {
+    ref,
+    listId,
+    onKeyDown,
+    ...rest
+  } = props;
+  const getListContainerEl = () => {
+    const listEl = document.getElementById(listId);
+    const listContainerEl = listEl.parentNode;
+    return listContainerEl;
   };
-  const hidePopover = e => {
-    if (!suggestionsOpenRef.current) {
-      return;
-    }
-    console.debug(`hidePopover (e.type:${e.type})`);
-    suggestionsOpenRef.current = false;
-    setSuggestionsOpen(false);
-    window.removeEventListener("scroll", positionPopover, {
-      capture: true
-    });
-    const popoverEl = document.getElementById(suggestions);
-    if (popoverEl) {
-      popoverEl.dispatchEvent(new CustomEvent("navi_suggestion_list_clear"));
-      popoverEl.hidePopover();
-    }
-    setSuggestionsOpen(false);
-  };
-  const positionPopover = () => {
-    const input = ref.current;
-    const rect = input.getBoundingClientRect();
-    const popoverEl = document.getElementById(suggestions);
-    if (popoverEl) {
-      popoverEl.style.top = `${rect.bottom + 2}px`;
-      popoverEl.style.left = `${rect.left}px`;
-      popoverEl.style.width = `${rect.width}px`;
-    }
-  };
-  const dispatchToSuggestionList = customEvent => {
-    const popoverEl = document.getElementById(suggestions);
-    if (!popoverEl) {
-      return false;
-    }
-    popoverEl.dispatchEvent(customEvent);
-    return customEvent.defaultPrevented;
-  };
-  useKeyboardShortcuts(ref, [{
-    key: "arrowdown",
-    description: "Open popover and point to next suggestion",
-    handler: e => {
-      showPopover(e);
-      const popoverEl = document.getElementById(suggestions);
-      if (!popoverEl) {
-        return false;
-      }
-      popoverEl.dispatchEvent(new CustomEvent("navi_suggestion_list_navigate", {
-        detail: {
-          direction: "down"
-        }
-      }));
-      return true;
-    }
-  }, {
-    key: "arrowup",
-    description: "Open popover and point to previous suggestion",
-    handler: e => {
-      showPopover(e);
-      return dispatchToSuggestionList(new CustomEvent("navi_suggestion_list_navigate", {
-        detail: {
-          direction: "up"
-        }
-      }));
-    }
-  }, {
-    key: "home",
-    description: "Point to first suggestion",
-    handler: () => {
-      if (!suggestionsOpenRef.current) {
-        return false;
-      }
-      return dispatchToSuggestionList(new CustomEvent("navi_suggestion_list_navigate", {
-        detail: {
-          direction: "first"
-        }
-      }));
-    }
-  }, {
-    key: "end",
-    description: "Point to last suggestion",
-    handler: () => {
-      if (!suggestionsOpenRef.current) {
-        return false;
-      }
-      return dispatchToSuggestionList(new CustomEvent("navi_suggestion_list_navigate", {
-        detail: {
-          direction: "last"
-        }
-      }));
-    }
-  }, {
-    key: "enter",
-    description: "Confirm pointed suggestion",
-    handler: () => {
-      if (!suggestionsOpenRef.current) {
-        return false;
-      }
-      return dispatchToSuggestionList(new CustomEvent("navi_suggestion_list_confirm", {
-        cancelable: true
-      }));
-    }
-  }, {
-    key: "escape",
-    description: "Close popover",
-    handler: e => {
-      if (!suggestionsOpenRef.current) {
-        return false;
-      }
-      hidePopover(e);
-      return true;
-    }
-  }]);
   _(() => {
     const inputEl = ref.current;
-    const popoverEl = document.getElementById(suggestions);
-    if (!popoverEl) {
+    if (!inputEl) {
       return undefined;
     }
-    const onSelected = e => {
-      inputEl.value = e.detail.value;
+    const listContainerEl = getListContainerEl();
+    if (!listContainerEl) {
+      return undefined;
+    }
+    const onListSelect = e => {
+      const {
+        event
+      } = e.detail;
+      if (event.type === "mousedown") {
+        if (!inputEl.hidden) {
+          event.preventDefault();
+          inputEl.focus({
+            preventScroll: true
+          });
+        }
+      }
+    };
+    listContainerEl.addEventListener("navi_list_select", onListSelect);
+    return () => {
+      listContainerEl.removeEventListener("navi_list_select", onListSelect);
+    };
+  }, []);
+  const onKeyDownWithShortcuts = shortcutsViaOnKeyDown({
+    arrowdown: e => {
+      const listContainerEl = getListContainerEl();
+      e.stopPropagation(); // when within a list, prevent list from handling it twice
+      return requestListNavFromCurrent(listContainerEl, {
+        event: e,
+        goal: "down"
+      });
+    },
+    arrowup: e => {
+      const listContainerEl = getListContainerEl();
+      e.stopPropagation(); // when within a list, prevent list from handling it twice
+      return requestListNavFromCurrent(listContainerEl, {
+        event: e,
+        goal: "up"
+      });
+    },
+    home: e => {
+      const listContainerEl = getListContainerEl();
+      e.stopPropagation(); // when within a list, prevent list from handling it twice
+      return requestListNavFromCurrent(listContainerEl, {
+        event: e,
+        goal: "first"
+      });
+    },
+    end: e => {
+      const listContainerEl = getListContainerEl();
+      e.stopPropagation(); // when within a list, prevent list from handling it twice
+      return requestListNavFromCurrent(listContainerEl, {
+        event: e,
+        goal: "last"
+      });
+    },
+    enter: e => {
+      const listContainerEl = getListContainerEl();
+      e.stopPropagation(); // when within a list, prevent list from handling it twice
+      return requestListSelectCurrent(listContainerEl, {
+        event: e
+      });
+    },
+    escape: e => {
+      // prevent escape from reaching eventual <select> ancestor
+      // when the escape is meant to clear the search input (otherwise it would close the select too)
+      if (e.currentTarget.type === "search" && e.currentTarget.value !== "") {
+        e.stopPropagation();
+        return false;
+      }
+      const listContainerEl = getListContainerEl();
+      // here we allow propagation of escape up to the <select> to allow closing if within a select
+      // it also means list might catch escape and reset again but it's ok to reset twice here as it won't cause side effects
+      // (if we need the same pattern for other events where it could be problematic we would have to mark
+      // event as handled somehow to prevent list containing input to react to it)
+      return requestListInteractionStateReset(listContainerEl, {
+        event: e
+      });
+    }
+  }, onKeyDown);
+  return u$1(ListIdContext.Provider, {
+    value: null,
+    children: u$1(InputTextualDispatcher, {
+      "aria-controls": listId,
+      "aria-autocomplete": "list",
+      "aria-has-popup": "listbox",
+      type: "search",
+      autoComplete: "off",
+      ...rest,
+      ref: ref,
+      listId: undefined,
+      onKeyDown: onKeyDownWithShortcuts
+    })
+  });
+};
+const InputTextualWithSuggestions = props => {
+  const {
+    ref,
+    suggestions,
+    onInput,
+    onFocus,
+    onBlur,
+    onKeyDown,
+    children,
+    ...rest
+  } = props;
+  const [expanded, setExpanded] = y$1(false);
+  const expandedRef = F(expanded);
+  expandedRef.current = expanded;
+  const expand = () => {
+    expandedRef.current = true;
+    setExpanded(true);
+  };
+  const collapse = () => {
+    expandedRef.current = false;
+    setExpanded(false);
+  };
+  const getListContainerEl = () => {
+    const listEl = document.getElementById(suggestions);
+    const listContainerEl = listEl.parentNode;
+    return listContainerEl;
+  };
+  const showSuggestions = e => {
+    if (expandedRef.current) {
+      return;
+    }
+    const listContainerEl = getListContainerEl();
+    if (listContainerEl) {
+      requestListOpen(listContainerEl, {
+        event: e,
+        anchor: ref.current
+      });
+      expand();
+    }
+  };
+  const hideSuggestions = e => {
+    if (!expandedRef.current) {
+      return;
+    }
+    const listContainerEl = getListContainerEl();
+    if (!listContainerEl) {
+      requestListClose(listContainerEl, {
+        event: e
+      });
+      collapse();
+    }
+  };
+  _(() => {
+    const inputEl = ref.current;
+    const listContainerEl = getListContainerEl();
+    if (!listContainerEl) {
+      return undefined;
+    }
+    const onSelect = e => {
+      const {
+        item
+      } = e.detail;
+      const {
+        value
+      } = item;
+      inputEl.value = value;
       inputEl.dispatchEvent(new Event("input", {
         bubbles: true
       }));
-      hidePopover(e);
+      hideSuggestions(e);
     };
-    popoverEl.addEventListener("navi_suggestion_list_selected", onSelected);
+    listContainerEl.addEventListener("navi_list_select", onSelect);
     return () => {
-      popoverEl.removeEventListener("navi_suggestion_list_selected", onSelected);
+      listContainerEl.removeEventListener("navi_list_select", onSelect);
     };
   }, [suggestions]);
-  return u$1(InputTextualPlain, {
-    ref: ref,
-    role: "combobox",
-    autoComplete: "off",
-    "aria-controls": suggestions,
-    "aria-haspopup": "listbox",
-    "aria-expanded": suggestionsOpen,
-    "aria-autocomplete": "list",
-    onnavi_callout_open: e => {
-      hidePopover(e);
-    },
-    onFocus: e => {
-      onFocus?.(e);
-      showPopover(e);
-    },
-    onBlur: e => {
-      onBlur?.(e);
-      hidePopover(e);
-    },
-    onInput: e => {
-      onInput?.(e);
-      showPopover(e);
-    },
-    ...rest
-  });
-};
-const InputTextualPlain = props => {
-  const contextReadOnly = j$1(ReadOnlyContext);
-  const contextDisabled = j$1(DisabledContext);
-  const contextLoading = j$1(LoadingContext);
-  const contextLoadingElement = j$1(LoadingElementContext);
-  const uiStateController = j$1(UIStateControllerContext);
-  const uiState = j$1(UIStateContext);
-  const {
-    type,
-    onInput,
-    readOnly,
-    disabled,
-    loading,
-    autoFocus,
-    autoFocusVisible,
-    autoSelect,
-    icon,
-    cancelButton = type === "search",
-    ...rest
-  } = props;
-  const defaultRef = F();
-  const ref = rest.ref || defaultRef;
-  const innerValue = type === "datetime-local" ? convertToLocalTimezone(uiState) : uiState;
-  const innerLoading = loading || contextLoading && contextLoadingElement === ref.current;
-  const innerReadOnly = readOnly || contextReadOnly || innerLoading || uiStateController.readOnly;
-  const innerDisabled = disabled || contextDisabled;
-  // infom any <label> parent of our readOnly state + that we are interactive
-  reportReadOnlyToLabel(innerReadOnly);
-  reportDisabledToLabel(innerDisabled);
-  reportInteractiveToLabel(true);
-  useAutoFocus(ref, autoFocus, {
-    autoFocusVisible,
-    autoSelect
-  });
-  const remainingProps = useConstraints(ref, rest);
-  const innerOnInput = useStableCallback(onInput);
-  const autoId = P();
-  const innerId = rest.id || autoId;
-  const renderInput = inputProps => {
-    return u$1(Box, {
-      ...inputProps,
-      as: "input",
-      id: innerId,
+  return u$1(ListIdContext.Provider, {
+    value: suggestions,
+    children: u$1(InputTextualDispatcher, {
+      role: "combobox",
+      "aria-haspopup": "listbox",
+      "aria-expanded": expanded,
+      "aria-autocomplete": "list",
+      basePseudoState: {
+        ":-navi-expanded": expanded
+      },
+      onnavi_callout_open: e => {
+        hideSuggestions(e);
+      },
+      ...rest,
       ref: ref,
-      type: type,
-      "data-value": uiState,
-      value: innerValue,
+      suggestions: undefined,
+      onFocus: e => {
+        onFocus?.(e);
+        showSuggestions(e);
+      },
+      onBlur: e => {
+        onBlur?.(e);
+        hideSuggestions(e);
+      },
       onInput: e => {
-        let inputValue;
-        if (type === "number") {
-          inputValue = e.target.valueAsNumber;
-          if (isNaN(inputValue)) {
-            inputValue = e.target.value;
+        onInput?.(e);
+        showSuggestions(e);
+      },
+      onKeyDown: shortcutsViaOnKeyDown({
+        arrowdown: e => {
+          showSuggestions(e);
+        },
+        arrowup: e => {
+          showSuggestions(e);
+        },
+        escape: e => {
+          if (!expandedRef.current) {
+            return false;
           }
-        } else if (type === "datetime-local") {
-          inputValue = convertToUTCTimezone(e.target.value);
-        } else {
-          inputValue = e.target.value;
+          hideSuggestions(e);
+          return true;
         }
-        uiStateController.setUIState(inputValue, e);
-        innerOnInput?.(e);
-      },
-      onresetuistate: e => {
-        uiStateController.resetUIState(e);
-      },
-      onsetuistate: e => {
-        uiStateController.setUIState(e.detail.value, e);
-      }
-      // style management
-      ,
-
-      baseClassName: "navi_native_input",
-      "data-rendered-by": ".navi_input"
-    });
-  };
-  const renderInputMemoized = b(renderInput, [type, uiState, innerValue, innerOnInput, innerId]);
-  let innerIcon;
-  if (icon === undefined) {
-    if (type === "search") {
-      innerIcon = u$1(SearchSvg, {});
-    } else if (type === "email") {
-      innerIcon = u$1(EmailSvg, {});
-    } else if (type === "tel") {
-      innerIcon = u$1(PhoneSvg, {});
-    }
-  } else {
-    innerIcon = icon;
-  }
-  return u$1(Box, {
-    as: "span",
-    flex: true,
-    baseClassName: "navi_input",
-    styleCSSVars: InputStyleCSSVars,
-    pseudoStateSelector: ".navi_native_input",
-    visualSelector: ".navi_native_input",
-    basePseudoState: {
-      ":read-only": innerReadOnly,
-      ":disabled": innerDisabled,
-      ":-navi-loading": innerLoading
-    },
-    pseudoClasses: InputPseudoClasses,
-    pseudoElements: InputPseudoElements,
-    hasChildFunction: true,
-    baseChildPropSet: InputChildPropSet,
-    "data-start-icon": innerIcon ? "" : undefined,
-    "data-end-icon": cancelButton ? "" : undefined,
-    ...remainingProps,
-    ref: undefined,
-    children: [u$1(LoaderBackground, {
-      loading: innerLoading,
-      color: "var(--loader-color)",
-      inset: -1
-    }), innerIcon && u$1(Label, {
-      htmlFor: innerId,
-      disabled: innerDisabled,
-      readOnly: innerReadOnly,
-      className: "navi_input_start_icon",
-      flex: true,
-      alignY: "center",
-      children: u$1(Icon, {
-        color: "rgba(28, 43, 52, 0.5)",
-        children: innerIcon
+      }, onKeyDown),
+      children: children || u$1(InputRightSlot, {
+        onClick: e => {
+          if (expanded) {
+            hideSuggestions(e);
+          } else {
+            showSuggestions(e);
+          }
+        },
+        children: u$1(Icon, {
+          color: "rgba(28, 43, 52, 0.5)",
+          children: u$1(ChevronDownSvg, {})
+        })
       })
-    }), renderInputMemoized, cancelButton && u$1("label", {
-      htmlFor: innerId,
-      "data-readonly": innerReadOnly ? "" : undefined,
-      "data-disabled": innerDisabled ? "" : undefined,
-      className: "navi_input_end_button",
-      onMouseDown: e => {
-        e.preventDefault(); // keep focus in the input
-      },
-      onClick: () => {
-        if (innerReadOnly || innerDisabled) {
-          return;
-        }
-        uiStateController.setUIState("", {
-          trigger: "cancel_button"
-        });
-        ref.current.value = "";
-        ref.current.dispatchEvent(new Event("navi_delete_content"));
-      },
-      children: u$1(Icon, {
-        color: "rgba(28, 43, 52, 0.5)",
-        children: u$1(CloseSvg, {})
-      })
-    })]
+    })
   });
 };
 const InputTextualWithAction = props => {
-  const uiState = j$1(UIStateContext);
   const {
+    ref,
     action,
     actionDebounce,
     actionAfterChange,
@@ -36476,8 +37883,7 @@ const InputTextualWithAction = props => {
     actionErrorEffect,
     ...rest
   } = props;
-  const defaultRef = F();
-  const ref = props.ref || defaultRef;
+  const uiState = j$1(UIStateContext);
   const [boundAction] = useActionBoundToOneParam(action, uiState);
   const {
     loading: actionLoading
@@ -36517,12 +37923,13 @@ const InputTextualWithAction = props => {
     onError: onActionError,
     onEnd: onActionEnd
   });
-  return u$1(InputTextualBasic, {
+  return u$1(InputTextualDispatcher, {
     "data-action": boundAction.name || "anonymous",
     "data-action-debounce": actionDebounce,
     "data-action-after-change": actionAfterChange ? "" : undefined,
     ...rest,
     ref: ref,
+    action: undefined,
     loading: loading || actionLoading
   });
 };
@@ -36609,7 +38016,7 @@ installImportMetaCssBuild(import.meta);/**
  * This means an editable thing MUST have a parent with position relative that wraps the content and the eventual editable input
  *
  */
-const css$9 = /* css */`
+const css$b = /* css */`
   .navi_editable_wrapper {
     --inset-top: 0px;
     --inset-right: 0px;
@@ -36636,7 +38043,7 @@ const css$9 = /* css */`
   }
 `;
 const useEditionController = () => {
-  const [editing, editingSetter] = h(null);
+  const [editing, editingSetter] = y$1(null);
   const startEditing = b(event => {
     editingSetter(current => {
       return current || {
@@ -36658,7 +38065,7 @@ const useEditionController = () => {
   };
 };
 const Editable = props => {
-  import.meta.css = [css$9, "@jsenv/navi/src/field/edition/editable.jsx"];
+  import.meta.css = [css$b, "@jsenv/navi/src/field/edition/editable.jsx"];
   let {
     children,
     action,
@@ -36911,10 +38318,13 @@ const Form = props => {
       for (const childUIStateController of childUIStateControllers) {
         const {
           name,
-          uiState
+          uiState,
+          allowNameless
         } = childUIStateController;
         if (!name) {
-          console.warn("A form child component is missing a name property, its state won't be included in the form state", childUIStateController);
+          if (!allowNameless) {
+            console.warn("A form child component is missing a name property, its state won't be included in the form state", childUIStateController);
+          }
           continue;
         }
         formValues[name] = uiState;
@@ -37071,75 +38481,6 @@ const FormWithAction = props => {
 
 installImportMetaCssBuild(import.meta);
 
-const createItemTracker = () => {
-  const ItemTrackerContext = K();
-  const useItemTrackerProvider = () => {
-    const itemsRef = F([]);
-    const items = itemsRef.current;
-    const itemCountRef = F(0);
-    const tracker = q(() => {
-      const ItemTrackerProvider = ({
-        children
-      }) => {
-        // Reset on each render to start fresh
-        tracker.reset();
-        return u$1(ItemTrackerContext.Provider, {
-          value: tracker,
-          children: children
-        });
-      };
-      ItemTrackerProvider.items = items;
-      return {
-        ItemTrackerProvider,
-        items,
-        registerItem: data => {
-          const index = itemCountRef.current++;
-          items[index] = data;
-          return index;
-        },
-        getItem: index => {
-          return items[index];
-        },
-        getAllItems: () => {
-          return items;
-        },
-        reset: () => {
-          items.length = 0;
-          itemCountRef.current = 0;
-        }
-      };
-    }, []);
-    return tracker.ItemTrackerProvider;
-  };
-  const useTrackItem = data => {
-    const tracker = j$1(ItemTrackerContext);
-    if (!tracker) {
-      throw new Error("useTrackItem must be used within SimpleItemTrackerProvider");
-    }
-    return tracker.registerItem(data);
-  };
-  const useTrackedItem = index => {
-    const trackedItems = useTrackedItems();
-    const item = trackedItems[index];
-    return item;
-  };
-  const useTrackedItems = () => {
-    const tracker = j$1(ItemTrackerContext);
-    if (!tracker) {
-      throw new Error("useTrackedItems must be used within SimpleItemTrackerProvider");
-    }
-    return tracker.items;
-  };
-  return [useItemTrackerProvider, useTrackItem, useTrackedItem, useTrackedItems];
-};
-
-installImportMetaCssBuild(import.meta);createItemTracker();
-
-/**
- * Context OptionList provides downward to its Option children.
- */
-K(null);
-
 const RadioList = props => {
   const uiStateController = useUIGroupStateController(props, "radio_list", {
     childComponentType: "radio",
@@ -37239,7 +38580,7 @@ const RadioListWithAction = props => {
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect
   });
-  const [actionRequester, setActionRequester] = h(null);
+  const [actionRequester, setActionRequester] = y$1(null);
   useActionEvents(innerRef, {
     onCancel: (e, reason) => {
       uiStateController.resetUIState(e);
@@ -37284,220 +38625,1036 @@ const RadioListWithAction = props => {
   });
 };
 
-const useRefArray = (items, keyFromItem) => {
-  const refMapRef = F(new Map());
-  const previousKeySetRef = F(new Set());
+const windowWidthSignal = y(window.innerWidth);
 
-  return q(() => {
-    const refMap = refMapRef.current;
-    const previousKeySet = previousKeySetRef.current;
-    const currentKeySet = new Set();
-    const refArray = [];
+window.addEventListener("resize", () => {
+  windowWidthSignal.value = window.innerWidth;
+});
 
-    for (let i = 0; i < items.length; i++) {
-      const item = items[i];
-      const key = keyFromItem(item);
-      currentKeySet.add(key);
-
-      const refForKey = refMap.get(key);
-      if (refForKey) {
-        refArray[i] = refForKey;
-      } else {
-        const newRef = b$1();
-        refMap.set(key, newRef);
-        refArray[i] = newRef;
-      }
-    }
-
-    for (const key of previousKeySet) {
-      if (!currentKeySet.has(key)) {
-        refMap.delete(key);
-      }
-    }
-    previousKeySetRef.current = currentKeySet;
-
-    return refArray;
-  }, [items]);
+const useCleanup = () => {
+  const cleanupMethodsRef = F(null);
+  let cleanupMethods = cleanupMethodsRef.current;
+  if (!cleanupMethods) {
+    const [publish, subscribe, clear] = createPubSub();
+    const cleanup = () => {
+      publish();
+      clear();
+    };
+    const registerCleanup = (cb) => {
+      subscribe(cb);
+    };
+    cleanupMethodsRef.current = cleanupMethods = [registerCleanup, cleanup];
+  }
+  A(() => {
+    return () => {
+      const [, cleanup] = cleanupMethods;
+      cleanup();
+    };
+  }, []);
+  return cleanupMethods;
 };
 
-installImportMetaCssBuild(import.meta);const useNavState = () => {};
-const css$8 = /* css */`
-  .navi_select[data-readonly] {
-    pointer-events: none;
+installImportMetaCssBuild(import.meta);const css$a = /* css */`
+  .navi_dialog {
+    &[open] {
+      display: flex;
+      flex-direction: column;
+    }
+
+    &::backdrop {
+      background: rgba(0, 0, 0, 0.4);
+    }
   }
 `;
-const Select = M((props, ref) => {
-  import.meta.css = [css$8, "@jsenv/navi/src/field/select.jsx"];
-  const select = renderActionableComponent(props, ref, {
-    Basic: SelectBasic,
-    WithAction: SelectWithAction
-  });
-  return select;
-});
-const SelectControlled = M((props, ref) => {
+const Dialog = props => {
+  import.meta.css = [css$a, "@jsenv/navi/src/popup/dialog.jsx"];
   const {
-    name,
-    value,
-    loading,
-    disabled,
-    readOnly,
     children,
+    scrollTrap,
+    pointerTrap,
     ...rest
   } = props;
-  const innerRef = F();
-  T(ref, () => innerRef.current);
-  const selectElement = u$1("select", {
-    className: "navi_select",
-    ref: innerRef,
-    "data-readonly": readOnly && !disabled ? "" : undefined,
-    onKeyDown: e => {
-      if (readOnly) {
-        e.preventDefault();
+  const defaultRef = F();
+  const ref = rest.ref || defaultRef;
+  const debugPopover = useDebugPopover();
+  const debugFocus = useDebugFocus();
+  const openedRef = F(false);
+  const [addCleanup, cleanup] = useCleanup();
+  const open = e => {
+    debugPopover(`openDialog("${e.type}")`);
+    const dialogEl = ref.current;
+    dialogEl.showModal();
+    const firstFocusable = findFocusable(dialogEl);
+    if (firstFocusable) {
+      debugFocus(`Moving focus to first focusable element in dialog: ${getElementSignature(firstFocusable)}.focus({ preventScroll: true })`);
+      firstFocusable.focus({
+        preventScroll: true
+      });
+    }
+    if (scrollTrap) {
+      addCleanup(trapScrollInside(dialogEl));
+    }
+    openedRef.current = true;
+    dispatchPublicCustomEvent(dialogEl, "navi_dialog_open", {
+      event: e
+    });
+  };
+  const close = e => {
+    debugPopover(`closeDialog("${e.type}")`);
+    const dialogEl = ref.current;
+    dialogEl.close();
+    cleanup();
+    openedRef.current = false;
+    dispatchPublicCustomEvent(dialogEl, "navi_dialog_close", {
+      event: e
+    });
+  };
+  const onRequestOpen = e => {
+    const dialogEl = ref.current;
+    if (!dialogEl) {
+      return;
+    }
+    if (openedRef.current) {
+      return;
+    }
+    open(e);
+  };
+  const onRequestClose = e => {
+    const dialogEl = ref.current;
+    if (!dialogEl) {
+      return;
+    }
+    if (!openedRef.current) {
+      return;
+    }
+    close(e);
+  };
+  return u$1(Box, {
+    ...rest,
+    as: "dialog",
+    ref: ref,
+    baseClassName: "navi_dialog",
+    onMouseDown: e => {
+      // The <dialog> element covers the full viewport; clicking the backdrop
+      // hits the dialog itself (not any child). Close when that happens.
+      if (!pointerTrap && e.target === ref.current) {
+        onRequestClose(e);
+      }
+      rest.onMouseDown?.(e);
+    },
+    onnavi_dialog_request_open: e => {
+      const {
+        event = e
+      } = e.detail;
+      onRequestOpen(event);
+    },
+    onnavi_dialog_request_close: e => {
+      const {
+        event = e
+      } = e.detail;
+      onRequestClose(event);
+    },
+    children: children
+  });
+};
+const requestDialogOpen = (popoverElement, {
+  event
+}) => {
+  return dispatchCustomEvent(popoverElement, "navi_dialog_request_open", {
+    event
+  });
+};
+const requestDialogClose = (popoverElement, {
+  event
+} = {}) => {
+  return dispatchCustomEvent(popoverElement, "navi_dialog_request_close", {
+    event
+  });
+};
+
+installImportMetaCssBuild(import.meta);const css$9 = /* css */`
+  .navi_popover_backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    background: transparent;
+  }
+
+  .navi_popover {
+    &[data-anchor-hidden] {
+      opacity: 0;
+      pointer-events: none;
+    }
+  }
+`;
+const Popover = props => {
+  import.meta.css = [css$9, "@jsenv/navi/src/popup/popover.jsx"];
+  const {
+    scrollTrap,
+    pointerTrap,
+    focusTrap,
+    children,
+    positionTry = "bottom",
+    ...rest
+  } = props;
+  const defaultRef = F();
+  const ref = rest.ref || defaultRef;
+  const defaultId = P();
+  const id = rest.id || defaultId;
+  const debugPopover = useDebugPopover();
+  const debugFocus = useDebugFocus();
+  const [opened, setOpened] = y$1(false);
+  const openedRef = F(opened);
+  openedRef.current = opened;
+  const [addCleanup, cleanup] = useCleanup();
+  const open = (e, {
+    anchor
+  }) => {
+    debugPopover(`openPopover("${e.type}")`);
+    const popoverEl = ref.current;
+    popoverEl.showPopover();
+    const firstFocusable = findFocusable(popoverEl);
+    if (firstFocusable) {
+      debugFocus(`Moving focus to first focusable element in popover: ${getElementSignature(firstFocusable)}.focus({ preventScroll: true })`);
+      firstFocusable.focus({
+        preventScroll: true
+      });
+    }
+    const effectiveAnchor = anchor || document.documentElement;
+    const positionPopover = positionEvent => {
+      debugPopover(`positionPopover("${positionEvent.type}")`);
+      popoverEl.style.setProperty("--anchor-width", `${effectiveAnchor.getBoundingClientRect().width}px`);
+      const minLeft = 1;
+      const effectivePositionTry = anchor ? positionTry : "center";
+      const {
+        left,
+        top
+      } = pickPositionRelativeTo(popoverEl, effectiveAnchor, {
+        positionTry: effectivePositionTry,
+        minLeft
+      });
+      popoverEl.style.top = `${top}px`;
+      const popoverRect = popoverEl.getBoundingClientRect();
+      const maxWidth = parseFloat(getComputedStyle(popoverEl).maxWidth);
+      if (!isNaN(maxWidth) && popoverRect.width >= maxWidth - 1) {
+        const viewportWidth = document.documentElement.clientWidth;
+        const centeredLeft = (viewportWidth - popoverRect.width) / 2;
+        popoverEl.style.left = `${Math.max(centeredLeft, minLeft)}px`;
+      } else {
+        popoverEl.style.left = `${Math.max(left, minLeft)}px`;
+      }
+    };
+    if (scrollTrap) {
+      addCleanup(trapScrollInside(popoverEl));
+    }
+    if (focusTrap) {
+      addCleanup(trapFocusInside(popoverEl, {
+        debug: debugFocus
+      }));
+    }
+    const rectEffect = visibleRectEffect(effectiveAnchor, ({
+      visibilityRatio
+    }, {
+      event
+    }) => {
+      if (visibilityRatio <= 0.2) {
+        popoverEl.setAttribute("data-anchor-hidden", "");
+        return;
+      }
+      popoverEl.removeAttribute("data-anchor-hidden");
+      positionPopover(event);
+    });
+    addCleanup(() => {
+      rectEffect.disconnect();
+    });
+    openedRef.current = true;
+    setOpened(true);
+    dispatchPublicCustomEvent(popoverEl, "navi_popover_open", {
+      event: e
+    });
+  };
+  const close = e => {
+    debugPopover(`closePopover("${e.type}")`);
+    const popoverEl = ref.current;
+    popoverEl.hidePopover();
+    cleanup();
+    openedRef.current = false;
+    setOpened(false);
+    dispatchPublicCustomEvent(popoverEl, "navi_popover_close", {
+      event: e
+    });
+  };
+  const onRequestOpen = (e, {
+    anchor
+  }) => {
+    const popoverEl = ref.current;
+    if (!popoverEl) {
+      return;
+    }
+    if (openedRef.current) {
+      return;
+    }
+    open(e, {
+      anchor
+    });
+  };
+  const onRequestClose = e => {
+    const popoverEl = ref.current;
+    if (!popoverEl) {
+      return;
+    }
+    if (!openedRef.current) {
+      return;
+    }
+    close(e);
+  };
+  return u$1(k, {
+    children: [opened && H$1(u$1("div", {
+      className: "navi_popover_backdrop",
+      "aria-hidden": "true",
+      onMouseDown: e => {
+        if (e.button !== 0) {
+          return;
+        }
+        if (pointerTrap) {
+          e.preventDefault();
+          return;
+        }
+        onRequestClose(e);
+      }
+    }), document.body), u$1(Box, {
+      id: id,
+      popover: "manual",
+      ...rest,
+      ref: ref,
+      baseClassName: "navi_popover",
+      onnavi_popover_request_open: e => {
+        const {
+          event = e,
+          anchor
+        } = e.detail;
+        onRequestOpen(event, {
+          anchor
+        });
+      },
+      onnavi_popover_request_close: e => {
+        const {
+          event = e
+        } = e.detail;
+        onRequestClose(event);
+      },
+      children: children
+    })]
+  });
+};
+const requestPopoverOpen = (popoverElement, {
+  event,
+  anchor
+}) => {
+  return dispatchCustomEvent(popoverElement, "navi_popover_request_open", {
+    event,
+    anchor
+  });
+};
+const requestPopoverClose = (popoverElement, {
+  event
+} = {}) => {
+  return dispatchCustomEvent(popoverElement, "navi_popover_request_close", {
+    event
+  });
+};
+
+installImportMetaCssBuild(import.meta);const css$8 = /* css */`
+  @layer navi {
+    .navi_select {
+      --select-border-radius: 2px;
+      --select-border-width: 1px;
+      --select-outline-width: 1px;
+      --select-font-size: 14px;
+      --select-padding-x-default: 8px;
+      --select-padding-y-default: 5px;
+      --select-border-color: light-dark(#767676, #8e8e93);
+      --select-background-color: white;
+      --select-color: currentColor;
+      --select-placeholder-color: color-mix(
+        in srgb,
+        currentColor 60%,
+        transparent
+      );
+      --select-border-color-hover: color-mix(
+        in srgb,
+        var(--select-border-color) 70%,
+        black
+      );
+      --select-background-color-hover: color-mix(
+        in srgb,
+        var(--select-background-color) 95%,
+        black
+      );
+    }
+  }
+
+  .navi_select {
+    position: relative;
+    box-sizing: border-box;
+    padding-top: var(
+      --select-padding-top,
+      var(--select-padding-y, var(--select-padding-y-default))
+    );
+    padding-right: var(
+      --select-padding-right,
+      var(--select-padding-x, var(--select-padding-x-default))
+    );
+    padding-bottom: var(
+      --select-padding-bottom,
+      var(--select-padding-y, var(--select-padding-y-default))
+    );
+    padding-left: var(
+      --select-padding-left,
+      var(--select-padding-x, var(--select-padding-x-default))
+    );
+    color: var(--select-color);
+    font-size: var(--select-font-size);
+    text-align: inherit; /* override browser defaults on button which is center */
+    white-space: nowrap; /* Prevent icon from going next line */
+    background-color: var(--select-background-color);
+    border: var(--select-border-width) solid transparent;
+    border-radius: var(--select-border-radius);
+    outline: var(--select-outline-width) solid var(--select-border-color);
+    outline-offset: calc(-1 * var(--select-outline-width));
+    user-select: none;
+
+    &:hover {
+      background-color: var(--select-background-color-hover);
+      outline-color: var(--select-border-color-hover);
+    }
+
+    &:focus,
+    &:focus-visible {
+      outline-width: calc(
+        var(--select-border-width) + var(--select-outline-width)
+      );
+      outline-color: var(--navi-focus-outline-color, #005fcc);
+      outline-offset: calc(
+        -1 * (var(--select-border-width) + var(--select-outline-width))
+      );
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: default;
+    }
+
+    .navi_list_container {
+      --list-border-radius: 0;
+    }
+
+    .navi_select_trigger_text {
+      display: inline-flex;
+      min-width: 0;
+      flex: 1;
+      flex-direction: column;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      overflow: hidden;
+    }
+
+    .navi_select_trigger_placeholder,
+    .navi_select_trigger_value {
+    }
+    .navi_select_trigger_placeholder {
+      color: var(--select-placeholder-color);
+
+      &[hidden] {
+        /* We keep placeholder in the dom in case it dictates the select width, this way select wont shrink once a value is selected */
+        display: inline-block;
+        height: 0;
+        padding-block: 0;
+        visibility: hidden;
+      }
+    }
+    .navi_select_trigger_icon {
+      margin-left: 6px;
+      flex-shrink: 0;
+      opacity: 0.6;
+    }
+
+    /* When the list inside the popover has keyboard focus, keep the focus ring
+       on the select trigger for visual continuity */
+    &:not(:has(.navi_select_dialog .navi_list_container:focus)):has(
+        .navi_list_container:focus
+      ) {
+      outline-width: calc(
+        var(--select-border-width) + var(--select-outline-width)
+      );
+      outline-color: var(--navi-focus-outline-color, #005fcc);
+      outline-offset: calc(
+        -1 * (var(--select-border-width) + var(--select-outline-width))
+      );
+    }
+    .navi_list_container:focus {
+      outline: none;
+    }
+
+    /* When the list inside the dialog has keyboard focus, show the focus ring
+       on the dialog instead */
+    .navi_select_dialog:has(.navi_list_container:focus) {
+      outline: var(--select-outline-width) solid
+        var(--navi-focus-outline-color, #005fcc);
+    }
+
+    .navi_select_popover {
+      position: absolute;
+      inset: unset;
+      min-width: var(--select-anchor-width, 0px);
+      max-width: 95vw;
+      max-height: 95dvh;
+      margin: 0;
+      padding: 0;
+      background: white;
+      border: none;
+      border-radius: 0;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+      cursor: default; /* Reset pointer cursor within the select */
+      overflow: auto;
+      overscroll-behavior: none;
+    }
+
+    .navi_select_dialog {
+      max-height: 95dvh;
+      margin: auto;
+      padding: 0;
+      background: white;
+      border: none;
+      border-radius: 8px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+      cursor: default; /* Reset pointer cursor within the select */
+
+      &[open] {
+        display: flex;
+        flex-direction: column;
+      }
+
+      &::backdrop {
+        background: rgba(0, 0, 0, 0.4);
+      }
+    }
+  }
+`;
+
+/**
+ * Select — a trigger button that opens a popover or dialog containing children.
+ *
+ * Props:
+ *   name        — form field name (hidden input for form submission)
+ *   value       — currently selected value (displayed in the trigger)
+ *   placeholder — text shown when value is null/undefined/"" and triggerContent is not set
+ *   triggerContent — custom ReactNode for the trigger, bypasses value/placeholder display
+ *   disabled    — disable the trigger
+ *   uiAction    — called with the selected value when an item confirms a selection
+ *   action      — server action (switches to WithAction variant)
+ *   mode        — "popover" (default, anchored below trigger) | "dialog" (centered modal)
+ *   children    — content rendered inside the popover/dialog (e.g. a <List>)
+ *
+ * Select exposes a ParentUIStateControllerContext so that a <List> placed inside
+ * automatically reports its selected value to Select without explicit prop wiring.
+ * Select in turn reports to a parent Form if one is present.
+ *
+ * Note: the trigger is type="button" — pressing Enter opens/closes the content
+ * but does NOT submit a parent form. Use a separate submit button for that.
+ */
+const Select = props => {
+  const defaultRef = F(null);
+  const ref = props.ref || defaultRef;
+  const uiStateController = useUIGroupStateController(props, "select", {
+    childComponentType: "list",
+    aggregateChildStates: childControllers => {
+      if (childControllers.length === 0) {
+        return undefined;
+      }
+      return childControllers[0].uiState;
+    },
+    emptyState: undefined
+  });
+  uiStateController.onUIStateChange = (value, e) => {
+    uiStateController.uiAction?.(value, e);
+  };
+  const uiState = useUIState(uiStateController);
+  const value = Object.hasOwn(props, "value") ? props.value : uiState;
+  return u$1(ParentUIStateControllerContext.Provider, {
+    value: uiStateController,
+    children: u$1(SelectDispatcher, {
+      ...props,
+      ref: ref,
+      value: value
+    })
+  });
+};
+const SelectDispatcher = props => {
+  const isSmallScreen = windowWidthSignal.value <= 600;
+  const defaultMode = isSmallScreen ? "dialog" : "popover";
+  const {
+    mode = defaultMode
+  } = props;
+  if (mode === "dialog") {
+    return u$1(SelectWithDialog, {
+      ...props
+    });
+  }
+  if (mode === "popover") {
+    return u$1(SelectWithPopover, {
+      ...props
+    });
+  }
+  return u$1(SelectUI, {
+    ...props
+  });
+};
+const SelectPlaceholderContext = Q();
+const SelectValueContext = Q(null);
+const SelectUI = props => {
+  import.meta.css = [css$8, "@jsenv/navi/src/field/select.jsx"];
+  let {
+    placeholder = "Select…",
+    trigger,
+    name,
+    value,
+    readOnly,
+    disabled,
+    loading,
+    children,
+    autoFocus,
+    autoFocusPreventScroll,
+    ...rest
+  } = props;
+  const contextReadOnly = j$1(ReadOnlyContext);
+  const contextDisabled = j$1(DisabledContext);
+  const contextLoading = j$1(LoadingContext);
+  const contextLoadingElement = j$1(LoadingElementContext);
+  const defaultRef = F();
+  const ref = rest.ref || defaultRef;
+  const hiddenInputId = P();
+  const remainingProps = useConstraints(ref, rest);
+  const innerLoading = loading || contextLoading && contextLoadingElement === ref.current;
+  const innerReadOnly = readOnly || contextReadOnly || innerLoading;
+  const innerDisabled = disabled || contextDisabled;
+  reportReadOnlyToLabel(innerReadOnly);
+  reportDisabledToLabel(innerDisabled);
+  reportInteractiveToLabel(true);
+  useAutoFocus(ref, autoFocus, {
+    preventScroll: autoFocusPreventScroll
+  });
+
+  // Re-run constraint validation when value changes (e.g. required constraint reads data-navi-value)
+  A(() => {
+    const el = ref.current;
+    if (!el) {
+      return;
+    }
+    const validationInterface = el.__validationInterface__;
+    if (!validationInterface) {
+      return;
+    }
+    validationInterface.checkValidity();
+  }, [value]);
+  if (trigger === undefined) {
+    trigger = u$1(SelectTrigger, {});
+  }
+  return u$1(Box, {
+    as: "button",
+    type: "button",
+    ...remainingProps,
+    baseClassName: "navi_select",
+    autoFocus: undefined // See use_auto_focus.js
+    ,
+
+    "data-navi-value": value || undefined,
+    "data-input-proxy": name ? `#${CSS.escape(hiddenInputId)}` : undefined,
+    styleCSSVars: SelectStyleCSSVars,
+    basePseudoState: {
+      ...remainingProps.basePseudoState,
+      ":read-only": innerReadOnly,
+      ":disabled": innerDisabled,
+      ":-navi-loading": innerLoading
+    },
+    pseudoClasses: SelectPseudoClasses,
+    pseudoElements: SelectPseudoElements,
+    children: [u$1(LoaderBackground, {
+      loading: innerLoading,
+      color: "var(--loader-color)",
+      inset: -1
+    }), u$1("input", {
+      id: hiddenInputId,
+      type: "hidden",
+      name: name,
+      value: value,
+      required: rest.required,
+      "data-rendered-by": ".navi_select"
+    }), u$1(SelectPlaceholderContext.Provider, {
+      value: placeholder,
+      children: [u$1(SelectValueContext.Provider, {
+        value: value,
+        children: trigger
+      }), children]
+    })]
+  });
+};
+const SelectStyleCSSVars = {
+  "borderWidth": "--select-border-width",
+  "borderRadius": "--select-border-radius",
+  "paddingX": "--select-padding-x",
+  "paddingY": "--select-padding-y",
+  "paddingTop": "--select-padding-top",
+  "paddingRight": "--select-padding-right",
+  "paddingBottom": "--select-padding-bottom",
+  "paddingLeft": "--select-padding-left",
+  "background": "--select-background",
+  "backgroundColor": "--select-background-color",
+  "borderColor": "--select-border-color",
+  "color": "--select-color",
+  "fontSize": "--select-font-size",
+  ":hover": {
+    backgroundColor: "--select-background-color-hover",
+    borderColor: "--select-border-color-hover",
+    color: "--select-color-hover"
+  },
+  ":focus": {
+    backgroundColor: "--select-background-color-focus",
+    borderColor: "--select-border-color-focus"
+  },
+  ":active": {
+    backgroundColor: "--select-background-color-active",
+    borderColor: "--select-border-color-active"
+  },
+  ":read-only": {
+    backgroundColor: "--select-background-color-readonly",
+    borderColor: "--select-border-color-readonly",
+    color: "--select-color-readonly"
+  },
+  ":disabled": {
+    backgroundColor: "--select-background-color-disabled",
+    borderColor: "--select-border-color-disabled",
+    color: "--select-color-disabled"
+  }
+};
+const SelectPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading", ":-navi-expanded"];
+const SelectPseudoElements = ["::-navi-loader"];
+const SelectTrigger = () => {
+  const placeholder = j$1(SelectPlaceholderContext);
+  const value = j$1(SelectValueContext);
+  const hasValue = value !== null && value !== undefined && value !== "";
+  const isPlaceholder = !hasValue;
+  return u$1(k, {
+    children: [u$1("span", {
+      className: "navi_select_trigger_text",
+      children: [u$1("span", {
+        className: "navi_select_trigger_placeholder",
+        hidden: hasValue,
+        children: placeholder
+      }), u$1("span", {
+        className: "navi_select_trigger_value",
+        hidden: isPlaceholder,
+        children: value
+      })]
+    }), u$1(Icon, {
+      className: "navi_select_trigger_icon",
+      children: u$1(ChevronDownSvg, {})
+    })]
+  });
+};
+
+// SelectWithPopover — trigger + popover anchored below the trigger.
+const SelectWithPopover = props => {
+  const {
+    ref,
+    disabled,
+    onKeyDown,
+    children,
+    positionTry,
+    pointerTrap,
+    scrollTrap = true,
+    focusTrap = true,
+    ...rest
+  } = props;
+  const debugFocus = useDebugFocus();
+  const popoverRef = F(null);
+  const popoverId = P();
+  const [expanded, setExpanded] = y$1(false);
+  const expandedRef = F(expanded);
+  expandedRef.current = expanded;
+  const onOpen = () => {
+    expandedRef.current = true;
+    setExpanded(true);
+  };
+  const onClose = () => {
+    expandedRef.current = false;
+    setExpanded(false);
+  };
+  const requestOpen = e => {
+    return requestPopoverOpen(popoverRef.current, {
+      event: e,
+      anchor: ref.current
+    });
+  };
+  const requestClose = e => {
+    return requestPopoverClose(popoverRef.current, {
+      event: e
+    });
+  };
+  const moveFocusToSelect = e => {
+    const select = ref.current;
+    debugFocus(`moveFocusToSelect("${e.type}")`);
+    select.focus({
+      preventScroll: true,
+      focusVisible: true
+    });
+  };
+  return u$1(SelectDispatcher, {
+    disabled: disabled,
+    "aria-haspopup": "listbox",
+    "aria-expanded": expanded,
+    "aria-controls": popoverId,
+    onMouseDown: e => {
+      if (e.button !== 0) {
+        return;
+      }
+      if (disabled) {
+        return;
+      }
+      if (expandedRef.current) {
+        requestClose(e);
+      } else {
+        e.preventDefault(); // prevent browser trying to give focus to the select (popover will take focus)
+        debugFocus(`select mousedown.preventDefault()`);
+        requestOpen(e);
+      }
+    },
+    onClick: e => {
+      if (e.detail === 0) {
+        // click triggered by enter won't open the popover
+        return;
+      }
+      // When a label is clicked it transfers focus to the select
+      // in that case we want to open it (otherwise we have already opened on mousedown interaction)
+      requestOpen(e);
+    }
+    // When a list item is interacted via mousedown, return focus to the select.
+    ,
+
+    onnavi_list_select: e => {
+      const {
+        event
+      } = e.detail;
+      if (event.type === "mousedown") {
+        event.preventDefault(); // prevent browser trying to give focus to the list item
+        debugFocus(`listItem mousedown.preventDefault()`);
+      }
+      if (event.key === " ") {
+        // space can open the popover we don't want space to propagate to the select otherwise it would open it back immediatly
+        event.stopPropagation();
+      }
+      requestClose(e);
+      moveFocusToSelect(e);
+    },
+    onFocusOut: e => {
+      // Close when focus leaves the select entirely (not just moving between internal elements).
+      // relatedTarget is the element receiving focus; if it's inside the select or the popover, keep open.
+      const relatedTarget = e.relatedTarget;
+      const selectEl = ref.current;
+      const popoverEl = popoverRef.current;
+      const focusStaysInside = selectEl && selectEl.contains(relatedTarget) || popoverEl && popoverEl.contains(relatedTarget);
+      if (!focusStaysInside) {
+        requestClose(e);
       }
     },
     ...rest,
-    children: children.map(child => {
+    onKeyDown: shortcutsViaOnKeyDown({
+      arrowdown: e => {
+        e.preventDefault(); // prevent container scroll
+        requestOpen(e);
+      },
+      arrowup: e => {
+        e.preventDefault(); // prevent container scroll
+        requestOpen(e);
+      },
+      space: e => {
+        e.preventDefault(); // prevent scroll
+        requestOpen(e);
+      },
+      escape: e => {
+        if (!expandedRef.current) {
+          return;
+        }
+        e.preventDefault();
+        requestClose(e);
+        moveFocusToSelect(e);
+      }
+    }, onKeyDown),
+    ref: ref,
+    mode: "ui",
+    children: u$1(Popover, {
+      ref: popoverRef,
+      className: "navi_select_popover",
+      onMouseDown: e => {
+        if (e.button !== 0) {
+          return;
+        }
+        // mousedown inside popover should not bubble to the select (would re-open it if that mousedown closes it)
+        e.stopPropagation();
+      },
+      onnavi_popover_open: e => {
+        onOpen();
+      },
+      onnavi_popover_close: e => {
+        onClose();
+        const {
+          event = e
+        } = e.detail;
+        if (event.type === "focusout") ; else {
+          moveFocusToSelect(e);
+        }
+      },
+      positionTry: positionTry,
+      scrollTrap: scrollTrap,
+      pointerTrap: pointerTrap,
+      focusTrap: focusTrap,
+      children: children
+    })
+  });
+};
+// SelectWithDialog — trigger + centered modal dialog.
+const SelectWithDialog = props => {
+  let {
+    ref,
+    disabled,
+    onKeyDown,
+    children,
+    scrollTrap,
+    pointerTrap,
+    ...rest
+  } = props;
+  const debugFocus = useDebugFocus();
+  const dialogRef = F(null);
+  const dialogId = P();
+  const [expanded, setExpanded] = y$1(false);
+  const expandedRef = F(expanded);
+  expandedRef.current = expanded;
+  const onOpen = () => {
+    expandedRef.current = true;
+    setExpanded(true);
+  };
+  const onClose = () => {
+    expandedRef.current = false;
+    setExpanded(false);
+  };
+  const requestOpen = e => {
+    return requestDialogOpen(dialogRef.current, {
+      event: e
+    });
+  };
+  const requestClose = e => {
+    return requestDialogClose(dialogRef.current, {
+      event: e
+    });
+  };
+  const moveFocusToSelect = e => {
+    debugFocus(`moveFocusToSelect("${e.type}")`);
+    ref.current.focus({
+      preventScroll: true,
+      focusVisible: true
+    });
+  };
+  return u$1(SelectDispatcher, {
+    disabled: disabled,
+    "aria-haspopup": "dialog",
+    "aria-expanded": expanded,
+    "aria-controls": dialogId,
+    onMouseDown: e => {
+      if (e.button !== 0) {
+        return;
+      }
+      if (disabled) {
+        return;
+      }
+      if (expandedRef.current) {
+        requestClose(e);
+      } else {
+        e.preventDefault(); // prevent browser trying to give focus to the select (dialog will take focus)
+        debugFocus(`select mousedown.preventDefault()`);
+        requestOpen(e);
+      }
+    },
+    onClick: e => {
+      if (e.detail === 0) {
+        // click triggered by enter won't open the dialog
+        return;
+      }
+      // When a label is clicked it transfers focus to the select, in that case we want to open it
+      requestOpen(e);
+    },
+    onnavi_list_select: e => {
       const {
-        label,
-        readOnly: childReadOnly,
-        disabled: childDisabled,
-        loading: childLoading,
-        value: childValue,
-        ...childRest
-      } = child;
-      return u$1("option", {
-        name: name,
-        value: childValue,
-        selected: childValue === value,
-        readOnly: readOnly || childReadOnly,
-        disabled: disabled || childDisabled,
-        loading: loading || childLoading,
-        ...childRest,
-        children: label
-      }, childValue);
-    })
-  });
-  return u$1(LoaderBackground, {
-    loading: loading,
-    color: "light-dark(#355fcc, #3b82f6)",
-    inset: -1,
-    children: selectElement
-  });
-});
-const SelectBasic = M((props, ref) => {
-  const {
-    value: initialValue,
-    id,
-    children,
-    ...rest
-  } = props;
-  const innerRef = F();
-  T(ref, () => innerRef.current);
-  const [navState, setNavState] = useNavState();
-  const valueAtStart = navState === undefined ? initialValue : navState;
-  const [value, setValue] = h(valueAtStart);
-  _(() => {
-    setNavState(value);
-  }, [value]);
-  return u$1(SelectControlled, {
-    ref: innerRef,
-    value: value,
-    onChange: event => {
-      const select = event.target;
-      const selectedValue = select.value;
-      setValue(selectedValue);
+        event
+      } = e.detail;
+      if (event.key === " ") {
+        // space can open the dialog, we don't want space to propagate to the select otherwise it would open it back immediately
+        event.stopPropagation();
+      }
+      requestClose(e);
     },
     ...rest,
-    children: children
-  });
-});
-const SelectWithAction = M((props, ref) => {
-  const {
-    id,
-    name,
-    value: externalValue,
-    valueSignal,
-    action,
-    children,
-    onCancel,
-    onActionPrevented,
-    onActionStart,
-    onActionAbort,
-    onActionError,
-    onActionEnd,
-    actionErrorEffect,
-    ...rest
-  } = props;
-  const innerRef = F();
-  T(ref, () => innerRef.current);
-  const [navState, setNavState, resetNavState] = useNavState();
-  const [boundAction, value, setValue, initialValue] = useActionBoundToOneParam(action, name);
-  const {
-    loading: actionLoading
-  } = useActionStatus(boundAction);
-  const executeAction = useExecuteAction(innerRef, {
-    errorEffect: actionErrorEffect
-  });
-  _(() => {
-    setNavState(value);
-  }, [value]);
-  const actionRequesterRef = F(null);
-  useActionEvents(innerRef, {
-    onCancel: (e, reason) => {
-      resetNavState();
-      setValue(initialValue);
-      onCancel?.(e, reason);
-    },
-    onPrevented: onActionPrevented,
-    onAction: actionEvent => {
-      actionRequesterRef.current = actionEvent.detail.requester;
-      executeAction(actionEvent);
-    },
-    onStart: onActionStart,
-    onAbort: e => {
-      setValue(initialValue);
-      onActionAbort?.(e);
-    },
-    onError: error => {
-      setValue(initialValue);
-      onActionError?.(error);
-    },
-    onEnd: () => {
-      resetNavState();
-      onActionEnd?.();
-    }
-  });
-  const childRefArray = useRefArray(children, child => child.value);
-  return u$1(SelectControlled, {
-    ref: innerRef,
-    name: name,
-    value: value,
-    "data-action": boundAction,
-    onChange: event => {
-      const select = event.target;
-      const selectedValue = select.value;
-      setValue(selectedValue);
-      const radioListContainer = innerRef.current;
-      const optionSelected = select.querySelector(`option[value="${selectedValue}"]`);
-      requestAction(radioListContainer, boundAction, {
-        event,
-        requester: optionSelected
-      });
-    },
-    ...rest,
-    children: children.map((child, i) => {
-      const childRef = childRefArray[i];
-      return {
-        ...child,
-        ref: childRef,
-        loading: child.loading || actionLoading && actionRequesterRef.current === childRef.current,
-        readOnly: child.readOnly || actionLoading
-      };
+    onKeyDown: shortcutsViaOnKeyDown({
+      arrowdown: e => {
+        e.preventDefault();
+        requestOpen(e);
+      },
+      arrowup: e => {
+        e.preventDefault();
+        requestOpen(e);
+      },
+      space: e => {
+        e.preventDefault();
+        if (!expandedRef.current) {
+          requestOpen(e);
+        }
+      },
+      escape: () => {
+        if (!expandedRef.current) {
+          return;
+        }
+        // native <dialog> handles closing on Escape; we just need focus back
+        // (the onClose handler also calls moveFocusToSelect but escape fires before it)
+      }
+    }, onKeyDown),
+    ref: ref,
+    mode: "ui",
+    children: u$1(Dialog, {
+      ref: dialogRef,
+      className: "navi_select_dialog",
+      onnavi_dialog_open: e => {
+        onOpen();
+      },
+      onnavi_dialog_close: e => {
+        onClose();
+        moveFocusToSelect(e);
+      },
+      onMouseDown: e => {
+        if (e.button !== 0) {
+          return;
+        }
+        // mousedown inside dialog should not bubble to the select (would re-open it if that mousedown closes it)
+        e.stopPropagation();
+      },
+      scrollTrap: scrollTrap,
+      pointerTrap: pointerTrap,
+      children: children
     })
   });
-});
+};
 
-const TableSelectionContext = K();
+installImportMetaCssBuild(import.meta);Q(null);
+
+const TableSelectionContext = Q();
 const useTableSelectionContextValue = (
   selection,
   selectionController,
@@ -37575,12 +39732,12 @@ const filterTableSelection = (selection, predicate) => {
 
 const createIsolatedItemTracker = () => {
   // Producer contexts (ref-based, no re-renders)
-  const ProducerTrackerContext = K();
-  const ProducerItemCountRefContext = K();
-  const ProducerListRenderIdContext = K();
+  const ProducerTrackerContext = Q();
+  const ProducerItemCountRefContext = Q();
+  const ProducerListRenderIdContext = Q();
 
   // Consumer contexts (state-based, re-renders)
-  const ConsumerItemsContext = K();
+  const ConsumerItemsContext = Q();
   const useIsolatedItemTrackerProvider = () => {
     const itemsRef = F([]);
     const items = itemsRef.current;
@@ -37654,8 +39811,11 @@ const createIsolatedItemTracker = () => {
     return [ItemProducerProvider, ItemConsumerProvider, items];
   };
 
-  // Hook for producers to register items (ref-based, no re-renders)
-  const useTrackIsolatedItem = data => {
+  // Hook for producers to register items (ref-based, no re-renders).
+  // id: stable identity across re-renders (same concept as Preact's key prop).
+  // explicitIndex: required when items can be reordered (e.g. after sort/filter),
+  // because Preact renders keyed components in old DOM order, not new array order.
+  const useTrackIsolatedItem = (id, data, explicitIndex) => {
     const listRenderId = j$1(ProducerListRenderIdContext);
     const itemCountRef = j$1(ProducerItemCountRefContext);
     const itemTracker = j$1(ProducerTrackerContext);
@@ -37670,9 +39830,10 @@ const createIsolatedItemTracker = () => {
       return itemIndex;
     }
     listRenderIdRef.current = listRenderId;
-    const itemCount = itemCountRef.current;
-    const itemIndex = itemCount;
-    itemCountRef.current = itemIndex + 1;
+    const itemIndex = explicitIndex !== undefined ? explicitIndex : itemCountRef.current;
+    if (explicitIndex === undefined) {
+      itemCountRef.current = itemIndex + 1;
+    }
     itemIndexRef.current = itemIndex;
     dataRef.current = data;
     itemTracker.registerItem(itemIndex, data);
@@ -37836,7 +39997,7 @@ installImportMetaCssBuild(import.meta);const css$7 = /* css */`
     height: 10px;
   }
 `;
-const TableDragContext = K();
+const TableDragContext = Q();
 const useTableDragContextValue = ({
   tableDragCloneContainerRef,
   tableColumnDropPreviewRef,
@@ -37845,7 +40006,7 @@ const useTableDragContextValue = ({
   canChangeColumnOrder
 }) => {
   setColumnOrder = useStableCallback(setColumnOrder);
-  const [grabTarget, setGrabTarget] = h(null);
+  const [grabTarget, setGrabTarget] = y$1(null);
   const grabColumn = columnIndex => {
     setGrabTarget(`column:${columnIndex}`);
   };
@@ -38151,13 +40312,13 @@ const createTableAttributeSync = (table, tableClone) => {
   return observer;
 };
 
-const TableSizeContext = K();
+const TableSizeContext = Q();
 
 const useTableSizeContextValue = ({
   onColumnSizeChange,
   onRowSizeChange,
   columns,
-  rows,
+  rowTracker,
   columnResizerRef,
   rowResizerRef,
 }) => {
@@ -38174,7 +40335,7 @@ const useTableSizeContextValue = ({
 
     const onRowSizeChangeWithRow = onRowSizeChange
       ? (height, rowIndex) => {
-          const row = rows[rowIndex];
+          const row = rowTracker.getTrackedItemByIndex(rowIndex);
           return onRowSizeChange(height, rowIndex, row);
         }
       : onRowSizeChange;
@@ -39372,7 +41533,7 @@ const initStickyGroup = (
 //   };
 // };
 
-const TableStickyContext = K();
+const TableStickyContext = Q();
 
 const useTableStickyContextValue = ({
   stickyLeftFrontierColumnIndex,
@@ -40168,14 +42329,22 @@ installImportMetaCssBuild(import.meta);/**
  * - Update table column info (I guess a down arrow icon which opens a meny when clicked for instance)
  */
 const [useColumnTrackerProviders, useRegisterColumn, useColumnByIndex] = createIsolatedItemTracker();
-const [useRowTrackerProvider, useRegisterRow, useRowByIndex] = createItemTracker();
-const ColumnProducerProviderContext = K();
-const ColumnConsumerProviderContext = K();
-const ColumnContext = K();
-const RowContext = K();
-const ColumnIndexContext = K();
-const RowIndexContext = K();
-const TableSectionContext = K();
+const TableRowTrackerContext = Q(null);
+const useRegisterRow = rowItem => {
+  const tracker = j$1(TableRowTrackerContext);
+  return tracker.useTrackItem(rowItem);
+};
+const useRowByIndex = index => {
+  const tracker = j$1(TableRowTrackerContext);
+  return tracker.getTrackedItemByIndex(index);
+};
+const ColumnProducerProviderContext = Q();
+const ColumnConsumerProviderContext = Q();
+const ColumnContext = Q();
+const RowContext = Q();
+const ColumnIndexContext = Q();
+const RowIndexContext = Q();
+const TableSectionContext = Q();
 const useIsInTableHead = () => j$1(TableSectionContext) === "head";
 const Table = props => {
   import.meta.css = [css$3, "@jsenv/navi/src/field/table/table.jsx"];
@@ -40203,8 +42372,7 @@ const Table = props => {
   const tableContainerRef = F();
   const tableUIRef = F();
   const [ColumnProducerProvider, ColumnConsumerProvider, columns] = useColumnTrackerProviders();
-  const RowTrackerProvider = useRowTrackerProvider();
-  const rows = RowTrackerProvider.items;
+  const rowTracker = useItemTracker();
 
   // selection
   const selectionController = useTableSelectionController({
@@ -40307,7 +42475,7 @@ const Table = props => {
     onColumnSizeChange,
     onRowSizeChange,
     columns,
-    rows,
+    rowTracker,
     columnResizerRef,
     rowResizerRef
   });
@@ -40342,7 +42510,8 @@ const Table = props => {
                   value: ColumnProducerProvider,
                   children: u$1(ColumnConsumerProviderContext.Provider, {
                     value: ColumnConsumerProvider,
-                    children: u$1(RowTrackerProvider, {
+                    children: u$1(TableRowTrackerContext.Provider, {
+                      value: rowTracker,
                       children: children
                     })
                   })
@@ -40387,16 +42556,17 @@ const Colgroup = ({
 };
 const Col = ({
   id,
+  index,
   width,
   immovable,
   backgroundColor
 }) => {
-  const columnIndex = useRegisterColumn({
+  const columnIndex = useRegisterColumn(id, {
     id,
     width,
     immovable,
     backgroundColor
-  });
+  }, index);
   const {
     stickyLeftFrontierColumnIndex
   } = j$1(TableStickyContext);
@@ -40435,6 +42605,7 @@ const Tbody = ({
 };
 const Tr = ({
   id,
+  index,
   height,
   children
 }) => {
@@ -40454,6 +42625,7 @@ const Tr = ({
   }
   const rowIndex = useRegisterRow({
     id,
+    index,
     height
   });
   const row = useRowByIndex(rowIndex);
@@ -40809,7 +42981,7 @@ const useOrderedColumns = (
 ) => {
   const initialColumnIds =
     columns.map((col) => col[columnIdKey]);
-  const [orderedColumnIds, setOrderedColumnIds] = h(initialColumnIds);
+  const [orderedColumnIds, setOrderedColumnIds] = y$1(initialColumnIds);
 
   const orderingRef = F(null);
   if (!orderingRef.current) {
@@ -41818,7 +43990,7 @@ const SVGMaskOverlay = ({
             width: "100%",
             height: "100%",
             fill: "white"
-          }), J(overlaySvg, {
+          }), K(overlaySvg, {
             className: "svg_mask_content" // Apply styling to make it black
           })]
         }, maskId);
@@ -41931,7 +44103,7 @@ installImportMetaCssBuild(import.meta);const css = /* css */`
     }
   }
 `;
-const SidePanelCloseContext = K(null);
+const SidePanelCloseContext = Q(null);
 const useSidePanelClose = () => j$1(SidePanelCloseContext);
 const SidePanelStyleCSSVars = {
   width: "--side-panel-width"
@@ -41945,10 +44117,10 @@ const SidePanel = ({
   width,
   ...rest
 }) => {
-  import.meta.css = [css, "@jsenv/navi/src/popover/side_panel.jsx"];
+  import.meta.css = [css, "@jsenv/navi/src/popup/side_panel.jsx"];
   onClose = useStableCallback(onClose);
   const panelDialogRef = F(null);
-  const [phase, setPhase] = h(isOpen ? "open" : "closed");
+  const [phase, setPhase] = y$1(isOpen ? "open" : "closed");
   const previousFocusRef = F(null);
   const isMountedRef = F(false);
   A(() => {
@@ -42391,7 +44563,7 @@ const ExplorerItemList = props => {
   } = props;
   const ref = F();
   const itemSelectionSignal = useSignal([]);
-  const [deletedItems, setDeletedItems] = h([]);
+  const [deletedItems, setDeletedItems] = y$1([]);
   const selection = itemSelectionSignal.value;
   const selectionLength = selection.length;
   const selectionController = useSelectionController({
@@ -42508,7 +44680,7 @@ const ExplorerGroup = props => {
       el.setAttribute("data-details-toggle-animation", "");
     });
   }, []);
-  const [isCreatingNew, setIsCreatingNew] = h(false);
+  const [isCreatingNew, setIsCreatingNew] = y$1(false);
   const startCreatingNew = b(() => {
     setIsCreatingNew(true);
   }, [setIsCreatingNew]);
@@ -42632,7 +44804,7 @@ const Aside = ({
   children
 }) => {
   const asideRef = F(null);
-  const [resizing, setResizing] = h(false);
+  const [resizing, setResizing] = y$1(false);
   return u$1("aside", {
     ref: asideRef,
     "data-resize": "horizontal",
@@ -43533,7 +45705,7 @@ const DatabaseLink = ({
 };
 
 const DatabasesDetails = () => {
-  const [resizable, setResizable] = h(false);
+  const [resizable, setResizable] = y$1(false);
   const databaseCount = useDatabaseCount();
   return u$1(ExplorerGroup, {
     id: "database_list",
@@ -43710,7 +45882,7 @@ const RoleLink = ({
 };
 
 const RoleCanLoginListDetails = () => {
-  const [resizable, setResizable] = h(false);
+  const [resizable, setResizable] = y$1(false);
   const roleCanLoginCount = useRoleCanLoginCount();
   return u$1(ExplorerGroup, {
     id: "role_can_login_list",
@@ -43757,7 +45929,7 @@ const RoleCanLoginListDetails = () => {
 };
 
 const RoleGroupListDetails = () => {
-  const [resizable, setResizable] = h(false);
+  const [resizable, setResizable] = y$1(false);
   const roleCannotLoginCount = useRoleGroupCount();
   return u$1(ExplorerGroup, {
     id: "role_group_list",
@@ -43884,7 +46056,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
   }
 `, "@jsenv/database-manager/src/client/assets/role/role_with_ownership/role_with_ownership_list_details.jsx"];
 const RoleWithOwnershipListDetails = () => {
-  const [resizable, setResizable] = h(false);
+  const [resizable, setResizable] = y$1(false);
   const roleWithOwnershipCount = useRoleWithOwnershipCount();
   return u$1(ExplorerGroup, {
     id: "role_ownership_list",
@@ -43999,7 +46171,7 @@ const RoleWithOwnershipListDetails = () => {
 };
 
 const TableListDetails = () => {
-  const [resizable, setResizable] = h(false);
+  const [resizable, setResizable] = y$1(false);
   const tableCount = useTableCount();
   return u$1(ExplorerGroup, {
     id: "table_list",
@@ -44152,7 +46324,7 @@ const DatabaseFieldset = ({
 const RoleField = ({
   role
 }) => {
-  const [editing, setEditing] = h(false);
+  const [editing, setEditing] = y$1(false);
   const startEditing = b(() => {
     setEditing(true);
   }, []);
@@ -44640,8 +46812,8 @@ const RoleGroupMemberList = ({
   role
 }) => {
   const memberList = role.members;
-  const [navState] = useNavState$1(`group_member_list_opened`);
-  const [isAdding, isAddingSetter] = h(navState);
+  const [navState] = useNavState(`group_member_list_opened`);
+  const [isAdding, isAddingSetter] = y$1(navState);
   return u$1("div", {
     children: [u$1("h2", {
       style: "gap: 10px; display: flex; align-items: center;",
@@ -45149,7 +47321,7 @@ const DataTypeField = ({
   putColumn
 }) => {
   const currentMaster = getMasterType(column.data_type) || "Other";
-  const [selectedMaster, setSelectedMaster] = h(currentMaster);
+  const [selectedMaster, setSelectedMaster] = y$1(currentMaster);
   const handleMasterChange = async e => {
     const newMaster = e.currentTarget.value;
     setSelectedMaster(newMaster);
@@ -45234,8 +47406,8 @@ const TextTypeOptions = ({
 }) => {
   const currentLength = column.character_maximum_length ?? null;
   const initialMode = column.data_type === "char" ? "fixed" : currentLength ? "max" : "free";
-  const [mode, setMode] = h(initialMode);
-  const [length, setLength] = h(currentLength ? String(currentLength) : "");
+  const [mode, setMode] = y$1(initialMode);
+  const [length, setLength] = y$1(currentLength ? String(currentLength) : "");
   const applyType = async (newMode, newLength) => {
     let type;
     if (newMode === "free") {
@@ -45418,8 +47590,8 @@ const DateTimeTypeOptions = ({
   putColumn
 }) => {
   const currentBase = getDateTimeBase(column.data_type);
-  const [base, setBase] = h(DATETIME_BASES.includes(currentBase) ? currentBase : "timestamp");
-  const [timezone, setTimezone] = h(column.data_type.includes("with time zone"));
+  const [base, setBase] = y$1(DATETIME_BASES.includes(currentBase) ? currentBase : "timestamp");
+  const [timezone, setTimezone] = y$1(column.data_type.includes("with time zone"));
   const applyType = async (newBase, newTimezone) => {
     let type = newBase;
     if (newTimezone && (newBase === "time" || newBase === "timestamp")) {
@@ -45577,9 +47749,9 @@ const BinaryTypeOptions = ({
   const isBit = column.data_type === "bit" || column.data_type === "bit varying";
   const currentLength = column.character_maximum_length ?? null;
   const isVariable = column.data_type === "bit varying";
-  const [useBit, setUseBit] = h(isBit);
-  const [length, setLength] = h(currentLength ? String(currentLength) : "1");
-  const [variable, setVariable] = h(isVariable);
+  const [useBit, setUseBit] = y$1(isBit);
+  const [length, setLength] = y$1(currentLength ? String(currentLength) : "1");
+  const [variable, setVariable] = y$1(isVariable);
   const applyBitType = async (newLength, newVariable) => {
     const type = newVariable ? `bit varying(${newLength})` : `bit(${newLength})`;
     await putColumn("data_type", type);
@@ -45656,8 +47828,8 @@ const GeneratedField = ({
   isGenerated,
   putColumn
 }) => {
-  const [showForm, setShowForm] = h(false);
-  const [expression, setExpression] = h(column.generation_expression ?? "");
+  const [showForm, setShowForm] = y$1(false);
+  const [expression, setExpression] = y$1(column.generation_expression ?? "");
   if (isGenerated) {
     return u$1(Box, {
       flex: "y",
@@ -45834,7 +48006,7 @@ const TableData = ({
   });
   const orderedColumnIds = orderedColumns.map(c => c.column_name);
   const cellGrid = useCellGridFromRows(rows, orderedColumnIds);
-  const [selection, setSelection] = h([]);
+  const [selection, setSelection] = y$1([]);
   const selectedRowIds = filterTableSelection(selection, ({
     columnId
   }) => columnId === "row_number").map(({
@@ -46195,4 +48367,4 @@ const App = () => {
     })]
   });
 };
-F$1(u$1(App, {}), document.querySelector("#root"));
+G(u$1(App, {}), document.querySelector("#root"));

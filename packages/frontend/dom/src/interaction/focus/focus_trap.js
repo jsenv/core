@@ -1,6 +1,34 @@
 import { performTabNavigation } from "./tab_navigation.js";
 
-export const trapFocusInside = (element) => {
+/**
+ * Traps keyboard focus and mouse clicks inside `element`.
+ *
+ * Once active:
+ * - **Tab / Shift+Tab** cycle through focusable descendants of `element`,
+ *   wrapping from last → first and first → last. If no focusable element
+ *   exists, the default browser Tab action is suppressed so focus cannot
+ *   escape.
+ * - **Mouse clicks** outside `element` are only blocked when `pointerTrap`
+ *   is `true`. Backdrop clicks (on `<dialog>` elements) still propagate even
+ *   then, so the dialog can close itself.
+ *
+ * Multiple traps can be stacked. When a new trap is activated the previous
+ * one is paused; when the new trap is released the previous one resumes.
+ * Traps must be released in LIFO order (the reverse of activation order).
+ *
+ * @param {HTMLElement} element - The root element to trap focus inside.
+ * @param {object} [options]
+ * @param {boolean} [options.pointerTrap=false] - When true, mouse clicks outside `element`
+ *   are cancelled so the user cannot move focus away by clicking the backdrop.
+ *   Backdrop clicks (target is a `<dialog>` element) only receive `preventDefault`
+ *   and still propagate, allowing the dialog to react to them (e.g. close itself).
+ * @param {Function} [options.debug] - Optional debug logger passed to tab navigation.
+ * @returns {() => void} Cleanup function — call it to release the trap.
+ */
+export const trapFocusInside = (
+  element,
+  { debug, pointerTrap = false } = {},
+) => {
   if (element.nodeType === 3) {
     console.warn("cannot trap focus inside a text node");
     return () => {};
@@ -15,39 +43,67 @@ export const trapFocusInside = (element) => {
   }
 
   const isEventOutside = (event) => {
-    if (event.target === element) return false;
-    if (element.contains(event.target)) return false;
+    if (event.target === element) {
+      return false;
+    }
+    if (element.contains(event.target)) {
+      return false;
+    }
     return true;
   };
 
   const lock = () => {
-    const onmousedown = (event) => {
-      if (isEventOutside(event)) {
-        event.preventDefault();
-        event.stopImmediatePropagation();
-      }
-    };
+    const onmousedown = pointerTrap
+      ? (event) => {
+          if (!isEventOutside(event)) {
+            return;
+          }
+          event.preventDefault();
+          // Backdrop clicks (e.g. clicking a <dialog>'s ::backdrop) must still
+          // propagate so the dialog/popover can react to them (e.g. close itself).
+          // A backdrop click is detected when the target is a <dialog> element —
+          // the ::backdrop pseudo-element is not in the DOM, so the event target
+          // becomes the dialog element itself when its content area is not hit.
+          const isBackdropClick =
+            event.target.tagName === "DIALOG" ||
+            event.target.className.includes("backdrop");
+          if (!isBackdropClick) {
+            event.stopImmediatePropagation();
+          }
+        }
+      : null;
 
     const onkeydown = (event) => {
       if (isTabEvent(event)) {
-        performTabNavigation(event, { rootElement: element });
+        const handled = performTabNavigation(event, {
+          rootElement: element,
+          debug,
+        });
+        if (!handled) {
+          // No focusable target found — prevent the browser from moving focus outside the trap.
+          event.preventDefault();
+        }
       }
     };
 
-    document.addEventListener("mousedown", onmousedown, {
-      capture: true,
-      passive: false,
-    });
+    if (onmousedown) {
+      document.addEventListener("mousedown", onmousedown, {
+        capture: true,
+        passive: false,
+      });
+    }
     document.addEventListener("keydown", onkeydown, {
       capture: true,
       passive: false,
     });
 
     return () => {
-      document.removeEventListener("mousedown", onmousedown, {
-        capture: true,
-        passive: false,
-      });
+      if (onmousedown) {
+        document.removeEventListener("mousedown", onmousedown, {
+          capture: true,
+          passive: false,
+        });
+      }
       document.removeEventListener("keydown", onkeydown, {
         capture: true,
         passive: false,

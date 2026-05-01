@@ -26,20 +26,19 @@ import {
   useState,
 } from "preact/hooks";
 
-import { renderActionableComponent } from "../action/render_actionable_component.jsx";
 import { useActionBoundToOneParam } from "../action/use_action.js";
 import { useActionStatus } from "../action/use_action_status.js";
 import { useExecuteAction } from "../action/use_execute_action.js";
 import { Box } from "../box/box.jsx";
-import { PSEUDO_CLASSES } from "../box/pseudo_styles.js";
 import { ChevronDownSvg } from "../graphic/icons/chevron_updown_svg.jsx";
 import { CloseSvg } from "../graphic/icons/close_svg.jsx";
 import { EmailSvg } from "../graphic/icons/email_svg.jsx";
 import { PhoneSvg } from "../graphic/icons/phone_svg.jsx";
 import { SearchSvg } from "../graphic/icons/search_svg.jsx";
 import { LoaderBackground } from "../graphic/loader/loader_background.jsx";
-import { useKeyboardShortcuts } from "../keyboard/keyboard_shortcuts.js";
+import { shortcutsViaOnKeyDown } from "../keyboard/keyboard_shortcuts.js";
 import { Icon } from "../text/icon.jsx";
+import { useAutoFocus } from "../utils/focus/use_auto_focus.js";
 import { useStableCallback } from "../utils/use_stable_callback.js";
 import { fieldPropSet } from "./field_prop_set.js";
 import {
@@ -48,8 +47,15 @@ import {
   reportInteractiveToLabel,
   reportReadOnlyToLabel,
 } from "./label.jsx";
+import {
+  ListIdContext,
+  requestListClose,
+  requestListInteractionStateReset,
+  requestListNavFromCurrent,
+  requestListOpen,
+  requestListSelectCurrent,
+} from "./list/list.jsx";
 import { useActionEvents } from "./use_action_events.js";
-import { useAutoFocus } from "./use_auto_focus.js";
 import {
   DisabledContext,
   LoadingContext,
@@ -62,7 +68,6 @@ import {
 } from "./use_ui_state_controller.js";
 import { forwardActionRequested } from "./validation/custom_constraint_validation.js";
 import { useConstraints } from "./validation/hooks/use_constraints.js";
-import { listenInputValue } from "./validation/input_value_listener.js";
 
 const css = /* css */ `
   @layer navi {
@@ -153,6 +158,7 @@ const css = /* css */ `
 
     .navi_native_input {
       box-sizing: border-box;
+      min-width: 50px;
       padding-top: var(--x-padding-top-base);
       padding-right: calc(var(--x-padding-right-base) + var(--right-slot-size));
       padding-bottom: var(--x-padding-bottom-base);
@@ -279,358 +285,45 @@ const css = /* css */ `
 `;
 
 export const InputTextual = (props) => {
-  import.meta.css = css;
+  const defaultRef = useRef(null);
+  const ref = props.ref || defaultRef;
   const uiStateController = useUIStateController(props, "input");
   const uiState = useUIState(uiStateController);
 
-  const input = renderActionableComponent(props, {
-    Basic: InputTextualBasic,
-    WithAction: InputTextualWithAction,
-  });
   return (
     <UIStateControllerContext.Provider value={uiStateController}>
-      <UIStateContext.Provider value={uiState}>{input}</UIStateContext.Provider>
+      <UIStateContext.Provider value={uiState}>
+        <InputTextualDispatcher {...props} ref={ref} />
+      </UIStateContext.Provider>
     </UIStateControllerContext.Provider>
   );
 };
+const InputTextualDispatcher = (props) => {
+  const listIdFromContext = useContext(ListIdContext);
 
-const InputStyleCSSVars = {
-  "outlineWidth": "--outline-width",
-  "borderWidth": "--border-width",
-  "borderRadius": "--border-radius",
-  "padding": "--padding",
-  "paddingX": "--padding-x",
-  "paddingY": "--padding-y",
-  "paddingTop": "--padding-top",
-  "paddingRight": "--padding-right",
-  "paddingBottom": "--padding-bottom",
-  "paddingLeft": "--padding-left",
-  "background": "--background",
-  "backgroundColor": "--background-color",
-  "borderColor": "--border-color",
-  "color": "--color",
-  "fontSize": "--font-size",
-  ":hover": {
-    backgroundColor: "--background-color-hover",
-    borderColor: "--border-color-hover",
-    color: "--color-hover",
-  },
-  ":focus": {
-    backgroundColor: "--background-color-focus",
-    borderColor: "--border-color-focus",
-  },
-  ":active": {
-    backgroundColor: "--background-color-active",
-    borderColor: "--border-color-active",
-  },
-  ":read-only": {
-    backgroundColor: "--background-color-readonly",
-    borderColor: "--border-color-readonly",
-    color: "--color-readonly",
-  },
-  ":disabled": {
-    backgroundColor: "--background-color-disabled",
-    borderColor: "--border-color-disabled",
-    color: "--color-disabled",
-  },
-};
-const InputPseudoClasses = [
-  ":hover",
-  ":active",
-  ":focus",
-  ":focus-visible",
-  ":read-only",
-  ":disabled",
-  ":-navi-loading",
-  ":navi-has-value",
-  ":navi-expanded",
-];
-Object.assign(PSEUDO_CLASSES, {
-  ":navi-has-value": {
-    attribute: "data-has-value",
-    setup: (el, callback) => {
-      return listenInputValue(el, callback);
-    },
-    test: (el) => {
-      if (el.value === "") {
-        return false;
-      }
-      return true;
-    },
-  },
-});
-const InputPseudoElements = ["::-navi-loader"];
-const InputChildPropSet = new Set([...fieldPropSet]);
-
-const InputNativeContext = createContext(null);
-
-const InputSlot = ({ side, onClick, hideWhileEmpty, ...props }) => {
-  const ctx = useContext(InputNativeContext);
-  const { id, readOnly, disabled } = ctx;
-
-  return (
-    <Label
-      htmlFor={id}
-      className="navi_input_slot"
-      disabled={disabled}
-      readOnly={readOnly}
-      data-readonly={readOnly}
-      data-disabled={disabled}
-      data-left={side === "left" ? "" : undefined}
-      data-right={side === "right" ? "" : undefined}
-      data-hide-while-empty={hideWhileEmpty ? "" : undefined}
-      flex
-      alignY="center"
-      onMouseDown={(e) => {
-        e.preventDefault(); // keep focus in the input
-      }}
-      onClick={(e) => {
-        if (readOnly || disabled) {
-          return;
-        }
-        onClick?.(e);
-      }}
-      {...props}
-    />
-  );
-};
-export const InputLeftSlot = (props) => {
-  return <InputSlot {...props} side="left" />;
-};
-export const InputRightSlot = (props) => {
-  return <InputSlot {...props} side="right" />;
-};
-
-const InputTextualBasic = (props) => {
+  if (props.action) {
+    return <InputTextualWithAction {...props} />;
+  }
+  if (listIdFromContext) {
+    return <InputControllingList listId={listIdFromContext} {...props} />;
+  }
+  if (props.listId) {
+    return <InputControllingList {...props} />;
+  }
   if (props.suggestions) {
     return <InputTextualWithSuggestions {...props} />;
   }
-  return <InputTextualPlain {...props} />;
+  return <InputTextualUI {...props} />;
 };
 
-const InputTextualWithSuggestions = ({
-  suggestions,
-  onInput,
-  onFocus,
-  onBlur,
-  children,
-  ...rest
-}) => {
-  const defaultRef = useRef();
-  const ref = rest.ref || defaultRef;
-  const [expanded, setExpanded] = useState(false);
-  const expandedRef = useRef(expanded);
-  expandedRef.current = expanded;
-  const expand = () => {
-    expandedRef.current = true;
-    setExpanded(true);
-  };
-  const collapse = () => {
-    expandedRef.current = false;
-    setExpanded(false);
-  };
-
-  const showSuggestions = (e) => {
-    if (expandedRef.current) {
-      return;
-    }
-    console.debug(`showPopover (e.type:${e.type})`);
-    const popoverEl = document.getElementById(suggestions);
-    if (!popoverEl) {
-      return;
-    }
-    popoverEl.dispatchEvent(
-      new CustomEvent("navi_suggestion_list_open", {
-        detail: { anchor: ref.current },
-      }),
-    );
-    expand();
-  };
-
-  const hideSuggestions = (e) => {
-    if (!expandedRef.current) {
-      return;
-    }
-    console.debug(`hidePopover (e.type:${e.type})`);
-    const popoverEl = document.getElementById(suggestions);
-    if (popoverEl) {
-      popoverEl.dispatchEvent(new CustomEvent("navi_suggestion_list_close"));
-    }
-    collapse();
-  };
-
-  const dispatchToSuggestionList = (customEvent) => {
-    const popoverEl = document.getElementById(suggestions);
-    if (!popoverEl) {
-      return false;
-    }
-    popoverEl.dispatchEvent(customEvent);
-    return customEvent.defaultPrevented;
-  };
-
-  useKeyboardShortcuts(ref, [
-    {
-      key: "arrowdown",
-      description: "Open popover and point to next suggestion",
-      handler: (e) => {
-        showSuggestions(e);
-        const popoverEl = document.getElementById(suggestions);
-        if (!popoverEl) {
-          return false;
-        }
-        popoverEl.dispatchEvent(
-          new CustomEvent("navi_suggestion_list_navigate", {
-            detail: { direction: "down" },
-          }),
-        );
-        return true;
-      },
-    },
-    {
-      key: "arrowup",
-      description: "Open popover and point to previous suggestion",
-      handler: (e) => {
-        showSuggestions(e);
-        return dispatchToSuggestionList(
-          new CustomEvent("navi_suggestion_list_navigate", {
-            detail: { direction: "up" },
-          }),
-        );
-      },
-    },
-    {
-      key: "home",
-      description: "Point to first suggestion",
-      handler: () => {
-        if (!expandedRef.current) {
-          return false;
-        }
-        return dispatchToSuggestionList(
-          new CustomEvent("navi_suggestion_list_navigate", {
-            detail: { direction: "first" },
-          }),
-        );
-      },
-    },
-    {
-      key: "end",
-      description: "Point to last suggestion",
-      handler: () => {
-        if (!expandedRef.current) {
-          return false;
-        }
-        return dispatchToSuggestionList(
-          new CustomEvent("navi_suggestion_list_navigate", {
-            detail: { direction: "last" },
-          }),
-        );
-      },
-    },
-    {
-      key: "enter",
-      description: "Confirm pointed suggestion",
-      handler: () => {
-        if (!expandedRef.current) {
-          return false;
-        }
-        return dispatchToSuggestionList(
-          new CustomEvent("navi_suggestion_list_confirm", {
-            cancelable: true,
-          }),
-        );
-      },
-    },
-    {
-      key: "escape",
-      description: "Close popover",
-      handler: (e) => {
-        if (!expandedRef.current) {
-          return false;
-        }
-        hideSuggestions(e);
-        return true;
-      },
-    },
-  ]);
-
-  useEffect(() => {
-    const inputEl = ref.current;
-    const popoverEl = document.getElementById(suggestions);
-    if (!popoverEl) {
-      return undefined;
-    }
-    const onSelected = (e) => {
-      inputEl.value = e.detail.value;
-      inputEl.dispatchEvent(new Event("input", { bubbles: true }));
-      hideSuggestions(e);
-    };
-    popoverEl.addEventListener("navi_suggestion_list_selected", onSelected);
-    return () => {
-      popoverEl.removeEventListener(
-        "navi_suggestion_list_selected",
-        onSelected,
-      );
-    };
-  }, [suggestions]);
-
-  return (
-    <InputTextualPlain
-      ref={ref}
-      role="combobox"
-      autoComplete="off"
-      aria-controls={suggestions}
-      aria-haspopup="listbox"
-      aria-expanded={expanded}
-      aria-autocomplete="list"
-      basePseudoState={{
-        ":navi-expanded": expanded,
-      }}
-      onnavi_callout_open={(e) => {
-        hideSuggestions(e);
-      }}
-      onFocus={(e) => {
-        onFocus?.(e);
-        showSuggestions(e);
-      }}
-      onBlur={(e) => {
-        onBlur?.(e);
-        hideSuggestions(e);
-      }}
-      onInput={(e) => {
-        onInput?.(e);
-        showSuggestions(e);
-      }}
-      {...rest}
-    >
-      {children || (
-        <InputRightSlot
-          onClick={(e) => {
-            if (expanded) {
-              hideSuggestions(e);
-            } else {
-              showSuggestions(e);
-            }
-          }}
-        >
-          <Icon color="rgba(28, 43, 52, 0.5)">
-            <ChevronDownSvg />
-          </Icon>
-        </InputRightSlot>
-      )}
-    </InputTextualPlain>
-  );
-};
-
-const InputTextualPlain = (props) => {
-  const contextReadOnly = useContext(ReadOnlyContext);
-  const contextDisabled = useContext(DisabledContext);
-  const contextLoading = useContext(LoadingContext);
-  const contextLoadingElement = useContext(LoadingElementContext);
-  const uiStateController = useContext(UIStateControllerContext);
-  const uiState = useContext(UIStateContext);
+const InputNativeContext = createContext(null);
+const InputTextualUI = (props) => {
+  import.meta.css = css;
   const {
+    ref,
     type,
     onInput,
+    onKeyDown,
 
     readOnly,
     disabled,
@@ -644,8 +337,12 @@ const InputTextualPlain = (props) => {
 
     ...rest
   } = props;
-  const defaultRef = useRef();
-  const ref = rest.ref || defaultRef;
+  const contextReadOnly = useContext(ReadOnlyContext);
+  const contextDisabled = useContext(DisabledContext);
+  const contextLoading = useContext(LoadingContext);
+  const contextLoadingElement = useContext(LoadingElementContext);
+  const uiStateController = useContext(UIStateControllerContext);
+  const uiState = useContext(UIStateContext);
 
   const innerValue =
     type === "datetime-local" ? convertToLocalTimezone(uiState) : uiState;
@@ -659,12 +356,13 @@ const InputTextualPlain = (props) => {
   reportDisabledToLabel(innerDisabled);
   reportInteractiveToLabel(true);
   useAutoFocus(ref, autoFocus, {
-    autoFocusVisible,
+    focusVisible: autoFocusVisible,
     autoSelect,
   });
   const remainingProps = useConstraints(ref, rest);
 
-  const innerOnInput = useStableCallback(onInput);
+  const onInputStable = useStableCallback(onInput);
+  const onKeyDownStable = useStableCallback(onKeyDown);
   const autoId = useId();
   const innerId = rest.id || autoId;
   const renderInput = (inputProps) => {
@@ -690,7 +388,10 @@ const InputTextualPlain = (props) => {
             inputValue = e.target.value;
           }
           uiStateController.setUIState(inputValue, e);
-          innerOnInput?.(e);
+          onInputStable?.(e);
+        }}
+        onKeyDown={(e) => {
+          onKeyDownStable?.(e);
         }}
         onresetuistate={(e) => {
           uiStateController.resetUIState(e);
@@ -708,8 +409,8 @@ const InputTextualPlain = (props) => {
     type,
     uiState,
     innerValue,
-    innerOnInput,
     innerId,
+    autoFocus,
   ]);
 
   let innerChildren;
@@ -775,6 +476,7 @@ const InputTextualPlain = (props) => {
       baseChildPropSet={InputChildPropSet}
       {...remainingProps}
       ref={undefined}
+      autoFocus={undefined} // See use_auto_focus.js
     >
       <LoaderBackground
         loading={innerLoading}
@@ -796,10 +498,337 @@ const InputTextualPlain = (props) => {
     </Box>
   );
 };
+const InputStyleCSSVars = {
+  "outlineWidth": "--outline-width",
+  "borderWidth": "--border-width",
+  "borderRadius": "--border-radius",
+  "padding": "--padding",
+  "paddingX": "--padding-x",
+  "paddingY": "--padding-y",
+  "paddingTop": "--padding-top",
+  "paddingRight": "--padding-right",
+  "paddingBottom": "--padding-bottom",
+  "paddingLeft": "--padding-left",
+  "background": "--background",
+  "backgroundColor": "--background-color",
+  "borderColor": "--border-color",
+  "color": "--color",
+  "fontSize": "--font-size",
+  ":hover": {
+    backgroundColor: "--background-color-hover",
+    borderColor: "--border-color-hover",
+    color: "--color-hover",
+  },
+  ":focus": {
+    backgroundColor: "--background-color-focus",
+    borderColor: "--border-color-focus",
+  },
+  ":active": {
+    backgroundColor: "--background-color-active",
+    borderColor: "--border-color-active",
+  },
+  ":read-only": {
+    backgroundColor: "--background-color-readonly",
+    borderColor: "--border-color-readonly",
+    color: "--color-readonly",
+  },
+  ":disabled": {
+    backgroundColor: "--background-color-disabled",
+    borderColor: "--border-color-disabled",
+    color: "--color-disabled",
+  },
+};
+const InputPseudoClasses = [
+  ":hover",
+  ":active",
+  ":focus",
+  ":focus-visible",
+  ":read-only",
+  ":disabled",
+  ":-navi-loading",
+  ":-navi-has-value",
+  ":-navi-expanded",
+];
+const InputPseudoElements = ["::-navi-loader"];
+const InputChildPropSet = new Set([...fieldPropSet]);
+const InputSlot = ({ side, onClick, hideWhileEmpty, ...props }) => {
+  const ctx = useContext(InputNativeContext);
+  const { id, readOnly, disabled } = ctx;
 
-const InputTextualWithAction = (props) => {
-  const uiState = useContext(UIStateContext);
+  return (
+    <Label
+      htmlFor={id}
+      className="navi_input_slot"
+      disabled={disabled}
+      readOnly={readOnly}
+      data-readonly={readOnly}
+      data-disabled={disabled}
+      data-left={side === "left" ? "" : undefined}
+      data-right={side === "right" ? "" : undefined}
+      data-hide-while-empty={hideWhileEmpty ? "" : undefined}
+      flex
+      alignY="center"
+      onMouseDown={(e) => {
+        e.preventDefault(); // keep focus in the input
+      }}
+      onClick={(e) => {
+        if (readOnly || disabled) {
+          return;
+        }
+        onClick?.(e);
+      }}
+      {...props}
+    />
+  );
+};
+export const InputLeftSlot = (props) => {
+  return <InputSlot {...props} side="left" />;
+};
+export const InputRightSlot = (props) => {
+  return <InputSlot {...props} side="right" />;
+};
+
+const InputControllingList = (props) => {
+  const { ref, listId, onKeyDown, ...rest } = props;
+
+  const getListContainerEl = () => {
+    const listEl = document.getElementById(listId);
+    const listContainerEl = listEl.parentNode;
+    return listContainerEl;
+  };
+
+  useEffect(() => {
+    const inputEl = ref.current;
+    if (!inputEl) {
+      return undefined;
+    }
+    const listContainerEl = getListContainerEl();
+    if (!listContainerEl) {
+      return undefined;
+    }
+    const onListSelect = (e) => {
+      const { event } = e.detail;
+      if (event.type === "mousedown") {
+        if (!inputEl.hidden) {
+          event.preventDefault();
+          inputEl.focus({ preventScroll: true });
+        }
+      }
+    };
+    listContainerEl.addEventListener("navi_list_select", onListSelect);
+    return () => {
+      listContainerEl.removeEventListener("navi_list_select", onListSelect);
+    };
+  }, []);
+
+  const onKeyDownWithShortcuts = shortcutsViaOnKeyDown(
+    {
+      arrowdown: (e) => {
+        const listContainerEl = getListContainerEl();
+        e.stopPropagation(); // when within a list, prevent list from handling it twice
+        return requestListNavFromCurrent(listContainerEl, {
+          event: e,
+          goal: "down",
+        });
+      },
+      arrowup: (e) => {
+        const listContainerEl = getListContainerEl();
+        e.stopPropagation(); // when within a list, prevent list from handling it twice
+        return requestListNavFromCurrent(listContainerEl, {
+          event: e,
+          goal: "up",
+        });
+      },
+      home: (e) => {
+        const listContainerEl = getListContainerEl();
+        e.stopPropagation(); // when within a list, prevent list from handling it twice
+        return requestListNavFromCurrent(listContainerEl, {
+          event: e,
+          goal: "first",
+        });
+      },
+      end: (e) => {
+        const listContainerEl = getListContainerEl();
+        e.stopPropagation(); // when within a list, prevent list from handling it twice
+        return requestListNavFromCurrent(listContainerEl, {
+          event: e,
+          goal: "last",
+        });
+      },
+      enter: (e) => {
+        const listContainerEl = getListContainerEl();
+        e.stopPropagation(); // when within a list, prevent list from handling it twice
+        return requestListSelectCurrent(listContainerEl, { event: e });
+      },
+      escape: (e) => {
+        // prevent escape from reaching eventual <select> ancestor
+        // when the escape is meant to clear the search input (otherwise it would close the select too)
+        if (e.currentTarget.type === "search" && e.currentTarget.value !== "") {
+          e.stopPropagation();
+          return false;
+        }
+        const listContainerEl = getListContainerEl();
+        // here we allow propagation of escape up to the <select> to allow closing if within a select
+        // it also means list might catch escape and reset again but it's ok to reset twice here as it won't cause side effects
+        // (if we need the same pattern for other events where it could be problematic we would have to mark
+        // event as handled somehow to prevent list containing input to react to it)
+        return requestListInteractionStateReset(listContainerEl, { event: e });
+      },
+    },
+    onKeyDown,
+  );
+  return (
+    <ListIdContext.Provider value={null}>
+      <InputTextualDispatcher
+        aria-controls={listId}
+        aria-autocomplete="list"
+        aria-has-popup="listbox"
+        type="search"
+        autoComplete="off"
+        {...rest}
+        ref={ref}
+        listId={undefined}
+        onKeyDown={onKeyDownWithShortcuts}
+      />
+    </ListIdContext.Provider>
+  );
+};
+const InputTextualWithSuggestions = (props) => {
   const {
+    ref,
+    suggestions,
+    onInput,
+    onFocus,
+    onBlur,
+    onKeyDown,
+    children,
+    ...rest
+  } = props;
+  const [expanded, setExpanded] = useState(false);
+  const expandedRef = useRef(expanded);
+  expandedRef.current = expanded;
+  const expand = () => {
+    expandedRef.current = true;
+    setExpanded(true);
+  };
+  const collapse = () => {
+    expandedRef.current = false;
+    setExpanded(false);
+  };
+  const getListContainerEl = () => {
+    const listEl = document.getElementById(suggestions);
+    const listContainerEl = listEl.parentNode;
+    return listContainerEl;
+  };
+  const showSuggestions = (e) => {
+    if (expandedRef.current) {
+      return;
+    }
+    const listContainerEl = getListContainerEl();
+    if (listContainerEl) {
+      requestListOpen(listContainerEl, { event: e, anchor: ref.current });
+      expand();
+    }
+  };
+  const hideSuggestions = (e) => {
+    if (!expandedRef.current) {
+      return;
+    }
+    const listContainerEl = getListContainerEl();
+    if (!listContainerEl) {
+      requestListClose(listContainerEl, { event: e });
+      collapse();
+    }
+  };
+
+  useEffect(() => {
+    const inputEl = ref.current;
+    const listContainerEl = getListContainerEl();
+    if (!listContainerEl) {
+      return undefined;
+    }
+    const onSelect = (e) => {
+      const { item } = e.detail;
+      const { value } = item;
+      inputEl.value = value;
+      inputEl.dispatchEvent(new Event("input", { bubbles: true }));
+      hideSuggestions(e);
+    };
+    listContainerEl.addEventListener("navi_list_select", onSelect);
+    return () => {
+      listContainerEl.removeEventListener("navi_list_select", onSelect);
+    };
+  }, [suggestions]);
+
+  return (
+    <ListIdContext.Provider value={suggestions}>
+      <InputTextualDispatcher
+        role="combobox"
+        aria-haspopup="listbox"
+        aria-expanded={expanded}
+        aria-autocomplete="list"
+        basePseudoState={{
+          ":-navi-expanded": expanded,
+        }}
+        onnavi_callout_open={(e) => {
+          hideSuggestions(e);
+        }}
+        {...rest}
+        ref={ref}
+        suggestions={undefined}
+        onFocus={(e) => {
+          onFocus?.(e);
+          showSuggestions(e);
+        }}
+        onBlur={(e) => {
+          onBlur?.(e);
+          hideSuggestions(e);
+        }}
+        onInput={(e) => {
+          onInput?.(e);
+          showSuggestions(e);
+        }}
+        onKeyDown={shortcutsViaOnKeyDown(
+          {
+            arrowdown: (e) => {
+              showSuggestions(e);
+            },
+            arrowup: (e) => {
+              showSuggestions(e);
+            },
+            escape: (e) => {
+              if (!expandedRef.current) {
+                return false;
+              }
+              hideSuggestions(e);
+              return true;
+            },
+          },
+          onKeyDown,
+        )}
+      >
+        {children || (
+          <InputRightSlot
+            onClick={(e) => {
+              if (expanded) {
+                hideSuggestions(e);
+              } else {
+                showSuggestions(e);
+              }
+            }}
+          >
+            <Icon color="rgba(28, 43, 52, 0.5)">
+              <ChevronDownSvg />
+            </Icon>
+          </InputRightSlot>
+        )}
+      </InputTextualDispatcher>
+    </ListIdContext.Provider>
+  );
+};
+const InputTextualWithAction = (props) => {
+  const {
+    ref,
     action,
     actionDebounce,
     actionAfterChange,
@@ -814,8 +843,7 @@ const InputTextualWithAction = (props) => {
     actionErrorEffect,
     ...rest
   } = props;
-  const defaultRef = useRef();
-  const ref = props.ref || defaultRef;
+  const uiState = useContext(UIStateContext);
   const [boundAction] = useActionBoundToOneParam(action, uiState);
   const { loading: actionLoading } = useActionStatus(boundAction);
   const executeAction = useExecuteAction(ref, {
@@ -857,12 +885,13 @@ const InputTextualWithAction = (props) => {
   });
 
   return (
-    <InputTextualBasic
+    <InputTextualDispatcher
       data-action={boundAction.name || "anonymous"}
       data-action-debounce={actionDebounce}
       data-action-after-change={actionAfterChange ? "" : undefined}
       {...rest}
       ref={ref}
+      action={undefined}
       loading={loading || actionLoading}
     />
   );

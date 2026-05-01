@@ -1,5 +1,7 @@
 import { createPubSub, mergeTwoStyles } from "@jsenv/dom";
 
+import { listenInputValue } from "../field/validation/input_value_listener.js";
+
 const pressedElements = new WeakSet();
 
 export const PSEUDO_CLASSES = {
@@ -59,18 +61,25 @@ export const PSEUDO_CLASSES = {
   ":active": {
     attribute: "data-active",
     setup: (el, callback) => {
-      const onPointerDown = (e) => {
-        el.setPointerCapture(e.pointerId);
+      // It might be tempting to use el.setPointerCapture() here so that pointerup
+      // always fires on el regardless of where the pointer is released. However,
+      // pointer capture routes all subsequent pointer events to the capturing element,
+      // which means any other element in the tree that expects to receive pointerup,
+      // mouseup, click, etc. after a pointerdown will silently not get them.
+      // For example a <label> that reacts to mousedown + click, or a third-party
+      // library that attaches its own listeners, would break because an ancestor
+      // grabbed the pointer out from under them.
+      // To avoid forcing every such element to declare an opt-out attribute
+      // (e.g. navi-own-pointer-capture) we simply listen on document instead,
+      // which is safe and does not interfere with anyone else's event flow.
+      const onPointerDown = () => {
         const onRelease = () => {
-          el.releasePointerCapture(e.pointerId);
-          el.removeEventListener("lostpointercapture", onRelease);
-          el.removeEventListener("pointercancel", onRelease);
-          el.removeEventListener("pointerup", onRelease);
+          document.removeEventListener("pointercancel", onRelease, true);
+          document.removeEventListener("pointerup", onRelease, true);
           callback();
         };
-        el.addEventListener("lostpointercapture", onRelease);
-        el.addEventListener("pointercancel", onRelease);
-        el.addEventListener("pointerup", onRelease);
+        document.addEventListener("pointercancel", onRelease, true);
+        document.addEventListener("pointerup", onRelease, true);
         callback();
       };
       el.addEventListener("pointerdown", onPointerDown);
@@ -83,20 +92,22 @@ export const PSEUDO_CLASSES = {
   ":-navi-pressed": {
     attribute: "data-pressed",
     setup: (el, callback) => {
+      // Same reasoning as :active above: setPointerCapture is avoided because it
+      // hijacks all subsequent pointer events and can break elements that rely on
+      // receiving their own pointerup/mouseup/click after a pointerdown, including
+      // <label> elements and third-party code. Listening on document is the safe
+      // alternative.
       const onPointerDown = (e) => {
         if (e.button !== 0) {
           // only left pointer (mouse left click, touch, pen)
           return;
         }
         pressedElements.add(el);
-        el.setPointerCapture(e.pointerId);
         const onRelease = () => {
           pressedElements.delete(el);
-          el.releasePointerCapture(e.pointerId);
-          el.removeEventListener("lostpointercapture", onRelease);
-          el.removeEventListener("pointercancel", onRelease);
-          el.removeEventListener("pointerup", onRelease);
-          el.removeEventListener("contextmenu", onContextMenu);
+          document.removeEventListener("pointercancel", onRelease, true);
+          document.removeEventListener("pointerup", onRelease, true);
+          document.removeEventListener("contextmenu", onContextMenu, true);
           callback();
         };
         const onContextMenu = (e) => {
@@ -107,18 +118,15 @@ export const PSEUDO_CLASSES = {
           // e.button === -1 means the event was synthesized from a long-press (not a real mouse click).
           if (e.button === -1 && !e.defaultPrevented) {
             pressedElements.delete(el);
-            el.releasePointerCapture(e.pointerId);
-            el.removeEventListener("lostpointercapture", onRelease);
-            el.removeEventListener("pointercancel", onRelease);
-            el.removeEventListener("pointerup", onRelease);
-            el.removeEventListener("contextmenu", onContextMenu);
+            document.removeEventListener("pointercancel", onRelease, true);
+            document.removeEventListener("pointerup", onRelease, true);
+            document.removeEventListener("contextmenu", onContextMenu, true);
             callback();
           }
         };
-        el.addEventListener("lostpointercapture", onRelease);
-        el.addEventListener("pointercancel", onRelease);
-        el.addEventListener("pointerup", onRelease);
-        el.addEventListener("contextmenu", onContextMenu);
+        document.addEventListener("pointercancel", onRelease, true);
+        document.addEventListener("pointerup", onRelease, true);
+        document.addEventListener("contextmenu", onContextMenu, true);
         callback();
       };
       el.addEventListener("pointerdown", onPointerDown);
@@ -300,6 +308,15 @@ export const PSEUDO_CLASSES = {
   ":-navi-pointed": {
     attribute: "data-pointed",
   },
+  ":-navi-pointed-by-mouse": {
+    attribute: "data-pointed-by-mouse",
+  },
+  ":-navi-pointed-by-keyboard": {
+    attribute: "data-pointed-by-keyboard",
+  },
+  ":-navi-pointed-by-proxy": {
+    attribute: "data-pointed-by-proxy",
+  },
   ":-navi-selected": {
     attribute: "data-selected",
   },
@@ -318,8 +335,23 @@ export const PSEUDO_CLASSES = {
   ":-navi-status-error": {
     attribute: "data-status-error",
   },
-  ":navi-expanded": {
+  ":-navi-expanded": {
     attribute: "data-expanded",
+  },
+  ":-navi-void": {
+    attribute: "data-void",
+  },
+  ":-navi-has-value": {
+    attribute: "data-has-value",
+    setup: (el, callback) => {
+      return listenInputValue(el, callback);
+    },
+    test: (el) => {
+      if (el.value === "") {
+        return false;
+      }
+      return true;
+    },
   },
 };
 

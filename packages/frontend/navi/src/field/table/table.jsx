@@ -55,15 +55,15 @@ import { createContext, toChildArray } from "preact";
 import { useContext, useId, useRef } from "preact/hooks";
 
 import { useKeyboardShortcuts } from "../../keyboard/keyboard_shortcuts.js";
+import { useFocusGroup } from "../../utils/focus/use_focus_group.js";
+import { createIsolatedItemTracker } from "../../utils/item_tracker/isolated_item_tracker.jsx";
+import { useItemTracker } from "../../utils/item_tracker/use_item_tracker.js";
 import { withPropsClassName } from "../../utils/with_props_class_name.js";
 import { Editable, useEditionController } from "../edition/editable.jsx";
-import { createIsolatedItemTracker } from "../item_tracker/isolated_item_tracker.jsx";
-import { createItemTracker } from "../item_tracker/item_tracker.jsx";
 import {
   createSelectionKeyboardShortcuts,
   useSelectableElement,
 } from "../selection/selection.jsx";
-import { useFocusGroup } from "../use_focus_group.js";
 import {
   initDragTableColumnViaPointer,
   TableColumnDropPreview,
@@ -100,8 +100,16 @@ import { TableUI } from "./table_ui.jsx";
 
 const [useColumnTrackerProviders, useRegisterColumn, useColumnByIndex] =
   createIsolatedItemTracker();
-const [useRowTrackerProvider, useRegisterRow, useRowByIndex] =
-  createItemTracker();
+
+const TableRowTrackerContext = createContext(null);
+const useRegisterRow = (rowItem) => {
+  const tracker = useContext(TableRowTrackerContext);
+  return tracker.useTrackItem(rowItem);
+};
+const useRowByIndex = (index) => {
+  const tracker = useContext(TableRowTrackerContext);
+  return tracker.getTrackedItemByIndex(index);
+};
 
 const ColumnProducerProviderContext = createContext();
 const ColumnConsumerProviderContext = createContext();
@@ -141,8 +149,7 @@ export const Table = (props) => {
 
   const [ColumnProducerProvider, ColumnConsumerProvider, columns] =
     useColumnTrackerProviders();
-  const RowTrackerProvider = useRowTrackerProvider();
-  const rows = RowTrackerProvider.items;
+  const rowTracker = useItemTracker();
 
   // selection
   const selectionController = useTableSelectionController({
@@ -255,7 +262,7 @@ export const Table = (props) => {
     onColumnSizeChange,
     onRowSizeChange,
     columns,
-    rows,
+    rowTracker,
     columnResizerRef,
     rowResizerRef,
   });
@@ -290,7 +297,9 @@ export const Table = (props) => {
                     <ColumnConsumerProviderContext.Provider
                       value={ColumnConsumerProvider}
                     >
-                      <RowTrackerProvider>{children}</RowTrackerProvider>
+                      <TableRowTrackerContext.Provider value={rowTracker}>
+                        {children}
+                      </TableRowTrackerContext.Provider>
                     </ColumnConsumerProviderContext.Provider>
                   </ColumnProducerProviderContext.Provider>
                 </TableStickyContext.Provider>
@@ -322,13 +331,17 @@ export const Colgroup = ({ children }) => {
     </colgroup>
   );
 };
-export const Col = ({ id, width, immovable, backgroundColor }) => {
-  const columnIndex = useRegisterColumn({
+export const Col = ({ id, index, width, immovable, backgroundColor }) => {
+  const columnIndex = useRegisterColumn(
     id,
-    width,
-    immovable,
-    backgroundColor,
-  });
+    {
+      id,
+      width,
+      immovable,
+      backgroundColor,
+    },
+    index,
+  );
   const { stickyLeftFrontierColumnIndex } = useContext(TableStickyContext);
   const isStickyLeft = columnIndex <= stickyLeftFrontierColumnIndex;
 
@@ -364,7 +377,7 @@ export const Tbody = ({ children }) => {
     </tbody>
   );
 };
-export const Tr = ({ id, height, children }) => {
+export const Tr = ({ id, index, height, children }) => {
   const { selectedRowIds, selectionController } = useContext(
     TableSelectionContext,
   );
@@ -376,7 +389,7 @@ export const Tr = ({ id, height, children }) => {
     // we need strings as this value is going to be used in data attributes and when generating cell ids
     id = String(id);
   }
-  const rowIndex = useRegisterRow({ id, height });
+  const rowIndex = useRegisterRow({ id, index, height });
   const row = useRowByIndex(rowIndex);
   const ColumnConsumerProvider = useContext(ColumnConsumerProviderContext);
 

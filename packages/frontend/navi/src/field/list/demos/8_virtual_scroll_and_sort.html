@@ -1,0 +1,540 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Virtual Scroll + Sort Demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:," />
+    <style>
+      body {
+        margin: 20px;
+        font-family: system-ui, sans-serif;
+        background: #f5f5f5;
+      }
+      #app {
+        max-width: 400px;
+        margin: 0 auto;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { signal } from "@preact/signals";
+      import { useState, useRef } from "preact/hooks";
+      import {
+        Input,
+        List,
+        ListItem,
+        ListItemHeader,
+        useSearchText,
+        Separator,
+      } from "@jsenv/navi";
+
+      const domItemsSignal = signal(0);
+      const peakDomItemsSignal = signal(0);
+      const observer = new MutationObserver(() => {
+        const app = document.getElementById("app");
+        if (!app) {
+          return;
+        }
+        const count = app.querySelectorAll("[navi-list-item-real]").length;
+        domItemsSignal.value = count;
+        if (count > peakDomItemsSignal.value) {
+          peakDomItemsSignal.value = count;
+        }
+      });
+      observer.observe(document.getElementById("app"), {
+        childList: true,
+        subtree: true,
+      });
+
+      const ALL_ITEMS = [
+        "JavaScript",
+        "TypeScript",
+        "Python",
+        "Rust",
+        "Go",
+        "Java",
+        "Kotlin",
+        "Swift",
+        "C",
+        "C++",
+        "C#",
+        "Ruby",
+        "PHP",
+        "Elixir",
+        "Erlang",
+        "Haskell",
+        "Clojure",
+        "Scala",
+        "Dart",
+        "Lua",
+        "Perl",
+        "R",
+        "Julia",
+        "F#",
+        "OCaml",
+        "Zig",
+        "Nim",
+        "Crystal",
+        "D",
+        "Groovy",
+        "React",
+        "Vue",
+        "Angular",
+        "Svelte",
+        "Preact",
+        "SolidJS",
+        "Qwik",
+        "Ember",
+        "Backbone",
+        "Alpine.js",
+        "Lit",
+        "Stencil",
+        "Marko",
+        "Mithril",
+        "Inferno",
+        "Next.js",
+        "Nuxt",
+        "Remix",
+        "Astro",
+        "SvelteKit",
+        "Gatsby",
+        "Vite",
+        "Webpack",
+        "Rollup",
+        "Parcel",
+        "esbuild",
+        "Turbopack",
+        "Babel",
+        "SWC",
+        "Rome",
+        "Biome",
+        "ESLint",
+        "Prettier",
+        "Stylelint",
+        "PostCSS",
+        "Tailwind CSS",
+        "Bootstrap",
+        "Bulma",
+        "Foundation",
+        "Materialize",
+        "Chakra UI",
+        "Ant Design",
+        "MUI",
+        "Radix UI",
+        "shadcn/ui",
+        "Headless UI",
+        "Mantine",
+        "Daisy UI",
+        "Open Props",
+        "PicoCSS",
+        "Node.js",
+        "Deno",
+        "Bun",
+        "Express",
+        "Fastify",
+        "Koa",
+        "Hono",
+        "Hapi",
+        "NestJS",
+        "Adonis",
+        "Feathers",
+        "Sails",
+        "Meteor",
+        "Strapi",
+        "Directus",
+        "Payload",
+        "KeystoneJS",
+        "GraphQL",
+        "tRPC",
+        "REST",
+        "gRPC",
+        "WebSockets",
+        "Socket.IO",
+        "Prisma",
+        "Drizzle",
+        "Sequelize",
+        "TypeORM",
+        "Mongoose",
+        "MikroORM",
+        "Knex",
+        "Redis",
+        "PostgreSQL",
+        "MySQL",
+        "SQLite",
+        "MongoDB",
+        "CouchDB",
+        "Cassandra",
+        "DynamoDB",
+        "Firestore",
+        "Supabase",
+        "PlanetScale",
+        "Neon",
+        "Turso",
+        "Vitest",
+        "Jest",
+        "Mocha",
+        "Jasmine",
+        "AVA",
+        "Tape",
+        "Playwright",
+        "Cypress",
+        "Puppeteer",
+        "Selenium",
+        "Testing Library",
+        "Storybook",
+        "Chromatic",
+        "Docker",
+        "Kubernetes",
+        "Podman",
+        "Terraform",
+        "Ansible",
+        "GitHub Actions",
+        "GitLab CI",
+        "CircleCI",
+        "Jenkins",
+        "Vercel",
+        "Netlify",
+        "Cloudflare",
+        "AWS",
+        "Azure",
+        "GCP",
+        "Fly.io",
+        "Railway",
+        "Render",
+        "Heroku",
+        "Digital Ocean",
+        "Linode",
+        "Hetzner",
+        "git",
+        "pnpm",
+        "npm",
+        "yarn",
+        "bun install",
+        "nvm",
+        "volta",
+        "mise",
+        "asdf",
+        "Nix",
+        "Homebrew",
+        "apt",
+        "brew",
+        "cargo",
+        "pip",
+        "gem",
+        "composer",
+        "maven",
+        "gradle",
+        "sbt",
+        "mix",
+        "opam",
+        "zig build",
+        "make",
+        "cmake",
+        "ninja",
+        "meson",
+        "bazel",
+        "Buck",
+        "Pants",
+        "Nx",
+        "Turborepo",
+        "Lerna",
+        "Rush",
+        "Changesets",
+        "semantic-release",
+        "standard-version",
+        "commitizen",
+        "husky",
+        "lint-staged",
+        "lefthook",
+        "VSCode",
+        "Neovim",
+        "Vim",
+        "Emacs",
+        "Zed",
+        "JetBrains",
+        "Sublime Text",
+        "Notepad++",
+        "Helix",
+        "Kakoune",
+      ];
+
+      // Sort items based on a filter string — now handled by useSearch.
+
+      const StatsBar = ({ totalItems }) => {
+        const domItems = domItemsSignal.value;
+        const peakDomItems = peakDomItemsSignal.value;
+        const savedFromDom = totalItems - domItems;
+        return (
+          <div
+            style={{
+              display: "flex",
+              gap: "16px",
+              marginBottom: "10px",
+              padding: "10px 14px",
+              color: "#d4d4d4",
+              fontSize: "0.85rem",
+              fontFamily: "monospace",
+              background: "#1e1e1e",
+              borderRadius: "6px",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: "2px",
+              }}
+            >
+              <span
+                style={{
+                  color: "#888",
+                  fontSize: "0.7rem",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                }}
+              >
+                Total items
+              </span>
+              <span style={{ fontWeight: "bold", fontSize: "1.1rem" }}>
+                {totalItems}
+              </span>
+            </div>
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: "2px",
+              }}
+            >
+              <span
+                style={{
+                  color: "#888",
+                  fontSize: "0.7rem",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                }}
+              >
+                In DOM
+              </span>
+              <span
+                style={{
+                  fontWeight: "bold",
+                  fontSize: "1.1rem",
+                  color: domItems < totalItems ? "#4ec9b0" : undefined,
+                }}
+              >
+                {domItems}
+              </span>
+            </div>
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: "2px",
+              }}
+            >
+              <span
+                style={{
+                  color: "#888",
+                  fontSize: "0.7rem",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                }}
+              >
+                Peak DOM
+              </span>
+              <span
+                style={{
+                  fontWeight: "bold",
+                  fontSize: "1.1rem",
+                  color: peakDomItems >= totalItems ? "#ce9178" : "#4ec9b0",
+                }}
+              >
+                {peakDomItems}
+              </span>
+            </div>
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: "2px",
+              }}
+            >
+              <span
+                style={{
+                  color: "#888",
+                  fontSize: "0.7rem",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                }}
+              >
+                Saved from DOM
+              </span>
+              <span
+                style={{
+                  fontWeight: "bold",
+                  fontSize: "1.1rem",
+                  color: savedFromDom > 0 ? "#ce9178" : undefined,
+                }}
+              >
+                {savedFromDom}
+              </span>
+            </div>
+          </div>
+        );
+      };
+
+      export const App = () => {
+        const [search, setSearch] = useState("");
+        const [selected, setSelected] = useState(ALL_ITEMS[70]);
+        const [scrollToIndex, setScrollToIndex] = useState(50);
+        const listRef = useRef(null);
+        const [orderedItems, getItemMatchInfo] = useSearchText(
+          search,
+          ALL_ITEMS,
+        );
+
+        const scrollTo = (position) => {
+          const containerEl = listRef.current;
+          if (!containerEl) {
+            return;
+          }
+          if (position === "top") {
+            containerEl.scrollTop = 0;
+          } else if (position === "middle") {
+            containerEl.scrollTop = containerEl.scrollHeight / 2;
+          } else if (position === "bottom") {
+            containerEl.scrollTop = containerEl.scrollHeight;
+          }
+        };
+
+        const scrollToItem = () => {
+          const idx = parseInt(scrollToIndex, 10);
+          if (isNaN(idx)) {
+            return;
+          }
+          const el = listRef.current;
+          if (!el) {
+            return;
+          }
+          const estimated = (el.scrollHeight / ALL_ITEMS.length) * idx;
+          el.scrollTop = estimated;
+        };
+
+        return (
+          <div>
+            <h2>Virtual Scroll + Sort Demo</h2>
+            <p style="font-size:13px;color:#555">
+              ~200 real tech names — virtual scroll active. Typing re-sorts:
+              starts-with matches first, then contains, nothing is hidden.
+            </p>
+            <StatsBar totalItems={ALL_ITEMS.length} />
+            {selected && (
+              <p style="font-size:13px;color:#1a73e8">
+                Selected: <b>{selected}</b>
+              </p>
+            )}
+            {/* Programmatic scroll controls */}
+            <fieldset
+              style={{
+                display: "flex",
+                gap: "8px",
+                flexWrap: "wrap",
+                marginBottom: "10px",
+                alignItems: "center",
+              }}
+            >
+              <legend style={{ fontSize: "0.85rem", color: "#555" }}>
+                Scroll to
+              </legend>
+              <button onClick={() => scrollTo("top")}>Top</button>
+              <button onClick={() => scrollTo("middle")}>Middle</button>
+              <button onClick={() => scrollTo("bottom")}>Bottom</button>
+              <span
+                style={{ display: "flex", gap: "4px", alignItems: "center" }}
+              >
+                <span style={{ fontSize: "0.85rem", color: "#555" }}>
+                  Item index:
+                </span>
+                <input
+                  type="number"
+                  min="0"
+                  max={ALL_ITEMS.length - 1}
+                  value={scrollToIndex}
+                  onInput={(e) => {
+                    setScrollToIndex(e.target.value);
+                  }}
+                  style={{
+                    width: "70px",
+                    padding: "4px 6px",
+                    border: "1px solid #ccc",
+                    borderRadius: "4px",
+                  }}
+                />
+                <button onClick={scrollToItem}>Go</button>
+              </span>
+            </fieldset>
+            <List
+              listRole="listbox"
+              ref={listRef}
+              maxHeight="220px"
+              uiAction={setSelected}
+              expandX
+              withSearch
+              renderBudget={30}
+              searchText={search}
+              separator={<Separator margin="0" />}
+              debugScroll
+            >
+              <ListItemHeader>
+                <Input
+                  placeholder="Sort suggestions…"
+                  paddingX="8px"
+                  paddingY="12px"
+                  expandX
+                  border="1px solid #ccc"
+                  value={search}
+                  uiAction={(v) => {
+                    setSearch(v);
+                  }}
+                  style={{
+                    boxSizing: "border-box",
+                    borderRadius: "6px",
+                    fontSize: "1rem",
+                  }}
+                />
+              </ListItemHeader>
+              {orderedItems.map((item, i) => {
+                const { score, ranges } = getItemMatchInfo(item);
+                return (
+                  <ListItem
+                    role="option"
+                    key={item}
+                    index={i}
+                    id={item}
+                    value={item}
+                    highlight={ranges}
+                    matchScore={score}
+                    selected={selected === item}
+                  >
+                    {item} #{i}
+                  </ListItem>
+                );
+              })}
+            </List>
+          </div>
+        );
+      };
+
+      render(<App />, document.getElementById("app"));
+    </script>
+  </body>
+</html>

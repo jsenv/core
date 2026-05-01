@@ -3,18 +3,21 @@ import { createPubSub } from "../pub_sub.js";
 
 const DEBUG = false;
 
-// Creates a visible rect effect that tracks how much of an element is visible within its scrollable parent
-// and within the document viewport. This is useful for implementing overlays, lazy loading, or any UI
-// that needs to react to element visibility changes.
-//
-// The function returns two visibility ratios:
-// - scrollVisibilityRatio: Visibility ratio relative to the scrollable parent (0-1)
-// - visibilityRatio: Visibility ratio relative to the document viewport (0-1)
-//
-// When scrollable parent is the document, both ratios will be the same.
-// When scrollable parent is a custom container, scrollVisibilityRatio might be 1.0 (fully visible
-// within the container) while visibilityRatio could be 0.0 (container is scrolled out of viewport).
-// A bit like https://tetherjs.dev/ but different
+/**
+ * Tracks how much of an element is visible within its scrollable parent and within the
+ * document viewport. Calls update() on initialization and whenever visibility changes
+ * (scroll, resize, intersection changes).
+ *
+ * The update callback receives a visibleRect object with:
+ * - left, top, right, bottom, width, height: the visible portion of the element,
+ *   clipped to its scroll container's bounds and expressed in overlay coordinates
+ * - visibilityRatio: fraction of the element's area that is truly visible on screen (0–1).
+ *   For document scroll containers this is the viewport-clipped fraction.
+ *   For custom containers this is the fraction clipped by both the container AND the viewport
+ *   (so an element scrolled out of its container correctly reports 0, not 1).
+ *
+ * A bit like https://tetherjs.dev/ but different
+ */
 export const visibleRectEffect = (element, update) => {
   const [teardown, addTeardown] = createPubSub();
   const scrollContainer = getScrollContainer(element);
@@ -22,9 +25,9 @@ export const visibleRectEffect = (element, update) => {
     scrollContainer === document.documentElement;
   let lastMeasuredWidth;
   let lastMeasuredHeight;
-  const check = (reason) => {
+  const check = (event) => {
     if (DEBUG) {
-      console.group(`visibleRect.check("${reason}")`);
+      console.group(`visibleRect.check("${event.type}")`);
     }
 
     // 1. Calculate element position relative to scrollable parent
@@ -119,27 +122,35 @@ export const visibleRectEffect = (element, update) => {
       }
     }
 
-    // Calculate visibility ratios
-    const scrollVisibilityRatio =
-      (widthVisible * heightVisible) / (width * height);
-    // Calculate visibility ratio relative to document viewport
-    let documentVisibilityRatio;
+    // Calculate visibilityRatio: fraction of element area truly visible on screen.
+    // For custom containers we intersect the container-clipped visible size (widthVisible x
+    // heightVisible) with the viewport bounds, so an element scrolled out of its container
+    // correctly reports 0 rather than the raw viewport intersection of its bounding rect.
+    let visibilityRatio;
     if (scrollContainerIsDocument) {
-      documentVisibilityRatio = scrollVisibilityRatio;
+      visibilityRatio = (widthVisible * heightVisible) / (width * height);
     } else {
-      // For custom containers, calculate visibility relative to document viewport
-      const elementRect = element.getBoundingClientRect();
+      // widthVisible/heightVisible are already clipped to the scroll container.
+      // Now clip their viewport-relative counterparts against the viewport.
       const viewportWidth = window.innerWidth;
       const viewportHeight = window.innerHeight;
-      // Calculate how much of the element is visible in the document viewport
-      const elementLeft = Math.max(0, elementRect.left);
-      const elementTop = Math.max(0, elementRect.top);
-      const elementRight = Math.min(viewportWidth, elementRect.right);
-      const elementBottom = Math.min(viewportHeight, elementRect.bottom);
-      const documentVisibleWidth = Math.max(0, elementRight - elementLeft);
-      const documentVisibleHeight = Math.max(0, elementBottom - elementTop);
-      documentVisibilityRatio =
-        (documentVisibleWidth * documentVisibleHeight) / (width * height);
+      // Container-clipped visible rect in viewport coordinates
+      const visibleLeft = overlayLeft;
+      const visibleTop = overlayTop;
+      const visibleRight = overlayLeft + widthVisible;
+      const visibleBottom = overlayTop + heightVisible;
+      // Intersect with viewport
+      const clippedLeft = visibleLeft < 0 ? 0 : visibleLeft;
+      const clippedTop = visibleTop < 0 ? 0 : visibleTop;
+      const clippedRight =
+        visibleRight > viewportWidth ? viewportWidth : visibleRight;
+      const clippedBottom =
+        visibleBottom > viewportHeight ? viewportHeight : visibleBottom;
+      const clippedWidth =
+        clippedRight > clippedLeft ? clippedRight - clippedLeft : 0;
+      const clippedHeight =
+        clippedBottom > clippedTop ? clippedBottom - clippedTop : 0;
+      visibilityRatio = (clippedWidth * clippedHeight) / (width * height);
     }
 
     const visibleRect = {
@@ -149,8 +160,7 @@ export const visibleRectEffect = (element, update) => {
       bottom: overlayTop + heightVisible,
       width: widthVisible,
       height: heightVisible,
-      visibilityRatio: documentVisibilityRatio,
-      scrollVisibilityRatio,
+      visibilityRatio,
     };
 
     if (DEBUG) {
@@ -158,18 +168,19 @@ export const visibleRectEffect = (element, update) => {
       console.groupEnd();
     }
     update(visibleRect, {
+      event,
       width,
       height,
     });
   };
 
-  check("initialization");
+  check(new CustomEvent("initialization"));
 
   const [publishBeforeAutoCheck, onBeforeAutoCheck] = createPubSub();
   auto_check: {
-    const autoCheck = (reason) => {
-      const beforeCheckResults = publishBeforeAutoCheck(reason);
-      check(reason);
+    const autoCheck = (event) => {
+      const beforeCheckResults = publishBeforeAutoCheck(event);
+      check(event);
       for (const beforeCheckResult of beforeCheckResults) {
         if (typeof beforeCheckResult === "function") {
           beforeCheckResult();
@@ -190,8 +201,8 @@ export const visibleRectEffect = (element, update) => {
     on_scroll: {
       // If scrollable parent is not document, also listen to document scroll
       // to update UI position when the scrollable parent moves in viewport
-      const onDocumentScroll = () => {
-        autoCheck("document_scroll");
+      const onDocumentScroll = (e) => {
+        autoCheck(e);
       };
       document.addEventListener("scroll", onDocumentScroll, {
         passive: true,
@@ -202,8 +213,8 @@ export const visibleRectEffect = (element, update) => {
         });
       });
       if (!scrollContainerIsDocument) {
-        const onScroll = () => {
-          autoCheck("scrollable_parent_scroll");
+        const onScroll = (e) => {
+          autoCheck(e);
         };
         scrollContainer.addEventListener("scroll", onScroll, {
           passive: true,
@@ -216,8 +227,8 @@ export const visibleRectEffect = (element, update) => {
       }
     }
     on_window_resize: {
-      const onWindowResize = () => {
-        autoCheck("window_size_change");
+      const onWindowResize = (e) => {
+        autoCheck(e);
       };
       window.addEventListener("resize", onWindowResize);
       addTeardown(() => {
@@ -242,7 +253,9 @@ export const visibleRectEffect = (element, update) => {
           return;
         }
         handlingResize = true;
-        autoCheck(`element_size_change (${width}x${height})`);
+        autoCheck(
+          new CustomEvent("element_size_change", { detail: { width, height } }),
+        );
         handlingResize = false;
       });
       resizeObserver.observe(element);
@@ -262,7 +275,9 @@ export const visibleRectEffect = (element, update) => {
     on_intersection_change: {
       const documentIntersectionObserver = new IntersectionObserver(
         () => {
-          autoCheck("element_intersection_with_document_change");
+          autoCheck(
+            new CustomEvent("element_intersection_with_document_change"),
+          );
         },
         {
           root: null,
@@ -277,7 +292,9 @@ export const visibleRectEffect = (element, update) => {
       if (!scrollContainerIsDocument) {
         const scrollIntersectionObserver = new IntersectionObserver(
           () => {
-            autoCheck("element_intersection_with_scroll_change");
+            autoCheck(
+              new CustomEvent("element_intersection_with_scroll_change"),
+            );
           },
           {
             root: scrollContainer,
@@ -292,8 +309,8 @@ export const visibleRectEffect = (element, update) => {
       }
     }
     on_window_touchmove: {
-      const onWindowTouchMove = () => {
-        autoCheck("window_touchmove");
+      const onWindowTouchMove = (e) => {
+        autoCheck(e);
       };
       window.addEventListener("touchmove", onWindowTouchMove, {
         passive: true,
@@ -315,14 +332,50 @@ export const visibleRectEffect = (element, update) => {
   };
 };
 
+/**
+ * Places element adjacent to anchor using one of 9 compass positions.
+ *
+ * ```
+ *   top-left  |   top   | top-right
+ *   ----------+---------+----------
+ *     left    |  center |   right
+ *   ----------+---------+----------
+ *  bottom-left|  bottom |bottom-right
+ * ```
+ *
+ * All positions except "center" place element outside the anchor:
+ *   - "top"          → element.bottom = anchor.top,    horizontally centered
+ *   - "bottom"       → element.top    = anchor.bottom, horizontally centered  (default)
+ *   - "left"         → element.right  = anchor.left,   vertically centered
+ *   - "right"        → element.left   = anchor.right,  vertically centered
+ *   - "top-left"     → element.bottom = anchor.top,    element.right = anchor.left
+ *   - "top-right"    → element.bottom = anchor.top,    element.left  = anchor.right
+ *   - "bottom-left"  → element.top    = anchor.bottom, element.right = anchor.left
+ *   - "bottom-right" → element.top    = anchor.bottom, element.left  = anchor.right
+ *   - "center"       → element centered on anchor (overlapping)
+ *
+ * @param {HTMLElement} element - The element to position (must be document-relative)
+ * @param {HTMLElement} anchor - The anchor element to position against
+ * @param {object} [options]
+ * @param {string} [options.positionTry="bottom"] - Preferred position. Mimics CSS position-try.
+ *   If it does not fit, the logical opposite is tried automatically:
+ *   top↔bottom, left↔right, top-left↔bottom-right, top-right↔bottom-left.
+ *   The element's data-position-try attribute takes precedence over this param;
+ *   the last resolved position is persisted as data-position-current to avoid flickering.
+ * @param {string} [options.position] - Force a specific position, skipping the fit-check.
+ * @param {number} [options.alignToViewportEdgeWhenAnchorNearEdge=0] - Snap to viewport left
+ *   edge when anchor is within this many px of the left edge and element is wider than anchor.
+ * @param {number} [options.minLeft=0] - Minimum left coordinate (document-relative).
+ * @returns {{ position, left, top, width, height, anchorLeft, anchorTop, anchorRight, anchorBottom, spaceAbove, spaceBelow }}
+ */
 export const pickPositionRelativeTo = (
   element,
-  target,
+  anchor,
   {
-    alignToViewportEdgeWhenTargetNearEdge = 0,
+    positionTry = "bottom",
+    position,
+    alignToViewportEdgeWhenAnchorNearEdge = 0,
     minLeft = 0,
-    positionPreference,
-    forcePosition,
   } = {},
 ) => {
   if (
@@ -346,7 +399,7 @@ export const pickPositionRelativeTo = (
   const viewportHeight = document.documentElement.clientHeight;
   // Get viewport-relative positions
   const elementRect = element.getBoundingClientRect();
-  const targetRect = target.getBoundingClientRect();
+  const anchorRect = anchor.getBoundingClientRect();
   const {
     left: elementLeft,
     right: elementRight,
@@ -354,50 +407,97 @@ export const pickPositionRelativeTo = (
     bottom: elementBottom,
   } = elementRect;
   const {
-    left: targetLeft,
-    right: targetRight,
-    top: targetTop,
-    bottom: targetBottom,
-  } = targetRect;
+    left: anchorLeft,
+    right: anchorRight,
+    top: anchorTop,
+    bottom: anchorBottom,
+  } = anchorRect;
   const elementWidth = elementRight - elementLeft;
   const elementHeight = elementBottom - elementTop;
-  const targetWidth = targetRight - targetLeft;
+  const anchorWidth = anchorRight - anchorLeft;
+  const anchorHeight = anchorBottom - anchorTop;
+
+  // Determine the active position: position wins, then data-position-current (last resolved),
+  // then data-position-try attribute (user preference), then positionTry param
+  let activePosition;
+  if (position) {
+    activePosition = position;
+  } else {
+    const positionCurrentFromAttribute = element.getAttribute(
+      "data-position-current",
+    );
+    const positionTryFromAttribute = element.getAttribute("data-position-try");
+    activePosition =
+      positionCurrentFromAttribute || positionTryFromAttribute || positionTry;
+  }
+
+  const spaceAbove = anchorTop;
+  const spaceBelow = viewportHeight - anchorBottom;
+
+  // Resolve vertical axis, falling back to opposite if the tried position does not fit
+  const { isTop, isBottom, isLeft, isRight, isCenter } =
+    decomposePosition(activePosition);
+  const isCenterX = !isLeft && !isRight; // top / bottom / center
+  const isCenterY = !isTop && !isBottom; // left / right / center
+
+  let resolvedVertical; // "top" | "bottom" | "center-y"
+  if (isCenter || isCenterY) {
+    resolvedVertical = "center-y";
+  } else if (position) {
+    resolvedVertical = isTop ? "top" : "bottom";
+  } else if (isTop) {
+    const minContentVisibilityRatio = 0.6;
+    const fitsAbove = spaceAbove / elementHeight >= minContentVisibilityRatio;
+    if (fitsAbove) {
+      resolvedVertical = "top";
+    } else {
+      resolvedVertical = "bottom"; // opposite of top
+    }
+  } else {
+    // isBottom
+    const elementFitsBelow = spaceBelow >= elementHeight;
+    if (elementFitsBelow) {
+      resolvedVertical = "bottom";
+    } else {
+      resolvedVertical = "top"; // opposite of bottom
+    }
+  }
 
   // Calculate horizontal position (viewport-relative)
   let elementPositionLeft;
   {
-    // Check if target element is wider than viewport
-    const targetIsWiderThanViewport = targetWidth > viewportWidth;
-    if (targetIsWiderThanViewport) {
-      const targetLeftIsVisible = targetLeft >= 0;
-      const targetRightIsVisible = targetRight <= viewportWidth;
-
-      if (!targetLeftIsVisible && targetRightIsVisible) {
-        // Target extends beyond left edge but right side is visible
-        const viewportCenter = viewportWidth / 2;
-        const distanceFromRightEdge = viewportWidth - targetRight;
-        elementPositionLeft =
-          viewportCenter - distanceFromRightEdge / 2 - elementWidth / 2;
-      } else if (targetLeftIsVisible && !targetRightIsVisible) {
-        // Target extends beyond right edge but left side is visible
-        const viewportCenter = viewportWidth / 2;
-        const distanceFromLeftEdge = -targetLeft;
-        elementPositionLeft =
-          viewportCenter - distanceFromLeftEdge / 2 - elementWidth / 2;
-      } else {
-        // Target extends beyond both edges or is fully visible (center in viewport)
-        elementPositionLeft = viewportWidth / 2 - elementWidth / 2;
-      }
+    if (isLeft) {
+      elementPositionLeft = anchorLeft - elementWidth;
+    } else if (isRight) {
+      elementPositionLeft = anchorRight;
     } else {
-      // Target fits within viewport width - center element relative to target
-      elementPositionLeft = targetLeft + targetWidth / 2 - elementWidth / 2;
-      // Special handling when element is wider than target
-      if (alignToViewportEdgeWhenTargetNearEdge) {
-        const elementIsWiderThanTarget = elementWidth > targetWidth;
-        const targetIsNearLeftEdge =
-          targetLeft < alignToViewportEdgeWhenTargetNearEdge;
-        if (elementIsWiderThanTarget && targetIsNearLeftEdge) {
-          elementPositionLeft = minLeft; // Left edge of viewport
+      // centered horizontally on anchor
+      const anchorIsWiderThanViewport = anchorWidth > viewportWidth;
+      if (anchorIsWiderThanViewport) {
+        const anchorLeftIsVisible = anchorLeft >= 0;
+        const anchorRightIsVisible = anchorRight <= viewportWidth;
+        if (!anchorLeftIsVisible && anchorRightIsVisible) {
+          const viewportCenter = viewportWidth / 2;
+          const distanceFromRightEdge = viewportWidth - anchorRight;
+          elementPositionLeft =
+            viewportCenter - distanceFromRightEdge / 2 - elementWidth / 2;
+        } else if (anchorLeftIsVisible && !anchorRightIsVisible) {
+          const viewportCenter = viewportWidth / 2;
+          const distanceFromLeftEdge = -anchorLeft;
+          elementPositionLeft =
+            viewportCenter - distanceFromLeftEdge / 2 - elementWidth / 2;
+        } else {
+          elementPositionLeft = viewportWidth / 2 - elementWidth / 2;
+        }
+      } else {
+        elementPositionLeft = anchorLeft + anchorWidth / 2 - elementWidth / 2;
+        if (alignToViewportEdgeWhenAnchorNearEdge) {
+          const elementIsWiderThanAnchor = elementWidth > anchorWidth;
+          const anchorIsNearLeftEdge =
+            anchorLeft < alignToViewportEdgeWhenAnchorNearEdge;
+          if (elementIsWiderThanAnchor && anchorIsNearLeftEdge) {
+            elementPositionLeft = minLeft;
+          }
         }
       }
     }
@@ -410,82 +510,75 @@ export const pickPositionRelativeTo = (
   }
 
   // Calculate vertical position (viewport-relative)
-  let position;
-  const spaceAboveTarget = targetTop;
-  const spaceBelowTarget = viewportHeight - targetBottom;
-  determine_position: {
-    if (forcePosition) {
-      position = forcePosition;
-      break determine_position;
-    }
-    const elementPreferredPosition = element.getAttribute("data-position");
-    const minContentVisibilityRatio = 0.6; // 60% minimum visibility to keep position
-
-    // Check positionPreference parameter first, then element attribute
-    const preferredPosition = positionPreference || elementPreferredPosition;
-
-    if (preferredPosition) {
-      // Element has a preferred position - try to keep it unless we really struggle
-      const visibleRatio =
-        preferredPosition === "above"
-          ? spaceAboveTarget / elementHeight
-          : spaceBelowTarget / elementHeight;
-      const canShowMinimumContent = visibleRatio >= minContentVisibilityRatio;
-      if (canShowMinimumContent) {
-        position = preferredPosition;
-        break determine_position;
-      }
-    }
-    // No preferred position - use original logic (prefer below, fallback to above if more space)
-    const elementFitsBelow = spaceBelowTarget >= elementHeight;
-    if (elementFitsBelow) {
-      position = "below";
-      break determine_position;
-    }
-    const hasMoreSpaceBelow = spaceBelowTarget >= spaceAboveTarget;
-    position = hasMoreSpaceBelow ? "below" : "above";
-  }
-
   let elementPositionTop;
   {
-    if (position === "below") {
-      // Calculate top position when placing below target (ensure whole pixels)
-      const idealTopWhenBelow = targetBottom;
+    if (resolvedVertical === "center-y") {
+      elementPositionTop = anchorTop + anchorHeight / 2 - elementHeight / 2;
+    } else if (resolvedVertical === "bottom") {
+      const idealTop = anchorBottom;
       elementPositionTop =
-        idealTopWhenBelow % 1 === 0
-          ? idealTopWhenBelow
-          : Math.floor(idealTopWhenBelow) + 1;
+        idealTop % 1 === 0 ? idealTop : Math.floor(idealTop) + 1;
     } else {
-      // Calculate top position when placing above target
-      const idealTopWhenAbove = targetTop - elementHeight;
-      const minimumTopInViewport = 0;
-      elementPositionTop =
-        idealTopWhenAbove < minimumTopInViewport
-          ? minimumTopInViewport
-          : idealTopWhenAbove;
+      // "top"
+      const idealTop = anchorTop - elementHeight;
+      elementPositionTop = idealTop < 0 ? 0 : idealTop;
     }
+  }
+
+  let finalPosition;
+  {
+    const vertPart = resolvedVertical === "center-y" ? "" : resolvedVertical;
+    const horzPart = isCenterX ? "" : isLeft ? "left" : "right";
+    if (vertPart && horzPart) {
+      finalPosition = `${vertPart}-${horzPart}`;
+    } else if (vertPart) {
+      finalPosition = vertPart;
+    } else if (horzPart) {
+      finalPosition = horzPart;
+    } else {
+      finalPosition = "center";
+    }
+  }
+
+  // Persist the resolved position on the element so subsequent calls start from it
+  // (avoids flickering between positions when the element is near the threshold).
+  // position is not persisted — it is always explicit.
+
+  if (!position) {
+    element.setAttribute("data-position-current", finalPosition);
   }
 
   // Get document scroll for final coordinate conversion
   const { scrollLeft, scrollTop } = document.documentElement;
   const elementDocumentLeft = elementPositionLeft + scrollLeft;
   const elementDocumentTop = elementPositionTop + scrollTop;
-  const targetDocumentLeft = targetLeft + scrollLeft;
-  const targetDocumentTop = targetTop + scrollTop;
-  const targetDocumentRight = targetRight + scrollLeft;
-  const targetDocumentBottom = targetBottom + scrollTop;
+  const anchorDocumentLeft = anchorLeft + scrollLeft;
+  const anchorDocumentTop = anchorTop + scrollTop;
+  const anchorDocumentRight = anchorRight + scrollLeft;
+  const anchorDocumentBottom = anchorBottom + scrollTop;
 
   return {
-    position,
+    position: finalPosition,
     left: elementDocumentLeft,
     top: elementDocumentTop,
     width: elementWidth,
     height: elementHeight,
-    targetLeft: targetDocumentLeft,
-    targetTop: targetDocumentTop,
-    targetRight: targetDocumentRight,
-    targetBottom: targetDocumentBottom,
-    spaceAboveTarget,
-    spaceBelowTarget,
+    anchorLeft: anchorDocumentLeft,
+    anchorTop: anchorDocumentTop,
+    anchorRight: anchorDocumentRight,
+    anchorBottom: anchorDocumentBottom,
+    spaceAbove,
+    spaceBelow,
+  };
+};
+// Decompose position flags
+const decomposePosition = (pos) => {
+  return {
+    isTop: pos === "top" || pos === "top-left" || pos === "top-right",
+    isBottom:
+      pos === "bottom" || pos === "bottom-left" || pos === "bottom-right",
+    isLeft: pos === "left" || pos === "top-left" || pos === "bottom-left",
+    isRight: pos === "right" || pos === "top-right" || pos === "bottom-right",
+    isCenter: pos === "center",
   };
 };

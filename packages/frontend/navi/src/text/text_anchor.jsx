@@ -70,6 +70,21 @@ export const TextAnchor = ({
     if (!anchorEl || !childEl) {
       return;
     }
+    // Only correct when the anchor lives in an inline formatting context.
+    // If the parent is a flex/grid container, inline layout rules don't apply
+    // and our font-metrics model is invalid.
+    const parentDisplay = getComputedStyle(anchorEl.parentElement).display;
+    if (
+      parentDisplay !== "inline" &&
+      parentDisplay !== "inline-block" &&
+      parentDisplay !== "block"
+    ) {
+      // we must hide the anchor otherwise it would affect layout without providing any benefit (would trigger flex gap for instance)
+      anchorEl.setAttribute("hidden", "");
+    } else {
+      anchorEl.removeAttribute("hidden");
+    }
+
     const topOffset = computeTopOffset({
       anchorEl,
       childEl,
@@ -104,7 +119,7 @@ export const TextAnchor = ({
   return (
     <>
       {children}
-      <span ref={anchorRef} className="navi_text_anchor">
+      <span ref={anchorRef} className="navi_text_anchor" aria-hidden="true">
         &#8203;
       </span>
     </>
@@ -119,18 +134,6 @@ const computeTopOffset = ({ anchorEl, childEl, textAnchor }) => {
     // No correction needed.
     return 0;
   }
-  // Only correct when the anchor lives in an inline formatting context.
-  // If the parent is a flex/grid container, inline layout rules don't apply
-  // and our font-metrics model is invalid.
-  const parentDisplay = getComputedStyle(anchorEl.parentElement).display;
-  if (
-    parentDisplay !== "inline" &&
-    parentDisplay !== "inline-block" &&
-    parentDisplay !== "block"
-  ) {
-    return 0;
-  }
-
   // The anchor's rendered rect corresponds to the surrounding text's line box:
   // top and bottom are the visual bounds of the line (including line-height).
   const anchorRect = anchorEl.getBoundingClientRect();

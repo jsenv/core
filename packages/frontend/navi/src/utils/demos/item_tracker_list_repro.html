@@ -1,0 +1,417 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Item Tracker - list.jsx repro</title>
+    <link rel="icon" href="data:," />
+    <style>
+      body {
+        margin: 20px;
+        font-family: system-ui, sans-serif;
+      }
+      input {
+        display: block;
+        margin-bottom: 8px;
+      }
+      .status {
+        margin: 4px 0;
+        font-size: 13px;
+      }
+      pre {
+        padding: 8px;
+        color: #ccc;
+        font-size: 11px;
+        white-space: pre-wrap;
+        background: #1e1e1e;
+      }
+    </style>
+  </head>
+  <body>
+    <script type="module" jsenv-type="module/jsx">
+      import { createContext, render } from "preact";
+      import {
+        useContext,
+        useLayoutEffect,
+        useRef,
+        useState,
+      } from "preact/hooks";
+      import { createItemTracker } from "../item_tracker/item_tracker.jsx";
+
+      const SearchContext = createContext(null);
+      // Provides a "notify filler" callback — only set in the fixed case
+      const NotifyFillerContext = createContext(null);
+
+      const ITEMS = [
+        "a-1",
+        "b-1",
+        "a-2",
+        "b-2",
+        "a-3",
+        "b-3",
+        "a-4",
+        "b-4",
+        "a-5",
+        "b-5",
+      ];
+
+      let effectLogs = {};
+      const logEffect = (logId, msg) => {
+        if (!effectLogs[logId]) {
+          effectLogs[logId] = [];
+        }
+        effectLogs[logId].push(msg);
+        const el = document.getElementById(logId);
+        if (el) {
+          el.textContent = effectLogs[logId].join("\n");
+        }
+      };
+      const resetLog = (logId) => {
+        effectLogs[logId] = [];
+        const el = document.getElementById(logId);
+        if (el) {
+          el.textContent = "";
+        }
+      };
+
+      // makeCase: independent set of components per demo case (separate tracker)
+      const makeCase = (logId) => {
+        const [useTrackerProvider, useTrackItem] = createItemTracker({
+          filter: (data) => !data.hidden,
+        });
+
+        // Item: subscribes to SearchContext → re-enqueued separately on context change.
+        // Also reads NotifyFillerContext to optionally call the fixed-case callback.
+        const Item = ({ value, id }) => {
+          const searchContext = useContext(SearchContext);
+          const notifyFiller = useContext(NotifyFillerContext);
+          const hidden = searchContext?.searchText
+            ? !value.startsWith(searchContext.searchText)
+            : false;
+          const index = useTrackItem(id, { hidden, value });
+          useLayoutEffect(() => {
+            logEffect(logId, `  [Item ${value}] index=${index}`);
+            // Fixed case: after committing, tell the parent to re-read the count
+            if (notifyFiller) {
+              notifyFiller();
+            }
+          }, [index]);
+          if (hidden || index === -1) {
+            return null;
+          }
+          return <li>{value}</li>;
+        };
+
+        // Stable vnodes — never re-created when searchText changes in Case.
+        // Same _original → bail-out → re-enqueued via context subscription → separate commit.
+        const itemVnodes = ITEMS.map((v) => <Item key={v} id={v} value={v} />);
+
+        return { useTrackerProvider, itemVnodes };
+      };
+
+      // ── BROKEN ─────────────────────────────────────────────────────────────────
+      // Filler lives in ListLikeBroken, OUTSIDE ItemTrackerProvider.
+      // When searchText changes: ListLikeBroken commits first → filler reads stale count.
+      // Items then commit separately (via context subscription) — too late for filler.
+      const {
+        useTrackerProvider: useTrackerProviderBroken,
+        itemVnodes: ITEMS_BROKEN,
+      } = makeCase("log-broken");
+
+      const ListLikeBroken = ({ children, searchText }) => {
+        const ItemTrackerProvider = useTrackerProviderBroken();
+        const searchContext = { searchText: searchText || null };
+
+        useLayoutEffect(() => {
+          const totalItems = ItemTrackerProvider.items.length;
+          const expected = ITEMS.filter((v) =>
+            searchText ? v.startsWith(searchText) : true,
+          ).length;
+          const ok = totalItems === expected;
+          logEffect(
+            "log-broken",
+            `[filler] totalItems=${totalItems} expected=${expected}${ok ? " ✅" : " ❌ WRONG"}`,
+          );
+          document.getElementById("status-broken").textContent = ok
+            ? "✅ correct"
+            : `❌ WRONG: got ${totalItems}, expected ${expected}`;
+          document.getElementById("status-broken").style.color = ok
+            ? "green"
+            : "red";
+        });
+
+        return (
+          <SearchContext.Provider value={searchContext}>
+            <ul>
+              <ItemTrackerProvider>{children}</ItemTrackerProvider>
+            </ul>
+          </SearchContext.Provider>
+        );
+      };
+
+      // ── FIXED ──────────────────────────────────────────────────────────────────
+      // Items call notifyFiller() in their useLayoutEffect.
+      // This triggers a setState in ListLikeFixed, adding it to rerenderQueue.
+      // After ALL items have committed, ListLikeFixed re-renders and the filler
+      // reads the correct (updated) count from ItemTrackerProvider.items.
+      const {
+        useTrackerProvider: useTrackerProviderFixed,
+        itemVnodes: ITEMS_FIXED,
+      } = makeCase("log-fixed");
+
+      const ListLikeFixed = ({ children, searchText }) => {
+        const ItemTrackerProvider = useTrackerProviderFixed();
+        const searchContext = { searchText: searchText || null };
+        const [, setTick] = useState(0);
+        // isMountedRef: prevent calling setTick during the initial synchronous render
+        // notifyScheduledRef: debounce — only one microtask-scheduled setTick per flush
+        const notifyScheduledRef = useRef(false);
+        const setTickRef = useRef(setTick);
+        setTickRef.current = setTick;
+        // Stable callback: items call this in their useLayoutEffect (separate commit pass).
+        // We schedule a microtask to batch all item notifications into one re-render.
+        const notifyStableRef = useRef(() => {
+          if (!notifyScheduledRef.current) {
+            notifyScheduledRef.current = true;
+            queueMicrotask(() => {
+              notifyScheduledRef.current = false;
+              setTickRef.current((n) => n + 1);
+            });
+          }
+        });
+
+        useLayoutEffect(() => {
+          const totalItems = ItemTrackerProvider.items.length;
+          const expected = ITEMS.filter((v) =>
+            searchText ? v.startsWith(searchText) : true,
+          ).length;
+          const ok = totalItems === expected;
+          logEffect(
+            "log-fixed",
+            `[filler] totalItems=${totalItems} expected=${expected}${ok ? " ✅" : " ❌ WRONG"}`,
+          );
+          document.getElementById("status-fixed").textContent = ok
+            ? "✅ correct"
+            : `❌ WRONG: got ${totalItems}, expected ${expected}`;
+          document.getElementById("status-fixed").style.color = ok
+            ? "green"
+            : "red";
+        });
+
+        return (
+          <NotifyFillerContext.Provider value={notifyStableRef.current}>
+            <SearchContext.Provider value={searchContext}>
+              <ul>
+                <ItemTrackerProvider>{children}</ItemTrackerProvider>
+              </ul>
+            </SearchContext.Provider>
+          </NotifyFillerContext.Provider>
+        );
+      };
+
+      // ── FIXED v2 ────────────────────────────────────────────────────────────────
+      // Same broken setup (filler in parent), but the tracker itself handles notify.
+      // useTrackItem calls notify() in its own useLayoutEffect — no manual notifyFiller
+      // needed in Item. The filler calls useTrackerItems() and re-renders automatically.
+      const createDemoTracker = ({ filter }) => {
+        const registrations = new Map(); // id → { data, order }
+        let orderCounter = 0;
+        const subscribers = new Set();
+        let notifyScheduled = false;
+
+        const notify = () => {
+          if (!notifyScheduled) {
+            notifyScheduled = true;
+            queueMicrotask(() => {
+              notifyScheduled = false;
+              for (const setState of subscribers) {
+                setState((n) => n + 1);
+              }
+            });
+          }
+        };
+
+        // Hook for components that depend on the items list.
+        // Subscribes via a setState — re-renders when notify() is called.
+        const useTrackerItems = () => {
+          const [, setState] = useState(0);
+          useLayoutEffect(() => {
+            subscribers.add(setState);
+            return () => {
+              subscribers.delete(setState);
+            };
+          }, []);
+          return [...registrations.entries()]
+            .filter(([, r]) => filter(r.data))
+            .sort((a, b) => a[1].order - b[1].order)
+            .map(([id]) => id);
+        };
+
+        // Hook for items to register themselves.
+        // Two effects: [] for unmount cleanup, no-deps for per-render update + notify.
+        // This avoids the bug where cleanup deletes registrations BEFORE new effects
+        // re-add them — which would cause notify() to see an empty map.
+        const useTrackItem = (id, data) => {
+          const orderRef = useRef(null);
+          if (orderRef.current === null) {
+            orderRef.current = orderCounter++;
+          }
+          // Set during render so index computation below sees current registrations.
+          registrations.set(id, { data, order: orderRef.current });
+
+          // Unmount only: remove from registrations.
+          useLayoutEffect(() => {
+            return () => {
+              registrations.delete(id);
+              notify();
+            };
+          }, []);
+
+          // Every render: re-sync data and notify dependents.
+          // No cleanup here — registrations are only removed on unmount (above).
+          useLayoutEffect(() => {
+            registrations.set(id, { data, order: orderRef.current });
+            notify();
+          });
+
+          if (!filter(data)) {
+            return -1;
+          }
+          const visible = [...registrations.values()]
+            .filter((r) => filter(r.data))
+            .sort((a, b) => a.order - b.order);
+          return visible.findIndex((r) => r.order === orderRef.current);
+        };
+
+        const ItemTrackerProvider = ({ children }) => children;
+
+        return { ItemTrackerProvider, useTrackItem, useTrackerItems };
+      };
+
+      const trackerFixed3 = createDemoTracker({
+        filter: (data) => !data.hidden,
+      });
+
+      // Item3: no NotifyFillerContext needed — useTrackItem handles it.
+      const Item3 = ({ value, id }) => {
+        const searchContext = useContext(SearchContext);
+        const hidden = searchContext?.searchText
+          ? !value.startsWith(searchContext.searchText)
+          : false;
+        const index = trackerFixed3.useTrackItem(id, { hidden, value });
+        useLayoutEffect(() => {
+          logEffect("log-fixed3", `  [Item ${value}] index=${index}`);
+        }, [index]);
+        if (hidden || index === -1) {
+          return null;
+        }
+        return <li>{value}</li>;
+      };
+
+      const ITEMS_FIXED3 = ITEMS.map((v) => <Item3 key={v} id={v} value={v} />);
+
+      const ListLikeFixed3 = ({ children, searchText }) => {
+        const { ItemTrackerProvider } = trackerFixed3;
+        // Stable searchContext reference — only new object when searchText actually changes.
+        // Prevents SearchContext.Provider from re-notifying items after useTrackerItems
+        // triggers a re-render of this component (which would cause an infinite loop).
+        const searchContextRef = useRef(null);
+        if (
+          !searchContextRef.current ||
+          searchContextRef.current.searchText !== (searchText || null)
+        ) {
+          searchContextRef.current = { searchText: searchText || null };
+        }
+
+        const items = trackerFixed3.useTrackerItems();
+
+        useLayoutEffect(() => {
+          const totalItems = items.length;
+          const expected = ITEMS.filter((v) =>
+            searchText ? v.startsWith(searchText) : true,
+          ).length;
+          const ok = totalItems === expected;
+          logEffect(
+            "log-fixed3",
+            `[filler] totalItems=${totalItems} expected=${expected}${ok ? " ✅" : " ❌ WRONG"}`,
+          );
+          document.getElementById("status-fixed3").textContent = ok
+            ? "✅ correct"
+            : `❌ WRONG: got ${totalItems}, expected ${expected}`;
+          document.getElementById("status-fixed3").style.color = ok
+            ? "green"
+            : "red";
+        });
+
+        return (
+          <SearchContext.Provider value={searchContextRef.current}>
+            <ul>
+              <ItemTrackerProvider>{children}</ItemTrackerProvider>
+            </ul>
+          </SearchContext.Provider>
+        );
+      };
+
+      // Case: owns searchText, receives stable children from outside.
+      // Items are NOT re-created when searchText changes → they bail-out → separate commit.
+      const Case = ({
+        // eslint-disable-next-line no-unused-vars
+        ListComponent,
+        statusId,
+        logId,
+        label,
+        children,
+      }) => {
+        const [searchText, setSearchText] = useState(null);
+        return (
+          <div style={{ flex: 1 }}>
+            <h3 style={{ marginTop: 0 }}>{label}</h3>
+            <p class="status">
+              <span id={statusId}>-</span>
+            </p>
+            <input
+              type="text"
+              placeholder='Filter: "a" or "b"'
+              onInput={(e) => {
+                resetLog(logId);
+                setSearchText(e.currentTarget.value || null);
+              }}
+            />
+            <ListComponent searchText={searchText}>{children}</ListComponent>
+            <pre id={logId} />
+          </div>
+        );
+      };
+
+      const App = () => (
+        <div style={{ display: "flex", gap: "40px", alignItems: "flex-start" }}>
+          <Case
+            ListComponent={ListLikeBroken}
+            statusId="status-broken"
+            logId="log-broken"
+            label="❌ Broken — filler outside ItemTrackerProvider, no notify"
+          >
+            {ITEMS_BROKEN}
+          </Case>
+          <Case
+            ListComponent={ListLikeFixed}
+            statusId="status-fixed"
+            logId="log-fixed"
+            label="✅ Fixed — items call notifyFiller() to trigger re-render after commit"
+          >
+            {ITEMS_FIXED}
+          </Case>
+          <Case
+            ListComponent={ListLikeFixed3}
+            statusId="status-fixed3"
+            logId="log-fixed3"
+            label="✅ Fixed v2 — useTrackItem notifies internally, no manual notifyFiller"
+          >
+            {ITEMS_FIXED3}
+          </Case>
+        </div>
+      );
+
+      render(<App />, document.body);
+    </script>
+  </body>
+</html>

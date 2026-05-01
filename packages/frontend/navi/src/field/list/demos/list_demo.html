@@ -1,0 +1,553 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>List Demo</title>
+    <style>
+      body {
+        max-width: 700px;
+        margin: 0 auto;
+        padding: 40px 20px;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: #f5f5f5;
+      }
+
+      h1 {
+        margin-bottom: 32px;
+        color: #333;
+        font-size: 1.8rem;
+        text-align: center;
+      }
+
+      .demo-section {
+        margin-bottom: 32px;
+        padding: 24px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      .demo-section h2 {
+        margin: 0 0 8px;
+        padding-bottom: 10px;
+        color: #333;
+        font-size: 1.1rem;
+        border-bottom: 2px solid #eee;
+      }
+
+      .demo-section p {
+        margin: 0 0 16px;
+        color: #555;
+        font-size: 0.9rem;
+        line-height: 1.5;
+      }
+
+      .value-display {
+        min-height: 24px;
+        margin-top: 12px;
+        padding: 8px 10px;
+        font-size: 0.85rem;
+        font-family: monospace;
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+      }
+
+      .value-display:empty::before {
+        color: #999;
+        font-style: italic;
+        content: "(none selected)";
+      }
+    </style>
+  </head>
+  <body>
+    <h1>List Demo</h1>
+    <div id="app"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useState, useRef } from "preact/hooks";
+      import {
+        List,
+        ListItem,
+        ListItemHeader,
+        Input,
+        useSearchText,
+        requestListOpen,
+        requestListClose,
+        Label,
+        Form,
+        Button,
+      } from "@jsenv/navi";
+
+      const FRUITS = [
+        "Apple",
+        "Banana",
+        "Cherry",
+        "Date",
+        "Elderberry",
+        "Fig",
+        "Grape",
+        "Honeydew",
+        "Kiwi",
+        "Lemon",
+        "Mango",
+        "Nectarine",
+        "Orange",
+        "Papaya",
+        "Quince",
+      ];
+
+      // ── 1. Display-only list ───────────────────────────────────────────────────
+
+      const DisplayOnlyDemo = () => {
+        return (
+          <div className="demo-section">
+            <h2>1. Display only</h2>
+            <p>
+              By default a <code>List</code> is purely presentational — no hover
+              state, no selection, no keyboard navigation. Items render as
+              read-only content.
+            </p>
+            <List>
+              {FRUITS.slice(0, 5).map((fruit, i) => (
+                <ListItem key={fruit} index={i} id={fruit} value={fruit}>
+                  {fruit}
+                </ListItem>
+              ))}
+            </List>
+          </div>
+        );
+      };
+
+      // ── 2. Interactive list (uiAction) ─────────────────────────────────────────
+
+      // Sugar level for each fruit: low / medium / high
+      const FRUIT_SUGAR = {
+        Apple: "medium",
+        Banana: "high",
+        Cherry: "high",
+        Date: "high",
+        Elderberry: "low",
+        Fig: "high",
+        Grape: "high",
+        Honeydew: "medium",
+        Kiwi: "medium",
+        Lemon: "low",
+        Mango: "high",
+        Nectarine: "medium",
+        Orange: "medium",
+        Papaya: "medium",
+        Quince: "low",
+      };
+
+      const SUGAR_ICON = { low: "🟢", medium: "🟡", high: "🔴" };
+      const SUGAR_LEVELS = [
+        { key: "low", label: "🟢 Peu sucré" },
+        { key: "medium", label: "🟡 Moyennement sucré" },
+        { key: "high", label: "🔴 Très sucré" },
+      ];
+
+      const InteractiveDemo = () => {
+        const [selected, setSelected] = useState(null);
+        // hoveredFruit: set when hovering a fruit row → highlights its category in the legend
+        const [hoveredFruit, setHoveredFruit] = useState(null);
+        // hoveredSugar: set when hovering a legend row → proxy-points matching fruits in the list
+        const [hoveredSugar, setHoveredSugar] = useState(null);
+        return (
+          <div className="demo-section">
+            <h2>2. Interactive — uiAction</h2>
+            <p>
+              Adding a <code>uiAction</code> prop makes the list interactive.
+              The legend demonstrates <code>:-navi-pointed-by-proxy</code>:
+              hovering a sugar level proxy-points matching fruits; hovering a
+              fruit highlights its category in the legend.
+            </p>
+            <div
+              style={{ display: "flex", gap: "16px", alignItems: "flex-start" }}
+            >
+              <List
+                uiAction={(value) => {
+                  setSelected(value);
+                }}
+              >
+                {FRUITS.map((fruit, i) => (
+                  <ListItem
+                    key={fruit}
+                    index={i}
+                    id={fruit}
+                    value={fruit}
+                    selected={selected === fruit}
+                    pointed={
+                      hoveredSugar !== null &&
+                      FRUIT_SUGAR[fruit] === hoveredSugar
+                    }
+                    onMouseEnter={() => {
+                      setHoveredFruit(fruit);
+                    }}
+                    onMouseLeave={() => {
+                      setHoveredFruit(null);
+                    }}
+                  >
+                    {SUGAR_ICON[FRUIT_SUGAR[fruit]]} {fruit}
+                  </ListItem>
+                ))}
+              </List>
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "6px",
+                  paddingTop: "4px",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: "0.8rem",
+                    color: "#888",
+                    marginBottom: "2px",
+                    fontWeight: 600,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.04em",
+                  }}
+                >
+                  Teneur en sucre
+                </div>
+                {SUGAR_LEVELS.map(({ key, label }) => {
+                  const isHoveredFromList =
+                    hoveredFruit !== null && FRUIT_SUGAR[hoveredFruit] === key;
+                  const isHoveredFromLegend = hoveredSugar === key;
+                  const isActive = isHoveredFromList || isHoveredFromLegend;
+                  return (
+                    <div
+                      key={key}
+                      onMouseEnter={() => {
+                        setHoveredSugar(key);
+                      }}
+                      onMouseLeave={() => {
+                        setHoveredSugar(null);
+                      }}
+                      style={{
+                        padding: "5px 10px",
+                        borderRadius: "4px",
+                        fontSize: "0.85rem",
+                        cursor: "default",
+                        userSelect: "none",
+                        background: isActive ? "#eef2ff" : "#f5f5f5",
+                        border: isActive
+                          ? "1px solid #c7d2fe"
+                          : "1px solid #e5e5e5",
+                        fontWeight: isActive ? 600 : "normal",
+                      }}
+                    >
+                      {label}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="value-display">{selected ?? ""}</div>
+          </div>
+        );
+      };
+
+      // ── 3. Searchable list — input inside list ─────────────────────────────────
+
+      const SearchableDemo = () => {
+        const [selected, setSelected] = useState(null);
+        const [searchText, setSearchText] = useState("");
+        const [fruits, getItemMatchInfo] = useSearchText(searchText, FRUITS);
+        return (
+          <div className="demo-section">
+            <h2>3. Search — input inside list</h2>
+            <p>
+              Placing an <code>Input</code> inside a <code>ListItemHeader</code>{" "}
+              auto-connects it to the list via context. Keyboard events (arrows,
+              enter, escape) forward from the input to the list automatically.
+            </p>
+            <List
+              uiAction={(value) => {
+                setSelected(value);
+              }}
+            >
+              <ListItemHeader>
+                <Input
+                  placeholder="Search fruits…"
+                  expandX
+                  paddingX="10"
+                  paddingY="6"
+                  size="m"
+                  style="border-bottom: 1px solid #eee; border-radius: 0;"
+                  uiAction={(value) => {
+                    setSearchText(value);
+                  }}
+                />
+              </ListItemHeader>
+              {fruits.map((fruit, i) => {
+                const { match, ranges } = getItemMatchInfo(fruit);
+                return (
+                  <ListItem
+                    key={fruit}
+                    index={i}
+                    id={fruit}
+                    value={fruit}
+                    selected={selected === fruit}
+                    hidden={!match}
+                    highlight={ranges}
+                  >
+                    {fruit}
+                  </ListItem>
+                );
+              })}
+            </List>
+            <div className="value-display">{selected ?? ""}</div>
+          </div>
+        );
+      };
+
+      // ── 3b. Searchable list — input outside list (listId) ──────────────────────
+
+      const SearchableExternalInputDemo = () => {
+        const [selected, setSelected] = useState(null);
+        const [searchText, setSearchText] = useState("");
+        const [fruits, getItemMatchInfo] = useSearchText(searchText, FRUITS);
+        return (
+          <div className="demo-section">
+            <h2>3b. Search — input outside list (listId)</h2>
+            <p>
+              When the input lives outside the list, pass <code>listId</code> on
+              the <code>Input</code> pointing to the list's <code>id</code>.
+              Keyboard forwarding and ARIA still wire up automatically.
+            </p>
+            <Input
+              placeholder="Search fruits…"
+              expandX
+              paddingX="10"
+              paddingY="6"
+              size="m"
+              listId="searchable-fruits-list"
+              uiAction={(value) => {
+                setSearchText(value);
+              }}
+            />
+            <List
+              listId="searchable-fruits-list"
+              uiAction={(value) => {
+                setSelected(value);
+              }}
+              expandX
+            >
+              {fruits.map((fruit, i) => {
+                const { match, ranges } = getItemMatchInfo(fruit);
+                return (
+                  <ListItem
+                    key={fruit}
+                    index={i}
+                    id={fruit}
+                    value={fruit}
+                    selected={selected === fruit}
+                    hidden={!match}
+                    highlight={ranges}
+                  >
+                    {fruit}
+                  </ListItem>
+                );
+              })}
+            </List>
+            <div className="value-display">{selected ?? ""}</div>
+          </div>
+        );
+      };
+
+      // ── 4. Popover list ────────────────────────────────────────────────────────
+
+      const PopoverDemo = () => {
+        const [selected, setSelected] = useState(null);
+        const listRef = useRef(null);
+        const buttonRef = useRef(null);
+
+        const openList = () => {
+          requestListOpen(listRef.current, { anchor: buttonRef.current });
+        };
+        const closeList = () => {
+          requestListClose(listRef.current, {});
+        };
+
+        return (
+          <div className="demo-section">
+            <h2>4. Popover</h2>
+            <p>
+              Pass <code>popover</code> to render the list as a managed popover.
+              Call <code>requestListOpen</code> with an anchor element to show
+              it; <code>requestListClose</code> to hide it. The list positions
+              itself below the anchor automatically.
+            </p>
+            <div style={{ display: "flex", gap: "8px", marginBottom: "12px" }}>
+              <button ref={buttonRef} onClick={openList}>
+                Open list
+              </button>
+              <button onClick={closeList}>Close list</button>
+            </div>
+            <List
+              ref={listRef}
+              popover
+              uiAction={(value) => {
+                setSelected(value);
+                requestListClose(listRef.current, {});
+              }}
+            >
+              {FRUITS.slice(0, 8).map((fruit, i) => (
+                <ListItem
+                  key={fruit}
+                  index={i}
+                  value={fruit}
+                  id={fruit}
+                  selected={selected === fruit}
+                >
+                  {fruit}
+                </ListItem>
+              ))}
+            </List>
+            <div className="value-display">{selected ?? ""}</div>
+          </div>
+        );
+      };
+
+      // ── 5. List inside a form ──────────────────────────────────────────────────
+
+      const FormDemo = () => {
+        const [submittedValues, setSubmittedValues] = useState(null);
+        const [selected, setSelected] = useState(null);
+        return (
+          <div className="demo-section">
+            <h2>5. List inside a form</h2>
+            <p>
+              A <code>List</code> with a <code>name</code> prop registers its
+              selected value with the parent <code>Form</code>. Submitting the
+              form collects the list value alongside other fields.
+            </p>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const data = new FormData(e.currentTarget);
+                setSubmittedValues(Object.fromEntries(data.entries()));
+              }}
+            >
+              <label
+                style={{
+                  display: "block",
+                  marginBottom: "4px",
+                  fontWeight: 600,
+                }}
+              >
+                Choose a fruit:
+              </label>
+              <List
+                name="fruit"
+                value={selected}
+                uiAction={(value) => {
+                  setSelected(value);
+                }}
+              >
+                {FRUITS.slice(0, 6).map((fruit, i) => (
+                  <ListItem
+                    key={fruit}
+                    index={i}
+                    id={fruit}
+                    value={fruit}
+                    selected={selected === fruit}
+                  >
+                    {fruit}
+                  </ListItem>
+                ))}
+              </List>
+              <button type="submit" style={{ marginTop: "12px" }}>
+                Submit
+              </button>
+            </form>
+            {submittedValues && (
+              <div className="value-display">
+                {JSON.stringify(submittedValues)}
+              </div>
+            )}
+          </div>
+        );
+      };
+
+      // ── 6. List required inside a form ─────────────────────────────────────────
+
+      const RequiredFormDemo = () => {
+        const [submittedValues, setSubmittedValues] = useState(null);
+        const [selected, setSelected] = useState(null);
+        return (
+          <div className="demo-section">
+            <h2>6. Required list inside a form</h2>
+            <p>
+              Adding <code>required</code> makes the hidden input required.
+              Submitting without selecting a value triggers native browser
+              validation.
+            </p>
+            <Form
+              action={(value) => {
+                setSubmittedValues(value);
+              }}
+            >
+              <Label>
+                Choose a fruit (required):
+                <List
+                  name="fruit"
+                  value={selected}
+                  required
+                  uiAction={(value) => {
+                    setSelected(value);
+                  }}
+                >
+                  {FRUITS.slice(0, 6).map((fruit, i) => (
+                    <ListItem
+                      key={fruit}
+                      index={i}
+                      id={fruit}
+                      value={fruit}
+                      selected={selected === fruit}
+                    >
+                      {fruit}
+                    </ListItem>
+                  ))}
+                </List>
+              </Label>
+              <Button type="submit" style={{ marginTop: "12px" }}>
+                Submit
+              </Button>
+            </Form>
+            {submittedValues && (
+              <div className="value-display">
+                {JSON.stringify(submittedValues)}
+              </div>
+            )}
+          </div>
+        );
+      };
+
+      // ── App ────────────────────────────────────────────────────────────────────
+
+      const App = () => {
+        return (
+          <>
+            <DisplayOnlyDemo />
+            <InteractiveDemo />
+            <SearchableExternalInputDemo />
+            <SearchableDemo />
+            <PopoverDemo />
+            <FormDemo />
+            <RequiredFormDemo />
+          </>
+        );
+      };
+
+      render(<App />, document.getElementById("app"));
+    </script>
+  </body>
+</html>

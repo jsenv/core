@@ -1,0 +1,483 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Virtual Scroll Demo</title>
+    <style>
+      body {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: #f5f5f5;
+      }
+
+      h1 {
+        margin-bottom: 30px;
+        color: #333;
+        font-size: 2rem;
+        text-align: center;
+      }
+
+      .demo-section {
+        margin-bottom: 40px;
+        padding: 20px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      .demo-section h2 {
+        margin: 0 0 16px 0;
+        padding-bottom: 10px;
+        color: #333;
+        font-size: 1.4rem;
+        border-bottom: 2px solid #ddd;
+      }
+
+      .demo-section p {
+        margin: 0 0 16px 0;
+        color: #555;
+        font-size: 0.95rem;
+      }
+
+      .stats-bar {
+        display: flex;
+        margin-bottom: 12px;
+        padding: 10px 14px;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 16px;
+        color: #d4d4d4;
+        font-size: 0.85rem;
+        font-family: monospace;
+        background: #1e1e1e;
+        border-radius: 6px;
+      }
+
+      .stat {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2px;
+      }
+
+      .stat-label {
+        color: #888;
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      .stat-value {
+        font-weight: bold;
+        font-size: 1.1rem;
+      }
+
+      .stat-value.highlight {
+        color: #4ec9b0;
+      }
+
+      .stat-value.warning {
+        color: #ce9178;
+      }
+
+      .value-display {
+        min-height: 20px;
+        margin-top: 12px;
+        padding: 8px;
+        font-size: 0.85rem;
+        font-family: monospace;
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+      }
+
+      .value-display:empty::before {
+        color: #999;
+        font-style: italic;
+        content: "(none selected)";
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Virtual Scroll Demo</h1>
+    <div id="root"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { signal } from "@preact/signals";
+      import { useState, useRef } from "preact/hooks";
+      import {
+        List,
+        ListItem,
+        Input,
+        ListItemHeader,
+        useSearchText,
+        Separator,
+      } from "@jsenv/navi";
+
+      const domItemsSignal = signal(0);
+      const peakDomItemsSignal = signal(0);
+      const observer = new MutationObserver(() => {
+        const root = document.getElementById("root");
+        if (!root) {
+          return;
+        }
+        const count = root.querySelectorAll("[navi-list-item-real]").length;
+        domItemsSignal.value = count;
+        if (count > peakDomItemsSignal.value) {
+          peakDomItemsSignal.value = count;
+        }
+      });
+      observer.observe(document.getElementById("root"), {
+        childList: true,
+        subtree: true,
+      });
+
+      const SUGGESTION_BG = "light-dark(#f0f4ff, #1a2040)";
+
+      const GREEK_NAMES = [
+        "Alpha",
+        "Beta",
+        "Gamma",
+        "Delta",
+        "Epsilon",
+        "Zeta",
+        "Eta",
+        "Theta",
+        "Iota",
+        "Kappa",
+        "Lambda",
+        "Mu",
+        "Nu",
+        "Xi",
+        "Omicron",
+        "Pi",
+        "Rho",
+        "Sigma",
+        "Tau",
+        "Upsilon",
+      ];
+      const LARGE_LIST = Array.from({ length: 200 }, (_, i) => {
+        const name = GREEK_NAMES[i % GREEK_NAMES.length];
+        const num = String(Math.floor(i / GREEK_NAMES.length) + 1).padStart(
+          2,
+          "0",
+        );
+        return `${name}-${num}`;
+      });
+
+      const StatsBar = ({ totalItems }) => {
+        const domItems = domItemsSignal.value;
+        const peakDomItems = peakDomItemsSignal.value;
+        const savedFromDom = totalItems - domItems;
+        return (
+          <div className="stats-bar">
+            <div className="stat">
+              <span className="stat-label">Total items</span>
+              <span className="stat-value">{totalItems}</span>
+            </div>
+            <div className="stat">
+              <span className="stat-label">In DOM</span>
+              <span
+                className={`stat-value ${domItems < totalItems ? "highlight" : ""}`}
+              >
+                {domItems}
+              </span>
+            </div>
+            <div className="stat">
+              <span className="stat-label">Peak DOM</span>
+              <span
+                className={`stat-value ${peakDomItems >= totalItems ? "warning" : "highlight"}`}
+              >
+                {peakDomItems}
+              </span>
+            </div>
+            <div className="stat">
+              <span className="stat-label">Saved from DOM</span>
+              <span
+                className={`stat-value ${savedFromDom > 0 ? "warning" : ""}`}
+              >
+                {savedFromDom}
+              </span>
+            </div>
+          </div>
+        );
+      };
+
+      const VirtualScrollDemo = () => {
+        // Start with an item selected at index 150, well outside the initial
+        // render window (0–30), to verify that the window shifts on mount.
+        const [selected, setSelected] = useState(LARGE_LIST[150]);
+        const [searchText, setSearchText] = useState("");
+        const [orderedItems, getItemMatchInfo] = useSearchText(
+          searchText,
+          LARGE_LIST,
+        );
+        const [maxHeight, setMaxHeight] = useState(280);
+        const [maxHeightEnabled, setMaxHeightEnabled] = useState(true);
+        const [itemHeight, setItemHeight] = useState(null);
+        const [scrollToIndex, setScrollToIndex] = useState(54);
+        const listRef = useRef(null);
+
+        const scrollTo = (position) => {
+          const containerEl = listRef.current;
+          if (!containerEl) {
+            return;
+          }
+          if (position === "top") {
+            containerEl.scrollTop = 0;
+          } else if (position === "middle") {
+            containerEl.scrollTop = containerEl.scrollHeight / 2;
+          } else if (position === "bottom") {
+            containerEl.scrollTop = containerEl.scrollHeight;
+          }
+        };
+
+        const scrollToItem = () => {
+          const el = listRef.current;
+          if (!el) {
+            return;
+          }
+          const index = parseInt(scrollToIndex, 10);
+          // el.dispatchEvent(
+          //   new CustomEvent("navi_list_request_nav", {
+          //     detail: { index },
+          //   }),
+          // );
+          const estimated = (el.scrollHeight / LARGE_LIST.length) * index;
+          console.log("scroll to", estimated);
+          el.scrollTop = estimated;
+        };
+
+        return (
+          <div className="demo-section">
+            <h2>200 items — virtual scroll</h2>
+            <p>
+              The list passes all {LARGE_LIST.length} items to <code>List</code>
+              . Virtual scroll is automatically enabled because a{" "}
+              <code>max-height</code> is set. Scroll programmatically below to
+              verify the component renders the correct DOM items at each scroll
+              position.
+            </p>
+
+            <StatsBar totalItems={LARGE_LIST.length} />
+
+            {/* Programmatic scroll controls */}
+            <fieldset
+              style={{
+                display: "flex",
+                gap: "8px",
+                flexWrap: "wrap",
+                marginBottom: "10px",
+                alignItems: "center",
+              }}
+            >
+              <legend style={{ fontSize: "0.85rem", color: "#555" }}>
+                Scroll to
+              </legend>
+              <button onClick={() => scrollTo("top")}>Top</button>
+              <button onClick={() => scrollTo("middle")}>Middle</button>
+              <button onClick={() => scrollTo("bottom")}>Bottom</button>
+              <span
+                style={{ display: "flex", gap: "4px", alignItems: "center" }}
+              >
+                <span style={{ fontSize: "0.85rem", color: "#555" }}>
+                  Item index:
+                </span>
+                <input
+                  type="number"
+                  min="0"
+                  max={LARGE_LIST.length - 1}
+                  value={scrollToIndex}
+                  onInput={(e) => {
+                    setScrollToIndex(e.target.value);
+                  }}
+                  style={{
+                    width: "70px",
+                    padding: "4px 6px",
+                    border: "1px solid #ccc",
+                    borderRadius: "4px",
+                  }}
+                />
+                <button onClick={scrollToItem}>Go</button>
+              </span>
+            </fieldset>
+
+            <List
+              ref={listRef}
+              maxHeight={maxHeight}
+              uiAction={setSelected}
+              expandX
+              renderBudget={30}
+              matchFallback={
+                <span
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: "6px",
+                    flexGrow: 1,
+                  }}
+                >
+                  <span
+                    style={{
+                      color: "light-dark(#888, #aaa)",
+                      fontSize: "0.9em",
+                    }}
+                  >
+                    No results for <em>"{searchText}"</em>
+                  </span>
+                  <button
+                    onClick={() => setSearchText("")}
+                    style={{ fontSize: "0.8em", cursor: "pointer" }}
+                  >
+                    Clear search
+                  </button>
+                </span>
+              }
+              withSearch
+              searchText={searchText}
+              separator={<Separator margin="0" />}
+              debugScroll
+            >
+              <ListItemHeader>
+                <Input
+                  placeholder="Filter…"
+                  paddingX="8px"
+                  paddingY="12px"
+                  expandX
+                  border="1px solid #ccc"
+                  value={searchText}
+                  uiAction={(text) => {
+                    setSearchText(text);
+                  }}
+                  style={{
+                    boxSizing: "border-box",
+                    borderRadius: "6px",
+                    fontSize: "1rem",
+                  }}
+                />
+              </ListItemHeader>
+              {orderedItems.map((item, i) => {
+                const { match, score, ranges } = getItemMatchInfo(item);
+                return (
+                  <ListItem
+                    key={item}
+                    id={item}
+                    index={i}
+                    value={item}
+                    highlight={ranges}
+                    matchScore={score}
+                    hidden={!match}
+                    selected={selected === item}
+                    style={{
+                      backgroundColor: SUGGESTION_BG,
+                      ...(itemHeight
+                        ? { minHeight: `${itemHeight}px`, alignItems: "center" }
+                        : {}),
+                    }}
+                  >
+                    {item} #{i}
+                  </ListItem>
+                );
+              })}
+            </List>
+
+            <div className="value-display">{selected ?? ""}</div>
+            {/* Advanced: max-height controls */}
+            <details style={{ marginTop: "16px" }}>
+              <summary
+                style={{
+                  cursor: "pointer",
+                  fontSize: "0.85rem",
+                  color: "#666",
+                }}
+              >
+                Advanced — max-height controls
+              </summary>
+              <div
+                style={{
+                  marginTop: "10px",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "8px",
+                }}
+              >
+                <label
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    fontSize: "0.9rem",
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={maxHeightEnabled}
+                    onChange={(e) => {
+                      setMaxHeightEnabled(e.target.checked);
+                    }}
+                  />
+                  Enable max-height (virtual scroll active only when set)
+                </label>
+                {maxHeightEnabled && (
+                  <label
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      fontSize: "0.9rem",
+                    }}
+                  >
+                    max-height: <strong>{maxHeight}px</strong>
+                    <input
+                      type="range"
+                      min="80"
+                      max="800"
+                      step="20"
+                      value={maxHeight}
+                      onInput={(e) => {
+                        setMaxHeight(Number(e.target.value));
+                      }}
+                      style={{ flex: 1 }}
+                    />
+                  </label>
+                )}
+                <label
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    fontSize: "0.9rem",
+                  }}
+                >
+                  item height:{" "}
+                  <strong>{itemHeight ? `${itemHeight}px` : "auto"}</strong>
+                  <input
+                    type="range"
+                    min="0"
+                    max="200"
+                    step="4"
+                    value={itemHeight ?? 0}
+                    onInput={(e) => {
+                      const v = Number(e.target.value);
+                      setItemHeight(v === 0 ? null : v);
+                    }}
+                    style={{ flex: 1 }}
+                  />
+                </label>
+              </div>
+            </details>
+          </div>
+        );
+      };
+
+      render(<VirtualScrollDemo />, document.getElementById("root"));
+    </script>
+  </body>
+</html>

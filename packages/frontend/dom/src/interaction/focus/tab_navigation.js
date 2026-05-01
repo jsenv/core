@@ -1,3 +1,4 @@
+import { getElementSignature } from "../../element_signature.js";
 import {
   findAfter,
   findBefore,
@@ -7,11 +8,13 @@ import {
 import { elementIsFocusable } from "./element_is_focusable.js";
 import { markFocusNav } from "./focus_nav_event_marker.js";
 
-const DEBUG = true;
-
 export const performTabNavigation = (
   event,
-  { rootElement = document.body, outsideOfElement = null } = {},
+  {
+    rootElement = document.body,
+    outsideOfElement = null,
+    debug = () => {},
+  } = {},
 ) => {
   if (!isTabEvent(event)) {
     return false;
@@ -23,29 +26,20 @@ export const performTabNavigation = (
   }
   const isForward = !event.shiftKey;
   const onTargetToFocus = (targetToFocus) => {
-    console.debug(
+    debug(
       `Tab navigation: ${isForward ? "forward" : "backward"} from`,
-      activeElement,
+      getElementSignature(activeElement),
       "to",
-      targetToFocus,
+      getElementSignature(targetToFocus),
     );
     event.preventDefault();
     markFocusNav(event);
     targetToFocus.focus();
   };
 
-  if (DEBUG) {
-    console.debug(
-      `Tab navigation: ${isForward ? "forward" : "backward"} from,`,
-      activeElement,
-    );
-  }
-
   const predicate = (candidate) => {
     const canBeFocusedByTab = isFocusableByTab(candidate);
-    if (DEBUG) {
-      console.debug(`Testing`, candidate, `${canBeFocusedByTab ? "✓" : "✗"}`);
-    }
+    // debug(`Testing`, candidate, `${canBeFocusedByTab ? "✓" : "✗"}`);
     return canBeFocusedByTab;
   };
 
@@ -70,7 +64,8 @@ export const performTabNavigation = (
     if (nextFocusableElement) {
       return onTargetToFocus(nextFocusableElement);
     }
-    const firstFocusableElement = findDescendant(activeElement, predicate, {
+    // Wrap around: go back to the first focusable element in root.
+    const firstFocusableElement = findDescendant(rootElement, predicate, {
       skipRoot: outsideOfElement,
     });
     if (firstFocusableElement) {
@@ -101,7 +96,8 @@ export const performTabNavigation = (
     if (previousFocusableElement) {
       return onTargetToFocus(previousFocusableElement);
     }
-    const lastFocusableElement = findLastDescendant(activeElement, predicate, {
+    // Wrap around: go back to the last focusable element in root.
+    const lastFocusableElement = findLastDescendant(rootElement, predicate, {
       skipRoot: outsideOfElement,
     });
     if (lastFocusableElement) {

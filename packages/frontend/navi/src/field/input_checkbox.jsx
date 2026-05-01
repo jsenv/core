@@ -7,6 +7,7 @@ import { useExecuteAction } from "../action/use_execute_action.js";
 import { Box } from "../box/box.jsx";
 import { LoaderBackground } from "../graphic/loader/loader_background.jsx";
 import { useDarkBackgroundAttribute } from "../text/use_dark_background_attribute.js";
+import { useAutoFocus } from "../utils/focus/use_auto_focus.js";
 import { useStableCallback } from "../utils/use_stable_callback.js";
 import { fieldPropSet } from "./field_prop_set.js";
 import {
@@ -15,7 +16,6 @@ import {
   reportReadOnlyToLabel,
 } from "./label.jsx";
 import { useActionEvents } from "./use_action_events.js";
-import { useAutoFocus } from "./use_auto_focus.js";
 import {
   DisabledContext,
   FieldNameContext,
@@ -538,6 +538,7 @@ const InputCheckboxBasic = (props) => {
     <Box
       as="span"
       {...remainingProps}
+      autoFocus={undefined} // See use_auto_focus.js
       ref={boxRef}
       data-appearance={appearance}
       baseClassName="navi_checkbox"

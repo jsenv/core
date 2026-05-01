@@ -114,16 +114,26 @@ export const getElementSignature = (element) => {
       return "<html>";
     }
     const elementId = element.id;
-    if (elementId) {
+    const className = element.className;
+    if (elementId && !looksLikeGeneratedId(elementId)) {
       return `${tagName}#${elementId}`;
     }
-    const className = element.className;
     if (className) {
       return `${tagName}.${className.split(" ").join(".")}`;
+    }
+    if (elementId) {
+      return `${tagName}#${elementId}`;
     }
 
     const parentSignature = getElementSignature(element.parentElement);
     return `${parentSignature} > ${tagName}`;
   }
   return String(element);
+};
+
+// Generated ids from frameworks (Preact useId, React useId, etc.) look like
+// "P0-0", ":r0:", "P1-3" — short alphanumeric tokens with dashes or colons.
+// If an id matches this pattern we prefer className over it.
+const looksLikeGeneratedId = (id) => {
+  return /^[A-Z][0-9]+-[0-9]+$|^:[a-z][0-9]*:$/.test(id);
 };

@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>ItemTracker – Stable Children Demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:," />
+    <style>
+      body {
+        margin: 20px;
+        font-family: system-ui, sans-serif;
+        background: #f5f5f5;
+      }
+      .box {
+        max-width: 700px;
+        margin: 0 auto;
+        padding: 24px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+      button {
+        margin: 4px;
+        padding: 6px 14px;
+        cursor: pointer;
+      }
+      .ok {
+        color: #4ec9b0;
+        font-weight: bold;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="box">
+      <h1>ItemTracker – Stable Children</h1>
+      <div id="app-root"></div>
+    </div>
+    <script type="module" jsenv-type="module/jsx">
+      /**
+       * Demonstrates that item tracking works correctly even when children are
+       * stable (created in an outer component and passed as props). With the
+       * explicit-index API, ordering is driven by the caller — not by render
+       * sequence — so there is no "stable children bug".
+       */
+
+      import { createContext, render } from "preact";
+      import { useContext, useState } from "preact/hooks";
+      import { useItemTracker } from "../item_tracker/use_item_tracker.js";
+
+      const TrackerContext = createContext();
+
+      // ---------------------------------------------------------------------------
+      // Item — registers itself with an explicit index
+      // ---------------------------------------------------------------------------
+      const Item = ({ value, index }) => {
+        const tracker = useContext(TrackerContext);
+        tracker.useTrackItem({ id: value, index, value });
+        return <li>{value}</li>;
+      };
+
+      // ---------------------------------------------------------------------------
+      // Inner — owns state and the tracker. Children come from Outer so their
+      // vnode reference is stable across Inner's own state changes.
+      // ---------------------------------------------------------------------------
+      const Inner = ({ children }) => {
+        const [counter, setCounter] = useState(0);
+        const tracker = useItemTracker();
+        const count = tracker.useItemCount();
+
+        return (
+          <div>
+            <p>
+              Counter: <strong>{counter}</strong>
+            </p>
+            <p>
+              Items tracked: <span className="ok">{count}</span> (stays 3 after
+              each state change)
+            </p>
+            <TrackerContext.Provider value={tracker}>
+              {children}
+            </TrackerContext.Provider>
+            <button onClick={() => setCounter((c) => c + 1)}>
+              Trigger Inner state change (counter++)
+            </button>
+          </div>
+        );
+      };
+
+      // ---------------------------------------------------------------------------
+      // Outer — renders children JSX. Does NOT re-render when Inner's state
+      // changes, so children vnode references passed to Inner are stable.
+      // ---------------------------------------------------------------------------
+      const Outer = () => {
+        return (
+          <Inner>
+            <ul>
+              <Item value="Alpha" index={0} />
+              <Item value="Beta" index={1} />
+              <Item value="Gamma" index={2} />
+            </ul>
+          </Inner>
+        );
+      };
+
+      const App = () => {
+        return (
+          <div>
+            <p>
+              There are 3 items (<code>Alpha</code>, <code>Beta</code>,{" "}
+              <code>Gamma</code>) registered via <code>useTrackItem</code>. They
+              are created in <code>Outer</code> and passed as stable children to{" "}
+              <code>Inner</code>, which owns the tracker and its own counter
+              state.
+            </p>
+            <p>
+              Click the button to trigger <code>Inner</code> re-renders. The
+              tracked count should always stay <strong>3</strong>.
+            </p>
+            <Outer />
+          </div>
+        );
+      };
+
+      render(<App />, document.getElementById("app-root"));
+    </script>
+  </body>
+</html>

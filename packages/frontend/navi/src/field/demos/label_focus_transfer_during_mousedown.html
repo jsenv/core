@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Label — Focus transfer during mousedown</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:," />
+    <style>
+      body {
+        margin: 40px;
+        font-family: system-ui, sans-serif;
+        background: #f5f5f5;
+      }
+      .demo-section {
+        max-width: 700px;
+        margin: 0 auto 40px;
+        padding: 24px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      h1 {
+        max-width: 700px;
+        margin: 0 auto 32px;
+        color: #333;
+        font-size: 1.6rem;
+        text-align: center;
+      }
+      h2 {
+        margin: 0 0 8px;
+        color: #222;
+        font-size: 1.1rem;
+      }
+      p {
+        margin: 0 0 16px;
+        color: #555;
+        font-size: 13px;
+      }
+      .row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-start;
+        gap: 24px;
+      }
+      .trigger {
+        display: inline-block;
+        padding: 6px 14px;
+        background: white;
+        border: 1px solid #999;
+        border-radius: 3px;
+        cursor: pointer;
+        user-select: none;
+      }
+      .trigger:focus {
+        outline: 2px solid #005fcc;
+      }
+      .focus-target {
+        padding: 8px 12px;
+        color: #333;
+        font-size: 13px;
+        background: #fafafa;
+        border: 1px solid #ccc;
+        border-radius: 3px;
+      }
+      .focus-target:focus {
+        background: #e8f0fe;
+        outline: 2px solid #005fcc;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Label — Focus transfer during mousedown</h1>
+    <div id="app"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useState } from "preact/hooks";
+      import { Label } from "@jsenv/navi";
+
+      const Demo = () => {
+        const [focusLog, setFocusLog] = useState([]);
+
+        const log = (msg) => {
+          const time = new Date().toLocaleTimeString("fr-FR", {
+            hour12: false,
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+            fractionalSecondDigits: 3,
+          });
+          setFocusLog((prev) => [`${time} ${msg}`, ...prev].slice(0, 40));
+        };
+
+        return (
+          <div className="demo-section">
+            <h2>
+              mousedown inside label → focus transfer to an element elsewhere
+            </h2>
+            <p>
+              Clicking the trigger calls <code>focusTarget.focus()</code> on{" "}
+              <code>mousedown</code>. The label wraps the trigger so the browser
+              will also try to delegate focus to it via the native label click
+              behavior. Observe where focus actually lands.
+            </p>
+            <div className="row">
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "12px",
+                }}
+              >
+                <input
+                  placeholder="Before (tab target)"
+                  onFocus={() => log("focus → input[before]")}
+                  onBlur={() => log("blur  ← input[before]")}
+                />
+
+                <Label>
+                  Label text —
+                  <button
+                    className="trigger"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      document.querySelector(".focus-target").focus({
+                        preventScroll: true,
+                        focusVisible: true,
+                      });
+                    }}
+                    onClick={(e) => {
+                      console.log(e);
+                      document.querySelector(".focus-target").focus({
+                        preventScroll: true,
+                        focusVisible: true,
+                      });
+                    }}
+                    onFocus={() => log("focus → trigger")}
+                    onBlur={() => log("blur  ← trigger")}
+                  >
+                    Trigger (div[tabIndex=0])
+                    <br />
+                    <br />
+                    <FocusTarget log={log} />
+                  </button>
+                </Label>
+
+                <input
+                  placeholder="After (tab target)"
+                  onFocus={() => log("focus → input[after]")}
+                  onBlur={() => log("blur  ← input[after]")}
+                />
+              </div>
+
+              <div style={{ flex: 1, minWidth: "260px" }}>
+                <div
+                  style={{
+                    fontSize: "12px",
+                    color: "#666",
+                    marginBottom: "6px",
+                  }}
+                >
+                  Event log (newest first)
+                </div>
+                <div
+                  style={{
+                    fontFamily: "monospace",
+                    fontSize: "11px",
+                    background: "#f8f9fa",
+                    border: "1px solid #dee2e6",
+                    borderRadius: "4px",
+                    padding: "8px",
+                    minHeight: "200px",
+                    maxHeight: "360px",
+                    overflowY: "auto",
+                  }}
+                >
+                  {focusLog.length === 0 ? (
+                    <span style={{ color: "#999", fontStyle: "italic" }}>
+                      (no events yet — click the trigger)
+                    </span>
+                  ) : (
+                    focusLog.map((entry, i) => (
+                      <div
+                        key={i}
+                        style={{
+                          borderBottom:
+                            i < focusLog.length - 1 ? "1px solid #eee" : "none",
+                          padding: "2px 0",
+                        }}
+                      >
+                        {entry}
+                      </div>
+                    ))
+                  )}
+                </div>
+                <button
+                  style={{
+                    marginTop: "6px",
+                    fontSize: "12px",
+                    padding: "2px 8px",
+                  }}
+                  onClick={() => setFocusLog([])}
+                >
+                  Clear log
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      const FocusTarget = ({ log }) => {
+        return (
+          <div
+            tabIndex="0"
+            className="focus-target"
+            onFocus={() => log("focus → focusTarget ✓")}
+            onBlur={() => log("blur  ← focusTarget")}
+          >
+            Focus target (should receive focus)
+          </div>
+        );
+      };
+
+      render(<Demo />, document.getElementById("app"));
+    </script>
+  </body>
+</html>

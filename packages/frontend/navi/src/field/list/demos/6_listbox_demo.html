@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <link rel="icon" href="data:," />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SuggestionList Demo</title>
+    <title>List as listbox Demo</title>
     <style>
       body {
         max-width: 800px;
@@ -63,19 +63,20 @@
     </style>
   </head>
   <body>
-    <h1>SuggestionList Demo</h1>
+    <h1>List as listbox Demo</h1>
     <div id="root"></div>
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState, useRef } from "preact/hooks";
       import {
-        Suggestion,
-        SuggestionList,
-        SuggestionGroup,
+        List,
+        ListItem,
+        ListItemGroup,
         Input,
         Text,
         Box,
+        useSearchText,
       } from "@jsenv/navi";
 
       // 200 auto-generated items
@@ -145,7 +146,7 @@
           <CustomStyleDemo />
           <SortedDemo />
           <LargeListDemo />
-          <SuggestionGroupDemo />
+          <ListItemGroupDemo />
           <SplitMatchDemo />
           <PopoverDemo />
         </div>
@@ -164,21 +165,25 @@
               Click a suggestion or use keyboard (Tab to focus, Arrow keys to
               navigate, Enter to select, Escape to clear active).
             </p>
-            <SuggestionList
+            <List
+              listRole="listbox"
+              fallback="No results"
               style={{ maxHeight: "220px" }}
-              onChange={setSelected}
+              uiAction={setSelected}
             >
-              {FRUITS.map((fruit) => (
-                <Suggestion
+              {FRUITS.map((fruit, i) => (
+                <ListItem
+                  role="option"
                   key={fruit}
+                  index={i}
                   value={fruit}
                   selected={selected === fruit}
                   style={{ backgroundColor: SUGGESTION_BG }}
                 >
                   {fruit}
-                </Suggestion>
+                </ListItem>
               ))}
-            </SuggestionList>
+            </List>
             <div className="value-display">{selected ?? ""}</div>
           </div>
         );
@@ -192,18 +197,27 @@
           <div className="demo-section">
             <h2>Custom suggestion content</h2>
             <p>Each suggestion renders the country name + region badge.</p>
-            <SuggestionList
+            <List
+              listRole="listbox"
+              fallback="No results"
               style={{ maxHeight: "220px" }}
-              onChange={setSelected}
+              uiAction={setSelected}
             >
-              <Suggestion noWrap style={{ backgroundColor: SUGGESTION_BG }}>
+              <ListItem
+                role="option"
+                index={0}
+                noWrap
+                style={{ backgroundColor: SUGGESTION_BG }}
+              >
                 A very large suggestion to test how it behaves when the text is
                 very large and exceeds the width of the list. It should be
                 visible
-              </Suggestion>
-              {COUNTRIES.map((country) => (
-                <Suggestion
+              </ListItem>
+              {COUNTRIES.map((country, i) => (
+                <ListItem
+                  role="option"
                   key={country.code}
+                  index={i + 1}
                   value={country.code}
                   selected={selected === country.code}
                   style={{ backgroundColor: SUGGESTION_BG }}
@@ -218,9 +232,9 @@
                   >
                     {country.region}
                   </span>
-                </Suggestion>
+                </ListItem>
               ))}
-            </SuggestionList>
+            </List>
             <div className="value-display">
               {selected
                 ? (() => {
@@ -247,8 +261,8 @@
           <div className="demo-section">
             <h2>Controlled with external filter input</h2>
             <p>
-              The list is filtered by the input above it. Shows how
-              SuggestionList works with an external query source.
+              The list is filtered by the input above it. Shows how List works
+              with an external query source.
             </p>
             <input
               type="text"
@@ -269,24 +283,27 @@
                 fontSize: "1rem",
               }}
             />
-            <SuggestionList
+            <List
+              listRole="listbox"
+              fallback="No results"
               style={{ maxHeight: "220px" }}
-              onChange={setSelected}
-              highlight={filter}
+              uiAction={setSelected}
               hidden={filtered.length === 0}
               expandX
             >
-              {filtered.map((fruit) => (
-                <Suggestion
+              {filtered.map((fruit, i) => (
+                <ListItem
+                  role="option"
                   key={fruit}
+                  index={i}
                   value={fruit}
                   selected={selected === fruit}
                   style={{ backgroundColor: SUGGESTION_BG }}
                 >
                   {fruit}
-                </Suggestion>
+                </ListItem>
               ))}
-            </SuggestionList>
+            </List>
             {filtered.length === 0 && (
               <p style={{ color: "#999", fontStyle: "italic" }}>
                 No results for "{filter}"
@@ -301,6 +318,7 @@
 
       const CustomStyleDemo = () => {
         const [selected, setSelected] = useState("Apple");
+        const [, getItemMatchInfo] = useSearchText("a", FRUITS);
         return (
           <div className="demo-section">
             <h2>Custom styles via CSS vars</h2>
@@ -308,44 +326,52 @@
               The list and suggestions have custom background/text colors,
               including for pointed and highlighted states.
             </p>
-            <SuggestionList
+            <List
+              listRole="listbox"
+              fallback="No results"
               style={{
                 backgroundColor: "#1a1a2e",
                 borderColor: "#e94560",
               }}
-              onChange={setSelected}
-              highlight="a"
+              uiAction={setSelected}
             >
-              {FRUITS.map((fruit) => (
-                <Suggestion
-                  key={fruit}
-                  value={fruit}
-                  selected={selected === fruit}
-                  style={{
-                    "color": "#eaeaea",
-                    "backgroundColor": "transparent",
-                    ":-navi-pointed": {
-                      color: "#1a1a2e",
-                      backgroundColor: "#e94560",
-                    },
-                    ":hover": {
-                      color: "#fff",
-                      backgroundColor: "#16213e",
-                    },
-                    ":-navi-selected": {
-                      color: "#fff",
-                      backgroundColor: "#7b1a30",
-                    },
-                    "::highlight": {
-                      color: "#fff",
-                      backgroundColor: "#7c3aed",
-                    },
-                  }}
-                >
-                  {fruit}
-                </Suggestion>
-              ))}
-            </SuggestionList>
+              {FRUITS.map((fruit, i) => {
+                const { match, ranges } = getItemMatchInfo(fruit);
+                return (
+                  <ListItem
+                    role="option"
+                    key={fruit}
+                    index={i}
+                    value={fruit}
+                    selected={selected === fruit}
+                    highlight={ranges}
+                    hidden={!match}
+                    style={{
+                      "color": "#eaeaea",
+                      "backgroundColor": "transparent",
+                      ":-navi-pointed": {
+                        color: "#1a1a2e",
+                        backgroundColor: "#e94560",
+                      },
+                      ":hover": {
+                        color: "#fff",
+                        backgroundColor: "#16213e",
+                      },
+                      ":-navi-selected": {
+                        color: "#fff",
+                        backgroundColor: "#7b1a30",
+                      },
+                      "::highlight": {
+                        color: "#fff",
+                        backgroundColor: "#7c3aed",
+                      },
+                    }}
+                  >
+                    {fruit}
+                  </ListItem>
+                );
+              })}
+            </List>
             <div className="value-display">{selected ?? ""}</div>
           </div>
         );
@@ -356,17 +382,7 @@
       const SortedDemo = () => {
         const [filter, setFilter] = useState("");
         const [selected, setSelected] = useState(null);
-
-        const sorted = filter
-          ? [
-              ...FRUITS.filter((f) =>
-                f.toLowerCase().includes(filter.toLowerCase()),
-              ),
-              ...FRUITS.filter(
-                (f) => !f.toLowerCase().includes(filter.toLowerCase()),
-              ),
-            ]
-          : FRUITS;
+        const [sorted, getItemMatchInfo] = useSearchText(filter, FRUITS);
 
         return (
           <div className="demo-section">
@@ -394,22 +410,30 @@
                 fontSize: "1rem",
               }}
             />
-            <SuggestionList
+            <List
+              listRole="listbox"
+              fallback="No results"
               style={{ maxHeight: "220px" }}
-              onChange={setSelected}
-              highlight={filter}
+              uiAction={setSelected}
             >
-              {sorted.map((fruit) => (
-                <Suggestion
-                  key={fruit}
-                  value={fruit}
-                  selected={selected === fruit}
-                  style={{ backgroundColor: SUGGESTION_BG }}
-                >
-                  {fruit}
-                </Suggestion>
-              ))}
-            </SuggestionList>
+              {sorted.map((fruit, i) => {
+                const { score, ranges } = getItemMatchInfo(fruit);
+                return (
+                  <ListItem
+                    role="option"
+                    key={fruit}
+                    index={i}
+                    value={fruit}
+                    selected={selected === fruit}
+                    highlight={ranges}
+                    matchScore={score}
+                    style={{ backgroundColor: SUGGESTION_BG }}
+                  >
+                    {fruit}
+                  </ListItem>
+                );
+              })}
+            </List>
             <div className="value-display">{selected ?? ""}</div>
           </div>
         );
@@ -420,18 +444,7 @@
       const LargeListDemo = () => {
         const [filter, setFilter] = useState("");
         const [selected, setSelected] = useState(null);
-
-        const lowerFilter = filter.toLowerCase();
-        const sorted = filter
-          ? [
-              ...LARGE_LIST.filter((item) =>
-                item.toLowerCase().includes(lowerFilter),
-              ),
-              ...LARGE_LIST.filter(
-                (item) => !item.toLowerCase().includes(lowerFilter),
-              ),
-            ]
-          : LARGE_LIST;
+        const [sorted, getItemMatchInfo] = useSearchText(filter, LARGE_LIST);
 
         // Group by first letter for table of contents
         const groupMap = new Map();
@@ -447,11 +460,9 @@
           items,
         }));
 
-        const matchCount = filter
-          ? LARGE_LIST.filter((item) =>
-              item.toLowerCase().includes(lowerFilter),
-            ).length
-          : LARGE_LIST.length;
+        const matchCount = sorted.filter(
+          (item) => getItemMatchInfo(item).match,
+        ).length;
 
         return (
           <Box className="demo-section">
@@ -487,32 +498,44 @@
                 {LARGE_LIST.length}
               </div>
             )}
-            <SuggestionList
+            <List
+              listRole="listbox"
+              fallback="No results"
               style={{ maxHeight: "280px" }}
-              onChange={setSelected}
-              highlight={filter}
+              uiAction={setSelected}
             >
-              {groups.map((group) => (
-                <SuggestionGroup key={group.letter} label={group.letter}>
-                  {group.items.map((item) => (
-                    <Suggestion
-                      key={item}
-                      value={item}
-                      selected={selected === item}
-                      style={{ backgroundColor: SUGGESTION_BG }}
-                    >
-                      {item}
-                    </Suggestion>
-                  ))}
-                </SuggestionGroup>
-              ))}
-            </SuggestionList>
+              {(() => {
+                let globalIndex = 0;
+                return groups.map((group) => (
+                  <ListItemGroup key={group.letter} label={group.letter}>
+                    {group.items.map((item) => {
+                      const i = globalIndex++;
+                      const { score, ranges } = getItemMatchInfo(item);
+                      return (
+                        <ListItem
+                          role="option"
+                          key={item}
+                          index={i}
+                          value={item}
+                          selected={selected === item}
+                          highlight={ranges}
+                          matchScore={score}
+                          style={{ backgroundColor: SUGGESTION_BG }}
+                        >
+                          {item}
+                        </ListItem>
+                      );
+                    })}
+                  </ListItemGroup>
+                ));
+              })()}
+            </List>
             <div className="value-display">{selected ?? ""}</div>
           </Box>
         );
       };
 
-      // --- 7. Grouped suggestions with SuggestionGroup ---
+      // --- 7. Grouped suggestions with ListItemGroup ---
 
       const GROUPED_ITEMS = [
         {
@@ -537,37 +560,47 @@
         },
       ];
 
-      const SuggestionGroupDemo = () => {
+      const ListItemGroupDemo = () => {
         const [selected, setSelected] = useState(null);
         return (
           <div className="demo-section">
             <h2>Grouped suggestions</h2>
-            <p>Options organized into labeled groups using SuggestionGroup.</p>
-            <SuggestionList
+            <p>Options organized into labeled groups using ListItemGroup.</p>
+            <List
+              listRole="listbox"
+              fallback="No results"
               style={{ maxHeight: "280px" }}
-              onChange={setSelected}
+              uiAction={setSelected}
               expandX
             >
-              <Suggestion>
+              <ListItem role="option" index={0}>
                 A very large suggestion to test how it behaves when the text is
                 very large and exceeds the width of the list. It should be
                 visible
-              </Suggestion>
-              {GROUPED_ITEMS.map((group) => (
-                <SuggestionGroup key={group.label} label={group.label}>
-                  {group.items.map((item) => (
-                    <Suggestion
-                      key={item}
-                      value={item}
-                      selected={selected === item}
-                      style={{ backgroundColor: SUGGESTION_BG }}
-                    >
-                      {item}
-                    </Suggestion>
-                  ))}
-                </SuggestionGroup>
-              ))}
-            </SuggestionList>
+              </ListItem>
+              {(() => {
+                let globalIndex = 1;
+                return GROUPED_ITEMS.map((group) => (
+                  <ListItemGroup key={group.label} label={group.label}>
+                    {group.items.map((item) => {
+                      const i = globalIndex++;
+                      return (
+                        <ListItem
+                          role="option"
+                          key={item}
+                          index={i}
+                          value={item}
+                          selected={selected === item}
+                          style={{ backgroundColor: SUGGESTION_BG }}
+                        >
+                          {item}
+                        </ListItem>
+                      );
+                    })}
+                  </ListItemGroup>
+                ));
+              })()}
+            </List>
             <div className="value-display">{selected ?? ""}</div>
           </div>
         );
@@ -578,18 +611,16 @@
       const SplitMatchDemo = () => {
         const [filter, setFilter] = useState("");
         const [selected, setSelected] = useState(null);
-
-        const lowerFilter = filter.toLowerCase();
-        const matches = filter
-          ? LARGE_LIST.filter((item) =>
-              item.toLowerCase().includes(lowerFilter),
-            )
-          : LARGE_LIST;
-        const nonMatches = filter
-          ? LARGE_LIST.filter(
-              (item) => !item.toLowerCase().includes(lowerFilter),
-            )
-          : [];
+        const [orderedItems, getItemMatchInfo] = useSearchText(
+          filter,
+          LARGE_LIST,
+        );
+        const matches = orderedItems.filter(
+          (item) => getItemMatchInfo(item).match,
+        );
+        const nonMatches = orderedItems.filter(
+          (item) => !getItemMatchInfo(item).match,
+        );
 
         return (
           <div className="demo-section">
@@ -618,12 +649,13 @@
                 fontSize: "1rem",
               }}
             />
-            <SuggestionList
+            <List
+              listRole="listbox"
+              fallback="No results"
               style={{ maxHeight: "300px" }}
-              onChange={setSelected}
-              highlight={filter}
+              uiAction={setSelected}
             >
-              <SuggestionGroup
+              <ListItemGroup
                 style={{ backgroundColor: "#f0faf3" }}
                 label={
                   <Box
@@ -638,19 +670,26 @@
                   </Box>
                 }
               >
-                {matches.map((item) => (
-                  <Suggestion
-                    key={item}
-                    value={item}
-                    selected={selected === item}
-                    style={{ backgroundColor: SUGGESTION_BG }}
-                  >
-                    {item}
-                  </Suggestion>
-                ))}
-              </SuggestionGroup>
+                {matches.map((item, i) => {
+                  const { score, ranges } = getItemMatchInfo(item);
+                  return (
+                    <ListItem
+                      role="option"
+                      key={item}
+                      index={i}
+                      value={item}
+                      selected={selected === item}
+                      highlight={ranges}
+                      matchScore={score}
+                      style={{ backgroundColor: SUGGESTION_BG }}
+                    >
+                      {item}
+                    </ListItem>
+                  );
+                })}
+              </ListItemGroup>
               {nonMatches.length > 0 && (
-                <SuggestionGroup
+                <ListItemGroup
                   style={{ backgroundColor: "#fef8f0" }}
                   label={
                     <Box
@@ -665,19 +704,21 @@
                     </Box>
                   }
                 >
-                  {nonMatches.map((item) => (
-                    <Suggestion
+                  {nonMatches.map((item, i) => (
+                    <ListItem
+                      role="option"
                       key={item}
+                      index={matches.length + i}
                       value={item}
                       selected={selected === item}
                       style={{ backgroundColor: SUGGESTION_BG }}
                     >
                       {item}
-                    </Suggestion>
+                    </ListItem>
                   ))}
-                </SuggestionGroup>
+                </ListItemGroup>
               )}
-            </SuggestionList>
+            </List>
             <div className="value-display">{selected ?? ""}</div>
           </div>
         );
@@ -692,14 +733,14 @@
 
         const showPopover = () => {
           listRef.current?.dispatchEvent(
-            new CustomEvent("navi_suggestion_list_open", {
+            new CustomEvent("navi_list_request_open", {
               detail: { anchor: buttonRef.current },
             }),
           );
         };
         const hidePopover = () => {
           listRef.current?.dispatchEvent(
-            new CustomEvent("navi_suggestion_list_close"),
+            new CustomEvent("navi_list_request_close"),
           );
         };
 
@@ -713,25 +754,29 @@
               </button>
               <button onClick={hidePopover}>Hide popover</button>
             </div>
-            <SuggestionList
+            <List
+              listRole="listbox"
+              fallback="No results"
               ref={listRef}
               popover
-              onChange={(value) => {
+              uiAction={(value) => {
                 setSelected(value);
                 hidePopover();
               }}
             >
-              {FRUITS.map((fruit) => (
-                <Suggestion
+              {FRUITS.map((fruit, i) => (
+                <ListItem
+                  role="option"
                   key={fruit}
+                  index={i}
                   value={fruit}
                   selected={selected === fruit}
                   style={{ backgroundColor: SUGGESTION_BG }}
                 >
                   {fruit}
-                </Suggestion>
+                </ListItem>
               ))}
-            </SuggestionList>
+            </List>
             <div className="value-display">{selected ?? ""}</div>
           </div>
         );

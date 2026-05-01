@@ -8,8 +8,8 @@ import { useActionStatus } from "../../action/use_action_status.js";
 import { useExecuteAction } from "../../action/use_execute_action.js";
 import { Box } from "../../box/box.jsx";
 import { useKeyboardShortcuts } from "../../keyboard/keyboard_shortcuts.js";
+import { useFocusGroup } from "../../utils/focus/use_focus_group.js";
 import { useActionEvents } from "../use_action_events.js";
-import { useFocusGroup } from "../use_focus_group.js";
 import {
   UIStateContext,
   UIStateControllerContext,

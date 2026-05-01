@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/dom",
-  "version": "0.9.5",
+  "version": "0.10.1",
   "type": "module",
   "description": "DOM utilities for writing frontend code",
   "repository": {
@@ -40,7 +40,7 @@
     "@jsenv/navi": "../navi",
     "@jsenv/snapshot": "../../tooling/snapshot",
     "@preact/signals": "2.9.0",
-    "preact": "11.0.0-beta.0"
+    "preact": "11.0.0-beta.1"
   },
   "publishConfig": {
     "access": "public"

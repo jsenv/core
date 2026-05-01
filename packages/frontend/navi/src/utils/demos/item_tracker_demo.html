@@ -1,0 +1,430 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Item Tracker Demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:," />
+    <style>
+      body {
+        margin: 20px;
+        font-family: system-ui, sans-serif;
+        background: #f5f5f5;
+      }
+
+      .demo-container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+
+      .section {
+        margin-bottom: 25px;
+        padding: 15px;
+        background: #fafafa;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+      }
+
+      .section h3 {
+        margin: 0 0 15px 0;
+        padding-bottom: 8px;
+        color: #333;
+        font-size: 16px;
+        border-bottom: 1px solid #eee;
+      }
+
+      .table-container {
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        overflow: hidden;
+      }
+
+      .table {
+        width: 100%;
+        background: white;
+        border-collapse: collapse;
+      }
+
+      .table th,
+      .table td {
+        padding: 8px 12px;
+        font-size: 12px;
+        text-align: left;
+        border-bottom: 1px solid #eee;
+      }
+
+      .table th {
+        color: #495057;
+        font-weight: 600;
+        background: #f8f9fa;
+      }
+
+      .table-row {
+        position: relative;
+      }
+
+      .table-row--red {
+        background-color: #ffebee;
+      }
+      .table-row--blue {
+        background-color: #e3f2fd;
+      }
+      .table-row--green {
+        background-color: #e8f5e8;
+      }
+      .table-row--yellow {
+        background-color: #fff8e1;
+      }
+
+      .controls {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .btn {
+        padding: 4px 8px;
+        color: #333;
+        font-size: 11px;
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 3px;
+        cursor: pointer;
+      }
+
+      .btn:hover {
+        background: #f0f0f0;
+      }
+
+      .btn--primary {
+        color: white;
+        background: #007bff;
+        border-color: #007bff;
+      }
+
+      .btn--primary:hover {
+        background: #0056b3;
+      }
+
+      .btn--small {
+        padding: 2px 6px;
+        font-size: 10px;
+      }
+
+      .info-grid {
+        display: grid;
+        margin-top: 10px;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 10px;
+      }
+
+      .info-item {
+        padding: 8px;
+        font-size: 11px;
+        background: white;
+        border: 1px solid #e0e0e0;
+        border-radius: 4px;
+      }
+
+      .info-item strong {
+        display: block;
+        margin-bottom: 4px;
+        color: #333;
+      }
+
+      .tracked-rows {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .tracked-row-item {
+        display: flex;
+        padding: 6px 8px;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 10px;
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 3px;
+      }
+
+      .log {
+        max-height: 200px;
+        padding: 10px;
+        font-size: 10px;
+        font-family: "Courier New", monospace;
+        white-space: pre-wrap;
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        overflow-y: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="demo-container">
+      <h1>Simple Item Tracker Demo</h1>
+      <p>
+        <strong>Use Case:</strong> TableRow components register themselves,
+        TableCell components access row data by index.
+      </p>
+      <div id="app-root"></div>
+      <div class="section">
+        <h3>Debug Log</h3>
+        <div id="log" class="log"></div>
+        <button
+          class="btn btn--small"
+          onclick="document.getElementById('log').textContent = ''"
+        >
+          Clear Log
+        </button>
+      </div>
+    </div>
+    <script type="module" jsenv-type="module/jsx">
+      import { createContext, render } from "preact";
+      import { useContext, useState } from "preact/hooks";
+      import { useItemTracker } from "../item_tracker/use_item_tracker.js";
+
+      const RowTrackerContext = createContext();
+      const RowContext = createContext();
+
+      // Main demo app
+      const App = () => {
+        const [rows, setRows] = useState([
+          {
+            id: "a",
+            name: "First Row",
+            color: "red",
+            category: "Type A",
+            value: 100,
+          },
+          {
+            id: "b",
+            name: "Second Row",
+            color: "blue",
+            category: "Type B",
+            value: 200,
+          },
+        ]);
+        const [renderKey, setRenderKey] = useState(0);
+
+        log(`🎬 App render #${renderKey}`);
+
+        const rowTracker = useItemTracker();
+
+        const addRow = () => {
+          const colors = ["red", "blue", "green", "yellow"];
+          const newId = String.fromCharCode(97 + rows.length);
+
+          const newRow = {
+            id: newId,
+            name: `Row ${newId.toUpperCase()}`,
+            color: colors[Math.floor(Math.random() * colors.length)],
+          };
+
+          setRows((prev) => [...prev, newRow]);
+          log(`➕ Added row: ${JSON.stringify(newRow)}`);
+        };
+
+        const removeLastRow = () => {
+          if (rows.length > 0) {
+            const removed = rows[rows.length - 1];
+            setRows((prev) => prev.slice(0, -1));
+            log(`➖ Removed row: ${removed.name}`);
+          }
+        };
+
+        const forceRerender = () => {
+          setRenderKey((prev) => prev + 1);
+          log(`🔄 Forced re-render #${renderKey + 1}`);
+        };
+
+        return (
+          <div>
+            <div className="section">
+              <h3>🎮 Controls</h3>
+              <div className="controls">
+                <button className="btn btn--primary" onClick={addRow}>
+                  ➕ Add Row
+                </button>
+                <button className="btn" onClick={removeLastRow}>
+                  ➖ Remove Last Row
+                </button>
+                <button className="btn" onClick={forceRerender}>
+                  🔄 Force Re-render
+                </button>
+                <span style={{ fontSize: "11px", opacity: 0.7 }}>
+                  Render #{renderKey}
+                </span>
+              </div>
+            </div>
+
+            <div className="section">
+              <h3>📋 Table with Tracked Rows</h3>
+              <p
+                style={{
+                  fontSize: "12px",
+                  margin: "0 0 10px 0",
+                  color: "#666",
+                }}
+              >
+                💡 Change colors using the dropdown in each row to trigger
+                individual row re-renders. Notice how only that specific row
+                re-renders and updates its tracked data.
+              </p>
+              <div className="table-container">
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Color</th>
+                      <th>Color Override</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <RowTrackerContext.Provider value={rowTracker}>
+                      {rows.map(({ id, name, color }, index) => (
+                        <TableRow
+                          key={id}
+                          id={id}
+                          index={index}
+                          name={name}
+                          color={color}
+                        >
+                          <TableCell column="name" />
+                          <TableCell column="color" />
+                          {/* Color selector is rendered directly in TableRow */}
+                        </TableRow>
+                      ))}
+                    </RowTrackerContext.Provider>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="section">
+              <h3>🔍 Tracked Items Debug</h3>
+              <TrackedRowsList rowTracker={rowTracker} />
+            </div>
+          </div>
+        );
+      };
+
+      // Simple logging
+      const logContainer = document.getElementById("log");
+      const log = (message) => {
+        const timestamp = new Date().toLocaleTimeString();
+        logContainer.textContent += `[${timestamp}] ${message}\n`;
+        logContainer.scrollTop = logContainer.scrollHeight;
+      };
+
+      const TableRowIndexContext = createContext();
+
+      // Demo components
+      const TableRow = ({ id, index, children, name, color: initialColor }) => {
+        // Local state for color override
+        const [localColor, setLocalColor] = useState(initialColor);
+
+        // Use local color if it differs from initial, otherwise use initial
+        const currentColor =
+          localColor !== initialColor ? localColor : initialColor;
+
+        const rowTracker = useContext(RowTrackerContext);
+        // Register this row and get its index
+        const rowIndex = rowTracker.useTrackItem({
+          id,
+          index,
+          name,
+          color: currentColor,
+        });
+
+        log(`🎬 TableRow ${rowIndex} render (${name}, color: ${currentColor})`);
+
+        const handleColorChange = (event) => {
+          const newColor = event.target.value;
+          setLocalColor(newColor);
+          log(`🎨 Row ${rowIndex} color changed to ${newColor}`);
+        };
+
+        return (
+          <tr className={`table-row table-row--${currentColor}`}>
+            <TableRowIndexContext.Provider value={rowIndex}>
+              {children}
+              <td>
+                <select
+                  value={currentColor}
+                  onChange={handleColorChange}
+                  style={{ fontSize: "10px", padding: "2px" }}
+                >
+                  <option value="red">Red</option>
+                  <option value="blue">Blue</option>
+                  <option value="green">Green</option>
+                  <option value="yellow">Yellow</option>
+                </select>
+                {localColor !== initialColor && (
+                  <small style={{ marginLeft: "4px", opacity: 0.7 }}>
+                    (overridden)
+                  </small>
+                )}
+              </td>
+            </TableRowIndexContext.Provider>
+          </tr>
+        );
+      };
+
+      const TableCell = ({ column }) => {
+        const rowTracker = useContext(RowTrackerContext);
+        const rowIndex = useContext(TableRowIndexContext);
+        const rowData = rowTracker.getTrackedItemByIndex(rowIndex);
+
+        if (!rowData) {
+          return <td>❌ Row {rowIndex} not found</td>;
+        }
+
+        const cellContent = rowData[column] || `${column}?`;
+
+        return (
+          <td title={`Row ${rowIndex}, Column ${column}`}>
+            {cellContent}
+            <small style={{ opacity: 0.6, marginLeft: "4px" }}>
+              (row {rowIndex})
+            </small>
+          </td>
+        );
+      };
+
+      const TrackedRowsList = ({ rowTracker }) => {
+        const rows = rowTracker.useItems();
+
+        return (
+          <div className="tracked-rows">
+            <strong>All Tracked Rows ({rows.length}):</strong>
+            {rows.map((item, index) => (
+              <div key={index} className="tracked-row-item">
+                <span>
+                  #{index}: {item.name}
+                </span>
+                <span style={{ color: item.color, fontWeight: "bold" }}>
+                  {item.color}
+                </span>
+              </div>
+            ))}
+            {rows.length === 0 && (
+              <div style={{ opacity: 0.6, fontStyle: "italic" }}>
+                No rows tracked yet
+              </div>
+            )}
+          </div>
+        );
+      };
+
+      render(<App />, document.getElementById("app-root"));
+    </script>
+  </body>
+</html>

@@ -73,6 +73,7 @@ export const useKeyboardShortcuts = (
     onActionError,
     onActionEnd,
     allowConcurrentActions,
+    closestFocusableSelector,
   } = {},
 ) => {
   if (!elementRef) {
@@ -149,49 +150,76 @@ export const useKeyboardShortcuts = (
     );
     shortcut.action = useAction(shortcut.action);
   }
-
+  const onKeyDown = createOnKeyDownForShortcuts(
+    shortcuts,
+    shortcutActionIsBusyRef,
+  );
   useEffect(() => {
     const element = elementRef.current;
     if (!element) {
       return null;
     }
-    const shortcutsCopy = [];
-    for (const shortcutCandidate of shortcuts) {
-      shortcutsCopy.push({
-        ...shortcutCandidate,
-        handler: (keyboardEvent) => {
-          if (shortcutCandidate.handler) {
-            return shortcutCandidate.handler(keyboardEvent);
-          }
-          if (shortcutActionIsBusyRef.current) {
-            return false;
-          }
-          const { action } = shortcutCandidate;
-          const actionWithEvent = action.bindParams(keyboardEvent);
-          return requestAction(element, actionWithEvent, {
-            actionOrigin: "keyboard_shortcut",
-            event: keyboardEvent,
-            requester: document.activeElement,
-            confirmMessage: shortcutCandidate.confirmMessage,
-            meta: {
-              shortcut: shortcutCandidate,
-            },
-          });
-        },
-      });
-    }
-
-    addShortcuts(element, shortcuts);
-
-    const onKeydown = (event) => {
-      applyKeyboardShortcuts(shortcutsCopy, event);
-    };
-    element.addEventListener("keydown", onKeydown);
+    const focusableElement = closestFocusableSelector
+      ? element.closest(closestFocusableSelector)
+      : element;
+    focusableElement.addEventListener("keydown", onKeyDown);
+    addShortcuts(focusableElement, shortcuts);
     return () => {
-      element.removeEventListener("keydown", onKeydown);
-      removeShortcuts(element);
+      focusableElement.removeEventListener("keydown", onKeyDown);
+      removeShortcuts(focusableElement);
     };
   }, [shortcutDeps]);
+};
+
+export const createOnKeyDownForShortcuts = (shortcuts, busyRef) => {
+  const shortcutsCopy = [];
+  for (const shortcutCandidate of shortcuts) {
+    shortcutsCopy.push({
+      ...shortcutCandidate,
+      handler: (keyboardEvent) => {
+        if (shortcutCandidate.handler) {
+          return shortcutCandidate.handler(keyboardEvent);
+        }
+        if (busyRef?.current) {
+          return false;
+        }
+        const { action } = shortcutCandidate;
+        const actionWithEvent = action.bindParams(keyboardEvent);
+        const element = keyboardEvent.currentTarget;
+        return requestAction(element, actionWithEvent, {
+          actionOrigin: "keyboard_shortcut",
+          event: keyboardEvent,
+          requester: document.activeElement,
+          confirmMessage: shortcutCandidate.confirmMessage,
+          meta: {
+            shortcut: shortcutCandidate,
+          },
+        });
+      },
+    });
+  }
+
+  return (keyboardEvent) => {
+    applyKeyboardShortcuts(shortcutsCopy, keyboardEvent);
+  };
+};
+export const shortcutsViaOnKeyDown = (shortcuts, onKeyDown) => {
+  const shortcutsArray = [];
+  for (const key of Object.keys(shortcuts)) {
+    const value = shortcuts[key];
+    const shortcut = { key };
+    if (typeof value === "function") {
+      shortcut.handler = value;
+    } else if (typeof value === "object" && value !== null) {
+      Object.assign(shortcut, value);
+    }
+    shortcutsArray.push(shortcut);
+  }
+  const onKeyDownForShortcuts = createOnKeyDownForShortcuts(shortcutsArray);
+  return (e) => {
+    onKeyDownForShortcuts(e);
+    onKeyDown?.(e);
+  };
 };
 
 const applyKeyboardShortcuts = (shortcuts, keyboardEvent) => {

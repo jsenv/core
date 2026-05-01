@@ -4,6 +4,7 @@ import { useCallback, useContext, useLayoutEffect, useRef } from "preact/hooks";
 import { renderActionableComponent } from "../action/render_actionable_component.jsx";
 import { Box } from "../box/box.jsx";
 import { LoaderBackground } from "../graphic/loader/loader_background.jsx";
+import { useAutoFocus } from "../utils/focus/use_auto_focus.js";
 import { useStableCallback } from "../utils/use_stable_callback.js";
 import { fieldPropSet } from "./field_prop_set.js";
 import {
@@ -11,7 +12,6 @@ import {
   reportInteractiveToLabel,
   reportReadOnlyToLabel,
 } from "./label.jsx";
-import { useAutoFocus } from "./use_auto_focus.js";
 import {
   DisabledContext,
   FieldNameContext,
@@ -536,6 +536,7 @@ const InputRadioBasic = (props) => {
     <Box
       as="span"
       {...remainingProps}
+      autoFocus={undefined} // See use_auto_focus.js
       ref={boxRef}
       data-appearance={appearance}
       baseClassName="navi_radio"
