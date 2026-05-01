@@ -1,5 +1,7 @@
 import { createPubSub, mergeTwoStyles } from "@jsenv/dom";
 
+import { listenInputValue } from "../field/validation/input_value_listener.js";
+
 const pressedElements = new WeakSet();
 
 export const PSEUDO_CLASSES = {
@@ -338,6 +340,18 @@ export const PSEUDO_CLASSES = {
   },
   ":-navi-void": {
     attribute: "data-void",
+  },
+  ":-navi-has-value": {
+    attribute: "data-has-value",
+    setup: (el, callback) => {
+      return listenInputValue(el, callback);
+    },
+    test: (el) => {
+      if (el.value === "") {
+        return false;
+      }
+      return true;
+    },
   },
 };
 

@@ -30,7 +30,6 @@ import { useActionBoundToOneParam } from "../action/use_action.js";
 import { useActionStatus } from "../action/use_action_status.js";
 import { useExecuteAction } from "../action/use_execute_action.js";
 import { Box } from "../box/box.jsx";
-import { PSEUDO_CLASSES } from "../box/pseudo_styles.js";
 import { ChevronDownSvg } from "../graphic/icons/chevron_updown_svg.jsx";
 import { CloseSvg } from "../graphic/icons/close_svg.jsx";
 import { EmailSvg } from "../graphic/icons/email_svg.jsx";
@@ -69,7 +68,6 @@ import {
 } from "./use_ui_state_controller.js";
 import { forwardActionRequested } from "./validation/custom_constraint_validation.js";
 import { useConstraints } from "./validation/hooks/use_constraints.js";
-import { listenInputValue } from "./validation/input_value_listener.js";
 
 const css = /* css */ `
   @layer navi {
@@ -300,7 +298,6 @@ export const InputTextual = (props) => {
     </UIStateControllerContext.Provider>
   );
 };
-
 const InputTextualDispatcher = (props) => {
   const listIdFromContext = useContext(ListIdContext);
 
@@ -549,20 +546,6 @@ const InputPseudoClasses = [
   ":-navi-has-value",
   ":-navi-expanded",
 ];
-Object.assign(PSEUDO_CLASSES, {
-  ":-navi-has-value": {
-    attribute: "data-has-value",
-    setup: (el, callback) => {
-      return listenInputValue(el, callback);
-    },
-    test: (el) => {
-      if (el.value === "") {
-        return false;
-      }
-      return true;
-    },
-  },
-});
 const InputPseudoElements = ["::-navi-loader"];
 const InputChildPropSet = new Set([...fieldPropSet]);
 const InputSlot = ({ side, onClick, hideWhileEmpty, ...props }) => {
