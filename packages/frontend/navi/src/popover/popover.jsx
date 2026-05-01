@@ -34,7 +34,7 @@ export const Popover = (props) => {
     disabled,
     scrollTrap,
     children,
-    positionPreference = "below",
+    position = "bottom",
     ...rest
   } = props;
 
@@ -76,30 +76,17 @@ export const Popover = (props) => {
     if (firstFocusable) {
       firstFocusable.focus({ preventScroll: true });
     }
-    if (!anchor) {
-      debugPopover("No anchor, centering popover in viewport");
-      const centerPopover = () => {
-        const viewportWidth = document.documentElement.clientWidth;
-        const viewportHeight = document.documentElement.clientHeight;
-        const popoverRect = popoverEl.getBoundingClientRect();
-        popoverEl.style.left = `${(viewportWidth - popoverRect.width) / 2}px`;
-        popoverEl.style.top = `${(viewportHeight - popoverRect.height) / 2}px`;
-      };
-      centerPopover();
-      window.addEventListener("resize", centerPopover);
-      cleanupRef.current = () => {
-        window.removeEventListener("resize", centerPopover);
-      };
-      dispatchPublicCustomEvent(popoverEl, "navi_popover_open", { event: e });
-      return;
-    }
+    const effectiveAnchor = anchor || document.documentElement;
     const positionPopover = (positionEvent) => {
       debugPopover(`positionPopover("${positionEvent.type}")`);
-      const anchorRect = anchor.getBoundingClientRect();
-      popoverEl.style.setProperty("--anchor-width", `${anchorRect.width}px`);
+      popoverEl.style.setProperty(
+        "--anchor-width",
+        `${effectiveAnchor.getBoundingClientRect().width}px`,
+      );
       const minLeft = 1;
-      const { left, top } = pickPositionRelativeTo(popoverEl, anchor, {
-        positionPreference,
+      const effectivePositionTry = anchor ? position : "center";
+      const { left, top } = pickPositionRelativeTo(popoverEl, effectiveAnchor, {
+        positionTry: effectivePositionTry,
         minLeft,
       });
       popoverEl.style.top = `${top}px`;
@@ -119,7 +106,7 @@ export const Popover = (props) => {
       cleanupScrollTrap = trapScrollInside(popoverEl);
     }
     const rectEffect = visibleRectEffect(
-      anchor,
+      effectiveAnchor,
       ({ visibilityRatio }, { event }) => {
         if (visibilityRatio <= 0.2) {
           popoverEl.setAttribute("data-anchor-hidden", "");

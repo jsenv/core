@@ -1122,7 +1122,7 @@ const ListWithPopover = (props) => {
             listContainerEl,
             anchor,
             {
-              positionPreference: "below",
+              positionTry: "bottom",
               minLeft,
             },
           );

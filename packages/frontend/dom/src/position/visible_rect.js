@@ -322,14 +322,39 @@ export const visibleRectEffect = (element, update) => {
   };
 };
 
+// pickPositionRelativeTo places an element relative to a target using 9 compass positions.
+//
+//   top-left  |   top   | top-right
+//   ----------+---------+----------
+//     left    |  center |   right
+//   ----------+---------+----------
+//  bottom-left|  bottom |bottom-right
+//
+// All positions except "center" are adjacent (element touches anchor from outside):
+//   "top"          → element.bottom = target.top,    horizontally centered
+//   "bottom"       → element.top    = target.bottom, horizontally centered  (default)
+//   "left"         → element.right  = target.left,   vertically centered
+//   "right"        → element.left   = target.right,  vertically centered
+//   "top-left"     → element.bottom = target.top,    element.right = target.left
+//   "top-right"    → element.bottom = target.top,    element.left  = target.right
+//   "bottom-left"  → element.top    = target.bottom, element.right = target.left
+//   "bottom-right" → element.top    = target.bottom, element.left  = target.right
+//   "center"       → element centered on target (overlapping)
+//
+// positionTry: the preferred position (default "bottom"). Mimics CSS position-try.
+//   If the tried position does not fit, the logical opposite is used as fallback:
+//     top ↔ bottom, left ↔ right, top-left ↔ bottom-right, top-right ↔ bottom-left
+//   The element's data-position-try attribute is checked first when no position.
+//
+// position: skip the fit-check and use this position as-is.
 export const pickPositionRelativeTo = (
   element,
   target,
   {
+    positionTry = "bottom",
+    position,
     alignToViewportEdgeWhenTargetNearEdge = 0,
     minLeft = 0,
-    positionPreference,
-    forcePosition,
   } = {},
 ) => {
   if (
@@ -369,42 +394,90 @@ export const pickPositionRelativeTo = (
   const elementWidth = elementRight - elementLeft;
   const elementHeight = elementBottom - elementTop;
   const targetWidth = targetRight - targetLeft;
+  const targetHeight = targetBottom - targetTop;
+
+  // Determine the active position: position wins, then data-position-current (last resolved),
+  // then data-position-try attribute (user preference), then positionTry param
+  let activePosition;
+  if (position) {
+    activePosition = position;
+  } else {
+    const positionCurrentFromAttribute = element.getAttribute(
+      "data-position-current",
+    );
+    const positionTryFromAttribute = element.getAttribute("data-position-try");
+    activePosition =
+      positionCurrentFromAttribute || positionTryFromAttribute || positionTry;
+  }
+
+  const spaceAboveTarget = targetTop;
+  const spaceBelowTarget = viewportHeight - targetBottom;
+
+  // Resolve vertical axis, falling back to opposite if the tried position does not fit
+  const { isTop, isBottom, isLeft, isRight, isCenter } =
+    decomposePosition(activePosition);
+  const isCenterX = !isLeft && !isRight; // top / bottom / center
+  const isCenterY = !isTop && !isBottom; // left / right / center
+
+  let resolvedVertical; // "top" | "bottom" | "center-y"
+  if (isCenter || isCenterY) {
+    resolvedVertical = "center-y";
+  } else if (position) {
+    resolvedVertical = isTop ? "top" : "bottom";
+  } else if (isTop) {
+    const minContentVisibilityRatio = 0.6;
+    const fitsAbove =
+      spaceAboveTarget / elementHeight >= minContentVisibilityRatio;
+    if (fitsAbove) {
+      resolvedVertical = "top";
+    } else {
+      resolvedVertical = "bottom"; // opposite of top
+    }
+  } else {
+    // isBottom
+    const elementFitsBelow = spaceBelowTarget >= elementHeight;
+    if (elementFitsBelow) {
+      resolvedVertical = "bottom";
+    } else {
+      resolvedVertical = "top"; // opposite of bottom
+    }
+  }
 
   // Calculate horizontal position (viewport-relative)
   let elementPositionLeft;
   {
-    // Check if target element is wider than viewport
-    const targetIsWiderThanViewport = targetWidth > viewportWidth;
-    if (targetIsWiderThanViewport) {
-      const targetLeftIsVisible = targetLeft >= 0;
-      const targetRightIsVisible = targetRight <= viewportWidth;
-
-      if (!targetLeftIsVisible && targetRightIsVisible) {
-        // Target extends beyond left edge but right side is visible
-        const viewportCenter = viewportWidth / 2;
-        const distanceFromRightEdge = viewportWidth - targetRight;
-        elementPositionLeft =
-          viewportCenter - distanceFromRightEdge / 2 - elementWidth / 2;
-      } else if (targetLeftIsVisible && !targetRightIsVisible) {
-        // Target extends beyond right edge but left side is visible
-        const viewportCenter = viewportWidth / 2;
-        const distanceFromLeftEdge = -targetLeft;
-        elementPositionLeft =
-          viewportCenter - distanceFromLeftEdge / 2 - elementWidth / 2;
-      } else {
-        // Target extends beyond both edges or is fully visible (center in viewport)
-        elementPositionLeft = viewportWidth / 2 - elementWidth / 2;
-      }
+    if (isLeft) {
+      elementPositionLeft = targetLeft - elementWidth;
+    } else if (isRight) {
+      elementPositionLeft = targetRight;
     } else {
-      // Target fits within viewport width - center element relative to target
-      elementPositionLeft = targetLeft + targetWidth / 2 - elementWidth / 2;
-      // Special handling when element is wider than target
-      if (alignToViewportEdgeWhenTargetNearEdge) {
-        const elementIsWiderThanTarget = elementWidth > targetWidth;
-        const targetIsNearLeftEdge =
-          targetLeft < alignToViewportEdgeWhenTargetNearEdge;
-        if (elementIsWiderThanTarget && targetIsNearLeftEdge) {
-          elementPositionLeft = minLeft; // Left edge of viewport
+      // centered horizontally on target
+      const targetIsWiderThanViewport = targetWidth > viewportWidth;
+      if (targetIsWiderThanViewport) {
+        const targetLeftIsVisible = targetLeft >= 0;
+        const targetRightIsVisible = targetRight <= viewportWidth;
+        if (!targetLeftIsVisible && targetRightIsVisible) {
+          const viewportCenter = viewportWidth / 2;
+          const distanceFromRightEdge = viewportWidth - targetRight;
+          elementPositionLeft =
+            viewportCenter - distanceFromRightEdge / 2 - elementWidth / 2;
+        } else if (targetLeftIsVisible && !targetRightIsVisible) {
+          const viewportCenter = viewportWidth / 2;
+          const distanceFromLeftEdge = -targetLeft;
+          elementPositionLeft =
+            viewportCenter - distanceFromLeftEdge / 2 - elementWidth / 2;
+        } else {
+          elementPositionLeft = viewportWidth / 2 - elementWidth / 2;
+        }
+      } else {
+        elementPositionLeft = targetLeft + targetWidth / 2 - elementWidth / 2;
+        if (alignToViewportEdgeWhenTargetNearEdge) {
+          const elementIsWiderThanTarget = elementWidth > targetWidth;
+          const targetIsNearLeftEdge =
+            targetLeft < alignToViewportEdgeWhenTargetNearEdge;
+          if (elementIsWiderThanTarget && targetIsNearLeftEdge) {
+            elementPositionLeft = minLeft;
+          }
         }
       }
     }
@@ -417,60 +490,42 @@ export const pickPositionRelativeTo = (
   }
 
   // Calculate vertical position (viewport-relative)
-  let position;
-  const spaceAboveTarget = targetTop;
-  const spaceBelowTarget = viewportHeight - targetBottom;
-  determine_position: {
-    if (forcePosition) {
-      position = forcePosition;
-      break determine_position;
-    }
-    const elementPreferredPosition = element.getAttribute("data-position");
-    const minContentVisibilityRatio = 0.6; // 60% minimum visibility to keep position
-
-    // Check positionPreference parameter first, then element attribute
-    const preferredPosition = positionPreference || elementPreferredPosition;
-
-    if (preferredPosition) {
-      // Element has a preferred position - try to keep it unless we really struggle
-      const visibleRatio =
-        preferredPosition === "above"
-          ? spaceAboveTarget / elementHeight
-          : spaceBelowTarget / elementHeight;
-      const canShowMinimumContent = visibleRatio >= minContentVisibilityRatio;
-      if (canShowMinimumContent) {
-        position = preferredPosition;
-        break determine_position;
-      }
-    }
-    // No preferred position - use original logic (prefer below, fallback to above if more space)
-    const elementFitsBelow = spaceBelowTarget >= elementHeight;
-    if (elementFitsBelow) {
-      position = "below";
-      break determine_position;
-    }
-    const hasMoreSpaceBelow = spaceBelowTarget >= spaceAboveTarget;
-    position = hasMoreSpaceBelow ? "below" : "above";
-  }
-
   let elementPositionTop;
   {
-    if (position === "below") {
-      // Calculate top position when placing below target (ensure whole pixels)
-      const idealTopWhenBelow = targetBottom;
+    if (resolvedVertical === "center-y") {
+      elementPositionTop = targetTop + targetHeight / 2 - elementHeight / 2;
+    } else if (resolvedVertical === "bottom") {
+      const idealTop = targetBottom;
       elementPositionTop =
-        idealTopWhenBelow % 1 === 0
-          ? idealTopWhenBelow
-          : Math.floor(idealTopWhenBelow) + 1;
+        idealTop % 1 === 0 ? idealTop : Math.floor(idealTop) + 1;
     } else {
-      // Calculate top position when placing above target
-      const idealTopWhenAbove = targetTop - elementHeight;
-      const minimumTopInViewport = 0;
-      elementPositionTop =
-        idealTopWhenAbove < minimumTopInViewport
-          ? minimumTopInViewport
-          : idealTopWhenAbove;
+      // "top"
+      const idealTop = targetTop - elementHeight;
+      elementPositionTop = idealTop < 0 ? 0 : idealTop;
     }
+  }
+
+  let finalPosition;
+  {
+    const vertPart = resolvedVertical === "center-y" ? "" : resolvedVertical;
+    const horzPart = isCenterX ? "" : isLeft ? "left" : "right";
+    if (vertPart && horzPart) {
+      finalPosition = `${vertPart}-${horzPart}`;
+    } else if (vertPart) {
+      finalPosition = vertPart;
+    } else if (horzPart) {
+      finalPosition = horzPart;
+    } else {
+      finalPosition = "center";
+    }
+  }
+
+  // Persist the resolved position on the element so subsequent calls start from it
+  // (avoids flickering between positions when the element is near the threshold).
+  // position is not persisted — it is always explicit.
+
+  if (!position) {
+    element.setAttribute("data-position-current", finalPosition);
   }
 
   // Get document scroll for final coordinate conversion
@@ -483,7 +538,7 @@ export const pickPositionRelativeTo = (
   const targetDocumentBottom = targetBottom + scrollTop;
 
   return {
-    position,
+    position: finalPosition,
     left: elementDocumentLeft,
     top: elementDocumentTop,
     width: elementWidth,
@@ -494,5 +549,16 @@ export const pickPositionRelativeTo = (
     targetBottom: targetDocumentBottom,
     spaceAboveTarget,
     spaceBelowTarget,
+  };
+};
+// Decompose position flags
+const decomposePosition = (pos) => {
+  return {
+    isTop: pos === "top" || pos === "top-left" || pos === "top-right",
+    isBottom:
+      pos === "bottom" || pos === "bottom-left" || pos === "bottom-right",
+    isLeft: pos === "left" || pos === "top-left" || pos === "bottom-left",
+    isRight: pos === "right" || pos === "top-right" || pos === "bottom-right",
+    isCenter: pos === "center",
   };
 };

@@ -679,14 +679,6 @@ const stickCalloutToAnchor = (calloutElement, anchorElement) => {
     ({ left: anchorLeft, right: anchorRight, visibilityRatio }) => {
       const calloutElementClone =
         cloneCalloutToMeasureNaturalSize(calloutElement);
-      // Check for preferred and forced position from anchor element
-      const preferredPosition = anchorElement.getAttribute(
-        "data-callout-position",
-      );
-      const forcedPosition = anchorElement.getAttribute(
-        "data-callout-position-force",
-      );
-
       const {
         position,
         left: calloutLeft,
@@ -699,13 +691,21 @@ const stickCalloutToAnchor = (calloutElement, anchorElement) => {
         alignToViewportEdgeWhenTargetNearEdge: 20,
         // when fully to the left, the border color is collé to the browser window making it hard to see
         minLeft: 1,
-        positionPreference:
-          // we want to avoid the callout to switch position when it can still fit so
-          // we start with preferredPosition if given but once a position is picked we stick to it
-          // This is implemented by favoring the data attribute of the callout then of the anchor
-          calloutElement.getAttribute("data-position") || preferredPosition,
-        forcePosition: forcedPosition,
+        // Check for preferred and forced position from anchor element
+        positionTry:
+          anchorElement.getAttribute("data-callout-position-try") || "bottom",
+        position: anchorElement.getAttribute("data-callout-position"),
       });
+      // data-position-current is written to the clone by pickPositionRelativeTo,
+      // copy it back to the real element so stickiness works on next call
+      const positionCurrent = calloutElementClone.getAttribute(
+        "data-position-current",
+      );
+      if (positionCurrent) {
+        calloutElement.setAttribute("data-position-current", positionCurrent);
+      } else {
+        calloutElement.removeAttribute("data-position-current");
+      }
       calloutElementClone.remove();
 
       // Calculate arrow position to point at anchorElement element
@@ -752,7 +752,7 @@ const stickCalloutToAnchor = (calloutElement, anchorElement) => {
       // Force content overflow when there is not enough space to display
       // the entirety of the callout
       const spaceAvailable =
-        position === "below" ? spaceBelowTarget : spaceAboveTarget;
+        position === "bottom" ? spaceBelowTarget : spaceAboveTarget;
       const paddingSizes = getPaddingSizes(calloutBodyElement);
       const paddingY = paddingSizes.top + paddingSizes.bottom;
       const spaceNeededAroundContent =
@@ -772,7 +772,7 @@ const stickCalloutToAnchor = (calloutElement, anchorElement) => {
       }
 
       const { width, height } = calloutElement.getBoundingClientRect();
-      if (position === "above") {
+      if (position === "top") {
         // Position above target element
         calloutBoxElement.style.marginTop = "";
         calloutBoxElement.style.marginBottom = `${ARROW_HEIGHT}px`;
@@ -794,8 +794,6 @@ const stickCalloutToAnchor = (calloutElement, anchorElement) => {
           arrowLeftPosOnCallout,
         );
       }
-
-      calloutElement.setAttribute("data-position", position);
       calloutStyleController.set(calloutElement, {
         opacity: visibilityRatio > 0 ? 1 : 0,
         transform: {
@@ -1106,6 +1104,6 @@ const dispatchCalloutCustomElement = (anchorElement, customEvent) => {
     targetElement = anchorElement;
   }
 
-  console.log("dispatch on", targetElement, "event", customEvent);
+  // console.log("dispatch on", targetElement, "event", customEvent);
   targetElement.dispatchEvent(customEvent);
 };
