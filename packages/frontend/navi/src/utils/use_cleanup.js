@@ -2,8 +2,9 @@ import { createPubSub } from "@jsenv/dom";
 import { useLayoutEffect, useRef } from "preact/hooks";
 
 export const useCleanup = () => {
-  const cleanupPubSub = useRef(null);
-  if (!cleanupPubSub.current) {
+  const cleanupMethodsRef = useRef(null);
+  let cleanupMethods = cleanupMethodsRef.current;
+  if (!cleanupMethods) {
     const [publish, subscribe, clear] = createPubSub();
     const cleanup = () => {
       publish();
@@ -12,13 +13,13 @@ export const useCleanup = () => {
     const registerCleanup = (cb) => {
       subscribe(cb);
     };
-    cleanupPubSub.current = [registerCleanup, cleanup];
+    cleanupMethodsRef.current = cleanupMethods = [registerCleanup, cleanup];
   }
   useLayoutEffect(() => {
     return () => {
-      const [, cleanup] = cleanupPubSub.current;
+      const [, cleanup] = cleanupMethods;
       cleanup();
     };
   }, []);
-  return cleanupPubSub;
+  return cleanupMethods;
 };
