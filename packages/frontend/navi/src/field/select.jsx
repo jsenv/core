@@ -567,7 +567,13 @@ const SelectWithPopover = (props) => {
         }}
         onnavi_popover_close={(e) => {
           onClose(e);
-          moveFocusToSelect(e);
+          const { event = e } = e.detail;
+          if (event.type === "focusout") {
+            // If the popover closed because focus left the select (focusout),
+            // don't steal focus back — let focus go where the user intended.
+          } else {
+            moveFocusToSelect(e);
+          }
         }}
         positionTry={positionTry}
         scrollTrap={scrollTrap}
