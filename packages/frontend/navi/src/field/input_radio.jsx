@@ -132,10 +132,13 @@ const css = /* css */ `
       --color-mix: var(--color-mix-dark);
     }
     /* When accent color is very light (e.g. white), keep the accent color
-       as the border/fill — make the background transparent when checked so
-       the page background shows through as the gap, matching native behavior */
+       as the border/fill — use a semi-transparent dark background so the
+       unchecked inner area darkens whatever is behind it (no hard white fill).
+       When checked, make background transparent so the page background shows
+       through as the gap ring, matching native behavior */
     &[data-light] {
       --border-color-checked: var(--accent-color);
+      --x-background-color: rgba(0, 0, 0, 0.15);
 
       &[data-checked] {
         --x-background-color: transparent;
