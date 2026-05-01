@@ -34,7 +34,14 @@ export const trapFocusInside = (element, { debug } = {}) => {
 
     const onkeydown = (event) => {
       if (isTabEvent(event)) {
-        performTabNavigation(event, { rootElement: element, debug });
+        const handled = performTabNavigation(event, {
+          rootElement: element,
+          debug,
+        });
+        if (!handled) {
+          // No focusable target found — prevent the browser from moving focus outside the trap.
+          event.preventDefault();
+        }
       }
     };
 

@@ -64,7 +64,8 @@ export const performTabNavigation = (
     if (nextFocusableElement) {
       return onTargetToFocus(nextFocusableElement);
     }
-    const firstFocusableElement = findDescendant(activeElement, predicate, {
+    // Wrap around: go back to the first focusable element in root.
+    const firstFocusableElement = findDescendant(rootElement, predicate, {
       skipRoot: outsideOfElement,
     });
     if (firstFocusableElement) {
@@ -95,7 +96,8 @@ export const performTabNavigation = (
     if (previousFocusableElement) {
       return onTargetToFocus(previousFocusableElement);
     }
-    const lastFocusableElement = findLastDescendant(activeElement, predicate, {
+    // Wrap around: go back to the last focusable element in root.
+    const lastFocusableElement = findLastDescendant(rootElement, predicate, {
       skipRoot: outsideOfElement,
     });
     if (lastFocusableElement) {
