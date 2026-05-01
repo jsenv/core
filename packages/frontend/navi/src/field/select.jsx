@@ -99,7 +99,6 @@ const css = /* css */ `
     border-radius: var(--select-border-radius);
     outline: var(--select-outline-width) solid var(--select-border-color);
     outline-offset: calc(-1 * var(--select-outline-width));
-    cursor: pointer;
     user-select: none;
 
     &:hover {
@@ -185,6 +184,7 @@ const css = /* css */ `
       border: none;
       border-radius: 0;
       box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+      cursor: default; /* Reset pointer cursor within the select */
       overflow: auto;
       overscroll-behavior: none;
     }
@@ -197,6 +197,7 @@ const css = /* css */ `
       border: none;
       border-radius: 8px;
       box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+      cursor: default; /* Reset pointer cursor within the select */
 
       &[open] {
         display: flex;
@@ -713,6 +714,13 @@ const SelectWithDialog = (props) => {
         onnavi_dialog_close={(e) => {
           onClose(e);
           moveFocusToSelect(e);
+        }}
+        onMouseDown={(e) => {
+          if (e.button !== 0) {
+            return;
+          }
+          // mousedown inside dialog should not bubble to the select (would re-open it if that mousedown closes it)
+          e.stopPropagation();
         }}
         scrollTrap={scrollTrap}
         pointerTrap={pointerTrap}

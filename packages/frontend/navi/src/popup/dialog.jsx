@@ -92,12 +92,13 @@ export const Dialog = (props) => {
       as="dialog"
       ref={ref}
       baseClassName="navi_dialog"
-      onClick={(e) => {
+      onMouseDown={(e) => {
         // The <dialog> element covers the full viewport; clicking the backdrop
         // hits the dialog itself (not any child). Close when that happens.
         if (!pointerTrap && e.target === ref.current) {
           onRequestClose(e);
         }
+        rest.onMouseDown?.(e);
       }}
       onnavi_dialog_request_open={(e) => {
         const { event = e } = e.detail;
