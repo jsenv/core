@@ -39,14 +39,10 @@ const css = /* css */ `
       --color-mix-dark: white;
       --color-mix: var(--color-mix-light);
 
-      --background-color-light: white;
-      --background-color-dark: black;
-      --background-color-mix: var(--background-color-light);
-
       --outline-color: var(--navi-focus-outline-color);
       --loader-color: var(--navi-loader-color);
       --border-color: light-dark(#767676, #8e8e93);
-      --background-color: var(--background-color-mix);
+      --x-background-color: rgba(0, 0, 0, 0.15);
       --accent-color: light-dark(#4476ff, #3b82f6);
       --radiomark-color: var(--accent-color);
       --border-color-checked: var(--accent-color);
@@ -129,21 +125,13 @@ const css = /* css */ `
     box-sizing: content-box;
     margin: var(--margin);
 
-    &[data-dark-background] {
-      --color-mix: var(--color-mix-dark);
-    }
-    /* When accent color is very light (e.g. white), keep the accent color
-       as the border/fill — use a semi-transparent dark background so the
-       unchecked inner area darkens whatever is behind it (no hard white fill).
-       When checked, make background transparent so the page background shows
-       through as the gap ring, matching native behavior */
-    &[data-light] {
-      --border-color-checked: var(--accent-color);
-      --x-background-color: rgba(0, 0, 0, 0.15);
-
-      &[data-checked] {
-        --x-background-color: transparent;
-      }
+    .navi_radio_accent_probe {
+      position: absolute;
+      width: 0;
+      height: 0;
+      background-color: var(--accent-color);
+      visibility: hidden;
+      pointer-events: none;
     }
 
     .navi_native_field {
@@ -172,6 +160,7 @@ const css = /* css */ `
     }
     /* Checked */
     &[data-checked] {
+      --x-background-color: transparent;
       --x-border-color: var(--border-color-checked);
 
       &[data-hover] {
@@ -205,6 +194,14 @@ const css = /* css */ `
       &[data-checked] {
         --x-border-color: var(--border-color-disabled);
         --x-radiomark-color: var(--radiomark-color-disabled);
+      }
+    }
+
+    &[data-dark-background] {
+      --x-background-color: white;
+      --color-mix: var(--color-mix-dark);
+      &[data-checked] {
+        --x-background-color: white;
       }
     }
 
@@ -488,14 +485,7 @@ const InputRadioUI = (props) => {
 
   const boxRef = useRef();
   useDarkBackgroundAttribute(boxRef, [color], {
-    backgroundElementSelector: ".navi_radio_border",
-    colorProperty: "fill",
-  });
-  useDarkBackgroundAttribute(boxRef, [color], {
-    backgroundElementSelector: ".navi_radio_border",
-    colorProperty: "fill",
-    attributeName: "data-light",
-    invert: true,
+    backgroundElementSelector: ".navi_radio_accent_probe",
   });
 
   return (
@@ -521,6 +511,7 @@ const InputRadioUI = (props) => {
       hasChildFunction
       baseChildPropSet={RadioChildPropSet}
     >
+      <span className="navi_radio_accent_probe" aria-hidden="true" />
       <LoaderBackground
         loading={innerLoading}
         inset={-1}
