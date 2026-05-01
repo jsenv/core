@@ -146,7 +146,7 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useState, useLayoutEffect } from "preact/hooks";
+      import { useState } from "preact/hooks";
       import {
         Input,
         Label,
@@ -356,16 +356,6 @@
       };
 
       const ColorDemo = () => {
-        // we checke after 2s, to ensure the checkbox can start unchecked and the checkmark will
-        // still end up being white on dark bacground because the component properly reacts to state changes
-        const [checkedAfterDelay, setCheckedAfterDelay] = useState(false);
-        useLayoutEffect(() => {
-          const timeout = setTimeout(() => {
-            setCheckedAfterDelay(true);
-          }, 2000);
-          return () => clearTimeout(timeout);
-        }, []);
-
         return (
           <div className="demo-section">
             <h2>Custom Colors</h2>
@@ -373,14 +363,26 @@
             <div className="states-section">
               <div className="states-title">Custom Color Themes</div>
               <p className="states-description">
-                Checkbox color can be customized and will maintain colors
-                constrast. Like the user agent version in modern browsers.
+                Checkbox color can be customized and will maintain color
+                contrast. Each row shows unchecked and checked state side by
+                side.
               </p>
 
-              <Box column spacing="sm">
-                <fieldset>
+              <Box flex="y" spacing="s">
+                <fieldset style="margin: 0">
                   <legend>Orange</legend>
-                  <Box row spacing="sm" alignX="start">
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "max-content max-content",
+                      gap: "4px 24px",
+                      alignItems: "center",
+                    }}
+                  >
+                    <Label>
+                      <Input type="checkbox" accentColor="#f39c12" />
+                      Navi
+                    </Label>
                     <Label>
                       <Input
                         type="checkbox"
@@ -393,15 +395,33 @@
                       <input
                         type="checkbox"
                         style={{ accentColor: "#f39c12" }}
+                      />
+                      Native
+                    </label>
+                    <label>
+                      <input
+                        type="checkbox"
+                        style={{ accentColor: "#f39c12" }}
                         defaultChecked
                       />
                       Native
                     </label>
-                  </Box>
+                  </div>
                 </fieldset>
-                <fieldset>
+                <fieldset style="margin: 0">
                   <legend>Green</legend>
-                  <Box row spacing="sm" alignX="start">
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "max-content max-content",
+                      gap: "4px 24px",
+                      alignItems: "center",
+                    }}
+                  >
+                    <Label>
+                      <Input type="checkbox" accentColor="#2ecc71" />
+                      Navi
+                    </Label>
                     <Label>
                       <Input
                         type="checkbox"
@@ -414,15 +434,33 @@
                       <input
                         type="checkbox"
                         style={{ accentColor: "#2ecc71" }}
+                      />
+                      Native
+                    </label>
+                    <label>
+                      <input
+                        type="checkbox"
+                        style={{ accentColor: "#2ecc71" }}
                         defaultChecked
                       />
                       Native
                     </label>
-                  </Box>
+                  </div>
                 </fieldset>
-                <fieldset>
+                <fieldset style="margin: 0">
                   <legend>Dark grey</legend>
-                  <Box row spacing="sm" alignX="start">
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "max-content max-content",
+                      gap: "4px 24px",
+                      alignItems: "center",
+                    }}
+                  >
+                    <Label>
+                      <Input type="checkbox" accentColor="#34495e" />
+                      Navi
+                    </Label>
                     <Label>
                       <Input
                         type="checkbox"
@@ -435,34 +473,103 @@
                       <input
                         type="checkbox"
                         style={{ accentColor: "#34495e" }}
+                      />
+                      Native
+                    </label>
+                    <label>
+                      <input
+                        type="checkbox"
+                        style={{ accentColor: "#34495e" }}
                         defaultChecked
                       />
                       Native
                     </label>
-                  </Box>
+                  </div>
                 </fieldset>
-
-                <fieldset>
-                  <legend>Dark grey (checked after 2s)</legend>
-                  <Box row spacing="sm" alignX="start">
+                <fieldset style="margin: 0">
+                  <legend>Pink</legend>
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "max-content max-content",
+                      gap: "4px 24px",
+                      alignItems: "center",
+                    }}
+                  >
+                    <Label>
+                      <Input type="checkbox" accentColor="#e91e8c" />
+                      Navi
+                    </Label>
                     <Label>
                       <Input
                         type="checkbox"
-                        accentColor="#34495e"
-                        checked={checkedAfterDelay}
-                        uiAction={() => {}}
+                        accentColor="#e91e8c"
+                        defaultChecked
                       />
                       Navi
                     </Label>
                     <label>
                       <input
                         type="checkbox"
-                        style={{ accentColor: "#34495e" }}
-                        checked={checkedAfterDelay}
+                        style={{ accentColor: "#e91e8c" }}
                       />
                       Native
                     </label>
-                  </Box>
+                    <label>
+                      <input
+                        type="checkbox"
+                        style={{ accentColor: "#e91e8c" }}
+                        defaultChecked
+                      />
+                      Native
+                    </label>
+                  </div>
+                </fieldset>
+                <fieldset
+                  style={{
+                    margin: 0,
+                    background: "#1e1e1e",
+                    color: "white",
+                    borderColor: "#444",
+                  }}
+                >
+                  <legend style={{ color: "white" }}>White</legend>
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "max-content max-content",
+                      gap: "4px 24px",
+                      alignItems: "center",
+                    }}
+                  >
+                    <Label>
+                      <Input type="checkbox" accentColor="#ffffff" />
+                      Navi
+                    </Label>
+                    <Label>
+                      <Input
+                        type="checkbox"
+                        accentColor="#ffffff"
+                        defaultChecked
+                      />
+                      Navi
+                    </Label>
+                    <label>
+                      <input
+                        type="checkbox"
+                        style={{ accentColor: "#ffffff" }}
+                      />
+                      Native
+                    </label>
+                    <label>
+                      <input
+                        type="checkbox"
+                        style={{ accentColor: "#ffffff" }}
+                        defaultChecked
+                      />
+                      Native
+                    </label>
+                  </div>
                 </fieldset>
               </Box>
             </div>
