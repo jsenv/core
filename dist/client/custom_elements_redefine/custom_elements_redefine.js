@@ -6,13 +6,19 @@
 const allowCustomElementsRedefine = ({
   updateWholeDOMOnRedefine = false,
 } = {}) => {
+  const patchedSymbol = Symbol.for("allowCustomElementsRedefine");
+  if (customElements.define[patchedSymbol]) {
+    customElements.define[patchedSymbol].updateWholeDOMOnRedefine =
+      updateWholeDOMOnRedefine;
+    return;
+  }
   let timeoutId;
   const onCustomElementChange = (
     customElementName,
     // customElementClass,
     // options,
   ) => {
-    if (!updateWholeDOMOnRedefine) {
+    if (!customElements.define[patchedSymbol].updateWholeDOMOnRedefine) {
       return;
     }
     clearTimeout(timeoutId);
@@ -31,7 +37,7 @@ const allowCustomElementsRedefine = ({
 
   const customElementClassMap = new Map();
   const defineOriginal = customElements.define;
-  customElements.define = (customElementName, customElementClass, options) => {
+  const definePatched = (customElementName, customElementClass, options) => {
     const registeredCustomElement = customElements.get(customElementName);
     customElementClassMap.set(customElementName, customElementClass);
     if (registeredCustomElement) {
@@ -49,6 +55,8 @@ const allowCustomElementsRedefine = ({
       options,
     );
   };
+  definePatched[patchedSymbol] = { updateWholeDOMOnRedefine };
+  customElements.define = definePatched;
 
   const observerSymbol = Symbol.for("observedAttributesObserver");
   const createCustomElementFacade = (
