@@ -685,8 +685,8 @@ const stickCalloutToAnchor = (calloutElement, anchorElement) => {
         top: calloutTop,
         width: calloutWidth,
         height: calloutHeight,
-        spaceAboveTarget,
-        spaceBelowTarget,
+        spaceAbove,
+        spaceBelow,
       } = pickPositionRelativeTo(calloutElementClone, anchorElement, {
         alignToViewportEdgeWhenTargetNearEdge: 20,
         // when fully to the left, the border color is collé to the browser window making it hard to see
@@ -751,8 +751,7 @@ const stickCalloutToAnchor = (calloutElement, anchorElement) => {
 
       // Force content overflow when there is not enough space to display
       // the entirety of the callout
-      const spaceAvailable =
-        position === "bottom" ? spaceBelowTarget : spaceAboveTarget;
+      const spaceAvailable = position === "bottom" ? spaceBelow : spaceAbove;
       const paddingSizes = getPaddingSizes(calloutBodyElement);
       const paddingY = paddingSizes.top + paddingSizes.bottom;
       const spaceNeededAroundContent =

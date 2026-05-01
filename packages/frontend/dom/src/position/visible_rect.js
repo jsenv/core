@@ -132,7 +132,6 @@ export const visibleRectEffect = (element, update) => {
     } else {
       // widthVisible/heightVisible are already clipped to the scroll container.
       // Now clip their viewport-relative counterparts against the viewport.
-      const elementRect = element.getBoundingClientRect();
       const viewportWidth = window.innerWidth;
       const viewportHeight = window.innerHeight;
       // Container-clipped visible rect in viewport coordinates
@@ -333,38 +332,49 @@ export const visibleRectEffect = (element, update) => {
   };
 };
 
-// pickPositionRelativeTo places an element relative to a target using 9 compass positions.
-//
-//   top-left  |   top   | top-right
-//   ----------+---------+----------
-//     left    |  center |   right
-//   ----------+---------+----------
-//  bottom-left|  bottom |bottom-right
-//
-// All positions except "center" are adjacent (element touches anchor from outside):
-//   "top"          → element.bottom = target.top,    horizontally centered
-//   "bottom"       → element.top    = target.bottom, horizontally centered  (default)
-//   "left"         → element.right  = target.left,   vertically centered
-//   "right"        → element.left   = target.right,  vertically centered
-//   "top-left"     → element.bottom = target.top,    element.right = target.left
-//   "top-right"    → element.bottom = target.top,    element.left  = target.right
-//   "bottom-left"  → element.top    = target.bottom, element.right = target.left
-//   "bottom-right" → element.top    = target.bottom, element.left  = target.right
-//   "center"       → element centered on target (overlapping)
-//
-// positionTry: the preferred position (default "bottom"). Mimics CSS position-try.
-//   If the tried position does not fit, the logical opposite is used as fallback:
-//     top ↔ bottom, left ↔ right, top-left ↔ bottom-right, top-right ↔ bottom-left
-//   The element's data-position-try attribute is checked first when no position.
-//
-// position: skip the fit-check and use this position as-is.
+/**
+ * Places element adjacent to anchor using one of 9 compass positions.
+ *
+ * ```
+ *   top-left  |   top   | top-right
+ *   ----------+---------+----------
+ *     left    |  center |   right
+ *   ----------+---------+----------
+ *  bottom-left|  bottom |bottom-right
+ * ```
+ *
+ * All positions except "center" place element outside the anchor:
+ *   - "top"          → element.bottom = anchor.top,    horizontally centered
+ *   - "bottom"       → element.top    = anchor.bottom, horizontally centered  (default)
+ *   - "left"         → element.right  = anchor.left,   vertically centered
+ *   - "right"        → element.left   = anchor.right,  vertically centered
+ *   - "top-left"     → element.bottom = anchor.top,    element.right = anchor.left
+ *   - "top-right"    → element.bottom = anchor.top,    element.left  = anchor.right
+ *   - "bottom-left"  → element.top    = anchor.bottom, element.right = anchor.left
+ *   - "bottom-right" → element.top    = anchor.bottom, element.left  = anchor.right
+ *   - "center"       → element centered on anchor (overlapping)
+ *
+ * @param {HTMLElement} element - The element to position (must be document-relative)
+ * @param {HTMLElement} anchor - The anchor element to position against
+ * @param {object} [options]
+ * @param {string} [options.positionTry="bottom"] - Preferred position. Mimics CSS position-try.
+ *   If it does not fit, the logical opposite is tried automatically:
+ *   top↔bottom, left↔right, top-left↔bottom-right, top-right↔bottom-left.
+ *   The element's data-position-try attribute takes precedence over this param;
+ *   the last resolved position is persisted as data-position-current to avoid flickering.
+ * @param {string} [options.position] - Force a specific position, skipping the fit-check.
+ * @param {number} [options.alignToViewportEdgeWhenAnchorNearEdge=0] - Snap to viewport left
+ *   edge when anchor is within this many px of the left edge and element is wider than anchor.
+ * @param {number} [options.minLeft=0] - Minimum left coordinate (document-relative).
+ * @returns {{ position, left, top, width, height, anchorLeft, anchorTop, anchorRight, anchorBottom, spaceAbove, spaceBelow }}
+ */
 export const pickPositionRelativeTo = (
   element,
-  target,
+  anchor,
   {
     positionTry = "bottom",
     position,
-    alignToViewportEdgeWhenTargetNearEdge = 0,
+    alignToViewportEdgeWhenAnchorNearEdge = 0,
     minLeft = 0,
   } = {},
 ) => {
@@ -389,7 +399,7 @@ export const pickPositionRelativeTo = (
   const viewportHeight = document.documentElement.clientHeight;
   // Get viewport-relative positions
   const elementRect = element.getBoundingClientRect();
-  const targetRect = target.getBoundingClientRect();
+  const anchorRect = anchor.getBoundingClientRect();
   const {
     left: elementLeft,
     right: elementRight,
@@ -397,15 +407,15 @@ export const pickPositionRelativeTo = (
     bottom: elementBottom,
   } = elementRect;
   const {
-    left: targetLeft,
-    right: targetRight,
-    top: targetTop,
-    bottom: targetBottom,
-  } = targetRect;
+    left: anchorLeft,
+    right: anchorRight,
+    top: anchorTop,
+    bottom: anchorBottom,
+  } = anchorRect;
   const elementWidth = elementRight - elementLeft;
   const elementHeight = elementBottom - elementTop;
-  const targetWidth = targetRight - targetLeft;
-  const targetHeight = targetBottom - targetTop;
+  const anchorWidth = anchorRight - anchorLeft;
+  const anchorHeight = anchorBottom - anchorTop;
 
   // Determine the active position: position wins, then data-position-current (last resolved),
   // then data-position-try attribute (user preference), then positionTry param
@@ -421,8 +431,8 @@ export const pickPositionRelativeTo = (
       positionCurrentFromAttribute || positionTryFromAttribute || positionTry;
   }
 
-  const spaceAboveTarget = targetTop;
-  const spaceBelowTarget = viewportHeight - targetBottom;
+  const spaceAbove = anchorTop;
+  const spaceBelow = viewportHeight - anchorBottom;
 
   // Resolve vertical axis, falling back to opposite if the tried position does not fit
   const { isTop, isBottom, isLeft, isRight, isCenter } =
@@ -437,8 +447,7 @@ export const pickPositionRelativeTo = (
     resolvedVertical = isTop ? "top" : "bottom";
   } else if (isTop) {
     const minContentVisibilityRatio = 0.6;
-    const fitsAbove =
-      spaceAboveTarget / elementHeight >= minContentVisibilityRatio;
+    const fitsAbove = spaceAbove / elementHeight >= minContentVisibilityRatio;
     if (fitsAbove) {
       resolvedVertical = "top";
     } else {
@@ -446,7 +455,7 @@ export const pickPositionRelativeTo = (
     }
   } else {
     // isBottom
-    const elementFitsBelow = spaceBelowTarget >= elementHeight;
+    const elementFitsBelow = spaceBelow >= elementHeight;
     if (elementFitsBelow) {
       resolvedVertical = "bottom";
     } else {
@@ -458,35 +467,35 @@ export const pickPositionRelativeTo = (
   let elementPositionLeft;
   {
     if (isLeft) {
-      elementPositionLeft = targetLeft - elementWidth;
+      elementPositionLeft = anchorLeft - elementWidth;
     } else if (isRight) {
-      elementPositionLeft = targetRight;
+      elementPositionLeft = anchorRight;
     } else {
-      // centered horizontally on target
-      const targetIsWiderThanViewport = targetWidth > viewportWidth;
-      if (targetIsWiderThanViewport) {
-        const targetLeftIsVisible = targetLeft >= 0;
-        const targetRightIsVisible = targetRight <= viewportWidth;
-        if (!targetLeftIsVisible && targetRightIsVisible) {
+      // centered horizontally on anchor
+      const anchorIsWiderThanViewport = anchorWidth > viewportWidth;
+      if (anchorIsWiderThanViewport) {
+        const anchorLeftIsVisible = anchorLeft >= 0;
+        const anchorRightIsVisible = anchorRight <= viewportWidth;
+        if (!anchorLeftIsVisible && anchorRightIsVisible) {
           const viewportCenter = viewportWidth / 2;
-          const distanceFromRightEdge = viewportWidth - targetRight;
+          const distanceFromRightEdge = viewportWidth - anchorRight;
           elementPositionLeft =
             viewportCenter - distanceFromRightEdge / 2 - elementWidth / 2;
-        } else if (targetLeftIsVisible && !targetRightIsVisible) {
+        } else if (anchorLeftIsVisible && !anchorRightIsVisible) {
           const viewportCenter = viewportWidth / 2;
-          const distanceFromLeftEdge = -targetLeft;
+          const distanceFromLeftEdge = -anchorLeft;
           elementPositionLeft =
             viewportCenter - distanceFromLeftEdge / 2 - elementWidth / 2;
         } else {
           elementPositionLeft = viewportWidth / 2 - elementWidth / 2;
         }
       } else {
-        elementPositionLeft = targetLeft + targetWidth / 2 - elementWidth / 2;
-        if (alignToViewportEdgeWhenTargetNearEdge) {
-          const elementIsWiderThanTarget = elementWidth > targetWidth;
-          const targetIsNearLeftEdge =
-            targetLeft < alignToViewportEdgeWhenTargetNearEdge;
-          if (elementIsWiderThanTarget && targetIsNearLeftEdge) {
+        elementPositionLeft = anchorLeft + anchorWidth / 2 - elementWidth / 2;
+        if (alignToViewportEdgeWhenAnchorNearEdge) {
+          const elementIsWiderThanAnchor = elementWidth > anchorWidth;
+          const anchorIsNearLeftEdge =
+            anchorLeft < alignToViewportEdgeWhenAnchorNearEdge;
+          if (elementIsWiderThanAnchor && anchorIsNearLeftEdge) {
             elementPositionLeft = minLeft;
           }
         }
@@ -504,14 +513,14 @@ export const pickPositionRelativeTo = (
   let elementPositionTop;
   {
     if (resolvedVertical === "center-y") {
-      elementPositionTop = targetTop + targetHeight / 2 - elementHeight / 2;
+      elementPositionTop = anchorTop + anchorHeight / 2 - elementHeight / 2;
     } else if (resolvedVertical === "bottom") {
-      const idealTop = targetBottom;
+      const idealTop = anchorBottom;
       elementPositionTop =
         idealTop % 1 === 0 ? idealTop : Math.floor(idealTop) + 1;
     } else {
       // "top"
-      const idealTop = targetTop - elementHeight;
+      const idealTop = anchorTop - elementHeight;
       elementPositionTop = idealTop < 0 ? 0 : idealTop;
     }
   }
@@ -543,10 +552,10 @@ export const pickPositionRelativeTo = (
   const { scrollLeft, scrollTop } = document.documentElement;
   const elementDocumentLeft = elementPositionLeft + scrollLeft;
   const elementDocumentTop = elementPositionTop + scrollTop;
-  const targetDocumentLeft = targetLeft + scrollLeft;
-  const targetDocumentTop = targetTop + scrollTop;
-  const targetDocumentRight = targetRight + scrollLeft;
-  const targetDocumentBottom = targetBottom + scrollTop;
+  const anchorDocumentLeft = anchorLeft + scrollLeft;
+  const anchorDocumentTop = anchorTop + scrollTop;
+  const anchorDocumentRight = anchorRight + scrollLeft;
+  const anchorDocumentBottom = anchorBottom + scrollTop;
 
   return {
     position: finalPosition,
@@ -554,12 +563,12 @@ export const pickPositionRelativeTo = (
     top: elementDocumentTop,
     width: elementWidth,
     height: elementHeight,
-    targetLeft: targetDocumentLeft,
-    targetTop: targetDocumentTop,
-    targetRight: targetDocumentRight,
-    targetBottom: targetDocumentBottom,
-    spaceAboveTarget,
-    spaceBelowTarget,
+    anchorLeft: anchorDocumentLeft,
+    anchorTop: anchorDocumentTop,
+    anchorRight: anchorDocumentRight,
+    anchorBottom: anchorDocumentBottom,
+    spaceAbove,
+    spaceBelow,
   };
 };
 // Decompose position flags
