@@ -200,9 +200,11 @@ const css = /* css */ `
 
       &[data-left] {
         left: var(--x-padding-left-base);
+        width: var(--left-slot-size);
       }
       &[data-right] {
         right: var(--x-padding-right-base);
+        width: var(--right-slot-size);
       }
       &[data-hide-while-empty] {
         opacity: 0;

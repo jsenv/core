@@ -573,7 +573,6 @@ const ListUI = (props) => {
       data-expand-x={expandX ? "" : undefined}
       expandX={expandX}
       maxHeight={maxHeight}
-      visualSelector=".navi_list"
       styleCSSVars={LIST_STYLE_CSS_VARS}
       pseudoClasses={LIST_PSEUDO_CLASSES}
       hasChildFunction
