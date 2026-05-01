@@ -27043,8 +27043,8 @@ const ListUI = props => {
     renderBudget = RENDER_BUDGET_DEFAULT,
     listId,
     listRole,
-    fallback = "Aucun élément dans cette liste",
-    noMatchFallback = "Aucun élément ne correspond à cette recherche",
+    fallback,
+    noMatchFallback,
     separator,
     children,
     popover,
@@ -27578,11 +27578,11 @@ const UnorderedList = ({
     children: [jsx(TopFiller, {
       virtualItemHeightSignal: virtualItemHeightSignal,
       renderWindowStart: renderWindow.start
-    }), noMatchFallback && jsx(NoMatchFallback, {
+    }), jsx(NoMatchFallback, {
       noMatchFallback: noMatchFallback,
       tracker: tracker,
       searchText: searchText
-    }), fallback && jsx(Fallback, {
+    }), jsx(Fallback, {
       fallback: fallback,
       tracker: tracker
     }), jsx(RenderWindowContext.Provider, {
@@ -27614,12 +27614,15 @@ const NoMatchFallback = ({
   const allHidden = itemCount > 0 && visibleItemCount === 0;
   const noneMatch = searchText && visibleItemCount > 0 && matchCount === 0;
   const showMatchFallback = allHidden || noneMatch;
+  if (noMatchFallback === undefined) {
+    noMatchFallback = allHidden ? "Aucun élément ne correspond à cette recherche." : "Aucun élément ne correspond à cette recherche. Le reste est affiché ci-dessous";
+  }
   return jsx(ListItem, {
     role: "presentation",
     className: "navi_list_item navi_list_no_match_fallback",
     hidden: !showMatchFallback,
     "navi-default": typeof noMatchFallback === "string" ? "" : undefined,
-    children: allHidden ? "Aucun élément ne correspond à cette recherche" : "Aucun élément ne correspond à cette recherche. Le reste est affiché ci-dessous"
+    children: noMatchFallback
   });
 };
 const Fallback = ({
@@ -27628,6 +27631,9 @@ const Fallback = ({
 }) => {
   const itemCount = tracker.countSignal.value;
   const showFallback = itemCount === 0;
+  if (fallback === undefined) {
+    fallback = "Aucun élément dans cette liste.";
+  }
   return jsx(ListItem, {
     role: "presentation",
     className: "navi_list_item navi_list_fallback",

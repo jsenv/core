@@ -444,8 +444,8 @@ const ListUI = (props) => {
     renderBudget = RENDER_BUDGET_DEFAULT,
     listId,
     listRole,
-    fallback = "Aucun élément dans cette liste",
-    noMatchFallback = "Aucun élément ne correspond à cette recherche",
+    fallback,
+    noMatchFallback,
     separator,
     children,
     popover,
@@ -1030,14 +1030,12 @@ const UnorderedList = ({
         virtualItemHeightSignal={virtualItemHeightSignal}
         renderWindowStart={renderWindow.start}
       />
-      {noMatchFallback && (
-        <NoMatchFallback
-          noMatchFallback={noMatchFallback}
-          tracker={tracker}
-          searchText={searchText}
-        />
-      )}
-      {fallback && <Fallback fallback={fallback} tracker={tracker} />}
+      <NoMatchFallback
+        noMatchFallback={noMatchFallback}
+        tracker={tracker}
+        searchText={searchText}
+      />
+      <Fallback fallback={fallback} tracker={tracker} />
       <RenderWindowContext.Provider value={renderWindow}>
         <SeparatorContext.Provider value={separator ?? null}>
           <ListItemTrackerContext.Provider value={tracker}>
@@ -1064,6 +1062,12 @@ const NoMatchFallback = ({ tracker, noMatchFallback, searchText }) => {
   const noneMatch = searchText && visibleItemCount > 0 && matchCount === 0;
   const showMatchFallback = allHidden || noneMatch;
 
+  if (noMatchFallback === undefined) {
+    noMatchFallback = allHidden
+      ? "Aucun élément ne correspond à cette recherche."
+      : "Aucun élément ne correspond à cette recherche. Le reste est affiché ci-dessous";
+  }
+
   return (
     <ListItem
       role="presentation"
@@ -1071,15 +1075,17 @@ const NoMatchFallback = ({ tracker, noMatchFallback, searchText }) => {
       hidden={!showMatchFallback}
       navi-default={typeof noMatchFallback === "string" ? "" : undefined}
     >
-      {allHidden
-        ? "Aucun élément ne correspond à cette recherche"
-        : "Aucun élément ne correspond à cette recherche. Le reste est affiché ci-dessous"}
+      {noMatchFallback}
     </ListItem>
   );
 };
 const Fallback = ({ tracker, fallback }) => {
   const itemCount = tracker.countSignal.value;
   const showFallback = itemCount === 0;
+  if (fallback === undefined) {
+    fallback = "Aucun élément dans cette liste.";
+  }
+
   return (
     <ListItem
       role="presentation"
