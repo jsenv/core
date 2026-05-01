@@ -42,6 +42,13 @@ export const getFocusVisibilityInfo = (node) => {
     if (elementIsDialog(nodeOrAncestor) && !nodeOrAncestor.open) {
       return { visible: false, reason: "inside closed dialog element" };
     }
+    if (
+      nodeOrAncestor.popover !== null &&
+      nodeOrAncestor.popover !== undefined &&
+      !nodeOrAncestor.matches(":popover-open")
+    ) {
+      return { visible: false, reason: "inside closed popover element" };
+    }
     nodeOrAncestor = nodeOrAncestor.parentNode;
   }
   return { visible: true, reason: "no reason to be hidden" };

@@ -1,6 +1,6 @@
 import { performTabNavigation } from "./tab_navigation.js";
 
-export const trapFocusInside = (element) => {
+export const trapFocusInside = (element, { debug } = {}) => {
   if (element.nodeType === 3) {
     console.warn("cannot trap focus inside a text node");
     return () => {};
@@ -15,8 +15,12 @@ export const trapFocusInside = (element) => {
   }
 
   const isEventOutside = (event) => {
-    if (event.target === element) return false;
-    if (element.contains(event.target)) return false;
+    if (event.target === element) {
+      return false;
+    }
+    if (element.contains(event.target)) {
+      return false;
+    }
     return true;
   };
 
@@ -30,7 +34,7 @@ export const trapFocusInside = (element) => {
 
     const onkeydown = (event) => {
       if (isTabEvent(event)) {
-        performTabNavigation(event, { rootElement: element });
+        performTabNavigation(event, { rootElement: element, debug });
       }
     };
 

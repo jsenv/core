@@ -117,7 +117,7 @@ export const Popover = (props) => {
     }
     let cleanupFocusTrap;
     if (focusTrap) {
-      cleanupFocusTrap = trapFocusInside(popoverEl);
+      cleanupFocusTrap = trapFocusInside(popoverEl, { debug: debugFocus });
     }
     const rectEffect = visibleRectEffect(
       effectiveAnchor,
