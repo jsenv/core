@@ -36,6 +36,7 @@ export const Popover = (props) => {
   const {
     disabled,
     scrollTrap,
+    pointerTrap,
     children,
     positionTry = "bottom",
     ...rest
@@ -160,6 +161,9 @@ export const Popover = (props) => {
             className="navi_popover_backdrop"
             onMouseDown={(e) => {
               if (e.button !== 0) {
+                return;
+              }
+              if (pointerTrap) {
                 return;
               }
               closePopover(e);
