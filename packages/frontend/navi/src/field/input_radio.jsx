@@ -132,10 +132,10 @@ const css = /* css */ `
       --color-mix: var(--color-mix-dark);
     }
     /* When accent color is very light (e.g. white), keep the accent color
-       as the border/fill but use a dark radiomark so the dot is visible */
+       as the border/fill — the dot stays the accent color too, matching
+       native browser behavior where contrast comes from the background */
     &[data-light] {
       --border-color-checked: var(--accent-color);
-      --radiomark-color: color-mix(in srgb, var(--accent-color) 10%, #333333);
     }
 
     .navi_native_field {
