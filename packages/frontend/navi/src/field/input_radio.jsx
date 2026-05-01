@@ -484,7 +484,7 @@ const InputRadioUI = (props) => {
   ]);
 
   const boxRef = useRef();
-  useDarkBackgroundAttribute(boxRef, [color], {
+  useDarkBackgroundAttribute(boxRef, [remainingProps.accentColor], {
     backgroundElementSelector: ".navi_radio_accent_probe",
     luminanceThreshold: 0.82,
   });

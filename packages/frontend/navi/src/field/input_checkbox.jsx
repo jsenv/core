@@ -162,6 +162,15 @@ const css = /* css */ `
     box-sizing: content-box;
     margin: var(--margin);
 
+    .navi_checkbox_accent_probe {
+      position: absolute;
+      width: 0;
+      height: 0;
+      background-color: var(--accent-color);
+      visibility: hidden;
+      pointer-events: none;
+    }
+
     .navi_native_field {
       position: absolute;
       inset: 0;
@@ -476,13 +485,9 @@ const InputCheckboxUI = (props) => {
   ]);
 
   const boxRef = useRef();
-  useDarkBackgroundAttribute(boxRef, [accentColor, checked], {
-    backgroundElementSelector: ".navi_checkbox_field",
-    // the browser (chrome at least) prefer white in this scenario even if
-    // the contrast is better with black, so we force it to white to match chrome behavior on this specific color
-    hardcoded: {
-      "#4476ff": "white",
-    },
+  useDarkBackgroundAttribute(boxRef, [accentColor], {
+    backgroundElementSelector: ".navi_checkbox_accent_probe",
+    luminanceThreshold: 0.4,
   });
 
   return (
@@ -513,6 +518,7 @@ const InputCheckboxUI = (props) => {
       baseChildPropSet={CheckboxChildPropSet}
       preventInitialTransition
     >
+      <span className="navi_checkbox_accent_probe" aria-hidden="true" />
       <LoaderBackground
         loading={innerLoading}
         inset={-1}
