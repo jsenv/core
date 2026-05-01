@@ -226,6 +226,8 @@ const css = /* css */ `
  * but does NOT submit a parent form. Use a separate submit button for that.
  */
 export const Select = (props) => {
+  const defaultRef = useRef(null);
+  const ref = props.ref || defaultRef;
   const uiStateController = useUIGroupStateController(props, "select", {
     childComponentType: "list",
     aggregateChildStates: (childControllers) => {
@@ -241,11 +243,20 @@ export const Select = (props) => {
   };
   const uiState = useUIState(uiStateController);
   const value = Object.hasOwn(props, "value") ? props.value : uiState;
+
   return (
     <ParentUIStateControllerContext.Provider value={uiStateController}>
-      <SelectBasic {...props} value={value} />
+      <SelectDispatcher {...props} ref={ref} value={value} />
     </ParentUIStateControllerContext.Provider>
   );
+};
+
+const SelectDispatcher = (props) => {
+  const { mode = "popover" } = props;
+  if (mode === "dialog") {
+    return <SelectWithDialog {...props} />;
+  }
+  return <SelectWithPopover {...props} />;
 };
 
 export const SelectPlaceholderContext = createContext();
@@ -409,14 +420,6 @@ const SelectTrigger = () => {
   );
 };
 
-// SelectBasic manages uncontrolled value state and routes to the mode variant.
-const SelectBasic = (props) => {
-  const { mode = "popover" } = props;
-  if (mode === "dialog") {
-    return <SelectWithDialog {...props} />;
-  }
-  return <SelectWithPopover {...props} />;
-};
 // SelectWithPopover — trigger + popover anchored below the trigger.
 const SelectWithPopover = (props) => {
   let { disabled, onKeyDown, children, ...rest } = props;
@@ -453,99 +456,97 @@ const SelectWithPopover = (props) => {
   };
 
   return (
-    <>
-      <SelectUI
-        disabled={disabled}
-        aria-haspopup="listbox"
-        aria-expanded={expanded}
-        aria-controls={popoverId}
+    <SelectUI
+      disabled={disabled}
+      aria-haspopup="listbox"
+      aria-expanded={expanded}
+      aria-controls={popoverId}
+      onMouseDown={(e) => {
+        if (e.button !== 0) {
+          return;
+        }
+        if (disabled) {
+          return;
+        }
+        if (expandedRef.current) {
+          requestClose(e);
+        } else {
+          e.preventDefault(); // prevent browser trying to give focus to the select (popover will take focus)
+          debugFocus(`select mousedown.preventDefault()`);
+          requestOpen(e);
+        }
+      }}
+      onClick={(e) => {
+        if (e.detail === 0) {
+          // click triggered by enter won't open the popover
+          return;
+        }
+        // When a label is clicked it transfers focus to the select, in that case we want to open it
+        requestOpen(e);
+      }}
+      // When a list item is interacted via mousedown, return focus to the select.
+      onnavi_list_select={(e) => {
+        const { event } = e.detail;
+        if (event.type === "mousedown") {
+          event.preventDefault(); // prevent browser trying to give focus to the list item
+          debugFocus(`listItem mousedown.preventDefault()`);
+        }
+        if (event.key === " ") {
+          // space can open the popover we don't want space to propagate to the select otherwise it would open it back immediatly
+          event.stopPropagation();
+        }
+        requestClose(e);
+        moveFocusToSelect(e);
+      }}
+      onKeyDown={shortcutsViaOnKeyDown(
+        {
+          arrowdown: (e) => {
+            e.preventDefault(); // prevent container scroll
+            requestOpen(e);
+          },
+          arrowup: (e) => {
+            e.preventDefault(); // prevent container scroll
+            requestOpen(e);
+          },
+          space: (e) => {
+            e.preventDefault(); // prevent scroll
+            requestOpen(e);
+          },
+          escape: (e) => {
+            if (!expandedRef.current) {
+              return;
+            }
+            e.preventDefault();
+            requestClose(e);
+            moveFocusToSelect(e);
+          },
+        },
+        onKeyDown,
+      )}
+      {...rest}
+      ref={ref}
+    >
+      <Popover
+        ref={popoverRef}
+        className="navi_select_popover"
         onMouseDown={(e) => {
           if (e.button !== 0) {
             return;
           }
-          if (disabled) {
-            return;
-          }
-          if (expandedRef.current) {
-            requestClose(e);
-          } else {
-            e.preventDefault(); // prevent browser trying to give focus to the select (popover will take focus)
-            debugFocus(`select mousedown.preventDefault()`);
-            requestOpen(e);
-          }
+          // mousedown inside popover should not bubble to the select (would re-open it if that mousedown closes it)
+          e.stopPropagation();
         }}
-        onClick={(e) => {
-          if (e.detail === 0) {
-            // click triggered by enter won't open the popover
-            return;
-          }
-          // When a label is clicked it transfers focus to the select, in that case we want to open it
-          requestOpen(e);
+        onnavi_popover_open={(e) => {
+          onOpen(e);
         }}
-        // When a list item is interacted via mousedown, return focus to the select.
-        onnavi_list_select={(e) => {
-          const { event } = e.detail;
-          if (event.type === "mousedown") {
-            event.preventDefault(); // prevent browser trying to give focus to the list item
-            debugFocus(`listItem mousedown.preventDefault()`);
-          }
-          if (event.key === " ") {
-            // space can open the popover we don't want space to propagate to the select otherwise it would open it back immediatly
-            event.stopPropagation();
-          }
-          requestClose(e);
+        onnavi_popover_close={(e) => {
+          onClose(e);
           moveFocusToSelect(e);
         }}
-        onKeyDown={shortcutsViaOnKeyDown(
-          {
-            arrowdown: (e) => {
-              e.preventDefault(); // prevent container scroll
-              requestOpen(e);
-            },
-            arrowup: (e) => {
-              e.preventDefault(); // prevent container scroll
-              requestOpen(e);
-            },
-            space: (e) => {
-              e.preventDefault(); // prevent scroll
-              requestOpen(e);
-            },
-            escape: (e) => {
-              if (!expandedRef.current) {
-                return;
-              }
-              e.preventDefault();
-              requestClose(e);
-              moveFocusToSelect(e);
-            },
-          },
-          onKeyDown,
-        )}
-        {...rest}
-        ref={ref}
       >
-        <Popover
-          ref={popoverRef}
-          className="navi_select_popover"
-          onMouseDown={(e) => {
-            if (e.button !== 0) {
-              return;
-            }
-            // mousedown inside popover should not bubble to the select (would re-open it if that mousedown closes it)
-            e.stopPropagation();
-          }}
-          onnavi_popover_open={(e) => {
-            onOpen(e);
-          }}
-          onnavi_popover_close={(e) => {
-            onClose(e);
-            moveFocusToSelect(e);
-          }}
-        >
-          {children}
-        </Popover>
-      </SelectUI>
-    </>
+        {children}
+      </Popover>
+    </SelectUI>
   );
 };
 // SelectWithDialog — trigger + centered modal dialog.
