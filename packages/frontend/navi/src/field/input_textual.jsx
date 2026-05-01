@@ -697,6 +697,7 @@ const InputTextualWithSuggestions = ({
   onInput,
   onFocus,
   onBlur,
+  onKeyDown,
   children,
   ...rest
 }) => {
@@ -714,20 +715,29 @@ const InputTextualWithSuggestions = ({
     setExpanded(false);
   };
 
+  const getListEl = () => {
+    return document.getElementById(suggestions);
+  };
+  const dispatchToList = (event, customEventName, customEventDetail) => {
+    const listEl = getListEl();
+    if (!listEl) {
+      return false;
+    }
+    return listEl.dispatchEvent(
+      new CustomEvent(customEventName, {
+        detail: { event, anchor: ref.current },
+        ...customEventDetail,
+      }),
+    );
+  };
+
   const showSuggestions = (e) => {
     if (expandedRef.current) {
       return;
     }
-    console.debug(`showPopover (e.type:${e.type})`);
-    const popoverEl = document.getElementById(suggestions);
-    if (!popoverEl) {
-      return;
-    }
-    popoverEl.dispatchEvent(
-      new CustomEvent("navi_list_open", {
-        detail: { anchor: ref.current },
-      }),
-    );
+    dispatchToList(e, "navi_list_request_open", {
+      detail: { anchor: ref.current },
+    });
     expand();
   };
 
@@ -735,20 +745,8 @@ const InputTextualWithSuggestions = ({
     if (!expandedRef.current) {
       return;
     }
-    console.debug(`hidePopover (e.type:${e.type})`);
-    const popoverEl = document.getElementById(suggestions);
-    if (popoverEl) {
-      popoverEl.dispatchEvent(new CustomEvent("navi_list_request_close"));
-    }
+    dispatchToList(e, "navi_list_request_close");
     collapse();
-  };
-
-  const forwardToList = (event, requestList, customEventDetail) => {
-    const suggestionList = document.getElementById(suggestions);
-    if (!suggestionList) {
-      return false;
-    }
-    return requestList(suggestionList, { event, ...customEventDetail });
   };
 
   useEffect(() => {
@@ -769,10 +767,9 @@ const InputTextualWithSuggestions = ({
   }, [suggestions]);
 
   return (
-    <InputTextualUI
+    <InputControllingList
+      listId={suggestions}
       role="combobox"
-      autoComplete="off"
-      aria-controls={suggestions}
       aria-haspopup="listbox"
       aria-expanded={expanded}
       aria-autocomplete="list"
@@ -799,35 +796,9 @@ const InputTextualWithSuggestions = ({
         {
           arrowdown: (e) => {
             showSuggestions(e);
-            return forwardToList(e, requestListNavFromCurrent, {
-              goal: "down",
-            });
           },
           arrowup: (e) => {
             showSuggestions(e);
-            return forwardToList(e, requestListNavFromCurrent, { goal: "up" });
-          },
-          home: (e) => {
-            if (!expandedRef.current) {
-              return false;
-            }
-            return forwardToList(e, requestListNavFromCurrent, {
-              goal: "first",
-            });
-          },
-          end: (e) => {
-            if (!expandedRef.current) {
-              return false;
-            }
-            return forwardToList(e, requestListNavFromCurrent, {
-              goal: "last",
-            });
-          },
-          enter: (e) => {
-            if (!expandedRef.current) {
-              return false;
-            }
-            return forwardToList(e, requestListSelectCurrent);
           },
           escape: (e) => {
             if (!expandedRef.current) {
@@ -837,7 +808,7 @@ const InputTextualWithSuggestions = ({
             return true;
           },
         },
-        rest.onKeyDown,
+        onKeyDown,
       )}
       ref={ref}
     >
@@ -856,7 +827,7 @@ const InputTextualWithSuggestions = ({
           </Icon>
         </InputRightSlot>
       )}
-    </InputTextualUI>
+    </InputControllingList>
   );
 };
 
