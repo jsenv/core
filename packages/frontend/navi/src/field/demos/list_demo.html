@@ -362,6 +362,12 @@
                         selected={selected === fruit}
                         hidden={!match}
                         highlight={ranges}
+                        style={{
+                          ":-navi-selected": {
+                            backgroundColor: "#3b0764",
+                            color: "#f3e8ff",
+                          },
+                        }}
                       >
                         {fruit}
                       </ListItem>

@@ -1745,13 +1745,13 @@ const ListItemReal = ({
       {...rest}
       ref={ref}
       basePseudoState={{
+        ...rest.basePseudoState,
+        ":disabled": Boolean(disabled),
         ":-navi-pointed": isPointed,
         ":-navi-pointed-by-mouse": isPointedByMouse,
         ":-navi-pointed-by-keyboard": isPointedByKeyboard,
         ":-navi-pointed-by-proxy": isPointedByProxy,
         ":-navi-selected": selected,
-        ":disabled": Boolean(disabled),
-        ...rest.basePseudoState,
       }}
     >
       {children}
