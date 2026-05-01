@@ -132,10 +132,14 @@ const css = /* css */ `
       --color-mix: var(--color-mix-dark);
     }
     /* When accent color is very light (e.g. white), keep the accent color
-       as the border/fill — the dot stays the accent color too, matching
-       native browser behavior where contrast comes from the background */
+       as the border/fill — make the background transparent when checked so
+       the page background shows through as the gap, matching native behavior */
     &[data-light] {
       --border-color-checked: var(--accent-color);
+
+      &[data-checked] {
+        --x-background-color: transparent;
+      }
     }
 
     .navi_native_field {
