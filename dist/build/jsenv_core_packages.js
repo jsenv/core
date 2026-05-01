@@ -5382,30 +5382,27 @@ const createPackageImportNotDefinedError = (
 const isSpecifierForNodeBuiltin = (specifier) => {
   return (
     specifier.startsWith("node:") ||
-    NODE_BUILTIN_MODULE_SPECIFIERS.includes(specifier)
+    NODE_BUILTIN_MODULE_SPECIFIER_SET.has(specifier)
   );
 };
 
-const NODE_BUILTIN_MODULE_SPECIFIERS = [
+const NODE_BUILTIN_MODULE_SPECIFIER_SET = new Set([
   "assert",
   "assert/strict",
   "async_hooks",
-  "buffer_ieee754",
   "buffer",
   "child_process",
   "cluster",
   "console",
   "constants",
   "crypto",
-  "_debugger",
   "diagnostics_channel",
   "dgram",
   "dns",
+  "dns/promises",
   "domain",
   "events",
-  "freelist",
   "fs",
-  "fsevents",
   "fs/promises",
   "_http_agent",
   "_http_client",
@@ -5417,21 +5414,21 @@ const NODE_BUILTIN_MODULE_SPECIFIERS = [
   "http2",
   "https",
   "inspector",
-  "_linklist",
+  "inspector/promises",
   "module",
   "net",
-  "node-inspect/lib/_inspect",
-  "node-inspect/lib/internal/inspect_client",
-  "node-inspect/lib/internal/inspect_repl",
   "os",
   "path",
+  "path/posix",
+  "path/win32",
   "perf_hooks",
   "process",
   "punycode",
   "querystring",
   "readline",
+  "readline/promises",
   "repl",
-  "smalloc",
+  "sea",
   "sqlite",
   "_stream_duplex",
   "_stream_transform",
@@ -5440,10 +5437,15 @@ const NODE_BUILTIN_MODULE_SPECIFIERS = [
   "_stream_readable",
   "_stream_writable",
   "stream",
+  "stream/consumers",
   "stream/promises",
+  "stream/web",
   "string_decoder",
   "sys",
+  "test",
+  "test/reporters",
   "timers",
+  "timers/promises",
   "_tls_common",
   "_tls_legacy",
   "_tls_wrap",
@@ -5452,20 +5454,15 @@ const NODE_BUILTIN_MODULE_SPECIFIERS = [
   "tty",
   "url",
   "util",
-  "v8/tools/arguments",
-  "v8/tools/codemap",
-  "v8/tools/consarray",
-  "v8/tools/csvparser",
-  "v8/tools/logreader",
-  "v8/tools/profile_view",
-  "v8/tools/splaytree",
+  "util/types",
   "v8",
   "vm",
+  "wasi",
   "worker_threads",
   "zlib",
   // global is special
   "global",
-];
+]);
 
 /*
  * https://nodejs.org/api/esm.html#resolver-algorithm-specification
