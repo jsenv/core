@@ -449,7 +449,6 @@ const ListUI = (props) => {
     searchText,
     name,
     value,
-    required,
     ...rest
   } = props;
 
@@ -592,9 +591,7 @@ const ListUI = (props) => {
         });
       }}
     >
-      {name && (
-        <input type="hidden" name={name} value={value} required={required} />
-      )}
+      {name && <input type="hidden" name={name} value={value} />}
       {renderListMemoized}
     </Box>
   );
