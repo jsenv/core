@@ -46,7 +46,6 @@ export const useDarkBackgroundAttribute = (
     backgroundElementSelector,
     colorProperty = "backgroundColor",
     attributeName = "data-dark-background",
-    invert = false,
     luminanceThreshold,
     hardcoded = {},
   } = {},
@@ -100,7 +99,7 @@ export const useDarkBackgroundAttribute = (
       } else {
         isDark = contrastColor(color, el) === "white";
       }
-      if (invert ? !isDark : isDark) {
+      if (isDark) {
         el.setAttribute(attributeName, "");
       } else {
         el.removeAttribute(attributeName);

@@ -44,13 +44,15 @@ const css = /* css */ `
       --outline-color: var(--navi-focus-outline-color);
       --loader-color: var(--navi-loader-color);
       --border-color: light-dark(#767676, #8e8e93);
-      --background-color: white;
+      --background-color: rgba(0, 0, 0, 0.15);
       --accent-color: light-dark(#4476ff, #3b82f6);
       --background-color-checked: var(--accent-color);
       --border-color-checked: var(--accent-color);
       --checkmark-color: rgb(55, 55, 55);
       --cursor: pointer;
-      --color-mix: white;
+      --color-mix-light: black;
+      --color-mix-dark: white;
+      --color-mix: var(--color-mix-light);
 
       /* Hover */
       --border-color-hover: color-mix(in srgb, var(--border-color) 60%, black);
@@ -145,7 +147,7 @@ const css = /* css */ `
       );
 
       &[data-dark-background] {
-        --color-mix: black;
+        --color-mix: var(--color-mix-dark);
         --checkmark-color: white;
       }
     }
@@ -245,6 +247,14 @@ const css = /* css */ `
         --x-border-color: var(--border-color-disabled-checked);
         --x-background-color: var(--background-color-disabled-checked);
         --x-checkmark-color: var(--checkmark-color-disabled);
+      }
+    }
+
+    &[data-dark-background]:not([data-appearance="toggle"]) {
+      --x-background-color: white;
+      --x-checkmark-color: var(--checkmark-color);
+      &[data-checked] {
+        --x-background-color: var(--background-color-checked);
       }
     }
 
@@ -487,7 +497,7 @@ const InputCheckboxUI = (props) => {
   const boxRef = useRef();
   useDarkBackgroundAttribute(boxRef, [accentColor], {
     backgroundElementSelector: ".navi_checkbox_accent_probe",
-    luminanceThreshold: 0.4,
+    luminanceThreshold: 0.82,
   });
 
   return (
