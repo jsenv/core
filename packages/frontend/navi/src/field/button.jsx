@@ -300,7 +300,10 @@ const css = /* css */ `
 `;
 
 export const Button = (props) => {
-  return <ButtonDispatcher {...props} />;
+  const defaultRef = useRef(null);
+  const ref = props.ref || defaultRef;
+
+  return <ButtonDispatcher {...props} ref={ref} />;
 };
 
 const ButtonDispatcher = (props) => {
@@ -492,7 +495,8 @@ const ButtonShadow = () => {
 };
 markAsOutsideTextFlow(ButtonShadow);
 
-const ButtonWithRoute = ({ route, routeParams, children, ...rest }) => {
+const ButtonWithRoute = (props) => {
+  const { route, routeParams, children, ...rest } = props;
   if (import.meta.dev) {
     assertRoute(route);
   }
@@ -515,6 +519,7 @@ const ButtonWithRoute = ({ route, routeParams, children, ...rest }) => {
 };
 const ButtonWithAction = (props) => {
   const {
+    ref,
     action,
     loading,
     actionErrorEffect,
@@ -525,8 +530,6 @@ const ButtonWithAction = (props) => {
     children,
     ...rest
   } = props;
-  const defaultRef = useRef();
-  const ref = props.ref || defaultRef;
   const boundAction = useAction(action);
   const { loading: actionLoading } = useActionStatus(boundAction);
   const executeAction = useExecuteAction(ref, {
@@ -558,8 +561,8 @@ const ButtonWithAction = (props) => {
   );
 };
 const ButtonWithActionInsideForm = (props) => {
-  const formAction = useContext(FormActionContext);
   const {
+    ref,
     type,
     action,
     loading,
@@ -571,8 +574,7 @@ const ButtonWithActionInsideForm = (props) => {
     onActionEnd,
     ...rest
   } = props;
-  const defaultRef = useRef();
-  const ref = props.ref || defaultRef;
+  const formAction = useContext(FormActionContext);
   const hasEffectOnForm =
     type === "submit" || type === "reset" || type === "image";
   if (import.meta.dev && hasEffectOnForm) {

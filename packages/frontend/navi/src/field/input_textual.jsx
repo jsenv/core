@@ -287,13 +287,15 @@ const css = /* css */ `
 `;
 
 export const InputTextual = (props) => {
+  const defaultRef = useRef(null);
+  const ref = props.ref || defaultRef;
   const uiStateController = useUIStateController(props, "input");
   const uiState = useUIState(uiStateController);
 
   return (
     <UIStateControllerContext.Provider value={uiStateController}>
       <UIStateContext.Provider value={uiState}>
-        <InputTextualDispatcher {...props} />
+        <InputTextualDispatcher {...props} ref={ref} />
       </UIStateContext.Provider>
     </UIStateControllerContext.Provider>
   );
@@ -320,6 +322,7 @@ const InputTextualDispatcher = (props) => {
 const InputNativeContext = createContext(null);
 const InputTextualUI = (props) => {
   const {
+    ref,
     type,
     onInput,
 
@@ -343,8 +346,6 @@ const InputTextualUI = (props) => {
   const contextLoadingElement = useContext(LoadingElementContext);
   const uiStateController = useContext(UIStateControllerContext);
   const uiState = useContext(UIStateContext);
-  const defaultRef = useRef();
-  const ref = rest.ref || defaultRef;
 
   const innerValue =
     type === "datetime-local" ? convertToLocalTimezone(uiState) : uiState;
@@ -601,9 +602,8 @@ export const InputRightSlot = (props) => {
   return <InputSlot {...props} side="right" />;
 };
 
-const InputControllingList = ({ listId, onKeyDown, ...props }) => {
-  const defaultRef = useRef(null);
-  const ref = props.ref || defaultRef;
+const InputControllingList = (props) => {
+  const { ref, listId, onKeyDown, ...rest } = props;
 
   const getListEl = () => {
     return document.getElementById(listId);
@@ -648,7 +648,8 @@ const InputControllingList = ({ listId, onKeyDown, ...props }) => {
         aria-has-popup="listbox"
         type="search"
         autoComplete="off"
-        {...props}
+        {...rest}
+        ref={ref}
         listId={undefined}
         onKeyDown={shortcutsViaOnKeyDown(
           {
@@ -690,23 +691,21 @@ const InputControllingList = ({ listId, onKeyDown, ...props }) => {
           },
           onKeyDown,
         )}
-        ref={ref}
       />
     </ListIdContext.Provider>
   );
 };
-
-const InputTextualWithSuggestions = ({
-  suggestions,
-  onInput,
-  onFocus,
-  onBlur,
-  onKeyDown,
-  children,
-  ...rest
-}) => {
-  const defaultRef = useRef();
-  const ref = rest.ref || defaultRef;
+const InputTextualWithSuggestions = (props) => {
+  const {
+    ref,
+    suggestions,
+    onInput,
+    onFocus,
+    onBlur,
+    onKeyDown,
+    children,
+    ...rest
+  } = props;
   const [expanded, setExpanded] = useState(false);
   const expandedRef = useRef(expanded);
   expandedRef.current = expanded;
@@ -775,6 +774,7 @@ const InputTextualWithSuggestions = ({
           hideSuggestions(e);
         }}
         {...rest}
+        ref={ref}
         suggestions={undefined}
         onFocus={(e) => {
           onFocus?.(e);
@@ -806,7 +806,6 @@ const InputTextualWithSuggestions = ({
           },
           onKeyDown,
         )}
-        ref={ref}
       >
         {children || (
           <InputRightSlot
@@ -827,10 +826,10 @@ const InputTextualWithSuggestions = ({
     </ListIdContext.Provider>
   );
 };
-
 const InputTextualWithAction = (props) => {
   const uiState = useContext(UIStateContext);
   const {
+    ref,
     action,
     actionDebounce,
     actionAfterChange,
@@ -845,8 +844,6 @@ const InputTextualWithAction = (props) => {
     actionErrorEffect,
     ...rest
   } = props;
-  const defaultRef = useRef();
-  const ref = props.ref || defaultRef;
   const [boundAction] = useActionBoundToOneParam(action, uiState);
   const { loading: actionLoading } = useActionStatus(boundAction);
   const executeAction = useExecuteAction(ref, {
