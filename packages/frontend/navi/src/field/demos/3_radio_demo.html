@@ -1039,292 +1039,136 @@
             <div className="states-section">
               <div className="states-title">Custom Color Themes</div>
               <p className="states-description">
-                Radio color can be customized and will maintain colors contrast.
-                Like the user agent version in modern browsers.
+                Radio color can be customized and will maintain color contrast.
+                Each row shows unchecked and checked state side by side.
               </p>
 
-              <Box flex spacing="s">
-                <fieldset>
+              <Box flex="y" spacing="s">
+                <fieldset style="margin: 0">
                   <legend>Orange</legend>
-                  <Box row spacing="sm" alignX="start">
+                  <Box flex spacing="s" alignX="start" alignY="center">
                     <Label>
                       <Input
                         type="radio"
-                        name="demo-orange-navi"
-                        value="1"
+                        name="demo-orange"
+                        value="unchecked"
+                        accentColor="#f39c12"
+                      />
+                      Unchecked
+                    </Label>
+                    <Label>
+                      <Input
+                        type="radio"
+                        name="demo-orange"
+                        value="checked"
                         accentColor="#f39c12"
                         defaultValue
                       />
-                      Navi
+                      Checked
                     </Label>
-                    <label>
-                      <input
-                        type="radio"
-                        name="demo-orange-native"
-                        value="1"
-                        style={{ accentColor: "#f39c12" }}
-                        defaultChecked
-                      />
-                      Native
-                    </label>
                   </Box>
                 </fieldset>
-                <fieldset>
+                <fieldset style="margin: 0">
                   <legend>Green</legend>
-                  <Box row spacing="sm" alignX="start">
+                  <Box flex spacing="s" alignX="start" alignY="center">
                     <Label>
                       <Input
                         type="radio"
-                        name="demo-green-navi"
-                        value="1"
+                        name="demo-green"
+                        value="unchecked"
+                        accentColor="#2ecc71"
+                      />
+                      Unchecked
+                    </Label>
+                    <Label>
+                      <Input
+                        type="radio"
+                        name="demo-green"
+                        value="checked"
                         accentColor="#2ecc71"
                         defaultValue
                       />
-                      Navi
+                      Checked
                     </Label>
-                    <label>
-                      <input
-                        type="radio"
-                        name="demo-green-native"
-                        value="1"
-                        style={{ accentColor: "#2ecc71" }}
-                        defaultChecked
-                      />
-                      Native
-                    </label>
                   </Box>
                 </fieldset>
-                <fieldset>
+                <fieldset style="margin: 0">
                   <legend>Dark grey</legend>
-                  <Box row spacing="sm" alignX="start">
+                  <Box flex spacing="s" alignX="start" alignY="center">
                     <Label>
                       <Input
                         type="radio"
-                        name="demo-dark-navi"
-                        value="1"
+                        name="demo-dark"
+                        value="unchecked"
+                        accentColor="#34495e"
+                      />
+                      Unchecked
+                    </Label>
+                    <Label>
+                      <Input
+                        type="radio"
+                        name="demo-dark"
+                        value="checked"
                         accentColor="#34495e"
                         defaultValue
                       />
-                      Navi
+                      Checked
                     </Label>
-                    <label>
-                      <input
-                        type="radio"
-                        name="demo-dark-native"
-                        value="1"
-                        style={{ accentColor: "#34495e" }}
-                        defaultChecked
-                      />
-                      Native
-                    </label>
                   </Box>
                 </fieldset>
-              </Box>
-              <Box flex spacing="s">
-                <fieldset>
-                  <legend>White</legend>
-                  <Box row spacing="sm" alignX="start">
-                    <Label>
-                      <Input
-                        type="radio"
-                        name="demo-white-navi"
-                        value="1"
-                        accentColor="#ffffff"
-                        defaultValue
-                      />
-                      Navi
-                    </Label>
-                    <label>
-                      <input
-                        type="radio"
-                        name="demo-white-native"
-                        value="1"
-                        style={{ accentColor: "#ffffff" }}
-                        defaultChecked
-                      />
-                      Native
-                    </label>
-                  </Box>
-                </fieldset>
-                <fieldset>
+                <fieldset style="margin: 0">
                   <legend>Pink</legend>
-                  <Box row spacing="sm" alignX="start">
+                  <Box flex spacing="s" alignX="start" alignY="center">
                     <Label>
                       <Input
                         type="radio"
-                        name="demo-pink-navi"
-                        value="1"
+                        name="demo-pink"
+                        value="unchecked"
+                        accentColor="#e91e8c"
+                      />
+                      Unchecked
+                    </Label>
+                    <Label>
+                      <Input
+                        type="radio"
+                        name="demo-pink"
+                        value="checked"
                         accentColor="#e91e8c"
                         defaultValue
                       />
-                      Navi
+                      Checked
                     </Label>
-                    <label>
-                      <input
-                        type="radio"
-                        name="demo-pink-native"
-                        value="1"
-                        style={{ accentColor: "#e91e8c" }}
-                        defaultChecked
-                      />
-                      Native
-                    </label>
                   </Box>
                 </fieldset>
-                <fieldset>
-                  <legend>Purple</legend>
-                  <Box row spacing="sm" alignX="start">
+                <fieldset
+                  style={{
+                    margin: 0,
+                    background: "#1e1e1e",
+                    color: "white",
+                    borderColor: "#444",
+                  }}
+                >
+                  <legend style={{ color: "white" }}>White</legend>
+                  <Box flex spacing="s" alignX="start" alignY="center">
                     <Label>
                       <Input
                         type="radio"
-                        name="demo-purple-navi"
-                        value="1"
-                        accentColor="#7c3aed"
-                        defaultValue
+                        name="demo-white"
+                        value="unchecked"
+                        accentColor="#ffffff"
                       />
-                      Navi
+                      Unchecked
                     </Label>
-                    <label>
-                      <input
-                        type="radio"
-                        name="demo-purple-native"
-                        value="1"
-                        style={{ accentColor: "#7c3aed" }}
-                        defaultChecked
-                      />
-                      Native
-                    </label>
-                  </Box>
-                </fieldset>
-              </Box>
-
-              <div className="enhanced-states-title">
-                Orange Color - Checked States
-              </div>
-              <p className="states-description">
-                How the orange color renders across different checked states,
-                comparing Navi enhancements with user agent equivalents.
-              </p>
-
-              <Box column spacing="sm">
-                <fieldset>
-                  <legend>:checked</legend>
-                  <Box row spacing="sm" alignX="start">
                     <Label>
                       <Input
                         type="radio"
-                        name="demo-orange-checked-navi"
-                        value="1"
-                        accentColor="#f39c12"
+                        name="demo-white"
+                        value="checked"
+                        accentColor="#ffffff"
                         defaultValue
                       />
-                      Navi
+                      Checked
                     </Label>
-                    <label>
-                      <input
-                        type="radio"
-                        name="demo-orange-checked-native"
-                        value="1"
-                        style={{ accentColor: "#f39c12" }}
-                        defaultChecked
-                      />
-                      Native
-                    </label>
-                  </Box>
-                </fieldset>
-                <fieldset>
-                  <legend>:focus-visible:checked</legend>
-                  <Box row spacing="sm" alignX="start">
-                    <Label>
-                      <Input
-                        type="radio"
-                        name="demo-orange-focus-checked-navi"
-                        value="1"
-                        accentColor="#f39c12"
-                        defaultValue
-                        pseudoState={{ ":focus-visible": true }}
-                      />
-                      Navi
-                    </Label>
-                    <label>
-                      <input
-                        type="radio"
-                        name="demo-orange-focus-checked-native"
-                        value="1"
-                        style={{ accentColor: "#f39c12" }}
-                        defaultChecked
-                        autofocus
-                      />
-                      Native
-                    </label>
-                  </Box>
-                </fieldset>
-                <fieldset>
-                  <legend>:disabled:checked</legend>
-                  <Box row spacing="sm" alignX="start">
-                    <Label>
-                      <Input
-                        type="radio"
-                        name="demo-orange-disabled-checked-navi"
-                        value="1"
-                        accentColor="#f39c12"
-                        defaultValue
-                        disabled
-                      />
-                      Navi
-                    </Label>
-                    <label>
-                      <input
-                        type="radio"
-                        name="demo-orange-disabled-checked-native"
-                        value="1"
-                        style={{ accentColor: "#f39c12" }}
-                        defaultChecked
-                        disabled
-                      />
-                      Native
-                    </label>
-                  </Box>
-                </fieldset>
-              </Box>
-              <Box column spacing="sm">
-                <fieldset>
-                  <legend>:read-only:checked</legend>
-                  <Box row spacing="sm" alignX="start">
-                    <Label>
-                      <Input
-                        type="radio"
-                        name="demo-orange-readonly-checked-navi"
-                        value="1"
-                        accentColor="#f39c12"
-                        defaultValue
-                        readOnly
-                      />
-                      Navi
-                    </Label>
-                    <div style={{ color: "#999", fontStyle: "italic" }}>
-                      (Native: N/A)
-                    </div>
-                  </Box>
-                </fieldset>
-                <fieldset>
-                  <legend>:read-only:-navi-loading:checked</legend>
-                  <Box row spacing="sm" alignX="start">
-                    <Label>
-                      <Input
-                        type="radio"
-                        name="demo-orange-readonly-loading-checked-navi"
-                        value="1"
-                        accentColor="#f39c12"
-                        defaultValue
-                        readOnly
-                        loading
-                      />
-                      Navi
-                    </Label>
-                    <div style={{ color: "#999", fontStyle: "italic" }}>
-                      (User Agent: N/A)
-                    </div>
                   </Box>
                 </fieldset>
               </Box>
