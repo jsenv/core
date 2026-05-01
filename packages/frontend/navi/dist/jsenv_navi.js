@@ -3,7 +3,7 @@ import { isValidElement, createContext, h, options, toChildArray, render, cloneE
 import { useErrorBoundary, useLayoutEffect, useEffect, useContext, useMemo, useRef, useState, useCallback, useImperativeHandle, useId } from "preact/hooks";
 import { jsxs, jsx, Fragment } from "preact/jsx-runtime";
 import { signal, effect, computed, batch, useSignal } from "@preact/signals";
-import { createIterableWeakSet, mergeOneStyle, stringifyStyle, createPubSub, mergeTwoStyles, normalizeStyles, createGroupTransitionController, getElementSignature, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, findBefore, findAfter, createValueEffect, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, allowWheelThrough, resolveCSSColor, createStyleController, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, resolveCSSSize, canInterceptKeys, activeElementSignal, contrastColor, hasCSSSizeUnit, initFocusGroup, elementIsFocusable, resolveColorLuminance, getScrollContainer, scrollIntoViewScoped, findFocusable, trapScrollInside, trapFocusInside, dragAfterThreshold, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
+import { createIterableWeakSet, mergeOneStyle, stringifyStyle, createPubSub, mergeTwoStyles, normalizeStyles, createGroupTransitionController, getElementSignature, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, findBefore, findAfter, createValueEffect, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, allowWheelThrough, resolveCSSColor, createStyleController, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, resolveCSSSize, canInterceptKeys, activeElementSignal, resolveColorLuminance, contrastColor, hasCSSSizeUnit, initFocusGroup, elementIsFocusable, getScrollContainer, scrollIntoViewScoped, findFocusable, trapScrollInside, trapFocusInside, dragAfterThreshold, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
 export { contrastColor } from "@jsenv/dom";
 import { prefixFirstAndIndentRemainingLines } from "@jsenv/humanize";
 import { createValidity } from "@jsenv/validity";
@@ -20400,25 +20400,30 @@ const isSameKey = (browserEventKey, key) => {
  *   should be tested instead of the element itself. Useful when the element
  *   has a transparent background but contains a coloured child (e.g. a fill
  *   bar inside a track).
+ * @param {string} [options.colorProperty] - CSS property to read instead of
+ *   `background-color`. Useful for SVG elements where the color is expressed
+ *   as `fill` or `stroke`.
  */
-
 const useDarkBackgroundAttribute = (
   ref,
   deps = [],
   {
     backgroundElementSelector,
+    colorProperty = "backgroundColor",
     attributeName = "data-dark-background",
+    luminanceThreshold,
     hardcoded = {},
   } = {},
 ) => {
   const innerDeps = [
     ...deps,
-    // ref can change is the component pass a different ref on different render based on some logic
-    // (can be used to control which element backgroundColor is being checked by switching the ref to another element)
+    // ref can change if the component passes a different ref on different renders
+    // (e.g. to control which element's color is being checked by switching the ref)
     ref,
-    // backgroundElementSelector can change if the component pass a different selector on different render based on some logic
-    // (can be used to control which element backgroundColor is being checked by switching the selector to point to another element)
+    // backgroundElementSelector can change if the component passes a different selector on different renders
+    // (e.g. to control which child element's color is being checked by switching the selector)
     backgroundElementSelector,
+    colorProperty,
   ];
 
   const hardcodedMap = new Map();
@@ -20443,16 +20448,23 @@ const useDarkBackgroundAttribute = (
     }
     const updateAttribute = () => {
       const computedStyle = getComputedStyle(elementToCheck);
-      const backgroundColor = computedStyle.backgroundColor;
-      if (!backgroundColor) {
+      const color = computedStyle[colorProperty];
+      if (!color) {
         el.removeAttribute(attributeName);
         return;
       }
-      const backgroundColorString = normalizeColorString(backgroundColor, el);
-      const hardcodedContrast = hardcodedMap.get(backgroundColorString);
-      const contrastingColor =
-        hardcodedContrast || contrastColor(backgroundColor, el);
-      if (contrastingColor === "white") {
+      const colorString = normalizeColorString(color, el);
+      const hardcodedContrast = hardcodedMap.get(colorString);
+      let isDark;
+      if (hardcodedContrast) {
+        isDark = hardcodedContrast === "white";
+      } else if (luminanceThreshold !== undefined) {
+        const luminance = resolveColorLuminance(color, el);
+        isDark = luminance !== undefined && luminance <= luminanceThreshold;
+      } else {
+        isDark = contrastColor(color, el) === "white";
+      }
+      if (isDark) {
         el.setAttribute(attributeName, "");
       } else {
         el.removeAttribute(attributeName);
@@ -24384,13 +24396,15 @@ installImportMetaCssBuild(import.meta);const css$p = /* css */`
       --outline-color: var(--navi-focus-outline-color);
       --loader-color: var(--navi-loader-color);
       --border-color: light-dark(#767676, #8e8e93);
-      --background-color: white;
+      --background-color: rgba(0, 0, 0, 0.15);
       --accent-color: light-dark(#4476ff, #3b82f6);
       --background-color-checked: var(--accent-color);
       --border-color-checked: var(--accent-color);
       --checkmark-color: rgb(55, 55, 55);
       --cursor: pointer;
-      --color-mix: white;
+      --color-mix-light: black;
+      --color-mix-dark: white;
+      --color-mix: var(--color-mix-light);
 
       /* Hover */
       --border-color-hover: color-mix(in srgb, var(--border-color) 60%, black);
@@ -24485,7 +24499,7 @@ installImportMetaCssBuild(import.meta);const css$p = /* css */`
       );
 
       &[data-dark-background] {
-        --color-mix: black;
+        --color-mix: var(--color-mix-dark);
         --checkmark-color: white;
       }
     }
@@ -24501,6 +24515,15 @@ installImportMetaCssBuild(import.meta);const css$p = /* css */`
     display: inline-flex;
     box-sizing: content-box;
     margin: var(--margin);
+
+    .navi_checkbox_accent_probe {
+      position: absolute;
+      width: 0;
+      height: 0;
+      background-color: var(--accent-color);
+      visibility: hidden;
+      pointer-events: none;
+    }
 
     .navi_native_field {
       position: absolute;
@@ -24576,6 +24599,14 @@ installImportMetaCssBuild(import.meta);const css$p = /* css */`
         --x-border-color: var(--border-color-disabled-checked);
         --x-background-color: var(--background-color-disabled-checked);
         --x-checkmark-color: var(--checkmark-color-disabled);
+      }
+    }
+
+    &[data-dark-background]:not([data-appearance="toggle"]) {
+      --x-background-color: white;
+      --x-checkmark-color: var(--checkmark-color);
+      &[data-checked] {
+        --x-background-color: var(--background-color-checked);
       }
     }
 
@@ -24697,7 +24728,8 @@ installImportMetaCssBuild(import.meta);const css$p = /* css */`
   }
 `;
 const InputCheckbox = props => {
-  import.meta.css = [css$p, "@jsenv/navi/src/field/input_checkbox.jsx"];
+  const defaultRef = useRef();
+  const ref = props.ref || defaultRef;
   const {
     value = "on"
   } = props;
@@ -24709,71 +24741,31 @@ const InputCheckbox = props => {
     getPropFromState: Boolean
   });
   const uiState = useUIState(uiStateController);
-  const checkbox = renderActionableComponent(props, {
-    Basic: InputCheckboxBasic,
-    WithAction: InputCheckboxWithAction
-  });
   return jsx(UIStateControllerContext.Provider, {
     value: uiStateController,
     children: jsx(UIStateContext.Provider, {
       value: uiState,
-      children: checkbox
+      children: jsx(InputCheckboxDispatcher, {
+        ...props,
+        ref: ref
+      })
     })
   });
 };
-const CheckboxStyleCSSVars = {
-  "width": "--width",
-  "height": "--height",
-  "outlineWidth": "--outline-width",
-  "borderWidth": "--border-width",
-  "backgroundColor": "--background-color",
-  "borderColor": "--border-color",
-  "accentColor": "--accent-color",
-  ":hover": {
-    backgroundColor: "--background-color-hover",
-    borderColor: "--border-color-hover"
-  },
-  ":active": {
-    borderColor: "--border-color-active"
-  },
-  ":read-only": {
-    backgroundColor: "--background-color-readonly",
-    borderColor: "--border-color-readonly"
-  },
-  ":disabled": {
-    backgroundColor: "--background-color-disabled",
-    borderColor: "--border-color-disabled"
+const InputCheckboxDispatcher = props => {
+  if (props.action) {
+    return jsx(InputCheckboxWithAction, {
+      ...props
+    });
   }
+  return jsx(InputCheckboxUI, {
+    ...props
+  });
 };
-const CheckboxToggleStyleCSSVars = {
-  ...CheckboxStyleCSSVars,
-  width: "--toggle-width",
-  height: "--toggle-height",
-  borderRadius: "--border-radius"
-};
-const CheckboxButtonStyleCSSVars = {
-  ...CheckboxStyleCSSVars,
-  paddingTop: "--padding-top",
-  paddingRight: "--padding-right",
-  paddingBottom: "--padding-bottom",
-  paddingLeft: "--padding-left",
-  paddingX: "--padding-x",
-  paddingY: "--padding-y",
-  padding: "--padding"
-};
-const CheckboxPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":checked", ":-navi-loading"];
-const CheckboxPseudoElements = ["::-navi-loader", "::-navi-checkmark"];
-const CheckboxChildPropSet = new Set([...fieldPropSet]);
-const InputCheckboxBasic = props => {
-  const contextFieldName = useContext(FieldNameContext);
-  const contextReadOnly = useContext(ReadOnlyContext);
-  const contextDisabled = useContext(DisabledContext);
-  const contextRequired = useContext(RequiredContext);
-  const contextLoading = useContext(LoadingContext);
-  const loadingElement = useContext(LoadingElementContext);
-  const uiStateController = useContext(UIStateControllerContext);
-  const uiState = useContext(UIStateContext);
+const InputCheckboxUI = props => {
+  import.meta.css = [css$p, "@jsenv/navi/src/field/input_checkbox.jsx"];
   const {
+    ref,
     /* eslint-disable no-unused-vars */
     type,
     defaultChecked,
@@ -24794,8 +24786,14 @@ const InputCheckboxBasic = props => {
     // "checkbox", "toggle", "icon", "button"
     ...rest
   } = props;
-  const defaultRef = useRef();
-  const ref = rest.ref || defaultRef;
+  const contextFieldName = useContext(FieldNameContext);
+  const contextReadOnly = useContext(ReadOnlyContext);
+  const contextDisabled = useContext(DisabledContext);
+  const contextRequired = useContext(RequiredContext);
+  const contextLoading = useContext(LoadingContext);
+  const loadingElement = useContext(LoadingElementContext);
+  const uiStateController = useContext(UIStateControllerContext);
+  const uiState = useContext(UIStateContext);
   const innerName = name || contextFieldName;
   const innerDisabled = disabled || contextDisabled;
   const innerRequired = required || contextRequired;
@@ -24841,13 +24839,9 @@ const InputCheckboxBasic = props => {
   });
   const renderCheckboxMemoized = useCallback(renderCheckbox, [id, innerName, checked, innerRequired]);
   const boxRef = useRef();
-  useDarkBackgroundAttribute(boxRef, [accentColor, checked], {
-    backgroundElementSelector: ".navi_checkbox_field",
-    // the browser (chrome at least) prefer white in this scenario even if
-    // the contrast is better with black, so we force it to white to match chrome behavior on this specific color
-    hardcoded: {
-      "#4476ff": "white"
-    }
+  useDarkBackgroundAttribute(boxRef, [accentColor], {
+    backgroundElementSelector: ".navi_checkbox_accent_probe",
+    luminanceThreshold: 0.82
   });
   return jsxs(Box, {
     as: "span",
@@ -24871,7 +24865,10 @@ const InputCheckboxBasic = props => {
     hasChildFunction: true,
     baseChildPropSet: CheckboxChildPropSet,
     preventInitialTransition: true,
-    children: [jsx(LoaderBackground, {
+    children: [jsx("span", {
+      className: "navi_checkbox_accent_probe",
+      "aria-hidden": "true"
+    }), jsx(LoaderBackground, {
       loading: innerLoading,
       inset: -1,
       color: "var(--loader-color)",
@@ -24908,10 +24905,54 @@ const InputCheckboxBasic = props => {
     })]
   });
 };
+const CheckboxStyleCSSVars = {
+  "width": "--width",
+  "height": "--height",
+  "outlineWidth": "--outline-width",
+  "borderWidth": "--border-width",
+  "backgroundColor": "--background-color",
+  "borderColor": "--border-color",
+  "accentColor": "--accent-color",
+  ":hover": {
+    backgroundColor: "--background-color-hover",
+    borderColor: "--border-color-hover"
+  },
+  ":active": {
+    borderColor: "--border-color-active"
+  },
+  ":read-only": {
+    backgroundColor: "--background-color-readonly",
+    borderColor: "--border-color-readonly"
+  },
+  ":disabled": {
+    backgroundColor: "--background-color-disabled",
+    borderColor: "--border-color-disabled"
+  }
+};
+const CheckboxToggleStyleCSSVars = {
+  ...CheckboxStyleCSSVars,
+  width: "--toggle-width",
+  height: "--toggle-height",
+  borderRadius: "--border-radius"
+};
+const CheckboxButtonStyleCSSVars = {
+  ...CheckboxStyleCSSVars,
+  paddingTop: "--padding-top",
+  paddingRight: "--padding-right",
+  paddingBottom: "--padding-bottom",
+  paddingLeft: "--padding-left",
+  paddingX: "--padding-x",
+  paddingY: "--padding-y",
+  padding: "--padding"
+};
+const CheckboxPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":checked", ":-navi-loading"];
+const CheckboxPseudoElements = ["::-navi-loader", "::-navi-checkmark"];
+const CheckboxChildPropSet = new Set([...fieldPropSet]);
 const InputCheckboxWithAction = props => {
   const uiStateController = useContext(UIStateControllerContext);
   const uiState = useContext(UIStateContext);
   const {
+    ref,
     action,
     onCancel,
     actionErrorEffect,
@@ -24923,8 +24964,6 @@ const InputCheckboxWithAction = props => {
     loading,
     ...rest
   } = props;
-  const defaultRef = useRef();
-  const ref = props.ref || defaultRef;
   const [actionBoundToUIState] = useActionBoundToOneParam(action, uiState);
   const actionStatus = useActionStatus(actionBoundToUIState);
   const {
@@ -24961,7 +25000,7 @@ const InputCheckboxWithAction = props => {
       onActionEnd?.(e);
     }
   });
-  return jsx(InputCheckboxBasic, {
+  return jsx(InputCheckboxDispatcher, {
     "data-action": actionBoundToUIState.name,
     ...rest,
     ref: ref,
@@ -25123,18 +25162,18 @@ installImportMetaCssBuild(import.meta);const css$o = /* css */`
       --width: 0.815em;
       --height: 0.815em;
 
+      --color-mix-light: black;
+      --color-mix-dark: white;
+      --color-mix: var(--color-mix-light);
+
       --outline-color: var(--navi-focus-outline-color);
       --loader-color: var(--navi-loader-color);
       --border-color: light-dark(#767676, #8e8e93);
-      --background-color: white;
+      --x-background-color: rgba(0, 0, 0, 0.15);
       --accent-color: light-dark(#4476ff, #3b82f6);
       --radiomark-color: var(--accent-color);
       --border-color-checked: var(--accent-color);
       --cursor: pointer;
-
-      --color-mix-light: black;
-      --color-mix-dark: white;
-      --color-mix: var(--color-mix-light);
 
       /* Hover */
       --border-color-hover: color-mix(in srgb, var(--border-color) 60%, black);
@@ -25194,10 +25233,6 @@ installImportMetaCssBuild(import.meta);const css$o = /* css */`
       --button-border-color-disabled: var(--border-color-readonly);
       --button-background-color-disabled: var(--background-color-readonly);
     }
-
-    &[data-dark] {
-      --color-mix: var(--color-mix-dark);
-    }
   }
 
   .navi_radio {
@@ -25216,6 +25251,15 @@ installImportMetaCssBuild(import.meta);const css$o = /* css */`
     display: inline-flex;
     box-sizing: content-box;
     margin: var(--margin);
+
+    .navi_radio_accent_probe {
+      position: absolute;
+      width: 0;
+      height: 0;
+      background-color: var(--accent-color);
+      visibility: hidden;
+      pointer-events: none;
+    }
 
     .navi_native_field {
       position: absolute;
@@ -25243,6 +25287,7 @@ installImportMetaCssBuild(import.meta);const css$o = /* css */`
     }
     /* Checked */
     &[data-checked] {
+      --x-background-color: transparent;
       --x-border-color: var(--border-color-checked);
 
       &[data-hover] {
@@ -25276,6 +25321,14 @@ installImportMetaCssBuild(import.meta);const css$o = /* css */`
       &[data-checked] {
         --x-border-color: var(--border-color-disabled);
         --x-radiomark-color: var(--radiomark-color-disabled);
+      }
+    }
+
+    &[data-dark-background] {
+      --x-background-color: white;
+      --color-mix: var(--color-mix-dark);
+      &[data-checked] {
+        --x-background-color: white;
       }
     }
 
@@ -25407,7 +25460,8 @@ installImportMetaCssBuild(import.meta);const css$o = /* css */`
   }
 `;
 const InputRadio = props => {
-  import.meta.css = [css$o, "@jsenv/navi/src/field/input_radio.jsx"];
+  const defaultRef = useRef();
+  const ref = props.ref || defaultRef;
   const {
     value = "on"
   } = props;
@@ -25424,76 +25478,29 @@ const InputRadio = props => {
     }
   });
   const uiState = useUIState(uiStateController);
-  const radio = renderActionableComponent(props, {
-    Basic: InputRadioBasic,
-    WithAction: InputRadioWithAction
-  });
   return jsx(UIStateControllerContext.Provider, {
     value: uiStateController,
     children: jsx(UIStateContext.Provider, {
       value: uiState,
-      children: radio
+      children: jsx(InputRadioDispatcher, {
+        ...props,
+        ref: ref
+      })
     })
   });
 };
-const RadioStyleCSSVars = {
-  "width": "--width",
-  "height": "--height",
-  "borderRadius": "--border-radius",
-  "outlineWidth": "--outline-width",
-  "borderWidth": "--border-width",
-  "backgroundColor": "--background-color",
-  "borderColor": "--border-color",
-  "accentColor": "--accent-color",
-  ":hover": {
-    backgroundColor: "--background-color-hover",
-    borderColor: "--border-color-hover"
-  },
-  ":active": {
-    borderColor: "--border-color-active"
-  },
-  ":read-only": {
-    backgroundColor: "--background-color-readonly",
-    borderColor: "--border-color-readonly"
-  },
-  ":disabled": {
-    backgroundColor: "--background-color-disabled",
-    borderColor: "--border-color-disabled"
+const InputRadioDispatcher = props => {
+  if (props.action) {
+    return jsx(InputRadioWithAction, {});
   }
+  return jsx(InputRadioUI, {
+    ...props
+  });
 };
-const RadioButtonStyleCSSVars = {
-  ...RadioStyleCSSVars,
-  "padding": "--padding",
-  "borderRadius": "--button-border-radius",
-  "borderWidth": "--button-border-width",
-  "borderColor": "--button-border-color",
-  "backgroundColor": "--button-background-color",
-  ":hover": {
-    backgroundColor: "--button-background-color-hover",
-    borderColor: "--button-border-color-hover"
-  },
-  ":read-only": {
-    backgroundColor: "--button-background-color-readonly",
-    borderColor: "--button-border-color-readonly"
-  },
-  ":disabled": {
-    backgroundColor: "--button-background-color-disabled",
-    borderColor: "--button-border-color-disabled"
-  }
-};
-const RadioPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":checked", ":-navi-loading"];
-const RadioPseudoElements = ["::-navi-loader", "::-navi-radiomark"];
-const RadioChildPropSet = new Set([...fieldPropSet]);
-const InputRadioBasic = props => {
-  const contextName = useContext(FieldNameContext);
-  const contextReadOnly = useContext(ReadOnlyContext);
-  const contextDisabled = useContext(DisabledContext);
-  const contextRequired = useContext(RequiredContext);
-  const contextLoading = useContext(LoadingContext);
-  const contextLoadingElement = useContext(LoadingElementContext);
-  const uiStateController = useContext(UIStateControllerContext);
-  const uiState = useContext(UIStateContext);
+const InputRadioUI = props => {
+  import.meta.css = [css$o, "@jsenv/navi/src/field/input_radio.jsx"];
   const {
+    ref,
     /* eslint-disable no-unused-vars */
     type,
     /* eslint-enable no-unused-vars */
@@ -25511,8 +25518,14 @@ const InputRadioBasic = props => {
     color,
     ...rest
   } = props;
-  const defaultRef = useRef();
-  const ref = rest.ref || defaultRef;
+  const contextName = useContext(FieldNameContext);
+  const contextReadOnly = useContext(ReadOnlyContext);
+  const contextDisabled = useContext(DisabledContext);
+  const contextRequired = useContext(RequiredContext);
+  const contextLoading = useContext(LoadingContext);
+  const contextLoadingElement = useContext(LoadingElementContext);
+  const uiStateController = useContext(UIStateControllerContext);
+  const uiState = useContext(UIStateContext);
   const innerName = name || contextName;
   const innerDisabled = disabled || contextDisabled;
   const innerRequired = required || contextRequired;
@@ -25586,15 +25599,10 @@ const InputRadioBasic = props => {
   });
   const renderRadioMemoized = useCallback(renderRadio, [innerName, checked, innerRequired]);
   const boxRef = useRef();
-  useLayoutEffect(() => {
-    const naviRadio = boxRef.current;
-    const luminance = resolveColorLuminance("var(--accent-color)", naviRadio);
-    if (luminance < 0.3) {
-      naviRadio.setAttribute("data-dark", "");
-    } else {
-      naviRadio.removeAttribute("data-dark");
-    }
-  }, [color]);
+  useDarkBackgroundAttribute(boxRef, [remainingProps.accentColor], {
+    backgroundElementSelector: ".navi_radio_accent_probe",
+    luminanceThreshold: 0.82
+  });
   return jsxs(Box, {
     as: "span",
     ...remainingProps,
@@ -25616,7 +25624,10 @@ const InputRadioBasic = props => {
     color: color,
     hasChildFunction: true,
     baseChildPropSet: RadioChildPropSet,
-    children: [jsx(LoaderBackground, {
+    children: [jsx("span", {
+      className: "navi_radio_accent_probe",
+      "aria-hidden": "true"
+    }), jsx(LoaderBackground, {
       loading: innerLoading,
       inset: -1,
       targetSelector: ".navi_radio_field",
@@ -25652,6 +25663,54 @@ const InputRadioBasic = props => {
     })]
   });
 };
+const RadioStyleCSSVars = {
+  "width": "--width",
+  "height": "--height",
+  "borderRadius": "--border-radius",
+  "outlineWidth": "--outline-width",
+  "borderWidth": "--border-width",
+  "backgroundColor": "--background-color",
+  "borderColor": "--border-color",
+  "accentColor": "--accent-color",
+  ":hover": {
+    backgroundColor: "--background-color-hover",
+    borderColor: "--border-color-hover"
+  },
+  ":active": {
+    borderColor: "--border-color-active"
+  },
+  ":read-only": {
+    backgroundColor: "--background-color-readonly",
+    borderColor: "--border-color-readonly"
+  },
+  ":disabled": {
+    backgroundColor: "--background-color-disabled",
+    borderColor: "--border-color-disabled"
+  }
+};
+const RadioButtonStyleCSSVars = {
+  ...RadioStyleCSSVars,
+  "padding": "--padding",
+  "borderRadius": "--button-border-radius",
+  "borderWidth": "--button-border-width",
+  "borderColor": "--button-border-color",
+  "backgroundColor": "--button-background-color",
+  ":hover": {
+    backgroundColor: "--button-background-color-hover",
+    borderColor: "--button-border-color-hover"
+  },
+  ":read-only": {
+    backgroundColor: "--button-background-color-readonly",
+    borderColor: "--button-border-color-readonly"
+  },
+  ":disabled": {
+    backgroundColor: "--button-background-color-disabled",
+    borderColor: "--button-border-color-disabled"
+  }
+};
+const RadioPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":checked", ":-navi-loading"];
+const RadioPseudoElements = ["::-navi-loader", "::-navi-radiomark"];
+const RadioChildPropSet = new Set([...fieldPropSet]);
 const InputRadioWithAction = () => {
   throw new Error(`<Input type="radio" /> with an action make no sense. Use <RadioList action={something} /> instead`);
 };
@@ -26637,10 +26696,13 @@ const css$m = /* css */`
       --list-item-color-selected: light-dark(#1a73e8, #7baaf7);
       --list-item-background-color-selected: light-dark(#e8f0fe, #1c3a6e);
       --list-item-font-weight-selected: 500;
+
+      /* Pointed+selected: darken the selected background slightly */
       --list-item-color-pointed-selected: var(--list-item-color-selected);
-      --list-item-background-color-pointed-selected: light-dark(
-        #d2e3fc,
-        #174ea6
+      --list-item-background-color-pointed-selected: color-mix(
+        in srgb,
+        var(--list-item-background-color-selected) 80%,
+        black
       );
 
       /* Disabled */
@@ -28226,13 +28288,13 @@ const ListItemReal = ({
     ...rest,
     ref: ref,
     basePseudoState: {
+      ...rest.basePseudoState,
+      ":disabled": Boolean(disabled),
       ":-navi-pointed": isPointed,
       ":-navi-pointed-by-mouse": isPointedByMouse,
       ":-navi-pointed-by-keyboard": isPointedByKeyboard,
       ":-navi-pointed-by-proxy": isPointedByProxy,
-      ":-navi-selected": selected,
-      ":disabled": Boolean(disabled),
-      ...rest.basePseudoState
+      ":-navi-selected": selected
     },
     children: children
   });
