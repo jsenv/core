@@ -262,9 +262,8 @@
             <h2>3. Search — input inside list</h2>
             <p>
               Placing an <code>Input</code> inside a <code>ListItemHeader</code>{" "}
-              auto-connects it to the list via context. Keyboard events
-              (arrows, enter, escape) forward from the input to the list
-              automatically.
+              auto-connects it to the list via context. Keyboard events (arrows,
+              enter, escape) forward from the input to the list automatically.
             </p>
             <List
               uiAction={(value) => {
@@ -316,10 +315,9 @@
           <div className="demo-section">
             <h2>3b. Search — input outside list (listId)</h2>
             <p>
-              When the input lives outside the list, pass{" "}
-              <code>listId</code> on the <code>Input</code> pointing to the
-              list's <code>id</code>. Keyboard forwarding and ARIA still wire
-              up automatically.
+              When the input lives outside the list, pass <code>listId</code> on
+              the <code>Input</code> pointing to the list's <code>id</code>.
+              Keyboard forwarding and ARIA still wire up automatically.
             </p>
             <Input
               placeholder="Search fruits…"
@@ -337,6 +335,7 @@
               uiAction={(value) => {
                 setSelected(value);
               }}
+              expandX
             >
               {fruits.map((fruit, i) => {
                 const { match, ranges } = getItemMatchInfo(fruit);
@@ -544,8 +543,8 @@
           <>
             <DisplayOnlyDemo />
             <InteractiveDemo />
-            <SearchableDemo />
             <SearchableExternalInputDemo />
+            <SearchableDemo />
             <PopoverDemo />
             <FormDemo />
             <RequiredFormDemo />
