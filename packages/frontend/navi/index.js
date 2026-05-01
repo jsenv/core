@@ -76,20 +76,6 @@ export { enableDebugOnDocumentLoading } from "./src/nav/browser_integration/docu
 export { Details } from "./src/field/details/details.jsx";
 export { SummaryMarker } from "./src/field/details/summary_marker.jsx";
 
-// list
-export { Dropdown, useDropdownClose } from "./src/list/dropdown.jsx";
-export {
-  List,
-  ListItem,
-  ListItemFooter,
-  ListItemGroup,
-  ListItemHeader,
-} from "./src/list/list.jsx";
-
-export { applySearch } from "./src/list/apply_search.js";
-export { createSearch } from "./src/list/create_search.js";
-export { useSearchText } from "./src/list/use_search_text.js";
-
 // Form
 // Validation
 export { openCallout } from "./src/field/validation/callout/callout.js";
@@ -125,7 +111,20 @@ export { Input } from "./src/field/input.jsx";
 export { Label } from "./src/field/label.jsx";
 export { Radio, RadioList } from "./src/field/radio_list.jsx";
 export { Select } from "./src/field/select.jsx";
-// Table start
+// --- List start ---
+export { applySearch } from "./src/field/list/apply_search.js";
+export { createSearch } from "./src/field/list/create_search.js";
+export { Dropdown, useDropdownClose } from "./src/field/list/dropdown.jsx";
+export {
+  List,
+  ListItem,
+  ListItemFooter,
+  ListItemGroup,
+  ListItemHeader,
+} from "./src/field/list/list.jsx";
+export { useSearchText } from "./src/field/list/use_search_text.js";
+// --- List end ---
+// --- Table start---
 export {
   filterTableSelection,
   isCellSelected,
@@ -146,7 +145,7 @@ export {
 } from "./src/field/table/table.jsx";
 export { useCellGridFromRows } from "./src/field/table/use_cell_grid_from_rows.js";
 export { useOrderedColumns } from "./src/field/table/use_ordered_columns.js";
-// Table end
+// --- Table end ---
 
 // Components
 export { ErrorBoundaryContext } from "./src/error_boundary_context.js";

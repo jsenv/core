@@ -2,9 +2,9 @@ import { trapScrollInside } from "@jsenv/dom";
 import { createContext } from "preact";
 import { useContext, useRef, useState } from "preact/hooks";
 
-import { Box } from "../box/box.jsx";
-import { ChevronDownSvg } from "../graphic/icons/chevron_updown_svg.jsx";
-import { Icon } from "../text/icon.jsx";
+import { Box } from "../../box/box.jsx";
+import { ChevronDownSvg } from "../../graphic/icons/chevron_updown_svg.jsx";
+import { Icon } from "../../text/icon.jsx";
 
 const css = /* css */ `
   @layer navi {

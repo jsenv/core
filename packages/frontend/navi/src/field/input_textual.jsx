@@ -37,14 +37,6 @@ import { PhoneSvg } from "../graphic/icons/phone_svg.jsx";
 import { SearchSvg } from "../graphic/icons/search_svg.jsx";
 import { LoaderBackground } from "../graphic/loader/loader_background.jsx";
 import { shortcutsViaOnKeyDown } from "../keyboard/keyboard_shortcuts.js";
-import {
-  ListIdContext,
-  requestListClose,
-  requestListInteractionStateReset,
-  requestListNavFromCurrent,
-  requestListOpen,
-  requestListSelectCurrent,
-} from "../list/list.jsx";
 import { Icon } from "../text/icon.jsx";
 import { useAutoFocus } from "../utils/focus/use_auto_focus.js";
 import { useStableCallback } from "../utils/use_stable_callback.js";
@@ -55,6 +47,14 @@ import {
   reportInteractiveToLabel,
   reportReadOnlyToLabel,
 } from "./label.jsx";
+import {
+  ListIdContext,
+  requestListClose,
+  requestListInteractionStateReset,
+  requestListNavFromCurrent,
+  requestListOpen,
+  requestListSelectCurrent,
+} from "./list/list.jsx";
 import { useActionEvents } from "./use_action_events.js";
 import {
   DisabledContext,

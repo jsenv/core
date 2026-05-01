@@ -16,20 +16,26 @@ import {
   useState,
 } from "preact/hooks";
 
-import { Box } from "../box/box.jsx";
-import {
-  ParentUIStateControllerContext,
-  useUIStateController,
-} from "../field/use_ui_state_controller.js";
-import { shortcutsViaOnKeyDown } from "../keyboard/keyboard_shortcuts.js";
-import { useDebugScroll } from "../navi_debug.jsx";
+import { useAction } from "../../action/use_action.js";
+import { useActionStatus } from "../../action/use_action_status.js";
+import { useExecuteAction } from "../../action/use_execute_action.js";
+import { Box } from "../../box/box.jsx";
+import { shortcutsViaOnKeyDown } from "../../keyboard/keyboard_shortcuts.js";
+import { useDebugScroll } from "../../navi_debug.jsx";
 import {
   dispatchCustomEvent,
   dispatchPublicCustomEvent,
-} from "../utils/custom_event.js";
-import { useAutoFocus } from "../utils/focus/use_auto_focus.js";
-import { useItemTracker } from "../utils/item_tracker/use_item_tracker.js";
-import { useDisplayedLayoutEffect } from "../utils/use_displayed_layout_effect.js";
+} from "../../utils/custom_event.js";
+import { useAutoFocus } from "../../utils/focus/use_auto_focus.js";
+import { useItemTracker } from "../../utils/item_tracker/use_item_tracker.js";
+import { useDisplayedLayoutEffect } from "../../utils/use_displayed_layout_effect.js";
+import { useActionEvents } from "../use_action_events.js";
+import {
+  ParentUIStateControllerContext,
+  useUIStateController,
+} from "../use_ui_state_controller.js";
+import { forwardActionRequested } from "../validation/custom_constraint_validation.js";
+import { useConstraints } from "../validation/hooks/use_constraints.js";
 
 const ListItemTrackerContext = createContext(null);
 const GroupItemTrackerContext = createContext(null);
@@ -409,10 +415,9 @@ export const List = (props) => {
 const ListDispatcher = (props) => {
   const alreadyInteractive = useContext(ListInteractiveContext);
   const parentUIStateController = useContext(ParentUIStateControllerContext);
-  // Each of the variants below strips its own triggering prop and re-renders
-  // List, so remaining variants are still picked up correctly on the next pass.
-  // The order only matters in cases where one variant should suppress another —
-  // currently only withSearch has that role (see above).
+  if (!alreadyInteractive && props.action) {
+    return <ListWithAction {...props} />;
+  }
   if (!alreadyInteractive && (props.uiAction || parentUIStateController)) {
     return <ListInteractive {...props} />;
   }
@@ -442,6 +447,9 @@ const ListUI = (props) => {
     virtualItemHeight,
     lockSize,
     searchText,
+    name,
+    value,
+    required,
     ...rest
   } = props;
 
@@ -493,6 +501,7 @@ const ListUI = (props) => {
   });
 
   const ulRef = useRef(null);
+  const remainingProps = useConstraints(ref, rest);
   const {
     virtualItemHeightSignal,
     renderWindow,
@@ -548,7 +557,7 @@ const ListUI = (props) => {
 
   return (
     <Box
-      {...rest}
+      {...remainingProps}
       ref={ref}
       baseClassName="navi_list_container"
       popover={popover}
@@ -559,6 +568,7 @@ const ListUI = (props) => {
       styleCSSVars={LIST_STYLE_CSS_VARS}
       pseudoClasses={LIST_PSEUDO_CLASSES}
       hasChildFunction
+      data-navi-value={value || undefined}
       onnavi_list_request_nav={(e) => {
         const { item } = e.detail;
         if (!item) {
@@ -582,6 +592,9 @@ const ListUI = (props) => {
         });
       }}
     >
+      {name && (
+        <input type="hidden" name={name} value={value} required={required} />
+      )}
       {renderListMemoized}
     </Box>
   );
@@ -1160,6 +1173,62 @@ const ListWithPopover = (props) => {
           event: e,
         });
       }}
+    />
+  );
+};
+
+// Interactive variant with action: calls the action whenever a value is selected.
+const ListWithAction = (props) => {
+  const {
+    ref,
+    action,
+    loading,
+    actionErrorEffect,
+    onActionPrevented,
+    onActionStart,
+    onActionAbort,
+    onActionError,
+    onActionEnd,
+    uiAction,
+    ...rest
+  } = props;
+  const boundAction = useAction(action);
+  const { loading: actionLoading } = useActionStatus(boundAction);
+  const executeAction = useExecuteAction(ref, {
+    errorEffect: actionErrorEffect,
+  });
+
+  useActionEvents(ref, {
+    onRequested: (e) => forwardActionRequested(e, boundAction),
+    onAction: executeAction,
+    onPrevented: onActionPrevented,
+    onStart: onActionStart,
+    onAbort: onActionAbort,
+    onError: onActionError,
+    onEnd: onActionEnd,
+  });
+
+  const innerUiAction = (value, event) => {
+    uiAction?.(value, event);
+    // Dispatch action request so useActionEvents can pick it up
+    if (ref && ref.current) {
+      ref.current.dispatchEvent(
+        new CustomEvent("navi_action_requested", {
+          bubbles: true,
+          detail: { value },
+        }),
+      );
+    }
+  };
+
+  return (
+    <List
+      data-action={boundAction.name}
+      {...rest}
+      ref={ref}
+      action={undefined}
+      loading={loading || actionLoading}
+      uiAction={innerUiAction}
     />
   );
 };

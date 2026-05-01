@@ -1,5 +1,26 @@
 import { performTabNavigation } from "./tab_navigation.js";
 
+/**
+ * Traps keyboard focus and mouse clicks inside `element`.
+ *
+ * Once active:
+ * - **Tab / Shift+Tab** cycle through focusable descendants of `element`,
+ *   wrapping from last → first and first → last. If no focusable element
+ *   exists, the default browser Tab action is suppressed so focus cannot
+ *   escape.
+ * - **Mouse clicks** outside `element` are cancelled
+ *   (`preventDefault` + `stopImmediatePropagation`) so the user cannot
+ *   move focus away by clicking on the backdrop.
+ *
+ * Multiple traps can be stacked. When a new trap is activated the previous
+ * one is paused; when the new trap is released the previous one resumes.
+ * Traps must be released in LIFO order (the reverse of activation order).
+ *
+ * @param {HTMLElement} element - The root element to trap focus inside.
+ * @param {object} [options]
+ * @param {Function} [options.debug] - Optional debug logger passed to tab navigation.
+ * @returns {() => void} Cleanup function — call it to release the trap.
+ */
 export const trapFocusInside = (element, { debug } = {}) => {
   if (element.nodeType === 3) {
     console.warn("cannot trap focus inside a text node");
