@@ -1,4 +1,8 @@
-import { pickPositionRelativeTo, visibleRectEffect } from "@jsenv/dom";
+import {
+  findFocusable,
+  pickPositionRelativeTo,
+  visibleRectEffect,
+} from "@jsenv/dom";
 import { createPortal } from "preact/compat";
 import { useId, useLayoutEffect, useRef, useState } from "preact/hooks";
 
@@ -58,6 +62,10 @@ export const Popover = (props) => {
     }
     popoverEl.showPopover();
     expand();
+    const firstFocusable = findFocusable(popoverEl);
+    if (firstFocusable) {
+      firstFocusable.focus({ preventScroll: true });
+    }
     const positionPopover = (positionEvent) => {
       debugPopover(`positionPopover("${positionEvent.type}")`);
       const anchorRect = anchor.getBoundingClientRect();
