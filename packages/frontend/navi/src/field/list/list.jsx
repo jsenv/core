@@ -657,7 +657,11 @@ const useListScrollSync = ({
         container: ref.current,
         block,
       });
-      dispatchPublicCustomEvent(itemEl, "navi_list_nav", { item, event });
+      const listContainerEl = ref.current;
+      dispatchPublicCustomEvent(listContainerEl, "navi_list_nav", {
+        event,
+        item,
+      });
     };
 
     const { start, end } = renderWindowRef.current;
@@ -1344,8 +1348,8 @@ const ListInteractive = (props) => {
               }
               const item = visibleItems[index];
               dispatchCustomEvent(e.currentTarget, "navi_list_request_nav", {
-                item,
                 event: e,
+                item,
               });
             }}
             onnavi_list_request_interaction_state_reset={() => {
@@ -1356,8 +1360,8 @@ const ListInteractive = (props) => {
             onnavi_list_request_select_current={(e) => {
               const item = getAnchorItem();
               dispatchCustomEvent(e.currentTarget, "navi_list_request_select", {
-                item,
                 event: e,
+                item,
               });
             }}
             onnavi_list_nav={(e) => {
