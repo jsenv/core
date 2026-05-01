@@ -398,7 +398,10 @@ const css = /* css */ `
  *   ...rest              — forwarded to the outer scroll container <Box>
  */
 export const List = (props) => {
-  return <ListDispatcher {...props} />;
+  const refDefault = useRef(null);
+  const ref = props.ref || refDefault;
+
+  return <ListDispatcher {...props} ref={ref} />;
 };
 const ListDispatcher = (props) => {
   const alreadyInteractive = useContext(ListInteractiveContext);
@@ -419,7 +422,9 @@ const ListDispatcher = (props) => {
   return <ListUI {...props} />;
 };
 const ListUI = (props) => {
+  import.meta.css = css;
   const {
+    ref,
     renderBudget = RENDER_BUDGET_DEFAULT,
     listId,
     listRole,
@@ -436,9 +441,6 @@ const ListUI = (props) => {
     searchText,
     ...rest
   } = props;
-  import.meta.css = css;
-  const refDefault = useRef(null);
-  const ref = rest.ref || refDefault;
 
   // lockSize: capture the container's dimensions on first render so filtering
   // cannot collapse the layout. Measurement happens on the initial (unfiltered)
