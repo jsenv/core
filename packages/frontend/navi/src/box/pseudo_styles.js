@@ -72,12 +72,12 @@ export const PSEUDO_CLASSES = {
       // which is safe and does not interfere with anyone else's event flow.
       const onPointerDown = () => {
         const onRelease = () => {
-          document.removeEventListener("pointercancel", onRelease);
-          document.removeEventListener("pointerup", onRelease);
+          document.removeEventListener("pointercancel", onRelease, true);
+          document.removeEventListener("pointerup", onRelease, true);
           callback();
         };
-        document.addEventListener("pointercancel", onRelease);
-        document.addEventListener("pointerup", onRelease);
+        document.addEventListener("pointercancel", onRelease, true);
+        document.addEventListener("pointerup", onRelease, true);
         callback();
       };
       el.addEventListener("pointerdown", onPointerDown);
@@ -103,9 +103,9 @@ export const PSEUDO_CLASSES = {
         pressedElements.add(el);
         const onRelease = () => {
           pressedElements.delete(el);
-          document.removeEventListener("pointercancel", onRelease);
-          document.removeEventListener("pointerup", onRelease);
-          document.removeEventListener("contextmenu", onContextMenu);
+          document.removeEventListener("pointercancel", onRelease, true);
+          document.removeEventListener("pointerup", onRelease, true);
+          document.removeEventListener("contextmenu", onContextMenu, true);
           callback();
         };
         const onContextMenu = (e) => {
@@ -116,15 +116,15 @@ export const PSEUDO_CLASSES = {
           // e.button === -1 means the event was synthesized from a long-press (not a real mouse click).
           if (e.button === -1 && !e.defaultPrevented) {
             pressedElements.delete(el);
-            document.removeEventListener("pointercancel", onRelease);
-            document.removeEventListener("pointerup", onRelease);
-            document.removeEventListener("contextmenu", onContextMenu);
+            document.removeEventListener("pointercancel", onRelease, true);
+            document.removeEventListener("pointerup", onRelease, true);
+            document.removeEventListener("contextmenu", onContextMenu, true);
             callback();
           }
         };
-        document.addEventListener("pointercancel", onRelease);
-        document.addEventListener("pointerup", onRelease);
-        document.addEventListener("contextmenu", onContextMenu);
+        document.addEventListener("pointercancel", onRelease, true);
+        document.addEventListener("pointerup", onRelease, true);
+        document.addEventListener("contextmenu", onContextMenu, true);
         callback();
       };
       el.addEventListener("pointerdown", onPointerDown);
