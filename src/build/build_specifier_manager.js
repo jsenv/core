@@ -917,6 +917,11 @@ export const createBuildSpecifierManager = ({
             const finalUrl = internalRedirections.get(rawUrl) || rawUrl;
             const urlInfo = finalKitchen.graph.getUrlInfo(finalUrl);
             if (!urlInfo) {
+              if (rel === "preconnect" || rel === "dns-prefetch") {
+                // preconnect/dns-prefetch hints refer to origins, not specific resources in the graph.
+                // Keep them as-is — the author knows what external domains will be used at runtime.
+                return;
+              }
               logger.warn(
                 `${UNICODE.WARNING} remove resource hint because cannot find "${href}" in the graph`,
               );
