@@ -1,6 +1,7 @@
 import {
   findFocusable,
   pickPositionRelativeTo,
+  trapScrollInside,
   visibleRectEffect,
 } from "@jsenv/dom";
 import { createPortal } from "preact/compat";
@@ -26,7 +27,13 @@ const css = /* css */ `
 
 export const Popover = (props) => {
   import.meta.css = css;
-  const { disabled, children, positionPreference = "below", ...rest } = props;
+  const {
+    disabled,
+    scrollTrap,
+    children,
+    positionPreference = "below",
+    ...rest
+  } = props;
 
   const defaultRef = useRef();
   const ref = rest.ref || defaultRef;
@@ -86,7 +93,12 @@ export const Popover = (props) => {
         popoverEl.style.left = `${Math.max(left, minLeft)}px`;
       }
     };
-    const cleanup = visibleRectEffect(
+
+    let cleanupScrollTrap;
+    if (scrollTrap) {
+      cleanupScrollTrap = trapScrollInside(popoverEl);
+    }
+    const rectEffect = visibleRectEffect(
       anchor,
       ({ visibilityRatio }, { event }) => {
         if (visibilityRatio <= 0.2) {
@@ -97,7 +109,10 @@ export const Popover = (props) => {
         positionPopover(event);
       },
     );
-    cleanupRef.current = () => cleanup.disconnect();
+    cleanupRef.current = () => {
+      rectEffect.disconnect();
+      cleanupScrollTrap?.();
+    };
     dispatchPublicCustomEvent(popoverEl, "navi_popover_open", {
       event: e,
     });
