@@ -165,6 +165,7 @@ const css = /* css */ `
     border-radius: var(--x-border-radius);
     transition: opacity 0.2s ease;
     overflow: auto;
+    overscroll-behavior: inherit; /* inherit select behavior */
 
     &[data-expand-x] {
       width: 100%;

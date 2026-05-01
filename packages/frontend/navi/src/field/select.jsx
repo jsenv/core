@@ -185,7 +185,7 @@ const css = /* css */ `
       border-radius: 0;
       box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
       overflow: auto;
-      overscroll-behavior: contain;
+      overscroll-behavior: none;
     }
 
     .navi_select_dialog {
