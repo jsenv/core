@@ -15,12 +15,14 @@ import {
 } from "../utils/custom_event.js";
 
 const css = /* css */ `
-  .navi_popover {
+  .navi_popover_backdrop {
     position: fixed;
     inset: 0;
     z-index: 1000;
     background: transparent;
+  }
 
+  .navi_popover {
     &[data-anchor-hidden] {
       opacity: 0;
       pointer-events: none;
@@ -34,7 +36,7 @@ export const Popover = (props) => {
     disabled,
     scrollTrap,
     children,
-    position = "bottom",
+    positionTry = "bottom",
     ...rest
   } = props;
 
@@ -84,7 +86,7 @@ export const Popover = (props) => {
         `${effectiveAnchor.getBoundingClientRect().width}px`,
       );
       const minLeft = 1;
-      const effectivePositionTry = anchor ? position : "center";
+      const effectivePositionTry = anchor ? positionTry : "center";
       const { left, top } = pickPositionRelativeTo(popoverEl, effectiveAnchor, {
         positionTry: effectivePositionTry,
         minLeft,
