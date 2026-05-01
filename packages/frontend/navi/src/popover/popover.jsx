@@ -67,7 +67,7 @@ export const Popover = (props) => {
       return;
     }
     const popoverEl = ref.current;
-    if (!anchor || !popoverEl) {
+    if (!popoverEl) {
       return;
     }
     popoverEl.showPopover();
@@ -75,6 +75,23 @@ export const Popover = (props) => {
     const firstFocusable = findFocusable(popoverEl);
     if (firstFocusable) {
       firstFocusable.focus({ preventScroll: true });
+    }
+    if (!anchor) {
+      debugPopover("No anchor, centering popover in viewport");
+      const centerPopover = () => {
+        const viewportWidth = document.documentElement.clientWidth;
+        const viewportHeight = document.documentElement.clientHeight;
+        const popoverRect = popoverEl.getBoundingClientRect();
+        popoverEl.style.left = `${(viewportWidth - popoverRect.width) / 2}px`;
+        popoverEl.style.top = `${(viewportHeight - popoverRect.height) / 2}px`;
+      };
+      centerPopover();
+      window.addEventListener("resize", centerPopover);
+      cleanupRef.current = () => {
+        window.removeEventListener("resize", centerPopover);
+      };
+      dispatchPublicCustomEvent(popoverEl, "navi_popover_open", { event: e });
+      return;
     }
     const positionPopover = (positionEvent) => {
       debugPopover(`positionPopover("${positionEvent.type}")`);
