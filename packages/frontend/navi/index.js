@@ -187,6 +187,9 @@ export { Dialog } from "./src/popup/dialog.jsx";
 export { Popover } from "./src/popup/popover.jsx";
 export { SidePanel, useSidePanelClose } from "./src/popup/side_panel.jsx";
 
+// Responsivness
+export { windowWidthSignal } from "./src/layout/responsive.js";
+
 // Focus helpers
 export { useFocusGroup } from "./src/utils/focus/use_focus_group.js";
 
