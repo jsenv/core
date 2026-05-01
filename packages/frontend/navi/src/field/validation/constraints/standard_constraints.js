@@ -89,6 +89,9 @@ export const REQUIRED_CONSTRAINT = {
     if (field.getAttribute("data-rendered-by") === ".navi_list_container") {
       return `Veuillez sélectionner une option.`;
     }
+    if (field.getAttribute("data-rendered-by") === ".navi_select") {
+      return `Veuillez sélectionner une option.`;
+    }
     return `Veuillez remplir ce champ.`;
   },
 };

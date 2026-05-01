@@ -365,6 +365,7 @@ const SelectUI = (props) => {
         name={name}
         value={value}
         required={rest.required}
+        data-rendered-by=".navi_select"
       />
       <SelectPlaceholderContext.Provider value={placeholder}>
         <SelectValueContext.Provider value={value}>
