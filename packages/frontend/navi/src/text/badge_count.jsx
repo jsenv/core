@@ -1,12 +1,12 @@
 import { useRef } from "preact/hooks";
 
 import { LoadingDots } from "../graphic/loader/loading_dots.jsx";
+import { useAccentColorAttributes } from "../utils/use_accent_color_attributes.js";
 import { withPropsClassName } from "../utils/with_props_class_name.js";
 import { formatNumber } from "./format_number.js";
 import { Icon } from "./icon.jsx";
 import { Text } from "./text.jsx";
 import { TextAnchor } from "./text_anchor.jsx";
-import { useDarkBackgroundAttribute } from "./use_dark_background_attribute.js";
 
 const css = /* css */ `
   @layer navi {
@@ -17,7 +17,7 @@ const css = /* css */ `
     --font-size: 0.7em;
     --x-background: var(--background);
     --x-background-color: var(--background-color, var(--x-background));
-    --x-color-contrasting: var(--navi-color-black);
+    --x-color-contrasting: var(--navi-color-white);
     --x-color: var(--color, var(--x-color-contrasting));
     --padding-x: 0.5em;
     --padding-y: 0.2em;
@@ -26,8 +26,8 @@ const css = /* css */ `
     font-size: var(--font-size);
     vertical-align: inherit;
 
-    &[data-dark-background] {
-      --x-color-contrasting: var(--navi-color-white);
+    &[data-accent-needs-dark-fg] {
+      --x-color-contrasting: var(--navi-color-black);
     }
 
     &[data-loading] {
@@ -137,7 +137,7 @@ export const BadgeCount = ({
 
   const defaultRef = useRef();
   const ref = props.ref || defaultRef;
-  useDarkBackgroundAttribute(ref, [loading]);
+  useAccentColorAttributes(ref, null);
 
   let valueRequested = (() => {
     if (typeof children !== "string") return children;

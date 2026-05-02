@@ -184,11 +184,6 @@ const css = /* css */ `
       }
     }
 
-    /* Dark background */
-    &[data-dark-background].navi_text {
-      --x-link-contrasting-color: white;
-      --x-link-color: var(--link-color, white);
-    }
     /* Interactive */
     &[data-interactive] {
       cursor: pointer;

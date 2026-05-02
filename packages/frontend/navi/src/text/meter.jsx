@@ -7,8 +7,8 @@ import {
   reportReadOnlyToLabel,
 } from "../field/label.jsx";
 import { LoaderBackground } from "../graphic/loader/loader_background.jsx";
+import { useAccentColorAttributes } from "../utils/use_accent_color_attributes.js";
 import { Quantity } from "./quantity.jsx";
-import { useDarkBackgroundAttribute } from "./use_dark_background_attribute.js";
 
 const css = /* css */ `
   @layer navi {
@@ -26,13 +26,9 @@ const css = /* css */ `
       --fill-color-suboptimum: light-dark(#fdb900, #ffc107);
       --fill-color-even-less-good: light-dark(#d83b01, #f44336);
 
-      --x-color: var(--navi-color-black);
-      --x-shadow-color: white;
+      --x-color: white;
+      --x-shadow-color: black;
       --shadow-size: 0.5em;
-      &[data-dark-background] {
-        --x-color: white;
-        --x-shadow-color: black;
-      }
     }
   }
 
@@ -91,6 +87,11 @@ const css = /* css */ `
 
     &[data-disabled] {
       opacity: 0.4;
+    }
+
+    &[data-accent-needs-dark-fg] {
+      --x-color: white;
+      --x-shadow-color: black;
     }
 
     /* When caption is shown, the track takes the full height */
@@ -218,8 +219,8 @@ export const Meter = ({
   // empty track — use the track color for contrast. Otherwise use fill color.
   const backgroundElementSelector =
     fillRatio >= 0.5 ? ".navi_meter_fill" : ".navi_meter_track";
-  useDarkBackgroundAttribute(ref, [], {
-    backgroundElementSelector,
+  useAccentColorAttributes(ref, null, {
+    elementSelector: backgroundElementSelector,
   });
 
   return (

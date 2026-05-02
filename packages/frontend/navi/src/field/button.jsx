@@ -8,8 +8,8 @@ import { LoaderBackground } from "../graphic/loader/loader_background.jsx";
 import { getHrefTargetInfo } from "../nav/browser_integration/href_target_info.js";
 import { assertRoute, useRouteStatus } from "../nav/route.js";
 import { Text, markAsOutsideTextFlow } from "../text/text.jsx";
-import { useDarkBackgroundAttribute } from "../text/use_dark_background_attribute.js";
 import { useAutoFocus } from "../utils/focus/use_auto_focus.js";
+import { useAccentColorAttributes } from "../utils/use_accent_color_attributes.js";
 import { FormActionContext } from "./form_context.js";
 import { useActionEvents } from "./use_action_events.js";
 import { useFormEvents } from "./use_form_events.js";
@@ -127,8 +127,8 @@ const css = /* css */ `
     touch-action: manipulation;
     user-select: none;
 
-    &[data-dark-background] {
-      --button-color: white;
+    &[data-accent-needs-dark-fg] {
+      --button-color: black;
     }
 
     &[data-icon] {
@@ -376,7 +376,7 @@ const ButtonUI = (props) => {
         : rel;
   }
 
-  useDarkBackgroundAttribute(ref, [innerLoading, innerDisabled, innerReadOnly]);
+  useAccentColorAttributes(ref, null);
 
   const renderButtonContent = (buttonProps) => {
     return (
