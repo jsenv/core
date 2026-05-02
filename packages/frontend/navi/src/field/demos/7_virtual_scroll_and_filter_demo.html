@@ -118,6 +118,7 @@
         ListItemHeader,
         useSearchText,
         Separator,
+        NaviDebug,
       } from "@jsenv/navi";
 
       const domItemsSignal = signal(0);
@@ -312,83 +313,88 @@
               </span>
             </fieldset>
 
-            <List
-              ref={listRef}
-              maxHeight={maxHeight}
-              uiAction={setSelected}
-              expandX
-              renderBudget={30}
-              noMatchFallback={
-                <span
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    gap: "6px",
-                    flexGrow: 1,
-                  }}
-                >
+            <NaviDebug debugScroll>
+              <List
+                ref={listRef}
+                maxHeight={maxHeight}
+                uiAction={setSelected}
+                expandX
+                renderBudget={30}
+                noMatchFallback={
                   <span
                     style={{
-                      color: "light-dark(#888, #aaa)",
-                      fontSize: "0.9em",
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      gap: "6px",
+                      flexGrow: 1,
                     }}
                   >
-                    No results for <em>"{searchText}"</em>
+                    <span
+                      style={{
+                        color: "light-dark(#888, #aaa)",
+                        fontSize: "0.9em",
+                      }}
+                    >
+                      No results for <em>"{searchText}"</em>
+                    </span>
+                    <button
+                      onClick={() => setSearchText("")}
+                      style={{ fontSize: "0.8em", cursor: "pointer" }}
+                    >
+                      Clear search
+                    </button>
                   </span>
-                  <button
-                    onClick={() => setSearchText("")}
-                    style={{ fontSize: "0.8em", cursor: "pointer" }}
-                  >
-                    Clear search
-                  </button>
-                </span>
-              }
-              searchText={searchText}
-              separator={<Separator margin="0" />}
-            >
-              <ListItemHeader>
-                <Input
-                  placeholder="Filter…"
-                  paddingX="8px"
-                  paddingY="12px"
-                  expandX
-                  border="1px solid #ccc"
-                  value={searchText}
-                  uiAction={(text) => {
-                    setSearchText(text);
-                  }}
-                  style={{
-                    boxSizing: "border-box",
-                    borderRadius: "6px",
-                    fontSize: "1rem",
-                  }}
-                />
-              </ListItemHeader>
-              {orderedItems.map((item, i) => {
-                const { match, score, ranges } = getItemMatchInfo(item);
-                return (
-                  <ListItem
-                    key={item}
-                    id={item}
-                    index={i}
-                    value={item}
-                    highlight={ranges}
-                    matchScore={score}
-                    hidden={!match}
-                    selected={selected === item}
-                    style={{
-                      backgroundColor: SUGGESTION_BG,
-                      ...(itemHeight
-                        ? { minHeight: `${itemHeight}px`, alignItems: "center" }
-                        : {}),
+                }
+                searchText={searchText}
+                separator={<Separator margin="0" />}
+              >
+                <ListItemHeader>
+                  <Input
+                    placeholder="Filter…"
+                    paddingX="8px"
+                    paddingY="12px"
+                    expandX
+                    border="1px solid #ccc"
+                    value={searchText}
+                    uiAction={(text) => {
+                      setSearchText(text);
                     }}
-                  >
-                    {item} #{i}
-                  </ListItem>
-                );
-              })}
-            </List>
+                    style={{
+                      boxSizing: "border-box",
+                      borderRadius: "6px",
+                      fontSize: "1rem",
+                    }}
+                  />
+                </ListItemHeader>
+                {orderedItems.map((item, i) => {
+                  const { match, score, ranges } = getItemMatchInfo(item);
+                  return (
+                    <ListItem
+                      key={item}
+                      id={item}
+                      index={i}
+                      value={item}
+                      highlight={ranges}
+                      matchScore={score}
+                      hidden={!match}
+                      selected={selected === item}
+                      style={{
+                        backgroundColor: SUGGESTION_BG,
+                        ...(itemHeight
+                          ? {
+                              minHeight: `${itemHeight}px`,
+                              alignItems: "center",
+                            }
+                          : {}),
+                      }}
+                    >
+                      {item} #{i}
+                    </ListItem>
+                  );
+                })}
+              </List>
+            </NaviDebug>
 
             <div className="value-display">{selected ?? ""}</div>
             {/* Advanced: max-height controls */}

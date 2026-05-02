@@ -750,9 +750,12 @@ const useListScrollSync = ({
       const trigger = `"${event.type}" on ${getElementSignature(event.target)} (${reason})`;
       const block = event.type === "keydown" ? "nearest" : "center";
       const scrollToItemCall = `${getElementSignature(itemEl)}.scrollIntoView({ block: "${block}", container: "nearest" })`;
+      const listScrollContainerEl = containerRef.current.querySelector(
+        `.navi_list_scroll_container`,
+      );
       debugScroll(`${trigger} -> ${scrollToItemCall}`);
       scrollIntoViewScoped(itemEl, {
-        container: containerRef.current,
+        container: listScrollContainerEl,
         block,
       });
       const listEl = ref.current;
