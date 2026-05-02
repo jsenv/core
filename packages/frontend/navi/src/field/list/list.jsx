@@ -642,6 +642,22 @@ const ListUI = (props) => {
     </Box>
   );
 };
+const LIST_STYLE_CSS_VARS = {
+  maxHeight: "--list-max-height",
+  borderColor: "--list-border-color",
+  borderRadius: "--list-border-radius",
+  borderWidth: "--list-border-width",
+};
+const LIST_PSEUDO_CLASSES = [
+  ":hover",
+  ":focus",
+  ":focus-visible",
+  ":read-only",
+  ":disabled",
+  ":-navi-void",
+  ":-navi-has-value",
+  ":-navi-expanded",
+];
 const useListScrollSync = ({
   containerRef,
   ref,
@@ -1023,18 +1039,6 @@ const useVirtualItemHeightSignal = (ref, virtualItemHeightProp = 0) => {
   return virtualHeightSignal;
 };
 
-const LIST_STYLE_CSS_VARS = {
-  maxHeight: "--list-max-height",
-  borderColor: "--list-border-color",
-  borderRadius: "--list-border-radius",
-  borderWidth: "--list-border-width",
-};
-const LIST_PSEUDO_CLASSES = [
-  ":hover",
-  ":focus",
-  ":focus-visible",
-  ":-navi-void",
-];
 // Inner <ul> — hosts the fillers + items.
 // Creates a virtualItemHeight signal so TopFiller and BottomFiller can
 // subscribe to it independently. When virtualItemHeight is passed as a prop it
