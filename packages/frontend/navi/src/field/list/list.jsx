@@ -206,11 +206,8 @@ const css = /* css */ `
     }
 
     &[data-focus] {
-      outline: var(--list-outline-width) solid var(--navi-focus-outline-color);
-      outline-offset: calc(-1 * var(--list-outline-width));
-      .navi_list {
-        outline: none;
-      }
+      /* outline: var(--list-outline-width) solid var(--navi-focus-outline-color);
+      outline-offset: calc(-1 * var(--list-outline-width)); */
     }
     &[data-focus-visible] {
       outline-width: calc(var(--list-border-width) + var(--list-outline-width));
@@ -218,6 +215,10 @@ const css = /* css */ `
       outline-offset: calc(
         -1 * (var(--list-border-width) + var(--list-outline-width))
       );
+
+      .navi_list {
+        outline: none;
+      }
     }
 
     &[data-callout] {
