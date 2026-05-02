@@ -67,6 +67,7 @@ const FLOW_PROPS = {
   block: () => {},
   flex: () => {},
   grid: () => {},
+  gridTemplateColumns: PASS_THROUGH,
   row: () => {},
   column: () => {},
 };

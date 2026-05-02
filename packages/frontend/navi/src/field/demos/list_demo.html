@@ -102,6 +102,83 @@
         "Quince",
       ];
 
+      // ── Item states showcase ───────────────────────────────────────────────────
+
+      const ItemState = ({
+        label,
+        listPseudoState,
+        itemPseudoState,
+        itemProps,
+      }) => {
+        return (
+          <fieldset
+            style={{
+              border: "1px solid #ddd",
+              borderRadius: "6px",
+              padding: "12px 16px",
+              margin: "0",
+            }}
+          >
+            <legend
+              style={{
+                padding: "0 6px",
+                fontSize: "0.85rem",
+                fontWeight: 600,
+                color: "#555",
+              }}
+            >
+              {label}
+            </legend>
+            <List basePseudoState={listPseudoState}>
+              <ListItem
+                index={0}
+                id="item"
+                value="Banana"
+                basePseudoState={itemPseudoState}
+                {...itemProps}
+              >
+                Banana
+              </ListItem>
+            </List>
+          </fieldset>
+        );
+      };
+
+      const ItemStatesDemo = () => {
+        return (
+          <div className="demo-section">
+            <h2>Item states</h2>
+            <p>All default visual states for a list item.</p>
+            <Box flex="y" spacing="s" alignY="start">
+              <ItemState label="default" />
+              <ItemState
+                label="pointed by mouse"
+                itemPseudoState={{
+                  ":-navi-pointed": true,
+                  ":-navi-pointed-by-mouse": true,
+                }}
+              />
+              <ItemState
+                label="pointed by keyboard (focused)"
+                listPseudoState={{
+                  ":focus-within": true,
+                }}
+                itemPseudoState={{
+                  ":-navi-pointed-by-keyboard": true,
+                }}
+              />
+              <ItemState
+                label="pointed by keyboard (no focus)"
+                itemPseudoState={{
+                  ":-navi-pointed-by-keyboard": true,
+                }}
+              />
+              <ItemState label="selected" itemProps={{ selected: true }} />
+            </Box>
+          </div>
+        );
+      };
+
       // ── 1. Display-only list ───────────────────────────────────────────────────
 
       const DisplayOnlyDemo = () => {
@@ -551,6 +628,7 @@
       const App = () => {
         return (
           <>
+            <ItemStatesDemo />
             <DisplayOnlyDemo />
             <InteractiveDemo />
             <SearchableExternalInputDemo />
