@@ -166,6 +166,10 @@ const css = /* css */ `
 
     /* dialog */
     &[aria-haspopup="dialog"] {
+      .navi_list_container {
+        --list-max-height: none;
+      }
+
       /* When the list inside the dialog has keyboard focus, show the focus ring
        on the dialog instead */
       &:has(.navi_list_container[data-focus-visible]) {

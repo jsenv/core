@@ -273,12 +273,13 @@
       const AnimalPicker = ({ selected }) => {
         return (
           <List
-            listRole="listbox"
+            role="listbox"
             fallback="No results"
             border="none"
             separator={<Separator margin="0" />}
             expandX
             minWidth="300"
+            // maxHeight="300"
             renderBudget={10}
           >
             <ListItemHeader>
