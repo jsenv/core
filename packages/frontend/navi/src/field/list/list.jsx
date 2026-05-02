@@ -1349,17 +1349,13 @@ const ListWithAction = (props) => {
     onActionAbort,
     onActionError,
     onActionEnd,
-    // eslint-disable-next-line no-unused-vars
-    uiAction: _uiAction, // stripped from rest; useUIStateController reads it from props
     ...rest
   } = props;
-
   // Setup uiStateController and bind action to uiState
   const uiStateController = useUIStateController(props, "list", {
     allowNameless: true,
   });
   const uiState = useUIState(uiStateController);
-
   // Bind action to uiState (like InputTextualWithAction, null-safe when no action)
   const [boundAction] = useActionBoundToOneParam(action, uiState);
   const { loading: actionLoading } = useActionStatus(boundAction);
@@ -1376,25 +1372,6 @@ const ListWithAction = (props) => {
     onError: onActionError,
     onEnd: onActionEnd,
   });
-
-  // Dispatch action request on select
-  useEffect(() => {
-    const listEl = ref.current;
-    if (!listEl) {
-      return undefined;
-    }
-    const onSelect = (e) => {
-      const { item } = e.detail;
-      dispatchCustomEvent(listEl, "navi_action_requested", {
-        bubbles: true,
-        detail: { value: item.value },
-      });
-    };
-    listEl.addEventListener("navi_list_select", onSelect);
-    return () => {
-      listEl.removeEventListener("navi_list_select", onSelect);
-    };
-  }, []);
 
   // Mouse/keyboard pointed state
   const [mousePointedId, setMousePointedId] = useState(null);
@@ -1539,6 +1516,15 @@ const ListWithAction = (props) => {
         if (item && event.type !== "navi_list_nav_top_on_displayed") {
           uiStateController.setUIState(item.value, event);
         }
+      }}
+      // Dispatch action request on select
+      onnavi_list_select={(e) => {
+        const listEl = e.currentTarget;
+        const { item } = e.detail;
+        dispatchCustomEvent(listEl, "navi_action_requested", {
+          bubbles: true,
+          detail: { value: item.value },
+        });
       }}
     />
   );
