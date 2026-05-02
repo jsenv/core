@@ -325,6 +325,14 @@ const css = /* css */ `
             --list-item-background-color-keyboard-pointed
           );
         }
+
+        /* Selected must win over pointed-by-keyboard */
+        &[data-selected] {
+          --x-list-item-color: var(--list-item-color-selected);
+          --x-list-item-background-color: var(
+            --list-item-background-color-selected
+          );
+        }
       }
     }
   }

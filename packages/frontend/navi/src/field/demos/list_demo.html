@@ -175,6 +175,16 @@
                 }}
               />
               <ItemState label="selected" itemProps={{ selected: true }} />
+              <ItemState
+                label="selected + pointed by keyboard (focused)"
+                listPseudoState={{
+                  ":focus-within": true,
+                }}
+                itemPseudoState={{
+                  ":-navi-pointed-by-keyboard": true,
+                }}
+                itemProps={{ selected: true }}
+              />
             </Box>
           </div>
         );
