@@ -620,7 +620,8 @@ const ListUI = (props) => {
         if (!item) {
           return;
         }
-        dispatchPublicCustomEvent(e.currentTarget, "navi_list_select", {
+        const listEl = e.currentTarget;
+        dispatchPublicCustomEvent(listEl, "navi_list_select", {
           item,
           event: e,
         });
@@ -836,7 +837,8 @@ const useListScrollSync = ({
           virtualItemHeightSignal,
           renderWindowRef,
         );
-        dispatchPublicCustomEvent(ref.current, "navi_list_nav", {
+        const listEl = ref.current;
+        dispatchPublicCustomEvent(listEl, "navi_list_nav", {
           item,
           event: new CustomEvent("navi_scroll_restore"),
         });
@@ -1179,7 +1181,8 @@ const ListWithPopover = (props) => {
       {...props}
       popover="manual"
       onnavi_list_request_open={(e) => {
-        const listContainerEl = e.currentTarget.closest(".navi_list_container");
+        const listEl = e.currentTarget;
+        const listContainerEl = listEl.closest(".navi_list_container");
         const anchor = e.detail?.anchor;
         listContainerEl.showPopover();
         const positionPopover = () => {
@@ -1219,16 +1222,17 @@ const ListWithPopover = (props) => {
           positionPopover();
         });
         cleanupRef.current = () => cleanup.disconnect();
-        dispatchPublicCustomEvent(listContainerEl, "navi_list_open", {
+        dispatchPublicCustomEvent(listEl, "navi_list_open", {
           event: e,
         });
       }}
       onnavi_list_request_close={(e) => {
-        const listContainerEl = e.currentTarget.closest(".navi_list_container");
+        const listEl = e.currentTarget;
+        const listContainerEl = listEl.closest(".navi_list_container");
         cleanupRef.current?.();
         listContainerEl.removeAttribute("data-anchor-hidden");
         listContainerEl.hidePopover();
-        dispatchPublicCustomEvent(listContainerEl, "navi_list_close", {
+        dispatchPublicCustomEvent(listEl, "navi_list_close", {
           event: e,
         });
       }}
@@ -1745,8 +1749,8 @@ const ListItemReal = ({
         if (disabled) {
           return;
         }
-        const listContainerEl = e.currentTarget.closest(".navi_list_container");
-        dispatchCustomEvent(listContainerEl, "navi_list_request_hover", {
+        const listEl = e.currentTarget.closest(".navi_list");
+        dispatchCustomEvent(listEl, "navi_list_request_hover", {
           item,
           event: e,
         });
@@ -1756,8 +1760,8 @@ const ListItemReal = ({
         if (disabled) {
           return;
         }
-        const listContainerEl = e.currentTarget.closest(".navi_list_container");
-        dispatchCustomEvent(listContainerEl, "navi_list_request_hover", {
+        const listEl = e.currentTarget.closest(".navi_list");
+        dispatchCustomEvent(listEl, "navi_list_request_hover", {
           item: null,
           event: e,
         });
@@ -1770,8 +1774,8 @@ const ListItemReal = ({
         if (e.button !== 0) {
           return;
         }
-        const listContainerEl = e.currentTarget.closest(".navi_list_container");
-        dispatchCustomEvent(listContainerEl, "navi_list_request_select", {
+        const listEl = e.currentTarget.closest(".navi_list");
+        dispatchCustomEvent(listEl, "navi_list_request_select", {
           item,
           event: e,
         });
@@ -1953,48 +1957,34 @@ export const ListItemFooter = (props) => {
   );
 };
 
-export const requestListNavFromCurrent = (
-  listContainerElement,
-  { event, goal },
-) => {
-  return dispatchCustomEvent(
-    listContainerElement,
-    "navi_list_request_nav_from_current",
-    {
-      event,
-      goal,
-    },
-  );
+export const requestListNavFromCurrent = (listEl, { event, goal }) => {
+  return dispatchCustomEvent(listEl, "navi_list_request_nav_from_current", {
+    event,
+    goal,
+  });
 };
-export const requestListSelectCurrent = (listContainerElement, { event }) => {
-  return dispatchCustomEvent(
-    listContainerElement,
-    "navi_list_request_select_current",
-    {
-      event,
-    },
-  );
+export const requestListSelectCurrent = (listEl, { event }) => {
+  return dispatchCustomEvent(listEl, "navi_list_request_select_current", {
+    event,
+  });
 };
-export const requestListInteractionStateReset = (
-  listContainerElement,
-  { event },
-) => {
+export const requestListInteractionStateReset = (listEl, { event }) => {
   return dispatchCustomEvent(
-    listContainerElement,
+    listEl,
     "navi_list_request_interaction_state_reset",
     {
       event,
     },
   );
 };
-export const requestListOpen = (listContainerElement, { event, anchor }) => {
-  return dispatchCustomEvent(listContainerElement, "navi_list_request_open", {
+export const requestListOpen = (listEl, { event, anchor }) => {
+  return dispatchCustomEvent(listEl, "navi_list_request_open", {
     event,
     anchor,
   });
 };
-export const requestListClose = (listContainerElement, { event }) => {
-  return dispatchCustomEvent(listContainerElement, "navi_list_request_close", {
+export const requestListClose = (listEl, { event }) => {
+  return dispatchCustomEvent(listEl, "navi_list_request_close", {
     event,
   });
 };
