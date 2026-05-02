@@ -1,11 +1,9 @@
-import { useCallback, useContext, useLayoutEffect, useRef } from "preact/hooks";
+import { useCallback, useContext, useRef } from "preact/hooks";
 
-import { contrastColor, resolveColorLuminance } from "@jsenv/dom";
 import { useActionBoundToOneParam } from "../action/use_action.js";
 import { useActionStatus } from "../action/use_action_status.js";
 import { useExecuteAction } from "../action/use_execute_action.js";
 import { Box } from "../box/box.jsx";
-import { NAVI_PSEUDO_STATE_CUSTOM_EVENT } from "../box/pseudo_styles.js";
 import { LoaderBackground } from "../graphic/loader/loader_background.jsx";
 import { useAutoFocus } from "../utils/focus/use_auto_focus.js";
 import { useStableCallback } from "../utils/use_stable_callback.js";
@@ -15,6 +13,7 @@ import {
   reportInteractiveToLabel,
   reportReadOnlyToLabel,
 } from "./label.jsx";
+import { useAccentAttributes } from "./use_accent_attributes.js";
 import { useActionEvents } from "./use_action_events.js";
 import {
   DisabledContext,
@@ -253,7 +252,7 @@ const css = /* css */ `
       }
     }
 
-    &[data-light-accent]:not([data-appearance="toggle"]) {
+    &[data-very-light-accent]:not([data-appearance="toggle"]) {
       --x-background-color: rgba(0, 0, 0, 0.15);
       &[data-checked] {
         --x-background-color: var(--background-color-checked);
@@ -497,7 +496,7 @@ const InputCheckboxUI = (props) => {
   ]);
 
   const boxRef = useRef();
-  useLightAccentAttribute(boxRef, [accentColor], {
+  useAccentAttributes(boxRef, [accentColor], {
     elementSelector: ".navi_checkbox_accent_probe",
   });
 
@@ -619,60 +618,6 @@ const CheckboxPseudoClasses = [
 ];
 const CheckboxPseudoElements = ["::-navi-loader", "::-navi-checkmark"];
 const CheckboxChildPropSet = new Set([...fieldPropSet]);
-
-const useLightAccentAttribute = (
-  ref,
-  deps = [],
-  {
-    elementSelector,
-    colorProperty = "backgroundColor",
-    lightAccentAttributeName = "data-light-accent",
-    darkContrastAttributeName = "data-dark-contrast",
-    luminanceThreshold = 0.82,
-  } = {},
-) => {
-  useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el) {
-      return undefined;
-    }
-    let elementToCheck = el;
-    if (elementSelector) {
-      elementToCheck = el.querySelector(elementSelector);
-      if (!elementToCheck) {
-        return undefined;
-      }
-    }
-    const updateAttribute = () => {
-      const computedStyle = getComputedStyle(elementToCheck);
-      const color = computedStyle[colorProperty];
-      if (!color) {
-        el.removeAttribute(lightAccentAttributeName);
-        el.removeAttribute(darkContrastAttributeName);
-        return;
-      }
-      const luminance = resolveColorLuminance(color, el);
-      if (luminance !== null && luminance > luminanceThreshold) {
-        el.setAttribute(lightAccentAttributeName, "");
-      } else {
-        el.removeAttribute(lightAccentAttributeName);
-      }
-      const bestContrast = contrastColor(color, el, 0.3);
-      if (bestContrast === "black") {
-        el.setAttribute(darkContrastAttributeName, "");
-      } else {
-        el.removeAttribute(darkContrastAttributeName);
-      }
-    };
-    updateAttribute();
-    el.addEventListener(NAVI_PSEUDO_STATE_CUSTOM_EVENT, updateAttribute);
-    return () => {
-      el.removeEventListener(NAVI_PSEUDO_STATE_CUSTOM_EVENT, updateAttribute);
-      el.removeAttribute(lightAccentAttributeName);
-      el.removeAttribute(darkContrastAttributeName);
-    };
-  }, [ref, ...deps, elementSelector, colorProperty]);
-};
 
 const InputCheckboxWithAction = (props) => {
   const uiStateController = useContext(UIStateControllerContext);

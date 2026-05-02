@@ -41,6 +41,7 @@ export {
   getContrastRatio,
   getLuminance,
   resolveColorLuminance,
+  resolveOklchLightness,
 } from "./src/style/color_contrast.js";
 export {
   getPreferedColorScheme,

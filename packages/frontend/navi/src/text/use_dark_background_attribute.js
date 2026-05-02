@@ -1,7 +1,7 @@
 import {
   contrastColor,
   resolveCSSColor,
-  resolveColorLuminance,
+  resolveOklchLightness,
 } from "@jsenv/dom";
 import { useLayoutEffect } from "preact/hooks";
 
@@ -94,7 +94,7 @@ export const useDarkBackgroundAttribute = (
       if (hardcodedContrast) {
         isDark = hardcodedContrast === "white";
       } else if (luminanceThreshold !== undefined) {
-        const luminance = resolveColorLuminance(color, el);
+        const luminance = resolveOklchLightness(color, el);
         isDark = luminance !== undefined && luminance <= luminanceThreshold;
       } else {
         isDark = contrastColor(color, el) === "white";
