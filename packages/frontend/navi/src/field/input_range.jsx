@@ -6,7 +6,6 @@ import {
   useRef,
 } from "preact/hooks";
 
-import { renderActionableComponent } from "../action/render_actionable_component.jsx";
 import { useActionBoundToOneParam } from "../action/use_action.js";
 import { useActionStatus } from "../action/use_action_status.js";
 import { useExecuteAction } from "../action/use_execute_action.js";
@@ -155,6 +154,15 @@ const css = /* css */ `
       }
     }
 
+    .navi_input_range_accent_probe {
+      position: absolute;
+      width: 0;
+      height: 0;
+      background-color: var(--accent-color);
+      visibility: hidden;
+      pointer-events: none;
+    }
+
     .navi_input_range_background {
       position: absolute;
       width: 100%;
@@ -260,15 +268,20 @@ export const InputRange = (props) => {
   const uiStateController = useUIStateController(props, "input");
   const uiState = useUIState(uiStateController);
 
-  const input = renderActionableComponent(props, {
-    Basic: InputRangeUI,
-    WithAction: InputRangeWithAction,
-  });
   return (
     <UIStateControllerContext.Provider value={uiStateController}>
-      <UIStateContext.Provider value={uiState}>{input}</UIStateContext.Provider>
+      <UIStateContext.Provider value={uiState}>
+        <InputRangeDispatcher {...props} ref={ref} />
+      </UIStateContext.Provider>
     </UIStateControllerContext.Provider>
   );
+};
+
+const InputRangeDispatcher = (props) => {
+  if (props.action) {
+    return <InputRangeWithAction {...props} />;
+  }
+  return <InputRangeUI {...props} />;
 };
 
 const InputRangeUI = (props) => {
@@ -418,18 +431,7 @@ const InputRangeUI = (props) => {
       ref={boxRef}
       autoFocus={undefined} // See use_auto_focus.js
     >
-      <span
-        className="navi_input_range_accent_probe"
-        aria-hidden="true"
-        style={{
-          position: "absolute",
-          width: 0,
-          height: 0,
-          backgroundColor: "var(--accent-color)",
-          visibility: "hidden",
-          pointerEvents: "none",
-        }}
-      />
+      <span className="navi_input_range_accent_probe" aria-hidden="true" />
       <LoaderBackground
         loading={innerLoading}
         color="var(--loader-color)"
