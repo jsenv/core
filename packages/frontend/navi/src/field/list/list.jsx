@@ -204,6 +204,22 @@ const css = /* css */ `
       opacity: 0;
       pointer-events: none;
     }
+
+    &[data-focus] {
+      outline: var(--list-outline-width) solid var(--navi-focus-outline-color);
+      outline-offset: calc(-1 * var(--list-outline-width));
+      .navi_list {
+        outline: none;
+      }
+    }
+    &[data-focus-visible] {
+      outline-width: calc(var(--list-border-width) + var(--list-outline-width));
+      outline-color: var(--navi-focus-outline-color);
+      outline-offset: calc(
+        -1 * (var(--list-border-width) + var(--list-outline-width))
+      );
+    }
+
     &[data-callout] {
       --x-border-color: var(--callout-color);
     }
@@ -293,21 +309,6 @@ const css = /* css */ `
   }
 
   .navi_list_container {
-    &[data-focus] {
-      outline: var(--list-outline-width) solid var(--navi-focus-outline-color);
-      outline-offset: calc(-1 * var(--list-outline-width));
-      .navi_list {
-        outline: none;
-      }
-    }
-    &[data-focus-visible] {
-      outline-width: calc(var(--list-border-width) + var(--list-outline-width));
-      outline-color: var(--navi-focus-outline-color);
-      outline-offset: calc(
-        -1 * (var(--list-border-width) + var(--list-outline-width))
-      );
-    }
-
     &[data-focus-within] {
       .navi_list_item {
         &[data-pointed-by-keyboard] {
