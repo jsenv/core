@@ -482,9 +482,10 @@ const ListUI = (props) => {
   // lockSize: capture the container's dimensions on first render so filtering
   // cannot collapse the layout. Measurement happens on the initial (unfiltered)
   // state because the parent controls hidden props before any search is applied.
+  const containerRef = useRef(null);
   const sizeLocked = useRef(false);
   useDisplayedLayoutEffect(
-    ref,
+    containerRef,
     (listContainerEl) => {
       if (!lockSize) {
         return undefined;
@@ -526,28 +527,26 @@ const ListUI = (props) => {
     },
   });
 
-  const ulRef = useRef(null);
   const {
     virtualItemHeightSignal,
     renderWindow,
     scrollToItem,
     pendingScrollRef,
   } = useListScrollSync({
-    ref,
-    ulRef,
+    containerRef,
     tracker,
     renderBudget,
     virtualItemHeight,
     searchText,
   });
 
-  const renderList = (listProps) => {
-    const listIdDefault = useId();
-    const innerListid = listId || listIdDefault;
+  const listIdDefault = useId();
+  const innerListid = listId || listIdDefault;
 
+  const renderList = (listProps) => {
     return (
       <UnorderedList
-        ref={ulRef}
+        ref={ref}
         id={innerListid}
         role={listRole}
         fallback={fallback}
@@ -569,7 +568,7 @@ const ListUI = (props) => {
     );
   };
   const renderListMemoized = useCallback(renderList, [
-    listId,
+    innerListid,
     listRole,
     fallback,
     noMatchFallback,
@@ -586,7 +585,7 @@ const ListUI = (props) => {
   return (
     <Box
       {...remainingProps}
-      ref={ref}
+      ref={containerRef}
       baseClassName="navi_list_container"
       popover={popover}
       data-expand-x={expandX ? "" : undefined}
@@ -594,6 +593,8 @@ const ListUI = (props) => {
       maxHeight={maxHeight}
       styleCSSVars={LIST_STYLE_CSS_VARS}
       pseudoClasses={LIST_PSEUDO_CLASSES}
+      pseudoStateSelector=".navi_list"
+      visualSelector=".navi_list"
       hasChildFunction
       data-navi-value={value || undefined}
       data-input-proxy={name ? `#${CSS.escape(hiddenInputId)}` : undefined}
@@ -636,8 +637,8 @@ const ListUI = (props) => {
   );
 };
 const useListScrollSync = ({
+  containerRef,
   ref,
-  ulRef,
   tracker,
   renderBudget,
   virtualItemHeight,
@@ -645,7 +646,7 @@ const useListScrollSync = ({
 }) => {
   const debugScroll = useDebugScroll();
   const virtualItemHeightSignal = useVirtualItemHeightSignal(
-    ulRef,
+    ref,
     virtualItemHeight,
   );
 
@@ -690,10 +691,10 @@ const useListScrollSync = ({
       const scrollToItemCall = `${getElementSignature(itemEl)}.scrollIntoView({ block: "${block}", container: "nearest" })`;
       debugScroll(`${trigger} -> ${scrollToItemCall}`);
       scrollIntoViewScoped(itemEl, {
-        container: ref.current,
+        container: containerRef.current,
         block,
       });
-      const listContainerEl = ref.current;
+      const listContainerEl = containerRef.current;
       dispatchPublicCustomEvent(listContainerEl, "navi_list_nav", {
         event,
         item,
@@ -727,7 +728,7 @@ const useListScrollSync = ({
 
   const currentScrollRef = useRef(null);
   const updateCurrentScroll = () => {
-    const listContainerEl = ref.current;
+    const listContainerEl = containerRef.current;
     const currentScrollLeft = listContainerEl.scrollLeft;
     const currentScrollTop = listContainerEl.scrollTop;
     const renderWindow = renderWindowRef.current;
@@ -756,7 +757,7 @@ const useListScrollSync = ({
   // Skipped when inside a closed <dialog>/<details> (scrollIntoView is a no-op
   // on hidden elements); re-runs automatically every time the ancestor opens.
   useDisplayedLayoutEffect(
-    ref,
+    containerRef,
     (el, openEvent) => {
       updateCurrentScroll();
       const items = tracker.itemsSignal.peek();
@@ -790,7 +791,7 @@ const useListScrollSync = ({
   const savedScrollRef = useRef(null);
   const topMatchScoresKeyRef = useRef("");
   useLayoutEffect(() => {
-    const listContainerEl = ref.current;
+    const listContainerEl = containerRef.current;
 
     if (!searchText) {
       // no search -> try to restore scroll position
@@ -867,11 +868,10 @@ const useListScrollSync = ({
 
   // Scroll listener — slides the window as the user scrolls.
   useLayoutEffect(() => {
-    const listContainerEl = ref.current;
+    const listContainerEl = containerRef.current;
     if (!listContainerEl) {
       return undefined;
     }
-
     const listEl = listContainerEl.querySelector(".navi_list");
     const scrollContainer = getScrollContainer(listEl);
     const onScroll = () => {
