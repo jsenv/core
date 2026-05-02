@@ -49,6 +49,9 @@ const css = /* css */ `
       --outline-color: var(--navi-focus-outline-color);
       --loader-color: var(--navi-loader-color);
       --accent-color: rgb(24, 117, 255);
+      --color-mix-light: black;
+      --color-mix-dark: white;
+      --color-mix: var(--color-mix-dark);
 
       --border-color: rgb(150, 150, 150);
       --track-border-color: color-mix(
@@ -66,9 +69,21 @@ const css = /* css */ `
         var(--track-border-color) 75%,
         black
       );
-      --track-color-hover: color-mix(in srgb, var(--fill-color) 95%, black);
-      --fill-color-hover: color-mix(in srgb, var(--fill-color) 80%, black);
-      --thumb-color-hover: color-mix(in srgb, var(--thumb-color) 80%, black);
+      --track-color-hover: color-mix(
+        in srgb,
+        var(--fill-color) 95%,
+        var(--color-mix)
+      );
+      --fill-color-hover: color-mix(
+        in srgb,
+        var(--fill-color) 80%,
+        var(--color-mix)
+      );
+      --thumb-color-hover: color-mix(
+        in srgb,
+        var(--thumb-color) 80%,
+        var(--color-mix)
+      );
       /* Pressed */
       --border-color-pressed: color-mix(
         in srgb,
@@ -244,11 +259,12 @@ const css = /* css */ `
     &[data-callout] {
     }
 
+    &[data-accent-light] {
+      --color-mix: var(--color-mix-light);
+    }
     &[data-accent-very-light] {
       --background-color: rgba(0, 0, 0, 0.15);
       --track-border-color: rgba(0, 0, 0, 0.25);
-      --fill-color-hover: color-mix(in srgb, var(--fill-color) 80%, black);
-      --thumb-color-hover: color-mix(in srgb, var(--thumb-color) 80%, black);
     }
   }
 `;
