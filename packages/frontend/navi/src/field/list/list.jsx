@@ -1775,7 +1775,19 @@ const ListItemReal = ({
       // directly to the correct text node positions without re-searching.
       const textNodes = [];
       let totalLength = 0;
-      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+        acceptNode: (node) => {
+          // Skip text nodes inside aria-hidden elements (icons, decorative emoji, etc.)
+          let el = node.parentElement;
+          while (el && el !== root) {
+            if (el.getAttribute("aria-hidden") === "true") {
+              return NodeFilter.FILTER_REJECT;
+            }
+            el = el.parentElement;
+          }
+          return NodeFilter.FILTER_ACCEPT;
+        },
+      });
       let node;
       while ((node = walker.nextNode())) {
         textNodes.push({ node, offset: totalLength });
