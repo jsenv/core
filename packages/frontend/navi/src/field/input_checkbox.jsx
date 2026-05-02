@@ -1,6 +1,6 @@
 import { useCallback, useContext, useLayoutEffect, useRef } from "preact/hooks";
 
-import { resolveColorLuminance } from "@jsenv/dom";
+import { contrastColor, resolveColorLuminance } from "@jsenv/dom";
 import { useActionBoundToOneParam } from "../action/use_action.js";
 import { useActionStatus } from "../action/use_action_status.js";
 import { useExecuteAction } from "../action/use_execute_action.js";
@@ -149,6 +149,8 @@ const css = /* css */ `
 
       &[data-light-accent] {
         --color-mix: var(--color-mix-light);
+      }
+      &[data-dark-contrast] {
         --checkmark-color: rgb(55, 55, 55);
       }
     }
@@ -496,7 +498,7 @@ const InputCheckboxUI = (props) => {
 
   const boxRef = useRef();
   useLightAccentAttribute(boxRef, [accentColor], {
-    backgroundElementSelector: ".navi_checkbox_accent_probe",
+    elementSelector: ".navi_checkbox_accent_probe",
   });
 
   return (
@@ -624,8 +626,9 @@ const useLightAccentAttribute = (
   {
     elementSelector,
     colorProperty = "backgroundColor",
-    attributeName = "data-light-accent",
-    luminanceThreshold = 0.5,
+    lightAccentAttributeName = "data-light-accent",
+    darkContrastAttributeName = "data-dark-contrast",
+    luminanceThreshold = 0.179,
   } = {},
 ) => {
   useLayoutEffect(() => {
@@ -644,23 +647,31 @@ const useLightAccentAttribute = (
       const computedStyle = getComputedStyle(elementToCheck);
       const color = computedStyle[colorProperty];
       if (!color) {
-        el.removeAttribute(attributeName);
+        el.removeAttribute(lightAccentAttributeName);
+        el.removeAttribute(darkContrastAttributeName);
         return;
       }
       const luminance = resolveColorLuminance(color, el);
-      if (luminance !== undefined && luminance > luminanceThreshold) {
-        el.setAttribute(attributeName, "");
+      if (luminance !== null && luminance > luminanceThreshold) {
+        el.setAttribute(lightAccentAttributeName, "");
       } else {
-        el.removeAttribute(attributeName);
+        el.removeAttribute(lightAccentAttributeName);
+      }
+      const bestContrast = contrastColor(color, el);
+      if (bestContrast === "black") {
+        el.setAttribute(darkContrastAttributeName, "");
+      } else {
+        el.removeAttribute(darkContrastAttributeName);
       }
     };
     updateAttribute();
     el.addEventListener(NAVI_PSEUDO_STATE_CUSTOM_EVENT, updateAttribute);
     return () => {
       el.removeEventListener(NAVI_PSEUDO_STATE_CUSTOM_EVENT, updateAttribute);
-      el.removeAttribute(attributeName);
+      el.removeAttribute(lightAccentAttributeName);
+      el.removeAttribute(darkContrastAttributeName);
     };
-  }, [ref, ...deps, elementSelector, colorProperty, luminanceThreshold]);
+  }, [ref, ...deps, elementSelector, colorProperty]);
 };
 
 const InputCheckboxWithAction = (props) => {
