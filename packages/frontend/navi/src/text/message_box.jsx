@@ -14,7 +14,7 @@ import { withPropsClassName } from "../utils/with_props_class_name.js";
 import { Icon } from "./icon.jsx";
 import { Text } from "./text.jsx";
 
-import.meta.css = /* css */ `
+const css = /* css */ `
   @layer navi {
     .navi_message_box {
       --background-color-info: var(--navi-info-color-light);
@@ -59,14 +59,6 @@ import.meta.css = /* css */ `
   }
 `;
 
-const MessageBoxPseudoClasses = [
-  ":-navi-status-info",
-  ":-navi-status-success",
-  ":-navi-status-warning",
-  ":-navi-status-error",
-];
-export const MessageBoxStatusContext = createContext();
-export const MessageBoxReportTitleChildContext = createContext();
 export const MessageBox = ({
   status = "info",
   padding = "sm",
@@ -76,6 +68,7 @@ export const MessageBox = ({
   onClose,
   ...rest
 }) => {
+  import.meta.css = css;
   const [hasTitleChild, setHasTitleChild] = useState(false);
   const innerLeftStripe = leftStripe === undefined ? hasTitleChild : leftStripe;
   if (icon === true) {
@@ -141,3 +134,11 @@ export const MessageBox = ({
     </Box>
   );
 };
+const MessageBoxPseudoClasses = [
+  ":-navi-status-info",
+  ":-navi-status-success",
+  ":-navi-status-warning",
+  ":-navi-status-error",
+];
+export const MessageBoxStatusContext = createContext();
+export const MessageBoxReportTitleChildContext = createContext();

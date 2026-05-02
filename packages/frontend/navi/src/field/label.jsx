@@ -21,32 +21,6 @@ const css = /* css */ `
   }
 `;
 
-const ReportReadOnlyOnLabelContext = createContext();
-const ReportDisabledOnLabelContext = createContext();
-const ReportInteractiveOnLabelContext = createContext();
-
-export const reportReadOnlyToLabel = (value) => {
-  const reportReadOnly = useContext(ReportReadOnlyOnLabelContext);
-  reportReadOnly?.(value);
-};
-export const reportInteractiveToLabel = (value) => {
-  const reportInteractive = useContext(ReportInteractiveOnLabelContext);
-  reportInteractive?.(value);
-};
-export const reportDisabledToLabel = (value) => {
-  const reportDisabled = useContext(ReportDisabledOnLabelContext);
-  reportDisabled?.(value);
-};
-
-const LabelPseudoClasses = [
-  ":hover",
-  ":active",
-  ":focus",
-  ":focus-visible",
-  ":read-only",
-  ":disabled",
-  ":-navi-loading",
-];
 export const Label = (props) => {
   import.meta.css = css;
   const { readOnly, disabled, children, ...rest } = props;
@@ -77,4 +51,30 @@ export const Label = (props) => {
       </ReportInteractiveOnLabelContext.Provider>
     </Box>
   );
+};
+const LabelPseudoClasses = [
+  ":hover",
+  ":active",
+  ":focus",
+  ":focus-visible",
+  ":read-only",
+  ":disabled",
+  ":-navi-loading",
+];
+
+const ReportReadOnlyOnLabelContext = createContext();
+const ReportDisabledOnLabelContext = createContext();
+const ReportInteractiveOnLabelContext = createContext();
+
+export const reportReadOnlyToLabel = (value) => {
+  const reportReadOnly = useContext(ReportReadOnlyOnLabelContext);
+  reportReadOnly?.(value);
+};
+export const reportInteractiveToLabel = (value) => {
+  const reportInteractive = useContext(ReportInteractiveOnLabelContext);
+  reportInteractive?.(value);
+};
+export const reportDisabledToLabel = (value) => {
+  const reportDisabled = useContext(ReportDisabledOnLabelContext);
+  reportDisabled?.(value);
 };

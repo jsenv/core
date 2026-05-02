@@ -130,37 +130,6 @@ const css = /* css */ `
   }
 `;
 
-const MeterStyleCSSVars = {
-  trackColor: "--track-color",
-  borderColor: "--border-color",
-  borderRadius: "--border-radius",
-  height: "--height",
-  width: "--width",
-};
-const MeterPseudoClasses = [
-  ":hover",
-  ":active",
-  ":focus",
-  ":focus-visible",
-  ":read-only",
-  ":disabled",
-  ":-navi-loading",
-  ":-navi-meter-optimum",
-  ":-navi-meter-suboptimum",
-  ":-navi-meter-even-less-good",
-];
-Object.assign(PSEUDO_CLASSES, {
-  ":-navi-meter-optimum": {
-    attribute: "data-optimum",
-  },
-  ":-navi-meter-suboptimum": {
-    attribute: "data-suboptimum",
-  },
-  ":-navi-meter-even-less-good": {
-    attribute: "data-even-less-good",
-  },
-});
-
 export const Meter = ({
   value = 0,
   min = 0,
@@ -271,6 +240,36 @@ export const Meter = ({
     </Box>
   );
 };
+const MeterStyleCSSVars = {
+  trackColor: "--track-color",
+  borderColor: "--border-color",
+  borderRadius: "--border-radius",
+  height: "--height",
+  width: "--width",
+};
+const MeterPseudoClasses = [
+  ":hover",
+  ":active",
+  ":focus",
+  ":focus-visible",
+  ":read-only",
+  ":disabled",
+  ":-navi-loading",
+  ":-navi-meter-optimum",
+  ":-navi-meter-suboptimum",
+  ":-navi-meter-even-less-good",
+];
+Object.assign(PSEUDO_CLASSES, {
+  ":-navi-meter-optimum": {
+    attribute: "data-optimum",
+  },
+  ":-navi-meter-suboptimum": {
+    attribute: "data-suboptimum",
+  },
+  ":-navi-meter-even-less-good": {
+    attribute: "data-even-less-good",
+  },
+});
 
 const getMeterLevel = (value, min, max, low, high, optimum) => {
   // Without low/high thresholds the whole range is one region → always optimum

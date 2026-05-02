@@ -114,7 +114,6 @@ export { Select } from "./src/field/select.jsx";
 // --- List start ---
 export { applySearch } from "./src/field/list/apply_search.js";
 export { createSearch } from "./src/field/list/create_search.js";
-export { Dropdown, useDropdownClose } from "./src/field/list/dropdown.jsx";
 export {
   List,
   ListItem,
@@ -169,7 +168,6 @@ export { Paragraph } from "./src/text/paragraph.jsx";
 export { Quantity, QuantityIntl } from "./src/text/quantity.jsx";
 export { Text } from "./src/text/text.jsx";
 export { Title, useTitleLevel } from "./src/text/title.jsx";
-export { useDarkBackgroundAttribute } from "./src/text/use_dark_background_attribute.js";
 
 // Graphics
 export { Image } from "./src/graphic/image.jsx";

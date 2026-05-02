@@ -1,7 +1,7 @@
 import { withPropsClassName } from "../utils/with_props_class_name.js";
 import { Text } from "./text.jsx";
 
-import.meta.css = /* css */ `
+const css = /* css */ `
   @layer navi {
     .navi_caption {
       --color: #6b7280;
@@ -19,11 +19,8 @@ import.meta.css = /* css */ `
   }
 `;
 
-const CaptionStyleCSSVars = {
-  color: "--color",
-};
-
 export const Caption = ({ className, ...rest }) => {
+  import.meta.css = css;
   return (
     <Text
       as="small"
@@ -33,4 +30,7 @@ export const Caption = ({ className, ...rest }) => {
       styleCSSVars={CaptionStyleCSSVars}
     />
   );
+};
+const CaptionStyleCSSVars = {
+  color: "--color",
 };

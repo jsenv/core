@@ -8,7 +8,7 @@ import {
 } from "./message_box.jsx";
 import { Text } from "./text.jsx";
 
-import.meta.css = /* css */ `
+const css = /* css */ `
   .navi_message_box {
     .navi_title {
       margin-top: 0;
@@ -18,12 +18,8 @@ import.meta.css = /* css */ `
   }
 `;
 
-export const TitleLevelContext = createContext();
-export const useTitleLevel = () => {
-  return useContext(TitleLevelContext);
-};
-const TitlePseudoClasses = [":hover"];
 export const Title = (props) => {
+  import.meta.css = css;
   const messageBoxStatus = useContext(MessageBoxStatusContext);
   const innerAs = props.as || (messageBoxStatus ? "h4" : "h1");
   const titleLevel = parseInt(innerAs.slice(1));
@@ -44,3 +40,8 @@ export const Title = (props) => {
     </TitleLevelContext.Provider>
   );
 };
+export const TitleLevelContext = createContext();
+export const useTitleLevel = () => {
+  return useContext(TitleLevelContext);
+};
+const TitlePseudoClasses = [":hover"];

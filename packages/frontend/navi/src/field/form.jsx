@@ -62,7 +62,7 @@ export const Form = (props) => {
   const uiState = useUIState(uiStateController);
 
   const form = renderActionableComponent(props, {
-    Basic: FormBasic,
+    Basic: FormUI,
     WithAction: FormWithAction,
   });
   return (
@@ -72,7 +72,7 @@ export const Form = (props) => {
   );
 };
 
-const FormBasic = (props) => {
+const FormUI = (props) => {
   const uiStateController = useContext(UIStateControllerContext);
   const { readOnly, loading, children, ...rest } = props;
   const defaultRef = useRef();
@@ -174,7 +174,7 @@ const FormWithAction = (props) => {
   const innerLoading = loading || actionPending;
 
   return (
-    <FormBasic
+    <FormUI
       data-action={actionBoundToUIState.name}
       data-method={action.meta?.httpVerb || method || "GET"}
       {...rest}
@@ -186,7 +186,7 @@ const FormWithAction = (props) => {
           {children}
         </LoadingElementContext.Provider>
       </FormActionContext.Provider>
-    </FormBasic>
+    </FormUI>
   );
 };
 

@@ -102,17 +102,6 @@ const css = /* css */ `
   }
 `;
 
-const BadgeStyleCSSVars = {
-  borderWidth: "--border-width",
-  borderRadius: "--border-radius",
-  paddingRight: "--padding-right",
-  paddingLeft: "--padding-left",
-  backgroundColor: "--background-color",
-  background: "--background",
-  borderColor: "--border-color",
-  color: "--color",
-  fontSize: "--font-size",
-};
 const BadgeCountOverflow = () => (
   <span className="navi_count_badge_overflow">+</span>
 );
@@ -201,6 +190,17 @@ export const BadgeCount = ({
       </BadgeCountEllipse>
     </TextAnchor>
   );
+};
+const BadgeStyleCSSVars = {
+  borderWidth: "--border-width",
+  borderRadius: "--border-radius",
+  paddingRight: "--padding-right",
+  paddingLeft: "--padding-left",
+  backgroundColor: "--background-color",
+  background: "--background",
+  borderColor: "--border-color",
+  color: "--color",
+  fontSize: "--font-size",
 };
 const applyMaxToValue = (max, value) => {
   if (isNaN(value)) {

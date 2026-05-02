@@ -96,17 +96,6 @@ QuantityIntl.addUnit = (unitName, langTranslations) => {
   }
 };
 
-const QuantityPropsCSSVars = {
-  unitColor: "--unit-color",
-  unitSizeRatio: "--unit-size-ratio",
-};
-const QuantityPseudoClasses = [
-  ":hover",
-  ":active",
-  ":read-only",
-  ":disabled",
-  ":-navi-loading",
-];
 export const Quantity = ({
   children,
   unit,
@@ -167,6 +156,17 @@ export const Quantity = ({
   );
 };
 Quantity.Intl = QuantityIntl;
+const QuantityPropsCSSVars = {
+  unitColor: "--unit-color",
+  unitSizeRatio: "--unit-size-ratio",
+};
+const QuantityPseudoClasses = [
+  ":hover",
+  ":active",
+  ":read-only",
+  ":disabled",
+  ":-navi-loading",
+];
 
 const Unit = ({ value, unit, lang }) => {
   let unitText = unit;

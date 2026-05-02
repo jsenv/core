@@ -34,18 +34,6 @@ const css = /* css */ `
   }
 `;
 
-const BadgeStyleCSSVars = {
-  borderWidth: "--border-width",
-  borderRadius: "--border-radius",
-  paddingRight: "--padding-right",
-  paddingLeft: "--padding-left",
-  backgroundColor: "--background-color",
-  background: "--background",
-  borderColor: "--border-color",
-  color: "--color",
-  fontSize: "--font-size",
-};
-
 export const Badge = ({ children, className, ...props }) => {
   import.meta.css = css;
 
@@ -64,4 +52,16 @@ export const Badge = ({ children, className, ...props }) => {
       {children}
     </Text>
   );
+};
+
+const BadgeStyleCSSVars = {
+  borderWidth: "--border-width",
+  borderRadius: "--border-radius",
+  paddingRight: "--padding-right",
+  paddingLeft: "--padding-left",
+  backgroundColor: "--background-color",
+  background: "--background",
+  borderColor: "--border-color",
+  color: "--color",
+  fontSize: "--font-size",
 };

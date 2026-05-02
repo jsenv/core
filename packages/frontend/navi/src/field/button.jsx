@@ -305,7 +305,6 @@ export const Button = (props) => {
 
   return <ButtonDispatcher {...props} ref={ref} />;
 };
-
 const ButtonDispatcher = (props) => {
   const formContext = useContext(FormActionContext);
   const hasAction = Boolean(
