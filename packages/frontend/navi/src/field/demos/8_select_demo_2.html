@@ -225,7 +225,6 @@
       };
 
       // ── Demo 3: animal picker with radio inputs ───────────────────────────────
-
       const Demo3 = () => {
         const [animal, setAnimal] = useState(ANIMALS[5]);
         return (
@@ -238,7 +237,7 @@
             <Select
               value={animal}
               placeholder="Pick an animal…"
-              // capturePointer
+              // lockPointer
               lockScroll
               uiAction={(v) => {
                 setAnimal(v);
@@ -254,7 +253,6 @@
           </div>
         );
       };
-
       const ANIMALS = [
         "Cat",
         "Dog",
@@ -301,7 +299,7 @@
                 height="60px"
                 style={{
                   ":-navi-selected": {
-                    backgroundColor: "unset",
+                    backgroundColor: "initial",
                     color: "inherit",
                   },
                 }}
