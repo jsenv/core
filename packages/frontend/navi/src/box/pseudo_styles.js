@@ -333,6 +333,18 @@ focus_classes: {
       return false;
     },
   });
+  definePseudoClass(":focus-within", {
+    attribute: "data-focus-within",
+    setup: (el, callback) => {
+      el.addEventListener("focusin", callback);
+      el.addEventListener("focusout", callback);
+      return () => {
+        el.removeEventListener("focusin", callback);
+        el.removeEventListener("focusout", callback);
+      };
+    },
+    test: (el) => el.matches(":focus-within"),
+  });
 }
 
 Object.assign(PSEUDO_CLASSES, {

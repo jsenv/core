@@ -292,26 +292,30 @@ const css = /* css */ `
     }
   }
 
-  .navi_list_container[data-focus] {
-    outline: var(--list-outline-width) solid var(--navi-focus-outline-color);
-    outline-offset: calc(-1 * var(--list-outline-width));
-    .navi_list {
-      outline: none;
-    }
-
-    .navi_list_item {
-      &[data-pointed-by-keyboard] {
-        --x-color: var(--list-item-color-pointed);
-        --x-background-color: var(--list-item-background-color-pointed);
+  .navi_list_container {
+    &[data-focus] {
+      outline: var(--list-outline-width) solid var(--navi-focus-outline-color);
+      outline-offset: calc(-1 * var(--list-outline-width));
+      .navi_list {
+        outline: none;
       }
     }
-  }
-  .navi_list_container[data-focus-visible] {
-    outline-width: calc(var(--list-border-width) + var(--list-outline-width));
-    outline-color: var(--navi-focus-outline-color);
-    outline-offset: calc(
-      -1 * (var(--list-border-width) + var(--list-outline-width))
-    );
+    &[data-focus-visible] {
+      outline-width: calc(var(--list-border-width) + var(--list-outline-width));
+      outline-color: var(--navi-focus-outline-color);
+      outline-offset: calc(
+        -1 * (var(--list-border-width) + var(--list-outline-width))
+      );
+    }
+
+    &[data-focus-within] {
+      .navi_list_item {
+        &[data-pointed-by-keyboard] {
+          --x-color: var(--list-item-color-pointed);
+          --x-background-color: var(--list-item-background-color-pointed);
+        }
+      }
+    }
   }
 
   /* Virtual scroll fillers — must remain invisible.
@@ -676,6 +680,7 @@ const LIST_PSEUDO_CLASSES = [
   ":hover",
   ":focus",
   ":focus-visible",
+  ":focus-within",
   ":read-only",
   ":disabled",
   ":-navi-void",
