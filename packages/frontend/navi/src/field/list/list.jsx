@@ -36,7 +36,10 @@ import {
   useUIState,
   useUIStateController,
 } from "../use_ui_state_controller.js";
-import { forwardActionRequested } from "../validation/custom_constraint_validation.js";
+import {
+  dispatchActionRequestedCustomEvent,
+  forwardActionRequested,
+} from "../validation/custom_constraint_validation.js";
 import { useConstraints } from "../validation/hooks/use_constraints.js";
 
 const ListItemTrackerContext = createContext(null);
@@ -1519,10 +1522,9 @@ const ListWithAction = (props) => {
       // Dispatch action request on select
       onnavi_list_select={(e) => {
         const listEl = e.currentTarget;
-        const { item } = e.detail;
-        dispatchCustomEvent(listEl, "navi_action_requested", {
-          bubbles: true,
-          detail: { value: item.value },
+        dispatchActionRequestedCustomEvent(listEl, {
+          event: e,
+          requester: e.target,
         });
       }}
     />
