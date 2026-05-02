@@ -629,9 +629,9 @@ export const resolveTypoSize = (size, property = "fontSize") => {
 
 const COLOR_KEYWORD_MAP = {
   secondary: "var(--navi-color-secondary)",
-  strong: "var(--navi-color-strong)",
-  muted: "var(--navi-color-muted)",
-  faint: "var(--navi-color-faint)",
+  emphasis: "var(--navi-color-emphasis)",
+  discrete: "var(--navi-color-discrete)",
+  hint: "var(--navi-color-hint)",
 };
 const resolveColorKeyword = (value) => {
   return COLOR_KEYWORD_MAP[value] || value;
