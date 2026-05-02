@@ -299,6 +299,12 @@
                 value={animal}
                 selected={selected === animal}
                 height="60px"
+                style={{
+                  ":-navi-selected": {
+                    backgroundColor: "transparent",
+                    color: "inherit",
+                  },
+                }}
               >
                 <Text>{animal}</Text>
                 <Input
