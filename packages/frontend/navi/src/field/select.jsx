@@ -95,19 +95,22 @@ const css = /* css */ `
     outline-offset: calc(-1 * var(--select-outline-width));
     user-select: none;
 
+    --x-select-outline-width-focus-visible: calc(
+      var(--select-border-width) + var(--select-outline-width)
+    );
+    --x-select-outline-offset-focus-visible: calc(
+      -1 * (var(--select-border-width) + var(--select-outline-width))
+    );
+
     &[data-hover] {
       background-color: var(--select-background-color-hover);
       outline-color: var(--select-border-color-hover);
     }
 
     &[data-focus-visible] {
-      outline-width: calc(
-        var(--select-border-width) + var(--select-outline-width)
-      );
+      outline-width: var(--x-select-outline-width-focus-visible);
       outline-color: var(--navi-focus-outline-color);
-      outline-offset: calc(
-        -1 * (var(--select-border-width) + var(--select-outline-width))
-      );
+      outline-offset: var(--x-select-outline-offset-focus-visible);
     }
 
     &[data-disabled] {
@@ -149,12 +152,26 @@ const css = /* css */ `
       opacity: 0.6;
     }
 
-    /* When the list inside the dialog has keyboard focus, show the focus ring
-       on the dialog instead */
-    .navi_select_dialog {
+    /* popover */
+    &[aria-haspopup="listbox"] {
       &:has(.navi_list_container[data-focus-visible]) {
-        outline: var(--select-outline-width) solid
-          var(--navi-focus-outline-color);
+        outline-width: var(--x-select-outline-width-focus-visible);
+        outline-color: var(--navi-focus-outline-color);
+        outline-offset: var(--x-select-outline-offset-focus-visible);
+        .navi_list_container {
+          outline: none;
+        }
+      }
+    }
+
+    /* dialog */
+    &[aria-haspopup="dialog"] {
+      /* When the list inside the dialog has keyboard focus, show the focus ring
+       on the dialog instead */
+      &:has(.navi_list_container[data-focus-visible]) {
+        outline-width: var(--x-select-outline-width-focus-visible);
+        outline-color: var(--navi-focus-outline-color);
+        outline-offset: var(--x-select-outline-offset-focus-visible);
         .navi_list_container {
           outline: none;
         }
