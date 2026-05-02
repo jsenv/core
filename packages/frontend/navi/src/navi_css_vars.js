@@ -38,8 +38,8 @@ const css = /* css */ `
       --navi-typo-xxl: 1.5rem; /* 24px at 16px base */
 
       /* Color keywords — mix currentColor toward transparent or black */
-      --navi-color-lighter: color-mix(in srgb, currentColor 50%, transparent);
-      --navi-color-darker: color-mix(in srgb, currentColor 50%, black);
+      --navi-color-secondary: color-mix(in srgb, currentColor 50%, transparent);
+      --navi-color-strong: color-mix(in srgb, currentColor 50%, black);
       --navi-color-muted: color-mix(in srgb, currentColor 60%, transparent);
       --navi-color-faint: color-mix(in srgb, currentColor 25%, transparent);
     }

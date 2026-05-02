@@ -48,17 +48,92 @@
         useSelectRequestClose,
       } from "@jsenv/navi";
 
-      // ── Reusable dialog header ────────────────────────────────────────────────
-
-      const DialogHeader = ({ title }) => {
+      const App = () => {
         return (
-          <div style="padding:14px 16px 10px;border-bottom:1px solid #eee;">
-            <span style="font-weight:600;font-size:15px;">{title}</span>
+          <div>
+            <Demo1 />
+            <Demo2 />
+            <Demo3 />
+            <Demo4 />
           </div>
         );
       };
 
-      // ── Demo 2: filterable List ──────────────────────────────────────────────
+      // ── Demo 1: arbitrary content ─────────────────────────────────────────────
+
+      const Demo1 = () => {
+        const [color, setColor] = useState(null);
+        return (
+          <div class="demo-section">
+            <h2>Demo 1 — Arbitrary content</h2>
+            <p>
+              A <code>Select</code> can contain any custom content inside its
+              panel, not just a list.
+            </p>
+            <Select value={color} placeholder="Choose a color…">
+              <ColorList onSelect={setColor} />
+            </Select>
+            {color && (
+              <p style="margin-top:12px;font-size:13px;color:#1a73e8;">
+                Selected: <b>{color}</b>
+              </p>
+            )}
+          </div>
+        );
+      };
+
+      const COLORS = ["Red", "Green", "Blue", "Yellow", "Purple", "Orange"];
+
+      const ColorList = ({ onSelect }) => {
+        const requestClose = useSelectRequestClose();
+        return (
+          <div style="padding: 20px; min-width: 260px;">
+            <p style="margin: 0 0 12px; font-weight: 600;">Pick a color</p>
+            <input autofocus="" placeholder="should be focused" />
+
+            {COLORS.map((color) => (
+              <button
+                key={color}
+                style="display:block;width:100%;margin-bottom:8px;padding:8px 12px;text-align:left;cursor:pointer;border:1px solid #ddd;border-radius:4px;background:white;font-size:14px"
+                onClick={(e) => {
+                  onSelect(color);
+                  requestClose(e);
+                }}
+              >
+                {color}
+              </button>
+            ))}
+          </div>
+        );
+      };
+
+      // ── Demo 2: filterable List ───────────────────────────────────────────────
+
+      const Demo2 = () => {
+        const [fruit, setFruit] = useState(FRUITS[15]);
+        return (
+          <div class="demo-section">
+            <h2>Demo 2 — Filterable List</h2>
+            <p>
+              A <code>Select</code> containing a search input and a{" "}
+              <code>List</code>. Selecting an item closes the panel
+              automatically.
+            </p>
+            <Select
+              value={fruit}
+              uiAction={setFruit}
+              placeholder="Pick a fruit…"
+            >
+              <FruitPicker selectedFruit={fruit} />
+            </Select>
+            {fruit && (
+              <p style="margin-top:12px;font-size:13px;color:#1a73e8;">
+                Selected: <b>{fruit}</b>
+              </p>
+            )}
+          </div>
+        );
+      };
 
       const FRUITS = [
         "Apple",
@@ -92,6 +167,14 @@
         "Tangerine",
         "Watermelon",
       ];
+
+      const DialogHeader = ({ title }) => {
+        return (
+          <div style="padding:14px 16px 10px;border-bottom:1px solid #eee;">
+            <span style="font-weight:600;font-size:15px;">{title}</span>
+          </div>
+        );
+      };
 
       const FruitPicker = ({ selectedFruit }) => {
         const [search, setSearch] = useState("");
@@ -143,7 +226,126 @@
 
       // ── Demo 3: animal picker with radio inputs ───────────────────────────────
 
+      const Demo3 = () => {
+        const [animal, setAnimal] = useState(ANIMALS[5]);
+        return (
+          <div class="demo-section">
+            <h2>Demo 3 — Radio list picker</h2>
+            <p>
+              Each item shows a radio input. A separator sits between items.
+              Selecting an animal closes the select panel.
+            </p>
+            <Select
+              value={animal}
+              placeholder="Pick an animal…"
+              // capturePointer
+              lockScroll
+              uiAction={(v) => {
+                setAnimal(v);
+              }}
+            >
+              <AnimalPicker selected={animal} />
+            </Select>
+            {animal && (
+              <p style="margin-top:12px;font-size:13px;color:#1a73e8;">
+                Selected: <b>{animal}</b>
+              </p>
+            )}
+          </div>
+        );
+      };
+
+      const ANIMALS = [
+        "Cat",
+        "Dog",
+        "Elephant",
+        "Fox",
+        "Giraffe",
+        "Horse",
+        "Lion",
+        "Monkey",
+        "Panda",
+        "Rabbit",
+        "Tiger",
+        "Wolf",
+        "Zebra",
+      ];
+
+      const AnimalPicker = ({ selected }) => {
+        return (
+          <List
+            listRole="listbox"
+            fallback="No results"
+            border="none"
+            separator={<Separator margin="0" />}
+            expandX
+            minWidth="300"
+            renderBudget={10}
+          >
+            <ListItemHeader>
+              <div style="padding:14px 16px 10px;border-bottom:1px solid #eee;">
+                <span style="font-weight:600;font-size:15px;">
+                  Pick an animal
+                </span>
+              </div>
+            </ListItemHeader>
+            {ANIMALS.map((animal, i) => (
+              <ListItem
+                key={animal}
+                index={i}
+                id={animal}
+                role="option"
+                flex
+                alignY="center"
+                value={animal}
+                selected={selected === animal}
+                height="60px"
+              >
+                <Text>{animal}</Text>
+                <Input
+                  selfAlignX="end"
+                  type="radio"
+                  tabIndex="-1"
+                  checked={selected === animal}
+                  uiAction={() => {}}
+                  style="pointer-events:none;flex-shrink:0;"
+                />
+              </ListItem>
+            ))}
+          </List>
+        );
+      };
+
       // ── Demo 4: large list with filter in header ──────────────────────────────
+
+      const Demo4 = () => {
+        const [country, setCountry] = useState("Cambodia");
+        return (
+          <div class="demo-section">
+            <h2>Demo 4 — Large list with filter header</h2>
+            <p>
+              Filter input lives inside a <code>ListItemHeader</code>. Items are
+              tall. No max-height — the select panel grows to fit all visible
+              options.
+            </p>
+            <Select
+              value={country}
+              uiAction={(v) => {
+                setCountry(v);
+              }}
+              placeholder="Pick a country…"
+              lockScroll
+            >
+              <CountryPicker selected={country} />
+            </Select>
+            {country && (
+              <p style="margin-top:12px;font-size:13px;color:#1a73e8;">
+                Selected: <b>{country}</b>
+              </p>
+            )}
+          </div>
+        );
+      };
 
       const COUNTRIES = [
         "Afghanistan",
@@ -260,209 +462,6 @@
               );
             })}
           </List>
-        );
-      };
-
-      const Demo4 = () => {
-        const [country, setCountry] = useState("Cambodia");
-        return (
-          <div class="demo-section">
-            <h2>Demo 4 — Large list with filter header</h2>
-            <p>
-              Filter input lives inside a <code>ListItemHeader</code>. Items are
-              tall. No max-height — the select panel grows to fit all visible
-              options.
-            </p>
-            <Select
-              value={country}
-              uiAction={(v) => {
-                setCountry(v);
-              }}
-              placeholder="Pick a country…"
-              lockScroll
-            >
-              <CountryPicker selected={country} />
-            </Select>
-            {country && (
-              <p style="margin-top:12px;font-size:13px;color:#1a73e8;">
-                Selected: <b>{country}</b>
-              </p>
-            )}
-          </div>
-        );
-      };
-
-      // ── App ───────────────────────────────────────────────────────────────────
-
-      // ── Demo 1: arbitrary content ─────────────────────────────────────────────
-      const Demo1 = () => {
-        const [color, setColor] = useState(null);
-        return (
-          <div class="demo-section">
-            <h2>Demo 1 — Arbitrary content</h2>
-            <p>
-              A <code>Select</code> can contain any custom content inside its
-              panel, not just a list.
-            </p>
-            <Select value={color} placeholder="Choose a color…">
-              <ColorList onSelect={setColor} />
-            </Select>
-            {color && (
-              <p style="margin-top:12px;font-size:13px;color:#1a73e8;">
-                Selected: <b>{color}</b>
-              </p>
-            )}
-          </div>
-        );
-      };
-      const COLORS = ["Red", "Green", "Blue", "Yellow", "Purple", "Orange"];
-      const ColorList = ({ onSelect }) => {
-        const requestClose = useSelectRequestClose();
-        return (
-          <div style="padding: 20px; min-width: 260px;">
-            <p style="margin: 0 0 12px; font-weight: 600;">Pick a color</p>
-            <input autofocus="" placeholder="should be focused" />
-
-            {COLORS.map((color) => (
-              <button
-                key={color}
-                style="display:block;width:100%;margin-bottom:8px;padding:8px 12px;text-align:left;cursor:pointer;border:1px solid #ddd;border-radius:4px;background:white;font-size:14px"
-                onClick={(e) => {
-                  onSelect(color);
-                  requestClose(e);
-                }}
-              >
-                {color}
-              </button>
-            ))}
-          </div>
-        );
-      };
-
-      const Demo2 = () => {
-        const [fruit, setFruit] = useState(FRUITS[15]);
-        return (
-          <div class="demo-section">
-            <h2>Demo 2 — Filterable List</h2>
-            <p>
-              A <code>Select</code> containing a search input and a{" "}
-              <code>List</code>. Selecting an item closes the panel
-              automatically.
-            </p>
-            <Select
-              value={fruit}
-              uiAction={setFruit}
-              placeholder="Pick a fruit…"
-            >
-              <FruitPicker selectedFruit={fruit} />
-            </Select>
-            {fruit && (
-              <p style="margin-top:12px;font-size:13px;color:#1a73e8;">
-                Selected: <b>{fruit}</b>
-              </p>
-            )}
-          </div>
-        );
-      };
-
-      const ANIMALS = [
-        "Cat",
-        "Dog",
-        "Elephant",
-        "Fox",
-        "Giraffe",
-        "Horse",
-        "Lion",
-        "Monkey",
-        "Panda",
-        "Rabbit",
-        "Tiger",
-        "Wolf",
-        "Zebra",
-      ];
-
-      const AnimalPicker = ({ selected }) => {
-        return (
-          <List
-            listRole="listbox"
-            fallback="No results"
-            border="none"
-            separator={<Separator margin="0" />}
-            expandX
-            minWidth="300"
-            renderBudget={10}
-          >
-            <ListItemHeader>
-              <div style="padding:14px 16px 10px;border-bottom:1px solid #eee;">
-                <span style="font-weight:600;font-size:15px;">
-                  Pick an animal
-                </span>
-              </div>
-            </ListItemHeader>
-            {ANIMALS.map((animal, i) => (
-              <ListItem
-                key={animal}
-                index={i}
-                id={animal}
-                role="option"
-                flex
-                alignY="center"
-                value={animal}
-                selected={selected === animal}
-                height="60px"
-              >
-                <Text>{animal}</Text>
-                <Input
-                  selfAlignX="end"
-                  type="radio"
-                  tabIndex="-1"
-                  checked={selected === animal}
-                  uiAction={() => {}}
-                  style="pointer-events:none;flex-shrink:0;"
-                />
-              </ListItem>
-            ))}
-          </List>
-        );
-      };
-
-      const Demo3 = () => {
-        const [animal, setAnimal] = useState(ANIMALS[5]);
-        return (
-          <div class="demo-section">
-            <h2>Demo 3 — Radio list picker</h2>
-            <p>
-              Each item shows a radio input. A separator sits between items.
-              Selecting an animal closes the select panel.
-            </p>
-            <Select
-              value={animal}
-              placeholder="Pick an animal…"
-              // capturePointer
-              lockScroll
-              uiAction={(v) => {
-                setAnimal(v);
-              }}
-            >
-              <AnimalPicker selected={animal} />
-            </Select>
-            {animal && (
-              <p style="margin-top:12px;font-size:13px;color:#1a73e8;">
-                Selected: <b>{animal}</b>
-              </p>
-            )}
-          </div>
-        );
-      };
-
-      const App = () => {
-        return (
-          <div>
-            <Demo1 />
-            <Demo2 />
-            <Demo3 />
-            <Demo4 />
-          </div>
         );
       };
 

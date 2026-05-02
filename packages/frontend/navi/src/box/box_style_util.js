@@ -628,8 +628,8 @@ export const resolveTypoSize = (size, property = "fontSize") => {
 };
 
 const COLOR_KEYWORD_MAP = {
-  lighter: "var(--navi-color-lighter)",
-  darker: "var(--navi-color-darker)",
+  secondary: "var(--navi-color-secondary)",
+  strong: "var(--navi-color-strong)",
   muted: "var(--navi-color-muted)",
   faint: "var(--navi-color-faint)",
 };
