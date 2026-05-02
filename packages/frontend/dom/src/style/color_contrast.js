@@ -15,7 +15,11 @@
 
 import { parseCSSColor } from "./parsing/css_color.js";
 
-export const contrastColor = (backgroundColor, element) => {
+export const contrastColor = (
+  backgroundColor,
+  element,
+  luminanceThreshold = EQUAL_CONTRAST_LUMINANCE,
+) => {
   const resolvedBgColor = parseCSSColor(backgroundColor, element);
   if (!resolvedBgColor) {
     return "white";
@@ -36,7 +40,7 @@ export const contrastColor = (backgroundColor, element) => {
   //   contrastWithWhite = contrastWithBlack
   //   1.05 / (L + 0.05) = (L + 0.05) / 0.05
   //   L = √(1.05 × 0.05) − 0.05  ≈ 0.179
-  return bgLuminance <= EQUAL_CONTRAST_LUMINANCE ? "white" : "black";
+  return bgLuminance <= luminanceThreshold ? "white" : "black";
 };
 
 // Luminance threshold at which white and black yield the same contrast ratio
