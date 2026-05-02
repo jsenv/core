@@ -185,6 +185,7 @@ const css = /* css */ `
 
     .navi_list_scroll_container {
       width: inherit;
+      min-width: inherit;
       max-width: inherit;
       max-height: var(--list-max-height);
       overflow: auto;
@@ -201,6 +202,10 @@ const css = /* css */ `
       max-width: 95vw;
       margin: 0;
       padding: 0;
+
+      .navi_list {
+        width: 100%;
+      }
     }
     &[data-anchor-hidden] {
       opacity: 0;
