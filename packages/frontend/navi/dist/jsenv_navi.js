@@ -21889,6 +21889,8 @@ const useAccentColorAttributes = (
       return undefined;
     }
     let elementToCheck = el;
+    elementSelector =
+      elementSelector || el.getAttribute("data-visual-selector");
     if (elementSelector) {
       elementToCheck = el.querySelector(elementSelector);
       if (!elementToCheck) {
@@ -22803,7 +22805,10 @@ const ButtonUI = props => {
     innerTarget = target === undefined ? isSameSite ? undefined : "_blank" : target;
     innerRel = rel === undefined ? isSameSite ? undefined : "noopener noreferrer" : rel;
   }
-  useAccentColorAttributes(ref, null);
+  const visualSelector = ".navi_button_content";
+  useAccentColorAttributes(ref, null, {
+    elementSelector: visualSelector
+  });
   const renderButtonContent = buttonProps => {
     return jsxs(Text, {
       ...buttonProps,
@@ -22857,7 +22862,7 @@ const ButtonUI = props => {
       ":disabled": innerDisabled,
       ":-navi-loading": innerLoading
     },
-    visualSelector: ".navi_button_content",
+    visualSelector: visualSelector,
     hasChildFunction: true,
     children: [jsx(LoaderBackground, {
       loading: innerLoading,

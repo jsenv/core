@@ -375,7 +375,10 @@ const ButtonUI = (props) => {
         : rel;
   }
 
-  useAccentColorAttributes(ref, null);
+  const visualSelector = ".navi_button_content";
+  useAccentColorAttributes(ref, null, {
+    elementSelector: visualSelector,
+  });
 
   const renderButtonContent = (buttonProps) => {
     return (
@@ -431,7 +434,7 @@ const ButtonUI = (props) => {
         ":disabled": innerDisabled,
         ":-navi-loading": innerLoading,
       }}
-      visualSelector=".navi_button_content"
+      visualSelector={visualSelector}
       hasChildFunction
     >
       <LoaderBackground

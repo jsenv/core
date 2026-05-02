@@ -49,6 +49,8 @@ export const useAccentColorAttributes = (
       return undefined;
     }
     let elementToCheck = el;
+    elementSelector =
+      elementSelector || el.getAttribute("data-visual-selector");
     if (elementSelector) {
       elementToCheck = el.querySelector(elementSelector);
       if (!elementToCheck) {
