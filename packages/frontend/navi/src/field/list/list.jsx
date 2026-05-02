@@ -9,13 +9,14 @@ import { createContext } from "preact";
 import {
   useCallback,
   useContext,
+  useEffect,
   useId,
   useLayoutEffect,
   useRef,
   useState,
 } from "preact/hooks";
 
-import { useAction } from "../../action/use_action.js";
+import { useActionBoundToOneParam } from "../../action/use_action.js";
 import { useActionStatus } from "../../action/use_action_status.js";
 import { useExecuteAction } from "../../action/use_execute_action.js";
 import { Box } from "../../box/box.jsx";
@@ -31,6 +32,9 @@ import { useDisplayedLayoutEffect } from "../../utils/use_displayed_layout_effec
 import { useActionEvents } from "../use_action_events.js";
 import {
   ParentUIStateControllerContext,
+  UIStateContext,
+  UIStateControllerContext,
+  useUIState,
   useUIStateController,
 } from "../use_ui_state_controller.js";
 import { forwardActionRequested } from "../validation/custom_constraint_validation.js";
@@ -221,7 +225,6 @@ const css = /* css */ `
       outline-offset: calc(
         -1 * (var(--list-border-width) + var(--list-outline-width))
       );
-
       .navi_list {
         outline: none;
       }
@@ -499,11 +502,11 @@ export const List = (props) => {
 const ListDispatcher = (props) => {
   const alreadyInteractive = useContext(ListInteractiveContext);
   const parentUIStateController = useContext(ParentUIStateControllerContext);
-  if (!alreadyInteractive && props.action) {
+  if (
+    !alreadyInteractive &&
+    (props.action || props.uiAction || parentUIStateController)
+  ) {
     return <ListWithAction {...props} />;
-  }
-  if (!alreadyInteractive && (props.uiAction || parentUIStateController)) {
-    return <ListInteractive {...props} />;
   }
   if (props.popover === true) {
     return <ListWithPopover {...props} />;
@@ -673,18 +676,22 @@ const ListUI = (props) => {
         if (!item) {
           return;
         }
-        // navi_list_nav is dispatched by scrollToItem after the scroll
-        // completes (including the async path via pendingScrollRef).
+        // navi_list_nav is dispatched immediately by scrollToItem (before scroll).
         scrollToItem(item, {
           reason: "navi_list_request_nav",
           event: e.detail.event,
         });
       }}
       onnavi_list_request_select={(e) => {
-        const { item } = e.detail;
+        const { item, event } = e.detail;
         if (!item) {
           return;
         }
+        // Nav to the selected item first (updates uiState, scrolls, etc.)
+        scrollToItem(item, {
+          reason: "navi_list_request_select",
+          event: event || e,
+        });
         const listEl = e.currentTarget;
         dispatchPublicCustomEvent(listEl, "navi_list_select", {
           item,
@@ -773,7 +780,7 @@ const useListScrollSync = ({
       index = itemCount - 1;
     }
 
-    const srollItemIntoView = (itemEl) => {
+    const scrollItemIntoView = (itemEl) => {
       const trigger = `"${event.type}" on ${getElementSignature(event.target)} (${reason})`;
       const block = event.type === "keydown" ? "nearest" : "center";
       const scrollToItemCall = `${getElementSignature(itemEl)}.scrollIntoView({ block: "${block}", container: "nearest" })`;
@@ -785,30 +792,35 @@ const useListScrollSync = ({
         container: listScrollContainerEl,
         block,
       });
-      const listEl = ref.current;
-      dispatchPublicCustomEvent(listEl, "navi_list_nav", {
+      dispatchPublicCustomEvent(listEl, "navi_list_scroll", {
         event,
         item,
       });
     };
+
+    // Dispatch navi_list_nav immediately — do not wait for scroll to complete.
+    const listEl = ref.current;
+    dispatchPublicCustomEvent(listEl, "navi_list_nav", {
+      event,
+      item,
+    });
 
     const { start, end } = renderWindowRef.current;
     const isInWindow = index >= start && index < end;
     if (isInWindow) {
       const itemEl = document.getElementById(item.id);
       if (itemEl) {
-        srollItemIntoView(itemEl);
+        scrollItemIntoView(itemEl);
         return;
       }
     }
     // Not in DOM — shift the render window. The item will read
-    // pendingScrollRef on mount and call scrollIntoViewWithStickyAwareness,
-    // then call onScrolled so we can dispatch navi_list_scroll.
+    // pendingScrollRef on mount and scroll into view.
     pendingScrollRef.current = {
       id: item.id,
       resolve: (itemEl) => {
         pendingScrollRef.current = null;
-        srollItemIntoView(itemEl);
+        scrollItemIntoView(itemEl);
       },
     };
     const half = Math.floor(renderBudget / 2);
@@ -1323,7 +1335,9 @@ const ListWithPopover = (props) => {
   );
 };
 
-// Interactive variant with action: calls the action whenever a value is selected.
+// Interactive variant: manages hover/keyboard/selection state and handles the
+// navi event protocol. When an action is provided it binds the action to ui state
+// and fires it on select. When only uiAction is provided it calls it directly.
 const ListWithAction = (props) => {
   const {
     ref,
@@ -1335,10 +1349,19 @@ const ListWithAction = (props) => {
     onActionAbort,
     onActionError,
     onActionEnd,
-    uiAction,
+    // eslint-disable-next-line no-unused-vars
+    uiAction: _uiAction, // stripped from rest; useUIStateController reads it from props
     ...rest
   } = props;
-  const boundAction = useAction(action);
+
+  // Setup uiStateController and bind action to uiState
+  const uiStateController = useUIStateController(props, "list", {
+    allowNameless: true,
+  });
+  const uiState = useUIState(uiStateController);
+
+  // Bind action to uiState (like InputTextualWithAction, null-safe when no action)
+  const [boundAction] = useActionBoundToOneParam(action, uiState);
   const { loading: actionLoading } = useActionStatus(boundAction);
   const executeAction = useExecuteAction(ref, {
     errorEffect: actionErrorEffect,
@@ -1354,35 +1377,26 @@ const ListWithAction = (props) => {
     onEnd: onActionEnd,
   });
 
-  const innerUiAction = (value, event) => {
-    uiAction?.(value, event);
-    // Dispatch action request so useActionEvents can pick it up
-    if (ref && ref.current) {
-      dispatchCustomEvent(ref.current, "navi_action_requested", {
-        bubbles: true,
-        detail: { value },
-      });
+  // Dispatch action request on select
+  useEffect(() => {
+    const listEl = ref.current;
+    if (!listEl) {
+      return undefined;
     }
-  };
+    const onSelect = (e) => {
+      const { item } = e.detail;
+      dispatchCustomEvent(listEl, "navi_action_requested", {
+        bubbles: true,
+        detail: { value: item.value },
+      });
+    };
+    listEl.addEventListener("navi_list_select", onSelect);
+    return () => {
+      listEl.removeEventListener("navi_list_select", onSelect);
+    };
+  }, []);
 
-  return (
-    <List
-      data-action={boundAction.name}
-      {...rest}
-      ref={ref}
-      action={undefined}
-      loading={loading || actionLoading}
-      uiAction={innerUiAction}
-    />
-  );
-};
-
-// Interactive variant: manages hover/keyboard/selection state and handles the
-// navi event protocol, then delegates rendering to ListUI.
-const ListInteractive = (props) => {
-  const uiStateController = useUIStateController(props, "list", {
-    allowNameless: true,
-  });
+  // Mouse/keyboard pointed state
   const [mousePointedId, setMousePointedId] = useState(null);
   const [keyboardPointedId, setKeyboardPointedId] = useState(null);
   const anchorIdRef = useRef(null);
@@ -1406,145 +1420,146 @@ const ListInteractive = (props) => {
     return visibleItemsRef.current.find((i) => i.id === anchorId);
   };
 
+  const listVnode = (
+    <List
+      keyboardInteractions
+      data-action={boundAction.name}
+      {...rest}
+      ref={ref}
+      action={undefined}
+      uiAction={undefined}
+      loading={loading || actionLoading}
+      value={uiState}
+      onListVisibleItemsChange={(visibleItems) => {
+        props.onListVisibleItemsChange?.(visibleItems);
+        visibleItemsRef.current = visibleItems;
+      }}
+      onnavi_list_request_hover={(e) => {
+        const { item } = e.detail;
+        setMousePointedId(item ? item.id : null);
+      }}
+      onnavi_list_request_nav_from_current={(e) => {
+        const { event = e, goal } = e.detail;
+        const visibleItems = visibleItemsRef.current;
+        const visibleItemCount = visibleItems.length;
+        if (visibleItemCount === 0) {
+          return;
+        }
+        const anchorIndex = getAnchorIndex();
+        const isDisabledIndex = (i) => Boolean(visibleItems[i]?.disabled);
+        const resolveIndex = () => {
+          if (goal === "down") {
+            if (anchorIndex === -1) {
+              let i = 0;
+              while (i < visibleItemCount && isDisabledIndex(i)) {
+                i++;
+              }
+              return i < visibleItemCount ? i : anchorIndex;
+            }
+            let belowIndex = anchorIndex + 1;
+            while (
+              belowIndex < visibleItemCount &&
+              isDisabledIndex(belowIndex)
+            ) {
+              belowIndex++;
+            }
+            return belowIndex < visibleItemCount ? belowIndex : anchorIndex;
+          }
+          if (goal === "up") {
+            if (anchorIndex === -1) {
+              let i = visibleItemCount - 1;
+              while (i >= 0 && isDisabledIndex(i)) {
+                i--;
+              }
+              return i >= 0 ? i : anchorIndex;
+            }
+            let aboveIndex = anchorIndex - 1;
+            while (aboveIndex >= 0 && isDisabledIndex(aboveIndex)) {
+              aboveIndex--;
+            }
+            return aboveIndex >= 0 ? aboveIndex : anchorIndex;
+          }
+          if (goal === "first") {
+            let i = 0;
+            while (i < visibleItemCount && isDisabledIndex(i)) {
+              i++;
+            }
+            return i < visibleItemCount ? i : anchorIndex;
+          }
+          if (goal === "last") {
+            let i = visibleItemCount - 1;
+            while (i >= 0 && isDisabledIndex(i)) {
+              i--;
+            }
+            return i >= 0 ? i : anchorIndex;
+          }
+          return anchorIndex;
+        };
+        const index = resolveIndex();
+        if (index === anchorIndex) {
+          if (event.type === "keydown") {
+            event.preventDefault();
+          }
+          return;
+        }
+        if (event.type === "keydown") {
+          event.preventDefault();
+        }
+        const item = visibleItems[index];
+        dispatchCustomEvent(e.currentTarget, "navi_list_request_nav", {
+          event: e,
+          item,
+        });
+      }}
+      onnavi_list_request_interaction_state_reset={() => {
+        setAnchorId(null);
+        setKeyboardPointedId(null);
+        setMousePointedId(null);
+      }}
+      onnavi_list_request_select_current={(e) => {
+        const item = getAnchorItem();
+        dispatchCustomEvent(e.currentTarget, "navi_list_request_select", {
+          event: e,
+          item,
+        });
+      }}
+      onnavi_list_nav={(e) => {
+        const { item, event } = e.detail;
+        const id = item ? item.id : null;
+        if (event.type === "navi_list_nav_top_on_displayed") {
+          setAnchorId(null);
+        } else {
+          setAnchorId(id);
+        }
+        if (event.type === "keydown") {
+          setKeyboardPointedId(id);
+        } else {
+          setKeyboardPointedId(null);
+        }
+        if (item && event.type !== "navi_list_nav_top_on_displayed") {
+          uiStateController.setUIState(item.value, event);
+        }
+      }}
+    />
+  );
+
   return (
-    <ListInteractiveContext.Provider value={true}>
-      <ListMousePointedIdContext.Provider value={mousePointedId}>
-        <ListKeyboardPointedIdContext.Provider value={keyboardPointedId}>
-          <List
-            keyboardInteractions
-            {...props}
-            uiAction={undefined}
-            onListVisibleItemsChange={(visibleItems) => {
-              props.onListVisibleItemsChange?.(visibleItems);
-              visibleItemsRef.current = visibleItems;
-            }}
-            onnavi_list_request_hover={(e) => {
-              const { item } = e.detail;
-              setMousePointedId(item ? item.id : null);
-            }}
-            onnavi_list_request_nav_from_current={(e) => {
-              const { event = e, goal } = e.detail;
-              const visibleItems = visibleItemsRef.current;
-              const visibleItemCount = visibleItems.length;
-              if (visibleItemCount === 0) {
-                return;
-              }
-              const anchorIndex = getAnchorIndex();
-              const isDisabledIndex = (i) => Boolean(visibleItems[i]?.disabled);
-              const resolveIndex = () => {
-                if (goal === "down") {
-                  if (anchorIndex === -1) {
-                    let i = 0;
-                    while (i < visibleItemCount && isDisabledIndex(i)) {
-                      i++;
-                    }
-                    return i < visibleItemCount ? i : anchorIndex;
-                  }
-                  let belowIndex = anchorIndex + 1;
-                  while (
-                    belowIndex < visibleItemCount &&
-                    isDisabledIndex(belowIndex)
-                  ) {
-                    belowIndex++;
-                  }
-                  return belowIndex < visibleItemCount
-                    ? belowIndex
-                    : anchorIndex;
-                }
-                if (goal === "up") {
-                  if (anchorIndex === -1) {
-                    let i = visibleItemCount - 1;
-                    while (i >= 0 && isDisabledIndex(i)) {
-                      i--;
-                    }
-                    return i >= 0 ? i : anchorIndex;
-                  }
-                  let aboveIndex = anchorIndex - 1;
-                  while (aboveIndex >= 0 && isDisabledIndex(aboveIndex)) {
-                    aboveIndex--;
-                  }
-                  return aboveIndex >= 0 ? aboveIndex : anchorIndex;
-                }
-                if (goal === "first") {
-                  let i = 0;
-                  while (i < visibleItemCount && isDisabledIndex(i)) {
-                    i++;
-                  }
-                  return i < visibleItemCount ? i : anchorIndex;
-                }
-                if (goal === "last") {
-                  let i = visibleItemCount - 1;
-                  while (i >= 0 && isDisabledIndex(i)) {
-                    i--;
-                  }
-                  return i >= 0 ? i : anchorIndex;
-                }
-                return anchorIndex;
-              };
-              const index = resolveIndex();
-              if (index === anchorIndex) {
-                if (event.type === "keydown") {
-                  // we still prevent default to avoid page scroll or search caret to move, might be unexpected
-                  // as it usually nav the list to have side effects when we reach the end of the list
-                  event.preventDefault();
-                }
-                return;
-              }
-              if (event.type === "keydown") {
-                event.preventDefault();
-              }
-              const item = visibleItems[index];
-              dispatchCustomEvent(e.currentTarget, "navi_list_request_nav", {
-                event: e,
-                item,
-              });
-            }}
-            onnavi_list_request_interaction_state_reset={() => {
-              setAnchorId(null);
-              setKeyboardPointedId(null);
-              setMousePointedId(null);
-            }}
-            onnavi_list_request_select_current={(e) => {
-              const item = getAnchorItem();
-              dispatchCustomEvent(e.currentTarget, "navi_list_request_select", {
-                event: e,
-                item,
-              });
-            }}
-            onnavi_list_nav={(e) => {
-              const { item, event } = e.detail;
-              const id = item.id;
-              if (event.type === "navi_list_nav_top_on_displayed") {
-                // arrow down should focus first item for instance
-                setAnchorId(null);
-              } else {
-                setAnchorId(id);
-              }
-              if (event.type === "keydown") {
-                setKeyboardPointedId(id);
-              } else {
-                setKeyboardPointedId(null);
-              }
-            }}
-            onnavi_list_select={(e) => {
-              const { item, event } = e.detail;
-              const id = item.id;
-              setAnchorId(id);
-              if (event.type === "keydown") {
-                setKeyboardPointedId(id);
-              } else {
-                setKeyboardPointedId(null);
-              }
-              const value = item.value;
-              uiStateController.setUIState(value, event);
-            }}
-          />
-        </ListKeyboardPointedIdContext.Provider>
-      </ListMousePointedIdContext.Provider>
-    </ListInteractiveContext.Provider>
+    <UIStateControllerContext.Provider value={uiStateController}>
+      <UIStateContext.Provider value={uiState}>
+        <ListInteractiveContext.Provider value={true}>
+          <ListMousePointedIdContext.Provider value={mousePointedId}>
+            <ListKeyboardPointedIdContext.Provider value={keyboardPointedId}>
+              {listVnode}
+            </ListKeyboardPointedIdContext.Provider>
+          </ListMousePointedIdContext.Provider>
+        </ListInteractiveContext.Provider>
+      </UIStateContext.Provider>
+    </UIStateControllerContext.Provider>
   );
 };
 
+// Interactive variant: manages hover/keyboard/selection state and handles the
+// navi event protocol, then delegates rendering to ListUI.
 const ListWithKeyboardInteractions = (props) => {
   const { autoFocus, autoFocusPreventScroll } = props;
   const defaultRef = useRef(null);
