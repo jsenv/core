@@ -162,6 +162,28 @@ const css = /* css */ `
           outline: none;
         }
       }
+
+      .navi_select_popover {
+        position: absolute;
+        inset: unset;
+        min-width: var(--anchor-width, 0px);
+        max-width: 95vw;
+        max-height: 95dvh;
+        margin: 0;
+        padding: 0;
+        background: white;
+        border: none;
+        border-radius: 0;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+        cursor: default; /* Reset pointer cursor within the select */
+        overflow: auto;
+        overscroll-behavior: none;
+
+        &:popover-open {
+          display: flex;
+          flex-direction: column;
+        }
+      }
     }
 
     /* dialog */
@@ -180,42 +202,25 @@ const css = /* css */ `
           outline: none;
         }
       }
-    }
 
-    .navi_select_popover {
-      position: absolute;
-      inset: unset;
-      min-width: var(--select-anchor-width, 0px);
-      max-width: 95vw;
-      max-height: 95dvh;
-      margin: 0;
-      padding: 0;
-      background: white;
-      border: none;
-      border-radius: 0;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
-      cursor: default; /* Reset pointer cursor within the select */
-      overflow: auto;
-      overscroll-behavior: none;
-    }
+      .navi_select_dialog {
+        max-height: 95dvh;
+        margin: auto;
+        padding: 0;
+        background: white;
+        border: none;
+        border-radius: 8px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+        cursor: default; /* Reset pointer cursor within the select */
 
-    .navi_select_dialog {
-      max-height: 95dvh;
-      margin: auto;
-      padding: 0;
-      background: white;
-      border: none;
-      border-radius: 8px;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
-      cursor: default; /* Reset pointer cursor within the select */
+        &[open] {
+          display: flex;
+          flex-direction: column;
+        }
 
-      &[open] {
-        display: flex;
-        flex-direction: column;
-      }
-
-      &::backdrop {
-        background: rgba(0, 0, 0, 0.4);
+        &::backdrop {
+          background: rgba(0, 0, 0, 0.4);
+        }
       }
     }
   }

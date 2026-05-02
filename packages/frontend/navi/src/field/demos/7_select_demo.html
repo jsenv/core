@@ -114,7 +114,6 @@
                           setColor(v);
                         }}
                         role="listbox"
-                        border="none"
                         expandX
                         // debugScroll
                         separator={<Separator margin="0" />}
@@ -302,12 +301,7 @@
                 </List>
               </Select>
               <Select name="size_disabled" value="L" disabled>
-                <List
-                  uiAction={() => {}}
-                  role="listbox"
-                  border="none"
-                  expandX
-                >
+                <List uiAction={() => {}} role="listbox" border="none" expandX>
                   {SIZES.map((s, i) => (
                     <ListItem
                       key={s}

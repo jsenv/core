@@ -345,6 +345,7 @@ const css = /* css */ `
      The browser may briefly flash them during scroll before the render window
      updates, so giving them a visible background would cause visual glitches. */
   .navi_list_virtual_filler {
+    display: inline-block;
     height: 0px;
     list-style: none;
     /* background: pink; */
