@@ -6,6 +6,7 @@ import { useExecuteAction } from "../action/use_execute_action.js";
 import { Box } from "../box/box.jsx";
 import { LoaderBackground } from "../graphic/loader/loader_background.jsx";
 import { useAutoFocus } from "../utils/focus/use_auto_focus.js";
+import { useAccentColorAttributes } from "../utils/use_accent_color_attributes.js";
 import { useStableCallback } from "../utils/use_stable_callback.js";
 import { fieldPropSet } from "./field_prop_set.js";
 import {
@@ -13,7 +14,6 @@ import {
   reportInteractiveToLabel,
   reportReadOnlyToLabel,
 } from "./label.jsx";
-import { useAccentColorAttributes } from "./use_accent_attributes.js";
 import { useActionEvents } from "./use_action_events.js";
 import {
   DisabledContext,
