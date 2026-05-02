@@ -1,6 +1,5 @@
 import {
   getElementSignature,
-  getScrollContainer,
   pickPositionRelativeTo,
   scrollIntoViewScoped,
   visibleRectEffect,
@@ -945,7 +944,6 @@ const useListScrollSync = ({
       `.navi_list_scroll_container`,
     );
     const listEl = listContainerEl.querySelector(".navi_list");
-    const scrollContainer = getScrollContainer(listEl);
     const onScroll = () => {
       updateCurrentScroll();
       const visibleItemCount = tracker.visibleCountSignal.peek();
@@ -979,9 +977,11 @@ const useListScrollSync = ({
       }
       updateRenderWindow(newStart, newEnd, reason);
     };
-    scrollContainer.addEventListener("scroll", onScroll, { passive: true });
+    listScrollContainerEl.addEventListener("scroll", onScroll, {
+      passive: true,
+    });
     return () => {
-      scrollContainer.removeEventListener("scroll", onScroll);
+      listScrollContainerEl.removeEventListener("scroll", onScroll);
     };
   }, [renderBudget]);
 
@@ -1074,11 +1074,11 @@ const useVirtualItemHeightSignal = (ref, virtualItemHeightProp = 0) => {
     if (virtualHeightSignal.peek() !== 0) {
       return;
     }
-    const ulEl = ref.current;
-    if (!ulEl) {
+    const listEl = ref.current;
+    if (!listEl) {
       return;
     }
-    const firstListItem = ulEl.querySelector(REAL_LIST_ITEM_SELECTOR);
+    const firstListItem = listEl.querySelector(REAL_LIST_ITEM_SELECTOR);
     if (!firstListItem) {
       return;
     }
@@ -1962,9 +1962,9 @@ export const ListItemHeader = (props) => {
   useDisplayedLayoutEffect(
     ref,
     (headerEl) => {
-      const scrollContainer = getScrollContainer(headerEl);
+      const listContainerEl = headerEl.closest(".navi_list_container");
       const headerHeight = headerEl.getBoundingClientRect().height;
-      scrollContainer.style.setProperty(
+      listContainerEl.style.setProperty(
         "--list-header-height",
         `${headerHeight}px`,
       );
@@ -1988,9 +1988,9 @@ export const ListItemFooter = (props) => {
   useDisplayedLayoutEffect(
     ref,
     (headerEl) => {
-      const scrollContainer = getScrollContainer(headerEl);
+      const listContainerEl = headerEl.closest(".navi_list_container");
       const headerHeight = headerEl.getBoundingClientRect().height;
-      scrollContainer.style.setProperty(
+      listContainerEl.style.setProperty(
         "--list-footer-height",
         `${headerHeight}px`,
       );
