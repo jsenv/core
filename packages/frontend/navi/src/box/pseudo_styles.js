@@ -336,14 +336,26 @@ focus_classes: {
   definePseudoClass(":focus-within", {
     attribute: "data-focus-within",
     setup: (el, callback) => {
-      el.addEventListener("focusin", callback);
-      el.addEventListener("focusout", callback);
+      const onFocusChange = (e) => {
+        callback();
+        notifyAriaControlled(el, e);
+      };
+      el.addEventListener("focusin", onFocusChange);
+      el.addEventListener("focusout", onFocusChange);
       return () => {
-        el.removeEventListener("focusin", callback);
-        el.removeEventListener("focusout", callback);
+        el.removeEventListener("focusin", onFocusChange);
+        el.removeEventListener("focusout", onFocusChange);
       };
     },
-    test: (el) => el.matches(":focus-within"),
+    test: (el) => {
+      if (el.matches(":focus-within")) {
+        return true;
+      }
+      if (isControlledByFocusedElement(el)) {
+        return true;
+      }
+      return false;
+    },
   });
 }
 
