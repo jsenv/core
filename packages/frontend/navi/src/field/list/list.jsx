@@ -184,7 +184,7 @@ const css = /* css */ `
        the corners would visually overflow the rounded corners during scroll. */
     overflow: hidden;
 
-    .navi_list_overflow_container {
+    .navi_list_scroll_container {
       width: inherit;
       max-width: inherit;
       max-height: var(--list-max-height);
@@ -589,7 +589,7 @@ const ListUI = (props) => {
 
   const renderList = (listProps) => {
     return (
-      <div className="navi_list_overflow_container">
+      <div className="navi_list_scroll_container">
         <UnorderedList
           ref={ref}
           id={innerId}
@@ -791,8 +791,11 @@ const useListScrollSync = ({
   const currentScrollRef = useRef(null);
   const updateCurrentScroll = () => {
     const listContainerEl = containerRef.current;
-    const currentScrollLeft = listContainerEl.scrollLeft;
-    const currentScrollTop = listContainerEl.scrollTop;
+    const listScrollContainerEl = listContainerEl.querySelector(
+      `.navi_list_scroll_container`,
+    );
+    const currentScrollLeft = listScrollContainerEl.scrollLeft;
+    const currentScrollTop = listScrollContainerEl.scrollTop;
     const renderWindow = renderWindowRef.current;
     currentScrollRef.current = {
       left: currentScrollLeft,
@@ -854,6 +857,9 @@ const useListScrollSync = ({
   const topMatchScoresKeyRef = useRef("");
   useLayoutEffect(() => {
     const listContainerEl = containerRef.current;
+    const listScrollContainerEl = listContainerEl.querySelector(
+      `.navi_list_scroll_container`,
+    );
 
     if (!searchText) {
       // no search -> try to restore scroll position
@@ -875,9 +881,9 @@ const useListScrollSync = ({
         const top = savedScroll.top;
         // use scrollTo to respect eventual css scroll-behavior: smooth;
         debugScroll(
-          `restore scroll: ${getElementSignature(listContainerEl)}.scrollTo({ left: ${left}, top: ${top} })`,
+          `restore scroll: ${getElementSignature(listScrollContainerEl)}.scrollTo({ left: ${left}, top: ${top} })`,
         );
-        listContainerEl.scrollTo({
+        listScrollContainerEl.scrollTo({
           left: savedScroll.left,
           top: savedScroll.top,
         });
@@ -888,7 +894,7 @@ const useListScrollSync = ({
         // so we do our best to give that item back
         const { item } = getScrollInfo(
           { scrollTop: savedScroll.top },
-          listContainerEl,
+          listScrollContainerEl,
           tracker,
           virtualItemHeightSignal,
           renderWindowRef,
@@ -935,6 +941,9 @@ const useListScrollSync = ({
     if (!listContainerEl) {
       return undefined;
     }
+    const listScrollContainerEl = listContainerEl.querySelector(
+      `.navi_list_scroll_container`,
+    );
     const listEl = listContainerEl.querySelector(".navi_list");
     const scrollContainer = getScrollContainer(listEl);
     const onScroll = () => {
@@ -951,8 +960,8 @@ const useListScrollSync = ({
       }
       let reason = "";
       const scrollInfo = getScrollInfo(
-        { scrollTop: listContainerEl.scrollTop },
-        listContainerEl,
+        { scrollTop: listScrollContainerEl.scrollTop },
+        listScrollContainerEl,
         tracker,
         virtualItemHeightSignal,
         renderWindowRef,
@@ -989,14 +998,14 @@ const useListScrollSync = ({
 // Returns { index, item, reason } or null if nothing can be determined.
 const getScrollInfo = (
   { scrollTop },
-  listContainerEl,
+  listScrollContainerEl,
   tracker,
   virtualItemHeightSignal,
   renderWindowRef,
 ) => {
-  const listEl = listContainerEl.querySelector(".navi_list");
+  const listEl = listScrollContainerEl.querySelector(".navi_list");
   const items = tracker.itemsSignal.peek();
-  const containerRect = listContainerEl.getBoundingClientRect();
+  const containerRect = listScrollContainerEl.getBoundingClientRect();
   let hitEl = null;
   let hitFiller = null;
   for (let y = containerRect.top + 1; y < containerRect.bottom; y += 4) {

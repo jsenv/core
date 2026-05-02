@@ -96,7 +96,7 @@ export const Dialog = (props) => {
         rest.onMouseDown?.(e);
         // The <dialog> element covers the full viewport; clicking the backdrop
         // hits the dialog itself (not any child). Close when that happens.
-        if (!pointerTrap && e.target === ref.current) {
+        if (!pointerTrap && e.button === 0 && e.target === ref.current) {
           onRequestClose(e);
         }
       }}
