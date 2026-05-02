@@ -1829,13 +1829,13 @@ const ListItemReal = ({
         rest.onMouseDown?.(e);
       }}
       basePseudoState={{
-        ...rest.basePseudoState,
         ":disabled": Boolean(disabled),
         ":-navi-pointed": isPointed,
         ":-navi-pointed-by-mouse": isPointedByMouse,
         ":-navi-pointed-by-keyboard": isPointedByKeyboard,
         ":-navi-pointed-by-proxy": isPointedByProxy,
         ":-navi-selected": selected,
+        ...rest.basePseudoState,
       }}
     >
       {children}
