@@ -219,6 +219,20 @@ definePseudoClass(":active", {
   test: (el) => el.matches(":active"),
 });
 focus_classes: {
+  // We implement :focus and :focus-visible with enriched semantics:
+  // an element is considered focused not only when it natively has focus, but also
+  // when a "focus proxy" element has focus (e.g. a read-only range input delegates
+  // focus to a sibling span) or when a controlling element has focus (e.g. a combobox
+  // input with aria-controls pointing to a listbox — the listbox should appear focused
+  // while the input is focused).
+  //
+  // We intentionally reuse the native :focus / :focus-visible names rather than
+  // introducing new navi-specific pseudo-classes (e.g. :-navi-focus). This is a
+  // deliberate exception: all existing CSS and code written as [data-focus] or
+  // [data-focus-visible] automatically benefits from the enriched behavior without
+  // any changes. A separate navi-specific class would require updating every
+  // component.
+  //
   // When a controller element (e.g. combobox input) gains or loses focus,
   // notify the elements it controls via aria-controls so they re-check their focus state.
   const notifyAriaControlled = (el, e) => {
