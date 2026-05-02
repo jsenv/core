@@ -532,6 +532,12 @@ const ListUI = (props) => {
     ...rest
   } = props;
 
+  if (renderBudget < 30) {
+    console.warn(
+      `List: renderBudget=${renderBudget} is too low. A renderBudget below 30 is not supported: on large screens or when the list grows, items outside the window would appear as blank space instead of rendered content. Use a value of at least 30, or omit the prop to use the default (${RENDER_BUDGET_DEFAULT}).`,
+    );
+  }
+
   const hiddenInputId = useId();
 
   // lockSize: capture the container's dimensions on first render so filtering
