@@ -421,7 +421,9 @@ export const useUIGroupStateController = (
         `${componentType}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> updates from ${JSON.stringify(currentUIState)} to ${JSON.stringify(newUIState)}`,
       );
       publishUIState(newUIState);
-      uiStateController.onUIStateChange?.(newUIState, e);
+      if (!e.type.endsWith("_mount")) {
+        uiStateController.uiAction?.(newUIState, e);
+      }
       notifyParentAboutChildUIStateChange(e);
     },
     registerChild: (childUIStateController) => {

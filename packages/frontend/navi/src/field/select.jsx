@@ -255,9 +255,6 @@ export const Select = (props) => {
     },
     emptyState: undefined,
   });
-  uiStateController.onUIStateChange = (value, e) => {
-    uiStateController.uiAction?.(value, e);
-  };
   const uiState = useUIState(uiStateController);
   const value = Object.hasOwn(props, "value") ? props.value : uiState;
 
