@@ -107,15 +107,6 @@ const css = /* css */ `
   }
 
   .navi_input_range {
-    &[data-accent-very-light] {
-      --background-color: rgba(0, 0, 0, 0.15);
-      --track-border-color: rgba(0, 0, 0, 0.25);
-      --fill-color-hover: color-mix(in srgb, var(--fill-color) 80%, black);
-      --thumb-color-hover: color-mix(in srgb, var(--thumb-color) 80%, black);
-    }
-  }
-
-  .navi_input_range {
     --x-fill-ratio: 0;
     --x-border-color: var(--border-color);
     --x-track-border-color: var(--track-border-color);
@@ -247,17 +238,18 @@ const css = /* css */ `
       --x-fill-color: var(--fill-color-disabled);
       --x-thumb-color: var(--thumb-color-disabled);
       --x-thumb-cursor: default;
+      --x-accent-color: var(--accent-color-disabled);
     }
-  }
+    /* Callout (info, warning, error) */
+    &[data-callout] {
+    }
 
-  /* Disabled */
-  .navi_input_range[data-disabled] {
-    --x-background-color: var(--background-color-disabled);
-    --x-accent-color: var(--accent-color-disabled);
-  }
-  /* Callout (info, warning, error) */
-  .navi_input_range[data-callout] {
-    /* What can we do? */
+    &[data-accent-very-light] {
+      --background-color: rgba(0, 0, 0, 0.15);
+      --track-border-color: rgba(0, 0, 0, 0.25);
+      --fill-color-hover: color-mix(in srgb, var(--fill-color) 80%, black);
+      --thumb-color-hover: color-mix(in srgb, var(--thumb-color) 80%, black);
+    }
   }
 `;
 
