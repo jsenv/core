@@ -1,3 +1,5 @@
+// https://jsfiddle.net/v5xzJ/4/
+
 import { hasCSSSizeUnit } from "@jsenv/dom";
 import { createContext, toChildArray } from "preact";
 import { useContext, useRef, useState } from "preact/hooks";
@@ -363,8 +365,13 @@ const OverflowPinnedElementContext = createContext(null);
  *   like the skeleton container).
  */
 export const Text = (props) => {
-  import.meta.css = css;
+  const defaultRef = useRef();
+  const ref = props.ref || defaultRef;
 
+  return <TextDispatcher {...props} ref={ref} />;
+};
+
+const TextDispatcher = (props) => {
   if (props.loading || props.skeleton) {
     return <TextSkeleton {...props} />;
   }
@@ -377,107 +384,22 @@ export const Text = (props) => {
   if (props.selectRange) {
     return <TextWithSelectRange {...props} />;
   }
-  return <TextBasic {...props} />;
+  return <TextUI {...props} />;
 };
+const TextUI = (props) => {
+  import.meta.css = css;
+  let {
+    ref,
+    spacing,
+    preventSpaceUnderlines = false,
+    boldStable,
+    holdSpaceForStyle,
+    capitalize,
+    children,
+    childrenOutsideFlow,
+    ...rest
+  } = props;
 
-const TextSkeleton = ({ loading, children, ...props }) => {
-  // Three-level structure — see CSS comment on [data-skeleton] for details.
-  const skeletonOverlay = (
-    <span className="navi_text_skeleton_container" aria-hidden="true">
-      <span className="navi_text_skeleton_inset">
-        <span className="navi_text_skeleton" />
-      </span>
-    </span>
-  );
-  // When there are no children, inject a full-width placeholder so the element
-  // has measurable height driven by the current font-size/line-height, and the
-  // skeleton fills the available width instead of shrinking to a single char.
-  const hasChildren =
-    children !== null && children !== undefined && children !== false;
-  const innerChildren = hasChildren ? (
-    children
-  ) : (
-    <span
-      className="navi_text_skeleton_children_placeholder"
-      aria-hidden="true"
-    >
-      W
-    </span>
-  );
-  return (
-    <Text
-      data-skeleton=""
-      data-loading={loading ? "" : undefined}
-      {...props}
-      skeleton={undefined}
-      childrenOutsideFlow={skeletonOverlay}
-    >
-      {innerChildren}
-    </Text>
-  );
-};
-const TextOverflow = ({ noWrap, spacing, children, ...rest }) => {
-  const [OverflowPinnedElement, setOverflowPinnedElement] = useState(null);
-
-  return (
-    <Text
-      flex
-      block
-      as="div"
-      nowWrap={noWrap}
-      pre={!noWrap}
-      // For paragraph we prefer to keep lines and only hide unbreakable long sections
-      preLine={rest.as === "p"}
-      {...rest}
-      overflowEllipsis={undefined}
-      data-text-overflow=""
-      spacing="pre"
-    >
-      <span className="navi_text_overflow_wrapper">
-        <OverflowPinnedElementContext.Provider value={setOverflowPinnedElement}>
-          <Text className="navi_text_overflow_text" spacing={spacing}>
-            {children}
-          </Text>
-        </OverflowPinnedElementContext.Provider>
-        {OverflowPinnedElement}
-      </span>
-    </Text>
-  );
-};
-const TextOverflowPinned = ({ overflowPinned, ...props }) => {
-  const setOverflowPinnedElement = useContext(OverflowPinnedElementContext);
-  const text = <Text {...props} data-overflow-pinned=""></Text>;
-  if (!setOverflowPinnedElement) {
-    console.warn(
-      "<Text overflowPinned> declared outside a <Text overflowEllipsis>",
-    );
-    return text;
-  }
-  if (overflowPinned) {
-    setOverflowPinnedElement(text);
-    return null;
-  }
-  setOverflowPinnedElement(null);
-  return text;
-};
-const TextWithSelectRange = ({ selectRange, ...props }) => {
-  const defaultRef = useRef();
-  const ref = props.ref || defaultRef;
-  useInitialTextSelection(ref, selectRange);
-  return <Text ref={ref} {...props}></Text>;
-};
-const TextBasic = ({
-  spacing,
-  preventSpaceUnderlines = false,
-  boldStable,
-  holdSpaceForStyle,
-  capitalize,
-  children,
-  childrenOutsideFlow,
-  ...rest
-}) => {
-  const defaultRef = useRef();
-  const ref = rest.ref || defaultRef;
   const defaultSpace = preventSpaceUnderlines ? FAKE_SPACE : REGULAR_SPACE;
   const resolvedSpacing = spacing ?? defaultSpace;
   const boxProps = {
@@ -546,7 +468,87 @@ const TextBasic = ({
   );
 };
 
-/* https://jsfiddle.net/v5xzJ/4/ */
-export const TextForeground = (props) => {
-  return <Text {...props} className="navi_text_foreground" />;
+const TextSkeleton = ({ loading, children, ...props }) => {
+  // Three-level structure — see CSS comment on [data-skeleton] for details.
+  const skeletonOverlay = (
+    <span className="navi_text_skeleton_container" aria-hidden="true">
+      <span className="navi_text_skeleton_inset">
+        <span className="navi_text_skeleton" />
+      </span>
+    </span>
+  );
+  // When there are no children, inject a full-width placeholder so the element
+  // has measurable height driven by the current font-size/line-height, and the
+  // skeleton fills the available width instead of shrinking to a single char.
+  const hasChildren =
+    children !== null && children !== undefined && children !== false;
+  const innerChildren = hasChildren ? (
+    children
+  ) : (
+    <span
+      className="navi_text_skeleton_children_placeholder"
+      aria-hidden="true"
+    >
+      W
+    </span>
+  );
+  return (
+    <TextDispatcher
+      data-skeleton=""
+      data-loading={loading ? "" : undefined}
+      {...props}
+      skeleton={undefined}
+      childrenOutsideFlow={skeletonOverlay}
+    >
+      {innerChildren}
+    </TextDispatcher>
+  );
+};
+const TextOverflow = ({ noWrap, spacing, children, ...rest }) => {
+  const [OverflowPinnedElement, setOverflowPinnedElement] = useState(null);
+
+  return (
+    <TextDispatcher
+      flex
+      block
+      as="div"
+      nowWrap={noWrap}
+      pre={!noWrap}
+      // For paragraph we prefer to keep lines and only hide unbreakable long sections
+      preLine={rest.as === "p"}
+      {...rest}
+      overflowEllipsis={undefined}
+      data-text-overflow=""
+      spacing="pre"
+    >
+      <span className="navi_text_overflow_wrapper">
+        <OverflowPinnedElementContext.Provider value={setOverflowPinnedElement}>
+          <Text className="navi_text_overflow_text" spacing={spacing}>
+            {children}
+          </Text>
+        </OverflowPinnedElementContext.Provider>
+        {OverflowPinnedElement}
+      </span>
+    </TextDispatcher>
+  );
+};
+const TextOverflowPinned = ({ overflowPinned, ...props }) => {
+  const setOverflowPinnedElement = useContext(OverflowPinnedElementContext);
+  const text = <Text {...props} data-overflow-pinned=""></Text>;
+  if (!setOverflowPinnedElement) {
+    console.warn(
+      "<Text overflowPinned> declared outside a <Text overflowEllipsis>",
+    );
+    return text;
+  }
+  if (overflowPinned) {
+    setOverflowPinnedElement(text);
+    return null;
+  }
+  setOverflowPinnedElement(null);
+  return text;
+};
+const TextWithSelectRange = ({ ref, selectRange, ...props }) => {
+  useInitialTextSelection(ref, selectRange);
+  return <TextDispatcher {...props} ref={ref} selectRange={undefined} />;
 };
