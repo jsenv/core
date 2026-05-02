@@ -166,8 +166,10 @@ const css = /* css */ `
       var(--list-footer-height, 0px) + var(--list-scroll-padding-bottom, 0px)
     );
 
+    display: inline-flex;
     width: fit-content;
     max-width: 100%;
+    flex-direction: column;
     background-color: var(--x-list-background-color);
     /* Use a transparent real border to reserve layout space, and draw the
        visible border via outline (inset via negative offset). This way the
@@ -521,6 +523,7 @@ const ListUI = (props) => {
     children,
     popover,
     expandX,
+    expand,
     maxHeight,
     onListVisibleItemsChange,
     virtualItemHeight,
@@ -610,7 +613,7 @@ const ListUI = (props) => {
           noMatchFallback={noMatchFallback}
           searchText={searchText}
           separator={separator}
-          expandX={expandX}
+          expandX={expandX || expand}
           {...listProps}
           tracker={tracker}
           renderWindow={renderWindow}
@@ -633,6 +636,7 @@ const ListUI = (props) => {
     searchText,
     separator,
     expandX,
+    expand,
     renderWindow,
     children,
   ]);
@@ -646,8 +650,9 @@ const ListUI = (props) => {
       ref={containerRef}
       baseClassName="navi_list_container"
       popover={popover}
-      data-expand-x={expandX ? "" : undefined}
+      data-expand-x={expandX || expand ? "" : undefined}
       expandX={expandX}
+      expand={expand}
       maxHeight={maxHeight}
       styleCSSVars={LIST_STYLE_CSS_VARS}
       pseudoClasses={LIST_PSEUDO_CLASSES}
