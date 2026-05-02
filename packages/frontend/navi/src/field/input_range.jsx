@@ -13,6 +13,7 @@ import { useExecuteAction } from "../action/use_execute_action.js";
 import { Box } from "../box/box.jsx";
 import { LoaderBackground } from "../graphic/loader/loader_background.jsx";
 import { useAutoFocus } from "../utils/focus/use_auto_focus.js";
+import { useAccentColorAttributes } from "../utils/use_accent_color_attributes.js";
 import { useStableCallback } from "../utils/use_stable_callback.js";
 import { fieldPropSet } from "./field_prop_set.js";
 import {
@@ -103,6 +104,15 @@ const css = /* css */ `
       --track-border-color-disabled: var(--border-color-disabled);
       --fill-color-disabled: #cbcbcb;
       --thumb-color-disabled: #cbcbcb;
+    }
+  }
+
+  .navi_input_range {
+    &[data-accent-very-light] {
+      --background-color: rgba(0, 0, 0, 0.15);
+      --track-border-color: rgba(0, 0, 0, 0.25);
+      --fill-color-hover: color-mix(in srgb, var(--fill-color) 80%, black);
+      --thumb-color-hover: color-mix(in srgb, var(--thumb-color) 80%, black);
     }
   }
 
@@ -341,7 +351,12 @@ const InputRangeBasic = (props) => {
     autoSelect,
   });
   const remainingProps = useConstraints(ref, rest);
+  const { accentColor } = remainingProps;
 
+  const boxRef = useRef();
+  useAccentColorAttributes(boxRef, accentColor, {
+    elementSelector: ".navi_input_range_accent_probe",
+  });
   const innerOnInput = useStableCallback(onInput);
   const focusProxyId = `input_range_focus_proxy_${useId()}`;
   const inertButFocusable = innerReadOnly && !innerDisabled;
@@ -442,9 +457,21 @@ const InputRangeBasic = (props) => {
       hasChildFunction
       baseChildPropSet={RangeChildPropSet}
       {...remainingProps}
-      ref={undefined}
+      ref={boxRef}
       autoFocus={undefined} // See use_auto_focus.js
     >
+      <span
+        className="navi_input_range_accent_probe"
+        aria-hidden="true"
+        style={{
+          position: "absolute",
+          width: 0,
+          height: 0,
+          backgroundColor: "var(--accent-color)",
+          visibility: "hidden",
+          pointerEvents: "none",
+        }}
+      />
       <LoaderBackground
         loading={innerLoading}
         color="var(--loader-color)"
