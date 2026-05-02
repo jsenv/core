@@ -735,6 +735,36 @@
                   </div>
                 </Box>
               </fieldset>
+              <fieldset style={{ background: "#1e1e1e" }}>
+                <legend style={{ color: "white" }}>White Theme</legend>
+                <Box row spacing="sm" alignX="start">
+                  <div className="range-group">
+                    <InputRange
+                      value="50"
+                      uiAction={() => {}}
+                      min="0"
+                      max="100"
+                      accentColor="white"
+                    />
+                    <div className="value-display" style={{ color: "white" }}>
+                      50
+                    </div>
+                  </div>
+                  <div className="range-group">
+                    <input
+                      type="range"
+                      value="50"
+                      onChange={() => {}}
+                      min="0"
+                      max="100"
+                      style={{ accentColor: "white" }}
+                    />
+                    <div className="value-display" style={{ color: "white" }}>
+                      50
+                    </div>
+                  </div>
+                </Box>
+              </fieldset>
             </Box>
           </div>
         );
