@@ -2084,6 +2084,9 @@ const normalizeStyle = (
   if (propertyName === "transform") {
     if (context === "js") {
       if (typeof value === "string") {
+        if (isCSSKeyword(value)) {
+          return value;
+        }
         // For js context, prefer objects
         return parseCSSTransform(value, normalizeStyle);
       }
@@ -2121,6 +2124,9 @@ const normalizeStyle = (
   if (propertyName === "background") {
     if (context === "js") {
       if (typeof value === "string") {
+        if (isCSSKeyword(value)) {
+          return value;
+        }
         // For js context, prefer objects
         return parseCSSBackground(value, {
           parseStyle,
@@ -2158,6 +2164,9 @@ const normalizeStyle = (
   if (propertyName === "border") {
     if (context === "js") {
       if (typeof value === "string") {
+        if (isCSSKeyword(value)) {
+          return value;
+        }
         // For js context, prefer objects
         return parseCSSBorder(value, element);
       }
@@ -2285,10 +2294,20 @@ const normalizeStyle = (
   }
 
   if (colorPropertySet.has(propertyName)) {
-    if (typeof value === "string" && isCSSFunction(value)) {
-      return value;
+    if (typeof value === "string") {
+      if (isCSSKeyword(value)) {
+        return value;
+      }
+      if (isCSSFunction(value)) {
+        return value;
+      }
     }
     const rgba = parseCSSColor(value, element);
+    if (rgba === null) {
+      // parseCSSColor could not parse the value (e.g. a CSS variable or unknown keyword)
+      // return as-is so the original string reaches the DOM unchanged
+      return value;
+    }
     if (context === "js") {
       return rgba;
     }
@@ -2306,6 +2325,9 @@ const stringifyStyle = (value, propertyName, element) => {
 
 const isCSSFunction = (value) => {
   return /^[a-z-]+\(/.test(value);
+};
+const isCSSKeyword = (value) => {
+  return globalCSSKeywordSet.has(value);
 };
 const normalizeNumber = (value, { unit, propertyName, preferedType }) => {
   if (typeof value === "string") {
@@ -3406,72 +3428,99 @@ const isSameColor = (color1, color2) => {
 
 /**
  * Returns `"white"` or `"black"`, whichever provides better contrast against
- * the given background color — mirroring the CSS `contrast-color()` function.
+ * the given background color, using OKLCH lightness (perceptually uniform).
  *
- * `"white"` is preferred when both colors yield the same contrast ratio.
+ * Uses a threshold of 0.5 on the OKLCH L axis (0–1 scale).
+ * Colors with L > threshold are considered light → return "black".
+ * Colors with L ≤ threshold are considered dark → return "white".
  *
  * @param {string} backgroundColor - CSS color value (hex, rgb, hsl, CSS variable, …)
  * @param {Element} [element] - DOM element used to resolve CSS variables / computed styles
+ * @param {number} [lightnessThreshold=0.5] - OKLCH L threshold (0–1). Below → "white", above → "black".
  * @returns {"white"|"black"}
  * @example
- * contrastColor("#1a202c")                 // "white"  (dark background)
- * contrastColor("#f5f5f5")                 // "black"  (light background)
- * contrastColor("var(--bg)", el)             // "white" or "black"
+ * contrastColor("#1a202c")    // "white"  (dark background)
+ * contrastColor("#f5f5f5")    // "black"  (light background)
+ * contrastColor("#e91e8c")    // "white"  (vivid pink, perceptually dark)
  */
-
-
-const contrastColor = (backgroundColor, element) => {
+const contrastColor = (
+  backgroundColor,
+  element,
+  lightnessThreshold = 0.5,
+) => {
   const resolvedBgColor = parseCSSColor(backgroundColor, element);
   if (!resolvedBgColor) {
     return "white";
   }
-
-  // Composite against white when the background has transparency so the
-  // luminance reflects what the user actually sees.
   const [r, g, b] =
     resolvedBgColor[3] === 1
       ? resolvedBgColor
       : compositeColor(resolvedBgColor, WHITE_RGBA);
-
-  const bgLuminance = getLuminance(r, g, b);
-
-  // One luminance comparison replaces two full contrast-ratio computations.
-  // White wins (or ties) when bgLuminance <= the crossover point where both
-  // colors yield identical ratios:
-  //   contrastWithWhite = contrastWithBlack
-  //   1.05 / (L + 0.05) = (L + 0.05) / 0.05
-  //   L = √(1.05 × 0.05) − 0.05  ≈ 0.179
-  return bgLuminance <= EQUAL_CONTRAST_LUMINANCE ? "white" : "black";
+  const L = rgbToOklchL(r, g, b);
+  return L <= lightnessThreshold ? "white" : "black";
 };
 
-// Luminance threshold at which white and black yield the same contrast ratio
-// against a background. Below → white wins or ties; above → black wins.
-const EQUAL_CONTRAST_LUMINANCE = Math.sqrt(1.05 * 0.05) - 0.05;
-const WHITE_RGBA = [255, 255, 255, 1];
-
 /**
- * Resolves the luminance value of a CSS color
+ * Resolves the OKLCH lightness of a CSS color (perceptually uniform, 0–1 scale).
+ *
  * @param {string} color - CSS color value (hex, rgb, hsl, CSS variable, etc.)
  * @param {Element} [element] - DOM element to resolve CSS variables against
- * @returns {number|undefined} Relative luminance (0-1) according to WCAG formula, or undefined if color cannot be resolved
+ * @returns {number|null} OKLCH L value (0–1), or null if color cannot be resolved
  * @example
- * // Get luminance of a hex color
- * resolveColorLuminance("#ff0000") // returns ~0.213 (red)
- *
- * // Get luminance of a CSS variable
- * resolveColorLuminance("var(--primary-color)", element) // returns luminance value or undefined
- *
- * // Use for light/dark classification
- * const luminance = resolveColorLuminance("#2ecc71");
- * const isLight = luminance > 0.3; // true for light colors, false for dark
+ * resolveOklchLightness("#e91e8c") // ~0.56  (vivid pink feels medium-bright)
+ * resolveOklchLightness("#4476ff") // ~0.53  (blue)
+ * resolveOklchLightness("#1a202c") // ~0.22  (dark background)
+ */
+const resolveOklchLightness = (color, element) => {
+  const rgba = parseCSSColor(color, element);
+  if (!rgba) {
+    return null;
+  }
+  const [r, g, b] = rgba;
+  return rgbToOklchL(r, g, b);
+};
+
+/**
+ * Resolves the WCAG relative luminance of a CSS color (kept for backwards compatibility).
+ * @deprecated Prefer resolveOklchLightness for perceptually uniform results.
  */
 const resolveColorLuminance = (color, element) => {
   const rgba = parseCSSColor(color, element);
   if (!rgba) {
-    return undefined;
+    return null;
   }
   const [r, g, b] = rgba;
   return getLuminance(r, g, b);
+};
+
+const WHITE_RGBA = [255, 255, 255, 1];
+
+/**
+ * Converts sRGB (0–255 each) to OKLCH lightness L (0–1).
+ * Implements the sRGB → Linear sRGB → XYZ D65 → OKLab → L pipeline.
+ */
+const rgbToOklchL = (r, g, b) => {
+  // sRGB → linear
+  const toLinear = (c) => {
+    c = c / 255;
+    return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  };
+  const lr = toLinear(r);
+  const lg = toLinear(g);
+  const lb = toLinear(b);
+
+  // Linear sRGB → LMS (Oklab M1 matrix)
+  const l = 0.4122214708 * lr + 0.5363325363 * lg + 0.0514459929 * lb;
+  const m = 0.2119034982 * lr + 0.6806995451 * lg + 0.1073969566 * lb;
+  const s = 0.0883024619 * lr + 0.2817188376 * lg + 0.6299787005 * lb;
+
+  // Cube root
+  const l_ = Math.cbrt(l);
+  const m_ = Math.cbrt(m);
+  const s_ = Math.cbrt(s);
+
+  // LMS → OKLab L
+  return 0.2104542553 * l_ + 0.793617785 * m_ - 0.0040720468 * s_;
 };
 
 /**
@@ -13184,4 +13233,4 @@ const useResizeStatus = (elementRef, { as = "number" } = {}) => {
   };
 };
 
-export { EASING, activeElementSignal, addActiveElementEffect, addAttributeEffect, allowWheelThrough, appendStyles, canInterceptKeys, captureScrollState, contrastColor, createBackgroundColorTransition, createBackgroundTransition, createBorderRadiusTransition, createBorderTransition, createDragGestureController, createDragToMoveGestureController, createGroupTransitionController, createHeightTransition, createIterableWeakSet, createOpacityTransition, createPubSub, createStyleController, createTimelineTransition, createTransition, createTranslateXTransition, createValueEffect, createWidthTransition, cubicBezier, dragAfterThreshold, elementIsFocusable, elementIsVisibleForFocus, elementIsVisuallyVisible, findAfter, findAncestor, findBefore, findDescendant, findFocusable, getAvailableHeight, getAvailableWidth, getBackground, getBackgroundColor, getBorder, getBorderRadius, getBorderSizes, getContrastRatio, getDefaultStyles, getDragCoordinates, getDropTargetInfo, getElementSignature, getFirstVisuallyVisibleAncestor, getFocusVisibilityInfo, getHeight, getHeightWithoutTransition, getInnerHeight, getInnerWidth, getLuminance, getMarginSizes, getMaxHeight, getMaxWidth, getMinHeight, getMinWidth, getOpacity, getOpacityWithoutTransition, getPaddingSizes, getPositionedParent, getPreferedColorScheme, getScrollBox, getScrollContainer, getScrollContainerSet, getScrollRelativeRect, getSelfAndAncestorScrolls, getStyle, getTranslateX, getTranslateXWithoutTransition, getTranslateY, getVisuallyVisibleInfo, getWidth, getWidthWithoutTransition, hasCSSSizeUnit, initFlexDetailsSet, initFocusGroup, initPositionSticky, isSameColor, isScrollable, measureScrollbar, mergeOneStyle, mergeTwoStyles, normalizeStyles, parseStyle, pickPositionRelativeTo, prefersDarkColors, prefersLightColors, preventFocusNav, preventFocusNavViaKeyboard, preventIntermediateScrollbar, resolveCSSColor, resolveCSSSize, resolveColorLuminance, scrollIntoViewScoped, scrollIntoViewWithStickyAwareness, setAttribute, setAttributes, setStyles, startDragToResizeGesture, stickyAsRelativeCoords, stringifyStyle, trapFocusInside, trapScrollInside, useActiveElement, useAvailableHeight, useAvailableWidth, useMaxHeight, useMaxWidth, useResizeStatus, visibleRectEffect };
+export { EASING, activeElementSignal, addActiveElementEffect, addAttributeEffect, allowWheelThrough, appendStyles, canInterceptKeys, captureScrollState, contrastColor, createBackgroundColorTransition, createBackgroundTransition, createBorderRadiusTransition, createBorderTransition, createDragGestureController, createDragToMoveGestureController, createGroupTransitionController, createHeightTransition, createIterableWeakSet, createOpacityTransition, createPubSub, createStyleController, createTimelineTransition, createTransition, createTranslateXTransition, createValueEffect, createWidthTransition, cubicBezier, dragAfterThreshold, elementIsFocusable, elementIsVisibleForFocus, elementIsVisuallyVisible, findAfter, findAncestor, findBefore, findDescendant, findFocusable, getAvailableHeight, getAvailableWidth, getBackground, getBackgroundColor, getBorder, getBorderRadius, getBorderSizes, getContrastRatio, getDefaultStyles, getDragCoordinates, getDropTargetInfo, getElementSignature, getFirstVisuallyVisibleAncestor, getFocusVisibilityInfo, getHeight, getHeightWithoutTransition, getInnerHeight, getInnerWidth, getLuminance, getMarginSizes, getMaxHeight, getMaxWidth, getMinHeight, getMinWidth, getOpacity, getOpacityWithoutTransition, getPaddingSizes, getPositionedParent, getPreferedColorScheme, getScrollBox, getScrollContainer, getScrollContainerSet, getScrollRelativeRect, getSelfAndAncestorScrolls, getStyle, getTranslateX, getTranslateXWithoutTransition, getTranslateY, getVisuallyVisibleInfo, getWidth, getWidthWithoutTransition, hasCSSSizeUnit, initFlexDetailsSet, initFocusGroup, initPositionSticky, isSameColor, isScrollable, measureScrollbar, mergeOneStyle, mergeTwoStyles, normalizeStyles, parseStyle, pickPositionRelativeTo, prefersDarkColors, prefersLightColors, preventFocusNav, preventFocusNavViaKeyboard, preventIntermediateScrollbar, resolveCSSColor, resolveCSSSize, resolveColorLuminance, resolveOklchLightness, scrollIntoViewScoped, scrollIntoViewWithStickyAwareness, setAttribute, setAttributes, setStyles, startDragToResizeGesture, stickyAsRelativeCoords, stringifyStyle, trapFocusInside, trapScrollInside, useActiveElement, useAvailableHeight, useAvailableWidth, useMaxHeight, useMaxWidth, useResizeStatus, visibleRectEffect };

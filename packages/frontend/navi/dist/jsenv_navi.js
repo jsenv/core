@@ -3,7 +3,7 @@ import { isValidElement, createContext, h, options, toChildArray, render, cloneE
 import { useErrorBoundary, useLayoutEffect, useEffect, useContext, useMemo, useRef, useState, useCallback, useImperativeHandle, useId } from "preact/hooks";
 import { jsxs, jsx, Fragment } from "preact/jsx-runtime";
 import { signal, effect, computed, batch, useSignal } from "@preact/signals";
-import { createIterableWeakSet, mergeOneStyle, stringifyStyle, createPubSub, mergeTwoStyles, normalizeStyles, createGroupTransitionController, getElementSignature, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, findBefore, findAfter, createValueEffect, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, allowWheelThrough, resolveCSSColor, createStyleController, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, resolveCSSSize, canInterceptKeys, activeElementSignal, resolveColorLuminance, contrastColor, hasCSSSizeUnit, initFocusGroup, elementIsFocusable, getScrollContainer, scrollIntoViewScoped, findFocusable, trapScrollInside, trapFocusInside, dragAfterThreshold, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
+import { createIterableWeakSet, mergeOneStyle, stringifyStyle, createPubSub, mergeTwoStyles, normalizeStyles, createGroupTransitionController, getElementSignature, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, findBefore, findAfter, createValueEffect, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, allowWheelThrough, resolveCSSColor, createStyleController, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, resolveCSSSize, canInterceptKeys, activeElementSignal, hasCSSSizeUnit, resolveOklchLightness, contrastColor, initFocusGroup, elementIsFocusable, scrollIntoViewScoped, findFocusable, trapScrollInside, trapFocusInside, dragAfterThreshold, getScrollContainer, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
 export { contrastColor } from "@jsenv/dom";
 import { prefixFirstAndIndentRemainingLines } from "@jsenv/humanize";
 import { createValidity } from "@jsenv/validity";
@@ -6286,6 +6286,7 @@ const FLOW_PROPS = {
   block: () => {},
   flex: () => {},
   grid: () => {},
+  gridTemplateColumns: PASS_THROUGH,
   row: () => {},
   column: () => {},
 };
@@ -6560,7 +6561,9 @@ const TYPO_PROPS = {
   underlineColor: applyOnCSSProp("textDecorationColor"),
   textShadow: PASS_THROUGH,
   lineHeight: PASS_THROUGH,
-  color: PASS_THROUGH,
+  color: (value) => {
+    return { color: resolveColorKeyword(value) };
+  },
   noWrap: applyToCssPropWhenTruthy("whiteSpace", "nowrap", "normal"),
   pre: applyToCssPropWhenTruthy("whiteSpace", "pre", "normal"),
   preWrap: applyToCssPropWhenTruthy("whiteSpace", "pre-wrap", "normal"),
@@ -6838,6 +6841,16 @@ const isSizeSpacingScaleKey = (key) => {
 };
 const resolveSpacingSize = (size, property = "padding") => {
   return stringifyStyle(SIZE_MAP[size] || size, property);
+};
+
+const COLOR_KEYWORD_MAP = {
+  secondary: "var(--navi-color-secondary)",
+  emphasis: "var(--navi-color-emphasis)",
+  discrete: "var(--navi-color-discrete)",
+  hint: "var(--navi-color-hint)",
+};
+const resolveColorKeyword = (value) => {
+  return COLOR_KEYWORD_MAP[value] || value;
 };
 
 const DEFAULT_DISPLAY_BY_TAG_NAME = {
@@ -7202,66 +7215,501 @@ const listenInputValueChange = (input, callback) => {
   return teardown;
 };
 
-const pressedElements = new WeakSet();
+/**
+ * Navi uses three categories of custom events:
+ *
+ * 1. **Internal events** (`dispatchInternalCustomEvent`) — a component communicates
+ *    with other navi components internally. Not meant to be observed from outside.
+ *    They do not bubble so they stay contained within the subtree that handles them.
+ *    Names often reflect their internal nature (e.g. `navi_pseudo_state_request_check`).
+ *
+ * 2. **Public events** (`dispatchPublicCustomEvent`) — a component exposes information
+ *    about something that happened (e.g. `navi_list_select`). They bubble so any
+ *    ancestor can observe them. These are part of the public API and should be documented.
+ *
+ * 3. **Request events** (`dispatchCustomEvent`) — code *outside* a component asks it
+ *    to perform an action (e.g. `navi_list_request_open`). They are cancelable so the
+ *    component can signal whether it handled the request. Names are prefixed
+ *    with `request_` by convention.
+ */
 
-const PSEUDO_CLASSES = {
-  ":hover": {
-    attribute: "data-hover",
-    setup: (el, callback) => {
-      let onmouseenter = () => {
-        callback();
-      };
-      let onmouseleave = () => {
-        callback();
-      };
+/**
+ * Dispatches an internal event on `el`.
+ * Does not bubble — stays within the local subtree.
+ */
+const dispatchInternalCustomEvent = (
+  el,
+  customEventName,
+  customEventDetail,
+) => {
+  const customEvent = new CustomEvent(customEventName, {
+    detail: customEventDetail,
+  });
+  return el.dispatchEvent(customEvent);
+};
 
-      if (el.tagName === "LABEL") {
-        // input.matches(":hover") is true when hovering the label
-        // so when label is hovered/not hovered we need to recheck the input too
-        const recheckInput = () => {
-          if (el.htmlFor) {
-            const input = document.getElementById(el.htmlFor);
-            if (!input) {
-              // cannot find the input for this label in the DOM
-              return;
-            }
-            input.dispatchEvent(
-              new CustomEvent(NAVI_CHECK_PSEUDO_STATE_CUSTOM_EVENT),
-            );
-            return;
-          }
-          const input = el.querySelector("input, textarea, select");
+/**
+ * Dispatches a public event from `el`, announcing something that happened.
+ * Bubbles so any ancestor can observe it.
+ */
+const dispatchPublicCustomEvent = (
+  el,
+  customEventName,
+  customEventDetail,
+) => {
+  const customEvent = new CustomEvent(customEventName, {
+    detail: resolveEventDetail(customEventDetail),
+    bubbles: true,
+  });
+  return el.dispatchEvent(customEvent);
+};
+
+/**
+ * Dispatches a request event *at* `el`, asking it to perform an action.
+ * Cancelable — returns `false` if the component called `preventDefault()`,
+ * indicating it did not (or could not) handle the request.
+ * Names are conventionally prefixed with `request_` (e.g. `navi_list_request_open`).
+ */
+const dispatchCustomEvent = (el, customEventName, customEventDetail) => {
+  const customEvent = new CustomEvent(customEventName, {
+    detail: resolveEventDetail(customEventDetail),
+    cancelable: true,
+  });
+  const result = el.dispatchEvent(customEvent);
+  return result;
+};
+
+const resolveEventDetail = (customEventDetail) => {
+  const { event, ...rest } = customEventDetail ?? {};
+  let resolvedEvent;
+  if (event?.detail?.event !== undefined) {
+    resolvedEvent = event.detail.event;
+  } else if (event !== undefined) {
+    resolvedEvent = event;
+  }
+  return { ...rest, event: resolvedEvent };
+};
+
+const requestPseudoStateCheck = (element, detail) => {
+  dispatchInternalCustomEvent(
+    element,
+    "navi_pseudo_state_request_check",
+    detail,
+  );
+};
+const NAVI_PSEUDO_STATE_CUSTOM_EVENT = "navi_pseudo_state";
+const dispatchPseudoStateCustomEvent = (element, value, oldValue) => {
+  dispatchInternalCustomEvent(element, NAVI_PSEUDO_STATE_CUSTOM_EVENT, {
+    pseudoState: value,
+    oldPseudoState: oldValue,
+  });
+};
+
+const PSEUDO_CLASSES = {};
+Object.assign(PSEUDO_CLASSES, {
+  ":valid": {
+    attribute: "data-valid",
+    test: (el) => el.matches(":valid"),
+  },
+  ":invalid": {
+    attribute: "data-invalid",
+    test: (el) => el.matches(":invalid"),
+  },
+  ":visited": {
+    attribute: "data-visited",
+  },
+});
+const definePseudoClass = (pseudoClass, definition) => {
+  PSEUDO_CLASSES[pseudoClass] = definition;
+};
+
+definePseudoClass(":hover", {
+  attribute: "data-hover",
+  setup: (el, callback) => {
+    let onmouseenter = () => {
+      callback();
+    };
+    let onmouseleave = () => {
+      callback();
+    };
+
+    if (el.tagName === "LABEL") {
+      // input.matches(":hover") is true when hovering the label
+      // so when label is hovered/not hovered we need to recheck the input too
+      const recheckInput = (e) => {
+        if (el.htmlFor) {
+          const input = document.getElementById(el.htmlFor);
           if (!input) {
-            // label does not contain an input
+            // cannot find the input for this label in the DOM
             return;
           }
-          input.dispatchEvent(
-            new CustomEvent(NAVI_CHECK_PSEUDO_STATE_CUSTOM_EVENT),
-          );
-        };
-        onmouseenter = () => {
-          callback();
-          recheckInput();
-        };
-        onmouseleave = () => {
-          callback();
-          recheckInput();
-        };
-      }
+          requestPseudoStateCheck(input, { event: e });
+          return;
+        }
+        const input = el.querySelector("input, textarea, select");
+        if (!input) {
+          // label does not contain an input
+          return;
+        }
+        requestPseudoStateCheck(input, { event: e });
+      };
+      onmouseenter = (e) => {
+        callback();
+        recheckInput(e);
+      };
+      onmouseleave = (e) => {
+        callback();
+        recheckInput(e);
+      };
+    }
 
-      el.addEventListener("mouseenter", onmouseenter);
-      el.addEventListener("mouseleave", onmouseleave);
+    el.addEventListener("mouseenter", onmouseenter);
+    el.addEventListener("mouseleave", onmouseleave);
+    return () => {
+      el.removeEventListener("mouseenter", onmouseenter);
+      el.removeEventListener("mouseleave", onmouseleave);
+    };
+  },
+  test: (el) => el.matches(":hover"),
+});
+definePseudoClass(":disabled", {
+  attribute: "data-disabled",
+  add: (el) => {
+    if (
+      el.tagName === "BUTTON" ||
+      el.tagName === "INPUT" ||
+      el.tagName === "SELECT" ||
+      el.tagName === "TEXTAREA"
+    ) {
+      el.disabled = true;
+    }
+  },
+  remove: (el) => {
+    if (
+      el.tagName === "BUTTON" ||
+      el.tagName === "INPUT" ||
+      el.tagName === "SELECT" ||
+      el.tagName === "TEXTAREA"
+    ) {
+      el.disabled = false;
+    }
+  },
+});
+definePseudoClass(":read-only", {
+  attribute: "data-readonly",
+  add: (el) => {
+    if (
+      el.tagName === "INPUT" ||
+      el.tagName === "SELECT" ||
+      el.tagName === "TEXTAREA"
+    ) {
+      if (el.type === "checkbox" || el.type === "radio") {
+        // there is no readOnly for checkboxes/radios
+        return;
+      }
+      el.readOnly = true;
+    }
+  },
+  remove: (el) => {
+    if (
+      el.tagName === "INPUT" ||
+      el.tagName === "SELECT" ||
+      el.tagName === "TEXTAREA"
+    ) {
+      if (el.type === "checkbox" || el.type === "radio") {
+        // there is no readOnly for checkboxes/radios
+        return;
+      }
+      el.readOnly = false;
+    }
+  },
+});
+definePseudoClass(":checked", {
+  attribute: "data-checked",
+  setup: (el, callback) => {
+    if (el.type === "checkbox") {
+      // Listen to user interactions
+      el.addEventListener("input", callback);
+      // Intercept programmatic changes to .checked property
+      const originalDescriptor = Object.getOwnPropertyDescriptor(
+        HTMLInputElement.prototype,
+        "checked",
+      );
+      Object.defineProperty(el, "checked", {
+        get: originalDescriptor.get,
+        set(value) {
+          originalDescriptor.set.call(this, value);
+          callback();
+        },
+        configurable: true,
+      });
       return () => {
-        el.removeEventListener("mouseenter", onmouseenter);
-        el.removeEventListener("mouseleave", onmouseleave);
+        // Restore original property descriptor
+        Object.defineProperty(el, "checked", originalDescriptor);
+        el.removeEventListener("input", callback);
+      };
+    }
+    if (el.type === "radio") {
+      // Listen to changes on the radio group
+      const radioSet =
+        el.closest("[data-radio-list], fieldset, form") || document;
+      radioSet.addEventListener("input", callback);
+
+      // Intercept programmatic changes to .checked property
+      const originalDescriptor = Object.getOwnPropertyDescriptor(
+        HTMLInputElement.prototype,
+        "checked",
+      );
+      Object.defineProperty(el, "checked", {
+        get: originalDescriptor.get,
+        set(value) {
+          originalDescriptor.set.call(this, value);
+          callback();
+        },
+        configurable: true,
+      });
+      return () => {
+        radioSet.removeEventListener("input", callback);
+        // Restore original property descriptor
+        Object.defineProperty(el, "checked", originalDescriptor);
+      };
+    }
+    if (el.tagName === "INPUT") {
+      el.addEventListener("input", callback);
+      return () => {
+        el.removeEventListener("input", callback);
+      };
+    }
+    return () => {};
+  },
+  test: (el) => el.matches(":checked"),
+});
+definePseudoClass(":active", {
+  attribute: "data-active",
+  setup: (el, callback) => {
+    // I'ts recommended to use :-navi-pressed over :active for interactive elements.
+    const onPointerDown = () => {
+      const onRelease = () => {
+        document.removeEventListener("pointercancel", onRelease, true);
+        document.removeEventListener("pointerup", onRelease, true);
+        callback();
+      };
+      document.addEventListener("pointercancel", onRelease, true);
+      document.addEventListener("pointerup", onRelease, true);
+      callback();
+    };
+    el.addEventListener("pointerdown", onPointerDown);
+    return () => {
+      el.removeEventListener("pointerdown", onPointerDown);
+    };
+  },
+  test: (el) => el.matches(":active"),
+});
+{
+  // We implement :focus and :focus-visible with enriched semantics:
+  // an element is considered focused not only when it natively has focus, but also
+  // when a "focus proxy" element has focus (e.g. a read-only range input delegates
+  // focus to a sibling span) or when a controlling element has focus (e.g. a combobox
+  // input with aria-controls pointing to a listbox — the listbox should appear focused
+  // while the input is focused).
+  //
+  // We intentionally reuse the native :focus / :focus-visible names rather than
+  // introducing new navi-specific pseudo-classes (e.g. :-navi-focus). This is a
+  // deliberate exception: all existing CSS and code written as [data-focus] or
+  // [data-focus-visible] automatically benefits from the enriched behavior without
+  // any changes. A separate navi-specific class would require updating every
+  // component.
+  //
+  // When a controller element (e.g. combobox input) gains or loses focus,
+  // notify the elements it controls via aria-controls so they re-check their focus state.
+  const notifyAriaControlled = (el, e) => {
+    const controlledIds = el.getAttribute("aria-controls");
+    if (!controlledIds) {
+      return;
+    }
+    for (const id of controlledIds.split(" ")) {
+      const controlled = document.getElementById(id);
+      if (controlled) {
+        requestPseudoStateCheck(controlled, { event: e });
+      }
+    }
+  };
+  // Check if any element whose aria-controls includes el's id currently has focus.
+  const isControlledByFocusedElement = (
+    el,
+    { requireFocusVisible = false } = {},
+  ) => {
+    const id = el.id;
+    if (!id) {
+      return false;
+    }
+    const controllers = document.querySelectorAll(`[aria-controls~="${id}"]`);
+    for (const controller of controllers) {
+      // If the controller is inside the element it controls, the element already
+      // receives native :focus/:focus-within — no need to inherit focus from it.
+      if (el.contains(controller)) {
+        continue;
+      }
+      const pseudoClass = requireFocusVisible ? ":focus-visible" : ":focus";
+      if (controller.matches(pseudoClass)) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  definePseudoClass(":focus", {
+    attribute: "data-focus",
+    setup: (el, callback) => {
+      const onFocusChange = (e) => {
+        callback();
+        notifyAriaControlled(el, e);
+      };
+      el.addEventListener("focusin", onFocusChange);
+      el.addEventListener("focusout", onFocusChange);
+      return () => {
+        el.removeEventListener("focusin", onFocusChange);
+        el.removeEventListener("focusout", onFocusChange);
       };
     },
-    test: (el) => el.matches(":hover"),
-  },
-  ":active": {
-    attribute: "data-active",
+    test: (el) => {
+      if (el.matches(":focus")) {
+        return true;
+      }
+      const focusProxy = el.getAttribute("focus-proxy");
+      if (focusProxy) {
+        return document.querySelector(`#${focusProxy}`).matches(":focus");
+      }
+      if (isControlledByFocusedElement(el)) {
+        return true;
+      }
+      return false;
+    },
+  });
+  definePseudoClass(":focus-visible", {
+    attribute: "data-focus-visible",
     setup: (el, callback) => {
-      // It might be tempting to use el.setPointerCapture() here so that pointerup
+      const onFocusChange = (e) => {
+        callback();
+        notifyAriaControlled(el, e);
+      };
+      document.addEventListener("keydown", callback);
+      document.addEventListener("keyup", callback);
+      el.addEventListener("focusin", onFocusChange);
+      el.addEventListener("focusout", onFocusChange);
+      return () => {
+        document.removeEventListener("keydown", callback);
+        document.removeEventListener("keyup", callback);
+        el.removeEventListener("focusin", onFocusChange);
+        el.removeEventListener("focusout", onFocusChange);
+      };
+    },
+    test: (el) => {
+      if (el.matches(":focus-visible")) {
+        return true;
+      }
+      const focusProxy = el.getAttribute("focus-proxy");
+      if (focusProxy) {
+        return document
+          .querySelector(`#${focusProxy}`)
+          .matches(":focus-visible");
+      }
+      if (isControlledByFocusedElement(el, { requireFocusVisible: true })) {
+        return true;
+      }
+      return false;
+    },
+  });
+  definePseudoClass(":focus-within", {
+    attribute: "data-focus-within",
+    setup: (el, callback) => {
+      const onFocusChange = (e) => {
+        callback();
+        notifyAriaControlled(el, e);
+      };
+      el.addEventListener("focusin", onFocusChange);
+      el.addEventListener("focusout", onFocusChange);
+      return () => {
+        el.removeEventListener("focusin", onFocusChange);
+        el.removeEventListener("focusout", onFocusChange);
+      };
+    },
+    test: (el) => {
+      if (el.matches(":focus-within")) {
+        return true;
+      }
+      if (isControlledByFocusedElement(el)) {
+        return true;
+      }
+      return false;
+    },
+  });
+}
+
+Object.assign(PSEUDO_CLASSES, {
+  ":-navi-pointed": {
+    attribute: "data-pointed",
+  },
+  ":-navi-pointed-by-mouse": {
+    attribute: "data-pointed-by-mouse",
+  },
+  ":-navi-pointed-by-keyboard": {
+    attribute: "data-pointed-by-keyboard",
+  },
+  ":-navi-pointed-by-proxy": {
+    attribute: "data-pointed-by-proxy",
+  },
+  ":-navi-selected": {
+    attribute: "data-selected",
+  },
+  ":-navi-loading": {
+    attribute: "data-loading",
+  },
+  ":-navi-status-info": {
+    attribute: "data-status-info",
+  },
+  ":-navi-status-success": {
+    attribute: "data-status-success",
+  },
+  ":-navi-status-warning": {
+    attribute: "data-status-warning",
+  },
+  ":-navi-status-error": {
+    attribute: "data-status-error",
+  },
+  ":-navi-expanded": {
+    attribute: "data-expanded",
+  },
+  ":-navi-void": {
+    attribute: "data-void",
+  },
+  "::highlight": {},
+});
+definePseudoClass(":-navi-has-value", {
+  attribute: "data-has-value",
+  setup: (el, callback) => {
+    return listenInputValue(el, callback);
+  },
+  test: (el) => {
+    if (el.value === "") {
+      return false;
+    }
+    return true;
+  },
+});
+{
+  const pressedElements = new WeakSet();
+  definePseudoClass(":-navi-pressed", {
+    attribute: "data-pressed",
+    setup: (el, callback) => {
+      // Prefer :-navi-pressed over :active for interactive elements because:
+      // - :active only tracks the primary (left) button; right-click and touch
+      //   long-press do not trigger :active reliably across browsers.
+      // - :-navi-pressed explicitly ignores non-primary buttons (e.g. right-click)
+      //   and correctly clears pressed state when a context menu opens on long-press,
+      //   which would otherwise leave the element stuck in a pressed appearance.
+
+      // Note: it might be tempting to use el.setPointerCapture() here so that pointerup
       // always fires on el regardless of where the pointer is released. However,
       // pointer capture routes all subsequent pointer events to the capturing element,
       // which means any other element in the tree that expects to receive pointerup,
@@ -7272,31 +7720,6 @@ const PSEUDO_CLASSES = {
       // To avoid forcing every such element to declare an opt-out attribute
       // (e.g. navi-own-pointer-capture) we simply listen on document instead,
       // which is safe and does not interfere with anyone else's event flow.
-      const onPointerDown = () => {
-        const onRelease = () => {
-          document.removeEventListener("pointercancel", onRelease, true);
-          document.removeEventListener("pointerup", onRelease, true);
-          callback();
-        };
-        document.addEventListener("pointercancel", onRelease, true);
-        document.addEventListener("pointerup", onRelease, true);
-        callback();
-      };
-      el.addEventListener("pointerdown", onPointerDown);
-      return () => {
-        el.removeEventListener("pointerdown", onPointerDown);
-      };
-    },
-    test: (el) => el.matches(":active"),
-  },
-  ":-navi-pressed": {
-    attribute: "data-pressed",
-    setup: (el, callback) => {
-      // Same reasoning as :active above: setPointerCapture is avoided because it
-      // hijacks all subsequent pointer events and can break elements that rely on
-      // receiving their own pointerup/mouseup/click after a pointerdown, including
-      // <label> elements and third-party code. Listening on document is the safe
-      // alternative.
       const onPointerDown = (e) => {
         if (e.button !== 0) {
           // only left pointer (mouse left click, touch, pen)
@@ -7336,240 +7759,8 @@ const PSEUDO_CLASSES = {
       };
     },
     test: (el) => pressedElements.has(el),
-  },
-  ":visited": {
-    attribute: "data-visited",
-  },
-  ":checked": {
-    attribute: "data-checked",
-    setup: (el, callback) => {
-      if (el.type === "checkbox") {
-        // Listen to user interactions
-        el.addEventListener("input", callback);
-        // Intercept programmatic changes to .checked property
-        const originalDescriptor = Object.getOwnPropertyDescriptor(
-          HTMLInputElement.prototype,
-          "checked",
-        );
-        Object.defineProperty(el, "checked", {
-          get: originalDescriptor.get,
-          set(value) {
-            originalDescriptor.set.call(this, value);
-            callback();
-          },
-          configurable: true,
-        });
-        return () => {
-          // Restore original property descriptor
-          Object.defineProperty(el, "checked", originalDescriptor);
-          el.removeEventListener("input", callback);
-        };
-      }
-      if (el.type === "radio") {
-        // Listen to changes on the radio group
-        const radioSet =
-          el.closest("[data-radio-list], fieldset, form") || document;
-        radioSet.addEventListener("input", callback);
-
-        // Intercept programmatic changes to .checked property
-        const originalDescriptor = Object.getOwnPropertyDescriptor(
-          HTMLInputElement.prototype,
-          "checked",
-        );
-        Object.defineProperty(el, "checked", {
-          get: originalDescriptor.get,
-          set(value) {
-            originalDescriptor.set.call(this, value);
-            callback();
-          },
-          configurable: true,
-        });
-        return () => {
-          radioSet.removeEventListener("input", callback);
-          // Restore original property descriptor
-          Object.defineProperty(el, "checked", originalDescriptor);
-        };
-      }
-      if (el.tagName === "INPUT") {
-        el.addEventListener("input", callback);
-        return () => {
-          el.removeEventListener("input", callback);
-        };
-      }
-      return () => {};
-    },
-    test: (el) => el.matches(":checked"),
-  },
-  ":focus": {
-    attribute: "data-focus",
-    setup: (el, callback) => {
-      el.addEventListener("focusin", callback);
-      el.addEventListener("focusout", callback);
-      return () => {
-        el.removeEventListener("focusin", callback);
-        el.removeEventListener("focusout", callback);
-      };
-    },
-    test: (el) => {
-      if (el.matches(":focus")) {
-        return true;
-      }
-      const focusProxy = el.getAttribute("focus-proxy");
-      if (focusProxy) {
-        return document.querySelector(`#${focusProxy}`).matches(":focus");
-      }
-      return false;
-    },
-  },
-  ":focus-visible": {
-    attribute: "data-focus-visible",
-    setup: (el, callback) => {
-      document.addEventListener("keydown", callback);
-      document.addEventListener("keyup", callback);
-      return () => {
-        document.removeEventListener("keydown", callback);
-        document.removeEventListener("keyup", callback);
-      };
-    },
-    test: (el) => {
-      if (el.matches(":focus-visible")) {
-        return true;
-      }
-      const focusProxy = el.getAttribute("focus-proxy");
-      if (focusProxy) {
-        return document
-          .querySelector(`#${focusProxy}`)
-          .matches(":focus-visible");
-      }
-      return false;
-    },
-  },
-  ":disabled": {
-    attribute: "data-disabled",
-    add: (el) => {
-      if (
-        el.tagName === "BUTTON" ||
-        el.tagName === "INPUT" ||
-        el.tagName === "SELECT" ||
-        el.tagName === "TEXTAREA"
-      ) {
-        el.disabled = true;
-      }
-    },
-    remove: (el) => {
-      if (
-        el.tagName === "BUTTON" ||
-        el.tagName === "INPUT" ||
-        el.tagName === "SELECT" ||
-        el.tagName === "TEXTAREA"
-      ) {
-        el.disabled = false;
-      }
-    },
-  },
-  ":read-only": {
-    attribute: "data-readonly",
-    add: (el) => {
-      if (
-        el.tagName === "INPUT" ||
-        el.tagName === "SELECT" ||
-        el.tagName === "TEXTAREA"
-      ) {
-        if (el.type === "checkbox" || el.type === "radio") {
-          // there is no readOnly for checkboxes/radios
-          return;
-        }
-        el.readOnly = true;
-      }
-    },
-    remove: (el) => {
-      if (
-        el.tagName === "INPUT" ||
-        el.tagName === "SELECT" ||
-        el.tagName === "TEXTAREA"
-      ) {
-        if (el.type === "checkbox" || el.type === "radio") {
-          // there is no readOnly for checkboxes/radios
-          return;
-        }
-        el.readOnly = false;
-      }
-    },
-  },
-  ":valid": {
-    attribute: "data-valid",
-    test: (el) => el.matches(":valid"),
-  },
-  ":invalid": {
-    attribute: "data-invalid",
-    test: (el) => el.matches(":invalid"),
-  },
-  "::highlight": {},
-  ":-navi-pointed": {
-    attribute: "data-pointed",
-  },
-  ":-navi-pointed-by-mouse": {
-    attribute: "data-pointed-by-mouse",
-  },
-  ":-navi-pointed-by-keyboard": {
-    attribute: "data-pointed-by-keyboard",
-  },
-  ":-navi-pointed-by-proxy": {
-    attribute: "data-pointed-by-proxy",
-  },
-  ":-navi-selected": {
-    attribute: "data-selected",
-  },
-  ":-navi-loading": {
-    attribute: "data-loading",
-  },
-  ":-navi-status-info": {
-    attribute: "data-status-info",
-  },
-  ":-navi-status-success": {
-    attribute: "data-status-success",
-  },
-  ":-navi-status-warning": {
-    attribute: "data-status-warning",
-  },
-  ":-navi-status-error": {
-    attribute: "data-status-error",
-  },
-  ":-navi-expanded": {
-    attribute: "data-expanded",
-  },
-  ":-navi-void": {
-    attribute: "data-void",
-  },
-  ":-navi-has-value": {
-    attribute: "data-has-value",
-    setup: (el, callback) => {
-      return listenInputValue(el, callback);
-    },
-    test: (el) => {
-      if (el.value === "") {
-        return false;
-      }
-      return true;
-    },
-  },
-};
-
-const NAVI_PSEUDO_STATE_CUSTOM_EVENT = "navi_pseudo_state";
-const NAVI_CHECK_PSEUDO_STATE_CUSTOM_EVENT = "navi_check_pseudo_state";
-const dispatchNaviPseudoStateEvent = (element, value, oldValue) => {
-  if (!element) {
-    return;
-  }
-  element.dispatchEvent(
-    new CustomEvent(NAVI_PSEUDO_STATE_CUSTOM_EVENT, {
-      detail: {
-        pseudoState: value,
-        oldPseudoState: oldValue,
-      },
-    }),
-  );
-};
+  });
+}
 
 const EMPTY_STATE = {};
 const initPseudoStyles = (
@@ -7592,7 +7783,7 @@ const initPseudoStyles = (
   const onStateChange = (value, oldValue) => {
     effect?.(value, oldValue);
     if (elementListeningPseudoState) {
-      dispatchNaviPseudoStateEvent(
+      dispatchPseudoStateCustomEvent(
         elementListeningPseudoState,
         value,
         oldValue,
@@ -7661,7 +7852,7 @@ const initPseudoStyles = (
     state = event.detail.pseudoState;
     onStateChange(state, oldState);
   });
-  element.addEventListener(NAVI_CHECK_PSEUDO_STATE_CUSTOM_EVENT, () => {
+  element.addEventListener("navi_pseudo_state_request_check", () => {
     checkPseudoClasses();
   });
 
@@ -8037,6 +8228,10 @@ const PSEUDO_CLASSES_DEFAULT = [];
 const PSEUDO_ELEMENTS_DEFAULT = [];
 const STYLE_CSS_VARS_DEFAULT = {};
 const PROPS_CSS_VARS_DEFAULT = {};
+// When only pseudoStateSelector is set (no visualSelector), the box owns its
+// visual identity. Only event handlers and these explicit props are forwarded
+// to the inner semantic/interactive child element.
+const PSEUDO_STATE_CHILD_PROP_SET = new Set(["tabIndex", "tabindex"]);
 const Box = props => {
   const {
     as = "div",
@@ -8331,14 +8526,21 @@ const Box = props => {
         return;
       }
       // not a style prop what do we do with it?
-      if (shouldForwardAllToChild) {
-        if (isPseudoStyle) ; else {
-          childForwardedProps[name] = value;
-        }
-      } else {
-        if (isPseudoStyle) {
+      // When pseudoStateSelector is set, the child element is the semantic/interactive one
+      // When both selectors are set the child IS the component (e.g. Button with scale
+      // transform) — forward everything so it behaves like a normal element.
+      // When only pseudoStateSelector is set, the box keeps its own visual identity
+      // (border, background, overflow…) and the child is just the interactive/semantic
+      // element inside it. Only event handlers (onXxx) belong on that child; everything
+      // else stays on the box.
+      if (isPseudoStyle) {
+        if (shouldForwardAllToChild) ; else {
           console.warn(`unsupported pseudo style key "${name}"`);
+          selfForwardedProps[name] = value;
         }
+      } else if (shouldForwardAllToChild) {
+        childForwardedProps[name] = value;
+      } else {
         selfForwardedProps[name] = value;
       }
       return;
@@ -8367,6 +8569,19 @@ const Box = props => {
       const isNaviAttribute = propName.startsWith("navi-");
       if (isNaviAttribute) {
         selfForwardedProps[propName] = propValue;
+        continue;
+      }
+      const isEventHandler = propName.startsWith("on");
+      if (isEventHandler) {
+        if (pseudoStateSelector) {
+          childForwardedProps[propName] = propValue;
+          continue;
+        }
+        selfForwardedProps[propName] = propValue;
+        continue;
+      }
+      if (pseudoStateSelector && PSEUDO_STATE_CHILD_PROP_SET.has(propName)) {
+        childForwardedProps[propName] = propValue;
         continue;
       }
       visitProp(propValue, propName, styleContext, boxStyles, "prop");
@@ -15904,50 +16119,50 @@ const useActionEvents = (
     }
 
     return addManyEventListeners(element, {
-      cancel: (e) => {
+      navi_cancel: (e) => {
         // cancel don't need to check for actionOrigin because
         // it's actually unrelated to a specific actions
         // in that sense it should likely be moved elsewhere as it's related to
         // interaction and constraint validation, not to a specific action
         onCancel?.(e, e.detail.reason);
       },
-      actionrequested: (e) => {
+      navi_action_requested: (e) => {
         if (e.detail.actionOrigin !== actionOrigin) {
           return;
         }
         onRequested?.(e);
       },
-      actionprevented: (e) => {
+      navi_action_prevented: (e) => {
         if (e.detail.actionOrigin !== actionOrigin) {
           return;
         }
         onPrevented?.(e);
       },
-      action: (e) => {
+      navi_action: (e) => {
         if (e.detail.actionOrigin !== actionOrigin) {
           return;
         }
         onAction?.(e);
       },
-      actionstart: (e) => {
+      navi_action_start: (e) => {
         if (e.detail.actionOrigin !== actionOrigin) {
           return;
         }
         onStart?.(e);
       },
-      actionabort: (e) => {
+      navi_action_abort: (e) => {
         if (e.detail.actionOrigin !== actionOrigin) {
           return;
         }
         onAbort?.(e);
       },
-      actionerror: (e) => {
+      navi_action_error: (e) => {
         if (e.detail.actionOrigin !== actionOrigin) {
           return;
         }
         onError?.(e.detail.error, e);
       },
-      actionend: onEnd,
+      navi_action_end: onEnd,
     });
   }, [
     actionOrigin,
@@ -16024,7 +16239,7 @@ installImportMetaCssBuild(import.meta);
  * - Centers in viewport when no anchor element provided or anchor is too big
  */
 
-const css$z = /* css */`
+const css$B = /* css */`
   @layer navi {
     .navi_callout {
       --callout-success-color: #4caf50;
@@ -16198,7 +16413,7 @@ const openCallout = (message, {
   showErrorStack,
   debug = false
 } = {}) => {
-  import.meta.css = [css$z, "@jsenv/navi/src/field/validation/callout/callout.js"];
+  import.meta.css = [css$B, "@jsenv/navi/src/field/validation/callout/callout.js"];
   const callout = {
     opened: true,
     close: null,
@@ -18082,9 +18297,12 @@ const requestAction = (
 
   // If validation failed, dispatch actionprevented and return
   if (!isValid) {
-    const actionPreventedCustomEvent = new CustomEvent("actionprevented", {
-      detail: customEventDetail,
-    });
+    const actionPreventedCustomEvent = new CustomEvent(
+      "navi_action_prevented",
+      {
+        detail: customEventDetail,
+      },
+    );
     elementForDispatch.dispatchEvent(actionPreventedCustomEvent);
     return false;
   }
@@ -18096,16 +18314,19 @@ const requestAction = (
   if (confirmMessage) {
     // eslint-disable-next-line no-alert
     if (!window.confirm(confirmMessage)) {
-      const actionPreventedCustomEvent = new CustomEvent("actionprevented", {
-        detail: customEventDetail,
-      });
+      const actionPreventedCustomEvent = new CustomEvent(
+        "navi_action_prevented",
+        {
+          detail: customEventDetail,
+        },
+      );
       elementForDispatch.dispatchEvent(actionPreventedCustomEvent);
       return false;
     }
   }
 
   // All good, dispatch the action
-  const actionCustomEvent = new CustomEvent("action", {
+  const actionCustomEvent = new CustomEvent("navi_action", {
     detail: customEventDetail,
   });
   elementForDispatch.dispatchEvent(actionCustomEvent);
@@ -18175,7 +18396,7 @@ const installCustomConstraintValidation = (
   }
 
   const dispatchCancelCustomEvent = (options) => {
-    const cancelEvent = new CustomEvent("cancel", options);
+    const cancelEvent = new CustomEvent("navi_cancel", options);
     element.dispatchEvent(cancelEvent);
   };
   const closeElementValidationMessage = (reason) => {
@@ -18234,14 +18455,7 @@ const installCustomConstraintValidation = (
 
     resetValidity({ fromRequestAction });
     for (const constraint of constraintSet) {
-      // Some components (Select, List) proxy their value through a hidden <input>
-      // identified by data-input-proxy. When present, constraints run against
-      // that proxy element so they can read standard properties like .value,
-      // .required, .name without needing to know about each component's internals.
-      const inputProxySelector = element.getAttribute("data-input-proxy");
-      const fieldForConstraint = inputProxySelector
-        ? (element.ownerDocument.querySelector(inputProxySelector) ?? element)
-        : element;
+      const fieldForConstraint = element;
       const constraintCleanupSet = new Set();
       const registerChange = (register) => {
         const registerResult = register(() => {
@@ -18440,11 +18654,16 @@ const installCustomConstraintValidation = (
   }
 
   checkValidity();
+
+  const resetOnInteraction = (e) => {
+    customMessageMap.clear();
+    closeElementValidationMessage(e.type);
+    checkValidity();
+  };
+
   {
-    const oninput = () => {
-      customMessageMap.clear();
-      closeElementValidationMessage("input_event");
-      checkValidity();
+    const oninput = (e) => {
+      resetOnInteraction(e);
     };
     element.addEventListener("input", oninput);
     addTeardown(() => {
@@ -18453,14 +18672,66 @@ const installCustomConstraintValidation = (
   }
 
   {
+    // When the user clicks the field (or the interactive element rendered in place of it,
+    // e.g. the .navi_select button for a hidden input), treat it as intent to fix the issue
+    // and dismiss the callout — unless the status is "error", which requires explicit action.
+    const interactionTarget = (() => {
+      const renderedBy = element.getAttribute("data-rendered-by");
+      if (renderedBy) {
+        return element.closest(renderedBy) || element;
+      }
+      return element;
+    })();
+    const onmousedown = (e) => {
+      if (!validationInterface.validationMessage) {
+        return;
+      }
+      if (failedConstraintInfo && failedConstraintInfo.status === "error") {
+        return;
+      }
+      resetOnInteraction(e);
+    };
+    interactionTarget.addEventListener("mousedown", onmousedown);
+    addTeardown(() => {
+      interactionTarget.removeEventListener("mousedown", onmousedown);
+    });
+  }
+
+  check_on_hidden_input_value: {
+    // Hidden inputs (used by Select, List) don't fire "input" or "change" events
+    // when their value is set programmatically. We intercept the value setter to
+    // detect those changes and re-run validation.
+    if (element.type !== "hidden") {
+      break check_on_hidden_input_value;
+    }
+    const nativeDescriptor = Object.getOwnPropertyDescriptor(
+      HTMLInputElement.prototype,
+      "value",
+    );
+    Object.defineProperty(element, "value", {
+      get() {
+        return nativeDescriptor.get.call(this);
+      },
+      set(newValue) {
+        nativeDescriptor.set.call(this, newValue);
+        resetOnInteraction(new CustomEvent("programmatic_value_change"));
+      },
+      configurable: true,
+    });
+    addTeardown(() => {
+      delete element.value;
+    });
+  }
+
+  {
     // this ensure we re-check validity (and remove message no longer relevant)
     // once the action ends (used to remove the NOT_BUSY_CONSTRAINT message)
-    const onactionend = () => {
+    const onNaviActionEnd = () => {
       checkValidity();
     };
-    element.addEventListener("actionend", onactionend);
+    element.addEventListener("navi_action_end", onNaviActionEnd);
     addTeardown(() => {
-      element.removeEventListener("actionend", onactionend);
+      element.removeEventListener("navi_action_end", onNaviActionEnd);
     });
   }
 
@@ -18678,7 +18949,7 @@ const installCustomConstraintValidation = (
     form.setAttribute("novalidate", ""); // make sure browser don't prevent "submit" nor display messages
     const removeListener = addEventListener(form, "submit", (e) => {
       e.preventDefault();
-      const actionCustomEvent = new CustomEvent("action", {
+      const actionCustomEvent = new CustomEvent("navi_action", {
         detail: {
           action: null,
           event: e,
@@ -18799,7 +19070,7 @@ const dispatchActionRequestedCustomEvent = (
   elementWithAction,
   { actionOrigin = "action_prop", event, requester },
 ) => {
-  const actionRequestedCustomEvent = new CustomEvent("actionrequested", {
+  const actionRequestedCustomEvent = new CustomEvent("navi_action_requested", {
     cancelable: true,
     detail: {
       actionOrigin,
@@ -19712,7 +19983,16 @@ const useBoundAction = (action, actionParamsSignal) => {
   const actionCallbackRef = useRef();
 
   if (!action) {
-    return null;
+    const existingAction = actionRef.current;
+    if (existingAction) {
+      return existingAction;
+    }
+    const noopAction = createAction(() => {}, { params: undefined });
+    const noopActionBound = actionParamsSignal
+      ? noopAction.bindParams(actionParamsSignal)
+      : noopAction;
+    actionRef.current = noopActionBound;
+    return noopActionBound;
   }
   if (isFunctionButNotAnActionFunction(action)) {
     actionCallbackRef.current = action;
@@ -19875,7 +20155,7 @@ const useExecuteAction = (
       const validationMessageTarget = requester || elementRef.current;
       validationMessageTargetRef.current = validationMessageTarget;
 
-      dispatchCustomEvent("actionstart", {
+      dispatchCustomEvent("navi_action_start", {
         detail: sharedActionEventDetail,
       });
 
@@ -19902,7 +20182,7 @@ const useExecuteAction = (
             // but other side effects might do this
             elementRef.current
           ) {
-            dispatchCustomEvent("actionabort", {
+            dispatchCustomEvent("navi_action_abort", {
               detail: {
                 ...sharedActionEventDetail,
                 reason,
@@ -19917,7 +20197,7 @@ const useExecuteAction = (
             // but other side effects might do this
             elementRef.current
           ) {
-            dispatchCustomEvent("actionerror", {
+            dispatchCustomEvent("navi_action_error", {
               detail: {
                 ...sharedActionEventDetail,
                 error,
@@ -19937,7 +20217,7 @@ const useExecuteAction = (
             // but other side effects might do this
             elementRef.current
           ) {
-            dispatchCustomEvent("actionend", {
+            dispatchCustomEvent("navi_action_end", {
               detail: {
                 ...sharedActionEventDetail,
                 data,
@@ -20245,7 +20525,7 @@ const applyKeyboardShortcuts = (shortcuts, keyboardEvent) => {
       continue;
     }
     const returnValue = shortcutCandidate.handler(keyboardEvent);
-    if (returnValue) {
+    if (returnValue === false) {
       keyboardEvent.preventDefault();
     }
     return shortcutCandidate;
@@ -20372,121 +20652,6 @@ const isSameKey = (browserEventKey, key) => {
   return false;
 };
 
-/**
- * Toggles a `data-dark-background` attribute on the referenced element based on its
- * computed background color. Pair it with a CSS variable to get automatic
- * light/dark text without hard-coding colors:
- *
- * ```css
- * .my-element {
- *   --color-contrasting: black;
- *   &[data-dark-background] {
- *     --color-contrasting: white;
- *   }
- *   color: var(--color-contrasting);
- * }
- * ```
- *
- * - `data-dark-background` is **set** when the background is dark enough that white text
- *   provides better (or equal) contrast.
- * - `data-dark-background` is **absent** when black text is the better choice.
- *
- * @param {import("preact").RefObject} ref - Ref to the element that receives
- *   the `data-dark-background` attribute and is also passed to `contrastColor` for
- *   resolving CSS variables.
- * @param {object} [options]
- * @param {string} [options.backgroundElementSelector] - CSS selector relative
- *   to `ref.current` pointing to a child element whose `background-color`
- *   should be tested instead of the element itself. Useful when the element
- *   has a transparent background but contains a coloured child (e.g. a fill
- *   bar inside a track).
- * @param {string} [options.colorProperty] - CSS property to read instead of
- *   `background-color`. Useful for SVG elements where the color is expressed
- *   as `fill` or `stroke`.
- */
-const useDarkBackgroundAttribute = (
-  ref,
-  deps = [],
-  {
-    backgroundElementSelector,
-    colorProperty = "backgroundColor",
-    attributeName = "data-dark-background",
-    luminanceThreshold,
-    hardcoded = {},
-  } = {},
-) => {
-  const innerDeps = [
-    ...deps,
-    // ref can change if the component passes a different ref on different renders
-    // (e.g. to control which element's color is being checked by switching the ref)
-    ref,
-    // backgroundElementSelector can change if the component passes a different selector on different renders
-    // (e.g. to control which child element's color is being checked by switching the selector)
-    backgroundElementSelector,
-    colorProperty,
-  ];
-
-  const hardcodedMap = new Map();
-  for (const key of Object.keys(hardcoded)) {
-    const value = hardcoded[key];
-    innerDeps.push(key, value);
-    const colorString = normalizeColorString(key);
-    hardcodedMap.set(colorString, value);
-  }
-
-  useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el) {
-      return undefined;
-    }
-    let elementToCheck = el;
-    if (backgroundElementSelector) {
-      elementToCheck = el.querySelector(backgroundElementSelector);
-      if (!elementToCheck) {
-        return undefined;
-      }
-    }
-    const updateAttribute = () => {
-      const computedStyle = getComputedStyle(elementToCheck);
-      const color = computedStyle[colorProperty];
-      if (!color) {
-        el.removeAttribute(attributeName);
-        return;
-      }
-      const colorString = normalizeColorString(color, el);
-      const hardcodedContrast = hardcodedMap.get(colorString);
-      let isDark;
-      if (hardcodedContrast) {
-        isDark = hardcodedContrast === "white";
-      } else if (luminanceThreshold !== undefined) {
-        const luminance = resolveColorLuminance(color, el);
-        isDark = luminance !== undefined && luminance <= luminanceThreshold;
-      } else {
-        isDark = contrastColor(color, el) === "white";
-      }
-      if (isDark) {
-        el.setAttribute(attributeName, "");
-      } else {
-        el.removeAttribute(attributeName);
-      }
-    };
-    updateAttribute();
-    el.addEventListener(NAVI_PSEUDO_STATE_CUSTOM_EVENT, updateAttribute);
-    return () => {
-      el.removeEventListener(NAVI_PSEUDO_STATE_CUSTOM_EVENT, updateAttribute);
-      el.removeAttribute(attributeName);
-    };
-  }, innerDeps);
-};
-
-const normalizeColorString = (color, el) => {
-  const colorRgba = resolveCSSColor(color, el);
-  if (!colorRgba) {
-    return "";
-  }
-  return String(colorRgba);
-};
-
 const useInitialTextSelection = (ref, textSelection) => {
   const deps = [];
   if (Array.isArray(textSelection)) {
@@ -20586,7 +20751,8 @@ const selectByTextStrings = (element, range, startText, endText) => {
   }
 };
 
-installImportMetaCssBuild(import.meta);const css$y = /* css */`
+installImportMetaCssBuild(import.meta);// https://jsfiddle.net/v5xzJ/4/
+const css$A = /* css */`
   @layer navi {
     .navi_text {
       &[data-skeleton] {
@@ -20600,10 +20766,6 @@ installImportMetaCssBuild(import.meta);const css$y = /* css */`
 
   .navi_text {
     position: relative;
-
-    &[data-dark-background] {
-      color: white;
-    }
 
     /* There is a chrome specific bug that prevents text-transform: capitalize to be applied in nested DOM structure */
     /* The CSS below ensure capitalize is propagated to the bold clones */
@@ -20943,7 +21105,14 @@ const OverflowPinnedElementContext = createContext(null);
  *   like the skeleton container).
  */
 const Text = props => {
-  import.meta.css = [css$y, "@jsenv/navi/src/text/text.jsx"];
+  const defaultRef = useRef();
+  const ref = props.ref || defaultRef;
+  return jsx(TextDispatcher, {
+    ...props,
+    ref: ref
+  });
+};
+const TextDispatcher = props => {
   if (props.loading || props.skeleton) {
     return jsx(TextSkeleton, {
       ...props
@@ -20964,125 +21133,23 @@ const Text = props => {
       ...props
     });
   }
-  return jsx(TextBasic, {
+  return jsx(TextUI, {
     ...props
   });
 };
-const TextSkeleton = ({
-  loading,
-  children,
-  ...props
-}) => {
-  // Three-level structure — see CSS comment on [data-skeleton] for details.
-  const skeletonOverlay = jsx("span", {
-    className: "navi_text_skeleton_container",
-    "aria-hidden": "true",
-    children: jsx("span", {
-      className: "navi_text_skeleton_inset",
-      children: jsx("span", {
-        className: "navi_text_skeleton"
-      })
-    })
-  });
-  // When there are no children, inject a full-width placeholder so the element
-  // has measurable height driven by the current font-size/line-height, and the
-  // skeleton fills the available width instead of shrinking to a single char.
-  const hasChildren = children !== null && children !== undefined && children !== false;
-  const innerChildren = hasChildren ? children : jsx("span", {
-    className: "navi_text_skeleton_children_placeholder",
-    "aria-hidden": "true",
-    children: "W"
-  });
-  return jsx(Text, {
-    "data-skeleton": "",
-    "data-loading": loading ? "" : undefined,
-    ...props,
-    skeleton: undefined,
-    childrenOutsideFlow: skeletonOverlay,
-    children: innerChildren
-  });
-};
-const TextOverflow = ({
-  noWrap,
-  spacing,
-  children,
-  ...rest
-}) => {
-  const [OverflowPinnedElement, setOverflowPinnedElement] = useState(null);
-  return jsx(Text, {
-    flex: true,
-    block: true,
-    as: "div",
-    nowWrap: noWrap,
-    pre: !noWrap
-    // For paragraph we prefer to keep lines and only hide unbreakable long sections
-    ,
-
-    preLine: rest.as === "p",
-    ...rest,
-    overflowEllipsis: undefined,
-    "data-text-overflow": "",
-    spacing: "pre",
-    children: jsxs("span", {
-      className: "navi_text_overflow_wrapper",
-      children: [jsx(OverflowPinnedElementContext.Provider, {
-        value: setOverflowPinnedElement,
-        children: jsx(Text, {
-          className: "navi_text_overflow_text",
-          spacing: spacing,
-          children: children
-        })
-      }), OverflowPinnedElement]
-    })
-  });
-};
-const TextOverflowPinned = ({
-  overflowPinned,
-  ...props
-}) => {
-  const setOverflowPinnedElement = useContext(OverflowPinnedElementContext);
-  const text = jsx(Text, {
-    ...props,
-    "data-overflow-pinned": ""
-  });
-  if (!setOverflowPinnedElement) {
-    console.warn("<Text overflowPinned> declared outside a <Text overflowEllipsis>");
-    return text;
-  }
-  if (overflowPinned) {
-    setOverflowPinnedElement(text);
-    return null;
-  }
-  setOverflowPinnedElement(null);
-  return text;
-};
-const TextWithSelectRange = ({
-  selectRange,
-  ...props
-}) => {
-  const defaultRef = useRef();
-  const ref = props.ref || defaultRef;
-  useInitialTextSelection(ref, selectRange);
-  return jsx(Text, {
-    ref: ref,
-    ...props
-  });
-};
-const TextBasic = ({
-  spacing,
-  preventSpaceUnderlines = false,
-  boldStable,
-  holdSpaceForStyle,
-  capitalize,
-  children,
-  childrenOutsideFlow,
-  basePseudoState,
-  ...rest
-}) => {
-  const defaultRef = useRef();
-  const ref = rest.ref || defaultRef;
-  const bgDeps = basePseudoState ? Object.values(basePseudoState) : [];
-  useDarkBackgroundAttribute(ref, bgDeps);
+const TextUI = props => {
+  import.meta.css = [css$A, "@jsenv/navi/src/text/text.jsx"];
+  let {
+    ref,
+    spacing,
+    preventSpaceUnderlines = false,
+    boldStable,
+    holdSpaceForStyle,
+    capitalize,
+    children,
+    childrenOutsideFlow,
+    ...rest
+  } = props;
   const defaultSpace = preventSpaceUnderlines ? FAKE_SPACE : REGULAR_SPACE;
   const resolvedSpacing = spacing ?? defaultSpace;
   const boxProps = {
@@ -21141,8 +21208,108 @@ const TextBasic = ({
     children: [children, childrenOutsideFlow]
   });
 };
+const TextSkeleton = ({
+  loading,
+  children,
+  ...props
+}) => {
+  // Three-level structure — see CSS comment on [data-skeleton] for details.
+  const skeletonOverlay = jsx("span", {
+    className: "navi_text_skeleton_container",
+    "aria-hidden": "true",
+    children: jsx("span", {
+      className: "navi_text_skeleton_inset",
+      children: jsx("span", {
+        className: "navi_text_skeleton"
+      })
+    })
+  });
+  // When there are no children, inject a full-width placeholder so the element
+  // has measurable height driven by the current font-size/line-height, and the
+  // skeleton fills the available width instead of shrinking to a single char.
+  const hasChildren = children !== null && children !== undefined && children !== false;
+  const innerChildren = hasChildren ? children : jsx("span", {
+    className: "navi_text_skeleton_children_placeholder",
+    "aria-hidden": "true",
+    children: "W"
+  });
+  return jsx(TextDispatcher, {
+    "data-skeleton": "",
+    "data-loading": loading ? "" : undefined,
+    ...props,
+    skeleton: undefined,
+    childrenOutsideFlow: skeletonOverlay,
+    children: innerChildren
+  });
+};
+const TextOverflow = ({
+  noWrap,
+  spacing,
+  children,
+  ...rest
+}) => {
+  const [OverflowPinnedElement, setOverflowPinnedElement] = useState(null);
+  return jsx(TextDispatcher, {
+    flex: true,
+    block: true,
+    as: "div",
+    nowWrap: noWrap,
+    pre: !noWrap
+    // For paragraph we prefer to keep lines and only hide unbreakable long sections
+    ,
 
-installImportMetaCssBuild(import.meta);const css$x = /* css */`
+    preLine: rest.as === "p",
+    ...rest,
+    overflowEllipsis: undefined,
+    "data-text-overflow": "",
+    spacing: "pre",
+    children: jsxs("span", {
+      className: "navi_text_overflow_wrapper",
+      children: [jsx(OverflowPinnedElementContext.Provider, {
+        value: setOverflowPinnedElement,
+        children: jsx(Text, {
+          className: "navi_text_overflow_text",
+          spacing: spacing,
+          children: children
+        })
+      }), OverflowPinnedElement]
+    })
+  });
+};
+const TextOverflowPinned = ({
+  overflowPinned,
+  ...props
+}) => {
+  const setOverflowPinnedElement = useContext(OverflowPinnedElementContext);
+  const text = jsx(Text, {
+    ...props,
+    "data-overflow-pinned": ""
+  });
+  if (!setOverflowPinnedElement) {
+    console.warn("<Text overflowPinned> declared outside a <Text overflowEllipsis>");
+    return text;
+  }
+  if (overflowPinned) {
+    setOverflowPinnedElement(text);
+    return null;
+  }
+  setOverflowPinnedElement(null);
+  return text;
+};
+const TextWithSelectRange = ({
+  ref,
+  selectRange,
+  ...props
+}) => {
+  useInitialTextSelection(ref, selectRange);
+  return jsx(TextDispatcher, {
+    ...props,
+    ref: ref,
+    selectRange: undefined
+  });
+};
+
+installImportMetaCssBuild(import.meta);const css$z = /* css */`
   .navi_text_anchor {
     vertical-align: baseline;
     user-select: none;
@@ -21177,7 +21344,7 @@ const TextAnchor = ({
   textSize,
   lineLayout
 }) => {
-  import.meta.css = [css$x, "@jsenv/navi/src/text/text_anchor.jsx"];
+  import.meta.css = [css$z, "@jsenv/navi/src/text/text_anchor.jsx"];
   const anchorRef = useRef();
   useLayoutEffect(() => {
     const anchorEl = anchorRef.current;
@@ -21275,7 +21442,7 @@ const computeTopOffset = ({
 };
 const charTopCanvas = document.createElement("canvas");
 
-installImportMetaCssBuild(import.meta);const css$w = /* css */`
+installImportMetaCssBuild(import.meta);const css$y = /* css */`
   @layer navi {
     /* Ensure data attributes from box.jsx can win to update display */
     .navi_icon {
@@ -21348,7 +21515,7 @@ const Icon = ({
   lineLayout,
   ...props
 }) => {
-  import.meta.css = [css$w, "@jsenv/navi/src/text/icon.jsx"];
+  import.meta.css = [css$y, "@jsenv/navi/src/text/icon.jsx"];
   const innerChildren = href ? jsx("svg", {
     width: "100%",
     height: "100%",
@@ -21676,6 +21843,100 @@ document.body.addEventListener(
   { capture: true },
 );
 
+const LIGHT_ACCENT_ATTRIBUTE = "data-accent-light";
+const VERY_LIGHT_ACCENT_ATTRIBUTE = "data-accent-very-light";
+const DARK_CONTRAST_ATTRIBUTE = "data-accent-needs-dark-fg";
+const LIGHT_LUMINANCE_THRESHOLD = 0.5;
+const VERY_LIGHT_LUMINANCE_THRESHOLD = 0.92;
+const DARK_CONTRAST_LIGHTNESS_THRESHOLD = 0.65;
+
+/**
+ * Sets data attributes on an element based on the OKLCH lightness and contrast
+ * of a CSS color (typically an accent/brand color). All thresholds use OKLCH L
+ * (0–1, perceptually uniform scale).
+ *
+ * Three boolean attributes are managed independently:
+ *
+ * ## `data-accent-light` (set when OKLCH L > 0.5)
+ *   The accent color is perceptually light (orange, green, pink, yellow…).
+ *   Use to adjust color-mix direction so hover/active effects darken toward
+ *   black instead of lightening toward white.
+ *
+ * ## `data-accent-very-light` (set when OKLCH L > 0.92)
+ *   The accent color is near-white or white. Use to show a grey background on
+ *   unchecked state so the component boundary remains visible against white
+ *   page backgrounds.
+ *
+ * ## `data-accent-needs-dark-fg` (set when OKLCH L > 0.65)
+ *   The best contrasting foreground color against the accent is dark (black).
+ *   Use to render checkmarks, icons, or text in a dark color instead of white.
+ *
+ * @param {import("preact").RefObject} ref - Ref to the root element that receives the attributes.
+ * @param {string} accentColor - The accent color value. When it changes, attributes are recomputed.
+ * @param {object} [options]
+ * @param {string} [options.elementSelector] - CSS selector to find the element whose computed color is read.
+ *   Defaults to the root element itself. Useful when the color is applied to a probe/child element.
+ * @param {string} [options.colorProperty="backgroundColor"] - Computed style property to read (e.g. "color", "borderColor").
+ */
+const useAccentColorAttributes = (
+  ref,
+  accentColor,
+  { elementSelector, colorProperty = "backgroundColor" } = {},
+) => {
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) {
+      return undefined;
+    }
+    let elementToCheck = el;
+    if (elementSelector) {
+      elementToCheck = el.querySelector(elementSelector);
+      if (!elementToCheck) {
+        return undefined;
+      }
+    }
+    const updateAttributes = () => {
+      const computedStyle = getComputedStyle(elementToCheck);
+      const color = computedStyle[colorProperty];
+      if (!color) {
+        el.removeAttribute(LIGHT_ACCENT_ATTRIBUTE);
+        el.removeAttribute(VERY_LIGHT_ACCENT_ATTRIBUTE);
+        el.removeAttribute(DARK_CONTRAST_ATTRIBUTE);
+        return;
+      }
+      const luminance = resolveOklchLightness(color, el);
+      if (luminance !== null && luminance > LIGHT_LUMINANCE_THRESHOLD) {
+        el.setAttribute(LIGHT_ACCENT_ATTRIBUTE, "");
+      } else {
+        el.removeAttribute(LIGHT_ACCENT_ATTRIBUTE);
+      }
+      if (luminance !== null && luminance > VERY_LIGHT_LUMINANCE_THRESHOLD) {
+        el.setAttribute(VERY_LIGHT_ACCENT_ATTRIBUTE, "");
+      } else {
+        el.removeAttribute(VERY_LIGHT_ACCENT_ATTRIBUTE);
+      }
+      const bestContrast = contrastColor(
+        color,
+        el,
+        DARK_CONTRAST_LIGHTNESS_THRESHOLD,
+      );
+      if (bestContrast === "black") {
+        el.setAttribute(DARK_CONTRAST_ATTRIBUTE, "");
+      } else {
+        el.removeAttribute(DARK_CONTRAST_ATTRIBUTE);
+      }
+    };
+    updateAttributes();
+    el.addEventListener(NAVI_PSEUDO_STATE_CUSTOM_EVENT, updateAttributes);
+    return () => {
+      el.removeEventListener(NAVI_PSEUDO_STATE_CUSTOM_EVENT, updateAttributes);
+      el.removeAttribute(LIGHT_ACCENT_ATTRIBUTE);
+      el.removeAttribute(VERY_LIGHT_ACCENT_ATTRIBUTE);
+      el.removeAttribute(DARK_CONTRAST_ATTRIBUTE);
+    };
+  }, [ref, accentColor, elementSelector, colorProperty]);
+};
+
 const useFormEvents = (
   elementRef,
   {
@@ -21713,12 +21974,12 @@ const useFormEvents = (
     }
     return addManyEventListeners(form, {
       reset: onFormReset,
-      actionrequested: onFormActionRequested,
-      actionprevented: onFormActionPrevented,
-      actionstart: onFormActionStart,
-      actionabort: onFormActionAbort,
-      actionerror: onFormActionError,
-      actionend: onFormActionEnd,
+      navi_action_requested: onFormActionRequested,
+      navi_action_prevented: onFormActionPrevented,
+      navi_action_start: onFormActionStart,
+      navi_action_abort: onFormActionAbort,
+      navi_action_error: onFormActionError,
+      navi_action_end: onFormActionEnd,
     });
   }, [
     onFormReset,
@@ -22053,7 +22314,7 @@ const useUIGroupStateController = (
     return notifyParentAboutChildUnmount;
   }, []);
 
-  const onChange = (_, e) => {
+  const onChange = (_, e, { notifyExternal = true } = {}) => {
     if (groupIsRenderingRef.current) {
       pendingChangeRef.current = true;
       return;
@@ -22063,7 +22324,7 @@ const useUIGroupStateController = (
       emptyState,
     );
     const uiStateController = uiStateControllerRef.current;
-    uiStateController.setUIState(newUIState, e);
+    uiStateController.setUIState(newUIState, e, { notifyExternal });
   };
 
   useLayoutEffect(() => {
@@ -22073,6 +22334,7 @@ const useUIGroupStateController = (
       onChange(
         null,
         new CustomEvent(`${componentType}_batched_ui_state_update`),
+        { notifyExternal: false },
       );
     }
   });
@@ -22098,7 +22360,7 @@ const useUIGroupStateController = (
     value,
     uiAction,
     uiState: emptyState,
-    setUIState: (newUIState, e) => {
+    setUIState: (newUIState, e, { notifyExternal = true } = {}) => {
       const currentUIState = uiStateController.uiState;
       if (newUIState === currentUIState) {
         return;
@@ -22108,7 +22370,9 @@ const useUIGroupStateController = (
         `${componentType}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> updates from ${JSON.stringify(currentUIState)} to ${JSON.stringify(newUIState)}`,
       );
       publishUIState(newUIState);
-      uiStateController.onUIStateChange?.(newUIState, e);
+      if (notifyExternal) {
+        uiStateController.uiAction?.(newUIState, e);
+      }
       notifyParentAboutChildUIStateChange(e);
     },
     registerChild: (childUIStateController) => {
@@ -22123,6 +22387,7 @@ const useUIGroupStateController = (
       onChange(
         childUIStateController,
         new CustomEvent(`${childComponentType}_mount`),
+        { notifyExternal: false },
       );
     },
     onChildUIStateChange: (childUIStateController, e) => {
@@ -22152,6 +22417,7 @@ const useUIGroupStateController = (
       onChange(
         childUIStateController,
         new CustomEvent(`${childComponentType}_unmount`),
+        { notifyExternal: false },
       );
     },
     resetUIState: (e) => {
@@ -22199,7 +22465,7 @@ const useUIState = (uiStateController) => {
   return trackedUIState;
 };
 
-installImportMetaCssBuild(import.meta);const css$v = /* css */`
+installImportMetaCssBuild(import.meta);const css$x = /* css */`
   @layer navi {
     .navi_button {
       --button-outline-width: 1px;
@@ -22294,8 +22560,8 @@ installImportMetaCssBuild(import.meta);const css$v = /* css */`
     touch-action: manipulation;
     user-select: none;
 
-    &[data-dark-background] {
-      --button-color: white;
+    &[data-accent-needs-dark-fg] {
+      --button-color: black;
     }
 
     &[data-icon] {
@@ -22513,7 +22779,7 @@ const ButtonUI = props => {
     children,
     ...rest
   } = props;
-  import.meta.css = [css$v, "@jsenv/navi/src/field/button.jsx"];
+  import.meta.css = [css$x, "@jsenv/navi/src/field/button.jsx"];
   const contextLoading = useContext(LoadingContext);
   const contextLoadingElement = useContext(LoadingElementContext);
   const contextReadOnly = useContext(ReadOnlyContext);
@@ -22537,7 +22803,7 @@ const ButtonUI = props => {
     innerTarget = target === undefined ? isSameSite ? undefined : "_blank" : target;
     innerRel = rel === undefined ? isSameSite ? undefined : "noopener noreferrer" : rel;
   }
-  useDarkBackgroundAttribute(ref, [innerLoading, innerDisabled, innerReadOnly]);
+  useAccentColorAttributes(ref, null);
   const renderButtonContent = buttonProps => {
     return jsxs(Text, {
       ...buttonProps,
@@ -22760,7 +23026,7 @@ const ButtonWithActionInsideForm = props => {
     action: undefined,
     type: type,
     loading: innerLoading,
-    onactionrequested: e => {
+    onnavi_action_requested: e => {
       forwardActionRequested(e, actionBoundToFormParams, e.target.form);
     },
     children: children
@@ -22818,7 +23084,7 @@ const WarningSvg = () => {
   });
 };
 
-installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
+installImportMetaCssBuild(import.meta);const css$w = /* css */`
   @layer navi {
     .navi_message_box {
       --background-color-info: var(--navi-info-color-light);
@@ -22861,10 +23127,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
     border-top-left-radius: 6px;
     border-bottom-left-radius: 6px;
   }
-`, "@jsenv/navi/src/text/message_box.jsx"];
-const MessageBoxPseudoClasses = [":-navi-status-info", ":-navi-status-success", ":-navi-status-warning", ":-navi-status-error"];
-const MessageBoxStatusContext = createContext();
-const MessageBoxReportTitleChildContext = createContext();
+`;
 const MessageBox = ({
   status = "info",
   padding = "sm",
@@ -22874,6 +23137,7 @@ const MessageBox = ({
   onClose,
   ...rest
 }) => {
+  import.meta.css = [css$w, "@jsenv/navi/src/text/message_box.jsx"];
   const [hasTitleChild, setHasTitleChild] = useState(false);
   const innerLeftStripe = leftStripe === undefined ? hasTitleChild : leftStripe;
   if (icon === true) {
@@ -22928,8 +23192,11 @@ const MessageBox = ({
     })
   });
 };
+const MessageBoxPseudoClasses = [":-navi-status-info", ":-navi-status-success", ":-navi-status-warning", ":-navi-status-error"];
+const MessageBoxStatusContext = createContext();
+const MessageBoxReportTitleChildContext = createContext();
 
-installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
+installImportMetaCssBuild(import.meta);const css$v = /* css */`
   .navi_message_box {
     .navi_title {
       margin-top: 0;
@@ -22937,13 +23204,9 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
       color: var(--x-message-color);
     }
   }
-`, "@jsenv/navi/src/text/title.jsx"];
-const TitleLevelContext = createContext();
-const useTitleLevel = () => {
-  return useContext(TitleLevelContext);
-};
-const TitlePseudoClasses = [":hover"];
+`;
 const Title = props => {
+  import.meta.css = [css$v, "@jsenv/navi/src/text/title.jsx"];
   const messageBoxStatus = useContext(MessageBoxStatusContext);
   const innerAs = props.as || (messageBoxStatus ? "h4" : "h1");
   const titleLevel = parseInt(innerAs.slice(1));
@@ -22961,6 +23224,11 @@ const Title = props => {
     })
   });
 };
+const TitleLevelContext = createContext();
+const useTitleLevel = () => {
+  return useContext(TitleLevelContext);
+};
+const TitlePseudoClasses = [":hover"];
 
 /**
  * Hook that reactively checks if a URL is visited.
@@ -23161,11 +23429,6 @@ installImportMetaCssBuild(import.meta);const css$u = /* css */`
       }
     }
 
-    /* Dark background */
-    &[data-dark-background].navi_text {
-      --x-link-contrasting-color: white;
-      --x-link-color: var(--link-color, white);
-    }
     /* Interactive */
     &[data-interactive] {
       cursor: pointer;
@@ -24331,22 +24594,6 @@ installImportMetaCssBuild(import.meta);const css$q = /* css */`
     }
   }
 `;
-const ReportReadOnlyOnLabelContext = createContext();
-const ReportDisabledOnLabelContext = createContext();
-const ReportInteractiveOnLabelContext = createContext();
-const reportReadOnlyToLabel = value => {
-  const reportReadOnly = useContext(ReportReadOnlyOnLabelContext);
-  reportReadOnly?.(value);
-};
-const reportInteractiveToLabel = value => {
-  const reportInteractive = useContext(ReportInteractiveOnLabelContext);
-  reportInteractive?.(value);
-};
-const reportDisabledToLabel = value => {
-  const reportDisabled = useContext(ReportDisabledOnLabelContext);
-  reportDisabled?.(value);
-};
-const LabelPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
 const Label = props => {
   import.meta.css = [css$q, "@jsenv/navi/src/field/label.jsx"];
   const {
@@ -24381,6 +24628,22 @@ const Label = props => {
     })
   });
 };
+const LabelPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
+const ReportReadOnlyOnLabelContext = createContext();
+const ReportDisabledOnLabelContext = createContext();
+const ReportInteractiveOnLabelContext = createContext();
+const reportReadOnlyToLabel = value => {
+  const reportReadOnly = useContext(ReportReadOnlyOnLabelContext);
+  reportReadOnly?.(value);
+};
+const reportInteractiveToLabel = value => {
+  const reportInteractive = useContext(ReportInteractiveOnLabelContext);
+  reportInteractive?.(value);
+};
+const reportDisabledToLabel = value => {
+  const reportDisabled = useContext(ReportDisabledOnLabelContext);
+  reportDisabled?.(value);
+};
 
 installImportMetaCssBuild(import.meta);const css$p = /* css */`
   @layer navi {
@@ -24396,15 +24659,15 @@ installImportMetaCssBuild(import.meta);const css$p = /* css */`
       --outline-color: var(--navi-focus-outline-color);
       --loader-color: var(--navi-loader-color);
       --border-color: light-dark(#767676, #8e8e93);
-      --background-color: rgba(0, 0, 0, 0.15);
+      --background-color: white;
       --accent-color: light-dark(#4476ff, #3b82f6);
       --background-color-checked: var(--accent-color);
       --border-color-checked: var(--accent-color);
-      --checkmark-color: rgb(55, 55, 55);
+      --checkmark-color: white;
       --cursor: pointer;
       --color-mix-light: black;
       --color-mix-dark: white;
-      --color-mix: var(--color-mix-light);
+      --color-mix: var(--color-mix-dark);
 
       /* Hover */
       --border-color-hover: color-mix(in srgb, var(--border-color) 60%, black);
@@ -24497,11 +24760,6 @@ installImportMetaCssBuild(import.meta);const css$p = /* css */`
         var(--button-background-color) 95%,
         black
       );
-
-      &[data-dark-background] {
-        --color-mix: var(--color-mix-dark);
-        --checkmark-color: white;
-      }
     }
   }
 
@@ -24602,12 +24860,9 @@ installImportMetaCssBuild(import.meta);const css$p = /* css */`
       }
     }
 
-    &[data-dark-background]:not([data-appearance="toggle"]) {
-      --x-background-color: white;
-      --x-checkmark-color: var(--checkmark-color);
-      &[data-checked] {
-        --x-background-color: var(--background-color-checked);
-      }
+    /* Accent color adaptations */
+    &[data-accent-light] {
+      --color-mix: var(--color-mix-light);
     }
 
     /* Checkbox appearance */
@@ -24628,6 +24883,16 @@ installImportMetaCssBuild(import.meta);const css$p = /* css */`
           transition-duration: 0.15s;
           transition-timing-function: ease;
         }
+      }
+
+      &[data-accent-very-light] {
+        --x-background-color: rgba(0, 0, 0, 0.15);
+        &[data-checked] {
+          --x-background-color: var(--background-color-checked);
+        }
+      }
+      &[data-accent-needs-dark-fg] {
+        --x-checkmark-color: rgb(55, 55, 55);
       }
     }
 
@@ -24688,6 +24953,10 @@ installImportMetaCssBuild(import.meta);const css$p = /* css */`
             )
           );
         }
+      }
+
+      &[data-accent-very-light] {
+        --toggle-thumb-color: rgb(55, 55, 55);
       }
     }
 
@@ -24839,9 +25108,8 @@ const InputCheckboxUI = props => {
   });
   const renderCheckboxMemoized = useCallback(renderCheckbox, [id, innerName, checked, innerRequired]);
   const boxRef = useRef();
-  useDarkBackgroundAttribute(boxRef, [accentColor], {
-    backgroundElementSelector: ".navi_checkbox_accent_probe",
-    luminanceThreshold: 0.82
+  useAccentColorAttributes(boxRef, accentColor, {
+    elementSelector: ".navi_checkbox_accent_probe"
   });
   return jsxs(Box, {
     as: "span",
@@ -25164,12 +25432,12 @@ installImportMetaCssBuild(import.meta);const css$o = /* css */`
 
       --color-mix-light: black;
       --color-mix-dark: white;
-      --color-mix: var(--color-mix-light);
+      --color-mix: var(--color-mix-dark);
 
       --outline-color: var(--navi-focus-outline-color);
       --loader-color: var(--navi-loader-color);
       --border-color: light-dark(#767676, #8e8e93);
-      --x-background-color: rgba(0, 0, 0, 0.15);
+      --background-color: white;
       --accent-color: light-dark(#4476ff, #3b82f6);
       --radiomark-color: var(--accent-color);
       --border-color-checked: var(--accent-color);
@@ -25287,7 +25555,6 @@ installImportMetaCssBuild(import.meta);const css$o = /* css */`
     }
     /* Checked */
     &[data-checked] {
-      --x-background-color: transparent;
       --x-border-color: var(--border-color-checked);
 
       &[data-hover] {
@@ -25324,11 +25591,14 @@ installImportMetaCssBuild(import.meta);const css$o = /* css */`
       }
     }
 
-    &[data-dark-background] {
-      --x-background-color: white;
-      --color-mix: var(--color-mix-dark);
+    &[data-accent-light] {
+      --color-mix: var(--color-mix-light);
+    }
+
+    &[data-accent-very-light] {
+      --x-background-color: rgba(0, 0, 0, 0.15);
       &[data-checked] {
-        --x-background-color: white;
+        --x-background-color: rgba(0, 0, 0, 0.15);
       }
     }
 
@@ -25599,9 +25869,8 @@ const InputRadioUI = props => {
   });
   const renderRadioMemoized = useCallback(renderRadio, [innerName, checked, innerRequired]);
   const boxRef = useRef();
-  useDarkBackgroundAttribute(boxRef, [remainingProps.accentColor], {
-    backgroundElementSelector: ".navi_radio_accent_probe",
-    luminanceThreshold: 0.82
+  useAccentColorAttributes(boxRef, remainingProps.accentColor, {
+    elementSelector: ".navi_radio_accent_probe"
   });
   return jsxs(Box, {
     as: "span",
@@ -25730,6 +25999,9 @@ installImportMetaCssBuild(import.meta);const css$n = /* css */`
       --outline-color: var(--navi-focus-outline-color);
       --loader-color: var(--navi-loader-color);
       --accent-color: rgb(24, 117, 255);
+      --color-mix-light: black;
+      --color-mix-dark: white;
+      --color-mix: var(--color-mix-dark);
 
       --border-color: rgb(150, 150, 150);
       --track-border-color: color-mix(
@@ -25747,9 +26019,21 @@ installImportMetaCssBuild(import.meta);const css$n = /* css */`
         var(--track-border-color) 75%,
         black
       );
-      --track-color-hover: color-mix(in srgb, var(--fill-color) 95%, black);
-      --fill-color-hover: color-mix(in srgb, var(--fill-color) 80%, black);
-      --thumb-color-hover: color-mix(in srgb, var(--thumb-color) 80%, black);
+      --track-color-hover: color-mix(
+        in srgb,
+        var(--fill-color) 95%,
+        var(--color-mix)
+      );
+      --fill-color-hover: color-mix(
+        in srgb,
+        var(--fill-color) 80%,
+        var(--color-mix)
+      );
+      --thumb-color-hover: color-mix(
+        in srgb,
+        var(--thumb-color) 80%,
+        var(--color-mix)
+      );
       /* Pressed */
       --border-color-pressed: color-mix(
         in srgb,
@@ -25824,6 +26108,15 @@ installImportMetaCssBuild(import.meta);const css$n = /* css */`
         -webkit-appearance: none;
         cursor: var(--x-thumb-cursor);
       }
+    }
+
+    .navi_input_range_accent_probe {
+      position: absolute;
+      width: 0;
+      height: 0;
+      background-color: var(--accent-color);
+      visibility: hidden;
+      pointer-events: none;
     }
 
     .navi_input_range_background {
@@ -25910,77 +26203,51 @@ installImportMetaCssBuild(import.meta);const css$n = /* css */`
       --x-fill-color: var(--fill-color-disabled);
       --x-thumb-color: var(--thumb-color-disabled);
       --x-thumb-cursor: default;
+      --x-accent-color: var(--accent-color-disabled);
     }
-  }
+    /* Callout (info, warning, error) */
+    &[data-callout] {
+    }
 
-  /* Disabled */
-  .navi_input_range[data-disabled] {
-    --x-background-color: var(--background-color-disabled);
-    --x-accent-color: var(--accent-color-disabled);
-  }
-  /* Callout (info, warning, error) */
-  .navi_input_range[data-callout] {
-    /* What can we do? */
+    &[data-accent-light] {
+      --color-mix: var(--color-mix-light);
+    }
+    &[data-accent-very-light] {
+      --background-color: rgba(0, 0, 0, 0.15);
+      --track-border-color: rgba(0, 0, 0, 0.25);
+    }
   }
 `;
 const InputRange = props => {
-  import.meta.css = [css$n, "@jsenv/navi/src/field/input_range.jsx"];
+  const defaultRef = useRef();
+  const ref = props.ref || defaultRef;
   const uiStateController = useUIStateController(props, "input");
   const uiState = useUIState(uiStateController);
-  const input = renderActionableComponent(props, {
-    Basic: InputRangeBasic,
-    WithAction: InputRangeWithAction
-  });
   return jsx(UIStateControllerContext.Provider, {
     value: uiStateController,
     children: jsx(UIStateContext.Provider, {
       value: uiState,
-      children: input
+      children: jsx(InputRangeDispatcher, {
+        ...props,
+        ref: ref
+      })
     })
   });
 };
-const RangeStyleCSSVars = {
-  "outlineWidth": "--outline-width",
-  "borderRadius": "--border-radius",
-  "borderColor": "--border-color",
-  "backgroundColor": "--background-color",
-  "accentColor": "--accent-color",
-  ":hover": {
-    borderColor: "--border-color-hover",
-    backgroundColor: "--background-color-hover",
-    fillColor: "--fill-color-hover",
-    thumbColor: "--thumb-color-hover"
-  },
-  ":-navi-pressed": {
-    borderColor: "--border-color-hover",
-    backgroundColor: "--background-color-hover",
-    fillColor: "--fill-color-pressed",
-    thumbColor: "--thumb-color-pressed"
-  },
-  ":read-only": {
-    borderColor: "--border-color-readonly",
-    backgroundColor: "--background-color-readonly",
-    fillColor: "--fill-color-readonly",
-    thumbColor: "--thumb-color-readonly"
-  },
-  ":disabled": {
-    borderColor: "--border-color-disabled",
-    backgroundColor: "--background-color-disabled",
-    fillColor: "--fill-color-disabled",
-    thumbColor: "--thumb-color-disabled"
+const InputRangeDispatcher = props => {
+  if (props.action) {
+    return jsx(InputRangeWithAction, {
+      ...props
+    });
   }
+  return jsx(InputRangeUI, {
+    ...props
+  });
 };
-const RangePseudoClasses = [":hover", ":active", ":-navi-pressed", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
-const RangePseudoElements = ["::-navi-loader"];
-const RangeChildPropSet = new Set([...fieldPropSet]);
-const InputRangeBasic = props => {
-  const contextReadOnly = useContext(ReadOnlyContext);
-  const contextDisabled = useContext(DisabledContext);
-  const contextLoading = useContext(LoadingContext);
-  const contextLoadingElement = useContext(LoadingElementContext);
-  const uiStateController = useContext(UIStateControllerContext);
-  const uiState = useContext(UIStateContext);
+const InputRangeUI = props => {
+  import.meta.css = [css$n, "@jsenv/navi/src/field/input_range.jsx"];
   const {
+    ref,
     onInput,
     readOnly,
     disabled,
@@ -25990,8 +26257,12 @@ const InputRangeBasic = props => {
     autoSelect,
     ...rest
   } = props;
-  const defaultRef = useRef();
-  const ref = rest.ref || defaultRef;
+  const contextReadOnly = useContext(ReadOnlyContext);
+  const contextDisabled = useContext(DisabledContext);
+  const contextLoading = useContext(LoadingContext);
+  const contextLoadingElement = useContext(LoadingElementContext);
+  const uiStateController = useContext(UIStateControllerContext);
+  const uiState = useContext(UIStateContext);
   const innerValue = uiState;
   const innerLoading = loading || contextLoading && contextLoadingElement === ref.current;
   const innerReadOnly = readOnly || contextReadOnly || innerLoading || uiStateController.readOnly;
@@ -26005,6 +26276,13 @@ const InputRangeBasic = props => {
     autoSelect
   });
   const remainingProps = useConstraints(ref, rest);
+  const {
+    accentColor
+  } = remainingProps;
+  const boxRef = useRef();
+  useAccentColorAttributes(boxRef, accentColor, {
+    elementSelector: ".navi_input_range_accent_probe"
+  });
   const innerOnInput = useStableCallback(onInput);
   const focusProxyId = `input_range_focus_proxy_${useId()}`;
   const inertButFocusable = innerReadOnly && !innerDisabled;
@@ -26097,11 +26375,14 @@ const InputRangeBasic = props => {
     hasChildFunction: true,
     baseChildPropSet: RangeChildPropSet,
     ...remainingProps,
-    ref: undefined,
+    ref: boxRef,
     autoFocus: undefined // See use_auto_focus.js
     ,
 
-    children: [jsx(LoaderBackground, {
+    children: [jsx("span", {
+      className: "navi_input_range_accent_probe",
+      "aria-hidden": "true"
+    }), jsx(LoaderBackground, {
       loading: innerLoading,
       color: "var(--loader-color)",
       inset: -1
@@ -26120,9 +26401,43 @@ const InputRangeBasic = props => {
     }), renderInputMemoized]
   });
 };
+const RangeStyleCSSVars = {
+  "outlineWidth": "--outline-width",
+  "borderRadius": "--border-radius",
+  "borderColor": "--border-color",
+  "backgroundColor": "--background-color",
+  "accentColor": "--accent-color",
+  ":hover": {
+    borderColor: "--border-color-hover",
+    backgroundColor: "--background-color-hover",
+    fillColor: "--fill-color-hover",
+    thumbColor: "--thumb-color-hover"
+  },
+  ":-navi-pressed": {
+    borderColor: "--border-color-hover",
+    backgroundColor: "--background-color-hover",
+    fillColor: "--fill-color-pressed",
+    thumbColor: "--thumb-color-pressed"
+  },
+  ":read-only": {
+    borderColor: "--border-color-readonly",
+    backgroundColor: "--background-color-readonly",
+    fillColor: "--fill-color-readonly",
+    thumbColor: "--thumb-color-readonly"
+  },
+  ":disabled": {
+    borderColor: "--border-color-disabled",
+    backgroundColor: "--background-color-disabled",
+    fillColor: "--fill-color-disabled",
+    thumbColor: "--thumb-color-disabled"
+  }
+};
+const RangePseudoClasses = [":hover", ":active", ":-navi-pressed", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
+const RangePseudoElements = ["::-navi-loader"];
+const RangeChildPropSet = new Set([...fieldPropSet]);
 const InputRangeWithAction = props => {
-  const uiState = useContext(UIStateContext);
   const {
+    ref,
     action,
     actionDebounce,
     actionAfterChange,
@@ -26137,8 +26452,7 @@ const InputRangeWithAction = props => {
     actionErrorEffect,
     ...rest
   } = props;
-  const defaultRef = useRef();
-  const ref = props.ref || defaultRef;
+  const uiState = useContext(UIStateContext);
   const [boundAction] = useActionBoundToOneParam(action, uiState);
   const {
     loading: actionLoading
@@ -26178,12 +26492,13 @@ const InputRangeWithAction = props => {
     onError: onActionError,
     onEnd: onActionEnd
   });
-  return jsx(InputRangeBasic, {
+  return jsx(InputRangeDispatcher, {
     "data-action": boundAction.name,
     "data-action-debounce": actionDebounce,
     "data-action-after-change": actionAfterChange ? "" : undefined,
     ...rest,
     ref: ref,
+    action: undefined,
     loading: loading || actionLoading
   });
 };
@@ -26207,64 +26522,54 @@ const SearchSvg = () => jsx("svg", {
   })
 });
 
-/**
- * Navi uses three categories of custom events:
- *
- * 1. **Internal events** (`dispatchInternalCustomEvent`) — a component communicates
- *    with other navi components internally. Not meant to be observed from outside.
- *    They do not bubble so they stay contained within the subtree that handles them.
- *    Names often reflect their internal nature (e.g. `navi_check_pseudo_state`).
- *
- * 2. **Public events** (`dispatchPublicCustomEvent`) — a component exposes information
- *    about something that happened (e.g. `navi_list_select`). They bubble so any
- *    ancestor can observe them. These are part of the public API and should be documented.
- *
- * 3. **Request events** (`dispatchCustomEvent`) — code *outside* a component asks it
- *    to perform an action (e.g. `navi_list_request_open`). They are cancelable so the
- *    component can signal whether it handled the request. Names are prefixed
- *    with `request_` by convention.
- */
-
-
-/**
- * Dispatches a public event from `el`, announcing something that happened.
- * Bubbles so any ancestor can observe it.
- */
-const dispatchPublicCustomEvent = (
-  el,
-  customEventName,
-  customEventDetail,
-) => {
-  const customEvent = new CustomEvent(customEventName, {
-    detail: resolveEventDetail(customEventDetail),
-    bubbles: true,
-  });
-  return el.dispatchEvent(customEvent);
-};
-
-/**
- * Dispatches a request event *at* `el`, asking it to perform an action.
- * Cancelable — returns `false` if the component called `preventDefault()`,
- * indicating it did not (or could not) handle the request.
- * Names are conventionally prefixed with `request_` (e.g. `navi_list_request_open`).
- */
-const dispatchCustomEvent = (el, customEventName, customEventDetail) => {
-  const customEvent = new CustomEvent(customEventName, {
-    detail: resolveEventDetail(customEventDetail),
-    cancelable: true,
-  });
-  return el.dispatchEvent(customEvent);
-};
-
-const resolveEventDetail = (customEventDetail) => {
-  const { event, ...rest } = customEventDetail ?? {};
-  let resolvedEvent;
-  if (event?.detail?.event !== undefined) {
-    resolvedEvent = event.detail.event;
-  } else if (event !== undefined) {
-    resolvedEvent = event;
+installImportMetaCssBuild(import.meta);const css$m = /* css */`
+  @layer navi {
+    .navi_separator {
+      --size: 1px;
+      --color: #e4e4e7;
+      --spacing: 0.5em;
+      --spacing-start: 0.5em;
+      --spacing-end: 0.5em;
+    }
   }
-  return { ...rest, event: resolvedEvent };
+
+  .navi_separator {
+    width: 100%;
+    height: var(--size);
+    margin-top: var(--spacing-start, var(--spacing));
+    margin-bottom: var(--spacing-end, var(--spacing));
+    flex-shrink: 0;
+    background: var(--color);
+    border: none;
+
+    &[data-vertical] {
+      display: inline-block;
+
+      width: var(--size);
+      height: 1lh;
+      margin-top: 0;
+      margin-right: var(--spacing-end, var(--spacing));
+      margin-bottom: 0;
+      margin-left: var(--spacing-start, var(--spacing));
+      vertical-align: bottom;
+    }
+  }
+`;
+const SeparatorStyleCSSVars = {
+  color: "--color"
+};
+const Separator = ({
+  vertical,
+  ...props
+}) => {
+  import.meta.css = [css$m, "@jsenv/navi/src/layout/separator.jsx"];
+  return jsx(Box, {
+    as: vertical ? "span" : "hr",
+    ...props,
+    "data-vertical": vertical ? "" : undefined,
+    baseClassName: "navi_separator",
+    styleCSSVars: SeparatorStyleCSSVars
+  });
 };
 
 /*
@@ -26669,9 +26974,10 @@ const RenderWindowContext = createContext(null);
 // Carries the separator element/function down to each ListItem so separators
 // are only rendered between items that actually mount (post-filter, post-window).
 const SeparatorContext = createContext(null);
-const css$m = /* css */`
+const css$l = /* css */`
   @layer navi {
     .navi_list_container {
+      --list-outline-width: 1px;
       --list-border-radius: 4px;
       --list-border-width: 1px;
       --list-border-color: light-dark(#ccc, #555);
@@ -26688,22 +26994,20 @@ const css$m = /* css */`
       --list-item-color-hover: var(--list-item-color);
       --list-item-background-color-hover: light-dark(#f5f5f5, #2a2a2a);
 
-      /* Pointed (keyboard navigation position) */
-      --list-item-color-pointed: var(--list-item-color);
-      --list-item-background-color-pointed: light-dark(#c2d7fc, #1a4a9e);
+      /* Pointed by mouse — subtle, just a shade above background */
+      --list-item-color-mouse-pointed: var(--list-item-color);
+      --list-item-background-color-mouse-pointed: light-dark(#ebebeb, #303030);
 
-      /* Selected */
-      --list-item-color-selected: light-dark(#1a73e8, #7baaf7);
-      --list-item-background-color-selected: light-dark(#e8f0fe, #1c3a6e);
-      --list-item-font-weight-selected: 500;
-
-      /* Pointed+selected: darken the selected background slightly */
-      --list-item-color-pointed-selected: var(--list-item-color-selected);
-      --list-item-background-color-pointed-selected: color-mix(
-        in srgb,
-        var(--list-item-background-color-selected) 80%,
-        black
+      /* Pointed by keyboard — subtle light blue highlight */
+      --list-item-color-keyboard-pointed: var(--list-item-color);
+      --list-item-background-color-keyboard-pointed: light-dark(
+        #c2dcff,
+        #1c3a6e
       );
+
+      /* Selected — vivid blue accent */
+      --list-item-color-selected: light-dark(#ffffff, #ffffff);
+      --list-item-background-color-selected: light-dark(#1a73e8, #2b5fcc);
 
       /* Disabled */
       --list-item-color-disabled: light-dark(#aaa, #555);
@@ -26728,11 +27032,11 @@ const css$m = /* css */`
   }
 
   .navi_list_container {
-    --x-border-radius: var(--list-border-radius);
-    --x-border-width: var(--list-border-width);
-    --x-border-color: var(--list-border-color);
-    --x-border-style: var(--list-border-style);
-    --x-background-color: var(--list-background-color);
+    --x-list-border-radius: var(--list-border-radius);
+    --x-list-border-width: var(--list-border-width);
+    --x-list-border-color: var(--list-border-color);
+    --x-list-border-style: var(--list-border-style);
+    --x-list-background-color: var(--list-background-color);
     /* When typing inside an input browser tries to keep caret visible */
     /* For input within a sticky element inside a scrollable container */
     /* Browser will try to scroll that input into view */
@@ -26747,15 +27051,33 @@ const css$m = /* css */`
       var(--list-footer-height, 0px) + var(--list-scroll-padding-bottom, 0px)
     );
 
+    display: flex;
     width: fit-content;
     max-width: 100%;
-    max-height: var(--list-max-height);
-    background-color: var(--x-background-color);
-    border: var(--x-border-width) var(--x-border-style) var(--x-border-color);
-    border-radius: var(--x-border-radius);
+    flex-direction: column;
+    background-color: var(--x-list-background-color);
+    /* Use a transparent real border to reserve layout space, and draw the
+       visible border via outline (inset via negative offset). This way the
+       focus ring can simply widen the outline without shifting layout. */
+    border: var(--x-list-border-width) solid transparent;
+    border-radius: var(--x-list-border-radius);
+    outline: var(--x-list-border-width) var(--x-list-border-style)
+      var(--x-list-border-color);
+    outline-offset: calc(-1 * var(--x-list-border-width));
     transition: opacity 0.2s ease;
-    overflow: auto;
-    overscroll-behavior: inherit; /* inherit select behavior */
+    /* overflow:hidden is required on the container (not the inner scroll element)
+       so that border-radius clips the content correctly. Without it, items near
+       the corners would visually overflow the rounded corners during scroll. */
+    overflow: hidden;
+
+    .navi_list_scroll_container {
+      width: inherit;
+      min-width: inherit;
+      max-width: inherit;
+      max-height: var(--list-max-height);
+      overflow: auto;
+      overscroll-behavior: inherit; /* inherit select behavior */
+    }
 
     &[data-expand-x] {
       width: 100%;
@@ -26763,18 +27085,42 @@ const css$m = /* css */`
     &[popover] {
       position: absolute;
       inset: unset;
+      display: none;
       min-width: var(--list-anchor-width, 0px);
       max-width: 95vw;
       margin: 0;
       padding: 0;
+
+      &:popover-open {
+        display: flex;
+      }
+      .navi_list {
+        width: 100%;
+      }
+
+      &[data-anchor-hidden] {
+        opacity: 0;
+        pointer-events: none;
+      }
     }
-    &[data-anchor-hidden] {
-      opacity: 0;
-      pointer-events: none;
+
+    &[data-focus] {
+      /* outline: var(--list-outline-width) solid var(--navi-focus-outline-color);
+      outline-offset: calc(-1 * var(--list-outline-width)); */
     }
+    &[data-focus-visible] {
+      outline-width: calc(var(--list-border-width) + var(--list-outline-width));
+      outline-color: var(--navi-focus-outline-color);
+      outline-offset: calc(
+        -1 * (var(--list-border-width) + var(--list-outline-width))
+      );
+      .navi_list {
+        outline: none;
+      }
+    }
+
     &[data-callout] {
-      --x-border-color: var(--callout-color);
-      --x-outline-color: var(--callout-color);
+      --x-list-border-color: var(--callout-color);
     }
   }
 
@@ -26797,15 +27143,15 @@ const css$m = /* css */`
   }
 
   .navi_list_item {
-    --x-color: var(--list-item-color);
-    --x-background-color: var(--list-item-background-color);
-    --x-font-weight: var(--list-item-font-weight);
+    --x-list-item-color: var(--list-item-color);
+    --x-list-item-background-color: var(--list-item-background-color);
+    --x-list-item-font-weight: var(--list-item-font-weight);
     box-sizing: border-box;
     min-width: 100%;
     padding: var(--list-item-padding);
-    color: var(--x-color);
-    font-weight: var(--x-font-weight);
-    background-color: var(--x-background-color);
+    color: var(--x-list-item-color);
+    font-weight: var(--x-list-item-font-weight);
+    background-color: var(--x-list-item-background-color);
     /*
     CSS impossible d'obtenir un layout qui ferait en gros:
     width = max(min(max-content, 100%), unbreakable-content)
@@ -26829,27 +27175,31 @@ const css$m = /* css */`
     &[data-interactive] {
       cursor: pointer;
       user-select: none;
-      /* &:hover {
-        --x-color: var(--list-item-color-hover);
-        --x-background-color: var(--list-item-background-color-hover);
-      } */
     }
     &[data-pointed] {
-      --x-color: var(--list-item-color-pointed);
-      --x-background-color: var(--list-item-background-color-pointed);
+      --x-list-item-color: var(--list-item-color-mouse-pointed);
+      --x-list-item-background-color: var(
+        --list-item-background-color-mouse-pointed
+      );
     }
     &[data-selected] {
-      --x-color: var(--list-item-color-selected);
-      --x-background-color: var(--list-item-background-color-selected);
-      --x-font-weight: var(--list-item-font-weight-selected);
-    }
-    &[data-pointed][data-selected] {
-      --x-color: var(--list-item-color-pointed-selected);
-      --x-background-color: var(--list-item-background-color-pointed-selected);
+      --x-list-item-color: var(--list-item-color-selected);
+      --x-list-item-background-color: var(
+        --list-item-background-color-selected
+      );
+      &[data-pointed] {
+        /* Here important should no beed need, but for some reason it is */
+        --x-list-item-background-color: var(
+          --list-item-background-color-selected,
+          var(--list-item-background-color-mouse-pointed)
+        ) !important;
+      }
     }
     &[data-disabled] {
-      --x-color: var(--list-item-color-disabled);
-      --x-background-color: var(--list-item-background-color-disabled);
+      --x-list-item-color: var(--list-item-color-disabled);
+      --x-list-item-background-color: var(
+        --list-item-background-color-disabled
+      );
       cursor: not-allowed;
       pointer-events: none;
     }
@@ -26858,10 +27208,41 @@ const css$m = /* css */`
     }
   }
 
+  .navi_list_container {
+    &[data-focus-within] {
+      .navi_list_item {
+        &[data-pointed-by-keyboard] {
+          --x-list-item-color: var(--list-item-color-keyboard-pointed);
+          --x-list-item-background-color: var(
+            --list-item-background-color-keyboard-pointed
+          );
+        }
+
+        /* Selected must win over pointed-by-keyboard */
+        &[data-selected] {
+          --x-list-item-color: var(--list-item-color-selected);
+          --x-list-item-background-color: var(
+            --list-item-background-color-selected
+          );
+          /* Selected + pointed by keyboard: use keyboard color as fallback
+           so that if --list-item-background-color-selected is reset the
+           keyboard-pointed highlight still shows. */
+          &[data-pointed-by-keyboard] {
+            --x-list-item-background-color: var(
+              --list-item-background-color-selected,
+              var(--list-item-background-color-keyboard-pointed)
+            );
+          }
+        }
+      }
+    }
+  }
+
   /* Virtual scroll fillers — must remain invisible.
      The browser may briefly flash them during scroll before the render window
      updates, so giving them a visible background would cause visual glitches. */
   .navi_list_virtual_filler {
+    display: inline-block;
     height: 0px;
     list-style: none;
     /* background: pink; */
@@ -27012,13 +27393,8 @@ const List = props => {
 const ListDispatcher = props => {
   const alreadyInteractive = useContext(ListInteractiveContext);
   const parentUIStateController = useContext(ParentUIStateControllerContext);
-  if (!alreadyInteractive && props.action) {
+  if (!alreadyInteractive && (props.action || props.uiAction || parentUIStateController)) {
     return jsx(ListWithAction, {
-      ...props
-    });
-  }
-  if (!alreadyInteractive && (props.uiAction || parentUIStateController)) {
-    return jsx(ListInteractive, {
       ...props
     });
   }
@@ -27037,18 +27413,19 @@ const ListDispatcher = props => {
   });
 };
 const ListUI = props => {
-  import.meta.css = [css$m, "@jsenv/navi/src/field/list/list.jsx"];
+  import.meta.css = [css$l, "@jsenv/navi/src/field/list/list.jsx"];
   const {
     ref,
     renderBudget = RENDER_BUDGET_DEFAULT,
-    listId,
-    listRole,
+    id,
+    role,
     fallback,
     noMatchFallback,
     separator,
     children,
     popover,
     expandX,
+    expand,
     maxHeight,
     onListVisibleItemsChange,
     virtualItemHeight,
@@ -27059,13 +27436,17 @@ const ListUI = props => {
     required,
     ...rest
   } = props;
+  if (renderBudget < 30) {
+    console.warn(`List: renderBudget=${renderBudget} is too low. A renderBudget below 30 is not supported: on large screens or when the list grows, items outside the window would appear as blank space instead of rendered content. Use a value of at least 30, or omit the prop to use the default (${RENDER_BUDGET_DEFAULT}).`);
+  }
   const hiddenInputId = useId();
 
   // lockSize: capture the container's dimensions on first render so filtering
   // cannot collapse the layout. Measurement happens on the initial (unfiltered)
   // state because the parent controls hidden props before any search is applied.
+  const containerRef = useRef(null);
   const sizeLocked = useRef(false);
-  useDisplayedLayoutEffect(ref, listContainerEl => {
+  useDisplayedLayoutEffect(containerRef, listContainerEl => {
     if (!lockSize) {
       return undefined;
     }
@@ -27096,63 +27477,68 @@ const ListUI = props => {
       onListVisibleItemsChange?.(tracker.visibleItemsSignal.peek());
     }
   });
-  const ulRef = useRef(null);
   const {
     virtualItemHeightSignal,
     renderWindow,
     scrollToItem,
     pendingScrollRef
   } = useListScrollSync({
+    containerRef,
     ref,
-    ulRef,
     tracker,
     renderBudget,
     virtualItemHeight,
     searchText
   });
+  const idDefault = useId();
+  const innerId = id || idDefault;
   const renderList = listProps => {
-    const listIdDefault = useId();
-    const innerListid = listId || listIdDefault;
-    return jsx(UnorderedList, {
-      ref: ulRef,
-      id: innerListid,
-      role: listRole,
-      fallback: fallback,
-      noMatchFallback: noMatchFallback,
-      searchText: searchText,
-      separator: separator,
-      expandX: expandX,
-      ...listProps,
-      tracker: tracker,
-      renderWindow: renderWindow,
-      virtualItemHeightSignal: virtualItemHeightSignal,
-      children: jsx(PendingScrollRefContext.Provider, {
-        value: pendingScrollRef,
-        children: jsx(ListIdContext.Provider, {
-          value: innerListid,
-          children: children
+    return jsx("div", {
+      className: "navi_list_scroll_container",
+      children: jsx(UnorderedList, {
+        ref: ref,
+        id: innerId,
+        role: role,
+        fallback: fallback,
+        noMatchFallback: noMatchFallback,
+        searchText: searchText,
+        separator: separator === true ? jsx(Separator, {
+          margin: "0"
+        }) : separator,
+        expandX: expandX || expand,
+        ...listProps,
+        tracker: tracker,
+        renderWindow: renderWindow,
+        virtualItemHeightSignal: virtualItemHeightSignal,
+        children: jsx(PendingScrollRefContext.Provider, {
+          value: pendingScrollRef,
+          children: jsx(ListIdContext.Provider, {
+            value: innerId,
+            children: children
+          })
         })
       })
     });
   };
-  const renderListMemoized = useCallback(renderList, [listId, listRole, fallback, noMatchFallback, searchText, separator, expandX, renderWindow, children]);
+  const renderListMemoized = useCallback(renderList, [innerId, role, fallback, noMatchFallback, searchText, separator, expandX, expand, renderWindow, children]);
   const inputRef = useRef(null);
   const remainingProps = useConstraints(inputRef, rest, {
     disabled: !name
   });
   return jsxs(Box, {
     ...remainingProps,
-    ref: ref,
+    ref: containerRef,
     baseClassName: "navi_list_container",
     popover: popover,
-    "data-expand-x": expandX ? "" : undefined,
+    "data-expand-x": expandX || expand ? "" : undefined,
     expandX: expandX,
+    expand: expand,
     maxHeight: maxHeight,
     styleCSSVars: LIST_STYLE_CSS_VARS,
     pseudoClasses: LIST_PSEUDO_CLASSES,
+    pseudoStateSelector: ".navi_list",
     hasChildFunction: true,
     "data-navi-value": value || undefined,
-    "data-input-proxy": name ? `#${CSS.escape(hiddenInputId)}` : undefined,
     onnavi_list_request_nav: e => {
       const {
         item
@@ -27160,8 +27546,7 @@ const ListUI = props => {
       if (!item) {
         return;
       }
-      // navi_list_nav is dispatched by scrollToItem after the scroll
-      // completes (including the async path via pendingScrollRef).
+      // navi_list_nav is dispatched immediately by scrollToItem (before scroll).
       scrollToItem(item, {
         reason: "navi_list_request_nav",
         event: e.detail.event
@@ -27169,12 +27554,19 @@ const ListUI = props => {
     },
     onnavi_list_request_select: e => {
       const {
-        item
+        item,
+        event
       } = e.detail;
       if (!item) {
         return;
       }
-      dispatchPublicCustomEvent(e.currentTarget, "navi_list_select", {
+      // Nav to the selected item first (updates uiState, scrolls, etc.)
+      scrollToItem(item, {
+        reason: "navi_list_request_select",
+        event: event || e
+      });
+      const listEl = e.currentTarget;
+      dispatchPublicCustomEvent(listEl, "navi_list_select", {
         item,
         event: e
       });
@@ -27190,16 +27582,23 @@ const ListUI = props => {
     }), renderListMemoized]
   });
 };
+const LIST_STYLE_CSS_VARS = {
+  maxHeight: "--list-max-height",
+  borderColor: "--list-border-color",
+  borderRadius: "--list-border-radius",
+  borderWidth: "--list-border-width"
+};
+const LIST_PSEUDO_CLASSES = [":hover", ":focus", ":focus-visible", ":focus-within", ":read-only", ":disabled", ":-navi-void", ":-navi-has-value", ":-navi-expanded"];
 const useListScrollSync = ({
+  containerRef,
   ref,
-  ulRef,
   tracker,
   renderBudget,
   virtualItemHeight,
   searchText
 }) => {
   const debugScroll = useDebugScroll();
-  const virtualItemHeightSignal = useVirtualItemHeightSignal(ulRef, virtualItemHeight);
+  const virtualItemHeightSignal = useVirtualItemHeightSignal(ref, virtualItemHeight);
   const [renderWindow, setRenderWindow] = useState({
     start: 0,
     end: renderBudget
@@ -27242,21 +27641,28 @@ const useListScrollSync = ({
     if (index >= itemCount) {
       index = itemCount - 1;
     }
-    const srollItemIntoView = itemEl => {
+    const scrollItemIntoView = itemEl => {
       const trigger = `"${event.type}" on ${getElementSignature(event.target)} (${reason})`;
       const block = event.type === "keydown" ? "nearest" : "center";
       const scrollToItemCall = `${getElementSignature(itemEl)}.scrollIntoView({ block: "${block}", container: "nearest" })`;
+      const listScrollContainerEl = containerRef.current.querySelector(`.navi_list_scroll_container`);
       debugScroll(`${trigger} -> ${scrollToItemCall}`);
       scrollIntoViewScoped(itemEl, {
-        container: ref.current,
+        container: listScrollContainerEl,
         block
       });
-      const listContainerEl = ref.current;
-      dispatchPublicCustomEvent(listContainerEl, "navi_list_nav", {
+      dispatchPublicCustomEvent(listEl, "navi_list_scroll", {
         event,
         item
       });
     };
+
+    // Dispatch navi_list_nav immediately — do not wait for scroll to complete.
+    const listEl = ref.current;
+    dispatchPublicCustomEvent(listEl, "navi_list_nav", {
+      event,
+      item
+    });
     const {
       start,
       end
@@ -27265,30 +27671,30 @@ const useListScrollSync = ({
     if (isInWindow) {
       const itemEl = document.getElementById(item.id);
       if (itemEl) {
-        srollItemIntoView(itemEl);
+        scrollItemIntoView(itemEl);
         return;
       }
     }
     // Not in DOM — shift the render window. The item will read
-    // pendingScrollRef on mount and call scrollIntoViewWithStickyAwareness,
-    // then call onScrolled so we can dispatch navi_list_scroll.
+    // pendingScrollRef on mount and scroll into view.
     pendingScrollRef.current = {
       id: item.id,
       resolve: itemEl => {
         pendingScrollRef.current = null;
-        srollItemIntoView(itemEl);
+        scrollItemIntoView(itemEl);
       }
     };
     const half = Math.floor(renderBudget / 2);
     const newStart = Math.max(0, index - half);
     const newEnd = newStart + renderBudget;
-    updateRenderWindow(newStart, newEnd, `item to scroll out of render window`);
+    updateRenderWindow(newStart, newEnd, `item to scroll (at ${index}) is out of render window`);
   };
   const currentScrollRef = useRef(null);
   const updateCurrentScroll = () => {
-    const listContainerEl = ref.current;
-    const currentScrollLeft = listContainerEl.scrollLeft;
-    const currentScrollTop = listContainerEl.scrollTop;
+    const listContainerEl = containerRef.current;
+    const listScrollContainerEl = listContainerEl.querySelector(`.navi_list_scroll_container`);
+    const currentScrollLeft = listScrollContainerEl.scrollLeft;
+    const currentScrollTop = listScrollContainerEl.scrollTop;
     const renderWindow = renderWindowRef.current;
     currentScrollRef.current = {
       left: currentScrollLeft,
@@ -27313,7 +27719,7 @@ const useListScrollSync = ({
   // Scroll to the selected item when the list is first presented on screen.
   // Skipped when inside a closed <dialog>/<details> (scrollIntoView is a no-op
   // on hidden elements); re-runs automatically every time the ancestor opens.
-  useDisplayedLayoutEffect(ref, (el, openEvent) => {
+  useDisplayedLayoutEffect(containerRef, (el, openEvent) => {
     updateCurrentScroll();
     const items = tracker.itemsSignal.peek();
     const firstSelected = items.find(i => i.selected);
@@ -27346,7 +27752,8 @@ const useListScrollSync = ({
   const savedScrollRef = useRef(null);
   const topMatchScoresKeyRef = useRef("");
   useLayoutEffect(() => {
-    const listContainerEl = ref.current;
+    const listContainerEl = containerRef.current;
+    const listScrollContainerEl = listContainerEl.querySelector(`.navi_list_scroll_container`);
     if (!searchText) {
       // no search -> try to restore scroll position
       topMatchScoresKeyRef.current = "";
@@ -27362,8 +27769,8 @@ const useListScrollSync = ({
         const left = savedScroll.left;
         const top = savedScroll.top;
         // use scrollTo to respect eventual css scroll-behavior: smooth;
-        debugScroll(`restore scroll: ${getElementSignature(listContainerEl)}.scrollTo({ left: ${left}, top: ${top} })`);
-        listContainerEl.scrollTo({
+        debugScroll(`restore scroll: ${getElementSignature(listScrollContainerEl)}.scrollTo({ left: ${left}, top: ${top} })`);
+        listScrollContainerEl.scrollTo({
           left: savedScroll.left,
           top: savedScroll.top
         });
@@ -27376,15 +27783,15 @@ const useListScrollSync = ({
           item
         } = getScrollInfo({
           scrollTop: savedScroll.top
-        }, listContainerEl, tracker, virtualItemHeightSignal, renderWindowRef);
-        dispatchPublicCustomEvent(listContainerEl, "navi_list_nav", {
+        }, listScrollContainerEl, tracker, virtualItemHeightSignal, renderWindowRef);
+        const listEl = ref.current;
+        dispatchPublicCustomEvent(listEl, "navi_list_nav", {
           item,
           event: new CustomEvent("navi_scroll_restore")
         });
       });
+      return;
     }
-
-    // During search -> watch for changes in the top items or their scores.
     const visibleItems = tracker.visibleItemsSignal.peek();
     const topItems = visibleItems.slice(0, renderBudget);
     const topMatchScoresKey = topItems.map(i => `${i.id}:${i.matchScore ?? ""}`).join(",");
@@ -27410,12 +27817,12 @@ const useListScrollSync = ({
 
   // Scroll listener — slides the window as the user scrolls.
   useLayoutEffect(() => {
-    const listContainerEl = ref.current;
+    const listContainerEl = containerRef.current;
     if (!listContainerEl) {
       return undefined;
     }
+    const listScrollContainerEl = listContainerEl.querySelector(`.navi_list_scroll_container`);
     const listEl = listContainerEl.querySelector(".navi_list");
-    const scrollContainer = getScrollContainer(listEl);
     const onScroll = () => {
       updateCurrentScroll();
       const visibleItemCount = tracker.visibleCountSignal.peek();
@@ -27428,8 +27835,8 @@ const useListScrollSync = ({
       }
       let reason = "";
       const scrollInfo = getScrollInfo({
-        scrollTop: listContainerEl.scrollTop
-      }, listContainerEl, tracker, virtualItemHeightSignal, renderWindowRef);
+        scrollTop: listScrollContainerEl.scrollTop
+      }, listScrollContainerEl, tracker, virtualItemHeightSignal, renderWindowRef);
       if (!scrollInfo) {
         return;
       }
@@ -27446,11 +27853,11 @@ const useListScrollSync = ({
       }
       updateRenderWindow(newStart, newEnd, reason);
     };
-    scrollContainer.addEventListener("scroll", onScroll, {
+    listScrollContainerEl.addEventListener("scroll", onScroll, {
       passive: true
     });
     return () => {
-      scrollContainer.removeEventListener("scroll", onScroll);
+      listScrollContainerEl.removeEventListener("scroll", onScroll);
     };
   }, [renderBudget]);
   return {
@@ -27466,10 +27873,10 @@ const useListScrollSync = ({
 // Returns { index, item, reason } or null if nothing can be determined.
 const getScrollInfo = ({
   scrollTop
-}, listContainerEl, tracker, virtualItemHeightSignal, renderWindowRef) => {
-  const listEl = listContainerEl.querySelector(".navi_list");
+}, listScrollContainerEl, tracker, virtualItemHeightSignal, renderWindowRef) => {
+  const listEl = listScrollContainerEl.querySelector(".navi_list");
   const items = tracker.itemsSignal.peek();
-  const containerRect = listContainerEl.getBoundingClientRect();
+  const containerRect = listScrollContainerEl.getBoundingClientRect();
   let hitEl = null;
   let hitFiller = null;
   for (let y = containerRect.top + 1; y < containerRect.bottom; y += 4) {
@@ -27520,7 +27927,7 @@ const getScrollInfo = ({
     reason: "no hit"
   };
 };
-const useVirtualItemHeightSignal = (ulRef, virtualItemHeightProp = 0) => {
+const useVirtualItemHeightSignal = (ref, virtualItemHeightProp = 0) => {
   const virtualHeightSignalRef = useRef(null);
   if (!virtualHeightSignalRef.current) {
     virtualHeightSignalRef.current = signal(virtualItemHeightProp);
@@ -27534,11 +27941,11 @@ const useVirtualItemHeightSignal = (ulRef, virtualItemHeightProp = 0) => {
     if (virtualHeightSignal.peek() !== 0) {
       return;
     }
-    const ulEl = ulRef.current;
-    if (!ulEl) {
+    const listEl = ref.current;
+    if (!listEl) {
       return;
     }
-    const firstListItem = ulEl.querySelector(REAL_LIST_ITEM_SELECTOR);
+    const firstListItem = listEl.querySelector(REAL_LIST_ITEM_SELECTOR);
     if (!firstListItem) {
       return;
     }
@@ -27547,13 +27954,7 @@ const useVirtualItemHeightSignal = (ulRef, virtualItemHeightProp = 0) => {
   });
   return virtualHeightSignal;
 };
-const LIST_STYLE_CSS_VARS = {
-  maxHeight: "--list-max-height",
-  borderColor: "--list-border-color",
-  borderRadius: "--list-border-radius",
-  borderWidth: "--list-border-width"
-};
-const LIST_PSEUDO_CLASSES = [":-navi-void"];
+
 // Inner <ul> — hosts the fillers + items.
 // Creates a virtualItemHeight signal so TopFiller and BottomFiller can
 // subscribe to it independently. When virtualItemHeight is passed as a prop it
@@ -27696,7 +28097,8 @@ const ListWithPopover = props => {
     ...props,
     popover: "manual",
     onnavi_list_request_open: e => {
-      const listContainerEl = e.currentTarget;
+      const listEl = e.currentTarget;
+      const listContainerEl = listEl.closest(".navi_list_container");
       const anchor = e.detail?.anchor;
       listContainerEl.showPopover();
       const positionPopover = () => {
@@ -27732,23 +28134,26 @@ const ListWithPopover = props => {
         positionPopover();
       });
       cleanupRef.current = () => cleanup.disconnect();
-      dispatchPublicCustomEvent(listContainerEl, "navi_list_open", {
+      dispatchPublicCustomEvent(listEl, "navi_list_open", {
         event: e
       });
     },
     onnavi_list_request_close: e => {
-      const listContainerEl = e.currentTarget;
+      const listEl = e.currentTarget;
+      const listContainerEl = listEl.closest(".navi_list_container");
       cleanupRef.current?.();
       listContainerEl.removeAttribute("data-anchor-hidden");
       listContainerEl.hidePopover();
-      dispatchPublicCustomEvent(listContainerEl, "navi_list_close", {
+      dispatchPublicCustomEvent(listEl, "navi_list_close", {
         event: e
       });
     }
   });
 };
 
-// Interactive variant with action: calls the action whenever a value is selected.
+// Interactive variant: manages hover/keyboard/selection state and handles the
+// navi event protocol. When an action is provided it binds the action to ui state
+// and fires it on select. When only uiAction is provided it calls it directly.
 const ListWithAction = props => {
   const {
     ref,
@@ -27760,10 +28165,15 @@ const ListWithAction = props => {
     onActionAbort,
     onActionError,
     onActionEnd,
-    uiAction,
     ...rest
   } = props;
-  const boundAction = useAction(action);
+  // Setup uiStateController and bind action to uiState
+  const uiStateController = useUIStateController(props, "list", {
+    allowNameless: true
+  });
+  const uiState = useUIState(uiStateController);
+  // Bind action to uiState (like InputTextualWithAction, null-safe when no action)
+  const [boundAction] = useActionBoundToOneParam(action, uiState);
   const {
     loading: actionLoading
   } = useActionStatus(boundAction);
@@ -27779,34 +28189,8 @@ const ListWithAction = props => {
     onError: onActionError,
     onEnd: onActionEnd
   });
-  const innerUiAction = (value, event) => {
-    uiAction?.(value, event);
-    // Dispatch action request so useActionEvents can pick it up
-    if (ref && ref.current) {
-      dispatchCustomEvent(ref.current, "navi_action_requested", {
-        bubbles: true,
-        detail: {
-          value
-        }
-      });
-    }
-  };
-  return jsx(List, {
-    "data-action": boundAction.name,
-    ...rest,
-    ref: ref,
-    action: undefined,
-    loading: loading || actionLoading,
-    uiAction: innerUiAction
-  });
-};
 
-// Interactive variant: manages hover/keyboard/selection state and handles the
-// navi event protocol, then delegates rendering to ListUI.
-const ListInteractive = props => {
-  const uiStateController = useUIStateController(props, "list", {
-    allowNameless: true
-  });
+  // Mouse/keyboard pointed state
   const [mousePointedId, setMousePointedId] = useState(null);
   const [keyboardPointedId, setKeyboardPointedId] = useState(null);
   const anchorIdRef = useRef(null);
@@ -27828,146 +28212,163 @@ const ListInteractive = props => {
     }
     return visibleItemsRef.current.find(i => i.id === anchorId);
   };
-  return jsx(ListInteractiveContext.Provider, {
-    value: true,
-    children: jsx(ListMousePointedIdContext.Provider, {
-      value: mousePointedId,
-      children: jsx(ListKeyboardPointedIdContext.Provider, {
-        value: keyboardPointedId,
-        children: jsx(List, {
-          keyboardInteractions: true,
-          ...props,
-          uiAction: undefined,
-          onListVisibleItemsChange: visibleItems => {
-            props.onListVisibleItemsChange?.(visibleItems);
-            visibleItemsRef.current = visibleItems;
-          },
-          onnavi_list_request_hover: e => {
-            const {
-              item
-            } = e.detail;
-            setMousePointedId(item ? item.id : null);
-          },
-          onnavi_list_request_nav_from_current: e => {
-            const {
-              event = e,
-              goal
-            } = e.detail;
-            const visibleItems = visibleItemsRef.current;
-            const visibleItemCount = visibleItems.length;
-            if (visibleItemCount === 0) {
-              return;
+  const listVnode = jsx(List, {
+    keyboardInteractions: true,
+    "data-action": boundAction.name,
+    ...rest,
+    ref: ref,
+    action: undefined,
+    uiAction: undefined,
+    loading: loading || actionLoading,
+    value: uiState,
+    onListVisibleItemsChange: visibleItems => {
+      props.onListVisibleItemsChange?.(visibleItems);
+      visibleItemsRef.current = visibleItems;
+    },
+    onnavi_list_request_hover: e => {
+      const {
+        item
+      } = e.detail;
+      setMousePointedId(item ? item.id : null);
+    },
+    onnavi_list_request_nav_from_current: e => {
+      const {
+        event = e,
+        goal
+      } = e.detail;
+      const visibleItems = visibleItemsRef.current;
+      const visibleItemCount = visibleItems.length;
+      if (visibleItemCount === 0) {
+        return;
+      }
+      const anchorIndex = getAnchorIndex();
+      const isDisabledIndex = i => Boolean(visibleItems[i]?.disabled);
+      const resolveIndex = () => {
+        if (goal === "down") {
+          if (anchorIndex === -1) {
+            let i = 0;
+            while (i < visibleItemCount && isDisabledIndex(i)) {
+              i++;
             }
-            const anchorIndex = getAnchorIndex();
-            const isDisabledIndex = i => Boolean(visibleItems[i]?.disabled);
-            const resolveIndex = () => {
-              if (goal === "down") {
-                if (anchorIndex === -1) {
-                  let i = 0;
-                  while (i < visibleItemCount && isDisabledIndex(i)) {
-                    i++;
-                  }
-                  return i < visibleItemCount ? i : anchorIndex;
-                }
-                let belowIndex = anchorIndex + 1;
-                while (belowIndex < visibleItemCount && isDisabledIndex(belowIndex)) {
-                  belowIndex++;
-                }
-                return belowIndex < visibleItemCount ? belowIndex : anchorIndex;
-              }
-              if (goal === "up") {
-                if (anchorIndex === -1) {
-                  let i = visibleItemCount - 1;
-                  while (i >= 0 && isDisabledIndex(i)) {
-                    i--;
-                  }
-                  return i >= 0 ? i : anchorIndex;
-                }
-                let aboveIndex = anchorIndex - 1;
-                while (aboveIndex >= 0 && isDisabledIndex(aboveIndex)) {
-                  aboveIndex--;
-                }
-                return aboveIndex >= 0 ? aboveIndex : anchorIndex;
-              }
-              if (goal === "first") {
-                let i = 0;
-                while (i < visibleItemCount && isDisabledIndex(i)) {
-                  i++;
-                }
-                return i < visibleItemCount ? i : anchorIndex;
-              }
-              if (goal === "last") {
-                let i = visibleItemCount - 1;
-                while (i >= 0 && isDisabledIndex(i)) {
-                  i--;
-                }
-                return i >= 0 ? i : anchorIndex;
-              }
-              return anchorIndex;
-            };
-            const index = resolveIndex();
-            if (index === anchorIndex) {
-              return;
-            }
-            if (event.type === "keydown") {
-              event.preventDefault();
-            }
-            const item = visibleItems[index];
-            dispatchCustomEvent(e.currentTarget, "navi_list_request_nav", {
-              event: e,
-              item
-            });
-          },
-          onnavi_list_request_interaction_state_reset: () => {
-            setAnchorId(null);
-            setKeyboardPointedId(null);
-            setMousePointedId(null);
-          },
-          onnavi_list_request_select_current: e => {
-            const item = getAnchorItem();
-            dispatchCustomEvent(e.currentTarget, "navi_list_request_select", {
-              event: e,
-              item
-            });
-          },
-          onnavi_list_nav: e => {
-            const {
-              item,
-              event
-            } = e.detail;
-            const id = item.id;
-            if (event.type === "navi_list_nav_top_on_displayed") {
-              // arrow down should focus first item for instance
-              setAnchorId(null);
-            } else {
-              setAnchorId(id);
-            }
-            if (event.type === "keydown") {
-              setKeyboardPointedId(id);
-            } else {
-              setKeyboardPointedId(null);
-            }
-          },
-          onnavi_list_select: e => {
-            const {
-              item,
-              event
-            } = e.detail;
-            const id = item.id;
-            setAnchorId(id);
-            if (event.type === "keydown") {
-              setKeyboardPointedId(id);
-            } else {
-              setKeyboardPointedId(null);
-            }
-            const value = item.value;
-            uiStateController.setUIState(value, event);
+            return i < visibleItemCount ? i : anchorIndex;
           }
+          let belowIndex = anchorIndex + 1;
+          while (belowIndex < visibleItemCount && isDisabledIndex(belowIndex)) {
+            belowIndex++;
+          }
+          return belowIndex < visibleItemCount ? belowIndex : anchorIndex;
+        }
+        if (goal === "up") {
+          if (anchorIndex === -1) {
+            let i = visibleItemCount - 1;
+            while (i >= 0 && isDisabledIndex(i)) {
+              i--;
+            }
+            return i >= 0 ? i : anchorIndex;
+          }
+          let aboveIndex = anchorIndex - 1;
+          while (aboveIndex >= 0 && isDisabledIndex(aboveIndex)) {
+            aboveIndex--;
+          }
+          return aboveIndex >= 0 ? aboveIndex : anchorIndex;
+        }
+        if (goal === "first") {
+          let i = 0;
+          while (i < visibleItemCount && isDisabledIndex(i)) {
+            i++;
+          }
+          return i < visibleItemCount ? i : anchorIndex;
+        }
+        if (goal === "last") {
+          let i = visibleItemCount - 1;
+          while (i >= 0 && isDisabledIndex(i)) {
+            i--;
+          }
+          return i >= 0 ? i : anchorIndex;
+        }
+        return anchorIndex;
+      };
+      const index = resolveIndex();
+      if (index === anchorIndex) {
+        if (event.type === "keydown") {
+          event.preventDefault();
+        }
+        return;
+      }
+      if (event.type === "keydown") {
+        event.preventDefault();
+      }
+      const item = visibleItems[index];
+      dispatchCustomEvent(e.currentTarget, "navi_list_request_nav", {
+        event: e,
+        item
+      });
+    },
+    onnavi_list_request_interaction_state_reset: () => {
+      setAnchorId(null);
+      setKeyboardPointedId(null);
+      setMousePointedId(null);
+    },
+    onnavi_list_request_select_current: e => {
+      const item = getAnchorItem();
+      dispatchCustomEvent(e.currentTarget, "navi_list_request_select", {
+        event: e,
+        item
+      });
+    },
+    onnavi_list_nav: e => {
+      const {
+        item,
+        event
+      } = e.detail;
+      const id = item ? item.id : null;
+      const isNonUserNav = event.type === "navi_list_nav_top_on_displayed" || event.type === "navi_list_top_match_change";
+      if (isNonUserNav) {
+        setAnchorId(null);
+      } else {
+        setAnchorId(id);
+      }
+      if (event.type === "keydown") {
+        setKeyboardPointedId(id);
+      } else {
+        setKeyboardPointedId(null);
+      }
+      const isAutomaticNav = event.type === "navi_list_nav_top_on_displayed" || event.type === "navi_list_top_match_change" || event.type === "navi_scroll_restore";
+      if (item && !isAutomaticNav) {
+        uiStateController.setUIState(item.value, event);
+      }
+    }
+    // Dispatch action request on select
+    ,
+
+    onnavi_list_select: e => {
+      const listEl = e.currentTarget;
+      dispatchActionRequestedCustomEvent(listEl, {
+        event: e,
+        requester: e.target
+      });
+    }
+  });
+  return jsx(UIStateControllerContext.Provider, {
+    value: uiStateController,
+    children: jsx(UIStateContext.Provider, {
+      value: uiState,
+      children: jsx(ListInteractiveContext.Provider, {
+        value: true,
+        children: jsx(ListMousePointedIdContext.Provider, {
+          value: mousePointedId,
+          children: jsx(ListKeyboardPointedIdContext.Provider, {
+            value: keyboardPointedId,
+            children: listVnode
+          })
         })
       })
     })
   });
 };
+
+// Interactive variant: manages hover/keyboard/selection state and handles the
+// navi event protocol, then delegates rendering to ListUI.
 const ListWithKeyboardInteractions = props => {
   const {
     autoFocus,
@@ -28207,7 +28608,19 @@ const ListItemReal = ({
       // directly to the correct text node positions without re-searching.
       const textNodes = [];
       let totalLength = 0;
-      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+        acceptNode: node => {
+          // Skip text nodes inside aria-hidden elements (icons, decorative emoji, etc.)
+          let el = node.parentElement;
+          while (el && el !== root) {
+            if (el.getAttribute("aria-hidden") === "true") {
+              return NodeFilter.FILTER_REJECT;
+            }
+            el = el.parentElement;
+          }
+          return NodeFilter.FILTER_ACCEPT;
+        }
+      });
       let node;
       while (node = walker.nextNode()) {
         textNodes.push({
@@ -28254,13 +28667,14 @@ const ListItemReal = ({
     "navi-list-item-real": "",
     "data-interactive": isInteractive ? "" : undefined,
     "data-anchor": isPointedByKeyboard ? "" : undefined,
-    "data-disabled": disabled ? "" : undefined,
+    ...rest,
+    ref: ref,
     onMouseEnter: e => {
       if (disabled) {
         return;
       }
-      const listContainerEl = e.currentTarget.closest(".navi_list_container");
-      dispatchCustomEvent(listContainerEl, "navi_list_request_hover", {
+      const listEl = e.currentTarget.closest(".navi_list");
+      dispatchCustomEvent(listEl, "navi_list_request_hover", {
         item,
         event: e
       });
@@ -28270,8 +28684,8 @@ const ListItemReal = ({
       if (disabled) {
         return;
       }
-      const listContainerEl = e.currentTarget.closest(".navi_list_container");
-      dispatchCustomEvent(listContainerEl, "navi_list_request_hover", {
+      const listEl = e.currentTarget.closest(".navi_list");
+      dispatchCustomEvent(listEl, "navi_list_request_hover", {
         item: null,
         event: e
       });
@@ -28284,23 +28698,21 @@ const ListItemReal = ({
       if (e.button !== 0) {
         return;
       }
-      const listContainerEl = e.currentTarget.closest(".navi_list_container");
-      dispatchCustomEvent(listContainerEl, "navi_list_request_select", {
+      const listEl = e.currentTarget.closest(".navi_list");
+      dispatchCustomEvent(listEl, "navi_list_request_select", {
         item,
         event: e
       });
       rest.onMouseDown?.(e);
     },
-    ...rest,
-    ref: ref,
     basePseudoState: {
-      ...rest.basePseudoState,
       ":disabled": Boolean(disabled),
       ":-navi-pointed": isPointed,
       ":-navi-pointed-by-mouse": isPointedByMouse,
       ":-navi-pointed-by-keyboard": isPointedByKeyboard,
       ":-navi-pointed-by-proxy": isPointedByProxy,
-      ":-navi-selected": selected
+      ":-navi-selected": selected,
+      ...rest.basePseudoState
     },
     children: children
   });
@@ -28310,9 +28722,13 @@ const LIST_ITEM_STYLE_CSS_VARS = {
   "color": "--list-item-color",
   "backgroundColor": "--list-item-background-color",
   "fontWeight": "--list-item-font-weight",
-  ":-navi-pointed": {
-    color: "--list-item-color-pointed",
-    backgroundColor: "--list-item-background-color-pointed"
+  ":-navi-pointed-by-keyboard": {
+    color: "--list-item-color-keyboard-pointed",
+    backgroundColor: "--list-item-background-color-keyboard-pointed"
+  },
+  ":-navi-pointed-by-mouse": {
+    color: "--list-item-color-mouse-pointed",
+    backgroundColor: "--list-item-background-color-mouse-pointed"
   },
   ":hover": {
     color: "--list-item-color-hover",
@@ -28320,8 +28736,7 @@ const LIST_ITEM_STYLE_CSS_VARS = {
   },
   ":-navi-selected": {
     color: "--list-item-color-selected",
-    backgroundColor: "--list-item-background-color-selected",
-    fontWeight: "--list-item-font-weight-selected"
+    backgroundColor: "--list-item-background-color-selected"
   },
   ":disabled": {
     color: "--list-item-color-disabled",
@@ -28395,9 +28810,9 @@ const ListItemHeader = props => {
   const defaultRef = useRef(null);
   const ref = props.ref || defaultRef;
   useDisplayedLayoutEffect(ref, headerEl => {
-    const scrollContainer = getScrollContainer(headerEl);
+    const listContainerEl = headerEl.closest(".navi_list_container");
     const headerHeight = headerEl.getBoundingClientRect().height;
-    scrollContainer.style.setProperty("--list-header-height", `${headerHeight}px`);
+    listContainerEl.style.setProperty("--list-header-height", `${headerHeight}px`);
   }, []);
   return jsx(ListItem, {
     ...props,
@@ -28410,9 +28825,9 @@ const ListItemFooter = props => {
   const defaultRef = useRef(null);
   const ref = props.ref || defaultRef;
   useDisplayedLayoutEffect(ref, headerEl => {
-    const scrollContainer = getScrollContainer(headerEl);
+    const listContainerEl = headerEl.closest(".navi_list_container");
     const headerHeight = headerEl.getBoundingClientRect().height;
-    scrollContainer.style.setProperty("--list-footer-height", `${headerHeight}px`);
+    listContainerEl.style.setProperty("--list-footer-height", `${headerHeight}px`);
   }, []);
   return jsx(ListItem, {
     ...props,
@@ -28421,42 +28836,42 @@ const ListItemFooter = props => {
     baseClassName: "navi_list_item_footer"
   });
 };
-const requestListNavFromCurrent = (listContainerElement, {
+const requestListNavFromCurrent = (listEl, {
   event,
   goal
 }) => {
-  return dispatchCustomEvent(listContainerElement, "navi_list_request_nav_from_current", {
+  return dispatchCustomEvent(listEl, "navi_list_request_nav_from_current", {
     event,
     goal
   });
 };
-const requestListSelectCurrent = (listContainerElement, {
+const requestListSelectCurrent = (listEl, {
   event
 }) => {
-  return dispatchCustomEvent(listContainerElement, "navi_list_request_select_current", {
+  return dispatchCustomEvent(listEl, "navi_list_request_select_current", {
     event
   });
 };
-const requestListInteractionStateReset = (listContainerElement, {
+const requestListInteractionStateReset = (listEl, {
   event
 }) => {
-  return dispatchCustomEvent(listContainerElement, "navi_list_request_interaction_state_reset", {
+  return dispatchCustomEvent(listEl, "navi_list_request_interaction_state_reset", {
     event
   });
 };
-const requestListOpen = (listContainerElement, {
+const requestListOpen = (listEl, {
   event,
   anchor
 }) => {
-  return dispatchCustomEvent(listContainerElement, "navi_list_request_open", {
+  return dispatchCustomEvent(listEl, "navi_list_request_open", {
     event,
     anchor
   });
 };
-const requestListClose = (listContainerElement, {
+const requestListClose = (listEl, {
   event
 }) => {
-  return dispatchCustomEvent(listContainerElement, "navi_list_request_close", {
+  return dispatchCustomEvent(listEl, "navi_list_request_close", {
     event
   });
 };
@@ -28478,7 +28893,7 @@ installImportMetaCssBuild(import.meta);/**
  * - <InputCheckbox /> for type="checkbox"
  * - <InputRadio /> for type="radio"
  */
-const css$l = /* css */`
+const css$k = /* css */`
   @layer navi {
     .navi_input {
       --border-radius: 2px;
@@ -28739,7 +29154,7 @@ const InputTextualDispatcher = props => {
 };
 const InputNativeContext = createContext(null);
 const InputTextualUI = props => {
-  import.meta.css = [css$l, "@jsenv/navi/src/field/input_textual.jsx"];
+  import.meta.css = [css$k, "@jsenv/navi/src/field/input_textual.jsx"];
   const {
     ref,
     type,
@@ -28993,18 +29408,16 @@ const InputControllingList = props => {
     onKeyDown,
     ...rest
   } = props;
-  const getListContainerEl = () => {
-    const listEl = document.getElementById(listId);
-    const listContainerEl = listEl.parentNode;
-    return listContainerEl;
+  const getListEl = () => {
+    return document.getElementById(listId);
   };
   useEffect(() => {
     const inputEl = ref.current;
     if (!inputEl) {
       return undefined;
     }
-    const listContainerEl = getListContainerEl();
-    if (!listContainerEl) {
+    const listEl = getListEl();
+    if (!listEl) {
       return undefined;
     }
     const onListSelect = e => {
@@ -29020,48 +29433,48 @@ const InputControllingList = props => {
         }
       }
     };
-    listContainerEl.addEventListener("navi_list_select", onListSelect);
+    listEl.addEventListener("navi_list_select", onListSelect);
     return () => {
-      listContainerEl.removeEventListener("navi_list_select", onListSelect);
+      listEl.removeEventListener("navi_list_select", onListSelect);
     };
   }, []);
   const onKeyDownWithShortcuts = shortcutsViaOnKeyDown({
     arrowdown: e => {
-      const listContainerEl = getListContainerEl();
+      const listEl = getListEl();
       e.stopPropagation(); // when within a list, prevent list from handling it twice
-      return requestListNavFromCurrent(listContainerEl, {
+      return requestListNavFromCurrent(listEl, {
         event: e,
         goal: "down"
       });
     },
     arrowup: e => {
-      const listContainerEl = getListContainerEl();
+      const listEl = getListEl();
       e.stopPropagation(); // when within a list, prevent list from handling it twice
-      return requestListNavFromCurrent(listContainerEl, {
+      return requestListNavFromCurrent(listEl, {
         event: e,
         goal: "up"
       });
     },
     home: e => {
-      const listContainerEl = getListContainerEl();
+      const listEl = getListEl();
       e.stopPropagation(); // when within a list, prevent list from handling it twice
-      return requestListNavFromCurrent(listContainerEl, {
+      return requestListNavFromCurrent(listEl, {
         event: e,
         goal: "first"
       });
     },
     end: e => {
-      const listContainerEl = getListContainerEl();
+      const listEl = getListEl();
       e.stopPropagation(); // when within a list, prevent list from handling it twice
-      return requestListNavFromCurrent(listContainerEl, {
+      return requestListNavFromCurrent(listEl, {
         event: e,
         goal: "last"
       });
     },
     enter: e => {
-      const listContainerEl = getListContainerEl();
+      const listEl = getListEl();
       e.stopPropagation(); // when within a list, prevent list from handling it twice
-      return requestListSelectCurrent(listContainerEl, {
+      return requestListSelectCurrent(listEl, {
         event: e
       });
     },
@@ -29070,14 +29483,14 @@ const InputControllingList = props => {
       // when the escape is meant to clear the search input (otherwise it would close the select too)
       if (e.currentTarget.type === "search" && e.currentTarget.value !== "") {
         e.stopPropagation();
-        return false;
+        return true;
       }
-      const listContainerEl = getListContainerEl();
+      const listEl = getListEl();
       // here we allow propagation of escape up to the <select> to allow closing if within a select
       // it also means list might catch escape and reset again but it's ok to reset twice here as it won't cause side effects
       // (if we need the same pattern for other events where it could be problematic we would have to mark
       // event as handled somehow to prevent list containing input to react to it)
-      return requestListInteractionStateReset(listContainerEl, {
+      return requestListInteractionStateReset(listEl, {
         event: e
       });
     }
@@ -29119,18 +29532,16 @@ const InputTextualWithSuggestions = props => {
     expandedRef.current = false;
     setExpanded(false);
   };
-  const getListContainerEl = () => {
-    const listEl = document.getElementById(suggestions);
-    const listContainerEl = listEl.parentNode;
-    return listContainerEl;
+  const getListEl = () => {
+    return document.getElementById(suggestions);
   };
   const showSuggestions = e => {
     if (expandedRef.current) {
       return;
     }
-    const listContainerEl = getListContainerEl();
-    if (listContainerEl) {
-      requestListOpen(listContainerEl, {
+    const listEl = getListEl();
+    if (listEl) {
+      requestListOpen(listEl, {
         event: e,
         anchor: ref.current
       });
@@ -29141,9 +29552,9 @@ const InputTextualWithSuggestions = props => {
     if (!expandedRef.current) {
       return;
     }
-    const listContainerEl = getListContainerEl();
-    if (!listContainerEl) {
-      requestListClose(listContainerEl, {
+    const listEl = getListEl();
+    if (listEl) {
+      requestListClose(listEl, {
         event: e
       });
       collapse();
@@ -29151,8 +29562,8 @@ const InputTextualWithSuggestions = props => {
   };
   useEffect(() => {
     const inputEl = ref.current;
-    const listContainerEl = getListContainerEl();
-    if (!listContainerEl) {
+    const listEl = getListEl();
+    if (!listEl) {
       return undefined;
     }
     const onSelect = e => {
@@ -29168,9 +29579,9 @@ const InputTextualWithSuggestions = props => {
       }));
       hideSuggestions(e);
     };
-    listContainerEl.addEventListener("navi_list_select", onSelect);
+    listEl.addEventListener("navi_list_select", onSelect);
     return () => {
-      listContainerEl.removeEventListener("navi_list_select", onSelect);
+      listEl.removeEventListener("navi_list_select", onSelect);
     };
   }, [suggestions]);
   return jsx(ListIdContext.Provider, {
@@ -29382,7 +29793,7 @@ installImportMetaCssBuild(import.meta);/**
  * This means an editable thing MUST have a parent with position relative that wraps the content and the eventual editable input
  *
  */
-const css$k = /* css */`
+const css$j = /* css */`
   .navi_editable_wrapper {
     --inset-top: 0px;
     --inset-right: 0px;
@@ -29431,7 +29842,7 @@ const useEditionController = () => {
   };
 };
 const Editable = props => {
-  import.meta.css = [css$k, "@jsenv/navi/src/field/edition/editable.jsx"];
+  import.meta.css = [css$j, "@jsenv/navi/src/field/edition/editable.jsx"];
   let {
     children,
     action,
@@ -29700,7 +30111,7 @@ const Form = props => {
   });
   const uiState = useUIState(uiStateController);
   const form = renderActionableComponent(props, {
-    Basic: FormBasic,
+    Basic: FormUI,
     WithAction: FormWithAction
   });
   return jsx(UIStateControllerContext.Provider, {
@@ -29711,7 +30122,7 @@ const Form = props => {
     })
   });
 };
-const FormBasic = props => {
+const FormUI = props => {
   const uiStateController = useContext(UIStateControllerContext);
   const {
     readOnly,
@@ -29819,7 +30230,7 @@ const FormWithAction = props => {
     }
   });
   const innerLoading = loading || actionPending;
-  return jsx(FormBasic, {
+  return jsx(FormUI, {
     "data-action": actionBoundToUIState.name,
     "data-method": action.meta?.httpVerb || method || "GET",
     ...rest,
@@ -29845,7 +30256,7 @@ const FormWithAction = props => {
 //   form.dispatchEvent(customEvent);
 // };
 
-installImportMetaCssBuild(import.meta);const css$j = /* css */`
+installImportMetaCssBuild(import.meta);const css$i = /* css */`
   .navi_group {
     --border-width: 1px;
 
@@ -29942,7 +30353,7 @@ const Group = ({
   vertical = row,
   ...props
 }) => {
-  import.meta.css = [css$j, "@jsenv/navi/src/field/group.jsx"];
+  import.meta.css = [css$i, "@jsenv/navi/src/field/group.jsx"];
   if (typeof borderWidth === "string") {
     borderWidth = parseFloat(borderWidth);
   }
@@ -30133,7 +30544,7 @@ const useCleanup = () => {
   return cleanupMethods;
 };
 
-installImportMetaCssBuild(import.meta);const css$i = /* css */`
+installImportMetaCssBuild(import.meta);const css$h = /* css */`
   .navi_dialog {
     &[open] {
       display: flex;
@@ -30146,7 +30557,7 @@ installImportMetaCssBuild(import.meta);const css$i = /* css */`
   }
 `;
 const Dialog = props => {
-  import.meta.css = [css$i, "@jsenv/navi/src/popup/dialog.jsx"];
+  import.meta.css = [css$h, "@jsenv/navi/src/popup/dialog.jsx"];
   const {
     children,
     scrollTrap,
@@ -30214,12 +30625,18 @@ const Dialog = props => {
     ref: ref,
     baseClassName: "navi_dialog",
     onMouseDown: e => {
+      rest.onMouseDown?.(e);
       // The <dialog> element covers the full viewport; clicking the backdrop
       // hits the dialog itself (not any child). Close when that happens.
-      if (!pointerTrap && e.target === ref.current) {
+      if (!pointerTrap && e.button === 0 && e.target === ref.current) {
         onRequestClose(e);
       }
-      rest.onMouseDown?.(e);
+    },
+    onCancel: e => {
+      // The browser fires "cancel" (then closes the dialog) when the user presses Escape.
+      // Prevent the native close so we control the close flow and dispatch navi_dialog_close.
+      e.preventDefault();
+      onRequestClose(e);
     },
     onnavi_dialog_request_open: e => {
       const {
@@ -30251,7 +30668,7 @@ const requestDialogClose = (popoverElement, {
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$h = /* css */`
+installImportMetaCssBuild(import.meta);const css$g = /* css */`
   .navi_popover_backdrop {
     position: fixed;
     inset: 0;
@@ -30267,7 +30684,7 @@ installImportMetaCssBuild(import.meta);const css$h = /* css */`
   }
 `;
 const Popover = props => {
-  import.meta.css = [css$h, "@jsenv/navi/src/popup/popover.jsx"];
+  import.meta.css = [css$g, "@jsenv/navi/src/popup/popover.jsx"];
   const {
     scrollTrap,
     pointerTrap,
@@ -30443,7 +30860,7 @@ const requestPopoverClose = (popoverElement, {
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$g = /* css */`
+installImportMetaCssBuild(import.meta);const css$f = /* css */`
   @layer navi {
     .navi_select {
       --select-border-radius: 2px;
@@ -30503,23 +30920,25 @@ installImportMetaCssBuild(import.meta);const css$g = /* css */`
     outline-offset: calc(-1 * var(--select-outline-width));
     user-select: none;
 
-    &:hover {
+    --x-select-outline-width-focus-visible: calc(
+      var(--select-border-width) + var(--select-outline-width)
+    );
+    --x-select-outline-offset-focus-visible: calc(
+      -1 * (var(--select-border-width) + var(--select-outline-width))
+    );
+
+    &[data-hover] {
       background-color: var(--select-background-color-hover);
       outline-color: var(--select-border-color-hover);
     }
 
-    &:focus,
-    &:focus-visible {
-      outline-width: calc(
-        var(--select-border-width) + var(--select-outline-width)
-      );
-      outline-color: var(--navi-focus-outline-color, #005fcc);
-      outline-offset: calc(
-        -1 * (var(--select-border-width) + var(--select-outline-width))
-      );
+    &[data-focus-visible] {
+      outline-width: var(--x-select-outline-width-focus-visible);
+      outline-color: var(--navi-focus-outline-color);
+      outline-offset: var(--x-select-outline-offset-focus-visible);
     }
 
-    &:disabled {
+    &[data-disabled] {
       opacity: 0.5;
       cursor: default;
     }
@@ -30558,64 +30977,75 @@ installImportMetaCssBuild(import.meta);const css$g = /* css */`
       opacity: 0.6;
     }
 
-    /* When the list inside the popover has keyboard focus, keep the focus ring
-       on the select trigger for visual continuity */
-    &:not(:has(.navi_select_dialog .navi_list_container:focus)):has(
-        .navi_list_container:focus
-      ) {
-      outline-width: calc(
-        var(--select-border-width) + var(--select-outline-width)
-      );
-      outline-color: var(--navi-focus-outline-color, #005fcc);
-      outline-offset: calc(
-        -1 * (var(--select-border-width) + var(--select-outline-width))
-      );
-    }
-    .navi_list_container:focus {
-      outline: none;
-    }
-
-    /* When the list inside the dialog has keyboard focus, show the focus ring
-       on the dialog instead */
-    .navi_select_dialog:has(.navi_list_container:focus) {
-      outline: var(--select-outline-width) solid
-        var(--navi-focus-outline-color, #005fcc);
-    }
-
-    .navi_select_popover {
-      position: absolute;
-      inset: unset;
-      min-width: var(--select-anchor-width, 0px);
-      max-width: 95vw;
-      max-height: 95dvh;
-      margin: 0;
-      padding: 0;
-      background: white;
-      border: none;
-      border-radius: 0;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
-      cursor: default; /* Reset pointer cursor within the select */
-      overflow: auto;
-      overscroll-behavior: none;
-    }
-
-    .navi_select_dialog {
-      max-height: 95dvh;
-      margin: auto;
-      padding: 0;
-      background: white;
-      border: none;
-      border-radius: 8px;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
-      cursor: default; /* Reset pointer cursor within the select */
-
-      &[open] {
-        display: flex;
-        flex-direction: column;
+    /* popover */
+    &[aria-haspopup="listbox"] {
+      &:has(.navi_list_container[data-focus-visible]) {
+        outline-width: var(--x-select-outline-width-focus-visible);
+        outline-color: var(--navi-focus-outline-color);
+        outline-offset: var(--x-select-outline-offset-focus-visible);
+        .navi_list_container {
+          outline: none;
+        }
       }
 
-      &::backdrop {
-        background: rgba(0, 0, 0, 0.4);
+      .navi_select_popover {
+        position: absolute;
+        inset: unset;
+        min-width: var(--anchor-width, 0px);
+        max-width: 95vw;
+        max-height: 95dvh;
+        margin: 0;
+        padding: 0;
+        background: white;
+        border: none;
+        border-radius: 0;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+        cursor: default; /* Reset pointer cursor within the select */
+        overflow: auto;
+        overscroll-behavior: none;
+
+        &:popover-open {
+          display: flex;
+          flex-direction: column;
+        }
+      }
+    }
+
+    /* dialog */
+    &[aria-haspopup="dialog"] {
+      .navi_list_container {
+        --list-max-height: none;
+      }
+
+      /* When the list inside the dialog has keyboard focus, show the focus ring
+       on the dialog instead */
+      &:has(.navi_list_container[data-focus-visible]) {
+        outline-width: var(--x-select-outline-width-focus-visible);
+        outline-color: var(--navi-focus-outline-color);
+        outline-offset: var(--x-select-outline-offset-focus-visible);
+        .navi_list_container {
+          outline: none;
+        }
+      }
+
+      .navi_select_dialog {
+        max-height: 95dvh;
+        margin: auto;
+        padding: 0;
+        background: white;
+        border: none;
+        border-radius: 8px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+        cursor: default; /* Reset pointer cursor within the select */
+
+        &[open] {
+          display: flex;
+          flex-direction: column;
+        }
+
+        &::backdrop {
+          background: rgba(0, 0, 0, 0.4);
+        }
       }
     }
   }
@@ -30655,9 +31085,6 @@ const Select = props => {
     },
     emptyState: undefined
   });
-  uiStateController.onUIStateChange = (value, e) => {
-    uiStateController.uiAction?.(value, e);
-  };
   const uiState = useUIState(uiStateController);
   const value = Object.hasOwn(props, "value") ? props.value : uiState;
   return jsx(ParentUIStateControllerContext.Provider, {
@@ -30689,10 +31116,8 @@ const SelectDispatcher = props => {
     ...props
   });
 };
-const SelectPlaceholderContext = createContext();
-const SelectValueContext = createContext(null);
 const SelectUI = props => {
-  import.meta.css = [css$g, "@jsenv/navi/src/field/select.jsx"];
+  import.meta.css = [css$f, "@jsenv/navi/src/field/select.jsx"];
   let {
     placeholder = "Select…",
     trigger,
@@ -30713,7 +31138,8 @@ const SelectUI = props => {
   const defaultRef = useRef();
   const ref = rest.ref || defaultRef;
   const hiddenInputId = useId();
-  const remainingProps = useConstraints(ref, rest);
+  const hiddenInputRef = useRef(null);
+  const remainingProps = useConstraints(hiddenInputRef, rest);
   const innerLoading = loading || contextLoading && contextLoadingElement === ref.current;
   const innerReadOnly = readOnly || contextReadOnly || innerLoading;
   const innerDisabled = disabled || contextDisabled;
@@ -30723,19 +31149,6 @@ const SelectUI = props => {
   useAutoFocus(ref, autoFocus, {
     preventScroll: autoFocusPreventScroll
   });
-
-  // Re-run constraint validation when value changes (e.g. required constraint reads data-navi-value)
-  useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el) {
-      return;
-    }
-    const validationInterface = el.__validationInterface__;
-    if (!validationInterface) {
-      return;
-    }
-    validationInterface.checkValidity();
-  }, [value]);
   if (trigger === undefined) {
     trigger = jsx(SelectTrigger, {});
   }
@@ -30748,7 +31161,6 @@ const SelectUI = props => {
     ,
 
     "data-navi-value": value || undefined,
-    "data-input-proxy": name ? `#${CSS.escape(hiddenInputId)}` : undefined,
     styleCSSVars: SelectStyleCSSVars,
     basePseudoState: {
       ...remainingProps.basePseudoState,
@@ -30763,6 +31175,7 @@ const SelectUI = props => {
       color: "var(--loader-color)",
       inset: -1
     }), jsx("input", {
+      ref: hiddenInputRef,
       id: hiddenInputId,
       type: "hidden",
       name: name,
@@ -30778,6 +31191,8 @@ const SelectUI = props => {
     })]
   });
 };
+const SelectPlaceholderContext = createContext();
+const SelectValueContext = createContext(null);
 const SelectStyleCSSVars = {
   "borderWidth": "--select-border-width",
   "borderRadius": "--select-border-radius",
@@ -30875,7 +31290,7 @@ const SelectWithPopover = props => {
       anchor: ref.current
     });
   };
-  const requestClose = e => {
+  const requestClose = (e = new CustomEvent("programmatic")) => {
     return requestPopoverClose(popoverRef.current, {
       event: e
     });
@@ -30884,10 +31299,10 @@ const SelectWithPopover = props => {
     const select = ref.current;
     debugFocus(`moveFocusToSelect("${e.type}")`);
     select.focus({
-      preventScroll: true,
-      focusVisible: true
+      preventScroll: true
     });
   };
+  const [shouldIgnoreThatClick, disableClickFor] = useIgnoreClickForMousedown();
   return jsx(SelectDispatcher, {
     disabled: disabled,
     "aria-haspopup": "listbox",
@@ -30911,6 +31326,9 @@ const SelectWithPopover = props => {
     onClick: e => {
       if (e.detail === 0) {
         // click triggered by enter won't open the popover
+        return;
+      }
+      if (shouldIgnoreThatClick) {
         return;
       }
       // When a label is clicked it transfers focus to the select
@@ -30980,6 +31398,7 @@ const SelectWithPopover = props => {
         }
         // mousedown inside popover should not bubble to the select (would re-open it if that mousedown closes it)
         e.stopPropagation();
+        disableClickFor(e);
       },
       onnavi_popover_open: e => {
         onOpen();
@@ -30997,7 +31416,10 @@ const SelectWithPopover = props => {
       scrollTrap: scrollTrap,
       pointerTrap: pointerTrap,
       focusTrap: focusTrap,
-      children: children
+      children: jsx(SelectRequestCloseContext.Provider, {
+        value: requestClose,
+        children: children
+      })
     })
   });
 };
@@ -31031,7 +31453,7 @@ const SelectWithDialog = props => {
       event: e
     });
   };
-  const requestClose = e => {
+  const requestClose = (e = new CustomEvent("programmatic")) => {
     return requestDialogClose(dialogRef.current, {
       event: e
     });
@@ -31039,10 +31461,10 @@ const SelectWithDialog = props => {
   const moveFocusToSelect = e => {
     debugFocus(`moveFocusToSelect("${e.type}")`);
     ref.current.focus({
-      preventScroll: true,
-      focusVisible: true
+      preventScroll: true
     });
   };
+  const [shouldIgnoreThatClick, disableClickFor] = useIgnoreClickForMousedown();
   return jsx(SelectDispatcher, {
     disabled: disabled,
     "aria-haspopup": "dialog",
@@ -31066,6 +31488,11 @@ const SelectWithDialog = props => {
     onClick: e => {
       if (e.detail === 0) {
         // click triggered by enter won't open the dialog
+        return;
+      }
+      if (shouldIgnoreThatClick) {
+        // mousedown on the select already handled open/close; ignore this click
+        // to avoid toggling the dialog again on mouseup
         return;
       }
       // When a label is clicked it transfers focus to the select, in that case we want to open it
@@ -31123,12 +31550,73 @@ const SelectWithDialog = props => {
         }
         // mousedown inside dialog should not bubble to the select (would re-open it if that mousedown closes it)
         e.stopPropagation();
+        disableClickFor(e);
       },
       scrollTrap: scrollTrap,
       pointerTrap: pointerTrap,
-      children: children
+      children: jsx(SelectRequestCloseContext.Provider, {
+        value: requestClose,
+        children: children
+      })
     })
   });
+};
+const SelectRequestCloseContext = createContext();
+const useSelectRequestClose = () => {
+  return useContext(SelectRequestCloseContext);
+};
+
+/**
+ * Hook to prevent a `click` event from firing after a `mousedown` that already
+ * handled an open/close action.
+ *
+ * Problem: when the user clicks a dialog's backdrop to close it, the browser
+ * fires `mousedown` on the backdrop (which closes the dialog), then fires
+ * `click` on whatever element is underneath once the dialog is gone. If that
+ * element is the trigger button that originally opened the dialog, the `click`
+ * would immediately re-open it.
+ *
+ * This problem only occurs when the dialog is closed on `mousedown`. If the
+ * dialog were closed on `click` instead, the dialog would still be open when
+ * the `click` fires on the backdrop, so the trigger button underneath would
+ * never receive that `click`.
+ *
+ * Calling `stopPropagation()` or `preventDefault()` on the backdrop `mousedown`
+ * does not help: the browser dispatches the subsequent `click` regardless,
+ * targeting whichever element ends up under the pointer after the dialog closes.
+ *
+ * Usage:
+ *   const [shouldIgnoreThatClick, disableClickFor] = useIgnoreClickForMousedown();
+ *   // In onMouseDown (e.g. on the dialog backdrop): disableClickFor(e)
+ *   // In onClick (on the trigger): if (shouldIgnoreThatClick) return;
+ *
+ * `disableClickFor` arms the guard until the next `mouseup` on the document
+ * (with a 1 s safety-net fallback), using `requestAnimationFrame` so the
+ * `click` event — which fires synchronously after `mouseup` — is still blocked.
+ */
+const useIgnoreClickForMousedown = () => {
+  const pendingMousedownRef = useRef(false);
+  const shouldIgnore = pendingMousedownRef.current;
+  const disableClickFor = () => {
+    pendingMousedownRef.current = true;
+    const restoreClick = () => {
+      clearTimeout(safetyTimeout);
+      pendingMousedownRef.current = false;
+    };
+    const safetyTimeout = setTimeout(() => {
+      pendingMousedownRef.current = false;
+      restoreClick();
+    }, 1000);
+    document.addEventListener("mouseup", () => {
+      requestAnimationFrame(() => {
+        restoreClick();
+      });
+    }, {
+      once: true,
+      capture: true
+    });
+  };
+  return [shouldIgnore, disableClickFor];
 };
 
 /**
@@ -31367,207 +31855,6 @@ const createSearch = (fields) => {
     }
     return { match: true, matchScore: totalScore, matchRanges };
   };
-};
-
-installImportMetaCssBuild(import.meta);const css$f = /* css */`
-  @layer navi {
-    .navi_dropdown_trigger {
-      --border-radius: 2px;
-      --border-width: 1px;
-      --outline-width: 1px;
-      --font-size: 14px;
-      --padding: 5px 8px;
-      --border-color: light-dark(#767676, #8e8e93);
-      --background-color: white;
-      --color: currentColor;
-      --placeholder-color: color-mix(in srgb, currentColor 60%, transparent);
-      --border-color-hover: color-mix(in srgb, var(--border-color) 70%, black);
-      --background-color-hover: color-mix(
-        in srgb,
-        var(--background-color) 95%,
-        black
-      );
-    }
-  }
-
-  .navi_dropdown_trigger {
-    display: inline-flex;
-    box-sizing: border-box;
-    padding: var(--padding);
-    align-items: center;
-    gap: 6px;
-    color: var(--color);
-    font-size: var(--font-size);
-    text-align: left;
-    background-color: var(--background-color);
-    border: var(--border-width) solid transparent;
-    border-radius: var(--border-radius);
-    outline: var(--outline-width) solid var(--border-color);
-    outline-offset: calc(-1 * var(--outline-width));
-    cursor: pointer;
-    user-select: none;
-
-    &:hover {
-      background-color: var(--background-color-hover);
-      outline-color: var(--border-color-hover);
-    }
-
-    &:focus-visible {
-      outline-width: calc(var(--border-width) + var(--outline-width));
-      outline-color: var(--navi-focus-outline-color, #005fcc);
-      outline-offset: calc(-1 * (var(--border-width) + var(--outline-width)));
-    }
-  }
-
-  .navi_dropdown_trigger_label {
-    min-width: 0;
-    flex: 1;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    overflow: hidden;
-  }
-
-  .navi_dropdown_trigger_label[data-placeholder] {
-    color: var(--placeholder-color);
-  }
-
-  .navi_dropdown_trigger_icon {
-    flex-shrink: 0;
-    opacity: 0.6;
-  }
-
-  .navi_dropdown_dialog {
-    max-height: 95dvh;
-    margin: auto;
-    padding: 0;
-    background: white;
-    border: none;
-    border-radius: 8px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
-
-    &[open] {
-      display: flex;
-      flex-direction: column;
-    }
-
-    &::backdrop {
-      background: rgba(0, 0, 0, 0.4);
-    }
-
-    /* When the suggestion list inside the dialog has keyboard focus, show the
-       focus ring on the dialog itself and suppress it on the list container. 
-       It's visually better */
-    &:has(.navi_list_container:focus-visible) {
-      outline: 1px solid var(--navi-focus-outline-color, #005fcc);
-      outline-offset: 1px;
-    }
-    & .navi_list_container:focus-visible {
-      outline: none;
-    }
-  }
-`;
-const DropdownCloseContext = createContext(null);
-
-/**
- * Dropdown — a select-like trigger that opens a centered dialog.
- *
- * Props:
- *   value          — the currently selected value (displayed in the trigger)
- *   placeholder    — text shown when value is null/undefined/empty
- *   disabled       — disable the trigger
- *   capturePointer — when true, clicking the backdrop does NOT close the dialog
- *   onOpen         — called when the dialog opens
- *   onClose        — called when the dialog closes
- *   children       — content rendered inside the dialog
- *   ...rest        — forwarded to the trigger <button>
- */
-const Dropdown = ({
-  value,
-  placeholder = "Select…",
-  disabled,
-  capturePointer,
-  captureScroll,
-  onOpen,
-  onClose,
-  children,
-  ...rest
-}) => {
-  import.meta.css = [css$f, "@jsenv/navi/src/field/list/dropdown.jsx"];
-  const dialogRef = useRef(null);
-  const [open, setOpen] = useState(false);
-  const scrollTrapCleanupRef = useRef(null);
-  const openDialog = () => {
-    if (disabled) {
-      return;
-    }
-    const dialog = dialogRef.current;
-    if (!dialog || open) {
-      return;
-    }
-    dialog.showModal();
-    if (captureScroll) {
-      scrollTrapCleanupRef.current = trapScrollInside(dialog);
-    }
-    setOpen(true);
-    onOpen?.();
-  };
-  const closeDialog = () => {
-    const dialog = dialogRef.current;
-    if (!dialog || !open) {
-      return;
-    }
-    dialog.close();
-    setOpen(false);
-    if (captureScroll && scrollTrapCleanupRef.current) {
-      scrollTrapCleanupRef.current();
-      scrollTrapCleanupRef.current = null;
-    }
-    onClose?.();
-  };
-  const onDialogClick = e => {
-    // The <dialog> element itself is the backdrop area. Clicking directly on it
-    // (not on its content child) closes the dialog — unless capturePointer is set.
-    if (!capturePointer && e.target === dialogRef.current) {
-      closeDialog();
-    }
-  };
-  const hasValue = value !== null && value !== undefined && value !== "";
-  return jsxs(Fragment, {
-    children: [jsxs(Box, {
-      as: "button",
-      type: "button",
-      baseClassName: "navi_dropdown_trigger",
-      disabled: disabled,
-      onClick: openDialog,
-      ...rest,
-      children: [jsx("span", {
-        className: "navi_dropdown_trigger_label",
-        "data-placeholder": hasValue ? undefined : "",
-        children: hasValue ? String(value) : placeholder
-      }), jsx("span", {
-        className: "navi_dropdown_trigger_icon",
-        children: jsx(Icon, {
-          children: jsx(ChevronDownSvg, {})
-        })
-      })]
-    }), jsx("dialog", {
-      ref: dialogRef,
-      className: "navi_dropdown_dialog",
-      onClick: onDialogClick,
-      onClose: closeDialog,
-      children: jsx(DropdownCloseContext.Provider, {
-        value: closeDialog,
-        children: children
-      })
-    })]
-  });
-};
-
-/**
- * Hook to close the enclosing Dropdown dialog from inside its content.
- */
-const useDropdownClose = () => {
-  return useContext(DropdownCloseContext);
 };
 
 /**
@@ -35422,7 +35709,7 @@ installImportMetaCssBuild(import.meta);const css$7 = /* css */`
     --font-size: 0.7em;
     --x-background: var(--background);
     --x-background-color: var(--background-color, var(--x-background));
-    --x-color-contrasting: var(--navi-color-black);
+    --x-color-contrasting: var(--navi-color-white);
     --x-color: var(--color, var(--x-color-contrasting));
     --padding-x: 0.8em;
     --padding-y: 0.4em;
@@ -35439,11 +35726,29 @@ installImportMetaCssBuild(import.meta);const css$7 = /* css */`
     background-color: var(--x-background-color);
     border-radius: 1em;
 
-    &[data-dark-background] {
-      --x-color-contrasting: var(--navi-color-white);
+    &[data-accent-needs-dark-fg] {
+      --x-color-contrasting: var(--navi-color-black);
     }
   }
 `;
+const Badge = ({
+  children,
+  className,
+  ...props
+}) => {
+  import.meta.css = [css$7, "@jsenv/navi/src/text/badge.jsx"];
+  const defaultRef = useRef();
+  const ref = props.ref || defaultRef;
+  useAccentColorAttributes(ref, null);
+  return jsx(Text, {
+    ref: ref,
+    className: withPropsClassName("navi_badge", className),
+    bold: true,
+    ...props,
+    styleCSSVars: BadgeStyleCSSVars$1,
+    children: children
+  });
+};
 const BadgeStyleCSSVars$1 = {
   borderWidth: "--border-width",
   borderRadius: "--border-radius",
@@ -35454,24 +35759,6 @@ const BadgeStyleCSSVars$1 = {
   borderColor: "--border-color",
   color: "--color",
   fontSize: "--font-size"
-};
-const Badge = ({
-  children,
-  className,
-  ...props
-}) => {
-  import.meta.css = [css$7, "@jsenv/navi/src/text/badge.jsx"];
-  const defaultRef = useRef();
-  const ref = props.ref || defaultRef;
-  useDarkBackgroundAttribute(ref);
-  return jsx(Text, {
-    ref: ref,
-    className: withPropsClassName("navi_badge", className),
-    bold: true,
-    ...props,
-    styleCSSVars: BadgeStyleCSSVars$1,
-    children: children
-  });
 };
 
 const LoadingDots = () => {
@@ -35548,7 +35835,7 @@ installImportMetaCssBuild(import.meta);const css$6 = /* css */`
     --font-size: 0.7em;
     --x-background: var(--background);
     --x-background-color: var(--background-color, var(--x-background));
-    --x-color-contrasting: var(--navi-color-black);
+    --x-color-contrasting: var(--navi-color-white);
     --x-color: var(--color, var(--x-color-contrasting));
     --padding-x: 0.5em;
     --padding-y: 0.2em;
@@ -35557,8 +35844,8 @@ installImportMetaCssBuild(import.meta);const css$6 = /* css */`
     font-size: var(--font-size);
     vertical-align: inherit;
 
-    &[data-dark-background] {
-      --x-color-contrasting: var(--navi-color-white);
+    &[data-accent-needs-dark-fg] {
+      --x-color-contrasting: var(--navi-color-black);
     }
 
     &[data-loading] {
@@ -35632,17 +35919,6 @@ installImportMetaCssBuild(import.meta);const css$6 = /* css */`
     }
   }
 `;
-const BadgeStyleCSSVars = {
-  borderWidth: "--border-width",
-  borderRadius: "--border-radius",
-  paddingRight: "--padding-right",
-  paddingLeft: "--padding-left",
-  backgroundColor: "--background-color",
-  background: "--background",
-  borderColor: "--border-color",
-  color: "--color",
-  fontSize: "--font-size"
-};
 const BadgeCountOverflow = () => jsx("span", {
   className: "navi_count_badge_overflow",
   children: "+"
@@ -35666,7 +35942,7 @@ const BadgeCount = ({
   import.meta.css = [css$6, "@jsenv/navi/src/text/badge_count.jsx"];
   const defaultRef = useRef();
   const ref = props.ref || defaultRef;
-  useDarkBackgroundAttribute(ref, [loading]);
+  useAccentColorAttributes(ref, null);
   let valueRequested = (() => {
     if (typeof children !== "string") return children;
     const parsed = Number(children);
@@ -35717,6 +35993,17 @@ const BadgeCount = ({
       children: [valueFormatted, hasOverflow && maxElement]
     })
   });
+};
+const BadgeStyleCSSVars = {
+  borderWidth: "--border-width",
+  borderRadius: "--border-radius",
+  paddingRight: "--padding-right",
+  paddingLeft: "--padding-left",
+  backgroundColor: "--background-color",
+  background: "--background",
+  borderColor: "--border-color",
+  color: "--color",
+  fontSize: "--font-size"
 };
 const applyMaxToValue = (max, value) => {
   if (isNaN(value)) {
@@ -35791,7 +36078,7 @@ const BadgeCountCircle = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
+installImportMetaCssBuild(import.meta);const css$5 = /* css */`
   @layer navi {
     .navi_caption {
       --color: #6b7280;
@@ -35807,14 +36094,12 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
   .navi_caption {
     color: var(--color);
   }
-`, "@jsenv/navi/src/text/caption.jsx"];
-const CaptionStyleCSSVars = {
-  color: "--color"
-};
+`;
 const Caption = ({
   className,
   ...rest
 }) => {
+  import.meta.css = [css$5, "@jsenv/navi/src/text/caption.jsx"];
   return jsx(Text, {
     as: "small",
     size: "0.8em" // We use em to be relative to the parent (we want to be smaller than the surrounding text)
@@ -35824,6 +36109,9 @@ const Caption = ({
     ...rest,
     styleCSSVars: CaptionStyleCSSVars
   });
+};
+const CaptionStyleCSSVars = {
+  color: "--color"
 };
 
 /**
@@ -36194,7 +36482,7 @@ const interpolate = (template, values) => {
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$5 = /* css */`
+installImportMetaCssBuild(import.meta);const css$4 = /* css */`
   @layer navi {
     .navi_quantity {
       --unit-color: color-mix(in srgb, currentColor 50%, white);
@@ -36285,11 +36573,6 @@ QuantityIntl.addUnit = (unitName, langTranslations) => {
     });
   }
 };
-const QuantityPropsCSSVars = {
-  unitColor: "--unit-color",
-  unitSizeRatio: "--unit-size-ratio"
-};
-const QuantityPseudoClasses = [":hover", ":active", ":read-only", ":disabled", ":-navi-loading"];
 const Quantity = ({
   children,
   unit,
@@ -36304,7 +36587,7 @@ const Quantity = ({
   bold = true,
   ...props
 }) => {
-  import.meta.css = [css$5, "@jsenv/navi/src/text/quantity.jsx"];
+  import.meta.css = [css$4, "@jsenv/navi/src/text/quantity.jsx"];
   const value = parseQuantityValue(children);
   const valueRounded = integer && typeof value === "number" ? Math.round(value) : value;
   const valueFormatted = typeof valueRounded === "number" ? formatNumber(valueRounded, {
@@ -36346,6 +36629,11 @@ const Quantity = ({
   });
 };
 Quantity.Intl = QuantityIntl;
+const QuantityPropsCSSVars = {
+  unitColor: "--unit-color",
+  unitSizeRatio: "--unit-size-ratio"
+};
+const QuantityPseudoClasses = [":hover", ":active", ":read-only", ":disabled", ":-navi-loading"];
 const Unit = ({
   value,
   unit,
@@ -36388,7 +36676,7 @@ const parseQuantityValue = children => {
   return Number.isNaN(parsed) ? children : parsed;
 };
 
-installImportMetaCssBuild(import.meta);const css$4 = /* css */`
+installImportMetaCssBuild(import.meta);const css$3 = /* css */`
   @layer navi {
     .navi_meter {
       --loader-color: var(--navi-loader-color);
@@ -36404,13 +36692,9 @@ installImportMetaCssBuild(import.meta);const css$4 = /* css */`
       --fill-color-suboptimum: light-dark(#fdb900, #ffc107);
       --fill-color-even-less-good: light-dark(#d83b01, #f44336);
 
-      --x-color: var(--navi-color-black);
-      --x-shadow-color: white;
+      --x-color: white;
+      --x-shadow-color: black;
       --shadow-size: 0.5em;
-      &[data-dark-background] {
-        --x-color: white;
-        --x-shadow-color: black;
-      }
     }
   }
 
@@ -36471,6 +36755,11 @@ installImportMetaCssBuild(import.meta);const css$4 = /* css */`
       opacity: 0.4;
     }
 
+    &[data-accent-needs-dark-fg] {
+      --x-color: white;
+      --x-shadow-color: black;
+    }
+
     /* When caption is shown, the track takes the full height */
     &[data-has-caption] {
       .navi_meter_track_container {
@@ -36506,25 +36795,6 @@ installImportMetaCssBuild(import.meta);const css$4 = /* css */`
     }
   }
 `;
-const MeterStyleCSSVars = {
-  trackColor: "--track-color",
-  borderColor: "--border-color",
-  borderRadius: "--border-radius",
-  height: "--height",
-  width: "--width"
-};
-const MeterPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading", ":-navi-meter-optimum", ":-navi-meter-suboptimum", ":-navi-meter-even-less-good"];
-Object.assign(PSEUDO_CLASSES, {
-  ":-navi-meter-optimum": {
-    attribute: "data-optimum"
-  },
-  ":-navi-meter-suboptimum": {
-    attribute: "data-suboptimum"
-  },
-  ":-navi-meter-even-less-good": {
-    attribute: "data-even-less-good"
-  }
-});
 const Meter = ({
   value = 0,
   min = 0,
@@ -36544,7 +36814,7 @@ const Meter = ({
   style,
   ...rest
 }) => {
-  import.meta.css = [css$4, "@jsenv/navi/src/text/meter.jsx"];
+  import.meta.css = [css$3, "@jsenv/navi/src/text/meter.jsx"];
   const defaultRef = useRef();
   const ref = rest.ref || defaultRef;
   value = Number(value);
@@ -36573,8 +36843,8 @@ const Meter = ({
   // When fill covers less than half the track, the text center sits on the
   // empty track — use the track color for contrast. Otherwise use fill color.
   const backgroundElementSelector = fillRatio >= 0.5 ? ".navi_meter_fill" : ".navi_meter_track";
-  useDarkBackgroundAttribute(ref, [], {
-    backgroundElementSelector
+  useAccentColorAttributes(ref, null, {
+    elementSelector: backgroundElementSelector
   });
   return jsx(Box, {
     ref: ref,
@@ -36623,6 +36893,25 @@ const Meter = ({
     })
   });
 };
+const MeterStyleCSSVars = {
+  trackColor: "--track-color",
+  borderColor: "--border-color",
+  borderRadius: "--border-radius",
+  height: "--height",
+  width: "--width"
+};
+const MeterPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading", ":-navi-meter-optimum", ":-navi-meter-suboptimum", ":-navi-meter-even-less-good"];
+Object.assign(PSEUDO_CLASSES, {
+  ":-navi-meter-optimum": {
+    attribute: "data-optimum"
+  },
+  ":-navi-meter-suboptimum": {
+    attribute: "data-suboptimum"
+  },
+  ":-navi-meter-even-less-good": {
+    attribute: "data-even-less-good"
+  }
+});
 const getMeterLevel = (value, min, max, low, high, optimum) => {
   // Without low/high thresholds the whole range is one region → always optimum
   if (low === undefined && high === undefined) {
@@ -36767,7 +37056,7 @@ const SVGMaskOverlay = ({
 };
 
 installImportMetaCssBuild(import.meta);// We HAVE TO put paddings around the dialog to ensure window resizing respects this space
-const css$3 = /* css */`
+const css$2 = /* css */`
   @layer navi {
     .navi_dialog_layout {
       --layout-margin: 30px;
@@ -36851,7 +37140,7 @@ const DialogLayout = ({
   alignY = "center",
   ...props
 }) => {
-  import.meta.css = [css$3, "@jsenv/navi/src/layout/dialog_layout.jsx"];
+  import.meta.css = [css$2, "@jsenv/navi/src/layout/dialog_layout.jsx"];
   return jsx(Box, {
     baseClassName: "navi_dialog_layout",
     styleCSSVars: DialogLayoutStyleCSSVars,
@@ -36864,56 +37153,6 @@ const DialogLayout = ({
       alignY: alignY,
       children: children
     })
-  });
-};
-
-installImportMetaCssBuild(import.meta);const css$2 = /* css */`
-  @layer navi {
-    .navi_separator {
-      --size: 1px;
-      --color: #e4e4e7;
-      --spacing: 0.5em;
-      --spacing-start: 0.5em;
-      --spacing-end: 0.5em;
-    }
-  }
-
-  .navi_separator {
-    width: 100%;
-    height: var(--size);
-    margin-top: var(--spacing-start, var(--spacing));
-    margin-bottom: var(--spacing-end, var(--spacing));
-    flex-shrink: 0;
-    background: var(--color);
-    border: none;
-
-    &[data-vertical] {
-      display: inline-block;
-
-      width: var(--size);
-      height: 1lh;
-      margin-top: 0;
-      margin-right: var(--spacing-end, var(--spacing));
-      margin-bottom: 0;
-      margin-left: var(--spacing-start, var(--spacing));
-      vertical-align: bottom;
-    }
-  }
-`;
-const SeparatorStyleCSSVars = {
-  color: "--color"
-};
-const Separator = ({
-  vertical,
-  ...props
-}) => {
-  import.meta.css = [css$2, "@jsenv/navi/src/layout/separator.jsx"];
-  return jsx(Box, {
-    as: vertical ? "span" : "hr",
-    ...props,
-    "data-vertical": vertical ? "" : undefined,
-    baseClassName: "navi_separator",
-    styleCSSVars: SeparatorStyleCSSVars
   });
 };
 
@@ -37299,5 +37538,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, Box, Button, ButtonCopyToClipboard, Caption, CheckSvg, Checkbox, CheckboxList, CloseSvg, Code, Col, Colgroup, ConstructionSvg, Details, Dialog, DialogLayout, Dropdown, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemFooter, ListItemGroup, ListItemHeader, Loading, MessageBox, Meter, Nav, NaviDebug, Paragraph, Popover, Quantity, QuantityIntl, Radio, RadioList, Route, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectionContext, Separator, SettingsSvg, SidePanel, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, Thead, Title, Tr, UITransition, UserSvg, ViewportLayout, actionIntegratedVia, actionRunEffect, addCustomMessage, applySearch, arraySignalMembership, compareTwoJsValues, createAction, createAvailableConstraint, createIntl, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, enableDebugActions, enableDebugOnDocumentLoading, filterTableSelection, forwardActionRequested, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, localStorageSignal, navBack, navForward, navTo, openCallout, rawUrlPart, reload, removeCustomMessage, requestAction, requestListClose, requestListOpen, rerunActions, resource, route, routeAction, setBaseUrl, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, syncOwnedResourceToSignals, syncResourceToSignals, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutClose, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDarkBackgroundAttribute, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useDropdownClose, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, useRouteStatus, useRunOnMount, useSearchText, useSelectableElement, useSelectionController, useSidePanelClose, useSignalSync, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage, windowWidthSignal };
+export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, Box, Button, ButtonCopyToClipboard, Caption, CheckSvg, Checkbox, CheckboxList, CloseSvg, Code, Col, Colgroup, ConstructionSvg, Details, Dialog, DialogLayout, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemFooter, ListItemGroup, ListItemHeader, Loading, MessageBox, Meter, Nav, NaviDebug, Paragraph, Popover, Quantity, QuantityIntl, Radio, RadioList, Route, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectionContext, Separator, SettingsSvg, SidePanel, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, Thead, Title, Tr, UITransition, UserSvg, ViewportLayout, actionIntegratedVia, actionRunEffect, addCustomMessage, applySearch, arraySignalMembership, compareTwoJsValues, createAction, createAvailableConstraint, createIntl, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, enableDebugActions, enableDebugOnDocumentLoading, filterTableSelection, forwardActionRequested, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, localStorageSignal, navBack, navForward, navTo, openCallout, rawUrlPart, reload, removeCustomMessage, requestAction, requestListClose, requestListOpen, rerunActions, resource, route, routeAction, setBaseUrl, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, syncOwnedResourceToSignals, syncResourceToSignals, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutClose, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, useRouteStatus, useRunOnMount, useSearchText, useSelectRequestClose, useSelectableElement, useSelectionController, useSidePanelClose, useSignalSync, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage, windowWidthSignal };
 //# sourceMappingURL=jsenv_navi.js.map

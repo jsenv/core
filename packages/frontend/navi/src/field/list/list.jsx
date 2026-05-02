@@ -1509,7 +1509,10 @@ const ListWithAction = (props) => {
       onnavi_list_nav={(e) => {
         const { item, event } = e.detail;
         const id = item ? item.id : null;
-        if (event.type === "navi_list_nav_top_on_displayed") {
+        const isNonUserNav =
+          event.type === "navi_list_nav_top_on_displayed" ||
+          event.type === "navi_list_top_match_change";
+        if (isNonUserNav) {
           setAnchorId(null);
         } else {
           setAnchorId(id);
@@ -1519,7 +1522,11 @@ const ListWithAction = (props) => {
         } else {
           setKeyboardPointedId(null);
         }
-        if (item && event.type !== "navi_list_nav_top_on_displayed") {
+        const isAutomaticNav =
+          event.type === "navi_list_nav_top_on_displayed" ||
+          event.type === "navi_list_top_match_change" ||
+          event.type === "navi_scroll_restore";
+        if (item && !isAutomaticNav) {
           uiStateController.setUIState(item.value, event);
         }
       }}
