@@ -173,7 +173,8 @@ const css = /* css */ `
        focus ring can simply widen the outline without shifting layout. */
     border: var(--x-list-border-width) solid transparent;
     border-radius: var(--x-list-border-radius);
-    outline: var(--x-list-border-width) var(--x-list-border-style) var(--x-list-border-color);
+    outline: var(--x-list-border-width) var(--x-list-border-style)
+      var(--x-list-border-color);
     outline-offset: calc(-1 * var(--x-list-border-width));
     transition: opacity 0.2s ease;
     /* overflow:hidden is required on the container (not the inner scroll element)
@@ -253,7 +254,7 @@ const css = /* css */ `
     padding: var(--list-item-padding);
     color: var(--x-list-item-color);
     font-weight: var(--x-list-item-font-weight);
-    background-color: var(--x-list-background-color);
+    background-color: var(--x-list-item-background-color);
     /*
     CSS impossible d'obtenir un layout qui ferait en gros:
     width = max(min(max-content, 100%), unbreakable-content)
@@ -284,7 +285,9 @@ const css = /* css */ `
     }
     &[data-pointed] {
       --x-list-item-color: var(--list-item-color-mouse-pointed);
-      --x-list-item-background-color: var(--list-item-background-color-mouse-pointed);
+      --x-list-item-background-color: var(
+        --list-item-background-color-mouse-pointed
+      );
 
       &[data-selected] {
         --x-list-item-color: var(--list-item-color-pointed-selected);
@@ -295,12 +298,16 @@ const css = /* css */ `
     }
     &[data-selected] {
       --x-list-item-color: var(--list-item-color-selected);
-      --x-list-item-background-color: var(--list-item-background-color-selected);
+      --x-list-item-background-color: var(
+        --list-item-background-color-selected
+      );
       --x-list-item-font-weight: var(--list-item-font-weight-selected);
     }
     &[data-disabled] {
       --x-list-item-color: var(--list-item-color-disabled);
-      --x-list-item-background-color: var(--list-item-background-color-disabled);
+      --x-list-item-background-color: var(
+        --list-item-background-color-disabled
+      );
       cursor: not-allowed;
       pointer-events: none;
     }
@@ -314,7 +321,9 @@ const css = /* css */ `
       .navi_list_item {
         &[data-pointed-by-keyboard] {
           --x-list-item-color: var(--list-item-color-pointed);
-          --x-list-item-background-color: var(--list-item-background-color-pointed);
+          --x-list-item-background-color: var(
+            --list-item-background-color-pointed
+          );
         }
       }
     }
