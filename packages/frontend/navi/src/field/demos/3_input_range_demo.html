@@ -493,7 +493,7 @@
             <fieldset>
               <legend>Action After Change with Separate UI State</legend>
               <p className="states-description">
-                Using <code>onUIStateChange</code> for immediate UI updates and{" "}
+                Using <code>uiAction</code> for immediate UI updates and{" "}
                 <code>actionAfterChange</code>
                 for async processing. The slider shows the current UI value
                 instantly, but the circle radius represents the processed result
@@ -504,7 +504,7 @@
                   min="10"
                   max="100"
                   value={uiValue}
-                  onUIStateChange={(value) => {
+                  uiAction={(value) => {
                     // Immediate UI update
                     setUIValue(parseInt(value));
                   }}
@@ -647,7 +647,7 @@
                   <div className="range-group">
                     <InputRange
                       value={redValue}
-                      onUIStateChange={(v) => setRedValue(v)}
+                      uiAction={(v) => setRedValue(v)}
                       min="0"
                       max="100"
                       accentColor="red"
@@ -675,7 +675,7 @@
                       value="45"
                       min="0"
                       max="100"
-                      onUIStateChange={() => {}}
+                      uiAction={() => {}}
                       style={{
                         "--thumb-color": "#ff4444",
                         "--track-color": "#4444ff",
@@ -715,7 +715,7 @@
                   <div className="range-group">
                     <InputRange
                       value={greenValue}
-                      onUIStateChange={(v) => setGreenValue(v)}
+                      uiAction={(v) => setGreenValue(v)}
                       min="0"
                       max="100"
                       accentColor="green"
@@ -760,7 +760,7 @@
                   <div className="range-group">
                     <InputRange
                       value={smallThumbValue}
-                      onUIStateChange={(e) => setSmallThumbValue(e)}
+                      uiAction={(e) => setSmallThumbValue(e)}
                       min="0"
                       max="100"
                       style={{
@@ -789,7 +789,7 @@
                   <div className="range-group">
                     <InputRange
                       value={largeThumbValue}
-                      onUIStateChange={(e) => setLargeThumbValue(e)}
+                      uiAction={(e) => setLargeThumbValue(e)}
                       min="0"
                       max="100"
                       style={{
@@ -819,7 +819,7 @@
                     <InputRange
                       value="50"
                       min="0"
-                      onUIStateChange={() => {}}
+                      uiAction={() => {}}
                       max="100"
                       style={{
                         "--thumb-size": "1.2em",
