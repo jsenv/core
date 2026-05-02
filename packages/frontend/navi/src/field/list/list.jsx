@@ -9,7 +9,6 @@ import { createContext } from "preact";
 import {
   useCallback,
   useContext,
-  useEffect,
   useId,
   useLayoutEffect,
   useRef,

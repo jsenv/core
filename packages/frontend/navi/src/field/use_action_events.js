@@ -37,50 +37,50 @@ export const useActionEvents = (
     }
 
     return addManyEventListeners(element, {
-      cancel: (e) => {
+      navi_cancel: (e) => {
         // cancel don't need to check for actionOrigin because
         // it's actually unrelated to a specific actions
         // in that sense it should likely be moved elsewhere as it's related to
         // interaction and constraint validation, not to a specific action
         onCancel?.(e, e.detail.reason);
       },
-      actionrequested: (e) => {
+      navi_action_requested: (e) => {
         if (e.detail.actionOrigin !== actionOrigin) {
           return;
         }
         onRequested?.(e);
       },
-      actionprevented: (e) => {
+      navi_action_prevented: (e) => {
         if (e.detail.actionOrigin !== actionOrigin) {
           return;
         }
         onPrevented?.(e);
       },
-      action: (e) => {
+      navi_action: (e) => {
         if (e.detail.actionOrigin !== actionOrigin) {
           return;
         }
         onAction?.(e);
       },
-      actionstart: (e) => {
+      navi_action_start: (e) => {
         if (e.detail.actionOrigin !== actionOrigin) {
           return;
         }
         onStart?.(e);
       },
-      actionabort: (e) => {
+      navi_action_abort: (e) => {
         if (e.detail.actionOrigin !== actionOrigin) {
           return;
         }
         onAbort?.(e);
       },
-      actionerror: (e) => {
+      navi_action_error: (e) => {
         if (e.detail.actionOrigin !== actionOrigin) {
           return;
         }
         onError?.(e.detail.error, e);
       },
-      actionend: onEnd,
+      navi_action_end: onEnd,
     });
   }, [
     actionOrigin,

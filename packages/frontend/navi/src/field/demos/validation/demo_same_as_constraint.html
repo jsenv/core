@@ -216,7 +216,7 @@
       installCustomConstraintValidation(confirmPasswordInput);
       installCustomConstraintValidation(submitButton);
 
-      form.addEventListener("actionrequested", (e) => {
+      form.addEventListener("navi_action_requested", (e) => {
         forwardActionRequested(e, () => {
           // noop
           console.log("execute form action");
@@ -224,7 +224,7 @@
       });
 
       // Handle form submission
-      form.addEventListener("action", (event) => {
+      form.addEventListener("navi_action", (event) => {
         console.log("Form action event triggered:", event.detail);
 
         // Simulate successful form submission
@@ -238,7 +238,7 @@
       });
 
       // Handle validation prevention
-      form.addEventListener("actionprevented", (event) => {
+      form.addEventListener("navi_action_prevented", (event) => {
         console.log(
           "Form submission prevented due to validation:",
           event.detail,

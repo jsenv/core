@@ -210,9 +210,12 @@ export const requestAction = (
 
   // If validation failed, dispatch actionprevented and return
   if (!isValid) {
-    const actionPreventedCustomEvent = new CustomEvent("actionprevented", {
-      detail: customEventDetail,
-    });
+    const actionPreventedCustomEvent = new CustomEvent(
+      "navi_action_prevented",
+      {
+        detail: customEventDetail,
+      },
+    );
     elementForDispatch.dispatchEvent(actionPreventedCustomEvent);
     return false;
   }
@@ -224,16 +227,19 @@ export const requestAction = (
   if (confirmMessage) {
     // eslint-disable-next-line no-alert
     if (!window.confirm(confirmMessage)) {
-      const actionPreventedCustomEvent = new CustomEvent("actionprevented", {
-        detail: customEventDetail,
-      });
+      const actionPreventedCustomEvent = new CustomEvent(
+        "navi_action_prevented",
+        {
+          detail: customEventDetail,
+        },
+      );
       elementForDispatch.dispatchEvent(actionPreventedCustomEvent);
       return false;
     }
   }
 
   // All good, dispatch the action
-  const actionCustomEvent = new CustomEvent("action", {
+  const actionCustomEvent = new CustomEvent("navi_action", {
     detail: customEventDetail,
   });
   if (debug) {
@@ -320,7 +326,7 @@ export const installCustomConstraintValidation = (
   }
 
   const dispatchCancelCustomEvent = (options) => {
-    const cancelEvent = new CustomEvent("cancel", options);
+    const cancelEvent = new CustomEvent("navi_cancel", options);
     element.dispatchEvent(cancelEvent);
   };
   const closeElementValidationMessage = (reason) => {
@@ -649,15 +655,15 @@ export const installCustomConstraintValidation = (
     });
   }
 
-  check_on_actionend: {
+  check_on_navi_action_end: {
     // this ensure we re-check validity (and remove message no longer relevant)
     // once the action ends (used to remove the NOT_BUSY_CONSTRAINT message)
-    const onactionend = () => {
+    const onNaviActionEnd = () => {
       checkValidity();
     };
-    element.addEventListener("actionend", onactionend);
+    element.addEventListener("navi_action_end", onNaviActionEnd);
     addTeardown(() => {
-      element.removeEventListener("actionend", onactionend);
+      element.removeEventListener("navi_action_end", onNaviActionEnd);
     });
   }
 
@@ -878,7 +884,7 @@ export const installCustomConstraintValidation = (
       if (debug) {
         console.debug(`"submit" called -> dispatch "action" on`, form);
       }
-      const actionCustomEvent = new CustomEvent("action", {
+      const actionCustomEvent = new CustomEvent("navi_action", {
         detail: {
           action: null,
           event: e,
@@ -999,7 +1005,7 @@ export const dispatchActionRequestedCustomEvent = (
   elementWithAction,
   { actionOrigin = "action_prop", event, requester },
 ) => {
-  const actionRequestedCustomEvent = new CustomEvent("actionrequested", {
+  const actionRequestedCustomEvent = new CustomEvent("navi_action_requested", {
     cancelable: true,
     detail: {
       actionOrigin,

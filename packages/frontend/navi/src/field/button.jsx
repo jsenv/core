@@ -622,7 +622,7 @@ const ButtonWithActionInsideForm = (props) => {
       action={undefined}
       type={type}
       loading={innerLoading}
-      onactionrequested={(e) => {
+      onnavi_action_requested={(e) => {
         forwardActionRequested(e, actionBoundToFormParams, e.target.form);
       }}
     >

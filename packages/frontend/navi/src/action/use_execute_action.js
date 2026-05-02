@@ -118,7 +118,7 @@ export const useExecuteAction = (
       const validationMessageTarget = requester || elementRef.current;
       validationMessageTargetRef.current = validationMessageTarget;
 
-      dispatchCustomEvent("actionstart", {
+      dispatchCustomEvent("navi_action_start", {
         detail: sharedActionEventDetail,
       });
 
@@ -145,7 +145,7 @@ export const useExecuteAction = (
             // but other side effects might do this
             elementRef.current
           ) {
-            dispatchCustomEvent("actionabort", {
+            dispatchCustomEvent("navi_action_abort", {
               detail: {
                 ...sharedActionEventDetail,
                 reason,
@@ -160,7 +160,7 @@ export const useExecuteAction = (
             // but other side effects might do this
             elementRef.current
           ) {
-            dispatchCustomEvent("actionerror", {
+            dispatchCustomEvent("navi_action_error", {
               detail: {
                 ...sharedActionEventDetail,
                 error,
@@ -180,7 +180,7 @@ export const useExecuteAction = (
             // but other side effects might do this
             elementRef.current
           ) {
-            dispatchCustomEvent("actionend", {
+            dispatchCustomEvent("navi_action_end", {
               detail: {
                 ...sharedActionEventDetail,
                 data,

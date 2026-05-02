@@ -40,12 +40,12 @@ export const useFormEvents = (
     }
     return addManyEventListeners(form, {
       reset: onFormReset,
-      actionrequested: onFormActionRequested,
-      actionprevented: onFormActionPrevented,
-      actionstart: onFormActionStart,
-      actionabort: onFormActionAbort,
-      actionerror: onFormActionError,
-      actionend: onFormActionEnd,
+      navi_action_requested: onFormActionRequested,
+      navi_action_prevented: onFormActionPrevented,
+      navi_action_start: onFormActionStart,
+      navi_action_abort: onFormActionAbort,
+      navi_action_error: onFormActionError,
+      navi_action_end: onFormActionEnd,
     });
   }, [
     onFormReset,
