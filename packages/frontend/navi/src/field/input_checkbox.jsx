@@ -622,7 +622,7 @@ const useLightAccentAttribute = (
   ref,
   deps = [],
   {
-    backgroundElementSelector,
+    elementSelector,
     colorProperty = "backgroundColor",
     attributeName = "data-light-accent",
     luminanceThreshold = 0.5,
@@ -634,8 +634,8 @@ const useLightAccentAttribute = (
       return undefined;
     }
     let elementToCheck = el;
-    if (backgroundElementSelector) {
-      elementToCheck = el.querySelector(backgroundElementSelector);
+    if (elementSelector) {
+      elementToCheck = el.querySelector(elementSelector);
       if (!elementToCheck) {
         return undefined;
       }
@@ -660,13 +660,7 @@ const useLightAccentAttribute = (
       el.removeEventListener(NAVI_PSEUDO_STATE_CUSTOM_EVENT, updateAttribute);
       el.removeAttribute(attributeName);
     };
-  }, [
-    ref,
-    ...deps,
-    backgroundElementSelector,
-    colorProperty,
-    luminanceThreshold,
-  ]);
+  }, [ref, ...deps, elementSelector, colorProperty, luminanceThreshold]);
 };
 
 const InputCheckboxWithAction = (props) => {
