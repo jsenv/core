@@ -290,12 +290,12 @@ const css = /* css */ `
       --x-list-item-background-color: var(
         --list-item-background-color-selected
       );
-
       &[data-pointed] {
+        /* Here important should no beed need, but for some reason it is */
         --x-list-item-background-color: var(
           --list-item-background-color-selected,
           var(--list-item-background-color-mouse-pointed)
-        );
+        ) !important;
       }
     }
     &[data-disabled] {
