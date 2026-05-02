@@ -657,7 +657,6 @@ const ListUI = (props) => {
       pseudoStateSelector=".navi_list"
       hasChildFunction
       data-navi-value={value || undefined}
-      data-input-proxy={name ? `#${CSS.escape(hiddenInputId)}` : undefined}
       onnavi_list_request_nav={(e) => {
         const { item } = e.detail;
         if (!item) {

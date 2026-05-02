@@ -1,11 +1,5 @@
 import { createContext } from "preact";
-import {
-  useContext,
-  useId,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "preact/hooks";
+import { useContext, useId, useRef, useState } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
 import { ChevronDownSvg } from "../graphic/icons/chevron_updown_svg.jsx";
@@ -305,7 +299,8 @@ const SelectUI = (props) => {
   const defaultRef = useRef();
   const ref = rest.ref || defaultRef;
   const hiddenInputId = useId();
-  const remainingProps = useConstraints(ref, rest);
+  const hiddenInputRef = useRef(null);
+  const remainingProps = useConstraints(hiddenInputRef, rest);
 
   const innerLoading =
     loading || (contextLoading && contextLoadingElement === ref.current);
@@ -319,19 +314,6 @@ const SelectUI = (props) => {
     preventScroll: autoFocusPreventScroll,
   });
 
-  // Re-run constraint validation when value changes (e.g. required constraint reads data-navi-value)
-  useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el) {
-      return;
-    }
-    const validationInterface = el.__validationInterface__;
-    if (!validationInterface) {
-      return;
-    }
-    validationInterface.checkValidity();
-  }, [value]);
-
   if (trigger === undefined) {
     trigger = <SelectTrigger />;
   }
@@ -343,7 +325,6 @@ const SelectUI = (props) => {
       baseClassName="navi_select"
       autoFocus={undefined} // See use_auto_focus.js
       data-navi-value={value || undefined}
-      data-input-proxy={name ? `#${CSS.escape(hiddenInputId)}` : undefined}
       styleCSSVars={SelectStyleCSSVars}
       basePseudoState={{
         ...remainingProps.basePseudoState,
@@ -360,6 +341,7 @@ const SelectUI = (props) => {
         inset={-1}
       />
       <input
+        ref={hiddenInputRef}
         id={hiddenInputId}
         type="hidden"
         name={name}

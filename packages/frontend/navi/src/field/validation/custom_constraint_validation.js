@@ -379,14 +379,7 @@ export const installCustomConstraintValidation = (
 
     resetValidity({ fromRequestAction });
     for (const constraint of constraintSet) {
-      // Some components (Select, List) proxy their value through a hidden <input>
-      // identified by data-input-proxy. When present, constraints run against
-      // that proxy element so they can read standard properties like .value,
-      // .required, .name without needing to know about each component's internals.
-      const inputProxySelector = element.getAttribute("data-input-proxy");
-      const fieldForConstraint = inputProxySelector
-        ? (element.ownerDocument.querySelector(inputProxySelector) ?? element)
-        : element;
+      const fieldForConstraint = element;
       const constraintCleanupSet = new Set();
       const registerChange = (register) => {
         const registerResult = register(() => {
@@ -587,15 +580,46 @@ export const installCustomConstraintValidation = (
   }
 
   checkValidity();
+
+  const resetOnInteraction = (e) => {
+    customMessageMap.clear();
+    closeElementValidationMessage(e.type);
+    checkValidity();
+  };
+
   close_and_check_on_input: {
-    const oninput = () => {
-      customMessageMap.clear();
-      closeElementValidationMessage("input_event");
-      checkValidity();
+    const oninput = (e) => {
+      resetOnInteraction(e);
     };
     element.addEventListener("input", oninput);
     addTeardown(() => {
       element.removeEventListener("input", oninput);
+    });
+  }
+
+  check_on_hidden_input_value: {
+    // Hidden inputs (used by Select, List) don't fire "input" or "change" events
+    // when their value is set programmatically. We intercept the value setter to
+    // detect those changes and re-run validation.
+    if (element.type !== "hidden") {
+      break check_on_hidden_input_value;
+    }
+    const nativeDescriptor = Object.getOwnPropertyDescriptor(
+      HTMLInputElement.prototype,
+      "value",
+    );
+    Object.defineProperty(element, "value", {
+      get() {
+        return nativeDescriptor.get.call(this);
+      },
+      set(newValue) {
+        nativeDescriptor.set.call(this, newValue);
+        resetOnInteraction(new CustomEvent("programmatic_value_change"));
+      },
+      configurable: true,
+    });
+    addTeardown(() => {
+      delete element.value;
     });
   }
 
