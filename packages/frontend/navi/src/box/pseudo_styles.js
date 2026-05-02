@@ -200,17 +200,7 @@ definePseudoClass(":checked", {
 definePseudoClass(":active", {
   attribute: "data-active",
   setup: (el, callback) => {
-    // It might be tempting to use el.setPointerCapture() here so that pointerup
-    // always fires on el regardless of where the pointer is released. However,
-    // pointer capture routes all subsequent pointer events to the capturing element,
-    // which means any other element in the tree that expects to receive pointerup,
-    // mouseup, click, etc. after a pointerdown will silently not get them.
-    // For example a <label> that reacts to mousedown + click, or a third-party
-    // library that attaches its own listeners, would break because an ancestor
-    // grabbed the pointer out from under them.
-    // To avoid forcing every such element to declare an opt-out attribute
-    // (e.g. navi-own-pointer-capture) we simply listen on document instead,
-    // which is safe and does not interfere with anyone else's event flow.
+    // I'ts recommended to use :-navi-pressed over :active for interactive elements.
     const onPointerDown = () => {
       const onRelease = () => {
         document.removeEventListener("pointercancel", onRelease, true);
@@ -382,11 +372,24 @@ navi_pressed: {
   definePseudoClass(":-navi-pressed", {
     attribute: "data-pressed",
     setup: (el, callback) => {
-      // Same reasoning as :active above: setPointerCapture is avoided because it
-      // hijacks all subsequent pointer events and can break elements that rely on
-      // receiving their own pointerup/mouseup/click after a pointerdown, including
-      // <label> elements and third-party code. Listening on document is the safe
-      // alternative.
+      // Prefer :-navi-pressed over :active for interactive elements because:
+      // - :active only tracks the primary (left) button; right-click and touch
+      //   long-press do not trigger :active reliably across browsers.
+      // - :-navi-pressed explicitly ignores non-primary buttons (e.g. right-click)
+      //   and correctly clears pressed state when a context menu opens on long-press,
+      //   which would otherwise leave the element stuck in a pressed appearance.
+
+      // Note: it might be tempting to use el.setPointerCapture() here so that pointerup
+      // always fires on el regardless of where the pointer is released. However,
+      // pointer capture routes all subsequent pointer events to the capturing element,
+      // which means any other element in the tree that expects to receive pointerup,
+      // mouseup, click, etc. after a pointerdown will silently not get them.
+      // For example a <label> that reacts to mousedown + click, or a third-party
+      // library that attaches its own listeners, would break because an ancestor
+      // grabbed the pointer out from under them.
+      // To avoid forcing every such element to declare an opt-out attribute
+      // (e.g. navi-own-pointer-capture) we simply listen on document instead,
+      // which is safe and does not interfere with anyone else's event flow.
       const onPointerDown = (e) => {
         if (e.button !== 0) {
           // only left pointer (mouse left click, touch, pen)
