@@ -167,13 +167,22 @@ const css = /* css */ `
 
     width: fit-content;
     max-width: 100%;
-    max-height: var(--list-max-height);
     background-color: var(--x-background-color);
     border: var(--x-border-width) var(--x-border-style) var(--x-border-color);
     border-radius: var(--x-border-radius);
     transition: opacity 0.2s ease;
-    overflow: auto;
-    overscroll-behavior: inherit; /* inherit select behavior */
+    /* overflow:hidden is required on the container (not the inner scroll element)
+       so that border-radius clips the content correctly. Without it, items near
+       the corners would visually overflow the rounded corners during scroll. */
+    overflow: hidden;
+
+    .navi_list_overflow_container {
+      width: inherit;
+      max-width: inherit;
+      max-height: var(--list-max-height);
+      overflow: auto;
+      overscroll-behavior: inherit; /* inherit select behavior */
+    }
 
     &[data-expand-x] {
       width: 100%;
@@ -552,24 +561,28 @@ const ListUI = (props) => {
 
   const renderList = (listProps) => {
     return (
-      <UnorderedList
-        ref={ref}
-        id={innerId}
-        role={role}
-        fallback={fallback}
-        noMatchFallback={noMatchFallback}
-        searchText={searchText}
-        separator={separator}
-        expandX={expandX}
-        {...listProps}
-        tracker={tracker}
-        renderWindow={renderWindow}
-        virtualItemHeightSignal={virtualItemHeightSignal}
-      >
-        <PendingScrollRefContext.Provider value={pendingScrollRef}>
-          <ListIdContext.Provider value={id}>{children}</ListIdContext.Provider>
-        </PendingScrollRefContext.Provider>
-      </UnorderedList>
+      <div className="navi_list_overflow_container">
+        <UnorderedList
+          ref={ref}
+          id={innerId}
+          role={role}
+          fallback={fallback}
+          noMatchFallback={noMatchFallback}
+          searchText={searchText}
+          separator={separator}
+          expandX={expandX}
+          {...listProps}
+          tracker={tracker}
+          renderWindow={renderWindow}
+          virtualItemHeightSignal={virtualItemHeightSignal}
+        >
+          <PendingScrollRefContext.Provider value={pendingScrollRef}>
+            <ListIdContext.Provider value={innerId}>
+              {children}
+            </ListIdContext.Provider>
+          </PendingScrollRefContext.Provider>
+        </UnorderedList>
+      </div>
     );
   };
   const renderListMemoized = useCallback(renderList, [
@@ -599,7 +612,6 @@ const ListUI = (props) => {
       styleCSSVars={LIST_STYLE_CSS_VARS}
       pseudoClasses={LIST_PSEUDO_CLASSES}
       pseudoStateSelector=".navi_list"
-      visualSelector=".navi_list"
       hasChildFunction
       data-navi-value={value || undefined}
       data-input-proxy={name ? `#${CSS.escape(hiddenInputId)}` : undefined}

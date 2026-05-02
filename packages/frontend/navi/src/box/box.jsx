@@ -484,16 +484,23 @@ export const Box = (props) => {
         return;
       }
       // not a style prop what do we do with it?
-      if (shouldForwardAllToChild) {
-        if (isPseudoStyle) {
+      // When pseudoStateSelector is set, the child element is the semantic/interactive one
+      // When both selectors are set the child IS the component (e.g. Button with scale
+      // transform) — forward everything so it behaves like a normal element.
+      // When only pseudoStateSelector is set, the box keeps its own visual identity
+      // (border, background, overflow…) and the child is just the interactive/semantic
+      // element inside it. Only event handlers (onXxx) belong on that child; everything
+      // else stays on the box.
+      if (isPseudoStyle) {
+        if (shouldForwardAllToChild) {
           // le pseudo style est deja passé tel quel au child
         } else {
-          childForwardedProps[name] = value;
-        }
-      } else {
-        if (isPseudoStyle) {
           console.warn(`unsupported pseudo style key "${name}"`);
+          selfForwardedProps[name] = value;
         }
+      } else if (shouldForwardAllToChild) {
+        childForwardedProps[name] = value;
+      } else {
         selfForwardedProps[name] = value;
       }
       return;
@@ -522,6 +529,15 @@ export const Box = (props) => {
       // This help human to better scan the DOM
       const isNaviAttribute = propName.startsWith("navi-");
       if (isNaviAttribute) {
+        selfForwardedProps[propName] = propValue;
+        continue;
+      }
+      const isEventHandler = propName.startsWith("on");
+      if (isEventHandler) {
+        if (pseudoStateSelector) {
+          childForwardedProps[propName] = propValue;
+          continue;
+        }
         selfForwardedProps[propName] = propValue;
         continue;
       }

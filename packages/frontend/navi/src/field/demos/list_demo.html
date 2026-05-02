@@ -330,51 +330,47 @@
                 paddingX="10"
                 paddingY="6"
                 size="m"
-                id="searchable-fruits-list"
+                listId="searchable-fruits-list"
                 borderColor="#7c3aed"
                 borderRadius="m"
                 uiAction={(value) => {
                   setSearchText(value);
                 }}
               />
-              <Box
+              <List
                 borderStyle="solid"
                 borderWidth="1"
                 borderColor="#7c3aed"
                 borderRadius="m"
-                overflow="hidden"
+                id="searchable-fruits-list"
+                uiAction={(value) => {
+                  setSelected(value);
+                }}
+                expandX
               >
-                <List
-                  id="searchable-fruits-list"
-                  uiAction={(value) => {
-                    setSelected(value);
-                  }}
-                  expandX
-                >
-                  {fruits.map((fruit, i) => {
-                    const { match, ranges } = getItemMatchInfo(fruit);
-                    return (
-                      <ListItem
-                        key={fruit}
-                        index={i}
-                        id={fruit}
-                        value={fruit}
-                        selected={selected === fruit}
-                        hidden={!match}
-                        highlight={ranges}
-                        style={{
-                          ":-navi-selected": {
-                            backgroundColor: "#3b0764",
-                            color: "#f3e8ff",
-                          },
-                        }}
-                      >
-                        {fruit}
-                      </ListItem>
-                    );
-                  })}
-                </List>
-              </Box>
+                {fruits.map((fruit, i) => {
+                  const { match, ranges } = getItemMatchInfo(fruit);
+                  return (
+                    <ListItem
+                      key={fruit}
+                      index={i}
+                      id={fruit}
+                      value={fruit}
+                      selected={selected === fruit}
+                      hidden={!match}
+                      highlight={ranges}
+                      style={{
+                        ":-navi-selected": {
+                          backgroundColor: "#3b0764",
+                          color: "#f3e8ff",
+                        },
+                      }}
+                    >
+                      {fruit}
+                    </ListItem>
+                  );
+                })}
+              </List>
             </Box>
             <div className="value-display">{selected ?? ""}</div>
           </div>

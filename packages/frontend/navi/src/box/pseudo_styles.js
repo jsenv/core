@@ -258,6 +258,11 @@ focus_classes: {
     }
     const controllers = document.querySelectorAll(`[aria-controls~="${id}"]`);
     for (const controller of controllers) {
+      // If the controller is inside the element it controls, the element already
+      // receives native :focus/:focus-within — no need to inherit focus from it.
+      if (el.contains(controller)) {
+        continue;
+      }
       const pseudoClass = requireFocusVisible ? ":focus-visible" : ":focus";
       if (controller.matches(pseudoClass)) {
         return true;
