@@ -273,6 +273,7 @@ const POSITION_PROPS = {
   sticky: applyToCssPropWhenTruthy("position", "sticky", "static"),
   zIndex: PASS_THROUGH,
   order: PASS_THROUGH,
+  popover: PASS_THROUGH,
   left: (value) => {
     return { left: value === true ? 0 : value };
   },

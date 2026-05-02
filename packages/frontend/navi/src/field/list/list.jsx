@@ -534,6 +534,7 @@ const ListUI = (props) => {
     pendingScrollRef,
   } = useListScrollSync({
     containerRef,
+    ref,
     tracker,
     renderBudget,
     virtualItemHeight,
@@ -636,7 +637,7 @@ const ListUI = (props) => {
 };
 const useListScrollSync = ({
   containerRef,
-  ulRef,
+  ref,
   tracker,
   renderBudget,
   virtualItemHeight,
@@ -644,7 +645,7 @@ const useListScrollSync = ({
 }) => {
   const debugScroll = useDebugScroll();
   const virtualItemHeightSignal = useVirtualItemHeightSignal(
-    ulRef,
+    ref,
     virtualItemHeight,
   );
 
@@ -692,7 +693,7 @@ const useListScrollSync = ({
         container: containerRef.current,
         block,
       });
-      const listEl = ulRef.current;
+      const listEl = ref.current;
       dispatchPublicCustomEvent(listEl, "navi_list_nav", {
         event,
         item,
@@ -829,7 +830,7 @@ const useListScrollSync = ({
           virtualItemHeightSignal,
           renderWindowRef,
         );
-        dispatchPublicCustomEvent(ulRef.current, "navi_list_nav", {
+        dispatchPublicCustomEvent(ref.current, "navi_list_nav", {
           item,
           event: new CustomEvent("navi_scroll_restore"),
         });
@@ -983,7 +984,7 @@ const getScrollInfo = (
   };
 };
 
-const useVirtualItemHeightSignal = (ulRef, virtualItemHeightProp = 0) => {
+const useVirtualItemHeightSignal = (ref, virtualItemHeightProp = 0) => {
   const virtualHeightSignalRef = useRef(null);
   if (!virtualHeightSignalRef.current) {
     virtualHeightSignalRef.current = signal(virtualItemHeightProp);
@@ -1000,7 +1001,7 @@ const useVirtualItemHeightSignal = (ulRef, virtualItemHeightProp = 0) => {
     if (virtualHeightSignal.peek() !== 0) {
       return;
     }
-    const ulEl = ulRef.current;
+    const ulEl = ref.current;
     if (!ulEl) {
       return;
     }
