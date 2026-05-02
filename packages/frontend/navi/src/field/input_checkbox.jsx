@@ -1,11 +1,12 @@
-import { useCallback, useContext, useRef } from "preact/hooks";
+import { useCallback, useContext, useLayoutEffect, useRef } from "preact/hooks";
 
+import { resolveColorLuminance } from "@jsenv/dom";
 import { useActionBoundToOneParam } from "../action/use_action.js";
 import { useActionStatus } from "../action/use_action_status.js";
 import { useExecuteAction } from "../action/use_execute_action.js";
 import { Box } from "../box/box.jsx";
+import { NAVI_PSEUDO_STATE_CUSTOM_EVENT } from "../box/pseudo_styles.js";
 import { LoaderBackground } from "../graphic/loader/loader_background.jsx";
-import { useDarkBackgroundAttribute } from "../text/use_dark_background_attribute.js";
 import { useAutoFocus } from "../utils/focus/use_auto_focus.js";
 import { useStableCallback } from "../utils/use_stable_callback.js";
 import { fieldPropSet } from "./field_prop_set.js";
@@ -44,15 +45,15 @@ const css = /* css */ `
       --outline-color: var(--navi-focus-outline-color);
       --loader-color: var(--navi-loader-color);
       --border-color: light-dark(#767676, #8e8e93);
-      --background-color: rgba(0, 0, 0, 0.15);
+      --background-color: white;
       --accent-color: light-dark(#4476ff, #3b82f6);
       --background-color-checked: var(--accent-color);
       --border-color-checked: var(--accent-color);
-      --checkmark-color: rgb(55, 55, 55);
+      --checkmark-color: white;
       --cursor: pointer;
       --color-mix-light: black;
       --color-mix-dark: white;
-      --color-mix: var(--color-mix-light);
+      --color-mix: var(--color-mix-dark);
 
       /* Hover */
       --border-color-hover: color-mix(in srgb, var(--border-color) 60%, black);
@@ -146,9 +147,9 @@ const css = /* css */ `
         black
       );
 
-      &[data-dark-background] {
-        --color-mix: var(--color-mix-dark);
-        --checkmark-color: white;
+      &[data-light-accent] {
+        --color-mix: var(--color-mix-light);
+        --checkmark-color: rgb(55, 55, 55);
       }
     }
   }
@@ -250,9 +251,8 @@ const css = /* css */ `
       }
     }
 
-    &[data-dark-background]:not([data-appearance="toggle"]) {
-      --x-background-color: white;
-      --x-checkmark-color: var(--checkmark-color);
+    &[data-light-accent]:not([data-appearance="toggle"]) {
+      --x-background-color: rgba(0, 0, 0, 0.15);
       &[data-checked] {
         --x-background-color: var(--background-color-checked);
       }
@@ -495,9 +495,8 @@ const InputCheckboxUI = (props) => {
   ]);
 
   const boxRef = useRef();
-  useDarkBackgroundAttribute(boxRef, [accentColor], {
+  useLightAccentAttribute(boxRef, [accentColor], {
     backgroundElementSelector: ".navi_checkbox_accent_probe",
-    luminanceThreshold: 0.82,
   });
 
   return (
@@ -618,6 +617,57 @@ const CheckboxPseudoClasses = [
 ];
 const CheckboxPseudoElements = ["::-navi-loader", "::-navi-checkmark"];
 const CheckboxChildPropSet = new Set([...fieldPropSet]);
+
+const useLightAccentAttribute = (
+  ref,
+  deps = [],
+  {
+    backgroundElementSelector,
+    colorProperty = "backgroundColor",
+    attributeName = "data-light-accent",
+    luminanceThreshold = 0.5,
+  } = {},
+) => {
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) {
+      return undefined;
+    }
+    let elementToCheck = el;
+    if (backgroundElementSelector) {
+      elementToCheck = el.querySelector(backgroundElementSelector);
+      if (!elementToCheck) {
+        return undefined;
+      }
+    }
+    const updateAttribute = () => {
+      const computedStyle = getComputedStyle(elementToCheck);
+      const color = computedStyle[colorProperty];
+      if (!color) {
+        el.removeAttribute(attributeName);
+        return;
+      }
+      const luminance = resolveColorLuminance(color, el);
+      if (luminance !== undefined && luminance > luminanceThreshold) {
+        el.setAttribute(attributeName, "");
+      } else {
+        el.removeAttribute(attributeName);
+      }
+    };
+    updateAttribute();
+    el.addEventListener(NAVI_PSEUDO_STATE_CUSTOM_EVENT, updateAttribute);
+    return () => {
+      el.removeEventListener(NAVI_PSEUDO_STATE_CUSTOM_EVENT, updateAttribute);
+      el.removeAttribute(attributeName);
+    };
+  }, [
+    ref,
+    ...deps,
+    backgroundElementSelector,
+    colorProperty,
+    luminanceThreshold,
+  ]);
+};
 
 const InputCheckboxWithAction = (props) => {
   const uiStateController = useContext(UIStateControllerContext);
