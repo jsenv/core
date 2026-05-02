@@ -361,7 +361,7 @@ export const useUIGroupStateController = (
     return notifyParentAboutChildUnmount;
   }, []);
 
-  const onChange = (_, e) => {
+  const onChange = (_, e, { notifyExternal = true } = {}) => {
     if (groupIsRenderingRef.current) {
       pendingChangeRef.current = true;
       return;
@@ -371,7 +371,7 @@ export const useUIGroupStateController = (
       emptyState,
     );
     const uiStateController = uiStateControllerRef.current;
-    uiStateController.setUIState(newUIState, e);
+    uiStateController.setUIState(newUIState, e, { notifyExternal });
   };
 
   useLayoutEffect(() => {
@@ -381,6 +381,7 @@ export const useUIGroupStateController = (
       onChange(
         null,
         new CustomEvent(`${componentType}_batched_ui_state_update`),
+        { notifyExternal: false },
       );
     }
   });
@@ -411,7 +412,7 @@ export const useUIGroupStateController = (
     value,
     uiAction,
     uiState: emptyState,
-    setUIState: (newUIState, e) => {
+    setUIState: (newUIState, e, { notifyExternal = true } = {}) => {
       const currentUIState = uiStateController.uiState;
       if (newUIState === currentUIState) {
         return;
@@ -421,7 +422,7 @@ export const useUIGroupStateController = (
         `${componentType}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> updates from ${JSON.stringify(currentUIState)} to ${JSON.stringify(newUIState)}`,
       );
       publishUIState(newUIState);
-      if (!e.type.endsWith("_mount")) {
+      if (notifyExternal) {
         uiStateController.uiAction?.(newUIState, e);
       }
       notifyParentAboutChildUIStateChange(e);
@@ -438,6 +439,7 @@ export const useUIGroupStateController = (
       onChange(
         childUIStateController,
         new CustomEvent(`${childComponentType}_mount`),
+        { notifyExternal: false },
       );
     },
     onChildUIStateChange: (childUIStateController, e) => {
@@ -470,6 +472,7 @@ export const useUIGroupStateController = (
       onChange(
         childUIStateController,
         new CustomEvent(`${childComponentType}_unmount`),
+        { notifyExternal: false },
       );
     },
     resetUIState: (e) => {
