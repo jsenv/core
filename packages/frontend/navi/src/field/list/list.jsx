@@ -1464,6 +1464,11 @@ const ListInteractive = (props) => {
               };
               const index = resolveIndex();
               if (index === anchorIndex) {
+                if (event.type === "keydown") {
+                  // we still prevent default to avoid page scroll or search caret to move, might be unexpected
+                  // as it usually nav the list to have side effects when we reach the end of the list
+                  event.preventDefault();
+                }
                 return;
               }
               if (event.type === "keydown") {
