@@ -145,13 +145,6 @@ const css = /* css */ `
         var(--button-background-color) 95%,
         black
       );
-
-      &[data-accent-light] {
-        --color-mix: var(--color-mix-light);
-      }
-      &[data-accent-needs-dark-fg] {
-        --checkmark-color: rgb(55, 55, 55);
-      }
     }
   }
 
@@ -252,11 +245,9 @@ const css = /* css */ `
       }
     }
 
-    &[data-accent-very-light]:not([data-appearance="toggle"]) {
-      --x-background-color: rgba(0, 0, 0, 0.15);
-      &[data-checked] {
-        --x-background-color: var(--background-color-checked);
-      }
+    /* Accent color adaptations */
+    &[data-accent-light] {
+      --color-mix: var(--color-mix-light);
     }
 
     /* Checkbox appearance */
@@ -277,6 +268,16 @@ const css = /* css */ `
           transition-duration: 0.15s;
           transition-timing-function: ease;
         }
+      }
+
+      &[data-accent-very-light] {
+        --x-background-color: rgba(0, 0, 0, 0.15);
+        &[data-checked] {
+          --x-background-color: var(--background-color-checked);
+        }
+      }
+      &[data-accent-needs-dark-fg] {
+        --x-checkmark-color: rgb(55, 55, 55);
       }
     }
 
@@ -337,6 +338,10 @@ const css = /* css */ `
             )
           );
         }
+      }
+
+      &[data-accent-very-light] {
+        --toggle-thumb-color: rgb(55, 55, 55);
       }
     }
 
