@@ -158,7 +158,7 @@ const css = /* css */ `
       var(--list-footer-height, 0px) + var(--list-scroll-padding-bottom, 0px)
     );
 
-    display: inline-flex;
+    display: flex;
     width: fit-content;
     max-width: 100%;
     flex-direction: column;
@@ -192,18 +192,23 @@ const css = /* css */ `
     &[popover] {
       position: absolute;
       inset: unset;
+      display: none;
       min-width: var(--list-anchor-width, 0px);
       max-width: 95vw;
       margin: 0;
       padding: 0;
 
+      &:popover-open {
+        display: flex;
+      }
       .navi_list {
         width: 100%;
       }
-    }
-    &[data-anchor-hidden] {
-      opacity: 0;
-      pointer-events: none;
+
+      &[data-anchor-hidden] {
+        opacity: 0;
+        pointer-events: none;
+      }
     }
 
     &[data-focus] {
