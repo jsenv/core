@@ -13,7 +13,7 @@ import {
   reportInteractiveToLabel,
   reportReadOnlyToLabel,
 } from "./label.jsx";
-import { useAccentAttributes } from "./use_accent_attributes.js";
+import { useAccentColorAttributes } from "./use_accent_attributes.js";
 import { useActionEvents } from "./use_action_events.js";
 import {
   DisabledContext,
@@ -146,10 +146,10 @@ const css = /* css */ `
         black
       );
 
-      &[data-light-accent] {
+      &[data-accent-light] {
         --color-mix: var(--color-mix-light);
       }
-      &[data-dark-contrast] {
+      &[data-accent-needs-dark-fg] {
         --checkmark-color: rgb(55, 55, 55);
       }
     }
@@ -252,7 +252,7 @@ const css = /* css */ `
       }
     }
 
-    &[data-very-light-accent]:not([data-appearance="toggle"]) {
+    &[data-accent-very-light]:not([data-appearance="toggle"]) {
       --x-background-color: rgba(0, 0, 0, 0.15);
       &[data-checked] {
         --x-background-color: var(--background-color-checked);
@@ -496,7 +496,7 @@ const InputCheckboxUI = (props) => {
   ]);
 
   const boxRef = useRef();
-  useAccentAttributes(boxRef, [accentColor], {
+  useAccentColorAttributes(boxRef, accentColor, {
     elementSelector: ".navi_checkbox_accent_probe",
   });
 
