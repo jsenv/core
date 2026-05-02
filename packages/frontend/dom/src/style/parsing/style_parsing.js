@@ -209,6 +209,9 @@ export const normalizeStyle = (
   if (propertyName === "transform") {
     if (context === "js") {
       if (typeof value === "string") {
+        if (isCSSKeyword(value)) {
+          return value;
+        }
         // For js context, prefer objects
         return parseCSSTransform(value, normalizeStyle);
       }
@@ -246,6 +249,9 @@ export const normalizeStyle = (
   if (propertyName === "background") {
     if (context === "js") {
       if (typeof value === "string") {
+        if (isCSSKeyword(value)) {
+          return value;
+        }
         // For js context, prefer objects
         return parseCSSBackground(value, {
           parseStyle,
@@ -283,6 +289,9 @@ export const normalizeStyle = (
   if (propertyName === "border") {
     if (context === "js") {
       if (typeof value === "string") {
+        if (isCSSKeyword(value)) {
+          return value;
+        }
         // For js context, prefer objects
         return parseCSSBorder(value, element);
       }
@@ -410,10 +419,20 @@ export const normalizeStyle = (
   }
 
   if (colorPropertySet.has(propertyName)) {
-    if (typeof value === "string" && isCSSFunction(value)) {
-      return value;
+    if (typeof value === "string") {
+      if (isCSSKeyword(value)) {
+        return value;
+      }
+      if (isCSSFunction(value)) {
+        return value;
+      }
     }
     const rgba = parseCSSColor(value, element);
+    if (rgba === null) {
+      // parseCSSColor could not parse the value (e.g. a CSS variable or unknown keyword)
+      // return as-is so the original string reaches the DOM unchanged
+      return value;
+    }
     if (context === "js") {
       return rgba;
     }
@@ -431,6 +450,9 @@ export const stringifyStyle = (value, propertyName, element) => {
 
 const isCSSFunction = (value) => {
   return /^[a-z-]+\(/.test(value);
+};
+const isCSSKeyword = (value) => {
+  return globalCSSKeywordSet.has(value);
 };
 const normalizeNumber = (value, { unit, propertyName, preferedType }) => {
   if (typeof value === "string") {
