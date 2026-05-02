@@ -109,7 +109,7 @@ const css = /* css */ `
       /* Pointed by keyboard — subtle light blue highlight */
       --list-item-color-keyboard-pointed: var(--list-item-color);
       --list-item-background-color-keyboard-pointed: light-dark(
-        #e8f0fe,
+        #c2dcff,
         #1c3a6e
       );
 
