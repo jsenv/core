@@ -467,7 +467,7 @@ const SelectWithPopover = (props) => {
       anchor: ref.current,
     });
   };
-  const requestClose = (e) => {
+  const requestClose = (e = new CustomEvent("programmatic")) => {
     return requestPopoverClose(popoverRef.current, { event: e });
   };
   const moveFocusToSelect = (e) => {
@@ -594,7 +594,9 @@ const SelectWithPopover = (props) => {
         pointerTrap={pointerTrap}
         focusTrap={focusTrap}
       >
-        {children}
+        <SelectRequestCloseContext.Provider value={requestClose}>
+          {children}
+        </SelectRequestCloseContext.Provider>
       </Popover>
     </SelectDispatcher>
   );
@@ -622,7 +624,7 @@ const SelectWithDialog = (props) => {
       event: e,
     });
   };
-  const requestClose = (e) => {
+  const requestClose = (e = new CustomEvent("programmatic")) => {
     return requestDialogClose(dialogRef.current, {
       event: e,
     });
@@ -727,10 +729,17 @@ const SelectWithDialog = (props) => {
         scrollTrap={scrollTrap}
         pointerTrap={pointerTrap}
       >
-        {children}
+        <SelectRequestCloseContext.Provider value={requestClose}>
+          {children}
+        </SelectRequestCloseContext.Provider>
       </Dialog>
     </SelectDispatcher>
   );
+};
+
+const SelectRequestCloseContext = createContext();
+export const useSelectRequestClose = () => {
+  return useContext(SelectRequestCloseContext);
 };
 
 /**

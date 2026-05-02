@@ -110,7 +110,7 @@ export { Group } from "./src/field/group.jsx";
 export { Input } from "./src/field/input.jsx";
 export { Label } from "./src/field/label.jsx";
 export { Radio, RadioList } from "./src/field/radio_list.jsx";
-export { Select } from "./src/field/select.jsx";
+export { Select, useSelectRequestClose } from "./src/field/select.jsx";
 // --- List start ---
 export { applySearch } from "./src/field/list/apply_search.js";
 export { createSearch } from "./src/field/list/create_search.js";

@@ -1,0 +1,470 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Dropdown Demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:," />
+    <style>
+      body {
+        margin: 40px;
+        font-family: system-ui, sans-serif;
+        background: #f5f5f5;
+      }
+      .demo-section {
+        max-width: 500px;
+        margin: 0 auto 40px;
+        padding: 24px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      h2 {
+        margin: 0 0 8px;
+        font-size: 1.1rem;
+      }
+      p {
+        margin: 0 0 16px;
+        color: #555;
+        font-size: 13px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useState } from "preact/hooks";
+      import {
+        Input,
+        List,
+        ListItem,
+        Separator,
+        Text,
+        Box,
+        ListItemHeader,
+        useSearchText,
+        Select,
+        useSelectRequestClose,
+      } from "@jsenv/navi";
+
+      // ── Reusable dialog header ────────────────────────────────────────────────
+
+      const DialogHeader = ({ title }) => {
+        return (
+          <div style="padding:14px 16px 10px;border-bottom:1px solid #eee;">
+            <span style="font-weight:600;font-size:15px;">{title}</span>
+          </div>
+        );
+      };
+
+      // ── Demo 1: arbitrary content ─────────────────────────────────────────────
+
+      const COLORS = ["Red", "Green", "Blue", "Yellow", "Purple", "Orange"];
+
+      const ColorList = ({ onSelect }) => {
+        const close = useSelectRequestClose();
+        return (
+          <div style="padding: 20px; min-width: 260px;">
+            <p style="margin: 0 0 12px; font-weight: 600;">Pick a color</p>
+            <input autofocus="" placeholder="should be focused" />
+
+            {COLORS.map((color) => (
+              <button
+                key={color}
+                style="display:block;width:100%;margin-bottom:8px;padding:8px 12px;text-align:left;cursor:pointer;border:1px solid #ddd;border-radius:4px;background:white;font-size:14px"
+                onClick={(e) => {
+                  onSelect(color);
+                  close(e);
+                }}
+              >
+                {color}
+              </button>
+            ))}
+          </div>
+        );
+      };
+
+      // ── Demo 2: filterable List ──────────────────────────────────────────────
+
+      const FRUITS = [
+        "Apple",
+        "Apricot",
+        "Avocado",
+        "Banana",
+        "Blackberryyiudyiuyfiuafsyiudbyiufbyiuyiyiu",
+        "Blueberry",
+        "Cherry",
+        "Coconut",
+        "Fig",
+        "Grape",
+        "Grapefruit",
+        "Guava",
+        "Kiwi",
+        "Lemon",
+        "Lime",
+        "Lychee",
+        "Mango",
+        "Melon",
+        "Nectarine",
+        "Orange",
+        "Papaya",
+        "Peach",
+        "Pear",
+        "Pineapple",
+        "Plum",
+        "Pomegranate",
+        "Raspberry",
+        "Strawberry",
+        "Tangerine",
+        "Watermelon",
+      ];
+
+      const FruitPicker = ({ selectedFruit }) => {
+        const [search, setSearch] = useState("");
+        const [orderedFruits, getItemMatchInfo] = useSearchText(search, FRUITS);
+        return (
+          <div style="min-width: 300px;">
+            <DialogHeader title="Please select a fruit" />
+            <List
+              role="listbox"
+              maxHeight="240px"
+              expandX
+              border="none"
+              searchText={search}
+            >
+              <ListItemHeader>
+                <Input
+                  placeholder="Sort…"
+                  expandX
+                  paddingX="10"
+                  paddingY="6"
+                  size="m"
+                  style="border-bottom: 1px solid #eee; border-radius: 0;"
+                  uiAction={(v) => setSearch(v)}
+                />
+              </ListItemHeader>
+              {orderedFruits.map((fruit, i) => {
+                const selected = selectedFruit === fruit;
+                const { score, ranges } = getItemMatchInfo(fruit);
+                return (
+                  <ListItem
+                    role="option"
+                    key={fruit}
+                    index={i}
+                    id={fruit}
+                    value={fruit}
+                    highlight={ranges}
+                    matchScore={score}
+                    selected={selected}
+                    overflowEllipsis
+                  >
+                    {fruit}
+                  </ListItem>
+                );
+              })}
+            </List>
+          </div>
+        );
+      };
+
+      // ── Demo 3: animal picker with radio inputs ───────────────────────────────
+
+      // ── Demo 4: large list with filter in header ──────────────────────────────
+
+      const COUNTRIES = [
+        "Afghanistan",
+        "Albania",
+        "Algeria",
+        "Andorra",
+        "Angola",
+        "Fake very large country namewithaverylongnamecannotwrapohboy to see what happens when an option is very large",
+        "Argentina",
+        "Armenia",
+        "Australia",
+        "Austria",
+        "Azerbaijan",
+        "Bahamas",
+        "Bahrain",
+        "Bangladesh",
+        "Belarus",
+        "Belgium",
+        "Belize",
+        "Benin",
+        "Bhutan",
+        "Bolivia",
+        "Bosnia",
+        "Botswana",
+        "Brazil",
+        "Brunei",
+        "Bulgaria",
+        "Burkina Faso",
+        "Burundi",
+        "Cambodia",
+        "Cameroon",
+        "Canada",
+        "Chad",
+        "Chile",
+        "China",
+        "Colombia",
+        "Congo",
+        "Croatia",
+        "Cuba",
+        "Cyprus",
+        "Czech Republic",
+        "Denmark",
+        "Djibouti",
+        "Ecuador",
+        "Egypt",
+        "Estonia",
+        "Ethiopia",
+        "Finland",
+        "France",
+        "Georgia",
+        "Germany",
+        "Ghana",
+        "Greece",
+      ];
+
+      const CountryPicker = ({ selected }) => {
+        const [search, setSearch] = useState("");
+        const [orderedCountries, getItemMatchInfo] = useSearchText(
+          search,
+          COUNTRIES,
+        );
+
+        return (
+          <List
+            role="listbox"
+            border="none"
+            maxHeight="none"
+            expand
+            searchText={search}
+            separator={<Separator margin="0" />}
+          >
+            <ListItemHeader>
+              <div style="padding: 12px 12px 8px; border-bottom: 1px solid #eee;">
+                <span style="display:block;font-weight:600;font-size:15px;margin-bottom:8px;">
+                  Pick a country
+                </span>
+                <Input
+                  placeholder="Sort countries…"
+                  expandX
+                  autoFocus
+                  paddingX="10"
+                  paddingY="6"
+                  size="m"
+                  uiAction={(v) => setSearch(v)}
+                />
+              </div>
+            </ListItemHeader>
+            {orderedCountries.map((country, i) => {
+              const { score, ranges } = getItemMatchInfo(country);
+              return (
+                <ListItem
+                  role="option"
+                  key={country}
+                  id={country}
+                  index={i}
+                  value={country}
+                  selected={selected === country}
+                  highlight={ranges}
+                  matchScore={score}
+                  minHeight="64"
+                  flex
+                  alignY="center"
+                  spacing="m"
+                  overflowEllipsis
+                >
+                  <span style="font-size:28px" role="img">
+                    🌍
+                  </span>
+                  <span style="flex:1">{country}</span>
+                  {selected === country && (
+                    <span style="color:#1a73e8;font-size:18px">✓</span>
+                  )}
+                </ListItem>
+              );
+            })}
+          </List>
+        );
+      };
+
+      const Demo4 = () => {
+        const [country, setCountry] = useState("Cambodia");
+        return (
+          <div class="demo-section">
+            <h2>Demo 4 — Large list with filter header</h2>
+            <p>
+              Filter input lives inside a <code>ListItemHeader</code>. Items are
+              tall. No max-height — the dialog grows to fit all visible options.
+            </p>
+            <Select
+              value={country}
+              uiAction={(v) => {
+                setCountry(v);
+              }}
+              placeholder="Pick a country…"
+              lockScroll
+            >
+              <CountryPicker selected={country} />
+            </Select>
+            {country && (
+              <p style="margin-top:12px;font-size:13px;color:#1a73e8;">
+                Selected: <b>{country}</b>
+              </p>
+            )}
+          </div>
+        );
+      };
+
+      // ── App ───────────────────────────────────────────────────────────────────
+
+      const Demo1 = () => {
+        const [color, setColor] = useState(null);
+        return (
+          <div class="demo-section">
+            <h2>Demo 1 — Arbitrary content</h2>
+            <p>Custom list of buttons inside the dialog.</p>
+            <Select value={color} placeholder="Choose a color…">
+              <ColorList onSelect={setColor} />
+            </Select>
+            {color && (
+              <p style="margin-top:12px;font-size:13px;color:#1a73e8;">
+                Selected: <b>{color}</b>
+              </p>
+            )}
+          </div>
+        );
+      };
+
+      const Demo2 = () => {
+        const [fruit, setFruit] = useState(FRUITS[15]);
+        return (
+          <div class="demo-section">
+            <h2>Demo 2 — Filterable List</h2>
+            <p>
+              The dialog contains a search input and a suggestion list.
+              Selecting a fruit closes the dialog automatically.
+            </p>
+            <Select
+              value={fruit}
+              uiAction={setFruit}
+              placeholder="Pick a fruit…"
+            >
+              <FruitPicker selectedFruit={fruit} />
+            </Select>
+            {fruit && (
+              <p style="margin-top:12px;font-size:13px;color:#1a73e8;">
+                Selected: <b>{fruit}</b>
+              </p>
+            )}
+          </div>
+        );
+      };
+
+      const ANIMALS = [
+        "Cat",
+        "Dog",
+        "Elephant",
+        "Fox",
+        "Giraffe",
+        "Horse",
+        "Lion",
+        "Monkey",
+        "Panda",
+        "Rabbit",
+        "Tiger",
+        "Wolf",
+        "Zebra",
+      ];
+
+      const AnimalPicker = ({ selected }) => {
+        return (
+          <List
+            listRole="listbox"
+            fallback="No results"
+            border="none"
+            separator={<Separator margin="0" />}
+            expandX
+            minWidth="300"
+            renderBudget={10}
+          >
+            <ListItemHeader>
+              <div style="padding:14px 16px 10px;border-bottom:1px solid #eee;">
+                <span style="font-weight:600;font-size:15px;">
+                  Pick an animal
+                </span>
+              </div>
+            </ListItemHeader>
+            {ANIMALS.map((animal, i) => (
+              <ListItem
+                key={animal}
+                index={i}
+                id={animal}
+                role="option"
+                flex
+                alignY="center"
+                value={animal}
+                selected={selected === animal}
+                height="60px"
+              >
+                <Text>{animal}</Text>
+                <Input
+                  selfAlignX="end"
+                  type="radio"
+                  tabIndex="-1"
+                  checked={selected === animal}
+                  uiAction={() => {}}
+                  style="pointer-events:none;flex-shrink:0;"
+                />
+              </ListItem>
+            ))}
+          </List>
+        );
+      };
+
+      const Demo3 = () => {
+        const [animal, setAnimal] = useState(ANIMALS[5]);
+        return (
+          <div class="demo-section">
+            <h2>Demo 3 — Radio list picker</h2>
+            <p>
+              Each item shows a radio input. A separator sits between items.
+              Selecting an animal closes the dialog.
+            </p>
+            <Select
+              value={animal}
+              placeholder="Pick an animal…"
+              // capturePointer
+              lockScroll
+              uiAction={(v) => {
+                setAnimal(v);
+              }}
+            >
+              <AnimalPicker selected={animal} />
+            </Select>
+            {animal && (
+              <p style="margin-top:12px;font-size:13px;color:#1a73e8;">
+                Selected: <b>{animal}</b>
+              </p>
+            )}
+          </div>
+        );
+      };
+
+      const App = () => {
+        return (
+          <div>
+            <Demo1 />
+            <Demo2 />
+            <Demo3 />
+            <Demo4 />
+          </div>
+        );
+      };
+
+      render(<App />, document.getElementById("app"));
+    </script>
+  </body>
+</html>
