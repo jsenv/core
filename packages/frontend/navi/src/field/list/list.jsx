@@ -101,9 +101,13 @@ const css = /* css */ `
       --list-item-color-hover: var(--list-item-color);
       --list-item-background-color-hover: light-dark(#f5f5f5, #2a2a2a);
 
-      /* Pointed (keyboard navigation position) */
-      --list-item-color-pointed: var(--list-item-color);
-      --list-item-background-color-pointed: light-dark(#c2d7fc, #1a4a9e);
+      /* Pointed by mouse — subtle, just a shade above background */
+      --list-item-color-mouse-pointed: var(--list-item-color);
+      --list-item-background-color-mouse-pointed: light-dark(#ebebeb, #303030);
+
+      /* Pointed by keyboard — vivid accent highlight */
+      --list-item-color-pointed: light-dark(#ffffff, #ffffff);
+      --list-item-background-color-pointed: light-dark(#1a73e8, #2b5fcc);
 
       /* Selected */
       --list-item-color-selected: light-dark(#1a73e8, #7baaf7);
@@ -250,6 +254,10 @@ const css = /* css */ `
     &[data-pointed] {
       --x-color: var(--list-item-color-pointed);
       --x-background-color: var(--list-item-background-color-pointed);
+    }
+    &[data-pointed-by-mouse] {
+      --x-color: var(--list-item-color-mouse-pointed);
+      --x-background-color: var(--list-item-background-color-mouse-pointed);
     }
     &[data-selected] {
       --x-color: var(--list-item-color-selected);
@@ -1775,6 +1783,10 @@ const LIST_ITEM_STYLE_CSS_VARS = {
   ":-navi-pointed": {
     color: "--list-item-color-pointed",
     backgroundColor: "--list-item-background-color-pointed",
+  },
+  ":-navi-pointed-by-mouse": {
+    color: "--list-item-color-mouse-pointed",
+    backgroundColor: "--list-item-background-color-mouse-pointed",
   },
   ":hover": {
     color: "--list-item-color-hover",
