@@ -46,6 +46,7 @@
         useSearchText,
         Select,
         useSelectRequestClose,
+        NaviDebug,
       } from "@jsenv/navi";
 
       const App = () => {
@@ -60,7 +61,6 @@
       };
 
       // ── Demo 1: arbitrary content ─────────────────────────────────────────────
-
       const Demo1 = () => {
         const [color, setColor] = useState(null);
         return (
@@ -70,9 +70,11 @@
               A <code>Select</code> can contain any custom content inside its
               panel, not just a list.
             </p>
-            <Select value={color} placeholder="Choose a color…">
-              <ColorList onSelect={setColor} />
-            </Select>
+            <NaviDebug debugPopover>
+              <Select value={color} placeholder="Choose a color…">
+                <ColorList onSelect={setColor} />
+              </Select>
+            </NaviDebug>
             {color && (
               <p style="margin-top:12px;font-size:13px;color:#1a73e8;">
                 Selected: <b>{color}</b>
@@ -81,9 +83,7 @@
           </div>
         );
       };
-
       const COLORS = ["Red", "Green", "Blue", "Yellow", "Purple", "Orange"];
-
       const ColorList = ({ onSelect }) => {
         const requestClose = useSelectRequestClose();
         return (

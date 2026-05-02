@@ -476,6 +476,8 @@ const SelectWithPopover = (props) => {
     select.focus({ preventScroll: true });
   };
 
+  const [shouldIgnoreThatClick, disableClickFor] = useIgnoreClickForMousedown();
+
   return (
     <SelectDispatcher
       disabled={disabled}
@@ -500,6 +502,9 @@ const SelectWithPopover = (props) => {
       onClick={(e) => {
         if (e.detail === 0) {
           // click triggered by enter won't open the popover
+          return;
+        }
+        if (shouldIgnoreThatClick) {
           return;
         }
         // When a label is clicked it transfers focus to the select
@@ -575,6 +580,7 @@ const SelectWithPopover = (props) => {
           }
           // mousedown inside popover should not bubble to the select (would re-open it if that mousedown closes it)
           e.stopPropagation();
+          disableClickFor(e);
         }}
         onnavi_popover_open={(e) => {
           onOpen(e);
