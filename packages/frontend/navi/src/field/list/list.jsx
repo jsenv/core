@@ -107,8 +107,11 @@ const css = /* css */ `
       --list-item-background-color-mouse-pointed: light-dark(#ebebeb, #303030);
 
       /* Pointed by keyboard — subtle light blue highlight */
-      --list-item-color-pointed: light-dark(#1a73e8, #7baaf7);
-      --list-item-background-color-pointed: light-dark(#e8f0fe, #1c3a6e);
+      --list-item-color-keyboard-pointed: var(--list-item-color);
+      --list-item-background-color-keyboard-pointed: light-dark(
+        #e8f0fe,
+        #1c3a6e
+      );
 
       /* Selected (focused) — vivid blue accent, shown when list has focus-within */
       --list-item-color-selected: light-dark(#ffffff, #ffffff);
@@ -326,16 +329,16 @@ const css = /* css */ `
   .navi_list_container {
     &[data-focus-within] {
       .navi_list_item {
+        &[data-pointed-by-keyboard] {
+          --x-list-item-color: var(--list-item-color-keyboard-pointed);
+          --x-list-item-background-color: var(
+            --list-item-background-color-keyboard-pointed
+          );
+        }
         &[data-selected] {
           --x-list-item-color: var(--list-item-color-selected);
           --x-list-item-background-color: var(
             --list-item-background-color-selected
-          );
-        }
-        &[data-pointed-by-keyboard] {
-          --x-list-item-color: var(--list-item-color-pointed);
-          --x-list-item-background-color: var(
-            --list-item-background-color-pointed
           );
         }
       }
@@ -1859,9 +1862,9 @@ const LIST_ITEM_STYLE_CSS_VARS = {
   "color": "--list-item-color",
   "backgroundColor": "--list-item-background-color",
   "fontWeight": "--list-item-font-weight",
-  ":-navi-pointed": {
-    color: "--list-item-color-pointed",
-    backgroundColor: "--list-item-background-color-pointed",
+  ":-navi-pointed-by-keyboard": {
+    color: "--list-item-color-keyboard-pointed",
+    backgroundColor: "--list-item-background-color-keyboard-pointed",
   },
   ":-navi-pointed-by-mouse": {
     color: "--list-item-color-mouse-pointed",
