@@ -953,9 +953,8 @@ const useListScrollSync = ({
           event: new CustomEvent("navi_scroll_restore"),
         });
       });
+      return;
     }
-
-    // During search -> watch for changes in the top items or their scores.
     const visibleItems = tracker.visibleItemsSignal.peek();
     const topItems = visibleItems.slice(0, renderBudget);
     const topMatchScoresKey = topItems
