@@ -113,7 +113,7 @@
                         uiAction={(v) => {
                           setColor(v);
                         }}
-                        listRole="listbox"
+                        role="listbox"
                         border="none"
                         expandX
                         // debugScroll
@@ -236,7 +236,7 @@
                 scrollTrap
                 focusTrap
               >
-                <List listRole="listbox" border="none" expandX minWidth="240">
+                <List role="listbox" border="none" expandX minWidth="240">
                   <ListItemHeader padding="m" borderBottom="1px solid #eee">
                     <Input
                       uiAction={(v) => setSearchText(v)}
@@ -284,7 +284,7 @@
               <Select name="size" value={size} placeholder="Pick a size…">
                 <List
                   uiAction={(v) => setSize(v)}
-                  listRole="listbox"
+                  role="listbox"
                   border="none"
                   expandX
                 >
@@ -304,7 +304,7 @@
               <Select name="size_disabled" value="L" disabled>
                 <List
                   uiAction={() => {}}
-                  listRole="listbox"
+                  role="listbox"
                   border="none"
                   expandX
                 >
@@ -358,7 +358,7 @@
                     >
                       <List
                         uiAction={(v) => setCountry(v)}
-                        listRole="listbox"
+                        role="listbox"
                         border="none"
                         expandX
                       >
@@ -382,7 +382,7 @@
                     <Select name="role" value={role} placeholder="Pick a role…">
                       <List
                         uiAction={(v) => setRole(v)}
-                        listRole="listbox"
+                        role="listbox"
                         border="none"
                         expandX
                       >
@@ -440,7 +440,7 @@
                   setFruit(v);
                   setSearchText("");
                 }}
-                listRole="listbox"
+                role="listbox"
                 border="none"
                 expandX
                 minWidth="300"
@@ -512,7 +512,7 @@
                   >
                     <List
                       uiAction={(v) => setCountry(v)}
-                      listRole="listbox"
+                      role="listbox"
                       border="none"
                       expandX
                     >

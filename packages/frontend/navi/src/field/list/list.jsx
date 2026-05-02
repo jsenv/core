@@ -458,8 +458,8 @@ const ListUI = (props) => {
   const {
     ref,
     renderBudget = RENDER_BUDGET_DEFAULT,
-    listId,
-    listRole,
+    id,
+    role,
     fallback,
     noMatchFallback,
     separator,
@@ -540,15 +540,15 @@ const ListUI = (props) => {
     searchText,
   });
 
-  const listIdDefault = useId();
-  const innerListid = listId || listIdDefault;
+  const idDefault = useId();
+  const innerId = id || idDefault;
 
   const renderList = (listProps) => {
     return (
       <UnorderedList
         ref={ref}
-        id={innerListid}
-        role={listRole}
+        id={innerId}
+        role={role}
         fallback={fallback}
         noMatchFallback={noMatchFallback}
         searchText={searchText}
@@ -560,16 +560,14 @@ const ListUI = (props) => {
         virtualItemHeightSignal={virtualItemHeightSignal}
       >
         <PendingScrollRefContext.Provider value={pendingScrollRef}>
-          <ListIdContext.Provider value={innerListid}>
-            {children}
-          </ListIdContext.Provider>
+          <ListIdContext.Provider value={id}>{children}</ListIdContext.Provider>
         </PendingScrollRefContext.Provider>
       </UnorderedList>
     );
   };
   const renderListMemoized = useCallback(renderList, [
-    innerListid,
-    listRole,
+    innerId,
+    role,
     fallback,
     noMatchFallback,
     searchText,
@@ -638,7 +636,7 @@ const ListUI = (props) => {
 };
 const useListScrollSync = ({
   containerRef,
-  ref,
+  ulRef,
   tracker,
   renderBudget,
   virtualItemHeight,
@@ -646,7 +644,7 @@ const useListScrollSync = ({
 }) => {
   const debugScroll = useDebugScroll();
   const virtualItemHeightSignal = useVirtualItemHeightSignal(
-    ref,
+    ulRef,
     virtualItemHeight,
   );
 
@@ -694,8 +692,8 @@ const useListScrollSync = ({
         container: containerRef.current,
         block,
       });
-      const listContainerEl = containerRef.current;
-      dispatchPublicCustomEvent(listContainerEl, "navi_list_nav", {
+      const listEl = ulRef.current;
+      dispatchPublicCustomEvent(listEl, "navi_list_nav", {
         event,
         item,
       });
@@ -831,7 +829,7 @@ const useListScrollSync = ({
           virtualItemHeightSignal,
           renderWindowRef,
         );
-        dispatchPublicCustomEvent(listContainerEl, "navi_list_nav", {
+        dispatchPublicCustomEvent(ulRef.current, "navi_list_nav", {
           item,
           event: new CustomEvent("navi_scroll_restore"),
         });
@@ -1174,7 +1172,7 @@ const ListWithPopover = (props) => {
       {...props}
       popover="manual"
       onnavi_list_request_open={(e) => {
-        const listContainerEl = e.currentTarget;
+        const listContainerEl = e.currentTarget.closest(".navi_list_container");
         const anchor = e.detail?.anchor;
         listContainerEl.showPopover();
         const positionPopover = () => {
@@ -1219,7 +1217,7 @@ const ListWithPopover = (props) => {
         });
       }}
       onnavi_list_request_close={(e) => {
-        const listContainerEl = e.currentTarget;
+        const listContainerEl = e.currentTarget.closest(".navi_list_container");
         cleanupRef.current?.();
         listContainerEl.removeAttribute("data-anchor-hidden");
         listContainerEl.hidePopover();
