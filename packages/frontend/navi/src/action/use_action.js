@@ -60,7 +60,16 @@ const useBoundAction = (action, actionParamsSignal) => {
   const actionCallbackRef = useRef();
 
   if (!action) {
-    return null;
+    const existingAction = actionRef.current;
+    if (existingAction) {
+      return existingAction;
+    }
+    const noopAction = createAction(() => {}, { params: undefined });
+    const noopActionBound = actionParamsSignal
+      ? noopAction.bindParams(actionParamsSignal)
+      : noopAction;
+    actionRef.current = noopActionBound;
+    return noopActionBound;
   }
   if (isFunctionButNotAnActionFunction(action)) {
     actionCallbackRef.current = action;
