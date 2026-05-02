@@ -657,7 +657,7 @@ const useLightAccentAttribute = (
       } else {
         el.removeAttribute(lightAccentAttributeName);
       }
-      const bestContrast = contrastColor(color, el, 0.4);
+      const bestContrast = contrastColor(color, el, 0.3);
       if (bestContrast === "black") {
         el.setAttribute(darkContrastAttributeName, "");
       } else {
