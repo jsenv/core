@@ -632,6 +632,8 @@ const SelectWithDialog = (props) => {
     ref.current.focus({ preventScroll: true });
   };
 
+  const [shouldIgnoreThatClick, disableClickFor] = useIgnoreClickForMousedown();
+
   return (
     <SelectDispatcher
       disabled={disabled}
@@ -656,6 +658,11 @@ const SelectWithDialog = (props) => {
       onClick={(e) => {
         if (e.detail === 0) {
           // click triggered by enter won't open the dialog
+          return;
+        }
+        if (shouldIgnoreThatClick) {
+          // mousedown on the select already handled open/close; ignore this click
+          // to avoid toggling the dialog again on mouseup
           return;
         }
         // When a label is clicked it transfers focus to the select, in that case we want to open it
@@ -715,6 +722,7 @@ const SelectWithDialog = (props) => {
           }
           // mousedown inside dialog should not bubble to the select (would re-open it if that mousedown closes it)
           e.stopPropagation();
+          disableClickFor(e);
         }}
         scrollTrap={scrollTrap}
         pointerTrap={pointerTrap}
@@ -723,4 +731,60 @@ const SelectWithDialog = (props) => {
       </Dialog>
     </SelectDispatcher>
   );
+};
+
+/**
+ * Hook to prevent a `click` event from firing after a `mousedown` that already
+ * handled an open/close action.
+ *
+ * Problem: when the user clicks a dialog's backdrop to close it, the browser
+ * fires `mousedown` on the backdrop (which closes the dialog), then fires
+ * `click` on whatever element is underneath once the dialog is gone. If that
+ * element is the trigger button that originally opened the dialog, the `click`
+ * would immediately re-open it.
+ *
+ * This problem only occurs when the dialog is closed on `mousedown`. If the
+ * dialog were closed on `click` instead, the dialog would still be open when
+ * the `click` fires on the backdrop, so the trigger button underneath would
+ * never receive that `click`.
+ *
+ * Calling `stopPropagation()` or `preventDefault()` on the backdrop `mousedown`
+ * does not help: the browser dispatches the subsequent `click` regardless,
+ * targeting whichever element ends up under the pointer after the dialog closes.
+ *
+ * Usage:
+ *   const [shouldIgnoreThatClick, disableClickFor] = useIgnoreClickForMousedown();
+ *   // In onMouseDown (e.g. on the dialog backdrop): disableClickFor(e)
+ *   // In onClick (on the trigger): if (shouldIgnoreThatClick) return;
+ *
+ * `disableClickFor` arms the guard until the next `mouseup` on the document
+ * (with a 1 s safety-net fallback), using `requestAnimationFrame` so the
+ * `click` event — which fires synchronously after `mouseup` — is still blocked.
+ */
+const useIgnoreClickForMousedown = () => {
+  const pendingMousedownRef = useRef(false);
+
+  const shouldIgnore = pendingMousedownRef.current;
+  const disableClickFor = () => {
+    pendingMousedownRef.current = true;
+
+    const restoreClick = () => {
+      clearTimeout(safetyTimeout);
+      pendingMousedownRef.current = false;
+    };
+    const safetyTimeout = setTimeout(() => {
+      pendingMousedownRef.current = false;
+      restoreClick();
+    }, 1000);
+    document.addEventListener(
+      "mouseup",
+      () => {
+        requestAnimationFrame(() => {
+          restoreClick();
+        });
+      },
+      { once: true, capture: true },
+    );
+  };
+  return [shouldIgnore, disableClickFor];
 };
