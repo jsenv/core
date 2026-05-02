@@ -1,6 +1,6 @@
 import { useCallback, useContext, useLayoutEffect, useRef } from "preact/hooks";
 
-import { useDarkBackgroundAttribute } from "../text/use_dark_background_attribute.js";
+import { useAccentColorAttributes } from "../utils/use_accent_color_attributes.js";
 
 import { Box } from "../box/box.jsx";
 import { LoaderBackground } from "../graphic/loader/loader_background.jsx";
@@ -37,12 +37,12 @@ const css = /* css */ `
 
       --color-mix-light: black;
       --color-mix-dark: white;
-      --color-mix: var(--color-mix-light);
+      --color-mix: var(--color-mix-dark);
 
       --outline-color: var(--navi-focus-outline-color);
       --loader-color: var(--navi-loader-color);
       --border-color: light-dark(#767676, #8e8e93);
-      --x-background-color: rgba(0, 0, 0, 0.15);
+      --background-color: white;
       --accent-color: light-dark(#4476ff, #3b82f6);
       --radiomark-color: var(--accent-color);
       --border-color-checked: var(--accent-color);
@@ -160,7 +160,6 @@ const css = /* css */ `
     }
     /* Checked */
     &[data-checked] {
-      --x-background-color: transparent;
       --x-border-color: var(--border-color-checked);
 
       &[data-hover] {
@@ -197,11 +196,14 @@ const css = /* css */ `
       }
     }
 
-    &[data-dark-background] {
-      --x-background-color: white;
-      --color-mix: var(--color-mix-dark);
+    &[data-accent-light] {
+      --color-mix: var(--color-mix-light);
+    }
+
+    &[data-accent-very-light] {
+      --x-background-color: rgba(0, 0, 0, 0.15);
       &[data-checked] {
-        --x-background-color: white;
+        --x-background-color: rgba(0, 0, 0, 0.15);
       }
     }
 
@@ -484,9 +486,8 @@ const InputRadioUI = (props) => {
   ]);
 
   const boxRef = useRef();
-  useDarkBackgroundAttribute(boxRef, [remainingProps.accentColor], {
-    backgroundElementSelector: ".navi_radio_accent_probe",
-    luminanceThreshold: 0.82,
+  useAccentColorAttributes(boxRef, remainingProps.accentColor, {
+    elementSelector: ".navi_radio_accent_probe",
   });
 
   return (
