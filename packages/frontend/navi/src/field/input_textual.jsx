@@ -665,7 +665,7 @@ const InputControllingList = (props) => {
         // when the escape is meant to clear the search input (otherwise it would close the select too)
         if (e.currentTarget.type === "search" && e.currentTarget.value !== "") {
           e.stopPropagation();
-          return false;
+          return true;
         }
         const listEl = getListEl();
         // here we allow propagation of escape up to the <select> to allow closing if within a select

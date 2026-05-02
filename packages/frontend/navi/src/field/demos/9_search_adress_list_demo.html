@@ -61,7 +61,7 @@
         ListItemHeader,
         Input,
         Separator,
-        useSearch,
+        useSearchText,
         createSearch,
       } from "@jsenv/navi";
 
@@ -255,7 +255,7 @@
       const App = () => {
         const [selected, setSelected] = useState(null);
         const [search, setSearch] = useState("");
-        const [orderedItems, getItemMatchInfo] = useSearch(
+        const [orderedItems, getItemMatchInfo] = useSearchText(
           search,
           ITEMS,
           searchPerson,
@@ -279,7 +279,6 @@
               <List
                 role="listbox"
                 fallback="No results"
-                withSearch
                 searchText={search}
                 uiAction={setSelected}
                 expandX
