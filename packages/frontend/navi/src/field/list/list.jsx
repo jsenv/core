@@ -116,7 +116,6 @@ const css = /* css */ `
       /* Selected — vivid blue accent */
       --list-item-color-selected: light-dark(#ffffff, #ffffff);
       --list-item-background-color-selected: light-dark(#1a73e8, #2b5fcc);
-      --list-item-font-weight-selected: 500;
 
       /* Pointed+selected: darken the selected background slightly */
       --list-item-color-pointed-selected: var(--list-item-color-selected);
@@ -304,7 +303,6 @@ const css = /* css */ `
       --x-list-item-background-color: var(
         --list-item-background-color-selected
       );
-      --x-list-item-font-weight: var(--list-item-font-weight-selected);
     }
     &[data-disabled] {
       --x-list-item-color: var(--list-item-color-disabled);
@@ -1862,7 +1860,6 @@ const LIST_ITEM_STYLE_CSS_VARS = {
   ":-navi-selected": {
     color: "--list-item-color-selected",
     backgroundColor: "--list-item-background-color-selected",
-    fontWeight: "--list-item-font-weight-selected",
   },
   ":disabled": {
     color: "--list-item-color-disabled",
