@@ -95,23 +95,22 @@ const css = /* css */ `
     outline-offset: calc(-1 * var(--select-outline-width));
     user-select: none;
 
-    &:hover {
+    &[data-hover] {
       background-color: var(--select-background-color-hover);
       outline-color: var(--select-border-color-hover);
     }
 
-    &:focus,
-    &:focus-visible {
+    &[data-focus-visible] {
       outline-width: calc(
         var(--select-border-width) + var(--select-outline-width)
       );
-      outline-color: var(--navi-focus-outline-color, #005fcc);
+      outline-color: var(--navi-focus-outline-color);
       outline-offset: calc(
         -1 * (var(--select-border-width) + var(--select-outline-width))
       );
     }
 
-    &:disabled {
+    &[data-disabled] {
       opacity: 0.5;
       cursor: default;
     }
@@ -152,24 +151,24 @@ const css = /* css */ `
 
     /* When the list inside the popover has keyboard focus, keep the focus ring
        on the select trigger for visual continuity */
-    &:not(:has(.navi_select_dialog .navi_list_container[data-focus])):has(
-        .navi_list_container[data-focus]
-      ) {
+    &:not(
+        :has(.navi_select_dialog .navi_list_container[data-focus-visible])
+      ):has(.navi_list_container[data-focus-visible]) {
       outline-width: calc(
         var(--select-border-width) + var(--select-outline-width)
       );
-      outline-color: var(--navi-focus-outline-color, #005fcc);
+      outline-color: var(--navi-focus-outline-color);
       outline-offset: calc(
         -1 * (var(--select-border-width) + var(--select-outline-width))
       );
     }
-    .navi_list_container[data-focus] {
+    .navi_list_container[data-focus-visible] {
       outline: none;
     }
 
     /* When the list inside the dialog has keyboard focus, show the focus ring
        on the dialog instead */
-    .navi_select_dialog:has(.navi_list_container[data-focus]) {
+    .navi_select_dialog:has(.navi_list_container[data-focus-visible]) {
       outline: var(--select-outline-width) solid
         var(--navi-focus-outline-color, #005fcc);
     }
@@ -273,9 +272,6 @@ const SelectDispatcher = (props) => {
   return <SelectUI {...props} />;
 };
 
-export const SelectPlaceholderContext = createContext();
-const SelectValueContext = createContext(null);
-
 const SelectUI = (props) => {
   import.meta.css = css;
   let {
@@ -358,6 +354,8 @@ const SelectUI = (props) => {
     </Box>
   );
 };
+export const SelectPlaceholderContext = createContext();
+const SelectValueContext = createContext(null);
 const SelectStyleCSSVars = {
   "borderWidth": "--select-border-width",
   "borderRadius": "--select-border-radius",
@@ -470,7 +468,7 @@ const SelectWithPopover = (props) => {
   const moveFocusToSelect = (e) => {
     const select = ref.current;
     debugFocus(`moveFocusToSelect("${e.type}")`);
-    select.focus({ preventScroll: true, focusVisible: true });
+    select.focus({ preventScroll: true });
   };
 
   return (
@@ -626,7 +624,7 @@ const SelectWithDialog = (props) => {
   };
   const moveFocusToSelect = (e) => {
     debugFocus(`moveFocusToSelect("${e.type}")`);
-    ref.current.focus({ preventScroll: true, focusVisible: true });
+    ref.current.focus({ preventScroll: true });
   };
 
   return (
