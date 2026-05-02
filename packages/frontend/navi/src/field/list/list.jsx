@@ -168,8 +168,13 @@ const css = /* css */ `
     width: fit-content;
     max-width: 100%;
     background-color: var(--x-background-color);
-    border: var(--x-border-width) var(--x-border-style) var(--x-border-color);
+    /* Use a transparent real border to reserve layout space, and draw the
+       visible border via outline (inset via negative offset). This way the
+       focus ring can simply widen the outline without shifting layout. */
+    border: var(--x-border-width) solid transparent;
     border-radius: var(--x-border-radius);
+    outline: var(--x-border-width) var(--x-border-style) var(--x-border-color);
+    outline-offset: calc(-1 * var(--x-border-width));
     transition: opacity 0.2s ease;
     /* overflow:hidden is required on the container (not the inner scroll element)
        so that border-radius clips the content correctly. Without it, items near
@@ -201,7 +206,6 @@ const css = /* css */ `
     }
     &[data-callout] {
       --x-border-color: var(--callout-color);
-      --x-outline-color: var(--callout-color);
     }
   }
 
@@ -289,8 +293,8 @@ const css = /* css */ `
   }
 
   .navi_list_container[data-focus] {
-    border-color: var(--navi-focus-outline-color);
     outline: var(--list-outline-width) solid var(--navi-focus-outline-color);
+    outline-offset: calc(-1 * var(--list-outline-width));
     .navi_list {
       outline: none;
     }
@@ -301,6 +305,13 @@ const css = /* css */ `
         --x-background-color: var(--list-item-background-color-pointed);
       }
     }
+  }
+  .navi_list_container[data-focus-visible] {
+    outline-width: calc(var(--list-border-width) + var(--list-outline-width));
+    outline-color: var(--navi-focus-outline-color);
+    outline-offset: calc(
+      -1 * (var(--list-border-width) + var(--list-outline-width))
+    );
   }
 
   /* Virtual scroll fillers — must remain invisible.
