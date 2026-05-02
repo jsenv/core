@@ -225,16 +225,18 @@
         const listRef = useRef(null);
 
         const scrollTo = (position) => {
-          const containerEl = listRef.current;
-          if (!containerEl) {
+          const scrollContainer = listRef.current.closest(
+            ".navi_list_scroll_container",
+          );
+          if (!scrollContainer) {
             return;
           }
           if (position === "top") {
-            containerEl.scrollTop = 0;
+            scrollContainer.scrollTop = 0;
           } else if (position === "middle") {
-            containerEl.scrollTop = containerEl.scrollHeight / 2;
+            scrollContainer.scrollTop = scrollContainer.scrollHeight / 2;
           } else if (position === "bottom") {
-            containerEl.scrollTop = containerEl.scrollHeight;
+            scrollContainer.scrollTop = scrollContainer.scrollHeight;
           }
         };
 
@@ -243,15 +245,17 @@
           if (!el) {
             return;
           }
+          const scrollContainer = el.closest(".navi_list_scroll_container");
           const index = parseInt(scrollToIndex, 10);
           // el.dispatchEvent(
           //   new CustomEvent("navi_list_request_nav", {
           //     detail: { index },
           //   }),
           // );
-          const estimated = (el.scrollHeight / LARGE_LIST.length) * index;
+          const estimated =
+            (scrollContainer.scrollHeight / LARGE_LIST.length) * index;
           console.log("scroll to", estimated);
-          el.scrollTop = estimated;
+          scrollContainer.scrollTop = estimated;
         };
 
         return (
@@ -340,10 +344,8 @@
                   </button>
                 </span>
               }
-              withSearch
               searchText={searchText}
               separator={<Separator margin="0" />}
-              debugScroll
             >
               <ListItemHeader>
                 <Input
