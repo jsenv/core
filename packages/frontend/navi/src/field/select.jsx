@@ -246,7 +246,7 @@ export const Select = (props) => {
   const defaultRef = useRef(null);
   const ref = props.ref || defaultRef;
   const uiStateController = useUIGroupStateController(props, "select", {
-    childComponentType: "list",
+    childComponentType: "*",
     aggregateChildStates: (childControllers) => {
       if (childControllers.length === 0) {
         return undefined;
