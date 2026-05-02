@@ -779,10 +779,6 @@ const InputTextualWithSuggestions = (props) => {
           showSuggestions(e);
         }}
         onBlur={(e) => {
-          if (import.meta.dev) {
-            // during dev disable to allow inspecting the select (hot fix for now to ease life during dev)
-            return;
-          }
           onBlur?.(e);
           hideSuggestions(e);
         }}

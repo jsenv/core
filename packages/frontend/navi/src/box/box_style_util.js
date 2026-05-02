@@ -342,7 +342,9 @@ const TYPO_PROPS = {
   underlineColor: applyOnCSSProp("textDecorationColor"),
   textShadow: PASS_THROUGH,
   lineHeight: PASS_THROUGH,
-  color: PASS_THROUGH,
+  color: (value) => {
+    return { color: resolveColorKeyword(value) };
+  },
   noWrap: applyToCssPropWhenTruthy("whiteSpace", "nowrap", "normal"),
   pre: applyToCssPropWhenTruthy("whiteSpace", "pre", "normal"),
   preWrap: applyToCssPropWhenTruthy("whiteSpace", "pre-wrap", "normal"),
@@ -623,4 +625,14 @@ export const resolveSpacingSize = (size, property = "padding") => {
 };
 export const resolveTypoSize = (size, property = "fontSize") => {
   return stringifyStyle(TYPO_SIZE_MAP[size] || size, property);
+};
+
+const COLOR_KEYWORD_MAP = {
+  lighter: "var(--navi-color-lighter)",
+  darker: "var(--navi-color-darker)",
+  muted: "var(--navi-color-muted)",
+  faint: "var(--navi-color-faint)",
+};
+const resolveColorKeyword = (value) => {
+  return COLOR_KEYWORD_MAP[value] || value;
 };
