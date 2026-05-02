@@ -597,6 +597,32 @@ export const installCustomConstraintValidation = (
     });
   }
 
+  close_callout_on_mousedown: {
+    // When the user clicks the field (or the interactive element rendered in place of it,
+    // e.g. the .navi_select button for a hidden input), treat it as intent to fix the issue
+    // and dismiss the callout — unless the status is "error", which requires explicit action.
+    const interactionTarget = (() => {
+      const renderedBy = element.getAttribute("data-rendered-by");
+      if (renderedBy) {
+        return element.closest(renderedBy) || element;
+      }
+      return element;
+    })();
+    const onmousedown = (e) => {
+      if (!validationInterface.validationMessage) {
+        return;
+      }
+      if (failedConstraintInfo && failedConstraintInfo.status === "error") {
+        return;
+      }
+      resetOnInteraction(e);
+    };
+    interactionTarget.addEventListener("mousedown", onmousedown);
+    addTeardown(() => {
+      interactionTarget.removeEventListener("mousedown", onmousedown);
+    });
+  }
+
   check_on_hidden_input_value: {
     // Hidden inputs (used by Select, List) don't fire "input" or "change" events
     // when their value is set programmatically. We intercept the value setter to
