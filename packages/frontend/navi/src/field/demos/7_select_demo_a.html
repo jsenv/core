@@ -108,11 +108,11 @@
                       value={color}
                       placeholder="Pick a color…"
                       scrollTrap
+                      uiAction={(v) => {
+                        setColor(v);
+                      }}
                     >
                       <List
-                        uiAction={(v) => {
-                          setColor(v);
-                        }}
                         role="listbox"
                         expandX
                         // debugScroll
@@ -183,35 +183,6 @@
       };
 
       // ── Demo 2: List with search ──────────────────────────────────────────────
-
-      const FRUITS = [
-        "Apple",
-        "Apricot",
-        "Avocado",
-        "Banana",
-        "Blueberry",
-        "Cherry",
-        "Coconut",
-        "Fig",
-        "Grape",
-        "Guava",
-        "Kiwi",
-        "Lemon",
-        "Lime",
-        "Mango",
-        "Melon",
-        "Orange",
-        "Papaya",
-        "Peach",
-        "Pear",
-        "Pineapple",
-        "Plum",
-        "Pomegranate",
-        "Raspberry",
-        "Strawberry",
-        "Watermelon",
-      ];
-
       const Demo2 = () => {
         const [fruit, setFruit] = useState(null);
         const [searchText, setSearchText] = useState("");
@@ -235,7 +206,7 @@
                 scrollTrap
                 focusTrap
               >
-                <List role="listbox" border="none" expandX minWidth="240">
+                <List role="listbox" expandX minWidth="240">
                   <ListItemHeader padding="m" borderBottom="1px solid #eee">
                     <Input
                       uiAction={(v) => setSearchText(v)}
@@ -268,6 +239,33 @@
           </div>
         );
       };
+      const FRUITS = [
+        "Apple",
+        "Apricot",
+        "Avocado",
+        "Banana",
+        "Blueberry",
+        "Cherry",
+        "Coconut",
+        "Fig",
+        "Grape",
+        "Guava",
+        "Kiwi",
+        "Lemon",
+        "Lime",
+        "Mango",
+        "Melon",
+        "Orange",
+        "Papaya",
+        "Peach",
+        "Pear",
+        "Pineapple",
+        "Plum",
+        "Pomegranate",
+        "Raspberry",
+        "Strawberry",
+        "Watermelon",
+      ];
 
       // ── Demo 3: Placeholder and disabled states ───────────────────────────────
 
@@ -280,13 +278,13 @@
             <h2>Demo 3 — States</h2>
             <p>Pre-selected value and disabled state.</p>
             <div className="row">
-              <Select name="size" value={size} placeholder="Pick a size…">
-                <List
-                  uiAction={(v) => setSize(v)}
-                  role="listbox"
-                  border="none"
-                  expandX
-                >
+              <Select
+                name="size"
+                value={size}
+                uiAction={(v) => setSize(v)}
+                placeholder="Pick a size…"
+              >
+                <List role="listbox" expandX>
                   {SIZES.map((s, i) => (
                     <ListItem
                       key={s}
@@ -300,8 +298,13 @@
                   ))}
                 </List>
               </Select>
-              <Select name="size_disabled" value="L" disabled>
-                <List uiAction={() => {}} role="listbox" border="none" expandX>
+              <Select
+                uiAction={() => {}}
+                name="size_disabled"
+                value="L"
+                disabled
+              >
+                <List role="listbox" expandX>
                   {SIZES.map((s, i) => (
                     <ListItem
                       key={s}
@@ -349,13 +352,9 @@
                       name="country"
                       value={country}
                       placeholder="Pick a country…"
+                      uiAction={(v) => setCountry(v)}
                     >
-                      <List
-                        uiAction={(v) => setCountry(v)}
-                        role="listbox"
-                        border="none"
-                        expandX
-                      >
+                      <List role="listbox" expandX>
                         {COUNTRIES.map((c, i) => (
                           <ListItem
                             key={c}
@@ -373,13 +372,13 @@
 
                   <Label flex spacing="s" alignY="center">
                     Role
-                    <Select name="role" value={role} placeholder="Pick a role…">
-                      <List
-                        uiAction={(v) => setRole(v)}
-                        role="listbox"
-                        border="none"
-                        expandX
-                      >
+                    <Select
+                      name="role"
+                      value={role}
+                      uiAction={(v) => setRole(v)}
+                      placeholder="Pick a role…"
+                    >
+                      <List role="listbox" expandX>
                         {["Admin", "Editor", "Viewer"].map((r, i) => (
                           <ListItem
                             key={r}
@@ -428,18 +427,12 @@
               name="fruit_dialog"
               placeholder="Pick a fruit…"
               mode="dialog"
+              uiAction={(v) => {
+                setFruit(v);
+                setSearchText("");
+              }}
             >
-              <List
-                uiAction={(v) => {
-                  setFruit(v);
-                  setSearchText("");
-                }}
-                role="listbox"
-                border="none"
-                expandX
-                minWidth="300"
-                withSearch
-              >
+              <List role="listbox" expandX minWidth="300" withSearch>
                 <ListItemHeader>
                   <div
                     style={{ padding: "8px", borderBottom: "1px solid #eee" }}
@@ -503,13 +496,9 @@
                     placeholder="Pick a country…"
                     required
                     requiredMessage="Veuillez choisir un pays."
+                    uiAction={(v) => setCountry(v)}
                   >
-                    <List
-                      uiAction={(v) => setCountry(v)}
-                      role="listbox"
-                      border="none"
-                      expandX
-                    >
+                    <List role="listbox" expandX>
                       {COUNTRIES.map((c, i) => (
                         <ListItem
                           key={c}
