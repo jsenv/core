@@ -32,7 +32,7 @@ const DARK_CONTRAST_LIGHTNESS_THRESHOLD = 0.65;
  *   Use to render checkmarks, icons, or text in a dark color instead of white.
  *
  * @param {import("preact").RefObject} ref - Ref to the root element that receives the attributes.
- * @param {Array} deps - Extra dependency values that should re-trigger the effect (e.g. [accentColor]).
+ * @param {string} accentColor - The accent color value. When it changes, attributes are recomputed.
  * @param {object} [options]
  * @param {string} [options.elementSelector] - CSS selector to find the element whose computed color is read.
  *   Defaults to the root element itself. Useful when the color is applied to a probe/child element.
