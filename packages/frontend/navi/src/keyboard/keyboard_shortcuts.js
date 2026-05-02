@@ -275,7 +275,7 @@ const applyKeyboardShortcuts = (shortcuts, keyboardEvent) => {
       continue;
     }
     const returnValue = shortcutCandidate.handler(keyboardEvent);
-    if (returnValue) {
+    if (returnValue === false) {
       keyboardEvent.preventDefault();
     }
     return shortcutCandidate;

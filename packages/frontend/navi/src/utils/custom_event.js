@@ -58,7 +58,8 @@ export const dispatchCustomEvent = (el, customEventName, customEventDetail) => {
     detail: resolveEventDetail(customEventDetail),
     cancelable: true,
   });
-  return el.dispatchEvent(customEvent);
+  const result = el.dispatchEvent(customEvent);
+  return result;
 };
 
 const resolveEventDetail = (customEventDetail) => {
