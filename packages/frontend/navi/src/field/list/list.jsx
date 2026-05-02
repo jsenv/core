@@ -146,11 +146,11 @@ const css = /* css */ `
   }
 
   .navi_list_container {
-    --x-border-radius: var(--list-border-radius);
-    --x-border-width: var(--list-border-width);
-    --x-border-color: var(--list-border-color);
-    --x-border-style: var(--list-border-style);
-    --x-background-color: var(--list-background-color);
+    --x-list-border-radius: var(--list-border-radius);
+    --x-list-border-width: var(--list-border-width);
+    --x-list-border-color: var(--list-border-color);
+    --x-list-border-style: var(--list-border-style);
+    --x-list-background-color: var(--list-background-color);
     /* When typing inside an input browser tries to keep caret visible */
     /* For input within a sticky element inside a scrollable container */
     /* Browser will try to scroll that input into view */
@@ -167,14 +167,14 @@ const css = /* css */ `
 
     width: fit-content;
     max-width: 100%;
-    background-color: var(--x-background-color);
+    background-color: var(--x-list-background-color);
     /* Use a transparent real border to reserve layout space, and draw the
        visible border via outline (inset via negative offset). This way the
        focus ring can simply widen the outline without shifting layout. */
-    border: var(--x-border-width) solid transparent;
-    border-radius: var(--x-border-radius);
-    outline: var(--x-border-width) var(--x-border-style) var(--x-border-color);
-    outline-offset: calc(-1 * var(--x-border-width));
+    border: var(--x-list-border-width) solid transparent;
+    border-radius: var(--x-list-border-radius);
+    outline: var(--x-list-border-width) var(--x-list-border-style) var(--x-list-border-color);
+    outline-offset: calc(-1 * var(--x-list-border-width));
     transition: opacity 0.2s ease;
     /* overflow:hidden is required on the container (not the inner scroll element)
        so that border-radius clips the content correctly. Without it, items near
@@ -222,7 +222,7 @@ const css = /* css */ `
     }
 
     &[data-callout] {
-      --x-border-color: var(--callout-color);
+      --x-list-border-color: var(--callout-color);
     }
   }
 
@@ -245,15 +245,15 @@ const css = /* css */ `
   }
 
   .navi_list_item {
-    --x-color: var(--list-item-color);
-    --x-background-color: var(--list-item-background-color);
-    --x-font-weight: var(--list-item-font-weight);
+    --x-list-item-color: var(--list-item-color);
+    --x-list-item-background-color: var(--list-item-background-color);
+    --x-list-item-font-weight: var(--list-item-font-weight);
     box-sizing: border-box;
     min-width: 100%;
     padding: var(--list-item-padding);
-    color: var(--x-color);
-    font-weight: var(--x-font-weight);
-    background-color: var(--x-background-color);
+    color: var(--x-list-item-color);
+    font-weight: var(--x-list-item-font-weight);
+    background-color: var(--x-list-background-color);
     /*
     CSS impossible d'obtenir un layout qui ferait en gros:
     width = max(min(max-content, 100%), unbreakable-content)
@@ -278,29 +278,29 @@ const css = /* css */ `
       cursor: pointer;
       user-select: none;
       /* &:hover {
-        --x-color: var(--list-item-color-hover);
-        --x-background-color: var(--list-item-background-color-hover);
+        --x-list-item-color: var(--list-item-color-hover);
+        --x-list-item-background-color: var(--list-item-background-color-hover);
       } */
     }
     &[data-pointed] {
-      --x-color: var(--list-item-color-mouse-pointed);
-      --x-background-color: var(--list-item-background-color-mouse-pointed);
+      --x-list-item-color: var(--list-item-color-mouse-pointed);
+      --x-list-item-background-color: var(--list-item-background-color-mouse-pointed);
 
       &[data-selected] {
-        --x-color: var(--list-item-color-pointed-selected);
-        --x-background-color: var(
+        --x-list-item-color: var(--list-item-color-pointed-selected);
+        --x-list-item-background-color: var(
           --list-item-background-color-pointed-selected
         );
       }
     }
     &[data-selected] {
-      --x-color: var(--list-item-color-selected);
-      --x-background-color: var(--list-item-background-color-selected);
-      --x-font-weight: var(--list-item-font-weight-selected);
+      --x-list-item-color: var(--list-item-color-selected);
+      --x-list-item-background-color: var(--list-item-background-color-selected);
+      --x-list-item-font-weight: var(--list-item-font-weight-selected);
     }
     &[data-disabled] {
-      --x-color: var(--list-item-color-disabled);
-      --x-background-color: var(--list-item-background-color-disabled);
+      --x-list-item-color: var(--list-item-color-disabled);
+      --x-list-item-background-color: var(--list-item-background-color-disabled);
       cursor: not-allowed;
       pointer-events: none;
     }
@@ -313,8 +313,8 @@ const css = /* css */ `
     &[data-focus-within] {
       .navi_list_item {
         &[data-pointed-by-keyboard] {
-          --x-color: var(--list-item-color-pointed);
-          --x-background-color: var(--list-item-background-color-pointed);
+          --x-list-item-color: var(--list-item-color-pointed);
+          --x-list-item-background-color: var(--list-item-background-color-pointed);
         }
       }
     }
