@@ -37,7 +37,11 @@ const css = /* css */ `
       --navi-typo-xl: 1.25rem; /* 20px at 16px base */
       --navi-typo-xxl: 1.5rem; /* 24px at 16px base */
 
-      /* Color keywords — mix currentColor toward transparent or black */
+      /* Color keywords — mix currentColor toward transparent or black.
+         secondary: supporting text, captions, less important labels
+         emphasis:  reinforce meaning, make content stand out more
+         discrete:  unobtrusive elements that shouldn't compete for attention
+         hint:      barely-there color, watermarks, ghost placeholders */
       --navi-color-secondary: color-mix(in srgb, currentColor 50%, transparent);
       --navi-color-emphasis: color-mix(in srgb, currentColor 50%, black);
       --navi-color-discrete: color-mix(in srgb, currentColor 60%, transparent);
