@@ -20,6 +20,7 @@ import { useActionStatus } from "../../action/use_action_status.js";
 import { useExecuteAction } from "../../action/use_execute_action.js";
 import { Box } from "../../box/box.jsx";
 import { shortcutsViaOnKeyDown } from "../../keyboard/keyboard_shortcuts.js";
+import { Separator } from "../../layout/separator.jsx";
 import { useDebugScroll } from "../../navi_debug.jsx";
 import {
   dispatchCustomEvent,
@@ -626,7 +627,7 @@ const ListUI = (props) => {
           fallback={fallback}
           noMatchFallback={noMatchFallback}
           searchText={searchText}
-          separator={separator}
+          separator={separator === true ? <Separator margin="0" /> : separator}
           expandX={expandX || expand}
           {...listProps}
           tracker={tracker}
@@ -828,7 +829,11 @@ const useListScrollSync = ({
     const half = Math.floor(renderBudget / 2);
     const newStart = Math.max(0, index - half);
     const newEnd = newStart + renderBudget;
-    updateRenderWindow(newStart, newEnd, `item to scroll out of render window`);
+    updateRenderWindow(
+      newStart,
+      newEnd,
+      `item to scroll (at ${index}) is out of render window`,
+    );
   };
 
   const currentScrollRef = useRef(null);
