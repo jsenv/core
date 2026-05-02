@@ -126,6 +126,10 @@ const PSEUDO_CLASSES_DEFAULT = [];
 const PSEUDO_ELEMENTS_DEFAULT = [];
 const STYLE_CSS_VARS_DEFAULT = {};
 const PROPS_CSS_VARS_DEFAULT = {};
+// When only pseudoStateSelector is set (no visualSelector), the box owns its
+// visual identity. Only event handlers and these explicit props are forwarded
+// to the inner semantic/interactive child element.
+const PSEUDO_STATE_CHILD_PROP_SET = new Set(["tabIndex", "tabindex"]);
 
 export const Box = (props) => {
   const {
@@ -539,6 +543,10 @@ export const Box = (props) => {
           continue;
         }
         selfForwardedProps[propName] = propValue;
+        continue;
+      }
+      if (pseudoStateSelector && PSEUDO_STATE_CHILD_PROP_SET.has(propName)) {
+        childForwardedProps[propName] = propValue;
         continue;
       }
       visitProp(propValue, propName, styleContext, boxStyles, "prop");

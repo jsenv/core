@@ -85,7 +85,7 @@ const SeparatorContext = createContext(null);
 const css = /* css */ `
   @layer navi {
     .navi_list_container {
-      --list-outline-width: 2px;
+      --list-outline-width: 1px;
       --list-border-radius: 4px;
       --list-border-width: 1px;
       --list-border-color: light-dark(#ccc, #555);
