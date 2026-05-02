@@ -289,6 +289,7 @@ const css = /* css */ `
   }
 
   .navi_list_container[data-focus] {
+    border-color: var(--navi-focus-outline-color);
     outline: var(--list-outline-width) solid var(--navi-focus-outline-color);
     .navi_list {
       outline: none;
