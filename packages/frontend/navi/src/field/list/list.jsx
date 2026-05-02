@@ -116,14 +116,6 @@ const css = /* css */ `
       --list-item-color-selected: light-dark(#ffffff, #ffffff);
       --list-item-background-color-selected: light-dark(#1a73e8, #2b5fcc);
 
-      /* Pointed+selected: darken the selected background slightly */
-      --list-item-color-pointed-selected: var(--list-item-color-selected);
-      --list-item-background-color-pointed-selected: color-mix(
-        in srgb,
-        var(--list-item-background-color-selected) 80%,
-        black
-      );
-
       /* Disabled */
       --list-item-color-disabled: light-dark(#aaa, #555);
       --list-item-background-color-disabled: var(--list-item-background-color);
@@ -286,29 +278,25 @@ const css = /* css */ `
     &[data-interactive] {
       cursor: pointer;
       user-select: none;
-      /* &:hover {
-        --x-list-item-color: var(--list-item-color-hover);
-        --x-list-item-background-color: var(--list-item-background-color-hover);
-      } */
     }
     &[data-pointed] {
       --x-list-item-color: var(--list-item-color-mouse-pointed);
       --x-list-item-background-color: var(
         --list-item-background-color-mouse-pointed
       );
-
-      &[data-selected] {
-        --x-list-item-color: var(--list-item-color-pointed-selected);
-        --x-list-item-background-color: var(
-          --list-item-background-color-pointed-selected
-        );
-      }
     }
     &[data-selected] {
       --x-list-item-color: var(--list-item-color-selected);
       --x-list-item-background-color: var(
         --list-item-background-color-selected
       );
+
+      &[data-pointed] {
+        --x-list-item-background-color: var(
+          --list-item-background-color-selected,
+          var(--list-item-background-color-mouse-pointed)
+        );
+      }
     }
     &[data-disabled] {
       --x-list-item-color: var(--list-item-color-disabled);
@@ -337,9 +325,17 @@ const css = /* css */ `
         &[data-selected] {
           --x-list-item-color: var(--list-item-color-selected);
           --x-list-item-background-color: var(
-            --list-item-background-color-selected,
-            var(--list-item-background-color-keyboard-pointed)
+            --list-item-background-color-selected
           );
+          /* Selected + pointed by keyboard: use keyboard color as fallback
+           so that if --list-item-background-color-selected is reset the
+           keyboard-pointed highlight still shows. */
+          &[data-pointed-by-keyboard] {
+            --x-list-item-background-color: var(
+              --list-item-background-color-selected,
+              var(--list-item-background-color-keyboard-pointed)
+            );
+          }
         }
       }
     }
