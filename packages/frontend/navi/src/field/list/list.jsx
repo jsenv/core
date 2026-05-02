@@ -110,10 +110,17 @@ const css = /* css */ `
       --list-item-color-pointed: light-dark(#ffffff, #ffffff);
       --list-item-background-color-pointed: light-dark(#1a73e8, #2b5fcc);
 
-      /* Selected */
+      /* Selected (focused) — blue accent, shown when list has focus-within */
       --list-item-color-selected: light-dark(#1a73e8, #7baaf7);
       --list-item-background-color-selected: light-dark(#e8f0fe, #1c3a6e);
       --list-item-font-weight-selected: 500;
+
+      /* Selected (unfocused) — muted, shown when list has no focus-within */
+      --list-item-color-selected-unfocused: var(--list-item-color);
+      --list-item-background-color-selected-unfocused: light-dark(
+        #e0e0e0,
+        #3a3a3a
+      );
 
       /* Pointed+selected: darken the selected background slightly */
       --list-item-color-pointed-selected: var(--list-item-color-selected);
@@ -297,9 +304,9 @@ const css = /* css */ `
       }
     }
     &[data-selected] {
-      --x-list-item-color: var(--list-item-color-selected);
+      --x-list-item-color: var(--list-item-color-selected-unfocused);
       --x-list-item-background-color: var(
-        --list-item-background-color-selected
+        --list-item-background-color-selected-unfocused
       );
       --x-list-item-font-weight: var(--list-item-font-weight-selected);
     }
@@ -319,6 +326,12 @@ const css = /* css */ `
   .navi_list_container {
     &[data-focus-within] {
       .navi_list_item {
+        &[data-selected] {
+          --x-list-item-color: var(--list-item-color-selected);
+          --x-list-item-background-color: var(
+            --list-item-background-color-selected
+          );
+        }
         &[data-pointed-by-keyboard] {
           --x-list-item-color: var(--list-item-color-pointed);
           --x-list-item-background-color: var(
