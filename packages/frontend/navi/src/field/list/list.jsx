@@ -252,21 +252,20 @@ const css = /* css */ `
       } */
     }
     &[data-pointed] {
-      --x-color: var(--list-item-color-pointed);
-      --x-background-color: var(--list-item-background-color-pointed);
-    }
-    &[data-pointed-by-mouse] {
       --x-color: var(--list-item-color-mouse-pointed);
       --x-background-color: var(--list-item-background-color-mouse-pointed);
+
+      &[data-selected] {
+        --x-color: var(--list-item-color-pointed-selected);
+        --x-background-color: var(
+          --list-item-background-color-pointed-selected
+        );
+      }
     }
     &[data-selected] {
       --x-color: var(--list-item-color-selected);
       --x-background-color: var(--list-item-background-color-selected);
       --x-font-weight: var(--list-item-font-weight-selected);
-    }
-    &[data-pointed][data-selected] {
-      --x-color: var(--list-item-color-pointed-selected);
-      --x-background-color: var(--list-item-background-color-pointed-selected);
     }
     &[data-disabled] {
       --x-color: var(--list-item-color-disabled);
@@ -276,6 +275,15 @@ const css = /* css */ `
     }
     &[hidden] {
       display: none;
+    }
+  }
+
+  .navi_list_container[data-focus] {
+    .navi_list_item {
+      &[data-pointed-by-keyboard] {
+        --x-color: var(--list-item-color-pointed);
+        --x-background-color: var(--list-item-background-color-pointed);
+      }
     }
   }
 
@@ -1014,7 +1022,12 @@ const LIST_STYLE_CSS_VARS = {
   borderRadius: "--list-border-radius",
   borderWidth: "--list-border-width",
 };
-const LIST_PSEUDO_CLASSES = [":-navi-void"];
+const LIST_PSEUDO_CLASSES = [
+  ":hover",
+  ":focus",
+  ":focus-visible",
+  ":-navi-void",
+];
 // Inner <ul> — hosts the fillers + items.
 // Creates a virtualItemHeight signal so TopFiller and BottomFiller can
 // subscribe to it independently. When virtualItemHeight is passed as a prop it
