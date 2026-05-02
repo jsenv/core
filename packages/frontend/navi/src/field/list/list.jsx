@@ -1804,7 +1804,8 @@ const ListItemReal = ({
       navi-list-item-real=""
       data-interactive={isInteractive ? "" : undefined}
       data-anchor={isPointedByKeyboard ? "" : undefined}
-      data-disabled={disabled ? "" : undefined}
+      {...rest}
+      ref={ref}
       onMouseEnter={(e) => {
         if (disabled) {
           return;
@@ -1841,8 +1842,6 @@ const ListItemReal = ({
         });
         rest.onMouseDown?.(e);
       }}
-      {...rest}
-      ref={ref}
       basePseudoState={{
         ...rest.basePseudoState,
         ":disabled": Boolean(disabled),
