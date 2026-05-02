@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>Dropdown Demo</title>
+    <title>Select Demo 2</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" href="data:," />
     <style>
@@ -297,7 +297,8 @@
             <h2>Demo 4 — Large list with filter header</h2>
             <p>
               Filter input lives inside a <code>ListItemHeader</code>. Items are
-              tall. No max-height — the dialog grows to fit all visible options.
+              tall. No max-height — the select panel grows to fit all visible
+              options.
             </p>
             <Select
               value={country}
@@ -325,7 +326,10 @@
         return (
           <div class="demo-section">
             <h2>Demo 1 — Arbitrary content</h2>
-            <p>Custom list of buttons inside the dialog.</p>
+            <p>
+              A <code>Select</code> can contain any custom content inside its
+              panel, not just a list.
+            </p>
             <Select value={color} placeholder="Choose a color…">
               <ColorList onSelect={setColor} />
             </Select>
@@ -344,8 +348,9 @@
           <div class="demo-section">
             <h2>Demo 2 — Filterable List</h2>
             <p>
-              The dialog contains a search input and a suggestion list.
-              Selecting a fruit closes the dialog automatically.
+              A <code>Select</code> containing a search input and a{" "}
+              <code>List</code>. Selecting an item closes the panel
+              automatically.
             </p>
             <Select
               value={fruit}
@@ -431,7 +436,7 @@
             <h2>Demo 3 — Radio list picker</h2>
             <p>
               Each item shows a radio input. A separator sits between items.
-              Selecting an animal closes the dialog.
+              Selecting an animal closes the select panel.
             </p>
             <Select
               value={animal}
