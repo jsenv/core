@@ -4,7 +4,7 @@
  * 1. **Internal events** (`dispatchInternalCustomEvent`) — a component communicates
  *    with other navi components internally. Not meant to be observed from outside.
  *    They do not bubble so they stay contained within the subtree that handles them.
- *    Names often reflect their internal nature (e.g. `navi_check_pseudo_state`).
+ *    Names often reflect their internal nature (e.g. `navi_pseudo_state_request_check`).
  *
  * 2. **Public events** (`dispatchPublicCustomEvent`) — a component exposes information
  *    about something that happened (e.g. `navi_list_select`). They bubble so any

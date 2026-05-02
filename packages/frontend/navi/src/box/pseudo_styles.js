@@ -1,95 +1,385 @@
 import { createPubSub, mergeTwoStyles } from "@jsenv/dom";
 
 import { listenInputValue } from "../field/validation/input_value_listener.js";
+import { dispatchInternalCustomEvent } from "../utils/custom_event.js";
 
-const pressedElements = new WeakSet();
+const requestPseudoStateCheck = (element, detail) => {
+  dispatchInternalCustomEvent(
+    element,
+    "navi_pseudo_state_request_check",
+    detail,
+  );
+};
+export const NAVI_PSEUDO_STATE_CUSTOM_EVENT = "navi_pseudo_state";
+const dispatchPseudoStateCustomEvent = (element, value, oldValue) => {
+  dispatchInternalCustomEvent(element, NAVI_PSEUDO_STATE_CUSTOM_EVENT, {
+    pseudoState: value,
+    oldPseudoState: oldValue,
+  });
+};
 
-export const PSEUDO_CLASSES = {
-  ":hover": {
-    attribute: "data-hover",
-    setup: (el, callback) => {
-      let onmouseenter = () => {
-        callback();
-      };
-      let onmouseleave = () => {
-        callback();
-      };
+export const PSEUDO_CLASSES = {};
+Object.assign(PSEUDO_CLASSES, {
+  ":valid": {
+    attribute: "data-valid",
+    test: (el) => el.matches(":valid"),
+  },
+  ":invalid": {
+    attribute: "data-invalid",
+    test: (el) => el.matches(":invalid"),
+  },
+  ":visited": {
+    attribute: "data-visited",
+  },
+});
+const definePseudoClass = (pseudoClass, definition) => {
+  PSEUDO_CLASSES[pseudoClass] = definition;
+};
 
-      if (el.tagName === "LABEL") {
-        // input.matches(":hover") is true when hovering the label
-        // so when label is hovered/not hovered we need to recheck the input too
-        const recheckInput = () => {
-          if (el.htmlFor) {
-            const input = document.getElementById(el.htmlFor);
-            if (!input) {
-              // cannot find the input for this label in the DOM
-              return;
-            }
-            input.dispatchEvent(
-              new CustomEvent(NAVI_CHECK_PSEUDO_STATE_CUSTOM_EVENT),
-            );
-            return;
-          }
-          const input = el.querySelector("input, textarea, select");
+definePseudoClass(":hover", {
+  attribute: "data-hover",
+  setup: (el, callback) => {
+    let onmouseenter = () => {
+      callback();
+    };
+    let onmouseleave = () => {
+      callback();
+    };
+
+    if (el.tagName === "LABEL") {
+      // input.matches(":hover") is true when hovering the label
+      // so when label is hovered/not hovered we need to recheck the input too
+      const recheckInput = (e) => {
+        if (el.htmlFor) {
+          const input = document.getElementById(el.htmlFor);
           if (!input) {
-            // label does not contain an input
+            // cannot find the input for this label in the DOM
             return;
           }
-          input.dispatchEvent(
-            new CustomEvent(NAVI_CHECK_PSEUDO_STATE_CUSTOM_EVENT),
-          );
-        };
-        onmouseenter = () => {
-          callback();
-          recheckInput();
-        };
-        onmouseleave = () => {
-          callback();
-          recheckInput();
-        };
-      }
-
-      el.addEventListener("mouseenter", onmouseenter);
-      el.addEventListener("mouseleave", onmouseleave);
-      return () => {
-        el.removeEventListener("mouseenter", onmouseenter);
-        el.removeEventListener("mouseleave", onmouseleave);
+          requestPseudoStateCheck(input, { event: e });
+          return;
+        }
+        const input = el.querySelector("input, textarea, select");
+        if (!input) {
+          // label does not contain an input
+          return;
+        }
+        requestPseudoStateCheck(input, { event: e });
       };
-    },
-    test: (el) => el.matches(":hover"),
+      onmouseenter = (e) => {
+        callback();
+        recheckInput(e);
+      };
+      onmouseleave = (e) => {
+        callback();
+        recheckInput(e);
+      };
+    }
+
+    el.addEventListener("mouseenter", onmouseenter);
+    el.addEventListener("mouseleave", onmouseleave);
+    return () => {
+      el.removeEventListener("mouseenter", onmouseenter);
+      el.removeEventListener("mouseleave", onmouseleave);
+    };
   },
-  ":active": {
-    attribute: "data-active",
-    setup: (el, callback) => {
-      // It might be tempting to use el.setPointerCapture() here so that pointerup
-      // always fires on el regardless of where the pointer is released. However,
-      // pointer capture routes all subsequent pointer events to the capturing element,
-      // which means any other element in the tree that expects to receive pointerup,
-      // mouseup, click, etc. after a pointerdown will silently not get them.
-      // For example a <label> that reacts to mousedown + click, or a third-party
-      // library that attaches its own listeners, would break because an ancestor
-      // grabbed the pointer out from under them.
-      // To avoid forcing every such element to declare an opt-out attribute
-      // (e.g. navi-own-pointer-capture) we simply listen on document instead,
-      // which is safe and does not interfere with anyone else's event flow.
-      const onPointerDown = () => {
-        const onRelease = () => {
-          document.removeEventListener("pointercancel", onRelease, true);
-          document.removeEventListener("pointerup", onRelease, true);
+  test: (el) => el.matches(":hover"),
+});
+definePseudoClass(":disabled", {
+  attribute: "data-disabled",
+  add: (el) => {
+    if (
+      el.tagName === "BUTTON" ||
+      el.tagName === "INPUT" ||
+      el.tagName === "SELECT" ||
+      el.tagName === "TEXTAREA"
+    ) {
+      el.disabled = true;
+    }
+  },
+  remove: (el) => {
+    if (
+      el.tagName === "BUTTON" ||
+      el.tagName === "INPUT" ||
+      el.tagName === "SELECT" ||
+      el.tagName === "TEXTAREA"
+    ) {
+      el.disabled = false;
+    }
+  },
+});
+definePseudoClass(":read-only", {
+  attribute: "data-readonly",
+  add: (el) => {
+    if (
+      el.tagName === "INPUT" ||
+      el.tagName === "SELECT" ||
+      el.tagName === "TEXTAREA"
+    ) {
+      if (el.type === "checkbox" || el.type === "radio") {
+        // there is no readOnly for checkboxes/radios
+        return;
+      }
+      el.readOnly = true;
+    }
+  },
+  remove: (el) => {
+    if (
+      el.tagName === "INPUT" ||
+      el.tagName === "SELECT" ||
+      el.tagName === "TEXTAREA"
+    ) {
+      if (el.type === "checkbox" || el.type === "radio") {
+        // there is no readOnly for checkboxes/radios
+        return;
+      }
+      el.readOnly = false;
+    }
+  },
+});
+definePseudoClass(":checked", {
+  attribute: "data-checked",
+  setup: (el, callback) => {
+    if (el.type === "checkbox") {
+      // Listen to user interactions
+      el.addEventListener("input", callback);
+      // Intercept programmatic changes to .checked property
+      const originalDescriptor = Object.getOwnPropertyDescriptor(
+        HTMLInputElement.prototype,
+        "checked",
+      );
+      Object.defineProperty(el, "checked", {
+        get: originalDescriptor.get,
+        set(value) {
+          originalDescriptor.set.call(this, value);
           callback();
-        };
-        document.addEventListener("pointercancel", onRelease, true);
-        document.addEventListener("pointerup", onRelease, true);
+        },
+        configurable: true,
+      });
+      return () => {
+        // Restore original property descriptor
+        Object.defineProperty(el, "checked", originalDescriptor);
+        el.removeEventListener("input", callback);
+      };
+    }
+    if (el.type === "radio") {
+      // Listen to changes on the radio group
+      const radioSet =
+        el.closest("[data-radio-list], fieldset, form") || document;
+      radioSet.addEventListener("input", callback);
+
+      // Intercept programmatic changes to .checked property
+      const originalDescriptor = Object.getOwnPropertyDescriptor(
+        HTMLInputElement.prototype,
+        "checked",
+      );
+      Object.defineProperty(el, "checked", {
+        get: originalDescriptor.get,
+        set(value) {
+          originalDescriptor.set.call(this, value);
+          callback();
+        },
+        configurable: true,
+      });
+      return () => {
+        radioSet.removeEventListener("input", callback);
+        // Restore original property descriptor
+        Object.defineProperty(el, "checked", originalDescriptor);
+      };
+    }
+    if (el.tagName === "INPUT") {
+      el.addEventListener("input", callback);
+      return () => {
+        el.removeEventListener("input", callback);
+      };
+    }
+    return () => {};
+  },
+  test: (el) => el.matches(":checked"),
+});
+definePseudoClass(":active", {
+  attribute: "data-active",
+  setup: (el, callback) => {
+    // It might be tempting to use el.setPointerCapture() here so that pointerup
+    // always fires on el regardless of where the pointer is released. However,
+    // pointer capture routes all subsequent pointer events to the capturing element,
+    // which means any other element in the tree that expects to receive pointerup,
+    // mouseup, click, etc. after a pointerdown will silently not get them.
+    // For example a <label> that reacts to mousedown + click, or a third-party
+    // library that attaches its own listeners, would break because an ancestor
+    // grabbed the pointer out from under them.
+    // To avoid forcing every such element to declare an opt-out attribute
+    // (e.g. navi-own-pointer-capture) we simply listen on document instead,
+    // which is safe and does not interfere with anyone else's event flow.
+    const onPointerDown = () => {
+      const onRelease = () => {
+        document.removeEventListener("pointercancel", onRelease, true);
+        document.removeEventListener("pointerup", onRelease, true);
         callback();
       };
-      el.addEventListener("pointerdown", onPointerDown);
+      document.addEventListener("pointercancel", onRelease, true);
+      document.addEventListener("pointerup", onRelease, true);
+      callback();
+    };
+    el.addEventListener("pointerdown", onPointerDown);
+    return () => {
+      el.removeEventListener("pointerdown", onPointerDown);
+    };
+  },
+  test: (el) => el.matches(":active"),
+});
+focus_classes: {
+  // When a controller element (e.g. combobox input) gains or loses focus,
+  // notify the elements it controls via aria-controls so they re-check their focus state.
+  const notifyAriaControlled = (el, e) => {
+    const controlledIds = el.getAttribute("aria-controls");
+    if (!controlledIds) {
+      return;
+    }
+    for (const id of controlledIds.split(" ")) {
+      const controlled = document.getElementById(id);
+      if (controlled) {
+        requestPseudoStateCheck(controlled, { event: e });
+      }
+    }
+  };
+  // Check if any element whose aria-controls includes el's id currently has focus.
+  const isControlledByFocusedElement = (
+    el,
+    { requireFocusVisible = false } = {},
+  ) => {
+    const id = el.id;
+    if (!id) {
+      return false;
+    }
+    const controllers = document.querySelectorAll(`[aria-controls~="${id}"]`);
+    for (const controller of controllers) {
+      const pseudoClass = requireFocusVisible ? ":focus-visible" : ":focus";
+      if (controller.matches(pseudoClass)) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  definePseudoClass(":focus", {
+    attribute: "data-focus",
+    setup: (el, callback) => {
+      const onFocusChange = (e) => {
+        callback();
+        notifyAriaControlled(el, e);
+      };
+      el.addEventListener("focusin", onFocusChange);
+      el.addEventListener("focusout", onFocusChange);
       return () => {
-        el.removeEventListener("pointerdown", onPointerDown);
+        el.removeEventListener("focusin", onFocusChange);
+        el.removeEventListener("focusout", onFocusChange);
       };
     },
-    test: (el) => el.matches(":active"),
+    test: (el) => {
+      if (el.matches(":focus")) {
+        return true;
+      }
+      const focusProxy = el.getAttribute("focus-proxy");
+      if (focusProxy) {
+        return document.querySelector(`#${focusProxy}`).matches(":focus");
+      }
+      if (isControlledByFocusedElement(el)) {
+        return true;
+      }
+      return false;
+    },
+  });
+  definePseudoClass(":focus-visible", {
+    attribute: "data-focus-visible",
+    setup: (el, callback) => {
+      const onFocusChange = (e) => {
+        callback();
+        notifyAriaControlled(el, e);
+      };
+      document.addEventListener("keydown", callback);
+      document.addEventListener("keyup", callback);
+      el.addEventListener("focusin", onFocusChange);
+      el.addEventListener("focusout", onFocusChange);
+      return () => {
+        document.removeEventListener("keydown", callback);
+        document.removeEventListener("keyup", callback);
+        el.removeEventListener("focusin", onFocusChange);
+        el.removeEventListener("focusout", onFocusChange);
+      };
+    },
+    test: (el) => {
+      if (el.matches(":focus-visible")) {
+        return true;
+      }
+      const focusProxy = el.getAttribute("focus-proxy");
+      if (focusProxy) {
+        return document
+          .querySelector(`#${focusProxy}`)
+          .matches(":focus-visible");
+      }
+      if (isControlledByFocusedElement(el, { requireFocusVisible: true })) {
+        return true;
+      }
+      return false;
+    },
+  });
+}
+
+Object.assign(PSEUDO_CLASSES, {
+  ":-navi-pointed": {
+    attribute: "data-pointed",
   },
-  ":-navi-pressed": {
+  ":-navi-pointed-by-mouse": {
+    attribute: "data-pointed-by-mouse",
+  },
+  ":-navi-pointed-by-keyboard": {
+    attribute: "data-pointed-by-keyboard",
+  },
+  ":-navi-pointed-by-proxy": {
+    attribute: "data-pointed-by-proxy",
+  },
+  ":-navi-selected": {
+    attribute: "data-selected",
+  },
+  ":-navi-loading": {
+    attribute: "data-loading",
+  },
+  ":-navi-status-info": {
+    attribute: "data-status-info",
+  },
+  ":-navi-status-success": {
+    attribute: "data-status-success",
+  },
+  ":-navi-status-warning": {
+    attribute: "data-status-warning",
+  },
+  ":-navi-status-error": {
+    attribute: "data-status-error",
+  },
+  ":-navi-expanded": {
+    attribute: "data-expanded",
+  },
+  ":-navi-void": {
+    attribute: "data-void",
+  },
+  "::highlight": {},
+});
+definePseudoClass(":-navi-has-value", {
+  attribute: "data-has-value",
+  setup: (el, callback) => {
+    return listenInputValue(el, callback);
+  },
+  test: (el) => {
+    if (el.value === "") {
+      return false;
+    }
+    return true;
+  },
+});
+navi_pressed: {
+  const pressedElements = new WeakSet();
+  definePseudoClass(":-navi-pressed", {
     attribute: "data-pressed",
     setup: (el, callback) => {
       // Same reasoning as :active above: setPointerCapture is avoided because it
@@ -136,240 +426,8 @@ export const PSEUDO_CLASSES = {
       };
     },
     test: (el) => pressedElements.has(el),
-  },
-  ":visited": {
-    attribute: "data-visited",
-  },
-  ":checked": {
-    attribute: "data-checked",
-    setup: (el, callback) => {
-      if (el.type === "checkbox") {
-        // Listen to user interactions
-        el.addEventListener("input", callback);
-        // Intercept programmatic changes to .checked property
-        const originalDescriptor = Object.getOwnPropertyDescriptor(
-          HTMLInputElement.prototype,
-          "checked",
-        );
-        Object.defineProperty(el, "checked", {
-          get: originalDescriptor.get,
-          set(value) {
-            originalDescriptor.set.call(this, value);
-            callback();
-          },
-          configurable: true,
-        });
-        return () => {
-          // Restore original property descriptor
-          Object.defineProperty(el, "checked", originalDescriptor);
-          el.removeEventListener("input", callback);
-        };
-      }
-      if (el.type === "radio") {
-        // Listen to changes on the radio group
-        const radioSet =
-          el.closest("[data-radio-list], fieldset, form") || document;
-        radioSet.addEventListener("input", callback);
-
-        // Intercept programmatic changes to .checked property
-        const originalDescriptor = Object.getOwnPropertyDescriptor(
-          HTMLInputElement.prototype,
-          "checked",
-        );
-        Object.defineProperty(el, "checked", {
-          get: originalDescriptor.get,
-          set(value) {
-            originalDescriptor.set.call(this, value);
-            callback();
-          },
-          configurable: true,
-        });
-        return () => {
-          radioSet.removeEventListener("input", callback);
-          // Restore original property descriptor
-          Object.defineProperty(el, "checked", originalDescriptor);
-        };
-      }
-      if (el.tagName === "INPUT") {
-        el.addEventListener("input", callback);
-        return () => {
-          el.removeEventListener("input", callback);
-        };
-      }
-      return () => {};
-    },
-    test: (el) => el.matches(":checked"),
-  },
-  ":focus": {
-    attribute: "data-focus",
-    setup: (el, callback) => {
-      el.addEventListener("focusin", callback);
-      el.addEventListener("focusout", callback);
-      return () => {
-        el.removeEventListener("focusin", callback);
-        el.removeEventListener("focusout", callback);
-      };
-    },
-    test: (el) => {
-      if (el.matches(":focus")) {
-        return true;
-      }
-      const focusProxy = el.getAttribute("focus-proxy");
-      if (focusProxy) {
-        return document.querySelector(`#${focusProxy}`).matches(":focus");
-      }
-      return false;
-    },
-  },
-  ":focus-visible": {
-    attribute: "data-focus-visible",
-    setup: (el, callback) => {
-      document.addEventListener("keydown", callback);
-      document.addEventListener("keyup", callback);
-      return () => {
-        document.removeEventListener("keydown", callback);
-        document.removeEventListener("keyup", callback);
-      };
-    },
-    test: (el) => {
-      if (el.matches(":focus-visible")) {
-        return true;
-      }
-      const focusProxy = el.getAttribute("focus-proxy");
-      if (focusProxy) {
-        return document
-          .querySelector(`#${focusProxy}`)
-          .matches(":focus-visible");
-      }
-      return false;
-    },
-  },
-  ":disabled": {
-    attribute: "data-disabled",
-    add: (el) => {
-      if (
-        el.tagName === "BUTTON" ||
-        el.tagName === "INPUT" ||
-        el.tagName === "SELECT" ||
-        el.tagName === "TEXTAREA"
-      ) {
-        el.disabled = true;
-      }
-    },
-    remove: (el) => {
-      if (
-        el.tagName === "BUTTON" ||
-        el.tagName === "INPUT" ||
-        el.tagName === "SELECT" ||
-        el.tagName === "TEXTAREA"
-      ) {
-        el.disabled = false;
-      }
-    },
-  },
-  ":read-only": {
-    attribute: "data-readonly",
-    add: (el) => {
-      if (
-        el.tagName === "INPUT" ||
-        el.tagName === "SELECT" ||
-        el.tagName === "TEXTAREA"
-      ) {
-        if (el.type === "checkbox" || el.type === "radio") {
-          // there is no readOnly for checkboxes/radios
-          return;
-        }
-        el.readOnly = true;
-      }
-    },
-    remove: (el) => {
-      if (
-        el.tagName === "INPUT" ||
-        el.tagName === "SELECT" ||
-        el.tagName === "TEXTAREA"
-      ) {
-        if (el.type === "checkbox" || el.type === "radio") {
-          // there is no readOnly for checkboxes/radios
-          return;
-        }
-        el.readOnly = false;
-      }
-    },
-  },
-  ":valid": {
-    attribute: "data-valid",
-    test: (el) => el.matches(":valid"),
-  },
-  ":invalid": {
-    attribute: "data-invalid",
-    test: (el) => el.matches(":invalid"),
-  },
-  "::highlight": {},
-  ":-navi-pointed": {
-    attribute: "data-pointed",
-  },
-  ":-navi-pointed-by-mouse": {
-    attribute: "data-pointed-by-mouse",
-  },
-  ":-navi-pointed-by-keyboard": {
-    attribute: "data-pointed-by-keyboard",
-  },
-  ":-navi-pointed-by-proxy": {
-    attribute: "data-pointed-by-proxy",
-  },
-  ":-navi-selected": {
-    attribute: "data-selected",
-  },
-  ":-navi-loading": {
-    attribute: "data-loading",
-  },
-  ":-navi-status-info": {
-    attribute: "data-status-info",
-  },
-  ":-navi-status-success": {
-    attribute: "data-status-success",
-  },
-  ":-navi-status-warning": {
-    attribute: "data-status-warning",
-  },
-  ":-navi-status-error": {
-    attribute: "data-status-error",
-  },
-  ":-navi-expanded": {
-    attribute: "data-expanded",
-  },
-  ":-navi-void": {
-    attribute: "data-void",
-  },
-  ":-navi-has-value": {
-    attribute: "data-has-value",
-    setup: (el, callback) => {
-      return listenInputValue(el, callback);
-    },
-    test: (el) => {
-      if (el.value === "") {
-        return false;
-      }
-      return true;
-    },
-  },
-};
-
-export const NAVI_PSEUDO_STATE_CUSTOM_EVENT = "navi_pseudo_state";
-const NAVI_CHECK_PSEUDO_STATE_CUSTOM_EVENT = "navi_check_pseudo_state";
-const dispatchNaviPseudoStateEvent = (element, value, oldValue) => {
-  if (!element) {
-    return;
-  }
-  element.dispatchEvent(
-    new CustomEvent(NAVI_PSEUDO_STATE_CUSTOM_EVENT, {
-      detail: {
-        pseudoState: value,
-        oldPseudoState: oldValue,
-      },
-    }),
-  );
-};
+  });
+}
 
 const EMPTY_STATE = {};
 export const initPseudoStyles = (
@@ -392,7 +450,7 @@ export const initPseudoStyles = (
   const onStateChange = (value, oldValue) => {
     effect?.(value, oldValue);
     if (elementListeningPseudoState) {
-      dispatchNaviPseudoStateEvent(
+      dispatchPseudoStateCustomEvent(
         elementListeningPseudoState,
         value,
         oldValue,
@@ -461,7 +519,7 @@ export const initPseudoStyles = (
     state = event.detail.pseudoState;
     onStateChange(state, oldState);
   });
-  element.addEventListener(NAVI_CHECK_PSEUDO_STATE_CUSTOM_EVENT, () => {
+  element.addEventListener("navi_pseudo_state_request_check", () => {
     checkPseudoClasses();
   });
 
