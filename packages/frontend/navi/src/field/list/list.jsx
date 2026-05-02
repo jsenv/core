@@ -106,13 +106,13 @@ const css = /* css */ `
       --list-item-color-mouse-pointed: var(--list-item-color);
       --list-item-background-color-mouse-pointed: light-dark(#ebebeb, #303030);
 
-      /* Pointed by keyboard — vivid accent highlight */
-      --list-item-color-pointed: light-dark(#ffffff, #ffffff);
-      --list-item-background-color-pointed: light-dark(#1a73e8, #2b5fcc);
+      /* Pointed by keyboard — subtle light blue highlight */
+      --list-item-color-pointed: light-dark(#1a73e8, #7baaf7);
+      --list-item-background-color-pointed: light-dark(#e8f0fe, #1c3a6e);
 
-      /* Selected (focused) — blue accent, shown when list has focus-within */
-      --list-item-color-selected: light-dark(#1a73e8, #7baaf7);
-      --list-item-background-color-selected: light-dark(#e8f0fe, #1c3a6e);
+      /* Selected (focused) — vivid blue accent, shown when list has focus-within */
+      --list-item-color-selected: light-dark(#ffffff, #ffffff);
+      --list-item-background-color-selected: light-dark(#1a73e8, #2b5fcc);
       --list-item-font-weight-selected: 500;
 
       /* Selected (unfocused) — muted, shown when list has no focus-within */
