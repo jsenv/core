@@ -158,8 +158,8 @@ const css = /* css */ `
 
     /* When the list inside the popover has keyboard focus, keep the focus ring
        on the select trigger for visual continuity */
-    &:not(:has(.navi_select_dialog .navi_list_container:focus)):has(
-        .navi_list_container:focus
+    &:not(:has(.navi_select_dialog .navi_list_container[data-focus])):has(
+        .navi_list_container[data-focus]
       ) {
       outline-width: calc(
         var(--select-border-width) + var(--select-outline-width)
@@ -169,13 +169,13 @@ const css = /* css */ `
         -1 * (var(--select-border-width) + var(--select-outline-width))
       );
     }
-    .navi_list_container:focus {
+    .navi_list_container[data-focus] {
       outline: none;
     }
 
     /* When the list inside the dialog has keyboard focus, show the focus ring
        on the dialog instead */
-    .navi_select_dialog:has(.navi_list_container:focus) {
+    .navi_select_dialog:has(.navi_list_container[data-focus]) {
       outline: var(--select-outline-width) solid
         var(--navi-focus-outline-color, #005fcc);
     }

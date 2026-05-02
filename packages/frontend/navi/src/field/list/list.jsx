@@ -85,6 +85,7 @@ const SeparatorContext = createContext(null);
 const css = /* css */ `
   @layer navi {
     .navi_list_container {
+      --list-outline-width: 2px;
       --list-border-radius: 4px;
       --list-border-width: 1px;
       --list-border-color: light-dark(#ccc, #555);
@@ -279,6 +280,11 @@ const css = /* css */ `
   }
 
   .navi_list_container[data-focus] {
+    outline: var(--list-outline-width) solid var(--navi-focus-outline-color);
+    .navi_list {
+      outline: none;
+    }
+
     .navi_list_item {
       &[data-pointed-by-keyboard] {
         --x-color: var(--list-item-color-pointed);
