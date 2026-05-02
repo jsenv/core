@@ -254,13 +254,14 @@ const css = /* css */ `
 `;
 
 export const InputRange = (props) => {
-  import.meta.css = css;
+  const defaultRef = useRef();
+  const ref = props.ref || defaultRef;
 
   const uiStateController = useUIStateController(props, "input");
   const uiState = useUIState(uiStateController);
 
   const input = renderActionableComponent(props, {
-    Basic: InputRangeBasic,
+    Basic: InputRangeUI,
     WithAction: InputRangeWithAction,
   });
   return (
@@ -270,57 +271,10 @@ export const InputRange = (props) => {
   );
 };
 
-const RangeStyleCSSVars = {
-  "outlineWidth": "--outline-width",
-  "borderRadius": "--border-radius",
-  "borderColor": "--border-color",
-  "backgroundColor": "--background-color",
-  "accentColor": "--accent-color",
-  ":hover": {
-    borderColor: "--border-color-hover",
-    backgroundColor: "--background-color-hover",
-    fillColor: "--fill-color-hover",
-    thumbColor: "--thumb-color-hover",
-  },
-  ":-navi-pressed": {
-    borderColor: "--border-color-hover",
-    backgroundColor: "--background-color-hover",
-    fillColor: "--fill-color-pressed",
-    thumbColor: "--thumb-color-pressed",
-  },
-  ":read-only": {
-    borderColor: "--border-color-readonly",
-    backgroundColor: "--background-color-readonly",
-    fillColor: "--fill-color-readonly",
-    thumbColor: "--thumb-color-readonly",
-  },
-  ":disabled": {
-    borderColor: "--border-color-disabled",
-    backgroundColor: "--background-color-disabled",
-    fillColor: "--fill-color-disabled",
-    thumbColor: "--thumb-color-disabled",
-  },
-};
-const RangePseudoClasses = [
-  ":hover",
-  ":active",
-  ":-navi-pressed",
-  ":focus",
-  ":focus-visible",
-  ":read-only",
-  ":disabled",
-  ":-navi-loading",
-];
-const RangePseudoElements = ["::-navi-loader"];
-const RangeChildPropSet = new Set([...fieldPropSet]);
-const InputRangeBasic = (props) => {
-  const contextReadOnly = useContext(ReadOnlyContext);
-  const contextDisabled = useContext(DisabledContext);
-  const contextLoading = useContext(LoadingContext);
-  const contextLoadingElement = useContext(LoadingElementContext);
-  const uiStateController = useContext(UIStateControllerContext);
-  const uiState = useContext(UIStateContext);
+const InputRangeUI = (props) => {
+  import.meta.css = css;
   const {
+    ref,
     onInput,
 
     readOnly,
@@ -333,8 +287,12 @@ const InputRangeBasic = (props) => {
 
     ...rest
   } = props;
-  const defaultRef = useRef();
-  const ref = rest.ref || defaultRef;
+  const contextReadOnly = useContext(ReadOnlyContext);
+  const contextDisabled = useContext(DisabledContext);
+  const contextLoading = useContext(LoadingContext);
+  const contextLoadingElement = useContext(LoadingElementContext);
+  const uiStateController = useContext(UIStateControllerContext);
+  const uiState = useContext(UIStateContext);
 
   const innerValue = uiState;
   const innerLoading =
@@ -490,10 +448,53 @@ const InputRangeBasic = (props) => {
     </Box>
   );
 };
+const RangeStyleCSSVars = {
+  "outlineWidth": "--outline-width",
+  "borderRadius": "--border-radius",
+  "borderColor": "--border-color",
+  "backgroundColor": "--background-color",
+  "accentColor": "--accent-color",
+  ":hover": {
+    borderColor: "--border-color-hover",
+    backgroundColor: "--background-color-hover",
+    fillColor: "--fill-color-hover",
+    thumbColor: "--thumb-color-hover",
+  },
+  ":-navi-pressed": {
+    borderColor: "--border-color-hover",
+    backgroundColor: "--background-color-hover",
+    fillColor: "--fill-color-pressed",
+    thumbColor: "--thumb-color-pressed",
+  },
+  ":read-only": {
+    borderColor: "--border-color-readonly",
+    backgroundColor: "--background-color-readonly",
+    fillColor: "--fill-color-readonly",
+    thumbColor: "--thumb-color-readonly",
+  },
+  ":disabled": {
+    borderColor: "--border-color-disabled",
+    backgroundColor: "--background-color-disabled",
+    fillColor: "--fill-color-disabled",
+    thumbColor: "--thumb-color-disabled",
+  },
+};
+const RangePseudoClasses = [
+  ":hover",
+  ":active",
+  ":-navi-pressed",
+  ":focus",
+  ":focus-visible",
+  ":read-only",
+  ":disabled",
+  ":-navi-loading",
+];
+const RangePseudoElements = ["::-navi-loader"];
+const RangeChildPropSet = new Set([...fieldPropSet]);
 
 const InputRangeWithAction = (props) => {
-  const uiState = useContext(UIStateContext);
   const {
+    ref,
     action,
     actionDebounce,
     actionAfterChange,
@@ -508,8 +509,7 @@ const InputRangeWithAction = (props) => {
     actionErrorEffect,
     ...rest
   } = props;
-  const defaultRef = useRef();
-  const ref = props.ref || defaultRef;
+  const uiState = useContext(UIStateContext);
   const [boundAction] = useActionBoundToOneParam(action, uiState);
   const { loading: actionLoading } = useActionStatus(boundAction);
   const executeAction = useExecuteAction(ref, {
@@ -551,12 +551,13 @@ const InputRangeWithAction = (props) => {
   });
 
   return (
-    <InputRangeBasic
+    <InputRangeDispatcher
       data-action={boundAction.name}
       data-action-debounce={actionDebounce}
       data-action-after-change={actionAfterChange ? "" : undefined}
       {...rest}
       ref={ref}
+      action={undefined}
       loading={loading || actionLoading}
     />
   );
