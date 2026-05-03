@@ -161,6 +161,7 @@ export { BadgeCount } from "./src/text/badge_count.jsx";
 export { Caption } from "./src/text/caption.jsx";
 export { Code } from "./src/text/code.jsx";
 export { Icon } from "./src/text/icon.jsx";
+export { Interpolate } from "./src/text/interpolate.jsx";
 export { createIntl } from "./src/text/intl.js";
 export { MessageBox } from "./src/text/message_box.jsx";
 export { Meter } from "./src/text/meter.jsx";

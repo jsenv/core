@@ -36398,6 +36398,100 @@ const CodeBox = ({
   });
 };
 
+/*
+ * Technical note: although the component is named Interpolate and its primary
+ * use-case is text, it can render any mix of strings and JSX elements — 99% of
+ * the time it is used for text though.
+ *
+ * Why use Interpolate instead of plain JSX?
+ *
+ * Without Interpolate, the sentence is scattered across JSX expressions:
+ *
+ * ```jsx
+ * // harder to read — the full sentence is not visible at once
+ * // cannot be used as an i18n key
+ * Données limitées à <Text bold>{radius} km</Text> autour de
+ *   {zoneName || "votre zone"}.
+ * ```
+ *
+ * With Interpolate, the full sentence is visible in one place:
+ *
+ * ```jsx
+ * // readable — the sentence reads as prose
+ * // i18n-ready — the template string is a plain JS-free key
+ * <Interpolate radiusKm={<Text bold>{radius} km</Text>} zoneName={zoneName || "votre zone"}>
+ *   Données limitées à [radiusKm] autour de [zoneName].
+ * </Interpolate>
+ * ```
+ *
+ * Why [key] syntax was chosen for placeholders:
+ *
+ * {} / ${} / {{}}  — interpreted by JSX; using them would force wrapping the
+ *                    whole string in an expression, defeating the readability
+ *                    goal.
+ *
+ * %key%            — common in sprintf-style libraries, but the doubled %% hurts
+ *                    readability. It also carries the implicit expectation of
+ *                    format specifiers (cast to string/number, padding…) that
+ *                    this component does not support, which would mislead readers.
+ *
+ * :key:            — visually clean, but the colon conflicts with punctuation.
+ *                    Compare: "Hello :name:. How are you?"
+ *                         vs  "Hello [name]. How are you?"
+ *                    The period after :name: is ambiguous at a glance.
+ *
+ * <key>            — not possible; JSX treats it as an opening tag.
+ */
+
+/**
+ * Renders a template string with [key] placeholders replaced by props.
+ * Replacement values can be strings or JSX elements.
+ * Returns a plain string when all replacements are strings, a fragment otherwise.
+ *
+ * Keeps the full sentence readable in one place and makes the string
+ * i18n-ready, since the template contains no JSX expressions.
+ *
+ * @example
+ * <Interpolate radiusKm={<Text bold>50 km</Text>} zoneName="votre zone">
+ *   Données limitées à [radiusKm] autour de [zoneName].
+ * </Interpolate>
+ */
+const Interpolate = ({
+  children,
+  ...replacements
+}) => {
+  return interpolateText(children, replacements);
+};
+
+/**
+ * Interpolates a template string, replacing [key] placeholders with values.
+ * Values can be strings or JSX elements. Returns a plain string when all
+ * replacements are strings, or a JSX fragment otherwise.
+ */
+const interpolateText = (template, replacements) => {
+  const parts = template.split(/(\[[^\]]+\])/);
+  let hasVnode = false;
+  const resolved = [];
+  for (const part of parts) {
+    const match = part.match(/^\[([^\]]+)\]$/);
+    if (!match) {
+      resolved.push(part);
+      continue;
+    }
+    const value = replacements[match[1]] ?? part;
+    if (value !== null && typeof value === "object") {
+      hasVnode = true;
+    }
+    resolved.push(value);
+  }
+  if (!hasVnode) {
+    return resolved.join("");
+  }
+  return jsx(Fragment, {
+    children: resolved
+  });
+};
+
 const navigator = typeof window === "undefined" ? undefined : window.navigator;
 const browserLang =
   typeof navigator !== "undefined"
@@ -37547,5 +37641,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, Box, Button, ButtonCopyToClipboard, Caption, CheckSvg, Checkbox, CheckboxList, CloseSvg, Code, Col, Colgroup, ConstructionSvg, Details, Dialog, DialogLayout, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemFooter, ListItemGroup, ListItemHeader, Loading, MessageBox, Meter, Nav, NaviDebug, Paragraph, Popover, Quantity, QuantityIntl, Radio, RadioList, Route, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectionContext, Separator, SettingsSvg, SidePanel, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, Thead, Title, Tr, UITransition, UserSvg, ViewportLayout, actionIntegratedVia, actionRunEffect, addCustomMessage, applySearch, arraySignalMembership, compareTwoJsValues, createAction, createAvailableConstraint, createIntl, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, enableDebugActions, enableDebugOnDocumentLoading, filterTableSelection, forwardActionRequested, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, localStorageSignal, navBack, navForward, navTo, openCallout, rawUrlPart, reload, removeCustomMessage, requestAction, requestListClose, requestListOpen, rerunActions, resource, route, routeAction, setBaseUrl, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, syncOwnedResourceToSignals, syncResourceToSignals, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutClose, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, useRouteStatus, useRunOnMount, useSearchText, useSelectRequestClose, useSelectableElement, useSelectionController, useSidePanelClose, useSignalSync, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage, windowWidthSignal };
+export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, Box, Button, ButtonCopyToClipboard, Caption, CheckSvg, Checkbox, CheckboxList, CloseSvg, Code, Col, Colgroup, ConstructionSvg, Details, Dialog, DialogLayout, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemFooter, ListItemGroup, ListItemHeader, Loading, MessageBox, Meter, Nav, NaviDebug, Paragraph, Popover, Quantity, QuantityIntl, Radio, RadioList, Route, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectionContext, Separator, SettingsSvg, SidePanel, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, Thead, Title, Tr, UITransition, UserSvg, ViewportLayout, actionIntegratedVia, actionRunEffect, addCustomMessage, applySearch, arraySignalMembership, compareTwoJsValues, createAction, createAvailableConstraint, createIntl, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, enableDebugActions, enableDebugOnDocumentLoading, filterTableSelection, forwardActionRequested, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, localStorageSignal, navBack, navForward, navTo, openCallout, rawUrlPart, reload, removeCustomMessage, requestAction, requestListClose, requestListOpen, rerunActions, resource, route, routeAction, setBaseUrl, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, syncOwnedResourceToSignals, syncResourceToSignals, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutClose, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, useRouteStatus, useRunOnMount, useSearchText, useSelectRequestClose, useSelectableElement, useSelectionController, useSidePanelClose, useSignalSync, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage, windowWidthSignal };
 //# sourceMappingURL=jsenv_navi.js.map
