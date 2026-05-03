@@ -64,6 +64,27 @@ export const TextAnchor = ({
 
   const anchorRef = useRef();
 
+  const setTopOffset = (childEl, topOffset) => {
+    // position:relative + top shifts the element visually.
+    // marginTop: -topOffset makes the layout box follow the visual position, so any container
+    // (button, link, box…) computes its own padding/border/height based on the real final position
+    // rather than the original unshifted one. This means a badge inside a button will symmetrically
+    // expand the button height instead of overflowing or being clipped.
+    // marginBottom: topOffset compensates the marginTop so the line height stays unchanged —
+    // the shift is purely a repositioning, not an inflation of the line.
+    if (!topOffset) {
+      childEl.style.position = "";
+      childEl.style.top = "";
+      childEl.style.marginTop = "";
+      childEl.style.marginBottom = "";
+      return;
+    }
+    childEl.style.position = "relative";
+    childEl.style.top = `${topOffset}px`;
+    childEl.style.marginTop = `${-topOffset}px`;
+    childEl.style.marginBottom = `${topOffset}px`;
+  };
+
   useLayoutEffect(() => {
     const anchorEl = anchorRef.current;
     const childEl = childRef.current;
@@ -81,33 +102,16 @@ export const TextAnchor = ({
     ) {
       // we must hide the anchor otherwise it would affect layout without providing any benefit (would trigger flex gap for instance)
       anchorEl.setAttribute("hidden", "");
-    } else {
-      anchorEl.removeAttribute("hidden");
+      setTopOffset(childEl, 0);
+      return;
     }
-
+    anchorEl.removeAttribute("hidden");
     const topOffset = computeTopOffset({
       anchorEl,
       childEl,
       textAnchor,
     });
-    if (topOffset) {
-      // position:relative + top shifts the element visually.
-      // marginTop: -topOffset makes the layout box follow the visual position, so any container
-      // (button, link, box…) computes its own padding/border/height based on the real final position
-      // rather than the original unshifted one. This means a badge inside a button will symmetrically
-      // expand the button height instead of overflowing or being clipped.
-      // marginBottom: topOffset compensates the marginTop so the line height stays unchanged —
-      // the shift is purely a repositioning, not an inflation of the line.
-      childEl.style.position = "relative";
-      childEl.style.top = `${topOffset}px`;
-      childEl.style.marginTop = `${-topOffset}px`;
-      childEl.style.marginBottom = `${topOffset}px`;
-    } else {
-      childEl.style.position = "";
-      childEl.style.top = "";
-      childEl.style.marginTop = "";
-      childEl.style.marginBottom = "";
-    }
+    setTopOffset(childEl, topOffset);
   }, [
     textAnchor,
     textKey,
