@@ -571,7 +571,13 @@ const InputSlot = ({ side, onClick, hideWhileEmpty, ...props }) => {
       flex
       alignY="center"
       onMouseDown={(e) => {
-        e.preventDefault(); // keep focus in the input
+        // Only prevent focus from leaving when the input already has focus.
+        // If the input is not focused, let the mousedown proceed normally so
+        // the slot element (e.g. a clear button) can receive focus itself.
+        const inputEl = document.getElementById(id);
+        if (inputEl && inputEl === document.activeElement) {
+          e.preventDefault();
+        }
       }}
       onClick={(e) => {
         if (readOnly || disabled) {
