@@ -532,6 +532,7 @@ const SelectWithPopover = (props) => {
     ...rest
   } = props;
   const debugFocus = useDebugFocus();
+  const debugPopup = useDebugPopup();
   const popoverRef = useRef(null);
   const popoverId = useId();
   const [expanded, setExpanded] = useState(false);
@@ -554,7 +555,12 @@ const SelectWithPopover = (props) => {
       anchor: ref.current,
     });
   };
+  const [shouldIgnoreThatClick, disableClickFor] = useIgnoreClickForMousedown();
   const requestClose = (e = new CustomEvent("programmatic")) => {
+    if (e.type === "mousedown") {
+      debugPopup(formatEventSideEffect(e, `disable click`));
+      disableClickFor(e);
+    }
     return requestPopoverClose(popoverRef.current, { event: e });
   };
   const moveFocusToSelect = (e) => {
@@ -562,8 +568,6 @@ const SelectWithPopover = (props) => {
     debugFocus(`moveFocusToSelect("${e.type}")`);
     select.focus({ preventScroll: true });
   };
-
-  const [shouldIgnoreThatClick, disableClickFor] = useIgnoreClickForMousedown();
 
   return (
     <SelectDispatcher
@@ -592,6 +596,7 @@ const SelectWithPopover = (props) => {
           return;
         }
         if (shouldIgnoreThatClick) {
+          debugPopup(formatEventSideEffect(e, `ignore click`));
           return;
         }
         // When a label is clicked it transfers focus to the select
@@ -609,8 +614,8 @@ const SelectWithPopover = (props) => {
           // space can open the popover we don't want space to propagate to the select otherwise it would open it back immediatly
           event.stopPropagation();
         }
-        requestClose(e);
-        moveFocusToSelect(e);
+        requestClose(event);
+        moveFocusToSelect(event);
       }}
       onFocusOut={(e) => {
         if (import.meta.dev) {
@@ -667,7 +672,6 @@ const SelectWithPopover = (props) => {
           }
           // mousedown inside popover should not bubble to the select (would re-open it if that mousedown closes it)
           e.stopPropagation();
-          disableClickFor(e);
         }}
         onnavi_popover_open={(e) => {
           onOpen(e);
@@ -679,7 +683,7 @@ const SelectWithPopover = (props) => {
             // If the popover closed because focus left the select (focusout),
             // don't steal focus back — let focus go where the user intended.
           } else {
-            moveFocusToSelect(e);
+            moveFocusToSelect(event);
           }
         }}
         positionX="left-aligned"
@@ -697,7 +701,6 @@ const SelectWithPopover = (props) => {
             if (e.button !== 0) {
               return;
             }
-            disableClickFor(e);
             requestClose(e);
           }}
         >
