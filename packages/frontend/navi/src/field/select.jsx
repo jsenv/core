@@ -734,7 +734,7 @@ const SelectWithDialog = (props) => {
       event: e,
     });
   };
-  const [shouldIgnoreThatClick, disableClickFor] = useIgnoreClickForMousedown();
+  const [shouldIgnore, disableClickFor] = useIgnoreClickForMousedown();
 
   const requestClose = (e = new CustomEvent("programmatic")) => {
     if (e.type === "mousedown") {
@@ -776,7 +776,8 @@ const SelectWithDialog = (props) => {
           // click triggered by enter won't open the dialog
           return;
         }
-        if (shouldIgnoreThatClick) {
+        if (shouldIgnore) {
+          debugPopup(formatEventSideEffect(e, `ignore click`));
           // mousedown on the select already handled open/close; ignore this click
           // to avoid toggling the dialog again on mouseup
           return;
@@ -790,7 +791,7 @@ const SelectWithDialog = (props) => {
           // space can open the dialog, we don't want space to propagate to the select otherwise it would open it back immediately
           event.stopPropagation();
         }
-        requestClose(e);
+        requestClose(event);
       }}
       {...rest}
       onKeyDown={shortcutsViaOnKeyDown(
