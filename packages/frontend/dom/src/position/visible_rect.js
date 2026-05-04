@@ -466,15 +466,20 @@ export const pickPositionRelativeTo = (
       if (fitsAbove) {
         finalY = activeY;
       } else {
-        finalY = oppositeY[activeY];
+        const fitsBelow =
+          spaceBelow / elementHeight >= MIN_CONTENT_VISIBILITY_RATIO;
+        finalY = fitsBelow ? oppositeY[activeY] : activeY;
       }
     } else {
       // "below" or "below-overlap"
-      const fitsBelow = spaceBelow >= elementHeight;
+      const fitsBelow =
+        spaceBelow / elementHeight >= MIN_CONTENT_VISIBILITY_RATIO;
       if (fitsBelow) {
         finalY = activeY;
       } else {
-        finalY = oppositeY[activeY];
+        const fitsAbove =
+          spaceAbove / elementHeight >= MIN_CONTENT_VISIBILITY_RATIO;
+        finalY = fitsAbove ? oppositeY[activeY] : activeY;
       }
     }
   }
