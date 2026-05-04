@@ -5,7 +5,7 @@ import { createContext, toChildArray } from "preact";
 import { useContext, useRef, useState } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
-import { isSizeSpacingScaleKey } from "../box/box_style_util.js";
+import { isSizeSpacingKey } from "../box/box_style_util.js";
 import { withPropsClassName } from "../utils/with_props_class_name.js";
 import { useInitialTextSelection } from "./use_initial_text_selection.jsx";
 
@@ -236,7 +236,7 @@ const applySpacingOnTextChildren = (children, spacing, defaultSpace) => {
     separator = defaultSpace;
   } else if (typeof spacing === "string") {
     if (
-      isSizeSpacingScaleKey(spacing) ||
+      isSizeSpacingKey(spacing) ||
       hasCSSSizeUnit(spacing) ||
       spacing.startsWith("var(")
     ) {

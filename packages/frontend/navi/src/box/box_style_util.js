@@ -617,9 +617,9 @@ const TYPO_SIZE_MAP = {
   xxl: "var(--navi-typo-xxl)",
 };
 Object.assign(TYPO_SIZE_MAP, negativeEntries(TYPO_SIZE_MAP));
-const sizeSpacingScaleKeys = new Set(Object.keys(SIZE_MAP));
-export const isSizeSpacingScaleKey = (key) => {
-  return sizeSpacingScaleKeys.has(key);
+const sizeSpacingKeySet = new Set(Object.keys(SIZE_MAP));
+export const isSizeSpacingKey = (key) => {
+  return sizeSpacingKeySet.has(key);
 };
 export const resolveSpacingSize = (size, property = "padding") => {
   return stringifyStyle(SIZE_MAP[size] || size, property);
