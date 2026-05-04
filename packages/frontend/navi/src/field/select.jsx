@@ -112,7 +112,7 @@ const css = /* css */ `
 
     &[data-hover] {
       background-color: var(--select-background-color-hover);
-      outline-color: var(--select-border-color-hover);
+      --x-select-border-color: var(--select-border-color-hover);
     }
 
     &[data-focus-visible] {
@@ -150,7 +150,6 @@ const css = /* css */ `
       }
     }
     .navi_select_trigger_icon {
-      margin-left: 6px;
       flex-shrink: 0;
       opacity: 0.6;
     }
@@ -203,11 +202,8 @@ const css = /* css */ `
           padding-left: var(--x-select-padding-left);
           flex-shrink: 0;
           order: -1; /* before the list — popover is below the trigger */
-
           border-bottom: var(--select-border-width) solid
             var(--x-select-border-color);
-
-          pointer-events: none;
         }
 
         &[data-position-y-current="above"],
@@ -491,7 +487,7 @@ const SelectTrigger = () => {
   const isPlaceholder = !hasValue;
 
   return (
-    <>
+    <Box flex spacing="s">
       <span className="navi_select_trigger_text">
         <span className="navi_select_trigger_placeholder" hidden={hasValue}>
           {placeholder}
@@ -503,7 +499,7 @@ const SelectTrigger = () => {
       <Icon className="navi_select_trigger_icon">
         <ChevronDownSvg />
       </Icon>
-    </>
+    </Box>
   );
 };
 
@@ -679,7 +675,13 @@ const SelectWithPopover = (props) => {
         {/* Clone the trigger visually so the popover wraps both the trigger
             and the list with a unified border/shadow. The clone is not
             interactive — the real trigger behind it handles all events. */}
-        <div className="navi_select_anchor_clone" aria-hidden="true">
+        <div
+          className="navi_select_anchor_clone"
+          onMouseDown={(e) => {
+            disableClickFor(e);
+            requestClose(e);
+          }}
+        >
           {props.trigger}
         </div>
         <SelectRequestCloseContext.Provider value={requestClose}>
