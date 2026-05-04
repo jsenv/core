@@ -3,6 +3,10 @@ import { createPubSub } from "../pub_sub.js";
 
 const DEBUG = false;
 
+// Minimum fraction of element width/height that must be visible on the preferred side
+// before flipping to the opposite side. Prevents flickering near the flip threshold.
+const MIN_CONTENT_VISIBILITY_RATIO = 0.6;
+
 /**
  * Tracks how much of an element is visible within its scrollable parent and within the
  * document viewport. Calls update() on initialization and whenever visibility changes
@@ -369,7 +373,7 @@ export const visibleRectEffect = (element, update) => {
  * @param {number} [options.alignToViewportEdgeWhenAnchorNearEdge=0] - Snap to viewport left
  *   edge when anchor is within this many px of the left edge and element is wider than anchor.
  * @param {number} [options.minLeft=0] - Minimum left coordinate (document-relative).
- * @returns {{ positionX, positionY, left, top, width, height, anchorLeft, anchorTop, anchorRight, anchorBottom, spaceAbove, spaceBelow }}
+ * @returns {{ positionX, positionY, left, top, width, height, anchorLeft, anchorTop, anchorRight, anchorBottom, spaceLeft, spaceRight, spaceAbove, spaceBelow }}
  */
 export const pickPositionRelativeTo = (
   element,
@@ -424,6 +428,8 @@ export const pickPositionRelativeTo = (
 
   const spaceAbove = anchorTop;
   const spaceBelow = viewportHeight - anchorBottom;
+  const spaceLeft = anchorLeft;
+  const spaceRight = viewportWidth - anchorRight;
 
   // Resolve active X and Y, and whether each is fixed (no flip fallback)
   let activeX;
@@ -455,8 +461,8 @@ export const pickPositionRelativeTo = (
     if (yIsFixed || activeY === "center") {
       finalY = activeY;
     } else if (activeY === "above" || activeY === "above-overlap") {
-      const minContentVisibilityRatio = 0.6;
-      const fitsAbove = spaceAbove / elementHeight >= minContentVisibilityRatio;
+      const fitsAbove =
+        spaceAbove / elementHeight >= MIN_CONTENT_VISIBILITY_RATIO;
       if (fitsAbove) {
         finalY = activeY;
       } else {
@@ -485,12 +491,11 @@ export const pickPositionRelativeTo = (
     if (xIsFixed || activeX === "center") {
       finalX = activeX;
     } else if (activeX === "to-the-left" || activeX === "left-aligned") {
-      const spaceLeft = anchorLeft;
-      const spaceRight = viewportWidth - anchorRight;
       const fitsLeft =
         activeX === "to-the-left"
-          ? spaceLeft >= elementWidth
-          : spaceRight >= elementWidth;
+          ? spaceLeft / elementWidth >= MIN_CONTENT_VISIBILITY_RATIO
+          : (viewportWidth - anchorLeft) / elementWidth >=
+            MIN_CONTENT_VISIBILITY_RATIO;
       if (fitsLeft) {
         finalX = activeX;
       } else {
@@ -499,12 +504,10 @@ export const pickPositionRelativeTo = (
       }
     } else {
       // "to-the-right" or "right-aligned"
-      const spaceLeft = anchorLeft;
-      const spaceRight = viewportWidth - anchorRight;
       const fitsRight =
         activeX === "to-the-right"
-          ? spaceRight >= elementWidth
-          : spaceLeft >= elementWidth;
+          ? spaceRight / elementWidth >= MIN_CONTENT_VISIBILITY_RATIO
+          : anchorRight / elementWidth >= MIN_CONTENT_VISIBILITY_RATIO;
       if (fitsRight) {
         finalX = activeX;
       } else {
@@ -617,6 +620,8 @@ export const pickPositionRelativeTo = (
     anchorTop: anchorDocumentTop,
     anchorRight: anchorDocumentRight,
     anchorBottom: anchorDocumentBottom,
+    spaceLeft,
+    spaceRight,
     spaceAbove,
     spaceBelow,
   };
