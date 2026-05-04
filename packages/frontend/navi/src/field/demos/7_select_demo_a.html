@@ -547,51 +547,56 @@
               A fully custom trigger passed via the <code>trigger</code> prop.
               The select has custom border color and radius via style props.
             </p>
-            <Select
-              name="decoupage"
-              value={decoupage}
-              uiAction={(v) => setDecoupage(v)}
-              borderRadius="s"
-              paddingX="m"
-              paddingY="xs"
-              borderColor="#e4e4e7"
-              borderWidth="5"
-              trigger={
-                <Box flex spacing="m" alignY="center">
-                  <Text size="xs">
-                    Découpage de la période
-                    <br />
-                    <Caption>{decoupage}</Caption>
-                  </Text>
-                  <Icon color="rgb(55, 60, 69)" size="xs">
-                    <svg viewBox="0 0 10 10" xmlns="http://www.w3.org/2000/svg">
-                      <path
-                        d="M2 3.5L5 6.5L8 3.5"
-                        stroke="currentColor"
-                        stroke-width="1.5"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        fill="none"
-                      />
-                    </svg>
-                  </Icon>
-                </Box>
-              }
-            >
-              <List role="listbox">
-                {DECOUPAGES.map((d, i) => (
-                  <ListItem
-                    key={d}
-                    index={i}
-                    id={d}
-                    value={d}
-                    selected={decoupage === d}
-                  >
-                    {d}
-                  </ListItem>
-                ))}
-              </List>
-            </Select>
+            <NaviDebug debugPopover>
+              <Select
+                name="decoupage"
+                value={decoupage}
+                uiAction={(v) => setDecoupage(v)}
+                borderRadius="s"
+                paddingX="m"
+                paddingY="xs"
+                borderColor="#e4e4e7"
+                borderWidth="5"
+                trigger={
+                  <Box flex spacing="m" alignY="center">
+                    <Text size="xs">
+                      Découpage de la période
+                      <br />
+                      <Caption>{decoupage}</Caption>
+                    </Text>
+                    <Icon color="rgb(55, 60, 69)" size="xs">
+                      <svg
+                        viewBox="0 0 10 10"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          d="M2 3.5L5 6.5L8 3.5"
+                          stroke="currentColor"
+                          stroke-width="1.5"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          fill="none"
+                        />
+                      </svg>
+                    </Icon>
+                  </Box>
+                }
+              >
+                <List role="listbox">
+                  {DECOUPAGES.map((d, i) => (
+                    <ListItem
+                      key={d}
+                      index={i}
+                      id={d}
+                      value={d}
+                      selected={decoupage === d}
+                    >
+                      {d}
+                    </ListItem>
+                  ))}
+                </List>
+              </Select>
+            </NaviDebug>
             <div className="value-display">{decoupage}</div>
           </div>
         );

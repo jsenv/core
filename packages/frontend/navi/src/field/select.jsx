@@ -195,7 +195,7 @@ const css = /* css */ `
            trigger. It makes the popover wrap both the trigger area and the list
            under a single border/shadow. CSS order places it before the list
            when the popover is below the trigger, and after when above. */
-        .navi_select_anchor_placeholder {
+        .navi_select_anchor_clone {
           /* Mirror the trigger's padding so the clone looks identical */
           padding-top: var(--x-select-padding-top);
           padding-right: var(--x-select-padding-right);
@@ -203,13 +203,20 @@ const css = /* css */ `
           padding-left: var(--x-select-padding-left);
           flex-shrink: 0;
           order: -1; /* before the list — popover is below the trigger */
+
+          border-bottom: var(--select-border-width) solid
+            var(--x-select-border-color);
+
           pointer-events: none;
         }
 
         &[data-position-y-current="above"],
         &[data-position-y-current="above-overlap"] {
-          .navi_select_anchor_placeholder {
+          .navi_select_anchor_clone {
             order: 1; /* after the list — popover is above the trigger */
+            border-top: var(--select-border-width) solid
+              var(--x-select-border-color);
+            border-bottom: none;
           }
         }
 
@@ -527,6 +534,9 @@ const SelectWithPopover = (props) => {
     setExpanded(false);
   };
   const requestOpen = (e) => {
+    // scroll select into view when opening it
+    ref.current.scrollIntoView({ block: "nearest" });
+
     return requestPopoverOpen(popoverRef.current, {
       event: e,
       anchor: ref.current,
@@ -669,7 +679,7 @@ const SelectWithPopover = (props) => {
         {/* Clone the trigger visually so the popover wraps both the trigger
             and the list with a unified border/shadow. The clone is not
             interactive — the real trigger behind it handles all events. */}
-        <div className="navi_select_anchor_placeholder" aria-hidden="true">
+        <div className="navi_select_anchor_clone" aria-hidden="true">
           {props.trigger}
         </div>
         <SelectRequestCloseContext.Provider value={requestClose}>

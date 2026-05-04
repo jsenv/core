@@ -71,15 +71,9 @@ export const Popover = (props) => {
     }
     const effectiveAnchor = anchor || document.documentElement;
     const positionPopover = (positionEvent) => {
-      debugPopover(`positionPopover("${positionEvent.type}")`);
-      popoverEl.style.setProperty(
-        "--anchor-width",
-        `${effectiveAnchor.getBoundingClientRect().width}px`,
-      );
-      popoverEl.style.setProperty(
-        "--anchor-height",
-        `${effectiveAnchor.getBoundingClientRect().height}px`,
-      );
+      const { width, height } = effectiveAnchor.getBoundingClientRect();
+      popoverEl.style.setProperty("--anchor-width", `${width}px`);
+      popoverEl.style.setProperty("--anchor-height", `${height}px`);
       const minLeft = 1;
       const effectivePositionX = anchor ? positionX : "center";
       const { left, top } = pickPositionRelativeTo(popoverEl, effectiveAnchor, {
@@ -89,6 +83,9 @@ export const Popover = (props) => {
         positionYFixed,
         minLeft,
       });
+      debugPopover(
+        `positionPopover("${positionEvent.type}") -> left: ${left}, top: ${top}`,
+      );
       popoverEl.style.top = `${top}px`;
       popoverEl.style.left = `${Math.max(left, minLeft)}px`;
     };
