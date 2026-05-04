@@ -473,8 +473,46 @@ export const pickPositionRelativeTo = (
     }
   }
 
-  // Final X has no flip fallback
-  const finalX = activeX;
+  // Resolve final X — flip to opposite when requested X does not fit
+  let finalX;
+  {
+    const oppositeX = {
+      "to-the-left": "to-the-right",
+      "to-the-right": "to-the-left",
+      "left-aligned": "right-aligned",
+      "right-aligned": "left-aligned",
+    };
+    if (xIsFixed || activeX === "center") {
+      finalX = activeX;
+    } else if (activeX === "to-the-left" || activeX === "left-aligned") {
+      const spaceLeft = anchorLeft;
+      const spaceRight = viewportWidth - anchorRight;
+      const fitsLeft =
+        activeX === "to-the-left"
+          ? spaceLeft >= elementWidth
+          : spaceRight >= elementWidth;
+      if (fitsLeft) {
+        finalX = activeX;
+      } else {
+        const moreSpaceOnRight = spaceRight > spaceLeft;
+        finalX = moreSpaceOnRight ? oppositeX[activeX] : activeX;
+      }
+    } else {
+      // "to-the-right" or "right-aligned"
+      const spaceLeft = anchorLeft;
+      const spaceRight = viewportWidth - anchorRight;
+      const fitsRight =
+        activeX === "to-the-right"
+          ? spaceRight >= elementWidth
+          : spaceLeft >= elementWidth;
+      if (fitsRight) {
+        finalX = activeX;
+      } else {
+        const moreSpaceOnLeft = spaceLeft > spaceRight;
+        finalX = moreSpaceOnLeft ? oppositeX[activeX] : activeX;
+      }
+    }
+  }
 
   // Calculate horizontal position (viewport-relative)
   let elementPositionLeft;
