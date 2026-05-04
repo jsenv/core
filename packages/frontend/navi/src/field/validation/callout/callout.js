@@ -13,6 +13,7 @@ import {
 } from "@jsenv/dom";
 import { isValidElement } from "preact";
 
+import { dispatchPublicCustomEvent } from "../../../utils/custom_event.js";
 import { renderIntoCallout } from "./callout.jsx";
 
 /**
@@ -382,16 +383,23 @@ export const openCallout = (
 
     allowWheelThrough(calloutElement, anchorElement);
     anchorElement.setAttribute("data-callout", calloutId);
-    dispatchCalloutCustomElement(
-      anchorElement,
-      new CustomEvent("navi_callout_open", { bubbles: true }),
-    );
     addTeardown(() => {
       anchorElement.removeAttribute("data-callout");
-      dispatchCalloutCustomElement(
-        anchorElement,
-        new CustomEvent("navi_callout_close", { bubbles: true }),
-      );
+    });
+
+    const visualElement = (() => {
+      const visualSelector = anchorElement.getAttribute("data-visual-selector");
+      if (visualSelector) {
+        const visualElement = anchorElement.querySelector(visualSelector);
+        if (visualElement) {
+          return visualElement;
+        }
+      }
+      return anchorElement;
+    })();
+    dispatchPublicCustomEvent(visualElement, "navi_callout_open");
+    addTeardown(() => {
+      dispatchPublicCustomEvent(visualElement, "navi_callout_close");
     });
 
     addStatusEffect((status) => {
@@ -1095,21 +1103,4 @@ const generateSvgWithoutArrow = (width, height) => {
         ry="${Math.max(0, CORNER_RADIUS - BORDER_WIDTH)}"
       />
     </svg>`;
-};
-
-const dispatchCalloutCustomElement = (anchorElement, customEvent) => {
-  let targetElement;
-
-  const visualSelector = anchorElement.getAttribute("data-visual-selector");
-  if (visualSelector) {
-    const visualElement = anchorElement.querySelector(visualSelector);
-    if (visualElement) {
-      targetElement = visualElement;
-    }
-  } else {
-    targetElement = anchorElement;
-  }
-
-  // console.log("dispatch on", targetElement, "event", customEvent);
-  targetElement.dispatchEvent(customEvent);
 };
