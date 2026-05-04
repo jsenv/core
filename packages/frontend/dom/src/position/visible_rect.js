@@ -436,6 +436,8 @@ export const pickPositionRelativeTo = (
   let activeY;
   const xIsFixed = Boolean(positionXFixed);
   const yIsFixed = Boolean(positionYFixed);
+  const hasStoredY = Boolean(element.getAttribute("data-position-y-current"));
+  const hasStoredX = Boolean(element.getAttribute("data-position-x-current"));
   if (xIsFixed) {
     activeX = positionXFixed;
   } else {
@@ -449,7 +451,7 @@ export const pickPositionRelativeTo = (
     activeY = storedY ?? positionY;
   }
 
-  // Resolve final Y — flip to opposite when requested Y does not fit
+  // Resolve final Y
   let finalY;
   {
     const oppositeY = {
@@ -458,44 +460,55 @@ export const pickPositionRelativeTo = (
       "above-overlap": "below-overlap",
       "below-overlap": "above-overlap",
     };
+    // Compute effective space for a given Y value
+    const spaceFor = (y) => {
+      if (y === "above") {
+        return spaceAbove;
+      }
+      if (y === "above-overlap") {
+        return spaceAbove + anchorHeight;
+      }
+      if (y === "below") {
+        return spaceBelow;
+      }
+      if (y === "below-overlap") {
+        return spaceBelow + anchorHeight;
+      }
+      return Infinity; // center
+    };
     if (yIsFixed || activeY === "center") {
       finalY = activeY;
-    } else if (activeY === "above" || activeY === "above-overlap") {
-      // above: element.bottom = anchor.top → needs spaceAbove (= anchorTop)
-      // above-overlap: element.bottom = anchor.bottom → needs anchorBottom worth of space
-      const spaceForAbove =
-        activeY === "above" ? spaceAbove : spaceAbove + anchorHeight;
-      const spaceForBelow =
-        activeY === "above" ? spaceBelow : spaceBelow + anchorHeight;
-      const fitsAbove =
-        spaceForAbove / elementHeight >= MIN_CONTENT_VISIBILITY_RATIO;
-      if (fitsAbove) {
-        finalY = activeY;
+    } else if (!hasStoredY) {
+      // Never positioned before — pick the best side from scratch.
+      const preferred = positionY;
+      const opposite = oppositeY[preferred];
+      const preferredFits = spaceFor(preferred) >= elementHeight;
+      const oppositeFits = spaceFor(opposite) >= elementHeight;
+      if (preferredFits) {
+        // Preferred fits completely — use it (even if opposite also fits)
+        finalY = preferred;
+      } else if (oppositeFits) {
+        // Only opposite fits completely — flip
+        finalY = opposite;
       } else {
-        const fitsBelow =
-          spaceForBelow / elementHeight >= MIN_CONTENT_VISIBILITY_RATIO;
-        finalY = fitsBelow ? oppositeY[activeY] : activeY;
+        // Neither fits completely — use whichever meets the minimum ratio
+        const preferredMeetsRatio =
+          spaceFor(preferred) / elementHeight >= MIN_CONTENT_VISIBILITY_RATIO;
+        finalY = preferredMeetsRatio ? preferred : opposite;
       }
     } else {
-      // below: element.top = anchor.bottom → needs spaceBelow (= viewportHeight - anchorBottom)
-      // below-overlap: element.top = anchor.top → needs viewportHeight - anchorTop worth of space
-      const spaceForBelow =
-        activeY === "below" ? spaceBelow : spaceBelow + anchorHeight;
-      const spaceForAbove =
-        activeY === "below" ? spaceAbove : spaceAbove + anchorHeight;
-      const fitsBelow =
-        spaceForBelow / elementHeight >= MIN_CONTENT_VISIBILITY_RATIO;
-      if (fitsBelow) {
+      // Previously positioned — stay as long as current side meets minimum ratio
+      const currentFitsEnough =
+        spaceFor(activeY) / elementHeight >= MIN_CONTENT_VISIBILITY_RATIO;
+      if (currentFitsEnough) {
         finalY = activeY;
       } else {
-        const fitsAbove =
-          spaceForAbove / elementHeight >= MIN_CONTENT_VISIBILITY_RATIO;
-        finalY = fitsAbove ? oppositeY[activeY] : activeY;
+        finalY = oppositeY[activeY];
       }
     }
   }
 
-  // Resolve final X — flip to opposite when requested X does not fit
+  // Resolve final X
   let finalX;
   {
     const oppositeX = {
@@ -504,31 +517,47 @@ export const pickPositionRelativeTo = (
       "left-aligned": "right-aligned",
       "right-aligned": "left-aligned",
     };
+    // Compute effective space for a given X value
+    const spaceFor = (x) => {
+      if (x === "to-the-left") {
+        return spaceLeft;
+      }
+      if (x === "left-aligned") {
+        return viewportWidth - anchorLeft;
+      }
+      if (x === "right-aligned") {
+        return anchorRight;
+      }
+      if (x === "to-the-right") {
+        return spaceRight;
+      }
+      return Infinity; // center
+    };
     if (xIsFixed || activeX === "center") {
       finalX = activeX;
-    } else if (activeX === "to-the-left" || activeX === "left-aligned") {
-      const fitsLeft =
-        activeX === "to-the-left"
-          ? spaceLeft / elementWidth >= MIN_CONTENT_VISIBILITY_RATIO
-          : (viewportWidth - anchorLeft) / elementWidth >=
-            MIN_CONTENT_VISIBILITY_RATIO;
-      if (fitsLeft) {
-        finalX = activeX;
+    } else if (!hasStoredX) {
+      // Never positioned before — pick the best side from scratch.
+      const preferred = positionX;
+      const opposite = oppositeX[preferred];
+      const preferredFits = spaceFor(preferred) >= elementWidth;
+      const oppositeFits = spaceFor(opposite) >= elementWidth;
+      if (preferredFits) {
+        finalX = preferred;
+      } else if (oppositeFits) {
+        finalX = opposite;
       } else {
-        const moreSpaceOnRight = spaceRight > spaceLeft;
-        finalX = moreSpaceOnRight ? oppositeX[activeX] : activeX;
+        const preferredMeetsRatio =
+          spaceFor(preferred) / elementWidth >= MIN_CONTENT_VISIBILITY_RATIO;
+        finalX = preferredMeetsRatio ? preferred : opposite;
       }
     } else {
-      // "to-the-right" or "right-aligned"
-      const fitsRight =
-        activeX === "to-the-right"
-          ? spaceRight / elementWidth >= MIN_CONTENT_VISIBILITY_RATIO
-          : anchorRight / elementWidth >= MIN_CONTENT_VISIBILITY_RATIO;
-      if (fitsRight) {
+      // Previously positioned — stay as long as current side meets minimum ratio
+      const currentFitsEnough =
+        spaceFor(activeX) / elementWidth >= MIN_CONTENT_VISIBILITY_RATIO;
+      if (currentFitsEnough) {
         finalX = activeX;
       } else {
-        const moreSpaceOnLeft = spaceLeft > spaceRight;
-        finalX = moreSpaceOnLeft ? oppositeX[activeX] : activeX;
+        finalX = oppositeX[activeX];
       }
     }
   }
