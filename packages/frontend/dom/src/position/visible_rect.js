@@ -381,6 +381,10 @@ export const pickPositionRelativeTo = (
     // producing a border-collapse effect (the element's border sits on top of the
     // anchor's border instead of being placed flush outside it).
     anchorBorderCollapse = false,
+    // When true the positioned element is placed ON TOP of the anchor instead of
+    // outside it. For "bottom" positioning the element's top aligns with the anchor's
+    // top (the element covers the anchor). Disabled by default.
+    anchorOverlap = false,
   } = {},
 ) => {
   if (
@@ -526,12 +530,16 @@ export const pickPositionRelativeTo = (
     if (resolvedVertical === "center-y") {
       elementPositionTop = anchorTop + anchorHeight / 2 - elementHeight / 2;
     } else if (resolvedVertical === "bottom") {
-      const idealTop = anchorBottom - anchorBorderBottom;
+      const idealTop = anchorOverlap
+        ? anchorTop
+        : anchorBottom - anchorBorderBottom;
       elementPositionTop =
         idealTop % 1 === 0 ? idealTop : Math.floor(idealTop) + 1;
     } else {
       // "top"
-      const idealTop = anchorTop + anchorBorderTop - elementHeight;
+      const idealTop = anchorOverlap
+        ? anchorBottom - elementHeight
+        : anchorTop + anchorBorderTop - elementHeight;
       elementPositionTop = idealTop < 0 ? 0 : idealTop;
     }
   }

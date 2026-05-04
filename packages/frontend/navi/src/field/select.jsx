@@ -163,17 +163,33 @@ const css = /* css */ `
         inset: unset;
         min-width: var(--anchor-width, 0px);
         max-width: 95vw;
+        /* max-height covers the placeholder + list; the list scrolls internally */
         max-height: 95dvh;
         margin: 0;
         padding: 0;
-        background: white;
+        background: transparent;
         border-width: var(--select-border-width);
         border-style: solid;
         border-color: var(--select-border-color);
+        border-radius: var(--select-border-radius);
         box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
         cursor: default; /* Reset pointer cursor within the select */
-        overflow: auto;
+        overflow: hidden;
         overscroll-behavior: none;
+
+        /* The anchor placeholder sits at the top of the popover and mirrors the
+           trigger's height. It is transparent so the real trigger shows through. */
+        .navi_select_anchor_placeholder {
+          height: var(--anchor-height, 0px);
+          flex-shrink: 0;
+          pointer-events: none;
+        }
+
+        /* The list scrolls inside the popover */
+        .navi_list_container {
+          overflow: auto;
+          overscroll-behavior: none;
+        }
       }
 
       &[data-focus-within]:has([data-focus-visible]) {
@@ -185,28 +201,6 @@ const css = /* css */ `
         .navi_select_popover {
           border-width: var(--x-select-outline-width-focus-visible);
           border-color: var(--navi-focus-outline-color);
-        }
-      }
-
-      &[data-popover-position="top"] {
-        border-top-color: transparent;
-        border-top-left-radius: 0;
-        border-top-right-radius: 0;
-
-        .navi_select_popover {
-          border-bottom: none;
-          border-top-left-radius: var(--select-border-radius);
-          border-top-right-radius: var(--select-border-radius);
-        }
-      }
-      &[data-popover-position="bottom"] {
-        border-bottom-right-radius: 0;
-        border-bottom-left-radius: 0;
-
-        .navi_select_popover {
-          border-top: none;
-          border-bottom-right-radius: var(--select-border-radius);
-          border-bottom-left-radius: var(--select-border-radius);
         }
       }
 
@@ -637,11 +631,14 @@ const SelectWithPopover = (props) => {
           }
         }}
         positionTry={positionTry}
-        anchorBorderCollapse
+        anchorOverlap
         scrollTrap={scrollTrap}
         pointerTrap={pointerTrap}
         focusTrap={focusTrap}
       >
+        {/* Placeholder that mirrors the anchor's height so the popover visually
+            wraps the trigger + list. opacity:0 lets the real trigger show through. */}
+        <div className="navi_select_anchor_placeholder" aria-hidden="true" />
         <SelectRequestCloseContext.Provider value={requestClose}>
           {children}
         </SelectRequestCloseContext.Provider>

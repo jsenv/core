@@ -42,6 +42,7 @@ export const Popover = (props) => {
     children,
     positionTry = "bottom",
     anchorBorderCollapse = false,
+    anchorOverlap = false,
     ...rest
   } = props;
 
@@ -74,6 +75,10 @@ export const Popover = (props) => {
         "--anchor-width",
         `${effectiveAnchor.getBoundingClientRect().width}px`,
       );
+      popoverEl.style.setProperty(
+        "--anchor-height",
+        `${effectiveAnchor.getBoundingClientRect().height}px`,
+      );
       const minLeft = 1;
       const effectivePositionTry = anchor ? positionTry : "center";
       const { left, top, position } = pickPositionRelativeTo(
@@ -83,6 +88,7 @@ export const Popover = (props) => {
           positionTry: effectivePositionTry,
           minLeft,
           anchorBorderCollapse,
+          anchorOverlap,
         },
       );
       effectiveAnchor.setAttribute("data-popover-position", position);
