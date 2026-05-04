@@ -6836,9 +6836,9 @@ const TYPO_SIZE_MAP = {
   xxl: "var(--navi-typo-xxl)",
 };
 Object.assign(TYPO_SIZE_MAP, negativeEntries(TYPO_SIZE_MAP));
-const sizeSpacingScaleKeys = new Set(Object.keys(SIZE_MAP));
-const isSizeSpacingScaleKey = (key) => {
-  return sizeSpacingScaleKeys.has(key);
+const sizeSpacingKeySet = new Set(Object.keys(SIZE_MAP));
+const isSizeSpacingKey = (key) => {
+  return sizeSpacingKeySet.has(key);
 };
 const resolveSpacingSize = (size, property = "padding") => {
   return stringifyStyle(SIZE_MAP[size] || size, property);
@@ -20962,6 +20962,13 @@ const CustomWidthSpace = ({
   useRealSpaceChar
 }) => {
   if (useRealSpaceChar) {
+    // Two-span trick: we want a real space character in the DOM so that
+    // copy-pasting the text produces an actual space, but we also want
+    // full control over the visual width of that gap.
+    // - First span: contains the real space but rendered at font-size:0 so it
+    //   takes up zero visual space.
+    // - Second span: a zero-width joiner (&#8203;) with padding-left set to
+    //   the desired gap size. This is the only visible part.
     return jsxs("span", {
       children: [jsx("span", {
         style: "font-size: 0",
@@ -20994,7 +21001,13 @@ const applySpacingOnTextChildren = (children, spacing, defaultSpace) => {
   if (spacing === REGULAR_SPACE || spacing === FAKE_SPACE) {
     separator = defaultSpace;
   } else if (typeof spacing === "string") {
-    if (isSizeSpacingScaleKey(spacing) || hasCSSSizeUnit(spacing) || spacing.startsWith("var(")) {
+    if (isSizeSpacingKey(spacing)) {
+      const value = resolveSpacingSize(spacing);
+      separator = jsx(CustomWidthSpace, {
+        value: value,
+        useRealSpaceChar: useRealSpaceChar
+      });
+    } else if (hasCSSSizeUnit(spacing) || spacing.startsWith("var(")) {
       separator = jsx(CustomWidthSpace, {
         value: spacing,
         useRealSpaceChar: useRealSpaceChar
@@ -22782,7 +22795,9 @@ const ButtonDispatcher = props => {
   });
 };
 const ButtonUI = props => {
+  import.meta.css = [css$x, "@jsenv/navi/src/field/button.jsx"];
   const {
+    ref,
     readOnly,
     disabled,
     loading,
@@ -22799,13 +22814,10 @@ const ButtonUI = props => {
     children,
     ...rest
   } = props;
-  import.meta.css = [css$x, "@jsenv/navi/src/field/button.jsx"];
   const contextLoading = useContext(LoadingContext);
   const contextLoadingElement = useContext(LoadingElementContext);
   const contextReadOnly = useContext(ReadOnlyContext);
   const contextDisabled = useContext(DisabledContext);
-  const defaultRef = useRef();
-  const ref = props.ref || defaultRef;
   useAutoFocus(ref, autoFocus);
   const remainingProps = useConstraints(ref, rest);
   const innerLoading = loading || contextLoading && contextLoadingElement === ref.current;
@@ -22839,6 +22851,7 @@ const ButtonUI = props => {
   return jsxs(Box, {
     "data-readonly-silent": innerLoading ? "" : undefined,
     ...remainingProps,
+    ref: ref,
     autFocus: undefined // See use_auto_focus.js
     ,
 
@@ -22846,7 +22859,6 @@ const ButtonUI = props => {
     href: href,
     target: innerTarget,
     rel: innerRel,
-    ref: ref,
     onContextMenu: e => {
       if (as === "a") {
         // For link we keep context menu to allow "open in new tab" and other browser features
