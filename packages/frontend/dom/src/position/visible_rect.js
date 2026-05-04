@@ -461,24 +461,35 @@ export const pickPositionRelativeTo = (
     if (yIsFixed || activeY === "center") {
       finalY = activeY;
     } else if (activeY === "above" || activeY === "above-overlap") {
+      // above: element.bottom = anchor.top → needs spaceAbove (= anchorTop)
+      // above-overlap: element.bottom = anchor.bottom → needs anchorBottom worth of space
+      const spaceForAbove =
+        activeY === "above" ? spaceAbove : spaceAbove + anchorHeight;
+      const spaceForBelow =
+        activeY === "above" ? spaceBelow : spaceBelow + anchorHeight;
       const fitsAbove =
-        spaceAbove / elementHeight >= MIN_CONTENT_VISIBILITY_RATIO;
+        spaceForAbove / elementHeight >= MIN_CONTENT_VISIBILITY_RATIO;
       if (fitsAbove) {
         finalY = activeY;
       } else {
         const fitsBelow =
-          spaceBelow / elementHeight >= MIN_CONTENT_VISIBILITY_RATIO;
+          spaceForBelow / elementHeight >= MIN_CONTENT_VISIBILITY_RATIO;
         finalY = fitsBelow ? oppositeY[activeY] : activeY;
       }
     } else {
-      // "below" or "below-overlap"
+      // below: element.top = anchor.bottom → needs spaceBelow (= viewportHeight - anchorBottom)
+      // below-overlap: element.top = anchor.top → needs viewportHeight - anchorTop worth of space
+      const spaceForBelow =
+        activeY === "below" ? spaceBelow : spaceBelow + anchorHeight;
+      const spaceForAbove =
+        activeY === "below" ? spaceAbove : spaceAbove + anchorHeight;
       const fitsBelow =
-        spaceBelow / elementHeight >= MIN_CONTENT_VISIBILITY_RATIO;
+        spaceForBelow / elementHeight >= MIN_CONTENT_VISIBILITY_RATIO;
       if (fitsBelow) {
         finalY = activeY;
       } else {
         const fitsAbove =
-          spaceAbove / elementHeight >= MIN_CONTENT_VISIBILITY_RATIO;
+          spaceForAbove / elementHeight >= MIN_CONTENT_VISIBILITY_RATIO;
         finalY = fitsAbove ? oppositeY[activeY] : activeY;
       }
     }

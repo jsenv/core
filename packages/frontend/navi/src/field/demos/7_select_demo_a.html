@@ -529,7 +529,13 @@
 
       // ── Demo 7: Custom trigger ────────────────────────────────────────────────
 
-      const DECOUPAGES = ["Annuel", "Trimestriel", "Mensuel", "Hebdomadaire"];
+      const DECOUPAGES = [
+        "Annuel",
+        "Trimestriel",
+        "Mensuel",
+        "Hebdomadaire",
+        "Journalier",
+      ];
 
       const Demo7 = () => {
         const [decoupage, setDecoupage] = useState("Annuel");
@@ -550,7 +556,6 @@
               paddingY="xs"
               borderColor="#e4e4e7"
               borderWidth="5"
-              outlineWidth="20"
               trigger={
                 <Box flex spacing="m" alignY="center">
                   <Text size="xs">
