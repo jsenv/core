@@ -36,7 +36,7 @@ export const Dialog = (props) => {
   const openedRef = useRef(false);
   const [addCleanup, cleanup] = useCleanup();
   const open = (e) => {
-    debugPopup(`openDialog("${e.type}")`);
+    debugPopup(`"${e.type}" on ${getElementSignature(e.target)} -> openDialog`);
     const dialogEl = ref.current;
     dialogEl.showModal();
     const firstFocusable = findFocusable(dialogEl);
@@ -55,7 +55,9 @@ export const Dialog = (props) => {
     });
   };
   const close = (e) => {
-    debugPopup(`closeDialog("${e.type}")`);
+    debugPopup(
+      `"${e.type}" on ${getElementSignature(e.target)} -> closeDialog`,
+    );
     const dialogEl = ref.current;
     dialogEl.close();
     cleanup();
