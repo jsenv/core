@@ -117,7 +117,6 @@
                     >
                       <List
                         role="listbox"
-                        expandX
                         // debugScroll
                         separator={<Separator margin="0" />}
                       >
@@ -209,7 +208,7 @@
                 scrollTrap
                 focusTrap
               >
-                <List role="listbox" expandX minWidth="240">
+                <List role="listbox" minWidth="240">
                   <ListItemHeader padding="m" borderBottom="1px solid #eee">
                     <Input
                       uiAction={(v) => setSearchText(v)}
@@ -287,7 +286,7 @@
                 uiAction={(v) => setSize(v)}
                 placeholder="Pick a size…"
               >
-                <List role="listbox" expandX>
+                <List role="listbox">
                   {SIZES.map((s, i) => (
                     <ListItem
                       key={s}
@@ -307,7 +306,7 @@
                 value="L"
                 disabled
               >
-                <List role="listbox" expandX>
+                <List role="listbox">
                   {SIZES.map((s, i) => (
                     <ListItem
                       key={s}
@@ -357,7 +356,7 @@
                       placeholder="Pick a country…"
                       uiAction={(v) => setCountry(v)}
                     >
-                      <List role="listbox" expandX>
+                      <List role="listbox">
                         {COUNTRIES.map((c, i) => (
                           <ListItem
                             key={c}
@@ -381,7 +380,7 @@
                       uiAction={(v) => setRole(v)}
                       placeholder="Pick a role…"
                     >
-                      <List role="listbox" expandX>
+                      <List role="listbox">
                         {["Admin", "Editor", "Viewer"].map((r, i) => (
                           <ListItem
                             key={r}
@@ -435,7 +434,7 @@
                 setSearchText("");
               }}
             >
-              <List role="listbox" expandX minWidth="300" withSearch>
+              <List role="listbox" minWidth="300" withSearch>
                 <ListItemHeader>
                   <div
                     style={{ padding: "8px", borderBottom: "1px solid #eee" }}
@@ -501,7 +500,7 @@
                     requiredMessage="Veuillez choisir un pays."
                     uiAction={(v) => setCountry(v)}
                   >
-                    <List role="listbox" expandX>
+                    <List role="listbox">
                       {COUNTRIES.map((c, i) => (
                         <ListItem
                           key={c}
@@ -553,7 +552,7 @@
               trigger={
                 <Box flex spacing="m" alignY="center">
                   <Text size="xs">
-                    Découpage
+                    Découpage de la période
                     <br />
                     <Caption>{decoupage}</Caption>
                   </Text>
@@ -572,7 +571,7 @@
                 </Box>
               }
             >
-              <List role="listbox" expandX>
+              <List role="listbox">
                 {DECOUPAGES.map((d, i) => (
                   <ListItem
                     key={d}

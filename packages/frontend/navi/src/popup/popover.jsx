@@ -75,9 +75,17 @@ export const Popover = (props) => {
       );
       const minLeft = 1;
       const effectivePositionTry = anchor ? positionTry : "center";
-      const { left, top } = pickPositionRelativeTo(popoverEl, effectiveAnchor, {
-        positionTry: effectivePositionTry,
-        minLeft,
+      const { left, top, position } = pickPositionRelativeTo(
+        popoverEl,
+        effectiveAnchor,
+        {
+          positionTry: effectivePositionTry,
+          minLeft,
+        },
+      );
+      effectiveAnchor.setAttribute("data-popover-position", position);
+      addCleanup(() => {
+        effectiveAnchor.removeAttribute("data-popover-position");
       });
       popoverEl.style.top = `${top}px`;
       const popoverRect = popoverEl.getBoundingClientRect();

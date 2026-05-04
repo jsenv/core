@@ -118,10 +118,6 @@ const css = /* css */ `
       cursor: default;
     }
 
-    .navi_list_container {
-      --list-border-radius: 0;
-    }
-
     .navi_select_trigger_text {
       display: inline-flex;
       min-width: 0;
@@ -163,6 +159,22 @@ const css = /* css */ `
         }
       }
 
+      &[aria-expanded="true"] {
+        &[data-popover-position="top"] {
+          border-top-left-radius: 0;
+          border-top-right-radius: 0;
+        }
+        &[data-popover-position="bottom"] {
+          border-bottom-right-radius: 0;
+          border-bottom-left-radius: 0;
+        }
+      }
+
+      .navi_list_container {
+        width: 100%;
+        border-radius: inherit;
+      }
+
       .navi_select_popover {
         position: absolute;
         inset: unset;
@@ -189,7 +201,9 @@ const css = /* css */ `
     /* dialog */
     &[aria-haspopup="dialog"] {
       .navi_list_container {
+        width: 100%;
         --list-max-height: none;
+        border-radius: inherit;
       }
 
       /* When the list inside the dialog has keyboard focus, show the focus ring
