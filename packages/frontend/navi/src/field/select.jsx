@@ -73,25 +73,29 @@ const css = /* css */ `
       var(--select-outline-width) + var(--select-border-width)
     );
     --x-select-outline-offset: calc(-1 * var(--select-border-width));
-
-    position: relative;
-    box-sizing: border-box;
-    padding-top: var(
+    --x-select-padding-top: var(
       --select-padding-top,
       var(--select-padding-y, var(--select-padding-y-default))
     );
-    padding-right: var(
+    --x-select-padding-right: var(
       --select-padding-right,
       var(--select-padding-x, var(--select-padding-x-default))
     );
-    padding-bottom: var(
-      --select-padding-bottom,
-      var(--select-padding-y, var(--select-padding-y-default))
-    );
-    padding-left: var(
+    --x-select-padding-left: var(
       --select-padding-left,
       var(--select-padding-x, var(--select-padding-x-default))
     );
+    --x-select-padding-bottom: var(
+      --select-padding-bottom,
+      var(--select-padding-y, var(--select-padding-y-default))
+    );
+
+    position: relative;
+    box-sizing: border-box;
+    padding-top: var(--x-select-padding-top);
+    padding-right: var(--x-select-padding-right);
+    padding-bottom: var(--x-select-padding-bottom);
+    padding-left: var(--x-select-padding-left);
     color: var(--select-color);
     font-size: var(--select-font-size);
     text-align: inherit; /* override browser defaults on button which is center */
@@ -174,7 +178,7 @@ const css = /* css */ `
         max-height: 95dvh;
         margin: 0;
         padding: 0;
-        background: transparent;
+        background: var(--select-background-color);
         border-width: var(--select-border-width);
         border-style: solid;
         border-color: var(--x-select-border-color);
@@ -187,12 +191,16 @@ const css = /* css */ `
         overflow: hidden;
         overscroll-behavior: none;
 
-        /* The anchor placeholder mirrors the trigger's height so the popover
-           visually wraps the trigger + list. It is transparent so the real
-           trigger shows through. CSS order places it before the list when the
-           popover is below the trigger, and after when it is above. */
+        /* The anchor placeholder is a non-interactive visual clone of the
+           trigger. It makes the popover wrap both the trigger area and the list
+           under a single border/shadow. CSS order places it before the list
+           when the popover is below the trigger, and after when above. */
         .navi_select_anchor_placeholder {
-          height: var(--anchor-height, 0px);
+          /* Mirror the trigger's padding so the clone looks identical */
+          padding-top: var(--x-select-padding-top);
+          padding-right: var(--x-select-padding-right);
+          padding-bottom: var(--x-select-padding-bottom);
+          padding-left: var(--x-select-padding-left);
           flex-shrink: 0;
           order: -1; /* before the list — popover is below the trigger */
           pointer-events: none;
@@ -312,7 +320,12 @@ export const Select = (props) => {
 
   return (
     <ParentUIStateControllerContext.Provider value={uiStateController}>
-      <SelectDispatcher {...props} ref={ref} value={value} />
+      <SelectDispatcher
+        trigger={<SelectTrigger />}
+        {...props}
+        ref={ref}
+        value={value}
+      />
     </ParentUIStateControllerContext.Provider>
   );
 };
@@ -332,7 +345,7 @@ const SelectDispatcher = (props) => {
 
 const SelectUI = (props) => {
   import.meta.css = css;
-  let {
+  const {
     placeholder = "Select…",
     trigger,
     name,
@@ -368,9 +381,6 @@ const SelectUI = (props) => {
     preventScroll: autoFocusPreventScroll,
   });
 
-  if (trigger === undefined) {
-    trigger = <SelectTrigger />;
-  }
   return (
     <Box
       as="button"
@@ -656,9 +666,12 @@ const SelectWithPopover = (props) => {
         pointerTrap={pointerTrap}
         focusTrap={focusTrap}
       >
-        {/* Placeholder that mirrors the anchor's height so the popover visually
-            wraps the trigger + list. opacity:0 lets the real trigger show through. */}
-        <div className="navi_select_anchor_placeholder" aria-hidden="true" />
+        {/* Clone the trigger visually so the popover wraps both the trigger
+            and the list with a unified border/shadow. The clone is not
+            interactive — the real trigger behind it handles all events. */}
+        <div className="navi_select_anchor_placeholder" aria-hidden="true">
+          {props.trigger}
+        </div>
         <SelectRequestCloseContext.Provider value={requestClose}>
           {children}
         </SelectRequestCloseContext.Provider>
