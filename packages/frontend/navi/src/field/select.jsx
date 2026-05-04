@@ -6,7 +6,11 @@ import { ChevronDownSvg } from "../graphic/icons/chevron_updown_svg.jsx";
 import { LoaderBackground } from "../graphic/loader/loader_background.jsx";
 import { shortcutsViaOnKeyDown } from "../keyboard/keyboard_shortcuts.js";
 import { windowWidthSignal } from "../layout/responsive.js";
-import { useDebugFocus } from "../navi_debug.jsx";
+import {
+  formatEventSideEffect,
+  useDebugFocus,
+  useDebugPopup,
+} from "../navi_debug.jsx";
 import {
   Dialog,
   requestDialogClose,
@@ -711,6 +715,7 @@ const SelectWithDialog = (props) => {
   let { ref, disabled, onKeyDown, children, scrollTrap, pointerTrap, ...rest } =
     props;
   const debugFocus = useDebugFocus();
+  const debugPopup = useDebugPopup();
   const dialogRef = useRef(null);
   const dialogId = useId();
   const [expanded, setExpanded] = useState(false);
@@ -729,7 +734,13 @@ const SelectWithDialog = (props) => {
       event: e,
     });
   };
+  const [shouldIgnoreThatClick, disableClickFor] = useIgnoreClickForMousedown();
+
   const requestClose = (e = new CustomEvent("programmatic")) => {
+    if (e.type === "mousedown") {
+      debugPopup(formatEventSideEffect(e, `disable click`));
+      disableClickFor(e);
+    }
     return requestDialogClose(dialogRef.current, {
       event: e,
     });
@@ -738,8 +749,6 @@ const SelectWithDialog = (props) => {
     debugFocus(`moveFocusToSelect("${e.type}")`);
     ref.current.focus({ preventScroll: true });
   };
-
-  const [shouldIgnoreThatClick, disableClickFor] = useIgnoreClickForMousedown();
 
   return (
     <SelectDispatcher
@@ -829,7 +838,6 @@ const SelectWithDialog = (props) => {
           }
           // mousedown inside dialog should not bubble to the select (would re-open it if that mousedown closes it)
           e.stopPropagation();
-          disableClickFor(e);
         }}
         scrollTrap={scrollTrap}
         pointerTrap={pointerTrap}
