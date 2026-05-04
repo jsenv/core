@@ -322,7 +322,9 @@ const ButtonDispatcher = (props) => {
   return <ButtonUI {...props} />;
 };
 const ButtonUI = (props) => {
+  import.meta.css = css;
   const {
+    ref,
     readOnly,
     disabled,
     loading,
@@ -341,15 +343,10 @@ const ButtonUI = (props) => {
     children,
     ...rest
   } = props;
-
-  import.meta.css = css;
   const contextLoading = useContext(LoadingContext);
   const contextLoadingElement = useContext(LoadingElementContext);
   const contextReadOnly = useContext(ReadOnlyContext);
   const contextDisabled = useContext(DisabledContext);
-
-  const defaultRef = useRef();
-  const ref = props.ref || defaultRef;
 
   useAutoFocus(ref, autoFocus);
   const remainingProps = useConstraints(ref, rest);
@@ -397,12 +394,12 @@ const ButtonUI = (props) => {
     <Box
       data-readonly-silent={innerLoading ? "" : undefined}
       {...remainingProps}
+      ref={ref}
       autFocus={undefined} // See use_auto_focus.js
       as={as}
       href={href}
       target={innerTarget}
       rel={innerRel}
-      ref={ref}
       onContextMenu={(e) => {
         if (as === "a") {
           // For link we keep context menu to allow "open in new tab" and other browser features

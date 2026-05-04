@@ -168,6 +168,7 @@
             <SizeVariationsDemo />
             <ColorVariationsDemo />
             <FullWidthDemo />
+            <SpacingDemo />
             <IconToggleDemo />
             <DiscreteVariantDemo />
             <InteractiveDemo />
@@ -737,6 +738,56 @@
                 >
                   Danger — full width
                 </Button>
+              </div>
+            </fieldset>
+          </div>
+        );
+      };
+
+      const SpacingButton = ({ spacing, flex }) => (
+        <Box flex="y" alignY="center" spacing="s">
+          <span
+            style={{
+              fontSize: "0.75rem",
+              color: "#888",
+              fontFamily: "monospace",
+            }}
+          >
+            {spacing ? `spacing="${spacing}"` : "(none)"}
+          </span>
+          <Button flex={flex} spacing={spacing}>
+            <Icon>
+              <svg viewBox="0 0 10 10" xmlns="http://www.w3.org/2000/svg">
+                <rect x="0" y="0" width="10" height="10" fill="currentColor" />
+              </svg>
+            </Icon>
+            Upload
+          </Button>
+        </Box>
+      );
+
+      const SpacingDemo = () => {
+        return (
+          <div className="demo-section">
+            <h2>Button Spacing</h2>
+
+            <fieldset>
+              <legend>spacing prop without flex</legend>
+              <div className="button-group">
+                <SpacingButton />
+                <SpacingButton spacing="s" />
+                <SpacingButton spacing="m" />
+                <SpacingButton spacing="l" />
+              </div>
+            </fieldset>
+
+            <fieldset>
+              <legend>spacing prop with flex</legend>
+              <div className="button-group">
+                <SpacingButton flex />
+                <SpacingButton flex spacing="s" />
+                <SpacingButton flex spacing="m" />
+                <SpacingButton flex spacing="l" />
               </div>
             </fieldset>
           </div>
