@@ -1,5 +1,6 @@
 import { getScrollContainer } from "../interaction/scroll/scroll_container.js";
 import { createPubSub } from "../pub_sub.js";
+import { getBorderSizes } from "../size/get_border_sizes.js";
 
 const DEBUG = false;
 
@@ -376,6 +377,10 @@ export const pickPositionRelativeTo = (
     position,
     alignToViewportEdgeWhenAnchorNearEdge = 0,
     minLeft = 0,
+    // When true the positioned element is allowed to overlap the anchor's border,
+    // producing a border-collapse effect (the element's border sits on top of the
+    // anchor's border instead of being placed flush outside it).
+    anchorBorderCollapse = false,
   } = {},
 ) => {
   if (
@@ -512,15 +517,21 @@ export const pickPositionRelativeTo = (
   // Calculate vertical position (viewport-relative)
   let elementPositionTop;
   {
+    const anchorBorderTop = anchorBorderCollapse
+      ? getBorderSizes(anchor).top
+      : 0;
+    const anchorBorderBottom = anchorBorderCollapse
+      ? getBorderSizes(anchor).bottom
+      : 0;
     if (resolvedVertical === "center-y") {
       elementPositionTop = anchorTop + anchorHeight / 2 - elementHeight / 2;
     } else if (resolvedVertical === "bottom") {
-      const idealTop = anchorBottom;
+      const idealTop = anchorBottom - anchorBorderBottom;
       elementPositionTop =
         idealTop % 1 === 0 ? idealTop : Math.floor(idealTop) + 1;
     } else {
       // "top"
-      const idealTop = anchorTop - elementHeight;
+      const idealTop = anchorTop + anchorBorderTop - elementHeight;
       elementPositionTop = idealTop < 0 ? 0 : idealTop;
     }
   }

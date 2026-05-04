@@ -150,26 +150,6 @@ const css = /* css */ `
 
     /* popover */
     &[aria-haspopup="listbox"] {
-      &:has(.navi_list_container[data-focus-visible]) {
-        outline-width: var(--x-select-outline-width-focus-visible);
-        outline-color: var(--navi-focus-outline-color);
-        outline-offset: var(--x-select-outline-offset-focus-visible);
-        .navi_list_container {
-          outline: none;
-        }
-      }
-
-      &[aria-expanded="true"] {
-        &[data-popover-position="top"] {
-          border-top-left-radius: 0;
-          border-top-right-radius: 0;
-        }
-        &[data-popover-position="bottom"] {
-          border-bottom-right-radius: 0;
-          border-bottom-left-radius: 0;
-        }
-      }
-
       .navi_list_container {
         width: 100%;
         border-radius: inherit;
@@ -190,10 +170,39 @@ const css = /* css */ `
         cursor: default; /* Reset pointer cursor within the select */
         overflow: auto;
         overscroll-behavior: none;
+      }
 
-        &:popover-open {
+      &[aria-expanded="true"] {
+        .navi_select_popover {
           display: flex;
           flex-direction: column;
+        }
+
+        &[data-popover-position="top"] {
+          border-top-color: transparent;
+          border-top-left-radius: 0;
+          border-top-right-radius: 0;
+        }
+        &[data-popover-position="bottom"] {
+          border-bottom-right-radius: 0;
+          border-bottom-left-radius: 0;
+        }
+
+        &[data-focus-visible] {
+          outline-width: var(--x-select-outline-width-focus-visible);
+          outline-color: var(--navi-focus-outline-color);
+          outline-offset: var(--x-select-outline-offset-focus-visible);
+
+          .navi_select_popover {
+            border-width: var(--x-select-outline-width-focus-visible);
+            border-color: var(--select-border-color-focus);
+          }
+        }
+
+        &[data-focus-within] {
+          outline-width: var(--x-select-outline-width-focus-visible);
+          outline-color: var(--navi-focus-outline-color);
+          outline-offset: var(--x-select-outline-offset-focus-visible);
         }
       }
     }
@@ -424,6 +433,7 @@ const SelectPseudoClasses = [
   ":active",
   ":focus",
   ":focus-visible",
+  ":focus-within",
   ":read-only",
   ":disabled",
   ":-navi-loading",
@@ -616,6 +626,7 @@ const SelectWithPopover = (props) => {
           }
         }}
         positionTry={positionTry}
+        anchorBorderCollapse
         scrollTrap={scrollTrap}
         pointerTrap={pointerTrap}
         focusTrap={focusTrap}

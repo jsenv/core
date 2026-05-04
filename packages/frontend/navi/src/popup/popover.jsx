@@ -41,6 +41,7 @@ export const Popover = (props) => {
     focusTrap,
     children,
     positionTry = "bottom",
+    anchorBorderCollapse = false,
     ...rest
   } = props;
 
@@ -81,6 +82,7 @@ export const Popover = (props) => {
         {
           positionTry: effectivePositionTry,
           minLeft,
+          anchorBorderCollapse,
         },
       );
       effectiveAnchor.setAttribute("data-popover-position", position);
