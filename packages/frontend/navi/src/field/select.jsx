@@ -68,9 +68,11 @@ const css = /* css */ `
 
   .navi_select {
     --x-select-border-color: var(--select-border-color);
+    /* outline will draw the border when visible */
     --x-select-outline-width: calc(
       var(--select-outline-width) + var(--select-border-width)
     );
+    --x-select-outline-offset: calc(-1 * var(--select-border-width));
 
     position: relative;
     box-sizing: border-box;
@@ -101,8 +103,7 @@ const css = /* css */ `
     border-radius: var(--select-border-radius);
     outline-width: var(--x-select-outline-width);
     outline-color: var(--select-outline-color);
-    /* outline will draw the border when visible */
-    outline-offset: calc(-1 * var(--select-border-width));
+    outline-offset: var(--x-select-outline-offset);
     user-select: none;
 
     &[data-hover] {
@@ -158,6 +159,10 @@ const css = /* css */ `
         border: none;
         border-radius: 0;
         outline: none;
+
+        .navi_list {
+          width: 100%;
+        }
       }
 
       .navi_select_popover {
@@ -172,11 +177,11 @@ const css = /* css */ `
         background: transparent;
         border-width: var(--select-border-width);
         border-style: solid;
-        border-color: var(--select-border-color);
+        border-color: var(--x-select-border-color);
         border-radius: var(--select-border-radius);
-        outline-width: var(--x-select-outline-width-focus-visible);
-        outline-color: var(--navi-focus-outline-color);
-        outline-offset: var(--x-select-outline-offset-focus-visible);
+        outline-width: var(--x-select-outline-width);
+        outline-color: var(--select-outline-color);
+        outline-offset: var(--x-select-outline-offset);
         box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
         cursor: default; /* Reset pointer cursor within the select */
         overflow: hidden;
@@ -207,19 +212,16 @@ const css = /* css */ `
       }
 
       &[data-focus-within]:has([data-focus-visible]) {
-        border-color: var(--select-border-color-focus);
-
         .navi_select_popover {
-          border-color: var(--navi-focus-outline-color);
           outline-style: solid;
         }
       }
 
       &[aria-expanded="true"] {
-        /* border-color: transparent !important; */
         border-top-color: var(--select-border-color);
         border-top-left-radius: 0;
         border-top-right-radius: 0;
+        /* Let the popover handle the border and outline display */
         outline-color: transparent !important;
 
         .navi_select_popover {
