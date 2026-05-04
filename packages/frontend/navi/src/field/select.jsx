@@ -39,11 +39,12 @@ const css = /* css */ `
   @layer navi {
     .navi_select {
       --select-border-radius: 2px;
-      --select-border-width: 1px;
       --select-outline-width: 1px;
+      --select-border-width: 1px;
       --select-font-size: 14px;
       --select-padding-x-default: 8px;
       --select-padding-y-default: 5px;
+      --select-outline-color: var(--navi-focus-outline-color);
       --select-border-color: light-dark(#767676, #8e8e93);
       --select-background-color: white;
       --select-color: currentColor;
@@ -66,6 +67,11 @@ const css = /* css */ `
   }
 
   .navi_select {
+    --x-select-border-color: var(--select-border-color);
+    --x-select-outline-width: calc(
+      var(--select-outline-width) + var(--select-border-width)
+    );
+
     position: relative;
     box-sizing: border-box;
     padding-top: var(
@@ -89,18 +95,15 @@ const css = /* css */ `
     text-align: inherit; /* override browser defaults on button which is center */
     white-space: nowrap; /* Prevent icon from going next line */
     background-color: var(--select-background-color);
-    border: var(--select-border-width) solid transparent;
+    border-width: var(--select-border-width);
+    border-style: solid;
+    border-color: var(--x-select-border-color);
     border-radius: var(--select-border-radius);
-    outline: var(--select-outline-width) solid var(--select-border-color);
-    outline-offset: calc(-1 * var(--select-outline-width));
+    outline-width: var(--x-select-outline-width);
+    outline-color: var(--select-outline-color);
+    /* outline will draw the border when visible */
+    outline-offset: calc(-1 * var(--select-border-width));
     user-select: none;
-
-    --x-select-outline-width-focus-visible: calc(
-      var(--select-border-width) + var(--select-outline-width)
-    );
-    --x-select-outline-offset-focus-visible: calc(
-      -1 * (var(--select-border-width) + var(--select-outline-width))
-    );
 
     &[data-hover] {
       background-color: var(--select-background-color-hover);
@@ -108,9 +111,8 @@ const css = /* css */ `
     }
 
     &[data-focus-visible] {
-      outline-width: var(--x-select-outline-width-focus-visible);
-      outline-color: var(--navi-focus-outline-color);
-      outline-offset: var(--x-select-outline-offset-focus-visible);
+      --x-select-border-color: transparent;
+      outline-style: solid;
     }
 
     &[data-disabled] {
@@ -172,17 +174,29 @@ const css = /* css */ `
         border-style: solid;
         border-color: var(--select-border-color);
         border-radius: var(--select-border-radius);
+        outline-width: var(--x-select-outline-width-focus-visible);
+        outline-color: var(--navi-focus-outline-color);
+        outline-offset: var(--x-select-outline-offset-focus-visible);
         box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
         cursor: default; /* Reset pointer cursor within the select */
         overflow: hidden;
         overscroll-behavior: none;
 
-        /* The anchor placeholder sits at the top of the popover and mirrors the
-           trigger's height. It is transparent so the real trigger shows through. */
+        /* The anchor placeholder mirrors the trigger's height so the popover
+           visually wraps the trigger + list. It is transparent so the real
+           trigger shows through. CSS order places it before the list when the
+           popover is below the trigger, and after when it is above. */
         .navi_select_anchor_placeholder {
           height: var(--anchor-height, 0px);
           flex-shrink: 0;
+          order: -1; /* before the list — popover is below the trigger */
           pointer-events: none;
+        }
+
+        &[data-position-current="top"] {
+          .navi_select_anchor_placeholder {
+            order: 1; /* after the list — popover is above the trigger */
+          }
         }
 
         /* The list scrolls inside the popover */
@@ -194,17 +208,20 @@ const css = /* css */ `
 
       &[data-focus-within]:has([data-focus-visible]) {
         border-color: var(--select-border-color-focus);
-        outline-width: var(--x-select-outline-width-focus-visible);
-        outline-color: var(--navi-focus-outline-color);
-        outline-offset: var(--x-select-outline-offset-focus-visible);
 
         .navi_select_popover {
-          border-width: var(--x-select-outline-width-focus-visible);
           border-color: var(--navi-focus-outline-color);
+          outline-style: solid;
         }
       }
 
       &[aria-expanded="true"] {
+        /* border-color: transparent !important; */
+        border-top-color: var(--select-border-color);
+        border-top-left-radius: 0;
+        border-top-right-radius: 0;
+        outline-color: transparent !important;
+
         .navi_select_popover {
           display: flex;
           flex-direction: column;
@@ -396,6 +413,7 @@ const SelectUI = (props) => {
 export const SelectPlaceholderContext = createContext();
 const SelectValueContext = createContext(null);
 const SelectStyleCSSVars = {
+  "outlineWidth": "--select-outline-width",
   "borderWidth": "--select-border-width",
   "borderRadius": "--select-border-radius",
   "paddingX": "--select-padding-x",
