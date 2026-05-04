@@ -431,14 +431,7 @@ const CONTENT_PROPS = {
     };
   },
   spacing: (value, { boxFlow }) => {
-    if (
-      boxFlow === "flex-x" ||
-      boxFlow === "flex-y" ||
-      boxFlow === "inline-flex-x" ||
-      boxFlow === "inline-flex-y" ||
-      boxFlow === "grid" ||
-      boxFlow === "inline-grid"
-    ) {
+    if (isSpacingHandledByFlow(boxFlow)) {
       return {
         gap: resolveSpacingSize(value, "gap"),
       };
@@ -472,6 +465,18 @@ const CONTENT_PROPS = {
     return undefined;
   },
 };
+const flowSpacingHandlerSet = new Set([
+  "flex-x",
+  "flex-y",
+  "inline-flex-x",
+  "inline-flex-y",
+  "grid",
+  "inline-grid",
+]);
+export const isSpacingHandledByFlow = (boxFlow) => {
+  return flowSpacingHandlerSet.has(boxFlow);
+};
+
 const All_PROPS = {
   ...FLOW_PROPS,
   ...OUTER_SPACING_PROPS,

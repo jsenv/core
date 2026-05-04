@@ -5,7 +5,12 @@ import { createContext, toChildArray } from "preact";
 import { useContext, useRef, useState } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
-import { isSizeSpacingKey } from "../box/box_style_util.js";
+import { BoxFlowContext } from "../box/box_flow_context.jsx";
+import {
+  isSizeSpacingKey,
+  isSpacingHandledByFlow,
+  resolveSpacingSize,
+} from "../box/box_style_util.js";
 import { withPropsClassName } from "../utils/with_props_class_name.js";
 import { useInitialTextSelection } from "./use_initial_text_selection.jsx";
 
@@ -235,11 +240,12 @@ const applySpacingOnTextChildren = (children, spacing, defaultSpace) => {
   if (spacing === REGULAR_SPACE || spacing === FAKE_SPACE) {
     separator = defaultSpace;
   } else if (typeof spacing === "string") {
-    if (
-      isSizeSpacingKey(spacing) ||
-      hasCSSSizeUnit(spacing) ||
-      spacing.startsWith("var(")
-    ) {
+    if (isSizeSpacingKey(spacing)) {
+      const value = resolveSpacingSize(spacing);
+      separator = (
+        <CustomWidthSpace value={value} useRealSpaceChar={useRealSpaceChar} />
+      );
+    } else if (hasCSSSizeUnit(spacing) || spacing.startsWith("var(")) {
       separator = (
         <CustomWidthSpace value={spacing} useRealSpaceChar={useRealSpaceChar} />
       );
@@ -406,7 +412,7 @@ const TextUI = (props) => {
     childrenOutsideFlow,
     ...rest
   } = props;
-
+  const parentBoxFlow = useContext(BoxFlowContext);
   const defaultSpace = preventSpaceUnderlines ? FAKE_SPACE : REGULAR_SPACE;
   const resolvedSpacing = spacing ?? defaultSpace;
   const boxProps = {
@@ -416,7 +422,11 @@ const TextUI = (props) => {
     ref,
     "baseClassName": withPropsClassName("navi_text", rest.baseClassName),
   };
-  const shouldPreserveSpacing = rest.as === "pre" || rest.flex || rest.grid;
+  const shouldPreserveSpacing =
+    rest.as === "pre" ||
+    rest.flex ||
+    rest.grid ||
+    isSpacingHandledByFlow(parentBoxFlow);
   if (shouldPreserveSpacing) {
     boxProps.spacing = resolvedSpacing;
   } else {

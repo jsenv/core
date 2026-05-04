@@ -186,6 +186,8 @@ export const Box = (props) => {
   const TagName = as;
 
   const defaultDisplay = getDefaultDisplay(TagName);
+  // Read the parent flow early so we can use it when display="inherit" is requested.
+  const parentBoxFlow = useContext(BoxFlowContext);
   let { inline, block, flex, grid, row, column } = rest;
   // To obtain flex direction we have the following deprecated props:
   // - [deprecated] <Box column> -> <Box flex> or <Box flex="x">
@@ -250,6 +252,12 @@ export const Box = (props) => {
   } else {
     boxFlow = defaultDisplay;
   }
+  // When display="inherit" is passed, adopt the parent's flow instead of computing one.
+  // This lets a child Box mirror its parent's flex/grid/block layout without repeating
+  // the same layout props, and is used e.g. by Button's inner content element.
+  if (rest.display === "inherit") {
+    boxFlow = parentBoxFlow;
+  }
   const boxFlowIsDefault = boxFlow === defaultDisplay;
 
   const remainingPropKeySet = new Set(Object.keys(rest));
@@ -261,7 +269,6 @@ export const Box = (props) => {
   const selfForwardedProps = {};
   const childForwardedProps = {};
   styling: {
-    const parentBoxFlow = useContext(BoxFlowContext);
     const styleDeps = [
       // Layout and alignment props
       parentBoxFlow,

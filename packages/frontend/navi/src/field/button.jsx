@@ -381,7 +381,7 @@ const ButtonUI = (props) => {
     return (
       <Text
         {...buttonProps}
-        flex={spacing !== undefined ? true : buttonProps.flex}
+        display="inherit"
         spacing={spacing}
         className="navi_button_content"
       >

@@ -6650,14 +6650,7 @@ const CONTENT_PROPS = {
     };
   },
   spacing: (value, { boxFlow }) => {
-    if (
-      boxFlow === "flex-x" ||
-      boxFlow === "flex-y" ||
-      boxFlow === "inline-flex-x" ||
-      boxFlow === "inline-flex-y" ||
-      boxFlow === "grid" ||
-      boxFlow === "inline-grid"
-    ) {
+    if (isSpacingHandledByFlow(boxFlow)) {
       return {
         gap: resolveSpacingSize(value, "gap"),
       };
@@ -6691,6 +6684,18 @@ const CONTENT_PROPS = {
     return undefined;
   },
 };
+const flowSpacingHandlerSet = new Set([
+  "flex-x",
+  "flex-y",
+  "inline-flex-x",
+  "inline-flex-y",
+  "grid",
+  "inline-grid",
+]);
+const isSpacingHandledByFlow = (boxFlow) => {
+  return flowSpacingHandlerSet.has(boxFlow);
+};
+
 const All_PROPS = {
   ...FLOW_PROPS,
   ...OUTER_SPACING_PROPS,
@@ -8286,6 +8291,8 @@ const Box = props => {
   const ref = props.ref || defaultRef;
   const TagName = as;
   const defaultDisplay = getDefaultDisplay(TagName);
+  // Read the parent flow early so we can use it when display="inherit" is requested.
+  const parentBoxFlow = useContext(BoxFlowContext);
   let {
     inline,
     block,
@@ -8353,6 +8360,12 @@ const Box = props => {
   } else {
     boxFlow = defaultDisplay;
   }
+  // When display="inherit" is passed, adopt the parent's flow instead of computing one.
+  // This lets a child Box mirror its parent's flex/grid/block layout without repeating
+  // the same layout props, and is used e.g. by Button's inner content element.
+  if (rest.display === "inherit") {
+    boxFlow = parentBoxFlow;
+  }
   const boxFlowIsDefault = boxFlow === defaultDisplay;
   const remainingPropKeySet = new Set(Object.keys(rest));
   // some props not destructured but that are neither
@@ -8362,7 +8375,6 @@ const Box = props => {
   const selfForwardedProps = {};
   const childForwardedProps = {};
   {
-    const parentBoxFlow = useContext(BoxFlowContext);
     const styleDeps = [
     // Layout and alignment props
     parentBoxFlow, boxFlow,
@@ -21177,6 +21189,7 @@ const TextUI = props => {
     childrenOutsideFlow,
     ...rest
   } = props;
+  const parentBoxFlow = useContext(BoxFlowContext);
   const defaultSpace = preventSpaceUnderlines ? FAKE_SPACE : REGULAR_SPACE;
   const resolvedSpacing = spacing ?? defaultSpace;
   const boxProps = {
@@ -21186,7 +21199,7 @@ const TextUI = props => {
     ref,
     "baseClassName": withPropsClassName("navi_text", rest.baseClassName)
   };
-  const shouldPreserveSpacing = rest.as === "pre" || rest.flex || rest.grid;
+  const shouldPreserveSpacing = rest.as === "pre" || rest.flex || rest.grid || isSpacingHandledByFlow(parentBoxFlow);
   if (shouldPreserveSpacing) {
     boxProps.spacing = resolvedSpacing;
   } else {
@@ -22842,6 +22855,7 @@ const ButtonUI = props => {
   const renderButtonContent = buttonProps => {
     return jsxs(Text, {
       ...buttonProps,
+      display: "inherit",
       spacing: spacing,
       className: "navi_button_content",
       children: [children, jsx(ButtonShadow, {})]
