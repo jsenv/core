@@ -336,6 +336,14 @@ export const visibleRectEffect = (element, update) => {
   };
 };
 
+// Round a CSS-pixel value to the nearest physical pixel boundary.
+// At zoom levels other than 100%, devicePixelRatio is not an integer (e.g. 1.25, 1.5),
+// so CSS pixels don't align 1:1 with physical pixels. Rounding to the physical grid
+// ensures the browser can render the element without sub-pixel blurring.
+const snapToPhysicalPixel = (value) => {
+  return Math.round(value * devicePixelRatio) / devicePixelRatio;
+};
+
 /**
  * Places element relative to anchor with independent control of horizontal and vertical axes.
  *
@@ -415,12 +423,10 @@ export const pickPositionRelativeTo = (
     top: elementTop,
     bottom: elementBottom,
   } = elementRect;
-  const {
-    left: anchorLeft,
-    right: anchorRight,
-    top: anchorTop,
-    bottom: anchorBottom,
-  } = anchorRect;
+  const anchorLeft = snapToPhysicalPixel(anchorRect.left);
+  const anchorTop = snapToPhysicalPixel(anchorRect.top);
+  const anchorRight = snapToPhysicalPixel(anchorRect.right);
+  const anchorBottom = snapToPhysicalPixel(anchorRect.bottom);
   const elementWidth = elementRight - elementLeft;
   const elementHeight = elementBottom - elementTop;
   const anchorWidth = anchorRight - anchorLeft;
@@ -647,8 +653,12 @@ export const pickPositionRelativeTo = (
 
   // Get document scroll for final coordinate conversion
   const { scrollLeft, scrollTop } = document.documentElement;
-  const elementDocumentLeft = elementPositionLeft + scrollLeft;
-  const elementDocumentTop = elementPositionTop + scrollTop;
+  const elementDocumentLeft = snapToPhysicalPixel(
+    elementPositionLeft + scrollLeft,
+  );
+  const elementDocumentTop = snapToPhysicalPixel(
+    elementPositionTop + scrollTop,
+  );
   const anchorDocumentLeft = anchorLeft + scrollLeft;
   const anchorDocumentTop = anchorTop + scrollTop;
   const anchorDocumentRight = anchorRight + scrollLeft;

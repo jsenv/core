@@ -72,8 +72,9 @@ export const Popover = (props) => {
     const effectiveAnchor = anchor || document.documentElement;
     const positionPopover = (positionEvent) => {
       const { width, height } = effectiveAnchor.getBoundingClientRect();
-      popoverEl.style.setProperty("--anchor-width", `${width}px`);
-      popoverEl.style.setProperty("--anchor-height", `${height}px`);
+      const snap = (v) => Math.round(v * devicePixelRatio) / devicePixelRatio;
+      popoverEl.style.setProperty("--anchor-width", `${snap(width)}px`);
+      popoverEl.style.setProperty("--anchor-height", `${snap(height)}px`);
       const minLeft = 1;
       const effectivePositionX = anchor ? positionX : "center";
       const { left, top } = pickPositionRelativeTo(popoverEl, effectiveAnchor, {
