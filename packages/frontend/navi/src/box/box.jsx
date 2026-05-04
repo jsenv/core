@@ -120,6 +120,19 @@ import.meta.css = /* css */ `
       grid-auto-flow: unset;
     }
   }
+  /*
+
+  It's very common to declare a display on component as follow
+  .component_class { display: component_display; }
+
+  This kill the default behavior of [hidden] attribute and we need to explicitly handle it with:
+  .component_class[hidden] { display: none; }
+
+  To avoid this extra work and potential mistakes we force the default behavior of [hidden] attribute.
+  */
+  [hidden] {
+    display: none !important;
+  }
 `;
 
 const PSEUDO_CLASSES_DEFAULT = [];

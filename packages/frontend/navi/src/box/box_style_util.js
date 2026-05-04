@@ -68,6 +68,7 @@ const FLOW_PROPS = {
   flex: () => {},
   grid: () => {},
   gridTemplateColumns: PASS_THROUGH,
+  display: PASS_THROUGH, // in case people write "display: none" (even if hidden prop is recommended)
   row: () => {},
   column: () => {},
 };

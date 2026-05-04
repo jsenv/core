@@ -317,9 +317,6 @@ const css = /* css */ `
       cursor: not-allowed;
       pointer-events: none;
     }
-    &[hidden] {
-      display: none;
-    }
   }
 
   .navi_list_container {
@@ -394,9 +391,6 @@ const css = /* css */ `
       font-size: 0.9em;
       text-align: center;
       user-select: none;
-    }
-    &[hidden] {
-      display: none;
     }
   }
   [navi-virtual-filler="bottom"] {

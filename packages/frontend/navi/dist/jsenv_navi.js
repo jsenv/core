@@ -6287,6 +6287,7 @@ const FLOW_PROPS = {
   flex: () => {},
   grid: () => {},
   gridTemplateColumns: PASS_THROUGH,
+  display: PASS_THROUGH, // in case people write "display: none" (even if hidden prop is recommended)
   row: () => {},
   column: () => {},
 };
@@ -8222,6 +8223,19 @@ import.meta.css = [/* css */`
     &[navi-box-flow-column][navi-box-flow-row] {
       grid-auto-flow: unset;
     }
+  }
+  /*
+
+  It's very common to declare a display on component as follow
+  .component_class { display: component_display; }
+
+  This kill the default behavior of [hidden] attribute and we need to explicitly handle it with:
+  .component_class[hidden] { display: none; }
+
+  To avoid this extra work and potential mistakes we force the default behavior of [hidden] attribute.
+  */
+  [hidden] {
+    display: none !important;
   }
 `, "@jsenv/navi/src/box/box.jsx"];
 const PSEUDO_CLASSES_DEFAULT = [];
@@ -27212,9 +27226,6 @@ const css$l = /* css */`
       cursor: not-allowed;
       pointer-events: none;
     }
-    &[hidden] {
-      display: none;
-    }
   }
 
   .navi_list_container {
@@ -27289,9 +27300,6 @@ const css$l = /* css */`
       font-size: 0.9em;
       text-align: center;
       user-select: none;
-    }
-    &[hidden] {
-      display: none;
     }
   }
   [navi-virtual-filler="bottom"] {
@@ -30974,7 +30982,7 @@ installImportMetaCssBuild(import.meta);const css$f = /* css */`
 
       &[hidden] {
         /* We keep placeholder in the dom in case it dictates the select width, this way select wont shrink once a value is selected */
-        display: inline-block;
+        display: inline-block !important;
         height: 0;
         padding-block: 0;
         visibility: hidden;
