@@ -152,7 +152,10 @@ const css = /* css */ `
     &[aria-haspopup="listbox"] {
       .navi_list_container {
         width: 100%;
-        border-radius: inherit;
+        /* Handled by the popover */
+        border: none;
+        border-radius: 0;
+        outline: none;
       }
 
       .navi_select_popover {
@@ -164,45 +167,53 @@ const css = /* css */ `
         margin: 0;
         padding: 0;
         background: white;
-        border: none;
-        border-radius: 0;
+        border-width: var(--select-border-width);
+        border-style: solid;
+        border-color: var(--select-border-color);
         box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
         cursor: default; /* Reset pointer cursor within the select */
         overflow: auto;
         overscroll-behavior: none;
       }
 
+      &[data-focus-within]:has([data-focus-visible]) {
+        border-color: var(--select-border-color-focus);
+        outline-width: var(--x-select-outline-width-focus-visible);
+        outline-color: var(--navi-focus-outline-color);
+        outline-offset: var(--x-select-outline-offset-focus-visible);
+
+        .navi_select_popover {
+          border-width: var(--x-select-outline-width-focus-visible);
+          border-color: var(--navi-focus-outline-color);
+        }
+      }
+
+      &[data-popover-position="top"] {
+        border-top-color: transparent;
+        border-top-left-radius: 0;
+        border-top-right-radius: 0;
+
+        .navi_select_popover {
+          border-bottom: none;
+          border-top-left-radius: var(--select-border-radius);
+          border-top-right-radius: var(--select-border-radius);
+        }
+      }
+      &[data-popover-position="bottom"] {
+        border-bottom-right-radius: 0;
+        border-bottom-left-radius: 0;
+
+        .navi_select_popover {
+          border-top: none;
+          border-bottom-right-radius: var(--select-border-radius);
+          border-bottom-left-radius: var(--select-border-radius);
+        }
+      }
+
       &[aria-expanded="true"] {
         .navi_select_popover {
           display: flex;
           flex-direction: column;
-        }
-
-        &[data-popover-position="top"] {
-          border-top-color: transparent;
-          border-top-left-radius: 0;
-          border-top-right-radius: 0;
-        }
-        &[data-popover-position="bottom"] {
-          border-bottom-right-radius: 0;
-          border-bottom-left-radius: 0;
-        }
-
-        &[data-focus-visible] {
-          outline-width: var(--x-select-outline-width-focus-visible);
-          outline-color: var(--navi-focus-outline-color);
-          outline-offset: var(--x-select-outline-offset-focus-visible);
-
-          .navi_select_popover {
-            border-width: var(--x-select-outline-width-focus-visible);
-            border-color: var(--select-border-color-focus);
-          }
-        }
-
-        &[data-focus-within] {
-          outline-width: var(--x-select-outline-width-focus-visible);
-          outline-color: var(--navi-focus-outline-color);
-          outline-offset: var(--x-select-outline-offset-focus-visible);
         }
       }
     }
