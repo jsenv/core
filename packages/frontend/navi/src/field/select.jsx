@@ -129,6 +129,9 @@ const css = /* css */ `
       opacity: 0.5;
       cursor: default;
     }
+    &[data-callout] {
+      --x-select-border-color: var(--callout-color);
+    }
 
     .navi_select_trigger_text {
       display: inline-flex;
@@ -234,6 +237,11 @@ const css = /* css */ `
         }
       }
 
+      &:has([data-hover]) {
+        .navi_select_popover {
+          --x-select-border-color: var(--select-border-color-hover);
+        }
+      }
       &:has([data-focus-visible]) {
         .navi_select_popover {
           outline-style: solid;

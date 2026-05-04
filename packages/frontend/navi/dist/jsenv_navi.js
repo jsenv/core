@@ -3,7 +3,7 @@ import { isValidElement, createContext, h, options, toChildArray, render, cloneE
 import { useErrorBoundary, useLayoutEffect, useEffect, useContext, useMemo, useRef, useState, useCallback, useImperativeHandle, useId } from "preact/hooks";
 import { jsxs, jsx, Fragment } from "preact/jsx-runtime";
 import { signal, effect, computed, batch, useSignal } from "@preact/signals";
-import { createIterableWeakSet, mergeOneStyle, stringifyStyle, createPubSub, mergeTwoStyles, normalizeStyles, createGroupTransitionController, getElementSignature, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, findBefore, findAfter, createValueEffect, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, allowWheelThrough, resolveCSSColor, createStyleController, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, resolveCSSSize, canInterceptKeys, activeElementSignal, hasCSSSizeUnit, resolveOklchLightness, contrastColor, initFocusGroup, elementIsFocusable, scrollIntoViewScoped, findFocusable, trapScrollInside, trapFocusInside, dragAfterThreshold, getScrollContainer, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
+import { createIterableWeakSet, getElementSignature, mergeOneStyle, stringifyStyle, createPubSub, mergeTwoStyles, normalizeStyles, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, findBefore, findAfter, createValueEffect, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, allowWheelThrough, resolveCSSColor, createStyleController, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, resolveCSSSize, canInterceptKeys, activeElementSignal, hasCSSSizeUnit, resolveOklchLightness, contrastColor, initFocusGroup, elementIsFocusable, scrollIntoViewScoped, findFocusable, trapScrollInside, trapFocusInside, dragAfterThreshold, getScrollContainer, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
 export { contrastColor } from "@jsenv/dom";
 import { prefixFirstAndIndentRemainingLines } from "@jsenv/humanize";
 import { createValidity } from "@jsenv/validity";
@@ -2450,7 +2450,7 @@ const useRunOnMount = (action, Component) => {
 
 const DebugFocusContext = createContext(false);
 const DebugScrollContext = createContext(false);
-const DebugPopoverContext = createContext(false);
+const DebugPopupContext = createContext(false);
 const debugNoop = () => {};
 const useDebugFocus = () => {
   const debug = useContext(DebugFocusContext);
@@ -2460,8 +2460,8 @@ const useDebugScroll = () => {
   const debug = useContext(DebugScrollContext);
   return debug || debugNoop;
 };
-const useDebugPopover = () => {
-  const debug = useContext(DebugPopoverContext);
+const useDebugPopup = () => {
+  const debug = useContext(DebugPopupContext);
   return debug || debugNoop;
 };
 
@@ -2471,14 +2471,14 @@ const useDebugPopover = () => {
  * Props:
  *   debugFocus   — log focus moves (autoFocus, restoring previous focus, etc.)
  *   debugScroll  — log virtual scroll window updates and scroll-to-item calls
- *   debugPopover — log popover open/close/positioning decisions
+ *   debugPopup — log popover open/close/positioning decisions
  *
  * Pass a boolean `true` to use `console.debug`, or pass a custom function.
  */
 const NaviDebug = ({
   debugFocus,
   debugScroll,
-  debugPopover,
+  debugPopup,
   children
 }) => {
   if (debugFocus === true) {
@@ -2487,19 +2487,22 @@ const NaviDebug = ({
   if (debugScroll === true) {
     debugScroll = console.debug;
   }
-  if (debugPopover === true) {
-    debugPopover = console.debug;
+  if (debugPopup === true) {
+    debugPopup = console.debug;
   }
   return jsx(DebugFocusContext.Provider, {
     value: debugFocus,
     children: jsx(DebugScrollContext.Provider, {
       value: debugScroll,
-      children: jsx(DebugPopoverContext.Provider, {
-        value: debugPopover,
+      children: jsx(DebugPopupContext.Provider, {
+        value: debugPopup,
         children: children
       })
     })
   });
+};
+const formatEventSideEffect = (e, sideEffect) => {
+  return `"${e.type}" on ${getElementSignature(e.target)} -> ${sideEffect}`;
 };
 
 const addIntoArray = (array, ...valuesToAdd) => {
@@ -7645,6 +7648,11 @@ definePseudoClass(":active", {
         return true;
       }
       if (isControlledByFocusedElement(el)) {
+        return true;
+      }
+      if (el.contains(document.activeElement)) {
+        // for some reason :focus-within sometimes is false while focus is within...
+        // (popover with chrome for some reason)
         return true;
       }
       return false;
@@ -16599,14 +16607,22 @@ const openCallout = (message, {
     }
     allowWheelThrough(calloutElement, anchorElement);
     anchorElement.setAttribute("data-callout", calloutId);
-    dispatchCalloutCustomElement(anchorElement, new CustomEvent("navi_callout_open", {
-      bubbles: true
-    }));
     addTeardown(() => {
       anchorElement.removeAttribute("data-callout");
-      dispatchCalloutCustomElement(anchorElement, new CustomEvent("navi_callout_close", {
-        bubbles: true
-      }));
+    });
+    const visualElement = (() => {
+      const visualSelector = anchorElement.getAttribute("data-visual-selector");
+      if (visualSelector) {
+        const visualElement = anchorElement.querySelector(visualSelector);
+        if (visualElement) {
+          return visualElement;
+        }
+      }
+      return anchorElement;
+    })();
+    dispatchPublicCustomEvent(visualElement, "navi_callout_open");
+    addTeardown(() => {
+      dispatchPublicCustomEvent(visualElement, "navi_callout_close");
     });
     addStatusEffect(status => {
       if (!status) {
@@ -16869,7 +16885,7 @@ const stickCalloutToAnchor = (calloutElement, anchorElement) => {
   }) => {
     const calloutElementClone = cloneCalloutToMeasureNaturalSize(calloutElement);
     const {
-      position,
+      positionY,
       left: calloutLeft,
       top: calloutTop,
       width: calloutWidth,
@@ -16877,20 +16893,19 @@ const stickCalloutToAnchor = (calloutElement, anchorElement) => {
       spaceAbove,
       spaceBelow
     } = pickPositionRelativeTo(calloutElementClone, anchorElement, {
-      alignToViewportEdgeWhenTargetNearEdge: 20,
-      // when fully to the left, the border color is collé to the browser window making it hard to see
+      alignToViewportEdgeWhenAnchorNearEdge: 20,
       minLeft: 1,
-      // Check for preferred and forced position from anchor element
-      positionTry: anchorElement.getAttribute("data-callout-position-try") || "bottom",
-      position: anchorElement.getAttribute("data-callout-position")
+      positionX: "center",
+      positionY: anchorElement.getAttribute("data-callout-position") || "below",
+      positionYFixed: anchorElement.getAttribute("data-callout-position-fixed")
     });
-    // data-position-current is written to the clone by pickPositionRelativeTo,
+    // data-position-y-current is written to the clone by pickPositionRelativeTo,
     // copy it back to the real element so stickiness works on next call
-    const positionCurrent = calloutElementClone.getAttribute("data-position-current");
-    if (positionCurrent) {
-      calloutElement.setAttribute("data-position-current", positionCurrent);
+    const positionYCurrent = calloutElementClone.getAttribute("data-position-y-current");
+    if (positionYCurrent) {
+      calloutElement.setAttribute("data-position-y-current", positionYCurrent);
     } else {
-      calloutElement.removeAttribute("data-position-current");
+      calloutElement.removeAttribute("data-position-y-current");
     }
     calloutElementClone.remove();
 
@@ -16932,7 +16947,7 @@ const stickCalloutToAnchor = (calloutElement, anchorElement) => {
 
     // Force content overflow when there is not enough space to display
     // the entirety of the callout
-    const spaceAvailable = position === "bottom" ? spaceBelow : spaceAbove;
+    const spaceAvailable = positionY === "above" || positionY === "above-overlap" ? spaceAbove : spaceBelow;
     const paddingSizes = getPaddingSizes(calloutBodyElement);
     const paddingY = paddingSizes.top + paddingSizes.bottom;
     const spaceNeededAroundContent = ARROW_HEIGHT + BORDER_WIDTH * 2 + paddingY;
@@ -16951,7 +16966,7 @@ const stickCalloutToAnchor = (calloutElement, anchorElement) => {
       width,
       height
     } = calloutElement.getBoundingClientRect();
-    if (position === "top") {
+    if (positionY === "above" || positionY === "above-overlap") {
       // Position above target element
       calloutBoxElement.style.marginTop = "";
       calloutBoxElement.style.marginBottom = `${ARROW_HEIGHT}px`;
@@ -17237,21 +17252,6 @@ const generateSvgWithoutArrow = (width, height) => {
         ry="${Math.max(0, CORNER_RADIUS - BORDER_WIDTH)}"
       />
     </svg>`;
-};
-const dispatchCalloutCustomElement = (anchorElement, customEvent) => {
-  let targetElement;
-  const visualSelector = anchorElement.getAttribute("data-visual-selector");
-  if (visualSelector) {
-    const visualElement = anchorElement.querySelector(visualSelector);
-    if (visualElement) {
-      targetElement = visualElement;
-    }
-  } else {
-    targetElement = anchorElement;
-  }
-
-  // console.log("dispatch on", targetElement, "event", customEvent);
-  targetElement.dispatchEvent(customEvent);
 };
 
 /**
@@ -18709,6 +18709,9 @@ const installCustomConstraintValidation = (
       return element;
     })();
     const onmousedown = (e) => {
+      if (e.button !== 0) {
+        return;
+      }
       if (!validationInterface.validationMessage) {
         return;
       }
@@ -22514,9 +22517,9 @@ const useUIState = (uiStateController) => {
 installImportMetaCssBuild(import.meta);const css$x = /* css */`
   @layer navi {
     .navi_button {
+      --button-border-radius: 2px;
       --button-outline-width: 1px;
       --button-border-width: 1px;
-      --button-border-radius: 2px;
       /* Global padding defaults — override these to change all button paddings. */
       /* Use --button-padding, --button-padding-x, --button-padding-y for per-button overrides. */
       --button-padding-x-default: 6px;
@@ -22580,25 +22583,22 @@ installImportMetaCssBuild(import.meta);const css$x = /* css */`
   }
 
   .navi_button {
-    /* Internal vars — prefixed with --x- to signal they are private, do not use from outside */
-    --x-button-outline-width: var(--button-outline-width);
-    --x-button-border-radius: var(--button-border-radius);
-    --x-button-border-width: var(--button-border-width);
-    --x-button-outer-width: calc(
-      var(--x-button-border-width) + var(--x-button-outline-width)
-    );
-    --x-button-outline-color: var(--button-outline-color);
+    /* outline will draw the border when visible */
+    --x-button-outline-width: var(--button-outline-width) +
+      var(--button-border-width);
+    --x-button-outline-offset: calc(-1 * var(--button-border-width));
     --x-button-border-color: var(--button-border-color);
     --x-button-background: var(--button-background);
     --x-button-background-color: var(--button-background-color);
     --x-button-color: var(--button-color);
     --x-button-cursor: var(--button-cursor);
+
     box-sizing: border-box;
     aspect-ratio: inherit;
     padding: 0;
     background: none;
     border: none;
-    border-radius: var(--x-button-border-radius);
+    border-radius: var(--button-border-radius);
     outline: none;
     cursor: var(--x-button-cursor);
     -webkit-tap-highlight-color: transparent;
@@ -22658,15 +22658,13 @@ installImportMetaCssBuild(import.meta);const css$x = /* css */`
         --x-button-background-color,
         var(--x-button-background)
       );
-
-      border-width: var(--x-button-outer-width);
+      border-width: var(--button-border-width);
       border-style: solid;
-      border-color: transparent;
-      border-radius: var(--x-button-border-radius);
-      outline-width: var(--x-button-border-width);
-      outline-style: solid;
-      outline-color: var(--x-button-border-color);
-      outline-offset: calc(-1 * (var(--x-button-border-width)));
+      border-color: var(--x-button-border-color);
+      border-radius: var(--button-border-radius);
+      outline-width: var(--x-button-outline-width);
+      outline-color: var(--button-outline-color);
+      outline-offset: var(--x-button-outline-offset);
       transition-property: transform;
       transition-duration: 0.15s;
       transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
@@ -22727,12 +22725,10 @@ installImportMetaCssBuild(import.meta);const css$x = /* css */`
     }
     /* Focus */
     &[data-focus-visible] {
-      --x-button-border-color: var(--x-button-outline-color);
-    }
-    &[data-focus-visible] {
+      --x-button-border-color: transparent;
+
       .navi_button_content {
-        outline-width: var(--x-button-outer-width);
-        outline-offset: calc(-1 * var(--x-button-outer-width));
+        outline-style: solid;
       }
     }
     /* Disabled */
@@ -28152,7 +28148,6 @@ const ListWithPopover = props => {
           left,
           top
         } = pickPositionRelativeTo(listContainerEl, anchor, {
-          positionTry: "bottom",
           minLeft
         });
         listContainerEl.style.top = `${top}px`;
@@ -28942,7 +28937,6 @@ const css$k = /* css */`
       --border-radius: 2px;
       --border-width: 1px;
       --outline-width: 1px;
-      --outer-width: calc(var(--border-width) + var(--outline-width));
       --font-size: 14px;
 
       /* Default */
@@ -28986,6 +28980,16 @@ const css$k = /* css */`
   }
 
   .navi_input {
+    /* outline will draw the border when visible */
+    --x-outline-width: var(--outline-width) + var(--border-width);
+    --x-outline-offset: calc(-1 * var(--border-width));
+    --left-slot-size: 0px;
+    --right-slot-size: 0px;
+    --x-border-color: var(--border-color);
+    --x-background-color: var(--background-color);
+    --x-color: var(--color);
+    --x-placeholder-color: var(--placeholder-color);
+
     position: relative;
     box-sizing: border-box;
     width: fit-content;
@@ -28993,18 +28997,6 @@ const css$k = /* css */`
     flex-direction: inherit;
     border-radius: inherit;
     cursor: inherit;
-
-    --left-slot-size: 0px;
-    --right-slot-size: 0px;
-    --x-outline-width: var(--outline-width);
-    --x-border-radius: var(--border-radius);
-    --x-border-width: var(--border-width);
-    --x-outer-width: calc(var(--x-border-width) + var(--x-outline-width));
-    --x-outline-color: var(--outline-color);
-    --x-border-color: var(--border-color);
-    --x-background-color: var(--background-color);
-    --x-color: var(--color);
-    --x-placeholder-color: var(--placeholder-color);
 
     --x-padding-top-base: var(
       --padding-top,
@@ -29033,15 +29025,13 @@ const css$k = /* css */`
       color: var(--x-color);
       font-size: var(--font-size);
       background-color: var(--x-background-color);
-      border-width: var(--x-outer-width);
-      border-width: var(--x-outer-width);
+      border-width: var(--border-width);
       border-style: solid;
-      border-color: transparent;
-      border-radius: var(--x-border-radius);
-      outline-width: var(--x-border-width);
-      outline-style: solid;
-      outline-color: var(--x-border-color);
-      outline-offset: calc(-1 * (var(--x-border-width)));
+      border-color: var(--x-border-color);
+      border-radius: var(--border-radius);
+      outline-width: var(--x-outline-width);
+      outline-color: var(--outline-color);
+      outline-offset: var(--x-outline-offset);
 
       &[type="search"] {
         -webkit-appearance: textfield;
@@ -29121,12 +29111,10 @@ const css$k = /* css */`
     &[data-focus],
     &[data-focus-visible] {
       --x-background-color: var(--background-color-focus);
-      --x-border-color: var(--border-color-focus);
+      --x-border-color: transparent;
 
       .navi_native_input {
-        outline-width: var(--x-outer-width);
-        outline-offset: calc(-1 * var(--x-outer-width));
-        --x-border-color: var(--x-outline-color);
+        outline-style: solid;
       }
     }
     /* Disabled */
@@ -29421,7 +29409,13 @@ const InputSlot = ({
     flex: true,
     alignY: "center",
     onMouseDown: e => {
-      e.preventDefault(); // keep focus in the input
+      // Only prevent focus from leaving when the input already has focus.
+      // If the input is not focused, let the mousedown proceed normally so
+      // the slot element (e.g. a clear button) can receive focus itself.
+      const inputEl = document.getElementById(id);
+      if (inputEl && inputEl === document.activeElement) {
+        e.preventDefault();
+      }
     },
     onClick: e => {
       if (readOnly || disabled) {
@@ -30609,12 +30603,12 @@ const Dialog = props => {
   } = props;
   const defaultRef = useRef();
   const ref = rest.ref || defaultRef;
-  const debugPopover = useDebugPopover();
+  const debugPopup = useDebugPopup();
   const debugFocus = useDebugFocus();
   const openedRef = useRef(false);
   const [addCleanup, cleanup] = useCleanup();
   const open = e => {
-    debugPopover(`openDialog("${e.type}")`);
+    debugPopup(`"${e.type}" on ${getElementSignature(e.target)} -> openDialog`);
     const dialogEl = ref.current;
     dialogEl.showModal();
     const firstFocusable = findFocusable(dialogEl);
@@ -30633,7 +30627,7 @@ const Dialog = props => {
     });
   };
   const close = e => {
-    debugPopover(`closeDialog("${e.type}")`);
+    debugPopup(`"${e.type}" on ${getElementSignature(e.target)} -> closeDialog`);
     const dialogEl = ref.current;
     dialogEl.close();
     cleanup();
@@ -30733,14 +30727,17 @@ const Popover = props => {
     pointerTrap,
     focusTrap,
     children,
-    positionTry = "bottom",
+    positionX,
+    positionY,
+    positionXFixed,
+    positionYFixed,
     ...rest
   } = props;
   const defaultRef = useRef();
   const ref = rest.ref || defaultRef;
   const defaultId = useId();
   const id = rest.id || defaultId;
-  const debugPopover = useDebugPopover();
+  const debugPopup = useDebugPopup();
   const debugFocus = useDebugFocus();
   const [opened, setOpened] = useState(false);
   const openedRef = useRef(opened);
@@ -30749,7 +30746,7 @@ const Popover = props => {
   const open = (e, {
     anchor
   }) => {
-    debugPopover(`openPopover("${e.type}")`);
+    debugPopup(`openPopover("${e.type}")`);
     const popoverEl = ref.current;
     popoverEl.showPopover();
     const firstFocusable = findFocusable(popoverEl);
@@ -30761,27 +30758,27 @@ const Popover = props => {
     }
     const effectiveAnchor = anchor || document.documentElement;
     const positionPopover = positionEvent => {
-      debugPopover(`positionPopover("${positionEvent.type}")`);
-      popoverEl.style.setProperty("--anchor-width", `${effectiveAnchor.getBoundingClientRect().width}px`);
+      const {
+        width,
+        height
+      } = effectiveAnchor.getBoundingClientRect();
+      popoverEl.style.setProperty("--anchor-width", `${width}px`);
+      popoverEl.style.setProperty("--anchor-height", `${height}px`);
       const minLeft = 1;
-      const effectivePositionTry = anchor ? positionTry : "center";
+      const effectivePositionX = anchor ? positionX : "center";
       const {
         left,
         top
       } = pickPositionRelativeTo(popoverEl, effectiveAnchor, {
-        positionTry: effectivePositionTry,
+        positionX: effectivePositionX,
+        positionY,
+        positionXFixed,
+        positionYFixed,
         minLeft
       });
+      debugPopup(`positionPopover("${positionEvent.type}") -> left: ${left}, top: ${top}`);
       popoverEl.style.top = `${top}px`;
-      const popoverRect = popoverEl.getBoundingClientRect();
-      const maxWidth = parseFloat(getComputedStyle(popoverEl).maxWidth);
-      if (!isNaN(maxWidth) && popoverRect.width >= maxWidth - 1) {
-        const viewportWidth = document.documentElement.clientWidth;
-        const centeredLeft = (viewportWidth - popoverRect.width) / 2;
-        popoverEl.style.left = `${Math.max(centeredLeft, minLeft)}px`;
-      } else {
-        popoverEl.style.left = `${Math.max(left, minLeft)}px`;
-      }
+      popoverEl.style.left = `${Math.max(left, minLeft)}px`;
     };
     if (scrollTrap) {
       addCleanup(trapScrollInside(popoverEl));
@@ -30813,7 +30810,7 @@ const Popover = props => {
     });
   };
   const close = e => {
-    debugPopover(`closePopover("${e.type}")`);
+    debugPopup(`closePopover("${e.type}")`);
     const popoverEl = ref.current;
     popoverEl.hidePopover();
     cleanup();
@@ -30867,6 +30864,7 @@ const Popover = props => {
       ...rest,
       ref: ref,
       baseClassName: "navi_popover",
+      pseudoClasses: PopoverPseudoClasses,
       onnavi_popover_request_open: e => {
         const {
           event = e,
@@ -30886,6 +30884,7 @@ const Popover = props => {
     })]
   });
 };
+const PopoverPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":focus-within", ":read-only", ":disabled"];
 const requestPopoverOpen = (popoverElement, {
   event,
   anchor
@@ -30907,11 +30906,12 @@ installImportMetaCssBuild(import.meta);const css$f = /* css */`
   @layer navi {
     .navi_select {
       --select-border-radius: 2px;
-      --select-border-width: 1px;
       --select-outline-width: 1px;
+      --select-border-width: 1px;
       --select-font-size: 14px;
       --select-padding-x-default: 8px;
       --select-padding-y-default: 5px;
+      --select-outline-color: var(--navi-focus-outline-color);
       --select-border-color: light-dark(#767676, #8e8e93);
       --select-background-color: white;
       --select-color: currentColor;
@@ -30934,60 +30934,66 @@ installImportMetaCssBuild(import.meta);const css$f = /* css */`
   }
 
   .navi_select {
-    position: relative;
-    box-sizing: border-box;
-    padding-top: var(
+    --x-select-background-color: var(--select-background-color);
+    --x-select-border-color: var(--select-border-color);
+    /* outline will draw the border when visible */
+    --x-select-outline-width: calc(
+      var(--select-outline-width) + var(--select-border-width)
+    );
+    --x-select-outline-offset: calc(-1 * var(--select-border-width));
+    --x-select-padding-top: var(
       --select-padding-top,
       var(--select-padding-y, var(--select-padding-y-default))
     );
-    padding-right: var(
+    --x-select-padding-right: var(
       --select-padding-right,
       var(--select-padding-x, var(--select-padding-x-default))
     );
-    padding-bottom: var(
-      --select-padding-bottom,
-      var(--select-padding-y, var(--select-padding-y-default))
-    );
-    padding-left: var(
+    --x-select-padding-left: var(
       --select-padding-left,
       var(--select-padding-x, var(--select-padding-x-default))
     );
+    --x-select-padding-bottom: var(
+      --select-padding-bottom,
+      var(--select-padding-y, var(--select-padding-y-default))
+    );
+
+    position: relative;
+    box-sizing: border-box;
+    padding-top: var(--x-select-padding-top);
+    padding-right: var(--x-select-padding-right);
+    padding-bottom: var(--x-select-padding-bottom);
+    padding-left: var(--x-select-padding-left);
     color: var(--select-color);
     font-size: var(--select-font-size);
     text-align: inherit; /* override browser defaults on button which is center */
     white-space: nowrap; /* Prevent icon from going next line */
-    background-color: var(--select-background-color);
-    border: var(--select-border-width) solid transparent;
+    background-color: var(--x-select-background-color);
+    border-width: var(--select-border-width);
+    border-style: solid;
+    border-color: var(--x-select-border-color);
     border-radius: var(--select-border-radius);
-    outline: var(--select-outline-width) solid var(--select-border-color);
-    outline-offset: calc(-1 * var(--select-outline-width));
+    outline-width: var(--x-select-outline-width);
+    outline-color: var(--select-outline-color);
+    outline-offset: var(--x-select-outline-offset);
     user-select: none;
 
-    --x-select-outline-width-focus-visible: calc(
-      var(--select-border-width) + var(--select-outline-width)
-    );
-    --x-select-outline-offset-focus-visible: calc(
-      -1 * (var(--select-border-width) + var(--select-outline-width))
-    );
-
     &[data-hover] {
-      background-color: var(--select-background-color-hover);
-      outline-color: var(--select-border-color-hover);
+      --x-select-background-color: var(--select-background-color-hover);
+      --x-select-border-color: var(--select-border-color-hover);
     }
 
     &[data-focus-visible] {
-      outline-width: var(--x-select-outline-width-focus-visible);
-      outline-color: var(--navi-focus-outline-color);
-      outline-offset: var(--x-select-outline-offset-focus-visible);
+      --x-select-border-color: transparent;
+      outline-style: solid;
     }
 
     &[data-disabled] {
       opacity: 0.5;
       cursor: default;
     }
-
-    .navi_list_container {
-      --list-border-radius: 0;
+    &[data-callout] {
+      --x-select-border-color: var(--callout-color);
     }
 
     .navi_select_trigger_text {
@@ -31015,19 +31021,21 @@ installImportMetaCssBuild(import.meta);const css$f = /* css */`
       }
     }
     .navi_select_trigger_icon {
-      margin-left: 6px;
       flex-shrink: 0;
       opacity: 0.6;
     }
 
     /* popover */
     &[aria-haspopup="listbox"] {
-      &:has(.navi_list_container[data-focus-visible]) {
-        outline-width: var(--x-select-outline-width-focus-visible);
-        outline-color: var(--navi-focus-outline-color);
-        outline-offset: var(--x-select-outline-offset-focus-visible);
-        .navi_list_container {
-          outline: none;
+      .navi_list_container {
+        width: 100%;
+        /* Handled by the popover */
+        border: none;
+        border-radius: 0;
+        outline: none;
+
+        .navi_list {
+          width: 100%;
         }
       }
 
@@ -31036,18 +31044,79 @@ installImportMetaCssBuild(import.meta);const css$f = /* css */`
         inset: unset;
         min-width: var(--anchor-width, 0px);
         max-width: 95vw;
+        /* max-height covers the placeholder + list; the list scrolls internally */
         max-height: 95dvh;
         margin: 0;
         padding: 0;
-        background: white;
-        border: none;
-        border-radius: 0;
+        background: var(--select-background-color);
+        border-width: var(--select-border-width);
+        border-style: solid;
+        border-color: var(--x-select-border-color);
+        border-radius: var(--select-border-radius);
+        outline-width: var(--x-select-outline-width);
+        outline-color: var(--select-outline-color);
+        outline-offset: var(--x-select-outline-offset);
         box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
         cursor: default; /* Reset pointer cursor within the select */
-        overflow: auto;
+        overflow: hidden;
         overscroll-behavior: none;
 
-        &:popover-open {
+        /* The anchor placeholder is a non-interactive visual clone of the
+           trigger. It makes the popover wrap both the trigger area and the list
+           under a single border/shadow. CSS order places it before the list
+           when the popover is below the trigger, and after when above. */
+        .navi_select_anchor_clone {
+          /* Mirror the trigger's padding so the clone looks identical */
+          padding-top: var(--x-select-padding-top);
+          padding-right: var(--x-select-padding-right);
+          padding-bottom: var(--x-select-padding-bottom);
+          padding-left: var(--x-select-padding-left);
+          flex-shrink: 0;
+          order: -1; /* before the list — popover is below the trigger */
+          background: var(--x-select-background-color);
+          border-bottom: var(--select-border-width) solid
+            var(--x-select-border-color);
+
+          &:hover {
+            --x-select-background-color: var(--select-background-color-hover);
+            --x-select-border-color: var(--select-border-color-hover);
+          }
+        }
+
+        &[data-position-y-current="above"],
+        &[data-position-y-current="above-overlap"] {
+          .navi_select_anchor_clone {
+            order: 1; /* after the list — popover is above the trigger */
+            border-top: var(--select-border-width) solid
+              var(--x-select-border-color);
+            border-bottom: none;
+          }
+        }
+
+        /* The list scrolls inside the popover */
+        .navi_list_container {
+          overflow: auto;
+          overscroll-behavior: none;
+        }
+      }
+
+      &:has([data-hover]) {
+        .navi_select_popover {
+          --x-select-border-color: var(--select-border-color-hover);
+        }
+      }
+      &:has([data-focus-visible]) {
+        .navi_select_popover {
+          outline-style: solid;
+        }
+      }
+
+      &[aria-expanded="true"] {
+        border-top-color: var(--select-border-color);
+        border-top-left-radius: 0;
+        border-top-right-radius: 0;
+
+        .navi_select_popover {
           display: flex;
           flex-direction: column;
         }
@@ -31057,17 +31126,15 @@ installImportMetaCssBuild(import.meta);const css$f = /* css */`
     /* dialog */
     &[aria-haspopup="dialog"] {
       .navi_list_container {
+        width: 100%;
         --list-max-height: none;
-      }
+        /* Handled by the dialog */
+        border: none;
+        border-radius: 0;
+        outline: none;
 
-      /* When the list inside the dialog has keyboard focus, show the focus ring
-       on the dialog instead */
-      &:has(.navi_list_container[data-focus-visible]) {
-        outline-width: var(--x-select-outline-width-focus-visible);
-        outline-color: var(--navi-focus-outline-color);
-        outline-offset: var(--x-select-outline-offset-focus-visible);
-        .navi_list_container {
-          outline: none;
+        .navi_list {
+          width: 100%;
         }
       }
 
@@ -31075,9 +31142,12 @@ installImportMetaCssBuild(import.meta);const css$f = /* css */`
         max-height: 95dvh;
         margin: auto;
         padding: 0;
-        background: white;
-        border: none;
-        border-radius: 8px;
+        background: var(--select-background-color);
+        border: var(--select-border-width) solid var(--x-select-border-color);
+        border-radius: var(--select-border-radius);
+        outline-width: var(--x-select-outline-width);
+        outline-color: var(--select-outline-color);
+        outline-offset: var(--x-select-outline-offset);
         box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
         cursor: default; /* Reset pointer cursor within the select */
 
@@ -31088,6 +31158,14 @@ installImportMetaCssBuild(import.meta);const css$f = /* css */`
 
         &::backdrop {
           background: rgba(0, 0, 0, 0.4);
+        }
+      }
+
+      /* When the list inside the dialog has keyboard focus, show the focus ring
+       on the dialog instead */
+      &:has([data-focus-visible]) {
+        .navi_select_dialog {
+          outline-style: solid;
         }
       }
     }
@@ -31133,6 +31211,7 @@ const Select = props => {
   return jsx(ParentUIStateControllerContext.Provider, {
     value: uiStateController,
     children: jsx(SelectDispatcher, {
+      trigger: jsx(SelectTrigger, {}),
       ...props,
       ref: ref,
       value: value
@@ -31161,7 +31240,7 @@ const SelectDispatcher = props => {
 };
 const SelectUI = props => {
   import.meta.css = [css$f, "@jsenv/navi/src/field/select.jsx"];
-  let {
+  const {
     placeholder = "Select…",
     trigger,
     name,
@@ -31192,9 +31271,6 @@ const SelectUI = props => {
   useAutoFocus(ref, autoFocus, {
     preventScroll: autoFocusPreventScroll
   });
-  if (trigger === undefined) {
-    trigger = jsx(SelectTrigger, {});
-  }
   return jsxs(Box, {
     as: "button",
     type: "button",
@@ -31237,6 +31313,7 @@ const SelectUI = props => {
 const SelectPlaceholderContext = createContext();
 const SelectValueContext = createContext(null);
 const SelectStyleCSSVars = {
+  "outlineWidth": "--select-outline-width",
   "borderWidth": "--select-border-width",
   "borderRadius": "--select-border-radius",
   "paddingX": "--select-padding-x",
@@ -31274,14 +31351,16 @@ const SelectStyleCSSVars = {
     color: "--select-color-disabled"
   }
 };
-const SelectPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading", ":-navi-expanded"];
+const SelectPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":focus-within", ":read-only", ":disabled", ":-navi-loading", ":-navi-expanded"];
 const SelectPseudoElements = ["::-navi-loader"];
 const SelectTrigger = () => {
   const placeholder = useContext(SelectPlaceholderContext);
   const value = useContext(SelectValueContext);
   const hasValue = value !== null && value !== undefined && value !== "";
   const isPlaceholder = !hasValue;
-  return jsxs(Fragment, {
+  return jsxs(Box, {
+    flex: true,
+    spacing: "s",
     children: [jsxs("span", {
       className: "navi_select_trigger_text",
       children: [jsx("span", {
@@ -31307,13 +31386,13 @@ const SelectWithPopover = props => {
     disabled,
     onKeyDown,
     children,
-    positionTry,
     pointerTrap,
     scrollTrap = true,
     focusTrap = true,
     ...rest
   } = props;
   const debugFocus = useDebugFocus();
+  const debugPopup = useDebugPopup();
   const popoverRef = useRef(null);
   const popoverId = useId();
   const [expanded, setExpanded] = useState(false);
@@ -31328,12 +31407,21 @@ const SelectWithPopover = props => {
     setExpanded(false);
   };
   const requestOpen = e => {
+    // scroll select into view when opening it
+    ref.current.scrollIntoView({
+      block: "nearest"
+    });
     return requestPopoverOpen(popoverRef.current, {
       event: e,
       anchor: ref.current
     });
   };
+  const [shouldIgnoreThatClick, disableClickFor] = useIgnoreClickForMousedown();
   const requestClose = (e = new CustomEvent("programmatic")) => {
+    if (e.type === "mousedown") {
+      debugPopup(formatEventSideEffect(e, `disable click`));
+      disableClickFor(e);
+    }
     return requestPopoverClose(popoverRef.current, {
       event: e
     });
@@ -31345,7 +31433,6 @@ const SelectWithPopover = props => {
       preventScroll: true
     });
   };
-  const [shouldIgnoreThatClick, disableClickFor] = useIgnoreClickForMousedown();
   return jsx(SelectDispatcher, {
     disabled: disabled,
     "aria-haspopup": "listbox",
@@ -31372,6 +31459,7 @@ const SelectWithPopover = props => {
         return;
       }
       if (shouldIgnoreThatClick) {
+        debugPopup(formatEventSideEffect(e, `ignore click`));
         return;
       }
       // When a label is clicked it transfers focus to the select
@@ -31393,8 +31481,8 @@ const SelectWithPopover = props => {
         // space can open the popover we don't want space to propagate to the select otherwise it would open it back immediatly
         event.stopPropagation();
       }
-      requestClose(e);
-      moveFocusToSelect(e);
+      requestClose(event);
+      moveFocusToSelect(event);
     },
     onFocusOut: e => {
       // Close when focus leaves the select entirely (not just moving between internal elements).
@@ -31432,7 +31520,7 @@ const SelectWithPopover = props => {
     }, onKeyDown),
     ref: ref,
     mode: "ui",
-    children: jsx(Popover, {
+    children: jsxs(Popover, {
       ref: popoverRef,
       className: "navi_select_popover",
       onMouseDown: e => {
@@ -31441,7 +31529,6 @@ const SelectWithPopover = props => {
         }
         // mousedown inside popover should not bubble to the select (would re-open it if that mousedown closes it)
         e.stopPropagation();
-        disableClickFor(e);
       },
       onnavi_popover_open: e => {
         onOpen();
@@ -31452,17 +31539,27 @@ const SelectWithPopover = props => {
           event = e
         } = e.detail;
         if (event.type === "focusout") ; else {
-          moveFocusToSelect(e);
+          moveFocusToSelect(event);
         }
       },
-      positionTry: positionTry,
+      positionX: "left-aligned",
+      positionY: "below-overlap",
       scrollTrap: scrollTrap,
       pointerTrap: pointerTrap,
       focusTrap: focusTrap,
-      children: jsx(SelectRequestCloseContext.Provider, {
+      children: [jsx("div", {
+        className: "navi_select_anchor_clone",
+        onMouseDown: e => {
+          if (e.button !== 0) {
+            return;
+          }
+          requestClose(e);
+        },
+        children: props.trigger
+      }), jsx(SelectRequestCloseContext.Provider, {
         value: requestClose,
         children: children
-      })
+      })]
     })
   });
 };
@@ -31478,6 +31575,7 @@ const SelectWithDialog = props => {
     ...rest
   } = props;
   const debugFocus = useDebugFocus();
+  const debugPopup = useDebugPopup();
   const dialogRef = useRef(null);
   const dialogId = useId();
   const [expanded, setExpanded] = useState(false);
@@ -31496,7 +31594,12 @@ const SelectWithDialog = props => {
       event: e
     });
   };
+  const [shouldIgnore, disableClickFor] = useIgnoreClickForMousedown();
   const requestClose = (e = new CustomEvent("programmatic")) => {
+    if (e.type === "mousedown") {
+      debugPopup(formatEventSideEffect(e, `disable click`));
+      disableClickFor(e);
+    }
     return requestDialogClose(dialogRef.current, {
       event: e
     });
@@ -31507,7 +31610,6 @@ const SelectWithDialog = props => {
       preventScroll: true
     });
   };
-  const [shouldIgnoreThatClick, disableClickFor] = useIgnoreClickForMousedown();
   return jsx(SelectDispatcher, {
     disabled: disabled,
     "aria-haspopup": "dialog",
@@ -31533,7 +31635,8 @@ const SelectWithDialog = props => {
         // click triggered by enter won't open the dialog
         return;
       }
-      if (shouldIgnoreThatClick) {
+      if (shouldIgnore) {
+        debugPopup(formatEventSideEffect(e, `ignore click`));
         // mousedown on the select already handled open/close; ignore this click
         // to avoid toggling the dialog again on mouseup
         return;
@@ -31549,7 +31652,7 @@ const SelectWithDialog = props => {
         // space can open the dialog, we don't want space to propagate to the select otherwise it would open it back immediately
         event.stopPropagation();
       }
-      requestClose(e);
+      requestClose(event);
     },
     ...rest,
     onKeyDown: shortcutsViaOnKeyDown({
@@ -31593,7 +31696,6 @@ const SelectWithDialog = props => {
         }
         // mousedown inside dialog should not bubble to the select (would re-open it if that mousedown closes it)
         e.stopPropagation();
-        disableClickFor(e);
       },
       scrollTrap: scrollTrap,
       pointerTrap: pointerTrap,

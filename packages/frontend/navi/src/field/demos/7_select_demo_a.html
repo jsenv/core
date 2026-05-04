@@ -197,46 +197,49 @@
               The popover contains a search input and a filterable list.
               Selecting a fruit closes the popover automatically.
             </p>
-            <NaviDebug debugFocus debugScroll debugPopup>
-              <Select
-                name="fruit"
-                value={fruit}
-                uiAction={(v) => {
-                  setFruit(v);
-                }}
-                placeholder="Pick a fruit…"
-                scrollTrap
-                focusTrap
-              >
-                <List role="listbox">
-                  <ListItemHeader padding="m" borderBottom="1px solid #eee">
-                    <Input
-                      uiAction={(v) => setSearchText(v)}
-                      type="search"
-                      placeholder="Search…"
-                      value={searchText}
-                      expandX
-                    />
-                  </ListItemHeader>
-                  {items.map((f, i) => {
-                    const { match, ranges } = getItemMatchInfo(f);
-                    return (
-                      <ListItem
-                        key={f}
-                        index={i}
-                        id={f}
-                        value={f}
-                        selected={fruit === f}
-                        hidden={!match}
-                        highlight={ranges}
-                      >
-                        {f}
-                      </ListItem>
-                    );
-                  })}
-                </List>
-              </Select>
-            </NaviDebug>
+            <Box flex spacing="s" alignY="center">
+              <NaviDebug debugFocus debugScroll debugPopup>
+                <Select
+                  name="fruit"
+                  value={fruit}
+                  uiAction={(v) => {
+                    setFruit(v);
+                  }}
+                  placeholder="Pick a fruit…"
+                  scrollTrap
+                  focusTrap
+                >
+                  <List role="listbox">
+                    <ListItemHeader padding="m" borderBottom="1px solid #eee">
+                      <Input
+                        uiAction={(v) => setSearchText(v)}
+                        type="search"
+                        placeholder="Search…"
+                        value={searchText}
+                        expandX
+                      />
+                    </ListItemHeader>
+                    {items.map((f, i) => {
+                      const { match, ranges } = getItemMatchInfo(f);
+                      return (
+                        <ListItem
+                          key={f}
+                          index={i}
+                          id={f}
+                          value={f}
+                          selected={fruit === f}
+                          hidden={!match}
+                          highlight={ranges}
+                        >
+                          {f}
+                        </ListItem>
+                      );
+                    })}
+                  </List>
+                </Select>
+              </NaviDebug>
+              Some text here (to show no layout impact when opening select)
+            </Box>
             <div className="value-display">{fruit ?? ""}</div>
           </div>
         );
