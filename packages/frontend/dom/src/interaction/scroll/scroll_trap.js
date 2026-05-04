@@ -40,10 +40,10 @@ export const trapScrollInside = (element) => {
     }
     const [scrollbarWidth, scrollbarHeight] = measureScrollbar(el);
     const paddingRight = parseInt(getStyle(el, "padding-right"), 0);
-    const paddingTop = parseInt(getStyle(el, "padding-top"), 0);
+    const paddingBottom = parseInt(getStyle(el, "padding-bottom"), 0);
     const removeScrollLockStyles = setStyles(el, {
       "padding-right": `${paddingRight + scrollbarWidth}px`,
-      "padding-top": `${paddingTop + scrollbarHeight}px`,
+      "padding-bottom": `${paddingBottom + scrollbarHeight}px`,
       "overflow": "hidden",
     });
     cleanupCallbackSet.add(removeScrollLockStyles);
