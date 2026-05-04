@@ -379,7 +379,12 @@ const ButtonUI = (props) => {
 
   const renderButtonContent = (buttonProps) => {
     return (
-      <Text {...buttonProps} spacing={spacing} className="navi_button_content">
+      <Text
+        {...buttonProps}
+        flex={spacing !== undefined ? true : buttonProps.flex}
+        spacing={spacing}
+        className="navi_button_content"
+      >
         {children}
         <ButtonShadow />
       </Text>

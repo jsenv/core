@@ -753,7 +753,7 @@
               fontFamily: "monospace",
             }}
           >
-            {spacing ? `spacing="${spacing}"` : "(none)"}
+            {spacing !== undefined ? `spacing="${spacing}"` : "(not given)"}
           </span>
           <Button flex={flex} spacing={spacing}>
             <Icon>
@@ -775,6 +775,7 @@
               <legend>spacing prop without flex</legend>
               <div className="button-group">
                 <SpacingButton />
+                <SpacingButton spacing="0" />
                 <SpacingButton spacing="s" />
                 <SpacingButton spacing="m" />
                 <SpacingButton spacing="l" />
@@ -785,6 +786,7 @@
               <legend>spacing prop with flex</legend>
               <div className="button-group">
                 <SpacingButton flex />
+                <SpacingButton flex spacing="0" />
                 <SpacingButton flex spacing="s" />
                 <SpacingButton flex spacing="m" />
                 <SpacingButton flex spacing="l" />

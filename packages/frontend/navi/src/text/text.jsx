@@ -200,6 +200,13 @@ const FAKE_SPACE = (
 );
 const CustomWidthSpace = ({ value, useRealSpaceChar }) => {
   if (useRealSpaceChar) {
+    // Two-span trick: we want a real space character in the DOM so that
+    // copy-pasting the text produces an actual space, but we also want
+    // full control over the visual width of that gap.
+    // - First span: contains the real space but rendered at font-size:0 so it
+    //   takes up zero visual space.
+    // - Second span: a zero-width joiner (&#8203;) with padding-left set to
+    //   the desired gap size. This is the only visible part.
     return (
       <span>
         <span style="font-size: 0"> </span>
