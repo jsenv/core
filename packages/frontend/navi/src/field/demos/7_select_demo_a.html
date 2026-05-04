@@ -103,7 +103,7 @@
             <Box flex spacing="m">
               <fieldset>
                 <legend>Navi</legend>
-                <NaviDebug debugFocus debugScroll debugPopover>
+                <NaviDebug debugFocus debugScroll debugPopup>
                   <Label flex spacing="s" alignY="center">
                     Color
                     <Select
@@ -197,7 +197,7 @@
               The popover contains a search input and a filterable list.
               Selecting a fruit closes the popover automatically.
             </p>
-            <NaviDebug debugFocus debugScroll debugPopover>
+            <NaviDebug debugFocus debugScroll debugPopup>
               <Select
                 name="fruit"
                 value={fruit}
@@ -547,7 +547,7 @@
               A fully custom trigger passed via the <code>trigger</code> prop.
               The select has custom border color and radius via style props.
             </p>
-            <NaviDebug debugPopover debugFocus>
+            <NaviDebug debugPopup debugFocus>
               <Select
                 name="decoupage"
                 value={decoupage}

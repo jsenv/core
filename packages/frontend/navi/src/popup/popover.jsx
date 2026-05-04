@@ -10,7 +10,7 @@ import { createPortal } from "preact/compat";
 import { useId, useRef, useState } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
-import { useDebugFocus, useDebugPopover } from "../navi_debug.jsx";
+import { useDebugFocus, useDebugPopup } from "../navi_debug.jsx";
 import {
   dispatchCustomEvent,
   dispatchPublicCustomEvent,
@@ -51,7 +51,7 @@ export const Popover = (props) => {
   const ref = rest.ref || defaultRef;
   const defaultId = useId();
   const id = rest.id || defaultId;
-  const debugPopover = useDebugPopover();
+  const debugPopup = useDebugPopup();
   const debugFocus = useDebugFocus();
 
   const [opened, setOpened] = useState(false);
@@ -59,7 +59,7 @@ export const Popover = (props) => {
   openedRef.current = opened;
   const [addCleanup, cleanup] = useCleanup();
   const open = (e, { anchor }) => {
-    debugPopover(`openPopover("${e.type}")`);
+    debugPopup(`openPopover("${e.type}")`);
     const popoverEl = ref.current;
     popoverEl.showPopover();
     const firstFocusable = findFocusable(popoverEl);
@@ -83,7 +83,7 @@ export const Popover = (props) => {
         positionYFixed,
         minLeft,
       });
-      debugPopover(
+      debugPopup(
         `positionPopover("${positionEvent.type}") -> left: ${left}, top: ${top}`,
       );
       popoverEl.style.top = `${top}px`;
@@ -117,7 +117,7 @@ export const Popover = (props) => {
     });
   };
   const close = (e) => {
-    debugPopover(`closePopover("${e.type}")`);
+    debugPopup(`closePopover("${e.type}")`);
     const popoverEl = ref.current;
     popoverEl.hidePopover();
     cleanup();

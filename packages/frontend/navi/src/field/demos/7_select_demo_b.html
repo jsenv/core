@@ -70,7 +70,7 @@
               A <code>Select</code> can contain any custom content inside its
               panel, not just a list.
             </p>
-            <NaviDebug debugPopover>
+            <NaviDebug debugPopup>
               <Select value={color} placeholder="Choose a color…">
                 <ColorList onSelect={setColor} />
               </Select>
@@ -177,45 +177,47 @@
         const [orderedFruits, getItemMatchInfo] = useSearchText(search, FRUITS);
         return (
           <div style="min-width: 300px;">
-            <DialogHeader title="Please select a fruit" />
-            <List
-              role="listbox"
-              maxHeight="240px"
-              expandX
-              border="none"
-              searchText={search}
-            >
-              <ListItemHeader>
-                <Input
-                  placeholder="Sort…"
-                  expandX
-                  paddingX="10"
-                  paddingY="6"
-                  size="m"
-                  style="border-bottom: 1px solid #eee; border-radius: 0;"
-                  uiAction={(v) => setSearch(v)}
-                />
-              </ListItemHeader>
-              {orderedFruits.map((fruit, i) => {
-                const selected = selectedFruit === fruit;
-                const { score, ranges } = getItemMatchInfo(fruit);
-                return (
-                  <ListItem
-                    role="option"
-                    key={fruit}
-                    index={i}
-                    id={fruit}
-                    value={fruit}
-                    highlight={ranges}
-                    matchScore={score}
-                    selected={selected}
-                    overflowEllipsis
-                  >
-                    {fruit}
-                  </ListItem>
-                );
-              })}
-            </List>
+            <NaviDebug debugPopup>
+              <DialogHeader title="Please select a fruit" />
+              <List
+                role="listbox"
+                maxHeight="240px"
+                expandX
+                border="none"
+                searchText={search}
+              >
+                <ListItemHeader>
+                  <Input
+                    placeholder="Sort…"
+                    expandX
+                    paddingX="10"
+                    paddingY="6"
+                    size="m"
+                    style="border-bottom: 1px solid #eee; border-radius: 0;"
+                    uiAction={(v) => setSearch(v)}
+                  />
+                </ListItemHeader>
+                {orderedFruits.map((fruit, i) => {
+                  const selected = selectedFruit === fruit;
+                  const { score, ranges } = getItemMatchInfo(fruit);
+                  return (
+                    <ListItem
+                      role="option"
+                      key={fruit}
+                      index={i}
+                      id={fruit}
+                      value={fruit}
+                      highlight={ranges}
+                      matchScore={score}
+                      selected={selected}
+                      overflowEllipsis
+                    >
+                      {fruit}
+                    </ListItem>
+                  );
+                })}
+              </List>
+            </NaviDebug>
           </div>
         );
       };
