@@ -67,6 +67,7 @@ const css = /* css */ `
   }
 
   .navi_select {
+    --x-select-background-color: var(--select-background-color);
     --x-select-border-color: var(--select-border-color);
     /* outline will draw the border when visible */
     --x-select-outline-width: calc(
@@ -100,7 +101,7 @@ const css = /* css */ `
     font-size: var(--select-font-size);
     text-align: inherit; /* override browser defaults on button which is center */
     white-space: nowrap; /* Prevent icon from going next line */
-    background-color: var(--select-background-color);
+    background-color: var(--x-select-background-color);
     border-width: var(--select-border-width);
     border-style: solid;
     border-color: var(--x-select-border-color);
@@ -111,7 +112,7 @@ const css = /* css */ `
     user-select: none;
 
     &[data-hover] {
-      background-color: var(--select-background-color-hover);
+      --x-select-background-color: var(--select-background-color-hover);
       --x-select-border-color: var(--select-border-color-hover);
     }
 
@@ -202,8 +203,14 @@ const css = /* css */ `
           padding-left: var(--x-select-padding-left);
           flex-shrink: 0;
           order: -1; /* before the list — popover is below the trigger */
+          background: var(--x-select-background-color);
           border-bottom: var(--select-border-width) solid
             var(--x-select-border-color);
+
+          &:hover {
+            --x-select-background-color: var(--select-background-color-hover);
+            --x-select-border-color: var(--select-border-color-hover);
+          }
         }
 
         &[data-position-y-current="above"],
@@ -223,7 +230,7 @@ const css = /* css */ `
         }
       }
 
-      &[data-focus-within]:has([data-focus-visible]) {
+      &:has([data-focus-visible]) {
         .navi_select_popover {
           outline-style: solid;
         }
@@ -233,8 +240,6 @@ const css = /* css */ `
         border-top-color: var(--select-border-color);
         border-top-left-radius: 0;
         border-top-right-radius: 0;
-        /* Let the popover handle the border and outline display */
-        outline-color: transparent !important;
 
         .navi_select_popover {
           display: flex;
@@ -248,17 +253,13 @@ const css = /* css */ `
       .navi_list_container {
         width: 100%;
         --list-max-height: none;
-        border-radius: inherit;
-      }
+        /* Handled by the dialog */
+        border: none;
+        border-radius: 0;
+        outline: none;
 
-      /* When the list inside the dialog has keyboard focus, show the focus ring
-       on the dialog instead */
-      &:has(.navi_list_container[data-focus-visible]) {
-        outline-width: var(--x-select-outline-width-focus-visible);
-        outline-color: var(--navi-focus-outline-color);
-        outline-offset: var(--x-select-outline-offset-focus-visible);
-        .navi_list_container {
-          outline: none;
+        .navi_list {
+          width: 100%;
         }
       }
 
@@ -266,9 +267,12 @@ const css = /* css */ `
         max-height: 95dvh;
         margin: auto;
         padding: 0;
-        background: white;
-        border: none;
-        border-radius: 8px;
+        background: var(--select-background-color);
+        border: var(--select-border-width) solid var(--x-select-border-color);
+        border-radius: var(--select-border-radius);
+        outline-width: var(--x-select-outline-width);
+        outline-color: var(--select-outline-color);
+        outline-offset: var(--x-select-outline-offset);
         box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
         cursor: default; /* Reset pointer cursor within the select */
 
@@ -279,6 +283,14 @@ const css = /* css */ `
 
         &::backdrop {
           background: rgba(0, 0, 0, 0.4);
+        }
+      }
+
+      /* When the list inside the dialog has keyboard focus, show the focus ring
+       on the dialog instead */
+      &:has([data-focus-visible]) {
+        .navi_select_dialog {
+          outline-style: solid;
         }
       }
     }
@@ -678,6 +690,9 @@ const SelectWithPopover = (props) => {
         <div
           className="navi_select_anchor_clone"
           onMouseDown={(e) => {
+            if (e.button !== 0) {
+              return;
+            }
             disableClickFor(e);
             requestClose(e);
           }}

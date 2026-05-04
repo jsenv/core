@@ -174,6 +174,7 @@ export const Popover = (props) => {
         {...rest}
         ref={ref}
         baseClassName="navi_popover"
+        pseudoClasses={PopoverPseudoClasses}
         onnavi_popover_request_open={(e) => {
           const { event = e, anchor } = e.detail;
           onRequestOpen(event, { anchor });
@@ -188,6 +189,15 @@ export const Popover = (props) => {
     </>
   );
 };
+const PopoverPseudoClasses = [
+  ":hover",
+  ":active",
+  ":focus",
+  ":focus-visible",
+  ":focus-within",
+  ":read-only",
+  ":disabled",
+];
 
 export const requestPopoverOpen = (popoverElement, { event, anchor }) => {
   return dispatchCustomEvent(popoverElement, "navi_popover_request_open", {
