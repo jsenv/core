@@ -203,12 +203,18 @@ const css = /* css */ `
            under a single border/shadow. CSS order places it before the list
            when the popover is below the trigger, and after when above. */
         .navi_select_anchor_clone {
+          display: flex;
+          min-height: calc(var(--anchor-height) - var(--select-border-width));
           /* Mirror the trigger's padding so the clone looks identical */
           padding-top: var(--x-select-padding-top);
           padding-right: var(--x-select-padding-right);
           padding-bottom: var(--x-select-padding-bottom);
           padding-left: var(--x-select-padding-left);
           flex-shrink: 0;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: var(--navi-s);
           order: -1; /* before the list — popover is below the trigger */
           background: var(--x-select-background-color);
           border-bottom: var(--select-border-width) solid
@@ -249,10 +255,6 @@ const css = /* css */ `
       }
 
       &[aria-expanded="true"] {
-        border-top-color: var(--select-border-color);
-        border-top-left-radius: 0;
-        border-top-right-radius: 0;
-
         .navi_select_popover {
           display: flex;
           flex-direction: column;
