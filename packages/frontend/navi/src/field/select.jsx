@@ -206,7 +206,8 @@ const css = /* css */ `
           pointer-events: none;
         }
 
-        &[data-position-current="top"] {
+        &[data-position-y-current="above"],
+        &[data-position-y-current="above-overlap"] {
           .navi_select_anchor_placeholder {
             order: 1; /* after the list — popover is above the trigger */
           }
@@ -506,7 +507,6 @@ const SelectWithPopover = (props) => {
     disabled,
     onKeyDown,
     children,
-    positionTry,
     pointerTrap,
     scrollTrap = true,
     focusTrap = true,
@@ -660,8 +660,8 @@ const SelectWithPopover = (props) => {
             moveFocusToSelect(e);
           }
         }}
-        positionTry={positionTry}
-        anchorOverlap
+        positionX="left-aligned"
+        positionY="below-overlap"
         scrollTrap={scrollTrap}
         pointerTrap={pointerTrap}
         focusTrap={focusTrap}

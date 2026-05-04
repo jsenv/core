@@ -40,9 +40,10 @@ export const Popover = (props) => {
     pointerTrap,
     focusTrap,
     children,
-    positionTry = "bottom",
-    anchorBorderCollapse = false,
-    anchorOverlap = false,
+    positionX,
+    positionY,
+    positionXFixed,
+    positionYFixed,
     ...rest
   } = props;
 
@@ -80,31 +81,16 @@ export const Popover = (props) => {
         `${effectiveAnchor.getBoundingClientRect().height}px`,
       );
       const minLeft = 1;
-      const effectivePositionTry = anchor ? positionTry : "center";
-      const { left, top, position } = pickPositionRelativeTo(
-        popoverEl,
-        effectiveAnchor,
-        {
-          positionTry: effectivePositionTry,
-          minLeft,
-          anchorBorderCollapse,
-          anchorOverlap,
-        },
-      );
-      effectiveAnchor.setAttribute("data-popover-position", position);
-      addCleanup(() => {
-        effectiveAnchor.removeAttribute("data-popover-position");
+      const effectivePositionX = anchor ? positionX : "center";
+      const { left, top } = pickPositionRelativeTo(popoverEl, effectiveAnchor, {
+        positionX: effectivePositionX,
+        positionY,
+        positionXFixed,
+        positionYFixed,
+        minLeft,
       });
       popoverEl.style.top = `${top}px`;
-      const popoverRect = popoverEl.getBoundingClientRect();
-      const maxWidth = parseFloat(getComputedStyle(popoverEl).maxWidth);
-      if (!isNaN(maxWidth) && popoverRect.width >= maxWidth - 1) {
-        const viewportWidth = document.documentElement.clientWidth;
-        const centeredLeft = (viewportWidth - popoverRect.width) / 2;
-        popoverEl.style.left = `${Math.max(centeredLeft, minLeft)}px`;
-      } else {
-        popoverEl.style.left = `${Math.max(left, minLeft)}px`;
-      }
+      popoverEl.style.left = `${Math.max(left, minLeft)}px`;
     };
 
     if (scrollTrap) {

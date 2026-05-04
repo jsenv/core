@@ -1,6 +1,5 @@
 import { getScrollContainer } from "../interaction/scroll/scroll_container.js";
 import { createPubSub } from "../pub_sub.js";
-import { getBorderSizes } from "../size/get_border_sizes.js";
 
 const DEBUG = false;
 
@@ -334,57 +333,54 @@ export const visibleRectEffect = (element, update) => {
 };
 
 /**
- * Places element adjacent to anchor using one of 9 compass positions.
+ * Places element relative to anchor with independent control of horizontal and vertical axes.
  *
- * ```
- *   top-left  |   top   | top-right
- *   ----------+---------+----------
- *     left    |  center |   right
- *   ----------+---------+----------
- *  bottom-left|  bottom |bottom-right
- * ```
+ * Horizontal axis — positionX / positionXFixed (left → right):
+ *   "to-the-left"   element.right  = anchor.left   (sits entirely to the left of anchor)
+ *   "left-aligned"  element.left   = anchor.left   (left edges aligned)
+ *   "center"        element centered horizontally over anchor  (default)
+ *   "right-aligned" element.right  = anchor.right  (right edges aligned)
+ *   "to-the-right"  element.left   = anchor.right  (sits entirely to the right of anchor)
  *
- * All positions except "center" place element outside the anchor:
- *   - "top"          → element.bottom = anchor.top,    horizontally centered
- *   - "bottom"       → element.top    = anchor.bottom, horizontally centered  (default)
- *   - "left"         → element.right  = anchor.left,   vertically centered
- *   - "right"        → element.left   = anchor.right,  vertically centered
- *   - "top-left"     → element.bottom = anchor.top,    element.right = anchor.left
- *   - "top-right"    → element.bottom = anchor.top,    element.left  = anchor.right
- *   - "bottom-left"  → element.top    = anchor.bottom, element.right = anchor.left
- *   - "bottom-right" → element.top    = anchor.bottom, element.left  = anchor.right
- *   - "center"       → element centered on anchor (overlapping)
+ * Vertical axis — positionY / positionYFixed (top → bottom):
+ *   "above"         element.bottom = anchor.top    (sits above, no overlap)
+ *   "above-overlap" element.bottom = anchor.bottom (sits above, overlapping anchor)
+ *   "center"        element centered vertically over anchor
+ *   "below-overlap" element.top    = anchor.top    (sits below, overlapping anchor)
+ *   "below"         element.top    = anchor.bottom (sits below, no overlap)  (default)
+ *
+ * positionX / positionY attempt the requested placement and automatically flip to the
+ * logical opposite when the element does not fit in the viewport:
+ *   above ↔ below,   above-overlap ↔ below-overlap
+ *
+ * positionXFixed / positionYFixed skip the fit check entirely.
+ *
+ * The resolved X and Y are persisted as data-position-x-current / data-position-y-current
+ * on the element so subsequent calls start from the last resolved position (avoids
+ * flickering when the element is near the flip threshold). Fixed axes are not persisted.
  *
  * @param {HTMLElement} element - The element to position (must be document-relative)
  * @param {HTMLElement} anchor - The anchor element to position against
  * @param {object} [options]
- * @param {string} [options.positionTry="bottom"] - Preferred position. Mimics CSS position-try.
- *   If it does not fit, the logical opposite is tried automatically:
- *   top↔bottom, left↔right, top-left↔bottom-right, top-right↔bottom-left.
- *   The element's data-position-try attribute takes precedence over this param;
- *   the last resolved position is persisted as data-position-current to avoid flickering.
- * @param {string} [options.position] - Force a specific position, skipping the fit-check.
+ * @param {string} [options.positionX="center"] - Preferred X placement, with viewport fallback.
+ * @param {string} [options.positionY="below"] - Preferred Y placement, with viewport fallback.
+ * @param {string} [options.positionXFixed] - Force X placement, skipping the fit-check.
+ * @param {string} [options.positionYFixed] - Force Y placement, skipping the fit-check.
  * @param {number} [options.alignToViewportEdgeWhenAnchorNearEdge=0] - Snap to viewport left
  *   edge when anchor is within this many px of the left edge and element is wider than anchor.
  * @param {number} [options.minLeft=0] - Minimum left coordinate (document-relative).
- * @returns {{ position, left, top, width, height, anchorLeft, anchorTop, anchorRight, anchorBottom, spaceAbove, spaceBelow }}
+ * @returns {{ positionX, positionY, left, top, width, height, anchorLeft, anchorTop, anchorRight, anchorBottom, spaceAbove, spaceBelow }}
  */
 export const pickPositionRelativeTo = (
   element,
   anchor,
   {
-    positionTry = "bottom",
-    position,
+    positionX = "center",
+    positionY = "below",
+    positionXFixed,
+    positionYFixed,
     alignToViewportEdgeWhenAnchorNearEdge = 0,
     minLeft = 0,
-    // When true the positioned element is allowed to overlap the anchor's border,
-    // producing a border-collapse effect (the element's border sits on top of the
-    // anchor's border instead of being placed flush outside it).
-    anchorBorderCollapse = false,
-    // When true the positioned element is placed ON TOP of the anchor instead of
-    // outside it. For "bottom" positioning the element's top aligns with the anchor's
-    // top (the element covers the anchor). Disabled by default.
-    anchorOverlap = false,
   } = {},
 ) => {
   if (
@@ -426,61 +422,69 @@ export const pickPositionRelativeTo = (
   const anchorWidth = anchorRight - anchorLeft;
   const anchorHeight = anchorBottom - anchorTop;
 
-  // Determine the active position: position wins, then data-position-current (last resolved),
-  // then data-position-try attribute (user preference), then positionTry param
-  let activePosition;
-  if (position) {
-    activePosition = position;
-  } else {
-    const positionCurrentFromAttribute = element.getAttribute(
-      "data-position-current",
-    );
-    const positionTryFromAttribute = element.getAttribute("data-position-try");
-    activePosition =
-      positionCurrentFromAttribute || positionTryFromAttribute || positionTry;
-  }
-
   const spaceAbove = anchorTop;
   const spaceBelow = viewportHeight - anchorBottom;
 
-  // Resolve vertical axis, falling back to opposite if the tried position does not fit
-  const { isTop, isBottom, isLeft, isRight, isCenter } =
-    decomposePosition(activePosition);
-  const isCenterX = !isLeft && !isRight; // top / bottom / center
-  const isCenterY = !isTop && !isBottom; // left / right / center
-
-  let resolvedVertical; // "top" | "bottom" | "center-y"
-  if (isCenter || isCenterY) {
-    resolvedVertical = "center-y";
-  } else if (position) {
-    resolvedVertical = isTop ? "top" : "bottom";
-  } else if (isTop) {
-    const minContentVisibilityRatio = 0.6;
-    const fitsAbove = spaceAbove / elementHeight >= minContentVisibilityRatio;
-    if (fitsAbove) {
-      resolvedVertical = "top";
-    } else {
-      resolvedVertical = "bottom"; // opposite of top
-    }
+  // Resolve active X and Y, and whether each is fixed (no flip fallback)
+  let activeX;
+  let activeY;
+  const xIsFixed = Boolean(positionXFixed);
+  const yIsFixed = Boolean(positionYFixed);
+  if (xIsFixed) {
+    activeX = positionXFixed;
   } else {
-    // isBottom
-    const elementFitsBelow = spaceBelow >= elementHeight;
-    if (elementFitsBelow) {
-      resolvedVertical = "bottom";
+    const storedX = element.getAttribute("data-position-x-current");
+    activeX = storedX ?? positionX;
+  }
+  if (yIsFixed) {
+    activeY = positionYFixed;
+  } else {
+    const storedY = element.getAttribute("data-position-y-current");
+    activeY = storedY ?? positionY;
+  }
+
+  // Resolve final Y — flip to opposite when requested Y does not fit
+  let finalY;
+  {
+    const oppositeY = {
+      "above": "below",
+      "below": "above",
+      "above-overlap": "below-overlap",
+      "below-overlap": "above-overlap",
+    };
+    if (yIsFixed || activeY === "center") {
+      finalY = activeY;
+    } else if (activeY === "above" || activeY === "above-overlap") {
+      const minContentVisibilityRatio = 0.6;
+      const fitsAbove = spaceAbove / elementHeight >= minContentVisibilityRatio;
+      if (fitsAbove) {
+        finalY = activeY;
+      } else {
+        finalY = oppositeY[activeY];
+      }
     } else {
-      resolvedVertical = "top"; // opposite of bottom
+      // "below" or "below-overlap"
+      const fitsBelow = spaceBelow >= elementHeight;
+      if (fitsBelow) {
+        finalY = activeY;
+      } else {
+        finalY = oppositeY[activeY];
+      }
     }
   }
+
+  // Final X has no flip fallback
+  const finalX = activeX;
 
   // Calculate horizontal position (viewport-relative)
   let elementPositionLeft;
   {
-    if (isLeft) {
+    if (finalX === "to-the-left") {
       elementPositionLeft = anchorLeft - elementWidth;
-    } else if (isRight) {
-      elementPositionLeft = anchorRight;
-    } else {
-      // centered horizontally on anchor
+    } else if (finalX === "left-aligned") {
+      elementPositionLeft = anchorLeft;
+    } else if (finalX === "center") {
+      // Complex logic handles wide anchors and viewport-edge snapping
       const anchorIsWiderThanViewport = anchorWidth > viewportWidth;
       if (anchorIsWiderThanViewport) {
         const anchorLeftIsVisible = anchorLeft >= 0;
@@ -509,6 +513,11 @@ export const pickPositionRelativeTo = (
           }
         }
       }
+    } else if (finalX === "right-aligned") {
+      elementPositionLeft = anchorRight - elementWidth;
+    } else {
+      // "to-the-right"
+      elementPositionLeft = anchorRight;
     }
     // Constrain horizontal position to viewport boundaries
     if (elementPositionLeft < 0) {
@@ -521,50 +530,33 @@ export const pickPositionRelativeTo = (
   // Calculate vertical position (viewport-relative)
   let elementPositionTop;
   {
-    const anchorBorderTop = anchorBorderCollapse
-      ? getBorderSizes(anchor).top
-      : 0;
-    const anchorBorderBottom = anchorBorderCollapse
-      ? getBorderSizes(anchor).bottom
-      : 0;
-    if (resolvedVertical === "center-y") {
+    if (finalY === "above") {
+      const idealTop = anchorTop - elementHeight;
+      elementPositionTop = idealTop < 0 ? 0 : idealTop;
+    } else if (finalY === "above-overlap") {
+      const idealTop = anchorBottom - elementHeight;
+      elementPositionTop = idealTop < 0 ? 0 : idealTop;
+    } else if (finalY === "center") {
       elementPositionTop = anchorTop + anchorHeight / 2 - elementHeight / 2;
-    } else if (resolvedVertical === "bottom") {
-      const idealTop = anchorOverlap
-        ? anchorTop
-        : anchorBottom - anchorBorderBottom;
+    } else if (finalY === "below-overlap") {
+      const idealTop = anchorTop;
       elementPositionTop =
         idealTop % 1 === 0 ? idealTop : Math.floor(idealTop) + 1;
     } else {
-      // "top"
-      const idealTop = anchorOverlap
-        ? anchorBottom - elementHeight
-        : anchorTop + anchorBorderTop - elementHeight;
-      elementPositionTop = idealTop < 0 ? 0 : idealTop;
+      // "below"
+      const idealTop = anchorBottom;
+      elementPositionTop =
+        idealTop % 1 === 0 ? idealTop : Math.floor(idealTop) + 1;
     }
   }
 
-  let finalPosition;
-  {
-    const vertPart = resolvedVertical === "center-y" ? "" : resolvedVertical;
-    const horzPart = isCenterX ? "" : isLeft ? "left" : "right";
-    if (vertPart && horzPart) {
-      finalPosition = `${vertPart}-${horzPart}`;
-    } else if (vertPart) {
-      finalPosition = vertPart;
-    } else if (horzPart) {
-      finalPosition = horzPart;
-    } else {
-      finalPosition = "center";
-    }
+  // Persist resolved X/Y so subsequent calls start from here (avoids flickering).
+  // Fixed axes are not persisted.
+  if (!xIsFixed) {
+    element.setAttribute("data-position-x-current", finalX);
   }
-
-  // Persist the resolved position on the element so subsequent calls start from it
-  // (avoids flickering between positions when the element is near the threshold).
-  // position is not persisted — it is always explicit.
-
-  if (!position) {
-    element.setAttribute("data-position-current", finalPosition);
+  if (!yIsFixed) {
+    element.setAttribute("data-position-y-current", finalY);
   }
 
   // Get document scroll for final coordinate conversion
@@ -577,7 +569,8 @@ export const pickPositionRelativeTo = (
   const anchorDocumentBottom = anchorBottom + scrollTop;
 
   return {
-    position: finalPosition,
+    positionX: finalX,
+    positionY: finalY,
     left: elementDocumentLeft,
     top: elementDocumentTop,
     width: elementWidth,
@@ -588,16 +581,5 @@ export const pickPositionRelativeTo = (
     anchorBottom: anchorDocumentBottom,
     spaceAbove,
     spaceBelow,
-  };
-};
-// Decompose position flags
-const decomposePosition = (pos) => {
-  return {
-    isTop: pos === "top" || pos === "top-left" || pos === "top-right",
-    isBottom:
-      pos === "bottom" || pos === "bottom-left" || pos === "bottom-right",
-    isLeft: pos === "left" || pos === "top-left" || pos === "bottom-left",
-    isRight: pos === "right" || pos === "top-right" || pos === "bottom-right",
-    isCenter: pos === "center",
   };
 };

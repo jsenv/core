@@ -680,7 +680,7 @@ const stickCalloutToAnchor = (calloutElement, anchorElement) => {
       const calloutElementClone =
         cloneCalloutToMeasureNaturalSize(calloutElement);
       const {
-        position,
+        positionY,
         left: calloutLeft,
         top: calloutTop,
         width: calloutWidth,
@@ -688,23 +688,27 @@ const stickCalloutToAnchor = (calloutElement, anchorElement) => {
         spaceAbove,
         spaceBelow,
       } = pickPositionRelativeTo(calloutElementClone, anchorElement, {
-        alignToViewportEdgeWhenTargetNearEdge: 20,
-        // when fully to the left, the border color is collé to the browser window making it hard to see
+        alignToViewportEdgeWhenAnchorNearEdge: 20,
         minLeft: 1,
-        // Check for preferred and forced position from anchor element
-        positionTry:
-          anchorElement.getAttribute("data-callout-position-try") || "bottom",
-        position: anchorElement.getAttribute("data-callout-position"),
+        positionX: "center",
+        positionY:
+          anchorElement.getAttribute("data-callout-position") || "below",
+        positionYFixed: anchorElement.getAttribute(
+          "data-callout-position-fixed",
+        ),
       });
-      // data-position-current is written to the clone by pickPositionRelativeTo,
+      // data-position-y-current is written to the clone by pickPositionRelativeTo,
       // copy it back to the real element so stickiness works on next call
-      const positionCurrent = calloutElementClone.getAttribute(
-        "data-position-current",
+      const positionYCurrent = calloutElementClone.getAttribute(
+        "data-position-y-current",
       );
-      if (positionCurrent) {
-        calloutElement.setAttribute("data-position-current", positionCurrent);
+      if (positionYCurrent) {
+        calloutElement.setAttribute(
+          "data-position-y-current",
+          positionYCurrent,
+        );
       } else {
-        calloutElement.removeAttribute("data-position-current");
+        calloutElement.removeAttribute("data-position-y-current");
       }
       calloutElementClone.remove();
 
@@ -751,7 +755,10 @@ const stickCalloutToAnchor = (calloutElement, anchorElement) => {
 
       // Force content overflow when there is not enough space to display
       // the entirety of the callout
-      const spaceAvailable = position === "bottom" ? spaceBelow : spaceAbove;
+      const spaceAvailable =
+        positionY === "above" || positionY === "above-overlap"
+          ? spaceAbove
+          : spaceBelow;
       const paddingSizes = getPaddingSizes(calloutBodyElement);
       const paddingY = paddingSizes.top + paddingSizes.bottom;
       const spaceNeededAroundContent =
@@ -771,7 +778,7 @@ const stickCalloutToAnchor = (calloutElement, anchorElement) => {
       }
 
       const { width, height } = calloutElement.getBoundingClientRect();
-      if (position === "top") {
+      if (positionY === "above" || positionY === "above-overlap") {
         // Position above target element
         calloutBoxElement.style.marginTop = "";
         calloutBoxElement.style.marginBottom = `${ARROW_HEIGHT}px`;
