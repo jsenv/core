@@ -97,6 +97,10 @@ export const Popover = (props) => {
       );
       const minLeft = 1;
       const effectivePositionX = anchor ? positionX : "center";
+      // Remove max-height constraint so pickPositionRelativeTo measures the natural
+      // (unconstrained) height of the popover. This ensures the 60% flip threshold
+      // compares against the real content height, not the already-truncated one.
+      popoverEl.style.removeProperty("--space-available");
       const {
         left,
         top,
