@@ -464,16 +464,16 @@ export const pickPositionRelativeTo = (
     // Compute effective space for a given Y value
     const spaceFor = (y) => {
       if (y === "above") {
-        return spaceAbove;
+        return spaceAbove - spacing - viewportSpacing;
       }
       if (y === "above-overlap") {
-        return spaceAbove + anchorHeight;
+        return spaceAbove + anchorHeight - viewportSpacing;
       }
       if (y === "below") {
-        return spaceBelow;
+        return spaceBelow - spacing - viewportSpacing;
       }
       if (y === "below-overlap") {
-        return spaceBelow + anchorHeight;
+        return spaceBelow + anchorHeight - viewportSpacing;
       }
       return Infinity; // center
     };
@@ -521,16 +521,16 @@ export const pickPositionRelativeTo = (
     // Compute effective space for a given X value
     const spaceFor = (x) => {
       if (x === "to-the-left") {
-        return spaceLeft;
+        return spaceLeft - spacing - viewportSpacing;
       }
       if (x === "left-aligned") {
-        return viewportWidth - anchorLeft;
+        return viewportWidth - anchorLeft - viewportSpacing;
       }
       if (x === "right-aligned") {
-        return anchorRight;
+        return anchorRight - viewportSpacing;
       }
       if (x === "to-the-right") {
-        return spaceRight;
+        return spaceRight - spacing - viewportSpacing;
       }
       return Infinity; // center
     };
