@@ -1,5 +1,6 @@
 import {
   findFocusable,
+  getBorderSizes,
   getElementSignature,
   pickPositionRelativeTo,
   snapToPixel,
@@ -73,11 +74,12 @@ export const Popover = (props) => {
     const effectiveAnchor = anchor || document.documentElement;
     const positionPopover = (positionEvent) => {
       const { width, height } = effectiveAnchor.getBoundingClientRect();
-      const anchorStyle = getComputedStyle(effectiveAnchor);
-      const borderLeft = parseFloat(anchorStyle.borderLeftWidth) || 0;
-      const borderRight = parseFloat(anchorStyle.borderRightWidth) || 0;
-      const borderTop = parseFloat(anchorStyle.borderTopWidth) || 0;
-      const borderBottom = parseFloat(anchorStyle.borderBottomWidth) || 0;
+      const {
+        left: borderLeft,
+        right: borderRight,
+        top: borderTop,
+        bottom: borderBottom,
+      } = getBorderSizes(effectiveAnchor);
       popoverEl.style.setProperty("--anchor-width", `${snapToPixel(width)}px`);
       popoverEl.style.setProperty(
         "--anchor-height",
