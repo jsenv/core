@@ -474,9 +474,28 @@
       };
 
       const Demo6 = () => {
+        const [rounded, setRounded] = useState(false);
         return (
           <div className="demo-section">
             <h2>Demo 6 — Popover mode</h2>
+
+            <label
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                fontSize: "13px",
+                marginBottom: "16px",
+                cursor: "pointer",
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={rounded}
+                onChange={(e) => setRounded(e.target.checked)}
+              />
+              Rounded borders
+            </label>
 
             {/* ── 3-column interactive examples ── */}
             <Box
@@ -486,18 +505,23 @@
               style={{ marginBottom: "24px" }}
             >
               <Box flex="y" spacing="xs" alignX="start">
-                <StyleSelect label='popoverMode="nearby" (default)' />
+                <StyleSelect
+                  label='popoverMode="nearby" (default)'
+                  borderRadius={rounded ? "m" : "0"}
+                />
               </Box>
               <Box flex="y" spacing="xs" alignX="start">
                 <StyleSelect
                   label='popoverMode="overlay"'
                   popoverMode="overlay"
+                  borderRadius={rounded ? "m" : "0"}
                 />
               </Box>
               <Box flex="y" spacing="xs" alignX="start">
                 <StyleSelect
                   label='popoverMode="attached"'
                   popoverMode="attached"
+                  borderRadius={rounded ? "m" : "0"}
                 />
               </Box>
             </Box>
