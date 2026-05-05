@@ -663,12 +663,15 @@ export const pickPositionRelativeTo = (
 
   // For overlap variants the element starts at the anchor edge (not past it),
   // so the usable space includes the anchor dimension.
-  // viewportSpacing is subtracted so callers get the net usable space directly.
+  // spacing (gap between anchor and element) and viewportSpacing are subtracted
+  // so callers get the net usable space directly.
   const effectiveSpaceAbove =
     (finalY === "above-overlap" ? spaceAbove + anchorHeight : spaceAbove) -
+    (finalY === "above" ? spacing : 0) -
     viewportSpacing;
   const effectiveSpaceBelow =
     (finalY === "below-overlap" ? spaceBelow + anchorHeight : spaceBelow) -
+    (finalY === "below" ? spacing : 0) -
     viewportSpacing;
 
   return {
