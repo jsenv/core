@@ -386,6 +386,7 @@ export const pickPositionRelativeTo = (
     positionYFixed,
     alignToViewportEdgeWhenAnchorNearEdge = 0,
     minLeft = 0,
+    spacing = 0,
   } = {},
 ) => {
   if (
@@ -565,7 +566,7 @@ export const pickPositionRelativeTo = (
   let elementPositionLeft;
   {
     if (finalX === "to-the-left") {
-      elementPositionLeft = anchorLeft - elementWidth;
+      elementPositionLeft = anchorLeft - elementWidth - spacing;
     } else if (finalX === "left-aligned") {
       elementPositionLeft = anchorLeft;
     } else if (finalX === "center") {
@@ -602,7 +603,7 @@ export const pickPositionRelativeTo = (
       elementPositionLeft = anchorRight - elementWidth;
     } else {
       // "to-the-right"
-      elementPositionLeft = anchorRight;
+      elementPositionLeft = anchorRight + spacing;
     }
     // Constrain horizontal position to viewport boundaries
     if (elementPositionLeft < 0) {
@@ -616,7 +617,7 @@ export const pickPositionRelativeTo = (
   let elementPositionTop;
   {
     if (finalY === "above") {
-      const idealTop = anchorTop - elementHeight;
+      const idealTop = anchorTop - elementHeight - spacing;
       elementPositionTop = idealTop < 0 ? 0 : idealTop;
     } else if (finalY === "above-overlap") {
       const idealTop = anchorBottom - elementHeight;
@@ -629,7 +630,7 @@ export const pickPositionRelativeTo = (
         idealTop % 1 === 0 ? idealTop : Math.floor(idealTop) + 1;
     } else {
       // "below"
-      const idealTop = anchorBottom;
+      const idealTop = anchorBottom + spacing;
       elementPositionTop =
         idealTop % 1 === 0 ? idealTop : Math.floor(idealTop) + 1;
     }

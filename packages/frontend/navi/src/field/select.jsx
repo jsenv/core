@@ -215,7 +215,6 @@ const css = /* css */ `
           padding-left: var(--x-select-padding-left);
           flex-shrink: 0;
           flex-direction: column;
-          align-items: center;
           justify-content: center;
           gap: var(--navi-s);
           order: -1; /* before the list — popover is below the trigger */
@@ -532,7 +531,7 @@ const SelectTrigger = () => {
   );
 };
 
-// SelectWithPopover — trigger + popover anchored below the trigger.
+// SelectWithPopover — trigger + popover anchored relative to the trigger.
 const SelectWithPopover = (props) => {
   const {
     ref,
@@ -542,6 +541,8 @@ const SelectWithPopover = (props) => {
     pointerTrap,
     scrollTrap = true,
     focusTrap = true,
+    popoverBehavior = "nearby",
+    popoverSpacing = popoverBehavior === "nearby" ? 10 : 0,
     ...rest
   } = props;
   const debugFocus = useDebugFocus();
@@ -700,25 +701,28 @@ const SelectWithPopover = (props) => {
           }
         }}
         positionX="left-aligned"
-        positionY="below-overlap"
+        positionY={popoverBehavior === "nearby" ? "below" : "below-overlap"}
+        spacing={popoverSpacing}
         scrollTrap={scrollTrap}
         pointerTrap={pointerTrap}
         focusTrap={focusTrap}
       >
-        {/* Clone the trigger visually so the popover wraps both the trigger
+        {/* In "attached" mode clone the trigger visually so the popover wraps both the trigger
             and the list with a unified border/shadow. The clone is not
             interactive — the real trigger behind it handles all events. */}
-        <div
-          className="navi_select_anchor_clone"
-          onMouseDown={(e) => {
-            if (e.button !== 0) {
-              return;
-            }
-            requestClose(e);
-          }}
-        >
-          {props.trigger}
-        </div>
+        {popoverBehavior === "attached" ? (
+          <div
+            className="navi_select_anchor_clone"
+            onMouseDown={(e) => {
+              if (e.button !== 0) {
+                return;
+              }
+              requestClose(e);
+            }}
+          >
+            {props.trigger}
+          </div>
+        ) : null}
         <SelectRequestCloseContext.Provider value={requestClose}>
           {children}
         </SelectRequestCloseContext.Provider>
