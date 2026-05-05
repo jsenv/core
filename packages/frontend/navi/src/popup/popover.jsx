@@ -47,6 +47,7 @@ export const Popover = (props) => {
     positionXFixed,
     positionYFixed,
     spacing = 0,
+    viewportSpacing = 0,
     ...rest
   } = props;
 
@@ -108,6 +109,7 @@ export const Popover = (props) => {
         positionXFixed,
         positionYFixed,
         spacing,
+        viewportSpacing,
         minLeft,
       });
       const spaceAvailable =

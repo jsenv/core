@@ -387,6 +387,7 @@ export const pickPositionRelativeTo = (
     alignToViewportEdgeWhenAnchorNearEdge = 0,
     minLeft = 0,
     spacing = 0,
+    viewportSpacing = 0,
   } = {},
 ) => {
   if (
@@ -605,11 +606,14 @@ export const pickPositionRelativeTo = (
       // "to-the-right"
       elementPositionLeft = anchorRight + spacing;
     }
-    // Constrain horizontal position to viewport boundaries
-    if (elementPositionLeft < 0) {
-      elementPositionLeft = 0;
-    } else if (elementPositionLeft + elementWidth > viewportWidth) {
-      elementPositionLeft = viewportWidth - elementWidth;
+    // Constrain horizontal position to viewport boundaries (with viewportSpacing margin)
+    if (elementPositionLeft < viewportSpacing) {
+      elementPositionLeft = viewportSpacing;
+    } else if (
+      elementPositionLeft + elementWidth >
+      viewportWidth - viewportSpacing
+    ) {
+      elementPositionLeft = viewportWidth - viewportSpacing - elementWidth;
     }
   }
 
@@ -618,7 +622,8 @@ export const pickPositionRelativeTo = (
   {
     if (finalY === "above") {
       const idealTop = anchorTop - elementHeight - spacing;
-      elementPositionTop = idealTop < 0 ? 0 : idealTop;
+      elementPositionTop =
+        idealTop < viewportSpacing ? viewportSpacing : idealTop;
     } else if (finalY === "above-overlap") {
       const idealTop = anchorBottom - elementHeight;
       elementPositionTop = idealTop < 0 ? 0 : idealTop;
@@ -631,8 +636,10 @@ export const pickPositionRelativeTo = (
     } else {
       // "below"
       const idealTop = anchorBottom + spacing;
-      elementPositionTop =
+      const clampedTop =
         idealTop % 1 === 0 ? idealTop : Math.floor(idealTop) + 1;
+      const maxTop = viewportHeight - viewportSpacing - elementHeight;
+      elementPositionTop = clampedTop > maxTop ? maxTop : clampedTop;
     }
   }
 

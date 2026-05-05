@@ -543,6 +543,7 @@ const SelectWithPopover = (props) => {
     focusTrap = true,
     popoverBehavior = "nearby",
     popoverSpacing = popoverBehavior === "nearby" ? 10 : 0,
+    viewportSpacing = 8,
     ...rest
   } = props;
   const debugFocus = useDebugFocus();
@@ -703,6 +704,7 @@ const SelectWithPopover = (props) => {
         positionX="left-aligned"
         positionY={popoverBehavior === "nearby" ? "below" : "below-overlap"}
         spacing={popoverSpacing}
+        viewportSpacing={viewportSpacing}
         scrollTrap={scrollTrap}
         pointerTrap={pointerTrap}
         focusTrap={focusTrap}
