@@ -1,3 +1,5 @@
+import { snapToPixel } from "./snap_to_pixel.js";
+
 export const getBorderSizes = (element) => {
   const {
     borderLeftWidth,
@@ -5,10 +7,11 @@ export const getBorderSizes = (element) => {
     borderTopWidth,
     borderBottomWidth,
   } = window.getComputedStyle(element, null);
+
   return {
-    left: parseFloat(borderLeftWidth),
-    right: parseFloat(borderRightWidth),
-    top: parseFloat(borderTopWidth),
-    bottom: parseFloat(borderBottomWidth),
+    left: snapToPixel(parseFloat(borderLeftWidth)),
+    right: snapToPixel(parseFloat(borderRightWidth)),
+    top: snapToPixel(parseFloat(borderTopWidth)),
+    bottom: snapToPixel(parseFloat(borderBottomWidth)),
   };
 };

@@ -9,7 +9,7 @@ import { BoxFlowContext } from "../box/box_flow_context.jsx";
 import {
   isSizeSpacingKey,
   isSpacingHandledByFlow,
-  resolveSpacingSize,
+  stringifySpacingStyle,
 } from "../box/box_style_util.js";
 import { withPropsClassName } from "../utils/with_props_class_name.js";
 import { useInitialTextSelection } from "./use_initial_text_selection.jsx";
@@ -241,7 +241,7 @@ const applySpacingOnTextChildren = (children, spacing, defaultSpace) => {
     separator = defaultSpace;
   } else if (typeof spacing === "string") {
     if (isSizeSpacingKey(spacing)) {
-      const value = resolveSpacingSize(spacing);
+      const value = stringifySpacingStyle(spacing);
       separator = (
         <CustomWidthSpace value={value} useRealSpaceChar={useRealSpaceChar} />
       );

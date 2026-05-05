@@ -75,7 +75,6 @@ const css = /* css */ `
       --border-radius: 2px;
       --border-width: 1px;
       --outline-width: 1px;
-      --outer-width: calc(var(--border-width) + var(--outline-width));
       --font-size: 14px;
 
       /* Default */
@@ -119,6 +118,16 @@ const css = /* css */ `
   }
 
   .navi_input {
+    /* outline will draw the border when visible */
+    --x-outline-width: var(--outline-width) + var(--border-width);
+    --x-outline-offset: calc(-1 * var(--border-width));
+    --left-slot-size: 0px;
+    --right-slot-size: 0px;
+    --x-border-color: var(--border-color);
+    --x-background-color: var(--background-color);
+    --x-color: var(--color);
+    --x-placeholder-color: var(--placeholder-color);
+
     position: relative;
     box-sizing: border-box;
     width: fit-content;
@@ -126,18 +135,6 @@ const css = /* css */ `
     flex-direction: inherit;
     border-radius: inherit;
     cursor: inherit;
-
-    --left-slot-size: 0px;
-    --right-slot-size: 0px;
-    --x-outline-width: var(--outline-width);
-    --x-border-radius: var(--border-radius);
-    --x-border-width: var(--border-width);
-    --x-outer-width: calc(var(--x-border-width) + var(--x-outline-width));
-    --x-outline-color: var(--outline-color);
-    --x-border-color: var(--border-color);
-    --x-background-color: var(--background-color);
-    --x-color: var(--color);
-    --x-placeholder-color: var(--placeholder-color);
 
     --x-padding-top-base: var(
       --padding-top,
@@ -166,15 +163,13 @@ const css = /* css */ `
       color: var(--x-color);
       font-size: var(--font-size);
       background-color: var(--x-background-color);
-      border-width: var(--x-outer-width);
-      border-width: var(--x-outer-width);
+      border-width: var(--border-width);
       border-style: solid;
-      border-color: transparent;
-      border-radius: var(--x-border-radius);
-      outline-width: var(--x-border-width);
-      outline-style: solid;
-      outline-color: var(--x-border-color);
-      outline-offset: calc(-1 * (var(--x-border-width)));
+      border-color: var(--x-border-color);
+      border-radius: var(--border-radius);
+      outline-width: var(--x-outline-width);
+      outline-color: var(--outline-color);
+      outline-offset: var(--x-outline-offset);
 
       &[type="search"] {
         -webkit-appearance: textfield;
@@ -254,12 +249,10 @@ const css = /* css */ `
     &[data-focus],
     &[data-focus-visible] {
       --x-background-color: var(--background-color-focus);
-      --x-border-color: var(--border-color-focus);
+      --x-border-color: transparent;
 
       .navi_native_input {
-        outline-width: var(--x-outer-width);
-        outline-offset: calc(-1 * var(--x-outer-width));
-        --x-border-color: var(--x-outline-color);
+        outline-style: solid;
       }
     }
     /* Disabled */
@@ -571,7 +564,13 @@ const InputSlot = ({ side, onClick, hideWhileEmpty, ...props }) => {
       flex
       alignY="center"
       onMouseDown={(e) => {
-        e.preventDefault(); // keep focus in the input
+        // Only prevent focus from leaving when the input already has focus.
+        // If the input is not focused, let the mousedown proceed normally so
+        // the slot element (e.g. a clear button) can receive focus itself.
+        const inputEl = document.getElementById(id);
+        if (inputEl && inputEl === document.activeElement) {
+          e.preventDefault();
+        }
       }}
       onClick={(e) => {
         if (readOnly || disabled) {

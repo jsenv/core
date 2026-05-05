@@ -70,7 +70,7 @@
               A <code>Select</code> can contain any custom content inside its
               panel, not just a list.
             </p>
-            <NaviDebug debugPopover>
+            <NaviDebug>
               <Select value={color} placeholder="Choose a color…">
                 <ColorList onSelect={setColor} />
               </Select>
@@ -109,7 +109,7 @@
 
       // ── Demo 2: filterable List ───────────────────────────────────────────────
       const Demo2 = () => {
-        const [fruit, setFruit] = useState(FRUITS[15]);
+        const [fruit, setFruit] = useState(FRUITS[0]);
         return (
           <div class="demo-section">
             <h2>Demo 2 — Filterable List</h2>
@@ -118,13 +118,15 @@
               <code>List</code>. Selecting an item closes the panel
               automatically.
             </p>
-            <Select
-              value={fruit}
-              uiAction={setFruit}
-              placeholder="Pick a fruit…"
-            >
-              <FruitPicker selectedFruit={fruit} />
-            </Select>
+            <NaviDebug debugPopup>
+              <Select
+                value={fruit}
+                uiAction={setFruit}
+                placeholder="Pick a fruit…"
+              >
+                <FruitPicker selectedFruit={fruit} />
+              </Select>
+            </NaviDebug>
             {fruit && (
               <p style="margin-top:12px;font-size:13px;color:#1a73e8;">
                 Selected: <b>{fruit}</b>
@@ -230,17 +232,19 @@
               Each item shows a radio input. A separator sits between items.
               Selecting an animal closes the select panel.
             </p>
-            <Select
-              value={animal}
-              placeholder="Pick an animal…"
-              // capturePointer
-              lockScroll
-              uiAction={(v) => {
-                setAnimal(v);
-              }}
-            >
-              <AnimalPicker selected={animal} />
-            </Select>
+            <NaviDebug debugPopup>
+              <Select
+                value={animal}
+                placeholder="Pick an animal…"
+                // capturePointer
+                lockScroll
+                uiAction={(v) => {
+                  setAnimal(v);
+                }}
+              >
+                <AnimalPicker selected={animal} />
+              </Select>
+            </NaviDebug>
             {animal && (
               <p style="margin-top:12px;font-size:13px;color:#1a73e8;">
                 Selected: <b>{animal}</b>

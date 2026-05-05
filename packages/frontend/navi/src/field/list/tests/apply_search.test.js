@@ -60,4 +60,61 @@ await snapshotTests(import.meta.url, ({ test }) => {
       "Bob xyz", // one word missing → no match
     ]);
   });
+
+  test("trailing space in search", () => {
+    // "TC " (with trailing space) should still match "TCA"
+    // because splitting on whitespace produces ["TC"] and "TCA" contains "TC".
+    // "TC Adapter" is matched by the phrase path and highlights the space too.
+    return displayTable([
+      ["TC ", "TCA"],
+      ["TC ", "TC Adapter"],
+    ]);
+  });
+
+  test("multiple spaces between words", () => {
+    // "a     b" collapses to words ["a","b"] for the word-loop,
+    // but the literal phrase (with all spaces) is tried first.
+    return displayTable([
+      ["a     b", "a     b value"], // literal phrase matches
+      ["a     b", "a b c"], // literal not found → word loop matches both
+      ["a     b", "a c"], // only "a" matches → partial
+      ["a     b", "xyz"], // no match
+    ]);
+  });
+
+  test("only spaces as search", () => {
+    return displayTable([
+      [" ", "Bob"],
+      [" ", " Bob"],
+      ["  ", "Bob"],
+      ["  ", "a  b"],
+    ]);
+  });
+
+  test("acronym matching", () => {
+    return rank("TC", [
+      "TC Adapter", // phrase match at start → higher score
+      "Total Count", // acronym: T+C from word starts
+      "The Champion", // acronym: T+C from word starts
+      "tca", // phrase match mid-word
+      "Taco", // no acronym match (only 1 word start)
+      "xyz", // no match
+    ]);
+  });
+
+  test("acronym with accent folding", () => {
+    return displayTable([
+      ["rg", "Rachel Guérin"], // R+G from word starts (accent-insensitive)
+      ["RG", "Rachel Guérin"], // same, case-exact bonus
+    ]);
+  });
+
+  test("acronym single char is skipped", () => {
+    // Single-char acronym is too ambiguous, should not produce acronym matches
+    // beyond what phrase/word already finds.
+    return displayTable([
+      ["b", "Bob Martin"], // phrase match (not acronym)
+      ["z", "Bob Martin"], // no match
+    ]);
+  });
 });

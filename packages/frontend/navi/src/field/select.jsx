@@ -6,7 +6,11 @@ import { ChevronDownSvg } from "../graphic/icons/chevron_updown_svg.jsx";
 import { LoaderBackground } from "../graphic/loader/loader_background.jsx";
 import { shortcutsViaOnKeyDown } from "../keyboard/keyboard_shortcuts.js";
 import { windowWidthSignal } from "../layout/responsive.js";
-import { useDebugFocus } from "../navi_debug.jsx";
+import {
+  formatEventSideEffect,
+  useDebugFocus,
+  useDebugPopup,
+} from "../navi_debug.jsx";
 import {
   Dialog,
   requestDialogClose,
@@ -39,11 +43,12 @@ const css = /* css */ `
   @layer navi {
     .navi_select {
       --select-border-radius: 2px;
-      --select-border-width: 1px;
       --select-outline-width: 1px;
+      --select-border-width: 1px;
       --select-font-size: 14px;
       --select-padding-x-default: 8px;
       --select-padding-y-default: 5px;
+      --select-outline-color: var(--navi-focus-outline-color);
       --select-border-color: light-dark(#767676, #8e8e93);
       --select-background-color: white;
       --select-color: currentColor;
@@ -66,60 +71,66 @@ const css = /* css */ `
   }
 
   .navi_select {
-    position: relative;
-    box-sizing: border-box;
-    padding-top: var(
+    --x-select-background-color: var(--select-background-color);
+    --x-select-border-color: var(--select-border-color);
+    /* outline will draw the border when visible */
+    --x-select-outline-width: calc(
+      var(--select-outline-width) + var(--select-border-width)
+    );
+    --x-select-outline-offset: calc(-1 * var(--select-border-width));
+    --x-select-padding-top: var(
       --select-padding-top,
       var(--select-padding-y, var(--select-padding-y-default))
     );
-    padding-right: var(
+    --x-select-padding-right: var(
       --select-padding-right,
       var(--select-padding-x, var(--select-padding-x-default))
     );
-    padding-bottom: var(
-      --select-padding-bottom,
-      var(--select-padding-y, var(--select-padding-y-default))
-    );
-    padding-left: var(
+    --x-select-padding-left: var(
       --select-padding-left,
       var(--select-padding-x, var(--select-padding-x-default))
     );
+    --x-select-padding-bottom: var(
+      --select-padding-bottom,
+      var(--select-padding-y, var(--select-padding-y-default))
+    );
+
+    position: relative;
+    box-sizing: border-box;
+    padding-top: var(--x-select-padding-top);
+    padding-right: var(--x-select-padding-right);
+    padding-bottom: var(--x-select-padding-bottom);
+    padding-left: var(--x-select-padding-left);
     color: var(--select-color);
     font-size: var(--select-font-size);
     text-align: inherit; /* override browser defaults on button which is center */
     white-space: nowrap; /* Prevent icon from going next line */
-    background-color: var(--select-background-color);
-    border: var(--select-border-width) solid transparent;
+    background-color: var(--x-select-background-color);
+    border-width: var(--select-border-width);
+    border-style: solid;
+    border-color: var(--x-select-border-color);
     border-radius: var(--select-border-radius);
-    outline: var(--select-outline-width) solid var(--select-border-color);
-    outline-offset: calc(-1 * var(--select-outline-width));
+    outline-width: var(--x-select-outline-width);
+    outline-color: var(--select-outline-color);
+    outline-offset: var(--x-select-outline-offset);
     user-select: none;
 
-    --x-select-outline-width-focus-visible: calc(
-      var(--select-border-width) + var(--select-outline-width)
-    );
-    --x-select-outline-offset-focus-visible: calc(
-      -1 * (var(--select-border-width) + var(--select-outline-width))
-    );
-
     &[data-hover] {
-      background-color: var(--select-background-color-hover);
-      outline-color: var(--select-border-color-hover);
+      --x-select-background-color: var(--select-background-color-hover);
+      --x-select-border-color: var(--select-border-color-hover);
     }
 
     &[data-focus-visible] {
-      outline-width: var(--x-select-outline-width-focus-visible);
-      outline-color: var(--navi-focus-outline-color);
-      outline-offset: var(--x-select-outline-offset-focus-visible);
+      --x-select-border-color: transparent;
+      outline-style: solid;
     }
 
     &[data-disabled] {
       opacity: 0.5;
       cursor: default;
     }
-
-    .navi_list_container {
-      --list-border-radius: 0;
+    &[data-callout] {
+      --x-select-border-color: var(--callout-color);
     }
 
     .navi_select_trigger_text {
@@ -147,19 +158,21 @@ const css = /* css */ `
       }
     }
     .navi_select_trigger_icon {
-      margin-left: 6px;
       flex-shrink: 0;
       opacity: 0.6;
     }
 
     /* popover */
     &[aria-haspopup="listbox"] {
-      &:has(.navi_list_container[data-focus-visible]) {
-        outline-width: var(--x-select-outline-width-focus-visible);
-        outline-color: var(--navi-focus-outline-color);
-        outline-offset: var(--x-select-outline-offset-focus-visible);
-        .navi_list_container {
-          outline: none;
+      .navi_list_container {
+        width: 100%;
+        /* Handled by the popover */
+        border: none;
+        border-radius: 0;
+        outline: none;
+
+        .navi_list {
+          width: 100%;
         }
       }
 
@@ -168,18 +181,90 @@ const css = /* css */ `
         inset: unset;
         min-width: var(--anchor-width, 0px);
         max-width: 95vw;
-        max-height: 95dvh;
+        /* max-height covers the placeholder + list; the list scrolls internally */
+        max-height: var(--space-available, 95dvh);
         margin: 0;
         padding: 0;
-        background: white;
-        border: none;
-        border-radius: 0;
+        background: var(--select-background-color);
+        border-width: var(--select-border-width);
+        border-style: solid;
+        border-color: var(--x-select-border-color);
+        border-radius: var(--select-border-radius);
+        outline-width: var(--x-select-outline-width);
+        outline-color: var(--select-outline-color);
+        outline-offset: var(--x-select-outline-offset);
         box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
         cursor: default; /* Reset pointer cursor within the select */
-        overflow: auto;
+        overflow: hidden;
         overscroll-behavior: none;
 
-        &:popover-open {
+        /* The anchor placeholder is a non-interactive visual clone of the
+           trigger. It makes the popover wrap both the trigger area and the list
+           under a single border/shadow. CSS order places it before the list
+           when the popover is below the trigger, and after when above. */
+        .navi_select_anchor_clone {
+          display: flex;
+          /* To make clone same height as original we need to force it because context can impact height */
+          /* Like siblings with a bigger height in a flex container */
+          /* We subtract the border sizes as anchor-height includes borders in the dimensions */
+          min-height: var(--anchor-inner-height);
+          /* Mirror the trigger's padding so the clone looks identical */
+          padding-top: var(--x-select-padding-top);
+          padding-right: var(--x-select-padding-right);
+          padding-bottom: var(--x-select-padding-bottom);
+          padding-left: var(--x-select-padding-left);
+          flex-shrink: 0;
+          flex-direction: column;
+          justify-content: center;
+          gap: var(--navi-s);
+          order: -1; /* before the list — popover is below the trigger */
+          background: var(--x-select-background-color);
+          border-bottom: var(--select-border-width) solid
+            var(--x-select-border-color);
+
+          &:hover {
+            --x-select-background-color: var(--select-background-color-hover);
+            --x-select-border-color: var(--select-border-color-hover);
+          }
+        }
+
+        &[data-position-y-current="above"],
+        &[data-position-y-current="above-overlap"] {
+          .navi_select_anchor_clone {
+            order: 1; /* after the list — popover is above the trigger */
+            border-top: var(--select-border-width) solid
+              var(--x-select-border-color);
+            border-bottom: none;
+          }
+        }
+
+        /* The list scrolls inside the popover */
+        .navi_list_container {
+          overflow: auto;
+          overscroll-behavior: none;
+        }
+      }
+
+      &:has([data-hover]) {
+        .navi_select_popover {
+          --x-select-border-color: var(--select-border-color-hover);
+        }
+      }
+      &:has([data-focus-visible]) {
+        .navi_select_popover {
+          outline-style: solid;
+        }
+      }
+
+      &[aria-expanded="true"] {
+        &[navi-popover-mode="overlay"],
+        &[navi-popover-mode="attached"] {
+          /* When sizes uses float AND the border uses border-radius it's possible it's possible to see some pixels
+          of the underlying select borders. We hide them to ensure this cannot happen.  */
+          border-color: transparent;
+        }
+
+        .navi_select_popover {
           display: flex;
           flex-direction: column;
         }
@@ -189,17 +274,15 @@ const css = /* css */ `
     /* dialog */
     &[aria-haspopup="dialog"] {
       .navi_list_container {
+        width: 100%;
         --list-max-height: none;
-      }
+        /* Handled by the dialog */
+        border: none;
+        border-radius: 0;
+        outline: none;
 
-      /* When the list inside the dialog has keyboard focus, show the focus ring
-       on the dialog instead */
-      &:has(.navi_list_container[data-focus-visible]) {
-        outline-width: var(--x-select-outline-width-focus-visible);
-        outline-color: var(--navi-focus-outline-color);
-        outline-offset: var(--x-select-outline-offset-focus-visible);
-        .navi_list_container {
-          outline: none;
+        .navi_list {
+          width: 100%;
         }
       }
 
@@ -207,9 +290,12 @@ const css = /* css */ `
         max-height: 95dvh;
         margin: auto;
         padding: 0;
-        background: white;
-        border: none;
-        border-radius: 8px;
+        background: var(--select-background-color);
+        border: var(--select-border-width) solid var(--x-select-border-color);
+        border-radius: var(--select-border-radius);
+        outline-width: var(--x-select-outline-width);
+        outline-color: var(--select-outline-color);
+        outline-offset: var(--x-select-outline-offset);
         box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
         cursor: default; /* Reset pointer cursor within the select */
 
@@ -220,6 +306,14 @@ const css = /* css */ `
 
         &::backdrop {
           background: rgba(0, 0, 0, 0.4);
+        }
+      }
+
+      /* When the list inside the dialog has keyboard focus, show the focus ring
+       on the dialog instead */
+      &:has([data-focus-visible]) {
+        .navi_select_dialog {
+          outline-style: solid;
         }
       }
     }
@@ -265,7 +359,12 @@ export const Select = (props) => {
 
   return (
     <ParentUIStateControllerContext.Provider value={uiStateController}>
-      <SelectDispatcher {...props} ref={ref} value={value} />
+      <SelectDispatcher
+        trigger={<SelectTrigger />}
+        {...props}
+        ref={ref}
+        value={value}
+      />
     </ParentUIStateControllerContext.Provider>
   );
 };
@@ -285,7 +384,7 @@ const SelectDispatcher = (props) => {
 
 const SelectUI = (props) => {
   import.meta.css = css;
-  let {
+  const {
     placeholder = "Select…",
     trigger,
     name,
@@ -321,9 +420,6 @@ const SelectUI = (props) => {
     preventScroll: autoFocusPreventScroll,
   });
 
-  if (trigger === undefined) {
-    trigger = <SelectTrigger />;
-  }
   return (
     <Box
       as="button"
@@ -368,6 +464,7 @@ const SelectUI = (props) => {
 export const SelectPlaceholderContext = createContext();
 const SelectValueContext = createContext(null);
 const SelectStyleCSSVars = {
+  "outlineWidth": "--select-outline-width",
   "borderWidth": "--select-border-width",
   "borderRadius": "--select-border-radius",
   "paddingX": "--select-padding-x",
@@ -410,6 +507,7 @@ const SelectPseudoClasses = [
   ":active",
   ":focus",
   ":focus-visible",
+  ":focus-within",
   ":read-only",
   ":disabled",
   ":-navi-loading",
@@ -424,7 +522,7 @@ const SelectTrigger = () => {
   const isPlaceholder = !hasValue;
 
   return (
-    <>
+    <Box flex spacing="s">
       <span className="navi_select_trigger_text">
         <span className="navi_select_trigger_placeholder" hidden={hasValue}>
           {placeholder}
@@ -436,24 +534,27 @@ const SelectTrigger = () => {
       <Icon className="navi_select_trigger_icon">
         <ChevronDownSvg />
       </Icon>
-    </>
+    </Box>
   );
 };
 
-// SelectWithPopover — trigger + popover anchored below the trigger.
+// SelectWithPopover — trigger + popover anchored relative to the trigger.
 const SelectWithPopover = (props) => {
   const {
     ref,
     disabled,
     onKeyDown,
     children,
-    positionTry,
     pointerTrap,
     scrollTrap = true,
     focusTrap = true,
+    popoverMode = "nearby",
+    popoverSpacing = popoverMode === "nearby" ? 5 : 0,
+    viewportSpacing = 10,
     ...rest
   } = props;
   const debugFocus = useDebugFocus();
+  const debugPopup = useDebugPopup();
   const popoverRef = useRef(null);
   const popoverId = useId();
   const [expanded, setExpanded] = useState(false);
@@ -468,21 +569,34 @@ const SelectWithPopover = (props) => {
     setExpanded(false);
   };
   const requestOpen = (e) => {
+    // scroll select into view when opening it
+    ref.current.scrollIntoView({ block: "nearest" });
+
     return requestPopoverOpen(popoverRef.current, {
       event: e,
       anchor: ref.current,
     });
   };
+  const [shouldIgnoreThatClick, disableClickFor] = useIgnoreClickForMousedown();
   const requestClose = (e = new CustomEvent("programmatic")) => {
+    if (e.type === "mousedown") {
+      debugPopup(formatEventSideEffect(e, `disable click`));
+      disableClickFor(e);
+    }
     return requestPopoverClose(popoverRef.current, { event: e });
   };
   const moveFocusToSelect = (e) => {
+    if (e.type === "mousedown") {
+      e.preventDefault();
+      debugFocus(
+        formatEventSideEffect(e, `preventDefault and move focus to select`),
+      );
+    } else {
+      debugFocus(formatEventSideEffect(e, `move focus to select`));
+    }
     const select = ref.current;
-    debugFocus(`moveFocusToSelect("${e.type}")`);
     select.focus({ preventScroll: true });
   };
-
-  const [shouldIgnoreThatClick, disableClickFor] = useIgnoreClickForMousedown();
 
   return (
     <SelectDispatcher
@@ -490,6 +604,7 @@ const SelectWithPopover = (props) => {
       aria-haspopup="listbox"
       aria-expanded={expanded}
       aria-controls={popoverId}
+      navi-popover-mode={popoverMode}
       onMouseDown={(e) => {
         if (e.button !== 0) {
           return;
@@ -511,6 +626,7 @@ const SelectWithPopover = (props) => {
           return;
         }
         if (shouldIgnoreThatClick) {
+          debugPopup(formatEventSideEffect(e, `ignore click`));
           return;
         }
         // When a label is clicked it transfers focus to the select
@@ -528,8 +644,8 @@ const SelectWithPopover = (props) => {
           // space can open the popover we don't want space to propagate to the select otherwise it would open it back immediatly
           event.stopPropagation();
         }
-        requestClose(e);
-        moveFocusToSelect(e);
+        requestClose(event);
+        moveFocusToSelect(event);
       }}
       onFocusOut={(e) => {
         if (import.meta.dev) {
@@ -586,7 +702,6 @@ const SelectWithPopover = (props) => {
           }
           // mousedown inside popover should not bubble to the select (would re-open it if that mousedown closes it)
           e.stopPropagation();
-          disableClickFor(e);
         }}
         onnavi_popover_open={(e) => {
           onOpen(e);
@@ -598,14 +713,33 @@ const SelectWithPopover = (props) => {
             // If the popover closed because focus left the select (focusout),
             // don't steal focus back — let focus go where the user intended.
           } else {
-            moveFocusToSelect(e);
+            moveFocusToSelect(event);
           }
         }}
-        positionTry={positionTry}
+        positionX="left-aligned"
+        positionY={popoverMode === "nearby" ? "below" : "below-overlap"}
+        spacing={popoverSpacing}
+        viewportSpacing={viewportSpacing}
         scrollTrap={scrollTrap}
         pointerTrap={pointerTrap}
         focusTrap={focusTrap}
       >
+        {/* In "attached" mode clone the trigger visually so the popover wraps both the trigger
+            and the list with a unified border/shadow. The clone is not
+            interactive — the real trigger behind it handles all events. */}
+        {popoverMode === "attached" ? (
+          <div
+            className="navi_select_anchor_clone"
+            onMouseDown={(e) => {
+              if (e.button !== 0) {
+                return;
+              }
+              requestClose(e);
+            }}
+          >
+            {props.trigger}
+          </div>
+        ) : null}
         <SelectRequestCloseContext.Provider value={requestClose}>
           {children}
         </SelectRequestCloseContext.Provider>
@@ -618,6 +752,7 @@ const SelectWithDialog = (props) => {
   let { ref, disabled, onKeyDown, children, scrollTrap, pointerTrap, ...rest } =
     props;
   const debugFocus = useDebugFocus();
+  const debugPopup = useDebugPopup();
   const dialogRef = useRef(null);
   const dialogId = useId();
   const [expanded, setExpanded] = useState(false);
@@ -636,17 +771,29 @@ const SelectWithDialog = (props) => {
       event: e,
     });
   };
+  const [shouldIgnore, disableClickFor] = useIgnoreClickForMousedown();
+
   const requestClose = (e = new CustomEvent("programmatic")) => {
+    if (e.type === "mousedown") {
+      debugPopup(formatEventSideEffect(e, `disable click`));
+      disableClickFor(e);
+    }
     return requestDialogClose(dialogRef.current, {
       event: e,
     });
   };
   const moveFocusToSelect = (e) => {
-    debugFocus(`moveFocusToSelect("${e.type}")`);
-    ref.current.focus({ preventScroll: true });
+    if (e.type === "mousedown") {
+      e.preventDefault();
+      debugFocus(
+        formatEventSideEffect(e, `preventDefault and move focus to select`),
+      );
+    } else {
+      debugFocus(formatEventSideEffect(e, `move focus to select`));
+    }
+    const select = ref.current;
+    select.focus({ preventScroll: true });
   };
-
-  const [shouldIgnoreThatClick, disableClickFor] = useIgnoreClickForMousedown();
 
   return (
     <SelectDispatcher
@@ -674,7 +821,8 @@ const SelectWithDialog = (props) => {
           // click triggered by enter won't open the dialog
           return;
         }
-        if (shouldIgnoreThatClick) {
+        if (shouldIgnore) {
+          debugPopup(formatEventSideEffect(e, `ignore click`));
           // mousedown on the select already handled open/close; ignore this click
           // to avoid toggling the dialog again on mouseup
           return;
@@ -688,7 +836,7 @@ const SelectWithDialog = (props) => {
           // space can open the dialog, we don't want space to propagate to the select otherwise it would open it back immediately
           event.stopPropagation();
         }
-        requestClose(e);
+        requestClose(event);
       }}
       {...rest}
       onKeyDown={shortcutsViaOnKeyDown(
@@ -736,7 +884,6 @@ const SelectWithDialog = (props) => {
           }
           // mousedown inside dialog should not bubble to the select (would re-open it if that mousedown closes it)
           e.stopPropagation();
-          disableClickFor(e);
         }}
         scrollTrap={scrollTrap}
         pointerTrap={pointerTrap}

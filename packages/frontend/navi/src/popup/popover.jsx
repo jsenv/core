@@ -1,7 +1,9 @@
 import {
   findFocusable,
+  getBorderSizes,
   getElementSignature,
   pickPositionRelativeTo,
+  snapToPixel,
   trapFocusInside,
   trapScrollInside,
   visibleRectEffect,
@@ -10,7 +12,8 @@ import { createPortal } from "preact/compat";
 import { useId, useRef, useState } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
-import { useDebugFocus, useDebugPopover } from "../navi_debug.jsx";
+import { resolveSpacingSize } from "../box/box_style_util.js";
+import { useDebugFocus, useDebugPopup } from "../navi_debug.jsx";
 import {
   dispatchCustomEvent,
   dispatchPublicCustomEvent,
@@ -40,7 +43,12 @@ export const Popover = (props) => {
     pointerTrap,
     focusTrap,
     children,
-    positionTry = "bottom",
+    positionX,
+    positionY,
+    positionXFixed,
+    positionYFixed,
+    spacing = 0,
+    viewportSpacing = 0,
     ...rest
   } = props;
 
@@ -48,7 +56,7 @@ export const Popover = (props) => {
   const ref = rest.ref || defaultRef;
   const defaultId = useId();
   const id = rest.id || defaultId;
-  const debugPopover = useDebugPopover();
+  const debugPopup = useDebugPopup();
   const debugFocus = useDebugFocus();
 
   const [opened, setOpened] = useState(false);
@@ -56,7 +64,7 @@ export const Popover = (props) => {
   openedRef.current = opened;
   const [addCleanup, cleanup] = useCleanup();
   const open = (e, { anchor }) => {
-    debugPopover(`openPopover("${e.type}")`);
+    debugPopup(`openPopover("${e.type}")`);
     const popoverEl = ref.current;
     popoverEl.showPopover();
     const firstFocusable = findFocusable(popoverEl);
@@ -68,27 +76,57 @@ export const Popover = (props) => {
     }
     const effectiveAnchor = anchor || document.documentElement;
     const positionPopover = (positionEvent) => {
-      debugPopover(`positionPopover("${positionEvent.type}")`);
+      const { width, height } = effectiveAnchor.getBoundingClientRect();
+      const {
+        left: borderLeft,
+        right: borderRight,
+        top: borderTop,
+        bottom: borderBottom,
+      } = getBorderSizes(effectiveAnchor);
+      popoverEl.style.setProperty("--anchor-width", `${snapToPixel(width)}px`);
       popoverEl.style.setProperty(
-        "--anchor-width",
-        `${effectiveAnchor.getBoundingClientRect().width}px`,
+        "--anchor-height",
+        `${snapToPixel(height)}px`,
+      );
+      popoverEl.style.setProperty(
+        "--anchor-inner-width",
+        `${snapToPixel(width - borderLeft - borderRight)}px`,
+      );
+      popoverEl.style.setProperty(
+        "--anchor-inner-height",
+        `${snapToPixel(height - borderTop - borderBottom)}px`,
       );
       const minLeft = 1;
-      const effectivePositionTry = anchor ? positionTry : "center";
-      const { left, top } = pickPositionRelativeTo(popoverEl, effectiveAnchor, {
-        positionTry: effectivePositionTry,
+      const effectivePositionX = anchor ? positionX : "center";
+      // Remove max-height constraint so pickPositionRelativeTo measures the natural
+      // (unconstrained) height of the popover. This ensures the 60% flip threshold
+      // compares against the real content height, not the already-truncated one.
+      popoverEl.style.removeProperty("--space-available");
+      const {
+        left,
+        top,
+        positionY: finalPositionY,
+        spaceAbove,
+        spaceBelow,
+      } = pickPositionRelativeTo(popoverEl, effectiveAnchor, {
+        positionX: effectivePositionX,
+        positionY,
+        positionXFixed,
+        positionYFixed,
+        spacing: resolveSpacingSize(spacing),
+        viewportSpacing: resolveSpacingSize(viewportSpacing),
         minLeft,
       });
+      const spaceAvailable =
+        finalPositionY === "above" || finalPositionY === "above-overlap"
+          ? spaceAbove
+          : spaceBelow;
+      popoverEl.style.setProperty("--space-available", `${spaceAvailable}px`);
+      debugPopup(
+        `positionPopover("${positionEvent.type}") -> left: ${left}, top: ${top}`,
+      );
       popoverEl.style.top = `${top}px`;
-      const popoverRect = popoverEl.getBoundingClientRect();
-      const maxWidth = parseFloat(getComputedStyle(popoverEl).maxWidth);
-      if (!isNaN(maxWidth) && popoverRect.width >= maxWidth - 1) {
-        const viewportWidth = document.documentElement.clientWidth;
-        const centeredLeft = (viewportWidth - popoverRect.width) / 2;
-        popoverEl.style.left = `${Math.max(centeredLeft, minLeft)}px`;
-      } else {
-        popoverEl.style.left = `${Math.max(left, minLeft)}px`;
-      }
+      popoverEl.style.left = `${Math.max(left, minLeft)}px`;
     };
 
     if (scrollTrap) {
@@ -118,7 +156,7 @@ export const Popover = (props) => {
     });
   };
   const close = (e) => {
-    debugPopover(`closePopover("${e.type}")`);
+    debugPopup(`closePopover("${e.type}")`);
     const popoverEl = ref.current;
     popoverEl.hidePopover();
     cleanup();
@@ -175,6 +213,7 @@ export const Popover = (props) => {
         {...rest}
         ref={ref}
         baseClassName="navi_popover"
+        pseudoClasses={PopoverPseudoClasses}
         onnavi_popover_request_open={(e) => {
           const { event = e, anchor } = e.detail;
           onRequestOpen(event, { anchor });
@@ -189,6 +228,15 @@ export const Popover = (props) => {
     </>
   );
 };
+const PopoverPseudoClasses = [
+  ":hover",
+  ":active",
+  ":focus",
+  ":focus-visible",
+  ":focus-within",
+  ":read-only",
+  ":disabled",
+];
 
 export const requestPopoverOpen = (popoverElement, { event, anchor }) => {
   return dispatchCustomEvent(popoverElement, "navi_popover_request_open", {

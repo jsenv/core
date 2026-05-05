@@ -33,6 +33,8 @@ const pxPropertySet = new Set([
   "paddingRight",
   "paddingBottom",
   "paddingLeft",
+  "outlineWidth",
+  "outlineOffset",
   "borderWidth",
   "borderTopWidth",
   "borderRightWidth",

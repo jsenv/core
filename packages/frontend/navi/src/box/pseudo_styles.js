@@ -354,6 +354,11 @@ focus_classes: {
       if (isControlledByFocusedElement(el)) {
         return true;
       }
+      if (el.contains(document.activeElement)) {
+        // for some reason :focus-within sometimes is false while focus is within...
+        // (popover with chrome for some reason)
+        return true;
+      }
       return false;
     },
   });

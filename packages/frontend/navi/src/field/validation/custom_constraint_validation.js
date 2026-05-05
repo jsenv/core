@@ -615,6 +615,9 @@ export const installCustomConstraintValidation = (
       return element;
     })();
     const onmousedown = (e) => {
+      if (e.button !== 0) {
+        return;
+      }
       if (!validationInterface.validationMessage) {
         return;
       }

@@ -6,7 +6,7 @@ import {
 import { useRef } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
-import { useDebugFocus, useDebugPopover } from "../navi_debug.jsx";
+import { useDebugFocus, useDebugPopup } from "../navi_debug.jsx";
 import {
   dispatchCustomEvent,
   dispatchPublicCustomEvent,
@@ -31,12 +31,12 @@ export const Dialog = (props) => {
   const { children, scrollTrap, pointerTrap, ...rest } = props;
   const defaultRef = useRef();
   const ref = rest.ref || defaultRef;
-  const debugPopover = useDebugPopover();
+  const debugPopup = useDebugPopup();
   const debugFocus = useDebugFocus();
   const openedRef = useRef(false);
   const [addCleanup, cleanup] = useCleanup();
   const open = (e) => {
-    debugPopover(`openDialog("${e.type}")`);
+    debugPopup(`"${e.type}" on ${getElementSignature(e.target)} -> openDialog`);
     const dialogEl = ref.current;
     dialogEl.showModal();
     const firstFocusable = findFocusable(dialogEl);
@@ -55,7 +55,9 @@ export const Dialog = (props) => {
     });
   };
   const close = (e) => {
-    debugPopover(`closeDialog("${e.type}")`);
+    debugPopup(
+      `"${e.type}" on ${getElementSignature(e.target)} -> closeDialog`,
+    );
     const dialogEl = ref.current;
     dialogEl.close();
     cleanup();

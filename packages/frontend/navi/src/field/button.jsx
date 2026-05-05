@@ -35,9 +35,9 @@ import { useConstraints } from "./validation/hooks/use_constraints.js";
 const css = /* css */ `
   @layer navi {
     .navi_button {
+      --button-border-radius: 2px;
       --button-outline-width: 1px;
       --button-border-width: 1px;
-      --button-border-radius: 2px;
       /* Global padding defaults — override these to change all button paddings. */
       /* Use --button-padding, --button-padding-x, --button-padding-y for per-button overrides. */
       --button-padding-x-default: 6px;
@@ -101,25 +101,22 @@ const css = /* css */ `
   }
 
   .navi_button {
-    /* Internal vars — prefixed with --x- to signal they are private, do not use from outside */
-    --x-button-outline-width: var(--button-outline-width);
-    --x-button-border-radius: var(--button-border-radius);
-    --x-button-border-width: var(--button-border-width);
-    --x-button-outer-width: calc(
-      var(--x-button-border-width) + var(--x-button-outline-width)
-    );
-    --x-button-outline-color: var(--button-outline-color);
+    /* outline will draw the border when visible */
+    --x-button-outline-width: var(--button-outline-width) +
+      var(--button-border-width);
+    --x-button-outline-offset: calc(-1 * var(--button-border-width));
     --x-button-border-color: var(--button-border-color);
     --x-button-background: var(--button-background);
     --x-button-background-color: var(--button-background-color);
     --x-button-color: var(--button-color);
     --x-button-cursor: var(--button-cursor);
+
     box-sizing: border-box;
     aspect-ratio: inherit;
     padding: 0;
     background: none;
     border: none;
-    border-radius: var(--x-button-border-radius);
+    border-radius: var(--button-border-radius);
     outline: none;
     cursor: var(--x-button-cursor);
     -webkit-tap-highlight-color: transparent;
@@ -179,15 +176,13 @@ const css = /* css */ `
         --x-button-background-color,
         var(--x-button-background)
       );
-
-      border-width: var(--x-button-outer-width);
+      border-width: var(--button-border-width);
       border-style: solid;
-      border-color: transparent;
-      border-radius: var(--x-button-border-radius);
-      outline-width: var(--x-button-border-width);
-      outline-style: solid;
-      outline-color: var(--x-button-border-color);
-      outline-offset: calc(-1 * (var(--x-button-border-width)));
+      border-color: var(--x-button-border-color);
+      border-radius: var(--button-border-radius);
+      outline-width: var(--x-button-outline-width);
+      outline-color: var(--button-outline-color);
+      outline-offset: var(--x-button-outline-offset);
       transition-property: transform;
       transition-duration: 0.15s;
       transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
@@ -248,12 +243,10 @@ const css = /* css */ `
     }
     /* Focus */
     &[data-focus-visible] {
-      --x-button-border-color: var(--x-button-outline-color);
-    }
-    &[data-focus-visible] {
+      --x-button-border-color: transparent;
+
       .navi_button_content {
-        outline-width: var(--x-button-outer-width);
-        outline-offset: calc(-1 * var(--x-button-outer-width));
+        outline-style: solid;
       }
     }
     /* Disabled */

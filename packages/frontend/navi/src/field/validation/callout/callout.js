@@ -13,6 +13,7 @@ import {
 } from "@jsenv/dom";
 import { isValidElement } from "preact";
 
+import { dispatchPublicCustomEvent } from "../../../utils/custom_event.js";
 import { renderIntoCallout } from "./callout.jsx";
 
 /**
@@ -382,16 +383,23 @@ export const openCallout = (
 
     allowWheelThrough(calloutElement, anchorElement);
     anchorElement.setAttribute("data-callout", calloutId);
-    dispatchCalloutCustomElement(
-      anchorElement,
-      new CustomEvent("navi_callout_open", { bubbles: true }),
-    );
     addTeardown(() => {
       anchorElement.removeAttribute("data-callout");
-      dispatchCalloutCustomElement(
-        anchorElement,
-        new CustomEvent("navi_callout_close", { bubbles: true }),
-      );
+    });
+
+    const visualElement = (() => {
+      const visualSelector = anchorElement.getAttribute("data-visual-selector");
+      if (visualSelector) {
+        const visualElement = anchorElement.querySelector(visualSelector);
+        if (visualElement) {
+          return visualElement;
+        }
+      }
+      return anchorElement;
+    })();
+    dispatchPublicCustomEvent(visualElement, "navi_callout_open");
+    addTeardown(() => {
+      dispatchPublicCustomEvent(visualElement, "navi_callout_close");
     });
 
     addStatusEffect((status) => {
@@ -680,7 +688,7 @@ const stickCalloutToAnchor = (calloutElement, anchorElement) => {
       const calloutElementClone =
         cloneCalloutToMeasureNaturalSize(calloutElement);
       const {
-        position,
+        positionY,
         left: calloutLeft,
         top: calloutTop,
         width: calloutWidth,
@@ -688,23 +696,27 @@ const stickCalloutToAnchor = (calloutElement, anchorElement) => {
         spaceAbove,
         spaceBelow,
       } = pickPositionRelativeTo(calloutElementClone, anchorElement, {
-        alignToViewportEdgeWhenTargetNearEdge: 20,
-        // when fully to the left, the border color is collé to the browser window making it hard to see
+        alignToViewportEdgeWhenAnchorNearEdge: 20,
         minLeft: 1,
-        // Check for preferred and forced position from anchor element
-        positionTry:
-          anchorElement.getAttribute("data-callout-position-try") || "bottom",
-        position: anchorElement.getAttribute("data-callout-position"),
+        positionX: "center",
+        positionY:
+          anchorElement.getAttribute("data-callout-position") || "below",
+        positionYFixed: anchorElement.getAttribute(
+          "data-callout-position-fixed",
+        ),
       });
-      // data-position-current is written to the clone by pickPositionRelativeTo,
+      // data-position-y-current is written to the clone by pickPositionRelativeTo,
       // copy it back to the real element so stickiness works on next call
-      const positionCurrent = calloutElementClone.getAttribute(
-        "data-position-current",
+      const positionYCurrent = calloutElementClone.getAttribute(
+        "data-position-y-current",
       );
-      if (positionCurrent) {
-        calloutElement.setAttribute("data-position-current", positionCurrent);
+      if (positionYCurrent) {
+        calloutElement.setAttribute(
+          "data-position-y-current",
+          positionYCurrent,
+        );
       } else {
-        calloutElement.removeAttribute("data-position-current");
+        calloutElement.removeAttribute("data-position-y-current");
       }
       calloutElementClone.remove();
 
@@ -751,7 +763,10 @@ const stickCalloutToAnchor = (calloutElement, anchorElement) => {
 
       // Force content overflow when there is not enough space to display
       // the entirety of the callout
-      const spaceAvailable = position === "bottom" ? spaceBelow : spaceAbove;
+      const spaceAvailable =
+        positionY === "above" || positionY === "above-overlap"
+          ? spaceAbove
+          : spaceBelow;
       const paddingSizes = getPaddingSizes(calloutBodyElement);
       const paddingY = paddingSizes.top + paddingSizes.bottom;
       const spaceNeededAroundContent =
@@ -771,7 +786,7 @@ const stickCalloutToAnchor = (calloutElement, anchorElement) => {
       }
 
       const { width, height } = calloutElement.getBoundingClientRect();
-      if (position === "top") {
+      if (positionY === "above" || positionY === "above-overlap") {
         // Position above target element
         calloutBoxElement.style.marginTop = "";
         calloutBoxElement.style.marginBottom = `${ARROW_HEIGHT}px`;
@@ -1088,21 +1103,4 @@ const generateSvgWithoutArrow = (width, height) => {
         ry="${Math.max(0, CORNER_RADIUS - BORDER_WIDTH)}"
       />
     </svg>`;
-};
-
-const dispatchCalloutCustomElement = (anchorElement, customEvent) => {
-  let targetElement;
-
-  const visualSelector = anchorElement.getAttribute("data-visual-selector");
-  if (visualSelector) {
-    const visualElement = anchorElement.querySelector(visualSelector);
-    if (visualElement) {
-      targetElement = visualElement;
-    }
-  } else {
-    targetElement = anchorElement;
-  }
-
-  // console.log("dispatch on", targetElement, "event", customEvent);
-  targetElement.dispatchEvent(customEvent);
 };

@@ -548,25 +548,27 @@
               >
                 Choose a fruit:
               </label>
-              <List
-                name="fruit"
-                value={selected}
-                uiAction={(value) => {
-                  setSelected(value);
-                }}
-              >
-                {FRUITS.slice(0, 6).map((fruit, i) => (
-                  <ListItem
-                    key={fruit}
-                    index={i}
-                    id={fruit}
-                    value={fruit}
-                    selected={selected === fruit}
-                  >
-                    {fruit}
-                  </ListItem>
-                ))}
-              </List>
+              <Box background="orange" padding="m" width="fit-content">
+                <List
+                  name="fruit"
+                  value={selected}
+                  uiAction={(value) => {
+                    setSelected(value);
+                  }}
+                >
+                  {FRUITS.slice(0, 6).map((fruit, i) => (
+                    <ListItem
+                      key={fruit}
+                      index={i}
+                      id={fruit}
+                      value={fruit}
+                      selected={selected === fruit}
+                    >
+                      {fruit}
+                    </ListItem>
+                  ))}
+                </List>
+              </Box>
               <button type="submit" style={{ marginTop: "12px" }}>
                 Submit
               </button>
