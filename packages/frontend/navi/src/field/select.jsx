@@ -257,6 +257,13 @@ const css = /* css */ `
       }
 
       &[aria-expanded="true"] {
+        &[navi-popover-mode="overlay"],
+        &[navi-popover-mode="attached"] {
+          /* When sizes uses float AND the border uses border-radius it's possible it's possible to see some pixels
+          of the underlying select borders. We hide them to ensure this cannot happen.  */
+          border-color: transparent;
+        }
+
         .navi_select_popover {
           display: flex;
           flex-direction: column;
@@ -597,6 +604,7 @@ const SelectWithPopover = (props) => {
       aria-haspopup="listbox"
       aria-expanded={expanded}
       aria-controls={popoverId}
+      navi-popover-mode={popoverMode}
       onMouseDown={(e) => {
         if (e.button !== 0) {
           return;
