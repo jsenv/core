@@ -30762,8 +30762,9 @@ const Popover = props => {
         width,
         height
       } = effectiveAnchor.getBoundingClientRect();
-      popoverEl.style.setProperty("--anchor-width", `${width}px`);
-      popoverEl.style.setProperty("--anchor-height", `${height}px`);
+      const snap = v => Math.round(v * devicePixelRatio) / devicePixelRatio;
+      popoverEl.style.setProperty("--anchor-width", `${snap(width)}px`);
+      popoverEl.style.setProperty("--anchor-height", `${snap(height)}px`);
       const minLeft = 1;
       const effectivePositionX = anchor ? positionX : "center";
       const {
@@ -31067,6 +31068,9 @@ installImportMetaCssBuild(import.meta);const css$f = /* css */`
            when the popover is below the trigger, and after when above. */
         .navi_select_anchor_clone {
           display: flex;
+          /* To make clone same height as original we need to force it because context can impact height */
+          /* Like siblings with a bigger height in a flex container */
+          /* We subtract the border sizes as anchor-height includes borders in the dimensions */
           min-height: calc(var(--anchor-height) - var(--select-border-width));
           /* Mirror the trigger's padding so the clone looks identical */
           padding-top: var(--x-select-padding-top);
