@@ -627,7 +627,8 @@ export const pickPositionRelativeTo = (
         idealTop < viewportSpacing ? viewportSpacing : idealTop;
     } else if (finalY === "above-overlap") {
       const idealTop = anchorBottom - elementHeight;
-      elementPositionTop = idealTop < 0 ? 0 : idealTop;
+      elementPositionTop =
+        idealTop < viewportSpacing ? viewportSpacing : idealTop;
     } else if (finalY === "center") {
       elementPositionTop = anchorTop + anchorHeight / 2 - elementHeight / 2;
     } else if (finalY === "below-overlap") {
@@ -686,8 +687,8 @@ export const pickPositionRelativeTo = (
     anchorTop: anchorDocumentTop,
     anchorRight: anchorDocumentRight,
     anchorBottom: anchorDocumentBottom,
-    spaceLeft,
-    spaceRight,
+    spaceLeft: spaceLeft - viewportSpacing,
+    spaceRight: spaceRight - viewportSpacing,
     spaceAbove: effectiveSpaceAbove,
     spaceBelow: effectiveSpaceBelow,
   };
