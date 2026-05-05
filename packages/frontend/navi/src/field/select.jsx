@@ -541,8 +541,8 @@ const SelectWithPopover = (props) => {
     pointerTrap,
     scrollTrap = true,
     focusTrap = true,
-    popoverBehavior = "nearby",
-    popoverSpacing = popoverBehavior === "nearby" ? 5 : 0,
+    popoverMode = "nearby",
+    popoverSpacing = popoverMode === "nearby" ? 5 : 0,
     viewportSpacing = 10,
     ...rest
   } = props;
@@ -709,7 +709,7 @@ const SelectWithPopover = (props) => {
           }
         }}
         positionX="left-aligned"
-        positionY={popoverBehavior === "nearby" ? "below" : "below-overlap"}
+        positionY={popoverMode === "nearby" ? "below" : "below-overlap"}
         spacing={popoverSpacing}
         viewportSpacing={viewportSpacing}
         scrollTrap={scrollTrap}
@@ -719,7 +719,7 @@ const SelectWithPopover = (props) => {
         {/* In "attached" mode clone the trigger visually so the popover wraps both the trigger
             and the list with a unified border/shadow. The clone is not
             interactive — the real trigger behind it handles all events. */}
-        {popoverBehavior === "attached" ? (
+        {popoverMode === "attached" ? (
           <div
             className="navi_select_anchor_clone"
             onMouseDown={(e) => {

@@ -476,23 +476,28 @@
       const Demo6 = () => {
         return (
           <div className="demo-section">
-            <h2>Demo 6 — Popover behavior</h2>
+            <h2>Demo 6 — Popover mode</h2>
 
             {/* ── 3-column interactive examples ── */}
-            <Box flex spacing="xl" alignY="end" style={{ marginBottom: "24px" }}>
+            <Box
+              flex
+              spacing="xl"
+              alignY="end"
+              style={{ marginBottom: "24px" }}
+            >
               <Box flex="y" spacing="xs" alignX="start">
-                <StyleSelect label='popoverBehavior="nearby" (default)' />
+                <StyleSelect label='popoverMode="nearby" (default)' />
               </Box>
               <Box flex="y" spacing="xs" alignX="start">
                 <StyleSelect
-                  label='popoverBehavior="overlay"'
-                  popoverBehavior="overlay"
+                  label='popoverMode="overlay"'
+                  popoverMode="overlay"
                 />
               </Box>
               <Box flex="y" spacing="xs" alignX="start">
                 <StyleSelect
-                  label='popoverBehavior="attached"'
-                  popoverBehavior="attached"
+                  label='popoverMode="attached"'
+                  popoverMode="attached"
                 />
               </Box>
             </Box>
@@ -511,8 +516,8 @@
                 <b>"overlay"</b>
                 <span style={{ fontSize: "13px", color: "#444" }}>
                   The popover opens directly on top of the trigger (
-                  <code>spacing=0</code>). Adjust <code>popoverSpacing</code>{" "}
-                  to shift it up or down. The trigger remains fully visible
+                  <code>spacing=0</code>). Adjust <code>popoverSpacing</code> to
+                  shift it up or down. The trigger remains fully visible
                   underneath.
                 </span>
               </Box>
@@ -520,8 +525,8 @@
                 <b>"attached"</b>
                 <span style={{ fontSize: "13px", color: "#444" }}>
                   The popover wraps the trigger visually: a clone of the trigger
-                  is placed inside the popover so borders connect seamlessly. The
-                  real trigger handles all interaction. The popover can grow
+                  is placed inside the popover so borders connect seamlessly.
+                  The real trigger handles all interaction. The popover can grow
                   wider than the trigger without any layout impact.
                 </span>
               </Box>
@@ -597,10 +602,10 @@
         return (
           <div>
             <Demo1 />
+            <Demo6 />
             <Demo3 />
             <Demo4 />
             <Demo5 />
-            <Demo6 />
             <Demo7 />
           </div>
         );
