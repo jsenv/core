@@ -621,9 +621,9 @@ export const pickPositionRelativeTo = (
   let elementPositionTop;
   {
     if (finalY === "above") {
+      // top is always anchorTop - elementHeight - spacing — max-height truncates if needed.
       const idealTop = anchorTop - elementHeight - spacing;
-      elementPositionTop =
-        idealTop < viewportSpacing ? viewportSpacing : idealTop;
+      elementPositionTop = idealTop < 0 ? 0 : idealTop;
     } else if (finalY === "above-overlap") {
       const idealTop = anchorBottom - elementHeight;
       elementPositionTop = idealTop < 0 ? 0 : idealTop;
@@ -635,11 +635,11 @@ export const pickPositionRelativeTo = (
         idealTop % 1 === 0 ? idealTop : Math.floor(idealTop) + 1;
     } else {
       // "below"
+      // top is always anchorBottom + spacing — max-height (via --space-available) truncates
+      // the element height so it doesn't overflow the viewport bottom.
       const idealTop = anchorBottom + spacing;
-      const clampedTop =
+      elementPositionTop =
         idealTop % 1 === 0 ? idealTop : Math.floor(idealTop) + 1;
-      const maxTop = viewportHeight - viewportSpacing - elementHeight;
-      elementPositionTop = clampedTop > maxTop ? maxTop : clampedTop;
     }
   }
 
@@ -663,10 +663,13 @@ export const pickPositionRelativeTo = (
 
   // For overlap variants the element starts at the anchor edge (not past it),
   // so the usable space includes the anchor dimension.
+  // viewportSpacing is subtracted so callers get the net usable space directly.
   const effectiveSpaceAbove =
-    finalY === "above-overlap" ? spaceAbove + anchorHeight : spaceAbove;
+    (finalY === "above-overlap" ? spaceAbove + anchorHeight : spaceAbove) -
+    viewportSpacing;
   const effectiveSpaceBelow =
-    finalY === "below-overlap" ? spaceBelow + anchorHeight : spaceBelow;
+    (finalY === "below-overlap" ? spaceBelow + anchorHeight : spaceBelow) -
+    viewportSpacing;
 
   return {
     positionX: finalX,
