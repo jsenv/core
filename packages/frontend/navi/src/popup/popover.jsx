@@ -95,13 +95,24 @@ export const Popover = (props) => {
       );
       const minLeft = 1;
       const effectivePositionX = anchor ? positionX : "center";
-      const { left, top } = pickPositionRelativeTo(popoverEl, effectiveAnchor, {
+      const {
+        left,
+        top,
+        positionY: finalPositionY,
+        spaceAbove,
+        spaceBelow,
+      } = pickPositionRelativeTo(popoverEl, effectiveAnchor, {
         positionX: effectivePositionX,
         positionY,
         positionXFixed,
         positionYFixed,
         minLeft,
       });
+      const spaceAvailable =
+        finalPositionY === "above" || finalPositionY === "above-overlap"
+          ? spaceAbove
+          : spaceBelow;
+      popoverEl.style.setProperty("--space-available", `${spaceAvailable}px`);
       debugPopup(
         `positionPopover("${positionEvent.type}") -> left: ${left}, top: ${top}`,
       );
