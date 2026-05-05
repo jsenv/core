@@ -184,66 +184,6 @@
         );
       };
 
-      // ── Demo 2: List with search ──────────────────────────────────────────────
-      const Demo2 = () => {
-        const [fruit, setFruit] = useState(null);
-        const [searchText, setSearchText] = useState("");
-        const [items, getItemMatchInfo] = useSearchText(searchText, FRUITS);
-
-        return (
-          <div className="demo-section">
-            <h2>Demo 2 — List with search</h2>
-            <p>
-              The popover contains a search input and a filterable list.
-              Selecting a fruit closes the popover automatically.
-            </p>
-            <Box flex spacing="s" alignY="center">
-              <NaviDebug debugFocus debugScroll debugPopup>
-                <Select
-                  name="fruit"
-                  value={fruit}
-                  uiAction={(v) => {
-                    setFruit(v);
-                  }}
-                  placeholder="Pick a fruit…"
-                  scrollTrap
-                  focusTrap
-                >
-                  <List role="listbox">
-                    <ListItemHeader padding="m" borderBottom="1px solid #eee">
-                      <Input
-                        uiAction={(v) => setSearchText(v)}
-                        type="search"
-                        placeholder="Search…"
-                        value={searchText}
-                        expandX
-                      />
-                    </ListItemHeader>
-                    {items.map((f, i) => {
-                      const { match, ranges } = getItemMatchInfo(f);
-                      return (
-                        <ListItem
-                          key={f}
-                          index={i}
-                          id={f}
-                          value={f}
-                          selected={fruit === f}
-                          hidden={!match}
-                          highlight={ranges}
-                        >
-                          {f}
-                        </ListItem>
-                      );
-                    })}
-                  </List>
-                </Select>
-              </NaviDebug>
-              Some text here (to show no layout impact when opening select)
-            </Box>
-            <div className="value-display">{fruit ?? ""}</div>
-          </div>
-        );
-      };
       const FRUITS = [
         "Apple",
         "Apricot",
@@ -333,7 +273,7 @@
         );
       };
 
-      // ── Demo 4: Inside a form ─────────────────────────────────────────────────
+      // ── Demo 4: Form integration + required ──────────────────────────────────
 
       const COUNTRIES = ["France", "Germany", "Japan", "USA"];
 
@@ -343,10 +283,12 @@
         const [role, setRole] = useState(null);
         return (
           <div className="demo-section">
-            <h2>Demo 4 — Form integration</h2>
+            <h2>Demo 4 — Form integration &amp; required</h2>
             <p>
               Hidden <code>&lt;input type="hidden"&gt;</code> fields carry the
-              selected values on form submission.
+              selected values on form submission. A <code>required</code> select
+              blocks submission until a value is picked — closing the closed
+              select also triggers form validation.
             </p>
             <Form
               action={(data) => {
@@ -361,6 +303,8 @@
                       name="country"
                       value={country}
                       placeholder="Pick a country…"
+                      required
+                      requiredMessage="Veuillez choisir un pays."
                       uiAction={(v) => setCountry(v)}
                     >
                       <List role="listbox">
@@ -416,125 +360,7 @@
         );
       };
 
-      // ── Demo 5: Dialog mode ───────────────────────────────────────────────────
-
-      const Demo5 = () => {
-        const [fruit, setFruit] = useState(null);
-        const [searchText, setSearchText] = useState("");
-        const [items, getItemMatchInfo] = useSearchText(searchText, FRUITS);
-
-        return (
-          <div className="demo-section">
-            <h2>Demo 5 — Dialog mode</h2>
-            <p>
-              Using <code>mode="dialog"</code> opens a centered modal instead of
-              an anchored popover. The native <code>Escape</code> key closes the
-              dialog for free. Backdrop is provided by <code>::backdrop</code>.
-            </p>
-            <Select
-              value={fruit}
-              name="fruit_dialog"
-              placeholder="Pick a fruit…"
-              mode="dialog"
-              uiAction={(v) => {
-                setFruit(v);
-                setSearchText("");
-              }}
-            >
-              <List role="listbox" withSearch>
-                <ListItemHeader>
-                  <div
-                    style={{ padding: "8px", borderBottom: "1px solid #eee" }}
-                  >
-                    <Input
-                      uiAction={(v) => setSearchText(v)}
-                      type="search"
-                      placeholder="Search…"
-                      value={searchText}
-                      style={{ width: "100%" }}
-                    />
-                  </div>
-                </ListItemHeader>
-                {items.map((f, i) => {
-                  const { match, ranges } = getItemMatchInfo(f);
-                  return (
-                    <ListItem
-                      key={f}
-                      index={i}
-                      id={f}
-                      value={f}
-                      selected={fruit === f}
-                      hidden={!match}
-                      highlight={ranges}
-                    >
-                      {f}
-                    </ListItem>
-                  );
-                })}
-              </List>
-            </Select>
-            <div className="value-display">{fruit ?? ""}</div>
-          </div>
-        );
-      };
-
-      // ── Demo 6: Constraint validation (required) ─────────────────────────────
-
-      const Demo6 = () => {
-        const [country, setCountry] = useState(null);
-        const [submitted, setSubmitted] = useState(null);
-        return (
-          <div className="demo-section">
-            <h2>Demo 6 — Required constraint</h2>
-            <p>
-              A <code>required</code> select blocks form submission until a
-              value is picked. Pressing Enter on the closed select also triggers
-              form validation (just like a native <code>&lt;select&gt;</code>).
-            </p>
-            <Form
-              action={(data) => {
-                setSubmitted(data);
-              }}
-            >
-              <Box flex="y" spacing="m" alignX="start">
-                <Label flex spacing="s" alignY="center">
-                  Country
-                  <Select
-                    name="country"
-                    value={country}
-                    placeholder="Pick a country…"
-                    required
-                    requiredMessage="Veuillez choisir un pays."
-                    uiAction={(v) => setCountry(v)}
-                  >
-                    <List role="listbox">
-                      {COUNTRIES.map((c, i) => (
-                        <ListItem
-                          key={c}
-                          index={i}
-                          id={c}
-                          value={c}
-                          selected={country === c}
-                        >
-                          {c}
-                        </ListItem>
-                      ))}
-                    </List>
-                  </Select>
-                </Label>
-                <Button type="submit">Submit</Button>
-              </Box>
-              {submitted && (
-                <div className="value-display">
-                  {JSON.stringify(submitted, null, 2)}
-                </div>
-              )}
-            </Form>
-          </div>
-        );
-      };
-
-      // ── Demo 7: Custom trigger ────────────────────────────────────────────────
+      // ── Demo 5: Custom trigger ────────────────────────────────────────────────
 
       const DECOUPAGES = [
         "Annuel",
@@ -544,12 +370,12 @@
         "Journalier",
       ];
 
-      const Demo7 = () => {
+      const Demo5 = () => {
         const [decoupage, setDecoupage] = useState("Annuel");
 
         return (
           <div className="demo-section">
-            <h2>Demo 7 — Custom trigger</h2>
+            <h2>Demo 5 — Custom trigger</h2>
             <p>
               A fully custom trigger passed via the <code>trigger</code> prop.
               The select has custom border color and radius via style props.
@@ -612,13 +438,165 @@
         );
       };
 
+      // ── Demo 6: Popover style ─────────────────────────────────────────────────
+
+      const SIZES_STYLE = ["XS", "S", "M", "L", "XL"];
+
+      const StyleSelect = ({ label, ...props }) => {
+        const [value, setValue] = useState(null);
+        return (
+          <Box flex="y" spacing="xs">
+            <span style={{ fontSize: "12px", color: "#666" }}>{label}</span>
+            <Select
+              name="style_demo"
+              value={value}
+              placeholder="Pick a size…"
+              uiAction={(v) => setValue(v)}
+              {...props}
+            >
+              <List role="listbox">
+                {SIZES_STYLE.map((s, i) => (
+                  <ListItem
+                    key={s}
+                    index={i}
+                    id={s}
+                    value={s}
+                    selected={value === s}
+                  >
+                    {s}
+                  </ListItem>
+                ))}
+              </List>
+            </Select>
+            <div className="value-display">{value ?? ""}</div>
+          </Box>
+        );
+      };
+
+      const Demo6 = () => {
+        return (
+          <div className="demo-section">
+            <h2>Demo 6 — Popover behavior</h2>
+            <p>
+              Three ways to place the popover relative to the trigger,
+              controlled by <code>popoverBehavior</code>:
+            </p>
+            <Box flex spacing="xl" alignY="start">
+              <Box flex="y" spacing="s">
+                <b style={{ fontSize: "13px" }}>nearby (default)</b>
+                <p style={{ fontSize: "12px", color: "#555", margin: 0 }}>
+                  The popover floats just below the trigger with a small gap (
+                  <code>popoverSpacing=5</code>). It adapts naturally to any
+                  design: the trigger keeps its own style and the list appears
+                  right underneath, clearly separated.
+                </p>
+                <StyleSelect label='popoverBehavior="nearby" (default)' />
+              </Box>
+
+              <Box flex="y" spacing="s">
+                <b style={{ fontSize: "13px" }}>overlay</b>
+                <p style={{ fontSize: "12px", color: "#555", margin: 0 }}>
+                  The popover opens on top of the trigger (
+                  <code>spacing=0</code> by default). Use a negative{" "}
+                  <code>popoverSpacing</code> to slide it slightly over the
+                  trigger for a layered feel. The trigger always stays fully
+                  visible underneath.
+                </p>
+                <StyleSelect
+                  label='popoverBehavior="overlay"'
+                  popoverBehavior="overlay"
+                />
+              </Box>
+
+              <Box flex="y" spacing="s">
+                <b style={{ fontSize: "13px" }}>attached</b>
+                <p style={{ fontSize: "12px", color: "#555", margin: 0 }}>
+                  The popover wraps the trigger visually: a clone of the trigger
+                  is placed inside the popover so borders and shadows are
+                  seamlessly connected. The real trigger stays behind and
+                  handles all events. The popover can grow wider than the
+                  trigger without affecting layout.
+                  <br />
+                  More advanced — best for designs where the trigger and list
+                  should feel like a single unified widget.
+                </p>
+                <StyleSelect
+                  label='popoverBehavior="attached"'
+                  popoverBehavior="attached"
+                />
+              </Box>
+            </Box>
+          </div>
+        );
+      };
+
+      // ── Demo 7: List with search ──────────────────────────────────────────────
+      const Demo7 = () => {
+        const [fruit, setFruit] = useState(null);
+        const [searchText, setSearchText] = useState("");
+        const [items, getItemMatchInfo] = useSearchText(searchText, FRUITS);
+
+        return (
+          <div className="demo-section">
+            <h2>Demo 7 — List with search</h2>
+            <p>
+              The popover contains a search input and a filterable list.
+              Selecting a fruit closes the popover automatically.
+            </p>
+            <Box flex spacing="s" alignY="center">
+              <NaviDebug debugFocus debugScroll debugPopup>
+                <Select
+                  name="fruit"
+                  value={fruit}
+                  uiAction={(v) => {
+                    setFruit(v);
+                  }}
+                  placeholder="Pick a fruit…"
+                  scrollTrap
+                  focusTrap
+                >
+                  <List role="listbox">
+                    <ListItemHeader padding="m" borderBottom="1px solid #eee">
+                      <Input
+                        uiAction={(v) => setSearchText(v)}
+                        type="search"
+                        placeholder="Search…"
+                        value={searchText}
+                        expandX
+                      />
+                    </ListItemHeader>
+                    {items.map((f, i) => {
+                      const { match, ranges } = getItemMatchInfo(f);
+                      return (
+                        <ListItem
+                          key={f}
+                          index={i}
+                          id={f}
+                          value={f}
+                          selected={fruit === f}
+                          hidden={!match}
+                          highlight={ranges}
+                        >
+                          {f}
+                        </ListItem>
+                      );
+                    })}
+                  </List>
+                </Select>
+              </NaviDebug>
+              Some text here (to show no layout impact when opening select)
+            </Box>
+            <div className="value-display">{fruit ?? ""}</div>
+          </div>
+        );
+      };
+
       // ── App ───────────────────────────────────────────────────────────────────
 
       const App = () => {
         return (
           <div>
             <Demo1 />
-            <Demo2 />
             <Demo3 />
             <Demo4 />
             <Demo5 />
