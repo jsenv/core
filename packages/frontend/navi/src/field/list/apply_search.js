@@ -58,9 +58,11 @@ export const applySearch = (searchText, value) => {
 
   // Multi-word OR: split on whitespace, any word matching contributes to the score.
   // Items where all words match rank higher than partial matches.
-  if (words.length < 2) {
-    return { match: false, matchScore: 0, matchRanges: [] };
-  }
+  // Note: words always has at least 1 element here (searchText is non-empty and
+  // foldedSearch.split filters empty strings). This path also handles the case
+  // where searchText has trailing/leading spaces: the phrase match above tries
+  // the literal (e.g. "tc " in "tc adapter"), and if that fails we fall through
+  // here to try each word individually (e.g. "tc" matches "tca").
   const matchRanges = [];
   let matchedWordCount = 0;
   let anyWordAtStart = false;

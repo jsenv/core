@@ -2,7 +2,8 @@
 
 ```js
 // "TC " (with trailing space) should still match "TCA"
-// because splitting on whitespace produces ["TC"] and "TCA" contains "TC"
+// because splitting on whitespace produces ["TC"] and "TCA" contains "TC".
+// "TC Adapter" is matched by the phrase path and highlights the space too.
 return displayTable([
   ["TC ", "TCA"],
   ["TC ", "TC Adapter"],
@@ -13,7 +14,7 @@ return displayTable([
 ┌───────┬──────────────┬────────────────┐
 │ Query │ String       │ Result         │
 ├───────┼──────────────┼────────────────┤
-│ "TC " │ "TCA"        │ null           │
+│ "TC " │ "TCA"        │ "[TC]A"        │
 ├───────┼──────────────┼────────────────┤
 │ "TC " │ "TC Adapter" │ "[TC ]Adapter" │
 └───────┴──────────────┴────────────────┘

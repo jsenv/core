@@ -8,6 +8,7 @@
 - [score ranking](4_score_ranking/4_score_ranking.md)
 - [score ranking multi-word](5_score_ranking_multi-word/5_score_ranking_multi-word.md)
 - [trailing space in search](6_trailing_space_in_search/6_trailing_space_in_search.md)
+- [multiple spaces between words](7_multiple_spaces_between_words/7_multiple_spaces_between_words.md)
 
 ---
 
