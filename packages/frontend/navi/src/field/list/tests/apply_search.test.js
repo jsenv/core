@@ -60,4 +60,13 @@ await snapshotTests(import.meta.url, ({ test }) => {
       "Bob xyz", // one word missing → no match
     ]);
   });
+
+  test("trailing space in search", () => {
+    // "TC " (with trailing space) should still match "TCA"
+    // because splitting on whitespace produces ["TC"] and "TCA" contains "TC"
+    return displayTable([
+      ["TC ", "TCA"],
+      ["TC ", "TC Adapter"],
+    ]);
+  });
 });
