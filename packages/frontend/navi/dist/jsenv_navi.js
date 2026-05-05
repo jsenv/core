@@ -29445,33 +29445,6 @@ const InputControllingList = props => {
   const getListEl = () => {
     return document.getElementById(listId);
   };
-  useEffect(() => {
-    const inputEl = ref.current;
-    if (!inputEl) {
-      return undefined;
-    }
-    const listEl = getListEl();
-    if (!listEl) {
-      return undefined;
-    }
-    const onListSelect = e => {
-      const {
-        event
-      } = e.detail;
-      if (event.type === "mousedown") {
-        if (!inputEl.hidden) {
-          event.preventDefault();
-          inputEl.focus({
-            preventScroll: true
-          });
-        }
-      }
-    };
-    listEl.addEventListener("navi_list_select", onListSelect);
-    return () => {
-      listEl.removeEventListener("navi_list_select", onListSelect);
-    };
-  }, []);
   const onKeyDownWithShortcuts = shortcutsViaOnKeyDown({
     arrowdown: e => {
       const listEl = getListEl();
