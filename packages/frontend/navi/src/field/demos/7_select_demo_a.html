@@ -441,18 +441,8 @@
       // ── Demo 6: Popover style ─────────────────────────────────────────────────
 
       const SIZES_STYLE = ["XS", "S", "M", "L", "XL"];
-      const LONG_OPTIONS = [
-        "Very long option label A",
-        "Very long option label B",
-        "Very long option label C",
-      ];
 
-      const StyleSelect = ({
-        label,
-        items = SIZES_STYLE,
-        placeholder = "Pick a size…",
-        ...props
-      }) => {
+      const StyleSelect = ({ label, wideList = false, ...props }) => {
         const [value, setValue] = useState(null);
         return (
           <Box flex="y" spacing="xs">
@@ -460,12 +450,15 @@
             <Select
               name="style_demo"
               value={value}
-              placeholder={placeholder}
+              placeholder="Pick a size…"
               uiAction={(v) => setValue(v)}
               {...props}
             >
-              <List role="listbox">
-                {items.map((s, i) => (
+              <List
+                role="listbox"
+                style={wideList ? { minWidth: "220px" } : undefined}
+              >
+                {SIZES_STYLE.map((s, i) => (
                   <ListItem
                     key={s}
                     index={i}
@@ -566,16 +559,14 @@
               <Box flex="y" spacing="xs" alignX="start">
                 <StyleSelect
                   label='popoverMode="nearby" (default)'
-                  items={LONG_OPTIONS}
-                  placeholder="Pick…"
+                  wideList
                   borderRadius={rounded ? "m" : "0"}
                 />
               </Box>
               <Box flex="y" spacing="xs" alignX="start">
                 <StyleSelect
                   label='popoverMode="overlay"'
-                  items={LONG_OPTIONS}
-                  placeholder="Pick…"
+                  wideList
                   popoverMode="overlay"
                   borderRadius={rounded ? "m" : "0"}
                 />
@@ -583,254 +574,60 @@
               <Box flex="y" spacing="xs" alignX="start">
                 <StyleSelect
                   label='popoverMode="attached"'
-                  items={LONG_OPTIONS}
-                  placeholder="Pick…"
+                  wideList
                   popoverMode="attached"
                   borderRadius={rounded ? "m" : "0"}
                 />
               </Box>
             </Box>
 
-            {/* ── comparison table ── */}
-            <table
+            {/* ── explanations ── */}
+            <p style={{ fontSize: "13px", color: "#444", margin: "0 0 6px" }}>
+              <b>"nearby"</b> is the default because it has the fewest
+              trade-offs:
+            </p>
+            <ul
               style={{
-                width: "100%",
-                borderCollapse: "collapse",
-                fontSize: "12px",
-                marginBottom: "20px",
+                fontSize: "13px",
+                color: "#444",
+                margin: "0 0 12px",
+                paddingLeft: "20px",
+                lineHeight: "1.7",
               }}
             >
-              <thead>
-                <tr style={{ background: "#f5f5f5" }}>
-                  <th
-                    style={{
-                      padding: "8px 10px",
-                      textAlign: "left",
-                      border: "1px solid #e0e0e0",
-                      fontWeight: 600,
-                    }}
-                  >
-                    —
-                  </th>
-                  <th
-                    style={{
-                      padding: "8px 10px",
-                      textAlign: "left",
-                      border: "1px solid #e0e0e0",
-                      fontWeight: 600,
-                    }}
-                  >
-                    nearby ★ default
-                  </th>
-                  <th
-                    style={{
-                      padding: "8px 10px",
-                      textAlign: "left",
-                      border: "1px solid #e0e0e0",
-                      fontWeight: 600,
-                    }}
-                  >
-                    overlay
-                  </th>
-                  <th
-                    style={{
-                      padding: "8px 10px",
-                      textAlign: "left",
-                      border: "1px solid #e0e0e0",
-                      fontWeight: 600,
-                    }}
-                  >
-                    attached
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td
-                    style={{
-                      padding: "7px 10px",
-                      border: "1px solid #e0e0e0",
-                      color: "#555",
-                      fontWeight: 500,
-                    }}
-                  >
-                    Trigger visible when open
-                  </td>
-                  <td
-                    style={{
-                      padding: "7px 10px",
-                      border: "1px solid #e0e0e0",
-                      color: "#2e7d32",
-                    }}
-                  >
-                    ✓ always
-                  </td>
-                  <td
-                    style={{
-                      padding: "7px 10px",
-                      border: "1px solid #e0e0e0",
-                      color: "#c62828",
-                    }}
-                  >
-                    ✗ hidden under popover
-                  </td>
-                  <td
-                    style={{
-                      padding: "7px 10px",
-                      border: "1px solid #e0e0e0",
-                      color: "#f57c00",
-                    }}
-                  >
-                    ~ cloned inside popover
-                  </td>
-                </tr>
-                <tr style={{ background: "#fafafa" }}>
-                  <td
-                    style={{
-                      padding: "7px 10px",
-                      border: "1px solid #e0e0e0",
-                      color: "#555",
-                      fontWeight: 500,
-                    }}
-                  >
-                    Wider popover impact
-                  </td>
-                  <td
-                    style={{
-                      padding: "7px 10px",
-                      border: "1px solid #e0e0e0",
-                      color: "#2e7d32",
-                    }}
-                  >
-                    ✓ no layout change
-                  </td>
-                  <td
-                    style={{
-                      padding: "7px 10px",
-                      border: "1px solid #e0e0e0",
-                      color: "#2e7d32",
-                    }}
-                  >
-                    ✓ no layout change
-                  </td>
-                  <td
-                    style={{
-                      padding: "7px 10px",
-                      border: "1px solid #e0e0e0",
-                      color: "#f57c00",
-                    }}
-                  >
-                    ~ trigger grows too
-                  </td>
-                </tr>
-                <tr>
-                  <td
-                    style={{
-                      padding: "7px 10px",
-                      border: "1px solid #e0e0e0",
-                      color: "#555",
-                      fontWeight: 500,
-                    }}
-                  >
-                    Implementation complexity
-                  </td>
-                  <td
-                    style={{
-                      padding: "7px 10px",
-                      border: "1px solid #e0e0e0",
-                      color: "#2e7d32",
-                    }}
-                  >
-                    ✓ simple
-                  </td>
-                  <td
-                    style={{
-                      padding: "7px 10px",
-                      border: "1px solid #e0e0e0",
-                      color: "#2e7d32",
-                    }}
-                  >
-                    ✓ simple
-                  </td>
-                  <td
-                    style={{
-                      padding: "7px 10px",
-                      border: "1px solid #e0e0e0",
-                      color: "#c62828",
-                    }}
-                  >
-                    ✗ clone + sizing logic
-                  </td>
-                </tr>
-                <tr style={{ background: "#fafafa" }}>
-                  <td
-                    style={{
-                      padding: "7px 10px",
-                      border: "1px solid #e0e0e0",
-                      color: "#555",
-                      fontWeight: 500,
-                    }}
-                  >
-                    Works with any design
-                  </td>
-                  <td
-                    style={{
-                      padding: "7px 10px",
-                      border: "1px solid #e0e0e0",
-                      color: "#2e7d32",
-                    }}
-                  >
-                    ✓ yes (GitHub, etc.)
-                  </td>
-                  <td
-                    style={{
-                      padding: "7px 10px",
-                      border: "1px solid #e0e0e0",
-                      color: "#f57c00",
-                    }}
-                  >
-                    ~ design-dependent
-                  </td>
-                  <td
-                    style={{
-                      padding: "7px 10px",
-                      border: "1px solid #e0e0e0",
-                      color: "#c62828",
-                    }}
-                  >
-                    ✗ requires careful styling
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-
-            {/* ── 3-column explanations ── */}
-            <Box flex spacing="xl" alignY="start">
-              <Box flex="y" spacing="xs" style={{ flex: 1 }}>
-                <b>"nearby"</b>
-                <span style={{ fontSize: "13px", color: "#444" }}>
-                  Trigger and popover are fully independent components. No
-                  sizing coordination needed — if the popover is wider, it just
-                  floats wider. Used widely (GitHub, etc.) and scales to any UI.
-                </span>
-              </Box>
-              <Box flex="y" spacing="xs" style={{ flex: 1 }}>
-                <b>"overlay"</b>
-                <span style={{ fontSize: "13px", color: "#444" }}>
-                  The popover covers the trigger when open. Works well visually
-                  but the trigger disappears, which can feel disorienting. No
-                  layout impact when the popover is wider.
-                </span>
-              </Box>
-              <Box flex="y" spacing="xs" style={{ flex: 1 }}>
-                <b>"attached"</b>
-                <span style={{ fontSize: "13px", color: "#444" }}>
-                  Seamless visual connection between trigger and popover. But
-                  when the popover is wider, the trigger grows with it — two
-                  things change instead of one. More complex, more opinionated.
-                </span>
-              </Box>
-            </Box>
+              <li>
+                The trigger stays fully visible when the popover is open — the
+                user always knows what they are editing.
+              </li>
+              <li>
+                When the popover is wider than the trigger, only the popover
+                grows — nothing else in the layout changes. This is the most
+                natural behaviour and is used widely (GitHub, Linear, etc.).
+              </li>
+            </ul>
+            <p style={{ fontSize: "13px", color: "#444", margin: "0 0 6px" }}>
+              The other modes have valid use cases but come with trade-offs:
+            </p>
+            <ul
+              style={{
+                fontSize: "13px",
+                color: "#444",
+                margin: 0,
+                paddingLeft: "20px",
+                lineHeight: "1.7",
+              }}
+            >
+              <li>
+                <b>"overlay"</b> — the popover covers the trigger when open,
+                which can feel disorienting.
+              </li>
+              <li>
+                <b>"attached"</b> — when the popover is wider, the trigger grows
+                with it, so two things change at once instead of one. If you use
+                a custom trigger it needs to be fluid in width for this to work
+                correctly.
+              </li>
+            </ul>
           </div>
         );
       };
