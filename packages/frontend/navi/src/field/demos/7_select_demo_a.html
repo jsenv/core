@@ -477,53 +477,53 @@
         return (
           <div className="demo-section">
             <h2>Demo 6 — Popover behavior</h2>
-            <p>
-              Three ways to place the popover relative to the trigger,
-              controlled by <code>popoverBehavior</code>:
-            </p>
-            <Box flex spacing="xl" alignY="start">
-              <Box flex="y" spacing="s">
-                <b style={{ fontSize: "13px" }}>nearby (default)</b>
-                <p style={{ fontSize: "12px", color: "#555", margin: 0 }}>
-                  The popover floats just below the trigger with a small gap (
-                  <code>popoverSpacing=5</code>). It adapts naturally to any
-                  design: the trigger keeps its own style and the list appears
-                  right underneath, clearly separated.
-                </p>
+
+            {/* ── 3-column interactive examples ── */}
+            <Box flex spacing="xl" alignY="end" style={{ marginBottom: "24px" }}>
+              <Box flex="y" spacing="xs" alignX="start">
                 <StyleSelect label='popoverBehavior="nearby" (default)' />
               </Box>
-
-              <Box flex="y" spacing="s">
-                <b style={{ fontSize: "13px" }}>overlay</b>
-                <p style={{ fontSize: "12px", color: "#555", margin: 0 }}>
-                  The popover opens on top of the trigger (
-                  <code>spacing=0</code> by default). Use a negative{" "}
-                  <code>popoverSpacing</code> to slide it slightly over the
-                  trigger for a layered feel. The trigger always stays fully
-                  visible underneath.
-                </p>
+              <Box flex="y" spacing="xs" alignX="start">
                 <StyleSelect
                   label='popoverBehavior="overlay"'
                   popoverBehavior="overlay"
                 />
               </Box>
-
-              <Box flex="y" spacing="s">
-                <b style={{ fontSize: "13px" }}>attached</b>
-                <p style={{ fontSize: "12px", color: "#555", margin: 0 }}>
-                  The popover wraps the trigger visually: a clone of the trigger
-                  is placed inside the popover so borders and shadows are
-                  seamlessly connected. The real trigger stays behind and
-                  handles all events. The popover can grow wider than the
-                  trigger without affecting layout.
-                  <br />
-                  More advanced — best for designs where the trigger and list
-                  should feel like a single unified widget.
-                </p>
+              <Box flex="y" spacing="xs" alignX="start">
                 <StyleSelect
                   label='popoverBehavior="attached"'
                   popoverBehavior="attached"
                 />
+              </Box>
+            </Box>
+
+            {/* ── 3-column explanations ── */}
+            <Box flex spacing="xl" alignY="start">
+              <Box flex="y" spacing="xs" style={{ flex: 1 }}>
+                <b>"nearby"</b>
+                <span style={{ fontSize: "13px", color: "#444" }}>
+                  The popover floats just below the trigger with a small gap (
+                  <code>popoverSpacing=5</code>). Adapts to any design — the
+                  trigger and list keep their own independent styles.
+                </span>
+              </Box>
+              <Box flex="y" spacing="xs" style={{ flex: 1 }}>
+                <b>"overlay"</b>
+                <span style={{ fontSize: "13px", color: "#444" }}>
+                  The popover opens directly on top of the trigger (
+                  <code>spacing=0</code>). Adjust <code>popoverSpacing</code>{" "}
+                  to shift it up or down. The trigger remains fully visible
+                  underneath.
+                </span>
+              </Box>
+              <Box flex="y" spacing="xs" style={{ flex: 1 }}>
+                <b>"attached"</b>
+                <span style={{ fontSize: "13px", color: "#444" }}>
+                  The popover wraps the trigger visually: a clone of the trigger
+                  is placed inside the popover so borders connect seamlessly. The
+                  real trigger handles all interaction. The popover can grow
+                  wider than the trigger without any layout impact.
+                </span>
               </Box>
             </Box>
           </div>
