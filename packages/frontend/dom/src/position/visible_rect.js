@@ -623,7 +623,8 @@ export const pickPositionRelativeTo = (
     if (finalY === "above") {
       // top is always anchorTop - elementHeight - spacing — max-height truncates if needed.
       const idealTop = anchorTop - elementHeight - spacing;
-      elementPositionTop = idealTop < 0 ? 0 : idealTop;
+      elementPositionTop =
+        idealTop < viewportSpacing ? viewportSpacing : idealTop;
     } else if (finalY === "above-overlap") {
       const idealTop = anchorBottom - elementHeight;
       elementPositionTop = idealTop < 0 ? 0 : idealTop;
