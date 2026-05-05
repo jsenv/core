@@ -653,6 +653,13 @@ export const pickPositionRelativeTo = (
   const anchorDocumentRight = anchorRight + scrollLeft;
   const anchorDocumentBottom = anchorBottom + scrollTop;
 
+  // For overlap variants the element starts at the anchor edge (not past it),
+  // so the usable space includes the anchor dimension.
+  const effectiveSpaceAbove =
+    finalY === "above-overlap" ? spaceAbove + anchorHeight : spaceAbove;
+  const effectiveSpaceBelow =
+    finalY === "below-overlap" ? spaceBelow + anchorHeight : spaceBelow;
+
   return {
     positionX: finalX,
     positionY: finalY,
@@ -666,7 +673,7 @@ export const pickPositionRelativeTo = (
     anchorBottom: anchorDocumentBottom,
     spaceLeft,
     spaceRight,
-    spaceAbove,
-    spaceBelow,
+    spaceAbove: effectiveSpaceAbove,
+    spaceBelow: effectiveSpaceBelow,
   };
 };
