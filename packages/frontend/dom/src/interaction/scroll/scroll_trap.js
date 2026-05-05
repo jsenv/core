@@ -1,3 +1,4 @@
+import { getPaddingSizes } from "../../size/get_padding_sizes.js";
 import { getStyle, setStyles } from "../../style/dom_styles.js";
 import { isScrollable } from "./is_scrollable.js";
 import { getSelfAndAncestorScrolls } from "./scroll_container.js";
@@ -39,11 +40,10 @@ export const trapScrollInside = (element) => {
       return;
     }
     const [scrollbarWidth, scrollbarHeight] = measureScrollbar(el);
-    const paddingRight = parseInt(getStyle(el, "padding-right"), 0);
-    const paddingBottom = parseInt(getStyle(el, "padding-bottom"), 0);
+    const { right, bottom } = getPaddingSizes(el);
     const removeScrollLockStyles = setStyles(el, {
-      "padding-right": `${paddingRight + scrollbarWidth}px`,
-      "padding-bottom": `${paddingBottom + scrollbarHeight}px`,
+      "padding-right": `${right + scrollbarWidth}px`,
+      "padding-bottom": `${bottom + scrollbarHeight}px`,
       "overflow": "hidden",
     });
     cleanupCallbackSet.add(removeScrollLockStyles);

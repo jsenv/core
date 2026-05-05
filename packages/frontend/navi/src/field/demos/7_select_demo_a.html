@@ -277,7 +277,7 @@
       const SIZES = ["XS", "S", "M", "L", "XL", "XXL"];
 
       const Demo3 = () => {
-        const [size, setSize] = useState("M");
+        const [size, setSize] = useState("");
         return (
           <div className="demo-section">
             <h2>Demo 3 — States</h2>
@@ -289,6 +289,8 @@
                 uiAction={(v) => setSize(v)}
                 placeholder="Pick a size…"
                 borderRadius="m"
+                // borderWidth="10"
+                // scrollTrap={false}
               >
                 <List role="listbox">
                   {SIZES.map((s, i) => (

@@ -207,7 +207,7 @@ const css = /* css */ `
           /* To make clone same height as original we need to force it because context can impact height */
           /* Like siblings with a bigger height in a flex container */
           /* We subtract the border sizes as anchor-height includes borders in the dimensions */
-          min-height: calc(var(--anchor-height) - var(--select-border-width));
+          min-height: var(--anchor-inner-height);
           /* Mirror the trigger's padding so the clone looks identical */
           padding-top: var(--x-select-padding-top);
           padding-right: var(--x-select-padding-right);

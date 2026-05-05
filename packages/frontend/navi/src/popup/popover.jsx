@@ -2,6 +2,7 @@ import {
   findFocusable,
   getElementSignature,
   pickPositionRelativeTo,
+  snapToPixel,
   trapFocusInside,
   trapScrollInside,
   visibleRectEffect,
@@ -72,9 +73,24 @@ export const Popover = (props) => {
     const effectiveAnchor = anchor || document.documentElement;
     const positionPopover = (positionEvent) => {
       const { width, height } = effectiveAnchor.getBoundingClientRect();
-      const snap = (v) => Math.round(v * devicePixelRatio) / devicePixelRatio;
-      popoverEl.style.setProperty("--anchor-width", `${snap(width)}px`);
-      popoverEl.style.setProperty("--anchor-height", `${snap(height)}px`);
+      const anchorStyle = getComputedStyle(effectiveAnchor);
+      const borderLeft = parseFloat(anchorStyle.borderLeftWidth) || 0;
+      const borderRight = parseFloat(anchorStyle.borderRightWidth) || 0;
+      const borderTop = parseFloat(anchorStyle.borderTopWidth) || 0;
+      const borderBottom = parseFloat(anchorStyle.borderBottomWidth) || 0;
+      popoverEl.style.setProperty("--anchor-width", `${snapToPixel(width)}px`);
+      popoverEl.style.setProperty(
+        "--anchor-height",
+        `${snapToPixel(height)}px`,
+      );
+      popoverEl.style.setProperty(
+        "--anchor-inner-width",
+        `${snapToPixel(width - borderLeft - borderRight)}px`,
+      );
+      popoverEl.style.setProperty(
+        "--anchor-inner-height",
+        `${snapToPixel(height - borderTop - borderBottom)}px`,
+      );
       const minLeft = 1;
       const effectivePositionX = anchor ? positionX : "center";
       const { left, top } = pickPositionRelativeTo(popoverEl, effectiveAnchor, {

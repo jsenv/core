@@ -1,3 +1,5 @@
+import { snapToPixel } from "../../size/snap_to_pixel.js";
+
 // https://davidwalsh.name/detect-scrollbar-width
 export const measureScrollbar = (scrollableElement) => {
   const hasXScrollbar =
@@ -14,7 +16,7 @@ export const measureScrollbar = (scrollableElement) => {
   const scrollbarHeight = scrollDiv.offsetHeight - scrollDiv.clientHeight;
   scrollableElement.removeChild(scrollDiv);
   return [
-    hasXScrollbar ? scrollbarWidth : 0,
-    hasYScrollbar ? scrollbarHeight : 0,
+    hasXScrollbar ? snapToPixel(scrollbarWidth) : 0,
+    hasYScrollbar ? snapToPixel(scrollbarHeight) : 0,
   ];
 };

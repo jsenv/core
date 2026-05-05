@@ -132,6 +132,7 @@ export { getMinWidth } from "./src/size/get_min_width.js";
 export { getPaddingSizes } from "./src/size/get_padding_sizes.js";
 export { getWidth } from "./src/size/get_width.js";
 export { resolveCSSSize } from "./src/size/resolve_css_size.js";
+export { snapToPixel } from "./src/size/snap_to_pixel.js";
 // size hooks
 export { useAvailableHeight } from "./src/size/hooks/use_available_height.js";
 export { useAvailableWidth } from "./src/size/hooks/use_available_width.js";
