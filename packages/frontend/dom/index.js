@@ -9,6 +9,7 @@ export { createValueEffect } from "./src/value_effect.js";
 export { getStyle, setStyles } from "./src/style/dom_styles.js";
 export {
   hasCSSSizeUnit,
+  normalizeStyle,
   normalizeStyles,
   parseStyle,
   stringifyStyle,

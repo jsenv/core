@@ -12,6 +12,7 @@ import { createPortal } from "preact/compat";
 import { useId, useRef, useState } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
+import { resolveSpacingSize } from "../box/box_style_util.js";
 import { useDebugFocus, useDebugPopup } from "../navi_debug.jsx";
 import {
   dispatchCustomEvent,
@@ -112,8 +113,8 @@ export const Popover = (props) => {
         positionY,
         positionXFixed,
         positionYFixed,
-        spacing,
-        viewportSpacing,
+        spacing: resolveSpacingSize(spacing),
+        viewportSpacing: resolveSpacingSize(viewportSpacing),
         minLeft,
       });
       const spaceAvailable =

@@ -1,13 +1,4 @@
-import { mergeOneStyle, stringifyStyle } from "@jsenv/dom";
-
-export const normalizeSpacingStyle = (value, property = "padding") => {
-  const cssValue = SIZE_MAP[value];
-  return cssValue || stringifyStyle(value, property);
-};
-export const normalizeTypoStyle = (value, property = "fontSize") => {
-  const cssValue = TYPO_SIZE_MAP[value];
-  return cssValue || stringifyStyle(value, property);
-};
+import { mergeOneStyle, normalizeStyle } from "@jsenv/dom";
 
 const PASS_THROUGH = { name: "pass_through" };
 const applyOnCSSProp = (cssStyle) => {
@@ -188,7 +179,7 @@ const DIMENSION_PROPS = {
     return { transform: `scaleX(${stringifyStyle(value, "scaleX")})` };
   },
   scaleY: (value) => {
-    return { transform: `scaleY(${value})` };
+    return { transform: `scaleY(${stringifyStyle(value, "scaleY")})` };
   },
   scale: (value) => {
     if (Array.isArray(value)) {
@@ -433,7 +424,7 @@ const CONTENT_PROPS = {
   spacing: (value, { boxFlow }) => {
     if (isSpacingHandledByFlow(boxFlow)) {
       return {
-        gap: resolveSpacingSize(value, "gap"),
+        gap: stringifySpacingStyle(value, "gap"),
       };
     }
     return undefined;
@@ -441,12 +432,12 @@ const CONTENT_PROPS = {
   spacingX: (value, { boxFlow }) => {
     if (boxFlow === "flex-x" || boxFlow === "inline-flex-x") {
       return {
-        gap: resolveSpacingSize(value, "gap"),
+        gap: stringifySpacingStyle(value, "gap"),
       };
     }
     if (boxFlow === "grid" || boxFlow === "inline-grid") {
       return {
-        columnGap: resolveSpacingSize(value, "columnGap"),
+        columnGap: stringifySpacingStyle(value, "columnGap"),
       };
     }
     return undefined;
@@ -454,12 +445,12 @@ const CONTENT_PROPS = {
   spacingY: (value, { boxFlow }) => {
     if (boxFlow === "flex-y" || boxFlow === "inline-flex-y") {
       return {
-        gap: resolveSpacingSize(value, "gap"),
+        gap: stringifySpacingStyle(value, "gap"),
       };
     }
     if (boxFlow === "grid" || boxFlow === "inline-grid") {
       return {
-        rowGap: resolveSpacingSize(value, "rowGap"),
+        rowGap: stringifySpacingStyle(value, "rowGap"),
       };
     }
     return undefined;
@@ -551,25 +542,31 @@ const getStylePropGroup = (name) => {
   }
   return null;
 };
-const getNormalizer = (key) => {
+const getStringifier = (key) => {
   if (key === "borderRadius") {
-    return normalizeSpacingStyle;
+    return stringifySpacingStyle;
   }
   const group = getStylePropGroup(key);
   if (group === "margin" || group === "padding") {
-    return normalizeSpacingStyle;
+    return stringifySpacingStyle;
   }
   if (group === "typo") {
-    return normalizeTypoStyle;
+    return stringifyTypoStyle;
   }
-  return normalizeRegularStyle;
+  return stringifyStyle;
 };
-const normalizeRegularStyle = (
+export const stringifySpacingStyle = (size, property = "padding") => {
+  return normalizeStyle(SIZE_MAP[size] || size, property, "css");
+};
+const stringifyTypoStyle = (size, property = "fontSize") => {
+  return normalizeStyle(TYPO_SIZE_MAP[size] || size, property, "css");
+};
+const stringifyStyle = (
   value,
   name,
   // styleContext, context
 ) => {
-  return stringifyStyle(value, name);
+  return normalizeStyle(value, name, "css");
 };
 export const getHowToHandleStyleProp = (name) => {
   const getStyle = All_PROPS[name];
@@ -585,8 +582,8 @@ export const prepareStyleValue = (
   styleContext,
   context,
 ) => {
-  const normalizer = getNormalizer(name);
-  const cssValue = normalizer(value, name, styleContext, context);
+  const stringifier = getStringifier(name);
+  const cssValue = stringifier(value, name, styleContext, context);
   const mergedValue = mergeOneStyle(existingValue, cssValue, name, context);
   return mergedValue;
 };
@@ -626,11 +623,11 @@ const sizeSpacingKeySet = new Set(Object.keys(SIZE_MAP));
 export const isSizeSpacingKey = (key) => {
   return sizeSpacingKeySet.has(key);
 };
-export const resolveSpacingSize = (size, property = "padding") => {
-  return stringifyStyle(SIZE_MAP[size] || size, property);
+export const resolveSpacingSize = (size, element, property = "padding") => {
+  return normalizeStyle(SIZE_MAP[size] || size, property, "js", element);
 };
-export const resolveTypoSize = (size, property = "fontSize") => {
-  return stringifyStyle(TYPO_SIZE_MAP[size] || size, property);
+export const resolveTypoSize = (size, element, property = "fontSize") => {
+  return normalizeStyle(TYPO_SIZE_MAP[size] || size, property, "js", element);
 };
 
 const COLOR_KEYWORD_MAP = {

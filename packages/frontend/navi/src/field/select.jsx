@@ -542,8 +542,8 @@ const SelectWithPopover = (props) => {
     scrollTrap = true,
     focusTrap = true,
     popoverBehavior = "nearby",
-    popoverSpacing = popoverBehavior === "nearby" ? 10 : 0,
-    viewportSpacing = 8,
+    popoverSpacing = popoverBehavior === "nearby" ? 5 : 0,
+    viewportSpacing = 10,
     ...rest
   } = props;
   const debugFocus = useDebugFocus();
@@ -579,8 +579,15 @@ const SelectWithPopover = (props) => {
     return requestPopoverClose(popoverRef.current, { event: e });
   };
   const moveFocusToSelect = (e) => {
+    if (e.type === "mousedown") {
+      e.preventDefault();
+      debugFocus(
+        formatEventSideEffect(e, `preventDefault and move focus to select`),
+      );
+    } else {
+      debugFocus(formatEventSideEffect(e, `move focus to select`));
+    }
     const select = ref.current;
-    debugFocus(`moveFocusToSelect("${e.type}")`);
     select.focus({ preventScroll: true });
   };
 
@@ -768,8 +775,16 @@ const SelectWithDialog = (props) => {
     });
   };
   const moveFocusToSelect = (e) => {
-    debugFocus(`moveFocusToSelect("${e.type}")`);
-    ref.current.focus({ preventScroll: true });
+    if (e.type === "mousedown") {
+      e.preventDefault();
+      debugFocus(
+        formatEventSideEffect(e, `preventDefault and move focus to select`),
+      );
+    } else {
+      debugFocus(formatEventSideEffect(e, `move focus to select`));
+    }
+    const select = ref.current;
+    select.focus({ preventScroll: true });
   };
 
   return (
