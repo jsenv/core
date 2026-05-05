@@ -5,10 +5,10 @@
 // Phase 1: literal "  bob" in the string
 // Phase 2: words = ["bob"] (spaces filtered), word-loop runs
 return displayTable([
-  ["  bob", "Bob Martin"],   // word-loop: "bob" found at start
-  ["  bob", "  bob smith"],  // literal phrase match
-  ["  bob", "Jean bob"],     // word-loop: "bob" found mid-word boundary
-  ["  bob", "xyz"],          // no match
+  ["  bob", "Bob Martin"], // word-loop: "bob" found at start
+  ["  bob", "  bob smith"], // literal phrase match
+  ["  bob", "Jean bob"], // word-loop: "bob" found mid-word boundary
+  ["  bob", "xyz"], // no match
 ]);
 ```
 
