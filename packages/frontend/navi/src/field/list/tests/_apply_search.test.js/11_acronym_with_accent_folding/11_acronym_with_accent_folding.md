@@ -2,8 +2,8 @@
 
 ```js
 return displayTable([
-  ["rg", "Rachel Guérin"],   // R+G from word starts (accent-insensitive)
-  ["RG", "Rachel Guérin"],   // same, case-exact bonus
+  ["rg", "Rachel Guérin"], // R+G from word starts (accent-insensitive)
+  ["RG", "Rachel Guérin"], // same, case-exact bonus
 ]);
 ```
 

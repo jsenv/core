@@ -4,8 +4,8 @@
 // Single-char acronym is too ambiguous, should not produce acronym matches
 // beyond what phrase/word already finds.
 return displayTable([
-  ["b", "Bob Martin"],   // phrase match (not acronym)
-  ["z", "Bob Martin"],   // no match
+  ["b", "Bob Martin"], // phrase match (not acronym)
+  ["z", "Bob Martin"], // no match
 ]);
 ```
 

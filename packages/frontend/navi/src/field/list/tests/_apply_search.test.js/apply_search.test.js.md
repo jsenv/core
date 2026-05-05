@@ -10,9 +10,10 @@
 - [trailing space in search](6_trailing_space_in_search/6_trailing_space_in_search.md)
 - [multiple spaces between words](7_multiple_spaces_between_words/7_multiple_spaces_between_words.md)
 - [only spaces as search](8_only_spaces_as_search/8_only_spaces_as_search.md)
-- [acronym matching](9_acronym_matching/9_acronym_matching.md)
-- [acronym with accent folding](10_acronym_with_accent_folding/10_acronym_with_accent_folding.md)
-- [acronym single char is skipped](11_acronym_single_char_is_skipped/11_acronym_single_char_is_skipped.md)
+- [leading spaces before word](9_leading_spaces_before_word/9_leading_spaces_before_word.md)
+- [acronym matching](10_acronym_matching/10_acronym_matching.md)
+- [acronym with accent folding](11_acronym_with_accent_folding/11_acronym_with_accent_folding.md)
+- [acronym single char is skipped](12_acronym_single_char_is_skipped/12_acronym_single_char_is_skipped.md)
 
 ---
 

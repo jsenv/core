@@ -2,12 +2,12 @@
 
 ```js
 return rank("TC", [
-  "TC Adapter",         // phrase match at start → higher score
-  "Total Count",        // acronym: T+C from word starts
-  "The Champion",       // acronym: T+C from word starts
-  "tca",                // phrase match mid-word
-  "Taco",               // no acronym match (only 1 word start)
-  "xyz",                // no match
+  "TC Adapter", // phrase match at start → higher score
+  "Total Count", // acronym: T+C from word starts
+  "The Champion", // acronym: T+C from word starts
+  "tca", // phrase match mid-word
+  "Taco", // no acronym match (only 1 word start)
+  "xyz", // no match
 ]);
 ```
 
