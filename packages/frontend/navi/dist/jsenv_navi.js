@@ -3,7 +3,7 @@ import { isValidElement, createContext, h, options, toChildArray, render, cloneE
 import { useErrorBoundary, useLayoutEffect, useEffect, useContext, useMemo, useRef, useState, useCallback, useImperativeHandle, useId } from "preact/hooks";
 import { jsxs, jsx, Fragment } from "preact/jsx-runtime";
 import { signal, effect, computed, batch, useSignal } from "@preact/signals";
-import { createIterableWeakSet, getElementSignature, mergeOneStyle, stringifyStyle, createPubSub, mergeTwoStyles, normalizeStyles, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, findBefore, findAfter, createValueEffect, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, allowWheelThrough, resolveCSSColor, createStyleController, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, resolveCSSSize, canInterceptKeys, activeElementSignal, hasCSSSizeUnit, resolveOklchLightness, contrastColor, initFocusGroup, elementIsFocusable, scrollIntoViewScoped, findFocusable, trapScrollInside, trapFocusInside, dragAfterThreshold, getScrollContainer, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
+import { createIterableWeakSet, getElementSignature, mergeOneStyle, normalizeStyle, createPubSub, mergeTwoStyles, normalizeStyles, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, findBefore, findAfter, createValueEffect, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, allowWheelThrough, resolveCSSColor, createStyleController, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, resolveCSSSize, canInterceptKeys, activeElementSignal, hasCSSSizeUnit, resolveOklchLightness, contrastColor, initFocusGroup, elementIsFocusable, scrollIntoViewScoped, findFocusable, trapScrollInside, trapFocusInside, snapToPixel, dragAfterThreshold, getScrollContainer, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
 export { contrastColor } from "@jsenv/dom";
 import { prefixFirstAndIndentRemainingLines } from "@jsenv/humanize";
 import { createValidity } from "@jsenv/validity";
@@ -6222,15 +6222,6 @@ const withPropsClassName = (baseClassName, classNameFromProps) => {
 
 const BoxFlowContext = createContext();
 
-const normalizeSpacingStyle = (value, property = "padding") => {
-  const cssValue = SIZE_MAP[value];
-  return cssValue || stringifyStyle(value, property);
-};
-const normalizeTypoStyle = (value, property = "fontSize") => {
-  const cssValue = TYPO_SIZE_MAP[value];
-  return cssValue || stringifyStyle(value, property);
-};
-
 const PASS_THROUGH = { name: "pass_through" };
 const applyOnCSSProp = (cssStyle) => {
   return (value) => {
@@ -6410,7 +6401,7 @@ const DIMENSION_PROPS = {
     return { transform: `scaleX(${stringifyStyle(value, "scaleX")})` };
   },
   scaleY: (value) => {
-    return { transform: `scaleY(${value})` };
+    return { transform: `scaleY(${stringifyStyle(value, "scaleY")})` };
   },
   scale: (value) => {
     if (Array.isArray(value)) {
@@ -6655,7 +6646,7 @@ const CONTENT_PROPS = {
   spacing: (value, { boxFlow }) => {
     if (isSpacingHandledByFlow(boxFlow)) {
       return {
-        gap: resolveSpacingSize(value, "gap"),
+        gap: stringifySpacingStyle(value, "gap"),
       };
     }
     return undefined;
@@ -6663,12 +6654,12 @@ const CONTENT_PROPS = {
   spacingX: (value, { boxFlow }) => {
     if (boxFlow === "flex-x" || boxFlow === "inline-flex-x") {
       return {
-        gap: resolveSpacingSize(value, "gap"),
+        gap: stringifySpacingStyle(value, "gap"),
       };
     }
     if (boxFlow === "grid" || boxFlow === "inline-grid") {
       return {
-        columnGap: resolveSpacingSize(value, "columnGap"),
+        columnGap: stringifySpacingStyle(value, "columnGap"),
       };
     }
     return undefined;
@@ -6676,12 +6667,12 @@ const CONTENT_PROPS = {
   spacingY: (value, { boxFlow }) => {
     if (boxFlow === "flex-y" || boxFlow === "inline-flex-y") {
       return {
-        gap: resolveSpacingSize(value, "gap"),
+        gap: stringifySpacingStyle(value, "gap"),
       };
     }
     if (boxFlow === "grid" || boxFlow === "inline-grid") {
       return {
-        rowGap: resolveSpacingSize(value, "rowGap"),
+        rowGap: stringifySpacingStyle(value, "rowGap"),
       };
     }
     return undefined;
@@ -6773,25 +6764,31 @@ const getStylePropGroup = (name) => {
   }
   return null;
 };
-const getNormalizer = (key) => {
+const getStringifier = (key) => {
   if (key === "borderRadius") {
-    return normalizeSpacingStyle;
+    return stringifySpacingStyle;
   }
   const group = getStylePropGroup(key);
   if (group === "margin" || group === "padding") {
-    return normalizeSpacingStyle;
+    return stringifySpacingStyle;
   }
   if (group === "typo") {
-    return normalizeTypoStyle;
+    return stringifyTypoStyle;
   }
-  return normalizeRegularStyle;
+  return stringifyStyle;
 };
-const normalizeRegularStyle = (
+const stringifySpacingStyle = (size, property = "padding") => {
+  return normalizeStyle(SIZE_MAP[size] || size, property, "css");
+};
+const stringifyTypoStyle = (size, property = "fontSize") => {
+  return normalizeStyle(TYPO_SIZE_MAP[size] || size, property, "css");
+};
+const stringifyStyle = (
   value,
   name,
   // styleContext, context
 ) => {
-  return stringifyStyle(value, name);
+  return normalizeStyle(value, name, "css");
 };
 const getHowToHandleStyleProp = (name) => {
   const getStyle = All_PROPS[name];
@@ -6807,8 +6804,8 @@ const prepareStyleValue = (
   styleContext,
   context,
 ) => {
-  const normalizer = getNormalizer(name);
-  const cssValue = normalizer(value, name, styleContext, context);
+  const stringifier = getStringifier(name);
+  const cssValue = stringifier(value, name, styleContext, context);
   const mergedValue = mergeOneStyle(existingValue, cssValue, name, context);
   return mergedValue;
 };
@@ -6848,8 +6845,8 @@ const sizeSpacingKeySet = new Set(Object.keys(SIZE_MAP));
 const isSizeSpacingKey = (key) => {
   return sizeSpacingKeySet.has(key);
 };
-const resolveSpacingSize = (size, property = "padding") => {
-  return stringifyStyle(SIZE_MAP[size] || size, property);
+const resolveSpacingSize = (size, element, property = "padding") => {
+  return normalizeStyle(SIZE_MAP[size] || size, property, "js", element);
 };
 
 const COLOR_KEYWORD_MAP = {
@@ -21017,7 +21014,7 @@ const applySpacingOnTextChildren = (children, spacing, defaultSpace) => {
     separator = defaultSpace;
   } else if (typeof spacing === "string") {
     if (isSizeSpacingKey(spacing)) {
-      const value = resolveSpacingSize(spacing);
+      const value = stringifySpacingStyle(spacing);
       separator = jsx(CustomWidthSpace, {
         value: value,
         useRealSpaceChar: useRealSpaceChar
@@ -30731,6 +30728,8 @@ const Popover = props => {
     positionY,
     positionXFixed,
     positionYFixed,
+    spacing = 0,
+    viewportSpacing = 0,
     ...rest
   } = props;
   const defaultRef = useRef();
@@ -30762,21 +30761,39 @@ const Popover = props => {
         width,
         height
       } = effectiveAnchor.getBoundingClientRect();
-      const snap = v => Math.round(v * devicePixelRatio) / devicePixelRatio;
-      popoverEl.style.setProperty("--anchor-width", `${snap(width)}px`);
-      popoverEl.style.setProperty("--anchor-height", `${snap(height)}px`);
+      const {
+        left: borderLeft,
+        right: borderRight,
+        top: borderTop,
+        bottom: borderBottom
+      } = getBorderSizes(effectiveAnchor);
+      popoverEl.style.setProperty("--anchor-width", `${snapToPixel(width)}px`);
+      popoverEl.style.setProperty("--anchor-height", `${snapToPixel(height)}px`);
+      popoverEl.style.setProperty("--anchor-inner-width", `${snapToPixel(width - borderLeft - borderRight)}px`);
+      popoverEl.style.setProperty("--anchor-inner-height", `${snapToPixel(height - borderTop - borderBottom)}px`);
       const minLeft = 1;
       const effectivePositionX = anchor ? positionX : "center";
+      // Remove max-height constraint so pickPositionRelativeTo measures the natural
+      // (unconstrained) height of the popover. This ensures the 60% flip threshold
+      // compares against the real content height, not the already-truncated one.
+      popoverEl.style.removeProperty("--space-available");
       const {
         left,
-        top
+        top,
+        positionY: finalPositionY,
+        spaceAbove,
+        spaceBelow
       } = pickPositionRelativeTo(popoverEl, effectiveAnchor, {
         positionX: effectivePositionX,
         positionY,
         positionXFixed,
         positionYFixed,
+        spacing: resolveSpacingSize(spacing),
+        viewportSpacing: resolveSpacingSize(viewportSpacing),
         minLeft
       });
+      const spaceAvailable = finalPositionY === "above" || finalPositionY === "above-overlap" ? spaceAbove : spaceBelow;
+      popoverEl.style.setProperty("--space-available", `${spaceAvailable}px`);
       debugPopup(`positionPopover("${positionEvent.type}") -> left: ${left}, top: ${top}`);
       popoverEl.style.top = `${top}px`;
       popoverEl.style.left = `${Math.max(left, minLeft)}px`;
@@ -31046,7 +31063,7 @@ installImportMetaCssBuild(import.meta);const css$f = /* css */`
         min-width: var(--anchor-width, 0px);
         max-width: 95vw;
         /* max-height covers the placeholder + list; the list scrolls internally */
-        max-height: 95dvh;
+        max-height: var(--space-available, 95dvh);
         margin: 0;
         padding: 0;
         background: var(--select-background-color);
@@ -31071,7 +31088,7 @@ installImportMetaCssBuild(import.meta);const css$f = /* css */`
           /* To make clone same height as original we need to force it because context can impact height */
           /* Like siblings with a bigger height in a flex container */
           /* We subtract the border sizes as anchor-height includes borders in the dimensions */
-          min-height: calc(var(--anchor-height) - var(--select-border-width));
+          min-height: var(--anchor-inner-height);
           /* Mirror the trigger's padding so the clone looks identical */
           padding-top: var(--x-select-padding-top);
           padding-right: var(--x-select-padding-right);
@@ -31079,7 +31096,6 @@ installImportMetaCssBuild(import.meta);const css$f = /* css */`
           padding-left: var(--x-select-padding-left);
           flex-shrink: 0;
           flex-direction: column;
-          align-items: center;
           justify-content: center;
           gap: var(--navi-s);
           order: -1; /* before the list — popover is below the trigger */
@@ -31122,6 +31138,13 @@ installImportMetaCssBuild(import.meta);const css$f = /* css */`
       }
 
       &[aria-expanded="true"] {
+        &[navi-popover-mode="overlay"],
+        &[navi-popover-mode="attached"] {
+          /* When sizes uses float AND the border uses border-radius it's possible it's possible to see some pixels
+          of the underlying select borders. We hide them to ensure this cannot happen.  */
+          border-color: transparent;
+        }
+
         .navi_select_popover {
           display: flex;
           flex-direction: column;
@@ -31385,7 +31408,7 @@ const SelectTrigger = () => {
   });
 };
 
-// SelectWithPopover — trigger + popover anchored below the trigger.
+// SelectWithPopover — trigger + popover anchored relative to the trigger.
 const SelectWithPopover = props => {
   const {
     ref,
@@ -31395,6 +31418,9 @@ const SelectWithPopover = props => {
     pointerTrap,
     scrollTrap = true,
     focusTrap = true,
+    popoverMode = "nearby",
+    popoverSpacing = popoverMode === "nearby" ? 5 : 0,
+    viewportSpacing = 10,
     ...rest
   } = props;
   const debugFocus = useDebugFocus();
@@ -31433,8 +31459,13 @@ const SelectWithPopover = props => {
     });
   };
   const moveFocusToSelect = e => {
+    if (e.type === "mousedown") {
+      e.preventDefault();
+      debugFocus(formatEventSideEffect(e, `preventDefault and move focus to select`));
+    } else {
+      debugFocus(formatEventSideEffect(e, `move focus to select`));
+    }
     const select = ref.current;
-    debugFocus(`moveFocusToSelect("${e.type}")`);
     select.focus({
       preventScroll: true
     });
@@ -31444,6 +31475,7 @@ const SelectWithPopover = props => {
     "aria-haspopup": "listbox",
     "aria-expanded": expanded,
     "aria-controls": popoverId,
+    "navi-popover-mode": popoverMode,
     onMouseDown: e => {
       if (e.button !== 0) {
         return;
@@ -31549,11 +31581,13 @@ const SelectWithPopover = props => {
         }
       },
       positionX: "left-aligned",
-      positionY: "below-overlap",
+      positionY: popoverMode === "nearby" ? "below" : "below-overlap",
+      spacing: popoverSpacing,
+      viewportSpacing: viewportSpacing,
       scrollTrap: scrollTrap,
       pointerTrap: pointerTrap,
       focusTrap: focusTrap,
-      children: [jsx("div", {
+      children: [popoverMode === "attached" ? jsx("div", {
         className: "navi_select_anchor_clone",
         onMouseDown: e => {
           if (e.button !== 0) {
@@ -31562,7 +31596,7 @@ const SelectWithPopover = props => {
           requestClose(e);
         },
         children: props.trigger
-      }), jsx(SelectRequestCloseContext.Provider, {
+      }) : null, jsx(SelectRequestCloseContext.Provider, {
         value: requestClose,
         children: children
       })]
@@ -31611,8 +31645,14 @@ const SelectWithDialog = props => {
     });
   };
   const moveFocusToSelect = e => {
-    debugFocus(`moveFocusToSelect("${e.type}")`);
-    ref.current.focus({
+    if (e.type === "mousedown") {
+      e.preventDefault();
+      debugFocus(formatEventSideEffect(e, `preventDefault and move focus to select`));
+    } else {
+      debugFocus(formatEventSideEffect(e, `move focus to select`));
+    }
+    const select = ref.current;
+    select.focus({
       preventScroll: true
     });
   };
@@ -31830,9 +31870,11 @@ const applySearch = (searchText, value) => {
 
   // Multi-word OR: split on whitespace, any word matching contributes to the score.
   // Items where all words match rank higher than partial matches.
-  if (words.length < 2) {
-    return { match: false, matchScore: 0, matchRanges: [] };
-  }
+  // Note: words always has at least 1 element here (searchText is non-empty and
+  // foldedSearch.split filters empty strings). This path also handles the case
+  // where searchText has trailing/leading spaces: the phrase match above tries
+  // the literal (e.g. "tc " in "tc adapter"), and if that fails we fall through
+  // here to try each word individually (e.g. "tc" matches "tca").
   const matchRanges = [];
   let matchedWordCount = 0;
   let anyWordAtStart = false;
@@ -31865,7 +31907,7 @@ const applySearch = (searchText, value) => {
     }
   }
   if (matchedWordCount === 0) {
-    return { match: false, matchScore: 0, matchRanges: [] };
+    return tryAcronymMatch(foldedStr, str, searchText);
   }
   const wordRatio = matchedWordCount / words.length;
   let baseScore;
@@ -31907,7 +31949,52 @@ const SCORE_PHRASE_AT_START = 1;
 const SCORE_MULTI_WORD_AT_START = 0.75;
 const SCORE_AT_WORD_BOUNDARY = 0.625;
 const SCORE_MID_WORD = 0.5;
+const SCORE_ACRONYM = 0.4;
 const SCORE_BONUS_CASE_EXACT = 0.125;
+
+// Acronym match: each char of searchText (spaces stripped) must be the first
+// letter of a word in value, in order (greedy subsequence on word-starts).
+// e.g. "TC" matches "Total Count" highlighting the T and C.
+const tryAcronymMatch = (foldedStr, str, searchText) => {
+  const acronymChars = foldAccents(searchText).toLowerCase().replace(/\s/g, "");
+  if (acronymChars.length < 2) {
+    // Single-char acronym is too ambiguous — skip.
+    return { match: false, matchScore: 0, matchRanges: [] };
+  }
+  const wordStarts = [];
+  for (let i = 0; i < foldedStr.length; i++) {
+    if (isWordBoundary(foldedStr, i)) {
+      wordStarts.push(i);
+    }
+  }
+  const matchedPositions = [];
+  let wordIdx = 0;
+  const originalAcronym = searchText.replace(/\s/g, "");
+  for (let si = 0; si < acronymChars.length; si++) {
+    const ch = acronymChars[si];
+    let found = false;
+    while (wordIdx < wordStarts.length) {
+      const pos = wordStarts[wordIdx];
+      wordIdx++;
+      if (foldedStr[pos] === ch) {
+        matchedPositions.push(pos);
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      return { match: false, matchScore: 0, matchRanges: [] };
+    }
+  }
+  const atStart = matchedPositions[0] === 0;
+  const caseExact = matchedPositions.every(
+    (p, i) => str[p] === originalAcronym[i],
+  );
+  const baseScore = atStart ? SCORE_ACRONYM + 0.05 : SCORE_ACRONYM;
+  const matchScore = baseScore + (caseExact ? SCORE_BONUS_CASE_EXACT : 0);
+  const matchRanges = matchedPositions.map((p) => [p, p + 1]);
+  return { match: true, matchScore, matchRanges };
+};
 
 // LRU cache for pre-computed search info, avoids recomputing foldAccents/toLowerCase
 // for the same searchText across all items in a list render.

@@ -95,7 +95,7 @@ export const applySearch = (searchText, value) => {
     }
   }
   if (matchedWordCount === 0) {
-    return { match: false, matchScore: 0, matchRanges: [] };
+    return tryAcronymMatch(foldedStr, str, searchText);
   }
   const wordRatio = matchedWordCount / words.length;
   let baseScore;
@@ -137,7 +137,52 @@ const SCORE_PHRASE_AT_START = 1;
 const SCORE_MULTI_WORD_AT_START = 0.75;
 const SCORE_AT_WORD_BOUNDARY = 0.625;
 const SCORE_MID_WORD = 0.5;
+const SCORE_ACRONYM = 0.4;
 const SCORE_BONUS_CASE_EXACT = 0.125;
+
+// Acronym match: each char of searchText (spaces stripped) must be the first
+// letter of a word in value, in order (greedy subsequence on word-starts).
+// e.g. "TC" matches "Total Count" highlighting the T and C.
+const tryAcronymMatch = (foldedStr, str, searchText) => {
+  const acronymChars = foldAccents(searchText).toLowerCase().replace(/\s/g, "");
+  if (acronymChars.length < 2) {
+    // Single-char acronym is too ambiguous — skip.
+    return { match: false, matchScore: 0, matchRanges: [] };
+  }
+  const wordStarts = [];
+  for (let i = 0; i < foldedStr.length; i++) {
+    if (isWordBoundary(foldedStr, i)) {
+      wordStarts.push(i);
+    }
+  }
+  const matchedPositions = [];
+  let wordIdx = 0;
+  const originalAcronym = searchText.replace(/\s/g, "");
+  for (let si = 0; si < acronymChars.length; si++) {
+    const ch = acronymChars[si];
+    let found = false;
+    while (wordIdx < wordStarts.length) {
+      const pos = wordStarts[wordIdx];
+      wordIdx++;
+      if (foldedStr[pos] === ch) {
+        matchedPositions.push(pos);
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      return { match: false, matchScore: 0, matchRanges: [] };
+    }
+  }
+  const atStart = matchedPositions[0] === 0;
+  const caseExact = matchedPositions.every(
+    (p, i) => str[p] === originalAcronym[i],
+  );
+  const baseScore = atStart ? SCORE_ACRONYM + 0.05 : SCORE_ACRONYM;
+  const matchScore = baseScore + (caseExact ? SCORE_BONUS_CASE_EXACT : 0);
+  const matchRanges = matchedPositions.map((p) => [p, p + 1]);
+  return { match: true, matchScore, matchRanges };
+};
 
 // LRU cache for pre-computed search info, avoids recomputing foldAccents/toLowerCase
 // for the same searchText across all items in a list render.

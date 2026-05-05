@@ -90,4 +90,31 @@ await snapshotTests(import.meta.url, ({ test }) => {
       ["  ", "a  b"],
     ]);
   });
+
+  test("acronym matching", () => {
+    return rank("TC", [
+      "TC Adapter", // phrase match at start → higher score
+      "Total Count", // acronym: T+C from word starts
+      "The Champion", // acronym: T+C from word starts
+      "tca", // phrase match mid-word
+      "Taco", // no acronym match (only 1 word start)
+      "xyz", // no match
+    ]);
+  });
+
+  test("acronym with accent folding", () => {
+    return displayTable([
+      ["rg", "Rachel Guérin"], // R+G from word starts (accent-insensitive)
+      ["RG", "Rachel Guérin"], // same, case-exact bonus
+    ]);
+  });
+
+  test("acronym single char is skipped", () => {
+    // Single-char acronym is too ambiguous, should not produce acronym matches
+    // beyond what phrase/word already finds.
+    return displayTable([
+      ["b", "Bob Martin"], // phrase match (not acronym)
+      ["z", "Bob Martin"], // no match
+    ]);
+  });
 });

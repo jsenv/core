@@ -5419,6 +5419,31 @@ const getScrollContainerSet = (element) => {
   return scrollContainerSet;
 };
 
+/**
+ * Rounds a CSS pixel value to the nearest physical pixel boundary for the current display.
+ *
+ * At zoom levels other than 100%, `devicePixelRatio` is not an integer (e.g. 1.25, 1.5),
+ * so fractional CSS pixel values from `getBoundingClientRect()` may not align to the physical
+ * pixel grid. Setting `top`/`left` to such values causes the browser to interpolate across
+ * pixels, resulting in blurry rendering or misalignment with adjacent elements.
+ *
+ * Snapping to the physical grid ensures the value falls exactly on a pixel boundary.
+ *
+ * @param {number} value - A CSS pixel value (e.g. from getBoundingClientRect or scroll offset).
+ * @returns {number} The nearest physical-pixel-aligned CSS pixel value.
+ * @example
+ * // At devicePixelRatio 1.25, snapToPixel(154.4) → 154.4 (already on grid)
+ * // At devicePixelRatio 1.25, snapToPixel(154.3) → 154.4
+ */
+const snapToPixel = (value) => {
+  return Math.round(value * devicePixelRatio) / devicePixelRatio;
+};
+
+// Round a CSS-pixel value to the nearest physical pixel boundary.
+// At zoom levels other than 100%, devicePixelRatio is not an integer (e.g. 1.25, 1.5),
+// so CSS pixels don't align 1:1 with physical pixels. Rounding to the physical grid
+// ensures the browser can render the element without sub-pixel blurring.
+
 const getBorderSizes = (element) => {
   const {
     borderLeftWidth,
@@ -5426,11 +5451,12 @@ const getBorderSizes = (element) => {
     borderTopWidth,
     borderBottomWidth,
   } = window.getComputedStyle(element, null);
+
   return {
-    left: parseFloat(borderLeftWidth),
-    right: parseFloat(borderRightWidth),
-    top: parseFloat(borderTopWidth),
-    bottom: parseFloat(borderBottomWidth),
+    left: snapToPixel(parseFloat(borderLeftWidth)),
+    right: snapToPixel(parseFloat(borderRightWidth)),
+    top: snapToPixel(parseFloat(borderTopWidth)),
+    bottom: snapToPixel(parseFloat(borderBottomWidth)),
   };
 };
 
@@ -5782,8 +5808,8 @@ const measureScrollbar = (scrollableElement) => {
   const scrollbarHeight = scrollDiv.offsetHeight - scrollDiv.clientHeight;
   scrollableElement.removeChild(scrollDiv);
   return [
-    hasXScrollbar ? scrollbarWidth : 0,
-    hasYScrollbar ? scrollbarHeight : 0,
+    hasXScrollbar ? snapToPixel(scrollbarWidth) : 0,
+    hasYScrollbar ? snapToPixel(scrollbarHeight) : 0,
   ];
 };
 
@@ -6096,6 +6122,18 @@ const scrollIntoViewWithStickyAwareness = (
   }
 };
 
+const getPaddingSizes = (element) => {
+  const { paddingLeft, paddingRight, paddingTop, paddingBottom } =
+    window.getComputedStyle(element, null);
+
+  return {
+    left: snapToPixel(parseFloat(paddingLeft)),
+    right: snapToPixel(parseFloat(paddingRight)),
+    top: snapToPixel(parseFloat(paddingTop)),
+    bottom: snapToPixel(parseFloat(paddingBottom)),
+  };
+};
+
 /**
  * Prevents scrolling on all scrollable containers that are ancestors of (or
  * siblings preceding) `element`. Used when an overlay (popover, dialog) is
@@ -6132,11 +6170,10 @@ const trapScrollInside = (element) => {
       return;
     }
     const [scrollbarWidth, scrollbarHeight] = measureScrollbar(el);
-    const paddingRight = parseInt(getStyle(el, "padding-right"), 0);
-    const paddingBottom = parseInt(getStyle(el, "padding-bottom"), 0);
+    const { right, bottom } = getPaddingSizes(el);
     const removeScrollLockStyles = setStyles(el, {
-      "padding-right": `${paddingRight + scrollbarWidth}px`,
-      "padding-bottom": `${paddingBottom + scrollbarHeight}px`,
+      "padding-right": `${right + scrollbarWidth}px`,
+      "padding-bottom": `${bottom + scrollbarHeight}px`,
       "overflow": "hidden",
     });
     cleanupCallbackSet.add(removeScrollLockStyles);
@@ -9930,6 +9967,8 @@ const pickPositionRelativeTo = (
     positionYFixed,
     alignToViewportEdgeWhenAnchorNearEdge = 0,
     minLeft = 0,
+    spacing = 0,
+    viewportSpacing = 0,
   } = {},
 ) => {
 
@@ -9944,12 +9983,10 @@ const pickPositionRelativeTo = (
     top: elementTop,
     bottom: elementBottom,
   } = elementRect;
-  const {
-    left: anchorLeft,
-    right: anchorRight,
-    top: anchorTop,
-    bottom: anchorBottom,
-  } = anchorRect;
+  const anchorLeft = snapToPixel(anchorRect.left);
+  const anchorTop = snapToPixel(anchorRect.top);
+  const anchorRight = snapToPixel(anchorRect.right);
+  const anchorBottom = snapToPixel(anchorRect.bottom);
   const elementWidth = elementRight - elementLeft;
   const elementHeight = elementBottom - elementTop;
   const anchorWidth = anchorRight - anchorLeft;
@@ -9992,16 +10029,16 @@ const pickPositionRelativeTo = (
     // Compute effective space for a given Y value
     const spaceFor = (y) => {
       if (y === "above") {
-        return spaceAbove;
+        return spaceAbove - spacing - viewportSpacing;
       }
       if (y === "above-overlap") {
-        return spaceAbove + anchorHeight;
+        return spaceAbove + anchorHeight - viewportSpacing;
       }
       if (y === "below") {
-        return spaceBelow;
+        return spaceBelow - spacing - viewportSpacing;
       }
       if (y === "below-overlap") {
-        return spaceBelow + anchorHeight;
+        return spaceBelow + anchorHeight - viewportSpacing;
       }
       return Infinity; // center
     };
@@ -10049,16 +10086,16 @@ const pickPositionRelativeTo = (
     // Compute effective space for a given X value
     const spaceFor = (x) => {
       if (x === "to-the-left") {
-        return spaceLeft;
+        return spaceLeft - spacing - viewportSpacing;
       }
       if (x === "left-aligned") {
-        return viewportWidth - anchorLeft;
+        return viewportWidth - anchorLeft - viewportSpacing;
       }
       if (x === "right-aligned") {
-        return anchorRight;
+        return anchorRight - viewportSpacing;
       }
       if (x === "to-the-right") {
-        return spaceRight;
+        return spaceRight - spacing - viewportSpacing;
       }
       return Infinity; // center
     };
@@ -10095,7 +10132,7 @@ const pickPositionRelativeTo = (
   let elementPositionLeft;
   {
     if (finalX === "to-the-left") {
-      elementPositionLeft = anchorLeft - elementWidth;
+      elementPositionLeft = anchorLeft - elementWidth - spacing;
     } else if (finalX === "left-aligned") {
       elementPositionLeft = anchorLeft;
     } else if (finalX === "center") {
@@ -10132,13 +10169,16 @@ const pickPositionRelativeTo = (
       elementPositionLeft = anchorRight - elementWidth;
     } else {
       // "to-the-right"
-      elementPositionLeft = anchorRight;
+      elementPositionLeft = anchorRight + spacing;
     }
-    // Constrain horizontal position to viewport boundaries
-    if (elementPositionLeft < 0) {
-      elementPositionLeft = 0;
-    } else if (elementPositionLeft + elementWidth > viewportWidth) {
-      elementPositionLeft = viewportWidth - elementWidth;
+    // Constrain horizontal position to viewport boundaries (with viewportSpacing margin)
+    if (elementPositionLeft < viewportSpacing) {
+      elementPositionLeft = viewportSpacing;
+    } else if (
+      elementPositionLeft + elementWidth >
+      viewportWidth - viewportSpacing
+    ) {
+      elementPositionLeft = viewportWidth - viewportSpacing - elementWidth;
     }
   }
 
@@ -10146,11 +10186,14 @@ const pickPositionRelativeTo = (
   let elementPositionTop;
   {
     if (finalY === "above") {
-      const idealTop = anchorTop - elementHeight;
-      elementPositionTop = idealTop < 0 ? 0 : idealTop;
+      // top is always anchorTop - elementHeight - spacing — max-height truncates if needed.
+      const idealTop = anchorTop - elementHeight - spacing;
+      elementPositionTop =
+        idealTop < viewportSpacing ? viewportSpacing : idealTop;
     } else if (finalY === "above-overlap") {
       const idealTop = anchorBottom - elementHeight;
-      elementPositionTop = idealTop < 0 ? 0 : idealTop;
+      elementPositionTop =
+        idealTop < viewportSpacing ? viewportSpacing : idealTop;
     } else if (finalY === "center") {
       elementPositionTop = anchorTop + anchorHeight / 2 - elementHeight / 2;
     } else if (finalY === "below-overlap") {
@@ -10159,7 +10202,9 @@ const pickPositionRelativeTo = (
         idealTop % 1 === 0 ? idealTop : Math.floor(idealTop) + 1;
     } else {
       // "below"
-      const idealTop = anchorBottom;
+      // top is always anchorBottom + spacing — max-height (via --space-available) truncates
+      // the element height so it doesn't overflow the viewport bottom.
+      const idealTop = anchorBottom + spacing;
       elementPositionTop =
         idealTop % 1 === 0 ? idealTop : Math.floor(idealTop) + 1;
     }
@@ -10176,12 +10221,25 @@ const pickPositionRelativeTo = (
 
   // Get document scroll for final coordinate conversion
   const { scrollLeft, scrollTop } = document.documentElement;
-  const elementDocumentLeft = elementPositionLeft + scrollLeft;
-  const elementDocumentTop = elementPositionTop + scrollTop;
+  const elementDocumentLeft = snapToPixel(elementPositionLeft + scrollLeft);
+  const elementDocumentTop = snapToPixel(elementPositionTop + scrollTop);
   const anchorDocumentLeft = anchorLeft + scrollLeft;
   const anchorDocumentTop = anchorTop + scrollTop;
   const anchorDocumentRight = anchorRight + scrollLeft;
   const anchorDocumentBottom = anchorBottom + scrollTop;
+
+  // For overlap variants the element starts at the anchor edge (not past it),
+  // so the usable space includes the anchor dimension.
+  // spacing (gap between anchor and element) and viewportSpacing are subtracted
+  // so callers get the net usable space directly.
+  const effectiveSpaceAbove =
+    (finalY === "above-overlap" ? spaceAbove + anchorHeight : spaceAbove) -
+    (finalY === "above" ? spacing : 0) -
+    viewportSpacing;
+  const effectiveSpaceBelow =
+    (finalY === "below-overlap" ? spaceBelow + anchorHeight : spaceBelow) -
+    (finalY === "below" ? spacing : 0) -
+    viewportSpacing;
 
   return {
     positionX: finalX,
@@ -10194,10 +10252,10 @@ const pickPositionRelativeTo = (
     anchorTop: anchorDocumentTop,
     anchorRight: anchorDocumentRight,
     anchorBottom: anchorDocumentBottom,
-    spaceLeft,
-    spaceRight,
-    spaceAbove,
-    spaceBelow,
+    spaceLeft: spaceLeft - viewportSpacing,
+    spaceRight: spaceRight - viewportSpacing,
+    spaceAbove: effectiveSpaceAbove,
+    spaceBelow: effectiveSpaceBelow,
   };
 };
 
@@ -11973,17 +12031,6 @@ const getWidthWithoutTransition = (element) =>
 const getHeightWithoutTransition = (element) =>
   getHeight$1(element, transitionStyleController);
 
-const getPaddingSizes = (element) => {
-  const { paddingLeft, paddingRight, paddingTop, paddingBottom } =
-    window.getComputedStyle(element, null);
-  return {
-    left: parseFloat(paddingLeft),
-    right: parseFloat(paddingRight),
-    top: parseFloat(paddingTop),
-    bottom: parseFloat(paddingBottom),
-  };
-};
-
 const getInnerHeight = (element) => {
   // Always subtract paddings and borders to get the content height
   const paddingSizes = getPaddingSizes(element);
@@ -13324,4 +13371,4 @@ const useResizeStatus = (elementRef, { as = "number" } = {}) => {
   };
 };
 
-export { EASING, activeElementSignal, addActiveElementEffect, addAttributeEffect, allowWheelThrough, appendStyles, canInterceptKeys, captureScrollState, contrastColor, createBackgroundColorTransition, createBackgroundTransition, createBorderRadiusTransition, createBorderTransition, createDragGestureController, createDragToMoveGestureController, createGroupTransitionController, createHeightTransition, createIterableWeakSet, createOpacityTransition, createPubSub, createStyleController, createTimelineTransition, createTransition, createTranslateXTransition, createValueEffect, createWidthTransition, cubicBezier, dragAfterThreshold, elementIsFocusable, elementIsVisibleForFocus, elementIsVisuallyVisible, findAfter, findAncestor, findBefore, findDescendant, findFocusable, getAvailableHeight, getAvailableWidth, getBackground, getBackgroundColor, getBorder, getBorderRadius, getBorderSizes, getContrastRatio, getDefaultStyles, getDragCoordinates, getDropTargetInfo, getElementSignature, getFirstVisuallyVisibleAncestor, getFocusVisibilityInfo, getHeight, getHeightWithoutTransition, getInnerHeight, getInnerWidth, getLuminance, getMarginSizes, getMaxHeight, getMaxWidth, getMinHeight, getMinWidth, getOpacity, getOpacityWithoutTransition, getPaddingSizes, getPositionedParent, getPreferedColorScheme, getScrollBox, getScrollContainer, getScrollContainerSet, getScrollRelativeRect, getSelfAndAncestorScrolls, getStyle, getTranslateX, getTranslateXWithoutTransition, getTranslateY, getVisuallyVisibleInfo, getWidth, getWidthWithoutTransition, hasCSSSizeUnit, initFlexDetailsSet, initFocusGroup, initPositionSticky, isSameColor, isScrollable, measureScrollbar, mergeOneStyle, mergeTwoStyles, normalizeStyles, parseStyle, pickPositionRelativeTo, prefersDarkColors, prefersLightColors, preventFocusNav, preventFocusNavViaKeyboard, preventIntermediateScrollbar, resolveCSSColor, resolveCSSSize, resolveColorLuminance, resolveOklchLightness, scrollIntoViewScoped, scrollIntoViewWithStickyAwareness, setAttribute, setAttributes, setStyles, startDragToResizeGesture, stickyAsRelativeCoords, stringifyStyle, trapFocusInside, trapScrollInside, useActiveElement, useAvailableHeight, useAvailableWidth, useMaxHeight, useMaxWidth, useResizeStatus, visibleRectEffect };
+export { EASING, activeElementSignal, addActiveElementEffect, addAttributeEffect, allowWheelThrough, appendStyles, canInterceptKeys, captureScrollState, contrastColor, createBackgroundColorTransition, createBackgroundTransition, createBorderRadiusTransition, createBorderTransition, createDragGestureController, createDragToMoveGestureController, createGroupTransitionController, createHeightTransition, createIterableWeakSet, createOpacityTransition, createPubSub, createStyleController, createTimelineTransition, createTransition, createTranslateXTransition, createValueEffect, createWidthTransition, cubicBezier, dragAfterThreshold, elementIsFocusable, elementIsVisibleForFocus, elementIsVisuallyVisible, findAfter, findAncestor, findBefore, findDescendant, findFocusable, getAvailableHeight, getAvailableWidth, getBackground, getBackgroundColor, getBorder, getBorderRadius, getBorderSizes, getContrastRatio, getDefaultStyles, getDragCoordinates, getDropTargetInfo, getElementSignature, getFirstVisuallyVisibleAncestor, getFocusVisibilityInfo, getHeight, getHeightWithoutTransition, getInnerHeight, getInnerWidth, getLuminance, getMarginSizes, getMaxHeight, getMaxWidth, getMinHeight, getMinWidth, getOpacity, getOpacityWithoutTransition, getPaddingSizes, getPositionedParent, getPreferedColorScheme, getScrollBox, getScrollContainer, getScrollContainerSet, getScrollRelativeRect, getSelfAndAncestorScrolls, getStyle, getTranslateX, getTranslateXWithoutTransition, getTranslateY, getVisuallyVisibleInfo, getWidth, getWidthWithoutTransition, hasCSSSizeUnit, initFlexDetailsSet, initFocusGroup, initPositionSticky, isSameColor, isScrollable, measureScrollbar, mergeOneStyle, mergeTwoStyles, normalizeStyle, normalizeStyles, parseStyle, pickPositionRelativeTo, prefersDarkColors, prefersLightColors, preventFocusNav, preventFocusNavViaKeyboard, preventIntermediateScrollbar, resolveCSSColor, resolveCSSSize, resolveColorLuminance, resolveOklchLightness, scrollIntoViewScoped, scrollIntoViewWithStickyAwareness, setAttribute, setAttributes, setStyles, snapToPixel, startDragToResizeGesture, stickyAsRelativeCoords, stringifyStyle, trapFocusInside, trapScrollInside, useActiveElement, useAvailableHeight, useAvailableWidth, useMaxHeight, useMaxWidth, useResizeStatus, visibleRectEffect };
