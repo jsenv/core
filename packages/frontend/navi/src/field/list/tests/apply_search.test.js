@@ -81,4 +81,13 @@ await snapshotTests(import.meta.url, ({ test }) => {
       ["a     b", "xyz"], // no match
     ]);
   });
+
+  test("only spaces as search", () => {
+    return displayTable([
+      [" ", "Bob"],
+      [" ", " Bob"],
+      ["  ", "Bob"],
+      ["  ", "a  b"],
+    ]);
+  });
 });
