@@ -156,8 +156,30 @@ const css = /* css */ `
 
     position: relative;
     display: inline-flex;
-    box-sizing: content-box;
+    box-sizing: border-box;
+    width: var(--width);
+    height: var(--height);
     margin: var(--margin);
+    background-color: var(--x-background-color);
+    border-width: var(--border-width);
+    border-style: solid;
+    border-color: var(--x-border-color);
+    border-radius: var(--border-radius);
+    outline-width: var(--outline-width);
+    outline-style: none;
+    outline-color: var(--outline-color);
+    outline-offset: var(--outline-offset);
+
+    .navi_native_field {
+      position: absolute;
+      inset: 0;
+      margin: 0;
+      border: none;
+      border-radius: inherit;
+      opacity: 0;
+      appearance: none; /* This allows border-radius to have an effect */
+      cursor: var(--x-cursor);
+    }
 
     .navi_checkbox_accent_probe {
       position: absolute;
@@ -168,41 +190,10 @@ const css = /* css */ `
       pointer-events: none;
     }
 
-    .navi_native_field {
-      position: absolute;
-      inset: 0;
-      margin: 0;
-      padding: 0;
-      border: none;
-      border-radius: inherit;
-      opacity: 0;
-      appearance: none; /* This allows border-radius to have an effect */
-      cursor: var(--x-cursor);
-    }
-
-    .navi_checkbox_field {
-      display: inline-flex;
-      box-sizing: border-box;
-      width: var(--width);
-      height: var(--height);
-      background-color: var(--x-background-color);
-      border-width: var(--border-width);
-      border-style: solid;
-      border-color: var(--x-border-color);
-      border-radius: var(--border-radius);
-      outline-width: var(--outline-width);
-      outline-style: none;
-      outline-color: var(--outline-color);
-      outline-offset: var(--outline-offset);
-      pointer-events: none;
-    }
-
     /* Focus */
     &[data-focus-visible] {
       z-index: 1;
-      .navi_checkbox_field {
-        outline-style: solid;
-      }
+      outline-style: solid;
     }
     /* Hover */
     &[data-hover] {
@@ -284,7 +275,6 @@ const css = /* css */ `
     /* Toggle appearance */
     &[data-appearance="toggle"] {
       --margin: var(--toggle-margin);
-      --padding: var(--toggle-padding);
       --width: var(--toggle-width);
       --height: unset;
       --border-radius: var(--toggle-border-radius);
@@ -303,25 +293,19 @@ const css = /* css */ `
         --toggle-background-color-disabled-checked
       );
 
-      .navi_checkbox_field {
-        position: relative;
-        box-sizing: border-box;
-        width: var(--width);
-        height: var(--height);
-        padding: var(--padding);
-        background-color: var(--x-background-color);
-        border-color: transparent;
-        user-select: none;
+      position: relative;
+      background-color: var(--x-background-color);
+      border-color: transparent;
+      user-select: none;
 
-        .navi_checkbox_toggle {
-          width: var(--toggle-thumb-size);
-          height: var(--toggle-thumb-size);
-          border-radius: var(--toggle-thumb-border-radius);
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-          fill: var(--toggle-thumb-color);
-          transform: translateX(0);
-          transition: transform 0.2s ease;
-        }
+      .navi_checkbox_toggle {
+        width: var(--toggle-thumb-size);
+        height: var(--toggle-thumb-size);
+        border-radius: var(--toggle-thumb-border-radius);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+        fill: var(--toggle-thumb-color);
+        transform: translateX(0);
+        transition: transform 0.2s ease;
       }
 
       &[data-checked] {
@@ -347,22 +331,18 @@ const css = /* css */ `
 
     &[data-appearance="icon"] {
       --margin: 0;
-      --outline-offset: 0px;
       --width: auto;
       --height: auto;
 
-      .navi_checkbox_field {
-        background: none;
-        border: none;
-      }
+      background: none;
+      border: none;
     }
 
     &[data-appearance="button"] {
       --margin: 0;
-      --outline-offset: 0px;
       --width: auto;
       --height: auto;
-      --padding: 4px;
+      --button-padding: 4px;
       --border-color: var(--button-border-color);
       --border-color-hover: var(--button-border-color-hover);
       --background-color: var(--button-background-color);
@@ -372,12 +352,34 @@ const css = /* css */ `
       --border-color-checked: var(--button-border-color);
       --background-color-checked: var(--button-background-color);
 
-      .navi_checkbox_field {
-        padding-top: var(--padding-top, var(--padding-y, var(--padding)));
-        padding-right: var(--padding-right, var(--padding-x, var(--padding)));
-        padding-bottom: var(--padding-bottom, var(--padding-y, var(--padding)));
-        padding-left: var(--padding-left, var(--padding-x, var(--padding)));
-      }
+      padding-top: var(
+        --button-padding-top,
+        var(
+          --button-padding-y,
+          var(--button-padding, var(--button-padding-y-default))
+        )
+      );
+      padding-right: var(
+        --button-padding-right,
+        var(
+          --button-padding-x,
+          var(--button-padding, var(--button-padding-x-default))
+        )
+      );
+      padding-bottom: var(
+        --button-padding-bottom,
+        var(
+          --button-padding-y,
+          var(--button-padding, var(--button-padding-y-default))
+        )
+      );
+      padding-left: var(
+        --button-padding-left,
+        var(
+          --button-padding-x,
+          var(--button-padding, var(--button-padding-x-default))
+        )
+      );
     }
   }
 `;
@@ -471,28 +473,30 @@ const InputCheckboxUI = (props) => {
     uiStateController.setUIState(checkboxIsChecked, e);
     onInput?.(e);
   });
-  const renderCheckbox = (checkboxProps) => (
-    <Box
-      {...checkboxProps}
-      id={id}
-      as="input"
-      ref={ref}
-      type="checkbox"
-      name={innerName}
-      checked={checked}
-      required={innerRequired}
-      baseClassName="navi_native_field"
-      data-callout-arrow-x="center"
-      onClick={innerOnClick}
-      onInput={innerOnInput}
-      onresetuistate={(e) => {
-        uiStateController.resetUIState(e);
-      }}
-      onsetuistate={(e) => {
-        uiStateController.setUIState(e.detail.value, e);
-      }}
-    />
-  );
+  const renderCheckbox = (checkboxProps) => {
+    return (
+      <Box
+        {...checkboxProps}
+        id={id}
+        as="input"
+        ref={ref}
+        type="checkbox"
+        name={innerName}
+        checked={checked}
+        required={innerRequired}
+        baseClassName="navi_native_field"
+        data-callout-arrow-x="center"
+        onClick={innerOnClick}
+        onInput={innerOnInput}
+        onresetuistate={(e) => {
+          uiStateController.resetUIState(e);
+        }}
+        onsetuistate={(e) => {
+          uiStateController.setUIState(e.detail.value, e);
+        }}
+      />
+    );
+  };
   const renderCheckboxMemoized = useCallback(renderCheckbox, [
     id,
     innerName,
@@ -504,6 +508,39 @@ const InputCheckboxUI = (props) => {
   useAccentColorAttributes(boxRef, accentColor, {
     elementSelector: ".navi_checkbox_accent_probe",
   });
+
+  let visualVnode;
+  if (icon) {
+    visualVnode = (
+      <div className="navi_checkbox_icon" aria-hidden="true">
+        {Array.isArray(icon) ? icon[checked ? 1 : 0] : icon}
+      </div>
+    );
+  } else if (appearance === "toggle") {
+    visualVnode = (
+      <Box
+        className="navi_checkbox_toggle"
+        as="svg"
+        viewBox="0 0 12 12"
+        aria-hidden="true"
+        preventInitialTransition
+      >
+        <circle cx="6" cy="6" r="5"></circle>
+      </Box>
+    );
+  } else {
+    visualVnode = (
+      <Box
+        className="navi_checkbox_marker"
+        as="svg"
+        viewBox="0 0 12 12"
+        aria-hidden="true"
+        preventInitialTransition
+      >
+        <path d="M10.5 2L4.5 9L1.5 5.5" fill="none" strokeWidth="2" />
+      </Box>
+    );
+  }
 
   return (
     <Box
@@ -540,34 +577,8 @@ const InputCheckboxUI = (props) => {
         color="var(--loader-color)"
         targetSelector=".navi_checkbox_field"
       />
+      {visualVnode}
       {renderCheckboxMemoized}
-      <div className="navi_checkbox_field">
-        {icon ? (
-          <div className="navi_checkbox_icon" aria-hidden="true">
-            {Array.isArray(icon) ? icon[checked ? 1 : 0] : icon}
-          </div>
-        ) : appearance === "toggle" ? (
-          <Box
-            className="navi_checkbox_toggle"
-            as="svg"
-            viewBox="0 0 12 12"
-            aria-hidden="true"
-            preventInitialTransition
-          >
-            <circle cx="6" cy="6" r="5"></circle>
-          </Box>
-        ) : (
-          <Box
-            className="navi_checkbox_marker"
-            as="svg"
-            viewBox="0 0 12 12"
-            aria-hidden="true"
-            preventInitialTransition
-          >
-            <path d="M10.5 2L4.5 9L1.5 5.5" fill="none" strokeWidth="2" />
-          </Box>
-        )}
-      </div>
     </Box>
   );
 };
@@ -600,16 +611,17 @@ const CheckboxToggleStyleCSSVars = {
   width: "--toggle-width",
   height: "--toggle-height",
   borderRadius: "--border-radius",
+  padding: "--toggle-padding",
 };
 const CheckboxButtonStyleCSSVars = {
   ...CheckboxStyleCSSVars,
-  paddingTop: "--padding-top",
-  paddingRight: "--padding-right",
-  paddingBottom: "--padding-bottom",
-  paddingLeft: "--padding-left",
-  paddingX: "--padding-x",
-  paddingY: "--padding-y",
-  padding: "--padding",
+  padding: "--button-padding",
+  paddingX: "--button-padding-x",
+  paddingY: "--button-padding-y",
+  paddingTop: "--button-padding-top",
+  paddingRight: "--button-padding-right",
+  paddingBottom: "--button-padding-bottom",
+  paddingLeft: "--button-padding-left",
 };
 const CheckboxPseudoClasses = [
   ":hover",

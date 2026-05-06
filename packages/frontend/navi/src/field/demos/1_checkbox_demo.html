@@ -1186,10 +1186,33 @@
               Checkboxes with icons can also take the appearance of a button:
             </p>
 
-            <Label column spacing="sm" alignY="center">
+            <Label flex spacing="s" alignY="center">
               <Input
                 type="checkbox"
                 appearance="button"
+                checked={eyeChecked}
+                action={(checked) => {
+                  setEyeChecked(checked);
+                }}
+                icon={[
+                  <Icon>
+                    <EyeClosedSvg />
+                  </Icon>,
+                  <Icon>
+                    <EyeSvg />
+                  </Icon>,
+                ]}
+              />
+              Toggle visibility
+            </Label>
+
+            <Label flex spacing="s" alignY="center" marginTop="s">
+              <Input
+                type="checkbox"
+                appearance="button"
+                flex
+                align="center"
+                circle
                 checked={eyeChecked}
                 action={(checked) => {
                   setEyeChecked(checked);

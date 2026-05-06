@@ -148,6 +148,7 @@ const css = /* css */ `
       margin: 0;
       opacity: 0;
       --webkit-appearance: none;
+      min-width: inherit;
       font-size: inherit;
       appearance: none;
 

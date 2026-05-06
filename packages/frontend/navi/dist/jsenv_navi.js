@@ -6729,6 +6729,8 @@ const COPIED_ON_VISUAL_CHILD_PROP_SET = new Set([
   "align",
   "alignX",
   "alignY",
+  "minWidth",
+  "minHeight",
 ]);
 const HANDLED_BY_VISUAL_CHILD_PROP_SET = new Set([
   ...INNER_SPACING_PROP_NAME_SET,
@@ -14473,14 +14475,37 @@ const debug$1 = (...args) => {
 // - route    → RouteLeafRoute (rendered by parent container when URL matches)
 // - fallback → RouteActive (rendered by parent container when no sibling matches)
 const Route = props => {
-  if (props.children) return jsx(RouteContainer, {
-    ...props
-  });
+  if (props.children) {
+    return jsx(RouteContainer, {
+      ...props
+    });
+  }
   return jsx(RouteLeaf, {
     ...props
   });
 };
-
+// RouteContainer: traverses children statically per render, finds the active branch,
+// and renders only that branch — or the fallback if nothing matches.
+// No effects, no signals, no contexts needed: reads route signals directly.
+const RouteContainer = ({
+  id,
+  element,
+  elementProps,
+  children
+}) => {
+  const {
+    activeBranch
+  } = collectBranches(children);
+  debug$1(`[container "${id}"] RENDER, active=${activeBranch ? activeBranch.type : "none"}`);
+  const content = activeBranch ? activeBranch.node : null;
+  if (!content) {
+    return null;
+  }
+  if (element) {
+    return h(element, elementProps, content);
+  }
+  return content;
+};
 // Walk JSX children vnodes (without rendering) to build a branch list and
 // find the active one in the same pass.
 // All children must be <Route> — throws in dev otherwise.
@@ -14550,52 +14575,34 @@ const collectBranches = children => {
     activeBranch
   };
 };
-// RouteContainer: traverses children statically per render, finds the active branch,
-// and renders only that branch — or the fallback if nothing matches.
-// No effects, no signals, no contexts needed: reads route signals directly.
-const RouteContainer = ({
-  id,
-  element,
-  elementProps,
-  children
-}) => {
-  const {
-    activeBranch
-  } = collectBranches(children);
-  debug$1(`[container "${id}"] RENDER, active=${activeBranch ? activeBranch.type : "none"}`);
-  const content = activeBranch ? activeBranch.node : null;
-  if (!content) {
-    return null;
-  }
-  if (element) {
-    return h(element, elementProps, content);
-  }
-  return content;
-};
 const RouteLeaf = props => {
-  if (props.route) return jsx(RouteLeafRoute, {
-    ...props
-  });
-  if (props.fallback) return jsx(RouteLeafFallback, {
-    ...props
-  });
+  if (props.route) {
+    return jsx(RouteLeafRoute, {
+      ...props
+    });
+  }
+  if (props.fallback) {
+    return jsx(RouteLeafFallback, {
+      ...props
+    });
+  }
   // not supposed to happen?
-  return jsx(RouteActive, {
+  return jsx(RouteUI, {
     ...props
   });
 };
 const RouteLeafRoute = props => {
   useUITransitionContentId(props.route?.urlPattern);
-  return jsx(RouteActive, {
+  return jsx(RouteUI, {
     ...props
   });
 };
 const RouteLeafFallback = props => {
-  return jsx(RouteActive, {
+  return jsx(RouteUI, {
     ...props
   });
 };
-const RouteActive = ({
+const RouteUI = ({
   element,
   elementProps
 }) => {
@@ -14611,11 +14618,13 @@ const routeAction = (
   paramsEffect = () => true,
   options = {},
 ) => {
-  const routes = Array.isArray(routeOrRoutes) ? routeOrRoutes : [routeOrRoutes];
+  const routeMatchingSignal = Array.isArray(routeOrRoutes)
+    ? anyMatchingRouteSignal(routeOrRoutes)
+    : routeOrRoutes.matchingSignal;
   const actionBoundToRoute = actionRunEffect(
     action,
     () => {
-      const matching = routes.some((route) => route.matchingSignal.value);
+      const matching = routeMatchingSignal.value;
       const params = paramsEffect();
       if (!matching) {
         return null;
@@ -14626,6 +14635,31 @@ const routeAction = (
   );
 
   return actionBoundToRoute;
+};
+
+// I delibrately prefer the term "any" and avoid "some" so dev are not tempted to think
+// "well I could just use array.some" and bypass this helper entirely, which would be incorrect:
+// This helper does return if some/any route is matching but ensure all route matching signals are read (subscribed to)
+// array.some would return as soon as it finds a match and would not subscribe to the rest of the signals.
+const anyMatchingRouteSignal = (routes) => {
+  if (routes.length === 0) {
+    return signal(false);
+  }
+  if (routes.length === 1) {
+    const [route] = routes;
+    return route.matchingSignal;
+  }
+  const anyMatchingSignal = computed(() => {
+    let someMatching;
+    for (const route of routes) {
+      const matching = route.matchingSignal.value;
+      if (matching) {
+        someMatching = true;
+      }
+    }
+    return someMatching;
+  });
+  return anyMatchingSignal;
 };
 
 const FormContext = createContext();
@@ -26151,6 +26185,7 @@ installImportMetaCssBuild(import.meta);const css$n = /* css */`
       margin: 0;
       opacity: 0;
       --webkit-appearance: none;
+      min-width: inherit;
       font-size: inherit;
       appearance: none;
 
@@ -37854,5 +37889,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, Box, Button, ButtonCopyToClipboard, Caption, CheckSvg, Checkbox, CheckboxList, CloseSvg, Code, Col, Colgroup, ConstructionSvg, Details, Dialog, DialogLayout, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemFooter, ListItemGroup, ListItemHeader, Loading, MessageBox, Meter, Nav, NaviDebug, Paragraph, Popover, Quantity, QuantityIntl, Radio, RadioList, Route, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectionContext, Separator, SettingsSvg, SidePanel, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, Thead, Title, Tr, UITransition, UserSvg, ViewportLayout, actionIntegratedVia, actionRunEffect, addCustomMessage, applySearch, arraySignalMembership, compareTwoJsValues, createAction, createAvailableConstraint, createIntl, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, enableDebugActions, enableDebugOnDocumentLoading, filterTableSelection, forwardActionRequested, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, localStorageSignal, navBack, navForward, navTo, openCallout, rawUrlPart, reload, removeCustomMessage, requestAction, requestListClose, requestListOpen, rerunActions, resource, route, routeAction, setBaseUrl, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, syncOwnedResourceToSignals, syncResourceToSignals, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutClose, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, useRouteStatus, useRunOnMount, useSearchText, useSelectRequestClose, useSelectableElement, useSelectionController, useSidePanelClose, useSignalSync, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage, windowWidthSignal };
+export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, Box, Button, ButtonCopyToClipboard, Caption, CheckSvg, Checkbox, CheckboxList, CloseSvg, Code, Col, Colgroup, ConstructionSvg, Details, Dialog, DialogLayout, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemFooter, ListItemGroup, ListItemHeader, Loading, MessageBox, Meter, Nav, NaviDebug, Paragraph, Popover, Quantity, QuantityIntl, Radio, RadioList, Route, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectionContext, Separator, SettingsSvg, SidePanel, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, Thead, Title, Tr, UITransition, UserSvg, ViewportLayout, actionIntegratedVia, actionRunEffect, addCustomMessage, anyMatchingRouteSignal, applySearch, arraySignalMembership, compareTwoJsValues, createAction, createAvailableConstraint, createIntl, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, enableDebugActions, enableDebugOnDocumentLoading, filterTableSelection, forwardActionRequested, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, localStorageSignal, navBack, navForward, navTo, openCallout, rawUrlPart, reload, removeCustomMessage, requestAction, requestListClose, requestListOpen, rerunActions, resource, route, routeAction, setBaseUrl, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, syncOwnedResourceToSignals, syncResourceToSignals, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutClose, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, useRouteStatus, useRunOnMount, useSearchText, useSelectRequestClose, useSelectableElement, useSelectionController, useSidePanelClose, useSignalSync, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage, windowWidthSignal };
 //# sourceMappingURL=jsenv_navi.js.map

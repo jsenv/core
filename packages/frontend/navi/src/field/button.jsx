@@ -38,11 +38,6 @@ const css = /* css */ `
       --button-border-radius: 2px;
       --button-outline-width: 1px;
       --button-border-width: 1px;
-      /* Global padding defaults — override these to change all button paddings. */
-      /* Use --button-padding, --button-padding-x, --button-padding-y for per-button overrides. */
-      --button-padding-x-default: 6px;
-      --button-padding-y-default: 1px;
-      /* default */
 
       --button-outline-color: var(--navi-focus-outline-color);
       --button-loader-color: var(--navi-loader-color);

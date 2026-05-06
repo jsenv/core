@@ -507,6 +507,8 @@ const COPIED_ON_VISUAL_CHILD_PROP_SET = new Set([
   "align",
   "alignX",
   "alignY",
+  "minWidth",
+  "minHeight",
 ]);
 const HANDLED_BY_VISUAL_CHILD_PROP_SET = new Set([
   ...INNER_SPACING_PROP_NAME_SET,
