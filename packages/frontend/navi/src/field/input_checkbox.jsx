@@ -274,10 +274,13 @@ const css = /* css */ `
 
     /* Toggle appearance */
     &[data-appearance="toggle"] {
+      --toggle-outer-width: calc(
+        var(--toggle-width) + var(--toggle-padding) * 2
+      );
       --margin: var(--toggle-margin);
-      --width: var(--toggle-width);
+      --width: var(--toggle-outer-width);
       --height: unset;
-      min-width: var(--toggle-width);
+      min-width: var(--toggle-outer-width);
       --border-radius: var(--toggle-border-radius);
       --background-color: var(--toggle-background-color);
       --background-color-hover: var(--toggle-background-color-hover);
@@ -295,6 +298,7 @@ const css = /* css */ `
       );
 
       position: relative;
+      padding: var(--toggle-padding);
       background-color: var(--x-background-color);
       border-color: transparent;
       user-select: none;
@@ -312,11 +316,7 @@ const css = /* css */ `
       &[data-checked] {
         .navi_checkbox_toggle {
           transform: translateX(
-            calc(
-              var(--toggle-width) - var(--toggle-thumb-size) - var(
-                  --toggle-padding
-                )
-            )
+            calc(var(--toggle-width) - var(--toggle-thumb-size))
           );
         }
       }
