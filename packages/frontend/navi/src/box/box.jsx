@@ -53,7 +53,7 @@
 
 import { normalizeStyles } from "@jsenv/dom";
 import { toChildArray } from "preact";
-import { useContext, useRef } from "preact/hooks";
+import { useContext } from "preact/hooks";
 
 import { withPropsClassName } from "../utils/with_props_class_name.js";
 import { BoxFlowContext } from "./box_flow_context.jsx";
@@ -70,7 +70,7 @@ import {
   PSEUDO_NAMED_STYLES_DEFAULT,
   PSEUDO_STATE_DEFAULT,
 } from "./pseudo_styles.js";
-import { useEarlyDOMEffect } from "./use_early_dom_effect.js";
+import { useElementRefEffect } from "./use_element_ref.js";
 
 import.meta.css = /* css */ `
   @layer navi {
@@ -200,8 +200,7 @@ export const Box = (props) => {
     separator,
     ...rest
   } = props;
-  const defaultRef = useRef();
-  const ref = props.ref || defaultRef;
+  let ref;
   const TagName = as;
 
   const defaultDisplay = getDefaultDisplay(TagName);
@@ -620,32 +619,34 @@ export const Box = (props) => {
         styleDeps.push(...pseudoClasses);
       }
     }
-    // TODO: just use ref function, it will be called same time as early dom effect + give the dom node + be standard
-    // we need to implent our styleDeps tracking but that's likely very easy
-    useEarlyDOMEffect((boxEl) => {
-      const pseudoStateEl = pseudoStateSelector
-        ? boxEl.querySelector(pseudoStateSelector)
-        : boxEl;
-      const visualEl = visualSelector
-        ? boxEl.querySelector(visualSelector)
-        : null;
-      return initPseudoStyles(pseudoStateEl, {
-        pseudoClasses: innerPseudoClasses,
-        pseudoState: innerPseudoState,
-        effect: (state) => {
-          applyStyle(
-            boxEl,
-            boxStyles,
-            state,
-            boxPseudoNamedStyles,
-            preventInitialTransition,
-          );
-        },
-        elementToImpact: boxEl,
-        elementListeningPseudoState:
-          visualEl === pseudoStateEl ? null : visualEl,
-      });
-    }, styleDeps);
+    ref = useElementRefEffect(
+      props.ref,
+      (boxEl) => {
+        const pseudoStateEl = pseudoStateSelector
+          ? boxEl.querySelector(pseudoStateSelector)
+          : boxEl;
+        const visualEl = visualSelector
+          ? boxEl.querySelector(visualSelector)
+          : null;
+        return initPseudoStyles(pseudoStateEl, {
+          pseudoClasses: innerPseudoClasses,
+          pseudoState: innerPseudoState,
+          effect: (state) => {
+            applyStyle(
+              boxEl,
+              boxStyles,
+              state,
+              boxPseudoNamedStyles,
+              preventInitialTransition,
+            );
+          },
+          elementToImpact: boxEl,
+          elementListeningPseudoState:
+            visualEl === pseudoStateEl ? null : visualEl,
+        });
+      },
+      styleDeps,
+    );
   }
 
   // When hasChildFunction is used it means

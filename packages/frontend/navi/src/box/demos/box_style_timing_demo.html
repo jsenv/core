@@ -9,6 +9,7 @@
     <div id="app"></div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
+      import { signal } from "@preact/signals";
       import { useState, useLayoutEffect, useRef } from "preact/hooks";
       import { Box } from "@jsenv/navi";
 
@@ -67,6 +68,37 @@
 
       const COLORS = ["#ff6b6b", "#4dabf7", "#69db7c", "#ffd43b", "#da77f2"];
 
+      const nativeRefCallCount = signal(0);
+      const nativeRef = () => {
+        nativeRefCallCount.value++;
+      };
+
+      const boxRefCallCount = signal(0);
+      const boxRef = () => {
+        boxRefCallCount.value++;
+      };
+
+      const RefCallCounter = ({ count }) => {
+        return (
+          <div
+            style={{
+              fontFamily: "monospace",
+              fontSize: "13px",
+              padding: "6px 10px",
+              background: "#1e1e2e",
+              color: "#cdd6f4",
+              borderRadius: "6px",
+              marginBottom: "8px",
+            }}
+          >
+            ref callback calls:{" "}
+            <strong style={{ color: "#a6e3a1", fontSize: "16px" }}>
+              {count}
+            </strong>
+          </div>
+        );
+      };
+
       const Demo = () => {
         const [colorIndex, setColorIndex] = useState(0);
         const bg = COLORS[colorIndex];
@@ -119,12 +151,12 @@
             </div>
 
             <div style={{ display: "flex", gap: "24px" }}>
-              {/* Case 1: native Preact style prop — style is in the DOM before any useLayoutEffect */}
+              {/* Case 1: native Preact style prop */}
               <div style={{ flex: 1 }}>
-                <h3 style={{ marginTop: 0 }}>
-                  Native Preact <code>style</code> prop
-                </h3>
+                <h3 style={{ marginTop: 0 }}>{"<div ref style>"}</h3>
+                <RefCallCounter count={nativeRefCallCount} />
                 <div
+                  ref={nativeRef}
                   style={{
                     backgroundColor: bg,
                     padding: "16px",
@@ -135,12 +167,12 @@
                 </div>
               </div>
 
-              {/* Case 2: Box with its own style system — timing under test */}
+              {/* Case 2: Box with its own style system */}
               <div style={{ flex: 1 }}>
-                <h3 style={{ marginTop: 0 }}>
-                  <code>{"<Box background>"}</code>
-                </h3>
+                <h3 style={{ marginTop: 0 }}>{"<Box ref background>"}</h3>
+                <RefCallCounter count={boxRefCallCount} />
                 <Box
+                  ref={boxRef}
                   background={bg}
                   style={{ padding: "16px", borderRadius: "6px" }}
                 >
