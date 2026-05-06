@@ -73,6 +73,19 @@ import {
 import { useEarlyDOMEffect } from "./use_early_dom_effect.js";
 
 import.meta.css = /* css */ `
+  @layer navi {
+    /*
+    When using square/circle/aspectRatio prop we expect box to respect the aspect ratio.
+    But within flex containers or stuff like that the min-width/min-height auto
+    will prevent the item from shrinking to respect aspect-ratio
+    We put that in a layer navi + a specific attribute so that it's very easy to override this
+    */
+    [navi-aspect-ratio] {
+      min-width: 0;
+      min-height: 0;
+    }
+  }
+
   [navi-box-flow="inline"] {
     display: inline;
   }
@@ -652,6 +665,8 @@ export const Box = (props) => {
     innerChildren = applySeparatorOnChildren(innerChildren, separator);
   }
 
+  const aspectRatio = rest.square || rest.circle ? "1/1" : rest.aspectRatio;
+
   return (
     <TagName
       ref={ref}
@@ -659,6 +674,7 @@ export const Box = (props) => {
       navi-box-flow={boxFlowIsDefault ? undefined : boxFlow}
       navi-box-flow-row={row ? "" : undefined}
       navi-box-flow-column={column ? "" : undefined}
+      navi-aspect-ratio={aspectRatio ? aspectRatio : undefined}
       data-visual-selector={visualSelector}
       {...selfForwardedProps}
     >

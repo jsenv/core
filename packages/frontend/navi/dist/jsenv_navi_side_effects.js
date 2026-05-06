@@ -55,6 +55,12 @@ installImportMetaCssBuild(import.meta);/**
 const css = /* css */`
   @layer navi {
     :root {
+      /* Global padding defaults — override these to change all button paddings. */
+      /* Use --button-padding, --button-padding-x, --button-padding-y for per-button overrides. */
+      --button-padding-x-default: 6px;
+      --button-padding-y-default: 1px;
+      /* default */
+
       --navi-focus-outline-color: light-dark(#4476ff, #3b82f6);
       --navi-loader-color: light-dark(#355fcc, #3b82f6);
       --navi-selection-border-color: #0078d4;

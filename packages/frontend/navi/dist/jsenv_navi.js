@@ -8199,6 +8199,19 @@ installImportMetaCssBuild(import.meta);/**
  *    style can only be determined once the node is available.
  */
 import.meta.css = [/* css */`
+  @layer navi {
+    /*
+    When using square/circle/aspectRatio prop we expect box to respect the aspect ratio.
+    But within flex containers or stuff like that the min-width/min-height auto
+    will prevent the item from shrinking to respect aspect-ratio
+    We put that in a layer navi + a specific attribute so that it's very easy to override this
+    */
+    [navi-aspect-ratio] {
+      min-width: 0;
+      min-height: 0;
+    }
+  }
+
   [navi-box-flow="inline"] {
     display: inline;
   }
@@ -8694,12 +8707,14 @@ const Box = props => {
     // Flatten nested arrays (e.g., from .map()) to treat each element as individual child
     innerChildren = applySeparatorOnChildren(innerChildren, separator);
   }
+  const aspectRatio = rest.square || rest.circle ? "1/1" : rest.aspectRatio;
   return jsx(TagName, {
     ref: ref,
     className: innerClassName,
     "navi-box-flow": boxFlowIsDefault ? undefined : boxFlow,
     "navi-box-flow-row": row ? "" : undefined,
     "navi-box-flow-column": column ? "" : undefined,
+    "navi-aspect-ratio": aspectRatio ? aspectRatio : undefined,
     "data-visual-selector": visualSelector,
     ...selfForwardedProps,
     children: jsx(BoxFlowContext.Provider, {
@@ -22562,11 +22577,6 @@ installImportMetaCssBuild(import.meta);const css$x = /* css */`
       --button-border-radius: 2px;
       --button-outline-width: 1px;
       --button-border-width: 1px;
-      /* Global padding defaults — override these to change all button paddings. */
-      /* Use --button-padding, --button-padding-x, --button-padding-y for per-button overrides. */
-      --button-padding-x-default: 6px;
-      --button-padding-y-default: 1px;
-      /* default */
 
       --button-outline-color: var(--navi-focus-outline-color);
       --button-loader-color: var(--navi-loader-color);
@@ -24858,8 +24868,30 @@ installImportMetaCssBuild(import.meta);const css$p = /* css */`
 
     position: relative;
     display: inline-flex;
-    box-sizing: content-box;
+    box-sizing: border-box;
+    width: var(--width);
+    height: var(--height);
     margin: var(--margin);
+    background-color: var(--x-background-color);
+    border-width: var(--border-width);
+    border-style: solid;
+    border-color: var(--x-border-color);
+    border-radius: var(--border-radius);
+    outline-width: var(--outline-width);
+    outline-style: none;
+    outline-color: var(--outline-color);
+    outline-offset: var(--outline-offset);
+
+    .navi_native_field {
+      position: absolute;
+      inset: 0;
+      margin: 0;
+      border: none;
+      border-radius: inherit;
+      opacity: 0;
+      appearance: none; /* This allows border-radius to have an effect */
+      cursor: var(--x-cursor);
+    }
 
     .navi_checkbox_accent_probe {
       position: absolute;
@@ -24870,41 +24902,10 @@ installImportMetaCssBuild(import.meta);const css$p = /* css */`
       pointer-events: none;
     }
 
-    .navi_native_field {
-      position: absolute;
-      inset: 0;
-      margin: 0;
-      padding: 0;
-      border: none;
-      border-radius: inherit;
-      opacity: 0;
-      appearance: none; /* This allows border-radius to have an effect */
-      cursor: var(--x-cursor);
-    }
-
-    .navi_checkbox_field {
-      display: inline-flex;
-      box-sizing: border-box;
-      width: var(--width);
-      height: var(--height);
-      background-color: var(--x-background-color);
-      border-width: var(--border-width);
-      border-style: solid;
-      border-color: var(--x-border-color);
-      border-radius: var(--border-radius);
-      outline-width: var(--outline-width);
-      outline-style: none;
-      outline-color: var(--outline-color);
-      outline-offset: var(--outline-offset);
-      pointer-events: none;
-    }
-
     /* Focus */
     &[data-focus-visible] {
       z-index: 1;
-      .navi_checkbox_field {
-        outline-style: solid;
-      }
+      outline-style: solid;
     }
     /* Hover */
     &[data-hover] {
@@ -24986,7 +24987,6 @@ installImportMetaCssBuild(import.meta);const css$p = /* css */`
     /* Toggle appearance */
     &[data-appearance="toggle"] {
       --margin: var(--toggle-margin);
-      --padding: var(--toggle-padding);
       --width: var(--toggle-width);
       --height: unset;
       --border-radius: var(--toggle-border-radius);
@@ -25005,25 +25005,19 @@ installImportMetaCssBuild(import.meta);const css$p = /* css */`
         --toggle-background-color-disabled-checked
       );
 
-      .navi_checkbox_field {
-        position: relative;
-        box-sizing: border-box;
-        width: var(--width);
-        height: var(--height);
-        padding: var(--padding);
-        background-color: var(--x-background-color);
-        border-color: transparent;
-        user-select: none;
+      position: relative;
+      background-color: var(--x-background-color);
+      border-color: transparent;
+      user-select: none;
 
-        .navi_checkbox_toggle {
-          width: var(--toggle-thumb-size);
-          height: var(--toggle-thumb-size);
-          border-radius: var(--toggle-thumb-border-radius);
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-          fill: var(--toggle-thumb-color);
-          transform: translateX(0);
-          transition: transform 0.2s ease;
-        }
+      .navi_checkbox_toggle {
+        width: var(--toggle-thumb-size);
+        height: var(--toggle-thumb-size);
+        border-radius: var(--toggle-thumb-border-radius);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+        fill: var(--toggle-thumb-color);
+        transform: translateX(0);
+        transition: transform 0.2s ease;
       }
 
       &[data-checked] {
@@ -25049,22 +25043,17 @@ installImportMetaCssBuild(import.meta);const css$p = /* css */`
 
     &[data-appearance="icon"] {
       --margin: 0;
-      --outline-offset: 0px;
       --width: auto;
       --height: auto;
 
-      .navi_checkbox_field {
-        background: none;
-        border: none;
-      }
+      background: none;
+      border: none;
     }
 
     &[data-appearance="button"] {
       --margin: 0;
-      --outline-offset: 0px;
       --width: auto;
       --height: auto;
-      --padding: 4px;
       --border-color: var(--button-border-color);
       --border-color-hover: var(--button-border-color-hover);
       --background-color: var(--button-background-color);
@@ -25074,12 +25063,36 @@ installImportMetaCssBuild(import.meta);const css$p = /* css */`
       --border-color-checked: var(--button-border-color);
       --background-color-checked: var(--button-background-color);
 
-      .navi_checkbox_field {
-        padding-top: var(--padding-top, var(--padding-y, var(--padding)));
-        padding-right: var(--padding-right, var(--padding-x, var(--padding)));
-        padding-bottom: var(--padding-bottom, var(--padding-y, var(--padding)));
-        padding-left: var(--padding-left, var(--padding-x, var(--padding)));
-      }
+      padding-top: var(
+        --button-padding-top,
+        var(
+          --button-padding-y,
+          var(--button-padding, var(--button-padding-y-default))
+        )
+      );
+      padding-right: var(
+        --button-padding-right,
+        var(
+          --button-padding-x,
+          var(--button-padding, var(--button-padding-x-default))
+        )
+      );
+      padding-bottom: var(
+        --button-padding-bottom,
+        var(
+          --button-padding-y,
+          var(--button-padding, var(--button-padding-y-default))
+        )
+      );
+      padding-left: var(
+        --button-padding-left,
+        var(
+          --button-padding-x,
+          var(--button-padding, var(--button-padding-x-default))
+        )
+      );
+      align-items: center;
+      justify-content: center;
     }
   }
 `;
@@ -25173,33 +25186,74 @@ const InputCheckboxUI = props => {
     uiStateController.setUIState(checkboxIsChecked, e);
     onInput?.(e);
   });
-  const renderCheckbox = checkboxProps => jsx(Box, {
-    ...checkboxProps,
-    id: id,
-    as: "input",
-    ref: ref,
-    type: "checkbox",
-    name: innerName,
-    checked: checked,
-    required: innerRequired,
-    baseClassName: "navi_native_field",
-    "data-callout-arrow-x": "center",
-    onClick: innerOnClick,
-    onInput: innerOnInput,
-    onresetuistate: e => {
-      uiStateController.resetUIState(e);
-    },
-    onsetuistate: e => {
-      uiStateController.setUIState(e.detail.value, e);
-    }
-  });
+  const renderCheckbox = checkboxProps => {
+    return jsx(Box, {
+      ...checkboxProps,
+      id: id,
+      as: "input",
+      ref: ref,
+      type: "checkbox",
+      name: innerName,
+      checked: checked,
+      required: innerRequired,
+      baseClassName: "navi_native_field",
+      "data-callout-arrow-x": "center",
+      onClick: innerOnClick,
+      onInput: innerOnInput,
+      onresetuistate: e => {
+        uiStateController.resetUIState(e);
+      },
+      onsetuistate: e => {
+        uiStateController.setUIState(e.detail.value, e);
+      }
+    });
+  };
   const renderCheckboxMemoized = useCallback(renderCheckbox, [id, innerName, checked, innerRequired]);
   const boxRef = useRef();
   useAccentColorAttributes(boxRef, accentColor, {
     elementSelector: ".navi_checkbox_accent_probe"
   });
+  let visualVnode;
+  if (icon) {
+    visualVnode = jsx("div", {
+      className: "navi_checkbox_icon",
+      "aria-hidden": "true",
+      children: Array.isArray(icon) ? icon[checked ? 1 : 0] : icon
+    });
+  } else if (appearance === "toggle") {
+    visualVnode = jsx(Box, {
+      className: "navi_checkbox_toggle",
+      as: "svg",
+      viewBox: "0 0 12 12",
+      "aria-hidden": "true",
+      preventInitialTransition: true,
+      children: jsx("circle", {
+        cx: "6",
+        cy: "6",
+        r: "5"
+      })
+    });
+  } else {
+    visualVnode = jsx(Box, {
+      className: "navi_checkbox_marker",
+      as: "svg",
+      viewBox: "0 0 12 12",
+      "aria-hidden": "true",
+      preventInitialTransition: true,
+      children: jsx("path", {
+        d: "M10.5 2L4.5 9L1.5 5.5",
+        fill: "none",
+        strokeWidth: "2"
+      })
+    });
+  }
   return jsxs(Box, {
-    as: "span",
+    as: "span"
+    // Checkbox displayed as button are usually squarish
+    // (passsing any custom width/height would auto disable aspectRatio forced by the square prop)
+    ,
+
+    square: appearance === "button" ? true : undefined,
     ...remainingProps,
     autoFocus: undefined // See use_auto_focus.js
     ,
@@ -25228,36 +25282,7 @@ const InputCheckboxUI = props => {
       inset: -1,
       color: "var(--loader-color)",
       targetSelector: ".navi_checkbox_field"
-    }), renderCheckboxMemoized, jsx("div", {
-      className: "navi_checkbox_field",
-      children: icon ? jsx("div", {
-        className: "navi_checkbox_icon",
-        "aria-hidden": "true",
-        children: Array.isArray(icon) ? icon[checked ? 1 : 0] : icon
-      }) : appearance === "toggle" ? jsx(Box, {
-        className: "navi_checkbox_toggle",
-        as: "svg",
-        viewBox: "0 0 12 12",
-        "aria-hidden": "true",
-        preventInitialTransition: true,
-        children: jsx("circle", {
-          cx: "6",
-          cy: "6",
-          r: "5"
-        })
-      }) : jsx(Box, {
-        className: "navi_checkbox_marker",
-        as: "svg",
-        viewBox: "0 0 12 12",
-        "aria-hidden": "true",
-        preventInitialTransition: true,
-        children: jsx("path", {
-          d: "M10.5 2L4.5 9L1.5 5.5",
-          fill: "none",
-          strokeWidth: "2"
-        })
-      })
-    })]
+    }), visualVnode, renderCheckboxMemoized]
   });
 };
 const CheckboxStyleCSSVars = {
@@ -25288,17 +25313,18 @@ const CheckboxToggleStyleCSSVars = {
   ...CheckboxStyleCSSVars,
   width: "--toggle-width",
   height: "--toggle-height",
-  borderRadius: "--border-radius"
+  borderRadius: "--border-radius",
+  padding: "--toggle-padding"
 };
 const CheckboxButtonStyleCSSVars = {
   ...CheckboxStyleCSSVars,
-  paddingTop: "--padding-top",
-  paddingRight: "--padding-right",
-  paddingBottom: "--padding-bottom",
-  paddingLeft: "--padding-left",
-  paddingX: "--padding-x",
-  paddingY: "--padding-y",
-  padding: "--padding"
+  padding: "--button-padding",
+  paddingX: "--button-padding-x",
+  paddingY: "--button-padding-y",
+  paddingTop: "--button-padding-top",
+  paddingRight: "--button-padding-right",
+  paddingBottom: "--button-padding-bottom",
+  paddingLeft: "--button-padding-left"
 };
 const CheckboxPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":checked", ":-navi-loading"];
 const CheckboxPseudoElements = ["::-navi-loader", "::-navi-checkmark"];
@@ -25604,8 +25630,14 @@ installImportMetaCssBuild(import.meta);const css$o = /* css */`
 
     position: relative;
     display: inline-flex;
-    box-sizing: content-box;
+    box-sizing: border-box;
+    width: var(--x-width);
+    height: var(--x-height);
     margin: var(--margin);
+    outline-width: var(--x-outline-width);
+    outline-style: none;
+    outline-color: var(--x-outline-color);
+    outline-offset: var(--x-outline-offset);
 
     .navi_radio_accent_probe {
       position: absolute;
@@ -25631,9 +25663,7 @@ installImportMetaCssBuild(import.meta);const css$o = /* css */`
     /* Focus */
     &[data-focus-visible] {
       z-index: 1;
-      .navi_radio_field {
-        outline-style: solid;
-      }
+      outline-style: solid;
     }
     /* Hover */
     &[data-hover] {
@@ -25658,7 +25688,6 @@ installImportMetaCssBuild(import.meta);const css$o = /* css */`
       .navi_radio_dashed_border {
         display: none;
       }
-
       &[data-checked] {
         --x-background-color: var(--background-color-readonly-checked);
         --x-border-color: var(--border-color-readonly-checked);
@@ -25689,45 +25718,32 @@ installImportMetaCssBuild(import.meta);const css$o = /* css */`
       }
     }
 
-    .navi_radio_field {
-      box-sizing: border-box;
-      width: var(--x-width);
-      height: var(--x-height);
-      outline-width: var(--x-outline-width);
-      outline-style: none;
-      outline-color: var(--x-outline-color);
-      outline-offset: var(--x-outline-offset);
-      pointer-events: none;
-    }
-
     /* Radio appearance */
     &[data-appearance="radio"] {
-      .navi_radio_field {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
 
-        svg {
-          overflow: visible;
-        }
+      svg {
+        overflow: visible;
+      }
 
-        .navi_radio_border {
-          fill: var(--x-background-color);
-          stroke: var(--x-border-color);
-        }
-        .navi_radio_dashed_border {
-          display: none;
-        }
-        .navi_radio_marker {
-          width: 100%;
-          height: 100%;
-          opacity: 0;
-          fill: var(--x-radiomark-color);
-          transform: scale(0.3);
-          transform-origin: center;
-          pointer-events: none;
-        }
+      .navi_radio_border {
+        fill: var(--x-background-color);
+        stroke: var(--x-border-color);
+      }
+      .navi_radio_dashed_border {
+        display: none;
+      }
+      .navi_radio_marker {
+        width: 100%;
+        height: 100%;
+        opacity: 0;
+        fill: var(--x-radiomark-color);
+        transform: scale(0.3);
+        transform-origin: center;
+        pointer-events: none;
       }
 
       &[data-transition] {
@@ -25764,7 +25780,6 @@ installImportMetaCssBuild(import.meta);const css$o = /* css */`
       --outline-offset: 0px;
       --width: auto;
       --height: auto;
-      --padding: 2px;
       --border-color: var(--button-border-color);
       --border-color-hover: var(--button-border-color-hover);
       --background-color: var(--button-background-color);
@@ -25774,25 +25789,45 @@ installImportMetaCssBuild(import.meta);const css$o = /* css */`
       --border-color-checked: var(--button-border-color);
       --background-color-checked: var(--button-background-color);
 
-      .navi_radio_field {
-        display: inline-flex;
-        box-sizing: border-box;
-        padding-top: var(--padding-top, var(--padding-y, var(--padding)));
-        padding-right: var(--padding-right, var(--padding-x, var(--padding)));
-        padding-bottom: var(--padding-bottom, var(--padding-y, var(--padding)));
-        padding-left: var(--padding-left, var(--padding-x, var(--padding)));
-        align-items: center;
-        justify-content: center;
-        background-color: var(--x-background-color);
-        border-width: var(--button-border-width);
-        border-style: solid;
-        border-color: var(--x-border-color);
-        border-radius: var(--button-border-radius);
+      padding-top: var(
+        --button-padding-top,
+        var(
+          --button-padding-y,
+          var(--button-padding, var(--button-padding-y-default))
+        )
+      );
+      padding-right: var(
+        --button-padding-right,
+        var(
+          --button-padding-x,
+          var(--button-padding, var(--button-padding-x-default))
+        )
+      );
+      padding-bottom: var(
+        --button-padding-bottom,
+        var(
+          --button-padding-y,
+          var(--button-padding, var(--button-padding-y-default))
+        )
+      );
+      padding-left: var(
+        --button-padding-left,
+        var(
+          --button-padding-x,
+          var(--button-padding, var(--button-padding-x-default))
+        )
+      );
+      align-items: center;
+      justify-content: center;
+      background-color: var(--x-background-color);
+      border-width: var(--button-border-width);
+      border-style: solid;
+      border-color: var(--x-border-color);
+      border-radius: var(--button-border-radius);
 
-        .navi_icon,
-        img {
-          border-radius: inherit;
-        }
+      .navi_icon,
+      img {
+        border-radius: inherit;
       }
 
       &[data-hover] {
@@ -25803,11 +25838,9 @@ installImportMetaCssBuild(import.meta);const css$o = /* css */`
         --x-border-color: var(--button-border-color-checked);
         --x-background-color: var(--button-background-color-checked);
 
-        .navi_radio_field {
-          box-shadow:
-            inset 0 2px 4px rgba(0, 0, 0, 0.15),
-            inset 0 0 0 1px var(--button-border-color-checked);
-        }
+        box-shadow:
+          inset 0 2px 4px rgba(0, 0, 0, 0.15),
+          inset 0 0 0 1px var(--button-border-color-checked);
       }
       &[data-disabled] {
         --x-border-color: var(--button-border-color-disabled);
@@ -25934,33 +25967,70 @@ const InputRadioUI = props => {
     }
     onClick?.(e);
   });
-  const renderRadio = radioProps => jsx(Box, {
-    ...radioProps,
-    as: "input",
-    ref: ref,
-    type: "radio",
-    name: innerName,
-    checked: checked,
-    disabled: innerDisabled,
-    required: innerRequired,
-    baseClassName: "navi_native_field",
-    "data-callout-arrow-x": "center",
-    onClick: innerOnClick,
-    onInput: innerOnInput,
-    onresetuistate: e => {
-      uiStateController.resetUIState(e);
-    },
-    onsetuistate: e => {
-      uiStateController.setUIState(e.detail.value, e);
-    }
-  });
+  const renderRadio = radioProps => {
+    return jsx(Box, {
+      ...radioProps,
+      as: "input",
+      ref: ref,
+      type: "radio",
+      name: innerName,
+      checked: checked,
+      disabled: innerDisabled,
+      required: innerRequired,
+      baseClassName: "navi_native_field",
+      "data-callout-arrow-x": "center",
+      onClick: innerOnClick,
+      onInput: innerOnInput,
+      onresetuistate: e => {
+        uiStateController.resetUIState(e);
+      },
+      onsetuistate: e => {
+        uiStateController.setUIState(e.detail.value, e);
+      }
+    });
+  };
   const renderRadioMemoized = useCallback(renderRadio, [innerName, checked, innerRequired]);
   const boxRef = useRef();
   useAccentColorAttributes(boxRef, remainingProps.accentColor, {
     elementSelector: ".navi_radio_accent_probe"
   });
+  let visualVNode;
+  if (appearance === "radio") {
+    visualVNode = jsxs("svg", {
+      viewBox: "0 0 12 12",
+      "aria-hidden": "true",
+      preserveAspectRatio: "xMidYMid meet",
+      children: [jsx("circle", {
+        className: "navi_radio_border",
+        cx: "6",
+        cy: "6",
+        r: "5.5",
+        strokeWidth: "1"
+      }), jsx("circle", {
+        className: "navi_radio_dashed_border",
+        cx: "6",
+        cy: "6",
+        r: "5.5",
+        strokeWidth: "1",
+        strokeDasharray: "2.16 2.16",
+        strokeDashoffset: "0"
+      }), jsx("circle", {
+        className: "navi_radio_marker",
+        cx: "6",
+        cy: "6",
+        r: "3.5"
+      })]
+    });
+  } else {
+    visualVNode = icon;
+  }
   return jsxs(Box, {
-    as: "span",
+    as: "span"
+    // Radio displayed as button are usually squarish
+    // (passsing any custom width/height would auto disable aspectRatio forced by the square prop)
+    ,
+
+    square: appearance === "button" ? true : undefined,
     ...remainingProps,
     autoFocus: undefined // See use_auto_focus.js
     ,
@@ -25988,35 +26058,8 @@ const InputRadioUI = props => {
       inset: -1,
       targetSelector: ".navi_radio_field",
       color: "var(--loader-color)",
-      borderRadius: "50%"
-    }), renderRadioMemoized, jsx("span", {
-      className: "navi_radio_field",
-      children: appearance === "radio" ? jsxs("svg", {
-        viewBox: "0 0 12 12",
-        "aria-hidden": "true",
-        preserveAspectRatio: "xMidYMid meet",
-        children: [jsx("circle", {
-          className: "navi_radio_border",
-          cx: "6",
-          cy: "6",
-          r: "5.5",
-          strokeWidth: "1"
-        }), jsx("circle", {
-          className: "navi_radio_dashed_border",
-          cx: "6",
-          cy: "6",
-          r: "5.5",
-          strokeWidth: "1",
-          strokeDasharray: "2.16 2.16",
-          strokeDashoffset: "0"
-        }), jsx("circle", {
-          className: "navi_radio_marker",
-          cx: "6",
-          cy: "6",
-          r: "3.5"
-        })]
-      }) : icon
-    })]
+      borderRadius: appearance === "radio" ? "50%" : "inherit"
+    }), visualVNode, renderRadioMemoized]
   });
 };
 const RadioStyleCSSVars = {
@@ -26046,7 +26089,13 @@ const RadioStyleCSSVars = {
 };
 const RadioButtonStyleCSSVars = {
   ...RadioStyleCSSVars,
-  "padding": "--padding",
+  "padding": "--button-padding",
+  "paddingX": "--button-padding-x",
+  "paddingY": "--button-padding-y",
+  "paddingTop": "--button-padding-top",
+  "paddingRight": "--button-padding-right",
+  "paddingBottom": "--button-padding-bottom",
+  "paddingLeft": "--button-padding-left",
   "borderRadius": "--button-border-radius",
   "borderWidth": "--button-border-width",
   "borderColor": "--button-border-color",
