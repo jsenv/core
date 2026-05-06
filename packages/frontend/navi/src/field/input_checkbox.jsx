@@ -277,6 +277,7 @@ const css = /* css */ `
       --margin: var(--toggle-margin);
       --width: var(--toggle-width);
       --height: unset;
+      min-width: var(--toggle-width);
       --border-radius: var(--toggle-border-radius);
       --background-color: var(--toggle-background-color);
       --background-color-hover: var(--toggle-background-color-hover);
@@ -310,15 +311,11 @@ const css = /* css */ `
 
       &[data-checked] {
         .navi_checkbox_toggle {
-          /* We remove padding 3 times */
-          /* - twice to get real width (box-sizing: border-box) */
-          /* - one more to apply right padding to the translation */
           transform: translateX(
             calc(
               var(--toggle-width) - var(--toggle-thumb-size) - var(
                   --toggle-padding
-                ) *
-                3
+                )
             )
           );
         }
