@@ -8212,6 +8212,12 @@ import.meta.css = [/* css */`
     }
   }
 
+  /* We force a given display style using html attribute instead of inline style */
+  /* No particular reason for this, logic could be moved to inline style like the rest */
+  /* It was an attempt to see if attributes where a good candidate to set style based on props */
+  /* Actullay it's not that much as it make the attribute and CSS complexity explode */
+  /* For now it's kept here and must be outside layer navi to be able to override any given display
+  Set by navi itself on their default display */
   [navi-box-flow="inline"] {
     display: inline;
   }
@@ -22636,8 +22642,9 @@ installImportMetaCssBuild(import.meta);const css$x = /* css */`
 
   .navi_button {
     /* outline will draw the border when visible */
-    --x-button-outline-width: var(--button-outline-width) +
-      var(--button-border-width);
+    --x-button-outline-width: calc(
+      var(--button-outline-width) + var(--button-border-width)
+    );
     --x-button-outline-offset: calc(-1 * var(--button-border-width));
     --x-button-border-color: var(--button-border-color);
     --x-button-background: var(--button-background);
@@ -24800,7 +24807,7 @@ installImportMetaCssBuild(import.meta);const css$p = /* css */`
       --background-color-disabled-checked: #d3d3d3;
 
       /* Toggle specific */
-      --toggle-margin: 2px;
+      --toggle-margin: 2px; /* Useful to reserve space for outline */
       --toggle-width: 2.5em;
       --toggle-thumb-size: 1.2em;
       /* Padding uses px and not em otherwise it can be resolved to a float which does not play well */
@@ -24986,9 +24993,11 @@ installImportMetaCssBuild(import.meta);const css$p = /* css */`
 
     /* Toggle appearance */
     &[data-appearance="toggle"] {
-      --toggle-outer-width: calc(
-        var(--toggle-width) + var(--toggle-padding) * 2
-      );
+      /* We compute ourselves the width + padding otherwise during 
+      translation subpixel rounding makes the thumb feels too much to the right by 1px */
+      box-sizing: content-box;
+      --toggle-outer-width: calc(var(--toggle-width) + var(--toggle-padding));
+
       --margin: var(--toggle-margin);
       --width: var(--toggle-outer-width);
       --height: unset;
@@ -25028,7 +25037,10 @@ installImportMetaCssBuild(import.meta);const css$p = /* css */`
       &[data-checked] {
         .navi_checkbox_toggle {
           transform: translateX(
-            calc(var(--toggle-width) - var(--toggle-thumb-size))
+            calc(
+              var(--toggle-width) - var(--toggle-thumb-size) +
+                var(--toggle-padding)
+            )
           );
         }
       }
@@ -27114,8 +27126,8 @@ const css$l = /* css */`
       --list-outline-width: 1px;
       --list-border-radius: 4px;
       --list-border-width: 1px;
+      --list-outline-color: var(--navi-focus-outline-color);
       --list-border-color: light-dark(#ccc, #555);
-      --list-border-style: solid;
       --list-background-color: light-dark(#fff, #1e1e1e);
       --list-max-height: 220px;
     }
@@ -27166,10 +27178,13 @@ const css$l = /* css */`
   }
 
   .navi_list_container {
+    --x-list-outline-width: calc(
+      var(--list-outline-width) + var(--list-border-width)
+    );
+    --x-list-outline-offset: calc(-1 * var(--list-border-width));
     --x-list-border-radius: var(--list-border-radius);
     --x-list-border-width: var(--list-border-width);
     --x-list-border-color: var(--list-border-color);
-    --x-list-border-style: var(--list-border-style);
     --x-list-background-color: var(--list-background-color);
     /* When typing inside an input browser tries to keep caret visible */
     /* For input within a sticky element inside a scrollable container */
@@ -27190,14 +27205,11 @@ const css$l = /* css */`
     max-width: 100%;
     flex-direction: column;
     background-color: var(--x-list-background-color);
-    /* Use a transparent real border to reserve layout space, and draw the
-       visible border via outline (inset via negative offset). This way the
-       focus ring can simply widen the outline without shifting layout. */
-    border: var(--x-list-border-width) solid transparent;
+    border: var(--x-list-border-width) solid var(--x-list-border-color);
     border-radius: var(--x-list-border-radius);
-    outline: var(--x-list-border-width) var(--x-list-border-style)
-      var(--x-list-border-color);
-    outline-offset: calc(-1 * var(--x-list-border-width));
+    outline-width: var(--x-list-outline-width);
+    outline-color: var(--x-list-outline-color);
+    outline-offset: var(--x-list-outline-offset);
     transition: opacity 0.2s ease;
     /* overflow:hidden is required on the container (not the inner scroll element)
        so that border-radius clips the content correctly. Without it, items near
@@ -27243,14 +27255,7 @@ const css$l = /* css */`
       outline-offset: calc(-1 * var(--list-outline-width)); */
     }
     &[data-focus-visible] {
-      outline-width: calc(var(--list-border-width) + var(--list-outline-width));
-      outline-color: var(--navi-focus-outline-color);
-      outline-offset: calc(
-        -1 * (var(--list-border-width) + var(--list-outline-width))
-      );
-      .navi_list {
-        outline: none;
-      }
+      outline-style: solid;
     }
 
     &[data-callout] {
@@ -27267,6 +27272,7 @@ const css$l = /* css */`
     padding: 0;
     flex-direction: column;
     list-style: none;
+    outline: none; /*  Focus is displayed on the container */
 
     /* Would create scrollbars, for now just hide the loader here */
     .navi_input {
@@ -29070,7 +29076,7 @@ const css$k = /* css */`
 
   .navi_input {
     /* outline will draw the border when visible */
-    --x-outline-width: var(--outline-width) + var(--border-width);
+    --x-outline-width: calc(var(--outline-width) + var(--border-width));
     --x-outline-offset: calc(-1 * var(--border-width));
     --left-slot-size: 0px;
     --right-slot-size: 0px;
@@ -31017,13 +31023,13 @@ installImportMetaCssBuild(import.meta);const css$f = /* css */`
   }
 
   .navi_select {
-    --x-select-background-color: var(--select-background-color);
-    --x-select-border-color: var(--select-border-color);
     /* outline will draw the border when visible */
     --x-select-outline-width: calc(
       var(--select-outline-width) + var(--select-border-width)
     );
     --x-select-outline-offset: calc(-1 * var(--select-border-width));
+    --x-select-background-color: var(--select-background-color);
+    --x-select-border-color: var(--select-border-color);
     --x-select-padding-top: var(
       --select-padding-top,
       var(--select-padding-y, var(--select-padding-y-default))

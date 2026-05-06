@@ -274,9 +274,11 @@ const css = /* css */ `
 
     /* Toggle appearance */
     &[data-appearance="toggle"] {
-      --toggle-outer-width: calc(
-        var(--toggle-width) + var(--toggle-padding) * 2
-      );
+      /* We compute ourselves the width + padding otherwise during 
+      translation subpixel rounding makes the thumb feels too much to the right by 1px */
+      box-sizing: content-box;
+      --toggle-outer-width: calc(var(--toggle-width) + var(--toggle-padding));
+
       --margin: var(--toggle-margin);
       --width: var(--toggle-outer-width);
       --height: unset;
@@ -316,7 +318,10 @@ const css = /* css */ `
       &[data-checked] {
         .navi_checkbox_toggle {
           transform: translateX(
-            calc(var(--toggle-width) - var(--toggle-thumb-size))
+            calc(
+              var(--toggle-width) - var(--toggle-thumb-size) +
+                var(--toggle-padding)
+            )
           );
         }
       }
