@@ -1,10 +1,10 @@
 import { useRef } from "preact/hooks";
 
 /**
- * Returns a ref callback that forwards the DOM node to `externalRef` if provided.
- * Always maintains an internal `.current` property pointing to the current DOM node.
+ * Returns either the external ref passed via props, or a local ref as fallback.
+ * Useful when a component needs to access its own DOM node but must also support
+ * an optional ref forwarded by the parent.
  */
-
 export const useElementRef = (externalRef) => {
   const elRef = useRef(null);
   return externalRef || elRef;
@@ -20,7 +20,6 @@ export const useElementRef = (externalRef) => {
  * @param {function} syncElement - Called with the DOM element when deps change
  * @param {Array} deps - syncElement is re-called only when deps change
  */
-
 export const useElementRefEffect = (externalRef, syncElement, deps) => {
   const cleanupRef = useRef(null);
   const elRef = useRef(null);
@@ -81,4 +80,3 @@ export const useElementRefEffect = (externalRef, syncElement, deps) => {
 
   return ref;
 };
-
