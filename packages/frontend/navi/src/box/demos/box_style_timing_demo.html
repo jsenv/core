@@ -7,6 +7,25 @@
   </head>
   <body>
     <div id="app"></div>
+    <div
+      id="counters"
+      style="
+        font-family: monospace;
+        font-size: 12px;
+        padding: 8px 24px;
+        background: #f0f0f0;
+        border-top: 1px solid #ccc;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        display: flex;
+        gap: 32px;
+      "
+    >
+      <span>native div ref calls: <strong id="counter-native">0</strong></span>
+      <span>Box ref calls: <strong id="counter-box">0</strong></span>
+    </div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState, useLayoutEffect, useRef } from "preact/hooks";
@@ -67,6 +86,20 @@
 
       const COLORS = ["#ff6b6b", "#4dabf7", "#69db7c", "#ffd43b", "#da77f2"];
 
+      const counterNativeEl = document.getElementById("counter-native");
+      let nativeRefCallCount = 0;
+      const nativeRef = () => {
+        nativeRefCallCount++;
+        counterNativeEl.textContent = nativeRefCallCount;
+      };
+
+      const counterBoxEl = document.getElementById("counter-box");
+      let boxRefCallCount = 0;
+      const boxRef = () => {
+        boxRefCallCount++;
+        counterBoxEl.textContent = boxRefCallCount;
+      };
+
       const Demo = () => {
         const [colorIndex, setColorIndex] = useState(0);
         const bg = COLORS[colorIndex];
@@ -125,6 +158,7 @@
                   Native Preact <code>style</code> prop
                 </h3>
                 <div
+                  ref={nativeRef}
                   style={{
                     backgroundColor: bg,
                     padding: "16px",
@@ -141,6 +175,7 @@
                   <code>{"<Box background>"}</code>
                 </h3>
                 <Box
+                  ref={boxRef}
                   background={bg}
                   style={{ padding: "16px", borderRadius: "6px" }}
                 >
