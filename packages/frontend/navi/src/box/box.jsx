@@ -86,6 +86,12 @@ import.meta.css = /* css */ `
     }
   }
 
+  /* We force a given display style using html attribute instead of inline style */
+  /* No particular reason for this, logic could be moved to inline style like the rest */
+  /* It was an attempt to see if attributes where a good candidate to set style based on props */
+  /* Actullay it's not that much as it make the attribute and CSS complexity explode */
+  /* For now it's kept here and must be outside layer navi to be able to override any given display
+  Set by navi itself on their default display */
   [navi-box-flow="inline"] {
     display: inline;
   }

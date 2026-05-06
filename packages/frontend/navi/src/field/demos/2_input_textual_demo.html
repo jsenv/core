@@ -194,14 +194,14 @@
               <Box column spacing="sm">
                 <fieldset>
                   <legend>Default</legend>
-                  <Box row spacing="sm" alignX="start">
+                  <Box flex="y" spacing="s" alignX="start">
                     <Input placeholder="Type here..." />
                     <input placeholder="Type here..." />
                   </Box>
                 </fieldset>
                 <fieldset>
                   <legend>:focus-visible</legend>
-                  <Box row spacing="sm" alignX="start">
+                  <Box flex="y" spacing="s" alignX="start">
                     <Input
                       placeholder="Focus me"
                       pseudoState={{ ":focus-visible": true }}
@@ -211,7 +211,7 @@
                 </fieldset>
                 <fieldset>
                   <legend>:read-only</legend>
-                  <Box row spacing="sm" alignX="start">
+                  <Box flex="y" spacing="s" alignX="start">
                     <Input value="Read-only content" />
                     <input readOnly value="Read-only content" />
                   </Box>

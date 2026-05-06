@@ -119,7 +119,7 @@ const css = /* css */ `
 
   .navi_input {
     /* outline will draw the border when visible */
-    --x-outline-width: var(--outline-width) + var(--border-width);
+    --x-outline-width: calc(var(--outline-width) + var(--border-width));
     --x-outline-offset: calc(-1 * var(--border-width));
     --left-slot-size: 0px;
     --right-slot-size: 0px;

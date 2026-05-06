@@ -88,7 +88,7 @@ const css = /* css */ `
       --background-color-disabled-checked: #d3d3d3;
 
       /* Toggle specific */
-      --toggle-margin: 2px;
+      --toggle-margin: 2px; /* Useful to reserve space for outline */
       --toggle-width: 2.5em;
       --toggle-thumb-size: 1.2em;
       /* Padding uses px and not em otherwise it can be resolved to a float which does not play well */
