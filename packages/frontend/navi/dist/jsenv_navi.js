@@ -29293,6 +29293,7 @@ const InputTextualUI = props => {
     autoFocusVisible,
     autoSelect,
     basePseudoState,
+    icon,
     children,
     ...rest
   } = props;
@@ -29361,44 +29362,46 @@ const InputTextualUI = props => {
   };
   const renderInputMemoized = useCallback(renderInput, [type, uiState, innerValue, innerId, autoFocus]);
   let innerChildren;
-  if (children) {
+  if (children === undefined) {
+    if (type === "search") {
+      innerChildren = jsxs(Fragment, {
+        children: [icon === undefined && jsx(InputLeftSlot, {
+          children: jsx(Icon, {
+            color: "rgba(28, 43, 52, 0.5)",
+            children: jsx(SearchSvg, {})
+          })
+        }), jsx(InputRightSlot, {
+          hideWhileEmpty: true,
+          onClick: () => {
+            uiStateController.setUIState("", {
+              trigger: "cancel_button"
+            });
+            ref.current.value = "";
+            ref.current.dispatchEvent(new Event("navi_delete_content"));
+          },
+          children: jsx(Icon, {
+            color: "rgba(28, 43, 52, 0.5)",
+            children: jsx(CloseSvg, {})
+          })
+        })]
+      });
+    } else if (type === "email") {
+      innerChildren = icon === undefined && jsx(InputLeftSlot, {
+        children: jsx(Icon, {
+          color: "rgba(28, 43, 52, 0.5)",
+          children: jsx(EmailSvg, {})
+        })
+      });
+    } else if (type === "tel") {
+      innerChildren = icon === undefined && jsx(InputLeftSlot, {
+        children: jsx(Icon, {
+          color: "rgba(28, 43, 52, 0.5)",
+          children: jsx(PhoneSvg, {})
+        })
+      });
+    }
+  } else {
     innerChildren = children;
-  } else if (type === "search") {
-    innerChildren = jsxs(Fragment, {
-      children: [jsx(InputLeftSlot, {
-        children: jsx(Icon, {
-          color: "rgba(28, 43, 52, 0.5)",
-          children: jsx(SearchSvg, {})
-        })
-      }), jsx(InputRightSlot, {
-        hideWhileEmpty: true,
-        onClick: () => {
-          uiStateController.setUIState("", {
-            trigger: "cancel_button"
-          });
-          ref.current.value = "";
-          ref.current.dispatchEvent(new Event("navi_delete_content"));
-        },
-        children: jsx(Icon, {
-          color: "rgba(28, 43, 52, 0.5)",
-          children: jsx(CloseSvg, {})
-        })
-      })]
-    });
-  } else if (type === "email") {
-    innerChildren = jsx(InputLeftSlot, {
-      children: jsx(Icon, {
-        color: "rgba(28, 43, 52, 0.5)",
-        children: jsx(EmailSvg, {})
-      })
-    });
-  } else if (type === "tel") {
-    innerChildren = jsx(InputLeftSlot, {
-      children: jsx(Icon, {
-        color: "rgba(28, 43, 52, 0.5)",
-        children: jsx(PhoneSvg, {})
-      })
-    });
   }
   return jsxs(Box, {
     as: "span",

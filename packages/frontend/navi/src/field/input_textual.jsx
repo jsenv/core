@@ -328,6 +328,7 @@ const InputTextualUI = (props) => {
     autoFocusVisible,
     autoSelect,
     basePseudoState,
+    icon,
     children,
 
     ...rest
@@ -409,46 +410,50 @@ const InputTextualUI = (props) => {
   ]);
 
   let innerChildren;
-  if (children) {
-    innerChildren = children;
-  } else if (type === "search") {
-    innerChildren = (
-      <>
+  if (children === undefined) {
+    if (type === "search") {
+      innerChildren = (
+        <>
+          {icon === undefined && (
+            <InputLeftSlot>
+              <Icon color="rgba(28, 43, 52, 0.5)">
+                <SearchSvg />
+              </Icon>
+            </InputLeftSlot>
+          )}
+          <InputRightSlot
+            hideWhileEmpty
+            onClick={() => {
+              uiStateController.setUIState("", { trigger: "cancel_button" });
+              ref.current.value = "";
+              ref.current.dispatchEvent(new Event("navi_delete_content"));
+            }}
+          >
+            <Icon color="rgba(28, 43, 52, 0.5)">
+              <CloseSvg />
+            </Icon>
+          </InputRightSlot>
+        </>
+      );
+    } else if (type === "email") {
+      innerChildren = icon === undefined && (
         <InputLeftSlot>
           <Icon color="rgba(28, 43, 52, 0.5)">
-            <SearchSvg />
+            <EmailSvg />
           </Icon>
         </InputLeftSlot>
-        <InputRightSlot
-          hideWhileEmpty
-          onClick={() => {
-            uiStateController.setUIState("", { trigger: "cancel_button" });
-            ref.current.value = "";
-            ref.current.dispatchEvent(new Event("navi_delete_content"));
-          }}
-        >
+      );
+    } else if (type === "tel") {
+      innerChildren = icon === undefined && (
+        <InputLeftSlot>
           <Icon color="rgba(28, 43, 52, 0.5)">
-            <CloseSvg />
+            <PhoneSvg />
           </Icon>
-        </InputRightSlot>
-      </>
-    );
-  } else if (type === "email") {
-    innerChildren = (
-      <InputLeftSlot>
-        <Icon color="rgba(28, 43, 52, 0.5)">
-          <EmailSvg />
-        </Icon>
-      </InputLeftSlot>
-    );
-  } else if (type === "tel") {
-    innerChildren = (
-      <InputLeftSlot>
-        <Icon color="rgba(28, 43, 52, 0.5)">
-          <PhoneSvg />
-        </Icon>
-      </InputLeftSlot>
-    );
+        </InputLeftSlot>
+      );
+    }
+  } else {
+    innerChildren = children;
   }
 
   return (
