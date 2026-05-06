@@ -89,7 +89,7 @@ const css = /* css */ `
 
       /* Toggle specific */
       --toggle-margin: 2px; /* Useful to reserve space for outline */
-      --toggle-width: 2.5em;
+      --toggle-width: 2em;
       --toggle-thumb-size: 1.2em;
       /* Padding uses px and not em otherwise it can be resolved to a float which does not play well */
       /* With the translation calc in some configurations. In the end 2px is nice in all sizes and can still be configured for exceptions */
