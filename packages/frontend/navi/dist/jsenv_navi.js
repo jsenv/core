@@ -6279,11 +6279,15 @@ const FLOW_PROPS = {
   inline: () => {},
   block: () => {},
   flex: () => {},
+  flexWrap: applyToCssPropWhenTruthy("flexWrap", "wrap", "nowrap"),
   grid: () => {},
   gridTemplateColumns: PASS_THROUGH,
   display: PASS_THROUGH, // in case people write "display: none" (even if hidden prop is recommended)
   row: () => {},
   column: () => {},
+
+  // not really related to flow but should be on the container element if any
+  pointerEvents: PASS_THROUGH,
 };
 const OUTER_SPACING_PROPS = {
   margin: PASS_THROUGH,
@@ -6567,6 +6571,7 @@ const TYPO_PROPS = {
   capitalize: applyToCssPropWhenTruthy("textTransform", "capitalize", "none"),
   uppercase: applyToCssPropWhenTruthy("textTransform", "uppercase", "none"),
   lowercase: applyToCssPropWhenTruthy("textTransform", "lowercase", "none"),
+  letterSpacing: PASS_THROUGH,
 };
 const VISUAL_PROPS = {
   outline: PASS_THROUGH,
@@ -6585,10 +6590,15 @@ const VISUAL_PROPS = {
   borderRight: PASS_THROUGH,
   borderBottom: PASS_THROUGH,
   borderWidth: PASS_THROUGH,
-  borderRadius: PASS_THROUGH,
   borderColor: PASS_THROUGH,
   borderStyle: PASS_THROUGH,
+  borderRadius: PASS_THROUGH,
+  borderTopLeftRadius: PASS_THROUGH,
+  borderTopRightRadius: PASS_THROUGH,
+  borderBottomLeftRadius: PASS_THROUGH,
+  borderBottomRightRadius: PASS_THROUGH,
   opacity: PASS_THROUGH,
+  visibility: PASS_THROUGH,
   filter: PASS_THROUGH,
   cursor: PASS_THROUGH,
   transition: PASS_THROUGH,
@@ -14596,15 +14606,16 @@ const RouteActive = ({
 };
 
 const routeAction = (
-  route,
+  routeOrRoutes,
   action,
   paramsEffect = () => true,
   options = {},
 ) => {
+  const routes = Array.isArray(routeOrRoutes) ? routeOrRoutes : [routeOrRoutes];
   const actionBoundToRoute = actionRunEffect(
     action,
     () => {
-      const matching = route.matchingSignal.value;
+      const matching = routes.some((route) => route.matchingSignal.value);
       const params = paramsEffect();
       if (!matching) {
         return null;

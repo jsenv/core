@@ -1,15 +1,16 @@
 import { actionRunEffect } from "../action/action_run_effect.js";
 
 export const routeAction = (
-  route,
+  routeOrRoutes,
   action,
   paramsEffect = () => true,
   options = {},
 ) => {
+  const routes = Array.isArray(routeOrRoutes) ? routeOrRoutes : [routeOrRoutes];
   const actionBoundToRoute = actionRunEffect(
     action,
     () => {
-      const matching = route.matchingSignal.value;
+      const matching = routes.some((route) => route.matchingSignal.value);
       const params = paramsEffect();
       if (!matching) {
         return null;
