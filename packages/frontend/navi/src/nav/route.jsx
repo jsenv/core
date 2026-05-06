@@ -79,10 +79,30 @@ const debug = (...args) => {
 // - route    → RouteLeafRoute (rendered by parent container when URL matches)
 // - fallback → RouteActive (rendered by parent container when no sibling matches)
 export const Route = (props) => {
-  if (props.children) return <RouteContainer {...props} />;
+  if (props.children) {
+    return <RouteContainer {...props} />;
+  }
   return <RouteLeaf {...props} />;
 };
+// RouteContainer: traverses children statically per render, finds the active branch,
+// and renders only that branch — or the fallback if nothing matches.
+// No effects, no signals, no contexts needed: reads route signals directly.
+const RouteContainer = ({ id, element, elementProps, children }) => {
+  const { activeBranch } = collectBranches(children);
 
+  debug(
+    `[container "${id}"] RENDER, active=${activeBranch ? activeBranch.type : "none"}`,
+  );
+
+  const content = activeBranch ? activeBranch.node : null;
+  if (!content) {
+    return null;
+  }
+  if (element) {
+    return h(element, elementProps, content);
+  }
+  return content;
+};
 // Walk JSX children vnodes (without rendering) to build a branch list and
 // find the active one in the same pass.
 // All children must be <Route> — throws in dev otherwise.
@@ -145,40 +165,24 @@ const collectBranches = (children) => {
   const activeBranch = matchingBranch || fallbackBranch || null;
   return { matchingBranch, fallbackBranch, activeBranch };
 };
-// RouteContainer: traverses children statically per render, finds the active branch,
-// and renders only that branch — or the fallback if nothing matches.
-// No effects, no signals, no contexts needed: reads route signals directly.
-const RouteContainer = ({ id, element, elementProps, children }) => {
-  const { activeBranch } = collectBranches(children);
-
-  debug(
-    `[container "${id}"] RENDER, active=${activeBranch ? activeBranch.type : "none"}`,
-  );
-
-  const content = activeBranch ? activeBranch.node : null;
-  if (!content) {
-    return null;
-  }
-  if (element) {
-    return h(element, elementProps, content);
-  }
-  return content;
-};
-
 const RouteLeaf = (props) => {
-  if (props.route) return <RouteLeafRoute {...props} />;
-  if (props.fallback) return <RouteLeafFallback {...props} />;
+  if (props.route) {
+    return <RouteLeafRoute {...props} />;
+  }
+  if (props.fallback) {
+    return <RouteLeafFallback {...props} />;
+  }
   // not supposed to happen?
-  return <RouteActive {...props} />;
+  return <RouteUI {...props} />;
 };
 const RouteLeafRoute = (props) => {
   useUITransitionContentId(props.route?.urlPattern);
-  return <RouteActive {...props} />;
+  return <RouteUI {...props} />;
 };
 const RouteLeafFallback = (props) => {
-  return <RouteActive {...props} />;
+  return <RouteUI {...props} />;
 };
-const RouteActive = ({ element, elementProps }) => {
+const RouteUI = ({ element, elementProps }) => {
   if (typeof element === "function") {
     return h(element, elementProps);
   }
