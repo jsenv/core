@@ -272,7 +272,6 @@ const css = /* css */ `
       --outline-offset: 0px;
       --width: auto;
       --height: auto;
-      --padding: 2px;
       --border-color: var(--button-border-color);
       --border-color-hover: var(--button-border-color-hover);
       --background-color: var(--button-background-color);
@@ -282,10 +281,34 @@ const css = /* css */ `
       --border-color-checked: var(--button-border-color);
       --background-color-checked: var(--button-background-color);
 
-      padding-top: var(--padding-top, var(--padding-y, var(--padding)));
-      padding-right: var(--padding-right, var(--padding-x, var(--padding)));
-      padding-bottom: var(--padding-bottom, var(--padding-y, var(--padding)));
-      padding-left: var(--padding-left, var(--padding-x, var(--padding)));
+      padding-top: var(
+        --button-padding-top,
+        var(
+          --button-padding-y,
+          var(--button-padding, var(--button-padding-y-default))
+        )
+      );
+      padding-right: var(
+        --button-padding-right,
+        var(
+          --button-padding-x,
+          var(--button-padding, var(--button-padding-x-default))
+        )
+      );
+      padding-bottom: var(
+        --button-padding-bottom,
+        var(
+          --button-padding-y,
+          var(--button-padding, var(--button-padding-y-default))
+        )
+      );
+      padding-left: var(
+        --button-padding-left,
+        var(
+          --button-padding-x,
+          var(--button-padding, var(--button-padding-x-default))
+        )
+      );
       align-items: center;
       justify-content: center;
       background-color: var(--x-background-color);
@@ -513,6 +536,9 @@ const InputRadioUI = (props) => {
   return (
     <Box
       as="span"
+      // Radio displayed as button are usually squarish
+      // (passsing any custom width/height would auto disable aspectRatio forced by the square prop)
+      square={appearance === "button" ? true : undefined}
       {...remainingProps}
       autoFocus={undefined} // See use_auto_focus.js
       ref={boxRef}
@@ -539,7 +565,7 @@ const InputRadioUI = (props) => {
         inset={-1}
         targetSelector=".navi_radio_field"
         color="var(--loader-color)"
-        borderRadius="50%"
+        borderRadius={appearance === "radio" ? "50%" : "inherit"}
       />
       {visualVNode}
       {renderRadioMemoized}
@@ -573,7 +599,13 @@ const RadioStyleCSSVars = {
 };
 const RadioButtonStyleCSSVars = {
   ...RadioStyleCSSVars,
-  "padding": "--padding",
+  "padding": "--button-padding",
+  "paddingX": "--button-padding-x",
+  "paddingY": "--button-padding-y",
+  "paddingTop": "--button-padding-top",
+  "paddingRight": "--button-padding-right",
+  "paddingBottom": "--button-padding-bottom",
+  "paddingLeft": "--button-padding-left",
   "borderRadius": "--button-border-radius",
   "borderWidth": "--button-border-width",
   "borderColor": "--button-border-color",

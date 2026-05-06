@@ -342,7 +342,6 @@ const css = /* css */ `
       --margin: 0;
       --width: auto;
       --height: auto;
-      --button-padding: 4px;
       --border-color: var(--button-border-color);
       --border-color-hover: var(--button-border-color-hover);
       --background-color: var(--button-background-color);
@@ -380,6 +379,8 @@ const css = /* css */ `
           var(--button-padding, var(--button-padding-x-default))
         )
       );
+      align-items: center;
+      justify-content: center;
     }
   }
 `;
@@ -545,6 +546,9 @@ const InputCheckboxUI = (props) => {
   return (
     <Box
       as="span"
+      // Checkbox displayed as button are usually squarish
+      // (passsing any custom width/height would auto disable aspectRatio forced by the square prop)
+      square={appearance === "button" ? true : undefined}
       {...remainingProps}
       autoFocus={undefined} // See use_auto_focus.js
       ref={boxRef}
