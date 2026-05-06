@@ -71,13 +71,13 @@ const css = /* css */ `
   }
 
   .navi_select {
-    --x-select-background-color: var(--select-background-color);
-    --x-select-border-color: var(--select-border-color);
     /* outline will draw the border when visible */
     --x-select-outline-width: calc(
       var(--select-outline-width) + var(--select-border-width)
     );
     --x-select-outline-offset: calc(-1 * var(--select-border-width));
+    --x-select-background-color: var(--select-background-color);
+    --x-select-border-color: var(--select-border-color);
     --x-select-padding-top: var(
       --select-padding-top,
       var(--select-padding-y, var(--select-padding-y-default))

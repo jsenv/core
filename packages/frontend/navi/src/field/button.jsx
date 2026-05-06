@@ -97,8 +97,9 @@ const css = /* css */ `
 
   .navi_button {
     /* outline will draw the border when visible */
-    --x-button-outline-width: var(--button-outline-width) +
-      var(--button-border-width);
+    --x-button-outline-width: calc(
+      var(--button-outline-width) + var(--button-border-width)
+    );
     --x-button-outline-offset: calc(-1 * var(--button-border-width));
     --x-button-border-color: var(--button-border-color);
     --x-button-background: var(--button-background);

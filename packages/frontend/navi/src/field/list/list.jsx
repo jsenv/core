@@ -94,8 +94,8 @@ const css = /* css */ `
       --list-outline-width: 1px;
       --list-border-radius: 4px;
       --list-border-width: 1px;
+      --list-outline-color: var(--navi-focus-outline-color);
       --list-border-color: light-dark(#ccc, #555);
-      --list-border-style: solid;
       --list-background-color: light-dark(#fff, #1e1e1e);
       --list-max-height: 220px;
     }
@@ -146,10 +146,13 @@ const css = /* css */ `
   }
 
   .navi_list_container {
+    --x-list-outline-width: calc(
+      var(--list-outline-width) + var(--list-border-width)
+    );
+    --x-list-outline-offset: calc(-1 * var(--list-border-width));
     --x-list-border-radius: var(--list-border-radius);
     --x-list-border-width: var(--list-border-width);
     --x-list-border-color: var(--list-border-color);
-    --x-list-border-style: var(--list-border-style);
     --x-list-background-color: var(--list-background-color);
     /* When typing inside an input browser tries to keep caret visible */
     /* For input within a sticky element inside a scrollable container */
@@ -170,14 +173,11 @@ const css = /* css */ `
     max-width: 100%;
     flex-direction: column;
     background-color: var(--x-list-background-color);
-    /* Use a transparent real border to reserve layout space, and draw the
-       visible border via outline (inset via negative offset). This way the
-       focus ring can simply widen the outline without shifting layout. */
-    border: var(--x-list-border-width) solid transparent;
+    border: var(--x-list-border-width) solid var(--x-list-border-color);
     border-radius: var(--x-list-border-radius);
-    outline: var(--x-list-border-width) var(--x-list-border-style)
-      var(--x-list-border-color);
-    outline-offset: calc(-1 * var(--x-list-border-width));
+    outline-width: var(--x-list-outline-width);
+    outline-color: var(--x-list-outline-color);
+    outline-offset: var(--x-list-outline-offset);
     transition: opacity 0.2s ease;
     /* overflow:hidden is required on the container (not the inner scroll element)
        so that border-radius clips the content correctly. Without it, items near
@@ -223,14 +223,7 @@ const css = /* css */ `
       outline-offset: calc(-1 * var(--list-outline-width)); */
     }
     &[data-focus-visible] {
-      outline-width: calc(var(--list-border-width) + var(--list-outline-width));
-      outline-color: var(--navi-focus-outline-color);
-      outline-offset: calc(
-        -1 * (var(--list-border-width) + var(--list-outline-width))
-      );
-      .navi_list {
-        outline: none;
-      }
+      outline-style: solid;
     }
 
     &[data-callout] {
@@ -247,6 +240,7 @@ const css = /* css */ `
     padding: 0;
     flex-direction: column;
     list-style: none;
+    outline: none; /*  Focus is displayed on the container */
 
     /* Would create scrollbars, for now just hide the loader here */
     .navi_input {

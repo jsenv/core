@@ -822,13 +822,11 @@
               <legend>Different Sizes</legend>
               <div className="button-group">
                 <Button
-                  size="sm"
+                  size="xxs"
                   onClick={() => setIsVisible(!isVisible)}
                   aria-label={isVisible ? "Hide content" : "Show content"}
                 >
-                  <Icon size="sm">
-                    {isVisible ? <EyeSvg /> : <EyeClosedSvg />}
-                  </Icon>
+                  <Icon>{isVisible ? <EyeSvg /> : <EyeClosedSvg />}</Icon>
                 </Button>
                 <Button
                   onClick={() => setIsVisible(!isVisible)}
@@ -837,13 +835,11 @@
                   <Icon>{isVisible ? <EyeSvg /> : <EyeClosedSvg />}</Icon>
                 </Button>
                 <Button
-                  size="lg"
+                  size="xl"
                   onClick={() => setIsVisible(!isVisible)}
                   aria-label={isVisible ? "Hide content" : "Show content"}
                 >
-                  <Icon size="lg">
-                    {isVisible ? <EyeSvg /> : <EyeClosedSvg />}
-                  </Icon>
+                  <Icon>{isVisible ? <EyeSvg /> : <EyeClosedSvg />}</Icon>
                 </Button>
               </div>
             </fieldset>
