@@ -1062,6 +1062,35 @@
                 </fieldset>
               </Box>
             </div>
+
+            <div className="states-section">
+              <div className="states-title">Toggle Padding</div>
+              <p className="states-description">
+                With a large padding the toggle keeps enough width to be
+                displayed correctly (min-width enforced).
+              </p>
+
+              <Box flex spacing="s">
+                <fieldset>
+                  <legend>Big Padding</legend>
+                  <Box flex="y" spacing="s" alignX="start" alignY="center">
+                    <Label flex alignY="center" spacing="s">
+                      <Input type="checkbox" appearance="toggle" padding="l" />
+                      Label
+                    </Label>
+                    <Label flex alignY="center" spacing="s">
+                      <Input
+                        type="checkbox"
+                        appearance="toggle"
+                        padding="l"
+                        defaultChecked
+                      />
+                      Label
+                    </Label>
+                  </Box>
+                </fieldset>
+              </Box>
+            </div>
           </div>
         );
       };
