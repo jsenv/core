@@ -11,38 +11,35 @@ export const useElementRef = (externalRef) => {
 };
 
 /**
- * Like useElementRef, but also calls `onElement(el)` when the element mounts
- * or when deps change. The return value of `onElement` is used as a cleanup
- * function called on unmount or before re-running.
+ * Keeps a DOM element in sync with `syncElement(el)` whenever deps change.
+ * - If element is already mounted: runs syncElement immediately during render.
+ * - If not yet mounted: runs syncElement in the ref callback when element arrives.
+ * - Calls cleanup (if returned by syncElement) before each re-run and on unmount.
  *
  * @param {function|object|null} externalRef - Optional ref to forward to
- * @param {function} onElement - Called with the DOM element on mount or when deps change
- * @param {Array} deps - onElement is re-called only when deps change (like useEffect deps)
+ * @param {function} syncElement - Called with the DOM element when deps change
+ * @param {Array} deps - syncElement is re-called only when deps change
  */
 
-export const useElementRefEffect = (externalRef, onElement, deps) => {
+export const useElementRefEffect = (externalRef, syncElement, deps) => {
   const cleanupRef = useRef(null);
   const elRef = useRef(null);
   const prevDepsRef = useRef(undefined);
 
-  const ref = (el) => {
-    elRef.current = el;
-    if (externalRef) {
-      if (typeof externalRef === "function") {
-        externalRef(el);
-      } else {
-        externalRef.current = el;
-      }
+  const runSync = (el) => {
+    if (cleanupRef.current) {
+      cleanupRef.current();
+      cleanupRef.current = null;
     }
-    if (!el) {
-      const cleanup = cleanupRef.current;
-      if (cleanup) {
-        cleanup();
-        cleanupRef.current = null;
-      }
-      prevDepsRef.current = undefined;
-      return;
+    prevDepsRef.current = deps;
+    const cleanup = syncElement(el);
+    if (typeof cleanup === "function") {
+      cleanupRef.current = cleanup;
     }
+  };
+
+  // If element already mounted, check deps and sync during render.
+  if (elRef.current) {
     const prevDeps = prevDepsRef.current;
     let depsChanged;
     if (!prevDeps || prevDeps.length !== deps.length) {
@@ -56,20 +53,32 @@ export const useElementRefEffect = (externalRef, onElement, deps) => {
         }
       }
     }
-    if (!depsChanged) {
-      return;
+    if (depsChanged) {
+      runSync(elRef.current);
     }
-    if (cleanupRef.current) {
-      cleanupRef.current();
-      cleanupRef.current = null;
+  }
+
+  const ref = (el) => {
+    elRef.current = el;
+    if (externalRef) {
+      if (typeof externalRef === "function") {
+        externalRef(el);
+      } else {
+        externalRef.current = el;
+      }
     }
-    prevDepsRef.current = deps;
-    const cleanup = onElement(el);
-    if (typeof cleanup === "function") {
-      cleanupRef.current = cleanup;
+    if (el) {
+      runSync(el);
+    } else {
+      if (cleanupRef.current) {
+        cleanupRef.current();
+        cleanupRef.current = null;
+      }
+      prevDepsRef.current = undefined;
     }
   };
   ref.current = elRef.current;
 
   return ref;
 };
+
