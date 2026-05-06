@@ -24,6 +24,7 @@ export const useElementRefEffect = (externalRef, syncElement, deps) => {
   const cleanupRef = useRef(null);
   const elRef = useRef(null);
   const prevDepsRef = useRef(undefined);
+  const refCallbackRef = useRef(null);
 
   const runSync = (el) => {
     if (cleanupRef.current) {
@@ -57,26 +58,29 @@ export const useElementRefEffect = (externalRef, syncElement, deps) => {
     }
   }
 
-  const ref = (el) => {
-    elRef.current = el;
-    if (externalRef) {
-      if (typeof externalRef === "function") {
-        externalRef(el);
+  if (!refCallbackRef.current) {
+    refCallbackRef.current = (el) => {
+      elRef.current = el;
+      if (externalRef) {
+        if (typeof externalRef === "function") {
+          externalRef(el);
+        } else {
+          externalRef.current = el;
+        }
+      }
+      if (el) {
+        runSync(el);
       } else {
-        externalRef.current = el;
+        if (cleanupRef.current) {
+          cleanupRef.current();
+          cleanupRef.current = null;
+        }
+        prevDepsRef.current = undefined;
       }
-    }
-    if (el) {
-      runSync(el);
-    } else {
-      if (cleanupRef.current) {
-        cleanupRef.current();
-        cleanupRef.current = null;
-      }
-      prevDepsRef.current = undefined;
-    }
-  };
-  ref.current = elRef.current;
+    };
+  }
 
-  return ref;
+  const refCallback = refCallbackRef.current;
+  refCallback.current = elRef.current;
+  return refCallback;
 };
