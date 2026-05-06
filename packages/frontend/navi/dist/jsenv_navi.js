@@ -1,5 +1,5 @@
 import { installImportMetaCssBuild } from "./jsenv_navi_side_effects.js";
-import { isValidElement, createContext, h, options, toChildArray, render, cloneElement } from "preact";
+import { isValidElement, createContext, h, toChildArray, render, cloneElement } from "preact";
 import { useErrorBoundary, useLayoutEffect, useEffect, useContext, useMemo, useRef, useState, useCallback, useImperativeHandle, useId } from "preact/hooks";
 import { jsxs, jsx, Fragment } from "preact/jsx-runtime";
 import { signal, effect, computed, batch, useSignal } from "@preact/signals";
@@ -8041,72 +8041,42 @@ const updateStyle = (element, style, preventInitialTransition) => {
   styleKeySetWeakMap.set(element, styleKeySet);
 };
 
-// Implementation notes:
-//
-// options.__r fires before each component render — we capture the current
-// component instance (vnode.__c) so useEarlyDOMEffect can register itself.
-//
-// options.__c (commitRoot) fires after refs are assigned and before any
-// useLayoutEffect runs. We flush all pending effects there.
-// The DOM node is read from component.__v.__e (vnode → root DOM node),
-// which Preact sets during diffing, before options.__c fires.
-//
-// stateMap (WeakMap) stores { cleanup, deps } per component instance.
-// It's auto-GC'd when a component is destroyed; options.unmount also
-// deletes entries eagerly to release cleanup functions sooner.
-//
-// pendingMap (Map) holds effects registered during the current render pass.
-// It is always fully cleared in options.__c — bounded to one commit, no leak.
-
 /**
- * Like useLayoutEffect, but runs before any layout effect in the commit —
- * including those of descendant components.
+ * Keeps a DOM element in sync with `syncElement(el)` whenever deps change.
+ * - If element is already mounted: runs syncElement immediately during render.
+ * - If not yet mounted: runs syncElement in the ref callback when element arrives.
+ * - Calls cleanup (if returned by syncElement) before each re-run and on unmount.
  *
- * Use this when a parent needs to mutate the DOM (e.g. apply styles) so that
- * children can read those mutations in their own useLayoutEffect.
- *
- * The DOM node of the component is passed as the first argument to fn.
- * The effect is skipped if no DOM node is found (e.g. on a fragment root).
- *
- * Supports deps and cleanup return, same as useLayoutEffect.
+ * @param {function|object|null} externalRef - Optional ref to forward to
+ * @param {function} syncElement - Called with the DOM element when deps change
+ * @param {Array} deps - syncElement is re-called only when deps change
  */
-const useEarlyDOMEffect = (fn, deps, { needDOMNode = true } = {}) => {
-  const component = _currentComponent;
-  if (component) {
-    pendingMap.set(component, { fn, deps, needDOMNode });
-  }
-};
+const useElementRefEffect = (externalRef, syncElement, deps) => {
+  const cleanupRef = useRef(null);
+  const elRef = useRef(null);
+  const prevDepsRef = useRef(undefined);
+  const refCallbackRef = useRef(null);
 
-// Populated during render, consumed + cleared in options.__c each commit.
-const pendingMap = new Map(); // component → { fn, deps, ref }
-
-// Persists across commits. WeakMap → no leak when component is destroyed.
-const stateMap = new WeakMap(); // component → { cleanup, deps }
-
-let _currentComponent = null;
-const _prevBeforeRender = options.__r;
-options.__r = (vnode) => {
-  _currentComponent = vnode.__c;
-  if (_prevBeforeRender) {
-    _prevBeforeRender(vnode);
-  }
-};
-
-const _prevCommit = options.__c;
-options.__c = (root, commitQueue) => {
-  for (const [component, { fn, deps, needDOMNode }] of pendingMap) {
-    // component.__v is the component's vnode; __e is its root DOM node.
-    // Both are set during diff, before options.__c fires.
-    const element = component.__v && component.__v.__e;
-    if (needDOMNode && !element) {
-      continue;
+  const runSync = (el) => {
+    if (cleanupRef.current) {
+      cleanupRef.current();
+      cleanupRef.current = null;
     }
-    const prev = stateMap.get(component);
-    const prevDeps = prev ? prev.deps : undefined;
+    prevDepsRef.current = deps;
+    const cleanup = syncElement(el);
+    if (typeof cleanup === "function") {
+      cleanupRef.current = cleanup;
+    }
+  };
+
+  // If element already mounted, check deps and sync during render.
+  if (elRef.current) {
+    const prevDeps = prevDepsRef.current;
     let depsChanged;
-    if (!prevDeps || !deps || prevDeps.length !== deps.length) {
+    if (!prevDeps || prevDeps.length !== deps.length) {
       depsChanged = true;
     } else {
+      depsChanged = false;
       for (let i = 0; i < deps.length; i++) {
         if (!Object.is(deps[i], prevDeps[i])) {
           depsChanged = true;
@@ -8115,35 +8085,35 @@ options.__c = (root, commitQueue) => {
       }
     }
     if (depsChanged) {
-      if (prev && prev.cleanup) {
-        prev.cleanup();
-      }
-      const result = fn(element);
-      const cleanup = typeof result === "function" ? result : undefined;
-      stateMap.set(component, { cleanup, deps });
+      runSync(elRef.current);
     }
   }
-  pendingMap.clear();
-  if (_prevCommit) {
-    _prevCommit(root, commitQueue);
-  }
-};
 
-const _prevUnmount = options.unmount;
-options.unmount = (vnode) => {
-  const component = vnode.__c;
-  if (component) {
-    const state = stateMap.get(component);
-    if (state && state.cleanup) {
-      state.cleanup();
-    }
-    // stateMap is a WeakMap so the entry is GC'd automatically,
-    // but deleting explicitly releases the cleanup fn sooner.
-    stateMap.delete(component);
+  if (!refCallbackRef.current) {
+    refCallbackRef.current = (el) => {
+      elRef.current = el;
+      if (externalRef) {
+        if (typeof externalRef === "function") {
+          externalRef(el);
+        } else {
+          externalRef.current = el;
+        }
+      }
+      if (el) {
+        runSync(el);
+      } else {
+        if (cleanupRef.current) {
+          cleanupRef.current();
+          cleanupRef.current = null;
+        }
+        prevDepsRef.current = undefined;
+      }
+    };
   }
-  if (_prevUnmount) {
-    _prevUnmount(vnode);
-  }
+
+  const refCallback = refCallbackRef.current;
+  refCallback.current = elRef.current;
+  return refCallback;
 };
 
 installImportMetaCssBuild(import.meta);/**
@@ -8323,8 +8293,7 @@ const Box = props => {
     separator,
     ...rest
   } = props;
-  const defaultRef = useRef();
-  const ref = props.ref || defaultRef;
+  let ref;
   const TagName = as;
   const defaultDisplay = getDefaultDisplay(TagName);
   // Read the parent flow early so we can use it when display="inherit" is requested.
@@ -8677,9 +8646,7 @@ const Box = props => {
         styleDeps.push(...pseudoClasses);
       }
     }
-    // TODO: just use ref function, it will be called same time as early dom effect + give the dom node + be standard
-    // we need to implent our styleDeps tracking but that's likely very easy
-    useEarlyDOMEffect(boxEl => {
+    ref = useElementRefEffect(props.ref, boxEl => {
       const pseudoStateEl = pseudoStateSelector ? boxEl.querySelector(pseudoStateSelector) : boxEl;
       const visualEl = visualSelector ? boxEl.querySelector(visualSelector) : null;
       return initPseudoStyles(pseudoStateEl, {
