@@ -14,20 +14,18 @@
 
       // Register service worker — serves SVG images at ./image_demo_asset?theme=&delay=
       const swReadyPromise = (async () => {
-        const registration =
-          await window.navigator.serviceWorker.register("./image_demo_sw.js");
-        await registration.update();
-        if (registration.active) {
+        await window.navigator.serviceWorker.register("./image_demo_sw.js");
+        if (window.navigator.serviceWorker.controller) {
           return;
         }
-        const sw = registration.installing || registration.waiting;
         await new Promise((resolve) => {
-          sw.addEventListener("statechange", function onStateChange() {
-            if (sw.state === "activated") {
-              sw.removeEventListener("statechange", onStateChange);
-              resolve();
-            }
-          });
+          window.navigator.serviceWorker.addEventListener(
+            "controllerchange",
+            resolve,
+            {
+              once: true,
+            },
+          );
         });
       })();
 
@@ -39,36 +37,40 @@
 
       const THEMES = ["light", "dark", "colorful"];
 
+      const ReloadButton = ({ onClick }) => (
+        <button
+          onClick={onClick}
+          style={{
+            alignSelf: "flex-start",
+            padding: "4px 12px",
+            fontSize: "14px",
+            cursor: "pointer",
+            borderRadius: "4px",
+            border: "1px solid #adb5bd",
+            background: "#f8f9fa",
+          }}
+        >
+          Reload
+        </button>
+      );
+
       const NoHeightSection = ({ delay, theme }) => {
         const [key, setKey] = useState(0);
         return (
           <section
-            style={{ display: "flex", flexDirection: "column", gap: "12px" }}
+            style={{ display: "flex", flexDirection: "column", gap: "8px" }}
           >
             <h3 style={{ margin: 0 }}>Without height — layout shift</h3>
-            <p style={{ margin: 0, fontSize: "14px", color: "#555" }}>
-              No height is set. The page shifts when the image loads.
-            </p>
-            <button
-              onClick={() => setKey((k) => k + 1)}
-              style={{
-                alignSelf: "flex-start",
-                padding: "6px 14px",
-                fontSize: "14px",
-                cursor: "pointer",
-                borderRadius: "4px",
-                border: "1px solid #adb5bd",
-                background: "#f8f9fa",
-              }}
-            >
-              Reload
-            </button>
+            <ReloadButton onClick={() => setKey((k) => k + 1)} />
             <Image
               key={key}
               src={`./image_demo_asset?theme=${theme}&delay=${delay}&v=${key}`}
               alt="Demo image without height"
-              width="400px"
+              width="200px"
             />
+            <p style={{ margin: 0, fontSize: "14px" }}>
+              Text after the image — it shifts down when the image loads.
+            </p>
           </section>
         );
       };
@@ -77,33 +79,20 @@
         const [key, setKey] = useState(0);
         return (
           <section
-            style={{ display: "flex", flexDirection: "column", gap: "12px" }}
+            style={{ display: "flex", flexDirection: "column", gap: "8px" }}
           >
             <h3 style={{ margin: 0 }}>With height — no layout shift</h3>
-            <p style={{ margin: 0, fontSize: "14px", color: "#555" }}>
-              Height is set explicitly. Space is reserved while the image loads.
-            </p>
-            <button
-              onClick={() => setKey((k) => k + 1)}
-              style={{
-                alignSelf: "flex-start",
-                padding: "6px 14px",
-                fontSize: "14px",
-                cursor: "pointer",
-                borderRadius: "4px",
-                border: "1px solid #adb5bd",
-                background: "#f8f9fa",
-              }}
-            >
-              Reload
-            </button>
+            <ReloadButton onClick={() => setKey((k) => k + 1)} />
             <Image
               key={key}
               src={`./image_demo_asset?theme=${theme}&delay=${delay}&v=${key}`}
               alt="Demo image with height"
-              width="400px"
-              height="300px"
+              width="200px"
+              height="150px"
             />
+            <p style={{ margin: 0, fontSize: "14px" }}>
+              Text after the image — it stays in place while the image loads.
+            </p>
           </section>
         );
       };
@@ -146,23 +135,23 @@
                   style={{
                     display: "flex",
                     alignItems: "center",
-                    gap: "24px",
+                    gap: "16px",
                     flexWrap: "wrap",
+                    fontSize: "14px",
                   }}
                 >
                   <label
                     style={{
                       display: "flex",
                       alignItems: "center",
-                      gap: "8px",
-                      fontSize: "14px",
+                      gap: "6px",
                     }}
                   >
                     Loading speed:
                     <select
                       value={speed}
                       onChange={(e) => setSpeed(e.target.value)}
-                      style={{ fontSize: "14px", padding: "4px 8px" }}
+                      style={{ fontSize: "14px" }}
                     >
                       <option value="fast">fast (0.1s)</option>
                       <option value="normal">normal (0.5s)</option>
@@ -173,15 +162,14 @@
                     style={{
                       display: "flex",
                       alignItems: "center",
-                      gap: "8px",
-                      fontSize: "14px",
+                      gap: "6px",
                     }}
                   >
                     Image:
                     <select
                       value={theme}
                       onChange={(e) => setTheme(e.target.value)}
-                      style={{ fontSize: "14px", padding: "4px 8px" }}
+                      style={{ fontSize: "14px" }}
                     >
                       {THEMES.map((t) => (
                         <option key={t} value={t}>

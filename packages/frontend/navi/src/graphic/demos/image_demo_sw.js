@@ -7,28 +7,28 @@ self.addEventListener("activate", (event) => {
 });
 
 const IMAGES = {
-  light: `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300">
-  <rect width="400" height="300" fill="#f0f4f8"/>
-  <circle cx="200" cy="130" r="60" fill="#cbd5e1"/>
-  <circle cx="200" cy="130" r="36" fill="#f0f4f8"/>
-  <rect x="120" y="210" width="160" height="16" rx="8" fill="#cbd5e1"/>
-  <rect x="155" y="238" width="90" height="10" rx="5" fill="#e2e8f0"/>
+  light: `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="150" viewBox="0 0 200 150">
+  <rect width="200" height="150" fill="#f0f4f8"/>
+  <circle cx="100" cy="65" r="30" fill="#cbd5e1"/>
+  <circle cx="100" cy="65" r="18" fill="#f0f4f8"/>
+  <rect x="60" y="105" width="80" height="8" rx="4" fill="#cbd5e1"/>
+  <rect x="77" y="119" width="46" height="5" rx="2.5" fill="#e2e8f0"/>
 </svg>`,
 
-  dark: `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300">
-  <rect width="400" height="300" fill="#1e293b"/>
-  <circle cx="200" cy="130" r="60" fill="#334155"/>
-  <circle cx="200" cy="130" r="36" fill="#1e293b"/>
-  <rect x="120" y="210" width="160" height="16" rx="8" fill="#334155"/>
-  <rect x="155" y="238" width="90" height="10" rx="5" fill="#253347"/>
+  dark: `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="150" viewBox="0 0 200 150">
+  <rect width="200" height="150" fill="#1e293b"/>
+  <circle cx="100" cy="65" r="30" fill="#334155"/>
+  <circle cx="100" cy="65" r="18" fill="#1e293b"/>
+  <rect x="60" y="105" width="80" height="8" rx="4" fill="#334155"/>
+  <rect x="77" y="119" width="46" height="5" rx="2.5" fill="#253347"/>
 </svg>`,
 
-  colorful: `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300">
-  <rect width="400" height="300" fill="#fdf4ff"/>
-  <circle cx="200" cy="130" r="60" fill="#e879f9"/>
-  <circle cx="200" cy="130" r="36" fill="#fdf4ff"/>
-  <rect x="120" y="210" width="160" height="16" rx="8" fill="#c026d3"/>
-  <rect x="155" y="238" width="90" height="10" rx="5" fill="#e879f9"/>
+  colorful: `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="150" viewBox="0 0 200 150">
+  <rect width="200" height="150" fill="#fdf4ff"/>
+  <circle cx="100" cy="65" r="30" fill="#e879f9"/>
+  <circle cx="100" cy="65" r="18" fill="#fdf4ff"/>
+  <rect x="60" y="105" width="80" height="8" rx="4" fill="#c026d3"/>
+  <rect x="77" y="119" width="46" height="5" rx="2.5" fill="#e879f9"/>
 </svg>`,
 };
 
