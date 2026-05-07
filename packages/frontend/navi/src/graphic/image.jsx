@@ -17,12 +17,22 @@ const css = /* css */ `
         linear-gradient(
           105deg,
           transparent 30%,
-          color-mix(in srgb, var(--placeholder-color) 0%, white 18%) 50%,
+          color-mix(
+              in srgb,
+              var(--placeholder-color) 0%,
+              var(--placeholder-shimmer-color) 14%
+            )
+            50%,
           transparent 70%
         ),
         radial-gradient(
           ellipse at 40% 40%,
-          color-mix(in srgb, var(--placeholder-color) 60%, white 40%) 0%,
+          color-mix(
+              in srgb,
+              var(--placeholder-color) 70%,
+              var(--placeholder-shimmer-color) 30%
+            )
+            0%,
           var(--placeholder-color) 70%
         );
       background-size:
@@ -33,14 +43,15 @@ const css = /* css */ `
   }
 `;
 
-const DEFAULT_PLACEHOLDER_LIGHT = "#c8cdd4";
+const DEFAULT_PLACEHOLDER_LIGHT = "#d4d8dd";
 const DEFAULT_PLACEHOLDER_DARK = "#374151";
 
 /**
  * @param {string|false} [props.placeholderColor] - Background color shown while the image loads.
  *   Defaults to a light gray. Pass `false` to disable.
  * @param {boolean} [props.placeholderDark] - Use a dark default placeholder color,
- *   suited for images displayed on a dark background.
+ *   suited for images displayed on a dark background. Also switches the shimmer
+ *   highlight to mix with black instead of white.
  */
 export const Image = ({
   placeholderColor,
@@ -65,6 +76,7 @@ export const Image = ({
       navi-placeholder={loadedRef.current ? undefined : ""}
       style={{
         "--placeholder-color": resolvedPlaceholder || undefined,
+        "--placeholder-shimmer-color": placeholderDark ? "black" : "white",
         ...rest.style,
       }}
       onLoad={(e) => {
