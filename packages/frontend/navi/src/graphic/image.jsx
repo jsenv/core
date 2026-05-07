@@ -3,19 +3,32 @@ import { useRef } from "preact/hooks";
 import { Box } from "../box/box.jsx";
 
 const css = /* css */ `
-  @keyframes navi_image_placeholder_pulse {
-    0%,
-    100% {
-      opacity: 1;
+  @keyframes navi_image_shimmer {
+    0% {
+      background-position: -200% 0;
     }
-    50% {
-      opacity: 0.5;
+    100% {
+      background-position: 200% 0;
     }
   }
   .navi_image {
     &[navi-placeholder] {
-      background-color: var(--placeholder-color);
-      animation: navi_image_placeholder_pulse 1.5s ease-in-out infinite;
+      background-image:
+        linear-gradient(
+          105deg,
+          transparent 30%,
+          color-mix(in srgb, var(--placeholder-color) 0%, white 18%) 50%,
+          transparent 70%
+        ),
+        radial-gradient(
+          ellipse at 40% 40%,
+          color-mix(in srgb, var(--placeholder-color) 60%, white 40%) 0%,
+          var(--placeholder-color) 70%
+        );
+      background-size:
+        200% 100%,
+        100% 100%;
+      animation: navi_image_shimmer 2s linear infinite;
     }
   }
 `;
