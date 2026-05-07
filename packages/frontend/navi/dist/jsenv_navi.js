@@ -5450,15 +5450,18 @@ const stateSignal = (defaultValue, options = {}) => {
       }
       return value;
     }
-    if (debug) {
-      console.debug(`[stateSignal:${signalIdString}] validation failed`, {
-        value,
-        min,
-        max,
-        step,
-        oneOf,
-        hasAutoFix: Boolean(validity.validSuggestion),
-      });
+
+    const hasAutoFix = Boolean(validity.validSuggestion);
+    if (hasAutoFix) {
+      if (debug) {
+        console.debug(
+          `[stateSignal:${signalIdString}] validation failed: ${validity.message}`,
+        );
+      }
+    } else {
+      console.warn(
+        `[stateSignal:${signalIdString}] validation failed with no valid suggestion: ${validity.message}`,
+      );
     }
     if (validity.validSuggestion) {
       const validValue = validity.validSuggestion.value;

@@ -9,8 +9,9 @@
 - [dynamic_default_with_static_fallback](5_dynamic_default_with_static_fallback/5_dynamic_default_with_static_fallback.md)
 - [static_fallback_with_user_override](6_static_fallback_with_user_override/6_static_fallback_with_user_override.md)
 - [static_fallback_dynamic_changes](7_static_fallback_dynamic_changes/7_static_fallback_dynamic_changes.md)
-- [static_fallback_without_dynamic](8_static_fallback_without_dynamic/8_static_fallback_without_dynamic.md)
-- [static_fallback_with_persistence](9_static_fallback_with_persistence/9_static_fallback_with_persistence.md)
+- [array_type](8_array_type/8_array_type.md)
+- [static_fallback_without_dynamic](9_static_fallback_without_dynamic/9_static_fallback_without_dynamic.md)
+- [static_fallback_with_persistence](10_static_fallback_with_persistence/10_static_fallback_with_persistence.md)
 
 ---
 

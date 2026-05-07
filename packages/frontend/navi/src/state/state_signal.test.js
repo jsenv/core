@@ -197,6 +197,43 @@ await snapshotTests(import.meta.url, ({ test }) => {
     };
   });
 
+  test("array_type", () => {
+    clearSignalRegistry();
+    const sig = stateSignal([], {
+      id: "array_signal",
+      type: "array",
+    });
+
+    const initialValue = sig.value;
+    const initialValid = sig.validity.valid;
+
+    // Set to a valid array
+    sig.value = [1, 2, 3];
+    const valueAfterSet = sig.value;
+    const validAfterSet = sig.validity.valid;
+
+    // Set to an object — should be invalid
+    sig.value = { key: "value" };
+    const validAfterObject = sig.validity.valid;
+    const typeErrorAfterObject = sig.validity.type;
+
+    // Auto-fix from JSON string
+    sig.value = "[4, 5, 6]";
+    const validAfterString = sig.validity.valid;
+    const suggestionAfterString = sig.validity.validSuggestion;
+
+    return {
+      initialValue,
+      initialValid,
+      valueAfterSet,
+      validAfterSet,
+      validAfterObject,
+      typeErrorAfterObject,
+      validAfterString,
+      suggestionAfterString,
+    };
+  });
+
   test("static_fallback_without_dynamic", () => {
     clearSignalRegistry();
     // Test that static fallback option is ignored when not using dynamic default
