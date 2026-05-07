@@ -1,6 +1,6 @@
 import { useRef } from "preact/hooks";
 
-import { LoadingDots } from "../graphic/loader/loading_dots.jsx";
+import { LoadingDotsSvg } from "../graphic/loading/loading_dots_svg.jsx";
 import { useAccentColorAttributes } from "../utils/use_accent_color_attributes.js";
 import { withPropsClassName } from "../utils/with_props_class_name.js";
 import { formatNumber } from "./format_number.js";
@@ -250,7 +250,7 @@ const BadgeCountEllipse = ({
     >
       {loading ? (
         <Icon>
-          <LoadingDots />
+          <LoadingDotsSvg />
         </Icon>
       ) : (
         children
@@ -285,7 +285,7 @@ const BadgeCountCircle = ({
     >
       {loading ? (
         <Icon>
-          <LoadingDots />
+          <LoadingDotsSvg />
         </Icon>
       ) : (
         <span className="navi_badge_count_text">{children}</span>

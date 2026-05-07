@@ -1,4 +1,4 @@
-export const LoadingDots = () => {
+export const LoadingDotsSvg = () => {
   return (
     <svg
       viewBox="0 0 200 200"

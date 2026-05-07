@@ -1,4 +1,4 @@
-import { LoadingDots } from "../graphic/loader/loading_dots.jsx";
+import { LoadingDotsSvg } from "../graphic/loading/loading_dots_svg.jsx";
 import { formatNumber } from "./format_number.js";
 import { Icon } from "./icon.jsx";
 import { createIntl } from "./intl.js";
@@ -143,8 +143,8 @@ export const Quantity = ({
       >
         <span className="navi_quantity_value">
           {loading ? (
-            <Icon flowInline>
-              <LoadingDots />
+            <Icon inline>
+              <LoadingDotsSvg />
             </Icon>
           ) : (
             valueFormatted
