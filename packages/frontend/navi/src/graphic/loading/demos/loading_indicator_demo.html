@@ -12,7 +12,15 @@
       import { useState } from "preact/hooks";
       import { LoadingIndicator } from "@jsenv/navi";
 
-      const Cell = ({ label, width, height, children }) => (
+      const COLORS = [
+        { label: "dark", value: "#383a36" },
+        { label: "blue", value: "#4dabf7" },
+        { label: "green", value: "#69db7c" },
+        { label: "red", value: "#ff6b6b" },
+        { label: "purple", value: "#da77f2" },
+      ];
+
+      const Cell = ({ label, width, height, radius, children }) => (
         <div
           style={{
             display: "flex",
@@ -27,7 +35,7 @@
               width: `${width}px`,
               height: `${height}px`,
               border: "1px dashed #ccc",
-              borderRadius: "inherit",
+              borderRadius: radius ? `${radius}px` : undefined,
             }}
           >
             {children}
@@ -41,8 +49,7 @@
       );
 
       const Demo = () => {
-        const [visible, setVisible] = useState(true);
-        const [color, setColor] = useState("#383a36");
+        const [color, setColor] = useState(COLORS[0].value);
 
         return (
           <div
@@ -57,26 +64,37 @@
             <h2 style={{ margin: 0 }}>LoadingIndicator</h2>
 
             <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-              <label
-                style={{ display: "flex", alignItems: "center", gap: "8px" }}
-              >
-                <input
-                  type="checkbox"
-                  checked={visible}
-                  onChange={(e) => setVisible(e.target.checked)}
-                />
-                shouldShowSpinner
-              </label>
-              <label
-                style={{ display: "flex", alignItems: "center", gap: "8px" }}
-              >
-                Color:
-                <input
-                  type="color"
-                  value={color}
-                  onInput={(e) => setColor(e.target.value)}
-                />
-              </label>
+              <span style={{ fontSize: "14px" }}>Color:</span>
+              {COLORS.map(({ label, value }) => (
+                <label
+                  key={value}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    cursor: "pointer",
+                  }}
+                >
+                  <input
+                    type="radio"
+                    name="color"
+                    value={value}
+                    checked={color === value}
+                    onChange={() => setColor(value)}
+                  />
+                  <span
+                    style={{
+                      display: "inline-block",
+                      width: "14px",
+                      height: "14px",
+                      borderRadius: "50%",
+                      background: value,
+                      border: "1px solid rgba(0,0,0,0.15)",
+                    }}
+                  />
+                  {label}
+                </label>
+              ))}
             </div>
 
             <div
@@ -88,47 +106,46 @@
               }}
             >
               <Cell label="200×60 rectangle" width={200} height={60}>
-                <LoadingIndicator shouldShowSpinner={visible} color={color} />
+                <LoadingIndicator color={color} />
               </Cell>
 
               <Cell label="120×120 square" width={120} height={120}>
-                <LoadingIndicator
-                  shouldShowSpinner={visible}
-                  color={color}
-                  radius={60}
-                />
+                <LoadingIndicator color={color} />
               </Cell>
 
-              <Cell label="200×120 rounded" width={200} height={120}>
-                <LoadingIndicator
-                  shouldShowSpinner={visible}
-                  color={color}
-                  radius={16}
-                />
+              <Cell
+                label="200×120 rounded (radius=16)"
+                width={200}
+                height={120}
+                radius={16}
+              >
+                <LoadingIndicator color={color} radius={16} />
               </Cell>
 
-              <Cell label="80×80 circle" width={80} height={80}>
-                <LoadingIndicator
-                  shouldShowSpinner={visible}
-                  color={color}
-                  radius={40}
-                />
+              <Cell
+                label="80×80 circle (radius=40)"
+                width={80}
+                height={80}
+                radius={40}
+              >
+                <LoadingIndicator color={color} radius={40} />
               </Cell>
 
-              <Cell label="300×48 pill" width={300} height={48}>
-                <LoadingIndicator
-                  shouldShowSpinner={visible}
-                  color={color}
-                  radius={24}
-                />
+              <Cell
+                label="300×48 pill (radius=24)"
+                width={300}
+                height={48}
+                radius={24}
+              >
+                <LoadingIndicator color={color} radius={24} />
               </Cell>
 
               <Cell label="size=4" width={160} height={80}>
-                <LoadingIndicator
-                  shouldShowSpinner={visible}
-                  color={color}
-                  size={4}
-                />
+                <LoadingIndicator color={color} size={4} />
+              </Cell>
+
+              <Cell label="radius=inherit" width={160} height={80} radius={20}>
+                <LoadingIndicator color={color} radius="inherit" />
               </Cell>
             </div>
           </div>
