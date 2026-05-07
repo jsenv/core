@@ -64,9 +64,7 @@
                     color: "#383a36",
                   }}
                 >
-                  {loading && (
-                    <LoadingIndicator circle width="1em" height="1em" />
-                  )}
+                  {loading && <LoadingIndicator />}
                   Saving changes…
                 </div>
                 <div
@@ -78,9 +76,7 @@
                     color: "#4dabf7",
                   }}
                 >
-                  {loading && (
-                    <LoadingIndicator circle width="1em" height="1em" />
-                  )}
+                  {loading && <LoadingIndicator />}
                   <span style={{ color: "#4dabf7" }}>Syncing data…</span>
                 </div>
                 <div
@@ -92,9 +88,7 @@
                     color: "#ff6b6b",
                   }}
                 >
-                  {loading && (
-                    <LoadingIndicator circle width="1em" height="1em" />
-                  )}
+                  {loading && <LoadingIndicator />}
                   <span style={{ color: "#ff6b6b" }}>Uploading file…</span>
                 </div>
               </div>
@@ -123,12 +117,7 @@
                 }}
               >
                 {loading ? (
-                  <LoadingIndicator
-                    circle
-                    width="48px"
-                    height="48px"
-                    color="#4dabf7"
-                  />
+                  <LoadingIndicator height="48px" color="#4dabf7" />
                 ) : (
                   <span style={{ color: "#555" }}>Content loaded ✓</span>
                 )}
