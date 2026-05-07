@@ -19645,16 +19645,16 @@ const LoadingIndicatorFluid = ({
     if (!indicatorEl) {
       return null;
     }
-    if (radius === undefined || radius === "inherit") {
-      const radius = getComputedStyle(indicatorEl).borderRadius;
-      setContainerRadius(radius);
-    }
     const {
       width,
       height
     } = indicatorEl.getBoundingClientRect();
     setContainerWidth(width);
     setContainerHeight(height);
+    if (radius === undefined || radius === "inherit") {
+      const radius = getComputedStyle(indicatorEl).borderRadius;
+      setContainerRadius(radius);
+    }
     let animationFrameId = null;
     // Create a resize observer to detect changes in the container's dimensions
     const resizeObserver = new ResizeObserver(entries => {
@@ -19775,6 +19775,7 @@ const LoadingRectangleSvg = ({
     style: "overflow: visible",
     xmlns: "http://www.w3.org/2000/svg",
     "shape-rendering": "geometricPrecision",
+    "data-radius": radius,
     children: [isCircle ? jsx("circle", {
       cx: margin + drawableWidth / 2,
       cy: margin + drawableHeight / 2,

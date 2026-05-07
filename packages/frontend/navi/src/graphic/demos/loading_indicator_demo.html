@@ -155,6 +155,28 @@
         );
       };
 
+      const InParagraphSection = ({ loading, variant }) => {
+        return (
+          <section
+            style={{ display: "flex", flexDirection: "column", gap: "12px" }}
+          >
+            <h3 style={{ margin: 0 }}>Inside a title</h3>
+            <h2
+              style={{
+                margin: 0,
+                display: "flex",
+                alignItems: "center",
+                gap: "12px",
+                fontFamily: "sans-serif",
+              }}
+            >
+              My Dashboard
+              {loading && <LoadingIndicator variant={variant} />}
+            </h2>
+          </section>
+        );
+      };
+
       const Demo = () => {
         const [loading, setLoading] = useState(true);
         const [variant, setVariant] = useState("circle");
@@ -214,6 +236,7 @@
             </div>
 
             <InlineWithTextSection loading={loading} variant={variant} />
+            <InParagraphSection loading={loading} variant={variant} />
             <ColorOverrideSection loading={loading} variant={variant} />
             <BlockLoadingSection loading={loading} variant={variant} />
           </div>
