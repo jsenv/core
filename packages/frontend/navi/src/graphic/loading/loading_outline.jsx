@@ -2,7 +2,7 @@ import { createPortal } from "preact/compat";
 import { useRef } from "preact/hooks";
 
 import { useDebounceTrue } from "../../utils/use_debounce_true.js";
-import { LoadingIndicator } from "./loading_indicator.jsx";
+import { LoadingIndicatorFluid } from "./loading_indicator_fluid.jsx";
 
 const css = /* css */ `
   .navi_loading_outline_wrapper {
@@ -47,7 +47,7 @@ const LoadingOutlineUI = (props) => {
     targetSelector,
     color,
     borderWidth = 0,
-    borderRadius = 0,
+    radius,
     spacingTop = 0,
     spacingRight = 0,
     spacingBottom = 0,
@@ -109,10 +109,10 @@ const LoadingOutlineUI = (props) => {
         It conveys it was busy
         */}
         {loading && (
-          <LoadingIndicator
+          <LoadingIndicatorFluid
             hidden={!shouldShowSpinner}
+            radius={radius}
             color={color}
-            radius={borderRadius}
             size={size}
           />
         )}
@@ -130,7 +130,7 @@ const LoadingOutlineWithPortal = (props) => {
     loading,
     color,
     inset = 0,
-    borderRadius = 0,
+    radius,
     spacingTop = 0,
     spacingRight = 0,
     spacingBottom = 0,
@@ -164,7 +164,7 @@ const LoadingOutlineWithPortal = (props) => {
         }}
       >
         {shouldShowSpinner && (
-          <LoadingIndicator color={color} radius={borderRadius} />
+          <LoadingIndicatorFluid color={color} radius={radius} />
         )}
       </div>
       {children}

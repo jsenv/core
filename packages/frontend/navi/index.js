@@ -173,6 +173,7 @@ export { Title, useTitleLevel } from "./src/text/title.jsx";
 // Graphics
 export { Image } from "./src/graphic/image.jsx";
 export { LoadingIndicator } from "./src/graphic/loading/loading_indicator.jsx";
+export { LoadingIndicatorFluid } from "./src/graphic/loading/loading_indicator_fluid.jsx";
 export { Svg } from "./src/graphic/svg.jsx";
 export { SVGMaskOverlay } from "./src/graphic/svg_mask_overlay.jsx";
 
