@@ -64,8 +64,7 @@
             <ReloadButton onClick={() => setKey((k) => k + 1)} />
             <Image
               key={key}
-              src={`./image_demo_asset?theme=${theme}&delay=${delay}&v=${key}`}
-              alt="Demo image without height"
+              src={`./image_demo_asset?section=no-height&theme=${theme}&delay=${delay}&v=${key}`}
               width="200px"
             />
             <p style={{ margin: 0, fontSize: "14px" }}>
@@ -85,8 +84,7 @@
             <ReloadButton onClick={() => setKey((k) => k + 1)} />
             <Image
               key={key}
-              src={`./image_demo_asset?theme=${theme}&delay=${delay}&v=${key}`}
-              alt="Demo image with height"
+              src={`./image_demo_asset?section=with-height&theme=${theme}&delay=${delay}&v=${key}`}
               width="200px"
               height="150px"
             />
