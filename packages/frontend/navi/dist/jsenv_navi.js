@@ -5312,7 +5312,6 @@ const generateSignalId = () => {
  * const childTab = stateSignal(parentTab);
  * // childTab follows parentTab changes unless explicitly set
  */
-const NO_LOCAL_STORAGE = [() => undefined, () => {}, () => {}];
 const stateSignal = (defaultValue, options = {}) => {
   const {
     id,
@@ -5670,6 +5669,7 @@ const stateSignal = (defaultValue, options = {}) => {
   return facadeSignal;
 };
 
+const NO_LOCAL_STORAGE = [() => undefined, () => {}, () => {}];
 const localStorageTypeMap = {
   float: "number",
   integer: "number",
