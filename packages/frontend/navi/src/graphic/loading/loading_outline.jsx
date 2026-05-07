@@ -13,11 +13,11 @@ const css = /* css */ `
     left: var(--loading-rectangle-left, 0);
     z-index: 1;
     border-radius: inherit;
-    opacity: 0;
     pointer-events: none;
 
-    &[data-visible] {
-      opacity: 1;
+    &[hidden] {
+      display: block;
+      opacity: 0;
     }
   }
 `;
@@ -92,7 +92,7 @@ const LoadingOutlineUI = (props) => {
       <span
         ref={rectangleRef}
         className="navi_loading_outline_wrapper"
-        data-visible={shouldShowSpinner ? "" : undefined}
+        hidden={!shouldShowSpinner}
         style={{
           "--loading-rectangle-top": `${insetTop}px`,
           "--loading-rectangle-right": `${insetRight}px`,
@@ -110,7 +110,7 @@ const LoadingOutlineUI = (props) => {
         */}
         {loading && (
           <LoadingIndicator
-            shouldShowSpinner={shouldShowSpinner}
+            hidden={!shouldShowSpinner}
             color={color}
             radius={borderRadius}
             size={size}

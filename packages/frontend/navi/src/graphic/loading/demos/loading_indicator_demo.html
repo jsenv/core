@@ -1,0 +1,141 @@
+<!doctype html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>LoadingIndicator Demo</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useState } from "preact/hooks";
+      import { LoadingIndicator } from "@jsenv/navi";
+
+      const Cell = ({ label, width, height, children }) => (
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: "8px",
+          }}
+        >
+          <div
+            style={{
+              position: "relative",
+              width: `${width}px`,
+              height: `${height}px`,
+              border: "1px dashed #ccc",
+              borderRadius: "inherit",
+            }}
+          >
+            {children}
+          </div>
+          <span
+            style={{ fontSize: "12px", color: "#888", fontFamily: "monospace" }}
+          >
+            {label}
+          </span>
+        </div>
+      );
+
+      const Demo = () => {
+        const [visible, setVisible] = useState(true);
+        const [color, setColor] = useState("#383a36");
+
+        return (
+          <div
+            style={{
+              fontFamily: "sans-serif",
+              padding: "32px",
+              display: "flex",
+              flexDirection: "column",
+              gap: "32px",
+            }}
+          >
+            <h2 style={{ margin: 0 }}>LoadingIndicator</h2>
+
+            <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+              <label
+                style={{ display: "flex", alignItems: "center", gap: "8px" }}
+              >
+                <input
+                  type="checkbox"
+                  checked={visible}
+                  onChange={(e) => setVisible(e.target.checked)}
+                />
+                shouldShowSpinner
+              </label>
+              <label
+                style={{ display: "flex", alignItems: "center", gap: "8px" }}
+              >
+                Color:
+                <input
+                  type="color"
+                  value={color}
+                  onInput={(e) => setColor(e.target.value)}
+                />
+              </label>
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: "32px",
+                alignItems: "flex-end",
+              }}
+            >
+              <Cell label="200×60 rectangle" width={200} height={60}>
+                <LoadingIndicator shouldShowSpinner={visible} color={color} />
+              </Cell>
+
+              <Cell label="120×120 square" width={120} height={120}>
+                <LoadingIndicator
+                  shouldShowSpinner={visible}
+                  color={color}
+                  radius={60}
+                />
+              </Cell>
+
+              <Cell label="200×120 rounded" width={200} height={120}>
+                <LoadingIndicator
+                  shouldShowSpinner={visible}
+                  color={color}
+                  radius={16}
+                />
+              </Cell>
+
+              <Cell label="80×80 circle" width={80} height={80}>
+                <LoadingIndicator
+                  shouldShowSpinner={visible}
+                  color={color}
+                  radius={40}
+                />
+              </Cell>
+
+              <Cell label="300×48 pill" width={300} height={48}>
+                <LoadingIndicator
+                  shouldShowSpinner={visible}
+                  color={color}
+                  radius={24}
+                />
+              </Cell>
+
+              <Cell label="size=4" width={160} height={80}>
+                <LoadingIndicator
+                  shouldShowSpinner={visible}
+                  color={color}
+                  size={4}
+                />
+              </Cell>
+            </div>
+          </div>
+        );
+      };
+
+      render(<Demo />, document.getElementById("app"));
+    </script>
+  </body>
+</html>

@@ -1,20 +1,3 @@
-/**
- * RectangleLoading Component
- *
- * A responsive loading indicator that dynamically adjusts to fit its container.
- * Displays an animated outline with a traveling dot that follows the container's shape.
- *
- * Features:
- * - Adapts to any container dimensions using ResizeObserver
- * - Scales stroke width, margins and corner radius proportionally
- * - Animates using native SVG animations for smooth performance
- * - High-quality SVG rendering with proper path calculations
- *
- * @param {Object} props - Component props
- * @param {string} [props.color="#383a36"] - Color of the loading indicator
- * @param {number} [props.radius=0] - Corner radius of the rectangle (px)
- */
-
 import { resolveCSSSize } from "@jsenv/dom";
 import { useLayoutEffect, useRef, useState } from "preact/hooks";
 
@@ -27,26 +10,37 @@ const css = /* css */ `
     width: 100%;
     height: 100%;
     border-radius: inherit;
-    opacity: 0;
+    opacity: 1;
 
-    &[data-visible] {
-      opacity: 1;
+    &[hidden] {
+      display: flex;
+      opacity: 0;
     }
   }
 `;
 
+/**
+ * An animated loading indicator that fills its container and traces its outline.
+ *
+ * Adapts to any container shape: rectangle, rounded rectangle, or circle.
+ * Uses ResizeObserver to stay in sync with container dimensions to maintain svg crispness.
+ *
+ * @param {string} [props.color="currentColor"] - Stroke color
+ * @param {number|"inherit"} [props.radius] - Corner radius in px. When omitted or "inherit", reads border-radius from the context.
+ * @param {number} [props.size=2] - Stroke width in px
+ */
 export const LoadingIndicator = ({
-  shouldShowSpinner,
   color = "currentColor",
-  radius = 0,
+  radius,
   size = 2,
+  ...rest
 }) => {
   import.meta.css = css;
   const ref = useRef(null);
   // The container dimensions can be deduced from the ref itself as the indicator is absolute inset 0
   const [containerWidth, setContainerWidth] = useState(0);
   const [containerHeight, setContainerHeight] = useState(0);
-  const [containerRadius, setContainerRadius] = useState(radius);
+  const [containerRadius, setContainerRadius] = useState(0);
 
   useLayoutEffect(() => {
     const indicatorEl = ref.current;
@@ -54,8 +48,10 @@ export const LoadingIndicator = ({
       return null;
     }
 
-    const radius = getComputedStyle(indicatorEl).borderRadius;
-    setContainerRadius(radius);
+    if (radius === undefined || radius === "inherit") {
+      const radius = getComputedStyle(indicatorEl).borderRadius;
+      setContainerRadius(radius);
+    }
     const { width, height } = indicatorEl.getBoundingClientRect();
     setContainerWidth(width);
     setContainerHeight(height);
@@ -84,11 +80,7 @@ export const LoadingIndicator = ({
   }, []);
 
   return (
-    <span
-      ref={ref}
-      className="navi_loading_indicator"
-      data-visible={shouldShowSpinner ? "" : undefined}
-    >
+    <span {...rest} ref={ref} className="navi_loading_indicator">
       {containerWidth > 0 && containerHeight > 0 && (
         <RectangleLoadingSvg
           color={color}
