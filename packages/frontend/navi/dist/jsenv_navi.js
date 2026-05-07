@@ -6612,6 +6612,7 @@ const VISUAL_PROPS = {
       overflowWrap: "normal",
     };
   },
+  objectFit: PASS_THROUGH,
   accentColor: PASS_THROUGH,
 };
 const CONTENT_PROPS = {
@@ -16303,7 +16304,7 @@ installImportMetaCssBuild(import.meta);
  * - Centers in viewport when no anchor element provided or anchor is too big
  */
 
-const css$B = /* css */`
+const css$E = /* css */`
   @layer navi {
     .navi_callout {
       --callout-success-color: #4caf50;
@@ -16477,7 +16478,7 @@ const openCallout = (message, {
   showErrorStack,
   debug = false
 } = {}) => {
-  import.meta.css = [css$B, "@jsenv/navi/src/field/validation/callout/callout.js"];
+  import.meta.css = [css$E, "@jsenv/navi/src/field/validation/callout/callout.js"];
   const callout = {
     opened: true,
     close: null,
@@ -19603,53 +19604,55 @@ const setupNetworkMonitoring = () => {
 };
 setupNetworkMonitoring();
 
-installImportMetaCssBuild(import.meta);/**
- * RectangleLoading Component
- *
- * A responsive loading indicator that dynamically adjusts to fit its container.
- * Displays an animated outline with a traveling dot that follows the container's shape.
- *
- * Features:
- * - Adapts to any container dimensions using ResizeObserver
- * - Scales stroke width, margins and corner radius proportionally
- * - Animates using native SVG animations for smooth performance
- * - High-quality SVG rendering with proper path calculations
- *
- * @param {Object} props - Component props
- * @param {string} [props.color="#383a36"] - Color of the loading indicator
- * @param {number} [props.radius=0] - Corner radius of the rectangle (px)
- */
-import.meta.css = [/* css */`
-  .navi_rectangle_loading {
+installImportMetaCssBuild(import.meta);const css$D = /* css */`
+  .navi_loading_indicator_fluid_container {
     position: relative;
     display: flex;
     width: 100%;
     height: 100%;
-    opacity: 0;
-  }
-
-  .navi_rectangle_loading[data-visible] {
+    border-radius: inherit;
     opacity: 1;
+
+    &[hidden] {
+      display: flex;
+      opacity: 0;
+    }
   }
-`, "@jsenv/navi/src/graphic/loader/rectangle_loading.jsx"];
-const RectangleLoading = ({
-  shouldShowSpinner,
+`;
+
+/**
+ * A loading indicator that fills its container, adapting to its shape like water.
+ * Reads border-radius from the container (or accepts an explicit `radius` prop).
+ *
+ * @param {string} [props.color="currentColor"] - Stroke color
+ * @param {number|"inherit"} [props.radius] - Corner radius in px. When omitted, reads border-radius from the container.
+ * @param {number} [props.size=2] - Stroke width in px
+ */
+const LoadingIndicatorFluid = ({
   color = "currentColor",
-  radius = 0,
-  size = 2
+  size = 2,
+  radius,
+  ...rest
 }) => {
-  const containerRef = useRef(null);
+  import.meta.css = [css$D, "@jsenv/navi/src/graphic/loading/loading_indicator_fluid.jsx"];
+  const ref = useRef(null);
+  // The container dimensions can be deduced from the ref itself as the indicator is absolute inset 0
   const [containerWidth, setContainerWidth] = useState(0);
   const [containerHeight, setContainerHeight] = useState(0);
+  const [containerRadius, setContainerRadius] = useState(0);
   useLayoutEffect(() => {
-    const container = containerRef.current;
-    if (!container) {
+    const indicatorEl = ref.current;
+    if (!indicatorEl) {
       return null;
+    }
+    if (radius === undefined || radius === "inherit") {
+      const radius = getComputedStyle(indicatorEl).borderRadius;
+      setContainerRadius(radius);
     }
     const {
       width,
       height
-    } = container.getBoundingClientRect();
+    } = indicatorEl.getBoundingClientRect();
     setContainerWidth(width);
     setContainerHeight(height);
     let animationFrameId = null;
@@ -19669,7 +19672,7 @@ const RectangleLoading = ({
         setContainerHeight(height);
       });
     });
-    resizeObserver.observe(container);
+    resizeObserver.observe(indicatorEl);
     return () => {
       if (animationFrameId) {
         cancelAnimationFrame(animationFrameId);
@@ -19678,19 +19681,19 @@ const RectangleLoading = ({
     };
   }, []);
   return jsx("span", {
-    ref: containerRef,
-    className: "navi_rectangle_loading",
-    "data-visible": shouldShowSpinner ? "" : undefined,
-    children: containerWidth > 0 && containerHeight > 0 && jsx(RectangleLoadingSvg, {
-      radius: radius,
+    ...rest,
+    ref: ref,
+    className: "navi_loading_indicator_fluid_container",
+    children: containerWidth > 0 && containerHeight > 0 && jsx(LoadingRectangleSvg, {
       color: color,
+      radius: containerRadius,
       width: containerWidth,
       height: containerHeight,
       strokeWidth: size
     })
   });
 };
-const RectangleLoadingSvg = ({
+const LoadingRectangleSvg = ({
   width,
   height,
   color,
@@ -19818,173 +19821,144 @@ const RectangleLoadingSvg = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
-  .navi_loading_rectangle_wrapper {
+installImportMetaCssBuild(import.meta);const css$C = /* css */`
+  .navi_loading_outline_wrapper {
     position: absolute;
-    top: var(--rectangle-top, 0);
-    right: var(--rectangle-right, 0);
-    bottom: var(--rectangle-bottom, 0);
-    left: var(--rectangle-left, 0);
+    top: var(--loading-rectangle-top, 0);
+    right: var(--loading-rectangle-right, 0);
+    bottom: var(--loading-rectangle-bottom, 0);
+    left: var(--loading-rectangle-left, 0);
     z-index: 1;
-    opacity: 0;
+    border-radius: inherit;
     pointer-events: none;
 
-    &[data-visible] {
-      opacity: 1;
+    &[hidden] {
+      display: block;
+      opacity: 0;
     }
   }
-`, "@jsenv/navi/src/graphic/loader/loader_background.jsx"];
-const LoaderBackground = ({
-  loading,
-  containerRef,
-  targetSelector,
-  color,
-  inset = 0,
-  borderRadius = 0,
-  spacingTop = 0,
-  spacingLeft = 0,
-  spacingBottom = 0,
-  spacingRight = 0,
-  children
-}) => {
-  if (containerRef) {
-    const container = containerRef.current;
+`;
+const LoadingOutline = props => {
+  import.meta.css = [css$C, "@jsenv/navi/src/graphic/loading/loading_outline.jsx"];
+  if (props.containerRef) {
+    const container = props.containerRef.current;
     if (!container) {
-      return children;
+      return props.children;
     }
-    return createPortal(jsx(LoaderBackgroundWithPortal, {
+    return createPortal(jsx(LoadingOutlineWithPortal, {
       container: container,
-      loading: loading,
-      color: color,
-      inset: inset,
-      spacingTop: spacingTop,
-      spacingLeft: spacingLeft,
-      spacingBottom: spacingBottom,
-      spacingRight: spacingRight,
-      children: children
+      ...props,
+      containerRef: undefined
     }), container);
   }
-  return jsx(LoaderBackgroundBasic, {
-    targetSelector: targetSelector,
-    loading: loading,
-    color: color,
-    inset: inset,
-    borderRadius: borderRadius,
-    spacingTop: spacingTop,
-    spacingLeft: spacingLeft,
-    spacingBottom: spacingBottom,
-    spacingRight: spacingRight,
-    children: children
+  return jsx(LoadingOutlineUI, {
+    ...props
   });
 };
-const LoaderBackgroundWithPortal = ({
-  container,
-  loading,
-  color,
-  inset,
-  borderRadius,
-  spacingTop,
-  spacingLeft,
-  spacingBottom,
-  spacingRight,
-  children
-}) => {
-  const shouldShowSpinner = useDebounceTrue(loading, 300);
-  if (!shouldShowSpinner) {
-    return children;
-  }
-  container.style.position = "relative";
-  let paddingTop = 0;
-  if (container.nodeName === "DETAILS") {
-    paddingTop = container.querySelector("summary").offsetHeight;
-  }
-  return jsxs(Fragment, {
-    children: [jsx("div", {
-      style: {
-        position: "absolute",
-        top: `${inset + paddingTop + spacingTop}px`,
-        bottom: `${inset + spacingBottom}px`,
-        left: `${inset + spacingLeft}px`,
-        right: `${inset + spacingRight}px`
-      },
-      children: shouldShowSpinner && jsx(RectangleLoading, {
-        color: color,
-        radius: borderRadius
-      })
-    }), children]
-  });
-};
-const LoaderBackgroundBasic = ({
-  loading,
-  targetSelector,
-  color,
-  borderWidth = 0,
-  borderRadius = 0,
-  spacingTop,
-  spacingLeft,
-  spacingBottom,
-  spacingRight,
-  marginTop = 0,
-  marginLeft = 0,
-  marginBottom = 0,
-  marginRight = 0,
-  paddingTop = 0,
-  paddingLeft = 0,
-  paddingBottom = 0,
-  paddingRight = 0,
-  inset,
-  children
-}) => {
+const LoadingOutlineUI = props => {
+  const {
+    loading,
+    targetSelector,
+    color,
+    borderWidth = 0,
+    radius,
+    spacingTop = 0,
+    spacingRight = 0,
+    spacingBottom = 0,
+    spacingLeft = 0,
+    marginTop = 0,
+    marginRight = 0,
+    marginBottom = 0,
+    marginLeft = 0,
+    paddingTop = 0,
+    paddingRight = 0,
+    paddingBottom = 0,
+    paddingLeft = 0,
+    inset = 0,
+    children
+  } = props;
   const shouldShowSpinner = useDebounceTrue(loading, 300);
   const rectangleRef = useRef(null);
-  spacingTop += inset;
-  // spacingTop += outlineOffset;
-  // spacingTop -= borderTopWidth;
-  spacingTop += marginTop;
-  spacingLeft += inset;
-  // spacingLeft += outlineOffset;
-  // spacingLeft -= borderLeftWidth;
-  spacingLeft += marginLeft;
-  spacingRight += inset;
-  // spacingRight += outlineOffset;
-  // spacingRight -= borderRightWidth;
-  spacingRight += marginRight;
-  spacingBottom += inset;
-  // spacingBottom += outlineOffset;
-  // spacingBottom -= borderBottomWidth;
-  spacingBottom += marginBottom;
+  let insetTop = inset + spacingTop + marginTop;
+  let insetRight = inset + spacingRight + marginRight;
+  let insetBottom = inset + spacingBottom + marginBottom;
+  let insetLeft = inset + spacingLeft + marginLeft;
   if (targetSelector) {
     // oversimplification that actually works
     // (simplified because it assumes the targeted element is a direct child of the contained element which may have padding)
-    spacingTop += paddingTop;
-    spacingLeft += paddingLeft;
-    spacingRight += paddingRight;
-    spacingBottom += paddingBottom;
+    insetTop += paddingTop;
+    insetRight += paddingBottom;
+    insetBottom += paddingRight;
+    insetLeft += paddingLeft;
   }
   const maxBorderWidth = Math.max(borderWidth);
   const halfMaxBorderSize = maxBorderWidth / 2;
   const size = halfMaxBorderSize < 2 ? 2 : halfMaxBorderSize;
   const lineHalfSize = size / 2;
-  spacingTop -= lineHalfSize;
-  spacingLeft -= lineHalfSize;
-  spacingRight -= lineHalfSize;
-  spacingBottom -= lineHalfSize;
+  insetTop -= lineHalfSize;
+  insetRight -= lineHalfSize;
+  insetBottom -= lineHalfSize;
+  insetLeft -= lineHalfSize;
   return jsxs(Fragment, {
     children: [jsx("span", {
       ref: rectangleRef,
-      className: "navi_loading_rectangle_wrapper",
-      "data-visible": shouldShowSpinner ? "" : undefined,
+      className: "navi_loading_outline_wrapper",
+      hidden: !shouldShowSpinner,
       style: {
-        "--rectangle-top": `${spacingTop}px`,
-        "--rectangle-left": `${spacingLeft}px`,
-        "--rectangle-bottom": `${spacingBottom}px`,
-        "--rectangle-right": `${spacingRight}px`
+        "--loading-rectangle-top": `${insetTop}px`,
+        "--loading-rectangle-right": `${insetRight}px`,
+        "--loading-rectangle-bottom": `${insetBottom}px`,
+        "--loading-rectangle-left": `${insetLeft}px`
       },
-      children: loading && jsx(RectangleLoading, {
-        shouldShowSpinner: shouldShowSpinner,
+      children: loading && jsx(LoadingIndicatorFluid, {
+        hidden: !shouldShowSpinner,
+        radius: radius,
         color: color,
-        radius: borderRadius,
         size: size
+      })
+    }), children]
+  });
+};
+
+// Not actually used anymore.
+// Now all UI have a common wrapper that can be used to display the loading indicator without needing a container portal.
+const LoadingOutlineWithPortal = props => {
+  const {
+    container,
+    loading,
+    color,
+    inset = 0,
+    radius,
+    spacingTop = 0,
+    spacingRight = 0,
+    spacingBottom = 0,
+    spacingLeft = 0,
+    children
+  } = props;
+  const shouldShowSpinner = useDebounceTrue(loading, 300);
+  if (!shouldShowSpinner) {
+    return children;
+  }
+  container.style.position = "relative";
+  let insetTop = inset + spacingTop;
+  let insetRight = inset + spacingRight;
+  let insetBottom = inset + spacingBottom;
+  let insetLeft = inset + spacingLeft;
+  if (container.nodeName === "DETAILS") {
+    insetTop += container.querySelector("summary").offsetHeight;
+  }
+  return jsxs(Fragment, {
+    children: [jsx("div", {
+      className: "navi_loading_outline_wrapper",
+      style: {
+        "--loading-rectangle-top": `${insetTop}px`,
+        "--loading-rectangle-right": `${insetRight}px`,
+        "--loading-rectangle-bottom": `${insetBottom}px`,
+        "--loading-rectangle-left": `${insetLeft}px`
+      },
+      children: shouldShowSpinner && jsx(LoadingIndicatorFluid, {
+        color: color,
+        radius: radius
       })
     }), children]
   });
@@ -20811,7 +20785,7 @@ const selectByTextStrings = (element, range, startText, endText) => {
 };
 
 installImportMetaCssBuild(import.meta);// https://jsfiddle.net/v5xzJ/4/
-const css$A = /* css */`
+const css$B = /* css */`
   @layer navi {
     .navi_text {
       &[data-skeleton] {
@@ -21210,7 +21184,7 @@ const TextDispatcher = props => {
   });
 };
 const TextUI = props => {
-  import.meta.css = [css$A, "@jsenv/navi/src/text/text.jsx"];
+  import.meta.css = [css$B, "@jsenv/navi/src/text/text.jsx"];
   let {
     ref,
     spacing,
@@ -21382,7 +21356,7 @@ const TextWithSelectRange = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$z = /* css */`
+installImportMetaCssBuild(import.meta);const css$A = /* css */`
   .navi_text_anchor {
     vertical-align: baseline;
     user-select: none;
@@ -21417,7 +21391,7 @@ const TextAnchor = ({
   textSize,
   lineLayout
 }) => {
-  import.meta.css = [css$z, "@jsenv/navi/src/text/text_anchor.jsx"];
+  import.meta.css = [css$A, "@jsenv/navi/src/text/text_anchor.jsx"];
   const anchorRef = useRef();
   const setTopOffset = (childEl, topOffset) => {
     // position:relative + top shifts the element visually.
@@ -21519,7 +21493,7 @@ const computeTopOffset = ({
 };
 const charTopCanvas = document.createElement("canvas");
 
-installImportMetaCssBuild(import.meta);const css$y = /* css */`
+installImportMetaCssBuild(import.meta);const css$z = /* css */`
   @layer navi {
     /* Ensure data attributes from box.jsx can win to update display */
     .navi_icon {
@@ -21592,7 +21566,7 @@ const Icon = ({
   lineLayout,
   ...props
 }) => {
-  import.meta.css = [css$y, "@jsenv/navi/src/text/icon.jsx"];
+  import.meta.css = [css$z, "@jsenv/navi/src/text/icon.jsx"];
   const innerChildren = href ? jsx("svg", {
     width: "100%",
     height: "100%",
@@ -22544,7 +22518,7 @@ const useUIState = (uiStateController) => {
   return trackedUIState;
 };
 
-installImportMetaCssBuild(import.meta);const css$x = /* css */`
+installImportMetaCssBuild(import.meta);const css$y = /* css */`
   @layer navi {
     .navi_button {
       --button-border-radius: 2px;
@@ -22830,7 +22804,7 @@ const ButtonDispatcher = props => {
   });
 };
 const ButtonUI = props => {
-  import.meta.css = [css$x, "@jsenv/navi/src/field/button.jsx"];
+  import.meta.css = [css$y, "@jsenv/navi/src/field/button.jsx"];
   const {
     ref,
     readOnly,
@@ -22930,7 +22904,7 @@ const ButtonUI = props => {
     },
     visualSelector: visualSelector,
     hasChildFunction: true,
-    children: [jsx(LoaderBackground, {
+    children: [jsx(LoadingOutline, {
       loading: innerLoading,
       inset: -1,
       color: "var(--button-loader-color)"
@@ -23155,7 +23129,7 @@ const WarningSvg = () => {
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$w = /* css */`
+installImportMetaCssBuild(import.meta);const css$x = /* css */`
   @layer navi {
     .navi_message_box {
       --background-color-info: var(--navi-info-color-light);
@@ -23208,7 +23182,7 @@ const MessageBox = ({
   onClose,
   ...rest
 }) => {
-  import.meta.css = [css$w, "@jsenv/navi/src/text/message_box.jsx"];
+  import.meta.css = [css$x, "@jsenv/navi/src/text/message_box.jsx"];
   const [hasTitleChild, setHasTitleChild] = useState(false);
   const innerLeftStripe = leftStripe === undefined ? hasTitleChild : leftStripe;
   if (icon === true) {
@@ -23267,7 +23241,7 @@ const MessageBoxPseudoClasses = [":-navi-status-info", ":-navi-status-success", 
 const MessageBoxStatusContext = createContext();
 const MessageBoxReportTitleChildContext = createContext();
 
-installImportMetaCssBuild(import.meta);const css$v = /* css */`
+installImportMetaCssBuild(import.meta);const css$w = /* css */`
   .navi_message_box {
     .navi_title {
       margin-top: 0;
@@ -23277,7 +23251,7 @@ installImportMetaCssBuild(import.meta);const css$v = /* css */`
   }
 `;
 const Title = props => {
-  import.meta.css = [css$v, "@jsenv/navi/src/text/title.jsx"];
+  import.meta.css = [css$w, "@jsenv/navi/src/text/title.jsx"];
   const messageBoxStatus = useContext(MessageBoxStatusContext);
   const innerAs = props.as || (messageBoxStatus ? "h4" : "h1");
   const titleLevel = parseInt(innerAs.slice(1));
@@ -23355,7 +23329,7 @@ const useDimColorWhen = (elementRef, shouldDim) => {
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$u = /* css */`
+installImportMetaCssBuild(import.meta);const css$v = /* css */`
   @layer navi {
     .navi_link {
       --link-border-radius: unset;
@@ -23707,7 +23681,7 @@ Object.assign(PSEUDO_CLASSES, {
   }
 });
 const Link = props => {
-  import.meta.css = [css$u, "@jsenv/navi/src/nav/link/link.jsx"];
+  import.meta.css = [css$v, "@jsenv/navi/src/nav/link/link.jsx"];
   return renderActionableComponent(props, {
     Basic: LinkBasic,
     WithAction: LinkWithAction
@@ -23908,7 +23882,7 @@ const LinkPlain = props => {
       onKeyDown?.(e);
     },
     childrenOutsideFlow: jsxs(Fragment, {
-      children: [jsx(LoaderBackground, {
+      children: [jsx(LoadingOutline, {
         loading: loading,
         inset: 1,
         color: "var(--link-loader-color)"
@@ -23973,7 +23947,7 @@ installImportMetaCssBuild(import.meta);/**
  * TabList component with support for horizontal and vertical layouts
  * https://dribbble.com/search/tabs
  */
-const css$t = /* css */`
+const css$u = /* css */`
   @layer navi {
     .navi_nav {
       --nav-border: none;
@@ -24109,7 +24083,7 @@ const Nav = ({
   panelBorderConnection,
   ...props
 }) => {
-  import.meta.css = [css$t, "@jsenv/navi/src/nav/link/nav.jsx"];
+  import.meta.css = [css$u, "@jsenv/navi/src/nav/link/nav.jsx"];
   children = toChildArray(children);
   return jsx(Box, {
     as: "nav",
@@ -24157,7 +24131,7 @@ const useFocusGroup = (
 
 installImportMetaCssBuild(import.meta);const rightArrowPath = "M680-480L360-160l-80-80 240-240-240-240 80-80 320 320z";
 const downArrowPath = "M480-280L160-600l80-80 240 240 240-240 80 80-320 320z";
-const css$s = /* css */`
+const css$t = /* css */`
   .navi_summary_marker {
     width: 1em;
     height: 1em;
@@ -24242,7 +24216,7 @@ const SummaryMarker = ({
   open,
   loading
 }) => {
-  import.meta.css = [css$s, "@jsenv/navi/src/field/details/summary_marker.jsx"];
+  import.meta.css = [css$t, "@jsenv/navi/src/field/details/summary_marker.jsx"];
   const showLoading = useDebounceTrue(loading, 300);
   const mountedRef = useRef(false);
   const prevOpenRef = useRef(open);
@@ -24296,7 +24270,7 @@ const SummaryMarker = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$r = /* css */`
+installImportMetaCssBuild(import.meta);const css$s = /* css */`
   .navi_details {
     position: relative;
     z-index: 1;
@@ -24333,7 +24307,7 @@ installImportMetaCssBuild(import.meta);const css$r = /* css */`
   }
 `;
 const Details = props => {
-  import.meta.css = [css$r, "@jsenv/navi/src/field/details/details.jsx"];
+  import.meta.css = [css$s, "@jsenv/navi/src/field/details/details.jsx"];
   const {
     value = "on",
     persists
@@ -24648,7 +24622,7 @@ const fieldPropSet = new Set([
   "data-testid",
 ]);
 
-installImportMetaCssBuild(import.meta);const css$q = /* css */`
+installImportMetaCssBuild(import.meta);const css$r = /* css */`
   @layer navi {
     label {
       &[data-interactive] {
@@ -24666,7 +24640,7 @@ installImportMetaCssBuild(import.meta);const css$q = /* css */`
   }
 `;
 const Label = props => {
-  import.meta.css = [css$q, "@jsenv/navi/src/field/label.jsx"];
+  import.meta.css = [css$r, "@jsenv/navi/src/field/label.jsx"];
   const {
     readOnly,
     disabled,
@@ -24716,7 +24690,7 @@ const reportDisabledToLabel = value => {
   reportDisabled?.(value);
 };
 
-installImportMetaCssBuild(import.meta);const css$p = /* css */`
+installImportMetaCssBuild(import.meta);const css$q = /* css */`
   @layer navi {
     .navi_checkbox {
       --margin: 3px 3px 3px 4px;
@@ -25108,7 +25082,7 @@ const InputCheckboxDispatcher = props => {
   });
 };
 const InputCheckboxUI = props => {
-  import.meta.css = [css$p, "@jsenv/navi/src/field/input_checkbox.jsx"];
+  import.meta.css = [css$q, "@jsenv/navi/src/field/input_checkbox.jsx"];
   const {
     ref,
     /* eslint-disable no-unused-vars */
@@ -25253,11 +25227,10 @@ const InputCheckboxUI = props => {
     children: [jsx("span", {
       className: "navi_checkbox_accent_probe",
       "aria-hidden": "true"
-    }), jsx(LoaderBackground, {
+    }), jsx(LoadingOutline, {
       loading: innerLoading,
       inset: -1,
-      color: "var(--loader-color)",
-      targetSelector: ".navi_checkbox_field"
+      color: "var(--loader-color)"
     }), visualVnode, renderCheckboxMemoized]
   });
 };
@@ -25510,7 +25483,7 @@ forwardRef((props, ref) => {
   });
 });
 
-installImportMetaCssBuild(import.meta);const css$o = /* css */`
+installImportMetaCssBuild(import.meta);const css$p = /* css */`
   @layer navi {
     .navi_radio {
       --margin: 3px 3px 0 5px;
@@ -25864,7 +25837,7 @@ const InputRadioDispatcher = props => {
   });
 };
 const InputRadioUI = props => {
-  import.meta.css = [css$o, "@jsenv/navi/src/field/input_radio.jsx"];
+  import.meta.css = [css$p, "@jsenv/navi/src/field/input_radio.jsx"];
   const {
     ref,
     /* eslint-disable no-unused-vars */
@@ -26029,12 +26002,10 @@ const InputRadioUI = props => {
     children: [jsx("span", {
       className: "navi_radio_accent_probe",
       "aria-hidden": "true"
-    }), jsx(LoaderBackground, {
+    }), jsx(LoadingOutline, {
       loading: innerLoading,
       inset: -1,
-      targetSelector: ".navi_radio_field",
-      color: "var(--loader-color)",
-      borderRadius: appearance === "radio" ? "50%" : "inherit"
+      color: "var(--loader-color)"
     }), visualVNode, renderRadioMemoized]
   });
 };
@@ -26096,7 +26067,7 @@ const InputRadioWithAction = () => {
   throw new Error(`<Input type="radio" /> with an action make no sense. Use <RadioList action={something} /> instead`);
 };
 
-installImportMetaCssBuild(import.meta);const css$n = /* css */`
+installImportMetaCssBuild(import.meta);const css$o = /* css */`
   @layer navi {
     .navi_input_range {
       --border-radius: 6px;
@@ -26358,7 +26329,7 @@ const InputRangeDispatcher = props => {
   });
 };
 const InputRangeUI = props => {
-  import.meta.css = [css$n, "@jsenv/navi/src/field/input_range.jsx"];
+  import.meta.css = [css$o, "@jsenv/navi/src/field/input_range.jsx"];
   const {
     ref,
     onInput,
@@ -26495,7 +26466,7 @@ const InputRangeUI = props => {
     children: [jsx("span", {
       className: "navi_input_range_accent_probe",
       "aria-hidden": "true"
-    }), jsx(LoaderBackground, {
+    }), jsx(LoadingOutline, {
       loading: innerLoading,
       color: "var(--loader-color)",
       inset: -1
@@ -26635,7 +26606,7 @@ const SearchSvg = () => jsx("svg", {
   })
 });
 
-installImportMetaCssBuild(import.meta);const css$m = /* css */`
+installImportMetaCssBuild(import.meta);const css$n = /* css */`
   @layer navi {
     .navi_separator {
       --size: 1px;
@@ -26675,7 +26646,7 @@ const Separator = ({
   vertical,
   ...props
 }) => {
-  import.meta.css = [css$m, "@jsenv/navi/src/layout/separator.jsx"];
+  import.meta.css = [css$n, "@jsenv/navi/src/layout/separator.jsx"];
   return jsx(Box, {
     as: vertical ? "span" : "hr",
     ...props,
@@ -27087,7 +27058,7 @@ const RenderWindowContext = createContext(null);
 // Carries the separator element/function down to each ListItem so separators
 // are only rendered between items that actually mount (post-filter, post-window).
 const SeparatorContext = createContext(null);
-const css$l = /* css */`
+const css$m = /* css */`
   @layer navi {
     .navi_list_container {
       --list-outline-width: 1px;
@@ -27514,7 +27485,7 @@ const ListDispatcher = props => {
   });
 };
 const ListUI = props => {
-  import.meta.css = [css$l, "@jsenv/navi/src/field/list/list.jsx"];
+  import.meta.css = [css$m, "@jsenv/navi/src/field/list/list.jsx"];
   const {
     ref,
     renderBudget = RENDER_BUDGET_DEFAULT,
@@ -28993,7 +28964,7 @@ installImportMetaCssBuild(import.meta);/**
  * - <InputCheckbox /> for type="checkbox"
  * - <InputRadio /> for type="radio"
  */
-const css$k = /* css */`
+const css$l = /* css */`
   @layer navi {
     .navi_input {
       --border-radius: 2px;
@@ -29247,7 +29218,7 @@ const InputTextualDispatcher = props => {
 };
 const InputNativeContext = createContext(null);
 const InputTextualUI = props => {
-  import.meta.css = [css$k, "@jsenv/navi/src/field/input_textual.jsx"];
+  import.meta.css = [css$l, "@jsenv/navi/src/field/input_textual.jsx"];
   const {
     ref,
     type,
@@ -29392,7 +29363,7 @@ const InputTextualUI = props => {
     autoFocus: undefined // See use_auto_focus.js
     ,
 
-    children: [jsx(LoaderBackground, {
+    children: [jsx(LoadingOutline, {
       loading: innerLoading,
       color: "var(--loader-color)",
       inset: -1
@@ -29868,7 +29839,7 @@ installImportMetaCssBuild(import.meta);/**
  * This means an editable thing MUST have a parent with position relative that wraps the content and the eventual editable input
  *
  */
-const css$j = /* css */`
+const css$k = /* css */`
   .navi_editable_wrapper {
     --inset-top: 0px;
     --inset-right: 0px;
@@ -29917,7 +29888,7 @@ const useEditionController = () => {
   };
 };
 const Editable = props => {
-  import.meta.css = [css$j, "@jsenv/navi/src/field/edition/editable.jsx"];
+  import.meta.css = [css$k, "@jsenv/navi/src/field/edition/editable.jsx"];
   let {
     children,
     action,
@@ -30331,7 +30302,7 @@ const FormWithAction = props => {
 //   form.dispatchEvent(customEvent);
 // };
 
-installImportMetaCssBuild(import.meta);const css$i = /* css */`
+installImportMetaCssBuild(import.meta);const css$j = /* css */`
   .navi_group {
     --border-width: 1px;
 
@@ -30428,7 +30399,7 @@ const Group = ({
   vertical = row,
   ...props
 }) => {
-  import.meta.css = [css$i, "@jsenv/navi/src/field/group.jsx"];
+  import.meta.css = [css$j, "@jsenv/navi/src/field/group.jsx"];
   if (typeof borderWidth === "string") {
     borderWidth = parseFloat(borderWidth);
   }
@@ -30619,7 +30590,7 @@ const useCleanup = () => {
   return cleanupMethods;
 };
 
-installImportMetaCssBuild(import.meta);const css$h = /* css */`
+installImportMetaCssBuild(import.meta);const css$i = /* css */`
   .navi_dialog {
     &[open] {
       display: flex;
@@ -30632,7 +30603,7 @@ installImportMetaCssBuild(import.meta);const css$h = /* css */`
   }
 `;
 const Dialog = props => {
-  import.meta.css = [css$h, "@jsenv/navi/src/popup/dialog.jsx"];
+  import.meta.css = [css$i, "@jsenv/navi/src/popup/dialog.jsx"];
   const {
     children,
     scrollTrap,
@@ -30743,7 +30714,7 @@ const requestDialogClose = (popoverElement, {
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$g = /* css */`
+installImportMetaCssBuild(import.meta);const css$h = /* css */`
   .navi_popover_backdrop {
     position: fixed;
     inset: 0;
@@ -30759,7 +30730,7 @@ installImportMetaCssBuild(import.meta);const css$g = /* css */`
   }
 `;
 const Popover = props => {
-  import.meta.css = [css$g, "@jsenv/navi/src/popup/popover.jsx"];
+  import.meta.css = [css$h, "@jsenv/navi/src/popup/popover.jsx"];
   const {
     scrollTrap,
     pointerTrap,
@@ -30961,7 +30932,7 @@ const requestPopoverClose = (popoverElement, {
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$f = /* css */`
+installImportMetaCssBuild(import.meta);const css$g = /* css */`
   @layer navi {
     .navi_select {
       --select-border-radius: 2px;
@@ -31309,7 +31280,7 @@ const SelectDispatcher = props => {
   });
 };
 const SelectUI = props => {
-  import.meta.css = [css$f, "@jsenv/navi/src/field/select.jsx"];
+  import.meta.css = [css$g, "@jsenv/navi/src/field/select.jsx"];
   const {
     placeholder = "Select…",
     trigger,
@@ -31359,7 +31330,7 @@ const SelectUI = props => {
     },
     pseudoClasses: SelectPseudoClasses,
     pseudoElements: SelectPseudoElements,
-    children: [jsx(LoaderBackground, {
+    children: [jsx(LoadingOutline, {
       loading: innerLoading,
       color: "var(--loader-color)",
       inset: -1
@@ -32501,7 +32472,7 @@ const Z_INDEX_DROP_PREVIEW = Z_INDEX_STICKY_CORNER + 1;
 
 const Z_INDEX_TABLE_UI = Z_INDEX_STICKY_CORNER + 1;
 
-installImportMetaCssBuild(import.meta);const css$e = /* css */`
+installImportMetaCssBuild(import.meta);const css$f = /* css */`
   .navi_table_drag_clone_container {
     position: absolute;
     top: var(--table-visual-top);
@@ -32681,7 +32652,7 @@ const moveItem = (array, indexA, indexB) => {
   return newArray;
 };
 const TableDragCloneContainer = forwardRef((props, ref) => {
-  import.meta.css = [css$e, "@jsenv/navi/src/field/table/drag/table_drag.jsx"];
+  import.meta.css = [css$f, "@jsenv/navi/src/field/table/drag/table_drag.jsx"];
   const {
     tableId
   } = props;
@@ -32979,7 +32950,7 @@ installImportMetaCssBuild(import.meta);const ROW_MIN_HEIGHT = 30;
 const ROW_MAX_HEIGHT = 100;
 const COLUMN_MIN_WIDTH = 50;
 const COLUMN_MAX_WIDTH = 500;
-const css$d = /* css */`
+const css$e = /* css */`
   @layer navi {
     .navi_table {
       --table-resizer-handle-color: #063b7c;
@@ -33139,7 +33110,7 @@ const css$d = /* css */`
 
 // Column resize components
 const TableColumnResizer = props => {
-  import.meta.css = [css$d, "@jsenv/navi/src/field/table/resize/table_resize.jsx"];
+  import.meta.css = [css$e, "@jsenv/navi/src/field/table/resize/table_resize.jsx"];
   const defaultRef = useRef();
   const ref = props.ref || defaultRef;
   return jsxs("div", {
@@ -33606,7 +33577,7 @@ const findPreviousTableRow = currentRow => {
   return currentIndex > 0 ? allRows[currentIndex - 1] : null;
 };
 
-installImportMetaCssBuild(import.meta);const css$c = /* css */`
+installImportMetaCssBuild(import.meta);const css$d = /* css */`
   @layer navi {
     .navi_table {
       --selection-border-color: var(--navi-selection-border-color, #0078d4);
@@ -33708,7 +33679,7 @@ const useTableSelectionController = ({
   onSelectionChange,
   selectionColor
 }) => {
-  import.meta.css = [css$c, "@jsenv/navi/src/field/table/selection/table_selection.jsx"];
+  import.meta.css = [css$d, "@jsenv/navi/src/field/table/selection/table_selection.jsx"];
   const selectionController = useSelectionController({
     elementRef: tableRef,
     layout: "grid",
@@ -34179,7 +34150,7 @@ const useTableStickyContextValue = ({
 };
 
 installImportMetaCssBuild(import.meta);// TODO: sticky left/top frontier should likely use "followPosition"
-const css$b = /* css */`
+const css$c = /* css */`
   @layer navi {
     .navi_table {
       --sticky-frontier-color: #c0c0c0;
@@ -34422,7 +34393,7 @@ const css$b = /* css */`
 const TableStickyFrontier = ({
   tableRef
 }) => {
-  import.meta.css = [css$b, "@jsenv/navi/src/field/table/sticky/table_sticky.jsx"];
+  import.meta.css = [css$c, "@jsenv/navi/src/field/table/sticky/table_sticky.jsx"];
   const stickyLeftFrontierGhostRef = useRef();
   const stickyLeftFrontierPreviewRef = useRef();
   const stickyTopFrontierGhostRef = useRef();
@@ -34651,7 +34622,7 @@ const initMoveStickyFrontierViaPointer = (pointerdownEvent, {
  *   inset 0 -1px 0 0 color;   // Bottom border
  */
 
-const css$a = /* css */ `
+const css$b = /* css */ `
   .navi_table_root {
     position: relative;
     max-width: var(--table-max-width, none);
@@ -34854,7 +34825,7 @@ const css$a = /* css */ `
   }
 `;
 
-installImportMetaCssBuild(import.meta);const css$9 = /* css */`
+installImportMetaCssBuild(import.meta);const css$a = /* css */`
   .navi_table_ui {
     position: fixed;
     inset: 0;
@@ -34865,7 +34836,7 @@ installImportMetaCssBuild(import.meta);const css$9 = /* css */`
   }
 `;
 const TableUI = forwardRef((props, ref) => {
-  import.meta.css = [css$9, "@jsenv/navi/src/field/table/table_ui.jsx"];
+  import.meta.css = [css$a, "@jsenv/navi/src/field/table/table_ui.jsx"];
   const {
     tableRef,
     tableId,
@@ -34971,7 +34942,7 @@ const RowIndexContext = createContext();
 const TableSectionContext = createContext();
 const useIsInTableHead = () => useContext(TableSectionContext) === "head";
 const Table = props => {
-  import.meta.css = [css$a, "@jsenv/navi/src/field/table/table.jsx"];
+  import.meta.css = [css$b, "@jsenv/navi/src/field/table/table.jsx"];
   const tableDefaultRef = useRef();
   const tableDefaultId = `table-${useId()}`;
   const {
@@ -35868,7 +35839,7 @@ const KeyboardShortcutAriaElement = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$8 = /* css */`
+installImportMetaCssBuild(import.meta);const css$9 = /* css */`
   @layer navi {
     .navi_clipboard_container {
       --height: 1.5em;
@@ -35900,7 +35871,7 @@ const ButtonCopyToClipboard = ({
   children,
   ...props
 }) => {
-  import.meta.css = [css$8, "@jsenv/navi/src/field/button_copy_to_clipboard.jsx"];
+  import.meta.css = [css$9, "@jsenv/navi/src/field/button_copy_to_clipboard.jsx"];
   const [copied, setCopied] = useState(false);
   const renderedRef = useRef();
   useEffect(() => {
@@ -35981,7 +35952,7 @@ const Address = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$7 = /* css */`
+installImportMetaCssBuild(import.meta);const css$8 = /* css */`
   @layer navi {
   }
   .navi_badge {
@@ -36015,7 +35986,7 @@ const Badge = ({
   className,
   ...props
 }) => {
-  import.meta.css = [css$7, "@jsenv/navi/src/text/badge.jsx"];
+  import.meta.css = [css$8, "@jsenv/navi/src/text/badge.jsx"];
   const defaultRef = useRef();
   const ref = props.ref || defaultRef;
   useAccentColorAttributes(ref, null);
@@ -36040,7 +36011,7 @@ const BadgeStyleCSSVars$1 = {
   fontSize: "--font-size"
 };
 
-const LoadingDots = () => {
+const LoadingDotsSvg = () => {
   return jsxs("svg", {
     viewBox: "0 0 200 200",
     width: "100%",
@@ -36105,7 +36076,7 @@ const formatNumber = (value, { lang } = {}) => {
   return new Intl.NumberFormat(lang).format(value);
 };
 
-installImportMetaCssBuild(import.meta);const css$6 = /* css */`
+installImportMetaCssBuild(import.meta);const css$7 = /* css */`
   @layer navi {
   }
   .navi_text.navi_badge_count {
@@ -36218,7 +36189,7 @@ const BadgeCount = ({
   lineLayout,
   ...props
 }) => {
-  import.meta.css = [css$6, "@jsenv/navi/src/text/badge_count.jsx"];
+  import.meta.css = [css$7, "@jsenv/navi/src/text/badge_count.jsx"];
   const defaultRef = useRef();
   const ref = props.ref || defaultRef;
   useAccentColorAttributes(ref, null);
@@ -36321,7 +36292,7 @@ const BadgeCountEllipse = ({
     styleCSSVars: BadgeStyleCSSVars,
     spacing: "pre",
     children: loading ? jsx(Icon, {
-      children: jsx(LoadingDots, {})
+      children: jsx(LoadingDotsSvg, {})
     }) : children
   });
 };
@@ -36349,7 +36320,7 @@ const BadgeCountCircle = ({
     styleCSSVars: BadgeStyleCSSVars,
     spacing: "pre",
     children: loading ? jsx(Icon, {
-      children: jsx(LoadingDots, {})
+      children: jsx(LoadingDotsSvg, {})
     }) : jsx("span", {
       className: "navi_badge_count_text",
       children: children
@@ -36357,7 +36328,7 @@ const BadgeCountCircle = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$5 = /* css */`
+installImportMetaCssBuild(import.meta);const css$6 = /* css */`
   @layer navi {
     .navi_caption {
       --color: #6b7280;
@@ -36378,7 +36349,7 @@ const Caption = ({
   className,
   ...rest
 }) => {
-  import.meta.css = [css$5, "@jsenv/navi/src/text/caption.jsx"];
+  import.meta.css = [css$6, "@jsenv/navi/src/text/caption.jsx"];
   return jsx(Text, {
     as: "small",
     size: "0.8em" // We use em to be relative to the parent (we want to be smaller than the surrounding text)
@@ -36855,7 +36826,7 @@ const interpolate = (template, values) => {
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$4 = /* css */`
+installImportMetaCssBuild(import.meta);const css$5 = /* css */`
   @layer navi {
     .navi_quantity {
       --unit-color: color-mix(in srgb, currentColor 50%, white);
@@ -36960,7 +36931,7 @@ const Quantity = ({
   bold = true,
   ...props
 }) => {
-  import.meta.css = [css$4, "@jsenv/navi/src/text/quantity.jsx"];
+  import.meta.css = [css$5, "@jsenv/navi/src/text/quantity.jsx"];
   const value = parseQuantityValue(children);
   const valueRounded = integer && typeof value === "number" ? Math.round(value) : value;
   const valueFormatted = typeof valueRounded === "number" ? formatNumber(valueRounded, {
@@ -36990,8 +36961,8 @@ const Quantity = ({
       children: [jsx("span", {
         className: "navi_quantity_value",
         children: loading ? jsx(Icon, {
-          flowInline: true,
-          children: jsx(LoadingDots, {})
+          inline: true,
+          children: jsx(LoadingDotsSvg, {})
         }) : valueFormatted
       }), unit && jsx(Unit, {
         value: value,
@@ -37049,7 +37020,7 @@ const parseQuantityValue = children => {
   return Number.isNaN(parsed) ? children : parsed;
 };
 
-installImportMetaCssBuild(import.meta);const css$3 = /* css */`
+installImportMetaCssBuild(import.meta);const css$4 = /* css */`
   @layer navi {
     .navi_meter {
       --loader-color: var(--navi-loader-color);
@@ -37129,8 +37100,8 @@ installImportMetaCssBuild(import.meta);const css$3 = /* css */`
     }
 
     &[data-accent-needs-dark-fg] {
-      --x-color: white;
-      --x-shadow-color: black;
+      --x-color: black;
+      --x-shadow-color: white;
     }
 
     /* When caption is shown, the track takes the full height */
@@ -37187,7 +37158,7 @@ const Meter = ({
   style,
   ...rest
 }) => {
-  import.meta.css = [css$3, "@jsenv/navi/src/text/meter.jsx"];
+  import.meta.css = [css$4, "@jsenv/navi/src/text/meter.jsx"];
   const defaultRef = useRef();
   const ref = rest.ref || defaultRef;
   value = Number(value);
@@ -37250,7 +37221,7 @@ const Meter = ({
     ...rest,
     children: jsxs("span", {
       className: "navi_meter_track_container",
-      children: [jsx(LoaderBackground, {
+      children: [jsx(LoadingOutline, {
         loading: loading,
         color: "var(--loader-color)",
         inset: -1
@@ -37314,10 +37285,100 @@ const Paragraph = props => {
   });
 };
 
-const Image = props => {
+installImportMetaCssBuild(import.meta);const css$3 = /* css */`
+  @keyframes navi_image_shimmer {
+    0% {
+      background-position: -200% 0;
+    }
+    100% {
+      background-position: 200% 0;
+    }
+  }
+  .navi_image {
+    &[navi-placeholder] {
+      background-image:
+        linear-gradient(
+          105deg,
+          transparent 30%,
+          color-mix(
+              in srgb,
+              var(--placeholder-color) 0%,
+              var(--placeholder-shimmer-color) 14%
+            )
+            50%,
+          transparent 70%
+        ),
+        radial-gradient(
+          ellipse at 40% 40%,
+          color-mix(
+              in srgb,
+              var(--placeholder-color) 70%,
+              var(--placeholder-shimmer-color) 30%
+            )
+            0%,
+          var(--placeholder-color) 70%
+        );
+      background-size:
+        200% 100%,
+        100% 100%;
+      animation: navi_image_shimmer 2s linear infinite;
+    }
+  }
+`;
+const DEFAULT_PLACEHOLDER_LIGHT = "#d4d8dd";
+const DEFAULT_PLACEHOLDER_DARK = "#374151";
+
+/**
+ * @param {string|false} [props.placeholderColor] - Background color shown while the image loads.
+ *   Defaults to a light gray. Pass `false` to disable.
+ * @param {boolean} [props.placeholderDark] - Use a dark default placeholder color,
+ *   suited for images displayed on a dark background. Also switches the shimmer
+ *   highlight to mix with black instead of white.
+ */
+const Image = ({
+  placeholderColor,
+  placeholderDark = false,
+  ...rest
+}) => {
+  import.meta.css = [css$3, "@jsenv/navi/src/graphic/image.jsx"];
+  const loadedRef = useRef();
+  let resolvedPlaceholder = placeholderColor;
+  if (resolvedPlaceholder === undefined) {
+    resolvedPlaceholder = placeholderDark ? DEFAULT_PLACEHOLDER_DARK : DEFAULT_PLACEHOLDER_LIGHT;
+  }
   return jsx(Box, {
+    ...rest,
+    as: "img",
+    baseClassName: "navi_image",
+    "navi-placeholder": loadedRef.current ? undefined : "",
+    style: {
+      "--placeholder-color": resolvedPlaceholder || undefined,
+      "--placeholder-shimmer-color": placeholderDark ? "black" : "white",
+      ...rest.style
+    },
+    onLoad: e => {
+      const imageEl = e.currentTarget;
+      imageEl.removeAttribute("navi-placeholder");
+      imageEl.setAttribute("navi-loaded", "");
+      rest.onLoad?.(e);
+    }
+  });
+};
+
+const LoadingIndicator = ({
+  variant = "circle",
+  ...props
+}) => {
+  if (variant === "dots") {
+    return jsx(Icon, {
+      ...props,
+      children: jsx(LoadingDotsSvg, {})
+    });
+  }
+  return jsx(Icon, {
+    circle: true,
     ...props,
-    as: "img"
+    children: jsx(LoadingIndicatorFluid, {})
   });
 };
 
@@ -37911,5 +37972,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, Box, Button, ButtonCopyToClipboard, Caption, CheckSvg, Checkbox, CheckboxList, CloseSvg, Code, Col, Colgroup, ConstructionSvg, Details, Dialog, DialogLayout, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemFooter, ListItemGroup, ListItemHeader, Loading, MessageBox, Meter, Nav, NaviDebug, Paragraph, Popover, Quantity, QuantityIntl, Radio, RadioList, Route, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectionContext, Separator, SettingsSvg, SidePanel, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, Thead, Title, Tr, UITransition, UserSvg, ViewportLayout, actionIntegratedVia, actionRunEffect, addCustomMessage, anyMatchingRouteSignal, applySearch, arraySignalMembership, compareTwoJsValues, createAction, createAvailableConstraint, createIntl, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, enableDebugActions, enableDebugOnDocumentLoading, filterTableSelection, forwardActionRequested, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, localStorageSignal, navBack, navForward, navTo, openCallout, rawUrlPart, reload, removeCustomMessage, requestAction, requestListClose, requestListOpen, rerunActions, resource, route, routeAction, setBaseUrl, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, syncOwnedResourceToSignals, syncResourceToSignals, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutClose, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, useRouteStatus, useRunOnMount, useSearchText, useSelectRequestClose, useSelectableElement, useSelectionController, useSidePanelClose, useSignalSync, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage, windowWidthSignal };
+export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, Box, Button, ButtonCopyToClipboard, Caption, CheckSvg, Checkbox, CheckboxList, CloseSvg, Code, Col, Colgroup, ConstructionSvg, Details, Dialog, DialogLayout, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemFooter, ListItemGroup, ListItemHeader, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, MessageBox, Meter, Nav, NaviDebug, Paragraph, Popover, Quantity, QuantityIntl, Radio, RadioList, Route, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectionContext, Separator, SettingsSvg, SidePanel, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, Thead, Title, Tr, UITransition, UserSvg, ViewportLayout, actionIntegratedVia, actionRunEffect, addCustomMessage, anyMatchingRouteSignal, applySearch, arraySignalMembership, compareTwoJsValues, createAction, createAvailableConstraint, createIntl, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, enableDebugActions, enableDebugOnDocumentLoading, filterTableSelection, forwardActionRequested, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, localStorageSignal, navBack, navForward, navTo, openCallout, rawUrlPart, reload, removeCustomMessage, requestAction, requestListClose, requestListOpen, rerunActions, resource, route, routeAction, setBaseUrl, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, syncOwnedResourceToSignals, syncResourceToSignals, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutClose, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, useRouteStatus, useRunOnMount, useSearchText, useSelectRequestClose, useSelectableElement, useSelectionController, useSidePanelClose, useSignalSync, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage, windowWidthSignal };
 //# sourceMappingURL=jsenv_navi.js.map
