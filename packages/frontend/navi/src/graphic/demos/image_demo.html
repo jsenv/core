@@ -15,22 +15,22 @@
 
       // Register service worker — it intercepts ./image_demo_asset requests
       // and responds with a generated SVG after a configurable delay
-      const swReadyPromise = navigator.serviceWorker
-        .register("./image_demo_sw.js")
-        .then((registration) => {
-          if (registration.active) {
-            return;
-          }
-          const sw = registration.installing || registration.waiting;
-          return new Promise((resolve) => {
-            sw.addEventListener("statechange", function onStateChange() {
-              if (sw.state === "activated") {
-                sw.removeEventListener("statechange", onStateChange);
-                resolve();
-              }
-            });
+      const swReadyPromise = (async () => {
+        const registration =
+          await window.navigator.serviceWorker.register("./image_demo_sw.js");
+        if (registration.active) {
+          return;
+        }
+        const sw = registration.installing || registration.waiting;
+        await new Promise((resolve) => {
+          sw.addEventListener("statechange", function onStateChange() {
+            if (sw.state === "activated") {
+              sw.removeEventListener("statechange", onStateChange);
+              resolve();
+            }
           });
         });
+      })();
 
       const ImageWithLoadingState = ({ src, alt, width, height }) => {
         const [status, setStatus] = useState("loading");
