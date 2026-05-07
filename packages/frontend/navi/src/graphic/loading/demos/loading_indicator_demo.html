@@ -12,8 +12,152 @@
       import { useState } from "preact/hooks";
       import { LoadingIndicator } from "@jsenv/navi";
 
+      const InlineWithTextSection = ({ loading, variant }) => {
+        return (
+          <section
+            style={{ display: "flex", flexDirection: "column", gap: "12px" }}
+          >
+            <h3 style={{ margin: 0 }}>Inline with text</h3>
+            <p style={{ margin: 0, fontSize: "14px", color: "#555" }}>
+              The indicator inherits surrounding text color by default.
+            </p>
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "10px",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  fontSize: "16px",
+                  color: "#383a36",
+                }}
+              >
+                {loading && <LoadingIndicator variant={variant} />}
+                Saving changes…
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  fontSize: "16px",
+                  color: "#4dabf7",
+                }}
+              >
+                {loading && <LoadingIndicator variant={variant} />}
+                <span style={{ color: "#4dabf7" }}>Syncing data…</span>
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  fontSize: "22px",
+                  color: "#ff6b6b",
+                }}
+              >
+                {loading && <LoadingIndicator variant={variant} />}
+                <span style={{ color: "#ff6b6b" }}>Uploading file…</span>
+              </div>
+            </div>
+          </section>
+        );
+      };
+
+      const ColorOverrideSection = ({ loading, variant }) => {
+        return (
+          <section
+            style={{ display: "flex", flexDirection: "column", gap: "12px" }}
+          >
+            <h3 style={{ margin: 0 }}>Color override</h3>
+            <p style={{ margin: 0, fontSize: "14px", color: "#555" }}>
+              Use the <code>color</code> prop to override the inherited color.
+            </p>
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "10px",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  fontSize: "16px",
+                  color: "#383a36",
+                }}
+              >
+                {loading && (
+                  <LoadingIndicator variant={variant} color="#4dabf7" />
+                )}
+                <code>color="#4dabf7"</code> overrides dark text color
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  fontSize: "16px",
+                  color: "#4dabf7",
+                }}
+              >
+                {loading && (
+                  <LoadingIndicator variant={variant} color="#ff6b6b" />
+                )}
+                <code>color="#ff6b6b"</code> overrides blue text color
+              </div>
+            </div>
+          </section>
+        );
+      };
+
+      const BlockLoadingSection = ({ loading, variant }) => {
+        return (
+          <section
+            style={{ display: "flex", flexDirection: "column", gap: "12px" }}
+          >
+            <h3 style={{ margin: 0 }}>Block loading state</h3>
+            <p style={{ margin: 0, fontSize: "14px", color: "#555" }}>
+              Place the indicator in the center of a block to indicate the whole
+              area is loading.
+            </p>
+            <div
+              style={{
+                position: "relative",
+                width: "100%",
+                height: "160px",
+                background: "#f8f9fa",
+                border: "1px solid #dee2e6",
+                borderRadius: "8px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              {loading ? (
+                <LoadingIndicator
+                  variant={variant}
+                  height="48px"
+                  color="#4dabf7"
+                />
+              ) : (
+                <span style={{ color: "#555" }}>Content loaded ✓</span>
+              )}
+            </div>
+          </section>
+        );
+      };
+
       const Demo = () => {
         const [loading, setLoading] = useState(true);
+        const [variant, setVariant] = useState("circle");
 
         return (
           <div
@@ -28,147 +172,50 @@
           >
             <h2 style={{ margin: 0 }}>LoadingIndicator</h2>
 
-            <label
-              style={{ display: "flex", alignItems: "center", gap: "8px" }}
+            <div
+              style={{ display: "flex", flexDirection: "column", gap: "8px" }}
             >
-              <input
-                type="checkbox"
-                checked={loading}
-                onChange={(e) => setLoading(e.target.checked)}
-              />
-              loading
-            </label>
-
-            {/* Inline next to text — inherits text color */}
-            <section
-              style={{ display: "flex", flexDirection: "column", gap: "12px" }}
-            >
-              <h3 style={{ margin: 0 }}>Inline with text</h3>
-              <p style={{ margin: 0, fontSize: "14px", color: "#555" }}>
-                The indicator inherits <code>currentColor</code> by default, so
-                it matches the surrounding text without any extra props.
-              </p>
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "10px",
-                }}
+              <label
+                style={{ display: "flex", alignItems: "center", gap: "8px" }}
               >
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px",
-                    fontSize: "16px",
-                    color: "#383a36",
-                  }}
-                >
-                  {loading && <LoadingIndicator />}
-                  Saving changes…
-                </div>
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px",
-                    fontSize: "16px",
-                    color: "#4dabf7",
-                  }}
-                >
-                  {loading && <LoadingIndicator />}
-                  <span style={{ color: "#4dabf7" }}>Syncing data…</span>
-                </div>
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px",
-                    fontSize: "22px",
-                    color: "#ff6b6b",
-                  }}
-                >
-                  {loading && <LoadingIndicator />}
-                  <span style={{ color: "#ff6b6b" }}>Uploading file…</span>
-                </div>
-              </div>
-            </section>
-
-            {/* Block loading state */}
-            <section
-              style={{ display: "flex", flexDirection: "column", gap: "12px" }}
-            >
-              <h3 style={{ margin: 0 }}>Block loading state</h3>
-              <p style={{ margin: 0, fontSize: "14px", color: "#555" }}>
-                Place the indicator in the center of a block to indicate the
-                whole area is loading.
-              </p>
-              <div
-                style={{
-                  position: "relative",
-                  width: "100%",
-                  height: "160px",
-                  background: "#f8f9fa",
-                  border: "1px solid #dee2e6",
-                  borderRadius: "8px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
+                <input
+                  type="checkbox"
+                  checked={loading}
+                  onChange={(e) => setLoading(e.target.checked)}
+                />
+                loading
+              </label>
+              <label
+                style={{ display: "flex", alignItems: "center", gap: "8px" }}
               >
-                {loading ? (
-                  <LoadingIndicator height="48px" color="#4dabf7" />
-                ) : (
-                  <span style={{ color: "#555" }}>Content loaded ✓</span>
-                )}
-              </div>
-            </section>
-
-            {/* Variants */}
-            <section
-              style={{ display: "flex", flexDirection: "column", gap: "12px" }}
-            >
-              <h3 style={{ margin: 0 }}>Variants</h3>
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "10px",
-                }}
+                <input
+                  type="radio"
+                  name="variant"
+                  value="circle"
+                  checked={variant === "circle"}
+                  onChange={() => setVariant("circle")}
+                />
+                <LoadingIndicator />
+                <code>{"<LoadingIndicator />"}</code>
+              </label>
+              <label
+                style={{ display: "flex", alignItems: "center", gap: "8px" }}
               >
-                {/* Inherits parent color */}
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px",
-                    fontSize: "16px",
-                    color: "#4dabf7",
-                  }}
-                >
-                  {loading && <LoadingIndicator variant="circle" />}
-                  {loading && <LoadingIndicator variant="dots" />}
-                  Inherits parent color
-                </div>
-                {/* Override via color prop */}
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px",
-                    fontSize: "16px",
-                  }}
-                >
-                  {loading && (
-                    <LoadingIndicator variant="circle" color="#ff6b6b" />
-                  )}
-                  {loading && (
-                    <LoadingIndicator variant="dots" color="#ff6b6b" />
-                  )}
-                  <code>color="#ff6b6b"</code>
-                </div>
-              </div>
-            </section>
+                <input
+                  type="radio"
+                  name="variant"
+                  value="dots"
+                  checked={variant === "dots"}
+                  onChange={() => setVariant("dots")}
+                />
+                <LoadingIndicator variant="dots" />
+                <code>{'<LoadingIndicator variant="dots" />'}</code>
+              </label>
+            </div>
+
+            <InlineWithTextSection loading={loading} variant={variant} />
+            <ColorOverrideSection loading={loading} variant={variant} />
+            <BlockLoadingSection loading={loading} variant={variant} />
           </div>
         );
       };
