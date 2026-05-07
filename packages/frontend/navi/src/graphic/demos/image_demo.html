@@ -16,6 +16,7 @@
       const swReadyPromise = (async () => {
         const registration =
           await window.navigator.serviceWorker.register("./image_demo_sw.js");
+        await registration.update();
         if (registration.active) {
           return;
         }
