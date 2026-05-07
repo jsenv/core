@@ -9,12 +9,10 @@
     <div id="app"></div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useState, useCallback, useEffect } from "preact/hooks";
+      import { useState, useEffect } from "preact/hooks";
       import { Image } from "@jsenv/navi";
-      import { LoadingIndicator } from "@jsenv/navi";
 
-      // Register service worker — it intercepts ./image_demo_asset requests
-      // and responds with a generated SVG after a configurable delay
+      // Register service worker — serves SVG images at ./image_demo_asset?theme=&delay=
       const swReadyPromise = (async () => {
         const registration =
           await window.navigator.serviceWorker.register("./image_demo_sw.js");
@@ -32,80 +30,87 @@
         });
       })();
 
-      const ImageWithLoadingState = ({ src, alt, width, height }) => {
-        const [status, setStatus] = useState("loading");
+      const SPEEDS = {
+        fast: 100,
+        normal: 500,
+        slow: 2000,
+      };
 
-        const onLoad = useCallback(() => {
-          setStatus("loaded");
-        }, []);
+      const THEMES = ["light", "dark", "colorful"];
 
-        const onError = useCallback(() => {
-          setStatus("error");
-        }, []);
-
+      const NoHeightSection = ({ delay, theme }) => {
+        const [key, setKey] = useState(0);
         return (
-          <div
-            style={{
-              position: "relative",
-              width,
-              height,
-              background: "#f1f3f5",
-              borderRadius: "8px",
-              overflow: "hidden",
-              border: "1px solid #dee2e6",
-            }}
+          <section
+            style={{ display: "flex", flexDirection: "column", gap: "12px" }}
           >
-            {status === "loading" && (
-              <div
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "#868e96",
-                }}
-              >
-                <LoadingIndicator height="32px" />
-              </div>
-            )}
-            {status === "error" && (
-              <div
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "#fa5252",
-                  fontSize: "14px",
-                }}
-              >
-                Failed to load image
-              </div>
-            )}
-            <Image
-              src={src}
-              alt={alt}
-              width="100%"
-              height="100%"
+            <h3 style={{ margin: 0 }}>Without height — layout shift</h3>
+            <p style={{ margin: 0, fontSize: "14px", color: "#555" }}>
+              No height is set. The page shifts when the image loads.
+            </p>
+            <button
+              onClick={() => setKey((k) => k + 1)}
               style={{
-                objectFit: "cover",
-                opacity: status === "loaded" ? 1 : 0,
-                transition: "opacity 0.3s ease",
+                alignSelf: "flex-start",
+                padding: "6px 14px",
+                fontSize: "14px",
+                cursor: "pointer",
+                borderRadius: "4px",
+                border: "1px solid #adb5bd",
+                background: "#f8f9fa",
               }}
-              onLoad={onLoad}
-              onError={onError}
+            >
+              Reload
+            </button>
+            <Image
+              key={key}
+              src={`./image_demo_asset?theme=${theme}&delay=${delay}&v=${key}`}
+              alt="Demo image without height"
+              width="400px"
             />
-          </div>
+          </section>
+        );
+      };
+
+      const WithHeightSection = ({ delay, theme }) => {
+        const [key, setKey] = useState(0);
+        return (
+          <section
+            style={{ display: "flex", flexDirection: "column", gap: "12px" }}
+          >
+            <h3 style={{ margin: 0 }}>With height — no layout shift</h3>
+            <p style={{ margin: 0, fontSize: "14px", color: "#555" }}>
+              Height is set explicitly. Space is reserved while the image loads.
+            </p>
+            <button
+              onClick={() => setKey((k) => k + 1)}
+              style={{
+                alignSelf: "flex-start",
+                padding: "6px 14px",
+                fontSize: "14px",
+                cursor: "pointer",
+                borderRadius: "4px",
+                border: "1px solid #adb5bd",
+                background: "#f8f9fa",
+              }}
+            >
+              Reload
+            </button>
+            <Image
+              key={key}
+              src={`./image_demo_asset?theme=${theme}&delay=${delay}&v=${key}`}
+              alt="Demo image with height"
+              width="400px"
+              height="300px"
+            />
+          </section>
         );
       };
 
       const Demo = () => {
         const [swReady, setSwReady] = useState(false);
-        const [delay, setDelay] = useState(2000);
-        const [reloadKey, setReloadKey] = useState(0);
-        const [hue, setHue] = useState(210);
+        const [speed, setSpeed] = useState("normal");
+        const [theme, setTheme] = useState("light");
 
         useEffect(() => {
           swReadyPromise.then(() => {
@@ -113,12 +118,7 @@
           });
         }, []);
 
-        const reload = useCallback(() => {
-          setHue((h) => (h + 60) % 360);
-          setReloadKey((k) => k + 1);
-        }, []);
-
-        const src = `./image_demo_asset?delay=${delay}&hue=${hue}&v=${reloadKey}`;
+        const delay = SPEEDS[speed];
 
         return (
           <div
@@ -127,8 +127,8 @@
               padding: "32px",
               display: "flex",
               flexDirection: "column",
-              gap: "32px",
-              maxWidth: "640px",
+              gap: "40px",
+              maxWidth: "560px",
             }}
           >
             <h2 style={{ margin: 0 }}>Image</h2>
@@ -144,57 +144,55 @@
                 <div
                   style={{
                     display: "flex",
-                    flexDirection: "column",
-                    gap: "12px",
+                    alignItems: "center",
+                    gap: "24px",
+                    flexWrap: "wrap",
                   }}
                 >
                   <label
                     style={{
                       display: "flex",
-                      flexDirection: "column",
-                      gap: "4px",
+                      alignItems: "center",
+                      gap: "8px",
+                      fontSize: "14px",
                     }}
                   >
-                    <span style={{ fontSize: "14px", color: "#555" }}>
-                      Loading delay:{" "}
-                      <strong>
-                        {delay === 0 ? "instant" : `${delay / 1000}s`}
-                      </strong>
-                    </span>
-                    <input
-                      type="range"
-                      min="0"
-                      max="5000"
-                      step="500"
-                      value={delay}
-                      onInput={(e) => setDelay(Number(e.target.value))}
-                      style={{ width: "300px" }}
-                    />
-                  </label>
-                  <div>
-                    <button
-                      onClick={reload}
-                      style={{
-                        padding: "6px 14px",
-                        fontSize: "14px",
-                        cursor: "pointer",
-                        borderRadius: "4px",
-                        border: "1px solid #adb5bd",
-                        background: "#f8f9fa",
-                      }}
+                    Loading speed:
+                    <select
+                      value={speed}
+                      onChange={(e) => setSpeed(e.target.value)}
+                      style={{ fontSize: "14px", padding: "4px 8px" }}
                     >
-                      Load new image
-                    </button>
-                  </div>
+                      <option value="fast">fast (0.1s)</option>
+                      <option value="normal">normal (0.5s)</option>
+                      <option value="slow">slow (2s)</option>
+                    </select>
+                  </label>
+                  <label
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      fontSize: "14px",
+                    }}
+                  >
+                    Image:
+                    <select
+                      value={theme}
+                      onChange={(e) => setTheme(e.target.value)}
+                      style={{ fontSize: "14px", padding: "4px 8px" }}
+                    >
+                      {THEMES.map((t) => (
+                        <option key={t} value={t}>
+                          {t}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
                 </div>
 
-                <ImageWithLoadingState
-                  key={`${delay}-${reloadKey}`}
-                  src={src}
-                  alt="A demo image served by the service worker"
-                  width="100%"
-                  height="360px"
-                />
+                <NoHeightSection delay={delay} theme={theme} />
+                <WithHeightSection delay={delay} theme={theme} />
               </>
             )}
           </div>
