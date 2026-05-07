@@ -136,17 +136,21 @@
                   gap: "10px",
                 }}
               >
+                {/* Inherits parent color */}
                 <div
                   style={{
                     display: "flex",
                     alignItems: "center",
                     gap: "8px",
                     fontSize: "16px",
+                    color: "#4dabf7",
                   }}
                 >
                   {loading && <LoadingIndicator variant="circle" />}
-                  <code>variant="circle"</code> (default)
+                  {loading && <LoadingIndicator variant="dots" />}
+                  Inherits parent color
                 </div>
+                {/* Override via color prop */}
                 <div
                   style={{
                     display: "flex",
@@ -155,8 +159,13 @@
                     fontSize: "16px",
                   }}
                 >
-                  {loading && <LoadingIndicator variant="dots" />}
-                  <code>variant="dots"</code>
+                  {loading && (
+                    <LoadingIndicator variant="circle" color="#ff6b6b" />
+                  )}
+                  {loading && (
+                    <LoadingIndicator variant="dots" color="#ff6b6b" />
+                  )}
+                  <code>color="#ff6b6b"</code>
                 </div>
               </div>
             </section>

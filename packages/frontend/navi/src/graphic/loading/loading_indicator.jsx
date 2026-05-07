@@ -7,7 +7,7 @@ import { LoadingIndicatorFluid } from "./loading_indicator_fluid.jsx";
  * Inherits color from the current text color by default.
  *
  * @param {"circle"|"dots"} [props.variant="circle"] - Visual style of the indicator
- * @param {string} [props.color="currentColor"] - Stroke color (circle variant only)
+ * @param {string} [props.color="currentColor"] - Color of the indicator; inherits from CSS `color` by default
  * @param {number} [props.size=2] - Stroke width in px (circle variant only)
  */
 export const LoadingIndicator = ({ variant = "circle", ...props }) => {
