@@ -19653,7 +19653,11 @@ const LoadingIndicatorFluid = ({
     setContainerWidth(width);
     setContainerHeight(height);
     if (radius === undefined || radius === "inherit") {
-      const radius = getComputedStyle(indicatorEl).borderRadius;
+      const parentEl = indicatorEl.parentElement;
+      // Prefer the inline style (always available, even before layout is computed).
+      // Fall back to computed longhands — getComputedStyle shorthand may return ""
+      // if the browser hasn't resolved the layout yet.
+      const radius = parentEl.style.borderRadius || parentEl.style.borderTopLeftRadius || getComputedStyle(parentEl).borderTopLeftRadius || "0px";
       setContainerRadius(radius);
     }
     let animationFrameId = null;
