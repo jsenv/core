@@ -25,6 +25,42 @@ try {
 }
 ```
 
+# 1/2 logs
+
+![img](log_group.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+[stateSignal:8] validation failed with no valid suggestion:  {
+  type: 'must be a number',
+  step: undefined,
+  valid: false,
+  validSuggestion: null
+}
+[stateSignal:8] validation failed with no valid suggestion: 
+[stateSignal:8] validation failed with no valid suggestion:  {
+  type: 'must be a number',
+  step: undefined,
+  valid: false,
+  validSuggestion: null
+}
+[stateSignal:8] validation failed with no valid suggestion: 
+[stateSignal:8] validation failed with no valid suggestion:  {
+  type: 'must be a number',
+  step: undefined,
+  valid: false,
+  validSuggestion: null
+}
+[stateSignal:8] validation failed with no valid suggestion: 
+```
+
+</details>
+
+
+# 2/2 return
+
 ```js
 {
   "results": [

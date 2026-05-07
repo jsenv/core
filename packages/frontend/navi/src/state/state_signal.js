@@ -96,7 +96,6 @@ const generateSignalId = () => {
  * const childTab = stateSignal(parentTab);
  * // childTab follows parentTab changes unless explicitly set
  */
-const NO_LOCAL_STORAGE = [() => undefined, () => {}, () => {}];
 export const stateSignal = (defaultValue, options = {}) => {
   const {
     id,
@@ -221,6 +220,9 @@ export const stateSignal = (defaultValue, options = {}) => {
     oneOf,
   });
   const processValue = (value) => {
+    if (value === undefined) {
+      return undefined;
+    }
     const wasValid = validity.valid;
     updateValidity(value);
     if (validity.valid) {
@@ -239,12 +241,14 @@ export const stateSignal = (defaultValue, options = {}) => {
     if (hasAutoFix) {
       if (debug) {
         console.debug(
-          `[stateSignal:${signalIdString}] validation failed: ${validity.message}`,
+          `[stateSignal:${signalIdString}] validation failed: `,
+          validity,
         );
       }
     } else {
       console.warn(
-        `[stateSignal:${signalIdString}] validation failed with no valid suggestion: ${validity.message}`,
+        `[stateSignal:${signalIdString}] validation failed with no valid suggestion: `,
+        validity,
       );
     }
     if (validity.validSuggestion) {
@@ -449,6 +453,7 @@ export const stateSignal = (defaultValue, options = {}) => {
   return facadeSignal;
 };
 
+const NO_LOCAL_STORAGE = [() => undefined, () => {}, () => {}];
 const localStorageTypeMap = {
   float: "number",
   integer: "number",
