@@ -90,8 +90,8 @@ const css = /* css */ `
     }
 
     &[data-accent-needs-dark-fg] {
-      --x-color: white;
-      --x-shadow-color: black;
+      --x-color: black;
+      --x-shadow-color: white;
     }
 
     /* When caption is shown, the track takes the full height */
