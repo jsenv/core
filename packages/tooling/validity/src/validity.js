@@ -283,6 +283,21 @@ const TYPE_VALIDATORS = {
   ratio: (value) => TYPE_VALIDATORS.number(value),
   longitude: (value) => TYPE_VALIDATORS.number(value),
   latitude: (value) => TYPE_VALIDATORS.number(value),
+  array: (value) => {
+    if (!Array.isArray(value)) {
+      return `must be an array, got ${typeof value}`;
+    }
+    return "";
+  },
+  object: (value) => {
+    if (Array.isArray(value)) {
+      return `must be an object, got array`;
+    }
+    if (typeof value !== "object" || value === null) {
+      return `must be an object, got ${typeof value}`;
+    }
+    return "";
+  },
   percentage: (value) => {
     if (typeof value !== "string") {
       return `must be a percentage`;
@@ -485,9 +500,29 @@ const TYPE_CONVERTERS = {
   object: {
     string: (value) => {
       try {
-        return JSON.parse(value);
+        const parsed = JSON.parse(value);
+        if (
+          Array.isArray(parsed) ||
+          typeof parsed !== "object" ||
+          parsed === null
+        ) {
+          return CANNOT_AUTOFIX;
+        }
+        return parsed;
       } catch {
-        // Invalid JSON, can't convert
+        return CANNOT_AUTOFIX;
+      }
+    },
+  },
+  array: {
+    string: (value) => {
+      try {
+        const parsed = JSON.parse(value);
+        if (!Array.isArray(parsed)) {
+          return CANNOT_AUTOFIX;
+        }
+        return parsed;
+      } catch {
         return CANNOT_AUTOFIX;
       }
     },

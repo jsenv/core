@@ -25,7 +25,7 @@ return {
     "validSuggestion": null
   },
   '"{"key": "value"}"': {
-    "type": "must be a object, got string",
+    "type": "must be an object, got string",
     "valid": false,
     "validSuggestion": {
       "value": {
@@ -34,7 +34,7 @@ return {
     }
   },
   '"{invalid json}"': {
-    "type": "must be a object, got string",
+    "type": "must be an object, got string",
     "valid": false,
     "validSuggestion": null
   }
