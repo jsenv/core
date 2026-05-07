@@ -1,7 +1,7 @@
 import { generateAriaKeyShortcuts } from "./aria_key_shortcuts.js";
 import { activeShortcutsSignal } from "./keyboard_shortcuts.js";
 
-import.meta.css = /* css */ `
+const css = /* css */ `
   .navi_shortcut_container[data-visually-hidden] {
     /* Visually hidden container - doesn't affect layout */
     position: absolute;
@@ -38,6 +38,7 @@ import.meta.css = /* css */ `
 `;
 
 export const ActiveKeyboardShortcuts = ({ visible }) => {
+  import.meta.css = css;
   const activeShortcuts = activeShortcutsSignal.value;
 
   return (

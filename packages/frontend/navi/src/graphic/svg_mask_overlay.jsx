@@ -35,7 +35,7 @@
 
 import { cloneElement } from "preact";
 
-import.meta.css = /* css */ `
+const css = /* css */ `
   .svg_mask_content * {
     color: black !important;
     opacity: 1 !important;
@@ -47,6 +47,7 @@ import.meta.css = /* css */ `
 `;
 
 export const SVGMaskOverlay = ({ viewBox, children }) => {
+  import.meta.css = css;
   if (!Array.isArray(children)) {
     return children;
   }

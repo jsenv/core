@@ -1,4 +1,21 @@
+const css = /* css */ `
+  .navi_constraint_feedback_line {
+    position: fixed;
+    z-index: 9998;
+    border-top: 2px dotted rgba(59, 130, 246, 0.7);
+    visibility: hidden;
+    transform-origin: left center;
+    transition: opacity 0.15s ease;
+    pointer-events: none;
+  }
+
+  .navi_constraint_feedback_line[data-visible] {
+    visibility: visible;
+  }
+`;
+
 export const setupConstraintFeedbackLine = () => {
+  import.meta.css = css;
   const constraintFeedbackLine = createConstraintFeedbackLine();
 
   // Track last known mouse position for constraint feedback line during scroll
@@ -76,19 +93,3 @@ const createConstraintFeedbackLine = () => {
   document.body.appendChild(line);
   return line;
 };
-
-import.meta.css = /* css */ `
-  .navi_constraint_feedback_line {
-    position: fixed;
-    z-index: 9998;
-    border-top: 2px dotted rgba(59, 130, 246, 0.7);
-    visibility: hidden;
-    transform-origin: left center;
-    transition: opacity 0.15s ease;
-    pointer-events: none;
-  }
-
-  .navi_constraint_feedback_line[data-visible] {
-    visibility: visible;
-  }
-`;

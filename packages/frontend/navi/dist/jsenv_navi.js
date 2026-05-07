@@ -71,7 +71,7 @@ const useActionStatus = (action) => {
   };
 };
 
-installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
+installImportMetaCssBuild(import.meta);const css$H = /* css */`
   .action_error {
     margin-top: 0;
     margin-bottom: 20px;
@@ -79,7 +79,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
     background: #fdd;
     border: 1px solid red;
   }
-`, "@jsenv/navi/src/action/action_renderer.jsx"];
+`;
 const renderIdleDefault = () => null;
 const renderLoadingDefault = () => null;
 const renderAbortedDefault = () => null;
@@ -96,6 +96,7 @@ const ActionRenderer = ({
   children,
   disabled
 }) => {
+  import.meta.css = [css$H, "@jsenv/navi/src/action/action_renderer.jsx"];
   if (action === undefined) {
     throw new Error("ActionRenderer requires an action to render, but none was provided.");
   }
@@ -16304,7 +16305,7 @@ installImportMetaCssBuild(import.meta);
  * - Centers in viewport when no anchor element provided or anchor is too big
  */
 
-const css$E = /* css */`
+const css$G = /* css */`
   @layer navi {
     .navi_callout {
       --callout-success-color: #4caf50;
@@ -16478,7 +16479,7 @@ const openCallout = (message, {
   showErrorStack,
   debug = false
 } = {}) => {
-  import.meta.css = [css$E, "@jsenv/navi/src/field/validation/callout/callout.js"];
+  import.meta.css = [css$G, "@jsenv/navi/src/field/validation/callout/callout.js"];
   const callout = {
     opened: true,
     close: null,
@@ -19604,7 +19605,7 @@ const setupNetworkMonitoring = () => {
 };
 setupNetworkMonitoring();
 
-installImportMetaCssBuild(import.meta);const css$D = /* css */`
+installImportMetaCssBuild(import.meta);const css$F = /* css */`
   .navi_loading_indicator_fluid_container {
     position: relative;
     display: flex;
@@ -19634,7 +19635,7 @@ const LoadingIndicatorFluid = ({
   radius,
   ...rest
 }) => {
-  import.meta.css = [css$D, "@jsenv/navi/src/graphic/loading/loading_indicator_fluid.jsx"];
+  import.meta.css = [css$F, "@jsenv/navi/src/graphic/loading/loading_indicator_fluid.jsx"];
   const ref = useRef(null);
   // The container dimensions can be deduced from the ref itself as the indicator is absolute inset 0
   const [containerWidth, setContainerWidth] = useState(0);
@@ -19822,7 +19823,7 @@ const LoadingRectangleSvg = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$C = /* css */`
+installImportMetaCssBuild(import.meta);const css$E = /* css */`
   .navi_loading_outline_wrapper {
     position: absolute;
     top: var(--loading-rectangle-top, 0);
@@ -19840,7 +19841,7 @@ installImportMetaCssBuild(import.meta);const css$C = /* css */`
   }
 `;
 const LoadingOutline = props => {
-  import.meta.css = [css$C, "@jsenv/navi/src/graphic/loading/loading_outline.jsx"];
+  import.meta.css = [css$E, "@jsenv/navi/src/graphic/loading/loading_outline.jsx"];
   if (props.containerRef) {
     const container = props.containerRef.current;
     if (!container) {
@@ -20786,7 +20787,7 @@ const selectByTextStrings = (element, range, startText, endText) => {
 };
 
 installImportMetaCssBuild(import.meta);// https://jsfiddle.net/v5xzJ/4/
-const css$B = /* css */`
+const css$D = /* css */`
   @layer navi {
     .navi_text {
       &[data-skeleton] {
@@ -21185,7 +21186,7 @@ const TextDispatcher = props => {
   });
 };
 const TextUI = props => {
-  import.meta.css = [css$B, "@jsenv/navi/src/text/text.jsx"];
+  import.meta.css = [css$D, "@jsenv/navi/src/text/text.jsx"];
   let {
     ref,
     spacing,
@@ -21357,7 +21358,7 @@ const TextWithSelectRange = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$A = /* css */`
+installImportMetaCssBuild(import.meta);const css$C = /* css */`
   .navi_text_anchor {
     vertical-align: baseline;
     user-select: none;
@@ -21392,7 +21393,7 @@ const TextAnchor = ({
   textSize,
   lineLayout
 }) => {
-  import.meta.css = [css$A, "@jsenv/navi/src/text/text_anchor.jsx"];
+  import.meta.css = [css$C, "@jsenv/navi/src/text/text_anchor.jsx"];
   const anchorRef = useRef();
   const setTopOffset = (childEl, topOffset) => {
     // position:relative + top shifts the element visually.
@@ -21494,7 +21495,7 @@ const computeTopOffset = ({
 };
 const charTopCanvas = document.createElement("canvas");
 
-installImportMetaCssBuild(import.meta);const css$z = /* css */`
+installImportMetaCssBuild(import.meta);const css$B = /* css */`
   @layer navi {
     /* Ensure data attributes from box.jsx can win to update display */
     .navi_icon {
@@ -21567,7 +21568,7 @@ const Icon = ({
   lineLayout,
   ...props
 }) => {
-  import.meta.css = [css$z, "@jsenv/navi/src/text/icon.jsx"];
+  import.meta.css = [css$B, "@jsenv/navi/src/text/icon.jsx"];
   const innerChildren = href ? jsx("svg", {
     width: "100%",
     height: "100%",
@@ -22519,7 +22520,7 @@ const useUIState = (uiStateController) => {
   return trackedUIState;
 };
 
-installImportMetaCssBuild(import.meta);const css$y = /* css */`
+installImportMetaCssBuild(import.meta);const css$A = /* css */`
   @layer navi {
     .navi_button {
       --button-border-radius: 2px;
@@ -22805,7 +22806,7 @@ const ButtonDispatcher = props => {
   });
 };
 const ButtonUI = props => {
-  import.meta.css = [css$y, "@jsenv/navi/src/field/button.jsx"];
+  import.meta.css = [css$A, "@jsenv/navi/src/field/button.jsx"];
   const {
     ref,
     readOnly,
@@ -23130,7 +23131,7 @@ const WarningSvg = () => {
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$x = /* css */`
+installImportMetaCssBuild(import.meta);const css$z = /* css */`
   @layer navi {
     .navi_message_box {
       --background-color-info: var(--navi-info-color-light);
@@ -23183,7 +23184,7 @@ const MessageBox = ({
   onClose,
   ...rest
 }) => {
-  import.meta.css = [css$x, "@jsenv/navi/src/text/message_box.jsx"];
+  import.meta.css = [css$z, "@jsenv/navi/src/text/message_box.jsx"];
   const [hasTitleChild, setHasTitleChild] = useState(false);
   const innerLeftStripe = leftStripe === undefined ? hasTitleChild : leftStripe;
   if (icon === true) {
@@ -23242,7 +23243,7 @@ const MessageBoxPseudoClasses = [":-navi-status-info", ":-navi-status-success", 
 const MessageBoxStatusContext = createContext();
 const MessageBoxReportTitleChildContext = createContext();
 
-installImportMetaCssBuild(import.meta);const css$w = /* css */`
+installImportMetaCssBuild(import.meta);const css$y = /* css */`
   .navi_message_box {
     .navi_title {
       margin-top: 0;
@@ -23252,7 +23253,7 @@ installImportMetaCssBuild(import.meta);const css$w = /* css */`
   }
 `;
 const Title = props => {
-  import.meta.css = [css$w, "@jsenv/navi/src/text/title.jsx"];
+  import.meta.css = [css$y, "@jsenv/navi/src/text/title.jsx"];
   const messageBoxStatus = useContext(MessageBoxStatusContext);
   const innerAs = props.as || (messageBoxStatus ? "h4" : "h1");
   const titleLevel = parseInt(innerAs.slice(1));
@@ -23330,7 +23331,7 @@ const useDimColorWhen = (elementRef, shouldDim) => {
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$v = /* css */`
+installImportMetaCssBuild(import.meta);const css$x = /* css */`
   @layer navi {
     .navi_link {
       --link-border-radius: unset;
@@ -23682,7 +23683,7 @@ Object.assign(PSEUDO_CLASSES, {
   }
 });
 const Link = props => {
-  import.meta.css = [css$v, "@jsenv/navi/src/nav/link/link.jsx"];
+  import.meta.css = [css$x, "@jsenv/navi/src/nav/link/link.jsx"];
   return renderActionableComponent(props, {
     Basic: LinkBasic,
     WithAction: LinkWithAction
@@ -23948,7 +23949,7 @@ installImportMetaCssBuild(import.meta);/**
  * TabList component with support for horizontal and vertical layouts
  * https://dribbble.com/search/tabs
  */
-const css$u = /* css */`
+const css$w = /* css */`
   @layer navi {
     .navi_nav {
       --nav-border: none;
@@ -24084,7 +24085,7 @@ const Nav = ({
   panelBorderConnection,
   ...props
 }) => {
-  import.meta.css = [css$u, "@jsenv/navi/src/nav/link/nav.jsx"];
+  import.meta.css = [css$w, "@jsenv/navi/src/nav/link/nav.jsx"];
   children = toChildArray(children);
   return jsx(Box, {
     as: "nav",
@@ -24132,7 +24133,7 @@ const useFocusGroup = (
 
 installImportMetaCssBuild(import.meta);const rightArrowPath = "M680-480L360-160l-80-80 240-240-240-240 80-80 320 320z";
 const downArrowPath = "M480-280L160-600l80-80 240 240 240-240 80 80-320 320z";
-const css$t = /* css */`
+const css$v = /* css */`
   .navi_summary_marker {
     width: 1em;
     height: 1em;
@@ -24217,7 +24218,7 @@ const SummaryMarker = ({
   open,
   loading
 }) => {
-  import.meta.css = [css$t, "@jsenv/navi/src/field/details/summary_marker.jsx"];
+  import.meta.css = [css$v, "@jsenv/navi/src/field/details/summary_marker.jsx"];
   const showLoading = useDebounceTrue(loading, 300);
   const mountedRef = useRef(false);
   const prevOpenRef = useRef(open);
@@ -24271,7 +24272,7 @@ const SummaryMarker = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$s = /* css */`
+installImportMetaCssBuild(import.meta);const css$u = /* css */`
   .navi_details {
     position: relative;
     z-index: 1;
@@ -24308,7 +24309,7 @@ installImportMetaCssBuild(import.meta);const css$s = /* css */`
   }
 `;
 const Details = props => {
-  import.meta.css = [css$s, "@jsenv/navi/src/field/details/details.jsx"];
+  import.meta.css = [css$u, "@jsenv/navi/src/field/details/details.jsx"];
   const {
     value = "on",
     persists
@@ -24623,7 +24624,7 @@ const fieldPropSet = new Set([
   "data-testid",
 ]);
 
-installImportMetaCssBuild(import.meta);const css$r = /* css */`
+installImportMetaCssBuild(import.meta);const css$t = /* css */`
   @layer navi {
     label {
       &[data-interactive] {
@@ -24641,7 +24642,7 @@ installImportMetaCssBuild(import.meta);const css$r = /* css */`
   }
 `;
 const Label = props => {
-  import.meta.css = [css$r, "@jsenv/navi/src/field/label.jsx"];
+  import.meta.css = [css$t, "@jsenv/navi/src/field/label.jsx"];
   const {
     readOnly,
     disabled,
@@ -24691,7 +24692,7 @@ const reportDisabledToLabel = value => {
   reportDisabled?.(value);
 };
 
-installImportMetaCssBuild(import.meta);const css$q = /* css */`
+installImportMetaCssBuild(import.meta);const css$s = /* css */`
   @layer navi {
     .navi_checkbox {
       --margin: 3px 3px 3px 4px;
@@ -25083,7 +25084,7 @@ const InputCheckboxDispatcher = props => {
   });
 };
 const InputCheckboxUI = props => {
-  import.meta.css = [css$q, "@jsenv/navi/src/field/input_checkbox.jsx"];
+  import.meta.css = [css$s, "@jsenv/navi/src/field/input_checkbox.jsx"];
   const {
     ref,
     /* eslint-disable no-unused-vars */
@@ -25484,7 +25485,7 @@ forwardRef((props, ref) => {
   });
 });
 
-installImportMetaCssBuild(import.meta);const css$p = /* css */`
+installImportMetaCssBuild(import.meta);const css$r = /* css */`
   @layer navi {
     .navi_radio {
       --margin: 3px 3px 0 5px;
@@ -25838,7 +25839,7 @@ const InputRadioDispatcher = props => {
   });
 };
 const InputRadioUI = props => {
-  import.meta.css = [css$p, "@jsenv/navi/src/field/input_radio.jsx"];
+  import.meta.css = [css$r, "@jsenv/navi/src/field/input_radio.jsx"];
   const {
     ref,
     /* eslint-disable no-unused-vars */
@@ -26068,7 +26069,7 @@ const InputRadioWithAction = () => {
   throw new Error(`<Input type="radio" /> with an action make no sense. Use <RadioList action={something} /> instead`);
 };
 
-installImportMetaCssBuild(import.meta);const css$o = /* css */`
+installImportMetaCssBuild(import.meta);const css$q = /* css */`
   @layer navi {
     .navi_input_range {
       --border-radius: 6px;
@@ -26330,7 +26331,7 @@ const InputRangeDispatcher = props => {
   });
 };
 const InputRangeUI = props => {
-  import.meta.css = [css$o, "@jsenv/navi/src/field/input_range.jsx"];
+  import.meta.css = [css$q, "@jsenv/navi/src/field/input_range.jsx"];
   const {
     ref,
     onInput,
@@ -26607,7 +26608,7 @@ const SearchSvg = () => jsx("svg", {
   })
 });
 
-installImportMetaCssBuild(import.meta);const css$n = /* css */`
+installImportMetaCssBuild(import.meta);const css$p = /* css */`
   @layer navi {
     .navi_separator {
       --size: 1px;
@@ -26647,7 +26648,7 @@ const Separator = ({
   vertical,
   ...props
 }) => {
-  import.meta.css = [css$n, "@jsenv/navi/src/layout/separator.jsx"];
+  import.meta.css = [css$p, "@jsenv/navi/src/layout/separator.jsx"];
   return jsx(Box, {
     as: vertical ? "span" : "hr",
     ...props,
@@ -27059,7 +27060,7 @@ const RenderWindowContext = createContext(null);
 // Carries the separator element/function down to each ListItem so separators
 // are only rendered between items that actually mount (post-filter, post-window).
 const SeparatorContext = createContext(null);
-const css$m = /* css */`
+const css$o = /* css */`
   @layer navi {
     .navi_list_container {
       --list-outline-width: 1px;
@@ -27486,7 +27487,7 @@ const ListDispatcher = props => {
   });
 };
 const ListUI = props => {
-  import.meta.css = [css$m, "@jsenv/navi/src/field/list/list.jsx"];
+  import.meta.css = [css$o, "@jsenv/navi/src/field/list/list.jsx"];
   const {
     ref,
     renderBudget = RENDER_BUDGET_DEFAULT,
@@ -28965,7 +28966,7 @@ installImportMetaCssBuild(import.meta);/**
  * - <InputCheckbox /> for type="checkbox"
  * - <InputRadio /> for type="radio"
  */
-const css$l = /* css */`
+const css$n = /* css */`
   @layer navi {
     .navi_input {
       --border-radius: 2px;
@@ -29219,7 +29220,7 @@ const InputTextualDispatcher = props => {
 };
 const InputNativeContext = createContext(null);
 const InputTextualUI = props => {
-  import.meta.css = [css$l, "@jsenv/navi/src/field/input_textual.jsx"];
+  import.meta.css = [css$n, "@jsenv/navi/src/field/input_textual.jsx"];
   const {
     ref,
     type,
@@ -29840,7 +29841,7 @@ installImportMetaCssBuild(import.meta);/**
  * This means an editable thing MUST have a parent with position relative that wraps the content and the eventual editable input
  *
  */
-const css$k = /* css */`
+const css$m = /* css */`
   .navi_editable_wrapper {
     --inset-top: 0px;
     --inset-right: 0px;
@@ -29889,7 +29890,7 @@ const useEditionController = () => {
   };
 };
 const Editable = props => {
-  import.meta.css = [css$k, "@jsenv/navi/src/field/edition/editable.jsx"];
+  import.meta.css = [css$m, "@jsenv/navi/src/field/edition/editable.jsx"];
   let {
     children,
     action,
@@ -30303,7 +30304,7 @@ const FormWithAction = props => {
 //   form.dispatchEvent(customEvent);
 // };
 
-installImportMetaCssBuild(import.meta);const css$j = /* css */`
+installImportMetaCssBuild(import.meta);const css$l = /* css */`
   .navi_group {
     --border-width: 1px;
 
@@ -30400,7 +30401,7 @@ const Group = ({
   vertical = row,
   ...props
 }) => {
-  import.meta.css = [css$j, "@jsenv/navi/src/field/group.jsx"];
+  import.meta.css = [css$l, "@jsenv/navi/src/field/group.jsx"];
   if (typeof borderWidth === "string") {
     borderWidth = parseFloat(borderWidth);
   }
@@ -30591,7 +30592,7 @@ const useCleanup = () => {
   return cleanupMethods;
 };
 
-installImportMetaCssBuild(import.meta);const css$i = /* css */`
+installImportMetaCssBuild(import.meta);const css$k = /* css */`
   .navi_dialog {
     &[open] {
       display: flex;
@@ -30604,7 +30605,7 @@ installImportMetaCssBuild(import.meta);const css$i = /* css */`
   }
 `;
 const Dialog = props => {
-  import.meta.css = [css$i, "@jsenv/navi/src/popup/dialog.jsx"];
+  import.meta.css = [css$k, "@jsenv/navi/src/popup/dialog.jsx"];
   const {
     children,
     scrollTrap,
@@ -30715,7 +30716,7 @@ const requestDialogClose = (popoverElement, {
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$h = /* css */`
+installImportMetaCssBuild(import.meta);const css$j = /* css */`
   .navi_popover_backdrop {
     position: fixed;
     inset: 0;
@@ -30731,7 +30732,7 @@ installImportMetaCssBuild(import.meta);const css$h = /* css */`
   }
 `;
 const Popover = props => {
-  import.meta.css = [css$h, "@jsenv/navi/src/popup/popover.jsx"];
+  import.meta.css = [css$j, "@jsenv/navi/src/popup/popover.jsx"];
   const {
     scrollTrap,
     pointerTrap,
@@ -30933,7 +30934,7 @@ const requestPopoverClose = (popoverElement, {
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$g = /* css */`
+installImportMetaCssBuild(import.meta);const css$i = /* css */`
   @layer navi {
     .navi_select {
       --select-border-radius: 2px;
@@ -31281,7 +31282,7 @@ const SelectDispatcher = props => {
   });
 };
 const SelectUI = props => {
-  import.meta.css = [css$g, "@jsenv/navi/src/field/select.jsx"];
+  import.meta.css = [css$i, "@jsenv/navi/src/field/select.jsx"];
   const {
     placeholder = "Select…",
     trigger,
@@ -32473,7 +32474,7 @@ const Z_INDEX_DROP_PREVIEW = Z_INDEX_STICKY_CORNER + 1;
 
 const Z_INDEX_TABLE_UI = Z_INDEX_STICKY_CORNER + 1;
 
-installImportMetaCssBuild(import.meta);const css$f = /* css */`
+installImportMetaCssBuild(import.meta);const css$h = /* css */`
   .navi_table_drag_clone_container {
     position: absolute;
     top: var(--table-visual-top);
@@ -32653,7 +32654,7 @@ const moveItem = (array, indexA, indexB) => {
   return newArray;
 };
 const TableDragCloneContainer = forwardRef((props, ref) => {
-  import.meta.css = [css$f, "@jsenv/navi/src/field/table/drag/table_drag.jsx"];
+  import.meta.css = [css$h, "@jsenv/navi/src/field/table/drag/table_drag.jsx"];
   const {
     tableId
   } = props;
@@ -32951,7 +32952,7 @@ installImportMetaCssBuild(import.meta);const ROW_MIN_HEIGHT = 30;
 const ROW_MAX_HEIGHT = 100;
 const COLUMN_MIN_WIDTH = 50;
 const COLUMN_MAX_WIDTH = 500;
-const css$e = /* css */`
+const css$g = /* css */`
   @layer navi {
     .navi_table {
       --table-resizer-handle-color: #063b7c;
@@ -33111,7 +33112,7 @@ const css$e = /* css */`
 
 // Column resize components
 const TableColumnResizer = props => {
-  import.meta.css = [css$e, "@jsenv/navi/src/field/table/resize/table_resize.jsx"];
+  import.meta.css = [css$g, "@jsenv/navi/src/field/table/resize/table_resize.jsx"];
   const defaultRef = useRef();
   const ref = props.ref || defaultRef;
   return jsxs("div", {
@@ -33578,7 +33579,7 @@ const findPreviousTableRow = currentRow => {
   return currentIndex > 0 ? allRows[currentIndex - 1] : null;
 };
 
-installImportMetaCssBuild(import.meta);const css$d = /* css */`
+installImportMetaCssBuild(import.meta);const css$f = /* css */`
   @layer navi {
     .navi_table {
       --selection-border-color: var(--navi-selection-border-color, #0078d4);
@@ -33680,7 +33681,7 @@ const useTableSelectionController = ({
   onSelectionChange,
   selectionColor
 }) => {
-  import.meta.css = [css$d, "@jsenv/navi/src/field/table/selection/table_selection.jsx"];
+  import.meta.css = [css$f, "@jsenv/navi/src/field/table/selection/table_selection.jsx"];
   const selectionController = useSelectionController({
     elementRef: tableRef,
     layout: "grid",
@@ -34151,7 +34152,7 @@ const useTableStickyContextValue = ({
 };
 
 installImportMetaCssBuild(import.meta);// TODO: sticky left/top frontier should likely use "followPosition"
-const css$c = /* css */`
+const css$e = /* css */`
   @layer navi {
     .navi_table {
       --sticky-frontier-color: #c0c0c0;
@@ -34394,7 +34395,7 @@ const css$c = /* css */`
 const TableStickyFrontier = ({
   tableRef
 }) => {
-  import.meta.css = [css$c, "@jsenv/navi/src/field/table/sticky/table_sticky.jsx"];
+  import.meta.css = [css$e, "@jsenv/navi/src/field/table/sticky/table_sticky.jsx"];
   const stickyLeftFrontierGhostRef = useRef();
   const stickyLeftFrontierPreviewRef = useRef();
   const stickyTopFrontierGhostRef = useRef();
@@ -34623,7 +34624,7 @@ const initMoveStickyFrontierViaPointer = (pointerdownEvent, {
  *   inset 0 -1px 0 0 color;   // Bottom border
  */
 
-const css$b = /* css */ `
+const css$d = /* css */ `
   .navi_table_root {
     position: relative;
     max-width: var(--table-max-width, none);
@@ -34826,7 +34827,7 @@ const css$b = /* css */ `
   }
 `;
 
-installImportMetaCssBuild(import.meta);const css$a = /* css */`
+installImportMetaCssBuild(import.meta);const css$c = /* css */`
   .navi_table_ui {
     position: fixed;
     inset: 0;
@@ -34837,7 +34838,7 @@ installImportMetaCssBuild(import.meta);const css$a = /* css */`
   }
 `;
 const TableUI = forwardRef((props, ref) => {
-  import.meta.css = [css$a, "@jsenv/navi/src/field/table/table_ui.jsx"];
+  import.meta.css = [css$c, "@jsenv/navi/src/field/table/table_ui.jsx"];
   const {
     tableRef,
     tableId,
@@ -34943,7 +34944,7 @@ const RowIndexContext = createContext();
 const TableSectionContext = createContext();
 const useIsInTableHead = () => useContext(TableSectionContext) === "head";
 const Table = props => {
-  import.meta.css = [css$b, "@jsenv/navi/src/field/table/table.jsx"];
+  import.meta.css = [css$d, "@jsenv/navi/src/field/table/table.jsx"];
   const tableDefaultRef = useRef();
   const tableDefaultId = `table-${useId()}`;
   const {
@@ -35764,7 +35765,7 @@ const normalizeKey = (key) => {
   return key;
 };
 
-installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
+installImportMetaCssBuild(import.meta);const css$b = /* css */`
   .navi_shortcut_container[data-visually-hidden] {
     /* Visually hidden container - doesn't affect layout */
     position: absolute;
@@ -35798,10 +35799,11 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
     opacity: 0;
     pointer-events: none;
   }
-`, "@jsenv/navi/src/keyboard/active_keyboard_shortcuts.jsx"];
+`;
 const ActiveKeyboardShortcuts = ({
   visible
 }) => {
+  import.meta.css = [css$b, "@jsenv/navi/src/keyboard/active_keyboard_shortcuts.jsx"];
   const activeShortcuts = activeShortcutsSignal.value;
   return jsx("div", {
     className: "navi_shortcut_container",
@@ -35840,7 +35842,7 @@ const KeyboardShortcutAriaElement = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$9 = /* css */`
+installImportMetaCssBuild(import.meta);const css$a = /* css */`
   @layer navi {
     .navi_clipboard_container {
       --height: 1.5em;
@@ -35872,7 +35874,7 @@ const ButtonCopyToClipboard = ({
   children,
   ...props
 }) => {
-  import.meta.css = [css$9, "@jsenv/navi/src/field/button_copy_to_clipboard.jsx"];
+  import.meta.css = [css$a, "@jsenv/navi/src/field/button_copy_to_clipboard.jsx"];
   const [copied, setCopied] = useState(false);
   const renderedRef = useRef();
   useEffect(() => {
@@ -35953,7 +35955,7 @@ const Address = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$8 = /* css */`
+installImportMetaCssBuild(import.meta);const css$9 = /* css */`
   @layer navi {
   }
   .navi_badge {
@@ -35987,7 +35989,7 @@ const Badge = ({
   className,
   ...props
 }) => {
-  import.meta.css = [css$8, "@jsenv/navi/src/text/badge.jsx"];
+  import.meta.css = [css$9, "@jsenv/navi/src/text/badge.jsx"];
   const defaultRef = useRef();
   const ref = props.ref || defaultRef;
   useAccentColorAttributes(ref, null);
@@ -36077,7 +36079,7 @@ const formatNumber = (value, { lang } = {}) => {
   return new Intl.NumberFormat(lang).format(value);
 };
 
-installImportMetaCssBuild(import.meta);const css$7 = /* css */`
+installImportMetaCssBuild(import.meta);const css$8 = /* css */`
   @layer navi {
   }
   .navi_text.navi_badge_count {
@@ -36190,7 +36192,7 @@ const BadgeCount = ({
   lineLayout,
   ...props
 }) => {
-  import.meta.css = [css$7, "@jsenv/navi/src/text/badge_count.jsx"];
+  import.meta.css = [css$8, "@jsenv/navi/src/text/badge_count.jsx"];
   const defaultRef = useRef();
   const ref = props.ref || defaultRef;
   useAccentColorAttributes(ref, null);
@@ -36329,7 +36331,7 @@ const BadgeCountCircle = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$6 = /* css */`
+installImportMetaCssBuild(import.meta);const css$7 = /* css */`
   @layer navi {
     .navi_caption {
       --color: #6b7280;
@@ -36350,7 +36352,7 @@ const Caption = ({
   className,
   ...rest
 }) => {
-  import.meta.css = [css$6, "@jsenv/navi/src/text/caption.jsx"];
+  import.meta.css = [css$7, "@jsenv/navi/src/text/caption.jsx"];
   return jsx(Text, {
     as: "small",
     size: "0.8em" // We use em to be relative to the parent (we want to be smaller than the surrounding text)
@@ -36827,7 +36829,7 @@ const interpolate = (template, values) => {
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$5 = /* css */`
+installImportMetaCssBuild(import.meta);const css$6 = /* css */`
   @layer navi {
     .navi_quantity {
       --unit-color: color-mix(in srgb, currentColor 50%, white);
@@ -36932,7 +36934,7 @@ const Quantity = ({
   bold = true,
   ...props
 }) => {
-  import.meta.css = [css$5, "@jsenv/navi/src/text/quantity.jsx"];
+  import.meta.css = [css$6, "@jsenv/navi/src/text/quantity.jsx"];
   const value = parseQuantityValue(children);
   const valueRounded = integer && typeof value === "number" ? Math.round(value) : value;
   const valueFormatted = typeof valueRounded === "number" ? formatNumber(valueRounded, {
@@ -37021,7 +37023,7 @@ const parseQuantityValue = children => {
   return Number.isNaN(parsed) ? children : parsed;
 };
 
-installImportMetaCssBuild(import.meta);const css$4 = /* css */`
+installImportMetaCssBuild(import.meta);const css$5 = /* css */`
   @layer navi {
     .navi_meter {
       --loader-color: var(--navi-loader-color);
@@ -37159,7 +37161,7 @@ const Meter = ({
   style,
   ...rest
 }) => {
-  import.meta.css = [css$4, "@jsenv/navi/src/text/meter.jsx"];
+  import.meta.css = [css$5, "@jsenv/navi/src/text/meter.jsx"];
   const defaultRef = useRef();
   const ref = rest.ref || defaultRef;
   value = Number(value);
@@ -37286,7 +37288,7 @@ const Paragraph = props => {
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$3 = /* css */`
+installImportMetaCssBuild(import.meta);const css$4 = /* css */`
   @keyframes navi_image_shimmer {
     0% {
       background-position: -200% 0;
@@ -37341,7 +37343,7 @@ const Image = ({
   placeholderDark = false,
   ...rest
 }) => {
-  import.meta.css = [css$3, "@jsenv/navi/src/graphic/image.jsx"];
+  import.meta.css = [css$4, "@jsenv/navi/src/graphic/image.jsx"];
   const loadedRef = useRef();
   let resolvedPlaceholder = placeholderColor;
   if (resolvedPlaceholder === undefined) {
@@ -37424,7 +37426,7 @@ installImportMetaCssBuild(import.meta);/**
  * @param {ReactNode[]} props.children - SVG elements (first is base, rest are overlays)
  * @returns {ReactElement} A composed SVG with all elements properly masked
  */
-import.meta.css = [/* css */`
+const css$3 = /* css */`
   .svg_mask_content * {
     color: black !important;
     opacity: 1 !important;
@@ -37433,11 +37435,12 @@ import.meta.css = [/* css */`
     stroke: black !important;
     stroke-opacity: 1 !important;
   }
-`, "@jsenv/navi/src/graphic/svg_mask_overlay.jsx"];
+`;
 const SVGMaskOverlay = ({
   viewBox,
   children
 }) => {
+  import.meta.css = [css$3, "@jsenv/navi/src/graphic/svg_mask_overlay.jsx"];
   if (!Array.isArray(children)) {
     return children;
   }

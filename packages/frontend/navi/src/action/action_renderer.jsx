@@ -4,7 +4,7 @@ import { useErrorBoundary, useLayoutEffect } from "preact/hooks";
 import { getActionPrivateProperties } from "./action_private_properties.js";
 import { useActionStatus } from "./use_action_status.js";
 
-import.meta.css = /* css */ `
+const css = /* css */ `
   .action_error {
     margin-top: 0;
     margin-bottom: 20px;
@@ -24,6 +24,7 @@ const renderErrorDefault = (error) => {
 const renderCompletedDefault = () => null;
 
 export const ActionRenderer = ({ action, children, disabled }) => {
+  import.meta.css = css;
   if (action === undefined) {
     throw new Error(
       "ActionRenderer requires an action to render, but none was provided.",

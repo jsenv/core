@@ -9,7 +9,196 @@ let currentConstraintMarkers = [];
 let currentReferenceElementMarker = null;
 let currentElementMarker = null;
 
+const css = /* css */ `
+  .navi_debug_markers_container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 999998;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none;
+    overflow: hidden;
+    --marker-size: ${MARKER_SIZE}px;
+  }
+
+  .navi_debug_marker {
+    position: absolute;
+    pointer-events: none;
+  }
+
+  /* Markers based on side rather than orientation */
+  .navi_debug_marker[data-left],
+  .navi_debug_marker[data-right] {
+    width: var(--marker-size);
+    height: 100vh;
+  }
+
+  .navi_debug_marker[data-top],
+  .navi_debug_marker[data-bottom] {
+    width: 100vw;
+    height: var(--marker-size);
+  }
+
+  /* Gradient directions based on side, using CSS custom properties for color */
+  .navi_debug_marker[data-left] {
+    background: linear-gradient(
+      to right,
+      rgba(from var(--marker-color) r g b / 0.9) 0%,
+      rgba(from var(--marker-color) r g b / 0.7) 30%,
+      rgba(from var(--marker-color) r g b / 0.3) 70%,
+      rgba(from var(--marker-color) r g b / 0) 100%
+    );
+  }
+
+  .navi_debug_marker[data-right] {
+    background: linear-gradient(
+      to left,
+      rgba(from var(--marker-color) r g b / 0.9) 0%,
+      rgba(from var(--marker-color) r g b / 0.7) 30%,
+      rgba(from var(--marker-color) r g b / 0.3) 70%,
+      rgba(from var(--marker-color) r g b / 0) 100%
+    );
+  }
+
+  .navi_debug_marker[data-top] {
+    background: linear-gradient(
+      to bottom,
+      rgba(from var(--marker-color) r g b / 0.9) 0%,
+      rgba(from var(--marker-color) r g b / 0.7) 30%,
+      rgba(from var(--marker-color) r g b / 0.3) 70%,
+      rgba(from var(--marker-color) r g b / 0) 100%
+    );
+  }
+
+  .navi_debug_marker[data-bottom] {
+    background: linear-gradient(
+      to top,
+      rgba(from var(--marker-color) r g b / 0.9) 0%,
+      rgba(from var(--marker-color) r g b / 0.7) 30%,
+      rgba(from var(--marker-color) r g b / 0.3) 70%,
+      rgba(from var(--marker-color) r g b / 0) 100%
+    );
+  }
+
+  .navi_debug_marker_label {
+    position: absolute;
+    padding: 2px 6px;
+    color: rgb(from var(--marker-color) r g b / 1);
+    font-weight: bold;
+    font-size: 12px;
+    white-space: nowrap;
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid;
+    border-color: rgb(from var(--marker-color) r g b / 1);
+    border-radius: 3px;
+    pointer-events: none;
+  }
+
+  /* Label positioning based on side data attributes */
+
+  /* Left side markers - vertical with 90° rotation */
+  .navi_debug_marker[data-left] .navi_debug_marker_label {
+    top: 20px;
+    left: 10px;
+    transform: rotate(90deg);
+    transform-origin: left center;
+  }
+
+  /* Right side markers - vertical with -90° rotation */
+  .navi_debug_marker[data-right] .navi_debug_marker_label {
+    top: 20px;
+    right: 10px;
+    left: auto;
+    transform: rotate(-90deg);
+    transform-origin: right center;
+  }
+
+  /* Top side markers - horizontal, label on the line */
+  .navi_debug_marker[data-top] .navi_debug_marker_label {
+    top: 0px;
+    left: 20px;
+  }
+
+  /* Bottom side markers - horizontal, label on the line */
+  .navi_debug_marker[data-bottom] .navi_debug_marker_label {
+    top: auto;
+    bottom: 0px;
+    left: 20px;
+  }
+
+  .navi_obstacle_marker {
+    position: absolute;
+    z-index: 9999;
+    background-color: orange;
+    opacity: 0.6;
+    pointer-events: none;
+  }
+
+  .navi_obstacle_marker_label {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    color: white;
+    font-weight: bold;
+    font-size: 12px;
+    text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.8);
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+  }
+
+  .navi_element_marker {
+    position: absolute;
+    z-index: 9997;
+    background-color: var(--element-color-alpha, rgba(255, 0, 150, 0.3));
+    border: 2px solid var(--element-color, rgb(255, 0, 150));
+    opacity: 0.9;
+    pointer-events: none;
+  }
+
+  .navi_element_marker_label {
+    position: absolute;
+    top: -25px;
+    right: 0;
+    padding: 2px 6px;
+    color: var(--element-color, rgb(255, 0, 150));
+    font-weight: bold;
+    font-size: 11px;
+    white-space: nowrap;
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid var(--element-color, rgb(255, 0, 150));
+    border-radius: 3px;
+    pointer-events: none;
+  }
+
+  .navi_reference_element_marker {
+    position: absolute;
+    z-index: 9998;
+    background-color: rgba(0, 150, 255, 0.3);
+    border: 2px dashed rgba(0, 150, 255, 0.7);
+    opacity: 0.8;
+    pointer-events: none;
+  }
+
+  .navi_reference_element_marker_label {
+    position: absolute;
+    top: -25px;
+    left: 0;
+    padding: 2px 6px;
+    color: rgba(0, 150, 255, 1);
+    font-weight: bold;
+    font-size: 11px;
+    white-space: nowrap;
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(0, 150, 255, 0.7);
+    border-radius: 3px;
+    pointer-events: none;
+  }
+`;
+
 export const setupDragDebugMarkers = (dragGesture, { referenceElement }) => {
+  import.meta.css = css;
+
   // Clean up any existing persistent markers from previous drag gestures
   if (KEEP_MARKERS_ON_RELEASE) {
     // Remove any existing markers from previous gestures
@@ -446,190 +635,3 @@ const createReferenceElementMarker = ({
   container.appendChild(marker);
   return marker;
 };
-
-import.meta.css = /* css */ `
-  .navi_debug_markers_container {
-    position: fixed;
-    top: 0;
-    left: 0;
-    z-index: 999998;
-    width: 100vw;
-    height: 100vh;
-    pointer-events: none;
-    overflow: hidden;
-    --marker-size: ${MARKER_SIZE}px;
-  }
-
-  .navi_debug_marker {
-    position: absolute;
-    pointer-events: none;
-  }
-
-  /* Markers based on side rather than orientation */
-  .navi_debug_marker[data-left],
-  .navi_debug_marker[data-right] {
-    width: var(--marker-size);
-    height: 100vh;
-  }
-
-  .navi_debug_marker[data-top],
-  .navi_debug_marker[data-bottom] {
-    width: 100vw;
-    height: var(--marker-size);
-  }
-
-  /* Gradient directions based on side, using CSS custom properties for color */
-  .navi_debug_marker[data-left] {
-    background: linear-gradient(
-      to right,
-      rgba(from var(--marker-color) r g b / 0.9) 0%,
-      rgba(from var(--marker-color) r g b / 0.7) 30%,
-      rgba(from var(--marker-color) r g b / 0.3) 70%,
-      rgba(from var(--marker-color) r g b / 0) 100%
-    );
-  }
-
-  .navi_debug_marker[data-right] {
-    background: linear-gradient(
-      to left,
-      rgba(from var(--marker-color) r g b / 0.9) 0%,
-      rgba(from var(--marker-color) r g b / 0.7) 30%,
-      rgba(from var(--marker-color) r g b / 0.3) 70%,
-      rgba(from var(--marker-color) r g b / 0) 100%
-    );
-  }
-
-  .navi_debug_marker[data-top] {
-    background: linear-gradient(
-      to bottom,
-      rgba(from var(--marker-color) r g b / 0.9) 0%,
-      rgba(from var(--marker-color) r g b / 0.7) 30%,
-      rgba(from var(--marker-color) r g b / 0.3) 70%,
-      rgba(from var(--marker-color) r g b / 0) 100%
-    );
-  }
-
-  .navi_debug_marker[data-bottom] {
-    background: linear-gradient(
-      to top,
-      rgba(from var(--marker-color) r g b / 0.9) 0%,
-      rgba(from var(--marker-color) r g b / 0.7) 30%,
-      rgba(from var(--marker-color) r g b / 0.3) 70%,
-      rgba(from var(--marker-color) r g b / 0) 100%
-    );
-  }
-
-  .navi_debug_marker_label {
-    position: absolute;
-    padding: 2px 6px;
-    color: rgb(from var(--marker-color) r g b / 1);
-    font-weight: bold;
-    font-size: 12px;
-    white-space: nowrap;
-    background: rgba(255, 255, 255, 0.9);
-    border: 1px solid;
-    border-color: rgb(from var(--marker-color) r g b / 1);
-    border-radius: 3px;
-    pointer-events: none;
-  }
-
-  /* Label positioning based on side data attributes */
-
-  /* Left side markers - vertical with 90° rotation */
-  .navi_debug_marker[data-left] .navi_debug_marker_label {
-    top: 20px;
-    left: 10px;
-    transform: rotate(90deg);
-    transform-origin: left center;
-  }
-
-  /* Right side markers - vertical with -90° rotation */
-  .navi_debug_marker[data-right] .navi_debug_marker_label {
-    top: 20px;
-    right: 10px;
-    left: auto;
-    transform: rotate(-90deg);
-    transform-origin: right center;
-  }
-
-  /* Top side markers - horizontal, label on the line */
-  .navi_debug_marker[data-top] .navi_debug_marker_label {
-    top: 0px;
-    left: 20px;
-  }
-
-  /* Bottom side markers - horizontal, label on the line */
-  .navi_debug_marker[data-bottom] .navi_debug_marker_label {
-    top: auto;
-    bottom: 0px;
-    left: 20px;
-  }
-
-  .navi_obstacle_marker {
-    position: absolute;
-    z-index: 9999;
-    background-color: orange;
-    opacity: 0.6;
-    pointer-events: none;
-  }
-
-  .navi_obstacle_marker_label {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    color: white;
-    font-weight: bold;
-    font-size: 12px;
-    text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.8);
-    transform: translate(-50%, -50%);
-    pointer-events: none;
-  }
-
-  .navi_element_marker {
-    position: absolute;
-    z-index: 9997;
-    background-color: var(--element-color-alpha, rgba(255, 0, 150, 0.3));
-    border: 2px solid var(--element-color, rgb(255, 0, 150));
-    opacity: 0.9;
-    pointer-events: none;
-  }
-
-  .navi_element_marker_label {
-    position: absolute;
-    top: -25px;
-    right: 0;
-    padding: 2px 6px;
-    color: var(--element-color, rgb(255, 0, 150));
-    font-weight: bold;
-    font-size: 11px;
-    white-space: nowrap;
-    background: rgba(255, 255, 255, 0.9);
-    border: 1px solid var(--element-color, rgb(255, 0, 150));
-    border-radius: 3px;
-    pointer-events: none;
-  }
-
-  .navi_reference_element_marker {
-    position: absolute;
-    z-index: 9998;
-    background-color: rgba(0, 150, 255, 0.3);
-    border: 2px dashed rgba(0, 150, 255, 0.7);
-    opacity: 0.8;
-    pointer-events: none;
-  }
-
-  .navi_reference_element_marker_label {
-    position: absolute;
-    top: -25px;
-    left: 0;
-    padding: 2px 6px;
-    color: rgba(0, 150, 255, 1);
-    font-weight: bold;
-    font-size: 11px;
-    white-space: nowrap;
-    background: rgba(255, 255, 255, 0.9);
-    border: 1px solid rgba(0, 150, 255, 0.7);
-    border-radius: 3px;
-    pointer-events: none;
-  }
-`;

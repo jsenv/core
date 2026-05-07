@@ -26,7 +26,7 @@ import { getHeight } from "../size/get_height.js";
 import { getWidth } from "../size/get_width.js";
 import { forceStyles, setStyles } from "../style/dom_styles.js";
 
-import.meta.css = /* css */ `
+const css = /* css */ `
   [data-position-sticky-placeholder] {
     position: static !important;
     width: auto !important;
@@ -36,6 +36,7 @@ import.meta.css = /* css */ `
 `;
 
 export const initPositionSticky = (element) => {
+  import.meta.css = css;
   const computedStyle = getComputedStyle(element);
   const topCssValue = computedStyle.top;
   const top = parseFloat(topCssValue);

@@ -13,6 +13,14 @@ import { createPubSub } from "../../pub_sub.js";
 import { findFocusable } from "../focus/find_focusable.js";
 import { isolateInteractions } from "../isolate_interactions.js";
 
+const css = /* css */ `
+  .navi_drag_gesture_backdrop {
+    position: fixed;
+    inset: 0;
+    user-select: none;
+  }
+`;
+
 export const createDragGestureController = (options = {}) => {
   const {
     name,
@@ -167,6 +175,7 @@ export const createDragGestureController = (options = {}) => {
 
       // 2. VISUAL CONTROL: Backdrop for consistent cursor and pointer event blocking
       if (backdrop) {
+        import.meta.css = css;
         const backdropElement = document.createElement("div");
         backdropElement.className = "navi_drag_gesture_backdrop";
         backdropElement.ariaHidden = "true";
@@ -556,11 +565,3 @@ const definePropertyAsReadOnly = (object, propertyName) => {
     value: object[propertyName],
   });
 };
-
-import.meta.css = /* css */ `
-  .navi_drag_gesture_backdrop {
-    position: fixed;
-    inset: 0;
-    user-select: none;
-  }
-`;
