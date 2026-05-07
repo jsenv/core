@@ -390,6 +390,7 @@ const VISUAL_PROPS = {
       overflowWrap: "normal",
     };
   },
+  objectFit: PASS_THROUGH,
   accentColor: PASS_THROUGH,
 };
 const CONTENT_PROPS = {
