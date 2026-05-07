@@ -3,7 +3,7 @@ import { useCallback, useContext, useLayoutEffect, useRef } from "preact/hooks";
 import { useAccentColorAttributes } from "../utils/use_accent_color_attributes.js";
 
 import { Box } from "../box/box.jsx";
-import { LoaderBackground } from "../graphic/loader/loader_background.jsx";
+import { LoadingOutline } from "../graphic/loading/loading_outline.jsx";
 import { useAutoFocus } from "../utils/focus/use_auto_focus.js";
 import { useStableCallback } from "../utils/use_stable_callback.js";
 import { fieldPropSet } from "./field_prop_set.js";
@@ -560,12 +560,10 @@ const InputRadioUI = (props) => {
       baseChildPropSet={RadioChildPropSet}
     >
       <span className="navi_radio_accent_probe" aria-hidden="true" />
-      <LoaderBackground
+      <LoadingOutline
         loading={innerLoading}
         inset={-1}
-        targetSelector=".navi_radio_field"
         color="var(--loader-color)"
-        borderRadius={appearance === "radio" ? "50%" : "inherit"}
       />
       {visualVNode}
       {renderRadioMemoized}

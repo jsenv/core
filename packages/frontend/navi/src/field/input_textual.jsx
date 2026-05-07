@@ -35,7 +35,7 @@ import { CloseSvg } from "../graphic/icons/close_svg.jsx";
 import { EmailSvg } from "../graphic/icons/email_svg.jsx";
 import { PhoneSvg } from "../graphic/icons/phone_svg.jsx";
 import { SearchSvg } from "../graphic/icons/search_svg.jsx";
-import { LoaderBackground } from "../graphic/loader/loader_background.jsx";
+import { LoadingOutline } from "../graphic/loading/loading_outline.jsx";
 import { shortcutsViaOnKeyDown } from "../keyboard/keyboard_shortcuts.js";
 import { Icon } from "../text/icon.jsx";
 import { useAutoFocus } from "../utils/focus/use_auto_focus.js";
@@ -478,7 +478,7 @@ const InputTextualUI = (props) => {
       ref={undefined}
       autoFocus={undefined} // See use_auto_focus.js
     >
-      <LoaderBackground
+      <LoadingOutline
         loading={innerLoading}
         color="var(--loader-color)"
         inset={-1}

@@ -4,7 +4,7 @@ import { useAction } from "../action/use_action.js";
 import { useActionStatus } from "../action/use_action_status.js";
 import { useExecuteAction } from "../action/use_execute_action.js";
 import { Box } from "../box/box.jsx";
-import { LoaderBackground } from "../graphic/loader/loader_background.jsx";
+import { LoadingOutline } from "../graphic/loading/loading_outline.jsx";
 import { getHrefTargetInfo } from "../nav/browser_integration/href_target_info.js";
 import { assertRoute, useRouteStatus } from "../nav/route.js";
 import { Text, markAsOutsideTextFlow } from "../text/text.jsx";
@@ -428,7 +428,7 @@ const ButtonUI = (props) => {
       visualSelector={visualSelector}
       hasChildFunction
     >
-      <LoaderBackground
+      <LoadingOutline
         loading={innerLoading}
         inset={-1}
         color="var(--button-loader-color)"

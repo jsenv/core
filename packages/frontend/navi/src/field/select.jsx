@@ -3,7 +3,7 @@ import { useContext, useId, useRef, useState } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
 import { ChevronDownSvg } from "../graphic/icons/chevron_updown_svg.jsx";
-import { LoaderBackground } from "../graphic/loader/loader_background.jsx";
+import { LoadingOutline } from "../graphic/loading/loading_outline.jsx";
 import { shortcutsViaOnKeyDown } from "../keyboard/keyboard_shortcuts.js";
 import { windowWidthSignal } from "../layout/responsive.js";
 import {
@@ -438,7 +438,7 @@ const SelectUI = (props) => {
       pseudoClasses={SelectPseudoClasses}
       pseudoElements={SelectPseudoElements}
     >
-      <LoaderBackground
+      <LoadingOutline
         loading={innerLoading}
         color="var(--loader-color)"
         inset={-1}

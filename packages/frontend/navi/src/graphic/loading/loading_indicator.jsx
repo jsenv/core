@@ -18,39 +18,45 @@
 import { resolveCSSSize } from "@jsenv/dom";
 import { useLayoutEffect, useRef, useState } from "preact/hooks";
 
-import { useNetworkSpeed } from "./network_speed.js";
+import { useNetworkSpeed } from "../../utils/network_speed.js";
 
-import.meta.css = /* css */ `
-  .navi_rectangle_loading {
+const css = /* css */ `
+  .navi_loading_indicator {
     position: relative;
     display: flex;
     width: 100%;
     height: 100%;
+    border-radius: inherit;
     opacity: 0;
-  }
 
-  .navi_rectangle_loading[data-visible] {
-    opacity: 1;
+    &[data-visible] {
+      opacity: 1;
+    }
   }
 `;
 
-export const RectangleLoading = ({
+export const LoadingIndicator = ({
   shouldShowSpinner,
   color = "currentColor",
   radius = 0,
   size = 2,
 }) => {
-  const containerRef = useRef(null);
+  import.meta.css = css;
+  const ref = useRef(null);
+  // The container dimensions can be deduced from the ref itself as the indicator is absolute inset 0
   const [containerWidth, setContainerWidth] = useState(0);
   const [containerHeight, setContainerHeight] = useState(0);
+  const [containerRadius, setContainerRadius] = useState(radius);
 
   useLayoutEffect(() => {
-    const container = containerRef.current;
-    if (!container) {
+    const indicatorEl = ref.current;
+    if (!indicatorEl) {
       return null;
     }
 
-    const { width, height } = container.getBoundingClientRect();
+    const radius = getComputedStyle(indicatorEl).borderRadius;
+    setContainerRadius(radius);
+    const { width, height } = indicatorEl.getBoundingClientRect();
     setContainerWidth(width);
     setContainerHeight(height);
 
@@ -61,7 +67,6 @@ export const RectangleLoading = ({
       if (animationFrameId) {
         cancelAnimationFrame(animationFrameId);
       }
-
       animationFrameId = requestAnimationFrame(() => {
         const [containerEntry] = entries;
         const { width, height } = containerEntry.contentRect;
@@ -69,7 +74,7 @@ export const RectangleLoading = ({
         setContainerHeight(height);
       });
     });
-    resizeObserver.observe(container);
+    resizeObserver.observe(indicatorEl);
     return () => {
       if (animationFrameId) {
         cancelAnimationFrame(animationFrameId);
@@ -80,14 +85,14 @@ export const RectangleLoading = ({
 
   return (
     <span
-      ref={containerRef}
-      className="navi_rectangle_loading"
+      ref={ref}
+      className="navi_loading_indicator"
       data-visible={shouldShowSpinner ? "" : undefined}
     >
       {containerWidth > 0 && containerHeight > 0 && (
         <RectangleLoadingSvg
-          radius={radius}
           color={color}
+          radius={containerRadius}
           width={containerWidth}
           height={containerHeight}
           strokeWidth={size}

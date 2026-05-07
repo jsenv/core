@@ -6,7 +6,7 @@ import {
   reportDisabledToLabel,
   reportReadOnlyToLabel,
 } from "../field/label.jsx";
-import { LoaderBackground } from "../graphic/loader/loader_background.jsx";
+import { LoadingOutline } from "../graphic/loading/loading_outline.jsx";
 import { useAccentColorAttributes } from "../utils/use_accent_color_attributes.js";
 import { Quantity } from "./quantity.jsx";
 
@@ -224,7 +224,7 @@ export const Meter = ({
       {...rest}
     >
       <span className="navi_meter_track_container">
-        <LoaderBackground
+        <LoadingOutline
           loading={loading}
           color="var(--loader-color)"
           inset={-1}

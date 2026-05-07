@@ -10,7 +10,7 @@ import { useActionBoundToOneParam } from "../action/use_action.js";
 import { useActionStatus } from "../action/use_action_status.js";
 import { useExecuteAction } from "../action/use_execute_action.js";
 import { Box } from "../box/box.jsx";
-import { LoaderBackground } from "../graphic/loader/loader_background.jsx";
+import { LoadingOutline } from "../graphic/loading/loading_outline.jsx";
 import { useAutoFocus } from "../utils/focus/use_auto_focus.js";
 import { useAccentColorAttributes } from "../utils/use_accent_color_attributes.js";
 import { useStableCallback } from "../utils/use_stable_callback.js";
@@ -441,7 +441,7 @@ const InputRangeUI = (props) => {
       autoFocus={undefined} // See use_auto_focus.js
     >
       <span className="navi_input_range_accent_probe" aria-hidden="true" />
-      <LoaderBackground
+      <LoadingOutline
         loading={innerLoading}
         color="var(--loader-color)"
         inset={-1}

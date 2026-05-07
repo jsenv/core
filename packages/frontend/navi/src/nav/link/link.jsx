@@ -17,7 +17,7 @@ import {
   LinkSmsSvg,
 } from "../../graphic/icons/link_svgs.jsx";
 import { PhoneSvg } from "../../graphic/icons/phone_svg.jsx";
-import { LoaderBackground } from "../../graphic/loader/loader_background.jsx";
+import { LoadingOutline } from "../../graphic/loading/loading_outline.jsx";
 import { useKeyboardShortcuts } from "../../keyboard/keyboard_shortcuts.js";
 import { Icon } from "../../text/icon.jsx";
 import { markAsOutsideTextFlow, Text } from "../../text/text.jsx";
@@ -614,7 +614,7 @@ const LinkPlain = (props) => {
       }}
       childrenOutsideFlow={
         <>
-          <LoaderBackground
+          <LoadingOutline
             loading={loading}
             inset={1}
             color="var(--link-loader-color)"
