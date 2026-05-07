@@ -32,7 +32,8 @@
       const SPEEDS = {
         fast: 100,
         normal: 500,
-        slow: 2000,
+        slow: 1000,
+        never: -1,
       };
 
       const THEMES = ["light", "dark", "colorful"];
@@ -95,6 +96,39 @@
         );
       };
 
+      const DarkBackgroundSection = ({ delay, theme }) => {
+        const [key, setKey] = useState(0);
+        return (
+          <section
+            style={{ display: "flex", flexDirection: "column", gap: "8px" }}
+          >
+            <h3 style={{ margin: 0 }}>On dark background</h3>
+            <ReloadButton onClick={() => setKey((k) => k + 1)} />
+            <div
+              style={{
+                background: "#111827",
+                padding: "16px",
+                borderRadius: "8px",
+                display: "flex",
+                flexDirection: "column",
+                gap: "8px",
+              }}
+            >
+              <Image
+                key={key}
+                src={`./image_demo_asset?section=dark-bg&theme=${theme}&delay=${delay}&v=${key}`}
+                width="200px"
+                height="150px"
+                placeholderDark
+              />
+              <p style={{ margin: 0, fontSize: "14px", color: "#9ca3af" }}>
+                Text after the image
+              </p>
+            </div>
+          </section>
+        );
+      };
+
       const Demo = () => {
         const [swReady, setSwReady] = useState(false);
         const [speed, setSpeed] = useState("normal");
@@ -153,7 +187,8 @@
                     >
                       <option value="fast">fast (0.1s)</option>
                       <option value="normal">normal (0.5s)</option>
-                      <option value="slow">slow (2s)</option>
+                      <option value="slow">slow (1s)</option>
+                      <option value="never">never loads</option>
                     </select>
                   </label>
                   <label
@@ -180,6 +215,7 @@
 
                 <NoHeightSection delay={delay} theme={theme} />
                 <WithHeightSection delay={delay} theme={theme} />
+                <DarkBackgroundSection delay={delay} theme={theme} />
               </>
             )}
           </div>

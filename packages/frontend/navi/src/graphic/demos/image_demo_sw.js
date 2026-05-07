@@ -38,6 +38,11 @@ self.addEventListener("fetch", (event) => {
     return;
   }
   const delay = parseInt(url.searchParams.get("delay") || "0", 10);
+  if (delay === -1) {
+    // never resolves — simulates an image that never loads
+    event.respondWith(new Promise(() => {}));
+    return;
+  }
   const theme = url.searchParams.get("theme") || "light";
   const svg = IMAGES[theme] || IMAGES.light;
 
