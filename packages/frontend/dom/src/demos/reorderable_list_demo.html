@@ -105,6 +105,7 @@
       import { useRef, useState } from "preact/hooks";
       import {
         createDragToMoveGestureController,
+        dragAfterThreshold,
         getDropTargetInfo,
       } from "@jsenv/dom";
 
@@ -143,85 +144,87 @@
             container.querySelectorAll(".list-item"),
           )[originalIndex];
 
-          // Clone the element — the clone is the flying ghost, moved by createDragToMoveGestureController
-          const ghost = draggedEl.cloneNode(true);
-          ghost.dataset.dragging = "";
-          ghost.style.position = "absolute";
-          const draggedRect = draggedEl.getBoundingClientRect();
-          const containerRect = container.getBoundingClientRect();
-          ghost.style.top = `${draggedRect.top - containerRect.top + container.scrollTop}px`;
-          ghost.style.left = "0";
-          ghost.style.width = `${draggedRect.width}px`;
-          ghost.style.pointerEvents = "none";
-          container.appendChild(ghost);
+          dragAfterThreshold(event, () => {
+            // Threshold crossed — now create the ghost and drop hint
+            const draggedRect = draggedEl.getBoundingClientRect();
+            const containerRect = container.getBoundingClientRect();
 
-          // A thin line overlaid between items indicating where the drop will land
-          const dropHint = document.createElement("div");
-          dropHint.className = "drop-hint";
-          container.appendChild(dropHint);
+            const ghost = draggedEl.cloneNode(true);
+            ghost.dataset.dragging = "";
+            ghost.style.position = "absolute";
+            ghost.style.top = `${draggedRect.top - containerRect.top + container.scrollTop}px`;
+            ghost.style.left = "0";
+            ghost.style.width = `${draggedRect.width}px`;
+            ghost.style.pointerEvents = "none";
+            container.appendChild(ghost);
 
-          const updateDropHint = (targetIndex) => {
-            const items = Array.from(
-              container.querySelectorAll(".list-item:not([data-dragging])"),
-            );
-            const currentContainerRect = container.getBoundingClientRect();
-            let hintY;
-            if (targetIndex >= items.length) {
-              const lastRect = items[items.length - 1].getBoundingClientRect();
-              hintY =
-                lastRect.bottom -
-                currentContainerRect.top +
-                container.scrollTop;
-            } else {
-              const targetRect = items[targetIndex].getBoundingClientRect();
-              hintY =
-                targetRect.top - currentContainerRect.top + container.scrollTop;
-            }
-            dropHint.style.display = "block";
-            dropHint.style.top = `${hintY}px`;
-          };
+            const dropHint = document.createElement("div");
+            dropHint.className = "drop-hint";
+            container.appendChild(dropHint);
 
-          createDragToMoveGestureController({
-            direction: { x: false, y: true },
-            areaConstraint: "none",
-            onDrag: (gestureInfo) => {
-              if (!gestureInfo.started) {
-                return;
-              }
-              const dropTargets = Array.from(
+            const updateDropHint = (targetIndex) => {
+              const items = Array.from(
                 container.querySelectorAll(".list-item:not([data-dragging])"),
               );
-              const dropTargetInfo = getDropTargetInfo(
-                gestureInfo,
-                dropTargets,
-              );
-              if (!dropTargetInfo) {
-                return;
+              const currentContainerRect = container.getBoundingClientRect();
+              let hintY;
+              if (targetIndex >= items.length) {
+                const lastRect =
+                  items[items.length - 1].getBoundingClientRect();
+                hintY =
+                  lastRect.bottom -
+                  currentContainerRect.top +
+                  container.scrollTop;
+              } else {
+                const targetRect = items[targetIndex].getBoundingClientRect();
+                hintY =
+                  targetRect.top -
+                  currentContainerRect.top +
+                  container.scrollTop;
               }
-              const newIndex =
-                dropTargetInfo.elementSide.y === "end"
-                  ? dropTargetInfo.index + 1
-                  : dropTargetInfo.index;
+              dropHint.style.display = "block";
+              dropHint.style.top = `${hintY}px`;
+            };
 
-              if (newIndex !== currentPlaceholder) {
-                currentPlaceholder = newIndex;
-                updateDropHint(currentPlaceholder);
-              }
-            },
-            onRelease: () => {
-              ghost.remove();
-              dropHint.remove();
+            return createDragToMoveGestureController({
+              direction: { x: false, y: true },
+              areaConstraint: "none",
+              onDrag: (gestureInfo) => {
+                const dropTargets = Array.from(
+                  container.querySelectorAll(".list-item:not([data-dragging])"),
+                );
+                const dropTargetInfo = getDropTargetInfo(
+                  gestureInfo,
+                  dropTargets,
+                );
+                if (!dropTargetInfo) {
+                  return;
+                }
+                const newIndex =
+                  dropTargetInfo.elementSide.y === "end"
+                    ? dropTargetInfo.index + 1
+                    : dropTargetInfo.index;
 
-              if (currentPlaceholder !== originalIndex) {
-                setOrder((prev) => {
-                  const next = [...prev];
-                  next.splice(originalIndex, 1);
-                  next.splice(currentPlaceholder, 0, id);
-                  return next;
-                });
-              }
-            },
-          }).grabViaPointer(event, { element: ghost });
+                if (newIndex !== currentPlaceholder) {
+                  currentPlaceholder = newIndex;
+                  updateDropHint(currentPlaceholder);
+                }
+              },
+              onRelease: () => {
+                ghost.remove();
+                dropHint.remove();
+
+                if (currentPlaceholder !== originalIndex) {
+                  setOrder((prev) => {
+                    const next = [...prev];
+                    next.splice(originalIndex, 1);
+                    next.splice(currentPlaceholder, 0, id);
+                    return next;
+                  });
+                }
+              },
+            }).grabViaPointer(event, { element: ghost });
+          });
         };
 
         const visibleItems = order.map((id) =>
