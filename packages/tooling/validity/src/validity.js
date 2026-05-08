@@ -645,8 +645,9 @@ const ONE_OF_RULE = {
     if (oneOf.includes(value)) {
       return null;
     }
+    const oneOfSource = oneOf.map((v) => JSON.stringify(v)).join(", ");
     return {
-      message: `must be one of: ${oneOf.join(", ")}`,
+      message: `must be one of: ${oneOfSource}`,
       autoFix: () => oneOf[0],
     };
   },

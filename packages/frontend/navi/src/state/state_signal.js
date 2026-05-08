@@ -241,15 +241,16 @@ export const stateSignal = (defaultValue, options = {}) => {
     const hasAutoFix = Boolean(validity.validSuggestion);
     if (hasAutoFix) {
       if (debug) {
-        console.debug(
-          `[stateSignal:${signalIdString}] validation failed: `,
+        console.debug(`[stateSignal:${signalIdString}] validation failed: `, {
+          value,
+          validValue: validity.validSuggestion.value,
           validity,
-        );
+        });
       }
     } else {
       console.warn(
         `[stateSignal:${signalIdString}] validation failed with no valid suggestion: `,
-        validity,
+        { value, validity },
       );
     }
     if (validity.validSuggestion) {
