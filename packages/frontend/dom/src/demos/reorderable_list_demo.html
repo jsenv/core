@@ -113,7 +113,6 @@
       import { useRef, useState } from "preact/hooks";
       import {
         createDragToMoveGestureController,
-        createDragGhost,
         dragAfterThreshold,
         getDropTargetInfo,
       } from "@jsenv/dom";
@@ -153,16 +152,6 @@
           )[originalIndex];
 
           dragAfterThreshold(event, () => {
-            const {
-              ghost,
-              ghostWrapper,
-              remove: removeGhost,
-            } = createDragGhost(draggedEl, event);
-            // Trigger the lift transition on the next frame
-            requestAnimationFrame(() => {
-              ghost.dataset.lifted = "";
-            });
-
             const dropHint = document.createElement("div");
             dropHint.className = "drop-hint";
             container.appendChild(dropHint);
@@ -192,6 +181,7 @@
             };
 
             const gestureController = createDragToMoveGestureController({
+              cloneOnDrag: true,
               direction: { x: false, y: true },
               areaConstraint: "none",
               onDrag: (gestureInfo) => {
@@ -216,7 +206,6 @@
                 }
               },
               onRelease: () => {
-                removeGhost();
                 dropHint.remove();
 
                 if (currentPlaceholder !== originalIndex) {
@@ -230,7 +219,7 @@
               },
             });
             const gesture = gestureController.grabViaPointer(event, {
-              element: ghostWrapper,
+              element: draggedEl,
             });
             return gesture;
           });

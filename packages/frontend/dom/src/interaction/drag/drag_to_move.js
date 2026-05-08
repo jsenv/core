@@ -9,6 +9,7 @@ import { applyStickyFrontiersToAutoScrollArea } from "./sticky_frontiers.js";
 const dragStyleController = createStyleController("drag_to_move");
 
 export const createDragToMoveGestureController = ({
+  cloneOnDrag = false,
   stickyFrontiers = true,
   // Padding to reduce the area used to autoscroll by this amount (applied after sticky frontiers)
   // This creates an invisible space around the area where elements cannot be dragged
@@ -31,6 +32,20 @@ export const createDragToMoveGestureController = ({
     dragGesture,
     { element, referenceElement, elementToMove, convertScrollablePosition },
   ) => {
+    if (cloneOnDrag) {
+      const ghostData = createDragGhost(element, {
+        clientX: dragGesture.gestureInfo.grabX,
+        clientY: dragGesture.gestureInfo.grabY,
+      });
+      elementToMove = ghostData.ghostWrapper;
+      // Trigger the lift transition on the ghost on the next frame
+      requestAnimationFrame(() => {
+        ghostData.ghost.dataset.lifted = "";
+      });
+      dragGesture.addReleaseCallback(() => {
+        ghostData.remove();
+      });
+    }
     const direction = dragGesture.gestureInfo.direction;
     // const dragGestureName = dragGesture.gestureInfo.name;
     const scrollContainer = dragGesture.gestureInfo.scrollContainer;
@@ -300,26 +315,7 @@ export const createDragToMoveGestureController = ({
   return dragGestureController;
 };
 
-const DRAG_GHOST_CSS = `
-.jsenv_drag_ghost_wrapper {
-  position: fixed;
-  pointer-events: none;
-  z-index: 9999;
-}
-`;
-let dragGhostStyleInjected = false;
-const ensureDragGhostStyle = () => {
-  if (dragGhostStyleInjected) {
-    return;
-  }
-  dragGhostStyleInjected = true;
-  const style = document.createElement("style");
-  style.textContent = DRAG_GHOST_CSS;
-  document.head.appendChild(style);
-};
-
-export const createDragGhost = (element, pointerEvent) => {
-  ensureDragGhostStyle();
+const createDragGhost = (element, pointerEvent) => {
   const rect = element.getBoundingClientRect();
 
   const ghost = element.cloneNode(true);
@@ -331,10 +327,7 @@ export const createDragGhost = (element, pointerEvent) => {
   ghost.style.transformOrigin = `${originX}px ${originY}px`;
 
   const ghostWrapper = document.createElement("div");
-  ghostWrapper.className = "jsenv_drag_ghost_wrapper";
-  ghostWrapper.style.top = `${rect.top}px`;
-  ghostWrapper.style.left = `${rect.left}px`;
-  ghostWrapper.style.width = `${rect.width}px`;
+  ghostWrapper.style.cssText = `position: fixed; pointer-events: none; z-index: 9999; top: ${rect.top}px; left: ${rect.left}px; width: ${rect.width}px;`;
   ghostWrapper.appendChild(ghost);
   document.body.appendChild(ghostWrapper);
 
