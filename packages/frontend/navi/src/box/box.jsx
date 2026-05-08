@@ -52,7 +52,7 @@
  */
 
 import { normalizeStyles } from "@jsenv/dom";
-import { toChildArray } from "preact";
+import { isValidElement, toChildArray } from "preact";
 import { useContext } from "preact/hooks";
 
 import { withPropsClassName } from "../utils/with_props_class_name.js";
@@ -729,18 +729,11 @@ export const applySeparatorOnChildren = (children, separator) => {
   return childrenWithSeparators;
 };
 const shouldInjectSeparatorBetween = (left, right) => {
-  if (isPreactNode(left) && left.props?.hidden) {
+  if (isValidElement(left) && left.props?.hidden) {
     return false;
   }
-  if (isPreactNode(right) && right.props?.hidden) {
+  if (isValidElement(right) && right.props?.hidden) {
     return false;
   }
   return true;
-};
-const isPreactNode = (jsxChild) => {
-  return (
-    jsxChild !== null &&
-    typeof jsxChild === "object" &&
-    jsxChild.type !== undefined
-  );
 };

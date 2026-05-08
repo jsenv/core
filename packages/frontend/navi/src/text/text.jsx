@@ -1,7 +1,7 @@
 // https://jsfiddle.net/v5xzJ/4/
 
 import { hasCSSSizeUnit } from "@jsenv/dom";
-import { createContext, toChildArray } from "preact";
+import { createContext, isValidElement, toChildArray } from "preact";
 import { useContext, useRef, useState } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
@@ -289,16 +289,9 @@ const isMarkedAsOutsideTextFlow = (jsxElement) => {
   return outsideTextFlowSet.has(jsxElement.type);
 };
 
-const isPreactNode = (jsxChild) => {
-  return (
-    jsxChild !== null &&
-    typeof jsxChild === "object" &&
-    jsxChild.type !== undefined
-  );
-};
 const shouldInjectSpacingBetween = (left, right) => {
-  const leftIsNode = isPreactNode(left);
-  const rightIsNode = isPreactNode(right);
+  const leftIsNode = isValidElement(left);
+  const rightIsNode = isValidElement(right);
   // only inject spacing when at least one side is a preact node
   if (!leftIsNode && !rightIsNode) {
     return false;

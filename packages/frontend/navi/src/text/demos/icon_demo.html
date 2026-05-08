@@ -32,6 +32,71 @@
         HomeSvg,
       } from "@jsenv/navi";
 
+      const Demo = () => {
+        return (
+          <div
+            style={{
+              padding: "20px",
+              fontFamily: "system-ui, sans-serif",
+              maxWidth: "800px",
+              lineHeight: "1.6",
+            }}
+          >
+            <Title as="h1">Icon Demo</Title>
+
+            <Box
+              style={{
+                padding: "16px",
+                backgroundColor: "#fff3cd",
+                border: "1px solid #ffeaa7",
+                borderRadius: "8px",
+                marginBottom: "24px",
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: "14px",
+                  color: "#856404",
+                  fontWeight: "bold",
+                  display: "block",
+                  marginBottom: "8px",
+                }}
+              >
+                ⚠️ SVG Icon Guidelines
+              </Text>
+              <Text
+                style={{
+                  fontSize: "13px",
+                  color: "#856404",
+                  lineHeight: "1.4",
+                }}
+              >
+                Pour un alignement parfait des icônes, le SVG doit être
+                correctement tracé avec : un viewBox carré (ex: "0 0 24 24") et
+                le contenu centré dans ce carré. Bien que translateX/Y puisse
+                corriger l'alignement, il est préférable de dessiner le SVG
+                correctement dès le départ.
+              </Text>
+            </Box>
+
+            <TableOfContents />
+            <InlineTextIconsSection />
+            <IconPositioningSection />
+            <EmojiIconsSection />
+            <DifferentFontSizesSection />
+            <FontFamilySection />
+            <LineHeightVariationsSection />
+            <SquarishIconDimensionsSection />
+            <CustomIconDimensionsSection />
+            <IconTransformationSection />
+            <IconTextLinkSection />
+            <IconRowSection />
+            <IconColumnSection />
+            <IntegrationSection />
+          </div>
+        );
+      };
+
       // Table of Contents Component
       const TableOfContents = () => (
         <Box as="section" marginBottom="xl">
@@ -1669,71 +1734,6 @@
           </Box>
         </Box>
       );
-
-      const Demo = () => {
-        return (
-          <div
-            style={{
-              padding: "20px",
-              fontFamily: "system-ui, sans-serif",
-              maxWidth: "800px",
-              lineHeight: "1.6",
-            }}
-          >
-            <Title as="h1">Icon Demo</Title>
-
-            <Box
-              style={{
-                padding: "16px",
-                backgroundColor: "#fff3cd",
-                border: "1px solid #ffeaa7",
-                borderRadius: "8px",
-                marginBottom: "24px",
-              }}
-            >
-              <Text
-                style={{
-                  fontSize: "14px",
-                  color: "#856404",
-                  fontWeight: "bold",
-                  display: "block",
-                  marginBottom: "8px",
-                }}
-              >
-                ⚠️ SVG Icon Guidelines
-              </Text>
-              <Text
-                style={{
-                  fontSize: "13px",
-                  color: "#856404",
-                  lineHeight: "1.4",
-                }}
-              >
-                Pour un alignement parfait des icônes, le SVG doit être
-                correctement tracé avec : un viewBox carré (ex: "0 0 24 24") et
-                le contenu centré dans ce carré. Bien que translateX/Y puisse
-                corriger l'alignement, il est préférable de dessiner le SVG
-                correctement dès le départ.
-              </Text>
-            </Box>
-
-            <TableOfContents />
-            <InlineTextIconsSection />
-            <IconPositioningSection />
-            <EmojiIconsSection />
-            <DifferentFontSizesSection />
-            <FontFamilySection />
-            <LineHeightVariationsSection />
-            <SquarishIconDimensionsSection />
-            <CustomIconDimensionsSection />
-            <IconTransformationSection />
-            <IconTextLinkSection />
-            <IconRowSection />
-            <IconColumnSection />
-            <IntegrationSection />
-          </div>
-        );
-      };
 
       render(<Demo />, document.getElementById("app"));
     </script>
