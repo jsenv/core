@@ -104,7 +104,7 @@
       import { render } from "preact";
       import { useRef, useState } from "preact/hooks";
       import {
-        createDragGestureController,
+        createDragToMoveGestureController,
         getDropTargetInfo,
       } from "@jsenv/dom";
 
@@ -142,16 +142,14 @@
           const draggedEl = Array.from(
             container.querySelectorAll(".list-item"),
           )[originalIndex];
-          const draggedRect = draggedEl.getBoundingClientRect();
-          const containerRect = container.getBoundingClientRect();
-          const originalTop =
-            draggedRect.top - containerRect.top + container.scrollTop;
 
-          // Clone the element — the clone is the flying ghost
+          // Clone the element — the clone is the flying ghost, moved by createDragToMoveGestureController
           const ghost = draggedEl.cloneNode(true);
           ghost.dataset.dragging = "";
           ghost.style.position = "absolute";
-          ghost.style.top = `${originalTop}px`;
+          const draggedRect = draggedEl.getBoundingClientRect();
+          const containerRect = container.getBoundingClientRect();
+          ghost.style.top = `${draggedRect.top - containerRect.top + container.scrollTop}px`;
           ghost.style.left = "0";
           ghost.style.width = `${draggedRect.width}px`;
           ghost.style.pointerEvents = "none";
@@ -166,27 +164,30 @@
             const items = Array.from(
               container.querySelectorAll(".list-item:not([data-dragging])"),
             );
-            const containerRect = container.getBoundingClientRect();
+            const currentContainerRect = container.getBoundingClientRect();
             let hintY;
             if (targetIndex >= items.length) {
               const lastRect = items[items.length - 1].getBoundingClientRect();
-              hintY = lastRect.bottom - containerRect.top + container.scrollTop;
+              hintY =
+                lastRect.bottom -
+                currentContainerRect.top +
+                container.scrollTop;
             } else {
               const targetRect = items[targetIndex].getBoundingClientRect();
-              hintY = targetRect.top - containerRect.top + container.scrollTop;
+              hintY =
+                targetRect.top - currentContainerRect.top + container.scrollTop;
             }
             dropHint.style.display = "block";
             dropHint.style.top = `${hintY}px`;
           };
 
-          createDragGestureController({
+          createDragToMoveGestureController({
             direction: { x: false, y: true },
+            areaConstraint: "none",
             onDrag: (gestureInfo) => {
               if (!gestureInfo.started) {
                 return;
               }
-              ghost.style.top = `${originalTop + gestureInfo.layout.yDelta}px`;
-
               const dropTargets = Array.from(
                 container.querySelectorAll(".list-item:not([data-dragging])"),
               );
@@ -197,11 +198,10 @@
               if (!dropTargetInfo) {
                 return;
               }
-              const dropTargetIndex = dropTargetInfo.index;
               const newIndex =
                 dropTargetInfo.elementSide.y === "end"
-                  ? dropTargetIndex + 1
-                  : dropTargetIndex;
+                  ? dropTargetInfo.index + 1
+                  : dropTargetInfo.index;
 
               if (newIndex !== currentPlaceholder) {
                 currentPlaceholder = newIndex;
