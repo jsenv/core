@@ -46,11 +46,12 @@
         cursor: grabbing;
       }
 
-      .list-item[data-placeholder] {
-        background: #e8f0fe;
-        border: 2px dashed #4476ff;
-        box-shadow: none;
-        opacity: 0.6;
+      .drop-hint {
+        height: 3px;
+        margin-bottom: 8px;
+        background: #4476ff;
+        border-radius: 2px;
+        pointer-events: none;
       }
 
       .drag-handle {
@@ -98,7 +99,10 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useRef, useState } from "preact/hooks";
-      import { createDragGestureController } from "@jsenv/dom";
+      import {
+        createDragGestureController,
+        getDropTargetInfo,
+      } from "@jsenv/dom";
 
       const INITIAL_ITEMS = [
         { id: 1, label: "Apple", bg: "#e3f2fd", color: "#1565c0" },
@@ -131,17 +135,13 @@
           const originalIndex = order.indexOf(id);
           let currentPlaceholder = originalIndex;
 
-          // Snapshot item rects before any DOM changes
-          const itemEls = Array.from(container.querySelectorAll(".list-item"));
-          const itemRects = itemEls.map((el) => el.getBoundingClientRect());
-          const itemHeight = itemRects[0] ? itemRects[0].height + 8 : 56; // height + margin-bottom
+          const draggedEl = Array.from(
+            container.querySelectorAll(".list-item"),
+          )[originalIndex];
+          const draggedRect = draggedEl.getBoundingClientRect();
           const containerRect = container.getBoundingClientRect();
           const originalTop =
-            itemRects[originalIndex].top -
-            containerRect.top +
-            container.scrollTop;
-
-          const draggedEl = itemEls[originalIndex];
+            draggedRect.top - containerRect.top + container.scrollTop;
 
           // Clone the element — the clone is the flying ghost
           const ghost = draggedEl.cloneNode(true);
@@ -149,25 +149,28 @@
           ghost.style.position = "absolute";
           ghost.style.top = `${originalTop}px`;
           ghost.style.left = "0";
-          ghost.style.width = `${itemRects[originalIndex].width}px`;
+          ghost.style.width = `${draggedRect.width}px`;
           ghost.style.pointerEvents = "none";
           container.appendChild(ghost);
 
-          // The original stays in place and acts as the drop slot indicator
-          draggedEl.dataset.placeholder = "";
+          // A thin line shown between items indicating where the drop will land
+          const dropHint = document.createElement("div");
+          dropHint.className = "drop-hint";
+          dropHint.style.display = "none";
+          container.appendChild(dropHint);
 
-          const moveSlot = (targetIndex) => {
-            const nonGhosts = Array.from(
+          const updateDropHint = (targetIndex) => {
+            const items = Array.from(
               container.querySelectorAll(".list-item:not([data-dragging])"),
             );
-            const nonSlots = nonGhosts.filter((el) => !el.dataset.placeholder);
-            if (targetIndex >= nonSlots.length) {
-              container.appendChild(draggedEl);
-            } else {
-              nonSlots[targetIndex].insertAdjacentElement(
-                "beforebegin",
-                draggedEl,
+            dropHint.style.display = "";
+            if (targetIndex >= items.length) {
+              items[items.length - 1].insertAdjacentElement(
+                "afterend",
+                dropHint,
               );
+            } else {
+              items[targetIndex].insertAdjacentElement("beforebegin", dropHint);
             }
           };
 
@@ -177,26 +180,31 @@
               if (!gestureInfo.started) {
                 return;
               }
-              const newTop = originalTop + gestureInfo.layout.yDelta;
-              ghost.style.top = `${newTop}px`;
+              ghost.style.top = `${originalTop + gestureInfo.layout.yDelta}px`;
 
-              const midY = newTop + itemRects[originalIndex].height / 2;
-              let newIndex = Math.round(midY / itemHeight);
-              if (newIndex < 0) {
-                newIndex = 0;
+              const dropTargets = Array.from(
+                container.querySelectorAll(".list-item:not([data-dragging])"),
+              );
+              const dropTargetInfo = getDropTargetInfo(
+                gestureInfo,
+                dropTargets,
+              );
+              if (!dropTargetInfo) {
+                return;
               }
-              if (newIndex > order.length - 1) {
-                newIndex = order.length - 1;
-              }
+              const newIndex =
+                dropTargetInfo.elementSide.y === "end"
+                  ? dropTargetInfo.index + 1
+                  : dropTargetInfo.index;
 
               if (newIndex !== currentPlaceholder) {
                 currentPlaceholder = newIndex;
-                moveSlot(currentPlaceholder);
+                updateDropHint(currentPlaceholder);
               }
             },
             onRelease: () => {
               ghost.remove();
-              delete draggedEl.dataset.placeholder;
+              dropHint.remove();
 
               if (currentPlaceholder !== originalIndex) {
                 setOrder((prev) => {
