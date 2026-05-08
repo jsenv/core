@@ -23,6 +23,17 @@
         width: 360px;
       }
 
+      .list-container-scrollable {
+        position: relative;
+        width: 360px;
+        max-height: 400px;
+        padding: 8px;
+        background: #fafafa;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        overflow-y: auto;
+      }
+
       .list-item {
         position: relative;
         display: flex;
@@ -153,20 +164,8 @@
         { id: 30, label: "Cranberry", bg: "#ffebee", color: "#b71c1c" },
       ];
 
-      const DragHandle = () => (
-        <div class="drag-handle" title="Drag to reorder">
-          {[0, 1, 2].map((i) => (
-            <div key={i} class="drag-handle-dot-row">
-              <div class="drag-handle-dot" />
-              <div class="drag-handle-dot" />
-            </div>
-          ))}
-        </div>
-      );
-
-      const ReorderableList = () => {
+      const ReorderableList = ({ containerRef }) => {
         const [order, setOrder] = useState(INITIAL_ITEMS.map((i) => i.id));
-        const containerRef = useRef(null);
 
         const startDrag = (event, id) => {
           event.preventDefault();
@@ -255,6 +254,35 @@
           INITIAL_ITEMS.find((i) => i.id === id),
         );
 
+        return visibleItems.map((item, i) => (
+          <div key={item.id} class="list-item">
+            <div
+              class="drag-handle"
+              title="Drag to reorder"
+              onPointerDown={(e) => {
+                startDrag(e, item.id);
+              }}
+            >
+              {[0, 1, 2].map((r) => (
+                <div key={r} class="drag-handle-dot-row">
+                  <div class="drag-handle-dot" />
+                  <div class="drag-handle-dot" />
+                </div>
+              ))}
+            </div>
+            <span class="item-label">{item.label}</span>
+            <span
+              class="item-badge"
+              style={{ background: item.bg, color: item.color }}
+            >
+              #{i + 1}
+            </span>
+          </div>
+        ));
+      };
+
+      const NormalListDemo = () => {
+        const containerRef = useRef(null);
         return (
           <div>
             <h1>Reorderable List</h1>
@@ -262,37 +290,34 @@
               Drag the handle on each item to reorder.
             </p>
             <div class="list-container" ref={containerRef}>
-              {visibleItems.map((item, i) => (
-                <div key={item.id} class="list-item">
-                  <div
-                    class="drag-handle"
-                    title="Drag to reorder"
-                    onPointerDown={(e) => {
-                      startDrag(e, item.id);
-                    }}
-                  >
-                    {[0, 1, 2].map((r) => (
-                      <div key={r} class="drag-handle-dot-row">
-                        <div class="drag-handle-dot" />
-                        <div class="drag-handle-dot" />
-                      </div>
-                    ))}
-                  </div>
-                  <span class="item-label">{item.label}</span>
-                  <span
-                    class="item-badge"
-                    style={{ background: item.bg, color: item.color }}
-                  >
-                    #{i + 1}
-                  </span>
-                </div>
-              ))}
+              <ReorderableList containerRef={containerRef} />
             </div>
           </div>
         );
       };
 
-      render(<ReorderableList />, document.getElementById("root"));
+      const ScrollableListDemo = () => {
+        const containerRef = useRef(null);
+        return (
+          <div>
+            <h1>Scrollable Reorderable List</h1>
+            <p style={{ color: "#666", margin: "0 0 24px", fontSize: "14px" }}>
+              Same list inside a scrollable container.
+            </p>
+            <div class="list-container-scrollable" ref={containerRef}>
+              <ReorderableList containerRef={containerRef} />
+            </div>
+          </div>
+        );
+      };
+
+      render(
+        <div style={{ display: "flex", gap: "48px", alignItems: "flex-start" }}>
+          <NormalListDemo />
+          <ScrollableListDemo />
+        </div>,
+        document.getElementById("root"),
+      );
     </script>
   </body>
 </html>
