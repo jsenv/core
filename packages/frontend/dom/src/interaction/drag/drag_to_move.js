@@ -33,9 +33,10 @@ export const createDragToMoveGestureController = ({
     { element, referenceElement, elementToMove, convertScrollablePosition },
   ) => {
     if (cloneOnDrag) {
+      const { grabEvent } = dragGesture.gestureInfo;
       const ghostData = createDragGhost(element, {
-        clientX: dragGesture.gestureInfo.grabX,
-        clientY: dragGesture.gestureInfo.grabY,
+        clientX: grabEvent.clientX,
+        clientY: grabEvent.clientY,
       });
       elementToMove = ghostData.ghostWrapper;
       // Trigger the lift transition on the ghost on the next frame
