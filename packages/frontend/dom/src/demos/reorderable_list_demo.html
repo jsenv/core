@@ -47,10 +47,14 @@
       }
 
       .drop-hint {
+        position: absolute;
+        right: 0;
+        left: 0;
+        display: none;
         height: 3px;
-        margin-bottom: 8px;
         background: #4476ff;
         border-radius: 2px;
+        transform: translateY(-50%);
         pointer-events: none;
       }
 
@@ -153,25 +157,26 @@
           ghost.style.pointerEvents = "none";
           container.appendChild(ghost);
 
-          // A thin line shown between items indicating where the drop will land
+          // A thin line overlaid between items indicating where the drop will land
           const dropHint = document.createElement("div");
           dropHint.className = "drop-hint";
-          dropHint.style.display = "none";
           container.appendChild(dropHint);
 
           const updateDropHint = (targetIndex) => {
             const items = Array.from(
               container.querySelectorAll(".list-item:not([data-dragging])"),
             );
-            dropHint.style.display = "";
+            const containerRect = container.getBoundingClientRect();
+            let hintY;
             if (targetIndex >= items.length) {
-              items[items.length - 1].insertAdjacentElement(
-                "afterend",
-                dropHint,
-              );
+              const lastRect = items[items.length - 1].getBoundingClientRect();
+              hintY = lastRect.bottom - containerRect.top + container.scrollTop;
             } else {
-              items[targetIndex].insertAdjacentElement("beforebegin", dropHint);
+              const targetRect = items[targetIndex].getBoundingClientRect();
+              hintY = targetRect.top - containerRect.top + container.scrollTop;
             }
+            dropHint.style.display = "block";
+            dropHint.style.top = `${hintY}px`;
           };
 
           createDragGestureController({
