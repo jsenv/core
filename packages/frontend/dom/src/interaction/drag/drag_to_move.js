@@ -324,7 +324,7 @@ const createDragGhost = (element, pointerEvent) => {
   ghost.style.transformOrigin = `${originX}px ${originY}px`;
 
   const ghostWrapper = document.createElement("div");
-  ghostWrapper.style.cssText = `position: fixed; pointer-events: none; z-index: 9999; top: ${rect.top}px; left: ${rect.left}px; width: ${rect.width}px;`;
+  ghostWrapper.style.cssText = `position: absolute; pointer-events: none; z-index: 9999; top: ${rect.top}px; left: ${rect.left}px; width: ${rect.width}px;`;
   ghostWrapper.appendChild(ghost);
   document.body.appendChild(ghostWrapper);
 
