@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Reorderable List Demo</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 40px;
+        font-family: Arial, sans-serif;
+        background: #f0f0f0;
+      }
+
+      h1 {
+        margin: 0 0 8px;
+        color: #333;
+      }
+
+      .list-container {
+        position: relative;
+        width: 360px;
+      }
+
+      .list-item {
+        position: relative;
+        display: flex;
+        box-sizing: border-box;
+        width: 100%;
+        margin-bottom: 8px;
+        padding: 12px 16px;
+        align-items: center;
+        gap: 10px;
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+        user-select: none;
+      }
+
+      .list-item[data-dragging] {
+        z-index: 100;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.18);
+        opacity: 0.95;
+        cursor: grabbing;
+      }
+
+      .list-item[data-placeholder] {
+        background: #e8f0fe;
+        border: 2px dashed #4476ff;
+        box-shadow: none;
+        opacity: 0.6;
+      }
+
+      .drag-handle {
+        display: flex;
+        padding: 4px 2px;
+        flex-shrink: 0;
+        flex-direction: column;
+        gap: 3px;
+        cursor: grab;
+      }
+
+      .drag-handle[data-grabbing] {
+        cursor: grabbing;
+      }
+
+      .drag-handle-dot-row {
+        display: flex;
+        gap: 3px;
+      }
+
+      .drag-handle-dot {
+        width: 4px;
+        height: 4px;
+        background: #bbb;
+        border-radius: 50%;
+      }
+
+      .item-label {
+        flex: 1;
+        color: #333;
+        font-size: 14px;
+      }
+
+      .item-badge {
+        padding: 2px 8px;
+        font-weight: bold;
+        font-size: 12px;
+        border-radius: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useRef, useState } from "preact/hooks";
+      import { createDragGestureController } from "@jsenv/dom";
+
+      const INITIAL_ITEMS = [
+        { id: 1, label: "Apple", bg: "#e3f2fd", color: "#1565c0" },
+        { id: 2, label: "Banana", bg: "#fff9c4", color: "#f57f17" },
+        { id: 3, label: "Cherry", bg: "#fce4ec", color: "#c62828" },
+        { id: 4, label: "Date", bg: "#e8f5e9", color: "#2e7d32" },
+        { id: 5, label: "Elderberry", bg: "#f3e5f5", color: "#6a1b9a" },
+        { id: 6, label: "Fig", bg: "#fbe9e7", color: "#bf360c" },
+      ];
+
+      const DragHandle = () => (
+        <div class="drag-handle" title="Drag to reorder">
+          {[0, 1, 2].map((i) => (
+            <div key={i} class="drag-handle-dot-row">
+              <div class="drag-handle-dot" />
+              <div class="drag-handle-dot" />
+            </div>
+          ))}
+        </div>
+      );
+
+      const ReorderableList = () => {
+        const [order, setOrder] = useState(INITIAL_ITEMS.map((i) => i.id));
+        const containerRef = useRef(null);
+
+        const startDrag = (event, id) => {
+          event.preventDefault();
+
+          const container = containerRef.current;
+          const originalIndex = order.indexOf(id);
+          let currentPlaceholder = originalIndex;
+
+          // Snapshot item rects before any DOM changes
+          const itemEls = Array.from(container.querySelectorAll(".list-item"));
+          const itemRects = itemEls.map((el) => el.getBoundingClientRect());
+          const itemHeight = itemRects[0] ? itemRects[0].height + 8 : 56; // height + margin-bottom
+          const containerRect = container.getBoundingClientRect();
+          const originalTop =
+            itemRects[originalIndex].top -
+            containerRect.top +
+            container.scrollTop;
+
+          const draggedEl = itemEls[originalIndex];
+
+          // Clone the element — the clone is the flying ghost
+          const ghost = draggedEl.cloneNode(true);
+          ghost.dataset.dragging = "";
+          ghost.style.position = "absolute";
+          ghost.style.top = `${originalTop}px`;
+          ghost.style.left = "0";
+          ghost.style.width = `${itemRects[originalIndex].width}px`;
+          ghost.style.pointerEvents = "none";
+          container.appendChild(ghost);
+
+          // The original stays in place and acts as the drop slot indicator
+          draggedEl.dataset.placeholder = "";
+
+          const moveSlot = (targetIndex) => {
+            const nonGhosts = Array.from(
+              container.querySelectorAll(".list-item:not([data-dragging])"),
+            );
+            const nonSlots = nonGhosts.filter((el) => !el.dataset.placeholder);
+            if (targetIndex >= nonSlots.length) {
+              container.appendChild(draggedEl);
+            } else {
+              nonSlots[targetIndex].insertAdjacentElement(
+                "beforebegin",
+                draggedEl,
+              );
+            }
+          };
+
+          createDragGestureController({
+            direction: { x: false, y: true },
+            onDrag: (gestureInfo) => {
+              if (!gestureInfo.started) {
+                return;
+              }
+              const newTop = originalTop + gestureInfo.layout.yDelta;
+              ghost.style.top = `${newTop}px`;
+
+              const midY = newTop + itemRects[originalIndex].height / 2;
+              let newIndex = Math.round(midY / itemHeight);
+              if (newIndex < 0) {
+                newIndex = 0;
+              }
+              if (newIndex > order.length - 1) {
+                newIndex = order.length - 1;
+              }
+
+              if (newIndex !== currentPlaceholder) {
+                currentPlaceholder = newIndex;
+                moveSlot(currentPlaceholder);
+              }
+            },
+            onRelease: () => {
+              ghost.remove();
+              delete draggedEl.dataset.placeholder;
+
+              if (currentPlaceholder !== originalIndex) {
+                setOrder((prev) => {
+                  const next = [...prev];
+                  next.splice(originalIndex, 1);
+                  next.splice(currentPlaceholder, 0, id);
+                  return next;
+                });
+              }
+            },
+          }).grabViaPointer(event, { element: ghost });
+        };
+
+        const visibleItems = order.map((id) =>
+          INITIAL_ITEMS.find((i) => i.id === id),
+        );
+
+        return (
+          <div>
+            <h1>Reorderable List</h1>
+            <p style={{ color: "#666", margin: "0 0 24px", fontSize: "14px" }}>
+              Drag the handle on each item to reorder.
+            </p>
+            <div class="list-container" ref={containerRef}>
+              {visibleItems.map((item, i) => (
+                <div key={item.id} class="list-item">
+                  <div
+                    class="drag-handle"
+                    title="Drag to reorder"
+                    onPointerDown={(e) => {
+                      startDrag(e, item.id);
+                    }}
+                  >
+                    {[0, 1, 2].map((r) => (
+                      <div key={r} class="drag-handle-dot-row">
+                        <div class="drag-handle-dot" />
+                        <div class="drag-handle-dot" />
+                      </div>
+                    ))}
+                  </div>
+                  <span class="item-label">{item.label}</span>
+                  <span
+                    class="item-badge"
+                    style={{ background: item.bg, color: item.color }}
+                  >
+                    #{i + 1}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      };
+
+      render(<ReorderableList />, document.getElementById("root"));
+    </script>
+  </body>
+</html>
