@@ -23,8 +23,8 @@ export const createDragToMoveGestureController = ({
   // position due to obstacles, boundaries, or other constraints. The line originates from where the mouse
   // initially grabbed the element, but moves with the element to show the current anchor position.
   // It becomes visible when there's a significant distance between mouse and grab point.
-  showConstraintFeedbackLine = true,
-  showDebugMarkers = true,
+  showConstraintFeedbackLine = false,
+  showDebugMarkers = false,
   resetPositionAfterRelease = false,
   ...options
 } = {}) => {
