@@ -144,13 +144,15 @@ export const BadgeCount = ({
     circle = false;
   }
 
+  const textKey = loading + String(valueDisplayed) + hasOverflow;
+
   if (circle) {
     return (
       <TextAnchor
         childRef={ref}
         textAnchor={textAnchor}
         textSize={props.size}
-        textKey={loading + valueDisplayed + hasOverflow}
+        textKey={textKey}
         lineLayout={lineLayout}
       >
         <BadgeCountCircle
@@ -175,7 +177,7 @@ export const BadgeCount = ({
       childRef={ref}
       textAnchor={textAnchor}
       textSize={props.size}
-      textKey={loading + valueFormatted + hasOverflow}
+      textKey={textKey}
       lineLayout={lineLayout}
     >
       <BadgeCountEllipse
