@@ -54,15 +54,10 @@
         transform: scale(1.15);
       }
 
-      .ghost-wrapper {
-        z-index: 101;
-      }
-
       .drop-hint {
         position: absolute;
         right: 0;
         left: 0;
-        z-index: 100;
         display: none;
         height: 3px;
         background: #4476ff;
@@ -118,6 +113,7 @@
       import { useRef, useState } from "preact/hooks";
       import {
         createDragToMoveGestureController,
+        createDragGhost,
         dragAfterThreshold,
         getDropTargetInfo,
       } from "@jsenv/dom";
@@ -152,36 +148,16 @@
           const container = containerRef.current;
           const originalIndex = order.indexOf(id);
           let currentPlaceholder = originalIndex;
-          const pointerX = event.clientX;
-          const pointerY = event.clientY;
-
           const draggedEl = Array.from(
             container.querySelectorAll(".list-item"),
           )[originalIndex];
 
           dragAfterThreshold(event, () => {
-            // Threshold crossed — now create the ghost and drop hint
-            const draggedRect = draggedEl.getBoundingClientRect();
-            const containerRect = container.getBoundingClientRect();
-
-            const ghost = draggedEl.cloneNode(true);
-            ghost.dataset.dragging = "";
-            ghost.style.pointerEvents = "none";
-
-            // ghostWrapper is what createDragToMoveGestureController moves via transform
-            // ghost (inside it) gets the scale transition independently
-            const ghostWrapper = document.createElement("div");
-            ghostWrapper.className = "ghost-wrapper";
-            ghostWrapper.style.position = "absolute";
-            ghostWrapper.style.top = `${draggedRect.top - containerRect.top + container.scrollTop}px`;
-            ghostWrapper.style.left = "0";
-            ghostWrapper.style.width = `${draggedRect.width}px`;
-            ghostWrapper.appendChild(ghost);
-            container.appendChild(ghostWrapper);
-            // Set transform-origin to pointer position within the ghost
-            const originX = pointerX - draggedRect.left;
-            const originY = pointerY - draggedRect.top;
-            ghost.style.transformOrigin = `${originX}px ${originY}px`;
+            const {
+              ghost,
+              ghostWrapper,
+              remove: removeGhost,
+            } = createDragGhost(draggedEl, event);
             // Trigger the lift transition on the next frame
             requestAnimationFrame(() => {
               ghost.dataset.lifted = "";
@@ -215,7 +191,7 @@
               dropHint.style.top = `${hintY}px`;
             };
 
-            return createDragToMoveGestureController({
+            const gestureController = createDragToMoveGestureController({
               direction: { x: false, y: true },
               areaConstraint: "none",
               onDrag: (gestureInfo) => {
@@ -240,7 +216,7 @@
                 }
               },
               onRelease: () => {
-                ghostWrapper.remove();
+                removeGhost();
                 dropHint.remove();
 
                 if (currentPlaceholder !== originalIndex) {
@@ -252,7 +228,11 @@
                   });
                 }
               },
-            }).grabViaPointer(event, { element: ghostWrapper });
+            });
+            const gesture = gestureController.grabViaPointer(event, {
+              element: ghostWrapper,
+            });
+            return gesture;
           });
         };
 

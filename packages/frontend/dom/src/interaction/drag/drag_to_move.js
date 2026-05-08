@@ -299,3 +299,50 @@ export const createDragToMoveGestureController = ({
 
   return dragGestureController;
 };
+
+const DRAG_GHOST_CSS = `
+.jsenv_drag_ghost_wrapper {
+  position: fixed;
+  pointer-events: none;
+  z-index: 9999;
+}
+`;
+let dragGhostStyleInjected = false;
+const ensureDragGhostStyle = () => {
+  if (dragGhostStyleInjected) {
+    return;
+  }
+  dragGhostStyleInjected = true;
+  const style = document.createElement("style");
+  style.textContent = DRAG_GHOST_CSS;
+  document.head.appendChild(style);
+};
+
+export const createDragGhost = (element, pointerEvent) => {
+  ensureDragGhostStyle();
+  const rect = element.getBoundingClientRect();
+
+  const ghost = element.cloneNode(true);
+  ghost.dataset.dragging = "";
+  ghost.style.pointerEvents = "none";
+  // transform-origin set to pointer position within the element for natural scale expansion
+  const originX = pointerEvent.clientX - rect.left;
+  const originY = pointerEvent.clientY - rect.top;
+  ghost.style.transformOrigin = `${originX}px ${originY}px`;
+
+  const ghostWrapper = document.createElement("div");
+  ghostWrapper.className = "jsenv_drag_ghost_wrapper";
+  ghostWrapper.style.top = `${rect.top}px`;
+  ghostWrapper.style.left = `${rect.left}px`;
+  ghostWrapper.style.width = `${rect.width}px`;
+  ghostWrapper.appendChild(ghost);
+  document.body.appendChild(ghostWrapper);
+
+  return {
+    ghost,
+    ghostWrapper,
+    remove: () => {
+      ghostWrapper.remove();
+    },
+  };
+};
