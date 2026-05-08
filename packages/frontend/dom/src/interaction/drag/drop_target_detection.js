@@ -52,12 +52,13 @@ export const getDropTargetInfo = (gestureInfo, targetElements) => {
   const elementsUnderDragElement = document.elementsFromPoint(clientX, clientY);
   let targetElement = null;
   let targetIndex = -1;
+  let intersectingIndex = -1;
   for (const element of elementsUnderDragElement) {
     // First, check if the element itself is a target
     const directIndex = intersectingTargets.indexOf(element);
     if (directIndex !== -1) {
       targetElement = element;
-      targetIndex = directIndex;
+      intersectingIndex = directIndex;
       break;
     }
     // Special case: if element is <td> or <th> and not in targets,
@@ -78,7 +79,7 @@ export const getDropTargetInfo = (gestureInfo, targetElements) => {
         break try_col;
       }
       targetElement = tableCellCol;
-      targetIndex = colIndex;
+      intersectingIndex = colIndex;
       break;
     }
     try_tr: {
@@ -91,26 +92,31 @@ export const getDropTargetInfo = (gestureInfo, targetElements) => {
         break try_tr;
       }
       targetElement = tableRow;
-      targetIndex = rowIndex;
+      intersectingIndex = intersectingTargets.indexOf(tableRow);
       break;
     }
   }
   if (!targetElement) {
     targetElement = intersectingTargets[0];
-    targetIndex = 0;
+    intersectingIndex = 0;
   }
+  targetIndex = targetElements.indexOf(targetElement);
 
   // Determine position within the target for both axes
   const targetRect = targetElement.getBoundingClientRect();
   const targetCenterX = targetRect.left + targetRect.width / 2;
   const targetCenterY = targetRect.top + targetRect.height / 2;
   const result = {
+    // Index of the target element within the original targetElements array
     index: targetIndex,
     element: targetElement,
     elementSide: {
       x: dragElementRect.left < targetCenterX ? "start" : "end",
       y: dragElementRect.top < targetCenterY ? "start" : "end",
     },
+    // Index within the intersecting subset — could be useful to know how many
+    // elements were overlapping, but rarely needed in practice
+    intersectingIndex,
     intersecting: intersectingTargets,
   };
   return result;

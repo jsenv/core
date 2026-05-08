@@ -197,10 +197,11 @@
               if (!dropTargetInfo) {
                 return;
               }
+              const dropTargetIndex = dropTargetInfo.index;
               const newIndex =
                 dropTargetInfo.elementSide.y === "end"
-                  ? dropTargetInfo.index + 1
-                  : dropTargetInfo.index;
+                  ? dropTargetIndex + 1
+                  : dropTargetIndex;
 
               if (newIndex !== currentPlaceholder) {
                 currentPlaceholder = newIndex;

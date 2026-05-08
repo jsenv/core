@@ -358,7 +358,7 @@ export const initDragTableColumnViaPointer = (
 
       const updateDropTarget = (dropTargetInfo) => {
         const targetColumn = dropTargetInfo.element;
-        const targetColumnIndex = colElements.indexOf(targetColumn);
+        const targetColumnIndex = dropTargetInfo.index;
         dropColumnIndex = targetColumnIndex;
         if (dropColumnIndex === columnIndex) {
           dropPreview.removeAttribute("data-visible");
