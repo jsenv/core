@@ -39,6 +39,10 @@ export {
 } from "./src/state/async/use_async_data.jsx";
 export { createRequestCanceller } from "./src/state/request_canceller.js";
 export { useCancelPrevious } from "./src/state/use_cancel_previous.js";
+export {
+  moveArrayItemByIndex,
+  swapArrayItemByIndex,
+} from "./src/utils/array_move.js";
 
 // Box
 export { Box } from "./src/box/box.jsx";

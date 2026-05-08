@@ -6193,6 +6193,54 @@ const useCancelPrevious = () => {
   return canceller;
 };
 
+const moveArrayItemByIndex = (array, indexA, indexB) => {
+  const newArray = [];
+  const movedItem = array[indexA];
+  const movingRight = indexA < indexB;
+
+  for (let i = 0; i < array.length; i++) {
+    if (movingRight) {
+      // Moving right: add target first, then moved item after
+      if (i !== indexA) {
+        newArray.push(array[i]);
+      }
+      if (i === indexB) {
+        newArray.push(movedItem);
+      }
+    } else {
+      // Moving left: add moved item first, then target after
+      if (i === indexB) {
+        newArray.push(movedItem);
+      }
+      if (i !== indexA) {
+        newArray.push(array[i]);
+      }
+    }
+  }
+  return newArray;
+};
+
+const swapArrayItemByIndex = (array, indexA, indexB) => {
+  const newArray = [];
+  const itemAtPositionA = array[indexA];
+  const itemAtPositionB = array[indexB];
+  for (let i = 0; i < array.length; i++) {
+    if (i === indexB) {
+      // At the new position, put the dragged column
+      newArray.push(itemAtPositionA);
+      continue;
+    }
+    if (i === indexA) {
+      // At the old position, put what was at the new position
+      newArray.push(itemAtPositionB);
+      continue;
+    }
+    // Everything else stays the same
+    newArray.push(array[i]);
+  }
+  return newArray;
+};
+
 /**
  * Merges a component's base className with className received from props.
  *
@@ -32628,7 +32676,7 @@ const useTableDragContextValue = ({
       return;
     }
     const columnIds = columns.map(col => col.id);
-    const columnIdsWithNewOrder = moveItem(columnIds, columnIndex, newColumnIndex);
+    const columnIdsWithNewOrder = moveArrayItemByIndex(columnIds, columnIndex, newColumnIndex);
     setColumnOrder(columnIdsWithNewOrder);
   };
   return useMemo(() => {
@@ -32642,31 +32690,6 @@ const useTableDragContextValue = ({
       canChangeColumnOrder
     };
   }, [grabTarget, canChangeColumnOrder]);
-};
-const moveItem = (array, indexA, indexB) => {
-  const newArray = [];
-  const movedItem = array[indexA];
-  const movingRight = indexA < indexB;
-  for (let i = 0; i < array.length; i++) {
-    if (movingRight) {
-      // Moving right: add target first, then moved item after
-      if (i !== indexA) {
-        newArray.push(array[i]);
-      }
-      if (i === indexB) {
-        newArray.push(movedItem);
-      }
-    } else {
-      // Moving left: add moved item first, then target after
-      if (i === indexB) {
-        newArray.push(movedItem);
-      }
-      if (i !== indexA) {
-        newArray.push(array[i]);
-      }
-    }
-  }
-  return newArray;
 };
 const TableDragCloneContainer = forwardRef((props, ref) => {
   import.meta.css = [css$h, "@jsenv/navi/src/field/table/drag/table_drag.jsx"];
@@ -37992,5 +38015,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, Box, Button, ButtonCopyToClipboard, Caption, CheckSvg, Checkbox, CheckboxList, CloseSvg, Code, Col, Colgroup, ConstructionSvg, Details, Dialog, DialogLayout, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemFooter, ListItemGroup, ListItemHeader, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, MessageBox, Meter, Nav, NaviDebug, Paragraph, Popover, Quantity, QuantityIntl, Radio, RadioList, Route, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectionContext, Separator, SettingsSvg, SidePanel, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, Thead, Title, Tr, UITransition, UserSvg, ViewportLayout, actionIntegratedVia, actionRunEffect, addCustomMessage, anyMatchingRouteSignal, applySearch, arraySignalMembership, compareTwoJsValues, createAction, createAvailableConstraint, createIntl, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, enableDebugActions, enableDebugOnDocumentLoading, filterTableSelection, forwardActionRequested, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, localStorageSignal, navBack, navForward, navTo, openCallout, rawUrlPart, reload, removeCustomMessage, requestAction, requestListClose, requestListOpen, rerunActions, resource, route, routeAction, setBaseUrl, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, syncOwnedResourceToSignals, syncResourceToSignals, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutClose, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, useRouteStatus, useRunOnMount, useSearchText, useSelectRequestClose, useSelectableElement, useSelectionController, useSidePanelClose, useSignalSync, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage, windowWidthSignal };
+export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, Box, Button, ButtonCopyToClipboard, Caption, CheckSvg, Checkbox, CheckboxList, CloseSvg, Code, Col, Colgroup, ConstructionSvg, Details, Dialog, DialogLayout, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemFooter, ListItemGroup, ListItemHeader, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, MessageBox, Meter, Nav, NaviDebug, Paragraph, Popover, Quantity, QuantityIntl, Radio, RadioList, Route, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectionContext, Separator, SettingsSvg, SidePanel, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, Thead, Title, Tr, UITransition, UserSvg, ViewportLayout, actionIntegratedVia, actionRunEffect, addCustomMessage, anyMatchingRouteSignal, applySearch, arraySignalMembership, compareTwoJsValues, createAction, createAvailableConstraint, createIntl, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, enableDebugActions, enableDebugOnDocumentLoading, filterTableSelection, forwardActionRequested, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, localStorageSignal, moveArrayItemByIndex, navBack, navForward, navTo, openCallout, rawUrlPart, reload, removeCustomMessage, requestAction, requestListClose, requestListOpen, rerunActions, resource, route, routeAction, setBaseUrl, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutClose, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, useRouteStatus, useRunOnMount, useSearchText, useSelectRequestClose, useSelectableElement, useSelectionController, useSidePanelClose, useSignalSync, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage, windowWidthSignal };
 //# sourceMappingURL=jsenv_navi.js.map
