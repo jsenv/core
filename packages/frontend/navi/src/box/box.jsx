@@ -365,6 +365,14 @@ export const Box = (props) => {
       const cssVar = styleContext.styleCSSVars[name];
       if (cssVar) {
         addCSSVar(mergedValue, cssVar, stylesTarget);
+        if (name === "borderRadius" && value === "inherit") {
+          // "inherit" cannot be expressed via a CSS variable — a var() reference
+          // never propagates the inherit keyword itself. So when borderRadius="inherit"
+          // we must also set the inline style directly so the element actually
+          // inherits the radius from its parent.
+          styleDeps.push(name, value);
+          stylesTarget[name] = mergedValue;
+        }
         return true;
       }
       styleDeps.push(name, value); // impact box style -> add to deps

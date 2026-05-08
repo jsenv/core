@@ -175,7 +175,7 @@ const css = /* css */ `
       border-width: var(--button-border-width);
       border-style: solid;
       border-color: var(--x-button-border-color);
-      border-radius: var(--button-border-radius);
+      border-radius: inherit;
       outline-width: var(--x-button-outline-width);
       outline-color: var(--button-outline-color);
       outline-offset: var(--x-button-outline-offset);
