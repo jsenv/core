@@ -5,10 +5,8 @@ import { createContext, isValidElement, toChildArray } from "preact";
 import { useContext, useRef, useState } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
-import { BoxFlowContext } from "../box/box_flow_context.jsx";
 import {
   isSizeSpacingKey,
-  isSpacingHandledByFlow,
   stringifySpacingStyle,
 } from "../box/box_style_util.js";
 import { withPropsClassName } from "../utils/with_props_class_name.js";
@@ -405,7 +403,6 @@ const TextUI = (props) => {
     childrenOutsideFlow,
     ...rest
   } = props;
-  const parentBoxFlow = useContext(BoxFlowContext);
   const defaultSpace = preventSpaceUnderlines ? FAKE_SPACE : REGULAR_SPACE;
   const resolvedSpacing = spacing ?? defaultSpace;
   const boxProps = {
@@ -415,11 +412,7 @@ const TextUI = (props) => {
     ref,
     "baseClassName": withPropsClassName("navi_text", rest.baseClassName),
   };
-  const shouldPreserveSpacing =
-    rest.as === "pre" ||
-    rest.flex ||
-    rest.grid ||
-    isSpacingHandledByFlow(parentBoxFlow);
+  const shouldPreserveSpacing = rest.as === "pre" || rest.flex || rest.grid;
   if (shouldPreserveSpacing) {
     boxProps.spacing = resolvedSpacing;
   } else {
