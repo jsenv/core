@@ -8454,6 +8454,14 @@ const Box = props => {
       const cssVar = styleContext.styleCSSVars[name];
       if (cssVar) {
         addCSSVar(mergedValue, cssVar, stylesTarget);
+        if (name === "borderRadius" && value === "inherit") {
+          // "inherit" cannot be expressed via a CSS variable — a var() reference
+          // never propagates the inherit keyword itself. So when borderRadius="inherit"
+          // we must also set the inline style directly so the element actually
+          // inherits the radius from its parent.
+          styleDeps.push(name, value);
+          stylesTarget[name] = mergedValue;
+        }
         return true;
       }
       styleDeps.push(name, value); // impact box style -> add to deps
@@ -8735,16 +8743,13 @@ const applySeparatorOnChildren = (children, separator) => {
   return childrenWithSeparators;
 };
 const shouldInjectSeparatorBetween = (left, right) => {
-  if (isPreactNode$1(left) && left.props?.hidden) {
+  if (isValidElement(left) && left.props?.hidden) {
     return false;
   }
-  if (isPreactNode$1(right) && right.props?.hidden) {
+  if (isValidElement(right) && right.props?.hidden) {
     return false;
   }
   return true;
-};
-const isPreactNode$1 = jsxChild => {
-  return jsxChild !== null && typeof jsxChild === "object" && jsxChild.type !== undefined;
 };
 
 /**
@@ -21083,12 +21088,9 @@ const markAsOutsideTextFlow = jsxElement => {
 const isMarkedAsOutsideTextFlow = jsxElement => {
   return outsideTextFlowSet.has(jsxElement.type);
 };
-const isPreactNode = jsxChild => {
-  return jsxChild !== null && typeof jsxChild === "object" && jsxChild.type !== undefined;
-};
 const shouldInjectSpacingBetween = (left, right) => {
-  const leftIsNode = isPreactNode(left);
-  const rightIsNode = isPreactNode(right);
+  const leftIsNode = isValidElement(left);
+  const rightIsNode = isValidElement(right);
   // only inject spacing when at least one side is a preact node
   if (!leftIsNode && !rightIsNode) {
     return false;
@@ -21212,7 +21214,6 @@ const TextUI = props => {
     childrenOutsideFlow,
     ...rest
   } = props;
-  const parentBoxFlow = useContext(BoxFlowContext);
   const defaultSpace = preventSpaceUnderlines ? FAKE_SPACE : REGULAR_SPACE;
   const resolvedSpacing = spacing ?? defaultSpace;
   const boxProps = {
@@ -21222,7 +21223,7 @@ const TextUI = props => {
     ref,
     "baseClassName": withPropsClassName("navi_text", rest.baseClassName)
   };
-  const shouldPreserveSpacing = rest.as === "pre" || rest.flex || rest.grid || isSpacingHandledByFlow(parentBoxFlow);
+  const shouldPreserveSpacing = rest.as === "pre" || rest.flex || rest.grid;
   if (shouldPreserveSpacing) {
     boxProps.spacing = resolvedSpacing;
   } else {
@@ -22677,7 +22678,7 @@ installImportMetaCssBuild(import.meta);const css$A = /* css */`
       border-width: var(--button-border-width);
       border-style: solid;
       border-color: var(--x-button-border-color);
-      border-radius: var(--button-border-radius);
+      border-radius: inherit;
       outline-width: var(--x-button-outline-width);
       outline-color: var(--button-outline-color);
       outline-offset: var(--x-button-outline-offset);
@@ -36225,12 +36226,13 @@ const BadgeCount = ({
   if (charCount > MAX_CHAR_AS_CIRCLE) {
     circle = false;
   }
+  const textKey = loading + String(valueDisplayed) + hasOverflow;
   if (circle) {
     return jsx(TextAnchor, {
       childRef: ref,
       textAnchor: textAnchor,
       textSize: props.size,
-      textKey: loading + valueDisplayed + hasOverflow,
+      textKey: textKey,
       lineLayout: lineLayout,
       children: jsxs(BadgeCountCircle, {
         ...props,
@@ -36249,7 +36251,7 @@ const BadgeCount = ({
     childRef: ref,
     textAnchor: textAnchor,
     textSize: props.size,
-    textKey: loading + valueFormatted + hasOverflow,
+    textKey: textKey,
     lineLayout: lineLayout,
     children: jsxs(BadgeCountEllipse, {
       ...props,
