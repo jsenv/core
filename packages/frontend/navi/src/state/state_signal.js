@@ -107,6 +107,7 @@ export const stateSignal = (defaultValue, options = {}) => {
     persists = false,
     debug,
     default: staticFallback,
+    ignoreArrayOrder = true,
   } = options;
 
   // Check if defaultValue is a signal (dynamic default) or static value
@@ -199,15 +200,15 @@ export const stateSignal = (defaultValue, options = {}) => {
       const dynamicValue = dynamicDefaultSignal.peek();
       if (dynamicValue === undefined) {
         return !compareTwoJsValues(value, staticDefaultValue, {
-          ignoreArrayOrder: true,
+          ignoreArrayOrder,
         });
       }
       return !compareTwoJsValues(value, dynamicValue, {
-        ignoreArrayOrder: true,
+        ignoreArrayOrder,
       });
     }
     return !compareTwoJsValues(value, staticDefaultValue, {
-      ignoreArrayOrder: true,
+      ignoreArrayOrder,
     });
   };
 
