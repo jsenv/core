@@ -210,7 +210,6 @@
             const gestureController = createDragToMoveGestureController({
               cloneOnDrag: true,
               direction: { x: false, y: true },
-              areaConstraint: "none",
               onDrag: (gestureInfo) => {
                 const dropTargets = Array.from(
                   container.querySelectorAll(".list-item"),
