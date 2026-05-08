@@ -107,7 +107,7 @@ export const stateSignal = (defaultValue, options = {}) => {
     persists = false,
     debug,
     default: staticFallback,
-    ignoreArrayOrder = true,
+    ignoreArrayOrder,
   } = options;
 
   // Check if defaultValue is a signal (dynamic default) or static value
