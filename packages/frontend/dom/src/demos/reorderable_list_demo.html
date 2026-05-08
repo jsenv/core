@@ -47,6 +47,7 @@
         border: 1px solid #ddd;
         border-radius: 6px;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+        transition: transform 0.2s ease;
         user-select: none;
       }
 
@@ -124,7 +125,7 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useRef, useState } from "preact/hooks";
+      import { useRef, useState, useLayoutEffect } from "preact/hooks";
       import {
         createDragToMoveGestureController,
         dragAfterThreshold,
@@ -166,6 +167,36 @@
 
       const ReorderableList = ({ containerRef }) => {
         const [order, setOrder] = useState(INITIAL_ITEMS.map((i) => i.id));
+        const flipDataRef = useRef(null);
+
+        useLayoutEffect(() => {
+          if (!flipDataRef.current) {
+            return;
+          }
+          const oldRects = flipDataRef.current;
+          flipDataRef.current = null;
+          const items = Array.from(
+            containerRef.current.querySelectorAll(".list-item"),
+          );
+          for (const item of items) {
+            const itemId = Number(item.dataset.id);
+            const oldRect = oldRects.get(itemId);
+            if (!oldRect) {
+              continue;
+            }
+            const newRect = item.getBoundingClientRect();
+            const dy = oldRect.top - newRect.top;
+            if (dy === 0) {
+              continue;
+            }
+            item.style.transition = "none";
+            item.style.transform = `translateY(${dy}px)`;
+            requestAnimationFrame(() => {
+              item.style.transition = "";
+              item.style.transform = "";
+            });
+          }
+        }, [order]);
 
         const startDrag = (event, id) => {
           event.preventDefault();
@@ -234,6 +265,18 @@
                 dropHint.remove();
 
                 if (currentPlaceholder !== originalIndex) {
+                  // FLIP: snapshot current rects before state update
+                  const items = Array.from(
+                    container.querySelectorAll(".list-item"),
+                  );
+                  const rects = new Map();
+                  for (const item of items) {
+                    rects.set(
+                      Number(item.dataset.id),
+                      item.getBoundingClientRect(),
+                    );
+                  }
+                  flipDataRef.current = rects;
                   setOrder((prev) => {
                     const next = [...prev];
                     next.splice(originalIndex, 1);
@@ -257,6 +300,7 @@
         return visibleItems.map((item, i) => (
           <div
             key={item.id}
+            data-id={item.id}
             class="list-item"
             onPointerDown={(e) => {
               startDrag(e, item.id);
