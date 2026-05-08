@@ -41,17 +41,20 @@
 
       .list-item[data-dragging] {
         z-index: 100;
-        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.18);
+        box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
         opacity: 0.95;
+        transform: scale(1.15);
         transition:
           transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1),
           box-shadow 0.15s ease;
         cursor: grabbing;
       }
 
-      .list-item[data-dragging][data-lifted] {
-        box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
-        transform: scale(1.15);
+      @starting-style {
+        .list-item[data-dragging] {
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+          transform: scale(1);
+        }
       }
 
       .drop-hint {
@@ -124,6 +127,30 @@
         { id: 4, label: "Date", bg: "#e8f5e9", color: "#2e7d32" },
         { id: 5, label: "Elderberry", bg: "#f3e5f5", color: "#6a1b9a" },
         { id: 6, label: "Fig", bg: "#fbe9e7", color: "#bf360c" },
+        { id: 7, label: "Grape", bg: "#ede7f6", color: "#4527a0" },
+        { id: 8, label: "Honeydew", bg: "#f1f8e9", color: "#33691e" },
+        { id: 9, label: "Kiwi", bg: "#e8f5e9", color: "#1b5e20" },
+        { id: 10, label: "Lemon", bg: "#fffde7", color: "#f57f17" },
+        { id: 11, label: "Lime", bg: "#f9fbe7", color: "#558b2f" },
+        { id: 12, label: "Mango", bg: "#fff3e0", color: "#e65100" },
+        { id: 13, label: "Nectarine", bg: "#fbe9e7", color: "#bf360c" },
+        { id: 14, label: "Orange", bg: "#fff3e0", color: "#e65100" },
+        { id: 15, label: "Papaya", bg: "#fff8e1", color: "#ff6f00" },
+        { id: 16, label: "Peach", bg: "#fce4ec", color: "#ad1457" },
+        { id: 17, label: "Pear", bg: "#f9fbe7", color: "#827717" },
+        { id: 18, label: "Pineapple", bg: "#fffde7", color: "#f9a825" },
+        { id: 19, label: "Plum", bg: "#f3e5f5", color: "#6a1b9a" },
+        { id: 20, label: "Pomegranate", bg: "#fce4ec", color: "#b71c1c" },
+        { id: 21, label: "Raspberry", bg: "#fce4ec", color: "#c62828" },
+        { id: 22, label: "Strawberry", bg: "#ffebee", color: "#c62828" },
+        { id: 23, label: "Tangerine", bg: "#fff3e0", color: "#bf360c" },
+        { id: 24, label: "Watermelon", bg: "#e8f5e9", color: "#c62828" },
+        { id: 25, label: "Apricot", bg: "#fff3e0", color: "#e65100" },
+        { id: 26, label: "Avocado", bg: "#f1f8e9", color: "#33691e" },
+        { id: 27, label: "Blueberry", bg: "#e8eaf6", color: "#283593" },
+        { id: 28, label: "Cantaloupe", bg: "#fff8e1", color: "#ff8f00" },
+        { id: 29, label: "Coconut", bg: "#fafafa", color: "#424242" },
+        { id: 30, label: "Cranberry", bg: "#ffebee", color: "#b71c1c" },
       ];
 
       const DragHandle = () => (

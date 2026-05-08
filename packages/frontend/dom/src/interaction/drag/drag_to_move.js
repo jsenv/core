@@ -39,10 +39,6 @@ export const createDragToMoveGestureController = ({
         clientY: grabEvent.clientY,
       });
       elementToMove = ghostData.ghostWrapper;
-      // Trigger the lift transition on the ghost on the next frame
-      requestAnimationFrame(() => {
-        ghostData.ghost.dataset.lifted = "";
-      });
       dragGesture.addReleaseCallback(() => {
         ghostData.remove();
       });
