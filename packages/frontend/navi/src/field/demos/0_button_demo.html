@@ -170,6 +170,7 @@
             <FullWidthDemo />
             <SpacingDemo />
             <IconToggleDemo />
+            <CircleButtonDemo />
             <DiscreteVariantDemo />
             <InteractiveDemo />
           </div>
@@ -848,6 +849,88 @@
               Icon buttons that change state when clicked. The eye icon toggles
               between open and closed states based on the visibility toggle.
             </p>
+
+            <div
+              style={{
+                marginTop: "12px",
+                padding: "10px 14px",
+                background: "#fff8e1",
+                border: "1px solid #ffe082",
+                borderRadius: "6px",
+                fontSize: "0.85rem",
+                color: "#795548",
+              }}
+            >
+              <strong>💡 Consider using a checkbox instead.</strong> When a
+              button toggles between two states (on/off, visible/hidden…), a{" "}
+              <code>&lt;Checkbox&gt;</code> is semantically more appropriate —
+              it carries built-in checked state, is announced correctly by
+              screen readers, and works with form submission out of the box. Use
+              a toggle button only when the visual metaphor is clearly
+              action-oriented (e.g. play/pause).
+            </div>
+          </div>
+        );
+      };
+
+      const CircleButtonDemo = () => {
+        const [isVisible, setIsVisible] = useState(false);
+
+        return (
+          <div className="demo-section">
+            <h2>Circle / Rounded Container with borderRadius inherit</h2>
+
+            <fieldset>
+              <legend>Button inside a circle container</legend>
+              <p
+                style={{
+                  color: "#666",
+                  fontSize: "0.85rem",
+                  margin: "0 0 12px",
+                }}
+              >
+                The container has <code>border-radius: 100%</code>. The button
+                receives <code>borderRadius="inherit"</code> so it picks up the
+                parent's radius — useful for icon buttons that must stay
+                circular regardless of size.
+              </p>
+              <div className="button-group">
+                <div
+                  style={{
+                    display: "inline-flex",
+                    borderRadius: "100%",
+                    overflow: "hidden",
+                    border: "2px solid #007bff",
+                  }}
+                >
+                  <Button
+                    borderRadius="inherit"
+                    onClick={() => setIsVisible(!isVisible)}
+                    aria-label={isVisible ? "Hide content" : "Show content"}
+                  >
+                    <Icon>{isVisible ? <EyeSvg /> : <EyeClosedSvg />}</Icon>
+                  </Button>
+                </div>
+
+                <div
+                  style={{
+                    display: "inline-flex",
+                    borderRadius: "100%",
+                    overflow: "hidden",
+                    border: "2px solid #28a745",
+                  }}
+                >
+                  <Button
+                    size="xl"
+                    borderRadius="inherit"
+                    onClick={() => setIsVisible(!isVisible)}
+                    aria-label={isVisible ? "Hide content" : "Show content"}
+                  >
+                    <Icon>{isVisible ? <EyeSvg /> : <EyeClosedSvg />}</Icon>
+                  </Button>
+                </div>
+              </div>
+            </fieldset>
           </div>
         );
       };
