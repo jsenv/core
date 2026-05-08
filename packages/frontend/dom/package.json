@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/dom",
-  "version": "0.10.4",
+  "version": "0.10.5",
   "type": "module",
   "description": "DOM utilities for writing frontend code",
   "repository": {

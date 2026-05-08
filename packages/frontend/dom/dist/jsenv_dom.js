@@ -6956,6 +6956,13 @@ installImportMetaCssBuild(import.meta);/**
  * donc juste x/y ca seras surement mieux
  *
  */
+const css$3 = /* css */`
+  .navi_drag_gesture_backdrop {
+    position: fixed;
+    inset: 0;
+    user-select: none;
+  }
+`;
 const createDragGestureController = (options = {}) => {
   const {
     name,
@@ -7102,6 +7109,7 @@ const createDragGestureController = (options = {}) => {
 
       // 2. VISUAL CONTROL: Backdrop for consistent cursor and pointer event blocking
       if (backdrop) {
+        import.meta.css = [css$3, "@jsenv/dom/src/interaction/drag/drag_gesture.js"];
         const backdropElement = document.createElement("div");
         backdropElement.className = "navi_drag_gesture_backdrop";
         backdropElement.ariaHidden = "true";
@@ -7458,15 +7466,24 @@ const definePropertyAsReadOnly = (object, propertyName) => {
     value: object[propertyName]
   });
 };
-import.meta.css = [/* css */`
-  .navi_drag_gesture_backdrop {
-    position: fixed;
-    inset: 0;
-    user-select: none;
-  }
-`, "@jsenv/dom/src/interaction/drag/drag_gesture.js"];
 
-installImportMetaCssBuild(import.meta);const setupConstraintFeedbackLine = () => {
+installImportMetaCssBuild(import.meta);const css$2 = /* css */`
+  .navi_constraint_feedback_line {
+    position: fixed;
+    z-index: 9998;
+    border-top: 2px dotted rgba(59, 130, 246, 0.7);
+    visibility: hidden;
+    transform-origin: left center;
+    transition: opacity 0.15s ease;
+    pointer-events: none;
+  }
+
+  .navi_constraint_feedback_line[data-visible] {
+    visibility: visible;
+  }
+`;
+const setupConstraintFeedbackLine = () => {
+  import.meta.css = [css$2, "@jsenv/dom/src/interaction/drag/constraint_feedback_line.js"];
   const constraintFeedbackLine = createConstraintFeedbackLine();
 
   // Track last known mouse position for constraint feedback line during scroll
@@ -7539,21 +7556,6 @@ const createConstraintFeedbackLine = () => {
   document.body.appendChild(line);
   return line;
 };
-import.meta.css = [/* css */`
-  .navi_constraint_feedback_line {
-    position: fixed;
-    z-index: 9998;
-    border-top: 2px dotted rgba(59, 130, 246, 0.7);
-    visibility: hidden;
-    transform-origin: left center;
-    transition: opacity 0.15s ease;
-    pointer-events: none;
-  }
-
-  .navi_constraint_feedback_line[data-visible] {
-    visibility: visible;
-  }
-`, "@jsenv/dom/src/interaction/drag/constraint_feedback_line.js"];
 
 installImportMetaCssBuild(import.meta);// Keep visual markers (debug markers, obstacle markers, constraint feedback line) in DOM after drag ends
 const MARKER_SIZE = 12;
@@ -7561,9 +7563,197 @@ let currentDebugMarkers = [];
 let currentConstraintMarkers = [];
 let currentReferenceElementMarker = null;
 let currentElementMarker = null;
+const css$1 = /* css */`
+  .navi_debug_markers_container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 999998;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none;
+    overflow: hidden;
+    --marker-size: ${MARKER_SIZE}px;
+  }
+
+  .navi_debug_marker {
+    position: absolute;
+    pointer-events: none;
+  }
+
+  /* Markers based on side rather than orientation */
+  .navi_debug_marker[data-left],
+  .navi_debug_marker[data-right] {
+    width: var(--marker-size);
+    height: 100vh;
+  }
+
+  .navi_debug_marker[data-top],
+  .navi_debug_marker[data-bottom] {
+    width: 100vw;
+    height: var(--marker-size);
+  }
+
+  /* Gradient directions based on side, using CSS custom properties for color */
+  .navi_debug_marker[data-left] {
+    background: linear-gradient(
+      to right,
+      rgba(from var(--marker-color) r g b / 0.9) 0%,
+      rgba(from var(--marker-color) r g b / 0.7) 30%,
+      rgba(from var(--marker-color) r g b / 0.3) 70%,
+      rgba(from var(--marker-color) r g b / 0) 100%
+    );
+  }
+
+  .navi_debug_marker[data-right] {
+    background: linear-gradient(
+      to left,
+      rgba(from var(--marker-color) r g b / 0.9) 0%,
+      rgba(from var(--marker-color) r g b / 0.7) 30%,
+      rgba(from var(--marker-color) r g b / 0.3) 70%,
+      rgba(from var(--marker-color) r g b / 0) 100%
+    );
+  }
+
+  .navi_debug_marker[data-top] {
+    background: linear-gradient(
+      to bottom,
+      rgba(from var(--marker-color) r g b / 0.9) 0%,
+      rgba(from var(--marker-color) r g b / 0.7) 30%,
+      rgba(from var(--marker-color) r g b / 0.3) 70%,
+      rgba(from var(--marker-color) r g b / 0) 100%
+    );
+  }
+
+  .navi_debug_marker[data-bottom] {
+    background: linear-gradient(
+      to top,
+      rgba(from var(--marker-color) r g b / 0.9) 0%,
+      rgba(from var(--marker-color) r g b / 0.7) 30%,
+      rgba(from var(--marker-color) r g b / 0.3) 70%,
+      rgba(from var(--marker-color) r g b / 0) 100%
+    );
+  }
+
+  .navi_debug_marker_label {
+    position: absolute;
+    padding: 2px 6px;
+    color: rgb(from var(--marker-color) r g b / 1);
+    font-weight: bold;
+    font-size: 12px;
+    white-space: nowrap;
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid;
+    border-color: rgb(from var(--marker-color) r g b / 1);
+    border-radius: 3px;
+    pointer-events: none;
+  }
+
+  /* Label positioning based on side data attributes */
+
+  /* Left side markers - vertical with 90° rotation */
+  .navi_debug_marker[data-left] .navi_debug_marker_label {
+    top: 20px;
+    left: 10px;
+    transform: rotate(90deg);
+    transform-origin: left center;
+  }
+
+  /* Right side markers - vertical with -90° rotation */
+  .navi_debug_marker[data-right] .navi_debug_marker_label {
+    top: 20px;
+    right: 10px;
+    left: auto;
+    transform: rotate(-90deg);
+    transform-origin: right center;
+  }
+
+  /* Top side markers - horizontal, label on the line */
+  .navi_debug_marker[data-top] .navi_debug_marker_label {
+    top: 0px;
+    left: 20px;
+  }
+
+  /* Bottom side markers - horizontal, label on the line */
+  .navi_debug_marker[data-bottom] .navi_debug_marker_label {
+    top: auto;
+    bottom: 0px;
+    left: 20px;
+  }
+
+  .navi_obstacle_marker {
+    position: absolute;
+    z-index: 9999;
+    background-color: orange;
+    opacity: 0.6;
+    pointer-events: none;
+  }
+
+  .navi_obstacle_marker_label {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    color: white;
+    font-weight: bold;
+    font-size: 12px;
+    text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.8);
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+  }
+
+  .navi_element_marker {
+    position: absolute;
+    z-index: 9997;
+    background-color: var(--element-color-alpha, rgba(255, 0, 150, 0.3));
+    border: 2px solid var(--element-color, rgb(255, 0, 150));
+    opacity: 0.9;
+    pointer-events: none;
+  }
+
+  .navi_element_marker_label {
+    position: absolute;
+    top: -25px;
+    right: 0;
+    padding: 2px 6px;
+    color: var(--element-color, rgb(255, 0, 150));
+    font-weight: bold;
+    font-size: 11px;
+    white-space: nowrap;
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid var(--element-color, rgb(255, 0, 150));
+    border-radius: 3px;
+    pointer-events: none;
+  }
+
+  .navi_reference_element_marker {
+    position: absolute;
+    z-index: 9998;
+    background-color: rgba(0, 150, 255, 0.3);
+    border: 2px dashed rgba(0, 150, 255, 0.7);
+    opacity: 0.8;
+    pointer-events: none;
+  }
+
+  .navi_reference_element_marker_label {
+    position: absolute;
+    top: -25px;
+    left: 0;
+    padding: 2px 6px;
+    color: rgba(0, 150, 255, 1);
+    font-weight: bold;
+    font-size: 11px;
+    white-space: nowrap;
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(0, 150, 255, 0.7);
+    border-radius: 3px;
+    pointer-events: none;
+  }
+`;
 const setupDragDebugMarkers = (dragGesture, {
   referenceElement
 }) => {
+  import.meta.css = [css$1, "@jsenv/dom/src/interaction/drag/drag_debug_markers.js"];
+
   // Clean up any existing persistent markers from previous drag gestures
   {
     // Remove any existing markers from previous gestures
@@ -7950,192 +8140,6 @@ const createReferenceElementMarker = ({
   container.appendChild(marker);
   return marker;
 };
-import.meta.css = [/* css */`
-  .navi_debug_markers_container {
-    position: fixed;
-    top: 0;
-    left: 0;
-    z-index: 999998;
-    width: 100vw;
-    height: 100vh;
-    pointer-events: none;
-    overflow: hidden;
-    --marker-size: ${MARKER_SIZE}px;
-  }
-
-  .navi_debug_marker {
-    position: absolute;
-    pointer-events: none;
-  }
-
-  /* Markers based on side rather than orientation */
-  .navi_debug_marker[data-left],
-  .navi_debug_marker[data-right] {
-    width: var(--marker-size);
-    height: 100vh;
-  }
-
-  .navi_debug_marker[data-top],
-  .navi_debug_marker[data-bottom] {
-    width: 100vw;
-    height: var(--marker-size);
-  }
-
-  /* Gradient directions based on side, using CSS custom properties for color */
-  .navi_debug_marker[data-left] {
-    background: linear-gradient(
-      to right,
-      rgba(from var(--marker-color) r g b / 0.9) 0%,
-      rgba(from var(--marker-color) r g b / 0.7) 30%,
-      rgba(from var(--marker-color) r g b / 0.3) 70%,
-      rgba(from var(--marker-color) r g b / 0) 100%
-    );
-  }
-
-  .navi_debug_marker[data-right] {
-    background: linear-gradient(
-      to left,
-      rgba(from var(--marker-color) r g b / 0.9) 0%,
-      rgba(from var(--marker-color) r g b / 0.7) 30%,
-      rgba(from var(--marker-color) r g b / 0.3) 70%,
-      rgba(from var(--marker-color) r g b / 0) 100%
-    );
-  }
-
-  .navi_debug_marker[data-top] {
-    background: linear-gradient(
-      to bottom,
-      rgba(from var(--marker-color) r g b / 0.9) 0%,
-      rgba(from var(--marker-color) r g b / 0.7) 30%,
-      rgba(from var(--marker-color) r g b / 0.3) 70%,
-      rgba(from var(--marker-color) r g b / 0) 100%
-    );
-  }
-
-  .navi_debug_marker[data-bottom] {
-    background: linear-gradient(
-      to top,
-      rgba(from var(--marker-color) r g b / 0.9) 0%,
-      rgba(from var(--marker-color) r g b / 0.7) 30%,
-      rgba(from var(--marker-color) r g b / 0.3) 70%,
-      rgba(from var(--marker-color) r g b / 0) 100%
-    );
-  }
-
-  .navi_debug_marker_label {
-    position: absolute;
-    padding: 2px 6px;
-    color: rgb(from var(--marker-color) r g b / 1);
-    font-weight: bold;
-    font-size: 12px;
-    white-space: nowrap;
-    background: rgba(255, 255, 255, 0.9);
-    border: 1px solid;
-    border-color: rgb(from var(--marker-color) r g b / 1);
-    border-radius: 3px;
-    pointer-events: none;
-  }
-
-  /* Label positioning based on side data attributes */
-
-  /* Left side markers - vertical with 90° rotation */
-  .navi_debug_marker[data-left] .navi_debug_marker_label {
-    top: 20px;
-    left: 10px;
-    transform: rotate(90deg);
-    transform-origin: left center;
-  }
-
-  /* Right side markers - vertical with -90° rotation */
-  .navi_debug_marker[data-right] .navi_debug_marker_label {
-    top: 20px;
-    right: 10px;
-    left: auto;
-    transform: rotate(-90deg);
-    transform-origin: right center;
-  }
-
-  /* Top side markers - horizontal, label on the line */
-  .navi_debug_marker[data-top] .navi_debug_marker_label {
-    top: 0px;
-    left: 20px;
-  }
-
-  /* Bottom side markers - horizontal, label on the line */
-  .navi_debug_marker[data-bottom] .navi_debug_marker_label {
-    top: auto;
-    bottom: 0px;
-    left: 20px;
-  }
-
-  .navi_obstacle_marker {
-    position: absolute;
-    z-index: 9999;
-    background-color: orange;
-    opacity: 0.6;
-    pointer-events: none;
-  }
-
-  .navi_obstacle_marker_label {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    color: white;
-    font-weight: bold;
-    font-size: 12px;
-    text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.8);
-    transform: translate(-50%, -50%);
-    pointer-events: none;
-  }
-
-  .navi_element_marker {
-    position: absolute;
-    z-index: 9997;
-    background-color: var(--element-color-alpha, rgba(255, 0, 150, 0.3));
-    border: 2px solid var(--element-color, rgb(255, 0, 150));
-    opacity: 0.9;
-    pointer-events: none;
-  }
-
-  .navi_element_marker_label {
-    position: absolute;
-    top: -25px;
-    right: 0;
-    padding: 2px 6px;
-    color: var(--element-color, rgb(255, 0, 150));
-    font-weight: bold;
-    font-size: 11px;
-    white-space: nowrap;
-    background: rgba(255, 255, 255, 0.9);
-    border: 1px solid var(--element-color, rgb(255, 0, 150));
-    border-radius: 3px;
-    pointer-events: none;
-  }
-
-  .navi_reference_element_marker {
-    position: absolute;
-    z-index: 9998;
-    background-color: rgba(0, 150, 255, 0.3);
-    border: 2px dashed rgba(0, 150, 255, 0.7);
-    opacity: 0.8;
-    pointer-events: none;
-  }
-
-  .navi_reference_element_marker_label {
-    position: absolute;
-    top: -25px;
-    left: 0;
-    padding: 2px 6px;
-    color: rgba(0, 150, 255, 1);
-    font-weight: bold;
-    font-size: 11px;
-    white-space: nowrap;
-    background: rgba(255, 255, 255, 0.9);
-    border: 1px solid rgba(0, 150, 255, 0.7);
-    border-radius: 3px;
-    pointer-events: none;
-  }
-`, "@jsenv/dom/src/interaction/drag/drag_debug_markers.js"];
 
 const initDragConstraints = (
   dragGesture,
@@ -8767,6 +8771,7 @@ const createStickyFrontierOnAxis = (
 const dragStyleController = createStyleController("drag_to_move");
 
 const createDragToMoveGestureController = ({
+  cloneOnDrag = false,
   stickyFrontiers = true,
   // Padding to reduce the area used to autoscroll by this amount (applied after sticky frontiers)
   // This creates an invisible space around the area where elements cannot be dragged
@@ -8780,8 +8785,8 @@ const createDragToMoveGestureController = ({
   // position due to obstacles, boundaries, or other constraints. The line originates from where the mouse
   // initially grabbed the element, but moves with the element to show the current anchor position.
   // It becomes visible when there's a significant distance between mouse and grab point.
-  showConstraintFeedbackLine = true,
-  showDebugMarkers = true,
+  showConstraintFeedbackLine = false,
+  showDebugMarkers = false,
   resetPositionAfterRelease = false,
   ...options
 } = {}) => {
@@ -8789,6 +8794,18 @@ const createDragToMoveGestureController = ({
     dragGesture,
     { element, referenceElement, elementToMove, convertScrollablePosition },
   ) => {
+    if (cloneOnDrag) {
+      const { grabEvent } = dragGesture.gestureInfo;
+      const ghostData = createDragGhost(element, {
+        clientX: grabEvent.clientX,
+        clientY: grabEvent.clientY,
+      });
+      elementToMove = ghostData.ghostWrapper;
+      dragGesture.gestureInfo.elementImpacted = ghostData.ghostWrapper;
+      dragGesture.addReleaseCallback(() => {
+        ghostData.remove();
+      });
+    }
     const direction = dragGesture.gestureInfo.direction;
     // const dragGestureName = dragGesture.gestureInfo.name;
     const scrollContainer = dragGesture.gestureInfo.scrollContainer;
@@ -9058,6 +9075,31 @@ const createDragToMoveGestureController = ({
   return dragGestureController;
 };
 
+const createDragGhost = (element, pointerEvent) => {
+  const rect = element.getBoundingClientRect();
+
+  const ghost = element.cloneNode(true);
+  ghost.dataset.dragging = "";
+  ghost.style.pointerEvents = "none";
+  // transform-origin set to pointer position within the element for natural scale expansion
+  const originX = pointerEvent.clientX - rect.left;
+  const originY = pointerEvent.clientY - rect.top;
+  ghost.style.transformOrigin = `${originX}px ${originY}px`;
+
+  const ghostWrapper = document.createElement("div");
+  ghostWrapper.style.cssText = `position: absolute; pointer-events: none; z-index: 9999; top: ${rect.top + window.scrollY}px; left: ${rect.left + window.scrollX}px; width: ${rect.width}px;`;
+  ghostWrapper.appendChild(ghost);
+  document.body.appendChild(ghostWrapper);
+
+  return {
+    ghost,
+    ghostWrapper,
+    remove: () => {
+      ghostWrapper.remove();
+    },
+  };
+};
+
 const startDragToResizeGesture = (
   pointerdownEvent,
   { onDragStart, onDrag, onRelease, ...options },
@@ -9133,7 +9175,7 @@ const getResizeDirection = (element) => {
  * @returns {Object|null} Drop target info with elementSide or null if no valid target found
  */
 const getDropTargetInfo = (gestureInfo, targetElements) => {
-  const dragElement = gestureInfo.element;
+  const dragElement = gestureInfo.elementImpacted || gestureInfo.element;
   const dragElementRect = dragElement.getBoundingClientRect();
   const intersectingTargets = [];
   let someTargetIsCol;
@@ -9178,12 +9220,13 @@ const getDropTargetInfo = (gestureInfo, targetElements) => {
   const elementsUnderDragElement = document.elementsFromPoint(clientX, clientY);
   let targetElement = null;
   let targetIndex = -1;
+  let intersectingIndex = -1;
   for (const element of elementsUnderDragElement) {
     // First, check if the element itself is a target
     const directIndex = intersectingTargets.indexOf(element);
     if (directIndex !== -1) {
       targetElement = element;
-      targetIndex = directIndex;
+      intersectingIndex = directIndex;
       break;
     }
     // Special case: if element is <td> or <th> and not in targets,
@@ -9204,7 +9247,7 @@ const getDropTargetInfo = (gestureInfo, targetElements) => {
         break try_col;
       }
       targetElement = tableCellCol;
-      targetIndex = colIndex;
+      intersectingIndex = colIndex;
       break;
     }
     try_tr: {
@@ -9217,26 +9260,31 @@ const getDropTargetInfo = (gestureInfo, targetElements) => {
         break try_tr;
       }
       targetElement = tableRow;
-      targetIndex = rowIndex;
+      intersectingIndex = intersectingTargets.indexOf(tableRow);
       break;
     }
   }
   if (!targetElement) {
     targetElement = intersectingTargets[0];
-    targetIndex = 0;
+    intersectingIndex = 0;
   }
+  targetIndex = targetElements.indexOf(targetElement);
 
   // Determine position within the target for both axes
   const targetRect = targetElement.getBoundingClientRect();
   const targetCenterX = targetRect.left + targetRect.width / 2;
   const targetCenterY = targetRect.top + targetRect.height / 2;
   const result = {
+    // Index of the target element within the original targetElements array
     index: targetIndex,
     element: targetElement,
     elementSide: {
       x: dragElementRect.left < targetCenterX ? "start" : "end",
       y: dragElementRect.top < targetCenterY ? "start" : "end",
     },
+    // Index within the intersecting subset — could be useful to know how many
+    // elements were overlapping, but rarely needed in practice
+    intersectingIndex,
     intersecting: intersectingTargets,
   };
   return result;
@@ -9321,15 +9369,16 @@ installImportMetaCssBuild(import.meta);/**
  *
  * The element should have a CSS "top" value specified (e.g., top: 10px).
  */
-import.meta.css = [/* css */`
+const css = /* css */`
   [data-position-sticky-placeholder] {
     position: static !important;
     width: auto !important;
     height: auto !important;
     opacity: 0 !important;
   }
-`, "@jsenv/dom/src/position/position_sticky.js"];
+`;
 const initPositionSticky = element => {
+  import.meta.css = [css, "@jsenv/dom/src/position/position_sticky.js"];
   const computedStyle = getComputedStyle(element);
   const topCssValue = computedStyle.top;
   const top = parseFloat(topCssValue);

@@ -32848,7 +32848,7 @@ const initDragTableColumnViaPointer = (pointerdownEvent, {
       const dropCandidateElements = colElements.filter(col => !(col.getAttribute("data-drag-obstacle") || "").includes("move-column"));
       const updateDropTarget = dropTargetInfo => {
         const targetColumn = dropTargetInfo.element;
-        const targetColumnIndex = colElements.indexOf(targetColumn);
+        const targetColumnIndex = dropTargetInfo.index;
         dropColumnIndex = targetColumnIndex;
         if (dropColumnIndex === columnIndex) {
           dropPreview.removeAttribute("data-visible");
