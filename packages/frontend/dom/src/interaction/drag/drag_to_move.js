@@ -39,6 +39,7 @@ export const createDragToMoveGestureController = ({
         clientY: grabEvent.clientY,
       });
       elementToMove = ghostData.ghostWrapper;
+      dragGesture.gestureInfo.elementImpacted = ghostData.ghostWrapper;
       dragGesture.addReleaseCallback(() => {
         ghostData.remove();
       });

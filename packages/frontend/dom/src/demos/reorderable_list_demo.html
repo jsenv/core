@@ -255,14 +255,14 @@
         );
 
         return visibleItems.map((item, i) => (
-          <div key={item.id} class="list-item">
-            <div
-              class="drag-handle"
-              title="Drag to reorder"
-              onPointerDown={(e) => {
-                startDrag(e, item.id);
-              }}
-            >
+          <div
+            key={item.id}
+            class="list-item"
+            onPointerDown={(e) => {
+              startDrag(e, item.id);
+            }}
+          >
+            <div class="drag-handle" title="Drag to reorder">
               {[0, 1, 2].map((r) => (
                 <div key={r} class="drag-handle-dot-row">
                   <div class="drag-handle-dot" />

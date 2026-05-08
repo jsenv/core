@@ -7,7 +7,7 @@
  * @returns {Object|null} Drop target info with elementSide or null if no valid target found
  */
 export const getDropTargetInfo = (gestureInfo, targetElements) => {
-  const dragElement = gestureInfo.element;
+  const dragElement = gestureInfo.elementImpacted || gestureInfo.element;
   const dragElementRect = dragElement.getBoundingClientRect();
   const intersectingTargets = [];
   let someTargetIsCol;
