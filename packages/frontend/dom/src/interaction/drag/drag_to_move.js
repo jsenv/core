@@ -40,7 +40,9 @@ export const createDragToMoveGestureController = ({
       });
       elementToMove = clone;
       dragGesture.gestureInfo.elementImpacted = clone;
+      element.setAttribute("navi-drag-clone-source", "");
       dragGesture.addReleaseCallback(() => {
+        element.removeAttribute("navi-drag-clone-source");
         clone.remove();
       });
     }
