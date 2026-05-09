@@ -12,6 +12,7 @@ const dragStyleController = createStyleController("drag_to_move");
 const css = /* css */ `
   .navi_drop_hint {
     position: absolute;
+    top: var(--drop-hint-y);
     right: 0;
     left: 0;
     z-index: 10;
@@ -21,10 +22,14 @@ const css = /* css */ `
     border-radius: var(--drop-hint-border-radius, 2px);
     transform: translateY(-50%);
     pointer-events: none;
-
-    [data-visible] {
-      display: block;
-    }
+  }
+  [data-drop-edge="top"] > .navi_drop_hint {
+    display: block;
+    --drop-hint-y: var(--drop-target-top);
+  }
+  [data-drop-edge="bottom"] > .navi_drop_hint {
+    display: block;
+    --drop-hint-y: var(--drop-target-bottom);
   }
 
   .navi_drag_clone_wrapper {
@@ -99,10 +104,7 @@ export const createDragToMoveGestureController = ({
 
       let currentPlaceholder = originalIndex;
 
-      const updateDropHintPosition = (targetIndex) => {
-        if (!dropHintEl) {
-          return;
-        }
+      const updateDropTarget = (targetIndex) => {
         const items = getTargets();
         const containerRect = scrollContainer.getBoundingClientRect();
         let anchorRect;
@@ -117,14 +119,28 @@ export const createDragToMoveGestureController = ({
           anchorRect = items[targetIndex - 1].getBoundingClientRect();
           anchorEdge = "bottom";
         }
-        const hintY =
-          anchorRect[anchorEdge] -
-          containerRect.top +
-          scrollContainer.scrollTop;
-        dropHintEl.setAttribute("data-visible", "");
-        dropHintEl.style.setProperty("");
-        dropHintEl.style.top = `${hintY}px`;
+        const offsetTop =
+          anchorRect.top - containerRect.top + scrollContainer.scrollTop;
+        const offsetBottom =
+          anchorRect.bottom - containerRect.top + scrollContainer.scrollTop;
+        scrollContainer.setAttribute("data-drop-target", targetIndex);
+        scrollContainer.setAttribute("data-drop-edge", anchorEdge);
+        scrollContainer.style.setProperty(
+          "--drop-target-top",
+          `${offsetTop}px`,
+        );
+        scrollContainer.style.setProperty(
+          "--drop-target-bottom",
+          `${offsetBottom}px`,
+        );
       };
+
+      dragGesture.addReleaseCallback(() => {
+        scrollContainer.removeAttribute("data-drop-target");
+        scrollContainer.removeAttribute("data-drop-edge");
+        scrollContainer.style.removeProperty("--drop-target-top");
+        scrollContainer.style.removeProperty("--drop-target-bottom");
+      });
 
       dragGesture.addDragCallback((gestureInfo) => {
         const items = getTargets();
@@ -140,11 +156,12 @@ export const createDragToMoveGestureController = ({
         if (newIndex !== currentPlaceholder) {
           currentPlaceholder = newIndex;
           if (currentPlaceholder === originalIndex) {
-            if (dropHintEl) {
-              dropHintEl.style.display = "none";
-            }
+            scrollContainer.removeAttribute("data-drop-target");
+            scrollContainer.removeAttribute("data-drop-edge");
+            scrollContainer.style.removeProperty("--drop-target-top");
+            scrollContainer.style.removeProperty("--drop-target-bottom");
           } else {
-            updateDropHintPosition(currentPlaceholder);
+            updateDropTarget(currentPlaceholder);
           }
         }
       });
