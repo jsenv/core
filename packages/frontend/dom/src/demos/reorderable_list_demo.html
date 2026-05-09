@@ -102,6 +102,39 @@
         border-radius: 12px;
       }
 
+      .item-move-buttons {
+        display: flex;
+        margin-left: 4px;
+        flex-direction: column;
+        gap: 2px;
+      }
+
+      .item-move-btn {
+        display: flex;
+        width: 20px;
+        height: 20px;
+        padding: 0;
+        align-items: center;
+        justify-content: center;
+        color: #666;
+        font-size: 10px;
+        line-height: 1;
+        background: none;
+        border: 1px solid #ccc;
+        border-radius: 3px;
+        cursor: pointer;
+      }
+
+      .item-move-btn:hover:not(:disabled) {
+        color: #333;
+        background: #eee;
+      }
+
+      .item-move-btn:disabled {
+        opacity: 0.3;
+        cursor: default;
+      }
+
       [data-partially-hidden] {
         view-transition-name: none !important;
       }
@@ -219,20 +252,47 @@
           INITIAL_ITEMS.find((i) => i.id === id),
         );
 
+        const moveItem = (id, direction) => {
+          document.startViewTransition(() => {
+            setOrder((prev) => {
+              const index = prev.indexOf(id);
+              const newIndex = index + direction;
+              if (newIndex < 0 || newIndex >= prev.length) {
+                return prev;
+              }
+              const next = [...prev];
+              next.splice(index, 1);
+              next.splice(newIndex, 0, id);
+              return next;
+            });
+          });
+        };
+
         return visibleItems.map((item, i) => (
           <ListItem
             key={item.id}
             item={item}
             index={i}
+            total={visibleItems.length}
             name={name}
             onPointerDown={(e) => {
               startDrag(e, item.id);
             }}
+            onMoveUp={() => moveItem(item.id, -1)}
+            onMoveDown={() => moveItem(item.id, 1)}
           />
         ));
       };
 
-      const ListItem = ({ item, index, name, onPointerDown }) => {
+      const ListItem = ({
+        item,
+        index,
+        total,
+        name,
+        onPointerDown,
+        onMoveUp,
+        onMoveDown,
+      }) => {
         const ref = useRef(null);
         usePartiallyHidden(ref);
         return (
@@ -260,6 +320,30 @@
             >
               #{index + 1}
             </span>
+            <div class="item-move-buttons">
+              <button
+                class="item-move-btn"
+                title="Move up"
+                disabled={index === 0}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onMoveUp();
+                }}
+              >
+                ▲
+              </button>
+              <button
+                class="item-move-btn"
+                title="Move down"
+                disabled={index === total - 1}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onMoveDown();
+                }}
+              >
+                ▼
+              </button>
+            </div>
           </div>
         );
       };
