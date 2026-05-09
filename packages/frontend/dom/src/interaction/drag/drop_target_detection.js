@@ -107,7 +107,10 @@ export const getDropTargetInfo = (gestureInfo, targetElements) => {
   const targetCenterX = targetRect.left + targetRect.width / 2;
   const targetCenterY = targetRect.top + targetRect.height / 2;
   const result = {
-    // Index of the target element within the original targetElements array
+    // NOTE: avoid relying on `index` in application code. The targetElements
+    // array may be dynamically filtered (e.g. excluding the grabbed element),
+    // making this index inconsistent with the full list. Use `element` instead
+    // and look up its position yourself from your own data source.
     index: targetIndex,
     element: targetElement,
     elementSide: {

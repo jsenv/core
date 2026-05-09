@@ -212,11 +212,19 @@
               direction: { x: false, y: true },
               dropTargetSelector: ".list-item",
               dropHint: true,
-              applyDropEffect: (grabElementIndex, releaseElementIndex) => {
+              applyDropEffect: (grabElement, releaseElement, releaseEdge) => {
                 setOrder((prev) => {
+                  const grabId = parseInt(grabElement.dataset.id);
+                  const releaseId = parseInt(releaseElement.dataset.id);
+                  const grabIndex = prev.indexOf(grabId);
+                  const releaseIndex = prev.indexOf(releaseId);
+                  const insertAt =
+                    releaseEdge === "end" ? releaseIndex + 1 : releaseIndex;
                   const next = [...prev];
-                  next.splice(grabElementIndex, 1);
-                  next.splice(releaseElementIndex, 0, id);
+                  next.splice(grabIndex, 1);
+                  const adjustedInsertAt =
+                    grabIndex < insertAt ? insertAt - 1 : insertAt;
+                  next.splice(adjustedInsertAt, 0, grabId);
                   return next;
                 });
               },

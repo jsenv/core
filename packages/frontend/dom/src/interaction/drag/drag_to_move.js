@@ -96,8 +96,11 @@ const css = /* css */ `
  * @param {function} [options.onRelease]
  *   Called on every release with the gesture info object.
  * @param {function} [options.applyDropEffect]
- *   Called only when the item was actually moved (fromIndex !== toIndex).
- *   Signature: `applyDropEffect(fromIndex, toIndex)`.
+ *   Called only when the item was dropped onto a different element.
+ *   Signature: `applyDropEffect(grabElement, releaseElement, releaseEdge)`.
+ *   - `grabElement`: the DOM element that was grabbed.
+ *   - `releaseElement`: the DOM element it was dropped onto.
+ *   - `releaseEdge`: `"start"` (insert before) or `"end"` (insert after).
  *   When `cloneOnDrag` is true this call happens inside `startViewTransition`
  *   so the DOM mutation is captured as the transition's "new" state.
  * @param {boolean} [options.stickyFrontiers=true]
@@ -149,8 +152,6 @@ export const createDragToMoveGestureController = ({
       const getTargets = () => {
         return Array.from(scrollContainer.querySelectorAll(dropTargetSelector));
       };
-      const targets = getTargets();
-      const originalIndex = targets.indexOf(element);
 
       const dropHintVars = [
         "--drop-hint-size",
@@ -176,28 +177,14 @@ export const createDragToMoveGestureController = ({
         });
       }
 
-      let currentPlaceholder = originalIndex;
+      // Tracks which element is the current drop target and on which side.
+      // null means no active drop target (e.g. hovering over the grabbed element).
+      let currentDropTarget = null;
 
-      const updateDropTarget = (targetIndex) => {
-        const items = getTargets();
+      const updateDropTarget = (targetElement, edge) => {
         const containerRect = scrollContainer.getBoundingClientRect();
-        let anchorRect;
-        let anchorEdge;
-        if (targetIndex === 0) {
-          anchorEdge = "top";
-          anchorRect = items[0].getBoundingClientRect();
-        } else {
-          let item;
-          if (targetIndex >= items.length) {
-            item = items[items.length - 1];
-          } else if (targetIndex > originalIndex) {
-            item = items[targetIndex];
-          } else {
-            item = items[targetIndex - 1];
-          }
-          anchorEdge = "bottom";
-          anchorRect = item.getBoundingClientRect();
-        }
+        const anchorRect = targetElement.getBoundingClientRect();
+        const anchorEdge = edge === "start" ? "top" : "bottom";
         const scrollLeft = scrollContainer.scrollLeft;
         const scrollTop = scrollContainer.scrollTop;
         const isPositioned =
@@ -209,7 +196,6 @@ export const createDragToMoveGestureController = ({
           anchorRect.bottom - containerRect.top + scrollOffsetTop;
         const offsetLeft =
           anchorRect.left - containerRect.left + scrollOffsetLeft;
-        scrollContainer.setAttribute("data-drop-target", targetIndex);
         scrollContainer.setAttribute("data-drop-edge", anchorEdge);
         scrollContainer.style.setProperty(
           "--drop-target-top",
@@ -230,7 +216,6 @@ export const createDragToMoveGestureController = ({
       };
 
       dragGesture.addReleaseCallback(() => {
-        scrollContainer.removeAttribute("data-drop-target");
         scrollContainer.removeAttribute("data-drop-edge");
         scrollContainer.style.removeProperty("--drop-target-top");
         scrollContainer.style.removeProperty("--drop-target-bottom");
@@ -242,37 +227,29 @@ export const createDragToMoveGestureController = ({
         const items = getTargets();
         const dropTargetInfo = getDropTargetInfo(gestureInfo, items);
         gestureInfo.dropTargetInfo = dropTargetInfo || null;
-        if (!dropTargetInfo) {
-          return;
-        }
-        const newIndex =
-          dropTargetInfo.elementSide.y === "end"
-            ? dropTargetInfo.index + 1
-            : dropTargetInfo.index;
-        if (newIndex !== currentPlaceholder) {
-          currentPlaceholder = newIndex;
-        }
-        if (currentPlaceholder === originalIndex) {
-          scrollContainer.removeAttribute("data-drop-target");
+        // Ignore the grabbed element itself as a drop target.
+        if (!dropTargetInfo || dropTargetInfo.element === element) {
+          currentDropTarget = null;
           scrollContainer.removeAttribute("data-drop-edge");
           scrollContainer.style.removeProperty("--drop-target-top");
           scrollContainer.style.removeProperty("--drop-target-bottom");
           scrollContainer.style.removeProperty("--drop-target-left");
           scrollContainer.style.removeProperty("--drop-target-width");
-        } else {
-          updateDropTarget(currentPlaceholder);
+          return;
         }
+        const edge = dropTargetInfo.elementSide.y;
+        currentDropTarget = { element: dropTargetInfo.element, edge };
+        updateDropTarget(dropTargetInfo.element, edge);
       });
 
       dragGesture.addReleaseCallback((gestureInfo) => {
-        gestureInfo.grabElementIndex = originalIndex;
         gestureInfo.grabElement = element;
-        gestureInfo.releaseElementIndex =
-          currentPlaceholder !== originalIndex ? currentPlaceholder : null;
-        gestureInfo.releaseElement =
-          currentPlaceholder !== originalIndex
-            ? (getTargets()[currentPlaceholder] ?? null)
-            : null;
+        gestureInfo.releaseElement = currentDropTarget
+          ? currentDropTarget.element
+          : null;
+        gestureInfo.releaseEdge = currentDropTarget
+          ? currentDropTarget.edge
+          : null;
       });
     }
 
@@ -559,8 +536,8 @@ export const createDragToMoveGestureController = ({
     }
 
     dragGesture.addReleaseCallback(async (gestureInfo) => {
-      const { grabElementIndex, releaseElementIndex } = gestureInfo;
-      if (releaseElementIndex !== grabElementIndex) {
+      const { grabElement, releaseElement, releaseEdge } = gestureInfo;
+      if (releaseElement) {
         // The View Transitions API takes two snapshots:
         //   old  — the DOM as it is right now (clone scaled-up at drag position)
         //   new  — the DOM after the callback runs
@@ -605,7 +582,7 @@ export const createDragToMoveGestureController = ({
             // the browser captures the clone at scale 1 as the "new" state.
             clone.removeAttribute("navi-drag-clone");
           }
-          return applyDropEffect?.(grabElementIndex, releaseElementIndex);
+          return applyDropEffect?.(grabElement, releaseElement, releaseEdge);
         });
         await viewTransition.finished;
       }

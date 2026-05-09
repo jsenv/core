@@ -68,13 +68,22 @@
               direction: { x: false, y: true },
               dropTargetSelector: ".list-item",
               dropHint: true,
-              applyDropEffect: async (fromIndex, toIndex) => {
-                const viewTransition = document.startViewTransition(() => {
-                  setOrder((prev) =>
-                    moveArrayItemByIndex(prev, fromIndex, toIndex),
+              applyDropEffect: (grabElement, releaseElement, releaseEdge) => {
+                const grabId = parseInt(grabElement.dataset.id);
+                const releaseId = parseInt(releaseElement.dataset.id);
+                setOrder((prev) => {
+                  const grabIndex = prev.indexOf(grabId);
+                  const releaseIndex = prev.indexOf(releaseId);
+                  const insertAt =
+                    releaseEdge === "end" ? releaseIndex + 1 : releaseIndex;
+                  const adjustedInsertAt =
+                    grabIndex < insertAt ? insertAt - 1 : insertAt;
+                  return moveArrayItemByIndex(
+                    prev,
+                    grabIndex,
+                    adjustedInsertAt,
                   );
                 });
-                await viewTransition.finished;
               },
             });
             return gestureController.grabViaPointer(event, {
@@ -126,6 +135,7 @@
               boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
             }}
             className="list-item"
+            data-id={item.id}
             viewTransitionName={`${name}-item-${item.id}`}
             onPointerDown={onPointerDown}
           >
