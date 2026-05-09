@@ -594,28 +594,10 @@ export const createDragToMoveGestureController = ({
             // Snap the clone to the hovered drop target element before
             // applyDropEffect mutates the DOM.
             const destElement = releaseElement;
-            const destRect = destElement.getBoundingClientRect();
-            const releaseScrollLeft = document.documentElement.scrollLeft;
-            const releaseScrollTop = document.documentElement.scrollTop;
             // Remove any residual translate left by the drag style controller
             // so the wrapper sits purely at its CSS-var position.
             dragStyleController.clear(cloneWrapper);
-            cloneWrapper.style.setProperty(
-              "--clone-left",
-              `${destRect.left + releaseScrollLeft}px`,
-            );
-            cloneWrapper.style.setProperty(
-              "--clone-top",
-              `${destRect.top + releaseScrollTop}px`,
-            );
-            cloneWrapper.style.setProperty(
-              "--clone-width",
-              `${destRect.width}px`,
-            );
-            cloneWrapper.style.setProperty(
-              "--clone-height",
-              `${destRect.height}px`,
-            );
+            setCloneDocumentRect(cloneWrapper, destElement);
             // Stripping this attribute removes the CSS scale(1.15) rule, so
             // the browser captures the clone at scale 1 as the "new" state.
             clone.removeAttribute("navi-drag-clone");
@@ -649,23 +631,29 @@ export const createDragToMoveGestureController = ({
 //   so the element expands naturally from where the user clicked.
 //   On release, the `navi-drag-clone` attribute is removed inside
 //   startViewTransition to drop the scale back to 1 as the "new" state.
-const createDragClone = (element, pointerEvent) => {
-  const rect = element.getBoundingClientRect();
-  // getBoundingClientRect() returns viewport-relative coords.
-  // The wrapper is position:absolute inside document.body, so we need
-  // document-relative coords (add the current page scroll).
+// getBoundingClientRect() returns viewport-relative coords.
+// The clone wrapper is position:absolute inside document.body, so we need
+// document-relative coords (viewport coords + current page scroll).
+const setCloneDocumentRect = (cloneWrapper, el) => {
+  const rect = el.getBoundingClientRect();
   const scrollLeft = document.documentElement.scrollLeft;
   const scrollTop = document.documentElement.scrollTop;
+  cloneWrapper.style.setProperty("--clone-top", `${rect.top + scrollTop}px`);
+  cloneWrapper.style.setProperty("--clone-left", `${rect.left + scrollLeft}px`);
+  cloneWrapper.style.setProperty("--clone-width", `${rect.width}px`);
+  cloneWrapper.style.setProperty("--clone-height", `${rect.height}px`);
+};
+
+const createDragClone = (element, pointerEvent) => {
+  const rect = element.getBoundingClientRect();
 
   const wrapper = document.createElement("div");
   wrapper.setAttribute("navi-drag-clone-wrapper", "");
   wrapper.viewTransitionName = "navi-drag-clone-wrapper";
-  wrapper.style.setProperty("--clone-top", `${rect.top + scrollTop}px`);
-  wrapper.style.setProperty("--clone-left", `${rect.left + scrollLeft}px`);
-  wrapper.style.setProperty("--clone-width", `${rect.width}px`);
-  wrapper.style.setProperty("--clone-height", `${rect.height}px`);
+  setCloneDocumentRect(wrapper, element);
   // Grab point within the element — used as transform-origin so the
   // scale(1.15) expands from where the user clicked, not the element center.
+  // These offsets are element-relative so viewport coords are correct here.
   wrapper.style.setProperty(
     "--drag-origin",
     `${pointerEvent.clientX - rect.left}px ${pointerEvent.clientY - rect.top}px`,
