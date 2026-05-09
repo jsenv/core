@@ -595,14 +595,19 @@ export const createDragToMoveGestureController = ({
             // applyDropEffect mutates the DOM.
             const destElement = releaseElement;
             const destRect = destElement.getBoundingClientRect();
+            const releaseScrollLeft = document.documentElement.scrollLeft;
+            const releaseScrollTop = document.documentElement.scrollTop;
             // Remove any residual translate left by the drag style controller
             // so the wrapper sits purely at its CSS-var position.
             dragStyleController.clear(cloneWrapper);
             cloneWrapper.style.setProperty(
               "--clone-left",
-              `${destRect.left}px`,
+              `${destRect.left + releaseScrollLeft}px`,
             );
-            cloneWrapper.style.setProperty("--clone-top", `${destRect.top}px`);
+            cloneWrapper.style.setProperty(
+              "--clone-top",
+              `${destRect.top + releaseScrollTop}px`,
+            );
             cloneWrapper.style.setProperty(
               "--clone-width",
               `${destRect.width}px`,
@@ -646,12 +651,17 @@ export const createDragToMoveGestureController = ({
 //   startViewTransition to drop the scale back to 1 as the "new" state.
 const createDragClone = (element, pointerEvent) => {
   const rect = element.getBoundingClientRect();
+  // getBoundingClientRect() returns viewport-relative coords.
+  // The wrapper is position:absolute inside document.body, so we need
+  // document-relative coords (add the current page scroll).
+  const scrollLeft = document.documentElement.scrollLeft;
+  const scrollTop = document.documentElement.scrollTop;
 
   const wrapper = document.createElement("div");
   wrapper.setAttribute("navi-drag-clone-wrapper", "");
   wrapper.viewTransitionName = "navi-drag-clone-wrapper";
-  wrapper.style.setProperty("--clone-top", `${rect.top}px`);
-  wrapper.style.setProperty("--clone-left", `${rect.left}px`);
+  wrapper.style.setProperty("--clone-top", `${rect.top + scrollTop}px`);
+  wrapper.style.setProperty("--clone-left", `${rect.left + scrollLeft}px`);
   wrapper.style.setProperty("--clone-width", `${rect.width}px`);
   wrapper.style.setProperty("--clone-height", `${rect.height}px`);
   // Grab point within the element — used as transform-origin so the
