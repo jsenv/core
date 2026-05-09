@@ -11,7 +11,13 @@ import { createDragToMoveGestureController } from "./drag_to_move.js";
 export const startDragToReorder = (
   event,
   draggedElement,
-  { itemSelector, getItemId, onReorder, direction = { x: false, y: true } },
+  {
+    itemSelector,
+    getItemId,
+    onReorder,
+    direction = { x: false, y: true },
+    ...options
+  },
 ) => {
   event.preventDefault();
   dragAfterThreshold(event, () => {
@@ -26,6 +32,7 @@ export const startDragToReorder = (
         const toId = beforeElement ? getItemId(beforeElement) : null;
         onReorder(fromId, toId);
       },
+      ...options,
     });
     return gestureController.grabViaPointer(event, {
       element: draggedElement,
