@@ -225,18 +225,13 @@
               direction: { x: false, y: true },
               dropTargetSelector: ".list-item",
               dropHint: true,
-              onRelease: (gestureInfo) => {
-                const { grabElementIndex, releaseElementIndex } = gestureInfo;
-                if (releaseElementIndex !== null) {
-                  document.startViewTransition(() => {
-                    setOrder((prev) => {
-                      const next = [...prev];
-                      next.splice(grabElementIndex, 1);
-                      next.splice(releaseElementIndex, 0, id);
-                      return next;
-                    });
-                  });
-                }
+              applyDropEffect: (grabElementIndex, releaseElementIndex) => {
+                setOrder((prev) => {
+                  const next = [...prev];
+                  next.splice(grabElementIndex, 1);
+                  next.splice(releaseElementIndex, 0, id);
+                  return next;
+                });
               },
               // showConstraintFeedbackLine: true,
               // showDebugMarkers: true,
