@@ -529,7 +529,14 @@ export const createDragToMoveGestureController = ({
     dragGesture.addReleaseCallback(async (gestureInfo) => {
       const { grabElementIndex, releaseElementIndex } = gestureInfo;
       if (releaseElementIndex !== grabElementIndex) {
+        const cloneInner = elementToMove.querySelector("[navi-drag-clone]");
         const viewTransition = document.startViewTransition(() => {
+          // Removing the attribute drops the CSS scale(1.15) rule — the browser
+          // captures the unstyled clone (scale 1) as the new state, animating
+          // from the scaled-up old snapshot to the normal-sized new snapshot.
+          if (cloneInner) {
+            cloneInner.removeAttribute("navi-drag-clone");
+          }
           return applyDropEffect?.(grabElementIndex, releaseElementIndex);
         });
         await viewTransition.finished;
@@ -550,10 +557,9 @@ const createDragClone = (element, pointerEvent) => {
   elementClone.setAttribute("navi-drag-clone", "");
   const viewTransitionName = getComputedStyle(element).viewTransitionName;
   if (viewTransitionName && viewTransitionName !== "none") {
-    // Clone gets its own name so both elements participate in the transition
-    // independently: the clone animates out from the drag position while the
-    // source element animates to its new position.
-    elementClone.style.viewTransitionName = `${viewTransitionName}-clone`;
+    // Fixed name so ::view-transition-old(navi-drag-clone) CSS can target it.
+    // Only one drag happens at a time so the name is never duplicated.
+    elementClone.style.viewTransitionName = "navi-drag-clone";
   }
   // transform-origin set to pointer position within the element for natural scale expansion
   elementClone.style.setProperty(
