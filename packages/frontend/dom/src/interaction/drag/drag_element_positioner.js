@@ -346,6 +346,19 @@ const createGetScrollOffsets = (
         return getScrollOffsetsFixed;
       }
     }
+    const positionedParentIsInsideScrollContainer =
+      referenceScrollContainer === documentElement ||
+      referenceScrollContainer.contains(positionedParent);
+    if (!positionedParentIsInsideScrollContainer) {
+      // positionedParent is outside the scroll container (e.g. clone in document.body
+      // while tracking an element inside a custom scroll container).
+      // We must add the scroll at grab time as a frozen offset so that:
+      // - initial topDelta = 0 (clone starts at correct position)
+      // - auto-scroll doesn't double-move the clone (scroll changes cancel out in layout)
+      const scrollLeftAtGrab = referenceScrollContainer.scrollLeft;
+      const scrollTopAtGrab = referenceScrollContainer.scrollTop;
+      return () => [scrollLeft + scrollLeftAtGrab, scrollTop + scrollTopAtGrab];
+    }
     const getScrollOffsets = () => {
       const leftScrollToAdd = scrollLeft + referenceScrollContainer.scrollLeft;
       const topScrollToAdd = scrollTop + referenceScrollContainer.scrollTop;
