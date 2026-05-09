@@ -13,10 +13,10 @@ const css = /* css */ `
   .navi_drop_hint {
     position: absolute;
     top: var(--drop-hint-y);
-    right: 0;
-    left: 0;
+    left: var(--drop-target-left);
     z-index: 10;
     display: none;
+    width: var(--drop-target-width);
     height: var(--drop-hint-size, 3px);
     background: var(--drop-hint-background-color, #4476ff);
     border-radius: var(--drop-hint-border-radius, 2px);
@@ -119,10 +119,11 @@ export const createDragToMoveGestureController = ({
           anchorRect = items[targetIndex - 1].getBoundingClientRect();
           anchorEdge = "bottom";
         }
-        const offsetTop =
-          anchorRect.top - containerRect.top + scrollContainer.scrollTop;
-        const offsetBottom =
-          anchorRect.bottom - containerRect.top + scrollContainer.scrollTop;
+        const scrollLeft = scrollContainer.scrollLeft;
+        const scrollTop = scrollContainer.scrollTop;
+        const offsetTop = anchorRect.top - containerRect.top + scrollTop;
+        const offsetBottom = anchorRect.bottom - containerRect.top + scrollTop;
+        const offsetLeft = anchorRect.left - containerRect.left + scrollLeft;
         scrollContainer.setAttribute("data-drop-target", targetIndex);
         scrollContainer.setAttribute("data-drop-edge", anchorEdge);
         scrollContainer.style.setProperty(
@@ -133,6 +134,14 @@ export const createDragToMoveGestureController = ({
           "--drop-target-bottom",
           `${offsetBottom}px`,
         );
+        scrollContainer.style.setProperty(
+          "--drop-target-left",
+          `${offsetLeft}px`,
+        );
+        scrollContainer.style.setProperty(
+          "--drop-target-width",
+          `${anchorRect.width}px`,
+        );
       };
 
       dragGesture.addReleaseCallback(() => {
@@ -140,6 +149,8 @@ export const createDragToMoveGestureController = ({
         scrollContainer.removeAttribute("data-drop-edge");
         scrollContainer.style.removeProperty("--drop-target-top");
         scrollContainer.style.removeProperty("--drop-target-bottom");
+        scrollContainer.style.removeProperty("--drop-target-left");
+        scrollContainer.style.removeProperty("--drop-target-width");
       });
 
       dragGesture.addDragCallback((gestureInfo) => {
@@ -160,6 +171,8 @@ export const createDragToMoveGestureController = ({
             scrollContainer.removeAttribute("data-drop-edge");
             scrollContainer.style.removeProperty("--drop-target-top");
             scrollContainer.style.removeProperty("--drop-target-bottom");
+            scrollContainer.style.removeProperty("--drop-target-left");
+            scrollContainer.style.removeProperty("--drop-target-width");
           } else {
             updateDropTarget(currentPlaceholder);
           }
