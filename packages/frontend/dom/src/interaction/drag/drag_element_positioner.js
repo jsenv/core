@@ -57,11 +57,11 @@ export const createDragElementPositioner = (
     positionedParent,
     referencePositionedParent: referenceElement
       ? referenceElement.offsetParent
-      : undefined,
+      : positionedParent,
     scrollContainer,
     referenceScrollContainer: referenceElement
       ? getScrollContainer(referenceElement)
-      : undefined,
+      : scrollContainer,
   });
 
   scrollable_current: {
@@ -111,9 +111,9 @@ const getScrollablePosition = (element, scrollContainer) => {
 
 const createGetOffsets = ({
   positionedParent,
-  referencePositionedParent = positionedParent,
+  referencePositionedParent,
   scrollContainer,
-  referenceScrollContainer = scrollContainer,
+  referenceScrollContainer,
 }) => {
   const samePositionedParent = positionedParent === referencePositionedParent;
   const getScrollOffsets = createGetScrollOffsets(
