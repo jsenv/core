@@ -37,22 +37,21 @@ const css = /* css */ `
     );
   }
 
-  .navi_drag_clone_wrapper {
+  [navi-drag-clone-source] {
+    visibility: hidden;
+  }
+
+  [navi-drag-clone] {
     position: absolute;
     top: var(--clone-top);
     left: var(--clone-left);
     z-index: 9999;
     width: var(--clone-width);
     height: var(--clone-height);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-    pointer-events: none;
-  }
 
-  [navi-drag-clone-source] {
-    visibility: hidden;
-  }
-
-  [navi-drag-clone] {
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
+    opacity: 0.95;
+    transform: scale(1.15);
     transform-origin: var(--drag-origin);
     pointer-events: none;
   }
@@ -234,14 +233,11 @@ export const createDragToMoveGestureController = ({
     const direction = dragGesture.gestureInfo.direction;
     // const dragGestureName = dragGesture.gestureInfo.name;
     const elementImpacted = elementToMove || element;
-    const translateXAtGrab = dragStyleController.getUnderlyingValue(
-      elementImpacted,
-      "transform.translateX",
-    );
-    const translateYAtGrab = dragStyleController.getUnderlyingValue(
-      elementImpacted,
-      "transform.translateY",
-    );
+    const transformAtGrab =
+      dragStyleController.getUnderlyingValue(elementImpacted, "transform") ||
+      {};
+    const translateXAtGrab = transformAtGrab.translateX;
+    const translateYAtGrab = transformAtGrab.translateY;
     dragGesture.addReleaseCallback(() => {
       if (resetPositionAfterRelease) {
         dragStyleController.clear(elementImpacted);
@@ -433,7 +429,7 @@ export const createDragToMoveGestureController = ({
           scrollableLeft,
           scrollableTop,
         );
-        const transform = {};
+        const transform = { ...transformAtGrab };
         if (direction.x) {
           const leftTarget = positionedLeft;
           const leftAtGrab = dragGesture.gestureInfo.leftAtGrab;
@@ -476,34 +472,18 @@ export const createDragToMoveGestureController = ({
     ...rest
   } = {}) => {
     const scrollContainer = getScrollContainer(referenceElement || element);
-    let getDragPositioner;
     if (cloneOnDrag) {
       const dragClone = createDragClone(element, {
         clientX: event ? event.clientX : 0,
         clientY: event ? event.clientY : 0,
       });
       elementToMove = dragClone;
-      getDragPositioner = () => {
-        return createDragElementPositioner(
-          element,
-          referenceElement,
-          dragClone,
-        );
-      };
-    } else {
-      getDragPositioner = () => {
-        return createDragElementPositioner(
-          element,
-          referenceElement,
-          elementToMove,
-        );
-      };
     }
     const [
       elementScrollableLeft,
       elementScrollableTop,
       convertScrollablePosition,
-    ] = getDragPositioner();
+    ] = createDragElementPositioner(element, referenceElement, elementToMove);
     const dragGesture = grab({
       element,
       scrollContainer,
@@ -531,25 +511,23 @@ export const createDragToMoveGestureController = ({
       if (releaseElementIndex !== grabElementIndex) {
         const viewTransition = document.startViewTransition(() => {
           if (cloneOnDrag) {
-            // Snap the clone wrapper to where the real element currently sits so
+            // Snap the clone to where the real element currently sits so
             // the browser captures it at the destination position (scale 1).
             // The view transition then animates from the dragged position (old) to
             // the destination (new), giving a natural scale-down + slide effect.
             const destRect = element.getBoundingClientRect();
-            const cloneWrapper = elementToMove;
-            cloneWrapper.style.setProperty(
-              "--clone-left",
-              `${destRect.left + window.scrollX}px`,
-            );
-            cloneWrapper.style.setProperty(
-              "--clone-top",
-              `${destRect.top + window.scrollY}px`,
-            );
-            const clone = cloneWrapper.querySelector("[navi-drag-clone]");
             // Removing the attribute drops the CSS scale(1.15) rule — the browser
-            // captures the unstyled clone (scale 1) as the new state, animating
-            // from the scaled-up old snapshot to the normal-sized new snapshot.
-            clone.removeAttribute("navi-drag-clone");
+            // captures the clone at scale 1 as the new state.
+            // But removing it also drops the CSS position/size rules, so we
+            // re-apply them as inline styles immediately after.
+            elementToMove.removeAttribute("navi-drag-clone");
+            elementToMove.style.position = "fixed";
+            elementToMove.style.left = `${destRect.left}px`;
+            elementToMove.style.top = `${destRect.top}px`;
+            elementToMove.style.width = `${destRect.width}px`;
+            elementToMove.style.height = `${destRect.height}px`;
+            elementToMove.style.zIndex = "9999";
+            elementToMove.style.pointerEvents = "none";
           }
           return applyDropEffect?.(grabElementIndex, releaseElementIndex);
         });
@@ -568,33 +546,19 @@ export const createDragToMoveGestureController = ({
 const createDragClone = (element, pointerEvent) => {
   const rect = element.getBoundingClientRect();
 
-  // we "need" a clone wrapper to be able to move the element
-  // using transform translations without touching the style of the clone element
-  const cloneWrapper = document.createElement("div");
-  cloneWrapper.style.viewTransitionName = "navi-drag-clone-wrapper";
-  cloneWrapper.className = "navi_drag_clone_wrapper";
-  cloneWrapper.style.setProperty(
-    "--clone-top",
-    `${rect.top + window.scrollY}px`,
-  );
-  cloneWrapper.style.setProperty(
-    "--clone-left",
-    `${rect.left + window.scrollX}px`,
-  );
-  cloneWrapper.style.setProperty("--clone-width", `${rect.width}px`);
-  cloneWrapper.style.setProperty("--clone-height", `${rect.height}px`);
-
   const elementClone = element.cloneNode(true);
   elementClone.setAttribute("navi-drag-clone", "");
   elementClone.style.viewTransitionName = "navi-drag-clone";
+  elementClone.style.setProperty("--clone-top", `${rect.top}px`);
+  elementClone.style.setProperty("--clone-left", `${rect.left}px`);
+  elementClone.style.setProperty("--clone-width", `${rect.width}px`);
+  elementClone.style.setProperty("--clone-height", `${rect.height}px`);
   // transform-origin set to pointer position within the element for natural scale expansion
   elementClone.style.setProperty(
     "--drag-origin",
     `${pointerEvent.clientX - rect.left}px ${pointerEvent.clientY - rect.top}px`,
   );
+  document.body.appendChild(elementClone);
 
-  cloneWrapper.appendChild(elementClone);
-  document.body.appendChild(cloneWrapper);
-
-  return cloneWrapper;
+  return elementClone;
 };
