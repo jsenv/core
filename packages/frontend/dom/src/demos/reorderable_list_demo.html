@@ -183,20 +183,27 @@
                 container.querySelectorAll(".list-item"),
               );
               const currentContainerRect = container.getBoundingClientRect();
-              let hintY;
+              // targetIndex is the destination in the new array (dragged item removed).
+              // The original item is still in the DOM at originalIndex, so the visual
+              // anchor depends on whether we're moving up or down:
+              //   - moving up (targetIndex <= originalIndex): gap is above items[targetIndex]
+              //   - moving down (targetIndex > originalIndex): gap is below items[targetIndex]
+              let anchorRect;
+              let anchorEdge;
               if (targetIndex === 0) {
-                const firstRect = items[0].getBoundingClientRect();
-                hintY =
-                  firstRect.top -
-                  currentContainerRect.top +
-                  container.scrollTop;
+                anchorRect = items[0].getBoundingClientRect();
+                anchorEdge = "top";
+              } else if (targetIndex > originalIndex) {
+                anchorRect = items[targetIndex].getBoundingClientRect();
+                anchorEdge = "bottom";
               } else {
-                const prevRect = items[targetIndex - 1].getBoundingClientRect();
-                hintY =
-                  prevRect.bottom -
-                  currentContainerRect.top +
-                  container.scrollTop;
+                anchorRect = items[targetIndex - 1].getBoundingClientRect();
+                anchorEdge = "bottom";
               }
+              const hintY =
+                anchorRect[anchorEdge] -
+                currentContainerRect.top +
+                container.scrollTop;
               dropHint.style.display = "block";
               dropHint.style.top = `${hintY}px`;
             };
