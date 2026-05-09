@@ -102,10 +102,34 @@ export const getDropTargetInfo = (gestureInfo, targetElements) => {
   }
   targetIndex = targetElements.indexOf(targetElement);
 
-  // Determine position within the target for both axes
+  // Determine position within the target for both axes.
+  //
+  // Use the leading edge of the dragged element (in the direction of movement)
+  // compared against the target's center:
+  //   - Dragging down: "after" as soon as the bottom crosses the target center.
+  //   - Dragging up:   "before" as soon as the top crosses the target center.
+  //   - Not moving: center-vs-center fallback.
+  //
+  // This gives consistent, predictable thresholds regardless of element size.
   const targetRect = targetElement.getBoundingClientRect();
   const targetCenterX = targetRect.left + targetRect.width / 2;
   const targetCenterY = targetRect.top + targetRect.height / 2;
+  let sideY;
+  if (gestureInfo.isGoingDown) {
+    sideY = dragElementRect.bottom > targetCenterY ? "end" : "start";
+  } else if (gestureInfo.isGoingUp) {
+    sideY = dragElementRect.top < targetCenterY ? "start" : "end";
+  } else {
+    sideY = dragElementCenterY < targetCenterY ? "start" : "end";
+  }
+  let sideX;
+  if (gestureInfo.isGoingRight) {
+    sideX = dragElementRect.right > targetCenterX ? "end" : "start";
+  } else if (gestureInfo.isGoingLeft) {
+    sideX = dragElementRect.left < targetCenterX ? "start" : "end";
+  } else {
+    sideX = dragElementCenterX < targetCenterX ? "start" : "end";
+  }
   const result = {
     // NOTE: avoid relying on `index` in application code. The targetElements
     // array may be dynamically filtered (e.g. excluding the grabbed element),
@@ -114,8 +138,8 @@ export const getDropTargetInfo = (gestureInfo, targetElements) => {
     index: targetIndex,
     element: targetElement,
     elementSide: {
-      x: dragElementRect.left < targetCenterX ? "start" : "end",
-      y: dragElementRect.top < targetCenterY ? "start" : "end",
+      x: sideX,
+      y: sideY,
     },
     // Index within the intersecting subset — could be useful to know how many
     // elements were overlapping, but rarely needed in practice
