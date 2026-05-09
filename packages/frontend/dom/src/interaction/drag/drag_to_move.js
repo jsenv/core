@@ -11,20 +11,13 @@ import { applyStickyFrontiersToAutoScrollArea } from "./sticky_frontiers.js";
 const dragStyleController = createStyleController("drag_to_move");
 
 const css = /* css */ `
-  @layer navi {
-    .navi_drop_hint {
-      --drop-hint-margin-x: 0px;
-      --drop-hint-margin-y: 0px;
-    }
-  }
-
   .navi_drop_hint {
     position: absolute;
     top: var(--drop-hint-y);
-    left: calc(var(--drop-target-left) + var(--drop-hint-margin-x));
+    left: calc(var(--drop-target-left) + var(--drop-hint-margin-x, 0px));
     z-index: 10;
     display: none;
-    width: calc(var(--drop-target-width) - 2 * var(--drop-hint-margin-x));
+    width: calc(var(--drop-target-width) - 2 * var(--drop-hint-margin-x, 0px));
     height: var(--drop-hint-size, 3px);
     background: var(--drop-hint-background-color, #4476ff);
     border-radius: var(--drop-hint-border-radius, 2px);
@@ -33,11 +26,15 @@ const css = /* css */ `
   }
   [data-drop-edge="top"] > .navi_drop_hint {
     display: block;
-    --drop-hint-y: calc(var(--drop-target-top) - var(--drop-margin-y));
+    --drop-hint-y: calc(
+      var(--drop-target-top) - var(--drop-hint-margin-y, 0px)
+    );
   }
   [data-drop-edge="bottom"] > .navi_drop_hint {
     display: block;
-    --drop-hint-y: calc(var(--drop-target-bottom) + var(--drop-margin-y));
+    --drop-hint-y: calc(
+      var(--drop-target-bottom) + var(--drop-hint-margin-y, 0px)
+    );
   }
 
   .navi_drag_clone_wrapper {
@@ -67,6 +64,7 @@ export const createDragToMoveGestureController = ({
   cloneOnDrag = false,
   dropHint = false,
   dropTargetSelector = null,
+  onRelease,
   stickyFrontiers = true,
   // Padding to reduce the area used to autoscroll by this amount (applied after sticky frontiers)
   // This creates an invisible space around the area where elements cannot be dragged
@@ -489,6 +487,9 @@ export const createDragToMoveGestureController = ({
       elementToMove,
       convertScrollablePosition,
     });
+    if (onRelease) {
+      dragGesture.addReleaseCallback(onRelease);
+    }
     return dragGesture;
   };
 
