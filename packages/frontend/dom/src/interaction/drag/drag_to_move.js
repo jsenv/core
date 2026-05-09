@@ -12,33 +12,47 @@ export const dragStyleController = createStyleController("drag_to_move");
  * Creates a gesture controller that moves elements via drag.
  *
  * Wraps `createDragGestureController` and adds:
- * - Element translation via CSS transform
+ * - Element translation via CSS transform (translate only; other existing transforms are preserved)
  * - Auto-scroll while dragging near scroll-container edges
- * - Constraints (area, obstacles)
+ * - Constraints (area boundaries, obstacle elements)
+ *
+ * The returned controller exposes a `grab(options)` / `grabViaPointer(event, options)` method.
+ * Key grab options:
+ * - `element`: the element whose position drives layout calculations (scroll-container detection,
+ *   constraints, auto-scroll). Sets `data-grabbed` during the drag.
+ * - `referenceElement`: optional sticky-frontier / obstacle reference, defaults to `element`.
+ * - `elementToMove`: optional different element to actually translate (e.g. a drag clone).
+ *   If omitted, `element` is translated. The translate is read from `dragStyleController`
+ *   at grab time so any pre-existing translate is accumulated rather than reset.
  *
  * @param {object} [options]
  * @param {boolean} [options.stickyFrontiers=true]
- *   Shrinks the auto-scroll area at sticky boundaries.
+ *   Shrinks the auto-scroll area at sticky boundaries (elements with `data-sticky-left` /
+ *   `data-sticky-top`).
  * @param {number} [options.autoScrollAreaPadding=0]
- *   Extra padding (px) subtracted from each edge of the auto-scroll area.
+ *   Extra padding (px) subtracted from each edge of the auto-scroll trigger area.
  * @param {string|object|function} [options.areaConstraint="scroll"]
  *   Constrains where the element can be dragged.
- *   `"scroll"` | `"scrollport"` | `"none"` | `{left,top,right,bottom}` | function.
+ *   `"scroll"` — bounded by the full scroll area.
+ *   `"scrollport"` — bounded by the visible viewport of the scroll container.
+ *   `"none"` — no area constraint.
+ *   `{left, top, right, bottom}` — fixed bounds (values may be functions receiving context).
+ *   `function` — called each drag frame, must return a `{left,top,right,bottom}` object.
  * @param {Element} [options.obstaclesContainer]
  *   Container to look for obstacle elements in. Defaults to the scroll container.
  * @param {string} [options.obstacleAttributeName="data-drag-obstacle"]
  *   Attribute that marks obstacle elements.
  * @param {boolean} [options.showConstraintFeedbackLine=false]
- *   Shows a visual line when the pointer deviates from the element due to
- *   constraints.
+ *   Renders a visual line when the pointer deviates from the element due to constraints.
  * @param {boolean} [options.showDebugMarkers=false]
  *   Renders debug markers for constraint regions.
  * @param {"commit"|"cancel"|"manual"} [options.releasePositionEffect="commit"]
- *   Controls what happens to the element's translated position on release.
- *   - `"commit"`: bakes the translate into inline styles so the element stays put.
+ *   Controls what happens to the translated position on release.
+ *   - `"commit"`: bakes the translate into inline styles so the element stays put (default).
  *   - `"cancel"`: discards the translate so the element snaps back to its original position.
- *   - `"manual"`: does nothing, letting the caller handle cleanup.
- * @returns {object} Drag gesture controller with an augmented `grab()` method.
+ *   - `"manual"`: does nothing — the caller is responsible for clearing or committing
+ *     the transform via `dragStyleController`.
+ * @returns {object} Drag gesture controller with augmented `grab()` / `grabViaPointer()` methods.
  */
 export const createDragToMoveGestureController = ({
   stickyFrontiers = true,

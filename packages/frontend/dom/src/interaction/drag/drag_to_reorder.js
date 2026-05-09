@@ -80,11 +80,22 @@ const dragCSSVars = [
  * Starts a drag-to-reorder interaction on a list item.
  *
  * Handles the full reorder UX:
- * - Activates only after a short movement threshold (avoids accidental drags on clicks).
- * - Clones the grabbed element and moves the clone while the original stays hidden.
+ * - Activates only after a short movement threshold (avoids accidental reorders on clicks).
+ * - Clones the grabbed element and moves the clone while the original stays hidden in place
+ *   (keeps the layout intact so other items don't shift during the drag).
+ * - CSS vars (`--drop-hint-size`, `--drop-hint-background-color`, etc.) are read from the
+ *   dragged element and moved to `document.documentElement` for the duration of the drag so
+ *   the drop-hint and clone — both in `document.body` — can inherit them.
  * - Shows a drop-hint line indicating where the item will land.
- * - On release, animates the clone to the drop position via the View Transitions API,
- *   then calls `onReorder` so the caller can update its state.
+ * - Drop-target detection is intersection-based: the clone's bounding rect is compared
+ *   against every item that matches `itemSelector` in the scroll container.
+ * - No-ops are filtered: releasing on the grabbed element itself, or in a position that
+ *   would leave it at exactly the same index, never triggers `onReorder`.
+ * - On a valid drop, the clone animates to the drop position via the View Transitions API,
+ *   `onReorder` is called inside the transition callback so the DOM update and the animation
+ *   are captured together, then the clone is removed.
+ * - On a cancelled drop (pointer released with no valid target), the clone is removed
+ *   immediately without calling `onReorder`.
  *
  * IDs are used as the bridge between DOM elements and JS state because:
  * - Not all DOM elements matching `itemSelector` may be valid drop targets
@@ -106,10 +117,16 @@ const dragCSSVars = [
  * @param {function} options.onReorder
  *   Called when the user drops the item in a new position.
  *   Signature: `onReorder(fromId, toId)`.
- *   - `fromId`: ID of the dragged item.
- *   - `toId`: ID of the element to insert before, or `null` to append at the end.
+ *   - `fromId`: stable ID of the dragged item.
+ *   - `toId`: stable ID of the item to insert before, or `null` to append at the end.
+ *   Called inside `document.startViewTransition` so the resulting DOM mutation is
+ *   animated by the View Transitions API.
  * @param {object} [options.direction={ x: false, y: true }]
- *   Axes along which dragging is allowed.
+ *   Axes along which dragging is allowed. Passed to `createDragToMoveGestureController`.
+ * @param {...*} [options]
+ *   Any remaining options are forwarded to `createDragToMoveGestureController`
+ *   (e.g. `areaConstraint`, `autoScrollAreaPadding`, `stickyFrontiers`).
+ *   `releasePositionEffect` is always set to `"manual"` internally and cannot be overridden.
  */
 export const startDragToReorder = (
   event,
@@ -257,8 +274,8 @@ export const startDragToReorder = (
         setCloneDocumentRect(cloneWrapper, cloneWrapper);
         dragStyleController.clear(cloneWrapper);
         const viewTransition = document.startViewTransition(() => {
-          // resetPositionAfterRelease already cleared the drag translate.
-          // Snap the CSS-var position to the drop target rect.
+          // Snap the CSS-var position to the drop target rect so the browser
+          // captures the "new" state at the landing position.
           setCloneDocumentRect(cloneWrapper, currentReleaseElement);
           // Removing this attr drops the CSS scale(1.15), so the browser
           // captures the clone at scale 1 as the "new" state.
