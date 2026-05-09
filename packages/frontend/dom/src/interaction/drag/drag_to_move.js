@@ -11,12 +11,14 @@ const dragStyleController = createStyleController("drag_to_move");
 
 const css = /* css */ `
   .navi_drop_hint {
+    --drop-hint-margin: -10px;
+
     position: absolute;
     top: var(--drop-hint-y);
-    left: var(--drop-target-left);
+    left: calc(var(--drop-target-left) + var(--drop-hint-margin));
     z-index: 10;
     display: none;
-    width: var(--drop-target-width);
+    width: calc(var(--drop-target-width) - 2 * var(--drop-hint-margin));
     height: var(--drop-hint-size, 3px);
     background: var(--drop-hint-background-color, #4476ff);
     border-radius: var(--drop-hint-border-radius, 2px);
