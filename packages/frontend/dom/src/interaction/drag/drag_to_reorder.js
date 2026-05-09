@@ -141,6 +141,9 @@ export const startDragToReorder = (
       element: draggedElement,
       elementToMove: cloneWrapper,
     });
+    // getDropTargetInfo uses gestureInfo.elementImpacted to compute the dragged rect.
+    // Point it at the clone so drop detection tracks the clone's current position.
+    dragGesture.gestureInfo.elementImpacted = cloneWrapper;
 
     const scrollContainer = dragGesture.gestureInfo.scrollContainer;
     const getTargets = () => {
