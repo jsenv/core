@@ -130,14 +130,19 @@ export const createDragToMoveGestureController = ({
         let anchorRect;
         let anchorEdge;
         if (targetIndex === 0) {
-          anchorRect = items[0].getBoundingClientRect();
           anchorEdge = "top";
-        } else if (targetIndex > originalIndex) {
-          anchorRect = items[targetIndex].getBoundingClientRect();
-          anchorEdge = "bottom";
+          anchorRect = items[0].getBoundingClientRect();
         } else {
-          anchorRect = items[targetIndex - 1].getBoundingClientRect();
+          let item;
+          if (targetIndex >= items.length) {
+            item = items[items.length - 1];
+          } else if (targetIndex > originalIndex) {
+            item = items[targetIndex];
+          } else {
+            item = items[targetIndex - 1];
+          }
           anchorEdge = "bottom";
+          anchorRect = item.getBoundingClientRect();
         }
         const scrollLeft = scrollContainer.scrollLeft;
         const scrollTop = scrollContainer.scrollTop;
