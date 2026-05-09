@@ -1,7 +1,10 @@
-import { createPubSub, mergeTwoStyles } from "@jsenv/dom";
+import {
+  createPubSub,
+  dispatchInternalCustomEvent,
+  mergeTwoStyles,
+} from "@jsenv/dom";
 
 import { listenInputValue } from "../field/validation/input_value_listener.js";
-import { dispatchInternalCustomEvent } from "../utils/custom_event.js";
 
 const requestPseudoStateCheck = (element, detail) => {
   dispatchInternalCustomEvent(
