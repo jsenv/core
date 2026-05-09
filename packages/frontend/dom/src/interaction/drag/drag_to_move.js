@@ -247,6 +247,9 @@ export const createDragToMoveGestureController = ({
     const translateXAtGrab = transformAtGrab.translateX;
     const translateYAtGrab = transformAtGrab.translateY;
     dragGesture.addReleaseCallback(() => {
+      if (cloneOnDrag) {
+        return;
+      }
       if (resetPositionAfterRelease) {
         dragStyleController.clear(elementImpacted);
       } else {
@@ -519,17 +522,30 @@ export const createDragToMoveGestureController = ({
       if (releaseElementIndex !== grabElementIndex) {
         const viewTransition = document.startViewTransition(() => {
           if (cloneOnDrag) {
-            // Snap the wrapper to the destination so the browser captures the
-            // clone at scale 1 as the "new" state. The view transition then
-            // animates from the dragged (scaled) old state to this new state.
-            const destRect = element.getBoundingClientRect();
+            // Snap the wrapper to the drop target position so the browser
+            // captures the clone at scale 1 at exactly the right place.
+            // The view transition then animates from the dragged (scaled) old
+            // state to this unscaled destination state.
+            const destElement = gestureInfo.releaseElement || element;
+            const destRect = destElement.getBoundingClientRect();
             const cloneWrapper = elementToMove;
             const clone = cloneWrapper.firstElementChild;
+            // Clear any transform animation left from dragging so the wrapper
+            // sits purely at its CSS-var position with no residual translate.
+            dragStyleController.clear(cloneWrapper);
             cloneWrapper.style.setProperty(
               "--clone-left",
               `${destRect.left}px`,
             );
             cloneWrapper.style.setProperty("--clone-top", `${destRect.top}px`);
+            cloneWrapper.style.setProperty(
+              "--clone-width",
+              `${destRect.width}px`,
+            );
+            cloneWrapper.style.setProperty(
+              "--clone-height",
+              `${destRect.height}px`,
+            );
             // Removing the attribute drops the CSS scale(1.15) rule so the
             // browser captures the inner clone at scale 1.
             clone.removeAttribute("navi-drag-clone");
