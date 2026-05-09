@@ -96,11 +96,15 @@ const css = /* css */ `
  * @param {function} [options.onRelease]
  *   Called on every release with the gesture info object.
  * @param {function} [options.applyDropEffect]
- *   Called only when the item was dropped onto a different element.
- *   Signature: `applyDropEffect(grabElement, releaseElement, releaseEdge)`.
- *   - `grabElement`: the DOM element that was grabbed.
- *   - `releaseElement`: the DOM element it was dropped onto.
- *   - `releaseEdge`: `"start"` (insert before) or `"end"` (insert after).
+ *   Called when the item was dropped in a position that differs from its
+ *   current one (no-ops are automatically filtered out).
+ *   Signature: `applyDropEffect(beforeElement, gestureInfo)`.
+ *   - `beforeElement`: the element before which the grabbed item should be
+ *     inserted, or `null` to insert at the end of the list.
+ *   - `gestureInfo`: the full gesture info object. Also contains:
+ *     - `grabElement`: the DOM element that was grabbed.
+ *     - `releaseElement`: the DOM element the user was hovering over on drop
+ *       (used internally to snap the clone animation; available for callers too).
  *   When `cloneOnDrag` is true this call happens inside `startViewTransition`
  *   so the DOM mutation is captured as the transition's "new" state.
  * @param {boolean} [options.stickyFrontiers=true]
@@ -177,14 +181,35 @@ export const createDragToMoveGestureController = ({
         });
       }
 
-      // Tracks which element is the current drop target and on which side.
-      // null means no active drop target (e.g. hovering over the grabbed element).
-      let currentDropTarget = null;
+      // currentBeforeElement: element before which the grabbed item will be inserted (null = end)
+      // currentReleaseElement: the actual hovered drop target — used to snap the clone on release
+      let currentBeforeElement;
+      let currentReleaseElement;
 
-      const updateDropTarget = (targetElement, edge) => {
+      const clearDropHint = () => {
+        currentBeforeElement = undefined;
+        currentReleaseElement = undefined;
+        scrollContainer.removeAttribute("data-drop-edge");
+        scrollContainer.style.removeProperty("--drop-target-top");
+        scrollContainer.style.removeProperty("--drop-target-bottom");
+        scrollContainer.style.removeProperty("--drop-target-left");
+        scrollContainer.style.removeProperty("--drop-target-width");
+      };
+
+      const updateDropTarget = (beforeElement) => {
+        // beforeElement = null → insert at end (hint after last item)
+        // beforeElement = X    → insert before X (hint at top edge of X)
+        const allItems = getTargets().filter((el) => el !== element);
+        const anchorEl =
+          beforeElement !== null
+            ? beforeElement
+            : allItems[allItems.length - 1];
+        if (!anchorEl) {
+          return;
+        }
+        const anchorEdge = beforeElement !== null ? "top" : "bottom";
         const containerRect = scrollContainer.getBoundingClientRect();
-        const anchorRect = targetElement.getBoundingClientRect();
-        const anchorEdge = edge === "start" ? "top" : "bottom";
+        const anchorRect = anchorEl.getBoundingClientRect();
         const scrollLeft = scrollContainer.scrollLeft;
         const scrollTop = scrollContainer.scrollTop;
         const isPositioned =
@@ -215,41 +240,45 @@ export const createDragToMoveGestureController = ({
         );
       };
 
-      dragGesture.addReleaseCallback(() => {
-        scrollContainer.removeAttribute("data-drop-edge");
-        scrollContainer.style.removeProperty("--drop-target-top");
-        scrollContainer.style.removeProperty("--drop-target-bottom");
-        scrollContainer.style.removeProperty("--drop-target-left");
-        scrollContainer.style.removeProperty("--drop-target-width");
-      });
+      dragGesture.addReleaseCallback(clearDropHint);
 
       dragGesture.addDragCallback((gestureInfo) => {
         const items = getTargets();
         const dropTargetInfo = getDropTargetInfo(gestureInfo, items);
         gestureInfo.dropTargetInfo = dropTargetInfo || null;
-        // Ignore the grabbed element itself as a drop target.
+        // When hovering over the grabbed element, treat it as no drop target.
         if (!dropTargetInfo || dropTargetInfo.element === element) {
-          currentDropTarget = null;
-          scrollContainer.removeAttribute("data-drop-edge");
-          scrollContainer.style.removeProperty("--drop-target-top");
-          scrollContainer.style.removeProperty("--drop-target-bottom");
-          scrollContainer.style.removeProperty("--drop-target-left");
-          scrollContainer.style.removeProperty("--drop-target-width");
+          clearDropHint();
           return;
         }
+        // Convert {element, edge} to a beforeElement using the items array
+        // (not nextElementSibling, which breaks if non-item elements exist between items).
+        //   edge "start" → insert before the hovered element
+        //   edge "end"   → insert before the next item (null = append at end)
         const edge = dropTargetInfo.elementSide.y;
-        currentDropTarget = { element: dropTargetInfo.element, edge };
-        updateDropTarget(dropTargetInfo.element, edge);
+        const hoveredIndex = items.indexOf(dropTargetInfo.element);
+        const beforeElement =
+          edge === "start"
+            ? dropTargetInfo.element
+            : (items[hoveredIndex + 1] ?? null);
+        // Detect no-op: result would leave the grabbed element in the same position.
+        const elementIndex = items.indexOf(element);
+        const elementNextItem = items[elementIndex + 1] ?? null;
+        const isNoop =
+          beforeElement === element || beforeElement === elementNextItem;
+        if (isNoop) {
+          clearDropHint();
+          return;
+        }
+        currentBeforeElement = beforeElement;
+        currentReleaseElement = dropTargetInfo.element;
+        updateDropTarget(beforeElement);
       });
 
       dragGesture.addReleaseCallback((gestureInfo) => {
         gestureInfo.grabElement = element;
-        gestureInfo.releaseElement = currentDropTarget
-          ? currentDropTarget.element
-          : null;
-        gestureInfo.releaseEdge = currentDropTarget
-          ? currentDropTarget.edge
-          : null;
+        gestureInfo.beforeElement = currentBeforeElement;
+        gestureInfo.releaseElement = currentReleaseElement;
       });
     }
 
@@ -536,8 +565,8 @@ export const createDragToMoveGestureController = ({
     }
 
     dragGesture.addReleaseCallback(async (gestureInfo) => {
-      const { grabElement, releaseElement, releaseEdge } = gestureInfo;
-      if (releaseElement) {
+      const { beforeElement, releaseElement } = gestureInfo;
+      if (beforeElement !== undefined) {
         // The View Transitions API takes two snapshots:
         //   old  — the DOM as it is right now (clone scaled-up at drag position)
         //   new  — the DOM after the callback runs
@@ -558,9 +587,9 @@ export const createDragToMoveGestureController = ({
           if (cloneOnDrag) {
             const cloneWrapper = elementToMove;
             const clone = cloneWrapper.firstElementChild;
-            // Drop target rect must be read before applyDropEffect reorders the
-            // DOM, otherwise the element may have moved or been detached.
-            const destElement = gestureInfo.releaseElement || element;
+            // Snap the clone to the hovered drop target element before
+            // applyDropEffect mutates the DOM.
+            const destElement = releaseElement;
             const destRect = destElement.getBoundingClientRect();
             // Remove any residual translate left by the drag style controller
             // so the wrapper sits purely at its CSS-var position.
@@ -582,7 +611,7 @@ export const createDragToMoveGestureController = ({
             // the browser captures the clone at scale 1 as the "new" state.
             clone.removeAttribute("navi-drag-clone");
           }
-          return applyDropEffect?.(grabElement, releaseElement, releaseEdge);
+          return applyDropEffect?.(beforeElement, gestureInfo);
         });
         await viewTransition.finished;
       }
