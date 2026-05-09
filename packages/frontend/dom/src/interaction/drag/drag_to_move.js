@@ -48,6 +48,10 @@ const css = /* css */ `
     pointer-events: none;
   }
 
+  [navi-drag-clone-source] {
+    visibility: hidden;
+  }
+
   [navi-drag-clone] {
     transform-origin: var(--drag-origin);
     pointer-events: none;
