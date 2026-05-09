@@ -5,15 +5,17 @@ import { initDragConstraints } from "./drag_constraint.js";
 import { createDragElementPositioner } from "./drag_element_positioner.js";
 import { createDragGestureController } from "./drag_gesture.js";
 import { getDropTargetInfo } from "./drop_target_detection.js";
+import { moveCSSVars } from "./move_css_vars.js";
 import { applyStickyFrontiersToAutoScrollArea } from "./sticky_frontiers.js";
 
 const dragStyleController = createStyleController("drag_to_move");
 
 const css = /* css */ `
   @layer navi {
-  .navi_drop_hint {
-    --drop-hint-margin-x: 0px;
-    --drop-hint-margin-y: 0px;
+    .navi_drop_hint {
+      --drop-hint-margin-x: 0px;
+      --drop-hint-margin-y: 0px;
+    }
   }
 
   .navi_drop_hint {
@@ -98,6 +100,19 @@ export const createDragToMoveGestureController = ({
       const targets = getTargets();
       const originalIndex = targets.indexOf(element);
 
+      const dropHintVars = [
+        "--drop-hint-size",
+        "--drop-hint-background-color",
+        "--drop-hint-border-radius",
+        "--drop-hint-margin-x",
+        "--drop-hint-margin-y",
+      ];
+      const restoreCSSVars = moveCSSVars(
+        dropHintVars,
+        element,
+        scrollContainer,
+      );
+
       let dropHintEl = null;
       if (dropHint) {
         dropHintEl = document.createElement("div");
@@ -105,6 +120,7 @@ export const createDragToMoveGestureController = ({
         scrollContainer.appendChild(dropHintEl);
         dragGesture.addReleaseCallback(() => {
           dropHintEl.remove();
+          restoreCSSVars();
         });
       }
 
