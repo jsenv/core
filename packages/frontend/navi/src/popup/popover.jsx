@@ -1,4 +1,6 @@
 import {
+  dispatchCustomEvent,
+  dispatchPublicCustomEvent,
   findFocusable,
   getBorderSizes,
   getElementSignature,
@@ -14,10 +16,6 @@ import { useId, useRef, useState } from "preact/hooks";
 import { Box } from "../box/box.jsx";
 import { resolveSpacingSize } from "../box/box_style_util.js";
 import { useDebugFocus, useDebugPopup } from "../navi_debug.jsx";
-import {
-  dispatchCustomEvent,
-  dispatchPublicCustomEvent,
-} from "../utils/custom_event.js";
 import { useCleanup } from "../utils/use_cleanup.js";
 
 const css = /* css */ `

@@ -1,4 +1,6 @@
 import {
+  dispatchCustomEvent,
+  dispatchPublicCustomEvent,
   getElementSignature,
   pickPositionRelativeTo,
   scrollIntoViewScoped,
@@ -22,10 +24,6 @@ import { Box } from "../../box/box.jsx";
 import { shortcutsViaOnKeyDown } from "../../keyboard/keyboard_shortcuts.js";
 import { Separator } from "../../layout/separator.jsx";
 import { useDebugScroll } from "../../navi_debug.jsx";
-import {
-  dispatchCustomEvent,
-  dispatchPublicCustomEvent,
-} from "../../utils/custom_event.js";
 import { useAutoFocus } from "../../utils/focus/use_auto_focus.js";
 import { useItemTracker } from "../../utils/item_tracker/use_item_tracker.js";
 import { useDisplayedLayoutEffect } from "../../utils/use_displayed_layout_effect.js";
