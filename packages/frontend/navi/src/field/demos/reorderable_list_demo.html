@@ -40,7 +40,7 @@
         { id: 20, label: "Pomegranate", bg: "#fce4ec", color: "#b71c1c" },
       ];
 
-      const ReorderableList = ({ name, containerRef, scrollable }) => {
+      const ReorderableList = ({ name, containerRef }) => {
         const [order, setOrder] = useState(INITIAL_ITEMS.map((i) => i.id));
 
         const reorder = (fromIndex, toIndex) => {
