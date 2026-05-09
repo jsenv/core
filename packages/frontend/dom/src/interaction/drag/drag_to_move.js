@@ -529,13 +529,27 @@ export const createDragToMoveGestureController = ({
     dragGesture.addReleaseCallback(async (gestureInfo) => {
       const { grabElementIndex, releaseElementIndex } = gestureInfo;
       if (releaseElementIndex !== grabElementIndex) {
-        const cloneInner = elementToMove.querySelector("[navi-drag-clone]");
         const viewTransition = document.startViewTransition(() => {
-          // Removing the attribute drops the CSS scale(1.15) rule — the browser
-          // captures the unstyled clone (scale 1) as the new state, animating
-          // from the scaled-up old snapshot to the normal-sized new snapshot.
-          if (cloneInner) {
-            cloneInner.removeAttribute("navi-drag-clone");
+          if (cloneOnDrag) {
+            // Snap the clone wrapper to where the real element currently sits so
+            // the browser captures it at the destination position (scale 1).
+            // The view transition then animates from the dragged position (old) to
+            // the destination (new), giving a natural scale-down + slide effect.
+            const destRect = element.getBoundingClientRect();
+            const cloneWrapper = elementToMove;
+            cloneWrapper.style.setProperty(
+              "--clone-left",
+              `${destRect.left + window.scrollX}px`,
+            );
+            cloneWrapper.style.setProperty(
+              "--clone-top",
+              `${destRect.top + window.scrollY}px`,
+            );
+            const clone = cloneWrapper.querySelector("[navi-drag-clone]");
+            // Removing the attribute drops the CSS scale(1.15) rule — the browser
+            // captures the unstyled clone (scale 1) as the new state, animating
+            // from the scaled-up old snapshot to the normal-sized new snapshot.
+            clone.removeAttribute("navi-drag-clone");
           }
           return applyDropEffect?.(grabElementIndex, releaseElementIndex);
         });
@@ -553,21 +567,11 @@ export const createDragToMoveGestureController = ({
 
 const createDragClone = (element, pointerEvent) => {
   const rect = element.getBoundingClientRect();
-  const elementClone = element.cloneNode(true);
-  elementClone.setAttribute("navi-drag-clone", "");
-  const viewTransitionName = getComputedStyle(element).viewTransitionName;
-  if (viewTransitionName && viewTransitionName !== "none") {
-    // Fixed name so ::view-transition-old(navi-drag-clone) CSS can target it.
-    // Only one drag happens at a time so the name is never duplicated.
-    elementClone.style.viewTransitionName = "navi-drag-clone";
-  }
-  // transform-origin set to pointer position within the element for natural scale expansion
-  elementClone.style.setProperty(
-    "--drag-origin",
-    `${pointerEvent.clientX - rect.left}px ${pointerEvent.clientY - rect.top}px`,
-  );
 
+  // we "need" a clone wrapper to be able to move the element
+  // using transform translations without touching the style of the clone element
   const cloneWrapper = document.createElement("div");
+  cloneWrapper.style.viewTransitionName = "navi-drag-clone-wrapper";
   cloneWrapper.className = "navi_drag_clone_wrapper";
   cloneWrapper.style.setProperty(
     "--clone-top",
@@ -579,6 +583,16 @@ const createDragClone = (element, pointerEvent) => {
   );
   cloneWrapper.style.setProperty("--clone-width", `${rect.width}px`);
   cloneWrapper.style.setProperty("--clone-height", `${rect.height}px`);
+
+  const elementClone = element.cloneNode(true);
+  elementClone.setAttribute("navi-drag-clone", "");
+  elementClone.style.viewTransitionName = "navi-drag-clone";
+  // transform-origin set to pointer position within the element for natural scale expansion
+  elementClone.style.setProperty(
+    "--drag-origin",
+    `${pointerEvent.clientX - rect.left}px ${pointerEvent.clientY - rect.top}px`,
+  );
+
   cloneWrapper.appendChild(elementClone);
   document.body.appendChild(cloneWrapper);
 
