@@ -114,18 +114,20 @@ export const getDropTargetInfo = (gestureInfo, targetElements) => {
   const targetRect = targetElement.getBoundingClientRect();
   const targetCenterX = targetRect.left + targetRect.width / 2;
   const targetCenterY = targetRect.top + targetRect.height / 2;
+  const { intentGoingDown, intentGoingUp, intentGoingRight, intentGoingLeft } =
+    gestureInfo;
   let sideY;
-  if (gestureInfo.isGoingDown) {
+  if (intentGoingDown) {
     sideY = dragElementRect.bottom > targetCenterY ? "end" : "start";
-  } else if (gestureInfo.isGoingUp) {
+  } else if (intentGoingUp) {
     sideY = dragElementRect.top < targetCenterY ? "start" : "end";
   } else {
     sideY = dragElementCenterY < targetCenterY ? "start" : "end";
   }
   let sideX;
-  if (gestureInfo.isGoingRight) {
+  if (intentGoingRight) {
     sideX = dragElementRect.right > targetCenterX ? "end" : "start";
-  } else if (gestureInfo.isGoingLeft) {
+  } else if (intentGoingLeft) {
     sideX = dragElementRect.left < targetCenterX ? "start" : "end";
   } else {
     sideX = dragElementCenterX < targetCenterX ? "start" : "end";
