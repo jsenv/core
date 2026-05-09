@@ -10,15 +10,19 @@ import { applyStickyFrontiersToAutoScrollArea } from "./sticky_frontiers.js";
 const dragStyleController = createStyleController("drag_to_move");
 
 const css = /* css */ `
+  @layer navi {
   .navi_drop_hint {
-    --drop-hint-margin: -10px;
+    --drop-hint-margin-x: 0px;
+    --drop-hint-margin-y: 0px;
+  }
 
+  .navi_drop_hint {
     position: absolute;
     top: var(--drop-hint-y);
-    left: calc(var(--drop-target-left) + var(--drop-hint-margin));
+    left: calc(var(--drop-target-left) + var(--drop-hint-margin-x));
     z-index: 10;
     display: none;
-    width: calc(var(--drop-target-width) - 2 * var(--drop-hint-margin));
+    width: calc(var(--drop-target-width) - 2 * var(--drop-hint-margin-x));
     height: var(--drop-hint-size, 3px);
     background: var(--drop-hint-background-color, #4476ff);
     border-radius: var(--drop-hint-border-radius, 2px);
@@ -27,11 +31,11 @@ const css = /* css */ `
   }
   [data-drop-edge="top"] > .navi_drop_hint {
     display: block;
-    --drop-hint-y: var(--drop-target-top);
+    --drop-hint-y: calc(var(--drop-target-top) - var(--drop-margin-y));
   }
   [data-drop-edge="bottom"] > .navi_drop_hint {
     display: block;
-    --drop-hint-y: var(--drop-target-bottom);
+    --drop-hint-y: calc(var(--drop-target-bottom) + var(--drop-margin-y));
   }
 
   .navi_drag_clone_wrapper {
