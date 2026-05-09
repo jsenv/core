@@ -134,10 +134,7 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useRef, useState, useEffect } from "preact/hooks";
-      import {
-        createDragToMoveGestureController,
-        dragAfterThreshold,
-      } from "@jsenv/dom";
+      import { startDragToReorder } from "@jsenv/dom";
 
       const INITIAL_ITEMS = [
         { id: 1, label: "Apple", bg: "#e3f2fd", color: "#1565c0" },
@@ -195,52 +192,26 @@
         }, []);
       };
 
-      const ReorderableList = ({ name, containerRef }) => {
+      const ReorderableList = ({ name }) => {
         const [order, setOrder] = useState(INITIAL_ITEMS.map((i) => i.id));
 
-        const startDrag = (event, id) => {
-          event.preventDefault();
-
-          const container = containerRef.current;
-          const originalIndex = order.indexOf(id);
-          const draggedEl = Array.from(
-            container.querySelectorAll(".list-item"),
-          )[originalIndex];
-
-          dragAfterThreshold(event, () => {
-            const gestureController = createDragToMoveGestureController({
-              cloneOnDrag: true,
-              direction: { x: false, y: true },
-              dropTargetSelector: ".list-item",
-              dropHint: true,
-              applyDropEffect: (beforeElement) => {
-                setOrder((prev) => {
-                  let insertAt;
-                  if (beforeElement === null) {
-                    insertAt = prev.length;
-                  } else {
-                    const beforeId = parseInt(beforeElement.dataset.id);
-                    insertAt = prev.indexOf(beforeId);
-                  }
-                  const next = [...prev];
-                  next.splice(originalIndex, 1);
-                  const adjustedInsertAt =
-                    originalIndex < insertAt ? insertAt - 1 : insertAt;
-                  next.splice(
-                    adjustedInsertAt,
-                    0,
-                    parseInt(draggedEl.dataset.id),
-                  );
-                  return next;
-                });
-              },
-              // showConstraintFeedbackLine: true,
-              // showDebugMarkers: true,
-            });
-            const gesture = gestureController.grabViaPointer(event, {
-              element: draggedEl,
-            });
-            return gesture;
+        const startDrag = (event) => {
+          startDragToReorder(event, event.currentTarget, {
+            itemSelector: ".list-item",
+            getItemId: (el) => parseInt(el.dataset.id),
+            onReorder: (fromId, toId) => {
+              setOrder((prev) => {
+                const fromIndex = prev.indexOf(fromId);
+                const toIndex =
+                  toId === null ? prev.length : prev.indexOf(toId);
+                const adjustedToIndex =
+                  fromIndex < toIndex ? toIndex - 1 : toIndex;
+                const next = [...prev];
+                next.splice(fromIndex, 1);
+                next.splice(adjustedToIndex, 0, fromId);
+                return next;
+              });
+            },
           });
         };
 
@@ -271,9 +242,7 @@
             index={i}
             total={visibleItems.length}
             name={name}
-            onPointerDown={(e) => {
-              startDrag(e, item.id);
-            }}
+            onPointerDown={startDrag}
             onMoveUp={() => moveItem(item.id, -1)}
             onMoveDown={() => moveItem(item.id, 1)}
           />
@@ -345,30 +314,28 @@
       };
 
       const NormalListDemo = () => {
-        const containerRef = useRef(null);
         return (
           <div>
             <h1>Reorderable List</h1>
             <p style={{ color: "#666", margin: "0 0 24px", fontSize: "14px" }}>
               Drag the handle on each item to reorder.
             </p>
-            <div class="list-container" ref={containerRef}>
-              <ReorderableList name="normal" containerRef={containerRef} />
+            <div class="list-container">
+              <ReorderableList name="normal" />
             </div>
           </div>
         );
       };
 
       const ScrollableListDemo = () => {
-        const containerRef = useRef(null);
         return (
           <div>
             <h1>Scrollable Reorderable List</h1>
             <p style={{ color: "#666", margin: "0 0 24px", fontSize: "14px" }}>
               Same list inside a scrollable container.
             </p>
-            <div class="list-container-scrollable" ref={containerRef}>
-              <ReorderableList name="scrollable" containerRef={containerRef} />
+            <div class="list-container-scrollable">
+              <ReorderableList name="scrollable" />
             </div>
           </div>
         );
