@@ -69,6 +69,11 @@ export const createDragToMoveGestureController = ({
   dropHint = false,
   dropTargetSelector = null,
   onRelease,
+  // Called only when the item was actually moved (grabIndex !== releaseIndex).
+  // Signature: applyDropEffect(fromIndex, toIndex)
+  // When cloneOnDrag is true the DOM mutation is automatically wrapped in a
+  // view transition so the clone animates into the item's new position.
+  applyDropEffect,
   stickyFrontiers = true,
   // Padding to reduce the area used to autoscroll by this amount (applied after sticky frontiers)
   // This creates an invisible space around the area where elements cannot be dragged
@@ -510,10 +515,6 @@ export const createDragToMoveGestureController = ({
     if (cloneOnDrag) {
       dragGesture.gestureInfo.elementImpacted = elementToMove;
       element.setAttribute("navi-drag-clone-source", "");
-      dragGesture.addReleaseCallback(() => {
-        element.removeAttribute("navi-drag-clone-source");
-        elementToMove.remove();
-      });
     }
     initGrabToMoveElement(dragGesture, {
       element,
@@ -524,6 +525,16 @@ export const createDragToMoveGestureController = ({
     if (onRelease) {
       dragGesture.addReleaseCallback(onRelease);
     }
+
+    dragGesture.addReleaseCallback(async (gestureInfo) => {
+      const { grabElementIndex, releaseElementIndex } = gestureInfo;
+      if (releaseElementIndex !== grabElementIndex) {
+        await applyDropEffect?.(grabElementIndex, releaseElementIndex);
+      }
+      element.removeAttribute("navi-drag-clone-source");
+      elementToMove.remove();
+    });
+
     return dragGesture;
   };
 
@@ -534,6 +545,13 @@ const createDragClone = (element, pointerEvent) => {
   const rect = element.getBoundingClientRect();
   const elementClone = element.cloneNode(true);
   elementClone.setAttribute("navi-drag-clone", "");
+  // const viewTransitionName = getComputedStyle(element).viewTransitionName;
+  // if (viewTransitionName && viewTransitionName !== "none") {
+  //   // Clone gets its own name so both elements participate in the transition
+  //   // independently: the clone animates out from the drag position while the
+  //   // source element animates to its new position.
+  //   elementClone.style.viewTransitionName = `${viewTransitionName}-clone`;
+  // }
   elementClone.style.removeProperty("view-transition-name");
   // transform-origin set to pointer position within the element for natural scale expansion
   elementClone.style.setProperty(

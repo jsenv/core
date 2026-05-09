@@ -68,11 +68,13 @@
               direction: { x: false, y: true },
               dropTargetSelector: ".list-item",
               dropHint: true,
-              onRelease: (gestureInfo) => {
-                const { grabElementIndex, releaseElementIndex } = gestureInfo;
-                if (releaseElementIndex !== null) {
-                  reorder(grabElementIndex, releaseElementIndex);
-                }
+              applyDropEffect: async (fromIndex, toIndex) => {
+                const viewTransition = document.startViewTransition(() => {
+                  setOrder((prev) =>
+                    moveArrayItemByIndex(prev, fromIndex, toIndex),
+                  );
+                });
+                await viewTransition.finished;
               },
             });
             return gestureController.grabViaPointer(event, {
