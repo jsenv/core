@@ -41,19 +41,21 @@ const css = /* css */ `
     visibility: hidden;
   }
 
-  [navi-drag-clone] {
+  [navi-drag-clone-alive] {
     position: absolute;
     top: var(--clone-top);
     left: var(--clone-left);
     z-index: 9999;
     width: var(--clone-width);
     height: var(--clone-height);
+    transform-origin: var(--drag-origin);
+    pointer-events: none;
+  }
 
+  [navi-drag-clone] {
     box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
     opacity: 0.95;
     transform: scale(1.15);
-    transform-origin: var(--drag-origin);
-    pointer-events: none;
   }
 
   @starting-style {
@@ -521,13 +523,10 @@ export const createDragToMoveGestureController = ({
             // But removing it also drops the CSS position/size rules, so we
             // re-apply them as inline styles immediately after.
             elementToMove.removeAttribute("navi-drag-clone");
-            elementToMove.style.position = "fixed";
             elementToMove.style.left = `${destRect.left}px`;
             elementToMove.style.top = `${destRect.top}px`;
             elementToMove.style.width = `${destRect.width}px`;
             elementToMove.style.height = `${destRect.height}px`;
-            elementToMove.style.zIndex = "9999";
-            elementToMove.style.pointerEvents = "none";
           }
           return applyDropEffect?.(grabElementIndex, releaseElementIndex);
         });
@@ -547,8 +546,9 @@ const createDragClone = (element, pointerEvent) => {
   const rect = element.getBoundingClientRect();
 
   const elementClone = element.cloneNode(true);
-  elementClone.setAttribute("navi-drag-clone", "");
   elementClone.style.viewTransitionName = "navi-drag-clone";
+  elementClone.setAttribute("navi-drag-clone-alive", "");
+  elementClone.setAttribute("navi-drag-clone", "");
   elementClone.style.setProperty("--clone-top", `${rect.top}px`);
   elementClone.style.setProperty("--clone-left", `${rect.left}px`);
   elementClone.style.setProperty("--clone-width", `${rect.width}px`);
