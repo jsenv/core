@@ -64,6 +64,15 @@ const css = /* css */ `
   }
 `;
 
+const dragCSSVars = [
+  "--drop-hint-size",
+  "--drop-hint-background-color",
+  "--drop-hint-border-radius",
+  "--drop-hint-margin-x",
+  "--drop-hint-margin-y",
+  "--drag-clone-scale",
+];
+
 /**
  * Starts a drag-to-reorder interaction on a list item.
  *
@@ -115,6 +124,13 @@ export const startDragToReorder = (
   dragAfterThreshold(event, () => {
     const cloneWrapper = createDragClone(draggedElement, event);
     draggedElement.setAttribute("navi-drag-clone-source", "");
+    // Move drag related CSS vars from the element to the document
+    // so they're accessible to .navi_drop_hint and the clone (which are both in document.body)
+    const restoreCSSVars = moveCSSVars(
+      dragCSSVars,
+      draggedElement,
+      document.documentElement,
+    );
 
     const gestureController = createDragToMoveGestureController({
       direction,
@@ -130,22 +146,6 @@ export const startDragToReorder = (
     const getTargets = () => {
       return Array.from(scrollContainer.querySelectorAll(itemSelector));
     };
-
-    // Move drop-hint CSS vars from the item element to the scroll container
-    // so they're accessible from the .navi_drop_hint child of the container.
-    const dropHintVars = [
-      "--drop-hint-size",
-      "--drop-hint-background-color",
-      "--drop-hint-border-radius",
-      "--drop-hint-margin-x",
-      "--drop-hint-margin-y",
-      "--drag-clone-scale",
-    ];
-    const restoreCSSVars = moveCSSVars(
-      dropHintVars,
-      draggedElement,
-      scrollContainer,
-    );
 
     const dropHintEl = document.createElement("div");
     dropHintEl.className = "navi_drop_hint";
@@ -333,7 +333,7 @@ const createDragClone = (element, pointerEvent) => {
 
   return wrapper;
 };
-const INHERITED_PROPERTIES_TO_COPY_SET = new SET([
+const INHERITED_PROPERTIES_TO_COPY_SET = new Set([
   "color",
   "font-family",
   "font-size",
