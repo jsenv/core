@@ -41,7 +41,7 @@ const css = /* css */ `
     visibility: hidden;
   }
 
-  [navi-drag-clone-alive] {
+  [navi-drag-clone-wrapper] {
     position: absolute;
     top: var(--clone-top);
     left: var(--clone-left);
@@ -61,7 +61,7 @@ const css = /* css */ `
   }
 
   @starting-style {
-    [navi-drag-clone-alive] {
+    [navi-drag-clone-wrapper] {
       box-shadow: none;
     }
 
@@ -569,7 +569,7 @@ const createDragClone = (element, pointerEvent) => {
 
   // Wrapper handles positioning via CSS vars
   const wrapper = document.createElement("div");
-  wrapper.setAttribute("navi-drag-clone-alive", "");
+  wrapper.setAttribute("navi-drag-clone-wrapper", "");
   wrapper.viewTransitionName = "navi-drag-clone-wrapper";
   wrapper.style.setProperty("--clone-top", `${rect.top}px`);
   wrapper.style.setProperty("--clone-left", `${rect.left}px`);
