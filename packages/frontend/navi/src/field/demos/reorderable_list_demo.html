@@ -13,10 +13,10 @@
       import { render } from "preact";
       import { useRef, useState } from "preact/hooks";
       import {
-        createDragToMoveGestureController,
-        dragAfterThreshold,
-      } from "@jsenv/dom";
-      import { Box, moveArrayItemByIndex } from "@jsenv/navi";
+        Box,
+        moveArrayItemByIndex,
+        startDragToReorder,
+      } from "@jsenv/navi";
 
       const INITIAL_ITEMS = [
         { id: 1, label: "Apple", bg: "#e3f2fd", color: "#1565c0" },
@@ -41,7 +41,7 @@
         { id: 20, label: "Pomegranate", bg: "#fce4ec", color: "#b71c1c" },
       ];
 
-      const ReorderableList = ({ name, containerRef }) => {
+      const ReorderableList = ({ name }) => {
         const [order, setOrder] = useState(INITIAL_ITEMS.map((i) => i.id));
 
         const reorder = (fromIndex, toIndex) => {
@@ -50,40 +50,12 @@
           });
         };
 
-        const startDrag = (event, id) => {
-          event.preventDefault();
-          const container = containerRef.current;
-          const fromIndex = order.indexOf(id);
-          const draggedEl = container.querySelectorAll(".list-item")[fromIndex];
-
-          dragAfterThreshold(event, () => {
-            const gestureController = createDragToMoveGestureController({
-              cloneOnDrag: true,
-              direction: { x: false, y: true },
-              dropTargetSelector: ".list-item",
-              dropHint: true,
-              applyDropEffect: (beforeElement) => {
-                setOrder((prev) => {
-                  let insertAt;
-                  if (beforeElement === null) {
-                    insertAt = prev.length;
-                  } else {
-                    const beforeId = parseInt(beforeElement.dataset.id);
-                    insertAt = prev.indexOf(beforeId);
-                  }
-                  const adjustedInsertAt =
-                    fromIndex < insertAt ? insertAt - 1 : insertAt;
-                  return moveArrayItemByIndex(
-                    prev,
-                    fromIndex,
-                    adjustedInsertAt,
-                  );
-                });
-              },
-            });
-            return gestureController.grabViaPointer(event, {
-              element: draggedEl,
-            });
+        const startDrag = (event) => {
+          startDragToReorder(event, event.currentTarget, {
+            itemSelector: ".list-item",
+            onReorder: (from, to) => {
+              setOrder((prev) => moveArrayItemByIndex(prev, from, to));
+            },
           });
         };
 
@@ -98,7 +70,7 @@
             index={i}
             total={visibleItems.length}
             name={name}
-            onPointerDown={(e) => startDrag(e, item.id)}
+            onPointerDown={startDrag}
             onMoveUp={() => reorder(i, i - 1)}
             onMoveDown={() => reorder(i, i + 1)}
           />
@@ -256,7 +228,7 @@
                 "--drop-hint-margin-y": "5px",
               }}
             >
-              <ReorderableList name="normal" containerRef={containerRef} />
+              <ReorderableList name="normal" />
             </Box>
           </Box>
         );
@@ -286,7 +258,7 @@
                 "--drop-hint-margin-y": "5px",
               }}
             >
-              <ReorderableList name="scrollable" containerRef={containerRef} />
+              <ReorderableList name="scrollable" />
             </Box>
           </Box>
         );

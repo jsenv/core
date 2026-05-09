@@ -106,6 +106,7 @@ export {
   dragAfterThreshold,
 } from "./src/interaction/drag/drag_gesture.js";
 export { createDragToMoveGestureController } from "./src/interaction/drag/drag_to_move.js";
+export { startDragToReorder } from "./src/interaction/drag/drag_to_reorder.js";
 export { startDragToResizeGesture } from "./src/interaction/drag/drag_to_resize_gesture.js";
 export { getDropTargetInfo } from "./src/interaction/drag/drop_target_detection.js";
 
