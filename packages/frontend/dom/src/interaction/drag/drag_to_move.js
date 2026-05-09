@@ -344,6 +344,7 @@ const createDragClone = (element, pointerEvent) => {
   const rect = element.getBoundingClientRect();
   const elementClone = element.cloneNode(true);
   elementClone.setAttribute("navi-drag-clone", "");
+  elementClone.style.removeProperty("view-transition-name");
   // transform-origin set to pointer position within the element for natural scale expansion
   elementClone.style.setProperty(
     "--drag-origin",

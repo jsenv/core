@@ -159,7 +159,7 @@
         { id: 30, label: "Cranberry", bg: "#ffebee", color: "#b71c1c" },
       ];
 
-      const ReorderableList = ({ containerRef }) => {
+      const ReorderableList = ({ name, containerRef }) => {
         const [order, setOrder] = useState(INITIAL_ITEMS.map((i) => i.id));
 
         const startDrag = (event, id) => {
@@ -240,11 +240,13 @@
                       item.getBoundingClientRect(),
                     );
                   }
-                  setOrder((prev) => {
-                    const next = [...prev];
-                    next.splice(originalIndex, 1);
-                    next.splice(currentPlaceholder, 0, id);
-                    return next;
+                  document.startViewTransition(() => {
+                    setOrder((prev) => {
+                      const next = [...prev];
+                      next.splice(originalIndex, 1);
+                      next.splice(currentPlaceholder, 0, id);
+                      return next;
+                    });
                   });
                 }
               },
@@ -269,7 +271,7 @@
               startDrag(e, item.id);
             }}
             style={{
-              viewTransitionName: `item-${item.id}`,
+              viewTransitionName: `${name}-item-${item.id}`,
             }}
           >
             <div class="drag-handle" title="Drag to reorder">
@@ -300,7 +302,7 @@
               Drag the handle on each item to reorder.
             </p>
             <div class="list-container" ref={containerRef}>
-              <ReorderableList containerRef={containerRef} />
+              <ReorderableList name="normal" containerRef={containerRef} />
             </div>
           </div>
         );
@@ -315,7 +317,7 @@
               Same list inside a scrollable container.
             </p>
             <div class="list-container-scrollable" ref={containerRef}>
-              <ReorderableList containerRef={containerRef} />
+              <ReorderableList name="scrollable" containerRef={containerRef} />
             </div>
           </div>
         );
