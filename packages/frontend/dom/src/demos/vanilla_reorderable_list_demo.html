@@ -225,7 +225,11 @@
                   next.splice(originalIndex, 1);
                   const adjustedInsertAt =
                     originalIndex < insertAt ? insertAt - 1 : insertAt;
-                  next.splice(adjustedInsertAt, 0, draggedEl.dataset.id);
+                  next.splice(
+                    adjustedInsertAt,
+                    0,
+                    parseInt(draggedEl.dataset.id),
+                  );
                   return next;
                 });
               },
