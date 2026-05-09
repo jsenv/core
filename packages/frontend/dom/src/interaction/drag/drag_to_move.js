@@ -48,17 +48,23 @@ const css = /* css */ `
     z-index: 9999;
     width: var(--clone-width);
     height: var(--clone-height);
-    transform-origin: var(--drag-origin);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
+    opacity: 0.95;
+    transition: box-shadow 0.15s ease;
     pointer-events: none;
   }
 
   [navi-drag-clone] {
-    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
-    opacity: 0.95;
     transform: scale(1.15);
+    transform-origin: var(--drag-origin);
+    transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
   }
 
   @starting-style {
+    [navi-drag-clone-alive] {
+      box-shadow: none;
+    }
+
     [navi-drag-clone] {
       transform: scale(1);
     }
@@ -513,20 +519,20 @@ export const createDragToMoveGestureController = ({
       if (releaseElementIndex !== grabElementIndex) {
         const viewTransition = document.startViewTransition(() => {
           if (cloneOnDrag) {
-            // Snap the clone to where the real element currently sits so
-            // the browser captures it at the destination position (scale 1).
-            // The view transition then animates from the dragged position (old) to
-            // the destination (new), giving a natural scale-down + slide effect.
+            // Snap the wrapper to the destination so the browser captures the
+            // clone at scale 1 as the "new" state. The view transition then
+            // animates from the dragged (scaled) old state to this new state.
             const destRect = element.getBoundingClientRect();
-            // Removing the attribute drops the CSS scale(1.15) rule — the browser
-            // captures the clone at scale 1 as the new state.
-            // But removing it also drops the CSS position/size rules, so we
-            // re-apply them as inline styles immediately after.
-            elementToMove.removeAttribute("navi-drag-clone");
-            elementToMove.style.left = `${destRect.left}px`;
-            elementToMove.style.top = `${destRect.top}px`;
-            elementToMove.style.width = `${destRect.width}px`;
-            elementToMove.style.height = `${destRect.height}px`;
+            const cloneWrapper = elementToMove;
+            const clone = cloneWrapper.firstElementChild;
+            cloneWrapper.style.setProperty(
+              "--clone-left",
+              `${destRect.left}px`,
+            );
+            cloneWrapper.style.setProperty("--clone-top", `${destRect.top}px`);
+            // Removing the attribute drops the CSS scale(1.15) rule so the
+            // browser captures the inner clone at scale 1.
+            clone.removeAttribute("navi-drag-clone");
           }
           return applyDropEffect?.(grabElementIndex, releaseElementIndex);
         });
@@ -545,20 +551,26 @@ export const createDragToMoveGestureController = ({
 const createDragClone = (element, pointerEvent) => {
   const rect = element.getBoundingClientRect();
 
-  const elementClone = element.cloneNode(true);
-  elementClone.style.viewTransitionName = "navi-drag-clone";
-  elementClone.setAttribute("navi-drag-clone-alive", "");
-  elementClone.setAttribute("navi-drag-clone", "");
-  elementClone.style.setProperty("--clone-top", `${rect.top}px`);
-  elementClone.style.setProperty("--clone-left", `${rect.left}px`);
-  elementClone.style.setProperty("--clone-width", `${rect.width}px`);
-  elementClone.style.setProperty("--clone-height", `${rect.height}px`);
+  // Wrapper handles positioning via CSS vars
+  const wrapper = document.createElement("div");
+  wrapper.setAttribute("navi-drag-clone-alive", "");
+  wrapper.viewTransitionName = "navi-drag-clone-wrapper";
+  wrapper.style.setProperty("--clone-top", `${rect.top}px`);
+  wrapper.style.setProperty("--clone-left", `${rect.left}px`);
+  wrapper.style.setProperty("--clone-width", `${rect.width}px`);
+  wrapper.style.setProperty("--clone-height", `${rect.height}px`);
   // transform-origin set to pointer position within the element for natural scale expansion
-  elementClone.style.setProperty(
+  wrapper.style.setProperty(
     "--drag-origin",
     `${pointerEvent.clientX - rect.left}px ${pointerEvent.clientY - rect.top}px`,
   );
-  document.body.appendChild(elementClone);
 
-  return elementClone;
+  // Inner clone carries the visual styles (scale, shadow) and view-transition-name
+  const elementClone = element.cloneNode(true);
+  elementClone.setAttribute("navi-drag-clone", "");
+  elementClone.style.viewTransitionName = "navi-drag-clone";
+  wrapper.appendChild(elementClone);
+  document.body.appendChild(wrapper);
+
+  return wrapper;
 };
