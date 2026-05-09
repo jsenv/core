@@ -196,17 +196,51 @@ export const createDragToMoveGestureController = ({
         scrollContainer.style.removeProperty("--drop-target-width");
       };
 
-      const updateDropTarget = (beforeElement) => {
-        // beforeElement = null → insert at end (hint after last item)
-        // beforeElement = X    → insert before X (hint at top edge of X)
-        const allItems = getTargets().filter((el) => el !== element);
-        const anchorEl =
-          beforeElement !== null
-            ? beforeElement
-            : allItems[allItems.length - 1];
-        if (!anchorEl) {
+      dragGesture.addReleaseCallback(clearDropHint);
+
+      dragGesture.addDragCallback((gestureInfo) => {
+        const items = getTargets();
+        const dropTargetInfo = getDropTargetInfo(gestureInfo, items);
+        gestureInfo.dropTargetInfo = dropTargetInfo || null;
+        // When hovering over the grabbed element, treat it as no drop target.
+        if (!dropTargetInfo || dropTargetInfo.element === element) {
+          clearDropHint();
           return;
         }
+        // Convert {element, edge} to a beforeElement using the items array
+        // (not nextElementSibling, which breaks if non-item elements exist between items).
+        //   edge "start" → insert before the hovered element
+        //   edge "end"   → insert before the next item (null = append at end)
+        const edge = dropTargetInfo.elementSide.y;
+        const hoveredIndex = items.indexOf(dropTargetInfo.element);
+        const beforeElement =
+          edge === "start"
+            ? dropTargetInfo.element
+            : (items[hoveredIndex + 1] ?? null);
+        // Detect no-op: result would leave the grabbed element in the same position.
+        const elementIndex = items.indexOf(element);
+        const elementNextItem = items[elementIndex + 1] ?? null;
+        const isNoop =
+          beforeElement === element || beforeElement === elementNextItem;
+        if (isNoop) {
+          clearDropHint();
+          return;
+        }
+        // Early return if nothing changed.
+        const releaseElement = dropTargetInfo.element;
+        if (
+          beforeElement === currentBeforeElement &&
+          releaseElement === currentReleaseElement
+        ) {
+          return;
+        }
+        currentBeforeElement = beforeElement;
+        currentReleaseElement = releaseElement;
+        // Update drop hint position.
+        // beforeElement = null → insert at end (hint after last item)
+        // beforeElement = X    → insert before X (hint at top edge of X)
+        const anchorEl =
+          beforeElement || items.findLast((el) => el !== element);
         const anchorEdge = beforeElement !== null ? "top" : "bottom";
         const containerRect = scrollContainer.getBoundingClientRect();
         const anchorRect = anchorEl.getBoundingClientRect();
@@ -238,41 +272,6 @@ export const createDragToMoveGestureController = ({
           "--drop-target-width",
           `${anchorRect.width}px`,
         );
-      };
-
-      dragGesture.addReleaseCallback(clearDropHint);
-
-      dragGesture.addDragCallback((gestureInfo) => {
-        const items = getTargets();
-        const dropTargetInfo = getDropTargetInfo(gestureInfo, items);
-        gestureInfo.dropTargetInfo = dropTargetInfo || null;
-        // When hovering over the grabbed element, treat it as no drop target.
-        if (!dropTargetInfo || dropTargetInfo.element === element) {
-          clearDropHint();
-          return;
-        }
-        // Convert {element, edge} to a beforeElement using the items array
-        // (not nextElementSibling, which breaks if non-item elements exist between items).
-        //   edge "start" → insert before the hovered element
-        //   edge "end"   → insert before the next item (null = append at end)
-        const edge = dropTargetInfo.elementSide.y;
-        const hoveredIndex = items.indexOf(dropTargetInfo.element);
-        const beforeElement =
-          edge === "start"
-            ? dropTargetInfo.element
-            : (items[hoveredIndex + 1] ?? null);
-        // Detect no-op: result would leave the grabbed element in the same position.
-        const elementIndex = items.indexOf(element);
-        const elementNextItem = items[elementIndex + 1] ?? null;
-        const isNoop =
-          beforeElement === element || beforeElement === elementNextItem;
-        if (isNoop) {
-          clearDropHint();
-          return;
-        }
-        currentBeforeElement = beforeElement;
-        currentReleaseElement = dropTargetInfo.element;
-        updateDropTarget(beforeElement);
       });
 
       dragGesture.addReleaseCallback((gestureInfo) => {
