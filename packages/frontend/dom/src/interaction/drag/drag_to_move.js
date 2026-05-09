@@ -34,14 +34,14 @@ export const createDragToMoveGestureController = ({
   ) => {
     if (cloneOnDrag) {
       const { grabEvent } = dragGesture.gestureInfo;
-      const ghostData = createDragGhost(element, {
+      const clone = createDragClone(element, {
         clientX: grabEvent.clientX,
         clientY: grabEvent.clientY,
       });
-      elementToMove = ghostData.ghostWrapper;
-      dragGesture.gestureInfo.elementImpacted = ghostData.ghostWrapper;
+      elementToMove = clone;
+      dragGesture.gestureInfo.elementImpacted = clone;
       dragGesture.addReleaseCallback(() => {
-        ghostData.remove();
+        clone.remove();
       });
     }
     const direction = dragGesture.gestureInfo.direction;
@@ -313,27 +313,55 @@ export const createDragToMoveGestureController = ({
   return dragGestureController;
 };
 
-const createDragGhost = (element, pointerEvent) => {
+const css = /* css */ `
+  .navi_drag_clone_wrapper {
+    position: absolute;
+    top: var(--clone-top);
+    left: var(--clone-left);
+    z-index: 9999;
+    width: var(--clone-width);
+    height: var(--clone-height);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    pointer-events: none;
+  }
+
+  [navi-drag-clone] {
+    transform-origin: var(--drag-origin);
+    pointer-events: none;
+  }
+
+  @starting-style {
+    [navi-drag-clone] {
+      transform: scale(1);
+    }
+  }
+`;
+const createDragClone = (element, pointerEvent) => {
+  import.meta.css = css;
+
   const rect = element.getBoundingClientRect();
-
-  const ghost = element.cloneNode(true);
-  ghost.dataset.dragging = "";
-  ghost.style.pointerEvents = "none";
+  const elementClone = element.cloneNode(true);
+  elementClone.setAttribute("navi-drag-clone", "");
   // transform-origin set to pointer position within the element for natural scale expansion
-  const originX = pointerEvent.clientX - rect.left;
-  const originY = pointerEvent.clientY - rect.top;
-  ghost.style.transformOrigin = `${originX}px ${originY}px`;
+  elementClone.style.setProperty(
+    "--drag-origin",
+    `${pointerEvent.clientX - rect.left}px ${pointerEvent.clientY - rect.top}px`,
+  );
 
-  const ghostWrapper = document.createElement("div");
-  ghostWrapper.style.cssText = `position: absolute; pointer-events: none; z-index: 9999; top: ${rect.top + window.scrollY}px; left: ${rect.left + window.scrollX}px; width: ${rect.width}px;`;
-  ghostWrapper.appendChild(ghost);
-  document.body.appendChild(ghostWrapper);
+  const cloneWrapper = document.createElement("div");
+  cloneWrapper.className = "navi_drag_clone_wrapper";
+  cloneWrapper.style.setProperty(
+    "--clone-top",
+    `${rect.top + window.scrollY}px`,
+  );
+  cloneWrapper.style.setProperty(
+    "--clone-left",
+    `${rect.left + window.scrollX}px`,
+  );
+  cloneWrapper.style.setProperty("--clone-width", `${rect.width}px`);
+  cloneWrapper.style.setProperty("--clone-height", `${rect.height}px`);
+  cloneWrapper.appendChild(elementClone);
+  document.body.appendChild(cloneWrapper);
 
-  return {
-    ghost,
-    ghostWrapper,
-    remove: () => {
-      ghostWrapper.remove();
-    },
-  };
+  return cloneWrapper;
 };

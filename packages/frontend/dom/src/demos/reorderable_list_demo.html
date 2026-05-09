@@ -47,26 +47,16 @@
         border: 1px solid #ddd;
         border-radius: 6px;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-        transition: transform 0.2s ease;
-        user-select: none;
-      }
-
-      .list-item[data-dragging] {
-        z-index: 100;
-        box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
-        opacity: 0.95;
-        transform: scale(1.15);
         transition:
           transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1),
           box-shadow 0.15s ease;
-        cursor: grabbing;
+        user-select: none;
       }
 
-      @starting-style {
-        .list-item[data-dragging] {
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-          transform: scale(1);
-        }
+      .list-item[navi-drag-clone] {
+        box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
+        opacity: 0.95;
+        transform: scale(1.15);
       }
 
       .drop-hint {
