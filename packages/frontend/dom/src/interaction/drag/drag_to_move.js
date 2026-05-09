@@ -71,29 +71,67 @@ const css = /* css */ `
   }
 `;
 
+/**
+ * Creates a gesture controller that moves elements via drag.
+ *
+ * Wraps `createDragGestureController` and adds:
+ * - Element translation via CSS transform (or CSS vars when `cloneOnDrag` is true)
+ * - Auto-scroll while dragging near scroll-container edges
+ * - Optional drop-target detection with a visual drop hint
+ * - Optional drag clone: a scaled-up copy of the element is shown while
+ *   dragging, and on release a View Transition animates it to the destination
+ *   (scale down + slide) before the clone is removed from the DOM.
+ *
+ * @param {object} [options]
+ * @param {boolean} [options.cloneOnDrag=false]
+ *   When true, a clone of the grabbed element is created and moved instead of
+ *   the element itself. The original stays in place (hidden). On release the
+ *   clone animates to the drop target via the View Transitions API, then is
+ *   removed. Requires `applyDropEffect` to actually reorder the DOM/state.
+ * @param {boolean} [options.dropHint=false]
+ *   When true, renders a visual line indicating where the item will land.
+ * @param {string|null} [options.dropTargetSelector=null]
+ *   CSS selector for the draggable items inside the scroll container. Required
+ *   for drop-target detection and index-based callbacks.
+ * @param {function} [options.onRelease]
+ *   Called on every release with the gesture info object.
+ * @param {function} [options.applyDropEffect]
+ *   Called only when the item was actually moved (fromIndex !== toIndex).
+ *   Signature: `applyDropEffect(fromIndex, toIndex)`.
+ *   When `cloneOnDrag` is true this call happens inside `startViewTransition`
+ *   so the DOM mutation is captured as the transition's "new" state.
+ * @param {boolean} [options.stickyFrontiers=true]
+ *   Shrinks the auto-scroll area at sticky boundaries.
+ * @param {number} [options.autoScrollAreaPadding=0]
+ *   Extra padding (px) subtracted from each edge of the auto-scroll area.
+ * @param {string|object|function} [options.areaConstraint="scroll"]
+ *   Constrains where the element can be dragged.
+ *   `"scroll"` | `"scrollport"` | `"none"` | `{left,top,right,bottom}` | function.
+ * @param {Element} [options.obstaclesContainer]
+ *   Container to look for obstacle elements in. Defaults to the scroll container.
+ * @param {string} [options.obstacleAttributeName="data-drag-obstacle"]
+ *   Attribute that marks obstacle elements.
+ * @param {boolean} [options.showConstraintFeedbackLine=false]
+ *   Shows a visual line when the pointer deviates from the element due to
+ *   constraints.
+ * @param {boolean} [options.showDebugMarkers=false]
+ *   Renders debug markers for constraint regions.
+ * @param {boolean} [options.resetPositionAfterRelease=false]
+ *   When true, the element returns to its original position on release instead
+ *   of committing the translated position.
+ * @returns {object} Drag gesture controller with an augmented `grab()` method.
+ */
 export const createDragToMoveGestureController = ({
   cloneOnDrag = false,
   dropHint = false,
   dropTargetSelector = null,
   onRelease,
-  // Called only when the item was actually moved (grabIndex !== releaseIndex).
-  // Signature: applyDropEffect(fromIndex, toIndex)
-  // When cloneOnDrag is true the DOM mutation is automatically wrapped in a
-  // view transition so the clone animates into the item's new position.
   applyDropEffect,
   stickyFrontiers = true,
-  // Padding to reduce the area used to autoscroll by this amount (applied after sticky frontiers)
-  // This creates an invisible space around the area where elements cannot be dragged
   autoScrollAreaPadding = 0,
-  // constraints,
-  areaConstraint = "scroll", // "scroll" | "scrollport" | "none" | {left,top,right,bottom} | function
+  areaConstraint = "scroll",
   obstaclesContainer,
   obstacleAttributeName = "data-drag-obstacle",
-  // Visual feedback line connecting mouse cursor to the moving grab point when constraints prevent following
-  // This provides intuitive feedback during drag operations when the element cannot reach the mouse
-  // position due to obstacles, boundaries, or other constraints. The line originates from where the mouse
-  // initially grabbed the element, but moves with the element to show the current anchor position.
-  // It becomes visible when there's a significant distance between mouse and grab point.
   showConstraintFeedbackLine = false,
   showDebugMarkers = false,
   resetPositionAfterRelease = false,
@@ -239,8 +277,11 @@ export const createDragToMoveGestureController = ({
     }
 
     const direction = dragGesture.gestureInfo.direction;
-    // const dragGestureName = dragGesture.gestureInfo.name;
+    // elementImpacted is either the drag clone wrapper (cloneOnDrag) or the
+    // original element. The drag system moves this element.
     const elementImpacted = elementToMove || element;
+    // Capture any pre-existing translate so we can accumulate on top of it
+    // rather than resetting it to zero on the first drag event.
     const transformAtGrab =
       dragStyleController.getUnderlyingValue(elementImpacted, "transform") ||
       {};
@@ -248,11 +289,14 @@ export const createDragToMoveGestureController = ({
     const translateYAtGrab = transformAtGrab.translateY;
     dragGesture.addReleaseCallback(() => {
       if (cloneOnDrag) {
+        // Clone cleanup is handled by the view-transition release callback.
         return;
       }
       if (resetPositionAfterRelease) {
+        // Discard the translate — element snaps back.
         dragStyleController.clear(elementImpacted);
       } else {
+        // Bake the translate into inline styles so the element stays put.
         dragStyleController.commit(elementImpacted);
       }
     });
@@ -271,8 +315,8 @@ export const createDragToMoveGestureController = ({
 
     let scrollArea;
     {
-      // computed at start so that scrollWidth/scrollHeight are fixed
-      // even if the dragging side effects increases them afterwards
+      // Snapshot at grab time so that DOM mutations during dragging
+      // (e.g. items shifting) don't change the scrollable boundary mid-drag.
       scrollArea = {
         left: 0,
         top: 0,
@@ -284,8 +328,8 @@ export const createDragToMoveGestureController = ({
     let scrollport;
     let autoScrollArea;
     {
-      // for visible are we also want to snapshot the widht/height
-      // and we'll add scrollContainer container scrolls during drag (getScrollport does that)
+      // scrollBox is the fixed bounding rect of the scroll container viewport.
+      // scrollport is recomputed before each drag event to account for scrolling.
       const scrollBox = getScrollBox(scrollContainer);
       const updateScrollportAndAutoScrollArea = () => {
         scrollport = getScrollport(scrollBox, scrollContainer);
@@ -440,6 +484,9 @@ export const createDragToMoveGestureController = ({
           scrollableLeft,
           scrollableTop,
         );
+        // Build the transform to apply, preserving any transforms that were
+        // already on the element before the grab (e.g. rotate from another
+        // controller), and accumulating from the pre-grab translate baseline.
         const transform = { ...transformAtGrab };
         if (direction.x) {
           const leftTarget = positionedLeft;
@@ -449,12 +496,6 @@ export const createDragToMoveGestureController = ({
             ? translateXAtGrab + leftDelta
             : leftDelta;
           transform.translateX = translateX;
-          // console.log({
-          //   leftAtGrab,
-          //   scrollableLeft,
-          //   left,
-          //   leftTarget,
-          // });
         }
         if (direction.y) {
           const topTarget = positionedTop;
@@ -520,18 +561,32 @@ export const createDragToMoveGestureController = ({
     dragGesture.addReleaseCallback(async (gestureInfo) => {
       const { grabElementIndex, releaseElementIndex } = gestureInfo;
       if (releaseElementIndex !== grabElementIndex) {
+        // The View Transitions API takes two snapshots:
+        //   old  — the DOM as it is right now (clone scaled-up at drag position)
+        //   new  — the DOM after the callback runs
+        // Between these two states the browser cross-fades and slides each
+        // element that has a matching view-transition-name.
+        //
+        // Strategy:
+        //   1. Inside the callback, snap the clone wrapper's CSS vars to the
+        //      drop-target element's current rect.  This positions the wrapper
+        //      exactly where the dropped item will appear, at scale 1 (because
+        //      we also strip the `navi-drag-clone` attribute that applied the
+        //      CSS scale(1.15) rule).
+        //   2. Also call applyDropEffect so the real DOM is mutated in the same
+        //      "new" snapshot — items reorder while the clone slides into place.
+        //   3. After the transition finishes we remove the source placeholder
+        //      and the clone wrapper.
         const viewTransition = document.startViewTransition(() => {
           if (cloneOnDrag) {
-            // Snap the wrapper to the drop target position so the browser
-            // captures the clone at scale 1 at exactly the right place.
-            // The view transition then animates from the dragged (scaled) old
-            // state to this unscaled destination state.
-            const destElement = gestureInfo.releaseElement || element;
-            const destRect = destElement.getBoundingClientRect();
             const cloneWrapper = elementToMove;
             const clone = cloneWrapper.firstElementChild;
-            // Clear any transform animation left from dragging so the wrapper
-            // sits purely at its CSS-var position with no residual translate.
+            // Drop target rect must be read before applyDropEffect reorders the
+            // DOM, otherwise the element may have moved or been detached.
+            const destElement = gestureInfo.releaseElement || element;
+            const destRect = destElement.getBoundingClientRect();
+            // Remove any residual translate left by the drag style controller
+            // so the wrapper sits purely at its CSS-var position.
             dragStyleController.clear(cloneWrapper);
             cloneWrapper.style.setProperty(
               "--clone-left",
@@ -546,14 +601,15 @@ export const createDragToMoveGestureController = ({
               "--clone-height",
               `${destRect.height}px`,
             );
-            // Removing the attribute drops the CSS scale(1.15) rule so the
-            // browser captures the inner clone at scale 1.
+            // Stripping this attribute removes the CSS scale(1.15) rule, so
+            // the browser captures the clone at scale 1 as the "new" state.
             clone.removeAttribute("navi-drag-clone");
           }
           return applyDropEffect?.(grabElementIndex, releaseElementIndex);
         });
         await viewTransition.finished;
       }
+      // Unhide the original element and discard the clone wrapper.
       element.removeAttribute("navi-drag-clone-source");
       elementToMove.remove();
     });
@@ -564,10 +620,23 @@ export const createDragToMoveGestureController = ({
   return dragGestureController;
 };
 
+// Creates the two-layer clone structure used when cloneOnDrag is true.
+//
+// Layer 1 — wrapper (navi-drag-clone-wrapper):
+//   Positioned absolutely via --clone-top/--clone-left CSS vars.
+//   Carries the box-shadow and size. Updated every drag frame.
+//   Has a view-transition-name so the View Transitions API can animate it.
+//
+// Layer 2 — inner clone (navi-drag-clone):
+//   A deep clone of the grabbed element.
+//   Applies transform: scale(1.15) via the CSS rule for [navi-drag-clone],
+//   giving the "lifted" feel. The transform-origin is set to the grab point
+//   so the element expands naturally from where the user clicked.
+//   On release, the `navi-drag-clone` attribute is removed inside
+//   startViewTransition to drop the scale back to 1 as the "new" state.
 const createDragClone = (element, pointerEvent) => {
   const rect = element.getBoundingClientRect();
 
-  // Wrapper handles positioning via CSS vars
   const wrapper = document.createElement("div");
   wrapper.setAttribute("navi-drag-clone-wrapper", "");
   wrapper.viewTransitionName = "navi-drag-clone-wrapper";
@@ -575,13 +644,13 @@ const createDragClone = (element, pointerEvent) => {
   wrapper.style.setProperty("--clone-left", `${rect.left}px`);
   wrapper.style.setProperty("--clone-width", `${rect.width}px`);
   wrapper.style.setProperty("--clone-height", `${rect.height}px`);
-  // transform-origin set to pointer position within the element for natural scale expansion
+  // Grab point within the element — used as transform-origin so the
+  // scale(1.15) expands from where the user clicked, not the element center.
   wrapper.style.setProperty(
     "--drag-origin",
     `${pointerEvent.clientX - rect.left}px ${pointerEvent.clientY - rect.top}px`,
   );
 
-  // Inner clone carries the visual styles (scale, shadow) and view-transition-name
   const elementClone = element.cloneNode(true);
   elementClone.setAttribute("navi-drag-clone", "");
   elementClone.style.viewTransitionName = "navi-drag-clone";
