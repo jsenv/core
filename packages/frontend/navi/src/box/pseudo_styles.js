@@ -480,6 +480,45 @@ navi_pressed: {
   });
 }
 
+navi_drag: {
+  definePseudoClass(":-navi-drag-grabbed", {
+    attribute: "navi-drag-grabbed",
+    setup: (el, callback) => {
+      const onGrab = () => {
+        callback();
+        const onRelease = () => {
+          el.removeEventListener("navi_drag_release", onRelease);
+          callback();
+        };
+        el.addEventListener("navi_drag_release", onRelease);
+      };
+      el.addEventListener("navi_drag_grab", onGrab);
+      return () => {
+        el.removeEventListener("navi_drag_grab", onGrab);
+      };
+    },
+    test: (el) => el.hasAttribute("data-drag-grabbed"),
+  });
+  definePseudoClass(":-navi-dragging", {
+    attribute: "navi-dragging",
+    setup: (el, callback) => {
+      const onStart = () => {
+        callback();
+        const onRelease = () => {
+          el.removeEventListener("navi_drag_release", onRelease);
+          callback();
+        };
+        el.addEventListener("navi_drag_release", onRelease);
+      };
+      el.addEventListener("navi_drag_start", onStart);
+      return () => {
+        el.removeEventListener("navi_drag_start", onStart);
+      };
+    },
+    test: (el) => el.hasAttribute("data-dragging"),
+  });
+}
+
 const EMPTY_STATE = {};
 export const initPseudoStyles = (
   element,
