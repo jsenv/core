@@ -101,6 +101,10 @@
         font-size: 12px;
         border-radius: 12px;
       }
+
+      [data-out-of-view] {
+        view-transition-name: none !important;
+      }
     </style>
   </head>
   <body>
@@ -108,7 +112,7 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useRef, useState } from "preact/hooks";
+      import { useRef, useState, useEffect } from "preact/hooks";
       import {
         createDragToMoveGestureController,
         dragAfterThreshold,
@@ -146,6 +150,29 @@
         { id: 29, label: "Coconut", bg: "#fafafa", color: "#424242" },
         { id: 30, label: "Cranberry", bg: "#ffebee", color: "#b71c1c" },
       ];
+
+      const useOutOfView = (ref) => {
+        useEffect(() => {
+          const el = ref.current;
+          if (!el) {
+            return undefined;
+          }
+          const observer = new IntersectionObserver(
+            ([entry]) => {
+              if (entry.isIntersecting) {
+                el.removeAttribute("data-out-of-view");
+              } else {
+                el.setAttribute("data-out-of-view", "");
+              }
+            },
+            { threshold: 0 },
+          );
+          observer.observe(el);
+          return () => {
+            observer.disconnect();
+          };
+        }, []);
+      };
 
       const ReorderableList = ({ name, containerRef }) => {
         const [order, setOrder] = useState(INITIAL_ITEMS.map((i) => i.id));
@@ -191,13 +218,27 @@
         );
 
         return visibleItems.map((item, i) => (
-          <div
+          <ListItem
             key={item.id}
-            data-id={item.id}
-            class="list-item"
+            item={item}
+            index={i}
+            name={name}
             onPointerDown={(e) => {
               startDrag(e, item.id);
             }}
+          />
+        ));
+      };
+
+      const ListItem = ({ item, index, name, onPointerDown }) => {
+        const ref = useRef(null);
+        useOutOfView(ref);
+        return (
+          <div
+            ref={ref}
+            data-id={item.id}
+            class="list-item"
+            onPointerDown={onPointerDown}
             style={{
               viewTransitionName: `${name}-item-${item.id}`,
             }}
@@ -215,10 +256,10 @@
               class="item-badge"
               style={{ background: item.bg, color: item.color }}
             >
-              #{i + 1}
+              #{index + 1}
             </span>
           </div>
-        ));
+        );
       };
 
       const NormalListDemo = () => {
