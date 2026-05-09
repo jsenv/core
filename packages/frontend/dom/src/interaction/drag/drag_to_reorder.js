@@ -150,10 +150,6 @@ export const startDragToReorder = (
     const dropHintEl = document.createElement("div");
     dropHintEl.className = "navi_drop_hint";
     scrollContainer.appendChild(dropHintEl);
-    dragGesture.addReleaseCallback(() => {
-      dropHintEl.remove();
-      restoreCSSVars();
-    });
 
     // currentBeforeElement: element before which the grabbed item will be inserted (null = end)
     // currentReleaseElement: the actual hovered drop target — used to snap the clone on release
@@ -173,8 +169,6 @@ export const startDragToReorder = (
       currentReleaseElement = undefined;
       clearDropHintDOM();
     };
-
-    dragGesture.addReleaseCallback(clearDropHintDOM);
 
     dragGesture.addDragCallback((gestureInfo) => {
       const items = getTargets();
@@ -246,6 +240,10 @@ export const startDragToReorder = (
     });
 
     dragGesture.addReleaseCallback(async () => {
+      clearDropHintDOM();
+      dropHintEl.remove();
+      restoreCSSVars();
+
       if (currentBeforeElement !== undefined) {
         const clone = cloneWrapper.firstElementChild;
         const viewTransition = document.startViewTransition(() => {
