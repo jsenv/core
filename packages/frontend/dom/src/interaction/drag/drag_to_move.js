@@ -141,9 +141,15 @@ export const createDragToMoveGestureController = ({
         }
         const scrollLeft = scrollContainer.scrollLeft;
         const scrollTop = scrollContainer.scrollTop;
-        const offsetTop = anchorRect.top - containerRect.top + scrollTop;
-        const offsetBottom = anchorRect.bottom - containerRect.top + scrollTop;
-        const offsetLeft = anchorRect.left - containerRect.left + scrollLeft;
+        const isPositioned =
+          getComputedStyle(scrollContainer).position !== "static";
+        const scrollOffsetLeft = isPositioned ? scrollLeft : 0;
+        const scrollOffsetTop = isPositioned ? scrollTop : 0;
+        const offsetTop = anchorRect.top - containerRect.top + scrollOffsetTop;
+        const offsetBottom =
+          anchorRect.bottom - containerRect.top + scrollOffsetTop;
+        const offsetLeft =
+          anchorRect.left - containerRect.left + scrollOffsetLeft;
         scrollContainer.setAttribute("data-drop-target", targetIndex);
         scrollContainer.setAttribute("data-drop-edge", anchorEdge);
         scrollContainer.style.setProperty(
@@ -186,16 +192,16 @@ export const createDragToMoveGestureController = ({
             : dropTargetInfo.index;
         if (newIndex !== currentPlaceholder) {
           currentPlaceholder = newIndex;
-          if (currentPlaceholder === originalIndex) {
-            scrollContainer.removeAttribute("data-drop-target");
-            scrollContainer.removeAttribute("data-drop-edge");
-            scrollContainer.style.removeProperty("--drop-target-top");
-            scrollContainer.style.removeProperty("--drop-target-bottom");
-            scrollContainer.style.removeProperty("--drop-target-left");
-            scrollContainer.style.removeProperty("--drop-target-width");
-          } else {
-            updateDropTarget(currentPlaceholder);
-          }
+        }
+        if (currentPlaceholder === originalIndex) {
+          scrollContainer.removeAttribute("data-drop-target");
+          scrollContainer.removeAttribute("data-drop-edge");
+          scrollContainer.style.removeProperty("--drop-target-top");
+          scrollContainer.style.removeProperty("--drop-target-bottom");
+          scrollContainer.style.removeProperty("--drop-target-left");
+          scrollContainer.style.removeProperty("--drop-target-width");
+        } else {
+          updateDropTarget(currentPlaceholder);
         }
       });
 
