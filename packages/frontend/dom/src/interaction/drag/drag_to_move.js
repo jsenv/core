@@ -189,6 +189,10 @@ export const createDragToMoveGestureController = ({
       const clearDropHint = () => {
         currentBeforeElement = undefined;
         currentReleaseElement = undefined;
+        clearDropHintDOM();
+      };
+
+      const clearDropHintDOM = () => {
         scrollContainer.removeAttribute("data-drop-edge");
         scrollContainer.style.removeProperty("--drop-target-top");
         scrollContainer.style.removeProperty("--drop-target-bottom");
@@ -196,7 +200,7 @@ export const createDragToMoveGestureController = ({
         scrollContainer.style.removeProperty("--drop-target-width");
       };
 
-      dragGesture.addReleaseCallback(clearDropHint);
+      dragGesture.addReleaseCallback(clearDropHintDOM);
 
       dragGesture.addDragCallback((gestureInfo) => {
         const items = getTargets();
