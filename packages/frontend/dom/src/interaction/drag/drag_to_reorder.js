@@ -198,40 +198,9 @@ export const startDragToReorder = (
           items.push(el);
         }
       }
-      let dropTargetInfo = getDropTargetInfo(gestureInfo, items);
-      // When the clone is above all items or below all items and doesn't intersect
-      // any of them, fall back to the first or last item so there is always a valid
-      // drop target at the edges of the list.
-      if (!dropTargetInfo) {
-        const cloneRect = cloneWrapper.getBoundingClientRect();
-        const firstItem = items[0];
-        const lastItem = items[items.length - 1];
-        if (
-          firstItem &&
-          cloneRect.bottom < firstItem.getBoundingClientRect().top
-        ) {
-          // Clone is above all items → treat as hovering the first item from the top.
-          dropTargetInfo = {
-            element: firstItem,
-            elementSide: { x: "start", y: "start" },
-            index: 0,
-            intersectingIndex: 0,
-            intersecting: [firstItem],
-          };
-        } else if (
-          lastItem &&
-          cloneRect.top > lastItem.getBoundingClientRect().bottom
-        ) {
-          // Clone is below all items → treat as hovering the last item from the bottom.
-          dropTargetInfo = {
-            element: lastItem,
-            elementSide: { x: "start", y: "end" },
-            index: items.length - 1,
-            intersectingIndex: 0,
-            intersecting: [lastItem],
-          };
-        }
-      }
+      const dropTargetInfo = getDropTargetInfo(gestureInfo, items, {
+        fallbackToEdge: true,
+      });
       gestureInfo.dropTargetInfo = dropTargetInfo || null;
       if (!dropTargetInfo) {
         clearDropHint();
