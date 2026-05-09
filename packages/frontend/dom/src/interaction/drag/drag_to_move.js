@@ -55,7 +55,7 @@ const css = /* css */ `
   }
 
   [navi-drag-clone] {
-    transform: scale(1.15);
+    transform: scale(var(--drag-clone-scale, 1.15));
     transform-origin: var(--drag-origin);
     transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
   }
@@ -163,6 +163,7 @@ export const createDragToMoveGestureController = ({
         "--drop-hint-border-radius",
         "--drop-hint-margin-x",
         "--drop-hint-margin-y",
+        "--drag-clone-scale",
       ];
       const restoreCSSVars = moveCSSVars(
         dropHintVars,
