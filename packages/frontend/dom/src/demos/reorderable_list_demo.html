@@ -177,23 +177,23 @@
             dropHint.className = "drop-hint";
             container.appendChild(dropHint);
 
+            dropHint.style.display = "none";
             const updateDropHint = (targetIndex) => {
               const items = Array.from(
                 container.querySelectorAll(".list-item"),
               );
               const currentContainerRect = container.getBoundingClientRect();
               let hintY;
-              if (targetIndex >= items.length) {
-                const lastRect =
-                  items[items.length - 1].getBoundingClientRect();
+              if (targetIndex === 0) {
+                const firstRect = items[0].getBoundingClientRect();
                 hintY =
-                  lastRect.bottom -
+                  firstRect.top -
                   currentContainerRect.top +
                   container.scrollTop;
               } else {
-                const targetRect = items[targetIndex].getBoundingClientRect();
+                const prevRect = items[targetIndex - 1].getBoundingClientRect();
                 hintY =
-                  targetRect.top -
+                  prevRect.bottom -
                   currentContainerRect.top +
                   container.scrollTop;
               }
@@ -222,7 +222,11 @@
 
                 if (newIndex !== currentPlaceholder) {
                   currentPlaceholder = newIndex;
-                  updateDropHint(currentPlaceholder);
+                  if (currentPlaceholder === originalIndex) {
+                    dropHint.style.display = "none";
+                  } else {
+                    updateDropHint(currentPlaceholder);
+                  }
                 }
               },
               onRelease: () => {
