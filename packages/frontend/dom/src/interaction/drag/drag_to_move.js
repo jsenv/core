@@ -222,20 +222,6 @@ export const createDragToMoveGestureController = ({
       });
     }
 
-    if (cloneOnDrag) {
-      const { grabEvent } = dragGesture.gestureInfo;
-      const clone = createDragClone(element, {
-        clientX: grabEvent.clientX,
-        clientY: grabEvent.clientY,
-      });
-      elementToMove = clone;
-      dragGesture.gestureInfo.elementImpacted = clone;
-      element.setAttribute("navi-drag-clone-source", "");
-      dragGesture.addReleaseCallback(() => {
-        element.removeAttribute("navi-drag-clone-source");
-        clone.remove();
-      });
-    }
     const direction = dragGesture.gestureInfo.direction;
     // const dragGestureName = dragGesture.gestureInfo.name;
     const elementImpacted = elementToMove || element;
@@ -477,9 +463,16 @@ export const createDragToMoveGestureController = ({
     element,
     referenceElement,
     elementToMove,
+    event,
     ...rest
   } = {}) => {
     const scrollContainer = getScrollContainer(referenceElement || element);
+    if (cloneOnDrag) {
+      elementToMove = createDragClone(element, {
+        clientX: event ? event.clientX : 0,
+        clientY: event ? event.clientY : 0,
+      });
+    }
     const [
       elementScrollableLeft,
       elementScrollableTop,
@@ -490,8 +483,17 @@ export const createDragToMoveGestureController = ({
       scrollContainer,
       layoutScrollableLeft: elementScrollableLeft,
       layoutScrollableTop: elementScrollableTop,
+      event,
       ...rest,
     });
+    if (cloneOnDrag) {
+      dragGesture.gestureInfo.elementImpacted = elementToMove;
+      element.setAttribute("navi-drag-clone-source", "");
+      dragGesture.addReleaseCallback(() => {
+        element.removeAttribute("navi-drag-clone-source");
+        elementToMove.remove();
+      });
+    }
     initGrabToMoveElement(dragGesture, {
       element,
       referenceElement,
