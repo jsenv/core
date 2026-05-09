@@ -166,10 +166,6 @@ export const startDragToReorder = (
     dragGesture.gestureInfo.elementImpacted = cloneWrapper;
 
     const scrollContainer = dragGesture.gestureInfo.scrollContainer;
-    const getTargets = () => {
-      return Array.from(scrollContainer.querySelectorAll(itemSelector));
-    };
-
     const dropHintEl = document.createElement("div");
     dropHintEl.className = "navi_drop_hint";
     scrollContainer.appendChild(dropHintEl);
@@ -194,11 +190,50 @@ export const startDragToReorder = (
     };
 
     dragGesture.addDragCallback((gestureInfo) => {
-      const items = getTargets();
-      const dropTargetInfo = getDropTargetInfo(gestureInfo, items);
+      const allItems = [];
+      const items = [];
+      for (const el of scrollContainer.querySelectorAll(itemSelector)) {
+        allItems.push(el);
+        if (el !== draggedElement) {
+          items.push(el);
+        }
+      }
+      let dropTargetInfo = getDropTargetInfo(gestureInfo, items);
+      // When the clone is above all items or below all items and doesn't intersect
+      // any of them, fall back to the first or last item so there is always a valid
+      // drop target at the edges of the list.
+      if (!dropTargetInfo) {
+        const cloneRect = cloneWrapper.getBoundingClientRect();
+        const firstItem = items[0];
+        const lastItem = items[items.length - 1];
+        if (
+          firstItem &&
+          cloneRect.bottom < firstItem.getBoundingClientRect().top
+        ) {
+          // Clone is above all items → treat as hovering the first item from the top.
+          dropTargetInfo = {
+            element: firstItem,
+            elementSide: { x: "start", y: "start" },
+            index: 0,
+            intersectingIndex: 0,
+            intersecting: [firstItem],
+          };
+        } else if (
+          lastItem &&
+          cloneRect.top > lastItem.getBoundingClientRect().bottom
+        ) {
+          // Clone is below all items → treat as hovering the last item from the bottom.
+          dropTargetInfo = {
+            element: lastItem,
+            elementSide: { x: "start", y: "end" },
+            index: items.length - 1,
+            intersectingIndex: 0,
+            intersecting: [lastItem],
+          };
+        }
+      }
       gestureInfo.dropTargetInfo = dropTargetInfo || null;
-      // When hovering over the grabbed element, treat it as no drop target.
-      if (!dropTargetInfo || dropTargetInfo.element === draggedElement) {
+      if (!dropTargetInfo) {
         clearDropHint();
         return;
       }
@@ -213,10 +248,9 @@ export const startDragToReorder = (
           ? dropTargetInfo.element
           : (items[hoveredIndex + 1] ?? null);
       // Detect no-op: result would leave the grabbed element in the same position.
-      const elementIndex = items.indexOf(draggedElement);
-      const elementNextItem = items[elementIndex + 1] ?? null;
-      const isNoop =
-        beforeElement === draggedElement || beforeElement === elementNextItem;
+      const elementIndex = allItems.indexOf(draggedElement);
+      const elementNextItem = allItems[elementIndex + 1] ?? null;
+      const isNoop = beforeElement === elementNextItem;
       if (isNoop) {
         clearDropHint();
         return;
@@ -234,8 +268,7 @@ export const startDragToReorder = (
       // Update drop hint CSS vars.
       // beforeElement = null → insert at end (hint after last item)
       // beforeElement = X    → insert before X (hint at top edge of X)
-      const anchorEl =
-        beforeElement || items.findLast((el) => el !== draggedElement);
+      const anchorEl = beforeElement || items[items.length - 1];
       const anchorEdge = beforeElement !== null ? "top" : "bottom";
       const containerRect = scrollContainer.getBoundingClientRect();
       const anchorRect = anchorEl.getBoundingClientRect();
