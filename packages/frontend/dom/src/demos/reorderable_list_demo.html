@@ -102,7 +102,7 @@
         border-radius: 12px;
       }
 
-      [data-out-of-view] {
+      [data-partially-hidden] {
         view-transition-name: none !important;
       }
     </style>
@@ -151,7 +151,7 @@
         { id: 30, label: "Cranberry", bg: "#ffebee", color: "#b71c1c" },
       ];
 
-      const useOutOfView = (ref) => {
+      const usePartiallyHidden = (ref) => {
         useEffect(() => {
           const el = ref.current;
           if (!el) {
@@ -159,13 +159,13 @@
           }
           const observer = new IntersectionObserver(
             ([entry]) => {
-              if (entry.isIntersecting) {
-                el.removeAttribute("data-out-of-view");
+              if (entry.intersectionRatio >= 0.99) {
+                el.removeAttribute("data-partially-hidden");
               } else {
-                el.setAttribute("data-out-of-view", "");
+                el.setAttribute("data-partially-hidden", "");
               }
             },
-            { threshold: 0 },
+            { threshold: 0.99 },
           );
           observer.observe(el);
           return () => {
@@ -232,7 +232,7 @@
 
       const ListItem = ({ item, index, name, onPointerDown }) => {
         const ref = useRef(null);
-        useOutOfView(ref);
+        usePartiallyHidden(ref);
         return (
           <div
             ref={ref}
