@@ -59,8 +59,11 @@ export const useElementRefEffect = (externalRef, syncElement, deps) => {
   }
 
   if (!refCallbackRef.current) {
-    refCallbackRef.current = (el) => {
+    const refCallback = (el) => {
       elRef.current = el;
+      // Keep .current in sync immediately so useEffect callbacks that read
+      // ref.current (e.g. usePartiallyHidden) see the element, not null.
+      refCallback.current = el;
       if (externalRef) {
         if (typeof externalRef === "function") {
           externalRef(el);
@@ -78,6 +81,7 @@ export const useElementRefEffect = (externalRef, syncElement, deps) => {
         prevDepsRef.current = undefined;
       }
     };
+    refCallbackRef.current = refCallback;
   }
 
   const refCallback = refCallbackRef.current;
