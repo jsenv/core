@@ -119,7 +119,7 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useRef, useState, useLayoutEffect } from "preact/hooks";
+      import { useRef, useState } from "preact/hooks";
       import {
         createDragToMoveGestureController,
         dragAfterThreshold,
@@ -161,36 +161,6 @@
 
       const ReorderableList = ({ containerRef }) => {
         const [order, setOrder] = useState(INITIAL_ITEMS.map((i) => i.id));
-        const flipDataRef = useRef(null);
-
-        useLayoutEffect(() => {
-          if (!flipDataRef.current) {
-            return;
-          }
-          const oldRects = flipDataRef.current;
-          flipDataRef.current = null;
-          const items = Array.from(
-            containerRef.current.querySelectorAll(".list-item"),
-          );
-          for (const item of items) {
-            const itemId = Number(item.dataset.id);
-            const oldRect = oldRects.get(itemId);
-            if (!oldRect) {
-              continue;
-            }
-            const newRect = item.getBoundingClientRect();
-            const dy = oldRect.top - newRect.top;
-            if (dy === 0) {
-              continue;
-            }
-            item.style.transition = "none";
-            item.style.transform = `translateY(${dy}px)`;
-            requestAnimationFrame(() => {
-              item.style.transition = "";
-              item.style.transform = "";
-            });
-          }
-        }, [order]);
 
         const startDrag = (event, id) => {
           event.preventDefault();
@@ -270,7 +240,6 @@
                       item.getBoundingClientRect(),
                     );
                   }
-                  flipDataRef.current = rects;
                   setOrder((prev) => {
                     const next = [...prev];
                     next.splice(originalIndex, 1);
@@ -298,6 +267,9 @@
             class="list-item"
             onPointerDown={(e) => {
               startDrag(e, item.id);
+            }}
+            style={{
+              viewTransitionName: `item-${item.id}`,
             }}
           >
             <div class="drag-handle" title="Drag to reorder">

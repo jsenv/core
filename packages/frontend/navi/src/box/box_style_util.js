@@ -66,6 +66,7 @@ const FLOW_PROPS = {
 
   // not really related to flow but should be on the container element if any
   pointerEvents: PASS_THROUGH,
+  viewTransitionName: PASS_THROUGH,
 };
 const OUTER_SPACING_PROPS = {
   margin: PASS_THROUGH,
