@@ -467,17 +467,34 @@ export const createDragToMoveGestureController = ({
     ...rest
   } = {}) => {
     const scrollContainer = getScrollContainer(referenceElement || element);
+    let getDragPositioner;
     if (cloneOnDrag) {
-      elementToMove = createDragClone(element, {
+      const dragClone = createDragClone(element, {
         clientX: event ? event.clientX : 0,
         clientY: event ? event.clientY : 0,
       });
+      elementToMove = dragClone;
+      getDragPositioner = () => {
+        return createDragElementPositioner(
+          element,
+          referenceElement,
+          dragClone,
+        );
+      };
+    } else {
+      getDragPositioner = () => {
+        return createDragElementPositioner(
+          element,
+          referenceElement,
+          elementToMove,
+        );
+      };
     }
     const [
       elementScrollableLeft,
       elementScrollableTop,
       convertScrollablePosition,
-    ] = createDragElementPositioner(element, referenceElement, elementToMove);
+    ] = getDragPositioner();
     const dragGesture = grab({
       element,
       scrollContainer,
