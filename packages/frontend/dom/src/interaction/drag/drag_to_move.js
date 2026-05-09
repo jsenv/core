@@ -4,12 +4,56 @@ import { getScrollContainer } from "../scroll/scroll_container.js";
 import { initDragConstraints } from "./drag_constraint.js";
 import { createDragElementPositioner } from "./drag_element_positioner.js";
 import { createDragGestureController } from "./drag_gesture.js";
+import { getDropTargetInfo } from "./drop_target_detection.js";
 import { applyStickyFrontiersToAutoScrollArea } from "./sticky_frontiers.js";
 
 const dragStyleController = createStyleController("drag_to_move");
 
+const css = /* css */ `
+  .navi_drop_hint {
+    position: absolute;
+    right: 0;
+    left: 0;
+    z-index: 10;
+    display: none;
+    height: var(--drop-hint-size, 3px);
+    background: var(--drop-hint-background-color, #4476ff);
+    border-radius: var(--drop-hint-border-radius, 2px);
+    transform: translateY(-50%);
+    pointer-events: none;
+
+    [data-visible] {
+      display: block;
+    }
+  }
+
+  .navi_drag_clone_wrapper {
+    position: absolute;
+    top: var(--clone-top);
+    left: var(--clone-left);
+    z-index: 9999;
+    width: var(--clone-width);
+    height: var(--clone-height);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    pointer-events: none;
+  }
+
+  [navi-drag-clone] {
+    transform-origin: var(--drag-origin);
+    pointer-events: none;
+  }
+
+  @starting-style {
+    [navi-drag-clone] {
+      transform: scale(1);
+    }
+  }
+`;
+
 export const createDragToMoveGestureController = ({
   cloneOnDrag = false,
+  dropHint = false,
+  dropTargetSelector = null,
   stickyFrontiers = true,
   // Padding to reduce the area used to autoscroll by this amount (applied after sticky frontiers)
   // This creates an invisible space around the area where elements cannot be dragged
@@ -28,10 +72,95 @@ export const createDragToMoveGestureController = ({
   resetPositionAfterRelease = false,
   ...options
 } = {}) => {
+  import.meta.css = css;
+
   const initGrabToMoveElement = (
     dragGesture,
     { element, referenceElement, elementToMove, convertScrollablePosition },
   ) => {
+    const scrollContainer = dragGesture.gestureInfo.scrollContainer;
+
+    if (dropTargetSelector) {
+      const getTargets = () => {
+        return Array.from(scrollContainer.querySelectorAll(dropTargetSelector));
+      };
+      const targets = getTargets();
+      const originalIndex = targets.indexOf(element);
+
+      let dropHintEl = null;
+      if (dropHint) {
+        dropHintEl = document.createElement("div");
+        dropHintEl.className = "navi_drop_hint";
+        scrollContainer.appendChild(dropHintEl);
+        dragGesture.addReleaseCallback(() => {
+          dropHintEl.remove();
+        });
+      }
+
+      let currentPlaceholder = originalIndex;
+
+      const updateDropHintPosition = (targetIndex) => {
+        if (!dropHintEl) {
+          return;
+        }
+        const items = getTargets();
+        const containerRect = scrollContainer.getBoundingClientRect();
+        let anchorRect;
+        let anchorEdge;
+        if (targetIndex === 0) {
+          anchorRect = items[0].getBoundingClientRect();
+          anchorEdge = "top";
+        } else if (targetIndex > originalIndex) {
+          anchorRect = items[targetIndex].getBoundingClientRect();
+          anchorEdge = "bottom";
+        } else {
+          anchorRect = items[targetIndex - 1].getBoundingClientRect();
+          anchorEdge = "bottom";
+        }
+        const hintY =
+          anchorRect[anchorEdge] -
+          containerRect.top +
+          scrollContainer.scrollTop;
+        dropHintEl.setAttribute("data-visible", "");
+        dropHintEl.style.setProperty("");
+        dropHintEl.style.top = `${hintY}px`;
+      };
+
+      dragGesture.addDragCallback((gestureInfo) => {
+        const items = getTargets();
+        const dropTargetInfo = getDropTargetInfo(gestureInfo, items);
+        gestureInfo.dropTargetInfo = dropTargetInfo || null;
+        if (!dropTargetInfo) {
+          return;
+        }
+        const newIndex =
+          dropTargetInfo.elementSide.y === "end"
+            ? dropTargetInfo.index + 1
+            : dropTargetInfo.index;
+        if (newIndex !== currentPlaceholder) {
+          currentPlaceholder = newIndex;
+          if (currentPlaceholder === originalIndex) {
+            if (dropHintEl) {
+              dropHintEl.style.display = "none";
+            }
+          } else {
+            updateDropHintPosition(currentPlaceholder);
+          }
+        }
+      });
+
+      dragGesture.addReleaseCallback((gestureInfo) => {
+        gestureInfo.grabElementIndex = originalIndex;
+        gestureInfo.grabElement = element;
+        gestureInfo.releaseElementIndex =
+          currentPlaceholder !== originalIndex ? currentPlaceholder : null;
+        gestureInfo.releaseElement =
+          currentPlaceholder !== originalIndex
+            ? (getTargets()[currentPlaceholder] ?? null)
+            : null;
+      });
+    }
+
     if (cloneOnDrag) {
       const { grabEvent } = dragGesture.gestureInfo;
       const clone = createDragClone(element, {
@@ -48,7 +177,6 @@ export const createDragToMoveGestureController = ({
     }
     const direction = dragGesture.gestureInfo.direction;
     // const dragGestureName = dragGesture.gestureInfo.name;
-    const scrollContainer = dragGesture.gestureInfo.scrollContainer;
     const elementImpacted = elementToMove || element;
     const translateXAtGrab = dragStyleController.getUnderlyingValue(
       elementImpacted,
@@ -315,32 +443,7 @@ export const createDragToMoveGestureController = ({
   return dragGestureController;
 };
 
-const css = /* css */ `
-  .navi_drag_clone_wrapper {
-    position: absolute;
-    top: var(--clone-top);
-    left: var(--clone-left);
-    z-index: 9999;
-    width: var(--clone-width);
-    height: var(--clone-height);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-    pointer-events: none;
-  }
-
-  [navi-drag-clone] {
-    transform-origin: var(--drag-origin);
-    pointer-events: none;
-  }
-
-  @starting-style {
-    [navi-drag-clone] {
-      transform: scale(1);
-    }
-  }
-`;
 const createDragClone = (element, pointerEvent) => {
-  import.meta.css = css;
-
   const rect = element.getBoundingClientRect();
   const elementClone = element.cloneNode(true);
   elementClone.setAttribute("navi-drag-clone", "");

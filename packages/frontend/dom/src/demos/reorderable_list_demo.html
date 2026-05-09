@@ -63,18 +63,6 @@
         }
       }
 
-      .drop-hint {
-        position: absolute;
-        right: 0;
-        left: 0;
-        display: none;
-        height: 3px;
-        background: #4476ff;
-        border-radius: 2px;
-        transform: translateY(-50%);
-        pointer-events: none;
-      }
-
       .drag-handle {
         display: flex;
         padding: 4px 2px;
@@ -123,7 +111,6 @@
       import {
         createDragToMoveGestureController,
         dragAfterThreshold,
-        getDropTargetInfo,
       } from "@jsenv/dom";
 
       const INITIAL_ITEMS = [
@@ -167,95 +154,24 @@
 
           const container = containerRef.current;
           const originalIndex = order.indexOf(id);
-          let currentPlaceholder = originalIndex;
           const draggedEl = Array.from(
             container.querySelectorAll(".list-item"),
           )[originalIndex];
 
           dragAfterThreshold(event, () => {
-            const dropHint = document.createElement("div");
-            dropHint.className = "drop-hint";
-            container.appendChild(dropHint);
-
-            dropHint.style.display = "none";
-            const updateDropHint = (targetIndex) => {
-              const items = Array.from(
-                container.querySelectorAll(".list-item"),
-              );
-              const currentContainerRect = container.getBoundingClientRect();
-              // targetIndex is the destination in the new array (dragged item removed).
-              // The original item is still in the DOM at originalIndex, so the visual
-              // anchor depends on whether we're moving up or down:
-              //   - moving up (targetIndex <= originalIndex): gap is above items[targetIndex]
-              //   - moving down (targetIndex > originalIndex): gap is below items[targetIndex]
-              let anchorRect;
-              let anchorEdge;
-              if (targetIndex === 0) {
-                anchorRect = items[0].getBoundingClientRect();
-                anchorEdge = "top";
-              } else if (targetIndex > originalIndex) {
-                anchorRect = items[targetIndex].getBoundingClientRect();
-                anchorEdge = "bottom";
-              } else {
-                anchorRect = items[targetIndex - 1].getBoundingClientRect();
-                anchorEdge = "bottom";
-              }
-              const hintY =
-                anchorRect[anchorEdge] -
-                currentContainerRect.top +
-                container.scrollTop;
-              dropHint.style.display = "block";
-              dropHint.style.top = `${hintY}px`;
-            };
-
             const gestureController = createDragToMoveGestureController({
               cloneOnDrag: true,
               direction: { x: false, y: true },
-              onDrag: (gestureInfo) => {
-                const dropTargets = Array.from(
-                  container.querySelectorAll(".list-item"),
-                );
-                const dropTargetInfo = getDropTargetInfo(
-                  gestureInfo,
-                  dropTargets,
-                );
-                if (!dropTargetInfo) {
-                  return;
-                }
-                const newIndex =
-                  dropTargetInfo.elementSide.y === "end"
-                    ? dropTargetInfo.index + 1
-                    : dropTargetInfo.index;
-
-                if (newIndex !== currentPlaceholder) {
-                  currentPlaceholder = newIndex;
-                  if (currentPlaceholder === originalIndex) {
-                    dropHint.style.display = "none";
-                  } else {
-                    updateDropHint(currentPlaceholder);
-                  }
-                }
-              },
-              onRelease: () => {
-                dropHint.remove();
-
-                if (currentPlaceholder !== originalIndex) {
-                  // FLIP: snapshot current rects before state update
-                  const items = Array.from(
-                    container.querySelectorAll(".list-item"),
-                  );
-                  const rects = new Map();
-                  for (const item of items) {
-                    rects.set(
-                      Number(item.dataset.id),
-                      item.getBoundingClientRect(),
-                    );
-                  }
+              dropTargetSelector: ".list-item",
+              dropHint: true,
+              onRelease: (gestureInfo) => {
+                const { grabElementIndex, releaseElementIndex } = gestureInfo;
+                if (releaseElementIndex !== null) {
                   document.startViewTransition(() => {
                     setOrder((prev) => {
                       const next = [...prev];
-                      next.splice(originalIndex, 1);
-                      next.splice(currentPlaceholder, 0, id);
+                      next.splice(grabElementIndex, 1);
+                      next.splice(releaseElementIndex, 0, id);
                       return next;
                     });
                   });
