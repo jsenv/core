@@ -6,7 +6,7 @@ import { createDragElementPositioner } from "./drag_element_positioner.js";
 import { createDragGestureController } from "./drag_gesture.js";
 import { applyStickyFrontiersToAutoScrollArea } from "./sticky_frontiers.js";
 
-const dragStyleController = createStyleController("drag_to_move");
+export const dragStyleController = createStyleController("drag_to_move");
 
 /**
  * Creates a gesture controller that moves elements via drag.
@@ -33,9 +33,11 @@ const dragStyleController = createStyleController("drag_to_move");
  *   constraints.
  * @param {boolean} [options.showDebugMarkers=false]
  *   Renders debug markers for constraint regions.
- * @param {boolean} [options.resetPositionAfterRelease=false]
- *   When true, the element returns to its original position on release instead
- *   of committing the translated position.
+ * @param {"commit"|"cancel"|"manual"} [options.releasePositionEffect="commit"]
+ *   Controls what happens to the element's translated position on release.
+ *   - `"commit"`: bakes the translate into inline styles so the element stays put.
+ *   - `"cancel"`: discards the translate so the element snaps back to its original position.
+ *   - `"manual"`: does nothing, letting the caller handle cleanup.
  * @returns {object} Drag gesture controller with an augmented `grab()` method.
  */
 export const createDragToMoveGestureController = ({
@@ -46,7 +48,7 @@ export const createDragToMoveGestureController = ({
   obstacleAttributeName = "data-drag-obstacle",
   showConstraintFeedbackLine = false,
   showDebugMarkers = false,
-  resetPositionAfterRelease = false,
+  releasePositionEffect = "commit",
   ...options
 } = {}) => {
   const initGrabToMoveElement = (
@@ -68,13 +70,12 @@ export const createDragToMoveGestureController = ({
     const translateXAtGrab = transformAtGrab.translateX;
     const translateYAtGrab = transformAtGrab.translateY;
     dragGesture.addReleaseCallback(() => {
-      if (resetPositionAfterRelease) {
-        // Discard the translate — element snaps back.
+      if (releasePositionEffect === "cancel") {
         dragStyleController.clear(elementImpacted);
-      } else {
-        // Bake the translate into inline styles so the element stays put.
+      } else if (releasePositionEffect === "commit") {
         dragStyleController.commit(elementImpacted);
       }
+      // "manual": caller handles cleanup, do nothing.
     });
 
     let elementWidth;

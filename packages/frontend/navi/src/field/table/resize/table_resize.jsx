@@ -435,7 +435,7 @@ const initResizeViaPointer = (
       onGrab?.();
     },
     onDrag,
-    resetPositionAfterRelease: true,
+    releasePositionEffect: "cancel",
     onRelease: (gestureInfo) => {
       const sizeChange =
         axis === "x" ? gestureInfo.layout.xDelta : gestureInfo.layout.yDelta;

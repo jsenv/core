@@ -1,5 +1,8 @@
 import { dragAfterThreshold } from "./drag_gesture.js";
-import { createDragToMoveGestureController } from "./drag_to_move.js";
+import {
+  createDragToMoveGestureController,
+  dragStyleController,
+} from "./drag_to_move.js";
 import { getDropTargetInfo } from "./drop_target_detection.js";
 import { moveCSSVars } from "./move_css_vars.js";
 
@@ -121,7 +124,7 @@ export const startDragToReorder = (
 ) => {
   import.meta.css = css;
   event.preventDefault();
-  dragAfterThreshold(event, () => {
+  return dragAfterThreshold(event, () => {
     const cloneWrapper = createDragClone(draggedElement, event);
     draggedElement.setAttribute("navi-drag-clone-source", "");
     // Move drag related CSS vars from the element to the document
@@ -134,7 +137,7 @@ export const startDragToReorder = (
 
     const gestureController = createDragToMoveGestureController({
       direction,
-      resetPositionAfterRelease: true,
+      releasePositionEffect: "manual",
       ...options,
     });
     const dragGesture = gestureController.grabViaPointer(event, {
@@ -249,6 +252,10 @@ export const startDragToReorder = (
 
       if (currentBeforeElement !== undefined) {
         const clone = cloneWrapper.firstElementChild;
+        // Bake the current visual position (transform included) into the CSS vars
+        // so the clone stays where the user released it when we clear the transform.
+        setCloneDocumentRect(cloneWrapper, cloneWrapper);
+        dragStyleController.clear(cloneWrapper);
         const viewTransition = document.startViewTransition(() => {
           // resetPositionAfterRelease already cleared the drag translate.
           // Snap the CSS-var position to the drop target rect.
