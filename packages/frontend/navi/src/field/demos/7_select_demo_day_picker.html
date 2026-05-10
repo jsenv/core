@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Select Demo — Day Picker</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:," />
+    <style>
+      body {
+        margin: 40px;
+        font-family: system-ui, sans-serif;
+        background: #f5f5f5;
+      }
+      .demo-section {
+        max-width: 400px;
+        margin: 0 auto 40px;
+        padding: 24px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      h2 {
+        margin: 0 0 8px;
+        font-size: 1.1rem;
+      }
+      p {
+        margin: 0 0 16px;
+        color: #555;
+        font-size: 13px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { signal } from "@preact/signals";
+      import {
+        Box,
+        Icon,
+        Input,
+        Label,
+        List,
+        ListItem,
+        Select,
+        Text,
+      } from "@jsenv/navi";
+
+      const DAYS_TO_SHOW = 6;
+
+      const scheduledDaySignal = signal(0);
+
+      const App = () => {
+        return (
+          <div class="demo-section">
+            <h2>Day Picker Select</h2>
+            <p>
+              Custom trigger, fixed options + "pick another date" item with a
+              hidden date input overlaid on top. Selecting a custom date sets a
+              day-offset signal.
+            </p>
+            <GameWhenField />
+          </div>
+        );
+      };
+
+      const GameWhenField = () => {
+        return (
+          <Box flex="y" gap="s">
+            <Label
+              htmlFor="date"
+              flex
+              alignY="center"
+              size="l"
+              spacing="xs"
+              marginBottom="xs"
+              bold
+            >
+              <Icon size="s">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                >
+                  <path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z" />
+                </svg>
+              </Icon>
+              Date & Heure
+            </Label>
+            <DaySelect />
+          </Box>
+        );
+      };
+
+      const DaySelect = () => {
+        const offset = scheduledDaySignal.value;
+        const dayOptions = buildDayOptions();
+        const isCustom = offset >= DAYS_TO_SHOW;
+
+        return (
+          <Select
+            placeholder="Choisir un jour"
+            value={String(offset)}
+            uiAction={(key) => {
+              if (key !== "custom") {
+                scheduledDaySignal.value = key;
+              }
+            }}
+            expandX
+          >
+            <List expandX>
+              {dayOptions.map(({ key, label }) => (
+                <DayOption
+                  key={key}
+                  value={key}
+                  id={key}
+                  selected={offset === key}
+                >
+                  <Text capitalize>{label}</Text>
+                </DayOption>
+              ))}
+              <CustomDayOption offset={offset} isCustom={isCustom} />
+            </List>
+          </Select>
+        );
+      };
+
+      // --- helpers ---
+      const today = () => {
+        const d = new Date();
+        d.setHours(0, 0, 0, 0);
+        return d;
+      };
+      const toDateKey = (date) => date.toISOString().slice(0, 10);
+      const offsetToDateKey = (offset) => {
+        const d = today();
+        d.setDate(d.getDate() + offset);
+        return toDateKey(d);
+      };
+      const dateKeyToOffset = (dateKey) => {
+        const d = new Date(`${dateKey}T00:00:00`);
+        const t = today();
+        return Math.round((d - t) / 86_400_000);
+      };
+      const formatDayLabel = (date, index) => {
+        const label = date.toLocaleDateString("fr-FR", {
+          weekday: "long",
+          day: "numeric",
+          month: "long",
+        });
+        if (index === 0) {
+          return `${label} (aujourd'hui)`;
+        }
+        if (index === 1) {
+          return `${label} (demain)`;
+        }
+        return label;
+      };
+      const buildDayOptions = () => {
+        const options = [];
+        const t = today();
+        for (let i = 0; i < DAYS_TO_SHOW; i++) {
+          const d = new Date(t);
+          d.setDate(t.getDate() + i);
+          options.push({ key: String(i), label: formatDayLabel(d, i) });
+        }
+        return options;
+      };
+      const formatSelectedLabel = (dateKey) => {
+        if (!dateKey) {
+          return null;
+        }
+        const d = new Date(`${dateKey}T00:00:00`);
+        return d.toLocaleDateString("fr-FR", {
+          weekday: "long",
+          day: "numeric",
+          month: "long",
+        });
+      };
+
+      // --- components ---
+      const DayOption = ({ children, ...rest }) => {
+        return (
+          <ListItem paddingX="s" paddingY="m" {...rest}>
+            {children}
+          </ListItem>
+        );
+      };
+
+      const CustomDayOption = ({ offset, isCustom }) => {
+        const customDateKey = isCustom ? offsetToDateKey(offset) : undefined;
+        return (
+          <>
+            {isCustom && (
+              <DayOption value={String(offset)} paddingX="s" paddingY="s">
+                <Text capitalize>{formatSelectedLabel(customDateKey)}</Text>
+              </DayOption>
+            )}
+            <DayOption value="custom">
+              <Box
+                flex
+                alignY="center"
+                expandX
+                style={{ position: "relative" }}
+              >
+                <Text>Choisir une autre date…</Text>
+                <Input
+                  type="date"
+                  value={customDateKey}
+                  min={toDateKey(new Date())}
+                  uiAction={(value) => {
+                    scheduledDaySignal.value = dateKeyToOffset(value);
+                  }}
+                  absolute
+                  inset={0}
+                  opacity={0}
+                  cursor="pointer"
+                  expandX
+                />
+              </Box>
+            </DayOption>
+          </>
+        );
+      };
+
+      render(<App />, document.getElementById("app"));
+    </script>
+  </body>
+</html>
