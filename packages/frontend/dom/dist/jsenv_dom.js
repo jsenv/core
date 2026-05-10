@@ -8430,6 +8430,9 @@ const initDragConstraints = (
     );
 
     const logConstraintEnforcement = (axis, constraint) => {
+      if (constraint.type === "bounds") {
+        return;
+      }
       if (constraint.type === "obstacle") {
         return;
       }
@@ -8492,11 +8495,6 @@ const initDragConstraints = (
     const leftModified = elementLeft !== elementLeftRequested;
     const topModified = elementTop !== elementTopRequested;
     if (!leftModified && !topModified) {
-      {
-        console.debug(
-          `Drag by ${dragEvent.type}: no constraint enforcement needed (${elementLeftRequested.toFixed(2)}, ${elementTopRequested.toFixed(2)})`,
-        );
-      }
       return;
     }
 
