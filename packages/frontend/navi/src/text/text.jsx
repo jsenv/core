@@ -30,6 +30,8 @@ const css = /* css */ `
     /* There is a chrome specific bug that prevents text-transform: capitalize to be applied in nested DOM structure */
     /* The CSS below ensure capitalize is propagated to the bold clones */
     &[data-capitalize] {
+      display: inline-block; /* We need inline-block to match the pseudo element */
+
       &::first-letter {
         text-transform: uppercase;
       }
