@@ -196,7 +196,7 @@
         const [order, setOrder] = useState(INITIAL_ITEMS.map((i) => i.id));
 
         const startDrag = (event) => {
-          startDragToReorder(event, event.currentTarget, {
+          startDragToReorder(event, {
             itemSelector: ".list-item",
             getItemId: (el) => parseInt(el.dataset.id),
             onReorder: async (fromId, toId, syncClone) => {

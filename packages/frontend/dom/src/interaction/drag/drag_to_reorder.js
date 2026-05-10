@@ -127,10 +127,10 @@ const dragCSSVars = [
  */
 export const startDragToReorder = (
   event,
-  draggedElement,
   {
+    draggedElement = event.currentTarget,
+    containerElement = draggedElement.parentElement,
     itemSelector,
-    containerElement,
     getItemId,
     onReorder,
     direction = { x: false, y: true },
@@ -187,12 +187,10 @@ export const startDragToReorder = (
       clearDropHintDOM();
     };
 
-    const itemsContainer = containerElement || draggedElement.parentElement;
-
     dragGesture.addDragCallback((gestureInfo) => {
       const allItems = [];
       const items = [];
-      for (const el of itemsContainer.querySelectorAll(itemSelector)) {
+      for (const el of containerElement.querySelectorAll(itemSelector)) {
         allItems.push(el);
         if (el !== draggedElement) {
           items.push(el);

@@ -51,7 +51,7 @@
         };
 
         const startDrag = (event) => {
-          startDragToReorder(event, event.currentTarget, {
+          startDragToReorder(event, {
             itemSelector: ".list-item",
             getItemId: (el) => parseInt(el.dataset.id),
             onReorder: async (fromId, toId, syncClone) => {
