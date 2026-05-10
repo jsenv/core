@@ -145,20 +145,20 @@
               ))}
             </Box>
 
-            {/* Label */}
+            {/* Label + checkbox */}
             <Box
+              as="label"
+              flex
+              alignY="center"
+              spacing="6px"
               style={{
                 flex: 1,
                 color: "#333",
                 fontSize: "14px",
                 cursor: "pointer",
               }}
-              onClick={(e) => {
-                e.stopPropagation();
-                // eslint-disable-next-line no-alert
-                window.alert(`You clicked: ${item.label}`);
-              }}
             >
+              <input type="checkbox" />
               {item.label}
             </Box>
 
