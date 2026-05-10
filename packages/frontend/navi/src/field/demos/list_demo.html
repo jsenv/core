@@ -649,7 +649,63 @@
             <PopoverDemo />
             <FormDemo />
             <RequiredFormDemo />
+            <InputInsideListItemDemo />
           </>
+        );
+      };
+
+      // ── InputInsideListItemDemo ───────────────────────────────────────────────
+
+      const InputInsideListItemDemo = () => {
+        const [pickedDate, setPickedDate] = useState(null);
+        const inputRef = useRef(null);
+        return (
+          <div className="demo-section">
+            <h2>Input inside ListItem</h2>
+            <p>
+              Clicking anywhere on the item calls <code>showPicker()</code> to
+              force the calendar popup — no manual text entry.
+            </p>
+            <List>
+              <ListItem index={0} id="option_a" value="option_a">
+                Option A (normal item)
+              </ListItem>
+              <ListItem index={1} id="option_b" value="option_b">
+                Option B (normal item)
+              </ListItem>
+              <ListItem
+                index={2}
+                id="pick_date"
+                value="pick_date"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  inputRef.current.showPicker();
+                }}
+              >
+                <span>Pick a date…</span>
+                {pickedDate && <span> ({pickedDate})</span>}
+                <input
+                  ref={inputRef}
+                  type="date"
+                  value={pickedDate ?? ""}
+                  style={{
+                    position: "absolute",
+                    opacity: 0,
+                    pointerEvents: "none",
+                    width: 0,
+                    height: 0,
+                  }}
+                  onChange={(e) => {
+                    setPickedDate(e.target.value);
+                  }}
+                />
+              </ListItem>
+            </List>
+            {pickedDate && (
+              <div className="value-display">Picked: {pickedDate}</div>
+            )}
+          </div>
         );
       };
 

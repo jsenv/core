@@ -708,6 +708,9 @@ const SelectWithPopover = (props) => {
           }
           // mousedown inside popover should not bubble to the select (would re-open it if that mousedown closes it)
           e.stopPropagation();
+          debugPopup(
+            formatEventSideEffect(e, `popover mouseDown stopPropagation`),
+          );
         }}
         onnavi_popover_open={(e) => {
           onOpen(e);

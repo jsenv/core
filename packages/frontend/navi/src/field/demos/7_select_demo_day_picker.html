@@ -89,7 +89,7 @@
               </Icon>
               Date & Heure
             </Label>
-            <NaviDebug debugPopup>
+            <NaviDebug debugPopup debugFocus>
               <DaySelect />
             </NaviDebug>
           </Box>
@@ -230,7 +230,8 @@
                 }}
                 data-catch-mousedown=""
                 onMouseDown={(e) => {
-                  e.stopPropagation();
+                  //   debugger;
+                  //   e.stopPropagation();
                 }}
                 absolute
                 inset

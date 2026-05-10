@@ -1887,10 +1887,6 @@ const ListItemReal = ({
         if (e.button !== 0) {
           return;
         }
-        if (e.currentTarget.closest("[data-catch-mousedown")) {
-          debugger;
-          return;
-        }
         const listEl = e.currentTarget.closest(".navi_list");
         dispatchCustomEvent(listEl, "navi_list_request_select", {
           item,
