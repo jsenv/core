@@ -140,7 +140,12 @@
         d.setHours(0, 0, 0, 0);
         return d;
       };
-      const toDateKey = (date) => date.toISOString().slice(0, 10);
+      const toDateKey = (date) => {
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, "0");
+        const d = String(date.getDate()).padStart(2, "0");
+        return `${y}-${m}-${d}`;
+      };
       const offsetToDateKey = (offset) => {
         const d = today();
         d.setDate(d.getDate() + offset);
@@ -202,7 +207,12 @@
         return (
           <>
             {isCustom && (
-              <DayOption id="custom_display" index={index} value={offset}>
+              <DayOption
+                id="custom_display"
+                index={index}
+                value={offset}
+                selected={isCustom}
+              >
                 <Text capitalize>{formatSelectedLabel(customDateKey)}</Text>
               </DayOption>
             )}
