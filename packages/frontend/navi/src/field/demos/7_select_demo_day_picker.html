@@ -202,13 +202,7 @@
         return (
           <>
             {isCustom && (
-              <DayOption
-                id="custom_display"
-                index={index}
-                value={String(offset)}
-                paddingX="s"
-                paddingY="s"
-              >
+              <DayOption id="custom_display" index={index} value={offset}>
                 <Text capitalize>{formatSelectedLabel(customDateKey)}</Text>
               </DayOption>
             )}
@@ -224,14 +218,13 @@
                 value={customValue}
                 min={toDateKey(new Date())}
                 uiAction={(value) => {
-                  debugger;
                   setCustomValue(value);
                   scheduledDaySignal.value = dateKeyToOffset(value);
                 }}
-                data-catch-mousedown=""
                 onMouseDown={(e) => {
-                  //   debugger;
-                  //   e.stopPropagation();
+                  e.preventDefault();
+                  e.stopPropagation();
+                  e.currentTarget.showPicker();
                 }}
                 absolute
                 inset
