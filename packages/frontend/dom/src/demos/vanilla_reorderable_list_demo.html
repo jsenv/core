@@ -199,18 +199,22 @@
           startDragToReorder(event, event.currentTarget, {
             itemSelector: ".list-item",
             getItemId: (el) => parseInt(el.dataset.id),
-            onReorder: (fromId, toId) => {
-              setOrder((prev) => {
-                const fromIndex = prev.indexOf(fromId);
-                const toIndex =
-                  toId === null ? prev.length : prev.indexOf(toId);
-                const adjustedToIndex =
-                  fromIndex < toIndex ? toIndex - 1 : toIndex;
-                const next = [...prev];
-                next.splice(fromIndex, 1);
-                next.splice(adjustedToIndex, 0, fromId);
-                return next;
+            onReorder: async (fromId, toId, syncClone) => {
+              const viewTransition = document.startViewTransition(() => {
+                syncClone();
+                setOrder((prev) => {
+                  const fromIndex = prev.indexOf(fromId);
+                  const toIndex =
+                    toId === null ? prev.length : prev.indexOf(toId);
+                  const adjustedToIndex =
+                    fromIndex < toIndex ? toIndex - 1 : toIndex;
+                  const next = [...prev];
+                  next.splice(fromIndex, 1);
+                  next.splice(adjustedToIndex, 0, fromId);
+                  return next;
+                });
               });
+              await viewTransition.finished;
             },
             // showConstraintFeedbackLine: true,
             // showDebugMarkers: true,

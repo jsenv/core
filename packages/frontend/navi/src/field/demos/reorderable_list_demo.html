@@ -54,15 +54,19 @@
           startDragToReorder(event, event.currentTarget, {
             itemSelector: ".list-item",
             getItemId: (el) => parseInt(el.dataset.id),
-            onReorder: (fromId, toId) => {
-              setOrder((prev) => {
-                const fromIndex = prev.indexOf(fromId);
-                const toIndex =
-                  toId === null ? prev.length : prev.indexOf(toId);
-                const adjustedToIndex =
-                  fromIndex < toIndex ? toIndex - 1 : toIndex;
-                return moveArrayItemByIndex(prev, fromIndex, adjustedToIndex);
+            onReorder: async (fromId, toId, syncClone) => {
+              const viewTransition = document.startViewTransition(() => {
+                syncClone();
+                setOrder((prev) => {
+                  const fromIndex = prev.indexOf(fromId);
+                  const toIndex =
+                    toId === null ? prev.length : prev.indexOf(toId);
+                  const adjustedToIndex =
+                    fromIndex < toIndex ? toIndex - 1 : toIndex;
+                  return moveArrayItemByIndex(prev, fromIndex, adjustedToIndex);
+                });
               });
+              await viewTransition.finished;
             },
           });
         };

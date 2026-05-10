@@ -51,7 +51,7 @@ const css = /* css */ `
   }
 
   [navi-drag-clone] {
-    transform: scale(var(--drag-clone-scale, 1.15));
+    transform: scale(var(--drag-clone-scale, 1.03));
     transform-origin: var(--drag-origin);
     transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
   }
@@ -279,21 +279,21 @@ export const startDragToReorder = (
         // so the clone stays where the user released it when we clear the transform.
         setCloneDocumentRect(cloneWrapper, cloneWrapper);
         dragStyleController.clear(cloneWrapper);
-        const viewTransition = document.startViewTransition(() => {
+        const fromId = getItemId(draggedElement);
+        const toId = currentBeforeElement
+          ? getItemId(currentBeforeElement)
+          : null;
+        // provide onReorder a way to synchronously move the clone to the drop target
+        // (meant to be used inside a startViewTransition callback)
+        const syncCloneWithDropTarget = () => {
           // Snap the CSS-var position to the drop target rect so the browser
           // captures the "new" state at the landing position.
           setCloneDocumentRect(cloneWrapper, currentReleaseElement);
           // Removing this attr drops the CSS scale(1.15), so the browser
           // captures the clone at scale 1 as the "new" state.
           clone.removeAttribute("navi-drag-clone");
-
-          const fromId = getItemId(draggedElement);
-          const toId = currentBeforeElement
-            ? getItemId(currentBeforeElement)
-            : null;
-          onReorder(fromId, toId);
-        });
-        await viewTransition.finished;
+        };
+        await onReorder(fromId, toId, syncCloneWithDropTarget);
       }
       draggedElement.removeAttribute("navi-drag-clone-source");
       cloneWrapper.remove();
@@ -372,4 +372,6 @@ const INHERITED_PROPERTIES_TO_COPY_SET = new Set([
   "font-style",
   "line-height",
   "letter-spacing",
+  // in case the item has border-radius: inherit. The clone can inherit too
+  "border-radius",
 ]);
