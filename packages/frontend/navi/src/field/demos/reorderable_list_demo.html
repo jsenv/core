@@ -146,7 +146,19 @@
             </Box>
 
             {/* Label */}
-            <Box style={{ flex: 1, color: "#333", fontSize: "14px" }}>
+            <Box
+              style={{
+                flex: 1,
+                color: "#333",
+                fontSize: "14px",
+                cursor: "pointer",
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                // eslint-disable-next-line no-alert
+                window.alert(`You clicked: ${item.label}`);
+              }}
+            >
               {item.label}
             </Box>
 
