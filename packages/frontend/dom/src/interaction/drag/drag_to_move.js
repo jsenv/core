@@ -8,60 +8,99 @@ import { applyStickyFrontiersToAutoScrollArea } from "./sticky_frontiers.js";
 
 const dragStyleController = createStyleController("drag_to_move");
 
+/**
+ * Creates a gesture controller that moves elements via drag.
+ *
+ * Wraps `createDragGestureController` and adds:
+ * - Element translation via CSS transform (translate only; other existing transforms are preserved)
+ * - Auto-scroll while dragging near scroll-container edges
+ * - Constraints (area boundaries, obstacle elements)
+ *
+ * The returned controller exposes a `grab(options)` / `grabViaPointer(event, options)` method.
+ * Key grab options:
+ * - `element`: the element whose position drives layout calculations (scroll-container detection,
+ *   constraints, auto-scroll). Sets `data-grabbed` during the drag.
+ * - `referenceElement`: optional sticky-frontier / obstacle reference, defaults to `element`.
+ * - `elementToMove`: optional different element to actually translate (e.g. a drag clone).
+ *   If omitted, `element` is translated. The translate is read from `dragStyleController`
+ *   at grab time so any pre-existing translate is accumulated rather than reset.
+ *
+ * @param {object} [options]
+ * @param {boolean} [options.stickyFrontiers=true]
+ *   Shrinks the auto-scroll area at sticky boundaries (elements with `data-sticky-left` /
+ *   `data-sticky-top`).
+ * @param {number} [options.autoScrollAreaPadding=0]
+ *   Extra padding (px) subtracted from each edge of the auto-scroll trigger area.
+ * @param {string|object|function} [options.areaConstraint="scroll"]
+ *   Constrains where the element can be dragged.
+ *   `"scroll"` — bounded by the full scroll area.
+ *   `"scrollport"` — bounded by the visible viewport of the scroll container.
+ *   `"none"` — no area constraint.
+ *   `{left, top, right, bottom}` — fixed bounds (values may be functions receiving context).
+ *   `function` — called each drag frame, must return a `{left,top,right,bottom}` object.
+ * @param {Element} [options.obstaclesContainer]
+ *   Container to look for obstacle elements in. Defaults to the scroll container.
+ * @param {string} [options.obstacleAttributeName="data-drag-obstacle"]
+ *   Attribute that marks obstacle elements.
+ * @param {boolean} [options.showConstraintFeedbackLine=false]
+ *   Renders a visual line when the pointer deviates from the element due to constraints.
+ * @param {boolean} [options.showDebugMarkers=false]
+ *   Renders debug markers for constraint regions.
+ * @param {"commit"|"cancel"|"manual"} [options.releasePositionEffect="commit"]
+ *   Controls what happens to the translated position on release.
+ *   - `"commit"`: bakes the translate into inline styles so the element stays put (default).
+ *   - `"cancel"`: discards the translate so the element snaps back to its original position.
+ *   - `"manual"`: does nothing — the caller is responsible for clearing or committing
+ *     the transform via `dragStyleController`.
+ * @returns {object} Drag gesture controller with augmented `grab()` / `grabViaPointer()` methods.
+ */
 export const createDragToMoveGestureController = ({
-  cloneOnDrag = false,
   stickyFrontiers = true,
-  // Padding to reduce the area used to autoscroll by this amount (applied after sticky frontiers)
-  // This creates an invisible space around the area where elements cannot be dragged
   autoScrollAreaPadding = 0,
-  // constraints,
-  areaConstraint = "scroll", // "scroll" | "scrollport" | "none" | {left,top,right,bottom} | function
+  areaConstraint = "scroll",
   obstaclesContainer,
   obstacleAttributeName = "data-drag-obstacle",
-  // Visual feedback line connecting mouse cursor to the moving grab point when constraints prevent following
-  // This provides intuitive feedback during drag operations when the element cannot reach the mouse
-  // position due to obstacles, boundaries, or other constraints. The line originates from where the mouse
-  // initially grabbed the element, but moves with the element to show the current anchor position.
-  // It becomes visible when there's a significant distance between mouse and grab point.
   showConstraintFeedbackLine = false,
   showDebugMarkers = false,
-  resetPositionAfterRelease = false,
+  releasePositionEffect = "commit",
   ...options
 } = {}) => {
   const initGrabToMoveElement = (
     dragGesture,
     { element, referenceElement, elementToMove, convertScrollablePosition },
   ) => {
-    if (cloneOnDrag) {
-      const { grabEvent } = dragGesture.gestureInfo;
-      const ghostData = createDragGhost(element, {
-        clientX: grabEvent.clientX,
-        clientY: grabEvent.clientY,
-      });
-      elementToMove = ghostData.ghostWrapper;
-      dragGesture.gestureInfo.elementImpacted = ghostData.ghostWrapper;
-      dragGesture.addReleaseCallback(() => {
-        ghostData.remove();
-      });
-    }
-    const direction = dragGesture.gestureInfo.direction;
-    // const dragGestureName = dragGesture.gestureInfo.name;
     const scrollContainer = dragGesture.gestureInfo.scrollContainer;
+
+    const direction = dragGesture.gestureInfo.direction;
+    // elementImpacted is either an externally provided elementToMove (e.g. a drag clone)
     const elementImpacted = elementToMove || element;
-    const translateXAtGrab = dragStyleController.getUnderlyingValue(
+    // elementImpacted is either an externally provided elementToMove
+    // (e.g. a drag clone passed by the caller) or the element itself.
+    // Capture any pre-existing translate so we can accumulate on top of it
+    // rather than resetting it to zero on the first drag event.
+    const transformAtGrab = dragStyleController.getUnderlyingValue(
       elementImpacted,
-      "transform.translateX",
+      "transform",
     );
-    const translateYAtGrab = dragStyleController.getUnderlyingValue(
-      elementImpacted,
-      "transform.translateY",
-    );
+    const translateXAtGrab = transformAtGrab.translateX;
+    const translateYAtGrab = transformAtGrab.translateY;
+
+    const cancelPosition = () => {
+      dragStyleController.clear(elementImpacted);
+    };
+    const commitPosition = () => {
+      dragStyleController.commit(elementImpacted);
+    };
+    dragGesture.gestureInfo.cancelPosition = cancelPosition;
+    dragGesture.gestureInfo.commitPosition = commitPosition;
+
     dragGesture.addReleaseCallback(() => {
-      if (resetPositionAfterRelease) {
-        dragStyleController.clear(elementImpacted);
-      } else {
-        dragStyleController.commit(elementImpacted);
+      if (releasePositionEffect === "cancel") {
+        cancelPosition();
+      } else if (releasePositionEffect === "commit") {
+        commitPosition();
       }
+      // "manual": caller handles cleanup, do nothing.
     });
 
     let elementWidth;
@@ -78,8 +117,8 @@ export const createDragToMoveGestureController = ({
 
     let scrollArea;
     {
-      // computed at start so that scrollWidth/scrollHeight are fixed
-      // even if the dragging side effects increases them afterwards
+      // Snapshot at grab time so that DOM mutations during dragging
+      // (e.g. items shifting) don't change the scrollable boundary mid-drag.
       scrollArea = {
         left: 0,
         top: 0,
@@ -91,8 +130,8 @@ export const createDragToMoveGestureController = ({
     let scrollport;
     let autoScrollArea;
     {
-      // for visible are we also want to snapshot the widht/height
-      // and we'll add scrollContainer container scrolls during drag (getScrollport does that)
+      // scrollBox is the fixed bounding rect of the scroll container viewport.
+      // scrollport is recomputed before each drag event to account for scrolling.
       const scrollBox = getScrollBox(scrollContainer);
       const updateScrollportAndAutoScrollArea = () => {
         scrollport = getScrollport(scrollBox, scrollContainer);
@@ -247,7 +286,10 @@ export const createDragToMoveGestureController = ({
           scrollableLeft,
           scrollableTop,
         );
-        const transform = {};
+        // Build the transform to apply, preserving any transforms that were
+        // already on the element before the grab (e.g. rotate from another
+        // controller), and accumulating from the pre-grab translate baseline.
+        const transform = { ...transformAtGrab };
         if (direction.x) {
           const leftTarget = positionedLeft;
           const leftAtGrab = dragGesture.gestureInfo.leftAtGrab;
@@ -256,12 +298,6 @@ export const createDragToMoveGestureController = ({
             ? translateXAtGrab + leftDelta
             : leftDelta;
           transform.translateX = translateX;
-          // console.log({
-          //   leftAtGrab,
-          //   scrollableLeft,
-          //   left,
-          //   leftTarget,
-          // });
         }
         if (direction.y) {
           const topTarget = positionedTop;
@@ -286,6 +322,7 @@ export const createDragToMoveGestureController = ({
     element,
     referenceElement,
     elementToMove,
+    event,
     ...rest
   } = {}) => {
     const scrollContainer = getScrollContainer(referenceElement || element);
@@ -299,6 +336,7 @@ export const createDragToMoveGestureController = ({
       scrollContainer,
       layoutScrollableLeft: elementScrollableLeft,
       layoutScrollableTop: elementScrollableTop,
+      event,
       ...rest,
     });
     initGrabToMoveElement(dragGesture, {
@@ -311,29 +349,4 @@ export const createDragToMoveGestureController = ({
   };
 
   return dragGestureController;
-};
-
-const createDragGhost = (element, pointerEvent) => {
-  const rect = element.getBoundingClientRect();
-
-  const ghost = element.cloneNode(true);
-  ghost.dataset.dragging = "";
-  ghost.style.pointerEvents = "none";
-  // transform-origin set to pointer position within the element for natural scale expansion
-  const originX = pointerEvent.clientX - rect.left;
-  const originY = pointerEvent.clientY - rect.top;
-  ghost.style.transformOrigin = `${originX}px ${originY}px`;
-
-  const ghostWrapper = document.createElement("div");
-  ghostWrapper.style.cssText = `position: absolute; pointer-events: none; z-index: 9999; top: ${rect.top + window.scrollY}px; left: ${rect.left + window.scrollX}px; width: ${rect.width}px;`;
-  ghostWrapper.appendChild(ghost);
-  document.body.appendChild(ghostWrapper);
-
-  return {
-    ghost,
-    ghostWrapper,
-    remove: () => {
-      ghostWrapper.remove();
-    },
-  };
 };

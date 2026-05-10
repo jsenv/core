@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Reorderable List Demo</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 40px;
+        font-family: Arial, sans-serif;
+        background: #f0f0f0;
+      }
+
+      h1 {
+        margin: 0 0 8px;
+        color: #333;
+      }
+
+      .list-container {
+        position: relative;
+        width: 360px;
+        --drop-hint-margin-y: 5px; /* Half item gap */
+        /* --drag-clone-scale: 1; */
+      }
+
+      .list-container-scrollable {
+        position: relative;
+        width: 360px;
+        max-height: 400px;
+        padding: 8px;
+        background: #fafafa;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        overflow-y: auto;
+      }
+
+      .list-item {
+        position: relative;
+        display: flex;
+        box-sizing: border-box;
+        width: 100%;
+        margin-bottom: 8px;
+        padding: 12px 16px;
+        align-items: center;
+        gap: 10px;
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+        user-select: none;
+      }
+
+      .drag-handle {
+        display: flex;
+        padding: 4px 2px;
+        flex-shrink: 0;
+        flex-direction: column;
+        gap: 3px;
+        cursor: grab;
+      }
+
+      .drag-handle[data-grabbing] {
+        cursor: grabbing;
+      }
+
+      .drag-handle-dot-row {
+        display: flex;
+        gap: 3px;
+      }
+
+      .drag-handle-dot {
+        width: 4px;
+        height: 4px;
+        background: #bbb;
+        border-radius: 50%;
+      }
+
+      .item-label {
+        flex: 1;
+        color: #333;
+        font-size: 14px;
+      }
+
+      .item-badge {
+        padding: 2px 8px;
+        font-weight: bold;
+        font-size: 12px;
+        border-radius: 12px;
+      }
+
+      .item-move-buttons {
+        display: flex;
+        margin-left: 4px;
+        flex-direction: column;
+        gap: 2px;
+      }
+
+      .item-move-btn {
+        display: flex;
+        width: 20px;
+        height: 20px;
+        padding: 0;
+        align-items: center;
+        justify-content: center;
+        color: #666;
+        font-size: 10px;
+        line-height: 1;
+        background: none;
+        border: 1px solid #ccc;
+        border-radius: 3px;
+        cursor: pointer;
+      }
+
+      .item-move-btn:hover:not(:disabled) {
+        color: #333;
+        background: #eee;
+      }
+
+      .item-move-btn:disabled {
+        opacity: 0.3;
+        cursor: default;
+      }
+
+      [data-partially-hidden] {
+        view-transition-name: none !important;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useRef, useState, useEffect } from "preact/hooks";
+      import { startDragToReorder } from "@jsenv/dom";
+
+      const INITIAL_ITEMS = [
+        { id: 1, label: "Apple", bg: "#e3f2fd", color: "#1565c0" },
+        { id: 2, label: "Banana", bg: "#fff9c4", color: "#f57f17" },
+        { id: 3, label: "Cherry", bg: "#fce4ec", color: "#c62828" },
+        { id: 4, label: "Date", bg: "#e8f5e9", color: "#2e7d32" },
+        { id: 5, label: "Elderberry", bg: "#f3e5f5", color: "#6a1b9a" },
+        { id: 6, label: "Fig", bg: "#fbe9e7", color: "#bf360c" },
+        { id: 7, label: "Grape", bg: "#ede7f6", color: "#4527a0" },
+        { id: 8, label: "Honeydew", bg: "#f1f8e9", color: "#33691e" },
+        { id: 9, label: "Kiwi", bg: "#e8f5e9", color: "#1b5e20" },
+        { id: 10, label: "Lemon", bg: "#fffde7", color: "#f57f17" },
+        { id: 11, label: "Lime", bg: "#f9fbe7", color: "#558b2f" },
+        { id: 12, label: "Mango", bg: "#fff3e0", color: "#e65100" },
+        { id: 13, label: "Nectarine", bg: "#fbe9e7", color: "#bf360c" },
+        { id: 14, label: "Orange", bg: "#fff3e0", color: "#e65100" },
+        { id: 15, label: "Papaya", bg: "#fff8e1", color: "#ff6f00" },
+        { id: 16, label: "Peach", bg: "#fce4ec", color: "#ad1457" },
+        { id: 17, label: "Pear", bg: "#f9fbe7", color: "#827717" },
+        { id: 18, label: "Pineapple", bg: "#fffde7", color: "#f9a825" },
+        { id: 19, label: "Plum", bg: "#f3e5f5", color: "#6a1b9a" },
+        { id: 20, label: "Pomegranate", bg: "#fce4ec", color: "#b71c1c" },
+        { id: 21, label: "Raspberry", bg: "#fce4ec", color: "#c62828" },
+        { id: 22, label: "Strawberry", bg: "#ffebee", color: "#c62828" },
+        { id: 23, label: "Tangerine", bg: "#fff3e0", color: "#bf360c" },
+        { id: 24, label: "Watermelon", bg: "#e8f5e9", color: "#c62828" },
+        { id: 25, label: "Apricot", bg: "#fff3e0", color: "#e65100" },
+        { id: 26, label: "Avocado", bg: "#f1f8e9", color: "#33691e" },
+        { id: 27, label: "Blueberry", bg: "#e8eaf6", color: "#283593" },
+        { id: 28, label: "Cantaloupe", bg: "#fff8e1", color: "#ff8f00" },
+        { id: 29, label: "Coconut", bg: "#fafafa", color: "#424242" },
+        { id: 30, label: "Cranberry", bg: "#ffebee", color: "#b71c1c" },
+      ];
+
+      const usePartiallyHidden = (ref) => {
+        useEffect(() => {
+          const el = ref.current;
+          if (!el) {
+            return undefined;
+          }
+          const observer = new IntersectionObserver(
+            ([entry]) => {
+              if (entry.intersectionRatio >= 0.99) {
+                el.removeAttribute("data-partially-hidden");
+              } else {
+                el.setAttribute("data-partially-hidden", "");
+              }
+            },
+            { threshold: 0.99 },
+          );
+          observer.observe(el);
+          return () => {
+            observer.disconnect();
+          };
+        }, []);
+      };
+
+      const ReorderableList = ({ name }) => {
+        const [order, setOrder] = useState(INITIAL_ITEMS.map((i) => i.id));
+
+        const startDrag = (event) => {
+          startDragToReorder(event, event.currentTarget, {
+            itemSelector: ".list-item",
+            getItemId: (el) => parseInt(el.dataset.id),
+            onReorder: async (fromId, toId, syncClone) => {
+              const viewTransition = document.startViewTransition(() => {
+                syncClone();
+                setOrder((prev) => {
+                  const fromIndex = prev.indexOf(fromId);
+                  const toIndex =
+                    toId === null ? prev.length : prev.indexOf(toId);
+                  const adjustedToIndex =
+                    fromIndex < toIndex ? toIndex - 1 : toIndex;
+                  const next = [...prev];
+                  next.splice(fromIndex, 1);
+                  next.splice(adjustedToIndex, 0, fromId);
+                  return next;
+                });
+              });
+              await viewTransition.finished;
+            },
+            // showConstraintFeedbackLine: true,
+            // showDebugMarkers: true,
+          });
+        };
+
+        const visibleItems = order.map((id) =>
+          INITIAL_ITEMS.find((i) => i.id === id),
+        );
+
+        const moveItem = (id, direction) => {
+          document.startViewTransition(() => {
+            setOrder((prev) => {
+              const index = prev.indexOf(id);
+              const newIndex = index + direction;
+              if (newIndex < 0 || newIndex >= prev.length) {
+                return prev;
+              }
+              const next = [...prev];
+              next.splice(index, 1);
+              next.splice(newIndex, 0, id);
+              return next;
+            });
+          });
+        };
+
+        return visibleItems.map((item, i) => (
+          <ListItem
+            key={item.id}
+            item={item}
+            index={i}
+            total={visibleItems.length}
+            name={name}
+            onPointerDown={startDrag}
+            onMoveUp={() => moveItem(item.id, -1)}
+            onMoveDown={() => moveItem(item.id, 1)}
+          />
+        ));
+      };
+
+      const ListItem = ({
+        item,
+        index,
+        total,
+        name,
+        onPointerDown,
+        onMoveUp,
+        onMoveDown,
+      }) => {
+        const ref = useRef(null);
+        usePartiallyHidden(ref);
+        return (
+          <div
+            ref={ref}
+            data-id={item.id}
+            class="list-item"
+            onPointerDown={onPointerDown}
+            style={{
+              viewTransitionName: `${name}-item-${item.id}`,
+            }}
+          >
+            <div class="drag-handle" title="Drag to reorder">
+              {[0, 1, 2].map((r) => (
+                <div key={r} class="drag-handle-dot-row">
+                  <div class="drag-handle-dot" />
+                  <div class="drag-handle-dot" />
+                </div>
+              ))}
+            </div>
+            <span class="item-label">{item.label}</span>
+            <span
+              class="item-badge"
+              style={{ background: item.bg, color: item.color }}
+            >
+              #{index + 1}
+            </span>
+            <div class="item-move-buttons">
+              <button
+                class="item-move-btn"
+                title="Move up"
+                disabled={index === 0}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onMoveUp();
+                }}
+              >
+                ▲
+              </button>
+              <button
+                class="item-move-btn"
+                title="Move down"
+                disabled={index === total - 1}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onMoveDown();
+                }}
+              >
+                ▼
+              </button>
+            </div>
+          </div>
+        );
+      };
+
+      const NormalListDemo = () => {
+        return (
+          <div>
+            <h1>Reorderable List</h1>
+            <p style={{ color: "#666", margin: "0 0 24px", fontSize: "14px" }}>
+              Drag the handle on each item to reorder.
+            </p>
+            <div class="list-container">
+              <ReorderableList name="normal" />
+            </div>
+          </div>
+        );
+      };
+
+      const ScrollableListDemo = () => {
+        return (
+          <div>
+            <h1>Scrollable Reorderable List</h1>
+            <p style={{ color: "#666", margin: "0 0 24px", fontSize: "14px" }}>
+              Same list inside a scrollable container.
+            </p>
+            <div class="list-container-scrollable">
+              <ReorderableList name="scrollable" />
+            </div>
+          </div>
+        );
+      };
+
+      render(
+        <div style={{ display: "flex", gap: "48px", alignItems: "flex-start" }}>
+          <NormalListDemo />
+          <ScrollableListDemo />
+        </div>,
+        document.getElementById("root"),
+      );
+    </script>
+  </body>
+</html>

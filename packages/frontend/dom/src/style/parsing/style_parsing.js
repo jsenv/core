@@ -211,9 +211,6 @@ export const normalizeStyle = (
   if (propertyName === "transform") {
     if (context === "js") {
       if (typeof value === "string") {
-        if (isCSSKeyword(value)) {
-          return value;
-        }
         // For js context, prefer objects
         return parseCSSTransform(value, normalizeStyle);
       }

@@ -3,6 +3,7 @@ import {
   createPubSub,
   createStyleController,
   createValueEffect,
+  dispatchPublicCustomEvent,
   getBorderSizes,
   getFirstVisuallyVisibleAncestor,
   getPaddingSizes,
@@ -13,7 +14,6 @@ import {
 } from "@jsenv/dom";
 import { isValidElement } from "preact";
 
-import { dispatchPublicCustomEvent } from "../../../utils/custom_event.js";
 import { renderIntoCallout } from "./callout.jsx";
 
 /**

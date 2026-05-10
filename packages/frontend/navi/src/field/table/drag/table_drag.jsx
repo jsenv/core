@@ -330,7 +330,7 @@ export const initDragTableColumnViaPointer = (
       onDrag: (gestureInfo) => {
         onDrag?.(gestureInfo, dropColumnIndex);
       },
-      resetPositionAfterRelease: !DEBUG_VISUAL,
+      releasePositionEffect: DEBUG_VISUAL ? "cancel" : "commit",
       onRelease: (gestureInfo) => {
         if (!DEBUG_VISUAL) {
           teardown();

@@ -64,7 +64,7 @@
 
 import { h } from "preact";
 
-import { useUITransitionContentId } from "../ui_transition/ui_transition.jsx";
+import { useUITransitionContentId } from "../transition/ui_transition.jsx";
 
 const DEBUG = false;
 const debug = (...args) => {

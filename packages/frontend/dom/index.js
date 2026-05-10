@@ -1,6 +1,11 @@
 export { getElementSignature } from "./src/element_signature.js";
 
 // state management
+export {
+  dispatchCustomEvent,
+  dispatchInternalCustomEvent,
+  dispatchPublicCustomEvent,
+} from "./src/custom_event.js";
 export { createIterableWeakSet } from "./src/iterable_weak_set.js";
 export { createPubSub } from "./src/pub_sub.js";
 export { createValueEffect } from "./src/value_effect.js";
@@ -101,6 +106,7 @@ export {
   dragAfterThreshold,
 } from "./src/interaction/drag/drag_gesture.js";
 export { createDragToMoveGestureController } from "./src/interaction/drag/drag_to_move.js";
+export { startDragToReorder } from "./src/interaction/drag/drag_to_reorder.js";
 export { startDragToResizeGesture } from "./src/interaction/drag/drag_to_resize_gesture.js";
 export { getDropTargetInfo } from "./src/interaction/drag/drop_target_detection.js";
 

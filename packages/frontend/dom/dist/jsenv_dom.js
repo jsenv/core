@@ -141,6 +141,81 @@ const looksLikeGeneratedId = (id) => {
   return /^[A-Z][0-9]+-[0-9]+$|^:[a-z][0-9]*:$/.test(id);
 };
 
+/**
+ * Navi uses three categories of custom events:
+ *
+ * 1. **Internal events** (`dispatchInternalCustomEvent`) — a component communicates
+ *    with other navi components internally. Not meant to be observed from outside.
+ *    They do not bubble so they stay contained within the subtree that handles them.
+ *    Names often reflect their internal nature (e.g. `navi_pseudo_state_request_check`).
+ *
+ * 2. **Public events** (`dispatchPublicCustomEvent`) — a component exposes information
+ *    about something that happened (e.g. `navi_list_select`). They bubble so any
+ *    ancestor can observe them. These are part of the public API and should be documented.
+ *
+ * 3. **Request events** (`dispatchCustomEvent`) — code *outside* a component asks it
+ *    to perform an action (e.g. `navi_list_request_open`). They are cancelable so the
+ *    component can signal whether it handled the request. Names are prefixed
+ *    with `request_` by convention.
+ */
+
+/**
+ * Dispatches an internal event on `el`.
+ * Does not bubble — stays within the local subtree.
+ */
+const dispatchInternalCustomEvent = (
+  el,
+  customEventName,
+  customEventDetail,
+) => {
+  const customEvent = new CustomEvent(customEventName, {
+    detail: customEventDetail,
+  });
+  return el.dispatchEvent(customEvent);
+};
+
+/**
+ * Dispatches a public event from `el`, announcing something that happened.
+ * Bubbles so any ancestor can observe it.
+ */
+const dispatchPublicCustomEvent = (
+  el,
+  customEventName,
+  customEventDetail,
+) => {
+  const customEvent = new CustomEvent(customEventName, {
+    detail: resolveEventDetail(customEventDetail),
+    bubbles: true,
+  });
+  return el.dispatchEvent(customEvent);
+};
+
+/**
+ * Dispatches a request event *at* `el`, asking it to perform an action.
+ * Cancelable — returns `false` if the component called `preventDefault()`,
+ * indicating it did not (or could not) handle the request.
+ * Names are conventionally prefixed with `request_` (e.g. `navi_list_request_open`).
+ */
+const dispatchCustomEvent = (el, customEventName, customEventDetail) => {
+  const customEvent = new CustomEvent(customEventName, {
+    detail: resolveEventDetail(customEventDetail),
+    cancelable: true,
+  });
+  const result = el.dispatchEvent(customEvent);
+  return result;
+};
+
+const resolveEventDetail = (customEventDetail) => {
+  const { event, ...rest } = customEventDetail ?? {};
+  let resolvedEvent;
+  if (event?.detail?.event !== undefined) {
+    resolvedEvent = event.detail.event;
+  } else if (event !== undefined) {
+    resolvedEvent = event;
+  }
+  return { ...rest, event: resolvedEvent };
+};
+
 const createIterableWeakSet = () => {
   const objectWeakRefSet = new Set();
 
@@ -1721,13 +1796,16 @@ const stringifyCSSTransform = (transformObj, normalize) => {
     );
     transforms.push(`${key}(${normalizedTransformPartValue})`);
   }
+  if (transforms.length === 0) {
+    return "none";
+  }
   return transforms.join(" ");
 };
 
 // Parse transform CSS string into object
 const parseCSSTransform = (transformString, normalize) => {
   if (!transformString || transformString === "none") {
-    return undefined;
+    return {};
   }
 
   const transformObj = {};
@@ -2086,9 +2164,6 @@ const normalizeStyle = (
   if (propertyName === "transform") {
     if (context === "js") {
       if (typeof value === "string") {
-        if (isCSSKeyword(value)) {
-          return value;
-        }
         // For js context, prefer objects
         return parseCSSTransform(value, normalizeStyle);
       }
@@ -6358,42 +6433,75 @@ const findSelfOrAncestorFixedPosition = (element) => {
 /**
  * Creates a coordinate system positioner for drag operations.
  *
- * ARCHITECTURE:
- * This function uses a modular offset-based approach to handle coordinate system conversions
- * between different positioning contexts (scroll containers and positioned parents).
+ * PURPOSE:
+ * During a drag gesture, the system tracks mouse movement as "scrollable coordinates"
+ * relative to the scroll container. This function converts those coordinates into
+ * the actual CSS transform values needed to visually move an element (or a separate
+ * elementToMove) to follow the mouse.
  *
- * The system decomposes coordinate conversion into two types of offsets:
- * 1. Position offsets - compensate for different positioned parents
- * 2. Scroll offsets - handle scroll position and container differences
+ * PARAMETERS:
+ * - element:          The element being grabbed / tracked for drag detection and auto-scroll.
+ * - referenceElement: Optional. The element whose coordinate system defines the input space.
+ *                     When provided, scrollable coords are relative to its scroll container.
+ *                     Defaults to element itself.
+ * - elementToMove:    Optional. A different element to apply the transform to (e.g. a clone
+ *                     or a table that moves as a whole when a column is dragged).
+ *                     When provided, its offsetParent is used as the positioning context.
  *
- * COORDINATE SYSTEM:
- * - Input coordinates are relative to the reference element's scroll container
- * - Output coordinates are relative to the element's positioned parent for DOM positioning
- * - Handles cross-coordinate system scenarios (different scroll containers and positioned parents)
+ * THE COORDINATE PIPELINE:
+ *
+ *   Mouse position
+ *     → scrollable coords  (relative to referenceScrollContainer, scroll-independent)
+ *     → positioned coords  (relative to elementToMove's offsetParent, for CSS transform)
+ *
+ * Two types of offsets bridge these spaces:
+ *
+ * 1. POSITION OFFSETS (getPositionOffsets):
+ *    Compensate for the fact that positionedParent and referencePositionedParent
+ *    may differ. For example, if `element` lives inside a <table> and `elementToMove`
+ *    is a full table clone, their offsetParents are different elements.
+ *    This offset is the spatial difference between those two positioned ancestors.
+ *    Called dynamically because parents can move (e.g. overlay elements).
+ *
+ * 2. SCROLL OFFSETS (getScrollOffsets):
+ *    Account for the scroll position of the relevant scroll container(s).
+ *    The math ensures that at grab time, the transform delta is zero (element
+ *    stays at its visual position), and subsequent mouse movement maps 1:1
+ *    to transform change.
+ *
+ *    CRITICAL CASE — positionedParent outside referenceScrollContainer:
+ *    When elementToMove's offsetParent is NOT inside the referenceScrollContainer
+ *    (e.g. a clone appended to document.body while tracking an element inside
+ *    an overflow:auto div), the scroll offset must be FROZEN at grab time.
+ *    Using a live scroll value would double-move the clone during auto-scroll:
+ *    the scrollable coordinate decreases (element appears to move up) AND the
+ *    live scroll value increases — both applied to the same transform.
+ *    Freezing the scroll at grab time cancels this out while still correctly
+ *    placing the clone at the right initial position.
  *
  * KEY SCENARIOS SUPPORTED:
- * 1. Same positioned parent, same scroll container - Simple case, minimal offsets
- * 2. Different positioned parents, same scroll container - Position offset compensation
- * 3. Same positioned parent, different scroll containers - Scroll offset handling
- * 4. Different positioned parents, different scroll containers - Full offset compensation
- * 5. Overlay elements - Special handling for elements with data-overlay-for attribute
- * 6. Fixed positioning - Special scroll offset handling for fixed positioned elements
+ * 1. Same positioned parent, same scroll container        — minimal offsets
+ * 2. Different positioned parents, same scroll container  — position offset compensation
+ * 3. Same positioned parent, different scroll containers  — scroll offset bridging
+ * 4. Different positioned parents, different containers   — full offset compensation
+ * 5. Overlay elements (data-overlay-for)                  — specialized offset path
+ * 6. Fixed positioned elements                            — special scroll handling
+ * 7. elementToMove outside referenceScrollContainer       — frozen scroll offset at grab
  *
  * API CONTRACT:
  * Returns [scrollableLeft, scrollableTop, convertScrollablePosition] where:
  *
  * - scrollableLeft/scrollableTop:
- *   Current element coordinates in the reference coordinate system (adjusted for position offsets)
+ *   The element's current position in the reference coordinate system at grab time.
+ *   Used as the layout starting point (layoutScrollableLeft/Top) by the gesture system.
  *
- * - convertScrollablePosition:
- *   Converts reference coordinate system positions to DOM positioning coordinates
- *   Applies both position and scroll offsets for accurate element placement
- *
- * IMPLEMENTATION STRATEGY:
- * Uses factory functions to create specialized offset calculators based on the specific
- * combination of positioning contexts, optimizing for performance and code clarity.
+ * - convertScrollablePosition(scrollableLeft, scrollableTop):
+ *   Converts a scrollable coordinate (from the gesture layout) into a positioned
+ *   coordinate suitable for CSS transform. The gesture system computes:
+ *     topDelta = convertScrollablePosition(layout.scrollableTop) - topAtGrab
+ *   and applies that as translateY. At grab time, delta = 0. As the mouse moves,
+ *   delta tracks the movement exactly, regardless of scroll context differences.
  */
-
 const createDragElementPositioner = (
   element,
   referenceElement,
@@ -6411,11 +6519,11 @@ const createDragElementPositioner = (
     positionedParent,
     referencePositionedParent: referenceElement
       ? referenceElement.offsetParent
-      : undefined,
+      : positionedParent,
     scrollContainer,
     referenceScrollContainer: referenceElement
       ? getScrollContainer(referenceElement)
-      : undefined,
+      : scrollContainer,
   });
 
   {
@@ -6465,9 +6573,9 @@ const getScrollablePosition = (element, scrollContainer) => {
 
 const createGetOffsets = ({
   positionedParent,
-  referencePositionedParent = positionedParent,
+  referencePositionedParent,
   scrollContainer,
-  referenceScrollContainer = scrollContainer,
+  referenceScrollContainer,
 }) => {
   const samePositionedParent = positionedParent === referencePositionedParent;
   const getScrollOffsets = createGetScrollOffsets(
@@ -6699,6 +6807,19 @@ const createGetScrollOffsets = (
         };
         return getScrollOffsetsFixed;
       }
+    }
+    const positionedParentIsInsideScrollContainer =
+      referenceScrollContainer === documentElement ||
+      referenceScrollContainer.contains(positionedParent);
+    if (!positionedParentIsInsideScrollContainer) {
+      // positionedParent is outside the scroll container (e.g. clone in document.body
+      // while tracking an element inside a custom scroll container).
+      // We must add the scroll at grab time as a frozen offset so that:
+      // - initial topDelta = 0 (clone starts at correct position)
+      // - auto-scroll doesn't double-move the clone (scroll changes cancel out in layout)
+      const scrollLeftAtGrab = referenceScrollContainer.scrollLeft;
+      const scrollTopAtGrab = referenceScrollContainer.scrollTop;
+      return () => [scrollLeft + scrollLeftAtGrab, scrollTop + scrollTopAtGrab];
     }
     const getScrollOffsets = () => {
       const leftScrollToAdd = scrollLeft + referenceScrollContainer.scrollLeft;
@@ -6956,7 +7077,7 @@ installImportMetaCssBuild(import.meta);/**
  * donc juste x/y ca seras surement mieux
  *
  */
-const css$3 = /* css */`
+const css$4 = /* css */`
   .navi_drag_gesture_backdrop {
     position: fixed;
     inset: 0;
@@ -7065,6 +7186,10 @@ const createDragGestureController = (options = {}) => {
       isGoingDown: undefined,
       isGoingLeft: undefined,
       isGoingRight: undefined,
+      intentGoingUp: false,
+      intentGoingDown: false,
+      intentGoingLeft: false,
+      intentGoingRight: false,
       // metadata about interaction sources
       grabEvent: event,
       dragEvent: null,
@@ -7109,7 +7234,7 @@ const createDragGestureController = (options = {}) => {
 
       // 2. VISUAL CONTROL: Backdrop for consistent cursor and pointer event blocking
       if (backdrop) {
-        import.meta.css = [css$3, "@jsenv/dom/src/interaction/drag/drag_gesture.js"];
+        import.meta.css = [css$4, "@jsenv/dom/src/interaction/drag/drag_gesture.js"];
         const backdropElement = document.createElement("div");
         backdropElement.className = "navi_drag_gesture_backdrop";
         backdropElement.ariaHidden = "true";
@@ -7312,10 +7437,31 @@ const createDragGestureController = (options = {}) => {
       const layoutPrevious = gestureInfo.layout;
       // previousGestureInfo = { ...gestureInfo };
       Object.assign(gestureInfo, dragData);
+      if (gestureInfo.isGoingDown) {
+        gestureInfo.intentGoingDown = true;
+        gestureInfo.intentGoingUp = false;
+      } else if (gestureInfo.isGoingUp) {
+        gestureInfo.intentGoingUp = true;
+        gestureInfo.intentGoingDown = false;
+      }
+      if (gestureInfo.isGoingRight) {
+        gestureInfo.intentGoingRight = true;
+        gestureInfo.intentGoingLeft = false;
+      } else if (gestureInfo.isGoingLeft) {
+        gestureInfo.intentGoingLeft = true;
+        gestureInfo.intentGoingRight = false;
+      }
       if (!startedPrevious && gestureInfo.started) {
+        dispatchPublicCustomEvent(element, "navi_drag_start", {
+          gestureInfo
+        });
         onDragStart?.(gestureInfo);
       }
       const someLayoutChange = gestureInfo.layout !== layoutPrevious;
+      dispatchPublicCustomEvent(element, "navi_drag", {
+        gestureInfo,
+        someLayoutChange
+      });
       publishDrag(gestureInfo,
       // we still publish drag event even when unchanged
       // because UI might need to adjust when document scrolls
@@ -7332,8 +7478,14 @@ const createDragGestureController = (options = {}) => {
         event,
         isRelease: true
       });
+      dispatchPublicCustomEvent(element, "navi_drag_release", {
+        gestureInfo
+      });
       publishRelease(gestureInfo);
     };
+    dispatchPublicCustomEvent(element, "navi_drag_grab", {
+      gestureInfo
+    });
     onGrab?.(gestureInfo);
     const dragGesture = {
       gestureInfo,
@@ -7467,7 +7619,7 @@ const definePropertyAsReadOnly = (object, propertyName) => {
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$2 = /* css */`
+installImportMetaCssBuild(import.meta);const css$3 = /* css */`
   .navi_constraint_feedback_line {
     position: fixed;
     z-index: 9998;
@@ -7483,7 +7635,7 @@ installImportMetaCssBuild(import.meta);const css$2 = /* css */`
   }
 `;
 const setupConstraintFeedbackLine = () => {
-  import.meta.css = [css$2, "@jsenv/dom/src/interaction/drag/constraint_feedback_line.js"];
+  import.meta.css = [css$3, "@jsenv/dom/src/interaction/drag/constraint_feedback_line.js"];
   const constraintFeedbackLine = createConstraintFeedbackLine();
 
   // Track last known mouse position for constraint feedback line during scroll
@@ -7563,7 +7715,7 @@ let currentDebugMarkers = [];
 let currentConstraintMarkers = [];
 let currentReferenceElementMarker = null;
 let currentElementMarker = null;
-const css$1 = /* css */`
+const css$2 = /* css */`
   .navi_debug_markers_container {
     position: fixed;
     top: 0;
@@ -7752,7 +7904,7 @@ const css$1 = /* css */`
 const setupDragDebugMarkers = (dragGesture, {
   referenceElement
 }) => {
-  import.meta.css = [css$1, "@jsenv/dom/src/interaction/drag/drag_debug_markers.js"];
+  import.meta.css = [css$2, "@jsenv/dom/src/interaction/drag/drag_debug_markers.js"];
 
   // Clean up any existing persistent markers from previous drag gestures
   {
@@ -8770,60 +8922,99 @@ const createStickyFrontierOnAxis = (
 
 const dragStyleController = createStyleController("drag_to_move");
 
+/**
+ * Creates a gesture controller that moves elements via drag.
+ *
+ * Wraps `createDragGestureController` and adds:
+ * - Element translation via CSS transform (translate only; other existing transforms are preserved)
+ * - Auto-scroll while dragging near scroll-container edges
+ * - Constraints (area boundaries, obstacle elements)
+ *
+ * The returned controller exposes a `grab(options)` / `grabViaPointer(event, options)` method.
+ * Key grab options:
+ * - `element`: the element whose position drives layout calculations (scroll-container detection,
+ *   constraints, auto-scroll). Sets `data-grabbed` during the drag.
+ * - `referenceElement`: optional sticky-frontier / obstacle reference, defaults to `element`.
+ * - `elementToMove`: optional different element to actually translate (e.g. a drag clone).
+ *   If omitted, `element` is translated. The translate is read from `dragStyleController`
+ *   at grab time so any pre-existing translate is accumulated rather than reset.
+ *
+ * @param {object} [options]
+ * @param {boolean} [options.stickyFrontiers=true]
+ *   Shrinks the auto-scroll area at sticky boundaries (elements with `data-sticky-left` /
+ *   `data-sticky-top`).
+ * @param {number} [options.autoScrollAreaPadding=0]
+ *   Extra padding (px) subtracted from each edge of the auto-scroll trigger area.
+ * @param {string|object|function} [options.areaConstraint="scroll"]
+ *   Constrains where the element can be dragged.
+ *   `"scroll"` — bounded by the full scroll area.
+ *   `"scrollport"` — bounded by the visible viewport of the scroll container.
+ *   `"none"` — no area constraint.
+ *   `{left, top, right, bottom}` — fixed bounds (values may be functions receiving context).
+ *   `function` — called each drag frame, must return a `{left,top,right,bottom}` object.
+ * @param {Element} [options.obstaclesContainer]
+ *   Container to look for obstacle elements in. Defaults to the scroll container.
+ * @param {string} [options.obstacleAttributeName="data-drag-obstacle"]
+ *   Attribute that marks obstacle elements.
+ * @param {boolean} [options.showConstraintFeedbackLine=false]
+ *   Renders a visual line when the pointer deviates from the element due to constraints.
+ * @param {boolean} [options.showDebugMarkers=false]
+ *   Renders debug markers for constraint regions.
+ * @param {"commit"|"cancel"|"manual"} [options.releasePositionEffect="commit"]
+ *   Controls what happens to the translated position on release.
+ *   - `"commit"`: bakes the translate into inline styles so the element stays put (default).
+ *   - `"cancel"`: discards the translate so the element snaps back to its original position.
+ *   - `"manual"`: does nothing — the caller is responsible for clearing or committing
+ *     the transform via `dragStyleController`.
+ * @returns {object} Drag gesture controller with augmented `grab()` / `grabViaPointer()` methods.
+ */
 const createDragToMoveGestureController = ({
-  cloneOnDrag = false,
   stickyFrontiers = true,
-  // Padding to reduce the area used to autoscroll by this amount (applied after sticky frontiers)
-  // This creates an invisible space around the area where elements cannot be dragged
   autoScrollAreaPadding = 0,
-  // constraints,
-  areaConstraint = "scroll", // "scroll" | "scrollport" | "none" | {left,top,right,bottom} | function
+  areaConstraint = "scroll",
   obstaclesContainer,
   obstacleAttributeName = "data-drag-obstacle",
-  // Visual feedback line connecting mouse cursor to the moving grab point when constraints prevent following
-  // This provides intuitive feedback during drag operations when the element cannot reach the mouse
-  // position due to obstacles, boundaries, or other constraints. The line originates from where the mouse
-  // initially grabbed the element, but moves with the element to show the current anchor position.
-  // It becomes visible when there's a significant distance between mouse and grab point.
   showConstraintFeedbackLine = false,
   showDebugMarkers = false,
-  resetPositionAfterRelease = false,
+  releasePositionEffect = "commit",
   ...options
 } = {}) => {
   const initGrabToMoveElement = (
     dragGesture,
     { element, referenceElement, elementToMove, convertScrollablePosition },
   ) => {
-    if (cloneOnDrag) {
-      const { grabEvent } = dragGesture.gestureInfo;
-      const ghostData = createDragGhost(element, {
-        clientX: grabEvent.clientX,
-        clientY: grabEvent.clientY,
-      });
-      elementToMove = ghostData.ghostWrapper;
-      dragGesture.gestureInfo.elementImpacted = ghostData.ghostWrapper;
-      dragGesture.addReleaseCallback(() => {
-        ghostData.remove();
-      });
-    }
-    const direction = dragGesture.gestureInfo.direction;
-    // const dragGestureName = dragGesture.gestureInfo.name;
     const scrollContainer = dragGesture.gestureInfo.scrollContainer;
+
+    const direction = dragGesture.gestureInfo.direction;
+    // elementImpacted is either an externally provided elementToMove (e.g. a drag clone)
     const elementImpacted = elementToMove || element;
-    const translateXAtGrab = dragStyleController.getUnderlyingValue(
+    // elementImpacted is either an externally provided elementToMove
+    // (e.g. a drag clone passed by the caller) or the element itself.
+    // Capture any pre-existing translate so we can accumulate on top of it
+    // rather than resetting it to zero on the first drag event.
+    const transformAtGrab = dragStyleController.getUnderlyingValue(
       elementImpacted,
-      "transform.translateX",
+      "transform",
     );
-    const translateYAtGrab = dragStyleController.getUnderlyingValue(
-      elementImpacted,
-      "transform.translateY",
-    );
+    const translateXAtGrab = transformAtGrab.translateX;
+    const translateYAtGrab = transformAtGrab.translateY;
+
+    const cancelPosition = () => {
+      dragStyleController.clear(elementImpacted);
+    };
+    const commitPosition = () => {
+      dragStyleController.commit(elementImpacted);
+    };
+    dragGesture.gestureInfo.cancelPosition = cancelPosition;
+    dragGesture.gestureInfo.commitPosition = commitPosition;
+
     dragGesture.addReleaseCallback(() => {
-      if (resetPositionAfterRelease) {
-        dragStyleController.clear(elementImpacted);
-      } else {
-        dragStyleController.commit(elementImpacted);
+      if (releasePositionEffect === "cancel") {
+        cancelPosition();
+      } else if (releasePositionEffect === "commit") {
+        commitPosition();
       }
+      // "manual": caller handles cleanup, do nothing.
     });
 
     let elementWidth;
@@ -8840,8 +9031,8 @@ const createDragToMoveGestureController = ({
 
     let scrollArea;
     {
-      // computed at start so that scrollWidth/scrollHeight are fixed
-      // even if the dragging side effects increases them afterwards
+      // Snapshot at grab time so that DOM mutations during dragging
+      // (e.g. items shifting) don't change the scrollable boundary mid-drag.
       scrollArea = {
         left: 0,
         top: 0,
@@ -8853,8 +9044,8 @@ const createDragToMoveGestureController = ({
     let scrollport;
     let autoScrollArea;
     {
-      // for visible are we also want to snapshot the widht/height
-      // and we'll add scrollContainer container scrolls during drag (getScrollport does that)
+      // scrollBox is the fixed bounding rect of the scroll container viewport.
+      // scrollport is recomputed before each drag event to account for scrolling.
       const scrollBox = getScrollBox(scrollContainer);
       const updateScrollportAndAutoScrollArea = () => {
         scrollport = getScrollport(scrollBox, scrollContainer);
@@ -9009,7 +9200,10 @@ const createDragToMoveGestureController = ({
           scrollableLeft,
           scrollableTop,
         );
-        const transform = {};
+        // Build the transform to apply, preserving any transforms that were
+        // already on the element before the grab (e.g. rotate from another
+        // controller), and accumulating from the pre-grab translate baseline.
+        const transform = { ...transformAtGrab };
         if (direction.x) {
           const leftTarget = positionedLeft;
           const leftAtGrab = dragGesture.gestureInfo.leftAtGrab;
@@ -9018,12 +9212,6 @@ const createDragToMoveGestureController = ({
             ? translateXAtGrab + leftDelta
             : leftDelta;
           transform.translateX = translateX;
-          // console.log({
-          //   leftAtGrab,
-          //   scrollableLeft,
-          //   left,
-          //   leftTarget,
-          // });
         }
         if (direction.y) {
           const topTarget = positionedTop;
@@ -9048,6 +9236,7 @@ const createDragToMoveGestureController = ({
     element,
     referenceElement,
     elementToMove,
+    event,
     ...rest
   } = {}) => {
     const scrollContainer = getScrollContainer(referenceElement || element);
@@ -9061,6 +9250,7 @@ const createDragToMoveGestureController = ({
       scrollContainer,
       layoutScrollableLeft: elementScrollableLeft,
       layoutScrollableTop: elementScrollableTop,
+      event,
       ...rest,
     });
     initGrabToMoveElement(dragGesture, {
@@ -9075,106 +9265,25 @@ const createDragToMoveGestureController = ({
   return dragGestureController;
 };
 
-const createDragGhost = (element, pointerEvent) => {
-  const rect = element.getBoundingClientRect();
-
-  const ghost = element.cloneNode(true);
-  ghost.dataset.dragging = "";
-  ghost.style.pointerEvents = "none";
-  // transform-origin set to pointer position within the element for natural scale expansion
-  const originX = pointerEvent.clientX - rect.left;
-  const originY = pointerEvent.clientY - rect.top;
-  ghost.style.transformOrigin = `${originX}px ${originY}px`;
-
-  const ghostWrapper = document.createElement("div");
-  ghostWrapper.style.cssText = `position: absolute; pointer-events: none; z-index: 9999; top: ${rect.top + window.scrollY}px; left: ${rect.left + window.scrollX}px; width: ${rect.width}px;`;
-  ghostWrapper.appendChild(ghost);
-  document.body.appendChild(ghostWrapper);
-
-  return {
-    ghost,
-    ghostWrapper,
-    remove: () => {
-      ghostWrapper.remove();
-    },
-  };
-};
-
-const startDragToResizeGesture = (
-  pointerdownEvent,
-  { onDragStart, onDrag, onRelease, ...options },
-) => {
-  const target = pointerdownEvent.target;
-  if (!target.closest) {
-    return null;
-  }
-  const elementWithDataResizeHandle = target.closest("[data-resize-handle]");
-  if (!elementWithDataResizeHandle) {
-    return null;
-  }
-  let elementToResize;
-  const dataResizeHandle =
-    elementWithDataResizeHandle.getAttribute("data-resize-handle");
-  if (!dataResizeHandle || dataResizeHandle === "true") {
-    elementToResize = elementWithDataResizeHandle.closest("[data-resize]");
-  } else {
-    elementToResize = document.querySelector(`#${dataResizeHandle}`);
-  }
-  if (!elementToResize) {
-    console.warn("No element to resize found");
-    return null;
-  }
-  // inspired by https://developer.mozilla.org/en-US/docs/Web/CSS/resize
-  // "horizontal", "vertical", "both"
-  const resizeDirection = getResizeDirection(elementToResize);
-  if (!resizeDirection.x && !resizeDirection.y) {
-    return null;
-  }
-
-  const dragToResizeGestureController = createDragGestureController({
-    onDragStart: (...args) => {
-      onDragStart?.(...args);
-    },
-    onDrag,
-    onRelease: (...args) => {
-      elementWithDataResizeHandle.removeAttribute("data-active");
-      onRelease?.(...args);
-    },
-  });
-  elementWithDataResizeHandle.setAttribute("data-active", "");
-  const dragToResizeGesture = dragToResizeGestureController.grabViaPointer(
-    pointerdownEvent,
-    {
-      element: elementToResize,
-      direction: resizeDirection,
-      cursor:
-        resizeDirection.x && resizeDirection.y
-          ? "nwse-resize"
-          : resizeDirection.x
-            ? "ew-resize"
-            : "ns-resize",
-      ...options,
-    },
-  );
-  return dragToResizeGesture;
-};
-
-const getResizeDirection = (element) => {
-  const direction = element.getAttribute("data-resize");
-  const x = direction === "horizontal" || direction === "both";
-  const y = direction === "vertical" || direction === "both";
-  return { x, y };
-};
-
 /**
  * Detects the drop target based on what element is actually under the mouse cursor.
  * Uses document.elementsFromPoint() to respect visual stacking order naturally.
  *
  * @param {Object} gestureInfo - Gesture information
  * @param {Element[]} targetElements - Array of potential drop target elements
+ * @param {object} [options]
+ * @param {Element} [options.dragElement] - The element being dragged. When provided and
+ *   `fallbackToEdge` is true, used to compute the fallback rect.
+ * @param {boolean} [options.fallbackToEdge=false] - When true and the drag element does
+ *   not intersect any target, falls back to the first item (if above all items) or the
+ *   last item (if below all items) so there is always a valid drop target at list edges.
  * @returns {Object|null} Drop target info with elementSide or null if no valid target found
  */
-const getDropTargetInfo = (gestureInfo, targetElements) => {
+const getDropTargetInfo = (
+  gestureInfo,
+  targetElements,
+  { fallbackToEdge = false } = {},
+) => {
   const dragElement = gestureInfo.elementImpacted || gestureInfo.element;
   const dragElementRect = dragElement.getBoundingClientRect();
   const intersectingTargets = [];
@@ -9195,6 +9304,38 @@ const getDropTargetInfo = (gestureInfo, targetElements) => {
   }
 
   if (intersectingTargets.length === 0) {
+    if (fallbackToEdge) {
+      const dragElement = gestureInfo.elementImpacted || gestureInfo.element;
+      const dragElementRect = dragElement.getBoundingClientRect();
+      const firstItem = targetElements[0];
+      const lastItem = targetElements[targetElements.length - 1];
+      if (
+        firstItem &&
+        dragElementRect.bottom < firstItem.getBoundingClientRect().top
+      ) {
+        // Drag element is above all items → treat as hovering the first item from the top.
+        return {
+          element: firstItem,
+          elementSide: { x: "start", y: "start" },
+          index: 0,
+          intersectingIndex: 0,
+          intersecting: [firstItem],
+        };
+      }
+      if (
+        lastItem &&
+        dragElementRect.top > lastItem.getBoundingClientRect().bottom
+      ) {
+        // Drag element is below all items → treat as hovering the last item from the bottom.
+        return {
+          element: lastItem,
+          elementSide: { x: "start", y: "end" },
+          index: targetElements.length - 1,
+          intersectingIndex: 0,
+          intersecting: [lastItem],
+        };
+      }
+    }
     return null;
   }
 
@@ -9270,17 +9411,46 @@ const getDropTargetInfo = (gestureInfo, targetElements) => {
   }
   targetIndex = targetElements.indexOf(targetElement);
 
-  // Determine position within the target for both axes
+  // Determine position within the target for both axes.
+  //
+  // Use the leading edge of the dragged element (in the direction of movement)
+  // compared against the target's center:
+  //   - Dragging down: "after" as soon as the bottom crosses the target center.
+  //   - Dragging up:   "before" as soon as the top crosses the target center.
+  //   - Not moving: center-vs-center fallback.
+  //
+  // This gives consistent, predictable thresholds regardless of element size.
   const targetRect = targetElement.getBoundingClientRect();
   const targetCenterX = targetRect.left + targetRect.width / 2;
   const targetCenterY = targetRect.top + targetRect.height / 2;
+  const { intentGoingDown, intentGoingUp, intentGoingRight, intentGoingLeft } =
+    gestureInfo;
+  let sideY;
+  if (intentGoingDown) {
+    sideY = dragElementRect.bottom > targetCenterY ? "end" : "start";
+  } else if (intentGoingUp) {
+    sideY = dragElementRect.top < targetCenterY ? "start" : "end";
+  } else {
+    sideY = dragElementCenterY < targetCenterY ? "start" : "end";
+  }
+  let sideX;
+  if (intentGoingRight) {
+    sideX = dragElementRect.right > targetCenterX ? "end" : "start";
+  } else if (intentGoingLeft) {
+    sideX = dragElementRect.left < targetCenterX ? "start" : "end";
+  } else {
+    sideX = dragElementCenterX < targetCenterX ? "start" : "end";
+  }
   const result = {
-    // Index of the target element within the original targetElements array
+    // NOTE: avoid relying on `index` in application code. The targetElements
+    // array may be dynamically filtered (e.g. excluding the grabbed element),
+    // making this index inconsistent with the full list. Use `element` instead
+    // and look up its position yourself from your own data source.
     index: targetIndex,
     element: targetElement,
     elementSide: {
-      x: dragElementRect.left < targetCenterX ? "start" : "end",
-      y: dragElementRect.top < targetCenterY ? "start" : "end",
+      x: sideX,
+      y: sideY,
     },
     // Index within the intersecting subset — could be useful to know how many
     // elements were overlapping, but rarely needed in practice
@@ -9319,6 +9489,407 @@ const findTableCellCol = (cellElement) => {
   const columnIndex = cellElement.cellIndex;
   const correspondingCol = cols[columnIndex];
   return correspondingCol;
+};
+
+// Temporarily attach to the element so inherited CSS vars resolve correctly,
+// then snapshot all drop-hint custom properties onto the scroll container
+// so they survive once the element moves to the scroll container.
+const moveCSSVars = (vars, fromEl, toEl) => {
+  const fromComputedStyle = getComputedStyle(fromEl);
+  const savedVars = {};
+  for (const varName of vars) {
+    const value = fromComputedStyle.getPropertyValue(varName).trim();
+    if (value) {
+      savedVars[varName] = toEl.style.getPropertyValue(varName);
+      toEl.style.setProperty(varName, value);
+    }
+  }
+
+  return () => {
+    for (const varName of vars) {
+      if (varName in savedVars) {
+        if (savedVars[varName]) {
+          toEl.style.setProperty(varName, savedVars[varName]);
+        } else {
+          toEl.style.removeProperty(varName);
+        }
+      }
+    }
+  };
+};
+
+installImportMetaCssBuild(import.meta);const css$1 = /* css */`
+  .navi_drop_hint {
+    position: absolute;
+    top: var(--drop-hint-y);
+    left: calc(var(--drop-target-left) + var(--drop-hint-margin-x, 0px));
+    z-index: 10;
+    display: none;
+    width: calc(var(--drop-target-width) - 2 * var(--drop-hint-margin-x, 0px));
+    height: var(--drop-hint-size, 3px);
+    background: var(--drop-hint-background-color, #4476ff);
+    border-radius: var(--drop-hint-border-radius, 2px);
+    transform: translateY(-50%);
+    pointer-events: none;
+  }
+  [data-drop-edge="top"] > .navi_drop_hint {
+    display: block;
+    --drop-hint-y: calc(
+      var(--drop-target-top) - var(--drop-hint-margin-y, 0px)
+    );
+  }
+  [data-drop-edge="bottom"] > .navi_drop_hint {
+    display: block;
+    --drop-hint-y: calc(
+      var(--drop-target-bottom) + var(--drop-hint-margin-y, 0px)
+    );
+  }
+
+  [navi-drag-clone-source] {
+    visibility: hidden;
+  }
+
+  [navi-drag-clone-wrapper] {
+    position: absolute;
+    top: var(--clone-top);
+    left: var(--clone-left);
+    z-index: 9999;
+    width: var(--clone-width);
+    height: var(--clone-height);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
+    opacity: 0.95;
+    transition: box-shadow 0.15s ease;
+    pointer-events: none;
+  }
+
+  [navi-drag-clone] {
+    transform: scale(var(--drag-clone-scale, 1.03));
+    transform-origin: var(--drag-origin);
+    transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  @starting-style {
+    [navi-drag-clone-wrapper] {
+      box-shadow: none;
+    }
+
+    [navi-drag-clone] {
+      transform: scale(1);
+    }
+  }
+`;
+const dragCSSVars = ["--drop-hint-size", "--drop-hint-background-color", "--drop-hint-border-radius", "--drop-hint-margin-x", "--drop-hint-margin-y", "--drag-clone-scale"];
+
+/**
+ * Starts a drag-to-reorder interaction on a list item.
+ *
+ * Handles the full reorder UX:
+ * - Activates only after a short movement threshold (avoids accidental reorders on clicks).
+ * - Clones the grabbed element and moves the clone while the original stays hidden in place
+ *   (keeps the layout intact so other items don't shift during the drag).
+ * - CSS vars (`--drop-hint-size`, `--drop-hint-background-color`, etc.) are read from the
+ *   dragged element and moved to `document.documentElement` for the duration of the drag so
+ *   the drop-hint and clone — both in `document.body` — can inherit them.
+ * - Shows a drop-hint line indicating where the item will land.
+ * - Drop-target detection is intersection-based: the clone's bounding rect is compared
+ *   against every item that matches `itemSelector` in the scroll container.
+ * - No-ops are filtered: releasing on the grabbed element itself, or in a position that
+ *   would leave it at exactly the same index, never triggers `onReorder`.
+ * - On a valid drop, the clone animates to the drop position via the View Transitions API,
+ *   `onReorder` is called inside the transition callback so the DOM update and the animation
+ *   are captured together, then the clone is removed.
+ * - On a cancelled drop (pointer released with no valid target), the clone is removed
+ *   immediately without calling `onReorder`.
+ *
+ * IDs are used as the bridge between DOM elements and JS state because:
+ * - Not all DOM elements matching `itemSelector` may be valid drop targets
+ *   (holes in the structure), so DOM indices don't reliably map to state indices.
+ * - Virtual lists render fewer DOM nodes than the total item count, so
+ *   DOM-index-based counting would be wrong.
+ *
+ * @param {PointerEvent} event
+ *   The `pointerdown` event from the drag handle.
+ * @param {Element} draggedElement
+ *   The list item element to drag. Typically `event.currentTarget`.
+ * @param {object} options
+ * @param {string} options.itemSelector
+ *   CSS selector that matches all list items inside the scroll container.
+ *   Used for drop-target detection and no-op filtering.
+ * @param {function} options.getItemId
+ *   Returns the stable ID for a given DOM element.
+ *   Signature: `getItemId(element) → id`.
+ * @param {function} options.onReorder
+ *   Called when the user drops the item in a new position.
+ *   Signature: `onReorder(fromId, toId)`.
+ *   - `fromId`: stable ID of the dragged item.
+ *   - `toId`: stable ID of the item to insert before, or `null` to append at the end.
+ *   Called inside `document.startViewTransition` so the resulting DOM mutation is
+ *   animated by the View Transitions API.
+ * @param {object} [options.direction={ x: false, y: true }]
+ *   Axes along which dragging is allowed. Passed to `createDragToMoveGestureController`.
+ * @param {...*} [options]
+ *   Any remaining options are forwarded to `createDragToMoveGestureController`
+ *   (e.g. `areaConstraint`, `autoScrollAreaPadding`, `stickyFrontiers`).
+ *   `releasePositionEffect` is always set to `"manual"` internally and cannot be overridden.
+ */
+const startDragToReorder = (event, draggedElement, {
+  itemSelector,
+  containerElement,
+  getItemId,
+  onReorder,
+  direction = {
+    x: false,
+    y: true
+  },
+  ...options
+}) => {
+  import.meta.css = [css$1, "@jsenv/dom/src/interaction/drag/drag_to_reorder.js"];
+  event.preventDefault();
+  return dragAfterThreshold(event, () => {
+    const cloneWrapper = createDragClone(draggedElement, event);
+    draggedElement.setAttribute("navi-drag-clone-source", "");
+    // Move drag related CSS vars from the element to the document
+    // so they're accessible to .navi_drop_hint and the clone (which are both in document.body)
+    const restoreCSSVars = moveCSSVars(dragCSSVars, draggedElement, document.documentElement);
+    const gestureController = createDragToMoveGestureController({
+      direction,
+      releasePositionEffect: "manual",
+      ...options
+    });
+    const dragGesture = gestureController.grabViaPointer(event, {
+      element: draggedElement,
+      elementToMove: cloneWrapper
+    });
+    // getDropTargetInfo uses gestureInfo.elementImpacted to compute the dragged rect.
+    // Point it at the clone so drop detection tracks the clone's current position.
+    dragGesture.gestureInfo.elementImpacted = cloneWrapper;
+    const scrollContainer = dragGesture.gestureInfo.scrollContainer;
+    const dropHintEl = document.createElement("div");
+    dropHintEl.className = "navi_drop_hint";
+    scrollContainer.appendChild(dropHintEl);
+
+    // currentBeforeElement: element before which the grabbed item will be inserted (null = end)
+    // currentReleaseElement: the actual hovered drop target — used to snap the clone on release
+    let currentBeforeElement;
+    let currentReleaseElement;
+    const clearDropHintDOM = () => {
+      scrollContainer.removeAttribute("data-drop-edge");
+      scrollContainer.style.removeProperty("--drop-target-top");
+      scrollContainer.style.removeProperty("--drop-target-bottom");
+      scrollContainer.style.removeProperty("--drop-target-left");
+      scrollContainer.style.removeProperty("--drop-target-width");
+    };
+    const clearDropHint = () => {
+      currentBeforeElement = undefined;
+      currentReleaseElement = undefined;
+      clearDropHintDOM();
+    };
+    const itemsContainer = containerElement || draggedElement.parentElement;
+    dragGesture.addDragCallback(gestureInfo => {
+      const allItems = [];
+      const items = [];
+      for (const el of itemsContainer.querySelectorAll(itemSelector)) {
+        allItems.push(el);
+        if (el !== draggedElement) {
+          items.push(el);
+        }
+      }
+      const dropTargetInfo = getDropTargetInfo(gestureInfo, items, {
+        fallbackToEdge: true
+      });
+      gestureInfo.dropTargetInfo = dropTargetInfo || null;
+      if (!dropTargetInfo) {
+        clearDropHint();
+        return;
+      }
+      // Convert {element, edge} to a beforeElement using the items array
+      // (not nextElementSibling, which breaks if non-item elements exist between items).
+      //   edge "start" → insert before the hovered element
+      //   edge "end"   → insert before the next item (null = append at end)
+      const edge = dropTargetInfo.elementSide.y;
+      const hoveredIndex = items.indexOf(dropTargetInfo.element);
+      const beforeElement = edge === "start" ? dropTargetInfo.element : items[hoveredIndex + 1] ?? null;
+      // Detect no-op: result would leave the grabbed element in the same position.
+      const elementIndex = allItems.indexOf(draggedElement);
+      const elementNextItem = allItems[elementIndex + 1] ?? null;
+      const isNoop = beforeElement === elementNextItem;
+      if (isNoop) {
+        clearDropHint();
+        return;
+      }
+      // Early return if nothing changed.
+      const releaseElement = dropTargetInfo.element;
+      if (beforeElement === currentBeforeElement && releaseElement === currentReleaseElement) {
+        return;
+      }
+      currentBeforeElement = beforeElement;
+      currentReleaseElement = releaseElement;
+      // Update drop hint CSS vars.
+      // beforeElement = null → insert at end (hint after last item)
+      // beforeElement = X    → insert before X (hint at top edge of X)
+      const anchorEl = beforeElement || items[items.length - 1];
+      const anchorEdge = beforeElement !== null ? "top" : "bottom";
+      const containerRect = scrollContainer.getBoundingClientRect();
+      const anchorRect = anchorEl.getBoundingClientRect();
+      const isPositioned = getComputedStyle(scrollContainer).position !== "static";
+      const scrollOffsetLeft = isPositioned ? scrollContainer.scrollLeft : 0;
+      const scrollOffsetTop = isPositioned ? scrollContainer.scrollTop : 0;
+      scrollContainer.setAttribute("data-drop-edge", anchorEdge);
+      scrollContainer.style.setProperty("--drop-target-top", `${anchorRect.top - containerRect.top + scrollOffsetTop}px`);
+      scrollContainer.style.setProperty("--drop-target-bottom", `${anchorRect.bottom - containerRect.top + scrollOffsetTop}px`);
+      scrollContainer.style.setProperty("--drop-target-left", `${anchorRect.left - containerRect.left + scrollOffsetLeft}px`);
+      scrollContainer.style.setProperty("--drop-target-width", `${anchorRect.width}px`);
+    });
+    dragGesture.addReleaseCallback(async gestureInfo => {
+      clearDropHintDOM();
+      dropHintEl.remove();
+      restoreCSSVars();
+      if (currentBeforeElement !== undefined) {
+        const clone = cloneWrapper.firstElementChild;
+        // Bake the current visual position (transform included) into the CSS vars
+        // so the clone stays where the user released it when we clear the transform.
+        setCloneDocumentRect(cloneWrapper, cloneWrapper);
+        gestureInfo.cancelPosition();
+        const fromId = getItemId(draggedElement);
+        const toId = currentBeforeElement ? getItemId(currentBeforeElement) : null;
+        // provide onReorder a way to synchronously move the clone to the drop target
+        // (meant to be used inside a startViewTransition callback)
+        const syncCloneWithDropTarget = () => {
+          // Snap the CSS-var position to the drop target rect so the browser
+          // captures the "new" state at the landing position.
+          setCloneDocumentRect(cloneWrapper, currentReleaseElement);
+          // Removing this attr drops the CSS scale(1.15), so the browser
+          // captures the clone at scale 1 as the "new" state.
+          clone.removeAttribute("navi-drag-clone");
+        };
+        await onReorder(fromId, toId, syncCloneWithDropTarget);
+      }
+      draggedElement.removeAttribute("navi-drag-clone-source");
+      cloneWrapper.remove();
+    });
+    return dragGesture;
+  });
+};
+
+// getBoundingClientRect() returns viewport-relative coords.
+// The clone wrapper is position:absolute inside document.body, so we need
+// document-relative coords (viewport coords + current page scroll).
+const setCloneDocumentRect = (cloneWrapper, el) => {
+  const rect = el.getBoundingClientRect();
+  const scrollLeft = document.documentElement.scrollLeft;
+  const scrollTop = document.documentElement.scrollTop;
+  cloneWrapper.style.setProperty("--clone-top", `${rect.top + scrollTop}px`);
+  cloneWrapper.style.setProperty("--clone-left", `${rect.left + scrollLeft}px`);
+  cloneWrapper.style.setProperty("--clone-width", `${rect.width}px`);
+  cloneWrapper.style.setProperty("--clone-height", `${rect.height}px`);
+};
+
+// Creates the two-layer clone structure used for drag-to-reorder.
+//
+// Layer 1 — wrapper (navi-drag-clone-wrapper):
+//   Positioned absolutely via --clone-top/--clone-left CSS vars.
+//   Carries the box-shadow and size. Moved every drag frame via dragStyleController.
+//   Has a view-transition-name so the View Transitions API can animate it on release.
+//
+// Layer 2 — inner clone (navi-drag-clone):
+//   A deep clone of the grabbed element.
+//   Applies transform: scale(1.15) via the CSS rule for [navi-drag-clone],
+//   giving the "lifted" feel. The transform-origin is set to the grab point
+//   so the element expands naturally from where the user clicked.
+//   On release, the `navi-drag-clone` attribute is removed inside
+//   startViewTransition to drop the scale back to 1 as the "new" state.
+const createDragClone = (element, pointerEvent) => {
+  const rect = element.getBoundingClientRect();
+  const wrapper = document.createElement("div");
+  wrapper.setAttribute("navi-drag-clone-wrapper", "");
+  wrapper.viewTransitionName = "navi-drag-clone-wrapper";
+  setCloneDocumentRect(wrapper, element);
+  // Grab point within the element — used as transform-origin so the
+  // scale(1.15) expands from where the user clicked, not the element center.
+  // These offsets are element-relative so viewport coords are correct here.
+  wrapper.style.setProperty("--drag-origin", `${pointerEvent.clientX - rect.left}px ${pointerEvent.clientY - rect.top}px`);
+  // The clone is appended to document.body, so it loses inherited styles
+  // from the original parent. Copy the computed inherited properties that
+  // are most likely to affect visual appearance.
+  const computedStyle = getComputedStyle(element.parentElement);
+  for (const property of INHERITED_PROPERTIES_TO_COPY_SET) {
+    wrapper.style.setProperty(property, computedStyle.getPropertyValue(property));
+  }
+  const elementClone = element.cloneNode(true);
+  elementClone.setAttribute("navi-drag-clone", "");
+  elementClone.style.viewTransitionName = "navi-drag-clone";
+  wrapper.appendChild(elementClone);
+  document.body.appendChild(wrapper);
+  return wrapper;
+};
+const INHERITED_PROPERTIES_TO_COPY_SET = new Set(["color", "font-family", "font-size", "font-weight", "font-style", "line-height", "letter-spacing",
+// in case the item has border-radius: inherit. The clone can inherit too
+"border-radius"]);
+
+const startDragToResizeGesture = (
+  pointerdownEvent,
+  { onDragStart, onDrag, onRelease, ...options },
+) => {
+  const target = pointerdownEvent.target;
+  if (!target.closest) {
+    return null;
+  }
+  const elementWithDataResizeHandle = target.closest("[data-resize-handle]");
+  if (!elementWithDataResizeHandle) {
+    return null;
+  }
+  let elementToResize;
+  const dataResizeHandle =
+    elementWithDataResizeHandle.getAttribute("data-resize-handle");
+  if (!dataResizeHandle || dataResizeHandle === "true") {
+    elementToResize = elementWithDataResizeHandle.closest("[data-resize]");
+  } else {
+    elementToResize = document.querySelector(`#${dataResizeHandle}`);
+  }
+  if (!elementToResize) {
+    console.warn("No element to resize found");
+    return null;
+  }
+  // inspired by https://developer.mozilla.org/en-US/docs/Web/CSS/resize
+  // "horizontal", "vertical", "both"
+  const resizeDirection = getResizeDirection(elementToResize);
+  if (!resizeDirection.x && !resizeDirection.y) {
+    return null;
+  }
+
+  const dragToResizeGestureController = createDragGestureController({
+    onDragStart: (...args) => {
+      onDragStart?.(...args);
+    },
+    onDrag,
+    onRelease: (...args) => {
+      elementWithDataResizeHandle.removeAttribute("data-active");
+      onRelease?.(...args);
+    },
+  });
+  elementWithDataResizeHandle.setAttribute("data-active", "");
+  const dragToResizeGesture = dragToResizeGestureController.grabViaPointer(
+    pointerdownEvent,
+    {
+      element: elementToResize,
+      direction: resizeDirection,
+      cursor:
+        resizeDirection.x && resizeDirection.y
+          ? "nwse-resize"
+          : resizeDirection.x
+            ? "ew-resize"
+            : "ns-resize",
+      ...options,
+    },
+  );
+  return dragToResizeGesture;
+};
+
+const getResizeDirection = (element) => {
+  const direction = element.getAttribute("data-resize");
+  const x = direction === "horizontal" || direction === "both";
+  const y = direction === "vertical" || direction === "both";
+  return { x, y };
 };
 
 const getPositionedParent = (element) => {
@@ -13420,4 +13991,4 @@ const useResizeStatus = (elementRef, { as = "number" } = {}) => {
   };
 };
 
-export { EASING, activeElementSignal, addActiveElementEffect, addAttributeEffect, allowWheelThrough, appendStyles, canInterceptKeys, captureScrollState, contrastColor, createBackgroundColorTransition, createBackgroundTransition, createBorderRadiusTransition, createBorderTransition, createDragGestureController, createDragToMoveGestureController, createGroupTransitionController, createHeightTransition, createIterableWeakSet, createOpacityTransition, createPubSub, createStyleController, createTimelineTransition, createTransition, createTranslateXTransition, createValueEffect, createWidthTransition, cubicBezier, dragAfterThreshold, elementIsFocusable, elementIsVisibleForFocus, elementIsVisuallyVisible, findAfter, findAncestor, findBefore, findDescendant, findFocusable, getAvailableHeight, getAvailableWidth, getBackground, getBackgroundColor, getBorder, getBorderRadius, getBorderSizes, getContrastRatio, getDefaultStyles, getDragCoordinates, getDropTargetInfo, getElementSignature, getFirstVisuallyVisibleAncestor, getFocusVisibilityInfo, getHeight, getHeightWithoutTransition, getInnerHeight, getInnerWidth, getLuminance, getMarginSizes, getMaxHeight, getMaxWidth, getMinHeight, getMinWidth, getOpacity, getOpacityWithoutTransition, getPaddingSizes, getPositionedParent, getPreferedColorScheme, getScrollBox, getScrollContainer, getScrollContainerSet, getScrollRelativeRect, getSelfAndAncestorScrolls, getStyle, getTranslateX, getTranslateXWithoutTransition, getTranslateY, getVisuallyVisibleInfo, getWidth, getWidthWithoutTransition, hasCSSSizeUnit, initFlexDetailsSet, initFocusGroup, initPositionSticky, isSameColor, isScrollable, measureScrollbar, mergeOneStyle, mergeTwoStyles, normalizeStyle, normalizeStyles, parseStyle, pickPositionRelativeTo, prefersDarkColors, prefersLightColors, preventFocusNav, preventFocusNavViaKeyboard, preventIntermediateScrollbar, resolveCSSColor, resolveCSSSize, resolveColorLuminance, resolveOklchLightness, scrollIntoViewScoped, scrollIntoViewWithStickyAwareness, setAttribute, setAttributes, setStyles, snapToPixel, startDragToResizeGesture, stickyAsRelativeCoords, stringifyStyle, trapFocusInside, trapScrollInside, useActiveElement, useAvailableHeight, useAvailableWidth, useMaxHeight, useMaxWidth, useResizeStatus, visibleRectEffect };
+export { EASING, activeElementSignal, addActiveElementEffect, addAttributeEffect, allowWheelThrough, appendStyles, canInterceptKeys, captureScrollState, contrastColor, createBackgroundColorTransition, createBackgroundTransition, createBorderRadiusTransition, createBorderTransition, createDragGestureController, createDragToMoveGestureController, createGroupTransitionController, createHeightTransition, createIterableWeakSet, createOpacityTransition, createPubSub, createStyleController, createTimelineTransition, createTransition, createTranslateXTransition, createValueEffect, createWidthTransition, cubicBezier, dispatchCustomEvent, dispatchInternalCustomEvent, dispatchPublicCustomEvent, dragAfterThreshold, elementIsFocusable, elementIsVisibleForFocus, elementIsVisuallyVisible, findAfter, findAncestor, findBefore, findDescendant, findFocusable, getAvailableHeight, getAvailableWidth, getBackground, getBackgroundColor, getBorder, getBorderRadius, getBorderSizes, getContrastRatio, getDefaultStyles, getDragCoordinates, getDropTargetInfo, getElementSignature, getFirstVisuallyVisibleAncestor, getFocusVisibilityInfo, getHeight, getHeightWithoutTransition, getInnerHeight, getInnerWidth, getLuminance, getMarginSizes, getMaxHeight, getMaxWidth, getMinHeight, getMinWidth, getOpacity, getOpacityWithoutTransition, getPaddingSizes, getPositionedParent, getPreferedColorScheme, getScrollBox, getScrollContainer, getScrollContainerSet, getScrollRelativeRect, getSelfAndAncestorScrolls, getStyle, getTranslateX, getTranslateXWithoutTransition, getTranslateY, getVisuallyVisibleInfo, getWidth, getWidthWithoutTransition, hasCSSSizeUnit, initFlexDetailsSet, initFocusGroup, initPositionSticky, isSameColor, isScrollable, measureScrollbar, mergeOneStyle, mergeTwoStyles, normalizeStyle, normalizeStyles, parseStyle, pickPositionRelativeTo, prefersDarkColors, prefersLightColors, preventFocusNav, preventFocusNavViaKeyboard, preventIntermediateScrollbar, resolveCSSColor, resolveCSSSize, resolveColorLuminance, resolveOklchLightness, scrollIntoViewScoped, scrollIntoViewWithStickyAwareness, setAttribute, setAttributes, setStyles, snapToPixel, startDragToReorder, startDragToResizeGesture, stickyAsRelativeCoords, stringifyStyle, trapFocusInside, trapScrollInside, useActiveElement, useAvailableHeight, useAvailableWidth, useMaxHeight, useMaxWidth, useResizeStatus, visibleRectEffect };

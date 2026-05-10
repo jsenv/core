@@ -4,9 +4,19 @@
  *
  * @param {Object} gestureInfo - Gesture information
  * @param {Element[]} targetElements - Array of potential drop target elements
+ * @param {object} [options]
+ * @param {Element} [options.dragElement] - The element being dragged. When provided and
+ *   `fallbackToEdge` is true, used to compute the fallback rect.
+ * @param {boolean} [options.fallbackToEdge=false] - When true and the drag element does
+ *   not intersect any target, falls back to the first item (if above all items) or the
+ *   last item (if below all items) so there is always a valid drop target at list edges.
  * @returns {Object|null} Drop target info with elementSide or null if no valid target found
  */
-export const getDropTargetInfo = (gestureInfo, targetElements) => {
+export const getDropTargetInfo = (
+  gestureInfo,
+  targetElements,
+  { fallbackToEdge = false } = {},
+) => {
   const dragElement = gestureInfo.elementImpacted || gestureInfo.element;
   const dragElementRect = dragElement.getBoundingClientRect();
   const intersectingTargets = [];
@@ -27,6 +37,38 @@ export const getDropTargetInfo = (gestureInfo, targetElements) => {
   }
 
   if (intersectingTargets.length === 0) {
+    if (fallbackToEdge) {
+      const dragElement = gestureInfo.elementImpacted || gestureInfo.element;
+      const dragElementRect = dragElement.getBoundingClientRect();
+      const firstItem = targetElements[0];
+      const lastItem = targetElements[targetElements.length - 1];
+      if (
+        firstItem &&
+        dragElementRect.bottom < firstItem.getBoundingClientRect().top
+      ) {
+        // Drag element is above all items → treat as hovering the first item from the top.
+        return {
+          element: firstItem,
+          elementSide: { x: "start", y: "start" },
+          index: 0,
+          intersectingIndex: 0,
+          intersecting: [firstItem],
+        };
+      }
+      if (
+        lastItem &&
+        dragElementRect.top > lastItem.getBoundingClientRect().bottom
+      ) {
+        // Drag element is below all items → treat as hovering the last item from the bottom.
+        return {
+          element: lastItem,
+          elementSide: { x: "start", y: "end" },
+          index: targetElements.length - 1,
+          intersectingIndex: 0,
+          intersecting: [lastItem],
+        };
+      }
+    }
     return null;
   }
 
@@ -102,17 +144,46 @@ export const getDropTargetInfo = (gestureInfo, targetElements) => {
   }
   targetIndex = targetElements.indexOf(targetElement);
 
-  // Determine position within the target for both axes
+  // Determine position within the target for both axes.
+  //
+  // Use the leading edge of the dragged element (in the direction of movement)
+  // compared against the target's center:
+  //   - Dragging down: "after" as soon as the bottom crosses the target center.
+  //   - Dragging up:   "before" as soon as the top crosses the target center.
+  //   - Not moving: center-vs-center fallback.
+  //
+  // This gives consistent, predictable thresholds regardless of element size.
   const targetRect = targetElement.getBoundingClientRect();
   const targetCenterX = targetRect.left + targetRect.width / 2;
   const targetCenterY = targetRect.top + targetRect.height / 2;
+  const { intentGoingDown, intentGoingUp, intentGoingRight, intentGoingLeft } =
+    gestureInfo;
+  let sideY;
+  if (intentGoingDown) {
+    sideY = dragElementRect.bottom > targetCenterY ? "end" : "start";
+  } else if (intentGoingUp) {
+    sideY = dragElementRect.top < targetCenterY ? "start" : "end";
+  } else {
+    sideY = dragElementCenterY < targetCenterY ? "start" : "end";
+  }
+  let sideX;
+  if (intentGoingRight) {
+    sideX = dragElementRect.right > targetCenterX ? "end" : "start";
+  } else if (intentGoingLeft) {
+    sideX = dragElementRect.left < targetCenterX ? "start" : "end";
+  } else {
+    sideX = dragElementCenterX < targetCenterX ? "start" : "end";
+  }
   const result = {
-    // Index of the target element within the original targetElements array
+    // NOTE: avoid relying on `index` in application code. The targetElements
+    // array may be dynamically filtered (e.g. excluding the grabbed element),
+    // making this index inconsistent with the full list. Use `element` instead
+    // and look up its position yourself from your own data source.
     index: targetIndex,
     element: targetElement,
     elementSide: {
-      x: dragElementRect.left < targetCenterX ? "start" : "end",
-      y: dragElementRect.top < targetCenterY ? "start" : "end",
+      x: sideX,
+      y: sideY,
     },
     // Index within the intersecting subset — could be useful to know how many
     // elements were overlapping, but rarely needed in practice

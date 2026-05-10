@@ -10,13 +10,16 @@ export const stringifyCSSTransform = (transformObj, normalize) => {
     );
     transforms.push(`${key}(${normalizedTransformPartValue})`);
   }
+  if (transforms.length === 0) {
+    return "none";
+  }
   return transforms.join(" ");
 };
 
 // Parse transform CSS string into object
 export const parseCSSTransform = (transformString, normalize) => {
   if (!transformString || transformString === "none") {
-    return undefined;
+    return {};
   }
 
   const transformObj = {};

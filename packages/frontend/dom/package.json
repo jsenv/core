@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/dom",
-  "version": "0.10.5",
+  "version": "0.11.0",
   "type": "module",
   "description": "DOM utilities for writing frontend code",
   "repository": {
@@ -25,7 +25,8 @@
     },
     "./details_content_full_height": "./src/size/details_content_full_height.js",
     "./details_toggle_animation": "./src/details_toggle_animation.js",
-    "./resize": "./src/size/resize.js"
+    "./resize": "./src/size/resize.js",
+    "./*": "./*"
   },
   "files": [
     "/dist/"

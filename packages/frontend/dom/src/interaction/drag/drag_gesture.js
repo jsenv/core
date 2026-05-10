@@ -9,6 +9,7 @@
  *
  */
 
+import { dispatchPublicCustomEvent } from "../../custom_event.js";
 import { createPubSub } from "../../pub_sub.js";
 import { findFocusable } from "../focus/find_focusable.js";
 import { isolateInteractions } from "../isolate_interactions.js";
@@ -124,6 +125,10 @@ export const createDragGestureController = (options = {}) => {
       isGoingDown: undefined,
       isGoingLeft: undefined,
       isGoingRight: undefined,
+      intentGoingUp: false,
+      intentGoingDown: false,
+      intentGoingLeft: false,
+      intentGoingRight: false,
 
       // metadata about interaction sources
       grabEvent: event,
@@ -405,10 +410,31 @@ export const createDragGestureController = (options = {}) => {
       const layoutPrevious = gestureInfo.layout;
       // previousGestureInfo = { ...gestureInfo };
       Object.assign(gestureInfo, dragData);
+      if (gestureInfo.isGoingDown) {
+        gestureInfo.intentGoingDown = true;
+        gestureInfo.intentGoingUp = false;
+      } else if (gestureInfo.isGoingUp) {
+        gestureInfo.intentGoingUp = true;
+        gestureInfo.intentGoingDown = false;
+      }
+      if (gestureInfo.isGoingRight) {
+        gestureInfo.intentGoingRight = true;
+        gestureInfo.intentGoingLeft = false;
+      } else if (gestureInfo.isGoingLeft) {
+        gestureInfo.intentGoingLeft = true;
+        gestureInfo.intentGoingRight = false;
+      }
       if (!startedPrevious && gestureInfo.started) {
+        dispatchPublicCustomEvent(element, "navi_drag_start", {
+          gestureInfo,
+        });
         onDragStart?.(gestureInfo);
       }
       const someLayoutChange = gestureInfo.layout !== layoutPrevious;
+      dispatchPublicCustomEvent(element, "navi_drag", {
+        gestureInfo,
+        someLayoutChange,
+      });
       publishDrag(
         gestureInfo,
         // we still publish drag event even when unchanged
@@ -425,9 +451,11 @@ export const createDragGestureController = (options = {}) => {
       releaseY = gestureInfo.dragY,
     } = {}) => {
       drag(releaseX, releaseY, { event, isRelease: true });
+      dispatchPublicCustomEvent(element, "navi_drag_release", { gestureInfo });
       publishRelease(gestureInfo);
     };
 
+    dispatchPublicCustomEvent(element, "navi_drag_grab", { gestureInfo });
     onGrab?.(gestureInfo);
     const dragGesture = {
       gestureInfo,

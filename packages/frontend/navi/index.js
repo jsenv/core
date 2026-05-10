@@ -46,8 +46,10 @@ export {
 
 // Box
 export { Box } from "./src/box/box.jsx";
-// UI Transition
-export { UITransition } from "./src/ui_transition/ui_transition.jsx";
+
+// Transition
+export { ensureDocumentStartViewTransition } from "./src/transition/start_view_transition_polyfill.js";
+export { UITransition } from "./src/transition/ui_transition.jsx";
 
 // Navigation/routing
 export {
@@ -198,6 +200,9 @@ export { windowWidthSignal } from "./src/layout/responsive.js";
 
 // Focus helpers
 export { useFocusGroup } from "./src/utils/focus/use_focus_group.js";
+
+// Interactions
+export { startDragToReorder } from "@jsenv/dom";
 
 // Other
 export { useDependenciesDiff } from "./src/utils/use_dependencies_diff.js";

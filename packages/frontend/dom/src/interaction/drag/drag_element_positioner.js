@@ -4,42 +4,75 @@ import { getScrollContainer } from "../scroll/scroll_container.js";
 /**
  * Creates a coordinate system positioner for drag operations.
  *
- * ARCHITECTURE:
- * This function uses a modular offset-based approach to handle coordinate system conversions
- * between different positioning contexts (scroll containers and positioned parents).
+ * PURPOSE:
+ * During a drag gesture, the system tracks mouse movement as "scrollable coordinates"
+ * relative to the scroll container. This function converts those coordinates into
+ * the actual CSS transform values needed to visually move an element (or a separate
+ * elementToMove) to follow the mouse.
  *
- * The system decomposes coordinate conversion into two types of offsets:
- * 1. Position offsets - compensate for different positioned parents
- * 2. Scroll offsets - handle scroll position and container differences
+ * PARAMETERS:
+ * - element:          The element being grabbed / tracked for drag detection and auto-scroll.
+ * - referenceElement: Optional. The element whose coordinate system defines the input space.
+ *                     When provided, scrollable coords are relative to its scroll container.
+ *                     Defaults to element itself.
+ * - elementToMove:    Optional. A different element to apply the transform to (e.g. a clone
+ *                     or a table that moves as a whole when a column is dragged).
+ *                     When provided, its offsetParent is used as the positioning context.
  *
- * COORDINATE SYSTEM:
- * - Input coordinates are relative to the reference element's scroll container
- * - Output coordinates are relative to the element's positioned parent for DOM positioning
- * - Handles cross-coordinate system scenarios (different scroll containers and positioned parents)
+ * THE COORDINATE PIPELINE:
+ *
+ *   Mouse position
+ *     → scrollable coords  (relative to referenceScrollContainer, scroll-independent)
+ *     → positioned coords  (relative to elementToMove's offsetParent, for CSS transform)
+ *
+ * Two types of offsets bridge these spaces:
+ *
+ * 1. POSITION OFFSETS (getPositionOffsets):
+ *    Compensate for the fact that positionedParent and referencePositionedParent
+ *    may differ. For example, if `element` lives inside a <table> and `elementToMove`
+ *    is a full table clone, their offsetParents are different elements.
+ *    This offset is the spatial difference between those two positioned ancestors.
+ *    Called dynamically because parents can move (e.g. overlay elements).
+ *
+ * 2. SCROLL OFFSETS (getScrollOffsets):
+ *    Account for the scroll position of the relevant scroll container(s).
+ *    The math ensures that at grab time, the transform delta is zero (element
+ *    stays at its visual position), and subsequent mouse movement maps 1:1
+ *    to transform change.
+ *
+ *    CRITICAL CASE — positionedParent outside referenceScrollContainer:
+ *    When elementToMove's offsetParent is NOT inside the referenceScrollContainer
+ *    (e.g. a clone appended to document.body while tracking an element inside
+ *    an overflow:auto div), the scroll offset must be FROZEN at grab time.
+ *    Using a live scroll value would double-move the clone during auto-scroll:
+ *    the scrollable coordinate decreases (element appears to move up) AND the
+ *    live scroll value increases — both applied to the same transform.
+ *    Freezing the scroll at grab time cancels this out while still correctly
+ *    placing the clone at the right initial position.
  *
  * KEY SCENARIOS SUPPORTED:
- * 1. Same positioned parent, same scroll container - Simple case, minimal offsets
- * 2. Different positioned parents, same scroll container - Position offset compensation
- * 3. Same positioned parent, different scroll containers - Scroll offset handling
- * 4. Different positioned parents, different scroll containers - Full offset compensation
- * 5. Overlay elements - Special handling for elements with data-overlay-for attribute
- * 6. Fixed positioning - Special scroll offset handling for fixed positioned elements
+ * 1. Same positioned parent, same scroll container        — minimal offsets
+ * 2. Different positioned parents, same scroll container  — position offset compensation
+ * 3. Same positioned parent, different scroll containers  — scroll offset bridging
+ * 4. Different positioned parents, different containers   — full offset compensation
+ * 5. Overlay elements (data-overlay-for)                  — specialized offset path
+ * 6. Fixed positioned elements                            — special scroll handling
+ * 7. elementToMove outside referenceScrollContainer       — frozen scroll offset at grab
  *
  * API CONTRACT:
  * Returns [scrollableLeft, scrollableTop, convertScrollablePosition] where:
  *
  * - scrollableLeft/scrollableTop:
- *   Current element coordinates in the reference coordinate system (adjusted for position offsets)
+ *   The element's current position in the reference coordinate system at grab time.
+ *   Used as the layout starting point (layoutScrollableLeft/Top) by the gesture system.
  *
- * - convertScrollablePosition:
- *   Converts reference coordinate system positions to DOM positioning coordinates
- *   Applies both position and scroll offsets for accurate element placement
- *
- * IMPLEMENTATION STRATEGY:
- * Uses factory functions to create specialized offset calculators based on the specific
- * combination of positioning contexts, optimizing for performance and code clarity.
+ * - convertScrollablePosition(scrollableLeft, scrollableTop):
+ *   Converts a scrollable coordinate (from the gesture layout) into a positioned
+ *   coordinate suitable for CSS transform. The gesture system computes:
+ *     topDelta = convertScrollablePosition(layout.scrollableTop) - topAtGrab
+ *   and applies that as translateY. At grab time, delta = 0. As the mouse moves,
+ *   delta tracks the movement exactly, regardless of scroll context differences.
  */
-
 export const createDragElementPositioner = (
   element,
   referenceElement,
@@ -57,11 +90,11 @@ export const createDragElementPositioner = (
     positionedParent,
     referencePositionedParent: referenceElement
       ? referenceElement.offsetParent
-      : undefined,
+      : positionedParent,
     scrollContainer,
     referenceScrollContainer: referenceElement
       ? getScrollContainer(referenceElement)
-      : undefined,
+      : scrollContainer,
   });
 
   scrollable_current: {
@@ -111,9 +144,9 @@ const getScrollablePosition = (element, scrollContainer) => {
 
 const createGetOffsets = ({
   positionedParent,
-  referencePositionedParent = positionedParent,
+  referencePositionedParent,
   scrollContainer,
-  referenceScrollContainer = scrollContainer,
+  referenceScrollContainer,
 }) => {
   const samePositionedParent = positionedParent === referencePositionedParent;
   const getScrollOffsets = createGetScrollOffsets(
@@ -345,6 +378,19 @@ const createGetScrollOffsets = (
         };
         return getScrollOffsetsFixed;
       }
+    }
+    const positionedParentIsInsideScrollContainer =
+      referenceScrollContainer === documentElement ||
+      referenceScrollContainer.contains(positionedParent);
+    if (!positionedParentIsInsideScrollContainer) {
+      // positionedParent is outside the scroll container (e.g. clone in document.body
+      // while tracking an element inside a custom scroll container).
+      // We must add the scroll at grab time as a frozen offset so that:
+      // - initial topDelta = 0 (clone starts at correct position)
+      // - auto-scroll doesn't double-move the clone (scroll changes cancel out in layout)
+      const scrollLeftAtGrab = referenceScrollContainer.scrollLeft;
+      const scrollTopAtGrab = referenceScrollContainer.scrollTop;
+      return () => [scrollLeft + scrollLeftAtGrab, scrollTop + scrollTopAtGrab];
     }
     const getScrollOffsets = () => {
       const leftScrollToAdd = scrollLeft + referenceScrollContainer.scrollLeft;

@@ -1,4 +1,6 @@
 import {
+  dispatchCustomEvent,
+  dispatchPublicCustomEvent,
   findFocusable,
   getElementSignature,
   trapScrollInside,
@@ -7,10 +9,6 @@ import { useRef } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
 import { useDebugFocus, useDebugPopup } from "../navi_debug.jsx";
-import {
-  dispatchCustomEvent,
-  dispatchPublicCustomEvent,
-} from "../utils/custom_event.js";
 import { useCleanup } from "../utils/use_cleanup.js";
 
 const css = /* css */ `

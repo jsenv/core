@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Reorderable List Demo</title>
+  </head>
+  <body>
+    <div id="app"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useRef, useState } from "preact/hooks";
+      import {
+        Box,
+        moveArrayItemByIndex,
+        startDragToReorder,
+      } from "@jsenv/navi";
+
+      const INITIAL_ITEMS = [
+        { id: 1, label: "Apple", bg: "#e3f2fd", color: "#1565c0" },
+        { id: 2, label: "Banana", bg: "#fff9c4", color: "#f57f17" },
+        { id: 3, label: "Cherry", bg: "#fce4ec", color: "#c62828" },
+        { id: 4, label: "Date", bg: "#e8f5e9", color: "#2e7d32" },
+        { id: 5, label: "Elderberry", bg: "#f3e5f5", color: "#6a1b9a" },
+        { id: 6, label: "Fig", bg: "#fbe9e7", color: "#bf360c" },
+        { id: 7, label: "Grape", bg: "#ede7f6", color: "#4527a0" },
+        { id: 8, label: "Honeydew", bg: "#f1f8e9", color: "#33691e" },
+        { id: 9, label: "Kiwi", bg: "#e8f5e9", color: "#1b5e20" },
+        { id: 10, label: "Lemon", bg: "#fffde7", color: "#f57f17" },
+        { id: 11, label: "Lime", bg: "#f9fbe7", color: "#558b2f" },
+        { id: 12, label: "Mango", bg: "#fff3e0", color: "#e65100" },
+        { id: 13, label: "Nectarine", bg: "#fbe9e7", color: "#bf360c" },
+        { id: 14, label: "Orange", bg: "#fff3e0", color: "#e65100" },
+        { id: 15, label: "Papaya", bg: "#fff8e1", color: "#ff6f00" },
+        { id: 16, label: "Peach", bg: "#fce4ec", color: "#ad1457" },
+        { id: 17, label: "Pear", bg: "#f9fbe7", color: "#827717" },
+        { id: 18, label: "Pineapple", bg: "#fffde7", color: "#f9a825" },
+        { id: 19, label: "Plum", bg: "#f3e5f5", color: "#6a1b9a" },
+        { id: 20, label: "Pomegranate", bg: "#fce4ec", color: "#b71c1c" },
+      ];
+
+      const ReorderableList = ({ name }) => {
+        const [order, setOrder] = useState(INITIAL_ITEMS.map((i) => i.id));
+
+        const reorder = (fromIndex, toIndex) => {
+          document.startViewTransition(() => {
+            setOrder((prev) => moveArrayItemByIndex(prev, fromIndex, toIndex));
+          });
+        };
+
+        const startDrag = (event) => {
+          startDragToReorder(event, event.currentTarget, {
+            itemSelector: ".list-item",
+            getItemId: (el) => parseInt(el.dataset.id),
+            onReorder: async (fromId, toId, syncClone) => {
+              const viewTransition = document.startViewTransition(() => {
+                syncClone();
+                setOrder((prev) => {
+                  const fromIndex = prev.indexOf(fromId);
+                  const toIndex =
+                    toId === null ? prev.length : prev.indexOf(toId);
+                  const adjustedToIndex =
+                    fromIndex < toIndex ? toIndex - 1 : toIndex;
+                  return moveArrayItemByIndex(prev, fromIndex, adjustedToIndex);
+                });
+              });
+              await viewTransition.finished;
+            },
+          });
+        };
+
+        const visibleItems = order.map((id) =>
+          INITIAL_ITEMS.find((i) => i.id === id),
+        );
+
+        return visibleItems.map((item, i) => (
+          <ListItem
+            key={item.id}
+            item={item}
+            index={i}
+            total={visibleItems.length}
+            name={name}
+            onPointerDown={startDrag}
+            onMoveUp={() => reorder(i, i - 1)}
+            onMoveDown={() => reorder(i, i + 1)}
+          />
+        ));
+      };
+
+      const ListItem = ({
+        item,
+        index,
+        total,
+        name,
+        onPointerDown,
+        onMoveUp,
+        onMoveDown,
+      }) => {
+        return (
+          <Box
+            flex
+            alignY="center"
+            spacing="10px"
+            padding="12px 16px"
+            backgroundColor="white"
+            borderColor="#ddd"
+            borderRadius="6px"
+            expandX
+            style={{
+              boxSizing: "border-box",
+              marginBottom: "8px",
+              boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
+            }}
+            className="list-item"
+            data-id={item.id}
+            viewTransitionName={`${name}-item-${item.id}`}
+            onPointerDown={onPointerDown}
+          >
+            {/* Drag handle */}
+            <Box
+              flex="y"
+              spacing="3px"
+              padding="4px 2px"
+              shrink={0}
+              style={{ cursor: "grab" }}
+              title="Drag to reorder"
+            >
+              {[0, 1, 2].map((r) => (
+                <Box key={r} flex spacing="3px">
+                  <Box
+                    width="4px"
+                    height="4px"
+                    backgroundColor="#bbb"
+                    borderRadius="50%"
+                  />
+                  <Box
+                    width="4px"
+                    height="4px"
+                    backgroundColor="#bbb"
+                    borderRadius="50%"
+                  />
+                </Box>
+              ))}
+            </Box>
+
+            {/* Label */}
+            <Box style={{ flex: 1, color: "#333", fontSize: "14px" }}>
+              {item.label}
+            </Box>
+
+            {/* Badge */}
+            <Box
+              padding="2px 8px"
+              borderRadius="12px"
+              style={{
+                fontWeight: "bold",
+                fontSize: "12px",
+                background: item.bg,
+                color: item.color,
+              }}
+            >
+              #{index + 1}
+            </Box>
+
+            {/* Move buttons */}
+            <Box flex="y" gap="2px">
+              <MoveButton
+                title="Move up"
+                disabled={index === 0}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onMoveUp();
+                }}
+              >
+                ▲
+              </MoveButton>
+              <MoveButton
+                title="Move down"
+                disabled={index === total - 1}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onMoveDown();
+                }}
+              >
+                ▼
+              </MoveButton>
+            </Box>
+          </Box>
+        );
+      };
+
+      const MoveButton = ({ children, disabled, onClick, title }) => {
+        return (
+          <Box
+            as="button"
+            flex
+            alignX="center"
+            alignY="center"
+            width="20px"
+            height="20px"
+            padding="0"
+            backgroundColor="transparent"
+            borderColor="#ccc"
+            borderRadius="3px"
+            style={{
+              "fontSize": "10px",
+              "lineHeight": 1,
+              "cursor": disabled ? "default" : "pointer",
+              "opacity": disabled ? 0.3 : 1,
+              ":hover": disabled
+                ? {}
+                : { backgroundColor: "#eee", color: "#333" },
+            }}
+            disabled={disabled}
+            onClick={onClick}
+            title={title}
+          >
+            {children}
+          </Box>
+        );
+      };
+
+      const NormalListDemo = () => {
+        const containerRef = useRef(null);
+        return (
+          <Box flex="y" gap="8px">
+            <h1 style={{ margin: "0 0 8px", color: "#333" }}>
+              Reorderable List
+            </h1>
+            <p style={{ margin: "0 0 16px", color: "#666", fontSize: "14px" }}>
+              Drag the handle or use ▲▼ buttons to reorder.
+            </p>
+            <Box
+              ref={containerRef}
+              style={{
+                "position": "relative",
+                "width": "360px",
+                "--drop-hint-margin-y": "5px",
+              }}
+            >
+              <ReorderableList name="normal" />
+            </Box>
+          </Box>
+        );
+      };
+
+      const ScrollableListDemo = () => {
+        const containerRef = useRef(null);
+        return (
+          <Box flex="y" gap="8px">
+            <h1 style={{ margin: "0 0 8px", color: "#333" }}>
+              Scrollable Reorderable List
+            </h1>
+            <p style={{ margin: "0 0 16px", color: "#666", fontSize: "14px" }}>
+              Same list inside a scrollable container.
+            </p>
+            <Box
+              ref={containerRef}
+              style={{
+                "position": "relative",
+                "width": "360px",
+                "maxHeight": "400px",
+                "padding": "8px",
+                "background": "#fafafa",
+                "border": "1px solid #ddd",
+                "borderRadius": "8px",
+                "overflowY": "auto",
+                "--drop-hint-margin-y": "5px",
+              }}
+            >
+              <ReorderableList name="scrollable" />
+            </Box>
+          </Box>
+        );
+      };
+
+      render(
+        <Box
+          flex
+          spacing="48px"
+          alignY="flex-start"
+          padding="40px"
+          style={{
+            fontFamily: "Arial, sans-serif",
+            background: "#f0f0f0",
+            minHeight: "100vh",
+          }}
+        >
+          <NormalListDemo />
+          <ScrollableListDemo />
+        </Box>,
+        document.getElementById("app"),
+      );
+    </script>
+  </body>
+</html>

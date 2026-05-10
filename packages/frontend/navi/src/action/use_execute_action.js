@@ -1,3 +1,4 @@
+import { dispatchPublicCustomEvent } from "@jsenv/dom";
 import { isValidElement } from "preact";
 import { useCallback, useLayoutEffect, useRef, useState } from "preact/hooks";
 
@@ -104,11 +105,6 @@ export const useExecuteAction = (
         );
       }
 
-      const dispatchCustomEvent = (type, options) => {
-        const element = elementRef.current;
-        const customEvent = new CustomEvent(type, options);
-        element.dispatchEvent(customEvent);
-      };
       if (resetErrorBoundary) {
         resetErrorBoundary();
       }
@@ -118,9 +114,7 @@ export const useExecuteAction = (
       const validationMessageTarget = requester || elementRef.current;
       validationMessageTargetRef.current = validationMessageTarget;
 
-      dispatchCustomEvent("navi_action_start", {
-        detail: sharedActionEventDetail,
-      });
+      dispatchPublicCustomEvent("navi_action_start", sharedActionEventDetail);
 
       return action[method]({
         reason: `"${event.type}" event on ${(() => {
@@ -145,11 +139,9 @@ export const useExecuteAction = (
             // but other side effects might do this
             elementRef.current
           ) {
-            dispatchCustomEvent("navi_action_abort", {
-              detail: {
-                ...sharedActionEventDetail,
-                reason,
-              },
+            dispatchPublicCustomEvent("navi_action_abort", {
+              ...sharedActionEventDetail,
+              reason,
             });
           }
         },
@@ -160,11 +152,9 @@ export const useExecuteAction = (
             // but other side effects might do this
             elementRef.current
           ) {
-            dispatchCustomEvent("navi_action_error", {
-              detail: {
-                ...sharedActionEventDetail,
-                error,
-              },
+            dispatchPublicCustomEvent("navi_action_error", {
+              ...sharedActionEventDetail,
+              error,
             });
           }
           if (errorEffect === "show_validation_message") {
@@ -180,11 +170,9 @@ export const useExecuteAction = (
             // but other side effects might do this
             elementRef.current
           ) {
-            dispatchCustomEvent("navi_action_end", {
-              detail: {
-                ...sharedActionEventDetail,
-                data,
-              },
+            dispatchPublicCustomEvent("navi_action_end", {
+              ...sharedActionEventDetail,
+              data,
             });
           }
         },

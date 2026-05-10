@@ -1,0 +1,464 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>UI Transition - Viewport Demo</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body,
+      .ui_transition {
+        width: 100%;
+        min-width: max-content;
+        height: 100%;
+        min-height: max-content;
+      }
+
+      /* Content wrapper */
+      .content-wrapper {
+        position: relative;
+        /* Without flow-root, eventuals margins of elements inside are propagated up to the <body> */
+        /* Which can cause body to "move down"  */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: Arial, sans-serif;
+        background: #1a1a2e;
+        /* Simple dot pattern using box-shadow instead of gradients */
+        background-image:
+          radial-gradient(
+            circle at 25% 25%,
+            rgba(255, 255, 255, 0.05) 1px,
+            transparent 1px
+          ),
+          radial-gradient(
+            circle at 75% 75%,
+            rgba(255, 255, 255, 0.05) 1px,
+            transparent 1px
+          );
+        background-position:
+          0 0,
+          10px 10px;
+        background-size: 20px 20px;
+      }
+
+      /* Fixed controls in top-left corner */
+      .controls {
+        position: fixed;
+        bottom: 20px;
+        left: 20px;
+        z-index: 1000;
+        display: flex;
+        padding: 15px;
+        flex-direction: column;
+        gap: 10px;
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        backdrop-filter: blur(10px);
+      }
+
+      button {
+        padding: 12px 20px;
+        color: white;
+        font-weight: 500;
+        font-size: 14px;
+        background: #007acc;
+        border: none;
+        border-radius: 6px;
+        transition: background 0.2s ease;
+        cursor: pointer;
+      }
+
+      button:hover {
+        background: #005a99;
+      }
+
+      button.active {
+        background: #ff6b35;
+      }
+
+      button:disabled {
+        color: #999;
+        background: #ccc;
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+
+      /* Content styles */
+      .content-small {
+        display: flex;
+        width: 100px;
+        height: 100px;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        font-size: 14px;
+        background: #667eea;
+        border-radius: 8px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      }
+
+      .content-medium {
+        display: flex;
+        width: 50vw;
+        height: 50vh;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        font-size: 16px;
+        background: #a8edea;
+        border-radius: 10px;
+        box-shadow: 0 10px 36px rgba(0, 0, 0, 0.25);
+      }
+
+      .content-fullscreen {
+        position: relative;
+        display: flex;
+        width: 100vw;
+        height: 100vh;
+        padding: 20px;
+        color: white;
+        font-weight: bold;
+        font-size: 24px;
+        background: linear-gradient(45deg, #f093fb 0%, #f5576c 100%);
+      }
+
+      .content-wide {
+        display: flex;
+        width: 150vw;
+        height: 200px;
+        padding: 20px;
+        color: white;
+        font-weight: bold;
+        font-size: 18px;
+        background: #4facfe;
+        border-radius: 12px;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+      }
+
+      .content-tall {
+        display: flex;
+        width: 300px;
+        height: 150vh;
+        padding: 20px;
+        color: white;
+        font-weight: bold;
+        font-size: 18px;
+        background: #ff9a9e;
+        border-radius: 12px;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+      }
+
+      /* Debug info overlay */
+      .debug-info {
+        position: fixed;
+        right: 20px;
+        bottom: 20px;
+        z-index: 1000;
+        max-width: 300px;
+        padding: 15px;
+        color: white;
+        font-size: 12px;
+        font-family: "Courier New", monospace;
+        background: rgba(0, 0, 0, 0.8);
+        border-radius: 8px;
+        backdrop-filter: blur(10px);
+      }
+
+      .debug-info div {
+        margin-bottom: 5px;
+      }
+
+      .debug-info .label {
+        color: #88c999;
+        font-weight: bold;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Fixed controls -->
+    <div class="controls">
+      <button id="btn-small" class="active">Small (100x100)</button>
+      <button id="btn-medium">Medium (50vw x 50vh)</button>
+      <button id="btn-fullscreen">Fullscreen (100vw x 100vh)</button>
+      <button id="btn-wide">Wide (150vw x 200px)</button>
+      <button id="btn-tall">Tall (300px x 150vh)</button>
+      <button id="btn-empty">Empty</button>
+
+      <!-- Pause/Resume controls -->
+      <div
+        style="
+          margin-top: 10px;
+          padding-top: 10px;
+          border-top: 1px solid rgba(0, 0, 0, 0.1);
+        "
+      >
+        <label
+          style="
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+            color: #333;
+            font-size: 13px;
+          "
+        >
+          <input type="checkbox" id="pauseEnabled" />
+          <span>Pause at</span>
+          <select
+            id="pausePercentage"
+            style="padding: 2px 4px; font-size: 12px; border-radius: 3px"
+          >
+            <option value="0.01">1%</option>
+            <option value="0.2">20%</option>
+            <option value="0.5" selected>50%</option>
+            <option value="0.8">80%</option>
+            <option value="0.99">99%</option>
+          </select>
+        </label>
+        <button id="resumeButton">Resume Transitions</button>
+      </div>
+    </div>
+
+    <div
+      class="ui_transition"
+      data-align-x="center"
+      data-align-y="center"
+      data-debug-size
+    >
+      <div class="active_group">
+        <div class="target_slot">
+          <div class="content-small">Small Content<br />100x100px</div>
+        </div>
+        <div class="outgoing_slot"></div>
+      </div>
+      <div class="previous_group">
+        <div class="previous_target_slot"></div>
+        <div class="previous_outgoing_slot"></div>
+      </div>
+    </div>
+
+    <!-- Debug information -->
+    <div class="debug-info">
+      <div>
+        <span class="label">Container:</span> <span id="container-size">-</span>
+      </div>
+      <div>
+        <span class="label">Viewport:</span> <span id="viewport-size">-</span>
+      </div>
+      <div>
+        <span class="label">Current:</span>
+        <span id="current-content">Small</span>
+      </div>
+      <div>
+        <span class="label">Transitioning:</span>
+        <span id="is-transitioning">No</span>
+      </div>
+    </div>
+
+    <script type="module">
+      import { createUITransitionController } from "./poc_ui_transition.js";
+
+      const container = document.querySelector(".ui_transition");
+      const buttons = document.querySelectorAll("button");
+
+      // Debug elements
+      const containerSizeEl = document.getElementById("container-size");
+      const viewportSizeEl = document.getElementById("viewport-size");
+      const currentContentEl = document.getElementById("current-content");
+      const isTransitioningEl = document.getElementById("is-transitioning");
+
+      // Create content elements
+      const createSmallContent = () => {
+        const div = document.createElement("div");
+        div.className = "content-small";
+        div.innerHTML = "Small Content<br>100x100px";
+        return div;
+      };
+
+      const createMediumContent = () => {
+        const div = document.createElement("div");
+        div.className = "content-medium";
+        div.innerHTML = "Medium Content<br>50vw × 50vh";
+        return div;
+      };
+
+      const createFullscreenContent = () => {
+        const div = document.createElement("div");
+        div.className = "content-fullscreen";
+        div.innerHTML = "Fullscreen Content<br>100vw × 100vh";
+        return div;
+      };
+
+      const createWideContent = () => {
+        const div = document.createElement("div");
+        div.className = "content-wide";
+        div.innerHTML =
+          "Wide Content<br>150vw × 200px height<br>(horizontally scrollable)";
+        return div;
+      };
+
+      const createTallContent = () => {
+        const div = document.createElement("div");
+        div.className = "content-tall";
+        div.innerHTML =
+          "Tall Content<br>300px × 150vh<br>(vertically scrollable)";
+        return div;
+      };
+
+      // Initialize transition controller
+      const transitionController = createUITransitionController(container, {
+        duration: 600,
+        alignX: "center",
+        alignY: "center",
+        onStateChange: ({ isTransitioning }) => {
+          isTransitioningEl.textContent = isTransitioning ? "Yes" : "No";
+          buttons.forEach((btn) => {
+            // Skip resume button - it should always stay enabled
+            if (btn.id !== "resumeButton") {
+              btn.disabled = isTransitioning;
+            }
+          });
+        },
+      });
+
+      // Update debug info
+      const updateDebugInfo = () => {
+        const containerRect = container.getBoundingClientRect();
+        containerSizeEl.textContent = `${Math.round(containerRect.width)}×${Math.round(containerRect.height)}`;
+        viewportSizeEl.textContent = `${window.innerWidth}×${window.innerHeight}`;
+      };
+
+      // Button event handlers
+      document.getElementById("btn-small").addEventListener("click", () => {
+        transitionController.transitionTo(createSmallContent());
+        currentContentEl.textContent = "Small (100x100)";
+        updateActiveButton("btn-small");
+        setTimeout(updateDebugInfo, 100);
+      });
+
+      document.getElementById("btn-medium").addEventListener("click", () => {
+        transitionController.transitionTo(createMediumContent());
+        currentContentEl.textContent = "Medium (50vw×50vh)";
+        updateActiveButton("btn-medium");
+        setTimeout(updateDebugInfo, 100);
+      });
+
+      document
+        .getElementById("btn-fullscreen")
+        .addEventListener("click", () => {
+          transitionController.transitionTo(createFullscreenContent());
+          currentContentEl.textContent = "Fullscreen (100vw×100vh)";
+          updateActiveButton("btn-fullscreen");
+          setTimeout(updateDebugInfo, 100);
+        });
+
+      document.getElementById("btn-wide").addEventListener("click", () => {
+        transitionController.transitionTo(createWideContent());
+        currentContentEl.textContent = "Wide (150vw×200px)";
+        updateActiveButton("btn-wide");
+        setTimeout(updateDebugInfo, 100);
+      });
+
+      document.getElementById("btn-tall").addEventListener("click", () => {
+        transitionController.transitionTo(createTallContent());
+        currentContentEl.textContent = "Tall (300px×150vh)";
+        updateActiveButton("btn-tall");
+        setTimeout(updateDebugInfo, 100);
+      });
+
+      document.getElementById("btn-empty").addEventListener("click", () => {
+        transitionController.transitionTo(null);
+        currentContentEl.textContent = "Empty";
+        updateActiveButton("btn-empty");
+        setTimeout(updateDebugInfo, 100);
+      });
+
+      const updateActiveButton = (activeId) => {
+        buttons.forEach((btn) => btn.classList.remove("active"));
+        document.getElementById(activeId).classList.add("active");
+      };
+
+      // Initial debug info
+      updateDebugInfo();
+
+      // Update debug info on resize
+      window.addEventListener("resize", updateDebugInfo);
+
+      // Update debug info periodically during transitions
+      setInterval(updateDebugInfo, 200);
+
+      // LocalStorage keys for pause controls
+      const STORAGE_KEYS = {
+        pauseEnabled: "ui-transition-pause-enabled",
+        pausePercentage: "ui-transition-pause-percentage",
+      };
+
+      // Load saved settings
+      function loadPauseSettings() {
+        const pauseEnabled =
+          localStorage.getItem(STORAGE_KEYS.pauseEnabled) === "true";
+        const pausePercentage =
+          parseFloat(localStorage.getItem(STORAGE_KEYS.pausePercentage)) || 0.5;
+
+        document.getElementById("pauseEnabled").checked = pauseEnabled;
+        document.getElementById("pausePercentage").value = pausePercentage;
+      }
+
+      // Save settings to localStorage
+      function savePauseSettings() {
+        const pauseEnabled = document.getElementById("pauseEnabled").checked;
+        const pausePercentage =
+          document.getElementById("pausePercentage").value;
+
+        localStorage.setItem(STORAGE_KEYS.pauseEnabled, pauseEnabled);
+        localStorage.setItem(STORAGE_KEYS.pausePercentage, pausePercentage);
+      }
+
+      // Update pause breakpoints when controls change
+      const updatePauseBreakpoints = () => {
+        const pauseEnabled = document.getElementById("pauseEnabled").checked;
+        const pausePercentage = parseFloat(
+          document.getElementById("pausePercentage").value,
+        );
+        const pauseBreakpoints = pauseEnabled ? [pausePercentage] : [];
+        transitionController.setPauseBreakpoints(pauseBreakpoints);
+      };
+
+      // Setup pause controls event listeners with breakpoint updates
+      document.getElementById("pauseEnabled").addEventListener("change", () => {
+        savePauseSettings();
+        updatePauseBreakpoints();
+      });
+      document
+        .getElementById("pausePercentage")
+        .addEventListener("change", () => {
+          savePauseSettings();
+          updatePauseBreakpoints();
+        });
+
+      // Load initial pause settings and apply breakpoints
+      loadPauseSettings();
+      updatePauseBreakpoints();
+
+      // Resume button functionality
+      document.getElementById("resumeButton").addEventListener("click", () => {
+        if (typeof window.resumeTransitions === "function") {
+          window.resumeTransitions();
+        }
+      });
+    </script>
+  </body>
+</html>
