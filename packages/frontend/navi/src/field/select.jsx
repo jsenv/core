@@ -577,11 +577,11 @@ const SelectWithPopover = (props) => {
       anchor: ref.current,
     });
   };
-  const [shouldIgnoreThatClick, disableClickFor] = useIgnoreClickForMousedown();
+  const disableClickFor = useIgnoreClickForMousedown();
   const requestClose = (e = new CustomEvent("programmatic")) => {
     if (e.type === "mousedown") {
       debugPopup(formatEventSideEffect(e, `disable click`));
-      disableClickFor(e);
+      disableClickFor();
     }
     return requestPopoverClose(popoverRef.current, { event: e });
   };
@@ -623,10 +623,6 @@ const SelectWithPopover = (props) => {
       onClick={(e) => {
         if (e.detail === 0) {
           // click triggered by enter won't open the popover
-          return;
-        }
-        if (shouldIgnoreThatClick) {
-          debugPopup(formatEventSideEffect(e, `ignore click`));
           return;
         }
         // When a label is clicked it transfers focus to the select
@@ -771,12 +767,12 @@ const SelectWithDialog = (props) => {
       event: e,
     });
   };
-  const [shouldIgnore, disableClickFor] = useIgnoreClickForMousedown();
+  const disableClickFor = useIgnoreClickForMousedown();
 
   const requestClose = (e = new CustomEvent("programmatic")) => {
     if (e.type === "mousedown") {
       debugPopup(formatEventSideEffect(e, `disable click`));
-      disableClickFor(e);
+      disableClickFor();
     }
     return requestDialogClose(dialogRef.current, {
       event: e,
@@ -819,12 +815,6 @@ const SelectWithDialog = (props) => {
       onClick={(e) => {
         if (e.detail === 0) {
           // click triggered by enter won't open the dialog
-          return;
-        }
-        if (shouldIgnore) {
-          debugPopup(formatEventSideEffect(e, `ignore click`));
-          // mousedown on the select already handled open/close; ignore this click
-          // to avoid toggling the dialog again on mouseup
           return;
         }
         // When a label is clicked it transfers focus to the select, in that case we want to open it
@@ -902,8 +892,8 @@ export const useSelectRequestClose = () => {
 };
 
 /**
- * Hook to prevent a `click` event from firing after a `mousedown` that already
- * handled an open/close action.
+ * Returns a `disableClickFor` function that suppresses the `click` event that
+ * the browser fires after a `mousedown` which already handled an open/close action.
  *
  * Problem: when the user clicks a dialog's backdrop to close it, the browser
  * fires `mousedown` on the backdrop (which closes the dialog), then fires
@@ -911,48 +901,21 @@ export const useSelectRequestClose = () => {
  * element is the trigger button that originally opened the dialog, the `click`
  * would immediately re-open it.
  *
- * This problem only occurs when the dialog is closed on `mousedown`. If the
- * dialog were closed on `click` instead, the dialog would still be open when
- * the `click` fires on the backdrop, so the trigger button underneath would
- * never receive that `click`.
- *
  * Calling `stopPropagation()` or `preventDefault()` on the backdrop `mousedown`
  * does not help: the browser dispatches the subsequent `click` regardless,
  * targeting whichever element ends up under the pointer after the dialog closes.
  *
- * Usage:
- *   const [shouldIgnoreThatClick, disableClickFor] = useIgnoreClickForMousedown();
- *   // In onMouseDown (e.g. on the dialog backdrop): disableClickFor(e)
- *   // In onClick (on the trigger): if (shouldIgnoreThatClick) return;
- *
- * `disableClickFor` arms the guard until the next `mouseup` on the document
- * (with a 1 s safety-net fallback), using `requestAnimationFrame` so the
- * `click` event — which fires synchronously after `mouseup` — is still blocked.
+ * Solution: register a self-removing capture-phase `click` listener on `document`
+ * so the click is intercepted before it reaches any element handler.
  */
 const useIgnoreClickForMousedown = () => {
-  const pendingMousedownRef = useRef(false);
-
-  const shouldIgnore = pendingMousedownRef.current;
   const disableClickFor = () => {
-    pendingMousedownRef.current = true;
-
-    const restoreClick = () => {
-      clearTimeout(safetyTimeout);
-      pendingMousedownRef.current = false;
+    const suppressClick = (clickEvent) => {
+      clickEvent.stopPropagation();
+      clickEvent.preventDefault();
+      document.removeEventListener("click", suppressClick, { capture: true });
     };
-    const safetyTimeout = setTimeout(() => {
-      pendingMousedownRef.current = false;
-      restoreClick();
-    }, 1000);
-    document.addEventListener(
-      "mouseup",
-      () => {
-        requestAnimationFrame(() => {
-          restoreClick();
-        });
-      },
-      { once: true, capture: true },
-    );
+    document.addEventListener("click", suppressClick, { capture: true });
   };
-  return [shouldIgnore, disableClickFor];
+  return disableClickFor;
 };
