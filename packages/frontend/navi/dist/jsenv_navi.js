@@ -20282,10 +20282,15 @@ const useExecuteAction = (
       removeErrorMessage();
       setError(null);
 
-      const validationMessageTarget = requester || elementRef.current;
+      const element = elementRef.current;
+      const validationMessageTarget = requester || element;
       validationMessageTargetRef.current = validationMessageTarget;
 
-      dispatchPublicCustomEvent("navi_action_start", sharedActionEventDetail);
+      dispatchPublicCustomEvent(
+        element,
+        "navi_action_start",
+        sharedActionEventDetail,
+      );
 
       return action[method]({
         reason: `"${event.type}" event on ${(() => {
@@ -20304,26 +20309,28 @@ const useExecuteAction = (
           return `<${tagName}>`;
         })()}`,
         onAbort: (reason) => {
+          const element = elementRef.current;
           if (
             // at this stage the action side effect might have removed the <element> from the DOM
             // (in theory no because action side effect are batched to happen after)
             // but other side effects might do this
-            elementRef.current
+            element
           ) {
-            dispatchPublicCustomEvent("navi_action_abort", {
+            dispatchPublicCustomEvent(element, "navi_action_abort", {
               ...sharedActionEventDetail,
               reason,
             });
           }
         },
         onError: (error) => {
+          const element = elementRef.current;
           if (
             // at this stage the action side effect might have removed the <element> from the DOM
             // (in theory no because action side effect are batched to happen after)
             // but other side effects might do this
-            elementRef.current
+            element
           ) {
-            dispatchPublicCustomEvent("navi_action_error", {
+            dispatchPublicCustomEvent(element, "navi_action_error", {
               ...sharedActionEventDetail,
               error,
             });
@@ -20335,13 +20342,14 @@ const useExecuteAction = (
           }
         },
         onComplete: (data) => {
+          const element = elementRef.current;
           if (
             // at this stage the action side effect might have removed the <element> from the DOM
             // (in theory no because action side effect are batched to happen after)
             // but other side effects might do this
-            elementRef.current
+            element
           ) {
-            dispatchPublicCustomEvent("navi_action_end", {
+            dispatchPublicCustomEvent(element, "navi_action_end", {
               ...sharedActionEventDetail,
               data,
             });
