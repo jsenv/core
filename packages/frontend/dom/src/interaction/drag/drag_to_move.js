@@ -6,7 +6,7 @@ import { createDragElementPositioner } from "./drag_element_positioner.js";
 import { createDragGestureController } from "./drag_gesture.js";
 import { applyStickyFrontiersToAutoScrollArea } from "./sticky_frontiers.js";
 
-export const dragStyleController = createStyleController("drag_to_move");
+const dragStyleController = createStyleController("drag_to_move");
 
 /**
  * Creates a gesture controller that moves elements via drag.
@@ -78,16 +78,27 @@ export const createDragToMoveGestureController = ({
     // (e.g. a drag clone passed by the caller) or the element itself.
     // Capture any pre-existing translate so we can accumulate on top of it
     // rather than resetting it to zero on the first drag event.
-    const transformAtGrab =
-      dragStyleController.getUnderlyingValue(elementImpacted, "transform") ||
-      {};
+    const transformAtGrab = dragStyleController.getUnderlyingValue(
+      elementImpacted,
+      "transform",
+    );
     const translateXAtGrab = transformAtGrab.translateX;
     const translateYAtGrab = transformAtGrab.translateY;
+
+    const cancelPosition = () => {
+      dragStyleController.clear(elementImpacted);
+    };
+    const commitPosition = () => {
+      dragStyleController.commit(elementImpacted);
+    };
+    dragGesture.gestureInfo.cancelPosition = cancelPosition;
+    dragGesture.gestureInfo.commitPosition = commitPosition;
+
     dragGesture.addReleaseCallback(() => {
       if (releasePositionEffect === "cancel") {
-        dragStyleController.clear(elementImpacted);
+        cancelPosition();
       } else if (releasePositionEffect === "commit") {
-        dragStyleController.commit(elementImpacted);
+        commitPosition();
       }
       // "manual": caller handles cleanup, do nothing.
     });

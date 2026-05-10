@@ -1,8 +1,5 @@
 import { dragAfterThreshold } from "./drag_gesture.js";
-import {
-  createDragToMoveGestureController,
-  dragStyleController,
-} from "./drag_to_move.js";
+import { createDragToMoveGestureController } from "./drag_to_move.js";
 import { getDropTargetInfo } from "./drop_target_detection.js";
 import { moveCSSVars } from "./move_css_vars.js";
 
@@ -268,7 +265,7 @@ export const startDragToReorder = (
       );
     });
 
-    dragGesture.addReleaseCallback(async () => {
+    dragGesture.addReleaseCallback(async (gestureInfo) => {
       clearDropHintDOM();
       dropHintEl.remove();
       restoreCSSVars();
@@ -278,7 +275,7 @@ export const startDragToReorder = (
         // Bake the current visual position (transform included) into the CSS vars
         // so the clone stays where the user released it when we clear the transform.
         setCloneDocumentRect(cloneWrapper, cloneWrapper);
-        dragStyleController.clear(cloneWrapper);
+        gestureInfo.cancelPosition();
         const fromId = getItemId(draggedElement);
         const toId = currentBeforeElement
           ? getItemId(currentBeforeElement)
