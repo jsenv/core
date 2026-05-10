@@ -284,6 +284,12 @@ const POSITION_PROPS = {
   right: (value) => {
     return { right: value === true ? 0 : value };
   },
+  inset: (v) => {
+    if (v === true) {
+      return { inset: 0, width: "auto", height: "auto" };
+    }
+    return { inset: v };
+  },
 
   transform: PASS_THROUGH,
   translateX: (value) => {

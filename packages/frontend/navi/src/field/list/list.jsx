@@ -47,6 +47,7 @@ const GroupItemTrackerContext = createContext(null);
 const PendingScrollRefContext = createContext(null);
 
 export const ListIdContext = createContext();
+export const InsideRealListItemContext = createContext(false);
 
 // Provided by ListInteractive to give descendants (e.g. Suggestion) access
 // to hover/keyboard-pointed/selection state.
@@ -1886,6 +1887,10 @@ const ListItemReal = ({
         if (e.button !== 0) {
           return;
         }
+        if (e.currentTarget.closest("[data-catch-mousedown")) {
+          debugger;
+          return;
+        }
         const listEl = e.currentTarget.closest(".navi_list");
         dispatchCustomEvent(listEl, "navi_list_request_select", {
           item,
@@ -1903,7 +1908,9 @@ const ListItemReal = ({
         ...rest.basePseudoState,
       }}
     >
-      {children}
+      <InsideRealListItemContext.Provider value={true}>
+        {children}
+      </InsideRealListItemContext.Provider>
     </Box>
   );
 };

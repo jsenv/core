@@ -48,6 +48,7 @@ import {
   reportReadOnlyToLabel,
 } from "./label.jsx";
 import {
+  InsideRealListItemContext,
   ListIdContext,
   requestListClose,
   requestListInteractionStateReset,
@@ -295,11 +296,18 @@ export const InputTextual = (props) => {
 };
 const InputTextualDispatcher = (props) => {
   const listIdFromContext = useContext(ListIdContext);
+  const isInsideRealListItem = useContext(InsideRealListItemContext);
 
   if (props.action) {
     return <InputTextualWithAction {...props} />;
   }
-  if (listIdFromContext) {
+  if (
+    listIdFromContext &&
+    // When inside a ListItem the input is not considered as controlling the list
+    // (A list item may contain an input)
+    // Note that you can still have an input controlling list in a ListItemHeader or Footer
+    !isInsideRealListItem
+  ) {
     return <InputControllingList listId={listIdFromContext} {...props} />;
   }
   if (props.listId) {

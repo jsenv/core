@@ -34,6 +34,7 @@
     <div id="app"></div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
+      import { useState } from "preact/hooks";
       import { signal } from "@preact/signals";
       import {
         Box,
@@ -44,6 +45,7 @@
         ListItem,
         Select,
         Text,
+        NaviDebug,
       } from "@jsenv/navi";
 
       const DAYS_TO_SHOW = 6;
@@ -87,7 +89,9 @@
               </Icon>
               Date & Heure
             </Label>
-            <DaySelect />
+            <NaviDebug debugPopup>
+              <DaySelect />
+            </NaviDebug>
           </Box>
         );
       };
@@ -194,6 +198,7 @@
 
       const CustomDayOption = ({ offset, isCustom, index }) => {
         const customDateKey = isCustom ? offsetToDateKey(offset) : undefined;
+        const [customValue, setCustomValue] = useState(customDateKey);
         return (
           <>
             {isCustom && (
@@ -207,28 +212,32 @@
                 <Text capitalize>{formatSelectedLabel(customDateKey)}</Text>
               </DayOption>
             )}
-            <DayOption id="custom_pick" index={index + 1} value="custom">
-              <Box
-                flex
-                alignY="center"
-                expandX
-                style={{ position: "relative" }}
-              >
-                <Text>Choisir une autre date…</Text>
-                <Input
-                  type="date"
-                  value={customDateKey}
-                  min={toDateKey(new Date())}
-                  uiAction={(value) => {
-                    scheduledDaySignal.value = dateKeyToOffset(value);
-                  }}
-                  absolute
-                  inset={0}
-                  opacity={0}
-                  cursor="pointer"
-                  expandX
-                />
-              </Box>
+            <DayOption
+              id="custom_pick"
+              index={index + 1}
+              value="custom"
+              relative
+            >
+              <Text>Choisir une autre date…</Text>
+              <Input
+                type="date"
+                value={customValue}
+                min={toDateKey(new Date())}
+                uiAction={(value) => {
+                  debugger;
+                  setCustomValue(value);
+                  scheduledDaySignal.value = dateKeyToOffset(value);
+                }}
+                data-catch-mousedown=""
+                onMouseDown={(e) => {
+                  e.stopPropagation();
+                }}
+                absolute
+                inset
+                expand
+                opacity={0}
+                cursor="pointer"
+              />
             </DayOption>
           </>
         );

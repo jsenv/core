@@ -18,7 +18,7 @@ const css = /* css */ `
       &[data-skeleton] {
         border-radius: 0.2em;
       }
-      &[data-captitalize] {
+      &[data-capitalize] {
         display: inline-block; /* We need inline-block to match the pseudo element */
       }
     }
