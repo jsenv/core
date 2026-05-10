@@ -429,6 +429,21 @@ export const createDragGestureController = (options = {}) => {
           gestureInfo,
         });
         onDragStart?.(gestureInfo);
+        // Suppress the click that the browser fires after pointerup following a real drag.
+        // The capture phase runs before any element onClick handler.
+        const suppressClick = (clickEvent) => {
+          clickEvent.stopPropagation();
+          clickEvent.preventDefault();
+          document.removeEventListener("click", suppressClick, {
+            capture: true,
+          });
+        };
+        document.addEventListener("click", suppressClick, { capture: true });
+        addReleaseCallback(() => {
+          document.removeEventListener("click", suppressClick, {
+            capture: true,
+          });
+        });
       }
       const someLayoutChange = gestureInfo.layout !== layoutPrevious;
       dispatchPublicCustomEvent(element, "navi_drag", {
