@@ -34,6 +34,7 @@ import {
   LoadingElementContext,
   ParentUIStateControllerContext,
   ReadOnlyContext,
+  SelectTriggerContentRegistryContext,
   useUIGroupStateController,
   useUIState,
 } from "./use_ui_state_controller.js";
@@ -420,6 +421,8 @@ const SelectUI = (props) => {
     preventScroll: autoFocusPreventScroll,
   });
 
+  const [triggerContent, setTriggerContent] = useState(null);
+
   return (
     <Box
       as="button"
@@ -454,15 +457,20 @@ const SelectUI = (props) => {
       />
       <SelectPlaceholderContext.Provider value={placeholder}>
         <SelectValueContext.Provider value={value}>
-          {trigger}
+          <SelectTriggerContentContext.Provider value={triggerContent}>
+            {trigger}
+          </SelectTriggerContentContext.Provider>
         </SelectValueContext.Provider>
-        {children}
+        <SelectTriggerContentRegistryContext.Provider value={setTriggerContent}>
+          {children}
+        </SelectTriggerContentRegistryContext.Provider>
       </SelectPlaceholderContext.Provider>
     </Box>
   );
 };
 export const SelectPlaceholderContext = createContext();
 const SelectValueContext = createContext(null);
+const SelectTriggerContentContext = createContext(null);
 const SelectStyleCSSVars = {
   "outlineWidth": "--select-outline-width",
   "borderWidth": "--select-border-width",
@@ -518,8 +526,10 @@ const SelectPseudoElements = ["::-navi-loader"];
 const SelectTrigger = () => {
   const placeholder = useContext(SelectPlaceholderContext);
   const value = useContext(SelectValueContext);
+  const triggerContent = useContext(SelectTriggerContentContext);
   const hasValue = value !== null && value !== undefined && value !== "";
   const isPlaceholder = !hasValue;
+  const contentDisplayed = triggerContent || value;
 
   return (
     <Box flex spacing="s">
@@ -528,7 +538,7 @@ const SelectTrigger = () => {
           {placeholder}
         </span>
         <span className="navi_select_trigger_value" hidden={isPlaceholder}>
-          {value}
+          {contentDisplayed}
         </span>
       </span>
       <Icon className="navi_select_trigger_icon">

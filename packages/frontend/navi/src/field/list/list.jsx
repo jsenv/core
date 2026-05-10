@@ -30,6 +30,7 @@ import { useDisplayedLayoutEffect } from "../../utils/use_displayed_layout_effec
 import { useActionEvents } from "../use_action_events.js";
 import {
   ParentUIStateControllerContext,
+  SelectTriggerContentRegistryContext,
   UIStateContext,
   UIStateControllerContext,
   useUIState,
@@ -1726,6 +1727,18 @@ const ListItemReal = ({
   const mousePointedId = useContext(ListMousePointedIdContext);
   const keyboardPointedId = useContext(ListKeyboardPointedIdContext);
   const pendingScrollRef = useContext(PendingScrollRefContext);
+  const registerTriggerContent = useContext(
+    SelectTriggerContentRegistryContext,
+  );
+
+  useLayoutEffect(() => {
+    if (!registerTriggerContent) {
+      return;
+    }
+    if (selected) {
+      registerTriggerContent(children);
+    }
+  }, [selected, children, registerTriggerContent]);
 
   const isPointedByMouse = id === mousePointedId;
   const isPointedByKeyboard = id === keyboardPointedId;

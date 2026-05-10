@@ -28,6 +28,7 @@ const debugUIGroup = (...args) => {
 export const UIStateControllerContext = createContext();
 export const UIStateContext = createContext();
 export const ParentUIStateControllerContext = createContext();
+export const SelectTriggerContentRegistryContext = createContext(null);
 
 export const FieldNameContext = createContext();
 export const ReadOnlyContext = createContext();
