@@ -46,21 +46,30 @@ return {
 
 ```console
 [stateSignal:array_signal] validation failed with no valid suggestion:  {
-  type: 'must be an array, got object',
-  valid: false,
-  validSuggestion: null
+  value: { key: 'value' },
+  validity: {
+    type: 'must be an array, got object',
+    valid: false,
+    validSuggestion: null
+  }
 }
 [stateSignal:array_signal] validation failed with no valid suggestion: 
 [stateSignal:array_signal] validation failed with no valid suggestion:  {
-  type: 'must be an array, got object',
-  valid: false,
-  validSuggestion: null
+  value: { key: 'value' },
+  validity: {
+    type: 'must be an array, got object',
+    valid: false,
+    validSuggestion: null
+  }
 }
 [stateSignal:array_signal] validation failed with no valid suggestion: 
 [stateSignal:array_signal] validation failed with no valid suggestion:  {
-  type: 'must be an array, got object',
-  valid: false,
-  validSuggestion: null
+  value: { key: 'value' },
+  validity: {
+    type: 'must be an array, got object',
+    valid: false,
+    validSuggestion: null
+  }
 }
 [stateSignal:array_signal] validation failed with no valid suggestion: 
 ```

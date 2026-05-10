@@ -34,24 +34,33 @@ try {
 
 ```console
 [stateSignal:8] validation failed with no valid suggestion:  {
-  type: 'must be a number',
-  step: undefined,
-  valid: false,
-  validSuggestion: null
+  value: null,
+  validity: {
+    type: 'must be a number',
+    step: undefined,
+    valid: false,
+    validSuggestion: null
+  }
 }
 [stateSignal:8] validation failed with no valid suggestion: 
 [stateSignal:8] validation failed with no valid suggestion:  {
-  type: 'must be a number',
-  step: undefined,
-  valid: false,
-  validSuggestion: null
+  value: null,
+  validity: {
+    type: 'must be a number',
+    step: undefined,
+    valid: false,
+    validSuggestion: null
+  }
 }
 [stateSignal:8] validation failed with no valid suggestion: 
 [stateSignal:8] validation failed with no valid suggestion:  {
-  type: 'must be a number',
-  step: undefined,
-  valid: false,
-  validSuggestion: null
+  value: null,
+  validity: {
+    type: 'must be a number',
+    step: undefined,
+    valid: false,
+    validSuggestion: null
+  }
 }
 [stateSignal:8] validation failed with no valid suggestion: 
 ```
