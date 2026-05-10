@@ -133,6 +133,7 @@ export const startDragToReorder = (
   draggedElement,
   {
     itemSelector,
+    containerElement,
     getItemId,
     onReorder,
     direction = { x: false, y: true },
@@ -189,15 +190,18 @@ export const startDragToReorder = (
       clearDropHintDOM();
     };
 
+    const itemsContainer = containerElement || draggedElement.parentElement;
+
     dragGesture.addDragCallback((gestureInfo) => {
       const allItems = [];
       const items = [];
-      for (const el of scrollContainer.querySelectorAll(itemSelector)) {
+      for (const el of itemsContainer.querySelectorAll(itemSelector)) {
         allItems.push(el);
         if (el !== draggedElement) {
           items.push(el);
         }
       }
+
       const dropTargetInfo = getDropTargetInfo(gestureInfo, items, {
         fallbackToEdge: true,
       });
