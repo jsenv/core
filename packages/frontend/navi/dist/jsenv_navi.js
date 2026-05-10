@@ -6565,6 +6565,12 @@ const POSITION_PROPS = {
   right: (value) => {
     return { right: value === true ? 0 : value };
   },
+  inset: (v) => {
+    if (v === true) {
+      return { inset: 0, width: "auto", height: "auto" };
+    }
+    return { inset: v };
+  },
 
   transform: PASS_THROUGH,
   translateX: (value) => {
@@ -20888,6 +20894,9 @@ const css$D = /* css */`
       &[data-skeleton] {
         border-radius: 0.2em;
       }
+      &[data-capitalize] {
+        display: inline-block; /* We need inline-block to match the pseudo element */
+      }
     }
   }
 
@@ -22146,6 +22155,7 @@ const debugUIGroup = (...args) => {
 const UIStateControllerContext = createContext();
 const UIStateContext = createContext();
 const ParentUIStateControllerContext = createContext();
+const SelectTriggerContentRegistryContext = createContext(null);
 
 const FieldNameContext = createContext();
 const ReadOnlyContext = createContext();
@@ -27112,6 +27122,7 @@ installImportMetaCssBuild(import.meta);const ListItemTrackerContext = createCont
 const GroupItemTrackerContext = createContext(null);
 const PendingScrollRefContext = createContext(null);
 const ListIdContext = createContext();
+const InsideRealListItemContext = createContext(false);
 
 // Provided by ListInteractive to give descendants (e.g. Suggestion) access
 // to hover/keyboard-pointed/selection state.
@@ -28718,6 +28729,15 @@ const ListItemReal = ({
   const mousePointedId = useContext(ListMousePointedIdContext);
   const keyboardPointedId = useContext(ListKeyboardPointedIdContext);
   const pendingScrollRef = useContext(PendingScrollRefContext);
+  const registerTriggerContent = useContext(SelectTriggerContentRegistryContext);
+  useLayoutEffect(() => {
+    if (!registerTriggerContent) {
+      return;
+    }
+    if (selected) {
+      registerTriggerContent(children);
+    }
+  }, [selected, children, registerTriggerContent]);
   const isPointedByMouse = id === mousePointedId;
   const isPointedByKeyboard = id === keyboardPointedId;
   const isPointedByProxy = Boolean(pointed);
@@ -28878,7 +28898,10 @@ const ListItemReal = ({
       ":-navi-selected": selected,
       ...rest.basePseudoState
     },
-    children: children
+    children: jsx(InsideRealListItemContext.Provider, {
+      value: true,
+      children: children
+    })
   });
 };
 const LIST_ITEM_STYLE_CSS_VARS = {
@@ -29284,12 +29307,17 @@ const InputTextual = props => {
 };
 const InputTextualDispatcher = props => {
   const listIdFromContext = useContext(ListIdContext);
+  const isInsideRealListItem = useContext(InsideRealListItemContext);
   if (props.action) {
     return jsx(InputTextualWithAction, {
       ...props
     });
   }
-  if (listIdFromContext) {
+  if (listIdFromContext &&
+  // When inside a ListItem the input is not considered as controlling the list
+  // (A list item may contain an input)
+  // Note that you can still have an input controlling list in a ListItemHeader or Footer
+  !isInsideRealListItem) {
     return jsx(InputControllingList, {
       listId: listIdFromContext,
       ...props
@@ -31405,6 +31433,7 @@ const SelectUI = props => {
   useAutoFocus(ref, autoFocus, {
     preventScroll: autoFocusPreventScroll
   });
+  const [triggerContent, setTriggerContent] = useState(null);
   return jsxs(Box, {
     as: "button",
     type: "button",
@@ -31439,13 +31468,20 @@ const SelectUI = props => {
       value: placeholder,
       children: [jsx(SelectValueContext.Provider, {
         value: value,
-        children: trigger
-      }), children]
+        children: jsx(SelectTriggerContentContext.Provider, {
+          value: triggerContent,
+          children: trigger
+        })
+      }), jsx(SelectTriggerContentRegistryContext.Provider, {
+        value: setTriggerContent,
+        children: children
+      })]
     })]
   });
 };
 const SelectPlaceholderContext = createContext();
 const SelectValueContext = createContext(null);
+const SelectTriggerContentContext = createContext(null);
 const SelectStyleCSSVars = {
   "outlineWidth": "--select-outline-width",
   "borderWidth": "--select-border-width",
@@ -31490,8 +31526,10 @@ const SelectPseudoElements = ["::-navi-loader"];
 const SelectTrigger = () => {
   const placeholder = useContext(SelectPlaceholderContext);
   const value = useContext(SelectValueContext);
+  const triggerContent = useContext(SelectTriggerContentContext);
   const hasValue = value !== null && value !== undefined && value !== "";
   const isPlaceholder = !hasValue;
+  const contentDisplayed = triggerContent || value;
   return jsxs(Box, {
     flex: true,
     spacing: "s",
@@ -31504,7 +31542,7 @@ const SelectTrigger = () => {
       }), jsx("span", {
         className: "navi_select_trigger_value",
         hidden: isPlaceholder,
-        children: value
+        children: contentDisplayed
       })]
     }), jsx(Icon, {
       className: "navi_select_trigger_icon",
@@ -31668,6 +31706,7 @@ const SelectWithPopover = props => {
         }
         // mousedown inside popover should not bubble to the select (would re-open it if that mousedown closes it)
         e.stopPropagation();
+        debugPopup(formatEventSideEffect(e, `popover mouseDown stopPropagation`));
       },
       onnavi_popover_open: e => {
         onOpen();
