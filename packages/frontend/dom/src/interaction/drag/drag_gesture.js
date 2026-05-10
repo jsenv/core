@@ -584,6 +584,15 @@ export const dragAfterThreshold = (
   dragGestureInitializer,
   threshold,
 ) => {
+  const target = grabEvent.target;
+  const isDedicatedHandle =
+    target.closest && target.closest("[data-drag-handle]");
+  if (isDedicatedHandle) {
+    // Element is dedicated to drag — skip the threshold and start immediately.
+    const dragGesture = dragGestureInitializer();
+    dragGesture.dragViaPointer(grabEvent);
+    return;
+  }
   const significantDragGestureController = createDragGestureController({
     threshold,
     // allow interaction for this intermediate gesture:

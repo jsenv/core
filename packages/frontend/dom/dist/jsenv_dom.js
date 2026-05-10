@@ -7456,6 +7456,23 @@ const createDragGestureController = (options = {}) => {
           gestureInfo
         });
         onDragStart?.(gestureInfo);
+        // Suppress the click that the browser fires after pointerup following a real drag.
+        // The capture phase runs before any element onClick handler.
+        const suppressClick = clickEvent => {
+          clickEvent.stopPropagation();
+          clickEvent.preventDefault();
+          document.removeEventListener("click", suppressClick, {
+            capture: true
+          });
+        };
+        document.addEventListener("click", suppressClick, {
+          capture: true
+        });
+        addReleaseCallback(() => {
+          document.removeEventListener("click", suppressClick, {
+            capture: true
+          });
+        });
       }
       const someLayoutChange = gestureInfo.layout !== layoutPrevious;
       dispatchPublicCustomEvent(element, "navi_drag", {
@@ -7596,6 +7613,14 @@ const createDragGestureController = (options = {}) => {
   return dragGestureController;
 };
 const dragAfterThreshold = (grabEvent, dragGestureInitializer, threshold) => {
+  const target = grabEvent.target;
+  const isDedicatedHandle = target.closest && target.closest("[data-drag-handle]");
+  if (isDedicatedHandle) {
+    // Element is dedicated to drag — skip the threshold and start immediately.
+    const dragGesture = dragGestureInitializer();
+    dragGesture.dragViaPointer(grabEvent);
+    return;
+  }
   const significantDragGestureController = createDragGestureController({
     threshold,
     // allow interaction for this intermediate gesture:
@@ -9632,9 +9657,10 @@ const dragCSSVars = ["--drop-hint-size", "--drop-hint-background-color", "--drop
  *   (e.g. `areaConstraint`, `autoScrollAreaPadding`, `stickyFrontiers`).
  *   `releasePositionEffect` is always set to `"manual"` internally and cannot be overridden.
  */
-const startDragToReorder = (event, draggedElement, {
+const startDragToReorder = (event, {
+  draggedElement = event.currentTarget,
+  containerElement = draggedElement.parentElement,
   itemSelector,
-  containerElement,
   getItemId,
   onReorder,
   direction = {
@@ -9684,11 +9710,10 @@ const startDragToReorder = (event, draggedElement, {
       currentReleaseElement = undefined;
       clearDropHintDOM();
     };
-    const itemsContainer = containerElement || draggedElement.parentElement;
     dragGesture.addDragCallback(gestureInfo => {
       const allItems = [];
       const items = [];
-      for (const el of itemsContainer.querySelectorAll(itemSelector)) {
+      for (const el of containerElement.querySelectorAll(itemSelector)) {
         allItems.push(el);
         if (el !== draggedElement) {
           items.push(el);
