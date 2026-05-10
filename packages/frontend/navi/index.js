@@ -159,7 +159,7 @@ export { ErrorBoundaryContext } from "./src/error_boundary_context.js";
 export { ActiveKeyboardShortcuts } from "./src/keyboard/active_keyboard_shortcuts.jsx";
 
 // Text
-export { contrastColor } from "@jsenv/dom/src/style/color_contrast.js";
+export { contrastColor } from "@jsenv/dom";
 export { ButtonCopyToClipboard } from "./src/field/button_copy_to_clipboard.jsx";
 export { Address } from "./src/text/address.jsx";
 export { Badge } from "./src/text/badge.jsx";
@@ -202,7 +202,7 @@ export { windowWidthSignal } from "./src/layout/responsive.js";
 export { useFocusGroup } from "./src/utils/focus/use_focus_group.js";
 
 // Interactions
-export { startDragToReorder } from "@jsenv/dom/src/interaction/drag/drag_to_reorder.js";
+export { startDragToReorder } from "@jsenv/dom";
 
 // Other
 export { useDependenciesDiff } from "./src/utils/use_dependencies_diff.js";

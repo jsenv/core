@@ -3,8 +3,8 @@ import { isValidElement, createContext, h, toChildArray, render, cloneElement } 
 import { useErrorBoundary, useLayoutEffect, useEffect, useContext, useMemo, useRef, useState, useCallback, useImperativeHandle, useId } from "preact/hooks";
 import { jsxs, jsx, Fragment } from "preact/jsx-runtime";
 import { signal, effect, computed, batch, useSignal } from "@preact/signals";
-import { createIterableWeakSet, getElementSignature, mergeOneStyle, normalizeStyle, createPubSub, mergeTwoStyles, normalizeStyles, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, findBefore, findAfter, createValueEffect, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, allowWheelThrough, resolveCSSColor, createStyleController, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, resolveCSSSize, canInterceptKeys, activeElementSignal, hasCSSSizeUnit, resolveOklchLightness, contrastColor, initFocusGroup, elementIsFocusable, scrollIntoViewScoped, findFocusable, trapScrollInside, trapFocusInside, snapToPixel, dragAfterThreshold, getScrollContainer, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
-export { contrastColor } from "@jsenv/dom";
+import { createIterableWeakSet, getElementSignature, mergeOneStyle, normalizeStyle, createPubSub, dispatchInternalCustomEvent, mergeTwoStyles, normalizeStyles, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, findBefore, findAfter, createValueEffect, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, createStyleController, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, resolveCSSSize, canInterceptKeys, activeElementSignal, hasCSSSizeUnit, resolveOklchLightness, contrastColor, initFocusGroup, elementIsFocusable, dispatchCustomEvent, scrollIntoViewScoped, findFocusable, trapScrollInside, trapFocusInside, snapToPixel, dragAfterThreshold, getScrollContainer, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
+export { contrastColor, startDragToReorder } from "@jsenv/dom";
 import { prefixFirstAndIndentRemainingLines } from "@jsenv/humanize";
 import { createValidity } from "@jsenv/validity";
 import { Suspense, createPortal, forwardRef } from "preact/compat";
@@ -6347,6 +6347,7 @@ const FLOW_PROPS = {
 
   // not really related to flow but should be on the container element if any
   pointerEvents: PASS_THROUGH,
+  viewTransitionName: PASS_THROUGH,
 };
 const OUTER_SPACING_PROPS = {
   margin: PASS_THROUGH,
@@ -7293,81 +7294,6 @@ const listenInputValueChange = (input, callback) => {
   return teardown;
 };
 
-/**
- * Navi uses three categories of custom events:
- *
- * 1. **Internal events** (`dispatchInternalCustomEvent`) — a component communicates
- *    with other navi components internally. Not meant to be observed from outside.
- *    They do not bubble so they stay contained within the subtree that handles them.
- *    Names often reflect their internal nature (e.g. `navi_pseudo_state_request_check`).
- *
- * 2. **Public events** (`dispatchPublicCustomEvent`) — a component exposes information
- *    about something that happened (e.g. `navi_list_select`). They bubble so any
- *    ancestor can observe them. These are part of the public API and should be documented.
- *
- * 3. **Request events** (`dispatchCustomEvent`) — code *outside* a component asks it
- *    to perform an action (e.g. `navi_list_request_open`). They are cancelable so the
- *    component can signal whether it handled the request. Names are prefixed
- *    with `request_` by convention.
- */
-
-/**
- * Dispatches an internal event on `el`.
- * Does not bubble — stays within the local subtree.
- */
-const dispatchInternalCustomEvent = (
-  el,
-  customEventName,
-  customEventDetail,
-) => {
-  const customEvent = new CustomEvent(customEventName, {
-    detail: customEventDetail,
-  });
-  return el.dispatchEvent(customEvent);
-};
-
-/**
- * Dispatches a public event from `el`, announcing something that happened.
- * Bubbles so any ancestor can observe it.
- */
-const dispatchPublicCustomEvent = (
-  el,
-  customEventName,
-  customEventDetail,
-) => {
-  const customEvent = new CustomEvent(customEventName, {
-    detail: resolveEventDetail(customEventDetail),
-    bubbles: true,
-  });
-  return el.dispatchEvent(customEvent);
-};
-
-/**
- * Dispatches a request event *at* `el`, asking it to perform an action.
- * Cancelable — returns `false` if the component called `preventDefault()`,
- * indicating it did not (or could not) handle the request.
- * Names are conventionally prefixed with `request_` (e.g. `navi_list_request_open`).
- */
-const dispatchCustomEvent = (el, customEventName, customEventDetail) => {
-  const customEvent = new CustomEvent(customEventName, {
-    detail: resolveEventDetail(customEventDetail),
-    cancelable: true,
-  });
-  const result = el.dispatchEvent(customEvent);
-  return result;
-};
-
-const resolveEventDetail = (customEventDetail) => {
-  const { event, ...rest } = customEventDetail ?? {};
-  let resolvedEvent;
-  if (event?.detail?.event !== undefined) {
-    resolvedEvent = event.detail.event;
-  } else if (event !== undefined) {
-    resolvedEvent = event;
-  }
-  return { ...rest, event: resolvedEvent };
-};
-
 const requestPseudoStateCheck = (element, detail) => {
   dispatchInternalCustomEvent(
     element,
@@ -7845,6 +7771,45 @@ definePseudoClass(":-navi-has-value", {
   });
 }
 
+{
+  definePseudoClass(":-navi-drag-grabbed", {
+    attribute: "navi-drag-grabbed",
+    setup: (el, callback) => {
+      const onGrab = () => {
+        callback();
+        const onRelease = () => {
+          el.removeEventListener("navi_drag_release", onRelease);
+          callback();
+        };
+        el.addEventListener("navi_drag_release", onRelease);
+      };
+      el.addEventListener("navi_drag_grab", onGrab);
+      return () => {
+        el.removeEventListener("navi_drag_grab", onGrab);
+      };
+    },
+    test: (el) => el.hasAttribute("data-drag-grabbed"),
+  });
+  definePseudoClass(":-navi-dragging", {
+    attribute: "navi-dragging",
+    setup: (el, callback) => {
+      const onStart = () => {
+        callback();
+        const onRelease = () => {
+          el.removeEventListener("navi_drag_release", onRelease);
+          callback();
+        };
+        el.addEventListener("navi_drag_release", onRelease);
+      };
+      el.addEventListener("navi_drag_start", onStart);
+      return () => {
+        el.removeEventListener("navi_drag_start", onStart);
+      };
+    },
+    test: (el) => el.hasAttribute("data-dragging"),
+  });
+}
+
 const EMPTY_STATE = {};
 const initPseudoStyles = (
   element,
@@ -8150,8 +8115,11 @@ const useElementRefEffect = (externalRef, syncElement, deps) => {
   }
 
   if (!refCallbackRef.current) {
-    refCallbackRef.current = (el) => {
+    const refCallback = (el) => {
       elRef.current = el;
+      // Keep .current in sync immediately so useEffect callbacks that read
+      // ref.current (e.g. usePartiallyHidden) see the element, not null.
+      refCallback.current = el;
       if (externalRef) {
         if (typeof externalRef === "function") {
           externalRef(el);
@@ -8169,11 +8137,56 @@ const useElementRefEffect = (externalRef, syncElement, deps) => {
         prevDepsRef.current = undefined;
       }
     };
+    refCallbackRef.current = refCallback;
   }
 
   const refCallback = refCallbackRef.current;
   refCallback.current = elRef.current;
   return refCallback;
+};
+
+/**
+ * Tracks whether an element is fully visible in its scroll container and sets
+ * the `navi-partially-hidden` attribute when any part of it is clipped.
+ *
+ * This is used to suppress `view-transition-name` on elements that are partially
+ * outside the viewport or a scrollable container. Without this, a partially clipped
+ * element would still participate in view transitions, producing ghost animations or
+ * incorrect cross-fade effects.
+ *
+ * CSS usage:
+ * ```css
+ * [navi-partially-hidden] {
+ *   view-transition-name: none !important;
+ * }
+ * ```
+ *
+ * `Box` enables this hook automatically when a `viewTransitionName` prop is provided.
+ *
+ * @param {import("preact").RefObject} ref - Ref to the element to observe.
+ * @param {boolean} enabled - Only observe when true (typically when view-transition-name is set).
+ */
+const usePartiallyHidden = (ref, enabled) => {
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || !enabled) {
+      return undefined;
+    }
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.intersectionRatio >= 0.99) {
+          el.removeAttribute("navi-partially-hidden");
+        } else {
+          el.setAttribute("navi-partially-hidden", "");
+        }
+      },
+      { threshold: 0.99 },
+    );
+    observer.observe(el);
+    return () => {
+      observer.disconnect();
+    };
+  }, [enabled]);
 };
 
 installImportMetaCssBuild(import.meta);/**
@@ -8307,6 +8320,12 @@ import.meta.css = [/* css */`
   */
   [hidden] {
     display: none !important;
+  }
+
+  /* Partially hidden (or fully hidden) element should not participate in view transition no matter what */
+  /* Otherwise they appear immedatly and fully visible from a fully/partially hidden state */
+  [navi-partially-hidden] {
+    view-transition-name: none !important;
   }
 `, "@jsenv/navi/src/box/box.jsx"];
 const PSEUDO_CLASSES_DEFAULT = [];
@@ -8727,6 +8746,7 @@ const Box = props => {
         elementListeningPseudoState: visualEl === pseudoStateEl ? null : visualEl
       });
     }, styleDeps);
+    usePartiallyHidden(ref, Boolean(rest.viewTransitionName));
   }
 
   // When hasChildFunction is used it means
@@ -8798,6 +8818,19 @@ const shouldInjectSeparatorBetween = (left, right) => {
     return false;
   }
   return true;
+};
+
+const ensureDocumentStartViewTransition = () => {
+  if (document.startViewTransition) {
+    return;
+  }
+  document.startViewTransition = (updateCallback) => {
+    updateCallback();
+    return {
+      ready: Promise.resolve(),
+      finished: Promise.resolve(),
+    };
+  };
 };
 
 /**
@@ -9074,7 +9107,7 @@ import.meta.css = [/* css */`
   .ui_transition[data-transitioning] .ui_transition_target_slot_background {
     display: block;
   }
-`, "@jsenv/navi/src/ui_transition/ui_transition.js"];
+`, "@jsenv/navi/src/transition/ui_transition.js"];
 const CONTENT_ID_ATTRIBUTE = "data-content-id";
 const CONTENT_PHASE_ATTRIBUTE = "data-content-phase";
 const UNSET = {
@@ -20243,11 +20276,6 @@ const useExecuteAction = (
         method,
       };
 
-      const dispatchCustomEvent = (type, options) => {
-        const element = elementRef.current;
-        const customEvent = new CustomEvent(type, options);
-        element.dispatchEvent(customEvent);
-      };
       if (resetErrorBoundary) {
         resetErrorBoundary();
       }
@@ -20257,9 +20285,7 @@ const useExecuteAction = (
       const validationMessageTarget = requester || elementRef.current;
       validationMessageTargetRef.current = validationMessageTarget;
 
-      dispatchCustomEvent("navi_action_start", {
-        detail: sharedActionEventDetail,
-      });
+      dispatchPublicCustomEvent("navi_action_start", sharedActionEventDetail);
 
       return action[method]({
         reason: `"${event.type}" event on ${(() => {
@@ -20284,11 +20310,9 @@ const useExecuteAction = (
             // but other side effects might do this
             elementRef.current
           ) {
-            dispatchCustomEvent("navi_action_abort", {
-              detail: {
-                ...sharedActionEventDetail,
-                reason,
-              },
+            dispatchPublicCustomEvent("navi_action_abort", {
+              ...sharedActionEventDetail,
+              reason,
             });
           }
         },
@@ -20299,11 +20323,9 @@ const useExecuteAction = (
             // but other side effects might do this
             elementRef.current
           ) {
-            dispatchCustomEvent("navi_action_error", {
-              detail: {
-                ...sharedActionEventDetail,
-                error,
-              },
+            dispatchPublicCustomEvent("navi_action_error", {
+              ...sharedActionEventDetail,
+              error,
             });
           }
           if (errorEffect === "show_validation_message") {
@@ -20319,11 +20341,9 @@ const useExecuteAction = (
             // but other side effects might do this
             elementRef.current
           ) {
-            dispatchCustomEvent("navi_action_end", {
-              detail: {
-                ...sharedActionEventDetail,
-                data,
-              },
+            dispatchPublicCustomEvent("navi_action_end", {
+              ...sharedActionEventDetail,
+              data,
             });
           }
         },
@@ -32830,7 +32850,7 @@ const initDragTableColumnViaPointer = (pointerdownEvent, {
       onGrab,
       onDrag: gestureInfo => {
       },
-      resetPositionAfterRelease: true,
+      releasePositionEffect: "commit",
       onRelease: gestureInfo => {
         {
           teardown();
@@ -33402,7 +33422,7 @@ const initResizeViaPointer = (pointerdownEvent, {
       onGrab?.();
     },
     onDrag,
-    resetPositionAfterRelease: true,
+    releasePositionEffect: "cancel",
     onRelease: gestureInfo => {
       const sizeChange = axis === "x" ? gestureInfo.layout.xDelta : gestureInfo.layout.yDelta;
       const newSize = currentSize + sizeChange;
@@ -38015,5 +38035,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, Box, Button, ButtonCopyToClipboard, Caption, CheckSvg, Checkbox, CheckboxList, CloseSvg, Code, Col, Colgroup, ConstructionSvg, Details, Dialog, DialogLayout, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemFooter, ListItemGroup, ListItemHeader, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, MessageBox, Meter, Nav, NaviDebug, Paragraph, Popover, Quantity, QuantityIntl, Radio, RadioList, Route, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectionContext, Separator, SettingsSvg, SidePanel, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, Thead, Title, Tr, UITransition, UserSvg, ViewportLayout, actionIntegratedVia, actionRunEffect, addCustomMessage, anyMatchingRouteSignal, applySearch, arraySignalMembership, compareTwoJsValues, createAction, createAvailableConstraint, createIntl, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, enableDebugActions, enableDebugOnDocumentLoading, filterTableSelection, forwardActionRequested, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, localStorageSignal, moveArrayItemByIndex, navBack, navForward, navTo, openCallout, rawUrlPart, reload, removeCustomMessage, requestAction, requestListClose, requestListOpen, rerunActions, resource, route, routeAction, setBaseUrl, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutClose, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, useRouteStatus, useRunOnMount, useSearchText, useSelectRequestClose, useSelectableElement, useSelectionController, useSidePanelClose, useSignalSync, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage, windowWidthSignal };
+export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, Box, Button, ButtonCopyToClipboard, Caption, CheckSvg, Checkbox, CheckboxList, CloseSvg, Code, Col, Colgroup, ConstructionSvg, Details, Dialog, DialogLayout, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemFooter, ListItemGroup, ListItemHeader, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, MessageBox, Meter, Nav, NaviDebug, Paragraph, Popover, Quantity, QuantityIntl, Radio, RadioList, Route, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectionContext, Separator, SettingsSvg, SidePanel, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, Thead, Title, Tr, UITransition, UserSvg, ViewportLayout, actionIntegratedVia, actionRunEffect, addCustomMessage, anyMatchingRouteSignal, applySearch, arraySignalMembership, compareTwoJsValues, createAction, createAvailableConstraint, createIntl, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, filterTableSelection, forwardActionRequested, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, localStorageSignal, moveArrayItemByIndex, navBack, navForward, navTo, openCallout, rawUrlPart, reload, removeCustomMessage, requestAction, requestListClose, requestListOpen, rerunActions, resource, route, routeAction, setBaseUrl, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutClose, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, useRouteStatus, useRunOnMount, useSearchText, useSelectRequestClose, useSelectableElement, useSelectionController, useSidePanelClose, useSignalSync, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage, windowWidthSignal };
 //# sourceMappingURL=jsenv_navi.js.map
