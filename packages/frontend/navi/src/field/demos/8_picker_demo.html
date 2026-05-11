@@ -75,8 +75,15 @@
       );
 
       // ── Demo sections ────────────────────────────────────────────
+      const in10days = new Date(today);
+      in10days.setDate(today.getDate() + 10);
+      const tenDaysAgo = new Date(today);
+      tenDaysAgo.setDate(today.getDate() - 10);
+
       const DayPickerDemo = () => {
         const daySignal = useSignal("");
+        const dayLimitedSignal = useSignal("");
+        const dayPastSignal = useSignal("");
         return (
           <div class="demo-section">
             <h2>Day picker</h2>
@@ -96,6 +103,40 @@
               />
             </Field>
             <ValueDisplay label="Value" value={daySignal.value} />
+            <p style="margin-top:16px">Max = aujourd'hui + 10 jours.</p>
+            <Field vertical>
+              <Label>Date (10 jours max)</Label>
+              <Picker
+                name="day_limited"
+                type="day"
+                value={dayLimitedSignal.value}
+                uiAction={(v) => {
+                  dayLimitedSignal.value = v;
+                }}
+                min={today}
+                max={in10days}
+                placeholder="Choisir un jour"
+              />
+            </Field>
+            <ValueDisplay label="Value" value={dayLimitedSignal.value} />
+            <p style="margin-top:16px">
+              Autorise les jours passés (min = aujourd'hui - 10 jours).
+            </p>
+            <Field vertical>
+              <Label>Date (passé autorisé)</Label>
+              <Picker
+                name="day_past"
+                type="day"
+                value={dayPastSignal.value}
+                uiAction={(v) => {
+                  dayPastSignal.value = v;
+                }}
+                min={tenDaysAgo}
+                max={today}
+                placeholder="Choisir un jour"
+              />
+            </Field>
+            <ValueDisplay label="Value" value={dayPastSignal.value} />
           </div>
         );
       };
@@ -148,6 +189,7 @@
 
       const TimePickerDemo = () => {
         const timeSignal = useSignal("");
+        const timeRestrictedSignal = useSignal("");
         return (
           <div class="demo-section">
             <h2>Time picker</h2>
@@ -168,6 +210,25 @@
               />
             </Field>
             <ValueDisplay label="Value" value={timeSignal.value} />
+            <p style="margin-top:16px">
+              Heures entre 7h et 21h, par tranche de 30 min.
+            </p>
+            <Field vertical>
+              <Label>Heure (7h–21h, 30 min)</Label>
+              <Picker
+                name="time_restricted"
+                type="time"
+                value={timeRestrictedSignal.value}
+                uiAction={(v) => {
+                  timeRestrictedSignal.value = v;
+                }}
+                min="07:00"
+                max="21:00"
+                step={1800}
+                placeholder="Choisir une heure"
+              />
+            </Field>
+            <ValueDisplay label="Value" value={timeRestrictedSignal.value} />
           </div>
         );
       };
