@@ -96,6 +96,12 @@ const CustomDayOption = ({
   const hasCustom = customDateStringSignal.value !== undefined;
 
   const onDatePicked = (dateString, e) => {
+    if (!dateString) {
+      // user clicked "effacer" on the date picker
+      customDateStringSignal.value = undefined;
+      // TODO: forward this to the list
+      return;
+    }
     if (staticDateStringSet.has(dateString)) {
       customDateStringSignal.value = undefined;
       const itemEl = document.getElementById(dateString);
@@ -116,7 +122,7 @@ const CustomDayOption = ({
       <DayOption
         id="custom_display"
         index={index}
-        value={customDateString}
+        value={customDateStringSignal}
         hidden={!hasCustom}
         selected={value === customDateString}
       >
