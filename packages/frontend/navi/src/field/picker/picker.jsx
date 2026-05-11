@@ -264,6 +264,15 @@ const PickerUI = (props) => {
           return;
         }
         e.preventDefault();
+        rest.onMouseDown?.(e);
+      }}
+      onClick={(e) => {
+        if (e.button !== 0) {
+          return;
+        }
+        if (innerDisabled || innerReadOnly) {
+          return;
+        }
         const inputEl = ref.current?.querySelector(".navi_picker_input");
         if (inputEl) {
           try {
@@ -272,7 +281,7 @@ const PickerUI = (props) => {
             inputEl.click();
           }
         }
-        rest.onMouseDown?.(e);
+        rest.onClick?.(e);
       }}
     >
       <span className="navi_picker_text">
