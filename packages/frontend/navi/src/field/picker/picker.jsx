@@ -144,6 +144,14 @@ const css = /* css */ `
         visibility: hidden;
       }
     }
+    &[navi-type="color"][navi-has-placeholder] {
+      .navi_picker_placeholder {
+        &[hidden] {
+          /* Color display is absolute, keep placeholder in place */
+          height: auto;
+        }
+      }
+    }
     .navi_picker_value {
     }
     .navi_picker_icon {
@@ -259,6 +267,8 @@ const PickerUI = (props) => {
       {...remainingProps}
       ref={ref}
       baseClassName="navi_picker"
+      navi-type={type}
+      navi-has-placeholder={placeholder ? "" : undefined}
       autoFocus={undefined}
       basePseudoState={{
         ...remainingProps.basePseudoState,
