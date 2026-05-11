@@ -44,13 +44,13 @@ export const NaviDebug = ({
   children,
 }) => {
   if (debugFocus === true) {
-    debugFocus = console.debug;
+    debugFocus = createEventGroupLogger();
   }
   if (debugScroll === true) {
-    debugScroll = console.debug;
+    debugScroll = createEventGroupLogger();
   }
   if (debugPopup === true) {
-    debugPopup = console.debug;
+    debugPopup = createEventGroupLogger();
   }
   if (debugAction === true) {
     debugAction = createEventGroupLogger();

@@ -56,6 +56,7 @@ import { langSignal } from "./lang_signal.js";
  */
 export const createI18n = ({
   keyLang,
+  fallbackLang,
   systemLang = langSignal.peek(),
 } = {}) => {
   const languageMap = new Map();
@@ -105,6 +106,16 @@ export const createI18n = ({
       const translated = translations[key];
       if (translated !== undefined) {
         return translated;
+      }
+    }
+    if (fallbackLang) {
+      const resolvedFallbackLang = matchLang(fallbackLang, languageMap);
+      if (resolvedFallbackLang) {
+        const fallbackTranslations = languageMap.get(resolvedFallbackLang);
+        const fallbackTranslated = fallbackTranslations[key];
+        if (fallbackTranslated !== undefined) {
+          return fallbackTranslated;
+        }
       }
     }
     // No translation found — return key as-is (opaque fallback)

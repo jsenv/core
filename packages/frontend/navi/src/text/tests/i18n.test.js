@@ -126,4 +126,41 @@ await snapshotTests(import.meta.url, ({ test }) => {
     const after = i18n("one minute");
     return { before, after };
   });
+
+  // --- fallbackLang ---
+
+  test("fallbackLang used when requested lang has no translation", () => {
+    const i18n = createI18n({ fallbackLang: "en", systemLang: "fr" });
+    i18n.addLangKeys("en", {
+      greeting: "Hello!",
+      farewell: "Goodbye!",
+    });
+    i18n.addLangKeys("fr", {
+      greeting: "Bonjour !",
+      // farewell intentionally missing in fr
+    });
+
+    return {
+      greetingFr: i18n("greeting", undefined, { lang: "fr" }),
+      farewellFr: i18n("farewell", undefined, { lang: "fr" }),
+      greetingEn: i18n("greeting", undefined, { lang: "en" }),
+      unknownKey: i18n("unknown_key", undefined, { lang: "fr" }),
+    };
+  });
+
+  test("fallbackLang not used when translation exists", () => {
+    const i18n = createI18n({ fallbackLang: "en", systemLang: "fr" });
+    i18n.addLangKeys("en", { color: "color" });
+    i18n.addLangKeys("fr", { color: "couleur" });
+
+    return i18n("color", undefined, { lang: "fr" });
+  });
+
+  test("no fallbackLang: returns key as-is when translation missing", () => {
+    const i18n = createI18n({ systemLang: "fr" });
+    i18n.addLangKeys("en", { greeting: "Hello!" });
+    // no fr translation
+
+    return i18n("greeting", undefined, { lang: "fr" });
+  });
 });

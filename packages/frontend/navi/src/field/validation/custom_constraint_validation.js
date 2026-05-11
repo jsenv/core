@@ -57,7 +57,6 @@ import {
   createPubSub,
   dispatchCustomEvent,
   dispatchPublicCustomEvent,
-  formatEventSideEffect,
 } from "@jsenv/dom";
 
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";

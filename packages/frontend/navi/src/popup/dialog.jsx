@@ -40,6 +40,7 @@ export const Dialog = (props) => {
     const firstFocusable = findFocusable(dialogEl);
     if (firstFocusable) {
       debugFocus(
+        e,
         `Moving focus to first focusable element in dialog: ${getElementSignature(firstFocusable)}.focus({ preventScroll: true })`,
       );
       firstFocusable.focus({ preventScroll: true });

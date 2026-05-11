@@ -154,7 +154,7 @@ export const createEventGroupLogger = () => {
   };
 
   return (eOrMessage, sideEffect) => {
-    if (typeof eOrMessage === "string") {
+    if (!(eOrMessage instanceof Event)) {
       console.debug(eOrMessage);
       return;
     }

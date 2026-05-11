@@ -68,6 +68,7 @@ export const Popover = (props) => {
     const firstFocusable = findFocusable(popoverEl);
     if (firstFocusable) {
       debugFocus(
+        e,
         `Moving focus to first focusable element in popover: ${getElementSignature(firstFocusable)}.focus({ preventScroll: true })`,
       );
       firstFocusable.focus({ preventScroll: true });

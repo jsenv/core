@@ -595,11 +595,9 @@ const SelectWithPopover = (props) => {
   const moveFocusToSelect = (e) => {
     if (e.type === "mousedown") {
       e.preventDefault();
-      debugFocus(
-        formatEventSideEffect(e, `preventDefault and move focus to select`),
-      );
+      debugFocus(e, `preventDefault and move focus to select`);
     } else {
-      debugFocus(formatEventSideEffect(e, `move focus to select`));
+      debugFocus(e, `move focus to select`);
     }
     const select = ref.current;
     select.focus({ preventScroll: true });
@@ -623,7 +621,7 @@ const SelectWithPopover = (props) => {
           requestClose(e);
         } else {
           e.preventDefault(); // prevent browser trying to give focus to the select (popover will take focus)
-          debugFocus(`select mousedown.preventDefault()`);
+          debugFocus(e, `preventDefault()`);
           requestOpen(e);
         }
       }}
@@ -641,7 +639,7 @@ const SelectWithPopover = (props) => {
         const { event } = e.detail;
         if (event.type === "mousedown") {
           event.preventDefault(); // prevent browser trying to give focus to the list item
-          debugFocus(`listItem mousedown.preventDefault()`);
+          debugFocus(e, `preventDefault()`);
         }
         if (event.key === " ") {
           // space can open the popover we don't want space to propagate to the select otherwise it would open it back immediatly
@@ -791,11 +789,9 @@ const SelectWithDialog = (props) => {
   const moveFocusToSelect = (e) => {
     if (e.type === "mousedown") {
       e.preventDefault();
-      debugFocus(
-        formatEventSideEffect(e, `preventDefault and move focus to select`),
-      );
+      debugFocus(e, `preventDefault and move focus to select`);
     } else {
-      debugFocus(formatEventSideEffect(e, `move focus to select`));
+      debugFocus(e, `move focus to select`);
     }
     const select = ref.current;
     select.focus({ preventScroll: true });
@@ -818,7 +814,7 @@ const SelectWithDialog = (props) => {
           requestClose(e);
         } else {
           e.preventDefault(); // prevent browser trying to give focus to the select (dialog will take focus)
-          debugFocus(`select mousedown.preventDefault()`);
+          debugFocus(e, `preventDefault()`);
           requestOpen(e);
         }
       }}

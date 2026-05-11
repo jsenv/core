@@ -66,9 +66,10 @@ export const useAutoFocus = (
     const activeElement = document.activeElement;
     const focusDebugCall = `${getElementSignature(focusableElement)}.focus({ preventScroll: ${preventScroll} })`;
     if (e.type === "navi_displayed_on_document") {
-      debugFocus(`[autofocus] mount -> ${focusDebugCall}`);
+      debugFocus(e, `[autofocus] mount -> ${focusDebugCall}`);
     } else {
       debugFocus(
+        e,
         `[autofocus] "${e.type}" ${getElementSignature(e.target)} -> ${focusDebugCall}`,
       );
     }
@@ -119,6 +120,7 @@ export const useAutoFocus = (
       }
 
       debugFocus(
+        e,
         `restore focus to previously active element ${getElementSignature(activeElement)}.focus()`,
       );
       activeElement.focus();
