@@ -1,3 +1,4 @@
+import { dispatchCustomEvent } from "@jsenv/dom";
 import { useCallback, useContext, useLayoutEffect, useRef } from "preact/hooks";
 
 import { Box } from "@jsenv/navi/src/box/box.jsx";
@@ -439,9 +440,12 @@ const InputRadioUI = (props) => {
       if (radioInput === thisRadio) {
         continue;
       }
-      radioInput.dispatchEvent(
-        new CustomEvent("setuistate", { detail: false }),
-      );
+      // Dispatch "setuistate" with value: false to set the sibling radio's uiState to false (unchecked).
+      // Each radio's own uiState is a boolean (true = checked, false = unchecked).
+      // This is necessary because the group controller aggregates child states to determine
+      // the selected value — it needs all siblings to be unchecked before the newly checked
+      // radio propagates its state up, otherwise aggregation may find multiple "truthy" children.
+      dispatchCustomEvent(radioInput, "setuistate", { value: false });
     }
   };
   useLayoutEffect(() => {

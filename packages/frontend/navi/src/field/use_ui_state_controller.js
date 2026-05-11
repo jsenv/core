@@ -374,6 +374,7 @@ export const useUIGroupStateController = (
     return notifyParentAboutChildUnmount;
   }, []);
 
+  const debugAction = useDebugAction();
   const onChange = (_, e, { notifyExternal = true } = {}) => {
     if (groupIsRenderingRef.current) {
       pendingChangeRef.current = true;
@@ -442,7 +443,13 @@ export const useUIGroupStateController = (
       );
       publishUIState(newUIState);
       if (notifyExternal) {
-        uiStateController.uiAction?.(newUIState, e);
+        if (uiStateController.uiAction) {
+          debugAction(
+            e,
+            `${componentType}.uiAction(${JSON.stringify(newUIState)})`,
+          );
+          uiStateController.uiAction(newUIState, e);
+        }
       }
       notifyParentAboutChildUIStateChange(e);
     },
