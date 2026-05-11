@@ -1,19 +1,41 @@
 import { langSignal } from "./lang_signal.js";
 import { Text } from "./text.jsx";
 
-// type="day"      → "Lundi 11 Mai"        (jour de l'année, lisible)
-// type="month"    → "Mai 2026"
-// type="datetime" → "Lun. 11 Mai, 14:30"
-// type="time"     → "14:30"
-// type="relative" → "il y a 3 jours"
-
+/**
+ * Displays a date/time value in a human-readable format using the current locale.
+ *
+ * @param {Date|number|string} children
+ *   The date to display. Accepts:
+ *   - a `Date` instance
+ *   - a Unix timestamp (number, in ms)
+ *   - a date string `"YYYY-MM-DD"` or any string parseable by `Date`
+ *   If the value cannot be parsed, it is rendered as-is.
+ *   If undefined, renders `"–"`.
+ *
+ * @param {"day"|"month"|"datetime"|"time"|"relative"} [type="day"]
+ *   Controls the display format:
+ *   - `"day"`      → "lundi 11 mai"
+ *   - `"month"`    → "mai 2026"
+ *   - `"datetime"` → "lun. 11 mai, 14:30"
+ *   - `"time"`     → "14:30"
+ *   - `"relative"` → "il y a 3 jours"
+ *
+ * @param {string} [locale]
+ *   BCP 47 locale tag (e.g. `"fr"`, `"en-US"`).
+ *   Defaults to `langSignal.value` (the browser's current language).
+ */
 export const Time = ({ children, type = "day", locale, ...props }) => {
   const date = toDate(children);
   const lang = locale || langSignal.value;
-  const text = date ? formatDate(date, type, lang) : String(children ?? "");
+  const text = date
+    ? formatDate(date, type, lang)
+    : children === undefined
+      ? "–"
+      : String(children);
+  const dateTimeAttr = date ? toDateTimeAttr(date, type) : undefined;
 
   return (
-    <Text as="time" {...props}>
+    <Text as="time" dateTime={dateTimeAttr} {...props}>
       {text}
     </Text>
   );
@@ -37,6 +59,30 @@ const toDate = (value) => {
     return isNaN(d.getTime()) ? null : d;
   }
   return null;
+};
+
+// Produces a machine-readable value for the HTML `datetime` attribute.
+// See https://developer.mozilla.org/en-US/docs/Web/HTML/Element/time#datetime
+const toDateTimeAttr = (date, type) => {
+  if (type === "time") {
+    const hh = String(date.getHours()).padStart(2, "0");
+    const mm = String(date.getMinutes()).padStart(2, "0");
+    return `${hh}:${mm}`;
+  }
+  if (type === "month") {
+    const yyyy = date.getFullYear();
+    const mm = String(date.getMonth() + 1).padStart(2, "0");
+    return `${yyyy}-${mm}`;
+  }
+  // day / datetime / relative → full ISO date (or datetime)
+  if (type === "datetime" || type === "relative") {
+    return date.toISOString();
+  }
+  // day
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
 };
 
 const formatDate = (date, type, locale) => {
