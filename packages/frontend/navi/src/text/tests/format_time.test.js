@@ -6,7 +6,7 @@ import {
   formatMonth,
   formatTime,
   formatTimeAgo,
-} from "./format_time.js";
+} from "../format_time.js";
 
 // Fixed reference point: Monday 11 May 2026, 14:00:00 local time
 const NOW = new Date("2026-05-11T14:00:00");

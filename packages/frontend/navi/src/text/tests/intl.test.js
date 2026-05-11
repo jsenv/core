@@ -1,6 +1,6 @@
 import { snapshotTests } from "@jsenv/snapshot";
 
-import { createIntl } from "./intl.js";
+import { createIntl } from "../intl.js";
 
 await snapshotTests(import.meta.url, ({ test }) => {
   test("basic translation and interpolation", () => {
