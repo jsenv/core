@@ -1,9 +1,11 @@
 import { useSignal } from "@preact/signals";
+import { useContext } from "preact/hooks";
 
 import { Text } from "@jsenv/navi/src/text/text.jsx";
 import { Time } from "@jsenv/navi/src/text/time.jsx";
 import { Input } from "../input/input.jsx";
 import { List, ListItem, requestListItemSelect } from "../list/list.jsx";
+import { UIStateControllerContext } from "../use_ui_state_controller.js";
 
 export const SelectDay = (props) => {
   const {
@@ -95,11 +97,13 @@ const CustomDayOption = ({
   const customDateString = customDateStringSignal.value;
   const hasCustom = customDateStringSignal.value !== undefined;
 
+  const listUIStateController = useContext(UIStateControllerContext);
+
   const onDatePicked = (dateString, e) => {
     if (!dateString) {
       // user clicked "effacer" on the date picker
       customDateStringSignal.value = undefined;
-      // TODO: forward this to the list
+      listUIStateController.setUIState("", e);
       return;
     }
     if (staticDateStringSet.has(dateString)) {
@@ -149,7 +153,7 @@ const CustomDayOption = ({
           inset
           expand
           opacity={0}
-          cursor="pointer"
+          tabIndex={-1}
         />
       </DayOption>
     </>
