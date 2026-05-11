@@ -18,9 +18,9 @@ export const SelectDay = (props) => {
   } = props;
 
   const minDate = startOfDay(min ?? new Date());
-  const minKey = toDateKey(minDate);
-  const todayKey = toDateKey(startOfDay(new Date()));
-  const minIsToday = minKey === todayKey;
+  const minDateString = toDateString(minDate);
+  const todayDateString = toDateString(startOfDay(new Date()));
+  const minIsToday = minDateString === todayDateString;
 
   let daysToShow;
   let showCustomPicker;
@@ -40,6 +40,7 @@ export const SelectDay = (props) => {
   }
 
   const dayOptions = buildDayOptions(minDate, daysToShow, locale, minIsToday);
+  const fixedDateStrings = dayOptions.map((o) => o.dateString);
 
   return (
     <SelectDispatcher
@@ -49,13 +50,13 @@ export const SelectDay = (props) => {
       type={undefined}
     >
       <List expandX>
-        {dayOptions.map(({ key, label }, index) => (
+        {dayOptions.map(({ dateString, label }, index) => (
           <DayOption
-            key={key}
-            value={key}
+            key={dateString}
+            value={dateString}
             index={index}
-            id={key}
-            selected={value === key}
+            id={dateString}
+            selected={value === dateString}
           >
             <Text capitalize>{label}</Text>
           </DayOption>
@@ -64,8 +65,9 @@ export const SelectDay = (props) => {
           <CustomDayOption
             value={value}
             index={dayOptions.length}
-            minKey={minKey}
+            minDateString={minDateString}
             locale={locale}
+            fixedDateStrings={fixedDateStrings}
           />
         )}
       </List>
@@ -81,18 +83,35 @@ const DayOption = ({ children, ...rest }) => {
   );
 };
 
-const CustomDayOption = ({ value, index, minKey, locale }) => {
-  const fixedOptions = buildDayOptions(
-    dateKeyToDate(minKey),
-    index,
-    locale,
-    false,
-  );
-  const isValueInFixed = fixedOptions.some((o) => o.key === value);
-  const initialCustomKey =
+const CustomDayOption = ({
+  value,
+  index,
+  minDateString,
+  locale,
+  fixedDateStrings,
+}) => {
+  const isValueInFixed = fixedDateStrings.includes(value);
+  const initialCustomDateString =
     value && value !== "custom" && !isValueInFixed ? value : null;
-  const [customKey, setCustomKey] = useState(initialCustomKey);
-  const hasCustom = customKey !== null;
+  const [customDateString, setCustomDateString] = useState(
+    initialCustomDateString,
+  );
+  const hasCustom = customDateString !== null;
+
+  const onDatePicked = (dateString) => {
+    if (fixedDateStrings.includes(dateString)) {
+      // This date is already a fixed option — click its DOM element to
+      // trigger the normal selection path (navi_list_request_select).
+      const itemEl = document.getElementById(dateString);
+      if (itemEl) {
+        itemEl.click();
+      }
+      // Clear any custom option so it doesn't appear as a duplicate.
+      setCustomDateString(null);
+    } else {
+      setCustomDateString(dateString);
+    }
+  };
 
   return (
     <>
@@ -100,11 +119,11 @@ const CustomDayOption = ({ value, index, minKey, locale }) => {
         <DayOption
           id="custom_display"
           index={index}
-          value={customKey}
-          selected={value === customKey}
+          value={customDateString}
+          selected={value === customDateString}
         >
           <Text capitalize>
-            {dateKeyToDate(customKey).toLocaleDateString(locale, {
+            {dateStringToDate(customDateString).toLocaleDateString(locale, {
               weekday: "long",
               day: "numeric",
               month: "long",
@@ -121,11 +140,9 @@ const CustomDayOption = ({ value, index, minKey, locale }) => {
         <Text>Choisir un autre jour…</Text>
         <Input
           type="date"
-          value={hasCustom ? customKey : undefined}
-          min={minKey}
-          uiAction={(newKey) => {
-            setCustomKey(newKey);
-          }}
+          value={hasCustom ? customDateString : undefined}
+          min={minDateString}
+          uiAction={onDatePicked}
           onMouseDown={(e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -147,7 +164,7 @@ const buildDayOptions = (minDate, count, locale, minIsToday) => {
   for (let i = 0; i < count; i++) {
     const d = new Date(minDate);
     d.setDate(minDate.getDate() + i);
-    const key = toDateKey(d);
+    const dateString = toDateString(d);
     const baseLabel = d.toLocaleDateString(locale, {
       weekday: "long",
       day: "numeric",
@@ -161,7 +178,7 @@ const buildDayOptions = (minDate, count, locale, minIsToday) => {
         label = `${baseLabel} (demain)`;
       }
     }
-    options.push({ key, label });
+    options.push({ dateString, label });
   }
   return options;
 };
@@ -172,14 +189,14 @@ const startOfDay = (date) => {
   return d;
 };
 
-const toDateKey = (date) => {
+const toDateString = (date) => {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, "0");
   const d = String(date.getDate()).padStart(2, "0");
   return `${y}-${m}-${d}`;
 };
 
-const dateKeyToDate = (dateKey) => new Date(`${dateKey}T00:00:00`);
+const dateStringToDate = (dateString) => new Date(`${dateString}T00:00:00`);
 
 const dateDiffInDays = (a, b) => Math.round((b - a) / MS_PER_DAY);
 
