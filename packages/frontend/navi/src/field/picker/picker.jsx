@@ -144,14 +144,22 @@ const css = /* css */ `
         visibility: hidden;
       }
     }
-    &[navi-type="color"][navi-has-placeholder] {
-      .navi_picker_placeholder {
-        &[hidden] {
-          /* Color display is absolute, keep placeholder in place */
-          height: auto;
+    &[navi-type="color"] {
+      .navi_picker_text {
+        /* In case there is no placeholder */
+        min-width: 1em;
+      }
+
+      &[navi-has-placeholder] {
+        .navi_picker_placeholder {
+          &[hidden] {
+            /* Color display is absolute, keep placeholder in place */
+            height: auto;
+          }
         }
       }
     }
+
     .navi_picker_value {
     }
     .navi_picker_icon {

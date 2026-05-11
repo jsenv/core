@@ -192,12 +192,13 @@
 
       const ColorPickerDemo = () => {
         const colorSignal = useSignal("");
+        const colorWithPlaceholderSignal = useSignal("");
         return (
           <div class="demo-section">
             <h2>Color picker</h2>
             <p>Picks a color using the browser color chooser.</p>
-            <Label flex="y" spacing="s">
-              Couleur
+            <Label flex="y" alignX="start" spacing="s">
+              Sans placeholder
               <Picker
                 id="color-picker"
                 name="color"
@@ -206,10 +207,26 @@
                 uiAction={(v) => {
                   colorSignal.value = v;
                 }}
-                placeholder="Choisir une couleur"
               />
             </Label>
             <ValueDisplay label="Value" value={colorSignal.value} />
+            <Label flex="y" spacing="s">
+              Avec placeholder
+              <Picker
+                id="color-picker-placeholder"
+                name="color_with_placeholder"
+                type="color"
+                value={colorWithPlaceholderSignal.value}
+                uiAction={(v) => {
+                  colorWithPlaceholderSignal.value = v;
+                }}
+                placeholder="Choisir une couleur"
+              />
+            </Label>
+            <ValueDisplay
+              label="Value"
+              value={colorWithPlaceholderSignal.value}
+            />
           </div>
         );
       };
