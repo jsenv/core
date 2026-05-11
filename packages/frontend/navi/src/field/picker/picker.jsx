@@ -64,9 +64,12 @@ const css = /* css */ `
       --picker-padding-top,
       var(--picker-padding-y, var(--picker-padding-y-default))
     );
-    --x-picker-padding-right: var(
+    --x-picker-padding-right-base: var(
       --picker-padding-right,
       var(--picker-padding-x, var(--picker-padding-x-default))
+    );
+    --x-picker-padding-right: calc(
+      var(--x-picker-padding-right-base) + var(--picker-right-slot-size)
     );
     --x-picker-padding-left: var(
       --picker-padding-left,
@@ -82,9 +85,7 @@ const css = /* css */ `
     box-sizing: border-box;
     min-height: 1em;
     padding-top: var(--x-picker-padding-top);
-    padding-right: calc(
-      var(--x-picker-padding-right) + var(--picker-right-slot-size)
-    );
+    padding-right: var(--x-picker-padding-right);
     padding-bottom: var(--x-picker-padding-bottom);
     padding-left: var(--x-picker-padding-left);
     flex-direction: column;
@@ -140,18 +141,35 @@ const css = /* css */ `
       }
     }
     &[navi-type="color"] {
-      .navi_picker_text {
+      .navi_picker_value {
         /* In case there is no placeholder */
         min-width: 1em;
+        min-height: 1em;
       }
 
       &[navi-has-placeholder] {
+        .navi_picker_value {
+          min-height: auto;
+        }
+
         .navi_picker_placeholder {
           &[hidden] {
             /* Color display is absolute, keep placeholder in place */
             height: auto;
           }
         }
+      }
+
+      .navi_picker_color_display {
+        position: absolute;
+        top: var(--x-picker-padding-top);
+        right: var(--x-picker-padding-right);
+        bottom: var(--x-picker-padding-bottom);
+        left: var(--x-picker-padding-left);
+        display: block;
+        background-color: var(--picker-color);
+        border: 1px solid rgba(0, 0, 0, 0.2);
+        border-radius: 2px;
       }
     }
 
@@ -177,16 +195,6 @@ const css = /* css */ `
       opacity: 0;
       cursor: pointer;
     }
-  }
-
-  .navi_picker_color_display {
-    position: absolute;
-    inset: 0;
-    display: block;
-    vertical-align: middle;
-    background-color: var(--picker-color);
-    border: 1px solid rgba(0, 0, 0, 0.2);
-    border-radius: 2px;
   }
 `;
 
