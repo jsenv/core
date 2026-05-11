@@ -655,30 +655,14 @@ const ListUI = (props) => {
       pseudoStateSelector=".navi_list"
       hasChildFunction
       data-navi-value={value || undefined}
-      onnavi_list_request_nav={(e) => {
+      onnavi_request_scroll={(e) => {
         const { item } = e.detail;
         if (!item) {
           return;
         }
-        // navi_list_nav is dispatched immediately by scrollToItem (before scroll).
         scrollToItem(item, {
-          reason: "navi_list_request_nav",
-          event: e.detail.event,
-        });
-      }}
-      onnavi_list_request_select={(e) => {
-        const { item } = e.detail;
-        if (!item) {
-          return;
-        }
-        const listEl = e.currentTarget;
-        dispatchCustomEvent(listEl, "navi_list_request_nav", {
           event: e,
-          item,
-        });
-        dispatchPublicCustomEvent(listEl, "navi_list_select", {
-          item,
-          event: e,
+          reason: "navi_request_scroll",
         });
       }}
     >
@@ -1395,6 +1379,39 @@ const ListWithAction = (props) => {
       onListVisibleItemsChange={(visibleItems) => {
         props.onListVisibleItemsChange?.(visibleItems);
         visibleItemsRef.current = visibleItems;
+      }}
+      onnavi_list_request_nav={(e) => {
+        const { item } = e.detail;
+        if (!item) {
+          return;
+        }
+        if (item.id === anchorIdRef.current) {
+          return;
+        }
+        const isFailed = item.disabled || item.readOnly;
+        if (isFailed) {
+          return;
+        }
+        const listEl = e.currentTarget;
+        dispatchCustomEvent(listEl, "navi_list_request_scroll", {
+          event: e,
+          item,
+        });
+      }}
+      onnavi_list_request_select={(e) => {
+        const { item } = e.detail;
+        if (!item) {
+          return;
+        }
+        const listEl = e.currentTarget;
+        dispatchCustomEvent(listEl, "navi_list_request_nav", {
+          event: e,
+          item,
+        });
+        dispatchPublicCustomEvent(listEl, "navi_list_select", {
+          item,
+          event: e,
+        });
       }}
       onnavi_list_request_hover={(e) => {
         const { item } = e.detail;
