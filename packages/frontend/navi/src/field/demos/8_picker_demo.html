@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Picker Demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:," />
+    <style>
+      body {
+        margin: 40px;
+        font-family: system-ui, sans-serif;
+        background: #f5f5f5;
+      }
+      .demo-grid {
+        display: grid;
+        max-width: 1000px;
+        margin: 0 auto;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 24px;
+      }
+      .demo-section {
+        padding: 24px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      h1 {
+        max-width: 1000px;
+        margin: 0 auto 24px;
+        font-size: 1.4rem;
+      }
+      h2 {
+        margin: 0 0 6px;
+        font-size: 1rem;
+      }
+      p {
+        margin: 0 0 16px;
+        color: #555;
+        font-size: 13px;
+      }
+      .value-display {
+        margin-top: 12px;
+        color: #333;
+        font-size: 13px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Picker Demo</h1>
+    <div id="app"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { signal } from "@preact/signals";
+      import { Box, Label, Picker, Time } from "@jsenv/navi";
+
+      // ── signals ────────────────────────────────────────────────
+      const daySignal = signal("");
+      const monthSignal = signal("");
+      const weekSignal = signal("");
+      const timeSignal = signal("");
+      const datetimeSignal = signal("");
+      const colorSignal = signal("#4f8ef7");
+
+      // ── helpers ─────────────────────────────────────────────────
+      const today = new Date();
+      const in30days = new Date(today);
+      in30days.setDate(today.getDate() + 30);
+
+      const ValueDisplay = ({ label, value }) => (
+        <p class="value-display">
+          {label}: <strong>{value || "—"}</strong>
+        </p>
+      );
+
+      // ── App ─────────────────────────────────────────────────────
+      const App = () => (
+        <div class="demo-grid">
+          {/* Day picker */}
+          <div class="demo-section">
+            <h2>Day picker</h2>
+            <p>Picks a calendar day. Min = today, max = today + 30 days.</p>
+            <Label htmlFor="day-picker">Date</Label>
+            <Picker
+              id="day-picker"
+              name="day"
+              type="day"
+              value={daySignal.value}
+              uiAction={(v) => {
+                daySignal.value = v;
+              }}
+              min={today}
+              max={in30days}
+              placeholder="Choisir un jour"
+              expandX
+            />
+            <ValueDisplay label="Value" value={daySignal.value} />
+          </div>
+
+          {/* Month picker */}
+          <div class="demo-section">
+            <h2>Month picker</h2>
+            <p>Picks a year + month.</p>
+            <Label htmlFor="month-picker">Mois</Label>
+            <Picker
+              id="month-picker"
+              name="month"
+              type="month"
+              value={monthSignal.value}
+              uiAction={(v) => {
+                monthSignal.value = v;
+              }}
+              placeholder="Choisir un mois"
+              expandX
+            />
+            <ValueDisplay label="Value" value={monthSignal.value} />
+          </div>
+
+          {/* Week picker */}
+          <div class="demo-section">
+            <h2>Week picker</h2>
+            <p>Picks an ISO week (year + week number).</p>
+            <Label htmlFor="week-picker">Semaine</Label>
+            <Picker
+              id="week-picker"
+              name="week"
+              type="week"
+              value={weekSignal.value}
+              uiAction={(v) => {
+                weekSignal.value = v;
+              }}
+              placeholder="Choisir une semaine"
+              expandX
+            />
+            <ValueDisplay label="Value" value={weekSignal.value} />
+          </div>
+
+          {/* Time picker */}
+          <div class="demo-section">
+            <h2>Time picker</h2>
+            <p>Picks a time of day (hours + minutes).</p>
+            <Label htmlFor="time-picker">Heure</Label>
+            <Picker
+              id="time-picker"
+              name="time"
+              type="time"
+              value={timeSignal.value}
+              uiAction={(v) => {
+                timeSignal.value = v;
+              }}
+              min="08:00"
+              max="20:00"
+              step={900}
+              placeholder="Choisir une heure"
+              expandX
+            />
+            <ValueDisplay label="Value" value={timeSignal.value} />
+          </div>
+
+          {/* Datetime picker */}
+          <div class="demo-section">
+            <h2>Datetime picker</h2>
+            <p>Picks a date + time (datetime-local).</p>
+            <Label htmlFor="datetime-picker">Date &amp; heure</Label>
+            <Picker
+              id="datetime-picker"
+              name="datetime"
+              type="datetime"
+              value={datetimeSignal.value}
+              uiAction={(v) => {
+                datetimeSignal.value = v;
+              }}
+              placeholder="Choisir date &amp; heure"
+              expandX
+            />
+            <ValueDisplay label="Value" value={datetimeSignal.value} />
+          </div>
+
+          {/* Color picker */}
+          <div class="demo-section">
+            <h2>Color picker</h2>
+            <p>Picks a color using the browser color chooser.</p>
+            <Label htmlFor="color-picker">Couleur</Label>
+            <Picker
+              id="color-picker"
+              name="color"
+              type="color"
+              value={colorSignal.value}
+              uiAction={(v) => {
+                colorSignal.value = v;
+              }}
+              placeholder="Choisir une couleur"
+              expandX
+            />
+            <ValueDisplay label="Value" value={colorSignal.value} />
+          </div>
+
+          {/* Custom children */}
+          <div class="demo-section">
+            <h2>Custom children</h2>
+            <p>Override the value display with custom children.</p>
+            <Label htmlFor="custom-picker">Date de naissance</Label>
+            <Picker
+              id="custom-picker"
+              name="birthday"
+              type="day"
+              value={daySignal.value}
+              uiAction={(v) => {
+                daySignal.value = v;
+              }}
+              placeholder="Choisir une date"
+              expandX
+            >
+              {daySignal.value ? (
+                <Box flex alignY="center" spacing="xs">
+                  🎂{" "}
+                  <Time type="day" capitalize>
+                    {daySignal.value}
+                  </Time>
+                </Box>
+              ) : null}
+            </Picker>
+            <ValueDisplay label="Value" value={daySignal.value} />
+          </div>
+
+          {/* Disabled state */}
+          <div class="demo-section">
+            <h2>Disabled</h2>
+            <p>Picker is non-interactive when disabled.</p>
+            <Label htmlFor="disabled-picker">Date</Label>
+            <Picker
+              id="disabled-picker"
+              type="day"
+              value="2026-05-11"
+              disabled
+              placeholder="Choisir un jour"
+              expandX
+            />
+          </div>
+        </div>
+      );
+
+      render(<App />, document.getElementById("app"));
+    </script>
+  </body>
+</html>
