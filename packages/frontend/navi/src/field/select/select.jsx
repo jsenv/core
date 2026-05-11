@@ -39,7 +39,6 @@ import {
   useUIState,
 } from "../use_ui_state_controller.js";
 import { useConstraints } from "../validation/hooks/use_constraints.js";
-import { SelectDay } from "./select_day.jsx";
 
 const css = /* css */ `
   @layer navi {
@@ -375,9 +374,6 @@ const SelectDispatcher = (props) => {
   const isSmallScreen = windowWidthSignal.value <= 600;
   const defaultMode = isSmallScreen ? "dialog" : "popover";
   const { mode = defaultMode } = props;
-  if (props.type === "day") {
-    return <SelectDay SelectDispatcher={SelectDispatcher} {...props} />;
-  }
   if (mode === "dialog") {
     return <SelectWithDialog {...props} />;
   }
