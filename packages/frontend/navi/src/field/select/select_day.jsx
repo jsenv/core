@@ -90,8 +90,7 @@ const CustomDayOption = ({
   staticDateStringSet,
 }) => {
   const isValueInFixed = staticDateStringSet.has(value);
-  const initialCustomDateString =
-    value && value !== "custom" && !isValueInFixed ? value : undefined;
+  const initialCustomDateString = value && !isValueInFixed ? value : undefined;
   const customDateStringSignal = useSignal(initialCustomDateString);
   const customDateString = customDateStringSignal.value;
   const hasCustom = customDateStringSignal.value !== undefined;
@@ -125,12 +124,7 @@ const CustomDayOption = ({
           {customDateString}
         </Time>
       </DayOption>
-      <DayOption
-        id="custom_pick"
-        index={hasCustom ? index + 1 : index}
-        value="custom"
-        relative
-      >
+      <DayOption id="custom_pick" index={index + 1} value="custom" relative>
         <Text>Choisir un autre jour…</Text>
         <Input
           type="date"
