@@ -2,5 +2,6 @@ import { CONSTRAINT_ATTRIBUTE_SET } from "./validation/constraint_attribute_set.
 
 export const fieldPropSet = new Set([
   ...CONSTRAINT_ATTRIBUTE_SET,
+  "value",
   "data-testid",
 ]);

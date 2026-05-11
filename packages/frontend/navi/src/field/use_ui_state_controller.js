@@ -223,7 +223,9 @@ export const useUIStateController = (
         );
         uiStateController.uiAction(newUIState, e);
       }
-      notifyParentAboutChildUIStateChange(e);
+      if (!e.detail?.suppressParentNotification) {
+        notifyParentAboutChildUIStateChange(e);
+      }
     },
     resetUIState: (e) => {
       const currentState = uiStateController.state;

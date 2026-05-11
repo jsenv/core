@@ -15,6 +15,7 @@
       import {
         Button,
         Form,
+        Field,
         RadioList,
         Radio,
         Label,
@@ -39,13 +40,7 @@
         const selectedColor =
           colorChoices.find((choice) => choice.selected)?.color || null;
 
-        const [uiSelectedColor, setUiSelectedColor] = useState(selectedColor);
-
         const [nextId, setNextId] = useState(4);
-        const [isSubmitting, setIsSubmitting] = useState(false);
-        const [submitMessage, setSubmitMessage] = useState("");
-        const [submitError, setSubmitError] = useState("");
-        const [forceError, setForceError] = useState(false);
 
         const randomColors = [
           "purple",
@@ -63,38 +58,6 @@
           "navy",
           "maroon",
         ];
-
-        const submitForm = async ({ color }) => {
-          setIsSubmitting(true);
-          setSubmitError("");
-          setSubmitMessage(`Syncing color: ${color || "none"}...`);
-
-          try {
-            console.log("Submitting form data:", color);
-            await new Promise((resolve) => setTimeout(resolve, 1000));
-
-            if (forceError) {
-              throw new Error(
-                "Simulated server error: Failed to update color preference",
-              );
-            }
-
-            setColorChoices((prev) =>
-              prev.map((choice) => ({
-                ...choice,
-                selected: choice.color === color,
-              })),
-            );
-
-            setSubmitMessage(`✅ Successfully synced: ${color || "none"}`);
-            console.log("Data state updated from form:", color);
-          } catch (error) {
-            setSubmitError(error.message);
-            setSubmitMessage("");
-          } finally {
-            setIsSubmitting(false);
-          }
-        };
 
         const addColorToState = (color) => {
           setColorChoices((prev) => [
@@ -138,160 +101,32 @@
           );
         };
 
+        const onSubmit = (colorChoicesFromSubmit) => {
+          setColorChoices((prev) =>
+            prev.map((choice) => ({
+              ...choice,
+              selected: choice.color === colorChoicesFromSubmit.color,
+            })),
+          );
+        };
+
         return (
           <div style="border: 2px solid #ddd; padding: 20px; border-radius: 8px; background: #f9f9f9;">
             <h2>State ↔ UI Form Demo (Radio Selection)</h2>
 
             <div style="display: flex; gap: 20px; margin: 20px 0;">
-              {/* DATA STATE SECTION */}
-              <div style="flex: 1; padding: 15px; background: #fff; border-radius: 6px; border: 1px solid #ccc;">
-                <h3 style="margin: 0 0 15px 0; color: #2196F3;">
-                  🗄️ Data State
-                </h3>
-                <p style="margin: 0 0 15px 0; font-size: 14px; color: #666;">
-                  Direct manipulation of the data source (single selection)
-                </p>
-
-                <div style="margin-bottom: 15px;">
-                  <button
-                    onClick={addRandomColor}
-                    style="padding: 6px 12px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; margin-right: 8px;"
-                  >
-                    + Add Random Color
-                  </button>
-                  <button
-                    onClick={clearSelectionInState}
-                    style="padding: 6px 12px; background: #ff9800; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;"
-                  >
-                    Clear Selection
-                  </button>
-                </div>
-
-                <div style="display: flex; flex-direction: column; gap: 8px;">
-                  {colorChoices.map(({ id, color, selected }) => (
-                    <div
-                      key={id}
-                      style="display: flex; align-items: center; gap: 8px; padding: 6px; border: 1px solid #eee; border-radius: 3px; background: #fafafa;"
-                    >
-                      <span style="flex: 1; font-size: 14px;">
-                        {color.charAt(0).toUpperCase() + color.slice(1)}
-                      </span>
-
-                      <button
-                        onClick={() => selectColorInState(id)}
-                        style={{
-                          padding: "4px 8px",
-                          fontSize: "11px",
-                          background: selected ? "#4CAF50" : "#ccc",
-                          color: "white",
-                          border: "none",
-                          borderRadius: "3px",
-                          cursor: "pointer",
-                          minWidth: "60px",
-                        }}
-                      >
-                        {selected ? "Selected" : "Not Selected"}
-                      </button>
-
-                      <button
-                        onClick={() => removeColorFromState(id)}
-                        style="padding: 4px 6px; background: #f44336; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 11px;"
-                        title="Remove this color"
-                      >
-                        🗑
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* UI FORM SECTION */}
-              <div style="flex: 1; padding: 15px; background: #fff; border-radius: 6px; border: 1px solid #ccc;">
-                <h3 style="margin: 0 0 15px 0; color: #FF9800;">📝 UI Form</h3>
-                <p style="margin: 0 0 15px 0; font-size: 14px; color: #666;">
-                  Radio button interface for user interaction
-                </p>
-
-                <Form action={submitForm}>
-                  <fieldset style="border: 1px solid #ddd; padding: 10px; border-radius: 4px;">
-                    <legend>Select Favorite Color:</legend>
-                    <NaviDebug debugAction debugActionVerbose>
-                      <RadioList
-                        name="color"
-                        uiAction={(color) => {
-                          setUiSelectedColor(color);
-                        }}
-                      >
-                        {colorChoices.map(({ id, color }) => (
-                          <Label
-                            key={id}
-                            style="display: block; margin: 5px 0;"
-                          >
-                            {color.charAt(0).toUpperCase() + color.slice(1)}
-                            <Radio
-                              value={color}
-                              checked={selectedColor === color}
-                            />
-                          </Label>
-                        ))}
-                      </RadioList>
-                    </NaviDebug>
-                  </fieldset>
-
-                  {/* Error simulation checkbox */}
-                  <div style="margin: 10px 0; padding: 8px; background: #ffebee; border-radius: 4px; border: 1px solid #ffcdd2;">
-                    <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: #d32f2f;">
-                      <input
-                        type="checkbox"
-                        checked={forceError}
-                        onChange={(e) => setForceError(e.target.checked)}
-                        style="margin: 0;"
-                      />
-                      🔧 Force submission error (for testing)
-                    </label>
-                  </div>
-
-                  {/* Submission feedback messages */}
-                  {(isSubmitting || submitMessage || submitError) && (
-                    <div style="margin: 10px 0; padding: 10px; border-radius: 4px; font-size: 14px;">
-                      {isSubmitting && (
-                        <div style="color: #1976d2; background: #e3f2fd; padding: 8px; border-radius: 3px; border-left: 3px solid #1976d2;">
-                          🔄 {submitMessage}
-                        </div>
-                      )}
-                      {!isSubmitting && submitMessage && (
-                        <div style="color: #388e3c; background: #e8f5e8; padding: 8px; border-radius: 3px; border-left: 3px solid #388e3c;">
-                          {submitMessage}
-                        </div>
-                      )}
-                      {submitError && (
-                        <div style="color: #d32f2f; background: #ffebee; padding: 8px; border-radius: 3px; border-left: 3px solid #d32f2f;">
-                          ❌ {submitError}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  <div style="margin-top: 15px; display: flex; align-items: flex-start; flex-direction: column; gap: 8px;">
-                    <Button type="submit" disabled={isSubmitting}>
-                      {isSubmitting ? "⏳ Submitting..." : "📤 Submit Form"}{" "}
-                      {!isSubmitting && uiSelectedColor && (
-                        <span style="font-size: 11px; opacity: 0.7;">
-                          ({uiSelectedColor})
-                        </span>
-                      )}
-                    </Button>
-                    <Button type="reset">
-                      🔄 Reset to State{" "}
-                      {selectedColor && (
-                        <span style="font-size: 11px; opacity: 0.7;">
-                          ({selectedColor})
-                        </span>
-                      )}
-                    </Button>
-                  </div>
-                </Form>
-              </div>
+              <DataStatePanel
+                colorChoices={colorChoices}
+                onAddRandom={addRandomColor}
+                onClearSelection={clearSelectionInState}
+                onSelect={selectColorInState}
+                onRemove={removeColorFromState}
+              />
+              <UIFormPanel
+                colorChoices={colorChoices}
+                selectedColor={selectedColor}
+                onSubmit={onSubmit}
+              />
             </div>
 
             <div style="background: #f0f8ff; padding: 15px; border-radius: 6px; margin: 20px 0; border-left: 4px solid #2196F3;">
@@ -314,6 +149,197 @@
                 </li>
               </ul>
             </div>
+          </div>
+        );
+      };
+
+      const DataStatePanel = ({
+        colorChoices,
+        onAddRandom,
+        onClearSelection,
+        onSelect,
+        onRemove,
+      }) => {
+        return (
+          <div style="flex: 1; padding: 15px; background: #fff; border-radius: 6px; border: 1px solid #ccc;">
+            <h3 style="margin: 0 0 15px 0; color: #2196F3;">🗄️ Data State</h3>
+            <p style="margin: 0 0 15px 0; font-size: 14px; color: #666;">
+              Direct manipulation of the data source (single selection)
+            </p>
+
+            <div style="margin-bottom: 15px;">
+              <button
+                onClick={onAddRandom}
+                style="padding: 6px 12px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; margin-right: 8px;"
+              >
+                + Add Random Color
+              </button>
+              <button
+                onClick={onClearSelection}
+                style="padding: 6px 12px; background: #ff9800; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;"
+              >
+                Clear Selection
+              </button>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              {colorChoices.map(({ id, color, selected }) => (
+                <div
+                  key={id}
+                  style="display: flex; align-items: center; gap: 8px; padding: 6px; border: 1px solid #eee; border-radius: 3px; background: #fafafa;"
+                >
+                  <span style="flex: 1; font-size: 14px;">
+                    {color.charAt(0).toUpperCase() + color.slice(1)}
+                  </span>
+
+                  <button
+                    onClick={() => onSelect(id)}
+                    style={{
+                      padding: "4px 8px",
+                      fontSize: "11px",
+                      background: selected ? "#4CAF50" : "#ccc",
+                      color: "white",
+                      border: "none",
+                      borderRadius: "3px",
+                      cursor: "pointer",
+                      minWidth: "60px",
+                    }}
+                  >
+                    {selected ? "Selected" : "Not Selected"}
+                  </button>
+
+                  <button
+                    onClick={() => onRemove(id)}
+                    style="padding: 4px 6px; background: #f44336; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 11px;"
+                    title="Remove this color"
+                  >
+                    🗑
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      };
+
+      const UIFormPanel = ({ colorChoices, selectedColor, onSubmit }) => {
+        const [uiSelectedColor, setUiSelectedColor] = useState(selectedColor);
+        const [isSubmitting, setIsSubmitting] = useState(false);
+        const [submitMessage, setSubmitMessage] = useState("");
+        const [submitError, setSubmitError] = useState("");
+        const [forceError, setForceError] = useState(false);
+
+        const submitForm = async ({ color }) => {
+          setIsSubmitting(true);
+          setSubmitError("");
+          setSubmitMessage(`Syncing color: ${color || "none"}...`);
+
+          try {
+            console.log("Submitting form data:", color);
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+
+            if (forceError) {
+              throw new Error(
+                "Simulated server error: Failed to update color preference",
+              );
+            }
+
+            onSubmit({ color });
+            setSubmitMessage(`✅ Successfully synced: ${color || "none"}`);
+            console.log("Data state updated from form:", color);
+          } catch (error) {
+            setSubmitError(error.message);
+            setSubmitMessage("");
+          } finally {
+            setIsSubmitting(false);
+          }
+        };
+
+        return (
+          <div style="flex: 1; padding: 15px; background: #fff; border-radius: 6px; border: 1px solid #ccc;">
+            <h3 style="margin: 0 0 15px 0; color: #FF9800;">📝 UI Form</h3>
+            <p style="margin: 0 0 15px 0; font-size: 14px; color: #666;">
+              Radio button interface for user interaction
+            </p>
+
+            <Form action={submitForm}>
+              <fieldset style="border: 1px solid #ddd; padding: 10px; border-radius: 4px;">
+                <legend>Select Favorite Color:</legend>
+                <NaviDebug debugAction debugActionVerbose>
+                  <RadioList
+                    name="color"
+                    uiAction={(color) => {
+                      setUiSelectedColor(color);
+                    }}
+                  >
+                    {colorChoices.map(({ id, color }) => (
+                      <Field key={id}>
+                        <Label>
+                          {color.charAt(0).toUpperCase() + color.slice(1)}
+                        </Label>
+                        <Radio
+                          value={color}
+                          checked={selectedColor === color}
+                        />
+                      </Field>
+                    ))}
+                  </RadioList>
+                </NaviDebug>
+              </fieldset>
+
+              {/* Error simulation checkbox */}
+              <div style="margin: 10px 0; padding: 8px; background: #ffebee; border-radius: 4px; border: 1px solid #ffcdd2;">
+                <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: #d32f2f;">
+                  <input
+                    type="checkbox"
+                    checked={forceError}
+                    onChange={(e) => setForceError(e.target.checked)}
+                    style="margin: 0;"
+                  />
+                  🔧 Force submission error (for testing)
+                </label>
+              </div>
+
+              {/* Submission feedback messages */}
+              {(isSubmitting || submitMessage || submitError) && (
+                <div style="margin: 10px 0; padding: 10px; border-radius: 4px; font-size: 14px;">
+                  {isSubmitting && (
+                    <div style="color: #1976d2; background: #e3f2fd; padding: 8px; border-radius: 3px; border-left: 3px solid #1976d2;">
+                      🔄 {submitMessage}
+                    </div>
+                  )}
+                  {!isSubmitting && submitMessage && (
+                    <div style="color: #388e3c; background: #e8f5e8; padding: 8px; border-radius: 3px; border-left: 3px solid #388e3c;">
+                      {submitMessage}
+                    </div>
+                  )}
+                  {submitError && (
+                    <div style="color: #d32f2f; background: #ffebee; padding: 8px; border-radius: 3px; border-left: 3px solid #d32f2f;">
+                      ❌ {submitError}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div style="margin-top: 15px; display: flex; align-items: flex-start; flex-direction: column; gap: 8px;">
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? "⏳ Submitting..." : "📤 Submit Form"}{" "}
+                  {!isSubmitting && uiSelectedColor && (
+                    <span style="font-size: 11px; opacity: 0.7;">
+                      ({uiSelectedColor})
+                    </span>
+                  )}
+                </Button>
+                <Button type="reset">
+                  🔄 Reset to State{" "}
+                  {selectedColor && (
+                    <span style="font-size: 11px; opacity: 0.7;">
+                      ({selectedColor})
+                    </span>
+                  )}
+                </Button>
+              </div>
+            </Form>
           </div>
         );
       };

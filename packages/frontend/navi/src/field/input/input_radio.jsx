@@ -445,7 +445,12 @@ const InputRadioUI = (props) => {
       // This is necessary because the group controller aggregates child states to determine
       // the selected value — it needs all siblings to be unchecked before the newly checked
       // radio propagates its state up, otherwise aggregation may find multiple "truthy" children.
-      dispatchCustomEvent(radioInput, "setuistate", { value: false });
+      // suppressParentNotification: true prevents the group from aggregating and calling uiAction during
+      // this intermediate state (all unchecked) — only the clicked radio's setUIState triggers aggregation.
+      dispatchCustomEvent(radioInput, "setuistate", {
+        value: false,
+        suppressParentNotification: true,
+      });
     }
   };
   useLayoutEffect(() => {
