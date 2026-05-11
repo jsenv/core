@@ -2,6 +2,7 @@ import { useCallback, useContext, useLayoutEffect, useRef } from "preact/hooks";
 
 import { Box } from "@jsenv/navi/src/box/box.jsx";
 import { LoadingOutline } from "../../graphic/loading/loading_outline.jsx";
+import { useDebugAction } from "../../navi_debug.jsx";
 import { useAutoFocus } from "../../utils/focus/use_auto_focus.js";
 import { useAccentColorAttributes } from "../../utils/use_accent_color_attributes.js";
 import { useStableCallback } from "../../utils/use_stable_callback.js";
@@ -377,6 +378,7 @@ const InputRadioDispatcher = (props) => {
 
 const InputRadioUI = (props) => {
   import.meta.css = css;
+  const debugAction = useDebugAction();
   const {
     ref,
     /* eslint-disable no-unused-vars */
@@ -451,6 +453,10 @@ const InputRadioUI = (props) => {
   const innerOnInput = useStableCallback((e) => {
     const radio = e.target;
     const radioIsChecked = radio.checked;
+    debugAction(
+      e,
+      `radio input -> checked=${radioIsChecked}, value=${JSON.stringify(props.value || "on")}`,
+    );
     if (radioIsChecked) {
       updateOtherRadiosInGroup();
     }

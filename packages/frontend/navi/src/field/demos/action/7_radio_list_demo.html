@@ -132,6 +132,12 @@
           }
         };
 
+        const clearSelectionInState = () => {
+          setColorChoices((prev) =>
+            prev.map((choice) => ({ ...choice, selected: false })),
+          );
+        };
+
         return (
           <div style="border: 2px solid #ddd; padding: 20px; border-radius: 8px; background: #f9f9f9;">
             <h2>State ↔ UI Form Demo (Radio Selection)</h2>
@@ -149,9 +155,15 @@
                 <div style="margin-bottom: 15px;">
                   <button
                     onClick={addRandomColor}
-                    style="padding: 6px 12px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;"
+                    style="padding: 6px 12px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; margin-right: 8px;"
                   >
                     + Add Random Color
+                  </button>
+                  <button
+                    onClick={clearSelectionInState}
+                    style="padding: 6px 12px; background: #ff9800; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;"
+                  >
+                    Clear Selection
                   </button>
                 </div>
 
