@@ -658,6 +658,9 @@
                 addLog(`uiAction called with: "${value}"`);
                 setSelected(value);
               }}
+              action={(v) => {
+                addLog(`action called with: "${v}"`);
+              }}
             >
               <ListItem
                 index={0}
