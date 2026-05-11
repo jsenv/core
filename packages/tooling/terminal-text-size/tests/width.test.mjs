@@ -2,10 +2,13 @@ import { snapshotTests } from "@jsenv/snapshot";
 import { measureTextWidth } from "@jsenv/terminal-text-size";
 import stringWidth from "string-width";
 
+const MAX_INPUT_DISPLAY = 32;
+const MAX_CODEPOINTS_DISPLAY = 40;
+
 // Render a comparison table as a plain string — no external dep required.
 const renderComparisonTable = (sections) => {
   const rows = [
-    ["input", "codepoints", "string-width", "measureTextWidth", "match"],
+    ["input", "measureTextWidth", "string-width", "codepoints", "match"],
   ];
   for (const { label, inputs } of sections) {
     rows.push([`--- ${label} ---`, "", "", "", ""]);
@@ -18,26 +21,31 @@ const renderComparisonTable = (sections) => {
             `U+${c.codePointAt(0).toString(16).toUpperCase().padStart(4, "0")}`,
         )
         .join(" ");
+      const rawInput = JSON.stringify(input);
+      const displayInput =
+        rawInput.length > MAX_INPUT_DISPLAY
+          ? `${rawInput.slice(0, MAX_INPUT_DISPLAY - 1)}…"`
+          : rawInput;
       const codepoints =
-        cpFull.length > 40 ? cpFull.slice(0, 37) + "…" : cpFull;
+        cpFull.length > MAX_CODEPOINTS_DISPLAY
+          ? `${cpFull.slice(0, MAX_CODEPOINTS_DISPLAY - 1)}…`
+          : cpFull;
       rows.push([
-        JSON.stringify(input),
-        codepoints,
-        String(sw),
+        displayInput,
         String(mw),
+        String(sw),
+        codepoints,
         sw === mw ? "✓" : "✗ DIFF",
       ]);
     }
   }
 
   const colWidths = rows[0].map((_, colIndex) =>
-    Math.max(...rows.map((row) => row[colIndex].length)),
+    Math.max(...rows.map((row) => [...row[colIndex]].length)),
   );
-  const sep = "+" + colWidths.map((w) => "-".repeat(w + 2)).join("+") + "+";
+  const sep = `+${colWidths.map((w) => "-".repeat(w + 2)).join("+")}+`;
   const formatRow = (row) =>
-    "|" +
-    row.map((cell, i) => ` ${cell.padEnd(colWidths[i])} `).join("|") +
-    "|";
+    `|${row.map((cell, i) => ` ${cell.padEnd(colWidths[i])} `).join("|")}|`;
 
   const lines = [sep, formatRow(rows[0]), sep];
   for (const row of rows.slice(1)) {
@@ -150,106 +158,6 @@ const sections = [
     label: "emojis",
     inputs: ["✔️", "✅"],
   },
-];
-
-await snapshotTests(import.meta.url, ({ test }) => {
-  test("comparison", () => {
-    return renderComparisonTable(sections);
-  });
-});
-const main = [
-  "⛣",
-  "abcde",
-  "古池や",
-  "あいうabc",
-  "あいう★",
-  "あいう★",
-  "±",
-  '"ノード.js"',
-  "你好",
-  "안녕하세요",
-  "A\uD83C\uDE00BC",
-  "\u001B[31m\u001B[39m",
-  "\u001B[31m\u001B[39m",
-  "\u001B]8;;https://github.com\u0007Click\u001B]8;;\u0007",
-  "\u{231A}",
-  "\u{2194}\u{FE0F}",
-  "\u{1F469}",
-  "\u{1F469}\u{1F3FF}",
-  "\u{845B}\u{E0100}",
-  "ปฏัก",
-  "_\u0E34",
-  "“",
-  "✔",
-];
-const measureAll = (inputs) => {
-  const results = {};
-  for (const input of inputs) {
-    results[input] = measure(input);
-  }
-  return results;
-};
-const controlChars = [
-  String.fromCodePoint(0),
-  String.fromCodePoint(31),
-  String.fromCodePoint(127),
-  String.fromCodePoint(134),
-  String.fromCodePoint(159),
-  "\u001B",
-];
-
-const combining = [
-  "x\u0300",
-  "\u0300\u0301",
-  "e\u0301e",
-  "x\u036F",
-  "\u036F\u036F",
-];
-
-const ZWJ = ["👶", "👶🏽", "👩‍👩‍👦‍👦", "👨‍❤️‍💋‍👨"];
-
-const zeroWidths = [
-  "\u200B",
-  "x\u200Bx",
-  "\u200C",
-  "x\u200Cx",
-  "\u200D",
-  "x\u200Dx",
-  "\uFEFF",
-  "x\uFEFFx",
-];
-
-const variationSelectors = [
-  "\u{1F1E6}\uFE0F", // Regional indicator symbol A with variation selector
-  "A\uFE0F",
-  "\uFE0F",
-];
-
-const edgeCases = [
-  "",
-  "\u200B\u200B",
-  "x\u200Bx\u200B",
-  "x\u0300x\u0300",
-  "\uD83D\uDE00\uFE0F",
-  "\uD83D\uDC69\u200D\uD83C\uDF93",
-  "x\u1AB0x\u1AB0",
-  "x\u1DC0x\u1DC0",
-  "x\u20D0x\u20D0",
-  "x\uFE20x\uFE20",
-];
-
-const defaultIgnorableCodePoints = [
-  "\u2060",
-  "\u2061",
-  "\u2062",
-  "\u2063",
-  "\u2064",
-  "\uFEFF",
-  "x\u2060x",
-  "x\u2061x",
-  "x\u2062x",
-  "x\u2063x",
-  "x\u2064x",
 ];
 
 await snapshotTests(import.meta.url, ({ test }) => {
