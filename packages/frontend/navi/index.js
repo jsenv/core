@@ -174,6 +174,7 @@ export { Meter } from "./src/text/meter.jsx";
 export { Paragraph } from "./src/text/paragraph.jsx";
 export { Quantity, QuantityIntl } from "./src/text/quantity.jsx";
 export { Text } from "./src/text/text.jsx";
+export { Time } from "./src/text/time.jsx";
 export { Title, useTitleLevel } from "./src/text/title.jsx";
 
 // Graphics
