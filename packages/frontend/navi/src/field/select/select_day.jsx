@@ -103,19 +103,19 @@ const CustomDayOption = ({
   const customDateString = customDateStringSignal.value;
   const hasCustom = customDateStringSignal.value !== undefined;
 
-  const onDatePicked = (dateString) => {
+  const onDatePicked = (dateString, e) => {
     const listEl = listRef.current;
     if (staticDateStringSet.has(dateString)) {
       customDateStringSignal.value = undefined;
       dispatchCustomEvent(listEl, "navi_list_request_select", {
         item: { id: dateString, value: dateString },
-        event: { type: "change" },
+        event: e,
       });
     } else {
       customDateStringSignal.value = dateString;
       dispatchCustomEvent(listEl, "navi_list_request_select", {
         item: { id: "custom_display", value: dateString },
-        event: { type: "change" },
+        event: e,
       });
     }
   };
