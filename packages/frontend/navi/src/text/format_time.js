@@ -3,6 +3,8 @@
  * All functions accept an optional `{ now }` parameter for testability.
  */
 
+import { naviIntl } from "./navi_intl.js";
+
 const DEFAULT_LANG = "en";
 
 /**
@@ -216,11 +218,20 @@ const formatTomorrowAt = (date, locale) => {
     hour: "numeric",
     ...(hasMinutes ? { minute: "2-digit" } : {}),
   }).format(date);
-  const at = getAtConnector(locale);
-  return `${dayLabel}${at}${timeLabel}`;
+  const atTemplate = naviIntl.format("time.tomorrow_at", undefined, {
+    lang: locale,
+  });
+  // atTemplate is e.g. "[day] à [time]" — replace placeholders
+  if (atTemplate !== "time.tomorrow_at") {
+    return atTemplate.replace("[day]", dayLabel).replace("[time]", timeLabel);
+  }
+  // fallback: concatenate with a space
+  return `${dayLabel} ${timeLabel}`;
 };
 
-// "dans 1 heure 30" — colloquial format, built per language
+// "dans 1 heure 30" — colloquial format, built per language.
+// The plural suffix is applied inline because it depends on the count;
+// a plain string template cannot express this, so we keep it in JS.
 const formatHoursAndMinutes = (hours, minutes, locale) => {
   const lang = (locale || "").split("-")[0];
   const templates = {
@@ -232,53 +243,16 @@ const formatHoursAndMinutes = (hours, minutes, locale) => {
     pt: (h, m) => `em ${h} hora${h > 1 ? "s" : ""} ${m}`,
     nl: (h, m) => `over ${h} uur ${m}`,
   };
-  const template = templates[lang] || templates.fr;
+  const template = templates[lang] || templates[DEFAULT_LANG];
   return template(hours, minutes);
 };
 
-const AT_CONNECTOR = {
-  fr: " à ",
-  en: " at ",
-  de: " um ",
-  es: " a las ",
-  it: " alle ",
-  pt: " às ",
-  nl: " om ",
-};
-
-const getAtConnector = (locale) => {
-  const lang = (locale || "").split("-")[0];
-  return AT_CONNECTOR[lang] || " ";
-};
-
-const LESS_THAN_MINUTE_TEXTS = {
-  fr: "dans moins d'une minute",
-  en: "in less than a minute",
-  de: "in weniger als einer Minute",
-  es: "en menos de un minuto",
-  it: "in meno di un minuto",
-  pt: "em menos de um minuto",
-  nl: "over minder dan een minuut",
-};
-
 const getLessThanMinuteText = (locale) => {
-  const lang = (locale || "").split("-")[0];
-  return LESS_THAN_MINUTE_TEXTS[lang] || LESS_THAN_MINUTE_TEXTS[DEFAULT_LANG];
-};
-
-const ONGOING_TEXTS = {
-  fr: "En cours",
-  en: "Ongoing",
-  de: "Laufend",
-  es: "En curso",
-  it: "In corso",
-  pt: "Em andamento",
-  nl: "Bezig",
+  return naviIntl.format("time.less_than_minute", undefined, { lang: locale });
 };
 
 const getOngoingText = (locale) => {
-  const lang = (locale || "").split("-")[0];
-  return ONGOING_TEXTS[lang] || ONGOING_TEXTS[DEFAULT_LANG];
+  return naviIntl.format("time.ongoing", undefined, { lang: locale });
 };
 
 const MINUTE = 60_000;
