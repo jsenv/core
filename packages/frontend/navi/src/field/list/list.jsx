@@ -1380,6 +1380,43 @@ const ListWithAction = (props) => {
         props.onListVisibleItemsChange?.(visibleItems);
         visibleItemsRef.current = visibleItems;
       }}
+      onnavi_list_nav={(e) => {
+        const { item, event } = e.detail;
+        const id = item ? item.id : null;
+        const isNonUserNav =
+          event.type === "navi_list_nav_top_on_displayed" ||
+          event.type === "navi_list_top_match_change";
+        if (isNonUserNav) {
+          setAnchorId(null);
+        } else {
+          setAnchorId(id);
+        }
+        if (event.type === "keydown") {
+          setKeyboardPointedId(id);
+        } else {
+          setKeyboardPointedId(null);
+        }
+        const isAutomaticNav =
+          event.type === "navi_list_nav_top_on_displayed" ||
+          event.type === "navi_list_top_match_change" ||
+          event.type === "navi_scroll_restore";
+        if (item && !isAutomaticNav) {
+          uiStateController.setUIState(item.value, event);
+        }
+      }}
+      // Dispatch action request on select
+      onnavi_list_select={(e) => {
+        const listEl = e.currentTarget;
+        const item = e.detail?.item;
+        const requester = item
+          ? listEl.querySelector(`#${CSS.escape(item.id)}`)
+          : e.target;
+        const resolvedRequester = requester || e.target;
+        dispatchActionRequestedCustomEvent(listEl, {
+          event: e,
+          requester: resolvedRequester,
+        });
+      }}
       onnavi_list_request_nav={(e) => {
         const { item } = e.detail;
         if (!item) {
@@ -1501,43 +1538,6 @@ const ListWithAction = (props) => {
         dispatchCustomEvent(e.currentTarget, "navi_list_request_select", {
           event: e,
           item,
-        });
-      }}
-      onnavi_list_nav={(e) => {
-        const { item, event } = e.detail;
-        const id = item ? item.id : null;
-        const isNonUserNav =
-          event.type === "navi_list_nav_top_on_displayed" ||
-          event.type === "navi_list_top_match_change";
-        if (isNonUserNav) {
-          setAnchorId(null);
-        } else {
-          setAnchorId(id);
-        }
-        if (event.type === "keydown") {
-          setKeyboardPointedId(id);
-        } else {
-          setKeyboardPointedId(null);
-        }
-        const isAutomaticNav =
-          event.type === "navi_list_nav_top_on_displayed" ||
-          event.type === "navi_list_top_match_change" ||
-          event.type === "navi_scroll_restore";
-        if (item && !isAutomaticNav) {
-          uiStateController.setUIState(item.value, event);
-        }
-      }}
-      // Dispatch action request on select
-      onnavi_list_select={(e) => {
-        const listEl = e.currentTarget;
-        const item = e.detail?.item;
-        const requester = item
-          ? listEl.querySelector(`#${CSS.escape(item.id)}`)
-          : e.target;
-        const resolvedRequester = requester || e.target;
-        dispatchActionRequestedCustomEvent(listEl, {
-          event: e,
-          requester: resolvedRequester,
         });
       }}
     />

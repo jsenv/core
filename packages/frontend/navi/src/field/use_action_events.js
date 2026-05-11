@@ -52,6 +52,7 @@ export const useActionEvents = (
           return;
         }
         debugAction(formatEventSideEffect(e, `navi_action_requested`));
+        e.detail.debugAction = debugAction;
         onRequested?.(e);
       },
       navi_action_prevented: (e) => {

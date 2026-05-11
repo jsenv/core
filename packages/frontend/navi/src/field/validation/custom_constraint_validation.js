@@ -57,6 +57,7 @@ import {
   createPubSub,
   dispatchCustomEvent,
   dispatchPublicCustomEvent,
+  formatEventSideEffect,
 } from "@jsenv/dom";
 
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
@@ -129,6 +130,7 @@ export const requestAction = (
     method = "rerun",
     meta = {},
     confirmMessage,
+    debugAction,
   } = {},
 ) => {
   if (!actionOrigin) {
@@ -194,6 +196,12 @@ export const requestAction = (
           formElement.tagName === "BUTTON" && formElement !== requester,
       });
       if (!elementIsValid) {
+        debugAction?.(
+          formatEventSideEffect(
+            event || new Event("unknown"),
+            `open callout (${getFailedConstraintName(elementValidationInterface)})`,
+          ),
+        );
         elementValidationInterface.reportValidity({ event });
         isValid = false;
         break;
@@ -206,6 +214,12 @@ export const requestAction = (
     // Single element validation case
     isValid = validationInterface.checkValidity({ fromRequestAction: true });
     if (!isValid) {
+      debugAction?.(
+        formatEventSideEffect(
+          event || new Event("unknown"),
+          `open callout (${getFailedConstraintName(validationInterface)})`,
+        ),
+      );
       validationInterface.reportValidity({ event });
     }
     elementForConfirmation = target;
@@ -250,15 +264,18 @@ export const requestAction = (
   return true;
 };
 
-export const forwardActionRequested = (e, action, target = e.target) => {
+export const forwardActionRequested = (
+  e,
+  action,
+  target = e.target,
+  { debugAction } = {},
+) => {
   requestAction(target, action, {
     actionOrigin: e.detail?.actionOrigin,
-    // for now requestAction will receive initiator event (it cannot know the intermediate event chain)
-    // we could change that by going event: e but that means requestAction and other action events will know
-    // have the final event causing the action. Coul dbe interesting but for now we keep as is
     event: e.detail?.event || e,
     requester: e.detail?.requester,
     meta: e.detail?.meta,
+    debugAction,
   });
 };
 
@@ -1056,4 +1073,17 @@ const addEventListener = (element, event, callback) => {
   return () => {
     element.removeEventListener(event, callback);
   };
+};
+
+const getFailedConstraintName = (validationInterface) => {
+  const state = validationInterface.getConstraintValidityState?.();
+  if (!state) {
+    return "unknown";
+  }
+  for (const key of Object.keys(state)) {
+    if (key !== "valid" && state[key]) {
+      return key;
+    }
+  }
+  return "unknown";
 };
