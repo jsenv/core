@@ -1,4 +1,6 @@
-import { useState } from "preact/hooks";
+import { dispatchCustomEvent } from "@jsenv/dom";
+import { useSignal } from "@preact/signals";
+import { useRef } from "preact/hooks";
 
 import { Text } from "@jsenv/navi/src/text/text.jsx";
 import { Input } from "../input/input.jsx";
@@ -41,6 +43,8 @@ export const SelectDay = (props) => {
 
   const dayOptions = buildDayOptions(minDate, daysToShow, locale, minIsToday);
   const fixedDateStrings = dayOptions.map((o) => o.dateString);
+  const staticDateStringSet = new Set(fixedDateStrings);
+  const listRef = useRef(null);
 
   return (
     <SelectDispatcher
@@ -49,7 +53,7 @@ export const SelectDay = (props) => {
       {...rest}
       type={undefined}
     >
-      <List expandX>
+      <List ref={listRef} expandX>
         {dayOptions.map(({ dateString, label }, index) => (
           <DayOption
             key={dateString}
@@ -67,7 +71,8 @@ export const SelectDay = (props) => {
             index={dayOptions.length}
             minDateString={minDateString}
             locale={locale}
-            fixedDateStrings={fixedDateStrings}
+            staticDateStringSet={staticDateStringSet}
+            listRef={listRef}
           />
         )}
       </List>
@@ -88,49 +93,52 @@ const CustomDayOption = ({
   index,
   minDateString,
   locale,
-  fixedDateStrings,
+  staticDateStringSet,
+  listRef,
 }) => {
-  const isValueInFixed = fixedDateStrings.includes(value);
+  const isValueInFixed = staticDateStringSet.has(value);
   const initialCustomDateString =
-    value && value !== "custom" && !isValueInFixed ? value : null;
-  const [customDateString, setCustomDateString] = useState(
-    initialCustomDateString,
-  );
-  const hasCustom = customDateString !== null;
+    value && value !== "custom" && !isValueInFixed ? value : undefined;
+  const customDateStringSignal = useSignal(initialCustomDateString);
+  const customDateString = customDateStringSignal.value;
+  const hasCustom = customDateStringSignal.value !== undefined;
 
   const onDatePicked = (dateString) => {
-    if (fixedDateStrings.includes(dateString)) {
-      // This date is already a fixed option — click its DOM element to
-      // trigger the normal selection path (navi_list_request_select).
-      const itemEl = document.getElementById(dateString);
-      if (itemEl) {
-        itemEl.click();
-      }
-      // Clear any custom option so it doesn't appear as a duplicate.
-      setCustomDateString(null);
+    const listEl = listRef.current;
+    if (staticDateStringSet.has(dateString)) {
+      customDateStringSignal.value = undefined;
+      dispatchCustomEvent(listEl, "navi_list_request_select", {
+        item: { id: dateString, value: dateString },
+        event: { type: "change" },
+      });
     } else {
-      setCustomDateString(dateString);
+      customDateStringSignal.value = dateString;
+      dispatchCustomEvent(listEl, "navi_list_request_select", {
+        item: { id: "custom_display", value: dateString },
+        event: { type: "change" },
+      });
     }
   };
 
   return (
     <>
-      {hasCustom && (
-        <DayOption
-          id="custom_display"
-          index={index}
-          value={customDateString}
-          selected={value === customDateString}
-        >
-          <Text capitalize>
-            {dateStringToDate(customDateString).toLocaleDateString(locale, {
-              weekday: "long",
-              day: "numeric",
-              month: "long",
-            })}
-          </Text>
-        </DayOption>
-      )}
+      <DayOption
+        id="custom_display"
+        index={index}
+        value={customDateString}
+        hidden={!hasCustom}
+        selected={value === customDateString}
+      >
+        <Text capitalize>
+          {hasCustom
+            ? dateStringToDate(customDateString).toLocaleDateString(locale, {
+                weekday: "long",
+                day: "numeric",
+                month: "long",
+              })
+            : null}
+        </Text>
+      </DayOption>
       <DayOption
         id="custom_pick"
         index={hasCustom ? index + 1 : index}
@@ -140,7 +148,7 @@ const CustomDayOption = ({
         <Text>Choisir un autre jour…</Text>
         <Input
           type="date"
-          value={hasCustom ? customDateString : undefined}
+          value={customDateString}
           min={minDateString}
           uiAction={onDatePicked}
           onMouseDown={(e) => {
