@@ -30,7 +30,11 @@ export const interpolateText = (
       resolved.push(part);
       continue;
     }
-    const value = replacements[match[1]] ?? part;
+    const key = match[1];
+    let value = resolveValue(replacements, key, part);
+    if (typeof value === "function") {
+      value = value();
+    }
     if (isValidElement(value)) {
       if (allowJsx) {
         hasVnode = true;
@@ -47,4 +51,27 @@ export const interpolateText = (
   }
   // h(Fragment) instead of JSX (<>{resolved}</>) to keep this file as .js
   return h(Fragment, null, resolved);
+};
+
+// Resolves a placeholder key against the replacements object.
+// 1. Direct lookup: replacements["item.name"]
+// 2. Dot-path lookup: replacements["item"]["name"]
+// 3. Fallback: the original placeholder string (e.g. "[item.name]")
+const resolveValue = (replacements, key, fallback) => {
+  if (key in replacements) {
+    return replacements[key];
+  }
+  const dotIndex = key.indexOf(".");
+  if (dotIndex !== -1) {
+    const head = key.slice(0, dotIndex);
+    const tail = key.slice(dotIndex + 1);
+    const parent = replacements[head];
+    if (parent && typeof parent === "object") {
+      const nested = parent[tail];
+      if (nested !== undefined) {
+        return nested;
+      }
+    }
+  }
+  return fallback;
 };
