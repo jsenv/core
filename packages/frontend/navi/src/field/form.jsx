@@ -19,6 +19,7 @@ import { renderActionableComponent } from "../action/render_actionable_component
 import { useActionBoundToOneParam } from "../action/use_action.js";
 import { useExecuteAction } from "../action/use_execute_action.js";
 import { Box } from "../box/box.jsx";
+import { useDebugAction } from "../navi_debug.jsx";
 import { collectFormElementValues } from "./collect_form_element_values.js";
 import { FormActionContext, FormContext } from "./form_context.js";
 import {
@@ -73,6 +74,7 @@ export const Form = (props) => {
 };
 
 const FormUI = (props) => {
+  const debugAction = useDebugAction();
   const uiStateController = useContext(UIStateControllerContext);
   const { readOnly, loading, children, ...rest } = props;
   const defaultRef = useRef();
@@ -96,6 +98,10 @@ const FormUI = (props) => {
         // browser would empty all fields to their default values (likely empty/unchecked)
         // we want to reset to the last known external state instead
         e.preventDefault();
+        debugAction(
+          e,
+          `form reset -> resetUIState to ${JSON.stringify(uiStateController.state)}`,
+        );
         uiStateController.resetUIState(e);
       }}
     >
@@ -113,6 +119,7 @@ const FormUI = (props) => {
 };
 
 const FormWithAction = (props) => {
+  const debugAction = useDebugAction();
   const uiStateController = useContext(UIStateControllerContext);
   const {
     action,
@@ -149,26 +156,36 @@ const FormWithAction = (props) => {
     onAction: (e) => {
       const form = ref.current;
       const formElementValues = collectFormElementValues(form);
+      debugAction(
+        e,
+        `form onAction -> setUIState(${JSON.stringify(formElementValues)})`,
+      );
       uiStateController.setUIState(formElementValues, e);
       executeAction(e);
     },
-    onStart: onActionStart,
+    onStart: (e) => {
+      debugAction(e, `form onStart`);
+      onActionStart?.(e);
+    },
     onAbort: (e) => {
       // user might want to re-submit as is
       // or change the ui state before re-submitting
       // we can't decide for him
+      debugAction(e, `form onAbort`);
       onActionAbort?.(e);
     },
     onError: (e) => {
       // user might want to re-submit as is
       // or change the ui state before re-submitting
       // we can't decide for him
+      debugAction(e, `form onError`);
       onActionError?.(e);
     },
     onEnd: (e) => {
       // form side effect is a success
       // we can get rid of the nav state
       // that was keeping the ui state in case user navigates away without submission
+      debugAction(e, `form onEnd -> actionEnd`);
       uiStateController.actionEnd(e);
       onActionEnd?.(e);
     },
