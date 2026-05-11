@@ -53,7 +53,11 @@
  * We keep this behavior on purpose but in practice you always want to go through the form validation process
  */
 
-import { createPubSub } from "@jsenv/dom";
+import {
+  createPubSub,
+  dispatchCustomEvent,
+  dispatchPublicCustomEvent,
+} from "@jsenv/dom";
 
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
 import { openCallout } from "./callout/callout.js";
@@ -210,13 +214,11 @@ export const requestAction = (
 
   // If validation failed, dispatch actionprevented and return
   if (!isValid) {
-    const actionPreventedCustomEvent = new CustomEvent(
+    dispatchCustomEvent(
+      elementForDispatch,
       "navi_action_prevented",
-      {
-        detail: customEventDetail,
-      },
+      customEventDetail,
     );
-    elementForDispatch.dispatchEvent(actionPreventedCustomEvent);
     return false;
   }
 
@@ -227,28 +229,24 @@ export const requestAction = (
   if (confirmMessage) {
     // eslint-disable-next-line no-alert
     if (!window.confirm(confirmMessage)) {
-      const actionPreventedCustomEvent = new CustomEvent(
+      dispatchCustomEvent(
+        elementForDispatch,
         "navi_action_prevented",
-        {
-          detail: customEventDetail,
-        },
+        customEventDetail,
       );
-      elementForDispatch.dispatchEvent(actionPreventedCustomEvent);
       return false;
     }
   }
 
   // All good, dispatch the action
-  const actionCustomEvent = new CustomEvent("navi_action", {
-    detail: customEventDetail,
-  });
   if (debug) {
     console.debug(
       `element is valid -> dispatch "action" on`,
       elementForDispatch,
     );
   }
-  elementForDispatch.dispatchEvent(actionCustomEvent);
+  dispatchCustomEvent(elementForDispatch, "navi_action", customEventDetail);
+
   return true;
 };
 
@@ -325,9 +323,8 @@ export const installCustomConstraintValidation = (
     });
   }
 
-  const dispatchCancelCustomEvent = (options) => {
-    const cancelEvent = new CustomEvent("navi_cancel", options);
-    element.dispatchEvent(cancelEvent);
+  const dispatchCancelCustomEvent = (detail) => {
+    return dispatchCustomEvent(element, "navi_cancel", detail);
   };
   const closeElementValidationMessage = (reason) => {
     if (validationInterface.validationMessage) {
@@ -479,7 +476,7 @@ export const installCustomConstraintValidation = (
       !compareTwoJsValues(constraintValidityState, newConstraintValidityState)
     ) {
       constraintValidityState = newConstraintValidityState;
-      element.dispatchEvent(new CustomEvent(NAVI_VALIDITY_CHANGE_CUSTOM_EVENT));
+      dispatchPublicCustomEvent(element, NAVI_VALIDITY_CHANGE_CUSTOM_EVENT);
     }
     return newConstraintValidityState.valid;
   };
@@ -888,18 +885,15 @@ export const installCustomConstraintValidation = (
       if (debug) {
         console.debug(`"submit" called -> dispatch "action" on`, form);
       }
-      const actionCustomEvent = new CustomEvent("navi_action", {
-        detail: {
-          action: null,
-          event: e,
-          method: "rerun",
-          requester: form,
-          meta: {
-            isSubmit: true,
-          },
+      dispatchCustomEvent(form, "navi_action", {
+        action: null,
+        event: e,
+        method: "rerun",
+        requester: form,
+        meta: {
+          isSubmit: true,
         },
       });
-      form.dispatchEvent(actionCustomEvent);
     });
     addTeardown(() => {
       removeListener();
@@ -915,7 +909,7 @@ export const installCustomConstraintValidation = (
           e.preventDefault();
         } else {
           dispatchCancelCustomEvent({
-            detail: { reason: "escape_key" },
+            reason: "escape_key",
           });
         }
       }
@@ -930,19 +924,15 @@ export const installCustomConstraintValidation = (
     const onblur = () => {
       if (element.value === "") {
         dispatchCancelCustomEvent({
-          detail: {
-            reason: "blur_empty",
-          },
+          reason: "blur_empty",
         });
         return;
       }
       // if we have failed constraint, we cancel too
       if (failedConstraintInfo) {
         dispatchCancelCustomEvent({
-          detail: {
-            reason: "blur_invalid",
-            failedConstraintInfo,
-          },
+          reason: "blur_invalid",
+          failedConstraintInfo,
         });
         return;
       }
@@ -1009,15 +999,11 @@ export const dispatchActionRequestedCustomEvent = (
   elementWithAction,
   { actionOrigin = "action_prop", event, requester },
 ) => {
-  const actionRequestedCustomEvent = new CustomEvent("navi_action_requested", {
-    cancelable: true,
-    detail: {
-      actionOrigin,
-      event,
-      requester,
-    },
+  return dispatchCustomEvent(elementWithAction, "navi_action_requested", {
+    actionOrigin,
+    event,
+    requester,
   });
-  elementWithAction.dispatchEvent(actionRequestedCustomEvent);
 };
 // https://developer.mozilla.org/en-US/docs/Web/HTML/Guides/Constraint_validation
 const requestSubmit = HTMLFormElement.prototype.requestSubmit;
