@@ -216,7 +216,10 @@ export const useUIStateController = (
       uiStateController.uiState = newUIState;
       publishUIState(newUIState);
       if (uiStateController.uiAction) {
-        debugAction(`${componentType}.uiAction(${JSON.stringify(newUIState)})`);
+        debugAction(
+          e,
+          `${componentType}.uiAction(${JSON.stringify(newUIState)})`,
+        );
         uiStateController.uiAction(newUIState, e);
       }
       notifyParentAboutChildUIStateChange(e);

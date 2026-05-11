@@ -89,7 +89,13 @@ export const useActionEvents = (
         debugAction(e, `navi_action_error`);
         onError?.(e.detail.error, e);
       },
-      navi_action_end: onEnd,
+      navi_action_end: (e) => {
+        if (e.detail.actionOrigin !== actionOrigin) {
+          return;
+        }
+        debugAction(e, `navi_action_end`);
+        onEnd?.(e);
+      },
     });
   }, [
     actionOrigin,
