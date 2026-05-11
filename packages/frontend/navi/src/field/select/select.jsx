@@ -1,3 +1,4 @@
+import { formatEventSideEffect } from "@jsenv/dom";
 import { createContext } from "preact";
 import { useContext, useId, useRef, useState } from "preact/hooks";
 
@@ -6,11 +7,7 @@ import { ChevronDownSvg } from "@jsenv/navi/src/graphic/icons/chevron_updown_svg
 import { LoadingOutline } from "@jsenv/navi/src/graphic/loading/loading_outline.jsx";
 import { shortcutsViaOnKeyDown } from "@jsenv/navi/src/keyboard/keyboard_shortcuts.js";
 import { windowWidthSignal } from "@jsenv/navi/src/layout/responsive.js";
-import {
-  formatEventSideEffect,
-  useDebugFocus,
-  useDebugPopup,
-} from "@jsenv/navi/src/navi_debug.jsx";
+import { useDebugFocus, useDebugPopup } from "@jsenv/navi/src/navi_debug.jsx";
 import {
   Dialog,
   requestDialogClose,

@@ -9,7 +9,7 @@
  *
  */
 
-import { dispatchPublicCustomEvent } from "../../custom_event.js";
+import { dispatchPublicCustomEvent } from "../../dom_events.js";
 import { createPubSub } from "../../pub_sub.js";
 import { findFocusable } from "../focus/find_focusable.js";
 import { isolateInteractions } from "../isolate_interactions.js";

@@ -1,4 +1,3 @@
-import { getElementSignature } from "@jsenv/dom";
 import { createContext } from "preact";
 import { useContext } from "preact/hooks";
 
@@ -56,8 +55,4 @@ export const NaviDebug = ({
       </DebugScrollContext.Provider>
     </DebugFocusContext.Provider>
   );
-};
-
-export const formatEventSideEffect = (e, sideEffect) => {
-  return `"${e.type}" on ${getElementSignature(e.target)} -> ${sideEffect}`;
 };

@@ -5,7 +5,9 @@ export {
   dispatchCustomEvent,
   dispatchInternalCustomEvent,
   dispatchPublicCustomEvent,
-} from "./src/custom_event.js";
+  eventInvolves,
+  formatEventSideEffect,
+} from "./src/dom_events.js";
 export { createIterableWeakSet } from "./src/iterable_weak_set.js";
 export { createPubSub } from "./src/pub_sub.js";
 export { createValueEffect } from "./src/value_effect.js";

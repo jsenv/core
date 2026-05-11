@@ -190,7 +190,7 @@ export const requestAction = (
           formElement.tagName === "BUTTON" && formElement !== requester,
       });
       if (!elementIsValid) {
-        elementValidationInterface.reportValidity();
+        elementValidationInterface.reportValidity({ event });
         isValid = false;
         break;
       }
@@ -202,7 +202,7 @@ export const requestAction = (
     // Single element validation case
     isValid = validationInterface.checkValidity({ fromRequestAction: true });
     if (!isValid) {
-      validationInterface.reportValidity();
+      validationInterface.reportValidity({ event });
     }
     elementForConfirmation = target;
     elementForDispatch = target;
@@ -483,7 +483,7 @@ export const installCustomConstraintValidation = (
     }
     return newConstraintValidityState.valid;
   };
-  const reportValidity = ({ skipFocus } = {}) => {
+  const reportValidity = ({ skipFocus, event } = {}) => {
     if (!failedConstraintInfo) {
       closeElementValidationMessage("becomes_valid");
       return;
@@ -529,6 +529,7 @@ export const installCustomConstraintValidation = (
         anchorElement,
         status: failedConstraintInfo.status,
         closeOnClickOutside: failedConstraintInfo.closeOnClickOutside,
+        openingEvent: event,
         onClose: () => {
           removeCloseOnCleanup();
           validationInterface.validationMessage = null;

@@ -1,6 +1,7 @@
 import {
   dispatchCustomEvent,
   dispatchPublicCustomEvent,
+  eventInvolves,
   getElementSignature,
   pickPositionRelativeTo,
   scrollIntoViewScoped,
@@ -1506,8 +1507,15 @@ const ListWithAction = (props) => {
           event.type === "navi_list_nav_top_on_displayed" ||
           event.type === "navi_list_top_match_change" ||
           event.type === "navi_scroll_restore";
+
         if (item && !isAutomaticNav) {
-          uiStateController.setUIState(item.value, event);
+          const isSelectNav = eventInvolves(
+            e,
+            (ev) => ev.type === "navi_list_request_select",
+          );
+          if (!isSelectNav) {
+            uiStateController.setUIState(item.value, event);
+          }
         }
       }}
       // Dispatch action request on select
@@ -1517,9 +1525,13 @@ const ListWithAction = (props) => {
         const requester = item
           ? listEl.querySelector(`#${CSS.escape(item.id)}`)
           : e.target;
+        const resolvedRequester = requester || e.target;
+        if (item && !resolvedRequester.hasAttribute("data-readonly")) {
+          uiStateController.setUIState(item.value, e.detail?.event || e);
+        }
         dispatchActionRequestedCustomEvent(listEl, {
           event: e,
-          requester: requester || e.target,
+          requester: resolvedRequester,
         });
       }}
     />

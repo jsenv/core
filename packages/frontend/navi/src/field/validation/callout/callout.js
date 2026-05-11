@@ -4,6 +4,7 @@ import {
   createStyleController,
   createValueEffect,
   dispatchPublicCustomEvent,
+  eventInvolves,
   getBorderSizes,
   getFirstVisuallyVisibleAncestor,
   getPaddingSizes,
@@ -199,6 +200,7 @@ export const openCallout = (
     status = "",
     onClose,
     closeOnClickOutside = status === "info",
+    openingEvent,
     showErrorStack,
     debug = false,
   } = {},
@@ -329,10 +331,33 @@ export const openCallout = (
       // }
       close("click_outside");
     };
-    document.addEventListener("click", handleClickOutside, true);
-    addTeardown(() => {
-      document.removeEventListener("click", handleClickOutside, true);
-    });
+    const registerClickOutsideListener = () => {
+      document.addEventListener("click", handleClickOutside, true);
+      addTeardown(() => {
+        document.removeEventListener("click", handleClickOutside, true);
+      });
+    };
+    if (
+      closeOnClickOutside &&
+      openingEvent &&
+      eventInvolves(openingEvent, (e) => e.type === "mousedown")
+    ) {
+      // The callout was opened during a mousedown — wait for the corresponding
+      // mouseup before registering the click-outside listener, otherwise the
+      // upcoming click event from the same gesture would immediately close it.
+      const onMouseUp = () => {
+        registerClickOutsideListener();
+      };
+      document.addEventListener("mouseup", onMouseUp, {
+        once: true,
+        capture: true,
+      });
+      addTeardown(() => {
+        document.removeEventListener("mouseup", onMouseUp, true);
+      });
+    } else {
+      registerClickOutsideListener();
+    }
   }
   close_on_custom_event: {
     const handleCustomCloseEvent = () => {

@@ -16,6 +16,8 @@
  *    with `request_` by convention.
  */
 
+import { getElementSignature } from "./element_signature.js";
+
 /**
  * Dispatches an internal event on `el`.
  * Does not bubble — stays within the local subtree.
@@ -64,11 +66,64 @@ export const dispatchCustomEvent = (el, customEventName, customEventDetail) => {
 
 const resolveEventDetail = (customEventDetail) => {
   const { event, ...rest } = customEventDetail ?? {};
-  let resolvedEvent;
-  if (event?.detail?.event !== undefined) {
-    resolvedEvent = event.detail.event;
-  } else if (event !== undefined) {
-    resolvedEvent = event;
+  const isWrappedCustomEvent = event?.detail?.event !== undefined;
+  if (!isWrappedCustomEvent) {
+    return { ...rest, event };
   }
-  return { ...rest, event: resolvedEvent };
+  const previousChain = event.detail.eventChain;
+  const eventChain = previousChain ? [...previousChain, event] : [event];
+  return { ...rest, event: event.detail.event, eventChain };
+};
+
+/**
+ * Returns true if the event itself or any event in its chain matches the predicate.
+ *
+ * The full chain checked (oldest to newest) is:
+ *   initiator (event.detail.event) → ...intermediates (event.detail.eventChain)... → event
+ *
+ * Examples:
+ *   eventInvolves(e, (e) => e.type === "mousedown")
+ *   eventInvolves(e, (e) => e.type === "navi_list_select")
+ */
+export const eventInvolves = (event, predicate) => {
+  if (predicate(event)) {
+    return true;
+  }
+  if (event.detail?.eventChain) {
+    for (const chainedEvent of event.detail.eventChain) {
+      if (predicate(chainedEvent)) {
+        return true;
+      }
+    }
+  }
+  if (event.detail?.event !== undefined) {
+    if (predicate(event.detail.event)) {
+      return true;
+    }
+  }
+  return false;
+};
+
+/**
+ * Formats an event (and its chain when it's a custom event) for debug logging.
+ * For a plain browser event: `"mousedown" on button#submit`
+ * For a custom event with a chain: `"mousedown" on li#item-1 -> navi_list_request_select -> navi_list_nav`
+ */
+export const formatEventSideEffect = (e, sideEffect) => {
+  const parts = [];
+  if (e.detail?.event !== undefined) {
+    const initiator = e.detail.event;
+    parts.push(
+      `"${initiator.type}" on ${getElementSignature(initiator.target)}`,
+    );
+    if (e.detail.eventChain) {
+      for (const chainedEvent of e.detail.eventChain) {
+        parts.push(chainedEvent.type);
+      }
+    }
+    parts.push(e.type);
+  } else {
+    parts.push(`"${e.type}" on ${getElementSignature(e.target)}`);
+  }
+  return `${parts.join(" -> ")} -> ${sideEffect}`;
 };
