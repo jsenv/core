@@ -253,6 +253,9 @@ export const requestAction = (
 export const forwardActionRequested = (e, action, target = e.target) => {
   requestAction(target, action, {
     actionOrigin: e.detail?.actionOrigin,
+    // for now requestAction will receive initiator event (it cannot know the intermediate event chain)
+    // we could change that by going event: e but that means requestAction and other action events will know
+    // have the final event causing the action. Coul dbe interesting but for now we keep as is
     event: e.detail?.event || e,
     requester: e.detail?.requester,
     meta: e.detail?.meta,
