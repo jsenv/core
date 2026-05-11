@@ -10,6 +10,7 @@ import {
 
 import { isSignal } from "@jsenv/navi/src/utils/is_signal.js";
 import { useNavState } from "../nav/browser_integration/browser_integration.js";
+import { useDebugAction } from "../navi_debug.jsx";
 import { useInitialValue } from "../state/use_initial_value.js";
 import { FormContext } from "./form_context.js";
 
@@ -68,6 +69,7 @@ export const useUIStateController = (
     allowNameless = false,
   } = {},
 ) => {
+  const debugAction = useDebugAction();
   const parentUIStateController = useContext(ParentUIStateControllerContext);
   const formContext = useContext(FormContext);
   const { id, name, uiAction, action } = props;
@@ -213,7 +215,10 @@ export const useUIStateController = (
       );
       uiStateController.uiState = newUIState;
       publishUIState(newUIState);
-      uiStateController.uiAction?.(newUIState, e);
+      if (uiStateController.uiAction) {
+        debugAction(`${componentType}.uiAction(${JSON.stringify(newUIState)})`);
+        uiStateController.uiAction(newUIState, e);
+      }
       notifyParentAboutChildUIStateChange(e);
     },
     resetUIState: (e) => {

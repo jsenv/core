@@ -4,6 +4,7 @@ import { useContext } from "preact/hooks";
 const DebugFocusContext = createContext(false);
 const DebugScrollContext = createContext(false);
 const DebugPopupContext = createContext(false);
+const DebugActionContext = createContext(false);
 
 const debugNoop = () => {};
 
@@ -17,6 +18,10 @@ export const useDebugScroll = () => {
 };
 export const useDebugPopup = () => {
   const debug = useContext(DebugPopupContext);
+  return debug || debugNoop;
+};
+export const useDebugAction = () => {
+  const debug = useContext(DebugActionContext);
   return debug || debugNoop;
 };
 
@@ -34,6 +39,7 @@ export const NaviDebug = ({
   debugFocus,
   debugScroll,
   debugPopup,
+  debugAction,
   children,
 }) => {
   if (debugFocus === true) {
@@ -45,12 +51,17 @@ export const NaviDebug = ({
   if (debugPopup === true) {
     debugPopup = console.debug;
   }
+  if (debugAction === true) {
+    debugAction = console.debug;
+  }
 
   return (
     <DebugFocusContext.Provider value={debugFocus}>
       <DebugScrollContext.Provider value={debugScroll}>
         <DebugPopupContext.Provider value={debugPopup}>
-          {children}
+          <DebugActionContext.Provider value={debugAction}>
+            {children}
+          </DebugActionContext.Provider>
         </DebugPopupContext.Provider>
       </DebugScrollContext.Provider>
     </DebugFocusContext.Provider>

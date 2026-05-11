@@ -1,5 +1,6 @@
 import { useLayoutEffect, useState } from "preact/hooks";
 
+import { useDebugAction } from "../navi_debug.jsx";
 import { addManyEventListeners } from "../utils/add_many_event_listeners.js";
 import { useStableCallback } from "../utils/use_stable_callback.js";
 
@@ -21,6 +22,7 @@ export const useActionEvents = (
     onEnd,
   },
 ) => {
+  const debugAction = useDebugAction();
   onCancel = useStableCallback(onCancel);
   onRequested = useStableCallback(onRequested);
   onPrevented = useStableCallback(onPrevented);
@@ -48,36 +50,42 @@ export const useActionEvents = (
         if (e.detail.actionOrigin !== actionOrigin) {
           return;
         }
+        debugAction(`navi_action_requested (origin: ${e.detail.actionOrigin})`);
         onRequested?.(e);
       },
       navi_action_prevented: (e) => {
         if (e.detail.actionOrigin !== actionOrigin) {
           return;
         }
+        debugAction(`navi_action_prevented (origin: ${e.detail.actionOrigin})`);
         onPrevented?.(e);
       },
       navi_action: (e) => {
         if (e.detail.actionOrigin !== actionOrigin) {
           return;
         }
+        debugAction(`navi_action (origin: ${e.detail.actionOrigin})`);
         onAction?.(e);
       },
       navi_action_start: (e) => {
         if (e.detail.actionOrigin !== actionOrigin) {
           return;
         }
+        debugAction(`navi_action_start (origin: ${e.detail.actionOrigin})`);
         onStart?.(e);
       },
       navi_action_abort: (e) => {
         if (e.detail.actionOrigin !== actionOrigin) {
           return;
         }
+        debugAction(`navi_action_abort (origin: ${e.detail.actionOrigin})`);
         onAbort?.(e);
       },
       navi_action_error: (e) => {
         if (e.detail.actionOrigin !== actionOrigin) {
           return;
         }
+        debugAction(`navi_action_error (origin: ${e.detail.actionOrigin})`);
         onError?.(e.detail.error, e);
       },
       navi_action_end: onEnd,
