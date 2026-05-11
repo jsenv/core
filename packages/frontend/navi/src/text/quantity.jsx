@@ -62,40 +62,6 @@ const css = /* css */ `
   }
 `;
 
-export const QuantityIntl = naviIntl;
-const wellKnownUnitMap = new Map();
-/**
- * Registers a unit with its translations per language, making it a "well-known"
- * unit that Quantity will automatically translate and pluralize.
- *
- * @param {string} unitName - The unit identifier used in the `unit` prop, e.g. `"minute"`.
- * @param {Record<string, string | [string, string]>} langTranslations
- *   A map of language codes to translations. Each value is either:
- *   - A tuple `[singular, plural]` for languages with distinct plural forms.
- *   - A plain string for languages that use the same form for singular and plural (e.g. Japanese).
- *
- * @example
- * Quantity.Intl.addUnit("minute", {
- *   en: ["minute", "minutes"],
- *   fr: ["minute", "minutes"],
- *   ja: "分",
- * });
- */
-QuantityIntl.addUnit = (unitName, langTranslations) => {
-  const singularKey = unitName;
-  const pluralKey = `${unitName}__plural`;
-  wellKnownUnitMap.set(unitName, { singularKey, pluralKey });
-  for (const [lang, translation] of Object.entries(langTranslations)) {
-    const [singular, plural] = Array.isArray(translation)
-      ? translation
-      : [translation, translation];
-    naviIntl.add(lang, {
-      [singularKey]: singular,
-      [pluralKey]: plural,
-    });
-  }
-};
-
 export const Quantity = ({
   children,
   unit,
@@ -155,7 +121,6 @@ export const Quantity = ({
     </Text>
   );
 };
-Quantity.Intl = QuantityIntl;
 const QuantityPropsCSSVars = {
   unitColor: "--unit-color",
   unitSizeRatio: "--unit-size-ratio",
@@ -174,13 +139,16 @@ const Unit = ({ value, unit, lang }) => {
     const [singular, plural] = unit;
     unitText = value > 1 ? plural : singular;
   } else {
-    const wellKnownUnit = wellKnownUnitMap.get(unit);
-    if (wellKnownUnit) {
-      const { singularKey, pluralKey } = wellKnownUnit;
+    const singularText = naviIntl.format(unit, undefined, { lang });
+    if (singularText !== unit) {
+      // unit is known to naviIntl
       if (value > 1) {
-        unitText = naviIntl.format(pluralKey, { x: value }, { lang });
+        const pluralKey = `${unit}__plural`;
+        const pluralText = naviIntl.format(pluralKey, undefined, { lang });
+        // fallback to singular if no plural key registered
+        unitText = pluralText !== pluralKey ? pluralText : singularText;
       } else {
-        unitText = naviIntl.format(singularKey, undefined, { lang });
+        unitText = singularText;
       }
     }
   }
