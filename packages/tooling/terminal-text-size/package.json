@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/terminal-text-size",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "type": "module",
   "exports": {
     ".": {
@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "emoji-regex-xs": "2.0.1",
-    "get-east-asian-width": "1.5.0",
+    "get-east-asian-width": "1.6.0",
     "strip-ansi": "7.2.0"
   },
   "devDependencies": {
