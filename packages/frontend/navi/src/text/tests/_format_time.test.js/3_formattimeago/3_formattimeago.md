@@ -5,7 +5,11 @@ const ms = (n) => NOW.getTime() + n;
 return table(
   ["offset from NOW", "locale", "result"],
   [
-    ["-5 min", "fr", formatTimeAgo(new Date(ms(-5 * 60_000)), "fr", opts)],
+    [
+      "-5 min",
+      "fr",
+      formatTimeAgo(new Date(ms(-5 * 60_000)), "fr", opts),
+    ],
     [
       "+2 hours",
       "fr",
@@ -16,7 +20,11 @@ return table(
       "fr",
       formatTimeAgo(new Date(ms(-3 * 86_400_000)), "fr", opts),
     ],
-    ["-5 min", "en", formatTimeAgo(new Date(ms(-5 * 60_000)), "en", opts)],
+    [
+      "-5 min",
+      "en",
+      formatTimeAgo(new Date(ms(-5 * 60_000)), "en", opts),
+    ],
     [
       "+2 hours",
       "en",

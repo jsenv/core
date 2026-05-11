@@ -52,6 +52,7 @@ export const renderSideEffects = (
     }),
     sourceLocation = false,
     errorTransform,
+    preserveDurations = false,
   } = {},
 ) => {
   const { rootDirectoryUrl, replaceFilesystemWellKnownValues } =
@@ -61,6 +62,7 @@ export const renderSideEffects = (
     return replaceFluctuatingValues(value, {
       replaceFilesystemWellKnownValues,
       rootDirectoryUrl,
+      preserveDurations,
       ...options,
     });
   };

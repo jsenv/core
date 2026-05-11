@@ -24,6 +24,7 @@ const table = (headers, rows) => {
   return renderTable(grid, { borderCollapse: true });
 };
 
+snapshotTests.prefConfigure({ preserveDurations: true });
 await snapshotTests(import.meta.url, ({ test }) => {
   test("formatDay", () => {
     return table(

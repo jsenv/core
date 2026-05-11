@@ -35,6 +35,10 @@ import { renderSideEffects, renderSmallLink } from "./render_side_effects.js";
  * @param {url} [snapshotTestsOptions.filesystemEffects.baseDirectory]
  *        Urls of filesystem side effects will be relative to this base directory
  *        Default to the directory containing @sourceFileUrl
+ * @param {boolean} [snapshotTestsOptions.preserveDurations=false]
+ *        When true, duration-like values (e.g. "30s", "1.2 seconds") are kept as-is
+ *        in the snapshot instead of being replaced with "<X>s". Useful when the
+ *        test output intentionally contains duration strings.
  */
 let preconfiguredOptions = null;
 export const snapshotTests = async (
@@ -62,6 +66,7 @@ export const snapshotTests = async (
     filesystemEffects,
     throwWhenDiff = process.env.CI,
     sourceLocation = false,
+    preserveDurations = false,
   } = options;
   filesystemActions = {
     "**": "compare",
@@ -203,6 +208,7 @@ export const snapshotTests = async (
         generateOutFileUrl: generateScenarioOutFileUrl,
         title: scenario,
         sourceLocation,
+        preserveDurations,
       });
       writeFileSync(scenarioMdFileUrl, sideEffectsMarkdown);
     }

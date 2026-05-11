@@ -24,6 +24,7 @@ export const replaceFluctuatingValues = (
     rootDirectoryUrl,
     fileUrl,
     preserveAnsi,
+    preserveDurations = false,
     // for unit test
     replaceFilesystemWellKnownValues = createReplaceFilesystemWellKnownValues({
       rootDirectoryUrl,
@@ -84,7 +85,10 @@ export const replaceFluctuatingValues = (
   //   // string = string.replaceAll("‼", "⚠");
   //   return string;
   // };
-  const replaceThings = (string, { shouldReplaceDurations } = {}) => {
+  const replaceThings = (
+    string,
+    { preserveDurations: preserveDurationsLocal = false } = {},
+  ) => {
     if (stringType === "filesystem") {
       return replaceFilesystemWellKnownValues(string);
     }
@@ -96,7 +100,7 @@ export const replaceFluctuatingValues = (
       willBeWrittenOnFilesystem: false,
     });
     string = replaceHttpUrls(string);
-    if (shouldReplaceDurations !== false) {
+    if (!preserveDurationsLocal && !preserveDurations) {
       string = replaceDurations(string);
     }
     // string = replaceUnicodeFallbacks(string);
@@ -143,7 +147,7 @@ export const replaceFluctuatingValues = (
                 newValue = "[time]";
               } else {
                 newValue = replaceThings(attributeValue, {
-                  shouldReplaceDurations: name !== "style",
+                  preserveDurations: name === "style",
                 });
               }
               attributes[name] = newValue;
