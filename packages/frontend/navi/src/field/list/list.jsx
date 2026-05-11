@@ -40,7 +40,6 @@ import {
 import {
   dispatchActionRequestedCustomEvent,
   forwardActionRequested,
-  requestAction,
 } from "../validation/custom_constraint_validation.js";
 import { useConstraints } from "../validation/hooks/use_constraints.js";
 import { useSearchHighlight } from "./search_highlight.js";
@@ -1514,9 +1513,13 @@ const ListWithAction = (props) => {
       // Dispatch action request on select
       onnavi_list_select={(e) => {
         const listEl = e.currentTarget;
+        const item = e.detail?.item;
+        const requester = item
+          ? listEl.querySelector(`#${CSS.escape(item.id)}`)
+          : e.target;
         dispatchActionRequestedCustomEvent(listEl, {
           event: e,
-          requester: e.target,
+          requester: requester || e.target,
         });
       }}
     />
@@ -1831,14 +1834,6 @@ const ListItemReal = ({
       }}
       onMouseDown={(e) => {
         if (disabled) {
-          return;
-        }
-        if (readOnly) {
-          e.preventDefault();
-          requestAction(e.currentTarget, null, {
-            actionOrigin: e.currentTarget,
-            event: e,
-          });
           return;
         }
         if (e.button !== 0) {

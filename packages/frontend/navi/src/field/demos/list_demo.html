@@ -185,6 +185,7 @@
                 }}
                 itemProps={{ selected: true }}
               />
+              <ItemState label="readonly" itemProps={{ readOnly: true }} />
             </Box>
           </div>
         );
@@ -636,11 +637,78 @@
         );
       };
 
+      // ── ReadOnly items demo ────────────────────────────────────────────────────
+
+      const ReadOnlyDemo = () => {
+        const [selected, setSelected] = useState(null);
+        const [log, setLog] = useState([]);
+        const addLog = (msg) => {
+          setLog((prev) => [...prev.slice(-4), msg]);
+        };
+        return (
+          <div className="demo-section">
+            <h2>ReadOnly items</h2>
+            <p>
+              Items with <code>readOnly</code> show a callout on click instead
+              of selecting. The <code>uiAction</code> and <code>action</code>{" "}
+              callbacks must NOT be called for readonly items.
+            </p>
+            <List
+              uiAction={(value) => {
+                addLog(`uiAction called with: "${value}"`);
+                setSelected(value);
+              }}
+            >
+              <ListItem
+                index={0}
+                id="readonly_default"
+                value="readonly_default"
+                readOnly
+              >
+                Readonly (default message)
+              </ListItem>
+              <ListItem
+                index={1}
+                id="readonly_custom"
+                value="readonly_custom"
+                readOnly
+                data-readonly-message="Ce créneau est déjà réservé."
+              >
+                Readonly (custom message)
+              </ListItem>
+              <ListItem
+                index={2}
+                id="apple"
+                value="Apple"
+                selected={selected === "Apple"}
+              >
+                Apple (clickable)
+              </ListItem>
+              <ListItem
+                index={3}
+                id="banana"
+                value="Banana"
+                selected={selected === "Banana"}
+              >
+                Banana (clickable)
+              </ListItem>
+            </List>
+            <div
+              className="value-display"
+              style={{ minHeight: 60, whiteSpace: "pre-line" }}
+            >
+              {log.length === 0 ? "(no callbacks fired yet)" : log.join("\n")}
+            </div>
+          </div>
+        );
+      };
+
       // ── App ────────────────────────────────────────────────────────────────────
 
       const App = () => {
         return (
           <>
+            <ReadOnlyDemo />
             <ItemStatesDemo />
             <DisplayOnlyDemo />
             <InteractiveDemo />
