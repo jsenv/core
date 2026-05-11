@@ -12,7 +12,7 @@ import { getBorderSizes } from "@jsenv/dom";
 import { useCallback, useLayoutEffect, useRef, useState } from "preact/hooks";
 
 import { Box } from "../../box/box.jsx";
-import { Input } from "../input.jsx";
+import { Input } from "../input/input.jsx";
 
 const css = /* css */ `
   .navi_editable_wrapper {

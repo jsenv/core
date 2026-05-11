@@ -1,36 +1,36 @@
 import { createContext } from "preact";
 import { useContext, useId, useRef, useState } from "preact/hooks";
 
-import { Box } from "../box/box.jsx";
-import { ChevronDownSvg } from "../graphic/icons/chevron_updown_svg.jsx";
-import { LoadingOutline } from "../graphic/loading/loading_outline.jsx";
-import { shortcutsViaOnKeyDown } from "../keyboard/keyboard_shortcuts.js";
-import { windowWidthSignal } from "../layout/responsive.js";
+import { Box } from "@jsenv/navi/src/box/box.jsx";
+import { ChevronDownSvg } from "@jsenv/navi/src/graphic/icons/chevron_updown_svg.jsx";
+import { LoadingOutline } from "@jsenv/navi/src/graphic/loading/loading_outline.jsx";
+import { shortcutsViaOnKeyDown } from "@jsenv/navi/src/keyboard/keyboard_shortcuts.js";
+import { windowWidthSignal } from "@jsenv/navi/src/layout/responsive.js";
 import {
   formatEventSideEffect,
   useDebugFocus,
   useDebugPopup,
-} from "../navi_debug.jsx";
+} from "@jsenv/navi/src/navi_debug.jsx";
 import {
   Dialog,
   requestDialogClose,
   requestDialogOpen,
-} from "../popup/dialog.jsx";
+} from "@jsenv/navi/src/popup/dialog.jsx";
 import {
   Popover,
   requestPopoverClose,
   requestPopoverOpen,
-} from "../popup/popover.jsx";
-import { Icon } from "../text/icon.jsx";
-import { Text } from "../text/text.jsx";
-import { useAutoFocus } from "../utils/focus/use_auto_focus.js";
-import { Input } from "./input/input.jsx";
+} from "@jsenv/navi/src/popup/popover.jsx";
+import { Icon } from "@jsenv/navi/src/text/icon.jsx";
+import { Text } from "@jsenv/navi/src/text/text.jsx";
+import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
+import { Input } from "../input/input.jsx";
 import {
   reportDisabledToLabel,
   reportInteractiveToLabel,
   reportReadOnlyToLabel,
-} from "./label.jsx";
-import { List, ListItem } from "./list/list.jsx";
+} from "../label.jsx";
+import { List, ListItem } from "../list/list.jsx";
 import {
   DisabledContext,
   LoadingContext,
@@ -40,8 +40,8 @@ import {
   SelectTriggerContentRegistryContext,
   useUIGroupStateController,
   useUIState,
-} from "./use_ui_state_controller.js";
-import { useConstraints } from "./validation/hooks/use_constraints.js";
+} from "../use_ui_state_controller.js";
+import { useConstraints } from "../validation/hooks/use_constraints.js";
 
 const css = /* css */ `
   @layer navi {
