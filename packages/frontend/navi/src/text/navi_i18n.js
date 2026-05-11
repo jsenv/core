@@ -119,6 +119,10 @@ naviI18n.addAll({
     fr: "Veuillez sélectionner une couleur.",
     en: "Please select a color.",
   },
+  "picker.hour.no_slots": {
+    fr: "Aucune heure disponible.",
+    en: "No available time slots.",
+  },
   "constraint.disabled": {
     fr: "[field] est désactivé.",
     en: "[field] is disabled.",

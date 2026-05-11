@@ -56,6 +56,7 @@
         Field,
         Label,
         Picker,
+        HourPicker,
         Time,
         Text,
         Icon,
@@ -406,7 +407,52 @@
         );
       };
 
-      // ── App ─────────────────────────────────────────────────────
+      const DayHourPickerDemo = () => {
+        const daySignal = useSignal("");
+        const hourSignal = useSignal("");
+        return (
+          <div class="demo-section">
+            <h2>Jour + Heure</h2>
+            <p>
+              Le picker d'heure ne propose que les créneaux disponibles. Si le
+              jour sélectionné est aujourd'hui, les heures passées sont
+              masquées.
+            </p>
+            <Field vertical>
+              <Label>Jour</Label>
+              <Picker
+                type="day"
+                name="day"
+                value={daySignal.value}
+                uiAction={(v) => {
+                  daySignal.value = v;
+                  hourSignal.value = "";
+                }}
+                min={today}
+                max={in30days}
+                placeholder="Choisir un jour"
+              />
+            </Field>
+            <Field vertical style="margin-top:12px">
+              <Label>Heure (7h–21h, 30 min)</Label>
+              <HourPicker
+                name="hour"
+                min="07:00"
+                max="21:00"
+                step={1800}
+                selectedDay={daySignal.value}
+                value={hourSignal.value}
+                uiAction={(v) => {
+                  hourSignal.value = v;
+                }}
+                placeholder="Choisir une heure"
+                required={Boolean(daySignal.value)}
+              />
+            </Field>
+          </div>
+        );
+      };
+
       const App = () => (
         <div class="demo-grid">
           <DayPickerDemo />
@@ -417,6 +463,7 @@
           <ColorPickerDemo />
           <CustomUIDemo />
           <DisabledDemo />
+          <DayHourPickerDemo />
           <FormIntegrationDemo />
         </div>
       );
