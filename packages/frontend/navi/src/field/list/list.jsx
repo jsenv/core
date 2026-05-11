@@ -655,7 +655,7 @@ const ListUI = (props) => {
       pseudoStateSelector=".navi_list"
       hasChildFunction
       data-navi-value={value || undefined}
-      onnavi_request_scroll={(e) => {
+      onnavi_list_request_scroll={(e) => {
         const { item } = e.detail;
         if (!item) {
           return;
