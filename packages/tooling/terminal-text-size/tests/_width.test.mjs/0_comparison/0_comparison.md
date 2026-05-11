@@ -30,6 +30,7 @@ return renderComparisonTable(sections);
 | 1                | 1            |      | "_ิ"
 | 1                | 1            |      | "“"
 | 1                | 1            |      | "✔"
+| 5                | 5            |      | "+<X>s"
 |                  |              |      | --- typographic punctuation ---
 | 1                | 1            |      | "’"
 | 1                | 1            |      | "‘"
