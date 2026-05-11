@@ -97,18 +97,19 @@
           <div class="demo-section">
             <h2>Month picker</h2>
             <p>Picks a year + month.</p>
-            <Label htmlFor="month-picker">Mois</Label>
-            <Picker
-              id="month-picker"
-              name="month"
-              type="month"
-              value={monthSignal.value}
-              uiAction={(v) => {
-                monthSignal.value = v;
-              }}
-              placeholder="Choisir un mois"
-              expandX
-            />
+            <Label flex="y" spacing="s">
+              Mois
+              <Picker
+                id="month-picker"
+                name="month"
+                type="month"
+                value={monthSignal.value}
+                uiAction={(v) => {
+                  monthSignal.value = v;
+                }}
+                placeholder="Choisir un mois"
+              />
+            </Label>
             <ValueDisplay label="Value" value={monthSignal.value} />
           </div>
         );
@@ -120,18 +121,19 @@
           <div class="demo-section">
             <h2>Week picker</h2>
             <p>Picks an ISO week (year + week number).</p>
-            <Label htmlFor="week-picker">Semaine</Label>
-            <Picker
-              id="week-picker"
-              name="week"
-              type="week"
-              value={weekSignal.value}
-              uiAction={(v) => {
-                weekSignal.value = v;
-              }}
-              placeholder="Choisir une semaine"
-              expandX
-            />
+            <Label flex="y" spacing="s">
+              Semaine
+              <Picker
+                id="week-picker"
+                name="week"
+                type="week"
+                value={weekSignal.value}
+                uiAction={(v) => {
+                  weekSignal.value = v;
+                }}
+                placeholder="Choisir une semaine"
+              />
+            </Label>
             <ValueDisplay label="Value" value={weekSignal.value} />
           </div>
         );
@@ -143,21 +145,22 @@
           <div class="demo-section">
             <h2>Time picker</h2>
             <p>Picks a time of day (hours + minutes).</p>
-            <Label htmlFor="time-picker">Heure</Label>
-            <Picker
-              id="time-picker"
-              name="time"
-              type="time"
-              value={timeSignal.value}
-              uiAction={(v) => {
-                timeSignal.value = v;
-              }}
-              min="08:00"
-              max="20:00"
-              step={900}
-              placeholder="Choisir une heure"
-              expandX
-            />
+            <Label flex="y" spacing="s">
+              Heure
+              <Picker
+                id="time-picker"
+                name="time"
+                type="time"
+                value={timeSignal.value}
+                uiAction={(v) => {
+                  timeSignal.value = v;
+                }}
+                min="08:00"
+                max="20:00"
+                step={900}
+                placeholder="Choisir une heure"
+              />
+            </Label>
             <ValueDisplay label="Value" value={timeSignal.value} />
           </div>
         );
@@ -169,41 +172,43 @@
           <div class="demo-section">
             <h2>Datetime picker</h2>
             <p>Picks a date + time (datetime-local).</p>
-            <Label htmlFor="datetime-picker">Date &amp; heure</Label>
-            <Picker
-              id="datetime-picker"
-              name="datetime"
-              type="datetime"
-              value={datetimeSignal.value}
-              uiAction={(v) => {
-                datetimeSignal.value = v;
-              }}
-              placeholder="Choisir date &amp; heure"
-              expandX
-            />
+            <Label flex="y" spacing="s">
+              Date &amp; heure
+              <Picker
+                id="datetime-picker"
+                name="datetime"
+                type="datetime"
+                value={datetimeSignal.value}
+                uiAction={(v) => {
+                  datetimeSignal.value = v;
+                }}
+                placeholder="Choisir date &amp; heure"
+              />
+            </Label>
             <ValueDisplay label="Value" value={datetimeSignal.value} />
           </div>
         );
       };
 
       const ColorPickerDemo = () => {
-        const colorSignal = useSignal("#4f8ef7");
+        const colorSignal = useSignal("");
         return (
           <div class="demo-section">
             <h2>Color picker</h2>
             <p>Picks a color using the browser color chooser.</p>
-            <Label htmlFor="color-picker">Couleur</Label>
-            <Picker
-              id="color-picker"
-              name="color"
-              type="color"
-              value={colorSignal.value}
-              uiAction={(v) => {
-                colorSignal.value = v;
-              }}
-              placeholder="Choisir une couleur"
-              expandX
-            />
+            <Label flex="y" spacing="s">
+              Couleur
+              <Picker
+                id="color-picker"
+                name="color"
+                type="color"
+                value={colorSignal.value}
+                uiAction={(v) => {
+                  colorSignal.value = v;
+                }}
+                placeholder="Choisir une couleur"
+              />
+            </Label>
             <ValueDisplay label="Value" value={colorSignal.value} />
           </div>
         );
@@ -215,27 +220,28 @@
           <div class="demo-section">
             <h2>Custom children</h2>
             <p>Override the value display with custom children.</p>
-            <Label htmlFor="custom-picker">Date de naissance</Label>
-            <Picker
-              id="custom-picker"
-              name="birthday"
-              type="day"
-              value={daySignal.value}
-              uiAction={(v) => {
-                daySignal.value = v;
-              }}
-              placeholder="Choisir une date"
-              expandX
-            >
-              {daySignal.value ? (
-                <Box flex alignY="center" spacing="xs">
-                  🎂{" "}
-                  <Time type="day" capitalize>
-                    {daySignal.value}
-                  </Time>
-                </Box>
-              ) : null}
-            </Picker>
+            <Label flex="y" spacing="s">
+              Date de naissance
+              <Picker
+                id="custom-picker"
+                name="birthday"
+                type="day"
+                value={daySignal.value}
+                uiAction={(v) => {
+                  daySignal.value = v;
+                }}
+                placeholder="Choisir une date"
+              >
+                {daySignal.value ? (
+                  <Box flex alignY="center" spacing="xs">
+                    🎂{" "}
+                    <Time type="day" capitalize>
+                      {daySignal.value}
+                    </Time>
+                  </Box>
+                ) : null}
+              </Picker>
+            </Label>
             <ValueDisplay label="Value" value={daySignal.value} />
           </div>
         );
@@ -245,17 +251,66 @@
         <div class="demo-section">
           <h2>Disabled</h2>
           <p>Picker is non-interactive when disabled.</p>
-          <Label htmlFor="disabled-picker">Date</Label>
-          <Picker
-            id="disabled-picker"
-            type="day"
-            value="2026-05-11"
-            disabled
-            placeholder="Choisir un jour"
-            expandX
-          />
+          <Label flex="y" spacing="s">
+            Date
+            <Picker
+              id="disabled-picker"
+              type="day"
+              value="2026-05-11"
+              disabled
+              placeholder="Choisir un jour"
+            />
+          </Label>
         </div>
       );
+
+      const FormIntegrationDemo = () => {
+        const submittedSignal = useSignal(null);
+        const onSubmit = (e) => {
+          e.preventDefault();
+          const data = Object.fromEntries(new FormData(e.target));
+          submittedSignal.value = data;
+        };
+        return (
+          <div class="demo-section">
+            <h2>Form integration</h2>
+            <p>
+              Pickers participate in form submission. The day field is required.
+            </p>
+            <form onSubmit={onSubmit}>
+              <Box flex="y" spacing="m">
+                <Label flex="y" spacing="s">
+                  Date de début (required)
+                  <Picker
+                    name="start_date"
+                    type="day"
+                    required
+                    placeholder="Choisir une date"
+                  />
+                </Label>
+                <Label flex="y" spacing="s">
+                  Heure de début
+                  <Picker
+                    name="start_time"
+                    type="time"
+                    min="08:00"
+                    max="20:00"
+                    placeholder="Choisir une heure"
+                  />
+                </Label>
+                <Box>
+                  <button type="submit">Soumettre</button>
+                </Box>
+                {submittedSignal.value && (
+                  <pre style="margin:0;font-size:12px;background:#f0f0f0;padding:8px;border-radius:4px;">
+                    {JSON.stringify(submittedSignal.value, null, 2)}
+                  </pre>
+                )}
+              </Box>
+            </form>
+          </div>
+        );
+      };
 
       // ── App ─────────────────────────────────────────────────────
       const App = () => (
@@ -268,6 +323,7 @@
           <ColorPickerDemo />
           <CustomChildrenDemo />
           <DisabledDemo />
+          <FormIntegrationDemo />
         </div>
       );
 
