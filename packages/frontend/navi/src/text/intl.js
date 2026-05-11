@@ -23,7 +23,7 @@ import { langSignal } from "./lang_signal.js";
  * from its parent (`"fr"`) that it does not explicitly override.
  *
  * @example
- * intl.add("Hello [name]!", { fr: "Bonjour [name] !" });
+ * intl.add("hello", { fr: "Bonjour [name] !" });
  * intl.add("minute", { fr: "minute" });
  * intl.add("minutes", { fr: "minutes" });
  *
