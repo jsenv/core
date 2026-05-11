@@ -102,7 +102,7 @@ export const getVisuallyVisibleInfo = (
 
   // Check for transform scale(0)
   const transformStyle = getStyle(node, "transform");
-  if (transformStyle && transformStyle.includes("scale(0")) {
+  if (transformStyle.scale === 0) {
     return { visible: false, reason: "scaled to zero with transform" };
   }
 
