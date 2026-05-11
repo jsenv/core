@@ -646,6 +646,7 @@ const ListUI = (props) => {
       ref={containerRef}
       baseClassName="navi_list_container"
       popover={popover}
+      data-field={name ? `#${CSS.escape(hiddenInputId)}` : undefined}
       data-expand-x={expandX || expand ? "" : undefined}
       expandX={expandX}
       expand={expand}

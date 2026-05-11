@@ -136,6 +136,12 @@ export const requestAction = (
     console.warn("requestAction: actionOrigin is required");
   }
   let elementToValidate = requester;
+  if (!elementToValidate.__validationInterface__) {
+    const fieldElement = findFieldElement(requester);
+    if (fieldElement) {
+      elementToValidate = fieldElement;
+    }
+  }
 
   let validationInterface = elementToValidate.__validationInterface__;
   if (!validationInterface) {
@@ -1056,6 +1062,21 @@ const addEventListener = (element, event, callback) => {
   return () => {
     element.removeEventListener(event, callback);
   };
+};
+
+// When the requester is not a validated element itself (e.g. a <li> inside a
+// list container), look for a field element declared via data-field on the
+// closest [data-action] ancestor.
+const findFieldElement = (element) => {
+  const elementWithAction = element.closest("[data-action]");
+  if (!elementWithAction) {
+    return null;
+  }
+  const fieldSelector = elementWithAction.getAttribute("data-field");
+  if (!fieldSelector) {
+    return null;
+  }
+  return elementWithAction.querySelector(fieldSelector) || document.querySelector(fieldSelector);
 };
 
 const getFailedConstraintName = (validationInterface) => {
