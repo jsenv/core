@@ -3,7 +3,7 @@
  * All functions accept an optional `{ now }` parameter for testability.
  */
 
-import { naviIntl } from "./navi_intl.js";
+import { naviI18n } from "./navi_i18n.js";
 
 const DEFAULT_LANG = "en";
 
@@ -218,7 +218,7 @@ const formatTomorrowAt = (date, locale) => {
     hour: "numeric",
     ...(hasMinutes ? { minute: "2-digit" } : {}),
   }).format(date);
-  const atTemplate = naviIntl.format("time.tomorrow_at", undefined, {
+  const atTemplate = naviI18n("time.tomorrow_at", undefined, {
     lang: locale,
   });
   // atTemplate is e.g. "[day] à [time]" — replace placeholders
@@ -248,11 +248,11 @@ const formatHoursAndMinutes = (hours, minutes, locale) => {
 };
 
 const getLessThanMinuteText = (locale) => {
-  return naviIntl.format("time.less_than_minute", undefined, { lang: locale });
+  return naviI18n("time.less_than_minute", undefined, { lang: locale });
 };
 
 const getOngoingText = (locale) => {
-  return naviIntl.format("time.ongoing", undefined, { lang: locale });
+  return naviI18n("time.ongoing", undefined, { lang: locale });
 };
 
 const MINUTE = 60_000;
@@ -264,35 +264,3 @@ const YEAR = 365 * DAY;
 const toLocalDayKey = (date) => {
   return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
 };
-
-// Default built-in translations — apps can override any key via add()
-naviIntl.addAll({
-  "time.less_than_minute": {
-    en: "in less than a minute",
-    fr: "dans moins d'une minute",
-    de: "in weniger als einer Minute",
-    es: "en menos de un minuto",
-    it: "in meno di un minuto",
-    pt: "em menos de um minuto",
-    nl: "over minder dan een minuut",
-  },
-  "time.ongoing": {
-    en: "Ongoing",
-    fr: "En cours",
-    de: "Laufend",
-    es: "En curso",
-    it: "In corso",
-    pt: "Em andamento",
-    nl: "Bezig",
-  },
-  // [day] and [time] are replaced at runtime with the localized day/time strings
-  "time.tomorrow_at": {
-    en: "[day] at [time]",
-    fr: "[day] à [time]",
-    de: "[day] um [time]",
-    es: "[day] a las [time]",
-    it: "[day] alle [time]",
-    pt: "[day] às [time]",
-    nl: "[day] om [time]",
-  },
-});

@@ -59,5 +59,5 @@ import { interpolateText } from "./interpolate_text.js";
  * </Interpolate>
  */
 export const Interpolate = ({ children, ...replacements }) => {
-  return interpolateText(children, replacements);
+  return interpolateText(children, replacements, { allowJsx: true });
 };

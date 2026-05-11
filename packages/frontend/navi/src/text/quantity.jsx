@@ -1,7 +1,7 @@
 import { LoadingDotsSvg } from "../graphic/loading/loading_dots_svg.jsx";
 import { formatNumber } from "./format_number.js";
 import { Icon } from "./icon.jsx";
-import { naviIntl } from "./navi_intl.js";
+import { naviI18n } from "./navi_i18n.js";
 import { Text } from "./text.jsx";
 
 const css = /* css */ `
@@ -139,12 +139,12 @@ const Unit = ({ value, unit, lang }) => {
     const [singular, plural] = unit;
     unitText = value > 1 ? plural : singular;
   } else {
-    const singularText = naviIntl.format(unit, undefined, { lang });
+    const singularText = naviI18n(unit, undefined, { lang });
     if (singularText !== unit) {
-      // unit is known to naviIntl
+      // unit is known to naviI18n
       if (value > 1) {
         const pluralKey = `${unit}__plural`;
-        const pluralText = naviIntl.format(pluralKey, undefined, { lang });
+        const pluralText = naviI18n(pluralKey, undefined, { lang });
         // fallback to singular if no plural key registered
         unitText = pluralText !== pluralKey ? pluralText : singularText;
       } else {
