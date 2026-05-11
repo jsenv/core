@@ -125,8 +125,10 @@ const css = /* css */ `
     }
 
     .navi_picker_text {
+      position: relative;
       display: inline-flex;
       min-width: 0;
+      min-height: 1em;
       flex: 1;
       flex-direction: column;
       text-overflow: ellipsis;
@@ -162,6 +164,16 @@ const css = /* css */ `
       color-scheme: light dark;
       cursor: pointer;
     }
+  }
+
+  .navi_picker_color_display {
+    position: absolute;
+    inset: 0;
+    display: block;
+    vertical-align: middle;
+    background-color: var(--picker-color);
+    border: 1px solid rgba(0, 0, 0, 0.2);
+    border-radius: 2px;
   }
 `;
 
@@ -286,7 +298,7 @@ const PickerUI = (props) => {
     >
       <span className="navi_picker_text">
         <span className="navi_picker_placeholder" hidden={hasValue}>
-          {typeof placeholder === "string" ? placeholder : placeholder}
+          {placeholder}
         </span>
         <span className="navi_picker_value" hidden={!hasValue}>
           {children ? (
@@ -352,14 +364,9 @@ const DefaultValueDisplay = ({ type, value }) => {
   if (type === "color") {
     return (
       <span
+        className="navi_picker_color_display"
         style={{
-          display: "inline-block",
-          width: "1em",
-          height: "1em",
-          borderRadius: "2px",
-          backgroundColor: value,
-          border: "1px solid rgba(0,0,0,0.2)",
-          verticalAlign: "middle",
+          "--picker-color": value,
         }}
       />
     );

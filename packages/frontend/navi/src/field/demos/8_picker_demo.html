@@ -214,12 +214,15 @@
         );
       };
 
-      const CustomChildrenDemo = () => {
+      const CustomUIDemo = () => {
         const daySignal = useSignal("");
         return (
           <div class="demo-section">
-            <h2>Custom children</h2>
-            <p>Override the value display with custom children.</p>
+            <h2>Custom UI</h2>
+            <p>
+              Override both the placeholder and the value display with custom
+              children.
+            </p>
             <Label flex="y" spacing="s">
               Date de naissance
               <Picker
@@ -230,7 +233,11 @@
                 uiAction={(v) => {
                   daySignal.value = v;
                 }}
-                placeholder="Choisir une date"
+                placeholder={
+                  <Box flex alignY="center" spacing="xs">
+                    🎂 Choisir un anniversaire
+                  </Box>
+                }
               >
                 {daySignal.value ? (
                   <Box flex alignY="center" spacing="xs">
@@ -321,7 +328,7 @@
           <TimePickerDemo />
           <DatetimePickerDemo />
           <ColorPickerDemo />
-          <CustomChildrenDemo />
+          <CustomUIDemo />
           <DisabledDemo />
           <FormIntegrationDemo />
         </div>
