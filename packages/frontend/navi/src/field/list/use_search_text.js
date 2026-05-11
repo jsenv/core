@@ -10,7 +10,7 @@ import { applySearch } from "./apply_search.js";
  *
  * When searchText is empty, natural order is preserved and all items match with score 0.
  *
- * To filter (hide non-matching items), pass hidden={!getItemMatchInfo(item).match}
+ * To filter (hide non-matching items), pass filtered={!getItemMatchInfo(item).match}
  * to each ListItem. The list's matchFallback will be shown when all items are hidden.
  */
 export const useSearchText = (searchText, items, matchFn = applySearch) => {

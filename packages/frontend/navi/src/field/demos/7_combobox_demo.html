@@ -159,7 +159,7 @@
                   index={i}
                   value={fruit}
                   selected={selected === fruit}
-                  hidden={!matches(fruit)}
+                  filtered={!matches(fruit)}
                 >
                   {fruit}
                 </ListItem>
@@ -213,7 +213,7 @@
                   index={i}
                   value={country.name}
                   selected={selected === country.code}
-                  hidden={!matches(country)}
+                  filtered={!matches(country)}
                 >
                   <span style={{ fontWeight: 500 }}>{country.name}</span>
                   <span className="option-secondary">{country.region}</span>
@@ -293,7 +293,7 @@
                     index={0}
                     value="Option A"
                     selected={selected === "option-a"}
-                    hidden={!matchesQuery("Option A", descriptionA)}
+                    filtered={!matchesQuery("Option A", descriptionA)}
                   >
                     <div
                       style={{
@@ -313,7 +313,7 @@
                     index={1}
                     value="Option B"
                     selected={selected === "option-b"}
-                    hidden={!matchesQuery("Option B", descriptionB)}
+                    filtered={!matchesQuery("Option B", descriptionB)}
                   >
                     <div
                       style={{
@@ -333,7 +333,7 @@
                     index={2}
                     value="Option C"
                     selected={selected === "option-c"}
-                    hidden={!matchesQuery("Option C", descriptionC)}
+                    filtered={!matchesQuery("Option C", descriptionC)}
                   >
                     <div
                       style={{
@@ -370,7 +370,7 @@
                     index={0}
                     value="Option A"
                     selected={selected === "option-a"}
-                    hidden={!matchesQuery("Option A", descriptionA)}
+                    filtered={!matchesQuery("Option A", descriptionA)}
                   >
                     <div
                       style={{
@@ -396,7 +396,7 @@
                     index={1}
                     value="Option B"
                     selected={selected === "option-b"}
-                    hidden={!matchesQuery("Option B", descriptionB)}
+                    filtered={!matchesQuery("Option B", descriptionB)}
                   >
                     <div
                       style={{
@@ -422,7 +422,7 @@
                     index={2}
                     value="Option C"
                     selected={selected === "option-c"}
-                    hidden={!matchesQuery("Option C", descriptionC)}
+                    filtered={!matchesQuery("Option C", descriptionC)}
                   >
                     <div
                       style={{
@@ -495,7 +495,7 @@
                   index={i}
                   value={fruit}
                   selected={query === fruit}
-                  hidden={!matches(fruit)}
+                  filtered={!matches(fruit)}
                 >
                   {fruit}
                 </ListItem>
@@ -559,7 +559,7 @@
                       index={i}
                       value={fruit}
                       selected={fruitQuery === fruit}
-                      hidden={!fruitMatches(fruit)}
+                      filtered={!fruitMatches(fruit)}
                     >
                       {fruit}
                     </ListItem>
@@ -592,7 +592,7 @@
                       index={i}
                       value={c.name}
                       selected={countryQuery === c.name}
-                      hidden={!countryMatches(c)}
+                      filtered={!countryMatches(c)}
                     >
                       {c.name}
                     </ListItem>
