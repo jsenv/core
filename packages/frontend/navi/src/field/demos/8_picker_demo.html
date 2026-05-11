@@ -51,7 +51,7 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useSignal } from "@preact/signals";
-      import { Box, Label, Picker, Time } from "@jsenv/navi";
+      import { Box, Label, Picker, Time, Text } from "@jsenv/navi";
 
       // ── helpers ─────────────────────────────────────────────────
       const today = new Date();
@@ -250,15 +250,11 @@
                 uiAction={(v) => {
                   daySignal.value = v;
                 }}
-                placeholder={
-                  <Box flex alignY="center" spacing="xs">
-                    🎂 Choisir un anniversaire
-                  </Box>
-                }
+                placeholder={<Text>🎂 Choisir un anniversaire</Text>}
               >
                 {daySignal.value ? (
                   <Box flex alignY="center" spacing="xs">
-                    🎂{" "}
+                    🎂
                     <Time type="day" capitalize>
                       {daySignal.value}
                     </Time>
