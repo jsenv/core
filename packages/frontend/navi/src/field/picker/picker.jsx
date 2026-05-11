@@ -77,11 +77,14 @@ const css = /* css */ `
     );
 
     position: relative;
+    display: inline-flex;
     box-sizing: border-box;
     padding-top: var(--x-picker-padding-top);
     padding-right: var(--x-picker-padding-right);
     padding-bottom: var(--x-picker-padding-bottom);
     padding-left: var(--x-picker-padding-left);
+    align-items: center;
+    gap: var(--navi-s);
     color: var(--picker-color);
     font-size: var(--picker-font-size);
     text-align: inherit;
@@ -113,13 +116,6 @@ const css = /* css */ `
       --x-picker-border-color: var(--callout-color);
     }
 
-    .navi_picker_content {
-      display: inline-flex;
-      min-width: 0;
-      flex: 1;
-      align-items: center;
-      gap: 6px;
-    }
     .navi_picker_text {
       display: inline-flex;
       min-width: 0;
@@ -233,7 +229,7 @@ const PickerUI = (props) => {
   const remainingProps = useConstraints(pickerInputRef, rest);
 
   const inputType = TYPE_TO_INPUT_TYPE[type] || "date";
-  const hasValue = uiState !== undefined;
+  const hasValue = uiState !== undefined && uiState !== "" && uiState !== null;
 
   return (
     <Box
@@ -268,23 +264,21 @@ const PickerUI = (props) => {
         rest.onMouseDown?.(e);
       }}
     >
-      <span className="navi_picker_content">
-        <span className="navi_picker_text">
-          <span className="navi_picker_placeholder" hidden={hasValue}>
-            {typeof placeholder === "string" ? placeholder : placeholder}
-          </span>
-          <span className="navi_picker_value" hidden={!hasValue}>
-            {children ? (
-              children
-            ) : (
-              <DefaultValueDisplay type={type} value={uiState} />
-            )}
-          </span>
+      <span className="navi_picker_text">
+        <span className="navi_picker_placeholder" hidden={hasValue}>
+          {typeof placeholder === "string" ? placeholder : placeholder}
         </span>
-        <Icon className="navi_picker_icon" size="s">
-          {ICON_FOR_TYPE[type] || <CalendarSvg />}
-        </Icon>
+        <span className="navi_picker_value" hidden={!hasValue}>
+          {children ? (
+            children
+          ) : (
+            <DefaultValueDisplay type={type} value={uiState} />
+          )}
+        </span>
       </span>
+      <Icon className="navi_picker_icon" size="s">
+        {ICON_FOR_TYPE[type] || <CalendarSvg />}
+      </Icon>
       <input
         ref={pickerInputRef}
         className="navi_picker_input"
