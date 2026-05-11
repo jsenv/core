@@ -1875,7 +1875,6 @@ const ListItemReal = ({
       styleCSSVars={LIST_ITEM_STYLE_CSS_VARS}
       pseudoClasses={LIST_ITEM_PSEUDO_CLASSES}
       pseudoElements={LIST_ITEM_PSEUDO_ELEMENTS}
-      aria-hidden={hidden ? true : undefined}
       aria-selected={selected}
       aria-disabled={disabled ? true : undefined}
       id={id}
@@ -1883,6 +1882,7 @@ const ListItemReal = ({
       data-interactive={isInteractive ? "" : undefined}
       data-anchor={isPointedByKeyboard ? "" : undefined}
       {...rest}
+      hidden={hidden}
       ref={ref}
       onMouseEnter={(e) => {
         if (disabled) {

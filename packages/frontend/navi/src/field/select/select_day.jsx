@@ -117,7 +117,7 @@ const CustomDayOption = ({
         id="custom_display"
         index={index}
         value={customDateString}
-        filtered={!hasCustom}
+        hidden={!hasCustom}
         selected={value === customDateString}
       >
         <Time type="day" capitalize>
@@ -132,6 +132,9 @@ const CustomDayOption = ({
           min={minDateString}
           uiAction={onDatePicked}
           onMouseDown={(e) => {
+            if (e.button !== 0) {
+              return;
+            }
             e.preventDefault();
             e.stopPropagation();
             e.currentTarget.showPicker();
