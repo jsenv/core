@@ -290,6 +290,7 @@ const PickerUI = (props) => {
       baseClassName="navi_picker"
       navi-type={type}
       navi-has-placeholder={placeholder ? "" : undefined}
+      // data-callout-arrow-x="center"
       autoFocus={undefined}
       basePseudoState={{
         ...remainingProps.basePseudoState,
