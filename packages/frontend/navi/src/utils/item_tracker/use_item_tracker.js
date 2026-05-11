@@ -127,7 +127,7 @@ const createItemTracker = (onChange) => {
         if (!allItemsChanged && item !== prevAllItems[i]) {
           allItemsChanged = true;
         }
-        if (!item.hidden) {
+        if (!item.filtered && !item.hidden) {
           const visibleIdx = visibleItems.length;
           visibleItems.push(item);
           if (item.matchScore > 0) {
@@ -271,7 +271,7 @@ const createItemTracker = (onChange) => {
       insertAllKey(key, index);
     }
 
-    if (data.hidden) {
+    if (data.filtered || data.hidden) {
       registrations.delete(key);
       const idx = keyToOrderedIndex.get(key);
       if (idx !== undefined) {
@@ -334,7 +334,7 @@ const createItemTracker = (onChange) => {
       };
     }, []);
 
-    if (data.hidden || data.role === "presentation") {
+    if (data.filtered || data.hidden || data.role === "presentation") {
       return -1;
     }
     return keyToOrderedIndex.get(key) ?? -1;

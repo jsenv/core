@@ -117,7 +117,7 @@ const CustomDayOption = ({
         id="custom_display"
         index={index}
         value={customDateString}
-        hidden={!hasCustom}
+        filtered={!hasCustom}
         selected={value === customDateString}
       >
         <Time type="day" capitalize>

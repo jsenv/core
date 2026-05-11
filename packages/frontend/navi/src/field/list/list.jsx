@@ -1173,7 +1173,7 @@ const NoMatchFallback = ({ tracker, noMatchFallback, searchText }) => {
   const itemCount = tracker.countSignal.value;
   const visibleItemCount = tracker.visibleCountSignal.value;
   const matchCount = tracker.matchCountSignal.value;
-  // Show when all items are filtered out (hidden prop), or when search is
+  // Show when all items are filtered out (filtered prop), or when search is
   // active but no visible item has a positive match score.
   const allHidden = itemCount > 0 && visibleItemCount === 0;
   const noneMatch = searchText && visibleItemCount > 0 && matchCount === 0;
@@ -1620,7 +1620,9 @@ const ListWithKeyboardInteractions = (props) => {
  *
  * Props:
  *   itemId    — stable string id for tracking (auto-generated if omitted)
- *   hidden    — when true, item is excluded from the visible count and not rendered
+ *   filtered  — when true, item is excluded from visible count and removed from DOM entirely
+ *   hidden    — when true, item is excluded from visible count (no virtual scroll height)
+ *               but stays in DOM with the native HTML hidden attribute
  *   highlight — array of [start, end] ranges to highlight via CSS Highlight API
  *   ...rest   — forwarded to the rendered <li> element
  */
@@ -1634,8 +1636,17 @@ const ListItemPresentation = (props) => {
   return <Box as="li" {...props} />;
 };
 const ListItemRealOrVoid = (props) => {
-  let { id, value, hidden, selected, matchScore, disabled, index, ...rest } =
-    props;
+  let {
+    id,
+    value,
+    filtered,
+    hidden,
+    selected,
+    matchScore,
+    disabled,
+    index,
+    ...rest
+  } = props;
   if (id === undefined) {
     console.warn(
       "ListItem is missing an explicit id prop. Provide a stable id so pointed/selected state survives search reordering.",
@@ -1655,6 +1666,7 @@ const ListItemRealOrVoid = (props) => {
   const item = {
     id,
     index,
+    filtered,
     hidden,
     value,
     selected,
@@ -1668,8 +1680,22 @@ const ListItemRealOrVoid = (props) => {
     : null;
   const separator = useContext(SeparatorContext);
 
-  if (hidden) {
+  if (filtered) {
     return null;
+  }
+  // html-hidden items: excluded from virtual scroll accounting but always in DOM
+  if (hidden) {
+    return (
+      <ListItemReal
+        id={id}
+        value={value}
+        item={item}
+        selected={selected}
+        disabled={disabled}
+        hidden={hidden}
+        {...rest}
+      />
+    );
   }
   if (visibleIndex === -1) {
     return null;
