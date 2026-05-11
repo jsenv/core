@@ -268,6 +268,8 @@ const PickerUI = (props) => {
   const hasValue = uiState !== undefined && uiState !== "" && uiState !== null;
   const [expanded, setExpanded] = useState(false);
 
+  const showColorSwatchAlways = type === "color" && !placeholder && !children;
+
   return (
     <Box
       as="button"
@@ -318,11 +320,17 @@ const PickerUI = (props) => {
         <span className="navi_picker_placeholder" hidden={hasValue}>
           {placeholder}
         </span>
-        <span className="navi_picker_value" hidden={!hasValue}>
+        <span
+          className="navi_picker_value"
+          hidden={!hasValue && !showColorSwatchAlways}
+        >
           {children ? (
             children
           ) : (
-            <DefaultValueDisplay type={type} value={uiState} />
+            <DefaultValueDisplay
+              type={type}
+              value={hasValue ? uiState : "#000000"}
+            />
           )}
         </span>
       </span>
