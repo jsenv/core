@@ -3,6 +3,7 @@ import { useContext, useRef, useState } from "preact/hooks";
 import { Box } from "@jsenv/navi/src/box/box.jsx";
 import { LoadingOutline } from "@jsenv/navi/src/graphic/loading/loading_outline.jsx";
 import { Icon } from "@jsenv/navi/src/text/icon.jsx";
+import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { Time } from "@jsenv/navi/src/text/time.jsx";
 import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
 import {
@@ -291,7 +292,6 @@ const PickerUI = (props) => {
       baseClassName="navi_picker"
       navi-type={type}
       navi-has-placeholder={placeholder ? "" : undefined}
-      data-callout-arrow-x="center"
       autoFocus={undefined}
       basePseudoState={{
         ...remainingProps.basePseudoState,
@@ -367,6 +367,7 @@ const PickerUI = (props) => {
         tabIndex={-1}
         disabled={innerDisabled || innerReadOnly}
         data-rendered-by=".navi_picker"
+        data-required-message={naviI18n(`picker.required.${type}`)}
         onChange={(e) => {
           const newValue = e.currentTarget.value;
           uiStateController.setUIState(newValue, e);

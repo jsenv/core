@@ -1,34 +1,24 @@
-export const generateFieldInvalidMessage = (template, { field }) => {
-  return replaceStringVars(template, {
-    "{field}": () => generateThisFieldText(field),
+import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
+
+export const generateFieldInvalidMessage = (key, { field, ...vars } = {}) => {
+  return naviI18n(key, {
+    field: () => generateThisFieldText(field),
+    ...vars,
   });
 };
 
 const generateThisFieldText = (field) => {
   if (field.type === "password") {
-    return "Ce mot de passe";
+    return naviI18n("constraint.field.password");
   }
   if (field.type === "email") {
-    return "Cette adresse e-mail";
+    return naviI18n("constraint.field.email");
   }
   if (field.type === "checkbox") {
-    return "Cette case";
+    return naviI18n("constraint.field.checkbox");
   }
   if (field.type === "radio") {
-    return "Cette option";
+    return naviI18n("constraint.field.radio");
   }
-  return "Ce champ";
-};
-
-export const replaceStringVars = (string, replacers) => {
-  return string.replace(/(\{\w+\})/g, (match, name) => {
-    const replacer = replacers[name];
-    if (replacer === undefined) {
-      return match;
-    }
-    if (typeof replacer === "function") {
-      return replacer();
-    }
-    return replacer;
-  });
+  return naviI18n("constraint.field.default");
 };

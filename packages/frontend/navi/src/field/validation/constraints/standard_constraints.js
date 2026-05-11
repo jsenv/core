@@ -2,6 +2,7 @@
  * https://developer.mozilla.org/en-US/docs/Web/HTML/Guides/Constraint_validation
  */
 
+import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { CONSTRAINT_ATTRIBUTE_SET } from "../constraint_attribute_set.js";
 import { generateFieldInvalidMessage } from "./constraint_message_util.js";
 
@@ -12,7 +13,7 @@ export const DISABLED_CONSTRAINT = {
   messageAttribute: "data-disabled-message",
   check: (field) => {
     if (field.disabled) {
-      return generateFieldInvalidMessage(`{field} est désactivé.`, { field });
+      return generateFieldInvalidMessage("constraint.disabled", { field });
     }
     return null;
   },
@@ -30,7 +31,7 @@ export const REQUIRED_CONSTRAINT = {
     }
     if (field.type === "checkbox") {
       if (!field.checked) {
-        return `Veuillez cocher cette case.`;
+        return naviI18n("constraint.required.checkbox");
       }
       return null;
     }
@@ -40,7 +41,7 @@ export const REQUIRED_CONSTRAINT = {
       if (!name) {
         // If no name, check just this radio
         if (!field.checked) {
-          return `Veuillez sélectionner une option.`;
+          return naviI18n("constraint.required.radio");
         }
         return null;
       }
@@ -64,7 +65,7 @@ export const REQUIRED_CONSTRAINT = {
       }
 
       return {
-        message: `Veuillez sélectionner une option.`,
+        message: naviI18n("constraint.required.radio"),
         target: closestFieldset
           ? closestFieldset.querySelector("legend")
           : undefined,
@@ -75,24 +76,24 @@ export const REQUIRED_CONSTRAINT = {
     }
     if (field.type === "password") {
       return field.hasAttribute("data-same-as")
-        ? `Veuillez confirmer le mot de passe.`
-        : `Veuillez saisir un mot de passe.`;
+        ? naviI18n("constraint.required.password.confirm")
+        : naviI18n("constraint.required.password");
     }
     if (field.type === "email") {
       return field.hasAttribute("data-same-as")
-        ? `Veuillez confirmer l'adresse e-mail.`
-        : `Veuillez saisir une adresse e-mail.`;
+        ? naviI18n("constraint.required.email.confirm")
+        : naviI18n("constraint.required.email");
     }
     if (field.hasAttribute("data-same-as")) {
-      return `Veuillez confirmer le champ précédent.`;
+      return naviI18n("constraint.required.confirm");
     }
     if (field.getAttribute("data-rendered-by") === ".navi_list_container") {
-      return `Veuillez sélectionner une option.`;
+      return naviI18n("constraint.required.select");
     }
     if (field.getAttribute("data-rendered-by") === ".navi_select") {
-      return `Veuillez sélectionner une option.`;
+      return naviI18n("constraint.required.select");
     }
-    return `Veuillez remplir ce champ.`;
+    return naviI18n("constraint.required.default");
   },
 };
 CONSTRAINT_ATTRIBUTE_SET.add("required");
@@ -114,10 +115,7 @@ export const PATTERN_CONSTRAINT = {
     if (regex.test(value)) {
       return null;
     }
-    let message = generateFieldInvalidMessage(
-      `{field} ne correspond pas au format requis.`,
-      { field },
-    );
+    let message = generateFieldInvalidMessage("constraint.pattern", { field });
     const title = field.title;
     if (title) {
       message += `<br />${title}`;
@@ -143,10 +141,10 @@ export const TYPE_EMAIL_CONSTRAINT = {
       return null;
     }
     if (!value.includes("@")) {
-      return `Veuillez inclure "@" dans l'adresse e-mail. Il manque un symbole "@" dans ${value}.`;
+      return naviI18n("constraint.type.email.at", { value });
     }
     if (!emailregex.test(value)) {
-      return `Veuillez saisir une adresse e-mail valide.`;
+      return naviI18n("constraint.type.email.invalid");
     }
     return null;
   },
@@ -177,15 +175,16 @@ export const MIN_LENGTH_CONSTRAINT = {
       return null;
     }
     if (valueLength === 1) {
-      return generateFieldInvalidMessage(
-        `{field} doit contenir au moins ${minLength} caractère (il contient actuellement un seul caractère).`,
-        { field },
-      );
+      return generateFieldInvalidMessage("constraint.min_length.singular", {
+        field,
+        min: String(minLength),
+      });
     }
-    return generateFieldInvalidMessage(
-      `{field} doit contenir au moins ${minLength} caractères (il contient actuellement ${valueLength} caractères).`,
-      { field },
-    );
+    return generateFieldInvalidMessage("constraint.min_length.plural", {
+      field,
+      min: String(minLength),
+      count: String(valueLength),
+    });
   },
 };
 CONSTRAINT_ATTRIBUTE_SET.add("minLength");
@@ -219,10 +218,11 @@ export const MAX_LENGTH_CONSTRAINT = {
     if (valueLength <= maxLength) {
       return null;
     }
-    return generateFieldInvalidMessage(
-      `{field} doit contenir au maximum ${maxLength} caractères (il contient actuellement ${valueLength} caractères).`,
-      { field },
-    );
+    return generateFieldInvalidMessage("constraint.max_length", {
+      field,
+      max: String(maxLength),
+      count: String(valueLength),
+    });
   },
 };
 CONSTRAINT_ATTRIBUTE_SET.add("maxLength");
@@ -248,9 +248,7 @@ export const TYPE_NUMBER_CONSTRAINT = {
     const valueAsNumber = field.valueAsNumber;
     const valueAsNumberIsNaN = isNaN(valueAsNumber);
     if (valueAsNumberIsNaN) {
-      return generateFieldInvalidMessage(`{field} doit être un nombre.`, {
-        field,
-      });
+      return generateFieldInvalidMessage("constraint.type.number", { field });
     }
     return null;
   },
@@ -278,10 +276,10 @@ export const MIN_CONSTRAINT = {
         return null;
       }
       if (valueAsNumber < minNumber) {
-        return generateFieldInvalidMessage(
-          `{field} doit être supérieur ou égal à <strong>${minString}</strong>.`,
-          { field },
-        );
+        return generateFieldInvalidMessage("constraint.min.number", {
+          field,
+          min: minString,
+        });
       }
       return null;
     }
@@ -294,10 +292,10 @@ export const MIN_CONSTRAINT = {
       const value = field.value;
       const [hours, minutes] = value.split(":").map(Number);
       if (hours < minHours || (hours === minHours && minMinutes < minutes)) {
-        return generateFieldInvalidMessage(
-          `{field} doit être <strong>${min}</strong> ou plus.`,
-          { field },
-        );
+        return generateFieldInvalidMessage("constraint.min.time", {
+          field,
+          min,
+        });
       }
       return null;
     }
@@ -333,10 +331,10 @@ export const MAX_CONSTRAINT = {
         return null;
       }
       if (valueAsNumber > maxNumber) {
-        return generateFieldInvalidMessage(
-          `{field} doit être <strong>${maxAttribute}</strong> ou moins.`,
-          { field },
-        );
+        return generateFieldInvalidMessage("constraint.max.number", {
+          field,
+          max: maxAttribute,
+        });
       }
       return null;
     }
@@ -349,10 +347,10 @@ export const MAX_CONSTRAINT = {
       const value = field.value;
       const [hours, minutes] = value.split(":").map(Number);
       if (hours > maxHours || (hours === maxHours && maxMinutes > minutes)) {
-        return generateFieldInvalidMessage(
-          `{field} doit être <strong>${max}</strong> ou moins.`,
-          { field },
-        );
+        return generateFieldInvalidMessage("constraint.max.time", {
+          field,
+          max,
+        });
       }
       return null;
     }

@@ -24,14 +24,14 @@ export const MIN_LOWER_LETTER_CONSTRAINT = {
     if (numberOfLowercaseChars < min) {
       if (min === 1) {
         return generateFieldInvalidMessage(
-          `{field} doit contenir au moins une lettre minuscule.`,
+          "constraint.min_lower_letter.singular",
           { field },
         );
       }
-      return generateFieldInvalidMessage(
-        `{field} contenir au moins ${min} lettres minuscules.`,
-        { field },
-      );
+      return generateFieldInvalidMessage("constraint.min_lower_letter.plural", {
+        field,
+        min: String(min),
+      });
     }
     return "";
   },
@@ -61,14 +61,14 @@ export const MIN_UPPER_LETTER_CONSTRAINT = {
     if (numberOfUppercaseChars < min) {
       if (min === 1) {
         return generateFieldInvalidMessage(
-          `{field} doit contenir au moins une lettre majuscule.`,
+          "constraint.min_upper_letter.singular",
           { field },
         );
       }
-      return generateFieldInvalidMessage(
-        `{field} contenir au moins ${min} lettres majuscules.`,
-        { field },
-      );
+      return generateFieldInvalidMessage("constraint.min_upper_letter.plural", {
+        field,
+        min: String(min),
+      });
     }
     return "";
   },
@@ -97,15 +97,14 @@ export const MIN_DIGIT_CONSTRAINT = {
     }
     if (numberOfDigitChars < min) {
       if (min === 1) {
-        return generateFieldInvalidMessage(
-          `{field} doit contenir au moins un chiffre.`,
-          { field },
-        );
+        return generateFieldInvalidMessage("constraint.min_digit.singular", {
+          field,
+        });
       }
-      return generateFieldInvalidMessage(
-        `{field} doit contenir au moins ${min} chiffres.`,
-        { field },
-      );
+      return generateFieldInvalidMessage("constraint.min_digit.plural", {
+        field,
+        min: String(min),
+      });
     }
     return "";
   },
@@ -140,14 +139,18 @@ export const MIN_SPECIAL_CHAR_CONSTRAINT = {
     if (numberOfSpecialChars < min) {
       if (min === 1) {
         return generateFieldInvalidMessage(
-          `{field} doit contenir au moins un caractère spécial. (${specialCharset})`,
-          { field },
+          "constraint.min_special_char.singular",
+          {
+            field,
+            charset: specialCharset,
+          },
         );
       }
-      return generateFieldInvalidMessage(
-        `{field} doit contenir au moins ${min} caractères spéciaux (${specialCharset})`,
-        { field },
-      );
+      return generateFieldInvalidMessage("constraint.min_special_char.plural", {
+        field,
+        min: String(min),
+        charset: specialCharset,
+      });
     }
     return "";
   },

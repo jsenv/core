@@ -51,7 +51,17 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useSignal } from "@preact/signals";
-      import { Box, Field, Label, Picker, Time, Text, Icon } from "@jsenv/navi";
+      import {
+        Box,
+        Field,
+        Label,
+        Picker,
+        Time,
+        Text,
+        Icon,
+        Form,
+        Button,
+      } from "@jsenv/navi";
 
       // ── helpers ─────────────────────────────────────────────────
       const today = new Date();
@@ -281,48 +291,46 @@
 
       const FormIntegrationDemo = () => {
         const submittedSignal = useSignal(null);
-        const onSubmit = (e) => {
-          e.preventDefault();
-          const data = Object.fromEntries(new FormData(e.target));
-          submittedSignal.value = data;
-        };
         return (
           <div class="demo-section">
             <h2>Form integration</h2>
             <p>
               Pickers participate in form submission. The day field is required.
             </p>
-            <form onSubmit={onSubmit}>
-              <Box flex="y" spacing="m">
-                <Field vertical spacing="s">
-                  <Label>Date de début (required)</Label>
-                  <Picker
-                    name="start_date"
-                    type="day"
-                    required
-                    placeholder="Choisir une date"
-                  />
-                </Field>
-                <Field vertical spacing="s">
-                  <Label>Heure de début</Label>
-                  <Picker
-                    name="start_time"
-                    type="time"
-                    min="08:00"
-                    max="20:00"
-                    placeholder="Choisir une heure"
-                  />
-                </Field>
-                <Box>
-                  <button type="submit">Soumettre</button>
-                </Box>
-                {submittedSignal.value && (
-                  <pre style="margin:0;font-size:12px;background:#f0f0f0;padding:8px;border-radius:4px;">
-                    {JSON.stringify(submittedSignal.value, null, 2)}
-                  </pre>
-                )}
-              </Box>
-            </form>
+            <Form
+              action={(values) => {
+                submittedSignal.value = values;
+              }}
+              flex="y"
+              spacing="m"
+              alignX="start"
+            >
+              <Field vertical>
+                <Label>Date de début (required)</Label>
+                <Picker
+                  name="start_date"
+                  type="day"
+                  required
+                  placeholder="Choisir une date"
+                />
+              </Field>
+              <Field vertical>
+                <Label>Heure de début</Label>
+                <Picker
+                  name="start_time"
+                  type="time"
+                  min="08:00"
+                  max="20:00"
+                  placeholder="Choisir une heure"
+                />
+              </Field>
+              <Button type="submit">Soumettre</Button>
+              {submittedSignal.value && (
+                <pre style="margin:0;font-size:12px;background:#f0f0f0;padding:8px;border-radius:4px;">
+                  {JSON.stringify(submittedSignal.value, null, 2)}
+                </pre>
+              )}
+            </Form>
           </div>
         );
       };

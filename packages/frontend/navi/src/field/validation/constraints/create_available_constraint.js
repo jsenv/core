@@ -1,5 +1,5 @@
+import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { CONSTRAINT_ATTRIBUTE_SET } from "../constraint_attribute_set.js";
-import { replaceStringVars } from "./constraint_message_util.js";
 
 CONSTRAINT_ATTRIBUTE_SET.add("data-available-message");
 
@@ -11,7 +11,7 @@ export const createAvailableConstraint = (
   // But this is unlikely to happen and user could reload the page to be able to choose that name
   // that suddenly became available
   existingValueSet,
-  message = `"{value}" est utilisé. Veuillez entrer une autre valeur.`,
+  message = "constraint.available",
 ) => {
   return {
     name: "available",
@@ -19,15 +19,8 @@ export const createAvailableConstraint = (
     check: (field) => {
       const fieldValue = field.value;
       const hasConflict = existingValueSet.has(fieldValue);
-      // console.log({
-      //   inputValue,
-      //   names: Array.from(otherNameSet.values()),
-      //   hasConflict,
-      // });
       if (hasConflict) {
-        return replaceStringVars(message, {
-          "{value}": fieldValue,
-        });
+        return naviI18n(message, { value: fieldValue });
       }
       return "";
     },

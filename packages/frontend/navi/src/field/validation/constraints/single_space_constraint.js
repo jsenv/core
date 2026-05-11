@@ -15,19 +15,17 @@ export const SINGLE_SPACE_CONSTRAINT = {
     const hasDoubleSpace = fieldValue.includes("  ");
     if (hasLeadingSpace || hasDoubleSpace || hasTrailingSpace) {
       if (hasLeadingSpace) {
-        return generateFieldInvalidMessage(
-          `{field} ne doit pas commencer par un espace.`,
-          { field },
-        );
+        return generateFieldInvalidMessage("constraint.single_space.start", {
+          field,
+        });
       }
       if (hasTrailingSpace) {
-        return generateFieldInvalidMessage(
-          `{field} ne doit pas finir par un espace.`,
-          { field },
-        );
+        return generateFieldInvalidMessage("constraint.single_space.end", {
+          field,
+        });
       }
       return generateFieldInvalidMessage(
-        `{field} ne doit pas contenir plusieurs espaces consécutifs.`,
+        "constraint.single_space.consecutive",
         { field },
       );
     }
