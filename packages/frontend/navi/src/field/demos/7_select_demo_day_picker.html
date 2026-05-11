@@ -99,7 +99,6 @@
       const DaySelect = () => {
         const offset = scheduledDaySignal.value;
         const dayOptions = buildDayOptions();
-        const isCustom = offset >= DAYS_TO_SHOW;
 
         return (
           <Select
@@ -124,11 +123,7 @@
                   <Text capitalize>{label}</Text>
                 </DayOption>
               ))}
-              <CustomDayOption
-                offset={offset}
-                isCustom={isCustom}
-                index={dayOptions.length}
-              />
+              <CustomDayOption offset={offset} index={dayOptions.length} />
             </List>
           </Select>
         );
@@ -201,19 +196,22 @@
         );
       };
 
-      const CustomDayOption = ({ offset, isCustom, index }) => {
-        const customDateKey = isCustom ? offsetToDateKey(offset) : undefined;
-        const [customValue, setCustomValue] = useState(customDateKey);
+      const CustomDayOption = ({ offset, index }) => {
+        const initialCustomOffset = offset >= DAYS_TO_SHOW ? offset : null;
+        const [customOffset, setCustomOffset] = useState(initialCustomOffset);
+        const isCustom = customOffset !== null;
         return (
           <>
             {isCustom && (
               <DayOption
                 id="custom_display"
                 index={index}
-                value={offset}
-                selected={isCustom}
+                value={customOffset}
+                selected={offset === customOffset}
               >
-                <Text capitalize>{formatSelectedLabel(customDateKey)}</Text>
+                <Text capitalize>
+                  {formatSelectedLabel(offsetToDateKey(customOffset))}
+                </Text>
               </DayOption>
             )}
             <DayOption
@@ -222,14 +220,13 @@
               value="custom"
               relative
             >
-              <Text>Choisir une autre date…</Text>
+              <Text>Choisir un autre jour…</Text>
               <Input
                 type="date"
-                value={customValue}
+                value={isCustom ? offsetToDateKey(customOffset) : undefined}
                 min={toDateKey(new Date())}
                 uiAction={(value) => {
-                  setCustomValue(value);
-                  scheduledDaySignal.value = dateKeyToOffset(value);
+                  setCustomOffset(dateKeyToOffset(value));
                 }}
                 onMouseDown={(e) => {
                   e.preventDefault();
