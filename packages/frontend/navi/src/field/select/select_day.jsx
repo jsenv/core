@@ -1,6 +1,7 @@
 import { useSignal } from "@preact/signals";
 
 import { Text } from "@jsenv/navi/src/text/text.jsx";
+import { Time } from "@jsenv/navi/src/text/time.jsx";
 import { Input } from "../input/input.jsx";
 import { List, ListItem, requestListItemSelect } from "../list/list.jsx";
 
@@ -10,7 +11,6 @@ export const SelectDay = (props) => {
     max,
     maxLength = 10,
     custom: forceCustom,
-    locale = "fr-FR",
     value,
     placeholder = "Choisir un jour",
     SelectDispatcher,
@@ -19,8 +19,6 @@ export const SelectDay = (props) => {
 
   const minDate = startOfDay(min ?? new Date());
   const minDateString = toDateString(minDate);
-  const todayDateString = toDateString(startOfDay(new Date()));
-  const minIsToday = minDateString === todayDateString;
 
   let daysToShow;
   let showCustomPicker;
@@ -39,7 +37,7 @@ export const SelectDay = (props) => {
     showCustomPicker = forceCustom || false;
   }
 
-  const dayOptions = buildDayOptions(minDate, daysToShow, locale, minIsToday);
+  const dayOptions = buildDayOptions(minDate, daysToShow);
   const fixedDateStrings = dayOptions.map((o) => o.dateString);
   const staticDateStringSet = new Set(fixedDateStrings);
 
@@ -51,7 +49,7 @@ export const SelectDay = (props) => {
       type={undefined}
     >
       <List expandX>
-        {dayOptions.map(({ dateString, label }, index) => (
+        {dayOptions.map(({ dateString }, index) => (
           <DayOption
             key={dateString}
             value={dateString}
@@ -59,7 +57,9 @@ export const SelectDay = (props) => {
             id={dateString}
             selected={value === dateString}
           >
-            <Text capitalize>{label}</Text>
+            <Time type="day" capitalize>
+              {dateString}
+            </Time>
           </DayOption>
         ))}
         {showCustomPicker && (
@@ -67,7 +67,6 @@ export const SelectDay = (props) => {
             value={value}
             index={dayOptions.length}
             minDateString={minDateString}
-            locale={locale}
             staticDateStringSet={staticDateStringSet}
           />
         )}
@@ -88,7 +87,6 @@ const CustomDayOption = ({
   value,
   index,
   minDateString,
-  locale,
   staticDateStringSet,
 }) => {
   const isValueInFixed = staticDateStringSet.has(value);
@@ -123,15 +121,9 @@ const CustomDayOption = ({
         hidden={!hasCustom}
         selected={value === customDateString}
       >
-        <Text capitalize>
-          {hasCustom
-            ? dateStringToDate(customDateString).toLocaleDateString(locale, {
-                weekday: "long",
-                day: "numeric",
-                month: "long",
-              })
-            : null}
-        </Text>
+        <Time type="day" capitalize>
+          {customDateString}
+        </Time>
       </DayOption>
       <DayOption
         id="custom_pick"
@@ -161,26 +153,13 @@ const CustomDayOption = ({
   );
 };
 
-const buildDayOptions = (minDate, count, locale, minIsToday) => {
+const buildDayOptions = (minDate, count) => {
   const options = [];
   for (let i = 0; i < count; i++) {
     const d = new Date(minDate);
     d.setDate(minDate.getDate() + i);
     const dateString = toDateString(d);
-    const baseLabel = d.toLocaleDateString(locale, {
-      weekday: "long",
-      day: "numeric",
-      month: "long",
-    });
-    let label = baseLabel;
-    if (minIsToday) {
-      if (i === 0) {
-        label = `${baseLabel} (aujourd'hui)`;
-      } else if (i === 1) {
-        label = `${baseLabel} (demain)`;
-      }
-    }
-    options.push({ dateString, label });
+    options.push({ dateString });
   }
   return options;
 };
@@ -197,8 +176,6 @@ const toDateString = (date) => {
   const d = String(date.getDate()).padStart(2, "0");
   return `${y}-${m}-${d}`;
 };
-
-const dateStringToDate = (dateString) => new Date(`${dateString}T00:00:00`);
 
 const dateDiffInDays = (a, b) => Math.round((b - a) / MS_PER_DAY);
 
