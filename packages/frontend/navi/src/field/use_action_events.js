@@ -76,8 +76,7 @@ export const useActionEvents = (
           return;
         }
         const action = e.detail.action;
-        const actionLabel = action.name;
-        debugAction(e, `navi_action (action=${actionLabel})`);
+        debugAction(e, `navi_action (${action})`);
         onAction?.(e);
       },
       navi_action_start: (e) => {
