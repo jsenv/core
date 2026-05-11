@@ -17,7 +17,6 @@ import {
   useState,
 } from "preact/hooks";
 
-import { isSignal } from "@jsenv/navi/src/utils/is_signal.js";
 import { useActionBoundToOneParam } from "../../action/use_action.js";
 import { useActionStatus } from "../../action/use_action_status.js";
 import { useExecuteAction } from "../../action/use_execute_action.js";
@@ -1657,7 +1656,7 @@ const ListItemRealOrVoid = (props) => {
     id,
     index,
     hidden,
-    value: isSignal(value) ? value.value : value,
+    value,
     selected,
     matchScore,
     disabled,

@@ -8,6 +8,7 @@ import {
   useState,
 } from "preact/hooks";
 
+import { isSignal } from "@jsenv/navi/src/utils/is_signal.js";
 import { useNavState } from "../nav/browser_integration/browser_integration.js";
 import { useInitialValue } from "../state/use_initial_value.js";
 import { FormContext } from "./form_context.js";
@@ -197,7 +198,9 @@ export const useUIStateController = (
     getPropFromState,
     getStateFromProp,
     setUIState: (prop, e) => {
-      const newUIState = uiStateController.getStateFromProp(prop);
+      const newUIState = uiStateController.getStateFromProp(
+        isSignal(prop) ? prop.value : prop,
+      );
       if (persists) {
         setNavState(prop);
       }
@@ -414,6 +417,9 @@ export const useUIGroupStateController = (
     uiAction,
     uiState: emptyState,
     setUIState: (newUIState, e, { notifyExternal = true } = {}) => {
+      if (isSignal(newUIState)) {
+        newUIState = newUIState.value;
+      }
       const currentUIState = uiStateController.uiState;
       if (newUIState === currentUIState) {
         return;
