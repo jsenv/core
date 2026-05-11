@@ -25185,7 +25185,7 @@ const InputCheckboxDispatcher = props => {
   });
 };
 const InputCheckboxUI = props => {
-  import.meta.css = [css$s, "@jsenv/navi/src/field/input_checkbox.jsx"];
+  import.meta.css = [css$s, "@jsenv/navi/src/field/input/input_checkbox.jsx"];
   const {
     ref,
     /* eslint-disable no-unused-vars */
@@ -25940,7 +25940,7 @@ const InputRadioDispatcher = props => {
   });
 };
 const InputRadioUI = props => {
-  import.meta.css = [css$r, "@jsenv/navi/src/field/input_radio.jsx"];
+  import.meta.css = [css$r, "@jsenv/navi/src/field/input/input_radio.jsx"];
   const {
     ref,
     /* eslint-disable no-unused-vars */
@@ -26432,7 +26432,7 @@ const InputRangeDispatcher = props => {
   });
 };
 const InputRangeUI = props => {
-  import.meta.css = [css$q, "@jsenv/navi/src/field/input_range.jsx"];
+  import.meta.css = [css$q, "@jsenv/navi/src/field/input/input_range.jsx"];
   const {
     ref,
     onInput,
@@ -29339,7 +29339,7 @@ const InputTextualDispatcher = props => {
 };
 const InputNativeContext = createContext(null);
 const InputTextualUI = props => {
-  import.meta.css = [css$n, "@jsenv/navi/src/field/input_textual.jsx"];
+  import.meta.css = [css$n, "@jsenv/navi/src/field/input/input_textual.jsx"];
   const {
     ref,
     type,
@@ -31356,6 +31356,11 @@ installImportMetaCssBuild(import.meta);const css$i = /* css */`
  * but does NOT submit a parent form. Use a separate submit button for that.
  */
 const Select = props => {
+  if (props.type === "day") {
+    return jsx(SelectDay, {
+      ...props
+    });
+  }
   const defaultRef = useRef(null);
   const ref = props.ref || defaultRef;
   const uiStateController = useUIGroupStateController(props, "select", {
@@ -31401,7 +31406,7 @@ const SelectDispatcher = props => {
   });
 };
 const SelectUI = props => {
-  import.meta.css = [css$i, "@jsenv/navi/src/field/select.jsx"];
+  import.meta.css = [css$i, "@jsenv/navi/src/field/select/select.jsx"];
   const {
     placeholder = "Select…",
     trigger,
@@ -31889,6 +31894,183 @@ const SelectWithDialog = props => {
 const SelectRequestCloseContext = createContext();
 const useSelectRequestClose = () => {
   return useContext(SelectRequestCloseContext);
+};
+
+// --- Day picker ---
+
+const MS_PER_DAY = 86_400_000;
+const startOfDay = date => {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  return d;
+};
+const toDateKey = date => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+};
+const dateKeyToDate = dateKey => new Date(`${dateKey}T00:00:00`);
+const dateDiffInDays = (a, b) => Math.round((b - a) / MS_PER_DAY);
+const buildDayOptions = (minDate, count, locale, minIsToday) => {
+  const options = [];
+  for (let i = 0; i < count; i++) {
+    const d = new Date(minDate);
+    d.setDate(minDate.getDate() + i);
+    const key = toDateKey(d);
+    const baseLabel = d.toLocaleDateString(locale, {
+      weekday: "long",
+      day: "numeric",
+      month: "long"
+    });
+    let label = baseLabel;
+    if (minIsToday) {
+      if (i === 0) {
+        label = `${baseLabel} (aujourd'hui)`;
+      } else if (i === 1) {
+        label = `${baseLabel} (demain)`;
+      }
+    }
+    options.push({
+      key,
+      label
+    });
+  }
+  return options;
+};
+const DayOption = ({
+  children,
+  ...rest
+}) => {
+  return jsx(ListItem, {
+    paddingX: "s",
+    paddingY: "m",
+    ...rest,
+    children: children
+  });
+};
+const CustomDayOption = ({
+  value,
+  index,
+  minKey,
+  locale,
+  uiAction
+}) => {
+  const fixedOptions = buildDayOptions(dateKeyToDate(minKey), index, locale, false);
+  const isValueInFixed = fixedOptions.some(o => o.key === value);
+  const initialCustomKey = value && value !== "custom" && !isValueInFixed ? value : null;
+  const [customKey, setCustomKey] = useState(initialCustomKey);
+  const hasCustom = customKey !== null;
+  return jsxs(Fragment, {
+    children: [hasCustom && jsx(DayOption, {
+      id: "custom_display",
+      index: index,
+      value: customKey,
+      selected: value === customKey,
+      children: jsx(Text, {
+        capitalize: true,
+        children: dateKeyToDate(customKey).toLocaleDateString(locale, {
+          weekday: "long",
+          day: "numeric",
+          month: "long"
+        })
+      })
+    }), jsxs(DayOption, {
+      id: "custom_pick",
+      index: hasCustom ? index + 1 : index,
+      value: "custom",
+      relative: true,
+      children: [jsx(Text, {
+        children: "Choisir un autre jour\u2026"
+      }), jsx(Input, {
+        type: "date",
+        value: hasCustom ? customKey : undefined,
+        min: minKey,
+        uiAction: newKey => {
+          setCustomKey(newKey);
+          if (uiAction) {
+            uiAction(newKey);
+          }
+        },
+        onMouseDown: e => {
+          e.preventDefault();
+          e.stopPropagation();
+          e.currentTarget.showPicker();
+        },
+        absolute: true,
+        inset: true,
+        expand: true,
+        opacity: 0,
+        cursor: "pointer"
+      })]
+    })]
+  });
+};
+const SelectDay = ({
+  min,
+  max,
+  maxLength = 10,
+  custom: forceCustom,
+  locale = "fr-FR",
+  value,
+  uiAction,
+  placeholder = "Choisir un jour",
+  ...rest
+}) => {
+  const minDate = startOfDay(min ?? new Date());
+  const minKey = toDateKey(minDate);
+  const todayKey = toDateKey(startOfDay(new Date()));
+  const minIsToday = minKey === todayKey;
+  let daysToShow;
+  let showCustomPicker;
+  if (max) {
+    const maxDate = startOfDay(max);
+    const totalDays = dateDiffInDays(minDate, maxDate) + 1;
+    if (totalDays > maxLength) {
+      daysToShow = maxLength;
+      showCustomPicker = true;
+    } else {
+      daysToShow = totalDays;
+      showCustomPicker = forceCustom || false;
+    }
+  } else {
+    daysToShow = maxLength;
+    showCustomPicker = forceCustom || false;
+  }
+  const dayOptions = buildDayOptions(minDate, daysToShow, locale, minIsToday);
+  return jsx(SelectDispatcher, {
+    trigger: jsx(SelectTrigger, {}),
+    placeholder: placeholder,
+    value: value,
+    uiAction: key => {
+      if (key !== "custom" && uiAction) {
+        uiAction(key);
+      }
+    },
+    ...rest,
+    children: jsxs(List, {
+      expandX: true,
+      children: [dayOptions.map(({
+        key,
+        label
+      }, index) => jsx(DayOption, {
+        value: key,
+        index: index,
+        id: key,
+        selected: value === key,
+        children: jsx(Text, {
+          capitalize: true,
+          children: label
+        })
+      }, key)), showCustomPicker && jsx(CustomDayOption, {
+        value: value,
+        index: dayOptions.length,
+        minKey: minKey,
+        locale: locale,
+        uiAction: uiAction
+      })]
+    })
+  });
 };
 
 /**
