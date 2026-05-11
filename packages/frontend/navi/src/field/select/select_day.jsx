@@ -1,10 +1,8 @@
-import { dispatchCustomEvent } from "@jsenv/dom";
 import { useSignal } from "@preact/signals";
-import { useRef } from "preact/hooks";
 
 import { Text } from "@jsenv/navi/src/text/text.jsx";
 import { Input } from "../input/input.jsx";
-import { List, ListItem } from "../list/list.jsx";
+import { List, ListItem, requestListItemSelect } from "../list/list.jsx";
 
 export const SelectDay = (props) => {
   const {
@@ -44,7 +42,6 @@ export const SelectDay = (props) => {
   const dayOptions = buildDayOptions(minDate, daysToShow, locale, minIsToday);
   const fixedDateStrings = dayOptions.map((o) => o.dateString);
   const staticDateStringSet = new Set(fixedDateStrings);
-  const listRef = useRef(null);
 
   return (
     <SelectDispatcher
@@ -53,7 +50,7 @@ export const SelectDay = (props) => {
       {...rest}
       type={undefined}
     >
-      <List ref={listRef} expandX>
+      <List expandX>
         {dayOptions.map(({ dateString, label }, index) => (
           <DayOption
             key={dateString}
@@ -72,7 +69,6 @@ export const SelectDay = (props) => {
             minDateString={minDateString}
             locale={locale}
             staticDateStringSet={staticDateStringSet}
-            listRef={listRef}
           />
         )}
       </List>
@@ -94,7 +90,6 @@ const CustomDayOption = ({
   minDateString,
   locale,
   staticDateStringSet,
-  listRef,
 }) => {
   const isValueInFixed = staticDateStringSet.has(value);
   const initialCustomDateString =
@@ -104,19 +99,18 @@ const CustomDayOption = ({
   const hasCustom = customDateStringSignal.value !== undefined;
 
   const onDatePicked = (dateString, e) => {
-    const listEl = listRef.current;
     if (staticDateStringSet.has(dateString)) {
       customDateStringSignal.value = undefined;
-      dispatchCustomEvent(listEl, "navi_list_request_select", {
-        item: { id: dateString, value: dateString },
-        event: e,
-      });
+      const itemEl = document.getElementById(dateString);
+      if (itemEl) {
+        requestListItemSelect(itemEl, { event: e });
+      }
     } else {
       customDateStringSignal.value = dateString;
-      dispatchCustomEvent(listEl, "navi_list_request_select", {
-        item: { id: "custom_display", value: dateString },
-        event: e,
-      });
+      const itemEl = document.getElementById("custom_display");
+      if (itemEl) {
+        requestListItemSelect(itemEl, { event: e });
+      }
     }
   };
 

@@ -1894,6 +1894,13 @@ const ListItemReal = ({
         });
         rest.onMouseDown?.(e);
       }}
+      onnavi_list_item_request_select={(e) => {
+        const listEl = e.currentTarget.closest(".navi_list");
+        dispatchCustomEvent(listEl, "navi_list_request_select", {
+          item,
+          event: e.detail.event || e,
+        });
+      }}
       basePseudoState={{
         ":disabled": Boolean(disabled),
         ":-navi-pointed": isPointed,
@@ -2077,6 +2084,11 @@ export const requestListNavFromCurrent = (listEl, { event, goal }) => {
 };
 export const requestListSelectCurrent = (listEl, { event }) => {
   return dispatchCustomEvent(listEl, "navi_list_request_select_current", {
+    event,
+  });
+};
+export const requestListItemSelect = (itemEl, { event } = {}) => {
+  return dispatchCustomEvent(itemEl, "navi_list_item_request_select", {
     event,
   });
 };
