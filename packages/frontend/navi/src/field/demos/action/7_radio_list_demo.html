@@ -30,30 +30,23 @@
       };
 
       const DynamicRadioListDemo = () => {
-        // Available color choices with their selection state
         const [colorChoices, setColorChoices] = useState([
           { id: 1, color: "red", selected: true },
           { id: 2, color: "blue", selected: false },
           { id: 3, color: "green", selected: false },
         ]);
 
-        // Derived state: currently selected color in data state
         const selectedColor =
           colorChoices.find((choice) => choice.selected)?.color || null;
 
-        // UI FORM STATE - This represents the current form state (may differ from data state)
         const [uiSelectedColor, setUiSelectedColor] = useState(selectedColor);
 
-        // Next ID for new colors
         const [nextId, setNextId] = useState(4);
-
-        // Form submission feedback
         const [isSubmitting, setIsSubmitting] = useState(false);
         const [submitMessage, setSubmitMessage] = useState("");
         const [submitError, setSubmitError] = useState("");
         const [forceError, setForceError] = useState(false);
 
-        // Random colors pool
         const randomColors = [
           "purple",
           "orange",
@@ -71,7 +64,6 @@
           "maroon",
         ];
 
-        // Action that simulates submitting form data (takes 1s)
         const submitForm = async ({ color }) => {
           setIsSubmitting(true);
           setSubmitError("");
@@ -81,14 +73,12 @@
             console.log("Submitting form data:", color);
             await new Promise((resolve) => setTimeout(resolve, 1000));
 
-            // Simulate error if checkbox is checked
             if (forceError) {
               throw new Error(
                 "Simulated server error: Failed to update color preference",
               );
             }
 
-            // Update the data state to match the form submission
             setColorChoices((prev) =>
               prev.map((choice) => ({
                 ...choice,
@@ -106,7 +96,6 @@
           }
         };
 
-        // Add a new color to the data state
         const addColorToState = (color) => {
           setColorChoices((prev) => [
             ...prev,
@@ -115,14 +104,12 @@
           setNextId((prev) => prev + 1);
         };
 
-        // Remove a color from the data state
         const removeColorFromState = (colorId) => {
           setColorChoices((prev) =>
             prev.filter((choice) => choice.id !== colorId),
           );
         };
 
-        // Select a color in the data state (radio behavior - only one selected)
         const selectColorInState = (colorId) => {
           setColorChoices((prev) =>
             prev.map((choice) => ({
@@ -132,22 +119,6 @@
           );
         };
 
-        // Clear selection in the data state
-        const clearSelectionInState = () => {
-          setColorChoices((prev) =>
-            prev.map((choice) => ({
-              ...choice,
-              selected: false,
-            })),
-          );
-        };
-
-        // Get the color that reset would sync to
-        const getResetColor = () => {
-          return colorChoices.find((choice) => choice.selected)?.color || null;
-        };
-
-        // Add a random color choice to the data state
         const addRandomColor = () => {
           const availableColors = randomColors.filter(
             (color) => !colorChoices.some((choice) => choice.color === color),
@@ -178,15 +149,9 @@
                 <div style="margin-bottom: 15px;">
                   <button
                     onClick={addRandomColor}
-                    style="padding: 6px 12px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; margin-right: 8px;"
+                    style="padding: 6px 12px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;"
                   >
                     + Add Random Color
-                  </button>
-                  <button
-                    onClick={clearSelectionInState}
-                    style="padding: 6px 12px; background: #ff9800; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;"
-                  >
-                    Clear Selection
                   </button>
                 </div>
 
@@ -194,16 +159,7 @@
                   {colorChoices.map(({ id, color, selected }) => (
                     <div
                       key={id}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "8px",
-                        padding: "6px",
-                        border: "1px solid #eee",
-                        borderRadius: "3px",
-                        background: selected ? "#e8f5e8" : "#fafafa",
-                        borderColor: selected ? "#4CAF50" : "#eee",
-                      }}
+                      style="display: flex; align-items: center; gap: 8px; padding: 6px; border: 1px solid #eee; border-radius: 3px; background: #fafafa;"
                     >
                       <span style="flex: 1; font-size: 14px;">
                         {color.charAt(0).toUpperCase() + color.slice(1)}
@@ -214,7 +170,7 @@
                         style={{
                           padding: "4px 8px",
                           fontSize: "11px",
-                          background: selected ? "#4CAF50" : "#2196F3",
+                          background: selected ? "#4CAF50" : "#ccc",
                           color: "white",
                           border: "none",
                           borderRadius: "3px",
@@ -222,7 +178,7 @@
                           minWidth: "60px",
                         }}
                       >
-                        {selected ? "Selected" : "Select"}
+                        {selected ? "Selected" : "Not Selected"}
                       </button>
 
                       <button
@@ -315,9 +271,9 @@
                     </Button>
                     <Button type="reset">
                       🔄 Reset to State{" "}
-                      {getResetColor() && (
+                      {selectedColor && (
                         <span style="font-size: 11px; opacity: 0.7;">
-                          ({getResetColor()})
+                          ({selectedColor})
                         </span>
                       )}
                     </Button>

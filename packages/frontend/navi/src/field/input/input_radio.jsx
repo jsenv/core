@@ -352,7 +352,7 @@ export const InputRadio = (props) => {
     getPropFromState: Boolean,
     getStateFromParent: (parentUIStateController) => {
       if (parentUIStateController.componentType === "radio_list") {
-        return parentUIStateController.value === props.value;
+        return parentUIStateController.uiState === props.value;
       }
       return undefined;
     },
