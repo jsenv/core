@@ -1,7 +1,6 @@
 import {
   dispatchCustomEvent,
   dispatchPublicCustomEvent,
-  eventInvolves,
   getElementSignature,
   pickPositionRelativeTo,
   scrollIntoViewScoped,
@@ -668,16 +667,15 @@ const ListUI = (props) => {
         });
       }}
       onnavi_list_request_select={(e) => {
-        const { item, event } = e.detail;
+        const { item } = e.detail;
         if (!item) {
           return;
         }
-        // Nav to the selected item first (updates uiState, scrolls, etc.)
-        scrollToItem(item, {
-          reason: "navi_list_request_select",
-          event: event || e,
-        });
         const listEl = e.currentTarget;
+        dispatchCustomEvent(listEl, "navi_list_request_nav", {
+          event: e,
+          item,
+        });
         dispatchPublicCustomEvent(listEl, "navi_list_select", {
           item,
           event: e,
@@ -1410,12 +1408,13 @@ const ListWithAction = (props) => {
           return;
         }
         const anchorIndex = getAnchorIndex();
-        const isDisabledIndex = (i) => Boolean(visibleItems[i]?.disabled);
+        const isSkippedIndex = (i) =>
+          Boolean(visibleItems[i]?.disabled || visibleItems[i]?.readOnly);
         const resolveIndex = () => {
           if (goal === "down") {
             if (anchorIndex === -1) {
               let i = 0;
-              while (i < visibleItemCount && isDisabledIndex(i)) {
+              while (i < visibleItemCount && isSkippedIndex(i)) {
                 i++;
               }
               return i < visibleItemCount ? i : anchorIndex;
@@ -1423,7 +1422,7 @@ const ListWithAction = (props) => {
             let belowIndex = anchorIndex + 1;
             while (
               belowIndex < visibleItemCount &&
-              isDisabledIndex(belowIndex)
+              isSkippedIndex(belowIndex)
             ) {
               belowIndex++;
             }
@@ -1432,27 +1431,27 @@ const ListWithAction = (props) => {
           if (goal === "up") {
             if (anchorIndex === -1) {
               let i = visibleItemCount - 1;
-              while (i >= 0 && isDisabledIndex(i)) {
+              while (i >= 0 && isSkippedIndex(i)) {
                 i--;
               }
               return i >= 0 ? i : anchorIndex;
             }
             let aboveIndex = anchorIndex - 1;
-            while (aboveIndex >= 0 && isDisabledIndex(aboveIndex)) {
+            while (aboveIndex >= 0 && isSkippedIndex(aboveIndex)) {
               aboveIndex--;
             }
             return aboveIndex >= 0 ? aboveIndex : anchorIndex;
           }
           if (goal === "first") {
             let i = 0;
-            while (i < visibleItemCount && isDisabledIndex(i)) {
+            while (i < visibleItemCount && isSkippedIndex(i)) {
               i++;
             }
             return i < visibleItemCount ? i : anchorIndex;
           }
           if (goal === "last") {
             let i = visibleItemCount - 1;
-            while (i >= 0 && isDisabledIndex(i)) {
+            while (i >= 0 && isSkippedIndex(i)) {
               i--;
             }
             return i >= 0 ? i : anchorIndex;
@@ -1507,15 +1506,8 @@ const ListWithAction = (props) => {
           event.type === "navi_list_nav_top_on_displayed" ||
           event.type === "navi_list_top_match_change" ||
           event.type === "navi_scroll_restore";
-
         if (item && !isAutomaticNav) {
-          const isSelectNav = eventInvolves(
-            e,
-            (ev) => ev.type === "navi_list_request_select",
-          );
-          if (!isSelectNav) {
-            uiStateController.setUIState(item.value, event);
-          }
+          uiStateController.setUIState(item.value, event);
         }
       }}
       // Dispatch action request on select
@@ -1526,9 +1518,6 @@ const ListWithAction = (props) => {
           ? listEl.querySelector(`#${CSS.escape(item.id)}`)
           : e.target;
         const resolvedRequester = requester || e.target;
-        if (item && !resolvedRequester.hasAttribute("data-readonly")) {
-          uiStateController.setUIState(item.value, e.detail?.event || e);
-        }
         dispatchActionRequestedCustomEvent(listEl, {
           event: e,
           requester: resolvedRequester,
@@ -1683,6 +1672,7 @@ const ListItemRealOrVoid = (props) => {
     selected,
     matchScore,
     disabled,
+    readOnly,
   };
   const visibleIndex = tracker.useTrackItem(item);
   const groupTracker = useContext(GroupItemTrackerContext);
