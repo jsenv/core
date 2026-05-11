@@ -49,6 +49,7 @@ const css = /* css */ `
         var(--picker-background-color) 95%,
         black
       );
+      --picker-right-slot-size: 1.5em;
     }
   }
 
@@ -81,7 +82,9 @@ const css = /* css */ `
     box-sizing: border-box;
     min-height: 1em;
     padding-top: var(--x-picker-padding-top);
-    padding-right: var(--x-picker-padding-right);
+    padding-right: calc(
+      var(--x-picker-padding-right) + var(--picker-right-slot-size)
+    );
     padding-bottom: var(--x-picker-padding-bottom);
     padding-left: var(--x-picker-padding-left);
     flex-direction: column;
@@ -154,9 +157,10 @@ const css = /* css */ `
 
     .navi_picker_value {
     }
-    .navi_picker_icon {
+    .navi_picker_right_slot {
       position: absolute;
       right: 0;
+      width: var(--picker-right-slot-size);
       flex-shrink: 0;
       opacity: 0.6;
     }
@@ -171,7 +175,6 @@ const css = /* css */ `
       background: none;
       border: none;
       opacity: 0;
-      color-scheme: light dark;
       cursor: pointer;
     }
   }
@@ -326,9 +329,10 @@ const PickerUI = (props) => {
           />
         )}
       </span>
-      <Icon className="navi_picker_icon" size="m" marginLeft="xs">
-        {ICON_FOR_TYPE[type] || <CalendarSvg />}
-      </Icon>
+      <span className="navi_picker_right_slot">
+        <Icon size="m">{ICON_FOR_TYPE[type] || <CalendarSvg />}</Icon>
+      </span>
+
       <input
         ref={pickerInputRef}
         className="navi_picker_input"

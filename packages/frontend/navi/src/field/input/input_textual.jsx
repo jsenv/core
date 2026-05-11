@@ -128,15 +128,6 @@ const css = /* css */ `
     --x-background-color: var(--background-color);
     --x-color: var(--color);
     --x-placeholder-color: var(--placeholder-color);
-
-    position: relative;
-    box-sizing: border-box;
-    width: fit-content;
-    height: fit-content;
-    flex-direction: inherit;
-    border-radius: inherit;
-    cursor: inherit;
-
     --x-padding-top-base: var(
       --padding-top,
       var(--padding-y, var(--padding, 1px))
@@ -153,6 +144,14 @@ const css = /* css */ `
       --padding-left,
       var(--padding-x, var(--padding, 2px))
     );
+
+    position: relative;
+    box-sizing: border-box;
+    width: fit-content;
+    height: fit-content;
+    flex-direction: inherit;
+    border-radius: inherit;
+    cursor: inherit;
 
     .navi_native_input {
       box-sizing: border-box;
