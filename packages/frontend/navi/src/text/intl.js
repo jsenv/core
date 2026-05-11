@@ -1,10 +1,6 @@
-const navigator = typeof window === "undefined" ? undefined : window.navigator;
-const browserLang =
-  typeof navigator !== "undefined"
-    ? (navigator.language ?? navigator.languages?.[0])
-    : undefined;
+import { langSignal } from "./lang_signal.js";
 
-export const createIntl = ({ systemLang = browserLang } = {}) => {
+export const createIntl = ({ systemLang = langSignal.peek() } = {}) => {
   const languageMap = new Map();
 
   let defaultLang = systemLang;
