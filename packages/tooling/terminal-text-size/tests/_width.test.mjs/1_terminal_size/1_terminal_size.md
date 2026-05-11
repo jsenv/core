@@ -20,7 +20,7 @@ run(measureTextWidth)
     "\x1B[31m\x1B[39m": 0,
     "\x1B]8;;https://github.com\x07Click\x1B]8;;\x07": 5,
     "⌚": 2,
-    "↔️": 1,
+    "↔️": 2,
     "👩": 2,
     "👩🏿": 2,
     "葛󠄀": 2,
