@@ -1,4 +1,4 @@
-import { useContext, useRef } from "preact/hooks";
+import { useContext, useRef, useState } from "preact/hooks";
 
 import { Box } from "@jsenv/navi/src/box/box.jsx";
 import { Icon } from "@jsenv/navi/src/text/icon.jsx";
@@ -105,6 +105,14 @@ const css = /* css */ `
       --x-picker-border-color: var(--picker-border-color-hover);
     }
     &[data-focus-visible] {
+      --x-picker-border-color: transparent;
+      outline-style: solid;
+    }
+    &[data-focus-within] {
+      --x-picker-border-color: transparent;
+      outline-style: solid;
+    }
+    &[data-expanded] {
       --x-picker-border-color: transparent;
       outline-style: solid;
     }
@@ -230,6 +238,7 @@ const PickerUI = (props) => {
 
   const inputType = TYPE_TO_INPUT_TYPE[type] || "date";
   const hasValue = uiState !== undefined && uiState !== "" && uiState !== null;
+  const [expanded, setExpanded] = useState(false);
 
   return (
     <Box
@@ -244,7 +253,9 @@ const PickerUI = (props) => {
         ":read-only": innerReadOnly,
         ":disabled": innerDisabled,
         ":-navi-loading": innerLoading,
+        ":-navi-expanded": expanded,
       }}
+      pseudoClasses={PICKER_PSEUDO_CLASSES}
       onMouseDown={(e) => {
         if (e.button !== 0) {
           return;
@@ -294,11 +305,30 @@ const PickerUI = (props) => {
         onChange={(e) => {
           const newValue = e.currentTarget.value;
           uiStateController.setUIState(newValue, e);
+          setExpanded(false);
+        }}
+        onFocus={() => {
+          setExpanded(true);
+        }}
+        onBlur={() => {
+          setExpanded(false);
         }}
       />
     </Box>
   );
 };
+
+const PICKER_PSEUDO_CLASSES = [
+  ":hover",
+  ":focus",
+  ":focus-visible",
+  ":focus-within",
+  ":read-only",
+  ":disabled",
+  ":-navi-loading",
+  ":-navi-expanded",
+  ":-navi-has-value",
+];
 
 const TYPE_TO_INPUT_TYPE = {
   day: "date",
