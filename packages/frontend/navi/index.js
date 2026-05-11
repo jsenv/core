@@ -169,6 +169,7 @@ export { Code } from "./src/text/code.jsx";
 export { Icon } from "./src/text/icon.jsx";
 export { Interpolate } from "./src/text/interpolate.jsx";
 export { createIntl } from "./src/text/intl.js";
+export { langSignal } from "./src/text/lang_signal.js";
 export { MessageBox } from "./src/text/message_box.jsx";
 export { Meter } from "./src/text/meter.jsx";
 export { Paragraph } from "./src/text/paragraph.jsx";
