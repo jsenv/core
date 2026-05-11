@@ -1304,7 +1304,7 @@ const createActionProxyFromSignal = (
   };
 
   const nameSignal = signal(action.name);
-  const callSourceSignal = signal();
+  const callSourceSignal = signal(`[Proxy] ${action.callSource}`);
   let actionProxy;
   if (ACTION_AS_FUNCTION) {
     actionProxy = function actionProxyFunction() {
@@ -1378,7 +1378,7 @@ const createActionProxyFromSignal = (
       );
     },
     replaceParams: null, // Will be set below
-    callSource: actionProxy.callSource,
+    callSource: `[Proxy] ${action.callSource}`,
     toString: () => actionProxy.callSource,
     meta: {},
 
@@ -1410,6 +1410,7 @@ const createActionProxyFromSignal = (
     const currentAction = actionTarget || action;
     nameSignal.value = `[Proxy] ${currentAction.name}`;
     callSourceSignal.value = `[Proxy] ${currentAction.callSource}`;
+    actionProxy.callSource = `[Proxy] ${currentAction.callSource}`;
     actionProxy.callback = currentAction.callback;
     actionProxy.params = currentAction.params;
     actionProxy.isPrerun = currentAction.isPrerun;
