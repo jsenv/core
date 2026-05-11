@@ -1,5 +1,41 @@
 import { langSignal } from "./lang_signal.js";
 
+/**
+ * Creates a lightweight i18n instance scoped to a set of translations.
+ *
+ * @param {object} [options]
+ * @param {string|string[]} [options.systemLang]
+ *   The preferred language (BCP 47 tag or ordered array of tags).
+ *   Defaults to `langSignal.peek()` (browser language at creation time).
+ *   Used to pick the best registered translation when calling `format()`.
+ *
+ * @returns {{ add: Function, format: Function, languageMap: Map }}
+ *
+ * ---
+ *
+ * **`add(lang, translations)`**
+ *
+ * Registers translations for a language tag.
+ * Multiple calls for the same `lang` are merged (later keys win).
+ * A regional variant (e.g. `"fr-CA"`) automatically inherits all keys
+ * from its parent (`"fr"`) that it does not explicitly override.
+ *
+ * @example
+ * intl.add("fr", { hello: "Bonjour {name} !" });
+ * intl.add("en", { hello: "Hello {name}!" });
+ *
+ * ---
+ *
+ * **`format(key, values?, { lang? })`**
+ *
+ * Returns the translation for `key` in the best available language.
+ * Placeholders `{name}` in the template are replaced by `values`.
+ * Falls back to `key` itself when no translation is found.
+ *
+ * @example
+ * intl.format("hello", { name: "Alice" })        // "Bonjour Alice !" (if systemLang="fr")
+ * intl.format("hello", { name: "Bob" }, { lang: "en" }) // "Hello Bob!"
+ */
 export const createIntl = ({ systemLang = langSignal.peek() } = {}) => {
   const languageMap = new Map();
 

@@ -1,3 +1,5 @@
+import { interpolateText } from "./interpolate_text.js";
+
 /*
  * Technical note: although the component is named Interpolate and its primary
  * use-case is text, it can render any mix of strings and JSX elements — 99% of
@@ -58,31 +60,4 @@
  */
 export const Interpolate = ({ children, ...replacements }) => {
   return interpolateText(children, replacements);
-};
-
-/**
- * Interpolates a template string, replacing [key] placeholders with values.
- * Values can be strings or JSX elements. Returns a plain string when all
- * replacements are strings, or a JSX fragment otherwise.
- */
-const interpolateText = (template, replacements) => {
-  const parts = template.split(/(\[[^\]]+\])/);
-  let hasVnode = false;
-  const resolved = [];
-  for (const part of parts) {
-    const match = part.match(/^\[([^\]]+)\]$/);
-    if (!match) {
-      resolved.push(part);
-      continue;
-    }
-    const value = replacements[match[1]] ?? part;
-    if (value !== null && typeof value === "object") {
-      hasVnode = true;
-    }
-    resolved.push(value);
-  }
-  if (!hasVnode) {
-    return resolved.join("");
-  }
-  return <>{resolved}</>;
 };

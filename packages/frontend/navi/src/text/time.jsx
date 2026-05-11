@@ -1,3 +1,11 @@
+import {
+  formatDatetime,
+  formatDay,
+  formatDuration,
+  formatMonth,
+  formatTime,
+  formatTimeAgo,
+} from "./format_time.js";
 import { langSignal } from "./lang_signal.js";
 import { Text } from "./text.jsx";
 
@@ -10,29 +18,54 @@ import { Text } from "./text.jsx";
  *   - a Unix timestamp (number, in ms)
  *   - a date string `"YYYY-MM-DD"` or any string parseable by `Date`
  *   If the value cannot be parsed, it is rendered as-is.
- *   If undefined, renders `"–"`.
+ *   If undefined/null, renders `"–"`.
  *
- * @param {"day"|"month"|"datetime"|"time"|"relative"} [type="day"]
+ * @param {"day"|"month"|"datetime"|"time"|"relative"|"duration"} [type="day"]
  *   Controls the display format:
- *   - `"day"`      → "lundi 11 mai"
+ *   - `"day"`      → "lundi 11 mai (aujourd'hui)"  — with today/tomorrow label
  *   - `"month"`    → "mai 2026"
  *   - `"datetime"` → "lun. 11 mai, 14:30"
  *   - `"time"`     → "14:30"
  *   - `"relative"` → "il y a 3 jours"
+ *   - `"duration"` → "dans 1 heure 30" / "En cours" / "il y a 2 heures"
+ *                    Requires `duration` prop (milliseconds).
+ *
+ * @param {number} [duration]
+ *   Duration of the event in milliseconds. Only used with `type="duration"`.
+ *   When 0 (default), the event is considered instantaneous (no "En cours" window).
  *
  * @param {string} [locale]
  *   BCP 47 locale tag (e.g. `"fr"`, `"en-US"`).
  *   Defaults to `langSignal.value` (the browser's current language).
  */
-export const Time = ({ children, type = "day", locale, ...props }) => {
+export const Time = ({
+  children,
+  type = "day",
+  duration = 0,
+  locale,
+  ...props
+}) => {
   const date = toDate(children, type);
   const lang = locale || langSignal.value;
-  const text = date
-    ? formatDate(date, type, lang)
-    : children === undefined
-      ? "–"
-      : String(children);
-  const dateTimeAttr = date ? toDateTimeAttr(date, type) : undefined;
+
+  let text;
+  let dateTimeAttr;
+
+  if (type === "duration") {
+    text = date
+      ? formatDuration(date, duration, lang)
+      : children === undefined
+        ? "–"
+        : String(children);
+    dateTimeAttr = date ? date.toISOString() : undefined;
+  } else {
+    text = date
+      ? formatDate(date, type, lang)
+      : children === undefined
+        ? "–"
+        : String(children);
+    dateTimeAttr = date ? toDateTimeAttr(date, type) : undefined;
+  }
 
   return (
     <Text as="time" dateTime={dateTimeAttr} {...props}>
@@ -84,7 +117,6 @@ const toDateTimeAttr = (date, type) => {
     const mm = String(date.getMonth() + 1).padStart(2, "0");
     return `${yyyy}-${mm}`;
   }
-  // day / datetime / relative → full ISO date (or datetime)
   if (type === "datetime" || type === "relative") {
     return date.toISOString();
   }
@@ -97,69 +129,19 @@ const toDateTimeAttr = (date, type) => {
 
 const formatDate = (date, type, locale) => {
   if (type === "day") {
-    return new Intl.DateTimeFormat(locale, {
-      weekday: "long",
-      day: "numeric",
-      month: "long",
-    }).format(date);
+    return formatDay(date, locale);
   }
   if (type === "month") {
-    return new Intl.DateTimeFormat(locale, {
-      month: "long",
-      year: "numeric",
-    }).format(date);
+    return formatMonth(date, locale);
   }
   if (type === "datetime") {
-    return new Intl.DateTimeFormat(locale, {
-      weekday: "short",
-      day: "numeric",
-      month: "long",
-      hour: "2-digit",
-      minute: "2-digit",
-    }).format(date);
+    return formatDatetime(date, locale);
   }
   if (type === "time") {
-    return new Intl.DateTimeFormat(locale, {
-      hour: "2-digit",
-      minute: "2-digit",
-    }).format(date);
+    return formatTime(date, locale);
   }
   if (type === "relative") {
-    return formatRelative(date, locale);
+    return formatTimeAgo(date, locale);
   }
   return String(date);
-};
-
-const SECOND = 1000;
-const MINUTE = 60 * SECOND;
-const HOUR = 60 * MINUTE;
-const DAY = 24 * HOUR;
-const WEEK = 7 * DAY;
-const MONTH = 30 * DAY;
-const YEAR = 365 * DAY;
-
-const formatRelative = (date, locale) => {
-  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
-  const diff = date.getTime() - Date.now();
-  const absDiff = Math.abs(diff);
-
-  if (absDiff < MINUTE) {
-    return rtf.format(Math.round(diff / SECOND), "second");
-  }
-  if (absDiff < HOUR) {
-    return rtf.format(Math.round(diff / MINUTE), "minute");
-  }
-  if (absDiff < DAY) {
-    return rtf.format(Math.round(diff / HOUR), "hour");
-  }
-  if (absDiff < WEEK) {
-    return rtf.format(Math.round(diff / DAY), "day");
-  }
-  if (absDiff < MONTH) {
-    return rtf.format(Math.round(diff / WEEK), "week");
-  }
-  if (absDiff < YEAR) {
-    return rtf.format(Math.round(diff / MONTH), "month");
-  }
-  return rtf.format(Math.round(diff / YEAR), "year");
 };

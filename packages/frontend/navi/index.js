@@ -166,8 +166,18 @@ export { Badge } from "./src/text/badge.jsx";
 export { BadgeCount } from "./src/text/badge_count.jsx";
 export { Caption } from "./src/text/caption.jsx";
 export { Code } from "./src/text/code.jsx";
+export { formatNumber } from "./src/text/format_number.js";
+export {
+  formatDatetime,
+  formatDay,
+  formatDuration,
+  formatMonth,
+  formatTime,
+  formatTimeAgo,
+} from "./src/text/format_time.js";
 export { Icon } from "./src/text/icon.jsx";
 export { Interpolate } from "./src/text/interpolate.jsx";
+export { interpolateText } from "./src/text/interpolate_text.js";
 export { createIntl } from "./src/text/intl.js";
 export { langSignal } from "./src/text/lang_signal.js";
 export { MessageBox } from "./src/text/message_box.jsx";
