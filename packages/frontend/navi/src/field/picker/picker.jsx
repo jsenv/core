@@ -79,15 +79,17 @@ const css = /* css */ `
     position: relative;
     display: inline-flex;
     box-sizing: border-box;
+    min-height: 1em;
     padding-top: var(--x-picker-padding-top);
     padding-right: var(--x-picker-padding-right);
     padding-bottom: var(--x-picker-padding-bottom);
     padding-left: var(--x-picker-padding-left);
-    align-items: center;
-    gap: var(--navi-s);
+    flex-direction: column;
+    justify-content: center;
     color: var(--picker-color);
     font-size: var(--picker-font-size);
     text-align: inherit;
+    text-overflow: ellipsis;
     white-space: nowrap;
     background-color: var(--x-picker-background-color);
     border-width: var(--picker-border-width);
@@ -99,6 +101,7 @@ const css = /* css */ `
     outline-offset: var(--x-picker-outline-offset);
     cursor: pointer;
     user-select: none;
+    overflow: hidden;
 
     &[data-hover] {
       --x-picker-background-color: var(--picker-background-color-hover);
@@ -124,17 +127,6 @@ const css = /* css */ `
       --x-picker-border-color: var(--callout-color);
     }
 
-    .navi_picker_text {
-      position: relative;
-      display: inline-flex;
-      min-width: 0;
-      min-height: 1em;
-      flex: 1;
-      flex-direction: column;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      overflow: hidden;
-    }
     .navi_picker_placeholder {
       color: var(--picker-placeholder-color);
       &[hidden] {
@@ -163,6 +155,8 @@ const css = /* css */ `
     .navi_picker_value {
     }
     .navi_picker_icon {
+      position: absolute;
+      right: 0;
       flex-shrink: 0;
       opacity: 0.6;
     }
@@ -316,25 +310,23 @@ const PickerUI = (props) => {
         rest.onClick?.(e);
       }}
     >
-      <span className="navi_picker_text">
-        <span className="navi_picker_placeholder" hidden={hasValue}>
-          {placeholder}
-        </span>
-        <span
-          className="navi_picker_value"
-          hidden={!hasValue && !showColorSwatchAlways}
-        >
-          {children ? (
-            children
-          ) : (
-            <DefaultValueDisplay
-              type={type}
-              value={hasValue ? uiState : "#000000"}
-            />
-          )}
-        </span>
+      <span className="navi_picker_placeholder" hidden={hasValue}>
+        {placeholder}
       </span>
-      <Icon className="navi_picker_icon" size="s">
+      <span
+        className="navi_picker_value"
+        hidden={!hasValue && !showColorSwatchAlways}
+      >
+        {children ? (
+          children
+        ) : (
+          <DefaultValueDisplay
+            type={type}
+            value={hasValue ? uiState : "#000000"}
+          />
+        )}
+      </span>
+      <Icon className="navi_picker_icon" size="m" marginLeft="xs">
         {ICON_FOR_TYPE[type] || <CalendarSvg />}
       </Icon>
       <input
