@@ -97,6 +97,7 @@ export const Field = (props) => {
     <Box
       flex={vertical ? "y" : undefined}
       alignX={vertical ? "start" : undefined}
+      spacing="s"
       {...rest}
       baseClassName="navi_field"
       pseudoClasses={FieldPseudoClasses}
