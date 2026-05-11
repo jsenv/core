@@ -12,7 +12,14 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      import { Button, Form, RadioList, Radio, Label } from "@jsenv/navi";
+      import {
+        Button,
+        Form,
+        RadioList,
+        Radio,
+        Label,
+        NaviDebug,
+      } from "@jsenv/navi";
 
       const App = () => {
         return (
@@ -240,22 +247,27 @@
                 <Form action={submitForm}>
                   <fieldset style="border: 1px solid #ddd; padding: 10px; border-radius: 4px;">
                     <legend>Select Favorite Color:</legend>
-                    <RadioList
-                      name="color"
-                      uiAction={(color) => {
-                        setUiSelectedColor(color);
-                      }}
-                    >
-                      {colorChoices.map(({ id, color }) => (
-                        <Label key={id} style="display: block; margin: 5px 0;">
-                          {color.charAt(0).toUpperCase() + color.slice(1)}
-                          <Radio
-                            value={color}
-                            checked={selectedColor === color}
-                          />
-                        </Label>
-                      ))}
-                    </RadioList>
+                    <NaviDebug debugAction debugActionVerbose>
+                      <RadioList
+                        name="color"
+                        uiAction={(color) => {
+                          setUiSelectedColor(color);
+                        }}
+                      >
+                        {colorChoices.map(({ id, color }) => (
+                          <Label
+                            key={id}
+                            style="display: block; margin: 5px 0;"
+                          >
+                            {color.charAt(0).toUpperCase() + color.slice(1)}
+                            <Radio
+                              value={color}
+                              checked={selectedColor === color}
+                            />
+                          </Label>
+                        ))}
+                      </RadioList>
+                    </NaviDebug>
                   </fieldset>
 
                   {/* Error simulation checkbox */}

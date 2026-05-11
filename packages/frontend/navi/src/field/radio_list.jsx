@@ -1,6 +1,5 @@
 import { useContext, useRef, useState } from "preact/hooks";
 
-import { renderActionableComponent } from "../action/render_actionable_component.jsx";
 import { useActionBoundToOneParam } from "../action/use_action.js";
 import { useActionStatus } from "../action/use_action_status.js";
 import { useExecuteAction } from "../action/use_execute_action.js";
@@ -23,6 +22,8 @@ import {
 import { requestAction } from "./validation/custom_constraint_validation.js";
 
 export const RadioList = (props) => {
+  const refDefault = useRef(null);
+  const ref = props.ref || refDefault;
   const uiStateController = useUIGroupStateController(props, "radio_list", {
     childComponentType: "radio",
     aggregateChildStates: (childUIStateControllers) => {
@@ -37,21 +38,24 @@ export const RadioList = (props) => {
     },
   });
   const uiState = useUIState(uiStateController);
-  const radioList = renderActionableComponent(props, {
-    Basic: RadioListBasic,
-    WithAction: RadioListWithAction,
-  });
   return (
     <UIStateControllerContext.Provider value={uiStateController}>
       <UIStateContext.Provider value={uiState}>
-        {radioList}
+        <RadioListDispatcher {...props} ref={ref} />
       </UIStateContext.Provider>
     </UIStateControllerContext.Provider>
   );
 };
 export const Radio = InputRadio;
 
-const RadioListBasic = (props) => {
+const RadioListDispatcher = (props) => {
+  if (props.action) {
+    return <RadioListWithAction {...props} />;
+  }
+  return <RadioListUI {...props} />;
+};
+
+const RadioListUI = (props) => {
   const contextReadOnly = useContext(ReadOnlyContext);
   const contextDisabled = useContext(DisabledContext);
   const contextLoading = useContext(LoadingContext);
@@ -66,7 +70,6 @@ const RadioListBasic = (props) => {
 
   return (
     <Box
-      data-action={rest["data-action"]}
       flex="y"
       {...rest}
       baseClassName="navi_radio_list"
@@ -94,8 +97,8 @@ const RadioListBasic = (props) => {
 const RadioListWithAction = (props) => {
   const uiStateController = useContext(UIStateControllerContext);
   const {
+    ref,
     action,
-
     onCancel,
     onActionPrevented,
     onActionStart,
@@ -107,18 +110,17 @@ const RadioListWithAction = (props) => {
     children,
     ...rest
   } = props;
-  const innerRef = useRef();
   const [boundAction] = useActionBoundToOneParam(
     action,
     uiStateController.uiStateSignal,
   );
   const { loading: actionLoading } = useActionStatus(boundAction);
-  const executeAction = useExecuteAction(innerRef, {
+  const executeAction = useExecuteAction(ref, {
     errorEffect: actionErrorEffect,
   });
   const [actionRequester, setActionRequester] = useState(null);
 
-  useActionEvents(innerRef, {
+  useActionEvents(ref, {
     onCancel: (e, reason) => {
       uiStateController.resetUIState(e);
       onCancel?.(e, reason);
@@ -143,13 +145,14 @@ const RadioListWithAction = (props) => {
   });
 
   return (
-    <RadioListBasic
+    <RadioListUI
       data-action={boundAction}
       {...rest}
-      ref={innerRef}
+      ref={ref}
+      // This is the onChange event that bubbled from radios
       onChange={(e) => {
         const radio = e.target;
-        const radioListContainer = innerRef.current;
+        const radioListContainer = ref.current;
         requestAction(radioListContainer, boundAction, {
           event: e,
           requester: radio,
@@ -161,6 +164,6 @@ const RadioListWithAction = (props) => {
       <LoadingElementContext.Provider value={actionRequester}>
         {children}
       </LoadingElementContext.Provider>
-    </RadioListBasic>
+    </RadioListUI>
   );
 };
