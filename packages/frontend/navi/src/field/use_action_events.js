@@ -1,3 +1,4 @@
+import { formatEventSideEffect } from "@jsenv/dom";
 import { useLayoutEffect, useState } from "preact/hooks";
 
 import { useDebugAction } from "../navi_debug.jsx";
@@ -50,42 +51,42 @@ export const useActionEvents = (
         if (e.detail.actionOrigin !== actionOrigin) {
           return;
         }
-        debugAction(`navi_action_requested (origin: ${e.detail.actionOrigin})`);
+        debugAction(formatEventSideEffect(e, `navi_action_requested`));
         onRequested?.(e);
       },
       navi_action_prevented: (e) => {
         if (e.detail.actionOrigin !== actionOrigin) {
           return;
         }
-        debugAction(`navi_action_prevented (origin: ${e.detail.actionOrigin})`);
+        debugAction(formatEventSideEffect(e, `navi_action_prevented`));
         onPrevented?.(e);
       },
       navi_action: (e) => {
         if (e.detail.actionOrigin !== actionOrigin) {
           return;
         }
-        debugAction(`navi_action (origin: ${e.detail.actionOrigin})`);
+        debugAction(formatEventSideEffect(e, `navi_action`));
         onAction?.(e);
       },
       navi_action_start: (e) => {
         if (e.detail.actionOrigin !== actionOrigin) {
           return;
         }
-        debugAction(`navi_action_start (origin: ${e.detail.actionOrigin})`);
+        debugAction(formatEventSideEffect(e, `navi_action_start`));
         onStart?.(e);
       },
       navi_action_abort: (e) => {
         if (e.detail.actionOrigin !== actionOrigin) {
           return;
         }
-        debugAction(`navi_action_abort (origin: ${e.detail.actionOrigin})`);
+        debugAction(formatEventSideEffect(e, `navi_action_abort`));
         onAbort?.(e);
       },
       navi_action_error: (e) => {
         if (e.detail.actionOrigin !== actionOrigin) {
           return;
         }
-        debugAction(`navi_action_error (origin: ${e.detail.actionOrigin})`);
+        debugAction(formatEventSideEffect(e, `navi_action_error`));
         onError?.(e.detail.error, e);
       },
       navi_action_end: onEnd,
