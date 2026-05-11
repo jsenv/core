@@ -1,7 +1,7 @@
 import { LoadingDotsSvg } from "../graphic/loading/loading_dots_svg.jsx";
 import { formatNumber } from "./format_number.js";
 import { Icon } from "./icon.jsx";
-import { createIntl } from "./intl.js";
+import { naviIntl } from "./navi_intl.js";
 import { Text } from "./text.jsx";
 
 const css = /* css */ `
@@ -62,7 +62,7 @@ const css = /* css */ `
   }
 `;
 
-export const QuantityIntl = createIntl();
+export const QuantityIntl = naviIntl;
 const wellKnownUnitMap = new Map();
 /**
  * Registers a unit with its translations per language, making it a "well-known"
@@ -89,7 +89,7 @@ QuantityIntl.addUnit = (unitName, langTranslations) => {
     const [singular, plural] = Array.isArray(translation)
       ? translation
       : [translation, translation];
-    QuantityIntl.add(lang, {
+    naviIntl.add(lang, {
       [singularKey]: singular,
       [pluralKey]: plural,
     });
@@ -178,9 +178,9 @@ const Unit = ({ value, unit, lang }) => {
     if (wellKnownUnit) {
       const { singularKey, pluralKey } = wellKnownUnit;
       if (value > 1) {
-        unitText = QuantityIntl.format(pluralKey, { x: value }, { lang });
+        unitText = naviIntl.format(pluralKey, { x: value }, { lang });
       } else {
-        unitText = QuantityIntl.format(singularKey, undefined, { lang });
+        unitText = naviIntl.format(singularKey, undefined, { lang });
       }
     }
   }

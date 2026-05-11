@@ -182,6 +182,7 @@ export { createIntl } from "./src/text/intl.js";
 export { langSignal } from "./src/text/lang_signal.js";
 export { MessageBox } from "./src/text/message_box.jsx";
 export { Meter } from "./src/text/meter.jsx";
+export { naviIntl } from "./src/text/navi_intl.js";
 export { Paragraph } from "./src/text/paragraph.jsx";
 export { Quantity, QuantityIntl } from "./src/text/quantity.jsx";
 export { Text } from "./src/text/text.jsx";

@@ -1,3 +1,4 @@
+import { interpolateText } from "./interpolate_text.js";
 import { langSignal } from "./lang_signal.js";
 
 /**
@@ -21,15 +22,15 @@ import { langSignal } from "./lang_signal.js";
  * from its parent (`"fr"`) that it does not explicitly override.
  *
  * @example
- * intl.add("fr", { hello: "Bonjour {name} !" });
- * intl.add("en", { hello: "Hello {name}!" });
+ * intl.add("fr", { hello: "Bonjour [name] !" });
+ * intl.add("en", { hello: "Hello [name]!" });
  *
  * ---
  *
  * **`format(key, values?, { lang? })`**
  *
  * Returns the translation for `key` in the best available language.
- * Placeholders `{name}` in the template are replaced by `values`.
+ * Placeholders `[name]` in the template are replaced by `values`.
  * Falls back to `key` itself when no translation is found.
  *
  * @example
@@ -82,7 +83,7 @@ export const createIntl = ({ systemLang = langSignal.peek() } = {}) => {
 
   const format = (key, values, { lang = defaultLang } = {}) => {
     const template = _getTranslationTemplate(key, lang);
-    return interpolate(template, values);
+    return interpolateText(template, values);
   };
 
   return { languageMap, add, format };
@@ -113,12 +114,4 @@ const matchBestLang = (lang, languageMap) => {
     }
   }
   return null;
-};
-
-const interpolate = (template, values) => {
-  if (!values || typeof template !== "string") return template;
-  return template.replace(/\{(\w+)\}/g, (_, key) => {
-    const value = values[key];
-    return value !== undefined ? String(value) : `{${key}}`;
-  });
 };
