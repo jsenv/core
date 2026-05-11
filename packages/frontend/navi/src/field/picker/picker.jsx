@@ -275,6 +275,8 @@ const PickerUI = (props) => {
 
   const pickerInputRef = useRef(null);
   const remainingProps = useConstraints(pickerInputRef, rest);
+  const { "data-required-message": requiredMessageProp, ...buttonProps } =
+    remainingProps;
 
   const inputType = TYPE_TO_INPUT_TYPE[type] || "date";
   const hasValue = uiState !== undefined && uiState !== "" && uiState !== null;
@@ -286,7 +288,7 @@ const PickerUI = (props) => {
     <Box
       as="button"
       type="button"
-      {...remainingProps}
+      {...buttonProps}
       ref={ref}
       id={innerId}
       baseClassName="navi_picker"
@@ -294,7 +296,7 @@ const PickerUI = (props) => {
       navi-has-placeholder={placeholder ? "" : undefined}
       autoFocus={undefined}
       basePseudoState={{
-        ...remainingProps.basePseudoState,
+        ...buttonProps.basePseudoState,
         ":read-only": innerReadOnly,
         ":disabled": innerDisabled,
         ":-navi-loading": innerLoading,
@@ -367,7 +369,9 @@ const PickerUI = (props) => {
         tabIndex={-1}
         disabled={innerDisabled || innerReadOnly}
         data-rendered-by=".navi_picker"
-        data-required-message={naviI18n(`picker.required.${type}`)}
+        data-required-message={
+          requiredMessageProp ?? naviI18n(`picker.required.${type}`)
+        }
         onChange={(e) => {
           const newValue = e.currentTarget.value;
           uiStateController.setUIState(newValue, e);
