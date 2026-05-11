@@ -83,6 +83,10 @@ export const createI18n = ({
   };
 
   const add = (key, langTranslations) => {
+    if (keyLang && !(keyLang in langTranslations)) {
+      // Auto-register the key itself as the translation for keyLang
+      addLangKeys(keyLang, { [key]: key });
+    }
     for (const [lang, value] of Object.entries(langTranslations)) {
       addLangKeys(lang, { [key]: value });
     }
@@ -102,14 +106,6 @@ export const createI18n = ({
       if (translated !== undefined) {
         return translated;
       }
-    }
-    // When keyLang is set and the active lang matches it, the key itself is the template
-    if (
-      keyLang &&
-      lang &&
-      (lang === keyLang || lang.startsWith(`${keyLang}-`))
-    ) {
-      return key;
     }
     // No translation found — return key as-is (opaque fallback)
     return key;
