@@ -1,17 +1,16 @@
 import { useCallback, useContext, useLayoutEffect, useRef } from "preact/hooks";
 
-import { useAccentColorAttributes } from "../utils/use_accent_color_attributes.js";
-
-import { Box } from "../box/box.jsx";
-import { LoadingOutline } from "../graphic/loading/loading_outline.jsx";
-import { useAutoFocus } from "../utils/focus/use_auto_focus.js";
-import { useStableCallback } from "../utils/use_stable_callback.js";
-import { fieldPropSet } from "./field_prop_set.js";
+import { Box } from "@jsenv/navi/src/box/box.jsx";
+import { LoadingOutline } from "../../graphic/loading/loading_outline.jsx";
+import { useAutoFocus } from "../../utils/focus/use_auto_focus.js";
+import { useAccentColorAttributes } from "../../utils/use_accent_color_attributes.js";
+import { useStableCallback } from "../../utils/use_stable_callback.js";
+import { fieldPropSet } from "../field_prop_set.js";
 import {
   reportDisabledToLabel,
   reportInteractiveToLabel,
   reportReadOnlyToLabel,
-} from "./label.jsx";
+} from "../label.jsx";
 import {
   DisabledContext,
   FieldNameContext,
@@ -23,8 +22,8 @@ import {
   UIStateControllerContext,
   useUIState,
   useUIStateController,
-} from "./use_ui_state_controller.js";
-import { useConstraints } from "./validation/hooks/use_constraints.js";
+} from "../use_ui_state_controller.js";
+import { useConstraints } from "../validation/hooks/use_constraints.js";
 
 const css = /* css */ `
   @layer navi {

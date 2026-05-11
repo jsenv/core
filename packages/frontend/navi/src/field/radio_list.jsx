@@ -5,7 +5,7 @@ import { useActionBoundToOneParam } from "../action/use_action.js";
 import { useActionStatus } from "../action/use_action_status.js";
 import { useExecuteAction } from "../action/use_execute_action.js";
 import { Box } from "../box/box.jsx";
-import { InputRadio } from "./input_radio.jsx";
+import { InputRadio } from "./input/input_radio.jsx";
 import { useActionEvents } from "./use_action_events.js";
 import {
   DisabledContext,

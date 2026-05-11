@@ -6,21 +6,21 @@ import {
   useRef,
 } from "preact/hooks";
 
-import { useActionBoundToOneParam } from "../action/use_action.js";
-import { useActionStatus } from "../action/use_action_status.js";
-import { useExecuteAction } from "../action/use_execute_action.js";
-import { Box } from "../box/box.jsx";
-import { LoadingOutline } from "../graphic/loading/loading_outline.jsx";
-import { useAutoFocus } from "../utils/focus/use_auto_focus.js";
-import { useAccentColorAttributes } from "../utils/use_accent_color_attributes.js";
-import { useStableCallback } from "../utils/use_stable_callback.js";
-import { fieldPropSet } from "./field_prop_set.js";
+import { useActionBoundToOneParam } from "../../action/use_action.js";
+import { useActionStatus } from "../../action/use_action_status.js";
+import { useExecuteAction } from "../../action/use_execute_action.js";
+import { Box } from "../../box/box.jsx";
+import { LoadingOutline } from "../../graphic/loading/loading_outline.jsx";
+import { useAutoFocus } from "../../utils/focus/use_auto_focus.js";
+import { useAccentColorAttributes } from "../../utils/use_accent_color_attributes.js";
+import { useStableCallback } from "../../utils/use_stable_callback.js";
+import { fieldPropSet } from "../field_prop_set.js";
 import {
   reportDisabledToLabel,
   reportInteractiveToLabel,
   reportReadOnlyToLabel,
-} from "./label.jsx";
-import { useActionEvents } from "./use_action_events.js";
+} from "../label.jsx";
+import { useActionEvents } from "../use_action_events.js";
 import {
   DisabledContext,
   LoadingContext,
@@ -30,9 +30,9 @@ import {
   UIStateControllerContext,
   useUIState,
   useUIStateController,
-} from "./use_ui_state_controller.js";
-import { forwardActionRequested } from "./validation/custom_constraint_validation.js";
-import { useConstraints } from "./validation/hooks/use_constraints.js";
+} from "../use_ui_state_controller.js";
+import { forwardActionRequested } from "../validation/custom_constraint_validation.js";
+import { useConstraints } from "../validation/hooks/use_constraints.js";
 
 const css = /* css */ `
   @layer navi {

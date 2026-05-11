@@ -34,23 +34,17 @@
     <div id="app"></div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useState } from "preact/hooks";
       import { signal } from "@preact/signals";
-      import {
-        Box,
-        Icon,
-        Input,
-        Label,
-        List,
-        ListItem,
-        Select,
-        Text,
-        NaviDebug,
-      } from "@jsenv/navi";
+      import { Box, Icon, Label, Select, NaviDebug } from "@jsenv/navi";
 
-      const DAYS_TO_SHOW = 6;
+      const toDateKey = (date) => {
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, "0");
+        const d = String(date.getDate()).padStart(2, "0");
+        return `${y}-${m}-${d}`;
+      };
 
-      const scheduledDaySignal = signal(0);
+      const scheduledDaySignal = signal(toDateKey(new Date()));
 
       const App = () => {
         return (
@@ -90,157 +84,17 @@
               Date & Heure
             </Label>
             <NaviDebug debugPopup debugFocus>
-              <DaySelect />
+              <Select
+                type="day"
+                min={new Date()}
+                value={scheduledDaySignal.value}
+                uiAction={(dateKey) => {
+                  scheduledDaySignal.value = dateKey;
+                }}
+                expandX
+              />
             </NaviDebug>
           </Box>
-        );
-      };
-
-      const DaySelect = () => {
-        const offset = scheduledDaySignal.value;
-        const dayOptions = buildDayOptions();
-
-        return (
-          <Select
-            placeholder="Choisir un jour"
-            value={String(offset)}
-            uiAction={(key) => {
-              if (key !== "custom") {
-                scheduledDaySignal.value = key;
-              }
-            }}
-            expandX
-          >
-            <List expandX>
-              {dayOptions.map(({ key, label }, index) => (
-                <DayOption
-                  key={key}
-                  value={key}
-                  index={index}
-                  id={key}
-                  selected={offset === key}
-                >
-                  <Text capitalize>{label}</Text>
-                </DayOption>
-              ))}
-              <CustomDayOption offset={offset} index={dayOptions.length} />
-            </List>
-          </Select>
-        );
-      };
-
-      // --- helpers ---
-      const today = () => {
-        const d = new Date();
-        d.setHours(0, 0, 0, 0);
-        return d;
-      };
-      const toDateKey = (date) => {
-        const y = date.getFullYear();
-        const m = String(date.getMonth() + 1).padStart(2, "0");
-        const d = String(date.getDate()).padStart(2, "0");
-        return `${y}-${m}-${d}`;
-      };
-      const offsetToDateKey = (offset) => {
-        const d = today();
-        d.setDate(d.getDate() + offset);
-        return toDateKey(d);
-      };
-      const dateKeyToOffset = (dateKey) => {
-        const d = new Date(`${dateKey}T00:00:00`);
-        const t = today();
-        return Math.round((d - t) / 86_400_000);
-      };
-      const formatDayLabel = (date, index) => {
-        const label = date.toLocaleDateString("fr-FR", {
-          weekday: "long",
-          day: "numeric",
-          month: "long",
-        });
-        if (index === 0) {
-          return `${label} (aujourd'hui)`;
-        }
-        if (index === 1) {
-          return `${label} (demain)`;
-        }
-        return label;
-      };
-      const buildDayOptions = () => {
-        const options = [];
-        const t = today();
-        for (let i = 0; i < DAYS_TO_SHOW; i++) {
-          const d = new Date(t);
-          d.setDate(t.getDate() + i);
-          options.push({ key: i, label: formatDayLabel(d, i) });
-        }
-        return options;
-      };
-      const formatSelectedLabel = (dateKey) => {
-        if (!dateKey) {
-          return null;
-        }
-        const d = new Date(`${dateKey}T00:00:00`);
-        return d.toLocaleDateString("fr-FR", {
-          weekday: "long",
-          day: "numeric",
-          month: "long",
-        });
-      };
-
-      // --- components ---
-      const DayOption = ({ children, ...rest }) => {
-        return (
-          <ListItem paddingX="s" paddingY="m" {...rest}>
-            {children}
-          </ListItem>
-        );
-      };
-
-      const CustomDayOption = ({ offset, index }) => {
-        const initialCustomOffset = offset >= DAYS_TO_SHOW ? offset : null;
-        const [customOffset, setCustomOffset] = useState(initialCustomOffset);
-        const isCustom = customOffset !== null;
-        return (
-          <>
-            {isCustom && (
-              <DayOption
-                id="custom_display"
-                index={index}
-                value={customOffset}
-                selected={offset === customOffset}
-              >
-                <Text capitalize>
-                  {formatSelectedLabel(offsetToDateKey(customOffset))}
-                </Text>
-              </DayOption>
-            )}
-            <DayOption
-              id="custom_pick"
-              index={index + 1}
-              value="custom"
-              relative
-            >
-              <Text>Choisir un autre jour…</Text>
-              <Input
-                type="date"
-                value={isCustom ? offsetToDateKey(customOffset) : undefined}
-                min={toDateKey(new Date())}
-                uiAction={(value) => {
-                  setCustomOffset(dateKeyToOffset(value));
-                }}
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  e.currentTarget.showPicker();
-                }}
-                absolute
-                inset
-                expand
-                opacity={0}
-                cursor="pointer"
-              />
-            </DayOption>
-          </>
         );
       };
 

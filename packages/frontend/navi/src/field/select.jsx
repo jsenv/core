@@ -22,12 +22,15 @@ import {
   requestPopoverOpen,
 } from "../popup/popover.jsx";
 import { Icon } from "../text/icon.jsx";
+import { Text } from "../text/text.jsx";
 import { useAutoFocus } from "../utils/focus/use_auto_focus.js";
+import { Input } from "./input/input.jsx";
 import {
   reportDisabledToLabel,
   reportInteractiveToLabel,
   reportReadOnlyToLabel,
 } from "./label.jsx";
+import { List, ListItem } from "./list/list.jsx";
 import {
   DisabledContext,
   LoadingContext,
@@ -343,6 +346,9 @@ const css = /* css */ `
  * but does NOT submit a parent form. Use a separate submit button for that.
  */
 export const Select = (props) => {
+  if (props.type === "day") {
+    return <SelectDay {...props} />;
+  }
   const defaultRef = useRef(null);
   const ref = props.ref || defaultRef;
   const uiStateController = useUIGroupStateController(props, "select", {
@@ -902,6 +908,196 @@ const SelectWithDialog = (props) => {
 const SelectRequestCloseContext = createContext();
 export const useSelectRequestClose = () => {
   return useContext(SelectRequestCloseContext);
+};
+
+// --- Day picker ---
+
+const MS_PER_DAY = 86_400_000;
+
+const startOfDay = (date) => {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  return d;
+};
+
+const toDateKey = (date) => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+};
+
+const dateKeyToDate = (dateKey) => new Date(`${dateKey}T00:00:00`);
+
+const dateDiffInDays = (a, b) => Math.round((b - a) / MS_PER_DAY);
+
+const buildDayOptions = (minDate, count, locale, minIsToday) => {
+  const options = [];
+  for (let i = 0; i < count; i++) {
+    const d = new Date(minDate);
+    d.setDate(minDate.getDate() + i);
+    const key = toDateKey(d);
+    const baseLabel = d.toLocaleDateString(locale, {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+    });
+    let label = baseLabel;
+    if (minIsToday) {
+      if (i === 0) {
+        label = `${baseLabel} (aujourd'hui)`;
+      } else if (i === 1) {
+        label = `${baseLabel} (demain)`;
+      }
+    }
+    options.push({ key, label });
+  }
+  return options;
+};
+
+const DayOption = ({ children, ...rest }) => {
+  return (
+    <ListItem paddingX="s" paddingY="m" {...rest}>
+      {children}
+    </ListItem>
+  );
+};
+
+const CustomDayOption = ({ value, index, minKey, locale, uiAction }) => {
+  const fixedOptions = buildDayOptions(
+    dateKeyToDate(minKey),
+    index,
+    locale,
+    false,
+  );
+  const isValueInFixed = fixedOptions.some((o) => o.key === value);
+  const initialCustomKey =
+    value && value !== "custom" && !isValueInFixed ? value : null;
+  const [customKey, setCustomKey] = useState(initialCustomKey);
+  const hasCustom = customKey !== null;
+
+  return (
+    <>
+      {hasCustom && (
+        <DayOption
+          id="custom_display"
+          index={index}
+          value={customKey}
+          selected={value === customKey}
+        >
+          <Text capitalize>
+            {dateKeyToDate(customKey).toLocaleDateString(locale, {
+              weekday: "long",
+              day: "numeric",
+              month: "long",
+            })}
+          </Text>
+        </DayOption>
+      )}
+      <DayOption
+        id="custom_pick"
+        index={hasCustom ? index + 1 : index}
+        value="custom"
+        relative
+      >
+        <Text>Choisir un autre jour…</Text>
+        <Input
+          type="date"
+          value={hasCustom ? customKey : undefined}
+          min={minKey}
+          uiAction={(newKey) => {
+            setCustomKey(newKey);
+            if (uiAction) {
+              uiAction(newKey);
+            }
+          }}
+          onMouseDown={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            e.currentTarget.showPicker();
+          }}
+          absolute
+          inset
+          expand
+          opacity={0}
+          cursor="pointer"
+        />
+      </DayOption>
+    </>
+  );
+};
+
+export const SelectDay = ({
+  min,
+  max,
+  maxLength = 10,
+  custom: forceCustom,
+  locale = "fr-FR",
+  value,
+  uiAction,
+  placeholder = "Choisir un jour",
+  ...rest
+}) => {
+  const minDate = startOfDay(min ?? new Date());
+  const minKey = toDateKey(minDate);
+  const todayKey = toDateKey(startOfDay(new Date()));
+  const minIsToday = minKey === todayKey;
+
+  let daysToShow;
+  let showCustomPicker;
+  if (max) {
+    const maxDate = startOfDay(max);
+    const totalDays = dateDiffInDays(minDate, maxDate) + 1;
+    if (totalDays > maxLength) {
+      daysToShow = maxLength;
+      showCustomPicker = true;
+    } else {
+      daysToShow = totalDays;
+      showCustomPicker = forceCustom || false;
+    }
+  } else {
+    daysToShow = maxLength;
+    showCustomPicker = forceCustom || false;
+  }
+
+  const dayOptions = buildDayOptions(minDate, daysToShow, locale, minIsToday);
+
+  return (
+    <SelectDispatcher
+      trigger={<SelectTrigger />}
+      placeholder={placeholder}
+      value={value}
+      uiAction={(key) => {
+        if (key !== "custom" && uiAction) {
+          uiAction(key);
+        }
+      }}
+      {...rest}
+    >
+      <List expandX>
+        {dayOptions.map(({ key, label }, index) => (
+          <DayOption
+            key={key}
+            value={key}
+            index={index}
+            id={key}
+            selected={value === key}
+          >
+            <Text capitalize>{label}</Text>
+          </DayOption>
+        ))}
+        {showCustomPicker && (
+          <CustomDayOption
+            value={value}
+            index={dayOptions.length}
+            minKey={minKey}
+            locale={locale}
+            uiAction={uiAction}
+          />
+        )}
+      </List>
+    </SelectDispatcher>
+  );
 };
 
 /**

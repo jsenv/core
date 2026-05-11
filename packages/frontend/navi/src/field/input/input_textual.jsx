@@ -26,27 +26,27 @@ import {
   useState,
 } from "preact/hooks";
 
-import { useActionBoundToOneParam } from "../action/use_action.js";
-import { useActionStatus } from "../action/use_action_status.js";
-import { useExecuteAction } from "../action/use_execute_action.js";
-import { Box } from "../box/box.jsx";
-import { ChevronDownSvg } from "../graphic/icons/chevron_updown_svg.jsx";
-import { CloseSvg } from "../graphic/icons/close_svg.jsx";
-import { EmailSvg } from "../graphic/icons/email_svg.jsx";
-import { PhoneSvg } from "../graphic/icons/phone_svg.jsx";
-import { SearchSvg } from "../graphic/icons/search_svg.jsx";
-import { LoadingOutline } from "../graphic/loading/loading_outline.jsx";
-import { shortcutsViaOnKeyDown } from "../keyboard/keyboard_shortcuts.js";
-import { Icon } from "../text/icon.jsx";
-import { useAutoFocus } from "../utils/focus/use_auto_focus.js";
-import { useStableCallback } from "../utils/use_stable_callback.js";
-import { fieldPropSet } from "./field_prop_set.js";
+import { useActionBoundToOneParam } from "@jsenv/navi/src/action/use_action.js";
+import { useActionStatus } from "@jsenv/navi/src/action/use_action_status.js";
+import { useExecuteAction } from "@jsenv/navi/src/action/use_execute_action.js";
+import { Box } from "@jsenv/navi/src/box/box.jsx";
+import { ChevronDownSvg } from "@jsenv/navi/src/graphic/icons/chevron_updown_svg.jsx";
+import { CloseSvg } from "@jsenv/navi/src/graphic/icons/close_svg.jsx";
+import { EmailSvg } from "@jsenv/navi/src/graphic/icons/email_svg.jsx";
+import { PhoneSvg } from "@jsenv/navi/src/graphic/icons/phone_svg.jsx";
+import { SearchSvg } from "@jsenv/navi/src/graphic/icons/search_svg.jsx";
+import { LoadingOutline } from "@jsenv/navi/src/graphic/loading/loading_outline.jsx";
+import { shortcutsViaOnKeyDown } from "@jsenv/navi/src/keyboard/keyboard_shortcuts.js";
+import { Icon } from "@jsenv/navi/src/text/icon.jsx";
+import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
+import { useStableCallback } from "@jsenv/navi/src/utils/use_stable_callback.js";
+import { fieldPropSet } from "../field_prop_set.js";
 import {
   Label,
   reportDisabledToLabel,
   reportInteractiveToLabel,
   reportReadOnlyToLabel,
-} from "./label.jsx";
+} from "../label.jsx";
 import {
   InsideRealListItemContext,
   ListIdContext,
@@ -55,8 +55,8 @@ import {
   requestListNavFromCurrent,
   requestListOpen,
   requestListSelectCurrent,
-} from "./list/list.jsx";
-import { useActionEvents } from "./use_action_events.js";
+} from "../list/list.jsx";
+import { useActionEvents } from "../use_action_events.js";
 import {
   DisabledContext,
   LoadingContext,
@@ -66,9 +66,9 @@ import {
   UIStateControllerContext,
   useUIState,
   useUIStateController,
-} from "./use_ui_state_controller.js";
-import { forwardActionRequested } from "./validation/custom_constraint_validation.js";
-import { useConstraints } from "./validation/hooks/use_constraints.js";
+} from "../use_ui_state_controller.js";
+import { forwardActionRequested } from "../validation/custom_constraint_validation.js";
+import { useConstraints } from "../validation/hooks/use_constraints.js";
 
 const css = /* css */ `
   @layer navi {

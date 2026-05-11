@@ -13,7 +13,7 @@ import { useActionBoundToOneArrayParam } from "../action/use_action.js";
 import { useActionStatus } from "../action/use_action_status.js";
 import { useExecuteAction } from "../action/use_execute_action.js";
 import { Box } from "../box/box.jsx";
-import { InputCheckbox } from "./input_checkbox.jsx";
+import { InputCheckbox } from "./input/input_checkbox.jsx";
 import { useActionEvents } from "./use_action_events.js";
 import {
   DisabledContext,
