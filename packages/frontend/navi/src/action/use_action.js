@@ -1,40 +1,28 @@
-import { useSignal } from "@preact/signals";
 import { useCallback, useRef } from "preact/hooks";
 
 import { addIntoArray, removeFromArray } from "../utils/array_add_remove.js";
+import { isSignal } from "../utils/is_signal.js";
 import { createAction } from "./actions.js";
 
 // used by form elements such as <input>, <select>, <textarea> to have their own action bound to a single parameter
 // when inside a <form> the form params are updated when the form element single param is updated
-export const useActionBoundToOneParam = (action, externalValue) => {
-  const actionFirstArgSignal = useSignal(externalValue);
-  const boundAction = useBoundAction(action, actionFirstArgSignal);
-  const getValue = useCallback(() => actionFirstArgSignal.value, []);
-  const setValue = useCallback((value) => {
-    actionFirstArgSignal.value = value;
-  }, []);
-  const externalValueRef = useRef(externalValue);
-  if (externalValue !== externalValueRef.current) {
-    externalValueRef.current = externalValue;
-    setValue(externalValue);
+export const useActionBoundToOneParam = (action, paramsSignal) => {
+  if (!isSignal(paramsSignal)) {
+    throw new Error(
+      `useActionBoundToOneParam expects a signal as second argument, got: ${paramsSignal}`,
+    );
   }
-
-  const value = getValue();
-  return [boundAction, value, setValue];
+  const boundAction = useBoundAction(action, paramsSignal);
+  const getValue = useCallback(() => paramsSignal.value, []);
+  const setValue = useCallback((value) => {
+    paramsSignal.value = value;
+  }, []);
+  return [boundAction, getValue(), setValue];
 };
-export const useActionBoundToOneArrayParam = (
-  action,
-  name,
-  externalValue,
-  fallbackValue,
-  defaultValue,
-) => {
+export const useActionBoundToOneArrayParam = (action, paramsSignal) => {
   const [boundAction, value, setValue] = useActionBoundToOneParam(
     action,
-    name,
-    externalValue,
-    fallbackValue,
-    defaultValue,
+    paramsSignal,
   );
 
   const add = (valueToAdd, valueArray = value) => {

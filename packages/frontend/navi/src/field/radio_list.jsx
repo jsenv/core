@@ -93,7 +93,6 @@ const RadioListBasic = (props) => {
 };
 const RadioListWithAction = (props) => {
   const uiStateController = useContext(UIStateControllerContext);
-  const uiState = useContext(UIStateContext);
   const {
     action,
 
@@ -109,7 +108,10 @@ const RadioListWithAction = (props) => {
     ...rest
   } = props;
   const innerRef = useRef();
-  const [boundAction] = useActionBoundToOneParam(action, uiState);
+  const [boundAction] = useActionBoundToOneParam(
+    action,
+    uiStateController.uiStateSignal,
+  );
   const { loading: actionLoading } = useActionStatus(boundAction);
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,

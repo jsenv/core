@@ -826,8 +826,11 @@ const InputTextualWithAction = (props) => {
     actionErrorEffect,
     ...rest
   } = props;
-  const uiState = useContext(UIStateContext);
-  const [boundAction] = useActionBoundToOneParam(action, uiState);
+  const uiStateController = useContext(UIStateControllerContext);
+  const [boundAction] = useActionBoundToOneParam(
+    action,
+    uiStateController.uiStateSignal,
+  );
   const { loading: actionLoading } = useActionStatus(boundAction);
   const executeAction = useExecuteAction(ref, {
     errorEffect: actionErrorEffect,

@@ -1326,8 +1326,11 @@ const ListWithAction = (props) => {
     allowNameless: true,
   });
   const uiState = useUIState(uiStateController);
-  // Bind action to uiState (like InputTextualWithAction, null-safe when no action)
-  const [boundAction] = useActionBoundToOneParam(action, uiState);
+  // Pass uiStateSignal directly so action params update synchronously (not one render behind)
+  const [boundAction] = useActionBoundToOneParam(
+    action,
+    uiStateController.uiStateSignal,
+  );
   const { loading: actionLoading } = useActionStatus(boundAction);
   const executeAction = useExecuteAction(ref, {
     errorEffect: actionErrorEffect,

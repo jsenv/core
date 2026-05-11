@@ -114,7 +114,6 @@ const FormUI = (props) => {
 
 const FormWithAction = (props) => {
   const uiStateController = useContext(UIStateControllerContext);
-  const uiState = useContext(UIStateContext);
   const {
     action,
     method,
@@ -131,7 +130,10 @@ const FormWithAction = (props) => {
   } = props;
   const defaultRef = useRef();
   const ref = props.ref || defaultRef;
-  const [actionBoundToUIState] = useActionBoundToOneParam(action, uiState);
+  const [actionBoundToUIState] = useActionBoundToOneParam(
+    action,
+    uiStateController.uiStateSignal,
+  );
   const executeAction = useExecuteAction(ref, {
     errorEffect: actionErrorEffect,
     errorMapping,

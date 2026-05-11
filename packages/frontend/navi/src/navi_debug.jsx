@@ -6,6 +6,7 @@ const DebugFocusContext = createContext(false);
 const DebugScrollContext = createContext(false);
 const DebugPopupContext = createContext(false);
 const DebugActionContext = createContext(false);
+const DebugActionVerboseContext = createContext(false);
 
 const debugNoop = () => {};
 
@@ -25,6 +26,10 @@ export const useDebugAction = () => {
   const debug = useContext(DebugActionContext);
   return debug || debugNoop;
 };
+export const useDebugActionVerbose = () => {
+  const debug = useContext(DebugActionVerboseContext);
+  return debug || debugNoop;
+};
 
 /**
  * NaviDebug — enables debug logging for navi UI interactions within its subtree.
@@ -41,6 +46,7 @@ export const NaviDebug = ({
   debugScroll,
   debugPopup,
   debugAction,
+  debugActionVerbose,
   children,
 }) => {
   if (debugFocus === true) {
@@ -55,13 +61,20 @@ export const NaviDebug = ({
   if (debugAction === true) {
     debugAction = createEventGroupLogger();
   }
+  if (debugActionVerbose === true) {
+    debugActionVerbose = (e, label) => {
+      console.debug(label);
+    };
+  }
 
   return (
     <DebugFocusContext.Provider value={debugFocus}>
       <DebugScrollContext.Provider value={debugScroll}>
         <DebugPopupContext.Provider value={debugPopup}>
           <DebugActionContext.Provider value={debugAction}>
-            {children}
+            <DebugActionVerboseContext.Provider value={debugActionVerbose}>
+              {children}
+            </DebugActionVerboseContext.Provider>
           </DebugActionContext.Provider>
         </DebugPopupContext.Provider>
       </DebugScrollContext.Provider>

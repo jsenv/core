@@ -105,7 +105,6 @@ const CheckboxListBasic = forwardRef((props, ref) => {
 
 const CheckboxListWithAction = forwardRef((props, ref) => {
   const uiStateController = useContext(UIStateControllerContext);
-  const uiState = useContext(UIStateContext);
   const {
     action,
     actionErrorEffect,
@@ -121,7 +120,10 @@ const CheckboxListWithAction = forwardRef((props, ref) => {
   } = props;
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
-  const [boundAction] = useActionBoundToOneArrayParam(action, uiState);
+  const [boundAction] = useActionBoundToOneArrayParam(
+    action,
+    uiStateController.uiStateSignal,
+  );
   const { loading: actionLoading } = useActionStatus(boundAction);
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,

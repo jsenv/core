@@ -643,7 +643,6 @@ const CheckboxChildPropSet = new Set([...fieldPropSet]);
 
 const InputCheckboxWithAction = (props) => {
   const uiStateController = useContext(UIStateControllerContext);
-  const uiState = useContext(UIStateContext);
   const {
     ref,
     action,
@@ -657,7 +656,10 @@ const InputCheckboxWithAction = (props) => {
     loading,
     ...rest
   } = props;
-  const [actionBoundToUIState] = useActionBoundToOneParam(action, uiState);
+  const [actionBoundToUIState] = useActionBoundToOneParam(
+    action,
+    uiStateController.uiStateSignal,
+  );
   const actionStatus = useActionStatus(actionBoundToUIState);
   const { loading: actionLoading } = actionStatus;
   const executeAction = useExecuteAction(ref, {

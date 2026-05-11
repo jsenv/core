@@ -1,16 +1,11 @@
 import { createPubSub } from "@jsenv/dom";
+import { signal } from "@preact/signals";
 import { createContext } from "preact";
-import {
-  useContext,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "preact/hooks";
+import { useContext, useLayoutEffect, useMemo, useRef } from "preact/hooks";
 
 import { isSignal } from "@jsenv/navi/src/utils/is_signal.js";
 import { useNavState } from "../nav/browser_integration/browser_integration.js";
-import { useDebugAction } from "../navi_debug.jsx";
+import { useDebugAction, useDebugActionVerbose } from "../navi_debug.jsx";
 import { useInitialValue } from "../state/use_initial_value.js";
 import { FormContext } from "./form_context.js";
 
@@ -70,6 +65,7 @@ export const useUIStateController = (
   } = {},
 ) => {
   const debugAction = useDebugAction();
+  const debugActionVerbose = useDebugActionVerbose();
   const parentUIStateController = useContext(ParentUIStateControllerContext);
   const formContext = useContext(FormContext);
   const { id, name, uiAction, action } = props;
@@ -154,6 +150,7 @@ export const useUIStateController = (
     JSON.stringify(stateInitial),
   );
   const [publishUIState, subscribeUIState] = createPubSub();
+  const uiStateSignal = signal(stateInitial);
   const uiStateController = {
     _checkForUpdates: ({
       readOnly,
@@ -196,6 +193,7 @@ export const useUIStateController = (
     hasStateProp,
     state: stateInitial,
     uiState: stateInitial,
+    uiStateSignal,
     uiAction,
     getPropFromState,
     getStateFromProp,
@@ -214,7 +212,10 @@ export const useUIStateController = (
         `${componentType}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> updating to ${JSON.stringify(newUIState)}`,
       );
       uiStateController.uiState = newUIState;
+      uiStateSignal.value = newUIState;
+      debugActionVerbose(e, `uiStateSignal -> ${JSON.stringify(newUIState)}`);
       publishUIState(newUIState);
+      debugActionVerbose(e, `publishUIState(${JSON.stringify(newUIState)})`);
       if (uiStateController.uiAction) {
         debugAction(
           e,
@@ -412,6 +413,7 @@ export const useUIGroupStateController = (
   );
 
   const [publishUIState, subscribeUIState] = createPubSub();
+  const uiStateSignal = signal(emptyState);
   const isMonitoringChild = (childUIStateController) => {
     if (childComponentType === "*") {
       return true;
@@ -424,6 +426,7 @@ export const useUIGroupStateController = (
     value,
     uiAction,
     uiState: emptyState,
+    uiStateSignal,
     setUIState: (newUIState, e, { notifyExternal = true } = {}) => {
       if (isSignal(newUIState)) {
         newUIState = newUIState.value;
@@ -433,6 +436,7 @@ export const useUIGroupStateController = (
         return;
       }
       uiStateController.uiState = newUIState;
+      uiStateSignal.value = newUIState;
       debugUIGroup(
         `${componentType}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> updates from ${JSON.stringify(currentUIState)} to ${JSON.stringify(newUIState)}`,
       );
@@ -518,19 +522,5 @@ export const useUIGroupStateController = (
  * @returns {any} The current UI state
  */
 export const useUIState = (uiStateController) => {
-  const [trackedUIState, setTrackedUIState] = useState(
-    uiStateController.uiState,
-  );
-
-  useLayoutEffect(() => {
-    // Subscribe to UI state changes
-    const unsubscribe = uiStateController.subscribe(setTrackedUIState);
-
-    // Sync with current state in case it changed before subscription
-    setTrackedUIState(uiStateController.uiState);
-
-    return unsubscribe;
-  }, [uiStateController]);
-
-  return trackedUIState;
+  return uiStateController.uiStateSignal.value;
 };
