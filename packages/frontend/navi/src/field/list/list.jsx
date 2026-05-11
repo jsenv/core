@@ -37,12 +37,13 @@ import {
   useUIState,
   useUIStateController,
 } from "../use_ui_state_controller.js";
-import { openCallout } from "../validation/callout/callout.js";
 import {
   dispatchActionRequestedCustomEvent,
   forwardActionRequested,
+  requestAction,
 } from "../validation/custom_constraint_validation.js";
 import { useConstraints } from "../validation/hooks/use_constraints.js";
+import { useSearchHighlight } from "./search_highlight.js";
 
 const ListItemTrackerContext = createContext(null);
 const GroupItemTrackerContext = createContext(null);
@@ -59,19 +60,6 @@ const ListMousePointedIdContext = createContext(null);
 const ListKeyboardPointedIdContext = createContext(null);
 // Non-null when inside a ListInteractive (used to render data-interactive).
 const ListInteractiveContext = createContext(false);
-
-// Module-level shared Highlight instance for navi-search-match.
-let naviSearchHighlight = null;
-const getNaviSearchHighlight = () => {
-  if (!CSS.highlights) {
-    return null;
-  }
-  if (!naviSearchHighlight) {
-    naviSearchHighlight = new Highlight();
-    CSS.highlights.set("navi-search-match", naviSearchHighlight);
-  }
-  return naviSearchHighlight;
-};
 
 // When total rendered items exceeds renderBudget, a render window [start, end)
 // is activated to cap the number of DOM nodes. Items outside the window return
@@ -1800,87 +1788,7 @@ const ListItemReal = ({
   }, [needScrollOnMount]);
 
   // CSS Highlight API: mark matching text ranges when highlight prop is set.
-  // highlight can be:
-  //   - an array of [start, end] pairs — applied to all text nodes under itemEl
-  //   - an object { [domSelector]: [[start, end], …] } — applied to each
-  //     matching sub-element found by the selector (from createSearch)
-  useLayoutEffect(() => {
-    const hl = getNaviSearchHighlight();
-    if (!hl) {
-      return undefined;
-    }
-    const itemEl = ref.current;
-    if (!itemEl || !highlight) {
-      return undefined;
-    }
-
-    // Normalise highlight to { rootOrSelector: ranges[] } entries.
-    // Flat array → single entry scoped to the whole item element.
-    const entries = Array.isArray(highlight)
-      ? highlight.length === 0
-        ? []
-        : [{ root: itemEl, ranges: highlight }]
-      : Object.entries(highlight).map(([selector, ranges]) => ({
-          root: itemEl.querySelector(selector) ?? itemEl,
-          ranges,
-        }));
-
-    if (entries.length === 0) {
-      return undefined;
-    }
-
-    const ownRanges = [];
-    for (const { root, ranges } of entries) {
-      // Collect text nodes under root and their cumulative offsets so that
-      // [start, end] ranges (character positions in the field string) map
-      // directly to the correct text node positions without re-searching.
-      const textNodes = [];
-      let totalLength = 0;
-      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
-        acceptNode: (node) => {
-          // Skip text nodes inside aria-hidden elements (icons, decorative emoji, etc.)
-          let el = node.parentElement;
-          while (el && el !== root) {
-            if (el.getAttribute("aria-hidden") === "true") {
-              return NodeFilter.FILTER_REJECT;
-            }
-            el = el.parentElement;
-          }
-          return NodeFilter.FILTER_ACCEPT;
-        },
-      });
-      let node;
-      while ((node = walker.nextNode())) {
-        textNodes.push({ node, offset: totalLength });
-        totalLength += node.textContent.length;
-      }
-      for (const [start, end] of ranges) {
-        for (const { node: textNode, offset: nodeOffset } of textNodes) {
-          const nodeEnd = nodeOffset + textNode.textContent.length;
-          if (nodeEnd <= start || nodeOffset >= end) {
-            continue;
-          }
-          const rangeStart = start - nodeOffset;
-          const rangeEnd = end - nodeOffset;
-          const range = new Range();
-          range.setStart(textNode, rangeStart < 0 ? 0 : rangeStart);
-          range.setEnd(
-            textNode,
-            rangeEnd > textNode.textContent.length
-              ? textNode.textContent.length
-              : rangeEnd,
-          );
-          hl.add(range);
-          ownRanges.push(range);
-        }
-      }
-    }
-    return () => {
-      for (const range of ownRanges) {
-        hl.delete(range);
-      }
-    };
-  }, [highlight, children, hidden]);
+  useSearchHighlight(ref, highlight, [children, hidden]);
 
   return (
     <Box
@@ -1895,6 +1803,7 @@ const ListItemReal = ({
       navi-list-item-real=""
       data-interactive={isInteractive ? "" : undefined}
       data-anchor={isPointedByKeyboard ? "" : undefined}
+      data-required-message={naviI18n(`list_item.readonly`, { item })}
       {...rest}
       hidden={hidden}
       ref={ref}
@@ -1926,11 +1835,9 @@ const ListItemReal = ({
         }
         if (readOnly) {
           e.preventDefault();
-          const message = readonlyMessage ?? naviI18n("list_item.readonly");
-          openCallout(message, {
-            anchorElement: e.currentTarget,
-            status: "info",
-            closeOnClickOutside: true,
+          requestAction(e.currentTarget, null, {
+            actionOrigin: e.currentTarget,
+            event: e,
           });
           return;
         }
@@ -1951,9 +1858,10 @@ const ListItemReal = ({
           event: e.detail.event || e,
         });
       }}
-      data-readonly={readOnly ? "" : undefined}
+      data-readonly-message={readonlyMessage}
       basePseudoState={{
         ":disabled": Boolean(disabled),
+        ":read-only": Boolean(readOnly),
         ":-navi-pointed": isPointed,
         ":-navi-pointed-by-mouse": isPointedByMouse,
         ":-navi-pointed-by-keyboard": isPointedByKeyboard,
@@ -2005,6 +1913,7 @@ const LIST_ITEM_PSEUDO_CLASSES = [
   ":-navi-pointed-by-proxy",
   ":-navi-selected",
   ":disabled",
+  ":read-only",
 ];
 const LIST_ITEM_PSEUDO_ELEMENTS = ["::highlight"];
 
