@@ -184,21 +184,18 @@ const css = /* css */ `
       position: absolute;
       top: 0;
       bottom: 0;
-      display: inline-flex;
       margin: 0;
       padding: 0;
-      align-items: center;
-      justify-content: center;
       font-size: var(--font-size);
       background: none;
       border: none;
 
       &[data-left] {
-        left: var(--x-padding-left-base);
+        left: 0;
         width: var(--left-slot-size);
       }
       &[data-right] {
-        right: var(--x-padding-right-base);
+        right: 0;
         width: var(--right-slot-size);
       }
       &[data-hide-while-empty] {
@@ -227,10 +224,10 @@ const css = /* css */ `
       }
     }
     &:has(.navi_input_slot[data-left]) {
-      --left-slot-size: 1em;
+      --left-slot-size: 1.5em;
     }
     &:has(.navi_input_slot[data-right]) {
-      --right-slot-size: 1em;
+      --right-slot-size: 1.5em;
     }
 
     /* Hover */
@@ -573,8 +570,9 @@ const InputSlot = ({ side, onClick, hideWhileEmpty, ...props }) => {
       data-left={side === "left" ? "" : undefined}
       data-right={side === "right" ? "" : undefined}
       data-hide-while-empty={hideWhileEmpty ? "" : undefined}
+      inline
       flex
-      alignY="center"
+      align="center"
       onMouseDown={(e) => {
         // Only prevent focus from leaving when the input already has focus.
         // If the input is not focused, let the mousedown proceed normally so
