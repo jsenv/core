@@ -86,7 +86,6 @@ import {
 } from "./constraints/standard_constraints.js";
 import { listenInputValue } from "./input_value_listener.js";
 
-let debug = false;
 export const NAVI_VALIDITY_CHANGE_CUSTOM_EVENT = "navi_validity_change";
 
 const STANDARD_CONSTRAINT_SET = new Set([
@@ -152,13 +151,9 @@ export const requestAction = (
     meta,
   };
 
-  if (debug) {
-    console.debug(
-      `action requested by`,
-      requester,
-      `(event: "${event?.type}")`,
-    );
-  }
+  debugAction?.(
+    `action requested by ${requester?.id || requester?.tagName} (event: "${event?.type}")`,
+  );
 
   // Determine what needs to be validated and how to handle the result
   const isForm = elementToValidate.tagName === "FORM";
@@ -171,9 +166,9 @@ export const requestAction = (
   if (formToValidate) {
     // Form validation case
     if (validationInProgressWeakSet.has(formToValidate)) {
-      if (debug) {
-        console.debug(`validation already in progress for`, formToValidate);
-      }
+      debugAction?.(
+        `validation already in progress for ${formToValidate?.id || formToValidate?.tagName}`,
+      );
       return false;
     }
     validationInProgressWeakSet.add(formToValidate);
@@ -202,7 +197,7 @@ export const requestAction = (
             `open callout (${getFailedConstraintName(elementValidationInterface)})`,
           ),
         );
-        elementValidationInterface.reportValidity({ event });
+        elementValidationInterface.reportValidity({ event, debugAction });
         isValid = false;
         break;
       }
@@ -220,7 +215,7 @@ export const requestAction = (
           `open callout (${getFailedConstraintName(validationInterface)})`,
         ),
       );
-      validationInterface.reportValidity({ event });
+      validationInterface.reportValidity({ event, debugAction });
     }
     elementForConfirmation = target;
     elementForDispatch = target;
@@ -252,13 +247,7 @@ export const requestAction = (
     }
   }
 
-  // All good, dispatch the action
-  if (debug) {
-    console.debug(
-      `element is valid -> dispatch "action" on`,
-      elementForDispatch,
-    );
-  }
+  debugAction?.(`element is valid -> dispatch navi_action`);
   dispatchCustomEvent(elementForDispatch, "navi_action", customEventDetail);
 
   return true;
@@ -304,10 +293,6 @@ export const installCustomConstraintValidation = (
   element,
   elementReceivingValidationMessage = element,
 ) => {
-  if (debug) {
-    console.debug(`installCustomConstraintValidation on`, element);
-  }
-
   const validationInterface = {
     uninstall: undefined,
     registerConstraint: undefined,
@@ -500,7 +485,7 @@ export const installCustomConstraintValidation = (
     }
     return newConstraintValidityState.valid;
   };
-  const reportValidity = ({ skipFocus, event } = {}) => {
+  const reportValidity = ({ skipFocus, event, debugAction } = {}) => {
     if (!failedConstraintInfo) {
       closeElementValidationMessage("becomes_valid");
       return;
@@ -547,6 +532,7 @@ export const installCustomConstraintValidation = (
         status: failedConstraintInfo.status,
         closeOnClickOutside: failedConstraintInfo.closeOnClickOutside,
         openingEvent: event,
+        debug: debugAction,
         onClose: () => {
           removeCloseOnCleanup();
           validationInterface.validationMessage = null;
@@ -902,9 +888,6 @@ export const installCustomConstraintValidation = (
     form.setAttribute("novalidate", ""); // make sure browser don't prevent "submit" nor display messages
     const removeListener = addEventListener(form, "submit", (e) => {
       e.preventDefault();
-      if (debug) {
-        console.debug(`"submit" called -> dispatch "action" on`, form);
-      }
       dispatchCustomEvent(form, "navi_action", {
         action: null,
         event: e,

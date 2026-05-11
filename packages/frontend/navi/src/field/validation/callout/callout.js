@@ -202,7 +202,7 @@ export const openCallout = (
     closeOnClickOutside = status === "info",
     openingEvent,
     showErrorStack,
-    debug = false,
+    debug,
   } = {},
 ) => {
   import.meta.css = css;
@@ -219,7 +219,7 @@ export const openCallout = (
   };
 
   if (debug) {
-    console.debug("open callout", {
+    debug("open callout", {
       anchorElement,
       message,
       status,
@@ -232,7 +232,7 @@ export const openCallout = (
       return;
     }
     if (debug) {
-      console.debug(`callout closed (reason: ${reason})`);
+      debug(`callout closed (reason: ${reason})`);
     }
     callout.opened = false;
     teardown(reason);
