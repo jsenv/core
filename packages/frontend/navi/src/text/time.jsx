@@ -25,7 +25,7 @@ import { Text } from "./text.jsx";
  *   Defaults to `langSignal.value` (the browser's current language).
  */
 export const Time = ({ children, type = "day", locale, ...props }) => {
-  const date = toDate(children);
+  const date = toDate(children, type);
   const lang = locale || langSignal.value;
   const text = date
     ? formatDate(date, type, lang)
@@ -41,7 +41,7 @@ export const Time = ({ children, type = "day", locale, ...props }) => {
   );
 };
 
-const toDate = (value) => {
+const toDate = (value, type) => {
   if (value instanceof Date) {
     return value;
   }
@@ -49,7 +49,17 @@ const toDate = (value) => {
     return new Date(value);
   }
   if (typeof value === "string") {
-    // YYYY-MM-DD
+    // "HH:MM" or "HH:MM:SS" — only meaningful for type="time"
+    if (type === "time" && /^\d{2}:\d{2}(?::\d{2})?$/.test(value)) {
+      const d = new Date(`1970-01-01T${value}`);
+      return isNaN(d.getTime()) ? null : d;
+    }
+    // "YYYY-MM" — only meaningful for type="month", avoid UTC shift
+    if (type === "month" && /^\d{4}-\d{2}$/.test(value)) {
+      const d = new Date(`${value}-01T00:00:00`);
+      return isNaN(d.getTime()) ? null : d;
+    }
+    // "YYYY-MM-DD" — use local midnight to avoid UTC shift
     if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
       const d = new Date(`${value}T00:00:00`);
       return isNaN(d.getTime()) ? null : d;

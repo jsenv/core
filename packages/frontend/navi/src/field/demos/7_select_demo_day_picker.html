@@ -35,7 +35,15 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { signal } from "@preact/signals";
-      import { Box, Icon, Label, Select, NaviDebug, Time } from "@jsenv/navi";
+      import {
+        Box,
+        Icon,
+        Label,
+        Select,
+        NaviDebug,
+        Time,
+        Paragraph,
+      } from "@jsenv/navi";
 
       const toDateKey = (date) => {
         const y = date.getFullYear();
@@ -95,10 +103,12 @@
                 expandX
               />
             </NaviDebug>
-            <p style="margin: 12px 0 0; font-size: 13px; color: #333;">
-              Valeur sélectionnée :{" "}
-              <Time type="">{scheduledDaySignal.value}</Time>
-            </p>
+            <Paragraph style="margin: 12px 0 0; font-size: 13px; color: #333;">
+              Valeur sélectionnée :
+              <Time type="day" capitalize>
+                {scheduledDaySignal.value}
+              </Time>
+            </Paragraph>
           </Box>
         );
       };
