@@ -410,6 +410,7 @@
       const DayHourPickerDemo = () => {
         const daySignal = useSignal("");
         const hourSignal = useSignal("");
+        const submittedSignal = useSignal(null);
         return (
           <div class="demo-section">
             <h2>Jour + Heure</h2>
@@ -418,37 +419,53 @@
               jour sélectionné est aujourd'hui, les heures passées sont
               masquées.
             </p>
-            <Field vertical>
-              <Label>Jour</Label>
-              <Picker
-                type="day"
-                name="day"
-                value={daySignal.value}
-                uiAction={(v) => {
-                  daySignal.value = v;
-                  hourSignal.value = "";
-                }}
-                min={today}
-                max={in30days}
-                placeholder="Choisir un jour"
-              />
-            </Field>
-            <Field vertical style="margin-top:12px">
-              <Label>Heure (7h–21h, 30 min)</Label>
-              <HourPicker
-                name="hour"
-                min="07:00"
-                max="21:00"
-                step={1800}
-                selectedDay={daySignal.value}
-                value={hourSignal.value}
-                uiAction={(v) => {
-                  hourSignal.value = v;
-                }}
-                placeholder="Choisir une heure"
-                required={Boolean(daySignal.value)}
-              />
-            </Field>
+            <Form
+              action={(values) => {
+                submittedSignal.value = values;
+              }}
+              flex="y"
+              spacing="m"
+              alignX="start"
+            >
+              <Field vertical>
+                <Label>Jour</Label>
+                <Picker
+                  type="day"
+                  name="day"
+                  required
+                  value={daySignal.value}
+                  uiAction={(v) => {
+                    daySignal.value = v;
+                    hourSignal.value = "";
+                  }}
+                  min={today}
+                  max={in30days}
+                  placeholder="Choisir un jour"
+                />
+              </Field>
+              <Field vertical>
+                <Label>Heure (7h–21h, 30 min)</Label>
+                <HourPicker
+                  name="hour"
+                  required
+                  min="07:00"
+                  max="21:00"
+                  step={1800}
+                  selectedDay={daySignal.value}
+                  value={hourSignal.value}
+                  uiAction={(v) => {
+                    hourSignal.value = v;
+                  }}
+                  placeholder="Choisir une heure"
+                />
+              </Field>
+              <Button type="submit">Soumettre</Button>
+              {submittedSignal.value && (
+                <pre style="margin:0;font-size:12px;background:#f0f0f0;padding:8px;border-radius:4px;">
+                  {JSON.stringify(submittedSignal.value, null, 2)}
+                </pre>
+              )}
+            </Form>
           </div>
         );
       };

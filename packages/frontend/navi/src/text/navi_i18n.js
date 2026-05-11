@@ -123,6 +123,14 @@ naviI18n.addAll({
     fr: "Aucune heure disponible.",
     en: "No available time slots.",
   },
+  "picker.hour.readonly_slot": {
+    fr: "Cet horaire n'est pas disponible.",
+    en: "This time slot is not available.",
+  },
+  "list_item.readonly": {
+    fr: "Cette option n'est pas disponible.",
+    en: "This option is not available.",
+  },
   "constraint.disabled": {
     fr: "[field] est désactivé.",
     en: "[field] is disabled.",

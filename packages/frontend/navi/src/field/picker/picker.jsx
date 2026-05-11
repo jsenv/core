@@ -507,11 +507,13 @@ const ICON_FOR_TYPE = {
  * generated from min/max/step, so the user can never pick an out-of-range time.
  *
  * Props:
- *   min        — earliest slot as "HH:MM" string (e.g. "07:00")
- *   max        — latest slot as "HH:MM" string (e.g. "21:00")
- *   step       — interval in seconds between slots (e.g. 1800 = 30 min)
- *   selectedDay — date string "YYYY-MM-DD"; when equal to today, past slots are hidden
- *   noSlotsMessage — text shown when all slots are filtered out
+ *   min           — earliest slot as "HH:MM" string (e.g. "07:00")
+ *   max           — latest slot as "HH:MM" string (e.g. "21:00")
+ *   step          — interval in seconds between slots (e.g. 1800 = 30 min)
+ *   selectedDay        — date string "YYYY-MM-DD"; when equal to today, past slots are disabled
+ *   minReadonly        — "HH:MM" threshold: slots at or before this time are disabled
+ *   minReadonlyMessage — message shown in the list footer when a readonly slot is clicked
+ *   noSlotsMessage     — text shown when all slots are disabled
  *   value / uiAction / name / placeholder / required / disabled — forwarded to Select
  */
 export const HourPicker = ({
@@ -519,6 +521,8 @@ export const HourPicker = ({
   max = "23:30",
   step = 1800,
   selectedDay,
+  minReadonly,
+  minReadonlyMessage,
   noSlotsMessage,
   value,
   uiAction,
@@ -531,22 +535,29 @@ export const HourPicker = ({
   );
 
   const todayStr = toDateString(new Date());
+  const now = new Date();
   const nowMinutes =
-    selectedDay === todayStr
-      ? new Date().getHours() * 60 + new Date().getMinutes()
-      : -1;
+    selectedDay === todayStr ? now.getHours() * 60 + now.getMinutes() : -1;
 
-  const visibleSlots = useMemo(() => {
-    if (nowMinutes === -1) {
-      return slots;
+  const minReadonlyMinutes = useMemo(() => {
+    if (minReadonly) {
+      const [h, m] = minReadonly.split(":").map(Number);
+      return h * 60 + m;
     }
-    return slots.filter((slot) => {
-      const [h, m] = slot.split(":").map(Number);
-      return h * 60 + m > nowMinutes;
-    });
-  }, [slots, nowMinutes]);
+    return nowMinutes;
+  }, [minReadonly, nowMinutes]);
 
-  if (visibleSlots.length === 0) {
+  const isSlotReadonly = (slot) => {
+    if (minReadonlyMinutes === -1) {
+      return false;
+    }
+    const [h, m] = slot.split(":").map(Number);
+    return h * 60 + m <= minReadonlyMinutes;
+  };
+
+  const allDisabled = slots.length > 0 && slots.every(isSlotReadonly);
+
+  if (allDisabled) {
     return (
       <Box
         as="span"
@@ -569,13 +580,17 @@ export const HourPicker = ({
       {...rest}
     >
       <List role="listbox">
-        {visibleSlots.map((slot, i) => (
+        {slots.map((slot, i) => (
           <ListItem
             key={slot}
             index={i}
             id={slot}
             value={slot}
             selected={value === slot}
+            readOnly={isSlotReadonly(slot)}
+            data-readonly-message={
+              minReadonlyMessage ?? naviI18n("picker.hour.readonly_slot")
+            }
           >
             {slot}
           </ListItem>

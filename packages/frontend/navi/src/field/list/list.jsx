@@ -24,6 +24,7 @@ import { Box } from "../../box/box.jsx";
 import { shortcutsViaOnKeyDown } from "../../keyboard/keyboard_shortcuts.js";
 import { Separator } from "../../layout/separator.jsx";
 import { useDebugScroll } from "../../navi_debug.jsx";
+import { naviI18n } from "../../text/navi_i18n.js";
 import { useAutoFocus } from "../../utils/focus/use_auto_focus.js";
 import { useItemTracker } from "../../utils/item_tracker/use_item_tracker.js";
 import { useDisplayedLayoutEffect } from "../../utils/use_displayed_layout_effect.js";
@@ -36,6 +37,7 @@ import {
   useUIState,
   useUIStateController,
 } from "../use_ui_state_controller.js";
+import { openCallout } from "../validation/callout/callout.js";
 import {
   dispatchActionRequestedCustomEvent,
   forwardActionRequested,
@@ -310,6 +312,10 @@ const css = /* css */ `
       );
       cursor: not-allowed;
       pointer-events: none;
+    }
+    &[data-readonly] {
+      --x-list-item-color: var(--list-item-color-disabled);
+      cursor: not-allowed;
     }
   }
 
@@ -1644,6 +1650,8 @@ const ListItemRealOrVoid = (props) => {
     selected,
     matchScore,
     disabled,
+    readOnly,
+    "data-readonly-message": readonlyMessage,
     index,
     ...rest
   } = props;
@@ -1692,6 +1700,8 @@ const ListItemRealOrVoid = (props) => {
         item={item}
         selected={selected}
         disabled={disabled}
+        readOnly={readOnly}
+        readonlyMessage={readonlyMessage}
         hidden={hidden}
         {...rest}
       />
@@ -1710,6 +1720,8 @@ const ListItemRealOrVoid = (props) => {
       item={item}
       selected={selected}
       disabled={disabled}
+      readOnly={readOnly}
+      readonlyMessage={readonlyMessage}
       {...rest}
     />
   );
@@ -1743,6 +1755,8 @@ const ListItemReal = ({
   highlight,
   selected,
   disabled,
+  readOnly,
+  readonlyMessage,
   item,
   pointed,
   children,
@@ -1910,6 +1924,16 @@ const ListItemReal = ({
         if (disabled) {
           return;
         }
+        if (readOnly) {
+          e.preventDefault();
+          const message = readonlyMessage ?? naviI18n("list_item.readonly");
+          openCallout(message, {
+            anchorElement: e.currentTarget,
+            status: "info",
+            closeOnClickOutside: true,
+          });
+          return;
+        }
         if (e.button !== 0) {
           return;
         }
@@ -1927,6 +1951,7 @@ const ListItemReal = ({
           event: e.detail.event || e,
         });
       }}
+      data-readonly={readOnly ? "" : undefined}
       basePseudoState={{
         ":disabled": Boolean(disabled),
         ":-navi-pointed": isPointed,
