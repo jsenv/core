@@ -2,50 +2,50 @@ import { snapshotTests } from "@jsenv/snapshot";
 import { measureTextWidth } from "@jsenv/terminal-text-size";
 import stringWidth from "string-width";
 
-const MAX_INPUT_DISPLAY = 32;
-const MAX_CODEPOINTS_DISPLAY = 40;
+const MAX_INPUT_DISPLAY = 50;
 
 // Render a comparison table as a plain string — no external dep required.
 const renderComparisonTable = (sections) => {
-  const rows = [
-    ["input", "measureTextWidth", "string-width", "codepoints", "match"],
-  ];
+  const rows = [["measureTextWidth", "string-width", "diff", "input"]];
   for (const { label, inputs } of sections) {
-    rows.push([`--- ${label} ---`, "", "", "", ""]);
+    rows.push(["", "", "", `--- ${label} ---`]);
     for (const input of inputs) {
       const sw = stringWidth(input);
       const mw = measureTextWidth(input);
-      const cpFull = [...input]
-        .map(
-          (c) =>
-            `U+${c.codePointAt(0).toString(16).toUpperCase().padStart(4, "0")}`,
-        )
-        .join(" ");
       const rawInput = JSON.stringify(input);
       const displayInput =
         rawInput.length > MAX_INPUT_DISPLAY
           ? `${rawInput.slice(0, MAX_INPUT_DISPLAY - 1)}…"`
           : rawInput;
-      const codepoints =
-        cpFull.length > MAX_CODEPOINTS_DISPLAY
-          ? `${cpFull.slice(0, MAX_CODEPOINTS_DISPLAY - 1)}…`
-          : cpFull;
       rows.push([
-        displayInput,
         String(mw),
         String(sw),
-        codepoints,
-        sw === mw ? "✓" : "✗ DIFF",
+        sw === mw ? "" : "DIFF",
+        displayInput,
       ]);
     }
   }
 
-  const colWidths = rows[0].map((_, colIndex) =>
-    Math.max(...rows.map((row) => [...row[colIndex]].length)),
-  );
-  const sep = `+${colWidths.map((w) => "-".repeat(w + 2)).join("+")}+`;
-  const formatRow = (row) =>
-    `|${row.map((cell, i) => ` ${cell.padEnd(colWidths[i])} `).join("|")}|`;
+  // Input column is last so no right-padding needed — its width is unconstrained.
+  // All other columns use measureTextWidth for correct wide-char alignment.
+  const inputColIndex = 3;
+  const colWidths = rows[0].map((_, colIndex) => {
+    if (colIndex === inputColIndex) {
+      return 0; // no fixed width for last column
+    }
+    return Math.max(...rows.map((row) => measureTextWidth(row[colIndex])));
+  });
+  const sep = `+${colWidths
+    .slice(0, inputColIndex)
+    .map((w) => "-".repeat(w + 2))
+    .join("+")}+`;
+  const formatRow = (row) => {
+    const cells = row.slice(0, inputColIndex).map((cell, i) => {
+      const pad = colWidths[i] - measureTextWidth(cell);
+      return ` ${cell}${" ".repeat(pad)} `;
+    });
+    return `|${cells.join("|")}| ${row[inputColIndex]}`;
+  };
 
   const lines = [sep, formatRow(rows[0]), sep];
   for (const row of rows.slice(1)) {
