@@ -5,10 +5,11 @@ import { Icon } from "@jsenv/navi/src/text/icon.jsx";
 import { Time } from "@jsenv/navi/src/text/time.jsx";
 import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
 import {
-  reportDisabledToLabel,
-  reportInteractiveToLabel,
-  reportReadOnlyToLabel,
-} from "../label.jsx";
+  reportDisabledToField,
+  reportInteractiveToField,
+  reportReadOnlyToField,
+  useFieldId,
+} from "../field.jsx";
 import {
   DisabledContext,
   LoadingContext,
@@ -235,6 +236,7 @@ const PickerUI = (props) => {
   import.meta.css = css;
   const {
     ref,
+    id,
     type = "day",
     name,
     placeholder,
@@ -256,14 +258,17 @@ const PickerUI = (props) => {
   const contextLoading = useContext(LoadingContext);
   const contextLoadingElement = useContext(LoadingElementContext);
 
+  const fieldId = useFieldId();
+  const innerId = id || fieldId;
+
   const innerLoading =
     loading || (contextLoading && contextLoadingElement === ref.current);
   const innerReadOnly = readOnly || contextReadOnly || innerLoading;
   const innerDisabled = disabled || contextDisabled;
 
-  reportReadOnlyToLabel(innerReadOnly);
-  reportDisabledToLabel(innerDisabled);
-  reportInteractiveToLabel(true);
+  reportReadOnlyToField(innerReadOnly);
+  reportDisabledToField(innerDisabled);
+  reportInteractiveToField(true);
   useAutoFocus(ref, autoFocus, { preventScroll: autoFocusPreventScroll });
 
   const pickerInputRef = useRef(null);
@@ -281,6 +286,7 @@ const PickerUI = (props) => {
       type="button"
       {...remainingProps}
       ref={ref}
+      id={innerId}
       baseClassName="navi_picker"
       navi-type={type}
       navi-has-placeholder={placeholder ? "" : undefined}

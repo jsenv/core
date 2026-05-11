@@ -111,10 +111,10 @@ export {
   Editable,
   useEditionController,
 } from "./src/field/edition/editable.jsx";
+export { Field, Label } from "./src/field/field.jsx";
 export { Form } from "./src/field/form.jsx";
 export { Group } from "./src/field/group.jsx";
 export { Input } from "./src/field/input/input.jsx";
-export { Label } from "./src/field/label.jsx";
 export { Picker } from "./src/field/picker/picker.jsx";
 export { Radio, RadioList } from "./src/field/radio_list.jsx";
 export { Select, useSelectRequestClose } from "./src/field/select/select.jsx";

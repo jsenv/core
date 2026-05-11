@@ -8,12 +8,12 @@ import { LoadingOutline } from "../../graphic/loading/loading_outline.jsx";
 import { useAutoFocus } from "../../utils/focus/use_auto_focus.js";
 import { useAccentColorAttributes } from "../../utils/use_accent_color_attributes.js";
 import { useStableCallback } from "../../utils/use_stable_callback.js";
-import { fieldPropSet } from "../field_prop_set.js";
 import {
-  reportDisabledToLabel,
-  reportInteractiveToLabel,
-  reportReadOnlyToLabel,
-} from "../label.jsx";
+  reportDisabledToField,
+  reportInteractiveToField,
+  reportReadOnlyToField,
+} from "../field.jsx";
+import { fieldPropSet } from "../field_prop_set.js";
 import { useActionEvents } from "../use_action_events.js";
 import {
   DisabledContext,
@@ -457,9 +457,9 @@ const InputCheckboxUI = (props) => {
     loading || (contextLoading && loadingElement === ref.current);
   const innerReadOnly =
     readOnly || contextReadOnly || innerLoading || uiStateController.readOnly;
-  reportReadOnlyToLabel(innerReadOnly);
-  reportDisabledToLabel(innerDisabled);
-  reportInteractiveToLabel(true);
+  reportReadOnlyToField(innerReadOnly);
+  reportDisabledToField(innerDisabled);
+  reportInteractiveToField(true);
   useAutoFocus(ref, autoFocus);
   const remainingProps = useConstraints(ref, rest);
 

@@ -40,13 +40,13 @@ import { shortcutsViaOnKeyDown } from "@jsenv/navi/src/keyboard/keyboard_shortcu
 import { Icon } from "@jsenv/navi/src/text/icon.jsx";
 import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
 import { useStableCallback } from "@jsenv/navi/src/utils/use_stable_callback.js";
-import { fieldPropSet } from "../field_prop_set.js";
 import {
   Label,
-  reportDisabledToLabel,
-  reportInteractiveToLabel,
-  reportReadOnlyToLabel,
-} from "../label.jsx";
+  reportDisabledToField,
+  reportInteractiveToField,
+  reportReadOnlyToField,
+} from "../field.jsx";
+import { fieldPropSet } from "../field_prop_set.js";
 import {
   InsideRealListItemContext,
   ListIdContext,
@@ -352,9 +352,9 @@ const InputTextualUI = (props) => {
     readOnly || contextReadOnly || innerLoading || uiStateController.readOnly;
   const innerDisabled = disabled || contextDisabled;
   // infom any <label> parent of our readOnly state + that we are interactive
-  reportReadOnlyToLabel(innerReadOnly);
-  reportDisabledToLabel(innerDisabled);
-  reportInteractiveToLabel(true);
+  reportReadOnlyToField(innerReadOnly);
+  reportDisabledToField(innerDisabled);
+  reportInteractiveToField(true);
   useAutoFocus(ref, autoFocus, {
     focusVisible: autoFocusVisible,
     autoSelect,

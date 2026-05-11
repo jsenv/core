@@ -24,10 +24,10 @@ import {
 import { Icon } from "@jsenv/navi/src/text/icon.jsx";
 import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
 import {
-  reportDisabledToLabel,
-  reportInteractiveToLabel,
-  reportReadOnlyToLabel,
-} from "../label.jsx";
+  reportDisabledToField,
+  reportInteractiveToField,
+  reportReadOnlyToField,
+} from "../field.jsx";
 import {
   DisabledContext,
   LoadingContext,
@@ -414,9 +414,9 @@ const SelectUI = (props) => {
   const innerReadOnly = readOnly || contextReadOnly || innerLoading;
   const innerDisabled = disabled || contextDisabled;
 
-  reportReadOnlyToLabel(innerReadOnly);
-  reportDisabledToLabel(innerDisabled);
-  reportInteractiveToLabel(true);
+  reportReadOnlyToField(innerReadOnly);
+  reportDisabledToField(innerDisabled);
+  reportInteractiveToField(true);
   useAutoFocus(ref, autoFocus, {
     preventScroll: autoFocusPreventScroll,
   });

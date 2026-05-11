@@ -51,7 +51,7 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useSignal } from "@preact/signals";
-      import { Box, Label, Picker, Time, Text, Icon } from "@jsenv/navi";
+      import { Box, Field, Label, Picker, Time, Text, Icon } from "@jsenv/navi";
 
       // ── helpers ─────────────────────────────────────────────────
       const today = new Date();
@@ -71,10 +71,9 @@
           <div class="demo-section">
             <h2>Day picker</h2>
             <p>Picks a calendar day. Min = today, max = today + 30 days.</p>
-            <Box flex="y" spacing="s">
-              <Label htmlFor="day-picker">Date</Label>
+            <Field vertical spacing="s">
+              <Label>Date</Label>
               <Picker
-                id="day-picker"
                 name="day"
                 type="day"
                 value={daySignal.value}
@@ -85,7 +84,7 @@
                 max={in30days}
                 placeholder="Choisir un jour"
               />
-            </Box>
+            </Field>
             <ValueDisplay label="Value" value={daySignal.value} />
           </div>
         );
@@ -97,10 +96,9 @@
           <div class="demo-section">
             <h2>Month picker</h2>
             <p>Picks a year + month.</p>
-            <Box flex="y" spacing="s">
-              <Label htmlFor="month-picker">Mois</Label>
+            <Field vertical spacing="s">
+              <Label>Mois</Label>
               <Picker
-                id="month-picker"
                 name="month"
                 type="month"
                 value={monthSignal.value}
@@ -109,7 +107,7 @@
                 }}
                 placeholder="Choisir un mois"
               />
-            </Box>
+            </Field>
             <ValueDisplay label="Value" value={monthSignal.value} />
           </div>
         );
@@ -121,10 +119,9 @@
           <div class="demo-section">
             <h2>Week picker</h2>
             <p>Picks an ISO week (year + week number).</p>
-            <Box flex="y" spacing="s">
-              <Label htmlFor="week-picker">Semaine</Label>
+            <Field vertical spacing="s">
+              <Label>Semaine</Label>
               <Picker
-                id="week-picker"
                 name="week"
                 type="week"
                 value={weekSignal.value}
@@ -133,7 +130,7 @@
                 }}
                 placeholder="Choisir une semaine"
               />
-            </Box>
+            </Field>
             <ValueDisplay label="Value" value={weekSignal.value} />
           </div>
         );
@@ -145,10 +142,9 @@
           <div class="demo-section">
             <h2>Time picker</h2>
             <p>Picks a time of day (hours + minutes).</p>
-            <Box flex="y" spacing="s">
-              <Label htmlFor="time-picker">Heure</Label>
+            <Field vertical spacing="s">
+              <Label>Heure</Label>
               <Picker
-                id="time-picker"
                 name="time"
                 type="time"
                 value={timeSignal.value}
@@ -160,7 +156,7 @@
                 step={900}
                 placeholder="Choisir une heure"
               />
-            </Box>
+            </Field>
             <ValueDisplay label="Value" value={timeSignal.value} />
           </div>
         );
@@ -172,10 +168,9 @@
           <div class="demo-section">
             <h2>Datetime picker</h2>
             <p>Picks a date + time (datetime-local).</p>
-            <Box flex="y" spacing="s">
-              <Label htmlFor="datetime-picker">Date &amp; heure</Label>
+            <Field vertical spacing="s">
+              <Label>Date &amp; heure</Label>
               <Picker
-                id="datetime-picker"
                 name="datetime"
                 type="datetime"
                 value={datetimeSignal.value}
@@ -184,7 +179,7 @@
                 }}
                 placeholder="Choisir date &amp; heure"
               />
-            </Box>
+            </Field>
             <ValueDisplay label="Value" value={datetimeSignal.value} />
           </div>
         );
@@ -197,10 +192,9 @@
           <div class="demo-section">
             <h2>Color picker</h2>
             <p>Picks a color using the browser color chooser.</p>
-            <Box flex="y" alignX="start" spacing="s">
-              <Label htmlFor="color-picker">Sans placeholder</Label>
+            <Field vertical spacing="s">
+              <Label>Sans placeholder</Label>
               <Picker
-                id="color-picker"
                 name="color"
                 type="color"
                 value={colorSignal.value}
@@ -208,12 +202,11 @@
                   colorSignal.value = v;
                 }}
               />
-            </Box>
+            </Field>
             <ValueDisplay label="Value" value={colorSignal.value} />
-            <Box flex="y" spacing="s">
-              <Label htmlFor="color-picker-placeholder">Avec placeholder</Label>
+            <Field vertical spacing="s">
+              <Label>Avec placeholder</Label>
               <Picker
-                id="color-picker-placeholder"
                 name="color_with_placeholder"
                 type="color"
                 value={colorWithPlaceholderSignal.value}
@@ -222,7 +215,7 @@
                 }}
                 placeholder="Choisir une couleur"
               />
-            </Box>
+            </Field>
             <ValueDisplay
               label="Value"
               value={colorWithPlaceholderSignal.value}
@@ -240,10 +233,9 @@
               Override both the placeholder and the value display with custom
               children.
             </p>
-            <Box flex="y" spacing="s">
-              <Label htmlFor="custom-picker">Date de naissance</Label>
+            <Field vertical spacing="s">
+              <Label>Date de naissance</Label>
               <Picker
-                id="custom-picker"
                 name="birthday"
                 type="day"
                 value={daySignal.value}
@@ -265,7 +257,7 @@
                   </Box>
                 ) : null}
               </Picker>
-            </Box>
+            </Field>
             <ValueDisplay label="Value" value={daySignal.value} />
           </div>
         );
@@ -275,16 +267,15 @@
         <div class="demo-section">
           <h2>Disabled</h2>
           <p>Picker is non-interactive when disabled.</p>
-          <Box flex="y" spacing="s">
-            <Label htmlFor="disabled-picker">Date</Label>
+          <Field vertical spacing="s">
+            <Label>Date</Label>
             <Picker
-              id="disabled-picker"
               type="day"
               value="2026-05-11"
               disabled
               placeholder="Choisir un jour"
             />
-          </Box>
+          </Field>
         </div>
       );
 
@@ -303,29 +294,25 @@
             </p>
             <form onSubmit={onSubmit}>
               <Box flex="y" spacing="m">
-                <Box flex="y" spacing="s">
-                  <Label htmlFor="form-start-date">
-                    Date de début (required)
-                  </Label>
+                <Field vertical spacing="s">
+                  <Label>Date de début (required)</Label>
                   <Picker
-                    id="form-start-date"
                     name="start_date"
                     type="day"
                     required
                     placeholder="Choisir une date"
                   />
-                </Box>
-                <Box flex="y" spacing="s">
-                  <Label htmlFor="form-start-time">Heure de début</Label>
+                </Field>
+                <Field vertical spacing="s">
+                  <Label>Heure de début</Label>
                   <Picker
-                    id="form-start-time"
                     name="start_time"
                     type="time"
                     min="08:00"
                     max="20:00"
                     placeholder="Choisir une heure"
                   />
-                </Box>
+                </Field>
                 <Box>
                   <button type="submit">Soumettre</button>
                 </Box>
