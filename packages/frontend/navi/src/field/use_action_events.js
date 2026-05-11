@@ -1,3 +1,4 @@
+import { getElementSignature } from "@jsenv/dom";
 import { useLayoutEffect, useState } from "preact/hooks";
 
 import { useDebugAction } from "../navi_debug.jsx";
@@ -50,7 +51,16 @@ export const useActionEvents = (
         if (e.detail.actionOrigin !== actionOrigin) {
           return;
         }
-        debugAction(e, `navi_action_requested`);
+        const requester = e.detail?.requester;
+        const initiatorTarget = e.detail?.event?.target;
+        const requesterInfo =
+          requester && requester !== initiatorTarget
+            ? ` requester=${getElementSignature(requester)}`
+            : "";
+        debugAction(
+          e,
+          `navi_action_requested (origin=${actionOrigin}${requesterInfo})`,
+        );
         e.detail.debugAction = debugAction;
         onRequested?.(e);
       },
@@ -65,7 +75,9 @@ export const useActionEvents = (
         if (e.detail.actionOrigin !== actionOrigin) {
           return;
         }
-        debugAction(e, `navi_action`);
+        const action = e.detail.action;
+        const actionLabel = action.name;
+        debugAction(e, `navi_action (action=${actionLabel})`);
         onAction?.(e);
       },
       navi_action_start: (e) => {
