@@ -1,13 +1,36 @@
 # [formatDay](../../format_time.test.js)
 
 ```js
-return table(["date", "locale", "result"], [
-  ["2026-05-11 (today)",    "fr", formatDay(new Date("2026-05-11T09:00:00"), "fr", opts)],
-  ["2026-05-12 (tomorrow)", "fr", formatDay(new Date("2026-05-12T09:00:00"), "fr", opts)],
-  ["2026-05-18 (next week)","fr", formatDay(new Date("2026-05-18T09:00:00"), "fr", opts)],
-  ["2026-05-11 (today)",    "en", formatDay(new Date("2026-05-11T09:00:00"), "en", opts)],
-  ["2026-05-12 (tomorrow)", "en", formatDay(new Date("2026-05-12T09:00:00"), "en", opts)],
-]);
+return table(
+  ["date", "locale", "result"],
+  [
+    [
+      "2026-05-11 (today)",
+      "fr",
+      formatDay(new Date("2026-05-11T09:00:00"), "fr", opts),
+    ],
+    [
+      "2026-05-12 (tomorrow)",
+      "fr",
+      formatDay(new Date("2026-05-12T09:00:00"), "fr", opts),
+    ],
+    [
+      "2026-05-18 (next week)",
+      "fr",
+      formatDay(new Date("2026-05-18T09:00:00"), "fr", opts),
+    ],
+    [
+      "2026-05-11 (today)",
+      "en",
+      formatDay(new Date("2026-05-11T09:00:00"), "en", opts),
+    ],
+    [
+      "2026-05-12 (tomorrow)",
+      "en",
+      formatDay(new Date("2026-05-12T09:00:00"), "en", opts),
+    ],
+  ],
+);
 ```
 
 ```js

@@ -1,11 +1,26 @@
 # [formatTime](../../format_time.test.js)
 
 ```js
-return table(["date", "locale", "result"], [
-  ["2026-05-11T14:30:00", "fr", formatTime(new Date("2026-05-11T14:30:00"), "fr")],
-  ["2026-05-11T09:05:00", "fr", formatTime(new Date("2026-05-11T09:05:00"), "fr")],
-  ["2026-05-11T14:30:00", "en", formatTime(new Date("2026-05-11T14:30:00"), "en")],
-]);
+return table(
+  ["date", "locale", "result"],
+  [
+    [
+      "2026-05-11T14:30:00",
+      "fr",
+      formatTime(new Date("2026-05-11T14:30:00"), "fr"),
+    ],
+    [
+      "2026-05-11T09:05:00",
+      "fr",
+      formatTime(new Date("2026-05-11T09:05:00"), "fr"),
+    ],
+    [
+      "2026-05-11T14:30:00",
+      "en",
+      formatTime(new Date("2026-05-11T14:30:00"), "en"),
+    ],
+  ],
+);
 ```
 
 ```js

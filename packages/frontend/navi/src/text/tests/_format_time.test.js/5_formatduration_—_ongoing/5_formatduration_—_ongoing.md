@@ -2,10 +2,23 @@
 
 ```js
 const ms = (n) => NOW.getTime() + n;
-return table(["start offset", "duration", "locale", "result"], [
-  ["-10min", "1h",  "fr", formatDuration(ms(-10 * 60_000), 60 * 60_000, "fr", opts)],
-  ["-10min", "1h",  "en", formatDuration(ms(-10 * 60_000), 60 * 60_000, "en", opts)],
-]);
+return table(
+  ["start offset", "duration", "locale", "result"],
+  [
+    [
+      "-10min",
+      "1h",
+      "fr",
+      formatDuration(ms(-10 * 60_000), 60 * 60_000, "fr", opts),
+    ],
+    [
+      "-10min",
+      "1h",
+      "en",
+      formatDuration(ms(-10 * 60_000), 60 * 60_000, "en", opts),
+    ],
+  ],
+);
 ```
 
 ```js

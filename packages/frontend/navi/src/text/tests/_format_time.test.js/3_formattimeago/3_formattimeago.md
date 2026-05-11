@@ -2,13 +2,28 @@
 
 ```js
 const ms = (n) => NOW.getTime() + n;
-return table(["offset from NOW", "locale", "result"], [
-  ["-5 min",  "fr", formatTimeAgo(new Date(ms(-5 * 60_000)), "fr", opts)],
-  ["+2 hours","fr", formatTimeAgo(new Date(ms(+2 * 3_600_000)), "fr", opts)],
-  ["-3 days", "fr", formatTimeAgo(new Date(ms(-3 * 86_400_000)), "fr", opts)],
-  ["-5 min",  "en", formatTimeAgo(new Date(ms(-5 * 60_000)), "en", opts)],
-  ["+2 hours","en", formatTimeAgo(new Date(ms(+2 * 3_600_000)), "en", opts)],
-]);
+return table(
+  ["offset from NOW", "locale", "result"],
+  [
+    ["-5 min", "fr", formatTimeAgo(new Date(ms(-5 * 60_000)), "fr", opts)],
+    [
+      "+2 hours",
+      "fr",
+      formatTimeAgo(new Date(ms(+2 * 3_600_000)), "fr", opts),
+    ],
+    [
+      "-3 days",
+      "fr",
+      formatTimeAgo(new Date(ms(-3 * 86_400_000)), "fr", opts),
+    ],
+    ["-5 min", "en", formatTimeAgo(new Date(ms(-5 * 60_000)), "en", opts)],
+    [
+      "+2 hours",
+      "en",
+      formatTimeAgo(new Date(ms(+2 * 3_600_000)), "en", opts),
+    ],
+  ],
+);
 ```
 
 ```js
