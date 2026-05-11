@@ -198,10 +198,8 @@ export const requestAction = (
       });
       if (!elementIsValid) {
         debugAction?.(
-          formatEventSideEffect(
-            event || new Event("unknown"),
-            `open callout (${getFailedConstraintName(elementValidationInterface)})`,
-          ),
+          event || new Event("unknown"),
+          `open callout (${getFailedConstraintName(elementValidationInterface)})`,
         );
         elementValidationInterface.reportValidity({ event, debugAction });
         isValid = false;
@@ -216,10 +214,8 @@ export const requestAction = (
     isValid = validationInterface.checkValidity({ fromRequestAction: true });
     if (!isValid) {
       debugAction?.(
-        formatEventSideEffect(
-          event || new Event("unknown"),
-          `open callout (${getFailedConstraintName(validationInterface)})`,
-        ),
+        event || new Event("unknown"),
+        `open callout (${getFailedConstraintName(validationInterface)})`,
       );
       validationInterface.reportValidity({ event, debugAction });
     }
@@ -1076,7 +1072,10 @@ const findFieldElement = (element) => {
   if (!fieldSelector) {
     return null;
   }
-  return elementWithAction.querySelector(fieldSelector) || document.querySelector(fieldSelector);
+  return (
+    elementWithAction.querySelector(fieldSelector) ||
+    document.querySelector(fieldSelector)
+  );
 };
 
 const getFailedConstraintName = (validationInterface) => {

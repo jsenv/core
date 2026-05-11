@@ -1,3 +1,4 @@
+import { createEventGroupLogger } from "@jsenv/dom";
 import { createContext } from "preact";
 import { useContext } from "preact/hooks";
 
@@ -52,7 +53,7 @@ export const NaviDebug = ({
     debugPopup = console.debug;
   }
   if (debugAction === true) {
-    debugAction = console.debug;
+    debugAction = createEventGroupLogger();
   }
 
   return (

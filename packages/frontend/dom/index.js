@@ -2,6 +2,7 @@ export { getElementSignature } from "./src/element_signature.js";
 
 // state management
 export {
+  createEventGroupLogger,
   dispatchCustomEvent,
   dispatchInternalCustomEvent,
   dispatchPublicCustomEvent,

@@ -127,3 +127,64 @@ export const formatEventSideEffect = (e, sideEffect) => {
   }
   return `${parts.join(" -> ")} -> ${sideEffect}`;
 };
+
+/**
+ * Creates a stateful debug logger that groups side effects by their native initiator event.
+ *
+ * Usage:
+ *   const log = createEventGroupLogger();
+ *   log(e, "navi_action_requested");  // opens/reuses a group for the initiator event
+ *   log("plain message");             // logs inside the current group (or standalone)
+ *
+ * The group closes automatically after the current JS task completes (setTimeout 0).
+ */
+export const createEventGroupLogger = () => {
+  let currentInitiator = null;
+  let closeGroupTimeout = null;
+
+  const scheduleGroupEnd = () => {
+    if (closeGroupTimeout !== null) {
+      clearTimeout(closeGroupTimeout);
+    }
+    closeGroupTimeout = setTimeout(() => {
+      console.groupEnd();
+      currentInitiator = null;
+      closeGroupTimeout = null;
+    }, 0);
+  };
+
+  return (eOrMessage, sideEffect) => {
+    if (typeof eOrMessage === "string") {
+      console.debug(eOrMessage);
+      return;
+    }
+    const e = eOrMessage;
+    const initiator = e.detail?.event ?? e;
+    if (initiator !== currentInitiator) {
+      if (currentInitiator !== null) {
+        clearTimeout(closeGroupTimeout);
+        closeGroupTimeout = null;
+        console.groupEnd();
+      }
+      const label = initiator.target
+        ? `"${initiator.type}" on ${getElementSignature(initiator.target)}`
+        : `"${initiator.type}"`;
+      console.group(label);
+      currentInitiator = initiator;
+    }
+    const line = formatSideEffectLine(e, sideEffect);
+    console.debug(line);
+    scheduleGroupEnd();
+  };
+};
+
+const formatSideEffectLine = (e, sideEffect) => {
+  const parts = [];
+  if (e.detail?.eventChain) {
+    for (const chainedEvent of e.detail.eventChain) {
+      parts.push(chainedEvent.type);
+    }
+  }
+  parts.push(sideEffect);
+  return parts.join(" -> ");
+};

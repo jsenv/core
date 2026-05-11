@@ -1,4 +1,3 @@
-import { formatEventSideEffect } from "@jsenv/dom";
 import { useLayoutEffect, useState } from "preact/hooks";
 
 import { useDebugAction } from "../navi_debug.jsx";
@@ -51,7 +50,7 @@ export const useActionEvents = (
         if (e.detail.actionOrigin !== actionOrigin) {
           return;
         }
-        debugAction(formatEventSideEffect(e, `navi_action_requested`));
+        debugAction(e, `navi_action_requested`);
         e.detail.debugAction = debugAction;
         onRequested?.(e);
       },
@@ -59,35 +58,35 @@ export const useActionEvents = (
         if (e.detail.actionOrigin !== actionOrigin) {
           return;
         }
-        debugAction(formatEventSideEffect(e, `navi_action_prevented`));
+        debugAction(e, `navi_action_prevented`);
         onPrevented?.(e);
       },
       navi_action: (e) => {
         if (e.detail.actionOrigin !== actionOrigin) {
           return;
         }
-        debugAction(formatEventSideEffect(e, `navi_action`));
+        debugAction(e, `navi_action`);
         onAction?.(e);
       },
       navi_action_start: (e) => {
         if (e.detail.actionOrigin !== actionOrigin) {
           return;
         }
-        debugAction(formatEventSideEffect(e, `navi_action_start`));
+        debugAction(e, `navi_action_start`);
         onStart?.(e);
       },
       navi_action_abort: (e) => {
         if (e.detail.actionOrigin !== actionOrigin) {
           return;
         }
-        debugAction(formatEventSideEffect(e, `navi_action_abort`));
+        debugAction(e, `navi_action_abort`);
         onAbort?.(e);
       },
       navi_action_error: (e) => {
         if (e.detail.actionOrigin !== actionOrigin) {
           return;
         }
-        debugAction(formatEventSideEffect(e, `navi_action_error`));
+        debugAction(e, `navi_action_error`);
         onError?.(e.detail.error, e);
       },
       navi_action_end: onEnd,
