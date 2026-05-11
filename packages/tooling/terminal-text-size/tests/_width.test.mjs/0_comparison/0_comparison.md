@@ -29,7 +29,7 @@ return renderComparisonTable(sections);
 | 3                | 3            |      | "ปฏัก"
 | 1                | 1            |      | "_ิ"
 | 1                | 1            |      | "“"
-| 1                | 2            | DIFF | "✔"
+| 1                | 1            |      | "✔"
 |                  |              |      | --- typographic punctuation ---
 | 1                | 1            |      | "’"
 | 1                | 1            |      | "‘"
