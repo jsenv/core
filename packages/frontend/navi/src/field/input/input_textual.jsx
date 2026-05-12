@@ -870,7 +870,7 @@ const InputTextualWithAction = (props) => {
         onCancel?.(e, reason);
       }}
       onnavi_request_action={(e) => {
-        onRequestAction(e, boundAction);
+        onRequestAction(boundAction, e);
       }}
       onnavi_action_prevented={onActionPrevented}
       onnavi_action_ready={executeAction}

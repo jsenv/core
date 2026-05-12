@@ -132,6 +132,13 @@ export const onRequestAction = (
     debugAction = () => {},
   } = {},
 ) => {
+  if (!action || !action.isAction) {
+    throw new TypeError("First argument of onRequestAction must be an action");
+  }
+  if (!event || !(event instanceof Event)) {
+    throw new TypeError("Second argument of onRequestAction must be an Event");
+  }
+
   if (!actionOrigin) {
     console.warn("requestAction: actionOrigin is required");
   }
@@ -157,7 +164,7 @@ export const onRequestAction = (
     meta,
   };
 
-  const initiatorTarget = e.detail?.event?.target;
+  const initiatorTarget = event.detail?.event?.target;
   const requesterInfo =
     requester && requester !== initiatorTarget
       ? ` requester=${getElementSignature(requester)}`
