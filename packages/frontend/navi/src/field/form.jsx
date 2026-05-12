@@ -39,7 +39,6 @@ import { forwardActionRequested } from "./validation/custom_constraint_validatio
 import { useConstraints } from "./validation/hooks/use_constraints.js";
 
 export const Form = (props) => {
-export const Form = (props) => {
   const defaultRef = useRef();
   const ref = props.ref || defaultRef;
   const uiStateController = useUIGroupStateController(props, "form", {
