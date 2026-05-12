@@ -12,7 +12,15 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      import { Button, Form, CheckboxList, Label, Checkbox } from "@jsenv/navi";
+      import {
+        Button,
+        Form,
+        CheckboxList,
+        Field,
+        Label,
+        Checkbox,
+        NaviDebug,
+      } from "@jsenv/navi";
 
       const App = () => {
         return (
@@ -220,81 +228,81 @@
                 <p style="margin: 0 0 15px 0; font-size: 14px; color: #666;">
                   Checkbox interface for user interaction
                 </p>
-
-                <Form action={submitForm}>
-                  <fieldset style="border: 1px solid #ddd; padding: 10px; border-radius: 4px;">
-                    <legend>Select Colors:</legend>
+                <NaviDebug debugAction>
+                  <Form action={submitForm}>
                     <CheckboxList
                       name="colors"
-                      onUIStateChange={(colors) => {
+                      uiAction={(colors) => {
                         setUiSelectedColors(colors);
                       }}
                     >
                       {colorChoices.map(({ id, color }) => (
-                        <Label key={id} style="display: block; margin: 5px 0;">
-                          {color.charAt(0).toUpperCase() + color.slice(1)}
+                        <Field key={id} vertical>
+                          <Label>
+                            {color.charAt(0).toUpperCase() + color.slice(1)}
+                          </Label>
                           <Checkbox
                             value={color}
                             checked={selectedColors.includes(color)}
                           />
-                        </Label>
+                        </Field>
                       ))}
                     </CheckboxList>
-                  </fieldset>
 
-                  {/* Error simulation checkbox */}
-                  <div style="margin: 10px 0; padding: 8px; background: #ffebee; border-radius: 4px; border: 1px solid #ffcdd2;">
-                    <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: #d32f2f;">
-                      <input
-                        type="checkbox"
-                        checked={forceError}
-                        onChange={(e) => setForceError(e.target.checked)}
-                        style="margin: 0;"
-                      />
-                      🔧 Force submission error (for testing)
-                    </label>
-                  </div>
-
-                  {/* Submission feedback messages */}
-                  {(isSubmitting || submitMessage || submitError) && (
-                    <div style="margin: 10px 0; padding: 10px; border-radius: 4px; font-size: 14px;">
-                      {isSubmitting && (
-                        <div style="color: #1976d2; background: #e3f2fd; padding: 8px; border-radius: 3px; border-left: 3px solid #1976d2;">
-                          🔄 {submitMessage}
-                        </div>
-                      )}
-                      {!isSubmitting && submitMessage && (
-                        <div style="color: #388e3c; background: #e8f5e8; padding: 8px; border-radius: 3px; border-left: 3px solid #388e3c;">
-                          {submitMessage}
-                        </div>
-                      )}
-                      {submitError && (
-                        <div style="color: #d32f2f; background: #ffebee; padding: 8px; border-radius: 3px; border-left: 3px solid #d32f2f;">
-                          ❌ {submitError}
-                        </div>
-                      )}
+                    {/* Error simulation checkbox */}
+                    <div style="margin: 10px 0; padding: 8px; background: #ffebee; border-radius: 4px; border: 1px solid #ffcdd2;">
+                      <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: #d32f2f;">
+                        <input
+                          type="checkbox"
+                          checked={forceError}
+                          onChange={(e) => setForceError(e.target.checked)}
+                          style="margin: 0;"
+                        />
+                        🔧 Force submission error (for testing)
+                      </label>
                     </div>
-                  )}
 
-                  <div style="margin-top: 15px; display: flex; align-items: flex-start; flex-direction: column; gap: 8px;">
-                    <Button type="submit" disabled={isSubmitting}>
-                      {isSubmitting ? "⏳ Submitting..." : "📤 Submit Form"}{" "}
-                      {!isSubmitting && uiSelectedColors?.length > 0 && (
-                        <span style="font-size: 11px; opacity: 0.7;">
-                          ({uiSelectedColors.join(", ")})
-                        </span>
-                      )}
-                    </Button>
-                    <Button type="reset">
-                      🔄 Reset to State{" "}
-                      {getResetColors().length > 0 && (
-                        <span style="font-size: 11px; opacity: 0.7;">
-                          ({getResetColors().join(", ")})
-                        </span>
-                      )}
-                    </Button>
-                  </div>
-                </Form>
+                    {/* Submission feedback messages */}
+                    {(isSubmitting || submitMessage || submitError) && (
+                      <div style="margin: 10px 0; padding: 10px; border-radius: 4px; font-size: 14px;">
+                        {isSubmitting && (
+                          <div style="color: #1976d2; background: #e3f2fd; padding: 8px; border-radius: 3px; border-left: 3px solid #1976d2;">
+                            🔄 {submitMessage}
+                          </div>
+                        )}
+                        {!isSubmitting && submitMessage && (
+                          <div style="color: #388e3c; background: #e8f5e8; padding: 8px; border-radius: 3px; border-left: 3px solid #388e3c;">
+                            {submitMessage}
+                          </div>
+                        )}
+                        {submitError && (
+                          <div style="color: #d32f2f; background: #ffebee; padding: 8px; border-radius: 3px; border-left: 3px solid #d32f2f;">
+                            ❌ {submitError}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    <div style="margin-top: 15px; display: flex; align-items: flex-start; flex-direction: column; gap: 8px;">
+                      <Button type="submit" disabled={isSubmitting}>
+                        {isSubmitting ? "⏳ Submitting..." : "📤 Submit Form"}{" "}
+                        {!isSubmitting && uiSelectedColors?.length > 0 && (
+                          <span style="font-size: 11px; opacity: 0.7;">
+                            ({uiSelectedColors.join(", ")})
+                          </span>
+                        )}
+                      </Button>
+                      <Button type="reset">
+                        🔄 Reset to State{" "}
+                        {getResetColors().length > 0 && (
+                          <span style="font-size: 11px; opacity: 0.7;">
+                            ({getResetColors().join(", ")})
+                          </span>
+                        )}
+                      </Button>
+                    </div>
+                  </Form>
+                </NaviDebug>
               </div>
             </div>
 
