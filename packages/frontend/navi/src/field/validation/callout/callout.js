@@ -378,7 +378,7 @@ export const openCallout = (
       requestClose(e, "custom_event");
     };
     calloutElement.addEventListener(
-      "navi_callout_close",
+      "navi_callout_request_close",
       handleCustomCloseEvent,
     );
   }
