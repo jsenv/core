@@ -15,7 +15,6 @@
 
 import { useContext, useMemo, useRef } from "preact/hooks";
 
-import { renderActionableComponent } from "../action/render_actionable_component.jsx";
 import { useActionBoundToOneParam } from "../action/use_action.js";
 import { useExecuteAction } from "../action/use_execute_action.js";
 import { Box } from "../box/box.jsx";
@@ -40,6 +39,9 @@ import { forwardActionRequested } from "./validation/custom_constraint_validatio
 import { useConstraints } from "./validation/hooks/use_constraints.js";
 
 export const Form = (props) => {
+export const Form = (props) => {
+  const defaultRef = useRef();
+  const ref = props.ref || defaultRef;
   const uiStateController = useUIGroupStateController(props, "form", {
     childComponentType: "*",
     aggregateChildStates: (childUIStateControllers) => {
@@ -62,23 +64,25 @@ export const Form = (props) => {
   });
   const uiState = useUIState(uiStateController);
 
-  const form = renderActionableComponent(props, {
-    Basic: FormUI,
-    WithAction: FormWithAction,
-  });
   return (
     <UIStateControllerContext.Provider value={uiStateController}>
-      <UIStateContext.Provider value={uiState}>{form}</UIStateContext.Provider>
+      <UIStateContext.Provider value={uiState}>
+        <FormDispatcher {...props} ref={ref} />
+      </UIStateContext.Provider>
     </UIStateControllerContext.Provider>
   );
+};
+const FormDispatcher = (props) => {
+  if (props.action) {
+    return <FormWithAction {...props} />;
+  }
+  return <FormUI {...props} />;
 };
 
 const FormUI = (props) => {
   const debugAction = useDebugAction();
   const uiStateController = useContext(UIStateControllerContext);
-  const { readOnly, loading, children, ...rest } = props;
-  const defaultRef = useRef();
-  const ref = props.ref || defaultRef;
+  const { ref, readOnly, loading, children, ...rest } = props;
 
   // instantiate validation via useConstraints hook:
   // - receive "actionrequested" custom event ensure submit is prevented
@@ -122,6 +126,7 @@ const FormWithAction = (props) => {
   const debugAction = useDebugAction();
   const uiStateController = useContext(UIStateControllerContext);
   const {
+    ref,
     action,
     method,
     actionErrorEffect = "show_validation_message", // "show_validation_message" or "throw"
@@ -135,8 +140,6 @@ const FormWithAction = (props) => {
     children,
     ...rest
   } = props;
-  const defaultRef = useRef();
-  const ref = props.ref || defaultRef;
   const [actionBoundToUIState] = useActionBoundToOneParam(
     action,
     uiStateController.uiStateSignal,
