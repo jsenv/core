@@ -455,7 +455,7 @@
 
       // Cleanup on page unload
       window.addEventListener("beforeunload", () => {
-        activeCallouts.forEach((callout) => callout.close());
+        activeCallouts.forEach((callout) => callout.requestClose());
         activeCallouts.clear();
       });
     </script>

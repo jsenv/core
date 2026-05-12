@@ -6,6 +6,7 @@ import {
   dispatchPublicCustomEvent,
   eventInvolves,
   getBorderSizes,
+  getElementSignature,
   getFirstVisuallyVisibleAncestor,
   getPaddingSizes,
   getVisuallyVisibleInfo,
@@ -219,20 +220,19 @@ export const openCallout = (
   };
 
   if (debug) {
-    debug("open callout", {
-      anchorElement,
-      message,
-      status,
-    });
+    debug(
+      openingEvent,
+      `open callout on ${getElementSignature(anchorElement)} (status=${status})`,
+    );
   }
 
   const [teardown, addTeardown] = createPubSub(true);
-  const close = (reason) => {
+  const requestClose = (event, reason) => {
     if (!callout.opened) {
       return;
     }
     if (debug) {
-      debug(`callout closed (reason: ${reason})`);
+      debug(event, `callout close (reason: ${reason})`);
     }
     callout.opened = false;
     teardown(reason);
@@ -253,8 +253,8 @@ export const openCallout = (
   const calloutCloseButton = calloutElement.querySelector(
     ".navi_callout_close_button",
   );
-  calloutCloseButton.onclick = () => {
-    close("click_close_button");
+  calloutCloseButton.onclick = (e) => {
+    requestClose(e, "click_close_button");
   };
   const calloutId = `navi_callout_${Date.now()}`;
   calloutElement.id = calloutId;
@@ -272,7 +272,9 @@ export const openCallout = (
 
     if (isValidElement(newMessage)) {
       calloutMessageElement.innerHTML = "";
-      renderIntoCallout(newMessage, calloutMessageElement, { close });
+      renderIntoCallout(newMessage, calloutMessageElement, {
+        requestClose,
+      });
     } else if (newMessage instanceof Node) {
       // Handle DOM node (cloned from CSS selector)
       calloutMessageElement.innerHTML = "";
@@ -281,8 +283,8 @@ export const openCallout = (
       calloutMessageElement.innerHTML = "";
       newMessage({
         renderIntoCallout: (jsx) =>
-          renderIntoCallout(jsx, calloutMessageElement, { close }),
-        close,
+          renderIntoCallout(jsx, calloutMessageElement, { requestClose }),
+        requestClose,
       });
     } else {
       if (Error.isError(newMessage)) {
@@ -329,7 +331,7 @@ export const openCallout = (
       // ) {
       //   return;
       // }
-      close("click_outside");
+      requestClose(event, "click_outside");
     };
     const registerClickOutsideListener = () => {
       document.addEventListener("click", handleClickOutside, true);
@@ -360,8 +362,8 @@ export const openCallout = (
     }
   }
   close_on_custom_event: {
-    const handleCustomCloseEvent = () => {
-      close("custom_event");
+    const handleCustomCloseEvent = (e) => {
+      requestClose(e, "custom_event");
     };
     calloutElement.addEventListener(
       "navi_callout_close",
@@ -371,7 +373,7 @@ export const openCallout = (
   Object.assign(callout, {
     element: calloutElement,
     update,
-    close,
+    requestClose,
   });
   addStatusEffect(() => {
     if (status) {
@@ -461,7 +463,7 @@ export const openCallout = (
     });
 
     close_on_anchor_focus: {
-      const onfocus = () => {
+      const onfocus = (e) => {
         if (status === "error") {
           // error messages must be explicitely closed by the user
           return;
@@ -469,7 +471,7 @@ export const openCallout = (
         if (anchorElement.hasAttribute("data-callout-stay-on-focus")) {
           return;
         }
-        close("target_element_focus");
+        requestClose(e, "target_element_focus");
       };
       anchorElement.addEventListener("focus", onfocus);
       addTeardown(() => {

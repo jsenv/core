@@ -118,7 +118,7 @@
       window.openTestCallout = (anchorElement, message) => {
         // Close existing callout
         if (currentCallout) {
-          currentCallout.close();
+          currentCallout.requestClose();
         }
 
         currentCallout = openCallout({

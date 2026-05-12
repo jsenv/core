@@ -1,15 +1,19 @@
 import { createContext, render } from "preact";
 import { useContext } from "preact/hooks";
 
-export const CalloutCloseContext = createContext();
-export const useCalloutClose = () => {
-  return useContext(CalloutCloseContext);
+export const CalloutRequestCloseContext = createContext();
+export const useCalloutRequestClose = () => {
+  return useContext(CalloutRequestCloseContext);
 };
-export const renderIntoCallout = (jsx, calloutMessageElement, { close }) => {
+export const renderIntoCallout = (
+  jsx,
+  calloutMessageElement,
+  { requestClose },
+) => {
   const calloutJsx = (
-    <CalloutCloseContext.Provider value={close}>
+    <CalloutRequestCloseContext.Provider value={requestClose}>
       {jsx}
-    </CalloutCloseContext.Provider>
+    </CalloutRequestCloseContext.Provider>
   );
 
   render(calloutJsx, calloutMessageElement);

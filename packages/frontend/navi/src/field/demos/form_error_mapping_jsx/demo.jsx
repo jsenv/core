@@ -1,4 +1,10 @@
-import { Button, Form, Input, Label, useCalloutClose } from "@jsenv/navi";
+import {
+  Button,
+  Form,
+  Input,
+  Label,
+  useCalloutRequestClose,
+} from "@jsenv/navi";
 import { render } from "preact";
 import { useRef, useState } from "preact/hooks";
 
@@ -96,7 +102,7 @@ const Demo = () => {
 };
 
 const ValidationErrorMessage = ({ error }) => {
-  const closeCallout = useCalloutClose();
+  const closeCallout = useCalloutRequestClose();
   const [dismissed, setDismissed] = useState(false);
   const [helpShown, setHelpShown] = useState(false);
 
@@ -197,7 +203,7 @@ const ValidationErrorMessage = ({ error }) => {
   );
 };
 const ServerErrorMessage = ({ error }) => {
-  const closeCallout = useCalloutClose();
+  const closeCallout = useCalloutRequestClose();
   const [retryCount, setRetryCount] = useState(0);
   const [showDetails, setShowDetails] = useState(false);
 
@@ -264,7 +270,7 @@ const ServerErrorMessage = ({ error }) => {
   );
 };
 const UnexpectedErrorMessage = ({ error }) => {
-  const closeCallout = useCalloutClose();
+  const closeCallout = useCalloutRequestClose();
   const [reportSent, setReportSent] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
