@@ -502,6 +502,8 @@ export const installCustomConstraintValidation = (
     }
     return newConstraintValidityState.valid;
   };
+
+  const [notifyCalloutOpen, onCalloutOpen] = createPubSub(true);
   const reportValidity = ({ skipFocus, event, debugAction } = {}) => {
     if (!failedConstraintInfo) {
       closeElementValidationMessage(event, "becomes_valid");
@@ -552,6 +554,11 @@ export const installCustomConstraintValidation = (
         debug: debugAction,
         onClose: () => {
           removeCloseOnCleanup();
+          for (const result of results) {
+            if (typeof result === "function") {
+              result();
+            }
+          }
           validationInterface.validationMessage = null;
           if (failedConstraintInfo) {
             failedConstraintInfo.reportStatus = "closed";
@@ -562,6 +569,7 @@ export const installCustomConstraintValidation = (
         },
       },
     );
+    const results = notifyCalloutOpen(event);
     failedConstraintInfo.reportStatus = "reported";
   };
   validationInterface.checkValidity = checkValidity;
@@ -628,6 +636,8 @@ export const installCustomConstraintValidation = (
     // When the user clicks the field (or the interactive element rendered in place of it,
     // e.g. the .navi_select button for a hidden input), treat it as intent to fix the issue
     // and dismiss the callout — unless the status is "error", which requires explicit action.
+    // The listener is registered when the callout opens and removed when it closes,
+    // so it can never accidentally close the next callout.
     const interactionTarget = (() => {
       const renderedBy = element.getAttribute("data-rendered-by");
       if (renderedBy) {
@@ -635,21 +645,24 @@ export const installCustomConstraintValidation = (
       }
       return element;
     })();
-    const onmousedown = (e) => {
-      if (e.button !== 0) {
-        return;
-      }
-      if (!validationInterface.validationMessage) {
-        return;
-      }
-      if (failedConstraintInfo && failedConstraintInfo.status === "error") {
-        return;
-      }
-      resetOnInteraction(e);
-    };
-    interactionTarget.addEventListener("mousedown", onmousedown);
-    addTeardown(() => {
-      interactionTarget.removeEventListener("mousedown", onmousedown);
+    onCalloutOpen((openingEvent) => {
+      const onmousedown = (e) => {
+        if (e.button !== 0) {
+          return;
+        }
+        if (e === openingEvent) {
+          // The callout was opened during this same mousedown — don't close it immediately.
+          return;
+        }
+        if (failedConstraintInfo && failedConstraintInfo.status === "error") {
+          return;
+        }
+        resetOnInteraction(e);
+      };
+      interactionTarget.addEventListener("mousedown", onmousedown);
+      return () => {
+        interactionTarget.removeEventListener("mousedown", onmousedown);
+      };
     });
   }
 
