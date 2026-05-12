@@ -2,8 +2,16 @@
 
 ```js
 return table([
-  ["Hello [name]!", { name: "() => 'Bob'" }, interpolateText("Hello [name]!", { name: () => "Bob" })],
-  ["Hello [name]!", { name: "() => ''" }, interpolateText("Hello [name]!", { name: () => "" })],
+  [
+    "Hello [name]!",
+    { name: "() => 'Bob'" },
+    interpolateText("Hello [name]!", { name: () => "Bob" }),
+  ],
+  [
+    "Hello [name]!",
+    { name: "() => ''" },
+    interpolateText("Hello [name]!", { name: () => "" }),
+  ],
 ]);
 ```
 

@@ -2,7 +2,11 @@
 
 ```js
 return table([
-  ["Hello [name]!", { other: "x" }, interpolateText("Hello [name]!", { other: "x" })],
+  [
+    "Hello [name]!",
+    { other: "x" },
+    interpolateText("Hello [name]!", { other: "x" }),
+  ],
 ]);
 ```
 

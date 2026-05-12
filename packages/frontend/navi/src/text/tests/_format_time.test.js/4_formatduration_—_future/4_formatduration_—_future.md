@@ -5,34 +5,49 @@ const ms = (n) => NOW.getTime() + n;
 return table(
   ["start offset", "duration", "locale", "result"],
   [
-    ["+30s", 0, "fr", formatDuration(ms(+30_000), 0, "fr", opts)],
-    ["+20min", 0, "fr", formatDuration(ms(+20 * 60_000), 0, "fr", opts)],
-    ["+60min", 0, "fr", formatDuration(ms(+60 * 60_000), 0, "fr", opts)],
-    ["+90min", 0, "fr", formatDuration(ms(+90 * 60_000), 0, "fr", opts)],
-    ["+4h", 0, "fr", formatDuration(ms(+4 * 3_600_000), 0, "fr", opts)],
+    ["+30s", 0, "fr", formatTimeRelative(ms(+30_000), 0, "fr", opts)],
+    [
+      "+20min",
+      0,
+      "fr",
+      formatTimeRelative(ms(+20 * 60_000), 0, "fr", opts),
+    ],
+    [
+      "+60min",
+      0,
+      "fr",
+      formatTimeRelative(ms(+60 * 60_000), 0, "fr", opts),
+    ],
+    [
+      "+90min",
+      0,
+      "fr",
+      formatTimeRelative(ms(+90 * 60_000), 0, "fr", opts),
+    ],
+    ["+4h", 0, "fr", formatTimeRelative(ms(+4 * 3_600_000), 0, "fr", opts)],
     [
       "tomorrow 20h",
       0,
       "fr",
-      formatDuration(new Date("2026-05-12T20:00:00"), 0, "fr", opts),
+      formatTimeRelative(new Date("2026-05-12T20:00:00"), 0, "fr", opts),
     ],
     [
       "+3 days",
       0,
       "fr",
-      formatDuration(ms(+3 * 86_400_000), 0, "fr", opts),
+      formatTimeRelative(ms(+3 * 86_400_000), 0, "fr", opts),
     ],
     [
       "+35 days",
       0,
       "fr",
-      formatDuration(ms(+35 * 86_400_000), 0, "fr", opts),
+      formatTimeRelative(ms(+35 * 86_400_000), 0, "fr", opts),
     ],
     [
       "+65 days",
       0,
       "fr",
-      formatDuration(ms(+65 * 86_400_000), 0, "fr", opts),
+      formatTimeRelative(ms(+65 * 86_400_000), 0, "fr", opts),
     ],
   ],
 );

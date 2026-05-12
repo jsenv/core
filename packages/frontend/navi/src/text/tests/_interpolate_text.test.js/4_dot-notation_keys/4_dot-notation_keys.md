@@ -14,12 +14,15 @@ return table([
   ],
   [
     "Hello [item.name]",
-    'flat + nested',
-    interpolateText("Hello [item.name]", { "item.name": "flat", item: { name: "nested" } }),
+    "flat + nested",
+    interpolateText("Hello [item.name]", {
+      "item.name": "flat",
+      "item": { name: "nested" },
+    }),
   ],
   [
     "Hello [item.name]",
-    '{ item: { age: 42 } }',
+    "{ item: { age: 42 } }",
     interpolateText("Hello [item.name]", { item: { age: 42 } }),
   ],
   [
