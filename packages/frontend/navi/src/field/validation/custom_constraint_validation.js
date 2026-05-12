@@ -795,6 +795,8 @@ export const installCustomConstraintValidation = (
         const clickTarget = clickEvent.target;
         const { form } = clickTarget;
         if (!form) {
+          // reset button are not associated to the from
+          // so they early return here
           return null;
         }
         const wouldSubmitFormByType =
@@ -816,8 +818,14 @@ export const installCustomConstraintValidation = (
       };
       const formSubmitTarget = determineClosestFormSubmitTargetForClickEvent();
       if (formSubmitTarget) {
+        // prevent from submission
         clickEvent.preventDefault();
       }
+      if (button.type === "reset") {
+        // reset button got their own behavior
+        return;
+      }
+      // dispatch only if the button
       dispatchRequestAction(elementWithAction, {
         event: clickEvent,
         requester: formSubmitTarget || button,
