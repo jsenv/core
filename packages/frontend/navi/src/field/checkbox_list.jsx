@@ -1,14 +1,7 @@
 // TOFIX: select in data then reset, it reset to red/blue instead of red/blue/green
 
-import { forwardRef } from "preact/compat";
-import {
-  useContext,
-  useImperativeHandle,
-  useRef,
-  useState,
-} from "preact/hooks";
+import { useContext, useRef, useState } from "preact/hooks";
 
-import { renderActionableComponent } from "../action/render_actionable_component.jsx";
 import { useActionBoundToOneArrayParam } from "../action/use_action.js";
 import { useActionStatus } from "../action/use_action_status.js";
 import { useExecuteAction } from "../action/use_execute_action.js";
@@ -30,7 +23,9 @@ import {
 } from "./use_ui_state_controller.js";
 import { dispatchRequestAction } from "./validation/custom_constraint_validation.js";
 
-export const CheckboxList = forwardRef((props, ref) => {
+export const CheckboxList = (props) => {
+  const refDefault = useRef(null);
+  const ref = props.ref || refDefault;
   const uiStateController = useUIGroupStateController(props, "checkbox_list", {
     childComponentType: "checkbox",
     aggregateChildStates: (childUIStateControllers) => {
@@ -44,30 +39,30 @@ export const CheckboxList = forwardRef((props, ref) => {
     },
   });
   const uiState = useUIState(uiStateController);
-
-  const checkboxList = renderActionableComponent(props, ref, {
-    Basic: CheckboxListBasic,
-    WithAction: CheckboxListWithAction,
-  });
   return (
     <UIStateControllerContext.Provider value={uiStateController}>
       <UIStateContext.Provider value={uiState}>
-        {checkboxList}
+        <CheckboxListDispatcher {...props} ref={ref} />
       </UIStateContext.Provider>
     </UIStateControllerContext.Provider>
   );
-});
+};
 export const Checkbox = InputCheckbox;
 
-const CheckboxListBasic = forwardRef((props, ref) => {
+const CheckboxListDispatcher = (props) => {
+  if (props.action) {
+    return <CheckboxListWithAction {...props} />;
+  }
+  return <CheckboxListUI {...props} />;
+};
+
+const CheckboxListUI = (props) => {
+  const { name, readOnly, disabled, required, loading, children, ...rest } =
+    props;
   const contextReadOnly = useContext(ReadOnlyContext);
   const contextDisabled = useContext(DisabledContext);
   const contextLoading = useContext(LoadingContext);
   const uiStateController = useContext(UIStateControllerContext);
-  const { name, readOnly, disabled, required, loading, children, ...rest } =
-    props;
-  const innerRef = useRef();
-  useImperativeHandle(ref, () => innerRef.current);
 
   const innerLoading = loading || contextLoading;
   const innerReadOnly =
@@ -78,8 +73,6 @@ const CheckboxListBasic = forwardRef((props, ref) => {
     <Box
       flex
       {...rest}
-      ref={innerRef}
-      name={name}
       baseClassName="navi_checkbox_list"
       data-checkbox-list=""
       onresetuistate={(e) => {
@@ -101,11 +94,12 @@ const CheckboxListBasic = forwardRef((props, ref) => {
       </ParentUIStateControllerContext.Provider>
     </Box>
   );
-});
+};
 
-const CheckboxListWithAction = forwardRef((props, ref) => {
+const CheckboxListWithAction = (props) => {
   const uiStateController = useContext(UIStateControllerContext);
   const {
+    ref,
     action,
     actionErrorEffect,
     onCancel,
@@ -117,24 +111,31 @@ const CheckboxListWithAction = forwardRef((props, ref) => {
     children,
     ...rest
   } = props;
-  const innerRef = useRef();
-  useImperativeHandle(ref, () => innerRef.current);
   const [boundAction] = useActionBoundToOneArrayParam(
     action,
     uiStateController.uiStateSignal,
   );
   const { loading: actionLoading } = useActionStatus(boundAction);
-  const executeAction = useExecuteAction(innerRef, {
+  const executeAction = useExecuteAction(ref, {
     errorEffect: actionErrorEffect,
   });
   const onRequestAction = useOnRequestAction();
   const [actionRequester, setActionRequester] = useState(null);
 
   return (
-    <CheckboxListBasic
-      data-action={boundAction.name}
+    <CheckboxListUI
+      data-action={boundAction}
       {...rest}
-      ref={innerRef}
+      ref={ref}
+      onChange={(e) => {
+        const checkbox = e.target;
+        const checkboxList = ref.current;
+        dispatchRequestAction(checkboxList, {
+          event: e,
+          requester: checkbox,
+          actionOrigin: "action_prop",
+        });
+      }}
       onnavi_cancel={(e) => {
         const { reason } = e.detail;
         uiStateController.resetUIState(e);
@@ -157,19 +158,11 @@ const CheckboxListWithAction = forwardRef((props, ref) => {
         onActionError?.(e);
       }}
       onnavi_action_end={onActionEnd}
-      onChange={(event) => {
-        const checkboxList = innerRef.current;
-        const checkbox = event.target;
-        dispatchRequestAction(checkboxList, {
-          event,
-          requester: checkbox,
-        });
-      }}
       loading={loading || actionLoading}
     >
       <LoadingElementContext.Provider value={actionRequester}>
         {children}
       </LoadingElementContext.Provider>
-    </CheckboxListBasic>
+    </CheckboxListUI>
   );
-});
+};
