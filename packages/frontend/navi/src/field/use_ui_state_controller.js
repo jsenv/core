@@ -208,7 +208,8 @@ export const useUIStateController = (
       if (newUIState === currentUIState) {
         return;
       }
-      debugUIState(
+      debugAction(
+        e,
         `${componentType}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> updating to ${JSON.stringify(newUIState)}`,
       );
       uiStateController.uiState = newUIState;

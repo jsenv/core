@@ -11,7 +11,7 @@ import { Text, markAsOutsideTextFlow } from "../text/text.jsx";
 import { useAutoFocus } from "../utils/focus/use_auto_focus.js";
 import { useAccentColorAttributes } from "../utils/use_accent_color_attributes.js";
 import { FormActionContext } from "./form_context.js";
-import { useActionEvents } from "./use_action_events.js";
+import { useOnRequestAction } from "./use_action_events.js";
 import { useFormEvents } from "./use_form_events.js";
 import {
   DisabledContext,
@@ -19,7 +19,6 @@ import {
   LoadingElementContext,
   ReadOnlyContext,
 } from "./use_ui_state_controller.js";
-import { forwardActionRequested } from "./validation/custom_constraint_validation.js";
 import { useConstraints } from "./validation/hooks/use_constraints.js";
 
 /**
@@ -517,7 +516,7 @@ const ButtonWithAction = (props) => {
     loading,
     actionErrorEffect,
     onActionPrevented,
-    onActionStart,
+    onActionAbort,
     onActionError,
     onActionEnd,
     children,
@@ -528,17 +527,9 @@ const ButtonWithAction = (props) => {
   const executeAction = useExecuteAction(ref, {
     errorEffect: actionErrorEffect,
   });
+  const onRequestAction = useOnRequestAction();
 
   const innerLoading = loading || actionLoading;
-
-  useActionEvents(ref, {
-    onPrevented: onActionPrevented,
-    onRequested: (e) => forwardActionRequested(e, boundAction),
-    onAction: executeAction,
-    onStart: onActionStart,
-    onError: onActionError,
-    onEnd: onActionEnd,
-  });
 
   return (
     <ButtonDispatcher
@@ -548,6 +539,14 @@ const ButtonWithAction = (props) => {
       ref={ref}
       action={undefined}
       loading={innerLoading}
+      onnavi_request_action={(e) => {
+        onRequestAction(boundAction, e);
+      }}
+      onnavi_action_prevented={onActionPrevented}
+      onnavi_action_ready={executeAction}
+      onnavi_action_abort={onActionAbort}
+      onnavi_action_error={onActionError}
+      onnavi_action_end={onActionEnd}
     >
       {children}
     </ButtonDispatcher>
@@ -578,6 +577,7 @@ const ButtonWithActionInsideForm = (props) => {
   const formParamsSignal = formAction.paramsSignal;
   const actionBoundToFormParams = useAction(action, formParamsSignal);
   const { loading: actionLoading } = useActionStatus(actionBoundToFormParams);
+  const onRequestAction = useOnRequestAction();
 
   const innerLoading = loading || actionLoading;
   useFormEvents(ref, {
@@ -616,8 +616,10 @@ const ButtonWithActionInsideForm = (props) => {
       action={undefined}
       type={type}
       loading={innerLoading}
-      onnavi_action_requested={(e) => {
-        forwardActionRequested(e, actionBoundToFormParams, e.target.form);
+      onnavi_request_action={(e) => {
+        onRequestAction(actionBoundToFormParams, e, {
+          target: e.target.form,
+        });
       }}
     >
       {children}

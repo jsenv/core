@@ -6,7 +6,7 @@ import { useExecuteAction } from "../action/use_execute_action.js";
 import { Box } from "../box/box.jsx";
 import { useDebugAction } from "../navi_debug.jsx";
 import { InputRadio } from "./input/input_radio.jsx";
-import { useActionEvents } from "./use_action_events.js";
+import { useOnRequestAction } from "./use_action_events.js";
 import {
   DisabledContext,
   FieldNameContext,
@@ -20,7 +20,7 @@ import {
   useUIGroupStateController,
   useUIState,
 } from "./use_ui_state_controller.js";
-import { requestAction } from "./validation/custom_constraint_validation.js";
+import { dispatchRequestAction } from "./validation/custom_constraint_validation.js";
 
 export const RadioList = (props) => {
   const debugAction = useDebugAction();
@@ -107,7 +107,6 @@ const RadioListWithAction = (props) => {
     action,
     onCancel,
     onActionPrevented,
-    onActionStart,
     onActionAbort,
     onActionError,
     onActionEnd,
@@ -125,30 +124,7 @@ const RadioListWithAction = (props) => {
     errorEffect: actionErrorEffect,
   });
   const [actionRequester, setActionRequester] = useState(null);
-
-  useActionEvents(ref, {
-    onCancel: (e, reason) => {
-      uiStateController.resetUIState(e);
-      onCancel?.(e, reason);
-    },
-    onPrevented: onActionPrevented,
-    onAction: (actionEvent) => {
-      setActionRequester(actionEvent.detail.requester);
-      executeAction(actionEvent);
-    },
-    onStart: onActionStart,
-    onAbort: (e) => {
-      uiStateController.resetUIState(e);
-      onActionAbort?.(e);
-    },
-    onError: (e) => {
-      uiStateController.resetUIState(e);
-      onActionError?.(e);
-    },
-    onEnd: (e) => {
-      onActionEnd?.(e);
-    },
-  });
+  const onRequestAction = useOnRequestAction();
 
   return (
     <RadioListUI
@@ -159,12 +135,33 @@ const RadioListWithAction = (props) => {
       onChange={(e) => {
         const radio = e.target;
         const radioListContainer = ref.current;
-        requestAction(radioListContainer, boundAction, {
+        dispatchRequestAction(radioListContainer, {
           event: e,
           requester: radio,
           actionOrigin: "action_prop",
         });
       }}
+      onnavi_cancel={(e, reason) => {
+        uiStateController.resetUIState(e);
+        onCancel?.(e, reason);
+      }}
+      onnavi_request_action={(e) => {
+        onRequestAction(boundAction, e);
+      }}
+      onnavi_action_prevented={onActionPrevented}
+      onnavi_action_ready={(e) => {
+        setActionRequester(e.detail.requester);
+        executeAction(e);
+      }}
+      onnavi_action_abort={(e) => {
+        uiStateController.resetUIState(e);
+        onActionAbort?.(e);
+      }}
+      onnavi_action_error={(e) => {
+        uiStateController.resetUIState(e);
+        onActionError?.(e);
+      }}
+      onnavi_action_end={onActionEnd}
       loading={loading || actionLoading}
     >
       <LoadingElementContext.Provider value={actionRequester}>

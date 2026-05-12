@@ -56,7 +56,7 @@ import {
   requestListOpen,
   requestListSelectCurrent,
 } from "../list/list.jsx";
-import { useActionEvents } from "../use_action_events.js";
+import { useOnRequestAction } from "../use_action_events.js";
 import {
   DisabledContext,
   LoadingContext,
@@ -67,7 +67,6 @@ import {
   useUIState,
   useUIStateController,
 } from "../use_ui_state_controller.js";
-import { forwardActionRequested } from "../validation/custom_constraint_validation.js";
 import { useConstraints } from "../validation/hooks/use_constraints.js";
 
 const css = /* css */ `
@@ -818,7 +817,7 @@ const InputTextualWithAction = (props) => {
     loading,
     onCancel,
     onActionPrevented,
-    onActionStart,
+    onActionAborted,
     onActionError,
     onActionEnd,
     cancelOnBlurInvalid,
@@ -835,40 +834,12 @@ const InputTextualWithAction = (props) => {
   const executeAction = useExecuteAction(ref, {
     errorEffect: actionErrorEffect,
   });
+  const onRequestAction = useOnRequestAction();
+
   // here updating the input won't call the associated action
   // (user have to blur or press enter for this to happen)
   // so we can keep the ui state on cancel/abort/error and let user decide
   // to update ui state or retry via blur/enter as is
-  useActionEvents(ref, {
-    onCancel: (e, reason) => {
-      if (reason.startsWith("blur_invalid")) {
-        if (!cancelOnBlurInvalid) {
-          return;
-        }
-        if (
-          // error prevent cancellation until the user closes it (or something closes it)
-          e.detail.failedConstraintInfo.level === "error" &&
-          e.detail.failedConstraintInfo.reportStatus !== "closed"
-        ) {
-          return;
-        }
-      }
-      if (reason === "escape_key") {
-        if (!cancelOnEscape) {
-          return;
-        }
-      }
-      onCancel?.(e, reason);
-    },
-    onRequested: (e) => {
-      forwardActionRequested(e, boundAction);
-    },
-    onPrevented: onActionPrevented,
-    onAction: executeAction,
-    onStart: onActionStart,
-    onError: onActionError,
-    onEnd: onActionEnd,
-  });
 
   return (
     <InputTextualDispatcher
@@ -878,6 +849,34 @@ const InputTextualWithAction = (props) => {
       {...rest}
       ref={ref}
       action={undefined}
+      onnavi_cancel={(e, reason) => {
+        if (reason.startsWith("blur_invalid")) {
+          if (!cancelOnBlurInvalid) {
+            return;
+          }
+          if (
+            // error prevent cancellation until the user closes it (or something closes it)
+            e.detail.failedConstraintInfo.level === "error" &&
+            e.detail.failedConstraintInfo.reportStatus !== "closed"
+          ) {
+            return;
+          }
+        }
+        if (reason === "escape_key") {
+          if (!cancelOnEscape) {
+            return;
+          }
+        }
+        onCancel?.(e, reason);
+      }}
+      onnavi_request_action={(e) => {
+        onRequestAction(e, boundAction);
+      }}
+      onnavi_action_prevented={onActionPrevented}
+      onnavi_action_ready={executeAction}
+      onnavi_action_abort={onActionAborted}
+      onnavi_action_error={onActionError}
+      onnavi_action_end={onActionEnd}
       loading={loading || actionLoading}
     />
   );

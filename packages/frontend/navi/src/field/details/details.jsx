@@ -9,17 +9,14 @@ import { useExecuteAction } from "../../action/use_execute_action.js";
 import { Box } from "../../box/box.jsx";
 import { useKeyboardShortcuts } from "../../keyboard/keyboard_shortcuts.js";
 import { useFocusGroup } from "../../utils/focus/use_focus_group.js";
-import { useActionEvents } from "../use_action_events.js";
+import { useOnRequestAction } from "../use_action_events.js";
 import {
   UIStateContext,
   UIStateControllerContext,
   useUIState,
   useUIStateController,
 } from "../use_ui_state_controller.js";
-import {
-  dispatchActionRequestedCustomEvent,
-  forwardActionRequested,
-} from "../validation/custom_constraint_validation.js";
+import { dispatchRequestAction } from "../validation/custom_constraint_validation.js";
 import { SummaryMarker } from "./summary_marker.jsx";
 
 const css = /* css */ `
@@ -227,7 +224,6 @@ const DetailsWithAction = (props) => {
     onClose,
     onCancel,
     onActionPrevented,
-    onActionStart,
     onActionAbort,
     onActionError,
     onActionEnd,
@@ -243,39 +239,36 @@ const DetailsWithAction = (props) => {
     // the error will be displayed by actionRenderer inside <details>
     errorEffect: "none",
   });
-
-  useActionEvents(ref, {
-    onCancel: (e, reason) => {
-      if (reason === "blur_invalid") {
-        return;
-      }
-      uiStateController.resetUIState(e);
-      onCancel?.(e, reason);
-    },
-    onPrevented: onActionPrevented,
-    onRequested: (e) => forwardActionRequested(e, effectiveAction),
-    onAction: executeAction,
-    onStart: onActionStart,
-    onAbort: (e) => {
-      uiStateController.resetUIState(e);
-      onActionAbort?.(e);
-    },
-    onError: (e) => {
-      uiStateController.resetUIState(e);
-      onActionError?.(e);
-    },
-    onEnd: (e) => {
-      onActionEnd?.(e);
-    },
-  });
+  const onRequestAction = useOnRequestAction();
 
   return (
     <DetailsBasic
       {...rest}
       ref={ref}
       loading={loading || actionLoading}
+      onnavi_cancel={(e, reason) => {
+        if (reason === "blur_invalid") {
+          return;
+        }
+        uiStateController.resetUIState(e);
+        onCancel?.(e, reason);
+      }}
+      onnavi_request_action={(e) => {
+        onRequestAction(e, effectiveAction);
+      }}
+      onnavi_action_prevented={onActionPrevented}
+      onnavi_action_ready={executeAction}
+      onnavi_action_abort={(e) => {
+        uiStateController.resetUIState(e);
+        onActionAbort?.(e);
+      }}
+      onnavi_action_error={(e) => {
+        uiStateController.resetUIState(e);
+        onActionError?.(e);
+      }}
+      onnavi_action_end={onActionEnd}
       onOpen={(e) => {
-        dispatchActionRequestedCustomEvent(e.target, {
+        dispatchRequestAction(e.target, {
           event: e,
           requester: e.target,
         });

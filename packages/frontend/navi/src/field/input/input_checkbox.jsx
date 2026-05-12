@@ -14,7 +14,7 @@ import {
   reportReadOnlyToField,
 } from "../field.jsx";
 import { fieldPropSet } from "../field_prop_set.js";
-import { useActionEvents } from "../use_action_events.js";
+import { useOnRequestAction } from "../use_action_events.js";
 import {
   DisabledContext,
   FieldNameContext,
@@ -27,7 +27,6 @@ import {
   useUIState,
   useUIStateController,
 } from "../use_ui_state_controller.js";
-import { forwardActionRequested } from "../validation/custom_constraint_validation.js";
 import { useConstraints } from "../validation/hooks/use_constraints.js";
 
 const css = /* css */ `
@@ -642,20 +641,19 @@ const CheckboxPseudoElements = ["::-navi-loader", "::-navi-checkmark"];
 const CheckboxChildPropSet = new Set([...fieldPropSet]);
 
 const InputCheckboxWithAction = (props) => {
-  const uiStateController = useContext(UIStateControllerContext);
   const {
     ref,
     action,
     onCancel,
     actionErrorEffect,
     onActionPrevented,
-    onActionStart,
     onActionAbort,
     onActionError,
     onActionEnd,
     loading,
     ...rest
   } = props;
+  const uiStateController = useContext(UIStateControllerContext);
   const [actionBoundToUIState] = useActionBoundToOneParam(
     action,
     uiStateController.uiStateSignal,
@@ -665,34 +663,7 @@ const InputCheckboxWithAction = (props) => {
   const executeAction = useExecuteAction(ref, {
     errorEffect: actionErrorEffect,
   });
-
-  // In this situation updating the ui state === calling associated action
-  // so cance/abort/error have to revert the ui state to the one before user interaction
-  // to show back the real state of the checkbox (not the one user tried to set)
-  useActionEvents(ref, {
-    onCancel: (e, reason) => {
-      if (reason === "blur_invalid") {
-        return;
-      }
-      uiStateController.resetUIState(e);
-      onCancel?.(e, reason);
-    },
-    onRequested: (e) => forwardActionRequested(e, actionBoundToUIState),
-    onPrevented: onActionPrevented,
-    onAction: executeAction,
-    onStart: onActionStart,
-    onAbort: (e) => {
-      uiStateController.resetUIState(e);
-      onActionAbort?.(e);
-    },
-    onError: (e) => {
-      uiStateController.resetUIState(e);
-      onActionError?.(e);
-    },
-    onEnd: (e) => {
-      onActionEnd?.(e);
-    },
-  });
+  const onRequestAction = useOnRequestAction();
 
   return (
     <InputCheckboxDispatcher
@@ -700,6 +671,30 @@ const InputCheckboxWithAction = (props) => {
       {...rest}
       ref={ref}
       loading={loading || actionLoading}
+      // In this situation updating the ui state === calling associated action
+      // so cance/abort/error have to revert the ui state to the one before user interaction
+      // to show back the real state of the checkbox (not the one user tried to set)
+      onnavi_cancel={(e, reason) => {
+        if (reason === "blur_invalid") {
+          return;
+        }
+        uiStateController.resetUIState(e);
+        onCancel?.(e, reason);
+      }}
+      onnavi_request_action={(e) => {
+        onRequestAction(actionBoundToUIState, e);
+      }}
+      onnavi_action_prevented={onActionPrevented}
+      onnavi_action_ready={executeAction}
+      onnavi_action_abort={(e) => {
+        uiStateController.resetUIState(e);
+        onActionAbort?.(e);
+      }}
+      onnavi_action_error={(e) => {
+        uiStateController.resetUIState(e);
+        onActionError?.(e);
+      }}
+      onnavi_action_end={onActionEnd}
     />
   );
 };

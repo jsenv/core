@@ -40,7 +40,7 @@ export const useFormEvents = (
     }
     return addManyEventListeners(form, {
       reset: onFormReset,
-      navi_action_requested: onFormActionRequested,
+      navi_request_action: onFormActionRequested,
       navi_action_prevented: onFormActionPrevented,
       navi_action_start: onFormActionStart,
       navi_action_abort: onFormActionAbort,

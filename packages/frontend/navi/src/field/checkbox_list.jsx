@@ -14,7 +14,7 @@ import { useActionStatus } from "../action/use_action_status.js";
 import { useExecuteAction } from "../action/use_execute_action.js";
 import { Box } from "../box/box.jsx";
 import { InputCheckbox } from "./input/input_checkbox.jsx";
-import { useActionEvents } from "./use_action_events.js";
+import { useOnRequestAction } from "./use_action_events.js";
 import {
   DisabledContext,
   FieldNameContext,
@@ -28,7 +28,7 @@ import {
   useUIGroupStateController,
   useUIState,
 } from "./use_ui_state_controller.js";
-import { requestAction } from "./validation/custom_constraint_validation.js";
+import { dispatchRequestAction } from "./validation/custom_constraint_validation.js";
 
 export const CheckboxList = forwardRef((props, ref) => {
   const uiStateController = useUIGroupStateController(props, "checkbox_list", {
@@ -110,7 +110,6 @@ const CheckboxListWithAction = forwardRef((props, ref) => {
     actionErrorEffect,
     onCancel,
     onActionPrevented,
-    onActionStart,
     onActionAbort,
     onActionError,
     onActionEnd,
@@ -128,41 +127,39 @@ const CheckboxListWithAction = forwardRef((props, ref) => {
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,
   });
+  const onRequestAction = useOnRequestAction();
   const [actionRequester, setActionRequester] = useState(null);
-
-  useActionEvents(innerRef, {
-    onCancel: (e, reason) => {
-      uiStateController.resetUIState(e);
-      onCancel?.(e, reason);
-    },
-    onPrevented: onActionPrevented,
-    onAction: (actionEvent) => {
-      setActionRequester(actionEvent.detail.requester);
-      executeAction(actionEvent);
-    },
-    onStart: onActionStart,
-    onAbort: (e) => {
-      uiStateController.resetUIState(e);
-      onActionAbort?.(e);
-    },
-    onError: (e) => {
-      uiStateController.resetUIState(e);
-      onActionError?.(e);
-    },
-    onEnd: (e) => {
-      onActionEnd?.(e);
-    },
-  });
 
   return (
     <CheckboxListBasic
       data-action={boundAction.name}
       {...rest}
       ref={innerRef}
+      onnavi_cancel={(e) => {
+        uiStateController.resetUIState(e);
+        onCancel?.(e);
+      }}
+      onnavi_request_action={(e) => {
+        onRequestAction(boundAction, e);
+      }}
+      onnavi_action_prevented={onActionPrevented}
+      onnavi_action_ready={(e) => {
+        setActionRequester(e.detail.requester);
+        executeAction(e);
+      }}
+      onnavi_action_abort={(e) => {
+        uiStateController.resetUIState(e);
+        onActionAbort?.(e);
+      }}
+      onnavi_action_error={(e) => {
+        uiStateController.resetUIState(e);
+        onActionError?.(e);
+      }}
+      onnavi_action_end={onActionEnd}
       onChange={(event) => {
         const checkboxList = innerRef.current;
         const checkbox = event.target;
-        requestAction(checkboxList, boundAction, {
+        dispatchRequestAction(checkboxList, {
           event,
           requester: checkbox,
         });

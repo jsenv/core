@@ -28,7 +28,7 @@ import { naviI18n } from "../../text/navi_i18n.js";
 import { useAutoFocus } from "../../utils/focus/use_auto_focus.js";
 import { useItemTracker } from "../../utils/item_tracker/use_item_tracker.js";
 import { useDisplayedLayoutEffect } from "../../utils/use_displayed_layout_effect.js";
-import { useActionEvents } from "../use_action_events.js";
+import { useOnRequestAction } from "../use_action_events.js";
 import {
   ParentUIStateControllerContext,
   SelectTriggerContentRegistryContext,
@@ -37,10 +37,7 @@ import {
   useUIState,
   useUIStateController,
 } from "../use_ui_state_controller.js";
-import {
-  dispatchActionRequestedCustomEvent,
-  forwardActionRequested,
-} from "../validation/custom_constraint_validation.js";
+import { dispatchRequestAction } from "../validation/custom_constraint_validation.js";
 import { useConstraints } from "../validation/hooks/use_constraints.js";
 import { useSearchHighlight } from "./search_highlight.js";
 
@@ -1315,7 +1312,6 @@ const ListWithAction = (props) => {
     loading,
     actionErrorEffect,
     onActionPrevented,
-    onActionStart,
     onActionAbort,
     onActionError,
     onActionEnd,
@@ -1335,16 +1331,7 @@ const ListWithAction = (props) => {
   const executeAction = useExecuteAction(ref, {
     errorEffect: actionErrorEffect,
   });
-
-  useActionEvents(ref, {
-    onRequested: (e) => forwardActionRequested(e, boundAction),
-    onAction: executeAction,
-    onPrevented: onActionPrevented,
-    onStart: onActionStart,
-    onAbort: onActionAbort,
-    onError: onActionError,
-    onEnd: onActionEnd,
-  });
+  const onRequestAction = useOnRequestAction();
 
   // Mouse/keyboard pointed state
   const [mousePointedId, setMousePointedId] = useState(null);
@@ -1384,6 +1371,12 @@ const ListWithAction = (props) => {
         props.onListVisibleItemsChange?.(visibleItems);
         visibleItemsRef.current = visibleItems;
       }}
+      onnavi_request_action={(e) => onRequestAction(boundAction, e)}
+      onnavi_action_prevented={onActionPrevented}
+      onnavi_action_ready={executeAction}
+      onnavi_action_abort={onActionAbort}
+      onnavi_action_error={onActionError}
+      onnavi_action_end={onActionEnd}
       onnavi_list_nav={(e) => {
         const { item, event } = e.detail;
         const id = item ? item.id : null;
@@ -1416,7 +1409,7 @@ const ListWithAction = (props) => {
           ? listEl.querySelector(`#${CSS.escape(item.id)}`)
           : e.target;
         const resolvedRequester = requester || e.target;
-        dispatchActionRequestedCustomEvent(listEl, {
+        dispatchRequestAction(listEl, {
           event: e,
           requester: resolvedRequester,
         });

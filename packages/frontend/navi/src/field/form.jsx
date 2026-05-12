@@ -22,7 +22,7 @@ import { useDebugAction } from "../navi_debug.jsx";
 import { collectFormElementValues } from "./collect_form_element_values.js";
 import { FormActionContext, FormContext } from "./form_context.js";
 import {
-  useActionEvents,
+  useOnRequestAction,
   useRequestedActionStatus,
 } from "./use_action_events.js";
 import {
@@ -35,7 +35,6 @@ import {
   useUIGroupStateController,
   useUIState,
 } from "./use_ui_state_controller.js";
-import { forwardActionRequested } from "./validation/custom_constraint_validation.js";
 import { useConstraints } from "./validation/hooks/use_constraints.js";
 
 export const Form = (props) => {
@@ -79,9 +78,9 @@ const FormDispatcher = (props) => {
 };
 
 const FormUI = (props) => {
+  const { ref, readOnly, loading, children, ...rest } = props;
   const debugAction = useDebugAction();
   const uiStateController = useContext(UIStateControllerContext);
-  const { ref, readOnly, loading, children, ...rest } = props;
 
   // instantiate validation via useConstraints hook:
   // - receive "actionrequested" custom event ensure submit is prevented
@@ -122,8 +121,6 @@ const FormUI = (props) => {
 };
 
 const FormWithAction = (props) => {
-  const debugAction = useDebugAction();
-  const uiStateController = useContext(UIStateControllerContext);
   const {
     ref,
     action,
@@ -131,7 +128,6 @@ const FormWithAction = (props) => {
     actionErrorEffect = "show_validation_message", // "show_validation_message" or "throw"
     errorMapping,
     onActionPrevented,
-    onActionStart,
     onActionAbort,
     onActionError,
     onActionEnd,
@@ -139,6 +135,7 @@ const FormWithAction = (props) => {
     children,
     ...rest
   } = props;
+  const uiStateController = useContext(UIStateControllerContext);
   const [actionBoundToUIState] = useActionBoundToOneParam(
     action,
     uiStateController.uiStateSignal,
@@ -147,51 +144,10 @@ const FormWithAction = (props) => {
     errorEffect: actionErrorEffect,
     errorMapping,
   });
+  const onRequestAction = useOnRequestAction();
   const { actionPending, actionRequester: formActionRequester } =
     useRequestedActionStatus(ref);
 
-  useActionEvents(ref, {
-    onPrevented: onActionPrevented,
-    onRequested: (e) => {
-      forwardActionRequested(e, actionBoundToUIState);
-    },
-    onAction: (e) => {
-      const form = ref.current;
-      const formElementValues = collectFormElementValues(form);
-      debugAction(
-        e,
-        `form onAction -> setUIState(${JSON.stringify(formElementValues)})`,
-      );
-      uiStateController.setUIState(formElementValues, e);
-      executeAction(e);
-    },
-    onStart: (e) => {
-      debugAction(e, `form onStart`);
-      onActionStart?.(e);
-    },
-    onAbort: (e) => {
-      // user might want to re-submit as is
-      // or change the ui state before re-submitting
-      // we can't decide for him
-      debugAction(e, `form onAbort`);
-      onActionAbort?.(e);
-    },
-    onError: (e) => {
-      // user might want to re-submit as is
-      // or change the ui state before re-submitting
-      // we can't decide for him
-      debugAction(e, `form onError`);
-      onActionError?.(e);
-    },
-    onEnd: (e) => {
-      // form side effect is a success
-      // we can get rid of the nav state
-      // that was keeping the ui state in case user navigates away without submission
-      debugAction(e, `form onEnd -> actionEnd`);
-      uiStateController.actionEnd(e);
-      onActionEnd?.(e);
-    },
-  });
   const innerLoading = loading || actionPending;
 
   return (
@@ -201,6 +157,24 @@ const FormWithAction = (props) => {
       {...rest}
       ref={ref}
       loading={innerLoading}
+      onnavi_request_action={(e) => {
+        onRequestAction(actionBoundToUIState, e);
+      }}
+      onnavi_action_prevented={onActionPrevented}
+      onnavi_action_ready={(e) => {
+        const form = ref.current;
+        // this is not really mandatory, normally all navi fields already report
+        // it's only in case we have fields that are not managed by navi
+        const formElementValues = collectFormElementValues(form);
+        uiStateController.setUIState(formElementValues, e);
+        executeAction(e);
+      }}
+      onnavi_action_abort={onActionAbort}
+      onnavi_action_error={onActionError}
+      onnavi_action_end={(e) => {
+        uiStateController.actionEnd(e);
+        onActionEnd?.(e);
+      }}
     >
       <FormActionContext.Provider value={actionBoundToUIState}>
         <LoadingElementContext.Provider value={formActionRequester}>

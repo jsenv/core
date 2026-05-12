@@ -200,7 +200,7 @@
     <script type="module">
       import {
         installCustomConstraintValidation,
-        forwardActionRequested,
+        // onRequestAction,
       } from "@jsenv/navi";
 
       // Install validation on the form and its inputs
@@ -216,11 +216,11 @@
       installCustomConstraintValidation(confirmPasswordInput);
       installCustomConstraintValidation(submitButton);
 
-      form.addEventListener("navi_action_requested", (e) => {
-        forwardActionRequested(e, () => {
-          // noop
-          console.log("execute form action");
-        });
+      form.addEventListener("navi_request_action", () => {
+        // onRequestAction(e, () => {
+        //   // noop
+        //   console.log("execute form action");
+        // });
       });
 
       // Handle form submission

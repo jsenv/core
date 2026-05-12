@@ -57,6 +57,7 @@ import {
   createPubSub,
   dispatchCustomEvent,
   dispatchPublicCustomEvent,
+  getElementSignature,
 } from "@jsenv/dom";
 
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
@@ -118,17 +119,17 @@ const DEFAULT_CONSTRAINT_SET = new Set([
 
 const validationInProgressWeakSet = new WeakSet();
 
-export const requestAction = (
-  target,
+export const onRequestAction = (
   action,
+  event,
   {
-    actionOrigin,
-    event,
-    requester = target,
+    target = event.currentTarget,
+    requester = event.detail?.requester,
+    actionOrigin = event.detail?.actionOrigin,
     method = "rerun",
-    meta = {},
+    meta = event.detail?.meta || {},
     confirmMessage,
-    debugAction,
+    debugAction = () => {},
   } = {},
 ) => {
   if (!actionOrigin) {
@@ -156,8 +157,14 @@ export const requestAction = (
     meta,
   };
 
-  debugAction?.(
-    `action requested by ${requester?.id || requester?.tagName} (event: "${event?.type}")`,
+  const initiatorTarget = e.detail?.event?.target;
+  const requesterInfo =
+    requester && requester !== initiatorTarget
+      ? ` requester=${getElementSignature(requester)}`
+      : "";
+  debugAction(
+    event,
+    `action requested by ${requesterInfo} (event: "${event?.type}")`,
   );
 
   // Determine what needs to be validated and how to handle the result
@@ -171,7 +178,8 @@ export const requestAction = (
   if (formToValidate) {
     // Form validation case
     if (validationInProgressWeakSet.has(formToValidate)) {
-      debugAction?.(
+      debugAction(
+        event,
         `validation already in progress for ${formToValidate?.id || formToValidate?.tagName}`,
       );
       return false;
@@ -196,8 +204,8 @@ export const requestAction = (
           formElement.tagName === "BUTTON" && formElement !== requester,
       });
       if (!elementIsValid) {
-        debugAction?.(
-          event || new Event("unknown"),
+        debugAction(
+          event,
           `open callout (${getFailedConstraintName(elementValidationInterface)})`,
         );
         elementValidationInterface.reportValidity({ event, debugAction });
@@ -212,8 +220,8 @@ export const requestAction = (
     // Single element validation case
     isValid = validationInterface.checkValidity({ fromRequestAction: true });
     if (!isValid) {
-      debugAction?.(
-        event || new Event("unknown"),
+      debugAction(
+        event,
         `open callout (${getFailedConstraintName(validationInterface)})`,
       );
       validationInterface.reportValidity({ event, debugAction });
@@ -224,6 +232,7 @@ export const requestAction = (
 
   // If validation failed, dispatch actionprevented and return
   if (!isValid) {
+    debugAction(event, `validation failed -> dispatch navi_action_prevented`);
     dispatchCustomEvent(
       elementForDispatch,
       "navi_action_prevented",
@@ -239,6 +248,10 @@ export const requestAction = (
   if (confirmMessage) {
     // eslint-disable-next-line no-alert
     if (!window.confirm(confirmMessage)) {
+      debugAction(
+        event,
+        `action cancelled by user -> dispatch navi_action_prevented`,
+      );
       dispatchCustomEvent(
         elementForDispatch,
         "navi_action_prevented",
@@ -248,25 +261,14 @@ export const requestAction = (
     }
   }
 
-  debugAction?.(`element is valid -> dispatch navi_action`);
-  dispatchCustomEvent(elementForDispatch, "navi_action", customEventDetail);
+  debugAction(event, `element is valid -> dispatch navi_action`);
+  dispatchCustomEvent(
+    elementForDispatch,
+    "navi_action_ready",
+    customEventDetail,
+  );
 
   return true;
-};
-
-export const forwardActionRequested = (
-  e,
-  action,
-  target = e.target,
-  { debugAction } = {},
-) => {
-  requestAction(target, action, {
-    actionOrigin: e.detail?.actionOrigin,
-    event: e.detail?.event || e,
-    requester: e.detail?.requester,
-    meta: e.detail?.meta,
-    debugAction,
-  });
 };
 
 export const closeValidationMessage = (element, reason) => {
@@ -755,7 +757,7 @@ export const installCustomConstraintValidation = (
         // click on the button, so request_on_button_click won't double-fire.
         keydownEvent.preventDefault();
       }
-      dispatchActionRequestedCustomEvent(elementWithAction, {
+      dispatchRequestAction(elementWithAction, {
         event: keydownEvent,
         requester: formSubmitTarget || element,
       });
@@ -809,7 +811,7 @@ export const installCustomConstraintValidation = (
       if (formSubmitTarget) {
         clickEvent.preventDefault();
       }
-      dispatchActionRequestedCustomEvent(elementWithAction, {
+      dispatchRequestAction(elementWithAction, {
         event: clickEvent,
         requester: formSubmitTarget || button,
       });
@@ -835,7 +837,7 @@ export const installCustomConstraintValidation = (
     const stop = listenInputValue(
       element,
       (e) => {
-        dispatchActionRequestedCustomEvent(elementWithAction, {
+        dispatchRequestAction(elementWithAction, {
           event: e,
           requester: element,
         });
@@ -864,7 +866,7 @@ export const installCustomConstraintValidation = (
     }
     const onchange = (e) => {
       if (element.parentNode.hasAttribute("data-action")) {
-        dispatchActionRequestedCustomEvent(element, {
+        dispatchRequestAction(element, {
           event: e,
           requester: element,
         });
@@ -886,7 +888,7 @@ export const installCustomConstraintValidation = (
     if (!form.hasAttribute("data-action")) {
       form.setAttribute("data-action", "toto");
     }
-    form.setAttribute("novalidate", ""); // make sure browser don't prevent "submit" nor display messages
+    form.setAttribute("novalidate", ""); // make sure browser don't prevent "submit" when invalid, nor display messages
     const removeListener = addEventListener(form, "submit", (e) => {
       e.preventDefault();
       dispatchCustomEvent(form, "navi_action", {
@@ -999,11 +1001,11 @@ const getFirstButtonSubmittingForm = (form) => {
   );
 };
 
-export const dispatchActionRequestedCustomEvent = (
+export const dispatchRequestAction = (
   elementWithAction,
   { actionOrigin = "action_prop", event, requester },
 ) => {
-  return dispatchCustomEvent(elementWithAction, "navi_action_requested", {
+  return dispatchCustomEvent(elementWithAction, "navi_request_action", {
     actionOrigin,
     event,
     requester,
@@ -1024,7 +1026,7 @@ HTMLFormElement.prototype.requestSubmit = function (submitter) {
       submitter,
     },
   });
-  dispatchActionRequestedCustomEvent(form, {
+  dispatchRequestAction(form, {
     event: programmaticEvent,
     requester: submitter,
   });
