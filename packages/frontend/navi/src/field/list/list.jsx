@@ -1852,6 +1852,9 @@ const ListItemReal = ({
         if (disabled) {
           return;
         }
+        if (readOnly) {
+          return;
+        }
         if (e.button !== 0) {
           return;
         }
@@ -1863,6 +1866,9 @@ const ListItemReal = ({
         rest.onMouseDown?.(e);
       }}
       onnavi_list_item_request_select={(e) => {
+        if (readOnly) {
+          return;
+        }
         const listEl = e.currentTarget.closest(".navi_list");
         dispatchCustomEvent(listEl, "navi_list_request_select", {
           item,

@@ -1,9 +1,9 @@
 import { installImportMetaCssBuild } from "./jsenv_navi_side_effects.js";
-import { isValidElement, createContext, h, toChildArray, render, cloneElement } from "preact";
-import { useErrorBoundary, useLayoutEffect, useEffect, useContext, useMemo, useRef, useState, useCallback, useImperativeHandle, useId } from "preact/hooks";
-import { jsxs, jsx, Fragment } from "preact/jsx-runtime";
+import { isValidElement, createContext, h, toChildArray, render, Fragment, cloneElement } from "preact";
+import { useErrorBoundary, useLayoutEffect, useEffect, useContext, useMemo, useRef, useState, useCallback, useId } from "preact/hooks";
+import { jsxs, jsx, Fragment as Fragment$1 } from "preact/jsx-runtime";
 import { signal, effect, computed, batch, useSignal } from "@preact/signals";
-import { createIterableWeakSet, getElementSignature, mergeOneStyle, normalizeStyle, createPubSub, dispatchInternalCustomEvent, mergeTwoStyles, normalizeStyles, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, findBefore, findAfter, createValueEffect, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, createStyleController, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, resolveCSSSize, canInterceptKeys, activeElementSignal, hasCSSSizeUnit, resolveOklchLightness, contrastColor, initFocusGroup, elementIsFocusable, dispatchCustomEvent, scrollIntoViewScoped, findFocusable, trapScrollInside, trapFocusInside, snapToPixel, dragAfterThreshold, getScrollContainer, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
+import { createIterableWeakSet, createEventGroupLogger, mergeOneStyle, normalizeStyle, createPubSub, dispatchInternalCustomEvent, mergeTwoStyles, normalizeStyles, createGroupTransitionController, getElementSignature, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, findBefore, findAfter, createValueEffect, eventInvolves, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, createStyleController, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, dispatchCustomEvent, resolveCSSSize, canInterceptKeys, activeElementSignal, hasCSSSizeUnit, resolveOklchLightness, contrastColor, initFocusGroup, elementIsFocusable, scrollIntoViewScoped, findFocusable, trapScrollInside, trapFocusInside, snapToPixel, formatEventSideEffect, dragAfterThreshold, getScrollContainer, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
 export { contrastColor, startDragToReorder } from "@jsenv/dom";
 import { prefixFirstAndIndentRemainingLines } from "@jsenv/humanize";
 import { createValidity } from "@jsenv/validity";
@@ -71,7 +71,7 @@ const useActionStatus = (action) => {
   };
 };
 
-installImportMetaCssBuild(import.meta);const css$H = /* css */`
+installImportMetaCssBuild(import.meta);const css$I = /* css */`
   .action_error {
     margin-top: 0;
     margin-bottom: 20px;
@@ -96,7 +96,7 @@ const ActionRenderer = ({
   children,
   disabled
 }) => {
-  import.meta.css = [css$H, "@jsenv/navi/src/action/action_renderer.jsx"];
+  import.meta.css = [css$I, "@jsenv/navi/src/action/action_renderer.jsx"];
   if (action === undefined) {
     throw new Error("ActionRenderer requires an action to render, but none was provided.");
   }
@@ -1608,6 +1608,11 @@ const createAction = (callback, rootOptions = {}) => {
       return matches;
     };
 
+    const actionNameSignal = signal(name);
+    const actionCallSourceSignal = signal(
+      generateActionCallSource(name, params),
+    );
+
     {
       // Create the action as a function that can be called directly
       action = function actionFunction(...args) {
@@ -1619,15 +1624,22 @@ const createAction = (callback, rootOptions = {}) => {
       };
       Object.defineProperty(action, "name", {
         configurable: true,
-        writable: true,
-        value: name,
+        get() {
+          return actionNameSignal.value;
+        },
       });
-      // Register the action function itself so that createAction(action) returns
-      // the same action instead of creating a new one
+      Object.defineProperty(action, "callSource", {
+        configurable: true,
+        get() {
+          return actionCallSourceSignal.value;
+        },
+        set(v) {
+          actionCallSourceSignal.value = v;
+        },
+      });
       actionWeakMap.set(action, action);
     }
 
-    const callSource = generateActionCallSource(name, params);
     // Assign all the action properties and methods to the function
     Object.assign(action, {
       isAction: true,
@@ -1673,7 +1685,6 @@ const createAction = (callback, rootOptions = {}) => {
         paramsSignal.value = nextParams;
         return true;
       },
-      callSource,
       toString: () => action.callSource,
       meta,
       debug: (...args) => {
@@ -1967,6 +1978,9 @@ const createAction = (callback, rootOptions = {}) => {
         performReset,
         ui,
 
+        nameSignal: actionNameSignal,
+        callSourceSignal: actionCallSourceSignal,
+
         childActionWeakSet,
         childActionWeakMap,
       };
@@ -2109,7 +2123,7 @@ const createActionProxyFromSignal = (
   };
 
   const nameSignal = signal(action.name);
-  const callSourceSignal = signal();
+  const callSourceSignal = signal(`[Proxy] ${action.callSource}`);
   let actionProxy;
   {
     actionProxy = function actionProxyFunction() {
@@ -2119,6 +2133,12 @@ const createActionProxyFromSignal = (
       configurable: true,
       get() {
         return nameSignal.value;
+      },
+    });
+    Object.defineProperty(actionProxy, "callSource", {
+      configurable: true,
+      get() {
+        return callSourceSignal.value;
       },
     });
     actionWeakMap.set(actionProxy, actionProxy);
@@ -2177,7 +2197,6 @@ const createActionProxyFromSignal = (
       );
     },
     replaceParams: null, // Will be set below
-    callSource: actionProxy.callSource,
     toString: () => actionProxy.callSource,
     meta: {},
 
@@ -2452,7 +2471,10 @@ const useRunOnMount = (action, Component) => {
 const DebugFocusContext = createContext(false);
 const DebugScrollContext = createContext(false);
 const DebugPopupContext = createContext(false);
+const DebugActionContext = createContext(false);
+const DebugActionVerboseContext = createContext(false);
 const debugNoop = () => {};
+const sharedEventGroupLogger = createEventGroupLogger();
 const useDebugFocus = () => {
   const debug = useContext(DebugFocusContext);
   return debug || debugNoop;
@@ -2463,6 +2485,14 @@ const useDebugScroll = () => {
 };
 const useDebugPopup = () => {
   const debug = useContext(DebugPopupContext);
+  return debug || debugNoop;
+};
+const useDebugAction = () => {
+  const debug = useContext(DebugActionContext);
+  return debug || debugNoop;
+};
+const useDebugActionVerbose = () => {
+  const debug = useContext(DebugActionVerboseContext);
   return debug || debugNoop;
 };
 
@@ -2480,16 +2510,26 @@ const NaviDebug = ({
   debugFocus,
   debugScroll,
   debugPopup,
+  debugAction,
+  debugActionVerbose,
   children
 }) => {
   if (debugFocus === true) {
-    debugFocus = console.debug;
+    debugFocus = sharedEventGroupLogger;
   }
   if (debugScroll === true) {
-    debugScroll = console.debug;
+    debugScroll = sharedEventGroupLogger;
   }
   if (debugPopup === true) {
-    debugPopup = console.debug;
+    debugPopup = sharedEventGroupLogger;
+  }
+  if (debugAction === true) {
+    debugAction = sharedEventGroupLogger;
+  }
+  if (debugActionVerbose === true) {
+    debugActionVerbose = (e, label) => {
+      console.debug(label);
+    };
   }
   return jsx(DebugFocusContext.Provider, {
     value: debugFocus,
@@ -2497,13 +2537,16 @@ const NaviDebug = ({
       value: debugScroll,
       children: jsx(DebugPopupContext.Provider, {
         value: debugPopup,
-        children: children
+        children: jsx(DebugActionContext.Provider, {
+          value: debugAction,
+          children: jsx(DebugActionVerboseContext.Provider, {
+            value: debugActionVerbose,
+            children: children
+          })
+        })
       })
     })
   });
-};
-const formatEventSideEffect = (e, sideEffect) => {
-  return `"${e.type}" on ${getElementSignature(e.target)} -> ${sideEffect}`;
 };
 
 const addIntoArray = (array, ...valuesToAdd) => {
@@ -16253,144 +16296,15 @@ const addManyEventListeners = (element, events) => {
   };
 };
 
-const useActionEvents = (
-  elementRef,
-  {
-    actionOrigin = "action_prop",
-    /**
-     * @param {Event} e - L'événement original
-     * @param {"form_reset" | "blur_invalid" | "escape_key"} reason - Raison du cancel
-     */
-    onCancel,
-    onRequested,
-    onPrevented,
-    onAction,
-    onStart,
-    onAbort,
-    onError,
-    onEnd,
-  },
-) => {
-  onCancel = useStableCallback(onCancel);
-  onRequested = useStableCallback(onRequested);
-  onPrevented = useStableCallback(onPrevented);
-  onAction = useStableCallback(onAction);
-  onStart = useStableCallback(onStart);
-  onAbort = useStableCallback(onAbort);
-  onError = useStableCallback(onError);
-  onEnd = useStableCallback(onEnd);
-
-  useLayoutEffect(() => {
-    const element = elementRef.current;
-    if (!element) {
-      return null;
-    }
-
-    return addManyEventListeners(element, {
-      navi_cancel: (e) => {
-        // cancel don't need to check for actionOrigin because
-        // it's actually unrelated to a specific actions
-        // in that sense it should likely be moved elsewhere as it's related to
-        // interaction and constraint validation, not to a specific action
-        onCancel?.(e, e.detail.reason);
-      },
-      navi_action_requested: (e) => {
-        if (e.detail.actionOrigin !== actionOrigin) {
-          return;
-        }
-        onRequested?.(e);
-      },
-      navi_action_prevented: (e) => {
-        if (e.detail.actionOrigin !== actionOrigin) {
-          return;
-        }
-        onPrevented?.(e);
-      },
-      navi_action: (e) => {
-        if (e.detail.actionOrigin !== actionOrigin) {
-          return;
-        }
-        onAction?.(e);
-      },
-      navi_action_start: (e) => {
-        if (e.detail.actionOrigin !== actionOrigin) {
-          return;
-        }
-        onStart?.(e);
-      },
-      navi_action_abort: (e) => {
-        if (e.detail.actionOrigin !== actionOrigin) {
-          return;
-        }
-        onAbort?.(e);
-      },
-      navi_action_error: (e) => {
-        if (e.detail.actionOrigin !== actionOrigin) {
-          return;
-        }
-        onError?.(e.detail.error, e);
-      },
-      navi_action_end: onEnd,
-    });
-  }, [
-    actionOrigin,
-    onCancel,
-    onRequested,
-    onPrevented,
-    onAction,
-    onStart,
-    onAbort,
-    onError,
-    onEnd,
-  ]);
-};
-
-const useRequestedActionStatus = (elementRef, { actionOrigin } = {}) => {
-  const [actionRequester, setActionRequester] = useState(null);
-  const [actionPending, setActionPending] = useState(false);
-  const [actionAborted, setActionAborted] = useState(false);
-  const [actionError, setActionError] = useState(null);
-
-  useActionEvents(elementRef, {
-    actionOrigin,
-    onAction: (actionEvent) => {
-      setActionRequester(actionEvent.detail.requester);
-    },
-    onStart: () => {
-      setActionPending(true);
-      setActionAborted(false);
-      setActionError(null);
-    },
-    onAbort: () => {
-      setActionPending(false);
-      setActionAborted(true);
-    },
-    onError: (error) => {
-      setActionPending(false);
-      setActionError(error);
-    },
-    onEnd: () => {
-      setActionPending(false);
-    },
-  });
-
-  return {
-    actionRequester,
-    actionPending,
-    actionAborted,
-    actionError,
-  };
-};
-
-const CalloutCloseContext = createContext();
-const useCalloutClose = () => {
-  return useContext(CalloutCloseContext);
+const CalloutRequestCloseContext = createContext();
+const useCalloutRequestClose = () => {
+  return useContext(CalloutRequestCloseContext);
 };
 const renderIntoCallout = (jsx$1, calloutMessageElement, {
-  close
+  requestClose
 }) => {
-  const calloutJsx = jsx(CalloutCloseContext.Provider, {
-    value: close,
+  const calloutJsx = jsx(CalloutRequestCloseContext.Provider, {
+    value: requestClose,
     children: jsx$1
   });
   render(calloutJsx, calloutMessageElement);
@@ -16407,7 +16321,7 @@ installImportMetaCssBuild(import.meta);
  * - Centers in viewport when no anchor element provided or anchor is too big
  */
 
-const css$G = /* css */`
+const css$H = /* css */`
   @layer navi {
     .navi_callout {
       --callout-success-color: #4caf50;
@@ -16578,10 +16492,11 @@ const openCallout = (message, {
   status = "",
   onClose,
   closeOnClickOutside = status === "info",
+  openingEvent,
   showErrorStack,
-  debug = false
+  debug
 } = {}) => {
-  import.meta.css = [css$G, "@jsenv/navi/src/field/validation/callout/callout.js"];
+  import.meta.css = [css$H, "@jsenv/navi/src/field/validation/callout/callout.js"];
   const callout = {
     opened: true,
     close: null,
@@ -16591,19 +16506,15 @@ const openCallout = (message, {
     element: null
   };
   if (debug) {
-    console.debug("open callout", {
-      anchorElement,
-      message,
-      status
-    });
+    debug(openingEvent, `open callout on ${getElementSignature(anchorElement)} (status=${status})`);
   }
   const [teardown, addTeardown] = createPubSub(true);
-  const close = reason => {
+  const requestClose = (event, reason) => {
     if (!callout.opened) {
       return;
     }
     if (debug) {
-      console.debug(`callout closed (reason: ${reason})`);
+      debug(event, `callout close (reason: ${reason})`);
     }
     callout.opened = false;
     teardown(reason);
@@ -16618,8 +16529,8 @@ const openCallout = (message, {
   const calloutElement = createCalloutElement();
   const calloutMessageElement = calloutElement.querySelector(".navi_callout_message");
   const calloutCloseButton = calloutElement.querySelector(".navi_callout_close_button");
-  calloutCloseButton.onclick = () => {
-    close("click_close_button");
+  calloutCloseButton.onclick = e => {
+    requestClose(e, "click_close_button");
   };
   const calloutId = `navi_callout_${Date.now()}`;
   calloutElement.id = calloutId;
@@ -16638,7 +16549,7 @@ const openCallout = (message, {
     if (isValidElement(newMessage)) {
       calloutMessageElement.innerHTML = "";
       renderIntoCallout(newMessage, calloutMessageElement, {
-        close
+        requestClose
       });
     } else if (newMessage instanceof Node) {
       // Handle DOM node (cloned from CSS selector)
@@ -16648,9 +16559,9 @@ const openCallout = (message, {
       calloutMessageElement.innerHTML = "";
       newMessage({
         renderIntoCallout: jsx => renderIntoCallout(jsx, calloutMessageElement, {
-          close
+          requestClose
         }),
-        close
+        requestClose
       });
     } else {
       if (Error.isError(newMessage)) {
@@ -16693,23 +16604,48 @@ const openCallout = (message, {
       // ) {
       //   return;
       // }
-      close("click_outside");
+      requestClose(event, "click_outside");
     };
-    document.addEventListener("click", handleClickOutside, true);
-    addTeardown(() => {
-      document.removeEventListener("click", handleClickOutside, true);
-    });
+    const registerClickOutsideListener = () => {
+      document.addEventListener("click", handleClickOutside, true);
+      addTeardown(() => {
+        document.removeEventListener("click", handleClickOutside, true);
+      });
+    };
+    if (closeOnClickOutside && openingEvent && eventInvolves(openingEvent, e => e.type === "mousedown")) {
+      if (debug) {
+        debug(openingEvent, "deferring click-outside listener registration to avoid immediate close");
+      }
+      // The callout was opened during a mousedown — wait for the corresponding
+      // mouseup before registering the click-outside listener, otherwise the
+      // upcoming click event from the same gesture would immediately close it.
+      const onMouseUp = () => {
+        setTimeout(() => {
+          debug(openingEvent, "registering click-outside listener after mouseup");
+          registerClickOutsideListener();
+        });
+      };
+      document.addEventListener("mouseup", onMouseUp, {
+        once: true,
+        capture: true
+      });
+      addTeardown(() => {
+        document.removeEventListener("mouseup", onMouseUp, true);
+      });
+    } else {
+      registerClickOutsideListener();
+    }
   }
   {
-    const handleCustomCloseEvent = () => {
-      close("custom_event");
+    const handleCustomCloseEvent = e => {
+      requestClose(e, "custom_event");
     };
-    calloutElement.addEventListener("navi_callout_close", handleCustomCloseEvent);
+    calloutElement.addEventListener("navi_callout_request_close", handleCustomCloseEvent);
   }
   Object.assign(callout, {
     element: calloutElement,
     update,
-    close
+    requestClose
   });
   addStatusEffect(() => {
     if (status) {
@@ -16788,7 +16724,7 @@ const openCallout = (message, {
       };
     });
     {
-      const onfocus = () => {
+      const onfocus = e => {
         if (status === "error") {
           // error messages must be explicitely closed by the user
           return;
@@ -16796,7 +16732,7 @@ const openCallout = (message, {
         if (anchorElement.hasAttribute("data-callout-stay-on-focus")) {
           return;
         }
-        close("target_element_focus");
+        requestClose(e, "target_element_focus");
       };
       anchorElement.addEventListener("focus", onfocus);
       addTeardown(() => {
@@ -17389,223 +17325,667 @@ const generateSvgWithoutArrow = (width, height) => {
 };
 
 /**
- * Creates a live mirror of a source DOM element that automatically stays in sync.
+ * Returns a stable event handler to attach as onnavi_constraint_message on a DOM element.
+ * messageMap keys are constraint names (e.g. "readonly"), values are the message
+ * to display — either a string or a Preact element.
  *
- * The mirror is implemented as a custom element (`<navi-mirror>`) that:
- * - Copies the source element's content (innerHTML) and attributes
- * - Automatically updates when the source element changes
- * - Efficiently manages observers based on DOM presence (starts observing when
- *   added to DOM, stops when removed)
- * - Excludes the 'id' attribute to avoid conflicts
- *
- * @param {Element} sourceElement - The DOM element to mirror. Any changes to this
- *   element's content, attributes, or structure will be automatically reflected
- *   in the returned mirror element.
- *
- * @returns {NaviMirror} A custom element that mirrors the source element. Can be
- *   inserted into the DOM like any other element. The mirror will automatically
- *   start/stop observing the source based on its DOM presence.
+ * @example
+ * const onNaviConstraintMessage = useOnNaviConstraintMessage({ readOnlyMessage: <MyMessage item={item} /> });
+ * return <li onnavi_constraint_message={onNaviConstraintMessage} />;
  */
-const createNaviMirror = (sourceElement) => {
-  const naviMirror = new NaviMirror(sourceElement);
-  return naviMirror;
+const useOnNaviConstraintMessage = (props) => {
+  const propsRef = useRef(props);
+  propsRef.current = props;
+
+  return useCallback((e) => {
+    const propName = MAPPING[e.detail.constraintName];
+    const message = propsRef.current[propName];
+    if (message !== undefined && message !== null) {
+      e.detail.respondMessage(message);
+    }
+  }, []);
 };
 
-// Custom element that mirrors another element's content
-class NaviMirror extends HTMLElement {
-  constructor(sourceElement) {
-    super();
-    this.sourceElement = null;
-    this.sourceObserver = null;
-    this.setSourceElement(sourceElement);
-  }
+const MAPPING = {
+  disabled: "disabledMessage",
+  required: "requiredMessage",
+  pattern: "patternMessage",
+  type_email: "typeMessage",
+  type_number: "typeMessage",
+  min_length: "minLengthMessage",
+  max_length: "maxLengthMessage",
+  min: "minMessage",
+  max: "maxMessage",
+  single_space: "singleSpaceMessage",
+  same_as: "sameAsMessage",
+  min_lower_letter: "minLowerLetterMessage",
+  min_upper_letter: "minUpperLetterMessage",
+  min_digit: "minDigitMessage",
+  min_special_char: "minSpecialCharMessage",
+  one_of: "oneOfMessage",
+  readonly: "readOnlyMessage",
+  available: "availableMessage",
+};
 
-  setSourceElement(sourceElement) {
-    this.sourceElement = sourceElement;
-    this.updateFromSource();
-  }
-
-  updateFromSource() {
-    if (!this.sourceElement) return;
-
-    this.innerHTML = this.sourceElement.innerHTML;
-    // Copy attributes from source (except id to avoid conflicts)
-    for (const attr of Array.from(this.sourceElement.attributes)) {
-      if (attr.name !== "id") {
-        this.setAttribute(attr.name, attr.value);
-      }
-    }
-  }
-
-  startObserving() {
-    if (this.sourceObserver || !this.sourceElement) return;
-    this.sourceObserver = new MutationObserver(() => {
-      this.updateFromSource();
-    });
-    this.sourceObserver.observe(this.sourceElement, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      characterData: true,
-    });
-  }
-
-  stopObserving() {
-    if (this.sourceObserver) {
-      this.sourceObserver.disconnect();
-      this.sourceObserver = null;
-    }
-  }
-
-  // Called when element is added to DOM
-  connectedCallback() {
-    this.startObserving();
-  }
-
-  // Called when element is removed from DOM
-  disconnectedCallback() {
-    this.stopObserving();
-  }
-}
-
-// Register the custom element if not already registered
-if (!customElements.get("navi-mirror")) {
-  customElements.define("navi-mirror", NaviMirror);
-}
-
-const getMessageFromAttribute = (
-  originalElement,
-  attributeName,
+const getConstraintMessage = (
+  element,
+  constraint,
   generatedMessage,
+  { requester },
 ) => {
-  const selectorAttributeName = `${attributeName}-selector`;
-  const eventAttributeName = `${attributeName}-event`;
-  const resolutionSteps = [
-    {
-      description: "original element",
-      element: originalElement,
-    },
-    {
-      description: "closest fieldset",
-      element: originalElement.closest("fieldset"),
-    },
-    {
-      description: "closest form",
-      element: originalElement.closest("form"),
-    },
-  ];
-  // Sub-steps for each element (in order of priority)
-  const subSteps = ["event", "selector", "message"];
-  let currentStepIndex = 0;
-  let currentSubStepIndex = 0;
-  const resolve = () => {
-    while (currentStepIndex < resolutionSteps.length) {
-      const { element } = resolutionSteps[currentStepIndex];
-      if (element) {
-        while (currentSubStepIndex < subSteps.length) {
-          const subStep = subSteps[currentSubStepIndex];
-          currentSubStepIndex++;
-          if (subStep === "event") {
-            const eventAttribute = element.getAttribute(eventAttributeName);
-            if (eventAttribute) {
-              return createEventHandler(element, eventAttribute);
-            }
-          }
-          if (subStep === "selector") {
-            const selectorAttribute = element.getAttribute(
-              selectorAttributeName,
-            );
-            if (selectorAttribute) {
-              return fromSelectorAttribute(selectorAttribute);
-            }
-          }
-          if (subStep === "message") {
-            const messageAttribute = element.getAttribute(attributeName);
-            if (messageAttribute) {
-              return messageAttribute;
-            }
-          }
-        }
-      }
-      currentStepIndex++;
-      currentSubStepIndex = 0;
+  const { messageAttribute, name: constraintName } = constraint;
+
+  // 1. Dispatch navi_constraint_message event — JSX handlers respond synchronously.
+  //    Dispatch on the requester first (e.g. the <li> that was clicked),
+  //    then fall back to element (e.g. the hidden <input>).
+  const dispatchOn = (target) => {
+    let responded = null;
+    const event = new CustomEvent("navi_constraint_message", {
+      bubbles: false,
+      detail: {
+        constraintName,
+        respondMessage: (message) => {
+          responded = message;
+        },
+      },
+    });
+    target.dispatchEvent(event);
+    return responded;
+  };
+
+  if (requester && requester !== element) {
+    const fromRequester = dispatchOn(requester);
+    if (fromRequester !== null) {
+      return {
+        message: fromRequester,
+        origin: "onnavi_constraint_message handler on requester",
+      };
     }
-    return generatedMessage;
-  };
-
-  const createEventHandler = (element, eventName) => {
-    return ({ renderIntoCallout }) => {
-      element.dispatchEvent(
-        new CustomEvent(eventName, {
-          detail: {
-            render: (message) => {
-              if (message) {
-                renderIntoCallout(message);
-              } else {
-                // Resume resolution from next step
-                const nextResult = resolve();
-                renderIntoCallout(nextResult);
-              }
-            },
-          },
-        }),
-      );
-    };
-  };
-
-  return resolve();
-};
-
-// Helper function to resolve messages that might be CSS selectors
-const fromSelectorAttribute = (messageAttributeValue) => {
-  // It's a CSS selector, find the DOM element
-  const messageSourceElement = document.querySelector(messageAttributeValue);
-  if (!messageSourceElement) {
-    console.warn(
-      `Message selector "${messageAttributeValue}" not found in DOM`,
-    );
-    return null; // Fallback to the generic message
   }
-  const mirror = createNaviMirror(messageSourceElement);
-  mirror.setAttribute("data-source-selector", messageAttributeValue);
-  return mirror;
+  const fromElement = dispatchOn(element);
+  if (fromElement !== null) {
+    return {
+      message: fromElement,
+      origin: "onnavi_constraint_message handler",
+    };
+  }
+
+  // 2. Fall back to plain string attribute
+  if (messageAttribute) {
+    const messageAttribute_value = element.getAttribute(messageAttribute);
+    if (messageAttribute_value) {
+      return {
+        message: messageAttribute_value,
+        origin: `attribute ${messageAttribute}="${messageAttribute_value}"`,
+      };
+    }
+  }
+
+  // 3. Fall back to generated message
+  return { message: generatedMessage, origin: "generated message" };
 };
 
 const CONSTRAINT_ATTRIBUTE_SET = new Set();
 
-const generateFieldInvalidMessage = (template, { field }) => {
-  return replaceStringVars(template, {
-    "{field}": () => generateThisFieldText(field),
+/**
+ * Interpolates a template string, replacing [key] placeholders with values.
+ * Values can be strings or JSX elements (when allowJsx is true).
+ * Returns a plain string when all replacements are strings, or a Preact
+ * fragment when JSX values are present and allowJsx is enabled.
+ *
+ * `[]` was chosen as the placeholder delimiter (rather than `{}` or `{{}}`)
+ * because it does not conflict with JSX syntax, JavaScript template literals,
+ * or common punctuation in translated strings.
+ *
+ * Pass `allowJsx: true` to enable VNode replacements (used by <Interpolate>).
+ * Without it, all values are coerced to strings.
+ */
+const interpolateText = (
+  template,
+  replacements,
+  { allowJsx = false } = {},
+) => {
+  if (!replacements || typeof template !== "string") {
+    return template;
+  }
+  const parts = template.split(/(\[[^\]]+\])/);
+  let hasVnode = false;
+  const resolved = [];
+  for (const part of parts) {
+    const match = part.match(/^\[([^\]]+)\]$/);
+    if (!match) {
+      resolved.push(part);
+      continue;
+    }
+    const key = match[1];
+    let value = resolveValue(replacements, key, part);
+    if (typeof value === "function") {
+      value = value();
+    }
+    if (isValidElement(value)) {
+      if (allowJsx) {
+        hasVnode = true;
+      } else {
+        console.warn(
+          `interpolateText: VNode passed for placeholder [${match[1]}] but allowJsx is false — value coerced to string`,
+        );
+      }
+    }
+    resolved.push(value);
+  }
+  if (!hasVnode) {
+    return resolved.join("");
+  }
+  // h(Fragment) instead of JSX (<>{resolved}</>) to keep this file as .js
+  return h(Fragment, null, resolved);
+};
+
+// Resolves a placeholder key against the replacements object.
+// 1. Direct lookup: replacements["item.name"]
+// 2. Dot-path lookup: replacements["item"]["name"]
+// 3. Fallback: the original placeholder string (e.g. "[item.name]")
+const resolveValue = (replacements, key, fallback) => {
+  if (key in replacements) {
+    return replacements[key];
+  }
+  const dotIndex = key.indexOf(".");
+  if (dotIndex !== -1) {
+    const head = key.slice(0, dotIndex);
+    const tail = key.slice(dotIndex + 1);
+    const parent = replacements[head];
+    if (parent && typeof parent === "object") {
+      const nested = parent[tail];
+      if (nested !== undefined) {
+        return nested;
+      }
+    }
+  }
+  return fallback;
+};
+
+const DEFAULT_LANG$1 = "en";
+
+const getBrowserLang = () => {
+  if (typeof window === "undefined") {
+    return DEFAULT_LANG$1;
+  }
+  const { navigator } = window;
+  if (typeof navigator === "undefined") {
+    return DEFAULT_LANG$1;
+  }
+  const { language } = navigator;
+  if (typeof language === "string") {
+    return language;
+  }
+  const { languages } = navigator;
+  if (Array.isArray(languages) && languages.length > 0) {
+    return languages[0];
+  }
+  return DEFAULT_LANG$1;
+};
+
+const langSignal = signal(getBrowserLang());
+
+if (typeof window !== "undefined") {
+  window.addEventListener("languagechange", () => {
+    langSignal.value = getBrowserLang();
+  });
+}
+
+/**
+ * Creates a lightweight i18n instance for translating text in the current locale.
+ *
+ * @param {object} [options]
+ * @param {string} [options.keyLang]
+ *   When set, each key also serves as its own translation for `keyLang`.
+ *   This allows writing keys directly in that language (typically English) so
+ *   only other languages need to be registered:
+ *
+ *   ```js
+ *   const i18n = createI18n({ keyLang: "en" });
+ *   i18n.add("Hello [name]!", { fr: "Bonjour [name] !" });
+ *   i18n("Hello [name]!", { name: "Alice" }); // "Hello Alice!"    (en — key is template)
+ *   i18n("Hello [name]!", { name: "Alice" }); // "Bonjour Alice !" (fr)
+ *   ```
+ *
+ *   Without `keyLang`, keys are opaque identifiers and all languages (including
+ *   the fallback) must be registered explicitly:
+ *
+ *   ```js
+ *   const i18n = createI18n();
+ *   i18n.add("greeting", { en: "Hello [name]!", fr: "Bonjour [name] !" });
+ *   i18n("greeting", { name: "Alice" }); // "Hello Alice!" (en)
+ *   ```
+ *
+ * @param {string|string[]} [options.systemLang]
+ *   The active user language (BCP 47 tag or ordered array of tags).
+ *   Defaults to `langSignal.peek()` (browser language at creation time).
+ *
+ * ---
+ *
+ * ## Bulk registration
+ *
+ * **`i18n.add(key, { lang: "translation" })`** — one key, multiple languages.
+ *
+ * **`i18n.addAll({ key: { lang: "translation" }, ... })`** — multiple keys at once.
+ *
+ * **`i18n.addLangKeys(lang, { key: "translation", ... })`** — full language pack
+ * (useful when loading a JSON translation file).
+ *
+ * A regional variant (e.g. `"fr-CA"`) automatically inherits all keys from its
+ * parent (`"fr"`) that it does not explicitly override:
+ * ```js
+ * i18n.addLangKeys("fr", { hello: "Bonjour !" });
+ * i18n.addLangKeys("fr-CA", { hello: "Allo !" }); // other "fr" keys inherited
+ * ```
+ *
+ * ---
+ *
+ * @returns {Function & { add, addAll, addLangKeys, format, languageMap }}
+ *   A callable function — `i18n(key, values?, { lang? })` — with the same
+ *   signature as `i18n.format()`. `format` is kept as an alias.
+ */
+const createI18n = ({
+  keyLang,
+  fallbackLang,
+  systemLang = langSignal.peek(),
+} = {}) => {
+  const languageMap = new Map();
+
+  let activeLang = systemLang;
+
+  const addLangKeys = (lang, translations) => {
+    // Accumulate: merge with any existing translations for this lang
+    const existing = languageMap.get(lang);
+    if (existing) {
+      translations = { ...existing, ...translations };
+    }
+    // A regional variant inherits all keys not explicitly overridden
+    // e.g. "fr-CA" inherits from "fr"
+    const dashIndex = lang.indexOf("-");
+    if (dashIndex !== -1) {
+      const parentLang = lang.slice(0, dashIndex);
+      const parentTranslations = languageMap.get(parentLang);
+      if (parentTranslations) {
+        translations = { ...parentTranslations, ...translations };
+      }
+    }
+    languageMap.set(lang, translations);
+    activeLang = matchBestLang(systemLang, languageMap);
+  };
+
+  const add = (key, langTranslations) => {
+    if (keyLang && !(keyLang in langTranslations)) {
+      // Auto-register the key itself as the translation for keyLang
+      addLangKeys(keyLang, { [key]: key });
+    }
+    for (const [lang, value] of Object.entries(langTranslations)) {
+      addLangKeys(lang, { [key]: value });
+    }
+  };
+
+  const addAll = (keyMap) => {
+    for (const [key, langTranslations] of Object.entries(keyMap)) {
+      add(key, langTranslations);
+    }
+  };
+
+  const _getTemplate = (key, lang) => {
+    const resolvedLang = lang ? matchLang(lang, languageMap) : null;
+    if (resolvedLang) {
+      const translations = languageMap.get(resolvedLang);
+      const translated = translations[key];
+      if (translated !== undefined) {
+        return translated;
+      }
+    }
+    if (fallbackLang) {
+      const resolvedFallbackLang = matchLang(fallbackLang, languageMap);
+      if (resolvedFallbackLang) {
+        const fallbackTranslations = languageMap.get(resolvedFallbackLang);
+        const fallbackTranslated = fallbackTranslations[key];
+        if (fallbackTranslated !== undefined) {
+          return fallbackTranslated;
+        }
+      }
+    }
+    // No translation found — return key as-is (opaque fallback)
+    return key;
+  };
+
+  const format = (key, values, { lang = activeLang } = {}) => {
+    const template = _getTemplate(key, lang);
+    return interpolateText(template, values);
+  };
+
+  // The i18n instance is itself a callable function
+  const i18n = (key, values, opts) => format(key, values, opts);
+  i18n.add = add;
+  i18n.addAll = addAll;
+  i18n.addLangKeys = addLangKeys;
+  i18n.format = format;
+  i18n.languageMap = languageMap;
+
+  return i18n;
+};
+
+// Walk "fr-CA-variant" → "fr-CA" → "fr" until a registered lang is found
+const matchLang = (lang, languageMap) => {
+  if (languageMap.has(lang)) {
+    return lang;
+  }
+  const parts = lang.split("-");
+  while (parts.length > 1) {
+    parts.pop();
+    const candidate = parts.join("-");
+    if (languageMap.has(candidate)) {
+      return candidate;
+    }
+  }
+  return null;
+};
+
+// lang can be a string or an ordered array of preference strings
+const matchBestLang = (lang, languageMap) => {
+  if (!lang) {
+    return null;
+  }
+  const candidates = Array.isArray(lang) ? lang : [lang];
+  for (const candidate of candidates) {
+    const match = matchLang(candidate, languageMap);
+    if (match) {
+      return match;
+    }
+  }
+  return null;
+};
+
+/**
+ * The shared i18n instance for all @jsenv/navi components.
+ *
+ * Use `naviI18n.add(key, { lang: "translation" })` to register or override
+ * any text used by navi components. The active language is read from
+ * `langSignal` (the browser's current `navigator.language`).
+ *
+ * Built-in keys (can be overridden):
+ *   - `"time.less_than_minute"` — e.g. "in less than a minute"
+ *   - `"time.ongoing"`          — e.g. "Ongoing"
+ *   - `"time.tomorrow_at"`      — e.g. "[day] at [time]" ([day] and [time] are placeholders)
+ *
+ * @example
+ * import { naviI18n } from "@jsenv/navi";
+ *
+ * // Register unit translations for Quantity:
+ * naviI18n.add("minute",         { en: "minute",  fr: "minute"  });
+ * naviI18n.add("minute__plural", { en: "minutes", fr: "minutes" });
+ *
+ * // Register multiple keys at once:
+ * naviI18n.addAll({
+ *   minute:           { en: "minute",  fr: "minute"  },
+ *   minute__plural:   { en: "minutes", fr: "minutes" },
+ * });
+ *
+ * // Override a built-in text:
+ * naviI18n.add("time.ongoing", { fr: "En cours…" });
+ *
+ * // Load a full language pack at once:
+ * naviI18n.addLangKeys("fr", { minute: "minute", "minute__plural": "minutes" });
+ */
+const naviI18n = createI18n();
+
+// Default built-in translations — apps can override any key via add()
+naviI18n.addAll({
+  "time.less_than_minute": {
+    en: "in less than a minute",
+    fr: "dans moins d'une minute",
+    de: "in weniger als einer Minute",
+    es: "en menos de un minuto",
+    it: "in meno di un minuto",
+    pt: "em menos de um minuto",
+    nl: "over minder dan een minuut",
+  },
+  "time.ongoing": {
+    en: "Ongoing",
+    fr: "En cours",
+    de: "Laufend",
+    es: "En curso",
+    it: "In corso",
+    pt: "Em andamento",
+    nl: "Bezig",
+  },
+  // [day] and [time] are replaced at runtime with the localized day/time strings
+  "time.tomorrow_at": {
+    en: "[day] at [time]",
+    fr: "[day] à [time]",
+    de: "[day] um [time]",
+    es: "[day] a las [time]",
+    it: "[day] alle [time]",
+    pt: "[day] às [time]",
+    nl: "[day] om [time]",
+  },
+});
+
+// Field name substitutions used in constraint messages
+naviI18n.addAll({
+  "constraint.field.password": {
+    fr: "Ce mot de passe",
+    en: "This password",
+  },
+  "constraint.field.email": {
+    fr: "Cette adresse e-mail",
+    en: "This email address",
+  },
+  "constraint.field.checkbox": {
+    fr: "Cette case",
+    en: "This checkbox",
+  },
+  "constraint.field.radio": {
+    fr: "Cette option",
+    en: "This option",
+  },
+  "constraint.field.default": {
+    fr: "Ce champ",
+    en: "This field",
+  },
+});
+
+// Constraint validation messages — override any key to customize error messages
+naviI18n.addAll({
+  "constraint.available": {
+    fr: '"[value]" est utilisé. Veuillez entrer une autre valeur.',
+    en: '"[value]" is already taken. Please enter a different value.',
+  },
+  "picker.required.day": {
+    fr: "Veuillez sélectionner un jour.",
+    en: "Please select a day.",
+  },
+  "picker.required.month": {
+    fr: "Veuillez sélectionner un mois.",
+    en: "Please select a month.",
+  },
+  "picker.required.week": {
+    fr: "Veuillez sélectionner une semaine.",
+    en: "Please select a week.",
+  },
+  "picker.required.time": {
+    fr: "Veuillez sélectionner une heure.",
+    en: "Please select a time.",
+  },
+  "picker.required.datetime": {
+    fr: "Veuillez sélectionner une date et une heure.",
+    en: "Please select a date and time.",
+  },
+  "picker.required.color": {
+    fr: "Veuillez sélectionner une couleur.",
+    en: "Please select a color.",
+  },
+  "picker.hour.no_slots": {
+    fr: "Aucune heure disponible.",
+    en: "No available time slots.",
+  },
+  "picker.hour.readonly_slot": {
+    fr: "Cet horaire n'est pas disponible.",
+    en: "This time slot is not available.",
+  },
+  "list_item.required": {
+    fr: "Veuillez sélectionner une option.",
+    en: "Please select an option.",
+  },
+  "list_item.readonly": {
+    fr: "Cette option n'est pas disponible.",
+    en: "This option is not available.",
+  },
+  "constraint.disabled": {
+    fr: "[field] est désactivé.",
+    en: "[field] is disabled.",
+  },
+  "constraint.required.checkbox": {
+    fr: "Veuillez cocher cette case.",
+    en: "Please check this box.",
+  },
+  "constraint.required.radio": {
+    fr: "Veuillez sélectionner une option.",
+    en: "Please select an option.",
+  },
+  "constraint.required.password": {
+    fr: "Veuillez saisir un mot de passe.",
+    en: "Please enter a password.",
+  },
+  "constraint.required.password.confirm": {
+    fr: "Veuillez confirmer le mot de passe.",
+    en: "Please confirm the password.",
+  },
+  "constraint.required.email": {
+    fr: "Veuillez saisir une adresse e-mail.",
+    en: "Please enter an email address.",
+  },
+  "constraint.required.email.confirm": {
+    fr: "Veuillez confirmer l'adresse e-mail.",
+    en: "Please confirm the email address.",
+  },
+  "constraint.required.confirm": {
+    fr: "Veuillez confirmer le champ précédent.",
+    en: "Please confirm the previous field.",
+  },
+  "constraint.required.select": {
+    fr: "Veuillez sélectionner une option.",
+    en: "Please select an option.",
+  },
+  "constraint.required.default": {
+    fr: "Veuillez remplir ce champ.",
+    en: "Please fill in this field.",
+  },
+  "constraint.pattern": {
+    fr: "[field] ne correspond pas au format requis.",
+    en: "[field] does not match the required format.",
+  },
+  "constraint.type.email.at": {
+    fr: 'Veuillez inclure "@" dans l\'adresse e-mail. Il manque un symbole "@" dans [value].',
+    en: 'Please include "@" in the email address. "@" is missing in [value].',
+  },
+  "constraint.type.email.invalid": {
+    fr: "Veuillez saisir une adresse e-mail valide.",
+    en: "Please enter a valid email address.",
+  },
+  "constraint.min_length.singular": {
+    fr: "[field] doit contenir au moins [min] caractère (il contient actuellement un seul caractère).",
+    en: "[field] must contain at least [min] character (it currently contains only one character).",
+  },
+  "constraint.min_length.plural": {
+    fr: "[field] doit contenir au moins [min] caractères (il contient actuellement [count] caractères).",
+    en: "[field] must contain at least [min] characters (it currently contains [count] characters).",
+  },
+  "constraint.max_length": {
+    fr: "[field] doit contenir au maximum [max] caractères (il contient actuellement [count] caractères).",
+    en: "[field] must contain at most [max] characters (it currently contains [count] characters).",
+  },
+  "constraint.type.number": {
+    fr: "[field] doit être un nombre.",
+    en: "[field] must be a number.",
+  },
+  "constraint.min.number": {
+    fr: "[field] doit être supérieur ou égal à <strong>[min]</strong>.",
+    en: "[field] must be greater than or equal to <strong>[min]</strong>.",
+  },
+  "constraint.min.time": {
+    fr: "[field] doit être <strong>[min]</strong> ou plus.",
+    en: "[field] must be <strong>[min]</strong> or later.",
+  },
+  "constraint.max.number": {
+    fr: "[field] doit être <strong>[max]</strong> ou moins.",
+    en: "[field] must be <strong>[max]</strong> or less.",
+  },
+  "constraint.max.time": {
+    fr: "[field] doit être <strong>[max]</strong> ou moins.",
+    en: "[field] must be <strong>[max]</strong> or less.",
+  },
+  "constraint.single_space.start": {
+    fr: "[field] ne doit pas commencer par un espace.",
+    en: "[field] must not start with a space.",
+  },
+  "constraint.single_space.end": {
+    fr: "[field] ne doit pas finir par un espace.",
+    en: "[field] must not end with a space.",
+  },
+  "constraint.single_space.consecutive": {
+    fr: "[field] ne doit pas contenir plusieurs espaces consécutifs.",
+    en: "[field] must not contain consecutive spaces.",
+  },
+  "constraint.min_lower_letter.singular": {
+    fr: "[field] doit contenir au moins une lettre minuscule.",
+    en: "[field] must contain at least one lowercase letter.",
+  },
+  "constraint.min_lower_letter.plural": {
+    fr: "[field] contenir au moins [min] lettres minuscules.",
+    en: "[field] must contain at least [min] lowercase letters.",
+  },
+  "constraint.min_upper_letter.singular": {
+    fr: "[field] doit contenir au moins une lettre majuscule.",
+    en: "[field] must contain at least one uppercase letter.",
+  },
+  "constraint.min_upper_letter.plural": {
+    fr: "[field] contenir au moins [min] lettres majuscules.",
+    en: "[field] must contain at least [min] uppercase letters.",
+  },
+  "constraint.min_digit.singular": {
+    fr: "[field] doit contenir au moins un chiffre.",
+    en: "[field] must contain at least one digit.",
+  },
+  "constraint.min_digit.plural": {
+    fr: "[field] doit contenir au moins [min] chiffres.",
+    en: "[field] must contain at least [min] digits.",
+  },
+  "constraint.min_special_char.singular": {
+    fr: "[field] doit contenir au moins un caractère spécial. ([charset])",
+    en: "[field] must contain at least one special character. ([charset])",
+  },
+  "constraint.min_special_char.plural": {
+    fr: "[field] doit contenir au moins [min] caractères spéciaux. ([charset])",
+    en: "[field] must contain at least [min] special characters. ([charset])",
+  },
+});
+
+const generateFieldInvalidMessage = (key, { field, ...vars } = {}) => {
+  return naviI18n(key, {
+    field: () => generateThisFieldText(field),
+    ...vars,
   });
 };
 
 const generateThisFieldText = (field) => {
   if (field.type === "password") {
-    return "Ce mot de passe";
+    return naviI18n("constraint.field.password");
   }
   if (field.type === "email") {
-    return "Cette adresse e-mail";
+    return naviI18n("constraint.field.email");
   }
   if (field.type === "checkbox") {
-    return "Cette case";
+    return naviI18n("constraint.field.checkbox");
   }
   if (field.type === "radio") {
-    return "Cette option";
+    return naviI18n("constraint.field.radio");
   }
-  return "Ce champ";
-};
-
-const replaceStringVars = (string, replacers) => {
-  return string.replace(/(\{\w+\})/g, (match, name) => {
-    const replacer = replacers[name];
-    if (replacer === undefined) {
-      return match;
-    }
-    if (typeof replacer === "function") {
-      return replacer();
-    }
-    return replacer;
-  });
+  return naviI18n("constraint.field.default");
 };
 
 const MIN_LOWER_LETTER_CONSTRAINT = {
@@ -17630,14 +18010,14 @@ const MIN_LOWER_LETTER_CONSTRAINT = {
     if (numberOfLowercaseChars < min) {
       if (min === 1) {
         return generateFieldInvalidMessage(
-          `{field} doit contenir au moins une lettre minuscule.`,
+          "constraint.min_lower_letter.singular",
           { field },
         );
       }
-      return generateFieldInvalidMessage(
-        `{field} contenir au moins ${min} lettres minuscules.`,
-        { field },
-      );
+      return generateFieldInvalidMessage("constraint.min_lower_letter.plural", {
+        field,
+        min: String(min),
+      });
     }
     return "";
   },
@@ -17667,14 +18047,14 @@ const MIN_UPPER_LETTER_CONSTRAINT = {
     if (numberOfUppercaseChars < min) {
       if (min === 1) {
         return generateFieldInvalidMessage(
-          `{field} doit contenir au moins une lettre majuscule.`,
+          "constraint.min_upper_letter.singular",
           { field },
         );
       }
-      return generateFieldInvalidMessage(
-        `{field} contenir au moins ${min} lettres majuscules.`,
-        { field },
-      );
+      return generateFieldInvalidMessage("constraint.min_upper_letter.plural", {
+        field,
+        min: String(min),
+      });
     }
     return "";
   },
@@ -17703,15 +18083,14 @@ const MIN_DIGIT_CONSTRAINT = {
     }
     if (numberOfDigitChars < min) {
       if (min === 1) {
-        return generateFieldInvalidMessage(
-          `{field} doit contenir au moins un chiffre.`,
-          { field },
-        );
+        return generateFieldInvalidMessage("constraint.min_digit.singular", {
+          field,
+        });
       }
-      return generateFieldInvalidMessage(
-        `{field} doit contenir au moins ${min} chiffres.`,
-        { field },
-      );
+      return generateFieldInvalidMessage("constraint.min_digit.plural", {
+        field,
+        min: String(min),
+      });
     }
     return "";
   },
@@ -17746,14 +18125,18 @@ const MIN_SPECIAL_CHAR_CONSTRAINT = {
     if (numberOfSpecialChars < min) {
       if (min === 1) {
         return generateFieldInvalidMessage(
-          `{field} doit contenir au moins un caractère spécial. (${specialCharset})`,
-          { field },
+          "constraint.min_special_char.singular",
+          {
+            field,
+            charset: specialCharset,
+          },
         );
       }
-      return generateFieldInvalidMessage(
-        `{field} doit contenir au moins ${min} caractères spéciaux (${specialCharset})`,
-        { field },
-      );
+      return generateFieldInvalidMessage("constraint.min_special_char.plural", {
+        field,
+        min: String(min),
+        charset: specialCharset,
+      });
     }
     return "";
   },
@@ -17914,19 +18297,17 @@ const SINGLE_SPACE_CONSTRAINT = {
     const hasDoubleSpace = fieldValue.includes("  ");
     if (hasLeadingSpace || hasDoubleSpace || hasTrailingSpace) {
       if (hasLeadingSpace) {
-        return generateFieldInvalidMessage(
-          `{field} ne doit pas commencer par un espace.`,
-          { field },
-        );
+        return generateFieldInvalidMessage("constraint.single_space.start", {
+          field,
+        });
       }
       if (hasTrailingSpace) {
-        return generateFieldInvalidMessage(
-          `{field} ne doit pas finir par un espace.`,
-          { field },
-        );
+        return generateFieldInvalidMessage("constraint.single_space.end", {
+          field,
+        });
       }
       return generateFieldInvalidMessage(
-        `{field} ne doit pas contenir plusieurs espaces consécutifs.`,
+        "constraint.single_space.consecutive",
         { field },
       );
     }
@@ -17948,7 +18329,7 @@ const DISABLED_CONSTRAINT = {
   messageAttribute: "data-disabled-message",
   check: (field) => {
     if (field.disabled) {
-      return generateFieldInvalidMessage(`{field} est désactivé.`, { field });
+      return generateFieldInvalidMessage("constraint.disabled", { field });
     }
     return null;
   },
@@ -17966,7 +18347,7 @@ const REQUIRED_CONSTRAINT = {
     }
     if (field.type === "checkbox") {
       if (!field.checked) {
-        return `Veuillez cocher cette case.`;
+        return naviI18n("constraint.required.checkbox");
       }
       return null;
     }
@@ -17976,7 +18357,7 @@ const REQUIRED_CONSTRAINT = {
       if (!name) {
         // If no name, check just this radio
         if (!field.checked) {
-          return `Veuillez sélectionner une option.`;
+          return naviI18n("constraint.required.radio");
         }
         return null;
       }
@@ -18000,7 +18381,7 @@ const REQUIRED_CONSTRAINT = {
       }
 
       return {
-        message: `Veuillez sélectionner une option.`,
+        message: naviI18n("constraint.required.radio"),
         target: closestFieldset
           ? closestFieldset.querySelector("legend")
           : undefined,
@@ -18011,24 +18392,24 @@ const REQUIRED_CONSTRAINT = {
     }
     if (field.type === "password") {
       return field.hasAttribute("data-same-as")
-        ? `Veuillez confirmer le mot de passe.`
-        : `Veuillez saisir un mot de passe.`;
+        ? naviI18n("constraint.required.password.confirm")
+        : naviI18n("constraint.required.password");
     }
     if (field.type === "email") {
       return field.hasAttribute("data-same-as")
-        ? `Veuillez confirmer l'adresse e-mail.`
-        : `Veuillez saisir une adresse e-mail.`;
+        ? naviI18n("constraint.required.email.confirm")
+        : naviI18n("constraint.required.email");
     }
     if (field.hasAttribute("data-same-as")) {
-      return `Veuillez confirmer le champ précédent.`;
+      return naviI18n("constraint.required.confirm");
     }
     if (field.getAttribute("data-rendered-by") === ".navi_list_container") {
-      return `Veuillez sélectionner une option.`;
+      return naviI18n("constraint.required.select");
     }
     if (field.getAttribute("data-rendered-by") === ".navi_select") {
-      return `Veuillez sélectionner une option.`;
+      return naviI18n("constraint.required.select");
     }
-    return `Veuillez remplir ce champ.`;
+    return naviI18n("constraint.required.default");
   },
 };
 CONSTRAINT_ATTRIBUTE_SET.add("required");
@@ -18050,10 +18431,7 @@ const PATTERN_CONSTRAINT = {
     if (regex.test(value)) {
       return null;
     }
-    let message = generateFieldInvalidMessage(
-      `{field} ne correspond pas au format requis.`,
-      { field },
-    );
+    let message = generateFieldInvalidMessage("constraint.pattern", { field });
     const title = field.title;
     if (title) {
       message += `<br />${title}`;
@@ -18079,10 +18457,10 @@ const TYPE_EMAIL_CONSTRAINT = {
       return null;
     }
     if (!value.includes("@")) {
-      return `Veuillez inclure "@" dans l'adresse e-mail. Il manque un symbole "@" dans ${value}.`;
+      return naviI18n("constraint.type.email.at", { value });
     }
     if (!emailregex.test(value)) {
-      return `Veuillez saisir une adresse e-mail valide.`;
+      return naviI18n("constraint.type.email.invalid");
     }
     return null;
   },
@@ -18113,15 +18491,16 @@ const MIN_LENGTH_CONSTRAINT = {
       return null;
     }
     if (valueLength === 1) {
-      return generateFieldInvalidMessage(
-        `{field} doit contenir au moins ${minLength} caractère (il contient actuellement un seul caractère).`,
-        { field },
-      );
+      return generateFieldInvalidMessage("constraint.min_length.singular", {
+        field,
+        min: String(minLength),
+      });
     }
-    return generateFieldInvalidMessage(
-      `{field} doit contenir au moins ${minLength} caractères (il contient actuellement ${valueLength} caractères).`,
-      { field },
-    );
+    return generateFieldInvalidMessage("constraint.min_length.plural", {
+      field,
+      min: String(minLength),
+      count: String(valueLength),
+    });
   },
 };
 CONSTRAINT_ATTRIBUTE_SET.add("minLength");
@@ -18155,10 +18534,11 @@ const MAX_LENGTH_CONSTRAINT = {
     if (valueLength <= maxLength) {
       return null;
     }
-    return generateFieldInvalidMessage(
-      `{field} doit contenir au maximum ${maxLength} caractères (il contient actuellement ${valueLength} caractères).`,
-      { field },
-    );
+    return generateFieldInvalidMessage("constraint.max_length", {
+      field,
+      max: String(maxLength),
+      count: String(valueLength),
+    });
   },
 };
 CONSTRAINT_ATTRIBUTE_SET.add("maxLength");
@@ -18184,9 +18564,7 @@ const TYPE_NUMBER_CONSTRAINT = {
     const valueAsNumber = field.valueAsNumber;
     const valueAsNumberIsNaN = isNaN(valueAsNumber);
     if (valueAsNumberIsNaN) {
-      return generateFieldInvalidMessage(`{field} doit être un nombre.`, {
-        field,
-      });
+      return generateFieldInvalidMessage("constraint.type.number", { field });
     }
     return null;
   },
@@ -18214,10 +18592,10 @@ const MIN_CONSTRAINT = {
         return null;
       }
       if (valueAsNumber < minNumber) {
-        return generateFieldInvalidMessage(
-          `{field} doit être supérieur ou égal à <strong>${minString}</strong>.`,
-          { field },
-        );
+        return generateFieldInvalidMessage("constraint.min.number", {
+          field,
+          min: minString,
+        });
       }
       return null;
     }
@@ -18230,10 +18608,10 @@ const MIN_CONSTRAINT = {
       const value = field.value;
       const [hours, minutes] = value.split(":").map(Number);
       if (hours < minHours || (hours === minHours && minMinutes < minutes)) {
-        return generateFieldInvalidMessage(
-          `{field} doit être <strong>${min}</strong> ou plus.`,
-          { field },
-        );
+        return generateFieldInvalidMessage("constraint.min.time", {
+          field,
+          min,
+        });
       }
       return null;
     }
@@ -18269,10 +18647,10 @@ const MAX_CONSTRAINT = {
         return null;
       }
       if (valueAsNumber > maxNumber) {
-        return generateFieldInvalidMessage(
-          `{field} doit être <strong>${maxAttribute}</strong> ou moins.`,
-          { field },
-        );
+        return generateFieldInvalidMessage("constraint.max.number", {
+          field,
+          max: maxAttribute,
+        });
       }
       return null;
     }
@@ -18285,10 +18663,10 @@ const MAX_CONSTRAINT = {
       const value = field.value;
       const [hours, minutes] = value.split(":").map(Number);
       if (hours > maxHours || (hours === maxHours && maxMinutes > minutes)) {
-        return generateFieldInvalidMessage(
-          `{field} doit être <strong>${max}</strong> ou moins.`,
-          { field },
-        );
+        return generateFieldInvalidMessage("constraint.max.time", {
+          field,
+          max,
+        });
       }
       return null;
     }
@@ -18340,6 +18718,7 @@ CONSTRAINT_ATTRIBUTE_SET.add("data-max-message");
  * better UX patterns like showing all validation requirements upfront.
  */
 
+
 const NAVI_VALIDITY_CHANGE_CUSTOM_EVENT = "navi_validity_change";
 
 const STANDARD_CONSTRAINT_SET = new Set([
@@ -18373,22 +18752,36 @@ const DEFAULT_CONSTRAINT_SET = new Set([
 
 const validationInProgressWeakSet = new WeakSet();
 
-const requestAction = (
-  target,
+const onRequestAction = (
   action,
+  event,
   {
-    actionOrigin,
-    event,
-    requester = target,
+    target = event.currentTarget,
+    requester = event.detail?.requester,
+    actionOrigin = event.detail?.actionOrigin,
     method = "rerun",
-    meta = {},
+    meta = event.detail?.meta || {},
     confirmMessage,
+    debugAction = () => {},
   } = {},
 ) => {
+  if (!action || !action.isAction) {
+    throw new TypeError("First argument of onRequestAction must be an action");
+  }
+  if (!event || !(event instanceof Event)) {
+    throw new TypeError("Second argument of onRequestAction must be an Event");
+  }
+
   if (!actionOrigin) {
     console.warn("requestAction: actionOrigin is required");
   }
   let elementToValidate = requester;
+  if (!elementToValidate.__validationInterface__) {
+    const fieldElement = findFieldElement(requester);
+    if (fieldElement) {
+      elementToValidate = fieldElement;
+    }
+  }
 
   let validationInterface = elementToValidate.__validationInterface__;
   if (!validationInterface) {
@@ -18404,6 +18797,16 @@ const requestAction = (
     meta,
   };
 
+  const initiatorTarget = event.detail?.event?.target;
+  const requesterInfo =
+    requester && requester !== initiatorTarget
+      ? ` requester=${getElementSignature(requester)}`
+      : "";
+  debugAction(
+    event,
+    `action requested by ${requesterInfo} (event: "${event?.type}")`,
+  );
+
   // Determine what needs to be validated and how to handle the result
   const isForm = elementToValidate.tagName === "FORM";
   const formToValidate = isForm ? elementToValidate : elementToValidate.form;
@@ -18411,10 +18814,15 @@ const requestAction = (
   let isValid = false;
   let elementForConfirmation = elementToValidate;
   let elementForDispatch = elementToValidate;
+  let failedValidationInterface;
 
   if (formToValidate) {
     // Form validation case
     if (validationInProgressWeakSet.has(formToValidate)) {
+      debugAction(
+        event,
+        `validation already in progress for ${formToValidate?.id || formToValidate?.tagName}`,
+      );
       return false;
     }
     validationInProgressWeakSet.add(formToValidate);
@@ -18432,24 +18840,29 @@ const requestAction = (
       }
 
       const elementIsValid = elementValidationInterface.checkValidity({
+        event,
         fromRequestAction: true,
         skipReadonly:
           formElement.tagName === "BUTTON" && formElement !== requester,
+        debugAction,
       });
       if (!elementIsValid) {
-        elementValidationInterface.reportValidity();
+        failedValidationInterface = elementValidationInterface;
         isValid = false;
         break;
       }
     }
-
     elementForConfirmation = formToValidate;
     elementForDispatch = target;
   } else {
     // Single element validation case
-    isValid = validationInterface.checkValidity({ fromRequestAction: true });
+    isValid = validationInterface.checkValidity({
+      event,
+      fromRequestAction: true,
+      debugAction,
+    });
     if (!isValid) {
-      validationInterface.reportValidity();
+      failedValidationInterface = validationInterface;
     }
     elementForConfirmation = target;
     elementForDispatch = target;
@@ -18457,13 +18870,20 @@ const requestAction = (
 
   // If validation failed, dispatch actionprevented and return
   if (!isValid) {
-    const actionPreventedCustomEvent = new CustomEvent(
-      "navi_action_prevented",
-      {
-        detail: customEventDetail,
-      },
+    debugAction(
+      event,
+      `validation failed for "${getFailedConstraintName(failedValidationInterface)}" -> dispatch navi_action_prevented`,
     );
-    elementForDispatch.dispatchEvent(actionPreventedCustomEvent);
+    dispatchCustomEvent(
+      elementForDispatch,
+      "navi_action_prevented",
+      customEventDetail,
+    );
+    failedValidationInterface.reportValidity({
+      event,
+      debugAction,
+      requester,
+    });
     return false;
   }
 
@@ -18474,35 +18894,34 @@ const requestAction = (
   if (confirmMessage) {
     // eslint-disable-next-line no-alert
     if (!window.confirm(confirmMessage)) {
-      const actionPreventedCustomEvent = new CustomEvent(
-        "navi_action_prevented",
-        {
-          detail: customEventDetail,
-        },
+      debugAction(
+        event,
+        `action cancelled by user -> dispatch navi_action_prevented`,
       );
-      elementForDispatch.dispatchEvent(actionPreventedCustomEvent);
+      dispatchCustomEvent(
+        elementForDispatch,
+        "navi_action_prevented",
+        customEventDetail,
+      );
       return false;
     }
   }
 
-  // All good, dispatch the action
-  const actionCustomEvent = new CustomEvent("navi_action", {
-    detail: customEventDetail,
-  });
-  elementForDispatch.dispatchEvent(actionCustomEvent);
+  debugAction(event, `element is valid -> dispatch navi_action`);
+  dispatchCustomEvent(
+    elementForDispatch,
+    "navi_action_ready",
+    customEventDetail,
+  );
+
   return true;
 };
 
-const forwardActionRequested = (e, action, target = e.target) => {
-  requestAction(target, action, {
-    actionOrigin: e.detail?.actionOrigin,
-    event: e.detail?.event || e,
-    requester: e.detail?.requester,
-    meta: e.detail?.meta,
-  });
-};
-
-const closeValidationMessage = (element, reason) => {
+const closeValidationMessage = (
+  element,
+  event = new CustomEvent("programmatic_call"),
+  reason,
+) => {
   const validationInterface = element.__validationInterface__;
   if (!validationInterface) {
     return false;
@@ -18511,7 +18930,7 @@ const closeValidationMessage = (element, reason) => {
   if (!validationMessage) {
     return false;
   }
-  return validationMessage.close(reason);
+  return validationMessage.requestClose(event, reason);
 };
 
 const formInstrumentedWeakSet = new WeakSet();
@@ -18519,7 +18938,6 @@ const installCustomConstraintValidation = (
   element,
   elementReceivingValidationMessage = element,
 ) => {
-
   const validationInterface = {
     uninstall: undefined,
     registerConstraint: undefined,
@@ -18555,13 +18973,12 @@ const installCustomConstraintValidation = (
     });
   }
 
-  const dispatchCancelCustomEvent = (options) => {
-    const cancelEvent = new CustomEvent("navi_cancel", options);
-    element.dispatchEvent(cancelEvent);
+  const dispatchCancelCustomEvent = (detail) => {
+    return dispatchCustomEvent(element, "navi_cancel", detail);
   };
-  const closeElementValidationMessage = (reason) => {
+  const closeElementValidationMessage = (event, reason) => {
     if (validationInterface.validationMessage) {
-      validationInterface.validationMessage.close(reason);
+      validationInterface.validationMessage.requestClose(event, reason);
       return true;
     }
     return false;
@@ -18610,7 +19027,7 @@ const installCustomConstraintValidation = (
   };
   addTeardown(resetValidity);
 
-  const checkValidity = ({ fromRequestAction, skipReadonly } = {}) => {
+  const checkValidity = ({ event, fromRequestAction, skipReadonly } = {}) => {
     let newConstraintValidityState = { valid: true };
 
     resetValidity({ fromRequestAction });
@@ -18618,8 +19035,8 @@ const installCustomConstraintValidation = (
       const fieldForConstraint = element;
       const constraintCleanupSet = new Set();
       const registerChange = (register) => {
-        const registerResult = register(() => {
-          checkValidity();
+        const registerResult = register((options) => {
+          checkValidity(options);
         });
         if (typeof registerResult === "function") {
           constraintCleanupSet.add(registerResult);
@@ -18648,19 +19065,6 @@ const installCustomConstraintValidation = (
           : checkResult;
       constraintValidityInfo.messageString = constraintValidityInfo.message;
 
-      if (constraint.messageAttribute) {
-        const messageFromAttribute = getMessageFromAttribute(
-          element,
-          constraint.messageAttribute,
-          constraintValidityInfo.message,
-        );
-        if (messageFromAttribute !== constraintValidityInfo.message) {
-          constraintValidityInfo.message = messageFromAttribute;
-          if (typeof messageFromAttribute === "string") {
-            constraintValidityInfo.messageString = messageFromAttribute;
-          }
-        }
-      }
       const thisConstraintFailureInfo = {
         name: constraint.name,
         constraint,
@@ -18700,24 +19104,34 @@ const installCustomConstraintValidation = (
       if (!hasTitleAttribute) {
         element.removeAttribute("title");
       }
-      closeElementValidationMessage("becomes_valid");
+      closeElementValidationMessage(
+        event || new CustomEvent("checkValidity called with no event"),
+        "becomes_valid",
+      );
     }
 
     if (
       !compareTwoJsValues(constraintValidityState, newConstraintValidityState)
     ) {
       constraintValidityState = newConstraintValidityState;
-      element.dispatchEvent(new CustomEvent(NAVI_VALIDITY_CHANGE_CUSTOM_EVENT));
+      dispatchPublicCustomEvent(element, NAVI_VALIDITY_CHANGE_CUSTOM_EVENT);
     }
     return newConstraintValidityState.valid;
   };
-  const reportValidity = ({ skipFocus } = {}) => {
+
+  const [notifyCalloutOpen, onCalloutOpen] = createPubSub(true);
+  const reportValidity = ({
+    skipFocus,
+    event,
+    debugAction,
+    requester,
+  } = {}) => {
     if (!failedConstraintInfo) {
-      closeElementValidationMessage("becomes_valid");
+      closeElementValidationMessage(event, "becomes_valid");
       return;
     }
     if (failedConstraintInfo.silent) {
-      closeElementValidationMessage("invalid_silent");
+      closeElementValidationMessage(event, "invalid_silent");
       return;
     }
     if (validationInterface.validationMessage) {
@@ -18732,7 +19146,7 @@ const installCustomConstraintValidation = (
       element.focus();
     }
     const removeCloseOnCleanup = addTeardown(() => {
-      closeElementValidationMessage("cleanup");
+      closeElementValidationMessage(new CustomEvent("cleanup"), "cleanup");
     });
 
     const anchorElement = (() => {
@@ -18751,14 +19165,39 @@ const installCustomConstraintValidation = (
       return base;
     })();
 
+    let messageOrCustomMessage;
+    if (failedConstraintInfo.constraint.messageAttribute) {
+      const { message, origin } = getConstraintMessage(
+        element,
+        failedConstraintInfo.constraint,
+        failedConstraintInfo.message,
+        { requester },
+      );
+      if (debugAction) {
+        debugAction(
+          event,
+          `constraint message for "${failedConstraintInfo.constraint.name}": ${origin}`,
+        );
+      }
+      messageOrCustomMessage = message;
+    } else {
+      messageOrCustomMessage = failedConstraintInfo.message;
+    }
     validationInterface.validationMessage = openCallout(
-      failedConstraintInfo.message,
+      messageOrCustomMessage,
       {
         anchorElement,
         status: failedConstraintInfo.status,
         closeOnClickOutside: failedConstraintInfo.closeOnClickOutside,
+        openingEvent: event,
+        debug: debugAction,
         onClose: () => {
           removeCloseOnCleanup();
+          for (const result of results) {
+            if (typeof result === "function") {
+              result();
+            }
+          }
           validationInterface.validationMessage = null;
           if (failedConstraintInfo) {
             failedConstraintInfo.reportStatus = "closed";
@@ -18769,6 +19208,7 @@ const installCustomConstraintValidation = (
         },
       },
     );
+    const results = notifyCalloutOpen(event);
     failedConstraintInfo.reportStatus = "reported";
   };
   validationInterface.checkValidity = checkValidity;
@@ -18817,8 +19257,8 @@ const installCustomConstraintValidation = (
 
   const resetOnInteraction = (e) => {
     customMessageMap.clear();
-    closeElementValidationMessage(e.type);
-    checkValidity();
+    closeElementValidationMessage(e, e.type);
+    checkValidity({ event: e });
   };
 
   {
@@ -18835,6 +19275,8 @@ const installCustomConstraintValidation = (
     // When the user clicks the field (or the interactive element rendered in place of it,
     // e.g. the .navi_select button for a hidden input), treat it as intent to fix the issue
     // and dismiss the callout — unless the status is "error", which requires explicit action.
+    // The listener is registered when the callout opens and removed when it closes,
+    // so it can never accidentally close the next callout.
     const interactionTarget = (() => {
       const renderedBy = element.getAttribute("data-rendered-by");
       if (renderedBy) {
@@ -18842,21 +19284,24 @@ const installCustomConstraintValidation = (
       }
       return element;
     })();
-    const onmousedown = (e) => {
-      if (e.button !== 0) {
-        return;
-      }
-      if (!validationInterface.validationMessage) {
-        return;
-      }
-      if (failedConstraintInfo && failedConstraintInfo.status === "error") {
-        return;
-      }
-      resetOnInteraction(e);
-    };
-    interactionTarget.addEventListener("mousedown", onmousedown);
-    addTeardown(() => {
-      interactionTarget.removeEventListener("mousedown", onmousedown);
+    onCalloutOpen((openingEvent) => {
+      const onmousedown = (e) => {
+        if (e.button !== 0) {
+          return;
+        }
+        if (e === openingEvent) {
+          // The callout was opened during this same mousedown — don't close it immediately.
+          return;
+        }
+        if (failedConstraintInfo && failedConstraintInfo.status === "error") {
+          return;
+        }
+        resetOnInteraction(e);
+      };
+      interactionTarget.addEventListener("mousedown", onmousedown);
+      return () => {
+        interactionTarget.removeEventListener("mousedown", onmousedown);
+      };
     });
   }
 
@@ -18889,8 +19334,8 @@ const installCustomConstraintValidation = (
   {
     // this ensure we re-check validity (and remove message no longer relevant)
     // once the action ends (used to remove the NOT_BUSY_CONSTRAINT message)
-    const onNaviActionEnd = () => {
-      checkValidity();
+    const onNaviActionEnd = (e) => {
+      checkValidity({ event: e });
     };
     element.addEventListener("navi_action_end", onNaviActionEnd);
     addTeardown(() => {
@@ -18978,7 +19423,7 @@ const installCustomConstraintValidation = (
         // click on the button, so request_on_button_click won't double-fire.
         keydownEvent.preventDefault();
       }
-      dispatchActionRequestedCustomEvent(elementWithAction, {
+      dispatchRequestAction(elementWithAction, {
         event: keydownEvent,
         requester: formSubmitTarget || element,
       });
@@ -19009,6 +19454,8 @@ const installCustomConstraintValidation = (
         const clickTarget = clickEvent.target;
         const { form } = clickTarget;
         if (!form) {
+          // reset button are not associated to the from
+          // so they early return here
           return null;
         }
         const wouldSubmitFormByType =
@@ -19030,9 +19477,15 @@ const installCustomConstraintValidation = (
       };
       const formSubmitTarget = determineClosestFormSubmitTargetForClickEvent();
       if (formSubmitTarget) {
+        // prevent from submission
         clickEvent.preventDefault();
       }
-      dispatchActionRequestedCustomEvent(elementWithAction, {
+      if (button.type === "reset") {
+        // reset button got their own behavior
+        return;
+      }
+      // dispatch only if the button
+      dispatchRequestAction(elementWithAction, {
         event: clickEvent,
         requester: formSubmitTarget || button,
       });
@@ -19058,7 +19511,7 @@ const installCustomConstraintValidation = (
     const stop = listenInputValue(
       element,
       (e) => {
-        dispatchActionRequestedCustomEvent(elementWithAction, {
+        dispatchRequestAction(elementWithAction, {
           event: e,
           requester: element,
         });
@@ -19087,7 +19540,7 @@ const installCustomConstraintValidation = (
     }
     const onchange = (e) => {
       if (element.parentNode.hasAttribute("data-action")) {
-        dispatchActionRequestedCustomEvent(element, {
+        dispatchRequestAction(element, {
           event: e,
           requester: element,
         });
@@ -19109,21 +19562,18 @@ const installCustomConstraintValidation = (
     if (!form.hasAttribute("data-action")) {
       form.setAttribute("data-action", "toto");
     }
-    form.setAttribute("novalidate", ""); // make sure browser don't prevent "submit" nor display messages
+    form.setAttribute("novalidate", ""); // make sure browser don't prevent "submit" when invalid, nor display messages
     const removeListener = addEventListener(form, "submit", (e) => {
       e.preventDefault();
-      const actionCustomEvent = new CustomEvent("navi_action", {
-        detail: {
-          action: null,
-          event: e,
-          method: "rerun",
-          requester: form,
-          meta: {
-            isSubmit: true,
-          },
+      dispatchCustomEvent(form, "navi_action", {
+        action: null,
+        event: e,
+        method: "rerun",
+        requester: form,
+        meta: {
+          isSubmit: true,
         },
       });
-      form.dispatchEvent(actionCustomEvent);
     });
     addTeardown(() => {
       removeListener();
@@ -19133,13 +19583,13 @@ const installCustomConstraintValidation = (
   {
     const onkeydown = (e) => {
       if (e.key === "Escape") {
-        if (closeElementValidationMessage("escape_key")) {
+        if (closeElementValidationMessage(e, "escape_key")) {
           // closing the callout should prevent anything else from hapenning
           e.stopPropagation();
           e.preventDefault();
         } else {
           dispatchCancelCustomEvent({
-            detail: { reason: "escape_key" },
+            reason: "escape_key",
           });
         }
       }
@@ -19154,19 +19604,15 @@ const installCustomConstraintValidation = (
     const onblur = () => {
       if (element.value === "") {
         dispatchCancelCustomEvent({
-          detail: {
-            reason: "blur_empty",
-          },
+          reason: "blur_empty",
         });
         return;
       }
       // if we have failed constraint, we cancel too
       if (failedConstraintInfo) {
         dispatchCancelCustomEvent({
-          detail: {
-            reason: "blur_invalid",
-            failedConstraintInfo,
-          },
+          reason: "blur_invalid",
+          failedConstraintInfo,
         });
         return;
       }
@@ -19229,19 +19675,15 @@ const getFirstButtonSubmittingForm = (form) => {
   );
 };
 
-const dispatchActionRequestedCustomEvent = (
+const dispatchRequestAction = (
   elementWithAction,
   { actionOrigin = "action_prop", event, requester },
 ) => {
-  const actionRequestedCustomEvent = new CustomEvent("navi_action_requested", {
-    cancelable: true,
-    detail: {
-      actionOrigin,
-      event,
-      requester,
-    },
+  return dispatchCustomEvent(elementWithAction, "navi_request_action", {
+    actionOrigin,
+    event,
+    requester,
   });
-  elementWithAction.dispatchEvent(actionRequestedCustomEvent);
 };
 // https://developer.mozilla.org/en-US/docs/Web/HTML/Guides/Constraint_validation
 const requestSubmit = HTMLFormElement.prototype.requestSubmit;
@@ -19258,7 +19700,7 @@ HTMLFormElement.prototype.requestSubmit = function (submitter) {
       submitter,
     },
   });
-  dispatchActionRequestedCustomEvent(form, {
+  dispatchRequestAction(form, {
     event: programmaticEvent,
     requester: submitter,
   });
@@ -19291,6 +19733,187 @@ const addEventListener = (element, event, callback) => {
   return () => {
     element.removeEventListener(event, callback);
   };
+};
+
+// When the requester is not a validated element itself (e.g. a <li> inside a
+// list container), look for a field element declared via data-field on the
+// closest [data-action] ancestor.
+const findFieldElement = (element) => {
+  const elementWithAction = element.closest("[data-action]");
+  if (!elementWithAction) {
+    return null;
+  }
+  const fieldSelector = elementWithAction.getAttribute("data-field");
+  if (!fieldSelector) {
+    return null;
+  }
+  return (
+    elementWithAction.querySelector(fieldSelector) ||
+    document.querySelector(fieldSelector)
+  );
+};
+
+const getFailedConstraintName = (validationInterface) => {
+  const state = validationInterface.getConstraintValidityState?.();
+  if (!state) {
+    return "unknown";
+  }
+  for (const key of Object.keys(state)) {
+    if (key !== "valid" && state[key]) {
+      return key;
+    }
+  }
+  return "unknown";
+};
+
+const useOnRequestAction = (actionOrigin = "action_prop") => {
+  const debugAction = useDebugAction();
+
+  return (action, e, options = {}) => {
+    if (e.detail.actionOrigin !== actionOrigin) {
+      return;
+    }
+    const context = {
+      debugAction,
+      actionOrigin,
+      ...options,
+    };
+    onRequestAction(action, e, context);
+  };
+};
+
+const useRequestedActionStatus = (elementRef, { actionOrigin } = {}) => {
+  const [actionRequester, setActionRequester] = useState(null);
+  const [actionPending, setActionPending] = useState(false);
+  const [actionAborted, setActionAborted] = useState(false);
+  const [actionError, setActionError] = useState(null);
+
+  useActionEvents(elementRef, {
+    actionOrigin,
+    onReady: (actionEvent) => {
+      setActionRequester(actionEvent.detail.requester);
+    },
+    onStart: () => {
+      setActionPending(true);
+      setActionAborted(false);
+      setActionError(null);
+    },
+    onAbort: () => {
+      setActionPending(false);
+      setActionAborted(true);
+    },
+    onError: (error) => {
+      setActionPending(false);
+      setActionError(error);
+    },
+    onEnd: () => {
+      setActionPending(false);
+    },
+  });
+
+  return {
+    actionRequester,
+    actionPending,
+    actionAborted,
+    actionError,
+  };
+};
+
+const useActionEvents = (
+  elementRef,
+  {
+    actionOrigin = "action_prop",
+    /**
+     * @param {Event} e - L'événement original
+     * @param {"form_reset" | "blur_invalid" | "escape_key"} reason - Raison du cancel
+     */
+    onCancel,
+    onRequested,
+    onPrevented,
+    onReady,
+    onStart,
+    onAbort,
+    onError,
+    onEnd,
+  },
+) => {
+  onCancel = useStableCallback(onCancel);
+  onRequested = useStableCallback(onRequested);
+  onPrevented = useStableCallback(onPrevented);
+  onReady = useStableCallback(onReady);
+  onStart = useStableCallback(onStart);
+  onAbort = useStableCallback(onAbort);
+  onError = useStableCallback(onError);
+  onEnd = useStableCallback(onEnd);
+
+  useLayoutEffect(() => {
+    const element = elementRef.current;
+    if (!element) {
+      return null;
+    }
+
+    return addManyEventListeners(element, {
+      navi_cancel: (e) => {
+        // cancel don't need to check for actionOrigin because
+        // it's actually unrelated to a specific actions
+        // in that sense it should likely be moved elsewhere as it's related to
+        // interaction and constraint validation, not to a specific action
+        onCancel?.(e, e.detail.reason);
+      },
+      navi_request_action: (e) => {
+        if (e.detail.actionOrigin !== actionOrigin) {
+          return;
+        }
+        onRequested?.(e);
+      },
+      navi_action_prevented: (e) => {
+        if (e.detail.actionOrigin !== actionOrigin) {
+          return;
+        }
+        onPrevented?.(e);
+      },
+      navi_action_ready: (e) => {
+        if (e.detail.actionOrigin !== actionOrigin) {
+          return;
+        }
+        onReady?.(e);
+      },
+      navi_action_start: (e) => {
+        if (e.detail.actionOrigin !== actionOrigin) {
+          return;
+        }
+        onStart?.(e);
+      },
+      navi_action_abort: (e) => {
+        if (e.detail.actionOrigin !== actionOrigin) {
+          return;
+        }
+        onAbort?.(e);
+      },
+      navi_action_error: (e) => {
+        if (e.detail.actionOrigin !== actionOrigin) {
+          return;
+        }
+        onError?.(e.detail.error, e);
+      },
+      navi_action_end: (e) => {
+        if (e.detail.actionOrigin !== actionOrigin) {
+          return;
+        }
+        onEnd?.(e);
+      },
+    });
+  }, [
+    actionOrigin,
+    onCancel,
+    onRequested,
+    onPrevented,
+    onReady,
+    onStart,
+    onAbort,
+    onError,
+    onEnd,
+  ]);
 };
 
 const useCustomValidationRef = (
@@ -19707,7 +20330,7 @@ const setupNetworkMonitoring = () => {
 };
 setupNetworkMonitoring();
 
-installImportMetaCssBuild(import.meta);const css$F = /* css */`
+installImportMetaCssBuild(import.meta);const css$G = /* css */`
   .navi_loading_indicator_fluid_container {
     position: relative;
     display: flex;
@@ -19737,7 +20360,7 @@ const LoadingIndicatorFluid = ({
   radius,
   ...rest
 }) => {
-  import.meta.css = [css$F, "@jsenv/navi/src/graphic/loading/loading_indicator_fluid.jsx"];
+  import.meta.css = [css$G, "@jsenv/navi/src/graphic/loading/loading_indicator_fluid.jsx"];
   const ref = useRef(null);
   // The container dimensions can be deduced from the ref itself as the indicator is absolute inset 0
   const [containerWidth, setContainerWidth] = useState(0);
@@ -19929,7 +20552,7 @@ const LoadingRectangleSvg = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$E = /* css */`
+installImportMetaCssBuild(import.meta);const css$F = /* css */`
   .navi_loading_outline_wrapper {
     position: absolute;
     top: var(--loading-rectangle-top, 0);
@@ -19947,7 +20570,7 @@ installImportMetaCssBuild(import.meta);const css$E = /* css */`
   }
 `;
 const LoadingOutline = props => {
-  import.meta.css = [css$E, "@jsenv/navi/src/graphic/loading/loading_outline.jsx"];
+  import.meta.css = [css$F, "@jsenv/navi/src/graphic/loading/loading_outline.jsx"];
   if (props.containerRef) {
     const container = props.containerRef.current;
     if (!container) {
@@ -20007,7 +20630,7 @@ const LoadingOutlineUI = props => {
   insetRight -= lineHalfSize;
   insetBottom -= lineHalfSize;
   insetLeft -= lineHalfSize;
-  return jsxs(Fragment, {
+  return jsxs(Fragment$1, {
     children: [jsx("span", {
       ref: rectangleRef,
       className: "navi_loading_outline_wrapper",
@@ -20055,7 +20678,7 @@ const LoadingOutlineWithPortal = props => {
   if (container.nodeName === "DETAILS") {
     insetTop += container.querySelector("summary").offsetHeight;
   }
-  return jsxs(Fragment, {
+  return jsxs(Fragment$1, {
     children: [jsx("div", {
       className: "navi_loading_outline_wrapper",
       style: {
@@ -20074,32 +20697,24 @@ const LoadingOutlineWithPortal = props => {
 
 // used by form elements such as <input>, <select>, <textarea> to have their own action bound to a single parameter
 // when inside a <form> the form params are updated when the form element single param is updated
-const useActionBoundToOneParam = (action, externalValue) => {
-  const actionFirstArgSignal = useSignal(externalValue);
-  const boundAction = useBoundAction(action, actionFirstArgSignal);
-  const getValue = useCallback(() => actionFirstArgSignal.value, []);
-  const setValue = useCallback((value) => {
-    actionFirstArgSignal.value = value;
-  }, []);
-  const externalValueRef = useRef(externalValue);
-  if (externalValue !== externalValueRef.current) {
-    externalValueRef.current = externalValue;
-    setValue(externalValue);
+const useActionBoundToOneParam = (action, paramsSignal) => {
+  if (!isSignal(paramsSignal)) {
+    throw new Error(
+      `useActionBoundToOneParam expects a signal as second argument, got: ${paramsSignal}`,
+    );
   }
-
-  const value = getValue();
-  return [boundAction, value, setValue];
+  const boundAction = useBoundAction(action, paramsSignal);
+  const getValue = useCallback(() => paramsSignal.value, []);
+  const setValue = useCallback((value) => {
+    paramsSignal.value = value;
+  }, []);
+  return [boundAction, getValue(), setValue];
 };
-const useActionBoundToOneArrayParam = (
-  action,
-  name,
-  externalValue,
-  fallbackValue,
-  defaultValue,
-) => {
+const useActionBoundToOneArrayParam = (action, paramsSignal) => {
   const [boundAction, value, setValue] = useActionBoundToOneParam(
     action,
-    name);
+    paramsSignal,
+  );
 
   const add = (valueToAdd, valueArray = value) => {
     setValue(addIntoArray(valueArray, valueToAdd));
@@ -20473,7 +21088,7 @@ const useKeyboardShortcuts = (
   useActionEvents(elementRef, {
     actionOrigin: "keyboard_shortcut",
     onPrevented: onActionPrevented,
-    onAction: (actionEvent) => {
+    onReady: (actionEvent) => {
       const { shortcut } = actionEvent.detail.meta || {};
       if (!shortcut) {
         // not a shortcut (an other interaction triggered the action, don't request it again)
@@ -20572,15 +21187,8 @@ const createOnKeyDownForShortcuts = (shortcuts, busyRef) => {
         const { action } = shortcutCandidate;
         const actionWithEvent = action.bindParams(keyboardEvent);
         const element = keyboardEvent.currentTarget;
-        return requestAction(element, actionWithEvent, {
-          actionOrigin: "keyboard_shortcut",
-          event: keyboardEvent,
-          requester: document.activeElement,
-          confirmMessage: shortcutCandidate.confirmMessage,
-          meta: {
-            shortcut: shortcutCandidate,
-          },
-        });
+        return dispatchRequestAction(element, actionWithEvent, {
+          confirmMessage: shortcutCandidate.confirmMessage});
       },
     });
   }
@@ -20888,7 +21496,7 @@ const selectByTextStrings = (element, range, startText, endText) => {
 };
 
 installImportMetaCssBuild(import.meta);// https://jsfiddle.net/v5xzJ/4/
-const css$D = /* css */`
+const css$E = /* css */`
   @layer navi {
     .navi_text {
       &[data-skeleton] {
@@ -21287,7 +21895,7 @@ const TextDispatcher = props => {
   });
 };
 const TextUI = props => {
-  import.meta.css = [css$D, "@jsenv/navi/src/text/text.jsx"];
+  import.meta.css = [css$E, "@jsenv/navi/src/text/text.jsx"];
   let {
     ref,
     spacing,
@@ -21458,7 +22066,7 @@ const TextWithSelectRange = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$C = /* css */`
+installImportMetaCssBuild(import.meta);const css$D = /* css */`
   .navi_text_anchor {
     vertical-align: baseline;
     user-select: none;
@@ -21493,7 +22101,7 @@ const TextAnchor = ({
   textSize,
   lineLayout
 }) => {
-  import.meta.css = [css$C, "@jsenv/navi/src/text/text_anchor.jsx"];
+  import.meta.css = [css$D, "@jsenv/navi/src/text/text_anchor.jsx"];
   const anchorRef = useRef();
   const setTopOffset = (childEl, topOffset) => {
     // position:relative + top shifts the element visually.
@@ -21539,7 +22147,7 @@ const TextAnchor = ({
     });
     setTopOffset(childEl, topOffset);
   }, [textAnchor, textKey, textSize, lineLayout?.size, lineLayout?.verticalAlign]);
-  return jsxs(Fragment, {
+  return jsxs(Fragment$1, {
     children: [children, jsx("span", {
       ref: anchorRef,
       className: "navi_text_anchor",
@@ -21595,7 +22203,7 @@ const computeTopOffset = ({
 };
 const charTopCanvas = document.createElement("canvas");
 
-installImportMetaCssBuild(import.meta);const css$B = /* css */`
+installImportMetaCssBuild(import.meta);const css$C = /* css */`
   @layer navi {
     /* Ensure data attributes from box.jsx can win to update display */
     .navi_icon {
@@ -21668,7 +22276,7 @@ const Icon = ({
   lineLayout,
   ...props
 }) => {
-  import.meta.css = [css$B, "@jsenv/navi/src/text/icon.jsx"];
+  import.meta.css = [css$C, "@jsenv/navi/src/text/icon.jsx"];
   const innerChildren = href ? jsx("svg", {
     width: "100%",
     height: "100%",
@@ -21898,9 +22506,10 @@ const useAutoFocus = (
     const activeElement = document.activeElement;
     const focusDebugCall = `${getElementSignature(focusableElement)}.focus({ preventScroll: ${preventScroll} })`;
     if (e.type === "navi_displayed_on_document") {
-      debugFocus(`[autofocus] mount -> ${focusDebugCall}`);
+      debugFocus(e, `[autofocus] mount -> ${focusDebugCall}`);
     } else {
       debugFocus(
+        e,
         `[autofocus] "${e.type}" ${getElementSignature(e.target)} -> ${focusDebugCall}`,
       );
     }
@@ -21951,6 +22560,7 @@ const useAutoFocus = (
       }
 
       debugFocus(
+        e,
         `restore focus to previously active element ${getElementSignature(activeElement)}.focus()`,
       );
       activeElement.focus();
@@ -22129,7 +22739,7 @@ const useFormEvents = (
     }
     return addManyEventListeners(form, {
       reset: onFormReset,
-      navi_action_requested: onFormActionRequested,
+      navi_request_action: onFormActionRequested,
       navi_action_prevented: onFormActionPrevented,
       navi_action_start: onFormActionStart,
       navi_action_abort: onFormActionAbort,
@@ -22194,6 +22804,8 @@ const useUIStateController = (
     allowNameless = false,
   } = {},
 ) => {
+  const debugAction = useDebugAction();
+  const debugActionVerbose = useDebugActionVerbose();
   const parentUIStateController = useContext(ParentUIStateControllerContext);
   const formContext = useContext(FormContext);
   const { id, name, uiAction, action } = props;
@@ -22271,6 +22883,7 @@ const useUIStateController = (
     JSON.stringify(stateInitial),
   );
   const [publishUIState, subscribeUIState] = createPubSub();
+  const uiStateSignal = signal(stateInitial);
   const uiStateController = {
     _checkForUpdates: ({
       readOnly,
@@ -22313,11 +22926,14 @@ const useUIStateController = (
     hasStateProp,
     state: stateInitial,
     uiState: stateInitial,
+    uiStateSignal,
     uiAction,
     getPropFromState,
     getStateFromProp,
     setUIState: (prop, e) => {
-      const newUIState = uiStateController.getStateFromProp(prop);
+      const newUIState = uiStateController.getStateFromProp(
+        isSignal(prop) ? prop.value : prop,
+      );
       if (persists) {
         setNavState(prop);
       }
@@ -22325,13 +22941,25 @@ const useUIStateController = (
       if (newUIState === currentUIState) {
         return;
       }
-      debugUIState(
-        `${componentType}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> updating to ${JSON.stringify(newUIState)}`,
+      debugAction(
+        e,
+        `${getElementSignature(e.currentTarget)}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> updating to ${JSON.stringify(newUIState)}`,
       );
       uiStateController.uiState = newUIState;
+      uiStateSignal.value = newUIState;
+      debugActionVerbose(e, `uiStateSignal -> ${JSON.stringify(newUIState)}`);
       publishUIState(newUIState);
-      uiStateController.uiAction?.(newUIState, e);
-      notifyParentAboutChildUIStateChange(e);
+      debugActionVerbose(e, `publishUIState(${JSON.stringify(newUIState)})`);
+      if (uiStateController.uiAction) {
+        debugAction(
+          e,
+          `${getElementSignature(e.currentTarget)}.uiAction(${JSON.stringify(newUIState)})`,
+        );
+        uiStateController.uiAction(newUIState, e);
+      }
+      if (!e.detail?.suppressParentNotification) {
+        notifyParentAboutChildUIStateChange(e);
+      }
     },
     resetUIState: (e) => {
       const currentState = uiStateController.state;
@@ -22470,6 +23098,7 @@ const useUIGroupStateController = (
     return notifyParentAboutChildUnmount;
   }, []);
 
+  const debugAction = useDebugAction();
   const onChange = (_, e, { notifyExternal = true } = {}) => {
     if (groupIsRenderingRef.current) {
       pendingChangeRef.current = true;
@@ -22478,6 +23107,10 @@ const useUIGroupStateController = (
     const newUIState = aggregateChildStates(
       childUIStateControllerArray,
       emptyState,
+    );
+    debugAction(
+      e,
+      `${componentType}.aggregateChildStates -> ${JSON.stringify(newUIState)}`,
     );
     const uiStateController = uiStateControllerRef.current;
     uiStateController.setUIState(newUIState, e, { notifyExternal });
@@ -22504,6 +23137,7 @@ const useUIGroupStateController = (
   }
 
   const [publishUIState, subscribeUIState] = createPubSub();
+  const uiStateSignal = signal(emptyState);
   const isMonitoringChild = (childUIStateController) => {
     if (childComponentType === "*") {
       return true;
@@ -22516,18 +23150,29 @@ const useUIGroupStateController = (
     value,
     uiAction,
     uiState: emptyState,
+    uiStateSignal,
     setUIState: (newUIState, e, { notifyExternal = true } = {}) => {
+      if (isSignal(newUIState)) {
+        newUIState = newUIState.value;
+      }
       const currentUIState = uiStateController.uiState;
       if (newUIState === currentUIState) {
         return;
       }
       uiStateController.uiState = newUIState;
+      uiStateSignal.value = newUIState;
       debugUIGroup(
         `${componentType}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> updates from ${JSON.stringify(currentUIState)} to ${JSON.stringify(newUIState)}`,
       );
       publishUIState(newUIState);
       if (notifyExternal) {
-        uiStateController.uiAction?.(newUIState, e);
+        if (uiStateController.uiAction) {
+          debugAction(
+            e,
+            `${componentType}.uiAction(${JSON.stringify(newUIState)})`,
+          );
+          uiStateController.uiAction(newUIState, e);
+        }
       }
       notifyParentAboutChildUIStateChange(e);
     },
@@ -22604,24 +23249,10 @@ const useUIGroupStateController = (
  * @returns {any} The current UI state
  */
 const useUIState = (uiStateController) => {
-  const [trackedUIState, setTrackedUIState] = useState(
-    uiStateController.uiState,
-  );
-
-  useLayoutEffect(() => {
-    // Subscribe to UI state changes
-    const unsubscribe = uiStateController.subscribe(setTrackedUIState);
-
-    // Sync with current state in case it changed before subscription
-    setTrackedUIState(uiStateController.uiState);
-
-    return unsubscribe;
-  }, [uiStateController]);
-
-  return trackedUIState;
+  return uiStateController.uiStateSignal.value;
 };
 
-installImportMetaCssBuild(import.meta);const css$A = /* css */`
+installImportMetaCssBuild(import.meta);const css$B = /* css */`
   @layer navi {
     .navi_button {
       --button-border-radius: 2px;
@@ -22907,7 +23538,7 @@ const ButtonDispatcher = props => {
   });
 };
 const ButtonUI = props => {
-  import.meta.css = [css$A, "@jsenv/navi/src/field/button.jsx"];
+  import.meta.css = [css$B, "@jsenv/navi/src/field/button.jsx"];
   const {
     ref,
     readOnly,
@@ -23086,7 +23717,7 @@ const ButtonWithAction = props => {
     loading,
     actionErrorEffect,
     onActionPrevented,
-    onActionStart,
+    onActionAbort,
     onActionError,
     onActionEnd,
     children,
@@ -23099,15 +23730,8 @@ const ButtonWithAction = props => {
   const executeAction = useExecuteAction(ref, {
     errorEffect: actionErrorEffect
   });
+  const onRequestAction = useOnRequestAction();
   const innerLoading = loading || actionLoading;
-  useActionEvents(ref, {
-    onPrevented: onActionPrevented,
-    onRequested: e => forwardActionRequested(e, boundAction),
-    onAction: executeAction,
-    onStart: onActionStart,
-    onError: onActionError,
-    onEnd: onActionEnd
-  });
   return jsx(ButtonDispatcher
   // put data-action first to help find it in devtools
   , {
@@ -23116,6 +23740,14 @@ const ButtonWithAction = props => {
     ref: ref,
     action: undefined,
     loading: innerLoading,
+    onnavi_request_action: e => {
+      onRequestAction(boundAction, e);
+    },
+    onnavi_action_prevented: onActionPrevented,
+    onnavi_action_ready: executeAction,
+    onnavi_action_abort: onActionAbort,
+    onnavi_action_error: onActionError,
+    onnavi_action_end: onActionEnd,
     children: children
   });
 };
@@ -23139,6 +23771,7 @@ const ButtonWithActionInsideForm = props => {
   const {
     loading: actionLoading
   } = useActionStatus(actionBoundToFormParams);
+  const onRequestAction = useOnRequestAction();
   const innerLoading = loading || actionLoading;
   useFormEvents(ref, {
     onFormActionPrevented: e => {
@@ -23174,8 +23807,10 @@ const ButtonWithActionInsideForm = props => {
     action: undefined,
     type: type,
     loading: innerLoading,
-    onnavi_action_requested: e => {
-      forwardActionRequested(e, actionBoundToFormParams, e.target.form);
+    onnavi_request_action: e => {
+      onRequestAction(actionBoundToFormParams, e, {
+        target: e.target.form
+      });
     },
     children: children
   });
@@ -23232,7 +23867,7 @@ const WarningSvg = () => {
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$z = /* css */`
+installImportMetaCssBuild(import.meta);const css$A = /* css */`
   @layer navi {
     .navi_message_box {
       --background-color-info: var(--navi-info-color-light);
@@ -23285,7 +23920,7 @@ const MessageBox = ({
   onClose,
   ...rest
 }) => {
-  import.meta.css = [css$z, "@jsenv/navi/src/text/message_box.jsx"];
+  import.meta.css = [css$A, "@jsenv/navi/src/text/message_box.jsx"];
   const [hasTitleChild, setHasTitleChild] = useState(false);
   const innerLeftStripe = leftStripe === undefined ? hasTitleChild : leftStripe;
   if (icon === true) {
@@ -23344,7 +23979,7 @@ const MessageBoxPseudoClasses = [":-navi-status-info", ":-navi-status-success", 
 const MessageBoxStatusContext = createContext();
 const MessageBoxReportTitleChildContext = createContext();
 
-installImportMetaCssBuild(import.meta);const css$y = /* css */`
+installImportMetaCssBuild(import.meta);const css$z = /* css */`
   .navi_message_box {
     .navi_title {
       margin-top: 0;
@@ -23354,7 +23989,7 @@ installImportMetaCssBuild(import.meta);const css$y = /* css */`
   }
 `;
 const Title = props => {
-  import.meta.css = [css$y, "@jsenv/navi/src/text/title.jsx"];
+  import.meta.css = [css$z, "@jsenv/navi/src/text/title.jsx"];
   const messageBoxStatus = useContext(MessageBoxStatusContext);
   const innerAs = props.as || (messageBoxStatus ? "h4" : "h1");
   const titleLevel = parseInt(innerAs.slice(1));
@@ -23432,7 +24067,7 @@ const useDimColorWhen = (elementRef, shouldDim) => {
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$x = /* css */`
+installImportMetaCssBuild(import.meta);const css$y = /* css */`
   @layer navi {
     .navi_link {
       --link-border-radius: unset;
@@ -23784,7 +24419,7 @@ Object.assign(PSEUDO_CLASSES, {
   }
 });
 const Link = props => {
-  import.meta.css = [css$x, "@jsenv/navi/src/nav/link/link.jsx"];
+  import.meta.css = [css$y, "@jsenv/navi/src/nav/link/link.jsx"];
   return renderActionableComponent(props, {
     Basic: LinkBasic,
     WithAction: LinkWithAction
@@ -23968,7 +24603,7 @@ const LinkPlain = props => {
       if (preventDefault) {
         e.preventDefault();
       }
-      closeValidationMessage(e.target, "click");
+      closeValidationMessage(e.target, e, "click");
       if (readOnly) {
         e.preventDefault();
         return;
@@ -23984,7 +24619,7 @@ const LinkPlain = props => {
       }
       onKeyDown?.(e);
     },
-    childrenOutsideFlow: jsxs(Fragment, {
+    childrenOutsideFlow: jsxs(Fragment$1, {
       children: [jsx(LoadingOutline, {
         loading: loading,
         inset: 1,
@@ -24050,7 +24685,7 @@ installImportMetaCssBuild(import.meta);/**
  * TabList component with support for horizontal and vertical layouts
  * https://dribbble.com/search/tabs
  */
-const css$w = /* css */`
+const css$x = /* css */`
   @layer navi {
     .navi_nav {
       --nav-border: none;
@@ -24186,7 +24821,7 @@ const Nav = ({
   panelBorderConnection,
   ...props
 }) => {
-  import.meta.css = [css$w, "@jsenv/navi/src/nav/link/nav.jsx"];
+  import.meta.css = [css$x, "@jsenv/navi/src/nav/link/nav.jsx"];
   children = toChildArray(children);
   return jsx(Box, {
     as: "nav",
@@ -24234,7 +24869,7 @@ const useFocusGroup = (
 
 installImportMetaCssBuild(import.meta);const rightArrowPath = "M680-480L360-160l-80-80 240-240-240-240 80-80 320 320z";
 const downArrowPath = "M480-280L160-600l80-80 240 240 240-240 80 80-320 320z";
-const css$v = /* css */`
+const css$w = /* css */`
   .navi_summary_marker {
     width: 1em;
     height: 1em;
@@ -24319,7 +24954,7 @@ const SummaryMarker = ({
   open,
   loading
 }) => {
-  import.meta.css = [css$v, "@jsenv/navi/src/field/details/summary_marker.jsx"];
+  import.meta.css = [css$w, "@jsenv/navi/src/field/details/summary_marker.jsx"];
   const showLoading = useDebounceTrue(loading, 300);
   const mountedRef = useRef(false);
   const prevOpenRef = useRef(open);
@@ -24373,7 +25008,7 @@ const SummaryMarker = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$u = /* css */`
+installImportMetaCssBuild(import.meta);const css$v = /* css */`
   .navi_details {
     position: relative;
     z-index: 1;
@@ -24410,7 +25045,7 @@ installImportMetaCssBuild(import.meta);const css$u = /* css */`
   }
 `;
 const Details = props => {
-  import.meta.css = [css$u, "@jsenv/navi/src/field/details/details.jsx"];
+  import.meta.css = [css$v, "@jsenv/navi/src/field/details/details.jsx"];
   const {
     value = "on",
     persists
@@ -24571,7 +25206,6 @@ const DetailsWithAction = props => {
     onClose,
     onCancel,
     onActionPrevented,
-    onActionStart,
     onActionAbort,
     onActionError,
     onActionEnd,
@@ -24589,36 +25223,37 @@ const DetailsWithAction = props => {
     // the error will be displayed by actionRenderer inside <details>
     errorEffect: "none"
   });
-  useActionEvents(ref, {
-    onCancel: (e, reason) => {
+  const onRequestAction = useOnRequestAction();
+  return jsx(DetailsBasic, {
+    ...rest,
+    ref: ref,
+    loading: loading || actionLoading,
+    onnavi_cancel: e => {
+      const {
+        reason
+      } = e.detail;
       if (reason === "blur_invalid") {
         return;
       }
       uiStateController.resetUIState(e);
       onCancel?.(e, reason);
     },
-    onPrevented: onActionPrevented,
-    onRequested: e => forwardActionRequested(e, effectiveAction),
-    onAction: executeAction,
-    onStart: onActionStart,
-    onAbort: e => {
+    onnavi_request_action: e => {
+      onRequestAction(e, effectiveAction);
+    },
+    onnavi_action_prevented: onActionPrevented,
+    onnavi_action_ready: executeAction,
+    onnavi_action_abort: e => {
       uiStateController.resetUIState(e);
       onActionAbort?.(e);
     },
-    onError: e => {
+    onnavi_action_error: e => {
       uiStateController.resetUIState(e);
       onActionError?.(e);
     },
-    onEnd: e => {
-      onActionEnd?.(e);
-    }
-  });
-  return jsx(DetailsBasic, {
-    ...rest,
-    ref: ref,
-    loading: loading || actionLoading,
+    onnavi_action_end: onActionEnd,
     onOpen: e => {
-      dispatchActionRequestedCustomEvent(e.target, {
+      dispatchRequestAction(e.target, {
         event: e,
         requester: e.target
       });
@@ -24665,7 +25300,7 @@ const createAvailableConstraint = (
   // But this is unlikely to happen and user could reload the page to be able to choose that name
   // that suddenly became available
   existingValueSet,
-  message = `"{value}" est utilisé. Veuillez entrer une autre valeur.`,
+  message = "constraint.available",
 ) => {
   return {
     name: "available",
@@ -24673,15 +25308,8 @@ const createAvailableConstraint = (
     check: (field) => {
       const fieldValue = field.value;
       const hasConflict = existingValueSet.has(fieldValue);
-      // console.log({
-      //   inputValue,
-      //   names: Array.from(otherNameSet.values()),
-      //   hasConflict,
-      // });
       if (hasConflict) {
-        return replaceStringVars(message, {
-          "{value}": fieldValue,
-        });
+        return naviI18n(message, { value: fieldValue });
       }
       return "";
     },
@@ -24720,80 +25348,137 @@ const useConstraintValidityState = (ref) => {
   return constraintValidityState;
 };
 
-const fieldPropSet = new Set([
-  ...CONSTRAINT_ATTRIBUTE_SET,
-  "data-testid",
-]);
-
-installImportMetaCssBuild(import.meta);const css$t = /* css */`
+installImportMetaCssBuild(import.meta);const css$u = /* css */`
   @layer navi {
-    label {
+    .navi_field {
       &[data-interactive] {
-        cursor: pointer;
-        /* When label is interactive ability to select text oftens conflicts with other click interactions */
-        user-select: none;
+        .navi_label {
+          cursor: pointer;
+          /* When label is interactive ability to select text oftens conflicts with other click interactions */
+          user-select: none;
+        }
       }
 
       &[data-readonly],
       &[data-disabled] {
-        color: rgba(0, 0, 0, 0.5);
-        cursor: default;
+        .navi_label {
+          color: rgba(0, 0, 0, 0.5);
+          cursor: default;
+        }
       }
     }
   }
 `;
-const Label = props => {
-  import.meta.css = [css$t, "@jsenv/navi/src/field/label.jsx"];
+const FieldContext = createContext(null);
+const useFieldId = () => {
+  const ctx = useContext(FieldContext);
+  return ctx ? ctx.fieldId : undefined;
+};
+const reportReadOnlyToField = value => {
+  const ctx = useContext(FieldContext);
+  ctx?.setReadOnly(value);
+};
+const reportDisabledToField = value => {
+  const ctx = useContext(FieldContext);
+  ctx?.setDisabled(value);
+};
+const reportInteractiveToField = value => {
+  const ctx = useContext(FieldContext);
+  ctx?.setInteractive(value);
+};
+
+/**
+ * Field — a semantic wrapper that connects a label to a form control.
+ *
+ * It generates a stable `fieldId` (or accepts an explicit `id`) that is
+ * automatically forwarded to the `Label` inside the field as `htmlFor` and to
+ * any interactive control (Picker, Input, …) as its `id`, so clicking the
+ * label focuses the control without requiring manual wiring.
+ *
+ * It also tracks the readOnly / disabled / interactive state reported by its
+ * child control and reflects it on the `Label` (dimmed color, cursor change).
+ *
+ * Props:
+ *   id        — optional explicit id used as the field id instead of the auto-generated one
+ *   vertical  — shorthand for flex="y" + alignX="start"
+ *   children  — any JSX; should contain a `Label` and a form control
+ *   ...rest   — forwarded to the wrapping `<div>` (className, style, flex, spacing, …)
+ *
+ * @example
+ * <Field vertical spacing="s">
+ *   <Label>Date de début</Label>
+ *   <Input name="start_date" required />
+ * </Field>
+ */
+const Field = props => {
+  import.meta.css = [css$u, "@jsenv/navi/src/field/field.jsx"];
   const {
+    id,
+    vertical,
     readOnly,
     disabled,
     children,
     ...rest
   } = props;
+  const idDefault = useId();
+  const fieldId = id || `field_${idDefault}`;
+  const [readOnlyFromChild, setReadOnlyFromChild] = useState(false);
+  const [disabledByChild, setDisabledByChild] = useState(false);
   const [interactive, setInteractive] = useState(false);
-  const [inputReadOnly, setInputReadOnly] = useState(false);
-  const innerReadOnly = readOnly || inputReadOnly;
-  const [inputDisabled, setInputDisabled] = useState(false);
-  const innerDisabled = disabled || inputDisabled;
+  const readOnlyEffective = readOnly || readOnlyFromChild;
+  const disabledEffective = disabled || disabledByChild;
+  const contextValue = useMemo(() => ({
+    fieldId,
+    interactive,
+    readOnly: readOnlyEffective,
+    disabled: disabledEffective,
+    setReadOnly: setReadOnlyFromChild,
+    setDisabled: setDisabledByChild,
+    setInteractive
+  }), [fieldId, interactive, readOnlyEffective, disabledEffective]);
   return jsx(Box, {
+    flex: vertical ? "y" : undefined,
+    alignX: vertical ? "start" : undefined,
+    spacing: "s",
     ...rest,
-    as: "label",
-    pseudoClasses: LabelPseudoClasses,
+    baseClassName: "navi_field",
+    pseudoClasses: FieldPseudoClasses,
     basePseudoState: {
-      ":read-only": innerReadOnly,
-      ":disabled": innerDisabled
+      ":read-only": readOnlyEffective,
+      ":disabled": disabledEffective
     },
-    "data-interactive": interactive ? "" : undefined,
-    children: jsx(ReportInteractiveOnLabelContext.Provider, {
-      value: setInteractive,
-      children: jsx(ReportReadOnlyOnLabelContext.Provider, {
-        value: setInputReadOnly,
-        children: jsx(ReportDisabledOnLabelContext.Provider, {
-          value: setInputDisabled,
-          children: children
-        })
-      })
+    children: jsx(FieldContext.Provider, {
+      value: contextValue,
+      children: children
     })
   });
 };
-const LabelPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
-const ReportReadOnlyOnLabelContext = createContext();
-const ReportDisabledOnLabelContext = createContext();
-const ReportInteractiveOnLabelContext = createContext();
-const reportReadOnlyToLabel = value => {
-  const reportReadOnly = useContext(ReportReadOnlyOnLabelContext);
-  reportReadOnly?.(value);
-};
-const reportInteractiveToLabel = value => {
-  const reportInteractive = useContext(ReportInteractiveOnLabelContext);
-  reportInteractive?.(value);
-};
-const reportDisabledToLabel = value => {
-  const reportDisabled = useContext(ReportDisabledOnLabelContext);
-  reportDisabled?.(value);
+const FieldPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
+const Label = props => {
+  const {
+    children,
+    htmlFor,
+    ...rest
+  } = props;
+  const ctx = useContext(FieldContext);
+  const fieldId = ctx?.fieldId;
+  return jsx(Box, {
+    as: "label",
+    htmlFor: htmlFor || fieldId,
+    ...rest,
+    children: children
+  });
 };
 
-installImportMetaCssBuild(import.meta);const css$s = /* css */`
+const fieldPropSet = new Set([
+  ...CONSTRAINT_ATTRIBUTE_SET,
+  "value",
+  "id",
+  "name",
+  "data-testid",
+]);
+
+installImportMetaCssBuild(import.meta);const css$t = /* css */`
   @layer navi {
     .navi_checkbox {
       --margin: 3px 3px 3px 4px;
@@ -25152,6 +25837,8 @@ installImportMetaCssBuild(import.meta);const css$s = /* css */`
 const InputCheckbox = props => {
   const defaultRef = useRef();
   const ref = props.ref || defaultRef;
+  const fieldId = useFieldId();
+  const id = props.id || fieldId;
   const {
     value = "on"
   } = props;
@@ -25169,7 +25856,8 @@ const InputCheckbox = props => {
       value: uiState,
       children: jsx(InputCheckboxDispatcher, {
         ...props,
-        ref: ref
+        ref: ref,
+        id: id
       })
     })
   });
@@ -25185,7 +25873,7 @@ const InputCheckboxDispatcher = props => {
   });
 };
 const InputCheckboxUI = props => {
-  import.meta.css = [css$s, "@jsenv/navi/src/field/input/input_checkbox.jsx"];
+  import.meta.css = [css$t, "@jsenv/navi/src/field/input/input_checkbox.jsx"];
   const {
     ref,
     /* eslint-disable no-unused-vars */
@@ -25193,7 +25881,6 @@ const InputCheckboxUI = props => {
     defaultChecked,
     /* eslint-enable no-unused-vars */
 
-    id,
     name,
     readOnly,
     disabled,
@@ -25221,9 +25908,9 @@ const InputCheckboxUI = props => {
   const innerRequired = required || contextRequired;
   const innerLoading = loading || contextLoading && loadingElement === ref.current;
   const innerReadOnly = readOnly || contextReadOnly || innerLoading || uiStateController.readOnly;
-  reportReadOnlyToLabel(innerReadOnly);
-  reportDisabledToLabel(innerDisabled);
-  reportInteractiveToLabel(true);
+  reportReadOnlyToField(innerReadOnly);
+  reportDisabledToField(innerDisabled);
+  reportInteractiveToField(true);
   useAutoFocus(ref, autoFocus);
   const remainingProps = useConstraints(ref, rest);
   const checked = Boolean(uiState);
@@ -25242,7 +25929,6 @@ const InputCheckboxUI = props => {
   const renderCheckbox = checkboxProps => {
     return jsx(Box, {
       ...checkboxProps,
-      id: id,
       as: "input",
       ref: ref,
       type: "checkbox",
@@ -25261,7 +25947,7 @@ const InputCheckboxUI = props => {
       }
     });
   };
-  const renderCheckboxMemoized = useCallback(renderCheckbox, [id, innerName, checked, innerRequired]);
+  const renderCheckboxMemoized = useCallback(renderCheckbox, [innerName, checked, innerRequired]);
   const boxRef = useRef();
   useAccentColorAttributes(boxRef, accentColor, {
     elementSelector: ".navi_checkbox_accent_probe"
@@ -25382,22 +26068,20 @@ const CheckboxPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", 
 const CheckboxPseudoElements = ["::-navi-loader", "::-navi-checkmark"];
 const CheckboxChildPropSet = new Set([...fieldPropSet]);
 const InputCheckboxWithAction = props => {
-  const uiStateController = useContext(UIStateControllerContext);
-  const uiState = useContext(UIStateContext);
   const {
     ref,
     action,
     onCancel,
     actionErrorEffect,
     onActionPrevented,
-    onActionStart,
     onActionAbort,
     onActionError,
     onActionEnd,
     loading,
     ...rest
   } = props;
-  const [actionBoundToUIState] = useActionBoundToOneParam(action, uiState);
+  const uiStateController = useContext(UIStateControllerContext);
+  const [actionBoundToUIState] = useActionBoundToOneParam(action, uiStateController.uiStateSignal);
   const actionStatus = useActionStatus(actionBoundToUIState);
   const {
     loading: actionLoading
@@ -25405,45 +26089,49 @@ const InputCheckboxWithAction = props => {
   const executeAction = useExecuteAction(ref, {
     errorEffect: actionErrorEffect
   });
+  const onRequestAction = useOnRequestAction();
+  return jsx(InputCheckboxDispatcher, {
+    "data-action": actionBoundToUIState.name,
+    ...rest,
+    ref: ref,
+    loading: loading || actionLoading
+    // In this situation updating the ui state === calling associated action
+    // so cance/abort/error have to revert the ui state to the one before user interaction
+    // to show back the real state of the checkbox (not the one user tried to set)
+    ,
 
-  // In this situation updating the ui state === calling associated action
-  // so cance/abort/error have to revert the ui state to the one before user interaction
-  // to show back the real state of the checkbox (not the one user tried to set)
-  useActionEvents(ref, {
-    onCancel: (e, reason) => {
+    onnavi_cancel: e => {
+      const {
+        reason
+      } = e.detail;
       if (reason === "blur_invalid") {
         return;
       }
       uiStateController.resetUIState(e);
       onCancel?.(e, reason);
     },
-    onRequested: e => forwardActionRequested(e, actionBoundToUIState),
-    onPrevented: onActionPrevented,
-    onAction: executeAction,
-    onStart: onActionStart,
-    onAbort: e => {
+    onnavi_request_action: e => {
+      onRequestAction(actionBoundToUIState, e);
+    },
+    onnavi_action_prevented: onActionPrevented,
+    onnavi_action_ready: executeAction,
+    onnavi_action_abort: e => {
       uiStateController.resetUIState(e);
       onActionAbort?.(e);
     },
-    onError: e => {
+    onnavi_action_error: e => {
       uiStateController.resetUIState(e);
       onActionError?.(e);
     },
-    onEnd: e => {
-      onActionEnd?.(e);
-    }
-  });
-  return jsx(InputCheckboxDispatcher, {
-    "data-action": actionBoundToUIState.name,
-    ...rest,
-    ref: ref,
-    loading: loading || actionLoading
+    onnavi_action_end: onActionEnd
   });
 };
 
 // TOFIX: select in data then reset, it reset to red/blue instead of red/blue/green
 
-const CheckboxList = forwardRef((props, ref) => {
+const CheckboxList = props => {
+  const refDefault = useRef(null);
+  const ref = props.ref || refDefault;
   const uiStateController = useUIGroupStateController(props, "checkbox_list", {
     childComponentType: "checkbox",
     aggregateChildStates: childUIStateControllers => {
@@ -25457,21 +26145,29 @@ const CheckboxList = forwardRef((props, ref) => {
     }
   });
   const uiState = useUIState(uiStateController);
-  const checkboxList = renderActionableComponent(props, ref);
   return jsx(UIStateControllerContext.Provider, {
     value: uiStateController,
     children: jsx(UIStateContext.Provider, {
       value: uiState,
-      children: checkboxList
+      children: jsx(CheckboxListDispatcher, {
+        ...props,
+        ref: ref
+      })
     })
   });
-});
+};
 const Checkbox = InputCheckbox;
-const CheckboxListBasic = forwardRef((props, ref) => {
-  const contextReadOnly = useContext(ReadOnlyContext);
-  const contextDisabled = useContext(DisabledContext);
-  const contextLoading = useContext(LoadingContext);
-  const uiStateController = useContext(UIStateControllerContext);
+const CheckboxListDispatcher = props => {
+  if (props.action) {
+    return jsx(CheckboxListWithAction, {
+      ...props
+    });
+  }
+  return jsx(CheckboxListUI, {
+    ...props
+  });
+};
+const CheckboxListUI = props => {
   const {
     name,
     readOnly,
@@ -25481,16 +26177,16 @@ const CheckboxListBasic = forwardRef((props, ref) => {
     children,
     ...rest
   } = props;
-  const innerRef = useRef();
-  useImperativeHandle(ref, () => innerRef.current);
+  const contextReadOnly = useContext(ReadOnlyContext);
+  const contextDisabled = useContext(DisabledContext);
+  const contextLoading = useContext(LoadingContext);
+  const uiStateController = useContext(UIStateControllerContext);
   const innerLoading = loading || contextLoading;
   const innerReadOnly = readOnly || contextReadOnly || innerLoading || uiStateController.readOnly;
   const innerDisabled = disabled || contextDisabled;
   return jsx(Box, {
     flex: true,
     ...rest,
-    ref: innerRef,
-    name: name,
     baseClassName: "navi_checkbox_list",
     "data-checkbox-list": "",
     onresetuistate: e => {
@@ -25516,16 +26212,15 @@ const CheckboxListBasic = forwardRef((props, ref) => {
       })
     })
   });
-});
-forwardRef((props, ref) => {
+};
+const CheckboxListWithAction = props => {
   const uiStateController = useContext(UIStateControllerContext);
-  const uiState = useContext(UIStateContext);
   const {
+    ref,
     action,
     actionErrorEffect,
     onCancel,
     onActionPrevented,
-    onActionStart,
     onActionAbort,
     onActionError,
     onActionEnd,
@@ -25533,60 +26228,61 @@ forwardRef((props, ref) => {
     children,
     ...rest
   } = props;
-  const innerRef = useRef();
-  useImperativeHandle(ref, () => innerRef.current);
-  const [boundAction] = useActionBoundToOneArrayParam(action, uiState);
+  const [boundAction] = useActionBoundToOneArrayParam(action, uiStateController.uiStateSignal);
   const {
     loading: actionLoading
   } = useActionStatus(boundAction);
-  const executeAction = useExecuteAction(innerRef, {
+  const executeAction = useExecuteAction(ref, {
     errorEffect: actionErrorEffect
   });
+  const onRequestAction = useOnRequestAction();
   const [actionRequester, setActionRequester] = useState(null);
-  useActionEvents(innerRef, {
-    onCancel: (e, reason) => {
+  return jsx(CheckboxListUI, {
+    "data-action": boundAction,
+    ...rest,
+    ref: ref,
+    onChange: e => {
+      const checkbox = e.target;
+      const checkboxList = ref.current;
+      dispatchRequestAction(checkboxList, {
+        event: e,
+        requester: checkbox,
+        actionOrigin: "action_prop"
+      });
+    },
+    onnavi_cancel: e => {
+      const {
+        reason
+      } = e.detail;
       uiStateController.resetUIState(e);
       onCancel?.(e, reason);
     },
-    onPrevented: onActionPrevented,
-    onAction: actionEvent => {
-      setActionRequester(actionEvent.detail.requester);
-      executeAction(actionEvent);
+    onnavi_request_action: e => {
+      onRequestAction(boundAction, e);
     },
-    onStart: onActionStart,
-    onAbort: e => {
+    onnavi_action_prevented: onActionPrevented,
+    onnavi_action_ready: e => {
+      setActionRequester(e.detail.requester);
+      executeAction(e);
+    },
+    onnavi_action_abort: e => {
       uiStateController.resetUIState(e);
       onActionAbort?.(e);
     },
-    onError: e => {
+    onnavi_action_error: e => {
       uiStateController.resetUIState(e);
       onActionError?.(e);
     },
-    onEnd: e => {
-      onActionEnd?.(e);
-    }
-  });
-  return jsx(CheckboxListBasic, {
-    "data-action": boundAction.name,
-    ...rest,
-    ref: innerRef,
-    onChange: event => {
-      const checkboxList = innerRef.current;
-      const checkbox = event.target;
-      requestAction(checkboxList, boundAction, {
-        event,
-        requester: checkbox
-      });
-    },
+    onnavi_action_end: onActionEnd,
     loading: loading || actionLoading,
     children: jsx(LoadingElementContext.Provider, {
       value: actionRequester,
       children: children
     })
   });
-});
+};
 
-installImportMetaCssBuild(import.meta);const css$r = /* css */`
+installImportMetaCssBuild(import.meta);const css$s = /* css */`
   @layer navi {
     .navi_radio {
       --margin: 3px 3px 0 5px;
@@ -25904,6 +26600,8 @@ installImportMetaCssBuild(import.meta);const css$r = /* css */`
 const InputRadio = props => {
   const defaultRef = useRef();
   const ref = props.ref || defaultRef;
+  const fieldId = useFieldId();
+  const id = props.id || fieldId;
   const {
     value = "on"
   } = props;
@@ -25914,7 +26612,7 @@ const InputRadio = props => {
     getPropFromState: Boolean,
     getStateFromParent: parentUIStateController => {
       if (parentUIStateController.componentType === "radio_list") {
-        return parentUIStateController.value === props.value;
+        return parentUIStateController.uiState === props.value;
       }
       return undefined;
     }
@@ -25926,7 +26624,8 @@ const InputRadio = props => {
       value: uiState,
       children: jsx(InputRadioDispatcher, {
         ...props,
-        ref: ref
+        ref: ref,
+        id: id
       })
     })
   });
@@ -25940,7 +26639,8 @@ const InputRadioDispatcher = props => {
   });
 };
 const InputRadioUI = props => {
-  import.meta.css = [css$r, "@jsenv/navi/src/field/input/input_radio.jsx"];
+  import.meta.css = [css$s, "@jsenv/navi/src/field/input/input_radio.jsx"];
+  const debugAction = useDebugAction();
   const {
     ref,
     /* eslint-disable no-unused-vars */
@@ -25973,9 +26673,9 @@ const InputRadioUI = props => {
   const innerRequired = required || contextRequired;
   const innerLoading = loading || contextLoading && contextLoadingElement === ref.current;
   const innerReadOnly = readOnly || contextReadOnly || innerLoading || uiStateController.readOnly;
-  reportReadOnlyToLabel(innerReadOnly);
-  reportDisabledToLabel(innerDisabled);
-  reportInteractiveToLabel(true);
+  reportReadOnlyToField(innerReadOnly);
+  reportDisabledToField(innerDisabled);
+  reportInteractiveToField(true);
   useAutoFocus(ref, autoFocus);
   const remainingProps = useConstraints(ref, rest);
   const checked = Boolean(uiState);
@@ -25983,7 +26683,7 @@ const InputRadioUI = props => {
   // this way each other radio uiStateController knows thery are unchecked
   // we do this on "input"
   // but also when we are becoming checked from outside (hence the useLayoutEffect)
-  const updateOtherRadiosInGroup = () => {
+  const updateOtherRadiosInGroup = e => {
     const thisRadio = ref.current;
     const radioList = thisRadio.closest("[data-radio-list]");
     if (!radioList) {
@@ -25994,9 +26694,18 @@ const InputRadioUI = props => {
       if (radioInput === thisRadio) {
         continue;
       }
-      radioInput.dispatchEvent(new CustomEvent("setuistate", {
-        detail: false
-      }));
+      // Dispatch "setuistate" with value: false to set the sibling radio's uiState to false (unchecked).
+      // Each radio's own uiState is a boolean (true = checked, false = unchecked).
+      // This is necessary because the group controller aggregates child states to determine
+      // the selected value — it needs all siblings to be unchecked before the newly checked
+      // radio propagates its state up, otherwise aggregation may find multiple "truthy" children.
+      // suppressParentNotification: true prevents the group from aggregating and calling uiAction during
+      // this intermediate state (all unchecked) — only the clicked radio's setUIState triggers aggregation.
+      dispatchCustomEvent(radioInput, "setuistate", {
+        event: e,
+        value: false,
+        suppressParentNotification: true
+      });
     }
   };
   useLayoutEffect(() => {
@@ -26007,8 +26716,9 @@ const InputRadioUI = props => {
   const innerOnInput = useStableCallback(e => {
     const radio = e.target;
     const radioIsChecked = radio.checked;
+    debugAction(e, `radio input -> checked=${radioIsChecked}, value=${JSON.stringify(props.value || "on")}`);
     if (radioIsChecked) {
-      updateOtherRadiosInGroup();
+      updateOtherRadiosInGroup(e);
     }
     uiStateController.setUIState(radioIsChecked, e);
     onInput?.(e);
@@ -26170,7 +26880,7 @@ const InputRadioWithAction = () => {
   throw new Error(`<Input type="radio" /> with an action make no sense. Use <RadioList action={something} /> instead`);
 };
 
-installImportMetaCssBuild(import.meta);const css$q = /* css */`
+installImportMetaCssBuild(import.meta);const css$r = /* css */`
   @layer navi {
     .navi_input_range {
       --border-radius: 6px;
@@ -26408,6 +27118,8 @@ installImportMetaCssBuild(import.meta);const css$q = /* css */`
 const InputRange = props => {
   const defaultRef = useRef();
   const ref = props.ref || defaultRef;
+  const fieldId = useFieldId();
+  const id = props.id || fieldId;
   const uiStateController = useUIStateController(props, "input");
   const uiState = useUIState(uiStateController);
   return jsx(UIStateControllerContext.Provider, {
@@ -26416,7 +27128,8 @@ const InputRange = props => {
       value: uiState,
       children: jsx(InputRangeDispatcher, {
         ...props,
-        ref: ref
+        ref: ref,
+        id: id
       })
     })
   });
@@ -26432,7 +27145,7 @@ const InputRangeDispatcher = props => {
   });
 };
 const InputRangeUI = props => {
-  import.meta.css = [css$q, "@jsenv/navi/src/field/input/input_range.jsx"];
+  import.meta.css = [css$r, "@jsenv/navi/src/field/input/input_range.jsx"];
   const {
     ref,
     onInput,
@@ -26455,9 +27168,9 @@ const InputRangeUI = props => {
   const innerReadOnly = readOnly || contextReadOnly || innerLoading || uiStateController.readOnly;
   const innerDisabled = disabled || contextDisabled;
   // infom any <label> parent of our readOnly state
-  reportReadOnlyToLabel(innerReadOnly);
-  reportDisabledToLabel(innerDisabled);
-  reportInteractiveToLabel(true);
+  reportReadOnlyToField(innerReadOnly);
+  reportDisabledToField(innerDisabled);
+  reportInteractiveToField(true);
   useAutoFocus(ref, autoFocus, {
     focusVisible: autoFocusVisible,
     autoSelect
@@ -26631,7 +27344,7 @@ const InputRangeWithAction = props => {
     loading,
     onCancel,
     onActionPrevented,
-    onActionStart,
+    onActionAbort,
     onActionError,
     onActionEnd,
     cancelOnBlurInvalid,
@@ -26639,20 +27352,27 @@ const InputRangeWithAction = props => {
     actionErrorEffect,
     ...rest
   } = props;
-  const uiState = useContext(UIStateContext);
-  const [boundAction] = useActionBoundToOneParam(action, uiState);
+  const uiStateController = useContext(UIStateControllerContext);
+  const [boundAction] = useActionBoundToOneParam(action, uiStateController.uiStateSignal);
   const {
     loading: actionLoading
   } = useActionStatus(boundAction);
   const executeAction = useExecuteAction(ref, {
     errorEffect: actionErrorEffect
   });
-  // here updating the input won't call the associated action
-  // (user have to blur or press enter for this to happen)
-  // so we can keep the ui state on cancel/abort/error and let user decide
-  // to update ui state or retry via blur/enter as is
-  useActionEvents(ref, {
-    onCancel: (e, reason) => {
+  const onRequestAction = useOnRequestAction();
+  return jsx(InputRangeDispatcher, {
+    "data-action": boundAction.name,
+    "data-action-debounce": actionDebounce,
+    "data-action-after-change": actionAfterChange ? "" : undefined,
+    ...rest,
+    ref: ref,
+    action: undefined,
+    loading: loading || actionLoading,
+    onnavi_cancel: e => {
+      const {
+        reason
+      } = e.detail;
       if (reason.startsWith("blur_invalid")) {
         if (!cancelOnBlurInvalid) {
           return;
@@ -26670,23 +27390,14 @@ const InputRangeWithAction = props => {
       }
       onCancel?.(e, reason);
     },
-    onRequested: e => {
-      forwardActionRequested(e, boundAction);
+    onnavi_request_action: e => {
+      onRequestAction(boundAction, e);
     },
-    onPrevented: onActionPrevented,
-    onAction: executeAction,
-    onStart: onActionStart,
-    onError: onActionError,
-    onEnd: onActionEnd
-  });
-  return jsx(InputRangeDispatcher, {
-    "data-action": boundAction.name,
-    "data-action-debounce": actionDebounce,
-    "data-action-after-change": actionAfterChange ? "" : undefined,
-    ...rest,
-    ref: ref,
-    action: undefined,
-    loading: loading || actionLoading
+    onnavi_action_prevented: onActionPrevented,
+    onnavi_action_ready: executeAction,
+    onnavi_action_abort: onActionAbort,
+    onnavi_action_error: onActionError,
+    onnavi_action_end: onActionEnd
   });
 };
 
@@ -26709,7 +27420,7 @@ const SearchSvg = () => jsx("svg", {
   })
 });
 
-installImportMetaCssBuild(import.meta);const css$p = /* css */`
+installImportMetaCssBuild(import.meta);const css$q = /* css */`
   @layer navi {
     .navi_separator {
       --size: 1px;
@@ -26749,7 +27460,7 @@ const Separator = ({
   vertical,
   ...props
 }) => {
-  import.meta.css = [css$p, "@jsenv/navi/src/layout/separator.jsx"];
+  import.meta.css = [css$q, "@jsenv/navi/src/layout/separator.jsx"];
   return jsx(Box, {
     as: vertical ? "span" : "hr",
     ...props,
@@ -26885,7 +27596,7 @@ const createItemTracker = (onChange) => {
         if (!allItemsChanged && item !== prevAllItems[i]) {
           allItemsChanged = true;
         }
-        if (!item.hidden) {
+        if (!item.filtered && !item.hidden) {
           const visibleIdx = visibleItems.length;
           visibleItems.push(item);
           if (item.matchScore > 0) {
@@ -27029,7 +27740,7 @@ const createItemTracker = (onChange) => {
       insertAllKey(key, index);
     }
 
-    if (data.hidden) {
+    if (data.filtered || data.hidden) {
       registrations.delete(key);
       const idx = keyToOrderedIndex.get(key);
       if (idx !== undefined) {
@@ -27092,7 +27803,7 @@ const createItemTracker = (onChange) => {
       };
     }, []);
 
-    if (data.hidden || data.role === "presentation") {
+    if (data.filtered || data.hidden || data.role === "presentation") {
       return -1;
     }
     return keyToOrderedIndex.get(key) ?? -1;
@@ -27118,6 +27829,132 @@ const createItemTracker = (onChange) => {
   };
 };
 
+/**
+ * CSS Highlight API integration for navi-search-match.
+ *
+ * Provides a shared `Highlight` instance registered as "navi-search-match"
+ * and a `useSearchHighlight` hook that marks matching text ranges on an element.
+ *
+ * The highlight is not specific to ListItem — any element that wants to mark
+ * search match ranges (e.g. Suggestion, custom search results) can use these.
+ *
+ * CSS to paint the highlight:
+ *   ::highlight(navi-search-match) {
+ *     color: var(--search-match-color);
+ *     background-color: var(--search-match-background-color);
+ *   }
+ *
+ * The `highlight` prop can be:
+ *   - an array of [start, end] pairs — applied to all text nodes under the root element
+ *   - an object { [domSelector]: [[start, end], …] } — applied to each sub-element
+ *     matched by the selector (the format produced by createSearch)
+ */
+
+// Module-level shared Highlight instance — created lazily once.
+let naviSearchHighlight = null;
+const getNaviSearchHighlight = () => {
+  if (!CSS.highlights) {
+    return null;
+  }
+  if (!naviSearchHighlight) {
+    naviSearchHighlight = new Highlight();
+    CSS.highlights.set("navi-search-match", naviSearchHighlight);
+  }
+  return naviSearchHighlight;
+};
+
+/**
+ * useSearchHighlight — registers/unregisters CSS Highlight API ranges for an element.
+ *
+ * @param {import("preact").RefObject} ref - ref to the root element
+ * @param {Array|Object|null|undefined} highlight - ranges to highlight
+ * @param {Array} deps - additional dependencies that should retrigger the effect
+ *                       (typically [children, hidden] from the consuming component)
+ */
+const useSearchHighlight = (ref, highlight, deps = []) => {
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el || !highlight) {
+      return undefined;
+    }
+    return applySearchHighlight(el, highlight);
+  }, [highlight, ...deps]);
+};
+
+const applySearchHighlight = (el, highlight) => {
+  const hl = getNaviSearchHighlight();
+  if (!hl) {
+    return undefined;
+  }
+
+  // Normalise highlight to { root, ranges }[] entries.
+  // Flat array → single entry scoped to the whole element.
+  const entries = Array.isArray(highlight)
+    ? highlight.length === 0
+      ? []
+      : [{ root: el, ranges: highlight }]
+    : Object.entries(highlight).map(([selector, ranges]) => ({
+        root: el.querySelector(selector) ?? el,
+        ranges,
+      }));
+
+  if (entries.length === 0) {
+    return undefined;
+  }
+
+  const ownRanges = [];
+  for (const { root, ranges } of entries) {
+    // Collect text nodes under root with cumulative character offsets so that
+    // [start, end] ranges (positions in the field string) map directly to
+    // the correct DOM text node positions without re-searching.
+    const textNodes = [];
+    let totalLength = 0;
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+      acceptNode: (node) => {
+        // Skip text nodes inside aria-hidden elements (icons, decorative content, etc.)
+        let parent = node.parentElement;
+        while (parent && parent !== root) {
+          if (parent.getAttribute("aria-hidden") === "true") {
+            return NodeFilter.FILTER_REJECT;
+          }
+          parent = parent.parentElement;
+        }
+        return NodeFilter.FILTER_ACCEPT;
+      },
+    });
+    let node;
+    while ((node = walker.nextNode())) {
+      textNodes.push({ node, offset: totalLength });
+      totalLength += node.textContent.length;
+    }
+    for (const [start, end] of ranges) {
+      for (const { node: textNode, offset: nodeOffset } of textNodes) {
+        const nodeEnd = nodeOffset + textNode.textContent.length;
+        if (nodeEnd <= start || nodeOffset >= end) {
+          continue;
+        }
+        const rangeStart = start - nodeOffset;
+        const rangeEnd = end - nodeOffset;
+        const range = new Range();
+        range.setStart(textNode, rangeStart < 0 ? 0 : rangeStart);
+        range.setEnd(
+          textNode,
+          rangeEnd > textNode.textContent.length
+            ? textNode.textContent.length
+            : rangeEnd,
+        );
+        hl.add(range);
+        ownRanges.push(range);
+      }
+    }
+  }
+  return () => {
+    for (const range of ownRanges) {
+      hl.delete(range);
+    }
+  };
+};
+
 installImportMetaCssBuild(import.meta);const ListItemTrackerContext = createContext(null);
 const GroupItemTrackerContext = createContext(null);
 const PendingScrollRefContext = createContext(null);
@@ -27132,19 +27969,6 @@ const ListMousePointedIdContext = createContext(null);
 const ListKeyboardPointedIdContext = createContext(null);
 // Non-null when inside a ListInteractive (used to render data-interactive).
 const ListInteractiveContext = createContext(false);
-
-// Module-level shared Highlight instance for navi-search-match.
-let naviSearchHighlight = null;
-const getNaviSearchHighlight = () => {
-  if (!CSS.highlights) {
-    return null;
-  }
-  if (!naviSearchHighlight) {
-    naviSearchHighlight = new Highlight();
-    CSS.highlights.set("navi-search-match", naviSearchHighlight);
-  }
-  return naviSearchHighlight;
-};
 
 // When total rendered items exceeds renderBudget, a render window [start, end)
 // is activated to cap the number of DOM nodes. Items outside the window return
@@ -27162,7 +27986,7 @@ const RenderWindowContext = createContext(null);
 // Carries the separator element/function down to each ListItem so separators
 // are only rendered between items that actually mount (post-filter, post-window).
 const SeparatorContext = createContext(null);
-const css$o = /* css */`
+const css$p = /* css */`
   @layer navi {
     .navi_list_container {
       --list-outline-width: 1px;
@@ -27382,11 +28206,14 @@ const css$o = /* css */`
       --x-list-item-background-color: var(
         --list-item-background-color-disabled
       );
-      cursor: not-allowed;
+      cursor: default;
       pointer-events: none;
     }
+    &[data-readonly] {
+      --x-list-item-color: var(--list-item-color-disabled);
+      cursor: default;
+    }
   }
-
   .navi_list_container {
     &[data-focus-within] {
       .navi_list_item {
@@ -27589,7 +28416,7 @@ const ListDispatcher = props => {
   });
 };
 const ListUI = props => {
-  import.meta.css = [css$o, "@jsenv/navi/src/field/list/list.jsx"];
+  import.meta.css = [css$p, "@jsenv/navi/src/field/list/list.jsx"];
   const {
     ref,
     renderBudget = RENDER_BUDGET_DEFAULT,
@@ -27706,6 +28533,7 @@ const ListUI = props => {
     ref: containerRef,
     baseClassName: "navi_list_container",
     popover: popover,
+    "data-field": name ? `#${CSS.escape(hiddenInputId)}` : undefined,
     "data-expand-x": expandX || expand ? "" : undefined,
     expandX: expandX,
     expand: expand,
@@ -27715,36 +28543,16 @@ const ListUI = props => {
     pseudoStateSelector: ".navi_list",
     hasChildFunction: true,
     "data-navi-value": value || undefined,
-    onnavi_list_request_nav: e => {
+    onnavi_list_request_scroll: e => {
       const {
         item
       } = e.detail;
       if (!item) {
         return;
       }
-      // navi_list_nav is dispatched immediately by scrollToItem (before scroll).
       scrollToItem(item, {
-        reason: "navi_list_request_nav",
-        event: e.detail.event
-      });
-    },
-    onnavi_list_request_select: e => {
-      const {
-        item,
-        event
-      } = e.detail;
-      if (!item) {
-        return;
-      }
-      // Nav to the selected item first (updates uiState, scrolls, etc.)
-      scrollToItem(item, {
-        reason: "navi_list_request_select",
-        event: event || e
-      });
-      const listEl = e.currentTarget;
-      dispatchPublicCustomEvent(listEl, "navi_list_select", {
-        item,
-        event: e
+        event: e,
+        reason: "navi_request_scroll"
       });
     },
     children: [name && jsx("input", {
@@ -28186,7 +28994,7 @@ const NoMatchFallback = ({
   const itemCount = tracker.countSignal.value;
   const visibleItemCount = tracker.visibleCountSignal.value;
   const matchCount = tracker.matchCountSignal.value;
-  // Show when all items are filtered out (hidden prop), or when search is
+  // Show when all items are filtered out (filtered prop), or when search is
   // active but no visible item has a positive match score.
   const allHidden = itemCount > 0 && visibleItemCount === 0;
   const noneMatch = searchText && visibleItemCount > 0 && matchCount === 0;
@@ -28336,7 +29144,6 @@ const ListWithAction = props => {
     loading,
     actionErrorEffect,
     onActionPrevented,
-    onActionStart,
     onActionAbort,
     onActionError,
     onActionEnd,
@@ -28347,23 +29154,15 @@ const ListWithAction = props => {
     allowNameless: true
   });
   const uiState = useUIState(uiStateController);
-  // Bind action to uiState (like InputTextualWithAction, null-safe when no action)
-  const [boundAction] = useActionBoundToOneParam(action, uiState);
+  // Pass uiStateSignal directly so action params update synchronously (not one render behind)
+  const [boundAction] = useActionBoundToOneParam(action, uiStateController.uiStateSignal);
   const {
     loading: actionLoading
   } = useActionStatus(boundAction);
   const executeAction = useExecuteAction(ref, {
     errorEffect: actionErrorEffect
   });
-  useActionEvents(ref, {
-    onRequested: e => forwardActionRequested(e, boundAction),
-    onAction: executeAction,
-    onPrevented: onActionPrevented,
-    onStart: onActionStart,
-    onAbort: onActionAbort,
-    onError: onActionError,
-    onEnd: onActionEnd
-  });
+  const onRequestAction = useOnRequestAction();
 
   // Mouse/keyboard pointed state
   const [mousePointedId, setMousePointedId] = useState(null);
@@ -28400,6 +29199,84 @@ const ListWithAction = props => {
       props.onListVisibleItemsChange?.(visibleItems);
       visibleItemsRef.current = visibleItems;
     },
+    onnavi_request_action: e => onRequestAction(boundAction, e),
+    onnavi_action_prevented: onActionPrevented,
+    onnavi_action_ready: executeAction,
+    onnavi_action_abort: onActionAbort,
+    onnavi_action_error: onActionError,
+    onnavi_action_end: onActionEnd,
+    onnavi_list_nav: e => {
+      const {
+        item,
+        event
+      } = e.detail;
+      const id = item ? item.id : null;
+      const isNonUserNav = event.type === "navi_list_nav_top_on_displayed" || event.type === "navi_list_top_match_change";
+      if (isNonUserNav) {
+        setAnchorId(null);
+      } else {
+        setAnchorId(id);
+      }
+      if (event.type === "keydown") {
+        setKeyboardPointedId(id);
+      } else {
+        setKeyboardPointedId(null);
+      }
+      const isAutomaticNav = event.type === "navi_list_nav_top_on_displayed" || event.type === "navi_list_top_match_change" || event.type === "navi_scroll_restore";
+      if (item && !isAutomaticNav) {
+        uiStateController.setUIState(item.value, event);
+      }
+    }
+    // Dispatch action request on select
+    ,
+
+    onnavi_list_select: e => {
+      const listEl = e.currentTarget;
+      const item = e.detail?.item;
+      const requester = item ? listEl.querySelector(`#${CSS.escape(item.id)}`) : e.target;
+      const resolvedRequester = requester || e.target;
+      dispatchRequestAction(listEl, {
+        event: e,
+        requester: resolvedRequester
+      });
+    },
+    onnavi_list_request_nav: e => {
+      const {
+        item
+      } = e.detail;
+      if (!item) {
+        return;
+      }
+      if (item.id === anchorIdRef.current) {
+        return;
+      }
+      const isFailed = item.disabled || item.readOnly;
+      if (isFailed) {
+        return;
+      }
+      const listEl = e.currentTarget;
+      dispatchCustomEvent(listEl, "navi_list_request_scroll", {
+        event: e,
+        item
+      });
+    },
+    onnavi_list_request_select: e => {
+      const {
+        item
+      } = e.detail;
+      if (!item) {
+        return;
+      }
+      const listEl = e.currentTarget;
+      dispatchCustomEvent(listEl, "navi_list_request_nav", {
+        event: e,
+        item
+      });
+      dispatchPublicCustomEvent(listEl, "navi_list_select", {
+        item,
+        event: e
+      });
+    },
     onnavi_list_request_hover: e => {
       const {
         item
@@ -28417,18 +29294,18 @@ const ListWithAction = props => {
         return;
       }
       const anchorIndex = getAnchorIndex();
-      const isDisabledIndex = i => Boolean(visibleItems[i]?.disabled);
+      const isSkippedIndex = i => Boolean(visibleItems[i]?.disabled || visibleItems[i]?.readOnly);
       const resolveIndex = () => {
         if (goal === "down") {
           if (anchorIndex === -1) {
             let i = 0;
-            while (i < visibleItemCount && isDisabledIndex(i)) {
+            while (i < visibleItemCount && isSkippedIndex(i)) {
               i++;
             }
             return i < visibleItemCount ? i : anchorIndex;
           }
           let belowIndex = anchorIndex + 1;
-          while (belowIndex < visibleItemCount && isDisabledIndex(belowIndex)) {
+          while (belowIndex < visibleItemCount && isSkippedIndex(belowIndex)) {
             belowIndex++;
           }
           return belowIndex < visibleItemCount ? belowIndex : anchorIndex;
@@ -28436,27 +29313,27 @@ const ListWithAction = props => {
         if (goal === "up") {
           if (anchorIndex === -1) {
             let i = visibleItemCount - 1;
-            while (i >= 0 && isDisabledIndex(i)) {
+            while (i >= 0 && isSkippedIndex(i)) {
               i--;
             }
             return i >= 0 ? i : anchorIndex;
           }
           let aboveIndex = anchorIndex - 1;
-          while (aboveIndex >= 0 && isDisabledIndex(aboveIndex)) {
+          while (aboveIndex >= 0 && isSkippedIndex(aboveIndex)) {
             aboveIndex--;
           }
           return aboveIndex >= 0 ? aboveIndex : anchorIndex;
         }
         if (goal === "first") {
           let i = 0;
-          while (i < visibleItemCount && isDisabledIndex(i)) {
+          while (i < visibleItemCount && isSkippedIndex(i)) {
             i++;
           }
           return i < visibleItemCount ? i : anchorIndex;
         }
         if (goal === "last") {
           let i = visibleItemCount - 1;
-          while (i >= 0 && isDisabledIndex(i)) {
+          while (i >= 0 && isSkippedIndex(i)) {
             i--;
           }
           return i >= 0 ? i : anchorIndex;
@@ -28489,38 +29366,6 @@ const ListWithAction = props => {
       dispatchCustomEvent(e.currentTarget, "navi_list_request_select", {
         event: e,
         item
-      });
-    },
-    onnavi_list_nav: e => {
-      const {
-        item,
-        event
-      } = e.detail;
-      const id = item ? item.id : null;
-      const isNonUserNav = event.type === "navi_list_nav_top_on_displayed" || event.type === "navi_list_top_match_change";
-      if (isNonUserNav) {
-        setAnchorId(null);
-      } else {
-        setAnchorId(id);
-      }
-      if (event.type === "keydown") {
-        setKeyboardPointedId(id);
-      } else {
-        setKeyboardPointedId(null);
-      }
-      const isAutomaticNav = event.type === "navi_list_nav_top_on_displayed" || event.type === "navi_list_top_match_change" || event.type === "navi_scroll_restore";
-      if (item && !isAutomaticNav) {
-        uiStateController.setUIState(item.value, event);
-      }
-    }
-    // Dispatch action request on select
-    ,
-
-    onnavi_list_select: e => {
-      const listEl = e.currentTarget;
-      dispatchActionRequestedCustomEvent(listEl, {
-        event: e,
-        requester: e.target
       });
     }
   });
@@ -28619,7 +29464,9 @@ const ListWithKeyboardInteractions = props => {
  *
  * Props:
  *   itemId    — stable string id for tracking (auto-generated if omitted)
- *   hidden    — when true, item is excluded from the visible count and not rendered
+ *   filtered  — when true, item is excluded from visible count and removed from DOM entirely
+ *   hidden    — when true, item is excluded from visible count (no virtual scroll height)
+ *               but stays in DOM with the native HTML hidden attribute
  *   highlight — array of [start, end] ranges to highlight via CSS Highlight API
  *   ...rest   — forwarded to the rendered <li> element
  */
@@ -28643,10 +29490,12 @@ const ListItemRealOrVoid = props => {
   let {
     id,
     value,
+    filtered,
     hidden,
     selected,
     matchScore,
     disabled,
+    readOnly,
     index,
     ...rest
   } = props;
@@ -28667,18 +29516,33 @@ const ListItemRealOrVoid = props => {
   const item = {
     id,
     index,
+    filtered,
     hidden,
     value,
     selected,
     matchScore,
-    disabled
+    disabled,
+    readOnly
   };
   const visibleIndex = tracker.useTrackItem(item);
   const groupTracker = useContext(GroupItemTrackerContext);
   const groupVisibleIndex = groupTracker ? groupTracker.useTrackItem(item) : null;
   const separator = useContext(SeparatorContext);
-  if (hidden) {
+  if (filtered) {
     return null;
+  }
+  // html-hidden items: excluded from virtual scroll accounting but always in DOM
+  if (hidden) {
+    return jsx(ListItemReal, {
+      id: id,
+      value: value,
+      item: item,
+      selected: selected,
+      disabled: disabled,
+      readOnly: readOnly,
+      hidden: hidden,
+      ...rest
+    });
   }
   if (visibleIndex === -1) {
     return null;
@@ -28692,6 +29556,7 @@ const ListItemRealOrVoid = props => {
     item: item,
     selected: selected,
     disabled: disabled,
+    readOnly: readOnly,
     ...rest
   });
   // Use group-scoped visible index for separator when inside a group,
@@ -28701,7 +29566,7 @@ const ListItemRealOrVoid = props => {
     return listItemVnode;
   }
   const separatorVnode = typeof separator === "function" ? separator(separatorIndex - 1) : separator;
-  return jsxs(Fragment, {
+  return jsxs(Fragment$1, {
     children: [separatorVnode, listItemVnode]
   });
 };
@@ -28718,6 +29583,8 @@ const ListItemReal = ({
   highlight,
   selected,
   disabled,
+  readOnly,
+  readOnlyMessage,
   item,
   pointed,
   children,
@@ -28725,6 +29592,9 @@ const ListItemReal = ({
 }) => {
   const defaultRef = useRef(null);
   const ref = rest.ref || defaultRef;
+  const onNaviConstraintMessage = useOnNaviConstraintMessage({
+    readOnlyMessage
+  });
   const isInteractive = useContext(ListInteractiveContext);
   const mousePointedId = useContext(ListMousePointedIdContext);
   const keyboardPointedId = useContext(ListKeyboardPointedIdContext);
@@ -28756,102 +29626,24 @@ const ListItemReal = ({
   }, [needScrollOnMount]);
 
   // CSS Highlight API: mark matching text ranges when highlight prop is set.
-  // highlight can be:
-  //   - an array of [start, end] pairs — applied to all text nodes under itemEl
-  //   - an object { [domSelector]: [[start, end], …] } — applied to each
-  //     matching sub-element found by the selector (from createSearch)
-  useLayoutEffect(() => {
-    const hl = getNaviSearchHighlight();
-    if (!hl) {
-      return undefined;
-    }
-    const itemEl = ref.current;
-    if (!itemEl || !highlight) {
-      return undefined;
-    }
-
-    // Normalise highlight to { rootOrSelector: ranges[] } entries.
-    // Flat array → single entry scoped to the whole item element.
-    const entries = Array.isArray(highlight) ? highlight.length === 0 ? [] : [{
-      root: itemEl,
-      ranges: highlight
-    }] : Object.entries(highlight).map(([selector, ranges]) => ({
-      root: itemEl.querySelector(selector) ?? itemEl,
-      ranges
-    }));
-    if (entries.length === 0) {
-      return undefined;
-    }
-    const ownRanges = [];
-    for (const {
-      root,
-      ranges
-    } of entries) {
-      // Collect text nodes under root and their cumulative offsets so that
-      // [start, end] ranges (character positions in the field string) map
-      // directly to the correct text node positions without re-searching.
-      const textNodes = [];
-      let totalLength = 0;
-      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
-        acceptNode: node => {
-          // Skip text nodes inside aria-hidden elements (icons, decorative emoji, etc.)
-          let el = node.parentElement;
-          while (el && el !== root) {
-            if (el.getAttribute("aria-hidden") === "true") {
-              return NodeFilter.FILTER_REJECT;
-            }
-            el = el.parentElement;
-          }
-          return NodeFilter.FILTER_ACCEPT;
-        }
-      });
-      let node;
-      while (node = walker.nextNode()) {
-        textNodes.push({
-          node,
-          offset: totalLength
-        });
-        totalLength += node.textContent.length;
-      }
-      for (const [start, end] of ranges) {
-        for (const {
-          node: textNode,
-          offset: nodeOffset
-        } of textNodes) {
-          const nodeEnd = nodeOffset + textNode.textContent.length;
-          if (nodeEnd <= start || nodeOffset >= end) {
-            continue;
-          }
-          const rangeStart = start - nodeOffset;
-          const rangeEnd = end - nodeOffset;
-          const range = new Range();
-          range.setStart(textNode, rangeStart < 0 ? 0 : rangeStart);
-          range.setEnd(textNode, rangeEnd > textNode.textContent.length ? textNode.textContent.length : rangeEnd);
-          hl.add(range);
-          ownRanges.push(range);
-        }
-      }
-    }
-    return () => {
-      for (const range of ownRanges) {
-        hl.delete(range);
-      }
-    };
-  }, [highlight, children, hidden]);
+  useSearchHighlight(ref, highlight, [children, hidden]);
   return jsx(Box, {
     as: "li",
     baseClassName: "navi_list_item",
     styleCSSVars: LIST_ITEM_STYLE_CSS_VARS,
     pseudoClasses: LIST_ITEM_PSEUDO_CLASSES,
     pseudoElements: LIST_ITEM_PSEUDO_ELEMENTS,
-    "aria-hidden": hidden ? true : undefined,
     "aria-selected": selected,
     "aria-disabled": disabled ? true : undefined,
     id: id,
     "navi-list-item-real": "",
     "data-interactive": isInteractive ? "" : undefined,
     "data-anchor": isPointedByKeyboard ? "" : undefined,
+    "data-required-message": naviI18n(`list_item.readonly`, {
+      item
+    }),
     ...rest,
+    hidden: hidden,
     ref: ref,
     onMouseEnter: e => {
       if (disabled) {
@@ -28879,6 +29671,9 @@ const ListItemReal = ({
       if (disabled) {
         return;
       }
+      if (readOnly) {
+        return;
+      }
       if (e.button !== 0) {
         return;
       }
@@ -28889,8 +29684,20 @@ const ListItemReal = ({
       });
       rest.onMouseDown?.(e);
     },
+    onnavi_list_item_request_select: e => {
+      if (readOnly) {
+        return;
+      }
+      const listEl = e.currentTarget.closest(".navi_list");
+      dispatchCustomEvent(listEl, "navi_list_request_select", {
+        item,
+        event: e.detail.event || e
+      });
+    },
+    onnavi_constraint_message: onNaviConstraintMessage,
     basePseudoState: {
       ":disabled": Boolean(disabled),
+      ":read-only": Boolean(readOnly),
       ":-navi-pointed": isPointed,
       ":-navi-pointed-by-mouse": isPointedByMouse,
       ":-navi-pointed-by-keyboard": isPointedByKeyboard,
@@ -28934,7 +29741,7 @@ const LIST_ITEM_STYLE_CSS_VARS = {
     backgroundColor: "--suggestion-background-color-highlight"
   }
 };
-const LIST_ITEM_PSEUDO_CLASSES = [":-navi-pointed", ":-navi-pointed-by-mouse", ":-navi-pointed-by-keyboard", ":-navi-pointed-by-proxy", ":-navi-selected", ":disabled"];
+const LIST_ITEM_PSEUDO_CLASSES = [":-navi-pointed", ":-navi-pointed-by-mouse", ":-navi-pointed-by-keyboard", ":-navi-pointed-by-proxy", ":-navi-selected", ":disabled", ":read-only"];
 const LIST_ITEM_PSEUDO_ELEMENTS = ["::highlight"];
 
 /**
@@ -29080,7 +29887,7 @@ installImportMetaCssBuild(import.meta);/**
  * - <InputCheckbox /> for type="checkbox"
  * - <InputRadio /> for type="radio"
  */
-const css$n = /* css */`
+const css$o = /* css */`
   @layer navi {
     .navi_input {
       --border-radius: 2px;
@@ -29138,15 +29945,6 @@ const css$n = /* css */`
     --x-background-color: var(--background-color);
     --x-color: var(--color);
     --x-placeholder-color: var(--placeholder-color);
-
-    position: relative;
-    box-sizing: border-box;
-    width: fit-content;
-    height: fit-content;
-    flex-direction: inherit;
-    border-radius: inherit;
-    cursor: inherit;
-
     --x-padding-top-base: var(
       --padding-top,
       var(--padding-y, var(--padding, 1px))
@@ -29163,6 +29961,14 @@ const css$n = /* css */`
       --padding-left,
       var(--padding-x, var(--padding, 2px))
     );
+
+    position: relative;
+    box-sizing: border-box;
+    width: fit-content;
+    height: fit-content;
+    flex-direction: inherit;
+    border-radius: inherit;
+    cursor: inherit;
 
     .navi_native_input {
       box-sizing: border-box;
@@ -29195,21 +30001,18 @@ const css$n = /* css */`
       position: absolute;
       top: 0;
       bottom: 0;
-      display: inline-flex;
       margin: 0;
       padding: 0;
-      align-items: center;
-      justify-content: center;
       font-size: var(--font-size);
       background: none;
       border: none;
 
       &[data-left] {
-        left: var(--x-padding-left-base);
+        left: 0;
         width: var(--left-slot-size);
       }
       &[data-right] {
-        right: var(--x-padding-right-base);
+        right: 0;
         width: var(--right-slot-size);
       }
       &[data-hide-while-empty] {
@@ -29238,10 +30041,10 @@ const css$n = /* css */`
       }
     }
     &:has(.navi_input_slot[data-left]) {
-      --left-slot-size: 1em;
+      --left-slot-size: 1.5em;
     }
     &:has(.navi_input_slot[data-right]) {
-      --right-slot-size: 1em;
+      --right-slot-size: 1.5em;
     }
 
     /* Hover */
@@ -29292,6 +30095,9 @@ const css$n = /* css */`
 const InputTextual = props => {
   const defaultRef = useRef(null);
   const ref = props.ref || defaultRef;
+  const defaultId = useId(); // we need an id for the slots so we always generate one
+  const fieldId = useFieldId();
+  const id = props.id || fieldId || defaultId;
   const uiStateController = useUIStateController(props, "input");
   const uiState = useUIState(uiStateController);
   return jsx(UIStateControllerContext.Provider, {
@@ -29300,7 +30106,8 @@ const InputTextual = props => {
       value: uiState,
       children: jsx(InputTextualDispatcher, {
         ...props,
-        ref: ref
+        ref: ref,
+        id: id
       })
     })
   });
@@ -29339,7 +30146,7 @@ const InputTextualDispatcher = props => {
 };
 const InputNativeContext = createContext(null);
 const InputTextualUI = props => {
-  import.meta.css = [css$n, "@jsenv/navi/src/field/input/input_textual.jsx"];
+  import.meta.css = [css$o, "@jsenv/navi/src/field/input/input_textual.jsx"];
   const {
     ref,
     type,
@@ -29367,9 +30174,9 @@ const InputTextualUI = props => {
   const innerReadOnly = readOnly || contextReadOnly || innerLoading || uiStateController.readOnly;
   const innerDisabled = disabled || contextDisabled;
   // infom any <label> parent of our readOnly state + that we are interactive
-  reportReadOnlyToLabel(innerReadOnly);
-  reportDisabledToLabel(innerDisabled);
-  reportInteractiveToLabel(true);
+  reportReadOnlyToField(innerReadOnly);
+  reportDisabledToField(innerDisabled);
+  reportInteractiveToField(true);
   useAutoFocus(ref, autoFocus, {
     focusVisible: autoFocusVisible,
     autoSelect
@@ -29377,13 +30184,10 @@ const InputTextualUI = props => {
   const remainingProps = useConstraints(ref, rest);
   const onInputStable = useStableCallback(onInput);
   const onKeyDownStable = useStableCallback(onKeyDown);
-  const autoId = useId();
-  const innerId = rest.id || autoId;
   const renderInput = inputProps => {
     return jsx(Box, {
       ...inputProps,
       as: "input",
-      id: innerId,
       ref: ref,
       type: type,
       "data-value": uiState,
@@ -29419,11 +30223,11 @@ const InputTextualUI = props => {
       "data-rendered-by": ".navi_input"
     });
   };
-  const renderInputMemoized = useCallback(renderInput, [type, uiState, innerValue, innerId, autoFocus]);
+  const renderInputMemoized = useCallback(renderInput, [type, uiState, innerValue, autoFocus]);
   let innerChildren;
   if (children === undefined) {
     if (type === "search") {
-      innerChildren = jsxs(Fragment, {
+      innerChildren = jsxs(Fragment$1, {
         children: [icon === undefined && jsx(InputLeftSlot, {
           children: jsx(Icon, {
             color: "rgba(28, 43, 52, 0.5)",
@@ -29490,7 +30294,7 @@ const InputTextualUI = props => {
       inset: -1
     }), renderInputMemoized, innerChildren ? jsx(InputNativeContext.Provider, {
       value: {
-        id: innerId,
+        id: props.id,
         readOnly: innerReadOnly,
         disabled: innerDisabled
       },
@@ -29563,8 +30367,9 @@ const InputSlot = ({
     "data-left": side === "left" ? "" : undefined,
     "data-right": side === "right" ? "" : undefined,
     "data-hide-while-empty": hideWhileEmpty ? "" : undefined,
+    inline: true,
     flex: true,
-    alignY: "center",
+    align: "center",
     onMouseDown: e => {
       // Only prevent focus from leaving when the input already has focus.
       // If the input is not focused, let the mousedown proceed normally so
@@ -29819,7 +30624,7 @@ const InputTextualWithAction = props => {
     loading,
     onCancel,
     onActionPrevented,
-    onActionStart,
+    onActionAborted,
     onActionError,
     onActionEnd,
     cancelOnBlurInvalid,
@@ -29827,20 +30632,32 @@ const InputTextualWithAction = props => {
     actionErrorEffect,
     ...rest
   } = props;
-  const uiState = useContext(UIStateContext);
-  const [boundAction] = useActionBoundToOneParam(action, uiState);
+  const uiStateController = useContext(UIStateControllerContext);
+  const [boundAction] = useActionBoundToOneParam(action, uiStateController.uiStateSignal);
   const {
     loading: actionLoading
   } = useActionStatus(boundAction);
   const executeAction = useExecuteAction(ref, {
     errorEffect: actionErrorEffect
   });
+  const onRequestAction = useOnRequestAction();
+
   // here updating the input won't call the associated action
   // (user have to blur or press enter for this to happen)
   // so we can keep the ui state on cancel/abort/error and let user decide
   // to update ui state or retry via blur/enter as is
-  useActionEvents(ref, {
-    onCancel: (e, reason) => {
+
+  return jsx(InputTextualDispatcher, {
+    "data-action": boundAction.name || "anonymous",
+    "data-action-debounce": actionDebounce,
+    "data-action-after-change": actionAfterChange ? "" : undefined,
+    ...rest,
+    ref: ref,
+    action: undefined,
+    onnavi_cancel: e => {
+      const {
+        reason
+      } = e.detail;
       if (reason.startsWith("blur_invalid")) {
         if (!cancelOnBlurInvalid) {
           return;
@@ -29858,22 +30675,14 @@ const InputTextualWithAction = props => {
       }
       onCancel?.(e, reason);
     },
-    onRequested: e => {
-      forwardActionRequested(e, boundAction);
+    onnavi_request_action: e => {
+      onRequestAction(boundAction, e);
     },
-    onPrevented: onActionPrevented,
-    onAction: executeAction,
-    onStart: onActionStart,
-    onError: onActionError,
-    onEnd: onActionEnd
-  });
-  return jsx(InputTextualDispatcher, {
-    "data-action": boundAction.name || "anonymous",
-    "data-action-debounce": actionDebounce,
-    "data-action-after-change": actionAfterChange ? "" : undefined,
-    ...rest,
-    ref: ref,
-    action: undefined,
+    onnavi_action_prevented: onActionPrevented,
+    onnavi_action_ready: executeAction,
+    onnavi_action_abort: onActionAborted,
+    onnavi_action_error: onActionError,
+    onnavi_action_end: onActionEnd,
     loading: loading || actionLoading
   });
 };
@@ -29960,7 +30769,7 @@ installImportMetaCssBuild(import.meta);/**
  * This means an editable thing MUST have a parent with position relative that wraps the content and the eventual editable input
  *
  */
-const css$m = /* css */`
+const css$n = /* css */`
   .navi_editable_wrapper {
     --inset-top: 0px;
     --inset-right: 0px;
@@ -30009,7 +30818,7 @@ const useEditionController = () => {
   };
 };
 const Editable = props => {
-  import.meta.css = [css$m, "@jsenv/navi/src/field/edition/editable.jsx"];
+  import.meta.css = [css$n, "@jsenv/navi/src/field/edition/editable.jsx"];
   let {
     children,
     action,
@@ -30138,7 +30947,7 @@ const Editable = props => {
     wrapper.style.setProperty("--inset-right", `-${borderSizes.right}px`);
     wrapper.style.setProperty("--inset-bottom", `-${borderSizes.bottom}px`);
   });
-  return jsxs(Fragment, {
+  return jsxs(Fragment$1, {
     children: [children || jsx("span", {
       children: value
     }), jsx(Box, {
@@ -30255,6 +31064,8 @@ const getValue = (formElement) => {
  */
 
 const Form = props => {
+  const defaultRef = useRef();
+  const ref = props.ref || defaultRef;
   const uiStateController = useUIGroupStateController(props, "form", {
     childComponentType: "*",
     aggregateChildStates: childUIStateControllers => {
@@ -30277,28 +31088,37 @@ const Form = props => {
     }
   });
   const uiState = useUIState(uiStateController);
-  const form = renderActionableComponent(props, {
-    Basic: FormUI,
-    WithAction: FormWithAction
-  });
   return jsx(UIStateControllerContext.Provider, {
     value: uiStateController,
     children: jsx(UIStateContext.Provider, {
       value: uiState,
-      children: form
+      children: jsx(FormDispatcher, {
+        ...props,
+        ref: ref
+      })
     })
   });
 };
+const FormDispatcher = props => {
+  if (props.action) {
+    return jsx(FormWithAction, {
+      ...props
+    });
+  }
+  return jsx(FormUI, {
+    ...props
+  });
+};
 const FormUI = props => {
-  const uiStateController = useContext(UIStateControllerContext);
   const {
+    ref,
     readOnly,
     loading,
     children,
     ...rest
   } = props;
-  const defaultRef = useRef();
-  const ref = props.ref || defaultRef;
+  const debugAction = useDebugAction();
+  const uiStateController = useContext(UIStateControllerContext);
 
   // instantiate validation via useConstraints hook:
   // - receive "actionrequested" custom event ensure submit is prevented
@@ -30318,6 +31138,7 @@ const FormUI = props => {
       // browser would empty all fields to their default values (likely empty/unchecked)
       // we want to reset to the last known external state instead
       e.preventDefault();
+      debugAction(e, `form reset -> resetUIState to ${JSON.stringify(uiStateController.state)}`);
       uiStateController.resetUIState(e);
     },
     children: jsx(ParentUIStateControllerContext.Provider, {
@@ -30336,16 +31157,14 @@ const FormUI = props => {
   });
 };
 const FormWithAction = props => {
-  const uiStateController = useContext(UIStateControllerContext);
-  const uiState = useContext(UIStateContext);
   const {
+    ref,
     action,
     method,
     actionErrorEffect = "show_validation_message",
     // "show_validation_message" or "throw"
     errorMapping,
     onActionPrevented,
-    onActionStart,
     onActionAbort,
     onActionError,
     onActionEnd,
@@ -30353,56 +31172,42 @@ const FormWithAction = props => {
     children,
     ...rest
   } = props;
-  const defaultRef = useRef();
-  const ref = props.ref || defaultRef;
-  const [actionBoundToUIState] = useActionBoundToOneParam(action, uiState);
+  const uiStateController = useContext(UIStateControllerContext);
+  const [actionBoundToUIState] = useActionBoundToOneParam(action, uiStateController.uiStateSignal);
   const executeAction = useExecuteAction(ref, {
     errorEffect: actionErrorEffect,
     errorMapping
   });
+  const onRequestAction = useOnRequestAction();
   const {
     actionPending,
     actionRequester: formActionRequester
   } = useRequestedActionStatus(ref);
-  useActionEvents(ref, {
-    onPrevented: onActionPrevented,
-    onRequested: e => {
-      forwardActionRequested(e, actionBoundToUIState);
-    },
-    onAction: e => {
-      const form = ref.current;
-      const formElementValues = collectFormElementValues(form);
-      uiStateController.setUIState(formElementValues, e);
-      executeAction(e);
-    },
-    onStart: onActionStart,
-    onAbort: e => {
-      // user might want to re-submit as is
-      // or change the ui state before re-submitting
-      // we can't decide for him
-      onActionAbort?.(e);
-    },
-    onError: e => {
-      // user might want to re-submit as is
-      // or change the ui state before re-submitting
-      // we can't decide for him
-      onActionError?.(e);
-    },
-    onEnd: e => {
-      // form side effect is a success
-      // we can get rid of the nav state
-      // that was keeping the ui state in case user navigates away without submission
-      uiStateController.actionEnd(e);
-      onActionEnd?.(e);
-    }
-  });
   const innerLoading = loading || actionPending;
   return jsx(FormUI, {
-    "data-action": actionBoundToUIState.name,
+    "data-action": actionBoundToUIState.callSource,
     "data-method": action.meta?.httpVerb || method || "GET",
     ...rest,
     ref: ref,
     loading: innerLoading,
+    onnavi_request_action: e => {
+      onRequestAction(actionBoundToUIState, e);
+    },
+    onnavi_action_prevented: onActionPrevented,
+    onnavi_action_ready: e => {
+      const form = ref.current;
+      // this is not really mandatory, normally all navi fields already report
+      // it's only in case we have fields that are not managed by navi
+      const formElementValues = collectFormElementValues(form);
+      uiStateController.setUIState(formElementValues, e);
+      executeAction(e);
+    },
+    onnavi_action_abort: onActionAbort,
+    onnavi_action_error: onActionError,
+    onnavi_action_end: e => {
+      uiStateController.actionEnd(e);
+      onActionEnd?.(e);
+    },
     children: jsx(FormActionContext.Provider, {
       value: actionBoundToUIState,
       children: jsx(LoadingElementContext.Provider, {
@@ -30423,7 +31228,7 @@ const FormWithAction = props => {
 //   form.dispatchEvent(customEvent);
 // };
 
-installImportMetaCssBuild(import.meta);const css$l = /* css */`
+installImportMetaCssBuild(import.meta);const css$m = /* css */`
   .navi_group {
     --border-width: 1px;
 
@@ -30520,7 +31325,7 @@ const Group = ({
   vertical = row,
   ...props
 }) => {
-  import.meta.css = [css$l, "@jsenv/navi/src/field/group.jsx"];
+  import.meta.css = [css$m, "@jsenv/navi/src/field/group.jsx"];
   if (typeof borderWidth === "string") {
     borderWidth = parseFloat(borderWidth);
   }
@@ -30538,148 +31343,366 @@ const Group = ({
   });
 };
 
-const RadioList = props => {
-  const uiStateController = useUIGroupStateController(props, "radio_list", {
-    childComponentType: "radio",
-    aggregateChildStates: childUIStateControllers => {
-      let activeValue;
-      for (const childUIStateController of childUIStateControllers) {
-        if (childUIStateController.uiState) {
-          activeValue = childUIStateController.uiState;
-          break;
-        }
-      }
-      return activeValue;
+/**
+ * Pure vanilla JS time formatting utilities.
+ * All functions accept an optional `{ now }` parameter for testability.
+ */
+
+
+const DEFAULT_LANG = "en";
+
+/**
+ * Formats a date as a human-readable day, appending "(aujourd'hui)" or
+ * "(demain)" when the date matches today or tomorrow.
+ *
+ * @example
+ * formatDay(new Date(), "fr") // "lundi 11 mai (aujourd'hui)"
+ * formatDay(tomorrow, "fr")   // "mardi 12 mai (demain)"
+ * formatDay(nextWeek, "fr")   // "lundi 18 mai"
+ */
+const formatDay = (date, locale, { now = new Date() } = {}) => {
+  const base = new Intl.DateTimeFormat(locale, {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  }).format(date);
+
+  const dateKey = toLocalDayKey(date);
+  const todayKey = toLocalDayKey(now);
+  const tomorrowDate = new Date(now);
+  tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+  const tomorrowKey = toLocalDayKey(tomorrowDate);
+
+  if (dateKey === todayKey) {
+    const label = new Intl.RelativeTimeFormat(locale, {
+      numeric: "auto",
+    }).format(0, "day");
+    return `${base} (${label})`;
+  }
+  if (dateKey === tomorrowKey) {
+    const label = new Intl.RelativeTimeFormat(locale, {
+      numeric: "auto",
+    }).format(1, "day");
+    return `${base} (${label})`;
+  }
+  return base;
+};
+
+/**
+ * Formats a date as "mai 2026".
+ */
+const formatMonth = (date, locale) => {
+  return new Intl.DateTimeFormat(locale, {
+    month: "long",
+    year: "numeric",
+  }).format(date);
+};
+
+/**
+ * Formats a date as "lun. 11 mai, 14:30".
+ */
+const formatDatetime = (date, locale) => {
+  return new Intl.DateTimeFormat(locale, {
+    weekday: "short",
+    day: "numeric",
+    month: "long",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+};
+
+/**
+ * Formats a date as "14:30".
+ */
+const formatTime = (date, locale) => {
+  return new Intl.DateTimeFormat(locale, {
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+};
+
+/**
+ * Formats a date relative to now: "il y a 3 jours", "dans 2 heures", etc.
+ */
+const formatTimeAgo = (date, locale, { now = new Date() } = {}) => {
+  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
+  const nowMs = now instanceof Date ? now.getTime() : now;
+  const diff = date.getTime() - nowMs;
+  const absDiff = Math.abs(diff);
+
+  if (absDiff < MINUTE) {
+    return rtf.format(Math.round(diff / 1000), "second");
+  }
+  if (absDiff < HOUR) {
+    return rtf.format(Math.round(diff / MINUTE), "minute");
+  }
+  if (absDiff < DAY) {
+    return rtf.format(Math.round(diff / HOUR), "hour");
+  }
+  if (absDiff < 7 * DAY) {
+    return rtf.format(Math.round(diff / DAY), "day");
+  }
+  if (absDiff < 30 * DAY) {
+    return rtf.format(Math.round(diff / (7 * DAY)), "week");
+  }
+  if (absDiff < YEAR) {
+    return rtf.format(Math.round(diff / (30 * DAY)), "month");
+  }
+  return rtf.format(Math.round(diff / YEAR), "year");
+};
+
+/**
+ * Formats a timed event with an optional duration window.
+ *
+ * States:
+ * - Future  (now < start)              → "dans 1 heure 30", "demain à 15h", …
+ * - Ongoing (start ≤ now < start+dur)  → "En cours"
+ * - Past    (now ≥ start+dur)          → relative ("il y a 2 heures", …)
+ *
+ * @param {Date|number} start      Start of the event (Date or ms timestamp)
+ * @param {number}      durationMs Duration in milliseconds (0 = instant event)
+ * @param {string}      locale     BCP 47 locale tag
+ * @param {{ now?: Date|number }} options
+ *
+ * @example
+ * // 90 min from now
+ * formatDuration(Date.now() + 90 * 60_000, 0, "fr") // "dans 1 heure 30"
+ * // currently happening (30 min window)
+ * formatDuration(Date.now() - 5 * 60_000, 30 * 60_000, "fr") // "En cours"
+ * // ended 2 hours ago
+ * formatDuration(Date.now() - 3 * 3_600_000, 3_600_000, "fr") // "il y a 2 heures"
+ */
+const formatDuration = (
+  start,
+  durationMs = 0,
+  locale,
+  { now = new Date() } = {},
+) => {
+  const startMs = start instanceof Date ? start.getTime() : Number(start);
+  const endMs = startMs + durationMs;
+  const nowMs = now instanceof Date ? now.getTime() : Number(now);
+
+  if (nowMs >= startMs && nowMs < endMs) {
+    return getOngoingText(locale);
+  }
+  if (nowMs >= endMs) {
+    const refDate = endMs > startMs ? new Date(endMs) : new Date(startMs);
+    return formatTimeAgo(refDate, locale, { now });
+  }
+
+  const diff = startMs - nowMs;
+  return formatFuture(new Date(startMs), diff, locale, { now });
+};
+
+const formatFuture = (date, diff, locale, { now }) => {
+  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
+  const nowDate = now instanceof Date ? now : new Date(now);
+
+  // < 1 min
+  if (diff < MINUTE) {
+    return getLessThanMinuteText(locale);
+  }
+
+  // < 1 hour → "dans X minutes"
+  if (diff < HOUR) {
+    return rtf.format(Math.ceil(diff / MINUTE), "minute");
+  }
+
+  // 1h to 2h → "dans 1 heure 30"
+  if (diff < 2 * HOUR) {
+    const hours = Math.floor(diff / HOUR);
+    const minutes = Math.round((diff % HOUR) / MINUTE);
+    if (minutes === 0) {
+      return rtf.format(hours, "hour");
     }
+    return formatHoursAndMinutes(hours, minutes, locale);
+  }
+
+  // < 6h → "dans X heures" (precise enough, skip tomorrow label)
+  if (diff < 6 * HOUR) {
+    return rtf.format(Math.round(diff / HOUR), "hour");
+  }
+
+  // Tomorrow (calendar day) and within ~30h → "demain à 15h"
+  const tomorrowDate = new Date(nowDate);
+  tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+  if (diff < 30 * HOUR && toLocalDayKey(date) === toLocalDayKey(tomorrowDate)) {
+    return formatTomorrowAt(date, locale);
+  }
+
+  // < 24h → "dans X heures"
+  if (diff < DAY) {
+    return rtf.format(Math.round(diff / HOUR), "hour");
+  }
+
+  // < 7 days → "dans X jours"
+  if (diff < 7 * DAY) {
+    return rtf.format(Math.round(diff / DAY), "day");
+  }
+
+  // < 30 days → "dans X semaines"
+  if (diff < 30 * DAY) {
+    return rtf.format(Math.round(diff / (7 * DAY)), "week");
+  }
+
+  // months (Intl handles "le mois prochain" when value = 1)
+  if (diff < YEAR) {
+    return rtf.format(Math.round(diff / (30 * DAY)), "month");
+  }
+
+  return rtf.format(Math.round(diff / YEAR), "year");
+};
+
+const formatTomorrowAt = (date, locale) => {
+  const dayLabel = new Intl.RelativeTimeFormat(locale, {
+    numeric: "auto",
+  }).format(1, "day");
+  const hasMinutes = date.getMinutes() !== 0;
+  const timeLabel = new Intl.DateTimeFormat(locale, {
+    hour: "numeric",
+    ...(hasMinutes ? { minute: "2-digit" } : {}),
+  }).format(date);
+  const atTemplate = naviI18n("time.tomorrow_at", undefined, {
+    lang: locale,
   });
-  const uiState = useUIState(uiStateController);
-  const radioList = renderActionableComponent(props, {
-    Basic: RadioListBasic,
-    WithAction: RadioListWithAction
-  });
-  return jsx(UIStateControllerContext.Provider, {
-    value: uiStateController,
-    children: jsx(UIStateContext.Provider, {
-      value: uiState,
-      children: radioList
-    })
+  // atTemplate is e.g. "[day] à [time]" — replace placeholders
+  if (atTemplate !== "time.tomorrow_at") {
+    return atTemplate.replace("[day]", dayLabel).replace("[time]", timeLabel);
+  }
+  // fallback: concatenate with a space
+  return `${dayLabel} ${timeLabel}`;
+};
+
+// "dans 1 heure 30" — colloquial format, built per language.
+// The plural suffix is applied inline because it depends on the count;
+// a plain string template cannot express this, so we keep it in JS.
+const formatHoursAndMinutes = (hours, minutes, locale) => {
+  const lang = (locale || "").split("-")[0];
+  const templates = {
+    fr: (h, m) => `dans ${h} heure${h > 1 ? "s" : ""} ${m}`,
+    en: (h, m) => `in ${h} hour${h > 1 ? "s" : ""} ${m}`,
+    de: (h, m) => `in ${h} Stunde${h > 1 ? "n" : ""} ${m}`,
+    es: (h, m) => `en ${h} hora${h > 1 ? "s" : ""} ${m}`,
+    it: (h, m) => `tra ${h} ora${h > 1 ? "e" : ""} ${m}`,
+    pt: (h, m) => `em ${h} hora${h > 1 ? "s" : ""} ${m}`,
+    nl: (h, m) => `over ${h} uur ${m}`,
+  };
+  const template = templates[lang] || templates[DEFAULT_LANG];
+  return template(hours, minutes);
+};
+
+const getLessThanMinuteText = (locale) => {
+  return naviI18n("time.less_than_minute", undefined, { lang: locale });
+};
+
+const getOngoingText = (locale) => {
+  return naviI18n("time.ongoing", undefined, { lang: locale });
+};
+
+const MINUTE = 60_000;
+const HOUR = 60 * MINUTE;
+const DAY = 24 * HOUR;
+const YEAR = 365 * DAY;
+
+// Compares calendar days in local time (ignores the clock time)
+const toLocalDayKey = (date) => {
+  return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+};
+
+const Time = ({
+  children,
+  type = "day",
+  duration = 0,
+  locale,
+  ...props
+}) => {
+  const date = toDate(children, type);
+  const lang = locale || langSignal.value;
+  let text;
+  let dateTimeAttr;
+  if (type === "duration") {
+    text = date ? formatDuration(date, duration, lang) : children === undefined ? "–" : String(children);
+    dateTimeAttr = date ? date.toISOString() : undefined;
+  } else {
+    text = date ? formatDate(date, type, lang) : children === undefined ? "–" : String(children);
+    dateTimeAttr = date ? toDateTimeAttr(date, type) : undefined;
+  }
+  return jsx(Text, {
+    as: "time",
+    dateTime: dateTimeAttr,
+    ...props,
+    children: text
   });
 };
-const Radio = InputRadio;
-const RadioListBasic = props => {
-  const contextReadOnly = useContext(ReadOnlyContext);
-  const contextDisabled = useContext(DisabledContext);
-  const contextLoading = useContext(LoadingContext);
-  const uiStateController = useContext(UIStateControllerContext);
-  const {
-    name,
-    loading,
-    disabled,
-    readOnly,
-    children,
-    required,
-    ...rest
-  } = props;
-  const innerLoading = loading || contextLoading;
-  const innerReadOnly = readOnly || contextReadOnly || innerLoading || uiStateController.readOnly;
-  const innerDisabled = disabled || contextDisabled;
-  return jsx(Box, {
-    "data-action": rest["data-action"],
-    flex: "y",
-    ...rest,
-    baseClassName: "navi_radio_list",
-    "data-radio-list": "",
-    onresetuistate: e => {
-      uiStateController.resetUIState(e);
-    },
-    children: jsx(ParentUIStateControllerContext.Provider, {
-      value: uiStateController,
-      children: jsx(FieldNameContext.Provider, {
-        value: name,
-        children: jsx(ReadOnlyContext.Provider, {
-          value: innerReadOnly,
-          children: jsx(DisabledContext.Provider, {
-            value: innerDisabled,
-            children: jsx(RequiredContext.Provider, {
-              value: required,
-              children: jsx(LoadingContext.Provider, {
-                value: innerLoading,
-                children: children
-              })
-            })
-          })
-        })
-      })
-    })
-  });
-};
-const RadioListWithAction = props => {
-  const uiStateController = useContext(UIStateControllerContext);
-  const uiState = useContext(UIStateContext);
-  const {
-    action,
-    onCancel,
-    onActionPrevented,
-    onActionStart,
-    onActionAbort,
-    onActionError,
-    onActionEnd,
-    actionErrorEffect,
-    loading,
-    children,
-    ...rest
-  } = props;
-  const innerRef = useRef();
-  const [boundAction] = useActionBoundToOneParam(action, uiState);
-  const {
-    loading: actionLoading
-  } = useActionStatus(boundAction);
-  const executeAction = useExecuteAction(innerRef, {
-    errorEffect: actionErrorEffect
-  });
-  const [actionRequester, setActionRequester] = useState(null);
-  useActionEvents(innerRef, {
-    onCancel: (e, reason) => {
-      uiStateController.resetUIState(e);
-      onCancel?.(e, reason);
-    },
-    onPrevented: onActionPrevented,
-    onAction: actionEvent => {
-      setActionRequester(actionEvent.detail.requester);
-      executeAction(actionEvent);
-    },
-    onStart: onActionStart,
-    onAbort: e => {
-      uiStateController.resetUIState(e);
-      onActionAbort?.(e);
-    },
-    onError: e => {
-      uiStateController.resetUIState(e);
-      onActionError?.(e);
-    },
-    onEnd: e => {
-      onActionEnd?.(e);
+const toDate = (value, type) => {
+  if (value instanceof Date) {
+    return value;
+  }
+  if (typeof value === "number") {
+    return new Date(value);
+  }
+  if (typeof value === "string") {
+    // "HH:MM" or "HH:MM:SS" — only meaningful for type="time"
+    if (type === "time" && /^\d{2}:\d{2}(?::\d{2})?$/.test(value)) {
+      const d = new Date(`1970-01-01T${value}`);
+      return isNaN(d.getTime()) ? null : d;
     }
-  });
-  return jsx(RadioListBasic, {
-    "data-action": boundAction,
-    ...rest,
-    ref: innerRef,
-    onChange: e => {
-      const radio = e.target;
-      const radioListContainer = innerRef.current;
-      requestAction(radioListContainer, boundAction, {
-        event: e,
-        requester: radio,
-        actionOrigin: "action_prop"
-      });
-    },
-    loading: loading || actionLoading,
-    children: jsx(LoadingElementContext.Provider, {
-      value: actionRequester,
-      children: children
-    })
-  });
+    // "YYYY-MM" — only meaningful for type="month", avoid UTC shift
+    if (type === "month" && /^\d{4}-\d{2}$/.test(value)) {
+      const d = new Date(`${value}-01T00:00:00`);
+      return isNaN(d.getTime()) ? null : d;
+    }
+    // "YYYY-MM-DD" — use local midnight to avoid UTC shift
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      const d = new Date(`${value}T00:00:00`);
+      return isNaN(d.getTime()) ? null : d;
+    }
+    // ISO / other parseable strings
+    const d = new Date(value);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  return null;
+};
+
+// Produces a machine-readable value for the HTML `datetime` attribute.
+// See https://developer.mozilla.org/en-US/docs/Web/HTML/Element/time#datetime
+const toDateTimeAttr = (date, type) => {
+  if (type === "time") {
+    const hh = String(date.getHours()).padStart(2, "0");
+    const mm = String(date.getMinutes()).padStart(2, "0");
+    return `${hh}:${mm}`;
+  }
+  if (type === "month") {
+    const yyyy = date.getFullYear();
+    const mm = String(date.getMonth() + 1).padStart(2, "0");
+    return `${yyyy}-${mm}`;
+  }
+  if (type === "datetime" || type === "relative") {
+    return date.toISOString();
+  }
+  // day
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+};
+const formatDate = (date, type, locale) => {
+  if (type === "day") {
+    return formatDay(date, locale);
+  }
+  if (type === "month") {
+    return formatMonth(date, locale);
+  }
+  if (type === "datetime") {
+    return formatDatetime(date, locale);
+  }
+  if (type === "time") {
+    return formatTime(date, locale);
+  }
+  if (type === "relative") {
+    return formatTimeAgo(date, locale);
+  }
+  return String(date);
 };
 
 const windowWidthSignal = signal(window.innerWidth);
@@ -30711,7 +31734,7 @@ const useCleanup = () => {
   return cleanupMethods;
 };
 
-installImportMetaCssBuild(import.meta);const css$k = /* css */`
+installImportMetaCssBuild(import.meta);const css$l = /* css */`
   .navi_dialog {
     &[open] {
       display: flex;
@@ -30724,7 +31747,7 @@ installImportMetaCssBuild(import.meta);const css$k = /* css */`
   }
 `;
 const Dialog = props => {
-  import.meta.css = [css$k, "@jsenv/navi/src/popup/dialog.jsx"];
+  import.meta.css = [css$l, "@jsenv/navi/src/popup/dialog.jsx"];
   const {
     children,
     scrollTrap,
@@ -30743,7 +31766,7 @@ const Dialog = props => {
     dialogEl.showModal();
     const firstFocusable = findFocusable(dialogEl);
     if (firstFocusable) {
-      debugFocus(`Moving focus to first focusable element in dialog: ${getElementSignature(firstFocusable)}.focus({ preventScroll: true })`);
+      debugFocus(e, `Moving focus to first focusable element in dialog: ${getElementSignature(firstFocusable)}.focus({ preventScroll: true })`);
       firstFocusable.focus({
         preventScroll: true
       });
@@ -30835,7 +31858,7 @@ const requestDialogClose = (popoverElement, {
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$j = /* css */`
+installImportMetaCssBuild(import.meta);const css$k = /* css */`
   .navi_popover_backdrop {
     position: fixed;
     inset: 0;
@@ -30851,7 +31874,7 @@ installImportMetaCssBuild(import.meta);const css$j = /* css */`
   }
 `;
 const Popover = props => {
-  import.meta.css = [css$j, "@jsenv/navi/src/popup/popover.jsx"];
+  import.meta.css = [css$k, "@jsenv/navi/src/popup/popover.jsx"];
   const {
     scrollTrap,
     pointerTrap,
@@ -30883,7 +31906,7 @@ const Popover = props => {
     popoverEl.showPopover();
     const firstFocusable = findFocusable(popoverEl);
     if (firstFocusable) {
-      debugFocus(`Moving focus to first focusable element in popover: ${getElementSignature(firstFocusable)}.focus({ preventScroll: true })`);
+      debugFocus(e, `Moving focus to first focusable element in popover: ${getElementSignature(firstFocusable)}.focus({ preventScroll: true })`);
       firstFocusable.focus({
         preventScroll: true
       });
@@ -30995,7 +32018,7 @@ const Popover = props => {
     }
     close(e);
   };
-  return jsxs(Fragment, {
+  return jsxs(Fragment$1, {
     children: [opened && createPortal(jsx("div", {
       className: "navi_popover_backdrop",
       "aria-hidden": "true",
@@ -31053,7 +32076,7 @@ const requestPopoverClose = (popoverElement, {
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$i = /* css */`
+installImportMetaCssBuild(import.meta);const css$j = /* css */`
   @layer navi {
     .navi_select {
       --select-border-radius: 2px;
@@ -31356,11 +32379,6 @@ installImportMetaCssBuild(import.meta);const css$i = /* css */`
  * but does NOT submit a parent form. Use a separate submit button for that.
  */
 const Select = props => {
-  if (props.type === "day") {
-    return jsx(SelectDay, {
-      ...props
-    });
-  }
   const defaultRef = useRef(null);
   const ref = props.ref || defaultRef;
   const uiStateController = useUIGroupStateController(props, "select", {
@@ -31406,7 +32424,7 @@ const SelectDispatcher = props => {
   });
 };
 const SelectUI = props => {
-  import.meta.css = [css$i, "@jsenv/navi/src/field/select/select.jsx"];
+  import.meta.css = [css$j, "@jsenv/navi/src/field/select/select.jsx"];
   const {
     placeholder = "Select…",
     trigger,
@@ -31432,9 +32450,9 @@ const SelectUI = props => {
   const innerLoading = loading || contextLoading && contextLoadingElement === ref.current;
   const innerReadOnly = readOnly || contextReadOnly || innerLoading;
   const innerDisabled = disabled || contextDisabled;
-  reportReadOnlyToLabel(innerReadOnly);
-  reportDisabledToLabel(innerDisabled);
-  reportInteractiveToLabel(true);
+  reportReadOnlyToField(innerReadOnly);
+  reportDisabledToField(innerDisabled);
+  reportInteractiveToField(true);
   useAutoFocus(ref, autoFocus, {
     preventScroll: autoFocusPreventScroll
   });
@@ -31609,9 +32627,9 @@ const SelectWithPopover = props => {
   const moveFocusToSelect = e => {
     if (e.type === "mousedown") {
       e.preventDefault();
-      debugFocus(formatEventSideEffect(e, `preventDefault and move focus to select`));
+      debugFocus(e, `preventDefault and move focus to select`);
     } else {
-      debugFocus(formatEventSideEffect(e, `move focus to select`));
+      debugFocus(e, `move focus to select`);
     }
     const select = ref.current;
     select.focus({
@@ -31635,7 +32653,7 @@ const SelectWithPopover = props => {
         requestClose(e);
       } else {
         e.preventDefault(); // prevent browser trying to give focus to the select (popover will take focus)
-        debugFocus(`select mousedown.preventDefault()`);
+        debugFocus(e, `preventDefault()`);
         requestOpen(e);
       }
     },
@@ -31657,7 +32675,7 @@ const SelectWithPopover = props => {
       } = e.detail;
       if (event.type === "mousedown") {
         event.preventDefault(); // prevent browser trying to give focus to the list item
-        debugFocus(`listItem mousedown.preventDefault()`);
+        debugFocus(e, `preventDefault()`);
       }
       if (event.key === " ") {
         // space can open the popover we don't want space to propagate to the select otherwise it would open it back immediatly
@@ -31792,9 +32810,9 @@ const SelectWithDialog = props => {
   const moveFocusToSelect = e => {
     if (e.type === "mousedown") {
       e.preventDefault();
-      debugFocus(formatEventSideEffect(e, `preventDefault and move focus to select`));
+      debugFocus(e, `preventDefault and move focus to select`);
     } else {
-      debugFocus(formatEventSideEffect(e, `move focus to select`));
+      debugFocus(e, `move focus to select`);
     }
     const select = ref.current;
     select.focus({
@@ -31817,7 +32835,7 @@ const SelectWithDialog = props => {
         requestClose(e);
       } else {
         e.preventDefault(); // prevent browser trying to give focus to the select (dialog will take focus)
-        debugFocus(`select mousedown.preventDefault()`);
+        debugFocus(e, `preventDefault()`);
         requestOpen(e);
       }
     },
@@ -31896,183 +32914,6 @@ const useSelectRequestClose = () => {
   return useContext(SelectRequestCloseContext);
 };
 
-// --- Day picker ---
-
-const MS_PER_DAY = 86_400_000;
-const startOfDay = date => {
-  const d = new Date(date);
-  d.setHours(0, 0, 0, 0);
-  return d;
-};
-const toDateKey = date => {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
-};
-const dateKeyToDate = dateKey => new Date(`${dateKey}T00:00:00`);
-const dateDiffInDays = (a, b) => Math.round((b - a) / MS_PER_DAY);
-const buildDayOptions = (minDate, count, locale, minIsToday) => {
-  const options = [];
-  for (let i = 0; i < count; i++) {
-    const d = new Date(minDate);
-    d.setDate(minDate.getDate() + i);
-    const key = toDateKey(d);
-    const baseLabel = d.toLocaleDateString(locale, {
-      weekday: "long",
-      day: "numeric",
-      month: "long"
-    });
-    let label = baseLabel;
-    if (minIsToday) {
-      if (i === 0) {
-        label = `${baseLabel} (aujourd'hui)`;
-      } else if (i === 1) {
-        label = `${baseLabel} (demain)`;
-      }
-    }
-    options.push({
-      key,
-      label
-    });
-  }
-  return options;
-};
-const DayOption = ({
-  children,
-  ...rest
-}) => {
-  return jsx(ListItem, {
-    paddingX: "s",
-    paddingY: "m",
-    ...rest,
-    children: children
-  });
-};
-const CustomDayOption = ({
-  value,
-  index,
-  minKey,
-  locale,
-  uiAction
-}) => {
-  const fixedOptions = buildDayOptions(dateKeyToDate(minKey), index, locale, false);
-  const isValueInFixed = fixedOptions.some(o => o.key === value);
-  const initialCustomKey = value && value !== "custom" && !isValueInFixed ? value : null;
-  const [customKey, setCustomKey] = useState(initialCustomKey);
-  const hasCustom = customKey !== null;
-  return jsxs(Fragment, {
-    children: [hasCustom && jsx(DayOption, {
-      id: "custom_display",
-      index: index,
-      value: customKey,
-      selected: value === customKey,
-      children: jsx(Text, {
-        capitalize: true,
-        children: dateKeyToDate(customKey).toLocaleDateString(locale, {
-          weekday: "long",
-          day: "numeric",
-          month: "long"
-        })
-      })
-    }), jsxs(DayOption, {
-      id: "custom_pick",
-      index: hasCustom ? index + 1 : index,
-      value: "custom",
-      relative: true,
-      children: [jsx(Text, {
-        children: "Choisir un autre jour\u2026"
-      }), jsx(Input, {
-        type: "date",
-        value: hasCustom ? customKey : undefined,
-        min: minKey,
-        uiAction: newKey => {
-          setCustomKey(newKey);
-          if (uiAction) {
-            uiAction(newKey);
-          }
-        },
-        onMouseDown: e => {
-          e.preventDefault();
-          e.stopPropagation();
-          e.currentTarget.showPicker();
-        },
-        absolute: true,
-        inset: true,
-        expand: true,
-        opacity: 0,
-        cursor: "pointer"
-      })]
-    })]
-  });
-};
-const SelectDay = ({
-  min,
-  max,
-  maxLength = 10,
-  custom: forceCustom,
-  locale = "fr-FR",
-  value,
-  uiAction,
-  placeholder = "Choisir un jour",
-  ...rest
-}) => {
-  const minDate = startOfDay(min ?? new Date());
-  const minKey = toDateKey(minDate);
-  const todayKey = toDateKey(startOfDay(new Date()));
-  const minIsToday = minKey === todayKey;
-  let daysToShow;
-  let showCustomPicker;
-  if (max) {
-    const maxDate = startOfDay(max);
-    const totalDays = dateDiffInDays(minDate, maxDate) + 1;
-    if (totalDays > maxLength) {
-      daysToShow = maxLength;
-      showCustomPicker = true;
-    } else {
-      daysToShow = totalDays;
-      showCustomPicker = forceCustom || false;
-    }
-  } else {
-    daysToShow = maxLength;
-    showCustomPicker = forceCustom || false;
-  }
-  const dayOptions = buildDayOptions(minDate, daysToShow, locale, minIsToday);
-  return jsx(SelectDispatcher, {
-    trigger: jsx(SelectTrigger, {}),
-    placeholder: placeholder,
-    value: value,
-    uiAction: key => {
-      if (key !== "custom" && uiAction) {
-        uiAction(key);
-      }
-    },
-    ...rest,
-    children: jsxs(List, {
-      expandX: true,
-      children: [dayOptions.map(({
-        key,
-        label
-      }, index) => jsx(DayOption, {
-        value: key,
-        index: index,
-        id: key,
-        selected: value === key,
-        children: jsx(Text, {
-          capitalize: true,
-          children: label
-        })
-      }, key)), showCustomPicker && jsx(CustomDayOption, {
-        value: value,
-        index: dayOptions.length,
-        minKey: minKey,
-        locale: locale,
-        uiAction: uiAction
-      })]
-    })
-  });
-};
-
 /**
  * Returns a `disableClickFor` function that suppresses the `click` event that
  * the browser fires after a `mousedown` which already handled an open/close action.
@@ -32104,6 +32945,802 @@ const useIgnoreClickForMousedown = () => {
     });
   };
   return disableClickFor;
+};
+
+/**
+ * Parses a step value into seconds.
+ * Accepts:
+ *   - number: returned as-is (already in seconds)
+ *   - "HH:MM" string: converted to seconds (e.g. "00:30" → 1800, "01:00" → 3600)
+ *   - undefined/null: returned as-is
+ */
+const parseStepToSeconds = (step) => {
+  if (typeof step !== "string") {
+    return step;
+  }
+  const colonIndex = step.indexOf(":");
+  if (colonIndex === -1) {
+    return Number(step);
+  }
+  const hours = parseInt(step.slice(0, colonIndex), 10);
+  const minutes = parseInt(step.slice(colonIndex + 1), 10);
+  return (hours * 60 + minutes) * 60;
+};
+
+const isToday = (value) => {
+  if (!value) {
+    return false;
+  }
+  const now = new Date();
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  if (typeof value === "string") {
+    return value === todayStr;
+  }
+  if (typeof value === "number") {
+    const d = new Date(value);
+    const s = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    return s === todayStr;
+  }
+  if (value instanceof Date) {
+    const s = `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`;
+    return s === todayStr;
+  }
+  return false;
+};
+
+/**
+ * Returns the current time as "HH:MM", with an optional minute offset.
+ *
+ * @param {number} [offsetMinutes=0] - Minutes to add (negative = subtract).
+ *   E.g. getNowHours(-5) returns "now minus 5 minutes".
+ *
+ * @example
+ * getNowHours()       // "14:30"
+ * getNowHours(-5)     // "14:25"
+ */
+const getNowHours = (offsetMinutes = 0) => {
+  const now = new Date();
+  const totalMinutes = now.getHours() * 60 + now.getMinutes() + offsetMinutes;
+  const clamped =
+    totalMinutes < 0
+      ? 0
+      : totalMinutes > 23 * 60 + 59
+        ? 23 * 60 + 59
+        : totalMinutes;
+  const h = Math.floor(clamped / 60);
+  const m = clamped % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+};
+
+const HourPicker = ({
+  min = "00:00",
+  max = "23:30",
+  step: stepProp = 1800,
+  selectedDay,
+  minHidden,
+  minReadonly,
+  minReadonlyMessage,
+  noSlotsMessage,
+  value,
+  uiAction,
+  placeholder,
+  ...rest
+}) => {
+  const step = parseStepToSeconds(stepProp);
+  const slots = useMemo(() => {
+    const allSlots = generateTimeSlots(min, max, step);
+    if (!minHidden) {
+      return allSlots;
+    }
+    const [hh, mm] = minHidden.split(":").map(Number);
+    const minHiddenMinutes = hh * 60 + mm;
+    return allSlots.filter(slot => {
+      const [sh, sm] = slot.split(":").map(Number);
+      return sh * 60 + sm >= minHiddenMinutes;
+    });
+  }, [min, max, step, minHidden]);
+  const todayStr = toDateString(new Date());
+  const now = new Date();
+  const nowMinutes = selectedDay === todayStr ? now.getHours() * 60 + now.getMinutes() : -1;
+  const minReadonlyMinutes = useMemo(() => {
+    if (minReadonly) {
+      const [h, m] = minReadonly.split(":").map(Number);
+      return h * 60 + m;
+    }
+    return nowMinutes;
+  }, [minReadonly, nowMinutes]);
+  const isSlotReadonly = slot => {
+    if (minReadonlyMinutes === -1) {
+      return false;
+    }
+    const [h, m] = slot.split(":").map(Number);
+    return h * 60 + m <= minReadonlyMinutes;
+  };
+  const allDisabled = slots.length > 0 && slots.every(isSlotReadonly);
+  if (allDisabled) {
+    return jsx(Box, {
+      as: "span",
+      style: {
+        fontSize: "0.85em",
+        color: "color-mix(in srgb, currentColor 60%, transparent)",
+        fontStyle: "italic"
+      },
+      children: noSlotsMessage ?? naviI18n("picker.hour.no_slots")
+    });
+  }
+  return jsx(Select, {
+    value: value,
+    uiAction: uiAction,
+    placeholder: placeholder,
+    ...rest,
+    children: jsx(List, {
+      role: "listbox",
+      children: slots.map((slot, i) => jsx(ListItem, {
+        index: i,
+        id: slot,
+        value: slot,
+        selected: value === slot,
+        readOnly: isSlotReadonly(slot),
+        "data-readonly-message": minReadonlyMessage ?? naviI18n("picker.hour.readonly_slot"),
+        children: slot
+      }, slot))
+    })
+  });
+};
+const generateTimeSlots = (min, max, stepSeconds) => {
+  const slots = [];
+  const [minH, minM] = min.split(":").map(Number);
+  const [maxH, maxM] = max.split(":").map(Number);
+  const stepMinutes = Math.round(stepSeconds / 60);
+  let current = minH * 60 + minM;
+  const end = maxH * 60 + maxM;
+  while (current <= end) {
+    const h = Math.floor(current / 60);
+    const m = current % 60;
+    slots.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
+    current += stepMinutes;
+  }
+  return slots;
+};
+const toDateString = date => {
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+};
+
+installImportMetaCssBuild(import.meta);const css$i = /* css */`
+  @layer navi {
+    .navi_picker {
+      --picker-border-radius: 2px;
+      --picker-outline-width: 1px;
+      --picker-border-width: 1px;
+      --picker-font-size: 14px;
+      --picker-padding-x-default: 8px;
+      --picker-padding-y-default: 5px;
+      --picker-outline-color: var(--navi-focus-outline-color);
+      --picker-border-color: light-dark(#767676, #8e8e93);
+      --picker-background-color: white;
+      --picker-color: currentColor;
+      --picker-placeholder-color: color-mix(
+        in srgb,
+        currentColor 60%,
+        transparent
+      );
+      --picker-border-color-hover: color-mix(
+        in srgb,
+        var(--picker-border-color) 70%,
+        black
+      );
+      --picker-background-color-hover: color-mix(
+        in srgb,
+        var(--picker-background-color) 95%,
+        black
+      );
+      --picker-right-slot-size: 1.5em;
+    }
+  }
+
+  .navi_picker {
+    --x-picker-outline-width: calc(
+      var(--picker-outline-width) + var(--picker-border-width)
+    );
+    --x-picker-outline-offset: calc(-1 * var(--picker-border-width));
+    --x-picker-background-color: var(--picker-background-color);
+    --x-picker-border-color: var(--picker-border-color);
+    --x-picker-padding-top: var(
+      --picker-padding-top,
+      var(--picker-padding-y, var(--picker-padding-y-default))
+    );
+    --x-picker-padding-right-base: var(
+      --picker-padding-right,
+      var(--picker-padding-x, var(--picker-padding-x-default))
+    );
+    --x-picker-padding-right: calc(
+      var(--x-picker-padding-right-base) + var(--picker-right-slot-size)
+    );
+    --x-picker-padding-left: var(
+      --picker-padding-left,
+      var(--picker-padding-x, var(--picker-padding-x-default))
+    );
+    --x-picker-padding-bottom: var(
+      --picker-padding-bottom,
+      var(--picker-padding-y, var(--picker-padding-y-default))
+    );
+
+    position: relative;
+    display: inline-flex;
+    box-sizing: border-box;
+    min-height: 1em;
+    padding-top: var(--x-picker-padding-top);
+    padding-right: var(--x-picker-padding-right);
+    padding-bottom: var(--x-picker-padding-bottom);
+    padding-left: var(--x-picker-padding-left);
+    flex-direction: column;
+    justify-content: center;
+    color: var(--picker-color);
+    font-size: var(--picker-font-size);
+    text-align: inherit;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    background-color: var(--x-picker-background-color);
+    border-width: var(--picker-border-width);
+    border-style: solid;
+    border-color: var(--x-picker-border-color);
+    border-radius: var(--picker-border-radius);
+    outline-width: var(--x-picker-outline-width);
+    outline-color: var(--picker-outline-color);
+    outline-offset: var(--x-picker-outline-offset);
+    cursor: pointer;
+    user-select: none;
+    overflow: hidden;
+
+    &[data-hover] {
+      --x-picker-background-color: var(--picker-background-color-hover);
+      --x-picker-border-color: var(--picker-border-color-hover);
+    }
+    &[data-focus-visible] {
+      --x-picker-border-color: transparent;
+      outline-style: solid;
+    }
+    &[data-focus-within] {
+      --x-picker-border-color: transparent;
+      outline-style: solid;
+    }
+    &[data-expanded] {
+      --x-picker-border-color: transparent;
+      outline-style: solid;
+    }
+    &[data-disabled] {
+      opacity: 0.5;
+      cursor: default;
+    }
+    &[data-callout] {
+      --x-picker-border-color: var(--callout-color);
+    }
+
+    .navi_picker_placeholder {
+      color: var(--picker-placeholder-color);
+      &[hidden] {
+        display: inline-block !important;
+        height: 0;
+        padding-block: 0;
+        visibility: hidden;
+      }
+    }
+    &[navi-type="color"] {
+      .navi_picker_value {
+        /* In case there is no placeholder */
+        min-width: 1em;
+        min-height: 1em;
+      }
+
+      &[navi-has-placeholder] {
+        .navi_picker_value {
+          min-height: auto;
+        }
+
+        .navi_picker_placeholder {
+          &[hidden] {
+            /* Color display is absolute, keep placeholder in place */
+            height: auto;
+          }
+        }
+      }
+
+      .navi_picker_color_display {
+        position: absolute;
+        top: var(--x-picker-padding-top);
+        right: var(--x-picker-padding-right);
+        bottom: var(--x-picker-padding-bottom);
+        left: var(--x-picker-padding-left);
+        display: block;
+        background-color: var(--picker-color);
+        border: 1px solid rgba(0, 0, 0, 0.2);
+        border-radius: 2px;
+      }
+    }
+
+    .navi_picker_value {
+    }
+    .navi_picker_right_slot {
+      position: absolute;
+      right: 0;
+      width: var(--picker-right-slot-size);
+      flex-shrink: 0;
+      opacity: 0.6;
+    }
+    .navi_picker_input {
+      position: absolute;
+      inset: 0;
+      box-sizing: border-box;
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      background: none;
+      border: none;
+      opacity: 0;
+      cursor: pointer;
+    }
+  }
+`;
+
+/**
+ * Picker — a button-like trigger that opens the browser's native picker
+ * (date, time, month, week, datetime-local, color) via showPicker().
+ *
+ * Props:
+ *   type        — picker type: "day" | "month" | "week" | "time" | "datetime" | "color"
+ *                 Defaults to "day". Maps to the corresponding <input type=…>.
+ *   value       — current value string (same format as the underlying input)
+ *   uiAction    — called with the new value string when the user picks a value
+ *   name        — form field name (on the underlying input for form submission)
+ *   placeholder — shown when no value. If a string it is styled; otherwise rendered as-is.
+ *   disabled    — disables the picker
+ *   min         — min value forwarded to the underlying input
+ *   max         — max value forwarded to the underlying input
+ *   step        — step forwarded to the underlying input
+ *   children    — custom value display. If omitted, the default display for the type is used.
+ *   ...rest     — forwarded to the outer <button> element
+ */
+const Picker = props => {
+  const defaultRef = useRef(null);
+  const ref = props.ref || defaultRef;
+  const fieldId = useFieldId();
+  const id = props.id || fieldId;
+  const uiStateController = useUIStateController(props, "picker");
+  const uiState = useUIState(uiStateController);
+  return jsx(UIStateControllerContext.Provider, {
+    value: uiStateController,
+    children: jsx(UIStateContext.Provider, {
+      value: uiState,
+      children: jsx(PickerDispatcher, {
+        ...props,
+        ref: ref,
+        id: id
+      })
+    })
+  });
+};
+const PickerDispatcher = props => {
+  if (props.type === "hour") {
+    return jsx(HourPicker, {
+      ...props
+    });
+  }
+  return jsx(PickerUI, {
+    ...props
+  });
+};
+const PickerUI = props => {
+  import.meta.css = [css$i, "@jsenv/navi/src/field/picker/picker.jsx"];
+  const {
+    ref,
+    type = "day",
+    name,
+    placeholder,
+    disabled,
+    readOnly,
+    loading,
+    autoFocus,
+    autoFocusPreventScroll,
+    min,
+    max,
+    step: stepProp,
+    children,
+    ...rest
+  } = props;
+  const uiState = useContext(UIStateContext);
+  const uiStateController = useContext(UIStateControllerContext);
+  const contextReadOnly = useContext(ReadOnlyContext);
+  const contextDisabled = useContext(DisabledContext);
+  const contextLoading = useContext(LoadingContext);
+  const contextLoadingElement = useContext(LoadingElementContext);
+  const innerLoading = loading || contextLoading && contextLoadingElement === ref.current;
+  const innerReadOnly = readOnly || contextReadOnly || innerLoading;
+  const innerDisabled = disabled || contextDisabled;
+  reportReadOnlyToField(innerReadOnly);
+  reportDisabledToField(innerDisabled);
+  reportInteractiveToField(true);
+  useAutoFocus(ref, autoFocus, {
+    preventScroll: autoFocusPreventScroll
+  });
+  const step = type === "time" || type === "datetime" ? parseStepToSeconds(stepProp) : stepProp;
+  const pickerInputRef = useRef(null);
+  const remainingProps = useConstraints(pickerInputRef, rest);
+  const {
+    "data-required-message": requiredMessageProp,
+    ...buttonProps
+  } = remainingProps;
+  const inputType = TYPE_TO_INPUT_TYPE[type] || "date";
+  const hasValue = uiState !== undefined && uiState !== "" && uiState !== null;
+  const [expanded, setExpanded] = useState(false);
+  const showColorSwatchAlways = type === "color" && !placeholder && !children;
+  return jsxs(Box, {
+    as: "button",
+    type: "button",
+    ...buttonProps,
+    ref: ref,
+    baseClassName: "navi_picker",
+    "navi-type": type,
+    "navi-has-placeholder": placeholder ? "" : undefined,
+    autoFocus: undefined,
+    basePseudoState: {
+      ...buttonProps.basePseudoState,
+      ":read-only": innerReadOnly,
+      ":disabled": innerDisabled,
+      ":-navi-loading": innerLoading,
+      ":-navi-expanded": expanded
+    },
+    pseudoClasses: PICKER_PSEUDO_CLASSES,
+    onMouseDown: e => {
+      if (e.button !== 0) {
+        return;
+      }
+      if (innerDisabled || innerReadOnly) {
+        return;
+      }
+      e.preventDefault();
+      rest.onMouseDown?.(e);
+    },
+    onClick: e => {
+      if (e.button !== 0) {
+        return;
+      }
+      if (innerDisabled || innerReadOnly) {
+        return;
+      }
+      const inputEl = ref.current?.querySelector(".navi_picker_input");
+      if (inputEl) {
+        try {
+          inputEl.showPicker();
+        } catch {
+          inputEl.click();
+        }
+      }
+      rest.onClick?.(e);
+    },
+    children: [jsx(LoadingOutline, {
+      loading: innerLoading,
+      color: "var(--loader-color)",
+      inset: -1
+    }), jsx("span", {
+      className: "navi_picker_placeholder",
+      hidden: hasValue,
+      children: placeholder
+    }), jsx("span", {
+      className: "navi_picker_value",
+      hidden: !hasValue && !showColorSwatchAlways,
+      children: children ? children : jsx(DefaultValueDisplay, {
+        type: type,
+        value: hasValue ? uiState : "#000000"
+      })
+    }), jsx("span", {
+      className: "navi_picker_right_slot",
+      children: jsx(Icon, {
+        size: "m",
+        children: ICON_FOR_TYPE[type] || jsx(CalendarSvg, {})
+      })
+    }), jsx("input", {
+      ref: pickerInputRef,
+      className: "navi_picker_input",
+      type: inputType,
+      name: name,
+      value: uiState,
+      min: formatInputMin(type, min),
+      max: formatInputMax(type, max),
+      step: step,
+      required: rest.required,
+      tabIndex: -1,
+      disabled: innerDisabled || innerReadOnly,
+      "data-rendered-by": ".navi_picker",
+      "data-required-message": requiredMessageProp ?? naviI18n(`picker.required.${type}`),
+      onChange: e => {
+        const newValue = e.currentTarget.value;
+        uiStateController.setUIState(newValue, e);
+        setExpanded(false);
+      },
+      onFocus: () => {
+        setExpanded(true);
+      },
+      onBlur: () => {
+        setExpanded(false);
+      }
+    })]
+  });
+};
+const PICKER_PSEUDO_CLASSES = [":hover", ":focus", ":focus-visible", ":focus-within", ":read-only", ":disabled", ":-navi-loading", ":-navi-expanded", ":-navi-has-value"];
+const TYPE_TO_INPUT_TYPE = {
+  day: "date",
+  month: "month",
+  week: "week",
+  time: "time",
+  datetime: "datetime-local",
+  color: "color"
+};
+const DefaultValueDisplay = ({
+  type,
+  value
+}) => {
+  if (type === "color") {
+    return jsx("span", {
+      className: "navi_picker_color_display",
+      style: {
+        "--picker-color": value
+      }
+    });
+  }
+  if (timeTypeSet.has(type)) {
+    return jsx(Time, {
+      type: type === "week" ? null : type,
+      capitalize: type === "day" || type === "month",
+      children: value
+    });
+  }
+  return value;
+};
+const timeTypeSet = new Set(["day", "month", "week", "time", "datetime"]);
+const formatInputMin = (type, min) => {
+  if (min === undefined || min === null) {
+    return undefined;
+  }
+  if (min instanceof Date) {
+    return toInputValue(type, min);
+  }
+  return min;
+};
+const formatInputMax = (type, max) => {
+  if (max === undefined || max === null) {
+    return undefined;
+  }
+  if (max instanceof Date) {
+    return toInputValue(type, max);
+  }
+  return max;
+};
+const toInputValue = (type, date) => {
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  const hh = String(date.getHours()).padStart(2, "0");
+  const min = String(date.getMinutes()).padStart(2, "0");
+  if (type === "day") {
+    return `${yyyy}-${mm}-${dd}`;
+  }
+  if (type === "month") {
+    return `${yyyy}-${mm}`;
+  }
+  if (type === "week") {
+    return toWeekString(date);
+  }
+  if (type === "time") {
+    return `${hh}:${min}`;
+  }
+  if (type === "datetime") {
+    return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
+  }
+  return String(date);
+};
+const toWeekString = date => {
+  // ISO week number
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() + 3 - (d.getDay() + 6) % 7);
+  const yearStart = new Date(d.getFullYear(), 0, 4);
+  const week = Math.round(((d - yearStart) / 86400000 - 3 + (yearStart.getDay() + 6) % 7) / 7) + 1;
+  return `${d.getFullYear()}-W${String(week).padStart(2, "0")}`;
+};
+const ICON_FOR_TYPE = {
+  color: jsx(ColorSvg, {}),
+  time: jsx(ClockSvg, {}),
+  datetime: jsx(ClockSvg, {})
+};
+function CalendarSvg() {
+  return jsx("svg", {
+    xmlns: "http://www.w3.org/2000/svg",
+    viewBox: "0 0 24 24",
+    fill: "currentColor",
+    children: jsx("path", {
+      d: "M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"
+    })
+  });
+}
+function ClockSvg() {
+  return jsx("svg", {
+    xmlns: "http://www.w3.org/2000/svg",
+    viewBox: "0 0 24 24",
+    fill: "currentColor",
+    children: jsx("path", {
+      d: "M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"
+    })
+  });
+}
+function ColorSvg() {
+  return jsx("svg", {
+    xmlns: "http://www.w3.org/2000/svg",
+    viewBox: "0 0 24 24",
+    fill: "currentColor",
+    children: jsx("path", {
+      d: "M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8zm-5.5 9c-.83 0-1.5-.67-1.5-1.5S5.67 9 6.5 9 8 9.67 8 10.5 7.33 12 6.5 12zm3-4C8.67 8 8 7.33 8 6.5S8.67 5 9.5 5s1.5.67 1.5 1.5S10.33 8 9.5 8zm5 0c-.83 0-1.5-.67-1.5-1.5S13.67 5 14.5 5s1.5.67 1.5 1.5S15.33 8 14.5 8zm3 4c-.83 0-1.5-.67-1.5-1.5S16.67 9 17.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"
+    })
+  });
+}
+
+const RadioList = props => {
+  const refDefault = useRef(null);
+  const ref = props.ref || refDefault;
+  const uiStateController = useUIGroupStateController(props, "radio_list", {
+    childComponentType: "radio",
+    aggregateChildStates: childUIStateControllers => {
+      let activeValue;
+      for (const childUIStateController of childUIStateControllers) {
+        if (childUIStateController.uiState) {
+          activeValue = childUIStateController.uiState;
+          break;
+        }
+      }
+      return activeValue;
+    }
+  });
+  const uiState = useUIState(uiStateController);
+  return jsx(UIStateControllerContext.Provider, {
+    value: uiStateController,
+    children: jsx(UIStateContext.Provider, {
+      value: uiState,
+      children: jsx(RadioListDispatcher, {
+        ...props,
+        ref: ref
+      })
+    })
+  });
+};
+const Radio = InputRadio;
+const RadioListDispatcher = props => {
+  if (props.action) {
+    return jsx(RadioListWithAction, {
+      ...props
+    });
+  }
+  return jsx(RadioListUI, {
+    ...props
+  });
+};
+const RadioListUI = props => {
+  const contextReadOnly = useContext(ReadOnlyContext);
+  const contextDisabled = useContext(DisabledContext);
+  const contextLoading = useContext(LoadingContext);
+  const uiStateController = useContext(UIStateControllerContext);
+  const {
+    name,
+    loading,
+    disabled,
+    readOnly,
+    children,
+    required,
+    ...rest
+  } = props;
+  const innerLoading = loading || contextLoading;
+  const innerReadOnly = readOnly || contextReadOnly || innerLoading || uiStateController.readOnly;
+  const innerDisabled = disabled || contextDisabled;
+  return jsx(Box, {
+    flex: "y",
+    ...rest,
+    baseClassName: "navi_radio_list",
+    "data-radio-list": "",
+    onresetuistate: e => {
+      uiStateController.resetUIState(e);
+    },
+    children: jsx(ParentUIStateControllerContext.Provider, {
+      value: uiStateController,
+      children: jsx(FieldNameContext.Provider, {
+        value: name,
+        children: jsx(ReadOnlyContext.Provider, {
+          value: innerReadOnly,
+          children: jsx(DisabledContext.Provider, {
+            value: innerDisabled,
+            children: jsx(RequiredContext.Provider, {
+              value: required,
+              children: jsx(LoadingContext.Provider, {
+                value: innerLoading,
+                children: children
+              })
+            })
+          })
+        })
+      })
+    })
+  });
+};
+const RadioListWithAction = props => {
+  const uiStateController = useContext(UIStateControllerContext);
+  const {
+    ref,
+    action,
+    onCancel,
+    onActionPrevented,
+    onActionAbort,
+    onActionError,
+    onActionEnd,
+    actionErrorEffect,
+    loading,
+    children,
+    ...rest
+  } = props;
+  const [boundAction] = useActionBoundToOneParam(action, uiStateController.uiStateSignal);
+  const {
+    loading: actionLoading
+  } = useActionStatus(boundAction);
+  const executeAction = useExecuteAction(ref, {
+    errorEffect: actionErrorEffect
+  });
+  const [actionRequester, setActionRequester] = useState(null);
+  const onRequestAction = useOnRequestAction();
+  return jsx(RadioListUI, {
+    "data-action": boundAction,
+    ...rest,
+    ref: ref
+    // This is the onChange event that bubbled from radios
+    ,
+    onChange: e => {
+      const radio = e.target;
+      const radioListContainer = ref.current;
+      dispatchRequestAction(radioListContainer, {
+        event: e,
+        requester: radio,
+        actionOrigin: "action_prop"
+      });
+    },
+    onnavi_cancel: e => {
+      const {
+        reason
+      } = e.detail;
+      uiStateController.resetUIState(e);
+      onCancel?.(e, reason);
+    },
+    onnavi_request_action: e => {
+      onRequestAction(boundAction, e);
+    },
+    onnavi_action_prevented: onActionPrevented,
+    onnavi_action_ready: e => {
+      setActionRequester(e.detail.requester);
+      executeAction(e);
+    },
+    onnavi_action_abort: e => {
+      uiStateController.resetUIState(e);
+      onActionAbort?.(e);
+    },
+    onnavi_action_error: e => {
+      uiStateController.resetUIState(e);
+      onActionError?.(e);
+    },
+    onnavi_action_end: onActionEnd,
+    loading: loading || actionLoading,
+    children: jsx(LoadingElementContext.Provider, {
+      value: actionRequester,
+      children: children
+    })
+  });
 };
 
 /**
@@ -32400,7 +34037,7 @@ const createSearch = (fields) => {
  *
  * When searchText is empty, natural order is preserved and all items match with score 0.
  *
- * To filter (hide non-matching items), pass hidden={!getItemMatchInfo(item).match}
+ * To filter (hide non-matching items), pass filtered={!getItemMatchInfo(item).match}
  * to each ListItem. The list's matchFallback will be shown when all items are hidden.
  */
 const useSearchText = (searchText, items, matchFn = applySearch) => {
@@ -33398,7 +35035,7 @@ const TableCellColumnResizeHandles = ({
     onColumnSizeChange
   } = useContext(TableSizeContext);
   const canResize = Boolean(onColumnSizeChange);
-  return jsxs(Fragment, {
+  return jsxs(Fragment$1, {
     children: [canResize && columnIndex > 0 && jsx(TableColumnLeftResizeHandle, {
       onRelease: width => onColumnSizeChange(width, columnIndex - 1),
       columnMinWidth: columnMinWidth,
@@ -33720,7 +35357,7 @@ const TableCellRowResizeHandles = ({
     onRowSizeChange
   } = useContext(TableSizeContext);
   const canResize = Boolean(onRowSizeChange);
-  return jsxs(Fragment, {
+  return jsxs(Fragment$1, {
     children: [canResize && rowIndex > 0 && jsx(TableRowTopResizeHandle, {
       onRelease: width => onRowSizeChange(width, rowIndex - 1),
       rowMinHeight: rowMinHeight,
@@ -34657,7 +36294,7 @@ const TableStickyFrontier = ({
   const stickyLeftFrontierPreviewRef = useRef();
   const stickyTopFrontierGhostRef = useRef();
   const stickyTopFrontierPreviewRef = useRef();
-  return jsxs(Fragment, {
+  return jsxs(Fragment$1, {
     children: [jsx(TableStickyLeftFrontier, {
       tableRef: tableRef,
       stickyLeftFrontierGhostRef: stickyLeftFrontierGhostRef,
@@ -36962,128 +38599,8 @@ const Interpolate = ({
   children,
   ...replacements
 }) => {
-  return interpolateText(children, replacements);
-};
-
-/**
- * Interpolates a template string, replacing [key] placeholders with values.
- * Values can be strings or JSX elements. Returns a plain string when all
- * replacements are strings, or a JSX fragment otherwise.
- */
-const interpolateText = (template, replacements) => {
-  const parts = template.split(/(\[[^\]]+\])/);
-  let hasVnode = false;
-  const resolved = [];
-  for (const part of parts) {
-    const match = part.match(/^\[([^\]]+)\]$/);
-    if (!match) {
-      resolved.push(part);
-      continue;
-    }
-    const value = replacements[match[1]] ?? part;
-    if (value !== null && typeof value === "object") {
-      hasVnode = true;
-    }
-    resolved.push(value);
-  }
-  if (!hasVnode) {
-    return resolved.join("");
-  }
-  return jsx(Fragment, {
-    children: resolved
-  });
-};
-
-const navigator = typeof window === "undefined" ? undefined : window.navigator;
-const browserLang =
-  typeof navigator !== "undefined"
-    ? (navigator.language ?? navigator.languages?.[0])
-    : undefined;
-
-const createIntl = ({ systemLang = browserLang } = {}) => {
-  const languageMap = new Map();
-
-  let defaultLang = systemLang;
-
-  const add = (lang, translations) => {
-    // Accumulate: merge with any existing translations for this lang
-    const existing = languageMap.get(lang);
-    if (existing) {
-      translations = { ...existing, ...translations };
-    }
-    // Derived language inherits all keys not explicitly overridden
-    // e.g. "fr-provencal" inherits from "fr"
-    const dashIndex = lang.indexOf("-");
-    if (dashIndex !== -1) {
-      const parentLang = lang.slice(0, dashIndex);
-      const parentTranslations = languageMap.get(parentLang);
-      if (parentTranslations) {
-        translations = { ...parentTranslations, ...translations };
-      }
-    }
-    languageMap.set(lang, translations);
-
-    defaultLang = matchBestLang(systemLang, languageMap);
-  };
-
-  const _getTranslationTemplate = (key, lang) => {
-    if (!lang) {
-      // no lang specified
-      return key;
-    }
-    const translations = languageMap.get(lang);
-    if (!translations) {
-      // code don't know this language
-      return key;
-    }
-    const template = translations[key];
-    if (!template) {
-      // code know this language but have no translation for this key
-      return key;
-    }
-    return template;
-  };
-
-  const format = (key, values, { lang = defaultLang } = {}) => {
-    const template = _getTranslationTemplate(key, lang);
-    return interpolate(template, values);
-  };
-
-  return { languageMap, add, format };
-};
-
-// Walk "fr-CA-variant" → "fr-CA" → "fr" until a registered lang is found
-const matchLang = (lang, languageMap) => {
-  if (languageMap.has(lang)) return lang;
-  const parts = lang.split("-");
-  while (parts.length > 1) {
-    parts.pop();
-    const candidate = parts.join("-");
-    if (languageMap.has(candidate)) return candidate;
-  }
-  return null;
-};
-
-// lang can be a string or an ordered array of preference strings
-const matchBestLang = (lang, languageMap) => {
-  if (!lang) {
-    return null;
-  }
-  const candidates = Array.isArray(lang) ? lang : [lang];
-  for (const candidate of candidates) {
-    const match = matchLang(candidate, languageMap);
-    if (match) {
-      return match;
-    }
-  }
-  return null;
-};
-
-const interpolate = (template, values) => {
-  if (!values || typeof template !== "string") return template;
-  return template.replace(/\{(\w+)\}/g, (_, key) => {
-    const value = values[key];
-    return value !== undefined ? String(value) : `{${key}}`;
+  return interpolateText(children, replacements, {
+    allowJsx: true
   });
 };
 
@@ -37144,40 +38661,6 @@ installImportMetaCssBuild(import.meta);const css$6 = /* css */`
     }
   }
 `;
-const QuantityIntl = createIntl();
-const wellKnownUnitMap = new Map();
-/**
- * Registers a unit with its translations per language, making it a "well-known"
- * unit that Quantity will automatically translate and pluralize.
- *
- * @param {string} unitName - The unit identifier used in the `unit` prop, e.g. `"minute"`.
- * @param {Record<string, string | [string, string]>} langTranslations
- *   A map of language codes to translations. Each value is either:
- *   - A tuple `[singular, plural]` for languages with distinct plural forms.
- *   - A plain string for languages that use the same form for singular and plural (e.g. Japanese).
- *
- * @example
- * Quantity.Intl.addUnit("minute", {
- *   en: ["minute", "minutes"],
- *   fr: ["minute", "minutes"],
- *   ja: "分",
- * });
- */
-QuantityIntl.addUnit = (unitName, langTranslations) => {
-  const singularKey = unitName;
-  const pluralKey = `${unitName}__plural`;
-  wellKnownUnitMap.set(unitName, {
-    singularKey,
-    pluralKey
-  });
-  for (const [lang, translation] of Object.entries(langTranslations)) {
-    const [singular, plural] = Array.isArray(translation) ? translation : [translation, translation];
-    QuantityIntl.add(lang, {
-      [singularKey]: singular,
-      [pluralKey]: plural
-    });
-  }
-};
 const Quantity = ({
   children,
   unit,
@@ -37233,7 +38716,6 @@ const Quantity = ({
     })]
   });
 };
-Quantity.Intl = QuantityIntl;
 const QuantityPropsCSSVars = {
   unitColor: "--unit-color",
   unitSizeRatio: "--unit-size-ratio"
@@ -37249,22 +38731,20 @@ const Unit = ({
     const [singular, plural] = unit;
     unitText = value > 1 ? plural : singular;
   } else {
-    const wellKnownUnit = wellKnownUnitMap.get(unit);
-    if (wellKnownUnit) {
-      const {
-        singularKey,
-        pluralKey
-      } = wellKnownUnit;
+    const singularText = naviI18n(unit, undefined, {
+      lang
+    });
+    if (singularText !== unit) {
+      // unit is known to naviI18n
       if (value > 1) {
-        unitText = QuantityIntl.format(pluralKey, {
-          x: value
-        }, {
+        const pluralKey = `${unit}__plural`;
+        const pluralText = naviI18n(pluralKey, undefined, {
           lang
         });
+        // fallback to singular if no plural key registered
+        unitText = pluralText !== pluralKey ? pluralText : singularText;
       } else {
-        unitText = QuantityIntl.format(singularKey, undefined, {
-          lang
-        });
+        unitText = singularText;
       }
     }
   }
@@ -37442,8 +38922,8 @@ const Meter = ({
   }
   const level = getMeterLevel(clampedValue, min, max, low, high, optimum);
   const fillColorVar = level === "optimum" ? "var(--fill-color-optimum)" : level === "suboptimum" ? "var(--fill-color-suboptimum)" : "var(--fill-color-even-less-good)";
-  reportDisabledToLabel(disabled);
-  reportReadOnlyToLabel(readOnly);
+  reportDisabledToField(disabled);
+  reportReadOnlyToField(readOnly);
 
   // When fill covers less than half the track, the text center sits on the
   // empty track — use the track color for contrast. Otherwise use fill color.
@@ -38234,5 +39714,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, Box, Button, ButtonCopyToClipboard, Caption, CheckSvg, Checkbox, CheckboxList, CloseSvg, Code, Col, Colgroup, ConstructionSvg, Details, Dialog, DialogLayout, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemFooter, ListItemGroup, ListItemHeader, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, MessageBox, Meter, Nav, NaviDebug, Paragraph, Popover, Quantity, QuantityIntl, Radio, RadioList, Route, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectionContext, Separator, SettingsSvg, SidePanel, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, Thead, Title, Tr, UITransition, UserSvg, ViewportLayout, actionIntegratedVia, actionRunEffect, addCustomMessage, anyMatchingRouteSignal, applySearch, arraySignalMembership, compareTwoJsValues, createAction, createAvailableConstraint, createIntl, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, filterTableSelection, forwardActionRequested, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, localStorageSignal, moveArrayItemByIndex, navBack, navForward, navTo, openCallout, rawUrlPart, reload, removeCustomMessage, requestAction, requestListClose, requestListOpen, rerunActions, resource, route, routeAction, setBaseUrl, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutClose, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, useRouteStatus, useRunOnMount, useSearchText, useSelectRequestClose, useSelectableElement, useSelectionController, useSidePanelClose, useSignalSync, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage, windowWidthSignal };
+export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, Box, Button, ButtonCopyToClipboard, Caption, CheckSvg, Checkbox, CheckboxList, CloseSvg, Code, Col, Colgroup, ConstructionSvg, Details, Dialog, DialogLayout, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Field, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemFooter, ListItemGroup, ListItemHeader, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, MessageBox, Meter, Nav, NaviDebug, Paragraph, Picker, Popover, Quantity, Radio, RadioList, Route, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectionContext, Separator, SettingsSvg, SidePanel, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, Thead, Time, Title, Tr, UITransition, UserSvg, ViewportLayout, actionIntegratedVia, actionRunEffect, addCustomMessage, anyMatchingRouteSignal, applySearch, arraySignalMembership, compareTwoJsValues, createAction, createAvailableConstraint, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, filterTableSelection, formatDatetime, formatDay, formatDuration, formatMonth, formatNumber, formatTime, formatTimeAgo, getNowHours, installCustomConstraintValidation, interpolateText, isCellSelected, isColumnSelected, isRowSelected, isToday, langSignal, localStorageSignal, moveArrayItemByIndex, navBack, navForward, navTo, naviI18n, openCallout, rawUrlPart, reload, removeCustomMessage, requestListClose, requestListOpen, rerunActions, resource, route, routeAction, setBaseUrl, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutRequestClose, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, useRouteStatus, useRunOnMount, useSearchText, useSelectRequestClose, useSelectableElement, useSelectionController, useSidePanelClose, useSignalSync, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage, windowWidthSignal };
 //# sourceMappingURL=jsenv_navi.js.map

@@ -110,6 +110,24 @@ const getElementSignature = (element) => {
     if (dataUIName) {
       return `${tagName}[data-ui-name="${dataUIName}"]`;
     }
+    if (tagName === "input") {
+      const type = element.type || "text";
+      const name = element.getAttribute("name");
+      if (type === "radio" || type === "checkbox") {
+        const value = element.getAttribute("value");
+        if (name && value) {
+          return `${type}[name="${name}"][value="${value}"]`;
+        }
+        if (name) {
+          return `${type}[name="${name}"]`;
+        }
+        return `${type}`;
+      }
+      if (name) {
+        return `input[name="${name}"]`;
+      }
+      return `input[type="${type}"]`;
+    }
     if (element === document.body) {
       return "<body>";
     }
@@ -159,6 +177,7 @@ const looksLikeGeneratedId = (id) => {
  *    with `request_` by convention.
  */
 
+
 /**
  * Dispatches an internal event on `el`.
  * Does not bubble — stays within the local subtree.
@@ -207,13 +226,127 @@ const dispatchCustomEvent = (el, customEventName, customEventDetail) => {
 
 const resolveEventDetail = (customEventDetail) => {
   const { event, ...rest } = customEventDetail ?? {};
-  let resolvedEvent;
-  if (event?.detail?.event !== undefined) {
-    resolvedEvent = event.detail.event;
-  } else if (event !== undefined) {
-    resolvedEvent = event;
+  const isWrappedCustomEvent = event?.detail?.event !== undefined;
+  if (!isWrappedCustomEvent) {
+    return { ...rest, event };
   }
-  return { ...rest, event: resolvedEvent };
+  const previousChain = event.detail.eventChain;
+  const eventChain = previousChain ? [...previousChain, event] : [event];
+  return { ...rest, event: event.detail.event, eventChain };
+};
+
+/**
+ * Returns true if the event itself or any event in its chain matches the predicate.
+ *
+ * The full chain checked (oldest to newest) is:
+ *   initiator (event.detail.event) → ...intermediates (event.detail.eventChain)... → event
+ *
+ * Examples:
+ *   eventInvolves(e, (e) => e.type === "mousedown")
+ *   eventInvolves(e, (e) => e.type === "navi_list_select")
+ */
+const eventInvolves = (event, predicate) => {
+  if (predicate(event)) {
+    return true;
+  }
+  if (event.detail?.eventChain) {
+    for (const chainedEvent of event.detail.eventChain) {
+      if (predicate(chainedEvent)) {
+        return true;
+      }
+    }
+  }
+  if (event.detail?.event !== undefined) {
+    if (predicate(event.detail.event)) {
+      return true;
+    }
+  }
+  return false;
+};
+
+/**
+ * Formats an event (and its chain when it's a custom event) for debug logging.
+ * For a plain browser event: `"mousedown" on button#submit`
+ * For a custom event with a chain: `"mousedown" on li#item-1 -> navi_list_request_select -> navi_list_nav`
+ */
+const formatEventSideEffect = (e, sideEffect) => {
+  const parts = [];
+  if (e.detail?.event !== undefined) {
+    const initiator = e.detail.event;
+    parts.push(
+      `"${initiator.type}" on ${getElementSignature(initiator.target)}`,
+    );
+    if (e.detail.eventChain) {
+      for (const chainedEvent of e.detail.eventChain) {
+        parts.push(chainedEvent.type);
+      }
+    }
+    parts.push(e.type);
+  } else {
+    parts.push(`"${e.type}" on ${getElementSignature(e.target)}`);
+  }
+  return `${parts.join(" -> ")} -> ${sideEffect}`;
+};
+
+/**
+ * Creates a stateful debug logger that groups side effects by their native initiator event.
+ *
+ * Usage:
+ *   const log = createEventGroupLogger();
+ *   log(e, "navi_action_requested");  // opens/reuses a group for the initiator event
+ *   log("plain message");             // logs inside the current group (or standalone)
+ *
+ * The group closes automatically after the current JS task completes (setTimeout 0).
+ */
+const createEventGroupLogger = () => {
+  let currentInitiator = null;
+  let closeGroupTimeout = null;
+
+  const scheduleGroupEnd = () => {
+    if (closeGroupTimeout !== null) {
+      clearTimeout(closeGroupTimeout);
+    }
+    closeGroupTimeout = setTimeout(() => {
+      console.groupEnd();
+      currentInitiator = null;
+      closeGroupTimeout = null;
+    }, 0);
+  };
+
+  return (eOrMessage, sideEffect) => {
+    if (!(eOrMessage instanceof Event)) {
+      console.debug(eOrMessage);
+      return;
+    }
+    const e = eOrMessage;
+    const initiator = e.detail?.event ?? e;
+    if (initiator !== currentInitiator) {
+      if (currentInitiator !== null) {
+        clearTimeout(closeGroupTimeout);
+        closeGroupTimeout = null;
+        console.groupEnd();
+      }
+      const label = initiator.target
+        ? `"${initiator.type}" on ${getElementSignature(initiator.target)}`
+        : `"${initiator.type}"`;
+      console.group(label);
+      currentInitiator = initiator;
+    }
+    const line = formatSideEffectLine(e, sideEffect);
+    console.debug(line);
+    scheduleGroupEnd();
+  };
+};
+
+const formatSideEffectLine = (e, sideEffect) => {
+  const parts = [];
+  if (e.detail?.eventChain) {
+    for (const chainedEvent of e.detail.eventChain) {
+      parts.push(chainedEvent.type);
+    }
+  }
+  parts.push(sideEffect);
+  return parts.join(" -> ");
 };
 
 const createIterableWeakSet = () => {
@@ -4049,7 +4182,7 @@ const getVisuallyVisibleInfo = (
 
   // Check for transform scale(0)
   const transformStyle = getStyle(node, "transform");
-  if (transformStyle && transformStyle.includes("scale(0")) {
+  if (transformStyle.scale === 0) {
     return { visible: false, reason: "scaled to zero with transform" };
   }
 
@@ -14014,4 +14147,4 @@ const useResizeStatus = (elementRef, { as = "number" } = {}) => {
   };
 };
 
-export { EASING, activeElementSignal, addActiveElementEffect, addAttributeEffect, allowWheelThrough, appendStyles, canInterceptKeys, captureScrollState, contrastColor, createBackgroundColorTransition, createBackgroundTransition, createBorderRadiusTransition, createBorderTransition, createDragGestureController, createDragToMoveGestureController, createGroupTransitionController, createHeightTransition, createIterableWeakSet, createOpacityTransition, createPubSub, createStyleController, createTimelineTransition, createTransition, createTranslateXTransition, createValueEffect, createWidthTransition, cubicBezier, dispatchCustomEvent, dispatchInternalCustomEvent, dispatchPublicCustomEvent, dragAfterThreshold, elementIsFocusable, elementIsVisibleForFocus, elementIsVisuallyVisible, findAfter, findAncestor, findBefore, findDescendant, findFocusable, getAvailableHeight, getAvailableWidth, getBackground, getBackgroundColor, getBorder, getBorderRadius, getBorderSizes, getContrastRatio, getDefaultStyles, getDragCoordinates, getDropTargetInfo, getElementSignature, getFirstVisuallyVisibleAncestor, getFocusVisibilityInfo, getHeight, getHeightWithoutTransition, getInnerHeight, getInnerWidth, getLuminance, getMarginSizes, getMaxHeight, getMaxWidth, getMinHeight, getMinWidth, getOpacity, getOpacityWithoutTransition, getPaddingSizes, getPositionedParent, getPreferedColorScheme, getScrollBox, getScrollContainer, getScrollContainerSet, getScrollRelativeRect, getSelfAndAncestorScrolls, getStyle, getTranslateX, getTranslateXWithoutTransition, getTranslateY, getVisuallyVisibleInfo, getWidth, getWidthWithoutTransition, hasCSSSizeUnit, initFlexDetailsSet, initFocusGroup, initPositionSticky, isSameColor, isScrollable, measureScrollbar, mergeOneStyle, mergeTwoStyles, normalizeStyle, normalizeStyles, parseStyle, pickPositionRelativeTo, prefersDarkColors, prefersLightColors, preventFocusNav, preventFocusNavViaKeyboard, preventIntermediateScrollbar, resolveCSSColor, resolveCSSSize, resolveColorLuminance, resolveOklchLightness, scrollIntoViewScoped, scrollIntoViewWithStickyAwareness, setAttribute, setAttributes, setStyles, snapToPixel, startDragToReorder, startDragToResizeGesture, stickyAsRelativeCoords, stringifyStyle, trapFocusInside, trapScrollInside, useActiveElement, useAvailableHeight, useAvailableWidth, useMaxHeight, useMaxWidth, useResizeStatus, visibleRectEffect };
+export { EASING, activeElementSignal, addActiveElementEffect, addAttributeEffect, allowWheelThrough, appendStyles, canInterceptKeys, captureScrollState, contrastColor, createBackgroundColorTransition, createBackgroundTransition, createBorderRadiusTransition, createBorderTransition, createDragGestureController, createDragToMoveGestureController, createEventGroupLogger, createGroupTransitionController, createHeightTransition, createIterableWeakSet, createOpacityTransition, createPubSub, createStyleController, createTimelineTransition, createTransition, createTranslateXTransition, createValueEffect, createWidthTransition, cubicBezier, dispatchCustomEvent, dispatchInternalCustomEvent, dispatchPublicCustomEvent, dragAfterThreshold, elementIsFocusable, elementIsVisibleForFocus, elementIsVisuallyVisible, eventInvolves, findAfter, findAncestor, findBefore, findDescendant, findFocusable, formatEventSideEffect, getAvailableHeight, getAvailableWidth, getBackground, getBackgroundColor, getBorder, getBorderRadius, getBorderSizes, getContrastRatio, getDefaultStyles, getDragCoordinates, getDropTargetInfo, getElementSignature, getFirstVisuallyVisibleAncestor, getFocusVisibilityInfo, getHeight, getHeightWithoutTransition, getInnerHeight, getInnerWidth, getLuminance, getMarginSizes, getMaxHeight, getMaxWidth, getMinHeight, getMinWidth, getOpacity, getOpacityWithoutTransition, getPaddingSizes, getPositionedParent, getPreferedColorScheme, getScrollBox, getScrollContainer, getScrollContainerSet, getScrollRelativeRect, getSelfAndAncestorScrolls, getStyle, getTranslateX, getTranslateXWithoutTransition, getTranslateY, getVisuallyVisibleInfo, getWidth, getWidthWithoutTransition, hasCSSSizeUnit, initFlexDetailsSet, initFocusGroup, initPositionSticky, isSameColor, isScrollable, measureScrollbar, mergeOneStyle, mergeTwoStyles, normalizeStyle, normalizeStyles, parseStyle, pickPositionRelativeTo, prefersDarkColors, prefersLightColors, preventFocusNav, preventFocusNavViaKeyboard, preventIntermediateScrollbar, resolveCSSColor, resolveCSSSize, resolveColorLuminance, resolveOklchLightness, scrollIntoViewScoped, scrollIntoViewWithStickyAwareness, setAttribute, setAttributes, setStyles, snapToPixel, startDragToReorder, startDragToResizeGesture, stickyAsRelativeCoords, stringifyStyle, trapFocusInside, trapScrollInside, useActiveElement, useAvailableHeight, useAvailableWidth, useMaxHeight, useMaxWidth, useResizeStatus, visibleRectEffect };
