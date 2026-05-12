@@ -796,6 +796,11 @@ export const createAction = (callback, rootOptions = {}) => {
       return matches;
     };
 
+    const actionNameSignal = signal(name);
+    const actionCallSourceSignal = signal(
+      generateActionCallSource(name, params),
+    );
+
     if (ACTION_AS_FUNCTION) {
       // Create the action as a function that can be called directly
       action = function actionFunction(...args) {
@@ -807,17 +812,34 @@ export const createAction = (callback, rootOptions = {}) => {
       };
       Object.defineProperty(action, "name", {
         configurable: true,
-        writable: true,
-        value: name,
+        get() {
+          return actionNameSignal.value;
+        },
       });
-      // Register the action function itself so that createAction(action) returns
-      // the same action instead of creating a new one
+      Object.defineProperty(action, "callSource", {
+        configurable: true,
+        get() {
+          return actionCallSourceSignal.value;
+        },
+        set(v) {
+          actionCallSourceSignal.value = v;
+        },
+      });
       actionWeakMap.set(action, action);
     } else {
-      action = { name };
+      action = {
+        get name() {
+          return actionNameSignal.value;
+        },
+        get callSource() {
+          return actionCallSourceSignal.value;
+        },
+        set callSource(v) {
+          actionCallSourceSignal.value = v;
+        },
+      };
     }
 
-    const callSource = generateActionCallSource(name, params);
     // Assign all the action properties and methods to the function
     Object.assign(action, {
       isAction: true,
@@ -863,7 +885,6 @@ export const createAction = (callback, rootOptions = {}) => {
         paramsSignal.value = nextParams;
         return true;
       },
-      callSource,
       toString: () => action.callSource,
       meta,
       debug: (...args) => {
@@ -1157,6 +1178,9 @@ export const createAction = (callback, rootOptions = {}) => {
         performReset,
         ui,
 
+        nameSignal: actionNameSignal,
+        callSourceSignal: actionCallSourceSignal,
+
         childActionWeakSet,
         childActionWeakMap,
       };
@@ -1316,11 +1340,20 @@ const createActionProxyFromSignal = (
         return nameSignal.value;
       },
     });
+    Object.defineProperty(actionProxy, "callSource", {
+      configurable: true,
+      get() {
+        return callSourceSignal.value;
+      },
+    });
     actionWeakMap.set(actionProxy, actionProxy);
   } else {
     actionProxy = {
       get name() {
         return nameSignal.value;
+      },
+      get callSource() {
+        return callSourceSignal.value;
       },
     };
   }
@@ -1378,7 +1411,6 @@ const createActionProxyFromSignal = (
       );
     },
     replaceParams: null, // Will be set below
-    callSource: `[Proxy] ${action.callSource}`,
     toString: () => actionProxy.callSource,
     meta: {},
 
@@ -1410,7 +1442,6 @@ const createActionProxyFromSignal = (
     const currentAction = actionTarget || action;
     nameSignal.value = `[Proxy] ${currentAction.name}`;
     callSourceSignal.value = `[Proxy] ${currentAction.callSource}`;
-    actionProxy.callSource = `[Proxy] ${currentAction.callSource}`;
     actionProxy.callback = currentAction.callback;
     actionProxy.params = currentAction.params;
     actionProxy.isPrerun = currentAction.isPrerun;

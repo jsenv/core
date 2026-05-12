@@ -196,7 +196,7 @@ const FormWithAction = (props) => {
 
   return (
     <FormUI
-      data-action={actionBoundToUIState.name}
+      data-action={actionBoundToUIState.callSource}
       data-method={action.meta?.httpVerb || method || "GET"}
       {...rest}
       ref={ref}
