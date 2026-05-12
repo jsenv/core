@@ -45,6 +45,7 @@ import {
   reportDisabledToField,
   reportInteractiveToField,
   reportReadOnlyToField,
+  useFieldId,
 } from "../field.jsx";
 import { fieldPropSet } from "../field_prop_set.js";
 import {
@@ -278,13 +279,16 @@ const css = /* css */ `
 export const InputTextual = (props) => {
   const defaultRef = useRef(null);
   const ref = props.ref || defaultRef;
+  const defaultId = useId(); // we need an id for the slots so we always generate one
+  const fieldId = useFieldId();
+  const id = props.id || fieldId || defaultId;
   const uiStateController = useUIStateController(props, "input");
   const uiState = useUIState(uiStateController);
 
   return (
     <UIStateControllerContext.Provider value={uiStateController}>
       <UIStateContext.Provider value={uiState}>
-        <InputTextualDispatcher {...props} ref={ref} />
+        <InputTextualDispatcher {...props} ref={ref} id={id} />
       </UIStateContext.Provider>
     </UIStateControllerContext.Provider>
   );
@@ -362,14 +366,11 @@ const InputTextualUI = (props) => {
 
   const onInputStable = useStableCallback(onInput);
   const onKeyDownStable = useStableCallback(onKeyDown);
-  const autoId = useId();
-  const innerId = rest.id || autoId;
   const renderInput = (inputProps) => {
     return (
       <Box
         {...inputProps}
         as="input"
-        id={innerId}
         ref={ref}
         type={type}
         data-value={uiState}
@@ -408,7 +409,6 @@ const InputTextualUI = (props) => {
     type,
     uiState,
     innerValue,
-    innerId,
     autoFocus,
   ]);
 
@@ -490,7 +490,7 @@ const InputTextualUI = (props) => {
       {innerChildren ? (
         <InputNativeContext.Provider
           value={{
-            id: innerId,
+            id: props.id,
             readOnly: innerReadOnly,
             disabled: innerDisabled,
           }}

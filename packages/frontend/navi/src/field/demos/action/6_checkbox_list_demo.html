@@ -235,9 +235,11 @@
                       uiAction={(colors) => {
                         setUiSelectedColors(colors);
                       }}
+                      flex="y"
+                      spacing="s"
                     >
                       {colorChoices.map(({ id, color }) => (
-                        <Field key={id} vertical>
+                        <Field key={id}>
                           <Label>
                             {color.charAt(0).toUpperCase() + color.slice(1)}
                           </Label>

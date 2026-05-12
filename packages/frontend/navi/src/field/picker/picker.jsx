@@ -224,13 +224,15 @@ const css = /* css */ `
 export const Picker = (props) => {
   const defaultRef = useRef(null);
   const ref = props.ref || defaultRef;
+  const fieldId = useFieldId();
+  const id = props.id || fieldId;
   const uiStateController = useUIStateController(props, "picker");
   const uiState = useUIState(uiStateController);
 
   return (
     <UIStateControllerContext.Provider value={uiStateController}>
       <UIStateContext.Provider value={uiState}>
-        <PickerUI {...props} ref={ref} />
+        <PickerUI {...props} ref={ref} id={id} />
       </UIStateContext.Provider>
     </UIStateControllerContext.Provider>
   );
@@ -240,7 +242,6 @@ const PickerUI = (props) => {
   import.meta.css = css;
   const {
     ref,
-    id,
     type = "day",
     name,
     placeholder,
@@ -261,9 +262,6 @@ const PickerUI = (props) => {
   const contextDisabled = useContext(DisabledContext);
   const contextLoading = useContext(LoadingContext);
   const contextLoadingElement = useContext(LoadingElementContext);
-
-  const fieldId = useFieldId();
-  const innerId = id || fieldId;
 
   const innerLoading =
     loading || (contextLoading && contextLoadingElement === ref.current);
@@ -292,7 +290,6 @@ const PickerUI = (props) => {
       type="button"
       {...buttonProps}
       ref={ref}
-      id={innerId}
       baseClassName="navi_picker"
       navi-type={type}
       navi-has-placeholder={placeholder ? "" : undefined}
