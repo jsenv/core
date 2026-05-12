@@ -344,11 +344,23 @@ export const openCallout = (
       openingEvent &&
       eventInvolves(openingEvent, (e) => e.type === "mousedown")
     ) {
+      if (debug) {
+        debug(
+          openingEvent,
+          "deferring click-outside listener registration to avoid immediate close",
+        );
+      }
       // The callout was opened during a mousedown — wait for the corresponding
       // mouseup before registering the click-outside listener, otherwise the
       // upcoming click event from the same gesture would immediately close it.
       const onMouseUp = () => {
-        registerClickOutsideListener();
+        setTimeout(() => {
+          debug(
+            openingEvent,
+            "registering click-outside listener after mouseup",
+          );
+          registerClickOutsideListener();
+        });
       };
       document.addEventListener("mouseup", onMouseUp, {
         once: true,
