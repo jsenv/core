@@ -4,6 +4,7 @@ import { Box } from "@jsenv/navi/src/box/box.jsx";
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { List, ListItem } from "../list/list.jsx";
 import { Select } from "../select/select.jsx";
+import { parseStepToSeconds } from "./time_helpers.js";
 
 /**
  * HourPicker — a Select-based time slot picker.
@@ -24,7 +25,7 @@ import { Select } from "../select/select.jsx";
 export const HourPicker = ({
   min = "00:00",
   max = "23:30",
-  step = 1800,
+  step: stepProp = 1800,
   selectedDay,
   minReadonly,
   minReadonlyMessage,
@@ -34,6 +35,7 @@ export const HourPicker = ({
   placeholder,
   ...rest
 }) => {
+  const step = parseStepToSeconds(stepProp);
   const slots = useMemo(
     () => generateTimeSlots(min, max, step),
     [min, max, step],

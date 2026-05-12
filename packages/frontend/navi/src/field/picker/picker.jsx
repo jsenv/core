@@ -24,6 +24,7 @@ import {
 } from "../use_ui_state_controller.js";
 import { useConstraints } from "../validation/hooks/use_constraints.js";
 import { HourPicker } from "./picker_hour.jsx";
+import { parseStepToSeconds } from "./time_helpers.js";
 
 const css = /* css */ `
   @layer navi {
@@ -258,7 +259,7 @@ const PickerUI = (props) => {
     autoFocusPreventScroll,
     min,
     max,
-    step,
+    step: stepProp,
     children,
     ...rest
   } = props;
@@ -278,6 +279,10 @@ const PickerUI = (props) => {
   reportDisabledToField(innerDisabled);
   reportInteractiveToField(true);
   useAutoFocus(ref, autoFocus, { preventScroll: autoFocusPreventScroll });
+  const step =
+    type === "time" || type === "datetime"
+      ? parseStepToSeconds(stepProp)
+      : stepProp;
 
   const pickerInputRef = useRef(null);
   const remainingProps = useConstraints(pickerInputRef, rest);

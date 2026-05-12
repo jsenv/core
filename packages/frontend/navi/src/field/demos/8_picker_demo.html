@@ -61,6 +61,9 @@
         Icon,
         Form,
         Button,
+        isToday,
+        getNowHours,
+        minHour,
       } from "@jsenv/navi";
 
       // ── helpers ─────────────────────────────────────────────────
@@ -205,7 +208,7 @@
                 }}
                 min="08:00"
                 max="20:00"
-                step={900}
+                step="00:15"
                 placeholder="Choisir une heure"
               />
             </Field>
@@ -224,7 +227,7 @@
                 }}
                 min="07:00"
                 max="21:00"
-                step={1800}
+                step="00:30"
                 placeholder="Choisir une heure"
               />
             </Field>
@@ -448,10 +451,12 @@
                   type="hour"
                   name="hour"
                   required
-                  min="07:00"
+                  min={minHour([
+                    "07:00",
+                    isToday(daySignal.value) ? getNowHours(-5) : undefined,
+                  ])}
                   max="21:00"
-                  step={1800}
-                  selectedDay={daySignal.value}
+                  step="00:30"
                   value={hourSignal.value}
                   uiAction={(v) => {
                     hourSignal.value = v;
