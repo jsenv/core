@@ -62,7 +62,7 @@ import {
 
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
 import { openCallout } from "./callout/callout.js";
-import { getMessageFromAttribute } from "./constraint_message_attribute.js";
+import { getConstraintMessage } from "./constraint_message.js";
 import {
   MIN_DIGIT_CONSTRAINT,
   MIN_LOWER_LETTER_CONSTRAINT,
@@ -435,15 +435,16 @@ export const installCustomConstraintValidation = (
       constraintValidityInfo.messageString = constraintValidityInfo.message;
 
       if (constraint.messageAttribute) {
-        const messageFromAttribute = getMessageFromAttribute(
+        const message = getConstraintMessage(
           element,
           constraint.messageAttribute,
+          constraint.name,
           constraintValidityInfo.message,
         );
-        if (messageFromAttribute !== constraintValidityInfo.message) {
-          constraintValidityInfo.message = messageFromAttribute;
-          if (typeof messageFromAttribute === "string") {
-            constraintValidityInfo.messageString = messageFromAttribute;
+        if (message !== constraintValidityInfo.message) {
+          constraintValidityInfo.message = message;
+          if (typeof message === "string") {
+            constraintValidityInfo.messageString = message;
           }
         }
       }

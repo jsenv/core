@@ -37,6 +37,7 @@ import {
   useUIState,
   useUIStateController,
 } from "../use_ui_state_controller.js";
+import { useOnNaviConstraintMessage } from "../validation/constraint_message.js";
 import { dispatchRequestAction } from "../validation/custom_constraint_validation.js";
 import { useConstraints } from "../validation/hooks/use_constraints.js";
 import { useSearchHighlight } from "./search_highlight.js";
@@ -1762,7 +1763,7 @@ const ListItemReal = ({
   selected,
   disabled,
   readOnly,
-  readonlyMessage,
+  readOnlyMessage,
   item,
   pointed,
   children,
@@ -1770,6 +1771,9 @@ const ListItemReal = ({
 }) => {
   const defaultRef = useRef(null);
   const ref = rest.ref || defaultRef;
+  const onNaviConstraintMessage = useOnNaviConstraintMessage({
+    readOnlyMessage,
+  });
   const isInteractive = useContext(ListInteractiveContext);
   const mousePointedId = useContext(ListMousePointedIdContext);
   const keyboardPointedId = useContext(ListKeyboardPointedIdContext);
@@ -1868,7 +1872,7 @@ const ListItemReal = ({
           event: e.detail.event || e,
         });
       }}
-      data-readonly-message={readonlyMessage}
+      onnavi_constraint_message={onNaviConstraintMessage}
       basePseudoState={{
         ":disabled": Boolean(disabled),
         ":read-only": Boolean(readOnly),
