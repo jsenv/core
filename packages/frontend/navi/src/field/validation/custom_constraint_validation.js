@@ -181,6 +181,7 @@ export const onRequestAction = (
   let isValid = false;
   let elementForConfirmation = elementToValidate;
   let elementForDispatch = elementToValidate;
+  let failedValidationInterface;
 
   if (formToValidate) {
     // Form validation case
@@ -206,32 +207,27 @@ export const onRequestAction = (
       }
 
       const elementIsValid = elementValidationInterface.checkValidity({
+        event,
         fromRequestAction: true,
         skipReadonly:
           formElement.tagName === "BUTTON" && formElement !== requester,
       });
       if (!elementIsValid) {
-        debugAction(
-          event,
-          `open callout (${getFailedConstraintName(elementValidationInterface)})`,
-        );
-        elementValidationInterface.reportValidity({ event, debugAction });
+        failedValidationInterface = elementValidationInterface;
         isValid = false;
         break;
       }
     }
-
     elementForConfirmation = formToValidate;
     elementForDispatch = target;
   } else {
     // Single element validation case
-    isValid = validationInterface.checkValidity({ fromRequestAction: true });
+    isValid = validationInterface.checkValidity({
+      event,
+      fromRequestAction: true,
+    });
     if (!isValid) {
-      debugAction(
-        event,
-        `open callout (${getFailedConstraintName(validationInterface)})`,
-      );
-      validationInterface.reportValidity({ event, debugAction });
+      failedValidationInterface = validationInterface;
     }
     elementForConfirmation = target;
     elementForDispatch = target;
@@ -239,12 +235,16 @@ export const onRequestAction = (
 
   // If validation failed, dispatch actionprevented and return
   if (!isValid) {
-    debugAction(event, `validation failed -> dispatch navi_action_prevented`);
+    debugAction(
+      event,
+      `validation failed for "${getFailedConstraintName(failedValidationInterface)}" -> dispatch navi_action_prevented`,
+    );
     dispatchCustomEvent(
       elementForDispatch,
       "navi_action_prevented",
       customEventDetail,
     );
+    validationInterface.reportValidity({ event, debugAction });
     return false;
   }
 
@@ -278,7 +278,11 @@ export const onRequestAction = (
   return true;
 };
 
-export const closeValidationMessage = (element, reason) => {
+export const closeValidationMessage = (
+  element,
+  event = new CustomEvent("programmatic_call"),
+  reason,
+) => {
   const validationInterface = element.__validationInterface__;
   if (!validationInterface) {
     return false;
@@ -287,15 +291,15 @@ export const closeValidationMessage = (element, reason) => {
   if (!validationMessage) {
     return false;
   }
-  return validationMessage.close(reason);
+  return validationMessage.requestClose(event, reason);
 };
 
-export const checkValidity = (element) => {
+export const checkValidity = (element, options) => {
   const validationInterface = element.__validationInterface__;
   if (!validationInterface) {
     return false;
   }
-  return validationInterface.checkValidity();
+  return validationInterface.checkValidity(options);
 };
 
 const formInstrumentedWeakSet = new WeakSet();
@@ -343,7 +347,7 @@ export const installCustomConstraintValidation = (
   };
   const closeElementValidationMessage = (reason) => {
     if (validationInterface.validationMessage) {
-      validationInterface.validationMessage.close(reason);
+      validationInterface.validationMessage.requestClose(reason);
       return true;
     }
     return false;
@@ -392,7 +396,7 @@ export const installCustomConstraintValidation = (
   };
   addTeardown(resetValidity);
 
-  const checkValidity = ({ fromRequestAction, skipReadonly } = {}) => {
+  const checkValidity = ({ event, fromRequestAction, skipReadonly } = {}) => {
     let newConstraintValidityState = { valid: true };
 
     resetValidity({ fromRequestAction });
@@ -400,8 +404,8 @@ export const installCustomConstraintValidation = (
       const fieldForConstraint = element;
       const constraintCleanupSet = new Set();
       const registerChange = (register) => {
-        const registerResult = register(() => {
-          checkValidity();
+        const registerResult = register((options) => {
+          checkValidity(options);
         });
         if (typeof registerResult === "function") {
           constraintCleanupSet.add(registerResult);
@@ -484,7 +488,10 @@ export const installCustomConstraintValidation = (
       if (!hasTitleAttribute) {
         element.removeAttribute("title");
       }
-      closeElementValidationMessage("becomes_valid");
+      closeElementValidationMessage(
+        event || new CustomEvent("checkValidity called with no event"),
+        "becomes_valid",
+      );
     }
 
     if (
@@ -497,11 +504,11 @@ export const installCustomConstraintValidation = (
   };
   const reportValidity = ({ skipFocus, event, debugAction } = {}) => {
     if (!failedConstraintInfo) {
-      closeElementValidationMessage("becomes_valid");
+      closeElementValidationMessage(event, "becomes_valid");
       return;
     }
     if (failedConstraintInfo.silent) {
-      closeElementValidationMessage("invalid_silent");
+      closeElementValidationMessage(event, "invalid_silent");
       return;
     }
     if (validationInterface.validationMessage) {
@@ -516,7 +523,7 @@ export const installCustomConstraintValidation = (
       element.focus();
     }
     const removeCloseOnCleanup = addTeardown(() => {
-      closeElementValidationMessage("cleanup");
+      closeElementValidationMessage(new CustomEvent("cleanup"), "cleanup");
     });
 
     const anchorElement = (() => {
@@ -603,8 +610,8 @@ export const installCustomConstraintValidation = (
 
   const resetOnInteraction = (e) => {
     customMessageMap.clear();
-    closeElementValidationMessage(e.type);
-    checkValidity();
+    closeElementValidationMessage(e, e.type);
+    checkValidity({ event: e });
   };
 
   close_and_check_on_input: {
@@ -675,8 +682,8 @@ export const installCustomConstraintValidation = (
   check_on_navi_action_end: {
     // this ensure we re-check validity (and remove message no longer relevant)
     // once the action ends (used to remove the NOT_BUSY_CONSTRAINT message)
-    const onNaviActionEnd = () => {
-      checkValidity();
+    const onNaviActionEnd = (e) => {
+      checkValidity({ event: e });
     };
     element.addEventListener("navi_action_end", onNaviActionEnd);
     addTeardown(() => {
@@ -924,7 +931,7 @@ export const installCustomConstraintValidation = (
   close_on_escape: {
     const onkeydown = (e) => {
       if (e.key === "Escape") {
-        if (closeElementValidationMessage("escape_key")) {
+        if (closeElementValidationMessage(e, "escape_key")) {
           // closing the callout should prevent anything else from hapenning
           e.stopPropagation();
           e.preventDefault();

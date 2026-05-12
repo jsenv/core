@@ -294,12 +294,12 @@ const css = /* css */ `
       --x-list-item-background-color: var(
         --list-item-background-color-disabled
       );
-      cursor: not-allowed;
+      cursor: default;
       pointer-events: none;
     }
     &[data-readonly] {
       --x-list-item-color: var(--list-item-color-disabled);
-      cursor: not-allowed;
+      cursor: default;
     }
   }
 
