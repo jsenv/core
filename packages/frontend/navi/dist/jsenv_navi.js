@@ -31424,31 +31424,57 @@ const formatTime = (date, locale) => {
 /**
  * Formats a date relative to now: "il y a 3 jours", "dans 2 heures", etc.
  */
-const formatTimeAgo = (date, locale, { now = new Date() } = {}) => {
+const formatTimeAgo = (
+  date,
+  locale,
+  { now = new Date(), prefix } = {},
+) => {
   const rtf = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
   const nowMs = now instanceof Date ? now.getTime() : now;
   const diff = date.getTime() - nowMs;
   const absDiff = Math.abs(diff);
 
+  let value;
+  let unit;
   if (absDiff < MINUTE) {
-    return rtf.format(Math.round(diff / 1000), "second");
+    value = Math.round(diff / 1000);
+    unit = "second";
+  } else if (absDiff < HOUR) {
+    value = Math.round(diff / MINUTE);
+    unit = "minute";
+  } else if (absDiff < DAY) {
+    value = Math.round(diff / HOUR);
+    unit = "hour";
+  } else if (absDiff < 7 * DAY) {
+    value = Math.round(diff / DAY);
+    unit = "day";
+  } else if (absDiff < 30 * DAY) {
+    value = Math.round(diff / (7 * DAY));
+    unit = "week";
+  } else if (absDiff < YEAR) {
+    value = Math.round(diff / (30 * DAY));
+    unit = "month";
+  } else {
+    value = Math.round(diff / YEAR);
+    unit = "year";
   }
-  if (absDiff < HOUR) {
-    return rtf.format(Math.round(diff / MINUTE), "minute");
+
+  if (prefix === undefined || prefix === null || value >= 0) {
+    return rtf.format(value, unit);
   }
-  if (absDiff < DAY) {
-    return rtf.format(Math.round(diff / HOUR), "hour");
+  // Drop the leading past-tense literal ("il y a ", "ago ") and prepend the custom prefix.
+  // Slicing from the "integer" part keeps: integer + unit, drops the prefix.
+  const parts = rtf.formatToParts(value, unit);
+  const integerIndex = parts.findIndex((p) => p.type === "integer");
+  const withoutPrefix = parts
+    .slice(integerIndex)
+    .map((p) => p.value)
+    .join("")
+    .trim();
+  if (prefix === "") {
+    return withoutPrefix;
   }
-  if (absDiff < 7 * DAY) {
-    return rtf.format(Math.round(diff / DAY), "day");
-  }
-  if (absDiff < 30 * DAY) {
-    return rtf.format(Math.round(diff / (7 * DAY)), "week");
-  }
-  if (absDiff < YEAR) {
-    return rtf.format(Math.round(diff / (30 * DAY)), "month");
-  }
-  return rtf.format(Math.round(diff / YEAR), "year");
+  return `${prefix} ${withoutPrefix}`;
 };
 
 /**
@@ -31472,11 +31498,11 @@ const formatTimeAgo = (date, locale, { now = new Date() } = {}) => {
  * // ended 2 hours ago
  * formatDuration(Date.now() - 3 * 3_600_000, 3_600_000, "fr") // "il y a 2 heures"
  */
-const formatDuration = (
+const formatTimeRelative = (
   start,
   durationMs = 0,
   locale,
-  { now = new Date() } = {},
+  { now = new Date(), prefix } = {},
 ) => {
   const startMs = start instanceof Date ? start.getTime() : Number(start);
   const endMs = startMs + durationMs;
@@ -31487,7 +31513,7 @@ const formatDuration = (
   }
   if (nowMs >= endMs) {
     const refDate = endMs > startMs ? new Date(endMs) : new Date(startMs);
-    return formatTimeAgo(refDate, locale, { now });
+    return formatTimeAgo(refDate, locale, { now, prefix });
   }
 
   const diff = startMs - nowMs;
@@ -31612,7 +31638,8 @@ const toLocalDayKey = (date) => {
 const Time = ({
   children,
   type = "day",
-  duration = 0,
+  eventDuration = 0,
+  prefix,
   locale,
   ...props
 }) => {
@@ -31620,11 +31647,15 @@ const Time = ({
   const lang = locale || langSignal.value;
   let text;
   let dateTimeAttr;
-  if (type === "duration") {
-    text = date ? formatDuration(date, duration, lang) : children === undefined ? "–" : String(children);
+  if (type === "relative") {
+    text = date ? formatTimeRelative(date, eventDuration, lang, {
+      prefix
+    }) : children === undefined ? "–" : String(children);
     dateTimeAttr = date ? date.toISOString() : undefined;
   } else {
-    text = date ? formatDate(date, type, lang) : children === undefined ? "–" : String(children);
+    text = date ? formatDate(date, type, lang, {
+      prefix
+    }) : children === undefined ? "–" : String(children);
     dateTimeAttr = date ? toDateTimeAttr(date, type) : undefined;
   }
   return jsx(Text, {
@@ -31677,7 +31708,7 @@ const toDateTimeAttr = (date, type) => {
     const mm = String(date.getMonth() + 1).padStart(2, "0");
     return `${yyyy}-${mm}`;
   }
-  if (type === "datetime" || type === "relative") {
+  if (type === "datetime" || type === "ago" || type === "relative") {
     return date.toISOString();
   }
   // day
@@ -31686,7 +31717,9 @@ const toDateTimeAttr = (date, type) => {
   const dd = String(date.getDate()).padStart(2, "0");
   return `${yyyy}-${mm}-${dd}`;
 };
-const formatDate = (date, type, locale) => {
+const formatDate = (date, type, locale, {
+  prefix
+} = {}) => {
   if (type === "day") {
     return formatDay(date, locale);
   }
@@ -31699,8 +31732,10 @@ const formatDate = (date, type, locale) => {
   if (type === "time") {
     return formatTime(date, locale);
   }
-  if (type === "relative") {
-    return formatTimeAgo(date, locale);
+  if (type === "ago") {
+    return formatTimeAgo(date, locale, {
+      prefix
+    });
   }
   return String(date);
 };
@@ -39714,5 +39749,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, Box, Button, ButtonCopyToClipboard, Caption, CheckSvg, Checkbox, CheckboxList, CloseSvg, Code, Col, Colgroup, ConstructionSvg, Details, Dialog, DialogLayout, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Field, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemFooter, ListItemGroup, ListItemHeader, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, MessageBox, Meter, Nav, NaviDebug, Paragraph, Picker, Popover, Quantity, Radio, RadioList, Route, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectionContext, Separator, SettingsSvg, SidePanel, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, Thead, Time, Title, Tr, UITransition, UserSvg, ViewportLayout, actionIntegratedVia, actionRunEffect, addCustomMessage, anyMatchingRouteSignal, applySearch, arraySignalMembership, compareTwoJsValues, createAction, createAvailableConstraint, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, filterTableSelection, formatDatetime, formatDay, formatDuration, formatMonth, formatNumber, formatTime, formatTimeAgo, getNowHours, installCustomConstraintValidation, interpolateText, isCellSelected, isColumnSelected, isRowSelected, isToday, langSignal, localStorageSignal, moveArrayItemByIndex, navBack, navForward, navTo, naviI18n, openCallout, rawUrlPart, reload, removeCustomMessage, requestListClose, requestListOpen, rerunActions, resource, route, routeAction, setBaseUrl, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutRequestClose, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, useRouteStatus, useRunOnMount, useSearchText, useSelectRequestClose, useSelectableElement, useSelectionController, useSidePanelClose, useSignalSync, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage, windowWidthSignal };
+export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, Box, Button, ButtonCopyToClipboard, Caption, CheckSvg, Checkbox, CheckboxList, CloseSvg, Code, Col, Colgroup, ConstructionSvg, Details, Dialog, DialogLayout, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Field, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemFooter, ListItemGroup, ListItemHeader, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, MessageBox, Meter, Nav, NaviDebug, Paragraph, Picker, Popover, Quantity, Radio, RadioList, Route, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectionContext, Separator, SettingsSvg, SidePanel, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, Thead, Time, Title, Tr, UITransition, UserSvg, ViewportLayout, actionIntegratedVia, actionRunEffect, addCustomMessage, anyMatchingRouteSignal, applySearch, arraySignalMembership, compareTwoJsValues, createAction, createAvailableConstraint, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, filterTableSelection, formatDatetime, formatDay, formatMonth, formatNumber, formatTime, formatTimeAgo, formatTimeRelative, getNowHours, installCustomConstraintValidation, interpolateText, isCellSelected, isColumnSelected, isRowSelected, isToday, langSignal, localStorageSignal, moveArrayItemByIndex, navBack, navForward, navTo, naviI18n, openCallout, rawUrlPart, reload, removeCustomMessage, requestListClose, requestListOpen, rerunActions, resource, route, routeAction, setBaseUrl, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutRequestClose, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, useRouteStatus, useRunOnMount, useSearchText, useSelectRequestClose, useSelectableElement, useSelectionController, useSidePanelClose, useSignalSync, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage, windowWidthSignal };
 //# sourceMappingURL=jsenv_navi.js.map

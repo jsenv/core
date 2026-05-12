@@ -115,7 +115,7 @@ export const formatTimeAgo = (
     unit = "year";
   }
 
-  if (!prefix || value >= 0) {
+  if (prefix === undefined || prefix === null || value >= 0) {
     return rtf.format(value, unit);
   }
   // Drop the leading past-tense literal ("il y a ", "ago ") and prepend the custom prefix.
@@ -127,6 +127,9 @@ export const formatTimeAgo = (
     .map((p) => p.value)
     .join("")
     .trim();
+  if (prefix === "") {
+    return withoutPrefix;
+  }
   return `${prefix} ${withoutPrefix}`;
 };
 
