@@ -1,13 +1,13 @@
 import { useCallback, useRef } from "preact/hooks";
 
 /**
- * Returns a stable event handler to attach as onnavi_message on a DOM element.
+ * Returns a stable event handler to attach as onnavi_constraint_message on a DOM element.
  * messageMap keys are constraint names (e.g. "readonly"), values are the message
  * to display — either a string or a Preact element.
  *
  * @example
- * const onNaviMessage = useNaviMessage({ readonly: <MyMessage item={item} /> });
- * return <li onnavi_constraint_message={onNaviMessage} />;
+ * const onNaviConstraintMessage = useOnNaviConstraintMessage({ readonly: <MyMessage item={item} /> });
+ * return <li onnavi_constraint_message={onNaviConstraintMessage} />;
  */
 export const useOnNaviConstraintMessage = (messageMap) => {
   const messageMapRef = useRef(messageMap);
@@ -21,34 +21,39 @@ export const useOnNaviConstraintMessage = (messageMap) => {
   }, []);
 };
 
-export const getConstraintMessage = (
-  element,
-  attributeName,
-  constraintName,
-  generatedMessage,
-) => {
-  // 1. Dispatch navi_message event — JSX handlers (useNaviMessage) respond synchronously
+export const getConstraintMessage = (element, constraint, generatedMessage) => {
+  const { messageAttribute, name: constraintName } = constraint;
+
+  // 1. Dispatch navi_constraint_message event — JSX handlers respond synchronously
   let respondedMessage = null;
   const event = new CustomEvent("navi_constraint_message", {
     bubbles: false,
     detail: {
       constraintName,
-      respondCustomMessage: (message) => {
+      respondMessage: (message) => {
         respondedMessage = message;
       },
     },
   });
   element.dispatchEvent(event);
   if (respondedMessage !== null) {
-    return respondedMessage;
+    return {
+      message: respondedMessage,
+      origin: "onnavi_constraint_message handler",
+    };
   }
 
   // 2. Fall back to plain string attribute
-  const messageAttribute = element.getAttribute(attributeName);
   if (messageAttribute) {
-    return messageAttribute;
+    const messageAttribute_value = element.getAttribute(messageAttribute);
+    if (messageAttribute_value) {
+      return {
+        message: messageAttribute_value,
+        origin: `attribute ${messageAttribute}="${messageAttribute_value}"`,
+      };
+    }
   }
 
   // 3. Fall back to generated message
-  return generatedMessage;
+  return { message: generatedMessage, origin: "generated message" };
 };
