@@ -9,6 +9,7 @@ const DebugActionContext = createContext(false);
 const DebugActionVerboseContext = createContext(false);
 
 const debugNoop = () => {};
+const sharedEventGroupLogger = createEventGroupLogger();
 
 export const useDebugFocus = () => {
   const debug = useContext(DebugFocusContext);
@@ -50,16 +51,16 @@ export const NaviDebug = ({
   children,
 }) => {
   if (debugFocus === true) {
-    debugFocus = createEventGroupLogger();
+    debugFocus = sharedEventGroupLogger;
   }
   if (debugScroll === true) {
-    debugScroll = createEventGroupLogger();
+    debugScroll = sharedEventGroupLogger;
   }
   if (debugPopup === true) {
-    debugPopup = createEventGroupLogger();
+    debugPopup = sharedEventGroupLogger;
   }
   if (debugAction === true) {
-    debugAction = createEventGroupLogger();
+    debugAction = sharedEventGroupLogger;
   }
   if (debugActionVerbose === true) {
     debugActionVerbose = (e, label) => {
