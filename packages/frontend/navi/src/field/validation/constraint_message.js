@@ -6,19 +6,24 @@ import { useCallback, useRef } from "preact/hooks";
  * to display — either a string or a Preact element.
  *
  * @example
- * const onNaviConstraintMessage = useOnNaviConstraintMessage({ readonly: <MyMessage item={item} /> });
+ * const onNaviConstraintMessage = useOnNaviConstraintMessage({ readOnlyMessage: <MyMessage item={item} /> });
  * return <li onnavi_constraint_message={onNaviConstraintMessage} />;
  */
-export const useOnNaviConstraintMessage = (messageMap) => {
-  const messageMapRef = useRef(messageMap);
-  messageMapRef.current = messageMap;
+export const useOnNaviConstraintMessage = (props) => {
+  const propsRef = useRef(props);
+  propsRef.current = props;
 
   return useCallback((e) => {
-    const message = messageMapRef.current[e.detail.constraintName];
+    const propName = MAPPING[e.detail.constraintName];
+    const message = propsRef.current[propName];
     if (message !== undefined && message !== null) {
       e.detail.respondMessage(message);
     }
   }, []);
+};
+
+const MAPPING = {
+  readonly: "readOnlyMessage",
 };
 
 export const getConstraintMessage = (

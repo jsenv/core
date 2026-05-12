@@ -246,7 +246,7 @@ export const onRequestAction = (
       "navi_action_prevented",
       customEventDetail,
     );
-    validationInterface.reportValidity({
+    failedValidationInterface.reportValidity({
       event,
       debugAction,
       requester,
