@@ -345,9 +345,9 @@ export const installCustomConstraintValidation = (
   const dispatchCancelCustomEvent = (detail) => {
     return dispatchCustomEvent(element, "navi_cancel", detail);
   };
-  const closeElementValidationMessage = (reason) => {
+  const closeElementValidationMessage = (event, reason) => {
     if (validationInterface.validationMessage) {
-      validationInterface.validationMessage.requestClose(reason);
+      validationInterface.validationMessage.requestClose(event, reason);
       return true;
     }
     return false;
