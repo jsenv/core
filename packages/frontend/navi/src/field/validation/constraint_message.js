@@ -23,7 +23,24 @@ export const useOnNaviConstraintMessage = (props) => {
 };
 
 const MAPPING = {
+  disabled: "disabledMessage",
+  required: "requiredMessage",
+  pattern: "patternMessage",
+  type_email: "typeMessage",
+  type_number: "typeMessage",
+  min_length: "minLengthMessage",
+  max_length: "maxLengthMessage",
+  min: "minMessage",
+  max: "maxMessage",
+  single_space: "singleSpaceMessage",
+  same_as: "sameAsMessage",
+  min_lower_letter: "minLowerLetterMessage",
+  min_upper_letter: "minUpperLetterMessage",
+  min_digit: "minDigitMessage",
+  min_special_char: "minSpecialCharMessage",
+  one_of: "oneOfMessage",
   readonly: "readOnlyMessage",
+  available: "availableMessage",
 };
 
 export const getConstraintMessage = (
