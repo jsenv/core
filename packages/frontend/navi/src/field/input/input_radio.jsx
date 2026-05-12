@@ -427,7 +427,7 @@ const InputRadioUI = (props) => {
   // this way each other radio uiStateController knows thery are unchecked
   // we do this on "input"
   // but also when we are becoming checked from outside (hence the useLayoutEffect)
-  const updateOtherRadiosInGroup = () => {
+  const updateOtherRadiosInGroup = (e) => {
     const thisRadio = ref.current;
     const radioList = thisRadio.closest("[data-radio-list]");
     if (!radioList) {
@@ -448,6 +448,7 @@ const InputRadioUI = (props) => {
       // suppressParentNotification: true prevents the group from aggregating and calling uiAction during
       // this intermediate state (all unchecked) — only the clicked radio's setUIState triggers aggregation.
       dispatchCustomEvent(radioInput, "setuistate", {
+        event: e,
         value: false,
         suppressParentNotification: true,
       });
@@ -467,7 +468,7 @@ const InputRadioUI = (props) => {
       `radio input -> checked=${radioIsChecked}, value=${JSON.stringify(props.value || "on")}`,
     );
     if (radioIsChecked) {
-      updateOtherRadiosInGroup();
+      updateOtherRadiosInGroup(e);
     }
     uiStateController.setUIState(radioIsChecked, e);
     onInput?.(e);

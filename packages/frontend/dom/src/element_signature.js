@@ -107,6 +107,24 @@ export const getElementSignature = (element) => {
     if (dataUIName) {
       return `${tagName}[data-ui-name="${dataUIName}"]`;
     }
+    if (tagName === "input") {
+      const type = element.type || "text";
+      const name = element.getAttribute("name");
+      if (type === "radio" || type === "checkbox") {
+        const value = element.getAttribute("value");
+        if (name && value) {
+          return `${type}[name="${name}"][value="${value}"]`;
+        }
+        if (name) {
+          return `${type}[name="${name}"]`;
+        }
+        return `${type}`;
+      }
+      if (name) {
+        return `input[name="${name}"]`;
+      }
+      return `input[type="${type}"]`;
+    }
     if (element === document.body) {
       return "<body>";
     }

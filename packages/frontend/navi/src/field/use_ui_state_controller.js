@@ -1,4 +1,4 @@
-import { createPubSub } from "@jsenv/dom";
+import { createPubSub, getElementSignature } from "@jsenv/dom";
 import { signal } from "@preact/signals";
 import { createContext } from "preact";
 import { useContext, useLayoutEffect, useMemo, useRef } from "preact/hooks";
@@ -210,7 +210,7 @@ export const useUIStateController = (
       }
       debugAction(
         e,
-        `${componentType}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> updating to ${JSON.stringify(newUIState)}`,
+        `${getElementSignature(e.currentTarget)}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> updating to ${JSON.stringify(newUIState)}`,
       );
       uiStateController.uiState = newUIState;
       uiStateSignal.value = newUIState;
@@ -220,7 +220,7 @@ export const useUIStateController = (
       if (uiStateController.uiAction) {
         debugAction(
           e,
-          `${componentType}.uiAction(${JSON.stringify(newUIState)})`,
+          `${getElementSignature(e.currentTarget)}.uiAction(${JSON.stringify(newUIState)})`,
         );
         uiStateController.uiAction(newUIState, e);
       }
@@ -389,7 +389,7 @@ export const useUIGroupStateController = (
     );
     debugAction(
       e,
-      `${componentType} aggregateChildStates -> ${JSON.stringify(newUIState)}`,
+      `${componentType}.aggregateChildStates -> ${JSON.stringify(newUIState)}`,
     );
     const uiStateController = uiStateControllerRef.current;
     uiStateController.setUIState(newUIState, e, { notifyExternal });
