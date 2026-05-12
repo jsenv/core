@@ -151,7 +151,7 @@ export const formatTimeAgo = (
  * // ended 2 hours ago
  * formatDuration(Date.now() - 3 * 3_600_000, 3_600_000, "fr") // "il y a 2 heures"
  */
-export const formatDuration = (
+export const formatTimeRelative = (
   start,
   durationMs = 0,
   locale,

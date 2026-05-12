@@ -1,10 +1,10 @@
 import {
   formatDatetime,
   formatDay,
-  formatDuration,
   formatMonth,
   formatTime,
   formatTimeAgo,
+  formatTimeRelative,
 } from "./format_time.js";
 import { langSignal } from "./lang_signal.js";
 import { Text } from "./text.jsx";
@@ -20,23 +20,24 @@ import { Text } from "./text.jsx";
  *   If the value cannot be parsed, it is rendered as-is.
  *   If undefined/null, renders `"–"`.
  *
- * @param {"day"|"month"|"datetime"|"time"|"ago"|"duration"} [type="day"]
+ * @param {"day"|"month"|"datetime"|"time"|"ago"|"relative"} [type="day"]
  *   Controls the display format:
- *   - `"day"`      → "lundi 11 mai (aujourd'hui)"  — with today/tomorrow label
- *   - `"month"`    → "mai 2026"
- *   - `"datetime"` → "lun. 11 mai, 14:30"
- *   - `"time"`     → "14:30"
- *   - `"ago"`      → "il y a 3 jours"
- *   - `"duration"` → "dans 1 heure 30" / "En cours" / "il y a 2 heures"
- *                    `duration` defaults to 0 (instantaneous: no "En cours" window).
+ *   - `"day"`       → "lundi 11 mai (aujourd'hui)"  — with today/tomorrow label
+ *   - `"month"`     → "mai 2026"
+ *   - `"datetime"`  → "lun. 11 mai, 14:30"
+ *   - `"time"`      → "14:30"
+ *   - `"ago"`       → "il y a 3 jours" (simple past only)
+ *   - `"relative"`  → "dans 1 heure 30" / "En cours" / "il y a 2 heures"
+ *                     Prefer this over `"ago"` — handles past, present, and future.
+ *                     `eventDuration` defaults to 0 (instantaneous: no "En cours" window).
  *
- * @param {number} [duration=0]
- *   Duration of the event in milliseconds.
+ * @param {number} [eventDuration=0]
+ *   Duration of the event in milliseconds. Only used with `type="relative"`.
  *   When omitted, the event is instantaneous (point in time, no "En cours" window).
  * @param {string} [prefix]
  *   Custom prefix to replace "il y a" / "ago" for past times.
- *   Only applies to `type="ago"` and the past state of `type="duration"`.
- *   E.g. `prefix="depuis"` → "depuis 2 heures". *
+ *   Only applies to `type="ago"` and the past state of `type="relative"`.
+ *   E.g. `prefix="depuis"` → "depuis 2 heures".
  * @param {string} [locale]
  *   BCP 47 locale tag (e.g. `"fr"`, `"en-US"`).
  *   Defaults to `langSignal.value` (the browser's current language).
@@ -44,7 +45,7 @@ import { Text } from "./text.jsx";
 export const Time = ({
   children,
   type = "day",
-  duration = 0,
+  eventDuration = 0,
   prefix,
   locale,
   ...props
@@ -55,9 +56,9 @@ export const Time = ({
   let text;
   let dateTimeAttr;
 
-  if (type === "duration") {
+  if (type === "relative") {
     text = date
-      ? formatDuration(date, duration, lang, { prefix })
+      ? formatTimeRelative(date, eventDuration, lang, { prefix })
       : children === undefined
         ? "–"
         : String(children);
@@ -121,7 +122,7 @@ const toDateTimeAttr = (date, type) => {
     const mm = String(date.getMonth() + 1).padStart(2, "0");
     return `${yyyy}-${mm}`;
   }
-  if (type === "datetime" || type === "ago") {
+  if (type === "datetime" || type === "ago" || type === "relative") {
     return date.toISOString();
   }
   // day

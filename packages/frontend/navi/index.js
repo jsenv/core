@@ -168,10 +168,10 @@ export { formatNumber } from "./src/text/format_number.js";
 export {
   formatDatetime,
   formatDay,
-  formatDuration,
   formatMonth,
   formatTime,
   formatTimeAgo,
+  formatTimeRelative,
 } from "./src/text/format_time.js";
 export { Icon } from "./src/text/icon.jsx";
 export { Interpolate } from "./src/text/interpolate.jsx";
