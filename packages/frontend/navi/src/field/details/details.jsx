@@ -246,7 +246,8 @@ const DetailsWithAction = (props) => {
       {...rest}
       ref={ref}
       loading={loading || actionLoading}
-      onnavi_cancel={(e, reason) => {
+      onnavi_cancel={(e) => {
+        const { reason } = e.detail;
         if (reason === "blur_invalid") {
           return;
         }

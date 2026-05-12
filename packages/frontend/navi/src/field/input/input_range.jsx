@@ -539,7 +539,8 @@ const InputRangeWithAction = (props) => {
       ref={ref}
       action={undefined}
       loading={loading || actionLoading}
-      onnavi_cancel={(e, reason) => {
+      onnavi_cancel={(e) => {
+        const { reason } = e.detail;
         if (reason.startsWith("blur_invalid")) {
           if (!cancelOnBlurInvalid) {
             return;

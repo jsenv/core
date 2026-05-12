@@ -674,7 +674,8 @@ const InputCheckboxWithAction = (props) => {
       // In this situation updating the ui state === calling associated action
       // so cance/abort/error have to revert the ui state to the one before user interaction
       // to show back the real state of the checkbox (not the one user tried to set)
-      onnavi_cancel={(e, reason) => {
+      onnavi_cancel={(e) => {
+        const { reason } = e.detail;
         if (reason === "blur_invalid") {
           return;
         }

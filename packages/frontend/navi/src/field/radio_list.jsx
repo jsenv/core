@@ -141,7 +141,8 @@ const RadioListWithAction = (props) => {
           actionOrigin: "action_prop",
         });
       }}
-      onnavi_cancel={(e, reason) => {
+      onnavi_cancel={(e) => {
+        const { reason } = e.detail;
         uiStateController.resetUIState(e);
         onCancel?.(e, reason);
       }}

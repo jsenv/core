@@ -136,8 +136,9 @@ const CheckboxListWithAction = forwardRef((props, ref) => {
       {...rest}
       ref={innerRef}
       onnavi_cancel={(e) => {
+        const { reason } = e.detail;
         uiStateController.resetUIState(e);
-        onCancel?.(e);
+        onCancel?.(e, reason);
       }}
       onnavi_request_action={(e) => {
         onRequestAction(boundAction, e);
