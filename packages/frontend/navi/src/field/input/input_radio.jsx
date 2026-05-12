@@ -11,6 +11,7 @@ import {
   reportDisabledToField,
   reportInteractiveToField,
   reportReadOnlyToField,
+  useFieldId,
 } from "../field.jsx";
 import { fieldPropSet } from "../field_prop_set.js";
 import {
@@ -346,6 +347,8 @@ const css = /* css */ `
 export const InputRadio = (props) => {
   const defaultRef = useRef();
   const ref = props.ref || defaultRef;
+  const fieldId = useFieldId();
+  const id = props.id || fieldId;
   const { value = "on" } = props;
   const uiStateController = useUIStateController(props, "radio", {
     statePropName: "checked",
@@ -364,7 +367,7 @@ export const InputRadio = (props) => {
   return (
     <UIStateControllerContext.Provider value={uiStateController}>
       <UIStateContext.Provider value={uiState}>
-        <InputRadioDispatcher {...props} ref={ref} />
+        <InputRadioDispatcher {...props} ref={ref} id={id} />
       </UIStateContext.Provider>
     </UIStateControllerContext.Provider>
   );

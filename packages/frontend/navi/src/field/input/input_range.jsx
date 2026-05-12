@@ -18,6 +18,7 @@ import {
   reportDisabledToField,
   reportInteractiveToField,
   reportReadOnlyToField,
+  useFieldId,
 } from "../field.jsx";
 import { fieldPropSet } from "../field_prop_set.js";
 import { useOnRequestAction } from "../use_action_events.js";
@@ -272,6 +273,8 @@ const css = /* css */ `
 export const InputRange = (props) => {
   const defaultRef = useRef();
   const ref = props.ref || defaultRef;
+  const fieldId = useFieldId();
+  const id = props.id || fieldId;
 
   const uiStateController = useUIStateController(props, "input");
   const uiState = useUIState(uiStateController);
@@ -279,7 +282,7 @@ export const InputRange = (props) => {
   return (
     <UIStateControllerContext.Provider value={uiStateController}>
       <UIStateContext.Provider value={uiState}>
-        <InputRangeDispatcher {...props} ref={ref} />
+        <InputRangeDispatcher {...props} ref={ref} id={id} />
       </UIStateContext.Provider>
     </UIStateControllerContext.Provider>
   );

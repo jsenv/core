@@ -12,6 +12,7 @@ import {
   reportDisabledToField,
   reportInteractiveToField,
   reportReadOnlyToField,
+  useFieldId,
 } from "../field.jsx";
 import { fieldPropSet } from "../field_prop_set.js";
 import { useOnRequestAction } from "../use_action_events.js";
@@ -389,6 +390,8 @@ const css = /* css */ `
 export const InputCheckbox = (props) => {
   const defaultRef = useRef();
   const ref = props.ref || defaultRef;
+  const fieldId = useFieldId();
+  const id = props.id || fieldId;
   const { value = "on" } = props;
   const uiStateController = useUIStateController(props, "checkbox", {
     statePropName: "checked",
@@ -402,7 +405,7 @@ export const InputCheckbox = (props) => {
   return (
     <UIStateControllerContext.Provider value={uiStateController}>
       <UIStateContext.Provider value={uiState}>
-        <InputCheckboxDispatcher {...props} ref={ref} />
+        <InputCheckboxDispatcher {...props} ref={ref} id={id} />
       </UIStateContext.Provider>
     </UIStateControllerContext.Provider>
   );
@@ -424,7 +427,6 @@ const InputCheckboxUI = (props) => {
     defaultChecked,
     /* eslint-enable no-unused-vars */
 
-    id,
     name,
     readOnly,
     disabled,
@@ -479,7 +481,6 @@ const InputCheckboxUI = (props) => {
     return (
       <Box
         {...checkboxProps}
-        id={id}
         as="input"
         ref={ref}
         type="checkbox"
@@ -500,7 +501,6 @@ const InputCheckboxUI = (props) => {
     );
   };
   const renderCheckboxMemoized = useCallback(renderCheckbox, [
-    id,
     innerName,
     checked,
     innerRequired,
