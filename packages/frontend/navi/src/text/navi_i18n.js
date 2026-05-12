@@ -127,6 +127,10 @@ naviI18n.addAll({
     fr: "Cet horaire n'est pas disponible.",
     en: "This time slot is not available.",
   },
+  "list_item.required": {
+    fr: "Veuillez sélectionner une option.",
+    en: "Please select an option.",
+  },
   "list_item.readonly": {
     fr: "Cette option n'est pas disponible.",
     en: "This option is not available.",

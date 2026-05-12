@@ -1657,7 +1657,6 @@ const ListItemRealOrVoid = (props) => {
     matchScore,
     disabled,
     readOnly,
-    "data-readonly-message": readonlyMessage,
     index,
     ...rest
   } = props;
@@ -1708,7 +1707,6 @@ const ListItemRealOrVoid = (props) => {
         selected={selected}
         disabled={disabled}
         readOnly={readOnly}
-        readonlyMessage={readonlyMessage}
         hidden={hidden}
         {...rest}
       />
@@ -1728,7 +1726,6 @@ const ListItemRealOrVoid = (props) => {
       selected={selected}
       disabled={disabled}
       readOnly={readOnly}
-      readonlyMessage={readonlyMessage}
       {...rest}
     />
   );
