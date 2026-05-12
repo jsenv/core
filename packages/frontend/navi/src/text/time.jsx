@@ -20,20 +20,23 @@ import { Text } from "./text.jsx";
  *   If the value cannot be parsed, it is rendered as-is.
  *   If undefined/null, renders `"–"`.
  *
- * @param {"day"|"month"|"datetime"|"time"|"relative"|"duration"} [type="day"]
+ * @param {"day"|"month"|"datetime"|"time"|"ago"|"duration"} [type="day"]
  *   Controls the display format:
  *   - `"day"`      → "lundi 11 mai (aujourd'hui)"  — with today/tomorrow label
  *   - `"month"`    → "mai 2026"
  *   - `"datetime"` → "lun. 11 mai, 14:30"
  *   - `"time"`     → "14:30"
- *   - `"relative"` → "il y a 3 jours"
+ *   - `"ago"`      → "il y a 3 jours"
  *   - `"duration"` → "dans 1 heure 30" / "En cours" / "il y a 2 heures"
- *                    Requires `duration` prop (milliseconds).
+ *                    `duration` defaults to 0 (instantaneous: no "En cours" window).
  *
- * @param {number} [duration]
- *   Duration of the event in milliseconds. Only used with `type="duration"`.
- *   When 0 (default), the event is considered instantaneous (no "En cours" window).
- *
+ * @param {number} [duration=0]
+ *   Duration of the event in milliseconds.
+ *   When omitted, the event is instantaneous (point in time, no "En cours" window).
+ * @param {string} [prefix]
+ *   Custom prefix to replace "il y a" / "ago" for past times.
+ *   Only applies to `type="ago"` and the past state of `type="duration"`.
+ *   E.g. `prefix="depuis"` → "depuis 2 heures". *
  * @param {string} [locale]
  *   BCP 47 locale tag (e.g. `"fr"`, `"en-US"`).
  *   Defaults to `langSignal.value` (the browser's current language).
@@ -42,6 +45,7 @@ export const Time = ({
   children,
   type = "day",
   duration = 0,
+  prefix,
   locale,
   ...props
 }) => {
@@ -53,14 +57,14 @@ export const Time = ({
 
   if (type === "duration") {
     text = date
-      ? formatDuration(date, duration, lang)
+      ? formatDuration(date, duration, lang, { prefix })
       : children === undefined
         ? "–"
         : String(children);
     dateTimeAttr = date ? date.toISOString() : undefined;
   } else {
     text = date
-      ? formatDate(date, type, lang)
+      ? formatDate(date, type, lang, { prefix })
       : children === undefined
         ? "–"
         : String(children);
@@ -117,7 +121,7 @@ const toDateTimeAttr = (date, type) => {
     const mm = String(date.getMonth() + 1).padStart(2, "0");
     return `${yyyy}-${mm}`;
   }
-  if (type === "datetime" || type === "relative") {
+  if (type === "datetime" || type === "ago") {
     return date.toISOString();
   }
   // day
@@ -127,7 +131,7 @@ const toDateTimeAttr = (date, type) => {
   return `${yyyy}-${mm}-${dd}`;
 };
 
-const formatDate = (date, type, locale) => {
+const formatDate = (date, type, locale, { prefix } = {}) => {
   if (type === "day") {
     return formatDay(date, locale);
   }
@@ -140,8 +144,8 @@ const formatDate = (date, type, locale) => {
   if (type === "time") {
     return formatTime(date, locale);
   }
-  if (type === "relative") {
-    return formatTimeAgo(date, locale);
+  if (type === "ago") {
+    return formatTimeAgo(date, locale, { prefix });
   }
   return String(date);
 };

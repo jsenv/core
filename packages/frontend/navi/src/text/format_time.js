@@ -80,31 +80,55 @@ export const formatTime = (date, locale) => {
 /**
  * Formats a date relative to now: "il y a 3 jours", "dans 2 heures", etc.
  */
-export const formatTimeAgo = (date, locale, { now = new Date() } = {}) => {
+export const formatTimeAgo = (
+  date,
+  locale,
+  { now = new Date(), prefix } = {},
+) => {
   const rtf = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
   const nowMs = now instanceof Date ? now.getTime() : now;
   const diff = date.getTime() - nowMs;
   const absDiff = Math.abs(diff);
 
+  let value;
+  let unit;
   if (absDiff < MINUTE) {
-    return rtf.format(Math.round(diff / 1000), "second");
+    value = Math.round(diff / 1000);
+    unit = "second";
+  } else if (absDiff < HOUR) {
+    value = Math.round(diff / MINUTE);
+    unit = "minute";
+  } else if (absDiff < DAY) {
+    value = Math.round(diff / HOUR);
+    unit = "hour";
+  } else if (absDiff < 7 * DAY) {
+    value = Math.round(diff / DAY);
+    unit = "day";
+  } else if (absDiff < 30 * DAY) {
+    value = Math.round(diff / (7 * DAY));
+    unit = "week";
+  } else if (absDiff < YEAR) {
+    value = Math.round(diff / (30 * DAY));
+    unit = "month";
+  } else {
+    value = Math.round(diff / YEAR);
+    unit = "year";
   }
-  if (absDiff < HOUR) {
-    return rtf.format(Math.round(diff / MINUTE), "minute");
+
+  if (!prefix || value >= 0) {
+    return rtf.format(value, unit);
   }
-  if (absDiff < DAY) {
-    return rtf.format(Math.round(diff / HOUR), "hour");
+  // Replace the leading past-tense literal (e.g. "il y a ", "ago ") with the custom prefix
+  const parts = rtf.formatToParts(value, unit);
+  const firstLiteral = parts[0];
+  const rest = parts
+    .slice(1)
+    .map((p) => p.value)
+    .join("");
+  if (firstLiteral.type === "literal") {
+    return `${prefix} ${rest.trimStart()}`;
   }
-  if (absDiff < 7 * DAY) {
-    return rtf.format(Math.round(diff / DAY), "day");
-  }
-  if (absDiff < 30 * DAY) {
-    return rtf.format(Math.round(diff / (7 * DAY)), "week");
-  }
-  if (absDiff < YEAR) {
-    return rtf.format(Math.round(diff / (30 * DAY)), "month");
-  }
-  return rtf.format(Math.round(diff / YEAR), "year");
+  return rtf.format(value, unit);
 };
 
 /**
@@ -132,7 +156,7 @@ export const formatDuration = (
   start,
   durationMs = 0,
   locale,
-  { now = new Date() } = {},
+  { now = new Date(), prefix } = {},
 ) => {
   const startMs = start instanceof Date ? start.getTime() : Number(start);
   const endMs = startMs + durationMs;
@@ -143,7 +167,7 @@ export const formatDuration = (
   }
   if (nowMs >= endMs) {
     const refDate = endMs > startMs ? new Date(endMs) : new Date(startMs);
-    return formatTimeAgo(refDate, locale, { now });
+    return formatTimeAgo(refDate, locale, { now, prefix });
   }
 
   const diff = startMs - nowMs;
