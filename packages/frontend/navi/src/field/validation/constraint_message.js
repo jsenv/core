@@ -21,24 +21,45 @@ export const useOnNaviConstraintMessage = (messageMap) => {
   }, []);
 };
 
-export const getConstraintMessage = (element, constraint, generatedMessage) => {
+export const getConstraintMessage = (
+  element,
+  constraint,
+  generatedMessage,
+  { requester },
+) => {
   const { messageAttribute, name: constraintName } = constraint;
 
-  // 1. Dispatch navi_constraint_message event — JSX handlers respond synchronously
-  let respondedMessage = null;
-  const event = new CustomEvent("navi_constraint_message", {
-    bubbles: false,
-    detail: {
-      constraintName,
-      respondMessage: (message) => {
-        respondedMessage = message;
+  // 1. Dispatch navi_constraint_message event — JSX handlers respond synchronously.
+  //    Dispatch on the requester first (e.g. the <li> that was clicked),
+  //    then fall back to element (e.g. the hidden <input>).
+  const dispatchOn = (target) => {
+    let responded = null;
+    const event = new CustomEvent("navi_constraint_message", {
+      bubbles: false,
+      detail: {
+        constraintName,
+        respondMessage: (message) => {
+          responded = message;
+        },
       },
-    },
-  });
-  element.dispatchEvent(event);
-  if (respondedMessage !== null) {
+    });
+    target.dispatchEvent(event);
+    return responded;
+  };
+
+  if (requester && requester !== element) {
+    const fromRequester = dispatchOn(requester);
+    if (fromRequester !== null) {
+      return {
+        message: fromRequester,
+        origin: "onnavi_constraint_message handler on requester",
+      };
+    }
+  }
+  const fromElement = dispatchOn(element);
+  if (fromElement !== null) {
     return {
-      message: respondedMessage,
+      message: fromElement,
       origin: "onnavi_constraint_message handler",
     };
   }

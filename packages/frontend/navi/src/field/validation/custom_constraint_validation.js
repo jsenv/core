@@ -246,7 +246,11 @@ export const onRequestAction = (
       "navi_action_prevented",
       customEventDetail,
     );
-    validationInterface.reportValidity({ event, debugAction });
+    validationInterface.reportValidity({
+      event,
+      debugAction,
+      requester,
+    });
     return false;
   }
 
@@ -398,16 +402,7 @@ export const installCustomConstraintValidation = (
   };
   addTeardown(resetValidity);
 
-  let currentDebugAction = null;
-  const checkValidity = ({
-    event,
-    fromRequestAction,
-    skipReadonly,
-    debugAction,
-  } = {}) => {
-    if (debugAction) {
-      currentDebugAction = debugAction;
-    }
+  const checkValidity = ({ event, fromRequestAction, skipReadonly } = {}) => {
     let newConstraintValidityState = { valid: true };
 
     resetValidity({ fromRequestAction });
@@ -445,25 +440,6 @@ export const installCustomConstraintValidation = (
           : checkResult;
       constraintValidityInfo.messageString = constraintValidityInfo.message;
 
-      if (constraint.messageAttribute) {
-        const { message, origin } = getConstraintMessage(
-          element,
-          constraint,
-          constraintValidityInfo.message,
-        );
-        if (currentDebugAction) {
-          currentDebugAction(
-            event,
-            `constraint message for "${constraint.name}": ${origin}`,
-          );
-        }
-        if (message !== constraintValidityInfo.message) {
-          constraintValidityInfo.message = message;
-          if (typeof message === "string") {
-            constraintValidityInfo.messageString = message;
-          }
-        }
-      }
       const thisConstraintFailureInfo = {
         name: constraint.name,
         constraint,
@@ -521,7 +497,12 @@ export const installCustomConstraintValidation = (
   };
 
   const [notifyCalloutOpen, onCalloutOpen] = createPubSub(true);
-  const reportValidity = ({ skipFocus, event, debugAction } = {}) => {
+  const reportValidity = ({
+    skipFocus,
+    event,
+    debugAction,
+    requester,
+  } = {}) => {
     if (!failedConstraintInfo) {
       closeElementValidationMessage(event, "becomes_valid");
       return;
@@ -561,8 +542,26 @@ export const installCustomConstraintValidation = (
       return base;
     })();
 
+    let messageOrCustomMessage;
+    if (failedConstraintInfo.constraint.messageAttribute) {
+      const { message, origin } = getConstraintMessage(
+        element,
+        failedConstraintInfo.constraint,
+        failedConstraintInfo.message,
+        { requester },
+      );
+      if (debugAction) {
+        debugAction(
+          event,
+          `constraint message for "${failedConstraintInfo.constraint.name}": ${origin}`,
+        );
+      }
+      messageOrCustomMessage = message;
+    } else {
+      messageOrCustomMessage = failedConstraintInfo.message;
+    }
     validationInterface.validationMessage = openCallout(
-      failedConstraintInfo.message,
+      messageOrCustomMessage,
       {
         anchorElement,
         status: failedConstraintInfo.status,
