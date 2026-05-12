@@ -118,17 +118,16 @@ export const formatTimeAgo = (
   if (!prefix || value >= 0) {
     return rtf.format(value, unit);
   }
-  // Replace the leading past-tense literal (e.g. "il y a ", "ago ") with the custom prefix
+  // Drop the leading past-tense literal ("il y a ", "ago ") and prepend the custom prefix.
+  // Slicing from the "integer" part keeps: integer + unit, drops the prefix.
   const parts = rtf.formatToParts(value, unit);
-  const firstLiteral = parts[0];
-  const rest = parts
-    .slice(1)
+  const integerIndex = parts.findIndex((p) => p.type === "integer");
+  const withoutPrefix = parts
+    .slice(integerIndex)
     .map((p) => p.value)
-    .join("");
-  if (firstLiteral.type === "literal") {
-    return `${prefix} ${rest.trimStart()}`;
-  }
-  return rtf.format(value, unit);
+    .join("")
+    .trim();
+  return `${prefix} ${withoutPrefix}`;
 };
 
 /**
