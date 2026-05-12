@@ -62,23 +62,3 @@ export const getNowHours = (offsetMinutes = 0) => {
   const m = clamped % 60;
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 };
-
-/**
- * Returns the latest of all provided HH:MM time strings as the effective minimum.
- * undefined/null values are ignored.
- *
- * @example
- * minHour(["07:00", isToday(day) ? getNowHours(-5) : undefined])
- */
-export const minHour = (times) => {
-  let result = null;
-  for (const t of times) {
-    if (!t) {
-      continue;
-    }
-    if (result === null || t > result) {
-      result = t;
-    }
-  }
-  return result;
-};

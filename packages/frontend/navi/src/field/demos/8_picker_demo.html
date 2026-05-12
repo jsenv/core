@@ -63,7 +63,6 @@
         Button,
         isToday,
         getNowHours,
-        minHour,
       } from "@jsenv/navi";
 
       // ── helpers ─────────────────────────────────────────────────
@@ -451,12 +450,12 @@
                   type="hour"
                   name="hour"
                   required
-                  min={minHour([
-                    "07:00",
-                    isToday(daySignal.value) ? getNowHours(-5) : undefined,
-                  ])}
+                  min="07:00"
                   max="21:00"
                   step="00:30"
+                  minReadonly={
+                    isToday(daySignal.value) ? getNowHours(-5) : undefined
+                  }
                   value={hourSignal.value}
                   uiAction={(v) => {
                     hourSignal.value = v;
