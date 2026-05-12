@@ -24,7 +24,7 @@ return {
     "validSuggestion": null
   },
   '"yellow"': {
-    "oneOf": "must be one of: red, green, blue",
+    "oneOf": 'must be one of: "red", "green", "blue"',
     "valid": false,
     "validSuggestion": {
       "value": "red"

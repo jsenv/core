@@ -1,3 +1,5 @@
+import { dispatchCustomEvent } from "@jsenv/dom";
+
 import { createNaviMirror } from "./navi_mirror.js";
 
 export const getMessageFromAttribute = (
@@ -62,21 +64,17 @@ export const getMessageFromAttribute = (
 
   const createEventHandler = (element, eventName) => {
     return ({ renderIntoCallout }) => {
-      element.dispatchEvent(
-        new CustomEvent(eventName, {
-          detail: {
-            render: (message) => {
-              if (message) {
-                renderIntoCallout(message);
-              } else {
-                // Resume resolution from next step
-                const nextResult = resolve();
-                renderIntoCallout(nextResult);
-              }
-            },
-          },
-        }),
-      );
+      dispatchCustomEvent(element, eventName, {
+        render: (message) => {
+          if (message) {
+            renderIntoCallout(message);
+          } else {
+            // Resume resolution from next step
+            const nextResult = resolve();
+            renderIntoCallout(nextResult);
+          }
+        },
+      });
     };
   };
 

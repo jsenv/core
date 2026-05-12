@@ -677,7 +677,11 @@
                   id="readonly_custom"
                   value="readonly_custom"
                   readOnly
-                  data-readonly-message="Ce créneau est déjà réservé."
+                  data-readonly-message={
+                    <>
+                      Ce créneau est déjà <strong>réservé.</strong>
+                    </>
+                  }
                 >
                   Readonly (custom message)
                 </ListItem>

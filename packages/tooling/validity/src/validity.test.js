@@ -501,4 +501,120 @@ await snapshotTests(import.meta.url, ({ test }) => {
       48.8666669999999: run("48.86666699999998"),
     };
   });
+
+  test("day type validation", () => {
+    const [validity, applyOn] = createValidity({ type: "day" });
+    const run = (value) => {
+      applyOn(value);
+      return structuredClone(validity);
+    };
+    return {
+      '"2024-06-15"': run("2024-06-15"),
+      '"2024-02-29"': run("2024-02-29"), // valid leap day
+      '"2023-02-29"': run("2023-02-29"), // invalid leap day
+      '"not-a-date"': run("not-a-date"),
+      "timestamp (number)": run(Date.UTC(2024, 5, 15)),
+      "invalid type (boolean)": run(true),
+    };
+  });
+
+  test("day type with min (timestamp)", () => {
+    const today = new Date(2024, 5, 15); // 2024-06-15 local
+    const [validity, applyOn] = createValidity({
+      type: "day",
+      min: today.getTime(),
+    });
+    const run = (value) => {
+      applyOn(value);
+      return structuredClone(validity);
+    };
+    return {
+      '"2024-06-15" (today)': run("2024-06-15"),
+      '"2024-06-14" (yesterday)': run("2024-06-14"),
+      '"2024-06-16" (tomorrow)': run("2024-06-16"),
+    };
+  });
+
+  test("day type with min and max (string bounds)", () => {
+    const [validity, applyOn] = createValidity({
+      type: "day",
+      min: "2024-01-01",
+      max: "2024-12-31",
+    });
+    const run = (value) => {
+      applyOn(value);
+      return structuredClone(validity);
+    };
+    return {
+      '"2024-06-15"': run("2024-06-15"),
+      '"2023-12-31"': run("2023-12-31"), // before min
+      '"2025-01-01"': run("2025-01-01"), // after max
+    };
+  });
+
+  test("month type validation", () => {
+    const [validity, applyOn] = createValidity({ type: "month" });
+    const run = (value) => {
+      applyOn(value);
+      return structuredClone(validity);
+    };
+    return {
+      '"2024-06"': run("2024-06"),
+      '"2024-13"': run("2024-13"), // invalid month
+      '"2024-00"': run("2024-00"), // invalid month
+      '"not-a-month"': run("not-a-month"),
+      "timestamp (number)": run(Date.UTC(2024, 5, 1)),
+    };
+  });
+
+  test("month type with min (timestamp)", () => {
+    const thisMonth = new Date(2024, 5, 1); // June 2024
+    const [validity, applyOn] = createValidity({
+      type: "month",
+      min: thisMonth.getTime(),
+    });
+    const run = (value) => {
+      applyOn(value);
+      return structuredClone(validity);
+    };
+    return {
+      '"2024-06" (this month)': run("2024-06"),
+      '"2024-05" (last month)': run("2024-05"),
+      '"2024-07" (next month)': run("2024-07"),
+    };
+  });
+
+  test("datetime type validation", () => {
+    const [validity, applyOn] = createValidity({ type: "datetime" });
+    const run = (value) => {
+      applyOn(value);
+      return structuredClone(validity);
+    };
+    return {
+      '"2024-06-15T14:30:00Z"': run("2024-06-15T14:30:00Z"),
+      '"2024-06-15"': run("2024-06-15"),
+      '"not a datetime"': run("not a datetime"),
+      "timestamp (number)": run(Date.UTC(2024, 5, 15, 14, 30)),
+      "Date instance": run(new Date(2024, 5, 15, 14, 30)),
+    };
+  });
+
+  test("datetime type with min and max (timestamps)", () => {
+    const minTs = new Date(2024, 5, 15, 9, 0).getTime();
+    const maxTs = new Date(2024, 5, 15, 18, 0).getTime();
+    const [validity, applyOn] = createValidity({
+      type: "datetime",
+      min: minTs,
+      max: maxTs,
+    });
+    const run = (value) => {
+      applyOn(value);
+      return structuredClone(validity);
+    };
+    return {
+      "within range": run(new Date(2024, 5, 15, 12, 0).getTime()),
+      "before min": run(new Date(2024, 5, 15, 8, 0).getTime()),
+      "after max": run(new Date(2024, 5, 15, 19, 0).getTime()),
+    };
+  });
 });

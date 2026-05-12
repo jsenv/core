@@ -302,7 +302,6 @@ const css = /* css */ `
       cursor: default;
     }
   }
-
   .navi_list_container {
     &[data-focus-within] {
       .navi_list_item {
