@@ -4,7 +4,6 @@ import { useActionBoundToOneParam } from "../action/use_action.js";
 import { useActionStatus } from "../action/use_action_status.js";
 import { useExecuteAction } from "../action/use_execute_action.js";
 import { Box } from "../box/box.jsx";
-import { useDebugAction } from "../navi_debug.jsx";
 import { InputRadio } from "./input/input_radio.jsx";
 import { useOnRequestAction } from "./use_action_events.js";
 import {
@@ -23,7 +22,6 @@ import {
 import { dispatchRequestAction } from "./validation/custom_constraint_validation.js";
 
 export const RadioList = (props) => {
-  const debugAction = useDebugAction();
   const refDefault = useRef(null);
   const ref = props.ref || refDefault;
   const uiStateController = useUIGroupStateController(props, "radio_list", {
@@ -36,10 +34,7 @@ export const RadioList = (props) => {
           break;
         }
       }
-      debugAction(
-        new Event("aggregateChildStates"),
-        `radio_list aggregateChildStates -> ${JSON.stringify(activeValue)}`,
-      );
+
       return activeValue;
     },
   });

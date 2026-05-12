@@ -387,6 +387,10 @@ export const useUIGroupStateController = (
       childUIStateControllerArray,
       emptyState,
     );
+    debugAction(
+      e,
+      `${componentType} aggregateChildStates -> ${JSON.stringify(newUIState)}`,
+    );
     const uiStateController = uiStateControllerRef.current;
     uiStateController.setUIState(newUIState, e, { notifyExternal });
   };
