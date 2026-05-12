@@ -56,7 +56,6 @@
         Field,
         Label,
         Picker,
-        HourPicker,
         Time,
         Text,
         Icon,
@@ -445,7 +444,8 @@
               </Field>
               <Field vertical>
                 <Label>Heure (7h–21h, 30 min)</Label>
-                <HourPicker
+                <Picker
+                  type="hour"
                   name="hour"
                   required
                   min="07:00"
