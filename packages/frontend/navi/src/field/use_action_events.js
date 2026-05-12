@@ -13,12 +13,11 @@ export const useOnRequestAction = (actionOrigin = "action_prop") => {
       return;
     }
     const context = {
-      event: e,
       debugAction,
       actionOrigin,
       ...options,
     };
-    onRequestAction(action, context);
+    onRequestAction(action, e, context);
   };
 };
 
