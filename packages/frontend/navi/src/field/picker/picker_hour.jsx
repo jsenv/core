@@ -27,6 +27,7 @@ export const HourPicker = ({
   max = "23:30",
   step: stepProp = 1800,
   selectedDay,
+  minHidden,
   minReadonly,
   minReadonlyMessage,
   noSlotsMessage,
@@ -36,10 +37,18 @@ export const HourPicker = ({
   ...rest
 }) => {
   const step = parseStepToSeconds(stepProp);
-  const slots = useMemo(
-    () => generateTimeSlots(min, max, step),
-    [min, max, step],
-  );
+  const slots = useMemo(() => {
+    const allSlots = generateTimeSlots(min, max, step);
+    if (!minHidden) {
+      return allSlots;
+    }
+    const [hh, mm] = minHidden.split(":").map(Number);
+    const minHiddenMinutes = hh * 60 + mm;
+    return allSlots.filter((slot) => {
+      const [sh, sm] = slot.split(":").map(Number);
+      return sh * 60 + sm >= minHiddenMinutes;
+    });
+  }, [min, max, step, minHidden]);
 
   const todayStr = toDateString(new Date());
   const now = new Date();
