@@ -183,15 +183,15 @@ export const PickerPopup = (props) => {
   const defaultMode = isSmallScreen ? "dialog" : "popover";
   const { mode = defaultMode } = props;
   if (mode === "popover") {
-    return <PickerInsidePopover {...props} />;
+    return <PickerContentInsidePopover {...props} />;
   }
   if (mode === "dialog") {
-    return <PickerInsideDialog {...props} />;
+    return <PickerContentInsideDialog {...props} />;
   }
   return null;
 };
 
-const PickerInsidePopover = (props) => {
+const PickerContentInsidePopover = (props) => {
   import.meta.css = css;
   const {
     ref,
@@ -223,10 +223,12 @@ const PickerInsidePopover = (props) => {
     setExpanded(false);
   };
   const requestOpen = (e) => {
-    // scroll select into view when opening it
-    ref.current.scrollIntoView({ block: "nearest" });
+    // scroll <button> of the picker into view when opening it
+    const pickerEl = ref.current;
+    pickerEl.scrollIntoView({ block: "nearest" });
 
-    return requestPopoverOpen(popoverRef.current, {
+    const popoverEl = popoverRef.current;
+    return requestPopoverOpen(popoverEl, {
       event: e,
       anchor: ref.current,
     });
@@ -239,15 +241,15 @@ const PickerInsidePopover = (props) => {
     }
     return requestPopoverClose(popoverRef.current, { event: e });
   };
-  const moveFocusToSelect = (e) => {
+  const moveFocusToPicker = (e) => {
     if (e.type === "mousedown") {
       e.preventDefault();
-      debugFocus(e, `preventDefault and move focus to select`);
+      debugFocus(e, `preventDefault and move focus to picker`);
     } else {
-      debugFocus(e, `move focus to select`);
+      debugFocus(e, `move focus to picker`);
     }
-    const select = ref.current;
-    select.focus({ preventScroll: true });
+    const pickerEl = ref.current;
+    pickerEl.focus({ preventScroll: true });
   };
 
   return (
@@ -293,7 +295,7 @@ const PickerInsidePopover = (props) => {
           event.stopPropagation();
         }
         requestClose(event);
-        moveFocusToSelect(event);
+        moveFocusToPicker(event);
       }}
       onFocusOut={(e) => {
         if (import.meta.dev) {
@@ -333,7 +335,7 @@ const PickerInsidePopover = (props) => {
             }
             e.preventDefault();
             requestClose(e);
-            moveFocusToSelect(e);
+            moveFocusToPicker(e);
           },
         },
         onKeyDown,
@@ -361,7 +363,7 @@ const PickerInsidePopover = (props) => {
             // If the popover closed because focus left the select (focusout),
             // don't steal focus back — let focus go where the user intended.
           } else {
-            moveFocusToSelect(event);
+            moveFocusToPicker(event);
           }
         }}
         positionX="left-aligned"
@@ -396,7 +398,7 @@ const PickerInsidePopover = (props) => {
   );
 };
 
-const PickerInsideDialog = (props) => {
+const PickerContentInsideDialog = (props) => {
   import.meta.css = css;
   const {
     ref,
