@@ -3,7 +3,6 @@ import { useContext } from "preact/hooks";
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { Time } from "@jsenv/navi/src/text/time.jsx";
 import { PickerContext, PickerDispatcherContext } from "../picker_context.jsx";
-import { PickerValuePlaceholder } from "../picker_value_placeholder.jsx";
 import { parseStepToSeconds } from "../time_helpers.js";
 
 const getPropsToShowPicker = (props) => {
@@ -56,10 +55,7 @@ export const PickerColor = (props) => {
 const PickerColorUI = () => {
   const { value, placeholder } = useContext(PickerContext);
   if (!value) {
-    if (placeholder) {
-      return <PickerValuePlaceholder>{placeholder}</PickerValuePlaceholder>;
-    }
-    return null;
+    return placeholder || null;
   }
   return (
     <span
@@ -91,10 +87,7 @@ export const PickerDay = (props) => {
 const PickerDayUI = () => {
   const { value, placeholder } = useContext(PickerContext);
   if (!value) {
-    if (placeholder) {
-      return <PickerValuePlaceholder>{placeholder}</PickerValuePlaceholder>;
-    }
-    return null;
+    return placeholder || null;
   }
   return (
     <Time type="day" capitalize>
@@ -128,10 +121,7 @@ export const PickerMonth = (props) => {
 const PickerMonthUI = () => {
   const { value, placeholder } = useContext(PickerContext);
   if (!value) {
-    if (placeholder) {
-      return <PickerValuePlaceholder>{placeholder}</PickerValuePlaceholder>;
-    }
-    return null;
+    return placeholder || null;
   }
   return (
     <Time type="month" capitalize>
@@ -164,10 +154,7 @@ export const PickerWeek = (props) => {
 const PickerWeekUI = () => {
   const { value, placeholder } = useContext(PickerContext);
   if (!value) {
-    if (placeholder) {
-      return <PickerValuePlaceholder>{placeholder}</PickerValuePlaceholder>;
-    }
-    return null;
+    return placeholder || null;
   }
   return (
     <Time type="week" capitalize>
@@ -209,10 +196,7 @@ export const PickerTime = (props) => {
 const PickerTimeUI = () => {
   const { value, placeholder } = useContext(PickerContext);
   if (!value) {
-    if (placeholder) {
-      return <PickerValuePlaceholder>{placeholder}</PickerValuePlaceholder>;
-    }
-    return null;
+    return placeholder || null;
   }
   return <Time type="time">{value}</Time>;
 };
@@ -243,10 +227,7 @@ export const PickerDatetime = (props) => {
 const PickerDatetimeUI = () => {
   const { value, placeholder } = useContext(PickerContext);
   if (!value) {
-    if (placeholder) {
-      return <PickerValuePlaceholder>{placeholder}</PickerValuePlaceholder>;
-    }
-    return null;
+    return placeholder || null;
   }
   return <Time type="datetime">{value}</Time>;
 };

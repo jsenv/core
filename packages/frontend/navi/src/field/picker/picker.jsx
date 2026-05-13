@@ -145,9 +145,6 @@ const css = /* css */ `
       --x-picker-border-color: var(--callout-color);
     }
 
-    .navi_picker_placeholder {
-      color: var(--picker-placeholder-color);
-    }
     .navi_picker_right_slot {
       position: absolute;
       right: 0;
@@ -382,10 +379,7 @@ const PICKER_PSEUDO_CLASSES = [
 const PickerDefaultUI = () => {
   const { value, placeholder } = useContext(PickerContext);
   if (!value) {
-    if (placeholder) {
-      return placeholder;
-    }
-    return null;
+    return placeholder || null;
   }
   return value;
 };
