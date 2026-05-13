@@ -376,6 +376,22 @@ const PICKER_PSEUDO_CLASSES = [
   ":-navi-has-value",
 ];
 
+const getPropsToShowPicker = (props) => {
+  return {
+    ...props,
+    onMouseDown: (e) => {
+      e.preventDefault();
+      callInputShowPicker(e);
+      props.onMouseDown?.(e);
+    },
+    // we also listen click as it's what we receive from <label>
+    onClick: (e) => {
+      e.preventDefault();
+      callInputShowPicker(e);
+      props.onClick?.(e);
+    },
+  };
+};
 const callInputShowPicker = (e) => {
   const button = e.currentTarget;
   const inputEl = button.querySelector(".navi_picker_input");
@@ -391,21 +407,11 @@ const callInputShowPicker = (e) => {
 const PickerColor = (props) => {
   return (
     <PickerInput
-      type="color"
       requiredMessage={naviI18n(`picker.required.color`)}
       ui={<PickerColorUI />}
       icon={<ColorSvg />}
-      {...props}
-      onMouseDown={(e) => {
-        e.preventDefault();
-        callInputShowPicker(e);
-        props.onMouseDown?.(e);
-      }}
-      onClick={(e) => {
-        e.preventDefault();
-        callInputShowPicker(e);
-        props.onClick?.(e);
-      }}
+      {...getPropsToShowPicker(props)}
+      type="color"
     >
       {props.children}
     </PickerInput>
@@ -435,23 +441,13 @@ const PickerDay = (props) => {
 
   return (
     <PickerInput
-      type="date"
-      min={min}
-      max={max}
       requiredMessage={naviI18n(`picker.required.day`)}
       ui={<PickerDayUI />}
       icon={<CalendarSvg />}
-      {...props}
-      onMouseDown={(e) => {
-        e.preventDefault();
-        //  callInputShowPicker(e);
-        props.onMouseDown?.(e);
-      }}
-      onClick={(e) => {
-        e.preventDefault();
-        callInputShowPicker(e);
-        props.onClick?.(e);
-      }}
+      {...getPropsToShowPicker(props)}
+      min={min}
+      max={max}
+      type="date"
     >
       {props.children}
     </PickerInput>
@@ -483,13 +479,13 @@ const PickerMonth = (props) => {
 
   return (
     <PickerInput
-      type="month"
-      min={min}
-      max={max}
       requiredMessage={naviI18n(`picker.required.month`)}
       ui={<PickerMonthUI />}
       icon={<CalendarSvg />}
-      {...props}
+      {...getPropsToShowPicker(props)}
+      type="month"
+      min={min}
+      max={max}
     >
       {props.children}
     </PickerInput>
@@ -520,13 +516,13 @@ const PickerWeek = (props) => {
 
   return (
     <PickerInput
-      type="week"
-      min={min}
-      max={max}
       requiredMessage={naviI18n(`picker.required.week`)}
       ui={<PickerWeekUI />}
       icon={<CalendarSvg />}
-      {...props}
+      {...getPropsToShowPicker(props)}
+      type="week"
+      min={min}
+      max={max}
     >
       {props.children}
     </PickerInput>
@@ -565,14 +561,14 @@ const PickerTime = (props) => {
 
   return (
     <PickerInput
+      requiredMessage={naviI18n(`picker.required.time`)}
+      ui={<PickerTimeUI />}
+      icon={<ClockSvg />}
+      {...getPropsToShowPicker(props)}
       type="time"
       min={min}
       max={max}
       step={step}
-      requiredMessage={naviI18n(`picker.required.time`)}
-      ui={<PickerTimeUI />}
-      icon={<ClockSvg />}
-      {...props}
     >
       {props.children}
     </PickerInput>
@@ -600,14 +596,14 @@ const PickerDatetime = (props) => {
 
   return (
     <PickerInput
+      requiredMessage={naviI18n(`picker.required.datetime`)}
+      ui={<PickerDatetimeUI />}
+      icon={<CalendarSvg />}
+      {...getPropsToShowPicker(props)}
       type="datetime-local"
       min={min}
       max={max}
       step={step}
-      requiredMessage={naviI18n(`picker.required.datetime`)}
-      ui={<PickerDatetimeUI />}
-      icon={<CalendarSvg />}
-      {...props}
     >
       {props.children}
     </PickerInput>
