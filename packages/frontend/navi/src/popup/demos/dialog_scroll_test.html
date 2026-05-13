@@ -72,6 +72,16 @@
         }
       };
 
+      console.log({
+        innerHeight: window.innerHeight,
+
+        clientHeight: document.documentElement.clientHeight,
+
+        scrollHeight: document.documentElement.scrollHeight,
+
+        visual: window.visualViewport?.height,
+      });
+
       document.body.onclick = async () => {
         const scrollContainer = document.body;
         // showModal() triggers an internal focus() which causes the browser to
