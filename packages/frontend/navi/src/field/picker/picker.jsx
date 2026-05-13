@@ -177,21 +177,38 @@ const css = /* css */ `
 `;
 
 /**
- * Picker — a button-like trigger that opens the browser's native picker
- * (date, time, month, week, datetime-local, color) via showPicker().
+ * Picker — a button-like trigger that opens a browser-native or custom picker.
  *
- * Props:
- *   type        — picker type: "day" | "month" | "week" | "time" | "datetime" | "color"
- *                 Defaults to "day". Maps to the corresponding <input type=…>.
- *   value       — current value string (same format as the underlying input)
+ * The `type` prop selects the picker variant:
+ *
+ * Native browser pickers (via `showPicker()` on a hidden `<input>`):
+ *   "day"      → <input type="date">         — calendar day (YYYY-MM-DD)
+ *   "month"    → <input type="month">        — year + month (YYYY-MM)
+ *   "week"     → <input type="week">         — ISO week (YYYY-Www)
+ *   "time"     → <input type="time">         — hours + minutes (HH:MM)
+ *   "datetime" → <input type="datetime-local"> — date + time (YYYY-MM-DDTHH:MM)
+ *   "color"    → <input type="color">        — color chooser (#rrggbb)
+ *
+ * Custom Select-based picker:
+ *   "hour"     → HourPicker — a Select showing fixed time slots derived from
+ *                min/max/step; past slots are disabled when the selected day
+ *                is today.
+ *
+ * Fully custom picker (no built-in input):
+ *   (any other type, or no type) → bare PickerUI with a hidden input forwarded
+ *   via the `inputType` prop.
+ *
+ * Common props:
+ *   value       — current value string (format depends on type)
  *   uiAction    — called with the new value string when the user picks a value
- *   name        — form field name (on the underlying input for form submission)
- *   placeholder — shown when no value. If a string it is styled; otherwise rendered as-is.
+ *   name        — form field name (on the hidden input for form submission)
+ *   placeholder — shown when no value is selected
  *   disabled    — disables the picker
- *   min         — min value forwarded to the underlying input
- *   max         — max value forwarded to the underlying input
- *   step        — step forwarded to the underlying input
- *   children    — custom value display. If omitted, the default display for the type is used.
+ *   min         — minimum value; accepts a Date (converted automatically) or
+ *                 the raw input string
+ *   max         — maximum value; same as min
+ *   step        — step value forwarded to the underlying input
+ *   children    — custom value display rendered when a value is selected
  *   ...rest     — forwarded to the outer <button> element
  */
 export const Picker = (props) => {
@@ -408,8 +425,8 @@ const PickerColorUI = () => {
 };
 
 const PickerDay = (props) => {
-  const min = formatInputDateProp(props.min, formatDayForInput);
-  const max = formatInputDateProp(props.max, formatDayForInput);
+  const min = resolveDateProp(props.min, toInputDay);
+  const max = resolveDateProp(props.max, toInputDay);
 
   return (
     <PickerUI
@@ -440,15 +457,15 @@ const PickerDayUI = () => {
     </Time>
   );
 };
-const formatDayForInput = (date) => {
+const toInputDay = (date) => {
   const yyyy = date.getFullYear();
   const mm = String(date.getMonth() + 1).padStart(2, "0");
   const dd = String(date.getDate()).padStart(2, "0");
   return `${yyyy}-${mm}-${dd}`;
 };
 const PickerMonth = (props) => {
-  const min = formatInputDateProp(props.min, formatMonthForInput);
-  const max = formatInputDateProp(props.max, formatMonthForInput);
+  const min = resolveDateProp(props.min, toInputMonth);
+  const max = resolveDateProp(props.max, toInputMonth);
 
   return (
     <PickerUI
@@ -479,14 +496,14 @@ const PickerMonthUI = () => {
     </Time>
   );
 };
-const formatMonthForInput = (date) => {
+const toInputMonth = (date) => {
   const yyyy = date.getFullYear();
   const mm = String(date.getMonth() + 1).padStart(2, "0");
   return `${yyyy}-${mm}`;
 };
 const PickerWeek = (props) => {
-  const min = formatInputDateProp(props.min, formatWeekForInput);
-  const max = formatInputDateProp(props.max, formatWeekForInput);
+  const min = resolveDateProp(props.min, toInputWeek);
+  const max = resolveDateProp(props.max, toInputWeek);
 
   return (
     <PickerUI
@@ -517,7 +534,7 @@ const PickerWeekUI = () => {
     </Time>
   );
 };
-const formatWeekForInput = (date) => {
+const toInputWeek = (date) => {
   // ISO week number
   const d = new Date(date);
   d.setHours(0, 0, 0, 0);
@@ -530,8 +547,8 @@ const formatWeekForInput = (date) => {
   return `${d.getFullYear()}-W${String(week).padStart(2, "0")}`;
 };
 const PickerTime = (props) => {
-  const min = formatInputDateProp(props.min, formatTimeForInput);
-  const max = formatInputDateProp(props.max, formatTimeForInput);
+  const min = resolveDateProp(props.min, toInputTime);
+  const max = resolveDateProp(props.max, toInputTime);
   const step = parseStepToSeconds(props.step);
 
   return (
@@ -560,14 +577,14 @@ const PickerTimeUI = () => {
   }
   return <Time type="time">{value}</Time>;
 };
-const formatTimeForInput = (date) => {
+const toInputTime = (date) => {
   const hh = String(date.getHours()).padStart(2, "0");
   const min = String(date.getMinutes()).padStart(2, "0");
   return `${hh}:${min}`;
 };
 const PickerDatetime = (props) => {
-  const min = formatInputDateProp(props.min, formatDatetimeForInput);
-  const max = formatInputDateProp(props.max, formatDatetimeForInput);
+  const min = resolveDateProp(props.min, toInputDatetime);
+  const max = resolveDateProp(props.max, toInputDatetime);
   const step = parseStepToSeconds(props.step);
 
   return (
@@ -596,7 +613,7 @@ const PickerDatetimeUI = () => {
   }
   return <Time type="datetime">{value}</Time>;
 };
-const formatDatetimeForInput = (date) => {
+const toInputDatetime = (date) => {
   const yyyy = date.getFullYear();
   const mm = String(date.getMonth() + 1).padStart(2, "0");
   const dd = String(date.getDate()).padStart(2, "0");
@@ -605,7 +622,7 @@ const formatDatetimeForInput = (date) => {
   return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
 };
 
-const formatInputDateProp = (value, formatter) => {
+const resolveDateProp = (value, formatter) => {
   if (value === undefined || value === null) {
     return undefined;
   }
