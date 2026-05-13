@@ -71,6 +71,7 @@
         getNowHours,
         stateSignal,
         usePicker,
+        NaviDebug,
       } from "@jsenv/navi";
 
       const App = () => (
@@ -529,15 +530,17 @@
             </p>
             <Field vertical>
               <Label>Free text</Label>
-              <Picker type="text" placeholder="Type something…">
-                <Box flex="y" spacing="s" padding="s">
-                  <Input
-                    type="text"
-                    // action="picker"
-                    placeholder="Enter value"
-                  />
-                </Box>
-              </Picker>
+              <NaviDebug debugPopup debugFocus>
+                <Picker type="text" placeholder="Type something\u2026">
+                  <Box flex="y" spacing="s" padding="s">
+                    <Input
+                      type="text"
+                      // action="picker"
+                      placeholder="Enter value"
+                    />
+                  </Box>
+                </Picker>
+              </NaviDebug>
             </Field>
           </div>
         );
@@ -575,9 +578,11 @@
             </p>
             <Field vertical>
               <Label>Choose a color</Label>
-              <Picker type="color" placeholder="Pick a color" mode="dialog">
-                <ColorList />
-              </Picker>
+              <NaviDebug debugPopup debugFocus>
+                <Picker type="color" placeholder="Pick a color" mode="dialog">
+                  <ColorList />
+                </Picker>
+              </NaviDebug>
             </Field>
           </div>
         );

@@ -1,6 +1,7 @@
 import { useContext, useRef } from "preact/hooks";
 
 import { Box } from "@jsenv/navi/src/box/box.jsx";
+import { ChevronDownSvg } from "@jsenv/navi/src/graphic/icons/chevron_updown_svg.jsx";
 import { LoadingOutline } from "@jsenv/navi/src/graphic/loading/loading_outline.jsx";
 import { Icon } from "@jsenv/navi/src/text/icon.jsx";
 import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
@@ -99,6 +100,7 @@ const css = /* css */ `
     flex-direction: column;
     justify-content: center;
     color: var(--picker-color);
+    color: var(--picker-placeholder-color);
     font-size: var(--picker-font-size);
     text-align: inherit;
     text-overflow: ellipsis;
@@ -114,6 +116,10 @@ const css = /* css */ `
     cursor: pointer;
     user-select: none;
     overflow: hidden;
+
+    &[data-has-value] {
+      color: var(--picker-color);
+    }
 
     &[data-hover] {
       --x-picker-background-color: var(--picker-background-color-hover);
@@ -331,10 +337,10 @@ const PickerInput = (props) => {
           value: uiState,
         }}
       >
-        {ui}
+        {ui === undefined ? <PickerDefaultUI /> : ui}
       </PickerContext.Provider>
       <span className="navi_picker_right_slot">
-        <Icon size="m">{icon}</Icon>
+        <Icon size="m">{icon === undefined ? <ChevronDownSvg /> : icon}</Icon>
       </span>
 
       <input
@@ -372,3 +378,14 @@ const PICKER_PSEUDO_CLASSES = [
   ":-navi-expanded",
   ":-navi-has-value",
 ];
+
+const PickerDefaultUI = () => {
+  const { value, placeholder } = useContext(PickerContext);
+  if (!value) {
+    if (placeholder) {
+      return placeholder;
+    }
+    return null;
+  }
+  return value;
+};
