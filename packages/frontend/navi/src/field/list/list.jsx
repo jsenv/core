@@ -867,10 +867,12 @@ const useListScrollSync = ({
   const topMatchScoresKeyRef = useRef("");
   useLayoutEffect(() => {
     const listContainerEl = containerRef.current;
+    if (!listContainerEl) {
+      return;
+    }
     const listScrollContainerEl = listContainerEl.querySelector(
       `.navi_list_scroll_container`,
     );
-
     if (!searchText) {
       // no search -> try to restore scroll position
       topMatchScoresKeyRef.current = "";

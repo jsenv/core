@@ -66,6 +66,7 @@
         Icon,
         Form,
         Button,
+        PickerInput,
         isToday,
         getNowHours,
         stateSignal,
@@ -428,16 +429,19 @@
                     <Icon>🎂</Icon> Choisir un anniversaire
                   </Text>
                 }
-              >
-                {daySignal.value ? (
-                  <Box flex alignY="center" spacing="xs">
-                    🎂
-                    <Time type="day" capitalize>
-                      {daySignal.value}
-                    </Time>
-                  </Box>
-                ) : null}
-              </Picker>
+                input={
+                  <PickerInput>
+                    {daySignal.value ? (
+                      <Box flex alignY="center" spacing="xs">
+                        🎂
+                        <Time type="day" capitalize>
+                          {daySignal.value}
+                        </Time>
+                      </Box>
+                    ) : null}
+                  </PickerInput>
+                }
+              />
             </Field>
             <ValueDisplay label="Value" value={daySignal.value} />
           </div>

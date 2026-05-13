@@ -1,3 +1,4 @@
+import { createContext } from "preact";
 import { useContext, useRef, useState } from "preact/hooks";
 
 import { Box } from "@jsenv/navi/src/box/box.jsx";
@@ -237,14 +238,12 @@ export const Picker = (props) => {
     </UIStateControllerContext.Provider>
   );
 };
-
 const PickerDispatcher = (props) => {
   if (props.type === "hour") {
     return <HourPicker {...props} />;
   }
   return <PickerUI {...props} />;
 };
-
 const PickerUI = (props) => {
   import.meta.css = css;
   const {
@@ -252,6 +251,7 @@ const PickerUI = (props) => {
     type = "day",
     name,
     placeholder,
+    input = <PickerInput />,
     disabled,
     readOnly,
     loading,
@@ -260,7 +260,7 @@ const PickerUI = (props) => {
     min,
     max,
     step: stepProp,
-    children,
+    // children,
     ...rest
   } = props;
   const uiState = useContext(UIStateContext);
@@ -292,8 +292,6 @@ const PickerUI = (props) => {
   const inputType = TYPE_TO_INPUT_TYPE[type] || "date";
   const hasValue = uiState !== undefined && uiState !== "" && uiState !== null;
   const [expanded, setExpanded] = useState(false);
-
-  const showColorSwatchAlways = type === "color" && !placeholder && !children;
 
   return (
     <Box
@@ -346,22 +344,10 @@ const PickerUI = (props) => {
         color="var(--loader-color)"
         inset={-1}
       />
-      <span className="navi_picker_placeholder" hidden={hasValue}>
-        {placeholder}
-      </span>
-      <span
-        className="navi_picker_value"
-        hidden={!hasValue && !showColorSwatchAlways}
-      >
-        {children ? (
-          children
-        ) : (
-          <DefaultValueDisplay
-            type={type}
-            value={hasValue ? uiState : "#000000"}
-          />
-        )}
-      </span>
+      <PickerInputContext.Provider value={{ placeholder, type, hasValue }}>
+        {input}
+      </PickerInputContext.Provider>
+
       <span className="navi_picker_right_slot">
         <Icon size="m">{ICON_FOR_TYPE[type] || <CalendarSvg />}</Icon>
       </span>
@@ -395,6 +381,39 @@ const PickerUI = (props) => {
         }}
       />
     </Box>
+  );
+};
+
+const PickerInputContext = createContext();
+export const PickerInput = (props) => {
+  const uiState = useContext(UIStateContext);
+  const {
+    placeholder = props.placeholder,
+    type,
+    hasValue,
+  } = useContext(PickerInputContext);
+  const children = props.children;
+  const showColorSwatchAlways = type === "color" && !placeholder && !children;
+
+  return (
+    <>
+      <span className="navi_picker_placeholder" hidden={hasValue}>
+        {placeholder}
+      </span>
+      <span
+        className="navi_picker_value"
+        hidden={!hasValue && !showColorSwatchAlways}
+      >
+        {children ? (
+          children
+        ) : (
+          <DefaultValueDisplay
+            type={type}
+            value={hasValue ? uiState : "#000000"}
+          />
+        )}
+      </span>
+    </>
   );
 };
 

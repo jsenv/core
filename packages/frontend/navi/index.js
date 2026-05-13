@@ -111,7 +111,7 @@ export { Field, Label } from "./src/field/field.jsx";
 export { Form } from "./src/field/form.jsx";
 export { Group } from "./src/field/group.jsx";
 export { Input } from "./src/field/input/input.jsx";
-export { Picker } from "./src/field/picker/picker.jsx";
+export { Picker, PickerInput } from "./src/field/picker/picker.jsx";
 export { getNowHours, isToday } from "./src/field/picker/time_helpers.js";
 export { Radio, RadioList } from "./src/field/radio_list.jsx";
 export { Select, useSelectRequestClose } from "./src/field/select/select.jsx";
