@@ -251,6 +251,7 @@ const PickerContext = createContext();
 const PickerInput = (props) => {
   import.meta.css = css;
   const {
+    id,
     ref,
     type,
     name,
@@ -342,6 +343,7 @@ const PickerInput = (props) => {
       <input
         ref={pickerInputRef}
         className="navi_picker_input"
+        id={id}
         type={type}
         name={name}
         value={uiState}
@@ -393,7 +395,7 @@ const PickerColor = (props) => {
   return (
     <PickerInput
       type="color"
-      data-required-message={naviI18n(`picker.required.color`)}
+      requiredMessage={naviI18n(`picker.required.color`)}
       ui={<PickerColorUI />}
       icon={<ColorSvg />}
       {...props}
@@ -430,7 +432,7 @@ const PickerDay = (props) => {
       type="date"
       min={min}
       max={max}
-      data-required-message={naviI18n(`picker.required.day`)}
+      requiredMessage={naviI18n(`picker.required.day`)}
       ui={<PickerDayUI />}
       icon={<CalendarSvg />}
       {...props}
@@ -469,7 +471,7 @@ const PickerMonth = (props) => {
       type="month"
       min={min}
       max={max}
-      data-required-message={naviI18n(`picker.required.month`)}
+      requiredMessage={naviI18n(`picker.required.month`)}
       ui={<PickerMonthUI />}
       icon={<CalendarSvg />}
       {...props}
@@ -507,7 +509,7 @@ const PickerWeek = (props) => {
       type="week"
       min={min}
       max={max}
-      data-required-message={naviI18n(`picker.required.week`)}
+      requiredMessage={naviI18n(`picker.required.week`)}
       ui={<PickerWeekUI />}
       icon={<CalendarSvg />}
       {...props}
@@ -554,7 +556,7 @@ const PickerTime = (props) => {
       min={min}
       max={max}
       step={step}
-      data-required-message={naviI18n(`picker.required.time`)}
+      requiredMessage={naviI18n(`picker.required.time`)}
       ui={<PickerTimeUI />}
       icon={<ClockSvg />}
       {...props}
@@ -590,7 +592,7 @@ const PickerDatetime = (props) => {
       min={min}
       max={max}
       step={step}
-      data-required-message={naviI18n(`picker.required.datetime`)}
+      requiredMessage={naviI18n(`picker.required.datetime`)}
       ui={<PickerDatetimeUI />}
       icon={<CalendarSvg />}
       {...props}
