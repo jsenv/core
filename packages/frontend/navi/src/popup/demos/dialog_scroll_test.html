@@ -52,8 +52,6 @@
     </style>
   </head>
   <body onclick="document.getElementById('d').showModal()">
-    <div class="scroll-content" id="grid"></div>
-
     <dialog
       id="d"
       onclick="
@@ -63,6 +61,7 @@
     >
       <p>Clique en dehors pour fermer</p>
     </dialog>
+    <div class="scroll-content" id="grid"></div>
     <script>
       const grid = document.getElementById("grid");
       for (let i = 0; i < 100; i++) {
