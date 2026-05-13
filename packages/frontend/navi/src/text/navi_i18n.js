@@ -211,11 +211,19 @@ naviI18n.addAll({
     fr: "[field] doit être <strong>[min]</strong> ou plus.",
     en: "[field] must be <strong>[min]</strong> or later.",
   },
+  "constraint.min.date": {
+    fr: "[field] doit être <strong>[min]</strong> ou plus.",
+    en: "[field] must be <strong>[min]</strong> or later.",
+  },
   "constraint.max.number": {
     fr: "[field] doit être <strong>[max]</strong> ou moins.",
     en: "[field] must be <strong>[max]</strong> or less.",
   },
   "constraint.max.time": {
+    fr: "[field] doit être <strong>[max]</strong> ou moins.",
+    en: "[field] must be <strong>[max]</strong> or less.",
+  },
+  "constraint.max.date": {
     fr: "[field] doit être <strong>[max]</strong> ou moins.",
     en: "[field] must be <strong>[max]</strong> or less.",
   },

@@ -255,6 +255,16 @@ export const TYPE_NUMBER_CONSTRAINT = {
 };
 CONSTRAINT_ATTRIBUTE_SET.add("data-type-message");
 
+// ISO date strings (YYYY-MM-DD, YYYY-MM, YYYY-Www, YYYY-MM-DDTHH:MM) are
+// zero-padded big-endian, so lexicographic comparison is equivalent to
+// chronological comparison — no need to parse into Date objects.
+const DATE_INPUT_TYPE_SET = new Set([
+  "date",
+  "month",
+  "week",
+  "datetime-local",
+]);
+
 export const MIN_CONSTRAINT = {
   name: "min",
   messageAttribute: "data-min-message",
@@ -302,8 +312,23 @@ export const MIN_CONSTRAINT = {
     // "range"
     // - user interface do not let user enter anything outside the boundaries
     // - when setting value via js browser enforce boundaries too
-    // "date", "month", "week", "datetime-local"
-    // - same as "range"
+    if (DATE_INPUT_TYPE_SET.has(field.type)) {
+      const min = field.min;
+      if (!min) {
+        return null;
+      }
+      const value = field.value;
+      if (!value) {
+        return null;
+      }
+      if (value < min) {
+        return generateFieldInvalidMessage("constraint.min.date", {
+          field,
+          min,
+        });
+      }
+      return null;
+    }
     return null;
   },
 };
@@ -348,6 +373,23 @@ export const MAX_CONSTRAINT = {
       const [hours, minutes] = value.split(":").map(Number);
       if (hours > maxHours || (hours === maxHours && maxMinutes > minutes)) {
         return generateFieldInvalidMessage("constraint.max.time", {
+          field,
+          max,
+        });
+      }
+      return null;
+    }
+    if (DATE_INPUT_TYPE_SET.has(field.type)) {
+      const max = field.max;
+      if (!max) {
+        return null;
+      }
+      const value = field.value;
+      if (!value) {
+        return null;
+      }
+      if (value > max) {
+        return generateFieldInvalidMessage("constraint.max.date", {
           field,
           max,
         });
