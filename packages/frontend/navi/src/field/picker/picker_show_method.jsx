@@ -1,0 +1,325 @@
+import { useContext } from "preact/hooks";
+
+import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
+import { Time } from "@jsenv/navi/src/text/time.jsx";
+import { PickerContext, PickerDispatcherContext } from "./picker_context.jsx";
+import { PickerValuePlaceholder } from "./picker_value_placeholder.jsx";
+import { parseStepToSeconds } from "./time_helpers.js";
+
+export const PickerShowMethod = (props) => {
+  if (props.type === "color") {
+    return <PickerColor {...props} />;
+  }
+  if (props.type === "day") {
+    return <PickerDay {...props} />;
+  }
+  if (props.type === "month") {
+    return <PickerMonth {...props} />;
+  }
+  if (props.type === "week") {
+    return <PickerWeek {...props} />;
+  }
+  if (props.type === "time") {
+    return <PickerTime {...props} />;
+  }
+  if (props.type === "datetime") {
+    return <PickerDatetime {...props} />;
+  }
+  return null;
+};
+
+const getPropsToShowPicker = (props) => {
+  return {
+    ...props,
+    onMouseDown: (e) => {
+      // e.preventDefault();
+      callInputShowPicker(e);
+      props.onMouseDown?.(e);
+    },
+    // we also listen click as it's what we receive from <label>
+    onClick: (e) => {
+      // e.preventDefault();
+      callInputShowPicker(e);
+      props.onClick?.(e);
+    },
+  };
+};
+const callInputShowPicker = (e) => {
+  const button = e.currentTarget;
+  const inputEl = button.querySelector(".navi_picker_input");
+  if (inputEl) {
+    try {
+      inputEl.showPicker();
+    } catch {
+      inputEl.click();
+    }
+  }
+};
+
+const PickerColor = (props) => {
+  const PickerDispatcher = useContext(PickerDispatcherContext);
+  return (
+    <PickerDispatcher
+      requiredMessage={naviI18n(`picker.required.color`)}
+      ui={<PickerColorUI />}
+      icon={<ColorSvg />}
+      {...getPropsToShowPicker(props)}
+      type="color"
+    >
+      {props.children}
+    </PickerDispatcher>
+  );
+};
+const PickerColorUI = () => {
+  const { value, placeholder } = useContext(PickerContext);
+  if (!value) {
+    if (placeholder) {
+      return <PickerValuePlaceholder>{placeholder}</PickerValuePlaceholder>;
+    }
+    return null;
+  }
+  return (
+    <span
+      className="navi_picker_color_display"
+      style={{
+        "--picker-color": value,
+      }}
+    />
+  );
+};
+
+const PickerDay = (props) => {
+  const min = resolveDateProp(props.min, toInputDay);
+  const max = resolveDateProp(props.max, toInputDay);
+
+  return (
+    <PickerInput
+      requiredMessage={naviI18n(`picker.required.day`)}
+      ui={<PickerDayUI />}
+      icon={<CalendarSvg />}
+      {...getPropsToShowPicker(props)}
+      min={min}
+      max={max}
+      type="date"
+    >
+      {props.children}
+    </PickerInput>
+  );
+};
+const PickerDayUI = () => {
+  const { value, placeholder } = useContext(PickerContext);
+  if (!value) {
+    if (placeholder) {
+      return <PickerValuePlaceholder>{placeholder}</PickerValuePlaceholder>;
+    }
+    return null;
+  }
+  return (
+    <Time type="day" capitalize>
+      {value}
+    </Time>
+  );
+};
+const toInputDay = (date) => {
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+};
+const PickerMonth = (props) => {
+  const min = resolveDateProp(props.min, toInputMonth);
+  const max = resolveDateProp(props.max, toInputMonth);
+
+  return (
+    <PickerInput
+      requiredMessage={naviI18n(`picker.required.month`)}
+      ui={<PickerMonthUI />}
+      icon={<CalendarSvg />}
+      {...getPropsToShowPicker(props)}
+      type="month"
+      min={min}
+      max={max}
+    >
+      {props.children}
+    </PickerInput>
+  );
+};
+const PickerMonthUI = () => {
+  const { value, placeholder } = useContext(PickerContext);
+  if (!value) {
+    if (placeholder) {
+      return <PickerValuePlaceholder>{placeholder}</PickerValuePlaceholder>;
+    }
+    return null;
+  }
+  return (
+    <Time type="month" capitalize>
+      {value}
+    </Time>
+  );
+};
+const toInputMonth = (date) => {
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  return `${yyyy}-${mm}`;
+};
+const PickerWeek = (props) => {
+  const min = resolveDateProp(props.min, toInputWeek);
+  const max = resolveDateProp(props.max, toInputWeek);
+
+  return (
+    <PickerInput
+      requiredMessage={naviI18n(`picker.required.week`)}
+      ui={<PickerWeekUI />}
+      icon={<CalendarSvg />}
+      {...getPropsToShowPicker(props)}
+      type="week"
+      min={min}
+      max={max}
+    >
+      {props.children}
+    </PickerInput>
+  );
+};
+const PickerWeekUI = () => {
+  const { value, placeholder } = useContext(PickerContext);
+  if (!value) {
+    if (placeholder) {
+      return <PickerValuePlaceholder>{placeholder}</PickerValuePlaceholder>;
+    }
+    return null;
+  }
+  return (
+    <Time type="week" capitalize>
+      {value}
+    </Time>
+  );
+};
+const toInputWeek = (date) => {
+  // ISO week number
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
+  const yearStart = new Date(d.getFullYear(), 0, 4);
+  const week =
+    Math.round(
+      ((d - yearStart) / 86400000 - 3 + ((yearStart.getDay() + 6) % 7)) / 7,
+    ) + 1;
+  return `${d.getFullYear()}-W${String(week).padStart(2, "0")}`;
+};
+const PickerTime = (props) => {
+  const min = resolveDateProp(props.min, toInputTime);
+  const max = resolveDateProp(props.max, toInputTime);
+  const step = parseStepToSeconds(props.step);
+
+  return (
+    <PickerInput
+      requiredMessage={naviI18n(`picker.required.time`)}
+      ui={<PickerTimeUI />}
+      icon={<ClockSvg />}
+      {...getPropsToShowPicker(props)}
+      type="time"
+      min={min}
+      max={max}
+      step={step}
+    >
+      {props.children}
+    </PickerInput>
+  );
+};
+const PickerTimeUI = () => {
+  const { value, placeholder } = useContext(PickerContext);
+  if (!value) {
+    if (placeholder) {
+      return <PickerValuePlaceholder>{placeholder}</PickerValuePlaceholder>;
+    }
+    return null;
+  }
+  return <Time type="time">{value}</Time>;
+};
+const toInputTime = (date) => {
+  const hh = String(date.getHours()).padStart(2, "0");
+  const min = String(date.getMinutes()).padStart(2, "0");
+  return `${hh}:${min}`;
+};
+const PickerDatetime = (props) => {
+  const min = resolveDateProp(props.min, toInputDatetime);
+  const max = resolveDateProp(props.max, toInputDatetime);
+  const step = parseStepToSeconds(props.step);
+
+  return (
+    <PickerInput
+      requiredMessage={naviI18n(`picker.required.datetime`)}
+      ui={<PickerDatetimeUI />}
+      icon={<CalendarSvg />}
+      {...getPropsToShowPicker(props)}
+      type="datetime-local"
+      min={min}
+      max={max}
+      step={step}
+    >
+      {props.children}
+    </PickerInput>
+  );
+};
+const PickerDatetimeUI = () => {
+  const { value, placeholder } = useContext(PickerContext);
+  if (!value) {
+    if (placeholder) {
+      return <PickerValuePlaceholder>{placeholder}</PickerValuePlaceholder>;
+    }
+    return null;
+  }
+  return <Time type="datetime">{value}</Time>;
+};
+const toInputDatetime = (date) => {
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  const hh = String(date.getHours()).padStart(2, "0");
+  const min = String(date.getMinutes()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
+};
+
+const resolveDateProp = (value, formatter) => {
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+  if (value instanceof Date) {
+    return formatter(value);
+  }
+  return value;
+};
+const CalendarSvg = () => {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+    >
+      <path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z" />
+    </svg>
+  );
+};
+const ClockSvg = () => {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+    >
+      <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z" />
+    </svg>
+  );
+};
+const ColorSvg = () => {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+    >
+      <path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8zm-5.5 9c-.83 0-1.5-.67-1.5-1.5S5.67 9 6.5 9 8 9.67 8 10.5 7.33 12 6.5 12zm3-4C8.67 8 8 7.33 8 6.5S8.67 5 9.5 5s1.5.67 1.5 1.5S10.33 8 9.5 8zm5 0c-.83 0-1.5-.67-1.5-1.5S13.67 5 14.5 5s1.5.67 1.5 1.5S15.33 8 14.5 8zm3 4c-.83 0-1.5-.67-1.5-1.5S16.67 9 17.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z" />
+    </svg>
+  );
+};
