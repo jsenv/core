@@ -307,7 +307,7 @@ const PickerInput = (props) => {
         ":disabled": innerDisabled,
         ":-navi-loading": innerLoading,
       }}
-      pseudoStateSelector=".navi_picker_input"
+      // pseudoStateSelector=".navi_picker_input"
       pseudoClasses={PICKER_PSEUDO_CLASSES}
       onMouseDown={(e) => {
         if (e.button !== 0) {
@@ -375,20 +375,16 @@ const PICKER_PSEUDO_CLASSES = [
   ":-navi-has-value",
 ];
 
-const onMouseDownForShowPicker = (props) => {
-  return (e) => {
-    e.preventDefault();
-    const button = e.currentTarget;
-    const inputEl = button.querySelector(".navi_picker_input");
-    if (inputEl) {
-      try {
-        inputEl.showPicker();
-      } catch {
-        inputEl.click();
-      }
+const callInputShowPicker = (e) => {
+  const button = e.currentTarget;
+  const inputEl = button.querySelector(".navi_picker_input");
+  if (inputEl) {
+    try {
+      inputEl.showPicker();
+    } catch {
+      inputEl.click();
     }
-    props.onMouseDown?.(e);
-  };
+  }
 };
 
 const PickerColor = (props) => {
@@ -399,7 +395,6 @@ const PickerColor = (props) => {
       ui={<PickerColorUI />}
       icon={<ColorSvg />}
       {...props}
-      onMouseDown={onMouseDownForShowPicker(props)}
     >
       {props.children}
     </PickerInput>
@@ -436,7 +431,16 @@ const PickerDay = (props) => {
       ui={<PickerDayUI />}
       icon={<CalendarSvg />}
       {...props}
-      onMouseDown={onMouseDownForShowPicker(props)}
+      onMouseDown={(e) => {
+        e.preventDefault();
+        //  callInputShowPicker(e);
+        props.onMouseDown?.(e);
+      }}
+      onClick={(e) => {
+        e.preventDefault();
+        callInputShowPicker(e);
+        props.onClick?.(e);
+      }}
     >
       {props.children}
     </PickerInput>
@@ -475,7 +479,6 @@ const PickerMonth = (props) => {
       ui={<PickerMonthUI />}
       icon={<CalendarSvg />}
       {...props}
-      onMouseDown={onMouseDownForShowPicker(props)}
     >
       {props.children}
     </PickerInput>
@@ -513,7 +516,6 @@ const PickerWeek = (props) => {
       ui={<PickerWeekUI />}
       icon={<CalendarSvg />}
       {...props}
-      onMouseDown={onMouseDownForShowPicker(props)}
     >
       {props.children}
     </PickerInput>
@@ -560,7 +562,6 @@ const PickerTime = (props) => {
       ui={<PickerTimeUI />}
       icon={<ClockSvg />}
       {...props}
-      onMouseDown={onMouseDownForShowPicker(props)}
     >
       {props.children}
     </PickerInput>
@@ -596,7 +597,6 @@ const PickerDatetime = (props) => {
       ui={<PickerDatetimeUI />}
       icon={<CalendarSvg />}
       {...props}
-      onMouseDown={onMouseDownForShowPicker(props)}
     >
       {props.children}
     </PickerInput>
