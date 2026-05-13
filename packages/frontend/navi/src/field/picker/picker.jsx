@@ -23,8 +23,8 @@ import {
 import { useConstraints } from "../validation/hooks/use_constraints.js";
 import { createDispatcher } from "./create_dispatcher.jsx";
 import { PickerContext, PickerDispatcherContext } from "./picker_context.jsx";
-import { PickerHour } from "./picker_hour.jsx";
-import { PickerShowMethodMiddleware } from "./picker_show_method_middleware.jsx";
+import { PickerPresetMiddleware } from "./preset/picker_preset_middleware.jsx";
+import { PickerShowMethodMiddleware } from "./show_method/picker_show_method_middleware.jsx";
 
 const css = /* css */ `
   @layer navi {
@@ -215,14 +215,8 @@ export const Picker = (props) => {
     </UIStateControllerContext.Provider>
   );
 };
-const PickerHourMiddleware = (props) => {
-  if (props.type === "hour") {
-    return <PickerHour {...props} />;
-  }
-  return null;
-};
 const renderPicker = createDispatcher(
-  [PickerShowMethodMiddleware, PickerHourMiddleware],
+  [PickerShowMethodMiddleware, PickerPresetMiddleware],
   PickerDispatcherContext,
 );
 

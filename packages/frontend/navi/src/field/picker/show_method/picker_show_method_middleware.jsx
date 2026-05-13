@@ -2,9 +2,9 @@ import { useContext } from "preact/hooks";
 
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { Time } from "@jsenv/navi/src/text/time.jsx";
-import { PickerContext, PickerDispatcherContext } from "./picker_context.jsx";
-import { PickerValuePlaceholder } from "./picker_value_placeholder.jsx";
-import { parseStepToSeconds } from "./time_helpers.js";
+import { PickerContext, PickerDispatcherContext } from "../picker_context.jsx";
+import { PickerValuePlaceholder } from "../picker_value_placeholder.jsx";
+import { parseStepToSeconds } from "../time_helpers.js";
 
 export const PickerShowMethodMiddleware = (props) => {
   if (props.type === "color") {
