@@ -20,6 +20,7 @@
            (no physical height) — this eliminates the ghost white space at the
            bottom caused by the native horizontal scrollbar reserving space. */
         overflow: auto;
+        overscroll-behavior: none;
       }
       body {
         font-family: system-ui;
@@ -28,7 +29,6 @@
       }
       .scroll-content {
         display: grid;
-        width: max-content;
         padding: 8px;
         grid-template-columns: repeat(10, 200px);
         grid-template-rows: repeat(10, 200px);
@@ -43,16 +43,9 @@
         background: hsl(calc(var(--i) * 36), 60%, 85%);
         border-radius: 8px;
       }
-
-      dialog::backdrop {
-        background: rgba(0, 0, 0, 0.4);
-      }
     </style>
   </head>
   <body>
-    <dialog id="d" onclick="">
-      <p>Clique en dehors pour fermer</p>
-    </dialog>
     <div class="scroll-content" id="grid"></div>
     <script>
       const grid = document.getElementById("grid");
@@ -64,6 +57,25 @@
         grid.appendChild(cell);
       }
 
+      console.log({
+        innerWidth: window.innerWidth,
+        innerHeight: window.innerHeight,
+
+        clientWidth: document.documentElement.clientWidth,
+        clientHeight: document.documentElement.clientHeight,
+
+        scrollWidth: document.documentElement.scrollWidth,
+        scrollHeight: document.documentElement.scrollHeight,
+
+        visualWidth: window.visualViewport?.width,
+        visualHeight: window.visualViewport?.height,
+      });
+    </script>
+
+    <dialog id="d" onclick="">
+      <p>Clique en dehors pour fermer</p>
+    </dialog>
+    <script>
       const dialog = document.getElementById("d");
       dialog.onclick = (e) => {
         e.stopPropagation();
@@ -71,16 +83,6 @@
           dialog.close();
         }
       };
-
-      console.log({
-        innerHeight: window.innerHeight,
-
-        clientHeight: document.documentElement.clientHeight,
-
-        scrollHeight: document.documentElement.scrollHeight,
-
-        visual: window.visualViewport?.height,
-      });
 
       document.body.onclick = async () => {
         const scrollContainer = document.body;
