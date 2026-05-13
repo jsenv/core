@@ -18,6 +18,13 @@
         font-family: system-ui;
         cursor: pointer;
       }
+      .grid-wrapper {
+        /* Horizontal scroll is contained here, so the document never overflows
+           horizontally. This prevents Chrome Android from inflating the layout
+           viewport (innerWidth/Height) to match the content size — which would
+           break position:fixed centering for dialogs. */
+        overflow-x: auto;
+      }
       .grid {
         display: grid;
         grid-template-columns: repeat(4, 200px);
@@ -33,18 +40,6 @@
         background: hsl(calc(var(--i) * 20), 60%, 85%);
         border-radius: 8px;
       }
-      dialog {
-        position: fixed;
-        inset: 0;
-        margin: auto;
-        padding: 32px 40px;
-        font-size: 16px;
-        text-align: center;
-        background: white;
-        border: 2px solid #333;
-        border-radius: 12px;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-      }
       dialog::backdrop {
         background: rgba(0, 0, 0, 0.4);
       }
@@ -54,7 +49,9 @@
     <dialog id="d">
       <p>Clique en dehors pour fermer</p>
     </dialog>
-    <div class="grid" id="grid"></div>
+    <div class="grid-wrapper">
+      <div class="grid" id="grid"></div>
+    </div>
     <script>
       const grid = document.getElementById("grid");
       for (let i = 0; i < 40; i++) {
