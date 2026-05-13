@@ -1,3 +1,4 @@
+import { PickerPopup } from "./picker_popup/picker_popup.jsx";
 import { PickerHour } from "./preset/picker_hour.jsx";
 import {
   PickerColor,
@@ -37,7 +38,15 @@ const PickerPresetMiddleware = (props) => {
   return null;
 };
 
+const PickerPopupMiddleware = (props) => {
+  if (props.children !== undefined) {
+    return <PickerPopup {...props} />;
+  }
+  return null;
+};
+
 export const pickerMiddlewares = [
   PickerShowMethodMiddleware,
   PickerPresetMiddleware,
+  PickerPopupMiddleware,
 ];
