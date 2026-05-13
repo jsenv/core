@@ -754,8 +754,15 @@ const SelectWithPopover = (props) => {
 };
 // SelectWithDialog — trigger + centered modal dialog.
 const SelectWithDialog = (props) => {
-  let { ref, disabled, onKeyDown, children, scrollTrap, pointerTrap, ...rest } =
-    props;
+  const {
+    ref,
+    disabled,
+    onKeyDown,
+    children,
+    scrollTrap = true,
+    pointerTrap,
+    ...rest
+  } = props;
   const debugFocus = useDebugFocus();
   const debugPopup = useDebugPopup();
   const dialogRef = useRef(null);

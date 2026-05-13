@@ -68,6 +68,7 @@
         Button,
         isToday,
         getNowHours,
+        stateSignal,
       } from "@jsenv/navi";
 
       const App = () => (
@@ -94,10 +95,16 @@
       yesterday.setDate(today.getDate() - 1);
       const yesterdayStr = yesterday.toISOString().slice(0, 10);
 
+      const daySignal = stateSignal(todayStr, {
+        type: "day",
+        min: today,
+        autoFix: true,
+      });
+
       const DayHourPickerDemo = () => {
-        const daySignal = useSignal(todayStr);
         const hourSignal = useSignal("07:00");
         const submittedSignal = useSignal(null);
+
         return (
           <div class="demo-section">
             <h2>Jour + Heure</h2>
@@ -118,7 +125,8 @@
                 <Label htmlFor="day">Jour</Label>
                 <Box flex spacing="s">
                   <Picker
-                    minWidth="300"
+                    minWidth="200"
+                    alignX="center"
                     id="day"
                     type="day"
                     name="day"
@@ -129,7 +137,6 @@
                     }}
                     min={today}
                     max={in30days}
-                    placeholder="Choisir un jour"
                   />
                   <Picker
                     type="hour"
@@ -145,7 +152,6 @@
                     uiAction={(v) => {
                       hourSignal.value = v;
                     }}
-                    placeholder="Choisir une heure"
                   />
                 </Box>
               </Field>
