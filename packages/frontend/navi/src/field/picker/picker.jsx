@@ -23,8 +23,7 @@ import {
 import { useConstraints } from "../validation/hooks/use_constraints.js";
 import { createDispatcher } from "./create_dispatcher.jsx";
 import { PickerContext, PickerDispatcherContext } from "./picker_context.jsx";
-import { PickerPresetMiddleware } from "./preset/picker_preset_middleware.jsx";
-import { PickerShowMethodMiddleware } from "./show_method/picker_show_method_middleware.jsx";
+import { pickerMiddlewares } from "./picker_middlewares.jsx";
 
 const css = /* css */ `
   @layer navi {
@@ -216,7 +215,7 @@ export const Picker = (props) => {
   );
 };
 const renderPicker = createDispatcher(
-  [PickerShowMethodMiddleware, PickerPresetMiddleware],
+  pickerMiddlewares,
   PickerDispatcherContext,
 );
 

@@ -6,28 +6,6 @@ import { PickerContext, PickerDispatcherContext } from "../picker_context.jsx";
 import { PickerValuePlaceholder } from "../picker_value_placeholder.jsx";
 import { parseStepToSeconds } from "../time_helpers.js";
 
-export const PickerShowMethodMiddleware = (props) => {
-  if (props.type === "color") {
-    return <PickerColor {...props} />;
-  }
-  if (props.type === "day") {
-    return <PickerDay {...props} />;
-  }
-  if (props.type === "month") {
-    return <PickerMonth {...props} />;
-  }
-  if (props.type === "week") {
-    return <PickerWeek {...props} />;
-  }
-  if (props.type === "time") {
-    return <PickerTime {...props} />;
-  }
-  if (props.type === "datetime") {
-    return <PickerDatetime {...props} />;
-  }
-  return null;
-};
-
 const getPropsToShowPicker = (props) => {
   return {
     ...props,
@@ -56,7 +34,7 @@ const callInputShowPicker = (e) => {
   }
 };
 
-const PickerColor = (props) => {
+export const PickerColor = (props) => {
   const PickerDispatcher = useContext(PickerDispatcherContext);
   return (
     <PickerDispatcher
@@ -88,7 +66,7 @@ const PickerColorUI = () => {
   );
 };
 
-const PickerDay = (props) => {
+export const PickerDay = (props) => {
   const PickerDispatcher = useContext(PickerDispatcherContext);
   const min = resolveDateProp(props.min, toInputDay);
   const max = resolveDateProp(props.max, toInputDay);
@@ -127,7 +105,7 @@ const toInputDay = (date) => {
   const dd = String(date.getDate()).padStart(2, "0");
   return `${yyyy}-${mm}-${dd}`;
 };
-const PickerMonth = (props) => {
+export const PickerMonth = (props) => {
   const PickerDispatcher = useContext(PickerDispatcherContext);
   const min = resolveDateProp(props.min, toInputMonth);
   const max = resolveDateProp(props.max, toInputMonth);
@@ -165,7 +143,7 @@ const toInputMonth = (date) => {
   const mm = String(date.getMonth() + 1).padStart(2, "0");
   return `${yyyy}-${mm}`;
 };
-const PickerWeek = (props) => {
+export const PickerWeek = (props) => {
   const PickerDispatcher = useContext(PickerDispatcherContext);
   const min = resolveDateProp(props.min, toInputWeek);
   const max = resolveDateProp(props.max, toInputWeek);
@@ -210,7 +188,7 @@ const toInputWeek = (date) => {
     ) + 1;
   return `${d.getFullYear()}-W${String(week).padStart(2, "0")}`;
 };
-const PickerTime = (props) => {
+export const PickerTime = (props) => {
   const PickerDispatcher = useContext(PickerDispatcherContext);
   const min = resolveDateProp(props.min, toInputTime);
   const max = resolveDateProp(props.max, toInputTime);
@@ -246,7 +224,7 @@ const toInputTime = (date) => {
   const min = String(date.getMinutes()).padStart(2, "0");
   return `${hh}:${min}`;
 };
-const PickerDatetime = (props) => {
+export const PickerDatetime = (props) => {
   const PickerDispatcher = useContext(PickerDispatcherContext);
   const min = resolveDateProp(props.min, toInputDatetime);
   const max = resolveDateProp(props.max, toInputDatetime);
