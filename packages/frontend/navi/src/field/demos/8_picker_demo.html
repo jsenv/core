@@ -107,7 +107,7 @@
             >
               <Field vertical>
                 <Label htmlFor="day">Jour</Label>
-                <Box flex spacing="m">
+                <Box flex spacing="s">
                   <Picker
                     minWidth="300"
                     id="day"
@@ -141,7 +141,17 @@
                   />
                 </Box>
               </Field>
-              <Button type="submit">Soumettre</Button>
+              <Box flex spacing="s">
+                <Button
+                  type="button"
+                  onClick={() => {
+                    daySignal.value = yesterdayStr;
+                  }}
+                >
+                  Forcer hier ({yesterdayStr})
+                </Button>
+                <Button type="submit">Soumettre</Button>
+              </Box>
               {submittedSignal.value && (
                 <pre style="margin:0;font-size:12px;background:#f0f0f0;padding:8px;border-radius:4px;">
                   {JSON.stringify(submittedSignal.value, null, 2)}
@@ -156,6 +166,9 @@
       const today = new Date();
       const in30days = new Date(today);
       in30days.setDate(today.getDate() + 30);
+      const yesterday = new Date(today);
+      yesterday.setDate(today.getDate() - 1);
+      const yesterdayStr = yesterday.toISOString().slice(0, 10);
 
       const ValueDisplay = ({ label, value }) => (
         <p class="value-display">
