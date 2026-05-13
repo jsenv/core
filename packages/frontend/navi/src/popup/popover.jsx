@@ -62,7 +62,7 @@ export const Popover = (props) => {
   openedRef.current = opened;
   const [addCleanup, cleanup] = useCleanup();
   const open = (e, { anchor }) => {
-    debugPopup(`openPopover("${e.type}")`);
+    debugPopup(e, `openPopover()`);
     const popoverEl = ref.current;
     popoverEl.showPopover();
     const firstFocusable = findFocusable(popoverEl);
@@ -122,7 +122,8 @@ export const Popover = (props) => {
           : spaceBelow;
       popoverEl.style.setProperty("--space-available", `${spaceAvailable}px`);
       debugPopup(
-        `positionPopover("${positionEvent.type}") -> left: ${left}, top: ${top}`,
+        positionEvent,
+        `positionPopover() -> left: ${left}, top: ${top}`,
       );
       popoverEl.style.top = `${top}px`;
       popoverEl.style.left = `${Math.max(left, minLeft)}px`;
@@ -155,7 +156,7 @@ export const Popover = (props) => {
     });
   };
   const close = (e) => {
-    debugPopup(`closePopover("${e.type}")`);
+    debugPopup(e, `closePopover()`);
     const popoverEl = ref.current;
     popoverEl.hidePopover();
     cleanup();

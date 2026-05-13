@@ -226,11 +226,10 @@ const PickerContentInsidePopover = (props) => {
     // scroll <button> of the picker into view when opening it
     const pickerEl = ref.current;
     pickerEl.scrollIntoView({ block: "nearest" });
-
     const popoverEl = popoverRef.current;
     return requestPopoverOpen(popoverEl, {
       event: e,
-      anchor: ref.current,
+      anchor: pickerEl,
     });
   };
   const disableClickFor = useIgnoreClickForMousedown();
@@ -305,10 +304,10 @@ const PickerContentInsidePopover = (props) => {
         // Close when focus leaves the select entirely (not just moving between internal elements).
         // relatedTarget is the element receiving focus; if it's inside the select or the popover, keep open.
         const relatedTarget = e.relatedTarget;
-        const selectEl = ref.current;
+        const pickerEl = ref.current;
         const popoverEl = popoverRef.current;
         const focusStaysInside =
-          (selectEl && selectEl.contains(relatedTarget)) ||
+          (pickerEl && pickerEl.contains(relatedTarget)) ||
           (popoverEl && popoverEl.contains(relatedTarget));
         if (!focusStaysInside) {
           requestClose(e);
