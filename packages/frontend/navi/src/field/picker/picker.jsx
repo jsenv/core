@@ -298,6 +298,8 @@ const PickerInput = (props) => {
       type="button"
       {...remainingProps}
       ref={ref}
+      // We put id on the button because label should trigger click on the button not the input
+      id={id}
       baseClassName="navi_picker"
       navi-has-placeholder={placeholder ? "" : undefined}
       autoFocus={undefined}
@@ -343,7 +345,6 @@ const PickerInput = (props) => {
       <input
         ref={pickerInputRef}
         className="navi_picker_input"
-        id={id}
         type={type}
         name={name}
         value={uiState}
@@ -395,6 +396,16 @@ const PickerColor = (props) => {
       ui={<PickerColorUI />}
       icon={<ColorSvg />}
       {...props}
+      onMouseDown={(e) => {
+        e.preventDefault();
+        callInputShowPicker(e);
+        props.onMouseDown?.(e);
+      }}
+      onClick={(e) => {
+        e.preventDefault();
+        callInputShowPicker(e);
+        props.onClick?.(e);
+      }}
     >
       {props.children}
     </PickerInput>
