@@ -195,7 +195,7 @@ const css = /* css */ `
  *                is today.
  *
  * Fully custom picker (no built-in input):
- *   (any other type, or no type) → bare PickerUI with a hidden input forwarded
+ *   (any other type, or no type) → bare PickerInput with a hidden input forwarded
  *   via the `inputType` prop.
  *
  * Common props:
@@ -252,14 +252,14 @@ const PickerDispatcher = (props) => {
     return <HourPicker {...props} />;
   }
   // fully custom picker
-  return <PickerUI {...props} />;
+  return <PickerInput {...props} />;
 };
 
 const PickerValuePlaceholder = (props) => {
   return <Text className="navi_picker_placeholder" {...props} />;
 };
 const PickerContext = createContext();
-const PickerUI = (props) => {
+const PickerInput = (props) => {
   import.meta.css = css;
   const {
     ref,
@@ -268,13 +268,17 @@ const PickerUI = (props) => {
     placeholder,
     ui,
     icon,
-    inputType,
     disabled,
     readOnly,
     loading,
     autoFocus,
     autoFocusPreventScroll,
     onChange,
+    // input constraint attributes — forwarded to hidden <input>, not the button
+    required,
+    min,
+    max,
+    step,
     // children,
     ...rest
   } = props;
@@ -305,7 +309,6 @@ const PickerUI = (props) => {
       {...remainingProps}
       ref={ref}
       baseClassName="navi_picker"
-      navi-type={type}
       navi-has-placeholder={placeholder ? "" : undefined}
       autoFocus={undefined}
       basePseudoState={{
@@ -350,9 +353,13 @@ const PickerUI = (props) => {
       <input
         ref={pickerInputRef}
         className="navi_picker_input"
-        type={inputType}
+        type={type}
         name={name}
         value={uiState}
+        required={required}
+        min={min}
+        max={max}
+        step={step}
         tabIndex={-1}
         disabled={innerDisabled || innerReadOnly}
         data-rendered-by=".navi_picker"
@@ -395,8 +402,8 @@ const onMouseDownForShowPicker = (props) => {
 
 const PickerColor = (props) => {
   return (
-    <PickerUI
-      inputType="color"
+    <PickerInput
+      type="color"
       data-required-message={naviI18n(`picker.required.color`)}
       ui={<PickerColorUI />}
       icon={<ColorSvg />}
@@ -404,7 +411,7 @@ const PickerColor = (props) => {
       onMouseDown={onMouseDownForShowPicker(props)}
     >
       {props.children}
-    </PickerUI>
+    </PickerInput>
   );
 };
 const PickerColorUI = () => {
@@ -430,8 +437,8 @@ const PickerDay = (props) => {
   const max = resolveDateProp(props.max, toInputDay);
 
   return (
-    <PickerUI
-      inputType="date"
+    <PickerInput
+      type="date"
       min={min}
       max={max}
       data-required-message={naviI18n(`picker.required.day`)}
@@ -441,7 +448,7 @@ const PickerDay = (props) => {
       onMouseDown={onMouseDownForShowPicker(props)}
     >
       {props.children}
-    </PickerUI>
+    </PickerInput>
   );
 };
 const PickerDayUI = () => {
@@ -469,8 +476,8 @@ const PickerMonth = (props) => {
   const max = resolveDateProp(props.max, toInputMonth);
 
   return (
-    <PickerUI
-      inputType="month"
+    <PickerInput
+      type="month"
       min={min}
       max={max}
       data-required-message={naviI18n(`picker.required.month`)}
@@ -480,7 +487,7 @@ const PickerMonth = (props) => {
       onMouseDown={onMouseDownForShowPicker(props)}
     >
       {props.children}
-    </PickerUI>
+    </PickerInput>
   );
 };
 const PickerMonthUI = () => {
@@ -507,8 +514,8 @@ const PickerWeek = (props) => {
   const max = resolveDateProp(props.max, toInputWeek);
 
   return (
-    <PickerUI
-      inputType="week"
+    <PickerInput
+      type="week"
       min={min}
       max={max}
       data-required-message={naviI18n(`picker.required.week`)}
@@ -518,7 +525,7 @@ const PickerWeek = (props) => {
       onMouseDown={onMouseDownForShowPicker(props)}
     >
       {props.children}
-    </PickerUI>
+    </PickerInput>
   );
 };
 const PickerWeekUI = () => {
@@ -553,8 +560,8 @@ const PickerTime = (props) => {
   const step = parseStepToSeconds(props.step);
 
   return (
-    <PickerUI
-      inputType="time"
+    <PickerInput
+      type="time"
       min={min}
       max={max}
       step={step}
@@ -565,7 +572,7 @@ const PickerTime = (props) => {
       onMouseDown={onMouseDownForShowPicker(props)}
     >
       {props.children}
-    </PickerUI>
+    </PickerInput>
   );
 };
 const PickerTimeUI = () => {
@@ -589,8 +596,8 @@ const PickerDatetime = (props) => {
   const step = parseStepToSeconds(props.step);
 
   return (
-    <PickerUI
-      inputType="datetime-local"
+    <PickerInput
+      type="datetime-local"
       min={min}
       max={max}
       step={step}
@@ -601,7 +608,7 @@ const PickerDatetime = (props) => {
       onMouseDown={onMouseDownForShowPicker(props)}
     >
       {props.children}
-    </PickerUI>
+    </PickerInput>
   );
 };
 const PickerDatetimeUI = () => {
