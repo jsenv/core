@@ -1,5 +1,11 @@
 import { createContext } from "preact";
-import { useContext, useId, useMemo, useState } from "preact/hooks";
+import {
+  useContext,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useState,
+} from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
 
@@ -33,17 +39,23 @@ export const useFieldId = () => {
 
 export const reportReadOnlyToField = (value) => {
   const ctx = useContext(FieldContext);
-  ctx?.setReadOnly(value);
+  useLayoutEffect(() => {
+    ctx?.setReadOnly(value);
+  });
 };
 
 export const reportDisabledToField = (value) => {
   const ctx = useContext(FieldContext);
-  ctx?.setDisabled(value);
+  useLayoutEffect(() => {
+    ctx?.setDisabled(value);
+  });
 };
 
 export const reportInteractiveToField = (value) => {
   const ctx = useContext(FieldContext);
-  ctx?.setInteractive(value);
+  useLayoutEffect(() => {
+    ctx?.setInteractive(value);
+  });
 };
 
 /**

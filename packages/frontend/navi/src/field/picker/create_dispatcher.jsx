@@ -45,17 +45,15 @@ export const createDispatcher = (middlewares, DispatcherContext) => {
     return <TargetComponent {...props} />;
   };
 
-  const dispatcherCache = new WeakMap();
+  // Stable component defined once per createDispatcher call.
+  // Renders MiddlewareRunner directly — no new providers — so AttemptIndexContext
+  // is inherited from the parent tree, preventing already-matched middlewares
+  // from re-matching (no infinite loop). Stable type = no unmount.
+  const DispatcherComponent = (props) => <MiddlewareRunner {...props} />;
 
   const dispatch = (TargetComponent, props) => {
-    let Dispatcher = dispatcherCache.get(TargetComponent);
-    if (!Dispatcher) {
-      Dispatcher = (p) => dispatch(TargetComponent, p);
-      dispatcherCache.set(TargetComponent, Dispatcher);
-    }
-
     return (
-      <DispatcherContext.Provider value={Dispatcher}>
+      <DispatcherContext.Provider value={DispatcherComponent}>
         <TargetComponentContext.Provider value={TargetComponent}>
           <MiddlewareRunner {...props} />
         </TargetComponentContext.Provider>

@@ -6,6 +6,7 @@ import { LoadingOutline } from "@jsenv/navi/src/graphic/loading/loading_outline.
 import { Icon } from "@jsenv/navi/src/text/icon.jsx";
 import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
 import {
+  FieldContext,
   reportDisabledToField,
   reportInteractiveToField,
   reportReadOnlyToField,
@@ -357,7 +358,8 @@ const PickerInput = (props) => {
         }}
       />
       <PickerElementContext.Provider value={ref}>
-        {children}
+        {/* We are a field ourselve, which can contain other fields that should not inehrit our field */}
+        <FieldContext.Provider value={null}>{children}</FieldContext.Provider>
       </PickerElementContext.Provider>
     </Box>
   );
