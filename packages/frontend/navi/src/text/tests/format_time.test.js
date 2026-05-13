@@ -6,6 +6,7 @@ import {
   formatMonth,
   formatTime,
   formatTimeRelative,
+  getRelativeDay,
 } from "../format_time.js";
 
 // Fixed reference point: Monday 11 May 2026, 14:00:00 local time
@@ -29,139 +30,71 @@ await snapshotTests(import.meta.url, ({ test }) => {
     return table(
       ["date", "options", "locale", "result"],
       [
-        // default (short + labels)
         [
           "2026-05-10 (yesterday)",
           "default",
           "fr",
-          formatDay(new Date("2026-05-10T09:00:00"), "fr", opts),
+          formatDay(new Date("2026-05-10T09:00:00"), "fr"),
         ],
         [
           "2026-05-11 (today)",
           "default",
           "fr",
-          formatDay(new Date("2026-05-11T09:00:00"), "fr", opts),
+          formatDay(new Date("2026-05-11T09:00:00"), "fr"),
         ],
         [
           "2026-05-12 (tomorrow)",
           "default",
           "fr",
-          formatDay(new Date("2026-05-12T09:00:00"), "fr", opts),
+          formatDay(new Date("2026-05-12T09:00:00"), "fr"),
         ],
         [
           "2026-05-18 (next week)",
           "default",
           "fr",
-          formatDay(new Date("2026-05-18T09:00:00"), "fr", opts),
+          formatDay(new Date("2026-05-18T09:00:00"), "fr"),
         ],
         [
           "2026-05-11 (today)",
           "default",
           "en",
-          formatDay(new Date("2026-05-11T09:00:00"), "en", opts),
-        ],
-        [
-          "2026-05-12 (tomorrow)",
-          "default",
-          "en",
-          formatDay(new Date("2026-05-12T09:00:00"), "en", opts),
-        ],
-        // long
-        [
-          "2026-05-10 (yesterday)",
-          "long",
-          "fr",
-          formatDay(new Date("2026-05-10T09:00:00"), "fr", {
-            ...opts,
-            long: true,
-          }),
+          formatDay(new Date("2026-05-11T09:00:00"), "en"),
         ],
         [
           "2026-05-11 (today)",
           "long",
           "fr",
-          formatDay(new Date("2026-05-11T09:00:00"), "fr", {
-            ...opts,
-            long: true,
-          }),
-        ],
-        [
-          "2026-05-12 (tomorrow)",
-          "long",
-          "fr",
-          formatDay(new Date("2026-05-12T09:00:00"), "fr", {
-            ...opts,
-            long: true,
-          }),
+          formatDay(new Date("2026-05-11T09:00:00"), "fr", { long: true }),
         ],
         [
           "2026-05-18 (next week)",
           "long",
           "fr",
-          formatDay(new Date("2026-05-18T09:00:00"), "fr", {
-            ...opts,
-            long: true,
-          }),
+          formatDay(new Date("2026-05-18T09:00:00"), "fr", { long: true }),
         ],
-        // labels=false
-        [
-          "2026-05-11 (today)",
-          "labels:false",
-          "fr",
-          formatDay(new Date("2026-05-11T09:00:00"), "fr", {
-            ...opts,
-            labels: false,
-          }),
-        ],
-        // custom labels object
+      ],
+    );
+  });
+
+  test("getRelativeDay", () => {
+    return table(
+      ["date", "result"],
+      [
         [
           "2026-05-10 (yesterday)",
-          "labels:{}",
-          "fr",
-          formatDay(new Date("2026-05-10T09:00:00"), "fr", {
-            ...opts,
-            labels: {
-              yesterday: "hier",
-              today: "aujourd'hui",
-              tomorrow: "demain",
-            },
-          }),
+          getRelativeDay(new Date("2026-05-10T09:00:00"), opts),
         ],
         [
           "2026-05-11 (today)",
-          "labels:{}",
-          "fr",
-          formatDay(new Date("2026-05-11T09:00:00"), "fr", {
-            ...opts,
-            labels: {
-              yesterday: "hier",
-              today: "aujourd'hui",
-              tomorrow: "demain",
-            },
-          }),
+          getRelativeDay(new Date("2026-05-11T09:00:00"), opts),
         ],
         [
           "2026-05-12 (tomorrow)",
-          "labels:{}",
-          "fr",
-          formatDay(new Date("2026-05-12T09:00:00"), "fr", {
-            ...opts,
-            labels: {
-              yesterday: "hier",
-              today: "aujourd'hui",
-              tomorrow: "demain",
-            },
-          }),
+          getRelativeDay(new Date("2026-05-12T09:00:00"), opts),
         ],
-        // partial labels object (suppress tomorrow)
         [
-          "2026-05-12 (tomorrow)",
-          "labels:{today only}",
-          "fr",
-          formatDay(new Date("2026-05-12T09:00:00"), "fr", {
-            ...opts,
-            labels: { today: "aujourd'hui" },
-          }),
+          "2026-05-18 (next week)",
+          getRelativeDay(new Date("2026-05-18T09:00:00"), opts),
         ],
       ],
     );

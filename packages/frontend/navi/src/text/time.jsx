@@ -2,8 +2,10 @@ import {
   formatDatetime,
   formatDay,
   formatMonth,
+  formatRelativeDay,
   formatTime,
   formatTimeRelative,
+  getRelativeDay,
 } from "./format_time.js";
 import { langSignal } from "./lang_signal.js";
 import { Text } from "./text.jsx";
@@ -37,11 +39,9 @@ import { Text } from "./text.jsx";
  *   Only applies to the past state of `type="relative"`.
  * @param {boolean} [long]
  *   When true and `type="day"`, uses the long weekday/month format.
- * @param {true|false|null|{today?: string, yesterday?: string, tomorrow?: string}} [labels=true]
- *   Controls the today/yesterday/tomorrow label appended to `type="day"` dates.
- *   - `true` (default): uses locale-aware labels via `Intl.RelativeTimeFormat`
- *   - `false`/`null`: no label
- *   - object: custom labels per key; omit a key to suppress that label
+ * @param {boolean} [dayLabel]
+ *   When true and `type="day"`, appends the locale-aware relative label
+ *   ("hier", "aujourd'hui", "demain") when the date is yesterday, today, or tomorrow.
  * @param {string} [locale]
  *   BCP 47 locale tag (e.g. `"fr"`, `"en-US"`).
  *   Defaults to `langSignal.value` (the browser's current language).
@@ -63,7 +63,7 @@ export const Time = (props) => {
   return <TimeRelative {...props} />;
 };
 
-const TimeDay = ({ children, locale, long, labels, ...props }) => {
+const TimeDay = ({ children, locale, long, dayLabel, now, ...props }) => {
   const lang = locale || langSignal.value;
   const date = toDate(children, (value) => {
     if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
@@ -75,7 +75,17 @@ const TimeDay = ({ children, locale, long, labels, ...props }) => {
   let text;
   let dateTime; // See https://developer.mozilla.org/en-US/docs/Web/HTML/Element/time#datetime
   if (date) {
-    text = formatDay(date, lang, { long, labels });
+    const base = formatDay(date, lang, { long });
+    if (dayLabel) {
+      const offset = getRelativeDay(date, { now });
+      if (offset >= -1 && offset <= 1) {
+        text = `${base} (${formatRelativeDay(offset, lang)})`;
+      } else {
+        text = base;
+      }
+    } else {
+      text = base;
+    }
     const yyyy = date.getFullYear();
     const mm = String(date.getMonth() + 1).padStart(2, "0");
     const dd = String(date.getDate()).padStart(2, "0");

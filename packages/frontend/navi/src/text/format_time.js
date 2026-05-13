@@ -16,58 +16,54 @@ const DEFAULT_LANG = "en";
  * formatDay(tomorrow, "fr")   // "mardi 12 mai (demain)"
  * formatDay(nextWeek, "fr")   // "lundi 18 mai"
  */
-export const formatDay = (
-  date,
-  locale,
-  { now = new Date(), long = false, labels = true } = {},
-) => {
-  const base = new Intl.DateTimeFormat(locale, {
+export const formatDay = (date, locale, { long = false } = {}) => {
+  return new Intl.DateTimeFormat(locale, {
     weekday: long ? "long" : "short",
     day: "numeric",
     month: long ? "long" : "short",
   }).format(date);
-
-  if (!labels) {
-    return base;
-  }
-
-  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
-  const dateKey = toLocalDayKey(date);
-  const todayKey = toLocalDayKey(now);
-
-  const yesterdayDate = new Date(now);
-  yesterdayDate.setDate(yesterdayDate.getDate() - 1);
-  const yesterdayKey = toLocalDayKey(yesterdayDate);
-
-  const tomorrowDate = new Date(now);
-  tomorrowDate.setDate(tomorrowDate.getDate() + 1);
-  const tomorrowKey = toLocalDayKey(tomorrowDate);
-
-  if (dateKey === yesterdayKey) {
-    const labelText =
-      labels === true ? rtf.format(-1, "day") : labels.yesterday;
-    if (labelText) {
-      return `${base} (${labelText})`;
-    }
-  }
-  if (dateKey === todayKey) {
-    const labelText = labels === true ? rtf.format(0, "day") : labels.today;
-    if (labelText) {
-      return `${base} (${labelText})`;
-    }
-  }
-  if (dateKey === tomorrowKey) {
-    const labelText = labels === true ? rtf.format(1, "day") : labels.tomorrow;
-    if (labelText) {
-      return `${base} (${labelText})`;
-    }
-  }
-  return base;
 };
 
 /**
- * Formats a date as "mai 2026".
+ * Returns the day offset relative to now: -1 (yesterday), 0 (today), 1 (tomorrow), or the
+ * actual number of days difference for any other date.
  */
+export const getRelativeDay = (date, { now = new Date() } = {}) => {
+  const dateKey = toLocalDayKey(date);
+
+  const yesterdayDate = new Date(now);
+  yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+  if (dateKey === toLocalDayKey(yesterdayDate)) {
+    return -1;
+  }
+
+  if (dateKey === toLocalDayKey(now)) {
+    return 0;
+  }
+
+  const tomorrowDate = new Date(now);
+  tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+  if (dateKey === toLocalDayKey(tomorrowDate)) {
+    return 1;
+  }
+
+  const nowMidnight = new Date(now);
+  nowMidnight.setHours(0, 0, 0, 0);
+  const dateMidnight = new Date(date);
+  dateMidnight.setHours(0, 0, 0, 0);
+  return Math.round((dateMidnight - nowMidnight) / DAY);
+};
+
+/**
+ * Formats a relative day offset (-1/0/1) as a locale-aware label: "hier", "aujourd'hui", "demain".
+ */
+export const formatRelativeDay = (offset, locale) => {
+  const relativeDay = new Intl.RelativeTimeFormat(locale, {
+    numeric: "auto",
+  }).format(offset, "day");
+  return relativeDay;
+};
+
 export const formatMonth = (date, locale) => {
   return new Intl.DateTimeFormat(locale, {
     month: "long",
