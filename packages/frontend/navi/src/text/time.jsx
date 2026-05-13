@@ -21,7 +21,7 @@ import { Text } from "./text.jsx";
  *
  * @param {"day"|"month"|"datetime"|"time"|"relative"} [type="relative"]
  *   Controls the display format:
- *   - `"day"`       → "lundi 11 mai (aujourd'hui)"  — with today/tomorrow label
+ *   - `"day"`       → "Lun. 11 mai"  — short by default; use `long` for full "lundi 11 mai (aujourd'hui)"
  *   - `"month"`     → "mai 2026"
  *   - `"datetime"`  → "lun. 11 mai, 14:30"
  *   - `"time"`      → "14:30"
@@ -35,6 +35,13 @@ import { Text } from "./text.jsx";
  * @param {boolean} [bare]
  *   When true, strips the past-tense literal ("il y a", "ago") and returns only integer + unit.
  *   Only applies to the past state of `type="relative"`.
+ * @param {boolean} [long]
+ *   When true and `type="day"`, uses the long weekday/month format.
+ * @param {true|false|null|{today?: string, yesterday?: string, tomorrow?: string}} [labels=true]
+ *   Controls the today/yesterday/tomorrow label appended to `type="day"` dates.
+ *   - `true` (default): uses locale-aware labels via `Intl.RelativeTimeFormat`
+ *   - `false`/`null`: no label
+ *   - object: custom labels per key; omit a key to suppress that label
  * @param {string} [locale]
  *   BCP 47 locale tag (e.g. `"fr"`, `"en-US"`).
  *   Defaults to `langSignal.value` (the browser's current language).
@@ -56,7 +63,7 @@ export const Time = (props) => {
   return <TimeRelative {...props} />;
 };
 
-const TimeDay = ({ children, locale, ...props }) => {
+const TimeDay = ({ children, locale, long, labels, ...props }) => {
   const lang = locale || langSignal.value;
   const date = toDate(children, (value) => {
     if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
@@ -68,7 +75,7 @@ const TimeDay = ({ children, locale, ...props }) => {
   let text;
   let dateTime; // See https://developer.mozilla.org/en-US/docs/Web/HTML/Element/time#datetime
   if (date) {
-    text = formatDay(date, lang);
+    text = formatDay(date, lang, { long, labels });
     const yyyy = date.getFullYear();
     const mm = String(date.getMonth() + 1).padStart(2, "0");
     const dd = String(date.getDate()).padStart(2, "0");

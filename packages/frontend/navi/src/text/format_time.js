@@ -16,30 +16,51 @@ const DEFAULT_LANG = "en";
  * formatDay(tomorrow, "fr")   // "mardi 12 mai (demain)"
  * formatDay(nextWeek, "fr")   // "lundi 18 mai"
  */
-export const formatDay = (date, locale, { now = new Date() } = {}) => {
+export const formatDay = (
+  date,
+  locale,
+  { now = new Date(), long = false, labels = true } = {},
+) => {
   const base = new Intl.DateTimeFormat(locale, {
-    weekday: "long",
+    weekday: long ? "long" : "short",
     day: "numeric",
-    month: "long",
+    month: long ? "long" : "short",
   }).format(date);
 
+  if (!labels) {
+    return base;
+  }
+
+  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
   const dateKey = toLocalDayKey(date);
   const todayKey = toLocalDayKey(now);
+
+  const yesterdayDate = new Date(now);
+  yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+  const yesterdayKey = toLocalDayKey(yesterdayDate);
+
   const tomorrowDate = new Date(now);
   tomorrowDate.setDate(tomorrowDate.getDate() + 1);
   const tomorrowKey = toLocalDayKey(tomorrowDate);
 
+  if (dateKey === yesterdayKey) {
+    const labelText =
+      labels === true ? rtf.format(-1, "day") : labels.yesterday;
+    if (labelText) {
+      return `${base} (${labelText})`;
+    }
+  }
   if (dateKey === todayKey) {
-    const label = new Intl.RelativeTimeFormat(locale, {
-      numeric: "auto",
-    }).format(0, "day");
-    return `${base} (${label})`;
+    const labelText = labels === true ? rtf.format(0, "day") : labels.today;
+    if (labelText) {
+      return `${base} (${labelText})`;
+    }
   }
   if (dateKey === tomorrowKey) {
-    const label = new Intl.RelativeTimeFormat(locale, {
-      numeric: "auto",
-    }).format(1, "day");
-    return `${base} (${label})`;
+    const labelText = labels === true ? rtf.format(1, "day") : labels.tomorrow;
+    if (labelText) {
+      return `${base} (${labelText})`;
+    }
   }
   return base;
 };

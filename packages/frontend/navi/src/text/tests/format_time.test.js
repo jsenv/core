@@ -27,32 +27,141 @@ snapshotTests.prefConfigure({ preserveDurations: true });
 await snapshotTests(import.meta.url, ({ test }) => {
   test("formatDay", () => {
     return table(
-      ["date", "locale", "result"],
+      ["date", "options", "locale", "result"],
       [
+        // default (short + labels)
+        [
+          "2026-05-10 (yesterday)",
+          "default",
+          "fr",
+          formatDay(new Date("2026-05-10T09:00:00"), "fr", opts),
+        ],
         [
           "2026-05-11 (today)",
+          "default",
           "fr",
           formatDay(new Date("2026-05-11T09:00:00"), "fr", opts),
         ],
         [
           "2026-05-12 (tomorrow)",
+          "default",
           "fr",
           formatDay(new Date("2026-05-12T09:00:00"), "fr", opts),
         ],
         [
           "2026-05-18 (next week)",
+          "default",
           "fr",
           formatDay(new Date("2026-05-18T09:00:00"), "fr", opts),
         ],
         [
           "2026-05-11 (today)",
+          "default",
           "en",
           formatDay(new Date("2026-05-11T09:00:00"), "en", opts),
         ],
         [
           "2026-05-12 (tomorrow)",
+          "default",
           "en",
           formatDay(new Date("2026-05-12T09:00:00"), "en", opts),
+        ],
+        // long
+        [
+          "2026-05-10 (yesterday)",
+          "long",
+          "fr",
+          formatDay(new Date("2026-05-10T09:00:00"), "fr", {
+            ...opts,
+            long: true,
+          }),
+        ],
+        [
+          "2026-05-11 (today)",
+          "long",
+          "fr",
+          formatDay(new Date("2026-05-11T09:00:00"), "fr", {
+            ...opts,
+            long: true,
+          }),
+        ],
+        [
+          "2026-05-12 (tomorrow)",
+          "long",
+          "fr",
+          formatDay(new Date("2026-05-12T09:00:00"), "fr", {
+            ...opts,
+            long: true,
+          }),
+        ],
+        [
+          "2026-05-18 (next week)",
+          "long",
+          "fr",
+          formatDay(new Date("2026-05-18T09:00:00"), "fr", {
+            ...opts,
+            long: true,
+          }),
+        ],
+        // labels=false
+        [
+          "2026-05-11 (today)",
+          "labels:false",
+          "fr",
+          formatDay(new Date("2026-05-11T09:00:00"), "fr", {
+            ...opts,
+            labels: false,
+          }),
+        ],
+        // custom labels object
+        [
+          "2026-05-10 (yesterday)",
+          "labels:{}",
+          "fr",
+          formatDay(new Date("2026-05-10T09:00:00"), "fr", {
+            ...opts,
+            labels: {
+              yesterday: "hier",
+              today: "aujourd'hui",
+              tomorrow: "demain",
+            },
+          }),
+        ],
+        [
+          "2026-05-11 (today)",
+          "labels:{}",
+          "fr",
+          formatDay(new Date("2026-05-11T09:00:00"), "fr", {
+            ...opts,
+            labels: {
+              yesterday: "hier",
+              today: "aujourd'hui",
+              tomorrow: "demain",
+            },
+          }),
+        ],
+        [
+          "2026-05-12 (tomorrow)",
+          "labels:{}",
+          "fr",
+          formatDay(new Date("2026-05-12T09:00:00"), "fr", {
+            ...opts,
+            labels: {
+              yesterday: "hier",
+              today: "aujourd'hui",
+              tomorrow: "demain",
+            },
+          }),
+        ],
+        // partial labels object (suppress tomorrow)
+        [
+          "2026-05-12 (tomorrow)",
+          "labels:{today only}",
+          "fr",
+          formatDay(new Date("2026-05-12T09:00:00"), "fr", {
+            ...opts,
+            labels: { today: "aujourd'hui" },
+          }),
         ],
       ],
     );
