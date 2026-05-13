@@ -80,11 +80,7 @@ export const formatTime = (date, locale) => {
 /**
  * Formats a date relative to now: "il y a 3 jours", "dans 2 heures", etc.
  */
-export const formatTimeAgo = (
-  date,
-  locale,
-  { now = new Date(), bare } = {},
-) => {
+const formatTimeAgo = (date, locale, { now = new Date(), bare } = {}) => {
   const rtf = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
   const nowMs = now instanceof Date ? now.getTime() : now;
   const diff = date.getTime() - nowMs;

@@ -59,12 +59,19 @@ export const Time = (props) => {
 const TimeDay = ({ children, locale, ...props }) => {
   const lang = locale || langSignal.value;
   const date = toDate(children, "day");
-  const text = date
-    ? formatDay(date, lang)
-    : children === undefined
-      ? "–"
-      : String(children);
-  const dateTime = date ? toDayAttr(date) : undefined;
+  let text;
+  let dateTime; // See https://developer.mozilla.org/en-US/docs/Web/HTML/Element/time#datetime
+  if (date) {
+    text = formatDay(date, lang);
+    const yyyy = date.getFullYear();
+    const mm = String(date.getMonth() + 1).padStart(2, "0");
+    const dd = String(date.getDate()).padStart(2, "0");
+    dateTime = `${yyyy}-${mm}-${dd}`;
+  } else if (children === undefined) {
+    text = "–";
+  } else {
+    text = String(children);
+  }
 
   return (
     <TimeText dateTime={dateTime} {...props}>
@@ -76,12 +83,18 @@ const TimeDay = ({ children, locale, ...props }) => {
 const TimeMonth = ({ children, locale, ...props }) => {
   const lang = locale || langSignal.value;
   const date = toDate(children, "month");
-  const text = date
-    ? formatMonth(date, lang)
-    : children === undefined
-      ? "–"
-      : String(children);
-  const dateTime = date ? toMonthAttr(date) : undefined;
+  let text;
+  let dateTime; // See https://developer.mozilla.org/en-US/docs/Web/HTML/Element/time#datetime
+  if (date) {
+    text = formatMonth(date, lang);
+    const yyyy = date.getFullYear();
+    const mm = String(date.getMonth() + 1).padStart(2, "0");
+    dateTime = `${yyyy}-${mm}`;
+  } else if (children === undefined) {
+    text = "–";
+  } else {
+    text = String(children);
+  }
 
   return (
     <TimeText dateTime={dateTime} {...props}>
@@ -93,12 +106,16 @@ const TimeMonth = ({ children, locale, ...props }) => {
 const TimeDatetime = ({ children, locale, ...props }) => {
   const lang = locale || langSignal.value;
   const date = toDate(children, "datetime");
-  const text = date
-    ? formatDatetime(date, lang)
-    : children === undefined
-      ? "–"
-      : String(children);
-  const dateTime = date ? date.toISOString() : undefined;
+  let text;
+  let dateTime; // See https://developer.mozilla.org/en-US/docs/Web/HTML/Element/time#datetime
+  if (date) {
+    text = formatDatetime(date, lang);
+    dateTime = date.toISOString();
+  } else if (children === undefined) {
+    text = "–";
+  } else {
+    text = String(children);
+  }
 
   return (
     <TimeText dateTime={dateTime} {...props}>
@@ -111,10 +128,9 @@ const TimeTime = ({ children, locale, ...props }) => {
   const lang = locale || langSignal.value;
   const date = toDate(children, "time");
   let text;
-  let dateTime;
+  let dateTime; // See https://developer.mozilla.org/en-US/docs/Web/HTML/Element/time#datetime
   if (date) {
     text = formatTime(date, lang);
-    // See https://developer.mozilla.org/en-US/docs/Web/HTML/Element/time#datetime
     const hh = String(date.getHours()).padStart(2, "0");
     const mm = String(date.getMinutes()).padStart(2, "0");
     dateTime = `${hh}:${mm}`;
@@ -140,12 +156,16 @@ const TimeRelative = ({
 }) => {
   const lang = locale || langSignal.value;
   const date = toDate(children, "relative");
-  const text = date
-    ? formatTimeRelative(date, eventDuration, lang, { bare })
-    : children === undefined
-      ? "–"
-      : String(children);
-  const dateTime = date ? date.toISOString() : undefined;
+  let text;
+  let dateTime;
+  if (date) {
+    text = formatTimeRelative(date, eventDuration, lang, { bare });
+    dateTime = date.toISOString();
+  } else if (children === undefined) {
+    text = "–";
+  } else {
+    text = String(children);
+  }
 
   return (
     <TimeText dateTime={dateTime} {...props}>
@@ -186,17 +206,4 @@ const toDate = (value, type) => {
     return isNaN(d.getTime()) ? null : d;
   }
   return null;
-};
-
-const toMonthAttr = (date) => {
-  const yyyy = date.getFullYear();
-  const mm = String(date.getMonth() + 1).padStart(2, "0");
-  return `${yyyy}-${mm}`;
-};
-
-const toDayAttr = (date) => {
-  const yyyy = date.getFullYear();
-  const mm = String(date.getMonth() + 1).padStart(2, "0");
-  const dd = String(date.getDate()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd}`;
 };
