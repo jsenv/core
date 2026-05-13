@@ -70,6 +70,88 @@
         getNowHours,
       } from "@jsenv/navi";
 
+      const App = () => (
+        <div class="demo-grid">
+          <DayHourPickerDemo />
+          <DayPickerDemo />
+          <MonthPickerDemo />
+          <WeekPickerDemo />
+          <TimePickerDemo />
+          <DatetimePickerDemo />
+          <ColorPickerDemo />
+          <CustomUIDemo />
+          <DisabledDemo />
+          <FormIntegrationDemo />
+        </div>
+      );
+
+      const DayHourPickerDemo = () => {
+        const daySignal = useSignal("");
+        const hourSignal = useSignal("");
+        const submittedSignal = useSignal(null);
+        return (
+          <div class="demo-section">
+            <h2>Jour + Heure</h2>
+            <p>
+              Le picker d'heure ne propose que les créneaux disponibles. Si le
+              jour sélectionné est aujourd'hui, les heures passées sont
+              masquées.
+            </p>
+            <Form
+              action={(values) => {
+                submittedSignal.value = values;
+              }}
+              flex="y"
+              spacing="s"
+              alignX="start"
+            >
+              <Field vertical>
+                <Label htmlFor="day">Jour</Label>
+                <Box flex spacing="m">
+                  <Picker
+                    minWidth="300"
+                    id="day"
+                    type="day"
+                    name="day"
+                    required
+                    value={daySignal.value}
+                    uiAction={(v) => {
+                      daySignal.value = v;
+                      hourSignal.value = "";
+                    }}
+                    min={today}
+                    max={in30days}
+                    placeholder="Choisir un jour"
+                  />
+                  <Picker
+                    type="hour"
+                    name="hour"
+                    required
+                    min="07:00"
+                    max="21:00"
+                    step="00:30"
+                    minHidden={
+                      isToday(daySignal.value) ? getNowHours(-5) : undefined
+                    }
+                    value={hourSignal.value}
+                    uiAction={(v) => {
+                      hourSignal.value = v;
+                    }}
+                    placeholder="Choisir une heure"
+                  />
+                </Box>
+              </Field>
+              <Button type="submit">Soumettre</Button>
+              {submittedSignal.value && (
+                <pre style="margin:0;font-size:12px;background:#f0f0f0;padding:8px;border-radius:4px;">
+                  {JSON.stringify(submittedSignal.value, null, 2)}
+                </pre>
+              )}
+            </Form>
+          </div>
+        );
+      };
+
       // ── helpers ─────────────────────────────────────────────────
       const today = new Date();
       const in30days = new Date(today);
@@ -412,88 +494,6 @@
           </div>
         );
       };
-
-      const DayHourPickerDemo = () => {
-        const daySignal = useSignal("");
-        const hourSignal = useSignal("");
-        const submittedSignal = useSignal(null);
-        return (
-          <div class="demo-section">
-            <h2>Jour + Heure</h2>
-            <p>
-              Le picker d'heure ne propose que les créneaux disponibles. Si le
-              jour sélectionné est aujourd'hui, les heures passées sont
-              masquées.
-            </p>
-            <Form
-              action={(values) => {
-                submittedSignal.value = values;
-              }}
-              flex="y"
-              spacing="s"
-              alignX="start"
-            >
-              <Field vertical>
-                <Label htmlFor="day">Jour</Label>
-                <Box flex spacing="m">
-                  <Picker
-                    minWidth="300"
-                    id="day"
-                    type="day"
-                    name="day"
-                    required
-                    value={daySignal.value}
-                    uiAction={(v) => {
-                      daySignal.value = v;
-                      hourSignal.value = "";
-                    }}
-                    min={today}
-                    max={in30days}
-                    placeholder="Choisir un jour"
-                  />
-                  <Picker
-                    type="hour"
-                    name="hour"
-                    required
-                    min="07:00"
-                    max="21:00"
-                    step="00:30"
-                    minHidden={
-                      isToday(daySignal.value) ? getNowHours(-5) : undefined
-                    }
-                    value={hourSignal.value}
-                    uiAction={(v) => {
-                      hourSignal.value = v;
-                    }}
-                    placeholder="Choisir une heure"
-                  />
-                </Box>
-              </Field>
-              <Button type="submit">Soumettre</Button>
-              {submittedSignal.value && (
-                <pre style="margin:0;font-size:12px;background:#f0f0f0;padding:8px;border-radius:4px;">
-                  {JSON.stringify(submittedSignal.value, null, 2)}
-                </pre>
-              )}
-            </Form>
-          </div>
-        );
-      };
-
-      const App = () => (
-        <div class="demo-grid">
-          <DayHourPickerDemo />
-          <DayPickerDemo />
-          <MonthPickerDemo />
-          <WeekPickerDemo />
-          <TimePickerDemo />
-          <DatetimePickerDemo />
-          <ColorPickerDemo />
-          <CustomUIDemo />
-          <DisabledDemo />
-          <FormIntegrationDemo />
-        </div>
-      );
 
       render(<App />, document.getElementById("app"));
     </script>
