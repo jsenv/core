@@ -2,6 +2,8 @@
  * https://developer.mozilla.org/en-US/docs/Web/HTML/Guides/Constraint_validation
  */
 
+import { formatDay, formatMonth } from "@jsenv/navi/src/text/format_time.js";
+import { langSignal } from "@jsenv/navi/src/text/lang_signal.js";
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { CONSTRAINT_ATTRIBUTE_SET } from "../constraint_attribute_set.js";
 import { generateFieldInvalidMessage } from "./constraint_message_util.js";
@@ -322,9 +324,15 @@ export const MIN_CONSTRAINT = {
         return null;
       }
       if (value < min) {
+        const todayIso = getTodayIso(field.type);
+        if (min === todayIso) {
+          return generateFieldInvalidMessage("constraint.min.date.today", {
+            field,
+          });
+        }
         return generateFieldInvalidMessage("constraint.min.date", {
           field,
-          min,
+          min: formatDateIso(min, field.type),
         });
       }
       return null;
@@ -389,9 +397,15 @@ export const MAX_CONSTRAINT = {
         return null;
       }
       if (value > max) {
+        const todayIso = getTodayIso(field.type);
+        if (max === todayIso) {
+          return generateFieldInvalidMessage("constraint.max.date.today", {
+            field,
+          });
+        }
         return generateFieldInvalidMessage("constraint.max.date", {
           field,
-          max,
+          max: formatDateIso(max, field.type),
         });
       }
       return null;
@@ -401,3 +415,26 @@ export const MAX_CONSTRAINT = {
 };
 CONSTRAINT_ATTRIBUTE_SET.add("max");
 CONSTRAINT_ATTRIBUTE_SET.add("data-max-message");
+
+const getTodayIso = (inputType) => {
+  const now = new Date();
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth() + 1).padStart(2, "0");
+  const dd = String(now.getDate()).padStart(2, "0");
+  if (inputType === "month") {
+    return `${yyyy}-${mm}`;
+  }
+  return `${yyyy}-${mm}-${dd}`;
+};
+
+const formatDateIso = (iso, inputType) => {
+  const locale = langSignal.value;
+  if (inputType === "month") {
+    const date = new Date(`${iso}-01T00:00:00`);
+    return formatMonth(date, locale);
+  }
+  // date, week, datetime-local: parse and use formatDay
+  const dateStr = iso.slice(0, 10);
+  const date = new Date(`${dateStr}T00:00:00`);
+  return formatDay(date, locale, { long: true });
+};

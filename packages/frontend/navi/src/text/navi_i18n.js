@@ -211,19 +211,27 @@ naviI18n.addAll({
     fr: "[field] doit être <strong>[min]</strong> ou plus.",
     en: "[field] must be <strong>[min]</strong> or later.",
   },
+  "constraint.min.date.today": {
+    fr: "La date doit être aujourd'hui ou dans le futur.",
+    en: "The date must be today or in the future.",
+  },
   "constraint.min.date": {
-    fr: "[field] doit être <strong>[min]</strong> ou plus.",
-    en: "[field] must be <strong>[min]</strong> or later.",
+    fr: "La date doit être à partir du <strong>[min]</strong>.",
+    en: "The date must be on or after <strong>[min]</strong>.",
+  },
+  "constraint.max.date.today": {
+    fr: "La date doit être aujourd'hui ou dans le passé.",
+    en: "The date must be today or in the past.",
+  },
+  "constraint.max.date": {
+    fr: "La date doit être au plus tard le <strong>[max]</strong>.",
+    en: "The date must be on or before <strong>[max]</strong>.",
   },
   "constraint.max.number": {
     fr: "[field] doit être <strong>[max]</strong> ou moins.",
     en: "[field] must be <strong>[max]</strong> or less.",
   },
   "constraint.max.time": {
-    fr: "[field] doit être <strong>[max]</strong> ou moins.",
-    en: "[field] must be <strong>[max]</strong> or less.",
-  },
-  "constraint.max.date": {
     fr: "[field] doit être <strong>[max]</strong> ou moins.",
     en: "[field] must be <strong>[max]</strong> or less.",
   },
