@@ -8,6 +8,12 @@
       * {
         box-sizing: border-box;
       }
+      html {
+        overflow: auto;
+      }
+      body {
+        overflow: clip;
+      }
       html,
       body {
         margin: 0;
@@ -68,13 +74,12 @@
         // showModal() triggers an internal focus() which causes the browser to
         // scrollIntoView the dialog. Temporarily locking overflow on <html>
         // prevents the scroll from happening at all.
-        const prevOverflow = scrollContainer.style.overflow;
-        document.documentElement.style.overflow = "hidden";
-        scrollContainer.style.overflow = "hidden";
-        dialog.showModal();
+        scrollContainer.style.overflow = "clip";
         requestAnimationFrame(() => {
-          document.documentElement.style.overflow = "auto";
-          scrollContainer.style.overflow = prevOverflow;
+          // dialog.showModal();
+          requestAnimationFrame(() => {
+            scrollContainer.style.overflow = "auto";
+          });
         });
       };
     </script>
