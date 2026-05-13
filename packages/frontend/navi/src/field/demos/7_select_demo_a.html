@@ -57,6 +57,9 @@
         align-items: center;
         gap: 12px;
       }
+      fieldset {
+        min-width: 160px;
+      }
     </style>
   </head>
   <body>
@@ -84,100 +87,216 @@
         Icon,
       } from "@jsenv/navi";
 
-      // ── Demo 1: Simple list ───────────────────────────────────────────────────
+      // ── Demo 1: Basics ────────────────────────────────────────────────────────
 
+      const DEMO1_OPTIONS = ["Apple", "Banana"];
       const WARM_COLORS = ["Red", "Orange", "Yellow"];
       const COOL_COLORS = ["Green", "Blue", "Purple"];
 
       const Demo1 = () => {
-        const [color, setColor] = useState(null);
-        const [colorNative, setColorNative] = useState("");
+        const [val1, setVal1] = useState(null);
+        const [val1n, setVal1n] = useState("");
+        const [val2, setVal2] = useState("Banana");
+        const [val2n, setVal2n] = useState("Banana");
+        const [val3, setVal3] = useState(null);
+        const [val3n, setVal3n] = useState("");
+        const [val4, setVal4] = useState(null);
+        const [val4n, setVal4n] = useState("");
         return (
           <div className="demo-section">
-            <h2>Demo 1 — Simple list</h2>
-            <p>
-              Basic color picker. The <code>uiAction</code> on Select flows down
-              to the List automatically via context. Items are grouped with
-              separators.
-            </p>
-            <Box flex spacing="m">
+            <h2>Demo 1 — Basics</h2>
+
+            <p>No default value</p>
+            <Box flex spacing="m" wrap>
               <fieldset>
                 <legend>Navi</legend>
-                <NaviDebug debugFocus debugScroll debugPopup>
-                  <Label flex spacing="s" alignY="center">
-                    Color
-                    <Select
-                      name="color"
-                      value={color}
-                      placeholder="Pick a color…"
-                      scrollTrap
-                      uiAction={(v) => {
-                        setColor(v);
-                      }}
-                    >
-                      <List
-                        role="listbox"
-                        // debugScroll
-                        separator={<Separator margin="0" />}
+                <Select
+                  name="d1_no_default"
+                  value={val1}
+                  uiAction={(v) => setVal1(v)}
+                >
+                  <List role="listbox">
+                    {DEMO1_OPTIONS.map((o, i) => (
+                      <ListItem
+                        key={o}
+                        index={i}
+                        id={o}
+                        value={o}
+                        selected={val1 === o}
                       >
-                        <ListItemGroup label="Warm">
-                          {WARM_COLORS.map((c, i) => (
-                            <ListItem
-                              key={c}
-                              index={i}
-                              id={c}
-                              value={c}
-                              selected={color === c}
-                            >
-                              {c}
-                            </ListItem>
-                          ))}
-                        </ListItemGroup>
-                        <ListItemGroup label="Cool">
-                          {COOL_COLORS.map((c, i) => (
-                            <ListItem
-                              key={c}
-                              index={WARM_COLORS.length + i}
-                              id={c}
-                              value={c}
-                              selected={color === c}
-                            >
-                              {c}
-                            </ListItem>
-                          ))}
-                        </ListItemGroup>
-                      </List>
-                    </Select>
-                  </Label>
-                </NaviDebug>
-                <div className="value-display">{color ?? ""}</div>
+                        {o}
+                      </ListItem>
+                    ))}
+                  </List>
+                </Select>
+                <div className="value-display">{val1 ?? ""}</div>
               </fieldset>
               <fieldset>
-                <legend>Native</legend>
-                <label>
-                  Color
-                  <select
-                    value={colorNative}
-                    onChange={(e) => setColorNative(e.target.value)}
-                  >
-                    <option value="">Pick a color…</option>
-                    <optgroup label="Warm">
-                      {WARM_COLORS.map((c) => (
-                        <option key={c} value={c}>
+                <legend>User agent</legend>
+                <select
+                  value={val1n}
+                  onChange={(e) => setVal1n(e.target.value)}
+                >
+                  {DEMO1_OPTIONS.map((o) => (
+                    <option key={o} value={o}>
+                      {o}
+                    </option>
+                  ))}
+                </select>
+                <div className="value-display">{val1n}</div>
+              </fieldset>
+            </Box>
+
+            <p>With default value</p>
+            <Box flex spacing="m" wrap>
+              <fieldset>
+                <legend>Navi</legend>
+                <Select
+                  name="d1_default"
+                  value={val2}
+                  uiAction={(v) => setVal2(v)}
+                >
+                  <List role="listbox">
+                    {DEMO1_OPTIONS.map((o, i) => (
+                      <ListItem
+                        key={o}
+                        index={i}
+                        id={o}
+                        value={o}
+                        selected={val2 === o}
+                      >
+                        {o}
+                      </ListItem>
+                    ))}
+                  </List>
+                </Select>
+                <div className="value-display">{val2 ?? ""}</div>
+              </fieldset>
+              <fieldset>
+                <legend>User agent</legend>
+                <select
+                  value={val2n}
+                  onChange={(e) => setVal2n(e.target.value)}
+                >
+                  {DEMO1_OPTIONS.map((o) => (
+                    <option key={o} value={o}>
+                      {o}
+                    </option>
+                  ))}
+                </select>
+                <div className="value-display">{val2n}</div>
+              </fieldset>
+            </Box>
+
+            <p>With placeholder</p>
+            <Box flex spacing="m" wrap>
+              <fieldset>
+                <legend>Navi</legend>
+                <Select
+                  name="d1_placeholder"
+                  value={val3}
+                  placeholder="Pick a fruit…"
+                  uiAction={(v) => setVal3(v)}
+                >
+                  <List role="listbox">
+                    {DEMO1_OPTIONS.map((o, i) => (
+                      <ListItem
+                        key={o}
+                        index={i}
+                        id={o}
+                        value={o}
+                        selected={val3 === o}
+                      >
+                        {o}
+                      </ListItem>
+                    ))}
+                  </List>
+                </Select>
+                <div className="value-display">{val3 ?? ""}</div>
+              </fieldset>
+              <fieldset>
+                <legend>User agent</legend>
+                <select
+                  value={val3n}
+                  onChange={(e) => setVal3n(e.target.value)}
+                >
+                  <option value="" disabled>
+                    Pick a fruit…
+                  </option>
+                  {DEMO1_OPTIONS.map((o) => (
+                    <option key={o} value={o}>
+                      {o}
+                    </option>
+                  ))}
+                </select>
+                <div className="value-display">{val3n}</div>
+              </fieldset>
+            </Box>
+
+            <p>With optgroups</p>
+            <Box flex spacing="m" wrap>
+              <fieldset>
+                <legend>Navi</legend>
+                <Select
+                  name="d1_optgroups"
+                  value={val4}
+                  placeholder="Pick a color…"
+                  uiAction={(v) => setVal4(v)}
+                >
+                  <List role="listbox" separator={<Separator margin="0" />}>
+                    <ListItemGroup label="Warm">
+                      {WARM_COLORS.map((c, i) => (
+                        <ListItem
+                          key={c}
+                          index={i}
+                          id={c}
+                          value={c}
+                          selected={val4 === c}
+                        >
                           {c}
-                        </option>
+                        </ListItem>
                       ))}
-                    </optgroup>
-                    <optgroup label="Cool">
-                      {COOL_COLORS.map((c) => (
-                        <option key={c} value={c}>
+                    </ListItemGroup>
+                    <ListItemGroup label="Cool">
+                      {COOL_COLORS.map((c, i) => (
+                        <ListItem
+                          key={c}
+                          index={WARM_COLORS.length + i}
+                          id={c}
+                          value={c}
+                          selected={val4 === c}
+                        >
                           {c}
-                        </option>
+                        </ListItem>
                       ))}
-                    </optgroup>
-                  </select>
-                </label>
-                <div className="value-display">{colorNative || ""}</div>
+                    </ListItemGroup>
+                  </List>
+                </Select>
+                <div className="value-display">{val4 ?? ""}</div>
+              </fieldset>
+              <fieldset>
+                <legend>User agent</legend>
+                <select
+                  value={val4n}
+                  onChange={(e) => setVal4n(e.target.value)}
+                >
+                  <option value="">Pick a color…</option>
+                  <optgroup label="Warm">
+                    {WARM_COLORS.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="Cool">
+                    {COOL_COLORS.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </optgroup>
+                </select>
+                <div className="value-display">{val4n}</div>
               </fieldset>
             </Box>
           </div>
