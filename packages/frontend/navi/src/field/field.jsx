@@ -99,6 +99,7 @@ export const Field = (props) => {
       alignX={vertical ? "start" : undefined}
       spacing="s"
       {...rest}
+      data-interactive={interactive ? "" : undefined}
       baseClassName="navi_field"
       pseudoClasses={FieldPseudoClasses}
       basePseudoState={{
@@ -128,7 +129,12 @@ export const Label = (props) => {
   const fieldId = ctx?.fieldId;
 
   return (
-    <Box as="label" htmlFor={htmlFor || fieldId} {...rest}>
+    <Box
+      as="label"
+      htmlFor={htmlFor || fieldId}
+      baseClassName="navi_label"
+      {...rest}
+    >
       {children}
     </Box>
   );
