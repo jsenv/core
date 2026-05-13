@@ -28,6 +28,7 @@ import {
   useUIState,
   useUIStateController,
 } from "../use_ui_state_controller.js";
+import { dispatchRequestAction } from "../validation/custom_constraint_validation.js";
 import { useConstraints } from "../validation/hooks/use_constraints.js";
 
 const css = /* css */ `
@@ -696,6 +697,13 @@ const InputCheckboxWithAction = (props) => {
         onActionError?.(e);
       }}
       onnavi_action_end={onActionEnd}
+      onChange={(e) => {
+        const checkbox = e.currentTarget;
+        dispatchRequestAction(checkbox, {
+          event: e,
+          actionOrigin: "action_prop",
+        });
+      }}
     />
   );
 };

@@ -531,7 +531,13 @@
             <Field vertical>
               <Label>Free text</Label>
               <NaviDebug debugPopup debugFocus>
-                <Picker type="text" placeholder="Type something">
+                <Picker
+                  type="text"
+                  uiAction={() => {
+                    console.log("coucou");
+                  }}
+                  placeholder="Type something"
+                >
                   <Box flex="y" spacing="s" padding="s">
                     <Input
                       type="text"
