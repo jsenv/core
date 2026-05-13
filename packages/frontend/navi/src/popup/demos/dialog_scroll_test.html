@@ -12,19 +12,25 @@
       body {
         margin: 0;
         padding: 0;
+        /* scrollbar-width: none hides the native scrollbar UI (incl. its
+           physical height on mobile) while keeping scroll functional.
+           This eliminates the ghost whitespace at the bottom caused by
+           the horizontal scrollbar reserving vertical space on mobile. */
+        scrollbar-width: none;
       }
       html {
-        background: red; /* debug: html background */
-        /* Setting overflow explicitly on <html> makes it the scroll container
-           instead of the viewport, switching mobile scrollbars to overlay mode
-           (no physical height) — this eliminates the ghost white space at the
-           bottom caused by the native horizontal scrollbar reserving space. */
-        overflow: auto;
-        overscroll-behavior: none;
+        background: red; /* debug */
+        /* overflow-x: clip prevents horizontal content from expanding the
+           layout viewport on mobile Chrome (which would make innerWidth/Height
+           report full content dimensions instead of the visual viewport, causing
+           position:fixed to be centered in a giant invisible area).
+           Unlike overflow:hidden, clip does NOT create a new containing block
+           so position:fixed still works relative to the real viewport. */
+        overflow-x: clip;
       }
       body {
         font-family: system-ui;
-        background: blue; /* debug: body background */
+        background: blue; /* debug */
         cursor: pointer;
       }
       .scroll-content {
