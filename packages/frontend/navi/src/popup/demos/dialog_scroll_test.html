@@ -12,50 +12,52 @@
       body {
         margin: 0;
         padding: 0;
-        /* scrollbar-width: none hides the native scrollbar UI (incl. its
-           physical height on mobile) while keeping scroll functional.
-           This eliminates the ghost whitespace at the bottom caused by
-           the horizontal scrollbar reserving vertical space on mobile. */
-        scrollbar-width: none;
-      }
-      html {
-        background: red; /* debug */
-        /* overflow-x: clip prevents horizontal content from expanding the
-           layout viewport on mobile Chrome (which would make innerWidth/Height
-           report full content dimensions instead of the visual viewport, causing
-           position:fixed to be centered in a giant invisible area).
-           Unlike overflow:hidden, clip does NOT create a new containing block
-           so position:fixed still works relative to the real viewport. */
-        overflow-x: clip;
       }
       body {
+        padding: 8px;
         font-family: system-ui;
-        background: blue; /* debug */
         cursor: pointer;
       }
-      .scroll-content {
+      .grid {
         display: grid;
-        padding: 8px;
-        grid-template-columns: repeat(10, 200px);
-        grid-template-rows: repeat(10, 200px);
+        grid-template-columns: repeat(4, 200px);
         gap: 8px;
       }
       .cell {
         display: flex;
+        height: 120px;
         align-items: center;
         justify-content: center;
         color: #444;
         font-size: 13px;
-        background: hsl(calc(var(--i) * 36), 60%, 85%);
+        background: hsl(calc(var(--i) * 20), 60%, 85%);
         border-radius: 8px;
+      }
+      dialog {
+        position: fixed;
+        inset: 0;
+        margin: auto;
+        padding: 32px 40px;
+        font-size: 16px;
+        text-align: center;
+        background: white;
+        border: 2px solid #333;
+        border-radius: 12px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      }
+      dialog::backdrop {
+        background: rgba(0, 0, 0, 0.4);
       }
     </style>
   </head>
   <body>
-    <div class="scroll-content" id="grid"></div>
+    <dialog id="d">
+      <p>Clique en dehors pour fermer</p>
+    </dialog>
+    <div class="grid" id="grid"></div>
     <script>
       const grid = document.getElementById("grid");
-      for (let i = 0; i < 100; i++) {
+      for (let i = 0; i < 40; i++) {
         const cell = document.createElement("div");
         cell.className = "cell";
         cell.style.setProperty("--i", i);
@@ -63,25 +65,6 @@
         grid.appendChild(cell);
       }
 
-      console.log({
-        innerWidth: window.innerWidth,
-        innerHeight: window.innerHeight,
-
-        clientWidth: document.documentElement.clientWidth,
-        clientHeight: document.documentElement.clientHeight,
-
-        scrollWidth: document.documentElement.scrollWidth,
-        scrollHeight: document.documentElement.scrollHeight,
-
-        visualWidth: window.visualViewport?.width,
-        visualHeight: window.visualViewport?.height,
-      });
-    </script>
-
-    <dialog id="d" onclick="">
-      <p>Clique en dehors pour fermer</p>
-    </dialog>
-    <script>
       const dialog = document.getElementById("d");
       dialog.onclick = (e) => {
         e.stopPropagation();
@@ -90,18 +73,8 @@
         }
       };
 
-      document.body.onclick = async () => {
-        const scrollContainer = document.body;
-        // showModal() triggers an internal focus() which causes the browser to
-        // scrollIntoView the dialog. Temporarily locking overflow on <html>
-        // prevents the scroll from happening at all.
-        scrollContainer.style.overflow = "clip";
-        requestAnimationFrame(() => {
-          // dialog.showModal();
-          requestAnimationFrame(() => {
-            scrollContainer.style.overflow = "auto";
-          });
-        });
+      document.body.onclick = () => {
+        dialog.showModal();
       };
     </script>
   </body>
