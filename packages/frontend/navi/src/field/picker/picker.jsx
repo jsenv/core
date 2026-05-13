@@ -159,7 +159,8 @@ const css = /* css */ `
       background: none;
       border: none;
       opacity: 0;
-      cursor: pointer;
+      appearance: none;
+      pointer-events: none;
     }
   }
 
@@ -264,6 +265,8 @@ const PickerInput = (props) => {
     autoFocus,
     autoFocusPreventScroll,
     onChange,
+    onMouseDown,
+    onClick,
     // input constraint attributes — forwarded to hidden <input>, not the button
     required,
     min,
@@ -298,8 +301,6 @@ const PickerInput = (props) => {
       type="button"
       {...remainingProps}
       ref={ref}
-      // We put id on the button because label should trigger click on the button not the input
-      id={id}
       baseClassName="navi_picker"
       navi-has-placeholder={placeholder ? "" : undefined}
       autoFocus={undefined}
@@ -311,6 +312,9 @@ const PickerInput = (props) => {
       }}
       // pseudoStateSelector=".navi_picker_input"
       pseudoClasses={PICKER_PSEUDO_CLASSES}
+      // we must put the id on the button and not the input
+      // so that a <label> tries to give focus to the button and not the input
+      id={id}
       onMouseDown={(e) => {
         if (e.button !== 0) {
           return;
@@ -318,7 +322,7 @@ const PickerInput = (props) => {
         if (innerDisabled || innerReadOnly) {
           return;
         }
-        rest.onMouseDown?.(e);
+        onMouseDown?.(e);
       }}
       onClick={(e) => {
         if (e.button !== 0) {
@@ -327,7 +331,7 @@ const PickerInput = (props) => {
         if (innerDisabled || innerReadOnly) {
           return;
         }
-        rest.onClick?.(e);
+        onClick?.(e);
       }}
     >
       <LoadingOutline
@@ -380,13 +384,13 @@ const getPropsToShowPicker = (props) => {
   return {
     ...props,
     onMouseDown: (e) => {
-      e.preventDefault();
+      // e.preventDefault();
       callInputShowPicker(e);
       props.onMouseDown?.(e);
     },
     // we also listen click as it's what we receive from <label>
     onClick: (e) => {
-      e.preventDefault();
+      // e.preventDefault();
       callInputShowPicker(e);
       props.onClick?.(e);
     },
