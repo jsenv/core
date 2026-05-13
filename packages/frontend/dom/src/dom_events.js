@@ -82,26 +82,27 @@ const resolveEventDetail = (customEventDetail) => {
  *   initiator (event.detail.event) → ...intermediates (event.detail.eventChain)... → event
  *
  * Examples:
- *   eventInvolves(e, (e) => e.type === "mousedown")
- *   eventInvolves(e, (e) => e.type === "navi_list_select")
+ *   findEvent(e, (e) => e.type === "mousedown")
+ *   findEvent(e, (e) => e.type === "navi_list_select")
  */
-export const eventInvolves = (event, predicate) => {
+export const findEvent = (event, predicate) => {
   if (predicate(event)) {
-    return true;
+    return event;
   }
   if (event.detail?.eventChain) {
     for (const chainedEvent of event.detail.eventChain) {
       if (predicate(chainedEvent)) {
-        return true;
+        return chainedEvent;
       }
     }
   }
-  if (event.detail?.event !== undefined) {
-    if (predicate(event.detail.event)) {
-      return true;
+  const initiator = event.detail?.event;
+  if (initiator) {
+    if (predicate(initiator)) {
+      return initiator;
     }
   }
-  return false;
+  return undefined;
 };
 
 /**

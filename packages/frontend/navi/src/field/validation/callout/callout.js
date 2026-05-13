@@ -4,7 +4,7 @@ import {
   createStyleController,
   createValueEffect,
   dispatchPublicCustomEvent,
-  eventInvolves,
+  findEvent,
   getBorderSizes,
   getElementSignature,
   getFirstVisuallyVisibleAncestor,
@@ -342,7 +342,7 @@ export const openCallout = (
     if (
       closeOnClickOutside &&
       openingEvent &&
-      eventInvolves(openingEvent, (e) => e.type === "mousedown")
+      findEvent(openingEvent, (e) => e.type === "mousedown")
     ) {
       if (debug) {
         debug(

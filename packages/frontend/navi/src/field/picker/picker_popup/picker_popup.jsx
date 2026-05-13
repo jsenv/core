@@ -1,3 +1,4 @@
+import { findEvent } from "@jsenv/dom";
 import { useContext, useId, useRef, useState } from "preact/hooks";
 
 import { shortcutsViaOnKeyDown } from "@jsenv/navi/src/keyboard/keyboard_shortcuts.js";
@@ -241,9 +242,10 @@ const PickerContentInsidePopover = (props) => {
     return requestPopoverClose(popoverRef.current, { event: e });
   };
   const moveFocusToPicker = (e) => {
-    if (e.type === "mousedown") {
-      e.preventDefault();
+    const mousedownEvent = findEvent(e, (e) => e.type === "mousedown");
+    if (mousedownEvent) {
       debugFocus(e, `preventDefault and move focus to picker`);
+      mousedownEvent.preventDefault();
     } else {
       debugFocus(e, `move focus to picker`);
     }
@@ -349,8 +351,8 @@ const PickerContentInsidePopover = (props) => {
             return;
           }
           // mousedown inside popover should not bubble to the select (would re-open it if that mousedown closes it)
-          e.stopPropagation();
           debugPopup(e, `popover mouseDown stopPropagation`);
+          e.stopPropagation();
         }}
         onnavi_popover_open={(e) => {
           onOpen(e);
@@ -362,7 +364,7 @@ const PickerContentInsidePopover = (props) => {
             // If the popover closed because focus left the select (focusout),
             // don't steal focus back — let focus go where the user intended.
           } else {
-            moveFocusToPicker(event);
+            moveFocusToPicker(e);
           }
         }}
         positionX="left-aligned"

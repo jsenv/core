@@ -6,7 +6,7 @@ export {
   dispatchCustomEvent,
   dispatchInternalCustomEvent,
   dispatchPublicCustomEvent,
-  eventInvolves,
+  findEvent,
   formatEventSideEffect,
 } from "./src/dom_events.js";
 export { createIterableWeakSet } from "./src/iterable_weak_set.js";
