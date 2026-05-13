@@ -34,18 +34,7 @@
         background: hsl(calc(var(--i) * 36), 60%, 85%);
         border-radius: 8px;
       }
-      dialog {
-        position: fixed;
-        inset: 0;
-        margin: auto;
-        padding: 32px 40px;
-        font-size: 16px;
-        text-align: center;
-        background: white;
-        border: 2px solid #333;
-        border-radius: 12px;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-      }
+
       dialog::backdrop {
         background: rgba(0, 0, 0, 0.4);
       }
@@ -74,11 +63,19 @@
         }
       };
 
-      document.body.onclick = () => {
-        const scrollX = window.scrollX;
-        const scrollY = window.scrollY;
+      document.body.onclick = async () => {
+        const scrollContainer = document.body;
+        // showModal() triggers an internal focus() which causes the browser to
+        // scrollIntoView the dialog. Temporarily locking overflow on <html>
+        // prevents the scroll from happening at all.
+        const prevOverflow = scrollContainer.style.overflow;
+        document.documentElement.style.overflow = "hidden";
+        scrollContainer.style.overflow = "hidden";
         dialog.showModal();
-        window.scrollTo(scrollX, scrollY);
+        requestAnimationFrame(() => {
+          document.documentElement.style.overflow = "auto";
+          scrollContainer.style.overflow = prevOverflow;
+        });
       };
     </script>
   </body>
