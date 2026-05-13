@@ -1,10 +1,11 @@
 import { createContext } from "preact";
-import { useContext, useRef, useState } from "preact/hooks";
+import { useContext, useRef } from "preact/hooks";
 
 import { Box } from "@jsenv/navi/src/box/box.jsx";
 import { LoadingOutline } from "@jsenv/navi/src/graphic/loading/loading_outline.jsx";
 import { Icon } from "@jsenv/navi/src/text/icon.jsx";
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
+import { Text } from "@jsenv/navi/src/text/text.jsx";
 import { Time } from "@jsenv/navi/src/text/time.jsx";
 import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
 import {
@@ -139,47 +140,6 @@ const css = /* css */ `
 
     .navi_picker_placeholder {
       color: var(--picker-placeholder-color);
-      &[hidden] {
-        display: inline-block !important;
-        height: 0;
-        padding-block: 0;
-        visibility: hidden;
-      }
-    }
-    &[navi-type="color"] {
-      .navi_picker_value {
-        /* In case there is no placeholder */
-        min-width: 1em;
-        min-height: 1em;
-      }
-
-      &[navi-has-placeholder] {
-        .navi_picker_value {
-          min-height: auto;
-        }
-
-        .navi_picker_placeholder {
-          &[hidden] {
-            /* Color display is absolute, keep placeholder in place */
-            height: auto;
-          }
-        }
-      }
-
-      .navi_picker_color_display {
-        position: absolute;
-        top: var(--x-picker-padding-top);
-        right: var(--x-picker-padding-right);
-        bottom: var(--x-picker-padding-bottom);
-        left: var(--x-picker-padding-left);
-        display: block;
-        background-color: var(--picker-color);
-        border: 1px solid rgba(0, 0, 0, 0.2);
-        border-radius: 2px;
-      }
-    }
-
-    .navi_picker_value {
     }
     .navi_picker_right_slot {
       position: absolute;
@@ -201,6 +161,18 @@ const css = /* css */ `
       opacity: 0;
       cursor: pointer;
     }
+  }
+
+  .navi_picker_color_display {
+    position: absolute;
+    top: var(--x-picker-padding-top);
+    right: var(--x-picker-padding-right);
+    bottom: var(--x-picker-padding-bottom);
+    left: var(--x-picker-padding-left);
+    display: block;
+    background-color: var(--picker-color);
+    border: 1px solid rgba(0, 0, 0, 0.2);
+    border-radius: 2px;
   }
 `;
 
@@ -239,27 +211,53 @@ export const Picker = (props) => {
   );
 };
 const PickerDispatcher = (props) => {
+  // "native" pickers
+  if (props.type === "color") {
+    return <PickerColor {...props} />;
+  }
+  if (props.type === "day") {
+    return <PickerDay {...props} />;
+  }
+  if (props.type === "month") {
+    return <PickerMonth {...props} />;
+  }
+  if (props.type === "week") {
+    return <PickerWeek {...props} />;
+  }
+  if (props.type === "time") {
+    return <PickerTime {...props} />;
+  }
+  if (props.type === "datetime") {
+    return <PickerDatetime {...props} />;
+  }
+  // custom preset pickers
   if (props.type === "hour") {
     return <HourPicker {...props} />;
   }
+  // fully custom picker
   return <PickerUI {...props} />;
 };
+
+const PickerValuePlaceholder = (props) => {
+  return <Text className="navi_picker_placeholder" {...props} />;
+};
+const PickerContext = createContext();
 const PickerUI = (props) => {
   import.meta.css = css;
   const {
     ref,
-    type = "day",
+    type,
     name,
     placeholder,
-    input = <PickerInput />,
+    ui,
+    icon,
+    inputType,
     disabled,
     readOnly,
     loading,
     autoFocus,
     autoFocusPreventScroll,
-    min,
-    max,
-    step: stepProp,
+    onChange,
     // children,
     ...rest
   } = props;
@@ -279,36 +277,25 @@ const PickerUI = (props) => {
   reportDisabledToField(innerDisabled);
   reportInteractiveToField(true);
   useAutoFocus(ref, autoFocus, { preventScroll: autoFocusPreventScroll });
-  const step =
-    type === "time" || type === "datetime"
-      ? parseStepToSeconds(stepProp)
-      : stepProp;
 
   const pickerInputRef = useRef(null);
   const remainingProps = useConstraints(pickerInputRef, rest);
-  const { "data-required-message": requiredMessageProp, ...buttonProps } =
-    remainingProps;
-
-  const inputType = TYPE_TO_INPUT_TYPE[type] || "date";
-  const hasValue = uiState !== undefined && uiState !== "" && uiState !== null;
-  const [expanded, setExpanded] = useState(false);
 
   return (
     <Box
       as="button"
       type="button"
-      {...buttonProps}
+      {...remainingProps}
       ref={ref}
       baseClassName="navi_picker"
       navi-type={type}
       navi-has-placeholder={placeholder ? "" : undefined}
       autoFocus={undefined}
       basePseudoState={{
-        ...buttonProps.basePseudoState,
+        ...remainingProps.basePseudoState,
         ":read-only": innerReadOnly,
         ":disabled": innerDisabled,
         ":-navi-loading": innerLoading,
-        ":-navi-expanded": expanded,
       }}
       pseudoClasses={PICKER_PSEUDO_CLASSES}
       onMouseDown={(e) => {
@@ -318,7 +305,6 @@ const PickerUI = (props) => {
         if (innerDisabled || innerReadOnly) {
           return;
         }
-        e.preventDefault();
         rest.onMouseDown?.(e);
       }}
       onClick={(e) => {
@@ -328,14 +314,6 @@ const PickerUI = (props) => {
         if (innerDisabled || innerReadOnly) {
           return;
         }
-        const inputEl = ref.current?.querySelector(".navi_picker_input");
-        if (inputEl) {
-          try {
-            inputEl.showPicker();
-          } catch {
-            inputEl.click();
-          }
-        }
         rest.onClick?.(e);
       }}
     >
@@ -344,12 +322,11 @@ const PickerUI = (props) => {
         color="var(--loader-color)"
         inset={-1}
       />
-      <PickerInputContext.Provider value={{ placeholder, type, hasValue }}>
-        {input}
-      </PickerInputContext.Provider>
-
+      <PickerContext.Provider value={{ placeholder, value: uiState }}>
+        {ui}
+      </PickerContext.Provider>
       <span className="navi_picker_right_slot">
-        <Icon size="m">{ICON_FOR_TYPE[type] || <CalendarSvg />}</Icon>
+        <Icon size="m">{icon}</Icon>
       </span>
 
       <input
@@ -358,65 +335,18 @@ const PickerUI = (props) => {
         type={inputType}
         name={name}
         value={uiState}
-        min={formatInputMin(type, min)}
-        max={formatInputMax(type, max)}
-        step={step}
-        required={rest.required}
         tabIndex={-1}
         disabled={innerDisabled || innerReadOnly}
         data-rendered-by=".navi_picker"
-        data-required-message={
-          requiredMessageProp ?? naviI18n(`picker.required.${type}`)
-        }
         onChange={(e) => {
           const newValue = e.currentTarget.value;
           uiStateController.setUIState(newValue, e);
-          setExpanded(false);
-        }}
-        onFocus={() => {
-          setExpanded(true);
-        }}
-        onBlur={() => {
-          setExpanded(false);
+          onChange?.(e);
         }}
       />
     </Box>
   );
 };
-
-const PickerInputContext = createContext();
-export const PickerInput = (props) => {
-  const uiState = useContext(UIStateContext);
-  const {
-    placeholder = props.placeholder,
-    type,
-    hasValue,
-  } = useContext(PickerInputContext);
-  const children = props.children;
-  const showColorSwatchAlways = type === "color" && !placeholder && !children;
-
-  return (
-    <>
-      <span className="navi_picker_placeholder" hidden={hasValue}>
-        {placeholder}
-      </span>
-      <span
-        className="navi_picker_value"
-        hidden={!hasValue && !showColorSwatchAlways}
-      >
-        {children ? (
-          children
-        ) : (
-          <DefaultValueDisplay
-            type={type}
-            value={hasValue ? uiState : "#000000"}
-          />
-        )}
-      </span>
-    </>
-  );
-};
-
 const PICKER_PSEUDO_CLASSES = [
   ":hover",
   ":focus",
@@ -429,86 +359,165 @@ const PICKER_PSEUDO_CLASSES = [
   ":-navi-has-value",
 ];
 
-const TYPE_TO_INPUT_TYPE = {
-  day: "date",
-  month: "month",
-  week: "week",
-  time: "time",
-  datetime: "datetime-local",
-  color: "color",
+const onMouseDownForShowPicker = (props) => {
+  return (e) => {
+    e.preventDefault();
+    const button = e.currentTarget;
+    const inputEl = button.querySelector(".navi_picker_input");
+    if (inputEl) {
+      try {
+        inputEl.showPicker();
+      } catch {
+        inputEl.click();
+      }
+    }
+    props.onMouseDown?.(e);
+  };
 };
 
-const DefaultValueDisplay = ({ type, value }) => {
-  if (type === "color") {
-    return (
-      <span
-        className="navi_picker_color_display"
-        style={{
-          "--picker-color": value,
-        }}
-      />
-    );
+const PickerColor = (props) => {
+  return (
+    <PickerUI
+      inputType="color"
+      data-required-message={naviI18n(`picker.required.color`)}
+      ui={<PickerColorUI />}
+      icon={<ColorSvg />}
+      {...props}
+      onMouseDown={onMouseDownForShowPicker(props)}
+    >
+      {props.children}
+    </PickerUI>
+  );
+};
+const PickerColorUI = () => {
+  const { value, placeholder } = useContext(PickerContext);
+  if (!value) {
+    if (placeholder) {
+      return <PickerValuePlaceholder>{placeholder}</PickerValuePlaceholder>;
+    }
+    return null;
   }
-  if (timeTypeSet.has(type)) {
-    return (
-      <Time
-        type={type === "week" ? null : type}
-        capitalize={type === "day" || type === "month"}
-      >
-        {value}
-      </Time>
-    );
-  }
-  return value;
+  return (
+    <span
+      className="navi_picker_color_display"
+      style={{
+        "--picker-color": value,
+      }}
+    />
+  );
 };
 
-const timeTypeSet = new Set(["day", "month", "week", "time", "datetime"]);
+const PickerDay = (props) => {
+  const min = formatInputDateProp(props.min, formatDayForInput);
+  const max = formatInputDateProp(props.max, formatDayForInput);
 
-const formatInputMin = (type, min) => {
-  if (min === undefined || min === null) {
-    return undefined;
-  }
-  if (min instanceof Date) {
-    return toInputValue(type, min);
-  }
-  return min;
+  return (
+    <PickerUI
+      inputType="date"
+      min={min}
+      max={max}
+      data-required-message={naviI18n(`picker.required.day`)}
+      ui={<PickerDayUI />}
+      icon={<CalendarSvg />}
+      {...props}
+      onMouseDown={onMouseDownForShowPicker(props)}
+    >
+      {props.children}
+    </PickerUI>
+  );
 };
-
-const formatInputMax = (type, max) => {
-  if (max === undefined || max === null) {
-    return undefined;
+const PickerDayUI = () => {
+  const { value, placeholder } = useContext(PickerContext);
+  if (!value) {
+    if (placeholder) {
+      return <PickerValuePlaceholder>{placeholder}</PickerValuePlaceholder>;
+    }
+    return null;
   }
-  if (max instanceof Date) {
-    return toInputValue(type, max);
-  }
-  return max;
+  return (
+    <Time type="day" capitalize>
+      {value}
+    </Time>
+  );
 };
-
-const toInputValue = (type, date) => {
+const formatDayForInput = (date) => {
   const yyyy = date.getFullYear();
   const mm = String(date.getMonth() + 1).padStart(2, "0");
   const dd = String(date.getDate()).padStart(2, "0");
-  const hh = String(date.getHours()).padStart(2, "0");
-  const min = String(date.getMinutes()).padStart(2, "0");
-  if (type === "day") {
-    return `${yyyy}-${mm}-${dd}`;
-  }
-  if (type === "month") {
-    return `${yyyy}-${mm}`;
-  }
-  if (type === "week") {
-    return toWeekString(date);
-  }
-  if (type === "time") {
-    return `${hh}:${min}`;
-  }
-  if (type === "datetime") {
-    return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
-  }
-  return String(date);
+  return `${yyyy}-${mm}-${dd}`;
 };
+const PickerMonth = (props) => {
+  const min = formatInputDateProp(props.min, formatMonthForInput);
+  const max = formatInputDateProp(props.max, formatMonthForInput);
 
-const toWeekString = (date) => {
+  return (
+    <PickerUI
+      inputType="month"
+      min={min}
+      max={max}
+      data-required-message={naviI18n(`picker.required.month`)}
+      ui={<PickerMonthUI />}
+      icon={<CalendarSvg />}
+      {...props}
+      onMouseDown={onMouseDownForShowPicker(props)}
+    >
+      {props.children}
+    </PickerUI>
+  );
+};
+const PickerMonthUI = () => {
+  const { value, placeholder } = useContext(PickerContext);
+  if (!value) {
+    if (placeholder) {
+      return <PickerValuePlaceholder>{placeholder}</PickerValuePlaceholder>;
+    }
+    return null;
+  }
+  return (
+    <Time type="month" capitalize>
+      {value}
+    </Time>
+  );
+};
+const formatMonthForInput = (date) => {
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  return `${yyyy}-${mm}`;
+};
+const PickerWeek = (props) => {
+  const min = formatInputDateProp(props.min, formatWeekForInput);
+  const max = formatInputDateProp(props.max, formatWeekForInput);
+
+  return (
+    <PickerUI
+      inputType="week"
+      min={min}
+      max={max}
+      data-required-message={naviI18n(`picker.required.week`)}
+      ui={<PickerWeekUI />}
+      icon={<CalendarSvg />}
+      {...props}
+      onMouseDown={onMouseDownForShowPicker(props)}
+    >
+      {props.children}
+    </PickerUI>
+  );
+};
+const PickerWeekUI = () => {
+  const { value, placeholder } = useContext(PickerContext);
+  if (!value) {
+    if (placeholder) {
+      return <PickerValuePlaceholder>{placeholder}</PickerValuePlaceholder>;
+    }
+    return null;
+  }
+  return (
+    <Time type="week" capitalize>
+      {value}
+    </Time>
+  );
+};
+const formatWeekForInput = (date) => {
   // ISO week number
   const d = new Date(date);
   d.setHours(0, 0, 0, 0);
@@ -520,14 +529,92 @@ const toWeekString = (date) => {
     ) + 1;
   return `${d.getFullYear()}-W${String(week).padStart(2, "0")}`;
 };
+const PickerTime = (props) => {
+  const min = formatInputDateProp(props.min, formatTimeForInput);
+  const max = formatInputDateProp(props.max, formatTimeForInput);
+  const step = parseStepToSeconds(props.step);
 
-const ICON_FOR_TYPE = {
-  color: <ColorSvg />,
-  time: <ClockSvg />,
-  datetime: <ClockSvg />,
+  return (
+    <PickerUI
+      inputType="time"
+      min={min}
+      max={max}
+      step={step}
+      data-required-message={naviI18n(`picker.required.time`)}
+      ui={<PickerTimeUI />}
+      icon={<ClockSvg />}
+      {...props}
+      onMouseDown={onMouseDownForShowPicker(props)}
+    >
+      {props.children}
+    </PickerUI>
+  );
+};
+const PickerTimeUI = () => {
+  const { value, placeholder } = useContext(PickerContext);
+  if (!value) {
+    if (placeholder) {
+      return <PickerValuePlaceholder>{placeholder}</PickerValuePlaceholder>;
+    }
+    return null;
+  }
+  return <Time type="time">{value}</Time>;
+};
+const formatTimeForInput = (date) => {
+  const hh = String(date.getHours()).padStart(2, "0");
+  const min = String(date.getMinutes()).padStart(2, "0");
+  return `${hh}:${min}`;
+};
+const PickerDatetime = (props) => {
+  const min = formatInputDateProp(props.min, formatDatetimeForInput);
+  const max = formatInputDateProp(props.max, formatDatetimeForInput);
+  const step = parseStepToSeconds(props.step);
+
+  return (
+    <PickerUI
+      inputType="datetime-local"
+      min={min}
+      max={max}
+      step={step}
+      data-required-message={naviI18n(`picker.required.datetime`)}
+      ui={<PickerDatetimeUI />}
+      icon={<CalendarSvg />}
+      {...props}
+      onMouseDown={onMouseDownForShowPicker(props)}
+    >
+      {props.children}
+    </PickerUI>
+  );
+};
+const PickerDatetimeUI = () => {
+  const { value, placeholder } = useContext(PickerContext);
+  if (!value) {
+    if (placeholder) {
+      return <PickerValuePlaceholder>{placeholder}</PickerValuePlaceholder>;
+    }
+    return null;
+  }
+  return <Time type="datetime">{value}</Time>;
+};
+const formatDatetimeForInput = (date) => {
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  const hh = String(date.getHours()).padStart(2, "0");
+  const min = String(date.getMinutes()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
 };
 
-function CalendarSvg() {
+const formatInputDateProp = (value, formatter) => {
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+  if (value instanceof Date) {
+    return formatter(value);
+  }
+  return value;
+};
+const CalendarSvg = () => {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -537,9 +624,8 @@ function CalendarSvg() {
       <path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z" />
     </svg>
   );
-}
-
-function ClockSvg() {
+};
+const ClockSvg = () => {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -549,9 +635,8 @@ function ClockSvg() {
       <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z" />
     </svg>
   );
-}
-
-function ColorSvg() {
+};
+const ColorSvg = () => {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -561,4 +646,4 @@ function ColorSvg() {
       <path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8zm-5.5 9c-.83 0-1.5-.67-1.5-1.5S5.67 9 6.5 9 8 9.67 8 10.5 7.33 12 6.5 12zm3-4C8.67 8 8 7.33 8 6.5S8.67 5 9.5 5s1.5.67 1.5 1.5S10.33 8 9.5 8zm5 0c-.83 0-1.5-.67-1.5-1.5S13.67 5 14.5 5s1.5.67 1.5 1.5S15.33 8 14.5 8zm3 4c-.83 0-1.5-.67-1.5-1.5S16.67 9 17.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z" />
     </svg>
   );
-}
+};
