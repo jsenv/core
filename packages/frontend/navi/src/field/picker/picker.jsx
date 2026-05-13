@@ -115,7 +115,6 @@ const css = /* css */ `
     outline-offset: var(--x-picker-outline-offset);
     cursor: pointer;
     user-select: none;
-    overflow: hidden;
 
     &[data-has-value] {
       color: var(--picker-color);

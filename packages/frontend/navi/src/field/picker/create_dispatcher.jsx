@@ -16,7 +16,8 @@ import { useContext } from "preact/hooks";
  * All middlewares are always called (so hooks are always invoked in the same order).
  * The first non-null result wins. Middlewares that don't apply must return null.
  * TargetComponent is what every middleware ultimately wants to render into.
- * DispatcherContext exposes the dispatcher so middlewares can access it via useContext.
+ * DispatcherContext exposes a stable Dispatcher component so middlewares can re-enter via useContext(DispatcherContext).
+ * AttemptIndexContext prevents re-entrancy: once middleware[i] wins, the next dispatch starts at i+1.
  */
 export const createDispatcher = (middlewares, DispatcherContext) => {
   const AttemptIndexContext = createContext(0);
@@ -44,8 +45,14 @@ export const createDispatcher = (middlewares, DispatcherContext) => {
     return <TargetComponent {...props} />;
   };
 
+  const dispatcherCache = new WeakMap();
+
   const dispatch = (TargetComponent, props) => {
-    const Dispatcher = (p) => dispatch(TargetComponent, p);
+    let Dispatcher = dispatcherCache.get(TargetComponent);
+    if (!Dispatcher) {
+      Dispatcher = (p) => dispatch(TargetComponent, p);
+      dispatcherCache.set(TargetComponent, Dispatcher);
+    }
 
     return (
       <DispatcherContext.Provider value={Dispatcher}>

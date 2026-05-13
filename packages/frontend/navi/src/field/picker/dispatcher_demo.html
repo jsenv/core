@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <title>Dispatcher Demo</title>
+    <style>
+      body {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+        font-family: monospace;
+        background: #1a1a1a;
+        color: #eee;
+      }
+      h1 { color: #adf; }
+      h2 { color: #fda; margin-top: 2em; }
+      .box {
+        border: 1px solid #555;
+        padding: 12px;
+        margin: 8px 0;
+        border-radius: 4px;
+        background: #222;
+      }
+      .label { color: #8f8; font-size: 0.85em; margin-bottom: 4px; }
+      pre { margin: 0; color: #ccc; font-size: 0.9em; }
+    </style>
+  </head>
+  <body>
+    <h1>Dispatcher Demo</h1>
+    <div id="app"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render, createContext } from "preact";
+      import { useContext } from "preact/hooks";
+      import { createDispatcher } from "./create_dispatcher.jsx";
+
+      // ── Contexts ────────────────────────────────────────────────────────────
+      const MyDispatcherContext = createContext(null);
+
+      // ── Target component ────────────────────────────────────────────────────
+      // What the dispatcher ultimately renders when no middleware matches (or after wrapping).
+      const Button = (props) => {
+        const { children, label, type, ...rest } = props;
+        console.log("[Button] render — type=%s label=%s children=%o", type, label, children);
+        return (
+          <button {...rest} style="padding:6px 14px;cursor:pointer;">
+            {label || children || type || "button"}
+          </button>
+        );
+      };
+
+      // ── Middlewares ─────────────────────────────────────────────────────────
+      let wrapperRenderCount = 0;
+      const WrapperMiddleware = (props) => {
+        const Dispatcher = useContext(MyDispatcherContext);
+        if (props.children === undefined) {
+          // not a wrapping case — skip
+          return null;
+        }
+        wrapperRenderCount++;
+        const renderCount = wrapperRenderCount;
+        console.log("[WrapperMiddleware] match #%d — will re-dispatch via Dispatcher", renderCount);
+        if (renderCount > 10) {
+          console.error("[WrapperMiddleware] INFINITE LOOP DETECTED at render #%d — aborting", renderCount);
+          return <div style="color:red">INFINITE LOOP detected at render #{renderCount}</div>;
+        }
+        return (
+          <div style="border:1px solid #88f;padding:8px;border-radius:4px;margin:4px">
+            <div style="color:#88f;font-size:0.8em;margin-bottom:4px">[Wrapper #{renderCount}]</div>
+            {/* Re-dispatch so inner children also go through remaining middlewares */}
+            <Dispatcher {...props} />
+          </div>
+        );
+      };
+
+      let iconRenderCount = 0;
+      const IconMiddleware = (props) => {
+        const Dispatcher = useContext(MyDispatcherContext);
+        if (!props.icon) {
+          return null;
+        }
+        iconRenderCount++;
+        const renderCount = iconRenderCount;
+        console.log("[IconMiddleware] match #%d — icon=%s", renderCount, props.icon);
+        if (renderCount > 10) {
+          console.error("[IconMiddleware] INFINITE LOOP DETECTED at render #%d — aborting", renderCount);
+          return <div style="color:red">INFINITE LOOP detected at render #{renderCount}</div>;
+        }
+        const { icon, ...rest } = props;
+        return (
+          <span style="display:inline-flex;align-items:center;gap:4px">
+            <span style="color:#f84">{icon}</span>
+            {/* Re-dispatch without icon so this middleware won't match again */}
+            <Dispatcher {...rest} />
+          </span>
+        );
+      };
+
+      const middlewares = [WrapperMiddleware, IconMiddleware];
+      const dispatch = createDispatcher(middlewares, MyDispatcherContext);
+
+      // ── Cases ───────────────────────────────────────────────────────────────
+
+      const Case = ({ title, children }) => (
+        <div class="box">
+          <div class="label">{title}</div>
+          {children}
+        </div>
+      );
+
+      const App = () => {
+        return (
+          <div>
+            <h2>Case 1 — no middleware matches (plain button)</h2>
+            <Case title="dispatch(Button, { label: 'Hello' })">
+              {dispatch(Button, { label: "Hello" })}
+            </Case>
+
+            <h2>Case 2 — IconMiddleware matches</h2>
+            <Case title='dispatch(Button, { label: "Save", icon: "💾" })'>
+              {dispatch(Button, { label: "Save", icon: "💾" })}
+            </Case>
+
+            <h2>Case 3 — WrapperMiddleware matches (children passed)</h2>
+            <Case title='dispatch(Button, { children: <span>inner</span> })'>
+              {dispatch(Button, { children: <span style="color:#adf">inner content</span> })}
+            </Case>
+
+            <h2>Case 4 — Both match: wrapper + icon inside</h2>
+            <Case title='dispatch(Button, { icon:"⭐", children: <span>star</span> })'>
+              {dispatch(Button, { icon: "⭐", children: <span style="color:#adf">star content</span> })}
+            </Case>
+          </div>
+        );
+      };
+
+      render(<App />, document.getElementById("app"));
+    </script>
+  </body>
+</html>

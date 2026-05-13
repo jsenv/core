@@ -239,7 +239,8 @@ const PickerContentInsidePopover = (props) => {
       debugPopup(e, `disable click`);
       disableClickFor();
     }
-    return requestPopoverClose(popoverRef.current, { event: e });
+    const popoverEl = popoverRef.current;
+    return requestPopoverClose(popoverEl, { event: e });
   };
   const moveFocusToPicker = (e) => {
     const mousedownEvent = findEvent(e, (e) => e.type === "mousedown");
