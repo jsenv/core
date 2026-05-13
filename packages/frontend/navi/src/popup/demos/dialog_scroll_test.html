@@ -66,19 +66,19 @@
         grid.appendChild(cell);
       }
 
-      document.body.onclick = () => {
-        const scrollX = window.scrollX;
-        const scrollY = window.scrollY;
-        document.getElementById("d").showModal();
-        window.scrollTo(scrollX, scrollY);
-      };
-
       const dialog = document.getElementById("d");
       dialog.onclick = (e) => {
         e.stopPropagation();
         if (e.target === dialog) {
           dialog.close();
         }
+      };
+
+      document.body.onclick = () => {
+        const scrollX = window.scrollX;
+        const scrollY = window.scrollY;
+        dialog.showModal();
+        window.scrollTo(scrollX, scrollY);
       };
     </script>
   </body>
