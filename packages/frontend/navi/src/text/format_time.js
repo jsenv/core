@@ -57,7 +57,7 @@ export const getRelativeDay = (date, { now = new Date() } = {}) => {
 /**
  * Formats a relative day offset (-1/0/1) as a locale-aware label: "hier", "aujourd'hui", "demain".
  */
-export const formatRelativeDay = (offset, locale) => {
+export const formatDayRelative = (offset, locale) => {
   const relativeDay = new Intl.RelativeTimeFormat(locale, {
     numeric: "auto",
   }).format(offset, "day");

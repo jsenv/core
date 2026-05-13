@@ -1,8 +1,8 @@
 import {
   formatDatetime,
   formatDay,
+  formatDayRelative,
   formatMonth,
-  formatRelativeDay,
   formatTime,
   formatTimeRelative,
   getRelativeDay,
@@ -79,7 +79,7 @@ const TimeDay = ({ children, locale, long, dayLabel, now, ...props }) => {
     if (dayLabel) {
       const offset = getRelativeDay(date, { now });
       if (offset >= -1 && offset <= 1) {
-        text = `${base} (${formatRelativeDay(offset, lang)})`;
+        text = `${base} (${formatDayRelative(offset, lang)})`;
       } else {
         text = base;
       }

@@ -168,9 +168,9 @@ export { formatNumber } from "./src/text/format_number.js";
 export {
   formatDatetime,
   formatDay,
+  formatDayRelative,
   formatMonth,
   formatTime,
-  formatTimeAgo,
   formatTimeRelative,
 } from "./src/text/format_time.js";
 export { Icon } from "./src/text/icon.jsx";
