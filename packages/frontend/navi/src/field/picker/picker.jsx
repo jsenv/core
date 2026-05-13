@@ -314,6 +314,7 @@ const PickerUI = (props) => {
         ":disabled": innerDisabled,
         ":-navi-loading": innerLoading,
       }}
+      pseudoStateSelector=".navi_picker_input"
       pseudoClasses={PICKER_PSEUDO_CLASSES}
       onMouseDown={(e) => {
         if (e.button !== 0) {
