@@ -112,6 +112,7 @@ export { Form } from "./src/field/form.jsx";
 export { Group } from "./src/field/group.jsx";
 export { Input } from "./src/field/input/input.jsx";
 export { Picker } from "./src/field/picker/picker.jsx";
+export { usePickerRequestClose } from "./src/field/picker/picker_popup/picker_popup.jsx";
 export { getNowHours, isToday } from "./src/field/picker/time_helpers.js";
 export { Radio, RadioList } from "./src/field/radio_list.jsx";
 export { Select, useSelectRequestClose } from "./src/field/select/select.jsx";

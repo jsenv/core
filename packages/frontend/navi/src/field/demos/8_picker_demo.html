@@ -69,6 +69,7 @@
         isToday,
         getNowHours,
         stateSignal,
+        usePickerRequestClose,
       } from "@jsenv/navi";
 
       const App = () => (
@@ -81,6 +82,8 @@
           <DatetimePickerDemo />
           <ColorPickerDemo />
           <CustomUIDemo />
+          <PopoverPickerDemo />
+          <DialogPickerDemo />
           <DisabledDemo />
           <FormIntegrationDemo />
         </div>
@@ -510,6 +513,99 @@
                 </pre>
               )}
             </Form>
+          </div>
+        );
+      };
+
+      const FruitList = ({ onSelect }) => {
+        const requestClose = usePickerRequestClose();
+        return (
+          <div>
+            {["Apple", "Banana", "Cherry", "Date"].map((fruit) => (
+              <button
+                key={fruit}
+                style="display:block;width:100%;padding:8px 16px;text-align:left;background:none;border:none;cursor:pointer;font-size:14px;"
+                onClick={() => {
+                  onSelect(fruit);
+                  requestClose();
+                }}
+              >
+                {fruit}
+              </button>
+            ))}
+          </div>
+        );
+      };
+
+      const PopoverPickerDemo = () => {
+        const valueSignal = useSignal(null);
+        return (
+          <div class="demo-section">
+            <h2>Custom popover</h2>
+            <p>
+              Passing children to Picker opens a custom popover instead of the
+              native browser picker. On small screens a dialog is used instead.
+            </p>
+            <Field vertical>
+              <Label>Choose a fruit</Label>
+              <Picker
+                type="day"
+                value={valueSignal.value}
+                placeholder="Pick a fruit"
+              >
+                <FruitList onSelect={(fruit) => { valueSignal.value = fruit; }} />
+              </Picker>
+            </Field>
+            {valueSignal.value && (
+              <div class="value-display">Selected: {valueSignal.value}</div>
+            )}
+          </div>
+        );
+      };
+
+      const ColorList = ({ onSelect }) => {
+        const requestClose = usePickerRequestClose();
+        return (
+          <div>
+            {["Red", "Green", "Blue", "Yellow"].map((color) => (
+              <button
+                key={color}
+                style={`display:block;width:100%;padding:8px 16px;text-align:left;background:none;border:none;cursor:pointer;font-size:14px;color:${color.toLowerCase()};`}
+                onClick={() => {
+                  onSelect(color);
+                  requestClose();
+                }}
+              >
+                {color}
+              </button>
+            ))}
+          </div>
+        );
+      };
+
+      const DialogPickerDemo = () => {
+        const valueSignal = useSignal(null);
+        return (
+          <div class="demo-section">
+            <h2>Custom dialog</h2>
+            <p>
+              Use <code>mode="dialog"</code> to always open in a dialog,
+              regardless of screen size.
+            </p>
+            <Field vertical>
+              <Label>Choose a color</Label>
+              <Picker
+                type="color"
+                value={valueSignal.value}
+                placeholder="Pick a color"
+                mode="dialog"
+              >
+                <ColorList onSelect={(color) => { valueSignal.value = color; }} />
+              </Picker>
+            </Field>
+            {valueSignal.value && (
+              <div class="value-display">Selected: {valueSignal.value}</div>
+            )}
           </div>
         );
       };

@@ -186,6 +186,11 @@ const css = /* css */ `
  *   "color"    — color chooser
  *   "hour"     — fixed time slots (derived from min/max/step)
  *
+ * When `children` are provided, the picker opens a popover or dialog instead
+ * of the browser-native picker. On small screens a dialog is used automatically;
+ * on larger screens a popover is used. Pass `mode="dialog"` or `mode="popover"`
+ * to force one. The children are rendered inside the popup.
+ *
  * Props:
  *   type        — picker variant (see above)
  *   value       — controlled value
@@ -197,6 +202,8 @@ const css = /* css */ `
  *   max         — maximum allowed value; accepts a Date or a raw string
  *   step        — step interval
  *   disabled    — disables the picker
+ *   children    — content to display inside the popup (enables popover/dialog mode)
+ *   mode        — "popover" or "dialog"; auto-detected from screen size when omitted
  */
 export const Picker = (props) => {
   const defaultRef = useRef(null);
