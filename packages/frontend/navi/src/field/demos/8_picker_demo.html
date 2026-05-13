@@ -425,43 +425,44 @@
                 submittedSignal.value = values;
               }}
               flex="y"
-              spacing="m"
+              spacing="s"
               alignX="start"
             >
               <Field vertical>
-                <Label>Jour</Label>
-                <Picker
-                  type="day"
-                  name="day"
-                  required
-                  value={daySignal.value}
-                  uiAction={(v) => {
-                    daySignal.value = v;
-                    hourSignal.value = "";
-                  }}
-                  min={today}
-                  max={in30days}
-                  placeholder="Choisir un jour"
-                />
-              </Field>
-              <Field vertical>
-                <Label>Heure (7h–21h, 30 min)</Label>
-                <Picker
-                  type="hour"
-                  name="hour"
-                  required
-                  min="07:00"
-                  max="21:00"
-                  step="00:30"
-                  minHidden={
-                    isToday(daySignal.value) ? getNowHours(-5) : undefined
-                  }
-                  value={hourSignal.value}
-                  uiAction={(v) => {
-                    hourSignal.value = v;
-                  }}
-                  placeholder="Choisir une heure"
-                />
+                <Label htmlFor="day">Jour</Label>
+                <Box flex spacing="m">
+                  <Picker
+                    minWidth="300"
+                    id="day"
+                    type="day"
+                    name="day"
+                    required
+                    value={daySignal.value}
+                    uiAction={(v) => {
+                      daySignal.value = v;
+                      hourSignal.value = "";
+                    }}
+                    min={today}
+                    max={in30days}
+                    placeholder="Choisir un jour"
+                  />
+                  <Picker
+                    type="hour"
+                    name="hour"
+                    required
+                    min="07:00"
+                    max="21:00"
+                    step="00:30"
+                    minHidden={
+                      isToday(daySignal.value) ? getNowHours(-5) : undefined
+                    }
+                    value={hourSignal.value}
+                    uiAction={(v) => {
+                      hourSignal.value = v;
+                    }}
+                    placeholder="Choisir une heure"
+                  />
+                </Box>
               </Field>
               <Button type="submit">Soumettre</Button>
               {submittedSignal.value && (

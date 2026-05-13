@@ -286,7 +286,6 @@ const css = /* css */ `
 
       .navi_select_dialog {
         max-height: 95dvh;
-        margin: auto;
         padding: 0;
         background: var(--select-background-color);
         border: var(--select-border-width) solid var(--x-select-border-color);
@@ -296,6 +295,7 @@ const css = /* css */ `
         outline-offset: var(--x-select-outline-offset);
         box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
         cursor: default; /* Reset pointer cursor within the select */
+        /* overscroll-behavior: contain; */
 
         &[open] {
           display: flex;
