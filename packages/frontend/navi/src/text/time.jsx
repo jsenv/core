@@ -3,7 +3,6 @@ import {
   formatDay,
   formatMonth,
   formatTime,
-  formatTimeAgo,
   formatTimeRelative,
 } from "./format_time.js";
 import { langSignal } from "./lang_signal.js";
@@ -20,15 +19,14 @@ import { Text } from "./text.jsx";
  *   If the value cannot be parsed, it is rendered as-is.
  *   If undefined/null, renders `"–"`.
  *
- * @param {"day"|"month"|"datetime"|"time"|"ago"|"relative"} [type="relative"]
+ * @param {"day"|"month"|"datetime"|"time"|"relative"} [type="relative"]
  *   Controls the display format:
  *   - `"day"`       → "lundi 11 mai (aujourd'hui)"  — with today/tomorrow label
  *   - `"month"`     → "mai 2026"
  *   - `"datetime"`  → "lun. 11 mai, 14:30"
  *   - `"time"`      → "14:30"
- *   - `"ago"`       → "il y a 3 jours" (simple past only)
  *   - `"relative"`  → "dans 1 heure 30" / "En cours" / "il y a 2 heures"
- *                     Prefer this over `"ago"` — handles past, present, and future.
+ *                     Handles past, present, and future.
  *                     `eventDuration` defaults to 0 (instantaneous: no "En cours" window).
  *
  * @param {number} [eventDuration=0]
@@ -36,46 +34,128 @@ import { Text } from "./text.jsx";
  *   When omitted, the event is instantaneous (point in time, no "En cours" window).
  * @param {boolean} [bare]
  *   When true, strips the past-tense literal ("il y a", "ago") and returns only integer + unit.
- *   Only applies to `type="ago"` and the past state of `type="relative"`.
+ *   Only applies to the past state of `type="relative"`.
  * @param {string} [locale]
  *   BCP 47 locale tag (e.g. `"fr"`, `"en-US"`).
  *   Defaults to `langSignal.value` (the browser's current language).
  */
-export const Time = ({
-  children,
-  type = "relative",
-  eventDuration = 0,
-  bare,
-  locale,
-  ...props
-}) => {
-  const date = toDate(children, type);
+export const Time = (props) => {
+  const { type } = props;
+  if (type === "day") {
+    return <TimeDay {...props} />;
+  }
+  if (type === "month") {
+    return <TimeMonth {...props} />;
+  }
+  if (type === "datetime") {
+    return <TimeDatetime {...props} />;
+  }
+  if (type === "time") {
+    return <TimeTime {...props} />;
+  }
+  return <TimeRelative {...props} />;
+};
+
+const TimeDay = ({ children, locale, ...props }) => {
   const lang = locale || langSignal.value;
+  const date = toDate(children, "day");
+  const text = date
+    ? formatDay(date, lang)
+    : children === undefined
+      ? "–"
+      : String(children);
+  const dateTime = date ? toDayAttr(date) : undefined;
 
+  return (
+    <TimeText dateTime={dateTime} {...props}>
+      {text}
+    </TimeText>
+  );
+};
+
+const TimeMonth = ({ children, locale, ...props }) => {
+  const lang = locale || langSignal.value;
+  const date = toDate(children, "month");
+  const text = date
+    ? formatMonth(date, lang)
+    : children === undefined
+      ? "–"
+      : String(children);
+  const dateTime = date ? toMonthAttr(date) : undefined;
+
+  return (
+    <TimeText dateTime={dateTime} {...props}>
+      {text}
+    </TimeText>
+  );
+};
+
+const TimeDatetime = ({ children, locale, ...props }) => {
+  const lang = locale || langSignal.value;
+  const date = toDate(children, "datetime");
+  const text = date
+    ? formatDatetime(date, lang)
+    : children === undefined
+      ? "–"
+      : String(children);
+  const dateTime = date ? date.toISOString() : undefined;
+
+  return (
+    <TimeText dateTime={dateTime} {...props}>
+      {text}
+    </TimeText>
+  );
+};
+
+const TimeTime = ({ children, locale, ...props }) => {
+  const lang = locale || langSignal.value;
+  const date = toDate(children, "time");
   let text;
-  let dateTimeAttr;
-
-  if (type === "relative") {
-    text = date
-      ? formatTimeRelative(date, eventDuration, lang, { bare })
-      : children === undefined
-        ? "–"
-        : String(children);
-    dateTimeAttr = date ? date.toISOString() : undefined;
+  let dateTime;
+  if (date) {
+    text = formatTime(date, lang);
+    // See https://developer.mozilla.org/en-US/docs/Web/HTML/Element/time#datetime
+    const hh = String(date.getHours()).padStart(2, "0");
+    const mm = String(date.getMinutes()).padStart(2, "0");
+    dateTime = `${hh}:${mm}`;
+  } else if (children === undefined) {
+    text = "–";
   } else {
-    text = date
-      ? formatDate(date, type, lang, { bare })
-      : children === undefined
-        ? "–"
-        : String(children);
-    dateTimeAttr = date ? toDateTimeAttr(date, type) : undefined;
+    text = children;
   }
 
   return (
-    <Text as="time" dateTime={dateTimeAttr} {...props}>
+    <TimeText dateTime={dateTime} {...props}>
       {text}
-    </Text>
+    </TimeText>
   );
+};
+
+const TimeRelative = ({
+  children,
+  locale,
+  eventDuration = 0,
+  bare,
+  ...props
+}) => {
+  const lang = locale || langSignal.value;
+  const date = toDate(children, "relative");
+  const text = date
+    ? formatTimeRelative(date, eventDuration, lang, { bare })
+    : children === undefined
+      ? "–"
+      : String(children);
+  const dateTime = date ? date.toISOString() : undefined;
+
+  return (
+    <TimeText dateTime={dateTime} {...props}>
+      {text}
+    </TimeText>
+  );
+};
+
+const TimeText = (props) => {
+  return <Text as="time" {...props} />;
 };
 
 const toDate = (value, type) => {
@@ -108,44 +188,15 @@ const toDate = (value, type) => {
   return null;
 };
 
-// Produces a machine-readable value for the HTML `datetime` attribute.
-// See https://developer.mozilla.org/en-US/docs/Web/HTML/Element/time#datetime
-const toDateTimeAttr = (date, type) => {
-  if (type === "time") {
-    const hh = String(date.getHours()).padStart(2, "0");
-    const mm = String(date.getMinutes()).padStart(2, "0");
-    return `${hh}:${mm}`;
-  }
-  if (type === "month") {
-    const yyyy = date.getFullYear();
-    const mm = String(date.getMonth() + 1).padStart(2, "0");
-    return `${yyyy}-${mm}`;
-  }
-  if (type === "datetime" || type === "ago" || type === "relative") {
-    return date.toISOString();
-  }
-  // day
+const toMonthAttr = (date) => {
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  return `${yyyy}-${mm}`;
+};
+
+const toDayAttr = (date) => {
   const yyyy = date.getFullYear();
   const mm = String(date.getMonth() + 1).padStart(2, "0");
   const dd = String(date.getDate()).padStart(2, "0");
   return `${yyyy}-${mm}-${dd}`;
-};
-
-const formatDate = (date, type, locale, { bare } = {}) => {
-  if (type === "day") {
-    return formatDay(date, locale);
-  }
-  if (type === "month") {
-    return formatMonth(date, locale);
-  }
-  if (type === "datetime") {
-    return formatDatetime(date, locale);
-  }
-  if (type === "time") {
-    return formatTime(date, locale);
-  }
-  if (type === "ago") {
-    return formatTimeAgo(date, locale, { bare });
-  }
-  return String(date);
 };
