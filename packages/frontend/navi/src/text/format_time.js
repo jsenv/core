@@ -83,7 +83,7 @@ export const formatTime = (date, locale) => {
 export const formatTimeAgo = (
   date,
   locale,
-  { now = new Date(), prefix } = {},
+  { now = new Date(), bare } = {},
 ) => {
   const rtf = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
   const nowMs = now instanceof Date ? now.getTime() : now;
@@ -115,22 +115,17 @@ export const formatTimeAgo = (
     unit = "year";
   }
 
-  if (prefix === undefined || prefix === null || value >= 0) {
+  if (!bare || value >= 0) {
     return rtf.format(value, unit);
   }
-  // Drop the leading past-tense literal ("il y a ", "ago ") and prepend the custom prefix.
-  // Slicing from the "integer" part keeps: integer + unit, drops the prefix.
+  // Drop the leading past-tense literal ("il y a ", "ago ") — keep only integer + unit.
   const parts = rtf.formatToParts(value, unit);
   const integerIndex = parts.findIndex((p) => p.type === "integer");
-  const withoutPrefix = parts
+  return parts
     .slice(integerIndex)
     .map((p) => p.value)
     .join("")
     .trim();
-  if (prefix === "") {
-    return withoutPrefix;
-  }
-  return `${prefix} ${withoutPrefix}`;
 };
 
 /**
@@ -158,7 +153,7 @@ export const formatTimeRelative = (
   start,
   durationMs = 0,
   locale,
-  { now = new Date(), prefix } = {},
+  { now = new Date(), bare } = {},
 ) => {
   const startMs = start instanceof Date ? start.getTime() : Number(start);
   const endMs = startMs + durationMs;
@@ -169,7 +164,7 @@ export const formatTimeRelative = (
   }
   if (nowMs >= endMs) {
     const refDate = endMs > startMs ? new Date(endMs) : new Date(startMs);
-    return formatTimeAgo(refDate, locale, { now, prefix });
+    return formatTimeAgo(refDate, locale, { now, bare });
   }
 
   const diff = startMs - nowMs;

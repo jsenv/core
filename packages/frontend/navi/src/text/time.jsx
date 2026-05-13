@@ -20,7 +20,7 @@ import { Text } from "./text.jsx";
  *   If the value cannot be parsed, it is rendered as-is.
  *   If undefined/null, renders `"–"`.
  *
- * @param {"day"|"month"|"datetime"|"time"|"ago"|"relative"} [type="day"]
+ * @param {"day"|"month"|"datetime"|"time"|"ago"|"relative"} [type="relative"]
  *   Controls the display format:
  *   - `"day"`       → "lundi 11 mai (aujourd'hui)"  — with today/tomorrow label
  *   - `"month"`     → "mai 2026"
@@ -34,19 +34,18 @@ import { Text } from "./text.jsx";
  * @param {number} [eventDuration=0]
  *   Duration of the event in milliseconds. Only used with `type="relative"`.
  *   When omitted, the event is instantaneous (point in time, no "En cours" window).
- * @param {string} [prefix]
- *   Custom prefix to replace "il y a" / "ago" for past times.
+ * @param {boolean} [bare]
+ *   When true, strips the past-tense literal ("il y a", "ago") and returns only integer + unit.
  *   Only applies to `type="ago"` and the past state of `type="relative"`.
- *   E.g. `prefix="depuis"` → "depuis 2 heures".
  * @param {string} [locale]
  *   BCP 47 locale tag (e.g. `"fr"`, `"en-US"`).
  *   Defaults to `langSignal.value` (the browser's current language).
  */
 export const Time = ({
   children,
-  type = "day",
+  type = "relative",
   eventDuration = 0,
-  prefix,
+  bare,
   locale,
   ...props
 }) => {
@@ -58,14 +57,14 @@ export const Time = ({
 
   if (type === "relative") {
     text = date
-      ? formatTimeRelative(date, eventDuration, lang, { prefix })
+      ? formatTimeRelative(date, eventDuration, lang, { bare })
       : children === undefined
         ? "–"
         : String(children);
     dateTimeAttr = date ? date.toISOString() : undefined;
   } else {
     text = date
-      ? formatDate(date, type, lang, { prefix })
+      ? formatDate(date, type, lang, { bare })
       : children === undefined
         ? "–"
         : String(children);
@@ -132,7 +131,7 @@ const toDateTimeAttr = (date, type) => {
   return `${yyyy}-${mm}-${dd}`;
 };
 
-const formatDate = (date, type, locale, { prefix } = {}) => {
+const formatDate = (date, type, locale, { bare } = {}) => {
   if (type === "day") {
     return formatDay(date, locale);
   }
@@ -146,7 +145,7 @@ const formatDate = (date, type, locale, { prefix } = {}) => {
     return formatTime(date, locale);
   }
   if (type === "ago") {
-    return formatTimeAgo(date, locale, { prefix });
+    return formatTimeAgo(date, locale, { bare });
   }
   return String(date);
 };

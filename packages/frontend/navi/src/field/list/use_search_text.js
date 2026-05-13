@@ -14,8 +14,10 @@ import { applySearch } from "./apply_search.js";
  * to each ListItem. The list's matchFallback will be shown when all items are hidden.
  */
 export const useSearchText = (searchText, items, matchFn = applySearch) => {
-  if (typeof searchText !== "string") {
-    throw new TypeError("useSearchText: searchText must be a string");
+  if (typeof searchText !== "string" && searchText !== undefined) {
+    throw new TypeError(
+      "useSearchText: searchText must be a string or undefined",
+    );
   }
   if (items === undefined) {
     throw new TypeError("useSearch: items is undefined");
