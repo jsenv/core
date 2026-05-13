@@ -359,7 +359,9 @@ export const Box = (props) => {
       styles: boxStyles,
     };
     let boxPseudoNamedStyles = PSEUDO_NAMED_STYLES_DEFAULT;
-    const shouldForwardAllToChild = visualSelector && pseudoStateSelector;
+    const canForwardToChild = hasChildFunction;
+    const shouldForwardAllToChild =
+      canForwardToChild && visualSelector && pseudoStateSelector;
 
     const addStyle = (value, name, styleContext, stylesTarget, context) => {
       const mergedValue = prepareStyleValue(
@@ -411,6 +413,9 @@ export const Box = (props) => {
       if (visualChildPropStrategy === "copy") {
         // we stylyze ourself + forward prop to the child
         addStyle(value, name, styleContext, stylesTarget, context);
+      }
+      if (!canForwardToChild) {
+        return false;
       }
       return true;
     };
@@ -572,7 +577,11 @@ export const Box = (props) => {
     for (const propName of remainingPropKeySet) {
       const propValue = rest[propName];
       if (baseChildPropSet?.has(propName) || childPropSet?.has(propName)) {
-        childForwardedProps[propName] = propValue;
+        if (canForwardToChild) {
+          childForwardedProps[propName] = propValue;
+        } else {
+          selfForwardedProps[propName] = propValue;
+        }
         continue;
       }
       const isDataAttribute = propName.startsWith("data-");
@@ -591,14 +600,18 @@ export const Box = (props) => {
       }
       const isEventHandler = propName.startsWith("on");
       if (isEventHandler) {
-        if (pseudoStateSelector) {
+        if (canForwardToChild && pseudoStateSelector) {
           childForwardedProps[propName] = propValue;
           continue;
         }
         selfForwardedProps[propName] = propValue;
         continue;
       }
-      if (pseudoStateSelector && PSEUDO_STATE_CHILD_PROP_SET.has(propName)) {
+      if (
+        canForwardToChild &&
+        pseudoStateSelector &&
+        PSEUDO_STATE_CHILD_PROP_SET.has(propName)
+      ) {
         childForwardedProps[propName] = propValue;
         continue;
       }
