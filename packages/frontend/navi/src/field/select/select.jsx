@@ -95,6 +95,7 @@ const css = /* css */ `
 
     position: relative;
     box-sizing: border-box;
+    min-width: 80px;
     padding-top: var(--x-select-padding-top);
     padding-right: var(--x-select-padding-right);
     padding-bottom: var(--x-select-padding-bottom);
@@ -383,7 +384,7 @@ const SelectDispatcher = (props) => {
 const SelectUI = (props) => {
   import.meta.css = css;
   const {
-    placeholder = "Select…",
+    placeholder,
     trigger,
     name,
     value,
