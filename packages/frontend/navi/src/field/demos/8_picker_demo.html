@@ -85,9 +85,18 @@
         </div>
       );
 
+      // ── date helpers ────────────────────────────────────────────────────────
+      const today = new Date();
+      const todayStr = today.toISOString().slice(0, 10);
+      const in30days = new Date(today);
+      in30days.setDate(today.getDate() + 30);
+      const yesterday = new Date(today);
+      yesterday.setDate(today.getDate() - 1);
+      const yesterdayStr = yesterday.toISOString().slice(0, 10);
+
       const DayHourPickerDemo = () => {
-        const daySignal = useSignal("");
-        const hourSignal = useSignal("");
+        const daySignal = useSignal(todayStr);
+        const hourSignal = useSignal("07:00");
         const submittedSignal = useSignal(null);
         return (
           <div class="demo-section">
@@ -117,7 +126,6 @@
                     value={daySignal.value}
                     uiAction={(v) => {
                       daySignal.value = v;
-                      hourSignal.value = "";
                     }}
                     min={today}
                     max={in30days}
@@ -163,12 +171,6 @@
       };
 
       // ── helpers ─────────────────────────────────────────────────
-      const today = new Date();
-      const in30days = new Date(today);
-      in30days.setDate(today.getDate() + 30);
-      const yesterday = new Date(today);
-      yesterday.setDate(today.getDate() - 1);
-      const yesterdayStr = yesterday.toISOString().slice(0, 10);
 
       const ValueDisplay = ({ label, value }) => (
         <p class="value-display">
@@ -359,8 +361,8 @@
       };
 
       const ColorPickerDemo = () => {
-        const colorSignal = useSignal("");
-        const colorWithPlaceholderSignal = useSignal("");
+        const colorSignal = useSignal(undefined);
+        const colorWithPlaceholderSignal = useSignal(undefined);
         return (
           <div class="demo-section">
             <h2>Color picker</h2>

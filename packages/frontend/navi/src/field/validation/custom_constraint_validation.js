@@ -828,8 +828,7 @@ export const installCustomConstraintValidation = (
         if (clickEvent.defaultPrevented) {
           return null;
         }
-        const clickTarget = clickEvent.target;
-        const { form } = clickTarget;
+        const { form } = element;
         if (!form) {
           // reset button are not associated to the from
           // so they early return here
