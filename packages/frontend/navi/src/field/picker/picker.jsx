@@ -22,7 +22,11 @@ import {
 } from "../use_ui_state_controller.js";
 import { useConstraints } from "../validation/hooks/use_constraints.js";
 import { createDispatcher } from "./create_dispatcher.jsx";
-import { PickerContext, PickerDispatcherContext } from "./picker_context.jsx";
+import {
+  PickerContext,
+  PickerDispatcherContext,
+  PickerElementContext,
+} from "./picker_context.jsx";
 import { pickerMiddlewares } from "./picker_middlewares.jsx";
 
 const css = /* css */ `
@@ -216,7 +220,9 @@ export const Picker = (props) => {
   return (
     <UIStateControllerContext.Provider value={uiStateController}>
       <UIStateContext.Provider value={uiState}>
-        {renderPicker(PickerInput, { ...props, ref, id })}
+        <PickerElementContext.Provider value={ref}>
+          {renderPicker(PickerInput, { ...props, ref, id })}
+        </PickerElementContext.Provider>
       </UIStateContext.Provider>
     </UIStateControllerContext.Provider>
   );
@@ -309,6 +315,9 @@ const PickerInput = (props) => {
           return;
         }
         onClick?.(e);
+      }}
+      onnavi_picker_set_value={(e) => {
+        uiStateController.setUIState(e.detail.value, e);
       }}
     >
       <LoadingOutline

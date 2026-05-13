@@ -61,6 +61,7 @@
         Field,
         Label,
         Picker,
+        Input,
         Time,
         Text,
         Icon,
@@ -69,7 +70,7 @@
         isToday,
         getNowHours,
         stateSignal,
-        usePickerRequestClose,
+        usePicker,
       } from "@jsenv/navi";
 
       const App = () => (
@@ -518,48 +519,33 @@
       };
 
       const PopoverPickerDemo = () => {
-        const valueSignal = useSignal(null);
-        const requestClose = usePickerRequestClose();
-
         return (
           <div class="demo-section">
-            <h2>Custom popover</h2>
+            <h2>Custom popover — action="picker"</h2>
             <p>
-              Passing children to Picker opens a custom popover instead of the
-              native browser picker. On small screens a dialog is used instead.
+              Passing children to Picker opens a custom popover. An{" "}
+              <code>Input</code> with <code>action="picker"</code> binds its
+              value to the picker automatically.
             </p>
             <Field vertical>
-              <Label>Choose a fruit</Label>
-              <Picker
-                type="day"
-                value={valueSignal.value}
-                placeholder="Pick a fruit"
-              >
-                <div>
-                  {["Apple", "Banana", "Cherry", "Date"].map((fruit) => (
-                    <button
-                      key={fruit}
-                      style="display:block;width:100%;padding:8px 16px;text-align:left;background:none;border:none;cursor:pointer;font-size:14px;"
-                      onClick={() => {
-                        onSelect(fruit);
-                        requestClose();
-                      }}
-                    >
-                      {fruit}
-                    </button>
-                  ))}
-                </div>
+              <Label>Free text</Label>
+              <Picker type="text" placeholder="Type something…">
+                <Box flex="y" spacing="s" padding="s">
+                  <Input
+                    type="text"
+                    action="picker"
+                    placeholder="Enter value"
+                  />
+                </Box>
               </Picker>
             </Field>
-            {valueSignal.value && (
-              <div class="value-display">Selected: {valueSignal.value}</div>
-            )}
           </div>
         );
       };
 
-      const ColorList = ({ onSelect }) => {
-        const requestClose = usePickerRequestClose();
+      const ColorList = () => {
+        const { requestClose, setValue } = usePicker();
+
         return (
           <div>
             {["Red", "Green", "Blue", "Yellow"].map((color) => (
@@ -567,7 +553,7 @@
                 key={color}
                 style={`display:block;width:100%;padding:8px 16px;text-align:left;background:none;border:none;cursor:pointer;font-size:14px;color:${color.toLowerCase()};`}
                 onClick={() => {
-                  onSelect(color);
+                  setValue(color);
                   requestClose();
                 }}
               >
@@ -579,32 +565,20 @@
       };
 
       const DialogPickerDemo = () => {
-        const valueSignal = useSignal(null);
         return (
           <div class="demo-section">
-            <h2>Custom dialog</h2>
+            <h2>Custom dialog — usePickerSetValue</h2>
             <p>
-              Use <code>mode="dialog"</code> to always open in a dialog,
-              regardless of screen size.
+              Use <code>mode="dialog"</code> to always open in a dialog.
+              Children use <code>usePickerSetValue()</code> to update the picker
+              value and <code>usePickerRequestClose()</code> to close.
             </p>
             <Field vertical>
               <Label>Choose a color</Label>
-              <Picker
-                type="color"
-                value={valueSignal.value}
-                placeholder="Pick a color"
-                mode="dialog"
-              >
-                <ColorList
-                  onSelect={(color) => {
-                    valueSignal.value = color;
-                  }}
-                />
+              <Picker type="color" placeholder="Pick a color" mode="dialog">
+                <ColorList />
               </Picker>
             </Field>
-            {valueSignal.value && (
-              <div class="value-display">Selected: {valueSignal.value}</div>
-            )}
           </div>
         );
       };

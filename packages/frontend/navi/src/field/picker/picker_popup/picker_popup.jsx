@@ -1,4 +1,3 @@
-import { createContext } from "preact";
 import { useContext, useId, useRef, useState } from "preact/hooks";
 
 import { shortcutsViaOnKeyDown } from "@jsenv/navi/src/keyboard/keyboard_shortcuts.js";
@@ -14,12 +13,10 @@ import {
   requestPopoverClose,
   requestPopoverOpen,
 } from "@jsenv/navi/src/popup/popover.jsx";
-import { PickerDispatcherContext } from "../picker_context.jsx";
-
-const PickerRequestCloseContext = createContext();
-export const usePickerRequestClose = () => {
-  return useContext(PickerRequestCloseContext);
-};
+import {
+  PickerDispatcherContext,
+  PickerRequestCloseContext,
+} from "../picker_context.jsx";
 
 const css = /* css */ `
   .navi_picker {

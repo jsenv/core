@@ -9,6 +9,20 @@ import {
   PickerWeek,
 } from "./show_method/picker_show_method.jsx";
 
+const PickerPresetMiddleware = (props) => {
+  if (props.type === "hour") {
+    return <PickerHour {...props} />;
+  }
+  return null;
+};
+
+const PickerPopupMiddleware = (props) => {
+  if (props.children !== undefined) {
+    return <PickerPopup {...props} />;
+  }
+  return null;
+};
+
 const PickerShowMethodMiddleware = (props) => {
   if (props.type === "color") {
     return <PickerColor {...props} />;
@@ -31,22 +45,8 @@ const PickerShowMethodMiddleware = (props) => {
   return null;
 };
 
-const PickerPresetMiddleware = (props) => {
-  if (props.type === "hour") {
-    return <PickerHour {...props} />;
-  }
-  return null;
-};
-
-const PickerPopupMiddleware = (props) => {
-  if (props.children !== undefined) {
-    return <PickerPopup {...props} />;
-  }
-  return null;
-};
-
 export const pickerMiddlewares = [
-  PickerShowMethodMiddleware,
   PickerPresetMiddleware,
   PickerPopupMiddleware,
+  PickerShowMethodMiddleware,
 ];
