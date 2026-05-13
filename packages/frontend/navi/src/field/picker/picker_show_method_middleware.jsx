@@ -6,7 +6,7 @@ import { PickerContext, PickerDispatcherContext } from "./picker_context.jsx";
 import { PickerValuePlaceholder } from "./picker_value_placeholder.jsx";
 import { parseStepToSeconds } from "./time_helpers.js";
 
-export const PickerShowMethod = (props) => {
+export const PickerShowMethodMiddleware = (props) => {
   if (props.type === "color") {
     return <PickerColor {...props} />;
   }
@@ -89,11 +89,12 @@ const PickerColorUI = () => {
 };
 
 const PickerDay = (props) => {
+  const PickerDispatcher = useContext(PickerDispatcherContext);
   const min = resolveDateProp(props.min, toInputDay);
   const max = resolveDateProp(props.max, toInputDay);
 
   return (
-    <PickerInput
+    <PickerDispatcher
       requiredMessage={naviI18n(`picker.required.day`)}
       ui={<PickerDayUI />}
       icon={<CalendarSvg />}
@@ -103,7 +104,7 @@ const PickerDay = (props) => {
       type="date"
     >
       {props.children}
-    </PickerInput>
+    </PickerDispatcher>
   );
 };
 const PickerDayUI = () => {
@@ -127,11 +128,12 @@ const toInputDay = (date) => {
   return `${yyyy}-${mm}-${dd}`;
 };
 const PickerMonth = (props) => {
+  const PickerDispatcher = useContext(PickerDispatcherContext);
   const min = resolveDateProp(props.min, toInputMonth);
   const max = resolveDateProp(props.max, toInputMonth);
 
   return (
-    <PickerInput
+    <PickerDispatcher
       requiredMessage={naviI18n(`picker.required.month`)}
       ui={<PickerMonthUI />}
       icon={<CalendarSvg />}
@@ -141,7 +143,7 @@ const PickerMonth = (props) => {
       max={max}
     >
       {props.children}
-    </PickerInput>
+    </PickerDispatcher>
   );
 };
 const PickerMonthUI = () => {
@@ -164,11 +166,12 @@ const toInputMonth = (date) => {
   return `${yyyy}-${mm}`;
 };
 const PickerWeek = (props) => {
+  const PickerDispatcher = useContext(PickerDispatcherContext);
   const min = resolveDateProp(props.min, toInputWeek);
   const max = resolveDateProp(props.max, toInputWeek);
 
   return (
-    <PickerInput
+    <PickerDispatcher
       requiredMessage={naviI18n(`picker.required.week`)}
       ui={<PickerWeekUI />}
       icon={<CalendarSvg />}
@@ -178,7 +181,7 @@ const PickerWeek = (props) => {
       max={max}
     >
       {props.children}
-    </PickerInput>
+    </PickerDispatcher>
   );
 };
 const PickerWeekUI = () => {
@@ -208,12 +211,13 @@ const toInputWeek = (date) => {
   return `${d.getFullYear()}-W${String(week).padStart(2, "0")}`;
 };
 const PickerTime = (props) => {
+  const PickerDispatcher = useContext(PickerDispatcherContext);
   const min = resolveDateProp(props.min, toInputTime);
   const max = resolveDateProp(props.max, toInputTime);
   const step = parseStepToSeconds(props.step);
 
   return (
-    <PickerInput
+    <PickerDispatcher
       requiredMessage={naviI18n(`picker.required.time`)}
       ui={<PickerTimeUI />}
       icon={<ClockSvg />}
@@ -224,7 +228,7 @@ const PickerTime = (props) => {
       step={step}
     >
       {props.children}
-    </PickerInput>
+    </PickerDispatcher>
   );
 };
 const PickerTimeUI = () => {
@@ -243,12 +247,13 @@ const toInputTime = (date) => {
   return `${hh}:${min}`;
 };
 const PickerDatetime = (props) => {
+  const PickerDispatcher = useContext(PickerDispatcherContext);
   const min = resolveDateProp(props.min, toInputDatetime);
   const max = resolveDateProp(props.max, toInputDatetime);
   const step = parseStepToSeconds(props.step);
 
   return (
-    <PickerInput
+    <PickerDispatcher
       requiredMessage={naviI18n(`picker.required.datetime`)}
       ui={<PickerDatetimeUI />}
       icon={<CalendarSvg />}
@@ -259,7 +264,7 @@ const PickerDatetime = (props) => {
       step={step}
     >
       {props.children}
-    </PickerInput>
+    </PickerDispatcher>
   );
 };
 const PickerDatetimeUI = () => {

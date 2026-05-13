@@ -21,9 +21,10 @@ import {
   useUIStateController,
 } from "../use_ui_state_controller.js";
 import { useConstraints } from "../validation/hooks/use_constraints.js";
+import { createDispatcher } from "./create_dispatcher.jsx";
 import { PickerContext, PickerDispatcherContext } from "./picker_context.jsx";
 import { PickerHour } from "./picker_hour.jsx";
-import { PickerShowMethod } from "./picker_show_method.jsx";
+import { PickerShowMethodMiddleware } from "./picker_show_method_middleware.jsx";
 
 const css = /* css */ `
   @layer navi {
@@ -209,26 +210,21 @@ export const Picker = (props) => {
   return (
     <UIStateControllerContext.Provider value={uiStateController}>
       <UIStateContext.Provider value={uiState}>
-        <PickerDispatcherContext.Provider value={PickerDispatcher}>
-          <PickerDispatcher {...props} ref={ref} id={id} />
-        </PickerDispatcherContext.Provider>
+        {renderPicker(PickerInput, { ...props, ref, id })}
       </UIStateContext.Provider>
     </UIStateControllerContext.Provider>
   );
 };
-const PickerDispatcher = (props) => {
-  // pickers calling .showPicker() method on their respective <input>
-  const pickerShowMethod = <PickerShowMethod {...props} />;
-  if (pickerShowMethod) {
-    return pickerShowMethod;
-  }
-  // custom preset pickers
+const PickerHourMiddleware = (props) => {
   if (props.type === "hour") {
     return <PickerHour {...props} />;
   }
-  // fully custom picker
-  return <PickerInput {...props} />;
+  return null;
 };
+const renderPicker = createDispatcher(
+  [PickerShowMethodMiddleware, PickerHourMiddleware],
+  PickerDispatcherContext,
+);
 
 const PickerInput = (props) => {
   import.meta.css = css;
