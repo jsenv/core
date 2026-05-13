@@ -29,7 +29,7 @@ export const createDispatcher = (middlewares, DispatcherContext) => {
     let winnerIndex = -1;
     for (let i = attemptIndex; i < middlewares.length; i++) {
       const result = middlewares[i](props);
-      if (result !== null) {
+      if (result !== null && winner === null) {
         winner = result;
         winnerIndex = i;
       }
