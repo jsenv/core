@@ -51,14 +51,8 @@
       }
     </style>
   </head>
-  <body onclick="document.getElementById('d').showModal()">
-    <dialog
-      id="d"
-      onclick="
-        event.stopPropagation();
-        if (event.target === this) this.close();
-      "
-    >
+  <body>
+    <dialog id="d" onclick="">
       <p>Clique en dehors pour fermer</p>
     </dialog>
     <div class="scroll-content" id="grid"></div>
@@ -71,6 +65,21 @@
         cell.textContent = `${i + 1}`;
         grid.appendChild(cell);
       }
+
+      document.body.onclick = () => {
+        const scrollX = window.scrollX;
+        const scrollY = window.scrollY;
+        document.getElementById("d").showModal();
+        window.scrollTo(scrollX, scrollY);
+      };
+
+      const dialog = document.getElementById("d");
+      dialog.onclick = (e) => {
+        e.stopPropagation();
+        if (e.target === dialog) {
+          dialog.close();
+        }
+      };
     </script>
   </body>
 </html>
