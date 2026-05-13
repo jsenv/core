@@ -22,7 +22,7 @@ import { parseStepToSeconds } from "./time_helpers.js";
  *   noSlotsMessage     — text shown when all slots are disabled
  *   value / uiAction / name / placeholder / required / disabled — forwarded to Select
  */
-export const HourPicker = ({
+export const PickerHour = ({
   min = "00:00",
   max = "23:30",
   step: stepProp = 1800,

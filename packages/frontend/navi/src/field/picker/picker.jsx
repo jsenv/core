@@ -25,7 +25,7 @@ import {
   useUIStateController,
 } from "../use_ui_state_controller.js";
 import { useConstraints } from "../validation/hooks/use_constraints.js";
-import { HourPicker } from "./picker_hour.jsx";
+import { PickerHour } from "./picker_hour.jsx";
 import { parseStepToSeconds } from "./time_helpers.js";
 
 const css = /* css */ `
@@ -177,39 +177,28 @@ const css = /* css */ `
 `;
 
 /**
- * Picker — a button-like trigger that opens a browser-native or custom picker.
+ * A button-like trigger that opens a picker when clicked.
  *
- * The `type` prop selects the picker variant:
+ * Use the `type` prop to choose what kind of picker to open:
+ *   "day"      — calendar day
+ *   "month"    — year + month
+ *   "week"     — ISO week
+ *   "time"     — hours + minutes
+ *   "datetime" — date + time
+ *   "color"    — color chooser
+ *   "hour"     — fixed time slots (derived from min/max/step)
  *
- * Native browser pickers (via `showPicker()` on a hidden `<input>`):
- *   "day"      → <input type="date">         — calendar day (YYYY-MM-DD)
- *   "month"    → <input type="month">        — year + month (YYYY-MM)
- *   "week"     → <input type="week">         — ISO week (YYYY-Www)
- *   "time"     → <input type="time">         — hours + minutes (HH:MM)
- *   "datetime" → <input type="datetime-local"> — date + time (YYYY-MM-DDTHH:MM)
- *   "color"    → <input type="color">        — color chooser (#rrggbb)
- *
- * Custom Select-based picker:
- *   "hour"     → HourPicker — a Select showing fixed time slots derived from
- *                min/max/step; past slots are disabled when the selected day
- *                is today.
- *
- * Fully custom picker (no built-in input):
- *   (any other type, or no type) → bare PickerInput with a hidden input forwarded
- *   via the `inputType` prop.
- *
- * Common props:
- *   value       — current value string (format depends on type)
- *   uiAction    — called with the new value string when the user picks a value
- *   name        — form field name (on the hidden input for form submission)
+ * Props:
+ *   type        — picker variant (see above)
+ *   value       — controlled value
+ *   uiAction    — called with the new value when the user picks one
+ *   name        — form field name
  *   placeholder — shown when no value is selected
+ *   required    — marks the field as required
+ *   min         — minimum allowed value; accepts a Date or a raw string
+ *   max         — maximum allowed value; accepts a Date or a raw string
+ *   step        — step interval
  *   disabled    — disables the picker
- *   min         — minimum value; accepts a Date (converted automatically) or
- *                 the raw input string
- *   max         — maximum value; same as min
- *   step        — step value forwarded to the underlying input
- *   children    — custom value display rendered when a value is selected
- *   ...rest     — forwarded to the outer <button> element
  */
 export const Picker = (props) => {
   const defaultRef = useRef(null);
@@ -249,7 +238,7 @@ const PickerDispatcher = (props) => {
   }
   // custom preset pickers
   if (props.type === "hour") {
-    return <HourPicker {...props} />;
+    return <PickerHour {...props} />;
   }
   // fully custom picker
   return <PickerInput {...props} />;
