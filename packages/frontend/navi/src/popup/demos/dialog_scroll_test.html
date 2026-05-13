@@ -8,19 +8,22 @@
       * {
         box-sizing: border-box;
       }
-      html {
-        overflow: auto;
-      }
-      body {
-        overflow: clip;
-      }
       html,
       body {
         margin: 0;
         padding: 0;
       }
+      html {
+        background: red; /* debug: html background */
+        /* Setting overflow explicitly on <html> makes it the scroll container
+           instead of the viewport, switching mobile scrollbars to overlay mode
+           (no physical height) — this eliminates the ghost white space at the
+           bottom caused by the native horizontal scrollbar reserving space. */
+        overflow: auto;
+      }
       body {
         font-family: system-ui;
+        background: blue; /* debug: body background */
         cursor: pointer;
       }
       .scroll-content {
