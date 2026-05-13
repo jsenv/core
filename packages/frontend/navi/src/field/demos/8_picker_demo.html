@@ -517,28 +517,10 @@
         );
       };
 
-      const FruitList = ({ onSelect }) => {
-        const requestClose = usePickerRequestClose();
-        return (
-          <div>
-            {["Apple", "Banana", "Cherry", "Date"].map((fruit) => (
-              <button
-                key={fruit}
-                style="display:block;width:100%;padding:8px 16px;text-align:left;background:none;border:none;cursor:pointer;font-size:14px;"
-                onClick={() => {
-                  onSelect(fruit);
-                  requestClose();
-                }}
-              >
-                {fruit}
-              </button>
-            ))}
-          </div>
-        );
-      };
-
       const PopoverPickerDemo = () => {
         const valueSignal = useSignal(null);
+        const requestClose = usePickerRequestClose();
+
         return (
           <div class="demo-section">
             <h2>Custom popover</h2>
@@ -553,7 +535,20 @@
                 value={valueSignal.value}
                 placeholder="Pick a fruit"
               >
-                <FruitList onSelect={(fruit) => { valueSignal.value = fruit; }} />
+                <div>
+                  {["Apple", "Banana", "Cherry", "Date"].map((fruit) => (
+                    <button
+                      key={fruit}
+                      style="display:block;width:100%;padding:8px 16px;text-align:left;background:none;border:none;cursor:pointer;font-size:14px;"
+                      onClick={() => {
+                        onSelect(fruit);
+                        requestClose();
+                      }}
+                    >
+                      {fruit}
+                    </button>
+                  ))}
+                </div>
               </Picker>
             </Field>
             {valueSignal.value && (
@@ -600,7 +595,11 @@
                 placeholder="Pick a color"
                 mode="dialog"
               >
-                <ColorList onSelect={(color) => { valueSignal.value = color; }} />
+                <ColorList
+                  onSelect={(color) => {
+                    valueSignal.value = color;
+                  }}
+                />
               </Picker>
             </Field>
             {valueSignal.value && (
