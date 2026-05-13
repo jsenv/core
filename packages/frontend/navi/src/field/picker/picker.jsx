@@ -222,9 +222,7 @@ export const Picker = (props) => {
   return (
     <UIStateControllerContext.Provider value={uiStateController}>
       <UIStateContext.Provider value={uiState}>
-        <PickerElementContext.Provider value={ref}>
-          {renderPicker(PickerInput, { ...props, ref, id })}
-        </PickerElementContext.Provider>
+        {renderPicker(PickerInput, { ...props, ref, id })}
       </UIStateContext.Provider>
     </UIStateControllerContext.Provider>
   );
@@ -358,8 +356,9 @@ const PickerInput = (props) => {
           onChange?.(e);
         }}
       />
-
-      {children}
+      <PickerElementContext.Provider value={ref}>
+        {children}
+      </PickerElementContext.Provider>
     </Box>
   );
 };

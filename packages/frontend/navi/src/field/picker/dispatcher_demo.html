@@ -5,131 +5,440 @@
     <link rel="icon" href="data:," />
     <title>Dispatcher Demo</title>
     <style>
+      @keyframes render-flash {
+        0% {
+          background-color: var(--flash-color);
+          transform: scale(1.06);
+        }
+        60% {
+          transform: scale(1);
+        }
+        100% {
+          background-color: transparent;
+        }
+      }
+      .render-flash {
+        display: inline-block;
+        animation: render-flash 600ms ease-out;
+      }
+      * {
+        box-sizing: border-box;
+      }
       body {
-        max-width: 800px;
-        margin: 0 auto;
-        padding: 20px;
+        margin: 0;
+        font-family: system-ui, sans-serif;
+        background: #f5f5f5;
+      }
+      #render-log {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        display: flex;
+        padding: 8px 16px 10px;
+        flex-wrap: wrap;
+        align-items: flex-start;
+        gap: 24px;
+        color: #cdd6f4;
+        font-size: 12px;
         font-family: monospace;
-        background: #1a1a1a;
-        color: #eee;
+        background: #1e1e2e;
+        border-bottom: 2px solid #45475a;
       }
-      h1 { color: #adf; }
-      h2 { color: #fda; margin-top: 2em; }
-      .box {
-        border: 1px solid #555;
-        padding: 12px;
-        margin: 8px 0;
-        border-radius: 4px;
-        background: #222;
+      #render-log .log-title {
+        width: 100%;
+        margin-bottom: 2px;
+        color: #6c7086;
+        font-size: 11px;
       }
-      .label { color: #8f8; font-size: 0.85em; margin-bottom: 4px; }
-      pre { margin: 0; color: #ccc; font-size: 0.9em; }
+      .case-log {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .case-log-title {
+        margin-bottom: 2px;
+        color: #89b4fa;
+        font-weight: bold;
+        font-size: 11px;
+      }
+      #app {
+        max-width: 860px;
+        margin: 24px auto;
+        padding: 0 16px;
+      }
+      h1 {
+        margin-bottom: 4px;
+        color: #333;
+      }
+      .case-section {
+        margin-bottom: 32px;
+      }
+      .case-header {
+        display: flex;
+        margin-bottom: 8px;
+        align-items: baseline;
+        gap: 12px;
+      }
+      .case-title {
+        color: #333;
+        font-weight: 700;
+        font-size: 15px;
+      }
+      .case-code {
+        padding: 2px 6px;
+        color: #666;
+        font-size: 12px;
+        font-family: monospace;
+        background: #e8e8e8;
+        border-radius: 3px;
+      }
+      .case-render {
+        display: flex;
+        min-height: 48px;
+        padding: 16px 20px;
+        align-items: center;
+        background: #fff;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+      }
+      /* component boxes in render tree */
+      .cbox {
+        margin: 4px 0;
+        border: 2px solid;
+        border-radius: 6px;
+        overflow: hidden;
+      }
+      .cbox-header {
+        display: flex;
+        padding: 2px 8px;
+        align-items: center;
+        gap: 6px;
+        font-weight: bold;
+        font-size: 11px;
+        font-family: monospace;
+      }
+      .cbox-body {
+        padding: 6px 10px;
+      }
+      .cbox-wrapper {
+        border-color: #818cf8;
+      }
+      .cbox-wrapper .cbox-header {
+        color: #4338ca;
+        background: #eef2ff;
+      }
+      .cbox-icon {
+        border-color: #fb923c;
+      }
+      .cbox-icon .cbox-header {
+        color: #c2410c;
+        background: #fff7ed;
+      }
+      .cbox-button {
+        border-color: #34d399;
+      }
+      .cbox-button .cbox-header {
+        color: #065f46;
+        background: #ecfdf5;
+      }
     </style>
   </head>
   <body>
-    <h1>Dispatcher Demo</h1>
+    <div id="render-log">
+      <div class="log-title">
+        Render tracker — calls per component per case (resets on re-render):
+      </div>
+    </div>
     <div id="app"></div>
     <script type="module" jsenv-type="module/jsx">
       import { render, createContext } from "preact";
-      import { useContext } from "preact/hooks";
+      import { useContext, useLayoutEffect } from "preact/hooks";
       import { createDispatcher } from "./create_dispatcher.jsx";
 
-      // ── Contexts ────────────────────────────────────────────────────────────
+      // ── Dispatcher setup ────────────────────────────────────────────────────
       const MyDispatcherContext = createContext(null);
 
-      // ── Target component ────────────────────────────────────────────────────
-      // What the dispatcher ultimately renders when no middleware matches (or after wrapping).
-      const Button = (props) => {
-        const { children, label, type, ...rest } = props;
-        console.log("[Button] render — type=%s label=%s children=%o", type, label, children);
-        return (
-          <button {...rest} style="padding:6px 14px;cursor:pointer;">
-            {label || children || type || "button"}
-          </button>
-        );
+      // ── Render tracking (per case, plain DOM — never causes re-renders) ─────
+      // Each case has its own counters keyed by component name.
+      // TREE defines the display order and indent for each case.
+      const CASES = ["case1", "case2", "case3", "case4"];
+
+      const TREES = {
+        case1: [
+          { name: "MiddlewareRunner", indent: "" },
+          { name: "WrapperMiddleware", indent: "  ├─ " },
+          { name: "IconMiddleware", indent: "  ├─ " },
+          { name: "Button", indent: "  └─ " },
+        ],
+        case2: [
+          { name: "MiddlewareRunner", indent: "" },
+          { name: "WrapperMiddleware", indent: "  ├─ " },
+          { name: "IconMiddleware", indent: "  ├─ " },
+          { name: "Button", indent: "  └─ " },
+        ],
+        case3: [
+          { name: "MiddlewareRunner", indent: "" },
+          { name: "WrapperMiddleware", indent: "  ├─ " },
+          { name: "MiddlewareRunner (re-dispatch)", indent: "  │   ├─ " },
+          { name: "WrapperMiddleware (re-dispatch)", indent: "  │   │   ├─ " },
+          { name: "IconMiddleware (re-dispatch)", indent: "  │   │   ├─ " },
+          { name: "Button", indent: "  │   │   └─ " },
+          { name: "IconMiddleware", indent: "  ├─ " },
+        ],
+        case4: [
+          { name: "MiddlewareRunner", indent: "" },
+          { name: "WrapperMiddleware", indent: "  ├─ " },
+          { name: "MiddlewareRunner (re-dispatch)", indent: "  │   ├─ " },
+          { name: "WrapperMiddleware (re-dispatch)", indent: "  │   │   ├─ " },
+          { name: "IconMiddleware (re-dispatch)", indent: "  │   │   ├─ " },
+          { name: "Button", indent: "  │   │   └─ " },
+          { name: "IconMiddleware", indent: "  ├─ " },
+          { name: "Button (via icon)", indent: "  │   └─ " },
+        ],
       };
 
-      // ── Middlewares ─────────────────────────────────────────────────────────
-      let wrapperRenderCount = 0;
-      const WrapperMiddleware = (props) => {
-        const Dispatcher = useContext(MyDispatcherContext);
-        if (props.children === undefined) {
-          // not a wrapping case — skip
-          return null;
+      const COLORS = {
+        "MiddlewareRunner": "#6366f1",
+        "MiddlewareRunner (re-dispatch)": "#818cf8",
+        "WrapperMiddleware": "#818cf8",
+        "WrapperMiddleware (re-dispatch)": "#a5b4fc",
+        "IconMiddleware": "#fb923c",
+        "IconMiddleware (re-dispatch)": "#fdba74",
+        "Button": "#34d399",
+        "Button (via icon)": "#6ee7b7",
+      };
+
+      const counts = {}; // counts[caseId][componentName] = number
+      const pending = {}; // pending[caseId] = Set of names that flashed this batch
+
+      for (const c of CASES) {
+        counts[c] = {};
+        pending[c] = new Set();
+      }
+
+      const trackRender = (caseId, name) => {
+        counts[caseId][name] = (counts[caseId][name] || 0) + 1;
+        pending[caseId].add(name);
+      };
+
+      const initLog = () => {
+        const root = document.getElementById("render-log");
+        for (const caseId of CASES) {
+          const tree = TREES[caseId];
+          const div = document.createElement("div");
+          div.className = "case-log";
+          div.id = `log-${caseId}`;
+          const titleEl = document.createElement("div");
+          titleEl.className = "case-log-title";
+          titleEl.textContent = caseId.replace("case", "Case ");
+          div.appendChild(titleEl);
+          for (const { name, indent } of tree) {
+            const color = COLORS[name] ?? "#cdd6f4";
+            const line = document.createElement("div");
+            line.style.cssText =
+              "display:flex;align-items:center;gap:2px;font-size:11px;line-height:1.6";
+            line.innerHTML = `<span style="white-space:pre;color:#6c7086">${indent}</span><span id="rc-${caseId}-${CSS.escape(name)}" style="color:${color};opacity:0.3;padding:0 3px;border-radius:3px;--flash-color:${color}cc">${name}&thinsp;<b>0</b></span>`;
+            div.appendChild(line);
+          }
+          root.appendChild(div);
         }
-        wrapperRenderCount++;
-        const renderCount = wrapperRenderCount;
-        console.log("[WrapperMiddleware] match #%d — will re-dispatch via Dispatcher", renderCount);
-        if (renderCount > 10) {
-          console.error("[WrapperMiddleware] INFINITE LOOP DETECTED at render #%d — aborting", renderCount);
-          return <div style="color:red">INFINITE LOOP detected at render #{renderCount}</div>;
+      };
+
+      const flushLog = () => {
+        for (const caseId of CASES) {
+          const tree = TREES[caseId];
+          const flashing = new Set(pending[caseId]);
+          pending[caseId].clear();
+          for (const { name } of tree) {
+            const span = document.getElementById(
+              `rc-${caseId}-${CSS.escape(name)}`,
+            );
+            if (!span) {
+              continue;
+            }
+            const count = counts[caseId][name] ?? 0;
+            span.style.opacity = count === 0 ? "0.3" : "1";
+            span.querySelector("b").textContent = count;
+            if (flashing.has(name)) {
+              span.classList.remove("render-flash");
+              void span.offsetWidth;
+              span.classList.add("render-flash");
+              span.addEventListener(
+                "animationend",
+                () => span.classList.remove("render-flash"),
+                { once: true },
+              );
+            }
+          }
         }
+      };
+
+      initLog();
+      flushLog();
+
+      // ── Target component ────────────────────────────────────────────────────
+      const Button = (props) => {
+        const { caseId, children, label, icon, ...rest } = props;
+        if (caseId) {
+          trackRender(caseId, icon ? "Button (via icon)" : "Button");
+        }
+        const display = label ?? children ?? "button";
         return (
-          <div style="border:1px solid #88f;padding:8px;border-radius:4px;margin:4px">
-            <div style="color:#88f;font-size:0.8em;margin-bottom:4px">[Wrapper #{renderCount}]</div>
-            {/* Re-dispatch so inner children also go through remaining middlewares */}
-            <Dispatcher {...props} />
+          <div class="cbox cbox-button">
+            <div class="cbox-header">Button</div>
+            <div class="cbox-body">
+              <button style="padding:4px 12px;cursor:pointer;font-size:13px;">
+                {display}
+              </button>
+            </div>
           </div>
         );
       };
 
-      let iconRenderCount = 0;
-      const IconMiddleware = (props) => {
+      // ── Middlewares ─────────────────────────────────────────────────────────
+      const WrapperMiddleware = (props) => {
         const Dispatcher = useContext(MyDispatcherContext);
-        if (!props.icon) {
+        const { caseId } = props;
+        const isReDispatch = props["data-redispatch"];
+        const trackName = isReDispatch
+          ? "WrapperMiddleware (re-dispatch)"
+          : "WrapperMiddleware";
+        if (caseId) {
+          trackRender(caseId, trackName);
+        }
+        if (props.children === undefined) {
           return null;
         }
-        iconRenderCount++;
-        const renderCount = iconRenderCount;
-        console.log("[IconMiddleware] match #%d — icon=%s", renderCount, props.icon);
-        if (renderCount > 10) {
-          console.error("[IconMiddleware] INFINITE LOOP DETECTED at render #%d — aborting", renderCount);
-          return <div style="color:red">INFINITE LOOP detected at render #{renderCount}</div>;
-        }
-        const { icon, ...rest } = props;
         return (
-          <span style="display:inline-flex;align-items:center;gap:4px">
-            <span style="color:#f84">{icon}</span>
-            {/* Re-dispatch without icon so this middleware won't match again */}
-            <Dispatcher {...rest} />
-          </span>
+          <div class="cbox cbox-wrapper">
+            <div class="cbox-header">
+              WrapperMiddleware {isReDispatch ? "(re-dispatch)" : ""}
+            </div>
+            <div class="cbox-body">
+              <Dispatcher {...props} data-redispatch={true} />
+            </div>
+          </div>
+        );
+      };
+
+      const IconMiddleware = (props) => {
+        const Dispatcher = useContext(MyDispatcherContext);
+        const { caseId, icon } = props;
+        const isReDispatch = props["data-redispatch"];
+        const trackName = isReDispatch
+          ? "IconMiddleware (re-dispatch)"
+          : "IconMiddleware";
+        if (caseId) {
+          trackRender(caseId, trackName);
+        }
+        if (!icon) {
+          return null;
+        }
+        const { icon: _icon, ...rest } = props;
+        return (
+          <div class="cbox cbox-icon">
+            <div class="cbox-header">IconMiddleware — icon: {icon}</div>
+            <div
+              class="cbox-body"
+              style="display:flex;align-items:center;gap:8px"
+            >
+              <span style="font-size:20px">{icon}</span>
+              <Dispatcher {...rest} />
+            </div>
+          </div>
         );
       };
 
       const middlewares = [WrapperMiddleware, IconMiddleware];
       const dispatch = createDispatcher(middlewares, MyDispatcherContext);
 
-      // ── Cases ───────────────────────────────────────────────────────────────
+      // Wrap dispatch to also track MiddlewareRunner calls via a hook inside the tree.
+      // We do this by wrapping MiddlewareRunner tracking in the components themselves above.
+      // But MiddlewareRunner is internal — track it by wrapping dispatch output.
+      // Instead: add a thin tracker component.
+      const MiddlewareRunnerTracker = ({ caseId, isReDispatch, children }) => {
+        const name = isReDispatch
+          ? "MiddlewareRunner (re-dispatch)"
+          : "MiddlewareRunner";
+        if (caseId) {
+          trackRender(caseId, name);
+        }
+        useLayoutEffect(flushLog);
+        return children;
+      };
 
-      const Case = ({ title, children }) => (
-        <div class="box">
-          <div class="label">{title}</div>
-          {children}
+      const dispatchTracked = (caseId, Target, props) => {
+        return (
+          <MiddlewareRunnerTracker caseId={caseId}>
+            {dispatch(Target, { ...props, caseId })}
+          </MiddlewareRunnerTracker>
+        );
+      };
+
+      // ── App ─────────────────────────────────────────────────────────────────
+      const CaseSection = ({ id, title, code, children }) => (
+        <div class="case-section">
+          <div class="case-header">
+            <span class="case-title">{title}</span>
+            <span class="case-code">{code}</span>
+          </div>
+          <div class="case-render">{children}</div>
         </div>
       );
 
       const App = () => {
         return (
           <div>
-            <h2>Case 1 — no middleware matches (plain button)</h2>
-            <Case title="dispatch(Button, { label: 'Hello' })">
-              {dispatch(Button, { label: "Hello" })}
-            </Case>
+            <h1>Dispatcher Demo</h1>
+            <p style="color:#555;font-size:13px;margin-bottom:24px">
+              Each case shows the component tree rendered by the dispatcher. The
+              render log (top) counts how many times each component was called.
+            </p>
 
-            <h2>Case 2 — IconMiddleware matches</h2>
-            <Case title='dispatch(Button, { label: "Save", icon: "💾" })'>
-              {dispatch(Button, { label: "Save", icon: "💾" })}
-            </Case>
+            <CaseSection
+              id="case1"
+              title="Case 1 — no middleware matches"
+              code='dispatch(Button, { label: "Hello" })'
+            >
+              {dispatchTracked("case1", Button, { label: "Hello" })}
+            </CaseSection>
 
-            <h2>Case 3 — WrapperMiddleware matches (children passed)</h2>
-            <Case title='dispatch(Button, { children: <span>inner</span> })'>
-              {dispatch(Button, { children: <span style="color:#adf">inner content</span> })}
-            </Case>
+            <CaseSection
+              id="case2"
+              title="Case 2 — IconMiddleware matches"
+              code='dispatch(Button, { label: "Save", icon: "💾" })'
+            >
+              {dispatchTracked("case2", Button, { label: "Save", icon: "💾" })}
+            </CaseSection>
 
-            <h2>Case 4 — Both match: wrapper + icon inside</h2>
-            <Case title='dispatch(Button, { icon:"⭐", children: <span>star</span> })'>
-              {dispatch(Button, { icon: "⭐", children: <span style="color:#adf">star content</span> })}
-            </Case>
+            <CaseSection
+              id="case3"
+              title="Case 3 — WrapperMiddleware matches (children)"
+              code="dispatch(Button, { children: <span>inner</span> })"
+            >
+              {dispatchTracked("case3", Button, {
+                children: (
+                  <span style="color:#4338ca;font-weight:bold">
+                    inner content
+                  </span>
+                ),
+              })}
+            </CaseSection>
+
+            <CaseSection
+              id="case4"
+              title="Case 4 — Both match: wrapper + icon"
+              code='dispatch(Button, { icon: "⭐", children: <span>star</span> })'
+            >
+              {dispatchTracked("case4", Button, {
+                icon: "⭐",
+                children: (
+                  <span style="color:#4338ca;font-weight:bold">
+                    star content
+                  </span>
+                ),
+              })}
+            </CaseSection>
           </div>
         );
       };
