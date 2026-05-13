@@ -853,14 +853,19 @@ export const installCustomConstraintValidation = (
         return button;
       };
       const formSubmitTarget = determineClosestFormSubmitTargetForClickEvent();
+      if (!formSubmitTarget && elementWithAction !== button) {
+        // button has no form submit effect and no own action
+        return;
+      }
+      if (button.type === "reset") {
+        // reset button got their own behavior (I suppose this is now catched by previous if)
+        return;
+      }
       if (formSubmitTarget) {
         // prevent from submission
         clickEvent.preventDefault();
       }
-      if (button.type === "reset") {
-        // reset button got their own behavior
-        return;
-      }
+
       // dispatch only if the button
       dispatchRequestAction(elementWithAction, {
         event: clickEvent,
