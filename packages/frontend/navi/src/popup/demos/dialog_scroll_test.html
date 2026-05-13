@@ -5,30 +5,45 @@
     <title>Dialog scroll test</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <style>
-      body {
-        width: 3000px; /* force horizontal scroll */
-        height: 3000px; /* force vertical scroll */
-        margin: 0;
-        padding: 20px;
-        font-family: system-ui;
-        background: linear-gradient(to bottom right, #eef, #ffe);
+      * {
+        box-sizing: border-box;
       }
-      button {
-        position: fixed;
-        top: 20px;
-        left: 20px;
-        padding: 12px 24px;
-        font-size: 16px;
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family: system-ui;
         cursor: pointer;
+      }
+      .scroll-content {
+        display: grid;
+        width: max-content;
+        padding: 8px;
+        grid-template-columns: repeat(10, 200px);
+        grid-template-rows: repeat(10, 200px);
+        gap: 8px;
+      }
+      .cell {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #444;
+        font-size: 13px;
+        background: hsl(calc(var(--i) * 36), 60%, 85%);
+        border-radius: 8px;
       }
       dialog {
         position: fixed;
         inset: 0;
         margin: auto;
-        padding: 32px;
+        padding: 32px 40px;
+        font-size: 16px;
+        text-align: center;
         background: white;
         border: 2px solid #333;
-        border-radius: 8px;
+        border-radius: 12px;
         box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
       }
       dialog::backdrop {
@@ -36,29 +51,27 @@
       }
     </style>
   </head>
-  <body>
-    <p
-      style="
-        position: fixed;
-        top: 20px;
-        left: 160px;
-        margin: 0;
-        padding: 12px;
-        background: rgba(255, 255, 255, 0.8);
-        border-radius: 4px;
+  <body onclick="document.getElementById('d').showModal()">
+    <div class="scroll-content" id="grid"></div>
+
+    <dialog
+      id="d"
+      onclick="
+        event.stopPropagation();
+        if (event.target === this) this.close();
       "
     >
-      Scroll la page puis clique le bouton → la dialog doit être centrée dans le
-      viewport
-    </p>
-    <button onclick="document.getElementById('d').showModal()">
-      Ouvrir la dialog
-    </button>
-
-    <dialog id="d">
-      <p>Je suis une dialog.</p>
-      <p>Suis-je centrée dans le viewport ?</p>
-      <button onclick="document.getElementById('d').close()">Fermer</button>
+      <p>Clique en dehors pour fermer</p>
     </dialog>
+    <script>
+      const grid = document.getElementById("grid");
+      for (let i = 0; i < 100; i++) {
+        const cell = document.createElement("div");
+        cell.className = "cell";
+        cell.style.setProperty("--i", i);
+        cell.textContent = `${i + 1}`;
+        grid.appendChild(cell);
+      }
+    </script>
   </body>
 </html>
