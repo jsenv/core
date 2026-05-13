@@ -43,9 +43,7 @@ export const PickerColor = (props) => {
       icon={<ColorSvg />}
       {...getPropsToShowPicker(props)}
       type="color"
-    >
-      {props.children}
-    </PickerDispatcher>
+    />
   );
 };
 const PickerColorUI = () => {
@@ -80,9 +78,7 @@ export const PickerDay = (props) => {
       min={min}
       max={max}
       type="date"
-    >
-      {props.children}
-    </PickerDispatcher>
+    />
   );
 };
 const PickerDayUI = () => {
@@ -119,9 +115,7 @@ export const PickerMonth = (props) => {
       type="month"
       min={min}
       max={max}
-    >
-      {props.children}
-    </PickerDispatcher>
+    />
   );
 };
 const PickerMonthUI = () => {
@@ -157,9 +151,7 @@ export const PickerWeek = (props) => {
       type="week"
       min={min}
       max={max}
-    >
-      {props.children}
-    </PickerDispatcher>
+    />
   );
 };
 const PickerWeekUI = () => {
@@ -204,9 +196,7 @@ export const PickerTime = (props) => {
       min={min}
       max={max}
       step={step}
-    >
-      {props.children}
-    </PickerDispatcher>
+    />
   );
 };
 const PickerTimeUI = () => {
@@ -240,9 +230,7 @@ export const PickerDatetime = (props) => {
       min={min}
       max={max}
       step={step}
-    >
-      {props.children}
-    </PickerDispatcher>
+    />
   );
 };
 const PickerDatetimeUI = () => {

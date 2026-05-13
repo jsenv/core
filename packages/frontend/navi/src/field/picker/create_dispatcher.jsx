@@ -30,14 +30,8 @@ export const createDispatcher = (middlewares, DispatcherContext) => {
     for (let i = attemptIndex; i < middlewares.length; i++) {
       const result = middlewares[i](props);
       if (result !== null) {
-        if (winner === null) {
-          winner = result;
-          winnerIndex = i;
-        } else {
-          console.error(
-            `Dispatcher: middleware at index ${i} returned a non-null result but middleware at index ${winnerIndex} already did. Only one middleware should match at a time.`,
-          );
-        }
+        winner = result;
+        winnerIndex = i;
       }
     }
     if (winner !== null) {
