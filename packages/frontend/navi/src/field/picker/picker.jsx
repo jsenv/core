@@ -255,7 +255,7 @@ const PickerInput = (props) => {
     min,
     max,
     step,
-    // children,
+    children,
     ...rest
   } = props;
   const uiState = useContext(UIStateContext);
@@ -356,6 +356,8 @@ const PickerInput = (props) => {
           onChange?.(e);
         }}
       />
+
+      {children}
     </Box>
   );
 };
