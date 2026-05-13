@@ -58,7 +58,13 @@ export const Time = (props) => {
 
 const TimeDay = ({ children, locale, ...props }) => {
   const lang = locale || langSignal.value;
-  const date = toDate(children, "day");
+  const date = toDate(children, (value) => {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      const d = new Date(`${value}T00:00:00`);
+      return isNaN(d.getTime()) ? null : d;
+    }
+    return null;
+  });
   let text;
   let dateTime; // See https://developer.mozilla.org/en-US/docs/Web/HTML/Element/time#datetime
   if (date) {
@@ -82,7 +88,13 @@ const TimeDay = ({ children, locale, ...props }) => {
 
 const TimeMonth = ({ children, locale, ...props }) => {
   const lang = locale || langSignal.value;
-  const date = toDate(children, "month");
+  const date = toDate(children, (value) => {
+    if (/^\d{4}-\d{2}$/.test(value)) {
+      const d = new Date(`${value}-01T00:00:00`);
+      return isNaN(d.getTime()) ? null : d;
+    }
+    return null;
+  });
   let text;
   let dateTime; // See https://developer.mozilla.org/en-US/docs/Web/HTML/Element/time#datetime
   if (date) {
@@ -105,7 +117,7 @@ const TimeMonth = ({ children, locale, ...props }) => {
 
 const TimeDatetime = ({ children, locale, ...props }) => {
   const lang = locale || langSignal.value;
-  const date = toDate(children, "datetime");
+  const date = toDate(children);
   let text;
   let dateTime; // See https://developer.mozilla.org/en-US/docs/Web/HTML/Element/time#datetime
   if (date) {
@@ -126,7 +138,13 @@ const TimeDatetime = ({ children, locale, ...props }) => {
 
 const TimeTime = ({ children, locale, ...props }) => {
   const lang = locale || langSignal.value;
-  const date = toDate(children, "time");
+  const date = toDate(children, (value) => {
+    if (/^\d{2}:\d{2}(?::\d{2})?$/.test(value)) {
+      const d = new Date(`1970-01-01T${value}`);
+      return isNaN(d.getTime()) ? null : d;
+    }
+    return null;
+  });
   let text;
   let dateTime; // See https://developer.mozilla.org/en-US/docs/Web/HTML/Element/time#datetime
   if (date) {
@@ -155,7 +173,7 @@ const TimeRelative = ({
   ...props
 }) => {
   const lang = locale || langSignal.value;
-  const date = toDate(children, "relative");
+  const date = toDate(children);
   let text;
   let dateTime;
   if (date) {
@@ -178,7 +196,7 @@ const TimeText = (props) => {
   return <Text as="time" {...props} />;
 };
 
-const toDate = (value, type) => {
+const toDate = (value, parseString) => {
   if (value instanceof Date) {
     return value;
   }
@@ -186,15 +204,8 @@ const toDate = (value, type) => {
     return new Date(value);
   }
   if (typeof value === "string") {
-    // "HH:MM" or "HH:MM:SS" — only meaningful for type="time"
-    if (type === "time" && /^\d{2}:\d{2}(?::\d{2})?$/.test(value)) {
-      const d = new Date(`1970-01-01T${value}`);
-      return isNaN(d.getTime()) ? null : d;
-    }
-    // "YYYY-MM" — only meaningful for type="month", avoid UTC shift
-    if (type === "month" && /^\d{4}-\d{2}$/.test(value)) {
-      const d = new Date(`${value}-01T00:00:00`);
-      return isNaN(d.getTime()) ? null : d;
+    if (parseString) {
+      return parseString(value);
     }
     // "YYYY-MM-DD" — use local midnight to avoid UTC shift
     if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
