@@ -4,13 +4,48 @@
 return table(
   ["date", "options", "locale", "result"],
   [
-    ["2026-05-10 (yesterday)", "default", "fr", formatDay(new Date("2026-05-10T09:00:00"), "fr")],
-    ["2026-05-11 (today)",     "default", "fr", formatDay(new Date("2026-05-11T09:00:00"), "fr")],
-    ["2026-05-12 (tomorrow)",  "default", "fr", formatDay(new Date("2026-05-12T09:00:00"), "fr")],
-    ["2026-05-18 (next week)", "default", "fr", formatDay(new Date("2026-05-18T09:00:00"), "fr")],
-    ["2026-05-11 (today)",     "default", "en", formatDay(new Date("2026-05-11T09:00:00"), "en")],
-    ["2026-05-11 (today)",     "long",    "fr", formatDay(new Date("2026-05-11T09:00:00"), "fr", { long: true })],
-    ["2026-05-18 (next week)", "long",    "fr", formatDay(new Date("2026-05-18T09:00:00"), "fr", { long: true })],
+    [
+      "2026-05-10 (yesterday)",
+      "default",
+      "fr",
+      formatDay(new Date("2026-05-10T09:00:00"), "fr"),
+    ],
+    [
+      "2026-05-11 (today)",
+      "default",
+      "fr",
+      formatDay(new Date("2026-05-11T09:00:00"), "fr"),
+    ],
+    [
+      "2026-05-12 (tomorrow)",
+      "default",
+      "fr",
+      formatDay(new Date("2026-05-12T09:00:00"), "fr"),
+    ],
+    [
+      "2026-05-18 (next week)",
+      "default",
+      "fr",
+      formatDay(new Date("2026-05-18T09:00:00"), "fr"),
+    ],
+    [
+      "2026-05-11 (today)",
+      "default",
+      "en",
+      formatDay(new Date("2026-05-11T09:00:00"), "en"),
+    ],
+    [
+      "2026-05-11 (today)",
+      "long",
+      "fr",
+      formatDay(new Date("2026-05-11T09:00:00"), "fr", { long: true }),
+    ],
+    [
+      "2026-05-18 (next week)",
+      "long",
+      "fr",
+      formatDay(new Date("2026-05-18T09:00:00"), "fr", { long: true }),
+    ],
   ],
 );
 ```
