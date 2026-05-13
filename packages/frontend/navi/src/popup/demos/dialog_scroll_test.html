@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Dialog scroll test</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      body {
+        width: 3000px; /* force horizontal scroll */
+        height: 3000px; /* force vertical scroll */
+        margin: 0;
+        padding: 20px;
+        font-family: system-ui;
+        background: linear-gradient(to bottom right, #eef, #ffe);
+      }
+      button {
+        position: fixed;
+        top: 20px;
+        left: 20px;
+        padding: 12px 24px;
+        font-size: 16px;
+        cursor: pointer;
+      }
+      dialog {
+        position: fixed;
+        inset: 0;
+        margin: auto;
+        padding: 32px;
+        background: white;
+        border: 2px solid #333;
+        border-radius: 8px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      }
+      dialog::backdrop {
+        background: rgba(0, 0, 0, 0.4);
+      }
+    </style>
+  </head>
+  <body>
+    <p
+      style="
+        position: fixed;
+        top: 20px;
+        left: 160px;
+        margin: 0;
+        padding: 12px;
+        background: rgba(255, 255, 255, 0.8);
+        border-radius: 4px;
+      "
+    >
+      Scroll la page puis clique le bouton → la dialog doit être centrée dans le
+      viewport
+    </p>
+    <button onclick="document.getElementById('d').showModal()">
+      Ouvrir la dialog
+    </button>
+
+    <dialog id="d">
+      <p>Je suis une dialog.</p>
+      <p>Suis-je centrée dans le viewport ?</p>
+      <button onclick="document.getElementById('d').close()">Fermer</button>
+    </dialog>
+  </body>
+</html>

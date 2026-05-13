@@ -53,7 +53,7 @@ export const startDevServer = async ({
   ignore,
   port = 3456,
   hostname,
-  acceptAnyIp,
+  acceptAnyIp = true,
   https,
   // it's better to use http1 by default because it allows to get statusText in devtools
   // which gives valuable information when there is errors
