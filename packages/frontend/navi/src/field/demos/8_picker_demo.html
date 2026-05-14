@@ -75,6 +75,7 @@
 
       const App = () => (
         <div class="demo-grid">
+          <ColorPickerStatesDemo />
           <DayHourPickerDemo />
           <DayPickerDemo />
           <MonthPickerDemo />
@@ -366,6 +367,54 @@
               />
             </Field>
             <ValueDisplay label="Value" value={datetimeSignal.value} />
+          </div>
+        );
+      };
+
+      const ColorPickerStatesDemo = () => {
+        const colorSignal = useSignal("#4caf50");
+        return (
+          <div class="demo-section">
+            <h2>Color picker — états</h2>
+            <p>Normal, readonly, disabled, loading.</p>
+            <Field vertical spacing="s">
+              <Label>Normal</Label>
+              <Picker
+                name="color_normal"
+                type="color"
+                value={colorSignal.value}
+                uiAction={(v) => {
+                  colorSignal.value = v;
+                }}
+              />
+            </Field>
+            <Field vertical spacing="s">
+              <Label>Readonly</Label>
+              <Picker
+                name="color_readonly"
+                type="color"
+                value={colorSignal.value}
+                readOnly
+              />
+            </Field>
+            <Field vertical spacing="s">
+              <Label>Disabled</Label>
+              <Picker
+                name="color_disabled"
+                type="color"
+                value={colorSignal.value}
+                disabled
+              />
+            </Field>
+            <Field vertical spacing="s">
+              <Label>Loading</Label>
+              <Picker
+                name="color_loading"
+                type="color"
+                value={colorSignal.value}
+                loading
+              />
+            </Field>
           </div>
         );
       };

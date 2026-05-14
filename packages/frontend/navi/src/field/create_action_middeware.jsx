@@ -22,7 +22,6 @@ export const useActionProps = (props) => {
     action,
     actionDebounce,
     actionAfterChange,
-    loading,
     onCancel,
     onActionPrevented,
     onActionAborted,
@@ -37,13 +36,14 @@ export const useActionProps = (props) => {
     action,
     uiStateController.uiStateSignal,
   );
-  const { loading: actionLoading } = useActionStatus(boundAction);
+  const { loading } = useActionStatus(boundAction);
   const executeAction = useExecuteAction(ref, {
     errorEffect: actionErrorEffect,
   });
   const onRequestAction = useOnRequestAction();
 
   return {
+    loading,
     ...rest,
     ref,
     "data-action": boundAction.name || "anonymous",
@@ -61,6 +61,7 @@ export const useActionProps = (props) => {
     "onnavi_action_abort": onActionAborted,
     "onnavi_action_error": onActionError,
     "onnavi_action_end": onActionEnd,
-    "loading": loading || actionLoading,
+    "action": undefined,
+    "uiAction": undefined,
   };
 };
