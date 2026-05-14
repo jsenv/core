@@ -334,6 +334,7 @@ const PickerInput = (props) => {
       {...remainingProps}
       ref={ref}
       baseClassName="navi_picker"
+      data-field=".navi_picker_input"
       navi-has-placeholder={placeholder ? "" : undefined}
       autoFocus={undefined}
       basePseudoState={{

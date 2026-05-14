@@ -69,7 +69,10 @@ const PickerAction = (props) => {
         if (e.defaultPrevented) {
           return;
         }
-        dispatchRequestAction(e.currentTarget, e);
+        dispatchRequestAction(e.currentTarget, {
+          event: e,
+          requester: e.currentTarget,
+        });
       }}
       onClick={(e) => {
         props.onClick(e);
@@ -79,7 +82,10 @@ const PickerAction = (props) => {
         if (e.defaultPrevented) {
           return;
         }
-        dispatchRequestAction(e.currentTarget, e);
+        dispatchRequestAction(e.currentTarget, {
+          event: e,
+          requester: e.currentTarget,
+        });
       }}
     />
   );

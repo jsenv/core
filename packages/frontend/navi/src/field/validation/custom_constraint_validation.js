@@ -124,7 +124,9 @@ export const onRequestAction = (
   event,
   {
     target = event.currentTarget,
-    requester = event.detail?.requester,
+    requester = event.detail
+      ? event.detail.requester || event.target
+      : event.target,
     actionOrigin = event.detail?.actionOrigin,
     method = "rerun",
     meta = event.detail?.meta || {},

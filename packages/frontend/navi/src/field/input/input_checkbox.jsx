@@ -701,7 +701,7 @@ const InputCheckboxWithAction = (props) => {
         const checkbox = e.currentTarget;
         dispatchRequestAction(checkbox, {
           event: e,
-          actionOrigin: "action_prop",
+          requester: checkbox,
         });
       }}
     />
