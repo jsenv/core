@@ -50,9 +50,9 @@ const css = /* css */ `
 
     /* Popover resets */
     position: absolute;
+    inset: auto;
     top: 0;
     left: 0;
-    inset: auto;
     /* Callout styles */
     display: block;
     height: auto;
@@ -135,6 +135,7 @@ const css = /* css */ `
           box-sizing: border-box;
           box-decoration-break: clone;
           align-self: center;
+          white-space: normal; /* Override in case ancetor sets nowrap */
           word-break: break-word;
           overflow-wrap: anywhere;
 
@@ -407,12 +408,6 @@ export const openCallout = (
       calloutElement.setAttribute("role", "alert");
     }
   });
-  document.body.appendChild(calloutElement);
-  calloutElement.showPopover();
-  addTeardown(() => {
-    calloutElement.hidePopover();
-    calloutElement.remove();
-  });
 
   if (anchorElement) {
     const anchorVisuallyVisibleInfo = getVisuallyVisibleInfo(anchorElement, {
@@ -428,7 +423,17 @@ export const openCallout = (
         anchorElement = document.body;
       }
     }
+  }
+  const calloutContainer =
+    anchorElement === document.body ? document.body : anchorElement.parentNode;
+  calloutContainer.appendChild(calloutElement);
+  calloutElement.showPopover();
+  addTeardown(() => {
+    calloutElement.hidePopover();
+    calloutElement.remove();
+  });
 
+  if (anchorElement) {
     allowWheelThrough(calloutElement, anchorElement);
     anchorElement.setAttribute("data-callout", calloutId);
     addTeardown(() => {
@@ -746,7 +751,7 @@ const stickCalloutToAnchor = (calloutElement, anchorElement) => {
         height: calloutHeight,
         spaceAbove,
         spaceBelow,
-      } = pickPositionRelativeTo(calloutElementClone, anchorElement, {
+      } = pickPositionRelativeTo(calloutElement, anchorElement, {
         alignToViewportEdgeWhenAnchorNearEdge: 20,
         minLeft: 1,
         positionX: "center",
@@ -962,6 +967,7 @@ const cloneCalloutToMeasureNaturalSize = (calloutElement) => {
 
   // Add clone to DOM to measure
   calloutElement.parentNode.appendChild(calloutElementClone);
+  calloutElementClone.showPopover();
 
   return calloutElementClone;
 };
