@@ -380,7 +380,8 @@ const PickerInput = (props) => {
         max={max}
         step={step}
         tabIndex={-1}
-        disabled={innerDisabled || innerReadOnly}
+        readOnly={innerReadOnly}
+        disabled={innerDisabled}
         data-rendered-by=".navi_picker"
         onChange={(e) => {
           const newValue = e.currentTarget.value;
