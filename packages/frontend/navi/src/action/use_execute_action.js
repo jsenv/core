@@ -1,4 +1,4 @@
-import { dispatchPublicCustomEvent } from "@jsenv/dom";
+import { dispatchPublicCustomEvent, getElementSignature } from "@jsenv/dom";
 import { isValidElement } from "preact";
 import { useCallback, useLayoutEffect, useRef, useState } from "preact/hooks";
 
@@ -122,21 +122,8 @@ export const useExecuteAction = (
       );
 
       return action[method]({
-        reason: `"${event.type}" event on ${(() => {
-          const target = event.target;
-          const tagName = target.tagName.toLowerCase();
-
-          if (target.id) {
-            return `${tagName}#${target.id}`;
-          }
-
-          const uiName = target.getAttribute("data-ui-name");
-          if (uiName) {
-            return `${tagName}[data-ui-name="${uiName}"]`;
-          }
-
-          return `<${tagName}>`;
-        })()}`,
+        event,
+        reason: `"${event.type}" event on ${getElementSignature(event.target)}`,
         onAbort: (reason) => {
           const element = elementRef.current;
           if (

@@ -57,23 +57,19 @@ export const setActionDispatcher = (value) => {
 
 export const getActionDispatcher = () => dispatchActions;
 
-export const rerunActions = async (
-  actionSet,
-  { reason = "rerunActions was called" } = {},
-) => {
+export const rerunActions = async (actionSet, options) => {
   return dispatchActions({
     rerunSet: actionSet,
-    reason,
+    reason: "rerunActions was calle",
+    ...options,
   });
 };
 
-export const resetActions = async (
-  actionSet,
-  { reason = "resetActions was called" } = {},
-) => {
+export const resetActions = async (actionSet, options) => {
   return dispatchActions({
     resetSet: actionSet,
-    reason,
+    reason: "resetActions was called",
+    ...options,
   });
 };
 export const abortRunningActions = (
@@ -231,6 +227,7 @@ export const updateActions = ({
   abortSignal,
   isReplace = false,
   reason,
+  event,
   prerunSet = new Set(),
   runSet = new Set(),
   rerunSet = new Set(),
@@ -454,6 +451,7 @@ ${lines.join("\n")}`);
         getActionPrivateProperties(actionToReset);
       actionToResetPrivateProperties.performReset({
         reason,
+        event,
         willRunOrPrerun:
           willRunSet.has(actionToReset) || willPrerunSet.has(actionToReset),
       });
@@ -483,6 +481,7 @@ ${lines.join("\n")}`);
         globalAbortSignal,
         abortSignal: effectiveSignal,
         reason,
+        event,
         isPrerun,
         onComplete,
         onAbort,
@@ -944,6 +943,7 @@ export const createAction = (callback, rootOptions = {}) => {
           globalAbortSignal,
           abortSignal,
           reason,
+          event,
           isPrerun,
           onComplete,
           onAbort,
@@ -993,7 +993,12 @@ export const createAction = (callback, rootOptions = {}) => {
 
         const args = [];
         args.push(params);
-        args.push({ signal: internalAbortSignal, reason, isPrerun });
+        args.push({
+          reason,
+          event,
+          signal: internalAbortSignal,
+          isPrerun,
+        });
         const returnValue = sideEffect(...args);
         if (typeof returnValue === "function") {
           sideEffectCleanup = returnValue;

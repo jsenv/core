@@ -13,6 +13,7 @@ import {
   reportReadOnlyToField,
   useFieldId,
 } from "../field.jsx";
+import { createUICallback } from "../ui_callback.js";
 import {
   DisabledContext,
   LoadingContext,
@@ -233,26 +234,23 @@ const renderPicker = createDispatcher(
   pickerMiddlewares,
   PickerDispatcherContext,
 );
-Picker.update = (value, e) => {
-  return dispatchToPicker(e, "navi_picker_set_value", { value });
-};
-Picker.close = (...args) => {
-  if (args.length === 0) {
-    return false;
-  }
-  if (args.length === 1) {
-    const [event] = args;
-    return dispatchToPicker(event, "navi_picker_request_close");
-  }
-  const [value, event] = args;
-  const currentTarget = event.currentTarget;
-  if (currentTarget.name && TAGNAME_FIELD_SET.has(currentTarget.tagName)) {
-    if (!dispatchToPicker(value, "navi_picker_set_value", { value })) {
-      return false;
+Picker.update = createUICallback({
+  uiAction: (value, event) => {
+    return dispatchToPicker(event, "navi_picker_set_value", { value });
+  },
+});
+Picker.close = createUICallback({
+  event: (e) => dispatchToPicker(e, "navi_picker_request_close"),
+  uiAction: (value, event) => {
+    const currentTarget = event.currentTarget;
+    if (currentTarget.name && TAGNAME_FIELD_SET.has(currentTarget.tagName)) {
+      if (!dispatchToPicker(event, "navi_picker_set_value", { value })) {
+        return false;
+      }
     }
-  }
-  return dispatchToPicker(event, "navi_picker_request_close");
-};
+    return dispatchToPicker(event, "navi_picker_request_close");
+  },
+});
 const dispatchToPicker = (e, customEventName, detail) => {
   const pickerEl = e.currentTarget.closest(".navi_picker");
   if (!pickerEl) {
