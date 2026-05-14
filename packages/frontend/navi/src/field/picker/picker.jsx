@@ -4,9 +4,9 @@ import { useContext, useRef } from "preact/hooks";
 import { Box } from "@jsenv/navi/src/box/box.jsx";
 import { ChevronDownSvg } from "@jsenv/navi/src/graphic/icons/chevron_updown_svg.jsx";
 import { LoadingOutline } from "@jsenv/navi/src/graphic/loading/loading_outline.jsx";
+import { createComponentResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { Icon } from "@jsenv/navi/src/text/icon.jsx";
 import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
-import { createDispatcher } from "../../resolver/resolver.jsx";
 import {
   FieldContext,
   reportDisabledToField,
@@ -26,12 +26,8 @@ import {
   useUIStateController,
 } from "../use_ui_state_controller.js";
 import { useConstraints } from "../validation/hooks/use_constraints.js";
-import {
-  PickerContext,
-  PickerDispatcherContext,
-  PickerElementContext,
-} from "./picker_context.jsx";
-import { pickerMiddlewares } from "./picker_middlewares.jsx";
+import { PickerContext, PickerElementContext } from "./picker_context.jsx";
+import { pickerResolvers } from "./picker_resolvers.jsx";
 
 const css = /* css */ `
   @layer navi {
@@ -219,7 +215,7 @@ export const Picker = (props) => {
     </UIStateControllerContext.Provider>
   );
 };
-const renderPicker = createDispatcher(pickerMiddlewares);
+const renderPicker = createComponentResolver(pickerResolvers);
 Picker.update = createUICallback({
   name: "Picker.update",
   uiAction: (value, event) => {

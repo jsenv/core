@@ -1,7 +1,6 @@
 import { createContext } from "preact";
 import { useContext } from "preact/hooks";
 
-export const PickerDispatcherContext = createContext();
 export const PickerContext = createContext();
 export const PickerElementContext = createContext(null);
 export const PickerRequestCloseContext = createContext(); // available only for picker children (popover and dialog)

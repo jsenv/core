@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" href="data:," />
-    <title>Dispatcher Demo</title>
+    <title>Resolver Demo</title>
     <style>
       @keyframes render-flash {
         0% {
@@ -28,38 +28,6 @@
         margin: 0;
         font-family: system-ui, sans-serif;
         background: #f5f5f5;
-      }
-      #render-log {
-        position: sticky;
-        top: 0;
-        z-index: 10;
-        display: flex;
-        padding: 8px 16px 10px;
-        flex-wrap: wrap;
-        align-items: flex-start;
-        gap: 24px;
-        color: #cdd6f4;
-        font-size: 12px;
-        font-family: monospace;
-        background: #1e1e2e;
-        border-bottom: 2px solid #45475a;
-      }
-      #render-log .log-title {
-        width: 100%;
-        margin-bottom: 2px;
-        color: #6c7086;
-        font-size: 11px;
-      }
-      .case-log {
-        display: flex;
-        flex-direction: column;
-        gap: 2px;
-      }
-      .case-log-title {
-        margin-bottom: 2px;
-        color: #89b4fa;
-        font-weight: bold;
-        font-size: 11px;
       }
       #app {
         max-width: 860px;
@@ -141,188 +109,115 @@
         color: #065f46;
         background: #ecfdf5;
       }
+      .render-count {
+        margin-left: auto;
+        padding: 1px 5px;
+        color: #888;
+        font-weight: normal;
+        font-size: 10px;
+        background: #f0f0f0;
+        border-radius: 3px;
+      }
     </style>
   </head>
   <body>
-    <div id="render-log">
-      <div class="log-title">
-        Render tracker — calls per component per case (resets on re-render):
-      </div>
-    </div>
     <div id="app"></div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useLayoutEffect } from "preact/hooks";
+      import { useState, useRef, useLayoutEffect } from "preact/hooks";
       import {
         createComponentResolver,
         useNextResolver,
       } from "../resolver.jsx";
 
-      // ── Render tracking (per case, plain DOM — never causes re-renders) ─────
-      // Each case has its own counters keyed by component name.
-      // TREE defines the display order and indent for each case.
-      const CASES = ["case1", "case2", "case3", "case4", "case5"];
-
-      // With createComponentResolver, every resolver is always rendered as a component
-      // in a chain: WrapperResolver → (passes through) → IconResolver → (passes through) → Button.
-      // An resolver that "matches" terminates the chain early by not calling Next.
-      // An resolver that does not match calls <Next {...props} /> to continue.
-      const TREES = {
-        case1: [
-          { name: "WrapperResolver", indent: "" },
-          { name: "IconResolver", indent: "  └─ " },
-          { name: "Button", indent: "      └─ " },
-        ],
-        case2: [
-          { name: "WrapperResolver", indent: "" },
-          { name: "IconResolver", indent: "  └─ " },
-          { name: "Button", indent: "      └─ " },
-        ],
-        case3: [
-          { name: "WrapperResolver", indent: "" },
-          { name: "IconResolver (re-render)", indent: "  └─ " },
-          { name: "Button", indent: "      └─ " },
-        ],
-        case4: [
-          { name: "WrapperResolver", indent: "" },
-          { name: "IconResolver (re-render)", indent: "  └─ " },
-          { name: "Button", indent: "      └─ " },
-        ],
-        case5: [
-          { name: "WrapperResolver", indent: "" },
-          { name: "IconResolver", indent: "  └─ " },
-          { name: "Button (uiAction)", indent: "      └─ " },
-        ],
-      };
-
-      const COLORS = {
-        "WrapperResolver": "#818cf8",
-        "IconResolver": "#fb923c",
-        "IconResolver (re-render)": "#fdba74",
-        "Button": "#34d399",
-        "Button (uiAction)": "#22d3ee",
-      };
-
-      const counts = {}; // counts[caseId][componentName] = number
-      const pending = {}; // pending[caseId] = Set of names that flashed this batch
-
-      for (const c of CASES) {
-        counts[c] = {};
-        pending[c] = new Set();
-      }
-
-      const trackRender = (caseId, name) => {
-        counts[caseId][name] = (counts[caseId][name] || 0) + 1;
-        pending[caseId].add(name);
-      };
-
-      const initLog = () => {
-        const root = document.getElementById("render-log");
-        for (const caseId of CASES) {
-          const tree = TREES[caseId];
-          const div = document.createElement("div");
-          div.className = "case-log";
-          div.id = `log-${caseId}`;
-          const titleEl = document.createElement("div");
-          titleEl.className = "case-log-title";
-          titleEl.textContent = caseId.replace("case", "Case ");
-          div.appendChild(titleEl);
-          for (const { name, indent } of tree) {
-            const color = COLORS[name] ?? "#cdd6f4";
-            const line = document.createElement("div");
-            line.style.cssText =
-              "display:flex;align-items:center;gap:2px;font-size:11px;line-height:1.6";
-            line.innerHTML = `<span style="white-space:pre;color:#6c7086">${indent}</span><span id="rc-${caseId}-${CSS.escape(name)}" style="color:${color};opacity:0.3;padding:0 3px;border-radius:3px;--flash-color:${color}cc">${name}&thinsp;<b>0</b></span>`;
-            div.appendChild(line);
+      // ── Render flash — triggers CSS animation on every render ────────────────
+      const useRenderFlash = () => {
+        const ref = useRef(null);
+        useLayoutEffect(() => {
+          const el = ref.current;
+          if (!el) {
+            return;
           }
-          root.appendChild(div);
-        }
+          el.classList.remove("render-flash");
+          // eslint-disable-next-line no-void
+          void el.offsetWidth;
+          el.classList.add("render-flash");
+        });
+        return ref;
       };
 
-      const flushLog = () => {
-        for (const caseId of CASES) {
-          const tree = TREES[caseId];
-          const flashing = new Set(pending[caseId]);
-          pending[caseId].clear();
-          for (const { name } of tree) {
-            const span = document.getElementById(
-              `rc-${caseId}-${CSS.escape(name)}`,
-            );
-            if (!span) {
-              continue;
-            }
-            const count = counts[caseId][name] ?? 0;
-            span.style.opacity = count === 0 ? "0.3" : "1";
-            span.querySelector("b").textContent = count;
-            if (flashing.has(name)) {
-              span.classList.remove("render-flash");
-              // eslint-disable-next-line no-unused-expressions
-              span.offsetWidth;
-              span.classList.add("render-flash");
-              span.addEventListener(
-                "animationend",
-                () => span.classList.remove("render-flash"),
-                { once: true },
-              );
-            }
-          }
-        }
+      const useRenderCount = () => {
+        const ref = useRef(0);
+        ref.current += 1;
+        return ref.current;
       };
-
-      initLog();
-      flushLog();
 
       // ── Target component ────────────────────────────────────────────────────
       const Button = (props) => {
-        const { caseId, children, label, icon, uiAction } = props;
-        if (caseId) {
-          trackRender(
-            caseId,
-            uiAction
-              ? "Button (uiAction)"
-              : icon
-                ? "Button (via icon)"
-                : "Button",
-          );
-        }
+        const { children, label, highlight } = props;
+        const [ownCount, setOwnCount] = useState(0);
+        const renderCount = useRenderCount();
+        const flashRef = useRenderFlash();
         const display = label ?? children ?? "button";
         return (
-          <div class="cbox cbox-button">
+          <div
+            class="cbox cbox-button"
+            ref={flashRef}
+            style={
+              highlight ? "--flash-color:#86efac;outline:2px solid #22c55e" : ""
+            }
+          >
             <div class="cbox-header">
-              Button {uiAction ? "— uiAction received ✓" : ""}
+              Button {highlight ? "— highlight ✓" : ""}
+              <span class="render-count">render #{renderCount}</span>
             </div>
-            <div class="cbox-body">
+            <div
+              class="cbox-body"
+              style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"
+            >
               <button style="padding:4px 12px;cursor:pointer;font-size:13px;">
                 {display}
               </button>
+              <span style="font-size:12px;color:#065f46">
+                own state: {ownCount}
+                <button
+                  style="margin-left:6px;padding:1px 7px;cursor:pointer;font-size:11px"
+                  onClick={() => setOwnCount((n) => n + 1)}
+                >
+                  +1
+                </button>
+              </span>
             </div>
           </div>
         );
       };
 
       // ── Resolvers ───────────────────────────────────────────────────────────
-      // Resolvers that don't match call <Next {...props} /> to pass through
-      // to the next resolver in the chain.
       const WrapperResolver = (props) => {
         const Next = useNextResolver();
-        const { caseId } = props;
-        const isReRender = props["data-redispatch"];
-        const trackName = isReRender
-          ? "WrapperResolver (re-render)"
-          : "WrapperResolver";
-        if (caseId) {
-          trackRender(caseId, trackName);
-        }
+        const [ownCount, setOwnCount] = useState(0);
+        const renderCount = useRenderCount();
+        const flashRef = useRenderFlash();
         if (props.children === undefined) {
           return <Next {...props} />;
         }
         return (
-          <div class="cbox cbox-wrapper">
+          <div class="cbox cbox-wrapper" ref={flashRef}>
             <div class="cbox-header">
-              WrapperResolver {isReRender ? "(re-render)" : ""}
+              WrapperResolver
+              <span class="render-count">render #{renderCount}</span>
             </div>
             <div class="cbox-body">
-              <Next {...props} data-redispatch={true} />
+              <div style="margin-bottom:6px;font-size:12px;color:#4338ca">
+                own state: {ownCount}
+                <button
+                  style="margin-left:6px;padding:1px 7px;cursor:pointer;font-size:11px"
+                  onClick={() => setOwnCount((n) => n + 1)}
+                >
+                  +1
+                </button>
+              </div>
+              <Next {...props} />
             </div>
           </div>
         );
@@ -331,25 +226,32 @@
       const IconResolver = (props) => {
         const Next = useNextResolver();
         const { icon, ...rest } = props;
-        const { caseId } = props;
-        const isReRender = props["data-redispatch"];
-        const trackName = isReRender
-          ? "IconResolver (re-render)"
-          : "IconResolver";
-        if (caseId) {
-          trackRender(caseId, trackName);
-        }
+        const [ownCount, setOwnCount] = useState(0);
+        const renderCount = useRenderCount();
+        const flashRef = useRenderFlash();
         if (!icon) {
           return <Next {...props} />;
         }
         return (
-          <div class="cbox cbox-icon">
-            <div class="cbox-header">IconResolver — icon: {icon}</div>
+          <div class="cbox cbox-icon" ref={flashRef}>
+            <div class="cbox-header">
+              IconResolver — icon: {icon}
+              <span class="render-count">render #{renderCount}</span>
+            </div>
             <div
               class="cbox-body"
-              style="display:flex;align-items:center;gap:8px"
+              style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"
             >
               <span style="font-size:20px">{icon}</span>
+              <span style="font-size:12px;color:#c2410c">
+                own state: {ownCount}
+                <button
+                  style="margin-left:6px;padding:1px 7px;cursor:pointer;font-size:11px"
+                  onClick={() => setOwnCount((n) => n + 1)}
+                >
+                  +1
+                </button>
+              </span>
               <Next {...rest} />
             </div>
           </div>
@@ -359,83 +261,91 @@
       const resolvers = [WrapperResolver, IconResolver];
       const renderButton = createComponentResolver(resolvers);
 
-      const renderButtonTracked = (caseId, Target, props) => {
-        return renderButton(Target, { ...props, caseId });
-      };
-
       // ── App ─────────────────────────────────────────────────────────────────
-      const CaseSection = ({ title, code, children }) => (
+      const CaseSection = ({ title, children }) => (
         <div class="case-section">
           <div class="case-header">
             <span class="case-title">{title}</span>
-            <span class="case-code">{code}</span>
           </div>
           <div class="case-render">{children}</div>
         </div>
       );
 
       const App = () => {
-        useLayoutEffect(flushLog);
+        // Case 3: root can toggle between WrapperResolver (children) or IconResolver (icon)
+        const [case3Mode, setCase3Mode] = useState("wrapper");
+        // Case 4: WrapperResolver own-count (forwarded as prop after 5 clicks)
+        const [wrapperBoost, setWrapperBoost] = useState(0);
+        const boostActive = wrapperBoost >= 5;
         return (
           <div>
             <h1>Component Resolver Demo</h1>
             <p style="color:#555;font-size:13px;margin-bottom:24px">
-              Each case shows the component tree rendered by
-              createComponentResolver. The render log (top) counts how many
-              times each resolver was called.
+              Each resolver and Button have their own state (+1 button).
+              Clicking +1 re-renders only that component and its subtree. The
+              flash animation and render # track each re-render.{" "}
+              <strong>Case 3</strong> shows branch switching from the root.{" "}
+              <strong>Case 4</strong> shows a resolver forwarding its own state
+              as a prop once it reaches a threshold.
             </p>
 
-            <CaseSection
-              title="Case 1 — no resolver matches"
-              code='renderButton(Button, { label: "Hello" })'
-            >
-              {renderButtonTracked("case1", Button, { label: "Hello" })}
+            <CaseSection title="Case 1 — no resolver matches → plain Button">
+              {renderButton(Button, { label: "Hello" })}
+            </CaseSection>
+
+            <CaseSection title="Case 2 — IconResolver matches">
+              {renderButton(Button, { label: "Save", icon: "💾" })}
             </CaseSection>
 
             <CaseSection
-              title="Case 2 — IconResolver matches"
-              code='renderButton(Button, { label: "Save", icon: "💾" })'
+              title={`Case 3 — root toggles branch (currently: ${case3Mode === "wrapper" ? "WrapperResolver" : "IconResolver"})`}
             >
-              {renderButtonTracked("case2", Button, {
-                label: "Save",
-                icon: "💾",
-              })}
+              <div style="margin-bottom:10px">
+                <button
+                  style="padding:4px 12px;cursor:pointer;font-size:12px"
+                  onClick={() =>
+                    setCase3Mode((m) => (m === "wrapper" ? "icon" : "wrapper"))
+                  }
+                >
+                  Switch to{" "}
+                  {case3Mode === "wrapper"
+                    ? "IconResolver branch"
+                    : "WrapperResolver branch"}
+                </button>
+                <span style="margin-left:10px;font-size:11px;color:#888">
+                  root state changes → resolver chain re-evaluates → different
+                  component renders
+                </span>
+              </div>
+              {case3Mode === "wrapper"
+                ? renderButton(Button, {
+                    children: (
+                      <span style="color:#4338ca;font-weight:bold">
+                        inner content
+                      </span>
+                    ),
+                  })
+                : renderButton(Button, { label: "Switched!", icon: "🔀" })}
             </CaseSection>
 
             <CaseSection
-              title="Case 3 — WrapperResolver matches (children)"
-              code="renderButton(Button, { children: <span>inner</span> })"
+              title={`Case 4 — WrapperResolver forwards own state to Button after 5 clicks (${boostActive ? "active 🎉" : `${wrapperBoost}/5`})`}
             >
-              {renderButtonTracked("case3", Button, {
-                children: (
-                  <span style="color:#4338ca;font-weight:bold">
-                    inner content
-                  </span>
-                ),
-              })}
-            </CaseSection>
-
-            <CaseSection
-              title="Case 4 — Both match: wrapper + icon"
-              code='renderButton(Button, { icon: "⭐", children: <span>star</span> })'
-            >
-              {renderButtonTracked("case4", Button, {
-                icon: "⭐",
-                children: (
-                  <span style="color:#4338ca;font-weight:bold">
-                    star content
-                  </span>
-                ),
-              })}
-            </CaseSection>
-
-            <CaseSection
-              title="Case 5 — uiAction prop passes through to Button (no infinite loop)"
-              code='renderButton(Button, { label: "Save", uiAction: (v) => {} })'
-            >
-              {renderButtonTracked("case5", Button, {
-                label: "Save",
-                uiAction: () => {},
+              <div style="margin-bottom:10px">
+                <button
+                  style="padding:4px 12px;cursor:pointer;font-size:12px"
+                  onClick={() => setWrapperBoost((n) => n + 1)}
+                >
+                  Root +1 ({wrapperBoost})
+                </button>
+                <span style="margin-left:10px;font-size:11px;color:#888">
+                  after 5 clicks, WrapperResolver passes <code>highlight</code>{" "}
+                  prop → Button changes
+                </span>
+              </div>
+              {renderButton(Button, {
+                children: "wrapper content",
+                highlight: boostActive,
               })}
             </CaseSection>
           </div>

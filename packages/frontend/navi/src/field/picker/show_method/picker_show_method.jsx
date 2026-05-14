@@ -1,8 +1,9 @@
 import { useContext } from "preact/hooks";
 
+import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { Time } from "@jsenv/navi/src/text/time.jsx";
-import { PickerContext, PickerDispatcherContext } from "../picker_context.jsx";
+import { PickerContext } from "../picker_context.jsx";
 import { parseStepToSeconds } from "../time_helpers.js";
 
 const getPropsToShowPicker = (props) => {
@@ -41,9 +42,9 @@ const callInputShowPicker = (e) => {
 };
 
 export const PickerColor = (props) => {
-  const PickerDispatcher = useContext(PickerDispatcherContext);
+  const Next = useNextResolver();
   return (
-    <PickerDispatcher
+    <Next
       requiredMessage={naviI18n(`picker.required.color`)}
       ui={<PickerColorUI />}
       icon={<ColorSvg />}
@@ -77,12 +78,12 @@ const PickerColorUI = () => {
 };
 
 export const PickerDay = (props) => {
-  const PickerDispatcher = useContext(PickerDispatcherContext);
+  const Next = useNextResolver();
   const min = resolveDateProp(props.min, toInputDay);
   const max = resolveDateProp(props.max, toInputDay);
 
   return (
-    <PickerDispatcher
+    <Next
       requiredMessage={naviI18n(`picker.required.day`)}
       ui={<PickerDayUI />}
       icon={<CalendarSvg />}
@@ -111,12 +112,12 @@ const toInputDay = (date) => {
   return `${yyyy}-${mm}-${dd}`;
 };
 export const PickerMonth = (props) => {
-  const PickerDispatcher = useContext(PickerDispatcherContext);
+  const Next = useNextResolver();
   const min = resolveDateProp(props.min, toInputMonth);
   const max = resolveDateProp(props.max, toInputMonth);
 
   return (
-    <PickerDispatcher
+    <Next
       requiredMessage={naviI18n(`picker.required.month`)}
       ui={<PickerMonthUI />}
       icon={<CalendarSvg />}
@@ -144,12 +145,12 @@ const toInputMonth = (date) => {
   return `${yyyy}-${mm}`;
 };
 export const PickerWeek = (props) => {
-  const PickerDispatcher = useContext(PickerDispatcherContext);
+  const Next = useNextResolver();
   const min = resolveDateProp(props.min, toInputWeek);
   const max = resolveDateProp(props.max, toInputWeek);
 
   return (
-    <PickerDispatcher
+    <Next
       requiredMessage={naviI18n(`picker.required.week`)}
       ui={<PickerWeekUI />}
       icon={<CalendarSvg />}
@@ -184,13 +185,13 @@ const toInputWeek = (date) => {
   return `${d.getFullYear()}-W${String(week).padStart(2, "0")}`;
 };
 export const PickerTime = (props) => {
-  const PickerDispatcher = useContext(PickerDispatcherContext);
+  const Next = useNextResolver();
   const min = resolveDateProp(props.min, toInputTime);
   const max = resolveDateProp(props.max, toInputTime);
   const step = parseStepToSeconds(props.step);
 
   return (
-    <PickerDispatcher
+    <Next
       requiredMessage={naviI18n(`picker.required.time`)}
       ui={<PickerTimeUI />}
       icon={<ClockSvg />}
@@ -215,13 +216,13 @@ const toInputTime = (date) => {
   return `${hh}:${min}`;
 };
 export const PickerDatetime = (props) => {
-  const PickerDispatcher = useContext(PickerDispatcherContext);
+  const Next = useNextResolver();
   const min = resolveDateProp(props.min, toInputDatetime);
   const max = resolveDateProp(props.max, toInputDatetime);
   const step = parseStepToSeconds(props.step);
 
   return (
-    <PickerDispatcher
+    <Next
       requiredMessage={naviI18n(`picker.required.datetime`)}
       ui={<PickerDatetimeUI />}
       icon={<CalendarSvg />}

@@ -1,8 +1,8 @@
-import { useNextResolver } from "../../resolver/resolver.jsx";
+import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import {
-  createActionMiddleware,
+  createActionResolver,
   useActionProps,
-} from "../create_action_middeware.jsx";
+} from "../create_action_resolver.jsx";
 import { dispatchRequestAction } from "../validation/custom_constraint_validation.js";
 import { PickerPopup } from "./picker_popup/picker_popup.jsx";
 import { PickerHour } from "./preset/picker_hour.jsx";
@@ -15,7 +15,7 @@ import {
   PickerWeek,
 } from "./show_method/picker_show_method.jsx";
 
-const PickerPresetMiddleware = (props) => {
+const PickerPresetResolver = (props) => {
   const Next = useNextResolver();
   if (props.type === "hour") {
     return <PickerHour {...props} />;
@@ -23,7 +23,7 @@ const PickerPresetMiddleware = (props) => {
   return <Next {...props} />;
 };
 
-const PickerPopupMiddleware = (props) => {
+const PickerPopupResolver = (props) => {
   const Next = useNextResolver();
   if (props.children !== undefined) {
     return <PickerPopup {...props} />;
@@ -31,7 +31,7 @@ const PickerPopupMiddleware = (props) => {
   return <Next {...props} />;
 };
 
-const PickerShowMethodMiddleware = (props) => {
+const PickerShowMethodResolver = (props) => {
   const Next = useNextResolver();
   if (props.type === "color") {
     return <PickerColor {...props} />;
@@ -84,11 +84,11 @@ const PickerAction = (props) => {
     />
   );
 };
-const PickerActionMiddleware = createActionMiddleware(PickerAction);
+const PickerActionResolver = createActionResolver(PickerAction);
 
-export const pickerMiddlewares = [
-  PickerPresetMiddleware,
-  PickerPopupMiddleware,
-  PickerShowMethodMiddleware,
-  PickerActionMiddleware,
+export const pickerResolvers = [
+  PickerPresetResolver,
+  PickerPopupResolver,
+  PickerShowMethodResolver,
+  PickerActionResolver,
 ];

@@ -1,5 +1,5 @@
 import { findEvent } from "@jsenv/dom";
-import { useContext, useId, useRef, useState } from "preact/hooks";
+import { useId, useRef, useState } from "preact/hooks";
 
 import { shortcutsViaOnKeyDown } from "@jsenv/navi/src/keyboard/keyboard_shortcuts.js";
 import { windowWidthSignal } from "@jsenv/navi/src/layout/responsive.js";
@@ -14,10 +14,8 @@ import {
   requestPopoverClose,
   requestPopoverOpen,
 } from "@jsenv/navi/src/popup/popover.jsx";
-import {
-  PickerDispatcherContext,
-  PickerRequestCloseContext,
-} from "../picker_context.jsx";
+import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
+import { PickerRequestCloseContext } from "../picker_context.jsx";
 
 const css = /* css */ `
   .navi_picker {
@@ -202,7 +200,7 @@ const PickerContentInsidePopover = (props) => {
     viewportSpacing = 10,
     ...rest
   } = props;
-  const PickerDispatcher = useContext(PickerDispatcherContext);
+  const Next = useNextResolver();
   const debugFocus = useDebugFocus();
   const debugPopup = useDebugPopup();
   const popoverRef = useRef(null);
@@ -260,7 +258,7 @@ const PickerContentInsidePopover = (props) => {
   };
 
   return (
-    <PickerDispatcher
+    <Next
       disabled={disabled}
       aria-haspopup="listbox"
       aria-expanded={expanded}
@@ -399,7 +397,7 @@ const PickerContentInsidePopover = (props) => {
           {children}
         </PickerRequestCloseContext.Provider>
       </Popover>
-    </PickerDispatcher>
+    </Next>
   );
 };
 
@@ -414,7 +412,7 @@ const PickerContentInsideDialog = (props) => {
     pointerTrap,
     ...rest
   } = props;
-  const PickerDispatcher = useContext(PickerDispatcherContext);
+  const Next = useNextResolver();
   const debugFocus = useDebugFocus();
   const debugPopup = useDebugPopup();
   const dialogRef = useRef(null);
@@ -462,7 +460,7 @@ const PickerContentInsideDialog = (props) => {
   };
 
   return (
-    <PickerDispatcher
+    <Next
       disabled={disabled}
       aria-haspopup="dialog"
       aria-expanded={expanded}
@@ -560,7 +558,7 @@ const PickerContentInsideDialog = (props) => {
           {children}
         </PickerRequestCloseContext.Provider>
       </Dialog>
-    </PickerDispatcher>
+    </Next>
   );
 };
 

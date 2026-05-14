@@ -9,11 +9,11 @@ import { UIStateControllerContext } from "./use_ui_state_controller.js";
 
 export const createActionResolver = (ActionVariant) => {
   const ActionResolver = (props) => {
-    const NextResolver = useNextResolver();
+    const Next = useNextResolver();
     if (props.action || props.uiAction) {
       return <ActionVariant {...props} />;
     }
-    return <NextResolver {...props} />;
+    return <Next {...props} />;
   };
   return ActionResolver;
 };
