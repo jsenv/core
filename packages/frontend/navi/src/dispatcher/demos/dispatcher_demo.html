@@ -341,7 +341,11 @@
         if (!icon) {
           return <Next {...props} />;
         }
-        const { icon: _icon, ...rest } = props;
+        const {
+          // eslint-disable-next-line no-unused-vars
+          icon: i,
+          ...rest
+        } = props;
         return (
           <div class="cbox cbox-icon">
             <div class="cbox-header">IconEnhancer — icon: {icon}</div>
