@@ -22,7 +22,7 @@ export const READONLY_CONSTRAINT = {
     if (isBusy) {
       return {
         target: field,
-        message: `Cette action est en cours. Veuillez patienter.`,
+        message: `Cet élément est occupé.`,
         status: "info",
       };
     }

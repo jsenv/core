@@ -336,6 +336,7 @@ const PickerInput = (props) => {
       baseClassName="navi_picker"
       data-field=".navi_picker_input"
       navi-has-placeholder={placeholder ? "" : undefined}
+      aria-busy={innerLoading}
       autoFocus={undefined}
       basePseudoState={{
         ...remainingProps.basePseudoState,
@@ -382,6 +383,7 @@ const PickerInput = (props) => {
         tabIndex={-1}
         readOnly={innerReadOnly}
         disabled={innerDisabled}
+        aria-busy={innerLoading}
         data-rendered-by=".navi_picker"
         onChange={(e) => {
           const newValue = e.currentTarget.value;
