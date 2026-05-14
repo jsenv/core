@@ -1,6 +1,10 @@
 import { createContext } from "preact";
 import { useContext } from "preact/hooks";
 
+const DispatcherContext = createContext(null);
+
+export const useDispatcher = () => useContext(DispatcherContext);
+
 /**
  * Creates a dispatch function that passes props through a chain of middlewares.
  * Each middleware is rendered as a proper component (hooks are allowed).
@@ -19,7 +23,7 @@ import { useContext } from "preact/hooks";
  * MiddlewareIndexContext tracks which middleware is next so that when a middleware
  * re-renders and calls Dispatcher, the chain resumes from the correct position.
  */
-export const createDispatcher = (middlewares, DispatcherContext) => {
+export const createDispatcher = (middlewares) => {
   const MiddlewareIndexContext = createContext(0);
   const TargetComponentContext = createContext(null);
 
@@ -27,7 +31,11 @@ export const createDispatcher = (middlewares, DispatcherContext) => {
     const index = useContext(MiddlewareIndexContext);
     const TargetComponent = useContext(TargetComponentContext);
     if (index >= middlewares.length) {
-      return <TargetComponent {...props} />;
+      return (
+        <DispatcherContext.Provider value={null}>
+          <TargetComponent {...props} />
+        </DispatcherContext.Provider>
+      );
     }
     const Middleware = middlewares[index];
     return (

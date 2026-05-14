@@ -151,12 +151,12 @@
     </div>
     <div id="app"></div>
     <script type="module" jsenv-type="module/jsx">
-      import { render, createContext } from "preact";
-      import { useContext, useLayoutEffect } from "preact/hooks";
-      import { createDispatcher } from "../create_dispatcher.jsx";
-
-      // ── Dispatcher setup ────────────────────────────────────────────────────
-      const MyDispatcherContext = createContext(null);
+      import { render } from "preact";
+      import { useLayoutEffect } from "preact/hooks";
+      import {
+        createDispatcher,
+        useDispatcher,
+      } from "../create_dispatcher.jsx";
 
       // ── Render tracking (per case, plain DOM — never causes re-renders) ─────
       // Each case has its own counters keyed by component name.
@@ -308,7 +308,7 @@
       // Middlewares that don't match call <Dispatcher {...props} /> to pass through
       // to the next middleware in the chain.
       const WrapperMiddleware = (props) => {
-        const Dispatcher = useContext(MyDispatcherContext);
+        const Dispatcher = useDispatcher();
         const { caseId } = props;
         const isReDispatch = props["data-redispatch"];
         const trackName = isReDispatch
@@ -333,7 +333,7 @@
       };
 
       const IconMiddleware = (props) => {
-        const Dispatcher = useContext(MyDispatcherContext);
+        const Dispatcher = useDispatcher();
         const { caseId, icon } = props;
         const isReDispatch = props["data-redispatch"];
         const trackName = isReDispatch
@@ -361,7 +361,7 @@
       };
 
       const middlewares = [WrapperMiddleware, IconMiddleware];
-      const dispatch = createDispatcher(middlewares, MyDispatcherContext);
+      const dispatch = createDispatcher(middlewares);
 
       const dispatchTracked = (caseId, Target, props) => {
         return dispatch(Target, { ...props, caseId });

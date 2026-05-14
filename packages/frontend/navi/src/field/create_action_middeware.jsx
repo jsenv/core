@@ -1,14 +1,13 @@
-import { useContext } from "preact/hooks";
-
 import { useActionBoundToOneParam } from "@jsenv/navi/src/action/use_action.js";
 import { useActionStatus } from "@jsenv/navi/src/action/use_action_status.js";
 import { useExecuteAction } from "@jsenv/navi/src/action/use_execute_action.js";
+import { useDispatcher } from "./create_dispatcher.jsx";
 import { useOnRequestAction } from "./use_action_events.js";
 import { UIStateControllerContext } from "./use_ui_state_controller.js";
 
-export const createActionMiddleware = (ActionVariant, DispatcherContext) => {
+export const createActionMiddleware = (ActionVariant) => {
   const ActionMiddleware = (props) => {
-    const Dispatcher = useContext(DispatcherContext);
+    const Dispatcher = useDispatcher();
     if (props.action || props.uiAction) {
       return <ActionVariant {...props} />;
     }

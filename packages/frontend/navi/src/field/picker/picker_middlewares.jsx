@@ -1,11 +1,9 @@
-import { useContext } from "preact/hooks";
-
 import {
   createActionMiddleware,
   useActionProps,
 } from "../create_action_middeware.jsx";
+import { useDispatcher } from "../create_dispatcher.jsx";
 import { dispatchRequestAction } from "../validation/custom_constraint_validation.js";
-import { PickerDispatcherContext } from "./picker_context.jsx";
 import { PickerPopup } from "./picker_popup/picker_popup.jsx";
 import { PickerHour } from "./preset/picker_hour.jsx";
 import {
@@ -18,7 +16,7 @@ import {
 } from "./show_method/picker_show_method.jsx";
 
 const PickerPresetMiddleware = (props) => {
-  const Dispatcher = useContext(PickerDispatcherContext);
+  const Dispatcher = useDispatcher();
   if (props.type === "hour") {
     return <PickerHour {...props} />;
   }
@@ -26,7 +24,7 @@ const PickerPresetMiddleware = (props) => {
 };
 
 const PickerPopupMiddleware = (props) => {
-  const Dispatcher = useContext(PickerDispatcherContext);
+  const Dispatcher = useDispatcher();
   if (props.children !== undefined) {
     return <PickerPopup {...props} />;
   }
@@ -34,7 +32,7 @@ const PickerPopupMiddleware = (props) => {
 };
 
 const PickerShowMethodMiddleware = (props) => {
-  const Dispatcher = useContext(PickerDispatcherContext);
+  const Dispatcher = useDispatcher();
   if (props.type === "color") {
     return <PickerColor {...props} />;
   }
@@ -57,7 +55,7 @@ const PickerShowMethodMiddleware = (props) => {
 };
 
 const PickerAction = (props) => {
-  const Dispatcher = useContext(PickerDispatcherContext);
+  const Dispatcher = useDispatcher();
   const actionProps = useActionProps(props);
 
   return (
@@ -86,10 +84,7 @@ const PickerAction = (props) => {
     />
   );
 };
-const PickerActionMiddleware = createActionMiddleware(
-  PickerAction,
-  PickerDispatcherContext,
-);
+const PickerActionMiddleware = createActionMiddleware(PickerAction);
 
 export const pickerMiddlewares = [
   PickerPresetMiddleware,

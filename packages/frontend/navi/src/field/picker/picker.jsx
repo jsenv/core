@@ -219,10 +219,7 @@ export const Picker = (props) => {
     </UIStateControllerContext.Provider>
   );
 };
-const renderPicker = createDispatcher(
-  pickerMiddlewares,
-  PickerDispatcherContext,
-);
+const renderPicker = createDispatcher(pickerMiddlewares);
 Picker.update = createUICallback({
   name: "Picker.update",
   uiAction: (value, event) => {
