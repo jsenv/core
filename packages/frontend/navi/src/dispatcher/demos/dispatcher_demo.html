@@ -153,54 +153,53 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useLayoutEffect } from "preact/hooks";
-      import { createDispatcher, useDispatcher } from "../dispatcher.jsx";
+      import { createComponentResolver, useNext } from "../dispatcher.jsx";
 
       // ── Render tracking (per case, plain DOM — never causes re-renders) ─────
       // Each case has its own counters keyed by component name.
       // TREE defines the display order and indent for each case.
       const CASES = ["case1", "case2", "case3", "case4", "case5"];
 
-      // With the new dispatcher, every middleware is always rendered as a component
-      // in a chain: WrapperMiddleware → (passes through) → IconMiddleware → (passes through) → Button.
-      // A middleware that "matches" terminates the chain early by not calling Dispatcher.
-      // A middleware that does not match calls <Dispatcher {...props} /> to continue.
+      // With createComponentResolver, every enhancer is always rendered as a component
+      // in a chain: WrapperEnhancer → (passes through) → IconEnhancer → (passes through) → Button.
+      // An enhancer that "matches" terminates the chain early by not calling Next.
+      // An enhancer that does not match calls <Next {...props} /> to continue.
       const TREES = {
         case1: [
-          { name: "WrapperMiddleware", indent: "" },
-          { name: "IconMiddleware", indent: "  └─ " },
+          { name: "WrapperEnhancer", indent: "" },
+          { name: "IconEnhancer", indent: "  └─ " },
           { name: "Button", indent: "      └─ " },
         ],
         case2: [
-          { name: "WrapperMiddleware", indent: "" },
-          { name: "IconMiddleware", indent: "  └─ " },
+          { name: "WrapperEnhancer", indent: "" },
+          { name: "IconEnhancer", indent: "  └─ " },
           { name: "Button", indent: "      └─ " },
         ],
         case3: [
-          { name: "WrapperMiddleware", indent: "" },
-          { name: "WrapperMiddleware (re-dispatch)", indent: "  └─ " },
-          { name: "IconMiddleware (re-dispatch)", indent: "      └─ " },
+          { name: "WrapperEnhancer", indent: "" },
+          { name: "WrapperEnhancer (re-render)", indent: "  └─ " },
+          { name: "IconEnhancer (re-render)", indent: "      └─ " },
           { name: "Button", indent: "          └─ " },
         ],
         case4: [
-          { name: "WrapperMiddleware", indent: "" },
-          { name: "WrapperMiddleware (re-dispatch)", indent: "  └─ " },
-          { name: "IconMiddleware (re-dispatch)", indent: "      └─ " },
+          { name: "WrapperEnhancer", indent: "" },
+          { name: "WrapperEnhancer (re-render)", indent: "  └─ " },
+          { name: "IconEnhancer (re-render)", indent: "      └─ " },
           { name: "Button", indent: "          └─ " },
         ],
         case5: [
-          { name: "WrapperMiddleware", indent: "" },
-          { name: "IconMiddleware", indent: "  └─ " },
+          { name: "WrapperEnhancer", indent: "" },
+          { name: "IconEnhancer", indent: "  └─ " },
           { name: "Button (uiAction)", indent: "      └─ " },
         ],
       };
 
       const COLORS = {
-        "WrapperMiddleware": "#818cf8",
-        "WrapperMiddleware (re-dispatch)": "#a5b4fc",
-        "IconMiddleware": "#fb923c",
-        "IconMiddleware (re-dispatch)": "#fdba74",
+        "WrapperEnhancer": "#818cf8",
+        "WrapperEnhancer (re-render)": "#a5b4fc",
+        "IconEnhancer": "#fb923c",
+        "IconEnhancer (re-render)": "#fdba74",
         "Button": "#34d399",
-        "Button (via icon)": "#6ee7b7",
         "Button (uiAction)": "#22d3ee",
       };
 
@@ -301,67 +300,67 @@
         );
       };
 
-      // ── Middlewares ─────────────────────────────────────────────────────────
-      // Middlewares that don't match call <Dispatcher {...props} /> to pass through
-      // to the next middleware in the chain.
-      const WrapperMiddleware = (props) => {
-        const Dispatcher = useDispatcher();
+      // ── Enhancers ───────────────────────────────────────────────────────────
+      // Enhancers that don't match call <Next {...props} /> to pass through
+      // to the next enhancer in the chain.
+      const WrapperEnhancer = (props) => {
+        const Next = useNext();
         const { caseId } = props;
-        const isReDispatch = props["data-redispatch"];
-        const trackName = isReDispatch
-          ? "WrapperMiddleware (re-dispatch)"
-          : "WrapperMiddleware";
+        const isReRender = props["data-redispatch"];
+        const trackName = isReRender
+          ? "WrapperEnhancer (re-render)"
+          : "WrapperEnhancer";
         if (caseId) {
           trackRender(caseId, trackName);
         }
         if (props.children === undefined) {
-          return <Dispatcher {...props} />;
+          return <Next {...props} />;
         }
         return (
           <div class="cbox cbox-wrapper">
             <div class="cbox-header">
-              WrapperMiddleware {isReDispatch ? "(re-dispatch)" : ""}
+              WrapperEnhancer {isReRender ? "(re-render)" : ""}
             </div>
             <div class="cbox-body">
-              <Dispatcher {...props} data-redispatch={true} />
+              <Next {...props} data-redispatch={true} />
             </div>
           </div>
         );
       };
 
-      const IconMiddleware = (props) => {
-        const Dispatcher = useDispatcher();
+      const IconEnhancer = (props) => {
+        const Next = useNext();
         const { caseId, icon } = props;
-        const isReDispatch = props["data-redispatch"];
-        const trackName = isReDispatch
-          ? "IconMiddleware (re-dispatch)"
-          : "IconMiddleware";
+        const isReRender = props["data-redispatch"];
+        const trackName = isReRender
+          ? "IconEnhancer (re-render)"
+          : "IconEnhancer";
         if (caseId) {
           trackRender(caseId, trackName);
         }
         if (!icon) {
-          return <Dispatcher {...props} />;
+          return <Next {...props} />;
         }
-        const { icon: Icon, ...rest } = props;
+        const { icon: _icon, ...rest } = props;
         return (
           <div class="cbox cbox-icon">
-            <div class="cbox-header">IconMiddleware — icon: {icon}</div>
+            <div class="cbox-header">IconEnhancer — icon: {icon}</div>
             <div
               class="cbox-body"
               style="display:flex;align-items:center;gap:8px"
             >
               <span style="font-size:20px">{icon}</span>
-              <Dispatcher {...rest} />
+              <Next {...rest} />
             </div>
           </div>
         );
       };
 
-      const middlewares = [WrapperMiddleware, IconMiddleware];
-      const dispatch = createDispatcher(middlewares);
+      const enhancers = [WrapperEnhancer, IconEnhancer];
+      const renderButton = createComponentResolver(enhancers);
 
-      const dispatchTracked = (caseId, Target, props) => {
-        return dispatch(Target, { ...props, caseId });
+      const renderButtonTracked = (caseId, Target, props) => {
+        return renderButton(Target, { ...props, caseId });
       };
 
       // ── App ─────────────────────────────────────────────────────────────────
@@ -379,31 +378,35 @@
         useLayoutEffect(flushLog);
         return (
           <div>
-            <h1>Dispatcher Demo</h1>
+            <h1>Component Resolver Demo</h1>
             <p style="color:#555;font-size:13px;margin-bottom:24px">
-              Each case shows the component tree rendered by the dispatcher. The
-              render log (top) counts how many times each component was called.
+              Each case shows the component tree rendered by
+              createComponentResolver. The render log (top) counts how many
+              times each enhancer was called.
             </p>
 
             <CaseSection
-              title="Case 1 — no middleware matches"
-              code='dispatch(Button, { label: "Hello" })'
+              title="Case 1 — no enhancer matches"
+              code='renderButton(Button, { label: "Hello" })'
             >
-              {dispatchTracked("case1", Button, { label: "Hello" })}
+              {renderButtonTracked("case1", Button, { label: "Hello" })}
             </CaseSection>
 
             <CaseSection
-              title="Case 2 — IconMiddleware matches"
-              code='dispatch(Button, { label: "Save", icon: "💾" })'
+              title="Case 2 — IconEnhancer matches"
+              code='renderButton(Button, { label: "Save", icon: "💾" })'
             >
-              {dispatchTracked("case2", Button, { label: "Save", icon: "💾" })}
+              {renderButtonTracked("case2", Button, {
+                label: "Save",
+                icon: "💾",
+              })}
             </CaseSection>
 
             <CaseSection
-              title="Case 3 — WrapperMiddleware matches (children)"
-              code="dispatch(Button, { children: <span>inner</span> })"
+              title="Case 3 — WrapperEnhancer matches (children)"
+              code="renderButton(Button, { children: <span>inner</span> })"
             >
-              {dispatchTracked("case3", Button, {
+              {renderButtonTracked("case3", Button, {
                 children: (
                   <span style="color:#4338ca;font-weight:bold">
                     inner content
@@ -414,9 +417,9 @@
 
             <CaseSection
               title="Case 4 — Both match: wrapper + icon"
-              code='dispatch(Button, { icon: "⭐", children: <span>star</span> })'
+              code='renderButton(Button, { icon: "⭐", children: <span>star</span> })'
             >
-              {dispatchTracked("case4", Button, {
+              {renderButtonTracked("case4", Button, {
                 icon: "⭐",
                 children: (
                   <span style="color:#4338ca;font-weight:bold">
@@ -428,9 +431,9 @@
 
             <CaseSection
               title="Case 5 — uiAction prop passes through to Button (no infinite loop)"
-              code='dispatch(Button, { label: "Save", uiAction: (v) => {} })'
+              code='renderButton(Button, { label: "Save", uiAction: (v) => {} })'
             >
-              {dispatchTracked("case5", Button, {
+              {renderButtonTracked("case5", Button, {
                 label: "Save",
                 uiAction: () => {},
               })}

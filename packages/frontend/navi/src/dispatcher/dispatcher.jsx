@@ -1,65 +1,65 @@
 import { createContext } from "preact";
 import { useContext } from "preact/hooks";
 
-const DispatcherContext = createContext(null);
+const NextContext = createContext(null);
 
-export const useDispatcher = () => useContext(DispatcherContext);
+export const useNext = () => useContext(NextContext);
 
 /**
- * Creates a dispatch function that passes props through a chain of middlewares.
- * Each middleware is rendered as a proper component (hooks are allowed).
- * To pass through to the next middleware, a middleware calls useContext(DispatcherContext)
- * and renders the returned Dispatcher component with its props.
- * To terminate the chain early (e.g. render a specialized component), a middleware
- * renders its component directly without calling Dispatcher.
+ * Creates a renderComponent function that passes props through a chain of enhancers.
+ * Each enhancer is rendered as a proper component (hooks are allowed).
+ * To pass through to the next enhancer, an enhancer calls useNext() and renders
+ * the returned Next component with its props.
+ * To terminate the chain early (e.g. render a specialized component), an enhancer
+ * renders its component directly without calling Next.
  *
  * Usage:
- *   const dispatch = createDispatcher([MiddlewareA, MiddlewareB], DispatcherContext);
+ *   const renderButton = createComponentResolver([EnhancerA, EnhancerB]);
  *   // Then inside a component render:
- *   dispatch(TargetComponent, props)
+ *   renderButton(ButtonTarget, props)
  *
- * DispatcherContext exposes a stable Dispatcher component so middlewares can continue
- * the chain via useContext(DispatcherContext).
- * MiddlewareIndexContext tracks which middleware is next so that when a middleware
- * re-renders and calls Dispatcher, the chain resumes from the correct position.
+ * NextContext exposes a stable Next component so enhancers can continue
+ * the chain via useNext().
+ * EnhancerIndexContext tracks which enhancer is next so that when an enhancer
+ * re-renders and calls Next, the chain resumes from the correct position.
  */
-export const createDispatcher = (middlewares) => {
-  const MiddlewareIndexContext = createContext(0);
+export const createComponentResolver = (enhancers) => {
+  const EnhancerIndexContext = createContext(0);
   const TargetComponentContext = createContext(null);
 
-  const MiddlewareRunner = (props) => {
-    const index = useContext(MiddlewareIndexContext);
+  const ChainRunner = (props) => {
+    const index = useContext(EnhancerIndexContext);
     const TargetComponent = useContext(TargetComponentContext);
-    if (index >= middlewares.length) {
+    if (index >= enhancers.length) {
       return (
-        <DispatcherContext.Provider value={null}>
+        <NextContext.Provider value={null}>
           <TargetComponent {...props} />
-        </DispatcherContext.Provider>
+        </NextContext.Provider>
       );
     }
-    const Middleware = middlewares[index];
+    const Enhancer = enhancers[index];
     return (
-      <MiddlewareIndexContext.Provider value={index + 1}>
-        <Middleware {...props} />
-      </MiddlewareIndexContext.Provider>
+      <EnhancerIndexContext.Provider value={index + 1}>
+        <Enhancer {...props} />
+      </EnhancerIndexContext.Provider>
     );
   };
 
-  // Stable component defined once per createDispatcher call.
-  // Renders MiddlewareRunner directly — no new providers — so MiddlewareIndexContext
-  // is inherited from the parent tree. When a middleware calls <Dispatcher>, the chain
-  // resumes from index+1 (already set by the Provider wrapping that middleware).
-  const DispatcherComponent = (props) => <MiddlewareRunner {...props} />;
+  // Stable component defined once per createComponentResolver call.
+  // Renders ChainRunner directly — no new providers — so EnhancerIndexContext
+  // is inherited from the parent tree. When an enhancer calls <Next>, the chain
+  // resumes from index+1 (already set by the Provider wrapping that enhancer).
+  const NextComponent = (props) => <ChainRunner {...props} />;
 
-  const dispatch = (TargetComponent, props) => {
+  const renderComponent = (TargetComponent, props) => {
     return (
-      <DispatcherContext.Provider value={DispatcherComponent}>
+      <NextContext.Provider value={NextComponent}>
         <TargetComponentContext.Provider value={TargetComponent}>
-          <MiddlewareRunner {...props} />
+          <ChainRunner {...props} />
         </TargetComponentContext.Provider>
-      </DispatcherContext.Provider>
+      </NextContext.Provider>
     );
   };
 
-  return dispatch;
+  return renderComponent;
 };
