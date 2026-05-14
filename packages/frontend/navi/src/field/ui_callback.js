@@ -1,43 +1,45 @@
 /**
- * Creates a universal callback from an object describing how it should behave
+ * Creates a universal callback from an object declaring how it should behave
  * depending on how it is called.
  *
- * The handlers object declares the **intended usage** of the callback.
- * Navi will warn when the callback is placed on the wrong prop.
+ * The shape of the handlers object defines the **intended usage**.
+ * Navi warns at runtime when the callback is placed on the wrong prop.
+ *
+ * Supported call sites:
+ * - **DOM event props** (`onClick`, `onInput`, ...): called as `fn(event)`
+ * - **`uiAction` prop**: called as `fn(value, event)` — carries a value from the UI element
  *
  * ---
  *
- * **`{ event }`** — intended for DOM event props (`onClick`, `onInput`, etc.);
- *   also accepts `uiAction` with a warning (value is ignored):
+ * **`{ event }`** — intended for DOM event props:
  * ```js
  * const cb = createUICallback({ event: (event) => { ... } });
  * <Button onClick={cb} />   // ✓
  * <Button onInput={cb} />   // ✓
- * <Button uiAction={cb} />  // ⚠ warns — use a DOM event prop instead
+ * <Button uiAction={cb} />  // ⚠ warns, still calls event(event) — value ignored
  * ```
  *
- * **`{ uiAction }`** — intended for `uiAction` only; warns and no-ops on DOM
- *   event props because no value is available from a plain DOM event:
+ * **`{ uiAction }`** — intended for the `uiAction` prop only:
  * ```js
  * const cb = createUICallback({ uiAction: (value, event) => { ... } });
  * <Button uiAction={cb} />  // ✓
- * <Button onClick={cb} />   // ✗ warns — use uiAction instead
+ * <Button onClick={cb} />   // ✗ warns, no-op — no value available from DOM event
  * ```
  *
- * **`{ event, uiAction }`** — works from both; each call site uses its handler:
+ * **`{ event, uiAction }`** — works from both; each call site gets its own handler:
  * ```js
  * const cb = createUICallback({
  *   event:    (event) => { ... },
  *   uiAction: (value, event) => { ... },
  * });
- * <Button onClick={cb} />   // ✓
- * <Button uiAction={cb} />  // ✓
+ * <Button onClick={cb} />   // ✓ → event(event)
+ * <Button uiAction={cb} />  // ✓ → uiAction(value, event)
  * ```
  *
  * @param {{ event?: function(event: Event): any, uiAction?: function(value: any, event: Event): any }} handlers
  * @returns {function}
  */
-export const createUICallback = ({ event, uiAction }) => {
+export const createUICallback = ({ name = "ui callback", event, uiAction }) => {
   if (event && uiAction) {
     return (...args) => {
       return routeArgs(args, {
@@ -49,13 +51,13 @@ export const createUICallback = ({ event, uiAction }) => {
         },
         action: (value, actionSecondArg) => {
           console.info(
-            `${uiAction.name} got called by action. It works but is designed to be called by uiAction`,
+            `${name} got called by action. It works but is designed to be called by uiAction`,
           );
           return uiAction(value, actionSecondArg.event);
         },
         other: () => {
           console.warn(
-            `${uiAction.name} unsupported call attempt. It is designed to be called by uiAction.`,
+            `${name} unsupported call attempt. It is designed to be called by uiAction.`,
           );
           return false;
         },
@@ -67,7 +69,7 @@ export const createUICallback = ({ event, uiAction }) => {
       return routeArgs(args, {
         event: () => {
           console.warn(
-            `${uiAction.name} unsupported call attempt (by DOM event). It is designed to be called by uiAction.`,
+            `${name} unsupported call attempt (by DOM event). It is designed to be called by uiAction.`,
           );
           return false;
         },
@@ -76,13 +78,13 @@ export const createUICallback = ({ event, uiAction }) => {
         },
         action: (value, actionSecondArg) => {
           console.info(
-            `${uiAction.name} got called by action. It works but is designed to be called by uiAction`,
+            `${name} got called by action. It works but is designed to be called by uiAction`,
           );
           return uiAction(value, actionSecondArg.event);
         },
         other: () => {
           console.warn(
-            `${uiAction.name} unsupported call attempt. It is designed to be called by uiAction.`,
+            `${name} unsupported call attempt. It is designed to be called by uiAction.`,
           );
           return false;
         },
@@ -97,19 +99,19 @@ export const createUICallback = ({ event, uiAction }) => {
       },
       uiAction: (value, e) => {
         console.info(
-          `${event.name} got called by uiAction. It works but is designed to be called by DOM`,
+          `${name} got called by uiAction. It works but is designed to be called by DOM`,
         );
         return event(e);
       },
       action: (value, secondArg) => {
         console.info(
-          `${event.name} got called by action. It works but is designed to be called by DOM`,
+          `${name} got called by action. It works but is designed to be called by DOM`,
         );
         return event(secondArg.event);
       },
       other: () => {
         console.warn(
-          `${event.name} unsupported call attempt. It is designed to be called by DOM.`,
+          `${name} unsupported call attempt. It is designed to be called by DOM.`,
         );
         return false;
       },

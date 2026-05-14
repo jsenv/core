@@ -235,11 +235,13 @@ const renderPicker = createDispatcher(
   PickerDispatcherContext,
 );
 Picker.update = createUICallback({
+  name: "Picker.update",
   uiAction: (value, event) => {
     return dispatchToPicker(event, "navi_picker_set_value", { value });
   },
 });
 Picker.close = createUICallback({
+  name: "Picker.close",
   event: (e) => dispatchToPicker(e, "navi_picker_request_close"),
   uiAction: (value, event) => {
     const currentTarget = event.currentTarget;
