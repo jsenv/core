@@ -1,5 +1,6 @@
 import { useContext } from "preact/hooks";
 
+import { onRequestPointerInteraction } from "@jsenv/navi/src/field/validation/custom_constraint_validation.js";
 import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { Time } from "@jsenv/navi/src/text/time.jsx";
@@ -11,21 +12,12 @@ const getPropsToShowPicker = (props) => {
     ...props,
     onMouseDown: (e) => {
       props.onMouseDown?.(e);
-      if (e.defaultPrevented) {
-        // happens when popover/dialog opens for example
-        return;
-      }
-      // don't try on mousedown it would not work
-      // e.preventDefault();
-      // callInputShowPicker(e);
     },
-    // we also listen click as it's what we receive from <label>
     onClick: (e) => {
       props.onClick?.(e);
-      if (e.defaultPrevented) {
+      if (!onRequestPointerInteraction(e)) {
         return;
       }
-      // e.preventDefault();
       callInputShowPicker(e);
     },
   };

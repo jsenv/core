@@ -1,6 +1,6 @@
 import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { useActionProps } from "../create_action_resolver.jsx";
-import { dispatchRequestAction } from "../validation/custom_constraint_validation.js";
+// import { dispatchRequestAction } from "../validation/custom_constraint_validation.js";
 
 export const PickerAction = (props) => {
   const Next = useNextResolver();
@@ -9,34 +9,32 @@ export const PickerAction = (props) => {
   return (
     <Next
       {...actionProps}
-      onMouseDown={(e) => {
-        debugger;
-        actionProps.onMouseDown?.(e);
-        if (e.button !== 0) {
-          return;
-        }
-        if (e.defaultPrevented) {
-          return;
-        }
-        dispatchRequestAction(e.currentTarget, {
-          event: e,
-          requester: e.currentTarget,
-        });
-      }}
-      onClick={(e) => {
-        debugger;
-        actionProps.onClick(e);
-        if (e.button !== 0) {
-          return;
-        }
-        if (e.defaultPrevented) {
-          return;
-        }
-        dispatchRequestAction(e.currentTarget, {
-          event: e,
-          requester: e.currentTarget,
-        });
-      }}
+      //   onMouseDown={(e) => {
+      //     actionProps.onMouseDown?.(e);
+      //     if (e.button !== 0) {
+      //       return;
+      //     }
+      //     if (e.defaultPrevented) {
+      //       return;
+      //     }
+      //     dispatchRequestAction(e.currentTarget, {
+      //       event: e,
+      //       requester: e.currentTarget,
+      //     });
+      //   }}
+      //   onClick={(e) => {
+      //     actionProps.onClick(e);
+      //     if (e.button !== 0) {
+      //       return;
+      //     }
+      //     if (e.defaultPrevented) {
+      //       return;
+      //     }
+      //     dispatchRequestAction(e.currentTarget, {
+      //       event: e,
+      //       requester: e.currentTarget,
+      //     });
+      //   }}
     />
   );
 };

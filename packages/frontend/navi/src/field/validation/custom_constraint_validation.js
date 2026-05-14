@@ -88,36 +88,22 @@ import { listenInputValue } from "./input_value_listener.js";
 
 export const NAVI_VALIDITY_CHANGE_CUSTOM_EVENT = "navi_validity_change";
 
-const STANDARD_CONSTRAINT_SET = new Set([
+export const onRequestPointerInteraction = (pointerEvent) => {
+  if (pointerEvent.button !== 0) {
+    return false;
+  }
+  if (pointerEvent.defaultPrevented) {
+    return false;
+  }
+  const target = pointerEvent.currentTarget || pointerEvent.target;
+  return checkConstraintsAndReport(target, POINTER_INTERACTION_CONSTRAINTS, {
+    event: pointerEvent,
+  });
+};
+const POINTER_INTERACTION_CONSTRAINTS = [
   DISABLED_CONSTRAINT,
-  REQUIRED_CONSTRAINT,
-  PATTERN_CONSTRAINT,
-  TYPE_EMAIL_CONSTRAINT,
-  TYPE_NUMBER_CONSTRAINT,
-  MIN_LENGTH_CONSTRAINT,
-  MAX_LENGTH_CONSTRAINT,
-  MIN_CONSTRAINT,
-  MAX_CONSTRAINT,
-]);
-const NAVI_CONSTRAINT_SET = new Set([
-  // the order matters here, the last constraint is picked first when multiple constraints fail
-  // so it's better to keep the most complex constraints at the beginning of the list
-  // so the more basic ones shows up first
-  MIN_SPECIAL_CHAR_CONSTRAINT,
-  SINGLE_SPACE_CONSTRAINT,
-  MIN_DIGIT_CONSTRAINT,
-  MIN_UPPER_LETTER_CONSTRAINT,
-  MIN_LOWER_LETTER_CONSTRAINT,
-  SAME_AS_CONSTRAINT,
-  ONE_OF_CONSTRAINT,
   READONLY_CONSTRAINT,
-]);
-const DEFAULT_CONSTRAINT_SET = new Set([
-  ...STANDARD_CONSTRAINT_SET,
-  ...NAVI_CONSTRAINT_SET,
-]);
-
-const validationInProgressWeakSet = new WeakSet();
+];
 
 export const onRequestAction = (
   action,
@@ -285,6 +271,75 @@ export const onRequestAction = (
 
   return true;
 };
+const STANDARD_CONSTRAINT_SET = new Set([
+  DISABLED_CONSTRAINT,
+  REQUIRED_CONSTRAINT,
+  PATTERN_CONSTRAINT,
+  TYPE_EMAIL_CONSTRAINT,
+  TYPE_NUMBER_CONSTRAINT,
+  MIN_LENGTH_CONSTRAINT,
+  MAX_LENGTH_CONSTRAINT,
+  MIN_CONSTRAINT,
+  MAX_CONSTRAINT,
+]);
+const NAVI_CONSTRAINT_SET = new Set([
+  // the order matters here, the last constraint is picked first when multiple constraints fail
+  // so it's better to keep the most complex constraints at the beginning of the list
+  // so the more basic ones shows up first
+  MIN_SPECIAL_CHAR_CONSTRAINT,
+  SINGLE_SPACE_CONSTRAINT,
+  MIN_DIGIT_CONSTRAINT,
+  MIN_UPPER_LETTER_CONSTRAINT,
+  MIN_LOWER_LETTER_CONSTRAINT,
+  SAME_AS_CONSTRAINT,
+  ONE_OF_CONSTRAINT,
+  READONLY_CONSTRAINT,
+]);
+const DEFAULT_CONSTRAINT_SET = new Set([
+  ...STANDARD_CONSTRAINT_SET,
+  ...NAVI_CONSTRAINT_SET,
+]);
+
+const validationInProgressWeakSet = new WeakSet();
+const checkConstraintsAndReport = (
+  element,
+  constraints,
+  { event, requester = element } = {},
+) => {
+  for (const constraint of constraints) {
+    const result = constraint.check(element, {});
+    if (!result) {
+      continue;
+    }
+    if (result.silent) {
+      return false;
+    }
+    const base = result.target || element;
+    const anchorElement = (() => {
+      const renderedBy = base.getAttribute("data-rendered-by");
+      if (renderedBy) {
+        const renderedByElement = base.closest(renderedBy);
+        if (renderedByElement) {
+          return renderedByElement;
+        }
+      }
+      return base;
+    })();
+    const { message } = getConstraintMessage(
+      element,
+      constraint,
+      result.message,
+      { requester },
+    );
+    openCallout(message, {
+      anchorElement,
+      status: result.status,
+      openingEvent: event,
+    });
+    return false;
+  }
+  return true;
+};
 
 export const closeValidationMessage = (
   element,
@@ -316,6 +371,7 @@ export const installCustomConstraintValidation = (
   elementReceivingValidationMessage = element,
 ) => {
   const validationInterface = {
+    element,
     uninstall: undefined,
     registerConstraint: undefined,
     addCustomMessage: undefined,
