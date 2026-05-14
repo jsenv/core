@@ -22,8 +22,6 @@ export const useActionProps = (props) => {
   const {
     ref,
     action,
-    // eslint-disable-next-line no-unused-vars
-    uiAction,
     actionDebounce,
     actionAfterChange,
     onCancel,
@@ -50,6 +48,7 @@ export const useActionProps = (props) => {
     loading,
     ...rest,
     ref,
+    "uiAction": undefined, // rest of components don't need to know about uiAction
     "data-action": boundAction.name || "anonymous",
     "data-action-debounce": actionDebounce,
     "data-action-after-change": actionAfterChange ? "" : undefined,

@@ -39,6 +39,7 @@ const css = /* css */ `
       --picker-padding-x-default: 8px;
       --picker-padding-y-default: 5px;
       --picker-outline-color: var(--navi-focus-outline-color);
+      --picker-loader-color: var(--navi-loader-color);
       --picker-border-color: light-dark(#767676, #8e8e93);
       --picker-background-color: white;
       --picker-color: currentColor;
@@ -47,6 +48,9 @@ const css = /* css */ `
         currentColor 60%,
         transparent
       );
+      --picker-color-dimmed: color-mix(in srgb, currentColor 60%, transparent);
+      --picker-right-slot-size: 1.5em;
+      /* Hover */
       --picker-border-color-hover: color-mix(
         in srgb,
         var(--picker-border-color) 70%,
@@ -57,7 +61,26 @@ const css = /* css */ `
         var(--picker-background-color) 95%,
         black
       );
-      --picker-right-slot-size: 1.5em;
+      /* Readonly */
+      --picker-border-color-readonly: color-mix(
+        in srgb,
+        var(--picker-border-color) 45%,
+        transparent
+      );
+      --picker-background-color-readonly: var(--picker-background-color);
+      --picker-color-readonly: var(--picker-color-dimmed);
+      /* Disabled */
+      --picker-border-color-disabled: var(--picker-border-color-readonly);
+      --picker-background-color-disabled: color-mix(
+        in srgb,
+        var(--picker-background-color) 95%,
+        grey
+      );
+      --picker-color-disabled: color-mix(
+        in srgb,
+        var(--picker-color) 95%,
+        grey
+      );
     }
   }
 
@@ -87,6 +110,7 @@ const css = /* css */ `
       --picker-padding-bottom,
       var(--picker-padding-y, var(--picker-padding-y-default))
     );
+    --x-picker-color: var(--picker-color);
 
     position: relative;
     display: inline-flex;
@@ -98,7 +122,7 @@ const css = /* css */ `
     padding-left: var(--x-picker-padding-left);
     flex-direction: column;
     justify-content: center;
-    color: var(--picker-color);
+    color: var(--x-picker-color);
     color: var(--picker-placeholder-color);
     font-size: var(--picker-font-size);
     text-align: inherit;
@@ -112,28 +136,8 @@ const css = /* css */ `
     outline-width: var(--x-picker-outline-width);
     outline-color: var(--picker-outline-color);
     outline-offset: var(--x-picker-outline-offset);
-    cursor: pointer;
+    cursor: var(--x-picker-cursor, pointer);
     user-select: none;
-
-    &[data-has-value] {
-      color: var(--picker-color);
-    }
-
-    &[data-hover] {
-      --x-picker-background-color: var(--picker-background-color-hover);
-      --x-picker-border-color: var(--picker-border-color-hover);
-    }
-    &[data-focus-visible] {
-      --x-picker-border-color: transparent;
-      outline-style: solid;
-    }
-    &[data-disabled] {
-      opacity: 0.5;
-      cursor: default;
-    }
-    &[data-callout] {
-      --x-picker-border-color: var(--callout-color);
-    }
 
     .navi_picker_right_slot {
       position: absolute;
@@ -155,6 +159,37 @@ const css = /* css */ `
       opacity: 0;
       appearance: none;
       pointer-events: none;
+    }
+
+    &[data-has-value] {
+      --x-picker-color: var(--picker-color);
+    }
+    /* Hover */
+    &[data-hover] {
+      --x-picker-background-color: var(--picker-background-color-hover);
+      --x-picker-border-color: var(--picker-border-color-hover);
+    }
+    /* Readonly */
+    &[data-readonly] {
+      --x-picker-border-color: var(--picker-border-color-readonly);
+      --x-picker-background-color: var(--picker-background-color-readonly);
+      --x-picker-color: var(--picker-color-readonly);
+    }
+    /* Focus */
+    &[data-focus-visible] {
+      --x-picker-border-color: transparent;
+      outline-style: solid;
+    }
+    /* Disabled */
+    &[data-disabled] {
+      --x-picker-border-color: var(--picker-border-color-disabled);
+      --x-picker-background-color: var(--picker-background-color-disabled);
+      --x-picker-color: var(--picker-color-disabled);
+      --x-picker-cursor: default;
+    }
+    /* Callout (info, warning, error) */
+    &[data-callout] {
+      --x-picker-border-color: var(--callout-color);
     }
   }
 
@@ -318,7 +353,7 @@ const PickerInput = (props) => {
     >
       <LoadingOutline
         loading={innerLoading}
-        color="var(--loader-color)"
+        color="var(--picker-loader-color)"
         inset={-1}
       />
       <PickerContext.Provider
