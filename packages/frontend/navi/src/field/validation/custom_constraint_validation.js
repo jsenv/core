@@ -512,7 +512,7 @@ export const installCustomConstraintValidation = (
     return newConstraintValidityState.valid;
   };
 
-  const [notifyCalloutOpen, onCalloutOpen] = createPubSub(true);
+  const [notifyCalloutOpen, onCalloutOpen] = createPubSub();
   const reportValidity = ({
     skipFocus,
     event,
@@ -695,32 +695,6 @@ export const installCustomConstraintValidation = (
       return () => {
         interactionTarget.removeEventListener("mousedown", onmousedown);
       };
-    });
-  }
-
-  check_on_hidden_input_value: {
-    // Hidden inputs (used by Select, List) don't fire "input" or "change" events
-    // when their value is set programmatically. We intercept the value setter to
-    // detect those changes and re-run validation.
-    if (element.type !== "hidden") {
-      break check_on_hidden_input_value;
-    }
-    const nativeDescriptor = Object.getOwnPropertyDescriptor(
-      HTMLInputElement.prototype,
-      "value",
-    );
-    Object.defineProperty(element, "value", {
-      get() {
-        return nativeDescriptor.get.call(this);
-      },
-      set(newValue) {
-        nativeDescriptor.set.call(this, newValue);
-        resetOnInteraction(new CustomEvent("programmatic_value_change"));
-      },
-      configurable: true,
-    });
-    addTeardown(() => {
-      delete element.value;
     });
   }
 

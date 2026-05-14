@@ -324,7 +324,6 @@ export const openCallout = (
       if (!closeOnClickOutside) {
         return;
       }
-
       const clickTarget = event.target;
       if (
         clickTarget === calloutElement ||
