@@ -801,72 +801,6 @@ export const installCustomConstraintValidation = (
     });
   }
 
-  request_on_button_click: {
-    const onclick = (clickEvent) => {
-      if (clickEvent.defaultPrevented) {
-        return;
-      }
-      if (element.tagName !== "BUTTON") {
-        return;
-      }
-      const button = element;
-      const elementWithAction = closestElementWithAction(button);
-      if (!elementWithAction) {
-        return;
-      }
-      const determineClosestFormSubmitTargetForClickEvent = () => {
-        if (clickEvent.defaultPrevented) {
-          return null;
-        }
-        const { form } = element;
-        if (!form) {
-          // reset button are not associated to the from
-          // so they early return here
-          return null;
-        }
-        const wouldSubmitFormByType =
-          button.type === "submit" || button.type === "image";
-        if (wouldSubmitFormByType) {
-          return button;
-        }
-        if (button.type) {
-          // "reset", "button" or any other non submit type, it won't submit the form
-          return null;
-        }
-        const firstButtonSubmittingForm = getFirstButtonSubmittingForm(form);
-        if (button !== firstButtonSubmittingForm) {
-          // an other button is explicitly submitting the form, this one would not submit it
-          return null;
-        }
-        // this is the only button inside the form without type attribute, so it defaults to type="submit"
-        return button;
-      };
-      const formSubmitTarget = determineClosestFormSubmitTargetForClickEvent();
-      if (!formSubmitTarget && elementWithAction !== button) {
-        // button has no form submit effect and no own action
-        return;
-      }
-      if (button.type === "reset") {
-        // reset button got their own behavior (I suppose this is now catched by previous if)
-        return;
-      }
-      if (formSubmitTarget) {
-        // prevent from submission
-        clickEvent.preventDefault();
-      }
-
-      // dispatch only if the button
-      dispatchRequestAction(elementWithAction, {
-        event: clickEvent,
-        requester: formSubmitTarget || button,
-      });
-    };
-    element.addEventListener("click", onclick);
-    addTeardown(() => {
-      element.removeEventListener("click", onclick);
-    });
-  }
-
   request_on_input_value_change: {
     if (!isInput) {
       break request_on_input_value_change;
@@ -1029,12 +963,13 @@ const getFirstButtonSubmittingForm = (form) => {
 
 export const dispatchRequestAction = (
   elementWithAction,
-  { actionOrigin = "action_prop", event, requester },
+  { actionOrigin = "action_prop", event, requester, target },
 ) => {
   return dispatchCustomEvent(elementWithAction, "navi_request_action", {
     actionOrigin,
     event,
     requester,
+    target,
   });
 };
 // https://developer.mozilla.org/en-US/docs/Web/HTML/Guides/Constraint_validation

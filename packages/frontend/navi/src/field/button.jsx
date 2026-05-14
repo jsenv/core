@@ -1,8 +1,11 @@
 import { useCallback, useContext, useRef } from "preact/hooks";
 
+import {
+  createComponentResolver,
+  useNextResolver,
+} from "@jsenv/navi/src/resolver/resolver.jsx";
 import { useAction } from "../action/use_action.js";
 import { useActionStatus } from "../action/use_action_status.js";
-import { useExecuteAction } from "../action/use_execute_action.js";
 import { Box } from "../box/box.jsx";
 import { LoadingOutline } from "../graphic/loading/loading_outline.jsx";
 import { getHrefTargetInfo } from "../nav/browser_integration/href_target_info.js";
@@ -10,6 +13,7 @@ import { assertRoute, useRouteStatus } from "../nav/route.js";
 import { Text, markAsOutsideTextFlow } from "../text/text.jsx";
 import { useAutoFocus } from "../utils/focus/use_auto_focus.js";
 import { useAccentColorAttributes } from "../utils/use_accent_color_attributes.js";
+import { useActionProps } from "./create_action_resolver.jsx";
 import { FormActionContext } from "./form_context.js";
 import { useOnRequestAction } from "./use_action_events.js";
 import { useFormEvents } from "./use_form_events.js";
@@ -18,7 +22,12 @@ import {
   LoadingContext,
   LoadingElementContext,
   ReadOnlyContext,
+  UIStateContext,
+  UIStateControllerContext,
+  useUIState,
+  useUIStateController,
 } from "./use_ui_state_controller.js";
+import { dispatchRequestAction } from "./validation/custom_constraint_validation.js";
 import { useConstraints } from "./validation/hooks/use_constraints.js";
 
 /**
@@ -290,28 +299,50 @@ const css = /* css */ `
 export const Button = (props) => {
   const defaultRef = useRef(null);
   const ref = props.ref || defaultRef;
+  const uiStateController = useUIStateController(props, "button", {
+    allowNameless: true,
+  });
+  const uiState = useUIState(uiStateController);
 
-  return <ButtonDispatcher {...props} ref={ref} />;
-};
-const ButtonDispatcher = (props) => {
-  const formContext = useContext(FormActionContext);
-  const hasAction = Boolean(
-    props.action || (props.shortcuts && props.shortcuts.length > 0),
+  return (
+    <UIStateControllerContext.Provider value={uiStateController}>
+      <UIStateContext.Provider value={uiState}>
+        {renderButton(ButtonUI, { ...props, ref })}
+      </UIStateContext.Provider>
+    </UIStateControllerContext.Provider>
   );
-  if (hasAction) {
-    if (formContext && props.action) {
+};
+
+const ButtonRouteResolver = (props) => {
+  const Next = useNextResolver();
+  if (props.route) {
+    return <ButtonWithRoute {...props} />;
+  }
+  return <Next {...props} />;
+};
+const ButtonActionResolver = (props) => {
+  const Next = useNextResolver();
+  const formContext = useContext(FormActionContext);
+  if (
+    props.action ||
+    props.uiAction ||
+    (props.shortcuts && props.shortcuts.length > 0)
+  ) {
+    if (formContext) {
       return <ButtonWithActionInsideForm {...props} />;
     }
     return <ButtonWithAction {...props} />;
   }
-  if (props.uiAction) {
-    return <ButtonWithUIAction {...props} />;
+  if (formContext) {
+    return <ButtonInsideForm {...props} />;
   }
-  if (props.route) {
-    return <ButtonWithRoute {...props} />;
-  }
-  return <ButtonUI {...props} />;
+  return <Next {...props} />;
 };
+const renderButton = createComponentResolver([
+  ButtonRouteResolver,
+  ButtonActionResolver,
+]);
+
 const ButtonUI = (props) => {
   import.meta.css = css;
   const {
@@ -490,88 +521,71 @@ const ButtonShadow = () => {
 };
 markAsOutsideTextFlow(ButtonShadow);
 
-const ButtonWithUIAction = (props) => {
-  const { uiAction, value, onClick, children, ...rest } = props;
-  const innerOnClick = useCallback(
-    (e) => {
-      if (e.button !== 0) {
-        return;
-      }
-      uiAction(value, e);
-      onClick?.(e);
-    },
-    [uiAction, value, onClick],
-  );
+const ButtonInsideForm = (props) => {
+  const Next = useNextResolver();
   return (
-    <ButtonUI {...rest} value={value} onClick={innerOnClick}>
-      {children}
-    </ButtonUI>
-  );
-};
-
-const ButtonWithRoute = (props) => {
-  const { route, routeParams, children, ...rest } = props;
-  if (import.meta.dev) {
-    assertRoute(route);
-  }
-  const url = route.buildUrl(routeParams);
-  const { matching } = useRouteStatus(route);
-  const paramsAreMatching = route.matchesParams(routeParams);
-  const linkMatching = matching && paramsAreMatching;
-
-  return (
-    <ButtonDispatcher
-      href={url}
-      data-href-current={linkMatching ? "" : undefined}
-      {...rest}
-      route={undefined}
-      routeParams={undefined}
-    >
-      {children || route.buildRelativeUrl(routeParams)}
-    </ButtonDispatcher>
+    <Next
+      {...props}
+      onClick={(clickEvent) => {
+        props.onClick?.(clickEvent);
+        if (clickEvent.defaultPrevented) {
+          return;
+        }
+        const button = clickEvent.currentTarget;
+        const { form } = button;
+        if (!form) {
+          // either we are a "reset" button (not associated to the form)
+          // or there is no form despites from context saying so (unlikely)
+          return;
+        }
+        const wouldSubmitFormByType =
+          button.type === "submit" || button.type === "image";
+        if (wouldSubmitFormByType) {
+          clickEvent.preventDefault();
+          dispatchRequestAction(form, {
+            event: clickEvent,
+            requester: button,
+          });
+          return;
+        }
+        const firstButtonSubmittingForm = form.querySelector(
+          `button[type="submit"], input[type="submit"], input[type="image"]`,
+        );
+        if (button !== firstButtonSubmittingForm) {
+          // an other button is explicitly submitting the form, this one would not submit it
+          // so it would have no effect
+          return;
+        }
+        // this is the only button inside the form without type attribute, so it defaults to type="submit"
+        clickEvent.preventDefault();
+        dispatchRequestAction(form, {
+          event: clickEvent,
+          requester: button,
+        });
+      }}
+    />
   );
 };
 const ButtonWithAction = (props) => {
-  const {
-    ref,
-    action,
-    loading,
-    actionErrorEffect,
-    onActionPrevented,
-    onActionAbort,
-    onActionError,
-    onActionEnd,
-    children,
-    ...rest
-  } = props;
-  const boundAction = useAction(action);
-  const { loading: actionLoading } = useActionStatus(boundAction);
-  const executeAction = useExecuteAction(ref, {
-    errorEffect: actionErrorEffect,
-  });
-  const onRequestAction = useOnRequestAction();
-
-  const innerLoading = loading || actionLoading;
+  const remainingProps = useActionProps(props);
+  const Next = useNextResolver();
 
   return (
-    <ButtonDispatcher
-      // put data-action first to help find it in devtools
-      data-action={boundAction.name}
-      {...rest}
-      ref={ref}
-      action={undefined}
-      loading={innerLoading}
-      onnavi_request_action={(e) => {
-        onRequestAction(boundAction, e);
+    <Next
+      {...remainingProps}
+      onClick={(clickEvent) => {
+        remainingProps.onClick?.(clickEvent);
+        if (clickEvent.defaultPrevented) {
+          return;
+        }
+        // we know we are not inside a form, no need to preventDefault
+        const button = clickEvent.currentTarget;
+        dispatchRequestAction(button, {
+          event: clickEvent,
+          requester: button,
+        });
       }}
-      onnavi_action_prevented={onActionPrevented}
-      onnavi_action_ready={executeAction}
-      onnavi_action_abort={onActionAbort}
-      onnavi_action_error={onActionError}
-      onnavi_action_end={onActionEnd}
-    >
-      {children}
-    </ButtonDispatcher>
+    />
   );
 };
 const ButtonWithActionInsideForm = (props) => {
@@ -580,7 +594,6 @@ const ButtonWithActionInsideForm = (props) => {
     type,
     action,
     loading,
-    children,
     onActionPrevented,
     onActionStart,
     onActionAbort,
@@ -588,6 +601,7 @@ const ButtonWithActionInsideForm = (props) => {
     onActionEnd,
     ...rest
   } = props;
+  const Next = useNextResolver();
   const formAction = useContext(FormActionContext);
   const hasEffectOnForm =
     type === "submit" || type === "reset" || type === "image";
@@ -631,20 +645,51 @@ const ButtonWithActionInsideForm = (props) => {
   });
 
   return (
-    <ButtonDispatcher
+    <Next
       data-action={actionBoundToFormParams.name}
       {...rest}
       ref={ref}
-      action={undefined}
       type={type}
       loading={innerLoading}
       onnavi_request_action={(e) => {
-        onRequestAction(actionBoundToFormParams, e, {
-          target: e.target.form,
+        onRequestAction(actionBoundToFormParams, e);
+      }}
+      onClick={(e) => {
+        rest.onClick?.(e);
+        if (e.defaultPrevented) {
+          return;
+        }
+        const button = e.currentTarget;
+        const { form } = button;
+        dispatchRequestAction(button, {
+          event: e,
+          requester: button,
+          // button will handle the event himself
+          target: form,
         });
       }}
+    />
+  );
+};
+
+const ButtonWithRoute = (props) => {
+  const { route, routeParams, children, ...rest } = props;
+  const Next = useNextResolver();
+  if (import.meta.dev) {
+    assertRoute(route);
+  }
+  const url = route.buildUrl(routeParams);
+  const { matching } = useRouteStatus(route);
+  const paramsAreMatching = route.matchesParams(routeParams);
+  const linkMatching = matching && paramsAreMatching;
+
+  return (
+    <Next
+      href={url}
+      data-href-current={linkMatching ? "" : undefined}
+      {...rest}
     >
-      {children}
-    </ButtonDispatcher>
+      {children || route.buildRelativeUrl(routeParams)}
+    </Next>
   );
 };

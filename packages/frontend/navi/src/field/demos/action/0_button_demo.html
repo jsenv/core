@@ -12,63 +12,11 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      import { Input, Button, Form } from "@jsenv/navi";
+      import { Input, Button, Form, NaviDebug } from "@jsenv/navi";
 
       const App = () => {
         return (
           <div>
-            <div style="display: flex; flex-direction: row; gap: 30px">
-              <div>
-                <p>
-                  <strong>Default</strong>
-                </p>
-                <Button>A</Button>
-              </div>
-
-              <div>
-                <p>
-                  <strong>Big content</strong>
-                </p>
-                <Button>
-                  <div style="width: 50px; height: 50px;">B</div>
-                </Button>
-              </div>
-
-              <div>
-                <p>
-                  <strong>Border radius</strong>
-                </p>
-                <Button style={{ "--border-radius": "20px" }}>C</Button>
-              </div>
-            </div>
-
-            <div style="display: flex; flex-direction: row; gap: 30px">
-              <div>
-                <p>
-                  <strong>Violet border</strong>
-                </p>
-                <Button style={{ "--border-color": "violet" }}>D</Button>
-              </div>
-
-              <div>
-                <p>
-                  <strong>Border width</strong>
-                </p>
-                <Button style={{ "--border-width": "10px" }}>D</Button>
-              </div>
-
-              <div>
-                <p>
-                  <strong>Outline width</strong>
-                </p>
-                <Button
-                  style={{ "--border-width": "5px", "--outline-width": "5px" }}
-                >
-                  D
-                </Button>
-              </div>
-            </div>
-
             <div style="display: flex; flex-direction: row; gap: 30px">
               <div>
                 <p>
@@ -157,7 +105,7 @@
               min="5"
               name="count"
               value={count}
-              onValueChange={setCount}
+              uiAction={setCount}
             />
 
             <Form
@@ -188,7 +136,12 @@
         );
       };
 
-      render(<App />, document.querySelector("#root"));
+      render(
+        <NaviDebug debugAction>
+          <App />
+        </NaviDebug>,
+        document.querySelector("#root"),
+      );
     </script>
   </body>
 </html>
