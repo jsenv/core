@@ -231,7 +231,8 @@ const PickerContentInsidePopover = (props) => {
   };
   const disableClickFor = useIgnoreClickForMousedown();
   const requestClose = (e = new CustomEvent("programmatic")) => {
-    if (e.type === "mousedown") {
+    const mousedownEvent = findEvent(e, (e) => e.type === "mousedown");
+    if (mousedownEvent) {
       debugPopup(e, `disable click`);
       disableClickFor();
     }

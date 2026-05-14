@@ -43,7 +43,11 @@ const MIN_CONTENT_VISIBILITY_RATIO = 0.6;
  *
  * A bit like https://tetherjs.dev/ but different
  */
-export const visibleRectEffect = (element, update) => {
+export const visibleRectEffect = (
+  element,
+  update,
+  { event: initialEvent = new CustomEvent("initialization") } = {},
+) => {
   const [teardown, addTeardown] = createPubSub();
   const scrollContainer = getScrollContainer(element);
   const scrollContainerIsDocument =
@@ -201,7 +205,7 @@ export const visibleRectEffect = (element, update) => {
     });
   };
 
-  check(new CustomEvent("initialization"));
+  check(initialEvent);
 
   const [publishBeforeAutoCheck, onBeforeAutoCheck] = createPubSub();
   auto_check: {

@@ -145,6 +145,7 @@ export const Popover = (props) => {
         popoverEl.removeAttribute("data-anchor-hidden");
         positionPopover(event);
       },
+      { event: e },
     );
     addCleanup(() => {
       rectEffect.disconnect();
@@ -215,12 +216,11 @@ export const Popover = (props) => {
         baseClassName="navi_popover"
         pseudoClasses={PopoverPseudoClasses}
         onnavi_popover_request_open={(e) => {
-          const { event = e, anchor } = e.detail;
-          onRequestOpen(event, { anchor });
+          const { anchor } = e.detail;
+          onRequestOpen(e, { anchor });
         }}
         onnavi_popover_request_close={(e) => {
-          const { event = e } = e.detail;
-          onRequestClose(event);
+          onRequestClose(e);
         }}
       >
         {children}
