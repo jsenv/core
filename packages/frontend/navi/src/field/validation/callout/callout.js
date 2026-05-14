@@ -48,12 +48,19 @@ const css = /* css */ `
     --x-callout-background-color: var(--callout-background-color);
     --x-callout-icon-color: var(--x-callout-status-color);
 
+    /* Popover resets */
     position: absolute;
     top: 0;
     left: 0;
-    z-index: var(--callout-z-index);
+    inset: auto;
+    /* Callout styles */
     display: block;
     height: auto;
+    margin: 0;
+    padding: 0;
+    color: inherit;
+    background: transparent;
+    border: none;
     opacity: 0;
     /* will be positioned with transform: translate */
     transition: opacity 0.2s ease-in-out;
@@ -401,7 +408,9 @@ export const openCallout = (
     }
   });
   document.body.appendChild(calloutElement);
+  calloutElement.showPopover();
   addTeardown(() => {
+    calloutElement.hidePopover();
     calloutElement.remove();
   });
 
@@ -568,7 +577,10 @@ const ARROW_SPACING = 8;
 
 // HTML template for the callout
 const calloutTemplate = /* html */ `
-  <div class="navi_callout">
+  <div
+    class="navi_callout"
+    popover="manual"
+  >
     <div class="navi_callout_box">
       <div class="navi_callout_frame"></div>
       <div class="navi_callout_body">
