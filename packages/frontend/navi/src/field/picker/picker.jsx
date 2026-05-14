@@ -374,7 +374,7 @@ const PickerInput = (props) => {
         className="navi_picker_input"
         type={type}
         name={name}
-        value={uiState}
+        value={type === "color" && !uiState ? "#000000" : uiState}
         required={required}
         min={min}
         max={max}

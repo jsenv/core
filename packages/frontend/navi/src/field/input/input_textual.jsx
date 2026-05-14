@@ -374,7 +374,7 @@ const InputTextualUI = (props) => {
         ref={ref}
         type={type}
         data-value={uiState}
-        value={innerValue}
+        value={type === "color" && !innerValue ? "#000000" : innerValue}
         onInput={(e) => {
           let inputValue;
           if (type === "number") {
