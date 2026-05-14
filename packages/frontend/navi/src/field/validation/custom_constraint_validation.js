@@ -772,17 +772,17 @@ export const installCustomConstraintValidation = (
           return keydownTarget;
         }
         if (keydownTarget.tagName === "INPUT") {
-          if (
-            ![
-              "text",
-              "email",
-              "password",
-              "search",
-              "number",
-              "url",
-              "tel",
-            ].includes(keydownTarget.type)
-          ) {
+          const keyboardInteractiveInputTypeSet = new Set([
+            "text",
+            "email",
+            "password",
+            "search",
+            "number",
+            "url",
+            "tel",
+            // maybe date too (we can type a date inside a input date right?)
+          ]);
+          if (keyboardInteractiveInputTypeSet.has(keydownTarget.type)) {
             return null;
           }
           // when present, we use first button submitting the form as the requester

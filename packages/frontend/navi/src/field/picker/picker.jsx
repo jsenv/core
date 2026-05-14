@@ -1,3 +1,4 @@
+import { dispatchCustomEvent } from "@jsenv/dom";
 import { useContext, useRef } from "preact/hooks";
 
 import { Box } from "@jsenv/navi/src/box/box.jsx";
@@ -232,6 +233,37 @@ const renderPicker = createDispatcher(
   pickerMiddlewares,
   PickerDispatcherContext,
 );
+Picker.update = (value, e) => {
+  return dispatchToPicker(e, "navi_picker_set_value", { value });
+};
+Picker.close = (...args) => {
+  if (args.length === 0) {
+    return false;
+  }
+  if (args.length === 1) {
+    const [event] = args;
+    return dispatchToPicker(event, "navi_picker_request_close");
+  }
+  const [value, event] = args;
+  const currentTarget = event.currentTarget;
+  if (currentTarget.name && TAGNAME_FIELD_SET.has(currentTarget.tagName)) {
+    if (!dispatchToPicker(value, "navi_picker_set_value", { value })) {
+      return false;
+    }
+  }
+  return dispatchToPicker(event, "navi_picker_request_close");
+};
+const dispatchToPicker = (e, customEventName, detail) => {
+  const pickerEl = e.currentTarget.closest(".navi_picker");
+  if (!pickerEl) {
+    return false;
+  }
+  return dispatchCustomEvent(pickerEl, customEventName, {
+    event: e,
+    ...detail,
+  });
+};
+const TAGNAME_FIELD_SET = new Set(["INPUT", "SELECT", "TEXTAREA", "BUTTON"]);
 
 const PickerInput = (props) => {
   import.meta.css = css;

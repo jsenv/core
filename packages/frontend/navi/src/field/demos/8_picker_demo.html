@@ -70,7 +70,6 @@
         isToday,
         getNowHours,
         stateSignal,
-        usePicker,
         NaviDebug,
       } from "@jsenv/navi";
 
@@ -541,34 +540,14 @@
                   <Box flex="y" spacing="s" padding="s">
                     <Input
                       type="text"
-                      // action="picker"
+                      uiAction={Picker.update}
                       placeholder="Enter value"
                     />
+                    <Button action={Picker.close}>Close</Button>
                   </Box>
                 </Picker>
               </NaviDebug>
             </Field>
-          </div>
-        );
-      };
-
-      const ColorList = () => {
-        const { requestClose, setValue } = usePicker();
-
-        return (
-          <div>
-            {["Red", "Green", "Blue", "Yellow"].map((color) => (
-              <button
-                key={color}
-                style={`display:block;width:100%;padding:8px 16px;text-align:left;background:none;border:none;cursor:pointer;font-size:14px;color:${color.toLowerCase()};`}
-                onClick={() => {
-                  setValue(color);
-                  requestClose();
-                }}
-              >
-                {color}
-              </button>
-            ))}
           </div>
         );
       };
@@ -586,7 +565,20 @@
               <Label>Choose a color</Label>
               <NaviDebug debugPopup debugFocus>
                 <Picker type="color" placeholder="Pick a color" mode="dialog">
-                  <ColorList />
+                  <div>
+                    {["Red", "Green", "Blue", "Yellow"].map((color) => (
+                      <button
+                        key={color}
+                        style={`display:block;width:100%;padding:8px 16px;text-align:left;background:none;border:none;cursor:pointer;font-size:14px;color:${color.toLowerCase()};`}
+                        onClick={(e) => {
+                          Picker.update(color, e);
+                          Picker.close(e);
+                        }}
+                      >
+                        {color}
+                      </button>
+                    ))}
+                  </div>
                 </Picker>
               </NaviDebug>
             </Field>

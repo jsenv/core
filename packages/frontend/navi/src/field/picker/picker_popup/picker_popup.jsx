@@ -23,18 +23,6 @@ const css = /* css */ `
   .navi_picker {
     /* popover */
     &[aria-haspopup="listbox"] {
-      .navi_list_container {
-        width: 100%;
-        /* Handled by the popover */
-        border: none;
-        border-radius: 0;
-        outline: none;
-
-        .navi_list {
-          width: 100%;
-        }
-      }
-
       .navi_picker_popover {
         position: absolute;
         inset: unset;
@@ -104,17 +92,6 @@ const css = /* css */ `
         }
       }
 
-      &:has([data-hover]) {
-        .navi_picker_popover {
-          --x-picker-border-color: var(--picker-border-color-hover);
-        }
-      }
-      &:has([data-focus-visible]) {
-        .navi_picker_popover {
-          outline-style: solid;
-        }
-      }
-
       &[aria-expanded="true"] {
         &[navi-popover-mode="overlay"],
         &[navi-popover-mode="attached"] {
@@ -128,14 +105,15 @@ const css = /* css */ `
           flex-direction: column;
         }
       }
-    }
 
-    /* dialog */
-    &[aria-haspopup="dialog"] {
-      .navi_list_container {
+      &:has([data-hover]) {
+        .navi_picker_popover {
+          --x-picker-border-color: var(--picker-border-color-hover);
+        }
+      }
+
+      /* .navi_list_container {
         width: 100%;
-        --list-max-height: none;
-        /* Handled by the dialog */
         border: none;
         border-radius: 0;
         outline: none;
@@ -144,7 +122,15 @@ const css = /* css */ `
           width: 100%;
         }
       }
+      &:has([data-focus-visible]) {
+        .navi_picker_popover {
+          outline-style: solid;
+        }
+      } */
+    }
 
+    /* dialog */
+    &[aria-haspopup="dialog"] {
       .navi_picker_dialog {
         max-height: 95dvh;
         padding: 0;
@@ -168,13 +154,22 @@ const css = /* css */ `
         }
       }
 
-      /* When the list inside the dialog has keyboard focus, show the focus ring
-       on the dialog instead */
+      /* .navi_list_container {
+        --list-max-height: none;
+        width: 100%;
+        border: none;
+        border-radius: 0;
+        outline: none;
+
+        .navi_list {
+          width: 100%;
+        }
+      }
       &:has([data-focus-visible]) {
         .navi_select_dialog {
           outline-style: solid;
         }
-      }
+      } */
     }
   }
 `;

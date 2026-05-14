@@ -304,6 +304,9 @@ const ButtonDispatcher = (props) => {
     }
     return <ButtonWithAction {...props} />;
   }
+  if (props.uiAction) {
+    return <ButtonWithUIAction {...props} />;
+  }
   if (props.route) {
     return <ButtonWithRoute {...props} />;
   }
@@ -486,6 +489,25 @@ const ButtonShadow = () => {
   return <span className="navi_button_shadow"></span>;
 };
 markAsOutsideTextFlow(ButtonShadow);
+
+const ButtonWithUIAction = (props) => {
+  const { uiAction, value, onClick, children, ...rest } = props;
+  const innerOnClick = useCallback(
+    (e) => {
+      if (e.button !== 0) {
+        return;
+      }
+      uiAction(value, e);
+      onClick?.(e);
+    },
+    [uiAction, value, onClick],
+  );
+  return (
+    <ButtonUI {...rest} value={value} onClick={innerOnClick}>
+      {children}
+    </ButtonUI>
+  );
+};
 
 const ButtonWithRoute = (props) => {
   const { route, routeParams, children, ...rest } = props;
