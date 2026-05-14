@@ -153,7 +153,7 @@
     <script type="module" jsenv-type="module/jsx">
       import { render, createContext } from "preact";
       import { useContext, useLayoutEffect } from "preact/hooks";
-      import { createDispatcher } from "../picker/create_dispatcher.jsx";
+      import { createDispatcher } from "../create_dispatcher.jsx";
 
       // ── Dispatcher setup ────────────────────────────────────────────────────
       const MyDispatcherContext = createContext(null);
@@ -161,51 +161,50 @@
       // ── Render tracking (per case, plain DOM — never causes re-renders) ─────
       // Each case has its own counters keyed by component name.
       // TREE defines the display order and indent for each case.
-      const CASES = ["case1", "case2", "case3", "case4"];
+      const CASES = ["case1", "case2", "case3", "case4", "case5"];
 
+      // With the new dispatcher, every middleware is always rendered as a component
+      // in a chain: WrapperMiddleware → (passes through) → IconMiddleware → (passes through) → Button.
+      // A middleware that "matches" terminates the chain early by not calling Dispatcher.
+      // A middleware that does not match calls <Dispatcher {...props} /> to continue.
       const TREES = {
         case1: [
-          { name: "MiddlewareRunner", indent: "" },
-          { name: "WrapperMiddleware", indent: "  ├─ " },
-          { name: "IconMiddleware", indent: "  ├─ " },
-          { name: "Button", indent: "  └─ " },
+          { name: "WrapperMiddleware", indent: "" },
+          { name: "IconMiddleware", indent: "  └─ " },
+          { name: "Button", indent: "      └─ " },
         ],
         case2: [
-          { name: "MiddlewareRunner", indent: "" },
-          { name: "WrapperMiddleware", indent: "  ├─ " },
-          { name: "IconMiddleware", indent: "  ├─ " },
-          { name: "Button", indent: "  └─ " },
+          { name: "WrapperMiddleware", indent: "" },
+          { name: "IconMiddleware", indent: "  └─ " },
+          { name: "Button (via icon)", indent: "      └─ " },
         ],
         case3: [
-          { name: "MiddlewareRunner", indent: "" },
-          { name: "WrapperMiddleware", indent: "  ├─ " },
-          { name: "MiddlewareRunner (re-dispatch)", indent: "  │   ├─ " },
-          { name: "WrapperMiddleware (re-dispatch)", indent: "  │   │   ├─ " },
-          { name: "IconMiddleware (re-dispatch)", indent: "  │   │   ├─ " },
-          { name: "Button", indent: "  │   │   └─ " },
-          { name: "IconMiddleware", indent: "  ├─ " },
+          { name: "WrapperMiddleware", indent: "" },
+          { name: "WrapperMiddleware (re-dispatch)", indent: "  └─ " },
+          { name: "IconMiddleware (re-dispatch)", indent: "      └─ " },
+          { name: "Button", indent: "          └─ " },
         ],
         case4: [
-          { name: "MiddlewareRunner", indent: "" },
-          { name: "WrapperMiddleware", indent: "  ├─ " },
-          { name: "MiddlewareRunner (re-dispatch)", indent: "  │   ├─ " },
-          { name: "WrapperMiddleware (re-dispatch)", indent: "  │   │   ├─ " },
-          { name: "IconMiddleware (re-dispatch)", indent: "  │   │   ├─ " },
-          { name: "Button", indent: "  │   │   └─ " },
-          { name: "IconMiddleware", indent: "  ├─ " },
-          { name: "Button (via icon)", indent: "  │   └─ " },
+          { name: "WrapperMiddleware", indent: "" },
+          { name: "WrapperMiddleware (re-dispatch)", indent: "  └─ " },
+          { name: "IconMiddleware (re-dispatch)", indent: "      └─ " },
+          { name: "Button (via icon)", indent: "          └─ " },
+        ],
+        case5: [
+          { name: "WrapperMiddleware", indent: "" },
+          { name: "IconMiddleware", indent: "  └─ " },
+          { name: "Button (uiAction)", indent: "      └─ " },
         ],
       };
 
       const COLORS = {
-        "MiddlewareRunner": "#6366f1",
-        "MiddlewareRunner (re-dispatch)": "#818cf8",
         "WrapperMiddleware": "#818cf8",
         "WrapperMiddleware (re-dispatch)": "#a5b4fc",
         "IconMiddleware": "#fb923c",
         "IconMiddleware (re-dispatch)": "#fdba74",
         "Button": "#34d399",
         "Button (via icon)": "#6ee7b7",
+        "Button (uiAction)": "#22d3ee",
       };
 
       const counts = {}; // counts[caseId][componentName] = number
@@ -279,14 +278,23 @@
 
       // ── Target component ────────────────────────────────────────────────────
       const Button = (props) => {
-        const { caseId, children, label, icon } = props;
+        const { caseId, children, label, icon, uiAction } = props;
         if (caseId) {
-          trackRender(caseId, icon ? "Button (via icon)" : "Button");
+          trackRender(
+            caseId,
+            uiAction
+              ? "Button (uiAction)"
+              : icon
+                ? "Button (via icon)"
+                : "Button",
+          );
         }
         const display = label ?? children ?? "button";
         return (
           <div class="cbox cbox-button">
-            <div class="cbox-header">Button</div>
+            <div class="cbox-header">
+              Button {uiAction ? "— uiAction received ✓" : ""}
+            </div>
             <div class="cbox-body">
               <button style="padding:4px 12px;cursor:pointer;font-size:13px;">
                 {display}
@@ -297,6 +305,8 @@
       };
 
       // ── Middlewares ─────────────────────────────────────────────────────────
+      // Middlewares that don't match call <Dispatcher {...props} /> to pass through
+      // to the next middleware in the chain.
       const WrapperMiddleware = (props) => {
         const Dispatcher = useContext(MyDispatcherContext);
         const { caseId } = props;
@@ -308,7 +318,7 @@
           trackRender(caseId, trackName);
         }
         if (props.children === undefined) {
-          return null;
+          return <Dispatcher {...props} />;
         }
         return (
           <div class="cbox cbox-wrapper">
@@ -333,7 +343,7 @@
           trackRender(caseId, trackName);
         }
         if (!icon) {
-          return null;
+          return <Dispatcher {...props} />;
         }
         const { icon: Icon, ...rest } = props;
         return (
@@ -353,27 +363,8 @@
       const middlewares = [WrapperMiddleware, IconMiddleware];
       const dispatch = createDispatcher(middlewares, MyDispatcherContext);
 
-      // Wrap dispatch to also track MiddlewareRunner calls via a hook inside the tree.
-      // We do this by wrapping MiddlewareRunner tracking in the components themselves above.
-      // But MiddlewareRunner is internal — track it by wrapping dispatch output.
-      // Instead: add a thin tracker component.
-      const MiddlewareRunnerTracker = ({ caseId, isReDispatch, children }) => {
-        const name = isReDispatch
-          ? "MiddlewareRunner (re-dispatch)"
-          : "MiddlewareRunner";
-        if (caseId) {
-          trackRender(caseId, name);
-        }
-        useLayoutEffect(flushLog);
-        return children;
-      };
-
       const dispatchTracked = (caseId, Target, props) => {
-        return (
-          <MiddlewareRunnerTracker caseId={caseId}>
-            {dispatch(Target, { ...props, caseId })}
-          </MiddlewareRunnerTracker>
-        );
+        return dispatch(Target, { ...props, caseId });
       };
 
       // ── App ─────────────────────────────────────────────────────────────────
@@ -388,6 +379,7 @@
       );
 
       const App = () => {
+        useLayoutEffect(flushLog);
         return (
           <div>
             <h1>Dispatcher Demo</h1>
@@ -434,6 +426,16 @@
                     star content
                   </span>
                 ),
+              })}
+            </CaseSection>
+
+            <CaseSection
+              title="Case 5 — uiAction prop passes through to Button (no infinite loop)"
+              code='dispatch(Button, { label: "Save", uiAction: (v) => {} })'
+            >
+              {dispatchTracked("case5", Button, {
+                label: "Save",
+                uiAction: () => {},
               })}
             </CaseSection>
           </div>

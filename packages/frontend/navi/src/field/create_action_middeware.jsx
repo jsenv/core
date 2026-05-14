@@ -6,12 +6,13 @@ import { useExecuteAction } from "@jsenv/navi/src/action/use_execute_action.js";
 import { useOnRequestAction } from "./use_action_events.js";
 import { UIStateControllerContext } from "./use_ui_state_controller.js";
 
-export const createActionMiddleware = (ActionVariant) => {
+export const createActionMiddleware = (ActionVariant, DispatcherContext) => {
   const ActionMiddleware = (props) => {
+    const Dispatcher = useContext(DispatcherContext);
     if (props.action || props.uiAction) {
       return <ActionVariant {...props} />;
     }
-    return null;
+    return <Dispatcher {...props} />;
   };
   return ActionMiddleware;
 };
@@ -20,6 +21,8 @@ export const useActionProps = (props) => {
   const {
     ref,
     action,
+    // eslint-disable-next-line no-unused-vars
+    uiAction,
     actionDebounce,
     actionAfterChange,
     onCancel,
@@ -61,7 +64,5 @@ export const useActionProps = (props) => {
     "onnavi_action_abort": onActionAborted,
     "onnavi_action_error": onActionError,
     "onnavi_action_end": onActionEnd,
-    "action": undefined,
-    "uiAction": undefined,
   };
 };

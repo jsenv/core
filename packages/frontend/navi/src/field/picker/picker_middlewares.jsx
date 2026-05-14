@@ -18,20 +18,23 @@ import {
 } from "./show_method/picker_show_method.jsx";
 
 const PickerPresetMiddleware = (props) => {
+  const Dispatcher = useContext(PickerDispatcherContext);
   if (props.type === "hour") {
     return <PickerHour {...props} />;
   }
-  return null;
+  return <Dispatcher {...props} />;
 };
 
 const PickerPopupMiddleware = (props) => {
+  const Dispatcher = useContext(PickerDispatcherContext);
   if (props.children !== undefined) {
     return <PickerPopup {...props} />;
   }
-  return null;
+  return <Dispatcher {...props} />;
 };
 
 const PickerShowMethodMiddleware = (props) => {
+  const Dispatcher = useContext(PickerDispatcherContext);
   if (props.type === "color") {
     return <PickerColor {...props} />;
   }
@@ -50,7 +53,7 @@ const PickerShowMethodMiddleware = (props) => {
   if (props.type === "datetime") {
     return <PickerDatetime {...props} />;
   }
-  return null;
+  return <Dispatcher {...props} />;
 };
 
 const PickerAction = (props) => {
@@ -83,7 +86,10 @@ const PickerAction = (props) => {
     />
   );
 };
-const PickerActionMiddleware = createActionMiddleware(PickerAction);
+const PickerActionMiddleware = createActionMiddleware(
+  PickerAction,
+  PickerDispatcherContext,
+);
 
 export const pickerMiddlewares = [
   PickerPresetMiddleware,
