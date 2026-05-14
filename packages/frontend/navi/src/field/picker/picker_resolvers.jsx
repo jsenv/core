@@ -1,9 +1,6 @@
 import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
-import {
-  createActionResolver,
-  useActionProps,
-} from "../create_action_resolver.jsx";
-import { dispatchRequestAction } from "../validation/custom_constraint_validation.js";
+import { createActionResolver } from "../create_action_resolver.jsx";
+import { PickerAction } from "./picker_action.jsx";
 import { PickerPopup } from "./picker_popup/picker_popup.jsx";
 import { PickerHour } from "./preset/picker_hour.jsx";
 import {
@@ -54,42 +51,6 @@ const PickerShowMethodResolver = (props) => {
   return <Next {...props} />;
 };
 
-const PickerAction = (props) => {
-  const Next = useNextResolver();
-  const actionProps = useActionProps(props);
-
-  return (
-    <Next
-      {...actionProps}
-      onMouseDown={(e) => {
-        props.onMouseDown?.(e);
-        if (e.button !== 0) {
-          return;
-        }
-        if (e.defaultPrevented) {
-          return;
-        }
-        dispatchRequestAction(e.currentTarget, {
-          event: e,
-          requester: e.currentTarget,
-        });
-      }}
-      onClick={(e) => {
-        props.onClick(e);
-        if (e.button !== 0) {
-          return;
-        }
-        if (e.defaultPrevented) {
-          return;
-        }
-        dispatchRequestAction(e.currentTarget, {
-          event: e,
-          requester: e.currentTarget,
-        });
-      }}
-    />
-  );
-};
 const PickerActionResolver = createActionResolver(PickerAction);
 
 export const pickerResolvers = [

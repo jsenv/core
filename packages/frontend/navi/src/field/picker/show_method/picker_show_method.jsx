@@ -15,8 +15,9 @@ const getPropsToShowPicker = (props) => {
         // happens when popover/dialog opens for example
         return;
       }
+      // don't try on mousedown it would not work
       // e.preventDefault();
-      callInputShowPicker(e);
+      // callInputShowPicker(e);
     },
     // we also listen click as it's what we receive from <label>
     onClick: (e) => {
