@@ -158,6 +158,7 @@ export const onRequestAction = (
   const isValid = checkConstraintsAndReport(DEFAULT_CONSTRAINT_SET, {
     event,
     requester,
+    fromRequestAction: true,
     debugAction,
   });
   if (!isValid) {
