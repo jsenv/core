@@ -1,3 +1,4 @@
+import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { CONSTRAINT_ATTRIBUTE_SET } from "../constraint_attribute_set.js";
 
 export const SAME_AS_CONSTRAINT = {
@@ -29,12 +30,12 @@ export const SAME_AS_CONSTRAINT = {
     }
     const type = field.type;
     if (type === "password") {
-      return `Ce mot de passe doit être identique au précédent.`;
+      return naviI18n("constraint.same_as.password");
     }
     if (type === "email") {
-      return `Cette adresse e-mail doit être identique a la précédente.`;
+      return naviI18n("constraint.same_as.email");
     }
-    return `Ce champ doit être identique au précédent.`;
+    return naviI18n("constraint.same_as.default");
   },
 };
 CONSTRAINT_ATTRIBUTE_SET.add("data-same-as");

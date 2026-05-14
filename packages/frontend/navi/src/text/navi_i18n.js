@@ -139,6 +139,38 @@ naviI18n.addAll({
     fr: "[field] est désactivé.",
     en: "[field] is disabled.",
   },
+  "constraint.readonly.busy": {
+    fr: "Cet élément est occupé.",
+    en: "This element is busy.",
+  },
+  "constraint.readonly.button": {
+    fr: "Cette action n'est pas disponible pour l'instant.",
+    en: "This action is not available right now.",
+  },
+  "constraint.readonly.default": {
+    fr: "Cet élément est en lecture seule et ne peut pas être modifié.",
+    en: "This element is read-only and cannot be modified.",
+  },
+  "constraint.one_of.no_match": {
+    fr: "Aucune suggestion ne correspond à votre saisie.",
+    en: "No suggestion matches your input.",
+  },
+  "constraint.one_of.default": {
+    fr: "Veuillez choisir une valeur parmi les suggestions.",
+    en: "Please choose a value from the suggestions.",
+  },
+  "constraint.same_as.password": {
+    fr: "Ce mot de passe doit être identique au précédent.",
+    en: "This password must match the previous one.",
+  },
+  "constraint.same_as.email": {
+    fr: "Cette adresse e-mail doit être identique a la précédente.",
+    en: "This email address must match the previous one.",
+  },
+  "constraint.same_as.default": {
+    fr: "Ce champ doit être identique au précédent.",
+    en: "This field must match the previous one.",
+  },
   "constraint.required.checkbox": {
     fr: "Veuillez cocher cette case.",
     en: "Please check this box.",

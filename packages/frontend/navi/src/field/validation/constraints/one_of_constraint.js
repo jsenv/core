@@ -1,3 +1,4 @@
+import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { CONSTRAINT_ATTRIBUTE_SET } from "../constraint_attribute_set.js";
 
 export const ONE_OF_CONSTRAINT = {
@@ -33,11 +34,9 @@ export const ONE_OF_CONSTRAINT = {
     const message = field.getAttribute("data-one-of-message");
     const noMatchMessage = field.getAttribute("data-one-of-no-match-message");
     if (isNoMatch) {
-      return (
-        noMatchMessage || `Aucune suggestion ne correspond à votre saisie.`
-      );
+      return noMatchMessage || naviI18n("constraint.one_of.no_match");
     }
-    return message || `Veuillez choisir une valeur parmi les suggestions.`;
+    return message || naviI18n("constraint.one_of.default");
   },
 };
 CONSTRAINT_ATTRIBUTE_SET.add("data-one-of");

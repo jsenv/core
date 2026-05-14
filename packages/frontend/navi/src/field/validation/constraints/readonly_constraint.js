@@ -1,3 +1,4 @@
+import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { CONSTRAINT_ATTRIBUTE_SET } from "../constraint_attribute_set.js";
 
 export const READONLY_CONSTRAINT = {
@@ -22,15 +23,15 @@ export const READONLY_CONSTRAINT = {
     if (isBusy) {
       return {
         target: field,
-        message: `Cet élément est occupé.`,
+        message: naviI18n("constraint.readonly.busy"),
         status: "info",
       };
     }
     return {
       target: field,
       message: isButton
-        ? `Cet action n'est pas disponible pour l'instant.`
-        : `Cet élément est en lecture seule et ne peut pas être modifié.`,
+        ? naviI18n("constraint.readonly.button")
+        : naviI18n("constraint.readonly.default"),
       status: "info",
     };
   },
