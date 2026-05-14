@@ -11,15 +11,35 @@ const MIN_CONTENT_VISIBILITY_RATIO = 0.6;
 /**
  * Tracks how much of an element is visible within its scrollable parent and within the
  * document viewport. Calls update() on initialization and whenever visibility changes
- * (scroll, resize, intersection changes).
+ * (scroll, resize, intersection changes, ancestor open/close).
  *
- * The update callback receives a visibleRect object with:
- * - left, top, right, bottom, width, height: the visible portion of the element,
- *   clipped to its scroll container's bounds and expressed in overlay coordinates
- * - visibilityRatio: fraction of the element's area that is truly visible on screen (0–1).
- *   For document scroll containers this is the viewport-clipped fraction.
- *   For custom containers this is the fraction clipped by both the container AND the viewport
- *   (so an element scrolled out of its container correctly reports 0, not 1).
+ * @param {HTMLElement} element - The element to observe.
+ * @param {function(visibleRect: VisibleRect, info: VisibleRectInfo): void} update - Called on every visibility change.
+ *
+ * @typedef {Object} VisibleRect
+ * @property {number} left   - Left edge of the visible area, document-relative (px).
+ * @property {number} top    - Top edge of the visible area, document-relative (px).
+ * @property {number} right  - Right edge of the visible area, document-relative (px).
+ * @property {number} bottom - Bottom edge of the visible area, document-relative (px).
+ * @property {number} width  - Width of the visible area (px).
+ * @property {number} height - Height of the visible area (px).
+ * @property {number} visibilityRatio - Fraction of the element's area truly visible on screen (0–1).
+ *   For document scroll containers: viewport-clipped fraction.
+ *   For custom containers: fraction clipped by both the container and the viewport.
+ *   Is 0 when ancestorClosed is true.
+ *
+ * @typedef {Object} VisibleRectInfo
+ * @property {Event}   event          - The DOM event (or CustomEvent) that triggered the check.
+ * @property {number}  width          - Raw getBoundingClientRect() width of the element.
+ * @property {number}  height         - Raw getBoundingClientRect() height of the element.
+ * @property {boolean} ancestorClosed - True when a popover, dialog, or details ancestor is
+ *   currently closed so the element is not rendered. All visibleRect values are 0 in that case.
+ *   update() is called immediately on ancestor close and again (with false) on reopen.
+ *
+ * update() is called:
+ *   - Once synchronously on initialization (event.type = "initialization")
+ *   - On document/container scroll, window resize, element resize, intersection changes, touch move
+ *   - Immediately when an ancestor popover/dialog/details opens or closes
  *
  * A bit like https://tetherjs.dev/ but different
  */
@@ -30,6 +50,7 @@ export const visibleRectEffect = (element, update) => {
     scrollContainer === document.documentElement;
   let lastMeasuredWidth;
   let lastMeasuredHeight;
+  let ancestorClosedCount = 0;
   const check = (event) => {
     if (DEBUG) {
       console.group(`visibleRect.check("${event.type}")`);
@@ -176,6 +197,7 @@ export const visibleRectEffect = (element, update) => {
       event,
       width,
       height,
+      ancestorClosed: ancestorClosedCount > 0,
     });
   };
 
@@ -325,6 +347,59 @@ export const visibleRectEffect = (element, update) => {
           passive: true,
         });
       });
+    }
+    on_ancestor_toggle: {
+      let current = element.parentElement;
+      while (current) {
+        if (
+          current.hasAttribute("popover") ||
+          current.tagName === "DIALOG" ||
+          current.tagName === "DETAILS"
+        ) {
+          const ancestor = current;
+          const isInitiallyClosed =
+            ancestor.tagName === "DIALOG" || ancestor.tagName === "DETAILS"
+              ? !ancestor.open
+              : !ancestor.matches(":popover-open");
+          if (isInitiallyClosed) {
+            ancestorClosedCount++;
+          }
+          // eslint-disable-next-line no-loop-func
+          const onToggle = (e) => {
+            const isClosed =
+              ancestor.tagName === "DETAILS"
+                ? !ancestor.open
+                : e.newState === "closed";
+            if (isClosed) {
+              ancestorClosedCount++;
+              update(
+                {
+                  left: 0,
+                  top: 0,
+                  right: 0,
+                  bottom: 0,
+                  width: 0,
+                  height: 0,
+                  visibilityRatio: 0,
+                },
+                { event: e, width: 0, height: 0, ancestorClosed: true },
+              );
+            } else {
+              if (ancestorClosedCount > 0) {
+                ancestorClosedCount--;
+              }
+              if (ancestorClosedCount === 0) {
+                check(e);
+              }
+            }
+          };
+          ancestor.addEventListener("toggle", onToggle);
+          addTeardown(() => {
+            ancestor.removeEventListener("toggle", onToggle);
+          });
+        }
+        current = current.parentElement;
+      }
     }
   }
 

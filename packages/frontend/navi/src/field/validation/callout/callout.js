@@ -211,10 +211,13 @@ export const openCallout = (
     closeOnClickOutside = status === "info",
     openingEvent,
     showErrorStack,
-    debug,
+    debug = () => {},
   } = {},
 ) => {
   import.meta.css = css;
+  if (debug === true) {
+    debug = (e, ...args) => console.debug(`"${e.type}" -> `, ...args);
+  }
 
   const callout = {
     opened: true,
@@ -227,21 +230,17 @@ export const openCallout = (
     element: null,
   };
 
-  if (debug) {
-    debug(
-      openingEvent,
-      `open callout on ${getElementSignature(anchorElement)} (status=${status})`,
-    );
-  }
+  debug(
+    openingEvent,
+    `open callout on ${getElementSignature(anchorElement)} (status=${status})`,
+  );
 
   const [teardown, addTeardown] = createPubSub(true);
   const requestClose = (event, reason) => {
     if (!callout.opened) {
       return;
     }
-    if (debug) {
-      debug(event, `callout close (reason: ${reason})`);
-    }
+    debug(event, `callout close (reason: ${reason})`);
     callout.opened = false;
     teardown(reason);
   };
@@ -352,12 +351,10 @@ export const openCallout = (
       openingEvent &&
       findEvent(openingEvent, (e) => e.type === "mousedown")
     ) {
-      if (debug) {
-        debug(
-          openingEvent,
-          "deferring click-outside listener registration to avoid immediate close",
-        );
-      }
+      debug(
+        openingEvent,
+        "deferring click-outside listener registration to avoid immediate close",
+      );
       // The callout was opened during a mousedown — wait for the corresponding
       // mouseup before registering the click-outside listener, otherwise the
       // upcoming click event from the same gesture would immediately close it.
@@ -425,7 +422,9 @@ export const openCallout = (
     }
   }
   const calloutContainer =
-    anchorElement === document.body ? document.body : anchorElement.parentNode;
+    anchorElement && anchorElement !== document.body
+      ? anchorElement.parentNode
+      : document.body;
   calloutContainer.appendChild(calloutElement);
   calloutElement.showPopover();
   addTeardown(() => {
@@ -543,7 +542,9 @@ export const openCallout = (
           documentScrollTopAtOpen,
         });
       } else {
-        positioner = stickCalloutToAnchor(calloutElement, anchorElement);
+        positioner = stickCalloutToAnchor(calloutElement, anchorElement, {
+          debug,
+        });
       }
       strategy = newStrategy;
     };
@@ -722,7 +723,7 @@ const centerCalloutInViewport = (
  * @param {HTMLElement} anchorElement - The anchor element to stick to
  * @returns {Object} - Object with update and stop functions
  */
-const stickCalloutToAnchor = (calloutElement, anchorElement) => {
+const stickCalloutToAnchor = (calloutElement, anchorElement, { debug }) => {
   // Get references to callout parts
   const calloutBoxElement = calloutElement.querySelector(".navi_callout_box");
   const calloutFrameElement = calloutElement.querySelector(
@@ -740,7 +741,25 @@ const stickCalloutToAnchor = (calloutElement, anchorElement) => {
 
   const anchorVisibleRectEffect = visibleRectEffect(
     anchorElement,
-    ({ left: anchorLeft, right: anchorRight, visibilityRatio }) => {
+    (
+      { left: anchorLeft, right: anchorRight, visibilityRatio },
+      { event, ancestorClosed },
+    ) => {
+      if (ancestorClosed) {
+        if (calloutElement.matches(":popover-open")) {
+          if (debug) {
+            debug(
+              event,
+              "hiding callout because an ancestor popover/dialog/details is closed",
+            );
+          }
+          calloutElement.hidePopover();
+        }
+        return;
+      }
+      if (!calloutElement.matches(":popover-open")) {
+        calloutElement.showPopover();
+      }
       const calloutElementClone =
         cloneCalloutToMeasureNaturalSize(calloutElement);
       const {
@@ -751,7 +770,7 @@ const stickCalloutToAnchor = (calloutElement, anchorElement) => {
         height: calloutHeight,
         spaceAbove,
         spaceBelow,
-      } = pickPositionRelativeTo(calloutElement, anchorElement, {
+      } = pickPositionRelativeTo(calloutElementClone, anchorElement, {
         alignToViewportEdgeWhenAnchorNearEdge: 20,
         minLeft: 1,
         positionX: "center",
@@ -760,9 +779,17 @@ const stickCalloutToAnchor = (calloutElement, anchorElement) => {
         positionYFixed: anchorElement.getAttribute(
           "data-callout-position-fixed",
         ),
+        viewportSpacing: anchorElement.hasAttribute(
+          "data-callout-viewport-spacing",
+        )
+          ? Number(anchorElement.getAttribute("data-callout-viewport-spacing"))
+          : 0,
       });
       // data-position-y-current is written to the clone by pickPositionRelativeTo,
       // copy it back to the real element so stickiness works on next call
+      const previousPositionY = calloutElement.getAttribute(
+        "data-position-y-current",
+      );
       const positionYCurrent = calloutElementClone.getAttribute(
         "data-position-y-current",
       );
@@ -775,6 +802,13 @@ const stickCalloutToAnchor = (calloutElement, anchorElement) => {
         calloutElement.removeAttribute("data-position-y-current");
       }
       calloutElementClone.remove();
+      if (debug && positionY !== previousPositionY) {
+        const anchorRect = anchorElement.getBoundingClientRect();
+        debug(
+          event,
+          `callout position changed: ${previousPositionY ?? "(none)"} -> ${positionY} (spaceAbove: ${spaceAbove.toFixed(0)}px, spaceBelow: ${spaceBelow.toFixed(0)}px, anchorTop: ${anchorRect.top.toFixed(0)}px, anchorBottom: ${anchorRect.bottom.toFixed(0)}px)`,
+        );
+      }
 
       // Calculate arrow position to point at anchorElement element
       let arrowLeftPosOnCallout;
@@ -876,7 +910,9 @@ const stickCalloutToAnchor = (calloutElement, anchorElement) => {
   const calloutSizeChangeObserver = observeCalloutSizeChange(
     calloutMessageElement,
     (width, height) => {
-      anchorVisibleRectEffect.check(`callout_size_change (${width}x${height})`);
+      anchorVisibleRectEffect.check(
+        new CustomEvent(`callout_size_change (${width}x${height})`),
+      );
     },
   );
   anchorVisibleRectEffect.onBeforeAutoCheck(() => {

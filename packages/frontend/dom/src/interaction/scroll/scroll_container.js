@@ -20,6 +20,9 @@ export const getScrollContainer = (arg, { includeHidden } = {}) => {
     }
     return null;
   }
+  if (element.hasAttribute("popover") && element.matches(":popover-open")) {
+    return getScrollingElement(element.ownerDocument);
+  }
   const position = getStyle(element, "position");
   if (position === "fixed") {
     return getScrollingElement(element.ownerDocument);
