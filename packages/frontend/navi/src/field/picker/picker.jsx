@@ -110,7 +110,7 @@ const css = /* css */ `
       --picker-padding-bottom,
       var(--picker-padding-y, var(--picker-padding-y-default))
     );
-    --x-picker-color: var(--picker-color);
+    --x-picker-color: var(--picker-placeholder-color);
 
     position: relative;
     display: inline-flex;
@@ -123,7 +123,6 @@ const css = /* css */ `
     flex-direction: column;
     justify-content: center;
     color: var(--x-picker-color);
-    color: var(--picker-placeholder-color);
     font-size: var(--picker-font-size);
     text-align: inherit;
     text-overflow: ellipsis;
