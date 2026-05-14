@@ -180,15 +180,13 @@
         ],
         case3: [
           { name: "WrapperResolver", indent: "" },
-          { name: "WrapperResolver (re-render)", indent: "  └─ " },
-          { name: "IconResolver (re-render)", indent: "      └─ " },
-          { name: "Button", indent: "          └─ " },
+          { name: "IconResolver (re-render)", indent: "  └─ " },
+          { name: "Button", indent: "      └─ " },
         ],
         case4: [
           { name: "WrapperResolver", indent: "" },
-          { name: "WrapperResolver (re-render)", indent: "  └─ " },
-          { name: "IconResolver (re-render)", indent: "      └─ " },
-          { name: "Button", indent: "          └─ " },
+          { name: "IconResolver (re-render)", indent: "  └─ " },
+          { name: "Button", indent: "      └─ " },
         ],
         case5: [
           { name: "WrapperResolver", indent: "" },
@@ -199,7 +197,6 @@
 
       const COLORS = {
         "WrapperResolver": "#818cf8",
-        "WrapperResolver (re-render)": "#a5b4fc",
         "IconResolver": "#fb923c",
         "IconResolver (re-render)": "#fdba74",
         "Button": "#34d399",
@@ -333,7 +330,8 @@
 
       const IconResolver = (props) => {
         const Next = useNextResolver();
-        const { caseId, icon, ...rest } = props;
+        const { icon, ...rest } = props;
+        const { caseId } = props;
         const isReRender = props["data-redispatch"];
         const trackName = isReRender
           ? "IconResolver (re-render)"
