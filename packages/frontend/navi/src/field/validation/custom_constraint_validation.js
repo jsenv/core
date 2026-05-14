@@ -87,6 +87,10 @@ import {
 import { listenInputValue } from "./input_value_listener.js";
 
 export const NAVI_VALIDITY_CHANGE_CUSTOM_EVENT = "navi_validity_change";
+const POINTER_INTERACTION_CONSTRAINTS = [
+  DISABLED_CONSTRAINT,
+  READONLY_CONSTRAINT,
+];
 
 export const onRequestPointerInteraction = (pointerEvent) => {
   if (pointerEvent.button !== 0) {
@@ -95,15 +99,20 @@ export const onRequestPointerInteraction = (pointerEvent) => {
   if (pointerEvent.defaultPrevented) {
     return false;
   }
-  const target = pointerEvent.currentTarget || pointerEvent.target;
-  return checkConstraintsAndReport(target, POINTER_INTERACTION_CONSTRAINTS, {
+  const requester = pointerEvent.currentTarget || pointerEvent.target;
+  const isValid = checkConstraintsAndReport(POINTER_INTERACTION_CONSTRAINTS, {
     event: pointerEvent,
+    requester,
   });
+  if (!isValid) {
+    dispatchCustomEvent(requester, "navi_pointer_interaction_prevented", {
+      event: pointerEvent,
+      requester,
+    });
+    return false;
+  }
+  return true;
 };
-const POINTER_INTERACTION_CONSTRAINTS = [
-  DISABLED_CONSTRAINT,
-  READONLY_CONSTRAINT,
-];
 
 export const onRequestAction = (
   action,
@@ -126,23 +135,9 @@ export const onRequestAction = (
   if (!event || !(event instanceof Event)) {
     throw new TypeError("Second argument of onRequestAction must be an Event");
   }
-
   if (!actionOrigin) {
     console.warn("requestAction: actionOrigin is required");
   }
-  let elementToValidate = requester;
-  if (!elementToValidate.__validationInterface__) {
-    const fieldElement = findFieldElement(requester);
-    if (fieldElement) {
-      elementToValidate = fieldElement;
-    }
-  }
-
-  let validationInterface = elementToValidate.__validationInterface__;
-  if (!validationInterface) {
-    validationInterface = installCustomConstraintValidation(elementToValidate);
-  }
-
   const customEventDetail = {
     action,
     actionOrigin,
@@ -151,7 +146,6 @@ export const onRequestAction = (
     requester,
     meta,
   };
-
   const initiatorTarget = event.detail?.event?.target;
   const requesterInfo =
     requester && requester !== initiatorTarget
@@ -161,88 +155,16 @@ export const onRequestAction = (
     event,
     `action requested by ${requesterInfo} (event: "${event?.type}")`,
   );
-
-  // Determine what needs to be validated and how to handle the result
-  const isForm = elementToValidate.tagName === "FORM";
-  const formToValidate = isForm ? elementToValidate : elementToValidate.form;
-
-  let isValid = false;
-  let elementForConfirmation = elementToValidate;
-  let elementForDispatch = elementToValidate;
-  let failedValidationInterface;
-
-  if (formToValidate) {
-    // Form validation case
-    if (validationInProgressWeakSet.has(formToValidate)) {
-      debugAction(
-        event,
-        `validation already in progress for ${formToValidate?.id || formToValidate?.tagName}`,
-      );
-      return false;
-    }
-    validationInProgressWeakSet.add(formToValidate);
-    setTimeout(() => {
-      validationInProgressWeakSet.delete(formToValidate);
-    });
-
-    // Validate all form elements
-    const formElements = formToValidate.elements;
-    isValid = true; // Assume valid until proven otherwise
-    for (const formElement of formElements) {
-      const elementValidationInterface = formElement.__validationInterface__;
-      if (!elementValidationInterface) {
-        continue;
-      }
-
-      const elementIsValid = elementValidationInterface.checkValidity({
-        event,
-        fromRequestAction: true,
-        skipReadonly:
-          formElement.tagName === "BUTTON" && formElement !== requester,
-        debugAction,
-      });
-      if (!elementIsValid) {
-        failedValidationInterface = elementValidationInterface;
-        isValid = false;
-        break;
-      }
-    }
-    elementForConfirmation = formToValidate;
-    elementForDispatch = target;
-  } else {
-    // Single element validation case
-    isValid = validationInterface.checkValidity({
-      event,
-      fromRequestAction: true,
-      debugAction,
-    });
-    if (!isValid) {
-      failedValidationInterface = validationInterface;
-    }
-    elementForConfirmation = target;
-    elementForDispatch = target;
-  }
-
-  // If validation failed, dispatch actionprevented and return
+  const isValid = checkConstraintsAndReport(DEFAULT_CONSTRAINT_SET, {
+    requester,
+    event,
+    debugAction,
+  });
   if (!isValid) {
-    debugAction(
-      event,
-      `validation failed for "${getFailedConstraintName(failedValidationInterface)}" -> dispatch navi_action_prevented`,
-    );
-    dispatchCustomEvent(
-      elementForDispatch,
-      "navi_action_prevented",
-      customEventDetail,
-    );
-    failedValidationInterface.reportValidity({
-      event,
-      debugAction,
-      requester,
-    });
+    dispatchCustomEvent(target, "navi_action_prevented", customEventDetail);
     return false;
   }
-
-  // Validation passed, check for confirmation
+  const elementForConfirmation = requester.form || target;
   confirmMessage =
     confirmMessage ||
     elementForConfirmation.getAttribute("data-confirm-message");
@@ -253,22 +175,12 @@ export const onRequestAction = (
         event,
         `action cancelled by user -> dispatch navi_action_prevented`,
       );
-      dispatchCustomEvent(
-        elementForDispatch,
-        "navi_action_prevented",
-        customEventDetail,
-      );
+      dispatchCustomEvent(target, "navi_action_prevented", customEventDetail);
       return false;
     }
   }
-
-  debugAction(event, `element is valid -> dispatch navi_action`);
-  dispatchCustomEvent(
-    elementForDispatch,
-    "navi_action_ready",
-    customEventDetail,
-  );
-
+  debugAction(event, `element is valid -> dispatch navi_action_ready`);
+  dispatchCustomEvent(target, "navi_action_ready", customEventDetail);
   return true;
 };
 const STANDARD_CONSTRAINT_SET = new Set([
@@ -302,40 +214,76 @@ const DEFAULT_CONSTRAINT_SET = new Set([
 
 const validationInProgressWeakSet = new WeakSet();
 const checkConstraintsAndReport = (
-  element,
   constraints,
-  { event, requester = element } = {},
+  { event, requester, debugAction = () => {} } = {},
 ) => {
-  for (const constraint of constraints) {
-    const result = constraint.check(element, {});
-    if (!result) {
-      continue;
+  let elementToValidate = requester;
+  if (!elementToValidate.__validationInterface__) {
+    const fieldElement = findFieldElement(requester);
+    if (fieldElement) {
+      elementToValidate = fieldElement;
     }
-    if (result.silent) {
+  }
+  let validationInterface = elementToValidate.__validationInterface__;
+  if (!validationInterface) {
+    validationInterface = installCustomConstraintValidation(elementToValidate);
+  }
+
+  // Full validation
+  const isForm = elementToValidate.tagName === "FORM";
+  const formToValidate = isForm ? elementToValidate : elementToValidate.form;
+  let isValid = true;
+  let failedValidationInterface;
+
+  if (formToValidate) {
+    if (validationInProgressWeakSet.has(formToValidate)) {
+      debugAction(
+        event,
+        `validation already in progress for ${formToValidate?.id || formToValidate?.tagName}`,
+      );
       return false;
     }
-    const base = result.target || element;
-    const anchorElement = (() => {
-      const renderedBy = base.getAttribute("data-rendered-by");
-      if (renderedBy) {
-        const renderedByElement = base.closest(renderedBy);
-        if (renderedByElement) {
-          return renderedByElement;
-        }
-      }
-      return base;
-    })();
-    const { message } = getConstraintMessage(
-      element,
-      constraint,
-      result.message,
-      { requester },
-    );
-    openCallout(message, {
-      anchorElement,
-      status: result.status,
-      openingEvent: event,
+    validationInProgressWeakSet.add(formToValidate);
+    setTimeout(() => {
+      validationInProgressWeakSet.delete(formToValidate);
     });
+    for (const formElement of formToValidate.elements) {
+      const elementValidationInterface = formElement.__validationInterface__;
+      if (!elementValidationInterface) {
+        continue;
+      }
+      const elementIsValid = elementValidationInterface.checkValidity({
+        constraints,
+        event,
+        fromRequestAction: true,
+        skipReadonly:
+          formElement.tagName === "BUTTON" && formElement !== requester,
+        debugAction,
+      });
+      if (!elementIsValid) {
+        failedValidationInterface = elementValidationInterface;
+        isValid = false;
+        break;
+      }
+    }
+  } else {
+    isValid = validationInterface.checkValidity({
+      constraints,
+      event,
+      fromRequestAction: true,
+      debugAction,
+    });
+    if (!isValid) {
+      failedValidationInterface = validationInterface;
+    }
+  }
+
+  if (!isValid) {
+    debugAction(
+      event,
+      `validation failed for "${getFailedConstraintName(failedValidationInterface)}"`,
+    );
+    failedValidationInterface.reportValidity({ event, debugAction, requester });
     return false;
   }
   return true;
@@ -371,7 +319,6 @@ export const installCustomConstraintValidation = (
   elementReceivingValidationMessage = element,
 ) => {
   const validationInterface = {
-    element,
     uninstall: undefined,
     registerConstraint: undefined,
     addCustomMessage: undefined,
@@ -416,7 +363,7 @@ export const installCustomConstraintValidation = (
     return false;
   };
 
-  const constraintSet = new Set(DEFAULT_CONSTRAINT_SET);
+  const dynamicConstraintSet = new Set();
 
   register_constraint: {
     validationInterface.registerConstraint = (constraint) => {
@@ -426,9 +373,9 @@ export const installCustomConstraintValidation = (
           check: constraint,
         };
       }
-      constraintSet.add(constraint);
+      dynamicConstraintSet.add(constraint);
       return () => {
-        constraintSet.delete(constraint);
+        dynamicConstraintSet.delete(constraint);
       };
     };
   }
@@ -459,11 +406,18 @@ export const installCustomConstraintValidation = (
   };
   addTeardown(resetValidity);
 
-  const checkValidity = ({ event, fromRequestAction, skipReadonly } = {}) => {
+  const checkValidity = ({
+    constraints,
+    event,
+    fromRequestAction,
+    skipReadonly,
+  } = {}) => {
     let newConstraintValidityState = { valid: true };
-
+    if (fromRequestAction) {
+      constraints = new Set([...constraints, ...dynamicConstraintSet]);
+    }
     resetValidity({ fromRequestAction });
-    for (const constraint of constraintSet) {
+    for (const constraint of constraints) {
       const fieldForConstraint = element;
       const constraintCleanupSet = new Set();
       const registerChange = (register) => {
@@ -650,7 +604,7 @@ export const installCustomConstraintValidation = (
 
   const customMessageMap = new Map();
   custom_message: {
-    constraintSet.add({
+    dynamicConstraintSet.add({
       name: "custom_message",
       check: () => {
         for (const [, { message, status }] of customMessageMap) {
