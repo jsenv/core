@@ -47,15 +47,15 @@ export const createUICallback = ({ event, uiAction }) => {
         uiAction: (value, e) => {
           return uiAction(value, e);
         },
-        action: () => {
-          console.warn(
-            "This callback does not support being used as an action. Use it on the uiAction prop instead.",
+        action: (value, actionSecondArg) => {
+          console.info(
+            `${uiAction.name} got called by action. It works but is designed to be called by uiAction`,
           );
-          return false;
+          return uiAction(value, actionSecondArg.event);
         },
         other: () => {
           console.warn(
-            "This callback was called with unexpected arguments. Make sure it is used on a DOM event prop or uiAction.",
+            `${uiAction.name} unsupported call attempt. It is designed to be called by uiAction.`,
           );
           return false;
         },
@@ -67,22 +67,22 @@ export const createUICallback = ({ event, uiAction }) => {
       return routeArgs(args, {
         event: () => {
           console.warn(
-            "This callback expects a value and must be used on the uiAction prop, not a DOM event prop like onClick.",
+            `${uiAction.name} unsupported call attempt (by DOM event). It is designed to be called by uiAction.`,
           );
           return false;
         },
         uiAction: (value, e) => {
           return uiAction(value, e);
         },
-        action: () => {
-          console.warn(
-            "This callback does not support being used as an action. Use it on the uiAction prop instead.",
+        action: (value, actionSecondArg) => {
+          console.info(
+            `${uiAction.name} got called by action. It works but is designed to be called by uiAction`,
           );
-          return false;
+          return uiAction(value, actionSecondArg.event);
         },
         other: () => {
           console.warn(
-            "This callback was called with unexpected arguments. Make sure it is used on the uiAction prop.",
+            `${uiAction.name} unsupported call attempt. It is designed to be called by uiAction.`,
           );
           return false;
         },
@@ -96,20 +96,20 @@ export const createUICallback = ({ event, uiAction }) => {
         return event(e);
       },
       uiAction: (value, e) => {
-        console.warn(
-          "This callback is intended for DOM event props (onClick, onInput, ...). When used on uiAction the value is ignored.",
+        console.info(
+          `${event.name} got called by uiAction. It works but is designed to be called by DOM`,
         );
         return event(e);
       },
       action: (value, secondArg) => {
-        console.warn(
-          "This callback is intended for DOM event props (onClick, onInput, ...) and does not support being used as an action.",
+        console.info(
+          `${event.name} got called by action. It works but is designed to be called by DOM`,
         );
         return event(secondArg.event);
       },
       other: () => {
         console.warn(
-          "This callback was called with unexpected arguments. Make sure it is used on a DOM event prop like onClick or onInput.",
+          `${event.name} unsupported call attempt. It is designed to be called by DOM.`,
         );
         return false;
       },
