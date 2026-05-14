@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" href="data:," />
-    <title>Dispatcher Nested Demo</title>
+    <title>Resolver Nested Demo</title>
     <style>
       * {
         box-sizing: border-box;
@@ -135,90 +135,94 @@
     <div id="app"></div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { createDispatcher, useDispatcher } from "../dispatcher.jsx";
+      import {
+        createComponentResolver,
+        useNextResolver,
+      } from "../resolver.jsx";
 
-      // ── Dispatcher A — augments with icon and wrapper ────────────────────────
-      // Middlewares for dispatcher A use useDispatcher() and get A's dispatcher.
-      const WrapperMiddlewareA = (props) => {
-        const Dispatcher = useDispatcher();
+      // ── Resolver A — augments with icon and wrapper ──────────────────────────
+      const WrapperResolverA = (props) => {
+        const Next = useNextResolver();
         if (props.children === undefined) {
-          return <Dispatcher {...props} />;
+          return <Next {...props} />;
         }
         return (
           <div class="cbox cbox-a-wrapper">
-            <div class="cbox-header">A: WrapperMiddleware</div>
+            <div class="cbox-header">A: WrapperResolver</div>
             <div class="cbox-body">
-              <Dispatcher {...props} data-wrapped />
+              <Next {...props} data-wrapped />
             </div>
           </div>
         );
       };
 
-      const IconMiddlewareA = (props) => {
-        const Dispatcher = useDispatcher();
+      const IconResolverA = (props) => {
+        const Next = useNextResolver();
         if (!props.icon) {
-          return <Dispatcher {...props} />;
+          return <Next {...props} />;
         }
         const { icon, ...rest } = props;
         return (
           <div class="cbox cbox-a-icon">
-            <div class="cbox-header">A: IconMiddleware — {icon}</div>
+            <div class="cbox-header">A: IconResolver — {icon}</div>
             <div
               class="cbox-body"
               style="display:flex;align-items:center;gap:8px"
             >
               <span style="font-size:20px">{icon}</span>
-              <Dispatcher {...rest} />
+              <Next {...rest} />
             </div>
           </div>
         );
       };
 
-      const dispatchA = createDispatcher([WrapperMiddlewareA, IconMiddlewareA]);
+      const renderA = createComponentResolver([
+        WrapperResolverA,
+        IconResolverA,
+      ]);
 
-      // ── Dispatcher B — augments with badge and tooltip ───────────────────────
-      // Middlewares for dispatcher B use useDispatcher() and get B's dispatcher.
-      // Note: B's middlewares are completely unaware of A's dispatcher.
-      const BadgeMiddlewareB = (props) => {
-        const Dispatcher = useDispatcher();
+      // ── Resolver B — augments with badge and tooltip ─────────────────────────
+      // B's resolvers are completely unaware of A's resolver chain.
+      const BadgeResolverB = (props) => {
+        const Next = useNextResolver();
         if (!props.badge) {
-          return <Dispatcher {...props} />;
+          return <Next {...props} />;
         }
         const { badge, ...rest } = props;
         return (
           <div class="cbox cbox-b-badge">
-            <div class="cbox-header">B: BadgeMiddleware — badge: {badge}</div>
+            <div class="cbox-header">B: BadgeResolver — badge: {badge}</div>
             <div class="cbox-body">
-              <Dispatcher {...rest} />
+              <Next {...rest} />
             </div>
           </div>
         );
       };
 
-      const TooltipMiddlewareB = (props) => {
-        const Dispatcher = useDispatcher();
+      const TooltipResolverB = (props) => {
+        const Next = useNextResolver();
         if (!props.tooltip) {
-          return <Dispatcher {...props} />;
+          return <Next {...props} />;
         }
         const { tooltip, ...rest } = props;
         return (
           <div class="cbox cbox-b-tooltip">
-            <div class="cbox-header">B: TooltipMiddleware — "{tooltip}"</div>
+            <div class="cbox-header">B: TooltipResolver — "{tooltip}"</div>
             <div class="cbox-body">
-              <Dispatcher {...rest} />
+              <Next {...rest} />
             </div>
           </div>
         );
       };
 
-      const dispatchB = createDispatcher([
-        BadgeMiddlewareB,
-        TooltipMiddlewareB,
+      const renderB = createComponentResolver([
+        BadgeResolverB,
+        TooltipResolverB,
       ]);
 
-      // ── Leaf component (target for both dispatchers) ─────────────────────────
+      // ── Leaf component (target for both resolvers) ───────────────────────────
       const Leaf = (props) => {
-        const dispatcher = useDispatcher();
+        const next = useNextResolver();
         return (
           <div class="cbox cbox-leaf">
             <div class="cbox-header">
@@ -226,8 +230,8 @@
             </div>
             <div class="cbox-body" style="font-size:12px;color:#555">
               <div>
-                useDispatcher() inside Leaf ={" "}
-                <strong>{dispatcher === null ? "null ✓" : "NOT null ✗"}</strong>
+                useNextResolver() inside Leaf ={" "}
+                <strong>{next === null ? "null ✓" : "NOT null ✗"}</strong>
               </div>
               {props["data-wrapped"] ? (
                 <div style="color:#6d28d9">data-wrapped prop received ✓</div>
@@ -237,29 +241,29 @@
         );
       };
 
-      // ── A middleware that contains a B dispatch ──────────────────────────────
-      // This tests that when A's WrapperMiddleware calls dispatchB inside its render,
-      // B's middlewares get B's dispatcher (not A's) — no cross-contamination.
-      const ContainerMiddlewareA = (props) => {
-        const DispatcherA = useDispatcher();
+      // ── A resolver that contains a B render ──────────────────────────────────
+      // Tests that when A's resolver calls renderB inside its render,
+      // B's resolvers get B's Next (not A's) — no cross-contamination.
+      const ContainerResolverA = (props) => {
+        const Next = useNextResolver();
         if (!props.innerBadge && !props.innerTooltip) {
-          return <DispatcherA {...props} />;
+          return <Next {...props} />;
         }
         const { innerBadge, innerTooltip, ...rest } = props;
         return (
           <div class="cbox cbox-a-wrapper">
             <div class="cbox-header">
-              A: ContainerMiddleware (contains B dispatch)
+              A: ContainerResolver (contains B render)
             </div>
             <div class="cbox-body">
               <div style="margin-bottom:8px;font-size:11px;color:#6c7086">
-                outer A dispatcher continues:
+                outer A resolver continues:
               </div>
-              <DispatcherA {...rest} />
+              <Next {...rest} />
               <div style="margin:8px 0 4px;font-size:11px;color:#6c7086">
-                inner B dispatcher (independent):
+                inner B resolver (independent):
               </div>
-              {dispatchB(Leaf, {
+              {renderB(Leaf, {
                 label: "inner-B target",
                 badge: innerBadge,
                 tooltip: innerTooltip,
@@ -269,9 +273,9 @@
         );
       };
 
-      const dispatchAWithContainer = createDispatcher([
-        ContainerMiddlewareA,
-        IconMiddlewareA,
+      const renderAWithContainer = createComponentResolver([
+        ContainerResolverA,
+        IconResolverA,
       ]);
 
       // ── App ──────────────────────────────────────────────────────────────────
@@ -287,36 +291,35 @@
 
       const App = () => (
         <div>
-          <h1>Dispatcher — Nested Dispatch Demo</h1>
+          <h1>Component Resolver — Nested Demo</h1>
           <p class="description">
-            Verifies that nested dispatchers are fully isolated: each
-            dispatcher's middlewares see only their own dispatcher via{" "}
-            <code>useDispatcher()</code>, and the target component (Leaf) always
-            gets <code>null</code> from
-            <code>useDispatcher()</code> — never a stale reference.
+            Verifies that nested resolvers are fully isolated: each resolver's
+            resolvers see only their own Next via <code>useNextResolver()</code>
+            , and the target component (Leaf) always gets <code>null</code> from
+            <code>useNextResolver()</code> — never a stale reference.
           </p>
 
           <CaseSection
-            title="Case 1 — Dispatcher A only"
-            code="dispatchA(Leaf, { label: 'hello', icon: '🌟' })"
+            title="Case 1 — Resolver A only"
+            code="renderA(Leaf, { label: 'hello', icon: '🌟' })"
           >
-            {dispatchA(Leaf, { label: "hello", icon: "🌟" })}
+            {renderA(Leaf, { label: "hello", icon: "🌟" })}
           </CaseSection>
 
           <CaseSection
-            title="Case 2 — Dispatcher B only"
-            code="dispatchB(Leaf, { label: 'world', badge: '3', tooltip: 'hi' })"
+            title="Case 2 — Resolver B only"
+            code="renderB(Leaf, { label: 'world', badge: '3', tooltip: 'hi' })"
           >
-            {dispatchB(Leaf, { label: "world", badge: "3", tooltip: "hi" })}
+            {renderB(Leaf, { label: "world", badge: "3", tooltip: "hi" })}
           </CaseSection>
 
           <CaseSection
-            title="Case 3 — A dispatch wrapping a B dispatch"
-            code="dispatchA(Leaf, { children: dispatchB(Leaf, { badge: '!' }) })"
+            title="Case 3 — A render wrapping a B render"
+            code="renderA(Leaf, { children: renderB(Leaf, { badge: '!' }) })"
           >
-            {dispatchA(Leaf, {
+            {renderA(Leaf, {
               label: "outer-A target",
-              children: dispatchB(Leaf, {
+              children: renderB(Leaf, {
                 label: "inner-B target",
                 badge: "!",
               }),
@@ -324,10 +327,10 @@
           </CaseSection>
 
           <CaseSection
-            title="Case 4 — A middleware that internally calls dispatchB"
-            code="dispatchAWithContainer(Leaf, { icon: '🔥', innerBadge: '99', innerTooltip: 'hello' })"
+            title="Case 4 — A resolver that internally calls renderB"
+            code="renderAWithContainer(Leaf, { icon: '🔥', innerBadge: '99', innerTooltip: 'hello' })"
           >
-            {dispatchAWithContainer(Leaf, {
+            {renderAWithContainer(Leaf, {
               label: "outer-A target",
               icon: "🔥",
               innerBadge: "99",
@@ -335,13 +338,13 @@
             })}
           </CaseSection>
 
-          <CaseSection title="Case 5 — Leaf confirms useDispatcher() === null">
+          <CaseSection title="Case 5 — Leaf confirms useNextResolver() === null">
             <div class="info-box">
               Each Leaf above shows{" "}
-              <strong>useDispatcher() inside Leaf = null ✓</strong>. This
-              confirms the DispatcherContext is reset to null once the chain is
-              exhausted — the target component cannot accidentally re-enter any
-              dispatcher chain.
+              <strong>useNextResolver() inside Leaf = null ✓</strong>. This
+              confirms the NextResolverContext is reset to null once the chain
+              is exhausted — the target component cannot accidentally re-enter
+              any resolver chain.
             </div>
           </CaseSection>
         </div>

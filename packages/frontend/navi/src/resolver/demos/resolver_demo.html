@@ -153,52 +153,55 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useLayoutEffect } from "preact/hooks";
-      import { createComponentResolver, useNext } from "../dispatcher.jsx";
+      import {
+        createComponentResolver,
+        useNextResolver,
+      } from "../resolver.jsx";
 
       // ── Render tracking (per case, plain DOM — never causes re-renders) ─────
       // Each case has its own counters keyed by component name.
       // TREE defines the display order and indent for each case.
       const CASES = ["case1", "case2", "case3", "case4", "case5"];
 
-      // With createComponentResolver, every enhancer is always rendered as a component
-      // in a chain: WrapperEnhancer → (passes through) → IconEnhancer → (passes through) → Button.
-      // An enhancer that "matches" terminates the chain early by not calling Next.
-      // An enhancer that does not match calls <Next {...props} /> to continue.
+      // With createComponentResolver, every resolver is always rendered as a component
+      // in a chain: WrapperResolver → (passes through) → IconResolver → (passes through) → Button.
+      // An resolver that "matches" terminates the chain early by not calling Next.
+      // An resolver that does not match calls <Next {...props} /> to continue.
       const TREES = {
         case1: [
-          { name: "WrapperEnhancer", indent: "" },
-          { name: "IconEnhancer", indent: "  └─ " },
+          { name: "WrapperResolver", indent: "" },
+          { name: "IconResolver", indent: "  └─ " },
           { name: "Button", indent: "      └─ " },
         ],
         case2: [
-          { name: "WrapperEnhancer", indent: "" },
-          { name: "IconEnhancer", indent: "  └─ " },
+          { name: "WrapperResolver", indent: "" },
+          { name: "IconResolver", indent: "  └─ " },
           { name: "Button", indent: "      └─ " },
         ],
         case3: [
-          { name: "WrapperEnhancer", indent: "" },
-          { name: "WrapperEnhancer (re-render)", indent: "  └─ " },
-          { name: "IconEnhancer (re-render)", indent: "      └─ " },
+          { name: "WrapperResolver", indent: "" },
+          { name: "WrapperResolver (re-render)", indent: "  └─ " },
+          { name: "IconResolver (re-render)", indent: "      └─ " },
           { name: "Button", indent: "          └─ " },
         ],
         case4: [
-          { name: "WrapperEnhancer", indent: "" },
-          { name: "WrapperEnhancer (re-render)", indent: "  └─ " },
-          { name: "IconEnhancer (re-render)", indent: "      └─ " },
+          { name: "WrapperResolver", indent: "" },
+          { name: "WrapperResolver (re-render)", indent: "  └─ " },
+          { name: "IconResolver (re-render)", indent: "      └─ " },
           { name: "Button", indent: "          └─ " },
         ],
         case5: [
-          { name: "WrapperEnhancer", indent: "" },
-          { name: "IconEnhancer", indent: "  └─ " },
+          { name: "WrapperResolver", indent: "" },
+          { name: "IconResolver", indent: "  └─ " },
           { name: "Button (uiAction)", indent: "      └─ " },
         ],
       };
 
       const COLORS = {
-        "WrapperEnhancer": "#818cf8",
-        "WrapperEnhancer (re-render)": "#a5b4fc",
-        "IconEnhancer": "#fb923c",
-        "IconEnhancer (re-render)": "#fdba74",
+        "WrapperResolver": "#818cf8",
+        "WrapperResolver (re-render)": "#a5b4fc",
+        "IconResolver": "#fb923c",
+        "IconResolver (re-render)": "#fdba74",
         "Button": "#34d399",
         "Button (uiAction)": "#22d3ee",
       };
@@ -300,16 +303,16 @@
         );
       };
 
-      // ── Enhancers ───────────────────────────────────────────────────────────
-      // Enhancers that don't match call <Next {...props} /> to pass through
-      // to the next enhancer in the chain.
-      const WrapperEnhancer = (props) => {
-        const Next = useNext();
+      // ── Resolvers ───────────────────────────────────────────────────────────
+      // Resolvers that don't match call <Next {...props} /> to pass through
+      // to the next resolver in the chain.
+      const WrapperResolver = (props) => {
+        const Next = useNextResolver();
         const { caseId } = props;
         const isReRender = props["data-redispatch"];
         const trackName = isReRender
-          ? "WrapperEnhancer (re-render)"
-          : "WrapperEnhancer";
+          ? "WrapperResolver (re-render)"
+          : "WrapperResolver";
         if (caseId) {
           trackRender(caseId, trackName);
         }
@@ -319,7 +322,7 @@
         return (
           <div class="cbox cbox-wrapper">
             <div class="cbox-header">
-              WrapperEnhancer {isReRender ? "(re-render)" : ""}
+              WrapperResolver {isReRender ? "(re-render)" : ""}
             </div>
             <div class="cbox-body">
               <Next {...props} data-redispatch={true} />
@@ -328,13 +331,13 @@
         );
       };
 
-      const IconEnhancer = (props) => {
-        const Next = useNext();
+      const IconResolver = (props) => {
+        const Next = useNextResolver();
         const { caseId, icon } = props;
         const isReRender = props["data-redispatch"];
         const trackName = isReRender
-          ? "IconEnhancer (re-render)"
-          : "IconEnhancer";
+          ? "IconResolver (re-render)"
+          : "IconResolver";
         if (caseId) {
           trackRender(caseId, trackName);
         }
@@ -348,7 +351,7 @@
         } = props;
         return (
           <div class="cbox cbox-icon">
-            <div class="cbox-header">IconEnhancer — icon: {icon}</div>
+            <div class="cbox-header">IconResolver — icon: {icon}</div>
             <div
               class="cbox-body"
               style="display:flex;align-items:center;gap:8px"
@@ -360,8 +363,8 @@
         );
       };
 
-      const enhancers = [WrapperEnhancer, IconEnhancer];
-      const renderButton = createComponentResolver(enhancers);
+      const resolvers = [WrapperResolver, IconResolver];
+      const renderButton = createComponentResolver(resolvers);
 
       const renderButtonTracked = (caseId, Target, props) => {
         return renderButton(Target, { ...props, caseId });
@@ -386,18 +389,18 @@
             <p style="color:#555;font-size:13px;margin-bottom:24px">
               Each case shows the component tree rendered by
               createComponentResolver. The render log (top) counts how many
-              times each enhancer was called.
+              times each resolver was called.
             </p>
 
             <CaseSection
-              title="Case 1 — no enhancer matches"
+              title="Case 1 — no resolver matches"
               code='renderButton(Button, { label: "Hello" })'
             >
               {renderButtonTracked("case1", Button, { label: "Hello" })}
             </CaseSection>
 
             <CaseSection
-              title="Case 2 — IconEnhancer matches"
+              title="Case 2 — IconResolver matches"
               code='renderButton(Button, { label: "Save", icon: "💾" })'
             >
               {renderButtonTracked("case2", Button, {
@@ -407,7 +410,7 @@
             </CaseSection>
 
             <CaseSection
-              title="Case 3 — WrapperEnhancer matches (children)"
+              title="Case 3 — WrapperResolver matches (children)"
               code="renderButton(Button, { children: <span>inner</span> })"
             >
               {renderButtonTracked("case3", Button, {

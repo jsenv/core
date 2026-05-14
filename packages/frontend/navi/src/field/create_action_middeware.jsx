@@ -1,17 +1,17 @@
 import { useActionBoundToOneParam } from "@jsenv/navi/src/action/use_action.js";
 import { useActionStatus } from "@jsenv/navi/src/action/use_action_status.js";
 import { useExecuteAction } from "@jsenv/navi/src/action/use_execute_action.js";
-import { useDispatcher } from "../dispatcher/dispatcher.jsx";
+import { useNextResolver } from "../resolver/resolver.jsx";
 import { useOnRequestAction } from "./use_action_events.js";
 import { UIStateControllerContext } from "./use_ui_state_controller.js";
 
 export const createActionMiddleware = (ActionVariant) => {
   const ActionMiddleware = (props) => {
-    const Dispatcher = useDispatcher();
+    const Next = useNextResolver();
     if (props.action || props.uiAction) {
       return <ActionVariant {...props} />;
     }
-    return <Dispatcher {...props} />;
+    return <Next {...props} />;
   };
   return ActionMiddleware;
 };

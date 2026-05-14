@@ -1,4 +1,4 @@
-import { useDispatcher } from "../../dispatcher/dispatcher.jsx";
+import { useNextResolver } from "../../resolver/resolver.jsx";
 import {
   createActionMiddleware,
   useActionProps,
@@ -16,23 +16,23 @@ import {
 } from "./show_method/picker_show_method.jsx";
 
 const PickerPresetMiddleware = (props) => {
-  const Dispatcher = useDispatcher();
+  const Next = useNextResolver();
   if (props.type === "hour") {
     return <PickerHour {...props} />;
   }
-  return <Dispatcher {...props} />;
+  return <Next {...props} />;
 };
 
 const PickerPopupMiddleware = (props) => {
-  const Dispatcher = useDispatcher();
+  const Next = useNextResolver();
   if (props.children !== undefined) {
     return <PickerPopup {...props} />;
   }
-  return <Dispatcher {...props} />;
+  return <Next {...props} />;
 };
 
 const PickerShowMethodMiddleware = (props) => {
-  const Dispatcher = useDispatcher();
+  const Next = useNextResolver();
   if (props.type === "color") {
     return <PickerColor {...props} />;
   }
@@ -51,15 +51,15 @@ const PickerShowMethodMiddleware = (props) => {
   if (props.type === "datetime") {
     return <PickerDatetime {...props} />;
   }
-  return <Dispatcher {...props} />;
+  return <Next {...props} />;
 };
 
 const PickerAction = (props) => {
-  const Dispatcher = useDispatcher();
+  const Next = useNextResolver();
   const actionProps = useActionProps(props);
 
   return (
-    <Dispatcher
+    <Next
       {...actionProps}
       onMouseDown={(e) => {
         props.onMouseDown?.(e);
