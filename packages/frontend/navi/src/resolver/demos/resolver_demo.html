@@ -333,7 +333,7 @@
 
       const IconResolver = (props) => {
         const Next = useNextResolver();
-        const { caseId, icon } = props;
+        const { caseId, icon, ...rest } = props;
         const isReRender = props["data-redispatch"];
         const trackName = isReRender
           ? "IconResolver (re-render)"
@@ -344,11 +344,6 @@
         if (!icon) {
           return <Next {...props} />;
         }
-        const {
-          // eslint-disable-next-line no-unused-vars
-          icon: i,
-          ...rest
-        } = props;
         return (
           <div class="cbox cbox-icon">
             <div class="cbox-header">IconResolver — icon: {icon}</div>
