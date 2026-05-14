@@ -96,6 +96,7 @@ const generateSignalId = () => {
  * const childTab = stateSignal(parentTab);
  * // childTab follows parentTab changes unless explicitly set
  */
+const stringUndefinedAliasSet = new Set([""]);
 export const stateSignal = (defaultValue, options = {}) => {
   const {
     id,
@@ -108,7 +109,14 @@ export const stateSignal = (defaultValue, options = {}) => {
     debug,
     default: staticFallback,
     ignoreArrayOrder,
+    undefinedAlias,
   } = options;
+  const undefinedAliasSet =
+    undefinedAlias === undefined
+      ? type === "string"
+        ? stringUndefinedAliasSet
+        : undefined
+      : new Set(undefinedAlias);
 
   // Check if defaultValue is a signal (dynamic default) or static value
   const isDynamicDefault =
@@ -222,6 +230,9 @@ export const stateSignal = (defaultValue, options = {}) => {
   });
   const processValue = (value) => {
     if (value === undefined) {
+      return undefined;
+    }
+    if (undefinedAliasSet && undefinedAliasSet.has(value)) {
       return undefined;
     }
     const wasValid = validity.valid;

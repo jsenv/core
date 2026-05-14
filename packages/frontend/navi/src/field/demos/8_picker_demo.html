@@ -580,24 +580,23 @@
             </p>
             <Field vertical>
               <Label>Free text</Label>
-              <NaviDebug debugPopup debugFocus>
-                <Picker
-                  type="text"
-                  uiAction={() => {
-                    console.log("coucou");
-                  }}
-                  placeholder="Type something"
-                >
-                  <Box flex="y" spacing="s" padding="s">
-                    <Input
-                      type="text"
-                      uiAction={Picker.update}
-                      placeholder="Enter value"
-                    />
-                    <Button uiAction={Picker.close}>Close</Button>
-                  </Box>
-                </Picker>
-              </NaviDebug>
+
+              <Picker
+                type="text"
+                uiAction={() => {
+                  console.log("coucou");
+                }}
+                placeholder="Type something"
+              >
+                <Box flex="y" spacing="s" padding="s">
+                  <Input
+                    type="text"
+                    uiAction={Picker.update}
+                    placeholder="Enter value"
+                  />
+                  <Button uiAction={Picker.close}>Close</Button>
+                </Box>
+              </Picker>
             </Field>
           </div>
         );
@@ -637,7 +636,12 @@
         );
       };
 
-      render(<App />, document.getElementById("app"));
+      render(
+        <NaviDebug debugPopup debugFocus debugAction>
+          <App />
+        </NaviDebug>,
+        document.getElementById("app"),
+      );
     </script>
   </body>
 </html>
