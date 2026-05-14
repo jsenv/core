@@ -97,6 +97,19 @@ const generateSignalId = () => {
  * // childTab follows parentTab changes unless explicitly set
  */
 const stringUndefinedAliasSet = new Set([""]);
+const stringTypeSet = new Set([
+  "string",
+  "day",
+  "month",
+  "week",
+  "time",
+  "datetime",
+  "date",
+  "url",
+  "email",
+  "percentage",
+  "color",
+]);
 export const stateSignal = (defaultValue, options = {}) => {
   const {
     id,
@@ -113,7 +126,7 @@ export const stateSignal = (defaultValue, options = {}) => {
   } = options;
   const undefinedAliasSet =
     undefinedAlias === undefined
-      ? type === "string"
+      ? stringTypeSet.has(type)
         ? stringUndefinedAliasSet
         : undefined
       : new Set(undefinedAlias);
