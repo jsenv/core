@@ -1,8 +1,8 @@
+import { useDispatcher } from "../../dispatcher/dispatcher.jsx";
 import {
   createActionMiddleware,
   useActionProps,
 } from "../create_action_middeware.jsx";
-import { useDispatcher } from "../create_dispatcher.jsx";
 import { dispatchRequestAction } from "../validation/custom_constraint_validation.js";
 import { PickerPopup } from "./picker_popup/picker_popup.jsx";
 import { PickerHour } from "./preset/picker_hour.jsx";

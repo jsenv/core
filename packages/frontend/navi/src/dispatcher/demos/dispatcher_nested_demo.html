@@ -1,0 +1,353 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <title>Dispatcher Nested Demo</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: system-ui, sans-serif;
+        background: #f5f5f5;
+      }
+      #app {
+        max-width: 900px;
+        margin: 24px auto;
+        padding: 0 16px;
+      }
+      h1 {
+        margin-bottom: 4px;
+        color: #333;
+      }
+      h2 {
+        margin: 0 0 6px;
+        color: #555;
+        font-size: 15px;
+      }
+      .description {
+        margin-bottom: 24px;
+        color: #666;
+        font-size: 13px;
+      }
+      .case-section {
+        margin-bottom: 32px;
+      }
+      .case-header {
+        display: flex;
+        margin-bottom: 8px;
+        align-items: baseline;
+        gap: 12px;
+      }
+      .case-title {
+        color: #333;
+        font-weight: 700;
+        font-size: 15px;
+      }
+      .case-code {
+        padding: 2px 6px;
+        color: #666;
+        font-size: 12px;
+        font-family: monospace;
+        background: #e8e8e8;
+        border-radius: 3px;
+      }
+      .case-render {
+        display: flex;
+        min-height: 48px;
+        padding: 16px 20px;
+        flex-wrap: wrap;
+        align-items: flex-start;
+        gap: 16px;
+        background: #fff;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+      }
+      .cbox {
+        margin: 4px 0;
+        border: 2px solid;
+        border-radius: 6px;
+        overflow: hidden;
+      }
+      .cbox-header {
+        display: flex;
+        padding: 2px 8px;
+        align-items: center;
+        gap: 6px;
+        font-weight: bold;
+        font-size: 11px;
+        font-family: monospace;
+      }
+      .cbox-body {
+        padding: 6px 10px;
+      }
+      /* Dispatcher A — blue/indigo */
+      .cbox-a-wrapper {
+        border-color: #818cf8;
+      }
+      .cbox-a-wrapper .cbox-header {
+        color: #4338ca;
+        background: #eef2ff;
+      }
+      .cbox-a-icon {
+        border-color: #fb923c;
+      }
+      .cbox-a-icon .cbox-header {
+        color: #c2410c;
+        background: #fff7ed;
+      }
+      /* Dispatcher B — teal/emerald */
+      .cbox-b-badge {
+        border-color: #2dd4bf;
+      }
+      .cbox-b-badge .cbox-header {
+        color: #0f766e;
+        background: #f0fdfa;
+      }
+      .cbox-b-tooltip {
+        border-color: #a78bfa;
+      }
+      .cbox-b-tooltip .cbox-header {
+        color: #6d28d9;
+        background: #f5f3ff;
+      }
+      /* leaf */
+      .cbox-leaf {
+        border-color: #34d399;
+      }
+      .cbox-leaf .cbox-header {
+        color: #065f46;
+        background: #ecfdf5;
+      }
+      .info-box {
+        padding: 10px 14px;
+        color: #1e40af;
+        font-size: 12px;
+        background: #eff6ff;
+        border: 1px solid #bfdbfe;
+        border-radius: 6px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { createDispatcher, useDispatcher } from "../dispatcher.jsx";
+
+      // ── Dispatcher A — augments with icon and wrapper ────────────────────────
+      // Middlewares for dispatcher A use useDispatcher() and get A's dispatcher.
+      const WrapperMiddlewareA = (props) => {
+        const Dispatcher = useDispatcher();
+        if (props.children === undefined) {
+          return <Dispatcher {...props} />;
+        }
+        return (
+          <div class="cbox cbox-a-wrapper">
+            <div class="cbox-header">A: WrapperMiddleware</div>
+            <div class="cbox-body">
+              <Dispatcher {...props} data-wrapped />
+            </div>
+          </div>
+        );
+      };
+
+      const IconMiddlewareA = (props) => {
+        const Dispatcher = useDispatcher();
+        if (!props.icon) {
+          return <Dispatcher {...props} />;
+        }
+        const { icon, ...rest } = props;
+        return (
+          <div class="cbox cbox-a-icon">
+            <div class="cbox-header">A: IconMiddleware — {icon}</div>
+            <div
+              class="cbox-body"
+              style="display:flex;align-items:center;gap:8px"
+            >
+              <span style="font-size:20px">{icon}</span>
+              <Dispatcher {...rest} />
+            </div>
+          </div>
+        );
+      };
+
+      const dispatchA = createDispatcher([WrapperMiddlewareA, IconMiddlewareA]);
+
+      // ── Dispatcher B — augments with badge and tooltip ───────────────────────
+      // Middlewares for dispatcher B use useDispatcher() and get B's dispatcher.
+      // Note: B's middlewares are completely unaware of A's dispatcher.
+      const BadgeMiddlewareB = (props) => {
+        const Dispatcher = useDispatcher();
+        if (!props.badge) {
+          return <Dispatcher {...props} />;
+        }
+        const { badge, ...rest } = props;
+        return (
+          <div class="cbox cbox-b-badge">
+            <div class="cbox-header">B: BadgeMiddleware — badge: {badge}</div>
+            <div class="cbox-body">
+              <Dispatcher {...rest} />
+            </div>
+          </div>
+        );
+      };
+
+      const TooltipMiddlewareB = (props) => {
+        const Dispatcher = useDispatcher();
+        if (!props.tooltip) {
+          return <Dispatcher {...props} />;
+        }
+        const { tooltip, ...rest } = props;
+        return (
+          <div class="cbox cbox-b-tooltip">
+            <div class="cbox-header">B: TooltipMiddleware — "{tooltip}"</div>
+            <div class="cbox-body">
+              <Dispatcher {...rest} />
+            </div>
+          </div>
+        );
+      };
+
+      const dispatchB = createDispatcher([
+        BadgeMiddlewareB,
+        TooltipMiddlewareB,
+      ]);
+
+      // ── Leaf component (target for both dispatchers) ─────────────────────────
+      const Leaf = (props) => {
+        const dispatcher = useDispatcher();
+        return (
+          <div class="cbox cbox-leaf">
+            <div class="cbox-header">
+              Leaf {props.label ? `— ${props.label}` : ""}
+            </div>
+            <div class="cbox-body" style="font-size:12px;color:#555">
+              <div>
+                useDispatcher() inside Leaf ={" "}
+                <strong>{dispatcher === null ? "null ✓" : "NOT null ✗"}</strong>
+              </div>
+              {props["data-wrapped"] ? (
+                <div style="color:#6d28d9">data-wrapped prop received ✓</div>
+              ) : null}
+            </div>
+          </div>
+        );
+      };
+
+      // ── A middleware that contains a B dispatch ──────────────────────────────
+      // This tests that when A's WrapperMiddleware calls dispatchB inside its render,
+      // B's middlewares get B's dispatcher (not A's) — no cross-contamination.
+      const ContainerMiddlewareA = (props) => {
+        const DispatcherA = useDispatcher();
+        if (!props.innerBadge && !props.innerTooltip) {
+          return <DispatcherA {...props} />;
+        }
+        const { innerBadge, innerTooltip, ...rest } = props;
+        return (
+          <div class="cbox cbox-a-wrapper">
+            <div class="cbox-header">
+              A: ContainerMiddleware (contains B dispatch)
+            </div>
+            <div class="cbox-body">
+              <div style="margin-bottom:8px;font-size:11px;color:#6c7086">
+                outer A dispatcher continues:
+              </div>
+              <DispatcherA {...rest} />
+              <div style="margin:8px 0 4px;font-size:11px;color:#6c7086">
+                inner B dispatcher (independent):
+              </div>
+              {dispatchB(Leaf, {
+                label: "inner-B target",
+                badge: innerBadge,
+                tooltip: innerTooltip,
+              })}
+            </div>
+          </div>
+        );
+      };
+
+      const dispatchAWithContainer = createDispatcher([
+        ContainerMiddlewareA,
+        IconMiddlewareA,
+      ]);
+
+      // ── App ──────────────────────────────────────────────────────────────────
+      const CaseSection = ({ title, code, children }) => (
+        <div class="case-section">
+          <div class="case-header">
+            <span class="case-title">{title}</span>
+            {code ? <span class="case-code">{code}</span> : null}
+          </div>
+          <div class="case-render">{children}</div>
+        </div>
+      );
+
+      const App = () => (
+        <div>
+          <h1>Dispatcher — Nested Dispatch Demo</h1>
+          <p class="description">
+            Verifies that nested dispatchers are fully isolated: each
+            dispatcher's middlewares see only their own dispatcher via{" "}
+            <code>useDispatcher()</code>, and the target component (Leaf) always
+            gets <code>null</code> from
+            <code>useDispatcher()</code> — never a stale reference.
+          </p>
+
+          <CaseSection
+            title="Case 1 — Dispatcher A only"
+            code="dispatchA(Leaf, { label: 'hello', icon: '🌟' })"
+          >
+            {dispatchA(Leaf, { label: "hello", icon: "🌟" })}
+          </CaseSection>
+
+          <CaseSection
+            title="Case 2 — Dispatcher B only"
+            code="dispatchB(Leaf, { label: 'world', badge: '3', tooltip: 'hi' })"
+          >
+            {dispatchB(Leaf, { label: "world", badge: "3", tooltip: "hi" })}
+          </CaseSection>
+
+          <CaseSection
+            title="Case 3 — A dispatch wrapping a B dispatch"
+            code="dispatchA(Leaf, { children: dispatchB(Leaf, { badge: '!' }) })"
+          >
+            {dispatchA(Leaf, {
+              label: "outer-A target",
+              children: dispatchB(Leaf, {
+                label: "inner-B target",
+                badge: "!",
+              }),
+            })}
+          </CaseSection>
+
+          <CaseSection
+            title="Case 4 — A middleware that internally calls dispatchB"
+            code="dispatchAWithContainer(Leaf, { icon: '🔥', innerBadge: '99', innerTooltip: 'hello' })"
+          >
+            {dispatchAWithContainer(Leaf, {
+              label: "outer-A target",
+              icon: "🔥",
+              innerBadge: "99",
+              innerTooltip: "from B",
+            })}
+          </CaseSection>
+
+          <CaseSection title="Case 5 — Leaf confirms useDispatcher() === null">
+            <div class="info-box">
+              Each Leaf above shows{" "}
+              <strong>useDispatcher() inside Leaf = null ✓</strong>. This
+              confirms the DispatcherContext is reset to null once the chain is
+              exhausted — the target component cannot accidentally re-enter any
+              dispatcher chain.
+            </div>
+          </CaseSection>
+        </div>
+      );
+
+      render(<App />, document.getElementById("app"));
+    </script>
+  </body>
+</html>

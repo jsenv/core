@@ -6,7 +6,7 @@ import { ChevronDownSvg } from "@jsenv/navi/src/graphic/icons/chevron_updown_svg
 import { LoadingOutline } from "@jsenv/navi/src/graphic/loading/loading_outline.jsx";
 import { Icon } from "@jsenv/navi/src/text/icon.jsx";
 import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
-import { createDispatcher } from "../create_dispatcher.jsx";
+import { createDispatcher } from "../../dispatcher/dispatcher.jsx";
 import {
   FieldContext,
   reportDisabledToField,

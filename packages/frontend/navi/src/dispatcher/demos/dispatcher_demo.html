@@ -153,10 +153,7 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useLayoutEffect } from "preact/hooks";
-      import {
-        createDispatcher,
-        useDispatcher,
-      } from "../create_dispatcher.jsx";
+      import { createDispatcher, useDispatcher } from "../dispatcher.jsx";
 
       // ── Render tracking (per case, plain DOM — never causes re-renders) ─────
       // Each case has its own counters keyed by component name.

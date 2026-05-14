@@ -1,7 +1,7 @@
 import { useActionBoundToOneParam } from "@jsenv/navi/src/action/use_action.js";
 import { useActionStatus } from "@jsenv/navi/src/action/use_action_status.js";
 import { useExecuteAction } from "@jsenv/navi/src/action/use_execute_action.js";
-import { useDispatcher } from "./create_dispatcher.jsx";
+import { useDispatcher } from "../dispatcher/dispatcher.jsx";
 import { useOnRequestAction } from "./use_action_events.js";
 import { UIStateControllerContext } from "./use_ui_state_controller.js";
 
