@@ -6,6 +6,7 @@ import { ChevronDownSvg } from "@jsenv/navi/src/graphic/icons/chevron_updown_svg
 import { LoadingOutline } from "@jsenv/navi/src/graphic/loading/loading_outline.jsx";
 import { Icon } from "@jsenv/navi/src/text/icon.jsx";
 import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
+import { createDispatcher } from "../create_dispatcher.jsx";
 import {
   FieldContext,
   reportDisabledToField,
@@ -25,7 +26,6 @@ import {
   useUIStateController,
 } from "../use_ui_state_controller.js";
 import { useConstraints } from "../validation/hooks/use_constraints.js";
-import { createDispatcher } from "./create_dispatcher.jsx";
 import {
   PickerContext,
   PickerDispatcherContext,
@@ -270,8 +270,6 @@ const PickerInput = (props) => {
     autoFocus,
     autoFocusPreventScroll,
     onChange,
-    onMouseDown,
-    onClick,
     // input constraint attributes — forwarded to hidden <input>, not the button
     required,
     min,
@@ -289,7 +287,8 @@ const PickerInput = (props) => {
 
   const innerLoading =
     loading || (contextLoading && contextLoadingElement === ref.current);
-  const innerReadOnly = readOnly || contextReadOnly || innerLoading;
+  const innerReadOnly =
+    readOnly || contextReadOnly || innerLoading || uiStateController.readOnly;
   const innerDisabled = disabled || contextDisabled;
 
   reportReadOnlyToField(innerReadOnly);
@@ -320,24 +319,6 @@ const PickerInput = (props) => {
       // we must put the id on the button and not the input
       // so that a <label> tries to give focus to the button and not the input
       id={id}
-      onMouseDown={(e) => {
-        if (e.button !== 0) {
-          return;
-        }
-        if (innerDisabled || innerReadOnly) {
-          return;
-        }
-        onMouseDown?.(e);
-      }}
-      onClick={(e) => {
-        if (e.button !== 0) {
-          return;
-        }
-        if (innerDisabled || innerReadOnly) {
-          return;
-        }
-        onClick?.(e);
-      }}
       onnavi_picker_set_value={(e) => {
         uiStateController.setUIState(e.detail.value, e);
       }}
@@ -396,7 +377,6 @@ const PICKER_PSEUDO_CLASSES = [
   ":-navi-expanded",
   ":-navi-has-value",
 ];
-
 const PickerDefaultUI = () => {
   const { value, placeholder } = useContext(PickerContext);
   if (!value) {

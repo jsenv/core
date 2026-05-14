@@ -1,3 +1,11 @@
+import { useContext } from "preact/hooks";
+
+import {
+  createActionMiddleware,
+  useActionProps,
+} from "../create_action_middeware.jsx";
+import { dispatchRequestAction } from "../validation/custom_constraint_validation.js";
+import { PickerDispatcherContext } from "./picker_context.jsx";
 import { PickerPopup } from "./picker_popup/picker_popup.jsx";
 import { PickerHour } from "./preset/picker_hour.jsx";
 import {
@@ -45,8 +53,41 @@ const PickerShowMethodMiddleware = (props) => {
   return null;
 };
 
+const PickerAction = (props) => {
+  const Dispatcher = useContext(PickerDispatcherContext);
+  const actionProps = useActionProps(props);
+
+  return (
+    <Dispatcher
+      {...actionProps}
+      onMouseDown={(e) => {
+        props.onMouseDown?.(e);
+        if (e.button !== 0) {
+          return;
+        }
+        if (e.defaultPrevented) {
+          return;
+        }
+        dispatchRequestAction(e.currentTarget, e);
+      }}
+      onClick={(e) => {
+        props.onClick(e);
+        if (e.button !== 0) {
+          return;
+        }
+        if (e.defaultPrevented) {
+          return;
+        }
+        dispatchRequestAction(e.currentTarget, e);
+      }}
+    />
+  );
+};
+const PickerActionMiddleware = createActionMiddleware(PickerAction);
+
 export const pickerMiddlewares = [
   PickerPresetMiddleware,
   PickerPopupMiddleware,
   PickerShowMethodMiddleware,
+  PickerActionMiddleware,
 ];
