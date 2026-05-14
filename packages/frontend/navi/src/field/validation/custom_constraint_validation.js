@@ -156,8 +156,8 @@ export const onRequestAction = (
     `action requested by ${requesterInfo} (event: "${event?.type}")`,
   );
   const isValid = checkConstraintsAndReport(DEFAULT_CONSTRAINT_SET, {
-    requester,
     event,
+    requester,
     debugAction,
   });
   if (!isValid) {
@@ -215,7 +215,7 @@ const DEFAULT_CONSTRAINT_SET = new Set([
 const validationInProgressWeakSet = new WeakSet();
 const checkConstraintsAndReport = (
   constraints,
-  { event, requester, debugAction = () => {} } = {},
+  { event, requester, fromRequestAction, debugAction = () => {} } = {},
 ) => {
   let elementToValidate = requester;
   if (!elementToValidate.__validationInterface__) {
@@ -229,13 +229,12 @@ const checkConstraintsAndReport = (
     validationInterface = installCustomConstraintValidation(elementToValidate);
   }
 
-  // Full validation
   const isForm = elementToValidate.tagName === "FORM";
   const formToValidate = isForm ? elementToValidate : elementToValidate.form;
   let isValid = true;
   let failedValidationInterface;
 
-  if (formToValidate) {
+  if (fromRequestAction && formToValidate) {
     if (validationInProgressWeakSet.has(formToValidate)) {
       debugAction(
         event,
@@ -253,9 +252,8 @@ const checkConstraintsAndReport = (
         continue;
       }
       const elementIsValid = elementValidationInterface.checkValidity({
-        constraints,
         event,
-        fromRequestAction: true,
+        fromRequestAction,
         skipReadonly:
           formElement.tagName === "BUTTON" && formElement !== requester,
         debugAction,
@@ -270,7 +268,7 @@ const checkConstraintsAndReport = (
     isValid = validationInterface.checkValidity({
       constraints,
       event,
-      fromRequestAction: true,
+      fromRequestAction,
       debugAction,
     });
     if (!isValid) {
@@ -283,7 +281,11 @@ const checkConstraintsAndReport = (
       event,
       `validation failed for "${getFailedConstraintName(failedValidationInterface)}"`,
     );
-    failedValidationInterface.reportValidity({ event, debugAction, requester });
+    failedValidationInterface.reportValidity({
+      event,
+      requester,
+      debugAction,
+    });
     return false;
   }
   return true;
@@ -413,11 +415,13 @@ export const installCustomConstraintValidation = (
     skipReadonly,
   } = {}) => {
     let newConstraintValidityState = { valid: true };
-    if (fromRequestAction) {
-      constraints = new Set([...constraints, ...dynamicConstraintSet]);
-    }
+    // When constraints are explicitly provided (e.g. pointer interaction), use only those.
+    // Otherwise use default set merged with dynamic constraints.
+    const effectiveConstraints = constraints
+      ? constraints
+      : new Set([...DEFAULT_CONSTRAINT_SET, ...dynamicConstraintSet]);
     resetValidity({ fromRequestAction });
-    for (const constraint of constraints) {
+    for (const constraint of effectiveConstraints) {
       const fieldForConstraint = element;
       const constraintCleanupSet = new Set();
       const registerChange = (register) => {
