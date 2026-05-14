@@ -1,3 +1,5 @@
+import { useContext } from "preact/hooks";
+
 import { useActionBoundToOneParam } from "@jsenv/navi/src/action/use_action.js";
 import { useActionStatus } from "@jsenv/navi/src/action/use_action_status.js";
 import { useExecuteAction } from "@jsenv/navi/src/action/use_execute_action.js";
@@ -5,15 +7,15 @@ import { useNextResolver } from "../resolver/resolver.jsx";
 import { useOnRequestAction } from "./use_action_events.js";
 import { UIStateControllerContext } from "./use_ui_state_controller.js";
 
-export const createActionMiddleware = (ActionVariant) => {
-  const ActionMiddleware = (props) => {
-    const Next = useNextResolver();
+export const createActionResolver = (ActionVariant) => {
+  const ActionResolver = (props) => {
+    const NextResolver = useNextResolver();
     if (props.action || props.uiAction) {
       return <ActionVariant {...props} />;
     }
-    return <Next {...props} />;
+    return <NextResolver {...props} />;
   };
-  return ActionMiddleware;
+  return ActionResolver;
 };
 
 export const useActionProps = (props) => {
