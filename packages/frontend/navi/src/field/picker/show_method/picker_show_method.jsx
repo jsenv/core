@@ -55,7 +55,16 @@ export const PickerColor = (props) => {
 const PickerColorUI = () => {
   const { value, placeholder } = useContext(PickerContext);
   if (!value) {
-    return placeholder || null;
+    return (
+      placeholder || (
+        <span
+          className="navi_picker_color_display"
+          style={{
+            "--picker-color": "black",
+          }}
+        />
+      )
+    );
   }
   return (
     <span

@@ -163,12 +163,9 @@ const css = /* css */ `
   }
 
   .navi_picker_color_display {
-    position: absolute;
-    top: var(--x-picker-padding-top);
-    right: var(--x-picker-padding-right);
-    bottom: var(--x-picker-padding-bottom);
-    left: var(--x-picker-padding-left);
     display: block;
+    width: 1em;
+    height: 1em;
     background-color: var(--picker-color);
     border: 1px solid rgba(0, 0, 0, 0.2);
     border-radius: 2px;
