@@ -131,14 +131,6 @@ const css = /* css */ `
       --x-picker-border-color: transparent;
       outline-style: solid;
     }
-    &[data-focus-within] {
-      --x-picker-border-color: transparent;
-      outline-style: solid;
-    }
-    &[data-expanded] {
-      --x-picker-border-color: transparent;
-      outline-style: solid;
-    }
     &[data-disabled] {
       opacity: 0.5;
       cursor: default;

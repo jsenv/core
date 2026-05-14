@@ -106,11 +106,11 @@ const css = /* css */ `
         }
       }
 
-      &:has([data-hover]) {
+      /* &:has([data-hover]) {
         .navi_picker_popover {
           --x-picker-border-color: var(--picker-border-color-hover);
         }
-      }
+      } */
 
       /* .navi_list_container {
         width: 100%;
@@ -339,7 +339,6 @@ const PickerContentInsidePopover = (props) => {
             }
             e.preventDefault();
             requestClose(e);
-            moveFocusToPicker(e);
           },
         },
         onKeyDown,
@@ -355,6 +354,14 @@ const PickerContentInsidePopover = (props) => {
           }
           // mousedown inside popover should not bubble to the select (would re-open it if that mousedown closes it)
           debugPopup(e, `popover mouseDown stopPropagation`);
+          e.stopPropagation();
+        }}
+        onClick={(e) => {
+          if (e.button !== 0) {
+            return;
+          }
+          // click inside popover should not bubble to the select (would re-open it if that click closes it)
+          debugPopup(e, `popover click stopPropagation`);
           e.stopPropagation();
         }}
         onnavi_popover_open={(e) => {
@@ -418,9 +425,22 @@ const PickerContentInsideDialog = (props) => {
     expandedRef.current = true;
     setExpanded(true);
   };
-  const onClose = () => {
+  const onClose = (e) => {
     expandedRef.current = false;
     setExpanded(false);
+    moveFocusToPicker(e);
+  };
+  const moveFocusToPicker = (e) => {
+    const pickerEl = ref.current;
+    const mousedownEvent = findEvent(e, (e) => e.type === "mousedown");
+    if (mousedownEvent) {
+      debugFocus(e, `preventDefault and move focus to picker`);
+      mousedownEvent.preventDefault();
+      pickerEl.focus({ preventScroll: true });
+      return;
+    }
+    debugFocus(e, `move focus to picker`);
+    pickerEl.focus({ preventScroll: true });
   };
   const requestOpen = (e) => {
     return requestDialogOpen(dialogRef.current, {
@@ -430,23 +450,14 @@ const PickerContentInsideDialog = (props) => {
   const disableClickFor = useIgnoreClickForMousedown();
 
   const requestClose = (e = new CustomEvent("programmatic")) => {
-    if (e.type === "mousedown") {
+    const mousedownEvent = findEvent(e, (e) => e.type === "mousedown");
+    if (mousedownEvent) {
       debugPopup(e, `disable click`);
       disableClickFor();
     }
     return requestDialogClose(dialogRef.current, {
       event: e,
     });
-  };
-  const moveFocusToSelect = (e) => {
-    if (e.type === "mousedown") {
-      e.preventDefault();
-      debugFocus(e, `preventDefault and move focus to select`);
-    } else {
-      debugFocus(e, `move focus to select`);
-    }
-    const select = ref.current;
-    select.focus({ preventScroll: true });
   };
 
   return (
@@ -526,13 +537,19 @@ const PickerContentInsideDialog = (props) => {
         }}
         onnavi_dialog_close={(e) => {
           onClose(e);
-          moveFocusToSelect(e);
         }}
         onMouseDown={(e) => {
           if (e.button !== 0) {
             return;
           }
-          // mousedown inside dialog should not bubble to the select (would re-open it if that mousedown closes it)
+          // mousedown inside dialog should not bubble to the picker (would re-open it if that mousedown closes it)
+          e.stopPropagation();
+        }}
+        onClick={(e) => {
+          if (e.button !== 0) {
+            return;
+          }
+          // click inside dialog should not bubble to the picker (would re-open it if that click closes it)
           e.stopPropagation();
         }}
         scrollTrap={scrollTrap}
