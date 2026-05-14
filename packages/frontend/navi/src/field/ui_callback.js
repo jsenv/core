@@ -1,33 +1,37 @@
 /**
  * Creates a universal callback from an object describing how it should behave
- * depending on how it is called (`onClick`, `uiAction`).
+ * depending on how it is called.
+ *
+ * The handlers object declares the **intended usage** of the callback.
+ * Navi will warn when the callback is placed on the wrong prop.
  *
  * ---
  *
- * **`{ event }`** — handler receives `(event)`; works from `onClick`, `uiAction`, and `action`
- *   but warns when called from `uiAction` (value is available but ignored):
+ * **`{ event }`** — intended for DOM event props (`onClick`, `onInput`, etc.);
+ *   also accepts `uiAction` with a warning (value is ignored):
  * ```js
  * const cb = createUICallback({ event: (event) => { ... } });
- * <Button onClick={cb} />   // ✓ event(event)
- * <Button uiAction={cb} />  // ⚠ warns (value ignored), then event(event)
+ * <Button onClick={cb} />   // ✓
+ * <Button onInput={cb} />   // ✓
+ * <Button uiAction={cb} />  // ⚠ warns — use a DOM event prop instead
  * ```
  *
- * **`{ uiAction }`** — handler receives `(value, event)`; warns and no-ops when
- *   called from `onClick` (no value available):
+ * **`{ uiAction }`** — intended for `uiAction` only; warns and no-ops on DOM
+ *   event props because no value is available from a plain DOM event:
  * ```js
  * const cb = createUICallback({ uiAction: (value, event) => { ... } });
- * <Button uiAction={cb} />  // ✓ uiAction(value, event)
- * <Button onClick={cb} />   // ✗ warns, no-op
+ * <Button uiAction={cb} />  // ✓
+ * <Button onClick={cb} />   // ✗ warns — use uiAction instead
  * ```
  *
- * **`{ event, uiAction }`** — each call site uses its dedicated handler:
+ * **`{ event, uiAction }`** — works from both; each call site uses its handler:
  * ```js
  * const cb = createUICallback({
  *   event:    (event) => { ... },
  *   uiAction: (value, event) => { ... },
  * });
- * <Button onClick={cb} />   // ✓ event(event)
- * <Button uiAction={cb} />  // ✓ uiAction(value, event)
+ * <Button onClick={cb} />   // ✓
+ * <Button uiAction={cb} />  // ✓
  * ```
  *
  * @param {{ event?: function(event: Event): any, uiAction?: function(value: any, event: Event): any }} handlers
@@ -37,12 +41,24 @@ export const createUICallback = ({ event, uiAction }) => {
   if (event && uiAction) {
     return (...args) => {
       return routeArgs(args, {
-        event,
-        uiAction,
-        action: () => {
-          console.warn("");
+        event: (e) => {
+          return event(e);
         },
-        other: () => {},
+        uiAction: (value, e) => {
+          return uiAction(value, e);
+        },
+        action: () => {
+          console.warn(
+            "This callback does not support being used as an action. Use it on the uiAction prop instead.",
+          );
+          return false;
+        },
+        other: () => {
+          console.warn(
+            "This callback was called with unexpected arguments. Make sure it is used on a DOM event prop or uiAction.",
+          );
+          return false;
+        },
       });
     };
   }
@@ -51,23 +67,51 @@ export const createUICallback = ({ event, uiAction }) => {
       return routeArgs(args, {
         event: () => {
           console.warn(
-            "Unexpected call from event, must be called by uiAction",
+            "This callback expects a value and must be used on the uiAction prop, not a DOM event prop like onClick.",
           );
           return false;
         },
-        uiAction,
+        uiAction: (value, e) => {
+          return uiAction(value, e);
+        },
+        action: () => {
+          console.warn(
+            "This callback does not support being used as an action. Use it on the uiAction prop instead.",
+          );
+          return false;
+        },
+        other: () => {
+          console.warn(
+            "This callback was called with unexpected arguments. Make sure it is used on the uiAction prop.",
+          );
+          return false;
+        },
       });
     };
   }
-  // onEventOnly (no use case yet but why not some day)
+  // event only
   return (...args) => {
     return routeArgs(args, {
-      event,
+      event: (e) => {
+        return event(e);
+      },
       uiAction: (value, e) => {
         console.warn(
-          "Unexpected call from uiAction, must be called by regular event",
+          "This callback is intended for DOM event props (onClick, onInput, ...). When used on uiAction the value is ignored.",
         );
         return event(e);
+      },
+      action: (value, secondArg) => {
+        console.warn(
+          "This callback is intended for DOM event props (onClick, onInput, ...) and does not support being used as an action.",
+        );
+        return event(secondArg.event);
+      },
+      other: () => {
+        console.warn(
+          "This callback was called with unexpected arguments. Make sure it is used on a DOM event prop like onClick or onInput.",
+        );
+        return false;
       },
     });
   };
@@ -75,18 +119,24 @@ export const createUICallback = ({ event, uiAction }) => {
 
 /**
  * Detects the shape of the arguments and dispatches to the matching handler.
- * - DOM event handler (onClick):  fn(event)          → calls handlers.event(event)
- * - uiAction prop:                fn(value, event)   → calls handlers.uiAction(value, event)
+ * - DOM event prop (onClick, onInput, ...): fn(event)            → first arg has .currentTarget
+ * - uiAction prop:                          fn(value, event)     → second arg has .currentTarget
+ * - action prop:                            fn(value, { event }) → second arg is a plain object with .event
+ * - other:                                  unknown shape
  *
  * @param {any[]} args
- * @param {{ event: function, uiAction: function }} handlers
+ * @param {{ event: function, uiAction: function, action: function, other: function }} handlers
  */
-const routeArgs = (args, { event, uiAction }) => {
+const routeArgs = (args, { event, uiAction, action, other }) => {
   const [firstArg, secondArg] = args;
-  // onClick={fn} → fn(event): first arg is a DOM event
   if (firstArg && firstArg.currentTarget) {
-    return event(firstArg);
+    return event(...args);
   }
-  // uiAction={fn} → fn(value, event): second arg is a DOM event
-  return uiAction(firstArg, secondArg);
+  if (secondArg && secondArg.currentTarget) {
+    return uiAction(...args);
+  }
+  if (secondArg && secondArg.event) {
+    return action(...args);
+  }
+  return other(...args);
 };
