@@ -214,9 +214,10 @@ const PickerContentInsidePopover = (props) => {
     expandedRef.current = true;
     setExpanded(true);
   };
-  const onClose = () => {
+  const onClose = (e) => {
     expandedRef.current = false;
     setExpanded(false);
+    moveFocusToPicker(e);
   };
   const requestOpen = (e) => {
     // scroll <button> of the picker into view when opening it
@@ -238,14 +239,22 @@ const PickerContentInsidePopover = (props) => {
     return requestPopoverClose(popoverEl, { event: e });
   };
   const moveFocusToPicker = (e) => {
+    const pickerEl = ref.current;
     const mousedownEvent = findEvent(e, (e) => e.type === "mousedown");
     if (mousedownEvent) {
       debugFocus(e, `preventDefault and move focus to picker`);
       mousedownEvent.preventDefault();
-    } else {
-      debugFocus(e, `move focus to picker`);
+      pickerEl.focus({ preventScroll: true });
+      return;
     }
-    const pickerEl = ref.current;
+    const focusoutEvent = findEvent(e, (e) => e.type === "focusout");
+    if (focusoutEvent) {
+      // If the popover closed because focus left the select (focusout),
+      // don't steal focus back — let focus go where the user intended.
+      debugFocus(e, `let focus go away`);
+      return;
+    }
+    debugFocus(e, `move focus to picker`);
     pickerEl.focus({ preventScroll: true });
   };
 
@@ -256,6 +265,17 @@ const PickerContentInsidePopover = (props) => {
       aria-expanded={expanded}
       aria-controls={popoverId}
       navi-popover-mode={popoverMode}
+      onnavi_picker_request_close={(e) => {
+        //  if (event.type === "mousedown") {
+        //   event.preventDefault(); // prevent browser trying to give focus to the list item
+        //   debugFocus(e, `preventDefault()`);
+        // }
+        // if (event.key === " ") {
+        //   // space can open the popover we don't want space to propagate to the select otherwise it would open it back immediatly
+        //   event.stopPropagation();
+        // }
+        requestClose(e);
+      }}
       onMouseDown={(e) => {
         if (e.button !== 0) {
           return;
@@ -279,20 +299,6 @@ const PickerContentInsidePopover = (props) => {
         // When a label is clicked it transfers focus to the select
         // in that case we want to open it (otherwise we have already opened on mousedown interaction)
         requestOpen(e);
-      }}
-      // When a list item is interacted via mousedown, return focus to the select.
-      onnavi_list_select={(e) => {
-        const { event } = e.detail;
-        if (event.type === "mousedown") {
-          event.preventDefault(); // prevent browser trying to give focus to the list item
-          debugFocus(e, `preventDefault()`);
-        }
-        if (event.key === " ") {
-          // space can open the popover we don't want space to propagate to the select otherwise it would open it back immediatly
-          event.stopPropagation();
-        }
-        requestClose(event);
-        moveFocusToPicker(event);
       }}
       onFocusOut={(e) => {
         if (import.meta.dev) {
@@ -355,13 +361,6 @@ const PickerContentInsidePopover = (props) => {
         }}
         onnavi_popover_close={(e) => {
           onClose(e);
-          const { event = e } = e.detail;
-          if (event.type === "focusout") {
-            // If the popover closed because focus left the select (focusout),
-            // don't steal focus back — let focus go where the user intended.
-          } else {
-            moveFocusToPicker(e);
-          }
         }}
         positionX="left-aligned"
         positionY={popoverMode === "nearby" ? "below" : "below-overlap"}
@@ -455,6 +454,17 @@ const PickerContentInsideDialog = (props) => {
       aria-haspopup="dialog"
       aria-expanded={expanded}
       aria-controls={dialogId}
+      onnavi_picker_request_close={(e) => {
+        //  if (event.type === "mousedown") {
+        //   event.preventDefault(); // prevent browser trying to give focus to the list item
+        //   debugFocus(e, `preventDefault()`);
+        // }
+        // if (event.key === " ") {
+        //   // space can open the popover we don't want space to propagate to the select otherwise it would open it back immediatly
+        //   event.stopPropagation();
+        // }
+        requestClose(e);
+      }}
       onMouseDown={(e) => {
         if (e.button !== 0) {
           return;
@@ -477,14 +487,6 @@ const PickerContentInsideDialog = (props) => {
         }
         // When a label is clicked it transfers focus to the select, in that case we want to open it
         requestOpen(e);
-      }}
-      onnavi_list_select={(e) => {
-        const { event } = e.detail;
-        if (event.key === " ") {
-          // space can open the dialog, we don't want space to propagate to the select otherwise it would open it back immediately
-          event.stopPropagation();
-        }
-        requestClose(event);
       }}
       {...rest}
       onKeyDown={shortcutsViaOnKeyDown(
