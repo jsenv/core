@@ -10,7 +10,8 @@ export const PickerAction = (props) => {
     <Next
       {...actionProps}
       onMouseDown={(e) => {
-        props.onMouseDown?.(e);
+        debugger;
+        actionProps.onMouseDown?.(e);
         if (e.button !== 0) {
           return;
         }
@@ -23,7 +24,8 @@ export const PickerAction = (props) => {
         });
       }}
       onClick={(e) => {
-        props.onClick(e);
+        debugger;
+        actionProps.onClick(e);
         if (e.button !== 0) {
           return;
         }

@@ -7,17 +7,6 @@ import { useNextResolver } from "../resolver/resolver.jsx";
 import { useOnRequestAction } from "./use_action_events.js";
 import { UIStateControllerContext } from "./use_ui_state_controller.js";
 
-export const createActionResolver = (ActionVariant) => {
-  const ActionResolver = (props) => {
-    const Next = useNextResolver();
-    if (props.action || props.uiAction) {
-      return <ActionVariant {...props} />;
-    }
-    return <Next {...props} />;
-  };
-  return ActionResolver;
-};
-
 export const useActionProps = (props) => {
   const {
     ref,
@@ -32,7 +21,6 @@ export const useActionProps = (props) => {
     actionErrorEffect,
     ...rest
   } = props;
-
   const uiStateController = useContext(UIStateControllerContext);
   const [boundAction] = useActionBoundToOneParam(
     action,
@@ -65,4 +53,15 @@ export const useActionProps = (props) => {
     "onnavi_action_error": onActionError,
     "onnavi_action_end": onActionEnd,
   };
+};
+
+export const createActionResolver = (ActionVariant) => {
+  const ActionResolver = (props) => {
+    const Next = useNextResolver();
+    if (props.action || props.uiAction) {
+      return <ActionVariant {...props} />;
+    }
+    return <Next {...props} />;
+  };
+  return ActionResolver;
 };
