@@ -256,9 +256,16 @@ Picker.update = createUICallback({
     return dispatchToPicker(event, "navi_picker_set_value", { value });
   },
 });
-Picker.close = createUICallback({
-  name: "Picker.close",
-  event: (e) => dispatchToPicker(e, "navi_picker_request_close"),
+Picker.cancel = createUICallback({
+  name: "Picker.cancel",
+  event: (e) => dispatchToPicker(e, "navi_picker_request_cancel"),
+  uiAction: (value, event) => {
+    return dispatchToPicker(event, "navi_picker_request_cancel");
+  },
+});
+Picker.submit = createUICallback({
+  name: "Picker.submit",
+  event: (e) => dispatchToPicker(e, "navi_picker_request_submit"),
   uiAction: (value, event) => {
     const currentTarget = event.currentTarget;
     if (currentTarget.name && TAGNAME_FIELD_SET.has(currentTarget.tagName)) {
@@ -266,9 +273,10 @@ Picker.close = createUICallback({
         return false;
       }
     }
-    return dispatchToPicker(event, "navi_picker_request_close");
+    return dispatchToPicker(event, "navi_picker_request_submit");
   },
 });
+
 const dispatchToPicker = (e, customEventName, detail) => {
   const pickerEl = e.currentTarget.closest(".navi_picker");
   if (!pickerEl) {
