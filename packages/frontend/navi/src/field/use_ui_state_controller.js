@@ -9,7 +9,7 @@ import { useContext, useLayoutEffect, useMemo, useRef } from "preact/hooks";
 
 import { isSignal } from "@jsenv/navi/src/utils/is_signal.js";
 import { useNavState } from "../nav/browser_integration/browser_integration.js";
-import { useDebugAction, useDebugActionVerbose } from "../navi_debug.jsx";
+import { useDebugUiState } from "../navi_debug.jsx";
 import { useInitialValue } from "../state/use_initial_value.js";
 import { FormContext } from "./form_context.js";
 import { PickerElementContext } from "./picker/picker_context.jsx";
@@ -70,8 +70,7 @@ export const useUIStateController = (
   } = {},
 ) => {
   const uiStateControllerRef = useRef();
-  const debugAction = useDebugAction();
-  const debugActionVerbose = useDebugActionVerbose();
+  const debugUiState = useDebugUiState();
   const parentUIStateController = useContext(ParentUIStateControllerContext);
   const formContext = useContext(FormContext);
   const pickerElementContext = useContext(PickerElementContext);
@@ -213,15 +212,14 @@ export const useUIStateController = (
       if (newUIState === currentUIState) {
         return;
       }
-      debugAction(
+      debugUiState(
         e,
         `${getElementSignature(e.currentTarget)}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> updating to ${JSON.stringify(newUIState)}`,
       );
       uiStateController.uiState = newUIState;
       uiStateSignal.value = newUIState;
-      debugActionVerbose(e, `uiStateSignal -> ${JSON.stringify(newUIState)}`);
       publishUIState(newUIState, e);
-      debugActionVerbose(e, `publishUIState(${JSON.stringify(newUIState)})`);
+      debugUiState(e, `publishUIState(${JSON.stringify(newUIState)})`);
       if (!e.detail?.suppressParentNotification) {
         notifyParentAboutChildUIStateChange(e);
       }
@@ -375,7 +373,7 @@ export const useUIGroupStateController = (
     return notifyParentAboutChildUnmount;
   }, []);
 
-  const debugAction = useDebugAction();
+  const debugUiState = useDebugUiState();
   const onChange = (_, e, { notifyExternal = true } = {}) => {
     if (groupIsRenderingRef.current) {
       pendingChangeRef.current = true;
@@ -385,7 +383,7 @@ export const useUIGroupStateController = (
       childUIStateControllerArray,
       emptyState,
     );
-    debugAction(
+    debugUiState(
       e,
       `${componentType}.aggregateChildStates -> ${JSON.stringify(newUIState)}`,
     );

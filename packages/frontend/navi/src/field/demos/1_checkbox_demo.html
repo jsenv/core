@@ -224,7 +224,7 @@
 
       const InteractivityDemo = () => {
         return (
-          <NaviDebug debugAction>
+          <NaviDebug debugAction debugUiState>
             <div class="demo-section" id="interactivity">
               <h2>Interactivity</h2>
 
@@ -291,9 +291,10 @@
                 <Label>Enable feature</Label>
               </Field>
               <button
-                onClick={() =>
-                  ref.current.dispatchEvent(new CustomEvent("resetuistate"))
-                }
+                onClick={(e) => {
+                  const checkbox = ref.current;
+                  requestResetUIState(checkbox, e);
+                }}
               >
                 Reset
               </button>

@@ -6,7 +6,7 @@ const DebugFocusContext = createContext(false);
 const DebugScrollContext = createContext(false);
 const DebugPopupContext = createContext(false);
 const DebugActionContext = createContext(false);
-const DebugActionVerboseContext = createContext(false);
+const DebugUiStateContext = createContext(false);
 
 const debugNoop = () => {};
 const sharedEventGroupLogger = createEventGroupLogger();
@@ -27,8 +27,8 @@ export const useDebugAction = () => {
   const debug = useContext(DebugActionContext);
   return debug || debugNoop;
 };
-export const useDebugActionVerbose = () => {
-  const debug = useContext(DebugActionVerboseContext);
+export const useDebugUiState = () => {
+  const debug = useContext(DebugUiStateContext);
   return debug || debugNoop;
 };
 
@@ -47,7 +47,7 @@ export const NaviDebug = ({
   debugScroll,
   debugPopup,
   debugAction,
-  debugActionVerbose,
+  debugUiState,
   children,
 }) => {
   if (debugFocus === true) {
@@ -62,10 +62,8 @@ export const NaviDebug = ({
   if (debugAction === true) {
     debugAction = sharedEventGroupLogger;
   }
-  if (debugActionVerbose === true) {
-    debugActionVerbose = (e, label) => {
-      console.debug(label);
-    };
+  if (debugUiState === true) {
+    debugUiState = sharedEventGroupLogger;
   }
 
   return (
@@ -73,9 +71,9 @@ export const NaviDebug = ({
       <DebugScrollContext.Provider value={debugScroll}>
         <DebugPopupContext.Provider value={debugPopup}>
           <DebugActionContext.Provider value={debugAction}>
-            <DebugActionVerboseContext.Provider value={debugActionVerbose}>
+            <DebugUiStateContext.Provider value={debugUiState}>
               {children}
-            </DebugActionVerboseContext.Provider>
+            </DebugUiStateContext.Provider>
           </DebugActionContext.Provider>
         </DebugPopupContext.Provider>
       </DebugScrollContext.Provider>
