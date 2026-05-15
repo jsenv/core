@@ -504,7 +504,6 @@ const InputCheckboxUI = (props) => {
         as="svg"
         viewBox="0 0 12 12"
         aria-hidden="true"
-        preventInitialTransition
       >
         <circle cx="6" cy="6" r="5"></circle>
       </Box>
@@ -516,7 +515,6 @@ const InputCheckboxUI = (props) => {
         as="svg"
         viewBox="0 0 12 12"
         aria-hidden="true"
-        preventInitialTransition
       >
         <path d="M10.5 2L4.5 9L1.5 5.5" fill="none" strokeWidth="2" />
       </Box>
@@ -530,6 +528,7 @@ const InputCheckboxUI = (props) => {
       // (passsing any custom width/height would auto disable aspectRatio forced by the square prop)
       square={appearance === "button" ? true : undefined}
       {...remainingProps}
+      data-field=".navi_native_field"
       autoFocus={undefined} // See use_auto_focus.js
       ref={boxRef}
       data-appearance={appearance}
@@ -552,7 +551,6 @@ const InputCheckboxUI = (props) => {
       accentColor={accentColor}
       hasChildFunction
       baseChildPropSet={CheckboxChildPropSet}
-      preventInitialTransitions
       onClick={(e) => {
         if (!onRequestInteraction(e)) {
           e.preventDefault();

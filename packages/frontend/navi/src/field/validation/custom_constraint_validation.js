@@ -101,12 +101,12 @@ export const onRequestInteraction = (event) => {
     return false;
   }
   const requester = event.currentTarget || event.target;
-  const isValid = checkConstraintsAndReport(INTERACTION_CONSTRAINTS, {
+  const [isValid, field] = checkConstraintsAndReport(INTERACTION_CONSTRAINTS, {
     event,
     requester,
   });
   if (!isValid) {
-    dispatchCustomEvent(requester, "navi_interaction_prevented", {
+    dispatchCustomEvent(field, "navi_interaction_prevented", {
       event,
       requester,
     });
@@ -119,7 +119,6 @@ export const onRequestAction = (
   action,
   event,
   {
-    target = event.currentTarget,
     requester = event.detail?.requester || event.target,
     actionOrigin = event.detail?.actionOrigin,
     method = "rerun",
@@ -149,21 +148,28 @@ export const onRequestAction = (
     event,
     `${getElementSignature(requester)} is requesting action, checking ${DEFAULT_CONSTRAINT_SET.size} constraints...`,
   );
-  const isValid = checkConstraintsAndReport(DEFAULT_CONSTRAINT_SET, {
-    event,
-    requester,
-    fromRequestAction: true,
-    debugAction,
-  });
+  const [isValid, elementToValidate] = checkConstraintsAndReport(
+    DEFAULT_CONSTRAINT_SET,
+    {
+      event,
+      requester,
+      fromRequestAction: true,
+      debugAction,
+    },
+  );
   if (!isValid) {
     debugAction(
       event,
       `action prevented due to failing constraints, dispatch navi_action_prevented`,
     );
-    dispatchCustomEvent(target, "navi_action_prevented", customEventDetail);
+    dispatchCustomEvent(
+      elementToValidate,
+      "navi_action_prevented",
+      customEventDetail,
+    );
     return false;
   }
-  const elementForConfirmation = requester.form || target;
+  const elementForConfirmation = requester.form || elementToValidate;
   confirmMessage =
     confirmMessage ||
     elementForConfirmation.getAttribute("data-confirm-message");
@@ -174,15 +180,23 @@ export const onRequestAction = (
         event,
         `action cancelled by user -> dispatch navi_action_prevented`,
       );
-      dispatchCustomEvent(target, "navi_action_prevented", customEventDetail);
+      dispatchCustomEvent(
+        elementToValidate,
+        "navi_action_prevented",
+        customEventDetail,
+      );
       return false;
     }
   }
   debugAction(
     event,
-    `is valid -> ${getElementSignature(target)}.dispatchEvent("navi_action_ready")`,
+    `is valid -> ${getElementSignature(elementToValidate)}.dispatchEvent("navi_action_ready")`,
   );
-  dispatchCustomEvent(target, "navi_action_ready", customEventDetail);
+  dispatchCustomEvent(
+    elementToValidate,
+    "navi_action_ready",
+    customEventDetail,
+  );
   return true;
 };
 const STANDARD_CONSTRAINT_SET = new Set([
@@ -219,6 +233,18 @@ const checkConstraintsAndReport = (
   { event, requester, fromRequestAction, debugAction = () => {} } = {},
 ) => {
   let elementToValidate = requester;
+  const fieldSelector = requester.getAttribute("data-field");
+  if (fieldSelector) {
+    const field = requester.querySelector(fieldSelector);
+    if (field) {
+      elementToValidate = field;
+    } else {
+      debugAction(
+        `data-field selector "${fieldSelector}" did not match any element`,
+      );
+    }
+  }
+
   if (!elementToValidate.__validationInterface__) {
     const fieldElement = findFieldElement(requester);
     if (fieldElement) {
@@ -273,9 +299,9 @@ const checkConstraintsAndReport = (
       requester,
       debugAction,
     });
-    return false;
+    return [false, elementToValidate];
   }
-  return true;
+  return [true, elementToValidate];
 };
 
 const getManagedFields = (element) => {

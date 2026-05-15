@@ -659,14 +659,14 @@ const ButtonWithActionInsideForm = (props) => {
       }}
       uiAction={(value, e) => {
         rest.uiAction?.(value, e);
-        const button = e.currentTarget;
-        const { form } = button;
-        dispatchRequestAction(button, {
-          event: e,
-          requester: button,
-          // button will handle the event himself
-          target: form,
-        });
+        // const button = e.currentTarget;
+        // const { form } = button;
+        // dispatchRequestAction(button, {
+        //   event: e,
+        //   requester: button,
+        //   // button will handle the event himself
+        //   // target: form,
+        // });
       }}
     />
   );
