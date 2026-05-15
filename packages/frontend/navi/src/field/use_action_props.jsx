@@ -63,8 +63,7 @@ export const useActionProps = (
     ...rest,
     "children": childrenWithContext,
     ref,
-    "uiAction": undefined, // rest of components don't need to know about uiAction
-    "data-action": action ? boundAction.name || "anonymous" : undefined,
+    "data-action": boundAction.callSource,
     "data-action-debounce": actionDebounce,
     "data-action-after-change": actionAfterChange ? "" : undefined,
     "onnavi_cancel": (e) => {
