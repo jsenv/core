@@ -55,7 +55,6 @@
 
 import {
   createPubSub,
-  dispatchCustomEvent,
   dispatchInternalCustomEvent,
   dispatchPublicCustomEvent,
   getElementSignature,
@@ -107,7 +106,7 @@ export const onRequestInteraction = (event) => {
     requester,
   });
   if (!isValid) {
-    dispatchCustomEvent(
+    dispatchInternalCustomEvent(
       elementHandlingInteraction,
       "navi_interaction_prevented",
       {
@@ -172,7 +171,7 @@ export const onRequestAction = (
       event,
       `action prevented due to failing constraints, dispatch navi_action_prevented`,
     );
-    dispatchCustomEvent(
+    dispatchInternalCustomEvent(
       elementHandlingAction,
       "navi_action_prevented",
       customEventDetail,
@@ -189,7 +188,7 @@ export const onRequestAction = (
         event,
         `action cancelled by user -> dispatch navi_action_prevented`,
       );
-      dispatchCustomEvent(
+      dispatchInternalCustomEvent(
         elementHandlingAction,
         "navi_action_prevented",
         customEventDetail,
@@ -201,7 +200,7 @@ export const onRequestAction = (
     event,
     `${DEFAULT_CONSTRAINT_SET.size} constraints are valid -> ${getElementSignature(elementHandlingAction)}.dispatchEvent("navi_action_ready")`,
   );
-  dispatchCustomEvent(
+  dispatchInternalCustomEvent(
     elementHandlingAction,
     "navi_action_ready",
     customEventDetail,
@@ -391,7 +390,7 @@ export const installCustomConstraintValidation = (
   }
 
   const dispatchCancelCustomEvent = (detail) => {
-    return dispatchCustomEvent(element, "navi_cancel", detail);
+    return dispatchInternalCustomEvent(element, "navi_cancel", detail);
   };
   const closeElementValidationMessage = (event, reason) => {
     if (validationInterface.validationMessage) {
@@ -973,7 +972,7 @@ export const dispatchRequestAction = (
   elementWithAction,
   { actionOrigin = "action_prop", event, requester, target },
 ) => {
-  return dispatchCustomEvent(elementWithAction, "navi_request_action", {
+  return dispatchInternalCustomEvent(elementWithAction, "navi_request_action", {
     actionOrigin,
     event,
     requester,

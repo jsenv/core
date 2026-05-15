@@ -248,84 +248,82 @@
               voir toutes les erreurs.
             </p>
 
-            <NaviDebug debugAction>
-              <Form
-                onReset={() => {
-                  setSubmitStatus(null);
-                  setValidationErrors([]);
-                  setFormParams(null); // ✅ Clear params on reset
-                }}
-                onExecutePrevented={handleFormExecutePrevented}
-                action={async (params) => {
-                  console.log("🎯 Form execute event with params:", params);
+            <Form
+              onReset={() => {
+                setSubmitStatus(null);
+                setValidationErrors([]);
+                setFormParams(null); // ✅ Clear params on reset
+              }}
+              onExecutePrevented={handleFormExecutePrevented}
+              action={async (params) => {
+                console.log("🎯 Form execute event with params:", params);
 
-                  // ✅ Store form params in state
-                  setFormParams(params);
-                  setSubmitStatus("executing...");
-                  setValidationErrors([]);
-                  await new Promise((resolve) => setTimeout(resolve, 2_000));
-                  setSubmitStatus("Form submitted successfully!");
-                }}
-              >
-                {/* ✅ Champ requis */}
-                <Field vertical>
-                  <Label>Nom (obligatoire) :</Label>
-                  <Input name="name" required placeholder="Entrez votre nom" />
-                </Field>
+                // ✅ Store form params in state
+                setFormParams(params);
+                setSubmitStatus("executing...");
+                setValidationErrors([]);
+                await new Promise((resolve) => setTimeout(resolve, 2_000));
+                setSubmitStatus("Form submitted successfully!");
+              }}
+            >
+              {/* ✅ Champ requis */}
+              <Field vertical>
+                <Label>Nom (obligatoire) :</Label>
+                <Input name="name" required placeholder="Entrez votre nom" />
+              </Field>
 
-                {/* ✅ Champ email avec validation type */}
-                <Field vertical>
-                  <Label>Email (format email) :</Label>
-                  <Input
-                    name="email"
-                    type="email"
-                    placeholder="exemple@domain.com"
-                  />
-                </Field>
+              {/* ✅ Champ email avec validation type */}
+              <Field vertical>
+                <Label>Email (format email) :</Label>
+                <Input
+                  name="email"
+                  type="email"
+                  placeholder="exemple@domain.com"
+                />
+              </Field>
 
-                {/* ✅ Champ avec pattern */}
-                <Field vertical>
-                  <Label>Téléphone (format: 01-23-45-67-89) :</Label>
-                  <Input
-                    name="phone"
-                    pattern="[0-9]{2}-[0-9]{2}-[0-9]{2}-[0-9]{2}-[0-9]{2}"
-                    pattern-validation-message="Doit respecter le format <strong>01-23-45-67-89</strong>."
-                    placeholder="01-23-45-67-89"
-                  />
-                </Field>
+              {/* ✅ Champ avec pattern */}
+              <Field vertical>
+                <Label>Téléphone (format: 01-23-45-67-89) :</Label>
+                <Input
+                  name="phone"
+                  pattern="[0-9]{2}-[0-9]{2}-[0-9]{2}-[0-9]{2}-[0-9]{2}"
+                  pattern-validation-message="Doit respecter le format <strong>01-23-45-67-89</strong>."
+                  placeholder="01-23-45-67-89"
+                />
+              </Field>
 
-                {/* ✅ Champ avec longueur minimum */}
-                <Field vertical>
-                  <Label>Mot de passe (min 8 caractères) :</Label>
-                  <Input
-                    name="password"
-                    type="password"
-                    minLength="8"
-                    placeholder="Au moins 8 caractères"
-                  />
-                </Field>
+              {/* ✅ Champ avec longueur minimum */}
+              <Field vertical>
+                <Label>Mot de passe (min 8 caractères) :</Label>
+                <Input
+                  name="password"
+                  type="password"
+                  minLength="8"
+                  placeholder="Au moins 8 caractères"
+                />
+              </Field>
 
-                {/* ✅ Champ avec contrainte personnalisée */}
-                <Field vertical>
-                  <Label>Âge (18-99 ans) :</Label>
-                  <Input
-                    name="age"
-                    type="number"
-                    min="18"
-                    min-validation-message="L'age doit être de <strong>18</strong> ans ou plus."
-                    max="99"
-                    max-validation-message="L'age doit être de <strong>99</strong> ans ou moins."
-                    placeholder="18"
-                  />
-                </Field>
+              {/* ✅ Champ avec contrainte personnalisée */}
+              <Field vertical>
+                <Label>Âge (18-99 ans) :</Label>
+                <Input
+                  name="age"
+                  type="number"
+                  min="18"
+                  min-validation-message="L'age doit être de <strong>18</strong> ans ou plus."
+                  max="99"
+                  max-validation-message="L'age doit être de <strong>99</strong> ans ou moins."
+                  placeholder="18"
+                />
+              </Field>
 
-                {/* ✅ Bouton de soumission */}
-                <div className="field">
-                  <Button type="submit">Valider le formulaire</Button>
-                  <Button type="reset">Reset Status</Button>
-                </div>
-              </Form>
-            </NaviDebug>
+              {/* ✅ Bouton de soumission */}
+              <div className="field">
+                <Button type="submit">Valider le formulaire</Button>
+                <Button type="reset">Reset Status</Button>
+              </div>
+            </Form>
 
             {/* ✅ Affichage des paramètres du formulaire */}
             {formParams && (

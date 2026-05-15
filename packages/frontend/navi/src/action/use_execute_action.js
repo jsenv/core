@@ -1,4 +1,4 @@
-import { dispatchPublicCustomEvent, getElementSignature } from "@jsenv/dom";
+import { dispatchInternalCustomEvent, getElementSignature } from "@jsenv/dom";
 import { isValidElement } from "preact";
 import { useCallback, useLayoutEffect, useRef, useState } from "preact/hooks";
 
@@ -115,7 +115,7 @@ export const useExecuteAction = (
       const validationMessageTarget = requester || element;
       validationMessageTargetRef.current = validationMessageTarget;
 
-      dispatchPublicCustomEvent(
+      dispatchInternalCustomEvent(
         element,
         "navi_action_start",
         sharedActionEventDetail,
@@ -132,7 +132,7 @@ export const useExecuteAction = (
             // but other side effects might do this
             element
           ) {
-            dispatchPublicCustomEvent(element, "navi_action_abort", {
+            dispatchInternalCustomEvent(element, "navi_action_abort", {
               ...sharedActionEventDetail,
               reason,
             });
@@ -146,7 +146,7 @@ export const useExecuteAction = (
             // but other side effects might do this
             element
           ) {
-            dispatchPublicCustomEvent(element, "navi_action_error", {
+            dispatchInternalCustomEvent(element, "navi_action_error", {
               ...sharedActionEventDetail,
               error,
             });
@@ -165,7 +165,7 @@ export const useExecuteAction = (
             // but other side effects might do this
             element
           ) {
-            dispatchPublicCustomEvent(element, "navi_action_end", {
+            dispatchInternalCustomEvent(element, "navi_action_end", {
               ...sharedActionEventDetail,
               data,
             });

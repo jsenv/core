@@ -28,7 +28,8 @@ export const dispatchInternalCustomEvent = (
   customEventDetail,
 ) => {
   const customEvent = new CustomEvent(customEventName, {
-    detail: customEventDetail,
+    detail: resolveEventDetail(customEventDetail),
+    cancelable: true,
   });
   return el.dispatchEvent(customEvent);
 };
