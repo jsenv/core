@@ -149,7 +149,7 @@
       import { useState } from "preact/hooks";
       import {
         Input,
-        Label,
+        Field,
         Box,
         Icon,
         EyeSvg,
@@ -228,7 +228,7 @@
                 <fieldset>
                   <legend>Checkbox with uiAction</legend>
                   <Box row spacing="sm" alignX="start" alignY="center">
-                    <Label>
+                    <Field>
                       <Input
                         type="checkbox"
                         name="my-checkbox"
@@ -238,7 +238,7 @@
                         }}
                       />
                       Toggle me
-                    </Label>
+                    </Field>
                     {lastUIAction !== null && (
                       <span style={{ fontSize: "0.85rem", color: "#555" }}>
                         Last value: <code>{String(lastUIAction)}</code>
@@ -251,7 +251,7 @@
                   <legend>
                     Read-only checkbox — uiAction is not triggered
                   </legend>
-                  <Label>
+                  <Field>
                     <Input
                       type="checkbox"
                       readOnly
@@ -260,7 +260,7 @@
                       }}
                     />
                     Read-only
-                  </Label>
+                  </Field>
                 </fieldset>
               </div>
 
@@ -274,7 +274,7 @@
                 <fieldset>
                   <legend>Async action that fails</legend>
                   <Box row spacing="sm" alignX="start" alignY="center">
-                    <Label>
+                    <Field>
                       <Input
                         type="checkbox"
                         action={async () => {
@@ -286,7 +286,7 @@
                         }}
                       />
                       Fail after 800ms
-                    </Label>
+                    </Field>
                     {asyncResult && !asyncResult.ok && (
                       <span style={{ fontSize: "0.85rem", color: "#c00" }}>
                         Error: {asyncResult.message}
@@ -298,7 +298,7 @@
                 <fieldset>
                   <legend>Async action that succeeds</legend>
                   <Box row spacing="sm" alignX="start" alignY="center">
-                    <Label>
+                    <Field>
                       <Input
                         type="checkbox"
                         action={async (checked) => {
@@ -310,7 +310,7 @@
                         }}
                       />
                       Succeed after 800ms
-                    </Label>
+                    </Field>
                     {asyncResult && asyncResult.ok && (
                       <span style={{ fontSize: "0.85rem", color: "#2a7a2a" }}>
                         Success: {asyncResult.message}
@@ -340,10 +340,10 @@
                 <Box as="fieldset" width="100">
                   <legend>Default</legend>
                   <Box row spacing="sm" alignX="start">
-                    <Label>
+                    <Field>
                       <Input type="checkbox" />
                       Navi
-                    </Label>
+                    </Field>
                     <label>
                       <input type="checkbox" />
                       User Agent
@@ -353,13 +353,13 @@
                 <Box as="fieldset" width="200">
                   <legend>:focus-visible</legend>
                   <Box row spacing="sm" alignX="start">
-                    <Label>
+                    <Field>
                       <Input
                         type="checkbox"
                         pseudoState={{ ":focus-visible": true }}
                       />
                       Navi
-                    </Label>
+                    </Field>
                     <label>
                       <input type="checkbox" autofocus />
                       Native
@@ -369,10 +369,10 @@
                 <Box as="fieldset" width="150">
                   <legend>:disabled</legend>
                   <Box row spacing="sm" alignX="start">
-                    <Label>
+                    <Field>
                       <Input type="checkbox" disabled />
                       Navi
-                    </Label>
+                    </Field>
                     <label>
                       <input type="checkbox" disabled />
                       User Agent
@@ -384,10 +384,10 @@
                 <Box as="fieldset" width="100">
                   <legend>:checked</legend>
                   <Box row spacing="sm" alignX="start">
-                    <Label>
+                    <Field>
                       <Input type="checkbox" defaultChecked />
                       Navi
-                    </Label>
+                    </Field>
                     <label>
                       <input type="checkbox" checked />
                       User Agent
@@ -398,14 +398,14 @@
                 <Box as="fieldset" width="200">
                   <legend>:focus-visible:checked</legend>
                   <Box row spacing="sm" alignX="start">
-                    <Label>
+                    <Field>
                       <Input
                         type="checkbox"
                         defaultChecked
                         pseudoState={{ ":focus-visible": true }}
                       />
                       Navi
-                    </Label>
+                    </Field>
                     <label>
                       <input type="checkbox" autofocus defaultChecked />
                       User Agent
@@ -416,10 +416,10 @@
                 <Box as="fieldset" width="150">
                   <legend>:disabled:checked</legend>
                   <Box row spacing="sm" alignX="start">
-                    <Label>
+                    <Field>
                       <Input type="checkbox" disabled defaultChecked />
                       Navi
-                    </Label>
+                    </Field>
                     <label>
                       <input type="checkbox" disabled checked />
                       Native
@@ -442,19 +442,19 @@
                 <Box as="fieldset" width="200">
                   <legend>:read-only</legend>
                   <Box row spacing="sm" alignX="start">
-                    <Label>
+                    <Field>
                       <Input type="checkbox" readOnly />
                       Read-only
-                    </Label>
+                    </Field>
                   </Box>
                 </Box>
                 <Box as="fieldset" width="200">
                   <legend>:-navi-loading</legend>
                   <Box row spacing="sm" alignX="start">
-                    <Label>
+                    <Field>
                       <Input type="checkbox" loading />
                       Loading
-                    </Label>
+                    </Field>
                   </Box>
                 </Box>
               </Box>
@@ -462,19 +462,19 @@
                 <Box as="fieldset" width="200">
                   <legend>:read-only:checked</legend>
                   <Box row spacing="sm" alignX="start">
-                    <Label>
+                    <Field>
                       <Input type="checkbox" readOnly checked />
                       Read-only
-                    </Label>
+                    </Field>
                   </Box>
                 </Box>
                 <Box as="fieldset" width="200">
                   <legend>:-navi-loading:checked</legend>
                   <Box row spacing="sm" alignX="start">
-                    <Label>
+                    <Field>
                       <Input type="checkbox" loading checked />
                       Loading
-                    </Label>
+                    </Field>
                   </Box>
                 </Box>
               </Box>
@@ -531,18 +531,18 @@
                       alignItems: "center",
                     }}
                   >
-                    <Label>
+                    <Field>
                       <Input type="checkbox" accentColor="#f39c12" />
                       Navi
-                    </Label>
-                    <Label>
+                    </Field>
+                    <Field>
                       <Input
                         type="checkbox"
                         accentColor="#f39c12"
                         defaultChecked
                       />
                       Navi
-                    </Label>
+                    </Field>
                     <label>
                       <input
                         type="checkbox"
@@ -570,18 +570,18 @@
                       alignItems: "center",
                     }}
                   >
-                    <Label>
+                    <Field>
                       <Input type="checkbox" accentColor="#2ecc71" />
                       Navi
-                    </Label>
-                    <Label>
+                    </Field>
+                    <Field>
                       <Input
                         type="checkbox"
                         accentColor="#2ecc71"
                         defaultChecked
                       />
                       Navi
-                    </Label>
+                    </Field>
                     <label>
                       <input
                         type="checkbox"
@@ -609,18 +609,18 @@
                       alignItems: "center",
                     }}
                   >
-                    <Label>
+                    <Field>
                       <Input type="checkbox" accentColor="#34495e" />
                       Navi
-                    </Label>
-                    <Label>
+                    </Field>
+                    <Field>
                       <Input
                         type="checkbox"
                         accentColor="#34495e"
                         defaultChecked
                       />
                       Navi
-                    </Label>
+                    </Field>
                     <label>
                       <input
                         type="checkbox"
@@ -648,18 +648,18 @@
                       alignItems: "center",
                     }}
                   >
-                    <Label>
+                    <Field>
                       <Input type="checkbox" accentColor="#e91e8c" />
                       Navi
-                    </Label>
-                    <Label>
+                    </Field>
+                    <Field>
                       <Input
                         type="checkbox"
                         accentColor="#e91e8c"
                         defaultChecked
                       />
                       Navi
-                    </Label>
+                    </Field>
                     <label>
                       <input
                         type="checkbox"
@@ -694,18 +694,18 @@
                       alignItems: "center",
                     }}
                   >
-                    <Label>
+                    <Field>
                       <Input type="checkbox" accentColor="#ffffff" />
                       Navi
-                    </Label>
-                    <Label>
+                    </Field>
+                    <Field>
                       <Input
                         type="checkbox"
                         accentColor="#ffffff"
                         defaultChecked
                       />
                       Navi
-                    </Label>
+                    </Field>
                     <label>
                       <input
                         type="checkbox"
@@ -752,10 +752,10 @@
                   >
                     Extra Small (xs)
                   </div>
-                  <Label column spacing="sm" alignY="center">
+                  <Field column spacing="sm" alignY="center">
                     <Input type="checkbox" size="xs" defaultChecked />I agree to
                     the terms
-                  </Label>
+                  </Field>
 
                   <div
                     style={{
@@ -767,10 +767,10 @@
                   >
                     Small (s)
                   </div>
-                  <Label column spacing="sm" alignY="center">
+                  <Field column spacing="sm" alignY="center">
                     <Input type="checkbox" size="s" defaultChecked />I agree to
                     the terms
-                  </Label>
+                  </Field>
 
                   <div
                     style={{
@@ -782,9 +782,9 @@
                   >
                     Medium - Default (m)
                   </div>
-                  <Label column spacing="sm" alignY="center">
+                  <Field column spacing="sm" alignY="center">
                     <Input type="checkbox" defaultChecked />I agree to the terms
-                  </Label>
+                  </Field>
 
                   <div
                     style={{
@@ -796,10 +796,10 @@
                   >
                     Large (l)
                   </div>
-                  <Label column spacing="sm" alignY="center">
+                  <Field column spacing="sm" alignY="center">
                     <Input type="checkbox" size="l" defaultChecked />I agree to
                     the terms
-                  </Label>
+                  </Field>
 
                   <div
                     style={{
@@ -811,10 +811,10 @@
                   >
                     Extra Large (xl)
                   </div>
-                  <Label column spacing="sm" alignY="center">
+                  <Field column spacing="sm" alignY="center">
                     <Input type="checkbox" size="xl" defaultChecked />I agree to
                     the terms
-                  </Label>
+                  </Field>
                 </Box>
               </Box>
             </div>
@@ -837,42 +837,42 @@
               <Box column spacing="sm">
                 <Box as="fieldset" width="250">
                   <legend>Default</legend>
-                  <Label column alignY="center" borderRadius="50%">
+                  <Field column alignY="center" borderRadius="50%">
                     <Input type="checkbox" appearance="toggle" />
                     Label
-                  </Label>
+                  </Field>
                 </Box>
                 <Box as="fieldset" width="250">
                   <legend>:focus-visible</legend>
-                  <Label column alignY="center">
+                  <Field column alignY="center">
                     <Input
                       type="checkbox"
                       appearance="toggle"
                       pseudoState={{ ":focus-visible": true }}
                     />
                     Label
-                  </Label>
+                  </Field>
                 </Box>
                 <Box as="fieldset" width="250">
                   <legend>:disabled</legend>
-                  <Label column alignY="center">
+                  <Field column alignY="center">
                     <Input type="checkbox" appearance="toggle" disabled />
                     Label
-                  </Label>
+                  </Field>
                 </Box>
               </Box>
               <Box column spacing="sm">
                 <Box as="fieldset" width="250">
                   <legend>:checked</legend>
-                  <Label column alignY="center">
+                  <Field column alignY="center">
                     <Input type="checkbox" appearance="toggle" defaultChecked />
                     Label
-                  </Label>
+                  </Field>
                 </Box>
 
                 <Box as="fieldset" width="250">
                   <legend>:focus-visible:checked</legend>
-                  <Label column alignY="center">
+                  <Field column alignY="center">
                     <Input
                       type="checkbox"
                       appearance="toggle"
@@ -880,12 +880,12 @@
                       pseudoState={{ ":focus-visible": true }}
                     />
                     Label
-                  </Label>
+                  </Field>
                 </Box>
 
                 <Box as="fieldset" width="250">
                   <legend>:disabled:checked</legend>
-                  <Label column alignY="center">
+                  <Field column alignY="center">
                     <Input
                       type="checkbox"
                       appearance="toggle"
@@ -893,7 +893,7 @@
                       defaultChecked
                     />
                     Label
-                  </Label>
+                  </Field>
                 </Box>
               </Box>
             </div>
@@ -909,23 +909,23 @@
               <Box column spacing="sm">
                 <Box as="fieldset" width="200">
                   <legend>:read-only</legend>
-                  <Label column alignY="center" spacing="s">
+                  <Field column alignY="center" spacing="s">
                     <Input type="checkbox" appearance="toggle" readOnly />
                     Label
-                  </Label>
+                  </Field>
                 </Box>
                 <Box as="fieldset" width="200">
                   <legend>:-navi-loading</legend>
-                  <Label column alignY="center" spacing="s">
+                  <Field column alignY="center" spacing="s">
                     <Input type="checkbox" appearance="toggle" loading />
                     Label
-                  </Label>
+                  </Field>
                 </Box>
               </Box>
               <Box column spacing="sm">
                 <Box as="fieldset" width="200">
                   <legend>:read-only:checked</legend>
-                  <Label column alignY="center" spacing="s">
+                  <Field column alignY="center" spacing="s">
                     <Input
                       type="checkbox"
                       appearance="toggle"
@@ -933,11 +933,11 @@
                       checked
                     />
                     Label
-                  </Label>
+                  </Field>
                 </Box>
                 <Box as="fieldset" width="200">
                   <legend>:-navi-loading:checked</legend>
-                  <Label column alignY="center" spacing="s">
+                  <Field column alignY="center" spacing="s">
                     <Input
                       type="checkbox"
                       appearance="toggle"
@@ -945,7 +945,7 @@
                       checked
                     />
                     Label
-                  </Label>
+                  </Field>
                 </Box>
               </Box>
             </div>
@@ -968,15 +968,15 @@
                       alignItems: "center",
                     }}
                   >
-                    <Label column alignY="center" spacing="s">
+                    <Field column alignY="center" spacing="s">
                       <Input
                         type="checkbox"
                         appearance="toggle"
                         accentColor="#f39c12"
                       />
                       Label
-                    </Label>
-                    <Label column alignY="center" spacing="s">
+                    </Field>
+                    <Field column alignY="center" spacing="s">
                       <Input
                         type="checkbox"
                         appearance="toggle"
@@ -984,7 +984,7 @@
                         defaultChecked
                       />
                       Label
-                    </Label>
+                    </Field>
                   </div>
                 </fieldset>
                 <fieldset style="margin: 0">
@@ -997,15 +997,15 @@
                       alignItems: "center",
                     }}
                   >
-                    <Label column alignY="center" spacing="s">
+                    <Field column alignY="center" spacing="s">
                       <Input
                         type="checkbox"
                         appearance="toggle"
                         accentColor="#2ecc71"
                       />
                       Label
-                    </Label>
-                    <Label column alignY="center" spacing="s">
+                    </Field>
+                    <Field column alignY="center" spacing="s">
                       <Input
                         type="checkbox"
                         appearance="toggle"
@@ -1013,7 +1013,7 @@
                         defaultChecked
                       />
                       Label
-                    </Label>
+                    </Field>
                   </div>
                 </fieldset>
                 <fieldset style="margin: 0">
@@ -1026,15 +1026,15 @@
                       alignItems: "center",
                     }}
                   >
-                    <Label column alignY="center" spacing="s">
+                    <Field column alignY="center" spacing="s">
                       <Input
                         type="checkbox"
                         appearance="toggle"
                         accentColor="#34495e"
                       />
                       Label
-                    </Label>
-                    <Label column alignY="center" spacing="s">
+                    </Field>
+                    <Field column alignY="center" spacing="s">
                       <Input
                         type="checkbox"
                         appearance="toggle"
@@ -1042,7 +1042,7 @@
                         defaultChecked
                       />
                       Label
-                    </Label>
+                    </Field>
                   </div>
                 </fieldset>
                 <fieldset style={{ margin: 0, background: "#1e1e1e" }}>
@@ -1055,7 +1055,7 @@
                       alignItems: "center",
                     }}
                   >
-                    <Label
+                    <Field
                       column
                       alignY="center"
                       spacing="s"
@@ -1067,8 +1067,8 @@
                         accentColor="white"
                       />
                       Label
-                    </Label>
-                    <Label
+                    </Field>
+                    <Field
                       column
                       alignY="center"
                       spacing="s"
@@ -1081,7 +1081,7 @@
                         defaultChecked
                       />
                       Label
-                    </Label>
+                    </Field>
                   </div>
                 </fieldset>
               </Box>
@@ -1098,11 +1098,11 @@
                 <fieldset>
                   <legend>Small</legend>
                   <Box row spacing="sm" alignX="start" alignY="center">
-                    <Label column alignY="center" spacing="s">
+                    <Field column alignY="center" spacing="s">
                       <Input type="checkbox" appearance="toggle" size="s" />
                       Label
-                    </Label>
-                    <Label column alignY="center" spacing="s">
+                    </Field>
+                    <Field column alignY="center" spacing="s">
                       <Input
                         type="checkbox"
                         appearance="toggle"
@@ -1110,34 +1110,34 @@
                         defaultChecked
                       />
                       Label
-                    </Label>
+                    </Field>
                   </Box>
                 </fieldset>
                 <fieldset>
                   <legend>Medium (Default)</legend>
                   <Box row spacing="sm" alignX="start" alignY="center">
-                    <Label column alignY="center" spacing="s">
+                    <Field column alignY="center" spacing="s">
                       <Input type="checkbox" appearance="toggle" />
                       Label
-                    </Label>
-                    <Label column alignY="center" spacing="s">
+                    </Field>
+                    <Field column alignY="center" spacing="s">
                       <Input
                         type="checkbox"
                         appearance="toggle"
                         defaultChecked
                       />
                       Label
-                    </Label>
+                    </Field>
                   </Box>
                 </fieldset>
                 <fieldset>
                   <legend>Large</legend>
                   <Box row spacing="sm" alignX="start" alignY="center">
-                    <Label column alignY="center" spacing="s">
+                    <Field column alignY="center" spacing="s">
                       <Input type="checkbox" appearance="toggle" size="l" />
                       Label
-                    </Label>
-                    <Label column alignY="center" spacing="s">
+                    </Field>
+                    <Field column alignY="center" spacing="s">
                       <Input
                         type="checkbox"
                         appearance="toggle"
@@ -1145,7 +1145,7 @@
                         defaultChecked
                       />
                       Label
-                    </Label>
+                    </Field>
                   </Box>
                 </fieldset>
               </Box>
@@ -1162,28 +1162,28 @@
                 <fieldset>
                   <legend>Default Width</legend>
                   <Box flex="y" spacing="s" alignX="start" alignY="center">
-                    <Label flex alignY="center" spacing="s">
+                    <Field flex alignY="center" spacing="s">
                       <Input type="checkbox" appearance="toggle" />
                       Label
-                    </Label>
-                    <Label flex alignY="center" spacing="s">
+                    </Field>
+                    <Field flex alignY="center" spacing="s">
                       <Input
                         type="checkbox"
                         appearance="toggle"
                         defaultChecked
                       />
                       Label
-                    </Label>
+                    </Field>
                   </Box>
                 </fieldset>
                 <fieldset>
                   <legend>Custom Width (50px)</legend>
                   <Box flex="y" spacing="s" alignX="start" alignY="center">
-                    <Label flex alignY="center" spacing="s">
+                    <Field flex alignY="center" spacing="s">
                       <Input type="checkbox" appearance="toggle" width="50" />
                       Label
-                    </Label>
-                    <Label flex alignY="center" spacing="s">
+                    </Field>
+                    <Field flex alignY="center" spacing="s">
                       <Input
                         type="checkbox"
                         appearance="toggle"
@@ -1191,17 +1191,17 @@
                         defaultChecked
                       />
                       Label
-                    </Label>
+                    </Field>
                   </Box>
                 </fieldset>
                 <fieldset>
                   <legend>Big Width (80px)</legend>
                   <Box flex="y" spacing="s" alignX="start" alignY="center">
-                    <Label flex alignY="center" spacing="s">
+                    <Field flex alignY="center" spacing="s">
                       <Input type="checkbox" appearance="toggle" width="80" />
                       Label
-                    </Label>
-                    <Label flex alignY="center" spacing="s">
+                    </Field>
+                    <Field flex alignY="center" spacing="s">
                       <Input
                         type="checkbox"
                         appearance="toggle"
@@ -1209,7 +1209,7 @@
                         defaultChecked
                       />
                       Label
-                    </Label>
+                    </Field>
                   </Box>
                 </fieldset>
               </Box>
@@ -1226,11 +1226,11 @@
                 <fieldset>
                   <legend>Big Padding</legend>
                   <Box flex="y" spacing="s" alignX="start" alignY="center">
-                    <Label flex alignY="center" spacing="s">
+                    <Field flex alignY="center" spacing="s">
                       <Input type="checkbox" appearance="toggle" padding="l" />
                       Label
-                    </Label>
-                    <Label flex alignY="center" spacing="s">
+                    </Field>
+                    <Field flex alignY="center" spacing="s">
                       <Input
                         type="checkbox"
                         appearance="toggle"
@@ -1238,7 +1238,7 @@
                         defaultChecked
                       />
                       Label
-                    </Label>
+                    </Field>
                   </Box>
                 </fieldset>
               </Box>
@@ -1249,7 +1249,7 @@
 
       const HeartIconOpacityDemo = () => {
         return (
-          <Label column spacing="sm" alignY="center">
+          <Field column spacing="sm" alignY="center">
             <Input
               type="checkbox"
               style={{
@@ -1261,7 +1261,7 @@
               icon={<span style="opacity: var(--opacity)">❤️</span>}
             />
             Heart icon (single icon)
-          </Label>
+          </Field>
         );
       };
 
@@ -1277,15 +1277,15 @@
               <Box row spacing="sm" alignY="start">
                 <HeartIconOpacityDemo />
 
-                <Label column spacing="sm" alignY="center">
+                <Field column spacing="sm" alignY="center">
                   <Input
                     type="checkbox"
                     icon={[<span>⭐</span>, <span>❤️</span>]}
                   />
                   Star or Heart icon (array of icons for different states)
-                </Label>
+                </Field>
 
-                <Label column spacing="sm" alignY="center">
+                <Field column spacing="sm" alignY="center">
                   <Input
                     type="checkbox"
                     icon={[
@@ -1299,7 +1299,7 @@
                     defaultChecked
                   />
                   SVG icon component
-                </Label>
+                </Field>
               </Box>
 
               <div
@@ -1367,7 +1367,7 @@
               Checkboxes with icons can also take the appearance of a button:
             </p>
 
-            <Label flex spacing="s" alignY="center">
+            <Field flex spacing="s" alignY="center">
               <Input
                 type="checkbox"
                 appearance="button"
@@ -1385,9 +1385,9 @@
                 ]}
               />
               Toggle visibility
-            </Label>
+            </Field>
 
-            <Label flex spacing="s" alignY="center" marginTop="s">
+            <Field flex spacing="s" alignY="center" marginTop="s">
               <Input
                 type="checkbox"
                 appearance="button"
@@ -1408,14 +1408,14 @@
                 ]}
               />
               Toggle visibility
-            </Label>
+            </Field>
           </fieldset>
         );
       };
 
       const HeartField = (props) => {
         return (
-          <Label column spacing="sm" alignY="center">
+          <Field column spacing="sm" alignY="center">
             <Input
               type="checkbox"
               icon={[
@@ -1429,7 +1429,7 @@
               {...props}
             />
             Newsletter subscription
-          </Label>
+          </Field>
         );
       };
 
@@ -1490,7 +1490,7 @@
             <fieldset>
               <legend>Result</legend>
               <Box column spacing="sm">
-                <Label>
+                <Field>
                   <Input
                     type="checkbox"
                     loading={loading}
@@ -1499,7 +1499,7 @@
                     onUIStateChange={setChecked}
                   />
                   Interactive Checkbox
-                </Label>
+                </Field>
                 <div
                   style={{
                     marginTop: "10px",
