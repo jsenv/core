@@ -133,15 +133,22 @@ export const getElementSignature = (element) => {
       return "form";
     }
     if (element === document.body) {
-      return "<body>";
+      return "document.body";
     }
     if (element === document.documentElement) {
-      return "<html>";
+      return "document.html";
     }
     const elementId = element.id;
     const className = element.className;
     if (elementId && !looksLikeGeneratedId(elementId)) {
       return `${tagName}#${elementId}`;
+    }
+    if (tagName === "button" || element.getAttribute("type") === "submit") {
+      const text = element.textContent.trim();
+      if (text) {
+        const excerpt = text.length > 10 ? `${text.slice(0, 10)}…` : text;
+        return `button:text("${excerpt}")`;
+      }
     }
     if (className) {
       return `${tagName}.${className.split(" ").join(".")}`;
