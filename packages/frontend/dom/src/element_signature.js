@@ -125,6 +125,13 @@ export const getElementSignature = (element) => {
       }
       return `input[type="${type}"]`;
     }
+    if (tagName === "form") {
+      const name = element.getAttribute("name");
+      if (name) {
+        return `form[name="${name}"]`;
+      }
+      return "form";
+    }
     if (element === document.body) {
       return "<body>";
     }

@@ -14,7 +14,7 @@ export const PickerAction = (props) => {
         // no necessarily the field itself
         const pickerEl = e.currentTarget;
         const managedField = getPickerManagedField(pickerEl);
-        e.respondWith(managedField);
+        e.detail.respondWith(managedField);
       }}
     />
   );

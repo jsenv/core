@@ -100,16 +100,21 @@ export const onRequestInteraction = (event) => {
   if (event.defaultPrevented) {
     return false;
   }
-  const requester = event.currentTarget || event.target;
-  const [isValid, field] = checkConstraintsAndReport(INTERACTION_CONSTRAINTS, {
+  const elementHandlingInteraction = event.currentTarget;
+  const requester = event.target;
+  const [isValid] = checkConstraintsAndReport(INTERACTION_CONSTRAINTS, {
     event,
     requester,
   });
   if (!isValid) {
-    dispatchCustomEvent(field, "navi_interaction_prevented", {
-      event,
-      requester,
-    });
+    dispatchCustomEvent(
+      elementHandlingInteraction,
+      "navi_interaction_prevented",
+      {
+        event,
+        requester,
+      },
+    );
     return false;
   }
   return true;
@@ -144,35 +149,39 @@ export const onRequestAction = (
     requester,
     meta,
   };
-  debugAction(
-    event,
-    `${getElementSignature(requester)} is requesting action, checking ${DEFAULT_CONSTRAINT_SET.size} constraints...`,
-  );
-  const [isValid, elementToValidate] = checkConstraintsAndReport(
-    DEFAULT_CONSTRAINT_SET,
-    {
+  const elementHandlingAction = event.currentTarget;
+  if (requester === elementHandlingAction) {
+    debugAction(
       event,
-      requester,
-      fromRequestAction: true,
-      debugAction,
-    },
-  );
+      `${getElementSignature(elementHandlingAction)} action requested`,
+    );
+  } else {
+    debugAction(
+      event,
+      `${getElementSignature(elementHandlingAction)} action requested by ${getElementSignature(requester)}`,
+    );
+  }
+  const [isValid] = checkConstraintsAndReport(DEFAULT_CONSTRAINT_SET, {
+    event,
+    requester,
+    fromRequestAction: true,
+    debugAction,
+  });
   if (!isValid) {
     debugAction(
       event,
       `action prevented due to failing constraints, dispatch navi_action_prevented`,
     );
     dispatchCustomEvent(
-      elementToValidate,
+      elementHandlingAction,
       "navi_action_prevented",
       customEventDetail,
     );
     return false;
   }
-  const elementForConfirmation = requester.form || elementToValidate;
   confirmMessage =
     confirmMessage ||
-    elementForConfirmation.getAttribute("data-confirm-message");
+    elementHandlingAction.getAttribute("data-confirm-message");
   if (confirmMessage) {
     // eslint-disable-next-line no-alert
     if (!window.confirm(confirmMessage)) {
@@ -181,7 +190,7 @@ export const onRequestAction = (
         `action cancelled by user -> dispatch navi_action_prevented`,
       );
       dispatchCustomEvent(
-        elementToValidate,
+        elementHandlingAction,
         "navi_action_prevented",
         customEventDetail,
       );
@@ -190,10 +199,10 @@ export const onRequestAction = (
   }
   debugAction(
     event,
-    `is valid -> ${getElementSignature(elementToValidate)}.dispatchEvent("navi_action_ready")`,
+    `${DEFAULT_CONSTRAINT_SET.size} constraints are valid -> ${getElementSignature(elementHandlingAction)}.dispatchEvent("navi_action_ready")`,
   );
   dispatchCustomEvent(
-    elementToValidate,
+    elementHandlingAction,
     "navi_action_ready",
     customEventDetail,
   );
@@ -232,18 +241,18 @@ const checkConstraintsAndReport = (
   constraints,
   { event, requester, fromRequestAction, debugAction = () => {} } = {},
 ) => {
-  let elementToValidate = requester;
-  const fieldSelector = requester.getAttribute("data-field");
-  if (fieldSelector) {
-    const field = requester.querySelector(fieldSelector);
-    if (field) {
-      elementToValidate = field;
-    } else {
-      debugAction(
-        `data-field selector "${fieldSelector}" did not match any element`,
-      );
-    }
-  }
+  let elementToValidate = event.currentTarget;
+  // const fieldSelector = requester.getAttribute("data-field");
+  // if (fieldSelector) {
+  //   const field = requester.querySelector(fieldSelector);
+  //   if (field) {
+  //     elementToValidate = field;
+  //   } else {
+  //     debugAction(
+  //       `data-field selector "${fieldSelector}" did not match any element`,
+  //     );
+  //   }
+  // }
 
   if (!elementToValidate.__validationInterface__) {
     const fieldElement = findFieldElement(requester);

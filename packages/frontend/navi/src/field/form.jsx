@@ -143,7 +143,7 @@ const FormWithAction = (props) => {
       data-method={action.meta?.httpVerb || method || "GET"}
       {...remainingProps}
       onnavi_get_managed_fields={(e) => {
-        e.respondWith(getFormManagedFields(e.currentTarget));
+        e.detail.respondWith(getFormManagedFields(e.currentTarget));
       }}
       onnavi_action_ready={(e) => {
         const form = ref.current;
