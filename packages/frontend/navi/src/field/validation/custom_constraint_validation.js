@@ -214,7 +214,6 @@ const DEFAULT_CONSTRAINT_SET = new Set([
   ...NAVI_CONSTRAINT_SET,
 ]);
 
-const validationInProgressWeakSet = new WeakSet();
 const checkConstraintsAndReport = (
   constraints,
   { event, requester, fromRequestAction, debugAction = () => {} } = {},
@@ -230,19 +229,6 @@ const checkConstraintsAndReport = (
   if (!validationInterface) {
     validationInterface = installCustomConstraintValidation(elementToValidate);
   }
-
-  if (validationInProgressWeakSet.has(elementToValidate)) {
-    debugAction(
-      event,
-      `validation already in progress for ${getElementSignature(elementToValidate)}`,
-    );
-    return false;
-  }
-  validationInProgressWeakSet.add(elementToValidate);
-  setTimeout(() => {
-    validationInProgressWeakSet.delete(elementToValidate);
-  });
-
   const managedFields = getManagedFields(elementToValidate);
   let isValid = true;
   let failedValidationInterface;
