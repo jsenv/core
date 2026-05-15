@@ -58,11 +58,10 @@ import {
   requestListOpen,
   requestListSelectCurrent,
 } from "../list/list.jsx";
-import { useActionProps } from "../use_action_props.js";
+import { ActionRequesterContext, useActionProps } from "../use_action_props.js";
 import {
   DisabledContext,
   LoadingContext,
-  LoadingElementContext,
   ReadOnlyContext,
   UIStateContext,
   UIStateControllerContext,
@@ -356,14 +355,14 @@ const InputTextualUI = (props) => {
   const contextReadOnly = useContext(ReadOnlyContext);
   const contextDisabled = useContext(DisabledContext);
   const contextLoading = useContext(LoadingContext);
-  const contextLoadingElement = useContext(LoadingElementContext);
+  const actionRequester = useContext(ActionRequesterContext);
   const uiStateController = useContext(UIStateControllerContext);
   const uiState = useContext(UIStateContext);
 
   const innerValue =
     type === "datetime-local" ? convertToLocalTimezone(uiState) : uiState;
   const innerLoading =
-    loading || (contextLoading && contextLoadingElement === ref.current);
+    loading || (contextLoading && actionRequester === ref.current);
   const innerReadOnly =
     readOnly || contextReadOnly || innerLoading || uiStateController.readOnly;
   const innerDisabled = disabled || contextDisabled;

@@ -15,10 +15,10 @@ import {
   useFieldId,
 } from "../field.jsx";
 import { createUICallback } from "../ui_callback.js";
+import { ActionRequesterContext } from "../use_action_props.js";
 import {
   DisabledContext,
   LoadingContext,
-  LoadingElementContext,
   ReadOnlyContext,
   UIStateContext,
   UIStateControllerContext,
@@ -311,10 +311,10 @@ const PickerInput = (props) => {
   const contextReadOnly = useContext(ReadOnlyContext);
   const contextDisabled = useContext(DisabledContext);
   const contextLoading = useContext(LoadingContext);
-  const contextLoadingElement = useContext(LoadingElementContext);
+  const actionRequester = useContext(ActionRequesterContext);
 
   const innerLoading =
-    loading || (contextLoading && contextLoadingElement === ref.current);
+    loading || (contextLoading && actionRequester === ref.current);
   const innerReadOnly =
     readOnly || contextReadOnly || innerLoading || uiStateController.readOnly;
   const innerDisabled = disabled || contextDisabled;

@@ -12,12 +12,11 @@ import {
   useFieldId,
 } from "../field.jsx";
 import { fieldPropSet } from "../field_prop_set.js";
-import { useActionProps } from "../use_action_props.js";
+import { ActionRequesterContext, useActionProps } from "../use_action_props.js";
 import {
   DisabledContext,
   FieldNameContext,
   LoadingContext,
-  LoadingElementContext,
   ReadOnlyContext,
   RequiredContext,
   UIStateContext,
@@ -446,7 +445,7 @@ const InputCheckboxUI = (props) => {
   const contextDisabled = useContext(DisabledContext);
   const contextRequired = useContext(RequiredContext);
   const contextLoading = useContext(LoadingContext);
-  const loadingElement = useContext(LoadingElementContext);
+  const actionRequester = useContext(ActionRequesterContext);
   const uiStateController = useContext(UIStateControllerContext);
   const uiState = useContext(UIStateContext);
 
@@ -454,7 +453,7 @@ const InputCheckboxUI = (props) => {
   const innerDisabled = disabled || contextDisabled;
   const innerRequired = required || contextRequired;
   const innerLoading =
-    loading || (contextLoading && loadingElement === ref.current);
+    loading || (contextLoading && actionRequester === ref.current);
   const innerReadOnly =
     readOnly || contextReadOnly || innerLoading || uiStateController.readOnly;
   reportReadOnlyToField(innerReadOnly);

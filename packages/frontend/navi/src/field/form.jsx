@@ -16,19 +16,13 @@
 import { dispatchCustomEvent } from "@jsenv/dom";
 import { useContext, useMemo, useRef } from "preact/hooks";
 
-import { useActionBoundToOneParam } from "../action/use_action.js";
-import { useExecuteAction } from "../action/use_execute_action.js";
 import { Box } from "../box/box.jsx";
 import { useDebugAction } from "../navi_debug.jsx";
 import { collectFormElementValues } from "./collect_form_element_values.js";
-import { FormActionContext, FormContext } from "./form_context.js";
-import {
-  useOnRequestAction,
-  useRequestedActionStatus,
-} from "./use_action_events.js";
+import { FormContext } from "./form_context.js";
+import { useActionProps } from "./use_action_props.js";
 import {
   LoadingContext,
-  LoadingElementContext,
   ParentUIStateControllerContext,
   ReadOnlyContext,
   UIStateContext,
@@ -137,70 +131,29 @@ const FormUI = (props) => {
 };
 
 const FormWithAction = (props) => {
-  const {
-    ref,
-    action,
-    method,
-    actionErrorEffect = "show_validation_message", // "show_validation_message" or "throw"
-    errorMapping,
-    onActionPrevented,
-    onActionAbort,
-    onActionError,
-    onActionEnd,
-    loading,
-    children,
-    ...rest
-  } = props;
+  const { ref, action, method } = props;
   const uiStateController = useContext(UIStateControllerContext);
-  const [actionBoundToUIState] = useActionBoundToOneParam(
-    action,
-    uiStateController.uiStateSignal,
-  );
-  const executeAction = useExecuteAction(ref, {
-    errorEffect: actionErrorEffect,
-    errorMapping,
+  const remainingProps = useActionProps(props, {
+    provideAction: true,
+    provideActionRequester: true,
   });
-  const onRequestAction = useOnRequestAction();
-  const { actionPending, actionRequester: formActionRequester } =
-    useRequestedActionStatus(ref);
-
-  const innerLoading = loading || actionPending;
 
   return (
     <FormUI
-      data-action={actionBoundToUIState.callSource}
       data-method={action.meta?.httpVerb || method || "GET"}
-      {...rest}
-      ref={ref}
-      loading={innerLoading}
+      {...remainingProps}
       onnavi_get_managed_fields={(e) => {
         e.respondWith(getFormManagedFields(e.currentTarget));
       }}
-      onnavi_request_action={(e) => {
-        onRequestAction(actionBoundToUIState, e);
-      }}
-      onnavi_action_prevented={onActionPrevented}
       onnavi_action_ready={(e) => {
         const form = ref.current;
         // this is not really mandatory, normally all navi fields already report
         // it's only in case we have fields that are not managed by navi
         const formElementValues = collectFormElementValues(form);
         uiStateController.setUIState(formElementValues, e);
-        executeAction(e);
+        remainingProps.onnavi_action_ready?.(e);
       }}
-      onnavi_action_abort={onActionAbort}
-      onnavi_action_error={onActionError}
-      onnavi_action_end={(e) => {
-        uiStateController.actionEnd(e);
-        onActionEnd?.(e);
-      }}
-    >
-      <FormActionContext.Provider value={actionBoundToUIState}>
-        <LoadingElementContext.Provider value={formActionRequester}>
-          {children}
-        </LoadingElementContext.Provider>
-      </FormActionContext.Provider>
-    </FormUI>
+    />
   );
 };
 

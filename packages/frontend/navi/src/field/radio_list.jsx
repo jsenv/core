@@ -1,4 +1,4 @@
-import { useContext, useRef, useState } from "preact/hooks";
+import { useContext, useRef } from "preact/hooks";
 
 import { useActionBoundToOneParam } from "../action/use_action.js";
 import { useActionStatus } from "../action/use_action_status.js";
@@ -10,7 +10,6 @@ import {
   DisabledContext,
   FieldNameContext,
   LoadingContext,
-  LoadingElementContext,
   ParentUIStateControllerContext,
   ReadOnlyContext,
   RequiredContext,
@@ -107,7 +106,6 @@ const RadioListWithAction = (props) => {
     onActionEnd,
     actionErrorEffect,
     loading,
-    children,
     ...rest
   } = props;
   const [boundAction] = useActionBoundToOneParam(
@@ -118,7 +116,6 @@ const RadioListWithAction = (props) => {
   const executeAction = useExecuteAction(ref, {
     errorEffect: actionErrorEffect,
   });
-  const [actionRequester, setActionRequester] = useState(null);
   const onRequestAction = useOnRequestAction();
 
   return (
@@ -146,7 +143,6 @@ const RadioListWithAction = (props) => {
       }}
       onnavi_action_prevented={onActionPrevented}
       onnavi_action_ready={(e) => {
-        setActionRequester(e.detail.requester);
         executeAction(e);
       }}
       onnavi_action_abort={(e) => {
@@ -159,10 +155,6 @@ const RadioListWithAction = (props) => {
       }}
       onnavi_action_end={onActionEnd}
       loading={loading || actionLoading}
-    >
-      <LoadingElementContext.Provider value={actionRequester}>
-        {children}
-      </LoadingElementContext.Provider>
-    </RadioListUI>
+    />
   );
 };

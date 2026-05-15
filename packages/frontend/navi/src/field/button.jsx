@@ -14,14 +14,16 @@ import { assertRoute, useRouteStatus } from "../nav/route.js";
 import { Text, markAsOutsideTextFlow } from "../text/text.jsx";
 import { useAutoFocus } from "../utils/focus/use_auto_focus.js";
 import { useAccentColorAttributes } from "../utils/use_accent_color_attributes.js";
-import { FormActionContext } from "./form_context.js";
 import { useOnRequestAction } from "./use_action_events.js";
-import { useActionProps } from "./use_action_props.js";
+import {
+  ActionContext,
+  ActionRequesterContext,
+  useActionProps,
+} from "./use_action_props.js";
 import { useFormEvents } from "./use_form_events.js";
 import {
   DisabledContext,
   LoadingContext,
-  LoadingElementContext,
   ReadOnlyContext,
   UIStateContext,
   UIStateControllerContext,
@@ -323,14 +325,14 @@ const ButtonRouteResolver = (props) => {
 };
 const ButtonActionResolver = (props) => {
   const Next = useNextResolver();
-  const formContext = useContext(FormActionContext);
-  if (props.action || (props.shortcuts && props.shortcuts.length > 0)) {
-    if (formContext) {
-      return <ButtonWithActionInsideForm {...props} />;
+  const actionContext = useContext(ActionContext);
+  if (props.action) {
+    if (actionContext) {
+      return <ButtonWithActionNested {...props} />;
     }
     return <ButtonWithAction {...props} />;
   }
-  if (formContext) {
+  if (actionContext) {
     return <ButtonInsideForm {...props} />;
   }
   return <Next {...props} />;
@@ -364,14 +366,14 @@ const ButtonUI = (props) => {
   } = props;
   const uiStateController = useContext(UIStateControllerContext);
   const contextLoading = useContext(LoadingContext);
-  const contextLoadingElement = useContext(LoadingElementContext);
+  const actionRequester = useContext(ActionRequesterContext);
   const contextReadOnly = useContext(ReadOnlyContext);
   const contextDisabled = useContext(DisabledContext);
 
   useAutoFocus(ref, autoFocus);
   const remainingProps = useConstraints(ref, rest);
   const innerLoading =
-    loading || (contextLoading && contextLoadingElement === ref.current);
+    loading || (contextLoading && actionRequester === ref.current);
   const innerReadOnly = readOnly || contextReadOnly || innerLoading;
   const innerDisabled = disabled || contextDisabled;
 
@@ -591,7 +593,7 @@ const ButtonWithAction = (props) => {
     />
   );
 };
-const ButtonWithActionInsideForm = (props) => {
+const ButtonWithActionNested = (props) => {
   const {
     ref,
     type,
@@ -605,7 +607,7 @@ const ButtonWithActionInsideForm = (props) => {
     ...rest
   } = props;
   const Next = useNextResolver();
-  const formAction = useContext(FormActionContext);
+  const ancestorAction = useContext(ActionContext);
   const hasEffectOnForm =
     type === "submit" || type === "reset" || type === "image";
   if (import.meta.dev && hasEffectOnForm) {
@@ -613,35 +615,37 @@ const ButtonWithActionInsideForm = (props) => {
       `<Button type="${type}" /> should not have their own action`,
     );
   }
-  const formParamsSignal = formAction.paramsSignal;
-  const actionBoundToFormParams = useAction(action, formParamsSignal);
-  const { loading: actionLoading } = useActionStatus(actionBoundToFormParams);
+  const ancestorParamsSignal = ancestorAction.paramsSignal;
+  const actionBoundToAncestorParams = useAction(action, ancestorParamsSignal);
+  const { loading: actionLoading } = useActionStatus(
+    actionBoundToAncestorParams,
+  );
   const onRequestAction = useOnRequestAction();
 
   const innerLoading = loading || actionLoading;
   useFormEvents(ref, {
     onFormActionPrevented: (e) => {
-      if (e.detail.action === actionBoundToFormParams) {
+      if (e.detail.action === actionBoundToAncestorParams) {
         onActionPrevented?.(e);
       }
     },
     onFormActionStart: (e) => {
-      if (e.detail.action === actionBoundToFormParams) {
+      if (e.detail.action === actionBoundToAncestorParams) {
         onActionStart?.(e);
       }
     },
     onFormActionAbort: (e) => {
-      if (e.detail.action === actionBoundToFormParams) {
+      if (e.detail.action === actionBoundToAncestorParams) {
         onActionAbort?.(e);
       }
     },
     onFormActionError: (e) => {
-      if (e.detail.action === actionBoundToFormParams) {
+      if (e.detail.action === actionBoundToAncestorParams) {
         onActionError?.(e.detail.error);
       }
     },
     onFormActionEnd: (e) => {
-      if (e.detail.action === actionBoundToFormParams) {
+      if (e.detail.action === actionBoundToAncestorParams) {
         onActionEnd?.(e);
       }
     },
@@ -649,13 +653,13 @@ const ButtonWithActionInsideForm = (props) => {
 
   return (
     <Next
-      data-action={actionBoundToFormParams.name}
+      data-action={actionBoundToAncestorParams.name}
       {...rest}
       ref={ref}
       type={type}
       loading={innerLoading}
       onnavi_request_action={(e) => {
-        onRequestAction(actionBoundToFormParams, e);
+        onRequestAction(actionBoundToAncestorParams, e);
       }}
       uiAction={(value, e) => {
         rest.uiAction?.(value, e);

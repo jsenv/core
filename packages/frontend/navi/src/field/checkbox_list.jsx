@@ -1,6 +1,6 @@
 // TOFIX: select in data then reset, it reset to red/blue instead of red/blue/green
 
-import { useContext, useRef, useState } from "preact/hooks";
+import { useContext, useRef } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
 import { InputCheckbox } from "./input/input_checkbox.jsx";
@@ -9,7 +9,6 @@ import {
   DisabledContext,
   FieldNameContext,
   LoadingContext,
-  LoadingElementContext,
   ParentUIStateControllerContext,
   ReadOnlyContext,
   RequiredContext,
@@ -95,13 +94,18 @@ const CheckboxListUI = (props) => {
 };
 
 const CheckboxListWithAction = (props) => {
-  const remainingProps = useActionProps({
-    resetOnCancel: true,
-    resetOnAbort: true,
-    resetOnError: true,
-    ...props,
-  });
-  const [actionRequester, setActionRequester] = useState(null);
+  const remainingProps = useActionProps(
+    {
+      resetOnCancel: true,
+      resetOnAbort: true,
+      resetOnError: true,
+      ...props,
+    },
+    {
+      provideAction: true,
+      provideActionRequester: true,
+    },
+  );
 
   return (
     <CheckboxListUI
@@ -109,17 +113,12 @@ const CheckboxListWithAction = (props) => {
       onChange={(e) => {
         const checkbox = e.target;
         const checkboxList = remainingProps.ref.current;
-        setActionRequester(checkbox);
         dispatchRequestAction(checkboxList, {
           event: e,
           requester: checkbox,
           actionOrigin: "action_prop",
         });
       }}
-    >
-      <LoadingElementContext.Provider value={actionRequester}>
-        {remainingProps.children}
-      </LoadingElementContext.Provider>
-    </CheckboxListUI>
+    />
   );
 };

@@ -14,11 +14,11 @@ import {
   useFieldId,
 } from "../field.jsx";
 import { fieldPropSet } from "../field_prop_set.js";
+import { ActionRequesterContext } from "../use_action_props.js";
 import {
   DisabledContext,
   FieldNameContext,
   LoadingContext,
-  LoadingElementContext,
   ReadOnlyContext,
   RequiredContext,
   UIStateContext,
@@ -408,7 +408,7 @@ const InputRadioUI = (props) => {
   const contextDisabled = useContext(DisabledContext);
   const contextRequired = useContext(RequiredContext);
   const contextLoading = useContext(LoadingContext);
-  const contextLoadingElement = useContext(LoadingElementContext);
+  const actionRequester = useContext(ActionRequesterContext);
   const uiStateController = useContext(UIStateControllerContext);
   const uiState = useContext(UIStateContext);
 
@@ -416,7 +416,7 @@ const InputRadioUI = (props) => {
   const innerDisabled = disabled || contextDisabled;
   const innerRequired = required || contextRequired;
   const innerLoading =
-    loading || (contextLoading && contextLoadingElement === ref.current);
+    loading || (contextLoading && actionRequester === ref.current);
   const innerReadOnly =
     readOnly || contextReadOnly || innerLoading || uiStateController.readOnly;
 

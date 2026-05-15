@@ -25,10 +25,10 @@ import {
   reportInteractiveToField,
   reportReadOnlyToField,
 } from "../field.jsx";
+import { ActionRequesterContext } from "../use_action_props.js";
 import {
   DisabledContext,
   LoadingContext,
-  LoadingElementContext,
   ParentUIStateControllerContext,
   ReadOnlyContext,
   SelectTriggerContentRegistryContext,
@@ -400,7 +400,7 @@ const SelectUI = (props) => {
   const contextReadOnly = useContext(ReadOnlyContext);
   const contextDisabled = useContext(DisabledContext);
   const contextLoading = useContext(LoadingContext);
-  const contextLoadingElement = useContext(LoadingElementContext);
+  const actionRequester = useContext(ActionRequesterContext);
   const defaultRef = useRef();
   const ref = rest.ref || defaultRef;
   const hiddenInputId = useId();
@@ -408,7 +408,7 @@ const SelectUI = (props) => {
   const remainingProps = useConstraints(hiddenInputRef, rest);
 
   const innerLoading =
-    loading || (contextLoading && contextLoadingElement === ref.current);
+    loading || (contextLoading && actionRequester === ref.current);
   const innerReadOnly = readOnly || contextReadOnly || innerLoading;
   const innerDisabled = disabled || contextDisabled;
 
