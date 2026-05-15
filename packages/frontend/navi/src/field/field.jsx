@@ -145,9 +145,19 @@ export const Label = (props) => {
       as="label"
       htmlFor={htmlFor || fieldId}
       baseClassName="navi_label"
+      pseudoClasses={LabelPseudoClasses}
       {...rest}
     >
       {children}
     </Box>
   );
 };
+const LabelPseudoClasses = [
+  ":hover",
+  ":active",
+  ":focus",
+  ":focus-visible",
+  ":read-only",
+  ":disabled",
+  ":-navi-loading",
+];
