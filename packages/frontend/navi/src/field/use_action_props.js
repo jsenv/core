@@ -18,6 +18,8 @@ export const useActionProps = (props) => {
     onActionError,
     onActionEnd,
     actionErrorEffect,
+    cancelOnBlurInvalid,
+    cancelOnEscape,
     ...rest
   } = props;
   const uiStateController = useContext(UIStateControllerContext);
@@ -41,6 +43,23 @@ export const useActionProps = (props) => {
     "data-action-after-change": actionAfterChange ? "" : undefined,
     "onnavi_cancel": (e) => {
       const { reason } = e.detail;
+      if (reason.startsWith("blur_invalid")) {
+        if (!cancelOnBlurInvalid) {
+          return;
+        }
+        if (
+          // error prevent cancellation until the user closes it (or something closes it)
+          e.detail.failedConstraintInfo.level === "error" &&
+          e.detail.failedConstraintInfo.reportStatus !== "closed"
+        ) {
+          return;
+        }
+      }
+      if (reason === "escape_key") {
+        if (!cancelOnEscape) {
+          return;
+        }
+      }
       onCancel?.(e, reason);
     },
     "onnavi_request_action": (e) => {

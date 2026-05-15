@@ -26,9 +26,6 @@ import {
   useState,
 } from "preact/hooks";
 
-import { useActionBoundToOneParam } from "@jsenv/navi/src/action/use_action.js";
-import { useActionStatus } from "@jsenv/navi/src/action/use_action_status.js";
-import { useExecuteAction } from "@jsenv/navi/src/action/use_execute_action.js";
 import { Box } from "@jsenv/navi/src/box/box.jsx";
 import { ChevronDownSvg } from "@jsenv/navi/src/graphic/icons/chevron_updown_svg.jsx";
 import { CloseSvg } from "@jsenv/navi/src/graphic/icons/close_svg.jsx";
@@ -40,6 +37,10 @@ import { shortcutsViaOnKeyDown } from "@jsenv/navi/src/keyboard/keyboard_shortcu
 import { Icon } from "@jsenv/navi/src/text/icon.jsx";
 import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
 import { useStableCallback } from "@jsenv/navi/src/utils/use_stable_callback.js";
+import {
+  createComponentResolver,
+  useNextResolver,
+} from "../../resolver/resolver.jsx";
 import {
   Label,
   reportDisabledToField,
@@ -57,7 +58,7 @@ import {
   requestListOpen,
   requestListSelectCurrent,
 } from "../list/list.jsx";
-import { useOnRequestAction } from "../use_action_events.js";
+import { useActionProps } from "../use_action_props.js";
 import {
   DisabledContext,
   LoadingContext,
@@ -288,18 +289,25 @@ export const InputTextual = (props) => {
   return (
     <UIStateControllerContext.Provider value={uiStateController}>
       <UIStateContext.Provider value={uiState}>
-        <InputTextualDispatcher {...props} ref={ref} id={id} />
+        {renderInput(InputTextualUI, { ...props, ref, id })}
       </UIStateContext.Provider>
     </UIStateControllerContext.Provider>
   );
 };
-const InputTextualDispatcher = (props) => {
-  const listIdFromContext = useContext(ListIdContext);
-  const isInsideRealListItem = useContext(InsideRealListItemContext);
+
+const InputTextualActionResolver = (props) => {
+  const Next = useNextResolver();
 
   if (props.action) {
     return <InputTextualWithAction {...props} />;
   }
+  return <Next {...props} />;
+};
+const InputTextualWithListResolver = (props) => {
+  const Next = useNextResolver();
+  const listIdFromContext = useContext(ListIdContext);
+  const isInsideRealListItem = useContext(InsideRealListItemContext);
+
   if (
     listIdFromContext &&
     // When inside a ListItem the input is not considered as controlling the list
@@ -315,8 +323,13 @@ const InputTextualDispatcher = (props) => {
   if (props.suggestions) {
     return <InputTextualWithSuggestions {...props} />;
   }
-  return <InputTextualUI {...props} />;
+  return <Next {...props} />;
 };
+
+const renderInput = createComponentResolver([
+  InputTextualActionResolver,
+  InputTextualWithListResolver,
+]);
 
 const InputNativeContext = createContext(null);
 const InputTextualUI = (props) => {
@@ -599,6 +612,7 @@ export const InputRightSlot = (props) => {
 };
 
 const InputControllingList = (props) => {
+  const Next = useNextResolver();
   const { ref, listId, onKeyDown, ...rest } = props;
 
   const getListEl = () => {
@@ -663,7 +677,7 @@ const InputControllingList = (props) => {
   );
   return (
     <ListIdContext.Provider value={null}>
-      <InputTextualDispatcher
+      <Next
         aria-controls={listId}
         aria-autocomplete="list"
         aria-has-popup="listbox"
@@ -671,13 +685,13 @@ const InputControllingList = (props) => {
         autoComplete="off"
         {...rest}
         ref={ref}
-        listId={undefined}
         onKeyDown={onKeyDownWithShortcuts}
       />
     </ListIdContext.Provider>
   );
 };
 const InputTextualWithSuggestions = (props) => {
+  const Next = useNextResolver();
   const {
     ref,
     suggestions,
@@ -744,7 +758,7 @@ const InputTextualWithSuggestions = (props) => {
 
   return (
     <ListIdContext.Provider value={suggestions}>
-      <InputTextualDispatcher
+      <Next
         role="combobox"
         aria-haspopup="listbox"
         aria-expanded={expanded}
@@ -757,7 +771,6 @@ const InputTextualWithSuggestions = (props) => {
         }}
         {...rest}
         ref={ref}
-        suggestions={undefined}
         onFocus={(e) => {
           onFocus?.(e);
           showSuggestions(e);
@@ -804,83 +817,15 @@ const InputTextualWithSuggestions = (props) => {
             </Icon>
           </InputRightSlot>
         )}
-      </InputTextualDispatcher>
+      </Next>
     </ListIdContext.Provider>
   );
 };
 const InputTextualWithAction = (props) => {
-  const {
-    ref,
-    action,
-    actionDebounce,
-    actionAfterChange,
-    loading,
-    onCancel,
-    onActionPrevented,
-    onActionAborted,
-    onActionError,
-    onActionEnd,
-    cancelOnBlurInvalid,
-    cancelOnEscape,
-    actionErrorEffect,
-    ...rest
-  } = props;
-  const uiStateController = useContext(UIStateControllerContext);
-  const [boundAction] = useActionBoundToOneParam(
-    action,
-    uiStateController.uiStateSignal,
-  );
-  const { loading: actionLoading } = useActionStatus(boundAction);
-  const executeAction = useExecuteAction(ref, {
-    errorEffect: actionErrorEffect,
-  });
-  const onRequestAction = useOnRequestAction();
+  const Next = useNextResolver();
+  const remainingProps = useActionProps(props);
 
-  // here updating the input won't call the associated action
-  // (user have to blur or press enter for this to happen)
-  // so we can keep the ui state on cancel/abort/error and let user decide
-  // to update ui state or retry via blur/enter as is
-
-  return (
-    <InputTextualDispatcher
-      data-action={boundAction.name || "anonymous"}
-      data-action-debounce={actionDebounce}
-      data-action-after-change={actionAfterChange ? "" : undefined}
-      {...rest}
-      ref={ref}
-      action={undefined}
-      onnavi_cancel={(e) => {
-        const { reason } = e.detail;
-        if (reason.startsWith("blur_invalid")) {
-          if (!cancelOnBlurInvalid) {
-            return;
-          }
-          if (
-            // error prevent cancellation until the user closes it (or something closes it)
-            e.detail.failedConstraintInfo.level === "error" &&
-            e.detail.failedConstraintInfo.reportStatus !== "closed"
-          ) {
-            return;
-          }
-        }
-        if (reason === "escape_key") {
-          if (!cancelOnEscape) {
-            return;
-          }
-        }
-        onCancel?.(e, reason);
-      }}
-      onnavi_request_action={(e) => {
-        onRequestAction(boundAction, e);
-      }}
-      onnavi_action_prevented={onActionPrevented}
-      onnavi_action_ready={executeAction}
-      onnavi_action_abort={onActionAborted}
-      onnavi_action_error={onActionError}
-      onnavi_action_end={onActionEnd}
-      loading={loading || actionLoading}
-    />
-  );
+  return <Next {...remainingProps} />;
 };
 
 // As explained in https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/input/datetime-local#setting_timezones

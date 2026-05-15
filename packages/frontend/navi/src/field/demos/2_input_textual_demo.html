@@ -163,25 +163,54 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useState } from "preact/hooks";
+      import { useState, useRef } from "preact/hooks";
       import { Input, Box } from "@jsenv/navi";
 
       const App = () => {
         return (
           <div>
+            <TableOfContents />
             <BasicStatesDemo />
             <TypeVariationsDemo />
+            <ValueHandlingDemo />
             <ActionHandlingDemo />
             <SizeVariationsDemo />
-            <ValueHandlingDemo />
             <InteractiveDemo />
+          </div>
+        );
+      };
+
+      const TableOfContents = () => {
+        return (
+          <div class="demo-section">
+            <h2>Table of contents</h2>
+            <ol style={{ margin: 0, paddingLeft: "20px", lineHeight: "2" }}>
+              <li>
+                <a href="#states">Input States</a>
+              </li>
+              <li>
+                <a href="#types">Input Types</a>
+              </li>
+              <li>
+                <a href="#value-handling">Value Handling</a>
+              </li>
+              <li>
+                <a href="#action-handling">Action Handling</a>
+              </li>
+              <li>
+                <a href="#sizes">Size Variations</a>
+              </li>
+              <li>
+                <a href="#interactive-controls">Interactive Controls</a>
+              </li>
+            </ol>
           </div>
         );
       };
 
       const BasicStatesDemo = () => {
         return (
-          <div className="demo-section">
+          <div className="demo-section" id="states">
             <h2>Input States</h2>
 
             <div className="states-section">
@@ -280,7 +309,7 @@
         const [datetimeValue, setDatetimeValue] = useState("2024-06-15T14:30");
 
         return (
-          <div className="demo-section">
+          <div className="demo-section" id="types">
             <h2>Input Types</h2>
 
             <div
@@ -453,32 +482,19 @@
         const [abortValue, setAbortValue] = useState("");
         const [abortCallCount, setAbortCallCount] = useState(0);
         const [abortedCount, setAbortedCount] = useState(0);
-
-        const useCancelPrevious = () => {
-          const [currentAbortController, setCurrentAbortController] =
-            useState(null);
-
-          return () => {
-            if (currentAbortController) {
-              currentAbortController.abort();
-              setAbortedCount((c) => c + 1);
-            }
-            const newController = new AbortController();
-            setCurrentAbortController(newController);
-            return newController.signal;
-          };
-        };
-
-        const cancelPrevious = useCancelPrevious();
-
-        const slowAction = async (value, setter, counter, setCounter) => {
-          setCounter((c) => c + 1);
-          await new Promise((resolve) => setTimeout(resolve, 2000));
-          setter(value);
+        const currentAbortControllerRef = useRef(null);
+        const cancelPrevious = () => {
+          if (currentAbortControllerRef.current) {
+            currentAbortControllerRef.current.abort();
+            setAbortedCount((c) => c + 1);
+          }
+          const controller = new AbortController();
+          currentAbortControllerRef.current = controller;
+          return controller.signal;
         };
 
         return (
-          <div className="demo-section">
+          <div className="demo-section" id="action-handling">
             <h2>Action Handling</h2>
 
             <fieldset>
@@ -510,14 +526,11 @@
               <Box column spacing="sm">
                 <Input
                   placeholder="Type something (slow)..."
-                  action={(value) =>
-                    slowAction(
-                      value,
-                      setAsyncValue,
-                      asyncCallCount,
-                      setAsyncCallCount,
-                    )
-                  }
+                  action={async (value) => {
+                    setAsyncCallCount((c) => c + 1);
+                    await new Promise((resolve) => setTimeout(resolve, 2000));
+                    setAsyncValue(value);
+                  }}
                 />
                 <div className="value-display">
                   Value: "{asyncValue}" | Calls: {asyncCallCount}
@@ -535,14 +548,11 @@
               <Box column spacing="sm">
                 <Input
                   placeholder="Type something (debounced)..."
-                  action={(value) =>
-                    slowAction(
-                      value,
-                      setDebouncedValue,
-                      debouncedCallCount,
-                      setDebouncedCallCount,
-                    )
-                  }
+                  action={async (value) => {
+                    setDebouncedCallCount((c) => c + 1);
+                    await new Promise((resolve) => setTimeout(resolve, 2000));
+                    setDebouncedValue(value);
+                  }}
                   actionDebounce={600}
                 />
                 <div className="value-display">
@@ -561,14 +571,11 @@
               <Box column spacing="sm">
                 <Input
                   placeholder="Type and press Enter or blur..."
-                  action={(value) =>
-                    slowAction(
-                      value,
-                      setAfterChangeValue,
-                      afterChangeCallCount,
-                      setAfterChangeCallCount,
-                    )
-                  }
+                  action={async (value) => {
+                    setAfterChangeCallCount((c) => c + 1);
+                    await new Promise((resolve) => setTimeout(resolve, 2000));
+                    setAfterChangeValue(value);
+                  }}
                   actionAfterChange
                 />
                 <div className="value-display">
@@ -611,7 +618,7 @@
 
       const SizeVariationsDemo = () => {
         return (
-          <div className="demo-section">
+          <div className="demo-section" id="sizes">
             <h2>Size Variations</h2>
 
             <Box row spacing="sm">
@@ -645,7 +652,7 @@
         const [uncontrolledValue, setUncontrolledValue] = useState("");
 
         return (
-          <div className="demo-section">
+          <div className="demo-section" id="value-handling">
             <h2>Value Handling</h2>
 
             <fieldset>
@@ -688,10 +695,10 @@
                     margin: "0 0 10px 0",
                   }}
                 >
-                  Without onUIStateChange handler, Input becomes read-only
-                  automatically
+                  Passing only <code>value</code> with no way to update it makes
+                  the input read-only automatically.
                 </p>
-                <Input value="This is read-only (no handler)" />
+                <Input value="This is read-only" />
               </Box>
             </fieldset>
           </div>
@@ -705,7 +712,7 @@
         const [type, setType] = useState("text");
 
         return (
-          <div className="demo-section">
+          <div className="demo-section" id="interactive-controls">
             <h2>Interactive Controls</h2>
 
             <fieldset>
