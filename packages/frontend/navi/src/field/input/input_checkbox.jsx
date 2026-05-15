@@ -474,6 +474,8 @@ const InputCheckboxUI = (props) => {
         name={innerName}
         checked={checked}
         required={innerRequired}
+        data-readonly={innerReadOnly ? "" : undefined}
+        aria-busy={innerLoading ? "true" : undefined}
         baseClassName="navi_native_field"
         data-callout-arrow-x="center"
       />
@@ -483,6 +485,8 @@ const InputCheckboxUI = (props) => {
     innerName,
     checked,
     innerRequired,
+    innerReadOnly,
+    innerLoading,
   ]);
 
   const boxRef = useRef();
