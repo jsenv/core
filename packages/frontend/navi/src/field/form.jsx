@@ -13,6 +13,7 @@
  *    right now it's just logged to the console I need to see how we can achieve this
  */
 
+import { dispatchCustomEvent } from "@jsenv/dom";
 import { useContext, useMemo, useRef } from "preact/hooks";
 
 import { useActionBoundToOneParam } from "../action/use_action.js";
@@ -93,9 +94,24 @@ const FormUI = (props) => {
 
   return (
     <Box
+      data-action="toto"
       {...remainingProps}
       as="form"
       ref={ref}
+      novalidate="" // make sure browser don't prevent "submit" when invalid, nor display messages
+      onSubmit={(e) => {
+        const form = e.currentTarget;
+        e.preventDefault();
+        dispatchCustomEvent(form, "navi_action_ready", {
+          action: null,
+          event: e,
+          method: "rerun",
+          requester: form,
+          meta: {
+            isSubmit: true,
+          },
+        });
+      }}
       onReset={(e) => {
         // browser would empty all fields to their default values (likely empty/unchecked)
         // we want to reset to the last known external state instead

@@ -842,33 +842,6 @@ export const installCustomConstraintValidation = (
     });
   }
 
-  execute_on_form_submit: {
-    if (!isForm) {
-      break execute_on_form_submit;
-    }
-    // We will dispatch "action" when "submit" occurs (code called from.submit() to bypass validation)
-    const form = element;
-    if (!form.hasAttribute("data-action")) {
-      form.setAttribute("data-action", "toto");
-    }
-    form.setAttribute("novalidate", ""); // make sure browser don't prevent "submit" when invalid, nor display messages
-    const removeListener = addEventListener(form, "submit", (e) => {
-      e.preventDefault();
-      dispatchCustomEvent(form, "navi_action", {
-        action: null,
-        event: e,
-        method: "rerun",
-        requester: form,
-        meta: {
-          isSubmit: true,
-        },
-      });
-    });
-    addTeardown(() => {
-      removeListener();
-    });
-  }
-
   close_on_escape: {
     const onkeydown = (e) => {
       if (e.key === "Escape") {
@@ -1017,13 +990,6 @@ HTMLFormElement.prototype.requestSubmit = function (submitter) {
 //   }
 //   return submit.apply(this, args);
 // };
-
-const addEventListener = (element, event, callback) => {
-  element.addEventListener(event, callback);
-  return () => {
-    element.removeEventListener(event, callback);
-  };
-};
 
 // When the requester is not a validated element itself (e.g. a <li> inside a
 // list container), look for a field element declared via data-field on the
