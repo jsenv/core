@@ -1,11 +1,8 @@
 import { useContext, useRef } from "preact/hooks";
 
-import { useActionBoundToOneParam } from "../action/use_action.js";
-import { useActionStatus } from "../action/use_action_status.js";
-import { useExecuteAction } from "../action/use_execute_action.js";
 import { Box } from "../box/box.jsx";
 import { InputRadio } from "./input/input_radio.jsx";
-import { useOnRequestAction } from "./use_action_events.js";
+import { useActionProps } from "./use_action_props.jsx";
 import {
   DisabledContext,
   FieldNameContext,
@@ -15,6 +12,7 @@ import {
   RequiredContext,
   UIStateContext,
   UIStateControllerContext,
+  useUIAction,
   useUIGroupStateController,
   useUIState,
 } from "./use_ui_state_controller.js";
@@ -56,12 +54,21 @@ const RadioListDispatcher = (props) => {
 };
 
 const RadioListUI = (props) => {
+  const {
+    name,
+    loading,
+    disabled,
+    readOnly,
+    uiAction,
+    children,
+    required,
+    ...rest
+  } = props;
   const contextReadOnly = useContext(ReadOnlyContext);
   const contextDisabled = useContext(DisabledContext);
   const contextLoading = useContext(LoadingContext);
   const uiStateController = useContext(UIStateControllerContext);
-  const { name, loading, disabled, readOnly, children, required, ...rest } =
-    props;
+  useUIAction(uiStateController, uiAction);
 
   const innerLoading = loading || contextLoading;
   const innerReadOnly =
@@ -95,66 +102,30 @@ const RadioListUI = (props) => {
   );
 };
 const RadioListWithAction = (props) => {
-  const uiStateController = useContext(UIStateControllerContext);
-  const {
-    ref,
-    action,
-    onCancel,
-    onActionPrevented,
-    onActionAbort,
-    onActionError,
-    onActionEnd,
-    actionErrorEffect,
-    loading,
-    ...rest
-  } = props;
-  const [boundAction] = useActionBoundToOneParam(
-    action,
-    uiStateController.uiStateSignal,
+  const remainingProps = useActionProps(
+    {
+      resetOnCancel: true,
+      resetOnAbort: true,
+      resetOnError: true,
+      ...props,
+    },
+    {
+      provideAction: true,
+      provideActionRequester: true,
+    },
   );
-  const { loading: actionLoading } = useActionStatus(boundAction);
-  const executeAction = useExecuteAction(ref, {
-    errorEffect: actionErrorEffect,
-  });
-  const onRequestAction = useOnRequestAction();
 
   return (
     <RadioListUI
-      data-action={boundAction}
-      {...rest}
-      ref={ref}
-      // This is the onChange event that bubbled from radios
+      {...remainingProps}
       onChange={(e) => {
         const radio = e.target;
-        const radioListContainer = ref.current;
+        const radioListContainer = props.ref.current;
         dispatchRequestAction(radioListContainer, {
           event: e,
           requester: radio,
-          actionOrigin: "action_prop",
         });
       }}
-      onnavi_cancel={(e) => {
-        const { reason } = e.detail;
-        uiStateController.resetUIState(e);
-        onCancel?.(e, reason);
-      }}
-      onnavi_request_action={(e) => {
-        onRequestAction(boundAction, e);
-      }}
-      onnavi_action_prevented={onActionPrevented}
-      onnavi_action_ready={(e) => {
-        executeAction(e);
-      }}
-      onnavi_action_abort={(e) => {
-        uiStateController.resetUIState(e);
-        onActionAbort?.(e);
-      }}
-      onnavi_action_error={(e) => {
-        uiStateController.resetUIState(e);
-        onActionError?.(e);
-      }}
-      onnavi_action_end={onActionEnd}
-      loading={loading || actionLoading}
     />
   );
 };

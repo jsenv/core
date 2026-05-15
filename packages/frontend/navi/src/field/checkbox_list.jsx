@@ -123,7 +123,7 @@ const CheckboxListWithAction = (props) => {
       {...remainingProps}
       onChange={(e) => {
         const checkbox = e.target;
-        const checkboxList = remainingProps.ref.current;
+        const checkboxList = props.ref.current;
         dispatchRequestAction(checkboxList, {
           event: e,
           requester: checkbox,
