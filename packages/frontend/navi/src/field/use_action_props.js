@@ -18,6 +18,9 @@ export const useActionProps = (props) => {
     onActionError,
     onActionEnd,
     actionErrorEffect,
+    resetOnCancel,
+    resetOnAbort,
+    resetOnError,
     cancelOnBlurInvalid,
     cancelOnEscape,
     ...rest
@@ -43,6 +46,16 @@ export const useActionProps = (props) => {
     "data-action-after-change": actionAfterChange ? "" : undefined,
     "onnavi_cancel": (e) => {
       const { reason } = e.detail;
+
+      if (resetOnCancel) {
+        if (reason.startsWith("blur_invalid")) {
+          return;
+        }
+        uiStateController.resetUIState(e);
+        onCancel?.(e, reason);
+        return;
+      }
+
       if (reason.startsWith("blur_invalid")) {
         if (!cancelOnBlurInvalid) {
           return;
@@ -60,6 +73,7 @@ export const useActionProps = (props) => {
           return;
         }
       }
+
       onCancel?.(e, reason);
     },
     "onnavi_request_action": (e) => {
@@ -67,9 +81,17 @@ export const useActionProps = (props) => {
     },
     "onnavi_action_prevented": onActionPrevented,
     "onnavi_action_ready": executeAction,
-    "onnavi_action_abort": onActionAborted,
+    "onnavi_action_abort": (e) => {
+      if (resetOnAbort) {
+        uiStateController.resetUIState(e);
+      }
+      onActionAborted?.(e);
+    },
     "onnavi_action_error": (e) => {
       const { error } = e.detail;
+      if (resetOnError) {
+        uiStateController.resetUIState(e);
+      }
       onActionError?.(error, e);
     },
     "onnavi_action_end": (e) => {

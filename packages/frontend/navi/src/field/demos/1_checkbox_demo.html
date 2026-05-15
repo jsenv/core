@@ -157,12 +157,15 @@
         HeartSvg,
         ExclamationSvg,
         Caption,
+        NaviDebug,
       } from "@jsenv/navi";
 
       const App = () => {
         return (
           <div>
+            <TableOfContents />
             <BasicStatesDemo />
+            <InteractivityDemo />
             <SizeDemo />
             <ColorDemo />
             <ToggleAppearanceDemo />
@@ -172,9 +175,158 @@
         );
       };
 
+      const TableOfContents = () => {
+        return (
+          <div class="demo-section">
+            <h2>Table of contents</h2>
+            <ol style={{ margin: 0, paddingLeft: "20px", lineHeight: "2" }}>
+              <li>
+                <a href="#states">Checkbox States</a>
+              </li>
+              <li>
+                <a href="#interactivity">
+                  Interactivity (uiAction &amp; action)
+                </a>
+              </li>
+              <li>
+                <a href="#sizes">Checkbox Sizes</a>
+              </li>
+              <li>
+                <a href="#colors">Custom Colors</a>
+              </li>
+              <li>
+                <a href="#toggle">Toggle Appearance</a>
+              </li>
+              <li>
+                <a href="#icons">Custom Icons</a>
+              </li>
+              <li>
+                <a href="#interactive-controls">Interactive Controls</a>
+              </li>
+            </ol>
+          </div>
+        );
+      };
+
+      const InteractivityDemo = () => {
+        const [lastUIAction, setLastUIAction] = useState(null);
+        const [asyncResult, setAsyncResult] = useState(null);
+
+        return (
+          <NaviDebug debugAction>
+            <div class="demo-section" id="interactivity">
+              <h2>Interactivity</h2>
+
+              <div class="states-section">
+                <div class="states-title">uiAction</div>
+                <p class="states-description">
+                  <code>uiAction</code> is called synchronously with the checked
+                  boolean when the user clicks. A read-only checkbox does not
+                  trigger it.
+                </p>
+
+                <fieldset>
+                  <legend>Checkbox with uiAction</legend>
+                  <Box row spacing="sm" alignX="start" alignY="center">
+                    <Label>
+                      <Input
+                        type="checkbox"
+                        name="my-checkbox"
+                        uiAction={(checked) => {
+                          console.log("uiAction called with checked:", checked);
+                          setLastUIAction(checked);
+                        }}
+                      />
+                      Toggle me
+                    </Label>
+                    {lastUIAction !== null && (
+                      <span style={{ fontSize: "0.85rem", color: "#555" }}>
+                        Last value: <code>{String(lastUIAction)}</code>
+                      </span>
+                    )}
+                  </Box>
+                </fieldset>
+
+                <fieldset>
+                  <legend>
+                    Read-only checkbox — uiAction is not triggered
+                  </legend>
+                  <Label>
+                    <Input
+                      type="checkbox"
+                      readOnly
+                      uiAction={(checked) => {
+                        console.log("this should never log", checked);
+                      }}
+                    />
+                    Read-only
+                  </Label>
+                </fieldset>
+              </div>
+
+              <div class="states-section">
+                <div class="states-title">action</div>
+                <p class="states-description">
+                  <code>action</code> is an async function. The checkbox enters
+                  a loading state while it runs.
+                </p>
+
+                <fieldset>
+                  <legend>Async action that fails</legend>
+                  <Box row spacing="sm" alignX="start" alignY="center">
+                    <Label>
+                      <Input
+                        type="checkbox"
+                        action={async () => {
+                          await new Promise((r) => setTimeout(r, 800));
+                          throw new Error("Something went wrong");
+                        }}
+                        onActionError={(err) => {
+                          setAsyncResult({ ok: false, message: err.message });
+                        }}
+                      />
+                      Fail after 800ms
+                    </Label>
+                    {asyncResult && !asyncResult.ok && (
+                      <span style={{ fontSize: "0.85rem", color: "#c00" }}>
+                        Error: {asyncResult.message}
+                      </span>
+                    )}
+                  </Box>
+                </fieldset>
+
+                <fieldset>
+                  <legend>Async action that succeeds</legend>
+                  <Box row spacing="sm" alignX="start" alignY="center">
+                    <Label>
+                      <Input
+                        type="checkbox"
+                        action={async (checked) => {
+                          await new Promise((r) => setTimeout(r, 800));
+                          return checked ? "checked!" : "unchecked!";
+                        }}
+                        onActionSuccess={(value) => {
+                          setAsyncResult({ ok: true, message: value });
+                        }}
+                      />
+                      Succeed after 800ms
+                    </Label>
+                    {asyncResult && asyncResult.ok && (
+                      <span style={{ fontSize: "0.85rem", color: "#2a7a2a" }}>
+                        Success: {asyncResult.message}
+                      </span>
+                    )}
+                  </Box>
+                </fieldset>
+              </div>
+            </div>
+          </NaviDebug>
+        );
+      };
+
       const BasicStatesDemo = () => {
         return (
-          <div className="demo-section">
+          <div className="demo-section" id="states">
             <h2>Checkbox States</h2>
 
             <div className="states-section">
@@ -357,7 +509,7 @@
 
       const ColorDemo = () => {
         return (
-          <div className="demo-section">
+          <div className="demo-section" id="colors">
             <h2>Custom Colors</h2>
 
             <div className="states-section">
@@ -579,7 +731,7 @@
 
       const SizeDemo = () => {
         return (
-          <div className="demo-section">
+          <div className="demo-section" id="sizes">
             <h2>Checkbox Sizes</h2>
 
             <div className="states-section">
@@ -672,7 +824,7 @@
 
       const ToggleAppearanceDemo = () => {
         return (
-          <div className="demo-section">
+          <div className="demo-section" id="toggle">
             <h2>Toggle Appearance</h2>
 
             <div className="states-section">
@@ -1115,7 +1267,7 @@
 
       const IconDemo = () => {
         return (
-          <div className="demo-section">
+          <div className="demo-section" id="icons">
             <h2>Custom Icons</h2>
 
             <fieldset>
@@ -1287,7 +1439,7 @@
         const [checked, setChecked] = useState(false);
 
         return (
-          <div className="demo-section">
+          <div className="demo-section" id="interactive-controls">
             <h2>Interactive Controls</h2>
 
             <fieldset>
