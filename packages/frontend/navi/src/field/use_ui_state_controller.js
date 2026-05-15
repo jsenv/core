@@ -526,6 +526,19 @@ export const useUIState = (uiStateController) => {
   return uiStateController.uiStateSignal.value;
 };
 
+export const useUIAction = (uiStateController, uiAction) => {
+  const uiActionRef = useRef(uiAction);
+  uiActionRef.current = uiAction;
+  useLayoutEffect(() => {
+    if (!uiAction) {
+      return undefined;
+    }
+    return uiStateController.subscribe((newUIState, e) => {
+      uiActionRef.current?.(newUIState, e);
+    });
+  }, [Boolean(uiAction)]);
+};
+
 export const requestResetUIState = (element, e) => {
   return dispatchInternalCustomEvent(element, "navi_request_reset_ui_state", {
     event: e,

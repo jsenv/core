@@ -14,6 +14,7 @@ import {
   RequiredContext,
   UIStateContext,
   UIStateControllerContext,
+  useUIAction,
   useUIGroupStateController,
   useUIState,
 } from "./use_ui_state_controller.js";
@@ -54,12 +55,22 @@ const CheckboxListDispatcher = (props) => {
 };
 
 const CheckboxListUI = (props) => {
-  const { name, readOnly, disabled, required, loading, children, ...rest } =
-    props;
+  const {
+    name,
+    readOnly,
+    uiAction,
+    disabled,
+    required,
+    loading,
+    children,
+    ...rest
+  } = props;
   const contextReadOnly = useContext(ReadOnlyContext);
   const contextDisabled = useContext(DisabledContext);
   const contextLoading = useContext(LoadingContext);
   const uiStateController = useContext(UIStateControllerContext);
+
+  useUIAction(uiStateController, uiAction);
 
   const innerLoading = loading || contextLoading;
   const innerReadOnly =
