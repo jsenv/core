@@ -555,8 +555,8 @@
                   name="notifications"
                   action={(notifications) => toggleAction({ notifications })}
                   onActionStart={() => setResult({ pending: true })}
-                  onActionEnd={(e) =>
-                    setResult({ pending: false, value: e.detail.data })
+                  onActionEnd={(data) =>
+                    setResult({ pending: false, value: data })
                   }
                 />
                 <Label>Enable notifications</Label>
