@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <link rel="icon" href="data:," />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Form validation test - Multiple elements</title>
+    <title>Form Demo</title>
     <style>
       .test-container {
         margin: 20px;
@@ -77,8 +77,39 @@
       const App = () => {
         return (
           <div>
-            <h1>Test de validation de formulaire multi-éléments</h1>
+            <h1>Form Demo</h1>
+            <BasicFormDemo />
             <MultiFieldValidationTest />
+          </div>
+        );
+      };
+
+      const BasicFormDemo = () => {
+        const [result, setResult] = useState(null);
+        return (
+          <div className="test-container">
+            <h2>Basic form</h2>
+            <Form
+              action={async ({ username }) => {
+                await new Promise((r) => setTimeout(r, 600));
+                return `Hello, ${username}!`;
+              }}
+              onActionSuccess={(value) => setResult({ ok: true, value })}
+              onActionError={(err) => setResult({ ok: false, value: err.message })}
+            >
+              <div className="field">
+                <Field>
+                  <Label>Username</Label>
+                  <Input type="text" name="username" />
+                </Field>
+              </div>
+              <Button type="submit">Submit</Button>
+            </Form>
+            {result && (
+              <div className={`status ${result.ok ? "success" : "error"}`}>
+                {result.value}
+              </div>
+            )}
           </div>
         );
       };

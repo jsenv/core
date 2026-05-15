@@ -12,7 +12,7 @@ export const ActionContext = createContext();
 
 export const useActionProps = (
   props,
-  { provideAction, provideActionRequester } = {},
+  { paramsSignal, provideAction, provideActionRequester } = {},
 ) => {
   const {
     ref,
@@ -35,10 +35,8 @@ export const useActionProps = (
     ...rest
   } = props;
   const uiStateController = useContext(UIStateControllerContext);
-  const [boundAction] = useActionBoundToOneParam(
-    action,
-    uiStateController.uiStateSignal,
-  );
+  paramsSignal = paramsSignal || uiStateController.uiStateSignal;
+  const [boundAction] = useActionBoundToOneParam(action, paramsSignal);
   const { loading } = useActionStatus(boundAction);
   const executeAction = useExecuteAction(ref, {
     errorEffect: actionErrorEffect,

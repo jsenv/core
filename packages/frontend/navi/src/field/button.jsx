@@ -5,8 +5,6 @@ import {
   createComponentResolver,
   useNextResolver,
 } from "@jsenv/navi/src/resolver/resolver.jsx";
-import { useAction } from "../action/use_action.js";
-import { useActionStatus } from "../action/use_action_status.js";
 import { Box } from "../box/box.jsx";
 import { LoadingOutline } from "../graphic/loading/loading_outline.jsx";
 import { getHrefTargetInfo } from "../nav/browser_integration/href_target_info.js";
@@ -14,13 +12,12 @@ import { assertRoute, useRouteStatus } from "../nav/route.js";
 import { Text, markAsOutsideTextFlow } from "../text/text.jsx";
 import { useAutoFocus } from "../utils/focus/use_auto_focus.js";
 import { useAccentColorAttributes } from "../utils/use_accent_color_attributes.js";
-import { useOnRequestAction } from "./use_action_events.js";
+import { FormContext } from "./form_context.js";
 import {
   ActionContext,
   ActionRequesterContext,
   useActionProps,
 } from "./use_action_props.js";
-import { useFormEvents } from "./use_form_events.js";
 import {
   DisabledContext,
   LoadingContext,
@@ -326,20 +323,29 @@ const ButtonRouteResolver = (props) => {
 const ButtonActionResolver = (props) => {
   const Next = useNextResolver();
   const actionContext = useContext(ActionContext);
+
   if (props.action) {
     if (actionContext) {
       return <ButtonWithActionNested {...props} />;
     }
     return <ButtonWithAction {...props} />;
   }
-  if (actionContext) {
+  return <Next {...props} />;
+};
+const ButtonInsideFormResolver = (props) => {
+  const Next = useNextResolver();
+  const formContext = useContext(FormContext);
+
+  if (formContext) {
     return <ButtonInsideForm {...props} />;
   }
   return <Next {...props} />;
 };
+
 const renderButton = createComponentResolver([
   ButtonRouteResolver,
   ButtonActionResolver,
+  ButtonInsideFormResolver,
 ]);
 
 const ButtonUI = (props) => {
@@ -350,6 +356,8 @@ const ButtonUI = (props) => {
     disabled,
     loading,
     autoFocus,
+    uiAction,
+    onClick,
 
     // href/link
     href,
@@ -448,8 +456,8 @@ const ButtonUI = (props) => {
         }
         const value = e.currentTarget.value;
         uiStateController.setUIState(value, e);
-        remainingProps.uiAction?.(value, e);
-        remainingProps.onClick?.(e);
+        uiAction?.(value, e);
+        onClick?.(e);
       }}
       data-icon={icon ? "" : undefined}
       data-reveal-on-interaction={revealOnInteraction ? "" : undefined}
@@ -531,15 +539,32 @@ markAsOutsideTextFlow(ButtonShadow);
 
 const ButtonInsideForm = (props) => {
   const Next = useNextResolver();
+  const { action, type } = props;
+  if (
+    import.meta.dev &&
+    action &&
+    (type === "submit" || type === "reset" || type === "image")
+  ) {
+    throw new Error(
+      `<Button type="${type}" /> should not have their own action`,
+    );
+  }
+  const requestFormAction = (form, event) => {
+    const button = event.currentTarget;
+    if (event.type === "click") {
+      event.preventDefault(); // prevent form submission
+    }
+    dispatchRequestAction(form, {
+      event,
+      requester: button,
+    });
+  };
+
   return (
     <Next
       {...props}
-      onClick={(clickEvent) => {
-        props.onClick?.(clickEvent);
-        if (clickEvent.defaultPrevented) {
-          return;
-        }
-        const button = clickEvent.currentTarget;
+      uiAction={(v, event) => {
+        const button = event.currentTarget;
         const { form } = button;
         if (!form) {
           // either we are a "reset" button (not associated to the form)
@@ -549,11 +574,7 @@ const ButtonInsideForm = (props) => {
         const wouldSubmitFormByType =
           button.type === "submit" || button.type === "image";
         if (wouldSubmitFormByType) {
-          clickEvent.preventDefault(); // prevent form submission
-          dispatchRequestAction(form, {
-            event: clickEvent,
-            requester: button,
-          });
+          requestFormAction(form, event);
           return;
         }
         const firstButtonSubmittingForm = form.querySelector(
@@ -565,11 +586,7 @@ const ButtonInsideForm = (props) => {
           return;
         }
         // this is the only button inside the form without type attribute, so it defaults to type="submit"
-        clickEvent.preventDefault(); // prevent form submission
-        dispatchRequestAction(form, {
-          event: clickEvent,
-          requester: button,
-        });
+        requestFormAction(form, event);
       }}
     />
   );
@@ -583,7 +600,6 @@ const ButtonWithAction = (props) => {
       {...remainingProps}
       uiAction={(value, e) => {
         remainingProps.uiAction?.(value, e);
-        // we know we are not inside a form, no need to preventDefault
         const button = e.currentTarget;
         dispatchRequestAction(button, {
           event: e,
@@ -594,91 +610,19 @@ const ButtonWithAction = (props) => {
   );
 };
 const ButtonWithActionNested = (props) => {
-  const {
-    ref,
-    type,
-    action,
-    loading,
-    onActionPrevented,
-    onActionStart,
-    onActionAbort,
-    onActionError,
-    onActionEnd,
-    ...rest
-  } = props;
   const Next = useNextResolver();
   const ancestorAction = useContext(ActionContext);
-  const hasEffectOnForm =
-    type === "submit" || type === "reset" || type === "image";
-  if (import.meta.dev && hasEffectOnForm) {
-    throw new Error(
-      `<Button type="${type}" /> should not have their own action`,
-    );
-  }
   const ancestorParamsSignal = ancestorAction.paramsSignal;
-  const actionBoundToAncestorParams = useAction(action, ancestorParamsSignal);
-  const { loading: actionLoading } = useActionStatus(
-    actionBoundToAncestorParams,
-  );
-  const onRequestAction = useOnRequestAction();
-
-  const innerLoading = loading || actionLoading;
-  useFormEvents(ref, {
-    onFormActionPrevented: (e) => {
-      if (e.detail.action === actionBoundToAncestorParams) {
-        onActionPrevented?.(e);
-      }
-    },
-    onFormActionStart: (e) => {
-      if (e.detail.action === actionBoundToAncestorParams) {
-        onActionStart?.(e);
-      }
-    },
-    onFormActionAbort: (e) => {
-      if (e.detail.action === actionBoundToAncestorParams) {
-        onActionAbort?.(e);
-      }
-    },
-    onFormActionError: (e) => {
-      if (e.detail.action === actionBoundToAncestorParams) {
-        onActionError?.(e.detail.error);
-      }
-    },
-    onFormActionEnd: (e) => {
-      if (e.detail.action === actionBoundToAncestorParams) {
-        onActionEnd?.(e);
-      }
-    },
+  const remainingProps = useActionProps(props, {
+    paramsSignal: ancestorParamsSignal,
   });
 
-  return (
-    <Next
-      data-action={actionBoundToAncestorParams.name}
-      {...rest}
-      ref={ref}
-      type={type}
-      loading={innerLoading}
-      onnavi_request_action={(e) => {
-        onRequestAction(actionBoundToAncestorParams, e);
-      }}
-      uiAction={(value, e) => {
-        rest.uiAction?.(value, e);
-        // const button = e.currentTarget;
-        // const { form } = button;
-        // dispatchRequestAction(button, {
-        //   event: e,
-        //   requester: button,
-        //   // button will handle the event himself
-        //   // target: form,
-        // });
-      }}
-    />
-  );
+  return <Next {...remainingProps} />;
 };
 
 const ButtonWithRoute = (props) => {
-  const { route, routeParams, children, ...rest } = props;
   const Next = useNextResolver();
+  const { route, routeParams, children, ...rest } = props;
   if (import.meta.dev) {
     assertRoute(route);
   }
