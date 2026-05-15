@@ -161,6 +161,7 @@
         Button,
         Form,
         createAction,
+        Label,
       } from "@jsenv/navi";
 
       const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -276,7 +277,7 @@
         return (
           <fieldset>
             <legend>Basic — fires with checked boolean</legend>
-            <Box row spacing="sm" alignX="start" alignY="center">
+            <Box flex="y" spacing="s" alignX="start" alignY="center">
               <Field>
                 <Input
                   ref={ref}
@@ -286,7 +287,7 @@
                     setLastValue(checked);
                   }}
                 />
-                Enable feature
+                <Label>Enable feature</Label>
               </Field>
               <button
                 onClick={() =>
@@ -311,7 +312,7 @@
         return (
           <fieldset>
             <legend>Default checked — starts checked, fires on change</legend>
-            <Box row spacing="sm" alignX="start" alignY="center">
+            <Box flex="y" spacing="s" alignX="start" alignY="center">
               <Field>
                 <Input
                   ref={ref}
@@ -322,7 +323,7 @@
                     setLastValue(checked);
                   }}
                 />
-                Enable feature
+                <Label>Enable feature</Label>
               </Field>
               <button
                 onClick={() =>
@@ -352,7 +353,7 @@
                 console.log("this should never log", checked);
               }}
             />
-            Read-only
+            <Label>Read-only</Label>
           </Field>
         </fieldset>
       );
@@ -362,7 +363,7 @@
         return (
           <fieldset>
             <legend>Succeeds after 1s</legend>
-            <Box row spacing="sm" alignX="start" alignY="center">
+            <Box flex="y" spacing="s" alignX="start" alignY="center">
               <Field>
                 <Input
                   type="checkbox"
@@ -375,7 +376,7 @@
                   }}
                   onActionSuccess={(value) => setResult({ ok: true, value })}
                 />
-                Enable feature
+                <Label>Enable feature</Label>
               </Field>
               {result && (
                 <span
@@ -397,7 +398,7 @@
         return (
           <fieldset>
             <legend>Default checked — succeeds after 800ms</legend>
-            <Box row spacing="sm" alignX="start" alignY="center">
+            <Box flex="y" spacing="s" alignX="start" alignY="center">
               <Field>
                 <Input
                   type="checkbox"
@@ -411,7 +412,7 @@
                   }}
                   onActionSuccess={(value) => setResult({ ok: true, value })}
                 />
-                I agree to the terms
+                <Label>I agree to the terms</Label>
               </Field>
               {result && (
                 <span style={{ fontSize: "0.85rem", color: "#2a7a2a" }}>
@@ -428,7 +429,7 @@
         return (
           <fieldset>
             <legend>Always fails — checkbox reverts on error</legend>
-            <Box row spacing="sm" alignX="start" alignY="center">
+            <Box flex="y" spacing="s" alignX="start" alignY="center">
               <Field>
                 <Input
                   type="checkbox"
@@ -443,7 +444,7 @@
                   }}
                   onActionError={(err) => setError(err.message)}
                 />
-                Dangerous operation
+                <Label>Dangerous operation</Label>
               </Field>
               {error && (
                 <span style={{ fontSize: "0.85rem", color: "#c00" }}>
@@ -462,7 +463,7 @@
             <legend>
               Default checked + always fails — reverts to checked on error
             </legend>
-            <Box row spacing="sm" alignX="start" alignY="center">
+            <Box flex="y" spacing="s" alignX="start" alignY="center">
               <Field>
                 <Input
                   type="checkbox"
@@ -478,7 +479,7 @@
                   }}
                   onActionError={(err) => setError(err.message)}
                 />
-                Enable risky feature
+                <Label>Enable risky feature</Label>
               </Field>
               {error && (
                 <span style={{ fontSize: "0.85rem", color: "#c00" }}>
@@ -502,7 +503,7 @@
               The checked state comes from the server. On success the component
               re-renders with the new value; on failure it reverts.
             </p>
-            <Box row spacing="sm" alignX="start" alignY="center">
+            <Box flex="y" spacing="s" alignX="start" alignY="center">
               <Field>
                 <Input
                   type="checkbox"
@@ -521,7 +522,7 @@
                     setResult({ ok: false, value: err.message })
                   }
                 />
-                Enable security protection
+                <Label>Enable security protection</Label>
               </Field>
               {result && (
                 <span
@@ -544,7 +545,7 @@
         return (
           <fieldset>
             <legend>Action object — created with createAction</legend>
-            <Box row spacing="sm" alignX="start" alignY="center">
+            <Box flex="y" spacing="s" alignX="start" alignY="center">
               <Field>
                 <Input
                   type="checkbox"
@@ -555,7 +556,7 @@
                     setResult({ pending: false, value: e.detail.data })
                   }
                 />
-                Enable notifications
+                <Label>Enable notifications</Label>
               </Field>
               {result && (
                 <span
@@ -601,7 +602,7 @@
                 setResult({ ok: false, value: err.message })
               }
             >
-              <Box column spacing="sm" alignX="start">
+              <Box flex spacing="s" alignX="start">
                 <Field>
                   <Input
                     ref={ref}
@@ -609,9 +610,9 @@
                     name="terms"
                     checked={checked}
                   />
-                  I agree to the terms and conditions
+                  <Label>I agree to the terms and conditions</Label>
                 </Field>
-                <Box row spacing="sm">
+                <Box flex="y" spacing="s">
                   <Button type="submit">Submit</Button>
                   <button
                     type="button"
@@ -668,13 +669,13 @@
                 enhanced styling and consistent behavior.
               </p>
 
-              <Box column spacing="sm">
+              <Box flex spacing="s">
                 <Box as="fieldset" width="100">
                   <legend>Default</legend>
-                  <Box row spacing="sm" alignX="start">
+                  <Box flex="y" spacing="s" alignX="start">
                     <Field>
                       <Input type="checkbox" />
-                      Navi
+                      <Label>Navi</Label>
                     </Field>
                     <label>
                       <input type="checkbox" />
@@ -684,26 +685,26 @@
                 </Box>
                 <Box as="fieldset" width="200">
                   <legend>:focus-visible</legend>
-                  <Box row spacing="sm" alignX="start">
+                  <Box flex="y" spacing="s" alignX="start">
                     <Field>
                       <Input
                         type="checkbox"
                         pseudoState={{ ":focus-visible": true }}
                       />
-                      Navi
+                      <Label>Navi</Label>
                     </Field>
                     <label>
                       <input type="checkbox" autofocus />
-                      Native
+                      User agent
                     </label>
                   </Box>
                 </Box>
                 <Box as="fieldset" width="150">
                   <legend>:disabled</legend>
-                  <Box row spacing="sm" alignX="start">
+                  <Box flex="y" spacing="s" alignX="start">
                     <Field>
                       <Input type="checkbox" disabled />
-                      Navi
+                      <Label>Navi</Label>
                     </Field>
                     <label>
                       <input type="checkbox" disabled />
@@ -712,13 +713,13 @@
                   </Box>
                 </Box>
               </Box>
-              <Box column spacing="sm">
+              <Box flex spacing="s">
                 <Box as="fieldset" width="100">
                   <legend>:checked</legend>
-                  <Box row spacing="sm" alignX="start">
+                  <Box flex="y" spacing="s" alignX="start">
                     <Field>
                       <Input type="checkbox" defaultChecked />
-                      Navi
+                      <Label>Navi</Label>
                     </Field>
                     <label>
                       <input type="checkbox" checked />
@@ -729,14 +730,14 @@
 
                 <Box as="fieldset" width="200">
                   <legend>:focus-visible:checked</legend>
-                  <Box row spacing="sm" alignX="start">
+                  <Box flex="y" spacing="s" alignX="start">
                     <Field>
                       <Input
                         type="checkbox"
                         defaultChecked
                         pseudoState={{ ":focus-visible": true }}
                       />
-                      Navi
+                      <Label>Navi</Label>
                     </Field>
                     <label>
                       <input type="checkbox" autofocus defaultChecked />
@@ -747,14 +748,14 @@
 
                 <Box as="fieldset" width="150">
                   <legend>:disabled:checked</legend>
-                  <Box row spacing="sm" alignX="start">
+                  <Box flex="y" spacing="s" alignX="start">
                     <Field>
                       <Input type="checkbox" disabled defaultChecked />
-                      Navi
+                      <Label>Navi</Label>
                     </Field>
                     <label>
                       <input type="checkbox" disabled checked />
-                      Native
+                      User agent
                     </label>
                   </Box>
                 </Box>
@@ -770,42 +771,42 @@
                 available in standard HTML checkboxes.
               </p>
 
-              <Box column spacing="sm">
+              <Box flex spacing="s">
                 <Box as="fieldset" width="200">
                   <legend>:read-only</legend>
-                  <Box row spacing="sm" alignX="start">
+                  <Box flex="y" spacing="s" alignX="start">
                     <Field>
                       <Input type="checkbox" readOnly />
-                      Read-only
+                      <Label>Read-only</Label>
                     </Field>
                   </Box>
                 </Box>
                 <Box as="fieldset" width="200">
                   <legend>:-navi-loading</legend>
-                  <Box row spacing="sm" alignX="start">
+                  <Box flex="y" spacing="s" alignX="start">
                     <Field>
                       <Input type="checkbox" loading />
-                      Loading
+                      <Label>Loading</Label>
                     </Field>
                   </Box>
                 </Box>
               </Box>
-              <Box column spacing="sm">
+              <Box flex spacing="s">
                 <Box as="fieldset" width="200">
                   <legend>:read-only:checked</legend>
-                  <Box row spacing="sm" alignX="start">
+                  <Box flex="y" spacing="s" alignX="start">
                     <Field>
                       <Input type="checkbox" readOnly checked />
-                      Read-only
+                      <Label>Read-only</Label>
                     </Field>
                   </Box>
                 </Box>
                 <Box as="fieldset" width="200">
                   <legend>:-navi-loading:checked</legend>
-                  <Box row spacing="sm" alignX="start">
+                  <Box flex="y" spacing="s" alignX="start">
                     <Field>
                       <Input type="checkbox" loading checked />
-                      Loading
+                      <Label>Loading</Label>
                     </Field>
                   </Box>
                 </Box>
@@ -852,7 +853,7 @@
                 side.
               </p>
 
-              <Box flex="y" spacing="s">
+              <Box flex spacing="s">
                 <fieldset style="margin: 0; background: lightgrey">
                   <legend>Orange</legend>
                   <div
@@ -865,7 +866,7 @@
                   >
                     <Field>
                       <Input type="checkbox" accentColor="#f39c12" />
-                      Navi
+                      <Label>Navi</Label>
                     </Field>
                     <Field>
                       <Input
@@ -873,7 +874,7 @@
                         accentColor="#f39c12"
                         defaultChecked
                       />
-                      Navi
+                      <Label>Navi</Label>
                     </Field>
                     <label>
                       <input
@@ -904,7 +905,7 @@
                   >
                     <Field>
                       <Input type="checkbox" accentColor="#2ecc71" />
-                      Navi
+                      <Label>Navi</Label>
                     </Field>
                     <Field>
                       <Input
@@ -912,7 +913,7 @@
                         accentColor="#2ecc71"
                         defaultChecked
                       />
-                      Navi
+                      <Label>Navi</Label>
                     </Field>
                     <label>
                       <input
@@ -943,7 +944,7 @@
                   >
                     <Field>
                       <Input type="checkbox" accentColor="#34495e" />
-                      Navi
+                      <Label>Navi</Label>
                     </Field>
                     <Field>
                       <Input
@@ -951,7 +952,7 @@
                         accentColor="#34495e"
                         defaultChecked
                       />
-                      Navi
+                      <Label>Navi</Label>
                     </Field>
                     <label>
                       <input
@@ -982,7 +983,7 @@
                   >
                     <Field>
                       <Input type="checkbox" accentColor="#e91e8c" />
-                      Navi
+                      <Label>Navi</Label>
                     </Field>
                     <Field>
                       <Input
@@ -990,7 +991,7 @@
                         accentColor="#e91e8c"
                         defaultChecked
                       />
-                      Navi
+                      <Label>Navi</Label>
                     </Field>
                     <label>
                       <input
@@ -1028,7 +1029,7 @@
                   >
                     <Field>
                       <Input type="checkbox" accentColor="#ffffff" />
-                      Navi
+                      <Label>Navi</Label>
                     </Field>
                     <Field>
                       <Input
@@ -1036,7 +1037,7 @@
                         accentColor="#ffffff"
                         defaultChecked
                       />
-                      Navi
+                      <Label>Navi</Label>
                     </Field>
                     <label>
                       <input
@@ -1073,8 +1074,8 @@
                 s, m (default), l, xl.
               </p>
 
-              <Box column spacing="md">
-                <Box row spacing="0" alignY="start">
+              <Box flex spacing="md">
+                <Box flex="y" spacing="0" alignY="start">
                   <div
                     style={{
                       fontSize: "0.85rem",
@@ -1084,9 +1085,9 @@
                   >
                     Extra Small (xs)
                   </div>
-                  <Field column spacing="sm" alignY="center">
+                  <Field column spacing="s" alignY="center">
                     <Input type="checkbox" size="xs" defaultChecked />I agree to
-                    the terms
+                    <Label>the terms</Label>
                   </Field>
 
                   <div
@@ -1099,9 +1100,9 @@
                   >
                     Small (s)
                   </div>
-                  <Field column spacing="sm" alignY="center">
+                  <Field column spacing="s" alignY="center">
                     <Input type="checkbox" size="s" defaultChecked />I agree to
-                    the terms
+                    <Label>the terms</Label>
                   </Field>
 
                   <div
@@ -1114,7 +1115,7 @@
                   >
                     Medium - Default (m)
                   </div>
-                  <Field column spacing="sm" alignY="center">
+                  <Field column spacing="s" alignY="center">
                     <Input type="checkbox" defaultChecked />I agree to the terms
                   </Field>
 
@@ -1128,9 +1129,9 @@
                   >
                     Large (l)
                   </div>
-                  <Field column spacing="sm" alignY="center">
+                  <Field column spacing="s" alignY="center">
                     <Input type="checkbox" size="l" defaultChecked />I agree to
-                    the terms
+                    <Label>the terms</Label>
                   </Field>
 
                   <div
@@ -1143,9 +1144,9 @@
                   >
                     Extra Large (xl)
                   </div>
-                  <Field column spacing="sm" alignY="center">
+                  <Field column spacing="s" alignY="center">
                     <Input type="checkbox" size="xl" defaultChecked />I agree to
-                    the terms
+                    <Label>the terms</Label>
                   </Field>
                 </Box>
               </Box>
@@ -1166,12 +1167,12 @@
                 same state behaviors as standard checkboxes.
               </p>
 
-              <Box column spacing="sm">
+              <Box flex spacing="s">
                 <Box as="fieldset" width="250">
                   <legend>Default</legend>
                   <Field column alignY="center" borderRadius="50%">
                     <Input type="checkbox" appearance="toggle" />
-                    Label
+                    <Label>Label</Label>
                   </Field>
                 </Box>
                 <Box as="fieldset" width="250">
@@ -1182,23 +1183,23 @@
                       appearance="toggle"
                       pseudoState={{ ":focus-visible": true }}
                     />
-                    Label
+                    <Label>Label</Label>
                   </Field>
                 </Box>
                 <Box as="fieldset" width="250">
                   <legend>:disabled</legend>
                   <Field column alignY="center">
                     <Input type="checkbox" appearance="toggle" disabled />
-                    Label
+                    <Label>Label</Label>
                   </Field>
                 </Box>
               </Box>
-              <Box column spacing="sm">
+              <Box flex spacing="s">
                 <Box as="fieldset" width="250">
                   <legend>:checked</legend>
                   <Field column alignY="center">
                     <Input type="checkbox" appearance="toggle" defaultChecked />
-                    Label
+                    <Label>Label</Label>
                   </Field>
                 </Box>
 
@@ -1211,7 +1212,7 @@
                       defaultChecked
                       pseudoState={{ ":focus-visible": true }}
                     />
-                    Label
+                    <Label>Label</Label>
                   </Field>
                 </Box>
 
@@ -1224,7 +1225,7 @@
                       disabled
                       defaultChecked
                     />
-                    Label
+                    <Label>Label</Label>
                   </Field>
                 </Box>
               </Box>
@@ -1238,23 +1239,23 @@
                 Additional toggle states for enhanced UX patterns.
               </p>
 
-              <Box column spacing="sm">
+              <Box flex spacing="s">
                 <Box as="fieldset" width="200">
                   <legend>:read-only</legend>
                   <Field column alignY="center" spacing="s">
                     <Input type="checkbox" appearance="toggle" readOnly />
-                    Label
+                    <Label>Label</Label>
                   </Field>
                 </Box>
                 <Box as="fieldset" width="200">
                   <legend>:-navi-loading</legend>
                   <Field column alignY="center" spacing="s">
                     <Input type="checkbox" appearance="toggle" loading />
-                    Label
+                    <Label>Label</Label>
                   </Field>
                 </Box>
               </Box>
-              <Box column spacing="sm">
+              <Box flex spacing="s">
                 <Box as="fieldset" width="200">
                   <legend>:read-only:checked</legend>
                   <Field column alignY="center" spacing="s">
@@ -1264,7 +1265,7 @@
                       readOnly
                       checked
                     />
-                    Label
+                    <Label>Label</Label>
                   </Field>
                 </Box>
                 <Box as="fieldset" width="200">
@@ -1276,7 +1277,7 @@
                       loading
                       checked
                     />
-                    Label
+                    <Label>Label</Label>
                   </Field>
                 </Box>
               </Box>
@@ -1289,7 +1290,7 @@
                 theming as regular checkboxes.
               </p>
 
-              <Box flex="y" spacing="sm">
+              <Box flex spacing="s">
                 <fieldset style="margin: 0">
                   <legend>Orange</legend>
                   <div
@@ -1306,7 +1307,7 @@
                         appearance="toggle"
                         accentColor="#f39c12"
                       />
-                      Label
+                      <Label>Label</Label>
                     </Field>
                     <Field column alignY="center" spacing="s">
                       <Input
@@ -1315,7 +1316,7 @@
                         accentColor="#f39c12"
                         defaultChecked
                       />
-                      Label
+                      <Label>Label</Label>
                     </Field>
                   </div>
                 </fieldset>
@@ -1335,7 +1336,7 @@
                         appearance="toggle"
                         accentColor="#2ecc71"
                       />
-                      Label
+                      <Label>Label</Label>
                     </Field>
                     <Field column alignY="center" spacing="s">
                       <Input
@@ -1344,7 +1345,7 @@
                         accentColor="#2ecc71"
                         defaultChecked
                       />
-                      Label
+                      <Label>Label</Label>
                     </Field>
                   </div>
                 </fieldset>
@@ -1364,7 +1365,7 @@
                         appearance="toggle"
                         accentColor="#34495e"
                       />
-                      Label
+                      <Label>Label</Label>
                     </Field>
                     <Field column alignY="center" spacing="s">
                       <Input
@@ -1373,7 +1374,7 @@
                         accentColor="#34495e"
                         defaultChecked
                       />
-                      Label
+                      <Label>Label</Label>
                     </Field>
                   </div>
                 </fieldset>
@@ -1426,10 +1427,10 @@
                 the track and thumb proportionally.
               </p>
 
-              <Box column spacing="sm">
+              <Box flex spacing="s">
                 <fieldset>
                   <legend>Small</legend>
-                  <Box row spacing="sm" alignX="start" alignY="center">
+                  <Box flex="y" spacing="s" alignX="start" alignY="center">
                     <Field column alignY="center" spacing="s">
                       <Input type="checkbox" appearance="toggle" size="s" />
                       Label
@@ -1447,7 +1448,7 @@
                 </fieldset>
                 <fieldset>
                   <legend>Medium (Default)</legend>
-                  <Box row spacing="sm" alignX="start" alignY="center">
+                  <Box flex="y" spacing="s" alignX="start" alignY="center">
                     <Field column alignY="center" spacing="s">
                       <Input type="checkbox" appearance="toggle" />
                       Label
@@ -1464,7 +1465,7 @@
                 </fieldset>
                 <fieldset>
                   <legend>Large</legend>
-                  <Box row spacing="sm" alignX="start" alignY="center">
+                  <Box flex="y" spacing="s" alignX="start" alignY="center">
                     <Field column alignY="center" spacing="s">
                       <Input type="checkbox" appearance="toggle" size="l" />
                       Label
@@ -1490,10 +1491,10 @@
                 sizing.
               </p>
 
-              <Box column spacing="sm">
+              <Box flex spacing="s">
                 <fieldset>
                   <legend>Default Width</legend>
-                  <Box flex="y" spacing="s" alignX="start" alignY="center">
+                  <Box flex spacing="s" alignX="start" alignY="center">
                     <Field flex alignY="center" spacing="s">
                       <Input type="checkbox" appearance="toggle" />
                       Label
@@ -1510,7 +1511,7 @@
                 </fieldset>
                 <fieldset>
                   <legend>Custom Width (50px)</legend>
-                  <Box flex="y" spacing="s" alignX="start" alignY="center">
+                  <Box flex spacing="s" alignX="start" alignY="center">
                     <Field flex alignY="center" spacing="s">
                       <Input type="checkbox" appearance="toggle" width="50" />
                       Label
@@ -1528,7 +1529,7 @@
                 </fieldset>
                 <fieldset>
                   <legend>Big Width (80px)</legend>
-                  <Box flex="y" spacing="s" alignX="start" alignY="center">
+                  <Box flex spacing="s" alignX="start" alignY="center">
                     <Field flex alignY="center" spacing="s">
                       <Input type="checkbox" appearance="toggle" width="80" />
                       Label
@@ -1554,10 +1555,10 @@
                 displayed correctly (min-width enforced).
               </p>
 
-              <Box flex spacing="s">
+              <Box flex="y" spacing="s">
                 <fieldset>
                   <legend>Big Padding</legend>
-                  <Box flex="y" spacing="s" alignX="start" alignY="center">
+                  <Box flex spacing="s" alignX="start" alignY="center">
                     <Field flex alignY="center" spacing="s">
                       <Input type="checkbox" appearance="toggle" padding="l" />
                       Label
@@ -1581,7 +1582,7 @@
 
       const HeartIconOpacityDemo = () => {
         return (
-          <Field column spacing="sm" alignY="center">
+          <Field column spacing="s" alignY="center">
             <Input
               type="checkbox"
               style={{
@@ -1606,10 +1607,10 @@
               <legend>Basic Icon Usage</legend>
               <p>You can use custom icons instead of the default checkmark:</p>
 
-              <Box row spacing="sm" alignY="start">
+              <Box flex="y" spacing="s" alignY="start">
                 <HeartIconOpacityDemo />
 
-                <Field column spacing="sm" alignY="center">
+                <Field column spacing="s" alignY="center">
                   <Input
                     type="checkbox"
                     icon={[<span>⭐</span>, <span>❤️</span>]}
@@ -1617,7 +1618,7 @@
                   Star or Heart icon (array of icons for different states)
                 </Field>
 
-                <Field column spacing="sm" alignY="center">
+                <Field column spacing="s" alignY="center">
                   <Input
                     type="checkbox"
                     icon={[
@@ -1650,7 +1651,7 @@
               <legend>Icon Sizes</legend>
               <p>Icons scale with the size prop:</p>
 
-              <Box row alignY="start">
+              <Box flex="y" alignY="start">
                 <Caption>Extra Small (xs)</Caption>
                 <HeartField size="xs" />
 
@@ -1747,7 +1748,7 @@
 
       const HeartField = (props) => {
         return (
-          <Field column spacing="sm" alignY="center">
+          <Field column spacing="s" alignY="center">
             <Input
               type="checkbox"
               icon={[
@@ -1776,7 +1777,7 @@
 
             <fieldset>
               <legend>Toggle States</legend>
-              <Box row spacing="sm" alignX="start" wrap>
+              <Box flex="y" spacing="s" alignX="start" wrap>
                 <button
                   style={{
                     padding: "8px 16px",
@@ -1821,7 +1822,7 @@
 
             <fieldset>
               <legend>Result</legend>
-              <Box column spacing="sm">
+              <Box flex spacing="s">
                 <Field>
                   <Input
                     type="checkbox"
