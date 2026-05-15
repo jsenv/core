@@ -12,7 +12,10 @@ import {
   useFieldId,
 } from "../field.jsx";
 import { fieldPropSet } from "../field_prop_set.js";
-import { ActionRequesterContext, useActionProps } from "../use_action_props.jsx";
+import {
+  ActionRequesterContext,
+  useActionProps,
+} from "../use_action_props.jsx";
 import {
   DisabledContext,
   FieldNameContext,
@@ -571,7 +574,7 @@ const InputCheckboxUI = (props) => {
       onnavi_request_reset_ui_state={(e) => {
         uiStateController.resetUIState(e);
       }}
-      onsetuistate={(e) => {
+      onnavi_set_ui_state={(e) => {
         const { value } = e.detail;
         uiStateController.setUIState(value, e);
         uiAction?.(value, e);

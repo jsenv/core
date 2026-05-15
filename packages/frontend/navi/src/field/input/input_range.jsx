@@ -403,7 +403,7 @@ const InputRangeUI = (props) => {
         onnavi_request_reset_ui_state={(e) => {
           uiStateController.resetUIState(e);
         }}
-        onsetuistate={(e) => {
+        onnavi_set_ui_state={(e) => {
           uiStateController.setUIState(e.detail.value, e);
           updateFillRatio();
         }}

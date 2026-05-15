@@ -600,7 +600,7 @@
                     type="button"
                     onClick={() =>
                       ref.current.dispatchEvent(
-                        new CustomEvent("setuistate", {
+                        new CustomEvent("navi_set_ui_state", {
                           detail: { value: true },
                         }),
                       )
@@ -612,7 +612,7 @@
                     type="button"
                     onClick={() =>
                       ref.current.dispatchEvent(
-                        new CustomEvent("setuistate", {
+                        new CustomEvent("navi_set_ui_state", {
                           detail: { value: false },
                         }),
                       )

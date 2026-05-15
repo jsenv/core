@@ -50,7 +50,7 @@ export const LoadingElementContext = createContext();
  * - Immediate UI updates for responsive interactions
  * - State divergence with sync capabilities (resetUIState)
  * - Group integration for coordinated form inputs
- * - External control via custom events (onsetuistate/onresetuistate)
+ * - External control via custom events (onnavi_set_ui_state/onresetuistate)
  * - Error recovery and form reset support
  *
  * See README.md for detailed usage examples and patterns.

@@ -2,11 +2,10 @@ import { dispatchCustomEvent } from "@jsenv/dom";
 import { useCallback, useContext, useLayoutEffect, useRef } from "preact/hooks";
 
 import { Box } from "@jsenv/navi/src/box/box.jsx";
+import { onRequestInteraction } from "@jsenv/navi/src/field/validation/custom_constraint_validation.js";
 import { LoadingOutline } from "../../graphic/loading/loading_outline.jsx";
-import { useDebugAction } from "../../navi_debug.jsx";
 import { useAutoFocus } from "../../utils/focus/use_auto_focus.js";
 import { useAccentColorAttributes } from "../../utils/use_accent_color_attributes.js";
-import { useStableCallback } from "../../utils/use_stable_callback.js";
 import {
   reportDisabledToField,
   reportInteractiveToField,
@@ -382,7 +381,6 @@ const InputRadioDispatcher = (props) => {
 
 const InputRadioUI = (props) => {
   import.meta.css = css;
-  const debugAction = useDebugAction();
   const {
     ref,
     /* eslint-disable no-unused-vars */
@@ -394,6 +392,7 @@ const InputRadioUI = (props) => {
     disabled,
     required,
     loading,
+    uiAction,
     autoFocus,
     onClick,
     onInput,
@@ -443,14 +442,14 @@ const InputRadioUI = (props) => {
       if (radioInput === thisRadio) {
         continue;
       }
-      // Dispatch "setuistate" with value: false to set the sibling radio's uiState to false (unchecked).
+      // Dispatch "navi_set_ui_state" with value: false to set the sibling radio's uiState to false (unchecked).
       // Each radio's own uiState is a boolean (true = checked, false = unchecked).
       // This is necessary because the group controller aggregates child states to determine
       // the selected value — it needs all siblings to be unchecked before the newly checked
       // radio propagates its state up, otherwise aggregation may find multiple "truthy" children.
       // suppressParentNotification: true prevents the group from aggregating and calling uiAction during
       // this intermediate state (all unchecked) — only the clicked radio's setUIState triggers aggregation.
-      dispatchCustomEvent(radioInput, "setuistate", {
+      dispatchCustomEvent(radioInput, "navi_set_ui_state", {
         event: e,
         value: false,
         suppressParentNotification: true,
@@ -463,25 +462,6 @@ const InputRadioUI = (props) => {
     }
   }, [checked]);
 
-  const innerOnInput = useStableCallback((e) => {
-    const radio = e.target;
-    const radioIsChecked = radio.checked;
-    debugAction(
-      e,
-      `radio input -> checked=${radioIsChecked}, value=${JSON.stringify(props.value || "on")}`,
-    );
-    if (radioIsChecked) {
-      updateOtherRadiosInGroup(e);
-    }
-    uiStateController.setUIState(radioIsChecked, e);
-    onInput?.(e);
-  });
-  const innerOnClick = useStableCallback((e) => {
-    if (innerReadOnly) {
-      e.preventDefault();
-    }
-    onClick?.(e);
-  });
   const renderRadio = (radioProps) => {
     return (
       <Box
@@ -493,15 +473,17 @@ const InputRadioUI = (props) => {
         checked={checked}
         disabled={innerDisabled}
         required={innerRequired}
+        data-readonly={innerReadOnly ? "" : undefined}
+        aria-busy={innerLoading ? "true" : undefined}
         baseClassName="navi_native_field"
         data-callout-arrow-x="center"
-        onClick={innerOnClick}
-        onInput={innerOnInput}
         onnavi_request_reset_ui_state={(e) => {
           uiStateController.resetUIState(e);
         }}
-        onsetuistate={(e) => {
-          uiStateController.setUIState(e.detail.value, e);
+        onnavi_set_ui_state={(e) => {
+          const { value } = e.detail;
+          uiStateController.setUIState(value, e);
+          uiAction?.(value, e);
         }}
       />
     );
@@ -510,6 +492,8 @@ const InputRadioUI = (props) => {
     innerName,
     checked,
     innerRequired,
+    innerReadOnly,
+    innerLoading,
   ]);
 
   const boxRef = useRef();
@@ -558,6 +542,7 @@ const InputRadioUI = (props) => {
       // (passsing any custom width/height would auto disable aspectRatio forced by the square prop)
       square={appearance === "button" ? true : undefined}
       {...remainingProps}
+      data-field=".navi_native_field"
       autoFocus={undefined} // See use_auto_focus.js
       ref={boxRef}
       data-appearance={appearance}
@@ -576,6 +561,23 @@ const InputRadioUI = (props) => {
       color={color}
       hasChildFunction
       baseChildPropSet={RadioChildPropSet}
+      onClick={(e) => {
+        if (!onRequestInteraction(e)) {
+          e.preventDefault();
+          return;
+        }
+        onClick?.(e);
+      }}
+      onInput={(e) => {
+        const radio = e.target;
+        const radioIsChecked = radio.checked;
+        if (radioIsChecked) {
+          updateOtherRadiosInGroup(e);
+        }
+        uiStateController.setUIState(radioIsChecked, e);
+        uiAction?.(radioIsChecked, e);
+        onInput?.(e);
+      }}
     >
       <span className="navi_radio_accent_probe" aria-hidden="true" />
       <LoadingOutline
@@ -654,6 +656,6 @@ const RadioChildPropSet = new Set([...fieldPropSet]);
 
 const InputRadioWithAction = () => {
   throw new Error(
-    `<Input type="radio" /> with an action make no sense. Use <RadioList action={something} /> instead`,
+    `<Input type="radio" /> with an action is not supported. Use <RadioList action={...} /> instead`,
   );
 };
