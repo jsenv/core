@@ -95,7 +95,9 @@
                 return `Hello, ${username}!`;
               }}
               onActionSuccess={(value) => setResult({ ok: true, value })}
-              onActionError={(err) => setResult({ ok: false, value: err.message })}
+              onActionError={(err) =>
+                setResult({ ok: false, value: err.message })
+              }
             >
               <div className="field">
                 <Field>

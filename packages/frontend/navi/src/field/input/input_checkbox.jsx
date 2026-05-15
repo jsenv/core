@@ -12,7 +12,7 @@ import {
   useFieldId,
 } from "../field.jsx";
 import { fieldPropSet } from "../field_prop_set.js";
-import { ActionRequesterContext, useActionProps } from "../use_action_props.js";
+import { ActionRequesterContext, useActionProps } from "../use_action_props.jsx";
 import {
   DisabledContext,
   FieldNameContext,

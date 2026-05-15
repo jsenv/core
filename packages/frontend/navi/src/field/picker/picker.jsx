@@ -15,7 +15,7 @@ import {
   useFieldId,
 } from "../field.jsx";
 import { createUICallback } from "../ui_callback.js";
-import { ActionRequesterContext } from "../use_action_props.js";
+import { ActionRequesterContext } from "../use_action_props.jsx";
 import {
   DisabledContext,
   LoadingContext,

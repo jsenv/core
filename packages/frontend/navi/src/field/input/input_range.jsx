@@ -22,7 +22,7 @@ import {
 } from "../field.jsx";
 import { fieldPropSet } from "../field_prop_set.js";
 import { useOnRequestAction } from "../use_action_events.js";
-import { ActionRequesterContext } from "../use_action_props.js";
+import { ActionRequesterContext } from "../use_action_props.jsx";
 import {
   DisabledContext,
   LoadingContext,

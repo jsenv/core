@@ -17,7 +17,7 @@ import {
   ActionContext,
   ActionRequesterContext,
   useActionProps,
-} from "./use_action_props.js";
+} from "./use_action_props.jsx";
 import {
   DisabledContext,
   LoadingContext,
@@ -564,6 +564,9 @@ const ButtonInsideForm = (props) => {
     <Next
       {...props}
       uiAction={(v, event) => {
+        if (event.defaultPrevented) {
+          return;
+        }
         const button = event.currentTarget;
         const { form } = button;
         if (!form) {

@@ -25,7 +25,7 @@ import {
   reportInteractiveToField,
   reportReadOnlyToField,
 } from "../field.jsx";
-import { ActionRequesterContext } from "../use_action_props.js";
+import { ActionRequesterContext } from "../use_action_props.jsx";
 import {
   DisabledContext,
   LoadingContext,

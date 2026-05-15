@@ -58,7 +58,7 @@ import {
   requestListOpen,
   requestListSelectCurrent,
 } from "../list/list.jsx";
-import { ActionRequesterContext, useActionProps } from "../use_action_props.js";
+import { ActionRequesterContext, useActionProps } from "../use_action_props.jsx";
 import {
   DisabledContext,
   LoadingContext,

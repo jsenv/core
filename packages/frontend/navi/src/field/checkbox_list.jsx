@@ -4,7 +4,7 @@ import { useContext, useRef } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
 import { InputCheckbox } from "./input/input_checkbox.jsx";
-import { useActionProps } from "./use_action_props.js";
+import { useActionProps } from "./use_action_props.jsx";
 import {
   DisabledContext,
   FieldNameContext,

@@ -20,7 +20,7 @@ import { Box } from "../box/box.jsx";
 import { useDebugAction } from "../navi_debug.jsx";
 import { collectFormElementValues } from "./collect_form_element_values.js";
 import { FormContext } from "./form_context.js";
-import { useActionProps } from "./use_action_props.js";
+import { useActionProps } from "./use_action_props.jsx";
 import {
   LoadingContext,
   ParentUIStateControllerContext,
