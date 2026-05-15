@@ -147,6 +147,10 @@ naviI18n.addAll({
     fr: "Cette action n'est pas disponible pour l'instant.",
     en: "This action is not available right now.",
   },
+  "constraint.readonly.button_busy": {
+    fr: "Cette action est en cours...",
+    en: "This action is in progress...",
+  },
   "constraint.readonly.default": {
     fr: "Cet élément est en lecture seule et ne peut pas être modifié.",
     en: "This element is read-only and cannot be modified.",

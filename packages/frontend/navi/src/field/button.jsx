@@ -417,7 +417,6 @@ const ButtonUI = (props) => {
 
   return (
     <Box
-      data-readonly-silent={innerLoading ? "" : undefined}
       {...remainingProps}
       ref={ref}
       autFocus={undefined} // See use_auto_focus.js

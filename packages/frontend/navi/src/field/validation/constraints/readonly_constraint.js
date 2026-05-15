@@ -23,7 +23,9 @@ export const READONLY_CONSTRAINT = {
     if (isBusy) {
       return {
         target: field,
-        message: naviI18n("constraint.readonly.busy"),
+        message: isButton
+          ? naviI18n("constraint.readonly.button_busy")
+          : naviI18n("constraint.readonly.busy"),
         status: "info",
       };
     }

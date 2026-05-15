@@ -162,9 +162,9 @@
       const App = () => {
         return (
           <div>
-            <HrefDemo />
-            <PaddingDemo />
+            <TableOfContents />
             <BasicStatesDemo />
+            <InteractivityDemo />
             <SizeVariationsDemo />
             <ColorVariationsDemo />
             <FullWidthDemo />
@@ -173,13 +173,171 @@
             <CircleButtonDemo />
             <DiscreteVariantDemo />
             <InteractiveDemo />
+            <HrefDemo />
+            <PaddingDemo />
+          </div>
+        );
+      };
+
+      const TableOfContents = () => {
+        return (
+          <div class="demo-section">
+            <h2>Table of contents</h2>
+            <ol style={{ margin: 0, paddingLeft: "20px", lineHeight: "2" }}>
+              <li>
+                <a href="#states">Button States</a>
+              </li>
+              <li>
+                <a href="#interactivity">
+                  Interactivity (uiAction &amp; action)
+                </a>
+              </li>
+              <li>
+                <a href="#sizes">Size Variations</a>
+              </li>
+              <li>
+                <a href="#colors">Color Variations</a>
+              </li>
+              <li>
+                <a href="#full-width">Full Width</a>
+              </li>
+              <li>
+                <a href="#spacing">Button Spacing</a>
+              </li>
+              <li>
+                <a href="#icon-toggle">Icon Button Toggle</a>
+              </li>
+              <li>
+                <a href="#border-radius">Border Radius Inheritance</a>
+              </li>
+              <li>
+                <a href="#discrete">Discrete Variant</a>
+              </li>
+              <li>
+                <a href="#interactive-controls">Interactive Controls</a>
+              </li>
+              <li>
+                <a href="#href">Button as link</a>
+              </li>
+              <li>
+                <a href="#padding">Padding (advanced)</a>
+              </li>
+            </ol>
+          </div>
+        );
+      };
+
+      const InteractivityDemo = () => {
+        const [lastUIAction, setLastUIAction] = useState(null);
+        const [asyncResult, setAsyncResult] = useState(null);
+
+        return (
+          <div class="demo-section" id="interactivity">
+            <h2>Interactivity</h2>
+
+            <div class="states-section">
+              <div class="states-title">uiAction</div>
+              <p class="states-description">
+                <code>uiAction</code> is called synchronously with the button's
+                value when the user clicks. A read-only button does not trigger
+                it.
+              </p>
+
+              <fieldset>
+                <legend>Button with uiAction</legend>
+                <Box row spacing="sm" alignX="start" alignY="center">
+                  <Button
+                    name="my-button"
+                    value="hello"
+                    uiAction={(value) => {
+                      console.log("uiAction called with value:", value);
+                      setLastUIAction(value);
+                    }}
+                  >
+                    Click me
+                  </Button>
+                  {lastUIAction !== null && (
+                    <span style={{ fontSize: "0.85rem", color: "#555" }}>
+                      Last value logged: <code>{String(lastUIAction)}</code>
+                    </span>
+                  )}
+                </Box>
+              </fieldset>
+
+              <fieldset>
+                <legend>Read-only button — uiAction is not triggered</legend>
+                <Button
+                  name="readonly-button"
+                  value="ignored"
+                  readOnly
+                  uiAction={(value) => {
+                    console.log("this should never log", value);
+                  }}
+                >
+                  Read-only
+                </Button>
+              </fieldset>
+            </div>
+
+            <div class="states-section">
+              <div class="states-title">action</div>
+              <p class="states-description">
+                <code>action</code> is an async function. The button enters a
+                loading state while it runs. On failure the error is surfaced;
+                on success you can react to the resolved value.
+              </p>
+
+              <fieldset>
+                <legend>Async action that fails</legend>
+                <Box row spacing="sm" alignX="start" alignY="center">
+                  <Button
+                    action={async () => {
+                      await new Promise((r) => setTimeout(r, 800));
+                      throw new Error("Something went wrong");
+                    }}
+                    onActionError={(err) => {
+                      setAsyncResult({ ok: false, message: err.message });
+                    }}
+                  >
+                    Fail after 800ms
+                  </Button>
+                  {asyncResult && !asyncResult.ok && (
+                    <span style={{ fontSize: "0.85rem", color: "#c00" }}>
+                      Error: {asyncResult.message}
+                    </span>
+                  )}
+                </Box>
+              </fieldset>
+
+              <fieldset>
+                <legend>Async action that succeeds</legend>
+                <Box row spacing="sm" alignX="start" alignY="center">
+                  <Button
+                    action={async () => {
+                      await new Promise((r) => setTimeout(r, 800));
+                      return "done!";
+                    }}
+                    onActionSuccess={(value) => {
+                      setAsyncResult({ ok: true, message: value });
+                    }}
+                  >
+                    Succeed after 800ms
+                  </Button>
+                  {asyncResult && asyncResult.ok && (
+                    <span style={{ fontSize: "0.85rem", color: "#2a7a2a" }}>
+                      Success: {asyncResult.message}
+                    </span>
+                  )}
+                </Box>
+              </fieldset>
+            </div>
           </div>
         );
       };
 
       const HrefDemo = () => {
         return (
-          <div class="demo-section">
+          <div class="demo-section" id="href">
             <h2>Button as link (href)</h2>
             <div class="button-group">
               <Button href="https://github.com">GitHub (external)</Button>
@@ -253,251 +411,265 @@
 
       const PaddingDemo = () => {
         return (
-          <div className="demo-section">
+          <div className="demo-section" id="padding">
             <h2>Padding</h2>
+            <details>
+              <summary
+                style={{
+                  cursor: "pointer",
+                  color: "#555",
+                  fontSize: "0.9rem",
+                  marginBottom: "8px",
+                }}
+              >
+                Expand to see all padding scenarios — useful when you want to
+                define a global
+                <code> --button-padding-*-default</code> CSS variable.
+              </summary>
 
-            <PaddingScenario
-              considering={["Nothing is passed (default behavior)"]}
-              nativeStyle={{ paddingInline: "6px", paddingBlock: "1px" }}
-            >
-              <Button>Button</Button>
-            </PaddingScenario>
-
-            <PaddingScenario
-              considering={['padding="0"']}
-              nativeStyle={{ padding: 0 }}
-            >
-              <Button padding="0">Button</Button>
-            </PaddingScenario>
-
-            <PaddingScenario
-              considering={['padding="20px"']}
-              nativeStyle={{ padding: "20px" }}
-            >
-              <Button padding="20px">Button</Button>
-            </PaddingScenario>
-
-            <PaddingScenario
-              considering={['paddingX="20px"']}
-              nativeStyle={{ paddingInline: "20px", paddingBlock: "1px" }}
-            >
-              <Button paddingX="20px">Button</Button>
-            </PaddingScenario>
-
-            <PaddingScenario
-              considering={['paddingY="20px"']}
-              nativeStyle={{ paddingBlock: "20px", paddingInline: "6px" }}
-            >
-              <Button paddingY="20px">Button</Button>
-            </PaddingScenario>
-
-            <PaddingScenario
-              considering={['paddingLeft="40px"']}
-              nativeStyle={{
-                paddingLeft: "40px",
-                paddingRight: "6px",
-                paddingBlock: "1px",
-              }}
-            >
-              <Button paddingLeft="40px">Button</Button>
-            </PaddingScenario>
-
-            <PaddingScenario
-              considering={['paddingRight="40px"']}
-              nativeStyle={{
-                paddingRight: "40px",
-                paddingLeft: "6px",
-                paddingBlock: "1px",
-              }}
-            >
-              <Button paddingRight="40px">Button</Button>
-            </PaddingScenario>
-
-            <PaddingScenario
-              considering={['padding="20px"', 'paddingX="0"']}
-              nativeStyle={{ paddingInline: 0, paddingBlock: "20px" }}
-            >
-              <Button padding="20px" paddingX="0">
-                Button
-              </Button>
-            </PaddingScenario>
-
-            <PaddingScenario
-              considering={['padding="20px"', 'paddingLeft="0"']}
-              nativeStyle={{
-                paddingLeft: 0,
-                paddingRight: "20px",
-                paddingBlock: "20px",
-              }}
-            >
-              <Button padding="20px" paddingLeft="0">
-                Button
-              </Button>
-            </PaddingScenario>
-
-            <PaddingScenario
-              considering={['paddingX="20px"', 'paddingLeft="0"']}
-              nativeStyle={{
-                paddingLeft: 0,
-                paddingRight: "20px",
-                paddingBlock: "1px",
-              }}
-            >
-              <Button paddingX="20px" paddingLeft="0">
-                Button
-              </Button>
-            </PaddingScenario>
-
-            <PaddingScenario
-              considering={['style={{ "--button-padding": "20px" }}']}
-              nativeStyle={{ padding: "20px" }}
-            >
-              <Button style={{ "--button-padding": "20px" }}>Button</Button>
-            </PaddingScenario>
-
-            <PaddingScenario
-              considering={[
-                'style={{ "--button-padding": "20px" }}',
-                'paddingX="0"',
-              ]}
-              nativeStyle={{ paddingInline: 0, paddingBlock: "20px" }}
-            >
-              <Button style={{ "--button-padding": "20px" }} paddingX="0">
-                Button
-              </Button>
-            </PaddingScenario>
-
-            <PaddingScenario
-              considering={[
-                "CSS: .my-container { --button-padding: 30px }",
-                "Button is inside .my-container",
-                'padding="0"',
-              ]}
-              nativeStyle={{ padding: 0 }}
-            >
-              <div class="demo-outer-padding">
-                <Button padding="0">Button</Button>
-              </div>
-            </PaddingScenario>
-
-            <PaddingScenario
-              considering={[
-                "CSS: .my-container { --button-padding-x: 40px }",
-                "Button is inside .my-container",
-                'padding="0"',
-              ]}
-              nativeStyle={{ padding: 0 }}
-            >
-              <div class="demo-outer-padding-x">
-                <Button padding="0">Button</Button>
-              </div>
-            </PaddingScenario>
-
-            <p
-              style={{
-                margin: "8px 0 4px",
-                fontSize: "0.85rem",
-                color: "#c00",
-                fontStyle: "italic",
-              }}
-            >
-              ↑ broken: --button-padding-x inherited from parent wins over
-              padding="0" prop. Use --button-padding-x-default instead (see
-              below).
-            </p>
-
-            <PaddingScenario
-              considering={[
-                "CSS: .my-container { --button-padding-x-default: 40px }",
-                "Button is inside .my-container",
-                'padding="0"',
-              ]}
-              nativeStyle={{ padding: 0 }}
-            >
-              <div class="demo-outer-padding-x-default">
-                <Button padding="0">Button</Button>
-              </div>
-            </PaddingScenario>
-
-            <p
-              style={{
-                margin: "8px 0 4px",
-                fontSize: "0.85rem",
-                color: "#555",
-                fontStyle: "italic",
-              }}
-            >
-              ↑ works: --button-padding-x-default is the last fallback in the
-              chain, so padding="0" overrides it.
-            </p>
-
-            <PaddingScenario
-              considering={[
-                "CSS: .my-container { --button-padding-x-default: 40px }",
-                "Button is inside .my-container",
-                "(no prop — inherits the global default)",
-              ]}
-              nativeStyle={{ paddingInline: "40px", paddingBlock: "1px" }}
-            >
-              <div class="demo-outer-padding-x-default">
+              <PaddingScenario
+                considering={["Nothing is passed (default behavior)"]}
+                nativeStyle={{ paddingInline: "6px", paddingBlock: "1px" }}
+              >
                 <Button>Button</Button>
-              </div>
-            </PaddingScenario>
+              </PaddingScenario>
 
-            <p
-              style={{
-                margin: "8px 0 4px",
-                fontSize: "0.85rem",
-                color: "#555",
-                fontStyle: "italic",
-              }}
-            >
-              ↑ also works: when no prop is passed, the global default is used
-              as expected.
-            </p>
+              <PaddingScenario
+                considering={['padding="0"']}
+                nativeStyle={{ padding: 0 }}
+              >
+                <Button padding="0">Button</Button>
+              </PaddingScenario>
 
-            <p
-              style={{
-                margin: "16px 0 4px",
-                fontSize: "0.85rem",
-                color: "#555",
-                background: "#f5f5f5",
-                padding: "10px",
-                borderRadius: "4px",
-              }}
-            >
-              <strong>
-                Why --button-padding-x-default and not --button-padding-x?
-              </strong>
-              <br />
-              CSS custom properties inherit. If a parent sets{" "}
-              <code>--button-padding-x</code>, that value travels down to the
-              button and sits at the same "level" as
-              <code>--button-padding</code> set inline — there is no cascade
-              between vars. So <code>--button-padding-x</code> inherited from a
-              parent would always win over <code>--button-padding</code> set as
-              a prop, regardless of order.
-              <br />
-              <br />
-              <code>--button-padding-x-default</code> is placed as the{" "}
-              <em>last</em> fallback in the chain:{" "}
-              <code>
-                --button-padding-left → --button-padding-x → --button-padding →
-                --button-padding-x-default
-              </code>
-              . This means any more-specific prop or var set closer to the
-              button will override it. If you want to set a global default that
-              can still be overridden per-button via props, always use{" "}
-              <code>--button-padding-x-default</code> /{" "}
-              <code>--button-padding-y-default</code>.
-            </p>
+              <PaddingScenario
+                considering={['padding="20px"']}
+                nativeStyle={{ padding: "20px" }}
+              >
+                <Button padding="20px">Button</Button>
+              </PaddingScenario>
+
+              <PaddingScenario
+                considering={['paddingX="20px"']}
+                nativeStyle={{ paddingInline: "20px", paddingBlock: "1px" }}
+              >
+                <Button paddingX="20px">Button</Button>
+              </PaddingScenario>
+
+              <PaddingScenario
+                considering={['paddingY="20px"']}
+                nativeStyle={{ paddingBlock: "20px", paddingInline: "6px" }}
+              >
+                <Button paddingY="20px">Button</Button>
+              </PaddingScenario>
+
+              <PaddingScenario
+                considering={['paddingLeft="40px"']}
+                nativeStyle={{
+                  paddingLeft: "40px",
+                  paddingRight: "6px",
+                  paddingBlock: "1px",
+                }}
+              >
+                <Button paddingLeft="40px">Button</Button>
+              </PaddingScenario>
+
+              <PaddingScenario
+                considering={['paddingRight="40px"']}
+                nativeStyle={{
+                  paddingRight: "40px",
+                  paddingLeft: "6px",
+                  paddingBlock: "1px",
+                }}
+              >
+                <Button paddingRight="40px">Button</Button>
+              </PaddingScenario>
+
+              <PaddingScenario
+                considering={['padding="20px"', 'paddingX="0"']}
+                nativeStyle={{ paddingInline: 0, paddingBlock: "20px" }}
+              >
+                <Button padding="20px" paddingX="0">
+                  Button
+                </Button>
+              </PaddingScenario>
+
+              <PaddingScenario
+                considering={['padding="20px"', 'paddingLeft="0"']}
+                nativeStyle={{
+                  paddingLeft: 0,
+                  paddingRight: "20px",
+                  paddingBlock: "20px",
+                }}
+              >
+                <Button padding="20px" paddingLeft="0">
+                  Button
+                </Button>
+              </PaddingScenario>
+
+              <PaddingScenario
+                considering={['paddingX="20px"', 'paddingLeft="0"']}
+                nativeStyle={{
+                  paddingLeft: 0,
+                  paddingRight: "20px",
+                  paddingBlock: "1px",
+                }}
+              >
+                <Button paddingX="20px" paddingLeft="0">
+                  Button
+                </Button>
+              </PaddingScenario>
+
+              <PaddingScenario
+                considering={['style={{ "--button-padding": "20px" }}']}
+                nativeStyle={{ padding: "20px" }}
+              >
+                <Button style={{ "--button-padding": "20px" }}>Button</Button>
+              </PaddingScenario>
+
+              <PaddingScenario
+                considering={[
+                  'style={{ "--button-padding": "20px" }}',
+                  'paddingX="0"',
+                ]}
+                nativeStyle={{ paddingInline: 0, paddingBlock: "20px" }}
+              >
+                <Button style={{ "--button-padding": "20px" }} paddingX="0">
+                  Button
+                </Button>
+              </PaddingScenario>
+
+              <PaddingScenario
+                considering={[
+                  "CSS: .my-container { --button-padding: 30px }",
+                  "Button is inside .my-container",
+                  'padding="0"',
+                ]}
+                nativeStyle={{ padding: 0 }}
+              >
+                <div class="demo-outer-padding">
+                  <Button padding="0">Button</Button>
+                </div>
+              </PaddingScenario>
+
+              <PaddingScenario
+                considering={[
+                  "CSS: .my-container { --button-padding-x: 40px }",
+                  "Button is inside .my-container",
+                  'padding="0"',
+                ]}
+                nativeStyle={{ padding: 0 }}
+              >
+                <div class="demo-outer-padding-x">
+                  <Button padding="0">Button</Button>
+                </div>
+              </PaddingScenario>
+
+              <p
+                style={{
+                  margin: "8px 0 4px",
+                  fontSize: "0.85rem",
+                  color: "#c00",
+                  fontStyle: "italic",
+                }}
+              >
+                ↑ broken: --button-padding-x inherited from parent wins over
+                padding="0" prop. Use --button-padding-x-default instead (see
+                below).
+              </p>
+
+              <PaddingScenario
+                considering={[
+                  "CSS: .my-container { --button-padding-x-default: 40px }",
+                  "Button is inside .my-container",
+                  'padding="0"',
+                ]}
+                nativeStyle={{ padding: 0 }}
+              >
+                <div class="demo-outer-padding-x-default">
+                  <Button padding="0">Button</Button>
+                </div>
+              </PaddingScenario>
+
+              <p
+                style={{
+                  margin: "8px 0 4px",
+                  fontSize: "0.85rem",
+                  color: "#555",
+                  fontStyle: "italic",
+                }}
+              >
+                ↑ works: --button-padding-x-default is the last fallback in the
+                chain, so padding="0" overrides it.
+              </p>
+
+              <PaddingScenario
+                considering={[
+                  "CSS: .my-container { --button-padding-x-default: 40px }",
+                  "Button is inside .my-container",
+                  "(no prop — inherits the global default)",
+                ]}
+                nativeStyle={{ paddingInline: "40px", paddingBlock: "1px" }}
+              >
+                <div class="demo-outer-padding-x-default">
+                  <Button>Button</Button>
+                </div>
+              </PaddingScenario>
+
+              <p
+                style={{
+                  margin: "8px 0 4px",
+                  fontSize: "0.85rem",
+                  color: "#555",
+                  fontStyle: "italic",
+                }}
+              >
+                ↑ also works: when no prop is passed, the global default is used
+                as expected.
+              </p>
+
+              <p
+                style={{
+                  margin: "16px 0 4px",
+                  fontSize: "0.85rem",
+                  color: "#555",
+                  background: "#f5f5f5",
+                  padding: "10px",
+                  borderRadius: "4px",
+                }}
+              >
+                <strong>
+                  Why --button-padding-x-default and not --button-padding-x?
+                </strong>
+                <br />
+                CSS custom properties inherit. If a parent sets{" "}
+                <code>--button-padding-x</code>, that value travels down to the
+                button and sits at the same "level" as
+                <code>--button-padding</code> set inline — there is no cascade
+                between vars. So <code>--button-padding-x</code> inherited from
+                a parent would always win over <code>--button-padding</code> set
+                as a prop, regardless of order.
+                <br />
+                <br />
+                <code>--button-padding-x-default</code> is placed as the{" "}
+                <em>last</em> fallback in the chain:{" "}
+                <code>
+                  --button-padding-left → --button-padding-x → --button-padding
+                  → --button-padding-x-default
+                </code>
+                . This means any more-specific prop or var set closer to the
+                button will override it. If you want to set a global default
+                that can still be overridden per-button via props, always use{" "}
+                <code>--button-padding-x-default</code> /{" "}
+                <code>--button-padding-y-default</code>.
+              </p>
+            </details>
           </div>
         );
       };
 
       const BasicStatesDemo = () => {
         return (
-          <div className="demo-section">
+          <div className="demo-section" id="states">
             <h2>Button States</h2>
 
             <div className="states-section">
@@ -596,7 +768,7 @@
 
       const SizeVariationsDemo = () => {
         return (
-          <div className="demo-section">
+          <div className="demo-section" id="sizes">
             <h2>Size Variations</h2>
 
             <div className="variation-grid">
@@ -628,7 +800,7 @@
 
       const ColorVariationsDemo = () => {
         return (
-          <div className="demo-section">
+          <div className="demo-section" id="colors">
             <h2>Color Variations</h2>
 
             <div className="variation-grid">
@@ -689,7 +861,7 @@
 
       const FullWidthDemo = () => {
         return (
-          <div className="demo-section">
+          <div className="demo-section" id="full-width">
             <h2>Full Width</h2>
 
             <fieldset>
@@ -769,7 +941,7 @@
 
       const SpacingDemo = () => {
         return (
-          <div className="demo-section">
+          <div className="demo-section" id="spacing">
             <h2>Button Spacing</h2>
 
             <fieldset>
@@ -801,7 +973,7 @@
         const [isVisible, setIsVisible] = useState(false);
 
         return (
-          <div className="demo-section">
+          <div className="demo-section" id="icon-toggle">
             <h2>Icon Button Toggle</h2>
 
             <fieldset>
@@ -875,7 +1047,7 @@
 
       const CircleButtonDemo = () => {
         return (
-          <div className="demo-section">
+          <div className="demo-section" id="border-radius">
             <h2>Border Radius Inheritance</h2>
 
             <fieldset>
@@ -908,7 +1080,7 @@
 
       const DiscreteVariantDemo = () => {
         return (
-          <div className="demo-section">
+          <div className="demo-section" id="discrete">
             <h2>Discrete Variant</h2>
 
             <fieldset>
@@ -951,7 +1123,7 @@
         const [discrete, setDiscrete] = useState(false);
 
         return (
-          <div className="demo-section">
+          <div className="demo-section" id="interactive-controls">
             <h2>Interactive Controls</h2>
 
             <fieldset>
