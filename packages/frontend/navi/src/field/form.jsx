@@ -173,6 +173,9 @@ const FormWithAction = (props) => {
       {...rest}
       ref={ref}
       loading={innerLoading}
+      onnavi_get_managed_fields={(e) => {
+        e.respondWith(getFormManagedFields(e.currentTarget));
+      }}
       onnavi_request_action={(e) => {
         onRequestAction(actionBoundToUIState, e);
       }}
@@ -199,6 +202,16 @@ const FormWithAction = (props) => {
       </FormActionContext.Provider>
     </FormUI>
   );
+};
+
+const getFormManagedFields = (form) => {
+  const managedFields = [];
+  for (const element of form.elements) {
+    // if (element.name) {
+    managedFields.push(element);
+    // }
+  }
+  return managedFields;
 };
 
 // const dispatchCustomEventOnFormAndFormElements = (type, options) => {

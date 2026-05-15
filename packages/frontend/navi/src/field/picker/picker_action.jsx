@@ -9,32 +9,41 @@ export const PickerAction = (props) => {
   return (
     <Next
       {...actionProps}
-      //   onMouseDown={(e) => {
-      //     actionProps.onMouseDown?.(e);
-      //     if (e.button !== 0) {
-      //       return;
-      //     }
-      //     if (e.defaultPrevented) {
-      //       return;
-      //     }
-      //     dispatchRequestAction(e.currentTarget, {
-      //       event: e,
-      //       requester: e.currentTarget,
-      //     });
-      //   }}
-      //   onClick={(e) => {
-      //     actionProps.onClick(e);
-      //     if (e.button !== 0) {
-      //       return;
-      //     }
-      //     if (e.defaultPrevented) {
-      //       return;
-      //     }
-      //     dispatchRequestAction(e.currentTarget, {
-      //       event: e,
-      //       requester: e.currentTarget,
-      //     });
-      //   }}
+      onnavi_get_managed_fields={(e) => {
+        // we must check for the pickerEl content to search for a valid input because we might be a button used to validate for instance
+        // no necessarily the field itself
+        const pickerEl = e.currentTarget;
+        const managedField = getPickerManagedField(pickerEl);
+        e.respondWith(managedField);
+      }}
     />
   );
+};
+
+const getPickerManagedField = (pickerEl) => {
+  let pickerInput = pickerEl.querySelector(".navi_picker_input");
+  let firstField;
+  let sibling = pickerInput.nextElementSibling;
+  while (sibling) {
+    const candidate = findFieldWithName(sibling);
+    if (candidate) {
+      firstField = candidate;
+      return firstField;
+    }
+    sibling = sibling.nextElementSibling;
+  }
+  return null;
+};
+const findFieldWithName = (el) => {
+  const tag = el.tagName.toLowerCase();
+  if ((tag === "input" || tag === "textarea" || tag === "select") && el.name) {
+    return el;
+  }
+  for (const child of el.children) {
+    const found = findFieldWithName(child);
+    if (found) {
+      return found;
+    }
+  }
+  return null;
 };

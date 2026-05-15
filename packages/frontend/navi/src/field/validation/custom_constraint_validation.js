@@ -56,6 +56,7 @@
 import {
   createPubSub,
   dispatchCustomEvent,
+  dispatchInternalCustomEvent,
   dispatchPublicCustomEvent,
   getElementSignature,
 } from "@jsenv/dom";
@@ -233,42 +234,41 @@ const checkConstraintsAndReport = (
     validationInterface = installCustomConstraintValidation(elementToValidate);
   }
 
-  const isForm = elementToValidate.tagName === "FORM";
-  const formToValidate = isForm ? elementToValidate : elementToValidate.form;
+  if (validationInProgressWeakSet.has(elementToValidate)) {
+    debugAction(
+      event,
+      `validation already in progress for ${getElementSignature(elementToValidate)}`,
+    );
+    return false;
+  }
+  validationInProgressWeakSet.add(elementToValidate);
+  setTimeout(() => {
+    validationInProgressWeakSet.delete(elementToValidate);
+  });
+
+  const managedFields = getManagedFields(elementToValidate);
   let isValid = true;
   let failedValidationInterface;
-
-  if (fromRequestAction && formToValidate) {
-    if (validationInProgressWeakSet.has(formToValidate)) {
-      debugAction(
-        event,
-        `validation already in progress for ${formToValidate?.id || formToValidate?.tagName}`,
-      );
-      return false;
+  for (const managedField of managedFields) {
+    const elementValidationInterface = managedField.__validationInterface__;
+    if (!elementValidationInterface) {
+      continue;
     }
-    validationInProgressWeakSet.add(formToValidate);
-    setTimeout(() => {
-      validationInProgressWeakSet.delete(formToValidate);
+    const elementIsValid = elementValidationInterface.checkValidity({
+      event,
+      fromRequestAction,
+      skipReadonly:
+        managedField.tagName === "BUTTON" && managedField !== requester,
+      debugAction,
     });
-    for (const formElement of formToValidate.elements) {
-      const elementValidationInterface = formElement.__validationInterface__;
-      if (!elementValidationInterface) {
-        continue;
-      }
-      const elementIsValid = elementValidationInterface.checkValidity({
-        event,
-        fromRequestAction,
-        skipReadonly:
-          formElement.tagName === "BUTTON" && formElement !== requester,
-        debugAction,
-      });
-      if (!elementIsValid) {
-        failedValidationInterface = elementValidationInterface;
-        isValid = false;
-        break;
-      }
+    if (!elementIsValid) {
+      failedValidationInterface = elementValidationInterface;
+      isValid = false;
+      break;
     }
-  } else {
+  }
+  if (isValid) {
+    // all manageds fields (if any) are good ->  check ourselves
     isValid = validationInterface.checkValidity({
       constraints,
       event,
@@ -293,6 +293,20 @@ const checkConstraintsAndReport = (
     return false;
   }
   return true;
+};
+
+const getManagedFields = (element) => {
+  let managedFields;
+  dispatchInternalCustomEvent(element, "navi_get_managed_fields", {
+    respondWith: (fieldOrFields) => {
+      if (Array.isArray(fieldOrFields)) {
+        managedFields = fieldOrFields;
+      } else if (fieldOrFields) {
+        managedFields = [fieldOrFields];
+      }
+    },
+  });
+  return managedFields || [];
 };
 
 export const closeValidationMessage = (
