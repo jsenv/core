@@ -224,35 +224,18 @@
 
       const UIFormPanel = ({ colorChoices, selectedColor, onSubmit }) => {
         const [uiSelectedColor, setUiSelectedColor] = useState(selectedColor);
-        const [isSubmitting, setIsSubmitting] = useState(false);
-        const [submitMessage, setSubmitMessage] = useState("");
-        const [submitError, setSubmitError] = useState("");
+        const [submitResult, setSubmitResult] = useState(null);
         const [forceError, setForceError] = useState(false);
 
         const submitForm = async ({ color }) => {
-          setIsSubmitting(true);
-          setSubmitError("");
-          setSubmitMessage(`Syncing color: ${color || "none"}...`);
-
-          try {
-            console.log("Submitting form data:", color);
-            await new Promise((resolve) => setTimeout(resolve, 1000));
-
-            if (forceError) {
-              throw new Error(
-                "Simulated server error: Failed to update color preference",
-              );
-            }
-
-            onSubmit({ color });
-            setSubmitMessage(`✅ Successfully synced: ${color || "none"}`);
-            console.log("Data state updated from form:", color);
-          } catch (error) {
-            setSubmitError(error.message);
-            setSubmitMessage("");
-          } finally {
-            setIsSubmitting(false);
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+          if (forceError) {
+            throw new Error(
+              "Simulated server error: Failed to update color preference",
+            );
           }
+          onSubmit({ color });
+          return `✅ Successfully synced: ${color || "none"}`;
         };
 
         return (
@@ -262,10 +245,17 @@
               Radio button interface for user interaction
             </p>
 
-            <Form action={submitForm}>
+            <Form
+              action={submitForm}
+              resetOnError
+              onActionEnd={(value) => setSubmitResult({ ok: true, value })}
+              onActionError={(error) =>
+                setSubmitResult({ ok: false, value: error.message })
+              }
+            >
               <fieldset style="border: 1px solid #ddd; padding: 10px; border-radius: 4px;">
                 <legend>Select Favorite Color:</legend>
-                <NaviDebug debugAction debugActionVerbose>
+                <NaviDebug debugAction>
                   <RadioList
                     name="color"
                     uiAction={(color) => {
@@ -300,31 +290,28 @@
                 </label>
               </div>
 
-              {/* Submission feedback messages */}
-              {(isSubmitting || submitMessage || submitError) && (
-                <div style="margin: 10px 0; padding: 10px; border-radius: 4px; font-size: 14px;">
-                  {isSubmitting && (
-                    <div style="color: #1976d2; background: #e3f2fd; padding: 8px; border-radius: 3px; border-left: 3px solid #1976d2;">
-                      🔄 {submitMessage}
-                    </div>
-                  )}
-                  {!isSubmitting && submitMessage && (
-                    <div style="color: #388e3c; background: #e8f5e8; padding: 8px; border-radius: 3px; border-left: 3px solid #388e3c;">
-                      {submitMessage}
-                    </div>
-                  )}
-                  {submitError && (
-                    <div style="color: #d32f2f; background: #ffebee; padding: 8px; border-radius: 3px; border-left: 3px solid #d32f2f;">
-                      ❌ {submitError}
-                    </div>
-                  )}
+              {submitResult && (
+                <div
+                  style={{
+                    margin: "10px 0",
+                    padding: "8px",
+                    borderRadius: "3px",
+                    fontSize: "14px",
+                    color: submitResult.ok ? "#388e3c" : "#d32f2f",
+                    background: submitResult.ok ? "#e8f5e8" : "#ffebee",
+                    borderLeft: `3px solid ${submitResult.ok ? "#388e3c" : "#d32f2f"}`,
+                  }}
+                >
+                  {submitResult.ok
+                    ? submitResult.value
+                    : `❌ ${submitResult.value}`}
                 </div>
               )}
 
               <div style="margin-top: 15px; display: flex; align-items: flex-start; flex-direction: column; gap: 8px;">
-                <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? "⏳ Submitting..." : "📤 Submit Form"}{" "}
-                  {!isSubmitting && uiSelectedColor && (
+                <Button type="submit">
+                  📤 Submit Form{" "}
+                  {uiSelectedColor && (
                     <span style="font-size: 11px; opacity: 0.7;">
                       ({uiSelectedColor})
                     </span>
