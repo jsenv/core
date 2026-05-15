@@ -49,7 +49,10 @@ export const useActionProps = (props) => {
     "onnavi_action_prevented": onActionPrevented,
     "onnavi_action_ready": executeAction,
     "onnavi_action_abort": onActionAborted,
-    "onnavi_action_error": onActionError,
+    "onnavi_action_error": (e) => {
+      const { error } = e.detail;
+      onActionError?.(error, e);
+    },
     "onnavi_action_end": onActionEnd,
   };
 };
