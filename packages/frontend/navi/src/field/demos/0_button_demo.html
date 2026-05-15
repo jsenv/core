@@ -289,7 +289,7 @@
 
               <fieldset>
                 <legend>Async action that fails</legend>
-                <Box row spacing="sm" alignX="start" alignY="center">
+                <Box flex="y" spacing="s" alignX="start" alignY="center">
                   <Button
                     action={async () => {
                       await new Promise((r) => setTimeout(r, 800));
@@ -311,7 +311,7 @@
 
               <fieldset>
                 <legend>Async action that succeeds</legend>
-                <Box row spacing="sm" alignX="start" alignY="center">
+                <Box flex="y" spacing="s" alignX="start" alignY="center">
                   <Button
                     action={async () => {
                       await new Promise((r) => setTimeout(r, 800));
