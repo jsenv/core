@@ -55,6 +55,7 @@
     </div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
+      import { useState } from "preact/hooks";
       import { useSignal } from "@preact/signals";
       import {
         Box,
@@ -570,6 +571,7 @@
       };
 
       const PopoverPickerDemo = () => {
+        const [value, setValue] = useState("Hello");
         return (
           <div class="demo-section">
             <h2>Custom popover — action="picker"</h2>
@@ -583,14 +585,16 @@
 
               <Picker
                 type="text"
-                uiAction={() => {
-                  console.log("coucou");
+                value={value}
+                uiAction={(v) => {
+                  setValue(v);
                 }}
                 placeholder="Type something"
               >
                 <Box flex="y" spacing="s" padding="s">
                   <Input
                     type="text"
+                    value={value}
                     uiAction={Picker.update}
                     placeholder="Enter value"
                   />
