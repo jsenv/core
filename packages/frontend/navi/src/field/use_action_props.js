@@ -53,6 +53,9 @@ export const useActionProps = (props) => {
       const { error } = e.detail;
       onActionError?.(error, e);
     },
-    "onnavi_action_end": onActionEnd,
+    "onnavi_action_end": (e) => {
+      const { data } = e.detail;
+      onActionEnd?.(data, e);
+    },
   };
 };
