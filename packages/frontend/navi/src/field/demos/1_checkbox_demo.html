@@ -162,7 +162,6 @@
         Form,
         createAction,
         Label,
-        requestResetUIState,
       } from "@jsenv/navi";
 
       const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -273,7 +272,6 @@
       };
 
       const UIActionBasicDemo = () => {
-        const ref = useRef();
         const [lastValue, setLastValue] = useState(null);
         return (
           <fieldset>
@@ -281,7 +279,6 @@
             <Box flex="y" spacing="s" alignX="start" alignY="center">
               <Field>
                 <Input
-                  ref={ref}
                   type="checkbox"
                   name="enabled"
                   uiAction={(checked) => {
@@ -290,14 +287,6 @@
                 />
                 <Label>Enable feature</Label>
               </Field>
-              <button
-                onClick={(e) => {
-                  const checkbox = ref.current;
-                  requestResetUIState(checkbox, e);
-                }}
-              >
-                Reset
-              </button>
               {lastValue !== null && (
                 <span style={{ fontSize: "0.85rem", color: "#555" }}>
                   Last value: <code>{String(lastValue)}</code>
@@ -309,7 +298,6 @@
       };
 
       const UIActionDefaultCheckedDemo = () => {
-        const ref = useRef();
         const [lastValue, setLastValue] = useState(null);
         return (
           <fieldset>
@@ -317,7 +305,6 @@
             <Box flex="y" spacing="s" alignX="start" alignY="center">
               <Field>
                 <Input
-                  ref={ref}
                   type="checkbox"
                   name="enabled"
                   defaultChecked
@@ -327,14 +314,6 @@
                 />
                 <Label>Enable feature</Label>
               </Field>
-              <button
-                onClick={(e) => {
-                  const checkbox = ref.current;
-                  requestResetUIState(checkbox, e);
-                }}
-              >
-                Reset
-              </button>
               {lastValue !== null && (
                 <span style={{ fontSize: "0.85rem", color: "#555" }}>
                   Last value: <code>{String(lastValue)}</code>

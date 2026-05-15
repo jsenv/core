@@ -2,12 +2,9 @@
 
 import { useContext, useRef, useState } from "preact/hooks";
 
-import { useActionBoundToOneArrayParam } from "../action/use_action.js";
-import { useActionStatus } from "../action/use_action_status.js";
-import { useExecuteAction } from "../action/use_execute_action.js";
 import { Box } from "../box/box.jsx";
 import { InputCheckbox } from "./input/input_checkbox.jsx";
-import { useOnRequestAction } from "./use_action_events.js";
+import { useActionProps } from "./use_action_props.js";
 import {
   DisabledContext,
   FieldNameContext,
@@ -39,6 +36,7 @@ export const CheckboxList = (props) => {
     },
   });
   const uiState = useUIState(uiStateController);
+
   return (
     <UIStateControllerContext.Provider value={uiStateController}>
       <UIStateContext.Provider value={uiState}>
@@ -97,71 +95,30 @@ const CheckboxListUI = (props) => {
 };
 
 const CheckboxListWithAction = (props) => {
-  const uiStateController = useContext(UIStateControllerContext);
-  const {
-    ref,
-    action,
-    actionErrorEffect,
-    onCancel,
-    onActionPrevented,
-    onActionAbort,
-    onActionError,
-    onActionEnd,
-    loading,
-    children,
-    ...rest
-  } = props;
-  const [boundAction] = useActionBoundToOneArrayParam(
-    action,
-    uiStateController.uiStateSignal,
-  );
-  const { loading: actionLoading } = useActionStatus(boundAction);
-  const executeAction = useExecuteAction(ref, {
-    errorEffect: actionErrorEffect,
+  const remainingProps = useActionProps({
+    resetOnCancel: true,
+    resetOnAbort: true,
+    resetOnError: true,
+    ...props,
   });
-  const onRequestAction = useOnRequestAction();
   const [actionRequester, setActionRequester] = useState(null);
 
   return (
     <CheckboxListUI
-      data-action={boundAction}
-      {...rest}
-      ref={ref}
+      {...remainingProps}
       onChange={(e) => {
         const checkbox = e.target;
-        const checkboxList = ref.current;
+        const checkboxList = remainingProps.ref.current;
+        setActionRequester(checkbox);
         dispatchRequestAction(checkboxList, {
           event: e,
           requester: checkbox,
           actionOrigin: "action_prop",
         });
       }}
-      onnavi_cancel={(e) => {
-        const { reason } = e.detail;
-        uiStateController.resetUIState(e);
-        onCancel?.(e, reason);
-      }}
-      onnavi_request_action={(e) => {
-        onRequestAction(boundAction, e);
-      }}
-      onnavi_action_prevented={onActionPrevented}
-      onnavi_action_ready={(e) => {
-        setActionRequester(e.detail.requester);
-        executeAction(e);
-      }}
-      onnavi_action_abort={(e) => {
-        uiStateController.resetUIState(e);
-        onActionAbort?.(e);
-      }}
-      onnavi_action_error={(e) => {
-        uiStateController.resetUIState(e);
-        onActionError?.(e);
-      }}
-      onnavi_action_end={onActionEnd}
-      loading={loading || actionLoading}
     >
       <LoadingElementContext.Provider value={actionRequester}>
-        {children}
+        {remainingProps.children}
       </LoadingElementContext.Provider>
     </CheckboxListUI>
   );

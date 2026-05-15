@@ -645,13 +645,13 @@ const CheckboxChildPropSet = new Set([...fieldPropSet]);
 
 const InputCheckboxWithAction = (props) => {
   const remainingProps = useActionProps({
-    ...props,
     // In this situation updating the ui state === calling associated action
     // so cance/abort/error have to revert the ui state to the one before user interaction
     // to show back the real state of the checkbox (not the one user tried to set)
     resetOnCancel: true,
     resetOnAbort: true,
     resetOnError: true,
+    ...props,
   });
 
   return (
