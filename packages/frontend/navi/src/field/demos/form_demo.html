@@ -79,17 +79,36 @@
           <NaviDebug debugAction debugUiState>
             <div>
               <h1>Form Demo</h1>
+              <TableOfContents />
               <BasicFormDemo />
+              <FormWithButtonActionDemo />
               <MultiFieldValidationTest />
             </div>
           </NaviDebug>
         );
       };
 
+      const TableOfContents = () => (
+        <div className="test-container">
+          <h2>Table of contents</h2>
+          <ol style={{ margin: 0, paddingLeft: "20px", lineHeight: "2" }}>
+            <li>
+              <a href="#basic">Basic form</a>
+            </li>
+            <li>
+              <a href="#button-action">Form with button action</a>
+            </li>
+            <li>
+              <a href="#multi-field">Multi-field validation</a>
+            </li>
+          </ol>
+        </div>
+      );
+
       const BasicFormDemo = () => {
         const [result, setResult] = useState(null);
         return (
-          <div className="test-container">
+          <div className="test-container" id="basic">
             <h2>Basic form</h2>
             <Form
               name="basic"
@@ -113,6 +132,66 @@
             {result && (
               <div className={`status ${result.ok ? "success" : "error"}`}>
                 {result.value}
+              </div>
+            )}
+          </div>
+        );
+      };
+
+      const FormWithButtonActionDemo = () => {
+        const [formResult, setFormResult] = useState(null);
+        const [previewResult, setPreviewResult] = useState(null);
+        return (
+          <div className="test-container" id="button-action">
+            <h2>Form with a button that has its own action</h2>
+            <p>
+              The <strong>Preview</strong> button uses the form values but calls
+              its own action — it does not submit the form. Only{" "}
+              <strong>Submit</strong> triggers the form action.
+            </p>
+            <Form
+              name="with-button-action"
+              action={async ({ message }) => {
+                await new Promise((r) => setTimeout(r, 600));
+                return `Submitted: "${message}"`;
+              }}
+              onActionEnd={(value) => setFormResult({ ok: true, value })}
+              onActionError={(err) =>
+                setFormResult({ ok: false, value: err.message })
+              }
+            >
+              <div className="field">
+                <Field>
+                  <Label>Message</Label>
+                  <Input type="text" name="message" />
+                </Field>
+              </div>
+              <div style={{ display: "flex", gap: "8px", marginTop: "8px" }}>
+                <Button
+                  action={async ({ message }) => {
+                    await new Promise((r) => setTimeout(r, 400));
+                    return `Preview: "${message}"`;
+                  }}
+                  onActionEnd={(value) => setPreviewResult({ ok: true, value })}
+                  onActionError={(err) =>
+                    setPreviewResult({ ok: false, value: err.message })
+                  }
+                >
+                  Preview
+                </Button>
+                <Button type="submit">Submit</Button>
+              </div>
+            </Form>
+            {previewResult && (
+              <div
+                className={`status ${previewResult.ok ? "success" : "error"}`}
+              >
+                {previewResult.value}
+              </div>
+            )}
+            {formResult && (
+              <div className={`status ${formResult.ok ? "success" : "error"}`}>
+                {formResult.value}
               </div>
             )}
           </div>
@@ -161,7 +240,7 @@
         };
 
         return (
-          <div className="test-container">
+          <div className="test-container" id="multi-field">
             <h2>Formulaire avec validation multiple</h2>
             <p>
               Ce formulaire contient plusieurs champs avec différentes
