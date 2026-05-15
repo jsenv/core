@@ -340,8 +340,8 @@ const ButtonInsideFormResolver = (props) => {
 
 const renderButton = createComponentResolver([
   ButtonRouteResolver,
-  ButtonActionResolver,
   ButtonInsideFormResolver,
+  ButtonActionResolver,
 ]);
 
 const ButtonUI = (props) => {
@@ -563,6 +563,7 @@ const ButtonInsideForm = (props) => {
         if (event.defaultPrevented) {
           return;
         }
+
         const button = event.currentTarget;
         const { form } = button;
         if (!form) {
