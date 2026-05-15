@@ -160,16 +160,19 @@ export const onRequestAction = (
       `${getElementSignature(elementHandlingAction)} action requested by ${getElementSignature(requester)}`,
     );
   }
-  const [isValid] = checkConstraintsAndReport(DEFAULT_CONSTRAINT_SET, {
-    event,
-    requester,
-    fromRequestAction: true,
-    debugAction,
-  });
+  const [isValid, failedValidationInterface] = checkConstraintsAndReport(
+    DEFAULT_CONSTRAINT_SET,
+    {
+      event,
+      requester,
+      fromRequestAction: true,
+      debugAction,
+    },
+  );
   if (!isValid) {
     debugAction(
       event,
-      `action prevented due to failing constraints, dispatch navi_action_prevented`,
+      `action prevented due to failing constraint: "${failedValidationInterface.failedConstraintInfo.name}", dispatch navi_action_prevented`,
     );
     dispatchInternalCustomEvent(
       elementHandlingAction,
@@ -298,18 +301,14 @@ const checkConstraintsAndReport = (
   }
 
   if (!isValid) {
-    debugAction(
-      event,
-      `validation failed for "${getFailedConstraintName(failedValidationInterface)}"`,
-    );
     failedValidationInterface.reportValidity({
       event,
       requester,
       debugAction,
     });
-    return [false, elementToValidate];
+    return [false, failedValidationInterface];
   }
-  return [true, elementToValidate];
+  return [true, failedValidationInterface];
 };
 
 const getManagedFields = (element) => {
@@ -426,7 +425,7 @@ export const installCustomConstraintValidation = (
   validationInterface.getConstraintValidityState = getConstraintValidityState;
 
   const resetValidity = ({ fromRequestAction } = {}) => {
-    if (fromRequestAction && failedConstraintInfo) {
+    if (fromRequestAction) {
       for (const [key, customMessage] of customMessageMap) {
         if (customMessage.removeOnRequestAction) {
           customMessageMap.delete(key);
@@ -640,6 +639,9 @@ export const installCustomConstraintValidation = (
   };
   validationInterface.checkValidity = checkValidity;
   validationInterface.reportValidity = reportValidity;
+  Object.defineProperty(validationInterface, "failedConstraintInfo", {
+    get: () => failedConstraintInfo,
+  });
 
   const customMessageMap = new Map();
   custom_message: {
@@ -1038,17 +1040,4 @@ const findFieldElement = (element) => {
     elementWithAction.querySelector(fieldSelector) ||
     document.querySelector(fieldSelector)
   );
-};
-
-const getFailedConstraintName = (validationInterface) => {
-  const state = validationInterface.getConstraintValidityState?.();
-  if (!state) {
-    return "unknown";
-  }
-  for (const key of Object.keys(state)) {
-    if (key !== "valid" && state[key]) {
-      return key;
-    }
-  }
-  return "unknown";
 };
