@@ -1,4 +1,8 @@
-import { createPubSub, getElementSignature } from "@jsenv/dom";
+import {
+  createPubSub,
+  dispatchInternalCustomEvent,
+  getElementSignature,
+} from "@jsenv/dom";
 import { signal } from "@preact/signals";
 import { createContext } from "preact";
 import { useContext, useLayoutEffect, useMemo, useRef } from "preact/hooks";
@@ -522,4 +526,10 @@ export const useUIGroupStateController = (
  */
 export const useUIState = (uiStateController) => {
   return uiStateController.uiStateSignal.value;
+};
+
+export const requestResetUIState = (element, e) => {
+  return dispatchInternalCustomEvent(element, "navi_request_reset_ui_state", {
+    event: e,
+  });
 };

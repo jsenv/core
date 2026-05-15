@@ -75,7 +75,7 @@ const RadioListUI = (props) => {
       {...rest}
       baseClassName="navi_radio_list"
       data-radio-list=""
-      onresetuistate={(e) => {
+      onnavi_request_reset_ui_state={(e) => {
         uiStateController.resetUIState(e);
       }}
     >

@@ -406,10 +406,10 @@ const InputTextualUI = (props) => {
         onKeyDown={(e) => {
           onKeyDownStable?.(e);
         }}
-        onresetuistate={(e) => {
+        onnavi_request_reset_ui_state={(e) => {
           uiStateController.resetUIState(e);
         }}
-        onsetuistate={(e) => {
+        on_navi_set_ui_state={(e) => {
           uiStateController.setUIState(e.detail.value, e);
         }}
         // style management

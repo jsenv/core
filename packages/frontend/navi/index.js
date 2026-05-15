@@ -239,3 +239,6 @@ export { SearchSvg } from "./src/graphic/icons/search_svg.jsx";
 export { SettingsSvg } from "./src/graphic/icons/settings_svg.jsx";
 export { StarSvg } from "./src/graphic/icons/star_svg.jsx";
 export { UserSvg } from "./src/graphic/icons/user_svg.jsx";
+
+// internals
+export { requestResetUIState } from "./src/field/use_ui_state_controller.js";

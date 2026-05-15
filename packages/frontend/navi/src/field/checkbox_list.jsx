@@ -75,7 +75,7 @@ const CheckboxListUI = (props) => {
       {...rest}
       baseClassName="navi_checkbox_list"
       data-checkbox-list=""
-      onresetuistate={(e) => {
+      onnavi_request_reset_ui_state={(e) => {
         uiStateController.resetUIState(e);
       }}
     >

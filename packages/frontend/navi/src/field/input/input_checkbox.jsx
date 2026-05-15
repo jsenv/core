@@ -569,7 +569,7 @@ const InputCheckboxUI = (props) => {
         uiAction?.(checkboxIsChecked, e);
         onInput?.(e);
       }}
-      onresetuistate={(e) => {
+      onnavi_request_reset_ui_state={(e) => {
         uiStateController.resetUIState(e);
       }}
       onsetuistate={(e) => {

@@ -400,7 +400,7 @@ const InputRangeUI = (props) => {
           innerOnInput?.(e);
           updateFillRatio();
         }}
-        onresetuistate={(e) => {
+        onnavi_request_reset_ui_state={(e) => {
           uiStateController.resetUIState(e);
         }}
         onsetuistate={(e) => {
