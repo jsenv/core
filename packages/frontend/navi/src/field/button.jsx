@@ -1,5 +1,6 @@
 import { useCallback, useContext, useRef } from "preact/hooks";
 
+import { onRequestInteraction } from "@jsenv/navi/src/field/validation/custom_constraint_validation.js";
 import {
   createComponentResolver,
   useNextResolver,
@@ -13,9 +14,9 @@ import { assertRoute, useRouteStatus } from "../nav/route.js";
 import { Text, markAsOutsideTextFlow } from "../text/text.jsx";
 import { useAutoFocus } from "../utils/focus/use_auto_focus.js";
 import { useAccentColorAttributes } from "../utils/use_accent_color_attributes.js";
-import { useActionProps } from "./create_action_resolver.jsx";
 import { FormActionContext } from "./form_context.js";
 import { useOnRequestAction } from "./use_action_events.js";
+import { useActionProps } from "./use_action_props.js";
 import { useFormEvents } from "./use_form_events.js";
 import {
   DisabledContext,
@@ -323,11 +324,7 @@ const ButtonRouteResolver = (props) => {
 const ButtonActionResolver = (props) => {
   const Next = useNextResolver();
   const formContext = useContext(FormActionContext);
-  if (
-    props.action ||
-    props.uiAction ||
-    (props.shortcuts && props.shortcuts.length > 0)
-  ) {
+  if (props.action || (props.shortcuts && props.shortcuts.length > 0)) {
     if (formContext) {
       return <ButtonWithActionInsideForm {...props} />;
     }
@@ -365,6 +362,7 @@ const ButtonUI = (props) => {
     children,
     ...rest
   } = props;
+  const uiStateController = useContext(UIStateControllerContext);
   const contextLoading = useContext(LoadingContext);
   const contextLoadingElement = useContext(LoadingElementContext);
   const contextReadOnly = useContext(ReadOnlyContext);
@@ -442,6 +440,15 @@ const ButtonUI = (props) => {
         // Note: e.button === -1 is equivalent — it means no physical button triggered
         // the event, i.e. it was synthesized from a long-press gesture (right-click gives e.button === 2).
         e.preventDefault();
+      }}
+      onClick={(e) => {
+        if (!onRequestInteraction(e)) {
+          return;
+        }
+        const value = e.currentTarget.value;
+        uiStateController.setUIState(value, e);
+        remainingProps.uiAction?.(value, e);
+        remainingProps.onClick?.(e);
       }}
       data-icon={icon ? "" : undefined}
       data-reveal-on-interaction={revealOnInteraction ? "" : undefined}
@@ -573,15 +580,12 @@ const ButtonWithAction = (props) => {
   return (
     <Next
       {...remainingProps}
-      onClick={(clickEvent) => {
-        remainingProps.onClick?.(clickEvent);
-        if (clickEvent.defaultPrevented) {
-          return;
-        }
+      uiAction={(value, e) => {
+        remainingProps.uiAction?.(value, e);
         // we know we are not inside a form, no need to preventDefault
-        const button = clickEvent.currentTarget;
+        const button = e.currentTarget;
         dispatchRequestAction(button, {
-          event: clickEvent,
+          event: e,
           requester: button,
         });
       }}
@@ -654,11 +658,8 @@ const ButtonWithActionInsideForm = (props) => {
       onnavi_request_action={(e) => {
         onRequestAction(actionBoundToFormParams, e);
       }}
-      onClick={(e) => {
-        rest.onClick?.(e);
-        if (e.defaultPrevented) {
-          return;
-        }
+      uiAction={(value, e) => {
+        rest.uiAction?.(value, e);
         const button = e.currentTarget;
         const { form } = button;
         dispatchRequestAction(button, {

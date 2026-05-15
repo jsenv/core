@@ -65,19 +65,41 @@ export const useUIStateController = (
     allowNameless = false,
   } = {},
 ) => {
+  const uiStateControllerRef = useRef();
   const debugAction = useDebugAction();
   const debugActionVerbose = useDebugActionVerbose();
   const parentUIStateController = useContext(ParentUIStateControllerContext);
   const formContext = useContext(FormContext);
   const pickerElementContext = useContext(PickerElementContext);
-  const { id, name, uiAction, action } = props;
+  const { id, name, action, uiAction } = props;
+  const hasStateProp = Object.hasOwn(props, statePropName);
+  /**
+   * This check is needed only for basic field because
+   * When using action/form we consider the action/form code
+   * will have a side effect that will re-render the component with the up-to-date state
+   *
+   * In practice we set the checked from the backend state
+   * We use action to fetch the new state and update the local state
+   * The component re-renders so it's the action/form that is considered as responsible
+   * to update the state and as a result allowed to have "checked"/"value" prop without "onUIStateChange"
+   */
+  const uncontrolled =
+    !action &&
+    !uiAction &&
+    !formContext &&
+    !pickerElementContext &&
+    !parentUIStateController;
+  const readOnly = uncontrolled && hasStateProp;
+  if (readOnly && import.meta.dev) {
+    console.warn(
+      `"${componentType}" is controlled by "${statePropName}" prop. Replace it by "${defaultStatePropName}" or pass "action" to make field interactive.`,
+    );
+  }
+
   if (persists === undefined && formContext) {
     persists = true;
   }
   const [navState, setNavState] = useNavState(id);
-
-  const uiStateControllerRef = useRef();
-  const hasStateProp = Object.hasOwn(props, statePropName);
   const state = props[statePropName];
   const defaultState = props[defaultStatePropName];
   const stateInitial = useInitialValue(() => {
@@ -100,29 +122,6 @@ export const useUIStateController = (
     return getStateFromProp(fallbackState);
   });
 
-  /**
-   * This check is needed only for basic field because
-   * When using action/form we consider the action/form code
-   * will have a side effect that will re-render the component with the up-to-date state
-   *
-   * In practice we set the checked from the backend state
-   * We use action to fetch the new state and update the local state
-   * The component re-renders so it's the action/form that is considered as responsible
-   * to update the state and as a result allowed to have "checked"/"value" prop without "onUIStateChange"
-   */
-  const uncontrolled =
-    !action &&
-    !uiAction &&
-    !formContext &&
-    !pickerElementContext &&
-    !parentUIStateController;
-  const readOnly = uncontrolled && hasStateProp;
-  if (readOnly && import.meta.dev) {
-    console.warn(
-      `"${componentType}" is controlled by "${statePropName}" prop. Replace it by "${defaultStatePropName}" or pass "uiAction" or "action" to make field interactive.`,
-    );
-  }
-
   const [
     notifyParentAboutChildMount,
     notifyParentAboutChildUIStateChange,
@@ -142,7 +141,6 @@ export const useUIStateController = (
     existingUIStateController._checkForUpdates({
       readOnly,
       name,
-      uiAction,
       getPropFromState,
       getStateFromProp,
       hasStateProp,
@@ -161,7 +159,6 @@ export const useUIStateController = (
     _checkForUpdates: ({
       readOnly,
       name,
-      uiAction,
       getPropFromState,
       getStateFromProp,
       hasStateProp,
@@ -170,7 +167,6 @@ export const useUIStateController = (
     }) => {
       uiStateController.readOnly = readOnly;
       uiStateController.name = name;
-      uiStateController.uiAction = uiAction;
       uiStateController.getPropFromState = getPropFromState;
       uiStateController.getStateFromProp = getStateFromProp;
       uiStateController.stateInitial = stateInitial;
@@ -200,7 +196,6 @@ export const useUIStateController = (
     state: stateInitial,
     uiState: stateInitial,
     uiStateSignal,
-    uiAction,
     getPropFromState,
     getStateFromProp,
     setUIState: (prop, e) => {
@@ -221,15 +216,8 @@ export const useUIStateController = (
       uiStateController.uiState = newUIState;
       uiStateSignal.value = newUIState;
       debugActionVerbose(e, `uiStateSignal -> ${JSON.stringify(newUIState)}`);
-      publishUIState(newUIState);
+      publishUIState(newUIState, e);
       debugActionVerbose(e, `publishUIState(${JSON.stringify(newUIState)})`);
-      if (uiStateController.uiAction) {
-        debugAction(
-          e,
-          `${getElementSignature(e.currentTarget)}.uiAction(${JSON.stringify(newUIState)})`,
-        );
-        uiStateController.uiAction(newUIState, e);
-      }
       if (!e.detail?.suppressParentNotification) {
         notifyParentAboutChildUIStateChange(e);
       }
@@ -359,7 +347,7 @@ export const useUIGroupStateController = (
     throw new TypeError("aggregateChildStates must be a function");
   }
   const parentUIStateController = useContext(ParentUIStateControllerContext);
-  const { uiAction, name, value } = props;
+  const { name, value } = props;
   const childUIStateControllerArrayRef = useRef([]);
   const childUIStateControllerArray = childUIStateControllerArrayRef.current;
   const uiStateControllerRef = useRef();
@@ -416,7 +404,6 @@ export const useUIGroupStateController = (
   const existingUIStateController = uiStateControllerRef.current;
   if (existingUIStateController) {
     existingUIStateController.name = name;
-    existingUIStateController.uiAction = uiAction;
     existingUIStateController.value = value;
     return existingUIStateController;
   }
@@ -438,7 +425,6 @@ export const useUIGroupStateController = (
     componentType,
     name,
     value,
-    uiAction,
     uiState: emptyState,
     uiStateSignal,
     setUIState: (newUIState, e, { notifyExternal = true } = {}) => {
@@ -456,15 +442,8 @@ export const useUIGroupStateController = (
       );
       publishUIState(newUIState);
       if (notifyExternal) {
-        if (uiStateController.uiAction) {
-          debugAction(
-            e,
-            `${componentType}.uiAction(${JSON.stringify(newUIState)})`,
-          );
-          uiStateController.uiAction(newUIState, e);
-        }
+        notifyParentAboutChildUIStateChange(e);
       }
-      notifyParentAboutChildUIStateChange(e);
     },
     registerChild: (childUIStateController) => {
       if (!isMonitoringChild(childUIStateController)) {

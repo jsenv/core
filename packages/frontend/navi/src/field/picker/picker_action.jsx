@@ -1,5 +1,5 @@
 import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
-import { useActionProps } from "../create_action_resolver.jsx";
+import { useActionProps } from "../use_action_props.js";
 // import { dispatchRequestAction } from "../validation/custom_constraint_validation.js";
 
 export const PickerAction = (props) => {
