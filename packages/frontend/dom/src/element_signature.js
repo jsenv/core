@@ -139,17 +139,19 @@ export const getElementSignature = (element) => {
       return "document.html";
     }
     const elementId = element.id;
-    const className = element.className;
     if (elementId && !looksLikeGeneratedId(elementId)) {
       return `${tagName}#${elementId}`;
     }
-    if (tagName === "button" || element.getAttribute("type") === "submit") {
+    if (tagName === "button") {
       const text = element.textContent.trim();
       if (text) {
         const excerpt = text.length > 10 ? `${text.slice(0, 10)}…` : text;
         return `button:text("${excerpt}")`;
       }
+      const parentSignature = getElementSignature(element.parentElement);
+      return `${parentSignature} > button:empty`;
     }
+    const className = element.className;
     if (className) {
       return `${tagName}.${className.split(" ").join(".")}`;
     }
