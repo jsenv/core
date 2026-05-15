@@ -541,7 +541,7 @@ const ButtonInsideForm = (props) => {
         const wouldSubmitFormByType =
           button.type === "submit" || button.type === "image";
         if (wouldSubmitFormByType) {
-          clickEvent.preventDefault();
+          clickEvent.preventDefault(); // prevent form submission
           dispatchRequestAction(form, {
             event: clickEvent,
             requester: button,
@@ -557,7 +557,7 @@ const ButtonInsideForm = (props) => {
           return;
         }
         // this is the only button inside the form without type attribute, so it defaults to type="submit"
-        clickEvent.preventDefault();
+        clickEvent.preventDefault(); // prevent form submission
         dispatchRequestAction(form, {
           event: clickEvent,
           requester: button,

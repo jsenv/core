@@ -120,9 +120,7 @@ export const onRequestAction = (
   event,
   {
     target = event.currentTarget,
-    requester = event.detail
-      ? event.detail.requester || event.target
-      : event.target,
+    requester = event.detail?.requester || event.target,
     actionOrigin = event.detail?.actionOrigin,
     method = "rerun",
     meta = event.detail?.meta || {},
@@ -147,14 +145,9 @@ export const onRequestAction = (
     requester,
     meta,
   };
-  const initiatorTarget = event.detail?.event?.target;
-  const requesterInfo =
-    requester && requester !== initiatorTarget
-      ? ` requester=${getElementSignature(requester)}`
-      : "";
   debugAction(
     event,
-    `action requested by ${requesterInfo} (event: "${event?.type}")`,
+    `${getElementSignature(requester)} is requesting action, checking ${DEFAULT_CONSTRAINT_SET.size} constraints...`,
   );
   const isValid = checkConstraintsAndReport(DEFAULT_CONSTRAINT_SET, {
     event,
@@ -163,6 +156,10 @@ export const onRequestAction = (
     debugAction,
   });
   if (!isValid) {
+    debugAction(
+      event,
+      `action prevented due to failing constraints, dispatch navi_action_prevented`,
+    );
     dispatchCustomEvent(target, "navi_action_prevented", customEventDetail);
     return false;
   }
@@ -183,7 +180,7 @@ export const onRequestAction = (
   }
   debugAction(
     event,
-    `element is valid -> ${getElementSignature(target)}.dispatchEvent("navi_action_ready")`,
+    `is valid -> ${getElementSignature(target)}.dispatchEvent("navi_action_ready")`,
   );
   dispatchCustomEvent(target, "navi_action_ready", customEventDetail);
   return true;
