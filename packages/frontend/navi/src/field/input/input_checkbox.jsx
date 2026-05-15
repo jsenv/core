@@ -1,10 +1,10 @@
 import { useCallback, useContext, useRef } from "preact/hooks";
 
+import { onRequestInteraction } from "@jsenv/navi/src/field/validation/custom_constraint_validation.js";
 import { Box } from "../../box/box.jsx";
 import { LoadingOutline } from "../../graphic/loading/loading_outline.jsx";
 import { useAutoFocus } from "../../utils/focus/use_auto_focus.js";
 import { useAccentColorAttributes } from "../../utils/use_accent_color_attributes.js";
-import { useStableCallback } from "../../utils/use_stable_callback.js";
 import {
   reportDisabledToField,
   reportInteractiveToField,
@@ -431,6 +431,7 @@ const InputCheckboxUI = (props) => {
     required,
     loading,
 
+    uiAction,
     autoFocus,
     onClick,
     onInput,
@@ -463,18 +464,6 @@ const InputCheckboxUI = (props) => {
   const remainingProps = useConstraints(ref, rest);
 
   const checked = Boolean(uiState);
-  const innerOnClick = useStableCallback((e) => {
-    if (innerReadOnly) {
-      e.preventDefault();
-    }
-    onClick?.(e);
-  });
-  const innerOnInput = useStableCallback((e) => {
-    const checkbox = e.target;
-    const checkboxIsChecked = checkbox.checked;
-    uiStateController.setUIState(checkboxIsChecked, e);
-    onInput?.(e);
-  });
   const renderCheckbox = (checkboxProps) => {
     return (
       <Box
@@ -487,14 +476,6 @@ const InputCheckboxUI = (props) => {
         required={innerRequired}
         baseClassName="navi_native_field"
         data-callout-arrow-x="center"
-        onClick={innerOnClick}
-        onInput={innerOnInput}
-        onresetuistate={(e) => {
-          uiStateController.resetUIState(e);
-        }}
-        onsetuistate={(e) => {
-          uiStateController.setUIState(e.detail.value, e);
-        }}
       />
     );
   };
@@ -571,7 +552,29 @@ const InputCheckboxUI = (props) => {
       accentColor={accentColor}
       hasChildFunction
       baseChildPropSet={CheckboxChildPropSet}
-      preventInitialTransition
+      preventInitialTransitions
+      onClick={(e) => {
+        if (!onRequestInteraction(e)) {
+          e.preventDefault();
+          return;
+        }
+        onClick?.(e);
+      }}
+      onInput={(e) => {
+        const checkbox = e.target;
+        const checkboxIsChecked = checkbox.checked;
+        uiStateController.setUIState(checkboxIsChecked, e);
+        uiAction?.(checkboxIsChecked, e);
+        onInput?.(e);
+      }}
+      onresetuistate={(e) => {
+        uiStateController.resetUIState(e);
+      }}
+      onsetuistate={(e) => {
+        const { value } = e.detail;
+        uiStateController.setUIState(value, e);
+        uiAction?.(value, e);
+      }}
     >
       <span className="navi_checkbox_accent_probe" aria-hidden="true" />
       <LoadingOutline

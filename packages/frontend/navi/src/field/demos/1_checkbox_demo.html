@@ -146,7 +146,7 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useState } from "preact/hooks";
+      import { useState, useRef } from "preact/hooks";
       import {
         Input,
         Field,
@@ -158,7 +158,12 @@
         ExclamationSvg,
         Caption,
         NaviDebug,
+        Button,
+        Form,
+        createAction,
       } from "@jsenv/navi";
+
+      const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
       const App = () => {
         return (
@@ -185,7 +190,7 @@
               </li>
               <li>
                 <a href="#interactivity">
-                  Interactivity (uiAction &amp; action)
+                  Interactivity (uiAction, action &amp; form)
                 </a>
               </li>
               <li>
@@ -208,10 +213,14 @@
         );
       };
 
-      const InteractivityDemo = () => {
-        const [lastUIAction, setLastUIAction] = useState(null);
-        const [asyncResult, setAsyncResult] = useState(null);
+      const toggleAction = createAction(async ({ notifications }) => {
+        await delay(600);
+        return `${notifications ? "✅" : "☐"} Notifications ${
+          notifications ? "enabled" : "disabled"
+        }`;
+      });
 
+      const InteractivityDemo = () => {
         return (
           <NaviDebug debugAction>
             <div class="demo-section" id="interactivity">
@@ -225,102 +234,425 @@
                   trigger it.
                 </p>
 
-                <fieldset>
-                  <legend>Checkbox with uiAction</legend>
-                  <Box row spacing="sm" alignX="start" alignY="center">
-                    <Field>
-                      <Input
-                        type="checkbox"
-                        name="my-checkbox"
-                        uiAction={(checked) => {
-                          console.log("uiAction called with checked:", checked);
-                          setLastUIAction(checked);
-                        }}
-                      />
-                      Toggle me
-                    </Field>
-                    {lastUIAction !== null && (
-                      <span style={{ fontSize: "0.85rem", color: "#555" }}>
-                        Last value: <code>{String(lastUIAction)}</code>
-                      </span>
-                    )}
-                  </Box>
-                </fieldset>
-
-                <fieldset>
-                  <legend>
-                    Read-only checkbox — uiAction is not triggered
-                  </legend>
-                  <Field>
-                    <Input
-                      type="checkbox"
-                      readOnly
-                      uiAction={(checked) => {
-                        console.log("this should never log", checked);
-                      }}
-                    />
-                    Read-only
-                  </Field>
-                </fieldset>
+                <UIActionBasicDemo />
+                <UIActionDefaultCheckedDemo />
+                <UIActionReadonlyDemo />
               </div>
 
               <div class="states-section">
                 <div class="states-title">action</div>
                 <p class="states-description">
                   <code>action</code> is an async function. The checkbox enters
-                  a loading state while it runs.
+                  a loading state while it runs. On failure the checkbox reverts
+                  to its previous state.
                 </p>
 
-                <fieldset>
-                  <legend>Async action that fails</legend>
-                  <Box row spacing="sm" alignX="start" alignY="center">
-                    <Field>
-                      <Input
-                        type="checkbox"
-                        action={async () => {
-                          await new Promise((r) => setTimeout(r, 800));
-                          throw new Error("Something went wrong");
-                        }}
-                        onActionError={(err) => {
-                          setAsyncResult({ ok: false, message: err.message });
-                        }}
-                      />
-                      Fail after 800ms
-                    </Field>
-                    {asyncResult && !asyncResult.ok && (
-                      <span style={{ fontSize: "0.85rem", color: "#c00" }}>
-                        Error: {asyncResult.message}
-                      </span>
-                    )}
-                  </Box>
-                </fieldset>
+                <ActionSuccessDemo />
+                <ActionDefaultCheckedDemo />
+                <ActionAlwaysFailsDemo />
+                <ActionDefaultCheckedAlwaysFailsDemo />
+                <ActionFailsWhenUncheckedDemo />
+                <ActionObjectDemo />
+              </div>
 
-                <fieldset>
-                  <legend>Async action that succeeds</legend>
-                  <Box row spacing="sm" alignX="start" alignY="center">
-                    <Field>
-                      <Input
-                        type="checkbox"
-                        action={async (checked) => {
-                          await new Promise((r) => setTimeout(r, 800));
-                          return checked ? "checked!" : "unchecked!";
-                        }}
-                        onActionSuccess={(value) => {
-                          setAsyncResult({ ok: true, message: value });
-                        }}
-                      />
-                      Succeed after 800ms
-                    </Field>
-                    {asyncResult && asyncResult.ok && (
-                      <span style={{ fontSize: "0.85rem", color: "#2a7a2a" }}>
-                        Success: {asyncResult.message}
-                      </span>
-                    )}
-                  </Box>
-                </fieldset>
+              <div class="states-section">
+                <div class="states-title">Form</div>
+                <p class="states-description">
+                  Inside a <code>Form</code>, the checkbox value is submitted
+                  with the form. The server can reject the submission and the UI
+                  reflects the error.
+                </p>
+
+                <FormControlledDemo />
               </div>
             </div>
           </NaviDebug>
+        );
+      };
+
+      const UIActionBasicDemo = () => {
+        const ref = useRef();
+        const [lastValue, setLastValue] = useState(null);
+        return (
+          <fieldset>
+            <legend>Basic — fires with checked boolean</legend>
+            <Box row spacing="sm" alignX="start" alignY="center">
+              <Field>
+                <Input
+                  ref={ref}
+                  type="checkbox"
+                  name="enabled"
+                  uiAction={(checked) => {
+                    setLastValue(checked);
+                  }}
+                />
+                Enable feature
+              </Field>
+              <button
+                onClick={() =>
+                  ref.current.dispatchEvent(new CustomEvent("resetuistate"))
+                }
+              >
+                Reset
+              </button>
+              {lastValue !== null && (
+                <span style={{ fontSize: "0.85rem", color: "#555" }}>
+                  Last value: <code>{String(lastValue)}</code>
+                </span>
+              )}
+            </Box>
+          </fieldset>
+        );
+      };
+
+      const UIActionDefaultCheckedDemo = () => {
+        const ref = useRef();
+        const [lastValue, setLastValue] = useState(null);
+        return (
+          <fieldset>
+            <legend>Default checked — starts checked, fires on change</legend>
+            <Box row spacing="sm" alignX="start" alignY="center">
+              <Field>
+                <Input
+                  ref={ref}
+                  type="checkbox"
+                  name="enabled"
+                  defaultChecked
+                  uiAction={(checked) => {
+                    setLastValue(checked);
+                  }}
+                />
+                Enable feature
+              </Field>
+              <button
+                onClick={() =>
+                  ref.current.dispatchEvent(new CustomEvent("resetuistate"))
+                }
+              >
+                Reset
+              </button>
+              {lastValue !== null && (
+                <span style={{ fontSize: "0.85rem", color: "#555" }}>
+                  Last value: <code>{String(lastValue)}</code>
+                </span>
+              )}
+            </Box>
+          </fieldset>
+        );
+      };
+
+      const UIActionReadonlyDemo = () => (
+        <fieldset>
+          <legend>Read-only — uiAction is never triggered</legend>
+          <Field>
+            <Input
+              type="checkbox"
+              readOnly
+              uiAction={(checked) => {
+                console.log("this should never log", checked);
+              }}
+            />
+            Read-only
+          </Field>
+        </fieldset>
+      );
+
+      const ActionSuccessDemo = () => {
+        const [result, setResult] = useState(null);
+        return (
+          <fieldset>
+            <legend>Succeeds after 1s</legend>
+            <Box row spacing="sm" alignX="start" alignY="center">
+              <Field>
+                <Input
+                  type="checkbox"
+                  name="enabled"
+                  action={async (checked) => {
+                    await delay(1000);
+                    return `${checked ? "✅" : "☐"} ${
+                      checked ? "checked" : "unchecked"
+                    }`;
+                  }}
+                  onActionSuccess={(value) => setResult({ ok: true, value })}
+                />
+                Enable feature
+              </Field>
+              {result && (
+                <span
+                  style={{
+                    fontSize: "0.85rem",
+                    color: result.ok ? "#2a7a2a" : "#c00",
+                  }}
+                >
+                  {result.value}
+                </span>
+              )}
+            </Box>
+          </fieldset>
+        );
+      };
+
+      const ActionDefaultCheckedDemo = () => {
+        const [result, setResult] = useState(null);
+        return (
+          <fieldset>
+            <legend>Default checked — succeeds after 800ms</legend>
+            <Box row spacing="sm" alignX="start" alignY="center">
+              <Field>
+                <Input
+                  type="checkbox"
+                  name="agreed"
+                  defaultChecked
+                  action={async (agreed) => {
+                    await delay(800);
+                    return `${agreed ? "✅" : "☐"} Agreement: ${
+                      agreed ? "accepted" : "declined"
+                    }`;
+                  }}
+                  onActionSuccess={(value) => setResult({ ok: true, value })}
+                />
+                I agree to the terms
+              </Field>
+              {result && (
+                <span style={{ fontSize: "0.85rem", color: "#2a7a2a" }}>
+                  {result.value}
+                </span>
+              )}
+            </Box>
+          </fieldset>
+        );
+      };
+
+      const ActionAlwaysFailsDemo = () => {
+        const [error, setError] = useState(null);
+        return (
+          <fieldset>
+            <legend>Always fails — checkbox reverts on error</legend>
+            <Box row spacing="sm" alignX="start" alignY="center">
+              <Field>
+                <Input
+                  type="checkbox"
+                  name="dangerous"
+                  action={async (checked) => {
+                    await delay(1500);
+                    throw new Error(
+                      `Action failed for ${
+                        checked ? "checked" : "unchecked"
+                      } state`,
+                    );
+                  }}
+                  onActionError={(err) => setError(err.message)}
+                />
+                Dangerous operation
+              </Field>
+              {error && (
+                <span style={{ fontSize: "0.85rem", color: "#c00" }}>
+                  ❌ {error}
+                </span>
+              )}
+            </Box>
+          </fieldset>
+        );
+      };
+
+      const ActionDefaultCheckedAlwaysFailsDemo = () => {
+        const [error, setError] = useState(null);
+        return (
+          <fieldset>
+            <legend>
+              Default checked + always fails — reverts to checked on error
+            </legend>
+            <Box row spacing="sm" alignX="start" alignY="center">
+              <Field>
+                <Input
+                  type="checkbox"
+                  name="risky"
+                  defaultChecked
+                  action={async (risky) => {
+                    await delay(1200);
+                    throw new Error(
+                      `Operation failed for ${
+                        risky ? "enabled" : "disabled"
+                      } risky feature`,
+                    );
+                  }}
+                  onActionError={(err) => setError(err.message)}
+                />
+                Enable risky feature
+              </Field>
+              {error && (
+                <span style={{ fontSize: "0.85rem", color: "#c00" }}>
+                  ❌ {error}
+                </span>
+              )}
+            </Box>
+          </fieldset>
+        );
+      };
+
+      const ActionFailsWhenUncheckedDemo = () => {
+        const [checked, setChecked] = useState(false);
+        const [result, setResult] = useState(null);
+        return (
+          <fieldset>
+            <legend>
+              Controlled — fails when unchecked, reverts to true on error
+            </legend>
+            <p class="states-description" style={{ marginTop: 0 }}>
+              The checked state comes from the server. On success the component
+              re-renders with the new value; on failure it reverts.
+            </p>
+            <Box row spacing="sm" alignX="start" alignY="center">
+              <Field>
+                <Input
+                  type="checkbox"
+                  name="protection"
+                  checked={checked}
+                  action={async (protection) => {
+                    await delay(1000);
+                    if (!protection) {
+                      throw new Error("Protection must be enabled");
+                    }
+                    setChecked(true);
+                    return "✅ Protection enabled";
+                  }}
+                  onActionSuccess={(value) => setResult({ ok: true, value })}
+                  onActionError={(err) =>
+                    setResult({ ok: false, value: err.message })
+                  }
+                />
+                Enable security protection
+              </Field>
+              {result && (
+                <span
+                  style={{
+                    fontSize: "0.85rem",
+                    color: result.ok ? "#2a7a2a" : "#c00",
+                  }}
+                >
+                  {result.ok ? "" : "❌ "}
+                  {result.value}
+                </span>
+              )}
+            </Box>
+          </fieldset>
+        );
+      };
+
+      const ActionObjectDemo = () => {
+        const [result, setResult] = useState(null);
+        return (
+          <fieldset>
+            <legend>Action object — created with createAction</legend>
+            <Box row spacing="sm" alignX="start" alignY="center">
+              <Field>
+                <Input
+                  type="checkbox"
+                  name="notifications"
+                  action={(notifications) => toggleAction({ notifications })}
+                  onActionStart={() => setResult({ pending: true })}
+                  onActionEnd={(e) =>
+                    setResult({ pending: false, value: e.detail.data })
+                  }
+                />
+                Enable notifications
+              </Field>
+              {result && (
+                <span
+                  style={{
+                    fontSize: "0.85rem",
+                    color: result.pending ? "#555" : "#2a7a2a",
+                  }}
+                >
+                  {result.pending ? "Processing…" : result.value}
+                </span>
+              )}
+            </Box>
+          </fieldset>
+        );
+      };
+
+      const FormControlledDemo = () => {
+        const [checked, setChecked] = useState(true);
+        const [result, setResult] = useState(null);
+        const ref = useRef();
+
+        return (
+          <fieldset>
+            <legend>
+              Controlled checkbox in a Form — server rejects when unchecked
+            </legend>
+            <p class="states-description" style={{ marginTop: 0 }}>
+              Demonstrates backend validation: the form submits, but the server
+              throws if terms aren't agreed. The checkbox value is not in the
+              frontend required constraint, only the backend enforces it.
+            </p>
+            <Form
+              action={async ({ terms }) => {
+                await delay(1000);
+                if (!terms) {
+                  throw new Error("You must agree to the terms and conditions");
+                }
+                setChecked(Boolean(terms));
+                return "✅ Form submitted successfully!";
+              }}
+              onActionSuccess={(value) => setResult({ ok: true, value })}
+              onActionError={(err) =>
+                setResult({ ok: false, value: err.message })
+              }
+            >
+              <Box column spacing="sm" alignX="start">
+                <Field>
+                  <Input
+                    ref={ref}
+                    type="checkbox"
+                    name="terms"
+                    checked={checked}
+                  />
+                  I agree to the terms and conditions
+                </Field>
+                <Box row spacing="sm">
+                  <Button type="submit">Submit</Button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      ref.current.dispatchEvent(
+                        new CustomEvent("setuistate", {
+                          detail: { value: true },
+                        }),
+                      )
+                    }
+                  >
+                    Accept
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      ref.current.dispatchEvent(
+                        new CustomEvent("setuistate", {
+                          detail: { value: false },
+                        }),
+                      )
+                    }
+                  >
+                    Decline
+                  </button>
+                </Box>
+              </Box>
+            </Form>
+            {result && (
+              <div
+                style={{
+                  marginTop: "10px",
+                  fontSize: "0.85rem",
+                  color: result.ok ? "#2a7a2a" : "#c00",
+                }}
+              >
+                {result.ok ? "" : "❌ "}
+                {result.value}
+              </div>
+            )}
+          </fieldset>
         );
       };
 
