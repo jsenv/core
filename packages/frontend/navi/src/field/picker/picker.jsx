@@ -252,28 +252,22 @@ export const Picker = (props) => {
 const renderPicker = createComponentResolver(pickerResolvers);
 Picker.update = createUICallback({
   name: "Picker.update",
-  uiAction: (value, event) => {
-    return dispatchToPicker(event, "navi_picker_set_value", { value });
+  uiAction: (value, e) => {
+    return dispatchToPicker(e, "navi_picker_set_value", { value });
   },
 });
 Picker.cancel = createUICallback({
   name: "Picker.cancel",
   event: (e) => dispatchToPicker(e, "navi_picker_request_cancel"),
-  uiAction: (value, event) => {
-    return dispatchToPicker(event, "navi_picker_request_cancel");
+  uiAction: (_, e) => {
+    return dispatchToPicker(e, "navi_picker_request_cancel");
   },
 });
 Picker.submit = createUICallback({
   name: "Picker.submit",
   event: (e) => dispatchToPicker(e, "navi_picker_request_submit"),
-  uiAction: (value, event) => {
-    const currentTarget = event.currentTarget;
-    if (currentTarget.name && TAGNAME_FIELD_SET.has(currentTarget.tagName)) {
-      if (!dispatchToPicker(event, "navi_picker_set_value", { value })) {
-        return false;
-      }
-    }
-    return dispatchToPicker(event, "navi_picker_request_submit");
+  uiAction: (_, e) => {
+    return dispatchToPicker(e, "navi_picker_request_submit");
   },
 });
 
@@ -287,7 +281,6 @@ const dispatchToPicker = (e, customEventName, detail) => {
     ...detail,
   });
 };
-const TAGNAME_FIELD_SET = new Set(["INPUT", "SELECT", "TEXTAREA", "BUTTON"]);
 
 const PickerInput = (props) => {
   import.meta.css = css;
@@ -359,6 +352,16 @@ const PickerInput = (props) => {
       onnavi_picker_set_value={(e) => {
         uiStateController.setUIState(e.detail.value, e);
       }}
+      onnavi_picker_cancel={(e) => {
+        uiStateController.resetUIState(e);
+      }}
+      onnavi_request_submit={(e) => {
+        // we must check for the pickerEl content to search for a valid input because we might be a button used to validate for instance
+        // no necessarily the field itself
+        const pickerEl = e.currentTarget;
+        const managedField = getPickerManagedField(pickerEl);
+        return managedField;
+      }}
     >
       <LoadingOutline
         loading={innerLoading}
@@ -399,12 +402,41 @@ const PickerInput = (props) => {
         }}
       />
       <PickerElementContext.Provider value={ref}>
-        {/* We are a field ourselve, which can contain other fields that should not inehrit our field */}
+        {/* We are a field ourselve, which can contain other fields that should not inherit our field */}
         <FieldContext.Provider value={null}>{children}</FieldContext.Provider>
       </PickerElementContext.Provider>
     </Box>
   );
 };
+
+const getPickerManagedField = (pickerEl) => {
+  let pickerInput = pickerEl.querySelector(".navi_picker_input");
+  let firstField;
+  let sibling = pickerInput.nextElementSibling;
+  while (sibling) {
+    const candidate = findFieldWithName(sibling);
+    if (candidate) {
+      firstField = candidate;
+      return firstField;
+    }
+    sibling = sibling.nextElementSibling;
+  }
+  return null;
+};
+const findFieldWithName = (el) => {
+  const tag = el.tagName.toLowerCase();
+  if ((tag === "input" || tag === "textarea" || tag === "select") && el.name) {
+    return el;
+  }
+  for (const child of el.children) {
+    const found = findFieldWithName(child);
+    if (found) {
+      return found;
+    }
+  }
+  return null;
+};
+
 const PICKER_PSEUDO_CLASSES = [
   ":hover",
   ":focus",

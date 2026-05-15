@@ -1,6 +1,6 @@
 import { useContext } from "preact/hooks";
 
-import { onRequestPointerInteraction } from "@jsenv/navi/src/field/validation/custom_constraint_validation.js";
+import { onRequestInteraction } from "@jsenv/navi/src/field/validation/custom_constraint_validation.js";
 import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { Time } from "@jsenv/navi/src/text/time.jsx";
@@ -15,7 +15,7 @@ const getPropsToShowPicker = (props) => {
     },
     onClick: (e) => {
       props.onClick?.(e);
-      if (!onRequestPointerInteraction(e)) {
+      if (!onRequestInteraction(e)) {
         return;
       }
       callInputShowPicker(e);

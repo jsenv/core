@@ -8,6 +8,7 @@ import { useNavState } from "../nav/browser_integration/browser_integration.js";
 import { useDebugAction, useDebugActionVerbose } from "../navi_debug.jsx";
 import { useInitialValue } from "../state/use_initial_value.js";
 import { FormContext } from "./form_context.js";
+import { PickerElementContext } from "./picker/picker_context.jsx";
 
 const DEBUG_UI_STATE_CONTROLLER = false;
 const DEBUG_UI_GROUP_STATE_CONTROLLER = false;
@@ -68,6 +69,7 @@ export const useUIStateController = (
   const debugActionVerbose = useDebugActionVerbose();
   const parentUIStateController = useContext(ParentUIStateControllerContext);
   const formContext = useContext(FormContext);
+  const pickerElementContext = useContext(PickerElementContext);
   const { id, name, uiAction, action } = props;
   if (persists === undefined && formContext) {
     persists = true;
@@ -109,7 +111,11 @@ export const useUIStateController = (
    * to update the state and as a result allowed to have "checked"/"value" prop without "onUIStateChange"
    */
   const uncontrolled =
-    !action && !uiAction && !formContext && !parentUIStateController;
+    !action &&
+    !uiAction &&
+    !formContext &&
+    !pickerElementContext &&
+    !parentUIStateController;
   const readOnly = uncontrolled && hasStateProp;
   if (readOnly && import.meta.dev) {
     console.warn(

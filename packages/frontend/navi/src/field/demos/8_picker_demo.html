@@ -592,13 +592,8 @@
                 placeholder="Type something"
               >
                 <Box flex="y" spacing="s" padding="s">
-                  <Input
-                    type="text"
-                    value={value}
-                    uiAction={Picker.update}
-                    placeholder="Enter value"
-                  />
-                  <Button uiAction={Picker.close}>Close</Button>
+                  <Input type="text" value={value} placeholder="Enter value" />
+                  <Button uiAction={Picker.submit}>Close</Button>
                 </Box>
               </Picker>
             </Field>

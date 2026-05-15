@@ -87,26 +87,26 @@ import {
 import { listenInputValue } from "./input_value_listener.js";
 
 export const NAVI_VALIDITY_CHANGE_CUSTOM_EVENT = "navi_validity_change";
-const POINTER_INTERACTION_CONSTRAINTS = [
-  DISABLED_CONSTRAINT,
-  READONLY_CONSTRAINT,
-];
+const INTERACTION_CONSTRAINTS = [DISABLED_CONSTRAINT, READONLY_CONSTRAINT];
 
-export const onRequestPointerInteraction = (pointerEvent) => {
-  if (pointerEvent.button !== 0) {
+const pointerEventTypeSet = new Set(["pointerdown", "mousedown", "click"]);
+export const onRequestInteraction = (event) => {
+  if (pointerEventTypeSet.has(event)) {
+    if (event.button !== 0) {
+      return false;
+    }
+  }
+  if (event.defaultPrevented) {
     return false;
   }
-  if (pointerEvent.defaultPrevented) {
-    return false;
-  }
-  const requester = pointerEvent.currentTarget || pointerEvent.target;
-  const isValid = checkConstraintsAndReport(POINTER_INTERACTION_CONSTRAINTS, {
-    event: pointerEvent,
+  const requester = event.currentTarget || event.target;
+  const isValid = checkConstraintsAndReport(INTERACTION_CONSTRAINTS, {
+    event,
     requester,
   });
   if (!isValid) {
-    dispatchCustomEvent(requester, "navi_pointer_interaction_prevented", {
-      event: pointerEvent,
+    dispatchCustomEvent(requester, "navi_interaction_prevented", {
+      event,
       requester,
     });
     return false;
@@ -180,7 +180,10 @@ export const onRequestAction = (
       return false;
     }
   }
-  debugAction(event, `element is valid -> dispatch navi_action_ready`);
+  debugAction(
+    event,
+    `element is valid -> ${getElementSignature(target)}.dispatchEvent("navi_action_ready")`,
+  );
   dispatchCustomEvent(target, "navi_action_ready", customEventDetail);
   return true;
 };
