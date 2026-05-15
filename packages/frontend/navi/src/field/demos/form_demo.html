@@ -76,11 +76,13 @@
 
       const App = () => {
         return (
-          <div>
-            <h1>Form Demo</h1>
-            <BasicFormDemo />
-            <MultiFieldValidationTest />
-          </div>
+          <NaviDebug debugAction debugUiState>
+            <div>
+              <h1>Form Demo</h1>
+              <BasicFormDemo />
+              <MultiFieldValidationTest />
+            </div>
+          </NaviDebug>
         );
       };
 
@@ -94,10 +96,10 @@
                 await new Promise((r) => setTimeout(r, 600));
                 return `Hello, ${username}!`;
               }}
-              onActionSuccess={(value) => setResult({ ok: true, value })}
               onActionError={(err) =>
                 setResult({ ok: false, value: err.message })
               }
+              onActionEnd={(value) => setResult({ ok: true, value })}
             >
               <div className="field">
                 <Field>

@@ -322,12 +322,8 @@ const ButtonRouteResolver = (props) => {
 };
 const ButtonActionResolver = (props) => {
   const Next = useNextResolver();
-  const actionContext = useContext(ActionContext);
 
   if (props.action) {
-    if (actionContext) {
-      return <ButtonWithActionNested {...props} />;
-    }
     return <ButtonWithAction {...props} />;
   }
   return <Next {...props} />;
@@ -595,13 +591,22 @@ const ButtonInsideForm = (props) => {
   );
 };
 const ButtonWithAction = (props) => {
-  const remainingProps = useActionProps(props);
   const Next = useNextResolver();
+  const ancestorAction = useContext(ActionContext);
+  const ancestorParamsSignal = ancestorAction.paramsSignal;
+  const remainingProps = useActionProps(props, {
+    // button inehrit their ancestor params:
+    // - inside a form button action gets the form params
+    // - inside a radio list or a picker it's the same
+    paramsSignal: ancestorAction ? ancestorParamsSignal : undefined,
+  });
 
   return (
     <Next
       {...remainingProps}
       uiAction={(value, e) => {
+        // prevent requesting form action when within a form
+        e.preventDefault();
         remainingProps.uiAction?.(value, e);
         const button = e.currentTarget;
         dispatchRequestAction(button, {
@@ -611,16 +616,6 @@ const ButtonWithAction = (props) => {
       }}
     />
   );
-};
-const ButtonWithActionNested = (props) => {
-  const Next = useNextResolver();
-  const ancestorAction = useContext(ActionContext);
-  const ancestorParamsSignal = ancestorAction.paramsSignal;
-  const remainingProps = useActionProps(props, {
-    paramsSignal: ancestorParamsSignal,
-  });
-
-  return <Next {...remainingProps} />;
 };
 
 const ButtonWithRoute = (props) => {
