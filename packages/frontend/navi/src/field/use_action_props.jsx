@@ -45,11 +45,9 @@ export const useActionProps = (
   const onRequestAction = useOnRequestAction();
 
   const [actionRequester, setActionRequester] = useState();
-  let childrenWithContext;
-  if (children === undefined) {
-    childrenWithContext = undefined;
-  } else if (provideAction || provideActionRequester) {
-    childrenWithContext = (
+  let effectiveChildren = children;
+  if (provideAction || provideActionRequester) {
+    effectiveChildren = (
       <ActionContext.Provider value={boundAction}>
         <ActionRequesterContext.Provider value={actionRequester}>
           {children}
@@ -61,7 +59,7 @@ export const useActionProps = (
   return {
     loading,
     ...rest,
-    "children": childrenWithContext,
+    "children": effectiveChildren,
     ref,
     "data-action": boundAction.callSource,
     "data-action-debounce": actionDebounce,

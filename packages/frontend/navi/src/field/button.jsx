@@ -593,12 +593,11 @@ const ButtonInsideForm = (props) => {
 const ButtonWithAction = (props) => {
   const Next = useNextResolver();
   const ancestorAction = useContext(ActionContext);
-  const ancestorParamsSignal = ancestorAction.paramsSignal;
   const remainingProps = useActionProps(props, {
     // button inehrit their ancestor params:
     // - inside a form button action gets the form params
     // - inside a radio list or a picker it's the same
-    paramsSignal: ancestorAction ? ancestorParamsSignal : undefined,
+    paramsSignal: ancestorAction ? ancestorAction.paramsSignal : undefined,
   });
 
   return (
