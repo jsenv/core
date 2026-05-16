@@ -272,10 +272,11 @@ export const InputTextual = (props) => {
   const fieldId = useFieldId();
   const id = props.id || fieldId || defaultId;
   const uiStateController = useUIStateController(props, "input");
+  const input = renderInput(InputTextualUI, { ...props, ref, id });
 
   return (
     <UIStateControllerContext.Provider value={uiStateController}>
-      {renderInput(InputTextualUI, { ...props, ref, id })}
+      {input}
     </UIStateControllerContext.Provider>
   );
 };

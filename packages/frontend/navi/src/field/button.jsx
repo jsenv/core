@@ -294,14 +294,15 @@ export const Button = (props) => {
     allowNameless: true,
   });
   const uiAction = normalizeUIAction(props.uiAction);
+  const button = renderButton(ButtonUI, {
+    ...props,
+    ref,
+    uiAction,
+  });
 
   return (
     <UIStateControllerContext.Provider value={uiStateController}>
-      {renderButton(ButtonUI, {
-        ...props,
-        ref,
-        uiAction,
-      })}
+      {button}
     </UIStateControllerContext.Provider>
   );
 };
