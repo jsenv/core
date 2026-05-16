@@ -108,7 +108,6 @@
 
       .value-display {
         min-height: 20px;
-        margin-top: 10px;
         padding: 8px;
         font-size: 0.8rem;
         font-family: monospace;
@@ -171,9 +170,9 @@
           <div>
             <TableOfContents />
             <BasicStatesDemo />
+            <InputInteractivityDemo />
+            <AccidentalReadOnlyDemo />
             <TypeVariationsDemo />
-            <ValueHandlingDemo />
-            <ActionHandlingDemo />
             <SizeVariationsDemo />
             <InteractiveDemo />
           </div>
@@ -186,16 +185,16 @@
             <h2>Table of contents</h2>
             <ol style={{ margin: 0, paddingLeft: "20px", lineHeight: "2" }}>
               <li>
-                <a href="#states">Input States</a>
+                <a href="#states">Input UI States</a>
+              </li>
+              <li>
+                <a href="#interactivity">Input Interactivity</a>
+              </li>
+              <li>
+                <a href="#accidental-readonly">Accidental Read-Only</a>
               </li>
               <li>
                 <a href="#types">Input Types</a>
-              </li>
-              <li>
-                <a href="#value-handling">Value Handling</a>
-              </li>
-              <li>
-                <a href="#action-handling">Action Handling</a>
               </li>
               <li>
                 <a href="#sizes">Size Variations</a>
@@ -211,7 +210,7 @@
       const BasicStatesDemo = () => {
         return (
           <div className="demo-section" id="states">
-            <h2>Input States</h2>
+            <h2>Input UI States</h2>
 
             <div className="states-section">
               <div className="states-title">Standard HTML Input States</div>
@@ -470,14 +469,14 @@
         );
       };
 
-      const ActionHandlingDemo = () => {
-        const [basicValue, setBasicValue] = useState("");
-        const [asyncValue, setAsyncValue] = useState("");
+      const InputInteractivityDemo = () => {
+        const [controlledValue, setControlledValue] = useState("Controlled");
+        const [uiStateValue, setUiStateValue] = useState("");
+        const [basicActionValue, setBasicActionValue] = useState("");
+        const [basicActionCallCount, setBasicActionCallCount] = useState(0);
         const [debouncedValue, setDebouncedValue] = useState("");
-        const [afterChangeValue, setAfterChangeValue] = useState("");
-        const [actionCallCount, setActionCallCount] = useState(0);
-        const [asyncCallCount, setAsyncCallCount] = useState(0);
         const [debouncedCallCount, setDebouncedCallCount] = useState(0);
+        const [afterChangeValue, setAfterChangeValue] = useState("");
         const [afterChangeCallCount, setAfterChangeCallCount] = useState(0);
         const [abortValue, setAbortValue] = useState("");
         const [abortCallCount, setAbortCallCount] = useState(0);
@@ -494,63 +493,91 @@
         };
 
         return (
-          <div className="demo-section" id="action-handling">
-            <h2>Action Handling</h2>
+          <div className="demo-section" id="interactivity">
+            <h2>Input Interactivity</h2>
 
             <fieldset>
-              <legend>Basic Action</legend>
+              <legend>value</legend>
               <p className="states-description">
-                The <code>action</code> prop is called every time the input
-                value changes (user keydown, paste, programmatic changes, etc.)
+                Use <code>defaultValue</code> for an initial value the user can
+                freely change. Use <code>value</code> to control the input
+                externally — combined with <code>uiAction</code> or{" "}
+                <code>action</code> to keep it updateable.
               </p>
               <Box column spacing="sm">
+                <div>
+                  <label style={{ fontSize: "0.9rem" }}>defaultValue</label>
+                  <Input
+                    defaultValue="Hello World!"
+                    placeholder="Enter text..."
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: "0.9rem" }}>
+                    value + uiAction (controlled)
+                  </label>
+                  <Input
+                    value={controlledValue}
+                    uiAction={setControlledValue}
+                    placeholder="Controlled input"
+                  />
+                  <div className="value-display">{controlledValue}</div>
+                </div>
+              </Box>
+            </fieldset>
+
+            <fieldset>
+              <legend>uiAction</legend>
+              <p className="states-description">
+                <code>uiAction</code> fires on every user interaction,
+                reflecting what the input currently shows. Use this to react to
+                typing without triggering any async operation.
+              </p>
+              <Box flex spacing="s">
+                <Input
+                  placeholder="Type something..."
+                  uiAction={setUiStateValue}
+                />
+                <div className="value-display">
+                  Current value: "{uiStateValue}"
+                </div>
+              </Box>
+            </fieldset>
+
+            <fieldset>
+              <legend>action — basic</legend>
+              <p className="states-description">
+                The <code>action</code> prop is called on every value change
+                (keystroke, paste, programmatic). For synchronous actions this
+                is fine; for slow async operations see the options below.
+              </p>
+              <Box flex spacing="s">
                 <Input
                   placeholder="Type something..."
                   action={(value) => {
-                    setActionCallCount((c) => c + 1);
-                    setBasicValue(value);
+                    setBasicActionCallCount((c) => c + 1);
+                    setBasicActionValue(value);
                   }}
                 />
                 <div className="value-display">
-                  Value: "{basicValue}" | Calls: {actionCallCount}
+                  Value: "{basicActionValue}" | Calls: {basicActionCallCount}
                 </div>
               </Box>
             </fieldset>
 
             <fieldset>
-              <legend>Async Action (Poor UX)</legend>
+              <legend>action — debounced</legend>
               <p className="states-description">
-                When the action takes time, it feels bad for UX as it blocks on
-                every keystroke.
+                Use <code>actionDebounce</code> to wait for the user to stop
+                typing before calling the action. Ideal for search queries or
+                any slow async operation.
               </p>
-              <Box column spacing="sm">
+              <Box flex spacing="s">
                 <Input
-                  placeholder="Type something (slow)..."
-                  action={async (value) => {
-                    setAsyncCallCount((c) => c + 1);
-                    await new Promise((resolve) => setTimeout(resolve, 2000));
-                    setAsyncValue(value);
-                  }}
-                />
-                <div className="value-display">
-                  Value: "{asyncValue}" | Calls: {asyncCallCount}
-                </div>
-              </Box>
-            </fieldset>
-
-            <fieldset>
-              <legend>Debounced Action (Better UX)</legend>
-              <p className="states-description">
-                Using <code>actionDebounce={"300"}</code> waits 300ms without
-                changes before performing the action, making slow operations
-                feel much better.
-              </p>
-              <Box column spacing="sm">
-                <Input
-                  placeholder="Type something (debounced)..."
+                  placeholder="Type something (debounced 600ms)..."
                   action={async (value) => {
                     setDebouncedCallCount((c) => c + 1);
-                    await new Promise((resolve) => setTimeout(resolve, 2000));
+                    await new Promise((resolve) => setTimeout(resolve, 1500));
                     setDebouncedValue(value);
                   }}
                   actionDebounce={600}
@@ -562,18 +589,18 @@
             </fieldset>
 
             <fieldset>
-              <legend>Action After Change</legend>
+              <legend>action — after change (blur / Enter)</legend>
               <p className="states-description">
-                Using <code>actionAfterChange</code> performs the action only on
-                blur or when the user presses Enter. The input shows loading
-                state and becomes readonly during execution.
+                <code>actionAfterChange</code> delays the action until blur or
+                Enter. The input shows a loading state and becomes read-only
+                while the action is running.
               </p>
-              <Box column spacing="sm">
+              <Box flex spacing="s">
                 <Input
                   placeholder="Type and press Enter or blur..."
                   action={async (value) => {
                     setAfterChangeCallCount((c) => c + 1);
-                    await new Promise((resolve) => setTimeout(resolve, 2000));
+                    await new Promise((resolve) => setTimeout(resolve, 1500));
                     setAfterChangeValue(value);
                   }}
                   actionAfterChange
@@ -585,25 +612,23 @@
             </fieldset>
 
             <fieldset>
-              <legend>Async Action with Abort Mechanism</legend>
+              <legend>action — with abort</legend>
               <p className="states-description">
-                Drop the <code>async</code> from the action to keep UI
-                responsive, but use <code>cancelPrevious()</code> to get an
-                abort signal and properly cancel previous operations.
+                Keep the action synchronous to stay non-blocking, and use an
+                <code>AbortController</code> to cancel in-flight async work when
+                a new value arrives.
               </p>
-              <Box column spacing="sm">
+              <Box flex spacing="s">
                 <Input
                   placeholder="Type something (with abort)..."
                   action={(value) => {
                     const abortSignal = cancelPrevious();
                     setAbortCallCount((c) => c + 1);
-
-                    // Simulate async operation that can be aborted
                     setTimeout(() => {
                       if (!abortSignal.aborted) {
                         setAbortValue(value);
                       }
-                    }, 2000);
+                    }, 1500);
                   }}
                 />
                 <div className="value-display">
@@ -612,6 +637,22 @@
                 </div>
               </Box>
             </fieldset>
+          </div>
+        );
+      };
+
+      const AccidentalReadOnlyDemo = () => {
+        return (
+          <div className="demo-section" id="accidental-readonly">
+            <h2>Accidental Read-Only</h2>
+            <p className="states-description">
+              When <code>value</code> is passed without <code>uiAction</code> or{" "}
+              <code>action</code>, the input becomes read-only automatically.
+              This is a visual reminder for developers: if the input feels
+              frozen, it likely means the code provides a value but no way to
+              update it.
+            </p>
+            <Input value="Frozen — no uiAction or action provided" />
           </div>
         );
       };
@@ -643,64 +684,6 @@
                 </div>
               </Box>
             </Box>
-          </div>
-        );
-      };
-
-      const ValueHandlingDemo = () => {
-        const [controlledValue, setControlledValue] = useState("Controlled");
-        const [uncontrolledValue, setUncontrolledValue] = useState("");
-
-        return (
-          <div className="demo-section" id="value-handling">
-            <h2>Value Handling</h2>
-
-            <fieldset>
-              <legend>Controlled vs Uncontrolled</legend>
-              <Box column spacing="sm">
-                <Box row spacing="sm" alignX="start">
-                  <div>
-                    <label style={{ fontSize: "0.9rem", marginBottom: "5px" }}>
-                      Controlled (with value prop)
-                    </label>
-                    <Input
-                      value={controlledValue}
-                      uiAction={setControlledValue}
-                      placeholder="Controlled input"
-                    />
-                    <div className="value-display">{controlledValue}</div>
-                  </div>
-                  <div>
-                    <label style={{ fontSize: "0.9rem", marginBottom: "5px" }}>
-                      Uncontrolled (defaultValue)
-                    </label>
-                    <Input
-                      defaultValue="Default text"
-                      onUIStateChange={setUncontrolledValue}
-                      placeholder="Uncontrolled input"
-                    />
-                    <div className="value-display">{uncontrolledValue}</div>
-                  </div>
-                </Box>
-              </Box>
-            </fieldset>
-
-            <fieldset>
-              <legend>Read-only Behavior</legend>
-              <Box column spacing="sm">
-                <p
-                  style={{
-                    color: "#666",
-                    fontSize: "0.9rem",
-                    margin: "0 0 10px 0",
-                  }}
-                >
-                  Passing only <code>value</code> with no way to update it makes
-                  the input read-only automatically.
-                </p>
-                <Input value="This is read-only" />
-              </Box>
-            </fieldset>
           </div>
         );
       };

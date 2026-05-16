@@ -332,7 +332,7 @@ const InputTextualUI = (props) => {
 
   const onInputStable = useStableCallback(onInput);
   const renderInput = (inputProps) => {
-    const { value } = inputProps.value;
+    const { value } = inputProps;
     return (
       <Box
         {...inputProps}
