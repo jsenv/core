@@ -26,20 +26,19 @@ import {
   useNextResolver,
 } from "../../resolver/resolver.jsx";
 import { naviI18n } from "../../text/navi_i18n.js";
-import { useAutoFocus } from "../../utils/focus/use_auto_focus.js";
 import { useItemTracker } from "../../utils/item_tracker/use_item_tracker.js";
 import { useDisplayedLayoutEffect } from "../../utils/use_displayed_layout_effect.js";
 import { useActionProps } from "../use_action_props.jsx";
+import { useFieldProps } from "../use_field_props.jsx";
 import {
-  ParentUIStateControllerContext,
-  SelectTriggerContentRegistryContext,
-  UIStateContext,
   UIStateControllerContext,
-  useUIState,
   useUIStateController,
 } from "../use_ui_state_controller.js";
 import { useOnNaviConstraintMessage } from "../validation/constraint_message.js";
-import { dispatchRequestAction } from "../validation/custom_constraint_validation.js";
+import {
+  dispatchRequestAction,
+  dispatchRequestUIAction,
+} from "../validation/custom_constraint_validation.js";
 import { useConstraints } from "../validation/hooks/use_constraints.js";
 import { useSearchHighlight } from "./search_highlight.js";
 
@@ -475,15 +474,23 @@ const css = /* css */ `
  *                          min-height so filtering cannot collapse the layout.
  *   ...rest              — forwarded to the outer scroll container <Box>
  */
-const ListWithActionResolver = (props) => {
+const ListFieldResolver = (props) => {
   const Next = useNextResolver();
-  const alreadyInteractive = useContext(ListInteractiveContext);
-  const parentUIStateController = useContext(ParentUIStateControllerContext);
+
   if (
-    !alreadyInteractive &&
-    (props.action || props.uiAction || parentUIStateController)
+    props.name ||
+    Object.hasOwn(props, "value") ||
+    props.uiAction ||
+    props.action
   ) {
-    return <ListWithAction {...props} />;
+    return <ListField {...props} />;
+  }
+  return <Next {...props} />;
+};
+const ListActionResolver = (props) => {
+  const Next = useNextResolver();
+  if (props.action) {
+    return <ListAction {...props} />;
   }
   return <Next {...props} />;
 };
@@ -494,17 +501,10 @@ const ListWithPopoverResolver = (props) => {
   }
   return <Next {...props} />;
 };
-const ListWithKeyboardResolver = (props) => {
-  const Next = useNextResolver();
-  if (props.keyboardInteractions) {
-    return <ListWithKeyboardInteractions {...props} />;
-  }
-  return <Next {...props} />;
-};
 const renderList = createComponentResolver([
-  ListWithActionResolver,
+  ListFieldResolver,
+  ListActionResolver,
   ListWithPopoverResolver,
-  ListWithKeyboardResolver,
 ]);
 
 export const List = (props) => {
@@ -1245,105 +1245,25 @@ const BottomFiller = ({
   );
 };
 
-// Popover variant: handles open/close/positioning events and forwards
-// navigate/confirm/clear to the underlying list.
-const ListWithPopover = (props) => {
-  const Next = useNextResolver();
-  const cleanupRef = useRef();
-
-  useLayoutEffect(() => {
-    return () => {
-      cleanupRef.current?.();
-    };
-  }, []);
-
-  return (
-    <Next
-      {...props}
-      popover="manual"
-      onnavi_list_request_open={(e) => {
-        const listEl = e.currentTarget;
-        const listContainerEl = listEl.closest(".navi_list_container");
-        const anchor = e.detail?.anchor;
-        listContainerEl.showPopover();
-        const positionPopover = () => {
-          const anchorRect = anchor.getBoundingClientRect();
-          listContainerEl.style.setProperty(
-            "--list-anchor-width",
-            `${anchorRect.width}px`,
-          );
-          const minLeft = 1;
-          const { left, top } = pickPositionRelativeTo(
-            listContainerEl,
-            anchor,
-            {
-              minLeft,
-            },
-          );
-          listContainerEl.style.top = `${top}px`;
-          const popoverRect = listContainerEl.getBoundingClientRect();
-          const maxWidth = parseFloat(
-            getComputedStyle(listContainerEl).maxWidth,
-          );
-          if (!isNaN(maxWidth) && popoverRect.width >= maxWidth - 1) {
-            const viewportWidth = document.documentElement.clientWidth;
-            const centeredLeft = (viewportWidth - popoverRect.width) / 2;
-            listContainerEl.style.left = `${Math.max(centeredLeft, minLeft)}px`;
-          } else {
-            listContainerEl.style.left = `${Math.max(left, minLeft)}px`;
-          }
-        };
-        const cleanup = visibleRectEffect(anchor, ({ visibilityRatio }) => {
-          if (visibilityRatio <= 0.2) {
-            listContainerEl.setAttribute("data-anchor-hidden", "");
-            return;
-          }
-          listContainerEl.removeAttribute("data-anchor-hidden");
-          positionPopover();
-        });
-        cleanupRef.current = () => cleanup.disconnect();
-        dispatchPublicCustomEvent(listEl, "navi_list_open", {
-          event: e,
-        });
-      }}
-      onnavi_list_request_close={(e) => {
-        const listEl = e.currentTarget;
-        const listContainerEl = listEl.closest(".navi_list_container");
-        cleanupRef.current?.();
-        listContainerEl.removeAttribute("data-anchor-hidden");
-        listContainerEl.hidePopover();
-        dispatchPublicCustomEvent(listEl, "navi_list_close", {
-          event: e,
-        });
-      }}
-    />
-  );
-};
-
 // Interactive variant: manages hover/keyboard/selection state and handles the
 // navi event protocol. When an action is provided it binds the action to ui state
 // and fires it on select. When only uiAction is provided it calls it directly.
-const ListWithAction = (props) => {
+const ListField = (props) => {
   const uiStateController = useUIStateController(props, "list", {
     allowNameless: true,
   });
-  const uiState = useUIState(uiStateController);
+  const listField = <ListFieldInner {...props} />;
 
   return (
     <UIStateControllerContext.Provider value={uiStateController}>
-      <UIStateContext.Provider value={uiState}>
-        <ListWithActionInner {...props} />
-      </UIStateContext.Provider>
+      {listField}
     </UIStateControllerContext.Provider>
   );
 };
-
-const ListWithActionInner = (props) => {
+const ListFieldInner = (props) => {
   const Next = useNextResolver();
-  const uiStateController = useContext(UIStateControllerContext);
-  const uiState = useContext(UIStateContext);
-
-  const remainingProps = useActionProps(props);
+  const { uiAction } = props;
+  const fieldProps = useFieldProps(props);
 
   // Mouse/keyboard pointed state
   const [mousePointedId, setMousePointedId] = useState(null);
@@ -1369,13 +1289,57 @@ const ListWithActionInner = (props) => {
     return visibleItemsRef.current.find((i) => i.id === anchorId);
   };
 
+  const onKeyDown = shortcutsViaOnKeyDown(
+    {
+      arrowdown: (e) => {
+        return requestListNavFromCurrent(e.currentTarget, {
+          event: e,
+          goal: "down",
+        });
+      },
+      arrowup: (e) => {
+        return requestListNavFromCurrent(e.currentTarget, {
+          event: e,
+          goal: "up",
+        });
+      },
+      home: (e) => {
+        return requestListNavFromCurrent(e.currentTarget, {
+          event: e,
+          goal: "first",
+        });
+      },
+      end: (e) => {
+        return requestListNavFromCurrent(e.currentTarget, {
+          event: e,
+          goal: "last",
+        });
+      },
+      enter: (e) => {
+        return requestListSelectCurrent(e.currentTarget, {
+          event: e,
+        });
+      },
+      space: (e) => {
+        e.preventDefault(); // prevent page scroll
+        return requestListSelectCurrent(e.currentTarget, {
+          event: e,
+        });
+      },
+      escape: (e) => {
+        return requestListInteractionStateReset(e.currentTarget, {
+          event: e,
+        });
+      },
+    },
+    props.onKeyDown,
+  );
+
   const listVnode = (
     <Next
-      {...remainingProps}
-      keyboardInteractions
-      action={undefined}
-      uiAction={undefined}
-      value={uiState}
+      {...fieldProps}
+      tabIndex="0"
+      onKeyDown={onKeyDown}
       onListVisibleItemsChange={(visibleItems) => {
         props.onListVisibleItemsChange?.(visibleItems);
         visibleItemsRef.current = visibleItems;
@@ -1401,21 +1365,13 @@ const ListWithActionInner = (props) => {
           event.type === "navi_list_top_match_change" ||
           event.type === "navi_scroll_restore";
         if (item && !isAutomaticNav) {
-          uiStateController.setUIState(item.value, event);
+          const listEl = e.currentTarget;
+          dispatchRequestUIAction(listEl, {
+            event,
+            value: item.value,
+            uiAction,
+          });
         }
-      }}
-      // Dispatch action request on select
-      onnavi_list_select={(e) => {
-        const listEl = e.currentTarget;
-        const item = e.detail?.item;
-        const requester = item
-          ? listEl.querySelector(`#${CSS.escape(item.id)}`)
-          : e.target;
-        const resolvedRequester = requester || e.target;
-        dispatchRequestAction(listEl, {
-          event: e,
-          requester: resolvedRequester,
-        });
       }}
       onnavi_list_request_nav={(e) => {
         const { item } = e.detail;
@@ -1553,71 +1509,100 @@ const ListWithActionInner = (props) => {
     </ListInteractiveContext.Provider>
   );
 };
-
-// Interactive variant: manages hover/keyboard/selection state and handles the
-// navi event protocol, then delegates rendering to ListUI.
-const ListWithKeyboardInteractions = (props) => {
+const ListAction = (props) => {
   const Next = useNextResolver();
-  const { autoFocus, autoFocusPreventScroll } = props;
-  const defaultRef = useRef(null);
-  const ref = props.ref || defaultRef;
+  const actionProps = useActionProps(props);
 
-  const onKeyDown = shortcutsViaOnKeyDown(
-    {
-      arrowdown: (e) => {
-        return requestListNavFromCurrent(e.currentTarget, {
+  return (
+    <Next
+      {...actionProps}
+      onnavi_list_select={(e) => {
+        const listEl = e.currentTarget;
+        const item = e.detail?.item;
+        const requester = item
+          ? listEl.querySelector(`#${CSS.escape(item.id)}`)
+          : e.target;
+        const resolvedRequester = requester || e.target;
+        dispatchRequestAction(listEl, {
           event: e,
-          goal: "down",
+          requester: resolvedRequester,
         });
-      },
-      arrowup: (e) => {
-        return requestListNavFromCurrent(e.currentTarget, {
-          event: e,
-          goal: "up",
-        });
-      },
-      home: (e) => {
-        return requestListNavFromCurrent(e.currentTarget, {
-          event: e,
-          goal: "first",
-        });
-      },
-      end: (e) => {
-        return requestListNavFromCurrent(e.currentTarget, {
-          event: e,
-          goal: "last",
-        });
-      },
-      enter: (e) => {
-        return requestListSelectCurrent(e.currentTarget, {
-          event: e,
-        });
-      },
-      space: (e) => {
-        e.preventDefault(); // prevent page scroll
-        return requestListSelectCurrent(e.currentTarget, {
-          event: e,
-        });
-      },
-      escape: (e) => {
-        return requestListInteractionStateReset(e.currentTarget, {
-          event: e,
-        });
-      },
-    },
-    props.onKeyDown,
+      }}
+    />
   );
-  useAutoFocus(ref, autoFocus, { preventScroll: autoFocusPreventScroll });
+};
+
+// Popover variant: handles open/close/positioning events and forwards
+// navigate/confirm/clear to the underlying list.
+const ListWithPopover = (props) => {
+  const Next = useNextResolver();
+  const cleanupRef = useRef();
+
+  useLayoutEffect(() => {
+    return () => {
+      cleanupRef.current?.();
+    };
+  }, []);
 
   return (
     <Next
       {...props}
-      ref={ref}
-      keyboardInteractions={undefined}
-      tabIndex="0"
-      onKeyDown={onKeyDown}
-      autoFocus={undefined} // See use_auto_focus.js
-      autoFocusPreventScroll={undefined}
+      popover="manual"
+      onnavi_list_request_open={(e) => {
+        const listEl = e.currentTarget;
+        const listContainerEl = listEl.closest(".navi_list_container");
+        const anchor = e.detail?.anchor;
+        listContainerEl.showPopover();
+        const positionPopover = () => {
+          const anchorRect = anchor.getBoundingClientRect();
+          listContainerEl.style.setProperty(
+            "--list-anchor-width",
+            `${anchorRect.width}px`,
+          );
+          const minLeft = 1;
+          const { left, top } = pickPositionRelativeTo(
+            listContainerEl,
+            anchor,
+            {
+              minLeft,
+            },
+          );
+          listContainerEl.style.top = `${top}px`;
+          const popoverRect = listContainerEl.getBoundingClientRect();
+          const maxWidth = parseFloat(
+            getComputedStyle(listContainerEl).maxWidth,
+          );
+          if (!isNaN(maxWidth) && popoverRect.width >= maxWidth - 1) {
+            const viewportWidth = document.documentElement.clientWidth;
+            const centeredLeft = (viewportWidth - popoverRect.width) / 2;
+            listContainerEl.style.left = `${Math.max(centeredLeft, minLeft)}px`;
+          } else {
+            listContainerEl.style.left = `${Math.max(left, minLeft)}px`;
+          }
+        };
+        const cleanup = visibleRectEffect(anchor, ({ visibilityRatio }) => {
+          if (visibilityRatio <= 0.2) {
+            listContainerEl.setAttribute("data-anchor-hidden", "");
+            return;
+          }
+          listContainerEl.removeAttribute("data-anchor-hidden");
+          positionPopover();
+        });
+        cleanupRef.current = () => cleanup.disconnect();
+        dispatchPublicCustomEvent(listEl, "navi_list_open", {
+          event: e,
+        });
+      }}
+      onnavi_list_request_close={(e) => {
+        const listEl = e.currentTarget;
+        const listContainerEl = listEl.closest(".navi_list_container");
+        cleanupRef.current?.();
+        listContainerEl.removeAttribute("data-anchor-hidden");
+        listContainerEl.hidePopover();
+        dispatchPublicCustomEvent(listEl, "navi_list_close", {
+          event: e,
+        });
+      }}
     />
   );
 };
@@ -1775,18 +1760,6 @@ const ListItemReal = ({
   const mousePointedId = useContext(ListMousePointedIdContext);
   const keyboardPointedId = useContext(ListKeyboardPointedIdContext);
   const pendingScrollRef = useContext(PendingScrollRefContext);
-  const registerTriggerContent = useContext(
-    SelectTriggerContentRegistryContext,
-  );
-
-  useLayoutEffect(() => {
-    if (!registerTriggerContent) {
-      return;
-    }
-    if (selected) {
-      registerTriggerContent(children);
-    }
-  }, [selected, children, registerTriggerContent]);
 
   const isPointedByMouse = id === mousePointedId;
   const isPointedByKeyboard = id === keyboardPointedId;
