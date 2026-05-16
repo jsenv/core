@@ -267,12 +267,12 @@ const css = /* css */ `
 
 export const InputTextual = (props) => {
   const defaultRef = useRef(null);
-  const ref = props.ref || defaultRef;
+  props.ref = props.ref || defaultRef;
   const defaultId = useId(); // we need an id for the slots so we always generate one
   const fieldId = useFieldId();
-  const id = props.id || fieldId || defaultId;
+  props.id = props.id || fieldId || defaultId;
   const uiStateController = useUIStateController(props, "input");
-  const input = renderInput(InputTextualUI, { ...props, ref, id });
+  const input = renderInput(InputTextualUI, props);
 
   return (
     <UIStateControllerContext.Provider value={uiStateController}>
@@ -321,22 +321,7 @@ const InputNativeContext = createContext(null);
 const InputTextualUI = (props) => {
   import.meta.css = css;
   const { ref, type, onInput, icon, children } = props;
-  const fieldProps = useFieldProps(props, {
-    getUIState: () => {
-      const input = ref.current;
-      if (type === "number") {
-        const inputValueAsNumber = input.valueAsNumber;
-        if (isNaN(inputValueAsNumber)) {
-          return input.value;
-        }
-        return inputValueAsNumber;
-      }
-      if (type === "datetime-local") {
-        return convertToUTCTimezone(input.value);
-      }
-      return input.value;
-    },
-  });
+  const fieldProps = useFieldProps(props);
   const { basePseudoState } = fieldProps;
   const loading = basePseudoState[":-navi-loading"];
   const readOnly = basePseudoState[":read-only"];
@@ -359,8 +344,22 @@ const InputTextualUI = (props) => {
         value={type === "color" && !value ? "#000000" : value}
         onInput={(e) => {
           const input = e.target;
+          const inputUIState = (() => {
+            if (type === "number") {
+              const inputValueAsNumber = input.valueAsNumber;
+              if (isNaN(inputValueAsNumber)) {
+                return input.value;
+              }
+              return inputValueAsNumber;
+            }
+            if (type === "datetime-local") {
+              return convertToUTCTimezone(input.value);
+            }
+            return input.value;
+          })();
           dispatchRequestUIAction(input, {
             event: e,
+            value: inputUIState,
             uiAction: (inputValue, e) => {
               fieldProps.uiAction?.(inputValue, e);
               onInputStable?.(e);

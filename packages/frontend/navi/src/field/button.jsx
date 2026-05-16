@@ -290,16 +290,12 @@ const css = /* css */ `
 
 export const Button = (props) => {
   const defaultRef = useRef(null);
-  const ref = props.ref || defaultRef;
+  props.ref = props.ref || defaultRef;
+  props.uiAction = normalizeUIAction(props.uiAction);
   const uiStateController = useUIStateController(props, "button", {
     allowNameless: true,
   });
-  const uiAction = normalizeUIAction(props.uiAction);
-  const button = renderButton(ButtonUI, {
-    ...props,
-    ref,
-    uiAction,
-  });
+  const button = renderButton(ButtonUI, props);
 
   return (
     <UIStateControllerContext.Provider value={uiStateController}>
@@ -359,29 +355,7 @@ const ButtonUI = (props) => {
     children,
   } = props;
   const parentUIStateController = useContext(ParentUIStateControllerContext);
-  const fieldProps = useFieldProps(props, {
-    getUIState: () => {
-      const button = ref.current;
-      const namedValues = {};
-      if (parentUIStateController) {
-        const parentName = parentUIStateController.name;
-        const parentUIState = parentUIStateController.uiStateSignal.peek();
-        if (parentName) {
-          namedValues[parentName] = parentUIState;
-        }
-        // this is how we detect named collection for now (they don't have a name and have an object in their ui state)
-        else if (typeof parentUIState === "object" && parentUIState !== null) {
-          Object.assign(namedValues, parentUIState);
-        } else {
-          // no name, we don't know where to put that value right?
-        }
-      }
-      if (button.name) {
-        namedValues[button.name] = button.value;
-      }
-      return namedValues;
-    },
-  });
+  const fieldProps = useFieldProps(props);
   const { basePseudoState } = fieldProps;
   const loading = basePseudoState[":-navi-loading"];
 
@@ -450,8 +424,31 @@ const ButtonUI = (props) => {
       }}
       onClick={(e) => {
         const button = e.currentTarget;
+        // The button uiState is a combination of its own state (if it has a name)
+        // and its parent state (if the parent is named or is a named collection)
+        const buttonUIState = {};
+        if (parentUIStateController) {
+          const parentName = parentUIStateController.name;
+          const parentUIState = parentUIStateController.uiStateSignal.peek();
+          if (parentName) {
+            buttonUIState[parentName] = parentUIState;
+          }
+          // this is how we detect named collection for now (they don't have a name and have an object in their ui state)
+          else if (
+            typeof parentUIState === "object" &&
+            parentUIState !== null
+          ) {
+            Object.assign(buttonUIState, parentUIState);
+          } else {
+            // no name, we don't know where to put that value right?
+          }
+        }
+        if (button.name) {
+          buttonUIState[button.name] = button.value;
+        }
         dispatchRequestUIAction(button, {
           event: e,
+          value: buttonUIState,
           uiAction: (value, e) => {
             uiAction?.(value, e);
             onClick?.(e);

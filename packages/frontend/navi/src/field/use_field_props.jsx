@@ -19,7 +19,7 @@ import {
 import { onRequestUIAction } from "./validation/custom_constraint_validation.js";
 import { useConstraints } from "./validation/hooks/use_constraints.js";
 
-export const useFieldProps = (props, { getUIState = () => {} } = {}) => {
+export const useFieldProps = (props) => {
   const {
     ref,
     loading,
@@ -79,7 +79,6 @@ export const useFieldProps = (props, { getUIState = () => {} } = {}) => {
     },
     "onnavi_request_ui_action": (e) => {
       const uiAction = e.detail.uiAction;
-      const value = getUIState(uiState);
 
       if (uiAction === "not_available") {
         // we can't execute uiAction right now as value is not available
@@ -87,7 +86,6 @@ export const useFieldProps = (props, { getUIState = () => {} } = {}) => {
         // but the value will be set later (checkbox click vs input use case)
         e.detail.uiAction = () => {};
       } else {
-        e.detail.value = value;
         e.detail.uiAction = (value, e) => {
           uiStateController.setUIState(value, e);
           uiAction?.(value, e);
