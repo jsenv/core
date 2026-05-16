@@ -5,11 +5,10 @@ import { ActionRenderer } from "../../action/action_renderer.jsx";
 import { renderActionableComponent } from "../../action/render_actionable_component.jsx";
 import { useAction } from "../../action/use_action.js";
 import { useActionStatus } from "../../action/use_action_status.js";
-import { useExecuteAction } from "../../action/use_execute_action.js";
 import { Box } from "../../box/box.jsx";
 import { useKeyboardShortcuts } from "../../keyboard/keyboard_shortcuts.js";
 import { useFocusGroup } from "../../utils/focus/use_focus_group.js";
-import { useOnRequestAction } from "../use_action_events.js";
+import { useActionProps } from "../use_action_props.jsx";
 import {
   UIStateContext,
   UIStateControllerContext,
@@ -216,58 +215,27 @@ const DetailsBasic = (props) => {
 };
 
 const DetailsWithAction = (props) => {
-  const uiStateController = useContext(UIStateControllerContext);
-  const {
-    action,
-    loading,
-    onOpen,
-    onClose,
-    onCancel,
-    onActionPrevented,
-    onActionAbort,
-    onActionError,
-    onActionEnd,
-    children,
-    ...rest
-  } = props;
+  const { action, loading, onOpen, onClose, children, ...restProps } = props;
   const defaultRef = useRef();
-  const ref = rest.ref || defaultRef;
+  const ref = restProps.ref || defaultRef;
   const effectiveAction = useAction(action);
-  const actionStatus = useActionStatus(effectiveAction);
-  const { loading: actionLoading } = actionStatus;
-  const executeAction = useExecuteAction(ref, {
-    // the error will be displayed by actionRenderer inside <details>
-    errorEffect: "none",
-  });
-  const onRequestAction = useOnRequestAction();
+  const remainingProps = useActionProps(
+    {
+      resetOnCancel: true,
+      resetOnAbort: true,
+      resetOnError: true,
+      // errors are shown by ActionRenderer inside <details>, not as validation messages
+      actionErrorEffect: "none",
+      ...restProps,
+    },
+    { externalBoundAction: effectiveAction },
+  );
 
   return (
     <DetailsBasic
-      {...rest}
+      {...remainingProps}
       ref={ref}
-      loading={loading || actionLoading}
-      onnavi_cancel={(e) => {
-        const { reason } = e.detail;
-        if (reason === "blur_invalid") {
-          return;
-        }
-        uiStateController.resetUIState(e);
-        onCancel?.(e, reason);
-      }}
-      onnavi_request_action={(e) => {
-        onRequestAction(e, effectiveAction);
-      }}
-      onnavi_action_prevented={onActionPrevented}
-      onnavi_action_ready={executeAction}
-      onnavi_action_abort={(e) => {
-        uiStateController.resetUIState(e);
-        onActionAbort?.(e);
-      }}
-      onnavi_action_error={(e) => {
-        uiStateController.resetUIState(e);
-        onActionError?.(e);
-      }}
-      onnavi_action_end={onActionEnd}
+      loading={loading || remainingProps.loading}
       onOpen={(e) => {
         dispatchRequestAction(e.target, {
           event: e,

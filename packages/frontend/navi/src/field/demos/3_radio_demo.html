@@ -131,6 +131,34 @@
       const App = () => {
         return (
           <div>
+            <nav style={{ marginBottom: "32px" }}>
+              <ul
+                style={{
+                  margin: 0,
+                  padding: 0,
+                  listStyle: "none",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "4px",
+                }}
+              >
+                <li>
+                  <a href="#radio-states">Radio States</a>
+                </li>
+                <li>
+                  <a href="#radio-icons">Radio with Icons</a>
+                </li>
+                <li>
+                  <a href="#button-icons">Button Appearance with Icons</a>
+                </li>
+                <li>
+                  <a href="#custom-colors">Custom Colors</a>
+                </li>
+                <li>
+                  <a href="#interactive">Interactive Controls</a>
+                </li>
+              </ul>
+            </nav>
             <BasicStatesDemo />
             <IconStatesDemo />
             <ButtonIconStatesDemo />
@@ -142,7 +170,7 @@
 
       const BasicStatesDemo = () => {
         return (
-          <div className="demo-section">
+          <div id="radio-states" className="demo-section">
             <h2>Radio States</h2>
 
             <div className="states-section">
@@ -393,7 +421,7 @@
 
       const IconStatesDemo = () => {
         return (
-          <div className="demo-section">
+          <div id="radio-icons" className="demo-section">
             <h2>Radio with Icons</h2>
 
             <div className="states-section">
@@ -723,7 +751,7 @@
 
       const ButtonIconStatesDemo = () => {
         return (
-          <div className="demo-section">
+          <div id="button-icons" className="demo-section">
             <h2>Button Appearance with Icons</h2>
 
             <div className="states-section">
@@ -1033,7 +1061,7 @@
 
       const ColorDemo = () => {
         return (
-          <div className="demo-section">
+          <div id="custom-colors" className="demo-section">
             <h2>Custom Colors</h2>
 
             <div className="states-section">
@@ -1313,7 +1341,7 @@
         const [checked, setChecked] = useState(false);
 
         return (
-          <div className="demo-section">
+          <div id="interactive" className="demo-section">
             <h2>Interactive Controls</h2>
 
             <fieldset>

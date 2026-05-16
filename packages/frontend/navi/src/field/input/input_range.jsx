@@ -6,9 +6,6 @@ import {
   useRef,
 } from "preact/hooks";
 
-import { useActionBoundToOneParam } from "../../action/use_action.js";
-import { useActionStatus } from "../../action/use_action_status.js";
-import { useExecuteAction } from "../../action/use_execute_action.js";
 import { Box } from "../../box/box.jsx";
 import { LoadingOutline } from "../../graphic/loading/loading_outline.jsx";
 import { useAutoFocus } from "../../utils/focus/use_auto_focus.js";
@@ -21,8 +18,10 @@ import {
   useFieldId,
 } from "../field.jsx";
 import { fieldPropSet } from "../field_prop_set.js";
-import { useOnRequestAction } from "../use_action_events.js";
-import { ActionRequesterContext } from "../use_action_props.jsx";
+import {
+  ActionRequesterContext,
+  useActionProps,
+} from "../use_action_props.jsx";
 import {
   DisabledContext,
   LoadingContext,
@@ -506,71 +505,6 @@ const RangePseudoElements = ["::-navi-loader"];
 const RangeChildPropSet = new Set([...fieldPropSet]);
 
 const InputRangeWithAction = (props) => {
-  const {
-    ref,
-    action,
-    actionDebounce,
-    actionAfterChange,
-    loading,
-    onCancel,
-    onActionPrevented,
-    onActionAbort,
-    onActionError,
-    onActionEnd,
-    cancelOnBlurInvalid,
-    cancelOnEscape,
-    actionErrorEffect,
-    ...rest
-  } = props;
-  const uiStateController = useContext(UIStateControllerContext);
-  const [boundAction] = useActionBoundToOneParam(
-    action,
-    uiStateController.uiStateSignal,
-  );
-  const { loading: actionLoading } = useActionStatus(boundAction);
-  const executeAction = useExecuteAction(ref, {
-    errorEffect: actionErrorEffect,
-  });
-  const onRequestAction = useOnRequestAction();
-
-  return (
-    <InputRangeDispatcher
-      data-action={boundAction.name}
-      data-action-debounce={actionDebounce}
-      data-action-after-change={actionAfterChange ? "" : undefined}
-      {...rest}
-      ref={ref}
-      action={undefined}
-      loading={loading || actionLoading}
-      onnavi_cancel={(e) => {
-        const { reason } = e.detail;
-        if (reason.startsWith("blur_invalid")) {
-          if (!cancelOnBlurInvalid) {
-            return;
-          }
-          if (
-            // error prevent cancellation until the user closes it (or something closes it)
-            e.detail.failedConstraintInfo.level === "error" &&
-            e.detail.failedConstraintInfo.reportStatus !== "closed"
-          ) {
-            return;
-          }
-        }
-        if (reason === "escape_key") {
-          if (!cancelOnEscape) {
-            return;
-          }
-        }
-        onCancel?.(e, reason);
-      }}
-      onnavi_request_action={(e) => {
-        onRequestAction(boundAction, e);
-      }}
-      onnavi_action_prevented={onActionPrevented}
-      onnavi_action_ready={executeAction}
-      onnavi_action_abort={onActionAbort}
-      onnavi_action_error={onActionError}
-      onnavi_action_end={onActionEnd}
-    />
-  );
+  const remainingProps = useActionProps(props);
+  return <InputRangeDispatcher {...remainingProps} action={undefined} />;
 };

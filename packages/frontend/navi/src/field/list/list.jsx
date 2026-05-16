@@ -17,9 +17,6 @@ import {
   useState,
 } from "preact/hooks";
 
-import { useActionBoundToOneParam } from "../../action/use_action.js";
-import { useActionStatus } from "../../action/use_action_status.js";
-import { useExecuteAction } from "../../action/use_execute_action.js";
 import { Box } from "../../box/box.jsx";
 import { shortcutsViaOnKeyDown } from "../../keyboard/keyboard_shortcuts.js";
 import { Separator } from "../../layout/separator.jsx";
@@ -28,7 +25,7 @@ import { naviI18n } from "../../text/navi_i18n.js";
 import { useAutoFocus } from "../../utils/focus/use_auto_focus.js";
 import { useItemTracker } from "../../utils/item_tracker/use_item_tracker.js";
 import { useDisplayedLayoutEffect } from "../../utils/use_displayed_layout_effect.js";
-import { useOnRequestAction } from "../use_action_events.js";
+import { useActionProps } from "../use_action_props.jsx";
 import {
   ParentUIStateControllerContext,
   SelectTriggerContentRegistryContext,
@@ -1308,32 +1305,25 @@ const ListWithPopover = (props) => {
 // navi event protocol. When an action is provided it binds the action to ui state
 // and fires it on select. When only uiAction is provided it calls it directly.
 const ListWithAction = (props) => {
-  const {
-    ref,
-    action,
-    loading,
-    actionErrorEffect,
-    onActionPrevented,
-    onActionAbort,
-    onActionError,
-    onActionEnd,
-    ...rest
-  } = props;
-  // Setup uiStateController and bind action to uiState
   const uiStateController = useUIStateController(props, "list", {
     allowNameless: true,
   });
   const uiState = useUIState(uiStateController);
-  // Pass uiStateSignal directly so action params update synchronously (not one render behind)
-  const [boundAction] = useActionBoundToOneParam(
-    action,
-    uiStateController.uiStateSignal,
+
+  return (
+    <UIStateControllerContext.Provider value={uiStateController}>
+      <UIStateContext.Provider value={uiState}>
+        <ListWithActionInner {...props} />
+      </UIStateContext.Provider>
+    </UIStateControllerContext.Provider>
   );
-  const { loading: actionLoading } = useActionStatus(boundAction);
-  const executeAction = useExecuteAction(ref, {
-    errorEffect: actionErrorEffect,
-  });
-  const onRequestAction = useOnRequestAction();
+};
+
+const ListWithActionInner = (props) => {
+  const uiStateController = useContext(UIStateControllerContext);
+  const uiState = useContext(UIStateContext);
+
+  const remainingProps = useActionProps(props);
 
   // Mouse/keyboard pointed state
   const [mousePointedId, setMousePointedId] = useState(null);
@@ -1361,24 +1351,15 @@ const ListWithAction = (props) => {
 
   const listVnode = (
     <List
+      {...remainingProps}
       keyboardInteractions
-      data-action={boundAction.name}
-      {...rest}
-      ref={ref}
       action={undefined}
       uiAction={undefined}
-      loading={loading || actionLoading}
       value={uiState}
       onListVisibleItemsChange={(visibleItems) => {
         props.onListVisibleItemsChange?.(visibleItems);
         visibleItemsRef.current = visibleItems;
       }}
-      onnavi_request_action={(e) => onRequestAction(boundAction, e)}
-      onnavi_action_prevented={onActionPrevented}
-      onnavi_action_ready={executeAction}
-      onnavi_action_abort={onActionAbort}
-      onnavi_action_error={onActionError}
-      onnavi_action_end={onActionEnd}
       onnavi_list_nav={(e) => {
         const { item, event } = e.detail;
         const id = item ? item.id : null;
@@ -1543,17 +1524,13 @@ const ListWithAction = (props) => {
   );
 
   return (
-    <UIStateControllerContext.Provider value={uiStateController}>
-      <UIStateContext.Provider value={uiState}>
-        <ListInteractiveContext.Provider value={true}>
-          <ListMousePointedIdContext.Provider value={mousePointedId}>
-            <ListKeyboardPointedIdContext.Provider value={keyboardPointedId}>
-              {listVnode}
-            </ListKeyboardPointedIdContext.Provider>
-          </ListMousePointedIdContext.Provider>
-        </ListInteractiveContext.Provider>
-      </UIStateContext.Provider>
-    </UIStateControllerContext.Provider>
+    <ListInteractiveContext.Provider value={true}>
+      <ListMousePointedIdContext.Provider value={mousePointedId}>
+        <ListKeyboardPointedIdContext.Provider value={keyboardPointedId}>
+          {listVnode}
+        </ListKeyboardPointedIdContext.Provider>
+      </ListMousePointedIdContext.Provider>
+    </ListInteractiveContext.Provider>
   );
 };
 

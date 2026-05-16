@@ -12,13 +12,19 @@ export const ActionContext = createContext();
 
 export const useActionProps = (
   props,
-  { paramsSignal, provideAction, provideActionRequester } = {},
+  {
+    paramsSignal,
+    externalBoundAction,
+    provideAction,
+    provideActionRequester,
+  } = {},
 ) => {
   const {
     ref,
     action,
     actionDebounce,
     actionAfterChange,
+    loading: propLoading,
     onCancel,
     onActionPrevented,
     onActionAborted,
@@ -36,7 +42,14 @@ export const useActionProps = (
   } = props;
   const uiStateController = useContext(UIStateControllerContext);
   paramsSignal = paramsSignal || uiStateController.uiStateSignal;
-  const [boundAction] = useActionBoundToOneParam(action, paramsSignal);
+  // Always call the hook (hook call count must be stable), but when an
+  // externalBoundAction is provided we pass undefined so a noop is created
+  // internally, then we override with the external action below.
+  const [internalBoundAction] = useActionBoundToOneParam(
+    externalBoundAction ? undefined : action,
+    paramsSignal,
+  );
+  const boundAction = externalBoundAction || internalBoundAction;
   const { loading } = useActionStatus(boundAction);
   const executeAction = useExecuteAction(ref, {
     errorEffect: actionErrorEffect,
@@ -57,7 +70,7 @@ export const useActionProps = (
   }
 
   return {
-    loading,
+    "loading": propLoading || loading,
     ...rest,
     "children": effectiveChildren,
     ref,
