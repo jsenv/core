@@ -321,7 +321,22 @@ const InputNativeContext = createContext(null);
 const InputTextualUI = (props) => {
   import.meta.css = css;
   const { ref, type, onInput, icon, children } = props;
-  const fieldProps = useFieldProps(props);
+  const fieldProps = useFieldProps(props, {
+    getUIState: () => {
+      const input = ref.current;
+      if (type === "number") {
+        const inputValueAsNumber = input.valueAsNumber;
+        if (isNaN(inputValueAsNumber)) {
+          return input.value;
+        }
+        return inputValueAsNumber;
+      }
+      if (type === "datetime-local") {
+        return convertToUTCTimezone(input.value);
+      }
+      return input.value;
+    },
+  });
   const { basePseudoState } = fieldProps;
   const loading = basePseudoState[":-navi-loading"];
   const readOnly = basePseudoState[":read-only"];
@@ -344,20 +359,8 @@ const InputTextualUI = (props) => {
         value={type === "color" && !value ? "#000000" : value}
         onInput={(e) => {
           const input = e.target;
-          let inputValue;
-          if (type === "number") {
-            inputValue = input.valueAsNumber;
-            if (isNaN(inputValue)) {
-              inputValue = input.value;
-            }
-          } else if (type === "datetime-local") {
-            inputValue = convertToUTCTimezone(input.value);
-          } else {
-            inputValue = input.value;
-          }
           dispatchRequestUIAction(input, {
             event: e,
-            value: inputValue,
             uiAction: (inputValue, e) => {
               fieldProps.uiAction?.(inputValue, e);
               onInputStable?.(e);

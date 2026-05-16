@@ -3,6 +3,7 @@ import { useContext } from "preact/hooks";
 import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
 import { useDebugUIAction } from "../navi_debug.jsx";
 import {
+  FieldContext,
   reportDisabledToField,
   reportInteractiveToField,
   reportReadOnlyToField,
@@ -18,7 +19,7 @@ import {
 import { onRequestUIAction } from "./validation/custom_constraint_validation.js";
 import { useConstraints } from "./validation/hooks/use_constraints.js";
 
-export const useFieldProps = (props) => {
+export const useFieldProps = (props, { getUIState = () => {} } = {}) => {
   const {
     ref,
     loading,
@@ -28,6 +29,7 @@ export const useFieldProps = (props) => {
     autoFocusVisible,
     autoSelect,
     basePseudoState,
+    children,
     ...rest
   } = props;
   const debugUIAction = useDebugUIAction();
@@ -54,7 +56,17 @@ export const useFieldProps = (props) => {
   });
   const remainingProps = useConstraints(ref, rest);
 
+  let childrenWithContext;
+  if (children === undefined) {
+    childrenWithContext = undefined;
+  } else {
+    childrenWithContext = (
+      <FieldContext.Provider value={null}>{children}</FieldContext.Provider>
+    );
+  }
+
   return {
+    "children": childrenWithContext,
     ...remainingProps,
     ref,
     value,
@@ -67,12 +79,15 @@ export const useFieldProps = (props) => {
     },
     "onnavi_request_ui_action": (e) => {
       const uiAction = e.detail.uiAction;
+      const value = getUIState(uiState);
+
       if (uiAction === "not_available") {
         // we can't execute uiAction right now as value is not available
         // we just want to check if action is allowed to preventDefault or give feedback
         // but the value will be set later (checkbox click vs input use case)
         e.detail.uiAction = () => {};
       } else {
+        e.detail.value = value;
         e.detail.uiAction = (value, e) => {
           uiStateController.setUIState(value, e);
           uiAction?.(value, e);

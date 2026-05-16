@@ -53,10 +53,10 @@ export const useFieldGroupProps = (props) => {
     );
 
   return {
+    children: childrenWithContext,
     ...remainingProps,
     onnavi_request_reset_ui_state: (e) => {
       uiStateController.resetUIState(e);
     },
-    children: childrenWithContext,
   };
 };

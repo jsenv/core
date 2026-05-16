@@ -16,6 +16,7 @@ import { normalizeUIAction } from "./ui_actions.js";
 import { ActionContext, useActionProps } from "./use_action_props.jsx";
 import { useFieldProps } from "./use_field_props.jsx";
 import {
+  ParentUIStateControllerContext,
   UIStateControllerContext,
   useUIStateController,
 } from "./use_ui_state_controller.js";
@@ -357,7 +358,30 @@ const ButtonUI = (props) => {
     spacing,
     children,
   } = props;
-  const fieldProps = useFieldProps(props);
+  const parentUIStateController = useContext(ParentUIStateControllerContext);
+  const fieldProps = useFieldProps(props, {
+    getUIState: () => {
+      const button = ref.current;
+      const namedValues = {};
+      if (parentUIStateController) {
+        const parentName = parentUIStateController.name;
+        const parentUIState = parentUIStateController.uiStateSignal.peek();
+        if (parentName) {
+          namedValues[parentName] = parentUIState;
+        }
+        // this is how we detect named collection for now (they don't have a name and have an object in their ui state)
+        else if (typeof parentUIState === "object" && parentUIState !== null) {
+          Object.assign(namedValues, parentUIState);
+        } else {
+          // no name, we don't know where to put that value right?
+        }
+      }
+      if (button.name) {
+        namedValues[button.name] = button.value;
+      }
+      return namedValues;
+    },
+  });
   const { basePseudoState } = fieldProps;
   const loading = basePseudoState[":-navi-loading"];
 
@@ -428,7 +452,6 @@ const ButtonUI = (props) => {
         const button = e.currentTarget;
         dispatchRequestUIAction(button, {
           event: e,
-          value: button.value,
           uiAction: (value, e) => {
             uiAction?.(value, e);
             onClick?.(e);
