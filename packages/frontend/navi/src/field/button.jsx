@@ -502,7 +502,7 @@ markAsOutsideTextFlow(ButtonShadow);
 
 const ButtonInsideForm = (props) => {
   const Next = useNextResolver();
-  const { action, type } = props;
+  const { uiAction, action, type } = props;
   if (
     import.meta.dev &&
     action &&
@@ -512,54 +512,58 @@ const ButtonInsideForm = (props) => {
       `<Button type="${type}" /> should not have their own action`,
     );
   }
-  const requestFormAction = (form, event) => {
-    const button = event.currentTarget;
-    if (event.type === "click") {
-      event.preventDefault(); // prevent form submission
+  const shouldRequestFormAction = (event) => {
+    if (event.defaultPrevented) {
+      return false;
     }
-    dispatchRequestAction(form, {
-      event,
-      requester: button,
-    });
+    const button = event.currentTarget;
+    const { form } = button;
+    if (!form) {
+      // either we are a "reset" button (not associated to the form)
+      // or there is no form despites from context saying so (unlikely)
+      return false;
+    }
+    const wouldSubmitFormByType =
+      button.type === "submit" || button.type === "image";
+    if (wouldSubmitFormByType) {
+      return true;
+    }
+    const firstButtonSubmittingForm = form.querySelector(
+      `button[type="submit"], input[type="submit"], input[type="image"]`,
+    );
+    if (button !== firstButtonSubmittingForm) {
+      // an other button is explicitly submitting the form, this one would not submit it
+      // so it would have no effect
+      return false;
+    }
+    // this is the only button inside the form without type attribute, so it defaults to type="submit"
+    return true;
   };
 
   return (
     <Next
       {...props}
       uiAction={(v, event) => {
-        if (event.defaultPrevented) {
+        if (shouldRequestFormAction(event)) {
+          const button = event.currentTarget;
+          const { form } = button;
+          if (event.type === "click") {
+            event.preventDefault(); // prevent form submission
+          }
+          dispatchRequestAction(form, {
+            event,
+            requester: button,
+          });
           return;
         }
-
-        const button = event.currentTarget;
-        const { form } = button;
-        if (!form) {
-          // either we are a "reset" button (not associated to the form)
-          // or there is no form despites from context saying so (unlikely)
-          return;
-        }
-        const wouldSubmitFormByType =
-          button.type === "submit" || button.type === "image";
-        if (wouldSubmitFormByType) {
-          requestFormAction(form, event);
-          return;
-        }
-        const firstButtonSubmittingForm = form.querySelector(
-          `button[type="submit"], input[type="submit"], input[type="image"]`,
-        );
-        if (button !== firstButtonSubmittingForm) {
-          // an other button is explicitly submitting the form, this one would not submit it
-          // so it would have no effect
-          return;
-        }
-        // this is the only button inside the form without type attribute, so it defaults to type="submit"
-        requestFormAction(form, event);
+        uiAction?.(v, event);
       }}
     />
   );
 };
 const ButtonWithAction = (props) => {
   const Next = useNextResolver();
+  const { uiAction } = props;
   const ancestorAction = useContext(ActionContext);
   const remainingProps = useActionProps(props, {
     // button inehrit their ancestor params:
@@ -574,7 +578,7 @@ const ButtonWithAction = (props) => {
       uiAction={(value, e) => {
         // prevent requesting form action when within a form
         e.preventDefault();
-        remainingProps.uiAction?.(value, e);
+        uiAction?.(value, e);
         const button = e.currentTarget;
         dispatchRequestAction(button, {
           event: e,

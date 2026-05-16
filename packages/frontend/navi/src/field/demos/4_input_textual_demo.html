@@ -798,6 +798,7 @@
                     <Input
                       name="username"
                       minLength="5"
+                      defaultValue="hi"
                       placeholder="Enter username..."
                     />
                   </Field>
@@ -823,7 +824,13 @@
                     <Input
                       name="username"
                       minLength="5"
-                      minLengthMessage="Must be at least <strong>5 characters</strong>."
+                      defaultValue="hi"
+                      minLengthMessage={
+                        <span>
+                          At least <strong>5 characters</strong> required —
+                          currently only <strong>{"hi".length}</strong> 🙈
+                        </span>
+                      }
                       placeholder="Enter username..."
                     />
                   </Field>
