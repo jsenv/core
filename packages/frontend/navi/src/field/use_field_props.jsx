@@ -67,10 +67,17 @@ export const useFieldProps = (props) => {
     },
     "onnavi_request_ui_action": (e) => {
       const uiAction = e.detail.uiAction;
-      e.detail.uiAction = (value, e) => {
-        uiStateController.setUIState(value, e);
-        uiAction?.(value, e);
-      };
+      if (uiAction === "not_available") {
+        // we can't execute uiAction right now as value is not available
+        // we just want to check if action is allowed to preventDefault or give feedback
+        // but the value will be set later (checkbox click vs input use case)
+        e.detail.uiAction = () => {};
+      } else {
+        e.detail.uiAction = (value, e) => {
+          uiStateController.setUIState(value, e);
+          uiAction?.(value, e);
+        };
+      }
       onRequestUIAction(e, {
         debugUIAction,
       });

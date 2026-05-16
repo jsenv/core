@@ -391,7 +391,7 @@ export const InputCheckbox = (props) => {
 
   return (
     <UIStateControllerContext.Provider value={uiStateController}>
-      <InputCheckboxDispatcher {...props} ref={ref} id={id} />
+      <InputCheckboxDispatcher {...props} ref={ref} id={id} value={value} />
     </UIStateControllerContext.Provider>
   );
 };
@@ -419,9 +419,10 @@ const InputCheckboxUI = (props) => {
     accentColor,
     icon,
     appearance = icon ? "icon" : "checkbox", // "checkbox", "toggle", "icon", "button"
+    value,
   } = props;
   const fieldProps = useFieldProps(props);
-  const { basePseudoState, value } = fieldProps;
+  const { basePseudoState, value: uiState } = fieldProps;
   const innerLoading = basePseudoState[":-navi-loading"];
   const innerReadOnly = basePseudoState[":read-only"];
   const innerDisabled = basePseudoState[":disabled"];
@@ -430,7 +431,7 @@ const InputCheckboxUI = (props) => {
   const innerName = name || contextFieldName;
   const innerRequired = required || contextRequired;
 
-  const checked = Boolean(value);
+  const checked = Boolean(uiState);
   const renderCheckbox = (checkboxProps) => {
     return (
       <Box
@@ -524,12 +525,9 @@ const InputCheckboxUI = (props) => {
       onClick={(e) => {
         dispatchRequestUIAction(e.currentTarget, {
           event: e,
-          value,
-          uiAction: (v, e) => {
-            // we wait input to dispatch the uiAction
-            onClick?.(e);
-          },
+          uiAction: "not_available", // we wait input to dispatch the uiAction
         });
+        onClick?.(e);
       }}
       onInput={(e) => {
         const checkbox = e.target;
@@ -539,9 +537,9 @@ const InputCheckboxUI = (props) => {
           value: checkboxIsChecked ? value : undefined,
           uiAction: (v, e) => {
             uiAction?.(v, e);
-            onInput?.(e);
           },
         });
+        onInput?.(e);
       }}
     >
       <span className="navi_checkbox_accent_probe" aria-hidden="true" />
