@@ -184,15 +184,16 @@ export const onRequestAction = (
   action,
   requestActionCustomEvent,
   {
-    requester = requestActionCustomEvent.detail.requester ||
-      requestActionCustomEvent.target,
-    actionOrigin = requestActionCustomEvent.detail.actionOrigin,
-    meta = requestActionCustomEvent.detail.meta || {},
-    confirmMessage = requestActionCustomEvent.detail.confirmMessage,
-    method = "rerun",
+    method = "rerun", // not used for now
     debugAction = () => {},
   } = {},
 ) => {
+  let {
+    requester = requestActionCustomEvent.detail.event.target,
+    actionOrigin,
+    meta = {},
+    confirmMessage,
+  } = requestActionCustomEvent.detail;
   if (requestActionCustomEvent.detail.action) {
     // keyboard shotcut give the action and action is irrelevant here, the kayboard shortcut must win
     action = requestActionCustomEvent.detail.action;

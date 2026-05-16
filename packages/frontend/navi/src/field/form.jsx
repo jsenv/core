@@ -89,6 +89,7 @@ const FormUI = (props) => {
   return (
     <Box
       data-action="toto"
+      data-can-submit=""
       {...remainingProps}
       as="form"
       ref={ref}

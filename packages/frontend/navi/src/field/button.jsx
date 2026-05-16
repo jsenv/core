@@ -12,6 +12,7 @@ import { assertRoute, useRouteStatus } from "../nav/route.js";
 import { Text, markAsOutsideTextFlow } from "../text/text.jsx";
 import { useAccentColorAttributes } from "../utils/use_accent_color_attributes.js";
 import { FormContext } from "./form_context.js";
+import { normalizeUIAction } from "./ui_actions.js";
 import { ActionContext, useActionProps } from "./use_action_props.jsx";
 import { useFieldProps } from "./use_field_props.jsx";
 import {
@@ -292,10 +293,15 @@ export const Button = (props) => {
   const uiStateController = useUIStateController(props, "button", {
     allowNameless: true,
   });
+  const uiAction = normalizeUIAction(props.uiAction);
 
   return (
     <UIStateControllerContext.Provider value={uiStateController}>
-      {renderButton(ButtonUI, { ...props, ref })}
+      {renderButton(ButtonUI, {
+        ...props,
+        ref,
+        uiAction,
+      })}
     </UIStateControllerContext.Provider>
   );
 };
