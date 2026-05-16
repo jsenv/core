@@ -170,7 +170,9 @@
           <div>
             <TableOfContents />
             <BasicStatesDemo />
-            <InputInteractivityDemo />
+            <UiActionDemo />
+            <ActionDemo />
+            <InsideFormDemo />
             <AccidentalReadOnlyDemo />
             <TypeVariationsDemo />
             <SizeVariationsDemo />
@@ -188,7 +190,13 @@
                 <a href="#states">Input UI States</a>
               </li>
               <li>
-                <a href="#interactivity">Input Interactivity</a>
+                <a href="#ui-action">uiAction</a>
+              </li>
+              <li>
+                <a href="#action">action</a>
+              </li>
+              <li>
+                <a href="#inside-form">Inside Form</a>
               </li>
               <li>
                 <a href="#accidental-readonly">Accidental Read-Only</a>
@@ -469,40 +477,21 @@
         );
       };
 
-      const InputInteractivityDemo = () => {
+      const UiActionDemo = () => {
         const [controlledValue, setControlledValue] = useState("Controlled");
         const [uiStateValue, setUiStateValue] = useState("");
-        const [basicActionValue, setBasicActionValue] = useState("");
-        const [basicActionCallCount, setBasicActionCallCount] = useState(0);
-        const [debouncedValue, setDebouncedValue] = useState("");
-        const [debouncedCallCount, setDebouncedCallCount] = useState(0);
-        const [afterChangeValue, setAfterChangeValue] = useState("");
-        const [afterChangeCallCount, setAfterChangeCallCount] = useState(0);
-        const [abortValue, setAbortValue] = useState("");
-        const [abortCallCount, setAbortCallCount] = useState(0);
-        const [abortedCount, setAbortedCount] = useState(0);
-        const currentAbortControllerRef = useRef(null);
-        const cancelPrevious = () => {
-          if (currentAbortControllerRef.current) {
-            currentAbortControllerRef.current.abort();
-            setAbortedCount((c) => c + 1);
-          }
-          const controller = new AbortController();
-          currentAbortControllerRef.current = controller;
-          return controller.signal;
-        };
 
         return (
-          <div className="demo-section" id="interactivity">
-            <h2>Input Interactivity</h2>
+          <div className="demo-section" id="ui-action">
+            <h2>uiAction</h2>
 
             <fieldset>
               <legend>value</legend>
               <p className="states-description">
                 Use <code>defaultValue</code> for an initial value the user can
-                freely change. Use <code>value</code> to control the input
-                externally — combined with <code>uiAction</code> or{" "}
-                <code>action</code> to keep it updateable.
+                freely change. Use <code>value</code> combined with{" "}
+                <code>uiAction</code> or <code>action</code> to control the
+                input externally.
               </p>
               <Box column spacing="sm">
                 <div>
@@ -543,9 +532,37 @@
                 </div>
               </Box>
             </fieldset>
+          </div>
+        );
+      };
+
+      const ActionDemo = () => {
+        const [basicActionValue, setBasicActionValue] = useState("");
+        const [basicActionCallCount, setBasicActionCallCount] = useState(0);
+        const [debouncedValue, setDebouncedValue] = useState("");
+        const [debouncedCallCount, setDebouncedCallCount] = useState(0);
+        const [afterChangeValue, setAfterChangeValue] = useState("");
+        const [afterChangeCallCount, setAfterChangeCallCount] = useState(0);
+        const [abortValue, setAbortValue] = useState("");
+        const [abortCallCount, setAbortCallCount] = useState(0);
+        const [abortedCount, setAbortedCount] = useState(0);
+        const currentAbortControllerRef = useRef(null);
+        const cancelPrevious = () => {
+          if (currentAbortControllerRef.current) {
+            currentAbortControllerRef.current.abort();
+            setAbortedCount((c) => c + 1);
+          }
+          const controller = new AbortController();
+          currentAbortControllerRef.current = controller;
+          return controller.signal;
+        };
+
+        return (
+          <div className="demo-section" id="action">
+            <h2>action</h2>
 
             <fieldset>
-              <legend>action — basic</legend>
+              <legend>basic</legend>
               <p className="states-description">
                 The <code>action</code> prop is called on every value change
                 (keystroke, paste, programmatic). For synchronous actions this
@@ -566,7 +583,7 @@
             </fieldset>
 
             <fieldset>
-              <legend>action — debounced</legend>
+              <legend>debounced</legend>
               <p className="states-description">
                 Use <code>actionDebounce</code> to wait for the user to stop
                 typing before calling the action. Ideal for search queries or
@@ -589,7 +606,7 @@
             </fieldset>
 
             <fieldset>
-              <legend>action — after change (blur / Enter)</legend>
+              <legend>after change (blur / Enter)</legend>
               <p className="states-description">
                 <code>actionAfterChange</code> delays the action until blur or
                 Enter. The input shows a loading state and becomes read-only
@@ -612,9 +629,9 @@
             </fieldset>
 
             <fieldset>
-              <legend>action — with abort</legend>
+              <legend>with abort</legend>
               <p className="states-description">
-                Keep the action synchronous to stay non-blocking, and use an
+                Keep the action synchronous to stay non-blocking, and use an{" "}
                 <code>AbortController</code> to cancel in-flight async work when
                 a new value arrives.
               </p>
@@ -634,6 +651,65 @@
                 <div className="value-display">
                   Value: "{abortValue}" | Calls: {abortCallCount} | Aborted:{" "}
                   {abortedCount}
+                </div>
+              </Box>
+            </fieldset>
+          </div>
+        );
+      };
+
+      const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+      const InsideFormDemo = () => {
+        const [username, setUsername] = useState("");
+        const [formResult, setFormResult] = useState("");
+
+        const submitForm = async ({ username }) => {
+          setFormResult("Submitting...");
+          await delay(1000);
+          setFormResult(`✅ Submitted! Username: ${username}`);
+        };
+
+        return (
+          <div className="demo-section" id="inside-form">
+            <h2>Inside Form</h2>
+            <p className="states-description">
+              When an input is inside a <code>Form</code>, its <code>name</code>{" "}
+              is used to collect the value on submit. The input's own{" "}
+              <code>action</code> can still be used alongside the form action
+              (e.g. to track the field value independently).
+            </p>
+
+            <fieldset>
+              <legend>Basic form submission</legend>
+              <Box column spacing="sm">
+                <form
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    const data = new FormData(e.target);
+                    await submitForm({ username: data.get("username") });
+                  }}
+                >
+                  <Box column spacing="sm">
+                    <label style={{ fontSize: "0.9rem" }}>
+                      Username:
+                      <Input
+                        name="username"
+                        value={username}
+                        action={setUsername}
+                        placeholder="Enter username"
+                      />
+                    </label>
+                    <Box flex="y" spacing="s">
+                      <button type="submit">Submit</button>
+                      <button type="reset" onClick={() => setUsername("")}>
+                        Reset
+                      </button>
+                    </Box>
+                  </Box>
+                </form>
+                <div className="value-display">
+                  {formResult || "Fill and submit..."}
                 </div>
               </Box>
             </fieldset>
