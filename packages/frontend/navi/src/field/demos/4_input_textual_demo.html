@@ -165,14 +165,14 @@
       import { useState, useRef } from "preact/hooks";
       import { Input, Box } from "@jsenv/navi";
 
+      const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
       const App = () => {
         return (
           <div>
             <TableOfContents />
             <BasicStatesDemo />
-            <UiActionDemo />
-            <ActionDemo />
-            <InsideFormDemo />
+            <InputInteractivityDemo />
             <AccidentalReadOnlyDemo />
             <TypeVariationsDemo />
             <SizeVariationsDemo />
@@ -190,13 +190,18 @@
                 <a href="#states">Input UI States</a>
               </li>
               <li>
-                <a href="#ui-action">uiAction</a>
-              </li>
-              <li>
-                <a href="#action">action</a>
-              </li>
-              <li>
-                <a href="#inside-form">Inside Form</a>
+                <a href="#interactivity">Input Interactivity</a>
+                <ol style={{ margin: 0, paddingLeft: "20px", lineHeight: "2" }}>
+                  <li>
+                    <a href="#interactivity-ui-action">uiAction</a>
+                  </li>
+                  <li>
+                    <a href="#interactivity-action">action</a>
+                  </li>
+                  <li>
+                    <a href="#interactivity-form">Inside Form</a>
+                  </li>
+                </ol>
               </li>
               <li>
                 <a href="#accidental-readonly">Accidental Read-Only</a>
@@ -477,13 +482,36 @@
         );
       };
 
-      const UiActionDemo = () => {
+      const InputInteractivityDemo = () => {
         const [controlledValue, setControlledValue] = useState("Controlled");
         const [uiStateValue, setUiStateValue] = useState("");
+        const [basicActionValue, setBasicActionValue] = useState("");
+        const [basicActionCallCount, setBasicActionCallCount] = useState(0);
+        const [debouncedValue, setDebouncedValue] = useState("");
+        const [debouncedCallCount, setDebouncedCallCount] = useState(0);
+        const [afterChangeValue, setAfterChangeValue] = useState("");
+        const [afterChangeCallCount, setAfterChangeCallCount] = useState(0);
+        const [abortValue, setAbortValue] = useState("");
+        const [abortCallCount, setAbortCallCount] = useState(0);
+        const [abortedCount, setAbortedCount] = useState(0);
+        const [username, setUsername] = useState("");
+        const [formResult, setFormResult] = useState("");
+        const currentAbortControllerRef = useRef(null);
+        const cancelPrevious = () => {
+          if (currentAbortControllerRef.current) {
+            currentAbortControllerRef.current.abort();
+            setAbortedCount((c) => c + 1);
+          }
+          const controller = new AbortController();
+          currentAbortControllerRef.current = controller;
+          return controller.signal;
+        };
 
         return (
-          <div className="demo-section" id="ui-action">
-            <h2>uiAction</h2>
+          <div className="demo-section" id="interactivity">
+            <h2>Input Interactivity</h2>
+
+            <h3 id="interactivity-ui-action">uiAction</h3>
 
             <fieldset>
               <legend>value</legend>
@@ -532,34 +560,8 @@
                 </div>
               </Box>
             </fieldset>
-          </div>
-        );
-      };
 
-      const ActionDemo = () => {
-        const [basicActionValue, setBasicActionValue] = useState("");
-        const [basicActionCallCount, setBasicActionCallCount] = useState(0);
-        const [debouncedValue, setDebouncedValue] = useState("");
-        const [debouncedCallCount, setDebouncedCallCount] = useState(0);
-        const [afterChangeValue, setAfterChangeValue] = useState("");
-        const [afterChangeCallCount, setAfterChangeCallCount] = useState(0);
-        const [abortValue, setAbortValue] = useState("");
-        const [abortCallCount, setAbortCallCount] = useState(0);
-        const [abortedCount, setAbortedCount] = useState(0);
-        const currentAbortControllerRef = useRef(null);
-        const cancelPrevious = () => {
-          if (currentAbortControllerRef.current) {
-            currentAbortControllerRef.current.abort();
-            setAbortedCount((c) => c + 1);
-          }
-          const controller = new AbortController();
-          currentAbortControllerRef.current = controller;
-          return controller.signal;
-        };
-
-        return (
-          <div className="demo-section" id="action">
-            <h2>action</h2>
+            <h3 id="interactivity-action">action</h3>
 
             <fieldset>
               <legend>basic</legend>
@@ -654,25 +656,9 @@
                 </div>
               </Box>
             </fieldset>
-          </div>
-        );
-      };
 
-      const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+            <h3 id="interactivity-form">Inside Form</h3>
 
-      const InsideFormDemo = () => {
-        const [username, setUsername] = useState("");
-        const [formResult, setFormResult] = useState("");
-
-        const submitForm = async ({ username }) => {
-          setFormResult("Submitting...");
-          await delay(1000);
-          setFormResult(`✅ Submitted! Username: ${username}`);
-        };
-
-        return (
-          <div className="demo-section" id="inside-form">
-            <h2>Inside Form</h2>
             <p className="states-description">
               When an input is inside a <code>Form</code>, its <code>name</code>{" "}
               is used to collect the value on submit. The input's own{" "}
@@ -687,7 +673,11 @@
                   onSubmit={async (e) => {
                     e.preventDefault();
                     const data = new FormData(e.target);
-                    await submitForm({ username: data.get("username") });
+                    setFormResult("Submitting...");
+                    await delay(1000);
+                    setFormResult(
+                      `✅ Submitted! Username: ${data.get("username")}`,
+                    );
                   }}
                 >
                   <Box column spacing="sm">
