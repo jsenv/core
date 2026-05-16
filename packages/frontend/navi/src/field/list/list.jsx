@@ -21,6 +21,10 @@ import { Box } from "../../box/box.jsx";
 import { shortcutsViaOnKeyDown } from "../../keyboard/keyboard_shortcuts.js";
 import { Separator } from "../../layout/separator.jsx";
 import { useDebugScroll } from "../../navi_debug.jsx";
+import {
+  createComponentResolver,
+  useNextResolver,
+} from "../../resolver/resolver.jsx";
 import { naviI18n } from "../../text/navi_i18n.js";
 import { useAutoFocus } from "../../utils/focus/use_auto_focus.js";
 import { useItemTracker } from "../../utils/item_tracker/use_item_tracker.js";
@@ -471,13 +475,8 @@ const css = /* css */ `
  *                          min-height so filtering cannot collapse the layout.
  *   ...rest              — forwarded to the outer scroll container <Box>
  */
-export const List = (props) => {
-  const refDefault = useRef(null);
-  const ref = props.ref || refDefault;
-
-  return <ListDispatcher {...props} ref={ref} />;
-};
-const ListDispatcher = (props) => {
+const ListWithActionResolver = (props) => {
+  const Next = useNextResolver();
   const alreadyInteractive = useContext(ListInteractiveContext);
   const parentUIStateController = useContext(ParentUIStateControllerContext);
   if (
@@ -486,13 +485,32 @@ const ListDispatcher = (props) => {
   ) {
     return <ListWithAction {...props} />;
   }
+  return <Next {...props} />;
+};
+const ListWithPopoverResolver = (props) => {
+  const Next = useNextResolver();
   if (props.popover === true) {
     return <ListWithPopover {...props} />;
   }
+  return <Next {...props} />;
+};
+const ListWithKeyboardResolver = (props) => {
+  const Next = useNextResolver();
   if (props.keyboardInteractions) {
     return <ListWithKeyboardInteractions {...props} />;
   }
-  return <ListUI {...props} />;
+  return <Next {...props} />;
+};
+const renderList = createComponentResolver([
+  ListWithActionResolver,
+  ListWithPopoverResolver,
+  ListWithKeyboardResolver,
+]);
+
+export const List = (props) => {
+  const refDefault = useRef(null);
+  props.ref = props.ref || refDefault;
+  return renderList(ListUI, props);
 };
 const ListUI = (props) => {
   import.meta.css = css;
@@ -1230,6 +1248,7 @@ const BottomFiller = ({
 // Popover variant: handles open/close/positioning events and forwards
 // navigate/confirm/clear to the underlying list.
 const ListWithPopover = (props) => {
+  const Next = useNextResolver();
   const cleanupRef = useRef();
 
   useLayoutEffect(() => {
@@ -1239,7 +1258,7 @@ const ListWithPopover = (props) => {
   }, []);
 
   return (
-    <List
+    <Next
       {...props}
       popover="manual"
       onnavi_list_request_open={(e) => {
@@ -1320,6 +1339,7 @@ const ListWithAction = (props) => {
 };
 
 const ListWithActionInner = (props) => {
+  const Next = useNextResolver();
   const uiStateController = useContext(UIStateControllerContext);
   const uiState = useContext(UIStateContext);
 
@@ -1350,7 +1370,7 @@ const ListWithActionInner = (props) => {
   };
 
   const listVnode = (
-    <List
+    <Next
       {...remainingProps}
       keyboardInteractions
       action={undefined}
@@ -1537,6 +1557,7 @@ const ListWithActionInner = (props) => {
 // Interactive variant: manages hover/keyboard/selection state and handles the
 // navi event protocol, then delegates rendering to ListUI.
 const ListWithKeyboardInteractions = (props) => {
+  const Next = useNextResolver();
   const { autoFocus, autoFocusPreventScroll } = props;
   const defaultRef = useRef(null);
   const ref = props.ref || defaultRef;
@@ -1589,7 +1610,7 @@ const ListWithKeyboardInteractions = (props) => {
   useAutoFocus(ref, autoFocus, { preventScroll: autoFocusPreventScroll });
 
   return (
-    <List
+    <Next
       {...props}
       ref={ref}
       keyboardInteractions={undefined}
