@@ -175,6 +175,7 @@
             <InputInteractivityDemo />
             <AccidentalReadOnlyDemo />
             <TypeVariationsDemo />
+            <DatetimeDemo />
             <SizeVariationsDemo />
             <InteractiveDemo />
           </div>
@@ -208,6 +209,9 @@
               </li>
               <li>
                 <a href="#types">Input Types</a>
+              </li>
+              <li>
+                <a href="#datetime">Datetime Input</a>
               </li>
               <li>
                 <a href="#sizes">Size Variations</a>
@@ -657,6 +661,47 @@
               </Box>
             </fieldset>
 
+            <fieldset>
+              <legend>always fails</legend>
+              <p className="states-description">
+                When the action always throws, the input shows an error state
+                after the action rejects.
+              </p>
+              <Box flex spacing="s">
+                <Input
+                  placeholder="Type something..."
+                  action={async (value) => {
+                    await delay(800);
+                    throw new Error(`Processing failed for: "${value}"`);
+                  }}
+                  actionAfterChange
+                />
+              </Box>
+            </fieldset>
+
+            <fieldset>
+              <legend>fails when too short</legend>
+              <p className="states-description">
+                The action validates on blur/Enter and rejects if the text is
+                shorter than 5 characters.
+              </p>
+              <Box flex spacing="s">
+                <Input
+                  placeholder="Enter at least 5 characters..."
+                  action={async (value) => {
+                    await delay(600);
+                    if (!value || value.length < 5) {
+                      throw new Error(
+                        "Text must be at least 5 characters long",
+                      );
+                    }
+                    return value;
+                  }}
+                  actionAfterChange
+                />
+              </Box>
+            </fieldset>
+
             <h3 id="interactivity-form">Inside Form</h3>
 
             <p className="states-description">
@@ -719,6 +764,89 @@
               update it.
             </p>
             <Input value="Frozen — no uiAction or action provided" />
+          </div>
+        );
+      };
+
+      const DatetimeDemo = () => {
+        const [externalDateTime, setExternalDateTime] = useState(
+          "2024-01-15T14:30:00Z",
+        );
+        const [uiDateTime, setUiDateTime] = useState(externalDateTime);
+        const [saveResult, setSaveResult] = useState("");
+
+        return (
+          <div className="demo-section" id="datetime">
+            <h2>Datetime Input</h2>
+            <p className="states-description">
+              The <code>datetime-local</code> input type works with UTC ISO
+              strings: the <code>value</code> prop accepts a UTC string and the
+              browser converts it to local time for display. The action receives
+              the UTC string back, so no manual timezone conversion is needed.
+            </p>
+
+            <fieldset>
+              <legend>datetime-local with action</legend>
+              <p className="states-description">
+                The input displays the value in local time. The external state
+                below simulates what a server would store (UTC). Change the
+                datetime and blur/press Enter to trigger the save action.
+              </p>
+              <Box column spacing="sm">
+                <div
+                  style={{
+                    padding: "10px 14px",
+                    background: "#e3f2fd",
+                    borderRadius: "4px",
+                    fontSize: "0.85rem",
+                  }}
+                >
+                  <strong>External state (UTC):</strong>{" "}
+                  {externalDateTime || "(not set)"}
+                  <Box flex="y" spacing="s" style={{ marginTop: "8px" }}>
+                    <button
+                      onClick={() =>
+                        setExternalDateTime("2024-01-15T14:30:00Z")
+                      }
+                    >
+                      Jan 15, 2:30 PM UTC
+                    </button>
+                    <button
+                      onClick={() =>
+                        setExternalDateTime("2024-12-25T09:00:00Z")
+                      }
+                    >
+                      Dec 25, 9:00 AM UTC
+                    </button>
+                    <button onClick={() => setExternalDateTime(null)}>
+                      Clear
+                    </button>
+                  </Box>
+                </div>
+                <label style={{ fontSize: "0.9rem" }}>
+                  Datetime (displayed in local time):
+                  <Input
+                    type="datetime-local"
+                    name="datetime"
+                    value={externalDateTime}
+                    uiAction={setUiDateTime}
+                    action={async (value) => {
+                      setSaveResult("Saving...");
+                      await delay(1000);
+                      setExternalDateTime(value);
+                      setSaveResult(`✅ Saved: ${value}`);
+                    }}
+                    actionAfterChange
+                  />
+                </label>
+                <div className="value-display">
+                  UI state: {uiDateTime || "(empty)"}
+                </div>
+                <div className="value-display">
+                  {saveResult || "Change value and blur/Enter to save..."}
+                </div>
+              </Box>
+            </fieldset>
           </div>
         );
       };
