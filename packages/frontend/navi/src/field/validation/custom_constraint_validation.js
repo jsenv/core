@@ -87,10 +87,10 @@ import {
 import { listenInputValue } from "./input_value_listener.js";
 
 export const NAVI_VALIDITY_CHANGE_CUSTOM_EVENT = "navi_validity_change";
-const INTERACTION_CONSTRAINTS = [DISABLED_CONSTRAINT, READONLY_CONSTRAINT];
+const UI_ACTION_CONSTRAINTS = [DISABLED_CONSTRAINT, READONLY_CONSTRAINT];
 
 const pointerEventTypeSet = new Set(["pointerdown", "mousedown", "click"]);
-export const onRequestInteraction = (event) => {
+export const onRequestUIAction = (event) => {
   if (pointerEventTypeSet.has(event)) {
     if (event.button !== 0) {
       return false;
@@ -99,16 +99,16 @@ export const onRequestInteraction = (event) => {
   if (event.defaultPrevented) {
     return false;
   }
-  const elementHandlingInteraction = event.currentTarget;
+  const elementHandlingUIAction = event.currentTarget;
   const requester = event.target;
-  const [isValid] = checkConstraintsAndReport(INTERACTION_CONSTRAINTS, {
+  const [isValid] = checkConstraintsAndReport(UI_ACTION_CONSTRAINTS, {
     event,
     requester,
   });
   if (!isValid) {
     dispatchInternalCustomEvent(
-      elementHandlingInteraction,
-      "navi_interaction_prevented",
+      elementHandlingUIAction,
+      "navi_ui_action_prevented",
       {
         event,
         requester,

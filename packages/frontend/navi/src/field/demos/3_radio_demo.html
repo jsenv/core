@@ -126,44 +126,42 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      import { Input, Label, Box, Icon } from "@jsenv/navi";
+      import { Input, Field, Label, Box, Icon } from "@jsenv/navi";
 
       const App = () => {
         return (
           <div>
-            <nav style={{ marginBottom: "32px" }}>
-              <ul
-                style={{
-                  margin: 0,
-                  padding: 0,
-                  listStyle: "none",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "4px",
-                }}
-              >
-                <li>
-                  <a href="#radio-states">Radio States</a>
-                </li>
-                <li>
-                  <a href="#radio-icons">Radio with Icons</a>
-                </li>
-                <li>
-                  <a href="#button-icons">Button Appearance with Icons</a>
-                </li>
-                <li>
-                  <a href="#custom-colors">Custom Colors</a>
-                </li>
-                <li>
-                  <a href="#interactive">Interactive Controls</a>
-                </li>
-              </ul>
-            </nav>
+            <TableOfContents />
             <BasicStatesDemo />
             <IconStatesDemo />
             <ButtonIconStatesDemo />
             <ColorDemo />
             <InteractiveDemo />
+          </div>
+        );
+      };
+
+      const TableOfContents = () => {
+        return (
+          <div class="demo-section">
+            <h2>Table of contents</h2>
+            <ol style={{ margin: 0, paddingLeft: "20px", lineHeight: "2" }}>
+              <li>
+                <a href="#radio-states">Radio States</a>
+              </li>
+              <li>
+                <a href="#radio-icons">Radio with Icons</a>
+              </li>
+              <li>
+                <a href="#button-icons">Button Appearance with Icons</a>
+              </li>
+              <li>
+                <a href="#custom-colors">Custom Colors</a>
+              </li>
+              <li>
+                <a href="#interactive">Interactive Controls</a>
+              </li>
+            </ol>
           </div>
         );
       };
@@ -181,14 +179,14 @@
                 individual radios to focus on their appearance and behavior.
               </p>
 
-              <Box column spacing="sm">
+              <Box flex spacing="s">
                 <Box as="fieldset" width="100">
                   <legend>Default</legend>
-                  <Box row spacing="sm" alignX="start">
-                    <Label>
+                  <Box flex="y" spacing="s" alignX="start">
+                    <Field>
                       <Input type="radio" name="demo-default-navi" value="1" />
-                      Navi
-                    </Label>
+                      <Label>Navi</Label>
+                    </Field>
                     <label>
                       <input
                         type="radio"
@@ -201,16 +199,16 @@
                 </Box>
                 <Box as="fieldset" width="200">
                   <legend>:focus-visible</legend>
-                  <Box row spacing="sm" alignX="start">
-                    <Label>
+                  <Box flex="y" spacing="s" alignX="start">
+                    <Field>
                       <Input
                         type="radio"
                         name="demo-focus-navi"
                         value="1"
                         pseudoState={{ ":focus-visible": true }}
                       />
-                      Navi
-                    </Label>
+                      <Label>Navi</Label>
+                    </Field>
                     <label>
                       <input
                         type="radio"
@@ -224,16 +222,16 @@
                 </Box>
                 <Box as="fieldset" width="150">
                   <legend>:disabled</legend>
-                  <Box row spacing="sm" alignX="start">
-                    <Label>
+                  <Box flex="y" spacing="s" alignX="start">
+                    <Field>
                       <Input
                         type="radio"
                         name="demo-disabled-navi"
                         value="1"
                         disabled
                       />
-                      Navi
-                    </Label>
+                      <Label>Navi</Label>
+                    </Field>
                     <label>
                       <input
                         type="radio"
@@ -246,19 +244,19 @@
                   </Box>
                 </Box>
               </Box>
-              <Box column spacing="sm">
+              <Box flex spacing="s">
                 <Box as="fieldset" width="100">
                   <legend>:checked</legend>
-                  <Box row spacing="sm" alignX="start">
-                    <Label>
+                  <Box flex="y" spacing="s" alignX="start">
+                    <Field>
                       <Input
                         type="radio"
                         name="demo-checked-navi"
                         value="1"
                         defaultValue
                       />
-                      Navi
-                    </Label>
+                      <Label>Navi</Label>
+                    </Field>
                     <label>
                       <input
                         type="radio"
@@ -272,8 +270,8 @@
                 </Box>
                 <Box as="fieldset" width="200">
                   <legend>:focus-visible:checked</legend>
-                  <Box row spacing="sm" alignX="start">
-                    <Label>
+                  <Box flex="y" spacing="s" alignX="start">
+                    <Field>
                       <Input
                         type="radio"
                         name="demo-focus-checked-navi"
@@ -281,8 +279,8 @@
                         defaultValue
                         pseudoState={{ ":focus-visible": true }}
                       />
-                      Navi
-                    </Label>
+                      <Label>Navi</Label>
+                    </Field>
                     <label>
                       <input
                         type="radio"
@@ -297,8 +295,8 @@
                 </Box>
                 <Box as="fieldset" width="150">
                   <legend>:disabled:checked</legend>
-                  <Box row spacing="sm" alignX="start">
-                    <Label>
+                  <Box flex="y" spacing="s" alignX="start">
+                    <Field>
                       <Input
                         type="radio"
                         name="demo-checked-disabled-navi"
@@ -306,8 +304,8 @@
                         defaultValue
                         disabled
                       />
-                      Navi
-                    </Label>
+                      <Label>Navi</Label>
+                    </Field>
                     <label>
                       <input
                         type="radio"
@@ -328,41 +326,39 @@
                 aren't available in standard HTML.
               </p>
 
-              <Box column spacing="sm">
+              <Box flex spacing="s">
                 <Box as="fieldset" width="200">
                   <legend>:read-only</legend>
-                  <Box row spacing="sm" alignX="start">
-                    <Label>
+                  <Box flex="y" spacing="s" alignX="start">
+                    <Field>
                       <Input
                         type="radio"
                         name="demo-enhanced-readonly"
                         value="1"
                         readOnly
                       />
-                      Read-only
-                    </Label>
+                      <Label>Read-only</Label>
+                    </Field>
                   </Box>
                 </Box>
                 <Box as="fieldset" width="200">
                   <legend>:-navi-loading</legend>
-                  <Box row spacing="sm" alignX="start">
-                    <Label>
+                  <Box flex="y" spacing="s" alignX="start">
+                    <Field>
                       <Input
                         type="radio"
                         name="demo-loading"
                         value="1"
                         loading
                       />
-                      Loading
-                    </Label>
+                      <Label>Loading</Label>
+                    </Field>
                   </Box>
                 </Box>
-              </Box>
-              <Box column spacing="sm">
                 <Box as="fieldset" width="200">
                   <legend>:read-only:checked</legend>
-                  <Box row spacing="sm" alignX="start">
-                    <Label>
+                  <Box flex="y" spacing="s" alignX="start">
+                    <Field>
                       <Input
                         type="radio"
                         name="demo-enhanced-readonly-checked"
@@ -370,14 +366,14 @@
                         readOnly
                         checked
                       />
-                      Read-only
-                    </Label>
+                      <Label>Read-only</Label>
+                    </Field>
                   </Box>
                 </Box>
                 <Box as="fieldset" width="200">
                   <legend>:-navi-loading:checked</legend>
-                  <Box row spacing="sm" alignX="start">
-                    <Label>
+                  <Box flex="y" spacing="s" alignX="start">
+                    <Field>
                       <Input
                         type="radio"
                         name="demo-loading-checked"
@@ -385,35 +381,11 @@
                         loading
                         checked
                       />
-                      Loading
-                    </Label>
+                      <Label>Loading</Label>
+                    </Field>
                   </Box>
                 </Box>
               </Box>
-
-              <div
-                style={{
-                  marginTop: "15px",
-                  padding: "10px",
-                  background: "#f8f9fa",
-                  borderRadius: "4px",
-                  fontSize: "0.85rem",
-                  color: "#666",
-                }}
-              >
-                <strong>Enhanced State Explanations:</strong>
-                <ul style={{ margin: "5px 0", paddingLeft: "20px" }}>
-                  <li>
-                    <strong>Read-only:</strong> Visually indicates the radio
-                    cannot be interacted with, but remains focusable for
-                    accessibility
-                  </li>
-                  <li>
-                    <strong>Loading:</strong> Shows a spinner while allowing the
-                    radio to remain interactive
-                  </li>
-                </ul>
-              </div>
             </div>
           </div>
         );
@@ -432,11 +404,11 @@
                 <code>icon</code> prop.
               </p>
 
-              <Box column spacing="sm">
+              <Box flex spacing="s">
                 <Box as="fieldset" width="200">
                   <legend>Default (unchecked)</legend>
-                  <Box row spacing="sm" alignX="start">
-                    <Label>
+                  <Box flex="y" spacing="s" alignX="start">
+                    <Field>
                       <Input
                         type="radio"
                         name="demo-icon-default"
@@ -445,9 +417,9 @@
                         opacity="0.3"
                         style={{ ":checked": { opacity: 1 } }}
                       />
-                      Music
-                    </Label>
-                    <Label>
+                      <Label>Music</Label>
+                    </Field>
+                    <Field>
                       <Input
                         type="radio"
                         name="demo-icon-default"
@@ -456,9 +428,9 @@
                         opacity="0.3"
                         style={{ ":checked": { opacity: 1 } }}
                       />
-                      Art
-                    </Label>
-                    <Label>
+                      <Label>Art</Label>
+                    </Field>
+                    <Field>
                       <Input
                         type="radio"
                         name="demo-icon-default"
@@ -467,15 +439,15 @@
                         opacity="0.3"
                         style={{ ":checked": { opacity: 1 } }}
                       />
-                      Sports
-                    </Label>
+                      <Label>Sports</Label>
+                    </Field>
                   </Box>
                 </Box>
 
                 <Box as="fieldset" width="200">
                   <legend>:focus-visible (unchecked)</legend>
-                  <Box row spacing="sm" alignX="start">
-                    <Label>
+                  <Box flex="y" spacing="s" alignX="start">
+                    <Field>
                       <Input
                         type="radio"
                         name="demo-icon-focus"
@@ -483,24 +455,24 @@
                         icon={<Icon>🎵</Icon>}
                         pseudoState={{ ":focus-visible": true }}
                       />
-                      Music
-                    </Label>
-                    <Label>
+                      <Label>Music</Label>
+                    </Field>
+                    <Field>
                       <Input
                         type="radio"
                         name="demo-icon-focus"
                         value="2"
                         icon={<Icon>🎨</Icon>}
                       />
-                      Art
-                    </Label>
+                      <Label>Art</Label>
+                    </Field>
                   </Box>
                 </Box>
 
                 <Box as="fieldset" width="200">
                   <legend>:disabled (unchecked)</legend>
-                  <Box row spacing="sm" alignX="start">
-                    <Label>
+                  <Box flex="y" spacing="s" alignX="start">
+                    <Field>
                       <Input
                         type="radio"
                         name="demo-icon-disabled"
@@ -508,9 +480,9 @@
                         icon={<Icon>🎵</Icon>}
                         disabled
                       />
-                      Music
-                    </Label>
-                    <Label>
+                      <Label>Music</Label>
+                    </Field>
+                    <Field>
                       <Input
                         type="radio"
                         name="demo-icon-disabled"
@@ -518,17 +490,17 @@
                         icon={<Icon>🎨</Icon>}
                         disabled
                       />
-                      Art
-                    </Label>
+                      <Label>Art</Label>
+                    </Field>
                   </Box>
                 </Box>
               </Box>
 
-              <Box column spacing="sm">
+              <Box flex spacing="s">
                 <Box as="fieldset" width="200">
                   <legend>:checked</legend>
-                  <Box row spacing="sm" alignX="start">
-                    <Label>
+                  <Box flex="y" spacing="s" alignX="start">
+                    <Field>
                       <Input
                         type="radio"
                         name="demo-icon-checked"
@@ -536,24 +508,24 @@
                         icon={<Icon>🎵</Icon>}
                         defaultValue
                       />
-                      Music
-                    </Label>
-                    <Label>
+                      <Label>Music</Label>
+                    </Field>
+                    <Field>
                       <Input
                         type="radio"
                         name="demo-icon-checked"
                         value="2"
                         icon={<Icon>🎨</Icon>}
                       />
-                      Art
-                    </Label>
+                      <Label>Art</Label>
+                    </Field>
                   </Box>
                 </Box>
 
                 <Box as="fieldset" width="200">
                   <legend>:focus-visible:checked</legend>
-                  <Box row spacing="sm" alignX="start">
-                    <Label>
+                  <Box flex="y" spacing="s" alignX="start">
+                    <Field>
                       <Input
                         type="radio"
                         name="demo-icon-focus-checked"
@@ -562,24 +534,24 @@
                         defaultValue
                         pseudoState={{ ":focus-visible": true }}
                       />
-                      Music
-                    </Label>
-                    <Label>
+                      <Label>Music</Label>
+                    </Field>
+                    <Field>
                       <Input
                         type="radio"
                         name="demo-icon-focus-checked"
                         value="2"
                         icon={<Icon>🎨</Icon>}
                       />
-                      Art
-                    </Label>
+                      <Label>Art</Label>
+                    </Field>
                   </Box>
                 </Box>
 
                 <Box as="fieldset" width="200">
                   <legend>:disabled:checked</legend>
-                  <Box row spacing="sm" alignX="start">
-                    <Label>
+                  <Box flex="y" spacing="s" alignX="start">
+                    <Field>
                       <Input
                         type="radio"
                         name="demo-icon-disabled-checked"
@@ -588,9 +560,9 @@
                         defaultValue
                         disabled
                       />
-                      Music
-                    </Label>
-                    <Label>
+                      <Label>Music</Label>
+                    </Field>
+                    <Field>
                       <Input
                         type="radio"
                         name="demo-icon-disabled-checked"
@@ -598,8 +570,8 @@
                         icon={<Icon>🎨</Icon>}
                         disabled
                       />
-                      Art
-                    </Label>
+                      <Label>Art</Label>
+                    </Field>
                   </Box>
                 </Box>
               </Box>
@@ -609,11 +581,11 @@
                 Additional Navi-specific states for radio buttons with icons.
               </p>
 
-              <Box column spacing="sm">
+              <Box flex spacing="s">
                 <Box as="fieldset" width="200">
                   <legend>:read-only (unchecked)</legend>
-                  <Box row spacing="sm" alignX="start">
-                    <Label>
+                  <Box flex="y" spacing="s" alignX="start">
+                    <Field>
                       <Input
                         type="radio"
                         name="demo-icon-readonly"
@@ -621,9 +593,9 @@
                         icon={<Icon>🎵</Icon>}
                         readOnly
                       />
-                      Music
-                    </Label>
-                    <Label>
+                      <Label>Music</Label>
+                    </Field>
+                    <Field>
                       <Input
                         type="radio"
                         name="demo-icon-readonly"
@@ -631,15 +603,15 @@
                         icon={<Icon>🎨</Icon>}
                         readOnly
                       />
-                      Art
-                    </Label>
+                      <Label>Art</Label>
+                    </Field>
                   </Box>
                 </Box>
 
                 <Box as="fieldset" width="200">
                   <legend>:read-only:checked</legend>
-                  <Box row spacing="sm" alignX="start">
-                    <Label>
+                  <Box flex="y" spacing="s" alignX="start">
+                    <Field>
                       <Input
                         type="radio"
                         name="demo-icon-readonly-checked"
@@ -648,9 +620,9 @@
                         readOnly
                         checked
                       />
-                      Music
-                    </Label>
-                    <Label>
+                      <Label>Music</Label>
+                    </Field>
+                    <Field>
                       <Input
                         type="radio"
                         name="demo-icon-readonly-checked"
@@ -658,15 +630,15 @@
                         icon={<Icon>🎨</Icon>}
                         readOnly
                       />
-                      Art
-                    </Label>
+                      <Label>Art</Label>
+                    </Field>
                   </Box>
                 </Box>
 
                 <Box as="fieldset" width="200">
                   <legend>:-navi-loading (unchecked)</legend>
-                  <Box row spacing="sm" alignX="start">
-                    <Label>
+                  <Box flex="y" spacing="s" alignX="start">
+                    <Field>
                       <Input
                         type="radio"
                         name="demo-icon-loading"
@@ -674,9 +646,9 @@
                         icon={<Icon>🎵</Icon>}
                         loading
                       />
-                      Music
-                    </Label>
-                    <Label>
+                      <Label>Music</Label>
+                    </Field>
+                    <Field>
                       <Input
                         type="radio"
                         name="demo-icon-loading"
@@ -684,15 +656,15 @@
                         icon={<Icon>🎨</Icon>}
                         loading
                       />
-                      Art
-                    </Label>
+                      <Label>Art</Label>
+                    </Field>
                   </Box>
                 </Box>
 
                 <Box as="fieldset" width="200">
                   <legend>:-navi-loading:checked</legend>
-                  <Box row spacing="sm" alignX="start">
-                    <Label>
+                  <Box flex="y" spacing="s" alignX="start">
+                    <Field>
                       <Input
                         type="radio"
                         name="demo-icon-loading-checked"
@@ -701,9 +673,9 @@
                         loading
                         checked
                       />
-                      Music
-                    </Label>
-                    <Label>
+                      <Label>Music</Label>
+                    </Field>
+                    <Field>
                       <Input
                         type="radio"
                         name="demo-icon-loading-checked"
@@ -711,39 +683,11 @@
                         icon={<Icon>🎨</Icon>}
                         loading
                       />
-                      Art
-                    </Label>
+                      <Label>Art</Label>
+                    </Field>
                   </Box>
                 </Box>
               </Box>
-
-              <div
-                style={{
-                  marginTop: "15px",
-                  padding: "10px",
-                  background: "#f8f9fa",
-                  borderRadius: "4px",
-                  fontSize: "0.85rem",
-                  color: "#666",
-                }}
-              >
-                <strong>Icon Radio Behavior:</strong>
-                <ul style={{ margin: "5px 0", paddingLeft: "20px" }}>
-                  <li>Icons replace the standard radio circle appearance</li>
-                  <li>
-                    All standard radio states (checked, focus, disabled) still
-                    apply
-                  </li>
-                  <li>
-                    Visual feedback is provided through background color and
-                    opacity changes
-                  </li>
-                  <li>
-                    Loading state shows a spinner overlay while preserving the
-                    icon
-                  </li>
-                </ul>
-              </div>
             </div>
           </div>
         );
@@ -764,11 +708,11 @@
                 maintaining radio semantics.
               </p>
 
-              <Box column spacing="sm">
+              <Box flex spacing="s">
                 <Box as="fieldset" width="300">
                   <legend>Default Group (one selected)</legend>
-                  <Box row spacing="sm" alignX="start" wrap>
-                    <Label>
+                  <Box flex="y" spacing="s" alignX="start" wrap>
+                    <Field>
                       <Input
                         borderRadius="s"
                         type="radio"
@@ -782,9 +726,9 @@
                         appearance="button"
                         defaultValue
                       />
-                      Home
-                    </Label>
-                    <Label>
+                      <Label>Home</Label>
+                    </Field>
+                    <Field>
                       <Input
                         borderRadius="s"
                         type="radio"
@@ -797,9 +741,9 @@
                         icon={<Icon>💼</Icon>}
                         appearance="button"
                       />
-                      Work
-                    </Label>
-                    <Label>
+                      <Label>Work</Label>
+                    </Field>
+                    <Field>
                       <Input
                         borderRadius="s"
                         type="radio"
@@ -813,15 +757,15 @@
                         icon={<Icon>✈️</Icon>}
                         appearance="button"
                       />
-                      Travel
-                    </Label>
+                      <Label>Travel</Label>
+                    </Field>
                   </Box>
                 </Box>
 
                 <Box as="fieldset" width="300">
                   <legend>:focus-visible state</legend>
-                  <Box row spacing="sm" alignX="start" wrap>
-                    <Label>
+                  <Box flex="y" spacing="s" alignX="start" wrap>
+                    <Field>
                       <Input
                         type="radio"
                         name="demo-button-focus"
@@ -830,9 +774,9 @@
                         appearance="button"
                         pseudoState={{ ":focus-visible": true }}
                       />
-                      Music
-                    </Label>
-                    <Label>
+                      <Label>Music</Label>
+                    </Field>
+                    <Field>
                       <Input
                         type="radio"
                         name="demo-button-focus"
@@ -841,9 +785,9 @@
                         appearance="button"
                         defaultValue
                       />
-                      Art
-                    </Label>
-                    <Label>
+                      <Label>Art</Label>
+                    </Field>
+                    <Field>
                       <Input
                         type="radio"
                         name="demo-button-focus"
@@ -851,15 +795,15 @@
                         icon={<Icon>🏃</Icon>}
                         appearance="button"
                       />
-                      Sports
-                    </Label>
+                      <Label>Sports</Label>
+                    </Field>
                   </Box>
                 </Box>
 
                 <Box as="fieldset" width="300">
                   <legend>:disabled state</legend>
-                  <Box row spacing="sm" alignX="start" wrap>
-                    <Label>
+                  <Box flex="y" spacing="s" alignX="start" wrap>
+                    <Field>
                       <Input
                         type="radio"
                         name="demo-button-disabled"
@@ -868,9 +812,9 @@
                         appearance="button"
                         disabled
                       />
-                      Read
-                    </Label>
-                    <Label>
+                      <Label>Read</Label>
+                    </Field>
+                    <Field>
                       <Input
                         type="radio"
                         name="demo-button-disabled"
@@ -880,9 +824,9 @@
                         defaultValue
                         disabled
                       />
-                      Write
-                    </Label>
-                    <Label>
+                      <Label>Write</Label>
+                    </Field>
+                    <Field>
                       <Input
                         type="radio"
                         name="demo-button-disabled"
@@ -891,15 +835,17 @@
                         appearance="button"
                         disabled
                       />
-                      Code
-                    </Label>
+                      <Label>Code</Label>
+                    </Field>
                   </Box>
                 </Box>
+              </Box>
 
+              <Box flex spacing="s">
                 <Box as="fieldset" width="300">
                   <legend>:read-only state</legend>
-                  <Box row spacing="sm" alignX="start" wrap>
-                    <Label>
+                  <Box flex="y" spacing="s" alignX="start" wrap>
+                    <Field>
                       <Input
                         type="radio"
                         name="demo-button-readonly"
@@ -908,9 +854,9 @@
                         appearance="button"
                         readOnly
                       />
-                      Morning
-                    </Label>
-                    <Label>
+                      <Label>Morning</Label>
+                    </Field>
+                    <Field>
                       <Input
                         type="radio"
                         name="demo-button-readonly"
@@ -920,9 +866,9 @@
                         checked
                         readOnly
                       />
-                      Afternoon
-                    </Label>
-                    <Label>
+                      <Label>Afternoon</Label>
+                    </Field>
+                    <Field>
                       <Input
                         type="radio"
                         name="demo-button-readonly"
@@ -931,15 +877,15 @@
                         appearance="button"
                         readOnly
                       />
-                      Evening
-                    </Label>
+                      <Label>Evening</Label>
+                    </Field>
                   </Box>
                 </Box>
 
                 <Box as="fieldset" width="300">
                   <legend>:-navi-loading state</legend>
-                  <Box row spacing="sm" alignX="start" wrap>
-                    <Label>
+                  <Box flex="y" spacing="s" alignX="start" wrap>
+                    <Field>
                       <Input
                         type="radio"
                         name="demo-button-loading"
@@ -948,9 +894,9 @@
                         appearance="button"
                         loading
                       />
-                      Upload
-                    </Label>
-                    <Label>
+                      <Label>Upload</Label>
+                    </Field>
+                    <Field>
                       <Input
                         type="radio"
                         name="demo-button-loading"
@@ -960,9 +906,9 @@
                         checked
                         loading
                       />
-                      Download
-                    </Label>
-                    <Label>
+                      <Label>Download</Label>
+                    </Field>
+                    <Field>
                       <Input
                         type="radio"
                         name="demo-button-loading"
@@ -971,89 +917,50 @@
                         appearance="button"
                         loading
                       />
-                      Sync
-                    </Label>
+                      <Label>Sync</Label>
+                    </Field>
                   </Box>
                 </Box>
-              </Box>
 
-              <div className="enhanced-states-title">Size Variations</div>
-              <p className="states-description">
-                Button appearance adapts to different sizes while maintaining
-                the icon + text layout.
-              </p>
-
-              <Box column spacing="sm">
                 <Box as="fieldset" width="400">
                   <legend>Different sizes</legend>
-                  <Box column spacing="sm">
-                    <Box row spacing="sm" alignX="start" wrap>
-                      <Label>
-                        <Input
-                          type="radio"
-                          name="demo-button-sizes"
-                          value="small"
-                          icon={<Icon>📱</Icon>}
-                          appearance="button"
-                          size="s"
-                          defaultValue
-                        />
-                        Label
-                      </Label>
-                      <Label>
-                        <Input
-                          type="radio"
-                          name="demo-button-sizes"
-                          value="medium"
-                          icon={<Icon>📱</Icon>}
-                          appearance="button"
-                        />
-                        Label
-                      </Label>
-                      <Label>
-                        <Input
-                          type="radio"
-                          name="demo-button-sizes"
-                          value="large"
-                          icon={<Icon>📱</Icon>}
-                          appearance="button"
-                          size="l"
-                        />
-                        Label
-                      </Label>
-                    </Box>
+                  <Box flex="y" spacing="s" alignX="start" wrap>
+                    <Field>
+                      <Input
+                        type="radio"
+                        name="demo-button-sizes"
+                        value="small"
+                        icon={<Icon>📱</Icon>}
+                        appearance="button"
+                        size="s"
+                        defaultValue
+                      />
+                      <Label>Small</Label>
+                    </Field>
+                    <Field>
+                      <Input
+                        type="radio"
+                        name="demo-button-sizes"
+                        value="medium"
+                        icon={<Icon>📱</Icon>}
+                        appearance="button"
+                      />
+                      <Label>Medium</Label>
+                    </Field>
+                    <Field>
+                      <Input
+                        type="radio"
+                        name="demo-button-sizes"
+                        value="large"
+                        icon={<Icon>📱</Icon>}
+                        appearance="button"
+                        size="l"
+                      />
+                      <Label>Large</Label>
+                    </Field>
                   </Box>
                 </Box>
               </Box>
-
-              <div
-                style={{
-                  marginTop: "15px",
-                  padding: "10px",
-                  background: "#f8f9fa",
-                  borderRadius: "4px",
-                  fontSize: "0.85rem",
-                  color: "#666",
-                }}
-              >
-                <strong>Button Appearance Benefits:</strong>
-                <ul style={{ margin: "5px 0", paddingLeft: "20px" }}>
-                  <li>
-                    Creates toggle button groups that are visually distinct
-                  </li>
-                  <li>
-                    Maintains radio button semantics and keyboard navigation
-                  </li>
-                  <li>Icons and text are properly aligned and sized</li>
-                  <li>
-                    Visual states (pressed, focused, disabled) are clearly
-                    communicated
-                  </li>
-                  <li>
-                    Works well for toolbar-style interfaces and option selection
-                  </li>
-                </ul>
-              </div>
             </div>
           </div>
         );
@@ -1082,16 +989,16 @@
                       alignItems: "center",
                     }}
                   >
-                    <Label>
+                    <Field>
                       <Input
                         type="radio"
                         name="demo-orange"
                         value="unchecked"
                         accentColor="#f39c12"
                       />
-                      Navi
-                    </Label>
-                    <Label>
+                      <Label>Navi</Label>
+                    </Field>
+                    <Field>
                       <Input
                         type="radio"
                         name="demo-orange"
@@ -1099,8 +1006,8 @@
                         accentColor="#f39c12"
                         defaultValue
                       />
-                      Navi
-                    </Label>
+                      <Label>Navi</Label>
+                    </Field>
                     <label>
                       <input
                         type="radio"
@@ -1132,16 +1039,16 @@
                       alignItems: "center",
                     }}
                   >
-                    <Label>
+                    <Field>
                       <Input
                         type="radio"
                         name="demo-green"
                         value="unchecked"
                         accentColor="#2ecc71"
                       />
-                      Navi
-                    </Label>
-                    <Label>
+                      <Label>Navi</Label>
+                    </Field>
+                    <Field>
                       <Input
                         type="radio"
                         name="demo-green"
@@ -1149,8 +1056,8 @@
                         accentColor="#2ecc71"
                         defaultValue
                       />
-                      Navi
-                    </Label>
+                      <Label>Navi</Label>
+                    </Field>
                     <label>
                       <input
                         type="radio"
@@ -1182,16 +1089,16 @@
                       alignItems: "center",
                     }}
                   >
-                    <Label>
+                    <Field>
                       <Input
                         type="radio"
                         name="demo-dark"
                         value="unchecked"
                         accentColor="#34495e"
                       />
-                      Navi
-                    </Label>
-                    <Label>
+                      <Label>Navi</Label>
+                    </Field>
+                    <Field>
                       <Input
                         type="radio"
                         name="demo-dark"
@@ -1199,8 +1106,8 @@
                         accentColor="#34495e"
                         defaultValue
                       />
-                      Navi
-                    </Label>
+                      <Label>Navi</Label>
+                    </Field>
                     <label>
                       <input
                         type="radio"
@@ -1232,16 +1139,16 @@
                       alignItems: "center",
                     }}
                   >
-                    <Label>
+                    <Field>
                       <Input
                         type="radio"
                         name="demo-pink"
                         value="unchecked"
                         accentColor="#e91e8c"
                       />
-                      Navi
-                    </Label>
-                    <Label>
+                      <Label>Navi</Label>
+                    </Field>
+                    <Field>
                       <Input
                         type="radio"
                         name="demo-pink"
@@ -1249,8 +1156,8 @@
                         accentColor="#e91e8c"
                         defaultValue
                       />
-                      Navi
-                    </Label>
+                      <Label>Navi</Label>
+                    </Field>
                     <label>
                       <input
                         type="radio"
@@ -1289,16 +1196,16 @@
                       alignItems: "center",
                     }}
                   >
-                    <Label>
+                    <Field>
                       <Input
                         type="radio"
                         name="demo-white"
                         value="unchecked"
                         accentColor="#ffffff"
                       />
-                      Navi
-                    </Label>
-                    <Label>
+                      <Label>Navi</Label>
+                    </Field>
+                    <Field>
                       <Input
                         type="radio"
                         name="demo-white"
@@ -1306,8 +1213,8 @@
                         accentColor="#ffffff"
                         defaultValue
                       />
-                      Navi
-                    </Label>
+                      <Label>Navi</Label>
+                    </Field>
                     <label>
                       <input
                         type="radio"
@@ -1346,7 +1253,7 @@
 
             <fieldset>
               <legend>Toggle States</legend>
-              <Box row spacing="sm" alignX="start" wrap>
+              <Box flex="y" spacing="s" alignX="start" wrap>
                 <button
                   className={`control-button ${loading ? "active" : ""}`}
                   onClick={() => setLoading(!loading)}
@@ -1370,24 +1277,25 @@
 
             <fieldset>
               <legend>Interactive Radio</legend>
-              <Box column spacing="sm">
-                <Label>
+              <Box flex="y" spacing="s" alignX="start">
+                <Field>
                   <Input
                     type="radio"
                     name="interactive-demo"
                     value="option1"
                     checked={checked}
                     onUIStateChange={(newChecked) => {
-                      if (!disabled) setChecked(newChecked);
+                      if (!disabled) {
+                        setChecked(newChecked);
+                      }
                     }}
                     loading={loading}
                     disabled={disabled}
                   />
-                  Interactive Radio
-                </Label>
+                  <Label>Interactive Radio</Label>
+                </Field>
                 <div
                   style={{
-                    marginTop: "10px",
                     padding: "8px",
                     fontSize: "0.8rem",
                     fontFamily: "monospace",

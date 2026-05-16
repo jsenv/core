@@ -1,6 +1,6 @@
 import { useCallback, useContext, useRef } from "preact/hooks";
 
-import { onRequestInteraction } from "@jsenv/navi/src/field/validation/custom_constraint_validation.js";
+import { onRequestUIAction } from "@jsenv/navi/src/field/validation/custom_constraint_validation.js";
 import { Box } from "../../box/box.jsx";
 import { LoadingOutline } from "../../graphic/loading/loading_outline.jsx";
 import { useAutoFocus } from "../../utils/focus/use_auto_focus.js";
@@ -558,7 +558,7 @@ const InputCheckboxUI = (props) => {
       hasChildFunction
       baseChildPropSet={CheckboxChildPropSet}
       onClick={(e) => {
-        if (!onRequestInteraction(e)) {
+        if (!onRequestUIAction(e)) {
           e.preventDefault();
           return;
         }

@@ -9,7 +9,7 @@ import { useContext, useLayoutEffect, useMemo, useRef } from "preact/hooks";
 
 import { isSignal } from "@jsenv/navi/src/utils/is_signal.js";
 import { useNavState } from "../nav/browser_integration/browser_integration.js";
-import { useDebugUiState } from "../navi_debug.jsx";
+import { useDebugUIAction } from "../navi_debug.jsx";
 import { useInitialValue } from "../state/use_initial_value.js";
 import { FormContext } from "./form_context.js";
 import { PickerElementContext } from "./picker/picker_context.jsx";
@@ -70,7 +70,7 @@ export const useUIStateController = (
   } = {},
 ) => {
   const uiStateControllerRef = useRef();
-  const debugUiState = useDebugUiState();
+  const debugUIAction = useDebugUIAction();
   const parentUIStateController = useContext(ParentUIStateControllerContext);
   const formContext = useContext(FormContext);
   const pickerElementContext = useContext(PickerElementContext);
@@ -212,14 +212,14 @@ export const useUIStateController = (
       if (newUIState === currentUIState) {
         return;
       }
-      debugUiState(
+      debugUIAction(
         e,
         `${getElementSignature(e.currentTarget)}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> updating to ${JSON.stringify(newUIState)}`,
       );
       uiStateController.uiState = newUIState;
       uiStateSignal.value = newUIState;
       publishUIState(newUIState, e);
-      debugUiState(e, `publishUIState(${JSON.stringify(newUIState)})`);
+      debugUIAction(e, `publishUIState(${JSON.stringify(newUIState)})`);
       if (!e.detail?.suppressParentNotification) {
         notifyParentAboutChildUIStateChange(e);
       }
@@ -373,7 +373,7 @@ export const useUIGroupStateController = (
     return notifyParentAboutChildUnmount;
   }, []);
 
-  const debugUiState = useDebugUiState();
+  const debugUIAction = useDebugUIAction();
   const onChange = (_, e, { notifyExternal = true } = {}) => {
     if (groupIsRenderingRef.current) {
       pendingChangeRef.current = true;
@@ -383,7 +383,7 @@ export const useUIGroupStateController = (
       childUIStateControllerArray,
       emptyState,
     );
-    debugUiState(
+    debugUIAction(
       e,
       `${componentType}.aggregateChildStates -> ${JSON.stringify(newUIState)}`,
     );

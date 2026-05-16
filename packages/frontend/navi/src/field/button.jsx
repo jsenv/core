@@ -1,6 +1,6 @@
 import { useCallback, useContext, useRef } from "preact/hooks";
 
-import { onRequestInteraction } from "@jsenv/navi/src/field/validation/custom_constraint_validation.js";
+import { onRequestUIAction } from "@jsenv/navi/src/field/validation/custom_constraint_validation.js";
 import {
   createComponentResolver,
   useNextResolver,
@@ -447,7 +447,7 @@ const ButtonUI = (props) => {
         e.preventDefault();
       }}
       onClick={(e) => {
-        if (!onRequestInteraction(e)) {
+        if (!onRequestUIAction(e)) {
           return;
         }
         const value = e.currentTarget.value;

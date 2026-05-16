@@ -2,7 +2,7 @@ import { dispatchCustomEvent } from "@jsenv/dom";
 import { useCallback, useContext, useLayoutEffect, useRef } from "preact/hooks";
 
 import { Box } from "@jsenv/navi/src/box/box.jsx";
-import { onRequestInteraction } from "@jsenv/navi/src/field/validation/custom_constraint_validation.js";
+import { onRequestUIAction } from "@jsenv/navi/src/field/validation/custom_constraint_validation.js";
 import { LoadingOutline } from "../../graphic/loading/loading_outline.jsx";
 import { useAutoFocus } from "../../utils/focus/use_auto_focus.js";
 import { useAccentColorAttributes } from "../../utils/use_accent_color_attributes.js";
@@ -562,7 +562,7 @@ const InputRadioUI = (props) => {
       hasChildFunction
       baseChildPropSet={RadioChildPropSet}
       onClick={(e) => {
-        if (!onRequestInteraction(e)) {
+        if (!onRequestUIAction(e)) {
           e.preventDefault();
           return;
         }
