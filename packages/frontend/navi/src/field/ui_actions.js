@@ -27,12 +27,16 @@ const submitFromEvent = (e) => {
       event: e,
     });
   }
-  // submitting a picker must:
-  // - validate inputs inside the picker
-  // - sync picker ui state with field inside the picker
-  // - call picker uiAction
-  // in turn if the picker has an action has his input value will change the action is executed
-  // otherwise input inside picker is now valid and synced, ready to be picked (likely by a form managing multiple fields, including picker(s))
+  /**
+   *  submitting a picker must:
+   *  - validate inputs inside the picker
+   *  - sync picker ui state with field inside the picker
+   *  - call picker uiAction
+   *
+   * And
+   * - if picker has no action prop ->picker own input in sync (ready to be managed by a form when submitted)
+   * - otherwise if picker has an action prop -> picker own input value change triggers the action to execute
+   */
   return dispatchRequestUIAction(elementToSubmit, {
     event: e,
   });
