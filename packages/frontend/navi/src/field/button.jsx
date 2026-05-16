@@ -1,6 +1,6 @@
 import { useCallback, useContext, useRef } from "preact/hooks";
 
-import { onRequestUIAction } from "@jsenv/navi/src/field/validation/custom_constraint_validation.js";
+import { dispatchRequestUIAction } from "@jsenv/navi/src/field/validation/custom_constraint_validation.js";
 import {
   createComponentResolver,
   useNextResolver,
@@ -10,25 +10,15 @@ import { LoadingOutline } from "../graphic/loading/loading_outline.jsx";
 import { getHrefTargetInfo } from "../nav/browser_integration/href_target_info.js";
 import { assertRoute, useRouteStatus } from "../nav/route.js";
 import { Text, markAsOutsideTextFlow } from "../text/text.jsx";
-import { useAutoFocus } from "../utils/focus/use_auto_focus.js";
 import { useAccentColorAttributes } from "../utils/use_accent_color_attributes.js";
 import { FormContext } from "./form_context.js";
+import { ActionContext, useActionProps } from "./use_action_props.jsx";
+import { useFieldProps } from "./use_field_props.jsx";
 import {
-  ActionContext,
-  ActionRequesterContext,
-  useActionProps,
-} from "./use_action_props.jsx";
-import {
-  DisabledContext,
-  LoadingContext,
-  ReadOnlyContext,
-  UIStateContext,
   UIStateControllerContext,
-  useUIState,
   useUIStateController,
 } from "./use_ui_state_controller.js";
 import { dispatchRequestAction } from "./validation/custom_constraint_validation.js";
-import { useConstraints } from "./validation/hooks/use_constraints.js";
 
 /**
  * We need a content the visually shrink (scale down) but the button interactive are must remain intact
@@ -302,13 +292,10 @@ export const Button = (props) => {
   const uiStateController = useUIStateController(props, "button", {
     allowNameless: true,
   });
-  const uiState = useUIState(uiStateController);
 
   return (
     <UIStateControllerContext.Provider value={uiStateController}>
-      <UIStateContext.Provider value={uiState}>
-        {renderButton(ButtonUI, { ...props, ref })}
-      </UIStateContext.Provider>
+      {renderButton(ButtonUI, { ...props, ref })}
     </UIStateControllerContext.Provider>
   );
 };
@@ -348,10 +335,6 @@ const ButtonUI = (props) => {
   import.meta.css = css;
   const {
     ref,
-    readOnly,
-    disabled,
-    loading,
-    autoFocus,
     uiAction,
     onClick,
 
@@ -366,20 +349,8 @@ const ButtonUI = (props) => {
     discrete = icon && !revealOnInteraction,
     spacing,
     children,
-    ...rest
   } = props;
-  const uiStateController = useContext(UIStateControllerContext);
-  const contextLoading = useContext(LoadingContext);
-  const actionRequester = useContext(ActionRequesterContext);
-  const contextReadOnly = useContext(ReadOnlyContext);
-  const contextDisabled = useContext(DisabledContext);
-
-  useAutoFocus(ref, autoFocus);
-  const remainingProps = useConstraints(ref, rest);
-  const innerLoading =
-    loading || (contextLoading && actionRequester === ref.current);
-  const innerReadOnly = readOnly || contextReadOnly || innerLoading;
-  const innerDisabled = disabled || contextDisabled;
+  const fieldProps = useFieldProps(props);
 
   const isLink = href !== undefined;
   let as = "button";
@@ -423,9 +394,7 @@ const ButtonUI = (props) => {
 
   return (
     <Box
-      {...remainingProps}
-      ref={ref}
-      autFocus={undefined} // See use_auto_focus.js
+      {...fieldProps}
       as={as}
       href={href}
       target={innerTarget}
@@ -447,34 +416,30 @@ const ButtonUI = (props) => {
         e.preventDefault();
       }}
       onClick={(e) => {
-        if (!onRequestUIAction(e)) {
-          return;
-        }
-        const value = e.currentTarget.value;
-        uiStateController.setUIState(value, e);
-        uiAction?.(value, e);
-        onClick?.(e);
+        const button = e.currentTarget;
+        dispatchRequestUIAction(button, {
+          event: e,
+          value: button.value,
+          uiAction: (value, e) => {
+            uiAction?.(value, e);
+            onClick?.(e);
+          },
+        });
       }}
       data-icon={icon ? "" : undefined}
       data-reveal-on-interaction={revealOnInteraction ? "" : undefined}
       data-discrete={discrete ? "" : undefined}
       data-callout-arrow-x="center"
-      aria-busy={innerLoading}
       // style management
       baseClassName="navi_button"
       styleCSSVars={ButtonStyleCSSVars}
       pseudoClasses={ButtonPseudoClasses}
       pseudoElements={ButtonPseudoElements}
-      basePseudoState={{
-        ":read-only": innerReadOnly,
-        ":disabled": innerDisabled,
-        ":-navi-loading": innerLoading,
-      }}
       visualSelector={visualSelector}
       hasChildFunction
     >
       <LoadingOutline
-        loading={innerLoading}
+        loading={fieldProps.loading}
         inset={-1}
         color="var(--button-loader-color)"
       />

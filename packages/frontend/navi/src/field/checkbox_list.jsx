@@ -127,7 +127,6 @@ const CheckboxListWithAction = (props) => {
         dispatchRequestAction(checkboxList, {
           event: e,
           requester: checkbox,
-          actionOrigin: "action_prop",
         });
       }}
     />

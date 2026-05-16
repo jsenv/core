@@ -102,13 +102,24 @@ export const dispatchRequestUIAction = (
 };
 export const dispatchRequestAction = (
   elementWithAction,
-  { actionOrigin = "action_prop", event, requester, target },
-) => {
-  return dispatchInternalCustomEvent(elementWithAction, "navi_request_action", {
-    actionOrigin,
+  {
     event,
     requester,
-    target,
+    // for keyboard shortcuts
+    // (ideally a some point we'll just make them use a different event/code path)
+    actionOrigin = "action_prop",
+    action,
+    confirmMessage,
+    meta,
+  },
+) => {
+  return dispatchInternalCustomEvent(elementWithAction, "navi_request_action", {
+    event,
+    requester,
+    actionOrigin,
+    action,
+    confirmMessage,
+    meta,
   });
 };
 
@@ -117,9 +128,7 @@ const UI_ACTION_CONSTRAINTS = [DISABLED_CONSTRAINT, READONLY_CONSTRAINT];
 
 const pointerEventTypeSet = new Set(["pointerdown", "mousedown", "click"]);
 export const onRequestUIAction = (requestUIActionCustomEvent) => {
-  const event = requestUIActionCustomEvent.detail.event;
-  const value = requestUIActionCustomEvent.detail.value;
-  const uiAction = requestUIActionCustomEvent.detail.value;
+  const { event, value, uiAction } = requestUIActionCustomEvent.detail;
 
   if (pointerEventTypeSet.has(event)) {
     if (event.button !== 0) {
@@ -132,7 +141,7 @@ export const onRequestUIAction = (requestUIActionCustomEvent) => {
   const elementHandlingUIAction = requestUIActionCustomEvent.currentTarget;
   const requester = event.target;
   const [isValid] = checkConstraintsAndReport(UI_ACTION_CONSTRAINTS, {
-    event,
+    event: requestUIActionCustomEvent,
     requester,
   });
   const customEventDetail = {
@@ -154,21 +163,24 @@ export const onRequestUIAction = (requestUIActionCustomEvent) => {
 
 export const onRequestAction = (
   action,
-  event,
+  requestActionCustomEvent,
   {
-    requester = event.detail?.requester || event.target,
-    actionOrigin = event.detail?.actionOrigin,
+    requester = requestActionCustomEvent.detail.requester ||
+      requestActionCustomEvent.target,
+    actionOrigin = requestActionCustomEvent.detail.actionOrigin,
+    meta = requestActionCustomEvent.detail.meta || {},
+    confirmMessage = requestActionCustomEvent.detail.confirmMessage,
     method = "rerun",
-    meta = event.detail?.meta || {},
-    confirmMessage,
     debugAction = () => {},
   } = {},
 ) => {
+  if (requestActionCustomEvent.detail.action) {
+    // keyboard shotcut give the action and action is irrelevant here, the kayboard shortcut must win
+    action = requestActionCustomEvent.detail.action;
+  }
+
   if (!action || !action.isAction) {
     throw new TypeError("First argument of onRequestAction must be an action");
-  }
-  if (!event || !(event instanceof Event)) {
-    throw new TypeError("Second argument of onRequestAction must be an Event");
   }
   if (!actionOrigin) {
     console.warn("requestAction: actionOrigin is required");
@@ -177,26 +189,26 @@ export const onRequestAction = (
     action,
     actionOrigin,
     method,
-    event,
+    event: requestActionCustomEvent,
     requester,
     meta,
   };
-  const elementHandlingAction = event.currentTarget;
+  const elementHandlingAction = requestActionCustomEvent.currentTarget;
   if (requester === elementHandlingAction) {
     debugAction(
-      event,
+      requestActionCustomEvent,
       `${getElementSignature(elementHandlingAction)} action requested`,
     );
   } else {
     debugAction(
-      event,
+      requestActionCustomEvent,
       `${getElementSignature(elementHandlingAction)} action requested by ${getElementSignature(requester)}`,
     );
   }
   const [isValid, failedValidationInterface] = checkConstraintsAndReport(
     DEFAULT_CONSTRAINT_SET,
     {
-      event,
+      event: requestActionCustomEvent,
       requester,
       fromRequestAction: true,
       debugAction,
@@ -204,7 +216,7 @@ export const onRequestAction = (
   );
   if (!isValid) {
     debugAction(
-      event,
+      requestActionCustomEvent,
       `action prevented due to failing constraint: "${failedValidationInterface.failedConstraintInfo.name}", dispatch navi_action_prevented`,
     );
     dispatchInternalCustomEvent(
@@ -221,7 +233,7 @@ export const onRequestAction = (
     // eslint-disable-next-line no-alert
     if (!window.confirm(confirmMessage)) {
       debugAction(
-        event,
+        requestActionCustomEvent,
         `action cancelled by user -> dispatch navi_action_prevented`,
       );
       dispatchInternalCustomEvent(
@@ -233,7 +245,7 @@ export const onRequestAction = (
     }
   }
   debugAction(
-    event,
+    requestActionCustomEvent,
     `${DEFAULT_CONSTRAINT_SET.size} constraints are valid -> ${getElementSignature(elementHandlingAction)}.dispatchEvent("navi_action_ready")`,
   );
   dispatchInternalCustomEvent(

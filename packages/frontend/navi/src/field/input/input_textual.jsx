@@ -348,7 +348,8 @@ const InputTextualUI = (props) => {
           }
           dispatchRequestUIAction(input, {
             event: e,
-            uiAction: () => {
+            value: inputValue,
+            uiAction: (inputValue, e) => {
               fieldProps.uiAction?.(inputValue, e);
               onInputStable?.(e);
             },
@@ -380,6 +381,7 @@ const InputTextualUI = (props) => {
               const input = ref.current;
               dispatchRequestUIAction(input, {
                 event: e,
+                value: "",
                 uiAction: () => {
                   input.value = "";
                   input.dispatchEvent(new CustomEvent("navi_delete_content"));

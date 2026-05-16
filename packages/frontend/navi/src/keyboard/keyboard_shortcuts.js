@@ -186,10 +186,12 @@ export const createOnKeyDownForShortcuts = (shortcuts, busyRef) => {
         const { action } = shortcutCandidate;
         const actionWithEvent = action.bindParams(keyboardEvent);
         const element = keyboardEvent.currentTarget;
-        return dispatchRequestAction(element, actionWithEvent, {
+        return dispatchRequestAction(element, {
           event: keyboardEvent,
-          actionOrigin: "keyboard_shortcut",
           requester: document.activeElement,
+
+          action: actionWithEvent,
+          actionOrigin: "keyboard_shortcut",
           confirmMessage: shortcutCandidate.confirmMessage,
           meta: {
             shortcut: shortcutCandidate,

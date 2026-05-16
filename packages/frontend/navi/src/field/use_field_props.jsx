@@ -55,18 +55,24 @@ export const useFieldProps = (props) => {
   return {
     ...remainingProps,
     value,
-    onnavi_request_reset_ui_state: (e) => {
+    "aria-busy": innerLoading,
+    "onnavi_request_reset_ui_state": (e) => {
       uiStateController.resetUIState(e);
     },
-    onnavi_set_ui_state: (e) => {
+    "onnavi_set_ui_state": (e) => {
       const { value } = e.detail;
       uiStateController.setUIState(value, e);
     },
-    onnavi_request_ui_action: (e) => {
+    "onnavi_request_ui_action": (e) => {
+      const uiAction = e.detail.uiAction;
+      e.detail.uiAction = (value, e) => {
+        uiStateController.setUIState(value, e);
+        uiAction?.(value, e);
+      };
       onRequestUIAction(e);
     },
-    autoFocus: undefined, // See use_auto_focus.js
-    basePseudoState: {
+    "autoFocus": undefined, // See use_auto_focus.js
+    "basePseudoState": {
       ...basePseudoState,
       ":read-only": readOnly,
       ":disabled": disabled,
