@@ -4,7 +4,7 @@ import {
   mergeTwoStyles,
 } from "@jsenv/dom";
 
-import { listenInputValue } from "../field/validation/input_value_listener.js";
+import { listenInputValue } from "../field/input/input_value_listener.js";
 
 const requestPseudoStateCheck = (element, detail) => {
   dispatchInternalCustomEvent(
