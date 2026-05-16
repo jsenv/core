@@ -219,9 +219,6 @@
                       Client-side (HTML attributes)
                     </a>
                   </li>
-                  <li>
-                    <a href="#validation-custom-message">Custom message UI</a>
-                  </li>
                 </ol>
               </li>
               <li>
@@ -253,7 +250,7 @@
                 enhanced styling and consistent behavior.
               </p>
 
-              <Box column spacing="sm">
+              <Box flex="y" spacing="s" alignX="start">
                 <fieldset>
                   <legend>Default</legend>
                   <Box flex="y" spacing="s" alignX="start">
@@ -280,7 +277,7 @@
                 </fieldset>
                 <fieldset>
                   <legend>:disabled</legend>
-                  <Box row spacing="sm" alignX="start">
+                  <Box flex spacing="s" alignX="start">
                     <Input disabled placeholder="Disabled input" />
                     <input disabled placeholder="Disabled input" />
                   </Box>
@@ -297,10 +294,10 @@
                 available in standard HTML inputs.
               </p>
 
-              <Box column spacing="sm">
+              <Box flex="y" spacing="s" alignX="start">
                 <fieldset>
                   <legend>Loading state</legend>
-                  <Box row spacing="sm" alignX="start">
+                  <Box flex spacing="s" alignX="start">
                     <Input loading placeholder="Loading input..." />
                   </Box>
                 </fieldset>
@@ -542,7 +539,7 @@
                 <code>uiAction</code> or <code>action</code> to control the
                 input externally.
               </p>
-              <Box column spacing="sm">
+              <Box flex="y" spacing="s" alignX="start">
                 <div>
                   <label style={{ fontSize: "0.9rem" }}>defaultValue</label>
                   <Input
@@ -689,7 +686,7 @@
 
             <fieldset>
               <legend>Basic form submission</legend>
-              <Box column spacing="sm">
+              <Box flex="y" spacing="s" alignX="start">
                 <form
                   onSubmit={async (e) => {
                     e.preventDefault();
@@ -701,7 +698,7 @@
                     );
                   }}
                 >
-                  <Box column spacing="sm">
+                  <Box flex="y" spacing="s" alignX="start">
                     <label style={{ fontSize: "0.9rem" }}>
                       Username:
                       <Input
@@ -711,7 +708,7 @@
                         placeholder="Enter username"
                       />
                     </label>
-                    <Box flex="y" spacing="s">
+                    <Box flex="y" spacing="s" alignX="start">
                       <button type="submit">Submit</button>
                       <button type="reset" onClick={() => setUsername("")}>
                         Reset
@@ -745,8 +742,6 @@
       };
 
       const ValidationDemo = () => {
-        const [serverResult, setServerResult] = useState("");
-
         return (
           <div className="demo-section" id="validation">
             <h2>Validation</h2>
@@ -754,8 +749,8 @@
             <h3 id="validation-server">Server-side (form submit)</h3>
             <p className="states-description">
               The most natural place to validate is in the form action. When the
-              action throws, the form shows an error state. The input's error
-              appearance communicates the failure to the user.
+              action throws, the form shows an error state and the input's error
+              appearance communicates the failure — no extra UI needed.
             </p>
 
             <fieldset>
@@ -770,11 +765,9 @@
                       })`,
                     );
                   }
-                  setServerResult(`✅ Submitted: "${username}"`);
                 }}
-                onActionError={(err) => setServerResult(`❌ ${err.message}`)}
               >
-                <Box column spacing="sm">
+                <Box flex="y" spacing="s" alignX="start">
                   <Field>
                     <Label>Username</Label>
                     <Input
@@ -782,116 +775,61 @@
                       placeholder="Enter at least 5 characters..."
                     />
                   </Field>
-                  <Box flex="y" spacing="s">
-                    <Button type="submit">Submit</Button>
-                    <Button type="reset" onClick={() => setServerResult("")}>
-                      Reset
-                    </Button>
-                  </Box>
-                  <div className="value-display">
-                    {serverResult || "Submit to validate..."}
-                  </div>
+                  <Button type="submit">Submit</Button>
                 </Box>
               </Form>
             </fieldset>
 
             <h3 id="validation-client">Client-side (HTML attributes)</h3>
             <p className="states-description">
-              HTML constraint attributes (<code>required</code>,{" "}
-              <code>minLength</code>, <code>min</code>, <code>max</code>,{" "}
-              <code>pattern</code>) are checked before the form action runs. If
-              any constraint fails the form is not submitted and the input shows
-              an error.
+              HTML constraint attributes are checked before the form action
+              runs. If a constraint fails, the form is not submitted and the
+              input shows an error with the browser's default message.
             </p>
 
             <fieldset>
-              <legend>required + minLength + pattern</legend>
+              <legend>minLength attribute</legend>
               <Form
-                action={async ({ username, age, phone }) => {
+                action={async () => {
                   await delay(600);
-                  setServerResult(
-                    `✅ Valid! username="${username}" age=${age} phone=${phone}`,
-                  );
                 }}
-                onActionError={(err) => setServerResult(`❌ ${err.message}`)}
               >
-                <Box column spacing="sm">
+                <Box flex="y" spacing="s" alignX="start">
                   <Field>
-                    <Label>Username (required, min 3 chars)</Label>
-                    <Input name="username" required minLength="3" />
-                  </Field>
-                  <Field>
-                    <Label>Age (18–99)</Label>
-                    <Input name="age" type="number" min="18" max="99" />
-                  </Field>
-                  <Field>
-                    <Label>Phone (format: 01-23-45-67-89)</Label>
+                    <Label>Username (at least 5 characters)</Label>
                     <Input
-                      name="phone"
-                      pattern="[0-9]{2}-[0-9]{2}-[0-9]{2}-[0-9]{2}-[0-9]{2}"
-                      placeholder="01-23-45-67-89"
+                      name="username"
+                      minLength="5"
+                      placeholder="Enter username..."
                     />
                   </Field>
-                  <Box flex="y" spacing="s">
-                    <Button type="submit">Submit</Button>
-                    <Button type="reset" onClick={() => setServerResult("")}>
-                      Reset
-                    </Button>
-                  </Box>
-                  <div className="value-display">
-                    {serverResult || "Submit to validate..."}
-                  </div>
+                  <Button type="submit">Submit</Button>
                 </Box>
               </Form>
             </fieldset>
 
-            <h3 id="validation-custom-message">Custom message UI</h3>
-            <p className="states-description">
-              Constraint attributes accept a companion{" "}
-              <code>*-validation-message</code> prop to override the browser's
-              default validation message with a custom one (supports HTML).
-            </p>
-
             <fieldset>
-              <legend>Custom messages for min / pattern</legend>
+              <legend>Custom message with minLength-validation-message</legend>
+              <p className="states-description">
+                A companion <code>*-validation-message</code> prop overrides the
+                browser's default message with custom HTML.
+              </p>
               <Form
-                action={async ({ age, phone }) => {
+                action={async () => {
                   await delay(600);
-                  setServerResult(`✅ Valid! age=${age} phone=${phone}`);
                 }}
-                onActionError={(err) => setServerResult(`❌ ${err.message}`)}
               >
-                <Box column spacing="sm">
+                <Box flex="y" spacing="s" alignX="start">
                   <Field>
-                    <Label>Age (18 or older)</Label>
+                    <Label>Username (at least 5 characters)</Label>
                     <Input
-                      name="age"
-                      type="number"
-                      min="18"
-                      min-validation-message="Must be <strong>18</strong> or older."
-                      max="99"
-                      max-validation-message="Must be <strong>99</strong> or younger."
-                      placeholder="Enter age"
+                      name="username"
+                      minLength="5"
+                      minLength-validation-message="Must be at least <strong>5 characters</strong>."
+                      placeholder="Enter username..."
                     />
                   </Field>
-                  <Field>
-                    <Label>Phone</Label>
-                    <Input
-                      name="phone"
-                      pattern="[0-9]{2}-[0-9]{2}-[0-9]{2}-[0-9]{2}-[0-9]{2}"
-                      pattern-validation-message="Must match format <strong>01-23-45-67-89</strong>."
-                      placeholder="01-23-45-67-89"
-                    />
-                  </Field>
-                  <Box flex="y" spacing="s">
-                    <Button type="submit">Submit</Button>
-                    <Button type="reset" onClick={() => setServerResult("")}>
-                      Reset
-                    </Button>
-                  </Box>
-                  <div className="value-display">
-                    {serverResult || "Submit to see custom messages..."}
-                  </div>
+                  <Button type="submit">Submit</Button>
                 </Box>
               </Form>
             </fieldset>
@@ -923,7 +861,7 @@
                 below simulates what a server would store (UTC). Change the
                 datetime and blur/press Enter to trigger the save action.
               </p>
-              <Box column spacing="sm">
+              <Box flex="y" spacing="s" alignX="start">
                 <div
                   style={{
                     padding: "10px 14px",
@@ -987,8 +925,8 @@
           <div className="demo-section" id="sizes">
             <h2>Size Variations</h2>
 
-            <Box row spacing="sm">
-              <Box column spacing="sm">
+            <Box flex spacing="s">
+              <Box flex="y" spacing="s" alignX="start">
                 <div className="variation-item">
                   <p className="variation-label">Custom Padding</p>
                   <Input
@@ -1002,7 +940,7 @@
                   <Input placeholder="Wide input" width="200px" />
                 </div>
               </Box>
-              <Box row>
+              <Box flex>
                 <div className="variation-item">
                   <p className="variation-label">Full Width</p>
                   <Input placeholder="Full width" expandX />
@@ -1025,7 +963,7 @@
 
             <fieldset>
               <legend>Toggle States</legend>
-              <Box row spacing="sm" alignX="start" wrap>
+              <Box flex spacing="s" alignX="start" wrap>
                 <button
                   style={{
                     padding: "8px 16px",
@@ -1073,7 +1011,7 @@
 
             <fieldset>
               <legend>Result</legend>
-              <Box column spacing="sm">
+              <Box flex="y" spacing="s" alignX="start">
                 <Input
                   type={type}
                   loading={loading}
