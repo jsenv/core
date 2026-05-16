@@ -23,7 +23,18 @@ import {
 import { dispatchRequestAction } from "./validation/custom_constraint_validation.js";
 
 /**
- * We need a content the visually shrink (scale down) but the button interactive are must remain intact
+ * Notes on Button uiAction and action behavior regarding their context (form, radio list, picker):
+ *
+ * - A button ui action receives closest ui state in param (form, radiolist, ...)
+ * - If button is type="submit" it will try to execute closest form action
+ *   but ideally you should prefer the syntax <Button uiAction="submit"> as it works in other context too (picker)
+ *   and try to execute closest action on form/radiolist etc and uiAction on picker
+ *   (This way you can copy paste <Button uiAction="submit"> inside form or inside picker and it works)
+ * - A button with an action should not use type="submit" or uiAction="submit" as it would execute both closest action and his own
+ */
+
+/**
+ * We need the content to visually shrink (scale down) but the button interactive area MUST remain intact
  * Otherwise a click on the edges of the button cannot not trigger the click event (mouseup occurs outside the button)
  **/
 

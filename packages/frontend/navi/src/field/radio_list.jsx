@@ -52,6 +52,7 @@ const RadioListUI = (props) => {
       flex="y"
       {...fieldGroupProps}
       baseClassName="navi_radio_list"
+      navi-submit-effect="request_action"
       data-radio-list=""
     />
   );

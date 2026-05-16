@@ -89,7 +89,6 @@ const FormUI = (props) => {
   return (
     <Box
       data-action="toto"
-      data-can-submit=""
       {...remainingProps}
       as="form"
       ref={ref}
@@ -142,6 +141,7 @@ const FormWithAction = (props) => {
   return (
     <FormUI
       data-method={action.meta?.httpVerb || method || "GET"}
+      navi-submit-effect="request_action"
       {...actionProps}
       onnavi_get_managed_fields={(e) => {
         e.detail.respondWith(getFormManagedFields(e.currentTarget));

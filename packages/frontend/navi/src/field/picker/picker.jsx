@@ -335,6 +335,7 @@ const PickerInput = (props) => {
       ref={ref}
       baseClassName="navi_picker"
       data-field=".navi_picker_input"
+      navi-submit-effect="request_ui_action"
       navi-has-placeholder={placeholder ? "" : undefined}
       aria-busy={innerLoading}
       autoFocus={undefined}
