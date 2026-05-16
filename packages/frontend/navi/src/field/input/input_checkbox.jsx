@@ -1,34 +1,22 @@
 import { useCallback, useContext, useRef } from "preact/hooks";
 
-import { onRequestUIAction } from "@jsenv/navi/src/field/validation/custom_constraint_validation.js";
 import { Box } from "../../box/box.jsx";
 import { LoadingOutline } from "../../graphic/loading/loading_outline.jsx";
-import { useAutoFocus } from "../../utils/focus/use_auto_focus.js";
 import { useAccentColorAttributes } from "../../utils/use_accent_color_attributes.js";
-import {
-  reportDisabledToField,
-  reportInteractiveToField,
-  reportReadOnlyToField,
-  useFieldId,
-} from "../field.jsx";
+import { useFieldId } from "../field.jsx";
 import { fieldPropSet } from "../field_prop_set.js";
+import { useActionProps } from "../use_action_props.jsx";
+import { useFieldProps } from "../use_field_props.jsx";
 import {
-  ActionRequesterContext,
-  useActionProps,
-} from "../use_action_props.jsx";
-import {
-  DisabledContext,
   FieldNameContext,
-  LoadingContext,
-  ReadOnlyContext,
   RequiredContext,
-  UIStateContext,
   UIStateControllerContext,
-  useUIState,
   useUIStateController,
 } from "../use_ui_state_controller.js";
-import { dispatchRequestAction } from "../validation/custom_constraint_validation.js";
-import { useConstraints } from "../validation/hooks/use_constraints.js";
+import {
+  dispatchRequestAction,
+  dispatchRequestUIAction,
+} from "../validation/custom_constraint_validation.js";
 
 const css = /* css */ `
   @layer navi {
@@ -400,13 +388,10 @@ export const InputCheckbox = (props) => {
     getStateFromProp: (checked) => (checked ? value : undefined),
     getPropFromState: Boolean,
   });
-  const uiState = useUIState(uiStateController);
 
   return (
     <UIStateControllerContext.Provider value={uiStateController}>
-      <UIStateContext.Provider value={uiState}>
-        <InputCheckboxDispatcher {...props} ref={ref} id={id} />
-      </UIStateContext.Provider>
+      <InputCheckboxDispatcher {...props} ref={ref} id={id} />
     </UIStateControllerContext.Provider>
   );
 };
@@ -426,46 +411,26 @@ const InputCheckboxUI = (props) => {
     type,
     defaultChecked,
     /* eslint-enable no-unused-vars */
-
     name,
-    readOnly,
-    disabled,
     required,
-    loading,
-
     uiAction,
-    autoFocus,
     onClick,
     onInput,
-
     accentColor,
     icon,
     appearance = icon ? "icon" : "checkbox", // "checkbox", "toggle", "icon", "button"
-    ...rest
   } = props;
+  const fieldProps = useFieldProps(props);
+  const { basePseudoState, value } = fieldProps;
+  const innerLoading = basePseudoState[":-navi-loading"];
+  const innerReadOnly = basePseudoState[":read-only"];
+  const innerDisabled = basePseudoState[":disabled"];
   const contextFieldName = useContext(FieldNameContext);
-  const contextReadOnly = useContext(ReadOnlyContext);
-  const contextDisabled = useContext(DisabledContext);
   const contextRequired = useContext(RequiredContext);
-  const contextLoading = useContext(LoadingContext);
-  const actionRequester = useContext(ActionRequesterContext);
-  const uiStateController = useContext(UIStateControllerContext);
-  const uiState = useContext(UIStateContext);
-
   const innerName = name || contextFieldName;
-  const innerDisabled = disabled || contextDisabled;
   const innerRequired = required || contextRequired;
-  const innerLoading =
-    loading || (contextLoading && actionRequester === ref.current);
-  const innerReadOnly =
-    readOnly || contextReadOnly || innerLoading || uiStateController.readOnly;
-  reportReadOnlyToField(innerReadOnly);
-  reportDisabledToField(innerDisabled);
-  reportInteractiveToField(true);
-  useAutoFocus(ref, autoFocus);
-  const remainingProps = useConstraints(ref, rest);
 
-  const checked = Boolean(uiState);
+  const checked = Boolean(value);
   const renderCheckbox = (checkboxProps) => {
     return (
       <Box
@@ -533,10 +498,9 @@ const InputCheckboxUI = (props) => {
       // Checkbox displayed as button are usually squarish
       // (passsing any custom width/height would auto disable aspectRatio forced by the square prop)
       square={appearance === "button" ? true : undefined}
-      {...remainingProps}
-      data-field=".navi_native_field"
-      autoFocus={undefined} // See use_auto_focus.js
+      {...fieldProps}
       ref={boxRef}
+      data-field=".navi_native_field"
       data-appearance={appearance}
       baseClassName="navi_checkbox"
       pseudoStateSelector=".navi_native_field"
@@ -558,26 +522,26 @@ const InputCheckboxUI = (props) => {
       hasChildFunction
       baseChildPropSet={CheckboxChildPropSet}
       onClick={(e) => {
-        if (!onRequestUIAction(e)) {
-          e.preventDefault();
-          return;
-        }
-        onClick?.(e);
+        dispatchRequestUIAction(e.currentTarget, {
+          event: e,
+          value,
+          uiAction: (v, e) => {
+            // we wait input to dispatch the uiAction
+            onClick?.(e);
+          },
+        });
       }}
       onInput={(e) => {
         const checkbox = e.target;
         const checkboxIsChecked = checkbox.checked;
-        uiStateController.setUIState(checkboxIsChecked, e);
-        uiAction?.(checkboxIsChecked, e);
-        onInput?.(e);
-      }}
-      onnavi_request_reset_ui_state={(e) => {
-        uiStateController.resetUIState(e);
-      }}
-      onnavi_set_ui_state={(e) => {
-        const { value } = e.detail;
-        uiStateController.setUIState(value, e);
-        uiAction?.(value, e);
+        dispatchRequestUIAction(checkbox, {
+          event: e,
+          value: checkboxIsChecked ? value : undefined,
+          uiAction: (v, e) => {
+            uiAction?.(v, e);
+            onInput?.(e);
+          },
+        });
       }}
     >
       <span className="navi_checkbox_accent_probe" aria-hidden="true" />
@@ -660,7 +624,7 @@ const InputCheckboxWithAction = (props) => {
     <InputCheckboxDispatcher
       {...remainingProps}
       action={undefined}
-      onChange={(e) => {
+      uiAction={(_, e) => {
         const checkbox = e.currentTarget;
         dispatchRequestAction(checkbox, {
           event: e,

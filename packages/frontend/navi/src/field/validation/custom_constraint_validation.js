@@ -164,6 +164,7 @@ export const onRequestUIAction = (
       requestUIActionCustomEvent,
       `ui action prevented due to failing constraint: "${failedValidationInterface.failedConstraintInfo.name}" -> dispatch navi_ui_action_prevented`,
     );
+    event.preventDefault();
     dispatchInternalCustomEvent(
       elementHandlingUIAction,
       "navi_ui_action_prevented",
