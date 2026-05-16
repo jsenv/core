@@ -22,8 +22,6 @@ export const useActionProps = (
   const {
     ref,
     action,
-    actionDebounce,
-    actionAfterChange,
     loading: propLoading,
     onCancel,
     onActionPrevented,
@@ -75,8 +73,6 @@ export const useActionProps = (
     "children": effectiveChildren,
     ref,
     "data-action": boundAction.callSource,
-    "data-action-debounce": actionDebounce,
-    "data-action-after-change": actionAfterChange ? "" : undefined,
     "onnavi_cancel": (e) => {
       const { reason } = e.detail;
 

@@ -84,7 +84,6 @@ import {
   TYPE_EMAIL_CONSTRAINT,
   TYPE_NUMBER_CONSTRAINT,
 } from "./constraints/standard_constraints.js";
-import { listenInputValue } from "./input_value_listener.js";
 
 export const dispatchRequestUIAction = (
   elementWithUIAction,
@@ -439,7 +438,6 @@ export const installCustomConstraintValidation = (
   }
 
   const isForm = element.tagName === "FORM";
-  const isInput = element.tagName === "INPUT" || element.tagName === "TEXTAREA";
   if (isForm) {
     formInstrumentedWeakSet.add(element);
     addTeardown(() => {
@@ -900,44 +898,6 @@ export const installCustomConstraintValidation = (
     element.addEventListener("keydown", onkeydown);
     addTeardown(() => {
       element.removeEventListener("keydown", onkeydown);
-    });
-  }
-
-  request_on_input_value_change: {
-    if (!isInput) {
-      break request_on_input_value_change;
-    }
-    const elementWithAction = closestElementWithAction(element);
-    if (!elementWithAction) {
-      break request_on_input_value_change;
-    }
-    const closestElementWithActionAttr = element.closest("[data-action]");
-    if (closestElementWithActionAttr.tagName === "FORM") {
-      break request_on_input_value_change;
-    }
-    const stop = listenInputValue(
-      element,
-      (e) => {
-        dispatchRequestAction(elementWithAction, {
-          event: e,
-          requester: element,
-        });
-      },
-      {
-        waitForChange: closestElementWithActionAttr.hasAttribute(
-          "data-action-after-change",
-        ),
-        debounce: closestElementWithActionAttr.hasAttribute(
-          "data-action-debounce",
-        )
-          ? parseFloat(
-              closestElementWithActionAttr.getAttribute("data-action-debounce"),
-            )
-          : undefined,
-      },
-    );
-    addTeardown(() => {
-      stop();
     });
   }
 

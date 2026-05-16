@@ -1,4 +1,28 @@
 import { createPubSub } from "@jsenv/dom";
+import { useLayoutEffect } from "preact/hooks";
+
+import { useStableCallback } from "@jsenv/navi/src/utils/use_stable_callback.js";
+
+export const useOnInputValueChange = (
+  inputRef,
+  callback,
+  { waitForChange, debounce = 0 } = {},
+) => {
+  callback = useStableCallback(callback);
+  useLayoutEffect(() => {
+    const input = inputRef.current;
+    if (!input) {
+      return undefined;
+    }
+    const stopListening = listenInputValue(input, callback, {
+      waitForChange,
+      debounce,
+    });
+    return () => {
+      stopListening();
+    };
+  }, [waitForChange, debounce, callback]);
+};
 
 export const listenInputValue = (
   input,

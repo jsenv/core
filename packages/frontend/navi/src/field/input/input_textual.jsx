@@ -57,7 +57,11 @@ import {
   UIStateControllerContext,
   useUIStateController,
 } from "../use_ui_state_controller.js";
-import { dispatchRequestUIAction } from "../validation/custom_constraint_validation.js";
+import {
+  dispatchRequestAction,
+  dispatchRequestUIAction,
+} from "../validation/custom_constraint_validation.js";
+import { useOnInputValueChange } from "./input_value_listener.js";
 
 const css = /* css */ `
   @layer navi {
@@ -326,40 +330,20 @@ const InputTextualUI = (props) => {
   const loading = basePseudoState[":-navi-loading"];
   const readOnly = basePseudoState[":read-only"];
   const disabled = basePseudoState[":disabled"];
-  let { value } = fieldProps;
-  if (type === "datetime-local") {
-    value = convertToLocalTimezone(value);
-  }
 
   const onInputStable = useStableCallback(onInput);
   const renderInput = (inputProps) => {
-    const { value } = inputProps;
     return (
       <Box
         {...inputProps}
         as="input"
         ref={ref}
         type={type}
-        data-value={value}
-        value={type === "color" && !value ? "#000000" : value}
         onInput={(e) => {
           const input = e.target;
-          const inputUIState = (() => {
-            if (type === "number") {
-              const inputValueAsNumber = input.valueAsNumber;
-              if (isNaN(inputValueAsNumber)) {
-                return input.value;
-              }
-              return inputValueAsNumber;
-            }
-            if (type === "datetime-local") {
-              return convertToUTCTimezone(input.value);
-            }
-            return input.value;
-          })();
           dispatchRequestUIAction(input, {
             event: e,
-            value: inputUIState,
+            value: input.value,
             uiAction: (inputValue, e) => {
               fieldProps.uiAction?.(inputValue, e);
               onInputStable?.(e);
@@ -441,7 +425,6 @@ const InputTextualUI = (props) => {
       baseChildPropSet={InputChildPropSet}
       {...fieldProps}
       ref={undefined} // input takes the ref
-      value={value}
     >
       <LoadingOutline
         loading={loading}
@@ -773,57 +756,22 @@ const InputTextualWithSuggestions = (props) => {
 const InputTextualWithAction = (props) => {
   const Next = useNextResolver();
   const remainingProps = useActionProps(props);
+  const { ref, actionDebounce, actionAfterChange } = props;
+
+  useOnInputValueChange(
+    ref,
+    (e) => {
+      const input = ref.current;
+      dispatchRequestAction(input, {
+        event: e,
+        requester: input,
+      });
+    },
+    {
+      waitForChange: actionAfterChange,
+      debounce: actionDebounce,
+    },
+  );
 
   return <Next {...remainingProps} />;
-};
-
-// As explained in https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/input/datetime-local#setting_timezones
-// datetime-local does not support timezones
-const convertToLocalTimezone = (dateTimeString) => {
-  const date = new Date(dateTimeString);
-  // Check if the date is valid
-  if (isNaN(date.getTime())) {
-    return dateTimeString;
-  }
-
-  // Format to YYYY-MM-DDThh:mm:ss
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  const hours = String(date.getHours()).padStart(2, "0");
-  const minutes = String(date.getMinutes()).padStart(2, "0");
-  const seconds = String(date.getSeconds()).padStart(2, "0");
-
-  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
-};
-/**
- * Converts a datetime string without timezone (local time) to UTC format with 'Z' notation
- *
- * @param {string} localDateTimeString - Local datetime string without timezone (e.g., "2023-07-15T14:30:00")
- * @returns {string} Datetime string in UTC with 'Z' notation (e.g., "2023-07-15T12:30:00Z")
- */
-const convertToUTCTimezone = (localDateTimeString) => {
-  if (!localDateTimeString) {
-    return localDateTimeString;
-  }
-
-  try {
-    // Create a Date object using the local time string
-    // The browser will interpret this as local timezone
-    const localDate = new Date(localDateTimeString);
-
-    // Check if the date is valid
-    if (isNaN(localDate.getTime())) {
-      return localDateTimeString;
-    }
-
-    // Convert to UTC ISO string
-    const utcString = localDate.toISOString();
-
-    // Return the UTC string (which includes the 'Z' notation)
-    return utcString;
-  } catch (error) {
-    console.error("Error converting local datetime to UTC:", error);
-    return localDateTimeString;
-  }
 };
