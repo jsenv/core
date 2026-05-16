@@ -163,7 +163,15 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState, useRef } from "preact/hooks";
-      import { Input, Box, Form, Button, Field, Label } from "@jsenv/navi";
+      import {
+        Input,
+        Box,
+        Form,
+        Button,
+        Field,
+        Label,
+        NaviDebug,
+      } from "@jsenv/navi";
 
       const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -793,7 +801,7 @@
                 }}
               >
                 <Box flex="y" spacing="s" alignX="start">
-                  <Field>
+                  <Field flex spacing="s">
                     <Label>Username (at least 5 characters)</Label>
                     <Input
                       name="username"
@@ -818,7 +826,7 @@
                 }}
               >
                 <Box flex="y" spacing="s" alignX="start">
-                  <Field>
+                  <Field flex spacing="s">
                     <Label>Username (at least 5 characters)</Label>
                     <Input
                       name="username"
@@ -1014,7 +1022,12 @@
         );
       };
 
-      render(<App />, document.querySelector("#root"));
+      render(
+        <NaviDebug debugUIAction debugAction>
+          <App />
+        </NaviDebug>,
+        document.querySelector("#root"),
+      );
     </script>
   </body>
 </html>

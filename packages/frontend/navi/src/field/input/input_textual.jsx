@@ -437,6 +437,7 @@ const InputTextualUI = (props) => {
       hasChildFunction
       baseChildPropSet={InputChildPropSet}
       {...fieldProps}
+      ref={undefined} // input takes the ref
       value={value}
     >
       <LoadingOutline
