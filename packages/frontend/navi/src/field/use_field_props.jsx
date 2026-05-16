@@ -1,6 +1,7 @@
 import { useContext } from "preact/hooks";
 
 import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
+import { useDebugUIAction } from "../navi_debug.jsx";
 import {
   reportDisabledToField,
   reportInteractiveToField,
@@ -29,6 +30,7 @@ export const useFieldProps = (props) => {
     basePseudoState,
     ...rest
   } = props;
+  const debugUIAction = useDebugUIAction();
   const contextReadOnly = useContext(ReadOnlyContext);
   const contextDisabled = useContext(DisabledContext);
   const contextLoading = useContext(LoadingContext);
@@ -54,6 +56,7 @@ export const useFieldProps = (props) => {
 
   return {
     ...remainingProps,
+    ref,
     value,
     "aria-busy": innerLoading,
     "onnavi_request_reset_ui_state": (e) => {
@@ -69,7 +72,9 @@ export const useFieldProps = (props) => {
         uiStateController.setUIState(value, e);
         uiAction?.(value, e);
       };
-      onRequestUIAction(e);
+      onRequestUIAction(e, {
+        debugUIAction,
+      });
     },
     "autoFocus": undefined, // See use_auto_focus.js
     "basePseudoState": {

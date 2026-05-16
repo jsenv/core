@@ -239,108 +239,106 @@
         const [asyncResult, setAsyncResult] = useState(null);
 
         return (
-          <NaviDebug debugAction>
-            <div class="demo-section" id="interactivity">
-              <h2>Interactivity</h2>
+          <div class="demo-section" id="interactivity">
+            <h2>Interactivity</h2>
 
-              <div class="states-section">
-                <div class="states-title">uiAction</div>
-                <p class="states-description">
-                  <code>uiAction</code> is called synchronously with the
-                  button's value when the user clicks. A read-only button does
-                  not trigger it.
-                </p>
+            <div class="states-section">
+              <div class="states-title">uiAction</div>
+              <p class="states-description">
+                <code>uiAction</code> is called synchronously with the button's
+                value when the user clicks. A read-only button does not trigger
+                it.
+              </p>
 
-                <fieldset>
-                  <legend>Button with uiAction</legend>
-                  <Box row spacing="sm" alignX="start" alignY="center">
-                    <Button
-                      name="my-button"
-                      value="hello"
-                      uiAction={(value) => {
-                        console.log("uiAction called with value:", value);
-                        setLastUIAction(value);
-                      }}
-                    >
-                      Click me
-                    </Button>
-                    {lastUIAction !== null && (
-                      <span style={{ fontSize: "0.85rem", color: "#555" }}>
-                        Last value logged: <code>{String(lastUIAction)}</code>
-                      </span>
-                    )}
-                  </Box>
-                </fieldset>
-
-                <fieldset>
-                  <legend>Read-only button — uiAction is not triggered</legend>
+              <fieldset>
+                <legend>Button with uiAction</legend>
+                <Box row spacing="sm" alignX="start" alignY="center">
                   <Button
-                    name="readonly-button"
-                    value="ignored"
-                    readOnly
+                    name="my-button"
+                    value="hello"
                     uiAction={(value) => {
-                      console.log("this should never log", value);
+                      console.log("uiAction called with value:", value);
+                      setLastUIAction(value);
                     }}
                   >
-                    Read-only
+                    Click me
                   </Button>
-                </fieldset>
-              </div>
+                  {lastUIAction !== null && (
+                    <span style={{ fontSize: "0.85rem", color: "#555" }}>
+                      Last value logged: <code>{String(lastUIAction)}</code>
+                    </span>
+                  )}
+                </Box>
+              </fieldset>
 
-              <div class="states-section">
-                <div class="states-title">action</div>
-                <p class="states-description">
-                  <code>action</code> is an async function. The button enters a
-                  loading state while it runs. On failure the error is surfaced;
-                  on success you can react to the resolved value.
-                </p>
-
-                <fieldset>
-                  <legend>Async action that fails</legend>
-                  <Box flex="y" spacing="s" alignX="start" alignY="center">
-                    <Button
-                      action={async () => {
-                        await new Promise((r) => setTimeout(r, 800));
-                        throw new Error("Something went wrong");
-                      }}
-                      onActionError={(err) => {
-                        setAsyncResult({ ok: false, message: err.message });
-                      }}
-                    >
-                      Fail after 800ms
-                    </Button>
-                    {asyncResult && !asyncResult.ok && (
-                      <span style={{ fontSize: "0.85rem", color: "#c00" }}>
-                        Error: {asyncResult.message}
-                      </span>
-                    )}
-                  </Box>
-                </fieldset>
-
-                <fieldset>
-                  <legend>Async action that succeeds</legend>
-                  <Box flex="y" spacing="s" alignX="start" alignY="center">
-                    <Button
-                      action={async () => {
-                        await new Promise((r) => setTimeout(r, 800));
-                        return "done!";
-                      }}
-                      onActionEnd={(value) => {
-                        setAsyncResult({ ok: true, message: value });
-                      }}
-                    >
-                      Succeed after 800ms
-                    </Button>
-                    {asyncResult && asyncResult.ok && (
-                      <span style={{ fontSize: "0.85rem", color: "#2a7a2a" }}>
-                        Success: {asyncResult.message}
-                      </span>
-                    )}
-                  </Box>
-                </fieldset>
-              </div>
+              <fieldset>
+                <legend>Read-only button — uiAction is not triggered</legend>
+                <Button
+                  name="readonly-button"
+                  value="ignored"
+                  readOnly
+                  uiAction={(value) => {
+                    console.log("this should never log", value);
+                  }}
+                >
+                  Read-only
+                </Button>
+              </fieldset>
             </div>
-          </NaviDebug>
+
+            <div class="states-section">
+              <div class="states-title">action</div>
+              <p class="states-description">
+                <code>action</code> is an async function. The button enters a
+                loading state while it runs. On failure the error is surfaced;
+                on success you can react to the resolved value.
+              </p>
+
+              <fieldset>
+                <legend>Async action that fails</legend>
+                <Box flex="y" spacing="s" alignX="start" alignY="center">
+                  <Button
+                    action={async () => {
+                      await new Promise((r) => setTimeout(r, 800));
+                      throw new Error("Something went wrong");
+                    }}
+                    onActionError={(err) => {
+                      setAsyncResult({ ok: false, message: err.message });
+                    }}
+                  >
+                    Fail after 800ms
+                  </Button>
+                  {asyncResult && !asyncResult.ok && (
+                    <span style={{ fontSize: "0.85rem", color: "#c00" }}>
+                      Error: {asyncResult.message}
+                    </span>
+                  )}
+                </Box>
+              </fieldset>
+
+              <fieldset>
+                <legend>Async action that succeeds</legend>
+                <Box flex="y" spacing="s" alignX="start" alignY="center">
+                  <Button
+                    action={async () => {
+                      await new Promise((r) => setTimeout(r, 800));
+                      return "done!";
+                    }}
+                    onActionEnd={(value) => {
+                      setAsyncResult({ ok: true, message: value });
+                    }}
+                  >
+                    Succeed after 800ms
+                  </Button>
+                  {asyncResult && asyncResult.ok && (
+                    <span style={{ fontSize: "0.85rem", color: "#2a7a2a" }}>
+                      Success: {asyncResult.message}
+                    </span>
+                  )}
+                </Box>
+              </fieldset>
+            </div>
+          </div>
         );
       };
 
@@ -1210,7 +1208,12 @@
         );
       };
 
-      render(<App />, document.querySelector("#root"));
+      render(
+        <NaviDebug debugAction debugUIAction>
+          <App />
+        </NaviDebug>,
+        document.querySelector("#root"),
+      );
     </script>
   </body>
 </html>

@@ -127,7 +127,10 @@ export const NAVI_VALIDITY_CHANGE_CUSTOM_EVENT = "navi_validity_change";
 const UI_ACTION_CONSTRAINTS = [DISABLED_CONSTRAINT, READONLY_CONSTRAINT];
 
 const pointerEventTypeSet = new Set(["pointerdown", "mousedown", "click"]);
-export const onRequestUIAction = (requestUIActionCustomEvent) => {
+export const onRequestUIAction = (
+  requestUIActionCustomEvent,
+  { debugUIAction },
+) => {
   const { event, value, uiAction } = requestUIActionCustomEvent.detail;
 
   if (pointerEventTypeSet.has(event)) {
@@ -139,17 +142,28 @@ export const onRequestUIAction = (requestUIActionCustomEvent) => {
     return false;
   }
   const elementHandlingUIAction = requestUIActionCustomEvent.currentTarget;
+  debugUIAction(
+    requestUIActionCustomEvent,
+    `${getElementSignature(elementHandlingUIAction)} uiAction requested (value=${JSON.stringify(value)}, event="${event.type}")`,
+  );
   const requester = event.target;
-  const [isValid] = checkConstraintsAndReport(UI_ACTION_CONSTRAINTS, {
-    event: requestUIActionCustomEvent,
-    requester,
-  });
+  const [isValid, failedValidationInterface] = checkConstraintsAndReport(
+    UI_ACTION_CONSTRAINTS,
+    {
+      event: requestUIActionCustomEvent,
+      requester,
+    },
+  );
   const customEventDetail = {
     event,
     value,
     uiAction,
   };
   if (!isValid) {
+    debugUIAction(
+      requestUIActionCustomEvent,
+      `ui action prevented due to failing constraint: "${failedValidationInterface.failedConstraintInfo.name}" -> dispatch navi_ui_action_prevented`,
+    );
     dispatchInternalCustomEvent(
       elementHandlingUIAction,
       "navi_ui_action_prevented",
@@ -157,6 +171,10 @@ export const onRequestUIAction = (requestUIActionCustomEvent) => {
     );
     return false;
   }
+  debugUIAction(
+    requestUIActionCustomEvent,
+    `uiAction allowed -> calling uiAction`,
+  );
   uiAction(value, event);
   return true;
 };
