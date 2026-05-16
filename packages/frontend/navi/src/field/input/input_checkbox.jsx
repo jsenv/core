@@ -6,7 +6,7 @@ import { useAccentColorAttributes } from "../../utils/use_accent_color_attribute
 import { useFieldId } from "../field.jsx";
 import { fieldPropSet } from "../field_prop_set.js";
 import { useActionProps } from "../use_action_props.jsx";
-import { useFieldProps } from "../use_field_props.jsx";
+import { UI_STATE_NOT_AVAILABLE, useFieldProps } from "../use_field_props.jsx";
 import {
   FieldNameContext,
   RequiredContext,
@@ -525,7 +525,8 @@ const InputCheckboxUI = (props) => {
       onClick={(e) => {
         dispatchRequestUIAction(e.currentTarget, {
           event: e,
-          uiAction: "not_available", // we wait input to dispatch the uiAction
+          value: UI_STATE_NOT_AVAILABLE, // we must wait "input" to know the state
+          uiAction,
         });
         onClick?.(e);
       }}
@@ -535,9 +536,7 @@ const InputCheckboxUI = (props) => {
         dispatchRequestUIAction(checkbox, {
           event: e,
           value: checkboxIsChecked ? value : undefined,
-          uiAction: (v, e) => {
-            uiAction?.(v, e);
-          },
+          uiAction,
         });
         onInput?.(e);
       }}

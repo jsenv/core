@@ -7,7 +7,7 @@ import { LoadingOutline } from "../../graphic/loading/loading_outline.jsx";
 import { useAccentColorAttributes } from "../../utils/use_accent_color_attributes.js";
 import { useFieldId } from "../field.jsx";
 import { fieldPropSet } from "../field_prop_set.js";
-import { useFieldProps } from "../use_field_props.jsx";
+import { UI_STATE_NOT_AVAILABLE, useFieldProps } from "../use_field_props.jsx";
 import {
   FieldNameContext,
   RequiredContext,
@@ -528,7 +528,8 @@ const InputRadioUI = (props) => {
       onClick={(e) => {
         dispatchRequestUIAction(e.currentTarget, {
           event: e,
-          uiAction: "not_available", // we wait input to dispatch the uiAction
+          value: UI_STATE_NOT_AVAILABLE,
+          uiAction,
         });
         onClick?.(e);
       }}
@@ -541,9 +542,7 @@ const InputRadioUI = (props) => {
         dispatchRequestUIAction(radio, {
           event: e,
           value: radioIsChecked ? value : undefined,
-          uiAction: (v, e) => {
-            uiAction?.(v, e);
-          },
+          uiAction,
         });
         onInput?.(e);
       }}

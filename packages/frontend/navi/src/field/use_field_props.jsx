@@ -19,6 +19,7 @@ import {
 import { onRequestUIAction } from "./validation/custom_constraint_validation.js";
 import { useConstraints } from "./validation/hooks/use_constraints.js";
 
+export const UI_STATE_NOT_AVAILABLE = Symbol("UI_STATE_NOT_AVAILABLE");
 export const useFieldProps = (props) => {
   const {
     ref,
@@ -78,12 +79,11 @@ export const useFieldProps = (props) => {
       uiStateController.setUIState(value, e);
     },
     "onnavi_request_ui_action": (e) => {
-      const uiAction = e.detail.uiAction;
-
-      if (uiAction === "not_available") {
+      const { value, uiAction } = e.detail;
+      if (value === UI_STATE_NOT_AVAILABLE) {
         // we can't execute uiAction right now as value is not available
         // we just want to check if action is allowed to preventDefault or give feedback
-        // but the value will be set later (checkbox click vs input use case)
+        // but the value will be set later (checkbox "click" vs checkbox "input" use case)
         e.detail.uiAction = () => {};
       } else {
         e.detail.uiAction = (value, e) => {
