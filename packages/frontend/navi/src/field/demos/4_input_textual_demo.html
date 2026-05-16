@@ -686,40 +686,38 @@
 
             <fieldset>
               <legend>Basic form submission</legend>
-              <Box flex="y" spacing="s" alignX="start">
-                <form
-                  onSubmit={async (e) => {
-                    e.preventDefault();
-                    const data = new FormData(e.target);
-                    setFormResult("Submitting...");
-                    await delay(1000);
-                    setFormResult(
-                      `✅ Submitted! Username: ${data.get("username")}`,
-                    );
-                  }}
-                >
-                  <Box flex="y" spacing="s" alignX="start">
-                    <label style={{ fontSize: "0.9rem" }}>
-                      Username:
-                      <Input
-                        name="username"
-                        value={username}
-                        action={setUsername}
-                        placeholder="Enter username"
-                      />
-                    </label>
-                    <Box flex="y" spacing="s" alignX="start">
-                      <button type="submit">Submit</button>
-                      <button type="reset" onClick={() => setUsername("")}>
-                        Reset
-                      </button>
-                    </Box>
+              <Form
+                action={async ({ username }) => {
+                  await delay(1000);
+                  setFormResult(`Submitted! Username: ${username}`);
+                }}
+              >
+                <Box flex="y" spacing="s" alignX="start">
+                  <Field>
+                    <Label>Username</Label>
+                    <Input
+                      name="username"
+                      value={username}
+                      action={setUsername}
+                      placeholder="Enter username"
+                    />
+                  </Field>
+                  <Box flex spacing="s">
+                    <Button type="submit">Submit</Button>
+                    <Button
+                      type="reset"
+                      uiAction={() => {
+                        setUsername("");
+                      }}
+                    >
+                      Reset
+                    </Button>
                   </Box>
-                </form>
-                <div className="value-display">
-                  {formResult || "Fill and submit..."}
-                </div>
-              </Box>
+                  {formResult ? (
+                    <div className="value-display">{formResult}</div>
+                  ) : null}
+                </Box>
+              </Form>
             </fieldset>
           </div>
         );
@@ -825,7 +823,7 @@
                     <Input
                       name="username"
                       minLength="5"
-                      minLength-validation-message="Must be at least <strong>5 characters</strong>."
+                      minLengthMessage="Must be at least <strong>5 characters</strong>."
                       placeholder="Enter username..."
                     />
                   </Field>
@@ -872,28 +870,28 @@
                 >
                   <strong>External state (UTC):</strong>{" "}
                   {externalDateTime || "(not set)"}
-                  <Box flex="y" spacing="s" style={{ marginTop: "8px" }}>
-                    <button
-                      onClick={() =>
+                  <Box flex spacing="s" style={{ marginTop: "8px" }}>
+                    <Button
+                      uiAction={() =>
                         setExternalDateTime("2024-01-15T14:30:00Z")
                       }
                     >
                       Jan 15, 2:30 PM UTC
-                    </button>
-                    <button
-                      onClick={() =>
+                    </Button>
+                    <Button
+                      uiAction={() =>
                         setExternalDateTime("2024-12-25T09:00:00Z")
                       }
                     >
                       Dec 25, 9:00 AM UTC
-                    </button>
-                    <button onClick={() => setExternalDateTime(null)}>
+                    </Button>
+                    <Button uiAction={() => setExternalDateTime(null)}>
                       Clear
-                    </button>
+                    </Button>
                   </Box>
                 </div>
-                <label style={{ fontSize: "0.9rem" }}>
-                  Datetime (displayed in local time):
+                <Field>
+                  <Label>Datetime (displayed in local time)</Label>
                   <Input
                     type="datetime-local"
                     name="datetime"
@@ -903,11 +901,11 @@
                       setSaveResult("Saving...");
                       await delay(1000);
                       setExternalDateTime(value);
-                      setSaveResult(`✅ Saved: ${value}`);
+                      setSaveResult(`Saved: ${value}`);
                     }}
                     actionAfterChange
                   />
-                </label>
+                </Field>
                 <div className="value-display">
                   UI state: {uiDateTime || "(empty)"}
                 </div>
@@ -964,32 +962,12 @@
             <fieldset>
               <legend>Toggle States</legend>
               <Box flex spacing="s" alignX="start" wrap>
-                <button
-                  style={{
-                    padding: "8px 16px",
-                    background: loading ? "#007bff" : "#f8f9fa",
-                    color: loading ? "white" : "#333",
-                    border: "1px solid #ddd",
-                    borderRadius: "4px",
-                    cursor: "pointer",
-                  }}
-                  onClick={() => setLoading(!loading)}
-                >
+                <Button uiAction={() => setLoading(!loading)}>
                   Loading: {loading ? "ON" : "OFF"}
-                </button>
-                <button
-                  style={{
-                    padding: "8px 16px",
-                    background: disabled ? "#007bff" : "#f8f9fa",
-                    color: disabled ? "white" : "#333",
-                    border: "1px solid #ddd",
-                    borderRadius: "4px",
-                    cursor: "pointer",
-                  }}
-                  onClick={() => setDisabled(!disabled)}
-                >
+                </Button>
+                <Button uiAction={() => setDisabled(!disabled)}>
                   Disabled: {disabled ? "ON" : "OFF"}
-                </button>
+                </Button>
                 <select
                   value={type}
                   onChange={(e) => setType(e.target.value)}
