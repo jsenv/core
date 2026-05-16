@@ -2,30 +2,20 @@ import { dispatchCustomEvent } from "@jsenv/dom";
 import { useCallback, useContext, useLayoutEffect, useRef } from "preact/hooks";
 
 import { Box } from "@jsenv/navi/src/box/box.jsx";
-import { onRequestUIAction } from "@jsenv/navi/src/field/validation/custom_constraint_validation.js";
+import { dispatchRequestUIAction } from "@jsenv/navi/src/field/validation/custom_constraint_validation.js";
 import { LoadingOutline } from "../../graphic/loading/loading_outline.jsx";
-import { useAutoFocus } from "../../utils/focus/use_auto_focus.js";
 import { useAccentColorAttributes } from "../../utils/use_accent_color_attributes.js";
-import {
-  reportDisabledToField,
-  reportInteractiveToField,
-  reportReadOnlyToField,
-  useFieldId,
-} from "../field.jsx";
+import { useFieldId } from "../field.jsx";
 import { fieldPropSet } from "../field_prop_set.js";
-import { ActionRequesterContext } from "../use_action_props.jsx";
+import { useFieldProps } from "../use_field_props.jsx";
 import {
-  DisabledContext,
   FieldNameContext,
-  LoadingContext,
-  ReadOnlyContext,
   RequiredContext,
   UIStateContext,
   UIStateControllerContext,
   useUIState,
   useUIStateController,
 } from "../use_ui_state_controller.js";
-import { useConstraints } from "../validation/hooks/use_constraints.js";
 
 const css = /* css */ `
   @layer navi {
@@ -386,44 +376,27 @@ const InputRadioUI = (props) => {
     /* eslint-disable no-unused-vars */
     type,
     /* eslint-enable no-unused-vars */
-
+    value,
     name,
-    readOnly,
-    disabled,
     required,
-    loading,
     uiAction,
-    autoFocus,
     onClick,
     onInput,
-
     icon,
     appearance = icon ? "icon" : "radio",
     color,
-    ...rest
+    accentColor,
   } = props;
+  const fieldProps = useFieldProps(props);
+  const { value: uiState, basePseudoState } = fieldProps;
+  const innerLoading = basePseudoState[":-navi-loading"];
+  const innerReadOnly = basePseudoState[":read-only"];
+  const innerDisabled = basePseudoState[":disabled"];
   const contextName = useContext(FieldNameContext);
-  const contextReadOnly = useContext(ReadOnlyContext);
-  const contextDisabled = useContext(DisabledContext);
   const contextRequired = useContext(RequiredContext);
-  const contextLoading = useContext(LoadingContext);
-  const actionRequester = useContext(ActionRequesterContext);
-  const uiStateController = useContext(UIStateControllerContext);
-  const uiState = useContext(UIStateContext);
-
   const innerName = name || contextName;
-  const innerDisabled = disabled || contextDisabled;
   const innerRequired = required || contextRequired;
-  const innerLoading =
-    loading || (contextLoading && actionRequester === ref.current);
-  const innerReadOnly =
-    readOnly || contextReadOnly || innerLoading || uiStateController.readOnly;
 
-  reportReadOnlyToField(innerReadOnly);
-  reportDisabledToField(innerDisabled);
-  reportInteractiveToField(true);
-  useAutoFocus(ref, autoFocus);
-  const remainingProps = useConstraints(ref, rest);
   const checked = Boolean(uiState);
   // we must first dispatch an event to inform all other radios they where unchecked
   // this way each other radio uiStateController knows thery are unchecked
@@ -477,14 +450,6 @@ const InputRadioUI = (props) => {
         aria-busy={innerLoading ? "true" : undefined}
         baseClassName="navi_native_field"
         data-callout-arrow-x="center"
-        onnavi_request_reset_ui_state={(e) => {
-          uiStateController.resetUIState(e);
-        }}
-        onnavi_set_ui_state={(e) => {
-          const { value } = e.detail;
-          uiStateController.setUIState(value, e);
-          uiAction?.(value, e);
-        }}
       />
     );
   };
@@ -497,7 +462,7 @@ const InputRadioUI = (props) => {
   ]);
 
   const boxRef = useRef();
-  useAccentColorAttributes(boxRef, remainingProps.accentColor, {
+  useAccentColorAttributes(boxRef, accentColor, {
     elementSelector: ".navi_radio_accent_probe",
   });
 
@@ -541,10 +506,9 @@ const InputRadioUI = (props) => {
       // Radio displayed as button are usually squarish
       // (passsing any custom width/height would auto disable aspectRatio forced by the square prop)
       square={appearance === "button" ? true : undefined}
-      {...remainingProps}
-      data-field=".navi_native_field"
-      autoFocus={undefined} // See use_auto_focus.js
+      {...fieldProps}
       ref={boxRef}
+      data-field=".navi_native_field"
       data-appearance={appearance}
       baseClassName="navi_radio"
       pseudoStateSelector=".navi_native_field"
@@ -562,10 +526,10 @@ const InputRadioUI = (props) => {
       hasChildFunction
       baseChildPropSet={RadioChildPropSet}
       onClick={(e) => {
-        if (!onRequestUIAction(e)) {
-          e.preventDefault();
-          return;
-        }
+        dispatchRequestUIAction(e.currentTarget, {
+          event: e,
+          uiAction: "not_available", // we wait input to dispatch the uiAction
+        });
         onClick?.(e);
       }}
       onInput={(e) => {
@@ -574,8 +538,13 @@ const InputRadioUI = (props) => {
         if (radioIsChecked) {
           updateOtherRadiosInGroup(e);
         }
-        uiStateController.setUIState(radioIsChecked, e);
-        uiAction?.(radioIsChecked, e);
+        dispatchRequestUIAction(radio, {
+          event: e,
+          value: radioIsChecked ? value : undefined,
+          uiAction: (v, e) => {
+            uiAction?.(v, e);
+          },
+        });
         onInput?.(e);
       }}
     >
