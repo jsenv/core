@@ -319,8 +319,16 @@ const renderInput = createComponentResolver([
 const InputNativeContext = createContext(null);
 const InputTextualUI = (props) => {
   import.meta.css = css;
+  const { ref, type, onInput, icon, children } = props;
   const fieldProps = useFieldProps(props);
-  const { ref, type, onInput, icon, children } = fieldProps;
+  const { basePseudoState } = fieldProps;
+  const loading = basePseudoState[":-navi-loading"];
+  const readOnly = basePseudoState[":read-only"];
+  const disabled = basePseudoState[":disabled"];
+  let { value } = fieldProps;
+  if (type === "datetime-local") {
+    value = convertToLocalTimezone(value);
+  }
 
   const onInputStable = useStableCallback(onInput);
   const renderInput = (inputProps) => {
@@ -414,11 +422,6 @@ const InputTextualUI = (props) => {
     }
   } else {
     innerChildren = children;
-  }
-
-  let { value, loading, readOnly, disabled } = fieldProps;
-  if (type === "datetime-local") {
-    value = convertToLocalTimezone(value);
   }
 
   return (

@@ -351,6 +351,8 @@ const ButtonUI = (props) => {
     children,
   } = props;
   const fieldProps = useFieldProps(props);
+  const { basePseudoState } = fieldProps;
+  const loading = basePseudoState[":-navi-loading"];
 
   const isLink = href !== undefined;
   let as = "button";
@@ -439,7 +441,7 @@ const ButtonUI = (props) => {
       hasChildFunction
     >
       <LoadingOutline
-        loading={fieldProps.loading}
+        loading={loading}
         inset={-1}
         color="var(--button-loader-color)"
       />
