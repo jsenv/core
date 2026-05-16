@@ -346,9 +346,9 @@ const InputTextualUI = (props) => {
             value: input.value,
             uiAction: (inputValue, e) => {
               fieldProps.uiAction?.(inputValue, e);
-              onInputStable?.(e);
             },
           });
+          onInputStable?.(e);
         }}
         // style management
         baseClassName="navi_native_input"

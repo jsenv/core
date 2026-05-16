@@ -1,5 +1,4 @@
 import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
-import { PickerAction } from "./picker_action.jsx";
 import { PickerPopup } from "./picker_popup/picker_popup.jsx";
 import { PickerHour } from "./preset/picker_hour.jsx";
 import {
@@ -50,17 +49,8 @@ const PickerShowMethodResolver = (props) => {
   return <Next {...props} />;
 };
 
-const PickerActionResolver = (props) => {
-  const Next = useNextResolver();
-  if (props.action) {
-    return <PickerAction {...props} />;
-  }
-  return <Next {...props} />;
-};
-
 export const pickerResolvers = [
   PickerPresetResolver,
   PickerPopupResolver,
   PickerShowMethodResolver,
-  PickerActionResolver,
 ];

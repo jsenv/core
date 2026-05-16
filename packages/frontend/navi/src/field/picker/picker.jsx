@@ -4,28 +4,23 @@ import { useContext, useRef } from "preact/hooks";
 import { Box } from "@jsenv/navi/src/box/box.jsx";
 import { ChevronDownSvg } from "@jsenv/navi/src/graphic/icons/chevron_updown_svg.jsx";
 import { LoadingOutline } from "@jsenv/navi/src/graphic/loading/loading_outline.jsx";
-import { createComponentResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
+import {
+  createComponentResolver,
+  useNextResolver,
+} from "@jsenv/navi/src/resolver/resolver.jsx";
 import { Icon } from "@jsenv/navi/src/text/icon.jsx";
-import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
-import {
-  FieldContext,
-  reportDisabledToField,
-  reportInteractiveToField,
-  reportReadOnlyToField,
-  useFieldId,
-} from "../field.jsx";
+import { useFieldId } from "../field.jsx";
 import { createUICallback } from "../ui_callback.js";
-import { ActionRequesterContext } from "../use_action_props.jsx";
+import { useActionProps } from "../use_action_props.jsx";
+import { useFieldProps } from "../use_field_props.jsx";
 import {
-  DisabledContext,
-  LoadingContext,
-  ReadOnlyContext,
-  UIStateContext,
   UIStateControllerContext,
-  useUIState,
   useUIStateController,
 } from "../use_ui_state_controller.js";
-import { useConstraints } from "../validation/hooks/use_constraints.js";
+import {
+  dispatchRequestAction,
+  dispatchRequestUIAction,
+} from "../validation/custom_constraint_validation.js";
 import { PickerContext, PickerElementContext } from "./picker_context.jsx";
 import { pickerResolvers } from "./picker_resolvers.jsx";
 
@@ -235,21 +230,30 @@ const css = /* css */ `
  */
 export const Picker = (props) => {
   const defaultRef = useRef(null);
-  const ref = props.ref || defaultRef;
+  props.ref = props.ref || defaultRef;
   const fieldId = useFieldId();
-  const id = props.id || fieldId;
+  props.id = props.id || fieldId;
   const uiStateController = useUIStateController(props, "picker");
-  const uiState = useUIState(uiStateController);
+  const picker = renderPicker(PickerButton, props);
 
   return (
     <UIStateControllerContext.Provider value={uiStateController}>
-      <UIStateContext.Provider value={uiState}>
-        {renderPicker(PickerInput, { ...props, ref, id })}
-      </UIStateContext.Provider>
+      {picker}
     </UIStateControllerContext.Provider>
   );
 };
-const renderPicker = createComponentResolver(pickerResolvers);
+const PickerActionResolver = (props) => {
+  const Next = useNextResolver();
+  if (props.action) {
+    return <PickerAction {...props} />;
+  }
+  return <Next {...props} />;
+};
+
+const renderPicker = createComponentResolver([
+  pickerResolvers,
+  PickerActionResolver,
+]);
 Picker.update = createUICallback({
   name: "Picker.update",
   uiAction: (value, e) => {
@@ -282,80 +286,46 @@ const dispatchToPicker = (e, customEventName, detail) => {
   });
 };
 
-const PickerInput = (props) => {
+const PickerButton = (props) => {
   import.meta.css = css;
   const {
     id,
     type,
     name,
     ref,
-    disabled,
-    readOnly,
-    loading,
     placeholder,
     ui,
     icon,
-    autoFocus,
-    autoFocusPreventScroll,
-    onChange,
-    // input constraint attributes — forwarded to hidden <input>, not the button
+    // props forwarded to picker.input, not the picker.button
     required,
     min,
     max,
     step,
-    children,
-    ...rest
+    onInput,
+    onChange,
   } = props;
-  const uiState = useContext(UIStateContext);
-  const uiStateController = useContext(UIStateControllerContext);
-  const contextReadOnly = useContext(ReadOnlyContext);
-  const contextDisabled = useContext(DisabledContext);
-  const contextLoading = useContext(LoadingContext);
-  const actionRequester = useContext(ActionRequesterContext);
-
-  const innerLoading =
-    loading || (contextLoading && actionRequester === ref.current);
-  const innerReadOnly =
-    readOnly || contextReadOnly || innerLoading || uiStateController.readOnly;
-  const innerDisabled = disabled || contextDisabled;
-
-  reportReadOnlyToField(innerReadOnly);
-  reportDisabledToField(innerDisabled);
-  reportInteractiveToField(true);
-  useAutoFocus(ref, autoFocus, { preventScroll: autoFocusPreventScroll });
-
   const pickerInputRef = useRef(null);
-  const remainingProps = useConstraints(pickerInputRef, rest);
+  const fieldProps = useFieldProps({ ...props, ref: pickerInputRef });
+  const { value, basePseudoState, children } = fieldProps;
+  const loading = basePseudoState[":-navi-loading"];
+  const readOnly = basePseudoState[":read-only"];
+  const disabled = basePseudoState[":disabled"];
 
   return (
     <Box
       as="button"
       type="button"
-      {...remainingProps}
+      {...fieldProps}
       ref={ref}
       baseClassName="navi_picker"
       data-field=".navi_picker_input"
       navi-submit-effect="request_ui_action"
       navi-has-placeholder={placeholder ? "" : undefined}
-      aria-busy={innerLoading}
-      autoFocus={undefined}
-      basePseudoState={{
-        ...remainingProps.basePseudoState,
-        ":read-only": innerReadOnly,
-        ":disabled": innerDisabled,
-        ":-navi-loading": innerLoading,
-      }}
       // pseudoStateSelector=".navi_picker_input"
       pseudoClasses={PICKER_PSEUDO_CLASSES}
       // we must put the id on the button and not the input
       // so that a <label> tries to give focus to the button and not the input
       id={id}
-      onnavi_picker_set_value={(e) => {
-        uiStateController.setUIState(e.detail.value, e);
-      }}
-      onnavi_picker_cancel={(e) => {
-        uiStateController.resetUIState(e);
-      }}
       onnavi_get_managed_fields={(e) => {
         // we must check for the pickerEl content to search for a valid input because we might be a button used to validate for instance
         // no necessarily the field itself
@@ -365,14 +335,14 @@ const PickerInput = (props) => {
       }}
     >
       <LoadingOutline
-        loading={innerLoading}
+        loading={loading}
         color="var(--picker-loader-color)"
         inset={-1}
       />
       <PickerContext.Provider
         value={{
           placeholder,
-          value: uiState,
+          value,
         }}
       >
         {ui === undefined ? <PickerDefaultUI /> : ui}
@@ -386,25 +356,32 @@ const PickerInput = (props) => {
         className="navi_picker_input"
         type={type}
         name={name}
-        value={type === "color" && !uiState ? "#000000" : uiState}
+        value={value}
         required={required}
         min={min}
         max={max}
         step={step}
         tabIndex={-1}
-        readOnly={innerReadOnly}
-        disabled={innerDisabled}
-        aria-busy={innerLoading}
+        readOnly={readOnly}
+        disabled={disabled}
+        aria-busy={loading}
         data-rendered-by=".navi_picker"
-        onChange={(e) => {
-          const newValue = e.currentTarget.value;
-          uiStateController.setUIState(newValue, e);
-          onChange?.(e);
+        onInput={(e) => {
+          const input = e.target;
+          dispatchRequestUIAction(input, {
+            event: e,
+            value: input.value,
+            uiAction: (inputValue, e) => {
+              fieldProps.uiAction?.(inputValue, e);
+            },
+          });
+          onInput?.(e);
         }}
+        onChange={onChange}
       />
+
       <PickerElementContext.Provider value={ref}>
-        {/* We are a field ourselve, which can contain other fields that should not inherit our field */}
-        <FieldContext.Provider value={null}>{children}</FieldContext.Provider>
+        {children}
       </PickerElementContext.Provider>
     </Box>
   );
@@ -454,4 +431,22 @@ const PickerDefaultUI = () => {
     return placeholder || null;
   }
   return value;
+};
+
+export const PickerAction = (props) => {
+  const Next = useNextResolver();
+  const actionProps = useActionProps(props);
+
+  return (
+    <Next
+      {...actionProps}
+      onChange={(e) => {
+        const input = e.target;
+        dispatchRequestAction(input, {
+          event: e,
+          requester: input,
+        });
+      }}
+    />
+  );
 };
