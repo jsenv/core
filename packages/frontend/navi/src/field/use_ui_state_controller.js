@@ -74,7 +74,7 @@ export const useUIStateController = (
   const parentUIStateController = useContext(ParentUIStateControllerContext);
   const formContext = useContext(FormContext);
   const pickerElementContext = useContext(PickerElementContext);
-  const { id, name, action, uiAction } = props;
+  const { id, name, uiAction, action } = props;
   const hasStateProp = Object.hasOwn(props, statePropName);
   /**
    * This check is needed only for basic field because
@@ -87,8 +87,8 @@ export const useUIStateController = (
    * to update the state and as a result allowed to have "checked"/"value" prop without "onUIStateChange"
    */
   const uncontrolled =
-    !action &&
     !uiAction &&
+    !action &&
     !formContext &&
     !pickerElementContext &&
     !parentUIStateController;

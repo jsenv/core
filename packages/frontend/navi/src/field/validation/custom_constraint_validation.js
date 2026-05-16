@@ -86,11 +86,41 @@ import {
 } from "./constraints/standard_constraints.js";
 import { listenInputValue } from "./input_value_listener.js";
 
+export const dispatchRequestUIAction = (
+  elementWithUIAction,
+  { event, value, uiAction },
+) => {
+  return dispatchInternalCustomEvent(
+    elementWithUIAction,
+    "navi_request_ui_action",
+    {
+      event,
+      value,
+      uiAction,
+    },
+  );
+};
+export const dispatchRequestAction = (
+  elementWithAction,
+  { actionOrigin = "action_prop", event, requester, target },
+) => {
+  return dispatchInternalCustomEvent(elementWithAction, "navi_request_action", {
+    actionOrigin,
+    event,
+    requester,
+    target,
+  });
+};
+
 export const NAVI_VALIDITY_CHANGE_CUSTOM_EVENT = "navi_validity_change";
 const UI_ACTION_CONSTRAINTS = [DISABLED_CONSTRAINT, READONLY_CONSTRAINT];
 
 const pointerEventTypeSet = new Set(["pointerdown", "mousedown", "click"]);
-export const onRequestUIAction = (event) => {
+export const onRequestUIAction = (requestUIActionCustomEvent) => {
+  const event = requestUIActionCustomEvent.detail.event;
+  const value = requestUIActionCustomEvent.detail.value;
+  const uiAction = requestUIActionCustomEvent.detail.value;
+
   if (pointerEventTypeSet.has(event)) {
     if (event.button !== 0) {
       return false;
@@ -99,23 +129,26 @@ export const onRequestUIAction = (event) => {
   if (event.defaultPrevented) {
     return false;
   }
-  const elementHandlingUIAction = event.currentTarget;
+  const elementHandlingUIAction = requestUIActionCustomEvent.currentTarget;
   const requester = event.target;
   const [isValid] = checkConstraintsAndReport(UI_ACTION_CONSTRAINTS, {
     event,
     requester,
   });
+  const customEventDetail = {
+    event,
+    value,
+    uiAction,
+  };
   if (!isValid) {
     dispatchInternalCustomEvent(
       elementHandlingUIAction,
       "navi_ui_action_prevented",
-      {
-        event,
-        requester,
-      },
+      customEventDetail,
     );
     return false;
   }
+  uiAction(value, event);
   return true;
 };
 
@@ -210,6 +243,7 @@ export const onRequestAction = (
   );
   return true;
 };
+
 const STANDARD_CONSTRAINT_SET = new Set([
   DISABLED_CONSTRAINT,
   REQUIRED_CONSTRAINT,
@@ -970,17 +1004,6 @@ const getFirstButtonSubmittingForm = (form) => {
   );
 };
 
-export const dispatchRequestAction = (
-  elementWithAction,
-  { actionOrigin = "action_prop", event, requester, target },
-) => {
-  return dispatchInternalCustomEvent(elementWithAction, "navi_request_action", {
-    actionOrigin,
-    event,
-    requester,
-    target,
-  });
-};
 // https://developer.mozilla.org/en-US/docs/Web/HTML/Guides/Constraint_validation
 const requestSubmit = HTMLFormElement.prototype.requestSubmit;
 HTMLFormElement.prototype.requestSubmit = function (submitter) {

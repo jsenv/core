@@ -35,19 +35,12 @@ import { SearchSvg } from "@jsenv/navi/src/graphic/icons/search_svg.jsx";
 import { LoadingOutline } from "@jsenv/navi/src/graphic/loading/loading_outline.jsx";
 import { shortcutsViaOnKeyDown } from "@jsenv/navi/src/keyboard/keyboard_shortcuts.js";
 import { Icon } from "@jsenv/navi/src/text/icon.jsx";
-import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
 import { useStableCallback } from "@jsenv/navi/src/utils/use_stable_callback.js";
 import {
   createComponentResolver,
   useNextResolver,
 } from "../../resolver/resolver.jsx";
-import {
-  Label,
-  reportDisabledToField,
-  reportInteractiveToField,
-  reportReadOnlyToField,
-  useFieldId,
-} from "../field.jsx";
+import { Label, useFieldId } from "../field.jsx";
 import { fieldPropSet } from "../field_prop_set.js";
 import {
   InsideRealListItemContext,
@@ -58,17 +51,13 @@ import {
   requestListOpen,
   requestListSelectCurrent,
 } from "../list/list.jsx";
-import { ActionRequesterContext, useActionProps } from "../use_action_props.jsx";
+import { useActionProps } from "../use_action_props.jsx";
+import { useFieldProps } from "../use_field_props.jsx";
 import {
-  DisabledContext,
-  LoadingContext,
-  ReadOnlyContext,
-  UIStateContext,
   UIStateControllerContext,
-  useUIState,
   useUIStateController,
 } from "../use_ui_state_controller.js";
-import { useConstraints } from "../validation/hooks/use_constraints.js";
+import { dispatchRequestUIAction } from "../validation/custom_constraint_validation.js";
 
 const css = /* css */ `
   @layer navi {
@@ -283,13 +272,10 @@ export const InputTextual = (props) => {
   const fieldId = useFieldId();
   const id = props.id || fieldId || defaultId;
   const uiStateController = useUIStateController(props, "input");
-  const uiState = useUIState(uiStateController);
 
   return (
     <UIStateControllerContext.Provider value={uiStateController}>
-      <UIStateContext.Provider value={uiState}>
-        {renderInput(InputTextualUI, { ...props, ref, id })}
-      </UIStateContext.Provider>
+      {renderInput(InputTextualUI, { ...props, ref, id })}
     </UIStateControllerContext.Provider>
   );
 };
@@ -333,83 +319,40 @@ const renderInput = createComponentResolver([
 const InputNativeContext = createContext(null);
 const InputTextualUI = (props) => {
   import.meta.css = css;
-  const {
-    ref,
-    type,
-    onInput,
-    onKeyDown,
-
-    readOnly,
-    disabled,
-    loading,
-
-    autoFocus,
-    autoFocusVisible,
-    autoSelect,
-    basePseudoState,
-    icon,
-    children,
-
-    ...rest
-  } = props;
-  const contextReadOnly = useContext(ReadOnlyContext);
-  const contextDisabled = useContext(DisabledContext);
-  const contextLoading = useContext(LoadingContext);
-  const actionRequester = useContext(ActionRequesterContext);
-  const uiStateController = useContext(UIStateControllerContext);
-  const uiState = useContext(UIStateContext);
-
-  const innerValue =
-    type === "datetime-local" ? convertToLocalTimezone(uiState) : uiState;
-  const innerLoading =
-    loading || (contextLoading && actionRequester === ref.current);
-  const innerReadOnly =
-    readOnly || contextReadOnly || innerLoading || uiStateController.readOnly;
-  const innerDisabled = disabled || contextDisabled;
-  // infom any <label> parent of our readOnly state + that we are interactive
-  reportReadOnlyToField(innerReadOnly);
-  reportDisabledToField(innerDisabled);
-  reportInteractiveToField(true);
-  useAutoFocus(ref, autoFocus, {
-    focusVisible: autoFocusVisible,
-    autoSelect,
-  });
-  const remainingProps = useConstraints(ref, rest);
+  const fieldProps = useFieldProps(props);
+  const { ref, type, onInput, icon, children } = fieldProps;
 
   const onInputStable = useStableCallback(onInput);
-  const onKeyDownStable = useStableCallback(onKeyDown);
   const renderInput = (inputProps) => {
+    const { value } = inputProps.value;
     return (
       <Box
         {...inputProps}
         as="input"
         ref={ref}
         type={type}
-        data-value={uiState}
-        value={type === "color" && !innerValue ? "#000000" : innerValue}
+        data-value={value}
+        value={type === "color" && !value ? "#000000" : value}
         onInput={(e) => {
+          const input = e.target;
           let inputValue;
           if (type === "number") {
-            inputValue = e.target.valueAsNumber;
+            inputValue = input.valueAsNumber;
             if (isNaN(inputValue)) {
-              inputValue = e.target.value;
+              inputValue = input.value;
             }
           } else if (type === "datetime-local") {
-            inputValue = convertToUTCTimezone(e.target.value);
+            inputValue = convertToUTCTimezone(input.value);
           } else {
-            inputValue = e.target.value;
+            inputValue = input.value;
           }
-          uiStateController.setUIState(inputValue, e);
-          onInputStable?.(e);
-        }}
-        onKeyDown={(e) => {
-          onKeyDownStable?.(e);
-        }}
-        onnavi_request_reset_ui_state={(e) => {
-          uiStateController.resetUIState(e);
-        }}
-        on_navi_set_ui_state={(e) => {
-          uiStateController.setUIState(e.detail.value, e);
+          dispatchRequestUIAction(input, {
+            event: e,
+            uiAction: () => {
+              fieldProps.uiAction?.(inputValue, e);
+              onInputStable?.(e);
+            },
+          });
         }}
         // style management
         baseClassName="navi_native_input"
@@ -417,12 +360,7 @@ const InputTextualUI = (props) => {
       />
     );
   };
-  const renderInputMemoized = useCallback(renderInput, [
-    type,
-    uiState,
-    innerValue,
-    autoFocus,
-  ]);
+  const renderInputMemoized = useCallback(renderInput, [type]);
 
   let innerChildren;
   if (children === undefined) {
@@ -438,10 +376,15 @@ const InputTextualUI = (props) => {
           )}
           <InputRightSlot
             hideWhileEmpty
-            onClick={() => {
-              uiStateController.setUIState("", { trigger: "cancel_button" });
-              ref.current.value = "";
-              ref.current.dispatchEvent(new Event("navi_delete_content"));
+            onClick={(e) => {
+              const input = ref.current;
+              dispatchRequestUIAction(input, {
+                event: e,
+                uiAction: () => {
+                  input.value = "";
+                  input.dispatchEvent(new CustomEvent("navi_delete_content"));
+                },
+              });
             }}
           >
             <Icon color="rgba(28, 43, 52, 0.5)">
@@ -471,6 +414,11 @@ const InputTextualUI = (props) => {
     innerChildren = children;
   }
 
+  let { value, loading, readOnly, disabled } = fieldProps;
+  if (type === "datetime-local") {
+    value = convertToLocalTimezone(value);
+  }
+
   return (
     <Box
       as="span"
@@ -479,22 +427,15 @@ const InputTextualUI = (props) => {
       styleCSSVars={InputStyleCSSVars}
       pseudoStateSelector=".navi_native_input"
       visualSelector=".navi_native_input"
-      basePseudoState={{
-        ...basePseudoState,
-        ":read-only": innerReadOnly,
-        ":disabled": innerDisabled,
-        ":-navi-loading": innerLoading,
-      }}
       pseudoClasses={InputPseudoClasses}
       pseudoElements={InputPseudoElements}
       hasChildFunction
       baseChildPropSet={InputChildPropSet}
-      {...remainingProps}
-      ref={undefined}
-      autoFocus={undefined} // See use_auto_focus.js
+      {...fieldProps}
+      value={value}
     >
       <LoadingOutline
-        loading={innerLoading}
+        loading={loading}
         color="var(--loader-color)"
         inset={-1}
       />
@@ -503,8 +444,8 @@ const InputTextualUI = (props) => {
         <InputNativeContext.Provider
           value={{
             id: props.id,
-            readOnly: innerReadOnly,
-            disabled: innerDisabled,
+            readOnly,
+            disabled,
           }}
         >
           {innerChildren}
