@@ -134,7 +134,7 @@ const FormUI = (props) => {
 const FormWithAction = (props) => {
   const { ref, action, method } = props;
   const uiStateController = useContext(UIStateControllerContext);
-  const remainingProps = useActionProps(props, {
+  const actionProps = useActionProps(props, {
     provideAction: true,
     provideActionRequester: true,
   });
@@ -142,7 +142,7 @@ const FormWithAction = (props) => {
   return (
     <FormUI
       data-method={action.meta?.httpVerb || method || "GET"}
-      {...remainingProps}
+      {...actionProps}
       onnavi_get_managed_fields={(e) => {
         e.detail.respondWith(getFormManagedFields(e.currentTarget));
       }}
@@ -152,7 +152,7 @@ const FormWithAction = (props) => {
         // it's only in case we have fields that are not managed by navi
         const formElementValues = collectFormElementValues(form);
         uiStateController.setUIState(formElementValues, e);
-        remainingProps.onnavi_action_ready?.(e);
+        actionProps.onnavi_action_ready?.(e);
       }}
     />
   );
