@@ -58,7 +58,6 @@ export const useFieldProps = (props) => {
     ...remainingProps,
     ref,
     value,
-    "aria-busy": innerLoading,
     "onnavi_request_reset_ui_state": (e) => {
       uiStateController.resetUIState(e);
     },
@@ -79,9 +78,10 @@ export const useFieldProps = (props) => {
     "autoFocus": undefined, // See use_auto_focus.js
     "basePseudoState": {
       ...basePseudoState,
-      ":read-only": readOnly,
-      ":disabled": disabled,
-      ":-navi-loading": loading,
+      ":read-only": innerReadOnly,
+      ":disabled": innerDisabled,
+      ":-navi-loading": innerLoading,
     },
+    "aria-busy": innerLoading,
   };
 };
