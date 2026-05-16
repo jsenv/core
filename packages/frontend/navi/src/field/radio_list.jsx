@@ -1,20 +1,12 @@
-import { useContext, useRef } from "preact/hooks";
+import { useRef } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
 import { InputRadio } from "./input/input_radio.jsx";
 import { useActionProps } from "./use_action_props.jsx";
+import { useFieldGroupProps } from "./use_field_group_props.jsx";
 import {
-  DisabledContext,
-  FieldNameContext,
-  LoadingContext,
-  ParentUIStateControllerContext,
-  ReadOnlyContext,
-  RequiredContext,
-  UIStateContext,
   UIStateControllerContext,
-  useUIAction,
   useUIGroupStateController,
-  useUIState,
 } from "./use_ui_state_controller.js";
 import { dispatchRequestAction } from "./validation/custom_constraint_validation.js";
 
@@ -35,12 +27,11 @@ export const RadioList = (props) => {
       return activeValue;
     },
   });
-  const uiState = useUIState(uiStateController);
+  const radioList = <RadioListDispatcher {...props} ref={ref} />;
+
   return (
     <UIStateControllerContext.Provider value={uiStateController}>
-      <UIStateContext.Provider value={uiState}>
-        <RadioListDispatcher {...props} ref={ref} />
-      </UIStateContext.Provider>
+      {radioList}
     </UIStateControllerContext.Provider>
   );
 };
@@ -54,51 +45,15 @@ const RadioListDispatcher = (props) => {
 };
 
 const RadioListUI = (props) => {
-  const {
-    name,
-    loading,
-    disabled,
-    readOnly,
-    uiAction,
-    children,
-    required,
-    ...rest
-  } = props;
-  const contextReadOnly = useContext(ReadOnlyContext);
-  const contextDisabled = useContext(DisabledContext);
-  const contextLoading = useContext(LoadingContext);
-  const uiStateController = useContext(UIStateControllerContext);
-  useUIAction(uiStateController, uiAction);
-
-  const innerLoading = loading || contextLoading;
-  const innerReadOnly =
-    readOnly || contextReadOnly || innerLoading || uiStateController.readOnly;
-  const innerDisabled = disabled || contextDisabled;
+  const fieldGroupProps = useFieldGroupProps(props);
 
   return (
     <Box
       flex="y"
-      {...rest}
+      {...fieldGroupProps}
       baseClassName="navi_radio_list"
       data-radio-list=""
-      onnavi_request_reset_ui_state={(e) => {
-        uiStateController.resetUIState(e);
-      }}
-    >
-      <ParentUIStateControllerContext.Provider value={uiStateController}>
-        <FieldNameContext.Provider value={name}>
-          <ReadOnlyContext.Provider value={innerReadOnly}>
-            <DisabledContext.Provider value={innerDisabled}>
-              <RequiredContext.Provider value={required}>
-                <LoadingContext.Provider value={innerLoading}>
-                  {children}
-                </LoadingContext.Provider>
-              </RequiredContext.Provider>
-            </DisabledContext.Provider>
-          </ReadOnlyContext.Provider>
-        </FieldNameContext.Provider>
-      </ParentUIStateControllerContext.Provider>
-    </Box>
+    />
   );
 };
 const RadioListWithAction = (props) => {
@@ -118,6 +73,9 @@ const RadioListWithAction = (props) => {
   return (
     <RadioListUI
       {...remainingProps}
+      // This is the bubbling onChange we receive from radio buttons
+      // we should likely ensure we receive change for the correct radio (right now we trust change only happens from the radio we care)
+      // we should ensure that
       onChange={(e) => {
         const radio = e.target;
         const radioListContainer = props.ref.current;
