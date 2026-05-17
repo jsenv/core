@@ -36,6 +36,7 @@ export const useFieldProps = (
     getPropFromState,
     getStateFromParent,
     allowNameless,
+    persists,
 
     readUIState,
     paramsSignal,
@@ -51,6 +52,7 @@ export const useFieldProps = (
     getPropFromState,
     getStateFromParent,
     allowNameless,
+    persists,
     debugAction,
   });
 
@@ -247,6 +249,11 @@ export const useActionProps = (
     },
     "onnavi_action_prevented": onActionPrevented,
     "onnavi_action_ready": (e) => {
+      if (e.detail.action === "auto") {
+        // special case for the use case where form.submit is called
+        e.detail.action = boundAction;
+      }
+
       const { uiState } = e.detail;
       if (uiState !== UI_STATE_NOT_AVAILABLE) {
         // we can't execute uiAction right now as value is not available

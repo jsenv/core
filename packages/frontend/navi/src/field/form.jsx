@@ -13,29 +13,25 @@
  *    right now it's just logged to the console I need to see how we can achieve this
  */
 
-import { dispatchCustomEvent } from "@jsenv/dom";
-import { useContext, useMemo, useRef } from "preact/hooks";
+import { dispatchInternalCustomEvent } from "@jsenv/dom";
+import { useMemo, useRef } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
-import { useDebugAction } from "../navi_debug.jsx";
-import { collectFormElementValues } from "./collect_form_element_values.js";
 import { FormContext } from "./form_context.js";
-import { useActionProps } from "./use_action_props.jsx";
-import {
-  LoadingContext,
-  ParentUIStateControllerContext,
-  ReadOnlyContext,
-  UIStateContext,
-  UIStateControllerContext,
-  useUIGroupStateController,
-  useUIState,
-} from "./use_ui_state_controller.js";
-import { useConstraints } from "./validation/hooks/use_constraints.js";
+import { useFieldGroupProps } from "./use_field_group_props.jsx";
 
 export const Form = (props) => {
   const defaultRef = useRef();
-  const ref = props.ref || defaultRef;
-  const uiStateController = useUIGroupStateController(props, "form", {
+  props.ref = props.ref || defaultRef;
+  const form = <FormField {...props} />;
+
+  return form;
+};
+
+const FormField = (props) => {
+  const { ref, method = "GET" } = props;
+  const fieldGroupProps = useFieldGroupProps(props, {
+    fieldType: "form",
     childComponentType: "*",
     aggregateChildStates: (childUIStateControllers) => {
       const formValues = {};
@@ -55,50 +51,27 @@ export const Form = (props) => {
       return formValues;
     },
   });
-  const uiState = useUIState(uiStateController);
-
-  return (
-    <UIStateControllerContext.Provider value={uiStateController}>
-      <UIStateContext.Provider value={uiState}>
-        <FormDispatcher {...props} ref={ref} />
-      </UIStateContext.Provider>
-    </UIStateControllerContext.Provider>
-  );
-};
-const FormDispatcher = (props) => {
-  if (props.action) {
-    return <FormWithAction {...props} />;
-  }
-  return <FormUI {...props} />;
-};
-
-const FormUI = (props) => {
-  const { ref, readOnly, loading, children, ...rest } = props;
-  const debugAction = useDebugAction();
-  const uiStateController = useContext(UIStateControllerContext);
-
-  // instantiate validation via useConstraints hook:
-  // - receive "actionrequested" custom event ensure submit is prevented
-  // (and also execute action without validation if form.submit() is ever called)
-  const remainingProps = useConstraints(ref, rest);
-  const innerReadOnly = readOnly || loading;
+  const { basePseudoState, children } = fieldGroupProps;
+  // const disabled = basePseudoState[":disabled"];
+  // const readOnly = basePseudoState[":read-only"];
+  const loading = basePseudoState[":-navi-loading"];
   const formContextValue = useMemo(() => {
     return { loading };
   }, [loading]);
 
   return (
     <Box
-      data-action="toto"
-      {...remainingProps}
+      {...fieldGroupProps}
       as="form"
-      ref={ref}
+      data-method={method}
+      navi-submit-effect="request_action"
       novalidate="" // make sure browser don't prevent "submit" when invalid, nor display messages
       onSubmit={(e) => {
         const form = e.currentTarget;
         e.preventDefault();
-        dispatchCustomEvent(form, "navi_action_ready", {
-          action: null,
+        dispatchInternalCustomEvent(form, "navi_action_ready", {
           event: e,
+          action: "auto",
           method: "rerun",
           requester: form,
           meta: {
@@ -106,55 +79,23 @@ const FormUI = (props) => {
           },
         });
       }}
+      onnavi_get_managed_fields={(e) => {
+        e.detail.respondWith(getFormManagedFields(e.currentTarget));
+      }}
       onReset={(e) => {
         // browser would empty all fields to their default values (likely empty/unchecked)
         // we want to reset to the last known external state instead
         e.preventDefault();
-        debugAction(
-          e,
-          `form reset -> resetUIState to ${JSON.stringify(uiStateController.state)}`,
-        );
-        uiStateController.resetUIState(e);
+        const form = ref.current;
+        dispatchInternalCustomEvent(form, "navi_request_reset_ui_state", {
+          event: e,
+        });
       }}
     >
-      <ParentUIStateControllerContext.Provider value={uiStateController}>
-        <ReadOnlyContext.Provider value={innerReadOnly}>
-          <LoadingContext.Provider value={loading}>
-            <FormContext.Provider value={formContextValue}>
-              {children}
-            </FormContext.Provider>
-          </LoadingContext.Provider>
-        </ReadOnlyContext.Provider>
-      </ParentUIStateControllerContext.Provider>
+      <FormContext.Provider value={formContextValue}>
+        {children}
+      </FormContext.Provider>
     </Box>
-  );
-};
-
-const FormWithAction = (props) => {
-  const { ref, action, method } = props;
-  const uiStateController = useContext(UIStateControllerContext);
-  const actionProps = useActionProps(props, {
-    provideAction: true,
-    provideActionRequester: true,
-  });
-
-  return (
-    <FormUI
-      data-method={action.meta?.httpVerb || method || "GET"}
-      navi-submit-effect="request_action"
-      {...actionProps}
-      onnavi_get_managed_fields={(e) => {
-        e.detail.respondWith(getFormManagedFields(e.currentTarget));
-      }}
-      onnavi_action_ready={(e) => {
-        const form = ref.current;
-        // this is not really mandatory, normally all navi fields already report
-        // it's only in case we have fields that are not managed by navi
-        const formElementValues = collectFormElementValues(form);
-        uiStateController.setUIState(formElementValues, e);
-        actionProps.onnavi_action_ready?.(e);
-      }}
-    />
   );
 };
 

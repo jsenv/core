@@ -2,19 +2,11 @@ import { elementIsFocusable, findAfter } from "@jsenv/dom";
 import { useContext, useEffect, useRef } from "preact/hooks";
 
 import { ActionRenderer } from "../../action/action_renderer.jsx";
-import { renderActionableComponent } from "../../action/render_actionable_component.jsx";
-import { useAction } from "../../action/use_action.js";
-import { useActionStatus } from "../../action/use_action_status.js";
 import { Box } from "../../box/box.jsx";
 import { useKeyboardShortcuts } from "../../keyboard/keyboard_shortcuts.js";
 import { useFocusGroup } from "../../utils/focus/use_focus_group.js";
-import { useActionProps } from "../use_action_props.jsx";
-import {
-  UIStateContext,
-  UIStateControllerContext,
-  useUIState,
-  useUIStateController,
-} from "../use_ui_state_controller.js";
+import { ActionContext } from "../field_context.js";
+import { useFieldProps } from "../use_field_props.jsx";
 import { dispatchRequestAction } from "../validation/custom_constraint_validation.js";
 import { SummaryMarker } from "./summary_marker.jsx";
 
@@ -56,37 +48,19 @@ const css = /* css */ `
 `;
 
 export const Details = (props) => {
-  import.meta.css = css;
-  const { value = "on", persists } = props;
-  const uiStateController = useUIStateController(props, "details", {
-    statePropName: "open",
-    defaultStatePropName: "defaultOpen",
-    fallbackState: false,
-    getStateFromProp: (open) => (open ? value : undefined),
-    getPropFromState: Boolean,
-    persists,
-  });
-  const uiState = useUIState(uiStateController);
+  const refDefault = useRef();
+  props.ref = props.ref || refDefault;
+  props.value = props.value === undefined ? "on" : props.value;
 
-  const details = renderActionableComponent(props, {
-    Basic: DetailsBasic,
-    WithAction: DetailsWithAction,
-    WithConnectedAction: DetailsWithConnectedAction,
-  });
-  return (
-    <UIStateControllerContext.Provider value={uiStateController}>
-      <UIStateContext.Provider value={uiState}>
-        {details}
-      </UIStateContext.Provider>
-    </UIStateControllerContext.Provider>
-  );
+  const details = <DetailsField {...props} />;
+  return details;
 };
 
-const DetailsBasic = (props) => {
-  const uiStateController = useContext(UIStateControllerContext);
-  const uiState = useContext(UIStateContext);
+const DetailsField = (props) => {
+  import.meta.css = css;
   const {
-    id,
+    ref,
+    persists,
     label = "Summary",
     loading,
     focusGroup,
@@ -95,14 +69,33 @@ const DetailsBasic = (props) => {
     openKeyShortcut = "ArrowRight",
     closeKeyShortcut = "ArrowLeft",
     onToggle,
-    onOpen,
-    onClose,
-    children,
-    ...rest
   } = props;
-  const defaultRef = useRef();
-  const ref = rest.ref || defaultRef;
-  const open = Boolean(uiState);
+  const fieldProps = useFieldProps(
+    {
+      resetOnCancel: true,
+      resetOnAbort: true,
+      resetOnError: true,
+      // errors are shown by ActionRenderer inside <details>, not as validation messages
+      actionErrorEffect: "none",
+      ...props,
+    },
+    {
+      fieldType: "details",
+      readUIState: () => {
+        const details = ref.current;
+        const opened = details.open;
+        return opened ? props.value : undefined;
+      },
+      statePropName: "open",
+      defaultStatePropName: "defaultOpen",
+      fallbackState: false,
+      getStateFromProp: (open) => (open ? props.value : undefined),
+      getPropFromState: Boolean,
+      persists,
+    },
+  );
+  const { value, children } = fieldProps;
+  const open = Boolean(value);
 
   useFocusGroup(ref, {
     enabled: focusGroup,
@@ -184,22 +177,17 @@ const DetailsBasic = (props) => {
   return (
     <Box
       as="details"
-      {...rest}
-      ref={ref}
-      id={id}
+      {...fieldProps}
       baseClassName="navi_details"
       onToggle={(e) => {
         onToggle?.(e);
-        const isOpen = e.newState === "open";
-        if (mountedRef.current) {
-          if (isOpen) {
-            uiStateController.setUIState(true, e);
-            onOpen?.(e);
-          } else {
-            uiStateController.setUIState(false, e);
-            onClose?.(e);
-          }
+        if (!mountedRef.current) {
+          return;
         }
+        const details = ref.current;
+        dispatchRequestAction(details, {
+          event: e,
+        });
       }}
       open={open}
     >
@@ -209,57 +197,28 @@ const DetailsBasic = (props) => {
           <div className="navi_summary_label">{label}</div>
         </div>
       </summary>
-      {children}
+      <DetailsFieldContent>{children}</DetailsFieldContent>
     </Box>
   );
 };
 
-const DetailsWithAction = (props) => {
-  const { action, loading, onOpen, onClose, children, ...restProps } = props;
-  const defaultRef = useRef();
-  const ref = restProps.ref || defaultRef;
-  const effectiveAction = useAction(action);
-  const remainingProps = useActionProps(
-    {
-      resetOnCancel: true,
-      resetOnAbort: true,
-      resetOnError: true,
-      // errors are shown by ActionRenderer inside <details>, not as validation messages
-      actionErrorEffect: "none",
-      ...restProps,
-    },
-    { externalBoundAction: effectiveAction },
-  );
+// TODO: this is not really what we should be doing here:
+// the action should run on open and be aborted on close
+// instead we treat the details as a field
+// so it needs to be updated to work as designed (for later as we don't use details for now)
+//  onOpen={(e) => {
+//       dispatchRequestAction(e.target, {
+//         event: e,
+//         requester: e.target,
+//       });
+//       onOpen?.(e);
+//     }}
+//     onClose={(e) => {
+//       effectiveAction.abort();
+//       onClose?.(e);
+//     }}
+const DetailsFieldContent = ({ children }) => {
+  const action = useContext(ActionContext);
 
-  return (
-    <DetailsBasic
-      {...remainingProps}
-      ref={ref}
-      loading={loading || remainingProps.loading}
-      onOpen={(e) => {
-        dispatchRequestAction(e.target, {
-          event: e,
-          requester: e.target,
-        });
-        onOpen?.(e);
-      }}
-      onClose={(e) => {
-        effectiveAction.abort();
-        onClose?.(e);
-      }}
-    >
-      <ActionRenderer action={effectiveAction}>{children}</ActionRenderer>
-    </DetailsBasic>
-  );
-};
-
-const DetailsWithConnectedAction = (props) => {
-  const { connectedAction, children, loading, ...rest } = props;
-  const actionStatus = useActionStatus(connectedAction);
-  const { loading: actionLoading } = actionStatus;
-  return (
-    <DetailsBasic {...rest} loading={loading || actionLoading}>
-      <ActionRenderer action={connectedAction}>{children}</ActionRenderer>
-    </DetailsBasic>
-  );
+  return <ActionRenderer action={action}>{children}</ActionRenderer>;
 };

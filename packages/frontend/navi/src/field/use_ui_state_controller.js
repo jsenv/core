@@ -225,6 +225,7 @@ export const useUIStateController = (
     },
     resetUIState: (e) => {
       const currentState = uiStateController.state;
+      debugAction(e, `resetUIState to ${JSON.stringify(currentState)}`);
       uiStateController.setUIState(currentState, e);
     },
     actionEnd: () => {
@@ -499,6 +500,10 @@ export const useUIGroupStateController = (
       );
     },
     resetUIState: (e) => {
+      debugAction(
+        e,
+        `resetUIState to ${JSON.stringify(uiStateController.state)}`,
+      );
       // we should likely batch the changes that will be reported for performances
       for (const childUIStateController of childUIStateControllerArray) {
         childUIStateController.resetUIState(e);
