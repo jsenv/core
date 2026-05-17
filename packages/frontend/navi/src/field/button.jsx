@@ -395,6 +395,7 @@ const ButtonUI = (props) => {
   return (
     <Box
       {...rest}
+      ref={ref}
       as={as}
       href={href}
       target={innerTarget}
@@ -550,12 +551,12 @@ const ButtonInsideForm = (props) => {
 };
 const ButtonField = (props) => {
   const Next = useNextResolver();
+  const { ref, onClick } = props;
   const parentUIStateController = useContext(ParentUIStateControllerContext);
   const ancestorAction = useContext(ActionContext);
-  const remainingProps = useFieldProps(props, {
+  const fieldProps = useFieldProps(props, {
     fieldType: "button",
     readUIState: () => {
-      const ref = props.ref;
       const button = ref.current;
       // The button uiState is a combination of its own state (if it has a name)
       // and its parent state (if the parent is named or is a named collection)
@@ -587,13 +588,11 @@ const ButtonField = (props) => {
 
   return (
     <Next
-      {...remainingProps}
+      {...fieldProps}
       onClick={(e) => {
-        const button = e.currentTarget;
-        dispatchRequestAction(button, {
-          event: e,
-          requester: button,
-        });
+        onClick?.(e);
+        const button = ref.current;
+        dispatchRequestAction(button, { event: e });
       }}
     />
   );

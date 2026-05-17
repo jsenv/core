@@ -152,6 +152,8 @@ export const useActionProps = (
     if (!value) {
       valueForBrowser = "#000000";
     }
+  } else {
+    valueForBrowser = value;
   }
 
   return {
@@ -211,18 +213,19 @@ export const useActionProps = (
     "onnavi_request_action": (e) => {
       const { isInteractionOnly } = e.detail;
 
+      let uiStateRaw;
       if (isInteractionOnly) {
       } else {
-        let uiStateRaw;
         dispatchInternalCustomEvent(e.currentTarget, "navi_request_ui_state", {
           respondWith: (v) => {
+            debugAction(
+              e,
+              `navi_request_ui_state.respondWith(${JSON.stringify(v)})`,
+            );
             uiStateRaw = v;
           },
         });
-
-        if (uiStateRaw === UI_STATE_NOT_AVAILABLE) {
-          e.detail.uiState = UI_STATE_NOT_AVAILABLE;
-        } else if (type === "number") {
+        if (type === "number") {
           const inputValueAsNumber = Number(uiStateRaw);
           if (isNaN(inputValueAsNumber)) {
             e.detail.uiState = uiStateRaw;
@@ -254,8 +257,8 @@ export const useActionProps = (
         e.detail.action = boundAction;
       }
 
-      const { uiState } = e.detail;
-      if (uiState !== UI_STATE_NOT_AVAILABLE) {
+      const { isInteractionOnly, uiState } = e.detail;
+      if (!isInteractionOnly) {
         // we can't execute uiAction right now as value is not available
         // we just want to check if action is allowed to preventDefault or give feedback
         // but the value will be set later (checkbox "click" vs checkbox "input" use case)

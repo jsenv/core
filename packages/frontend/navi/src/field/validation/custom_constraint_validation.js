@@ -115,7 +115,6 @@ const pointerEventTypeSet = new Set(["pointerdown", "mousedown", "click"]);
 export const onRequestAction = (
   requestActionCustomEvent,
   {
-    isInteractionOnly = false,
     method = "rerun", // not used for now
     debugAction = () => {},
   } = {},
@@ -125,6 +124,8 @@ export const onRequestAction = (
     actionOrigin,
     action,
     requester = event.target,
+    isInteractionOnly = false,
+    uiState,
     meta = {},
     confirmMessage,
   } = requestActionCustomEvent.detail;
@@ -136,11 +137,13 @@ export const onRequestAction = (
     console.warn("requestAction: actionOrigin is required");
   }
   const customEventDetail = {
-    action,
-    actionOrigin,
-    method,
     event: requestActionCustomEvent,
     requester,
+    isInteractionOnly,
+    uiState,
+    actionOrigin,
+    action,
+    method,
     meta,
   };
   const elementHandlingAction = requestActionCustomEvent.currentTarget;
@@ -156,7 +159,7 @@ export const onRequestAction = (
     );
   }
 
-  let canProceed;
+  let canProceed = true;
   let preventReason;
 
   if (canProceed) {
@@ -220,7 +223,7 @@ export const onRequestAction = (
   }
   debugAction(
     requestActionCustomEvent,
-    `${DEFAULT_CONSTRAINT_SET.size} constraints are valid -> ${getElementSignature(elementHandlingAction)}.dispatchEvent("navi_action_ready")`,
+    `${DEFAULT_CONSTRAINT_SET.size} constraints verified -> ${getElementSignature(elementHandlingAction)}.dispatchEvent("navi_action_ready")`,
   );
   dispatchInternalCustomEvent(
     elementHandlingAction,
