@@ -75,6 +75,7 @@ export const useActionProps = (
 ) => {
   const {
     ref,
+    action,
 
     loading,
     readOnly,
@@ -99,9 +100,8 @@ export const useActionProps = (
     cancelOnEscape,
     ...rest
   } = props;
-  const action = normalizeAction(props.action);
   const [internalBoundAction] = useActionBoundToOneParam(
-    externalBoundAction ? undefined : action,
+    externalBoundAction ? undefined : normalizeAction(action),
     paramsSignal,
   );
   const boundAction = externalBoundAction || internalBoundAction;

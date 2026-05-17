@@ -536,13 +536,13 @@ const ButtonInsideForm = (props) => {
         })();
 
         if (shouldRequestFormAction) {
-          if (event.type === "click") {
-            event.preventDefault(); // prevent form submission
-          }
           dispatchRequestAction(form, {
             event,
             requester: button,
           });
+          if (event.type === "click") {
+            event.preventDefault(); // prevent form submission
+          }
         }
       }}
       {...props}

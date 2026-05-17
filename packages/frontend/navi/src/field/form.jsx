@@ -83,13 +83,13 @@ const FormField = (props) => {
         e.detail.respondWith(getFormManagedFields(e.currentTarget));
       }}
       onReset={(e) => {
-        // browser would empty all fields to their default values (likely empty/unchecked)
-        // we want to reset to the last known external state instead
-        e.preventDefault();
         const form = ref.current;
         dispatchInternalCustomEvent(form, "navi_request_reset_ui_state", {
           event: e,
         });
+        // browser would empty all fields to their default values (likely empty/unchecked)
+        // we want to reset to the last known external state instead
+        e.preventDefault();
       }}
     >
       <FormContext.Provider value={formContextValue}>
