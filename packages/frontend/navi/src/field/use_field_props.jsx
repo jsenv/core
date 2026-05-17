@@ -38,6 +38,7 @@ export const useFieldProps = (
     fallbackState,
     getStateFromProp,
     getPropFromState,
+    getStateFromParent,
     allowNameless,
     paramsSignal,
     externalBoundAction,
@@ -83,6 +84,7 @@ export const useFieldProps = (
     fallbackState,
     getStateFromProp,
     getPropFromState,
+    getStateFromParent,
     allowNameless,
     debugAction,
   });

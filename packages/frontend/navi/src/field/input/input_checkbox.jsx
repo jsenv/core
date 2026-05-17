@@ -375,7 +375,6 @@ export const InputCheckbox = (props) => {
   const fieldId = useFieldId();
   props.id = props.id || fieldId;
   props.value = props.value === undefined ? "on" : props.value;
-
   const contextFieldName = useContext(FieldNameContext);
   const contextRequired = useContext(RequiredContext);
   props.name = props.name === undefined ? contextFieldName : props.name;

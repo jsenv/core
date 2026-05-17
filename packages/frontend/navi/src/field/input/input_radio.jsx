@@ -2,19 +2,15 @@ import { dispatchCustomEvent } from "@jsenv/dom";
 import { useCallback, useContext, useLayoutEffect, useRef } from "preact/hooks";
 
 import { Box } from "@jsenv/navi/src/box/box.jsx";
-import { dispatchRequestUIAction } from "@jsenv/navi/src/field/validation/custom_constraint_validation.js";
+import { dispatchRequestAction } from "@jsenv/navi/src/field/validation/custom_constraint_validation.js";
 import { LoadingOutline } from "../../graphic/loading/loading_outline.jsx";
 import { useAccentColorAttributes } from "../../utils/use_accent_color_attributes.js";
 import { useFieldId } from "../field.jsx";
 import { fieldPropSet } from "../field_prop_set.js";
-import { UI_STATE_NOT_AVAILABLE, useFieldProps } from "../use_field_props.jsx";
+import { useFieldProps } from "../use_field_props.jsx";
 import {
   FieldNameContext,
   RequiredContext,
-  UIStateContext,
-  UIStateControllerContext,
-  useUIState,
-  useUIStateController,
 } from "../use_ui_state_controller.js";
 
 const css = /* css */ `
@@ -335,14 +331,45 @@ const css = /* css */ `
 
 export const InputRadio = (props) => {
   const defaultRef = useRef();
-  const ref = props.ref || defaultRef;
+  props.ref = props.ref || defaultRef;
   const fieldId = useFieldId();
-  const id = props.id || fieldId;
-  const { value = "on" } = props;
-  const uiStateController = useUIStateController(props, "radio", {
+  props.id = props.id || fieldId;
+  props.value = props.value === undefined ? "on" : props.value;
+  const contextFieldName = useContext(FieldNameContext);
+  const contextRequired = useContext(RequiredContext);
+  props.name = props.name === undefined ? contextFieldName : props.name;
+  props.required =
+    props.required === undefined ? contextRequired : props.required;
+
+  return <InputRadioField {...props} />;
+};
+
+const InputRadioField = (props) => {
+  import.meta.css = css;
+  const {
+    ref,
+    /* eslint-disable no-unused-vars */
+    type,
+    /* eslint-enable no-unused-vars */
+    name,
+    required,
+    onClick,
+    onInput,
+    icon,
+    appearance = icon ? "icon" : "radio",
+    color,
+    accentColor,
+  } = props;
+  const fieldProps = useFieldProps(props, {
+    fieldType: "radio",
+    readUIState: () => {
+      const radio = ref.current;
+      const radioIsChecked = radio.checked;
+      return radioIsChecked ? props.value : undefined;
+    },
     statePropName: "checked",
     fallbackState: false,
-    getStateFromProp: (checked) => (checked ? value : undefined),
+    getStateFromProp: (checked) => (checked ? props.value : undefined),
     getPropFromState: Boolean,
     getStateFromParent: (parentUIStateController) => {
       if (parentUIStateController.componentType === "radio_list") {
@@ -351,51 +378,10 @@ export const InputRadio = (props) => {
       return undefined;
     },
   });
-  const uiState = useUIState(uiStateController);
-
-  return (
-    <UIStateControllerContext.Provider value={uiStateController}>
-      <UIStateContext.Provider value={uiState}>
-        <InputRadioDispatcher {...props} ref={ref} id={id} />
-      </UIStateContext.Provider>
-    </UIStateControllerContext.Provider>
-  );
-};
-
-const InputRadioDispatcher = (props) => {
-  if (props.action) {
-    return <InputRadioWithAction />;
-  }
-  return <InputRadioUI {...props} />;
-};
-
-const InputRadioUI = (props) => {
-  import.meta.css = css;
-  const {
-    ref,
-    /* eslint-disable no-unused-vars */
-    type,
-    /* eslint-enable no-unused-vars */
-    value,
-    name,
-    required,
-    uiAction,
-    onClick,
-    onInput,
-    icon,
-    appearance = icon ? "icon" : "radio",
-    color,
-    accentColor,
-  } = props;
-  const fieldProps = useFieldProps(props);
   const { value: uiState, basePseudoState } = fieldProps;
-  const innerLoading = basePseudoState[":-navi-loading"];
-  const innerReadOnly = basePseudoState[":read-only"];
-  const innerDisabled = basePseudoState[":disabled"];
-  const contextName = useContext(FieldNameContext);
-  const contextRequired = useContext(RequiredContext);
-  const innerName = name || contextName;
-  const innerRequired = required || contextRequired;
+  const loading = basePseudoState[":-navi-loading"];
+  const readOnly = basePseudoState[":read-only"];
+  const disabled = basePseudoState[":disabled"];
 
   const checked = Boolean(uiState);
   // we must first dispatch an event to inform all other radios they where unchecked
@@ -442,23 +428,23 @@ const InputRadioUI = (props) => {
         as="input"
         ref={ref}
         type="radio"
-        name={innerName}
+        name={name}
         checked={checked}
-        disabled={innerDisabled}
-        required={innerRequired}
-        data-readonly={innerReadOnly ? "" : undefined}
-        aria-busy={innerLoading ? "true" : undefined}
+        disabled={disabled}
+        required={required}
+        data-readonly={readOnly ? "" : undefined}
+        aria-busy={readOnly ? "true" : undefined}
         baseClassName="navi_native_field"
         data-callout-arrow-x="center"
       />
     );
   };
   const renderRadioMemoized = useCallback(renderRadio, [
-    innerName,
+    name,
     checked,
-    innerRequired,
-    innerReadOnly,
-    innerLoading,
+    disabled,
+    readOnly,
+    loading,
   ]);
 
   const boxRef = useRef();
@@ -517,39 +503,32 @@ const InputRadioUI = (props) => {
       }
       pseudoClasses={RadioPseudoClasses}
       pseudoElements={RadioPseudoElements}
-      basePseudoState={{
-        ":read-only": innerReadOnly,
-        ":disabled": innerDisabled,
-        ":-navi-loading": innerLoading,
-      }}
       color={color}
       hasChildFunction
       baseChildPropSet={RadioChildPropSet}
       onClick={(e) => {
-        dispatchRequestUIAction(e.currentTarget, {
-          event: e,
-          value: UI_STATE_NOT_AVAILABLE,
-          uiAction,
-        });
         onClick?.(e);
+        const radio = ref.current;
+        dispatchRequestAction(radio, {
+          event: e,
+          isInteractionOnly: true,
+        });
       }}
       onInput={(e) => {
-        const radio = e.target;
+        onInput?.(e);
+        const radio = ref.current;
         const radioIsChecked = radio.checked;
         if (radioIsChecked) {
           updateOtherRadiosInGroup(e);
         }
-        dispatchRequestUIAction(radio, {
+        dispatchRequestAction(radio, {
           event: e,
-          value: radioIsChecked ? value : undefined,
-          uiAction,
         });
-        onInput?.(e);
       }}
     >
       <span className="navi_radio_accent_probe" aria-hidden="true" />
       <LoadingOutline
-        loading={innerLoading}
+        loading={loading}
         inset={-1}
         color="var(--loader-color)"
       />
@@ -621,9 +600,3 @@ const RadioPseudoClasses = [
 ];
 const RadioPseudoElements = ["::-navi-loader", "::-navi-radiomark"];
 const RadioChildPropSet = new Set([...fieldPropSet]);
-
-const InputRadioWithAction = () => {
-  throw new Error(
-    `<Input type="radio" /> with an action is not supported. Use <RadioList action={...} /> instead`,
-  );
-};
