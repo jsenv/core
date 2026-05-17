@@ -296,10 +296,13 @@ export const MIN_CONSTRAINT = {
       return null;
     }
     if (field.type === "time") {
-      const [minHours, minMinutes] = minString.split(":").map(Number);
       const value = field.value;
+      if (value === "") {
+        return null;
+      }
+      const [minHours, minMinutes] = minString.split(":").map(Number);
       const [hours, minutes] = value.split(":").map(Number);
-      if (hours < minHours || (hours === minHours && minMinutes < minutes)) {
+      if (hours < minHours || (hours === minHours && minutes < minMinutes)) {
         return generateFieldInvalidMessage("constraint.min.time", {
           field,
           min: minString,
@@ -364,10 +367,13 @@ export const MAX_CONSTRAINT = {
       return null;
     }
     if (field.type === "time") {
-      const [maxHours, maxMinutes] = maxString.split(":").map(Number);
       const value = field.value;
+      if (value === "") {
+        return null;
+      }
+      const [maxHours, maxMinutes] = maxString.split(":").map(Number);
       const [hours, minutes] = value.split(":").map(Number);
-      if (hours > maxHours || (hours === maxHours && maxMinutes > minutes)) {
+      if (hours > maxHours || (hours === maxHours && minutes > maxMinutes)) {
         return generateFieldInvalidMessage("constraint.max.time", {
           field,
           max: maxString,
