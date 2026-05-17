@@ -162,7 +162,11 @@ export const useActionProps = (
     ref,
     "action": undefined,
     "data-action":
-      typeof props.action === "string" ? props.action : action.callSource,
+      props.action === undefined
+        ? undefined
+        : typeof props.action === "string"
+          ? props.action
+          : action.callSource,
     "value": valueForBrowser,
     "autoFocus": undefined, // See use_auto_focus.js
     "basePseudoState": {

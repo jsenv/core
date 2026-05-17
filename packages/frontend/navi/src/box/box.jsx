@@ -584,6 +584,9 @@ export const Box = (props) => {
         }
         continue;
       }
+      if (canForwardToChild && toCopySet.has(propName)) {
+        childForwardedProps[propName] = propValue;
+      }
       const isDataAttribute = propName.startsWith("data-");
       if (isDataAttribute) {
         selfForwardedProps[propName] = propValue;
@@ -721,6 +724,8 @@ export const Box = (props) => {
     </TagName>
   );
 };
+
+const toCopySet = new Set(["data-action"]);
 
 export const applySeparatorOnChildren = (children, separator) => {
   const flattenedChildren = toChildArray(children);
