@@ -119,6 +119,10 @@ naviI18n.addAll({
     fr: "Veuillez sélectionner une couleur.",
     en: "Please select a color.",
   },
+  "picker.required.file": {
+    fr: "Veuillez sélectionner un fichier.",
+    en: "Please select a file.",
+  },
   "picker.hour.no_slots": {
     fr: "Aucune heure disponible.",
     en: "No available time slots.",
