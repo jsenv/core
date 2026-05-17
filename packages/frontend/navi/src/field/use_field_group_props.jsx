@@ -94,8 +94,8 @@ export const useFieldGroupProps = (
   }
 
   return {
-    children: childrenWithContext,
     ...actionProps,
+    children: childrenWithContext,
     value: undefined, // field group doesn't have a value
     onnavi_action_ready: (e) => {
       setActionRequester(e.detail.requester);
