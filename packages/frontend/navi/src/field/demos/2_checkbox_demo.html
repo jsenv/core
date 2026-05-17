@@ -229,12 +229,16 @@
             <div class="states-section">
               <div class="states-title">action</div>
               <p class="states-description">
-                <code>action</code> is called with the checked boolean when the
-                user clicks. It can be synchronous or async. A read-only
-                checkbox does not trigger it.
+                <code>action</code> is called when the user clicks. It receives
+                the checkbox <code>value</code> when checked, or{" "}
+                <code>undefined</code> when unchecked — mirroring how a standard
+                checkbox behaves in a form (present or absent). When no{" "}
+                <code>value</code> prop is set, it defaults to <code>"on"</code>
+                . A read-only checkbox does not trigger it.
               </p>
 
               <ActionBasicDemo />
+              <ActionCustomValueDemo />
               <ActionDefaultCheckedDemo />
               <ActionReadonlyDemo />
               <ActionAsyncSuccessDemo />
@@ -260,24 +264,81 @@
       };
 
       const ActionBasicDemo = () => {
-        const [lastValue, setLastValue] = useState(null);
+        const [lastValue, setLastValue] = useState(undefined);
+        const [fired, setFired] = useState(false);
         return (
           <fieldset>
-            <legend>Basic — fires with checked boolean</legend>
+            <legend>
+              Default value — action receives <code>"on"</code> or{" "}
+              <code>undefined</code>
+            </legend>
+            <p class="states-description" style={{ marginTop: 0 }}>
+              No <code>value</code> prop set. Checking calls action with{" "}
+              <code>"on"</code>; unchecking calls it with <code>undefined</code>
+              .
+            </p>
             <Box flex="y" spacing="s" alignX="start" alignY="center">
               <Field>
                 <Input
                   type="checkbox"
                   name="enabled"
-                  action={(checked) => {
-                    setLastValue(checked);
+                  action={(value) => {
+                    setLastValue(value);
+                    setFired(true);
                   }}
                 />
                 <Label>Enable feature</Label>
               </Field>
-              {lastValue !== null && (
+              {fired && (
                 <span style={{ fontSize: "0.85rem", color: "#555" }}>
-                  Last value: <code>{String(lastValue)}</code>
+                  action called with:{" "}
+                  <code>
+                    {lastValue === undefined
+                      ? "undefined"
+                      : JSON.stringify(lastValue)}
+                  </code>
+                </span>
+              )}
+            </Box>
+          </fieldset>
+        );
+      };
+
+      const ActionCustomValueDemo = () => {
+        const [lastValue, setLastValue] = useState(undefined);
+        const [fired, setFired] = useState(false);
+        return (
+          <fieldset>
+            <legend>
+              Custom value — action receives <code>"admin"</code> or{" "}
+              <code>undefined</code>
+            </legend>
+            <p class="states-description" style={{ marginTop: 0 }}>
+              <code>value="admin"</code> is set. Checking calls action with{" "}
+              <code>"admin"</code>; unchecking calls it with{" "}
+              <code>undefined</code>.
+            </p>
+            <Box flex="y" spacing="s" alignX="start" alignY="center">
+              <Field>
+                <Input
+                  type="checkbox"
+                  name="role"
+                  value="admin"
+                  action={(value) => {
+                    setLastValue(value);
+                    setFired(true);
+                  }}
+                />
+                <Label>Grant admin role</Label>
+              </Field>
+              {fired && (
+                <span style={{ fontSize: "0.85rem", color: "#555" }}>
+                  action called with:{" "}
+                  <code>
+                    {lastValue === undefined
+                      ? "undefined"
+                      : JSON.stringify(lastValue)}
+                  </code>
                 </span>
               )}
             </Box>
@@ -286,7 +347,8 @@
       };
 
       const ActionDefaultCheckedDemo = () => {
-        const [lastValue, setLastValue] = useState(null);
+        const [lastValue, setLastValue] = useState(undefined);
+        const [fired, setFired] = useState(false);
         return (
           <fieldset>
             <legend>Default checked — starts checked, fires on change</legend>
@@ -296,15 +358,21 @@
                   type="checkbox"
                   name="enabled"
                   defaultChecked
-                  action={(checked) => {
-                    setLastValue(checked);
+                  action={(value) => {
+                    setLastValue(value);
+                    setFired(true);
                   }}
                 />
                 <Label>Enable feature</Label>
               </Field>
-              {lastValue !== null && (
+              {fired && (
                 <span style={{ fontSize: "0.85rem", color: "#555" }}>
-                  Last value: <code>{String(lastValue)}</code>
+                  action called with:{" "}
+                  <code>
+                    {lastValue === undefined
+                      ? "undefined"
+                      : JSON.stringify(lastValue)}
+                  </code>
                 </span>
               )}
             </Box>
@@ -314,17 +382,36 @@
 
       const ActionReadonlyDemo = () => (
         <fieldset>
-          <legend>Read-only — action is never triggered</legend>
-          <Field>
-            <Input
-              type="checkbox"
-              readOnly
-              action={(checked) => {
-                console.log("this should never log", checked);
-              }}
-            />
-            <Label>Read-only</Label>
-          </Field>
+          <legend>
+            Read-only — state is frozen, action is never triggered
+          </legend>
+          <p class="states-description" style={{ marginTop: 0 }}>
+            A read-only checkbox cannot be checked or unchecked by the user. Its
+            state is frozen in place, so action is never called.
+          </p>
+          <Box flex="y" spacing="s" alignX="start">
+            <Field>
+              <Input
+                type="checkbox"
+                readOnly
+                action={(value) => {
+                  console.log("this should never log", value);
+                }}
+              />
+              <Label>Unchecked read-only</Label>
+            </Field>
+            <Field>
+              <Input
+                type="checkbox"
+                readOnly
+                defaultChecked
+                action={(value) => {
+                  console.log("this should never log", value);
+                }}
+              />
+              <Label>Checked read-only</Label>
+            </Field>
+          </Box>
         </fieldset>
       );
 
