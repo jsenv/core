@@ -97,7 +97,10 @@ export const dispatchRequestInteraction = (element, event) => {
   );
   return allowed;
 };
-export const onRequestInteraction = (requestInteractionCustomEvent) => {
+export const onRequestInteraction = (
+  requestInteractionCustomEvent,
+  { debugInteraction },
+) => {
   const requestStatus = { canProceed: true, preventReason: undefined };
 
   const { event } = requestInteractionCustomEvent.detail;
@@ -108,7 +111,7 @@ export const onRequestInteraction = (requestInteractionCustomEvent) => {
     checkAndReportConstraints(requestStatus, INTERACTION_CONSTRAINTS, {
       event: requestInteractionCustomEvent,
       requester: event.currentTarget,
-      debug: () => {},
+      debug: debugInteraction,
     });
   }
   if (!requestStatus.canProceed) {

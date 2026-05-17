@@ -5,7 +5,7 @@ import { useActionBoundToOneParam } from "@jsenv/navi/src/action/use_action.js";
 import { useActionStatus } from "@jsenv/navi/src/action/use_action_status.js";
 import { useExecuteAction } from "@jsenv/navi/src/action/use_execute_action.js";
 import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
-import { useDebugAction } from "../navi_debug.jsx";
+import { useDebugAction, useDebugInteraction } from "../navi_debug.jsx";
 import {
   FieldContext,
   reportDisabledToField,
@@ -117,6 +117,7 @@ export const useActionProps = (
     errorMapping,
   });
   const debugAction = useDebugAction();
+  const debugInteraction = useDebugInteraction();
 
   const uiState = useUIState(uiStateController);
   const value = uiState;
@@ -184,7 +185,7 @@ export const useActionProps = (
       uiStateController.setUIState(value, e);
     },
     "onnavi_request_interaction": (e) => {
-      onRequestInteraction(e);
+      onRequestInteraction(e, { debugInteraction });
     },
     "onnavi_cancel": (e) => {
       const { reason } = e.detail;
