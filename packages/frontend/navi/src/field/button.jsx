@@ -10,8 +10,9 @@ import { getHrefTargetInfo } from "../nav/browser_integration/href_target_info.j
 import { assertRoute, useRouteStatus } from "../nav/route.js";
 import { Text, markAsOutsideTextFlow } from "../text/text.jsx";
 import { useAccentColorAttributes } from "../utils/use_accent_color_attributes.js";
+import { ActionContext } from "./field_context.js";
 import { FormContext } from "./form_context.js";
-import { ActionContext, useFieldProps } from "./use_field_props.jsx";
+import { useFieldProps } from "./use_field_props.jsx";
 import { ParentUIStateControllerContext } from "./use_ui_state_controller.js";
 import { dispatchRequestAction } from "./validation/custom_constraint_validation.js";
 

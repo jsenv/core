@@ -1,6 +1,5 @@
 import { dispatchInternalCustomEvent } from "@jsenv/dom";
-import { createContext } from "preact";
-import { useContext, useState } from "preact/hooks";
+import { useContext } from "preact/hooks";
 
 import { useActionBoundToOneParam } from "@jsenv/navi/src/action/use_action.js";
 import { useActionStatus } from "@jsenv/navi/src/action/use_action_status.js";
@@ -13,6 +12,7 @@ import {
   reportInteractiveToField,
   reportReadOnlyToField,
 } from "./field.jsx";
+import { ActionRequesterContext } from "./field_context.js";
 import { normalizeAction } from "./ui_actions.js";
 import {
   DisabledContext,
@@ -24,15 +24,11 @@ import {
 import { onRequestAction } from "./validation/custom_constraint_validation.js";
 import { useConstraints } from "./validation/hooks/use_constraints.js";
 
-export const ActionRequesterContext = createContext();
-export const ActionContext = createContext();
-
 export const UI_STATE_NOT_AVAILABLE = Symbol("UI_STATE_NOT_AVAILABLE");
 export const useFieldProps = (
   props,
   {
     fieldType,
-    readUIState,
     statePropName,
     defaultStatePropName,
     fallbackState,
@@ -40,15 +36,41 @@ export const useFieldProps = (
     getPropFromState,
     getStateFromParent,
     allowNameless,
+
+    readUIState,
     paramsSignal,
     externalBoundAction,
-    provideAction,
-    provideActionRequester,
   },
 ) => {
-  let {
+  const debugAction = useDebugAction();
+  const uiStateController = useUIStateController(props, fieldType, {
+    statePropName,
+    defaultStatePropName,
+    fallbackState,
+    getStateFromProp,
+    getPropFromState,
+    getStateFromParent,
+    allowNameless,
+    debugAction,
+  });
+
+  paramsSignal = paramsSignal || uiStateController.uiStateSignal;
+
+  return useActionProps(props, {
+    uiStateController,
+    readUIState,
+    paramsSignal,
+    externalBoundAction,
+  });
+};
+
+export const useActionProps = (
+  props,
+  { uiStateController, readUIState, paramsSignal, externalBoundAction },
+) => {
+  const {
     ref,
-    action,
+
     loading,
     readOnly,
     disabled,
@@ -72,41 +94,26 @@ export const useFieldProps = (
     cancelOnEscape,
     ...rest
   } = props;
-  const debugAction = useDebugAction();
-  const contextReadOnly = useContext(ReadOnlyContext);
-  const contextDisabled = useContext(DisabledContext);
-  const contextLoading = useContext(LoadingContext);
-  const parentActionRequester = useContext(ActionRequesterContext);
-  action = normalizeAction(action);
-  const uiStateController = useUIStateController(props, fieldType, {
-    statePropName,
-    defaultStatePropName,
-    fallbackState,
-    getStateFromProp,
-    getPropFromState,
-    getStateFromParent,
-    allowNameless,
-    debugAction,
-  });
-  paramsSignal = paramsSignal || uiStateController.uiStateSignal;
-  const uiState = useUIState(uiStateController);
-
-  // Always call the hook (hook call count must be stable), but when an
-  // externalBoundAction is provided we pass undefined so a noop is created
-  // internally, then we override with the external action below.
+  const action = normalizeAction(props.action);
   const [internalBoundAction] = useActionBoundToOneParam(
     externalBoundAction ? undefined : action,
     paramsSignal,
   );
   const boundAction = externalBoundAction || internalBoundAction;
   const actionStatus = useActionStatus(boundAction);
+
+  const contextReadOnly = useContext(ReadOnlyContext);
+  const contextDisabled = useContext(DisabledContext);
+  const contextLoading = useContext(LoadingContext);
+  const parentActionRequester = useContext(ActionRequesterContext);
+
   const executeAction = useExecuteAction(ref, {
     errorEffect: actionErrorEffect,
     errorMapping,
   });
+  const debugAction = useDebugAction();
 
-  const [actionRequester, setActionRequester] = useState();
-
+  const uiState = useUIState(uiStateController);
   const value = uiState;
   const innerLoading =
     loading ||
@@ -133,15 +140,6 @@ export const useFieldProps = (
     childrenWithContext = (
       <FieldContext.Provider value={null}>{children}</FieldContext.Provider>
     );
-    if (provideAction || provideActionRequester) {
-      childrenWithContext = (
-        <ActionContext.Provider value={boundAction}>
-          <ActionRequesterContext.Provider value={actionRequester}>
-            {childrenWithContext}
-          </ActionRequesterContext.Provider>
-        </ActionContext.Provider>
-      );
-    }
   }
 
   const { type } = props;
@@ -256,7 +254,6 @@ export const useFieldProps = (
         // but the value will be set later (checkbox "click" vs checkbox "input" use case)
         uiStateController.setUIState(uiState, e);
       }
-      setActionRequester(e.detail.requester);
       executeAction(e);
     },
     "onnavi_action_abort": (e) => {

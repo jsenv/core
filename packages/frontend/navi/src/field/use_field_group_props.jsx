@@ -1,6 +1,8 @@
-import { useContext } from "preact/hooks";
+import { useState } from "preact/hooks";
 
-import { FieldContext } from "./field.jsx";
+import { useActionBoundToOneParam } from "@jsenv/navi/src/action/use_action.js";
+import { ActionContext, ActionRequesterContext } from "./field_context.js";
+import { useActionProps } from "./use_field_props.jsx";
 import {
   DisabledContext,
   FieldNameContext,
@@ -8,55 +10,81 @@ import {
   ParentUIStateControllerContext,
   ReadOnlyContext,
   RequiredContext,
-  UIStateControllerContext,
+  useUIGroupStateController,
+  useUIState,
 } from "./use_ui_state_controller.js";
 
-export const useFieldGroupProps = (props) => {
-  const {
-    name,
-    loading,
-    disabled,
-    readOnly,
-    children,
-    required,
-    ...remainingProps
-  } = props;
-  const contextReadOnly = useContext(ReadOnlyContext);
-  const contextDisabled = useContext(DisabledContext);
-  const contextLoading = useContext(LoadingContext);
-  const uiStateController = useContext(UIStateControllerContext);
+export const useFieldGroupProps = (
+  props,
+  { fieldType, childComponentType, aggregateChildStates },
+) => {
+  const { action, name, children, required } = props;
+  const uiGroupStateController = useUIGroupStateController(fieldType, {
+    childComponentType,
+    aggregateChildStates,
+  });
+  const uiState = useUIState(uiGroupStateController);
+  const [boundAction] = useActionBoundToOneParam(
+    action,
+    uiGroupStateController.uiStateSignal,
+  );
 
-  const innerLoading = loading || contextLoading;
-  const innerReadOnly =
-    readOnly || contextReadOnly || innerLoading || uiStateController.readOnly;
-  const innerDisabled = disabled || contextDisabled;
-
-  const childrenWithContext =
-    children === undefined ? (
-      children
-    ) : (
-      <ParentUIStateControllerContext.Provider value={uiStateController}>
-        <FieldNameContext.Provider value={name}>
-          <ReadOnlyContext.Provider value={innerReadOnly}>
-            <DisabledContext.Provider value={innerDisabled}>
-              <RequiredContext.Provider value={required}>
-                <LoadingContext.Provider value={innerLoading}>
-                  <FieldContext.Provider value={null}>
-                    {children}
-                  </FieldContext.Provider>
-                </LoadingContext.Provider>
-              </RequiredContext.Provider>
-            </DisabledContext.Provider>
-          </ReadOnlyContext.Provider>
-        </FieldNameContext.Provider>
-      </ParentUIStateControllerContext.Provider>
+  let childrenWithContext;
+  if (children === undefined) {
+    childrenWithContext = undefined;
+  } else {
+    childrenWithContext = (
+      <ActionContext.Provider value={boundAction}>
+        <ParentUIStateControllerContext.Provider value={uiGroupStateController}>
+          <FieldNameContext.Provider value={name}>
+            <RequiredContext.Provider value={required}>
+              {children}
+            </RequiredContext.Provider>
+          </FieldNameContext.Provider>
+        </ParentUIStateControllerContext.Provider>
+      </ActionContext.Provider>
     );
+  }
+
+  const [actionRequester, setActionRequester] = useState();
+  const actionProps = useActionProps(
+    {
+      ...props,
+      children: childrenWithContext,
+    },
+    {
+      uiStateController: uiGroupStateController,
+    },
+  );
+
+  if (actionProps.children === undefined) {
+    childrenWithContext = undefined;
+  } else {
+    const { basePseudoState } = actionProps;
+    const disabled = basePseudoState[":disabled"];
+    const readOnly = basePseudoState[":read-only"];
+    const loading = basePseudoState[":-navi-loading"];
+
+    childrenWithContext = (
+      <ActionRequesterContext.Provider value={actionRequester}>
+        <ReadOnlyContext.Provider value={readOnly}>
+          <DisabledContext.Provider value={disabled}>
+            <LoadingContext.Provider value={loading}>
+              {actionProps.children}
+            </LoadingContext.Provider>
+          </DisabledContext.Provider>
+        </ReadOnlyContext.Provider>
+      </ActionRequesterContext.Provider>
+    );
+  }
 
   return {
     children: childrenWithContext,
-    ...remainingProps,
-    onnavi_request_reset_ui_state: (e) => {
-      uiStateController.resetUIState(e);
+    ...actionProps,
+    value: uiState,
+    onnavi_action_ready: (e) => {
+      setActionRequester(e.detail.requester);
+      actionProps.onnavi_action_ready(e);
     },
   };
 };

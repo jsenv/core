@@ -4,61 +4,21 @@ import { useRef } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
 import { InputCheckbox } from "./input/input_checkbox.jsx";
-import { useActionProps } from "./use_action_props.jsx";
 import { useFieldGroupProps } from "./use_field_group_props.jsx";
-import {
-  UIStateControllerContext,
-  useUIGroupStateController,
-} from "./use_ui_state_controller.js";
 import { dispatchRequestAction } from "./validation/custom_constraint_validation.js";
 
 export const CheckboxList = (props) => {
   const refDefault = useRef(null);
-  const ref = props.ref || refDefault;
-  const uiStateController = useUIGroupStateController(props, "checkbox_list", {
-    childComponentType: "checkbox",
-    aggregateChildStates: (childUIStateControllers) => {
-      const values = [];
-      for (const childUIStateController of childUIStateControllers) {
-        if (childUIStateController.uiState) {
-          values.push(childUIStateController.uiState);
-        }
-      }
-      return values.length === 0 ? undefined : values;
-    },
-  });
-  const checkboxList = <CheckboxListDispatcher {...props} ref={ref} />;
+  props.ref = props.ref || refDefault;
+  const checkboxList = <CheckboxListField {...props} />;
 
-  return (
-    <UIStateControllerContext.Provider value={uiStateController}>
-      {checkboxList}
-    </UIStateControllerContext.Provider>
-  );
+  return checkboxList;
 };
 export const Checkbox = InputCheckbox;
 
-const CheckboxListDispatcher = (props) => {
-  if (props.action) {
-    return <CheckboxListWithAction {...props} />;
-  }
-  return <CheckboxListUI {...props} />;
-};
-
-const CheckboxListUI = (props) => {
-  const fieldGroupProps = useFieldGroupProps(props);
-
-  return (
-    <Box
-      flex
-      {...fieldGroupProps}
-      baseClassName="navi_checkbox_list"
-      data-checkbox-list=""
-    />
-  );
-};
-
-const CheckboxListWithAction = (props) => {
-  const remainingProps = useActionProps(
+const CheckboxListField = (props) => {
+  const { ref } = props;
+  const fieldGroupProps = useFieldGroupProps(
     {
       resetOnCancel: true,
       resetOnAbort: true,
@@ -66,17 +26,29 @@ const CheckboxListWithAction = (props) => {
       ...props,
     },
     {
-      provideAction: true,
-      provideActionRequester: true,
+      fieldType: "checkbox_list",
+      childComponentType: "checkbox",
+      aggregateChildStates: (childUIStateControllers) => {
+        const values = [];
+        for (const childUIStateController of childUIStateControllers) {
+          if (childUIStateController.uiState) {
+            values.push(childUIStateController.uiState);
+          }
+        }
+        return values.length === 0 ? undefined : values;
+      },
     },
   );
 
   return (
-    <CheckboxListUI
-      {...remainingProps}
+    <Box
+      flex
+      {...fieldGroupProps}
+      baseClassName="navi_checkbox_list"
+      data-checkbox-list=""
       onChange={(e) => {
         const checkbox = e.target;
-        const checkboxList = props.ref.current;
+        const checkboxList = ref.current;
         dispatchRequestAction(checkboxList, {
           event: e,
           requester: checkbox,
