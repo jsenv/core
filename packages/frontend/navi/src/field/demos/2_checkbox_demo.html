@@ -252,7 +252,8 @@
                 reflects the error.
               </p>
 
-              <FormControlledDemo />
+              <FormBackendRejectDemo />
+              <FormRequiredDemo />
             </div>
           </div>
         );
@@ -512,20 +513,18 @@
         );
       };
 
-      const FormControlledDemo = () => {
+      const FormBackendRejectDemo = () => {
         const [checked, setChecked] = useState(true);
         const [result, setResult] = useState(null);
         const ref = useRef();
 
         return (
           <fieldset>
-            <legend>
-              Controlled checkbox in a Form — server rejects when unchecked
-            </legend>
+            <legend>Backend rejects — server throws when unchecked</legend>
             <p class="states-description" style={{ marginTop: 0 }}>
               Demonstrates backend validation: the form submits, but the server
-              throws if terms aren't agreed. The checkbox value is not in the
-              frontend required constraint, only the backend enforces it.
+              throws if terms aren't agreed. No frontend constraint — only the
+              backend enforces it.
             </p>
             <Form
               action={async ({ terms }) => {
@@ -541,43 +540,88 @@
                 setResult({ ok: false, value: err.message })
               }
             >
-              <Box flex spacing="s" alignX="start">
-                <Field>
-                  <Input
-                    ref={ref}
-                    type="checkbox"
-                    name="terms"
-                    checked={checked}
-                  />
-                  <Label>I agree to the terms and conditions</Label>
-                </Field>
-                <Box flex="y" spacing="s">
-                  <Button type="submit">Submit</Button>
-                  <button
+              <Box flex="y" spacing="s" alignX="start">
+                <Box flex spacing="s" alignX="start" alignY="center">
+                  <Field>
+                    <Input
+                      ref={ref}
+                      type="checkbox"
+                      name="terms"
+                      checked={checked}
+                    />
+                    <Label>I agree to the terms and conditions</Label>
+                  </Field>
+                  <Button
                     type="button"
-                    onClick={() =>
+                    action={() => {
                       ref.current.dispatchEvent(
                         new CustomEvent("navi_set_ui_state", {
                           detail: { value: true },
                         }),
-                      )
-                    }
+                      );
+                    }}
                   >
                     Accept
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
-                    onClick={() =>
+                    action={() => {
                       ref.current.dispatchEvent(
                         new CustomEvent("navi_set_ui_state", {
                           detail: { value: false },
                         }),
-                      )
-                    }
+                      );
+                    }}
                   >
                     Decline
-                  </button>
+                  </Button>
                 </Box>
+                <Button type="submit">Submit</Button>
+              </Box>
+            </Form>
+            {result && (
+              <div
+                style={{
+                  marginTop: "10px",
+                  fontSize: "0.85rem",
+                  color: result.ok ? "#2a7a2a" : "#c00",
+                }}
+              >
+                {result.ok ? "" : "❌ "}
+                {result.value}
+              </div>
+            )}
+          </fieldset>
+        );
+      };
+
+      const FormRequiredDemo = () => {
+        const [result, setResult] = useState(null);
+
+        return (
+          <fieldset>
+            <legend>Frontend required — callout blocks submission</legend>
+            <p class="states-description" style={{ marginTop: 0 }}>
+              The checkbox is marked <code>required</code>. The form action
+              never runs while it is unchecked — a callout appears at the
+              checkbox instead.
+            </p>
+            <Form
+              action={async () => {
+                await delay(1000);
+                return "✅ Form submitted successfully!";
+              }}
+              onActionSuccess={(value) => setResult({ ok: true, value })}
+              onActionError={(err) =>
+                setResult({ ok: false, value: err.message })
+              }
+            >
+              <Box flex="y" spacing="s" alignX="start">
+                <Field>
+                  <Input type="checkbox" name="terms" required />
+                  <Label>I agree to the terms and conditions</Label>
+                </Field>
+                <Button type="submit">Submit</Button>
               </Box>
             </Form>
             {result && (
