@@ -35,7 +35,6 @@ import { SearchSvg } from "@jsenv/navi/src/graphic/icons/search_svg.jsx";
 import { LoadingOutline } from "@jsenv/navi/src/graphic/loading/loading_outline.jsx";
 import { shortcutsViaOnKeyDown } from "@jsenv/navi/src/keyboard/keyboard_shortcuts.js";
 import { Icon } from "@jsenv/navi/src/text/icon.jsx";
-import { useStableCallback } from "@jsenv/navi/src/utils/use_stable_callback.js";
 import {
   createComponentResolver,
   useNextResolver,
@@ -51,16 +50,8 @@ import {
   requestListOpen,
   requestListSelectCurrent,
 } from "../list/list.jsx";
-import { useActionProps } from "../use_action_props.jsx";
 import { useFieldProps } from "../use_field_props.jsx";
-import {
-  UIStateControllerContext,
-  useUIStateController,
-} from "../use_ui_state_controller.js";
-import {
-  dispatchRequestAction,
-  dispatchRequestUIAction,
-} from "../validation/custom_constraint_validation.js";
+import { dispatchRequestAction } from "../validation/custom_constraint_validation.js";
 import { useOnInputValueChange } from "./input_value_listener.js";
 
 const css = /* css */ `
@@ -275,24 +266,12 @@ export const InputTextual = (props) => {
   const defaultId = useId(); // we need an id for the slots so we always generate one
   const fieldId = useFieldId();
   props.id = props.id || fieldId || defaultId;
-  const uiStateController = useUIStateController(props, "input");
-  const input = renderInput(InputTextualUI, props);
 
-  return (
-    <UIStateControllerContext.Provider value={uiStateController}>
-      {input}
-    </UIStateControllerContext.Provider>
-  );
+  const input = renderInput(InputTextualField, props);
+
+  return input;
 };
 
-const InputTextualActionResolver = (props) => {
-  const Next = useNextResolver();
-
-  if (props.action) {
-    return <InputTextualWithAction {...props} />;
-  }
-  return <Next {...props} />;
-};
 const InputTextualWithListResolver = (props) => {
   const Next = useNextResolver();
   const listIdFromContext = useContext(ListIdContext);
@@ -316,22 +295,32 @@ const InputTextualWithListResolver = (props) => {
   return <Next {...props} />;
 };
 
-const renderInput = createComponentResolver([
-  InputTextualActionResolver,
-  InputTextualWithListResolver,
-]);
+const renderInput = createComponentResolver([InputTextualWithListResolver]);
 
 const InputNativeContext = createContext(null);
-const InputTextualUI = (props) => {
+const InputTextualField = (props) => {
   import.meta.css = css;
-  const { ref, type, onInput, icon, children } = props;
-  const fieldProps = useFieldProps(props);
+  const { ref, type, icon, children } = props;
+  const fieldProps = useFieldProps(props, {
+    fieldType: "input",
+  });
   const { basePseudoState } = fieldProps;
-  const loading = basePseudoState[":-navi-loading"];
-  const readOnly = basePseudoState[":read-only"];
   const disabled = basePseudoState[":disabled"];
+  const readOnly = basePseudoState[":read-only"];
+  const loading = basePseudoState[":-navi-loading"];
+  const { actionDebounce, actionAfterChange } = props;
+  useOnInputValueChange(
+    ref,
+    (e) => {
+      const input = ref.current;
+      dispatchRequestAction(input, { event: e });
+    },
+    {
+      waitForChange: actionAfterChange,
+      debounce: actionDebounce,
+    },
+  );
 
-  const onInputStable = useStableCallback(onInput);
   const renderInput = (inputProps) => {
     return (
       <Box
@@ -339,17 +328,6 @@ const InputTextualUI = (props) => {
         as="input"
         ref={ref}
         type={type}
-        onInput={(e) => {
-          const input = e.target;
-          dispatchRequestUIAction(input, {
-            event: e,
-            value: input.value,
-            uiAction: (inputValue, e) => {
-              fieldProps.uiAction?.(inputValue, e);
-            },
-          });
-          onInputStable?.(e);
-        }}
         // style management
         baseClassName="navi_native_input"
         data-rendered-by=".navi_input"
@@ -372,16 +350,17 @@ const InputTextualUI = (props) => {
           )}
           <InputRightSlot
             hideWhileEmpty
-            onClick={(e) => {
-              const input = ref.current;
-              dispatchRequestUIAction(input, {
-                event: e,
-                value: "",
-                uiAction: () => {
-                  input.value = "";
-                  input.dispatchEvent(new CustomEvent("navi_delete_content"));
-                },
-              });
+            onClick={() => {
+              // TODO: find how to do this with new field approach
+              // const input = ref.current;
+              // dispatchRequestAction(input, {
+              //   event: e,
+              //   value: "",
+              //   uiAction: () => {
+              //     input.value = "";
+              //     input.dispatchEvent(new CustomEvent("navi_delete_content"));
+              //   },
+              // });
             }}
           >
             <Icon color="rgba(28, 43, 52, 0.5)">
@@ -752,26 +731,4 @@ const InputTextualWithSuggestions = (props) => {
       </Next>
     </ListIdContext.Provider>
   );
-};
-const InputTextualWithAction = (props) => {
-  const Next = useNextResolver();
-  const remainingProps = useActionProps(props);
-  const { ref, actionDebounce, actionAfterChange } = props;
-
-  useOnInputValueChange(
-    ref,
-    (e) => {
-      const input = ref.current;
-      dispatchRequestAction(input, {
-        event: e,
-        requester: input,
-      });
-    },
-    {
-      waitForChange: actionAfterChange,
-      debounce: actionDebounce,
-    },
-  );
-
-  return <Next {...remainingProps} />;
 };

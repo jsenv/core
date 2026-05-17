@@ -89,7 +89,7 @@ export const dispatchRequestAction = (
   elementWithAction,
   {
     event,
-    requester,
+    requester = elementWithAction,
     isInteractionOnly,
     // for keyboard shortcuts
     // (ideally a some point we'll just make them use a different event/code path)
