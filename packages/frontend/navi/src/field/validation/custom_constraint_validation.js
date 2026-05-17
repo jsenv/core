@@ -85,25 +85,12 @@ import {
   TYPE_NUMBER_CONSTRAINT,
 } from "./constraints/standard_constraints.js";
 
-export const dispatchRequestUIAction = (
-  elementWithUIAction,
-  { event, value, uiAction },
-) => {
-  return dispatchInternalCustomEvent(
-    elementWithUIAction,
-    "navi_request_ui_action",
-    {
-      event,
-      value,
-      uiAction,
-    },
-  );
-};
 export const dispatchRequestAction = (
   elementWithAction,
   {
     event,
     requester,
+    isInteractionOnly,
     // for keyboard shortcuts
     // (ideally a some point we'll just make them use a different event/code path)
     actionOrigin = "action_prop",
@@ -115,89 +102,32 @@ export const dispatchRequestAction = (
   return dispatchInternalCustomEvent(elementWithAction, "navi_request_action", {
     event,
     requester,
+    isInteractionOnly,
     actionOrigin,
     action,
     confirmMessage,
     meta,
   });
 };
-
 export const NAVI_VALIDITY_CHANGE_CUSTOM_EVENT = "navi_validity_change";
-const UI_ACTION_CONSTRAINTS = [DISABLED_CONSTRAINT, READONLY_CONSTRAINT];
-
+const INTERACTION_CONSTRAINTS = [DISABLED_CONSTRAINT, READONLY_CONSTRAINT];
 const pointerEventTypeSet = new Set(["pointerdown", "mousedown", "click"]);
-export const onRequestUIAction = (
-  requestUIActionCustomEvent,
-  { debugUIAction },
-) => {
-  const { event, value, uiAction } = requestUIActionCustomEvent.detail;
-
-  if (pointerEventTypeSet.has(event)) {
-    if (event.button !== 0) {
-      return false;
-    }
-  }
-  if (event.defaultPrevented) {
-    // hum ça pose souci pour les keyboard events ça
-    return false;
-  }
-  const elementHandlingUIAction = requestUIActionCustomEvent.currentTarget;
-  debugUIAction(
-    requestUIActionCustomEvent,
-    `${getElementSignature(elementHandlingUIAction)} uiAction requested (value=${JSON.stringify(value)}, event="${event.type}")`,
-  );
-  const requester = event.target;
-  const [isValid, failedValidationInterface] = checkConstraintsAndReport(
-    UI_ACTION_CONSTRAINTS,
-    {
-      event: requestUIActionCustomEvent,
-      requester,
-    },
-  );
-  const customEventDetail = {
-    event,
-    value,
-    uiAction,
-  };
-  if (!isValid) {
-    debugUIAction(
-      requestUIActionCustomEvent,
-      `ui action prevented due to failing constraint: "${failedValidationInterface.failedConstraintInfo.name}" -> dispatch navi_ui_action_prevented`,
-    );
-    event.preventDefault();
-    dispatchInternalCustomEvent(
-      elementHandlingUIAction,
-      "navi_ui_action_prevented",
-      customEventDetail,
-    );
-    return false;
-  }
-  debugUIAction(
-    requestUIActionCustomEvent,
-    `uiAction allowed -> calling uiAction`,
-  );
-  uiAction(value, event);
-  return true;
-};
-
 export const onRequestAction = (
-  action,
   requestActionCustomEvent,
   {
+    isInteractionOnly = false,
     method = "rerun", // not used for now
     debugAction = () => {},
   } = {},
 ) => {
-  let {
-    requester = requestActionCustomEvent.detail.event.target,
+  const { event } = requestActionCustomEvent.detail;
+  const {
     actionOrigin,
+    action,
+    requester = event.target,
     meta = {},
     confirmMessage,
   } = requestActionCustomEvent.detail;
-  if (requestActionCustomEvent.detail.action) {
-    // keyboard shotcut give the action and action is irrelevant here, the kayboard shortcut must win
-    action = requestActionCustomEvent.detail.action;
-  }
 
   if (!action || !action.isAction) {
     throw new TypeError("First argument of onRequestAction must be an action");
@@ -225,19 +155,60 @@ export const onRequestAction = (
       `${getElementSignature(elementHandlingAction)} action requested by ${getElementSignature(requester)}`,
     );
   }
-  const [isValid, failedValidationInterface] = checkConstraintsAndReport(
-    DEFAULT_CONSTRAINT_SET,
-    {
-      event: requestActionCustomEvent,
-      requester,
-      fromRequestAction: true,
-      debugAction,
-    },
-  );
-  if (!isValid) {
+
+  let canProceed;
+  let preventReason;
+
+  if (canProceed) {
+    if (event.defaultPrevented) {
+      canProceed = false;
+      preventReason = "event.defaultPrevented is true";
+    }
+  }
+  if (canProceed) {
+    if (pointerEventTypeSet.has(event) && event.button !== 0) {
+      canProceed = false;
+      preventReason = `non-primary pointer button (button ${event.button})`;
+    }
+  }
+  if (canProceed) {
+    const constraintToCheck = isInteractionOnly
+      ? INTERACTION_CONSTRAINTS
+      : DEFAULT_CONSTRAINT_SET;
+    const [isValid, failedValidationInterface] = checkConstraintsAndReport(
+      constraintToCheck,
+      {
+        event: requestActionCustomEvent,
+        requester,
+        fromRequestAction: true,
+        debugAction,
+      },
+    );
+    if (!isValid) {
+      canProceed = false;
+      preventReason = `failing constraint "${failedValidationInterface.failedConstraintInfo.name}"`;
+    }
+  }
+  if (canProceed) {
+    // NOTE for future: confirmation must move to to action execution (be part of it when set)
+    // because it's actually once everything is valid that we perform this so it's conceptually part of the action execution
+    // also because in order to allow people to put their own ui it will becomes async
+    // so must be inside action execution code path
+    const effectiveConfirmMessage =
+      confirmMessage ||
+      elementHandlingAction.getAttribute("data-confirm-message");
+    if (effectiveConfirmMessage) {
+      // eslint-disable-next-line no-alert
+      if (!window.confirm(effectiveConfirmMessage)) {
+        canProceed = false;
+        preventReason = "user cancelled on confirm message";
+      }
+    }
+  }
+  if (!canProceed) {
     debugAction(
       requestActionCustomEvent,
-      `action prevented due to failing constraint: "${failedValidationInterface.failedConstraintInfo.name}", dispatch navi_action_prevented`,
+      `action prevented due ${preventReason} -> dispatch navi_action_prevented`,
     );
     dispatchInternalCustomEvent(
       elementHandlingAction,
@@ -245,24 +216,6 @@ export const onRequestAction = (
       customEventDetail,
     );
     return false;
-  }
-  confirmMessage =
-    confirmMessage ||
-    elementHandlingAction.getAttribute("data-confirm-message");
-  if (confirmMessage) {
-    // eslint-disable-next-line no-alert
-    if (!window.confirm(confirmMessage)) {
-      debugAction(
-        requestActionCustomEvent,
-        `action cancelled by user -> dispatch navi_action_prevented`,
-      );
-      dispatchInternalCustomEvent(
-        elementHandlingAction,
-        "navi_action_prevented",
-        customEventDetail,
-      );
-      return false;
-    }
   }
   debugAction(
     requestActionCustomEvent,

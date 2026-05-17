@@ -1,25 +1,7 @@
 import { useLayoutEffect, useState } from "preact/hooks";
 
-import { useDebugAction } from "../navi_debug.jsx";
 import { addManyEventListeners } from "../utils/add_many_event_listeners.js";
 import { useStableCallback } from "../utils/use_stable_callback.js";
-import { onRequestAction } from "./validation/custom_constraint_validation.js";
-
-export const useOnRequestAction = (actionOrigin = "action_prop") => {
-  const debugAction = useDebugAction();
-
-  return (action, e, options = {}) => {
-    if (e.detail.actionOrigin !== actionOrigin) {
-      return;
-    }
-    const context = {
-      debugAction,
-      actionOrigin,
-      ...options,
-    };
-    onRequestAction(action, e, context);
-  };
-};
 
 export const useRequestedActionStatus = (elementRef, { actionOrigin } = {}) => {
   const [actionRequester, setActionRequester] = useState(null);

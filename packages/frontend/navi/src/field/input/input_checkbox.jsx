@@ -5,18 +5,12 @@ import { LoadingOutline } from "../../graphic/loading/loading_outline.jsx";
 import { useAccentColorAttributes } from "../../utils/use_accent_color_attributes.js";
 import { useFieldId } from "../field.jsx";
 import { fieldPropSet } from "../field_prop_set.js";
-import { useActionProps } from "../use_action_props.jsx";
-import { UI_STATE_NOT_AVAILABLE, useFieldProps } from "../use_field_props.jsx";
+import { useFieldProps } from "../use_field_props.jsx";
 import {
   FieldNameContext,
   RequiredContext,
-  UIStateControllerContext,
-  useUIStateController,
 } from "../use_ui_state_controller.js";
-import {
-  dispatchRequestAction,
-  dispatchRequestUIAction,
-} from "../validation/custom_constraint_validation.js";
+import { dispatchRequestAction } from "../validation/custom_constraint_validation.js";
 
 const css = /* css */ `
   @layer navi {
@@ -377,33 +371,21 @@ const css = /* css */ `
 
 export const InputCheckbox = (props) => {
   const defaultRef = useRef();
-  const ref = props.ref || defaultRef;
+  props.ref = props.ref || defaultRef;
   const fieldId = useFieldId();
-  const id = props.id || fieldId;
-  const { value = "on" } = props;
-  const uiStateController = useUIStateController(props, "checkbox", {
-    statePropName: "checked",
-    defaultStatePropName: "defaultChecked",
-    fallbackState: false,
-    getStateFromProp: (checked) => (checked ? value : undefined),
-    getPropFromState: Boolean,
-  });
+  props.id = props.id || fieldId;
+  props.value = props.value === undefined ? "on" : props.value;
 
-  return (
-    <UIStateControllerContext.Provider value={uiStateController}>
-      <InputCheckboxDispatcher {...props} ref={ref} id={id} value={value} />
-    </UIStateControllerContext.Provider>
-  );
+  const contextFieldName = useContext(FieldNameContext);
+  const contextRequired = useContext(RequiredContext);
+  props.name = props.name === undefined ? contextFieldName : props.name;
+  props.required =
+    props.required === undefined ? contextRequired : props.required;
+
+  return <InputCheckboxField {...props} />;
 };
 
-const InputCheckboxDispatcher = (props) => {
-  if (props.action) {
-    return <InputCheckboxWithAction {...props} />;
-  }
-  return <InputCheckboxUI {...props} />;
-};
-
-const InputCheckboxUI = (props) => {
+const InputCheckboxField = (props) => {
   import.meta.css = css;
   const {
     ref,
@@ -413,23 +395,39 @@ const InputCheckboxUI = (props) => {
     /* eslint-enable no-unused-vars */
     name,
     required,
-    uiAction,
     onClick,
     onInput,
     accentColor,
     icon,
     appearance = icon ? "icon" : "checkbox", // "checkbox", "toggle", "icon", "button"
-    value,
   } = props;
-  const fieldProps = useFieldProps(props);
+  const fieldProps = useFieldProps(
+    {
+      // In this situation updating the ui state === calling associated action
+      // so cance/abort/error have to revert the ui state to the one before user interaction
+      // to show back the real state of the checkbox (not the one user tried to set)
+      resetOnCancel: true,
+      resetOnAbort: true,
+      resetOnError: true,
+      ...props,
+    },
+    {
+      fieldType: "checkbox",
+      readUIState: () => {
+        const checkbox = ref.current;
+        const checkboxIsChecked = checkbox.checked;
+        return checkboxIsChecked ? props.value : undefined;
+      },
+      statePropName: "checked",
+      defaultStatePropName: "defaultChecked",
+      fallbackState: false,
+      getStateFromProp: (checked) => (checked ? props.value : undefined),
+      getPropFromState: Boolean,
+    },
+  );
   const { basePseudoState, value: uiState } = fieldProps;
-  const innerLoading = basePseudoState[":-navi-loading"];
-  const innerReadOnly = basePseudoState[":read-only"];
-  const innerDisabled = basePseudoState[":disabled"];
-  const contextFieldName = useContext(FieldNameContext);
-  const contextRequired = useContext(RequiredContext);
-  const innerName = name || contextFieldName;
-  const innerRequired = required || contextRequired;
+  const loading = basePseudoState[":-navi-loading"];
+  const readOnly = basePseudoState[":read-only"];
 
   const checked = Boolean(uiState);
   const renderCheckbox = (checkboxProps) => {
@@ -439,22 +437,22 @@ const InputCheckboxUI = (props) => {
         as="input"
         ref={ref}
         type="checkbox"
-        name={innerName}
+        name={name}
         checked={checked}
-        required={innerRequired}
-        data-readonly={innerReadOnly ? "" : undefined}
-        aria-busy={innerLoading ? "true" : undefined}
+        required={required}
+        data-readonly={readOnly ? "" : undefined}
+        aria-busy={readOnly ? "true" : undefined}
         baseClassName="navi_native_field"
         data-callout-arrow-x="center"
       />
     );
   };
   const renderCheckboxMemoized = useCallback(renderCheckbox, [
-    innerName,
+    name,
     checked,
-    innerRequired,
-    innerReadOnly,
-    innerLoading,
+    required,
+    readOnly,
+    loading,
   ]);
 
   const boxRef = useRef();
@@ -514,36 +512,28 @@ const InputCheckboxUI = (props) => {
       }
       pseudoClasses={CheckboxPseudoClasses}
       pseudoElements={CheckboxPseudoElements}
-      basePseudoState={{
-        ":read-only": innerReadOnly,
-        ":disabled": innerDisabled,
-        ":-navi-loading": innerLoading,
-      }}
       accentColor={accentColor}
       hasChildFunction
       baseChildPropSet={CheckboxChildPropSet}
       onClick={(e) => {
-        dispatchRequestUIAction(e.currentTarget, {
-          event: e,
-          value: UI_STATE_NOT_AVAILABLE, // we must wait "input" to know the state
-          uiAction,
-        });
         onClick?.(e);
+        const checkbox = ref.current;
+        dispatchRequestAction(checkbox, {
+          event: e,
+          isInteractionOnly: true, // we must wait "input" to know the ui state
+        });
       }}
       onInput={(e) => {
-        const checkbox = e.target;
-        const checkboxIsChecked = checkbox.checked;
-        dispatchRequestUIAction(checkbox, {
-          event: e,
-          value: checkboxIsChecked ? value : undefined,
-          uiAction,
-        });
         onInput?.(e);
+        const checkbox = ref.current;
+        dispatchRequestAction(checkbox, {
+          event: e,
+        });
       }}
     >
       <span className="navi_checkbox_accent_probe" aria-hidden="true" />
       <LoadingOutline
-        loading={innerLoading}
+        loading={loading}
         inset={-1}
         color="var(--loader-color)"
       />
@@ -605,29 +595,3 @@ const CheckboxPseudoClasses = [
 ];
 const CheckboxPseudoElements = ["::-navi-loader", "::-navi-checkmark"];
 const CheckboxChildPropSet = new Set([...fieldPropSet]);
-
-const InputCheckboxWithAction = (props) => {
-  const remainingProps = useActionProps({
-    // In this situation updating the ui state === calling associated action
-    // so cance/abort/error have to revert the ui state to the one before user interaction
-    // to show back the real state of the checkbox (not the one user tried to set)
-    resetOnCancel: true,
-    resetOnAbort: true,
-    resetOnError: true,
-    ...props,
-  });
-
-  return (
-    <InputCheckboxDispatcher
-      {...remainingProps}
-      action={undefined}
-      uiAction={(_, e) => {
-        const checkbox = e.currentTarget;
-        dispatchRequestAction(checkbox, {
-          event: e,
-          requester: checkbox,
-        });
-      }}
-    />
-  );
-};

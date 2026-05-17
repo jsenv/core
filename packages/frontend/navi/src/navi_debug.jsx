@@ -5,7 +5,6 @@ import { useContext } from "preact/hooks";
 const DebugFocusContext = createContext(false);
 const DebugScrollContext = createContext(false);
 const DebugPopupContext = createContext(false);
-const DebugUIActionContext = createContext(false);
 const DebugActionContext = createContext(false);
 
 const debugNoop = () => {};
@@ -21,10 +20,6 @@ export const useDebugScroll = () => {
 };
 export const useDebugPopup = () => {
   const debug = useContext(DebugPopupContext);
-  return debug || debugNoop;
-};
-export const useDebugUIAction = () => {
-  const debug = useContext(DebugUIActionContext);
   return debug || debugNoop;
 };
 export const useDebugAction = () => {
@@ -43,16 +38,12 @@ export const useDebugAction = () => {
  * Pass a boolean `true` to use `console.debug`, or pass a custom function.
  */
 export const NaviDebug = ({
-  debugUIAction,
   debugAction,
   debugFocus,
   debugScroll,
   debugPopup,
   children,
 }) => {
-  if (debugUIAction === true) {
-    debugUIAction = sharedEventGroupLogger;
-  }
   if (debugAction === true) {
     debugAction = sharedEventGroupLogger;
   }
@@ -71,9 +62,7 @@ export const NaviDebug = ({
       <DebugScrollContext.Provider value={debugScroll}>
         <DebugPopupContext.Provider value={debugPopup}>
           <DebugActionContext.Provider value={debugAction}>
-            <DebugUIActionContext.Provider value={debugUIAction}>
-              {children}
-            </DebugUIActionContext.Provider>
+            {children}
           </DebugActionContext.Provider>
         </DebugPopupContext.Provider>
       </DebugScrollContext.Provider>

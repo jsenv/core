@@ -1,6 +1,5 @@
 import { useCallback, useContext, useRef } from "preact/hooks";
 
-import { dispatchRequestUIAction } from "@jsenv/navi/src/field/validation/custom_constraint_validation.js";
 import {
   createComponentResolver,
   useNextResolver,
@@ -12,14 +11,8 @@ import { assertRoute, useRouteStatus } from "../nav/route.js";
 import { Text, markAsOutsideTextFlow } from "../text/text.jsx";
 import { useAccentColorAttributes } from "../utils/use_accent_color_attributes.js";
 import { FormContext } from "./form_context.js";
-import { normalizeUIAction } from "./ui_actions.js";
-import { ActionContext, useActionProps } from "./use_action_props.jsx";
-import { useFieldProps } from "./use_field_props.jsx";
-import {
-  ParentUIStateControllerContext,
-  UIStateControllerContext,
-  useUIStateController,
-} from "./use_ui_state_controller.js";
+import { ActionContext, useFieldProps } from "./use_field_props.jsx";
+import { ParentUIStateControllerContext } from "./use_ui_state_controller.js";
 import { dispatchRequestAction } from "./validation/custom_constraint_validation.js";
 
 /**
@@ -302,17 +295,9 @@ const css = /* css */ `
 export const Button = (props) => {
   const defaultRef = useRef(null);
   props.ref = props.ref || defaultRef;
-  props.uiAction = normalizeUIAction(props.uiAction);
-  const uiStateController = useUIStateController(props, "button", {
-    allowNameless: true,
-  });
   const button = renderButton(ButtonUI, props);
 
-  return (
-    <UIStateControllerContext.Provider value={uiStateController}>
-      {button}
-    </UIStateControllerContext.Provider>
-  );
+  return button;
 };
 
 const ButtonRouteResolver = (props) => {
@@ -322,11 +307,11 @@ const ButtonRouteResolver = (props) => {
   }
   return <Next {...props} />;
 };
-const ButtonActionResolver = (props) => {
+const ButtonFieldResolver = (props) => {
   const Next = useNextResolver();
 
-  if (props.action) {
-    return <ButtonWithAction {...props} />;
+  if (props.name || props.action) {
+    return <ButtonField {...props} />;
   }
   return <Next {...props} />;
 };
@@ -343,15 +328,13 @@ const ButtonInsideFormResolver = (props) => {
 const renderButton = createComponentResolver([
   ButtonRouteResolver,
   ButtonInsideFormResolver,
-  ButtonActionResolver,
+  ButtonFieldResolver,
 ]);
 
 const ButtonUI = (props) => {
   import.meta.css = css;
   const {
     ref,
-    uiAction,
-    onClick,
 
     // href/link
     href,
@@ -365,7 +348,7 @@ const ButtonUI = (props) => {
     spacing,
     children,
   } = props;
-  const parentUIStateController = useContext(ParentUIStateControllerContext);
+
   const fieldProps = useFieldProps(props);
   const { basePseudoState } = fieldProps;
   const loading = basePseudoState[":-navi-loading"];
@@ -432,39 +415,6 @@ const ButtonUI = (props) => {
         // Note: e.button === -1 is equivalent — it means no physical button triggered
         // the event, i.e. it was synthesized from a long-press gesture (right-click gives e.button === 2).
         e.preventDefault();
-      }}
-      onClick={(e) => {
-        const button = e.currentTarget;
-        // The button uiState is a combination of its own state (if it has a name)
-        // and its parent state (if the parent is named or is a named collection)
-        const buttonUIState = {};
-        if (parentUIStateController) {
-          const parentName = parentUIStateController.name;
-          const parentUIState = parentUIStateController.uiStateSignal.peek();
-          if (parentName) {
-            buttonUIState[parentName] = parentUIState;
-          }
-          // this is how we detect named collection for now (they don't have a name and have an object in their ui state)
-          else if (
-            typeof parentUIState === "object" &&
-            parentUIState !== null
-          ) {
-            Object.assign(buttonUIState, parentUIState);
-          } else {
-            // no name, we don't know where to put that value right?
-          }
-        }
-        if (button.name) {
-          buttonUIState[button.name] = button.value;
-        }
-        dispatchRequestUIAction(button, {
-          event: e,
-          value: buttonUIState,
-          uiAction: (value, e) => {
-            uiAction?.(value, e);
-            onClick?.(e);
-          },
-        });
       }}
       data-icon={icon ? "" : undefined}
       data-reveal-on-interaction={revealOnInteraction ? "" : undefined}
@@ -540,7 +490,7 @@ markAsOutsideTextFlow(ButtonShadow);
 
 const ButtonInsideForm = (props) => {
   const Next = useNextResolver();
-  const { uiAction, action, type } = props;
+  const { action, type } = props;
   if (
     import.meta.dev &&
     action &&
@@ -550,41 +500,42 @@ const ButtonInsideForm = (props) => {
       `<Button type="${type}" /> should not have their own action`,
     );
   }
-  const shouldRequestFormAction = (event) => {
-    if (event.defaultPrevented) {
-      return false;
-    }
-    const button = event.currentTarget;
-    const { form } = button;
-    if (!form) {
-      // either we are a "reset" button (not associated to the form)
-      // or there is no form despites from context saying so (unlikely)
-      return false;
-    }
-    const wouldSubmitFormByType =
-      button.type === "submit" || button.type === "image";
-    if (wouldSubmitFormByType) {
-      return true;
-    }
-    const firstButtonSubmittingForm = form.querySelector(
-      `button[type="submit"], input[type="submit"], input[type="image"]`,
-    );
-    if (button !== firstButtonSubmittingForm) {
-      // an other button is explicitly submitting the form, this one would not submit it
-      // so it would have no effect
-      return false;
-    }
-    // this is the only button inside the form without type attribute, so it defaults to type="submit"
-    return true;
-  };
 
   return (
     <Next
-      {...props}
-      uiAction={(v, event) => {
-        if (shouldRequestFormAction(event)) {
+      // The default action for a button inside a form is to request form action
+      action={(v, { event }) => {
+        const button = event.currentTarget;
+        const { form } = button;
+        const shouldRequestFormAction = (() => {
+          if (event.defaultPrevented) {
+            return false;
+          }
           const button = event.currentTarget;
           const { form } = button;
+          if (!form) {
+            // either we are a "reset" button (not associated to the form)
+            // or there is no form despites from context saying so (unlikely)
+            return false;
+          }
+          const wouldSubmitFormByType =
+            button.type === "submit" || button.type === "image";
+          if (wouldSubmitFormByType) {
+            return true;
+          }
+          const firstButtonSubmittingForm = form.querySelector(
+            `button[type="submit"], input[type="submit"], input[type="image"]`,
+          );
+          if (button !== firstButtonSubmittingForm) {
+            // an other button is explicitly submitting the form, this one would not submit it
+            // so it would have no effect
+            return false;
+          }
+          // this is the only button inside the form without type attribute, so it defaults to type="submit"
+          return true;
+        })();
+
+        if (shouldRequestFormAction) {
           if (event.type === "click") {
             event.preventDefault(); // prevent form submission
           }
@@ -592,19 +543,44 @@ const ButtonInsideForm = (props) => {
             event,
             requester: button,
           });
-          return;
         }
-        uiAction?.(v, event);
       }}
+      {...props}
     />
   );
 };
-const ButtonWithAction = (props) => {
+const ButtonField = (props) => {
   const Next = useNextResolver();
-  const { uiAction } = props;
+  const parentUIStateController = useContext(ParentUIStateControllerContext);
   const ancestorAction = useContext(ActionContext);
-  const remainingProps = useActionProps(props, {
-    // button inehrit their ancestor params:
+  const remainingProps = useFieldProps(props, {
+    fieldType: "button",
+    readUIState: () => {
+      const ref = props.ref;
+      const button = ref.current;
+      // The button uiState is a combination of its own state (if it has a name)
+      // and its parent state (if the parent is named or is a named collection)
+      const buttonUIState = {};
+      if (parentUIStateController) {
+        const parentName = parentUIStateController.name;
+        const parentUIState = parentUIStateController.uiStateSignal.peek();
+        if (parentName) {
+          buttonUIState[parentName] = parentUIState;
+        }
+        // this is how we detect named collection for now (they don't have a name and have an object in their ui state)
+        else if (typeof parentUIState === "object" && parentUIState !== null) {
+          Object.assign(buttonUIState, parentUIState);
+        } else {
+          // no name, we don't know where to put that value right?
+        }
+      }
+      if (button.name) {
+        buttonUIState[button.name] = button.value;
+      }
+      return buttonUIState;
+    },
+    allowNameless: true,
+    // button inherit their ancestor params:
     // - inside a form button action gets the form params
     // - inside a radio list or a picker it's the same
     paramsSignal: ancestorAction ? ancestorAction.paramsSignal : undefined,
@@ -613,10 +589,7 @@ const ButtonWithAction = (props) => {
   return (
     <Next
       {...remainingProps}
-      uiAction={(value, e) => {
-        // prevent requesting form action when within a form
-        e.preventDefault();
-        uiAction?.(value, e);
+      onClick={(e) => {
         const button = e.currentTarget;
         dispatchRequestAction(button, {
           event: e,

@@ -1,28 +1,53 @@
-import { useContext } from "preact/hooks";
+import { dispatchInternalCustomEvent } from "@jsenv/dom";
+import { createContext } from "preact";
+import { useContext, useState } from "preact/hooks";
 
+import { useActionBoundToOneParam } from "@jsenv/navi/src/action/use_action.js";
+import { useActionStatus } from "@jsenv/navi/src/action/use_action_status.js";
+import { useExecuteAction } from "@jsenv/navi/src/action/use_execute_action.js";
 import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
-import { useDebugUIAction } from "../navi_debug.jsx";
+import { useDebugAction } from "../navi_debug.jsx";
 import {
   FieldContext,
   reportDisabledToField,
   reportInteractiveToField,
   reportReadOnlyToField,
 } from "./field.jsx";
-import { ActionRequesterContext } from "./use_action_props.jsx";
+import { normalizeAction } from "./ui_actions.js";
 import {
   DisabledContext,
   LoadingContext,
   ReadOnlyContext,
-  UIStateControllerContext,
   useUIState,
+  useUIStateController,
 } from "./use_ui_state_controller.js";
-import { onRequestUIAction } from "./validation/custom_constraint_validation.js";
+import { onRequestAction } from "./validation/custom_constraint_validation.js";
 import { useConstraints } from "./validation/hooks/use_constraints.js";
 
+export const ActionRequesterContext = createContext();
+export const ActionContext = createContext();
+
 export const UI_STATE_NOT_AVAILABLE = Symbol("UI_STATE_NOT_AVAILABLE");
-export const useFieldProps = (props) => {
-  const {
+export const useFieldProps = (
+  props,
+  {
+    fieldType,
+    readUIState,
+    statePropName,
+    defaultStatePropName,
+    fallbackState,
+    getStateFromProp,
+    getPropFromState,
+    allowNameless,
+    paramsSignal,
+    externalBoundAction,
+    provideAction,
+    provideActionRequester,
+  },
+) => {
+  let {
     ref,
+    action,
     loading,
     readOnly,
     disabled,
@@ -31,19 +56,60 @@ export const useFieldProps = (props) => {
     autoSelect,
     basePseudoState,
     children,
+
+    onCancel,
+    onActionPrevented,
+    onActionAborted,
+    onActionError,
+    onActionEnd,
+    actionErrorEffect,
+    errorMapping,
+    resetOnCancel,
+    resetOnAbort,
+    resetOnError,
+    cancelOnBlurInvalid,
+    cancelOnEscape,
     ...rest
   } = props;
-  const debugUIAction = useDebugUIAction();
+  const debugAction = useDebugAction();
   const contextReadOnly = useContext(ReadOnlyContext);
   const contextDisabled = useContext(DisabledContext);
   const contextLoading = useContext(LoadingContext);
-  const actionRequester = useContext(ActionRequesterContext);
-  const uiStateController = useContext(UIStateControllerContext);
+  const parentActionRequester = useContext(ActionRequesterContext);
+  action = normalizeAction(action);
+  const uiStateController = useUIStateController(props, fieldType, {
+    statePropName,
+    defaultStatePropName,
+    fallbackState,
+    getStateFromProp,
+    getPropFromState,
+    allowNameless,
+    debugAction,
+  });
+  paramsSignal = paramsSignal || uiStateController.uiStateSignal;
   const uiState = useUIState(uiStateController);
+
+  // Always call the hook (hook call count must be stable), but when an
+  // externalBoundAction is provided we pass undefined so a noop is created
+  // internally, then we override with the external action below.
+  const [internalBoundAction] = useActionBoundToOneParam(
+    externalBoundAction ? undefined : action,
+    paramsSignal,
+  );
+  const boundAction = externalBoundAction || internalBoundAction;
+  const actionStatus = useActionStatus(boundAction);
+  const executeAction = useExecuteAction(ref, {
+    errorEffect: actionErrorEffect,
+    errorMapping,
+  });
+
+  const [actionRequester, setActionRequester] = useState();
 
   const value = uiState;
   const innerLoading =
-    loading || (contextLoading && actionRequester === ref.current);
+    loading ||
+    actionStatus.loading ||
+    (contextLoading && parentActionRequester === ref.current);
   const innerReadOnly =
     readOnly || contextReadOnly || innerLoading || uiStateController.readOnly;
   const innerDisabled = disabled || contextDisabled;
@@ -65,6 +131,15 @@ export const useFieldProps = (props) => {
     childrenWithContext = (
       <FieldContext.Provider value={null}>{children}</FieldContext.Provider>
     );
+    if (provideAction || provideActionRequester) {
+      childrenWithContext = (
+        <ActionContext.Provider value={boundAction}>
+          <ActionRequesterContext.Provider value={actionRequester}>
+            {childrenWithContext}
+          </ActionRequesterContext.Provider>
+        </ActionContext.Provider>
+      );
+    }
   }
 
   const { type } = props;
@@ -82,38 +157,6 @@ export const useFieldProps = (props) => {
     ...remainingProps,
     ref,
     "value": valueForBrowser,
-    "onnavi_request_reset_ui_state": (e) => {
-      uiStateController.resetUIState(e);
-    },
-    "onnavi_set_ui_state": (e) => {
-      const { value } = e.detail;
-      uiStateController.setUIState(value, e);
-    },
-    "onnavi_request_ui_action": (e) => {
-      const { value, uiAction } = e.detail;
-      if (value === UI_STATE_NOT_AVAILABLE) {
-        // we can't execute uiAction right now as value is not available
-        // we just want to check if action is allowed to preventDefault or give feedback
-        // but the value will be set later (checkbox "click" vs checkbox "input" use case)
-        e.detail.uiAction = () => {};
-      } else {
-        if (type === "number") {
-          const inputValueAsNumber = Number(value);
-          if (!isNaN(inputValueAsNumber)) {
-            e.detail.value = inputValueAsNumber;
-          }
-        } else if (type === "datetime-local") {
-          e.detail.value = convertToUTCTimezone(value);
-        }
-        e.detail.uiAction = (value, e) => {
-          uiStateController.setUIState(value, e);
-          uiAction?.(value, e);
-        };
-      }
-      onRequestUIAction(e, {
-        debugUIAction,
-      });
-    },
     "autoFocus": undefined, // See use_auto_focus.js
     "basePseudoState": {
       ...basePseudoState,
@@ -122,6 +165,116 @@ export const useFieldProps = (props) => {
       ":-navi-loading": innerLoading,
     },
     "aria-busy": innerLoading,
+    "data-action": boundAction.callSource,
+    "onnavi_request_reset_ui_state": (e) => {
+      uiStateController.resetUIState(e);
+    },
+    "onnavi_request_ui_state": (e) => {
+      e.detail.respondWith(readUIState(e));
+    },
+    "onnavi_set_ui_state": (e) => {
+      const { value } = e.detail;
+      uiStateController.setUIState(value, e);
+    },
+    "onnavi_cancel": (e) => {
+      const { reason } = e.detail;
+
+      if (resetOnCancel) {
+        if (reason.startsWith("blur_invalid")) {
+          return;
+        }
+        uiStateController.resetUIState(e);
+        onCancel?.(e, reason);
+        return;
+      }
+      if (reason.startsWith("blur_invalid")) {
+        if (!cancelOnBlurInvalid) {
+          return;
+        }
+        if (
+          // error prevent cancellation until the user closes it (or something closes it)
+          e.detail.failedConstraintInfo.level === "error" &&
+          e.detail.failedConstraintInfo.reportStatus !== "closed"
+        ) {
+          return;
+        }
+      }
+      if (reason === "escape_key") {
+        if (!cancelOnEscape) {
+          return;
+        }
+      }
+      onCancel?.(e, reason);
+    },
+    "onnavi_request_action": (e) => {
+      const { isInteractionOnly } = e.detail;
+
+      if (isInteractionOnly) {
+      } else {
+        let uiStateRaw;
+        dispatchInternalCustomEvent(e.currentTarget, "navi_request_ui_state", {
+          respondWith: (v) => {
+            uiStateRaw = v;
+          },
+        });
+
+        if (uiStateRaw === UI_STATE_NOT_AVAILABLE) {
+          e.detail.uiState = UI_STATE_NOT_AVAILABLE;
+        } else if (type === "number") {
+          const inputValueAsNumber = Number(uiStateRaw);
+          if (isNaN(inputValueAsNumber)) {
+            e.detail.uiState = uiStateRaw;
+          } else {
+            e.detail.uiState = inputValueAsNumber;
+          }
+        } else if (type === "datetime-local") {
+          e.detail.uiState = convertToUTCTimezone(uiStateRaw);
+        } else {
+          e.detail.uiState = uiStateRaw;
+        }
+      }
+
+      if (e.detail.action) {
+        // keyboard shotcut give the action and action is irrelevant here, the kayboard shortcut must win
+      } else {
+        e.detail.actionOrigin = "action_prop";
+        e.detail.action = boundAction;
+      }
+
+      onRequestAction(e, {
+        debugAction,
+      });
+    },
+    "onnavi_action_prevented": onActionPrevented,
+    "onnavi_action_ready": (e) => {
+      const { uiState } = e.detail;
+      if (uiState !== UI_STATE_NOT_AVAILABLE) {
+        // we can't execute uiAction right now as value is not available
+        // we just want to check if action is allowed to preventDefault or give feedback
+        // but the value will be set later (checkbox "click" vs checkbox "input" use case)
+        uiStateController.setUIState(uiState, e);
+      }
+      setActionRequester(e.detail.requester);
+      executeAction(e);
+    },
+    "onnavi_action_abort": (e) => {
+      if (resetOnAbort) {
+        uiStateController.resetUIState(e);
+      }
+      onActionAborted?.(e);
+    },
+    "onnavi_action_error": (e) => {
+      const { error } = e.detail;
+      if (resetOnError) {
+        uiStateController.resetUIState(e);
+      }
+      onActionError?.(error, e);
+    },
+    "onnavi_action_end": (e) => {
+      const { data } = e.detail;
+      uiStateController.actionEnd(e);
+      onActionEnd?.(data, e);
+    },
   };
 };
 

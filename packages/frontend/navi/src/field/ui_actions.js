@@ -4,15 +4,15 @@ import {
   dispatchRequestUIAction,
 } from "./validation/custom_constraint_validation.js";
 
-export const normalizeUIAction = (uiAction) => {
-  if (typeof uiAction === "string") {
-    const naviUIAction = UI_ACTIONS[uiAction];
+export const normalizeAction = (action) => {
+  if (typeof action === "string") {
+    const naviUIAction = UI_ACTIONS[action];
     if (!naviUIAction) {
-      throw new Error(`Unknown uiAction "${uiAction}"`);
+      throw new Error(`Unknown ui action "${action}"`);
     }
     return naviUIAction;
   }
-  return uiAction;
+  return action;
 };
 
 const submitFromEvent = (e) => {
