@@ -4,23 +4,12 @@ import { useContext, useRef } from "preact/hooks";
 import { Box } from "@jsenv/navi/src/box/box.jsx";
 import { ChevronDownSvg } from "@jsenv/navi/src/graphic/icons/chevron_updown_svg.jsx";
 import { LoadingOutline } from "@jsenv/navi/src/graphic/loading/loading_outline.jsx";
-import {
-  createComponentResolver,
-  useNextResolver,
-} from "@jsenv/navi/src/resolver/resolver.jsx";
+import { createComponentResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { Icon } from "@jsenv/navi/src/text/icon.jsx";
 import { useFieldId } from "../field.jsx";
 import { createUICallback } from "../ui_callback.js";
-import { useActionProps } from "../use_action_props.jsx";
 import { useFieldProps } from "../use_field_props.jsx";
-import {
-  UIStateControllerContext,
-  useUIStateController,
-} from "../use_ui_state_controller.js";
-import {
-  dispatchRequestAction,
-  dispatchRequestUIAction,
-} from "../validation/custom_constraint_validation.js";
+import { dispatchRequestAction } from "../validation/custom_constraint_validation.js";
 import { PickerContext, PickerElementContext } from "./picker_context.jsx";
 import { pickerResolvers } from "./picker_resolvers.jsx";
 
@@ -233,27 +222,13 @@ export const Picker = (props) => {
   props.ref = props.ref || defaultRef;
   const fieldId = useFieldId();
   props.id = props.id || fieldId;
-  const uiStateController = useUIStateController(props, "picker");
+
   const picker = renderPicker(PickerButton, props);
 
-  return (
-    <UIStateControllerContext.Provider value={uiStateController}>
-      {picker}
-    </UIStateControllerContext.Provider>
-  );
-};
-const PickerActionResolver = (props) => {
-  const Next = useNextResolver();
-  if (props.action) {
-    return <PickerAction {...props} />;
-  }
-  return <Next {...props} />;
+  return picker;
 };
 
-const renderPicker = createComponentResolver([
-  pickerResolvers,
-  PickerActionResolver,
-]);
+const renderPicker = createComponentResolver(pickerResolvers);
 Picker.update = createUICallback({
   name: "Picker.update",
   uiAction: (value, e) => {
@@ -305,7 +280,15 @@ const PickerButton = (props) => {
     onChange,
   } = props;
   const pickerInputRef = useRef(null);
-  const fieldProps = useFieldProps({ ...props, ref: pickerInputRef });
+  const fieldProps = useFieldProps(
+    {
+      ...props,
+      ref: pickerInputRef,
+    },
+    {
+      fieldType: "picker",
+    },
+  );
   const { value, basePseudoState, children } = fieldProps;
   const loading = basePseudoState[":-navi-loading"];
   const readOnly = basePseudoState[":read-only"];
@@ -319,13 +302,13 @@ const PickerButton = (props) => {
       ref={ref}
       baseClassName="navi_picker"
       data-field=".navi_picker_input"
-      navi-submit-effect="request_ui_action"
       navi-has-placeholder={placeholder ? "" : undefined}
       // pseudoStateSelector=".navi_picker_input"
       pseudoClasses={PICKER_PSEUDO_CLASSES}
       // we must put the id on the button and not the input
       // so that a <label> tries to give focus to the button and not the input
       id={id}
+      navi-submit-effect="request_ui_action"
       onnavi_get_managed_fields={(e) => {
         // we must check for the pickerEl content to search for a valid input because we might be a button used to validate for instance
         // no necessarily the field itself
@@ -367,15 +350,11 @@ const PickerButton = (props) => {
         aria-busy={loading}
         data-rendered-by=".navi_picker"
         onInput={(e) => {
-          const input = e.target;
-          dispatchRequestUIAction(input, {
-            event: e,
-            value: input.value,
-            uiAction: (inputValue, e) => {
-              fieldProps.uiAction?.(inputValue, e);
-            },
-          });
           onInput?.(e);
+          const input = ref.current;
+          dispatchRequestAction(input, {
+            event: e,
+          });
         }}
         onChange={onChange}
       />
@@ -431,22 +410,4 @@ const PickerDefaultUI = () => {
     return placeholder || null;
   }
   return value;
-};
-
-export const PickerAction = (props) => {
-  const Next = useNextResolver();
-  const actionProps = useActionProps(props);
-
-  return (
-    <Next
-      {...actionProps}
-      onChange={(e) => {
-        const input = e.target;
-        dispatchRequestAction(input, {
-          event: e,
-          requester: input,
-        });
-      }}
-    />
-  );
 };
