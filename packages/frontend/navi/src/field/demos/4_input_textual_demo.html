@@ -577,15 +577,17 @@
             <fieldset>
               <legend>async</legend>
               <p className="states-description">
-                The <code>action</code> prop is called on every value change
-                (keystroke, paste, programmatic). For slow async operations see
-                the options below.
+                When <code>action</code> is async, it is called on{" "}
+                <strong>every keystroke</strong>. Type quickly to see multiple
+                overlapping calls — the displayed value jumps as each one
+                resolves. Use the options below to avoid this.
               </p>
               <Box flex spacing="s">
                 <Input
                   placeholder="Type something..."
-                  action={(value) => {
+                  action={async (value) => {
                     setBasicActionCallCount((c) => c + 1);
+                    await delay(1000);
                     setBasicActionValue(value);
                   }}
                 />
