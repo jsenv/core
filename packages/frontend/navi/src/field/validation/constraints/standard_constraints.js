@@ -113,7 +113,7 @@ export const PATTERN_CONSTRAINT = {
     if (!value && !field.required) {
       return null;
     }
-    const regex = new RegExp(pattern);
+    const regex = new RegExp(`^(?:${pattern})$`);
     if (regex.test(value)) {
       return null;
     }
@@ -139,7 +139,7 @@ export const TYPE_EMAIL_CONSTRAINT = {
       return null;
     }
     const value = field.value;
-    if (!value && !field.required) {
+    if (!value) {
       return null;
     }
     if (!value.includes("@")) {
@@ -169,7 +169,7 @@ export const MIN_LENGTH_CONSTRAINT = {
       return null;
     }
     const value = field.value;
-    if (!value && !field.required) {
+    if (!value) {
       return null;
     }
     const valueLength = value.length;
@@ -310,9 +310,8 @@ export const MIN_CONSTRAINT = {
       }
       return null;
     }
-    // "range"
-    // - user interface do not let user enter anything outside the boundaries
-    // - when setting value via js browser enforce boundaries too
+    // range inputs enforce boundaries via their UI and browser clamping for programmatic updates
+    // so they never need a min/max validation message.
     if (DATE_INPUT_TYPE_SET.has(field.type)) {
       const value = field.value;
       if (!value) {
