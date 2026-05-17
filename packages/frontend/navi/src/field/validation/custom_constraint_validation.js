@@ -761,9 +761,23 @@ export const installCustomConstraintValidation = (
         }
         resetOnInteraction(e);
       };
+
+      const id = element.id;
+      let removeLabelListener;
+      if (id) {
+        const label = document.querySelector(`label[for="${CSS.escape(id)}"]`);
+        if (label) {
+          label.addEventListener("mousedown", onmousedown);
+          removeLabelListener = () => {
+            label.removeEventListener("mousedown", onmousedown);
+          };
+        }
+      }
+
       interactionTarget.addEventListener("mousedown", onmousedown);
       return () => {
         interactionTarget.removeEventListener("mousedown", onmousedown);
+        removeLabelListener?.();
       };
     });
   }
