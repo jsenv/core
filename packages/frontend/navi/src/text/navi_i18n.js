@@ -123,6 +123,10 @@ naviI18n.addAll({
     fr: "Veuillez sélectionner un fichier.",
     en: "Please select a file.",
   },
+  "picker.required.file.multiple": {
+    fr: "Veuillez sélectionner au moins un fichier.",
+    en: "Please select at least one file.",
+  },
   "picker.hour.no_slots": {
     fr: "Aucune heure disponible.",
     en: "No available time slots.",

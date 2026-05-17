@@ -245,9 +245,12 @@ const toInputDatetime = (date) => {
 
 export const PickerFile = (props) => {
   const Next = useNextResolver();
+  const requiredMessage = props.multiple
+    ? naviI18n(`picker.required.file.multiple`)
+    : naviI18n(`picker.required.file`);
   return (
     <Next
-      requiredMessage={naviI18n(`picker.required.file`)}
+      requiredMessage={requiredMessage}
       ui={<PickerFileUI />}
       icon={<FileSvg />}
       {...getPropsToShowPicker(props)}
