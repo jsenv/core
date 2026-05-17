@@ -10,42 +10,40 @@ import { useDisplayedLayoutEffect } from "../use_displayed_layout_effect.js";
  *
  * WHY NOT USE THE NATIVE `autofocus` ATTRIBUTE?
  *
- * The browser fires autofocus before JavaScript layout effects have run. This
- * means the element may not be correctly positioned yet — for example a popover
- * that is still being placed by our own positioning logic. When the browser then
- * calls scrollIntoView internally as part of focusing, it reads stale geometry
- * and may scroll the page even though the popover content is already fully on
- * screen (or will be once layout settles). There is no way to hook into the
- * browser's autofocus timing or suppress just its scroll side-effect while
- * keeping the focus itself.
- *
- * Also browser is just bad at scrolling into view something in a popover
+ * The browser's built-in `autofocus` triggers a `scrollIntoView` that reads
+ * element geometry before JavaScript layout effects have run. This can cause
+ * incorrect scrolling — for example, a popover that is still being positioned
+ * by our own layout logic will report stale geometry, and the browser may scroll
+ * the page unnecessarily. There is no way to suppress just the scroll side-effect
+ * while keeping the focus itself.
  *
  * For that reason, components that use `useAutoFocus` must NOT set the
- * `autofocus`|`autoFocus` attribute on the underlying DOM node. The hook
- * takes over the focus call entirely, fires it inside a `useDisplayedLayoutEffect`
- * (so Preact layout work is done and the element is correctly positioned), and
- * exposes `autoFocusPreventScroll` to let the caller decide whether any
- * scroll-into-view should happen at all.
+ * `autofocus`|`autoFocus` attribute on the underlying DOM node (use
+ * `navi-autofocus` instead, which has no browser behavior). The hook takes over
+ * the focus call entirely and fires it inside a `useDisplayedLayoutEffect`,
+ * which runs after Preact layout work is done and the element is correctly
+ * positioned.
+ *
+ * As a secondary benefit, firing focus after layout effects means any
+ * positioning-dependent setup (e.g. popover placement) is already complete,
+ * though in practice this ordering issue has not been observed — it is simply
+ * a safe default.
  *
  * @param {import("preact/hooks").Ref<HTMLElement>} focusableElementRef
  *   Ref to the element to focus.
  * @param {boolean} autoFocus
  *   When false the hook is a no-op.
  * @param {object} [options]
- * @param {boolean} [options.autoFocusPreventScroll]
- *   Passed as `preventScroll` to `element.focus()`. Set to true to suppress
+ * @param {boolean} [options.preventScroll]
+ *   Passed as `preventScroll` to `element.focus()`. Defaults to true to suppress
  *   the browser's built-in scroll-into-view that accompanies focus.
- * @param {boolean} [options.autoFocusVisible]
+ * @param {boolean} [options.focusVisible]
  *   Passed as `focusVisible` to `element.focus()`.
  * @param {boolean} [options.autoSelect]
  *   When true, also calls `element.select()` after focusing (useful for text inputs).
- * @param {boolean} [options.debugFocus]
- *   When true, logs focus decisions to the console.
  * @returns {Function} triggerAutofocus — can be called manually with a synthetic
  *   event to re-run the focus logic outside of the layout-effect lifecycle.
  */
-
 export const useAutoFocus = (
   focusableElementRef,
   autoFocus,

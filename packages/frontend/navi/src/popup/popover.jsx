@@ -1,9 +1,7 @@
 import {
   dispatchCustomEvent,
   dispatchPublicCustomEvent,
-  findFocusable,
   getBorderSizes,
-  getElementSignature,
   pickPositionRelativeTo,
   snapToPixel,
   trapFocusInside,
@@ -16,6 +14,7 @@ import { useId, useRef, useState } from "preact/hooks";
 import { Box } from "../box/box.jsx";
 import { resolveSpacingSize } from "../box/box_style_util.js";
 import { useDebugFocus, useDebugPopup } from "../navi_debug.jsx";
+import { focusFirstAutofocusOrFocusable } from "../utils/focus/focus_first_autofocus_or_focusable.js";
 import { useCleanup } from "../utils/use_cleanup.js";
 
 const css = /* css */ `
@@ -65,14 +64,7 @@ export const Popover = (props) => {
     debugPopup(e, `openPopover()`);
     const popoverEl = ref.current;
     popoverEl.showPopover();
-    const firstFocusable = findFocusable(popoverEl);
-    if (firstFocusable) {
-      debugFocus(
-        e,
-        `Moving focus to first focusable element in popover: ${getElementSignature(firstFocusable)}.focus({ preventScroll: true })`,
-      );
-      firstFocusable.focus({ preventScroll: true });
-    }
+    focusFirstAutofocusOrFocusable(popoverEl, debugFocus, e);
     const effectiveAnchor = anchor || document.documentElement;
     const positionPopover = (positionEvent) => {
       const { width, height } = effectiveAnchor.getBoundingClientRect();

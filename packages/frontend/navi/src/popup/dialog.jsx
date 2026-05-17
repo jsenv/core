@@ -1,7 +1,6 @@
 import {
   dispatchCustomEvent,
   dispatchPublicCustomEvent,
-  findFocusable,
   getElementSignature,
   trapScrollInside,
 } from "@jsenv/dom";
@@ -9,6 +8,7 @@ import { useRef } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
 import { useDebugFocus, useDebugPopup } from "../navi_debug.jsx";
+import { focusFirstAutofocusOrFocusable } from "../utils/focus/focus_first_autofocus_or_focusable.js";
 import { useCleanup } from "../utils/use_cleanup.js";
 
 const css = /* css */ `
@@ -37,14 +37,7 @@ export const Dialog = (props) => {
     debugPopup(`"${e.type}" on ${getElementSignature(e.target)} -> openDialog`);
     const dialogEl = ref.current;
     dialogEl.showModal();
-    const firstFocusable = findFocusable(dialogEl);
-    if (firstFocusable) {
-      debugFocus(
-        e,
-        `Moving focus to first focusable element in dialog: ${getElementSignature(firstFocusable)}.focus({ preventScroll: true })`,
-      );
-      firstFocusable.focus({ preventScroll: true });
-    }
+    focusFirstAutofocusOrFocusable(dialogEl, debugFocus, e);
     if (scrollTrap) {
       addCleanup(trapScrollInside(dialogEl));
     }
