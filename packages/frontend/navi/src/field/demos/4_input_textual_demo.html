@@ -270,7 +270,11 @@
                       placeholder="Focus me"
                       pseudoState={{ ":focus-visible": true }}
                     />
-                    <input placeholder="Focus me" autoFocus />
+                    <input
+                      placeholder="Focus me"
+                      // commented out cause it prevent brwoser from restoring scroll on reload
+                      // autoFocus
+                    />
                   </Box>
                 </fieldset>
                 <fieldset>
@@ -509,8 +513,6 @@
         const [abortValue, setAbortValue] = useState("");
         const [abortCallCount, setAbortCallCount] = useState(0);
         const [abortedCount, setAbortedCount] = useState(0);
-        const [username, setUsername] = useState("");
-        const [formResult, setFormResult] = useState("");
         const currentAbortControllerRef = useRef(null);
         const cancelPrevious = () => {
           if (currentAbortControllerRef.current) {
@@ -674,84 +676,102 @@
 
             <p className="states-description">
               When an input is inside a <code>Form</code>, its <code>name</code>{" "}
-              is used to collect the value on submit. The input's own{" "}
-              <code>action</code> can still be used alongside the form action
-              (e.g. to track the field value independently).
+              is used to collect the value on submit.
             </p>
 
-            <fieldset>
-              <legend>Enter does not submit the form</legend>
-              <p className="states-description">
-                Pressing <kbd>Enter</kbd> inside an input with an{" "}
-                <code>action</code> triggers the input's own action (if{" "}
-                <code>actionAfterChange</code> is set), but does{" "}
-                <strong>not</strong> submit the surrounding form. Only the
-                Submit button triggers form submission.
-              </p>
-              <Form
-                action={async ({ search }) => {
-                  await delay(800);
-                  setFormResult(`Form submitted! search: "${search}"`);
-                }}
-              >
-                <Box flex="y" spacing="s" alignX="start">
-                  <Field>
-                    <Label>Search</Label>
-                    <Input
-                      name="search"
-                      placeholder="Type and press Enter…"
-                      action={async (value) => {
-                        setFormResult(`action called with: "${value}"`);
-                        await delay(600);
-                        setFormResult(`action done: "${value}"`);
-                      }}
-                      actionAfterChange
-                    />
-                  </Field>
-                  <Button type="submit">Submit form</Button>
-                  {formResult ? (
-                    <div className="value-display">{formResult}</div>
-                  ) : null}
-                </Box>
-              </Form>
-            </fieldset>
-
-            <fieldset>
-              <legend>Basic form submission</legend>
-              <Form
-                action={async ({ username }) => {
-                  await delay(1000);
-                  setFormResult(`Submitted! Username: ${username}`);
-                }}
-              >
-                <Box flex="y" spacing="s" alignX="start">
-                  <Field>
-                    <Label>Username</Label>
-                    <Input
-                      name="username"
-                      value={username}
-                      action={setUsername}
-                      placeholder="Enter username"
-                    />
-                  </Field>
-                  <Box flex spacing="s">
-                    <Button type="submit">Submit</Button>
-                    <Button
-                      type="reset"
-                      action={() => {
-                        setUsername("");
-                      }}
-                    >
-                      Reset
-                    </Button>
-                  </Box>
-                  {formResult ? (
-                    <div className="value-display">{formResult}</div>
-                  ) : null}
-                </Box>
-              </Form>
-            </fieldset>
+            <FormBasicDemo />
+            <FormWithInputActionDemo />
           </div>
+        );
+      };
+
+      const FormBasicDemo = () => {
+        const [username, setUsername] = useState("dam");
+        const [formResult, setFormResult] = useState("");
+
+        return (
+          <fieldset>
+            <legend>Basic form submission</legend>
+            <Form
+              action={async ({ username }) => {
+                await delay(1000);
+                setFormResult(`Submitted! Username: "${username}"`);
+              }}
+            >
+              <Box flex="y" spacing="s" alignX="start">
+                <Field flex spacing="s">
+                  <Label>Username</Label>
+                  <Input
+                    name="username"
+                    value={username}
+                    action={setUsername}
+                    placeholder="Enter username"
+                  />
+                </Field>
+                <Box flex spacing="s">
+                  <Button type="submit">Submit</Button>
+                  <Button
+                    type="reset"
+                    action={() => {
+                      setUsername("");
+                    }}
+                  >
+                    Reset
+                  </Button>
+                </Box>
+                {formResult ? (
+                  <div className="value-display">{formResult}</div>
+                ) : null}
+              </Box>
+            </Form>
+          </fieldset>
+        );
+      };
+
+      const FormWithInputActionDemo = () => {
+        const [actionLog, setActionLog] = useState("");
+        const [formResult, setFormResult] = useState("");
+
+        return (
+          <fieldset>
+            <legend>Input with own action inside a form</legend>
+            <p className="states-description">
+              The input has its own <code>action</code> with{" "}
+              <code>actionAfterChange</code>. Pressing <kbd>Enter</kbd> should
+              trigger the input's action — <strong>not</strong> submit the form.
+              The input is also named so its value is included in the form
+              submission.
+            </p>
+            <Form
+              action={async ({ search }) => {
+                await delay(800);
+                setFormResult(`Form submitted! search: "${search}"`);
+              }}
+            >
+              <Box flex="y" spacing="s" alignX="start">
+                <Field flex spacing="s">
+                  <Label>Search</Label>
+                  <Input
+                    name="search"
+                    placeholder="Type and press Enter…"
+                    action={async (value) => {
+                      setActionLog(`action called with: "${value}"`);
+                      await delay(600);
+                      setActionLog(`action done: "${value}"`);
+                    }}
+                    actionAfterChange
+                  />
+                </Field>
+                <Button type="submit">Submit form</Button>
+                {actionLog ? (
+                  <div className="value-display">Input action: {actionLog}</div>
+                ) : null}
+                {formResult ? (
+                  <div className="value-display">Form: {formResult}</div>
+                ) : null}
+              </Box>
+            </Form>
+          </fieldset>
         );
       };
 
