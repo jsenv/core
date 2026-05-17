@@ -427,11 +427,11 @@ const InputCheckboxField = (props) => {
       getPropFromState: Boolean,
     },
   );
-  const { basePseudoState, value: uiState } = fieldProps;
+  const { basePseudoState, value } = fieldProps;
   const loading = basePseudoState[":-navi-loading"];
   const readOnly = basePseudoState[":read-only"];
 
-  const checked = Boolean(uiState);
+  const checked = Boolean(value);
   const renderCheckbox = (checkboxProps) => {
     return (
       <Box

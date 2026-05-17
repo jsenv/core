@@ -1,6 +1,7 @@
 import { useState } from "preact/hooks";
 
 import { useActionBoundToOneParam } from "@jsenv/navi/src/action/use_action.js";
+import { useDebugAction } from "../navi_debug.jsx";
 import { ActionContext, ActionRequesterContext } from "./field_context.js";
 import { useActionProps } from "./use_field_props.jsx";
 import {
@@ -19,9 +20,11 @@ export const useFieldGroupProps = (
   { fieldType, childComponentType, aggregateChildStates },
 ) => {
   const { action, name, children, required } = props;
-  const uiGroupStateController = useUIGroupStateController(fieldType, {
+  const debugAction = useDebugAction();
+  const uiGroupStateController = useUIGroupStateController(props, fieldType, {
     childComponentType,
     aggregateChildStates,
+    debugAction,
   });
   const uiState = useUIState(uiGroupStateController);
   const [boundAction] = useActionBoundToOneParam(
@@ -54,6 +57,10 @@ export const useFieldGroupProps = (
     },
     {
       uiStateController: uiGroupStateController,
+      readUIState: () => {
+        return uiGroupStateController.uiStateSignal.peek();
+      },
+      paramsSignal: uiGroupStateController.uiStateSignal,
     },
   );
 
