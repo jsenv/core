@@ -806,7 +806,9 @@ export const installCustomConstraintValidation = (
   check_on_navi_action_end: {
     // this ensure we re-check validity (and remove message no longer relevant)
     // once the action ends (used to remove the NOT_BUSY_CONSTRAINT message)
-    const onNaviActionEnd = (e) => {
+    const onNaviActionEnd = async (e) => {
+      // wait a tick for preact to have time to remove attrs (like data-readonly) as "navi_action_end" side effects are executed
+      await new Promise((r) => requestAnimationFrame(r));
       checkValidity({ event: e });
     };
     element.addEventListener("navi_action_end", onNaviActionEnd);
