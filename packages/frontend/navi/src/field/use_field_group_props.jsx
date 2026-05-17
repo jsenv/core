@@ -2,15 +2,18 @@ import { useState } from "preact/hooks";
 
 import { useActionBoundToOneParam } from "@jsenv/navi/src/action/use_action.js";
 import { useDebugAction } from "../navi_debug.jsx";
-import { ActionContext, ActionRequesterContext } from "./field_context.js";
-import { useActionProps } from "./use_field_props.jsx";
 import {
+  ActionContext,
+  ActionRequesterContext,
   DisabledContext,
   FieldNameContext,
   LoadingContext,
-  ParentUIStateControllerContext,
   ReadOnlyContext,
   RequiredContext,
+} from "./field_context.js";
+import { useActionProps } from "./use_field_props.jsx";
+import {
+  ParentUIStateControllerContext,
   useUIGroupStateController,
 } from "./use_ui_state_controller.js";
 
@@ -70,6 +73,12 @@ export const useFieldGroupProps = (
     const disabled = basePseudoState[":disabled"];
     const readOnly = basePseudoState[":read-only"];
     const loading = basePseudoState[":-navi-loading"];
+
+    console.log("field group props", {
+      disabled,
+      readOnly,
+      loading,
+    });
 
     childrenWithContext = (
       <ActionRequesterContext.Provider value={actionRequester}>

@@ -4,12 +4,9 @@ import { Box } from "../../box/box.jsx";
 import { LoadingOutline } from "../../graphic/loading/loading_outline.jsx";
 import { useAccentColorAttributes } from "../../utils/use_accent_color_attributes.js";
 import { useFieldId } from "../field.jsx";
+import { FieldNameContext, RequiredContext } from "../field_context.js";
 import { fieldPropSet } from "../field_prop_set.js";
 import { useFieldProps } from "../use_field_props.jsx";
-import {
-  FieldNameContext,
-  RequiredContext,
-} from "../use_ui_state_controller.js";
 import {
   dispatchRequestAction,
   dispatchRequestInteraction,
