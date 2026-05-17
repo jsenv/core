@@ -12,7 +12,6 @@ import {
   ReadOnlyContext,
   RequiredContext,
   useUIGroupStateController,
-  useUIState,
 } from "./use_ui_state_controller.js";
 
 export const useFieldGroupProps = (
@@ -26,7 +25,7 @@ export const useFieldGroupProps = (
     aggregateChildStates,
     debugAction,
   });
-  const uiState = useUIState(uiGroupStateController);
+  // const uiState = useUIState(uiGroupStateController);
   const [boundAction] = useActionBoundToOneParam(
     action,
     uiGroupStateController.uiStateSignal,
@@ -56,11 +55,11 @@ export const useFieldGroupProps = (
       children: childrenWithContext,
     },
     {
+      action: boundAction,
       uiStateController: uiGroupStateController,
       readUIState: () => {
         return uiGroupStateController.uiStateSignal.peek();
       },
-      paramsSignal: uiGroupStateController.uiStateSignal,
     },
   );
 

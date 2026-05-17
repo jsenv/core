@@ -60,22 +60,25 @@ export const useFieldProps = (
   });
 
   paramsSignal = paramsSignal || uiStateController.uiStateSignal;
+  const [internalBoundAction] = useActionBoundToOneParam(
+    externalBoundAction ? undefined : normalizeAction(props.action),
+    paramsSignal,
+  );
+  const boundAction = externalBoundAction || internalBoundAction;
 
   return useActionProps(props, {
+    action: boundAction,
     uiStateController,
     readUIState,
-    paramsSignal,
-    externalBoundAction,
   });
 };
 
 export const useActionProps = (
   props,
-  { uiStateController, readUIState, paramsSignal, externalBoundAction },
+  { action, uiStateController, readUIState },
 ) => {
   const {
     ref,
-    action,
 
     loading,
     readOnly,
@@ -100,13 +103,7 @@ export const useActionProps = (
     cancelOnEscape,
     ...rest
   } = props;
-  const [internalBoundAction] = useActionBoundToOneParam(
-    externalBoundAction ? undefined : normalizeAction(action),
-    paramsSignal,
-  );
-  const boundAction = externalBoundAction || internalBoundAction;
-  const actionStatus = useActionStatus(boundAction);
-
+  const actionStatus = useActionStatus(action);
   const contextReadOnly = useContext(ReadOnlyContext);
   const contextDisabled = useContext(DisabledContext);
   const contextLoading = useContext(LoadingContext);
@@ -164,6 +161,8 @@ export const useActionProps = (
     "children": childrenWithContext,
     ...remainingProps,
     ref,
+    "action": undefined,
+    "data-action": action.callSource,
     "value": valueForBrowser,
     "autoFocus": undefined, // See use_auto_focus.js
     "basePseudoState": {
@@ -173,7 +172,6 @@ export const useActionProps = (
       ":-navi-loading": innerLoading,
     },
     "aria-busy": innerLoading,
-    "data-action": boundAction.callSource,
     "onnavi_request_reset_ui_state": (e) => {
       uiStateController.resetUIState(e);
     },
@@ -245,7 +243,7 @@ export const useActionProps = (
         // keyboard shotcut give the action and action is irrelevant here, the kayboard shortcut must win
       } else {
         e.detail.actionOrigin = "action_prop";
-        e.detail.action = boundAction;
+        e.detail.action = action;
       }
 
       onRequestAction(e, { debugAction });
@@ -254,7 +252,7 @@ export const useActionProps = (
     "onnavi_action_ready": (e) => {
       if (e.detail.action === "auto") {
         // special case for the use case where form.submit is called
-        e.detail.action = boundAction;
+        e.detail.action = action;
       }
 
       const { uiState } = e.detail;
