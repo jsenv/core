@@ -2,20 +2,23 @@ import { createEventGroupLogger } from "@jsenv/dom";
 import { createContext } from "preact";
 import { useContext } from "preact/hooks";
 
-const DebugFocusContext = createContext(false);
-const DebugScrollContext = createContext(false);
+const DebugInteractionContext = createContext(false);
 const DebugPopupContext = createContext(false);
 const DebugActionContext = createContext(false);
 
 const debugNoop = () => {};
 const sharedEventGroupLogger = createEventGroupLogger();
 
+export const useDebugInteraction = () => {
+  const debug = useContext(DebugInteractionContext);
+  return debug || debugNoop;
+};
 export const useDebugFocus = () => {
-  const debug = useContext(DebugFocusContext);
+  const debug = useContext(DebugInteractionContext);
   return debug || debugNoop;
 };
 export const useDebugScroll = () => {
-  const debug = useContext(DebugScrollContext);
+  const debug = useContext(DebugInteractionContext);
   return debug || debugNoop;
 };
 export const useDebugPopup = () => {
@@ -31,41 +34,35 @@ export const useDebugAction = () => {
  * NaviDebug — enables debug logging for navi UI interactions within its subtree.
  *
  * Props:
- *   debugFocus   — log focus moves (autoFocus, restoring previous focus, etc.)
- *   debugScroll  — log virtual scroll window updates and scroll-to-item calls
- *   debugPopup — log popover open/close/positioning decisions
+ *   debugInteraction — log focus moves and virtual scroll updates (enables debugFocus + debugScroll)
+ *   debugPopup       — log popover open/close/positioning decisions
+ *   debugAction      — log action lifecycle events
  *
  * Pass a boolean `true` to use `console.debug`, or pass a custom function.
  */
 export const NaviDebug = ({
-  debugAction,
-  debugFocus,
-  debugScroll,
+  debugInteraction,
   debugPopup,
+  debugAction,
   children,
 }) => {
-  if (debugAction === true) {
-    debugAction = sharedEventGroupLogger;
-  }
-  if (debugFocus === true) {
-    debugFocus = sharedEventGroupLogger;
-  }
-  if (debugScroll === true) {
-    debugScroll = sharedEventGroupLogger;
+  if (debugInteraction === true) {
+    debugInteraction = sharedEventGroupLogger;
   }
   if (debugPopup === true) {
     debugPopup = sharedEventGroupLogger;
   }
+  if (debugAction === true) {
+    debugAction = sharedEventGroupLogger;
+  }
 
   return (
-    <DebugFocusContext.Provider value={debugFocus}>
-      <DebugScrollContext.Provider value={debugScroll}>
-        <DebugPopupContext.Provider value={debugPopup}>
-          <DebugActionContext.Provider value={debugAction}>
-            {children}
-          </DebugActionContext.Provider>
-        </DebugPopupContext.Provider>
-      </DebugScrollContext.Provider>
-    </DebugFocusContext.Provider>
+    <DebugInteractionContext.Provider value={debugInteraction}>
+      <DebugPopupContext.Provider value={debugPopup}>
+        <DebugActionContext.Provider value={debugAction}>
+          {children}
+        </DebugActionContext.Provider>
+      </DebugPopupContext.Provider>
+    </DebugInteractionContext.Provider>
   );
 };

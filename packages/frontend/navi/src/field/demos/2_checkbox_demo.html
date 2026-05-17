@@ -168,16 +168,18 @@
 
       const App = () => {
         return (
-          <div>
-            <TableOfContents />
-            <BasicStatesDemo />
-            <InteractivityDemo />
-            <SizeDemo />
-            <ColorDemo />
-            <ToggleAppearanceDemo />
-            <IconDemo />
-            <InteractiveDemo />
-          </div>
+          <NaviDebug debugAction debugInteraction>
+            <div>
+              <TableOfContents />
+              <BasicStatesDemo />
+              <InteractivityDemo />
+              <SizeDemo />
+              <ColorDemo />
+              <ToggleAppearanceDemo />
+              <IconDemo />
+              <InteractiveDemo />
+            </div>
+          </NaviDebug>
         );
       };
 
@@ -190,9 +192,7 @@
                 <a href="#states">Checkbox States</a>
               </li>
               <li>
-                <a href="#interactivity">
-                  Interactivity (uiAction, action &amp; form)
-                </a>
+                <a href="#interactivity">Interactivity (action &amp; form)</a>
               </li>
               <li>
                 <a href="#sizes">Checkbox Sizes</a>
@@ -223,55 +223,42 @@
 
       const InteractivityDemo = () => {
         return (
-          <NaviDebug debugAction debugUIAction>
-            <div class="demo-section" id="interactivity">
-              <h2>Interactivity</h2>
+          <div class="demo-section" id="interactivity">
+            <h2>Interactivity</h2>
 
-              <div class="states-section">
-                <div class="states-title">uiAction</div>
-                <p class="states-description">
-                  <code>uiAction</code> is called synchronously with the checked
-                  boolean when the user clicks. A read-only checkbox does not
-                  trigger it.
-                </p>
+            <div class="states-section">
+              <div class="states-title">action</div>
+              <p class="states-description">
+                <code>action</code> is called with the checked boolean when the
+                user clicks. It can be synchronous or async. A read-only
+                checkbox does not trigger it.
+              </p>
 
-                <UIActionBasicDemo />
-                <UIActionDefaultCheckedDemo />
-                <UIActionReadonlyDemo />
-              </div>
-
-              <div class="states-section">
-                <div class="states-title">action</div>
-                <p class="states-description">
-                  <code>action</code> is an async function. The checkbox enters
-                  a loading state while it runs. On failure the checkbox reverts
-                  to its previous state.
-                </p>
-
-                <ActionSuccessDemo />
-                <ActionDefaultCheckedDemo />
-                <ActionAlwaysFailsDemo />
-                <ActionDefaultCheckedAlwaysFailsDemo />
-                <ActionFailsWhenUncheckedDemo />
-                <ActionObjectDemo />
-              </div>
-
-              <div class="states-section">
-                <div class="states-title">Form</div>
-                <p class="states-description">
-                  Inside a <code>Form</code>, the checkbox value is submitted
-                  with the form. The server can reject the submission and the UI
-                  reflects the error.
-                </p>
-
-                <FormControlledDemo />
-              </div>
+              <ActionBasicDemo />
+              <ActionDefaultCheckedDemo />
+              <ActionReadonlyDemo />
+              <ActionAsyncSuccessDemo />
+              <ActionAsyncAlwaysFailsDemo />
+              <ActionAsyncDefaultCheckedAlwaysFailsDemo />
+              <ActionAsyncControlledDemo />
+              <ActionObjectDemo />
             </div>
-          </NaviDebug>
+
+            <div class="states-section">
+              <div class="states-title">Form</div>
+              <p class="states-description">
+                Inside a <code>Form</code>, the checkbox value is submitted with
+                the form. The server can reject the submission and the UI
+                reflects the error.
+              </p>
+
+              <FormControlledDemo />
+            </div>
+          </div>
         );
       };
 
-      const UIActionBasicDemo = () => {
+      const ActionBasicDemo = () => {
         const [lastValue, setLastValue] = useState(null);
         return (
           <fieldset>
@@ -281,7 +268,7 @@
                 <Input
                   type="checkbox"
                   name="enabled"
-                  uiAction={(checked) => {
+                  action={(checked) => {
                     setLastValue(checked);
                   }}
                 />
@@ -297,7 +284,7 @@
         );
       };
 
-      const UIActionDefaultCheckedDemo = () => {
+      const ActionDefaultCheckedDemo = () => {
         const [lastValue, setLastValue] = useState(null);
         return (
           <fieldset>
@@ -308,7 +295,7 @@
                   type="checkbox"
                   name="enabled"
                   defaultChecked
-                  uiAction={(checked) => {
+                  action={(checked) => {
                     setLastValue(checked);
                   }}
                 />
@@ -324,14 +311,14 @@
         );
       };
 
-      const UIActionReadonlyDemo = () => (
+      const ActionReadonlyDemo = () => (
         <fieldset>
-          <legend>Read-only — uiAction is never triggered</legend>
+          <legend>Read-only — action is never triggered</legend>
           <Field>
             <Input
               type="checkbox"
               readOnly
-              uiAction={(checked) => {
+              action={(checked) => {
                 console.log("this should never log", checked);
               }}
             />
@@ -340,11 +327,11 @@
         </fieldset>
       );
 
-      const ActionSuccessDemo = () => {
+      const ActionAsyncSuccessDemo = () => {
         const [result, setResult] = useState(null);
         return (
           <fieldset>
-            <legend>Succeeds after 1s</legend>
+            <legend>Async — succeeds after 1s</legend>
             <Box flex="y" spacing="s" alignX="start" alignY="center">
               <Field>
                 <Input
@@ -375,42 +362,11 @@
         );
       };
 
-      const ActionDefaultCheckedDemo = () => {
-        const [result, setResult] = useState(null);
-        return (
-          <fieldset>
-            <legend>Default checked — succeeds after 800ms</legend>
-            <Box flex="y" spacing="s" alignX="start" alignY="center">
-              <Field>
-                <Input
-                  type="checkbox"
-                  name="agreed"
-                  defaultChecked
-                  action={async (agreed) => {
-                    await delay(800);
-                    return `${agreed ? "✅" : "☐"} Agreement: ${
-                      agreed ? "accepted" : "declined"
-                    }`;
-                  }}
-                  onActionSuccess={(value) => setResult({ ok: true, value })}
-                />
-                <Label>I agree to the terms</Label>
-              </Field>
-              {result && (
-                <span style={{ fontSize: "0.85rem", color: "#2a7a2a" }}>
-                  {result.value}
-                </span>
-              )}
-            </Box>
-          </fieldset>
-        );
-      };
-
-      const ActionAlwaysFailsDemo = () => {
+      const ActionAsyncAlwaysFailsDemo = () => {
         const [error, setError] = useState(null);
         return (
           <fieldset>
-            <legend>Always fails — checkbox reverts on error</legend>
+            <legend>Async — always fails, checkbox reverts on error</legend>
             <Box flex="y" spacing="s" alignX="start" alignY="center">
               <Field>
                 <Input
@@ -438,12 +394,13 @@
         );
       };
 
-      const ActionDefaultCheckedAlwaysFailsDemo = () => {
+      const ActionAsyncDefaultCheckedAlwaysFailsDemo = () => {
         const [error, setError] = useState(null);
         return (
           <fieldset>
             <legend>
-              Default checked + always fails — reverts to checked on error
+              Async + default checked — always fails, reverts to checked on
+              error
             </legend>
             <Box flex="y" spacing="s" alignX="start" alignY="center">
               <Field>
@@ -473,13 +430,13 @@
         );
       };
 
-      const ActionFailsWhenUncheckedDemo = () => {
+      const ActionAsyncControlledDemo = () => {
         const [checked, setChecked] = useState(false);
         const [result, setResult] = useState(null);
         return (
           <fieldset>
             <legend>
-              Controlled — fails when unchecked, reverts to true on error
+              Async + controlled — fails when unchecked, reverts on error
             </legend>
             <p class="states-description" style={{ marginTop: 0 }}>
               The checked state comes from the server. On success the component
