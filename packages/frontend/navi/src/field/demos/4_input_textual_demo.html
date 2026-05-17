@@ -181,8 +181,8 @@
             <TableOfContents />
             <BasicStatesDemo />
             <InputInteractivityDemo />
-            <AccidentalReadOnlyDemo />
             <ValidationDemo />
+            <AccidentalReadOnlyDemo />
             <TypeVariationsDemo />
             <DatetimeDemo />
             <SizeVariationsDemo />
@@ -211,9 +211,6 @@
                 </ol>
               </li>
               <li>
-                <a href="#accidental-readonly">Accidental Read-Only</a>
-              </li>
-              <li>
                 <a href="#validation">Validation</a>
                 <ol style={{ margin: 0, paddingLeft: "20px", lineHeight: "2" }}>
                   <li>
@@ -225,6 +222,9 @@
                     </a>
                   </li>
                 </ol>
+              </li>
+              <li>
+                <a href="#accidental-readonly">Accidental Read-Only</a>
               </li>
               <li>
                 <a href="#types">Input Types</a>
@@ -678,6 +678,43 @@
             </p>
 
             <fieldset>
+              <legend>Enter does not submit the form</legend>
+              <p className="states-description">
+                Pressing <kbd>Enter</kbd> inside an input with an{" "}
+                <code>action</code> triggers the input's own action (if{" "}
+                <code>actionAfterChange</code> is set), but does{" "}
+                <strong>not</strong> submit the surrounding form. Only the
+                Submit button triggers form submission.
+              </p>
+              <Form
+                action={async ({ search }) => {
+                  await delay(800);
+                  setFormResult(`Form submitted! search: "${search}"`);
+                }}
+              >
+                <Box flex="y" spacing="s" alignX="start">
+                  <Field>
+                    <Label>Search</Label>
+                    <Input
+                      name="search"
+                      placeholder="Type and press Enter…"
+                      action={async (value) => {
+                        setFormResult(`action called with: "${value}"`);
+                        await delay(600);
+                        setFormResult(`action done: "${value}"`);
+                      }}
+                      actionAfterChange
+                    />
+                  </Field>
+                  <Button type="submit">Submit form</Button>
+                  {formResult ? (
+                    <div className="value-display">{formResult}</div>
+                  ) : null}
+                </Box>
+              </Form>
+            </fieldset>
+
+            <fieldset>
               <legend>Basic form submission</legend>
               <Form
                 action={async ({ username }) => {
@@ -721,13 +758,12 @@
           <div className="demo-section" id="accidental-readonly">
             <h2>Accidental Read-Only</h2>
             <p className="states-description">
-              When <code>value</code> is passed without <code>uiAction</code> or{" "}
-              <code>action</code>, the input becomes read-only automatically.
-              This is a visual reminder for developers: if the input feels
-              frozen, it likely means the code provides a value but no way to
-              update it.
+              When <code>value</code> is passed without <code>action</code>, the
+              input becomes read-only automatically. This is a visual reminder
+              for developers: if the input feels frozen, it likely means the
+              code provides a value but no way to update it.
             </p>
-            <Input value="Frozen — no uiAction or action provided" />
+            <Input value="Frozen — no action provided" />
           </div>
         );
       };

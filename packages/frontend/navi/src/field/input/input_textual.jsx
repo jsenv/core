@@ -303,6 +303,10 @@ const InputTextualField = (props) => {
   const { ref, type, icon, children, onKeyDown } = props;
   const fieldProps = useFieldProps(props, {
     fieldType: "input",
+    readUIState: () => {
+      const input = ref.current;
+      return input.value;
+    },
   });
   const { basePseudoState } = fieldProps;
   const disabled = basePseudoState[":disabled"];

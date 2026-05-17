@@ -74,12 +74,6 @@ export const useFieldGroupProps = (
     const readOnly = basePseudoState[":read-only"];
     const loading = basePseudoState[":-navi-loading"];
 
-    console.log("field group props", {
-      disabled,
-      readOnly,
-      loading,
-    });
-
     childrenWithContext = (
       <ActionRequesterContext.Provider value={actionRequester}>
         <ReadOnlyContext.Provider value={readOnly}>
