@@ -18,7 +18,7 @@ import {
   LoadingContext,
   ReadOnlyContext,
 } from "./field_context.js";
-import { normalizeAction } from "./string_actions.js";
+import { resolveActionProp } from "./string_actions.js";
 import { useUIState, useUIStateController } from "./use_ui_state_controller.js";
 import {
   onRequestAction,
@@ -60,7 +60,7 @@ export const useFieldProps = (
 
   paramsSignal = paramsSignal || uiStateController.uiStateSignal;
   const [internalBoundAction] = useActionBoundToOneParam(
-    externalBoundAction ? undefined : normalizeAction(props.action),
+    externalBoundAction ? undefined : resolveActionProp(props.action),
     paramsSignal,
   );
   const boundAction = externalBoundAction || internalBoundAction;
@@ -161,7 +161,8 @@ export const useActionProps = (
     ...remainingProps,
     ref,
     "action": undefined,
-    "data-action": action.callSource,
+    "data-action":
+      typeof props.action === "string" ? props.action : action.callSource,
     "value": valueForBrowser,
     "autoFocus": undefined, // See use_auto_focus.js
     "basePseudoState": {

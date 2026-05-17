@@ -8,7 +8,7 @@ export const READONLY_CONSTRAINT = {
     if (skipReadonly) {
       return null;
     }
-    if (!field.readonly && !field.hasAttribute("data-readonly")) {
+    if (!field.readOnly && !field.hasAttribute("data-readonly")) {
       return null;
     }
     if (field.type === "hidden") {

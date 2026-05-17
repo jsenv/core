@@ -1,7 +1,7 @@
 import { createUICallback } from "./ui_callback.js";
 import { dispatchRequestAction } from "./validation/custom_constraint_validation.js";
 
-export const normalizeAction = (action) => {
+export const resolveActionProp = (action) => {
   if (typeof action === "string") {
     const naviAction = STRING_ACTIONS[action];
     if (!naviAction) {

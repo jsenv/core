@@ -51,7 +51,10 @@ import {
   requestListSelectCurrent,
 } from "../list/list.jsx";
 import { useFieldProps } from "../use_field_props.jsx";
-import { dispatchRequestAction } from "../validation/custom_constraint_validation.js";
+import {
+  dispatchRequestAction,
+  dispatchRequestInteraction,
+} from "../validation/custom_constraint_validation.js";
 import { useOnInputValueChange } from "./input_value_listener.js";
 
 const css = /* css */ `
@@ -300,7 +303,7 @@ const renderInput = createComponentResolver([InputTextualWithListResolver]);
 const InputNativeContext = createContext(null);
 const InputTextualField = (props) => {
   import.meta.css = css;
-  const { ref, type, icon, children, onKeyDown } = props;
+  const { ref, type, icon, children, onKeyDown, onPaste } = props;
   const fieldProps = useFieldProps(props, {
     fieldType: "input",
     readUIState: () => {
@@ -413,10 +416,13 @@ const InputTextualField = (props) => {
         if (e.defaultPrevented) {
           return;
         }
+        const input = ref.current;
+        if (readOnly && isTypingIntent(e)) {
+          dispatchRequestInteraction(input, e);
+        }
         if (e.key !== "Enter") {
           return;
         }
-        const input = ref.current;
         const keyboardInteractiveInputTypeSet = new Set([
           "text",
           "email",
@@ -456,7 +462,7 @@ const InputTextualField = (props) => {
           // not the input, it aligns with browser behavior where
           // hitting Enter in a text input triggers the first submit button of the form, not the input itself
           const firstButtonSubmittingForm = form.querySelector(
-            `button[type="submit"], input[type="submit"], input[type="image"]`,
+            `button[type="submit"], input[type="submit"], input[type="image"], [data-action="submit"]`,
           );
           if (firstButtonSubmittingForm) {
             requester = firstButtonSubmittingForm;
@@ -470,6 +476,12 @@ const InputTextualField = (props) => {
         // we sill need to prevent form submission
         e.preventDefault();
         return;
+      }}
+      onPaste={(e) => {
+        onPaste?.(e);
+        if (readOnly) {
+          dispatchRequestInteraction(ref.current, e);
+        }
       }}
     >
       <LoadingOutline
@@ -492,6 +504,29 @@ const InputTextualField = (props) => {
     </Box>
   );
 };
+// Returns true when the key combination looks like the user is trying to type
+// into the input (as opposed to a keyboard shortcut, navigation key, etc.).
+// Used to trigger the readonly callout when relevant.
+const isTypingIntent = (e) => {
+  // Modifier keys used for shortcuts: skip
+  if (e.metaKey || e.ctrlKey) {
+    return false;
+  }
+  // Shift alone (or Shift+arrow for selection): skip
+  // Characters produced with Shift (e.g. uppercase, symbols) are caught below
+  // via key.length === 1, so we only need to filter out non-printable Shift combos.
+  const { key } = e;
+  // Single printable character — the user is typing
+  if (key.length === 1) {
+    return true;
+  }
+  // Editing keys that would modify the text
+  if (key === "Backspace" || key === "Delete" || key === "Enter") {
+    return true;
+  }
+  return false;
+};
+
 const InputStyleCSSVars = {
   "outlineWidth": "--outline-width",
   "borderWidth": "--border-width",

@@ -514,7 +514,7 @@ const ButtonInsideForm = (props) => {
             return true;
           }
           const firstButtonSubmittingForm = form.querySelector(
-            `button[type="submit"], input[type="submit"], input[type="image"]`,
+            `button[type="submit"], input[type="submit"], input[type="image"], [data-action="submit"]`,
           );
           if (button !== firstButtonSubmittingForm) {
             // an other button is explicitly submitting the form, this one would not submit it
