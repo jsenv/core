@@ -1,37 +1,12 @@
-import {
-  useCallback,
-  useContext,
-  useId,
-  useLayoutEffect,
-  useRef,
-} from "preact/hooks";
+import { useCallback, useId, useLayoutEffect, useRef } from "preact/hooks";
 
 import { Box } from "../../box/box.jsx";
 import { LoadingOutline } from "../../graphic/loading/loading_outline.jsx";
-import { useAutoFocus } from "../../utils/focus/use_auto_focus.js";
 import { useAccentColorAttributes } from "../../utils/use_accent_color_attributes.js";
-import { useStableCallback } from "../../utils/use_stable_callback.js";
-import {
-  reportDisabledToField,
-  reportInteractiveToField,
-  reportReadOnlyToField,
-  useFieldId,
-} from "../field.jsx";
+import { useFieldId } from "../field.jsx";
 import { fieldPropSet } from "../field_prop_set.js";
-import {
-  ActionRequesterContext,
-  useActionProps,
-} from "../use_action_props.jsx";
-import {
-  DisabledContext,
-  LoadingContext,
-  ReadOnlyContext,
-  UIStateContext,
-  UIStateControllerContext,
-  useUIState,
-  useUIStateController,
-} from "../use_ui_state_controller.js";
-import { useConstraints } from "../validation/hooks/use_constraints.js";
+import { useFieldProps } from "../use_field_props.jsx";
+import { dispatchRequestAction } from "../validation/custom_constraint_validation.js";
 
 const css = /* css */ `
   @layer navi {
@@ -271,87 +246,46 @@ const css = /* css */ `
 
 export const InputRange = (props) => {
   const defaultRef = useRef();
-  const ref = props.ref || defaultRef;
+  props.ref = props.ref || defaultRef;
   const fieldId = useFieldId();
-  const id = props.id || fieldId;
+  props.id = props.id || fieldId;
 
-  const uiStateController = useUIStateController(props, "input");
-  const uiState = useUIState(uiStateController);
-
-  return (
-    <UIStateControllerContext.Provider value={uiStateController}>
-      <UIStateContext.Provider value={uiState}>
-        <InputRangeDispatcher {...props} ref={ref} id={id} />
-      </UIStateContext.Provider>
-    </UIStateControllerContext.Provider>
-  );
+  return <InputRangeField {...props} />;
 };
 
-const InputRangeDispatcher = (props) => {
-  if (props.action) {
-    return <InputRangeWithAction {...props} />;
-  }
-  return <InputRangeUI {...props} />;
-};
-
-const InputRangeUI = (props) => {
+const InputRangeField = (props) => {
   import.meta.css = css;
-  const {
-    ref,
-    onInput,
-
-    readOnly,
-    disabled,
-    loading,
-
-    autoFocus,
-    autoFocusVisible,
-    autoSelect,
-
-    ...rest
-  } = props;
-  const contextReadOnly = useContext(ReadOnlyContext);
-  const contextDisabled = useContext(DisabledContext);
-  const contextLoading = useContext(LoadingContext);
-  const actionRequester = useContext(ActionRequesterContext);
-  const uiStateController = useContext(UIStateControllerContext);
-  const uiState = useContext(UIStateContext);
-
-  const innerValue = uiState;
-  const innerLoading =
-    loading || (contextLoading && actionRequester === ref.current);
-  const innerReadOnly =
-    readOnly || contextReadOnly || innerLoading || uiStateController.readOnly;
-  const innerDisabled = disabled || contextDisabled;
-  // infom any <label> parent of our readOnly state
-  reportReadOnlyToField(innerReadOnly);
-  reportDisabledToField(innerDisabled);
-  reportInteractiveToField(true);
-  useAutoFocus(ref, autoFocus, {
-    focusVisible: autoFocusVisible,
-    autoSelect,
+  const { ref, onInput, accentColor } = props;
+  const fieldProps = useFieldProps(props, {
+    fieldType: "input",
+    readUIState: () => {
+      const input = ref.current;
+      return input.valueAsNumber;
+    },
   });
-  const remainingProps = useConstraints(ref, rest);
-  const { accentColor } = remainingProps;
+  const { basePseudoState } = fieldProps;
+  const disabled = basePseudoState[":disabled"];
+  const readOnly = basePseudoState[":read-only"];
+  const loading = basePseudoState[":-navi-loading"];
 
   const boxRef = useRef();
   useAccentColorAttributes(boxRef, accentColor, {
     elementSelector: ".navi_input_range_accent_probe",
   });
-  const innerOnInput = useStableCallback(onInput);
   const focusProxyId = `input_range_focus_proxy_${useId()}`;
-  const inertButFocusable = innerReadOnly && !innerDisabled;
-  const renderInput = (inputProps) => {
-    const updateFillRatio = () => {
-      const input = ref.current;
-      if (!input) {
-        return;
-      }
-      const inputValue = input.value;
-      const ratio = (inputValue - input.min) / (input.max - input.min);
-      input.parentNode.style.setProperty("--x-fill-ratio", ratio);
-    };
+  const inertButFocusable = readOnly && !disabled;
 
+  const updateFillRatio = () => {
+    const input = ref.current;
+    if (!input) {
+      return;
+    }
+    const inputValue = input.value;
+    const ratio = (inputValue - input.min) / (input.max - input.min);
+    input.parentNode.style.setProperty("--x-fill-ratio", ratio);
+  };
+
+  const renderInput = (inputProps) => {
     useLayoutEffect(() => {
       updateFillRatio();
     }, []);
@@ -368,57 +302,36 @@ const InputRangeUI = (props) => {
       }
 
       const focusProxy = document.querySelector(`#${focusProxyId}`);
-      if (innerReadOnly) {
+      if (readOnly) {
         if (document.activeElement === input) {
           focusProxy.focus({ preventScroll: true });
         }
         input.setAttribute("focus-proxy", focusProxyId);
-        input.disabled = innerReadOnly;
+        input.disabled = readOnly;
       } else {
         if (document.activeElement === focusProxy) {
           input.focus({ preventScroll: true });
         }
-        if (!innerDisabled) {
+        if (!disabled) {
           input.disabled = false;
         }
         input.removeAttribute("focus-proxy");
       }
-    }, [innerReadOnly, innerDisabled]);
+    }, [disabled, readOnly]);
 
     return (
       <Box
         {...inputProps}
+        ref={ref}
         as="input"
         type="range"
-        ref={ref}
-        data-value={uiState}
-        value={innerValue}
-        onInput={(e) => {
-          const inputValue = e.target.valueAsNumber;
-          uiStateController.setUIState(inputValue, e);
-          innerOnInput?.(e);
-          updateFillRatio();
-        }}
-        onnavi_request_reset_ui_state={(e) => {
-          uiStateController.resetUIState(e);
-        }}
-        onnavi_set_ui_state={(e) => {
-          uiStateController.setUIState(e.detail.value, e);
-          updateFillRatio();
-        }}
         // style management
         baseClassName="navi_native_input"
       />
     );
   };
 
-  const renderInputMemoized = useCallback(renderInput, [
-    uiState,
-    innerValue,
-    innerOnInput,
-    innerDisabled,
-    innerReadOnly,
-  ]);
+  const renderInputMemoized = useCallback(renderInput, [disabled, readOnly]);
 
   return (
     <Box
@@ -428,22 +341,24 @@ const InputRangeUI = (props) => {
       styleCSSVars={RangeStyleCSSVars}
       pseudoStateSelector=".navi_native_input"
       visualSelector=".navi_native_input"
-      basePseudoState={{
-        ":read-only": innerReadOnly,
-        ":disabled": innerDisabled,
-        ":-navi-loading": innerLoading,
-      }}
       pseudoClasses={RangePseudoClasses}
       pseudoElements={RangePseudoElements}
       hasChildFunction
       baseChildPropSet={RangeChildPropSet}
-      {...remainingProps}
+      {...fieldProps}
       ref={boxRef}
-      autoFocus={undefined} // See use_auto_focus.js
+      onInput={(e) => {
+        onInput?.(e);
+        updateFillRatio();
+        const input = ref.current;
+        dispatchRequestAction(input, {
+          event: e,
+        });
+      }}
     >
       <span className="navi_input_range_accent_probe" aria-hidden="true" />
       <LoadingOutline
-        loading={innerLoading}
+        loading={loading}
         color="var(--loader-color)"
         inset={-1}
       />
@@ -503,8 +418,3 @@ const RangePseudoClasses = [
 ];
 const RangePseudoElements = ["::-navi-loader"];
 const RangeChildPropSet = new Set([...fieldPropSet]);
-
-const InputRangeWithAction = (props) => {
-  const remainingProps = useActionProps(props);
-  return <InputRangeDispatcher {...remainingProps} action={undefined} />;
-};
