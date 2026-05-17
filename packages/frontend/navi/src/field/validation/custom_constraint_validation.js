@@ -287,26 +287,8 @@ const checkAndReportConstraints = (
       elementToValidate = fieldElement;
     }
   }
-  const managedFields = getManagedFields(elementToValidate);
-  for (const managedField of managedFields) {
-    const elementValidationInterface = managedField.__validationInterface__;
-    if (!elementValidationInterface) {
-      continue;
-    }
-    const elementIsValid = elementValidationInterface.checkValidity({
-      event,
-      debug,
-      fromRequestAction,
-      skipReadonly:
-        managedField.tagName === "BUTTON" && managedField !== requester,
-    });
-    if (!elementIsValid) {
-      onInvalid(elementValidationInterface);
-      return;
-    }
-  }
 
-  // all manageds fields (if any) are good ->  check ourselves
+  // all manageds fields (if any) are checked inside checkValidity
   let validationInterface = elementToValidate.__validationInterface__;
   if (!validationInterface) {
     validationInterface = installCustomConstraintValidation(elementToValidate);
@@ -315,10 +297,13 @@ const checkAndReportConstraints = (
     event,
     constraints,
     fromRequestAction,
+    requester,
   });
   if (!isValid) {
-    onInvalid(validationInterface);
-    return;
+    const failingInterface =
+      validationInterface.failingManagedValidationInterface ||
+      validationInterface;
+    onInvalid(failingInterface);
   }
 };
 
@@ -459,6 +444,7 @@ export const installCustomConstraintValidation = (
   }
 
   let failedConstraintInfo = null;
+  let failingManagedValidationInterface = null;
   const validityInfoMap = new Map();
   const hasTitleAttribute = element.hasAttribute("title");
 
@@ -481,15 +467,40 @@ export const installCustomConstraintValidation = (
     }
     validityInfoMap.clear();
     failedConstraintInfo = null;
+    failingManagedValidationInterface = null;
   };
   addTeardown(resetValidity);
 
   const checkValidity = ({
     constraints,
     event,
+    requester = element,
     fromRequestAction,
     skipReadonly,
   } = {}) => {
+    // Always check managed fields first. If any fails, stop immediately and
+    // expose the failing interface so the caller can reportValidity on the right element.
+    failingManagedValidationInterface = null;
+    const managedFields = getManagedFields(element);
+    for (const managedField of managedFields) {
+      const managedVI = managedField.__validationInterface__;
+      if (!managedVI) {
+        continue;
+      }
+      const managedIsValid = managedVI.checkValidity({
+        constraints,
+        event,
+        requester,
+        fromRequestAction,
+        skipReadonly:
+          managedField.tagName === "BUTTON" && managedField !== requester,
+      });
+      if (!managedIsValid) {
+        failingManagedValidationInterface = managedVI;
+        return false;
+      }
+    }
+
     let newConstraintValidityState = { valid: true };
     // When constraints are explicitly provided (e.g. pointer interaction), use only those.
     // Otherwise use default set merged with dynamic constraints.
@@ -679,6 +690,13 @@ export const installCustomConstraintValidation = (
   Object.defineProperty(validationInterface, "failedConstraintInfo", {
     get: () => failedConstraintInfo,
   });
+  Object.defineProperty(
+    validationInterface,
+    "failingManagedValidationInterface",
+    {
+      get: () => failingManagedValidationInterface,
+    },
+  );
 
   const customMessageMap = new Map();
   custom_message: {
