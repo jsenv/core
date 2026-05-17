@@ -427,16 +427,17 @@ const InputTextualField = (props) => {
           "tel",
           // maybe date too (we can type a date inside a input date right?)
         ]);
-        if (keyboardInteractiveInputTypeSet.has(input.type)) {
+        if (!keyboardInteractiveInputTypeSet.has(input.type)) {
+          return;
+        }
+        if (props.action) {
+          // input has his own action
+          dispatchRequestAction(input, { event: e });
+          e.preventDefault(); // prevent form submission
           return;
         }
         const elementWithSubmitEffect = input.closest("[navi-submit-effect]");
         if (!elementWithSubmitEffect) {
-          if (props.action) {
-            // input has his own action
-            dispatchRequestAction(input, { event: e });
-            e.preventDefault();
-          }
           return;
         }
         const { form } = input;
