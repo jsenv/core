@@ -423,16 +423,6 @@ const InputTextualField = (props) => {
         if (e.key !== "Enter") {
           return;
         }
-        const keyboardInteractiveInputTypeSet = new Set([
-          "text",
-          "email",
-          "password",
-          "search",
-          "number",
-          "url",
-          "tel",
-          // maybe date too (we can type a date inside a input date right?)
-        ]);
         if (!keyboardInteractiveInputTypeSet.has(input.type)) {
           return;
         }
@@ -504,6 +494,22 @@ const InputTextualField = (props) => {
     </Box>
   );
 };
+
+const keyboardInteractiveInputTypeSet = new Set([
+  "text",
+  "email",
+  "password",
+  "search",
+  "number",
+  "url",
+  "tel",
+  "time",
+  "date",
+  "datetime-local",
+  "month",
+  "week",
+]);
+
 // Returns true when the key combination looks like the user is trying to type
 // into the input (as opposed to a keyboard shortcut, navigation key, etc.).
 // Used to trigger the readonly callout when relevant.
