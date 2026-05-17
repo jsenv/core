@@ -490,16 +490,6 @@ markAsOutsideTextFlow(ButtonShadow);
 
 const ButtonInsideForm = (props) => {
   const Next = useNextResolver();
-  const { action, type } = props;
-  if (
-    import.meta.dev &&
-    action &&
-    (type === "submit" || type === "reset" || type === "image")
-  ) {
-    throw new Error(
-      `<Button type="${type}" /> should not have their own action`,
-    );
-  }
 
   return (
     <Next

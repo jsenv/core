@@ -428,6 +428,11 @@ const InputTextualField = (props) => {
         }
         const elementWithSubmitEffect = input.closest("[navi-submit-effect]");
         if (!elementWithSubmitEffect) {
+          if (props.action) {
+            // input has his own action
+            dispatchRequestAction(input, { event: e });
+            e.preventDefault();
+          }
           return;
         }
         const { form } = input;
