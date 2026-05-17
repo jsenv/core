@@ -5,6 +5,7 @@ import {
   PickerColor,
   PickerDatetime,
   PickerDay,
+  PickerFile,
   PickerMonth,
   PickerTime,
   PickerWeek,
@@ -45,6 +46,9 @@ const PickerShowMethodResolver = (props) => {
   }
   if (props.type === "datetime") {
     return <PickerDatetime {...props} />;
+  }
+  if (props.type === "file") {
+    return <PickerFile {...props} />;
   }
   return <Next {...props} />;
 };
