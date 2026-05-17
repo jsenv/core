@@ -300,7 +300,7 @@ const renderInput = createComponentResolver([InputTextualWithListResolver]);
 const InputNativeContext = createContext(null);
 const InputTextualField = (props) => {
   import.meta.css = css;
-  const { ref, type, icon, children } = props;
+  const { ref, type, icon, children, onKeyDown } = props;
   const fieldProps = useFieldProps(props, {
     fieldType: "input",
   });
@@ -404,6 +404,63 @@ const InputTextualField = (props) => {
       baseChildPropSet={InputChildPropSet}
       {...fieldProps}
       ref={undefined} // input takes the ref
+      onKeyDown={(e) => {
+        onKeyDown?.(e);
+        if (e.defaultPrevented) {
+          return;
+        }
+        if (e.key !== "Enter") {
+          return;
+        }
+        const input = ref.current;
+        const keyboardInteractiveInputTypeSet = new Set([
+          "text",
+          "email",
+          "password",
+          "search",
+          "number",
+          "url",
+          "tel",
+          // maybe date too (we can type a date inside a input date right?)
+        ]);
+        if (keyboardInteractiveInputTypeSet.has(input.type)) {
+          return;
+        }
+        const elementWithSubmitEffect = input.closest("[navi-submit-effect]");
+        if (!elementWithSubmitEffect) {
+          return;
+        }
+        const { form } = input;
+        if (!form) {
+          // not inside a form, just request closest element action
+          dispatchRequestAction(elementWithSubmitEffect, {
+            event: e,
+            requester: input,
+          });
+          return;
+        }
+
+        let requester = input;
+        if (elementWithSubmitEffect === form) {
+          // when present, we use first button submitting the form as the requester
+          // not the input, it aligns with browser behavior where
+          // hitting Enter in a text input triggers the first submit button of the form, not the input itself
+          const firstButtonSubmittingForm = form.querySelector(
+            `button[type="submit"], input[type="submit"], input[type="image"]`,
+          );
+          if (firstButtonSubmittingForm) {
+            requester = firstButtonSubmittingForm;
+          }
+        }
+        dispatchRequestAction(elementWithSubmitEffect, {
+          event: e,
+          requester,
+        });
+        // we have requested submit on the closest element with submit effect (form or other)
+        // we sill need to prevent form submission
+        e.preventDefault();
+        return;
+      }}
     >
       <LoadingOutline
         loading={loading}

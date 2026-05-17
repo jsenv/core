@@ -807,87 +807,6 @@ export const installCustomConstraintValidation = (
     });
   }
 
-  request_on_enter: {
-    const isNaviSelect =
-      element.tagName === "BUTTON" && element.classList.contains("navi_select");
-    if (element.tagName !== "INPUT" && !isNaviSelect) {
-      // maybe we want it too for checkboxes etc, we'll see
-      break request_on_enter;
-    }
-    const onkeydown = (keydownEvent) => {
-      if (keydownEvent.defaultPrevented) {
-        return;
-      }
-      if (keydownEvent.key !== "Enter") {
-        return;
-      }
-      const elementWithAction = closestElementWithAction(element);
-      if (!elementWithAction) {
-        return;
-      }
-
-      const determineClosestFormSubmitTargetForEnterKeyEvent = () => {
-        if (keydownEvent.defaultPrevented) {
-          return null;
-        }
-        const keydownTarget = keydownEvent.target;
-        const { form } = keydownTarget;
-        if (!form) {
-          return null;
-        }
-        if (keydownTarget.tagName === "BUTTON") {
-          if (
-            keydownTarget.type !== "submit" &&
-            keydownTarget.type !== "image"
-          ) {
-            // navi_select acts like a native <select>: Enter on the closed select
-            // triggers form submission rather than toggling the popover.
-            if (isNaviSelect) {
-              return getFirstButtonSubmittingForm(form) || keydownTarget;
-            }
-            return null;
-          }
-          return keydownTarget;
-        }
-        if (keydownTarget.tagName === "INPUT") {
-          const keyboardInteractiveInputTypeSet = new Set([
-            "text",
-            "email",
-            "password",
-            "search",
-            "number",
-            "url",
-            "tel",
-            // maybe date too (we can type a date inside a input date right?)
-          ]);
-          if (keyboardInteractiveInputTypeSet.has(keydownTarget.type)) {
-            return null;
-          }
-          // when present, we use first button submitting the form as the requester
-          // not the input, it aligns with browser behavior where
-          // hitting Enter in a text input triggers the first submit button of the form, not the input itself
-          return getFirstButtonSubmittingForm(keydownTarget) || keydownTarget;
-        }
-        return null;
-      };
-      const formSubmitTarget =
-        determineClosestFormSubmitTargetForEnterKeyEvent();
-      if (formSubmitTarget) {
-        // preventDefault on keydown prevents the browser from firing a synthetic
-        // click on the button, so request_on_button_click won't double-fire.
-        keydownEvent.preventDefault();
-      }
-      dispatchRequestAction(elementWithAction, {
-        event: keydownEvent,
-        requester: formSubmitTarget || element,
-      });
-    };
-    element.addEventListener("keydown", onkeydown);
-    addTeardown(() => {
-      element.removeEventListener("keydown", onkeydown);
-    });
-  }
-
   close_on_escape: {
     const onkeydown = (e) => {
       if (e.key === "Escape") {
@@ -934,31 +853,6 @@ export const installCustomConstraintValidation = (
   return validationInterface;
 };
 
-// When interacting with an element we want to find the closest element
-// eventually handling the action
-// 1. <button> itself has an action
-// 2. <button> is inside a <form> with an action
-// 3. <button> is inside a wrapper <div> with an action (data-action is not necessarly on the interactive element itself, it can be on a wrapper, we want to support that)
-// 4. <button> is inside a <fieldset> or any element that catches the action like a <form> would
-// In examples above <button> can also be <input> etc..
-const closestElementWithAction = (el) => {
-  if (el.hasAttribute("data-action")) {
-    return el;
-  }
-  const closestDataActionElement = el.closest("[data-action]");
-  if (!closestDataActionElement) {
-    return null;
-  }
-  const visualSelector = closestDataActionElement.getAttribute(
-    "data-visual-selector",
-  );
-  if (!visualSelector) {
-    return closestDataActionElement;
-  }
-  const visualElement = closestDataActionElement.querySelector(visualSelector);
-  return visualElement;
-};
-
 const pickConstraint = (a, b) => {
   const aPrio = getConstraintPriority(a);
   const bPrio = getConstraintPriority(b);
@@ -975,12 +869,6 @@ const getConstraintPriority = (constraint) => {
     return 10;
   }
   return 1;
-};
-
-const getFirstButtonSubmittingForm = (form) => {
-  return form.querySelector(
-    `button[type="submit"], input[type="submit"], input[type="image"]`,
-  );
 };
 
 // https://developer.mozilla.org/en-US/docs/Web/HTML/Guides/Constraint_validation

@@ -3,11 +3,11 @@ import { dispatchRequestAction } from "./validation/custom_constraint_validation
 
 export const normalizeAction = (action) => {
   if (typeof action === "string") {
-    const naviUIAction = UI_ACTIONS[action];
-    if (!naviUIAction) {
+    const naviAction = STRING_ACTIONS[action];
+    if (!naviAction) {
       throw new Error(`Unknown ui action "${action}"`);
     }
-    return naviUIAction;
+    return naviAction;
   }
   return action;
 };
@@ -30,7 +30,6 @@ const submitFromEvent = (e) => {
     if (elementWithSubmitEffect.tagName === "FORM") {
       e.preventDefault(); // prevent form submission on buttons
     }
-
     /**
      *  submitting a picker must:
      *  - validate inputs inside the picker
@@ -60,6 +59,6 @@ const submit = createUICallback({
   },
 });
 
-const UI_ACTIONS = {
+const STRING_ACTIONS = {
   submit,
 };

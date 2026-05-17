@@ -18,7 +18,7 @@ import {
   LoadingContext,
   ReadOnlyContext,
 } from "./field_context.js";
-import { normalizeAction } from "./ui_actions.js";
+import { normalizeAction } from "./string_actions.js";
 import { useUIState, useUIStateController } from "./use_ui_state_controller.js";
 import {
   onRequestAction,

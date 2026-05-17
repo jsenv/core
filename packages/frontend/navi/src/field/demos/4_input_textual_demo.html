@@ -163,15 +163,7 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState, useRef } from "preact/hooks";
-      import {
-        Input,
-        Box,
-        Form,
-        Button,
-        Field,
-        Label,
-        NaviDebug,
-      } from "@jsenv/navi";
+      import { Input, Box, Form, Button, Field, Label, NaviDebug } from "@jsenv/navi";
 
       const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -202,9 +194,6 @@
               <li>
                 <a href="#interactivity">Input Interactivity</a>
                 <ol style={{ margin: 0, paddingLeft: "20px", lineHeight: "2" }}>
-                  <li>
-                    <a href="#interactivity-ui-action">uiAction</a>
-                  </li>
                   <li>
                     <a href="#interactivity-action">action</a>
                   </li>
@@ -359,7 +348,7 @@
                 <Input
                   type="text"
                   value={textValue}
-                  onUIStateChange={setTextValue}
+                  action={setTextValue}
                   placeholder="Enter text"
                 />
                 <input
@@ -375,7 +364,7 @@
                 <Input
                   type="email"
                   value={emailValue}
-                  onUIStateChange={setEmailValue}
+                  action={setEmailValue}
                   placeholder="user@example.com"
                 />
                 <input
@@ -391,7 +380,7 @@
                 <Input
                   type="password"
                   value={passwordValue}
-                  onUIStateChange={setPasswordValue}
+                  action={setPasswordValue}
                   placeholder="Enter password"
                 />
                 <input
@@ -407,7 +396,7 @@
                 <Input
                   type="url"
                   value={urlValue}
-                  onUIStateChange={setUrlValue}
+                  action={setUrlValue}
                   placeholder="https://example.com"
                 />
                 <input
@@ -423,7 +412,7 @@
                 <Input
                   type="number"
                   value={numberValue}
-                  onUIStateChange={setNumberValue}
+                  action={setNumberValue}
                   placeholder="Enter number"
                 />
                 <input
@@ -439,7 +428,7 @@
                 <Input
                   type="search"
                   value={searchValue}
-                  onUIStateChange={setSearchValue}
+                  action={setSearchValue}
                   placeholder="Search..."
                 />
                 <input
@@ -455,7 +444,7 @@
                 <Input
                   type="tel"
                   value={telValue}
-                  onUIStateChange={setTelValue}
+                  action={setTelValue}
                   placeholder="+1-555-000-0000"
                 />
                 <br />
@@ -472,7 +461,7 @@
                 <Input
                   type="date"
                   value={dateValue}
-                  onUIStateChange={setDateValue}
+                  action={setDateValue}
                 />
                 <br />
                 <input type="date" value={dateValue} onChange={() => {}} />
@@ -483,7 +472,7 @@
                 <Input
                   type="time"
                   value={timeValue}
-                  onUIStateChange={setTimeValue}
+                  action={setTimeValue}
                 />
                 <br />
                 <input type="time" value={timeValue} onChange={() => {}} />
@@ -494,7 +483,7 @@
                 <Input
                   type="datetime-local"
                   value={datetimeValue}
-                  onUIStateChange={setDatetimeValue}
+                  action={setDatetimeValue}
                 />
                 <br />
                 <input
@@ -537,15 +526,12 @@
           <div className="demo-section" id="interactivity">
             <h2>Input Interactivity</h2>
 
-            <h3 id="interactivity-ui-action">uiAction</h3>
-
             <fieldset>
               <legend>value</legend>
               <p className="states-description">
                 Use <code>defaultValue</code> for an initial value the user can
                 freely change. Use <code>value</code> combined with{" "}
-                <code>uiAction</code> or <code>action</code> to control the
-                input externally.
+                <code>action</code> to control the input externally.
               </p>
               <Box flex="y" spacing="s" alignX="start">
                 <div>
@@ -557,11 +543,11 @@
                 </div>
                 <div>
                   <label style={{ fontSize: "0.9rem" }}>
-                    value + uiAction (controlled)
+                    value + action (controlled)
                   </label>
                   <Input
                     value={controlledValue}
-                    uiAction={setControlledValue}
+                    action={setControlledValue}
                     placeholder="Controlled input"
                   />
                   <div className="value-display">{controlledValue}</div>
@@ -569,17 +555,18 @@
               </Box>
             </fieldset>
 
+            <h3 id="interactivity-action">action</h3>
+
             <fieldset>
-              <legend>uiAction</legend>
+              <legend>basic (sync)</legend>
               <p className="states-description">
-                <code>uiAction</code> fires on every user interaction,
-                reflecting what the input currently shows. Use this to react to
-                typing without triggering any async operation.
+                <code>action</code> fires on every user interaction, reflecting
+                what the input currently shows.
               </p>
               <Box flex spacing="s">
                 <Input
                   placeholder="Type something..."
-                  uiAction={setUiStateValue}
+                  action={setUiStateValue}
                 />
                 <div className="value-display">
                   Current value: "{uiStateValue}"
@@ -587,14 +574,12 @@
               </Box>
             </fieldset>
 
-            <h3 id="interactivity-action">action</h3>
-
             <fieldset>
-              <legend>basic</legend>
+              <legend>async</legend>
               <p className="states-description">
                 The <code>action</code> prop is called on every value change
-                (keystroke, paste, programmatic). For synchronous actions this
-                is fine; for slow async operations see the options below.
+                (keystroke, paste, programmatic). For slow async operations see
+                the options below.
               </p>
               <Box flex spacing="s">
                 <Input
@@ -714,7 +699,7 @@
                     <Button type="submit">Submit</Button>
                     <Button
                       type="reset"
-                      uiAction={() => {
+                      action={() => {
                         setUsername("");
                       }}
                     >
@@ -886,20 +871,20 @@
                   {externalDateTime || "(not set)"}
                   <Box flex spacing="s" style={{ marginTop: "8px" }}>
                     <Button
-                      uiAction={() =>
+                      action={() =>
                         setExternalDateTime("2024-01-15T14:30:00Z")
                       }
                     >
                       Jan 15, 2:30 PM UTC
                     </Button>
                     <Button
-                      uiAction={() =>
+                      action={() =>
                         setExternalDateTime("2024-12-25T09:00:00Z")
                       }
                     >
                       Dec 25, 9:00 AM UTC
                     </Button>
-                    <Button uiAction={() => setExternalDateTime(null)}>
+                    <Button action={() => setExternalDateTime(null)}>
                       Clear
                     </Button>
                   </Box>
@@ -976,10 +961,10 @@
             <fieldset>
               <legend>Toggle States</legend>
               <Box flex spacing="s" alignX="start" wrap>
-                <Button uiAction={() => setLoading(!loading)}>
+                <Button action={() => setLoading(!loading)}>
                   Loading: {loading ? "ON" : "OFF"}
                 </Button>
-                <Button uiAction={() => setDisabled(!disabled)}>
+                <Button action={() => setDisabled(!disabled)}>
                   Disabled: {disabled ? "ON" : "OFF"}
                 </Button>
                 <select
@@ -1009,7 +994,7 @@
                   loading={loading}
                   disabled={disabled}
                   value={value}
-                  onUIStateChange={setValue}
+                  action={setValue}
                   placeholder="Interactive input..."
                 />
                 <div className="value-display">
@@ -1023,7 +1008,7 @@
       };
 
       render(
-        <NaviDebug debugUIAction debugAction>
+        <NaviDebug debugAction>
           <App />
         </NaviDebug>,
         document.querySelector("#root"),
