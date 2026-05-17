@@ -57,12 +57,10 @@ export const useAutoFocus = (
     if (!autoFocus) {
       return () => {};
     }
-
     const focusableElement = focusableElementRef.current;
     if (!focusableElement) {
       return () => {};
     }
-
     const activeElement = document.activeElement;
     const focusDebugCall = `${getElementSignature(focusableElement)}.focus({ preventScroll: ${preventScroll} })`;
     if (e.type === "navi_displayed_on_document") {

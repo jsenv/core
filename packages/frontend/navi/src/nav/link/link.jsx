@@ -554,6 +554,7 @@ const LinkPlain = (props) => {
       id={anchor ? href.slice(1) : undefined}
       {...remainingProps}
       autoFocus={undefined} // See use_auto_focus.js
+      navi-autofocus={autoFocus ? "" : undefined}
       ref={ref}
       href={href}
       rel={innerRel}

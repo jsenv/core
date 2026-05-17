@@ -168,7 +168,7 @@ export const useActionProps = (
           ? props.action
           : action.callSource,
     "value": valueForBrowser,
-    "autoFocus": undefined, // See use_auto_focus.js
+    "navi-autofocus": autoFocus ? "" : undefined,
     "basePseudoState": {
       ...basePseudoState,
       ":read-only": innerReadOnly,
