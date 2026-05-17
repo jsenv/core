@@ -28,18 +28,9 @@ import {
 import { naviI18n } from "../../text/navi_i18n.js";
 import { useItemTracker } from "../../utils/item_tracker/use_item_tracker.js";
 import { useDisplayedLayoutEffect } from "../../utils/use_displayed_layout_effect.js";
-import { useActionProps } from "../use_action_props.jsx";
 import { useFieldProps } from "../use_field_props.jsx";
-import {
-  UIStateControllerContext,
-  useUIStateController,
-} from "../use_ui_state_controller.js";
 import { useOnNaviConstraintMessage } from "../validation/constraint_message.js";
-import {
-  dispatchRequestAction,
-  dispatchRequestUIAction,
-} from "../validation/custom_constraint_validation.js";
-import { useConstraints } from "../validation/hooks/use_constraints.js";
+import { dispatchRequestAction } from "../validation/custom_constraint_validation.js";
 import { useSearchHighlight } from "./search_highlight.js";
 
 const ListItemTrackerContext = createContext(null);
@@ -477,20 +468,8 @@ const css = /* css */ `
 const ListFieldResolver = (props) => {
   const Next = useNextResolver();
 
-  if (
-    props.name ||
-    Object.hasOwn(props, "value") ||
-    props.uiAction ||
-    props.action
-  ) {
+  if (props.name || Object.hasOwn(props, "value") || props.action) {
     return <ListField {...props} />;
-  }
-  return <Next {...props} />;
-};
-const ListActionResolver = (props) => {
-  const Next = useNextResolver();
-  if (props.action) {
-    return <ListAction {...props} />;
   }
   return <Next {...props} />;
 };
@@ -503,7 +482,6 @@ const ListWithPopoverResolver = (props) => {
 };
 const renderList = createComponentResolver([
   ListFieldResolver,
-  ListActionResolver,
   ListWithPopoverResolver,
 ]);
 
@@ -531,9 +509,6 @@ const ListUI = (props) => {
     virtualItemHeight,
     lockSize,
     searchText,
-    name,
-    value,
-    required,
     ...rest
   } = props;
 
@@ -542,8 +517,6 @@ const ListUI = (props) => {
       `List: renderBudget=${renderBudget} is too low. A renderBudget below 30 is not supported: on large screens or when the list grows, items outside the window would appear as blank space instead of rendered content. Use a value of at least 30, or omit the prop to use the default (${RENDER_BUDGET_DEFAULT}).`,
     );
   }
-
-  const hiddenInputId = useId();
 
   // lockSize: capture the container's dimensions on first render so filtering
   // cannot collapse the layout. Measurement happens on the initial (unfiltered)
@@ -649,16 +622,12 @@ const ListUI = (props) => {
     children,
   ]);
 
-  const inputRef = useRef(null);
-  const remainingProps = useConstraints(inputRef, rest, { disabled: !name });
-
   return (
     <Box
-      {...remainingProps}
+      {...rest}
       ref={containerRef}
       baseClassName="navi_list_container"
       popover={popover}
-      data-field={name ? `#${CSS.escape(hiddenInputId)}` : undefined}
       data-expand-x={expandX || expand ? "" : undefined}
       expandX={expandX}
       expand={expand}
@@ -667,7 +636,6 @@ const ListUI = (props) => {
       pseudoClasses={LIST_PSEUDO_CLASSES}
       pseudoStateSelector=".navi_list"
       hasChildFunction
-      data-navi-value={value || undefined}
       onnavi_list_request_scroll={(e) => {
         const { item } = e.detail;
         if (!item) {
@@ -679,17 +647,6 @@ const ListUI = (props) => {
         });
       }}
     >
-      {name && (
-        <input
-          ref={inputRef}
-          id={hiddenInputId}
-          type="hidden"
-          name={name}
-          value={value}
-          required={required}
-          data-rendered-by=".navi_list_container"
-        />
-      )}
       {renderListMemoized}
     </Box>
   );
@@ -1249,21 +1206,18 @@ const BottomFiller = ({
 // navi event protocol. When an action is provided it binds the action to ui state
 // and fires it on select. When only uiAction is provided it calls it directly.
 const ListField = (props) => {
-  const uiStateController = useUIStateController(props, "list", {
+  const Next = useNextResolver();
+  const hiddenInputId = useId();
+  const inputRef = useRef(null);
+  const fieldProps = useFieldProps(props, {
+    fieldType: "list",
+    readUIState: () => {
+      const input = inputRef.current;
+      return input.value;
+    },
     allowNameless: true,
   });
-  const listField = <ListFieldInner {...props} />;
-
-  return (
-    <UIStateControllerContext.Provider value={uiStateController}>
-      {listField}
-    </UIStateControllerContext.Provider>
-  );
-};
-const ListFieldInner = (props) => {
-  const Next = useNextResolver();
-  const { uiAction } = props;
-  const fieldProps = useFieldProps(props);
+  const { name, value, required } = fieldProps;
 
   // Mouse/keyboard pointed state
   const [mousePointedId, setMousePointedId] = useState(null);
@@ -1340,6 +1294,7 @@ const ListFieldInner = (props) => {
       {...fieldProps}
       tabIndex="0"
       onKeyDown={onKeyDown}
+      data-field={`#${CSS.escape(hiddenInputId)}`}
       onListVisibleItemsChange={(visibleItems) => {
         props.onListVisibleItemsChange?.(visibleItems);
         visibleItemsRef.current = visibleItems;
@@ -1366,10 +1321,9 @@ const ListFieldInner = (props) => {
           event.type === "navi_scroll_restore";
         if (item && !isAutomaticNav) {
           const listEl = e.currentTarget;
-          dispatchRequestUIAction(listEl, {
+          dispatchPublicCustomEvent(listEl, "navi_list_item_point", {
+            item,
             event,
-            value: item.value,
-            uiAction,
           });
         }
       }}
@@ -1404,6 +1358,13 @@ const ListFieldInner = (props) => {
         dispatchPublicCustomEvent(listEl, "navi_list_select", {
           item,
           event: e,
+        });
+        const requester = item
+          ? listEl.querySelector(`#${CSS.escape(item.id)}`)
+          : e.target;
+        dispatchRequestAction(listEl, {
+          event: e,
+          requester,
         });
       }}
       onnavi_list_request_hover={(e) => {
@@ -1496,7 +1457,18 @@ const ListFieldInner = (props) => {
           item,
         });
       }}
-    />
+    >
+      <input
+        ref={inputRef}
+        id={hiddenInputId}
+        type="hidden"
+        name={name}
+        value={value}
+        required={required}
+        data-rendered-by=".navi_list_container"
+      />
+      {fieldProps.children}
+    </Next>
   );
 
   return (
@@ -1507,28 +1479,6 @@ const ListFieldInner = (props) => {
         </ListKeyboardPointedIdContext.Provider>
       </ListMousePointedIdContext.Provider>
     </ListInteractiveContext.Provider>
-  );
-};
-const ListAction = (props) => {
-  const Next = useNextResolver();
-  const actionProps = useActionProps(props);
-
-  return (
-    <Next
-      {...actionProps}
-      onnavi_list_select={(e) => {
-        const listEl = e.currentTarget;
-        const item = e.detail?.item;
-        const requester = item
-          ? listEl.querySelector(`#${CSS.escape(item.id)}`)
-          : e.target;
-        const resolvedRequester = requester || e.target;
-        dispatchRequestAction(listEl, {
-          event: e,
-          requester: resolvedRequester,
-        });
-      }}
-    />
   );
 };
 

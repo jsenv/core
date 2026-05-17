@@ -3,8 +3,11 @@ import { useMemo } from "preact/hooks";
 import { Box } from "@jsenv/navi/src/box/box.jsx";
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { List, ListItem } from "../../list/list.jsx";
-import { Select } from "../../select/select.jsx";
+// import { Select } from "../../select/select.jsx";
 import { parseStepToSeconds } from "../time_helpers.js";
+
+// TODO: update to use the picker directly instead
+const Select = null;
 
 /**
  * HourPicker — a Select-based time slot picker.
