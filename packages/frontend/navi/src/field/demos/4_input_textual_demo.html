@@ -736,24 +736,26 @@
           <fieldset>
             <legend>Input with own action inside a form</legend>
             <p className="states-description">
-              The input has its own <code>action</code> with{" "}
-              <code>actionAfterChange</code>. Pressing <kbd>Enter</kbd> should
-              trigger the input's action — <strong>not</strong> submit the form.
-              The input is also named so its value is included in the form
-              submission.
+              The first input has its own <code>action</code> +{" "}
+              <code>actionAfterChange</code>: pressing <kbd>Enter</kbd> should
+              trigger its action — <strong>not</strong> submit the form. The
+              second is a regular input. Both are named so their values appear
+              in the form submission.
             </p>
             <Form
-              action={async ({ search }) => {
+              action={async ({ search, note }) => {
                 await delay(800);
-                setFormResult(`Form submitted! search: "${search}"`);
+                setFormResult(
+                  `Form submitted! search: "${search}", note: "${note}"`,
+                );
               }}
             >
               <Box flex="y" spacing="s" alignX="start">
                 <Field flex spacing="s">
-                  <Label>Search</Label>
+                  <Label>Search (has own action)</Label>
                   <Input
                     name="search"
-                    placeholder="Type and press Enter…"
+                    defaultValue="cats"
                     action={async (value) => {
                       setActionLog(`action called with: "${value}"`);
                       await delay(600);
@@ -761,6 +763,10 @@
                     }}
                     actionAfterChange
                   />
+                </Field>
+                <Field flex spacing="s">
+                  <Label>Note (regular input)</Label>
+                  <Input name="note" defaultValue="cute" />
                 </Field>
                 <Button type="submit">Submit form</Button>
                 {actionLog ? (
