@@ -3,7 +3,6 @@
 import { useRef } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
-import { InputCheckbox } from "./input/input_checkbox.jsx";
 import { useFieldGroupProps } from "./use_field_group_props.jsx";
 import { dispatchRequestAction } from "./validation/custom_constraint_validation.js";
 
@@ -14,7 +13,6 @@ export const CheckboxList = (props) => {
 
   return checkboxList;
 };
-export const Checkbox = InputCheckbox;
 
 const CheckboxListField = (props) => {
   const { ref } = props;

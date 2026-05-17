@@ -50,6 +50,7 @@ import {
   requestListOpen,
   requestListSelectCurrent,
 } from "../list/list.jsx";
+import { requestClosestAction } from "../string_actions.js";
 import { useFieldProps } from "../use_field_props.jsx";
 import {
   dispatchRequestAction,
@@ -419,52 +420,12 @@ const InputTextualField = (props) => {
         const input = ref.current;
         if (readOnly && isTypingIntent(e)) {
           dispatchRequestInteraction(input, e);
-        }
-        if (e.key !== "Enter") {
           return;
         }
-        if (!keyboardInteractiveInputTypeSet.has(input.type)) {
-          return;
-        }
-        if (props.action) {
-          // input has his own action
-          dispatchRequestAction(input, { event: e });
-          e.preventDefault(); // prevent form submission
-          return;
-        }
-        const elementWithSubmitEffect = input.closest("[navi-submit-effect]");
-        if (!elementWithSubmitEffect) {
-          return;
-        }
-        const { form } = input;
-        if (!form) {
-          // not inside a form, just request closest element action
-          dispatchRequestAction(elementWithSubmitEffect, {
-            event: e,
-            requester: input,
-          });
-          return;
+        if (e.key === "Enter") {
+          requestClosestAction(e);
         }
 
-        let requester = input;
-        if (elementWithSubmitEffect === form) {
-          // when present, we use first button submitting the form as the requester
-          // not the input, it aligns with browser behavior where
-          // hitting Enter in a text input triggers the first submit button of the form, not the input itself
-          const firstButtonSubmittingForm = form.querySelector(
-            `button[type="submit"], input[type="submit"], input[type="image"], [data-action="submit"]`,
-          );
-          if (firstButtonSubmittingForm) {
-            requester = firstButtonSubmittingForm;
-          }
-        }
-        dispatchRequestAction(elementWithSubmitEffect, {
-          event: e,
-          requester,
-        });
-        // we have requested submit on the closest element with submit effect (form or other)
-        // we sill need to prevent form submission
-        e.preventDefault();
         return;
       }}
       onPaste={(e) => {
@@ -494,21 +455,6 @@ const InputTextualField = (props) => {
     </Box>
   );
 };
-
-const keyboardInteractiveInputTypeSet = new Set([
-  "text",
-  "email",
-  "password",
-  "search",
-  "number",
-  "url",
-  "tel",
-  "time",
-  "date",
-  "datetime-local",
-  "month",
-  "week",
-]);
 
 // Returns true when the key combination looks like the user is trying to type
 // into the input (as opposed to a keyboard shortcut, navigation key, etc.).

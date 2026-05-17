@@ -1,7 +1,6 @@
 import { useRef } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
-import { InputRadio } from "./input/input_radio.jsx";
 import { useFieldGroupProps } from "./use_field_group_props.jsx";
 import { dispatchRequestAction } from "./validation/custom_constraint_validation.js";
 
@@ -12,7 +11,6 @@ export const RadioList = (props) => {
 
   return radioList;
 };
-export const Radio = InputRadio;
 
 const RadioListField = (props) => {
   const { ref } = props;

@@ -6,6 +6,7 @@ import { useAccentColorAttributes } from "../../utils/use_accent_color_attribute
 import { useFieldId } from "../field.jsx";
 import { FieldNameContext, RequiredContext } from "../field_context.js";
 import { fieldPropSet } from "../field_prop_set.js";
+import { requestClosestAction } from "../string_actions.js";
 import { useFieldProps } from "../use_field_props.jsx";
 import {
   dispatchRequestAction,
@@ -399,6 +400,7 @@ const InputCheckboxField = (props) => {
     accentColor,
     icon,
     appearance = icon ? "icon" : "checkbox", // "checkbox", "toggle", "icon", "button"
+    onKeyDown,
   } = props;
   const fieldProps = useFieldProps(
     {
@@ -528,6 +530,12 @@ const InputCheckboxField = (props) => {
         dispatchRequestAction(checkbox, {
           event: e,
         });
+      }}
+      onKeyDown={(e) => {
+        onKeyDown?.(e);
+        if (e.key === "Enter") {
+          requestClosestAction(e);
+        }
       }}
     >
       <span className="navi_checkbox_accent_probe" aria-hidden="true" />

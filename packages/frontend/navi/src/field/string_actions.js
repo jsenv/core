@@ -12,50 +12,46 @@ export const resolveActionProp = (action) => {
   return action;
 };
 
-const submitFromEvent = (e) => {
-  const elementWithSubmitEffect = e.currentTarget.closest(
-    "[navi-submit-effect]",
-  );
-  if (!elementWithSubmitEffect) {
+export const requestClosestAction = (e) => {
+  const target = e.target;
+  const elementWithAction = target.closest("[data-action]");
+  if (!elementWithAction) {
     console.warn(
-      "submit event triggered but no element with navi-submit-effect found in event path",
+      "submit event triggered but no element with [data-action] found in event path",
       e,
     );
     return false;
   }
-
-  const submitEffect =
-    elementWithSubmitEffect.getAttribute("navi-submit-effect");
-  if (submitEffect === "request_action") {
-    if (elementWithSubmitEffect.tagName === "FORM") {
-      e.preventDefault(); // prevent form submission on buttons
+  let requester = target;
+  const { form } = target;
+  if (elementWithAction.tagName === "FORM") {
+    // when present, we use first button submitting the form as the requester
+    // not the input, it aligns with browser behavior where
+    // hitting Enter in a text input triggers the first submit button of the form, not the input itself
+    const firstButtonSubmittingForm = elementWithAction.querySelector(
+      `button[type="submit"], input[type="submit"], input[type="image"], [data-action="submit"]`,
+    );
+    if (firstButtonSubmittingForm) {
+      requester = firstButtonSubmittingForm;
     }
-    /**
-     *  submitting a picker must:
-     *  - validate inputs inside the picker
-     *  - sync picker ui state with field inside the picker
-     *  - call picker uiAction
-     *
-     * And
-     * - if picker has no action prop ->picker own input in sync (ready to be managed by a form when submitted)
-     * - otherwise if picker has an action prop -> picker own input value change triggers the action to execute
-     */
-    return dispatchRequestAction(elementWithSubmitEffect, {
-      event: e,
-    });
   }
-  console.warn(
-    `Unknown submit effect "${submitEffect}" on element:`,
-    elementWithSubmitEffect,
-  );
-  return false;
+  const allowed = dispatchRequestAction(elementWithAction, {
+    event: e,
+    requester,
+  });
+
+  if (form) {
+    // prevent form submission when cliking buttons or pressing enter on inputs
+    e.preventDefault();
+  }
+  return allowed;
 };
 
 const submit = createUICallback({
   name: "submit",
-  event: (e) => submitFromEvent(e),
+  event: (e) => requestClosestAction(e),
   action: (_, { event }) => {
-    return submitFromEvent(event);
+    return requestClosestAction(event);
   },
 });
 

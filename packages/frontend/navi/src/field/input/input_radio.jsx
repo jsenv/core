@@ -11,6 +11,7 @@ import { useAccentColorAttributes } from "../../utils/use_accent_color_attribute
 import { useFieldId } from "../field.jsx";
 import { FieldNameContext, RequiredContext } from "../field_context.js";
 import { fieldPropSet } from "../field_prop_set.js";
+import { requestClosestAction } from "../string_actions.js";
 import { useFieldProps } from "../use_field_props.jsx";
 
 const css = /* css */ `
@@ -355,6 +356,7 @@ const InputRadioField = (props) => {
     required,
     onClick,
     onInput,
+    onKeyDown,
     icon,
     appearance = icon ? "icon" : "radio",
     color,
@@ -524,6 +526,12 @@ const InputRadioField = (props) => {
         dispatchRequestAction(radio, {
           event: e,
         });
+      }}
+      onKeyDown={(e) => {
+        onKeyDown?.(e);
+        if (e.key === "Enter") {
+          requestClosestAction(e);
+        }
       }}
     >
       <span className="navi_radio_accent_probe" aria-hidden="true" />
