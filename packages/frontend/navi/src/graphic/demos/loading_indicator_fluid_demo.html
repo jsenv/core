@@ -9,8 +9,8 @@
     <div id="app"></div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useState } from "preact/hooks";
-      import { LoadingIndicatorFluid } from "@jsenv/navi";
+      import { useState, useRef, useEffect } from "preact/hooks";
+      import { LoadingIndicatorFluid, LoadingOutline } from "@jsenv/navi";
 
       const COLORS = [
         { label: "dark", value: "#383a36" },
@@ -154,6 +154,194 @@
             >
               <LoadingIndicatorFluid color={color} />
             </div>
+
+            <DebounceDemo color={color} />
+          </div>
+        );
+      };
+
+      const DebounceDemo = ({ color }) => {
+        const [loading, setLoading] = useState(false);
+        const [debounce, setDebounce] = useState(1000);
+        const [duration, setDuration] = useState(5000);
+        const timerRef = useRef(null);
+
+        const startLoad = () => {
+          if (loading) {
+            return;
+          }
+          setLoading(true);
+          timerRef.current = setTimeout(() => {
+            setLoading(false);
+          }, duration);
+        };
+
+        useEffect(() => {
+          return () => {
+            if (timerRef.current) {
+              clearTimeout(timerRef.current);
+            }
+          };
+        }, []);
+
+        return (
+          <div
+            style={{ display: "flex", flexDirection: "column", gap: "16px" }}
+          >
+            <h3 style={{ margin: 0 }}>Debounce — delayed display</h3>
+            <p style={{ margin: 0, fontSize: "14px", color: "#555" }}>
+              The outline is hidden for <strong>debounce ms</strong> after
+              loading starts. The animation begins immediately so when the
+              outline appears it is already mid-rotation — conveying that work
+              was already in progress.
+            </p>
+
+            <div style={{ display: "flex", gap: "24px", flexWrap: "wrap" }}>
+              <label
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  fontSize: "14px",
+                }}
+              >
+                Debounce (ms):
+                <input
+                  type="number"
+                  min="0"
+                  max="2000"
+                  step="50"
+                  value={debounce}
+                  onInput={(e) => setDebounce(Number(e.currentTarget.value))}
+                  style={{ width: "70px" }}
+                />
+              </label>
+              <label
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  fontSize: "14px",
+                }}
+              >
+                Load duration (ms):
+                <input
+                  type="number"
+                  min="100"
+                  max="10000"
+                  step="100"
+                  value={duration}
+                  onInput={(e) => setDuration(Number(e.currentTarget.value))}
+                  style={{ width: "80px" }}
+                />
+              </label>
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                gap: "32px",
+                flexWrap: "wrap",
+                alignItems: "flex-end",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: "8px",
+                }}
+              >
+                <div
+                  style={{
+                    position: "relative",
+                    width: "200px",
+                    height: "60px",
+                    border: "1px dashed #ccc",
+                    borderRadius: "8px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: "13px",
+                    color: "#888",
+                  }}
+                >
+                  <LoadingOutline
+                    loading={loading}
+                    debounce={debounce}
+                    color={color}
+                  />
+                  {loading
+                    ? debounce > 0
+                      ? `hidden for ${debounce}ms…`
+                      : "loading…"
+                    : "idle"}
+                </div>
+                <span
+                  style={{
+                    fontSize: "12px",
+                    color: "#888",
+                    fontFamily: "monospace",
+                  }}
+                >
+                  debounce={debounce}ms
+                </span>
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: "8px",
+                }}
+              >
+                <div
+                  style={{
+                    position: "relative",
+                    width: "200px",
+                    height: "60px",
+                    border: "1px dashed #ccc",
+                    borderRadius: "8px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: "13px",
+                    color: "#888",
+                  }}
+                >
+                  <LoadingOutline
+                    loading={loading}
+                    debounce={0}
+                    color={color}
+                  />
+                  {loading ? "loading…" : "idle"}
+                </div>
+                <span
+                  style={{
+                    fontSize: "12px",
+                    color: "#888",
+                    fontFamily: "monospace",
+                  }}
+                >
+                  debounce=0ms (no delay, for comparison)
+                </span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              disabled={loading}
+              onClick={startLoad}
+              style={{
+                width: "fit-content",
+                padding: "6px 16px",
+                fontSize: "14px",
+              }}
+            >
+              {loading ? `loading… (${duration}ms)` : "Start load"}
+            </button>
           </div>
         );
       };

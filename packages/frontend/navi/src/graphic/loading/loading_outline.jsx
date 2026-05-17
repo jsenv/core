@@ -44,6 +44,7 @@ export const LoadingOutline = (props) => {
 const LoadingOutlineUI = (props) => {
   const {
     loading,
+    debounce = 300,
     targetSelector,
     color,
     borderWidth = 0,
@@ -63,7 +64,7 @@ const LoadingOutlineUI = (props) => {
     inset = 0,
     children,
   } = props;
-  const shouldShowSpinner = useDebounceTrue(loading, 300);
+  const shouldShowSpinner = useDebounceTrue(loading, debounce);
   const rectangleRef = useRef(null);
 
   let insetTop = inset + spacingTop + marginTop;
