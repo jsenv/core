@@ -654,55 +654,54 @@
               of selecting. The <code>uiAction</code> and <code>action</code>{" "}
               callbacks must NOT be called for readonly items.
             </p>
-            <NaviDebug debugAction debugUIAction>
-              <List
-                uiAction={(value) => {
-                  addLog(`uiAction called with: "${value}"`);
-                  setSelected(value);
-                }}
-                action={(v) => {
-                  addLog(`action called with: "${v}"`);
-                }}
+
+            <List
+              uiAction={(value) => {
+                addLog(`uiAction called with: "${value}"`);
+                setSelected(value);
+              }}
+              action={(v) => {
+                addLog(`action called with: "${v}"`);
+              }}
+            >
+              <ListItem
+                index={0}
+                id="readonly_default"
+                value="readonly_default"
+                readOnly
               >
-                <ListItem
-                  index={0}
-                  id="readonly_default"
-                  value="readonly_default"
-                  readOnly
-                >
-                  Readonly (default message)
-                </ListItem>
-                <ListItem
-                  index={1}
-                  id="readonly_custom"
-                  value="readonly_custom"
-                  readOnly
-                  readOnlyMessage={
-                    <>
-                      Ce créneau est déjà <strong>réservé.</strong>
-                    </>
-                  }
-                >
-                  Readonly (custom message)
-                </ListItem>
-                <ListItem
-                  index={2}
-                  id="apple"
-                  value="Apple"
-                  selected={selected === "Apple"}
-                >
-                  Apple (clickable)
-                </ListItem>
-                <ListItem
-                  index={3}
-                  id="banana"
-                  value="Banana"
-                  selected={selected === "Banana"}
-                >
-                  Banana (clickable)
-                </ListItem>
-              </List>
-            </NaviDebug>
+                Readonly (default message)
+              </ListItem>
+              <ListItem
+                index={1}
+                id="readonly_custom"
+                value="readonly_custom"
+                readOnly
+                readOnlyMessage={
+                  <>
+                    Ce créneau est déjà <strong>réservé.</strong>
+                  </>
+                }
+              >
+                Readonly (custom message)
+              </ListItem>
+              <ListItem
+                index={2}
+                id="apple"
+                value="Apple"
+                selected={selected === "Apple"}
+              >
+                Apple (clickable)
+              </ListItem>
+              <ListItem
+                index={3}
+                id="banana"
+                value="Banana"
+                selected={selected === "Banana"}
+              >
+                Banana (clickable)
+              </ListItem>
+            </List>
             <div
               className="value-display"
               style={{ minHeight: 60, whiteSpace: "pre-line" }}
@@ -717,7 +716,7 @@
 
       const App = () => {
         return (
-          <>
+          <NaviDebug debugUIAction debugAction>
             <ReadOnlyDemo />
             <ItemStatesDemo />
             <DisplayOnlyDemo />
@@ -728,7 +727,7 @@
             <FormDemo />
             <RequiredFormDemo />
             <InputInsideListItemDemo />
-          </>
+          </NaviDebug>
         );
       };
 

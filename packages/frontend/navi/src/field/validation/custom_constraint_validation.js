@@ -138,6 +138,7 @@ export const onRequestUIAction = (
     }
   }
   if (event.defaultPrevented) {
+    // hum ça pose souci pour les keyboard events ça
     return false;
   }
   const elementHandlingUIAction = requestUIActionCustomEvent.currentTarget;
