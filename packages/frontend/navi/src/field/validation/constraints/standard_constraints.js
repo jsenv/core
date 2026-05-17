@@ -274,11 +274,11 @@ export const MIN_CONSTRAINT = {
     if (field.tagName !== "INPUT") {
       return null;
     }
+    const minString = field.min;
+    if (minString === "") {
+      return null;
+    }
     if (field.type === "number") {
-      const minString = field.min;
-      if (minString === "") {
-        return null;
-      }
       const minNumber = parseFloat(minString);
       if (isNaN(minNumber)) {
         return null;
@@ -296,17 +296,13 @@ export const MIN_CONSTRAINT = {
       return null;
     }
     if (field.type === "time") {
-      const min = field.min;
-      if (min === undefined) {
-        return null;
-      }
-      const [minHours, minMinutes] = min.split(":").map(Number);
+      const [minHours, minMinutes] = minString.split(":").map(Number);
       const value = field.value;
       const [hours, minutes] = value.split(":").map(Number);
       if (hours < minHours || (hours === minHours && minMinutes < minutes)) {
         return generateFieldInvalidMessage("constraint.min.time", {
           field,
-          min,
+          min: minString,
         });
       }
       return null;
@@ -315,24 +311,20 @@ export const MIN_CONSTRAINT = {
     // - user interface do not let user enter anything outside the boundaries
     // - when setting value via js browser enforce boundaries too
     if (DATE_INPUT_TYPE_SET.has(field.type)) {
-      const min = field.min;
-      if (!min) {
-        return null;
-      }
       const value = field.value;
       if (!value) {
         return null;
       }
-      if (value < min) {
+      if (value < minString) {
         const todayIso = getTodayIso(field.type);
-        if (min === todayIso) {
+        if (minString === todayIso) {
           return generateFieldInvalidMessage("constraint.min.date.today", {
             field,
           });
         }
         return generateFieldInvalidMessage("constraint.min.date", {
           field,
-          min: formatDateIso(min, field.type),
+          min: formatDateIso(minString, field.type),
         });
       }
       return null;
@@ -350,12 +342,12 @@ export const MAX_CONSTRAINT = {
     if (field.tagName !== "INPUT") {
       return null;
     }
+    const maxString = field.max;
+    if (maxString === "") {
+      return null;
+    }
     if (field.type === "number") {
-      const maxAttribute = field.max;
-      if (maxAttribute === "") {
-        return null;
-      }
-      const maxNumber = parseFloat(maxAttribute);
+      const maxNumber = parseFloat(maxString);
       if (isNaN(maxNumber)) {
         return null;
       }
@@ -366,46 +358,38 @@ export const MAX_CONSTRAINT = {
       if (valueAsNumber > maxNumber) {
         return generateFieldInvalidMessage("constraint.max.number", {
           field,
-          max: maxAttribute,
+          max: maxString,
         });
       }
       return null;
     }
     if (field.type === "time") {
-      const max = field.max;
-      if (max === undefined) {
-        return null;
-      }
-      const [maxHours, maxMinutes] = max.split(":").map(Number);
+      const [maxHours, maxMinutes] = maxString.split(":").map(Number);
       const value = field.value;
       const [hours, minutes] = value.split(":").map(Number);
       if (hours > maxHours || (hours === maxHours && maxMinutes > minutes)) {
         return generateFieldInvalidMessage("constraint.max.time", {
           field,
-          max,
+          max: maxString,
         });
       }
       return null;
     }
     if (DATE_INPUT_TYPE_SET.has(field.type)) {
-      const max = field.max;
-      if (!max) {
-        return null;
-      }
       const value = field.value;
       if (!value) {
         return null;
       }
-      if (value > max) {
+      if (value > maxString) {
         const todayIso = getTodayIso(field.type);
-        if (max === todayIso) {
+        if (maxString === todayIso) {
           return generateFieldInvalidMessage("constraint.max.date.today", {
             field,
           });
         }
         return generateFieldInvalidMessage("constraint.max.date", {
           field,
-          max: formatDateIso(max, field.type),
+          max: formatDateIso(maxString, field.type),
         });
       }
       return null;
