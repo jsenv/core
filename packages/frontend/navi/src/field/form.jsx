@@ -66,6 +66,7 @@ const FormField = (props) => {
       data-method={method}
       navi-submit-effect="request_action"
       novalidate="" // make sure browser don't prevent "submit" when invalid, nor display messages
+      pseudoClasses={FormPseudoClasses}
       onSubmit={(e) => {
         const form = e.currentTarget;
         e.preventDefault();
@@ -98,6 +99,15 @@ const FormField = (props) => {
     </Box>
   );
 };
+const FormPseudoClasses = [
+  ":hover",
+  ":active",
+  ":focus",
+  ":focus-visible",
+  ":read-only",
+  ":disabled",
+  ":-navi-loading",
+];
 
 const getFormManagedFields = (form) => {
   const managedFields = [];
