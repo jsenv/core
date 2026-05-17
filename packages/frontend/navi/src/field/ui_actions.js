@@ -1,8 +1,5 @@
 import { createUICallback } from "./ui_callback.js";
-import {
-  dispatchRequestAction,
-  dispatchRequestUIAction,
-} from "./validation/custom_constraint_validation.js";
+import { dispatchRequestAction } from "./validation/custom_constraint_validation.js";
 
 export const normalizeAction = (action) => {
   if (typeof action === "string") {
@@ -26,18 +23,14 @@ const submitFromEvent = (e) => {
     );
     return false;
   }
-  if (elementWithSubmitEffect.tagName === "FORM") {
-    e.preventDefault(); // prevent form submission on buttons
-  }
 
   const submitEffect =
     elementWithSubmitEffect.getAttribute("navi-submit-effect");
   if (submitEffect === "request_action") {
-    return dispatchRequestAction(elementWithSubmitEffect, {
-      event: e,
-    });
-  }
-  if (submitEffect === "request_ui_action") {
+    if (elementWithSubmitEffect.tagName === "FORM") {
+      e.preventDefault(); // prevent form submission on buttons
+    }
+
     /**
      *  submitting a picker must:
      *  - validate inputs inside the picker
@@ -48,7 +41,7 @@ const submitFromEvent = (e) => {
      * - if picker has no action prop ->picker own input in sync (ready to be managed by a form when submitted)
      * - otherwise if picker has an action prop -> picker own input value change triggers the action to execute
      */
-    return dispatchRequestUIAction(elementWithSubmitEffect, {
+    return dispatchRequestAction(elementWithSubmitEffect, {
       event: e,
     });
   }
@@ -62,8 +55,8 @@ const submitFromEvent = (e) => {
 const submit = createUICallback({
   name: "submit",
   event: (e) => submitFromEvent(e),
-  uiAction: (v_, e) => {
-    return submitFromEvent(e);
+  action: (_, { event }) => {
+    return submitFromEvent(event);
   },
 });
 

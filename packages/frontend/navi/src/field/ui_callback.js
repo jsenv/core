@@ -39,52 +39,40 @@
  * @param {{ event?: function(event: Event): any, uiAction?: function(value: any, event: Event): any }} handlers
  * @returns {function}
  */
-export const createUICallback = ({ name = "ui callback", event, uiAction }) => {
-  if (event && uiAction) {
+export const createUICallback = ({ name = "ui callback", event, action }) => {
+  if (event && action) {
     return (...args) => {
       return routeArgs(args, {
         event: (e) => {
           return event(e);
         },
-        uiAction: (value, e) => {
-          return uiAction(value, e);
-        },
         action: (value, actionSecondArg) => {
-          console.info(
-            `${name} got called by action. It works but is designed to be called by uiAction`,
-          );
-          return uiAction(value, actionSecondArg.event);
+          return action(value, actionSecondArg);
         },
         other: () => {
           console.warn(
-            `${name} unsupported call attempt. It is designed to be called by uiAction.`,
+            `${name} unsupported call attempt. It is designed to be called by action.`,
           );
           return false;
         },
       });
     };
   }
-  if (uiAction) {
+  if (action) {
     return (...args) => {
       return routeArgs(args, {
         event: () => {
           console.warn(
-            `${name} unsupported call attempt (by DOM event). It is designed to be called by uiAction.`,
+            `${name} unsupported call attempt (by DOM event). It is designed to be called by action.`,
           );
           return false;
         },
-        uiAction: (value, e) => {
-          return uiAction(value, e);
-        },
-        action: (value, actionSecondArg) => {
-          console.info(
-            `${name} got called by action. It works but is designed to be called by uiAction`,
-          );
-          return uiAction(value, actionSecondArg.event);
+        action: (value, secondArg) => {
+          return action(value, secondArg);
         },
         other: () => {
           console.warn(
-            `${name} unsupported call attempt. It is designed to be called by uiAction.`,
+            `${name} unsupported call attempt. It is designed to be called by action.`,
           );
           return false;
         },
@@ -97,17 +85,11 @@ export const createUICallback = ({ name = "ui callback", event, uiAction }) => {
       event: (e) => {
         return event(e);
       },
-      uiAction: (value, e) => {
-        console.info(
-          `${name} got called by uiAction. It works but is designed to be called by DOM`,
-        );
-        return event(e);
-      },
-      action: (value, secondArg) => {
+      action: (_, { event: eventFromArg }) => {
         console.info(
           `${name} got called by action. It works but is designed to be called by DOM`,
         );
-        return event(secondArg.event);
+        return event(eventFromArg);
       },
       other: () => {
         console.warn(
@@ -129,13 +111,10 @@ export const createUICallback = ({ name = "ui callback", event, uiAction }) => {
  * @param {any[]} args
  * @param {{ event: function, uiAction: function, action: function, other: function }} handlers
  */
-const routeArgs = (args, { event, uiAction, action, other }) => {
+const routeArgs = (args, { event, action, other }) => {
   const [firstArg, secondArg] = args;
   if (firstArg && firstArg.currentTarget) {
     return event(...args);
-  }
-  if (secondArg && secondArg.currentTarget) {
-    return uiAction(...args);
   }
   if (secondArg && secondArg.event) {
     return action(...args);
