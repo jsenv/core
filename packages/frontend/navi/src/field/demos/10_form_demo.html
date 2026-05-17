@@ -76,13 +76,25 @@
 
       const App = () => {
         return (
-          <NaviDebug debugAction debugUiState>
+          <NaviDebug debugAction debugInteraction>
             <div>
               <h1>Form Demo</h1>
               <TableOfContents />
               <BasicFormDemo />
               <FormWithButtonActionDemo />
               <MultiFieldValidationTest />
+              <h2 style={{ margin: "40px 20px 0" }}>Input types in forms</h2>
+              <FormTextDemo />
+              <FormEmailDemo />
+              <FormPasswordDemo />
+              <FormNumberDemo />
+              <FormDateDemo />
+              <FormDatetimeDemo />
+              <FormTimeDemo />
+              <FormSearchDemo />
+              <FormTelDemo />
+              <FormRangeDemo />
+              <FormCheckboxDemo />
             </div>
           </NaviDebug>
         );
@@ -100,6 +112,44 @@
             </li>
             <li>
               <a href="#multi-field">Multi-field validation</a>
+            </li>
+            <li>
+              Input types in forms
+              <ol style={{ margin: 0, paddingLeft: "20px", lineHeight: "2" }}>
+                <li>
+                  <a href="#form-text">text</a>
+                </li>
+                <li>
+                  <a href="#form-email">email</a>
+                </li>
+                <li>
+                  <a href="#form-password">password</a>
+                </li>
+                <li>
+                  <a href="#form-number">number</a>
+                </li>
+                <li>
+                  <a href="#form-date">date</a>
+                </li>
+                <li>
+                  <a href="#form-datetime">datetime-local</a>
+                </li>
+                <li>
+                  <a href="#form-time">time</a>
+                </li>
+                <li>
+                  <a href="#form-search">search</a>
+                </li>
+                <li>
+                  <a href="#form-tel">tel</a>
+                </li>
+                <li>
+                  <a href="#form-range">range</a>
+                </li>
+                <li>
+                  <a href="#form-checkbox">checkbox</a>
+                </li>
+              </ol>
             </li>
           </ol>
         </div>
@@ -388,6 +438,336 @@
                 </li>
               </ol>
             </div>
+          </div>
+        );
+      };
+
+      const delay = (ms) => new Promise((r) => setTimeout(r, ms));
+
+      // Helper to display what was submitted
+      const SubmitResult = ({ result }) => {
+        if (!result) {
+          return null;
+        }
+        return (
+          <div className="form-params">
+            <strong>Submitted:</strong>
+            <pre>{JSON.stringify(result, null, 2)}</pre>
+          </div>
+        );
+      };
+
+      const FormTextDemo = () => {
+        const [username, setUsername] = useState("dam");
+        const [result, setResult] = useState(null);
+        return (
+          <div className="test-container" id="form-text">
+            <h3>text</h3>
+            <Form
+              action={async ({ username: v }) => {
+                await delay(600);
+                setUsername(v);
+                setResult({ username: v });
+              }}
+            >
+              <Field>
+                <Label>Username</Label>
+                <Input
+                  name="username"
+                  required
+                  minLength="2"
+                  value={username}
+                />
+              </Field>
+              <Button type="submit" style={{ marginTop: "8px" }}>
+                Submit
+              </Button>
+            </Form>
+            <SubmitResult result={result} />
+          </div>
+        );
+      };
+
+      const FormEmailDemo = () => {
+        const [email, setEmail] = useState("dam@example.com");
+        const [result, setResult] = useState(null);
+        return (
+          <div className="test-container" id="form-email">
+            <h3>email</h3>
+            <Form
+              action={async ({ email: v }) => {
+                await delay(600);
+                setEmail(v);
+                setResult({ email: v });
+              }}
+            >
+              <Field>
+                <Label>Email</Label>
+                <Input name="email" type="email" required value={email} />
+              </Field>
+              <Button type="submit" style={{ marginTop: "8px" }}>
+                Submit
+              </Button>
+            </Form>
+            <SubmitResult result={result} />
+          </div>
+        );
+      };
+
+      const FormPasswordDemo = () => {
+        const [password, setPassword] = useState("secret123");
+        const [result, setResult] = useState(null);
+        return (
+          <div className="test-container" id="form-password">
+            <h3>password</h3>
+            <Form
+              action={async ({ password: v }) => {
+                await delay(600);
+                setPassword(v);
+                setResult({ password: "***" });
+              }}
+            >
+              <Field>
+                <Label>Password</Label>
+                <Input
+                  name="password"
+                  type="password"
+                  required
+                  minLength="8"
+                  value={password}
+                />
+              </Field>
+              <Button type="submit" style={{ marginTop: "8px" }}>
+                Submit
+              </Button>
+            </Form>
+            <SubmitResult result={result} />
+          </div>
+        );
+      };
+
+      const FormNumberDemo = () => {
+        const [age, setAge] = useState(25);
+        const [result, setResult] = useState(null);
+        return (
+          <div className="test-container" id="form-number">
+            <h3>number</h3>
+            <Form
+              action={async ({ age: v }) => {
+                await delay(600);
+                setAge(Number(v));
+                setResult({ age: v });
+              }}
+            >
+              <Field>
+                <Label>Age</Label>
+                <Input
+                  name="age"
+                  type="number"
+                  required
+                  min="0"
+                  max="120"
+                  value={age}
+                />
+              </Field>
+              <Button type="submit" style={{ marginTop: "8px" }}>
+                Submit
+              </Button>
+            </Form>
+            <SubmitResult result={result} />
+          </div>
+        );
+      };
+
+      const FormDateDemo = () => {
+        const [date, setDate] = useState("2024-06-15");
+        const [result, setResult] = useState(null);
+        return (
+          <div className="test-container" id="form-date">
+            <h3>date</h3>
+            <Form
+              action={async ({ birthday: v }) => {
+                await delay(600);
+                setDate(v);
+                setResult({ birthday: v });
+              }}
+            >
+              <Field>
+                <Label>Birthday</Label>
+                <Input name="birthday" type="date" required value={date} />
+              </Field>
+              <Button type="submit" style={{ marginTop: "8px" }}>
+                Submit
+              </Button>
+            </Form>
+            <SubmitResult result={result} />
+          </div>
+        );
+      };
+
+      const FormDatetimeDemo = () => {
+        const [datetime, setDatetime] = useState("2024-06-15T14:30");
+        const [result, setResult] = useState(null);
+        return (
+          <div className="test-container" id="form-datetime">
+            <h3>datetime-local</h3>
+            <Form
+              action={async ({ meeting: v }) => {
+                await delay(600);
+                setDatetime(v);
+                setResult({ meeting: v });
+              }}
+            >
+              <Field>
+                <Label>Meeting</Label>
+                <Input
+                  name="meeting"
+                  type="datetime-local"
+                  required
+                  value={datetime}
+                />
+              </Field>
+              <Button type="submit" style={{ marginTop: "8px" }}>
+                Submit
+              </Button>
+            </Form>
+            <SubmitResult result={result} />
+          </div>
+        );
+      };
+
+      const FormTimeDemo = () => {
+        const [time, setTime] = useState("09:00");
+        const [result, setResult] = useState(null);
+        return (
+          <div className="test-container" id="form-time">
+            <h3>time</h3>
+            <Form
+              action={async ({ alarm: v }) => {
+                await delay(600);
+                setTime(v);
+                setResult({ alarm: v });
+              }}
+            >
+              <Field>
+                <Label>Alarm</Label>
+                <Input name="alarm" type="time" required value={time} />
+              </Field>
+              <Button type="submit" style={{ marginTop: "8px" }}>
+                Submit
+              </Button>
+            </Form>
+            <SubmitResult result={result} />
+          </div>
+        );
+      };
+
+      const FormSearchDemo = () => {
+        const [query, setQuery] = useState("cats");
+        const [result, setResult] = useState(null);
+        return (
+          <div className="test-container" id="form-search">
+            <h3>search</h3>
+            <Form
+              action={async ({ q: v }) => {
+                await delay(600);
+                setQuery(v);
+                setResult({ q: v });
+              }}
+            >
+              <Field>
+                <Label>Query</Label>
+                <Input name="q" type="search" required value={query} />
+              </Field>
+              <Button type="submit" style={{ marginTop: "8px" }}>
+                Submit
+              </Button>
+            </Form>
+            <SubmitResult result={result} />
+          </div>
+        );
+      };
+
+      const FormTelDemo = () => {
+        const [tel, setTel] = useState("+33612345678");
+        const [result, setResult] = useState(null);
+        return (
+          <div className="test-container" id="form-tel">
+            <h3>tel</h3>
+            <Form
+              action={async ({ phone: v }) => {
+                await delay(600);
+                setTel(v);
+                setResult({ phone: v });
+              }}
+            >
+              <Field>
+                <Label>Phone</Label>
+                <Input name="phone" type="tel" required value={tel} />
+              </Field>
+              <Button type="submit" style={{ marginTop: "8px" }}>
+                Submit
+              </Button>
+            </Form>
+            <SubmitResult result={result} />
+          </div>
+        );
+      };
+
+      const FormRangeDemo = () => {
+        const [volume, setVolume] = useState(60);
+        const [result, setResult] = useState(null);
+        return (
+          <div className="test-container" id="form-range">
+            <h3>range</h3>
+            <Form
+              action={async ({ volume: v }) => {
+                await delay(600);
+                setVolume(Number(v));
+                setResult({ volume: v });
+              }}
+            >
+              <Field>
+                <Label>Volume ({volume})</Label>
+                <Input
+                  name="volume"
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={volume}
+                />
+              </Field>
+              <Button type="submit" style={{ marginTop: "8px" }}>
+                Submit
+              </Button>
+            </Form>
+            <SubmitResult result={result} />
+          </div>
+        );
+      };
+
+      const FormCheckboxDemo = () => {
+        const [agreed, setAgreed] = useState(true);
+        const [result, setResult] = useState(null);
+        return (
+          <div className="test-container" id="form-checkbox">
+            <h3>checkbox</h3>
+            <Form
+              action={async ({ terms: v }) => {
+                await delay(600);
+                setAgreed(v === "on");
+                setResult({ terms: v });
+              }}
+            >
+              <Field flex spacing="s">
+                <Input name="terms" type="checkbox" required checked={agreed} />
+                <Label>I agree to the terms</Label>
+              </Field>
+              <Button type="submit" style={{ marginTop: "8px" }}>
+                Submit
+              </Button>
+            </Form>
+            <SubmitResult result={result} />
           </div>
         );
       };
