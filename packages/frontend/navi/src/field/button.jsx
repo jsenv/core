@@ -348,11 +348,9 @@ const ButtonUI = (props) => {
     discrete = icon && !revealOnInteraction,
     spacing,
     children,
+    ...rest
   } = props;
-
-  const fieldProps = useFieldProps(props);
-  const { basePseudoState } = fieldProps;
-  const loading = basePseudoState[":-navi-loading"];
+  const loading = props.basePseudoState?.[":-navi-loading"];
 
   const isLink = href !== undefined;
   let as = "button";
@@ -396,7 +394,7 @@ const ButtonUI = (props) => {
 
   return (
     <Box
-      {...fieldProps}
+      {...rest}
       as={as}
       href={href}
       target={innerTarget}

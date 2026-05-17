@@ -206,6 +206,7 @@ export const onRequestAction = (
     }
   }
   if (!canProceed) {
+    requestActionCustomEvent.preventDefault();
     debugAction(
       requestActionCustomEvent,
       `action prevented due ${preventReason} -> dispatch navi_action_prevented`,
