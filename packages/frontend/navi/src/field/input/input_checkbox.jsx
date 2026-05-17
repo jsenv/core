@@ -443,7 +443,7 @@ const InputCheckboxField = (props) => {
         checked={checked}
         required={required}
         data-readonly={readOnly ? "" : undefined}
-        aria-busy={readOnly ? "true" : undefined}
+        aria-busy={loading}
         baseClassName="navi_native_field"
         data-callout-arrow-x="center"
       />
@@ -520,7 +520,10 @@ const InputCheckboxField = (props) => {
       onClick={(e) => {
         onClick?.(e);
         const checkbox = ref.current;
-        dispatchRequestInteraction(checkbox, e);
+        const allowed = dispatchRequestInteraction(checkbox, e);
+        if (!allowed) {
+          e.preventDefault();
+        }
       }}
       onInput={(e) => {
         onInput?.(e);

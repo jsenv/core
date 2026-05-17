@@ -381,12 +381,12 @@ const InputRadioField = (props) => {
       return undefined;
     },
   });
-  const { value: uiState, basePseudoState } = fieldProps;
-  const loading = basePseudoState[":-navi-loading"];
-  const readOnly = basePseudoState[":read-only"];
+  const { value, basePseudoState } = fieldProps;
   const disabled = basePseudoState[":disabled"];
+  const readOnly = basePseudoState[":read-only"];
+  const loading = basePseudoState[":-navi-loading"];
 
-  const checked = Boolean(uiState);
+  const checked = Boolean(value);
   // we must first dispatch an event to inform all other radios they where unchecked
   // this way each other radio uiStateController knows thery are unchecked
   // we do this on "input"
@@ -436,7 +436,7 @@ const InputRadioField = (props) => {
         disabled={disabled}
         required={required}
         data-readonly={readOnly ? "" : undefined}
-        aria-busy={readOnly ? "true" : undefined}
+        aria-busy={loading}
         baseClassName="navi_native_field"
         data-callout-arrow-x="center"
       />
@@ -512,7 +512,10 @@ const InputRadioField = (props) => {
       onClick={(e) => {
         onClick?.(e);
         const radio = ref.current;
-        dispatchRequestInteraction(radio, e);
+        const allowed = dispatchRequestInteraction(radio, e);
+        if (!allowed) {
+          e.preventDefault(); // prevent click to toggle
+        }
       }}
       onInput={(e) => {
         onInput?.(e);
