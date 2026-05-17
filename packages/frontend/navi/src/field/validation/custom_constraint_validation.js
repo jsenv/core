@@ -85,12 +85,42 @@ import {
   TYPE_NUMBER_CONSTRAINT,
 } from "./constraints/standard_constraints.js";
 
+export const NAVI_VALIDITY_CHANGE_CUSTOM_EVENT = "navi_validity_change";
+
+export const dispatchRequestInteraction = (element, event) => {
+  const allowed = dispatchInternalCustomEvent(
+    element,
+    "navi_request_interaction",
+    {
+      event,
+    },
+  );
+  return allowed;
+};
+export const onRequestInteraction = (requestInteractionCustomEvent) => {
+  const requestStatus = { canProceed: true, preventReason: undefined };
+
+  const { event } = requestInteractionCustomEvent.detail;
+  if (requestStatus.canProceed) {
+    checkEvent(requestStatus, event);
+  }
+  if (requestStatus.canProceed) {
+    checkAndReportConstraints(requestStatus, INTERACTION_CONSTRAINTS, {
+      event: requestInteractionCustomEvent,
+      requester: event.currentTarget,
+      debug: () => {},
+    });
+  }
+  if (!requestStatus.canProceed) {
+    requestInteractionCustomEvent.preventDefault();
+  }
+};
+
 export const dispatchRequestAction = (
   elementWithAction,
   {
     event,
     requester = elementWithAction,
-    isInteractionOnly,
     // for keyboard shortcuts
     // (ideally a some point we'll just make them use a different event/code path)
     actionOrigin = "action_prop",
@@ -99,19 +129,20 @@ export const dispatchRequestAction = (
     meta,
   },
 ) => {
-  return dispatchInternalCustomEvent(elementWithAction, "navi_request_action", {
-    event,
-    requester,
-    isInteractionOnly,
-    actionOrigin,
-    action,
-    confirmMessage,
-    meta,
-  });
+  const allowed = dispatchInternalCustomEvent(
+    elementWithAction,
+    "navi_request_action",
+    {
+      event,
+      requester,
+      actionOrigin,
+      action,
+      confirmMessage,
+      meta,
+    },
+  );
+  return allowed;
 };
-export const NAVI_VALIDITY_CHANGE_CUSTOM_EVENT = "navi_validity_change";
-const INTERACTION_CONSTRAINTS = [DISABLED_CONSTRAINT, READONLY_CONSTRAINT];
-const pointerEventTypeSet = new Set(["pointerdown", "mousedown", "click"]);
 export const onRequestAction = (
   requestActionCustomEvent,
   {
@@ -119,12 +150,11 @@ export const onRequestAction = (
     debugAction = () => {},
   } = {},
 ) => {
-  const { event } = requestActionCustomEvent.detail;
   const {
+    event,
     actionOrigin,
     action,
     requester = event.target,
-    isInteractionOnly = false,
     uiState,
     meta = {},
     confirmMessage,
@@ -136,16 +166,6 @@ export const onRequestAction = (
   if (!actionOrigin) {
     console.warn("requestAction: actionOrigin is required");
   }
-  const customEventDetail = {
-    event: requestActionCustomEvent,
-    requester,
-    isInteractionOnly,
-    uiState,
-    actionOrigin,
-    action,
-    method,
-    meta,
-  };
   const elementHandlingAction = requestActionCustomEvent.currentTarget;
   if (requester === elementHandlingAction) {
     debugAction(
@@ -159,40 +179,19 @@ export const onRequestAction = (
     );
   }
 
-  let canProceed = true;
-  let preventReason;
-
-  if (canProceed) {
-    if (event.defaultPrevented) {
-      canProceed = false;
-      preventReason = "event.defaultPrevented is true";
-    }
+  const requestStatus = { canProceed: true, preventReason: undefined };
+  if (requestStatus.canProceed) {
+    checkEvent(requestStatus, event);
   }
-  if (canProceed) {
-    if (pointerEventTypeSet.has(event) && event.button !== 0) {
-      canProceed = false;
-      preventReason = `non-primary pointer button (button ${event.button})`;
-    }
+  if (requestStatus.canProceed) {
+    checkAndReportConstraints(requestStatus, DEFAULT_CONSTRAINT_SET, {
+      event: requestActionCustomEvent,
+      requester,
+      debug: debugAction,
+      fromRequestAction: true,
+    });
   }
-  if (canProceed) {
-    const constraintToCheck = isInteractionOnly
-      ? INTERACTION_CONSTRAINTS
-      : DEFAULT_CONSTRAINT_SET;
-    const [isValid, failedValidationInterface] = checkConstraintsAndReport(
-      constraintToCheck,
-      {
-        event: requestActionCustomEvent,
-        requester,
-        fromRequestAction: true,
-        debugAction,
-      },
-    );
-    if (!isValid) {
-      canProceed = false;
-      preventReason = `failing constraint "${failedValidationInterface.failedConstraintInfo.name}"`;
-    }
-  }
-  if (canProceed) {
+  if (requestStatus.canProceed) {
     // NOTE for future: confirmation must move to to action execution (be part of it when set)
     // because it's actually once everything is valid that we perform this so it's conceptually part of the action execution
     // also because in order to allow people to put their own ui it will becomes async
@@ -203,16 +202,28 @@ export const onRequestAction = (
     if (effectiveConfirmMessage) {
       // eslint-disable-next-line no-alert
       if (!window.confirm(effectiveConfirmMessage)) {
-        canProceed = false;
-        preventReason = "user cancelled on confirm message";
+        Object.assign(requestStatus, {
+          canProceed: false,
+          preventReason: "user cancelled on confirm message",
+        });
       }
     }
   }
-  if (!canProceed) {
+
+  const customEventDetail = {
+    event,
+    requester,
+    uiState,
+    actionOrigin,
+    action,
+    method,
+    meta,
+  };
+  if (!requestStatus.canProceed) {
     requestActionCustomEvent.preventDefault();
     debugAction(
       requestActionCustomEvent,
-      `action prevented due ${preventReason} -> dispatch navi_action_prevented`,
+      `action prevented due ${requestStatus.preventReason} -> dispatch navi_action_prevented`,
     );
     dispatchInternalCustomEvent(
       elementHandlingAction,
@@ -232,6 +243,84 @@ export const onRequestAction = (
   );
   return true;
 };
+
+const checkEvent = (requestStatus, event) => {
+  if (event.defaultPrevented) {
+    Object.assign(requestStatus, {
+      canProceed: false,
+      preventReason: "event.defaultPrevented is true",
+    });
+    return;
+  }
+  if (pointerEventTypeSet.has(event) && event.button !== 0) {
+    Object.assign(requestStatus, {
+      canProceed: false,
+      preventReason: `non-primary pointer button (button ${event.button})`,
+    });
+    return;
+  }
+};
+const checkAndReportConstraints = (
+  requestStatus,
+  constraints,
+  { event, requester, debug, fromRequestAction } = {},
+) => {
+  const onInvalid = (failedValidationInterface) => {
+    Object.assign(requestStatus, {
+      canProceed: false,
+      preventReason: `failing constraint "${failedValidationInterface.failedConstraintInfo.name}"`,
+    });
+    failedValidationInterface.reportValidity({
+      event,
+      requester,
+      debug,
+    });
+  };
+
+  let elementToValidate = event.currentTarget;
+  if (!elementToValidate.__validationInterface__) {
+    const fieldElement = findFieldElement(requester);
+    if (fieldElement) {
+      elementToValidate = fieldElement;
+    }
+  }
+  const managedFields = getManagedFields(elementToValidate);
+  for (const managedField of managedFields) {
+    const elementValidationInterface = managedField.__validationInterface__;
+    if (!elementValidationInterface) {
+      continue;
+    }
+    const elementIsValid = elementValidationInterface.checkValidity({
+      event,
+      debug,
+      fromRequestAction,
+      skipReadonly:
+        managedField.tagName === "BUTTON" && managedField !== requester,
+    });
+    if (!elementIsValid) {
+      onInvalid(elementValidationInterface);
+      return;
+    }
+  }
+
+  // all manageds fields (if any) are good ->  check ourselves
+  let validationInterface = elementToValidate.__validationInterface__;
+  if (!validationInterface) {
+    validationInterface = installCustomConstraintValidation(elementToValidate);
+  }
+  const isValid = validationInterface.checkValidity({
+    event,
+    constraints,
+    fromRequestAction,
+  });
+  if (!isValid) {
+    onInvalid(validationInterface);
+    return;
+  }
+};
+
+const INTERACTION_CONSTRAINTS = [DISABLED_CONSTRAINT, READONLY_CONSTRAINT];
+const pointerEventTypeSet = new Set(["pointerdown", "mousedown", "click"]);
 
 const STANDARD_CONSTRAINT_SET = new Set([
   DISABLED_CONSTRAINT,
@@ -261,78 +350,6 @@ const DEFAULT_CONSTRAINT_SET = new Set([
   ...STANDARD_CONSTRAINT_SET,
   ...NAVI_CONSTRAINT_SET,
 ]);
-
-const checkConstraintsAndReport = (
-  constraints,
-  { event, requester, fromRequestAction, debugAction = () => {} } = {},
-) => {
-  let elementToValidate = event.currentTarget;
-  // const fieldSelector = requester.getAttribute("data-field");
-  // if (fieldSelector) {
-  //   const field = requester.querySelector(fieldSelector);
-  //   if (field) {
-  //     elementToValidate = field;
-  //   } else {
-  //     debugAction(
-  //       `data-field selector "${fieldSelector}" did not match any element`,
-  //     );
-  //   }
-  // }
-
-  if (!elementToValidate.__validationInterface__) {
-    const fieldElement = findFieldElement(requester);
-    if (fieldElement) {
-      elementToValidate = fieldElement;
-    }
-  }
-  let validationInterface = elementToValidate.__validationInterface__;
-  if (!validationInterface) {
-    validationInterface = installCustomConstraintValidation(elementToValidate);
-  }
-  const managedFields = getManagedFields(elementToValidate);
-  let isValid = true;
-  let failedValidationInterface;
-  for (const managedField of managedFields) {
-    const elementValidationInterface = managedField.__validationInterface__;
-    if (!elementValidationInterface) {
-      continue;
-    }
-    const elementIsValid = elementValidationInterface.checkValidity({
-      event,
-      fromRequestAction,
-      skipReadonly:
-        managedField.tagName === "BUTTON" && managedField !== requester,
-      debugAction,
-    });
-    if (!elementIsValid) {
-      failedValidationInterface = elementValidationInterface;
-      isValid = false;
-      break;
-    }
-  }
-  if (isValid) {
-    // all manageds fields (if any) are good ->  check ourselves
-    isValid = validationInterface.checkValidity({
-      constraints,
-      event,
-      fromRequestAction,
-      debugAction,
-    });
-    if (!isValid) {
-      failedValidationInterface = validationInterface;
-    }
-  }
-
-  if (!isValid) {
-    failedValidationInterface.reportValidity({
-      event,
-      requester,
-      debugAction,
-    });
-    return [false, failedValidationInterface];
-  }
-  return [true, failedValidationInterface];
-};
 
 const getManagedFields = (element) => {
   let managedFields;
@@ -568,12 +585,7 @@ export const installCustomConstraintValidation = (
   };
 
   const [notifyCalloutOpen, onCalloutOpen] = createPubSub();
-  const reportValidity = ({
-    skipFocus,
-    event,
-    debugAction,
-    requester,
-  } = {}) => {
+  const reportValidity = ({ event, requester, debug, skipFocus } = {}) => {
     if (!failedConstraintInfo) {
       closeElementValidationMessage(event, "becomes_valid");
       return;
@@ -621,8 +633,8 @@ export const installCustomConstraintValidation = (
         failedConstraintInfo.message,
         { requester },
       );
-      if (debugAction) {
-        debugAction(
+      if (debug) {
+        debug(
           event,
           `constraint message for "${failedConstraintInfo.constraint.name}": ${origin}`,
         );
@@ -638,7 +650,7 @@ export const installCustomConstraintValidation = (
         status: failedConstraintInfo.status,
         closeOnClickOutside: failedConstraintInfo.closeOnClickOutside,
         openingEvent: event,
-        debug: debugAction,
+        debug,
         onClose: () => {
           removeCloseOnCleanup();
           for (const result of results) {

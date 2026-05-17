@@ -2,7 +2,10 @@ import { dispatchCustomEvent } from "@jsenv/dom";
 import { useCallback, useContext, useLayoutEffect, useRef } from "preact/hooks";
 
 import { Box } from "@jsenv/navi/src/box/box.jsx";
-import { dispatchRequestAction } from "@jsenv/navi/src/field/validation/custom_constraint_validation.js";
+import {
+  dispatchRequestAction,
+  dispatchRequestInteraction,
+} from "@jsenv/navi/src/field/validation/custom_constraint_validation.js";
 import { LoadingOutline } from "../../graphic/loading/loading_outline.jsx";
 import { useAccentColorAttributes } from "../../utils/use_accent_color_attributes.js";
 import { useFieldId } from "../field.jsx";
@@ -509,10 +512,7 @@ const InputRadioField = (props) => {
       onClick={(e) => {
         onClick?.(e);
         const radio = ref.current;
-        dispatchRequestAction(radio, {
-          event: e,
-          isInteractionOnly: true,
-        });
+        dispatchRequestInteraction(radio, e);
       }}
       onInput={(e) => {
         onInput?.(e);

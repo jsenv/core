@@ -21,7 +21,10 @@ import {
   useUIState,
   useUIStateController,
 } from "./use_ui_state_controller.js";
-import { onRequestAction } from "./validation/custom_constraint_validation.js";
+import {
+  onRequestAction,
+  onRequestInteraction,
+} from "./validation/custom_constraint_validation.js";
 import { useConstraints } from "./validation/hooks/use_constraints.js";
 
 export const UI_STATE_NOT_AVAILABLE = Symbol("UI_STATE_NOT_AVAILABLE");
@@ -180,6 +183,9 @@ export const useActionProps = (
       const { value } = e.detail;
       uiStateController.setUIState(value, e);
     },
+    "onnavi_request_interaction": (e) => {
+      onRequestInteraction(e);
+    },
     "onnavi_cancel": (e) => {
       const { reason } = e.detail;
 
@@ -211,32 +217,27 @@ export const useActionProps = (
       onCancel?.(e, reason);
     },
     "onnavi_request_action": (e) => {
-      const { isInteractionOnly } = e.detail;
-
       let uiStateRaw;
-      if (isInteractionOnly) {
-      } else {
-        dispatchInternalCustomEvent(e.currentTarget, "navi_request_ui_state", {
-          respondWith: (v) => {
-            debugAction(
-              e,
-              `navi_request_ui_state.respondWith(${JSON.stringify(v)})`,
-            );
-            uiStateRaw = v;
-          },
-        });
-        if (type === "number") {
-          const inputValueAsNumber = Number(uiStateRaw);
-          if (isNaN(inputValueAsNumber)) {
-            e.detail.uiState = uiStateRaw;
-          } else {
-            e.detail.uiState = inputValueAsNumber;
-          }
-        } else if (type === "datetime-local") {
-          e.detail.uiState = convertToUTCTimezone(uiStateRaw);
-        } else {
+      dispatchInternalCustomEvent(e.currentTarget, "navi_request_ui_state", {
+        respondWith: (v) => {
+          debugAction(
+            e,
+            `navi_request_ui_state.respondWith(${JSON.stringify(v)})`,
+          );
+          uiStateRaw = v;
+        },
+      });
+      if (type === "number") {
+        const inputValueAsNumber = Number(uiStateRaw);
+        if (isNaN(inputValueAsNumber)) {
           e.detail.uiState = uiStateRaw;
+        } else {
+          e.detail.uiState = inputValueAsNumber;
         }
+      } else if (type === "datetime-local") {
+        e.detail.uiState = convertToUTCTimezone(uiStateRaw);
+      } else {
+        e.detail.uiState = uiStateRaw;
       }
 
       if (e.detail.action) {
@@ -246,9 +247,7 @@ export const useActionProps = (
         e.detail.action = boundAction;
       }
 
-      onRequestAction(e, {
-        debugAction,
-      });
+      onRequestAction(e, { debugAction });
     },
     "onnavi_action_prevented": onActionPrevented,
     "onnavi_action_ready": (e) => {
@@ -257,13 +256,8 @@ export const useActionProps = (
         e.detail.action = boundAction;
       }
 
-      const { isInteractionOnly, uiState } = e.detail;
-      if (!isInteractionOnly) {
-        // we can't execute uiAction right now as value is not available
-        // we just want to check if action is allowed to preventDefault or give feedback
-        // but the value will be set later (checkbox "click" vs checkbox "input" use case)
-        uiStateController.setUIState(uiState, e);
-      }
+      const { uiState } = e.detail;
+      uiStateController.setUIState(uiState, e);
       executeAction(e);
     },
     "onnavi_action_abort": (e) => {
