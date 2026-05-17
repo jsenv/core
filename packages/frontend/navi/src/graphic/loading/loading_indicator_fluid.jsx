@@ -12,8 +12,7 @@ const css = /* css */ `
     border-radius: inherit;
     opacity: 1;
 
-    &[hidden] {
-      display: flex;
+    &[data-visually-hidden] {
       opacity: 0;
     }
   }
@@ -31,6 +30,7 @@ export const LoadingIndicatorFluid = ({
   color = "currentColor",
   size = 2,
   radius,
+  visuallyHidden,
   ...rest
 }) => {
   import.meta.css = css;
@@ -89,6 +89,7 @@ export const LoadingIndicatorFluid = ({
       {...rest}
       ref={ref}
       className="navi_loading_indicator_fluid_container"
+      data-visually-hidden={visuallyHidden ? "" : undefined}
     >
       {containerWidth > 0 && containerHeight > 0 && (
         <LoadingRectangleSvg

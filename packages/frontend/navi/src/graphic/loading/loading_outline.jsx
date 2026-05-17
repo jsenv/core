@@ -93,7 +93,6 @@ const LoadingOutlineUI = (props) => {
       <span
         ref={rectangleRef}
         className="navi_loading_outline_wrapper"
-        hidden={!shouldShowSpinner}
         style={{
           "--loading-rectangle-top": `${insetTop}px`,
           "--loading-rectangle-right": `${insetRight}px`,
@@ -111,7 +110,7 @@ const LoadingOutlineUI = (props) => {
         */}
         {loading && (
           <LoadingIndicatorFluid
-            hidden={!shouldShowSpinner}
+            visuallyHidden={!shouldShowSpinner}
             radius={radius}
             color={color}
             size={size}
