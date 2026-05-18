@@ -492,6 +492,13 @@ const InputRadioField = (props) => {
         const radio = ref.current;
         dispatchRequestInteraction(radio, e);
       }}
+      onClick={(e) => {
+        const radio = ref.current;
+        const allowed = dispatchRequestInteraction(radio, e);
+        if (!allowed) {
+          e.preventDefault();
+        }
+      }}
       onInput={(e) => {
         onInput?.(e);
         const radio = ref.current;
