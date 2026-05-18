@@ -488,7 +488,8 @@ const renderList = createComponentResolver([
 export const List = (props) => {
   const refDefault = useRef(null);
   props.ref = props.ref || refDefault;
-  return renderList(ListUI, props);
+  const listVnode = renderList(ListUI, props);
+  return listVnode;
 };
 const ListUI = (props) => {
   import.meta.css = css;
@@ -511,7 +512,6 @@ const ListUI = (props) => {
     searchText,
     ...rest
   } = props;
-
   if (renderBudget < 30) {
     console.warn(
       `List: renderBudget=${renderBudget} is too low. A renderBudget below 30 is not supported: on large screens or when the list grows, items outside the window would appear as blank space instead of rendered content. Use a value of at least 30, or omit the prop to use the default (${RENDER_BUDGET_DEFAULT}).`,
@@ -1583,7 +1583,19 @@ const ListItemPresentation = (props) => {
   return <Box as="li" {...props} />;
 };
 const ListItemRealOrVoid = (props) => {
-  let {
+  if (props.id === undefined) {
+    console.warn(
+      "ListItem is missing an explicit id prop. Provide a stable id so pointed/selected state survives search reordering.",
+    );
+  }
+  if (props.index === undefined) {
+    console.warn(
+      "ListItem is missing an explicit index prop. Provide an index so item ordering is stable regardless of render order.",
+    );
+  }
+  const idDefault = useId();
+  props.id = props.id || idDefault;
+  const {
     id,
     value,
     filtered,
@@ -1595,20 +1607,6 @@ const ListItemRealOrVoid = (props) => {
     index,
     ...rest
   } = props;
-  if (id === undefined) {
-    console.warn(
-      "ListItem is missing an explicit id prop. Provide a stable id so pointed/selected state survives search reordering.",
-      { value },
-    );
-  }
-  if (index === undefined) {
-    console.warn(
-      "ListItem is missing an explicit index prop. Provide an index so item ordering is stable regardless of render order.",
-      { value },
-    );
-  }
-  const idDefault = useId();
-  id = id || idDefault;
   const renderWindow = useContext(RenderWindowContext);
   const tracker = useContext(ListItemTrackerContext);
   const item = {
@@ -1688,21 +1686,24 @@ const ListItemRealOrVoid = (props) => {
 const ListItemVoid = () => {
   return null;
 };
-const ListItemReal = ({
-  id,
-  hidden,
-  highlight,
-  selected,
-  disabled,
-  readOnly,
-  readOnlyMessage,
-  item,
-  pointed,
-  children,
-  ...rest
-}) => {
+const ListItemReal = (props) => {
   const defaultRef = useRef(null);
-  const ref = rest.ref || defaultRef;
+  props.ref = props.ref || defaultRef;
+  const {
+    ref,
+    id,
+    hidden,
+    highlight,
+    selected,
+    disabled,
+    readOnly,
+    readOnlyMessage,
+    item,
+    pointed,
+    children,
+    ...rest
+  } = props;
+
   const onNaviConstraintMessage = useOnNaviConstraintMessage({
     readOnlyMessage,
   });
