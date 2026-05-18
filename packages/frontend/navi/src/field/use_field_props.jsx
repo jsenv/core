@@ -117,8 +117,6 @@ export const useActionProps = (
   const debugAction = useDebugAction();
   const debugInteraction = useDebugInteraction();
 
-  const uiState = useUIState(uiStateController);
-  const value = uiState;
   const innerLoading =
     loading ||
     actionStatus.loading ||
@@ -147,16 +145,22 @@ export const useActionProps = (
     );
   }
 
+  const uiState = useUIState(uiStateController);
+  const { statePropName } = uiStateController;
   const { type } = props;
-  let valueForBrowser;
+  let statePropValue;
   if (type === "datetime-local") {
-    valueForBrowser = convertToLocalTimezone(value);
+    statePropValue = convertToLocalTimezone(uiState);
   } else if (type === "color") {
-    if (!value) {
-      valueForBrowser = "#000000";
+    if (uiState) {
+      statePropValue = uiState;
+    } else {
+      statePropValue = "#000000";
     }
+  } else if (uiStateController.getPropFromState) {
+    statePropValue = uiStateController.getPropFromState(uiState);
   } else {
-    valueForBrowser = value;
+    statePropValue = uiState;
   }
 
   return {
@@ -170,13 +174,7 @@ export const useActionProps = (
         : typeof props.action === "string"
           ? props.action
           : action.callSource,
-    // When statePropName is "checked" (radio, checkbox), the uiState represents the
-    // internal selection state and must be converted via getPropFromState to a boolean
-    // for the "checked" attribute. The "value" attribute must stay as the static prop
-    // value (e.g., "alpha"), not the uiState.
-    [uiStateController.statePropName]:
-      uiStateController.getPropFromState?.(uiState),
-    "value": valueForBrowser,
+    [statePropName]: statePropValue,
     "navi-autofocus": autoFocus ? "" : undefined,
     "aria-busy": innerLoading,
     "aria-readonly": innerReadOnly,
