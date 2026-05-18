@@ -15,7 +15,7 @@ export const CheckboxList = (props) => {
 };
 
 const CheckboxListField = (props) => {
-  const { ref } = props;
+  const { ref, name } = props;
   const fieldGroupProps = useFieldGroupProps(
     {
       resetOnCancel: true,
@@ -45,11 +45,18 @@ const CheckboxListField = (props) => {
       baseClassName="navi_checkbox_list"
       data-checkbox-list=""
       onChange={(e) => {
-        const checkbox = e.target;
+        // we rely on change event bubbling but we want to catch only the relevant checkbox change events
+        const target = e.target;
+        if (target.tagName !== "INPUT" || target.type !== "checkbox") {
+          return;
+        }
+        if (target.name !== name) {
+          return;
+        }
         const checkboxList = ref.current;
         dispatchRequestAction(checkboxList, {
           event: e,
-          requester: checkbox,
+          requester: target,
         });
       }}
     />

@@ -13,7 +13,7 @@ export const RadioList = (props) => {
 };
 
 const RadioListField = (props) => {
-  const { ref } = props;
+  const { ref, name } = props;
   const fieldGroupProps = useFieldGroupProps(
     {
       resetOnCancel: true,
@@ -44,15 +44,19 @@ const RadioListField = (props) => {
       baseClassName="navi_radio_list"
       navi-submit-effect="request_action"
       data-radio-list=""
-      // This is the bubbling onChange we receive from radio buttons
-      // we should likely ensure we receive change for the correct radio (right now we trust change only happens from the radio we care)
-      // we should ensure that
       onChange={(e) => {
+        // we rely on change event bubbling but we want to catch only the relevant radio change events
+        const target = e.target;
+        if (target.tagName !== "INPUT" || target.type !== "radio") {
+          return;
+        }
+        if (target.name !== name) {
+          return;
+        }
         const radioList = ref.current;
-        const radio = e.target;
         dispatchRequestAction(radioList, {
           event: e,
-          requester: radio,
+          requester: target,
         });
       }}
     />
