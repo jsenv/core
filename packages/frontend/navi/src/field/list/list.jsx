@@ -149,6 +149,8 @@ const css = /* css */ `
     display: flex;
     width: fit-content;
     max-width: 100%;
+    margin: 0; /* Reset margin that might come from fieldset */
+    padding: 0; /* Reset padding that might come from fieldset */
     flex-direction: column;
     background-color: var(--x-list-background-color);
     border: var(--x-list-border-width) solid var(--x-list-border-color);
@@ -1240,9 +1242,8 @@ const ListField = (props) => {
 
   const listVnode = (
     <Next
+      as="fieldset"
       {...fieldProps}
-      navi-radio-list={multiple ? undefined : ""}
-      navi-checkbox-list={multiple ? "" : undefined}
       onListVisibleItemsChange={(visibleItems) => {
         props.onListVisibleItemsChange?.(visibleItems);
         visibleItemsRef.current = visibleItems;
