@@ -26,10 +26,7 @@ const debugUIGroup = (...args) => {
   }
 };
 
-export const UIStateControllerContext = createContext();
-export const UIStateContext = createContext();
 export const ParentUIStateControllerContext = createContext();
-export const SelectTriggerContentRegistryContext = createContext(null);
 
 /**
  * UI State Controller Hook
@@ -187,6 +184,7 @@ export const useUIStateController = (
     allowNameless,
     readOnly,
     name,
+    statePropName,
     hasStateProp,
     state: stateInitial,
     uiState: stateInitial,

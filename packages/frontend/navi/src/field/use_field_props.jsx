@@ -170,6 +170,12 @@ export const useActionProps = (
         : typeof props.action === "string"
           ? props.action
           : action.callSource,
+    // When statePropName is "checked" (radio, checkbox), the uiState represents the
+    // internal selection state and must be converted via getPropFromState to a boolean
+    // for the "checked" attribute. The "value" attribute must stay as the static prop
+    // value (e.g., "alpha"), not the uiState.
+    [uiStateController.statePropName]:
+      uiStateController.getPropFromState(uiState),
     "value": valueForBrowser,
     "navi-autofocus": autoFocus ? "" : undefined,
     "basePseudoState": {
