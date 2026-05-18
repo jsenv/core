@@ -83,6 +83,7 @@
         Button,
         Box,
         NaviDebug,
+        Field,
       } from "@jsenv/navi";
 
       const App = () => {
@@ -680,21 +681,25 @@
               }}
             >
               <ListItem index={0} id="readonly_default" flex spacing="s">
-                <Input type="radio" value="readonly_default" readOnly />
-                Readonly (default message)
+                <Field paddingX="s" paddingY="m">
+                  <Input type="radio" value="readonly_default" readOnly />
+                  Readonly (default message)
+                </Field>
               </ListItem>
               <ListItem index={1} id="readonly_custom" flex spacing="s">
-                <Input
-                  type="radio"
-                  value="readonly_custom"
-                  readOnly
-                  readOnlyMessage={
-                    <>
-                      Ce créneau est déjà <strong>réservé.</strong>
-                    </>
-                  }
-                />
-                Readonly (custom message)
+                <Field paddingX="s" paddingY="m">
+                  <Input
+                    type="radio"
+                    value="readonly_custom"
+                    readOnly
+                    readOnlyMessage={
+                      <>
+                        Ce créneau est déjà <strong>réservé.</strong>
+                      </>
+                    }
+                  />
+                  Readonly (custom message)
+                </Field>
               </ListItem>
               <ListItem index={2} id="apple" flex spacing="s">
                 <Input

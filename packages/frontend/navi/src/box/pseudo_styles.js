@@ -630,13 +630,15 @@ export const initPseudoStyles = (
     }
   }
   checkPseudoClasses();
-  // just in case + catch use forcing them in chrome devtools
-  const interval = setInterval(() => {
-    checkPseudoClasses();
-  }, 1_000);
-  addTeardown(() => {
-    clearInterval(interval);
-  });
+  if (import.meta.dev) {
+    // just in case + catch use forcing them in chrome devtools
+    const interval = setInterval(() => {
+      checkPseudoClasses();
+    }, 1_000);
+    addTeardown(() => {
+      clearInterval(interval);
+    });
+  }
 
   return teardown;
 };

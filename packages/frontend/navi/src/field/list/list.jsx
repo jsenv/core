@@ -78,8 +78,8 @@ const css = /* css */ `
       --list-max-height: 220px;
     }
     .navi_list_item {
-      --list-item-padding-x: 12px;
-      --list-item-padding-y: 8px;
+      --list-item-padding-x: 0px;
+      --list-item-padding-y: 0px;
       --list-item-padding: var(--list-item-padding-y) var(--list-item-padding-x);
       --list-item-color: inherit;
       --list-item-font-weight: inherit;
@@ -261,11 +261,6 @@ const css = /* css */ `
     /* When list has sticky header/footer, put a scroll padding */
     scroll-margin-top: var(--x-list-scroll-spacing-top);
     scroll-margin-bottom: var(--x-list-scroll-spacing-bottom);
-
-    > label {
-      margin-block: calc(-1 * var(--list-item-padding-y));
-      margin-inline: calc(-1 * var(--list-item-padding-x));
-    }
 
     &[data-interactive] {
       cursor: pointer;
