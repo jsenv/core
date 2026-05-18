@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <link rel="icon" href="data:," />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>CheckboxFieldset Demo</title>
+    <title>RadioFieldset Demo</title>
     <style>
       body {
         max-width: 800px;
@@ -40,7 +40,7 @@
     </style>
   </head>
   <body>
-    <h1>CheckboxFieldset Demo</h1>
+    <h1>RadioFieldset Demo</h1>
     <div id="root"></div>
 
     <script type="module" jsenv-type="module/jsx">
@@ -49,7 +49,7 @@
       import {
         Button,
         Form,
-        CheckboxFieldset,
+        RadioFieldset,
         Field,
         Label,
         Input,
@@ -75,32 +75,32 @@
           <div class="demo-section">
             <h2>Standalone</h2>
             <p style={{ margin: "0 0 12px", color: "#555" }}>
-              <code>action</code> is called each time a checkbox is toggled. It
-              receives the current array of selected values, or{" "}
-              <code>undefined</code> when nothing is selected.
+              <code>action</code> is called each time a radio is selected. It
+              receives the selected value, or <code>undefined</code> when
+              nothing is selected.
             </p>
-            <CheckboxFieldset
-              name="standalone_options"
-              flex="y"
-              spacing="s"
-              action={(values) => {
-                setLastCall(values);
-              }}
-            >
-              <legend>Pick options</legend>
-              <Field flex alignY="center" spacing="s">
-                <Input type="checkbox" value="alpha" />
-                <Label>Alpha</Label>
-              </Field>
-              <Field flex alignY="center" spacing="s">
-                <Input type="checkbox" value="beta" />
-                <Label>Beta</Label>
-              </Field>
-              <Field flex alignY="center" spacing="s">
-                <Input type="checkbox" value="gamma" />
-                <Label>Gamma</Label>
-              </Field>
-            </CheckboxFieldset>
+            <Field vertical spacing="s">
+              <Label>Pick an option</Label>
+              <RadioFieldset
+                name="standalone_option"
+                action={(value) => {
+                  setLastCall(value);
+                }}
+              >
+                <Field flex alignY="center" spacing="s">
+                  <Input type="radio" value="alpha" />
+                  <Label>Alpha</Label>
+                </Field>
+                <Field flex alignY="center" spacing="s">
+                  <Input type="radio" value="beta" />
+                  <Label>Beta</Label>
+                </Field>
+                <Field flex alignY="center" spacing="s">
+                  <Input type="radio" value="gamma" />
+                  <Label>Gamma</Label>
+                </Field>
+              </RadioFieldset>
+            </Field>
             <p
               style={{
                 marginTop: "12px",
@@ -125,29 +125,31 @@
           <div class="demo-section">
             <h2>In a form</h2>
             <p style={{ margin: "0 0 12px", color: "#555" }}>
-              A <code>CheckboxFieldset</code> inside a <code>Form</code>. The
-              selected values are submitted with the form.
+              A <code>RadioFieldset</code> inside a <code>Form</code>. The
+              selected value is submitted with the form.
             </p>
             <Form
               action={(params) => {
                 setSubmitted(params);
               }}
             >
-              <CheckboxFieldset name="form_options" flex="y" spacing="s">
-                <legend>Pick options</legend>
-                <Field flex alignY="center" spacing="s">
-                  <Input type="checkbox" value="alpha" />
-                  <Label>Alpha</Label>
-                </Field>
-                <Field flex alignY="center" spacing="s">
-                  <Input type="checkbox" value="beta" />
-                  <Label>Beta</Label>
-                </Field>
-                <Field flex alignY="center" spacing="s">
-                  <Input type="checkbox" value="gamma" />
-                  <Label>Gamma</Label>
-                </Field>
-              </CheckboxFieldset>
+              <Field vertical spacing="s">
+                <Label>Pick an option</Label>
+                <RadioFieldset name="form_option">
+                  <Field flex alignY="center" spacing="s">
+                    <Input type="radio" value="alpha" />
+                    <Label>Alpha</Label>
+                  </Field>
+                  <Field flex alignY="center" spacing="s">
+                    <Input type="radio" value="beta" />
+                    <Label>Beta</Label>
+                  </Field>
+                  <Field flex alignY="center" spacing="s">
+                    <Input type="radio" value="gamma" />
+                    <Label>Gamma</Label>
+                  </Field>
+                </RadioFieldset>
+              </Field>
               <Button type="submit" style={{ marginTop: "12px" }}>
                 Submit
               </Button>
@@ -176,35 +178,31 @@
           <div class="demo-section">
             <h2>With required validation</h2>
             <p style={{ margin: "0 0 12px", color: "#555" }}>
-              The <code>required</code> attribute on a{" "}
-              <code>CheckboxFieldset</code> means at least one option must be
-              selected before the form can be submitted.
+              The <code>required</code> attribute on a <code>RadioFieldset</code>{" "}
+              means an option must be selected before the form can be submitted.
             </p>
             <Form
               action={(params) => {
                 setSubmitted(params);
               }}
             >
-              <CheckboxFieldset
-                name="required_options"
-                required
-                flex="y"
-                spacing="s"
-              >
-                <legend>Pick options (required)</legend>
-                <Field flex alignY="center" spacing="s">
-                  <Input type="checkbox" value="alpha" />
-                  <Label>Alpha</Label>
-                </Field>
-                <Field flex alignY="center" spacing="s">
-                  <Input type="checkbox" value="beta" />
-                  <Label>Beta</Label>
-                </Field>
-                <Field flex alignY="center" spacing="s">
-                  <Input type="checkbox" value="gamma" />
-                  <Label>Gamma</Label>
-                </Field>
-              </CheckboxFieldset>
+              <Field vertical spacing="s">
+                <Label>Pick an option (required)</Label>
+                <RadioFieldset name="required_option" required>
+                  <Field flex alignY="center" spacing="s">
+                    <Input type="radio" value="alpha" />
+                    <Label>Alpha</Label>
+                  </Field>
+                  <Field flex alignY="center" spacing="s">
+                    <Input type="radio" value="beta" />
+                    <Label>Beta</Label>
+                  </Field>
+                  <Field flex alignY="center" spacing="s">
+                    <Input type="radio" value="gamma" />
+                    <Label>Gamma</Label>
+                  </Field>
+                </RadioFieldset>
+              </Field>
               <Button type="submit" style={{ marginTop: "12px" }}>
                 Submit
               </Button>
@@ -233,43 +231,45 @@
           <div class="demo-section">
             <h2>With readonly options</h2>
             <p style={{ margin: "0 0 12px", color: "#555" }}>
-              Mix of normal and <code>readOnly</code> checkboxes. Clicking a
-              readonly one shows a message. Readonly checkboxes are skipped when
-              navigating with the keyboard.
+              Mix of normal and <code>readOnly</code> radios. Clicking a
+              readonly one shows a message. Arrow key navigation skips readonly
+              options.
             </p>
-            <CheckboxFieldset name="readonly_options" flex="y" spacing="s">
-              <legend>Pick options</legend>
-              <Field flex alignY="center" spacing="s">
-                <Input type="checkbox" value="alpha" />
-                <Label>Alpha (normal)</Label>
-              </Field>
-              <Field flex alignY="center" spacing="s">
-                <Input type="checkbox" value="beta" />
-                <Label>Beta (normal)</Label>
-              </Field>
-              <Field flex alignY="center" spacing="s">
-                <Input
-                  type="checkbox"
-                  value="gamma"
-                  readOnly
-                  readOnlyMessage={ro}
-                />
-                <Label>Gamma (readonly)</Label>
-              </Field>
-              <Field flex alignY="center" spacing="s">
-                <Input
-                  type="checkbox"
-                  value="delta"
-                  readOnly
-                  readOnlyMessage={ro}
-                />
-                <Label>Delta (readonly)</Label>
-              </Field>
-              <Field flex alignY="center" spacing="s">
-                <Input type="checkbox" value="epsilon" />
-                <Label>Epsilon (normal)</Label>
-              </Field>
-            </CheckboxFieldset>
+            <Field vertical spacing="s">
+              <Label>Pick an option</Label>
+              <RadioFieldset name="readonly_option">
+                <Field flex alignY="center" spacing="s">
+                  <Input type="radio" value="alpha" />
+                  <Label>Alpha (normal)</Label>
+                </Field>
+                <Field flex alignY="center" spacing="s">
+                  <Input type="radio" value="beta" />
+                  <Label>Beta (normal)</Label>
+                </Field>
+                <Field flex alignY="center" spacing="s">
+                  <Input
+                    type="radio"
+                    value="gamma"
+                    readOnly
+                    readOnlyMessage={ro}
+                  />
+                  <Label>Gamma (readonly)</Label>
+                </Field>
+                <Field flex alignY="center" spacing="s">
+                  <Input
+                    type="radio"
+                    value="delta"
+                    readOnly
+                    readOnlyMessage={ro}
+                  />
+                  <Label>Delta (readonly)</Label>
+                </Field>
+                <Field flex alignY="center" spacing="s">
+                  <Input type="radio" value="epsilon" />
+                  <Label>Epsilon (normal)</Label>
+                </Field>
+              </RadioFieldset>
+            </Field>
           </div>
         );
       };
