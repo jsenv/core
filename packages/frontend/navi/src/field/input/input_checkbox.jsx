@@ -529,9 +529,7 @@ const InputCheckboxField = (props) => {
       onInput={(e) => {
         onInput?.(e);
         const checkbox = ref.current;
-        dispatchRequestAction(checkbox, {
-          event: e,
-        });
+        dispatchRequestAction(checkbox, { event: e });
       }}
       onKeyDown={(e) => {
         onKeyDown?.(e);
