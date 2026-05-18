@@ -17,6 +17,7 @@ import {
   useState,
 } from "preact/hooks";
 
+import { useFocusGroup } from "@jsenv/navi/src/utils/focus/use_focus_group.js";
 import { Box } from "../../box/box.jsx";
 import { Separator } from "../../layout/separator.jsx";
 import { useDebugScroll } from "../../navi_debug.jsx";
@@ -24,10 +25,8 @@ import {
   createComponentResolver,
   useNextResolver,
 } from "../../resolver/resolver.jsx";
-import { naviI18n } from "../../text/navi_i18n.js";
 import { useItemTracker } from "../../utils/item_tracker/use_item_tracker.js";
 import { useDisplayedLayoutEffect } from "../../utils/use_displayed_layout_effect.js";
-import { Field } from "../field.jsx";
 import { useFieldGroupProps } from "../use_field_group_props.jsx";
 import {
   dispatchRequestAction,
@@ -469,11 +468,11 @@ const css = /* css */ `
  *                          min-height so filtering cannot collapse the layout.
  *   ...rest              — forwarded to the outer scroll container <Box>
  */
-const ListFieldResolver = (props) => {
+const ListFieldsetResolver = (props) => {
   const Next = useNextResolver();
 
   if (props.name || Object.hasOwn(props, "value") || props.action) {
-    return <ListField {...props} />;
+    return <ListFieldset {...props} />;
   }
   return <Next {...props} />;
 };
@@ -485,7 +484,7 @@ const ListWithPopoverResolver = (props) => {
   return <Next {...props} />;
 };
 const renderList = createComponentResolver([
-  ListFieldResolver,
+  ListFieldsetResolver,
   ListWithPopoverResolver,
 ]);
 
@@ -1209,12 +1208,12 @@ const BottomFiller = ({
 // Interactive variant: manages hover/keyboard/selection state and handles the
 // navi event protocol. When an action is provided it binds the action to ui state
 // and fires it on select. When only uiAction is provided it calls it directly.
-const ListField = (props) => {
+const ListFieldset = (props) => {
   const Next = useNextResolver();
   const defaultName = useId();
   // we allow ourselves to auto-generate a name
-  props.name = props.name || defaultName;
-  const { multiple } = props;
+  props.name = props.name || `listbox_${defaultName}`;
+  const { ref, multiple } = props;
   const fieldProps = useFieldGroupProps(props, {
     fieldType: "list",
     childComponentType: multiple ? "checkbox" : "radio",
@@ -1239,6 +1238,7 @@ const ListField = (props) => {
           return activeValue;
         },
   });
+  useFocusGroup(ref, { direction: "both", loop: true });
 
   const visibleItemsRef = useRef([]);
 
@@ -1246,6 +1246,8 @@ const ListField = (props) => {
     <Next
       as="fieldset"
       aria-multiselectable={multiple ? "true" : undefined}
+      // TODO: find how to know select item id (when multiple is false)
+      // aria-activedescendant={fieldProps.uiState}
       {...fieldProps}
       onListVisibleItemsChange={(visibleItems) => {
         props.onListVisibleItemsChange?.(visibleItems);

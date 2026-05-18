@@ -128,13 +128,27 @@
               }}
             >
               <ListItem index={0} id="readonly_default" flex spacing="s">
-                <Field paddingX="s" paddingY="m">
+                <Field
+                  paddingX="m"
+                  paddingY="m"
+                  flex
+                  alignY="center"
+                  spacing="s"
+                  expandX
+                >
                   <Input type="radio" value="readonly_default" readOnly />
                   Readonly (default message)
                 </Field>
               </ListItem>
               <ListItem index={1} id="readonly_custom" flex spacing="s">
-                <Field paddingX="s" paddingY="m">
+                <Field
+                  paddingX="m"
+                  paddingY="m"
+                  flex
+                  alignY="center"
+                  spacing="s"
+                  expandX
+                >
                   <Input
                     type="radio"
                     value="readonly_custom"
@@ -149,20 +163,38 @@
                 </Field>
               </ListItem>
               <ListItem index={2} id="apple" flex spacing="s">
-                <Input
-                  type="radio"
-                  value="Apple"
-                  checked={selected === "Apple"}
-                />
-                Apple (clickable)
+                <Field
+                  paddingX="m"
+                  paddingY="m"
+                  flex
+                  alignY="center"
+                  spacing="s"
+                  expandX
+                >
+                  <Input
+                    type="radio"
+                    value="Apple"
+                    checked={selected === "Apple"}
+                  />
+                  Apple (clickable)
+                </Field>
               </ListItem>
               <ListItem index={3} id="banana" flex spacing="s">
-                <Input
-                  type="radio"
-                  value="Banana"
-                  checked={selected === "Banana"}
-                />
-                Banana (clickable)
+                <Field
+                  paddingX="m"
+                  paddingY="m"
+                  flex
+                  alignY="center"
+                  spacing="s"
+                  expandX
+                >
+                  <Input
+                    type="radio"
+                    value="Banana"
+                    checked={selected === "Banana"}
+                  />
+                  Banana (clickable)
+                </Field>
               </ListItem>
             </List>
             <div

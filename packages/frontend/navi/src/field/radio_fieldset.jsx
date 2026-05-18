@@ -1,4 +1,4 @@
-import { useRef } from "preact/hooks";
+import { useId, useRef } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
 import { useFocusGroup } from "../utils/focus/use_focus_group.js";
@@ -8,6 +8,8 @@ import { dispatchRequestAction } from "./validation/custom_constraint_validation
 export const RadioFieldset = (props) => {
   const refDefault = useRef(null);
   props.ref = props.ref || refDefault;
+  const defaultName = useId();
+  props.name = props.name || `radio_group_${defaultName}`;
   const radioFieldset = <RadioFieldsetUI {...props} />;
 
   return radioFieldset;
