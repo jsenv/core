@@ -530,6 +530,8 @@ export const installCustomConstraintValidation = (
       const checkResult = constraint.check(fieldForConstraint, {
         fromRequestAction,
         skipReadonly,
+        skipRequired:
+          requester.tagName === "INPUT" && requester.type === "checkbox",
         registerChange,
       });
       if (!checkResult) {

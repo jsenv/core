@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CheckboxFieldset Demo</title>
+    <style>
+      body {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: #f5f5f5;
+      }
+
+      h1 {
+        margin-bottom: 30px;
+        color: #333;
+        font-size: 2rem;
+        text-align: center;
+      }
+
+      .demo-section {
+        margin-bottom: 40px;
+        padding: 20px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      .demo-section h2 {
+        margin: 0 0 20px 0;
+        padding-bottom: 10px;
+        color: #333;
+        font-size: 1.4rem;
+        border-bottom: 2px solid #ddd;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>CheckboxFieldset Demo</h1>
+    <div id="root"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useState } from "preact/hooks";
+      import {
+        Button,
+        Form,
+        CheckboxFieldset,
+        Field,
+        Label,
+        Input,
+        NaviDebug,
+      } from "@jsenv/navi";
+
+      const App = () => {
+        return (
+          <NaviDebug debugAction>
+            <div>
+              <StandaloneDemo />
+              <InFormDemo />
+              <RequiredDemo />
+            </div>
+          </NaviDebug>
+        );
+      };
+
+      const StandaloneDemo = () => {
+        return (
+          <div class="demo-section">
+            <h2>Standalone</h2>
+            <p style={{ margin: "0 0 12px", color: "#555" }}>
+              A <code>CheckboxFieldset</code> outside any form. Selecting or
+              deselecting options triggers the <code>uiAction</code> callback.
+            </p>
+            <CheckboxFieldset name="standalone_options" flex="y" spacing="s">
+              <legend>Pick options</legend>
+              <Field flex alignY="center" spacing="s">
+                <Input type="checkbox" value="alpha" />
+                <Label>Alpha</Label>
+              </Field>
+              <Field flex alignY="center" spacing="s">
+                <Input type="checkbox" value="beta" />
+                <Label>Beta</Label>
+              </Field>
+              <Field flex alignY="center" spacing="s">
+                <Input type="checkbox" value="gamma" />
+                <Label>Gamma</Label>
+              </Field>
+            </CheckboxFieldset>
+          </div>
+        );
+      };
+
+      const InFormDemo = () => {
+        const [submitted, setSubmitted] = useState(null);
+        return (
+          <div class="demo-section">
+            <h2>In a form</h2>
+            <p style={{ margin: "0 0 12px", color: "#555" }}>
+              A <code>CheckboxFieldset</code> inside a <code>Form</code>. The
+              selected values are submitted with the form.
+            </p>
+            <Form
+              action={(params) => {
+                setSubmitted(params);
+              }}
+            >
+              <CheckboxFieldset name="form_options" flex="y" spacing="s">
+                <legend>Pick options</legend>
+                <Field flex alignY="center" spacing="s">
+                  <Input type="checkbox" value="alpha" />
+                  <Label>Alpha</Label>
+                </Field>
+                <Field flex alignY="center" spacing="s">
+                  <Input type="checkbox" value="beta" />
+                  <Label>Beta</Label>
+                </Field>
+                <Field flex alignY="center" spacing="s">
+                  <Input type="checkbox" value="gamma" />
+                  <Label>Gamma</Label>
+                </Field>
+              </CheckboxFieldset>
+              <Button type="submit" style={{ marginTop: "12px" }}>
+                Submit
+              </Button>
+              {submitted !== null && (
+                <pre
+                  style={{
+                    marginTop: "12px",
+                    padding: "8px",
+                    fontFamily: "monospace",
+                    background: "#f8f9fa",
+                    border: "1px solid #dee2e6",
+                    borderRadius: "4px",
+                  }}
+                >
+                  {JSON.stringify(submitted, null, 2)}
+                </pre>
+              )}
+            </Form>
+          </div>
+        );
+      };
+
+      const RequiredDemo = () => {
+        const [submitted, setSubmitted] = useState(null);
+        return (
+          <div class="demo-section">
+            <h2>With required validation</h2>
+            <p style={{ margin: "0 0 12px", color: "#555" }}>
+              The <code>required</code> attribute on a{" "}
+              <code>CheckboxFieldset</code> means at least one option must be
+              selected before the form can be submitted.
+            </p>
+            <Form
+              action={(params) => {
+                setSubmitted(params);
+              }}
+            >
+              <CheckboxFieldset
+                name="required_options"
+                required
+                flex="y"
+                spacing="s"
+              >
+                <legend>Pick options (required)</legend>
+                <Field flex alignY="center" spacing="s">
+                  <Input type="checkbox" value="alpha" />
+                  <Label>Alpha</Label>
+                </Field>
+                <Field flex alignY="center" spacing="s">
+                  <Input type="checkbox" value="beta" />
+                  <Label>Beta</Label>
+                </Field>
+                <Field flex alignY="center" spacing="s">
+                  <Input type="checkbox" value="gamma" />
+                  <Label>Gamma</Label>
+                </Field>
+              </CheckboxFieldset>
+              <Button type="submit" style={{ marginTop: "12px" }}>
+                Submit
+              </Button>
+              {submitted !== null && (
+                <pre
+                  style={{
+                    marginTop: "12px",
+                    padding: "8px",
+                    fontFamily: "monospace",
+                    background: "#f8f9fa",
+                    border: "1px solid #dee2e6",
+                    borderRadius: "4px",
+                  }}
+                >
+                  {JSON.stringify(submitted, null, 2)}
+                </pre>
+              )}
+            </Form>
+          </div>
+        );
+      };
+
+      render(<App />, document.querySelector("#root"));
+    </script>
+  </body>
+</html>
