@@ -84,6 +84,8 @@
         Box,
         NaviDebug,
         Field,
+        SelectableList,
+        Selectable,
       } from "@jsenv/navi";
 
       const App = () => {
@@ -120,83 +122,67 @@
               callbacks must NOT be called for readonly items.
             </p>
 
-            <List
+            <SelectableList
               // name="fruits"
               action={(v) => {
                 addLog(`action called with: "${v}"`);
                 setSelected(v);
               }}
             >
-              <ListItem index={0} id="readonly_default" flex spacing="s">
-                <Field
-                  paddingX="m"
-                  paddingY="m"
-                  flex
-                  alignY="center"
-                  spacing="s"
-                  expandX
-                >
-                  <Input type="radio" value="readonly_default" readOnly />
-                  Readonly (default message)
-                </Field>
-              </ListItem>
-              <ListItem index={1} id="readonly_custom" flex spacing="s">
-                <Field
-                  paddingX="m"
-                  paddingY="m"
-                  flex
-                  alignY="center"
-                  spacing="s"
-                  expandX
-                >
-                  <Input
-                    type="radio"
-                    value="readonly_custom"
-                    readOnly
-                    readOnlyMessage={
-                      <>
-                        Ce créneau est déjà <strong>réservé.</strong>
-                      </>
-                    }
-                  />
-                  Readonly (custom message)
-                </Field>
-              </ListItem>
-              <ListItem index={2} id="apple" flex spacing="s">
-                <Field
-                  paddingX="m"
-                  paddingY="m"
-                  flex
-                  alignY="center"
-                  spacing="s"
-                  expandX
-                >
-                  <Input
-                    type="radio"
-                    value="Apple"
-                    checked={selected === "Apple"}
-                  />
-                  Apple (clickable)
-                </Field>
-              </ListItem>
-              <ListItem index={3} id="banana" flex spacing="s">
-                <Field
-                  paddingX="m"
-                  paddingY="m"
-                  flex
-                  alignY="center"
-                  spacing="s"
-                  expandX
-                >
-                  <Input
-                    type="radio"
-                    value="Banana"
-                    checked={selected === "Banana"}
-                  />
-                  Banana (clickable)
-                </Field>
-              </ListItem>
-            </List>
+              <Selectable
+                index={0}
+                id="readonly_default"
+                flex
+                spacing="s"
+                value="readonly_default"
+                readOnly
+              >
+                <Selectable.Input />
+                Readonly (default message)
+              </Selectable>
+              <Selectable
+                index={1}
+                id="readonly_custom"
+                flex
+                spacing="s"
+                value="readonly_custom"
+                readOnly
+                readOnlyMessage={
+                  <>
+                    Ce créneau est déjà <strong>réservé.</strong>
+                  </>
+                }
+              >
+                <Selectable.Input />
+                Readonly (custom message)
+              </Selectable>
+              <Selectable
+                index={2}
+                id="apple"
+                value="Apple"
+                flex
+                spacing="s"
+                selected={selected === "Apple"}
+              >
+                <Selectable.Input />
+                Apple (clickable)
+              </Selectable>
+              <Selectable
+                index={3}
+                id="banana"
+                value="Banana"
+                selected={selected === "Bannana"}
+                flex
+                spacing="s"
+                paddingX="m"
+                paddingY="m"
+                alignY="center"
+                selected={selected === "Banana"}
+              >
+                <Selectable.Input />
+                Banana (clickable)
+              </Selectable>
+            </SelectableList>
             <div
               className="value-display"
               style={{ minHeight: 60, whiteSpace: "pre-line" }}

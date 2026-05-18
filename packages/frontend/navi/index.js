@@ -127,6 +127,10 @@ export {
   requestListClose,
   requestListOpen,
 } from "./src/field/list/list.jsx";
+export {
+  Selectable,
+  SelectableList,
+} from "./src/field/list/selectable_list.jsx";
 export { useSearchText } from "./src/field/list/use_search_text.js";
 // --- List end ---
 // --- Table start---

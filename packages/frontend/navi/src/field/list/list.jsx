@@ -17,7 +17,6 @@ import {
   useState,
 } from "preact/hooks";
 
-import { useFocusGroup } from "@jsenv/navi/src/utils/focus/use_focus_group.js";
 import { Box } from "../../box/box.jsx";
 import { Separator } from "../../layout/separator.jsx";
 import { useDebugScroll } from "../../navi_debug.jsx";
@@ -27,11 +26,6 @@ import {
 } from "../../resolver/resolver.jsx";
 import { useItemTracker } from "../../utils/item_tracker/use_item_tracker.js";
 import { useDisplayedLayoutEffect } from "../../utils/use_displayed_layout_effect.js";
-import { useFieldGroupProps } from "../use_field_group_props.jsx";
-import {
-  dispatchRequestAction,
-  dispatchRequestInteraction,
-} from "../validation/custom_constraint_validation.js";
 import { useSearchHighlight } from "./search_highlight.js";
 
 const ListItemTrackerContext = createContext(null);
@@ -40,13 +34,6 @@ const PendingScrollRefContext = createContext(null);
 
 export const ListIdContext = createContext();
 export const InsideRealListItemContext = createContext(false);
-
-// Provided by ListInteractive to give descendants (e.g. Suggestion) access
-// to hover/keyboard-pointed/selection state.
-// Values are item IDs (strings) or null — not indices — so they survive
-// index changes caused by search reordering
-// Non-null when inside a ListInteractive (used to render data-interactive).
-const ListInteractiveContext = createContext(false);
 
 // When total rendered items exceeds renderBudget, a render window [start, end)
 // is activated to cap the number of DOM nodes. Items outside the window return
@@ -150,8 +137,6 @@ const css = /* css */ `
     display: flex;
     width: fit-content;
     max-width: 100%;
-    margin: 0; /* Reset margin that might come from fieldset */
-    padding: 0; /* Reset padding that might come from fieldset */
     flex-direction: column;
     background-color: var(--x-list-background-color);
     border: var(--x-list-border-width) solid var(--x-list-border-color);
@@ -468,14 +453,6 @@ const css = /* css */ `
  *                          min-height so filtering cannot collapse the layout.
  *   ...rest              — forwarded to the outer scroll container <Box>
  */
-const ListFieldsetResolver = (props) => {
-  const Next = useNextResolver();
-
-  if (props.name || Object.hasOwn(props, "value") || props.action) {
-    return <ListFieldset {...props} />;
-  }
-  return <Next {...props} />;
-};
 const ListWithPopoverResolver = (props) => {
   const Next = useNextResolver();
   if (props.popover === true) {
@@ -483,10 +460,7 @@ const ListWithPopoverResolver = (props) => {
   }
   return <Next {...props} />;
 };
-const renderList = createComponentResolver([
-  ListFieldsetResolver,
-  ListWithPopoverResolver,
-]);
+const renderList = createComponentResolver([ListWithPopoverResolver]);
 
 export const List = (props) => {
   const refDefault = useRef(null);
@@ -1205,115 +1179,6 @@ const BottomFiller = ({
   );
 };
 
-// Interactive variant: manages hover/keyboard/selection state and handles the
-// navi event protocol. When an action is provided it binds the action to ui state
-// and fires it on select. When only uiAction is provided it calls it directly.
-const ListFieldset = (props) => {
-  const Next = useNextResolver();
-  const defaultName = useId();
-  // we allow ourselves to auto-generate a name
-  props.name = props.name || `listbox_${defaultName}`;
-  const { ref, multiple } = props;
-  const fieldProps = useFieldGroupProps(props, {
-    fieldType: "list",
-    childComponentType: multiple ? "checkbox" : "radio",
-    aggregateChildStates: multiple
-      ? (childUIStateControllers) => {
-          const values = [];
-          for (const childUIStateController of childUIStateControllers) {
-            if (childUIStateController.uiState) {
-              values.push(childUIStateController.uiState);
-            }
-          }
-          return values.length === 0 ? undefined : values;
-        }
-      : (childUIStateControllers) => {
-          let activeValue;
-          for (const childUIStateController of childUIStateControllers) {
-            if (childUIStateController.uiState) {
-              activeValue = childUIStateController.uiState;
-              break;
-            }
-          }
-          return activeValue;
-        },
-  });
-  useFocusGroup(ref, { direction: "both", loop: true });
-
-  const visibleItemsRef = useRef([]);
-
-  const listVnode = (
-    <Next
-      as="fieldset"
-      aria-multiselectable={multiple ? "true" : undefined}
-      // TODO: find how to know select item id (when multiple is false)
-      // aria-activedescendant={fieldProps.uiState}
-      {...fieldProps}
-      onListVisibleItemsChange={(visibleItems) => {
-        props.onListVisibleItemsChange?.(visibleItems);
-        visibleItemsRef.current = visibleItems;
-      }}
-      onnavi_list_nav={(e) => {
-        const { item, event } = e.detail;
-        // const id = item ? item.id : null;
-        // const isNonUserNav =
-        //   event.type === "navi_list_nav_top_on_displayed" ||
-        //   event.type === "navi_list_top_match_change";
-        const isAutomaticNav =
-          event.type === "navi_list_nav_top_on_displayed" ||
-          event.type === "navi_list_top_match_change" ||
-          event.type === "navi_scroll_restore";
-        if (item && !isAutomaticNav) {
-          const listEl = e.currentTarget;
-          dispatchPublicCustomEvent(listEl, "navi_list_item_point", {
-            item,
-            event,
-          });
-        }
-      }}
-      onnavi_list_request_nav={(e) => {
-        const { item } = e.detail;
-        if (!item) {
-          return;
-        }
-        const listEl = e.currentTarget;
-        dispatchCustomEvent(listEl, "navi_list_request_scroll", {
-          event: e,
-          item,
-        });
-      }}
-      onnavi_list_request_select={(e) => {
-        const { item } = e.detail;
-        if (!item) {
-          return;
-        }
-        const listEl = e.currentTarget;
-        dispatchCustomEvent(listEl, "navi_list_request_nav", {
-          event: e,
-          item,
-        });
-        dispatchPublicCustomEvent(listEl, "navi_list_select", {
-          item,
-          event: e,
-        });
-        const requester = item
-          ? listEl.querySelector(`#${CSS.escape(item.id)}`)
-          : e.target;
-        dispatchRequestAction(listEl, {
-          event: e,
-          requester,
-        });
-      }}
-    />
-  );
-
-  return (
-    <ListInteractiveContext.Provider value={true}>
-      {listVnode}
-    </ListInteractiveContext.Provider>
-  );
-};
-
 // Popover variant: handles open/close/positioning events and forwards
 // navigate/confirm/clear to the underlying list.
 const ListWithPopover = (props) => {
@@ -1478,39 +1343,6 @@ const ListItemVoid = () => {
 const ListItemReal = (props) => {
   const defaultRef = useRef(null);
   props.ref = props.ref || defaultRef;
-  const isInteractive = useContext(ListInteractiveContext);
-  if (isInteractive) {
-    return <ListItemRealField {...props} />;
-  }
-  return <ListItemRealUI {...props} />;
-};
-const ListItemRealField = (props) => {
-  const { item } = props;
-  // requiredMessage={naviI18n(`list_item.readonly`, { item })
-
-  return (
-    <ListItemRealUI
-      {...props}
-      item={undefined}
-      onnavi_list_item_request_select={(e) => {
-        const listItem = e.currentTarget;
-        const listEl = listItem.closest(".navi_list");
-        const allowed = dispatchRequestInteraction(listItem, e);
-        if (allowed) {
-          dispatchCustomEvent(listEl, "navi_list_request_select", {
-            item,
-            event: e,
-          });
-        }
-      }}
-    >
-      <ListInteractiveContext.Provider value={undefined}>
-        {props.children}
-      </ListInteractiveContext.Provider>
-    </ListItemRealUI>
-  );
-};
-const ListItemRealUI = (props) => {
   const { ref, id, hidden, highlight, children, ...rest } = props;
   const pendingScrollRef = useContext(PendingScrollRefContext);
   const pendingScroll = pendingScrollRef.current;
