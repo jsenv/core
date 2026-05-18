@@ -563,7 +563,12 @@ const getStylePropGroup = (name) => {
   return null;
 };
 const getStringifier = (key) => {
-  if (key === "borderRadius") {
+  if (
+    key === "borderRadius" ||
+    key === "spacing" ||
+    key === "spacingX" ||
+    key === "spacingY"
+  ) {
     return stringifySpacingStyle;
   }
   const group = getStylePropGroup(key);

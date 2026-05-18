@@ -498,6 +498,11 @@ export const Box = (props) => {
         // otherwise we decide to put it either on self or child
         const visualChildPropStrategy =
           visualSelector && getVisualChildStylePropStrategy(name);
+        const cssVar = styleCSSVars[name];
+        if (cssVar && typeof cssVar === "string") {
+          addStyle(value, name, styleContext, boxStylesTarget, "css");
+          return;
+        }
         const getStyle = getHowToHandleStyleProp(name);
         if (
           // prop name === css style name
