@@ -1,28 +1,4 @@
-import { useCallback, useRef } from "preact/hooks";
-
-/**
- * Returns a stable event handler to attach as onnavi_constraint_message on a DOM element.
- * messageMap keys are constraint names (e.g. "readonly"), values are the message
- * to display — either a string or a Preact element.
- *
- * @example
- * const onNaviConstraintMessage = useOnNaviConstraintMessage({ readOnlyMessage: <MyMessage item={item} /> });
- * return <li onnavi_constraint_message={onNaviConstraintMessage} />;
- */
-export const useOnNaviConstraintMessage = (props) => {
-  const propsRef = useRef(props);
-  propsRef.current = props;
-
-  return useCallback((e) => {
-    const propName = MAPPING[e.detail.constraintName];
-    const message = propsRef.current[propName];
-    if (message !== undefined && message !== null) {
-      e.detail.respondMessage(message);
-    }
-  }, []);
-};
-
-const MAPPING = {
+export const CONSTRAINT_NAME_TO_PROP = {
   disabled: "disabledMessage",
   required: "requiredMessage",
   pattern: "patternMessage",
@@ -41,6 +17,24 @@ const MAPPING = {
   one_of: "oneOfMessage",
   readonly: "readOnlyMessage",
   available: "availableMessage",
+};
+
+const CONSTRAINT_MESSAGE_PROP_NAME_SET = new Set(
+  Object.values(CONSTRAINT_NAME_TO_PROP),
+);
+
+export const extractMessageAndRemainingProps = (props) => {
+  const ownMessages = {};
+  const remaining = {};
+  const keyToVisit = new Set(Object.keys(props));
+  for (const key of keyToVisit) {
+    if (CONSTRAINT_MESSAGE_PROP_NAME_SET.has(key)) {
+      ownMessages[key] = props[key];
+    } else {
+      remaining[key] = props[key];
+    }
+  }
+  return [ownMessages, remaining];
 };
 
 export const getConstraintMessage = (

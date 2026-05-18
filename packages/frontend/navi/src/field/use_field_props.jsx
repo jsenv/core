@@ -24,6 +24,7 @@ import {
   onRequestAction,
   onRequestInteraction,
 } from "./validation/custom_constraint_validation.js";
+import { useConstraintMessages } from "./validation/hooks/use_constraint_messages.js";
 import { useConstraints } from "./validation/hooks/use_constraints.js";
 
 export const UI_STATE_NOT_AVAILABLE = Symbol("UI_STATE_NOT_AVAILABLE");
@@ -79,6 +80,7 @@ export const useActionProps = (
   const {
     ref,
 
+    constraints,
     loading,
     readOnly,
     disabled,
@@ -132,7 +134,8 @@ export const useActionProps = (
     focusVisible: autoFocusVisible,
     autoSelect,
   });
-  const remainingProps = useConstraints(ref, rest);
+  useConstraints(ref, constraints);
+  const remainingProps = useConstraintMessages(ref, rest);
 
   let childrenWithContext;
   if (children === undefined) {

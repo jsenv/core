@@ -4,10 +4,12 @@ import {
   useId,
   useLayoutEffect,
   useMemo,
+  useRef,
   useState,
 } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
+import { extractMessageAndRemainingProps } from "./validation/constraint_message.js";
 
 const css = /* css */ `
   @layer navi {
@@ -83,6 +85,8 @@ export const reportInteractiveToField = (value) => {
  */
 export const Field = (props) => {
   import.meta.css = css;
+  const refDefault = useRef();
+  props.ref = props.ref || refDefault;
   const idDefault = useId();
   const fieldId = `field_${idDefault}`;
   props.id = props.id || fieldId;
@@ -111,6 +115,13 @@ const FieldPseudoClasses = [
 
 export const useFieldBehaviorProps = (props) => {
   const { id, readOnly, disabled, ...rest } = props;
+
+  // Collect constraint message props so child fields can inherit them via context.
+  const [fieldMessageProps, remainingProps] =
+    extractMessageAndRemainingProps(rest);
+  const fieldMessagePropsRef = useRef(fieldMessageProps);
+  fieldMessagePropsRef.current = fieldMessageProps;
+
   const [readOnlyFromChild, setReadOnlyFromChild] = useState(false);
   const [disabledByChild, setDisabledByChild] = useState(false);
   const [interactive, setInteractive] = useState(false);
@@ -126,6 +137,7 @@ export const useFieldBehaviorProps = (props) => {
       setReadOnly: setReadOnlyFromChild,
       setDisabled: setDisabledByChild,
       setInteractive,
+      messagePropsRef: fieldMessagePropsRef,
     }),
     [id, interactive, readOnlyEffective, disabledEffective],
   );
@@ -142,13 +154,13 @@ export const useFieldBehaviorProps = (props) => {
 
   return {
     "data-interactive": interactive ? "" : undefined,
-    ...rest,
+    ...remainingProps,
     "children": childrenWithContext,
     "pseudoClasses": FieldPseudoClasses,
     "basePseudoState": {
       ":read-only": readOnlyEffective,
       ":disabled": disabledEffective,
-      ...rest.basePseudoState,
+      ...remainingProps.basePseudoState,
     },
   };
 };
