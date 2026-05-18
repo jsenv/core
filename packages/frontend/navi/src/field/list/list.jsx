@@ -27,7 +27,7 @@ import {
 import { naviI18n } from "../../text/navi_i18n.js";
 import { useItemTracker } from "../../utils/item_tracker/use_item_tracker.js";
 import { useDisplayedLayoutEffect } from "../../utils/use_displayed_layout_effect.js";
-import { useFieldBehaviorProps } from "../field.jsx";
+import { Field } from "../field.jsx";
 import { useFieldGroupProps } from "../use_field_group_props.jsx";
 import {
   dispatchRequestAction,
@@ -259,6 +259,10 @@ const css = /* css */ `
     /* When list has sticky header/footer, put a scroll padding */
     scroll-margin-top: var(--x-list-scroll-spacing-top);
     scroll-margin-bottom: var(--x-list-scroll-spacing-bottom);
+
+    > label {
+      margin: calc(-1 * var(--list-item-padding));
+    }
 
     &[data-interactive] {
       cursor: pointer;
@@ -1481,14 +1485,10 @@ const ListItemReal = (props) => {
 };
 const ListItemRealField = (props) => {
   const { item } = props;
-  const fieldBehaviorProps = useFieldBehaviorProps({
-    requiredMessage: naviI18n(`list_item.readonly`, { item }),
-    ...props,
-  });
 
   return (
     <ListItemRealUI
-      {...fieldBehaviorProps}
+      {...props}
       item={undefined}
       onnavi_list_item_request_select={(e) => {
         const listItem = e.currentTarget;
@@ -1502,9 +1502,11 @@ const ListItemRealField = (props) => {
         }
       }}
     >
-      <ListInteractiveContext.Provider value={undefined}>
-        {fieldBehaviorProps.children}
-      </ListInteractiveContext.Provider>
+      <Field requiredMessage={naviI18n(`list_item.readonly`, { item })}>
+        <ListInteractiveContext.Provider value={undefined}>
+          {props.children}
+        </ListInteractiveContext.Provider>
+      </Field>
     </ListItemRealUI>
   );
 };
