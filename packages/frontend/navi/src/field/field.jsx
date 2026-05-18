@@ -14,6 +14,24 @@ import { extractMessageAndRemainingProps } from "./validation/constraint_message
 const css = /* css */ `
   @layer navi {
     [data-navi-field] {
+      --field-spacing: var(--navi-s);
+
+      > * + .navi_label {
+        padding-left: var(--field-spacing);
+      }
+      > .navi_label:first-child {
+        padding-right: var(--field-spacing);
+      }
+      &[data-vertical] > .navi_label:first-child {
+        padding-bottom: var(--field--spacing);
+      }
+
+      .navi_checkbox {
+        --margin: 0;
+      }
+      .navi_radio {
+        --margin: 0;
+      }
       &[data-interactive] {
         .navi_label {
           cursor: pointer;
@@ -21,7 +39,6 @@ const css = /* css */ `
           user-select: none;
         }
       }
-
       &[data-readonly],
       &[data-disabled] {
         .navi_label {
@@ -97,11 +114,15 @@ export const Field = (props) => {
     <Box
       flex={vertical ? "y" : undefined}
       alignX={vertical ? "start" : undefined}
-      spacing="s"
+      data-vertical={vertical ? "" : undefined}
+      styleCSSVars={FieldCSSVars}
       // baseClassName="navi_field"
       {...fieldBehaviorProps}
     />
   );
+};
+const FieldCSSVars = {
+  spacing: "--field-spacing",
 };
 const FieldPseudoClasses = [
   ":hover",
