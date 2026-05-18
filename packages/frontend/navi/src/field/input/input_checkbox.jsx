@@ -393,9 +393,6 @@ const InputCheckboxField = (props) => {
     type,
     defaultChecked,
     /* eslint-enable no-unused-vars */
-    name,
-    value,
-    required,
     onClick,
     onInput,
     accentColor,
@@ -427,9 +424,8 @@ const InputCheckboxField = (props) => {
       getPropFromState: Boolean,
     },
   );
-  const { basePseudoState, value: checked } = fieldProps;
+  const { basePseudoState, checked } = fieldProps;
   const loading = basePseudoState[":-navi-loading"];
-  const readOnly = basePseudoState[":read-only"];
 
   const renderCheckbox = (checkboxProps) => {
     return (
@@ -438,25 +434,12 @@ const InputCheckboxField = (props) => {
         as="input"
         ref={ref}
         type="checkbox"
-        name={name}
-        value={value}
-        checked={checked}
-        required={required}
-        data-readonly={readOnly ? "" : undefined}
-        aria-busy={loading}
         baseClassName="navi_native_field"
         data-callout-arrow-x="center"
       />
     );
   };
-  const renderCheckboxMemoized = useCallback(renderCheckbox, [
-    name,
-    value,
-    checked,
-    required,
-    readOnly,
-    loading,
-  ]);
+  const renderCheckboxMemoized = useCallback(renderCheckbox, []);
 
   const boxRef = useRef();
   useAccentColorAttributes(boxRef, accentColor, {
@@ -601,4 +584,4 @@ const CheckboxPseudoClasses = [
   ":-navi-loading",
 ];
 const CheckboxPseudoElements = ["::-navi-loader", "::-navi-checkmark"];
-const CheckboxChildPropSet = new Set([...fieldPropSet]);
+const CheckboxChildPropSet = new Set([...fieldPropSet, "checked"]);
