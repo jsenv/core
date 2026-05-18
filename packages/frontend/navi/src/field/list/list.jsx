@@ -78,7 +78,9 @@ const css = /* css */ `
       --list-max-height: 220px;
     }
     .navi_list_item {
-      --list-item-padding: 8px 12px;
+      --list-item-padding-x: 12px;
+      --list-item-padding-y: 8px;
+      --list-item-padding: var(--list-item-padding-y) var(--list-item-padding-x);
       --list-item-color: inherit;
       --list-item-font-weight: inherit;
 
@@ -261,7 +263,8 @@ const css = /* css */ `
     scroll-margin-bottom: var(--x-list-scroll-spacing-bottom);
 
     > label {
-      margin: calc(-1 * var(--list-item-padding));
+      margin-block: calc(-1 * var(--list-item-padding-y));
+      margin-inline: calc(-1 * var(--list-item-padding-x));
     }
 
     &[data-interactive] {
@@ -1549,6 +1552,8 @@ const ListItemRealUI = (props) => {
   );
 };
 const LIST_ITEM_STYLE_CSS_VARS = {
+  "paddingX": "--list-item-padding-x",
+  "paddingY": "--list-item-padding-y",
   "padding": "--list-item-padding",
   "color": "--list-item-color",
   "backgroundColor": "--list-item-background-color",

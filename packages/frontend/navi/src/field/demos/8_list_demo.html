@@ -85,6 +85,23 @@
         NaviDebug,
       } from "@jsenv/navi";
 
+      const App = () => {
+        return (
+          <NaviDebug debugAction debugInteraction>
+            <ReadOnlyDemo />
+            <ItemStatesDemo />
+            <DisplayOnlyDemo />
+            <InteractiveDemo />
+            <SearchableExternalInputDemo />
+            <SearchableDemo />
+            <PopoverDemo />
+            <FormDemo />
+            <RequiredFormDemo />
+            <InputInsideListItemDemo />
+          </NaviDebug>
+        );
+      };
+
       const FRUITS = [
         "Apple",
         "Banana",
@@ -707,23 +724,6 @@
       };
 
       // ── App ────────────────────────────────────────────────────────────────────
-
-      const App = () => {
-        return (
-          <NaviDebug debugAction debugInteraction>
-            <ReadOnlyDemo />
-            <ItemStatesDemo />
-            <DisplayOnlyDemo />
-            <InteractiveDemo />
-            <SearchableExternalInputDemo />
-            <SearchableDemo />
-            <PopoverDemo />
-            <FormDemo />
-            <RequiredFormDemo />
-            <InputInsideListItemDemo />
-          </NaviDebug>
-        );
-      };
 
       // ── InputInsideListItemDemo ───────────────────────────────────────────────
 
