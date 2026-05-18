@@ -167,9 +167,9 @@ definePseudoClass(":checked", {
     }
     if (el.type === "radio") {
       // Listen to changes on the radio group
-      const radioSet =
+      const radioSetContainer =
         el.closest("[navi-radio-list], fieldset, form") || document;
-      radioSet.addEventListener("input", callback);
+      radioSetContainer.addEventListener("input", callback);
 
       // Intercept programmatic changes to .checked property
       const originalDescriptor = Object.getOwnPropertyDescriptor(
@@ -185,7 +185,7 @@ definePseudoClass(":checked", {
         configurable: true,
       });
       return () => {
-        radioSet.removeEventListener("input", callback);
+        radioSetContainer.removeEventListener("input", callback);
         // Restore original property descriptor
         Object.defineProperty(el, "checked", originalDescriptor);
       };

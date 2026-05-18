@@ -47,13 +47,12 @@ export const REQUIRED_CONSTRAINT = {
         }
         return null;
       }
-
-      const closestFieldset = field.closest("fieldset");
-      // Find the container (form or closest fieldset)
-      const container = field.form || closestFieldset || document;
+      const radioSetContainer =
+        field.closest("[navi-radio-list], fieldset, form") || document;
       // Check if any radio with the same name is checked
       const radioSelector = `input[type="radio"][name="${CSS.escape(name)}"]`;
-      const radiosWithSameName = container.querySelectorAll(radioSelector);
+      const radiosWithSameName =
+        radioSetContainer.querySelectorAll(radioSelector);
       for (const radio of radiosWithSameName) {
         if (radio.checked) {
           return null; // At least one radio is selected
@@ -68,9 +67,10 @@ export const REQUIRED_CONSTRAINT = {
 
       return {
         message: naviI18n("constraint.required.radio"),
-        target: closestFieldset
-          ? closestFieldset.querySelector("legend")
-          : undefined,
+        target:
+          radioSetContainer.tagName === "FIELDSET"
+            ? radioSetContainer.querySelector("legend")
+            : undefined,
       };
     }
     if (field.value) {
