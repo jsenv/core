@@ -419,6 +419,7 @@ const InputTextualField = (props) => {
         }
         const input = ref.current;
         if (readOnly && isTypingIntent(e)) {
+          e.preventDefault(); // prevent space from scrolling the page, etc.
           dispatchRequestInteraction(input, e);
           return;
         }
