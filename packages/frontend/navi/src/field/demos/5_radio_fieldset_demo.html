@@ -79,28 +79,28 @@
               receives the selected value, or <code>undefined</code> when
               nothing is selected.
             </p>
-            <Field vertical spacing="s">
-              <Label>Pick an option</Label>
-              <RadioFieldset
-                name="standalone_option"
-                action={(value) => {
-                  setLastCall(value);
-                }}
-              >
-                <Field flex alignY="center" spacing="s">
-                  <Input type="radio" value="alpha" />
-                  <Label>Alpha</Label>
-                </Field>
-                <Field flex alignY="center" spacing="s">
-                  <Input type="radio" value="beta" />
-                  <Label>Beta</Label>
-                </Field>
-                <Field flex alignY="center" spacing="s">
-                  <Input type="radio" value="gamma" />
-                  <Label>Gamma</Label>
-                </Field>
-              </RadioFieldset>
-            </Field>
+
+            <RadioFieldset
+              name="standalone_option"
+              action={(value) => {
+                setLastCall(value);
+              }}
+            >
+              <legend>Pick an option</legend>
+              <Field flex alignY="center" spacing="s">
+                <Input type="radio" value="alpha" />
+                <Label>Alpha</Label>
+              </Field>
+              <Field flex alignY="center" spacing="s">
+                <Input type="radio" value="beta" />
+                <Label>Beta</Label>
+              </Field>
+              <Field flex alignY="center" spacing="s">
+                <Input type="radio" value="gamma" />
+                <Label>Gamma</Label>
+              </Field>
+            </RadioFieldset>
+
             <p
               style={{
                 marginTop: "12px",
@@ -133,23 +133,22 @@
                 setSubmitted(params);
               }}
             >
-              <Field vertical spacing="s">
-                <Label>Pick an option</Label>
-                <RadioFieldset name="form_option">
-                  <Field flex alignY="center" spacing="s">
-                    <Input type="radio" value="alpha" />
-                    <Label>Alpha</Label>
-                  </Field>
-                  <Field flex alignY="center" spacing="s">
-                    <Input type="radio" value="beta" />
-                    <Label>Beta</Label>
-                  </Field>
-                  <Field flex alignY="center" spacing="s">
-                    <Input type="radio" value="gamma" />
-                    <Label>Gamma</Label>
-                  </Field>
-                </RadioFieldset>
-              </Field>
+              <RadioFieldset name="form_option">
+                <legend>Pick an option</legend>
+                <Field>
+                  <Input type="radio" value="alpha" />
+                  <Label>Alpha</Label>
+                </Field>
+                <Field>
+                  <Input type="radio" value="beta" />
+                  <Label>Beta</Label>
+                </Field>
+                <Field>
+                  <Input type="radio" value="gamma" />
+                  <Label>Gamma</Label>
+                </Field>
+              </RadioFieldset>
+
               <Button type="submit" style={{ marginTop: "12px" }}>
                 Submit
               </Button>
@@ -187,23 +186,21 @@
                 setSubmitted(params);
               }}
             >
-              <Field vertical spacing="s">
-                <Label>Pick an option (required)</Label>
-                <RadioFieldset name="required_option" required>
-                  <Field flex alignY="center" spacing="s">
-                    <Input type="radio" value="alpha" />
-                    <Label>Alpha</Label>
-                  </Field>
-                  <Field flex alignY="center" spacing="s">
-                    <Input type="radio" value="beta" />
-                    <Label>Beta</Label>
-                  </Field>
-                  <Field flex alignY="center" spacing="s">
-                    <Input type="radio" value="gamma" />
-                    <Label>Gamma</Label>
-                  </Field>
-                </RadioFieldset>
-              </Field>
+              <RadioFieldset name="required_option" required>
+                <legend>Pick an option (required)</legend>
+                <Field flex alignY="center" spacing="s">
+                  <Input type="radio" value="alpha" />
+                  <Label>Alpha</Label>
+                </Field>
+                <Field flex alignY="center" spacing="s">
+                  <Input type="radio" value="beta" />
+                  <Label>Beta</Label>
+                </Field>
+                <Field flex alignY="center" spacing="s">
+                  <Input type="radio" value="gamma" />
+                  <Label>Gamma</Label>
+                </Field>
+              </RadioFieldset>
               <Button type="submit" style={{ marginTop: "12px" }}>
                 Submit
               </Button>
@@ -236,41 +233,40 @@
               readonly one shows a message. Arrow key navigation skips readonly
               options.
             </p>
-            <Field vertical spacing="s">
-              <Label>Pick an option</Label>
-              <RadioFieldset name="readonly_option">
-                <Field flex alignY="center" spacing="s">
-                  <Input type="radio" value="alpha" />
-                  <Label>Alpha (normal)</Label>
-                </Field>
-                <Field flex alignY="center" spacing="s">
-                  <Input type="radio" value="beta" />
-                  <Label>Beta (normal)</Label>
-                </Field>
-                <Field flex alignY="center" spacing="s">
-                  <Input
-                    type="radio"
-                    value="gamma"
-                    readOnly
-                    readOnlyMessage={ro}
-                  />
-                  <Label>Gamma (readonly)</Label>
-                </Field>
-                <Field flex alignY="center" spacing="s">
-                  <Input
-                    type="radio"
-                    value="delta"
-                    readOnly
-                    readOnlyMessage={ro}
-                  />
-                  <Label>Delta (readonly)</Label>
-                </Field>
-                <Field flex alignY="center" spacing="s">
-                  <Input type="radio" value="epsilon" />
-                  <Label>Epsilon (normal)</Label>
-                </Field>
-              </RadioFieldset>
-            </Field>
+
+            <RadioFieldset name="readonly_option">
+              <legend>Pick an option</legend>
+              <Field flex alignY="center" spacing="s">
+                <Input type="radio" value="alpha" />
+                <Label>Alpha (normal)</Label>
+              </Field>
+              <Field flex alignY="center" spacing="s">
+                <Input type="radio" value="beta" />
+                <Label>Beta (normal)</Label>
+              </Field>
+              <Field flex alignY="center" spacing="s">
+                <Input
+                  type="radio"
+                  value="gamma"
+                  readOnly
+                  readOnlyMessage={ro}
+                />
+                <Label>Gamma (readonly)</Label>
+              </Field>
+              <Field flex alignY="center" spacing="s">
+                <Input
+                  type="radio"
+                  value="delta"
+                  readOnly
+                  readOnlyMessage={ro}
+                />
+                <Label>Delta (readonly)</Label>
+              </Field>
+              <Field flex alignY="center" spacing="s">
+                <Input type="radio" value="epsilon" />
+                <Label>Epsilon (normal)</Label>
+              </Field>
+            </RadioFieldset>
           </div>
         );
       };
