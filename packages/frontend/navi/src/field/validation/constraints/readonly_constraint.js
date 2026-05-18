@@ -8,7 +8,11 @@ export const READONLY_CONSTRAINT = {
     if (skipReadonly) {
       return null;
     }
-    if (!field.readOnly && !field.hasAttribute("data-readonly")) {
+    if (
+      !field.readOnly &&
+      !field.hasAttribute("data-readonly") &&
+      field.getAttribute("aria-readonly") !== "true"
+    ) {
       return null;
     }
     if (field.type === "hidden") {

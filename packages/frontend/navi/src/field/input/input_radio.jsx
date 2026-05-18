@@ -352,9 +352,6 @@ const InputRadioField = (props) => {
     /* eslint-disable no-unused-vars */
     type,
     /* eslint-enable no-unused-vars */
-    name,
-    value,
-    required,
     onInput,
     onKeyDown,
     icon,
@@ -380,9 +377,7 @@ const InputRadioField = (props) => {
       return undefined;
     },
   });
-  const { value: checked, basePseudoState } = fieldProps;
-  const disabled = basePseudoState[":disabled"];
-  const readOnly = basePseudoState[":read-only"];
+  const { checked, basePseudoState } = fieldProps;
   const loading = basePseudoState[":-navi-loading"];
 
   // we must first dispatch an event to inform all other radios they where unchecked
@@ -427,28 +422,12 @@ const InputRadioField = (props) => {
         as="input"
         ref={ref}
         type="radio"
-        name={name}
-        value={value}
-        checked={checked}
-        disabled={disabled}
-        required={required}
-        data-readonly={readOnly ? "" : undefined}
-        aria-readonly={readOnly}
-        aria-busy={loading}
         baseClassName="navi_native_field"
         data-callout-arrow-x="center"
       />
     );
   };
-  const renderRadioMemoized = useCallback(renderRadio, [
-    name,
-    value,
-    checked,
-    disabled,
-    readOnly,
-    loading,
-    required,
-  ]);
+  const renderRadioMemoized = useCallback(renderRadio, []);
 
   const boxRef = useRef();
   useAccentColorAttributes(boxRef, accentColor, {
@@ -611,4 +590,4 @@ const RadioPseudoClasses = [
   ":-navi-loading",
 ];
 const RadioPseudoElements = ["::-navi-loader", "::-navi-radiomark"];
-const RadioChildPropSet = new Set([...fieldPropSet]);
+const RadioChildPropSet = new Set([...fieldPropSet, "checked"]);

@@ -175,16 +175,17 @@ export const useActionProps = (
     // for the "checked" attribute. The "value" attribute must stay as the static prop
     // value (e.g., "alpha"), not the uiState.
     [uiStateController.statePropName]:
-      uiStateController.getPropFromState(uiState),
+      uiStateController.getPropFromState?.(uiState),
     "value": valueForBrowser,
     "navi-autofocus": autoFocus ? "" : undefined,
+    "aria-busy": innerLoading,
+    "aria-readonly": innerReadOnly,
     "basePseudoState": {
       ...basePseudoState,
       ":read-only": innerReadOnly,
       ":disabled": innerDisabled,
       ":-navi-loading": innerLoading,
     },
-    "aria-busy": innerLoading,
     "onnavi_request_reset_ui_state": (e) => {
       uiStateController.resetUIState(e);
     },
