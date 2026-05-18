@@ -424,6 +424,7 @@ export const useUIGroupStateController = (
     value,
     uiState: emptyState,
     uiStateSignal,
+    getPropFromState: (uiState) => uiState,
     setUIState: (newUIState, e, { notifyExternal = true } = {}) => {
       if (isSignal(newUIState)) {
         newUIState = newUIState.value;
