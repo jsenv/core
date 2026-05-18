@@ -371,7 +371,7 @@ const InputRadioField = (props) => {
     getStateFromProp: (checked) => (checked ? props.value : undefined),
     getPropFromState: Boolean,
     getStateFromParent: (parentUIStateController) => {
-      if (parentUIStateController.componentType === "radio_list") {
+      if (parentUIStateController.componentType === "radio_fieldset") {
         return parentUIStateController.uiState === props.value;
       }
       return undefined;

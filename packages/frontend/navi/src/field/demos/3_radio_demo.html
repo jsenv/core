@@ -134,7 +134,7 @@
         Icon,
         Form,
         Button,
-        RadioList,
+        RadioFieldset,
         NaviDebug,
       } from "@jsenv/navi";
 
@@ -148,8 +148,8 @@
               <ButtonIconStatesDemo />
               <ColorDemo />
               <InteractiveDemo />
-              <RadioListInFormDemo />
-              <RadioListWithReadonlyDemo />
+              <RadioFieldsetInFormDemo />
+              <RadioFieldsetWithReadonlyDemo />
             </div>
           </NaviDebug>
         );
@@ -1337,7 +1337,7 @@
       };
 
       // --- Radio list inside a form with submit ---
-      const RadioListInFormDemo = () => {
+      const RadioFieldsetInFormDemo = () => {
         const [submitted, setSubmitted] = useState(null);
         return (
           <div id="radio-list-form" className="demo-section">
@@ -1354,7 +1354,7 @@
             >
               <Field vertical spacing="s">
                 <Label>Pick an option</Label>
-                <RadioList name="form_option" required>
+                <RadioFieldset name="form_option" required>
                   <Field flex alignY="center" spacing="s">
                     <Input type="radio" value="alpha" />
                     <Label>Alpha</Label>
@@ -1367,7 +1367,7 @@
                     <Input type="radio" value="gamma" />
                     <Label>Gamma</Label>
                   </Field>
-                </RadioList>
+                </RadioFieldset>
               </Field>
               <Button type="submit" style={{ marginTop: "12px" }}>
                 Submit
@@ -1392,7 +1392,7 @@
       };
 
       // --- Radio list where the 2nd option is readonly ---
-      const RadioListWithReadonlyDemo = () => {
+      const RadioFieldsetWithReadonlyDemo = () => {
         const ro = "This option is currently unavailable.";
         return (
           <div id="radio-list-readonly" className="demo-section">
@@ -1404,7 +1404,7 @@
             </p>
             <Field vertical spacing="s">
               <Label>Pick an option</Label>
-              <RadioList name="readonly_option">
+              <RadioFieldset name="readonly_option">
                 <Field id="field-alpha" flex alignY="center" spacing="s">
                   <Input type="radio" value="alpha" />
                   <Label>Alpha (normal)</Label>
@@ -1452,7 +1452,7 @@
                   <Input type="radio" value="theta" />
                   <Label>Theta (normal)</Label>
                 </Field>
-              </RadioList>
+              </RadioFieldset>
             </Field>
           </div>
         );

@@ -1,19 +1,20 @@
+// TOFIX: select in data then reset, it reset to red/blue instead of red/blue/green
+
 import { useRef } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
-import { useFocusGroup } from "../utils/focus/use_focus_group.js";
 import { useFieldGroupProps } from "./use_field_group_props.jsx";
 import { dispatchRequestAction } from "./validation/custom_constraint_validation.js";
 
-export const RadioList = (props) => {
+export const CheckboxFieldset = (props) => {
   const refDefault = useRef(null);
   props.ref = props.ref || refDefault;
-  const radioList = <RadioListField {...props} />;
+  const checkboxFieldset = <CheckboxFieldsetField {...props} />;
 
-  return radioList;
+  return checkboxFieldset;
 };
 
-const RadioListField = (props) => {
+const CheckboxFieldsetField = (props) => {
   const { ref, name } = props;
   const fieldGroupProps = useFieldGroupProps(
     {
@@ -23,41 +24,38 @@ const RadioListField = (props) => {
       ...props,
     },
     {
-      fieldType: "radio_list",
-      childComponentType: "radio",
+      fieldType: "checkbox_fieldset",
+      childComponentType: "checkbox",
       aggregateChildStates: (childUIStateControllers) => {
-        let activeValue;
+        const values = [];
         for (const childUIStateController of childUIStateControllers) {
           if (childUIStateController.uiState) {
-            activeValue = childUIStateController.uiState;
-            break;
+            values.push(childUIStateController.uiState);
           }
         }
-        return activeValue;
+        return values.length === 0 ? undefined : values;
       },
     },
   );
 
-  useFocusGroup(ref, { direction: "both", loop: true });
-
   return (
     <Box
       as="fieldset"
-      flex="y"
+      flex
       {...fieldGroupProps}
-      baseClassName="navi_radio_list"
-      navi-radio-list=""
+      baseClassName="navi_checkbox_fieldset"
+      navi-checkbox-list=""
       onChange={(e) => {
-        // we rely on change event bubbling but we want to catch only the relevant radio change events
+        // we rely on change event bubbling but we want to catch only the relevant checkbox change events
         const target = e.target;
-        if (target.tagName !== "INPUT" || target.type !== "radio") {
+        if (target.tagName !== "INPUT" || target.type !== "checkbox") {
           return;
         }
         if (target.name !== name) {
           return;
         }
-        const radioList = ref.current;
-        dispatchRequestAction(radioList, {
+        const checkboxFieldset = ref.current;
+        dispatchRequestAction(checkboxFieldset, {
           event: e,
           requester: target,
         });

@@ -102,7 +102,7 @@ export {
 } from "./src/field/selection/selection.jsx";
 // Form/Components
 export { Button } from "./src/field/button.jsx";
-export { CheckboxList } from "./src/field/checkbox_list.jsx";
+export { CheckboxFieldset } from "./src/field/checkbox_fieldset.jsx";
 export {
   Editable,
   useEditionController,
@@ -114,7 +114,7 @@ export { Input } from "./src/field/input/input.jsx";
 export { Picker } from "./src/field/picker/picker.jsx";
 export { usePicker } from "./src/field/picker/picker_context.jsx";
 export { getNowHours, isToday } from "./src/field/picker/time_helpers.js";
-export { RadioList } from "./src/field/radio_list.jsx";
+export { RadioFieldset } from "./src/field/radio_fieldset.jsx";
 // --- List start ---
 export { applySearch } from "./src/field/list/apply_search.js";
 export { createSearch } from "./src/field/list/create_search.js";

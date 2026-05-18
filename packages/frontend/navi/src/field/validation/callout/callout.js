@@ -828,12 +828,16 @@ const stickCalloutToAnchor = (calloutElement, anchorElement, { debug }) => {
         arrowAnchorLeft = (anchorLeft + anchorRight) / 2;
       } else if (arrowPositionAttribute === "end") {
         const anchorBorderSizes = getBorderSizes(anchorElement);
-        // Target the right edge of the anchorElement element (before borders)
-        arrowAnchorLeft = anchorRight - anchorBorderSizes.right;
+        const anchorPaddingSizes = getPaddingSizes(anchorElement);
+        // Target the right edge of the anchorElement text content (before borders + padding)
+        arrowAnchorLeft =
+          anchorRight - anchorBorderSizes.right - anchorPaddingSizes.right;
       } else {
         const anchorBorderSizes = getBorderSizes(anchorElement);
-        // Default behavior: target the left edge of the anchorElement element (after borders)
-        arrowAnchorLeft = anchorLeft + anchorBorderSizes.left;
+        const anchorPaddingSizes = getPaddingSizes(anchorElement);
+        // Default behavior: target the left edge of the anchorElement text content (after borders + padding)
+        arrowAnchorLeft =
+          anchorLeft + anchorBorderSizes.left + anchorPaddingSizes.left;
       }
 
       // Calculate arrow position within the callout

@@ -107,17 +107,17 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      import { RadioList, Radio, Label, Box, Icon, Image } from "@jsenv/navi";
+      import { RadioFieldset, Radio, Label, Box, Icon, Image } from "@jsenv/navi";
 
       const App = () => {
         return (
           <div>
-            <ImageRadioListDemo />
+            <ImageRadioFieldsetDemo />
           </div>
         );
       };
 
-      const ImageRadioListDemo = () => {
+      const ImageRadioFieldsetDemo = () => {
         const [selectedMapType, setSelectedMapType] = useState("street");
 
         return (
@@ -131,7 +131,7 @@
             </p>
 
             <Box column spacing="lg">
-              <RadioList
+              <RadioFieldset
                 column
                 name="mapType"
                 value={selectedMapType}
@@ -179,7 +179,7 @@
                     />
                   }
                 />
-              </RadioList>
+              </RadioFieldset>
             </Box>
 
             <div
@@ -203,7 +203,7 @@
                   toggle buttons
                 </li>
                 <li>
-                  <strong>RadioList Integration:</strong> Coordinated radio
+                  <strong>RadioFieldset Integration:</strong> Coordinated radio
                   group with shared state
                 </li>
                 <li>

@@ -16,7 +16,7 @@
         Button,
         Form,
         Field,
-        RadioList,
+        RadioFieldset,
         Radio,
         Label,
         NaviDebug,
@@ -25,12 +25,12 @@
       const App = () => {
         return (
           <div style="display: flex; flex-direction: column; gap: 40px">
-            <DynamicRadioListDemo />
+            <DynamicRadioFieldsetDemo />
           </div>
         );
       };
 
-      const DynamicRadioListDemo = () => {
+      const DynamicRadioFieldsetDemo = () => {
         const [colorChoices, setColorChoices] = useState([
           { id: 1, color: "red", selected: true },
           { id: 2, color: "blue", selected: false },
@@ -256,7 +256,7 @@
               <fieldset style="border: 1px solid #ddd; padding: 10px; border-radius: 4px;">
                 <legend>Select Favorite Color:</legend>
                 <NaviDebug debugAction>
-                  <RadioList
+                  <RadioFieldset
                     name="color"
                     uiAction={(color) => {
                       setUiSelectedColor(color);
@@ -273,7 +273,7 @@
                         />
                       </Field>
                     ))}
-                  </RadioList>
+                  </RadioFieldset>
                 </NaviDebug>
               </fieldset>
 

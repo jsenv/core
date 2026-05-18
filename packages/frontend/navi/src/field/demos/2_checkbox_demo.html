@@ -162,7 +162,7 @@
         Form,
         createAction,
         Label,
-        CheckboxList,
+        CheckboxFieldset,
       } from "@jsenv/navi";
 
       const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -179,8 +179,8 @@
               <ToggleAppearanceDemo />
               <IconDemo />
               <InteractiveDemo />
-              <CheckboxListInFormDemo />
-              <CheckboxListWithReadonlyDemo />
+              <CheckboxFieldsetInFormDemo />
+              <CheckboxFieldsetWithReadonlyDemo />
             </div>
           </NaviDebug>
         );
@@ -213,11 +213,11 @@
                 <a href="#interactive-controls">Interactive Controls</a>
               </li>
               <li>
-                <a href="#checkbox-list-form">CheckboxList in a form</a>
+                <a href="#checkbox-list-form">CheckboxFieldset in a form</a>
               </li>
               <li>
                 <a href="#checkbox-list-readonly">
-                  CheckboxList with readonly option
+                  CheckboxFieldset with readonly option
                 </a>
               </li>
             </ol>
@@ -1935,12 +1935,12 @@
         );
       };
 
-      // --- CheckboxList inside a form with submit ---
-      const CheckboxListInFormDemo = () => {
+      // --- CheckboxFieldset inside a form with submit ---
+      const CheckboxFieldsetInFormDemo = () => {
         const [submitted, setSubmitted] = useState(null);
         return (
           <div id="checkbox-list-form" className="demo-section">
-            <h2>CheckboxList in a form</h2>
+            <h2>CheckboxFieldset in a form</h2>
             <p style={{ margin: "0 0 12px", color: "#555" }}>
               Multiple checkboxes inside a <code>Form</code> with a submit
               button. The field is <code>required</code> — submitting without
@@ -1951,23 +1951,21 @@
                 setSubmitted(params);
               }}
             >
-              <fieldset>
+              <CheckboxFieldset name="form_options" required flex="y" spacing="s">
                 <legend>Pick options</legend>
-                <CheckboxList name="form_options" required flex="y" spacing="s">
-                  <Field flex alignY="center" spacing="s">
-                    <Input type="checkbox" value="alpha" />
-                    <Label>Alpha</Label>
-                  </Field>
-                  <Field flex alignY="center" spacing="s">
-                    <Input type="checkbox" value="beta" />
-                    <Label>Beta</Label>
-                  </Field>
-                  <Field flex alignY="center" spacing="s">
-                    <Input type="checkbox" value="gamma" />
-                    <Label>Gamma</Label>
-                  </Field>
-                </CheckboxList>
-              </fieldset>
+                <Field flex alignY="center" spacing="s">
+                  <Input type="checkbox" value="alpha" />
+                  <Label>Alpha</Label>
+                </Field>
+                <Field flex alignY="center" spacing="s">
+                  <Input type="checkbox" value="beta" />
+                  <Label>Beta</Label>
+                </Field>
+                <Field flex alignY="center" spacing="s">
+                  <Input type="checkbox" value="gamma" />
+                  <Label>Gamma</Label>
+                </Field>
+              </CheckboxFieldset>
               <Button type="submit" style={{ marginTop: "12px" }}>
                 Submit
               </Button>
@@ -1990,68 +1988,68 @@
         );
       };
 
-      // --- CheckboxList with some readonly checkboxes ---
-      const CheckboxListWithReadonlyDemo = () => {
+      // --- CheckboxFieldset with some readonly checkboxes ---
+      const CheckboxFieldsetWithReadonlyDemo = () => {
         const ro = "This option is currently unavailable.";
         return (
           <div id="checkbox-list-readonly" className="demo-section">
-            <h2>CheckboxList with readonly options</h2>
+            <h2>CheckboxFieldset with readonly options</h2>
             <p style={{ margin: "0 0 12px", color: "#555" }}>
               Mix of normal and <code>readOnly</code> checkboxes. Clicking a
               readonly one shows a custom message.
             </p>
-            <Field vertical spacing="s">
+
+            <CheckboxFieldset name="readonly_options">
               <Label>Pick options</Label>
-              <CheckboxList name="readonly_options">
-                <Field id="cb-field-alpha" flex alignY="center" spacing="s">
-                  <Input type="checkbox" value="alpha" />
-                  <Label>Alpha (normal)</Label>
-                </Field>
-                <Field id="cb-field-beta" flex alignY="center" spacing="s">
-                  <Input type="checkbox" value="beta" />
-                  <Label>Beta (normal)</Label>
-                </Field>
-                <Field id="cb-field-gamma" flex alignY="center" spacing="s">
-                  <Input
-                    type="checkbox"
-                    value="gamma"
-                    readOnly
-                    readOnlyMessage={ro}
-                  />
-                  <Label>Gamma (readonly)</Label>
-                </Field>
-                <Field id="cb-field-delta" flex alignY="center" spacing="s">
-                  <Input
-                    type="checkbox"
-                    value="delta"
-                    readOnly
-                    readOnlyMessage={ro}
-                  />
-                  <Label>Delta (readonly)</Label>
-                </Field>
-                <Field id="cb-field-epsilon" flex alignY="center" spacing="s">
-                  <Input type="checkbox" value="epsilon" />
-                  <Label>Epsilon (normal)</Label>
-                </Field>
-                <Field id="cb-field-zeta" flex alignY="center" spacing="s">
-                  <Input
-                    type="checkbox"
-                    value="zeta"
-                    readOnly
-                    readOnlyMessage={ro}
-                  />
-                  <Label>Zeta (readonly)</Label>
-                </Field>
-                <Field id="cb-field-eta" flex alignY="center" spacing="s">
-                  <Input type="checkbox" value="eta" />
-                  <Label>Eta (normal)</Label>
-                </Field>
-                <Field id="cb-field-theta" flex alignY="center" spacing="s">
-                  <Input type="checkbox" value="theta" />
-                  <Label>Theta (normal)</Label>
-                </Field>
-              </CheckboxList>
-            </Field>
+
+              <Field id="cb-field-alpha" flex alignY="center" spacing="s">
+                <Input type="checkbox" value="alpha" />
+                <Label>Alpha (normal)</Label>
+              </Field>
+              <Field id="cb-field-beta" flex alignY="center" spacing="s">
+                <Input type="checkbox" value="beta" />
+                <Label>Beta (normal)</Label>
+              </Field>
+              <Field id="cb-field-gamma" flex alignY="center" spacing="s">
+                <Input
+                  type="checkbox"
+                  value="gamma"
+                  readOnly
+                  readOnlyMessage={ro}
+                />
+                <Label>Gamma (readonly)</Label>
+              </Field>
+              <Field id="cb-field-delta" flex alignY="center" spacing="s">
+                <Input
+                  type="checkbox"
+                  value="delta"
+                  readOnly
+                  readOnlyMessage={ro}
+                />
+                <Label>Delta (readonly)</Label>
+              </Field>
+              <Field id="cb-field-epsilon" flex alignY="center" spacing="s">
+                <Input type="checkbox" value="epsilon" />
+                <Label>Epsilon (normal)</Label>
+              </Field>
+              <Field id="cb-field-zeta" flex alignY="center" spacing="s">
+                <Input
+                  type="checkbox"
+                  value="zeta"
+                  readOnly
+                  readOnlyMessage={ro}
+                />
+                <Label>Zeta (readonly)</Label>
+              </Field>
+              <Field id="cb-field-eta" flex alignY="center" spacing="s">
+                <Input type="checkbox" value="eta" />
+                <Label>Eta (normal)</Label>
+              </Field>
+              <Field id="cb-field-theta" flex alignY="center" spacing="s">
+                <Input type="checkbox" value="theta" />
+                <Label>Theta (normal)</Label>
+              </Field>
+            </CheckboxFieldset>
           </div>
         );
       };

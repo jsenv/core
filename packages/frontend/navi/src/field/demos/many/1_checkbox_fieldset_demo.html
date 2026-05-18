@@ -15,7 +15,7 @@
       import {
         Button,
         Form,
-        CheckboxList,
+        CheckboxFieldset,
         Field,
         Label,
         Checkbox,
@@ -25,13 +25,13 @@
       const App = () => {
         return (
           <div style="display: flex; flex-direction: column; gap: 40px">
-            <DynamicCheckboxListDemo />
+            <DynamicCheckboxFieldsetDemo />
             <div style="display: flex; flex-direction: row; gap: 30px"></div>
           </div>
         );
       };
 
-      const DynamicCheckboxListDemo = () => {
+      const DynamicCheckboxFieldsetDemo = () => {
         // Available color choices with their selection state
         const [colorChoices, setColorChoices] = useState([
           { id: 1, color: "red", selected: true },
@@ -230,7 +230,7 @@
                 </p>
                 <NaviDebug debugAction>
                   <Form action={submitForm}>
-                    <CheckboxList
+                    <CheckboxFieldset
                       name="colors"
                       uiAction={(colors) => {
                         setUiSelectedColors(colors);
@@ -249,7 +249,7 @@
                           />
                         </Field>
                       ))}
-                    </CheckboxList>
+                    </CheckboxFieldset>
 
                     {/* Error simulation checkbox */}
                     <div style="margin: 10px 0; padding: 8px; background: #ffebee; border-radius: 4px; border: 1px solid #ffcdd2;">

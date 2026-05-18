@@ -31,7 +31,7 @@ export const useFormEvents = (
 
     let form = element.form;
     if (!form) {
-      // some non input elements may want to listen form events (<RadioList> is a <div>)
+      // some non input elements may want to listen form events (<RadioFieldset> is a <fieldset>)
       form = element.closest("form");
       if (!form) {
         console.warn("No form found for element", element);
