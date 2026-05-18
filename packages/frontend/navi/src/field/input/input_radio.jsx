@@ -430,12 +430,13 @@ const InputRadioField = (props) => {
         as="input"
         ref={ref}
         type="radio"
-        name={name}
+        name={readOnly ? `${name}-readonly-${value}` : name}
         value={value}
         checked={checked}
         disabled={disabled}
         required={required}
         data-readonly={readOnly ? "" : undefined}
+        aria-readonly={readOnly}
         aria-busy={loading}
         baseClassName="navi_native_field"
         data-callout-arrow-x="center"
@@ -449,6 +450,7 @@ const InputRadioField = (props) => {
     disabled,
     readOnly,
     loading,
+    required,
   ]);
 
   const boxRef = useRef();
