@@ -266,6 +266,10 @@ export const openCallout = (
   calloutCloseButton.onmousedown = (e) => {
     requestClose(e, "mousedown_close_button");
   };
+  // "click" is received for enter/space
+  calloutCloseButton.onclick = (e) => {
+    requestClose(e, "click_close_button");
+  };
   const calloutId = `navi_callout_${Date.now()}`;
   calloutElement.id = calloutId;
   calloutStyleController.set(calloutElement, { opacity: 0 });

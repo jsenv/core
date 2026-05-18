@@ -16,7 +16,7 @@ export const performArrowNavigation = (
   element,
   { direction = "both", loop, name } = {},
 ) => {
-  if (!canInterceptKeys(event)) {
+  if (!canInterceptKeys(event, { intent: "override_arrow_navigation" })) {
     return false;
   }
   const activeElement = document.activeElement;

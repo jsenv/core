@@ -355,7 +355,6 @@ const InputRadioField = (props) => {
     name,
     value,
     required,
-    onClick,
     onInput,
     onKeyDown,
     icon,
@@ -430,7 +429,7 @@ const InputRadioField = (props) => {
         as="input"
         ref={ref}
         type="radio"
-        name={readOnly ? `${name}-readonly-${value}` : name}
+        name={name}
         value={value}
         checked={checked}
         disabled={disabled}
@@ -512,13 +511,9 @@ const InputRadioField = (props) => {
       color={color}
       hasChildFunction
       baseChildPropSet={RadioChildPropSet}
-      onClick={(e) => {
-        onClick?.(e);
+      onMouseDown={(e) => {
         const radio = ref.current;
-        const allowed = dispatchRequestInteraction(radio, e);
-        if (!allowed) {
-          e.preventDefault(); // prevent click to toggle
-        }
+        dispatchRequestInteraction(radio, e);
       }}
       onInput={(e) => {
         onInput?.(e);
