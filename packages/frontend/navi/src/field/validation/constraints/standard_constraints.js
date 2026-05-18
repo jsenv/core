@@ -37,10 +37,11 @@ export const REQUIRED_CONSTRAINT = {
         Boolean(field.closest("[navi-checkbox-list]"));
       if (isCheckboxGroup) {
         const name = field.name;
-        const container =
+        const checkboxSetContainer =
           field.closest("[navi-checkbox-list], fieldset, form") || document;
         const checkboxSelector = `input[type="checkbox"][name="${CSS.escape(name)}"]`;
-        const checkboxes = container.querySelectorAll(checkboxSelector);
+        const checkboxes =
+          checkboxSetContainer.querySelectorAll(checkboxSelector);
         for (const checkbox of checkboxes) {
           if (checkbox.checked) {
             return null;
@@ -52,7 +53,13 @@ export const REQUIRED_CONSTRAINT = {
             };
           });
         }
-        return naviI18n("constraint.required.checkbox_group");
+        return {
+          message: naviI18n("constraint.required.checkbox_group"),
+          target:
+            checkboxSetContainer.tagName === "FIELDSET"
+              ? checkboxSetContainer.querySelector("legend")
+              : undefined,
+        };
       }
       if (!field.checked) {
         return naviI18n("constraint.required.checkbox");

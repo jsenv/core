@@ -40,6 +40,7 @@ const CheckboxListField = (props) => {
 
   return (
     <Box
+      as="fieldset"
       flex
       {...fieldGroupProps}
       baseClassName="navi_checkbox_list"

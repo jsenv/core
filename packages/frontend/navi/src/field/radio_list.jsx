@@ -42,6 +42,7 @@ const RadioListField = (props) => {
 
   return (
     <Box
+      as="fieldset"
       flex="y"
       {...fieldGroupProps}
       baseClassName="navi_radio_list"
