@@ -1480,12 +1480,15 @@ const ListItemReal = (props) => {
 };
 const ListItemRealField = (props) => {
   const { item } = props;
-  const fieldBehaviorProps = useFieldBehaviorProps(props);
+  const fieldBehaviorProps = useFieldBehaviorProps({
+    requiredMessage: naviI18n(`list_item.readonly`, { item }),
+    ...props,
+  });
 
   return (
     <ListItemRealUI
       {...fieldBehaviorProps}
-      requiredMessage={naviI18n(`list_item.readonly`, { item })}
+      item={undefined}
       onnavi_list_item_request_select={(e) => {
         const listItem = e.currentTarget;
         const listEl = listItem.closest(".navi_list");

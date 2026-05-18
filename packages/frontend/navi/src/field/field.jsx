@@ -13,7 +13,7 @@ import { extractMessageAndRemainingProps } from "./validation/constraint_message
 
 const css = /* css */ `
   @layer navi {
-    .navi_field {
+    [data-navi-field] {
       &[data-interactive] {
         .navi_label {
           cursor: pointer;
@@ -98,7 +98,7 @@ export const Field = (props) => {
       flex={vertical ? "y" : undefined}
       alignX={vertical ? "start" : undefined}
       spacing="s"
-      baseClassName="navi_field"
+      // baseClassName="navi_field"
       {...fieldBehaviorProps}
     />
   );
@@ -114,6 +114,7 @@ const FieldPseudoClasses = [
 ];
 
 export const useFieldBehaviorProps = (props) => {
+  import.meta.css = css;
   const { id, readOnly, disabled, ...rest } = props;
 
   // Collect constraint message props so child fields can inherit them via context.
@@ -153,6 +154,7 @@ export const useFieldBehaviorProps = (props) => {
   }
 
   return {
+    "data-navi-field": "",
     "data-interactive": interactive ? "" : undefined,
     ...remainingProps,
     "children": childrenWithContext,
