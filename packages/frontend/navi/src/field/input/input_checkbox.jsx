@@ -501,6 +501,10 @@ const InputCheckboxField = (props) => {
       accentColor={accentColor}
       hasChildFunction
       baseChildPropSet={CheckboxChildPropSet}
+      onMouseDown={(e) => {
+        const checkbox = ref.current;
+        dispatchRequestInteraction(checkbox, e);
+      }}
       onClick={(e) => {
         onClick?.(e);
         const checkbox = ref.current;
@@ -518,6 +522,13 @@ const InputCheckboxField = (props) => {
         onKeyDown?.(e);
         if (e.key === "Enter") {
           requestClosestAction(e);
+        }
+        if (e.key === " ") {
+          const radio = ref.current;
+          const allowed = dispatchRequestInteraction(radio, e);
+          if (!allowed) {
+            e.preventDefault();
+          }
         }
       }}
     >

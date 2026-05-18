@@ -3,18 +3,19 @@
 import { useRef } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
+import { useFocusGroup } from "../utils/focus/use_focus_group.js";
 import { useFieldGroupProps } from "./use_field_group_props.jsx";
 import { dispatchRequestAction } from "./validation/custom_constraint_validation.js";
 
 export const CheckboxFieldset = (props) => {
   const refDefault = useRef(null);
   props.ref = props.ref || refDefault;
-  const checkboxFieldset = <CheckboxFieldsetField {...props} />;
+  const checkboxFieldset = <CheckboxFieldsetUI {...props} />;
 
   return checkboxFieldset;
 };
 
-const CheckboxFieldsetField = (props) => {
+const CheckboxFieldsetUI = (props) => {
   const { ref, name } = props;
   const fieldGroupProps = useFieldGroupProps(
     {
@@ -37,6 +38,8 @@ const CheckboxFieldsetField = (props) => {
       },
     },
   );
+
+  useFocusGroup(ref, { direction: "both", loop: true });
 
   return (
     <Box

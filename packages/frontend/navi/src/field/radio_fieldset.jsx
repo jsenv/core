@@ -8,12 +8,12 @@ import { dispatchRequestAction } from "./validation/custom_constraint_validation
 export const RadioFieldset = (props) => {
   const refDefault = useRef(null);
   props.ref = props.ref || refDefault;
-  const radioFieldset = <RadioFieldsetField {...props} />;
+  const radioFieldset = <RadioFieldsetUI {...props} />;
 
   return radioFieldset;
 };
 
-const RadioFieldsetField = (props) => {
+const RadioFieldsetUI = (props) => {
   const { ref, name } = props;
   const fieldGroupProps = useFieldGroupProps(
     {
