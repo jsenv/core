@@ -87,17 +87,17 @@
               }}
             >
               <legend>Pick an option</legend>
-              <Field flex alignY="center" spacing="s">
+              <Field as="label" flex alignY="center" spacing="s">
                 <Input type="radio" value="alpha" />
-                <Label>Alpha</Label>
+                Alpha
               </Field>
-              <Field flex alignY="center" spacing="s">
+              <Field as="label" flex alignY="center" spacing="s">
                 <Input type="radio" value="beta" />
-                <Label>Beta</Label>
+                Beta
               </Field>
-              <Field flex alignY="center" spacing="s">
+              <Field as="label" flex alignY="center" spacing="s">
                 <Input type="radio" value="gamma" />
-                <Label>Gamma</Label>
+                Gamma
               </Field>
             </RadioFieldset>
 
@@ -137,15 +137,15 @@
                 <legend>Pick an option</legend>
                 <Field>
                   <Input type="radio" value="alpha" />
-                  <Label>Alpha</Label>
+                  Alpha
                 </Field>
                 <Field>
                   <Input type="radio" value="beta" />
-                  <Label>Beta</Label>
+                  Beta
                 </Field>
                 <Field>
                   <Input type="radio" value="gamma" />
-                  <Label>Gamma</Label>
+                  Gamma
                 </Field>
               </RadioFieldset>
 
@@ -190,15 +190,15 @@
                 <legend>Pick an option (required)</legend>
                 <Field flex alignY="center" spacing="s">
                   <Input type="radio" value="alpha" />
-                  <Label>Alpha</Label>
+                  Alpha
                 </Field>
                 <Field flex alignY="center" spacing="s">
                   <Input type="radio" value="beta" />
-                  <Label>Beta</Label>
+                  Beta
                 </Field>
                 <Field flex alignY="center" spacing="s">
                   <Input type="radio" value="gamma" />
-                  <Label>Gamma</Label>
+                  Gamma
                 </Field>
               </RadioFieldset>
               <Button type="submit" style={{ marginTop: "12px" }}>
@@ -236,35 +236,35 @@
 
             <RadioFieldset name="readonly_option">
               <legend>Pick an option</legend>
-              <Field flex alignY="center" spacing="s">
+              <Field as="label" flex alignY="center" spacing="s">
                 <Input type="radio" value="alpha" />
-                <Label>Alpha (normal)</Label>
+                Alpha (normal)
               </Field>
-              <Field flex alignY="center" spacing="s">
+              <Field as="label" flex alignY="center" spacing="s">
                 <Input type="radio" value="beta" />
-                <Label>Beta (normal)</Label>
+                Beta (normal)
               </Field>
-              <Field flex alignY="center" spacing="s">
+              <Field as="label" flex alignY="center" spacing="s">
                 <Input
                   type="radio"
                   value="gamma"
                   readOnly
                   readOnlyMessage={ro}
                 />
-                <Label>Gamma (readonly)</Label>
+                Gamma (readonly)
               </Field>
-              <Field flex alignY="center" spacing="s">
+              <Field as="label" flex alignY="center" spacing="s">
                 <Input
                   type="radio"
                   value="delta"
                   readOnly
                   readOnlyMessage={ro}
                 />
-                <Label>Delta (readonly)</Label>
+                Delta (readonly)
               </Field>
-              <Field flex alignY="center" spacing="s">
+              <Field as="label" flex alignY="center" spacing="s">
                 <Input type="radio" value="epsilon" />
-                <Label>Epsilon (normal)</Label>
+                Epsilon (normal)
               </Field>
             </RadioFieldset>
           </div>

@@ -116,7 +116,10 @@ export const Field = (props) => {
   import.meta.css = css;
   const refDefault = useRef();
   props.ref = props.ref || refDefault;
-
+  const { as, vertical } = props;
+  if (as === undefined && !vertical) {
+    props.as = "label";
+  }
   if (props.as === "label") {
     return <FieldAsLabel {...props} />;
   }
