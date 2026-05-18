@@ -27,8 +27,11 @@ CONSTRAINT_ATTRIBUTE_SET.add("data-disabled-message");
 export const REQUIRED_CONSTRAINT = {
   name: "required",
   messageAttribute: "data-required-message",
-  check: (field, { registerChange }) => {
+  check: (field, { skipRequired, registerChange }) => {
     if (!field.required) {
+      return null;
+    }
+    if (skipRequired) {
       return null;
     }
     if (field.type === "checkbox") {
