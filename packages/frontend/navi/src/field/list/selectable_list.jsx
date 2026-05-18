@@ -162,7 +162,6 @@ export const Selectable = (props) => {
         spacing="s"
         expandX
         {...props}
-        pseudoStateSelector=".navi_input"
         hasChildFunction
       >
         {renderInputMemo}

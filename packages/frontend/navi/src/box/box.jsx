@@ -661,6 +661,11 @@ export const Box = (props) => {
         const pseudoStateEl = pseudoStateSelector
           ? boxEl.querySelector(pseudoStateSelector)
           : boxEl;
+        if (!pseudoStateEl) {
+          console.error(
+            `pseudoStateSelector "${pseudoStateSelector}" did not match any element inside the box`,
+          );
+        }
         const visualEl = visualSelector
           ? boxEl.querySelector(visualSelector)
           : null;
