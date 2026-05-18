@@ -1245,6 +1245,7 @@ const ListField = (props) => {
   const listVnode = (
     <Next
       as="fieldset"
+      aria-multiselectable={multiple ? "true" : undefined}
       {...fieldProps}
       onListVisibleItemsChange={(visibleItems) => {
         props.onListVisibleItemsChange?.(visibleItems);
@@ -1483,6 +1484,7 @@ const ListItemReal = (props) => {
 };
 const ListItemRealField = (props) => {
   const { item } = props;
+  // requiredMessage={naviI18n(`list_item.readonly`, { item })
 
   return (
     <ListItemRealUI
@@ -1500,11 +1502,9 @@ const ListItemRealField = (props) => {
         }
       }}
     >
-      <Field requiredMessage={naviI18n(`list_item.readonly`, { item })}>
-        <ListInteractiveContext.Provider value={undefined}>
-          {props.children}
-        </ListInteractiveContext.Provider>
-      </Field>
+      <ListInteractiveContext.Provider value={undefined}>
+        {props.children}
+      </ListInteractiveContext.Provider>
     </ListItemRealUI>
   );
 };

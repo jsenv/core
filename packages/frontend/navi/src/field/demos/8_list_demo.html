@@ -103,23 +103,77 @@
         );
       };
 
-      const FRUITS = [
-        "Apple",
-        "Banana",
-        "Cherry",
-        "Date",
-        "Elderberry",
-        "Fig",
-        "Grape",
-        "Honeydew",
-        "Kiwi",
-        "Lemon",
-        "Mango",
-        "Nectarine",
-        "Orange",
-        "Papaya",
-        "Quince",
-      ];
+      // ── ReadOnly items demo ────────────────────────────────────────────────────
+
+      const ReadOnlyDemo = () => {
+        const [selected, setSelected] = useState(null);
+        const [log, setLog] = useState([]);
+        const addLog = (msg) => {
+          setLog((prev) => [...prev.slice(-4), msg]);
+        };
+        return (
+          <div className="demo-section">
+            <h2>ReadOnly items</h2>
+            <p>
+              Items with <code>readOnly</code> show a callout on click instead
+              of selecting. The <code>uiAction</code> and <code>action</code>{" "}
+              callbacks must NOT be called for readonly items.
+            </p>
+
+            <List
+              // name="fruits"
+              action={(v) => {
+                addLog(`action called with: "${v}"`);
+                setSelected(v);
+              }}
+            >
+              <ListItem index={0} id="readonly_default" flex spacing="s">
+                <Field paddingX="s" paddingY="m">
+                  <Input type="radio" value="readonly_default" readOnly />
+                  Readonly (default message)
+                </Field>
+              </ListItem>
+              <ListItem index={1} id="readonly_custom" flex spacing="s">
+                <Field paddingX="s" paddingY="m">
+                  <Input
+                    type="radio"
+                    value="readonly_custom"
+                    readOnly
+                    readOnlyMessage={
+                      <>
+                        Ce créneau est déjà <strong>réservé.</strong>
+                      </>
+                    }
+                  />
+                  Readonly (custom message)
+                </Field>
+              </ListItem>
+              <ListItem index={2} id="apple" flex spacing="s">
+                <Input
+                  type="radio"
+                  value="Apple"
+                  checked={selected === "Apple"}
+                />
+                Apple (clickable)
+              </ListItem>
+              <ListItem index={3} id="banana" flex spacing="s">
+                <Input
+                  type="radio"
+                  value="Banana"
+                  checked={selected === "Banana"}
+                />
+                Banana (clickable)
+              </ListItem>
+            </List>
+            <div
+              className="value-display"
+              style={{ minHeight: 60, whiteSpace: "pre-line" }}
+            >
+              {log.length === 0 ? "(no callbacks fired yet)" : log.join("\n")}
+            </div>
+          </div>
+        );
+      };
 
       // ── Item states showcase ───────────────────────────────────────────────────
 
@@ -211,6 +265,24 @@
       };
 
       // ── 1. Display-only list ───────────────────────────────────────────────────
+
+      const FRUITS = [
+        "Apple",
+        "Banana",
+        "Cherry",
+        "Date",
+        "Elderberry",
+        "Fig",
+        "Grape",
+        "Honeydew",
+        "Kiwi",
+        "Lemon",
+        "Mango",
+        "Nectarine",
+        "Orange",
+        "Papaya",
+        "Quince",
+      ];
 
       const DisplayOnlyDemo = () => {
         return (
@@ -363,60 +435,6 @@
         );
       };
 
-      // ── 3. Searchable list — input inside list ─────────────────────────────────
-
-      const SearchableDemo = () => {
-        const [selected, setSelected] = useState(null);
-        const [searchText, setSearchText] = useState("");
-        const [fruits, getItemMatchInfo] = useSearchText(searchText, FRUITS);
-        return (
-          <div className="demo-section">
-            <h2>3. Search — input inside list</h2>
-            <p>
-              Placing an <code>Input</code> inside a <code>ListItemHeader</code>{" "}
-              auto-connects it to the list via context. Keyboard events (arrows,
-              enter, escape) forward from the input to the list automatically.
-            </p>
-            <List
-              uiAction={(value) => {
-                setSelected(value);
-              }}
-            >
-              <ListItemHeader>
-                <Input
-                  placeholder="Search fruits…"
-                  expandX
-                  paddingX="10"
-                  paddingY="6"
-                  size="m"
-                  style="border-bottom: 1px solid #eee; border-radius: 0;"
-                  uiAction={(value) => {
-                    setSearchText(value);
-                  }}
-                />
-              </ListItemHeader>
-              {fruits.map((fruit, i) => {
-                const { match, ranges } = getItemMatchInfo(fruit);
-                return (
-                  <ListItem
-                    key={fruit}
-                    index={i}
-                    id={fruit}
-                    value={fruit}
-                    selected={selected === fruit}
-                    filtered={!match}
-                    highlight={ranges}
-                  >
-                    {fruit}
-                  </ListItem>
-                );
-              })}
-            </List>
-            <div className="value-display">{selected ?? ""}</div>
-          </div>
-        );
-      };
-
       // ── 3b. Searchable list — input outside list (listId) ──────────────────────
 
       const SearchableExternalInputDemo = () => {
@@ -480,6 +498,60 @@
                 })}
               </List>
             </Box>
+            <div className="value-display">{selected ?? ""}</div>
+          </div>
+        );
+      };
+
+      // ── 3. Searchable list — input inside list ─────────────────────────────────
+
+      const SearchableDemo = () => {
+        const [selected, setSelected] = useState(null);
+        const [searchText, setSearchText] = useState("");
+        const [fruits, getItemMatchInfo] = useSearchText(searchText, FRUITS);
+        return (
+          <div className="demo-section">
+            <h2>3. Search — input inside list</h2>
+            <p>
+              Placing an <code>Input</code> inside a <code>ListItemHeader</code>{" "}
+              auto-connects it to the list via context. Keyboard events (arrows,
+              enter, escape) forward from the input to the list automatically.
+            </p>
+            <List
+              uiAction={(value) => {
+                setSelected(value);
+              }}
+            >
+              <ListItemHeader>
+                <Input
+                  placeholder="Search fruits…"
+                  expandX
+                  paddingX="10"
+                  paddingY="6"
+                  size="m"
+                  style="border-bottom: 1px solid #eee; border-radius: 0;"
+                  uiAction={(value) => {
+                    setSearchText(value);
+                  }}
+                />
+              </ListItemHeader>
+              {fruits.map((fruit, i) => {
+                const { match, ranges } = getItemMatchInfo(fruit);
+                return (
+                  <ListItem
+                    key={fruit}
+                    index={i}
+                    id={fruit}
+                    value={fruit}
+                    selected={selected === fruit}
+                    filtered={!match}
+                    highlight={ranges}
+                  >
+                    {fruit}
+                  </ListItem>
+                );
+              })}
+            </List>
             <div className="value-display">{selected ?? ""}</div>
           </div>
         );
@@ -655,80 +727,6 @@
           </div>
         );
       };
-
-      // ── ReadOnly items demo ────────────────────────────────────────────────────
-
-      const ReadOnlyDemo = () => {
-        const [selected, setSelected] = useState(null);
-        const [log, setLog] = useState([]);
-        const addLog = (msg) => {
-          setLog((prev) => [...prev.slice(-4), msg]);
-        };
-        return (
-          <div className="demo-section">
-            <h2>ReadOnly items</h2>
-            <p>
-              Items with <code>readOnly</code> show a callout on click instead
-              of selecting. The <code>uiAction</code> and <code>action</code>{" "}
-              callbacks must NOT be called for readonly items.
-            </p>
-
-            <List
-              // name="fruits"
-              action={(v) => {
-                addLog(`action called with: "${v}"`);
-                setSelected(v);
-              }}
-            >
-              <ListItem index={0} id="readonly_default" flex spacing="s">
-                <Field paddingX="s" paddingY="m">
-                  <Input type="radio" value="readonly_default" readOnly />
-                  Readonly (default message)
-                </Field>
-              </ListItem>
-              <ListItem index={1} id="readonly_custom" flex spacing="s">
-                <Field paddingX="s" paddingY="m">
-                  <Input
-                    type="radio"
-                    value="readonly_custom"
-                    readOnly
-                    readOnlyMessage={
-                      <>
-                        Ce créneau est déjà <strong>réservé.</strong>
-                      </>
-                    }
-                  />
-                  Readonly (custom message)
-                </Field>
-              </ListItem>
-              <ListItem index={2} id="apple" flex spacing="s">
-                <Input
-                  type="radio"
-                  value="Apple"
-                  checked={selected === "Apple"}
-                />
-                Apple (clickable)
-              </ListItem>
-              <ListItem index={3} id="banana" flex spacing="s">
-                <Input
-                  type="radio"
-                  value="Banana"
-                  checked={selected === "Banana"}
-                />
-                Banana (clickable)
-              </ListItem>
-            </List>
-            <div
-              className="value-display"
-              style={{ minHeight: 60, whiteSpace: "pre-line" }}
-            >
-              {log.length === 0 ? "(no callbacks fired yet)" : log.join("\n")}
-            </div>
-          </div>
-        );
-      };
-
-      // ── App ────────────────────────────────────────────────────────────────────
 
       // ── InputInsideListItemDemo ───────────────────────────────────────────────
 
