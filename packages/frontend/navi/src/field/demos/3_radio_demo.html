@@ -1393,32 +1393,64 @@
 
       // --- Radio list where the 2nd option is readonly ---
       const RadioListWithReadonlyDemo = () => {
+        const ro = "This option is currently unavailable.";
         return (
           <div id="radio-list-readonly" className="demo-section">
             <h2>Radio list with readonly option</h2>
             <p className="states-description">
-              The second radio is <code>readOnly</code> and shows a custom
-              message when the user tries to select it.
+              Mix of normal and <code>readOnly</code> radios to verify keyboard
+              navigation (arrows skip readonly) and click behaviour (readonly
+              shows a message).
             </p>
             <Field vertical spacing="s">
               <Label>Pick an option</Label>
               <RadioList name="readonly_option">
-                <Field id="alpha" flex alignY="center" spacing="s">
+                <Field id="field-alpha" flex alignY="center" spacing="s">
                   <Input type="radio" value="alpha" />
-                  <Label>Alpha</Label>
+                  <Label>Alpha (normal)</Label>
                 </Field>
-                <Field id="beta" flex alignY="center" spacing="s">
+                <Field id="field-beta" flex alignY="center" spacing="s">
+                  <Input type="radio" value="beta" />
+                  <Label>Beta (normal)</Label>
+                </Field>
+                <Field id="field-gamma" flex alignY="center" spacing="s">
                   <Input
                     type="radio"
-                    value="beta"
+                    value="gamma"
                     readOnly
-                    readOnlyMessage="Beta is currently unavailable. Please choose another option."
+                    readOnlyMessage={ro}
                   />
-                  <Label>Beta (unavailable)</Label>
+                  <Label>Gamma (readonly)</Label>
                 </Field>
-                <Field id="gamma" flex alignY="center" spacing="s">
-                  <Input type="radio" value="gamma" />
-                  <Label>Gamma</Label>
+                <Field id="field-delta" flex alignY="center" spacing="s">
+                  <Input
+                    type="radio"
+                    value="delta"
+                    readOnly
+                    readOnlyMessage={ro}
+                  />
+                  <Label>Delta (readonly)</Label>
+                </Field>
+                <Field id="field-epsilon" flex alignY="center" spacing="s">
+                  <Input type="radio" value="epsilon" />
+                  <Label>Epsilon (normal)</Label>
+                </Field>
+                <Field id="field-zeta" flex alignY="center" spacing="s">
+                  <Input
+                    type="radio"
+                    value="zeta"
+                    readOnly
+                    readOnlyMessage={ro}
+                  />
+                  <Label>Zeta (readonly)</Label>
+                </Field>
+                <Field id="field-eta" flex alignY="center" spacing="s">
+                  <Input type="radio" value="eta" />
+                  <Label>Eta (normal)</Label>
+                </Field>
+                <Field id="field-theta" flex alignY="center" spacing="s">
+                  <Input type="radio" value="theta" />
+                  <Label>Theta (normal)</Label>
                 </Field>
               </RadioList>
             </Field>
