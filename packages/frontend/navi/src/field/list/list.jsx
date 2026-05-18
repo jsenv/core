@@ -1598,31 +1598,9 @@ const ListItemRealOrVoid = (props) => {
   }
   const idDefault = useId();
   props.id = props.id || idDefault;
-  const {
-    id,
-    value,
-    filtered,
-    hidden,
-    selected,
-    matchScore,
-    disabled,
-    readOnly,
-    index,
-    ...rest
-  } = props;
   const renderWindow = useContext(RenderWindowContext);
   const tracker = useContext(ListItemTrackerContext);
-  const item = {
-    id,
-    index,
-    filtered,
-    hidden,
-    value,
-    selected,
-    matchScore,
-    disabled,
-    readOnly,
-  };
+  const item = props;
   const visibleIndex = tracker.useTrackItem(item);
   const groupTracker = useContext(GroupItemTrackerContext);
   const groupVisibleIndex = groupTracker
@@ -1630,23 +1608,12 @@ const ListItemRealOrVoid = (props) => {
     : null;
   const separator = useContext(SeparatorContext);
 
-  if (filtered) {
+  if (props.filtered) {
     return null;
   }
   // html-hidden items: excluded from virtual scroll accounting but always in DOM
-  if (hidden) {
-    return (
-      <ListItemReal
-        id={id}
-        value={value}
-        item={item}
-        selected={selected}
-        disabled={disabled}
-        readOnly={readOnly}
-        hidden={hidden}
-        {...rest}
-      />
-    );
+  if (props.hidden) {
+    return <ListItemReal item={item} {...props} />;
   }
   if (visibleIndex === -1) {
     return null;
@@ -1654,17 +1621,7 @@ const ListItemRealOrVoid = (props) => {
   if (visibleIndex < renderWindow.start || visibleIndex >= renderWindow.end) {
     return <ListItemVoid />;
   }
-  const listItemVnode = (
-    <ListItemReal
-      id={id}
-      value={value}
-      item={item}
-      selected={selected}
-      disabled={disabled}
-      readOnly={readOnly}
-      {...rest}
-    />
-  );
+  const listItemVnode = <ListItemReal item={item} {...props} />;
   // Use group-scoped visible index for separator when inside a group,
   // so separators are only rendered between items within the same group.
   const separatorIndex =
@@ -1749,7 +1706,7 @@ const ListItemReal = (props) => {
       navi-list-item-real=""
       data-interactive={isInteractive ? "" : undefined}
       data-anchor={isPointedByKeyboard ? "" : undefined}
-      data-required-message={naviI18n(`list_item.readonly`, { item })}
+      requiredMessage={naviI18n(`list_item.readonly`, { item })}
       {...rest}
       hidden={hidden}
       ref={ref}

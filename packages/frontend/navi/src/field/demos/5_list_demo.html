@@ -656,12 +656,9 @@
             </p>
 
             <List
-              uiAction={(value) => {
-                addLog(`uiAction called with: "${value}"`);
-                setSelected(value);
-              }}
               action={(v) => {
                 addLog(`action called with: "${v}"`);
+                setSelected(v);
               }}
             >
               <ListItem
