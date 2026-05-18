@@ -241,6 +241,9 @@ export const openCallout = (
       return;
     }
     debug(event, `callout close (reason: ${reason})`);
+    if (event.type === "mousedown") {
+      event.preventDefault(); // prevent focus change to the callout, let it on the input
+    }
     callout.opened = false;
     teardown(reason);
   };
@@ -260,8 +263,8 @@ export const openCallout = (
   const calloutCloseButton = calloutElement.querySelector(
     ".navi_callout_close_button",
   );
-  calloutCloseButton.onclick = (e) => {
-    requestClose(e, "click_close_button");
+  calloutCloseButton.onmousedown = (e) => {
+    requestClose(e, "mousedown_close_button");
   };
   const calloutId = `navi_callout_${Date.now()}`;
   calloutElement.id = calloutId;
