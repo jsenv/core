@@ -29,7 +29,6 @@ import { naviI18n } from "../../text/navi_i18n.js";
 import { useItemTracker } from "../../utils/item_tracker/use_item_tracker.js";
 import { useDisplayedLayoutEffect } from "../../utils/use_displayed_layout_effect.js";
 import { useFieldProps } from "../use_field_props.jsx";
-import { useOnNaviConstraintMessage } from "../validation/constraint_message.js";
 import {
   dispatchRequestAction,
   dispatchRequestInteraction,
@@ -1649,36 +1648,96 @@ const ListItemVoid = () => {
 const ListItemReal = (props) => {
   const defaultRef = useRef(null);
   props.ref = props.ref || defaultRef;
-  const {
-    ref,
-    id,
-    hidden,
-    highlight,
-    selected,
-    disabled,
-    readOnly,
-    readOnlyMessage,
-    item,
-    pointed,
-    children,
-    ...rest
-  } = props;
-
-  const onNaviConstraintMessage = useOnNaviConstraintMessage({
-    readOnlyMessage,
-  });
   const isInteractive = useContext(ListInteractiveContext);
+  if (isInteractive) {
+    return <ListItemRealField {...props} />;
+  }
+  return <ListItemRealUI {...props} />;
+};
+const ListItemRealField = (props) => {
+  const {
+    id,
+    item,
+    selected,
+    onMouseEnter,
+    pointed,
+    onMouseLeave,
+    onMouseDown,
+  } = props;
+  const fieldProps = useFieldProps(props, {
+    fieldType: "list_item",
+    readUIState: () => {
+      return selected ? item.value : undefined;
+    },
+  });
+  const { basePseudoState } = fieldProps;
+  const disabled = basePseudoState[":disabled"];
   const mousePointedId = useContext(ListMousePointedIdContext);
   const keyboardPointedId = useContext(ListKeyboardPointedIdContext);
-  const pendingScrollRef = useContext(PendingScrollRefContext);
-
   const isPointedByMouse = id === mousePointedId;
   const isPointedByKeyboard = id === keyboardPointedId;
   const isPointedByProxy = Boolean(pointed);
   const isPointed = isPointedByMouse || isPointedByKeyboard || isPointedByProxy;
+
+  return (
+    <ListItemRealUI
+      {...fieldProps}
+      aria-selected={selected}
+      aria-disabled={disabled}
+      data-interactive=""
+      data-anchor={isPointedByKeyboard ? "" : undefined}
+      requiredMessage={naviI18n(`list_item.readonly`, { item })}
+      basePseudoState={{
+        ...fieldProps.basePseudoState,
+        ":-navi-pointed": isPointed,
+        ":-navi-pointed-by-mouse": isPointedByMouse,
+        ":-navi-pointed-by-keyboard": isPointedByKeyboard,
+        ":-navi-pointed-by-proxy": isPointedByProxy,
+        ":-navi-selected": selected,
+      }}
+      onMouseEnter={(e) => {
+        onMouseEnter?.(e);
+        const listEl = e.currentTarget.closest(".navi_list");
+        dispatchCustomEvent(listEl, "navi_list_request_hover", {
+          item,
+          event: e,
+        });
+      }}
+      onMouseLeave={(e) => {
+        onMouseLeave?.(e);
+        const listEl = e.currentTarget.closest(".navi_list");
+        dispatchCustomEvent(listEl, "navi_list_request_hover", {
+          item: null,
+          event: e,
+        });
+      }}
+      onMouseDown={(e) => {
+        onMouseDown?.(e);
+        const listItem = e.currentTarget;
+        dispatchCustomEvent(listItem, "navi_list_item_request_select", {
+          item,
+          event: e,
+        });
+      }}
+      onnavi_list_item_request_select={(e) => {
+        const listItem = e.currentTarget;
+        const listEl = listItem.closest(".navi_list");
+        const allowed = dispatchRequestInteraction(listItem, e);
+        if (allowed) {
+          dispatchCustomEvent(listEl, "navi_list_request_select", {
+            item,
+            event: e,
+          });
+        }
+      }}
+    />
+  );
+};
+const ListItemRealUI = (props) => {
+  const { ref, id, hidden, highlight, children, ...rest } = props;
+  const pendingScrollRef = useContext(PendingScrollRefContext);
   const pendingScroll = pendingScrollRef.current;
   const needScrollOnMount = pendingScroll && pendingScroll.id === id;
-
   useLayoutEffect(() => {
     if (!needScrollOnMount) {
       return;
@@ -1700,62 +1759,11 @@ const ListItemReal = (props) => {
       styleCSSVars={LIST_ITEM_STYLE_CSS_VARS}
       pseudoClasses={LIST_ITEM_PSEUDO_CLASSES}
       pseudoElements={LIST_ITEM_PSEUDO_ELEMENTS}
-      aria-selected={selected}
-      aria-disabled={disabled ? true : undefined}
       id={id}
       navi-list-item-real=""
-      data-interactive={isInteractive ? "" : undefined}
-      data-anchor={isPointedByKeyboard ? "" : undefined}
-      requiredMessage={naviI18n(`list_item.readonly`, { item })}
       {...rest}
       hidden={hidden}
       ref={ref}
-      onMouseEnter={(e) => {
-        rest.onMouseEnter?.(e);
-        const listEl = e.currentTarget.closest(".navi_list");
-        dispatchCustomEvent(listEl, "navi_list_request_hover", {
-          item,
-          event: e,
-        });
-      }}
-      onMouseLeave={(e) => {
-        rest.onMouseLeave?.(e);
-        const listEl = e.currentTarget.closest(".navi_list");
-        dispatchCustomEvent(listEl, "navi_list_request_hover", {
-          item: null,
-          event: e,
-        });
-      }}
-      onMouseDown={(e) => {
-        rest.onMouseDown?.(e);
-        const listItem = e.currentTarget;
-        dispatchCustomEvent(listItem, "navi_list_item_request_select", {
-          item,
-          event: e,
-        });
-      }}
-      onnavi_list_item_request_select={(e) => {
-        const listItem = e.currentTarget;
-        const listEl = listItem.closest(".navi_list");
-        const allowed = dispatchRequestInteraction(listItem, e);
-        if (allowed) {
-          dispatchCustomEvent(listEl, "navi_list_request_select", {
-            item,
-            event: e,
-          });
-        }
-      }}
-      onnavi_constraint_message={onNaviConstraintMessage}
-      basePseudoState={{
-        ":disabled": Boolean(disabled),
-        ":read-only": Boolean(readOnly),
-        ":-navi-pointed": isPointed,
-        ":-navi-pointed-by-mouse": isPointedByMouse,
-        ":-navi-pointed-by-keyboard": isPointedByKeyboard,
-        ":-navi-pointed-by-proxy": isPointedByProxy,
-        ":-navi-selected": selected,
-        ...rest.basePseudoState,
-      }}
     >
       <InsideRealListItemContext.Provider value={true}>
         {children}
