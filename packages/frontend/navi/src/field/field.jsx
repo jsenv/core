@@ -14,36 +14,51 @@ import { extractMessageAndRemainingProps } from "./validation/constraint_message
 const css = /* css */ `
   @layer navi {
     [data-navi-field] {
-      --field-spacing: var(--navi-xs);
-
-      > * + .navi_label {
-        padding-left: var(--field-spacing);
-      }
-      > .navi_label:first-child {
-        padding-right: var(--field-spacing);
-      }
-      &[data-vertical] > .navi_label:first-child {
-        padding-bottom: var(--field-spacing);
-      }
-
       .navi_checkbox {
         --margin: 0;
       }
       .navi_radio {
         --margin: 0;
       }
-      &[data-interactive] {
-        .navi_label {
+
+      &label {
+        &[data-interactive] {
           cursor: pointer;
-          /* When label is interactive ability to select text oftens conflicts with other click interactions */
           user-select: none;
         }
-      }
-      &[data-readonly],
-      &[data-disabled] {
-        .navi_label {
+        &[data-readonly],
+        &[data-disabled] {
           color: rgba(0, 0, 0, 0.5);
           cursor: default;
+        }
+      }
+
+      &[data-navi-field-container] {
+        --field-spacing: var(--navi-xs);
+
+        > * + .navi_label {
+          padding-left: var(--field-spacing);
+        }
+        > .navi_label:first-child {
+          padding-right: var(--field-spacing);
+        }
+        &[data-vertical] > .navi_label:first-child {
+          padding-bottom: var(--field-spacing);
+        }
+
+        &[data-interactive] {
+          .navi_label {
+            cursor: pointer;
+            /* When label is interactive ability to select text oftens conflicts with other click interactions */
+            user-select: none;
+          }
+        }
+        &[data-readonly],
+        &[data-disabled] {
+          .navi_label {
+            color: rgba(0, 0, 0, 0.5);
+            cursor: default;
+          }
         }
       }
     }
@@ -55,21 +70,18 @@ export const useFieldId = () => {
   const ctx = useContext(FieldContext);
   return ctx ? ctx.fieldId : undefined;
 };
-
 export const reportReadOnlyToField = (value) => {
   const ctx = useContext(FieldContext);
   useLayoutEffect(() => {
     ctx?.setReadOnly(value);
   });
 };
-
 export const reportDisabledToField = (value) => {
   const ctx = useContext(FieldContext);
   useLayoutEffect(() => {
     ctx?.setDisabled(value);
   });
 };
-
 export const reportInteractiveToField = (value) => {
   const ctx = useContext(FieldContext);
   useLayoutEffect(() => {
@@ -104,9 +116,27 @@ export const Field = (props) => {
   import.meta.css = css;
   const refDefault = useRef();
   props.ref = props.ref || refDefault;
+
+  if (props.as === "label") {
+    return <FieldAsLabel {...props} />;
+  }
+  return <FieldAsContainer {...props} />;
+};
+const FieldAsLabel = (props) => {
+  return <FieldUI {...props} />;
+};
+
+const FieldAsContainer = (props) => {
   const idDefault = useId();
   const fieldId = `field_${idDefault}`;
   props.id = props.id || fieldId;
+
+  return <FieldUI {...props} styleCSSVars={FieldCSSVars} />;
+};
+const FieldCSSVars = {
+  spacing: "--field-spacing",
+};
+const FieldUI = (props) => {
   const { vertical } = props;
   const fieldBehaviorProps = useFieldBehaviorProps(props);
 
@@ -115,15 +145,11 @@ export const Field = (props) => {
       flex={vertical ? "y" : undefined}
       alignX={vertical ? "start" : undefined}
       data-vertical={vertical ? "" : undefined}
-      styleCSSVars={FieldCSSVars}
-      // baseClassName="navi_field"
       {...fieldBehaviorProps}
     />
   );
 };
-const FieldCSSVars = {
-  spacing: "--field-spacing",
-};
+
 const FieldPseudoClasses = [
   ":hover",
   ":active",

@@ -54,6 +54,7 @@
         Label,
         Input,
         NaviDebug,
+        Box,
       } from "@jsenv/navi";
 
       const App = () => {
@@ -88,17 +89,17 @@
               }}
             >
               <legend>Pick options</legend>
-              <Field flex alignY="center" spacing="s">
+              <Field as="label" flex alignY="center" spacing="s">
                 <Input type="checkbox" value="alpha" />
-                <Label>Alpha</Label>
+                Alpha
               </Field>
-              <Field flex alignY="center" spacing="s">
+              <Field as="label" flex alignY="center" spacing="s">
                 <Input type="checkbox" value="beta" />
-                <Label>Beta</Label>
+                Beta
               </Field>
-              <Field flex alignY="center" spacing="s">
+              <Field as="label" flex alignY="center" spacing="s">
                 <Input type="checkbox" value="gamma" />
-                <Label>Gamma</Label>
+                Gamma
               </Field>
             </CheckboxFieldset>
             <p
@@ -237,38 +238,40 @@
               readonly one shows a message. Readonly checkboxes are skipped when
               navigating with the keyboard.
             </p>
-            <CheckboxFieldset name="readonly_options" flex="y" spacing="s">
+            <CheckboxFieldset name="readonly_options">
               <legend>Pick options</legend>
-              <Field flex alignY="center" spacing="s">
-                <Input type="checkbox" value="alpha" />
-                <Label>Alpha (normal)</Label>
-              </Field>
-              <Field flex alignY="center" spacing="s">
-                <Input type="checkbox" value="beta" />
-                <Label>Beta (normal)</Label>
-              </Field>
-              <Field flex alignY="center" spacing="s">
-                <Input
-                  type="checkbox"
-                  value="gamma"
-                  readOnly
-                  readOnlyMessage={ro}
-                />
-                <Label>Gamma (readonly)</Label>
-              </Field>
-              <Field flex alignY="center" spacing="s">
-                <Input
-                  type="checkbox"
-                  value="delta"
-                  readOnly
-                  readOnlyMessage={ro}
-                />
-                <Label>Delta (readonly)</Label>
-              </Field>
-              <Field flex alignY="center" spacing="s">
-                <Input type="checkbox" value="epsilon" />
-                <Label>Epsilon (normal)</Label>
-              </Field>
+              <Box flex="y" alignX="start" spacing="s">
+                <Field as="label" flex alignY="center" spacing="s">
+                  <Input type="checkbox" value="alpha" />
+                  Alpha (normal)
+                </Field>
+                <Field as="label" flex alignY="center" spacing="s">
+                  <Input type="checkbox" value="beta" />
+                  Beta (normal)
+                </Field>
+                <Field as="label" flex alignY="center" spacing="s">
+                  <Input
+                    type="checkbox"
+                    value="gamma"
+                    readOnly
+                    readOnlyMessage={ro}
+                  />
+                  Gamma (readonly)
+                </Field>
+                <Field as="label" flex alignY="center" spacing="s">
+                  <Input
+                    type="checkbox"
+                    value="delta"
+                    readOnly
+                    readOnlyMessage={ro}
+                  />
+                  Delta (readonly)
+                </Field>
+                <Field as="label" flex alignY="center" spacing="s">
+                  <Input type="checkbox" value="epsilon" />
+                  Epsilon (normal)
+                </Field>
+              </Box>
             </CheckboxFieldset>
           </div>
         );
