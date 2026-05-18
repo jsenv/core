@@ -134,7 +134,6 @@
         Icon,
         Form,
         Button,
-        RadioFieldset,
         NaviDebug,
       } from "@jsenv/navi";
 
@@ -148,8 +147,6 @@
               <ButtonIconStatesDemo />
               <ColorDemo />
               <InteractiveDemo />
-              <RadioFieldsetInFormDemo />
-              <RadioFieldsetWithReadonlyDemo />
             </div>
           </NaviDebug>
         );
@@ -176,12 +173,7 @@
                 <a href="#interactive">Interactive Controls</a>
               </li>
               <li>
-                <a href="#radio-list-form">Radio list in a form</a>
-              </li>
-              <li>
-                <a href="#radio-list-readonly">
-                  Radio list with readonly option
-                </a>
+                <a href="./5_radio_fieldset_demo.html">RadioFieldset demo</a>
               </li>
             </ol>
           </div>
@@ -1332,128 +1324,6 @@
                 </div>
               </Box>
             </fieldset>
-          </div>
-        );
-      };
-
-      // --- Radio list inside a form with submit ---
-      const RadioFieldsetInFormDemo = () => {
-        const [submitted, setSubmitted] = useState(null);
-        return (
-          <div id="radio-list-form" className="demo-section">
-            <h2>Radio list in a form</h2>
-            <p className="states-description">
-              Three radios inside a <code>Form</code> with a submit button. The
-              field is <code>required</code> — submitting without a selection
-              shows the validation message.
-            </p>
-            <Form
-              action={(params) => {
-                setSubmitted(params);
-              }}
-            >
-              <Field vertical spacing="s">
-                <Label>Pick an option</Label>
-                <RadioFieldset name="form_option" required>
-                  <Field flex alignY="center" spacing="s">
-                    <Input type="radio" value="alpha" />
-                    <Label>Alpha</Label>
-                  </Field>
-                  <Field flex alignY="center" spacing="s">
-                    <Input type="radio" value="beta" />
-                    <Label>Beta</Label>
-                  </Field>
-                  <Field flex alignY="center" spacing="s">
-                    <Input type="radio" value="gamma" />
-                    <Label>Gamma</Label>
-                  </Field>
-                </RadioFieldset>
-              </Field>
-              <Button type="submit" style={{ marginTop: "12px" }}>
-                Submit
-              </Button>
-              {submitted !== null && (
-                <pre
-                  style={{
-                    marginTop: "12px",
-                    padding: "8px",
-                    fontFamily: "monospace",
-                    background: "#f8f9fa",
-                    border: "1px solid #dee2e6",
-                    borderRadius: "4px",
-                  }}
-                >
-                  {JSON.stringify(submitted, null, 2)}
-                </pre>
-              )}
-            </Form>
-          </div>
-        );
-      };
-
-      // --- Radio list where the 2nd option is readonly ---
-      const RadioFieldsetWithReadonlyDemo = () => {
-        const ro = "This option is currently unavailable.";
-        return (
-          <div id="radio-list-readonly" className="demo-section">
-            <h2>Radio list with readonly option</h2>
-            <p className="states-description">
-              Mix of normal and <code>readOnly</code> radios to verify keyboard
-              navigation (arrows skip readonly) and click behaviour (readonly
-              shows a message).
-            </p>
-            <Field vertical spacing="s">
-              <Label>Pick an option</Label>
-              <RadioFieldset name="readonly_option">
-                <Field id="field-alpha" flex alignY="center" spacing="s">
-                  <Input type="radio" value="alpha" />
-                  <Label>Alpha (normal)</Label>
-                </Field>
-                <Field id="field-beta" flex alignY="center" spacing="s">
-                  <Input type="radio" value="beta" />
-                  <Label>Beta (normal)</Label>
-                </Field>
-                <Field id="field-gamma" flex alignY="center" spacing="s">
-                  <Input
-                    type="radio"
-                    value="gamma"
-                    readOnly
-                    readOnlyMessage={ro}
-                  />
-                  <Label>Gamma (readonly)</Label>
-                </Field>
-                <Field id="field-delta" flex alignY="center" spacing="s">
-                  <Input
-                    type="radio"
-                    value="delta"
-                    readOnly
-                    readOnlyMessage={ro}
-                  />
-                  <Label>Delta (readonly)</Label>
-                </Field>
-                <Field id="field-epsilon" flex alignY="center" spacing="s">
-                  <Input type="radio" value="epsilon" />
-                  <Label>Epsilon (normal)</Label>
-                </Field>
-                <Field id="field-zeta" flex alignY="center" spacing="s">
-                  <Input
-                    type="radio"
-                    value="zeta"
-                    readOnly
-                    readOnlyMessage={ro}
-                  />
-                  <Label>Zeta (readonly)</Label>
-                </Field>
-                <Field id="field-eta" flex alignY="center" spacing="s">
-                  <Input type="radio" value="eta" />
-                  <Label>Eta (normal)</Label>
-                </Field>
-                <Field id="field-theta" flex alignY="center" spacing="s">
-                  <Input type="radio" value="theta" />
-                  <Label>Theta (normal)</Label>
-                </Field>
-              </RadioFieldset>
-            </Field>
           </div>
         );
       };
