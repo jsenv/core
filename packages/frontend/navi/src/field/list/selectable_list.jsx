@@ -69,17 +69,11 @@ export const SelectableList = (props) => {
   });
   useFocusGroup(ref, { direction: "both", loop: true });
 
-  const visibleItemsRef = useRef([]);
-
   const listVnode = (
     <List
       as="fieldset"
       aria-multiselectable={multiple ? "true" : undefined}
       {...fieldProps}
-      onListVisibleItemsChange={(visibleItems) => {
-        props.onListVisibleItemsChange?.(visibleItems);
-        visibleItemsRef.current = visibleItems;
-      }}
       onnavi_list_nav={(e) => {
         const { item, event } = e.detail;
         // const id = item ? item.id : null;
