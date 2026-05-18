@@ -663,7 +663,7 @@ export const installCustomConstraintValidation = (
       closeOnClickOutside: failedConstraintInfo.closeOnClickOutside,
       openingEvent: event,
       debug,
-      onClose: () => {
+      onClose: ({ focusWithinCallout }) => {
         removeCloseOnCleanup();
         for (const result of results) {
           if (typeof result === "function") {
@@ -674,7 +674,10 @@ export const installCustomConstraintValidation = (
         if (failedConstraintInfo) {
           failedConstraintInfo.reportStatus = "closed";
         }
-        if (!skipFocus) {
+        if (!skipFocus && focusWithinCallout) {
+          // focus is withing callout and we are closing it
+          // if we don't do anything browser will move focus to the body
+          // it's better to have it back to the field
           element.focus();
         }
       },

@@ -245,10 +245,15 @@ export const openCallout = (
       event.preventDefault(); // prevent focus change to the callout, let it on the input
     }
     callout.opened = false;
-    teardown(reason);
+    teardown({ event, reason });
   };
   if (onClose) {
-    addTeardown(onClose);
+    addTeardown(({ event, reason }) => {
+      const focusWithinCallout = callout.element.contains(
+        document.activeElement,
+      );
+      onClose({ event, reason, focusWithinCallout });
+    });
   }
 
   const [updateStatus, addStatusEffect, cleanupStatusEffects] =
@@ -338,18 +343,27 @@ export const openCallout = (
       ) {
         return;
       }
-      // if (
-      //   clickTarget === targetElement ||
-      //   targetElement.contains(clickTarget)
-      // ) {
-      //   return;
-      // }
+      requestClose(event, "click_outside");
+    };
+    const handleSpaceOutside = (event) => {
+      if (!closeOnClickOutside) {
+        return;
+      }
+      if (event.key !== " ") {
+        return;
+      }
+      const keyTarget = event.target;
+      if (keyTarget === calloutElement || calloutElement.contains(keyTarget)) {
+        return;
+      }
       requestClose(event, "click_outside");
     };
     const registerClickOutsideListener = () => {
       document.addEventListener("click", handleClickOutside, true);
+      document.addEventListener("keydown", handleSpaceOutside, true);
       addTeardown(() => {
         document.removeEventListener("click", handleClickOutside, true);
+        document.removeEventListener("keydown", handleSpaceOutside, true);
       });
     };
     if (
