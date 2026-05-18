@@ -1730,7 +1730,11 @@ const ListItemRealField = (props) => {
           });
         }
       }}
-    />
+    >
+      <ListInteractiveContext.Provider value={undefined}>
+        {fieldProps.children}
+      </ListInteractiveContext.Provider>
+    </ListItemRealUI>
   );
 };
 const ListItemRealUI = (props) => {
