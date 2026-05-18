@@ -20,45 +20,45 @@ const css = /* css */ `
       .navi_radio {
         --margin: 0;
       }
+    }
 
-      &label {
-        &[data-interactive] {
-          cursor: pointer;
-          user-select: none;
-        }
-        &[data-readonly],
-        &[data-disabled] {
-          color: rgba(0, 0, 0, 0.5);
-          cursor: default;
-        }
+    label[data-navi-field] {
+      &[data-interactive] {
+        cursor: pointer;
+        user-select: none;
+      }
+      &[data-readonly],
+      &[data-disabled] {
+        color: rgba(0, 0, 0, 0.5);
+        cursor: default;
+      }
+    }
+
+    [data-navi-field-container] {
+      --field-spacing: var(--navi-xs);
+
+      > * + .navi_label {
+        padding-left: var(--field-spacing);
+      }
+      > .navi_label:first-child {
+        padding-right: var(--field-spacing);
+      }
+      &[data-vertical] > .navi_label:first-child {
+        padding-bottom: var(--field-spacing);
       }
 
-      &[data-navi-field-container] {
-        --field-spacing: var(--navi-xs);
-
-        > * + .navi_label {
-          padding-left: var(--field-spacing);
+      &[data-interactive] {
+        .navi_label {
+          cursor: pointer;
+          /* When label is interactive ability to select text oftens conflicts with other click interactions */
+          user-select: none;
         }
-        > .navi_label:first-child {
-          padding-right: var(--field-spacing);
-        }
-        &[data-vertical] > .navi_label:first-child {
-          padding-bottom: var(--field-spacing);
-        }
-
-        &[data-interactive] {
-          .navi_label {
-            cursor: pointer;
-            /* When label is interactive ability to select text oftens conflicts with other click interactions */
-            user-select: none;
-          }
-        }
-        &[data-readonly],
-        &[data-disabled] {
-          .navi_label {
-            color: rgba(0, 0, 0, 0.5);
-            cursor: default;
-          }
+      }
+      &[data-readonly],
+      &[data-disabled] {
+        .navi_label {
+          color: rgba(0, 0, 0, 0.5);
+          cursor: default;
         }
       }
     }
@@ -131,7 +131,13 @@ const FieldAsContainer = (props) => {
   const fieldId = `field_${idDefault}`;
   props.id = props.id || fieldId;
 
-  return <FieldUI {...props} styleCSSVars={FieldCSSVars} />;
+  return (
+    <FieldUI
+      {...props}
+      data-navi-field-container=""
+      styleCSSVars={FieldCSSVars}
+    />
+  );
 };
 const FieldCSSVars = {
   spacing: "--field-spacing",
