@@ -531,6 +531,13 @@ const InputRadioField = (props) => {
         if (e.key === "Enter") {
           requestClosestAction(e);
         }
+        if (e.key === " ") {
+          const radio = ref.current;
+          const allowed = dispatchRequestInteraction(radio, e);
+          if (!allowed) {
+            e.preventDefault();
+          }
+        }
       }}
     >
       <span className="navi_radio_accent_probe" aria-hidden="true" />
