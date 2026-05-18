@@ -69,14 +69,23 @@
       };
 
       const StandaloneDemo = () => {
+        const [lastCall, setLastCall] = useState(undefined);
         return (
           <div class="demo-section">
             <h2>Standalone</h2>
             <p style={{ margin: "0 0 12px", color: "#555" }}>
-              A <code>CheckboxFieldset</code> outside any form. Selecting or
-              deselecting options triggers the <code>uiAction</code> callback.
+              <code>action</code> is called each time a checkbox is toggled. It
+              receives the current array of selected values, or{" "}
+              <code>undefined</code> when nothing is selected.
             </p>
-            <CheckboxFieldset name="standalone_options" flex="y" spacing="s">
+            <CheckboxFieldset
+              name="standalone_options"
+              flex="y"
+              spacing="s"
+              action={(values) => {
+                setLastCall(values);
+              }}
+            >
               <legend>Pick options</legend>
               <Field flex alignY="center" spacing="s">
                 <Input type="checkbox" value="alpha" />
@@ -91,6 +100,20 @@
                 <Label>Gamma</Label>
               </Field>
             </CheckboxFieldset>
+            <p
+              style={{
+                marginTop: "12px",
+                color: "#555",
+                fontFamily: "monospace",
+              }}
+            >
+              Last action call:{" "}
+              {lastCall === undefined ? (
+                <em>none</em>
+              ) : (
+                JSON.stringify(lastCall)
+              )}
+            </p>
           </div>
         );
       };
