@@ -57,6 +57,7 @@ import {
   createPubSub,
   dispatchInternalCustomEvent,
   dispatchPublicCustomEvent,
+  findEvent,
   getElementSignature,
 } from "@jsenv/dom";
 
@@ -746,7 +747,30 @@ export const installCustomConstraintValidation = (
   };
 
   close_and_check_on_input: {
+    let waitPointerRelease;
+    onCalloutOpen((openingEvent) => {
+      if (findEvent(openingEvent, (e) => e.type === "mousedown")) {
+        waitPointerRelease = true;
+        const onMouseUp = () => {
+          setTimeout(() => {
+            waitPointerRelease = false;
+          });
+        };
+        document.addEventListener("mouseup", onMouseUp, {
+          once: true,
+          capture: true,
+        });
+        return () => {
+          document.removeEventListener("mouseup", onMouseUp, true);
+        };
+      }
+      return undefined;
+    });
+
     const oninput = (e) => {
+      if (waitPointerRelease) {
+        return;
+      }
       resetOnInteraction(e);
     };
     element.addEventListener("input", oninput);
