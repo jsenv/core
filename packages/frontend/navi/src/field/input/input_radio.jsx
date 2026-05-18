@@ -353,6 +353,7 @@ const InputRadioField = (props) => {
     type,
     /* eslint-enable no-unused-vars */
     name,
+    value,
     required,
     onClick,
     onInput,
@@ -380,12 +381,11 @@ const InputRadioField = (props) => {
       return undefined;
     },
   });
-  const { value, basePseudoState } = fieldProps;
+  const { value: checked, basePseudoState } = fieldProps;
   const disabled = basePseudoState[":disabled"];
   const readOnly = basePseudoState[":read-only"];
   const loading = basePseudoState[":-navi-loading"];
 
-  const checked = Boolean(value);
   // we must first dispatch an event to inform all other radios they where unchecked
   // this way each other radio uiStateController knows thery are unchecked
   // we do this on "input"
@@ -431,6 +431,7 @@ const InputRadioField = (props) => {
         ref={ref}
         type="radio"
         name={name}
+        value={value}
         checked={checked}
         disabled={disabled}
         required={required}
@@ -443,6 +444,7 @@ const InputRadioField = (props) => {
   };
   const renderRadioMemoized = useCallback(renderRadio, [
     name,
+    value,
     checked,
     disabled,
     readOnly,

@@ -126,18 +126,32 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      import { Input, Field, Label, Box, Icon } from "@jsenv/navi";
+      import {
+        Input,
+        Field,
+        Label,
+        Box,
+        Icon,
+        Form,
+        Button,
+        RadioList,
+        NaviDebug,
+      } from "@jsenv/navi";
 
       const App = () => {
         return (
-          <div>
-            <TableOfContents />
-            <BasicStatesDemo />
-            <IconStatesDemo />
-            <ButtonIconStatesDemo />
-            <ColorDemo />
-            <InteractiveDemo />
-          </div>
+          <NaviDebug debugAction debugInteraction>
+            <div>
+              <TableOfContents />
+              <BasicStatesDemo />
+              <IconStatesDemo />
+              <ButtonIconStatesDemo />
+              <ColorDemo />
+              <InteractiveDemo />
+              <RadioListInFormDemo />
+              <RadioListWithReadonlyDemo />
+            </div>
+          </NaviDebug>
         );
       };
 
@@ -160,6 +174,14 @@
               </li>
               <li>
                 <a href="#interactive">Interactive Controls</a>
+              </li>
+              <li>
+                <a href="#radio-list-form">Radio list in a form</a>
+              </li>
+              <li>
+                <a href="#radio-list-readonly">
+                  Radio list with readonly option
+                </a>
               </li>
             </ol>
           </div>
@@ -1310,6 +1332,96 @@
                 </div>
               </Box>
             </fieldset>
+          </div>
+        );
+      };
+
+      // --- Radio list inside a form with submit ---
+      const RadioListInFormDemo = () => {
+        const [submitted, setSubmitted] = useState(null);
+        return (
+          <div id="radio-list-form" className="demo-section">
+            <h2>Radio list in a form</h2>
+            <p className="states-description">
+              Three radios inside a <code>Form</code> with a submit button. The
+              field is <code>required</code> — submitting without a selection
+              shows the validation message.
+            </p>
+            <Form
+              action={(params) => {
+                setSubmitted(params);
+              }}
+            >
+              <Field vertical spacing="s">
+                <Label>Pick an option</Label>
+                <RadioList name="form_option" required>
+                  <Field flex alignY="center" spacing="s">
+                    <Input type="radio" value="alpha" />
+                    <Label>Alpha</Label>
+                  </Field>
+                  <Field flex alignY="center" spacing="s">
+                    <Input type="radio" value="beta" />
+                    <Label>Beta</Label>
+                  </Field>
+                  <Field flex alignY="center" spacing="s">
+                    <Input type="radio" value="gamma" />
+                    <Label>Gamma</Label>
+                  </Field>
+                </RadioList>
+              </Field>
+              <Button type="submit" style={{ marginTop: "12px" }}>
+                Submit
+              </Button>
+              {submitted !== null && (
+                <pre
+                  style={{
+                    marginTop: "12px",
+                    padding: "8px",
+                    fontFamily: "monospace",
+                    background: "#f8f9fa",
+                    border: "1px solid #dee2e6",
+                    borderRadius: "4px",
+                  }}
+                >
+                  {JSON.stringify(submitted, null, 2)}
+                </pre>
+              )}
+            </Form>
+          </div>
+        );
+      };
+
+      // --- Radio list where the 2nd option is readonly ---
+      const RadioListWithReadonlyDemo = () => {
+        return (
+          <div id="radio-list-readonly" className="demo-section">
+            <h2>Radio list with readonly option</h2>
+            <p className="states-description">
+              The second radio is <code>readOnly</code> and shows a custom
+              message when the user tries to select it.
+            </p>
+            <Field vertical spacing="s">
+              <Label>Pick an option</Label>
+              <RadioList name="readonly_option">
+                <Field flex alignY="center" spacing="s">
+                  <Input type="radio" value="alpha" />
+                  <Label>Alpha</Label>
+                </Field>
+                <Field flex alignY="center" spacing="s">
+                  <Input
+                    type="radio"
+                    value="beta"
+                    readOnly
+                    readOnlyMessage="Beta is currently unavailable. Please choose another option."
+                  />
+                  <Label>Beta (unavailable)</Label>
+                </Field>
+                <Field flex alignY="center" spacing="s">
+                  <Input type="radio" value="gamma" />
+                  <Label>Gamma</Label>
+                </Field>
+              </RadioList>
+            </Field>
           </div>
         );
       };
