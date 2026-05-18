@@ -1562,10 +1562,6 @@ const LIST_ITEM_STYLE_CSS_VARS = {
     color: "--list-item-color-keyboard-pointed",
     backgroundColor: "--list-item-background-color-keyboard-pointed",
   },
-  ":-navi-hover": {
-    color: "--list-item-color-mouse-pointed",
-    backgroundColor: "--list-item-background-color-mouse-pointed",
-  },
   ":hover": {
     color: "--list-item-color-hover",
     backgroundColor: "--list-item-background-color-hover",
@@ -1585,7 +1581,6 @@ const LIST_ITEM_STYLE_CSS_VARS = {
 };
 const LIST_ITEM_PSEUDO_CLASSES = [
   ":-navi-pointed",
-  ":-navi-hover",
   ":-navi-selected",
   ":disabled",
   ":read-only",
