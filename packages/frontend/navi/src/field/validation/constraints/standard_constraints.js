@@ -32,6 +32,28 @@ export const REQUIRED_CONSTRAINT = {
       return null;
     }
     if (field.type === "checkbox") {
+      const isCheckboxGroup =
+        field.name?.endsWith("[]") ||
+        Boolean(field.closest("[navi-checkbox-list]"));
+      if (isCheckboxGroup) {
+        const name = field.name;
+        const container =
+          field.closest("[navi-checkbox-list], fieldset, form") || document;
+        const checkboxSelector = `input[type="checkbox"][name="${CSS.escape(name)}"]`;
+        const checkboxes = container.querySelectorAll(checkboxSelector);
+        for (const checkbox of checkboxes) {
+          if (checkbox.checked) {
+            return null;
+          }
+          registerChange((onChange) => {
+            checkbox.addEventListener("change", onChange);
+            return () => {
+              checkbox.removeEventListener("change", onChange);
+            };
+          });
+        }
+        return naviI18n("constraint.required.checkbox_group");
+      }
       if (!field.checked) {
         return naviI18n("constraint.required.checkbox");
       }

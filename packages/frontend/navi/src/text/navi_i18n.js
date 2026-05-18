@@ -187,6 +187,10 @@ naviI18n.addAll({
     fr: "Veuillez cocher cette case.",
     en: "Please check this box.",
   },
+  "constraint.required.checkbox_group": {
+    fr: "Veuillez sélectionner au moins une option.",
+    en: "Please select at least one option.",
+  },
   "constraint.required.radio": {
     fr: "Veuillez sélectionner une option.",
     en: "Please select an option.",
