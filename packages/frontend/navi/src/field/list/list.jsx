@@ -30,7 +30,10 @@ import { useItemTracker } from "../../utils/item_tracker/use_item_tracker.js";
 import { useDisplayedLayoutEffect } from "../../utils/use_displayed_layout_effect.js";
 import { useFieldProps } from "../use_field_props.jsx";
 import { useOnNaviConstraintMessage } from "../validation/constraint_message.js";
-import { dispatchRequestAction } from "../validation/custom_constraint_validation.js";
+import {
+  dispatchRequestAction,
+  dispatchRequestInteraction,
+} from "../validation/custom_constraint_validation.js";
 import { useSearchHighlight } from "./search_highlight.js";
 
 const ListItemTrackerContext = createContext(null);
@@ -1372,7 +1375,7 @@ const ListField = (props) => {
         setMousePointedId(item ? item.id : null);
       }}
       onnavi_list_request_nav_from_current={(e) => {
-        const { event = e, goal } = e.detail;
+        const { event, goal } = e.detail;
         const visibleItems = visibleItemsRef.current;
         const visibleItemCount = visibleItems.length;
         if (visibleItemCount === 0) {
@@ -1751,53 +1754,39 @@ const ListItemReal = (props) => {
       hidden={hidden}
       ref={ref}
       onMouseEnter={(e) => {
-        if (disabled) {
-          return;
-        }
+        rest.onMouseEnter?.(e);
         const listEl = e.currentTarget.closest(".navi_list");
         dispatchCustomEvent(listEl, "navi_list_request_hover", {
           item,
           event: e,
         });
-        rest.onMouseEnter?.(e);
       }}
       onMouseLeave={(e) => {
-        if (disabled) {
-          return;
-        }
+        rest.onMouseLeave?.(e);
         const listEl = e.currentTarget.closest(".navi_list");
         dispatchCustomEvent(listEl, "navi_list_request_hover", {
           item: null,
           event: e,
         });
-        rest.onMouseLeave?.(e);
       }}
       onMouseDown={(e) => {
-        if (disabled) {
-          return;
-        }
-        if (readOnly) {
-          return;
-        }
-        if (e.button !== 0) {
-          return;
-        }
-        const listEl = e.currentTarget.closest(".navi_list");
-        dispatchCustomEvent(listEl, "navi_list_request_select", {
+        rest.onMouseDown?.(e);
+        const listItem = e.currentTarget;
+        dispatchCustomEvent(listItem, "navi_list_item_request_select", {
           item,
           event: e,
         });
-        rest.onMouseDown?.(e);
       }}
       onnavi_list_item_request_select={(e) => {
-        if (readOnly) {
-          return;
+        const listItem = e.currentTarget;
+        const listEl = listItem.closest(".navi_list");
+        const allowed = dispatchRequestInteraction(listItem, e);
+        if (allowed) {
+          dispatchCustomEvent(listEl, "navi_list_request_select", {
+            item,
+            event: e,
+          });
         }
-        const listEl = e.currentTarget.closest(".navi_list");
-        dispatchCustomEvent(listEl, "navi_list_request_select", {
-          item,
-          event: e.detail.event || e,
-        });
       }}
       onnavi_constraint_message={onNaviConstraintMessage}
       basePseudoState={{
