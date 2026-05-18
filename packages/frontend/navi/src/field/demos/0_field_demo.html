@@ -65,11 +65,11 @@
       const DefaultDemo = () => (
         <Box flex="y" spacing="s" id="default">
           <h2 style={{ margin: 0 }}>Default (label to the left)</h2>
-          <Field flex alignY="center" spacing="s">
+          <Field flex alignY="center">
             <Label style={labelDotted}>Username</Label>
             <Input type="text" name="username" placeholder="Enter username" />
           </Field>
-          <Field flex alignY="center" spacing="s">
+          <Field flex alignY="center">
             <Label style={labelDotted}>Email</Label>
             <Input type="email" name="email" placeholder="Enter email" />
           </Field>
@@ -79,11 +79,11 @@
       const VerticalDemo = () => (
         <Box flex="y" spacing="s" id="vertical">
           <h2 style={{ margin: 0 }}>Vertical (label above)</h2>
-          <Field vertical spacing="s">
+          <Field vertical>
             <Label style={labelDotted}>Username</Label>
             <Input type="text" name="username_v" placeholder="Enter username" />
           </Field>
-          <Field vertical spacing="s">
+          <Field vertical>
             <Label style={labelDotted}>Email</Label>
             <Input type="email" name="email_v" placeholder="Enter email" />
           </Field>
@@ -96,7 +96,7 @@
           <p style={{ margin: 0, fontSize: "0.85em", color: "#555" }}>
             The label dims automatically when the input is disabled.
           </p>
-          <Field flex alignY="center" spacing="s">
+          <Field flex alignY="center">
             <Label style={labelDotted}>Username</Label>
             <Input
               type="text"
@@ -202,7 +202,7 @@
       );
 
       const FieldRow = ({ children, ...props }) => (
-        <Field flex alignY="center" spacing="s" {...props}>
+        <Field flex alignY="center" {...props}>
           <Label expandX style={labelDotted} overflowEllipsis noWrap>
             {children}
           </Label>

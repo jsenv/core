@@ -14,7 +14,7 @@ import { extractMessageAndRemainingProps } from "./validation/constraint_message
 const css = /* css */ `
   @layer navi {
     [data-navi-field] {
-      --field-spacing: var(--navi-s);
+      --field-spacing: var(--navi-xs);
 
       > * + .navi_label {
         padding-left: var(--field-spacing);
@@ -23,7 +23,7 @@ const css = /* css */ `
         padding-right: var(--field-spacing);
       }
       &[data-vertical] > .navi_label:first-child {
-        padding-bottom: var(--field--spacing);
+        padding-bottom: var(--field-spacing);
       }
 
       .navi_checkbox {
