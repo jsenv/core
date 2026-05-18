@@ -16,7 +16,7 @@ import {
  */
 export const useConstraintMessages = (elementRef, props) => {
   const fieldCtx = useContext(FieldContext);
-  const fieldConstraintMessagesRef = fieldCtx?.constraintMessagesRef;
+  const fieldConstraintMessagesRef = fieldCtx?.messagePropsRef;
 
   const messagePropsRef = useRef();
   const [messageProps, remainingProps] = extractMessageAndRemainingProps(props);
