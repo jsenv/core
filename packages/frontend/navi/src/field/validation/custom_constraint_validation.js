@@ -111,7 +111,7 @@ export const onRequestInteraction = (
   if (requestStatus.canProceed) {
     checkAndReportConstraints(requestStatus, INTERACTION_CONSTRAINTS, {
       event: requestInteractionCustomEvent,
-      requester: event.currentTarget,
+      requester: event.target,
       debug: debugInteraction,
     });
   }
@@ -609,8 +609,23 @@ export const installCustomConstraintValidation = (
       closeElementValidationMessage(event, "invalid_silent");
       return;
     }
+
+    // Always resolve the right message first (handles custom messages, attributes, fallback).
+    const { message, origin } = getConstraintMessage(
+      element,
+      failedConstraintInfo.constraint,
+      failedConstraintInfo.message,
+      { requester },
+    );
+    if (debug) {
+      debug(
+        event,
+        `constraint message for "${failedConstraintInfo.constraint.name}": ${origin}`,
+      );
+    }
+
     if (validationInterface.validationMessage) {
-      const { message, status, closeOnClickOutside } = failedConstraintInfo;
+      const { status, closeOnClickOutside } = failedConstraintInfo;
       validationInterface.validationMessage.update(message, {
         status,
         closeOnClickOutside,
@@ -640,49 +655,28 @@ export const installCustomConstraintValidation = (
       return base;
     })();
 
-    let messageOrCustomMessage;
-    if (failedConstraintInfo.constraint.messageAttribute) {
-      const { message, origin } = getConstraintMessage(
-        element,
-        failedConstraintInfo.constraint,
-        failedConstraintInfo.message,
-        { requester },
-      );
-      if (debug) {
-        debug(
-          event,
-          `constraint message for "${failedConstraintInfo.constraint.name}": ${origin}`,
-        );
-      }
-      messageOrCustomMessage = message;
-    } else {
-      messageOrCustomMessage = failedConstraintInfo.message;
-    }
-    validationInterface.validationMessage = openCallout(
-      messageOrCustomMessage,
-      {
-        anchorElement,
-        status: failedConstraintInfo.status,
-        closeOnClickOutside: failedConstraintInfo.closeOnClickOutside,
-        openingEvent: event,
-        debug,
-        onClose: () => {
-          removeCloseOnCleanup();
-          for (const result of results) {
-            if (typeof result === "function") {
-              result();
-            }
+    validationInterface.validationMessage = openCallout(message, {
+      anchorElement,
+      status: failedConstraintInfo.status,
+      closeOnClickOutside: failedConstraintInfo.closeOnClickOutside,
+      openingEvent: event,
+      debug,
+      onClose: () => {
+        removeCloseOnCleanup();
+        for (const result of results) {
+          if (typeof result === "function") {
+            result();
           }
-          validationInterface.validationMessage = null;
-          if (failedConstraintInfo) {
-            failedConstraintInfo.reportStatus = "closed";
-          }
-          if (!skipFocus) {
-            element.focus();
-          }
-        },
+        }
+        validationInterface.validationMessage = null;
+        if (failedConstraintInfo) {
+          failedConstraintInfo.reportStatus = "closed";
+        }
+        if (!skipFocus) {
+          element.focus();
+        }
       },
-    );
+    });
     const results = notifyCalloutOpen(event);
     failedConstraintInfo.reportStatus = "reported";
   };
