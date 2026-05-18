@@ -512,6 +512,14 @@ const InputCheckboxField = (props) => {
         if (!allowed) {
           e.preventDefault();
         }
+        // To reproduce a focus bug:
+        // 1. space on readonly radio
+        // 2. Arrow up/down to a regular radio
+        // 3. Space to select
+        // Expected: radio is selected and focused
+        // Actual: radio is selected and focus goes back to the readonly radio
+        // Explicitely focusing on click fixes it
+        checkbox.focus();
       }}
       onInput={(e) => {
         onInput?.(e);
