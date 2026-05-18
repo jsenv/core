@@ -394,6 +394,7 @@ const InputCheckboxField = (props) => {
     defaultChecked,
     /* eslint-enable no-unused-vars */
     name,
+    value,
     required,
     onClick,
     onInput,
@@ -426,11 +427,10 @@ const InputCheckboxField = (props) => {
       getPropFromState: Boolean,
     },
   );
-  const { basePseudoState, value } = fieldProps;
+  const { basePseudoState, value: checked } = fieldProps;
   const loading = basePseudoState[":-navi-loading"];
   const readOnly = basePseudoState[":read-only"];
 
-  const checked = Boolean(value);
   const renderCheckbox = (checkboxProps) => {
     return (
       <Box
@@ -439,6 +439,7 @@ const InputCheckboxField = (props) => {
         ref={ref}
         type="checkbox"
         name={name}
+        value={value}
         checked={checked}
         required={required}
         data-readonly={readOnly ? "" : undefined}
@@ -450,6 +451,7 @@ const InputCheckboxField = (props) => {
   };
   const renderCheckboxMemoized = useCallback(renderCheckbox, [
     name,
+    value,
     checked,
     required,
     readOnly,
