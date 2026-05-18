@@ -52,7 +52,7 @@
  */
 
 import { normalizeStyles } from "@jsenv/dom";
-import { isValidElement, toChildArray } from "preact";
+import { createContext, isValidElement, toChildArray } from "preact";
 import { useContext } from "preact/hooks";
 
 import { withPropsClassName } from "../utils/with_props_class_name.js";
@@ -72,6 +72,8 @@ import {
 } from "./pseudo_styles.js";
 import { useElementRefEffect } from "./use_element_ref.js";
 import { usePartiallyHidden } from "./use_partially_hidden.js";
+
+export const BoxForwardedPropsContext = createContext({});
 
 import.meta.css = /* css */ `
   @layer navi {
@@ -195,7 +197,7 @@ export const Box = (props) => {
     // The box contains content that holds pseudoState
     // -> introduced for <Input /> with a wrapped for loading, checkboxes, etc
     pseudoStateSelector,
-    hasChildFunction,
+    hasChildUsingForwardedProps,
     baseChildPropSet,
     childPropSet,
     // preventInitialTransition can be used to prevent transition on mount
@@ -359,7 +361,7 @@ export const Box = (props) => {
       styles: boxStyles,
     };
     let boxPseudoNamedStyles = PSEUDO_NAMED_STYLES_DEFAULT;
-    const canForwardToChild = hasChildFunction;
+    const canForwardToChild = hasChildUsingForwardedProps;
     const shouldForwardAllToChild =
       canForwardToChild && visualSelector && pseudoStateSelector;
 
@@ -696,16 +698,12 @@ export const Box = (props) => {
   // Some/all the children needs to access remainingProps
   // to render and will provide a function to do so.
   let innerChildren;
-  if (hasChildFunction) {
-    if (Array.isArray(children)) {
-      innerChildren = children.map((child) =>
-        typeof child === "function" ? child(childForwardedProps) : child,
-      );
-    } else if (typeof children === "function") {
-      innerChildren = children(childForwardedProps);
-    } else {
-      innerChildren = children;
-    }
+  if (hasChildUsingForwardedProps) {
+    innerChildren = (
+      <BoxForwardedPropsContext.Provider value={childForwardedProps}>
+        {innerChildren}
+      </BoxForwardedPropsContext.Provider>
+    );
   } else {
     innerChildren = children;
   }

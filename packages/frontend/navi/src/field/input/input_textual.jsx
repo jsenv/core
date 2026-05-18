@@ -17,16 +17,9 @@
  */
 
 import { createContext } from "preact";
-import {
-  useCallback,
-  useContext,
-  useEffect,
-  useId,
-  useRef,
-  useState,
-} from "preact/hooks";
+import { useContext, useEffect, useId, useRef, useState } from "preact/hooks";
 
-import { Box } from "@jsenv/navi/src/box/box.jsx";
+import { Box, BoxForwardedPropsContext } from "@jsenv/navi/src/box/box.jsx";
 import { ChevronDownSvg } from "@jsenv/navi/src/graphic/icons/chevron_updown_svg.jsx";
 import { CloseSvg } from "@jsenv/navi/src/graphic/icons/close_svg.jsx";
 import { EmailSvg } from "@jsenv/navi/src/graphic/icons/email_svg.jsx";
@@ -331,21 +324,6 @@ const InputTextualField = (props) => {
     },
   );
 
-  const renderInput = (inputProps) => {
-    return (
-      <Box
-        {...inputProps}
-        as="input"
-        ref={ref}
-        type={type}
-        // style management
-        baseClassName="navi_native_input"
-        data-rendered-by=".navi_input"
-      />
-    );
-  };
-  const renderInputMemoized = useCallback(renderInput, [type]);
-
   let innerChildren;
   if (children === undefined) {
     if (type === "search") {
@@ -410,7 +388,7 @@ const InputTextualField = (props) => {
       visualSelector=".navi_native_input"
       pseudoClasses={InputPseudoClasses}
       pseudoElements={InputPseudoElements}
-      hasChildFunction
+      hasChildUsingForwardedProps
       baseChildPropSet={InputChildPropSet}
       {...fieldProps}
       ref={undefined} // input takes the ref
@@ -443,7 +421,7 @@ const InputTextualField = (props) => {
         color="var(--loader-color)"
         inset={-1}
       />
-      {renderInputMemoized}
+      <NativeInputBox ref={ref} type={type} />
       {innerChildren ? (
         <InputNativeContext.Provider
           value={{
@@ -456,6 +434,18 @@ const InputTextualField = (props) => {
         </InputNativeContext.Provider>
       ) : null}
     </Box>
+  );
+};
+const NativeInputBox = (props) => {
+  const inputProps = useContext(BoxForwardedPropsContext);
+  return (
+    <Box
+      {...inputProps}
+      {...props}
+      as="input"
+      baseClassName="navi_native_input"
+      data-rendered-by=".navi_input"
+    />
   );
 };
 
