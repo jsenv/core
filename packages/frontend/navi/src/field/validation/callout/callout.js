@@ -58,7 +58,7 @@ const css = /* css */ `
     height: auto;
     margin: 0;
     padding: 0;
-    color: inherit;
+    color: revert; /* Do no inherit element color, callout is inside the element it should use document color though */
     background: transparent;
     border: none;
     opacity: 0;
