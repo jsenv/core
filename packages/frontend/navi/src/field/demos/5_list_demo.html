@@ -656,46 +656,43 @@
             </p>
 
             <List
+              // name="fruits"
               action={(v) => {
                 addLog(`action called with: "${v}"`);
                 setSelected(v);
               }}
             >
-              <ListItem
-                index={0}
-                id="readonly_default"
-                value="readonly_default"
-                readOnly
-              >
-                Readonly (default message)
+              <ListItem index={0} id="readonly_default" flex spacing="s">
+                <Input type="radio" value="readonly_default" readOnly />
+                <Label>Readonly (default message)</Label>
               </ListItem>
-              <ListItem
-                index={1}
-                id="readonly_custom"
-                value="readonly_custom"
-                readOnly
-                readOnlyMessage={
-                  <>
-                    Ce créneau est déjà <strong>réservé.</strong>
-                  </>
-                }
-              >
-                Readonly (custom message)
+              <ListItem index={1} id="readonly_custom" flex spacing="s">
+                <Input
+                  type="radio"
+                  value="readonly_custom"
+                  readOnly
+                  readOnlyMessage={
+                    <>
+                      Ce créneau est déjà <strong>réservé.</strong>
+                    </>
+                  }
+                />
+                <Label>Readonly (custom message)</Label>
               </ListItem>
-              <ListItem
-                index={2}
-                id="apple"
-                value="Apple"
-                selected={selected === "Apple"}
-              >
+              <ListItem index={2} id="apple" flex spacing="s">
+                <Input
+                  type="radio"
+                  value="Apple"
+                  checked={selected === "Apple"}
+                />
                 Apple (clickable)
               </ListItem>
-              <ListItem
-                index={3}
-                id="banana"
-                value="Banana"
-                selected={selected === "Banana"}
-              >
+              <ListItem index={3} id="banana" flex spacing="s">
+                <Input
+                  type="radio"
+                  value="Banana"
+                  checked={selected === "Banana"}
+                />
                 Banana (clickable)
               </ListItem>
             </List>

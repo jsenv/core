@@ -392,7 +392,7 @@ const InputRadioField = (props) => {
   // but also when we are becoming checked from outside (hence the useLayoutEffect)
   const updateOtherRadiosInGroup = (e) => {
     const thisRadio = ref.current;
-    const radioList = thisRadio.closest("[data-radio-list]");
+    const radioList = thisRadio.closest("[navi-radio-list]");
     if (!radioList) {
       return;
     }

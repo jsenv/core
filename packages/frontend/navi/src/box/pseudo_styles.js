@@ -168,7 +168,7 @@ definePseudoClass(":checked", {
     if (el.type === "radio") {
       // Listen to changes on the radio group
       const radioSet =
-        el.closest("[data-radio-list], fieldset, form") || document;
+        el.closest("[navi-radio-list], fieldset, form") || document;
       radioSet.addEventListener("input", callback);
 
       // Intercept programmatic changes to .checked property

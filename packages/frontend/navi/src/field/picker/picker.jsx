@@ -308,7 +308,6 @@ const PickerButton = (props) => {
       // we must put the id on the button and not the input
       // so that a <label> tries to give focus to the button and not the input
       id={id}
-      navi-submit-effect="request_ui_action"
       onnavi_get_managed_fields={(e) => {
         // we must check for the pickerEl content to search for a valid input because we might be a button used to validate for instance
         // no necessarily the field itself

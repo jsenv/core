@@ -18,7 +18,6 @@ import {
 } from "preact/hooks";
 
 import { Box } from "../../box/box.jsx";
-import { shortcutsViaOnKeyDown } from "../../keyboard/keyboard_shortcuts.js";
 import { Separator } from "../../layout/separator.jsx";
 import { useDebugScroll } from "../../navi_debug.jsx";
 import {
@@ -28,7 +27,8 @@ import {
 import { naviI18n } from "../../text/navi_i18n.js";
 import { useItemTracker } from "../../utils/item_tracker/use_item_tracker.js";
 import { useDisplayedLayoutEffect } from "../../utils/use_displayed_layout_effect.js";
-import { useFieldProps } from "../use_field_props.jsx";
+import { useFieldBehaviorProps } from "../field.jsx";
+import { useFieldGroupProps } from "../use_field_group_props.jsx";
 import {
   dispatchRequestAction,
   dispatchRequestInteraction,
@@ -45,9 +45,7 @@ export const InsideRealListItemContext = createContext(false);
 // Provided by ListInteractive to give descendants (e.g. Suggestion) access
 // to hover/keyboard-pointed/selection state.
 // Values are item IDs (strings) or null — not indices — so they survive
-// index changes caused by search reordering.
-const ListMousePointedIdContext = createContext(null);
-const ListKeyboardPointedIdContext = createContext(null);
+// index changes caused by search reordering
 // Non-null when inside a ListInteractive (used to render data-interactive).
 const ListInteractiveContext = createContext(false);
 
@@ -1209,114 +1207,52 @@ const BottomFiller = ({
 // and fires it on select. When only uiAction is provided it calls it directly.
 const ListField = (props) => {
   const Next = useNextResolver();
-  const hiddenInputId = useId();
-  const inputRef = useRef(null);
-  const fieldProps = useFieldProps(props, {
+  const defaultName = useId();
+  // we allow ourselves to auto-generate a name
+  props.name = props.name || defaultName;
+  const { multiple } = props;
+  const fieldProps = useFieldGroupProps(props, {
     fieldType: "list",
-    readUIState: () => {
-      const input = inputRef.current;
-      return input.value;
-    },
-    allowNameless: true,
+    childComponentType: multiple ? "checkbox" : "radio",
+    aggregateChildStates: multiple
+      ? (childUIStateControllers) => {
+          const values = [];
+          for (const childUIStateController of childUIStateControllers) {
+            if (childUIStateController.uiState) {
+              values.push(childUIStateController.uiState);
+            }
+          }
+          return values.length === 0 ? undefined : values;
+        }
+      : (childUIStateControllers) => {
+          let activeValue;
+          for (const childUIStateController of childUIStateControllers) {
+            if (childUIStateController.uiState) {
+              activeValue = childUIStateController.uiState;
+              break;
+            }
+          }
+          return activeValue;
+        },
   });
-  const { name, value, required } = fieldProps;
-
-  // Mouse/keyboard pointed state
-  const [mousePointedId, setMousePointedId] = useState(null);
-  const [keyboardPointedId, setKeyboardPointedId] = useState(null);
-  const anchorIdRef = useRef(null);
-  const setAnchorId = (id) => {
-    anchorIdRef.current = id;
-  };
 
   const visibleItemsRef = useRef([]);
-  const getAnchorIndex = () => {
-    const anchorId = anchorIdRef.current;
-    if (!anchorId) {
-      return -1;
-    }
-    return visibleItemsRef.current.findIndex((i) => i.id === anchorId);
-  };
-  const getAnchorItem = () => {
-    const anchorId = anchorIdRef.current;
-    if (!anchorId) {
-      return null;
-    }
-    return visibleItemsRef.current.find((i) => i.id === anchorId);
-  };
-
-  const onKeyDown = shortcutsViaOnKeyDown(
-    {
-      arrowdown: (e) => {
-        return requestListNavFromCurrent(e.currentTarget, {
-          event: e,
-          goal: "down",
-        });
-      },
-      arrowup: (e) => {
-        return requestListNavFromCurrent(e.currentTarget, {
-          event: e,
-          goal: "up",
-        });
-      },
-      home: (e) => {
-        return requestListNavFromCurrent(e.currentTarget, {
-          event: e,
-          goal: "first",
-        });
-      },
-      end: (e) => {
-        return requestListNavFromCurrent(e.currentTarget, {
-          event: e,
-          goal: "last",
-        });
-      },
-      enter: (e) => {
-        return requestListSelectCurrent(e.currentTarget, {
-          event: e,
-        });
-      },
-      space: (e) => {
-        e.preventDefault(); // prevent page scroll
-        return requestListSelectCurrent(e.currentTarget, {
-          event: e,
-        });
-      },
-      escape: (e) => {
-        return requestListInteractionStateReset(e.currentTarget, {
-          event: e,
-        });
-      },
-    },
-    props.onKeyDown,
-  );
 
   const listVnode = (
     <Next
       {...fieldProps}
-      tabIndex="0"
-      onKeyDown={onKeyDown}
-      data-field={`#${CSS.escape(hiddenInputId)}`}
+      navi-radio-list={multiple ? undefined : ""}
+      navi-checkbox-list={multiple ? "" : undefined}
       onListVisibleItemsChange={(visibleItems) => {
         props.onListVisibleItemsChange?.(visibleItems);
         visibleItemsRef.current = visibleItems;
       }}
       onnavi_list_nav={(e) => {
         const { item, event } = e.detail;
-        const id = item ? item.id : null;
-        const isNonUserNav =
-          event.type === "navi_list_nav_top_on_displayed" ||
-          event.type === "navi_list_top_match_change";
-        if (isNonUserNav) {
-          setAnchorId(null);
-        } else {
-          setAnchorId(id);
-        }
-        if (event.type === "keydown") {
-          setKeyboardPointedId(id);
-        } else {
-          setKeyboardPointedId(null);
-        }
+        // const id = item ? item.id : null;
+        // const isNonUserNav =
+        //   event.type === "navi_list_nav_top_on_displayed" ||
+        //   event.type === "navi_list_top_match_change";
         const isAutomaticNav =
           event.type === "navi_list_nav_top_on_displayed" ||
           event.type === "navi_list_top_match_change" ||
@@ -1332,13 +1268,6 @@ const ListField = (props) => {
       onnavi_list_request_nav={(e) => {
         const { item } = e.detail;
         if (!item) {
-          return;
-        }
-        if (item.id === anchorIdRef.current) {
-          return;
-        }
-        const isFailed = item.disabled || item.readOnly;
-        if (isFailed) {
           return;
         }
         const listEl = e.currentTarget;
@@ -1369,117 +1298,12 @@ const ListField = (props) => {
           requester,
         });
       }}
-      onnavi_list_request_hover={(e) => {
-        const { item } = e.detail;
-        setMousePointedId(item ? item.id : null);
-      }}
-      onnavi_list_request_nav_from_current={(e) => {
-        const { event, goal } = e.detail;
-        const visibleItems = visibleItemsRef.current;
-        const visibleItemCount = visibleItems.length;
-        if (visibleItemCount === 0) {
-          return;
-        }
-        const anchorIndex = getAnchorIndex();
-        const isSkippedIndex = (i) =>
-          Boolean(visibleItems[i]?.disabled || visibleItems[i]?.readOnly);
-        const resolveIndex = () => {
-          if (goal === "down") {
-            if (anchorIndex === -1) {
-              let i = 0;
-              while (i < visibleItemCount && isSkippedIndex(i)) {
-                i++;
-              }
-              return i < visibleItemCount ? i : anchorIndex;
-            }
-            let belowIndex = anchorIndex + 1;
-            while (
-              belowIndex < visibleItemCount &&
-              isSkippedIndex(belowIndex)
-            ) {
-              belowIndex++;
-            }
-            return belowIndex < visibleItemCount ? belowIndex : anchorIndex;
-          }
-          if (goal === "up") {
-            if (anchorIndex === -1) {
-              let i = visibleItemCount - 1;
-              while (i >= 0 && isSkippedIndex(i)) {
-                i--;
-              }
-              return i >= 0 ? i : anchorIndex;
-            }
-            let aboveIndex = anchorIndex - 1;
-            while (aboveIndex >= 0 && isSkippedIndex(aboveIndex)) {
-              aboveIndex--;
-            }
-            return aboveIndex >= 0 ? aboveIndex : anchorIndex;
-          }
-          if (goal === "first") {
-            let i = 0;
-            while (i < visibleItemCount && isSkippedIndex(i)) {
-              i++;
-            }
-            return i < visibleItemCount ? i : anchorIndex;
-          }
-          if (goal === "last") {
-            let i = visibleItemCount - 1;
-            while (i >= 0 && isSkippedIndex(i)) {
-              i--;
-            }
-            return i >= 0 ? i : anchorIndex;
-          }
-          return anchorIndex;
-        };
-        const index = resolveIndex();
-        if (index === anchorIndex) {
-          if (event.type === "keydown") {
-            event.preventDefault();
-          }
-          return;
-        }
-        if (event.type === "keydown") {
-          event.preventDefault();
-        }
-        const item = visibleItems[index];
-        dispatchCustomEvent(e.currentTarget, "navi_list_request_nav", {
-          event: e,
-          item,
-        });
-      }}
-      onnavi_list_request_interaction_state_reset={() => {
-        setAnchorId(null);
-        setKeyboardPointedId(null);
-        setMousePointedId(null);
-      }}
-      onnavi_list_request_select_current={(e) => {
-        const item = getAnchorItem();
-        dispatchCustomEvent(e.currentTarget, "navi_list_request_select", {
-          event: e,
-          item,
-        });
-      }}
-    >
-      <input
-        ref={inputRef}
-        id={hiddenInputId}
-        type="hidden"
-        name={name}
-        value={value}
-        required={required}
-        data-rendered-by=".navi_list_container"
-      />
-      {fieldProps.children}
-    </Next>
+    />
   );
 
   return (
     <ListInteractiveContext.Provider value={true}>
-      <ListMousePointedIdContext.Provider value={mousePointedId}>
-        <ListKeyboardPointedIdContext.Provider value={keyboardPointedId}>
-          {listVnode}
-        </ListKeyboardPointedIdContext.Provider>
-      </ListMousePointedIdContext.Provider>
+      {listVnode}
     </ListInteractiveContext.Provider>
   );
 };
@@ -1655,70 +1479,13 @@ const ListItemReal = (props) => {
   return <ListItemRealUI {...props} />;
 };
 const ListItemRealField = (props) => {
-  const {
-    id,
-    item,
-    selected,
-    onMouseEnter,
-    pointed,
-    onMouseLeave,
-    onMouseDown,
-  } = props;
-  const fieldProps = useFieldProps(props, {
-    fieldType: "list_item",
-    readUIState: () => {
-      return selected ? item.value : undefined;
-    },
-  });
-  const { basePseudoState } = fieldProps;
-  const disabled = basePseudoState[":disabled"];
-  const mousePointedId = useContext(ListMousePointedIdContext);
-  const keyboardPointedId = useContext(ListKeyboardPointedIdContext);
-  const isPointedByMouse = id === mousePointedId;
-  const isPointedByKeyboard = id === keyboardPointedId;
-  const isPointedByProxy = Boolean(pointed);
-  const isPointed = isPointedByMouse || isPointedByKeyboard || isPointedByProxy;
+  const { item } = props;
+  const fieldBehaviorProps = useFieldBehaviorProps(props);
 
   return (
     <ListItemRealUI
-      {...fieldProps}
-      aria-selected={selected}
-      aria-disabled={disabled}
-      data-interactive=""
-      data-anchor={isPointedByKeyboard ? "" : undefined}
+      {...fieldBehaviorProps}
       requiredMessage={naviI18n(`list_item.readonly`, { item })}
-      basePseudoState={{
-        ...fieldProps.basePseudoState,
-        ":-navi-pointed": isPointed,
-        ":-navi-pointed-by-mouse": isPointedByMouse,
-        ":-navi-pointed-by-keyboard": isPointedByKeyboard,
-        ":-navi-pointed-by-proxy": isPointedByProxy,
-        ":-navi-selected": selected,
-      }}
-      onMouseEnter={(e) => {
-        onMouseEnter?.(e);
-        const listEl = e.currentTarget.closest(".navi_list");
-        dispatchCustomEvent(listEl, "navi_list_request_hover", {
-          item,
-          event: e,
-        });
-      }}
-      onMouseLeave={(e) => {
-        onMouseLeave?.(e);
-        const listEl = e.currentTarget.closest(".navi_list");
-        dispatchCustomEvent(listEl, "navi_list_request_hover", {
-          item: null,
-          event: e,
-        });
-      }}
-      onMouseDown={(e) => {
-        onMouseDown?.(e);
-        const listItem = e.currentTarget;
-        dispatchCustomEvent(listItem, "navi_list_item_request_select", {
-          item,
-          event: e,
-        });
-      }}
       onnavi_list_item_request_select={(e) => {
         const listItem = e.currentTarget;
         const listEl = listItem.closest(".navi_list");
@@ -1732,7 +1499,7 @@ const ListItemRealField = (props) => {
       }}
     >
       <ListInteractiveContext.Provider value={undefined}>
-        {fieldProps.children}
+        {fieldBehaviorProps.children}
       </ListInteractiveContext.Provider>
     </ListItemRealUI>
   );
@@ -1780,11 +1547,11 @@ const LIST_ITEM_STYLE_CSS_VARS = {
   "color": "--list-item-color",
   "backgroundColor": "--list-item-background-color",
   "fontWeight": "--list-item-font-weight",
-  ":-navi-pointed-by-keyboard": {
+  ":-navi-pointed": {
     color: "--list-item-color-keyboard-pointed",
     backgroundColor: "--list-item-background-color-keyboard-pointed",
   },
-  ":-navi-pointed-by-mouse": {
+  ":-navi-hover": {
     color: "--list-item-color-mouse-pointed",
     backgroundColor: "--list-item-background-color-mouse-pointed",
   },
@@ -1807,9 +1574,7 @@ const LIST_ITEM_STYLE_CSS_VARS = {
 };
 const LIST_ITEM_PSEUDO_CLASSES = [
   ":-navi-pointed",
-  ":-navi-pointed-by-mouse",
-  ":-navi-pointed-by-keyboard",
-  ":-navi-pointed-by-proxy",
+  ":-navi-hover",
   ":-navi-selected",
   ":disabled",
   ":read-only",

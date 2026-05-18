@@ -42,8 +42,7 @@ const RadioListField = (props) => {
       flex="y"
       {...fieldGroupProps}
       baseClassName="navi_radio_list"
-      navi-submit-effect="request_action"
-      data-radio-list=""
+      navi-radio-list=""
       onChange={(e) => {
         // we rely on change event bubbling but we want to catch only the relevant radio change events
         const target = e.target;

@@ -64,7 +64,6 @@ const FormField = (props) => {
       {...fieldGroupProps}
       as="form"
       data-method={method}
-      navi-submit-effect="request_action"
       novalidate="" // make sure browser don't prevent "submit" when invalid, nor display messages
       pseudoClasses={FormPseudoClasses}
       onSubmit={(e) => {

@@ -20,10 +20,10 @@ export const collectFormElementValues = (element) => {
         values[name] = [];
         continue;
       }
-      const closestDataCheckboxList = formElement.closest(
-        "[data-checkbox-list]",
+      const closestNaviCheckboxList = formElement.closest(
+        "[navi-checkbox-list]",
       );
-      if (closestDataCheckboxList) {
+      if (closestNaviCheckboxList) {
         checkboxArrayNameSet.add(name);
         values[name] = [];
       }

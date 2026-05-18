@@ -83,46 +83,20 @@ export const reportInteractiveToField = (value) => {
  */
 export const Field = (props) => {
   import.meta.css = css;
-  const { id, vertical, readOnly, disabled, children, ...rest } = props;
   const idDefault = useId();
-  const fieldId = id || `field_${idDefault}`;
-  const [readOnlyFromChild, setReadOnlyFromChild] = useState(false);
-  const [disabledByChild, setDisabledByChild] = useState(false);
-  const [interactive, setInteractive] = useState(false);
-  const readOnlyEffective = readOnly || readOnlyFromChild;
-  const disabledEffective = disabled || disabledByChild;
-
-  const contextValue = useMemo(
-    () => ({
-      fieldId,
-      interactive,
-      readOnly: readOnlyEffective,
-      disabled: disabledEffective,
-      setReadOnly: setReadOnlyFromChild,
-      setDisabled: setDisabledByChild,
-      setInteractive,
-    }),
-    [fieldId, interactive, readOnlyEffective, disabledEffective],
-  );
+  const fieldId = `field_${idDefault}`;
+  props.id = props.id || fieldId;
+  const { vertical } = props;
+  const fieldBehaviorProps = useFieldBehaviorProps(props);
 
   return (
     <Box
       flex={vertical ? "y" : undefined}
       alignX={vertical ? "start" : undefined}
       spacing="s"
-      {...rest}
-      data-interactive={interactive ? "" : undefined}
       baseClassName="navi_field"
-      pseudoClasses={FieldPseudoClasses}
-      basePseudoState={{
-        ":read-only": readOnlyEffective,
-        ":disabled": disabledEffective,
-      }}
-    >
-      <FieldContext.Provider value={contextValue}>
-        {children}
-      </FieldContext.Provider>
-    </Box>
+      {...fieldBehaviorProps}
+    />
   );
 };
 const FieldPseudoClasses = [
@@ -134,6 +108,50 @@ const FieldPseudoClasses = [
   ":disabled",
   ":-navi-loading",
 ];
+
+export const useFieldBehaviorProps = (props) => {
+  const { id, readOnly, disabled, ...rest } = props;
+  const [readOnlyFromChild, setReadOnlyFromChild] = useState(false);
+  const [disabledByChild, setDisabledByChild] = useState(false);
+  const [interactive, setInteractive] = useState(false);
+  const readOnlyEffective = readOnly || readOnlyFromChild;
+  const disabledEffective = disabled || disabledByChild;
+
+  const contextValue = useMemo(
+    () => ({
+      fieldId: id,
+      interactive,
+      readOnly: readOnlyEffective,
+      disabled: disabledEffective,
+      setReadOnly: setReadOnlyFromChild,
+      setDisabled: setDisabledByChild,
+      setInteractive,
+    }),
+    [id, interactive, readOnlyEffective, disabledEffective],
+  );
+
+  let childrenWithContext;
+  if (props.children === undefined) {
+  } else {
+    childrenWithContext = (
+      <FieldContext.Provider value={contextValue}>
+        {props.children}
+      </FieldContext.Provider>
+    );
+  }
+
+  return {
+    "data-interactive": interactive ? "" : undefined,
+    ...rest,
+    "children": childrenWithContext,
+    "pseudoClasses": FieldPseudoClasses,
+    "basePseudoState": {
+      ":read-only": readOnlyEffective,
+      ":disabled": disabledEffective,
+      ...rest.basePseudoState,
+    },
+  };
+};
 
 export const Label = (props) => {
   const { children, htmlFor, ...rest } = props;
