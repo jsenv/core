@@ -644,7 +644,7 @@ export const installCustomConstraintValidation = (
     const anchorElement = (() => {
       const base =
         failedConstraintInfo.target || elementReceivingValidationMessage;
-      const renderedBy = base.getAttribute("data-rendered-by");
+      const renderedBy = base.getAttribute("navi-rendered-by");
       if (renderedBy) {
         const renderedByElement = base.closest(renderedBy);
         if (renderedByElement) {
@@ -785,7 +785,7 @@ export const installCustomConstraintValidation = (
     // The listener is registered when the callout opens and removed when it closes,
     // so it can never accidentally close the next callout.
     const interactionTarget = (() => {
-      const renderedBy = element.getAttribute("data-rendered-by");
+      const renderedBy = element.getAttribute("navi-rendered-by");
       if (renderedBy) {
         return element.closest(renderedBy) || element;
       }

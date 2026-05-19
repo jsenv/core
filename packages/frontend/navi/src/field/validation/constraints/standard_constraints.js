@@ -121,12 +121,6 @@ export const REQUIRED_CONSTRAINT = {
     if (field.hasAttribute("data-same-as")) {
       return naviI18n("constraint.required.confirm");
     }
-    if (field.getAttribute("data-rendered-by") === ".navi_list_container") {
-      return naviI18n("constraint.required.select");
-    }
-    if (field.getAttribute("data-rendered-by") === ".navi_select") {
-      return naviI18n("constraint.required.select");
-    }
     return naviI18n("constraint.required.default");
   },
 };

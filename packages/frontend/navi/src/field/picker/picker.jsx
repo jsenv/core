@@ -343,7 +343,8 @@ const PickerButton = (props) => {
         readOnly={readOnly}
         disabled={disabled}
         aria-busy={loading}
-        data-rendered-by=".navi_picker"
+        // eslint-disable-next-line react/no-unknown-property
+        navi-rendered-by=".navi_picker"
         onInput={(e) => {
           onInput?.(e);
           const input = ref.current;

@@ -155,7 +155,7 @@ const css = /* css */ `
     outline-color: var(--outline-color);
     outline-offset: var(--outline-offset);
 
-    .navi_native_field {
+    .navi_real_input_checkbox {
       position: absolute;
       inset: 0;
       margin: 0;
@@ -471,10 +471,10 @@ const InputCheckboxFieldInterface = (props) => {
       square={appearance === "button" ? true : undefined}
       {...fieldInterfaceProps}
       ref={boxRef}
-      data-field=".navi_native_field"
+      data-field=".navi_real_input_checkbox"
       data-appearance={appearance}
       baseClassName="navi_checkbox"
-      pseudoStateSelector=".navi_native_field"
+      pseudoStateSelector=".navi_real_input_checkbox"
       styleCSSVars={
         appearance === "toggle"
           ? CheckboxToggleStyleCSSVars
@@ -525,11 +525,11 @@ const InputCheckboxFieldInterface = (props) => {
         color="var(--loader-color)"
       />
       {visualVnode}
-      <CheckboxNativeField ref={ref} />
+      <RealInputCheckbox ref={ref} />
     </Box>
   );
 };
-const CheckboxNativeField = ({ ref }) => {
+const RealInputCheckbox = ({ ref }) => {
   const checkboxProps = useContext(BoxForwardedPropsContext);
   return (
     <Box
@@ -537,7 +537,8 @@ const CheckboxNativeField = ({ ref }) => {
       as="input"
       ref={ref}
       type="checkbox"
-      baseClassName="navi_native_field"
+      baseClassName="navi_real_input_checkbox"
+      navi-rendered-by=".navi_checkbox"
       data-callout-arrow-x="center"
     />
   );

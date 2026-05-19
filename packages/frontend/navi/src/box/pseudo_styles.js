@@ -522,6 +522,7 @@ navi_drag: {
 }
 
 const EMPTY_STATE = {};
+const elementToImpactWeakMap = new WeakMap();
 export const initPseudoStyles = (
   element,
   {
@@ -532,6 +533,7 @@ export const initPseudoStyles = (
     elementListeningPseudoState,
   },
 ) => {
+  elementToImpactWeakMap.set(element, elementToImpact);
   if (elementListeningPseudoState === element) {
     console.warn(
       `elementListeningPseudoState should not be the same as element to avoid infinite loop`,
@@ -550,11 +552,12 @@ export const initPseudoStyles = (
         oldValue,
       );
     }
-    // If this element is a proxy for another, notify the target to re-check its pseudo-classes
-    if (proxyForId) {
-      const target = document.getElementById(proxyForId);
-      if (target) {
-        requestPseudoStateCheck(target, {});
+    // When this element's state changes, notify any proxy element that mirrors it
+    // so it can re-check and visually reflect the new state.
+    if (element.id) {
+      const proxy = document.querySelector(`[navi-proxy-for="${element.id}"]`);
+      if (proxy) {
+        requestPseudoStateCheck(proxy, {});
       }
     }
   };
@@ -589,17 +592,20 @@ export const initPseudoStyles = (
           currentValue = test(element, pseudoState);
         }
       }
-      // If the element itself isn't in this state, check if any proxy element is.
-      // A proxy element declares navi-proxy-for="{element.id}" and its active
-      // pseudo-state propagates upward so the target also appears active.
-      if (!currentValue && element.id) {
+      // If this element is a proxy for another (navi-proxy-for="targetId"),
+      // inherit the target's active pseudo-state when the element itself isn't in that state.
+      // We check the target's elementToImpact (not the target itself) because the
+      // data-* attribute may be set on a different element (e.g. pseudoStateSelector).
+      if (!currentValue && proxyForId) {
         const { attribute } = pseudoClassDefinition;
         if (attribute) {
-          const proxy = document.querySelector(
-            `[navi-proxy-for="${element.id}"]`,
-          );
-          if (proxy && proxy.hasAttribute(attribute)) {
-            currentValue = true;
+          const target = document.getElementById(proxyForId);
+          if (target) {
+            const targetElementToImpact =
+              elementToImpactWeakMap.get(target) || target;
+            if (targetElementToImpact.hasAttribute(attribute)) {
+              currentValue = true;
+            }
           }
         }
       }

@@ -134,7 +134,7 @@ const css = /* css */ `
     border-radius: inherit;
     cursor: inherit;
 
-    .navi_native_input {
+    .navi_real_input {
       box-sizing: border-box;
       min-width: 50px;
       padding-top: var(--x-padding-top-base);
@@ -382,8 +382,8 @@ const InputTextualFieldInterface = (props) => {
       flex
       baseClassName="navi_input"
       styleCSSVars={InputStyleCSSVars}
-      pseudoStateSelector=".navi_native_input"
-      visualSelector=".navi_native_input"
+      pseudoStateSelector=".navi_real_input"
+      visualSelector=".navi_real_input"
       pseudoClasses={InputPseudoClasses}
       pseudoElements={InputPseudoElements}
       hasChildUsingForwardedProps
@@ -419,7 +419,7 @@ const InputTextualFieldInterface = (props) => {
         color="var(--loader-color)"
         inset={-1}
       />
-      <NativeInputBox ref={ref} type={type} />
+      <RealInput ref={ref} type={type} />
       {innerChildren ? (
         <InputNativeContext.Provider
           value={{
@@ -434,15 +434,15 @@ const InputTextualFieldInterface = (props) => {
     </Box>
   );
 };
-const NativeInputBox = (props) => {
+const RealInput = (props) => {
   const inputProps = useContext(BoxForwardedPropsContext);
   return (
     <Box
       {...inputProps}
       {...props}
       as="input"
-      baseClassName="navi_native_input"
-      data-rendered-by=".navi_input"
+      baseClassName="navi_real_input"
+      navi-rendered-by=".navi_input"
     />
   );
 };

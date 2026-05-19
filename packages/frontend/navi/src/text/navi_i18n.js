@@ -215,10 +215,6 @@ naviI18n.addAll({
     fr: "Veuillez confirmer le champ précédent.",
     en: "Please confirm the previous field.",
   },
-  "constraint.required.select": {
-    fr: "Veuillez sélectionner une option.",
-    en: "Please select an option.",
-  },
   "constraint.required.default": {
     fr: "Veuillez remplir ce champ.",
     en: "Please fill in this field.",

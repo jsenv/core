@@ -126,7 +126,7 @@ const css = /* css */ `
       pointer-events: none;
     }
 
-    .navi_native_field {
+    .navi_real_input_radio {
       position: absolute;
       inset: 0;
       margin: 0;
@@ -452,10 +452,10 @@ const InputRadioFieldInterface = (props) => {
       square={appearance === "button" ? true : undefined}
       {...fieldInterfaceProps}
       ref={boxRef}
-      data-field=".navi_native_field"
+      data-field=".navi_real_input_radio"
       data-appearance={appearance}
       baseClassName="navi_radio"
-      pseudoStateSelector=".navi_native_field"
+      pseudoStateSelector=".navi_real_input_radio"
       styleCSSVars={
         appearance === "button" ? RadioButtonStyleCSSVars : RadioStyleCSSVars
       }
@@ -508,11 +508,11 @@ const InputRadioFieldInterface = (props) => {
         color="var(--loader-color)"
       />
       {visualVNode}
-      <RadioNativeField ref={ref} />
+      <RealInputRadio ref={ref} />
     </Box>
   );
 };
-const RadioNativeField = ({ ref }) => {
+const RealInputRadio = ({ ref }) => {
   const radioProps = useContext(BoxForwardedPropsContext);
   return (
     <Box
@@ -520,7 +520,8 @@ const RadioNativeField = ({ ref }) => {
       as="input"
       ref={ref}
       type="radio"
-      baseClassName="navi_native_field"
+      baseClassName="navi_real_input_radio"
+      navi-rendered-by=".navi_radio"
       data-callout-arrow-x="center"
     />
   );

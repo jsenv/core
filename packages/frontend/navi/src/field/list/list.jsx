@@ -457,7 +457,6 @@ const ListUI = (props) => {
       maxHeight={maxHeight}
       styleCSSVars={LIST_STYLE_CSS_VARS}
       pseudoClasses={LIST_PSEUDO_CLASSES}
-      pseudoStateSelector=".navi_list"
       hasChildUsingForwardedProps
       onnavi_list_request_scroll={(e) => {
         const { item } = e.detail;
