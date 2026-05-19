@@ -25,9 +25,10 @@ import { BoxForwardedPropsContext } from "@jsenv/navi/src/box/box.jsx";
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { useFocusGroup } from "@jsenv/navi/src/utils/focus/use_focus_group.js";
 import { Field } from "../field.jsx";
-import { FIELD_PROP_SET } from "../field_context.js";
+import { FIELD_PROP_SET, FieldToInterfaceContext } from "../field_context.js";
 import { useFieldgroupInterfaceProps } from "../field_hooks.jsx";
 import { Input } from "../input/input.jsx";
+import { requestSetUIState } from "../use_ui_state_controller.js";
 import { dispatchRequestAction } from "../validation/custom_constraint_validation.js";
 import { List, LIST_ITEM_PSEUDO_CLASSES, ListItem } from "./list.jsx";
 
@@ -106,16 +107,26 @@ const css = /* css */ `
     --list-item-color-disabled: light-dark(#aaa, #555);
     --list-item-background-color-disabled: var(--list-item-background-color);
 
+    position: relative;
+
     .selectable_real_input {
       position: absolute;
       width: 1px;
       height: 1px;
-      margin: -1p;
+      margin: -1px;
       padding: 0;
       overflow: hidden;
       clip: rect(0, 0, 0, 0);
       white-space: nowrap;
       border: 0;
+
+      &[navi-debug] {
+        top: 0;
+        left: 0;
+        width: 15px;
+        height: 15px;
+        clip: auto;
+      }
     }
 
     &[data-interactive] {
@@ -264,10 +275,7 @@ export const SelectableList = (props) => {
 const SelectableRealInputContext = createContext(null);
 
 export const Selectable = (props) => {
-  const defaultRef = useRef();
-  props.ref = props.ref || defaultRef;
   const {
-    ref,
     index,
     id,
     highlight,
@@ -278,10 +286,11 @@ export const Selectable = (props) => {
     ...rest
   } = props;
   const multiple = useContext(SelectableListMultipleContext);
+  const inputRef = useRef();
   const inputType = multiple ? "checkbox" : "radio";
   const realInputContextValue = useMemo(() => {
     return {
-      ref,
+      ref: inputRef,
       type: inputType,
       selected,
     };
@@ -297,6 +306,7 @@ export const Selectable = (props) => {
       pseudoClasses={SELECTABLE_PSEUDO_CLASSES}
     >
       <Field
+        id={`${id}_field`}
         as="div"
         requiredMessage={naviI18n(`list_item.readonly`, props)}
         padding="m"
@@ -309,7 +319,11 @@ export const Selectable = (props) => {
         baseChildPropSet={SELECTABLE_REAL_INPUT_CHILD_PROP_SET}
         hasChildUsingForwardedProps
       >
-        <SelectableRealInput ref={ref} type={inputType} selected={selected} />
+        <SelectableRealInput
+          ref={inputRef}
+          type={inputType}
+          selected={selected}
+        />
         <SelectableRealInputContext.Provider value={realInputContextValue}>
           {children}
         </SelectableRealInputContext.Provider>
@@ -331,13 +345,15 @@ const SELECTABLE_REAL_INPUT_CHILD_PROP_SET = new Set([
   ...FIELD_PROP_SET,
   "selected",
 ]);
-const SelectableRealInput = ({ type, selected }) => {
+const SelectableRealInput = ({ ref, type, selected }) => {
   const inputProps = useContext(BoxForwardedPropsContext);
 
   return (
     <Input
       className="selectable_real_input"
+      navi-debug
       {...inputProps}
+      ref={ref}
       type={type}
       checked={selected}
     />
@@ -370,21 +386,29 @@ const SelectableInputMirror = (props) => {
   }, []);
 
   return (
-    <Input
-      ref={ref}
-      type={realInputType}
-      aria-hidden="true"
-      tabIndex={-1}
-      checked={realInputSelected}
-      onMouseDown={(e) => {
-        // const mirrorInput = e.currentTarget;
-        // transfer focus to the real input
-        const realInput = realInputRef.current;
-        e.preventDefault();
-        realInput.focus();
-        realInput.dispatchEvent(new MouseEvent("mousedown", e));
-      }}
-    />
+    // Reset FieldToInterfaceContext to ensure we don't read id or report our states (real input should take id and report)
+    <FieldToInterfaceContext.Provider value={undefined}>
+      <Input
+        ref={ref}
+        type={realInputType}
+        aria-hidden="true"
+        tabIndex={-1}
+        checked={realInputSelected}
+        onMouseDown={(e) => {
+          // const mirrorInput = e.currentTarget;
+          // transfer focus to the real input
+          const realInput = realInputRef.current;
+          e.preventDefault();
+          realInput.focus();
+          realInput.dispatchEvent(new MouseEvent("mousedown", e));
+        }}
+        action={(v, { event }) => {
+          const mirrorInput = ref.current;
+          const realInput = realInputRef.current;
+          requestSetUIState(realInput, mirrorInput.checked, { event });
+        }}
+      />
+    </FieldToInterfaceContext.Provider>
   );
 };
 Selectable.Input = SelectableInputMirror;
