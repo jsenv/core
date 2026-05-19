@@ -99,9 +99,17 @@ export const getVisuallyVisibleInfo = (
     return { visible: false, reason: "clipped with clip property" };
   }
 
+  if (node.hasAttribute("navi-visually-hidden")) {
+    return { visible: false, reason: "has navi-visually-hidden attribute" };
+  }
+
   const clipPathStyle = getStyle(node, "clip-path");
-  if (clipPathStyle && clipPathStyle.includes("inset(100%")) {
-    return { visible: false, reason: "clipped with clip-path" };
+  if (clipPathStyle) {
+    // inset(N%) where N >= 50 collapses the visible area to nothing
+    const insetMatch = clipPathStyle.match(/^inset\((\d+)%/);
+    if (insetMatch && Number(insetMatch[1]) >= 50) {
+      return { visible: false, reason: "clipped with clip-path" };
+    }
   }
 
   // Check if positioned off-screen (unless option says to count as visible)

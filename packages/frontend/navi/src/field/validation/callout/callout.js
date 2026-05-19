@@ -436,9 +436,6 @@ export const openCallout = (
         anchorElement = proxyElement;
       }
     }
-    if (anchorElement.tagName === "INPUT" && anchorElement.type === "hidden") {
-      anchorElement = anchorElement.closest("label, fieldset, form");
-    }
     const renderedBy = anchorElement.getAttribute("navi-rendered-by");
     if (renderedBy) {
       const renderedByElement = anchorElement.closest(renderedBy);

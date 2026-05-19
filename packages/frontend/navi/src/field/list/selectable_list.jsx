@@ -109,23 +109,23 @@ const css = /* css */ `
 
     position: relative;
 
-    .selectable_real_input {
+    [navi-visually-hidden] {
       position: absolute;
       width: 1px;
       height: 1px;
       margin: -1px;
       padding: 0;
-      overflow: hidden;
-      clip: rect(0, 0, 0, 0);
       white-space: nowrap;
       border: 0;
+      clip-path: inset(50%);
+      overflow: hidden;
 
       &[navi-debug] {
         top: 0;
         left: 0;
         width: 15px;
         height: 15px;
-        clip: auto;
+        clip-path: none;
       }
     }
 
@@ -317,7 +317,6 @@ export const Selectable = (props) => {
         spacing="s"
         expandX
         {...rest}
-        // pseudoStateSelector={pseudoStateSelector}
         baseChildPropSet={SELECTABLE_REAL_INPUT_CHILD_PROP_SET}
         hasChildUsingForwardedProps
       >
@@ -353,6 +352,7 @@ const SelectableRealInput = ({ ref, type, selected }) => {
   return (
     <Input
       className="selectable_real_input"
+      navi-visually-hidden
       navi-debug
       {...inputProps}
       ref={ref}
