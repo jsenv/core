@@ -1312,7 +1312,7 @@ const LIST_ITEM_STYLE_CSS_VARS = {
     backgroundColor: "--suggestion-background-color-highlight",
   },
 };
-const LIST_ITEM_PSEUDO_CLASSES = [
+export const LIST_ITEM_PSEUDO_CLASSES = [
   ":-navi-pointed",
   ":-navi-selected",
   ":disabled",

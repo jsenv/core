@@ -13,7 +13,13 @@
 
 import { dispatchCustomEvent, dispatchPublicCustomEvent } from "@jsenv/dom";
 import { createContext } from "preact";
-import { useContext, useId, useRef } from "preact/hooks";
+import {
+  useContext,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+} from "preact/hooks";
 
 import { BoxForwardedPropsContext } from "@jsenv/navi/src/box/box.jsx";
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
@@ -23,7 +29,7 @@ import { FIELD_PROP_SET } from "../field_context.js";
 import { useFieldgroupInterfaceProps } from "../field_hooks.jsx";
 import { Input } from "../input/input.jsx";
 import { dispatchRequestAction } from "../validation/custom_constraint_validation.js";
-import { List, ListItem } from "./list.jsx";
+import { List, LIST_ITEM_PSEUDO_CLASSES, ListItem } from "./list.jsx";
 
 const css = /* css */ `
   fieldset.navi_list_container {
@@ -99,6 +105,18 @@ const css = /* css */ `
     /* Disabled */
     --list-item-color-disabled: light-dark(#aaa, #555);
     --list-item-background-color-disabled: var(--list-item-background-color);
+
+    .selectable_real_input {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      margin: -1p;
+      padding: 0;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
 
     &[data-interactive] {
       cursor: pointer;
@@ -243,8 +261,13 @@ export const SelectableList = (props) => {
   );
 };
 
+const SelectableRealInputContext = createContext(null);
+
 export const Selectable = (props) => {
+  const defaultRef = useRef();
+  props.ref = props.ref || defaultRef;
   const {
+    ref,
     index,
     id,
     highlight,
@@ -256,7 +279,13 @@ export const Selectable = (props) => {
   } = props;
   const multiple = useContext(SelectableListMultipleContext);
   const inputType = multiple ? "checkbox" : "radio";
-  // const pseudoStateSelector = multiple ? ".navi_checkbox" : ".navi_radio";
+  const realInputContextValue = useMemo(() => {
+    return {
+      ref,
+      type: inputType,
+      selected,
+    };
+  }, [inputType, selected]);
 
   return (
     <ListItem
@@ -265,8 +294,10 @@ export const Selectable = (props) => {
       highlight={highlight}
       filtered={filtered}
       hidden={hidden}
+      pseudoClasses={SELECTABLE_PSEUDO_CLASSES}
     >
       <Field
+        as="div"
         requiredMessage={naviI18n(`list_item.readonly`, props)}
         padding="m"
         flex
@@ -278,12 +309,24 @@ export const Selectable = (props) => {
         baseChildPropSet={SELECTABLE_REAL_INPUT_CHILD_PROP_SET}
         hasChildUsingForwardedProps
       >
-        <SelectableRealInput type={inputType} selected={selected} />
-        {children}
+        <SelectableRealInput ref={ref} type={inputType} selected={selected} />
+        <SelectableRealInputContext.Provider value={realInputContextValue}>
+          {children}
+        </SelectableRealInputContext.Provider>
       </Field>
     </ListItem>
   );
 };
+const SELECTABLE_PSEUDO_CLASSES = [
+  ...LIST_ITEM_PSEUDO_CLASSES,
+  ":hover",
+  ":disabled",
+  ":read-only",
+  ":focus-within",
+  ":focus",
+  ":focus-visible",
+  ":-navi-loading",
+];
 const SELECTABLE_REAL_INPUT_CHILD_PROP_SET = new Set([
   ...FIELD_PROP_SET,
   "selected",
@@ -291,9 +334,57 @@ const SELECTABLE_REAL_INPUT_CHILD_PROP_SET = new Set([
 const SelectableRealInput = ({ type, selected }) => {
   const inputProps = useContext(BoxForwardedPropsContext);
 
-  return <Input {...inputProps} type={type} checked={selected} />;
+  return (
+    <Input
+      className="selectable_real_input"
+      {...inputProps}
+      type={type}
+      checked={selected}
+    />
+  );
 };
-const SelectableInputMirror = () => {
-  return "coucouu";
+const SelectableInputMirror = (props) => {
+  const defaultRef = useRef();
+  props.ref = props.ref || defaultRef;
+  const { ref } = props;
+  const {
+    ref: realInputRef,
+    type: realInputType,
+    selected: realInputSelected,
+  } = useContext(SelectableRealInputContext);
+
+  useLayoutEffect(() => {
+    const realInput = realInputRef.current;
+    const mirrorInput = ref.current;
+    if (!realInput) {
+      return undefined;
+    }
+    const sync = () => {
+      mirrorInput.checked = realInput.checked;
+    };
+    sync();
+    realInput.addEventListener("change", sync);
+    return () => {
+      realInput.removeEventListener("change", sync);
+    };
+  }, []);
+
+  return (
+    <Input
+      ref={ref}
+      type={realInputType}
+      aria-hidden="true"
+      tabIndex={-1}
+      checked={realInputSelected}
+      onMouseDown={(e) => {
+        // const mirrorInput = e.currentTarget;
+        // transfer focus to the real input
+        const realInput = realInputRef.current;
+        e.preventDefault();
+        realInput.focus();
+        realInput.dispatchEvent(new MouseEvent("mousedown", e));
+      }}
+    />
+  );
 };
 Selectable.Input = SelectableInputMirror;
