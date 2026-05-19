@@ -121,20 +121,8 @@ const FieldCSSVars = {
   spacing: "--field-spacing",
 };
 const FieldUI = (props) => {
-  const { vertical } = props;
-  const fieldProps = useFieldProps(props);
-
-  return (
-    <Box
-      flex={vertical ? "y" : undefined}
-      alignX={vertical ? "start" : undefined}
-      data-vertical={vertical ? "" : undefined}
-      {...fieldProps}
-    />
-  );
-};
-const useFieldProps = (props) => {
   import.meta.css = css;
+  const { vertical } = props;
   const { id, name, disabled, readOnly, required, loading, ...rest } = props;
 
   // Collect constraint message props so child fields can inherit them via context.
@@ -178,7 +166,7 @@ const useFieldProps = (props) => {
   const readOnlyEffective = readOnly || readOnlyFromChild;
   const disabledEffective = disabled || disabledByChild;
 
-  return {
+  const fieldProps = {
     "data-navi-field": "",
     "data-interactive": interactive ? "" : undefined,
     ...remainingProps,
@@ -190,7 +178,17 @@ const useFieldProps = (props) => {
       ...remainingProps.basePseudoState,
     },
   };
+
+  return (
+    <Box
+      flex={vertical ? "y" : undefined}
+      alignX={vertical ? "start" : undefined}
+      data-vertical={vertical ? "" : undefined}
+      {...fieldProps}
+    />
+  );
 };
+
 const FieldPseudoClasses = [
   ":hover",
   ":active",

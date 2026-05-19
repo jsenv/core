@@ -84,7 +84,7 @@ export const useFieldgroupInterfaceProps = (
   props,
   { fieldType, childComponentType, aggregateChildStates },
 ) => {
-  const { action, name, required } = props;
+  const { action } = props;
   const debugAction = useDebugAction();
   const uiGroupStateController = useUIGroupStateController(props, fieldType, {
     childComponentType,
@@ -115,10 +115,10 @@ export const useFieldgroupInterfaceProps = (
 
     childrenWithContext = (
       <ParentUIStateControllerContext.Provider value={uiGroupStateController}>
-        <FieldNameContext.Provider value={name}>
+        <FieldNameContext.Provider value={actionProps.name}>
           <DisabledContext.Provider value={disabled}>
             <ReadOnlyContext.Provider value={readOnly}>
-              <RequiredContext.Provider value={required}>
+              <RequiredContext.Provider value={actionProps.required}>
                 <LoadingContext.Provider value={loading}>
                   <ActionContext.Provider value={boundAction}>
                     <ActionRequesterContext.Provider value={actionRequester}>

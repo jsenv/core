@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <link rel="icon" href="data:," />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>RadioFieldset Demo</title>
+    <title>RadioGroup Demo</title>
     <style>
       body {
         max-width: 800px;
@@ -40,7 +40,7 @@
     </style>
   </head>
   <body>
-    <h1>RadioFieldset Demo</h1>
+    <h1>RadioGroup Demo</h1>
     <div id="root"></div>
 
     <script type="module" jsenv-type="module/jsx">
@@ -49,7 +49,7 @@
       import {
         Button,
         Form,
-        RadioFieldset,
+        RadioGroup,
         Field,
         Label,
         Input,
@@ -80,7 +80,7 @@
               nothing is selected.
             </p>
 
-            <RadioFieldset
+            <RadioGroup
               name="standalone_option"
               action={(value) => {
                 setLastCall(value);
@@ -99,7 +99,7 @@
                 <Input type="radio" value="gamma" />
                 Gamma
               </Field>
-            </RadioFieldset>
+            </RadioGroup>
 
             <p
               style={{
@@ -125,15 +125,15 @@
           <div class="demo-section">
             <h2>In a form</h2>
             <p style={{ margin: "0 0 12px", color: "#555" }}>
-              A <code>RadioFieldset</code> inside a <code>Form</code>. The
-              selected value is submitted with the form.
+              A <code>RadioGroup</code> inside a <code>Form</code>. The selected
+              value is submitted with the form.
             </p>
             <Form
               action={(params) => {
                 setSubmitted(params);
               }}
             >
-              <RadioFieldset name="form_option">
+              <RadioGroup name="form_option">
                 <legend>Pick an option</legend>
                 <Field>
                   <Input type="radio" value="alpha" />
@@ -147,7 +147,7 @@
                   <Input type="radio" value="gamma" />
                   Gamma
                 </Field>
-              </RadioFieldset>
+              </RadioGroup>
 
               <Button type="submit" style={{ marginTop: "12px" }}>
                 Submit
@@ -177,16 +177,15 @@
           <div class="demo-section">
             <h2>With required validation</h2>
             <p style={{ margin: "0 0 12px", color: "#555" }}>
-              The <code>required</code> attribute on a{" "}
-              <code>RadioFieldset</code> means an option must be selected before
-              the form can be submitted.
+              The <code>required</code> attribute on a <code>RadioGroup</code>{" "}
+              means an option must be selected before the form can be submitted.
             </p>
             <Form
               action={(params) => {
                 setSubmitted(params);
               }}
             >
-              <RadioFieldset name="required_option" required>
+              <RadioGroup name="required_option" required>
                 <legend>Pick an option (required)</legend>
                 <Field flex alignY="center" spacing="s">
                   <Input type="radio" value="alpha" />
@@ -200,7 +199,7 @@
                   <Input type="radio" value="gamma" />
                   Gamma
                 </Field>
-              </RadioFieldset>
+              </RadioGroup>
               <Button type="submit" style={{ marginTop: "12px" }}>
                 Submit
               </Button>
@@ -234,7 +233,7 @@
               options.
             </p>
 
-            <RadioFieldset name="readonly_option">
+            <RadioGroup name="readonly_option">
               <legend>Pick an option</legend>
               <Field as="label" flex alignY="center" spacing="s">
                 <Input type="radio" value="alpha" />
@@ -266,7 +265,7 @@
                 <Input type="radio" value="epsilon" />
                 Epsilon (normal)
               </Field>
-            </RadioFieldset>
+            </RadioGroup>
           </div>
         );
       };
