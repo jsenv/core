@@ -512,29 +512,27 @@ export const pickPositionRelativeTo = (
   // alignToAnchorBox controls whether the element aligns to the anchor's border-box (outer edge)
   // or content-box (inner content area, ignoring padding and border).
   // content-box lets the arrow point into the content area instead of the outer edge.
-  let anchorInsetY = 0;
-  let anchorInsetX = 0;
+  // Insets are directional: top/bottom for Y-axis, left/right for X-axis.
+  // When positioning above, only the top inset applies (content-box top edge).
+  // When positioning below, only the bottom inset applies (content-box bottom edge).
+  let insetTop = 0;
+  let insetBottom = 0;
+  let insetLeft = 0;
+  let insetRight = 0;
   if (alignToAnchorBox === "content-box") {
     const anchorBorderSizes = getBorderSizes(anchor);
     const anchorPaddingSizes = getPaddingSizes(anchor);
-    anchorInsetY =
-      anchorBorderSizes.top +
-      anchorPaddingSizes.top +
-      anchorPaddingSizes.bottom +
-      anchorBorderSizes.bottom;
-    anchorInsetX =
-      anchorBorderSizes.left +
-      anchorPaddingSizes.left +
-      anchorPaddingSizes.right +
-      anchorBorderSizes.right;
+    insetTop = anchorBorderSizes.top + anchorPaddingSizes.top;
+    insetBottom = anchorBorderSizes.bottom + anchorPaddingSizes.bottom;
+    insetLeft = anchorBorderSizes.left + anchorPaddingSizes.left;
+    insetRight = anchorBorderSizes.right + anchorPaddingSizes.right;
   }
-  const effectiveSpacing = spacing - anchorInsetY;
-  const spaceAbove = anchorTop + anchorInsetY;
-  const spaceBelow = viewportHeight - anchorBottom + anchorInsetY;
-  const effectiveAnchorLeft = anchorLeft + anchorInsetX / 2;
-  const effectiveAnchorRight = anchorRight - anchorInsetX / 2;
-  const spaceLeft = anchorLeft + anchorInsetX / 2;
-  const spaceRight = viewportWidth - anchorRight + anchorInsetX / 2;
+  const spaceAbove = anchorTop + insetTop;
+  const spaceBelow = viewportHeight - anchorBottom + insetBottom;
+  const effectiveAnchorLeft = anchorLeft + insetLeft;
+  const effectiveAnchorRight = anchorRight - insetRight;
+  const spaceLeft = anchorLeft + insetLeft;
+  const spaceRight = viewportWidth - anchorRight + insetRight;
 
   // Resolve active X and Y, and whether each is fixed (no flip fallback)
   let activeX;
@@ -568,13 +566,13 @@ export const pickPositionRelativeTo = (
     // Compute effective space for a given Y value
     const spaceFor = (y) => {
       if (y === "above") {
-        return spaceAbove - effectiveSpacing - viewportSpacing;
+        return spaceAbove - spacing - viewportSpacing;
       }
       if (y === "above-overlap") {
         return spaceAbove + anchorHeight - viewportSpacing;
       }
       if (y === "below") {
-        return spaceBelow - effectiveSpacing - viewportSpacing;
+        return spaceBelow - spacing - viewportSpacing;
       }
       if (y === "below-overlap") {
         return spaceBelow + anchorHeight - viewportSpacing;
@@ -734,8 +732,8 @@ export const pickPositionRelativeTo = (
   let elementPositionTop;
   {
     if (finalY === "above") {
-      // top is always anchorTop - elementHeight - effectiveSpacing — max-height truncates if needed.
-      const idealTop = anchorTop - elementHeight - effectiveSpacing;
+      // top is always anchorTop + insetTop - elementHeight - spacing — max-height truncates if needed.
+      const idealTop = anchorTop + insetTop - elementHeight - spacing;
       elementPositionTop =
         idealTop < viewportSpacing ? viewportSpacing : idealTop;
     } else if (finalY === "above-overlap") {
@@ -750,9 +748,9 @@ export const pickPositionRelativeTo = (
         idealTop % 1 === 0 ? idealTop : Math.floor(idealTop) + 1;
     } else {
       // "below"
-      // top is always anchorBottom + effectiveSpacing — max-height (via --space-available) truncates
+      // top is always anchorBottom - insetBottom + spacing — max-height (via --space-available) truncates
       // the element height so it doesn't overflow the viewport bottom.
-      const idealTop = anchorBottom - anchorInsetY + effectiveSpacing;
+      const idealTop = anchorBottom - insetBottom + spacing;
       elementPositionTop =
         idealTop % 1 === 0 ? idealTop : Math.floor(idealTop) + 1;
     }
@@ -782,11 +780,11 @@ export const pickPositionRelativeTo = (
   // so callers get the net usable space directly.
   const effectiveSpaceAbove =
     (finalY === "above-overlap" ? spaceAbove + anchorHeight : spaceAbove) -
-    (finalY === "above" ? effectiveSpacing : 0) -
+    (finalY === "above" ? spacing : 0) -
     viewportSpacing;
   const effectiveSpaceBelow =
     (finalY === "below-overlap" ? spaceBelow + anchorHeight : spaceBelow) -
-    (finalY === "below" ? effectiveSpacing : 0) -
+    (finalY === "below" ? spacing : 0) -
     viewportSpacing;
 
   return {

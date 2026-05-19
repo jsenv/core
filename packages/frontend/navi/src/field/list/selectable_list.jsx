@@ -106,7 +106,6 @@ const css = /* css */ `
     /* Disabled */
     --list-item-color-disabled: light-dark(#aaa, #555);
     --list-item-background-color-disabled: var(--list-item-background-color);
-
     position: relative;
 
     [navi-visually-hidden] {
