@@ -63,15 +63,15 @@
 
       // Default: label to the left, input to the right (horizontal row layout)
       const DefaultDemo = () => (
-        <Box flex="y" spacing="s" id="default">
+        <Box flex="y" spacing="s" alignX="start" id="default">
           <h2 style={{ margin: 0 }}>Default (label to the left)</h2>
+          <Field flex alignY="center" spacing="s" style={labelDotted}>
+            Email
+            <Input type="email" name="email" placeholder="Enter email" />
+          </Field>
           <Field flex alignY="center">
             <Label style={labelDotted}>Username</Label>
             <Input type="text" name="username" placeholder="Enter username" />
-          </Field>
-          <Field flex alignY="center">
-            <Label style={labelDotted}>Email</Label>
-            <Input type="email" name="email" placeholder="Enter email" />
           </Field>
         </Box>
       );
