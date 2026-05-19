@@ -240,7 +240,9 @@ export const openCallout = (
     if (!callout.opened) {
       return;
     }
-    debug(event, `callout close (reason: ${reason})`);
+    if (debug) {
+      debug(event, `callout close (reason: ${reason})`);
+    }
     if (event.type === "mousedown") {
       event.preventDefault(); // prevent focus change to the callout, let it on the input
     }
@@ -460,15 +462,21 @@ export const openCallout = (
       return document.body;
     }
     // Some elements (e.g. <input>) cannot have children
-    if (canHaveChildren(anchorElement)) {
+    if (canContainCallout(anchorElement)) {
       return anchorElement;
     }
     return anchorElement.parentNode || document.body;
   })();
+  if (debug) {
+    debug(
+      openingEvent,
+      "append callout into",
+      getElementSignature(calloutContainer),
+    );
+  }
   calloutContainer.appendChild(calloutElement);
   calloutElement.showPopover();
   addTeardown(() => {
-    calloutElement.hidePopover();
     calloutElement.remove();
   });
 
@@ -778,6 +786,9 @@ const stickCalloutToAnchor = (calloutElement, anchorElement, { debug }) => {
         return;
       }
       if (!calloutElement.matches(":popover-open")) {
+        if (debug) {
+          debug(event, "showing callout because anchor is visible again");
+        }
         calloutElement.showPopover();
       }
       const calloutElementClone =
@@ -1009,8 +1020,15 @@ const VOID_ELEMENT_TAG_NAMES = new Set([
   "TRACK",
   "WBR",
 ]);
-const canHaveChildren = (element) => {
-  return !VOID_ELEMENT_TAG_NAMES.has(element.tagName);
+const canContainCallout = (element) => {
+  if (VOID_ELEMENT_TAG_NAMES.has(element.tagName)) {
+    return false;
+  }
+  if (element.tagName === "BUTTON") {
+    // callout itself contains a button, browser would not let that happen
+    return false;
+  }
+  return true;
 };
 
 const escapeHtml = (string) => {
