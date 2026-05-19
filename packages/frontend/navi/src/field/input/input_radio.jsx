@@ -1,4 +1,3 @@
-import { dispatchCustomEvent } from "@jsenv/dom";
 import { useContext, useLayoutEffect, useRef } from "preact/hooks";
 
 import { Box, BoxForwardedPropsContext } from "@jsenv/navi/src/box/box.jsx";
@@ -11,6 +10,7 @@ import { useAccentColorAttributes } from "../../utils/use_accent_color_attribute
 import { FIELD_PROP_SET } from "../field_context.js";
 import { useFieldInterfaceProps } from "../field_hooks.jsx";
 import { requestClosestAction } from "../string_actions.js";
+import { requestSetUIState } from "../use_ui_state_controller.js";
 
 const css = /* css */ `
   @layer navi {
@@ -343,6 +343,7 @@ const InputRadioFieldInterface = (props) => {
     /* eslint-disable no-unused-vars */
     type,
     /* eslint-enable no-unused-vars */
+    onMouseDown,
     onInput,
     onKeyDown,
     icon,
@@ -392,9 +393,8 @@ const InputRadioFieldInterface = (props) => {
       // radio propagates its state up, otherwise aggregation may find multiple "truthy" children.
       // suppressParentNotification: true prevents the group from aggregating and calling uiAction during
       // this intermediate state (all unchecked) — only the clicked radio's setUIState triggers aggregation.
-      dispatchCustomEvent(radioInput, "navi_set_ui_state", {
+      requestSetUIState(radioInput, false, {
         event: e,
-        value: false,
         suppressParentNotification: true,
       });
     }
@@ -465,6 +465,7 @@ const InputRadioFieldInterface = (props) => {
       hasChildUsingForwardedProps
       baseChildPropSet={RadioChildPropSet}
       onMouseDown={(e) => {
+        onMouseDown?.(e);
         const radio = ref.current;
         dispatchRequestInteraction(radio, e);
       }}

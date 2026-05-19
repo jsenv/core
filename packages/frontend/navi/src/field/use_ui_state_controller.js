@@ -539,6 +539,12 @@ export const useUIAction = (uiStateController, uiAction) => {
   }, [Boolean(uiAction)]);
 };
 
+export const requestSetUIState = (element, value, detail) => {
+  return dispatchInternalCustomEvent(element, "navi_set_ui_state", {
+    ...detail,
+    value,
+  });
+};
 export const requestResetUIState = (element, e) => {
   return dispatchInternalCustomEvent(element, "navi_request_reset_ui_state", {
     event: e,
