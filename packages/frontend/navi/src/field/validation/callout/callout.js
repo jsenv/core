@@ -290,7 +290,6 @@ export const openCallout = (
     }
 
     if (isValidElement(newMessage)) {
-      calloutMessageElement.innerHTML = "";
       renderIntoCallout(newMessage, calloutMessageElement, {
         requestClose,
       });
