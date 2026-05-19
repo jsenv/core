@@ -583,7 +583,11 @@ export const pickPositionRelativeTo = (
       if (currentFitsEnough) {
         finalY = activeY;
       } else {
-        finalY = oppositeY[activeY];
+        // Only flip if the opposite side has more space — avoids oscillation
+        // when neither side has enough room (both fail the ratio).
+        const opposite = oppositeY[activeY];
+        const oppositeHasMoreSpace = spaceFor(opposite) > spaceFor(activeY);
+        finalY = oppositeHasMoreSpace ? opposite : activeY;
       }
     }
   }
