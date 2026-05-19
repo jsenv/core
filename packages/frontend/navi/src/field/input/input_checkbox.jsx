@@ -471,9 +471,9 @@ const InputCheckboxFieldInterface = (props) => {
       square={appearance === "button" ? true : undefined}
       {...fieldInterfaceProps}
       ref={boxRef}
-      data-field=".navi_real_input_checkbox"
       data-appearance={appearance}
       baseClassName="navi_checkbox"
+      navi-field=".navi_real_input_checkbox"
       pseudoStateSelector=".navi_real_input_checkbox"
       styleCSSVars={
         appearance === "toggle"

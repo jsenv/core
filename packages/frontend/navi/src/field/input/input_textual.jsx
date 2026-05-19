@@ -382,6 +382,7 @@ const InputTextualFieldInterface = (props) => {
       flex
       baseClassName="navi_input"
       styleCSSVars={InputStyleCSSVars}
+      navi-field=".navi_real_input"
       pseudoStateSelector=".navi_real_input"
       visualSelector=".navi_real_input"
       pseudoClasses={InputPseudoClasses}

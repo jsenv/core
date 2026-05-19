@@ -452,9 +452,9 @@ const InputRadioFieldInterface = (props) => {
       square={appearance === "button" ? true : undefined}
       {...fieldInterfaceProps}
       ref={boxRef}
-      data-field=".navi_real_input_radio"
       data-appearance={appearance}
       baseClassName="navi_radio"
+      navi-field=".navi_real_input_radio"
       pseudoStateSelector=".navi_real_input_radio"
       styleCSSVars={
         appearance === "button" ? RadioButtonStyleCSSVars : RadioStyleCSSVars

@@ -297,7 +297,7 @@ const PickerButton = (props) => {
       {...fieldInterfaceProps}
       ref={ref}
       baseClassName="navi_picker"
-      data-field=".navi_picker_input"
+      navi-field=".navi_picker_input"
       navi-has-placeholder={placeholder ? "" : undefined}
       // pseudoStateSelector=".navi_picker_input"
       pseudoClasses={PICKER_PSEUDO_CLASSES}

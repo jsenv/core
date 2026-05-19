@@ -776,6 +776,14 @@ const stickCalloutToAnchor = (calloutElement, anchorElement, { debug }) => {
   const calloutMessageElement = calloutElement.querySelector(
     ".navi_callout_message",
   );
+  let alignToAnchorBox;
+  if (anchorElement.hasAttribute("data-callout-point-to-border-box")) {
+    alignToAnchorBox = "border-box";
+  } else if (anchorElement.hasAttribute("data-callout-point-to-content-box")) {
+    alignToAnchorBox = "content-box";
+  } else {
+    //
+  }
 
   // Set initial border styles
   calloutBoxElement.style.borderWidth = `${BORDER_WIDTH}px`;
@@ -826,11 +834,7 @@ const stickCalloutToAnchor = (calloutElement, anchorElement, { debug }) => {
           "data-callout-position-fixed",
         ),
         spacing: ARROW_HEIGHT,
-        alignToAnchorBox: anchorElement.hasAttribute(
-          "data-callout-point-to-border-box",
-        )
-          ? "border-box"
-          : "content-box",
+        alignToAnchorBox,
         viewportSpacing: anchorElement.hasAttribute(
           "data-callout-viewport-spacing",
         )
