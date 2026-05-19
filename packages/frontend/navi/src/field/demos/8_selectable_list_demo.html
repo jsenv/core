@@ -312,6 +312,10 @@
               action={(v) => {
                 setSelected(v);
               }}
+              style={{
+                "--list-item-background-color-selected": "unset",
+                "--list-item-color-selected": "unset",
+              }}
             >
               {FRUITS.map((fruit, i) => (
                 <Selectable

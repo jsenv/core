@@ -45,6 +45,21 @@ const css = /* css */ `
       var(--list-outline-width) + var(--list-border-width)
     );
     --x-list-outline-offset: calc(-1 * var(--list-border-width));
+    /* Hover (mouse) */
+    --list-item-color-hover: var(--list-item-color);
+    --list-item-background-color-hover: light-dark(#f5f5f5, #2a2a2a);
+    /* Pointed by mouse — subtle, just a shade above background */
+    --list-item-color-mouse-pointed: var(--list-item-color);
+    --list-item-background-color-mouse-pointed: light-dark(#ebebeb, #303030);
+    /* Pointed by keyboard — subtle light blue highlight */
+    --list-item-color-keyboard-pointed: var(--list-item-color);
+    --list-item-background-color-keyboard-pointed: light-dark(#c2dcff, #1c3a6e);
+    /* Selected — vivid blue accent */
+    --list-item-color-selected: light-dark(#ffffff, #ffffff);
+    --list-item-background-color-selected: light-dark(#1a73e8, #2b5fcc);
+    /* Disabled */
+    --list-item-color-disabled: light-dark(#aaa, #555);
+    --list-item-background-color-disabled: var(--list-item-background-color);
 
     outline-width: var(--x-list-outline-width);
     outline-color: var(--x-list-outline-color);
@@ -92,21 +107,6 @@ const css = /* css */ `
   }
 
   .navi_list_item {
-    /* Hover (mouse) */
-    --list-item-color-hover: var(--list-item-color);
-    --list-item-background-color-hover: light-dark(#f5f5f5, #2a2a2a);
-    /* Pointed by mouse — subtle, just a shade above background */
-    --list-item-color-mouse-pointed: var(--list-item-color);
-    --list-item-background-color-mouse-pointed: light-dark(#ebebeb, #303030);
-    /* Pointed by keyboard — subtle light blue highlight */
-    --list-item-color-keyboard-pointed: var(--list-item-color);
-    --list-item-background-color-keyboard-pointed: light-dark(#c2dcff, #1c3a6e);
-    /* Selected — vivid blue accent */
-    --list-item-color-selected: light-dark(#ffffff, #ffffff);
-    --list-item-background-color-selected: light-dark(#1a73e8, #2b5fcc);
-    /* Disabled */
-    --list-item-color-disabled: light-dark(#aaa, #555);
-    --list-item-background-color-disabled: var(--list-item-background-color);
     position: relative;
 
     [navi-visually-hidden] {
@@ -144,7 +144,7 @@ const css = /* css */ `
         --list-item-background-color-selected
       );
       &[data-hover] {
-        /* Here important should no beed need, but for some reason it is */
+        /* Here important should no be needed, but for some reason it is */
         --x-list-item-background-color: var(
           --list-item-background-color-selected,
           var(--list-item-background-color-mouse-pointed)
