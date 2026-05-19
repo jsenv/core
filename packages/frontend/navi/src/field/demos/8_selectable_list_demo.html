@@ -23,12 +23,7 @@
       }
 
       h2.section-title {
-        margin: 40px 0 12px;
-        color: #555;
-        font-weight: 700;
-        font-size: 0.8rem;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
+        display: none;
       }
 
       .demo-section {
@@ -83,16 +78,41 @@
 
       const App = () => {
         return (
-          <>
-            <NaviDebug debugAction debugInteraction>
+          <NaviDebug debugAction debugInteraction>
+            <div>
+              <TableOfContents />
               <BasicDemo />
               <ReadOnlyDemo />
               <FormDemo />
-              <h2 className="section-title">Customization</h2>
               <InputDemo />
               <IconInputDemo />
-            </NaviDebug>
-          </>
+            </div>
+          </NaviDebug>
+        );
+      };
+
+      const TableOfContents = () => {
+        return (
+          <div class="demo-section">
+            <h2>Table of contents</h2>
+            <ol style={{ margin: 0, paddingLeft: "20px", lineHeight: "2" }}>
+              <li>
+                <a href="#basic">Basic selectable list</a>
+              </li>
+              <li>
+                <a href="#readonly">ReadOnly items</a>
+              </li>
+              <li>
+                <a href="#form">Form integration</a>
+              </li>
+              <li>
+                <a href="#input">Selectable.Input</a>
+              </li>
+              <li>
+                <a href="#icons">Custom icons</a>
+              </li>
+            </ol>
+          </div>
         );
       };
 
@@ -103,12 +123,8 @@
       const BasicDemo = () => {
         const [selected, setSelected] = useState(null);
         return (
-          <div className="demo-section">
+          <div id="basic" className="demo-section">
             <h2>Basic selectable list</h2>
-            <p>
-              A plain list of selectable items — only text, no{" "}
-              <code>Selectable.Input</code>.
-            </p>
             <SelectableList
               expandX
               action={(v) => {
@@ -141,7 +157,7 @@
       const ReadOnlyDemo = () => {
         const [selected, setSelected] = useState(null);
         return (
-          <div className="demo-section">
+          <div id="readonly" className="demo-section">
             <h2>ReadOnly items</h2>
             <p>
               Items with <code>readOnly</code> show a callout on click instead
@@ -221,7 +237,7 @@
         const [selected, setSelected] = useState(null);
         const [submitted, setSubmitted] = useState(null);
         return (
-          <div className="demo-section">
+          <div id="form" className="demo-section">
             <h2>Form integration</h2>
             <p>
               <code>SelectableList</code> works inside a native{" "}
@@ -278,7 +294,7 @@
       const InputDemo = () => {
         const [selected, setSelected] = useState(null);
         return (
-          <div className="demo-section">
+          <div id="input" className="demo-section">
             <h2>Selectable.Input</h2>
             <p>
               <code>Selectable.Input</code> renders a decorative radio that
@@ -345,7 +361,7 @@
       const IconInputDemo = () => {
         const [selected, setSelected] = useState(null);
         return (
-          <div className="demo-section">
+          <div id="icons" className="demo-section">
             <h2>Custom icons</h2>
             <p>
               Pass <code>icons={`{[uncheckedIcon, checkedIcon]}`}</code> to{" "}
