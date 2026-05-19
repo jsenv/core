@@ -124,7 +124,6 @@ const FieldUI = (props) => {
   import.meta.css = css;
   const { vertical } = props;
   const { id, name, disabled, readOnly, required, loading, ...rest } = props;
-
   // Collect constraint message props so child fields can inherit them via context.
   const [fieldMessageProps, remainingProps] =
     extractMessageAndRemainingProps(rest);
@@ -134,26 +133,36 @@ const FieldUI = (props) => {
   const [readOnlyFromChild, setReadOnlyFromChild] = useState(false);
   const [interactive, setInteractive] = useState(false);
 
+  const parentFieldContext = useContext(FieldContext);
+  const parentFieldDisabled = useContext(DisabledContext);
+  const parentFieldReadOnly = useContext(ReadOnlyContext);
+  const parentFieldRequired = useContext(RequiredContext);
+  const parentFieldLoading = useContext(LoadingContext);
+  const nameResolved = name || parentFieldContext?.name;
+  const disabledResolved = disabled || parentFieldDisabled;
+  const readOnlyResolved = readOnly || parentFieldReadOnly;
+  const requiredResolved = required || parentFieldRequired;
+  const loadingResolved = loading || parentFieldLoading;
   const contextValue = useMemo(
     () => ({
       id,
-      name,
+      name: nameResolved,
       setReadOnly: setReadOnlyFromChild,
       setDisabled: setDisabledByChild,
       setInteractive,
       messagePropsRef: fieldMessagePropsRef,
     }),
-    [id, name],
+    [id, nameResolved],
   );
   let childrenWithContext;
   if (props.children === undefined) {
   } else {
     childrenWithContext = (
       <FieldContext.Provider value={contextValue}>
-        <DisabledContext.Provider value={disabled}>
-          <ReadOnlyContext.Provider value={readOnly}>
-            <RequiredContext.Provider value={required}>
-              <LoadingContext.Provider value={loading}>
+        <DisabledContext.Provider value={disabledResolved}>
+          <ReadOnlyContext.Provider value={readOnlyResolved}>
+            <RequiredContext.Provider value={requiredResolved}>
+              <LoadingContext.Provider value={loadingResolved}>
                 {props.children}
               </LoadingContext.Provider>
             </RequiredContext.Provider>
@@ -163,9 +172,12 @@ const FieldUI = (props) => {
     );
   }
 
-  const readOnlyEffective = readOnly || readOnlyFromChild;
-  const disabledEffective = disabled || disabledByChild;
-
+  // a field inteface can make the field component
+  // disabled/readonly when that field interface is disabled/readonly
+  // this is the only bottom up communication there is
+  // (apart from action requested by child which cause ancestor action to execute)
+  const disabledOrByChild = disabledResolved || disabledByChild;
+  const readOnlyOrByChild = readOnlyResolved || readOnlyFromChild;
   const fieldProps = {
     "data-navi-field": "",
     "data-interactive": interactive ? "" : undefined,
@@ -173,8 +185,8 @@ const FieldUI = (props) => {
     "children": childrenWithContext,
     "pseudoClasses": FieldPseudoClasses,
     "basePseudoState": {
-      ":disabled": disabledEffective,
-      ":read-only": readOnlyEffective,
+      ":disabled": disabledOrByChild,
+      ":read-only": readOnlyOrByChild,
       ...remainingProps.basePseudoState,
     },
   };
