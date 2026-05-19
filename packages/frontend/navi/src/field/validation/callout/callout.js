@@ -427,6 +427,7 @@ export const openCallout = (
     }
   });
 
+  const originalAnchorElement = anchorElement;
   if (anchorElement) {
     if (anchorElement.id) {
       const proxyElement = document.querySelector(
@@ -586,6 +587,7 @@ export const openCallout = (
       } else {
         positioner = stickCalloutToAnchor(calloutElement, visualAnchorElement, {
           debug,
+          originalAnchorElement,
         });
       }
       strategy = newStrategy;
@@ -765,7 +767,20 @@ const centerCalloutInViewport = (
  * @param {HTMLElement} anchorElement - The anchor element to stick to
  * @returns {Object} - Object with update and stop functions
  */
-const stickCalloutToAnchor = (calloutElement, anchorElement, { debug }) => {
+const stickCalloutToAnchor = (
+  calloutElement,
+  anchorElement,
+  { debug, originalAnchorElement = anchorElement },
+) => {
+  // Read an attribute from the original anchor first, then the visual anchor.
+  // The visual anchor may differ from the original when navi-rendered-by redirects
+  // the anchor to a wrapper element that doesn't carry the data-callout-* attributes.
+  const getAnchorAttribute = (name) => {
+    return (
+      originalAnchorElement.getAttribute(name) ??
+      anchorElement.getAttribute(name)
+    );
+  };
   // Get references to callout parts
   const calloutBoxElement = calloutElement.querySelector(".navi_callout_box");
   const calloutFrameElement = calloutElement.querySelector(
@@ -839,18 +854,15 @@ const stickCalloutToAnchor = (calloutElement, anchorElement, { debug }) => {
         alignToViewportEdgeWhenAnchorNearEdge: 20,
         minLeft: 1,
         positionX: "center",
-        positionY:
-          anchorElement.getAttribute("data-callout-position") || "below",
-        positionYFixed: anchorElement.getAttribute(
-          "data-callout-position-fixed",
-        ),
+        positionY: getAnchorAttribute("data-callout-position") || "below",
+        positionYFixed: getAnchorAttribute("data-callout-position-fixed"),
         spacing: ARROW_HEIGHT,
         alignToAnchorBox,
-        viewportSpacing: anchorElement.hasAttribute(
-          "data-callout-viewport-spacing",
-        )
-          ? Number(anchorElement.getAttribute("data-callout-viewport-spacing"))
-          : 0,
+        viewportSpacing:
+          originalAnchorElement.hasAttribute("data-callout-viewport-spacing") ||
+          anchorElement.hasAttribute("data-callout-viewport-spacing")
+            ? Number(getAnchorAttribute("data-callout-viewport-spacing"))
+            : 0,
       });
       // data-position-y-current is written to the clone by pickPositionRelativeTo,
       // copy it back to the real element so stickiness works on next call
@@ -880,9 +892,7 @@ const stickCalloutToAnchor = (calloutElement, anchorElement, { debug }) => {
       // Calculate arrow position to point at anchorElement element
       let arrowLeftPosOnCallout;
       // Determine arrow target position based on attribute
-      const arrowPositionAttribute = anchorElement.getAttribute(
-        "data-callout-arrow-x",
-      );
+      const arrowPositionAttribute = getAnchorAttribute("data-callout-arrow-x");
       let arrowAnchorLeft;
       if (arrowPositionAttribute === "center") {
         // Target the center of the anchorElement element
@@ -901,17 +911,16 @@ const stickCalloutToAnchor = (calloutElement, anchorElement, { debug }) => {
           anchorLeft + anchorBorderSizes.left + anchorPaddingSizes.left;
       }
 
-      // Calculate arrow position within the callout
-      if (calloutLeft < arrowAnchorLeft) {
-        // Callout is left of the target point, move arrow right
-        const diff = arrowAnchorLeft - calloutLeft;
-        arrowLeftPosOnCallout = diff;
-      } else if (calloutLeft + calloutWidth < arrowAnchorLeft) {
-        // Edge case: target point is beyond right edge of callout
+      // arrowAnchorLeft is viewport-relative (from visibleRectEffect).
+      // calloutLeft is document-relative (pickPositionRelativeTo adds scrollLeft).
+      // Subtract scrollLeft to bring calloutLeft to viewport coordinates before diffing.
+      const calloutViewportLeft =
+        calloutLeft - document.documentElement.scrollLeft;
+      if (calloutViewportLeft + calloutWidth < arrowAnchorLeft) {
+        // Arrow target is beyond the right edge of the callout — pin arrow to far right
         arrowLeftPosOnCallout = calloutWidth - ARROW_WIDTH;
       } else {
-        // Target point is within callout width
-        arrowLeftPosOnCallout = arrowAnchorLeft - calloutLeft;
+        arrowLeftPosOnCallout = arrowAnchorLeft - calloutViewportLeft;
       }
 
       // Ensure arrow stays within callout bounds with some padding

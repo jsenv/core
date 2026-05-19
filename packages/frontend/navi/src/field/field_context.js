@@ -9,6 +9,12 @@ export const FIELD_PROP_SET = new Set([
   "name",
   "data-testid",
   "navi-proxy-for",
+  "data-callout-arrow-x",
+  "data-callout-point-to-border-box",
+  "data-callout-point-to-content-box",
+  "data-callout-viewport-spacing",
+  "data-callout-position",
+  "data-callout-position-fixed",
 ]);
 
 export const FieldToInterfaceContext = createContext(null);
