@@ -375,10 +375,9 @@ const SelectableInputMirror = (props) => {
     if (!realInput) {
       return undefined;
     }
-    const sync = () => {
-      mirrorInput.checked = realInput.checked;
+    const sync = (event) => {
+      requestSetUIState(mirrorInput, realInput.checked, { event });
     };
-    sync();
     realInput.addEventListener("change", sync);
     return () => {
       realInput.removeEventListener("change", sync);
@@ -390,6 +389,8 @@ const SelectableInputMirror = (props) => {
     <FieldToInterfaceContext.Provider value={undefined}>
       <Input
         ref={ref}
+        name="navi_mirror" // give it a specific name to avoid radio name (would unselect others)
+        navi-mirror // mark this input as a mirror, might be useful to ignore form params for instance
         type={realInputType}
         aria-hidden="true"
         tabIndex={-1}
