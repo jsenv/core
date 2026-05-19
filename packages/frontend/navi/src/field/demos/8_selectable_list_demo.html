@@ -84,8 +84,13 @@
               <BasicDemo />
               <ReadOnlyDemo />
               <FormDemo />
-              <InputDemo />
-              <IconInputDemo />
+              <div id="customization">
+                <div class="demo-section">
+                  <h2>Customization</h2>
+                </div>
+                <InputDemo />
+                <IconInputDemo />
+              </div>
             </div>
           </NaviDebug>
         );
@@ -106,10 +111,15 @@
                 <a href="#form">Form integration</a>
               </li>
               <li>
-                <a href="#input">Selectable.Input</a>
-              </li>
-              <li>
-                <a href="#icons">Custom icons</a>
+                Customization
+                <ol style={{ margin: 0, paddingLeft: "20px" }}>
+                  <li>
+                    <a href="#input">Selectable.Input</a>
+                  </li>
+                  <li>
+                    <a href="#icons">Custom icons</a>
+                  </li>
+                </ol>
               </li>
             </ol>
           </div>
@@ -294,7 +304,7 @@
       const InputDemo = () => {
         const [selected, setSelected] = useState(null);
         return (
-          <div id="input" className="demo-section">
+          <div className="demo-section">
             <h2>Selectable.Input</h2>
             <p>
               <code>Selectable.Input</code> renders a decorative radio that
@@ -361,7 +371,7 @@
       const IconInputDemo = () => {
         const [selected, setSelected] = useState(null);
         return (
-          <div id="icons" className="demo-section">
+          <div className="demo-section">
             <h2>Custom icons</h2>
             <p>
               Pass <code>icons={`{[uncheckedIcon, checkedIcon]}`}</code> to{" "}
