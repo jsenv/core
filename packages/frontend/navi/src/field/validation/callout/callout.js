@@ -428,15 +428,23 @@ export const openCallout = (
   });
 
   if (anchorElement) {
+    if (anchorElement.id) {
+      const proxyElement = document.querySelector(
+        `[navi-proxy-for="${anchorElement.id}"]`,
+      );
+      if (proxyElement) {
+        anchorElement = proxyElement;
+      }
+    }
+    if (anchorElement.tagName === "INPUT" && anchorElement.type === "hidden") {
+      anchorElement = anchorElement.closest("label, fieldset, form");
+    }
     const renderedBy = anchorElement.getAttribute("navi-rendered-by");
     if (renderedBy) {
       const renderedByElement = anchorElement.closest(renderedBy);
       if (renderedByElement) {
         anchorElement = renderedByElement;
       }
-    }
-    if (anchorElement.tagName === "INPUT" && anchorElement.type === "hidden") {
-      anchorElement = anchorElement.closest("label, fieldset, form");
     }
     const anchorVisuallyVisibleInfo = getVisuallyVisibleInfo(anchorElement, {
       countOffscreenAsVisible: true,
