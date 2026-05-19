@@ -456,10 +456,16 @@ export const openCallout = (
       }
     }
   }
-  const calloutContainer =
-    anchorElement && anchorElement !== document.body
-      ? anchorElement
-      : document.body;
+  const calloutContainer = (() => {
+    if (!anchorElement || anchorElement === document.body) {
+      return document.body;
+    }
+    // Some elements (e.g. <input>) cannot have children
+    if (canHaveChildren(anchorElement)) {
+      return anchorElement;
+    }
+    return anchorElement.parentNode || document.body;
+  })();
   calloutContainer.appendChild(calloutElement);
   calloutElement.showPopover();
   addTeardown(() => {
@@ -1000,6 +1006,27 @@ const observeCalloutSizeChange = (elementSizeToObserve, callback) => {
       resizeObserver.disconnect();
     },
   };
+};
+
+// Void elements and replaced elements cannot have children
+const VOID_ELEMENT_TAG_NAMES = new Set([
+  "AREA",
+  "BASE",
+  "BR",
+  "COL",
+  "EMBED",
+  "HR",
+  "IMG",
+  "INPUT",
+  "LINK",
+  "META",
+  "PARAM",
+  "SOURCE",
+  "TRACK",
+  "WBR",
+]);
+const canHaveChildren = (element) => {
+  return !VOID_ELEMENT_TAG_NAMES.has(element.tagName);
 };
 
 const escapeHtml = (string) => {
