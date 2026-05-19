@@ -16,7 +16,6 @@ export const RadioGroup = (props) => {
 };
 
 const RadioGroupInterface = (props) => {
-  const { ref, name } = props;
   const fieldgroupInterfaceProps = useFieldgroupInterfaceProps(
     {
       resetOnCancel: true,
@@ -39,7 +38,7 @@ const RadioGroupInterface = (props) => {
       },
     },
   );
-
+  const { ref, name } = fieldgroupInterfaceProps;
   useFocusGroup(ref, { direction: "both", loop: true });
 
   return (
@@ -47,6 +46,7 @@ const RadioGroupInterface = (props) => {
       as="fieldset"
       flex="y"
       {...fieldgroupInterfaceProps}
+      name={undefined}
       baseClassName="navi_radio_fieldset"
       onChange={(e) => {
         // we rely on change event bubbling but we want to catch only the relevant radio change events
