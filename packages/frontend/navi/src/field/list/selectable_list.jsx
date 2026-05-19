@@ -293,6 +293,7 @@ const SelectableRealInput = ({ type, selected }) => {
 
   return <Input {...inputProps} type={type} checked={selected} />;
 };
-Selectable.Input = () => {
-  return "coucou";
+const SelectableInputMirror = () => {
+  return "coucouu";
 };
+Selectable.Input = SelectableInputMirror;
