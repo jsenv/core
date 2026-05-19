@@ -7,11 +7,11 @@ import { useExecuteAction } from "@jsenv/navi/src/action/use_execute_action.js";
 import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
 import { useState } from "preact/hooks";
 import { useDebugAction, useDebugInteraction } from "../navi_debug.jsx";
-import { FieldContext } from "./field.jsx";
 import {
   ActionContext,
   ActionRequesterContext,
   DisabledContext,
+  FieldContext,
   FieldNameContext,
   LoadingContext,
   ReadOnlyContext,
@@ -114,8 +114,8 @@ export const useFieldgroupInterfaceProps = (
     const loading = basePseudoState[":-navi-loading"];
 
     childrenWithContext = (
-      <FieldNameContext.Provider value={name}>
-        <ParentUIStateControllerContext.Provider value={uiGroupStateController}>
+      <ParentUIStateControllerContext.Provider value={uiGroupStateController}>
+        <FieldNameContext.Provider value={name}>
           <DisabledContext.Provider value={disabled}>
             <ReadOnlyContext.Provider value={readOnly}>
               <RequiredContext.Provider value={required}>
@@ -129,8 +129,8 @@ export const useFieldgroupInterfaceProps = (
               </RequiredContext.Provider>
             </ReadOnlyContext.Provider>
           </DisabledContext.Provider>
-        </ParentUIStateControllerContext.Provider>
-      </FieldNameContext.Provider>
+        </FieldNameContext.Provider>
+      </ParentUIStateControllerContext.Provider>
     );
   }
 
@@ -158,16 +158,19 @@ const useActionProps = (
   const {
     ref,
 
-    constraints,
-    loading,
-    readOnly,
-    disabled,
+    name,
+    id,
     autoFocus,
     autoFocusVisible,
     autoSelect,
     basePseudoState,
     children,
 
+    constraints,
+    disabled,
+    readOnly,
+    required,
+    loading,
     onCancel,
     onActionPrevented,
     onActionAborted,
@@ -184,10 +187,22 @@ const useActionProps = (
   } = props;
   const actionStatus = useActionStatus(action);
   const fieldContext = useContext(FieldContext);
-  const contextReadOnly = useContext(ReadOnlyContext);
-  const contextDisabled = useContext(DisabledContext);
-  const contextLoading = useContext(LoadingContext);
+  const fieldDisabled = useContext(DisabledContext);
+  const fieldReadOnly = useContext(ReadOnlyContext);
+  const fieldRequired = useContext(RequiredContext);
+  const fieldLoading = useContext(LoadingContext);
   const parentActionRequester = useContext(ActionRequesterContext);
+
+  const idResolved = id || fieldContext?.id;
+  const nameResolved = name || fieldContext?.name;
+  const disabledResolved = disabled || fieldDisabled;
+  const requiredResolved = required || fieldRequired;
+  const loadingResolved =
+    loading ||
+    actionStatus.loading ||
+    (fieldLoading && parentActionRequester === ref.current);
+  const readOnlyResolved =
+    readOnly || fieldReadOnly || loadingResolved || uiStateController.readOnly;
 
   const executeAction = useExecuteAction(ref, {
     errorEffect: actionErrorEffect,
@@ -196,26 +211,14 @@ const useActionProps = (
   const debugAction = useDebugAction();
   const debugInteraction = useDebugInteraction();
 
-  const innerLoading =
-    loading ||
-    actionStatus.loading ||
-    (contextLoading && parentActionRequester === ref.current);
-  const innerReadOnly =
-    readOnly ||
-    contextReadOnly ||
-    innerLoading ||
-    uiStateController.readOnly ||
-    fieldContext?.readOnly;
-  const innerDisabled = disabled || contextDisabled || fieldContext?.disabled;
-
   // infom any <Field> parent of our readOnly state + that we are interactive
   useLayoutEffect(() => {
     if (fieldContext) {
-      fieldContext.setReadOnly(innerReadOnly);
-      fieldContext.setDisabled(innerDisabled);
       fieldContext.setInteractive(true);
+      fieldContext.setDisabled(disabledResolved);
+      fieldContext.setReadOnly(readOnlyResolved);
     }
-  }, [fieldContext, innerReadOnly, innerDisabled]);
+  }, [fieldContext, disabledResolved, readOnlyResolved]);
 
   useAutoFocus(ref, autoFocus, {
     focusVisible: autoFocusVisible,
@@ -229,8 +232,11 @@ const useActionProps = (
     childrenWithContext = undefined;
   } else {
     /* We are a field ourselve, which can contain other fields that should not inherit our field */
+    /* at least not the id/name and readonly/required reporting which belongs to this field only */
     childrenWithContext = (
-      <FieldContext.Provider value={null}>{children}</FieldContext.Provider>
+      <FieldContext.Provider value={undefined}>
+        {children}
+      </FieldContext.Provider>
     );
   }
 
@@ -243,6 +249,9 @@ const useActionProps = (
     "children": childrenWithContext,
     ...remainingProps,
     ref,
+    "id": idResolved,
+    "name": nameResolved,
+    "required": requiredResolved,
     "action": undefined,
     "data-action":
       props.action === undefined
@@ -252,13 +261,13 @@ const useActionProps = (
           : action.callSource,
     [statePropName]: statePropValue,
     "navi-autofocus": autoFocus ? "" : undefined,
-    "aria-busy": innerLoading,
-    "aria-readonly": innerReadOnly,
+    "aria-readonly": readOnlyResolved,
+    "aria-busy": loadingResolved,
     "basePseudoState": {
       ...basePseudoState,
-      ":read-only": innerReadOnly,
-      ":disabled": innerDisabled,
-      ":-navi-loading": innerLoading,
+      ":disabled": disabledResolved,
+      ":read-only": readOnlyResolved,
+      ":-navi-loading": loadingResolved,
     },
     "onnavi_request_reset_ui_state": (e) => {
       uiStateController.resetUIState(e);

@@ -3,7 +3,6 @@ import { useContext, useRef } from "preact/hooks";
 import { Box, BoxForwardedPropsContext } from "../../box/box.jsx";
 import { LoadingOutline } from "../../graphic/loading/loading_outline.jsx";
 import { useAccentColorAttributes } from "../../utils/use_accent_color_attributes.js";
-import { useFieldId } from "../field.jsx";
 import {
   FieldNameContext,
   fieldPropSet,
@@ -376,8 +375,6 @@ const css = /* css */ `
 export const InputCheckbox = (props) => {
   const defaultRef = useRef();
   props.ref = props.ref || defaultRef;
-  const fieldId = useFieldId();
-  props.id = props.id || fieldId;
   props.value = props.value === undefined ? "on" : props.value;
   const contextFieldName = useContext(FieldNameContext);
   const contextRequired = useContext(RequiredContext);

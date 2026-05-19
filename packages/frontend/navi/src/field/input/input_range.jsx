@@ -3,7 +3,6 @@ import { useContext, useId, useLayoutEffect, useRef } from "preact/hooks";
 import { Box, BoxForwardedPropsContext } from "../../box/box.jsx";
 import { LoadingOutline } from "../../graphic/loading/loading_outline.jsx";
 import { useAccentColorAttributes } from "../../utils/use_accent_color_attributes.js";
-import { useFieldId } from "../field.jsx";
 import { fieldPropSet } from "../field_context.js";
 import { useFieldInterfaceProps } from "../field_hooks.jsx";
 import { dispatchRequestAction } from "../validation/custom_constraint_validation.js";
@@ -247,8 +246,6 @@ const css = /* css */ `
 export const InputRange = (props) => {
   const defaultRef = useRef();
   props.ref = props.ref || defaultRef;
-  const fieldId = useFieldId();
-  props.id = props.id || fieldId;
 
   return <InputRangeFieldInterface {...props} />;
 };

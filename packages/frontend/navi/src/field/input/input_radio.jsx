@@ -8,12 +8,7 @@ import {
 } from "@jsenv/navi/src/field/validation/custom_constraint_validation.js";
 import { LoadingOutline } from "../../graphic/loading/loading_outline.jsx";
 import { useAccentColorAttributes } from "../../utils/use_accent_color_attributes.js";
-import { useFieldId } from "../field.jsx";
-import {
-  FieldNameContext,
-  RequiredContext,
-  fieldPropSet,
-} from "../field_context.js";
+import { fieldPropSet } from "../field_context.js";
 import { useFieldInterfaceProps } from "../field_hooks.jsx";
 import { requestClosestAction } from "../string_actions.js";
 
@@ -336,14 +331,7 @@ const css = /* css */ `
 export const InputRadio = (props) => {
   const defaultRef = useRef();
   props.ref = props.ref || defaultRef;
-  const fieldId = useFieldId();
-  props.id = props.id || fieldId;
   props.value = props.value === undefined ? "on" : props.value;
-  const contextFieldName = useContext(FieldNameContext);
-  const contextRequired = useContext(RequiredContext);
-  props.name = props.name === undefined ? contextFieldName : props.name;
-  props.required =
-    props.required === undefined ? contextRequired : props.required;
 
   return <InputRadioFieldInterface {...props} />;
 };

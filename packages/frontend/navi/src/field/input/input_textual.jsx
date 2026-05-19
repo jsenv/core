@@ -32,7 +32,7 @@ import {
   createComponentResolver,
   useNextResolver,
 } from "../../resolver/resolver.jsx";
-import { Label, useFieldId } from "../field.jsx";
+import { Label } from "../field.jsx";
 import { fieldPropSet } from "../field_context.js";
 import { useFieldInterfaceProps } from "../field_hooks.jsx";
 import {
@@ -260,10 +260,6 @@ const css = /* css */ `
 export const InputTextual = (props) => {
   const defaultRef = useRef(null);
   props.ref = props.ref || defaultRef;
-  const defaultId = useId(); // we need an id for the slots so we always generate one
-  const fieldId = useFieldId();
-  props.id = props.id || fieldId || defaultId;
-
   const input = renderInput(InputTextualFieldInterface, props);
 
   return input;
@@ -307,7 +303,9 @@ const InputTextualFieldInterface = (props) => {
     getDisplayValue: getDisplayValueForType(type),
     normalizeUIState: getNormalizeUIStateForType(type),
   });
-  const { basePseudoState } = fieldInterfaceProps;
+  const idDefault = useId();
+  fieldInterfaceProps.id = fieldInterfaceProps.id || `input_${idDefault}`;
+  const { id, basePseudoState } = fieldInterfaceProps;
   const disabled = basePseudoState[":disabled"];
   const readOnly = basePseudoState[":read-only"];
   const loading = basePseudoState[":-navi-loading"];
@@ -425,7 +423,7 @@ const InputTextualFieldInterface = (props) => {
       {innerChildren ? (
         <InputNativeContext.Provider
           value={{
-            id: props.id,
+            id,
             readOnly,
             disabled,
           }}

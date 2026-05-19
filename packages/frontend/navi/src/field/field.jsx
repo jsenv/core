@@ -1,7 +1,13 @@
-import { createContext } from "preact";
 import { useContext, useId, useMemo, useRef, useState } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
+import {
+  DisabledContext,
+  FieldContext,
+  LoadingContext,
+  ReadOnlyContext,
+  RequiredContext,
+} from "./field_context.js";
 import { extractMessageAndRemainingProps } from "./validation/constraint_message.js";
 
 const css = /* css */ `
@@ -57,12 +63,6 @@ const css = /* css */ `
     }
   }
 `;
-
-export const FieldContext = createContext(null);
-export const useFieldId = () => {
-  const ctx = useContext(FieldContext);
-  return ctx ? ctx.fieldId : undefined;
-};
 
 /**
  * Field — a semantic wrapper that connects a label to a form control.
@@ -122,18 +122,75 @@ const FieldCSSVars = {
 };
 const FieldUI = (props) => {
   const { vertical } = props;
-  const fieldBehaviorProps = useFieldBehaviorProps(props);
+  const fieldProps = useFieldProps(props);
 
   return (
     <Box
       flex={vertical ? "y" : undefined}
       alignX={vertical ? "start" : undefined}
       data-vertical={vertical ? "" : undefined}
-      {...fieldBehaviorProps}
+      {...fieldProps}
     />
   );
 };
+const useFieldProps = (props) => {
+  import.meta.css = css;
+  const { id, name, disabled, readOnly, required, loading, ...rest } = props;
 
+  // Collect constraint message props so child fields can inherit them via context.
+  const [fieldMessageProps, remainingProps] =
+    extractMessageAndRemainingProps(rest);
+  const fieldMessagePropsRef = useRef(fieldMessageProps);
+  fieldMessagePropsRef.current = fieldMessageProps;
+  const [disabledByChild, setDisabledByChild] = useState(false);
+  const [readOnlyFromChild, setReadOnlyFromChild] = useState(false);
+  const [interactive, setInteractive] = useState(false);
+
+  const contextValue = useMemo(
+    () => ({
+      id,
+      name,
+      setReadOnly: setReadOnlyFromChild,
+      setDisabled: setDisabledByChild,
+      setInteractive,
+      messagePropsRef: fieldMessagePropsRef,
+    }),
+    [id, name],
+  );
+  let childrenWithContext;
+  if (props.children === undefined) {
+  } else {
+    childrenWithContext = (
+      <FieldContext.Provider value={contextValue}>
+        <DisabledContext.Provider value={disabled}>
+          <ReadOnlyContext.Provider value={readOnly}>
+            <RequiredContext.Provider value={required}>
+              <LoadingContext.Provider value={loading}>
+                {props.children}
+              </LoadingContext.Provider>
+            </RequiredContext.Provider>
+          </ReadOnlyContext.Provider>
+        </DisabledContext.Provider>
+      </FieldContext.Provider>
+    );
+  }
+
+  const readOnlyEffective = readOnly || readOnlyFromChild;
+  const disabledEffective = disabled || disabledByChild;
+
+  return {
+    "data-navi-field": "",
+    "data-interactive": interactive ? "" : undefined,
+    ...remainingProps,
+    "children": childrenWithContext,
+    "pseudoClasses": FieldPseudoClasses,
+    "basePseudoState": {
+      ":disabled": disabledEffective,
+      ":read-only": readOnlyEffective,
+      ...remainingProps.basePseudoState,
+    },
+  };
+};
 const FieldPseudoClasses = [
   ":hover",
   ":active",
@@ -143,60 +200,6 @@ const FieldPseudoClasses = [
   ":disabled",
   ":-navi-loading",
 ];
-
-export const useFieldBehaviorProps = (props) => {
-  import.meta.css = css;
-  const { id, readOnly, disabled, ...rest } = props;
-
-  // Collect constraint message props so child fields can inherit them via context.
-  const [fieldMessageProps, remainingProps] =
-    extractMessageAndRemainingProps(rest);
-  const fieldMessagePropsRef = useRef(fieldMessageProps);
-  fieldMessagePropsRef.current = fieldMessageProps;
-
-  const [readOnlyFromChild, setReadOnlyFromChild] = useState(false);
-  const [disabledByChild, setDisabledByChild] = useState(false);
-  const [interactive, setInteractive] = useState(false);
-  const readOnlyEffective = readOnly || readOnlyFromChild;
-  const disabledEffective = disabled || disabledByChild;
-
-  const contextValue = useMemo(
-    () => ({
-      fieldId: id,
-      interactive,
-      readOnly: readOnlyEffective,
-      disabled: disabledEffective,
-      setReadOnly: setReadOnlyFromChild,
-      setDisabled: setDisabledByChild,
-      setInteractive,
-      messagePropsRef: fieldMessagePropsRef,
-    }),
-    [id, interactive, readOnlyEffective, disabledEffective],
-  );
-
-  let childrenWithContext;
-  if (props.children === undefined) {
-  } else {
-    childrenWithContext = (
-      <FieldContext.Provider value={contextValue}>
-        {props.children}
-      </FieldContext.Provider>
-    );
-  }
-
-  return {
-    "data-navi-field": "",
-    "data-interactive": interactive ? "" : undefined,
-    ...remainingProps,
-    "children": childrenWithContext,
-    "pseudoClasses": FieldPseudoClasses,
-    "basePseudoState": {
-      ":read-only": readOnlyEffective,
-      ":disabled": disabledEffective,
-      ...remainingProps.basePseudoState,
-    },
-  };
-};
 
 export const Label = (props) => {
   const { children, htmlFor, ...rest } = props;

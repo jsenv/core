@@ -6,7 +6,6 @@ import { ChevronDownSvg } from "@jsenv/navi/src/graphic/icons/chevron_updown_svg
 import { LoadingOutline } from "@jsenv/navi/src/graphic/loading/loading_outline.jsx";
 import { createComponentResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { Icon } from "@jsenv/navi/src/text/icon.jsx";
-import { useFieldId } from "../field.jsx";
 import { useFieldInterfaceProps } from "../field_hooks.jsx";
 import { createUICallback } from "../ui_callback.js";
 import { dispatchRequestAction } from "../validation/custom_constraint_validation.js";
@@ -220,9 +219,6 @@ const css = /* css */ `
 export const Picker = (props) => {
   const defaultRef = useRef(null);
   props.ref = props.ref || defaultRef;
-  const fieldId = useFieldId();
-  props.id = props.id || fieldId;
-
   const picker = renderPicker(PickerButton, props);
 
   return picker;
