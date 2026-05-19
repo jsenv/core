@@ -8,6 +8,7 @@ export const FIELD_PROP_SET = new Set([
   "id",
   "name",
   "data-testid",
+  "navi-proxy-for",
 ]);
 
 export const FieldToInterfaceContext = createContext(null);

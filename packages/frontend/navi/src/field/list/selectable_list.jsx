@@ -361,7 +361,7 @@ const SelectableRealInput = ({ ref, type, selected }) => {
     />
   );
 };
-const SelectableInputMirror = (props) => {
+const SelectableInputProxy = (props) => {
   const defaultRef = useRef();
   props.ref = props.ref || defaultRef;
   const { ref } = props;
@@ -374,12 +374,12 @@ const SelectableInputMirror = (props) => {
 
   useLayoutEffect(() => {
     const realInput = realInputRef.current;
-    const mirrorInput = ref.current;
+    const proxyInput = ref.current;
     if (!realInput) {
       return undefined;
     }
     const sync = (event) => {
-      requestSetUIState(mirrorInput, realInput.checked, { event });
+      requestSetUIState(proxyInput, realInput.checked, { event });
     };
     realInput.addEventListener("change", sync);
     return () => {
@@ -392,14 +392,14 @@ const SelectableInputMirror = (props) => {
     <FieldToInterfaceContext.Provider value={undefined}>
       <Input
         ref={ref}
-        name="navi_mirror" // give it a specific name to avoid radio name (would unselect others)
+        name="navi_input_proxy" // give it a specific name to avoid radio name (would unselect others)
         navi-proxy-for={realInputId}
         type={realInputType}
         aria-hidden="true"
         tabIndex={-1}
         checked={realInputSelected}
         onMouseDown={(e) => {
-          // const mirrorInput = e.currentTarget;
+          // const proxyInput = e.currentTarget;
           // transfer focus to the real input
           const realInput = realInputRef.current;
           e.preventDefault();
@@ -407,12 +407,12 @@ const SelectableInputMirror = (props) => {
           realInput.dispatchEvent(new MouseEvent("mousedown", e));
         }}
         action={(v, { event }) => {
-          const mirrorInput = ref.current;
+          const proxyInput = ref.current;
           const realInput = realInputRef.current;
-          requestSetUIState(realInput, mirrorInput.checked, { event });
+          requestSetUIState(realInput, proxyInput.checked, { event });
         }}
       />
     </FieldToInterfaceContext.Provider>
   );
 };
-Selectable.Input = SelectableInputMirror;
+Selectable.Input = SelectableInputProxy;

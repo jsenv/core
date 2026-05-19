@@ -598,7 +598,7 @@ export const initPseudoStyles = (
           const proxy = document.querySelector(
             `[navi-proxy-for="${element.id}"]`,
           );
-          if (proxy.hasAttribute(attribute)) {
+          if (proxy && proxy.hasAttribute(attribute)) {
             currentValue = true;
           }
         }
