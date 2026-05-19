@@ -122,7 +122,11 @@
         <div class="scrollable-container">
           <div class="scrollable-content">
             <div>Top of scrollable area</div>
-            <button id="auto-target" class="target-element">
+            <button
+              id="auto-target"
+              class="target-element"
+              data-callout-arrow-x="center"
+            >
               Target Element (Auto-opened message)
             </button>
             <div>Bottom of scrollable area</div>
@@ -140,6 +144,8 @@
           The callout should follow the target element as you scroll past this
           section.
         </p>
+        <!-- To create horizontal scrollbar -->
+        <div style="width: 1500px; height: 1px; background: violet"></div>
       </div>
 
       <div class="spacer">Scroll Area 2 - More scrolling space</div>
