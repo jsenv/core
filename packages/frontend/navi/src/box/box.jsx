@@ -694,23 +694,21 @@ export const Box = (props) => {
     usePartiallyHidden(ref, Boolean(rest.viewTransitionName));
   }
 
-  // When hasChildFunction is used it means
+  let innerChildren = children;
+  if (separator) {
+    // Flatten nested arrays (e.g., from .map()) to treat each element as individual child
+    innerChildren = applySeparatorOnChildren(innerChildren, separator);
+  }
+
+  // When hasChildUsingForwardedProps is used it means
   // Some/all the children needs to access remainingProps
   // to render and will provide a function to do so.
-  let innerChildren;
   if (hasChildUsingForwardedProps) {
     innerChildren = (
       <BoxForwardedPropsContext.Provider value={childForwardedProps}>
         {innerChildren}
       </BoxForwardedPropsContext.Provider>
     );
-  } else {
-    innerChildren = children;
-  }
-
-  if (separator) {
-    // Flatten nested arrays (e.g., from .map()) to treat each element as individual child
-    innerChildren = applySeparatorOnChildren(innerChildren, separator);
   }
 
   const aspectRatio = rest.square || rest.circle ? "1/1" : rest.aspectRatio;
