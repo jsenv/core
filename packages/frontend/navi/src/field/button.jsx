@@ -1,10 +1,10 @@
-import { useCallback, useContext, useRef } from "preact/hooks";
+import { useContext, useRef } from "preact/hooks";
 
 import {
   createComponentResolver,
   useNextResolver,
 } from "@jsenv/navi/src/resolver/resolver.jsx";
-import { Box } from "../box/box.jsx";
+import { Box, BoxForwardedPropsContext } from "../box/box.jsx";
 import { LoadingOutline } from "../graphic/loading/loading_outline.jsx";
 import { getHrefTargetInfo } from "../nav/browser_integration/href_target_info.js";
 import { assertRoute, useRouteStatus } from "../nav/route.js";
@@ -374,24 +374,6 @@ const ButtonUI = (props) => {
     elementSelector: visualSelector,
   });
 
-  const renderButtonContent = (buttonProps) => {
-    return (
-      <Text
-        {...buttonProps}
-        display="inherit"
-        spacing={spacing}
-        className="navi_button_content"
-      >
-        {children}
-        <ButtonShadow />
-      </Text>
-    );
-  };
-  const renderButtonContentMemoized = useCallback(renderButtonContent, [
-    children,
-    spacing,
-  ]);
-
   return (
     <Box
       {...rest}
@@ -426,15 +408,29 @@ const ButtonUI = (props) => {
       pseudoClasses={ButtonPseudoClasses}
       pseudoElements={ButtonPseudoElements}
       visualSelector={visualSelector}
-      hasChildFunction
+      hasChildUsingForwardedProps
     >
       <LoadingOutline
         loading={loading}
         inset={-1}
         color="var(--button-loader-color)"
       />
-      {renderButtonContentMemoized}
+      <ButtonContent spacing={spacing}>{children}</ButtonContent>
     </Box>
+  );
+};
+const ButtonContent = ({ spacing, children }) => {
+  const buttonProps = useContext(BoxForwardedPropsContext);
+  return (
+    <Text
+      {...buttonProps}
+      display="inherit"
+      spacing={spacing}
+      className="navi_button_content"
+    >
+      {children}
+      <ButtonShadow />
+    </Text>
   );
 };
 const ButtonStyleCSSVars = {

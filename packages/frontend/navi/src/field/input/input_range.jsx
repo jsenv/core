@@ -1,6 +1,6 @@
-import { useCallback, useId, useLayoutEffect, useRef } from "preact/hooks";
+import { useContext, useId, useLayoutEffect, useRef } from "preact/hooks";
 
-import { Box } from "../../box/box.jsx";
+import { Box, BoxForwardedPropsContext } from "../../box/box.jsx";
 import { LoadingOutline } from "../../graphic/loading/loading_outline.jsx";
 import { useAccentColorAttributes } from "../../utils/use_accent_color_attributes.js";
 import { useFieldId } from "../field.jsx";
@@ -285,54 +285,6 @@ const InputRangeField = (props) => {
     input.parentNode.style.setProperty("--x-fill-ratio", ratio);
   };
 
-  const renderInput = (inputProps) => {
-    useLayoutEffect(() => {
-      updateFillRatio();
-    }, []);
-
-    // we must disable the input when readOnly to prevent drag and keyboard interactions effectively
-    // for some reason we have to do this here instead of just giving the disabled attribute
-    // via props, as for some reason preact won't set it correctly on the input element in that case
-    // this means however that the input is no longer focusable
-    // we have to put an other focusable element somewhere
-    useLayoutEffect(() => {
-      const input = ref.current;
-      if (!input) {
-        return;
-      }
-
-      const focusProxy = document.querySelector(`#${focusProxyId}`);
-      if (readOnly) {
-        if (document.activeElement === input) {
-          focusProxy.focus({ preventScroll: true });
-        }
-        input.setAttribute("focus-proxy", focusProxyId);
-        input.disabled = readOnly;
-      } else {
-        if (document.activeElement === focusProxy) {
-          input.focus({ preventScroll: true });
-        }
-        if (!disabled) {
-          input.disabled = false;
-        }
-        input.removeAttribute("focus-proxy");
-      }
-    }, [disabled, readOnly]);
-
-    return (
-      <Box
-        {...inputProps}
-        ref={ref}
-        as="input"
-        type="range"
-        // style management
-        baseClassName="navi_native_input"
-      />
-    );
-  };
-
-  const renderInputMemoized = useCallback(renderInput, [disabled, readOnly]);
-
   return (
     <Box
       as="span"
@@ -343,7 +295,7 @@ const InputRangeField = (props) => {
       visualSelector=".navi_native_input"
       pseudoClasses={RangePseudoClasses}
       pseudoElements={RangePseudoElements}
-      hasChildFunction
+      hasChildUsingForwardedProps
       baseChildPropSet={RangeChildPropSet}
       {...fieldProps}
       ref={boxRef}
@@ -371,8 +323,66 @@ const InputRangeField = (props) => {
         className="navi_input_range_focus_proxy"
         tabIndex={inertButFocusable ? "0" : "-1"}
       />
-      {renderInputMemoized}
+      <RangeNativeInput
+        ref={ref}
+        disabled={disabled}
+        readOnly={readOnly}
+        focusProxyId={focusProxyId}
+        updateFillRatio={updateFillRatio}
+      />
     </Box>
+  );
+};
+const RangeNativeInput = ({
+  ref,
+  disabled,
+  readOnly,
+  focusProxyId,
+  updateFillRatio,
+}) => {
+  const inputProps = useContext(BoxForwardedPropsContext);
+
+  useLayoutEffect(() => {
+    updateFillRatio();
+  }, []);
+
+  // we must disable the input when readOnly to prevent drag and keyboard interactions effectively
+  // for some reason we have to do this here instead of just giving the disabled attribute
+  // via props, as for some reason preact won't set it correctly on the input element in that case
+  // this means however that the input is no longer focusable
+  // we have to put an other focusable element somewhere
+  useLayoutEffect(() => {
+    const input = ref.current;
+    if (!input) {
+      return;
+    }
+
+    const focusProxy = document.querySelector(`#${focusProxyId}`);
+    if (readOnly) {
+      if (document.activeElement === input) {
+        focusProxy.focus({ preventScroll: true });
+      }
+      input.setAttribute("focus-proxy", focusProxyId);
+      input.disabled = readOnly;
+    } else {
+      if (document.activeElement === focusProxy) {
+        input.focus({ preventScroll: true });
+      }
+      if (!disabled) {
+        input.disabled = false;
+      }
+      input.removeAttribute("focus-proxy");
+    }
+  }, [disabled, readOnly]);
+
+  return (
+    <Box
+      {...inputProps}
+      ref={ref}
+      as="input"
+      type="range"
+      baseClassName="navi_native_input"
+    />
   );
 };
 const RangeStyleCSSVars = {

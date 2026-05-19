@@ -1,6 +1,6 @@
-import { useCallback, useContext, useRef } from "preact/hooks";
+import { useContext, useRef } from "preact/hooks";
 
-import { Box } from "../../box/box.jsx";
+import { Box, BoxForwardedPropsContext } from "../../box/box.jsx";
 import { LoadingOutline } from "../../graphic/loading/loading_outline.jsx";
 import { useAccentColorAttributes } from "../../utils/use_accent_color_attributes.js";
 import { useFieldId } from "../field.jsx";
@@ -427,20 +427,6 @@ const InputCheckboxField = (props) => {
   const { basePseudoState, checked } = fieldProps;
   const loading = basePseudoState[":-navi-loading"];
 
-  const renderCheckbox = (checkboxProps) => {
-    return (
-      <Box
-        {...checkboxProps}
-        as="input"
-        ref={ref}
-        type="checkbox"
-        baseClassName="navi_native_field"
-        data-callout-arrow-x="center"
-      />
-    );
-  };
-  const renderCheckboxMemoized = useCallback(renderCheckbox, []);
-
   const boxRef = useRef();
   useAccentColorAttributes(boxRef, accentColor, {
     elementSelector: ".navi_checkbox_accent_probe",
@@ -499,7 +485,7 @@ const InputCheckboxField = (props) => {
       pseudoClasses={CheckboxPseudoClasses}
       pseudoElements={CheckboxPseudoElements}
       accentColor={accentColor}
-      hasChildFunction
+      hasChildUsingForwardedProps
       baseChildPropSet={CheckboxChildPropSet}
       onMouseDown={(e) => {
         const checkbox = ref.current;
@@ -539,8 +525,21 @@ const InputCheckboxField = (props) => {
         color="var(--loader-color)"
       />
       {visualVnode}
-      {renderCheckboxMemoized}
+      <CheckboxNativeField ref={ref} />
     </Box>
+  );
+};
+const CheckboxNativeField = ({ ref }) => {
+  const checkboxProps = useContext(BoxForwardedPropsContext);
+  return (
+    <Box
+      {...checkboxProps}
+      as="input"
+      ref={ref}
+      type="checkbox"
+      baseClassName="navi_native_field"
+      data-callout-arrow-x="center"
+    />
   );
 };
 const CheckboxStyleCSSVars = {

@@ -13,8 +13,9 @@
 
 import { dispatchCustomEvent, dispatchPublicCustomEvent } from "@jsenv/dom";
 import { createContext } from "preact";
-import { useCallback, useContext, useId, useRef } from "preact/hooks";
+import { useContext, useId, useRef } from "preact/hooks";
 
+import { BoxForwardedPropsContext } from "@jsenv/navi/src/box/box.jsx";
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { useFocusGroup } from "@jsenv/navi/src/utils/focus/use_focus_group.js";
 import { Field } from "../field.jsx";
@@ -137,14 +138,9 @@ export const SelectableList = (props) => {
 
 export const Selectable = (props) => {
   const { index, id, highlight, hidden, filtered, value, children } = props;
-  // const multiple = useContext(SelectableListMultipleContext);
-
-  const renderInput = (inputProps) => {
-    const multiple = useContext(SelectableListMultipleContext);
-
-    return <Input {...inputProps} type={multiple ? "radio" : "checkbox"} />;
-  };
-  const renderInputMemo = useCallback(renderInput, []);
+  const multiple = useContext(SelectableListMultipleContext);
+  const inputType = multiple ? "checkbox" : "radio";
+  const pseudoStateSelector = multiple ? ".navi_checkbox" : ".navi_radio";
 
   return (
     <ListItem
@@ -162,13 +158,18 @@ export const Selectable = (props) => {
         spacing="s"
         expandX
         {...props}
-        hasChildFunction
+        pseudoStateSelector={pseudoStateSelector}
+        hasChildUsingForwardedProps
       >
-        {renderInputMemo}
+        <SelectableInput inputType={inputType} />
         {children}
       </Field>
     </ListItem>
   );
+};
+const SelectableInput = ({ inputType }) => {
+  const inputProps = useContext(BoxForwardedPropsContext);
+  return <Input {...inputProps} type={inputType} />;
 };
 Selectable.Input = () => {
   return "coucou";

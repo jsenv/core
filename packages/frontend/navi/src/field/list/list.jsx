@@ -9,7 +9,6 @@ import {
 import { signal } from "@preact/signals";
 import { createContext } from "preact";
 import {
-  useCallback,
   useContext,
   useId,
   useLayoutEffect,
@@ -17,7 +16,7 @@ import {
   useState,
 } from "preact/hooks";
 
-import { Box } from "../../box/box.jsx";
+import { Box, BoxForwardedPropsContext } from "../../box/box.jsx";
 import { Separator } from "../../layout/separator.jsx";
 import { useDebugScroll } from "../../navi_debug.jsx";
 import {
@@ -560,45 +559,6 @@ const ListUI = (props) => {
   const idDefault = useId();
   const innerId = id || idDefault;
 
-  const renderList = (listProps) => {
-    return (
-      <div className="navi_list_scroll_container">
-        <UnorderedList
-          ref={ref}
-          id={innerId}
-          role={role}
-          fallback={fallback}
-          noMatchFallback={noMatchFallback}
-          searchText={searchText}
-          separator={separator === true ? <Separator margin="0" /> : separator}
-          expandX={expandX || expand}
-          {...listProps}
-          tracker={tracker}
-          renderWindow={renderWindow}
-          virtualItemHeightSignal={virtualItemHeightSignal}
-        >
-          <PendingScrollRefContext.Provider value={pendingScrollRef}>
-            <ListIdContext.Provider value={innerId}>
-              {children}
-            </ListIdContext.Provider>
-          </PendingScrollRefContext.Provider>
-        </UnorderedList>
-      </div>
-    );
-  };
-  const renderListMemoized = useCallback(renderList, [
-    innerId,
-    role,
-    fallback,
-    noMatchFallback,
-    searchText,
-    separator,
-    expandX,
-    expand,
-    renderWindow,
-    children,
-  ]);
-
   return (
     <Box
       {...rest}
@@ -612,7 +572,7 @@ const ListUI = (props) => {
       styleCSSVars={LIST_STYLE_CSS_VARS}
       pseudoClasses={LIST_PSEUDO_CLASSES}
       pseudoStateSelector=".navi_list"
-      hasChildFunction
+      hasChildUsingForwardedProps
       onnavi_list_request_scroll={(e) => {
         const { item } = e.detail;
         if (!item) {
@@ -624,8 +584,66 @@ const ListUI = (props) => {
         });
       }}
     >
-      {renderListMemoized}
+      <ListContent
+        ref={ref}
+        innerId={innerId}
+        role={role}
+        fallback={fallback}
+        noMatchFallback={noMatchFallback}
+        searchText={searchText}
+        separator={separator}
+        expandX={expandX}
+        expand={expand}
+        tracker={tracker}
+        renderWindow={renderWindow}
+        virtualItemHeightSignal={virtualItemHeightSignal}
+        pendingScrollRef={pendingScrollRef}
+      >
+        {children}
+      </ListContent>
     </Box>
+  );
+};
+const ListContent = ({
+  ref,
+  innerId,
+  role,
+  fallback,
+  noMatchFallback,
+  searchText,
+  separator,
+  expandX,
+  expand,
+  tracker,
+  renderWindow,
+  virtualItemHeightSignal,
+  pendingScrollRef,
+  children,
+}) => {
+  const listProps = useContext(BoxForwardedPropsContext);
+  return (
+    <div className="navi_list_scroll_container">
+      <UnorderedList
+        ref={ref}
+        id={innerId}
+        role={role}
+        fallback={fallback}
+        noMatchFallback={noMatchFallback}
+        searchText={searchText}
+        separator={separator === true ? <Separator margin="0" /> : separator}
+        expandX={expandX || expand}
+        {...listProps}
+        tracker={tracker}
+        renderWindow={renderWindow}
+        virtualItemHeightSignal={virtualItemHeightSignal}
+      >
+        <PendingScrollRefContext.Provider value={pendingScrollRef}>
+          <ListIdContext.Provider value={innerId}>
+            {children}
+          </ListIdContext.Provider>
+        </PendingScrollRefContext.Provider>
+      </UnorderedList>
+    </div>
   );
 };
 const LIST_STYLE_CSS_VARS = {

@@ -1,7 +1,7 @@
 import { dispatchCustomEvent } from "@jsenv/dom";
-import { useCallback, useContext, useLayoutEffect, useRef } from "preact/hooks";
+import { useContext, useLayoutEffect, useRef } from "preact/hooks";
 
-import { Box } from "@jsenv/navi/src/box/box.jsx";
+import { Box, BoxForwardedPropsContext } from "@jsenv/navi/src/box/box.jsx";
 import {
   dispatchRequestAction,
   dispatchRequestInteraction,
@@ -414,20 +414,6 @@ const InputRadioField = (props) => {
     }
   }, [checked]);
 
-  const renderRadio = (radioProps) => {
-    return (
-      <Box
-        {...radioProps}
-        as="input"
-        ref={ref}
-        type="radio"
-        baseClassName="navi_native_field"
-        data-callout-arrow-x="center"
-      />
-    );
-  };
-  const renderRadioMemoized = useCallback(renderRadio, []);
-
   const boxRef = useRef();
   useAccentColorAttributes(boxRef, accentColor, {
     elementSelector: ".navi_radio_accent_probe",
@@ -485,7 +471,7 @@ const InputRadioField = (props) => {
       pseudoClasses={RadioPseudoClasses}
       pseudoElements={RadioPseudoElements}
       color={color}
-      hasChildFunction
+      hasChildUsingForwardedProps
       baseChildPropSet={RadioChildPropSet}
       onMouseDown={(e) => {
         const radio = ref.current;
@@ -530,8 +516,21 @@ const InputRadioField = (props) => {
         color="var(--loader-color)"
       />
       {visualVNode}
-      {renderRadioMemoized}
+      <RadioNativeField ref={ref} />
     </Box>
+  );
+};
+const RadioNativeField = ({ ref }) => {
+  const radioProps = useContext(BoxForwardedPropsContext);
+  return (
+    <Box
+      {...radioProps}
+      as="input"
+      ref={ref}
+      type="radio"
+      baseClassName="navi_native_field"
+      data-callout-arrow-x="center"
+    />
   );
 };
 const RadioStyleCSSVars = {
