@@ -244,8 +244,16 @@ export const SelectableList = (props) => {
 };
 
 export const Selectable = (props) => {
-  const { index, id, highlight, hidden, filtered, value, selected, children } =
-    props;
+  const {
+    index,
+    id,
+    highlight,
+    hidden,
+    filtered,
+    selected,
+    children,
+    ...rest
+  } = props;
   const multiple = useContext(SelectableListMultipleContext);
   const inputType = multiple ? "checkbox" : "radio";
   // const pseudoStateSelector = multiple ? ".navi_checkbox" : ".navi_radio";
@@ -259,13 +267,13 @@ export const Selectable = (props) => {
       hidden={hidden}
     >
       <Field
-        requiredMessage={naviI18n(`list_item.readonly`, { value })}
+        requiredMessage={naviI18n(`list_item.readonly`, props)}
         padding="m"
         flex
         alignY="center"
         spacing="s"
         expandX
-        {...props}
+        {...rest}
         // pseudoStateSelector={pseudoStateSelector}
         baseChildPropSet={SELECTABLE_REAL_INPUT_CHILD_PROP_SET}
         hasChildUsingForwardedProps

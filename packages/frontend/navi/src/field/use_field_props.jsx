@@ -128,8 +128,12 @@ export const useActionProps = (
     actionStatus.loading ||
     (contextLoading && parentActionRequester === ref.current);
   const innerReadOnly =
-    readOnly || contextReadOnly || innerLoading || uiStateController.readOnly;
-  const innerDisabled = disabled || contextDisabled;
+    readOnly ||
+    contextReadOnly ||
+    innerLoading ||
+    uiStateController.readOnly ||
+    fieldContext?.readOnly;
+  const innerDisabled = disabled || contextDisabled || fieldContext?.disabled;
 
   // infom any <Field> parent of our readOnly state + that we are interactive
   useLayoutEffect(() => {
