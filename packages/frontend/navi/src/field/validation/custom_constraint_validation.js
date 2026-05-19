@@ -806,18 +806,24 @@ export const installCustomConstraintValidation = (
         resetOnInteraction(e);
       };
 
-      const id = element.id;
-      let removeLabelListener;
-      if (id) {
-        const label = document.querySelector(`label[for="${CSS.escape(id)}"]`);
-        if (label) {
-          label.addEventListener("mousedown", onmousedown);
-          removeLabelListener = () => {
-            label.removeEventListener("mousedown", onmousedown);
-          };
+      let label;
+
+      const closestLabel = element.closest("label");
+      if (closestLabel && closestLabel !== element) {
+        label = closestLabel;
+      } else {
+        const id = element.id;
+        if (id) {
+          label = document.querySelector(`label[for="${CSS.escape(id)}"]`);
         }
       }
-
+      let removeLabelListener;
+      if (label) {
+        label.addEventListener("mousedown", onmousedown);
+        removeLabelListener = () => {
+          label.removeEventListener("mousedown", onmousedown);
+        };
+      }
       interactionTarget.addEventListener("mousedown", onmousedown);
       return () => {
         interactionTarget.removeEventListener("mousedown", onmousedown);
