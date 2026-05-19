@@ -4,8 +4,8 @@ import { Box, BoxForwardedPropsContext } from "../../box/box.jsx";
 import { LoadingOutline } from "../../graphic/loading/loading_outline.jsx";
 import { useAccentColorAttributes } from "../../utils/use_accent_color_attributes.js";
 import {
+  FIELD_PROP_SET,
   FieldNameContext,
-  fieldPropSet,
   RequiredContext,
 } from "../field_context.js";
 import { useFieldInterfaceProps } from "../field_hooks.jsx";
@@ -594,4 +594,4 @@ const CheckboxPseudoClasses = [
   ":-navi-loading",
 ];
 const CheckboxPseudoElements = ["::-navi-loader", "::-navi-checkmark"];
-const CheckboxChildPropSet = new Set([...fieldPropSet, "checked"]);
+const CheckboxChildPropSet = new Set([...FIELD_PROP_SET, "checked"]);

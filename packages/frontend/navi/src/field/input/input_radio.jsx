@@ -8,7 +8,7 @@ import {
 } from "@jsenv/navi/src/field/validation/custom_constraint_validation.js";
 import { LoadingOutline } from "../../graphic/loading/loading_outline.jsx";
 import { useAccentColorAttributes } from "../../utils/use_accent_color_attributes.js";
-import { fieldPropSet } from "../field_context.js";
+import { FIELD_PROP_SET } from "../field_context.js";
 import { useFieldInterfaceProps } from "../field_hooks.jsx";
 import { requestClosestAction } from "../string_actions.js";
 
@@ -586,4 +586,4 @@ const RadioPseudoClasses = [
   ":-navi-loading",
 ];
 const RadioPseudoElements = ["::-navi-loader", "::-navi-radiomark"];
-const RadioChildPropSet = new Set([...fieldPropSet, "checked"]);
+const RadioChildPropSet = new Set([...FIELD_PROP_SET, "checked"]);

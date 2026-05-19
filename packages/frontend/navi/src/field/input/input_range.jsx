@@ -3,7 +3,7 @@ import { useContext, useId, useLayoutEffect, useRef } from "preact/hooks";
 import { Box, BoxForwardedPropsContext } from "../../box/box.jsx";
 import { LoadingOutline } from "../../graphic/loading/loading_outline.jsx";
 import { useAccentColorAttributes } from "../../utils/use_accent_color_attributes.js";
-import { fieldPropSet } from "../field_context.js";
+import { FIELD_PROP_SET } from "../field_context.js";
 import { useFieldInterfaceProps } from "../field_hooks.jsx";
 import { dispatchRequestAction } from "../validation/custom_constraint_validation.js";
 
@@ -424,4 +424,4 @@ const RangePseudoClasses = [
   ":-navi-loading",
 ];
 const RangePseudoElements = ["::-navi-loader"];
-const RangeChildPropSet = new Set([...fieldPropSet]);
+const RangeChildPropSet = new Set([...FIELD_PROP_SET]);

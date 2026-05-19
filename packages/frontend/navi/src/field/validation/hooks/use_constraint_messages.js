@@ -1,6 +1,6 @@
 import { useCallback, useContext, useLayoutEffect, useRef } from "preact/hooks";
 
-import { FieldContext } from "../../field.jsx";
+import { FieldContext } from "../../field_context.js";
 import {
   CONSTRAINT_NAME_TO_PROP,
   extractMessageAndRemainingProps,

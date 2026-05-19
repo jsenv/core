@@ -4,7 +4,7 @@ import { CONSTRAINT_ATTRIBUTE_SET } from "./validation/constraint_attribute_set.
 
 export const FieldContext = createContext(null);
 
-export const fieldPropSet = new Set([
+export const FIELD_PROP_SET = new Set([
   ...CONSTRAINT_ATTRIBUTE_SET,
   "value",
   "id",

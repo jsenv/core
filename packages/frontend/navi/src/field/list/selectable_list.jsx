@@ -19,7 +19,7 @@ import { BoxForwardedPropsContext } from "@jsenv/navi/src/box/box.jsx";
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { useFocusGroup } from "@jsenv/navi/src/utils/focus/use_focus_group.js";
 import { Field } from "../field.jsx";
-import { fieldPropSet } from "../field_context.js";
+import { FIELD_PROP_SET } from "../field_context.js";
 import { useFieldgroupInterfaceProps } from "../field_hooks.jsx";
 import { Input } from "../input/input.jsx";
 import { dispatchRequestAction } from "../validation/custom_constraint_validation.js";
@@ -285,7 +285,7 @@ export const Selectable = (props) => {
   );
 };
 const SELECTABLE_REAL_INPUT_CHILD_PROP_SET = new Set([
-  ...fieldPropSet,
+  ...FIELD_PROP_SET,
   "selected",
 ]);
 const SelectableRealInput = ({ type, selected }) => {

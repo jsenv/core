@@ -33,7 +33,7 @@ import {
   useNextResolver,
 } from "../../resolver/resolver.jsx";
 import { Label } from "../field.jsx";
-import { fieldPropSet } from "../field_context.js";
+import { FIELD_PROP_SET } from "../field_context.js";
 import { useFieldInterfaceProps } from "../field_hooks.jsx";
 import {
   InsideRealListItemContext,
@@ -522,7 +522,7 @@ const InputPseudoClasses = [
   ":-navi-expanded",
 ];
 const InputPseudoElements = ["::-navi-loader"];
-const InputChildPropSet = new Set([...fieldPropSet]);
+const InputChildPropSet = new Set([...FIELD_PROP_SET]);
 const InputSlot = ({ side, onClick, hideWhileEmpty, ...props }) => {
   const ctx = useContext(InputNativeContext);
   const { id, readOnly, disabled } = ctx;
