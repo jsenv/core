@@ -194,12 +194,18 @@
               </p>
 
               <Box flex spacing="s">
-                <Box as="fieldset" width="100">
+                <Box as="fieldset" width="250">
                   <legend>Default</legend>
                   <Box flex="y" spacing="s" alignX="start">
                     <Field>
-                      <Input type="radio" name="demo-default-navi" value="1" />
-                      <Label>Navi</Label>
+                      <Input
+                        type="radio"
+                        name="demo-default-navi"
+                        value="1"
+                        marginLeft="5"
+                        marginRight="3"
+                      />
+                      Navi
                     </Field>
                     <label>
                       <input
@@ -207,11 +213,11 @@
                         name="demo-default-native"
                         value="1"
                       />
-                      Native
+                      User agent
                     </label>
                   </Box>
                 </Box>
-                <Box as="fieldset" width="200">
+                <Box as="fieldset" width="250">
                   <legend>:focus-visible</legend>
                   <Box flex="y" spacing="s" alignX="start">
                     <Field>
@@ -220,6 +226,8 @@
                         name="demo-focus-navi"
                         value="1"
                         pseudoState={{ ":focus-visible": true }}
+                        marginLeft="5"
+                        marginRight="3"
                       />
                       <Label>Navi</Label>
                     </Field>
@@ -230,11 +238,13 @@
                         value="1"
                         autofocus
                       />
-                      Native
+                      User agent
                     </label>
                   </Box>
                 </Box>
-                <Box as="fieldset" width="150">
+              </Box>
+              <Box flex spacing="s">
+                <Box as="fieldset" width="250">
                   <legend>:disabled</legend>
                   <Box flex="y" spacing="s" alignX="start">
                     <Field>
@@ -243,8 +253,10 @@
                         name="demo-disabled-navi"
                         value="1"
                         disabled
+                        marginLeft="5"
+                        marginRight="3"
                       />
-                      <Label>Navi</Label>
+                      Navi
                     </Field>
                     <label>
                       <input
@@ -253,13 +265,11 @@
                         value="1"
                         disabled
                       />
-                      Native
+                      User agent
                     </label>
                   </Box>
                 </Box>
-              </Box>
-              <Box flex spacing="s">
-                <Box as="fieldset" width="100">
+                <Box as="fieldset" width="250">
                   <legend>:checked</legend>
                   <Box flex="y" spacing="s" alignX="start">
                     <Field>
@@ -268,8 +278,10 @@
                         name="demo-checked-navi"
                         value="1"
                         defaultValue
+                        marginLeft="5"
+                        marginRight="3"
                       />
-                      <Label>Navi</Label>
+                      Navi
                     </Field>
                     <label>
                       <input
@@ -278,11 +290,13 @@
                         value="1"
                         checked
                       />
-                      Native
+                      User agent
                     </label>
                   </Box>
                 </Box>
-                <Box as="fieldset" width="200">
+              </Box>
+              <Box flex spacing="s">
+                <Box as="fieldset" width="250">
                   <legend>:focus-visible:checked</legend>
                   <Box flex="y" spacing="s" alignX="start">
                     <Field>
@@ -292,8 +306,10 @@
                         value="1"
                         defaultValue
                         pseudoState={{ ":focus-visible": true }}
+                        marginLeft="5"
+                        marginRight="3"
                       />
-                      <Label>Navi</Label>
+                      Navi
                     </Field>
                     <label>
                       <input
@@ -307,7 +323,7 @@
                     </label>
                   </Box>
                 </Box>
-                <Box as="fieldset" width="150">
+                <Box as="fieldset" width="250">
                   <legend>:disabled:checked</legend>
                   <Box flex="y" spacing="s" alignX="start">
                     <Field>
@@ -317,8 +333,10 @@
                         value="1"
                         defaultValue
                         disabled
+                        marginLeft="5"
+                        marginRight="3"
                       />
-                      <Label>Navi</Label>
+                      Navi
                     </Field>
                     <label>
                       <input
@@ -328,7 +346,7 @@
                         checked
                         disabled
                       />
-                      Native
+                      User agent
                     </label>
                   </Box>
                 </Box>
