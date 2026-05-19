@@ -74,7 +74,13 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      import { NaviDebug, SelectableList, Selectable } from "@jsenv/navi";
+      import {
+        NaviDebug,
+        SelectableList,
+        Selectable,
+        Form,
+        Button,
+      } from "@jsenv/navi";
 
       const App = () => {
         return (
@@ -250,15 +256,12 @@
           <div id="form" className="demo-section">
             <h2>Form integration</h2>
             <p>
-              <code>SelectableList</code> works inside a native{" "}
-              <code>&lt;form&gt;</code>. The selected value is submitted under
-              the list's <code>name</code>.
+              <code>SelectableList</code> works inside a <code>Form</code>. The
+              selected value is submitted under the list's <code>name</code>.
             </p>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                const data = new FormData(e.currentTarget);
-                setSubmitted(data.get("fruit") ?? "(none)");
+            <Form
+              action={({ fruit }) => {
+                setSubmitted(fruit ?? "(none)");
               }}
             >
               <SelectableList
@@ -281,17 +284,10 @@
                   </Selectable>
                 ))}
               </SelectableList>
-              <button
-                type="submit"
-                style={{
-                  marginTop: 12,
-                  padding: "6px 16px",
-                  cursor: "pointer",
-                }}
-              >
+              <Button type="submit" style={{ marginTop: 12 }}>
                 Submit
-              </button>
-            </form>
+              </Button>
+            </Form>
             <div className="value-display">
               {submitted !== null ? `Submitted: ${submitted}` : ""}
             </div>
