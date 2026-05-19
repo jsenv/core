@@ -133,10 +133,12 @@ export const useActionProps = (
 
   // infom any <Field> parent of our readOnly state + that we are interactive
   useLayoutEffect(() => {
-    fieldContext.setReadOnly(innerReadOnly);
-    fieldContext.setDisabled(innerDisabled);
-    fieldContext.setInteractive(true);
-  }, [innerReadOnly, innerDisabled]);
+    if (fieldContext) {
+      fieldContext.setReadOnly(innerReadOnly);
+      fieldContext.setDisabled(innerDisabled);
+      fieldContext.setInteractive(true);
+    }
+  }, [fieldContext, innerReadOnly, innerDisabled]);
 
   useAutoFocus(ref, autoFocus, {
     focusVisible: autoFocusVisible,

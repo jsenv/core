@@ -19,6 +19,7 @@ import { BoxForwardedPropsContext } from "@jsenv/navi/src/box/box.jsx";
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { useFocusGroup } from "@jsenv/navi/src/utils/focus/use_focus_group.js";
 import { Field } from "../field.jsx";
+import { fieldPropSet } from "../field_prop_set.js";
 import { Input } from "../input/input.jsx";
 import { useFieldGroupProps } from "../use_field_group_props.jsx";
 import { dispatchRequestAction } from "../validation/custom_constraint_validation.js";
@@ -243,7 +244,8 @@ export const SelectableList = (props) => {
 };
 
 export const Selectable = (props) => {
-  const { index, id, highlight, hidden, filtered, value, children } = props;
+  const { index, id, highlight, hidden, filtered, value, selected, children } =
+    props;
   const multiple = useContext(SelectableListMultipleContext);
   const inputType = multiple ? "checkbox" : "radio";
   const pseudoStateSelector = multiple ? ".navi_checkbox" : ".navi_radio";
@@ -265,17 +267,23 @@ export const Selectable = (props) => {
         expandX
         {...props}
         pseudoStateSelector={pseudoStateSelector}
+        baseChildPropSet={SELECTABLE_REAL_INPUT_CHILD_PROP_SET}
         hasChildUsingForwardedProps
       >
-        <SelectableInput inputType={inputType} />
+        <SelectableRealInput type={inputType} selected={selected} />
         {children}
       </Field>
     </ListItem>
   );
 };
-const SelectableInput = ({ inputType }) => {
+const SELECTABLE_REAL_INPUT_CHILD_PROP_SET = new Set([
+  ...fieldPropSet,
+  "selected",
+]);
+const SelectableRealInput = ({ type, selected }) => {
   const inputProps = useContext(BoxForwardedPropsContext);
-  return <Input {...inputProps} type={inputType} />;
+
+  return <Input {...inputProps} type={type} checked={selected} />;
 };
 Selectable.Input = () => {
   return "coucou";
