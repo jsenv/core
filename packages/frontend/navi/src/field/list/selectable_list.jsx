@@ -79,7 +79,7 @@ const css = /* css */ `
 
     &[data-focus-within] {
       .navi_list_item {
-        &[data-focus-within]:has([data-focus-visible]) {
+        &:has([data-focus-visible]) {
           --x-list-item-color: var(--list-item-color-keyboard-pointed);
           --x-list-item-background-color: var(
             --list-item-background-color-keyboard-pointed
@@ -95,7 +95,7 @@ const css = /* css */ `
           /* Selected + pointed by keyboard: use keyboard color as fallback
            so that if --list-item-background-color-selected is reset the
            keyboard-pointed highlight still shows. */
-          &[data-focus-within]:has([data-focus-visible]) {
+          &:has([data-focus-visible]) {
             --x-list-item-background-color: var(
               --list-item-background-color-selected,
               var(--list-item-background-color-keyboard-pointed)
@@ -349,7 +349,6 @@ export const Selectable = (props) => {
           ref={inputRef}
           type={inputType}
           selected={selected}
-          listItemId={id}
         />
         <SelectableRealInputContext.Provider value={realInputContextValue}>
           {children}
@@ -372,7 +371,7 @@ const SELECTABLE_REAL_INPUT_CHILD_PROP_SET = new Set([
   ...FIELD_PROP_SET,
   "selected",
 ]);
-const SelectableRealInput = ({ ref, type, selected, listItemId }) => {
+const SelectableRealInput = ({ ref, type, selected }) => {
   const inputProps = useContext(BoxForwardedPropsContext);
 
   return (
@@ -384,7 +383,6 @@ const SelectableRealInput = ({ ref, type, selected, listItemId }) => {
       ref={ref}
       type={type}
       checked={selected}
-      aria-controls={listItemId}
     />
   );
 };
