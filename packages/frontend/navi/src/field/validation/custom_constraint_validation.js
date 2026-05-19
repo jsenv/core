@@ -641,24 +641,9 @@ export const installCustomConstraintValidation = (
       closeElementValidationMessage(new CustomEvent("cleanup"), "cleanup");
     });
 
-    const anchorElement = (() => {
-      const base =
-        failedConstraintInfo.target || elementReceivingValidationMessage;
-      const renderedBy = base.getAttribute("navi-rendered-by");
-      if (renderedBy) {
-        const renderedByElement = base.closest(renderedBy);
-        if (renderedByElement) {
-          return renderedByElement;
-        }
-      }
-      if (base.tagName === "INPUT" && base.type === "hidden") {
-        return base.form || document.body;
-      }
-      return base;
-    })();
-
     validationInterface.validationMessage = openCallout(message, {
-      anchorElement,
+      anchorElement:
+        failedConstraintInfo.target || elementReceivingValidationMessage,
       status: failedConstraintInfo.status,
       closeOnClickOutside: failedConstraintInfo.closeOnClickOutside,
       openingEvent: event,

@@ -428,6 +428,16 @@ export const openCallout = (
   });
 
   if (anchorElement) {
+    const renderedBy = anchorElement.getAttribute("navi-rendered-by");
+    if (renderedBy) {
+      const renderedByElement = anchorElement.closest(renderedBy);
+      if (renderedByElement) {
+        anchorElement = renderedByElement;
+      }
+    }
+    if (anchorElement.tagName === "INPUT" && anchorElement.type === "hidden") {
+      anchorElement = anchorElement.closest("label, fieldset, form");
+    }
     const anchorVisuallyVisibleInfo = getVisuallyVisibleInfo(anchorElement, {
       countOffscreenAsVisible: true,
     });
