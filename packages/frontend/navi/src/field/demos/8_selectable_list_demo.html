@@ -83,14 +83,16 @@
 
       const App = () => {
         return (
-          <NaviDebug debugAction debugInteraction>
-            <BasicDemo />
-            <ReadOnlyDemo />
-            <FormDemo />
-            <h2 className="section-title">Customization</h2>
-            <InputDemo />
-            <IconInputDemo />
-          </NaviDebug>
+          <>
+            <NaviDebug debugAction debugInteraction>
+              <BasicDemo />
+              <ReadOnlyDemo />
+              <FormDemo />
+              <h2 className="section-title">Customization</h2>
+              <InputDemo />
+              <IconInputDemo />
+            </NaviDebug>
+          </>
         );
       };
 
@@ -108,6 +110,7 @@
               <code>Selectable.Input</code>.
             </p>
             <SelectableList
+              expandX
               action={(v) => {
                 setSelected(v);
               }}
