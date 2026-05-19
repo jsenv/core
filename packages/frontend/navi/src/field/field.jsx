@@ -1,12 +1,5 @@
 import { createContext } from "preact";
-import {
-  useContext,
-  useId,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "preact/hooks";
+import { useContext, useId, useMemo, useRef, useState } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
 import { extractMessageAndRemainingProps } from "./validation/constraint_message.js";
@@ -69,24 +62,6 @@ export const FieldContext = createContext(null);
 export const useFieldId = () => {
   const ctx = useContext(FieldContext);
   return ctx ? ctx.fieldId : undefined;
-};
-export const reportReadOnlyToField = (value) => {
-  const ctx = useContext(FieldContext);
-  useLayoutEffect(() => {
-    ctx?.setReadOnly(value);
-  });
-};
-export const reportDisabledToField = (value) => {
-  const ctx = useContext(FieldContext);
-  useLayoutEffect(() => {
-    ctx?.setDisabled(value);
-  });
-};
-export const reportInteractiveToField = (value) => {
-  const ctx = useContext(FieldContext);
-  useLayoutEffect(() => {
-    ctx?.setInteractive(value);
-  });
 };
 
 /**

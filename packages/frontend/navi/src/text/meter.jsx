@@ -2,10 +2,6 @@ import { useRef } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
 import { PSEUDO_CLASSES } from "../box/pseudo_styles.js";
-import {
-  reportDisabledToField,
-  reportReadOnlyToField,
-} from "../field/field.jsx";
 import { LoadingOutline } from "../graphic/loading/loading_outline.jsx";
 import { useAccentColorAttributes } from "../utils/use_accent_color_attributes.js";
 import { Quantity } from "./quantity.jsx";
@@ -180,9 +176,6 @@ export const Meter = ({
       : level === "suboptimum"
         ? "var(--fill-color-suboptimum)"
         : "var(--fill-color-even-less-good)";
-
-  reportDisabledToField(disabled);
-  reportReadOnlyToField(readOnly);
 
   // When fill covers less than half the track, the text center sits on the
   // empty track — use the track color for contrast. Otherwise use fill color.

@@ -1,17 +1,12 @@
 import { dispatchInternalCustomEvent } from "@jsenv/dom";
-import { useContext } from "preact/hooks";
+import { useContext, useLayoutEffect } from "preact/hooks";
 
 import { useActionBoundToOneParam } from "@jsenv/navi/src/action/use_action.js";
 import { useActionStatus } from "@jsenv/navi/src/action/use_action_status.js";
 import { useExecuteAction } from "@jsenv/navi/src/action/use_execute_action.js";
 import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
 import { useDebugAction, useDebugInteraction } from "../navi_debug.jsx";
-import {
-  FieldContext,
-  reportDisabledToField,
-  reportInteractiveToField,
-  reportReadOnlyToField,
-} from "./field.jsx";
+import { FieldContext } from "./field.jsx";
 import {
   ActionRequesterContext,
   DisabledContext,
@@ -115,6 +110,7 @@ export const useActionProps = (
     ...rest
   } = props;
   const actionStatus = useActionStatus(action);
+  const fieldContext = useContext(FieldContext);
   const contextReadOnly = useContext(ReadOnlyContext);
   const contextDisabled = useContext(DisabledContext);
   const contextLoading = useContext(LoadingContext);
@@ -134,10 +130,14 @@ export const useActionProps = (
   const innerReadOnly =
     readOnly || contextReadOnly || innerLoading || uiStateController.readOnly;
   const innerDisabled = disabled || contextDisabled;
+
   // infom any <Field> parent of our readOnly state + that we are interactive
-  reportReadOnlyToField(innerReadOnly);
-  reportDisabledToField(innerDisabled);
-  reportInteractiveToField(true);
+  useLayoutEffect(() => {
+    fieldContext.setReadOnly(innerReadOnly);
+    fieldContext.setDisabled(innerDisabled);
+    fieldContext.setInteractive(true);
+  }, [innerReadOnly, innerDisabled]);
+
   useAutoFocus(ref, autoFocus, {
     focusVisible: autoFocusVisible,
     autoSelect,

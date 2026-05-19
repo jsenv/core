@@ -1211,7 +1211,7 @@ const ListItemRealOrVoid = (props) => {
   }
   // html-hidden items: excluded from virtual scroll accounting but always in DOM
   if (props.hidden) {
-    return <ListItemReal item={item} {...props} />;
+    return <ListItemReal {...props} />;
   }
   if (visibleIndex === -1) {
     return null;
@@ -1219,7 +1219,7 @@ const ListItemRealOrVoid = (props) => {
   if (visibleIndex < renderWindow.start || visibleIndex >= renderWindow.end) {
     return <ListItemVoid />;
   }
-  const listItemVnode = <ListItemReal item={item} {...props} />;
+  const listItemVnode = <ListItemReal {...props} />;
   // Use group-scoped visible index for separator when inside a group,
   // so separators are only rendered between items within the same group.
   const separatorIndex =
