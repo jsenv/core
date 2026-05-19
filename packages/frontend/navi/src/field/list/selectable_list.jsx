@@ -248,7 +248,7 @@ export const Selectable = (props) => {
     props;
   const multiple = useContext(SelectableListMultipleContext);
   const inputType = multiple ? "checkbox" : "radio";
-  const pseudoStateSelector = multiple ? ".navi_checkbox" : ".navi_radio";
+  // const pseudoStateSelector = multiple ? ".navi_checkbox" : ".navi_radio";
 
   return (
     <ListItem
@@ -266,7 +266,7 @@ export const Selectable = (props) => {
         spacing="s"
         expandX
         {...props}
-        pseudoStateSelector={pseudoStateSelector}
+        // pseudoStateSelector={pseudoStateSelector}
         baseChildPropSet={SELECTABLE_REAL_INPUT_CHILD_PROP_SET}
         hasChildUsingForwardedProps
       >
