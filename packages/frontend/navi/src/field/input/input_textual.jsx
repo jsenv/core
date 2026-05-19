@@ -33,7 +33,7 @@ import {
   useNextResolver,
 } from "../../resolver/resolver.jsx";
 import { Label, useFieldId } from "../field.jsx";
-import { fieldPropSet } from "../field_prop_set.js";
+import { fieldPropSet } from "../field_context.js";
 import {
   InsideRealListItemContext,
   ListIdContext,

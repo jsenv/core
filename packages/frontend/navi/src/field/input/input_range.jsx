@@ -4,7 +4,7 @@ import { Box, BoxForwardedPropsContext } from "../../box/box.jsx";
 import { LoadingOutline } from "../../graphic/loading/loading_outline.jsx";
 import { useAccentColorAttributes } from "../../utils/use_accent_color_attributes.js";
 import { useFieldId } from "../field.jsx";
-import { fieldPropSet } from "../field_prop_set.js";
+import { fieldPropSet } from "../field_context.js";
 import { useFieldProps } from "../use_field_props.jsx";
 import { dispatchRequestAction } from "../validation/custom_constraint_validation.js";
 

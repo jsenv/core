@@ -19,7 +19,7 @@ import { BoxForwardedPropsContext } from "@jsenv/navi/src/box/box.jsx";
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { useFocusGroup } from "@jsenv/navi/src/utils/focus/use_focus_group.js";
 import { Field } from "../field.jsx";
-import { fieldPropSet } from "../field_prop_set.js";
+import { fieldPropSet } from "../field_context.js";
 import { Input } from "../input/input.jsx";
 import { useFieldGroupProps } from "../use_field_group_props.jsx";
 import { dispatchRequestAction } from "../validation/custom_constraint_validation.js";
