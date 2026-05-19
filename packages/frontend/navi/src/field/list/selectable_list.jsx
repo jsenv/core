@@ -55,7 +55,7 @@ const css = /* css */ `
 
     &[data-focus-within] {
       .navi_list_item {
-        &[data-pointed-by-keyboard] {
+        &[data-focus-visible] {
           --x-list-item-color: var(--list-item-color-keyboard-pointed);
           --x-list-item-background-color: var(
             --list-item-background-color-keyboard-pointed
@@ -103,7 +103,7 @@ const css = /* css */ `
       cursor: pointer;
       user-select: none;
     }
-    &[data-pointed] {
+    &[data-hover] {
       --x-list-item-color: var(--list-item-color-mouse-pointed);
       --x-list-item-background-color: var(
         --list-item-background-color-mouse-pointed
