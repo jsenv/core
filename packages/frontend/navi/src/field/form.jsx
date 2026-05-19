@@ -17,8 +17,8 @@ import { dispatchInternalCustomEvent } from "@jsenv/dom";
 import { useMemo, useRef } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
+import { useFieldgroupInterfaceProps } from "./field_hooks.jsx";
 import { FormContext } from "./form_context.js";
-import { useFieldGroupProps } from "./use_field_group_props.jsx";
 
 export const Form = (props) => {
   const defaultRef = useRef();
@@ -30,7 +30,7 @@ export const Form = (props) => {
 
 const FormField = (props) => {
   const { ref, method = "GET" } = props;
-  const fieldGroupProps = useFieldGroupProps(props, {
+  const fieldgroupInterfaceProps = useFieldgroupInterfaceProps(props, {
     fieldType: "form",
     childComponentType: "*",
     aggregateChildStates: (childUIStateControllers) => {
@@ -51,7 +51,7 @@ const FormField = (props) => {
       return formValues;
     },
   });
-  const { basePseudoState, children } = fieldGroupProps;
+  const { basePseudoState, children } = fieldgroupInterfaceProps;
   // const disabled = basePseudoState[":disabled"];
   // const readOnly = basePseudoState[":read-only"];
   const loading = basePseudoState[":-navi-loading"];
@@ -61,7 +61,7 @@ const FormField = (props) => {
 
   return (
     <Box
-      {...fieldGroupProps}
+      {...fieldgroupInterfaceProps}
       as="form"
       data-method={method}
       novalidate="" // make sure browser don't prevent "submit" when invalid, nor display messages

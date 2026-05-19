@@ -11,8 +11,8 @@ import { assertRoute, useRouteStatus } from "../nav/route.js";
 import { Text, markAsOutsideTextFlow } from "../text/text.jsx";
 import { useAccentColorAttributes } from "../utils/use_accent_color_attributes.js";
 import { ActionContext } from "./field_context.js";
+import { useFieldInterfaceProps } from "./field_hooks.jsx";
 import { FormContext } from "./form_context.js";
-import { useFieldProps } from "./use_field_props.jsx";
 import { ParentUIStateControllerContext } from "./use_ui_state_controller.js";
 import { dispatchRequestAction } from "./validation/custom_constraint_validation.js";
 
@@ -312,7 +312,7 @@ const ButtonFieldResolver = (props) => {
   const Next = useNextResolver();
 
   if (props.name || props.action) {
-    return <ButtonField {...props} />;
+    return <ButtonFieldInterface {...props} />;
   }
   return <Next {...props} />;
 };
@@ -535,12 +535,12 @@ const ButtonInsideForm = (props) => {
     />
   );
 };
-const ButtonField = (props) => {
+const ButtonFieldInterface = (props) => {
   const Next = useNextResolver();
   const { ref, onClick } = props;
   const parentUIStateController = useContext(ParentUIStateControllerContext);
   const ancestorAction = useContext(ActionContext);
-  const fieldProps = useFieldProps(props, {
+  const fieldInterfaceProps = useFieldInterfaceProps(props, {
     fieldType: "button",
     readUIState: () => {
       const button = ref.current;
@@ -574,7 +574,7 @@ const ButtonField = (props) => {
 
   return (
     <Next
-      {...fieldProps}
+      {...fieldInterfaceProps}
       onClick={(e) => {
         onClick?.(e);
         const button = ref.current;

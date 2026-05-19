@@ -5,7 +5,7 @@ import { LoadingOutline } from "../../graphic/loading/loading_outline.jsx";
 import { useAccentColorAttributes } from "../../utils/use_accent_color_attributes.js";
 import { useFieldId } from "../field.jsx";
 import { fieldPropSet } from "../field_context.js";
-import { useFieldProps } from "../use_field_props.jsx";
+import { useFieldInterfaceProps } from "../field_hooks.jsx";
 import { dispatchRequestAction } from "../validation/custom_constraint_validation.js";
 
 const css = /* css */ `
@@ -250,20 +250,20 @@ export const InputRange = (props) => {
   const fieldId = useFieldId();
   props.id = props.id || fieldId;
 
-  return <InputRangeField {...props} />;
+  return <InputRangeFieldInterface {...props} />;
 };
 
-const InputRangeField = (props) => {
+const InputRangeFieldInterface = (props) => {
   import.meta.css = css;
   const { ref, onInput, accentColor } = props;
-  const fieldProps = useFieldProps(props, {
+  const fieldInterfaceProps = useFieldInterfaceProps(props, {
     fieldType: "input",
     readUIState: () => {
       const input = ref.current;
       return input.valueAsNumber;
     },
   });
-  const { basePseudoState } = fieldProps;
+  const { basePseudoState } = fieldInterfaceProps;
   const disabled = basePseudoState[":disabled"];
   const readOnly = basePseudoState[":read-only"];
   const loading = basePseudoState[":-navi-loading"];
@@ -297,7 +297,7 @@ const InputRangeField = (props) => {
       pseudoElements={RangePseudoElements}
       hasChildUsingForwardedProps
       baseChildPropSet={RangeChildPropSet}
-      {...fieldProps}
+      {...fieldInterfaceProps}
       ref={boxRef}
       onInput={(e) => {
         onInput?.(e);

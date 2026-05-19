@@ -7,8 +7,8 @@ import { LoadingOutline } from "@jsenv/navi/src/graphic/loading/loading_outline.
 import { createComponentResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { Icon } from "@jsenv/navi/src/text/icon.jsx";
 import { useFieldId } from "../field.jsx";
+import { useFieldInterfaceProps } from "../field_hooks.jsx";
 import { createUICallback } from "../ui_callback.js";
-import { useFieldProps } from "../use_field_props.jsx";
 import { dispatchRequestAction } from "../validation/custom_constraint_validation.js";
 import { PickerContext, PickerElementContext } from "./picker_context.jsx";
 import { pickerResolvers } from "./picker_resolvers.jsx";
@@ -231,21 +231,21 @@ export const Picker = (props) => {
 const renderPicker = createComponentResolver(pickerResolvers);
 Picker.update = createUICallback({
   name: "Picker.update",
-  uiAction: (value, e) => {
+  action: (value, e) => {
     return dispatchToPicker(e, "navi_picker_set_value", { value });
   },
 });
 Picker.cancel = createUICallback({
   name: "Picker.cancel",
   event: (e) => dispatchToPicker(e, "navi_picker_request_cancel"),
-  uiAction: (_, e) => {
+  action: (_, e) => {
     return dispatchToPicker(e, "navi_picker_request_cancel");
   },
 });
 Picker.submit = createUICallback({
   name: "Picker.submit",
   event: (e) => dispatchToPicker(e, "navi_request_action"),
-  uiAction: (_, e) => {
+  action: (_, e) => {
     return dispatchToPicker(e, "navi_request_action");
   },
 });
@@ -280,7 +280,7 @@ const PickerButton = (props) => {
     onChange,
   } = props;
   const pickerInputRef = useRef(null);
-  const fieldProps = useFieldProps(
+  const fieldInterfaceProps = useFieldInterfaceProps(
     {
       ...props,
       ref: pickerInputRef,
@@ -289,7 +289,7 @@ const PickerButton = (props) => {
       fieldType: "picker",
     },
   );
-  const { value, basePseudoState, children } = fieldProps;
+  const { value, basePseudoState, children } = fieldInterfaceProps;
   const loading = basePseudoState[":-navi-loading"];
   const readOnly = basePseudoState[":read-only"];
   const disabled = basePseudoState[":disabled"];
@@ -298,7 +298,7 @@ const PickerButton = (props) => {
     <Box
       as="button"
       type="button"
-      {...fieldProps}
+      {...fieldInterfaceProps}
       ref={ref}
       baseClassName="navi_picker"
       data-field=".navi_picker_input"

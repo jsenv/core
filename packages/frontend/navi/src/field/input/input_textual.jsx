@@ -34,6 +34,7 @@ import {
 } from "../../resolver/resolver.jsx";
 import { Label, useFieldId } from "../field.jsx";
 import { fieldPropSet } from "../field_context.js";
+import { useFieldInterfaceProps } from "../field_hooks.jsx";
 import {
   InsideRealListItemContext,
   ListIdContext,
@@ -44,7 +45,6 @@ import {
   requestListSelectCurrent,
 } from "../list/list.jsx";
 import { requestClosestAction } from "../string_actions.js";
-import { useFieldProps } from "../use_field_props.jsx";
 import {
   dispatchRequestAction,
   dispatchRequestInteraction,
@@ -264,7 +264,7 @@ export const InputTextual = (props) => {
   const fieldId = useFieldId();
   props.id = props.id || fieldId || defaultId;
 
-  const input = renderInput(InputTextualField, props);
+  const input = renderInput(InputTextualFieldInterface, props);
 
   return input;
 };
@@ -295,10 +295,10 @@ const InputTextualWithListResolver = (props) => {
 const renderInput = createComponentResolver([InputTextualWithListResolver]);
 
 const InputNativeContext = createContext(null);
-const InputTextualField = (props) => {
+const InputTextualFieldInterface = (props) => {
   import.meta.css = css;
   const { ref, type, icon, children, onKeyDown, onPaste } = props;
-  const fieldProps = useFieldProps(props, {
+  const fieldInterfaceProps = useFieldInterfaceProps(props, {
     fieldType: "input",
     readUIState: () => {
       const input = ref.current;
@@ -307,7 +307,7 @@ const InputTextualField = (props) => {
     getDisplayValue: getDisplayValueForType(type),
     normalizeUIState: getNormalizeUIStateForType(type),
   });
-  const { basePseudoState } = fieldProps;
+  const { basePseudoState } = fieldInterfaceProps;
   const disabled = basePseudoState[":disabled"];
   const readOnly = basePseudoState[":read-only"];
   const loading = basePseudoState[":-navi-loading"];
@@ -390,7 +390,7 @@ const InputTextualField = (props) => {
       pseudoElements={InputPseudoElements}
       hasChildUsingForwardedProps
       baseChildPropSet={InputChildPropSet}
-      {...fieldProps}
+      {...fieldInterfaceProps}
       ref={undefined} // input takes the ref
       onKeyDown={(e) => {
         onKeyDown?.(e);

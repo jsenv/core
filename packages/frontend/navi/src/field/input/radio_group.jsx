@@ -2,7 +2,7 @@ import { useId, useRef } from "preact/hooks";
 
 import { Box } from "../../box/box.jsx";
 import { useFocusGroup } from "../../utils/focus/use_focus_group.js";
-import { useFieldGroupProps } from "../use_field_group_props.jsx";
+import { useFieldgroupInterfaceProps } from "../field_hooks.jsx";
 import { dispatchRequestAction } from "../validation/custom_constraint_validation.js";
 
 export const RadioGroup = (props) => {
@@ -10,14 +10,14 @@ export const RadioGroup = (props) => {
   props.ref = props.ref || refDefault;
   const defaultName = useId();
   props.name = props.name || `radio_group_${defaultName}`;
-  const radioGroup = <RadioGroupUI {...props} />;
+  const radioGroup = <RadioGroupInterface {...props} />;
 
   return radioGroup;
 };
 
-const RadioGroupUI = (props) => {
+const RadioGroupInterface = (props) => {
   const { ref, name } = props;
-  const fieldGroupProps = useFieldGroupProps(
+  const fieldgroupInterfaceProps = useFieldgroupInterfaceProps(
     {
       resetOnCancel: true,
       resetOnAbort: true,
@@ -46,7 +46,7 @@ const RadioGroupUI = (props) => {
     <Box
       as="fieldset"
       flex="y"
-      {...fieldGroupProps}
+      {...fieldgroupInterfaceProps}
       baseClassName="navi_radio_fieldset"
       onChange={(e) => {
         // we rely on change event bubbling but we want to catch only the relevant radio change events

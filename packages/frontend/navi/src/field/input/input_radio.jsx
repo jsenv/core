@@ -14,8 +14,8 @@ import {
   RequiredContext,
   fieldPropSet,
 } from "../field_context.js";
+import { useFieldInterfaceProps } from "../field_hooks.jsx";
 import { requestClosestAction } from "../string_actions.js";
-import { useFieldProps } from "../use_field_props.jsx";
 
 const css = /* css */ `
   @layer navi {
@@ -345,10 +345,10 @@ export const InputRadio = (props) => {
   props.required =
     props.required === undefined ? contextRequired : props.required;
 
-  return <InputRadioField {...props} />;
+  return <InputRadioFieldInterface {...props} />;
 };
 
-const InputRadioField = (props) => {
+const InputRadioFieldInterface = (props) => {
   import.meta.css = css;
   const {
     ref,
@@ -362,7 +362,7 @@ const InputRadioField = (props) => {
     color,
     accentColor,
   } = props;
-  const fieldProps = useFieldProps(props, {
+  const fieldInterfaceProps = useFieldInterfaceProps(props, {
     fieldType: "radio",
     readUIState: () => {
       const radio = ref.current;
@@ -380,7 +380,7 @@ const InputRadioField = (props) => {
       return undefined;
     },
   });
-  const { checked, basePseudoState } = fieldProps;
+  const { checked, basePseudoState } = fieldInterfaceProps;
   const loading = basePseudoState[":-navi-loading"];
 
   // we must first dispatch an event to inform all other radios they where unchecked
@@ -462,7 +462,7 @@ const InputRadioField = (props) => {
       // Radio displayed as button are usually squarish
       // (passsing any custom width/height would auto disable aspectRatio forced by the square prop)
       square={appearance === "button" ? true : undefined}
-      {...fieldProps}
+      {...fieldInterfaceProps}
       ref={boxRef}
       data-field=".navi_native_field"
       data-appearance={appearance}

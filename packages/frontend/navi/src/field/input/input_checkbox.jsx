@@ -9,8 +9,8 @@ import {
   fieldPropSet,
   RequiredContext,
 } from "../field_context.js";
+import { useFieldInterfaceProps } from "../field_hooks.jsx";
 import { requestClosestAction } from "../string_actions.js";
-import { useFieldProps } from "../use_field_props.jsx";
 import {
   dispatchRequestAction,
   dispatchRequestInteraction,
@@ -385,10 +385,10 @@ export const InputCheckbox = (props) => {
   props.required =
     props.required === undefined ? contextRequired : props.required;
 
-  return <InputCheckboxField {...props} />;
+  return <InputCheckboxFieldInterface {...props} />;
 };
 
-const InputCheckboxField = (props) => {
+const InputCheckboxFieldInterface = (props) => {
   import.meta.css = css;
   const {
     ref,
@@ -403,7 +403,7 @@ const InputCheckboxField = (props) => {
     appearance = icon ? "icon" : "checkbox", // "checkbox", "toggle", "icon", "button"
     onKeyDown,
   } = props;
-  const fieldProps = useFieldProps(
+  const fieldInterfaceProps = useFieldInterfaceProps(
     {
       // In this situation updating the ui state === calling associated action
       // so cance/abort/error have to revert the ui state to the one before user interaction
@@ -427,7 +427,7 @@ const InputCheckboxField = (props) => {
       getPropFromState: Boolean,
     },
   );
-  const { basePseudoState, checked } = fieldProps;
+  const { basePseudoState, checked } = fieldInterfaceProps;
   const loading = basePseudoState[":-navi-loading"];
 
   const boxRef = useRef();
@@ -472,7 +472,7 @@ const InputCheckboxField = (props) => {
       // Checkbox displayed as button are usually squarish
       // (passsing any custom width/height would auto disable aspectRatio forced by the square prop)
       square={appearance === "button" ? true : undefined}
-      {...fieldProps}
+      {...fieldInterfaceProps}
       ref={boxRef}
       data-field=".navi_native_field"
       data-appearance={appearance}

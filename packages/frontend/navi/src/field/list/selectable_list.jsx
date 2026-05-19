@@ -20,8 +20,8 @@ import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { useFocusGroup } from "@jsenv/navi/src/utils/focus/use_focus_group.js";
 import { Field } from "../field.jsx";
 import { fieldPropSet } from "../field_context.js";
+import { useFieldgroupInterfaceProps } from "../field_hooks.jsx";
 import { Input } from "../input/input.jsx";
-import { useFieldGroupProps } from "../use_field_group_props.jsx";
 import { dispatchRequestAction } from "../validation/custom_constraint_validation.js";
 import { List, ListItem } from "./list.jsx";
 
@@ -151,7 +151,7 @@ export const SelectableList = (props) => {
   props.ref = props.ref || defaultRef;
   props.name = props.name || `listbox_${defaultName}`;
   const { ref, multiple } = props;
-  const fieldProps = useFieldGroupProps(props, {
+  const fieldgroupInterfaceProps = useFieldgroupInterfaceProps(props, {
     fieldType: "list",
     childComponentType: multiple ? "checkbox" : "radio",
     aggregateChildStates: multiple
@@ -181,7 +181,7 @@ export const SelectableList = (props) => {
     <List
       as="fieldset"
       aria-multiselectable={multiple ? "true" : undefined}
-      {...fieldProps}
+      {...fieldgroupInterfaceProps}
       onnavi_list_nav={(e) => {
         const { item, event } = e.detail;
         // const id = item ? item.id : null;

@@ -4,20 +4,20 @@ import { useRef } from "preact/hooks";
 
 import { Box } from "../../box/box.jsx";
 import { useFocusGroup } from "../../utils/focus/use_focus_group.js";
-import { useFieldGroupProps } from "../use_field_group_props.jsx";
+import { useFieldgroupInterfaceProps } from "../field_hooks.jsx";
 import { dispatchRequestAction } from "../validation/custom_constraint_validation.js";
 
 export const CheckboxGroup = (props) => {
   const refDefault = useRef(null);
   props.ref = props.ref || refDefault;
-  const checkboxGroup = <CheckboxGroupUI {...props} />;
+  const checkboxGroup = <CheckboxGroupInterface {...props} />;
 
   return checkboxGroup;
 };
 
-const CheckboxGroupUI = (props) => {
+const CheckboxGroupInterface = (props) => {
   const { ref, name } = props;
-  const fieldGroupProps = useFieldGroupProps(
+  const fieldgroupInterfaceProps = useFieldgroupInterfaceProps(
     {
       resetOnCancel: true,
       resetOnAbort: true,
@@ -45,7 +45,7 @@ const CheckboxGroupUI = (props) => {
     <Box
       as="fieldset"
       flex
-      {...fieldGroupProps}
+      {...fieldgroupInterfaceProps}
       baseClassName="navi_checkbox_fieldset"
       navi-checkbox-list=""
       onChange={(e) => {
