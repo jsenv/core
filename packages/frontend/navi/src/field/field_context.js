@@ -9,6 +9,7 @@ export const FIELD_PROP_SET = new Set([
   "name",
   "data-testid",
   "navi-proxy-for",
+  "aria-controls",
   "data-callout-arrow-x",
   "data-callout-point-to-border-box",
   "data-callout-point-to-content-box",

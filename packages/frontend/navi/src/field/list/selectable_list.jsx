@@ -349,6 +349,7 @@ export const Selectable = (props) => {
           ref={inputRef}
           type={inputType}
           selected={selected}
+          listItemId={id}
         />
         <SelectableRealInputContext.Provider value={realInputContextValue}>
           {children}
@@ -371,7 +372,7 @@ const SELECTABLE_REAL_INPUT_CHILD_PROP_SET = new Set([
   ...FIELD_PROP_SET,
   "selected",
 ]);
-const SelectableRealInput = ({ ref, type, selected }) => {
+const SelectableRealInput = ({ ref, type, selected, listItemId }) => {
   const inputProps = useContext(BoxForwardedPropsContext);
 
   return (
@@ -383,6 +384,7 @@ const SelectableRealInput = ({ ref, type, selected }) => {
       ref={ref}
       type={type}
       checked={selected}
+      aria-controls={listItemId}
     />
   );
 };
