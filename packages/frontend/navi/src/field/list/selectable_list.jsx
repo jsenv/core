@@ -121,8 +121,7 @@ const css = /* css */ `
       overflow: hidden;
 
       &[navi-debug] {
-        top: 0;
-        left: 0;
+        right: 10px;
         width: 15px;
         height: 15px;
         clip-path: none;

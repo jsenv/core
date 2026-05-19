@@ -1,5 +1,7 @@
 import { getScrollContainer } from "../interaction/scroll/scroll_container.js";
 import { createPubSub } from "../pub_sub.js";
+import { getBorderSizes } from "../size/get_border_sizes.js";
+import { getPaddingSizes } from "../size/get_padding_sizes.js";
 import { snapToPixel } from "../size/snap_to_pixel.js";
 
 const DEBUG = false;
@@ -466,6 +468,7 @@ export const pickPositionRelativeTo = (
     alignToViewportEdgeWhenAnchorNearEdge = 0,
     minLeft = 0,
     spacing = 0,
+    alignToAnchorBox = "border-box",
     viewportSpacing = 0,
   } = {},
 ) => {
@@ -506,10 +509,32 @@ export const pickPositionRelativeTo = (
   const anchorWidth = anchorRight - anchorLeft;
   const anchorHeight = anchorBottom - anchorTop;
 
-  const spaceAbove = anchorTop;
-  const spaceBelow = viewportHeight - anchorBottom;
-  const spaceLeft = anchorLeft;
-  const spaceRight = viewportWidth - anchorRight;
+  // alignToAnchorBox controls whether the element aligns to the anchor's border-box (outer edge)
+  // or content-box (inner content area, ignoring padding and border).
+  // content-box lets the arrow point into the content area instead of the outer edge.
+  let anchorInsetY = 0;
+  let anchorInsetX = 0;
+  if (alignToAnchorBox === "content-box") {
+    const anchorBorderSizes = getBorderSizes(anchor);
+    const anchorPaddingSizes = getPaddingSizes(anchor);
+    anchorInsetY =
+      anchorBorderSizes.top +
+      anchorPaddingSizes.top +
+      anchorPaddingSizes.bottom +
+      anchorBorderSizes.bottom;
+    anchorInsetX =
+      anchorBorderSizes.left +
+      anchorPaddingSizes.left +
+      anchorPaddingSizes.right +
+      anchorBorderSizes.right;
+  }
+  const effectiveSpacing = spacing - anchorInsetY;
+  const spaceAbove = anchorTop + anchorInsetY;
+  const spaceBelow = viewportHeight - anchorBottom + anchorInsetY;
+  const effectiveAnchorLeft = anchorLeft + anchorInsetX / 2;
+  const effectiveAnchorRight = anchorRight - anchorInsetX / 2;
+  const spaceLeft = anchorLeft + anchorInsetX / 2;
+  const spaceRight = viewportWidth - anchorRight + anchorInsetX / 2;
 
   // Resolve active X and Y, and whether each is fixed (no flip fallback)
   let activeX;
@@ -543,13 +568,13 @@ export const pickPositionRelativeTo = (
     // Compute effective space for a given Y value
     const spaceFor = (y) => {
       if (y === "above") {
-        return spaceAbove - spacing - viewportSpacing;
+        return spaceAbove - effectiveSpacing - viewportSpacing;
       }
       if (y === "above-overlap") {
         return spaceAbove + anchorHeight - viewportSpacing;
       }
       if (y === "below") {
-        return spaceBelow - spacing - viewportSpacing;
+        return spaceBelow - effectiveSpacing - viewportSpacing;
       }
       if (y === "below-overlap") {
         return spaceBelow + anchorHeight - viewportSpacing;
@@ -650,44 +675,49 @@ export const pickPositionRelativeTo = (
   let elementPositionLeft;
   {
     if (finalX === "to-the-left") {
-      elementPositionLeft = anchorLeft - elementWidth - spacing;
+      elementPositionLeft = effectiveAnchorLeft - elementWidth - spacing;
     } else if (finalX === "left-aligned") {
-      elementPositionLeft = anchorLeft;
+      elementPositionLeft = effectiveAnchorLeft;
     } else if (finalX === "center") {
       // Complex logic handles wide anchors and viewport-edge snapping
       const anchorIsWiderThanViewport = anchorWidth > viewportWidth;
       if (anchorIsWiderThanViewport) {
-        const anchorLeftIsVisible = anchorLeft >= 0;
-        const anchorRightIsVisible = anchorRight <= viewportWidth;
+        const anchorLeftIsVisible = effectiveAnchorLeft >= 0;
+        const anchorRightIsVisible = effectiveAnchorRight <= viewportWidth;
         if (!anchorLeftIsVisible && anchorRightIsVisible) {
           const viewportCenter = viewportWidth / 2;
-          const distanceFromRightEdge = viewportWidth - anchorRight;
+          const distanceFromRightEdge = viewportWidth - effectiveAnchorRight;
           elementPositionLeft =
             viewportCenter - distanceFromRightEdge / 2 - elementWidth / 2;
         } else if (anchorLeftIsVisible && !anchorRightIsVisible) {
           const viewportCenter = viewportWidth / 2;
-          const distanceFromLeftEdge = -anchorLeft;
+          const distanceFromLeftEdge = -effectiveAnchorLeft;
           elementPositionLeft =
             viewportCenter - distanceFromLeftEdge / 2 - elementWidth / 2;
         } else {
           elementPositionLeft = viewportWidth / 2 - elementWidth / 2;
         }
       } else {
-        elementPositionLeft = anchorLeft + anchorWidth / 2 - elementWidth / 2;
+        elementPositionLeft =
+          effectiveAnchorLeft +
+          (effectiveAnchorRight - effectiveAnchorLeft) / 2 -
+          elementWidth / 2;
         if (alignToViewportEdgeWhenAnchorNearEdge) {
-          const elementIsWiderThanAnchor = elementWidth > anchorWidth;
+          const effectiveAnchorWidth =
+            effectiveAnchorRight - effectiveAnchorLeft;
+          const elementIsWiderThanAnchor = elementWidth > effectiveAnchorWidth;
           const anchorIsNearLeftEdge =
-            anchorLeft < alignToViewportEdgeWhenAnchorNearEdge;
+            effectiveAnchorLeft < alignToViewportEdgeWhenAnchorNearEdge;
           if (elementIsWiderThanAnchor && anchorIsNearLeftEdge) {
             elementPositionLeft = minLeft;
           }
         }
       }
     } else if (finalX === "right-aligned") {
-      elementPositionLeft = anchorRight - elementWidth;
+      elementPositionLeft = effectiveAnchorRight - elementWidth;
     } else {
       // "to-the-right"
-      elementPositionLeft = anchorRight + spacing;
+      elementPositionLeft = effectiveAnchorRight + spacing;
     }
     // Constrain horizontal position to viewport boundaries (with viewportSpacing margin)
     if (elementPositionLeft < viewportSpacing) {
@@ -704,8 +734,8 @@ export const pickPositionRelativeTo = (
   let elementPositionTop;
   {
     if (finalY === "above") {
-      // top is always anchorTop - elementHeight - spacing — max-height truncates if needed.
-      const idealTop = anchorTop - elementHeight - spacing;
+      // top is always anchorTop - elementHeight - effectiveSpacing — max-height truncates if needed.
+      const idealTop = anchorTop - elementHeight - effectiveSpacing;
       elementPositionTop =
         idealTop < viewportSpacing ? viewportSpacing : idealTop;
     } else if (finalY === "above-overlap") {
@@ -720,9 +750,9 @@ export const pickPositionRelativeTo = (
         idealTop % 1 === 0 ? idealTop : Math.floor(idealTop) + 1;
     } else {
       // "below"
-      // top is always anchorBottom + spacing — max-height (via --space-available) truncates
+      // top is always anchorBottom + effectiveSpacing — max-height (via --space-available) truncates
       // the element height so it doesn't overflow the viewport bottom.
-      const idealTop = anchorBottom + spacing;
+      const idealTop = anchorBottom - anchorInsetY + effectiveSpacing;
       elementPositionTop =
         idealTop % 1 === 0 ? idealTop : Math.floor(idealTop) + 1;
     }
@@ -752,11 +782,11 @@ export const pickPositionRelativeTo = (
   // so callers get the net usable space directly.
   const effectiveSpaceAbove =
     (finalY === "above-overlap" ? spaceAbove + anchorHeight : spaceAbove) -
-    (finalY === "above" ? spacing : 0) -
+    (finalY === "above" ? effectiveSpacing : 0) -
     viewportSpacing;
   const effectiveSpaceBelow =
     (finalY === "below-overlap" ? spaceBelow + anchorHeight : spaceBelow) -
-    (finalY === "below" ? spacing : 0) -
+    (finalY === "below" ? effectiveSpacing : 0) -
     viewportSpacing;
 
   return {

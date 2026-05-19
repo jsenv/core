@@ -826,6 +826,11 @@ const stickCalloutToAnchor = (calloutElement, anchorElement, { debug }) => {
           "data-callout-position-fixed",
         ),
         spacing: ARROW_HEIGHT,
+        alignToAnchorBox: anchorElement.hasAttribute(
+          "data-callout-point-to-border-box",
+        )
+          ? "border-box"
+          : "content-box",
         viewportSpacing: anchorElement.hasAttribute(
           "data-callout-viewport-spacing",
         )
