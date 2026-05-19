@@ -29,6 +29,112 @@ const css = /* css */ `
     margin: 0; /* Reset margin that might come from fieldset */
     padding: 0; /* Reset padding that might come from fieldset */
   }
+
+  .navi_list_container {
+    --list-outline-color: var(--navi-focus-outline-color);
+    --x-list-outline-width: calc(
+      var(--list-outline-width) + var(--list-border-width)
+    );
+    --x-list-outline-offset: calc(-1 * var(--list-border-width));
+
+    outline-width: var(--x-list-outline-width);
+    outline-color: var(--x-list-outline-color);
+    outline-offset: var(--x-list-outline-offset);
+
+    &[data-focus] {
+      /* outline: var(--list-outline-width) solid var(--navi-focus-outline-color);
+      outline-offset: calc(-1 * var(--list-outline-width)); */
+    }
+    &[data-focus-visible] {
+      outline-style: solid;
+    }
+
+    &[data-callout] {
+      --x-list-border-color: var(--callout-color);
+    }
+
+    &[data-focus-within] {
+      .navi_list_item {
+        &[data-pointed-by-keyboard] {
+          --x-list-item-color: var(--list-item-color-keyboard-pointed);
+          --x-list-item-background-color: var(
+            --list-item-background-color-keyboard-pointed
+          );
+        }
+
+        /* Selected must win over pointed-by-keyboard */
+        &[data-selected] {
+          --x-list-item-color: var(--list-item-color-selected);
+          --x-list-item-background-color: var(
+            --list-item-background-color-selected
+          );
+          /* Selected + pointed by keyboard: use keyboard color as fallback
+           so that if --list-item-background-color-selected is reset the
+           keyboard-pointed highlight still shows. */
+          &[data-focus-visible] {
+            --x-list-item-background-color: var(
+              --list-item-background-color-selected,
+              var(--list-item-background-color-keyboard-pointed)
+            );
+          }
+        }
+      }
+    }
+  }
+
+  .navi_list_item {
+    /* Hover (mouse) */
+    --list-item-color-hover: var(--list-item-color);
+    --list-item-background-color-hover: light-dark(#f5f5f5, #2a2a2a);
+    /* Pointed by mouse — subtle, just a shade above background */
+    --list-item-color-mouse-pointed: var(--list-item-color);
+    --list-item-background-color-mouse-pointed: light-dark(#ebebeb, #303030);
+    /* Pointed by keyboard — subtle light blue highlight */
+    --list-item-color-keyboard-pointed: var(--list-item-color);
+    --list-item-background-color-keyboard-pointed: light-dark(#c2dcff, #1c3a6e);
+    /* Selected — vivid blue accent */
+    --list-item-color-selected: light-dark(#ffffff, #ffffff);
+    --list-item-background-color-selected: light-dark(#1a73e8, #2b5fcc);
+    /* Disabled */
+    --list-item-color-disabled: light-dark(#aaa, #555);
+    --list-item-background-color-disabled: var(--list-item-background-color);
+
+    &[data-interactive] {
+      cursor: pointer;
+      user-select: none;
+    }
+    &[data-pointed] {
+      --x-list-item-color: var(--list-item-color-mouse-pointed);
+      --x-list-item-background-color: var(
+        --list-item-background-color-mouse-pointed
+      );
+    }
+    &[data-selected] {
+      --x-list-item-color: var(--list-item-color-selected);
+      --x-list-item-background-color: var(
+        --list-item-background-color-selected
+      );
+      &[data-hover] {
+        /* Here important should no beed need, but for some reason it is */
+        --x-list-item-background-color: var(
+          --list-item-background-color-selected,
+          var(--list-item-background-color-mouse-pointed)
+        ) !important;
+      }
+    }
+    &[data-disabled] {
+      --x-list-item-color: var(--list-item-color-disabled);
+      --x-list-item-background-color: var(
+        --list-item-background-color-disabled
+      );
+      cursor: default;
+      pointer-events: none;
+    }
+    &[data-readonly] {
+      --x-list-item-color: var(--list-item-color-disabled);
+      cursor: default;
+    }
+  }
 `;
 
 const SelectableListMultipleContext = createContext(false);

@@ -57,7 +57,6 @@ const css = /* css */ `
       --list-outline-width: 1px;
       --list-border-radius: 4px;
       --list-border-width: 1px;
-      --list-outline-color: var(--navi-focus-outline-color);
       --list-border-color: light-dark(#ccc, #555);
       --list-background-color: light-dark(#fff, #1e1e1e);
       --list-max-height: 220px;
@@ -68,29 +67,6 @@ const css = /* css */ `
       --list-item-padding: var(--list-item-padding-y) var(--list-item-padding-x);
       --list-item-color: inherit;
       --list-item-font-weight: inherit;
-
-      /* Hover (mouse) */
-      --list-item-color-hover: var(--list-item-color);
-      --list-item-background-color-hover: light-dark(#f5f5f5, #2a2a2a);
-
-      /* Pointed by mouse — subtle, just a shade above background */
-      --list-item-color-mouse-pointed: var(--list-item-color);
-      --list-item-background-color-mouse-pointed: light-dark(#ebebeb, #303030);
-
-      /* Pointed by keyboard — subtle light blue highlight */
-      --list-item-color-keyboard-pointed: var(--list-item-color);
-      --list-item-background-color-keyboard-pointed: light-dark(
-        #c2dcff,
-        #1c3a6e
-      );
-
-      /* Selected — vivid blue accent */
-      --list-item-color-selected: light-dark(#ffffff, #ffffff);
-      --list-item-background-color-selected: light-dark(#1a73e8, #2b5fcc);
-
-      /* Disabled */
-      --list-item-color-disabled: light-dark(#aaa, #555);
-      --list-item-background-color-disabled: var(--list-item-background-color);
 
       /* Highlight (CSS Highlight API match) */
       --list-item-color-highlight: inherit;
@@ -111,10 +87,6 @@ const css = /* css */ `
   }
 
   .navi_list_container {
-    --x-list-outline-width: calc(
-      var(--list-outline-width) + var(--list-border-width)
-    );
-    --x-list-outline-offset: calc(-1 * var(--list-border-width));
     --x-list-border-radius: var(--list-border-radius);
     --x-list-border-width: var(--list-border-width);
     --x-list-border-color: var(--list-border-color);
@@ -140,9 +112,7 @@ const css = /* css */ `
     background-color: var(--x-list-background-color);
     border: var(--x-list-border-width) solid var(--x-list-border-color);
     border-radius: var(--x-list-border-radius);
-    outline-width: var(--x-list-outline-width);
-    outline-color: var(--x-list-outline-color);
-    outline-offset: var(--x-list-outline-offset);
+
     transition: opacity 0.2s ease;
     /* overflow:hidden is required on the container (not the inner scroll element)
        so that border-radius clips the content correctly. Without it, items near
@@ -181,18 +151,6 @@ const css = /* css */ `
         opacity: 0;
         pointer-events: none;
       }
-    }
-
-    &[data-focus] {
-      /* outline: var(--list-outline-width) solid var(--navi-focus-outline-color);
-      outline-offset: calc(-1 * var(--list-outline-width)); */
-    }
-    &[data-focus-visible] {
-      outline-style: solid;
-    }
-
-    &[data-callout] {
-      --x-list-border-color: var(--callout-color);
     }
   }
 
@@ -244,71 +202,6 @@ const css = /* css */ `
     /* When list has sticky header/footer, put a scroll padding */
     scroll-margin-top: var(--x-list-scroll-spacing-top);
     scroll-margin-bottom: var(--x-list-scroll-spacing-bottom);
-
-    &[data-interactive] {
-      cursor: pointer;
-      user-select: none;
-    }
-    &[data-pointed] {
-      --x-list-item-color: var(--list-item-color-mouse-pointed);
-      --x-list-item-background-color: var(
-        --list-item-background-color-mouse-pointed
-      );
-    }
-    &[data-selected] {
-      --x-list-item-color: var(--list-item-color-selected);
-      --x-list-item-background-color: var(
-        --list-item-background-color-selected
-      );
-      &[data-pointed] {
-        /* Here important should no beed need, but for some reason it is */
-        --x-list-item-background-color: var(
-          --list-item-background-color-selected,
-          var(--list-item-background-color-mouse-pointed)
-        ) !important;
-      }
-    }
-    &[data-disabled] {
-      --x-list-item-color: var(--list-item-color-disabled);
-      --x-list-item-background-color: var(
-        --list-item-background-color-disabled
-      );
-      cursor: default;
-      pointer-events: none;
-    }
-    &[data-readonly] {
-      --x-list-item-color: var(--list-item-color-disabled);
-      cursor: default;
-    }
-  }
-  .navi_list_container {
-    &[data-focus-within] {
-      .navi_list_item {
-        &[data-pointed-by-keyboard] {
-          --x-list-item-color: var(--list-item-color-keyboard-pointed);
-          --x-list-item-background-color: var(
-            --list-item-background-color-keyboard-pointed
-          );
-        }
-
-        /* Selected must win over pointed-by-keyboard */
-        &[data-selected] {
-          --x-list-item-color: var(--list-item-color-selected);
-          --x-list-item-background-color: var(
-            --list-item-background-color-selected
-          );
-          /* Selected + pointed by keyboard: use keyboard color as fallback
-           so that if --list-item-background-color-selected is reset the
-           keyboard-pointed highlight still shows. */
-          &[data-pointed-by-keyboard] {
-            --x-list-item-background-color: var(
-              --list-item-background-color-selected,
-              var(--list-item-background-color-keyboard-pointed)
-            );
-          }
-        }
-      }
-    }
   }
 
   /* Virtual scroll fillers — must remain invisible.
@@ -412,13 +305,6 @@ const css = /* css */ `
         );
       }
     }
-  }
-
-  .navi_list_select_placeholder {
-    height: 0;
-    padding-block: 0;
-    line-height: 0;
-    overflow: hidden;
   }
 `;
 
