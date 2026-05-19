@@ -84,7 +84,7 @@ export const useFieldgroupInterfaceProps = (
   props,
   { fieldType, childComponentType, aggregateChildStates },
 ) => {
-  const { action, name, children, required } = props;
+  const { action, name, required } = props;
   const debugAction = useDebugAction();
   const uiGroupStateController = useUIGroupStateController(props, fieldType, {
     childComponentType,
@@ -96,39 +96,15 @@ export const useFieldgroupInterfaceProps = (
     action,
     uiGroupStateController.uiStateSignal,
   );
-
-  let childrenWithContext;
-  if (children === undefined) {
-    childrenWithContext = undefined;
-  } else {
-    childrenWithContext = (
-      <ActionContext.Provider value={boundAction}>
-        <ParentUIStateControllerContext.Provider value={uiGroupStateController}>
-          <FieldNameContext.Provider value={name}>
-            <RequiredContext.Provider value={required}>
-              {children}
-            </RequiredContext.Provider>
-          </FieldNameContext.Provider>
-        </ParentUIStateControllerContext.Provider>
-      </ActionContext.Provider>
-    );
-  }
-
   const [actionRequester, setActionRequester] = useState();
-  const actionProps = useActionProps(
-    {
-      ...props,
-      children: childrenWithContext,
+  const actionProps = useActionProps(props, {
+    action: boundAction,
+    uiStateController: uiGroupStateController,
+    readUIState: () => {
+      return uiGroupStateController.uiStateSignal.peek();
     },
-    {
-      action: boundAction,
-      uiStateController: uiGroupStateController,
-      readUIState: () => {
-        return uiGroupStateController.uiStateSignal.peek();
-      },
-    },
-  );
-
+  });
+  let childrenWithContext;
   if (actionProps.children === undefined) {
     childrenWithContext = undefined;
   } else {
@@ -138,15 +114,23 @@ export const useFieldgroupInterfaceProps = (
     const loading = basePseudoState[":-navi-loading"];
 
     childrenWithContext = (
-      <ActionRequesterContext.Provider value={actionRequester}>
-        <ReadOnlyContext.Provider value={readOnly}>
+      <FieldNameContext.Provider value={name}>
+        <ParentUIStateControllerContext.Provider value={uiGroupStateController}>
           <DisabledContext.Provider value={disabled}>
-            <LoadingContext.Provider value={loading}>
-              {actionProps.children}
-            </LoadingContext.Provider>
+            <ReadOnlyContext.Provider value={readOnly}>
+              <RequiredContext.Provider value={required}>
+                <LoadingContext.Provider value={loading}>
+                  <ActionContext.Provider value={boundAction}>
+                    <ActionRequesterContext.Provider value={actionRequester}>
+                      {actionProps.children}
+                    </ActionRequesterContext.Provider>
+                  </ActionContext.Provider>
+                </LoadingContext.Provider>
+              </RequiredContext.Provider>
+            </ReadOnlyContext.Provider>
           </DisabledContext.Provider>
-        </ReadOnlyContext.Provider>
-      </ActionRequesterContext.Provider>
+        </ParentUIStateControllerContext.Provider>
+      </FieldNameContext.Provider>
     );
   }
 
