@@ -9,33 +9,42 @@
       body {
         max-width: 700px;
         margin: 0 auto;
-        padding: 40px 20px;
+        padding: 20px;
         font-family:
           -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         background: #f5f5f5;
       }
 
       h1 {
-        margin-bottom: 32px;
+        margin-bottom: 30px;
         color: #333;
-        font-size: 1.8rem;
+        font-size: 2rem;
         text-align: center;
       }
 
+      h2.section-title {
+        margin: 40px 0 12px;
+        color: #555;
+        font-weight: 700;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
       .demo-section {
-        margin-bottom: 32px;
-        padding: 24px;
+        margin-bottom: 40px;
+        padding: 20px;
         background: white;
         border-radius: 8px;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
       }
 
       .demo-section h2 {
-        margin: 0 0 8px;
+        margin: 0 0 20px;
         padding-bottom: 10px;
         color: #333;
-        font-size: 1.1rem;
-        border-bottom: 2px solid #eee;
+        font-size: 1.4rem;
+        border-bottom: 2px solid #ddd;
       }
 
       .demo-section p {
@@ -61,28 +70,6 @@
         font-style: italic;
         content: "(none selected)";
       }
-
-      /* Icon radio styles */
-      .icon-radio {
-        display: flex;
-        width: 28px;
-        height: 28px;
-        flex-shrink: 0;
-        align-items: center;
-        justify-content: center;
-        background: white;
-        border: 2px solid #ccc;
-        border-radius: 6px;
-        transition:
-          border-color 0.15s,
-          background 0.15s;
-        pointer-events: none;
-      }
-      [data-selected] .icon-radio {
-        color: white;
-        background: #1a73e8;
-        border-color: #1a73e8;
-      }
     </style>
   </head>
   <body>
@@ -92,22 +79,24 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      import { Box, NaviDebug, SelectableList, Selectable } from "@jsenv/navi";
+      import { NaviDebug, SelectableList, Selectable } from "@jsenv/navi";
 
       const App = () => {
         return (
           <NaviDebug debugAction debugInteraction>
             <BasicDemo />
             <ReadOnlyDemo />
+            <FormDemo />
+            <h2 className="section-title">Customization</h2>
             <InputDemo />
             <IconInputDemo />
           </NaviDebug>
         );
       };
 
-      // ── 1. Basic selectable list (no input shown) ──────────────────────────────
-
       const FRUITS = ["Apple", "Banana", "Cherry", "Date", "Elderberry"];
+
+      // ── Basic selectable list ──────────────────────────────────────────────────
 
       const BasicDemo = () => {
         const [selected, setSelected] = useState(null);
@@ -115,8 +104,8 @@
           <div className="demo-section">
             <h2>Basic selectable list</h2>
             <p>
-              A plain list of selectable items. No <code>Selectable.Input</code>{" "}
-              is used — only text is shown inside each item.
+              A plain list of selectable items — only text, no{" "}
+              <code>Selectable.Input</code>.
             </p>
             <SelectableList
               action={(v) => {
@@ -144,7 +133,7 @@
         );
       };
 
-      // ── 2. ReadOnly items ──────────────────────────────────────────────────────
+      // ── ReadOnly items ─────────────────────────────────────────────────────────
 
       const ReadOnlyDemo = () => {
         const [selected, setSelected] = useState(null);
@@ -223,17 +212,75 @@
         );
       };
 
-      // ── 3. Selectable.Input — radio at the start ───────────────────────────────
+      // ── Form integration ───────────────────────────────────────────────────────
+
+      const FormDemo = () => {
+        const [selected, setSelected] = useState(null);
+        const [submitted, setSubmitted] = useState(null);
+        return (
+          <div className="demo-section">
+            <h2>Form integration</h2>
+            <p>
+              <code>SelectableList</code> works inside a native{" "}
+              <code>&lt;form&gt;</code>. The selected value is submitted under
+              the list's <code>name</code>.
+            </p>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const data = new FormData(e.currentTarget);
+                setSubmitted(data.get("fruit") ?? "(none)");
+              }}
+            >
+              <SelectableList
+                name="fruit"
+                action={(v) => {
+                  setSelected(v);
+                }}
+              >
+                {FRUITS.map((fruit, i) => (
+                  <Selectable
+                    key={fruit}
+                    index={i}
+                    id={`form_${fruit.toLowerCase()}`}
+                    value={fruit}
+                    selected={selected === fruit}
+                    flex
+                    spacing="s"
+                  >
+                    {fruit}
+                  </Selectable>
+                ))}
+              </SelectableList>
+              <button
+                type="submit"
+                style={{
+                  marginTop: 12,
+                  padding: "6px 16px",
+                  cursor: "pointer",
+                }}
+              >
+                Submit
+              </button>
+            </form>
+            <div className="value-display">
+              {submitted !== null ? `Submitted: ${submitted}` : ""}
+            </div>
+          </div>
+        );
+      };
+
+      // ── Selectable.Input — radio at the start ──────────────────────────────────
 
       const InputDemo = () => {
         const [selected, setSelected] = useState(null);
         return (
           <div className="demo-section">
-            <h2>With Selectable.Input (radio at start)</h2>
+            <h2>Selectable.Input</h2>
             <p>
               <code>Selectable.Input</code> renders a decorative radio that
-              mirrors the selection state. It is not mandatory — it is purely a
-              visual cue and can be placed anywhere inside the{" "}
+              mirrors the selection state. It is purely a visual cue — not
+              mandatory — and can be placed anywhere inside the{" "}
               <code>Selectable</code>.
             </p>
             <SelectableList
@@ -263,7 +310,19 @@
         );
       };
 
-      // ── 4. Custom icon input at the end ───────────────────────────────────────
+      // ── Custom icon input at the end ───────────────────────────────────────────
+
+      const CircleIcon = () => (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+          <circle
+            cx="12"
+            cy="12"
+            r="9"
+            stroke="currentColor"
+            stroke-width="2.5"
+          />
+        </svg>
+      );
 
       const CheckIcon = () => (
         <svg
@@ -284,11 +343,12 @@
         const [selected, setSelected] = useState(null);
         return (
           <div className="demo-section">
-            <h2>Custom icon input (at end)</h2>
+            <h2>Custom icons</h2>
             <p>
-              <code>Selectable.Input</code> can be replaced by any decorative
-              element. Here a custom icon badge is placed at the <em>end</em> of
-              each item to indicate selection.
+              Pass <code>icons={`{[uncheckedIcon, checkedIcon]}`}</code> to{" "}
+              <code>Selectable.Input</code> to render custom icons instead of
+              the default radio mark. Here the input is placed at the{" "}
+              <em>end</em> to show it can go anywhere.
             </p>
             <SelectableList
               action={(v) => {
@@ -308,9 +368,7 @@
                   alignY="center"
                 >
                   <span style={{ flex: 1 }}>{fruit}</span>
-                  <span className="icon-radio">
-                    {selected === fruit ? <CheckIcon /> : null}
-                  </span>
+                  <Selectable.Input icons={[<CircleIcon />, <CheckIcon />]} />
                 </Selectable>
               ))}
             </SelectableList>

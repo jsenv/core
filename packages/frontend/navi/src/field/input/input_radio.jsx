@@ -347,7 +347,8 @@ const InputRadioFieldInterface = (props) => {
     onInput,
     onKeyDown,
     icon,
-    appearance = icon ? "icon" : "radio",
+    icons,
+    appearance = icons || icon ? "icon" : "radio",
     color,
     accentColor,
   } = props;
@@ -440,6 +441,8 @@ const InputRadioFieldInterface = (props) => {
         <circle className="navi_radio_marker" cx="6" cy="6" r="3.5" />
       </svg>
     );
+  } else if (icons) {
+    visualVNode = checked ? icons[1] : icons[0];
   } else {
     visualVNode = icon;
   }

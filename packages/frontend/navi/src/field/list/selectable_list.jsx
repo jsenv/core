@@ -304,6 +304,9 @@ export const Selectable = (props) => {
       filtered={filtered}
       hidden={hidden}
       pseudoClasses={SELECTABLE_PSEUDO_CLASSES}
+      // todo; not enough, we must subscribe to the input state
+      data-selected={selected || undefined}
+      aria-selected={selected ? "true" : "false"}
     >
       <Field
         id={inputId}
@@ -362,7 +365,7 @@ const SelectableRealInput = ({ ref, type, selected }) => {
 const SelectableInputProxy = (props) => {
   const defaultRef = useRef();
   props.ref = props.ref || defaultRef;
-  const { ref } = props;
+  const { ref, icons } = props;
   const {
     id: realInputId,
     ref: realInputRef,
@@ -398,6 +401,7 @@ const SelectableInputProxy = (props) => {
         aria-hidden="true"
         tabIndex={-1}
         checked={realInputSelected}
+        icons={icons}
         onMouseDown={(e) => {
           // const proxyInput = e.currentTarget;
           // transfer focus to the real input
