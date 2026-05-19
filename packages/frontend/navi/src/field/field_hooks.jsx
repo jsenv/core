@@ -21,6 +21,8 @@ import {
 import { resolveActionProp } from "./string_actions.js";
 import {
   ParentUIStateControllerContext,
+  requestResetUIState,
+  requestSetUIState,
   useUIGroupStateController,
   useUIState,
   useUIStateController,
@@ -278,7 +280,7 @@ const useActionProps = (
       ":-navi-loading": loadingResolved,
     },
     "onnavi_request_reset_ui_state": (e) => {
-      uiStateController.resetUIState(e);
+      requestSetUIState(e.currentTarget, uiStateController.state, { event: e });
     },
     "onnavi_request_ui_state": (e) => {
       e.detail.respondWith(readUIState(e));
@@ -297,7 +299,7 @@ const useActionProps = (
         if (reason.startsWith("blur_invalid")) {
           return;
         }
-        uiStateController.resetUIState(e);
+        requestResetUIState(e.currentTarget, e);
         onCancel?.(e, reason);
         return;
       }
@@ -349,19 +351,19 @@ const useActionProps = (
       }
 
       const { uiState } = e.detail;
-      uiStateController.setUIState(uiState, e);
+      requestSetUIState(e.currentTarget, uiState, { event: e.detail.event });
       executeAction(e);
     },
     "onnavi_action_abort": (e) => {
       if (resetOnAbort) {
-        uiStateController.resetUIState(e);
+        requestResetUIState(e.currentTarget, e);
       }
       onActionAborted?.(e);
     },
     "onnavi_action_error": (e) => {
       const { error } = e.detail;
       if (resetOnError) {
-        uiStateController.resetUIState(e);
+        requestResetUIState(e.currentTarget, e);
       }
       onActionError?.(error, e);
     },

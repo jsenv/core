@@ -19,6 +19,7 @@ import {
   useLayoutEffect,
   useMemo,
   useRef,
+  useState,
 } from "preact/hooks";
 
 import { BoxForwardedPropsContext } from "@jsenv/navi/src/box/box.jsx";
@@ -296,6 +297,30 @@ export const Selectable = (props) => {
     };
   }, [inputId, inputType, selected]);
 
+  const [checkedState, setCheckedState] = useState(selected);
+  useLayoutEffect(() => {
+    setCheckedState(selected);
+  }, [selected]);
+  useLayoutEffect(() => {
+    const realInput = inputRef.current;
+    if (!realInput) {
+      return undefined;
+    }
+    const onnavi_set_ui_state = (e) => {
+      console.log(
+        "received set ui_state",
+        e.detail.value,
+        "for",
+        e.currentTarget,
+      );
+      setCheckedState(e.detail.value);
+    };
+    realInput.addEventListener("navi_set_ui_state", onnavi_set_ui_state);
+    return () => {
+      realInput.removeEventListener("navi_set_ui_state", onnavi_set_ui_state);
+    };
+  }, []);
+
   return (
     <ListItem
       id={id}
@@ -304,9 +329,8 @@ export const Selectable = (props) => {
       filtered={filtered}
       hidden={hidden}
       pseudoClasses={SELECTABLE_PSEUDO_CLASSES}
-      // todo; not enough, we must subscribe to the input state
-      data-selected={selected || undefined}
-      aria-selected={selected ? "true" : "false"}
+      data-selected={checkedState || undefined}
+      aria-selected={checkedState ? "true" : "false"}
     >
       <Field
         id={inputId}
