@@ -6,10 +6,20 @@ import {
   isDocumentElement,
 } from "../../utils.js";
 
-export const elementIsVisibleForFocus = (node) => {
-  return getFocusVisibilityInfo(node).visible;
+/**
+ * Returns whether a node is visible from a focus/keyboard-navigation perspective.
+ * This intentionally ignores purely visual properties (opacity, clip, off-screen)
+ * and only checks structural visibility: hidden attribute, display:none, visibility:hidden,
+ * closed <details>/<dialog>/popover ancestors, and optionally aria-hidden ancestry.
+ *
+ * @param {Node} node
+ * @param {{ excludeAriaHidden?: boolean }} [options]
+ * @returns {boolean}
+ */
+export const elementIsVisibleForFocus = (node, { excludeAriaHidden } = {}) => {
+  return getFocusVisibilityInfo(node, { excludeAriaHidden }).visible;
 };
-export const getFocusVisibilityInfo = (node) => {
+export const getFocusVisibilityInfo = (node, { excludeAriaHidden } = {}) => {
   if (isDocumentElement(node)) {
     return { visible: true, reason: "is document" };
   }
@@ -26,6 +36,12 @@ export const getFocusVisibilityInfo = (node) => {
   while (nodeOrAncestor) {
     if (isDocumentElement(nodeOrAncestor)) {
       break;
+    }
+    if (
+      excludeAriaHidden &&
+      nodeOrAncestor.getAttribute("aria-hidden") === "true"
+    ) {
+      return { visible: false, reason: "inside aria-hidden element" };
     }
     if (getStyle(nodeOrAncestor, "display") === "none") {
       return { visible: false, reason: "ancestor uses display: none" };

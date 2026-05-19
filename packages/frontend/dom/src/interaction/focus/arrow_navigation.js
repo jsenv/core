@@ -14,7 +14,7 @@ const DEBUG = false;
 export const performArrowNavigation = (
   event,
   element,
-  { direction = "both", loop, name } = {},
+  { direction = "both", loop, name, excludeAriaHidden } = {},
 ) => {
   if (!canInterceptKeys(event, { intent: "override_arrow_navigation" })) {
     return false;
@@ -25,6 +25,9 @@ export const performArrowNavigation = (
     // (and it would prevent scroll via keyboard that we might want here)
     return true;
   }
+
+  const predicate = (candidate) =>
+    elementIsFocusable(candidate, { excludeAriaHidden });
 
   const onTargetToFocus = (targetToFocus) => {
     if (DEBUG) {
@@ -43,7 +46,10 @@ export const performArrowNavigation = (
   // Grid navigation: we support only TABLE element for now
   // A role="table" or an element with display: table could be used too but for now we need only TABLE support
   if (element.tagName === "TABLE") {
-    const targetInGrid = getTargetInTableFocusGroup(event, element, { loop });
+    const targetInGrid = getTargetInTableFocusGroup(event, element, {
+      loop,
+      predicate,
+    });
     if (!targetInGrid) {
       return false;
     }
@@ -55,6 +61,7 @@ export const performArrowNavigation = (
     direction,
     loop,
     name,
+    predicate,
   });
   if (!targetInLinearGroup) {
     return false;
@@ -66,7 +73,7 @@ export const performArrowNavigation = (
 const getTargetInLinearFocusGroup = (
   event,
   element,
-  { direction, loop, name },
+  { direction, loop, name, predicate },
 ) => {
   const activeElement = document.activeElement;
 
@@ -74,7 +81,7 @@ const getTargetInLinearFocusGroup = (
   const isJumpToEnd = event.metaKey || event.ctrlKey;
 
   if (isJumpToEnd) {
-    return getJumpToEndTargetLinear(event, element, direction);
+    return getJumpToEndTargetLinear(event, element, direction, predicate);
   }
 
   const isForward = isForwardArrow(event, direction);
@@ -84,7 +91,7 @@ const getTargetInLinearFocusGroup = (
     if (!isBackwardArrow(event, direction)) {
       break backward;
     }
-    const previousElement = findBefore(activeElement, elementIsFocusable, {
+    const previousElement = findBefore(activeElement, predicate, {
       root: element,
     });
     if (previousElement) {
@@ -92,15 +99,13 @@ const getTargetInLinearFocusGroup = (
     }
     const ancestorTarget = delegateArrowNavigation(event, element, {
       name,
+      predicate,
     });
     if (ancestorTarget) {
       return ancestorTarget;
     }
     if (loop) {
-      const lastFocusableElement = findLastDescendant(
-        element,
-        elementIsFocusable,
-      );
+      const lastFocusableElement = findLastDescendant(element, predicate);
       if (lastFocusableElement) {
         return lastFocusableElement;
       }
@@ -113,7 +118,7 @@ const getTargetInLinearFocusGroup = (
     if (!isForward) {
       break forward;
     }
-    const nextElement = findAfter(activeElement, elementIsFocusable, {
+    const nextElement = findAfter(activeElement, predicate, {
       root: element,
     });
     if (nextElement) {
@@ -121,13 +126,14 @@ const getTargetInLinearFocusGroup = (
     }
     const ancestorTarget = delegateArrowNavigation(event, element, {
       name,
+      predicate,
     });
     if (ancestorTarget) {
       return ancestorTarget;
     }
     if (loop) {
       // No next element, wrap to first focusable in group
-      const firstFocusableElement = findDescendant(element, elementIsFocusable);
+      const firstFocusableElement = findDescendant(element, predicate);
       if (firstFocusableElement) {
         return firstFocusableElement;
       }
@@ -138,7 +144,11 @@ const getTargetInLinearFocusGroup = (
   return null;
 };
 // Find parent focus group with the same name and try delegation
-const delegateArrowNavigation = (event, currentElement, { name }) => {
+const delegateArrowNavigation = (
+  event,
+  currentElement,
+  { name, predicate },
+) => {
   let ancestorElement = currentElement.parentElement;
   while (ancestorElement) {
     const ancestorFocusGroup = getFocusGroup(ancestorElement);
@@ -166,6 +176,7 @@ const delegateArrowNavigation = (event, currentElement, { name }) => {
         direction: ancestorFocusGroup.direction,
         loop: ancestorFocusGroup.loop,
         name: ancestorFocusGroup.name,
+        predicate,
       });
     }
   }
@@ -173,7 +184,7 @@ const delegateArrowNavigation = (event, currentElement, { name }) => {
 };
 
 // Handle Cmd/Ctrl + arrow keys for linear focus groups to jump to start/end
-const getJumpToEndTargetLinear = (event, element, direction) => {
+const getJumpToEndTargetLinear = (event, element, direction, predicate) => {
   // Check if this arrow key is valid for the given direction
   if (!isForwardArrow(event, direction) && !isBackwardArrow(event, direction)) {
     return null;
@@ -181,12 +192,12 @@ const getJumpToEndTargetLinear = (event, element, direction) => {
 
   if (isBackwardArrow(event, direction)) {
     // Jump to first focusable element in the group
-    return findDescendant(element, elementIsFocusable);
+    return findDescendant(element, predicate);
   }
 
   if (isForwardArrow(event, direction)) {
     // Jump to last focusable element in the group
-    return findLastDescendant(element, elementIsFocusable);
+    return findLastDescendant(element, predicate);
   }
 
   return null;
@@ -211,7 +222,7 @@ const isForwardArrow = (event, direction = "both") => {
 
 // Handle arrow navigation inside an HTMLTableElement as a grid.
 // Moves focus to adjacent cell in the direction of the arrow key.
-const getTargetInTableFocusGroup = (event, table, { loop }) => {
+const getTargetInTableFocusGroup = (event, table, { loop, predicate }) => {
   const arrowKey = event.key;
 
   // Only handle arrow keys
@@ -229,7 +240,7 @@ const getTargetInTableFocusGroup = (event, table, { loop }) => {
 
   // If we're not currently in a table cell, try to focus the first focusable element in the table
   if (!currentCell || !table.contains(currentCell)) {
-    return findDescendant(table, elementIsFocusable) || null;
+    return findDescendant(table, predicate) || null;
   }
 
   // Get the current position in the table grid
@@ -249,6 +260,7 @@ const getTargetInTableFocusGroup = (event, table, { loop }) => {
       allRows,
       currentRowIndex,
       currentColumnIndex,
+      predicate,
     );
   }
 
@@ -263,7 +275,7 @@ const getTargetInTableFocusGroup = (event, table, { loop }) => {
 
   // Find the first cell that is itself focusable
   for (const candidateCell of candidateCells) {
-    if (elementIsFocusable(candidateCell)) {
+    if (predicate(candidateCell)) {
       return candidateCell;
     }
   }
@@ -277,6 +289,7 @@ const getJumpToEndTarget = (
   allRows,
   currentRowIndex,
   currentColumnIndex,
+  predicate,
 ) => {
   if (arrowKey === "ArrowRight") {
     // Jump to last focusable cell in current row
@@ -287,7 +300,7 @@ const getJumpToEndTarget = (
     const cells = Array.from(currentRow.cells);
     for (let i = cells.length - 1; i >= 0; i--) {
       const cell = cells[i];
-      if (elementIsFocusable(cell)) {
+      if (predicate(cell)) {
         return cell;
       }
     }
@@ -301,7 +314,7 @@ const getJumpToEndTarget = (
 
     const cells = Array.from(currentRow.cells);
     for (const cell of cells) {
-      if (elementIsFocusable(cell)) {
+      if (predicate(cell)) {
         return cell;
       }
     }
@@ -313,7 +326,7 @@ const getJumpToEndTarget = (
     for (let rowIndex = allRows.length - 1; rowIndex >= 0; rowIndex--) {
       const row = allRows[rowIndex];
       const cell = row?.cells?.[currentColumnIndex];
-      if (cell && elementIsFocusable(cell)) {
+      if (cell && predicate(cell)) {
         return cell;
       }
     }
@@ -325,7 +338,7 @@ const getJumpToEndTarget = (
     for (let rowIndex = 0; rowIndex < allRows.length; rowIndex++) {
       const row = allRows[rowIndex];
       const cell = row?.cells?.[currentColumnIndex];
-      if (cell && elementIsFocusable(cell)) {
+      if (cell && predicate(cell)) {
         return cell;
       }
     }

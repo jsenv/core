@@ -14,6 +14,7 @@ export const performTabNavigation = (
     rootElement = document.body,
     outsideOfElement = null,
     debug = () => {},
+    excludeAriaHidden,
   } = {},
 ) => {
   if (!isTabEvent(event)) {
@@ -35,6 +36,12 @@ export const performTabNavigation = (
     event.preventDefault();
     markFocusNav(event);
     targetToFocus.focus();
+  };
+  const isFocusableByTab = (element) => {
+    if (hasNegativeTabIndex(element)) {
+      return false;
+    }
+    return elementIsFocusable(element, { excludeAriaHidden });
   };
 
   const predicate = (candidate) => {
@@ -109,12 +116,6 @@ export const performTabNavigation = (
 
 export const isTabEvent = (event) => event.key === "Tab" || event.keyCode === 9;
 
-const isFocusableByTab = (element) => {
-  if (hasNegativeTabIndex(element)) {
-    return false;
-  }
-  return elementIsFocusable(element);
-};
 const hasNegativeTabIndex = (element) => {
   return (
     element.hasAttribute &&

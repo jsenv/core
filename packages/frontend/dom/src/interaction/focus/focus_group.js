@@ -20,6 +20,7 @@ export const initFocusGroup = (
     skipTab = true,
     loop = false,
     name, // Can be undefined for implicit ancestor-descendant grouping
+    excludeAriaHidden = true,
   } = {},
 ) => {
   const cleanupCallbackSet = new Set();
@@ -47,7 +48,10 @@ export const initFocusGroup = (
         // Prevent double handling of the same event + allow preventing focus nav from outside
         return;
       }
-      performTabNavigation(event, { outsideOfElement: element });
+      performTabNavigation(event, {
+        outsideOfElement: element,
+        excludeAriaHidden,
+      });
     };
     // Handle Tab navigation (exit group)
     element.addEventListener("keydown", handleTabKeyDown, {
@@ -71,7 +75,12 @@ export const initFocusGroup = (
         // Prevent double handling of the same event + allow preventing focus nav from outside
         return;
       }
-      performArrowNavigation(event, element, { direction, loop, name });
+      performArrowNavigation(event, element, {
+        direction,
+        loop,
+        name,
+        excludeAriaHidden,
+      });
     };
     element.addEventListener("keydown", handleArrowKeyDown, {
       // we must use capture: false to let chance for other part of the code

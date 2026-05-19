@@ -62,7 +62,7 @@ const css = /* css */ `
 
     &[data-focus-within] {
       .navi_list_item {
-        &[data-focus-visible] {
+        &[data-focus-within]:has([data-focus-visible]) {
           --x-list-item-color: var(--list-item-color-keyboard-pointed);
           --x-list-item-background-color: var(
             --list-item-background-color-keyboard-pointed
@@ -78,7 +78,7 @@ const css = /* css */ `
           /* Selected + pointed by keyboard: use keyboard color as fallback
            so that if --list-item-background-color-selected is reset the
            keyboard-pointed highlight still shows. */
-          &[data-focus-visible] {
+          &[data-focus-within]:has([data-focus-visible]) {
             --x-list-item-background-color: var(
               --list-item-background-color-selected,
               var(--list-item-background-color-keyboard-pointed)
