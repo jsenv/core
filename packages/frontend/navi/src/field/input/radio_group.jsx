@@ -5,6 +5,16 @@ import { useFocusGroup } from "../../utils/focus/use_focus_group.js";
 import { useFieldgroupInterfaceProps } from "../field_hooks.jsx";
 import { dispatchRequestAction } from "../validation/custom_constraint_validation.js";
 
+const css = /* css */ `
+  .navi_radio_fieldset {
+    border-style: solid;
+
+    &[data-callout] {
+      border-color: var(--callout-color);
+    }
+  }
+`;
+
 export const RadioGroup = (props) => {
   const refDefault = useRef(null);
   props.ref = props.ref || refDefault;
@@ -16,6 +26,7 @@ export const RadioGroup = (props) => {
 };
 
 const RadioGroupInterface = (props) => {
+  import.meta.css = css;
   const fieldgroupInterfaceProps = useFieldgroupInterfaceProps(
     {
       resetOnCancel: true,
@@ -48,6 +59,7 @@ const RadioGroupInterface = (props) => {
       {...fieldgroupInterfaceProps}
       name={undefined}
       baseClassName="navi_radio_fieldset"
+      data-callout-anchor="legend"
       onChange={(e) => {
         // we rely on change event bubbling but we want to catch only the relevant radio change events
         const target = e.target;

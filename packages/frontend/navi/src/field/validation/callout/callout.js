@@ -441,9 +441,24 @@ export const openCallout = (
       }
     }
   }
+  // Resolve the visual anchor for positioning: when data-callout-anchor is set,
+  // use the inner element it points to. anchorElement remains the container
+  // that receives data-callout and CSS vars.
+  let visualAnchorElement = anchorElement;
+  if (anchorElement && anchorElement !== document.body) {
+    const calloutAnchorSelector = anchorElement.getAttribute(
+      "data-callout-anchor",
+    );
+    if (calloutAnchorSelector) {
+      const resolvedAnchor = anchorElement.querySelector(calloutAnchorSelector);
+      if (resolvedAnchor) {
+        visualAnchorElement = resolvedAnchor;
+      }
+    }
+  }
   const calloutContainer =
     anchorElement && anchorElement !== document.body
-      ? anchorElement.parentNode
+      ? anchorElement
       : document.body;
   calloutContainer.appendChild(calloutElement);
   calloutElement.showPopover();
@@ -453,7 +468,7 @@ export const openCallout = (
   });
 
   if (anchorElement) {
-    allowWheelThrough(calloutElement, anchorElement);
+    allowWheelThrough(calloutElement, visualAnchorElement);
     anchorElement.setAttribute("data-callout", calloutId);
     addTeardown(() => {
       anchorElement.removeAttribute("data-callout");
@@ -478,9 +493,6 @@ export const openCallout = (
       if (!status) {
         return () => {};
       }
-      // todo:
-      // - dispatch something on the element to indicate the status
-      // and that would in turn be used by pseudo styles system to eventually apply styles
       const statusColor = resolveCSSColor(
         `var(--callout-${status}-color)`,
         calloutElement,
@@ -494,16 +506,16 @@ export const openCallout = (
     });
     addStatusEffect((status) => {
       if (!status || status === "info" || status === "success") {
-        anchorElement.setAttribute("aria-describedby", calloutId);
+        visualAnchorElement.setAttribute("aria-describedby", calloutId);
         return () => {
-          anchorElement.removeAttribute("aria-describedby");
+          visualAnchorElement.removeAttribute("aria-describedby");
         };
       }
-      anchorElement.setAttribute("aria-errormessage", calloutId);
-      anchorElement.setAttribute("aria-invalid", "true");
+      visualAnchorElement.setAttribute("aria-errormessage", calloutId);
+      visualAnchorElement.setAttribute("aria-invalid", "true");
       return () => {
-        anchorElement.removeAttribute("aria-errormessage");
-        anchorElement.removeAttribute("aria-invalid");
+        visualAnchorElement.removeAttribute("aria-errormessage");
+        visualAnchorElement.removeAttribute("aria-invalid");
       };
     });
 
@@ -518,9 +530,9 @@ export const openCallout = (
         }
         requestClose(e, "target_element_focus");
       };
-      anchorElement.addEventListener("focus", onfocus);
+      visualAnchorElement.addEventListener("focus", onfocus);
       addTeardown(() => {
-        anchorElement.removeEventListener("focus", onfocus);
+        visualAnchorElement.removeEventListener("focus", onfocus);
       });
     }
     anchorElement.callout = callout;
@@ -538,11 +550,11 @@ export const openCallout = (
     let positioner;
     let strategy;
     const determine = () => {
-      if (!anchorElement) {
+      if (!visualAnchorElement) {
         return "centered";
       }
       // Check if anchor element is too big to reasonably position callout relative to it
-      const anchorRect = anchorElement.getBoundingClientRect();
+      const anchorRect = visualAnchorElement.getBoundingClientRect();
       const viewportHeight = window.innerHeight;
       const anchorTooBig = anchorRect.height > viewportHeight - 50;
       if (anchorTooBig) {
@@ -551,7 +563,7 @@ export const openCallout = (
       return "anchored";
     };
     const updatePositioner = () => {
-      const newStrategy = determine(anchorElement);
+      const newStrategy = determine();
       if (newStrategy === strategy) {
         return;
       }
@@ -562,7 +574,7 @@ export const openCallout = (
           documentScrollTopAtOpen,
         });
       } else {
-        positioner = stickCalloutToAnchor(calloutElement, anchorElement, {
+        positioner = stickCalloutToAnchor(calloutElement, visualAnchorElement, {
           debug,
         });
       }

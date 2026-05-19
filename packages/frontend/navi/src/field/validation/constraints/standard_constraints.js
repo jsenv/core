@@ -60,7 +60,7 @@ export const REQUIRED_CONSTRAINT = {
           message: naviI18n("constraint.required.checkbox_group"),
           target:
             checkboxSetContainer.tagName === "FIELDSET"
-              ? checkboxSetContainer.querySelector("legend")
+              ? checkboxSetContainer
               : undefined,
         };
       }
@@ -101,7 +101,7 @@ export const REQUIRED_CONSTRAINT = {
         message: naviI18n("constraint.required.radio"),
         target:
           radioSetContainer.tagName === "FIELDSET"
-            ? radioSetContainer.querySelector("legend")
+            ? radioSetContainer
             : undefined,
       };
     }
