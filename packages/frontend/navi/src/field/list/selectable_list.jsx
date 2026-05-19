@@ -377,12 +377,14 @@ const SelectableInputProxy = (props) => {
     if (!realInput) {
       return undefined;
     }
-    const sync = (event) => {
-      requestSetUIState(proxyInput, realInput.checked, { event });
+    const onnavi_set_ui_state = (e) => {
+      requestSetUIState(proxyInput, e.detail.value, {
+        event: e.detail.event,
+      });
     };
-    realInput.addEventListener("change", sync);
+    realInput.addEventListener("navi_set_ui_state", onnavi_set_ui_state);
     return () => {
-      realInput.removeEventListener("change", sync);
+      realInput.removeEventListener("navi_set_ui_state", onnavi_set_ui_state);
     };
   }, []);
 

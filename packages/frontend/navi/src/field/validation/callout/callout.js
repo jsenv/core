@@ -782,7 +782,19 @@ const stickCalloutToAnchor = (calloutElement, anchorElement, { debug }) => {
   } else if (anchorElement.hasAttribute("data-callout-point-to-content-box")) {
     alignToAnchorBox = "content-box";
   } else {
-    //
+    // Smart default: inputs and buttons are tight boxes where border-box makes sense.
+    // For everything else (labels, divs, fieldsets…) content-box maximizes the chance
+    // the arrow points at visible text rather than the outer padding/border.
+    const naviFieldSelector = anchorElement.getAttribute("navi-field");
+    const fieldElement = naviFieldSelector
+      ? anchorElement.querySelector(naviFieldSelector)
+      : anchorElement;
+    const tagName = (fieldElement || anchorElement).tagName;
+    if (tagName === "INPUT" || tagName === "BUTTON") {
+      alignToAnchorBox = "border-box";
+    } else {
+      alignToAnchorBox = "content-box";
+    }
   }
 
   // Set initial border styles
