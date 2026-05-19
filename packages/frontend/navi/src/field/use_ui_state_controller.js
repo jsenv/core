@@ -64,7 +64,7 @@ export const useUIStateController = (
   const formContext = useContext(FormContext);
   const pickerElementContext = useContext(PickerElementContext);
   const { id, name, uiAction, action } = props;
-  const isMirror = Boolean(props["navi-mirror"]);
+  const isProxy = Boolean(props["navi-proxy-for"]);
   const hasStateProp = Object.hasOwn(props, statePropName);
   /**
    * This check is needed only for basic field because
@@ -182,7 +182,7 @@ export const useUIStateController = (
     },
 
     componentType,
-    isMirror,
+    isProxy,
     allowNameless,
     readOnly,
     name,
@@ -415,7 +415,7 @@ export const useUIGroupStateController = (
   const [publishUIState, subscribeUIState] = createPubSub();
   const uiStateSignal = signal(emptyState);
   const isMonitoringChild = (childUIStateController) => {
-    if (childUIStateController.isMirror) {
+    if (childUIStateController.isProxy) {
       return false;
     }
     if (childComponentType === "*") {

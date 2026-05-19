@@ -288,13 +288,15 @@ export const Selectable = (props) => {
   const multiple = useContext(SelectableListMultipleContext);
   const inputRef = useRef();
   const inputType = multiple ? "checkbox" : "radio";
+  const inputId = `${id}_input`;
   const realInputContextValue = useMemo(() => {
     return {
+      id: inputId,
       ref: inputRef,
       type: inputType,
       selected,
     };
-  }, [inputType, selected]);
+  }, [inputId, inputType, selected]);
 
   return (
     <ListItem
@@ -306,8 +308,8 @@ export const Selectable = (props) => {
       pseudoClasses={SELECTABLE_PSEUDO_CLASSES}
     >
       <Field
-        id={`${id}_field`}
-        as="div"
+        id={inputId}
+        // as="div"
         requiredMessage={naviI18n(`list_item.readonly`, props)}
         padding="m"
         flex
@@ -364,6 +366,7 @@ const SelectableInputMirror = (props) => {
   props.ref = props.ref || defaultRef;
   const { ref } = props;
   const {
+    id: realInputId,
     ref: realInputRef,
     type: realInputType,
     selected: realInputSelected,
@@ -390,7 +393,7 @@ const SelectableInputMirror = (props) => {
       <Input
         ref={ref}
         name="navi_mirror" // give it a specific name to avoid radio name (would unselect others)
-        navi-mirror // mark this input as a mirror, might be useful to ignore form params for instance
+        navi-proxy-for={realInputId}
         type={realInputType}
         aria-hidden="true"
         tabIndex={-1}

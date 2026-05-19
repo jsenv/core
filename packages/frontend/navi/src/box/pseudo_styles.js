@@ -539,6 +539,8 @@ export const initPseudoStyles = (
     elementListeningPseudoState = null;
   }
 
+  const proxyForId = element.getAttribute("navi-proxy-for");
+
   const onStateChange = (value, oldValue) => {
     effect?.(value, oldValue);
     if (elementListeningPseudoState) {
@@ -547,6 +549,13 @@ export const initPseudoStyles = (
         value,
         oldValue,
       );
+    }
+    // If this element is a proxy for another, notify the target to re-check its pseudo-classes
+    if (proxyForId) {
+      const target = document.getElementById(proxyForId);
+      if (target) {
+        requestPseudoStateCheck(target, {});
+      }
     }
   };
 
@@ -578,6 +587,20 @@ export const initPseudoStyles = (
         const { test } = pseudoClassDefinition;
         if (test) {
           currentValue = test(element, pseudoState);
+        }
+      }
+      // If the element itself isn't in this state, check if any proxy element is.
+      // A proxy element declares navi-proxy-for="{element.id}" and its active
+      // pseudo-state propagates upward so the target also appears active.
+      if (!currentValue && element.id) {
+        const { attribute } = pseudoClassDefinition;
+        if (attribute) {
+          const proxy = document.querySelector(
+            `[navi-proxy-for="${element.id}"]`,
+          );
+          if (proxy.hasAttribute(attribute)) {
+            currentValue = true;
+          }
         }
       }
       currentState[pseudoClass] = currentValue;
