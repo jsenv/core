@@ -6,7 +6,7 @@ import { useFieldgroupInterfaceProps } from "../field_hooks.jsx";
 import { dispatchRequestAction } from "../validation/custom_constraint_validation.js";
 
 const css = /* css */ `
-  .navi_radio_fieldset {
+  .navi_radio_group {
     border-style: solid;
 
     &[data-callout] {
@@ -35,7 +35,7 @@ const RadioGroupInterface = (props) => {
       ...props,
     },
     {
-      fieldType: "radio_fieldset",
+      fieldType: "radio_group",
       childComponentType: "radio",
       aggregateChildStates: (childUIStateControllers) => {
         let activeValue;
@@ -58,7 +58,7 @@ const RadioGroupInterface = (props) => {
       flex="y"
       {...fieldgroupInterfaceProps}
       name={undefined}
-      baseClassName="navi_radio_fieldset"
+      baseClassName="navi_radio_group"
       data-callout-anchor="legend"
       onChange={(e) => {
         // we rely on change event bubbling but we want to catch only the relevant radio change events
@@ -69,8 +69,8 @@ const RadioGroupInterface = (props) => {
         if (target.name !== name) {
           return;
         }
-        const radioFieldset = ref.current;
-        dispatchRequestAction(radioFieldset, {
+        const radioGroup = ref.current;
+        dispatchRequestAction(radioGroup, {
           event: e,
           requester: target,
         });

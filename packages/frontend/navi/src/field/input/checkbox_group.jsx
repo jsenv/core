@@ -1,22 +1,34 @@
 // TOFIX: select in data then reset, it reset to red/blue instead of red/blue/green
 
-import { useRef } from "preact/hooks";
+import { useId, useRef } from "preact/hooks";
 
 import { Box } from "../../box/box.jsx";
 import { useFocusGroup } from "../../utils/focus/use_focus_group.js";
 import { useFieldgroupInterfaceProps } from "../field_hooks.jsx";
 import { dispatchRequestAction } from "../validation/custom_constraint_validation.js";
 
+const css = /* css */ `
+  .navi_checkbox_group {
+    border-style: solid;
+
+    &[data-callout] {
+      border-color: var(--callout-color);
+    }
+  }
+`;
+
 export const CheckboxGroup = (props) => {
   const refDefault = useRef(null);
   props.ref = props.ref || refDefault;
+  const defaultName = useId();
+  props.name = props.name || `checkbox_group_${defaultName}`;
   const checkboxGroup = <CheckboxGroupInterface {...props} />;
 
   return checkboxGroup;
 };
 
 const CheckboxGroupInterface = (props) => {
-  const { ref, name } = props;
+  import.meta.css = css;
   const fieldgroupInterfaceProps = useFieldgroupInterfaceProps(
     {
       resetOnCancel: true,
@@ -25,7 +37,7 @@ const CheckboxGroupInterface = (props) => {
       ...props,
     },
     {
-      fieldType: "checkbox_fieldset",
+      fieldType: "checkbox_group",
       childComponentType: "checkbox",
       aggregateChildStates: (childUIStateControllers) => {
         const values = [];
@@ -38,7 +50,7 @@ const CheckboxGroupInterface = (props) => {
       },
     },
   );
-
+  const { ref, name } = fieldgroupInterfaceProps;
   useFocusGroup(ref, { direction: "both", loop: true });
 
   return (
@@ -46,7 +58,8 @@ const CheckboxGroupInterface = (props) => {
       as="fieldset"
       flex
       {...fieldgroupInterfaceProps}
-      baseClassName="navi_checkbox_fieldset"
+      name={undefined}
+      baseClassName="navi_checkbox_group"
       navi-checkbox-list=""
       onChange={(e) => {
         // we rely on change event bubbling but we want to catch only the relevant checkbox change events
@@ -57,8 +70,8 @@ const CheckboxGroupInterface = (props) => {
         if (target.name !== name) {
           return;
         }
-        const checkboxFieldset = ref.current;
-        dispatchRequestAction(checkboxFieldset, {
+        const checkboxGroup = ref.current;
+        dispatchRequestAction(checkboxGroup, {
           event: e,
           requester: target,
         });
