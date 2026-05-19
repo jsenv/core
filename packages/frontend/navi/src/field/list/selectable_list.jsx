@@ -351,7 +351,7 @@ const SelectableRealInput = ({ ref, type, selected }) => {
     <Input
       className="selectable_real_input"
       navi-visually-hidden
-      navi-debug
+      // navi-debug
       {...inputProps}
       ref={ref}
       type={type}
