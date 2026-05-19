@@ -447,14 +447,14 @@ export const openCallout = (
       countOffscreenAsVisible: true,
     });
     if (!anchorVisuallyVisibleInfo.visible) {
-      console.warn(
-        `anchor element is not visually visible (${anchorVisuallyVisibleInfo.reason}) -> will be anchored to first visually visible ancestor`,
-      );
       anchorElement = getFirstVisuallyVisibleAncestor(anchorElement);
       if (!anchorElement) {
         // anchorElement is not in the DOM anymore, fallback to body
         anchorElement = document.body;
       }
+      console.warn(
+        `anchor is not visually visible (${anchorVisuallyVisibleInfo.reason}) -> callout will anchor to first visually visible ancestor (${getElementSignature(anchorElement)})`,
+      );
     }
   }
   // Resolve the visual anchor for positioning: when data-callout-anchor is set,
@@ -485,8 +485,7 @@ export const openCallout = (
   if (debug) {
     debug(
       openingEvent,
-      "append callout into",
-      getElementSignature(calloutContainer),
+      `append callout into ${getElementSignature(calloutContainer)}`,
     );
   }
   calloutContainer.appendChild(calloutElement);
