@@ -2,20 +2,20 @@
 
 import { useRef } from "preact/hooks";
 
-import { Box } from "../box/box.jsx";
-import { useFocusGroup } from "../utils/focus/use_focus_group.js";
-import { useFieldGroupProps } from "./use_field_group_props.jsx";
-import { dispatchRequestAction } from "./validation/custom_constraint_validation.js";
+import { Box } from "../../box/box.jsx";
+import { useFocusGroup } from "../../utils/focus/use_focus_group.js";
+import { useFieldGroupProps } from "../use_field_group_props.jsx";
+import { dispatchRequestAction } from "../validation/custom_constraint_validation.js";
 
-export const CheckboxFieldset = (props) => {
+export const CheckboxGroup = (props) => {
   const refDefault = useRef(null);
   props.ref = props.ref || refDefault;
-  const checkboxFieldset = <CheckboxFieldsetUI {...props} />;
+  const checkboxGroup = <CheckboxGroupUI {...props} />;
 
-  return checkboxFieldset;
+  return checkboxGroup;
 };
 
-const CheckboxFieldsetUI = (props) => {
+const CheckboxGroupUI = (props) => {
   const { ref, name } = props;
   const fieldGroupProps = useFieldGroupProps(
     {

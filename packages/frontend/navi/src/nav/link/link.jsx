@@ -6,7 +6,6 @@ import {
   SelectionContext,
   useSelectableElement,
 } from "../../field/selection/selection.jsx";
-import { useRequestedActionStatus } from "../../field/use_action_events.js";
 import { closeValidationMessage } from "../../field/validation/custom_constraint_validation.js";
 import { useConstraints } from "../../field/validation/hooks/use_constraints.js";
 import { EmailSvg } from "../../graphic/icons/email_svg.jsx";
@@ -19,6 +18,7 @@ import {
 import { PhoneSvg } from "../../graphic/icons/phone_svg.jsx";
 import { LoadingOutline } from "../../graphic/loading/loading_outline.jsx";
 import { useKeyboardShortcuts } from "../../keyboard/keyboard_shortcuts.js";
+import { useRequestedActionStatus } from "../../keyboard/use_action_events.js";
 import { Icon } from "../../text/icon.jsx";
 import { markAsOutsideTextFlow, Text } from "../../text/text.jsx";
 import { TitleLevelContext } from "../../text/title.jsx";

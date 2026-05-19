@@ -1,4 +1,4 @@
-import { Box } from "../box/box.jsx";
+import { Box } from "@jsenv/navi/src/box/box.jsx";
 
 const css = /* css */ `
   .navi_group {
