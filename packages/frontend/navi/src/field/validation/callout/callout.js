@@ -811,6 +811,8 @@ const stickCalloutToAnchor = (
     }
   }
 
+  calloutElement.setAttribute("data-anchor-box", alignToAnchorBox);
+
   // Set initial border styles
   calloutBoxElement.style.borderWidth = `${BORDER_WIDTH}px`;
   calloutFrameElement.style.left = `-${BORDER_WIDTH}px`;
