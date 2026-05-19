@@ -523,23 +523,6 @@ export const openCallout = (
         visualAnchorElement.removeAttribute("aria-invalid");
       };
     });
-
-    close_on_anchor_focus: {
-      const onfocus = (e) => {
-        if (status === "error") {
-          // error messages must be explicitely closed by the user
-          return;
-        }
-        if (anchorElement.hasAttribute("data-callout-stay-on-focus")) {
-          return;
-        }
-        requestClose(e, "target_element_focus");
-      };
-      visualAnchorElement.addEventListener("focus", onfocus);
-      addTeardown(() => {
-        visualAnchorElement.removeEventListener("focus", onfocus);
-      });
-    }
     anchorElement.callout = callout;
     addTeardown(() => {
       delete anchorElement.callout;
@@ -816,6 +799,7 @@ const stickCalloutToAnchor = (calloutElement, anchorElement, { debug }) => {
         positionYFixed: anchorElement.getAttribute(
           "data-callout-position-fixed",
         ),
+        spacing: ARROW_HEIGHT,
         viewportSpacing: anchorElement.hasAttribute(
           "data-callout-viewport-spacing",
         )
@@ -900,11 +884,11 @@ const stickCalloutToAnchor = (calloutElement, anchorElement, { debug }) => {
           : spaceBelow;
       const paddingSizes = getPaddingSizes(calloutBodyElement);
       const paddingY = paddingSizes.top + paddingSizes.bottom;
-      const spaceNeededAroundContent =
-        ARROW_HEIGHT + BORDER_WIDTH * 2 + paddingY;
+      // spaceAbove/spaceBelow already exclude ARROW_HEIGHT (via spacing: ARROW_HEIGHT passed to pickPositionRelativeTo)
+      const spaceNeededAroundContent = BORDER_WIDTH * 2 + paddingY;
       const spaceAvailableForContent =
         spaceAvailable - spaceNeededAroundContent;
-      const contentHeight = calloutHeight - spaceNeededAroundContent;
+      const contentHeight = calloutHeight - BORDER_WIDTH * 2 - paddingY;
       const spaceRemainingAfterContent =
         spaceAvailableForContent - contentHeight;
       if (spaceRemainingAfterContent < 2) {
@@ -918,24 +902,25 @@ const stickCalloutToAnchor = (calloutElement, anchorElement, { debug }) => {
 
       const { width, height } = calloutElement.getBoundingClientRect();
       if (positionY === "above" || positionY === "above-overlap") {
-        // Position above target element
+        // Arrow at bottom, extending below the element
         calloutBoxElement.style.marginTop = "";
-        calloutBoxElement.style.marginBottom = `${ARROW_HEIGHT}px`;
+        calloutBoxElement.style.marginBottom = "";
         calloutFrameElement.style.top = `-${BORDER_WIDTH}px`;
         calloutFrameElement.style.bottom = `-${BORDER_WIDTH + ARROW_HEIGHT - 0.5}px`;
         calloutFrameElement.innerHTML = generateSvgWithBottomArrow(
           width,
-          height,
+          height + ARROW_HEIGHT,
           arrowLeftPosOnCallout,
         );
       } else {
-        calloutBoxElement.style.marginTop = `${ARROW_HEIGHT}px`;
+        // Arrow at top, extending above the element
+        calloutBoxElement.style.marginTop = "";
         calloutBoxElement.style.marginBottom = "";
         calloutFrameElement.style.top = `-${BORDER_WIDTH + ARROW_HEIGHT - 0.5}px`;
         calloutFrameElement.style.bottom = `-${BORDER_WIDTH}px`;
         calloutFrameElement.innerHTML = generateSvgWithTopArrow(
           width,
-          height,
+          height + ARROW_HEIGHT,
           arrowLeftPosOnCallout,
         );
       }
