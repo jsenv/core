@@ -11,9 +11,10 @@ import {
   ActionContext,
   ActionRequesterContext,
   DisabledContext,
-  FieldContext,
   FieldNameContext,
+  FieldToInterfaceContext,
   LoadingContext,
+  MessagePropsRefContext,
   ReadOnlyContext,
   RequiredContext,
 } from "./field_context.js";
@@ -186,15 +187,16 @@ const useActionProps = (
     ...rest
   } = props;
   const actionStatus = useActionStatus(action);
-  const fieldContext = useContext(FieldContext);
+  const fieldToInterfaceContext = useContext(FieldToInterfaceContext);
+  const fieldName = useContext(FieldNameContext);
   const fieldDisabled = useContext(DisabledContext);
   const fieldReadOnly = useContext(ReadOnlyContext);
   const fieldRequired = useContext(RequiredContext);
   const fieldLoading = useContext(LoadingContext);
   const parentActionRequester = useContext(ActionRequesterContext);
 
-  const idResolved = id || fieldContext?.id;
-  const nameResolved = name || fieldContext?.name;
+  const idResolved = id || fieldToInterfaceContext?.id;
+  const nameResolved = name || fieldName;
   const disabledResolved = disabled || fieldDisabled;
   const requiredResolved = required || fieldRequired;
   const loadingResolved =
@@ -213,12 +215,12 @@ const useActionProps = (
 
   // infom any <Field> parent of our readOnly state + that we are interactive
   useLayoutEffect(() => {
-    if (fieldContext) {
-      fieldContext.setInteractive(true);
-      fieldContext.setDisabled(disabledResolved);
-      fieldContext.setReadOnly(readOnlyResolved);
+    if (fieldToInterfaceContext) {
+      fieldToInterfaceContext.setInteractive(true);
+      fieldToInterfaceContext.setDisabled(disabledResolved);
+      fieldToInterfaceContext.setReadOnly(readOnlyResolved);
     }
-  }, [fieldContext, disabledResolved, readOnlyResolved]);
+  }, [fieldToInterfaceContext, disabledResolved, readOnlyResolved]);
 
   useAutoFocus(ref, autoFocus, {
     focusVisible: autoFocusVisible,
@@ -231,12 +233,18 @@ const useActionProps = (
   if (children === undefined) {
     childrenWithContext = undefined;
   } else {
-    /* We are a field ourselve, which can contain other fields that should not inherit our field */
-    /* at least not the id/name and readonly/required reporting which belongs to this field only */
+    /**
+     * We are a field ourselve, which can contain other fields that should not inherit some of the context:
+     * - id was used by this field, no other field use it
+     * - message props are not meant to be propagated either, they are specific to a given field
+     * - readonly/required reporting is specific to this field interface. No other field interface should be able to report to parent
+     */
     childrenWithContext = (
-      <FieldContext.Provider value={undefined}>
-        {children}
-      </FieldContext.Provider>
+      <MessagePropsRefContext.Provider value={undefined}>
+        <FieldToInterfaceContext.Provider value={undefined}>
+          {children}
+        </FieldToInterfaceContext.Provider>
+      </MessagePropsRefContext.Provider>
     );
   }
 

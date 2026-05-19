@@ -3,8 +3,10 @@ import { useContext, useId, useMemo, useRef, useState } from "preact/hooks";
 import { Box } from "../box/box.jsx";
 import {
   DisabledContext,
-  FieldContext,
+  FieldNameContext,
+  FieldToInterfaceContext,
   LoadingContext,
+  MessagePropsRefContext,
   ReadOnlyContext,
   RequiredContext,
 } from "./field_context.js";
@@ -124,51 +126,53 @@ const FieldUI = (props) => {
   import.meta.css = css;
   const { vertical } = props;
   const { id, name, disabled, readOnly, required, loading, ...rest } = props;
-  // Collect constraint message props so child fields can inherit them via context.
-  const [fieldMessageProps, remainingProps] =
-    extractMessageAndRemainingProps(rest);
-  const fieldMessagePropsRef = useRef(fieldMessageProps);
-  fieldMessagePropsRef.current = fieldMessageProps;
+
+  const [messageProps, remainingProps] = extractMessageAndRemainingProps(rest);
+  const messagePropsRef = useRef();
+  messagePropsRef.current = messageProps;
+
   const [disabledByChild, setDisabledByChild] = useState(false);
   const [readOnlyFromChild, setReadOnlyFromChild] = useState(false);
   const [interactive, setInteractive] = useState(false);
 
-  const parentFieldContext = useContext(FieldContext);
+  const parentFieldName = useContext(FieldNameContext);
   const parentFieldDisabled = useContext(DisabledContext);
   const parentFieldReadOnly = useContext(ReadOnlyContext);
   const parentFieldRequired = useContext(RequiredContext);
   const parentFieldLoading = useContext(LoadingContext);
-  const nameResolved = name || parentFieldContext?.name;
+  const nameResolved = name || parentFieldName;
   const disabledResolved = disabled || parentFieldDisabled;
   const readOnlyResolved = readOnly || parentFieldReadOnly;
   const requiredResolved = required || parentFieldRequired;
   const loadingResolved = loading || parentFieldLoading;
-  const contextValue = useMemo(
+  const fieldToInterfaceContextValue = useMemo(
     () => ({
       id,
-      name: nameResolved,
       setReadOnly: setReadOnlyFromChild,
       setDisabled: setDisabledByChild,
       setInteractive,
-      messagePropsRef: fieldMessagePropsRef,
     }),
-    [id, nameResolved],
+    [id],
   );
   let childrenWithContext;
   if (props.children === undefined) {
   } else {
     childrenWithContext = (
-      <FieldContext.Provider value={contextValue}>
-        <DisabledContext.Provider value={disabledResolved}>
-          <ReadOnlyContext.Provider value={readOnlyResolved}>
-            <RequiredContext.Provider value={requiredResolved}>
-              <LoadingContext.Provider value={loadingResolved}>
-                {props.children}
-              </LoadingContext.Provider>
-            </RequiredContext.Provider>
-          </ReadOnlyContext.Provider>
-        </DisabledContext.Provider>
-      </FieldContext.Provider>
+      <MessagePropsRefContext.Provider value={messagePropsRef}>
+        <FieldToInterfaceContext.Provider value={fieldToInterfaceContextValue}>
+          <FieldNameContext.Provider value={nameResolved}>
+            <DisabledContext.Provider value={disabledResolved}>
+              <ReadOnlyContext.Provider value={readOnlyResolved}>
+                <RequiredContext.Provider value={requiredResolved}>
+                  <LoadingContext.Provider value={loadingResolved}>
+                    {props.children}
+                  </LoadingContext.Provider>
+                </RequiredContext.Provider>
+              </ReadOnlyContext.Provider>
+            </DisabledContext.Provider>
+          </FieldNameContext.Provider>
+        </FieldToInterfaceContext.Provider>
+      </MessagePropsRefContext.Provider>
     );
   }
 
@@ -213,8 +217,8 @@ const FieldPseudoClasses = [
 
 export const Label = (props) => {
   const { children, htmlFor, ...rest } = props;
-  const ctx = useContext(FieldContext);
-  const fieldId = ctx?.fieldId;
+  const fieldToInterface = useContext(FieldToInterfaceContext);
+  const fieldId = fieldToInterface?.id;
 
   return (
     <Box

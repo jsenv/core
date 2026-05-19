@@ -2,8 +2,6 @@ import { createContext } from "preact";
 
 import { CONSTRAINT_ATTRIBUTE_SET } from "./validation/constraint_attribute_set.js";
 
-export const FieldContext = createContext(null);
-
 export const FIELD_PROP_SET = new Set([
   ...CONSTRAINT_ATTRIBUTE_SET,
   "value",
@@ -11,6 +9,9 @@ export const FIELD_PROP_SET = new Set([
   "name",
   "data-testid",
 ]);
+
+export const FieldToInterfaceContext = createContext(null);
+export const MessagePropsRefContext = createContext();
 
 export const FieldNameContext = createContext();
 export const DisabledContext = createContext();

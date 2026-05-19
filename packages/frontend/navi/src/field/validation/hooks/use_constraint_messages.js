@@ -1,6 +1,6 @@
 import { useCallback, useContext, useLayoutEffect, useRef } from "preact/hooks";
 
-import { FieldContext } from "../../field_context.js";
+import { MessagePropsRefContext } from "../../field_context.js";
 import {
   CONSTRAINT_NAME_TO_PROP,
   extractMessageAndRemainingProps,
@@ -15,9 +15,7 @@ import {
  * Returns the remaining props with all *Message props removed.
  */
 export const useConstraintMessages = (elementRef, props) => {
-  const fieldCtx = useContext(FieldContext);
-  const fieldConstraintMessagesRef = fieldCtx?.messagePropsRef;
-
+  const messagePropsRefFromContext = useContext(MessagePropsRefContext);
   const messagePropsRef = useRef();
   const [messageProps, remainingProps] = extractMessageAndRemainingProps(props);
   messagePropsRef.current = messageProps;
@@ -26,16 +24,17 @@ export const useConstraintMessages = (elementRef, props) => {
     (e) => {
       const propName = CONSTRAINT_NAME_TO_PROP[e.detail.constraintName];
       const messageProp = messagePropsRef.current[propName];
-      if (messageProp !== undefined && messageProp !== null) {
+      if (messageProp) {
         e.detail.respondMessage(messageProp);
         return;
       }
-      const fieldMessageProp = fieldConstraintMessagesRef?.current?.[propName];
-      if (fieldMessageProp !== undefined && fieldMessageProp !== null) {
-        e.detail.respondMessage(fieldMessageProp);
+      const messagePropFromContext =
+        messagePropsRefFromContext?.current?.[propName];
+      if (messagePropFromContext) {
+        e.detail.respondMessage(messagePropFromContext);
       }
     },
-    [fieldConstraintMessagesRef],
+    [messagePropsRefFromContext],
   );
 
   useLayoutEffect(() => {
