@@ -1,4 +1,4 @@
-import { dispatchInternalCustomEvent } from "@jsenv/dom";
+import { dispatchInternalCustomEvent, findEvent } from "@jsenv/dom";
 import { useContext, useLayoutEffect } from "preact/hooks";
 
 import { useActionBoundToOneParam } from "@jsenv/navi/src/action/use_action.js";
@@ -27,6 +27,7 @@ import {
   useUIStateController,
 } from "./ui_state_controller.js";
 import {
+  dispatchRequestAction,
   onRequestAction,
   onRequestInteraction,
 } from "./validation/custom_constraint_validation.js";
@@ -321,9 +322,29 @@ const useActionProps = (
     "onnavi_set_ui_state": (e) => {
       const { value } = e.detail;
       uiStateController.setUIState(value, e);
+      const currentTarget = e.currentTarget;
+      const proxyFor = currentTarget.getAttribute("navi-proxy-for");
+      if (proxyFor) {
+        const realInput = document.getElementById(proxyFor);
+        if (realInput) {
+          requestSetUIState(realInput, value, { event: e.detail.event });
+          return;
+        }
+      }
     },
     "onnavi_request_interaction": (e) => {
       onRequestInteraction(e, { debugInteraction });
+
+      const field = e.currentTarget;
+      const naviProxyFor = field.getAttribute("navi-proxy-for");
+      if (naviProxyFor) {
+        const mousedownEvent = findEvent(e, "mousedown");
+        if (mousedownEvent) {
+          const realField = document.getElementById(naviProxyFor);
+          mousedownEvent.preventDefault();
+          realField.focus({ focusVisible: false });
+        }
+      }
     },
     "onnavi_cancel": (e) => {
       const { reason } = e.detail;
@@ -356,6 +377,15 @@ const useActionProps = (
       onCancel?.(e, reason);
     },
     "onnavi_request_action": (e) => {
+      const currentTarget = e.currentTarget;
+      const proxyFor = currentTarget.getAttribute("navi-proxy-for");
+      if (proxyFor) {
+        const realInput = document.getElementById(proxyFor);
+        if (realInput) {
+          dispatchRequestAction(realInput, { event: e });
+          return;
+        }
+      }
       let uiStateRaw;
       dispatchInternalCustomEvent(e.currentTarget, "navi_request_ui_state", {
         respondWith: (v) => {
@@ -367,8 +397,9 @@ const useActionProps = (
         },
       });
       e.detail.uiState = normalizeUIState(uiStateRaw);
+
       if (e.detail.action) {
-        // keyboard shotcut give the action and action is irrelevant here, the kayboard shortcut must win
+        // keyboard shortcut give the action and action is irrelevant here, the kayboard shortcut must win
       } else {
         e.detail.actionOrigin = "action_prop";
         e.detail.action = action;

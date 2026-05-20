@@ -353,6 +353,9 @@ const SelectableRealInput = ({ ref, type, selected }) => {
   );
 };
 const SelectableInputProxy = (props) => {
+  // const defaultRef = useRef();
+  // props.ref = props.ref || defaultRef;
+  // const { ref } = props;
   const {
     id: realInputId,
     type: realInputType,

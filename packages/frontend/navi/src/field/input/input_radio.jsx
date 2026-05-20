@@ -438,6 +438,9 @@ export const InputRadio = (props) => {
   // but also when we are becoming checked from outside (hence the useLayoutEffect)
   const updateOtherRadiosInGroup = (e) => {
     const thisRadio = ref.current;
+    if (!thisRadio) {
+      return;
+    }
     const radioSetContainer = thisRadio.closest("fieldset, form") || document;
     const radioInputs = radioSetContainer.querySelectorAll(
       `input[type="radio"][name="${thisRadio.name}"]`,
@@ -461,7 +464,7 @@ export const InputRadio = (props) => {
   };
   useLayoutEffect(() => {
     if (checked) {
-      updateOtherRadiosInGroup();
+      updateOtherRadiosInGroup(new CustomEvent("external_state_sync"));
     }
   }, [checked]);
 

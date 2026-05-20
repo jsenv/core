@@ -118,17 +118,6 @@ export const onRequestInteraction = (
   if (!requestStatus.canProceed) {
     requestInteractionCustomEvent.preventDefault();
   }
-
-  const field = requestInteractionCustomEvent.currentTarget;
-  const naviProxyFor = field.getAttribute("navi-proxy-for");
-  if (naviProxyFor) {
-    const mousedownEvent = findEvent(event, "mousedown");
-    if (mousedownEvent) {
-      const realField = document.getElementById(naviProxyFor);
-      mousedownEvent.preventDefault();
-      realField.focus();
-    }
-  }
 };
 
 export const dispatchRequestAction = (
@@ -144,6 +133,9 @@ export const dispatchRequestAction = (
     meta,
   },
 ) => {
+  if (!event) {
+    throw new TypeError("dispatchRequestAction requires an event");
+  }
   const allowed = dispatchInternalCustomEvent(
     elementWithAction,
     "navi_request_action",
