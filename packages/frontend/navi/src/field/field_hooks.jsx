@@ -386,17 +386,26 @@ const useActionProps = (
       }
     },
     "onnavi_request_action": (e) => {
-      let uiStateRaw;
-      dispatchInternalCustomEvent(e.currentTarget, "navi_request_ui_state", {
-        respondWith: (v) => {
-          debugAction(
-            e,
-            `navi_request_ui_state.respondWith(${JSON.stringify(v)})`,
-          );
-          uiStateRaw = v;
-        },
-      });
-      const uiState = normalizeUIState(uiStateRaw);
+      let uiState;
+      if (Object.hasOwn(e.detail, "uiState")) {
+        // uiState was forwarded by a proxy — use it directly to avoid
+        // re-computing from the element's own state (which may already reflect
+        // the optimistic update and return undefined for radio)
+        uiState = e.detail.uiState;
+      } else {
+        let uiStateRaw;
+        dispatchInternalCustomEvent(e.currentTarget, "navi_request_ui_state", {
+          respondWith: (v) => {
+            debugAction(
+              e,
+              `navi_request_ui_state.respondWith(${JSON.stringify(v)})`,
+            );
+            uiStateRaw = v;
+          },
+        });
+        uiState = normalizeUIState(uiStateRaw);
+      }
+      e.detail.uiState = uiState;
       const naviProxyTarget = getNaviProxyTarget(e);
       if (naviProxyTarget) {
         requestSetUIState(naviProxyTarget, uiState, { event: e });
@@ -404,8 +413,6 @@ const useActionProps = (
         dispatchRequestAction(naviProxyTarget, { event: e });
         return;
       }
-
-      e.detail.uiState = uiState;
       if (e.detail.action) {
         // keyboard shortcut give the action and action is irrelevant here, the kayboard shortcut must win
       } else {
