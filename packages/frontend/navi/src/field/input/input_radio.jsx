@@ -31,6 +31,7 @@ const css = /* css */ `
       --loader-color: var(--navi-loader-color);
       --border-color: light-dark(#767676, #8e8e93);
       --background-color: white;
+      --background-color-checked: var(--background-color);
       --accent-color: light-dark(#4476ff, #3b82f6);
       --radiomark-color: var(--accent-color);
       --border-color-checked: var(--accent-color);
@@ -48,6 +49,8 @@ const css = /* css */ `
         var(--radiomark-color) 80%,
         var(--color-mix)
       );
+      --background-color-hover: var(--background-color);
+      --background-color-hover-checked: var(--background-color);
       /* Readonly */
       --border-color-readonly: color-mix(
         in srgb,
@@ -147,16 +150,19 @@ const css = /* css */ `
     }
     /* Hover */
     &[data-hover] {
+      --x-background-color: var(--background-color-hover);
       --x-border-color: var(--border-color-hover);
       --x-radiomark-color: var(--radiomark-color-hover);
+
+      &[data-checked] {
+        --x-background-color: var(--background-color-hover-checked);
+        --x-border-color: var(--border-color-hover-checked);
+      }
     }
     /* Checked */
     &[data-checked] {
+      --x-background-color: var(--background-color-checked);
       --x-border-color: var(--border-color-checked);
-
-      &[data-hover] {
-        --x-border-color: var(--border-color-hover-checked);
-      }
     }
     /* Readonly */
     &[data-readonly] {
@@ -182,6 +188,7 @@ const css = /* css */ `
       --x-radiomark-color: var(--radiomark-color-disabled);
 
       &[data-checked] {
+        --x-background-color: var(--background-color-disabled-checked);
         --x-border-color: var(--border-color-disabled);
         --x-radiomark-color: var(--radiomark-color-disabled);
       }
@@ -330,43 +337,35 @@ const css = /* css */ `
 
     /* Toggle appearance */
     &[data-appearance="toggle"] {
-      --toggle-width: 2.5em;
-      --toggle-height: 1.4em;
-      --width: var(--toggle-width);
-      --height: var(--toggle-height);
+      /* We compute ourselves the width + padding otherwise during
+      translation subpixel rounding makes the thumb feel too much to the right by 1px */
+      box-sizing: content-box;
+      --toggle-outer-width: calc(var(--toggle-width) + var(--toggle-padding));
+
+      --margin: var(--toggle-margin);
+      --width: var(--toggle-outer-width);
+      --height: unset;
+      min-width: var(--toggle-outer-width);
+      border-radius: var(--toggle-border-radius);
+      --background-color: var(--toggle-background-color);
+      --background-color-hover: var(--toggle-background-color-hover);
+      --background-color-readonly: var(--toggle-background-color-readonly);
+      --background-color-disabled: var(--toggle-background-color-disabled);
+      --background-color-checked: var(--toggle-background-color-checked);
+      --background-color-hover-checked: var(
+        --toggle-background-color-hover-checked
+      );
+      --background-color-readonly-checked: var(
+        --toggle-background-color-readonly-checked
+      );
+      --background-color-disabled-checked: var(
+        --toggle-background-color-disabled-checked
+      );
 
       position: relative;
-      background: light-dark(#ccc, #555);
-      border: none;
-      border-radius: var(--toggle-height);
-      outline-offset: 3px;
-
-      .navi_toggle_thumb {
-        position: absolute;
-        top: 2px;
-        left: 2px;
-        width: calc(var(--toggle-height) - 4px);
-        height: calc(var(--toggle-height) - 4px);
-        background: white;
-        border-radius: 50%;
-        transition: transform 0.2s ease;
-        pointer-events: none;
-      }
-
-      &[data-checked] {
-        background: var(--navi-accent-color, light-dark(#1a73e8, #4a9eff));
-
-        .navi_toggle_thumb {
-          transform: translateX(
-            calc(var(--toggle-width) - var(--toggle-height))
-          );
-        }
-      }
-
-      &[data-disabled],
-      &[data-readonly] {
-        opacity: 0.5;
-      }
+      padding: var(--toggle-padding);
+      background-color: var(--x-background-color);
+      border-color: transparent;
     }
   }
 `;
@@ -380,6 +379,7 @@ export const InputRadio = (props) => {
   const fieldInterfaceProps = useFieldInterfaceProps(props, {
     fieldType: "radio",
     statePropName: "checked",
+    defaultStatePropName: "defaultChecked",
     readUIState: () => {
       const radio = props.ref.current;
       const radioIsChecked = radio.checked;
@@ -508,14 +508,8 @@ const InputRadioVisuallyHidden = (props) => {
 };
 const InputRadioFieldInterface = (props) => {
   import.meta.css = css;
-  const {
-    accentColor,
-    color,
-    icon,
-    appearance = icon ? "icon" : "radio",
-    ...rest
-  } = props;
-  const { ref, basePseudoState, checked } = props;
+  const { icon, appearance = icon ? "icon" : "radio", ...rest } = props;
+  const { ref, basePseudoState, checked, accentColor } = props;
   const loading = basePseudoState[":-navi-loading"];
   const boxRef = useRef();
   useAccentColorAttributes(boxRef, accentColor, {
@@ -524,7 +518,7 @@ const InputRadioFieldInterface = (props) => {
   let visualVNode;
   if (appearance === "hidden") {
     visualVNode = null;
-  } else if (appearance === "icon") {
+  } else if (appearance === "icon" || icon) {
     visualVNode = Array.isArray(icon) ? icon[checked ? 1 : 0] : icon;
   } else if (appearance === "toggle") {
     visualVNode = <ToggleUI />;
@@ -581,7 +575,6 @@ const InputRadioFieldInterface = (props) => {
       }
       pseudoClasses={RadioPseudoClasses}
       pseudoElements={RadioPseudoElements}
-      color={color}
       hasChildUsingForwardedProps
       baseChildPropSet={RadioChildPropSet}
     >

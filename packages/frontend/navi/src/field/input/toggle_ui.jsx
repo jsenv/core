@@ -47,6 +47,10 @@ const css = /* css */ `
         #d3d3d3
       );
       --toggle-thumb-color: white;
+
+      &[data-accent-very-light] {
+        --toggle-thumb-color: rgb(55, 55, 55);
+      }
     }
   }
 
@@ -60,6 +64,7 @@ const css = /* css */ `
       fill: var(--toggle-thumb-color);
       transform: translateX(0);
       transition: transform 0.2s ease;
+      user-select: none;
     }
 
     &[data-checked] {

@@ -240,11 +240,6 @@ const css = /* css */ `
       padding: var(--toggle-padding);
       background-color: var(--x-background-color);
       border-color: transparent;
-      user-select: none;
-
-      &[data-accent-very-light] {
-        --toggle-thumb-color: rgb(55, 55, 55);
-      }
     }
 
     &[data-appearance="icon"] {
@@ -402,19 +397,18 @@ const InputCheckboxVisuallyHidden = (props) => {
 const InputCheckboxFieldInterface = (props) => {
   import.meta.css = css;
   const {
-    accentColor,
     icon,
     appearance = icon ? "icon" : "checkbox", // "checkbox", "toggle", "icon", "button"
     ...rest
   } = props;
-  const { ref, basePseudoState, checked } = props;
+  const { ref, basePseudoState, checked, accentColor } = props;
   const loading = basePseudoState[":-navi-loading"];
   const boxRef = useRef();
   useAccentColorAttributes(boxRef, accentColor, {
     elementSelector: ".navi_checkbox_accent_probe",
   });
   let visualVnode;
-  if (appearance === "icon") {
+  if (appearance === "icon" || icon) {
     visualVnode = (
       <div className="navi_checkbox_icon" aria-hidden="true">
         {Array.isArray(icon) ? icon[checked ? 1 : 0] : icon}
@@ -456,7 +450,6 @@ const InputCheckboxFieldInterface = (props) => {
       }
       pseudoClasses={CheckboxPseudoClasses}
       pseudoElements={CheckboxPseudoElements}
-      accentColor={accentColor}
       hasChildUsingForwardedProps
       baseChildPropSet={CheckboxChildPropSet}
     >
