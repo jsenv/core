@@ -64,6 +64,17 @@ export const performArrowNavigation = (
     predicate,
   });
   if (!targetInLinearGroup) {
+    // Even with no target to move to, the active element may have native
+    // arrow-key behavior (e.g. radio inputs cycle through their name group)
+    // that would take over at the boundary when loop=false.
+    // Prevent that if the pressed key is relevant to our direction.
+    if (
+      (isForwardArrow(event, direction) || isBackwardArrow(event, direction)) &&
+      browserWouldLoopWithoutPreventDefault(document.activeElement)
+    ) {
+      event.preventDefault();
+      markFocusNav(event);
+    }
     return false;
   }
   onTargetToFocus(targetInLinearGroup);
@@ -218,6 +229,18 @@ const isForwardArrow = (event, direction = "both") => {
     horizontal: ["ArrowRight"],
   };
   return forwardKeys[direction]?.includes(event.key) ?? false;
+};
+
+// We decided not to loop, but the browser may loop anyway for certain element
+// types (e.g. radio inputs cycle through their name group on arrow keys).
+// Return true when the browser would do something we explicitly chose not to
+// do, so the caller can preventDefault to enforce our decision.
+const browserWouldLoopWithoutPreventDefault = (element) => {
+  if (element.tagName === "INPUT" && element.type === "radio") {
+    // Radio: browser cycles through same-name group on arrow keys
+    return true;
+  }
+  return false;
 };
 
 // Handle arrow navigation inside an HTMLTableElement as a grid.
