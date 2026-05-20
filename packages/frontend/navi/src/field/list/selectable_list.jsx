@@ -174,7 +174,11 @@ export const SelectableList = (props) => {
           return activeValue;
         },
   });
-  useFocusGroup(ref, { direction: "both", loop: true });
+  useFocusGroup(ref, {
+    direction: "both",
+    loop: true,
+    cssSelector: "[navi-selectable-real-input]",
+  });
 
   const listVnode = (
     <List
@@ -350,7 +354,7 @@ const SelectableRealInput = (props) => {
       // navi-debug
       {...inputProps}
       {...props}
-      navi-selectable-real-input="" // not used, just a marker for now
+      navi-selectable-real-input=""
       appearance="hidden"
     />
   );
