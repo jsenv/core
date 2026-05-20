@@ -29,7 +29,7 @@ import { Field } from "../field.jsx";
 import { FIELD_PROP_SET, FieldToInterfaceContext } from "../field_context.js";
 import { useFieldgroupInterfaceProps } from "../field_hooks.jsx";
 import { Input } from "../input/input.jsx";
-import { requestSetUIState } from "../use_ui_state_controller.js";
+import { requestSetUIState } from "../ui_state_controller.js";
 import { dispatchRequestAction } from "../validation/custom_constraint_validation.js";
 import { List, LIST_ITEM_PSEUDO_CLASSES, ListItem } from "./list.jsx";
 

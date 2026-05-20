@@ -26,7 +26,7 @@ import {
   useUIGroupStateController,
   useUIState,
   useUIStateController,
-} from "./use_ui_state_controller.js";
+} from "./ui_state_controller.js";
 import {
   onRequestAction,
   onRequestInteraction,

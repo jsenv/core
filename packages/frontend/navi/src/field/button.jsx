@@ -13,7 +13,7 @@ import { useAccentColorAttributes } from "../utils/use_accent_color_attributes.j
 import { ActionContext } from "./field_context.js";
 import { useFieldInterfaceProps } from "./field_hooks.jsx";
 import { FormContext } from "./form_context.js";
-import { ParentUIStateControllerContext } from "./use_ui_state_controller.js";
+import { ParentUIStateControllerContext } from "./ui_state_controller.js";
 import { dispatchRequestAction } from "./validation/custom_constraint_validation.js";
 
 /**

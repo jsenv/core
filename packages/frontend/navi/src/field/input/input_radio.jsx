@@ -10,7 +10,7 @@ import { useAccentColorAttributes } from "../../utils/use_accent_color_attribute
 import { FIELD_PROP_SET } from "../field_context.js";
 import { useFieldInterfaceProps } from "../field_hooks.jsx";
 import { requestClosestAction } from "../string_actions.js";
-import { requestSetUIState } from "../use_ui_state_controller.js";
+import { requestSetUIState } from "../ui_state_controller.js";
 
 const css = /* css */ `
   @layer navi {

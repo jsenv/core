@@ -245,4 +245,4 @@ export { StarSvg } from "./src/graphic/icons/star_svg.jsx";
 export { UserSvg } from "./src/graphic/icons/user_svg.jsx";
 
 // internals
-export { requestResetUIState } from "./src/field/use_ui_state_controller.js";
+export { requestResetUIState } from "./src/field/ui_state_controller.js";
