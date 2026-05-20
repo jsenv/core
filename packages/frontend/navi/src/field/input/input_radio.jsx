@@ -482,12 +482,14 @@ export const InputRadio = (props) => {
 
 const InputRadioVisuallyHidden = (props) => {
   return (
-    <RealInputRadio
-      pseudoClasses={RadioPseudoClasses}
-      {...props}
-      appearance={undefined}
-      navi-visually-hidden=""
-    />
+    <BoxForwardedPropsContext.Provider value={undefined}>
+      <RealInputRadio
+        pseudoClasses={RadioPseudoClasses}
+        {...props}
+        appearance={undefined}
+        navi-visually-hidden=""
+      />
+    </BoxForwardedPropsContext.Provider>
   );
 };
 const InputRadioFieldInterface = (props) => {
