@@ -70,15 +70,11 @@ const css = /* css */ `
       --x-list-border-color: var(--callout-color);
     }
 
-    &[data-focus-within] {
-      .navi_list_item {
-        &:has([data-focus-visible]) {
-          --x-list-item-color: var(--list-item-color-keyboard-pointed);
-          --x-list-item-background-color: var(
-            --list-item-background-color-keyboard-pointed
-          );
-        }
-      }
+    .navi_list_item:has([data-focus-visible]) {
+      --x-list-item-color: var(--list-item-color-keyboard-pointed);
+      --x-list-item-background-color: var(
+        --list-item-background-color-keyboard-pointed
+      );
     }
 
     /* opt-in: apply background color to selected items */
