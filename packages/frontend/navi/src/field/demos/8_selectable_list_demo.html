@@ -116,7 +116,6 @@
                 <IconInputDemo />
                 <ToggleDemo />
                 <BgColorDemo />
-                <CustomBgColorDemo />
                 <ManualAreaDemo />
               </div>
             </div>
@@ -152,9 +151,6 @@
                   </li>
                   <li>
                     <a href="#bg-color">Background color indicator</a>
-                  </li>
-                  <li>
-                    <a href="#custom-bg">Custom background color</a>
                   </li>
                   <li>
                     <a href="#manual-area">Manual selectable area</a>
@@ -610,7 +606,7 @@
                 alignY="center"
               >
                 <span style={{ flex: 1 }}>{fruit}</span>
-                <Selectable.Input icons={[<CircleIcon />, <CheckIcon />]} />
+                <Selectable.Input icon={[<CircleIcon />, <CheckIcon />]} />
               </Selectable>
             ))}
           </SelectableList>
@@ -619,7 +615,7 @@
           <div id="icons" className="demo-section">
             <h2>Custom icons</h2>
             <p>
-              Pass <code>icons={`{[uncheckedIcon, checkedIcon]}`}</code> to{" "}
+              Pass <code>icon={`{[uncheckedIcon, checkedIcon]}`}</code> to{" "}
               <code>Selectable.Input</code> to render custom icons. Here the
               input is placed at the <em>end</em> of the row.
             </p>
@@ -734,10 +730,15 @@
           "Apple",
           "Cherry",
         ]);
+        const [bgColor, setBgColor] = useState("#1a73e8");
+        const customStyle = {
+          "--list-item-background-color-selected": bgColor,
+        };
         const renderList = ({ multiple, selected, setSelected }) => (
           <SelectableList
             multiple={multiple}
             selectedIndicator="backgroundColor"
+            style={customStyle}
             action={(v) => {
               setSelected(multiple ? (v ?? []) : (v ?? null));
             }}
@@ -767,85 +768,46 @@
               <code>SelectableList</code> to highlight selected items with a
               background color. This is opt-in — by default no background is
               applied so the visual indicator is entirely up to{" "}
-              <code>Selectable.Input</code>.
+              <code>Selectable.Input</code>. Override{" "}
+              <code>--list-item-background-color-selected</code> to customize
+              the color.
             </p>
-            <div className="two-col">
-              <div>
-                <div className="col-label">Single</div>
-                {renderList({
-                  multiple: false,
-                  selected: selectedSingle,
-                  setSelected: setSelectedSingle,
-                })}
-                <div className="value-display">
-                  {selectedSingle ? `Selected: ${selectedSingle}` : ""}
-                </div>
-              </div>
-              <div>
-                <div className="col-label">Multiple</div>
-                {renderList({
-                  multiple: true,
-                  selected: selectedMultiple,
-                  setSelected: setSelectedMultiple,
-                })}
-                <div className="value-display">
-                  {selectedMultiple.length
-                    ? `Selected: ${selectedMultiple.join(", ")}`
-                    : ""}
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-      };
-
-      // ── Custom background color ────────────────────────────────────────────────
-
-      const CustomBgColorDemo = () => {
-        const [selectedSingle, setSelectedSingle] = useState("Apple");
-        const [selectedMultiple, setSelectedMultiple] = useState([
-          "Apple",
-          "Cherry",
-        ]);
-        const customStyle = {
-          "--list-item-background-color-selected":
-            "light-dark(#d1fae5, #065f46)",
-          "--list-item-color-selected": "light-dark(#065f46, #d1fae5)",
-        };
-        const renderList = ({ multiple, selected, setSelected }) => (
-          <SelectableList
-            multiple={multiple}
-            selectedIndicator="backgroundColor"
-            style={customStyle}
-            action={(v) => {
-              setSelected(multiple ? (v ?? []) : (v ?? null));
-            }}
-          >
-            {FRUITS.map((fruit, i) => (
-              <Selectable
-                key={fruit}
-                index={i}
-                id={`custombg_${multiple ? "m" : "s"}_${fruit.toLowerCase()}`}
-                value={fruit}
-                selected={
-                  multiple ? selected.includes(fruit) : selected === fruit
-                }
-                flex
-                spacing="s"
+            <div
+              style={{
+                marginBottom: 16,
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+              }}
+            >
+              <label style={{ fontSize: "0.85rem", color: "#555" }}>
+                Background color:
+              </label>
+              <input
+                type="color"
+                value={bgColor}
+                onInput={(e) => {
+                  setBgColor(e.currentTarget.value);
+                }}
+                style={{
+                  width: 40,
+                  height: 28,
+                  padding: 2,
+                  cursor: "pointer",
+                  border: "1px solid #ccc",
+                  borderRadius: 4,
+                }}
+              />
+              <span
+                style={{
+                  fontFamily: "monospace",
+                  fontSize: "0.85rem",
+                  color: "#555",
+                }}
               >
-                {fruit}
-              </Selectable>
-            ))}
-          </SelectableList>
-        );
-        return (
-          <div id="custom-bg" className="demo-section">
-            <h2>Custom background color</h2>
-            <p>
-              Override <code>--list-item-background-color-selected</code> and{" "}
-              <code>--list-item-color-selected</code> to use a custom palette.
-              Always set both to ensure sufficient contrast.
-            </p>
+                {bgColor}
+              </span>
+            </div>
             <div className="two-col">
               <div>
                 <div className="col-label">Single</div>

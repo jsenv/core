@@ -388,8 +388,7 @@ const InputRadioFieldInterface = (props) => {
     onInput,
     onKeyDown,
     icon,
-    icons,
-    appearance = icons || icon ? "icon" : "radio",
+    appearance = icon ? "icon" : "radio",
     color,
     accentColor,
   } = props;
@@ -453,9 +452,13 @@ const InputRadioFieldInterface = (props) => {
   });
 
   let visualVNode;
-  if (appearance === "toggle") {
+  if (appearance === "icon") {
+    visualVNode = Array.isArray(icon) ? icon[checked ? 1 : 0] : icon;
+  } else if (appearance === "toggle") {
     visualVNode = <span className="navi_toggle_thumb" />;
-  } else if (appearance === "radio") {
+  }
+  // appearance === "radio"
+  else {
     visualVNode = (
       <svg
         viewBox="0 0 12 12"
@@ -484,10 +487,6 @@ const InputRadioFieldInterface = (props) => {
         <circle className="navi_radio_marker" cx="6" cy="6" r="3.5" />
       </svg>
     );
-  } else if (icons) {
-    visualVNode = checked ? icons[1] : icons[0];
-  } else {
-    visualVNode = icon;
   }
 
   return (
