@@ -45,10 +45,17 @@ export const ParentUIStateControllerContext = createContext();
  * - Immediate UI updates for responsive interactions
  * - State divergence with sync capabilities (resetUIState)
  * - Group integration for coordinated form inputs
- * - External control via custom events (onnavi_set_ui_state/onresetuistate)
+ * - External control via DOM events (navi_set_ui_state / navi_request_reset_ui_state)
  * - Error recovery and form reset support
  *
- * See README.md for detailed usage examples and patterns.
+ * State change flow:
+ * All state changes (interaction, action result, external reset) go through DOM events:
+ * - `navi_set_ui_state` dispatched on the field's DOM element triggers setUIState
+ * - `navi_request_reset_ui_state` dispatched on the field's DOM element resets to controller.state
+ * This ensures any subscriber (e.g. useUIState) receives every state change regardless of origin.
+ *
+ * The controller stores `elementRef` so parent group controllers can dispatch DOM events
+ * directly on child DOM elements when performing group-level operations like resetUIState.
  */
 export const useUIStateController = (
   props,
@@ -303,9 +310,10 @@ const useParentControllerNotifiers = (
  *    - Enables type-safe aggregation patterns
  *
  * 3. **Group Operations**:
- *    - Provides `resetUIState()` that cascades to all children
+ *    - Provides `resetUIState()` that cascades to all monitored children
+ *    - Dispatches `navi_request_reset_ui_state` DOM events on each child's DOM element
+ *    - Children handle the event independently, allowing nested groups to cascade further
  *    - Enables group-level operations like "clear all" or "reset form section"
- *    - Maintains consistency across related inputs
  *
  * 4. **External State Management**:
  *    - Notifies external code of group state changes via `onUIStateChange`
@@ -527,14 +535,23 @@ export const useUIGroupStateController = (
 };
 
 /**
- * Hook to track UI state from a UI state controller
+ * Hook to subscribe to the UI state of a field from its DOM element ref.
  *
- * This hook allows external code to react to UI state changes without
- * causing the controller itself to re-create. It returns the current UI state
- * and will cause re-renders when the UI state changes.
+ * Tracks state from two independent sources:
+ * 1. `initialValue` — the external/controlled state coming from props. Passed as the
+ *    initial useState value AND synced via a useLayoutEffect whenever it changes.
+ *    This ensures the hook stays in sync when the parent re-renders with a new value.
+ * 2. `navi_set_ui_state` DOM event — fired on the element whenever a UI interaction
+ *    or action result updates the field's state. This handles all internal state changes
+ *    that do not cause the parent to re-render with a new prop.
  *
- * @param {Object} uiStateController - The UI state controller to track
- * @returns {any} The current UI state
+ * The `initialValue` parameter is important: without it the hook starts as `undefined`
+ * and misses the initial state. External state changes (e.g. prop update from server)
+ * also only reach the hook through `initialValue` since they do not dispatch a DOM event.
+ *
+ * @param {import('preact').RefObject} ref - Ref pointing to the field's DOM element
+ * @param {any} initialValue - The current external/controlled state value
+ * @returns {any} The current UI state, updated by both external changes and UI interactions
  */
 export const useUIState = (ref, initialValue) => {
   const [uiState, setUIState] = useState(initialValue);

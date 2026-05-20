@@ -33,6 +33,22 @@ import {
 import { useConstraintMessages } from "./validation/hooks/use_constraint_messages.js";
 import { useConstraints } from "./validation/hooks/use_constraints.js";
 
+/**
+ * Core hook for interactive field components (InputText, InputCheckbox, etc.).
+ *
+ * Sets up the full field lifecycle:
+ * - Creates a UI state controller that manages state divergence between props and user interactions
+ * - Binds the field's action to its current UI state via a signal
+ * - Wires up all DOM event handlers (navi_set_ui_state, navi_request_reset_ui_state,
+ *   navi_action_ready, navi_action_abort, navi_action_error, navi_cancel, etc.)
+ * - Resolves inherited context (disabled, readOnly, required, loading, fieldName)
+ * - Handles constraint validation and message props
+ *
+ * All state changes route through DOM events on the field element so that
+ * external subscribers (e.g. useUIState, Selectable) receive every update.
+ *
+ * @returns {Object} Props to spread onto the field's root/input element
+ */
 export const useFieldInterfaceProps = (
   props,
   {
@@ -82,6 +98,21 @@ export const useFieldInterfaceProps = (
   });
 };
 
+/**
+ * Core hook for field group components (SelectableList, CheckboxList, etc.).
+ *
+ * Coordinates a collection of child fields:
+ * - Creates a UI group state controller that aggregates child states into one group state
+ * - Binds the group's action to the aggregated state signal
+ * - Provides context to children: ParentUIStateController, FieldName, Disabled, ReadOnly,
+ *   Required, Loading, Action, ActionRequester
+ * - Overrides `onnavi_request_reset_ui_state` to cascade resets to all monitored children
+ *   by dispatching `navi_request_reset_ui_state` DOM events on each child's DOM element
+ * - Overrides `onnavi_action_ready` to track the action requester
+ *
+ * @param {{ fieldType: string, childComponentType: string, aggregateChildStates: Function }} config
+ * @returns {Object} Props to spread onto the group's root element
+ */
 export const useFieldgroupInterfaceProps = (
   props,
   { fieldType, childComponentType, aggregateChildStates },
