@@ -309,7 +309,13 @@ export const Selectable = (props) => {
         <SelectableRealInput
           ref={inputRef}
           type={inputType}
-          selected={selected}
+          checked={selected}
+          onChange={(e) => {
+            const listContainerEl = e.currentTarget.closest(
+              ".navi_list_container",
+            );
+            dispatchRequestAction(listContainerEl, { event: e });
+          }}
         />
         <SelectableRealInputContext.Provider value={realInputContextValue}>
           {children}
@@ -336,18 +342,16 @@ const SELECTABLE_REAL_INPUT_CHILD_PROP_SET = new Set([
   ...FIELD_PROP_SET,
   "selected",
 ]);
-const SelectableRealInput = ({ ref, type, selected }) => {
+const SelectableRealInput = (props) => {
   const inputProps = useContext(BoxForwardedPropsContext);
 
   return (
     <Input
       // navi-debug
       {...inputProps}
+      {...props}
       navi-selectable-real-input="" // not used, just a marker for now
       appearance="hidden"
-      ref={ref}
-      type={type}
-      checked={selected}
     />
   );
 };

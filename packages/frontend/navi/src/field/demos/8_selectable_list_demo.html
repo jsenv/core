@@ -185,7 +185,7 @@
                 <div className="col-label">Single</div>
                 <SelectableList
                   action={(v) => {
-                    setSelectedSingle(v ?? null);
+                    setSelectedSingle(v);
                   }}
                   expandX
                 >
@@ -213,7 +213,7 @@
                 <SelectableList
                   multiple
                   action={(v) => {
-                    setSelectedMultiple(v ?? []);
+                    setSelectedMultiple(v);
                   }}
                   expandX
                 >

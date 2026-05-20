@@ -356,16 +356,17 @@ const useActionProps = (
     },
     "onnavi_cancel": (e) => {
       const { reason } = e.detail;
+      const isBlurInvalid = reason.startsWith("blur_invalid");
 
       if (resetOnCancel) {
-        if (reason.startsWith("blur_invalid")) {
+        if (isBlurInvalid) {
           return;
         }
         requestResetUIState(e.currentTarget, e);
         onCancel?.(e, reason);
         return;
       }
-      if (reason.startsWith("blur_invalid")) {
+      if (isBlurInvalid) {
         if (!cancelOnBlurInvalid) {
           return;
         }

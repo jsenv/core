@@ -867,6 +867,7 @@ export const installCustomConstraintValidation = (
           e.preventDefault();
         } else {
           dispatchCancelCustomEvent({
+            event: e,
             reason: "escape_key",
           });
         }
@@ -879,9 +880,10 @@ export const installCustomConstraintValidation = (
   }
 
   cancel_on_blur: {
-    const onblur = () => {
+    const onblur = (e) => {
       if (element.value === "") {
         dispatchCancelCustomEvent({
+          event: e,
           reason: "blur_empty",
         });
         return;
@@ -889,6 +891,7 @@ export const installCustomConstraintValidation = (
       // if we have failed constraint, we cancel too
       if (failedConstraintInfo) {
         dispatchCancelCustomEvent({
+          event: e,
           reason: "blur_invalid",
           failedConstraintInfo,
         });
