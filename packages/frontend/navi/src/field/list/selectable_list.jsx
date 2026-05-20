@@ -78,16 +78,30 @@ const css = /* css */ `
             --list-item-background-color-keyboard-pointed
           );
         }
+      }
+    }
 
-        /* Selected must win over pointed-by-keyboard */
-        &[data-selected] {
+    /* opt-in: apply background color to selected items */
+    &[navi-has-selected-background] {
+      .navi_list_item[data-selected] {
+        --x-list-item-color: var(--list-item-color-selected);
+        --x-list-item-background-color: var(
+          --list-item-background-color-selected
+        );
+        &[data-hover] {
+          --x-list-item-background-color: var(
+            --list-item-background-color-selected,
+            var(--list-item-background-color-mouse-pointed)
+          ) !important;
+        }
+      }
+      &[data-focus-within] {
+        /* Selected must win over keyboard-pointed */
+        .navi_list_item[data-selected] {
           --x-list-item-color: var(--list-item-color-selected);
           --x-list-item-background-color: var(
             --list-item-background-color-selected
           );
-          /* Selected + pointed by keyboard: use keyboard color as fallback
-           so that if --list-item-background-color-selected is reset the
-           keyboard-pointed highlight still shows. */
           &:has([data-focus-visible]) {
             --x-list-item-background-color: var(
               --list-item-background-color-selected,
@@ -131,19 +145,6 @@ const css = /* css */ `
         --list-item-background-color-mouse-pointed
       );
     }
-    &[data-selected] {
-      --x-list-item-color: var(--list-item-color-selected);
-      --x-list-item-background-color: var(
-        --list-item-background-color-selected
-      );
-      &[data-hover] {
-        /* Here important should no be needed, but for some reason it is */
-        --x-list-item-background-color: var(
-          --list-item-background-color-selected,
-          var(--list-item-background-color-mouse-pointed)
-        ) !important;
-      }
-    }
     &[data-disabled] {
       --x-list-item-color: var(--list-item-color-disabled);
       --x-list-item-background-color: var(
@@ -171,7 +172,7 @@ export const SelectableList = (props) => {
   const defaultRef = useRef();
   props.ref = props.ref || defaultRef;
   props.name = props.name || `listbox_${defaultName}`;
-  const { ref, multiple } = props;
+  const { ref, multiple, selectedIndicator } = props;
   const fieldgroupInterfaceProps = useFieldgroupInterfaceProps(props, {
     fieldType: "list",
     childComponentType: multiple ? "checkbox" : "radio",
@@ -201,8 +202,12 @@ export const SelectableList = (props) => {
   const listVnode = (
     <List
       as="fieldset"
+      navi-has-selected-background={
+        selectedIndicator === "backgroundColor" ? "" : undefined
+      }
       aria-multiselectable={multiple ? "true" : undefined}
       {...fieldgroupInterfaceProps}
+      selectedIndicator={undefined}
       onnavi_list_nav={(e) => {
         const { item, event } = e.detail;
         // const id = item ? item.id : null;
@@ -275,6 +280,7 @@ export const Selectable = (props) => {
     filtered,
     selected,
     children,
+    selectableArea,
     ...rest
   } = props;
   const multiple = useContext(SelectableListMultipleContext);
@@ -305,7 +311,7 @@ export const Selectable = (props) => {
     >
       <Field
         id={inputId}
-        // as="div"
+        as={selectableArea === "manual" ? "div" : undefined}
         requiredMessage={naviI18n(`list_item.readonly`, props)}
         padding="m"
         flex
@@ -313,6 +319,7 @@ export const Selectable = (props) => {
         spacing="s"
         expandX
         {...rest}
+        selectableArea={undefined}
         baseChildPropSet={SELECTABLE_REAL_INPUT_CHILD_PROP_SET}
         hasChildUsingForwardedProps
       >

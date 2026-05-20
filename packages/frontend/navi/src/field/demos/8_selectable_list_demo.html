@@ -7,7 +7,7 @@
     <title>Selectable List Demo</title>
     <style>
       body {
-        max-width: 700px;
+        max-width: 1000px;
         margin: 0 auto;
         padding: 20px;
         font-family:
@@ -22,10 +22,6 @@
         text-align: center;
       }
 
-      h2.section-title {
-        display: none;
-      }
-
       .demo-section {
         margin-bottom: 40px;
         padding: 20px;
@@ -35,11 +31,17 @@
       }
 
       .demo-section h2 {
-        margin: 0 0 20px;
+        margin: 0 0 12px;
         padding-bottom: 10px;
         color: #333;
         font-size: 1.4rem;
         border-bottom: 2px solid #ddd;
+      }
+
+      .demo-section h3 {
+        margin: 0 0 10px;
+        color: #333;
+        font-size: 1.05rem;
       }
 
       .demo-section p {
@@ -47,6 +49,21 @@
         color: #555;
         font-size: 0.9rem;
         line-height: 1.5;
+      }
+
+      .two-col {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+      }
+
+      .col-label {
+        margin-bottom: 8px;
+        color: #888;
+        font-weight: 600;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
       }
 
       .value-display {
@@ -94,8 +111,11 @@
                 <div class="demo-section">
                   <h2>Customization</h2>
                 </div>
-                <InputDemo />
                 <IconInputDemo />
+                <ToggleDemo />
+                <BgColorDemo />
+                <CustomBgColorDemo />
+                <ManualAreaDemo />
               </div>
             </div>
           </NaviDebug>
@@ -108,7 +128,7 @@
             <h2>Table of contents</h2>
             <ol style={{ margin: 0, paddingLeft: "20px", lineHeight: "2" }}>
               <li>
-                <a href="#basic">Basic selectable list</a>
+                <a href="#basic">Basic (with Selectable.Input)</a>
               </li>
               <li>
                 <a href="#readonly">ReadOnly items</a>
@@ -120,10 +140,19 @@
                 Customization
                 <ol style={{ margin: 0, paddingLeft: "20px" }}>
                   <li>
-                    <a href="#input">Selectable.Input</a>
+                    <a href="#icons">Custom icons</a>
                   </li>
                   <li>
-                    <a href="#icons">Custom icons</a>
+                    <a href="#toggle">Toggle appearance</a>
+                  </li>
+                  <li>
+                    <a href="#bg-color">Background color indicator</a>
+                  </li>
+                  <li>
+                    <a href="#custom-bg">Custom background color</a>
+                  </li>
+                  <li>
+                    <a href="#manual-area">Manual selectable area</a>
                   </li>
                 </ol>
               </li>
@@ -134,35 +163,76 @@
 
       const FRUITS = ["Apple", "Banana", "Cherry", "Date", "Elderberry"];
 
-      // ── Basic selectable list ──────────────────────────────────────────────────
+      // ── Basic (with Selectable.Input) ──────────────────────────────────────────
 
       const BasicDemo = () => {
-        const [selected, setSelected] = useState(null);
+        const [selectedSingle, setSelectedSingle] = useState(null);
+        const [selectedMultiple, setSelectedMultiple] = useState([]);
         return (
           <div id="basic" className="demo-section">
-            <h2>Basic selectable list</h2>
-            <SelectableList
-              expandX
-              action={(v) => {
-                setSelected(v);
-              }}
-            >
-              {FRUITS.map((fruit, i) => (
-                <Selectable
-                  key={fruit}
-                  index={i}
-                  id={`basic_${fruit.toLowerCase()}`}
-                  value={fruit}
-                  selected={selected === fruit}
-                  flex
-                  spacing="s"
+            <h2>Basic (with Selectable.Input)</h2>
+            <p>
+              <code>Selectable.Input</code> renders a decorative radio/checkbox
+              that mirrors the selection state.
+            </p>
+            <div className="two-col">
+              <div>
+                <div className="col-label">Single</div>
+                <SelectableList
+                  action={(v) => {
+                    setSelectedSingle(v ?? null);
+                  }}
+                  expandX
                 >
-                  {fruit}
-                </Selectable>
-              ))}
-            </SelectableList>
-            <div className="value-display">
-              {selected ? `Selected: ${selected}` : ""}
+                  {FRUITS.map((fruit, i) => (
+                    <Selectable
+                      key={fruit}
+                      index={i}
+                      id={`basic_s_${fruit.toLowerCase()}`}
+                      value={fruit}
+                      selected={selectedSingle === fruit}
+                      flex
+                      spacing="s"
+                    >
+                      <Selectable.Input />
+                      {fruit}
+                    </Selectable>
+                  ))}
+                </SelectableList>
+                <div className="value-display">
+                  {selectedSingle ? `Selected: ${selectedSingle}` : ""}
+                </div>
+              </div>
+              <div>
+                <div className="col-label">Multiple</div>
+                <SelectableList
+                  multiple
+                  action={(v) => {
+                    setSelectedMultiple(v ?? []);
+                  }}
+                  expandX
+                >
+                  {FRUITS.map((fruit, i) => (
+                    <Selectable
+                      key={fruit}
+                      index={i}
+                      id={`basic_m_${fruit.toLowerCase()}`}
+                      value={fruit}
+                      selected={selectedMultiple.includes(fruit)}
+                      flex
+                      spacing="s"
+                    >
+                      <Selectable.Input />
+                      {fruit}
+                    </Selectable>
+                  ))}
+                </SelectableList>
+                <div className="value-display">
+                  {selectedMultiple.length
+                    ? `Selected: ${selectedMultiple.join(", ")}`
+                    : ""}
+                </div>
+              </div>
             </div>
           </div>
         );
@@ -171,7 +241,61 @@
       // ── ReadOnly items ─────────────────────────────────────────────────────────
 
       const ReadOnlyDemo = () => {
-        const [selected, setSelected] = useState(null);
+        const [selectedSingle, setSelectedSingle] = useState(null);
+        const [selectedMultiple, setSelectedMultiple] = useState([]);
+        const renderList = ({ multiple, selected, setSelected }) => (
+          <SelectableList
+            multiple={multiple}
+            action={(v) => {
+              setSelected(multiple ? (v ?? []) : (v ?? null));
+            }}
+            expandX
+          >
+            <Selectable
+              index={0}
+              id={`ro_taken_${multiple ? "m" : "s"}`}
+              value="taken"
+              flex
+              spacing="s"
+              readOnly
+              readOnlyMessage={
+                <>
+                  This slot is already <strong>taken.</strong>
+                </>
+              }
+            >
+              <Selectable.Input />
+              Taken
+            </Selectable>
+            <Selectable
+              index={1}
+              id={`ro_unavailable_${multiple ? "m" : "s"}`}
+              value="unavailable"
+              flex
+              spacing="s"
+              readOnly
+            >
+              <Selectable.Input />
+              Unavailable
+            </Selectable>
+            {FRUITS.slice(0, 3).map((fruit, i) => (
+              <Selectable
+                key={fruit}
+                index={i + 2}
+                id={`ro_${multiple ? "m" : "s"}_${fruit.toLowerCase()}`}
+                value={fruit}
+                selected={
+                  multiple ? selected.includes(fruit) : selected === fruit
+                }
+                flex
+                spacing="s"
+              >
+                <Selectable.Input />
+                {fruit}
+              </Selectable>
+            ))}
+          </SelectableList>
+        );
         return (
           <div id="readonly" className="demo-section">
             <h2>ReadOnly items</h2>
@@ -179,69 +303,31 @@
               Items with <code>readOnly</code> show a callout on click instead
               of selecting.
             </p>
-            <SelectableList
-              action={(v) => {
-                setSelected(v);
-              }}
-            >
-              <Selectable
-                index={0}
-                id="ro_taken"
-                value="taken"
-                flex
-                spacing="s"
-                readOnly
-                readOnlyMessage={
-                  <>
-                    This slot is already <strong>taken.</strong>
-                  </>
-                }
-              >
-                Taken (readonly, custom message)
-              </Selectable>
-              <Selectable
-                index={1}
-                id="ro_unavailable"
-                value="unavailable"
-                flex
-                spacing="s"
-                readOnly
-              >
-                Unavailable (readonly, default message)
-              </Selectable>
-              <Selectable
-                index={2}
-                id="ro_apple"
-                value="Apple"
-                selected={selected === "Apple"}
-                flex
-                spacing="s"
-              >
-                Apple (selectable)
-              </Selectable>
-              <Selectable
-                index={3}
-                id="ro_banana"
-                value="Banana"
-                selected={selected === "Banana"}
-                flex
-                spacing="s"
-              >
-                Banana (selectable)
-              </Selectable>
-              <Selectable
-                index={4}
-                id="ro_cherry"
-                value="Cherry"
-                selected={selected === "Cherry"}
-                flex
-                spacing="s"
-              >
-                Cherry (selectable)
-              </Selectable>
-            </SelectableList>
-            <div className="value-display">
-              {selected ? `Selected: ${selected}` : ""}
+            <div className="two-col">
+              <div>
+                <div className="col-label">Single</div>
+                {renderList({
+                  multiple: false,
+                  selected: selectedSingle,
+                  setSelected: setSelectedSingle,
+                })}
+                <div className="value-display">
+                  {selectedSingle ? `Selected: ${selectedSingle}` : ""}
+                </div>
+              </div>
+              <div>
+                <div className="col-label">Multiple</div>
+                {renderList({
+                  multiple: true,
+                  selected: selectedMultiple,
+                  setSelected: setSelectedMultiple,
+                })}
+                <div className="value-display">
+                  {selectedMultiple.length
+                    ? `Selected: ${selectedMultiple.join(", ")}`
+                    : ""}
+                </div>
+              </div>
             </div>
           </div>
         );
@@ -250,8 +336,10 @@
       // ── Form integration ───────────────────────────────────────────────────────
 
       const FormDemo = () => {
-        const [selected, setSelected] = useState(null);
-        const [submitted, setSubmitted] = useState(null);
+        const [submittedSingle, setSubmittedSingle] = useState(null);
+        const [submittedMultiple, setSubmittedMultiple] = useState(null);
+        const [selectedSingle, setSelectedSingle] = useState(null);
+        const [selectedMultiple, setSelectedMultiple] = useState([]);
         return (
           <div id="form" className="demo-section">
             <h2>Form integration</h2>
@@ -259,87 +347,94 @@
               <code>SelectableList</code> works inside a <code>Form</code>. The
               selected value is submitted under the list's <code>name</code>.
             </p>
-            <Form
-              action={({ fruit }) => {
-                setSubmitted(fruit ?? "(none)");
-              }}
-            >
-              <SelectableList
-                name="fruit"
-                action={(v) => {
-                  setSelected(v);
-                }}
-              >
-                {FRUITS.map((fruit, i) => (
-                  <Selectable
-                    key={fruit}
-                    index={i}
-                    id={`form_${fruit.toLowerCase()}`}
-                    value={fruit}
-                    selected={selected === fruit}
-                    flex
-                    spacing="s"
-                  >
-                    {fruit}
-                  </Selectable>
-                ))}
-              </SelectableList>
-              <Button type="submit" style={{ marginTop: 12 }}>
-                Submit
-              </Button>
-            </Form>
-            <div className="value-display">
-              {submitted !== null ? `Submitted: ${submitted}` : ""}
-            </div>
-          </div>
-        );
-      };
-
-      // ── Selectable.Input — radio at the start ──────────────────────────────────
-
-      const InputDemo = () => {
-        const [selected, setSelected] = useState(null);
-        return (
-          <div className="demo-section">
-            <h2>Selectable.Input</h2>
-            <p>
-              <code>Selectable.Input</code> renders a decorative radio that
-              mirrors the selection state. It is purely a visual cue — not
-              mandatory — and can be placed anywhere inside the{" "}
-              <code>Selectable</code>.
-            </p>
-            <SelectableList
-              action={(v) => {
-                setSelected(v);
-              }}
-              style={{
-                "--list-item-background-color-selected": "unset",
-                "--list-item-color-selected": "unset",
-              }}
-            >
-              {FRUITS.map((fruit, i) => (
-                <Selectable
-                  key={fruit}
-                  index={i}
-                  id={`input_${fruit.toLowerCase()}`}
-                  value={fruit}
-                  selected={selected === fruit}
-                  flex
-                  spacing="s"
+            <div className="two-col">
+              <div>
+                <div className="col-label">Single</div>
+                <Form
+                  action={({ fruit }) => {
+                    setSubmittedSingle(fruit ?? "(none)");
+                  }}
                 >
-                  <Selectable.Input />
-                  {fruit}
-                </Selectable>
-              ))}
-            </SelectableList>
-            <div className="value-display">
-              {selected ? `Selected: ${selected}` : ""}
+                  <SelectableList
+                    name="fruit"
+                    action={(v) => {
+                      setSelectedSingle(v ?? null);
+                    }}
+                  >
+                    {FRUITS.map((fruit, i) => (
+                      <Selectable
+                        key={fruit}
+                        index={i}
+                        id={`form_s_${fruit.toLowerCase()}`}
+                        value={fruit}
+                        selected={selectedSingle === fruit}
+                        flex
+                        spacing="s"
+                      >
+                        <Selectable.Input />
+                        {fruit}
+                      </Selectable>
+                    ))}
+                  </SelectableList>
+                  <Button type="submit" style={{ marginTop: 12 }}>
+                    Submit
+                  </Button>
+                </Form>
+                <div className="value-display">
+                  {submittedSingle !== null
+                    ? `Submitted: ${submittedSingle}`
+                    : ""}
+                </div>
+              </div>
+              <div>
+                <div className="col-label">Multiple</div>
+                <Form
+                  action={({ fruit }) => {
+                    setSubmittedMultiple(
+                      Array.isArray(fruit)
+                        ? fruit.join(", ")
+                        : (fruit ?? "(none)"),
+                    );
+                  }}
+                >
+                  <SelectableList
+                    multiple
+                    name="fruit"
+                    action={(v) => {
+                      setSelectedMultiple(v ?? []);
+                    }}
+                  >
+                    {FRUITS.map((fruit, i) => (
+                      <Selectable
+                        key={fruit}
+                        index={i}
+                        id={`form_m_${fruit.toLowerCase()}`}
+                        value={fruit}
+                        selected={selectedMultiple.includes(fruit)}
+                        flex
+                        spacing="s"
+                      >
+                        <Selectable.Input />
+                        {fruit}
+                      </Selectable>
+                    ))}
+                  </SelectableList>
+                  <Button type="submit" style={{ marginTop: 12 }}>
+                    Submit
+                  </Button>
+                </Form>
+                <div className="value-display">
+                  {submittedMultiple !== null
+                    ? `Submitted: ${submittedMultiple}`
+                    : ""}
+                </div>
+              </div>
             </div>
           </div>
         );
       };
 
-      // ── Custom icon input at the end ───────────────────────────────────────────
+      // ── Custom icons ───────────────────────────────────────────────────────────
 
       const CircleIcon = () => (
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
@@ -369,40 +464,356 @@
       );
 
       const IconInputDemo = () => {
-        const [selected, setSelected] = useState(null);
+        const [selectedSingle, setSelectedSingle] = useState(null);
+        const [selectedMultiple, setSelectedMultiple] = useState([]);
+        const renderList = ({ multiple, selected, setSelected }) => (
+          <SelectableList
+            multiple={multiple}
+            action={(v) => {
+              setSelected(multiple ? (v ?? []) : (v ?? null));
+            }}
+          >
+            {FRUITS.map((fruit, i) => (
+              <Selectable
+                key={fruit}
+                index={i}
+                id={`icon_${multiple ? "m" : "s"}_${fruit.toLowerCase()}`}
+                value={fruit}
+                selected={
+                  multiple ? selected.includes(fruit) : selected === fruit
+                }
+                flex
+                spacing="s"
+                expandX
+                alignY="center"
+              >
+                <span style={{ flex: 1 }}>{fruit}</span>
+                <Selectable.Input icons={[<CircleIcon />, <CheckIcon />]} />
+              </Selectable>
+            ))}
+          </SelectableList>
+        );
         return (
-          <div className="demo-section">
+          <div id="icons" className="demo-section">
             <h2>Custom icons</h2>
             <p>
               Pass <code>icons={`{[uncheckedIcon, checkedIcon]}`}</code> to{" "}
-              <code>Selectable.Input</code> to render custom icons instead of
-              the default radio mark. Here the input is placed at the{" "}
-              <em>end</em> to show it can go anywhere.
+              <code>Selectable.Input</code> to render custom icons. Here the
+              input is placed at the <em>end</em> of the row.
             </p>
-            <SelectableList
-              action={(v) => {
-                setSelected(v);
-              }}
-            >
-              {FRUITS.map((fruit, i) => (
-                <Selectable
-                  key={fruit}
-                  index={i}
-                  id={`icon_${fruit.toLowerCase()}`}
-                  value={fruit}
-                  selected={selected === fruit}
-                  flex
-                  spacing="s"
-                  expandX
-                  alignY="center"
-                >
-                  <span style={{ flex: 1 }}>{fruit}</span>
-                  <Selectable.Input icons={[<CircleIcon />, <CheckIcon />]} />
-                </Selectable>
-              ))}
-            </SelectableList>
-            <div className="value-display">
-              {selected ? `Selected: ${selected}` : ""}
+            <div className="two-col">
+              <div>
+                <div className="col-label">Single</div>
+                {renderList({
+                  multiple: false,
+                  selected: selectedSingle,
+                  setSelected: setSelectedSingle,
+                })}
+                <div className="value-display">
+                  {selectedSingle ? `Selected: ${selectedSingle}` : ""}
+                </div>
+              </div>
+              <div>
+                <div className="col-label">Multiple</div>
+                {renderList({
+                  multiple: true,
+                  selected: selectedMultiple,
+                  setSelected: setSelectedMultiple,
+                })}
+                <div className="value-display">
+                  {selectedMultiple.length
+                    ? `Selected: ${selectedMultiple.join(", ")}`
+                    : ""}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      // ── Toggle appearance ──────────────────────────────────────────────────────
+
+      const ToggleDemo = () => {
+        const [selectedSingle, setSelectedSingle] = useState(null);
+        const [selectedMultiple, setSelectedMultiple] = useState([]);
+        const renderList = ({ multiple, selected, setSelected }) => (
+          <SelectableList
+            multiple={multiple}
+            action={(v) => {
+              setSelected(multiple ? (v ?? []) : (v ?? null));
+            }}
+          >
+            {FRUITS.map((fruit, i) => (
+              <Selectable
+                key={fruit}
+                index={i}
+                id={`toggle_${multiple ? "m" : "s"}_${fruit.toLowerCase()}`}
+                value={fruit}
+                selected={
+                  multiple ? selected.includes(fruit) : selected === fruit
+                }
+                flex
+                spacing="s"
+                expandX
+                alignY="center"
+              >
+                <span style={{ flex: 1 }}>{fruit}</span>
+                <Selectable.Input appearance="toggle" />
+              </Selectable>
+            ))}
+          </SelectableList>
+        );
+        return (
+          <div id="toggle" className="demo-section">
+            <h2>Toggle appearance</h2>
+            <p>
+              Pass <code>appearance="toggle"</code> to{" "}
+              <code>Selectable.Input</code> to render a toggle switch instead of
+              a radio/checkbox mark.
+            </p>
+            <div className="two-col">
+              <div>
+                <div className="col-label">Single</div>
+                {renderList({
+                  multiple: false,
+                  selected: selectedSingle,
+                  setSelected: setSelectedSingle,
+                })}
+                <div className="value-display">
+                  {selectedSingle ? `Selected: ${selectedSingle}` : ""}
+                </div>
+              </div>
+              <div>
+                <div className="col-label">Multiple</div>
+                {renderList({
+                  multiple: true,
+                  selected: selectedMultiple,
+                  setSelected: setSelectedMultiple,
+                })}
+                <div className="value-display">
+                  {selectedMultiple.length
+                    ? `Selected: ${selectedMultiple.join(", ")}`
+                    : ""}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      // ── Background color indicator ─────────────────────────────────────────────
+
+      const BgColorDemo = () => {
+        const [selectedSingle, setSelectedSingle] = useState(null);
+        const [selectedMultiple, setSelectedMultiple] = useState([]);
+        const renderList = ({ multiple, selected, setSelected }) => (
+          <SelectableList
+            multiple={multiple}
+            selectedIndicator="backgroundColor"
+            action={(v) => {
+              setSelected(multiple ? (v ?? []) : (v ?? null));
+            }}
+          >
+            {FRUITS.map((fruit, i) => (
+              <Selectable
+                key={fruit}
+                index={i}
+                id={`bg_${multiple ? "m" : "s"}_${fruit.toLowerCase()}`}
+                value={fruit}
+                selected={
+                  multiple ? selected.includes(fruit) : selected === fruit
+                }
+                flex
+                spacing="s"
+              >
+                {fruit}
+              </Selectable>
+            ))}
+          </SelectableList>
+        );
+        return (
+          <div id="bg-color" className="demo-section">
+            <h2>Background color indicator</h2>
+            <p>
+              Pass <code>selectedIndicator="backgroundColor"</code> to{" "}
+              <code>SelectableList</code> to highlight selected items with a
+              background color. This is opt-in — by default no background is
+              applied so the visual indicator is entirely up to{" "}
+              <code>Selectable.Input</code>.
+            </p>
+            <div className="two-col">
+              <div>
+                <div className="col-label">Single</div>
+                {renderList({
+                  multiple: false,
+                  selected: selectedSingle,
+                  setSelected: setSelectedSingle,
+                })}
+                <div className="value-display">
+                  {selectedSingle ? `Selected: ${selectedSingle}` : ""}
+                </div>
+              </div>
+              <div>
+                <div className="col-label">Multiple</div>
+                {renderList({
+                  multiple: true,
+                  selected: selectedMultiple,
+                  setSelected: setSelectedMultiple,
+                })}
+                <div className="value-display">
+                  {selectedMultiple.length
+                    ? `Selected: ${selectedMultiple.join(", ")}`
+                    : ""}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      // ── Custom background color ────────────────────────────────────────────────
+
+      const CustomBgColorDemo = () => {
+        const [selectedSingle, setSelectedSingle] = useState(null);
+        const [selectedMultiple, setSelectedMultiple] = useState([]);
+        const customStyle = {
+          "--list-item-background-color-selected":
+            "light-dark(#d1fae5, #065f46)",
+          "--list-item-color-selected": "light-dark(#065f46, #d1fae5)",
+        };
+        const renderList = ({ multiple, selected, setSelected }) => (
+          <SelectableList
+            multiple={multiple}
+            selectedIndicator="backgroundColor"
+            style={customStyle}
+            action={(v) => {
+              setSelected(multiple ? (v ?? []) : (v ?? null));
+            }}
+          >
+            {FRUITS.map((fruit, i) => (
+              <Selectable
+                key={fruit}
+                index={i}
+                id={`custombg_${multiple ? "m" : "s"}_${fruit.toLowerCase()}`}
+                value={fruit}
+                selected={
+                  multiple ? selected.includes(fruit) : selected === fruit
+                }
+                flex
+                spacing="s"
+              >
+                {fruit}
+              </Selectable>
+            ))}
+          </SelectableList>
+        );
+        return (
+          <div id="custom-bg" className="demo-section">
+            <h2>Custom background color</h2>
+            <p>
+              Override <code>--list-item-background-color-selected</code> and{" "}
+              <code>--list-item-color-selected</code> to use a custom palette.
+              Always set both to ensure sufficient contrast.
+            </p>
+            <div className="two-col">
+              <div>
+                <div className="col-label">Single</div>
+                {renderList({
+                  multiple: false,
+                  selected: selectedSingle,
+                  setSelected: setSelectedSingle,
+                })}
+                <div className="value-display">
+                  {selectedSingle ? `Selected: ${selectedSingle}` : ""}
+                </div>
+              </div>
+              <div>
+                <div className="col-label">Multiple</div>
+                {renderList({
+                  multiple: true,
+                  selected: selectedMultiple,
+                  setSelected: setSelectedMultiple,
+                })}
+                <div className="value-display">
+                  {selectedMultiple.length
+                    ? `Selected: ${selectedMultiple.join(", ")}`
+                    : ""}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      // ── Manual selectable area ─────────────────────────────────────────────────
+
+      const ManualAreaDemo = () => {
+        const [selectedSingle, setSelectedSingle] = useState(null);
+        const [selectedMultiple, setSelectedMultiple] = useState([]);
+        const renderList = ({ multiple, selected, setSelected }) => (
+          <SelectableList
+            multiple={multiple}
+            action={(v) => {
+              setSelected(multiple ? (v ?? []) : (v ?? null));
+            }}
+          >
+            {FRUITS.map((fruit, i) => (
+              <Selectable
+                key={fruit}
+                index={i}
+                id={`manual_${multiple ? "m" : "s"}_${fruit.toLowerCase()}`}
+                value={fruit}
+                selected={
+                  multiple ? selected.includes(fruit) : selected === fruit
+                }
+                selectableArea="manual"
+                flex
+                spacing="s"
+                expandX
+                alignY="center"
+              >
+                <span style={{ flex: 1 }}>{fruit}</span>
+                <Selectable.Input />
+              </Selectable>
+            ))}
+          </SelectableList>
+        );
+        return (
+          <div id="manual-area" className="demo-section">
+            <h2>Manual selectable area</h2>
+            <p>
+              By default the entire row acts as a <code>{"<label>"}</code> so
+              clicking anywhere selects the item. Pass{" "}
+              <code>selectableArea="manual"</code> to render the row as a{" "}
+              <code>{"<div>"}</code> instead — only clicking directly on the{" "}
+              <code>Selectable.Input</code> (or another interactive element)
+              will then trigger selection.
+            </p>
+            <div className="two-col">
+              <div>
+                <div className="col-label">Single</div>
+                {renderList({
+                  multiple: false,
+                  selected: selectedSingle,
+                  setSelected: setSelectedSingle,
+                })}
+                <div className="value-display">
+                  {selectedSingle ? `Selected: ${selectedSingle}` : ""}
+                </div>
+              </div>
+              <div>
+                <div className="col-label">Multiple</div>
+                {renderList({
+                  multiple: true,
+                  selected: selectedMultiple,
+                  setSelected: setSelectedMultiple,
+                })}
+                <div className="value-display">
+                  {selectedMultiple.length
+                    ? `Selected: ${selectedMultiple.join(", ")}`
+                    : ""}
+                </div>
+              </div>
             </div>
           </div>
         );

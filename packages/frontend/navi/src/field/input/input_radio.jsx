@@ -325,6 +325,47 @@ const css = /* css */ `
         --x-background-color: var(--button-background-color-disabled);
       }
     }
+
+    /* Toggle appearance */
+    &[data-appearance="toggle"] {
+      --toggle-width: 2.5em;
+      --toggle-height: 1.4em;
+      --width: var(--toggle-width);
+      --height: var(--toggle-height);
+
+      position: relative;
+      background: light-dark(#ccc, #555);
+      border: none;
+      border-radius: var(--toggle-height);
+      outline-offset: 3px;
+
+      .navi_toggle_thumb {
+        position: absolute;
+        top: 2px;
+        left: 2px;
+        width: calc(var(--toggle-height) - 4px);
+        height: calc(var(--toggle-height) - 4px);
+        background: white;
+        border-radius: 50%;
+        transition: transform 0.2s ease;
+        pointer-events: none;
+      }
+
+      &[data-checked] {
+        background: var(--navi-accent-color, light-dark(#1a73e8, #4a9eff));
+
+        .navi_toggle_thumb {
+          transform: translateX(
+            calc(var(--toggle-width) - var(--toggle-height))
+          );
+        }
+      }
+
+      &[data-disabled],
+      &[data-readonly] {
+        opacity: 0.5;
+      }
+    }
   }
 `;
 
@@ -412,7 +453,9 @@ const InputRadioFieldInterface = (props) => {
   });
 
   let visualVNode;
-  if (appearance === "radio") {
+  if (appearance === "toggle") {
+    visualVNode = <span className="navi_toggle_thumb" />;
+  } else if (appearance === "radio") {
     visualVNode = (
       <svg
         viewBox="0 0 12 12"
