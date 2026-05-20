@@ -338,6 +338,12 @@ const css = /* css */ `
  *                          min-height so filtering cannot collapse the layout.
  *   ...rest              — forwarded to the outer scroll container <Box>
  */
+export const List = (props) => {
+  const refDefault = useRef(null);
+  props.ref = props.ref || refDefault;
+  const listVnode = renderList(ListUI, props);
+  return listVnode;
+};
 const ListWithPopoverResolver = (props) => {
   const Next = useNextResolver();
   if (props.popover === true) {
@@ -347,12 +353,6 @@ const ListWithPopoverResolver = (props) => {
 };
 const renderList = createComponentResolver([ListWithPopoverResolver]);
 
-export const List = (props) => {
-  const refDefault = useRef(null);
-  props.ref = props.ref || refDefault;
-  const listVnode = renderList(ListUI, props);
-  return listVnode;
-};
 const ListUI = (props) => {
   import.meta.css = css;
   const {
