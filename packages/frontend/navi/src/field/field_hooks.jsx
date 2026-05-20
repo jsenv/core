@@ -24,7 +24,6 @@ import {
   requestResetUIState,
   requestSetUIState,
   useUIGroupStateController,
-  useUIState,
   useUIStateController,
 } from "./ui_state_controller.js";
 import {
@@ -94,7 +93,6 @@ export const useFieldgroupInterfaceProps = (
     aggregateChildStates,
     debugAction,
   });
-  // const uiState = useUIState(uiGroupStateController);
   const [boundAction] = useActionBoundToOneParam(
     action,
     uiGroupStateController.uiStateSignal,
@@ -141,9 +139,6 @@ export const useFieldgroupInterfaceProps = (
     ...actionProps,
     children: childrenWithContext,
     value: undefined, // field group doesn't have a value
-    onnavi_request_reset_ui_state: (e) => {
-      uiGroupStateController.resetUIState(e);
-    },
     onnavi_action_ready: (e) => {
       setActionRequester(e.detail.requester);
       actionProps.onnavi_action_ready(e);
@@ -253,7 +248,7 @@ const useActionProps = (
     );
   }
 
-  const uiState = useUIState(uiStateController);
+  const uiState = uiStateController.uiStateSignal.value;
   const { statePropName } = uiStateController;
   const statePropValueRaw = uiStateController.getPropFromState(uiState);
   const statePropValue = getDisplayValue(statePropValueRaw);
@@ -283,7 +278,7 @@ const useActionProps = (
       ":-navi-loading": loadingResolved,
     },
     "onnavi_request_reset_ui_state": (e) => {
-      requestSetUIState(e.currentTarget, uiStateController.state, { event: e });
+      uiStateController.resetUIState(e);
     },
     "onnavi_request_ui_state": (e) => {
       e.detail.respondWith(readUIState(e));

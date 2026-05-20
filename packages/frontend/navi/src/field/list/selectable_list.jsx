@@ -19,7 +19,6 @@ import {
   useLayoutEffect,
   useMemo,
   useRef,
-  useState,
 } from "preact/hooks";
 
 import { BoxForwardedPropsContext } from "@jsenv/navi/src/box/box.jsx";
@@ -29,7 +28,7 @@ import { Field } from "../field.jsx";
 import { FIELD_PROP_SET, FieldToInterfaceContext } from "../field_context.js";
 import { useFieldgroupInterfaceProps } from "../field_hooks.jsx";
 import { Input } from "../input/input.jsx";
-import { requestSetUIState } from "../ui_state_controller.js";
+import { requestSetUIState, useUIState } from "../ui_state_controller.js";
 import { dispatchRequestAction } from "../validation/custom_constraint_validation.js";
 import { List, LIST_ITEM_PSEUDO_CLASSES, ListItem } from "./list.jsx";
 
@@ -297,30 +296,7 @@ export const Selectable = (props) => {
     };
   }, [inputId, inputType, selected]);
 
-  const [checkedState, setCheckedState] = useState(selected);
-  useLayoutEffect(() => {
-    setCheckedState(selected);
-  }, [selected]);
-  useLayoutEffect(() => {
-    const realInput = inputRef.current;
-    if (!realInput) {
-      return undefined;
-    }
-    const onnavi_set_ui_state = (e) => {
-      console.log(
-        "received set ui_state",
-        e.detail.value,
-        "for",
-        e.currentTarget,
-      );
-      setCheckedState(e.detail.value);
-    };
-    realInput.addEventListener("navi_set_ui_state", onnavi_set_ui_state);
-    return () => {
-      realInput.removeEventListener("navi_set_ui_state", onnavi_set_ui_state);
-    };
-  }, []);
-
+  const checkedUIState = useUIState(inputRef, selected);
   return (
     <ListItem
       id={id}
@@ -329,8 +305,8 @@ export const Selectable = (props) => {
       filtered={filtered}
       hidden={hidden}
       pseudoClasses={SELECTABLE_PSEUDO_CLASSES}
-      data-selected={checkedState || undefined}
-      aria-selected={checkedState ? "true" : "false"}
+      data-selected={checkedUIState || undefined}
+      aria-selected={checkedUIState ? "true" : "false"}
     >
       <Field
         id={inputId}

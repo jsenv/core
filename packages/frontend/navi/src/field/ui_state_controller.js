@@ -5,7 +5,13 @@ import {
 } from "@jsenv/dom";
 import { signal } from "@preact/signals";
 import { createContext } from "preact";
-import { useContext, useLayoutEffect, useMemo, useRef } from "preact/hooks";
+import {
+  useContext,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "preact/hooks";
 
 import { isSignal } from "@jsenv/navi/src/utils/is_signal.js";
 import { useNavState } from "../nav/browser_integration/browser_integration.js";
@@ -219,9 +225,7 @@ export const useUIStateController = (
       }
     },
     resetUIState: (e) => {
-      const currentState = uiStateController.state;
-      debugAction(e, `resetUIState to ${JSON.stringify(currentState)}`);
-      uiStateController.setUIState(currentState, e);
+      requestSetUIState(e.currentTarget, uiStateController.state, { event: e });
     },
     actionEnd: () => {
       debugUIState(`"${componentType}" actionEnd called`);
@@ -532,8 +536,25 @@ export const useUIGroupStateController = (
  * @param {Object} uiStateController - The UI state controller to track
  * @returns {any} The current UI state
  */
-export const useUIState = (uiStateController) => {
-  return uiStateController.uiStateSignal.value;
+export const useUIState = (ref, initialValue) => {
+  const [uiState, setUIState] = useState(initialValue);
+  useLayoutEffect(() => {
+    setUIState(initialValue);
+  }, [initialValue]);
+  useLayoutEffect(() => {
+    const inputEl = ref.current;
+    if (!inputEl) {
+      return undefined;
+    }
+    const onnavi_set_ui_state = (e) => {
+      setUIState(e.detail.value);
+    };
+    inputEl.addEventListener("navi_set_ui_state", onnavi_set_ui_state);
+    return () => {
+      inputEl.removeEventListener("navi_set_ui_state", onnavi_set_ui_state);
+    };
+  }, [ref]);
+  return uiState;
 };
 
 export const useUIAction = (uiStateController, uiAction) => {
