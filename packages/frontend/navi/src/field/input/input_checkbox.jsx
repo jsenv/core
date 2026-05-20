@@ -3,11 +3,7 @@ import { useContext, useRef } from "preact/hooks";
 import { Box, BoxForwardedPropsContext } from "../../box/box.jsx";
 import { LoadingOutline } from "../../graphic/loading/loading_outline.jsx";
 import { useAccentColorAttributes } from "../../utils/use_accent_color_attributes.js";
-import {
-  FIELD_PROP_SET,
-  FieldNameContext,
-  RequiredContext,
-} from "../field_context.js";
+import { FIELD_PROP_SET } from "../field_context.js";
 import { useFieldInterfaceProps } from "../field_hooks.jsx";
 import { requestClosestAction } from "../string_actions.js";
 import {
@@ -376,11 +372,6 @@ export const InputCheckbox = (props) => {
   const defaultRef = useRef();
   props.ref = props.ref || defaultRef;
   props.value = props.value === undefined ? "on" : props.value;
-  const contextFieldName = useContext(FieldNameContext);
-  const contextRequired = useContext(RequiredContext);
-  props.name = props.name === undefined ? contextFieldName : props.name;
-  props.required =
-    props.required === undefined ? contextRequired : props.required;
 
   return <InputCheckboxFieldInterface {...props} />;
 };
@@ -510,8 +501,8 @@ const InputCheckboxFieldInterface = (props) => {
           requestClosestAction(e);
         }
         if (e.key === " ") {
-          const radio = ref.current;
-          const allowed = dispatchRequestInteraction(radio, e);
+          const checkbox = ref.current;
+          const allowed = dispatchRequestInteraction(checkbox, e);
           if (!allowed) {
             e.preventDefault();
           }
