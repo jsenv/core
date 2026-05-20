@@ -5,6 +5,7 @@ import {
   dispatchRequestAction,
   dispatchRequestInteraction,
 } from "@jsenv/navi/src/field/validation/custom_constraint_validation.js";
+import { useDebugInteraction } from "@jsenv/navi/src/navi_debug.jsx";
 import { LoadingOutline } from "../../graphic/loading/loading_outline.jsx";
 import { useAccentColorAttributes } from "../../utils/use_accent_color_attributes.js";
 import { FIELD_PROP_SET } from "../field_context.js";
@@ -374,6 +375,7 @@ export const InputRadio = (props) => {
   props.ref = props.ref || defaultRef;
   props.value = props.value === undefined ? "on" : props.value;
 
+  const debugInteraction = useDebugInteraction();
   const fieldInterfaceProps = useFieldInterfaceProps(props, {
     fieldType: "radio",
     statePropName: "checked",
@@ -405,6 +407,7 @@ export const InputRadio = (props) => {
       const radio = ref.current;
       const allowed = dispatchRequestInteraction(radio, e);
       if (!allowed) {
+        debugInteraction(e, "preventDefault() to prevent radio being checked");
         e.preventDefault();
       }
     },
@@ -426,6 +429,10 @@ export const InputRadio = (props) => {
         const radio = ref.current;
         const allowed = dispatchRequestInteraction(radio, e);
         if (!allowed) {
+          debugInteraction(
+            e,
+            "preventDefault() to prevent radio being checked and page from scrolling",
+          );
           e.preventDefault();
         }
       }
