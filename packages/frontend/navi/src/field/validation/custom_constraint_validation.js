@@ -126,9 +126,8 @@ export const onRequestInteraction = (
   }
 };
 
-export const dispatchRequestAction = (
-  elementWithAction,
-  {
+export const dispatchRequestAction = (elementWithAction, params) => {
+  const {
     event,
     requester = elementWithAction,
     // for keyboard shortcuts
@@ -138,23 +137,25 @@ export const dispatchRequestAction = (
     confirmMessage,
     meta,
     uiState,
-  },
-) => {
+  } = params;
   if (!event) {
     throw new TypeError("dispatchRequestAction requires an event");
+  }
+  const detail = {
+    event,
+    requester,
+    actionOrigin,
+    action,
+    confirmMessage,
+    meta,
+  };
+  if ("uiState" in params) {
+    detail.uiState = uiState;
   }
   const allowed = dispatchInternalCustomEvent(
     elementWithAction,
     "navi_request_action",
-    {
-      event,
-      requester,
-      actionOrigin,
-      action,
-      confirmMessage,
-      meta,
-      uiState,
-    },
+    detail,
   );
   return allowed;
 };

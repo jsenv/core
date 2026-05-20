@@ -404,8 +404,8 @@ const useActionProps = (
           },
         });
         uiState = normalizeUIState(uiStateRaw);
+        e.detail.uiState = uiState;
       }
-      e.detail.uiState = uiState;
       const naviProxyTarget = getNaviProxyTarget(e);
       if (naviProxyTarget) {
         requestSetUIState(naviProxyTarget, uiState, { event: e });
