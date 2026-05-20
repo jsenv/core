@@ -172,8 +172,9 @@
           <div id="basic" className="demo-section">
             <h2>Basic (with Selectable.Input)</h2>
             <p>
-              <code>Selectable.Input</code> renders a decorative radio/checkbox
-              that mirrors the selection state.
+              <code>Selectable.Input</code> lets you control where the input
+              indicator appears inside the row. See the Customization section
+              below for more advanced placements and appearances.
             </p>
             <div className="two-col">
               <div>
@@ -747,10 +748,132 @@
 
       // ── Manual selectable area ─────────────────────────────────────────────────
 
+      const FRUIT_BADGES = {
+        Apple: 3,
+        Banana: 0,
+        Cherry: 12,
+        Date: 1,
+        Elderberry: 0,
+      };
+
+      const ManualAreaItem = ({ fruit, index, selected, prefix }) => {
+        const [lastAction, setLastAction] = useState(null);
+        const badge = FRUIT_BADGES[fruit];
+        return (
+          <Selectable
+            index={index}
+            id={`manual_${prefix}_${fruit.toLowerCase()}`}
+            value={fruit}
+            selected={selected}
+            selectableArea="manual"
+            flex
+            expandX
+            alignY="center"
+            padding="0"
+          >
+            {/* The <label> wrapping Selectable.Input + text is the clickable selection zone */}
+            <label
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                flex: 1,
+                padding: "10px 12px",
+                cursor: "pointer",
+                border: "2px dotted #aaa",
+                borderRadius: 6,
+                margin: 4,
+              }}
+            >
+              <Selectable.Input />
+              <span>{fruit}</span>
+              {badge > 0 && (
+                <span
+                  style={{
+                    marginLeft: "auto",
+                    minWidth: 20,
+                    height: 20,
+                    padding: "0 6px",
+                    borderRadius: 10,
+                    background: "#e53e3e",
+                    color: "white",
+                    fontSize: "0.72rem",
+                    fontWeight: 700,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  {badge}
+                </span>
+              )}
+            </label>
+            {/* Actions on the right — outside the label, so clicking them does NOT select */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 4,
+                padding: "0 8px",
+                flexShrink: 0,
+              }}
+            >
+              <button
+                type="button"
+                title="Edit"
+                onClick={() => {
+                  setLastAction(`edit ${fruit}`);
+                }}
+                style={{
+                  padding: "4px 8px",
+                  border: "1px solid #ddd",
+                  borderRadius: 4,
+                  background: "white",
+                  cursor: "pointer",
+                  fontSize: "0.8rem",
+                }}
+              >
+                ✏️
+              </button>
+              <button
+                type="button"
+                title="Delete"
+                onClick={() => {
+                  setLastAction(`delete ${fruit}`);
+                }}
+                style={{
+                  padding: "4px 8px",
+                  border: "1px solid #ddd",
+                  borderRadius: 4,
+                  background: "white",
+                  cursor: "pointer",
+                  fontSize: "0.8rem",
+                }}
+              >
+                🗑️
+              </button>
+            </div>
+            {lastAction && (
+              <span
+                style={{
+                  fontSize: "0.75rem",
+                  color: "#888",
+                  paddingRight: 8,
+                  fontStyle: "italic",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                → {lastAction}
+              </span>
+            )}
+          </Selectable>
+        );
+      };
+
       const ManualAreaDemo = () => {
         const [selectedSingle, setSelectedSingle] = useState(null);
         const [selectedMultiple, setSelectedMultiple] = useState([]);
-        const renderList = ({ multiple, selected, setSelected }) => (
+        const renderList = ({ multiple, selected, setSelected, prefix }) => (
           <SelectableList
             multiple={multiple}
             action={(v) => {
@@ -758,23 +881,16 @@
             }}
           >
             {FRUITS.map((fruit, i) => (
-              <Selectable
+              <ManualAreaItem
                 key={fruit}
+                fruit={fruit}
                 index={i}
-                id={`manual_${multiple ? "m" : "s"}_${fruit.toLowerCase()}`}
-                value={fruit}
+                multiple={multiple}
                 selected={
                   multiple ? selected.includes(fruit) : selected === fruit
                 }
-                selectableArea="manual"
-                flex
-                spacing="s"
-                expandX
-                alignY="center"
-              >
-                <span style={{ flex: 1 }}>{fruit}</span>
-                <Selectable.Input />
-              </Selectable>
+                prefix={prefix}
+              />
             ))}
           </SelectableList>
         );
@@ -782,12 +898,12 @@
           <div id="manual-area" className="demo-section">
             <h2>Manual selectable area</h2>
             <p>
-              By default the entire row acts as a <code>{"<label>"}</code> so
-              clicking anywhere selects the item. Pass{" "}
-              <code>selectableArea="manual"</code> to render the row as a{" "}
-              <code>{"<div>"}</code> instead — only clicking directly on the{" "}
-              <code>Selectable.Input</code> (or another interactive element)
-              will then trigger selection.
+              With <code>selectableArea="manual"</code> the row renders as a{" "}
+              <code>{"<div>"}</code> instead of a <code>{"<label>"}</code>. You
+              can then wrap <code>Selectable.Input</code> + text in your own{" "}
+              <code>{"<label>"}</code> to define exactly which area is clickable
+              (dotted border below), while placing independent actions on the
+              right without affecting selection.
             </p>
             <div className="two-col">
               <div>
@@ -796,6 +912,7 @@
                   multiple: false,
                   selected: selectedSingle,
                   setSelected: setSelectedSingle,
+                  prefix: "s",
                 })}
                 <div className="value-display">
                   {selectedSingle ? `Selected: ${selectedSingle}` : ""}
@@ -807,6 +924,7 @@
                   multiple: true,
                   selected: selectedMultiple,
                   setSelected: setSelectedMultiple,
+                  prefix: "m",
                 })}
                 <div className="value-display">
                   {selectedMultiple.length
