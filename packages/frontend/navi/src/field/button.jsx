@@ -567,6 +567,9 @@ const ButtonFieldInterface = (props) => {
       if (button.name) {
         buttonUIState[button.name] = button.value;
       }
+      if (!parentUIStateController && !button.name) {
+        return props.value;
+      }
       return buttonUIState;
     },
     allowNameless: true,
