@@ -1077,6 +1077,10 @@
       };
 
       const ProxyDemo = () => {
+        const [log, setLog] = useState([]);
+        const addLog = (msg) => {
+          setLog((prev) => [...prev.slice(-4), msg]);
+        };
         return (
           <div id="proxy" className="demo-section">
             <h2>Proxy</h2>
@@ -1090,10 +1094,10 @@
               <div>
                 <div className="col-label">Proxy buttons (try mousedown)</div>
                 <Box flex="y" spacing="s">
-                  <Button navi-proxy-for="proxy-demo-radio" value={true}>
+                  <Button navi-proxy-for="radio_being_proxied" value={true}>
                     Enable
                   </Button>
-                  <Button navi-proxy-for="proxy-demo-radio" value={false}>
+                  <Button navi-proxy-for="radio_being_proxied" value={false}>
                     Disable
                   </Button>
                 </Box>
@@ -1103,12 +1107,19 @@
                 <Field>
                   <Input
                     type="radio"
-                    id="proxy-demo-radio"
-                    name="proxy-demo"
+                    id="radio_being_proxied"
+                    name="radio_being_proxied"
                     value="on"
+                    action={(v) => addLog(`action called with ${v}`)}
+                    onnavi_action_end={() => addLog("action ended")}
                   />
                   Option
                 </Field>
+                <div className="value-display">
+                  {log.map((msg, i) => (
+                    <div key={i}>{msg}</div>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
