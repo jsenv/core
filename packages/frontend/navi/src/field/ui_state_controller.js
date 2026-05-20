@@ -219,9 +219,10 @@ export const useUIStateController = (
       if (newUIState === currentUIState) {
         return;
       }
+      const controllerSig = getElementSignature(e.currentTarget || ref.current);
       debugAction(
         e,
-        `${getElementSignature(e.currentTarget)}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> updating to ${JSON.stringify(newUIState)}`,
+        `${controllerSig}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> updating to ${JSON.stringify(newUIState)}`,
       );
       uiStateController.uiState = newUIState;
       uiStateSignal.value = newUIState;

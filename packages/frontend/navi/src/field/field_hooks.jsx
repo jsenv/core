@@ -1,4 +1,8 @@
-import { dispatchInternalCustomEvent, findEvent } from "@jsenv/dom";
+import {
+  dispatchInternalCustomEvent,
+  findEvent,
+  getElementSignature,
+} from "@jsenv/dom";
 import { useContext, useLayoutEffect, useState } from "preact/hooks";
 
 import { useActionBoundToOneParam } from "@jsenv/navi/src/action/use_action.js";
@@ -328,7 +332,10 @@ const useActionProps = (
       uiStateController.setUIState(value, e);
       const naviProxyTarget = getNaviProxyTarget(e);
       if (naviProxyTarget) {
-        debugInteraction(e, "forwarding set_ui_state to navi proxy target");
+        debugInteraction(
+          e,
+          `forwarding set_ui_state "${value}" to ${getElementSignature(naviProxyTarget)}`,
+        );
         requestSetUIState(naviProxyTarget, value, { event: e.detail.event });
       }
     },
