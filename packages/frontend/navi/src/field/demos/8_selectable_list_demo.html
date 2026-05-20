@@ -851,10 +851,11 @@
       const ManualAreaItem = ({ fruit, index, selected, prefix }) => {
         const [lastAction, setLastAction] = useState(null);
         const badge = FRUIT_BADGES[fruit];
+        const id = `manual_${prefix}_${fruit.toLowerCase()}`;
         return (
           <Selectable
             index={index}
-            id={`manual_${prefix}_${fruit.toLowerCase()}`}
+            id={id}
             value={fruit}
             selected={selected}
             selectableArea="manual"
@@ -865,6 +866,7 @@
           >
             {/* The <label> wrapping Selectable.Input + text is the clickable selection zone */}
             <label
+              htmlFor={`${id}_input`}
               style={{
                 display: "flex",
                 alignItems: "center",
