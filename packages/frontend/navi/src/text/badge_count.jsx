@@ -123,9 +123,9 @@ export const BadgeCount = ({
   ...props
 }) => {
   import.meta.css = css;
-
   const defaultRef = useRef();
-  const ref = props.ref || defaultRef;
+  props.ref = props.ref || defaultRef;
+  const { ref } = props;
   useAccentColorAttributes(ref, null);
 
   let valueRequested = (() => {
@@ -158,7 +158,6 @@ export const BadgeCount = ({
         <BadgeCountCircle
           {...props}
           loading={loading}
-          ref={ref}
           hasOverflow={hasOverflow}
           charCount={charCount}
         >
@@ -183,7 +182,6 @@ export const BadgeCount = ({
       <BadgeCountEllipse
         {...props}
         loading={loading}
-        ref={ref}
         hasOverflow={hasOverflow}
         charCount={charCount}
       >
@@ -229,7 +227,6 @@ const applyMaxToValue = (max, value) => {
 };
 
 const BadgeCountEllipse = ({
-  ref,
   loading,
   hasOverflow,
   charCount,
@@ -239,7 +236,6 @@ const BadgeCountEllipse = ({
 }) => {
   return (
     <Text
-      ref={ref}
       className={withPropsClassName("navi_badge_count", className)}
       bold
       data-ellipse=""
@@ -261,7 +257,6 @@ const BadgeCountEllipse = ({
   );
 };
 const BadgeCountCircle = ({
-  ref,
   charCount,
   hasOverflow,
   loading,
@@ -271,7 +266,6 @@ const BadgeCountCircle = ({
 }) => {
   return (
     <Text
-      ref={ref}
       className={withPropsClassName("navi_badge_count", className)}
       data-circle=""
       bold

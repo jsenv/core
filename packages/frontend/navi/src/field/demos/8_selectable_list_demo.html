@@ -167,8 +167,11 @@
       // ── Basic (with Selectable.Input) ──────────────────────────────────────────
 
       const BasicDemo = () => {
-        const [selectedSingle, setSelectedSingle] = useState(null);
-        const [selectedMultiple, setSelectedMultiple] = useState([]);
+        const [selectedSingle, setSelectedSingle] = useState("Apple");
+        const [selectedMultiple, setSelectedMultiple] = useState([
+          "Apple",
+          "Cherry",
+        ]);
         return (
           <div id="basic" className="demo-section">
             <h2>Basic (with Selectable.Input)</h2>
@@ -243,8 +246,11 @@
       // ── ReadOnly items ─────────────────────────────────────────────────────────
 
       const ReadOnlyDemo = () => {
-        const [selectedSingle, setSelectedSingle] = useState(null);
-        const [selectedMultiple, setSelectedMultiple] = useState([]);
+        const [selectedSingle, setSelectedSingle] = useState("Apple");
+        const [selectedMultiple, setSelectedMultiple] = useState([
+          "Apple",
+          "Cherry",
+        ]);
         const renderList = ({ multiple, selected, setSelected }) => (
           <SelectableList
             multiple={multiple}
@@ -340,8 +346,11 @@
       const FormDemo = () => {
         const [submittedSingle, setSubmittedSingle] = useState(null);
         const [submittedMultiple, setSubmittedMultiple] = useState(null);
-        const [selectedSingle, setSelectedSingle] = useState(null);
-        const [selectedMultiple, setSelectedMultiple] = useState([]);
+        const [selectedSingle, setSelectedSingle] = useState("Apple");
+        const [selectedMultiple, setSelectedMultiple] = useState([
+          "Apple",
+          "Cherry",
+        ]);
         return (
           <div id="form" className="demo-section">
             <h2>Form integration</h2>
@@ -466,8 +475,11 @@
       );
 
       const IconInputDemo = () => {
-        const [selectedSingle, setSelectedSingle] = useState(null);
-        const [selectedMultiple, setSelectedMultiple] = useState([]);
+        const [selectedSingle, setSelectedSingle] = useState("Apple");
+        const [selectedMultiple, setSelectedMultiple] = useState([
+          "Apple",
+          "Cherry",
+        ]);
         const renderList = ({ multiple, selected, setSelected }) => (
           <SelectableList
             multiple={multiple}
@@ -536,8 +548,11 @@
       // ── Toggle appearance ──────────────────────────────────────────────────────
 
       const ToggleDemo = () => {
-        const [selectedSingle, setSelectedSingle] = useState(null);
-        const [selectedMultiple, setSelectedMultiple] = useState([]);
+        const [selectedSingle, setSelectedSingle] = useState("Apple");
+        const [selectedMultiple, setSelectedMultiple] = useState([
+          "Apple",
+          "Cherry",
+        ]);
         const renderList = ({ multiple, selected, setSelected }) => (
           <SelectableList
             multiple={multiple}
@@ -606,8 +621,11 @@
       // ── Background color indicator ─────────────────────────────────────────────
 
       const BgColorDemo = () => {
-        const [selectedSingle, setSelectedSingle] = useState(null);
-        const [selectedMultiple, setSelectedMultiple] = useState([]);
+        const [selectedSingle, setSelectedSingle] = useState("Apple");
+        const [selectedMultiple, setSelectedMultiple] = useState([
+          "Apple",
+          "Cherry",
+        ]);
         const renderList = ({ multiple, selected, setSelected }) => (
           <SelectableList
             multiple={multiple}
@@ -676,8 +694,11 @@
       // ── Custom background color ────────────────────────────────────────────────
 
       const CustomBgColorDemo = () => {
-        const [selectedSingle, setSelectedSingle] = useState(null);
-        const [selectedMultiple, setSelectedMultiple] = useState([]);
+        const [selectedSingle, setSelectedSingle] = useState("Apple");
+        const [selectedMultiple, setSelectedMultiple] = useState([
+          "Apple",
+          "Cherry",
+        ]);
         const customStyle = {
           "--list-item-background-color-selected":
             "light-dark(#d1fae5, #065f46)",
@@ -857,8 +878,11 @@
       };
 
       const ManualAreaDemo = () => {
-        const [selectedSingle, setSelectedSingle] = useState(null);
-        const [selectedMultiple, setSelectedMultiple] = useState([]);
+        const [selectedSingle, setSelectedSingle] = useState("Apple");
+        const [selectedMultiple, setSelectedMultiple] = useState([
+          "Apple",
+          "Cherry",
+        ]);
         const renderList = ({ multiple, selected, setSelected, prefix }) => (
           <SelectableList
             multiple={multiple}
