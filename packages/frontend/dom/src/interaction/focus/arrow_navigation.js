@@ -11,6 +11,27 @@ import { markFocusNav } from "./focus_nav_event_marker.js";
 
 const DEBUG = false;
 
+/**
+ * Performs arrow-key navigation within a focus group element.
+ *
+ * Called on every keydown event inside the group. Decides whether the pressed
+ * key should move focus to another element, and if so, which one.
+ *
+ * @param {KeyboardEvent} event - The keydown event.
+ * @param {Element} element - The focus-group root element.
+ * @param {object} [options]
+ * @param {string} [options.name] - Optional group name used for ancestor delegation.
+ * @param {boolean} [options.excludeAriaHidden=true] - Skip elements hidden from the accessibility tree.
+ * @param {"x"|"y"|"both"} [options.direction="both"] - Which axes are active.
+ *   "x" = left/right only, "y" = up/down only, "both" = all four arrows.
+ * @param {"x"|"y"|"both"} [options.wrap] - Which axes loop at boundaries.
+ *   Omit or pass undefined for no looping on either axis.
+ * @param {string} [options.xSelector] - CSS selector that candidates must match
+ *   when navigating on the x axis. Omit to allow any focusable element.
+ * @param {string} [options.ySelector] - CSS selector that candidates must match
+ *   when navigating on the y axis. Omit to allow any focusable element.
+ * @returns {boolean} True if the event was handled (focus moved or default prevented).
+ */
 export const performArrowNavigation = (
   event,
   element,

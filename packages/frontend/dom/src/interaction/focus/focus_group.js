@@ -12,6 +12,33 @@ import { setFocusGroup } from "./focus_group_registry.js";
 import { isFocusNavMarked } from "./focus_nav_event_marker.js";
 import { performTabNavigation } from "./tab_navigation.js";
 
+/**
+ * Initialises keyboard navigation for a focus group.
+ *
+ * Sets up two keyboard behaviours on the element:
+ * - **Tab**: exits the group, moving focus to the next/previous focusable
+ *   element outside the group (standard skip-group behaviour).
+ * - **Arrow keys**: moves focus between focusable descendants according to
+ *   the configured direction, wrapping and selector constraints.
+ *
+ * @param {Element} element - The focus-group root element.
+ * @param {object} [options]
+ * @param {boolean} [options.skipTab=true] - When true, Tab exits the group
+ *   instead of moving through its children one by one.
+ * @param {string} [options.name] - Optional name shared between related groups
+ *   to enable delegation (focus jumps from one named group to another).
+ * @param {boolean} [options.excludeAriaHidden=true] - Skip elements that are
+ *   hidden from the accessibility tree (aria-hidden).
+ * @param {"x"|"y"|"both"} [options.direction="both"] - Which axes are active.
+ *   "x" = left/right only, "y" = up/down only, "both" = all four arrows.
+ * @param {"x"|"y"|"both"} [options.wrap] - Which axes loop at boundaries.
+ *   Omit or pass undefined for no looping on either axis.
+ * @param {string} [options.xSelector] - CSS selector that candidates must match
+ *   when navigating on the x axis. Omit to allow any focusable element.
+ * @param {string} [options.ySelector] - CSS selector that candidates must match
+ *   when navigating on the y axis. Omit to allow any focusable element.
+ * @returns {{ cleanup: () => void }} Call cleanup() to remove all event listeners.
+ */
 export const initFocusGroup = (
   element,
   {
