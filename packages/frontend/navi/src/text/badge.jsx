@@ -36,14 +36,13 @@ const css = /* css */ `
 
 export const Badge = ({ children, className, ...props }) => {
   import.meta.css = css;
-
   const defaultRef = useRef();
-  const ref = props.ref || defaultRef;
+  props.ref = props.ref || defaultRef;
+  const { ref } = props;
   useAccentColorAttributes(ref, null);
 
   return (
     <Text
-      ref={ref}
       className={withPropsClassName("navi_badge", className)}
       bold
       {...props}
@@ -53,7 +52,6 @@ export const Badge = ({ children, className, ...props }) => {
     </Text>
   );
 };
-
 const BadgeStyleCSSVars = {
   borderWidth: "--border-width",
   borderRadius: "--border-radius",
