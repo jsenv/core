@@ -267,8 +267,7 @@ export const Selectable = (props) => {
   const inputId = `${id}_input`;
   const checkedUIState = useUIState(inputRef, selected);
   const inputSelected = Boolean(checkedUIState); // ui state is value or undefined, not a boolean
-  // TODO: readonly is more complex than this it can come from context
-  const inputReadOnly = rest.readOnly;
+  const inputReadOnly = rest.readOnly; // TODO: readonly is more complex than this it can come from context
   const realInputContextValue = useMemo(() => {
     return {
       id: inputId,
