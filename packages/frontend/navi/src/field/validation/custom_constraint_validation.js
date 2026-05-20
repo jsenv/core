@@ -643,7 +643,11 @@ export const installCustomConstraintValidation = (
       });
       return;
     }
-    if (!skipFocus) {
+    if (
+      !skipFocus &&
+      // skip focus on proxy (which uses aria-hidden and are not meant to be focused)
+      !element.closest('[aria-hidden="true"]')
+    ) {
       element.focus();
     }
     const removeCloseOnCleanup = addTeardown(() => {
@@ -668,7 +672,11 @@ export const installCustomConstraintValidation = (
         if (failedConstraintInfo) {
           failedConstraintInfo.reportStatus = "closed";
         }
-        if (!skipFocus && focusWithinCallout) {
+        if (
+          !skipFocus &&
+          focusWithinCallout &&
+          !element.closest('[aria-hidden="true"]') // do not focus invalid proxy
+        ) {
           // focus is withing callout and we are closing it
           // if we don't do anything browser will move focus to the body
           // it's better to have it back to the field

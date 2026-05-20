@@ -12,6 +12,7 @@ import { FIELD_PROP_SET } from "../field_context.js";
 import { useFieldInterfaceProps } from "../field_hooks.jsx";
 import { requestClosestAction } from "../string_actions.js";
 import { requestSetUIState } from "../ui_state_controller.js";
+import { ToggleCSSVars, ToggleUI } from "./toggle_ui.jsx";
 
 const css = /* css */ `
   @layer navi {
@@ -526,7 +527,7 @@ const InputRadioFieldInterface = (props) => {
   } else if (appearance === "icon") {
     visualVNode = Array.isArray(icon) ? icon[checked ? 1 : 0] : icon;
   } else if (appearance === "toggle") {
-    visualVNode = <span className="navi_toggle_thumb" />;
+    visualVNode = <ToggleUI />;
   } else {
     // appearance === "radio"
     visualVNode = (
@@ -572,7 +573,11 @@ const InputRadioFieldInterface = (props) => {
       navi-field=".navi_real_input_radio"
       pseudoStateSelector=".navi_real_input_radio"
       styleCSSVars={
-        appearance === "button" ? RadioButtonStyleCSSVars : RadioStyleCSSVars
+        appearance === "button"
+          ? RadioButtonStyleCSSVars
+          : appearance === "toggle"
+            ? RadioToggleCSSVars
+            : RadioStyleCSSVars
       }
       pseudoClasses={RadioPseudoClasses}
       pseudoElements={RadioPseudoElements}
@@ -655,6 +660,10 @@ const RadioButtonStyleCSSVars = {
     backgroundColor: "--button-background-color-disabled",
     borderColor: "--button-border-color-disabled",
   },
+};
+const RadioToggleCSSVars = {
+  ...RadioStyleCSSVars,
+  ...ToggleCSSVars,
 };
 const RadioPseudoClasses = [
   ":hover",
