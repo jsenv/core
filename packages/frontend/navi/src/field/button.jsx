@@ -14,7 +14,10 @@ import { ActionContext } from "./field_context.js";
 import { useFieldInterfaceProps } from "./field_hooks.jsx";
 import { FormContext } from "./form_context.js";
 import { ParentUIStateControllerContext } from "./ui_state_controller.js";
-import { dispatchRequestAction } from "./validation/custom_constraint_validation.js";
+import {
+  dispatchRequestAction,
+  dispatchRequestInteraction,
+} from "./validation/custom_constraint_validation.js";
 
 /**
  * Notes on Button uiAction and action behavior regarding their context (form, radio list, picker):
@@ -537,7 +540,7 @@ const ButtonInsideForm = (props) => {
 };
 const ButtonFieldInterface = (props) => {
   const Next = useNextResolver();
-  const { ref, onClick } = props;
+  const { ref, onClick, onMouseDown } = props;
   const parentUIStateController = useContext(ParentUIStateControllerContext);
   const ancestorAction = useContext(ActionContext);
   const fieldInterfaceProps = useFieldInterfaceProps(props, {
@@ -576,6 +579,12 @@ const ButtonFieldInterface = (props) => {
   return (
     <Next
       {...fieldInterfaceProps}
+      onMouseDown={(e) => {
+        onMouseDown?.(e);
+        // we set pressed state on mouse down so that button feels responsive, but we dispatch action on click to allow preventing default without blocking pressed state
+        const button = ref.current;
+        dispatchRequestInteraction(button, e);
+      }}
       onClick={(e) => {
         onClick?.(e);
         const button = ref.current;
