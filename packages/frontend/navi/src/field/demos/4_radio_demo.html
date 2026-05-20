@@ -197,8 +197,8 @@
                 <ButtonAppearanceDemo />
                 <ColorDemo />
               </div>
-              <ProxyDemo />
               <InteractiveDemo />
+              <ProxyDemo />
             </div>
           </NaviDebug>
         );
@@ -230,10 +230,10 @@
                 </ol>
               </li>
               <li>
-                <a href="#proxy">Proxy</a>
+                <a href="#interactive">Interactive Controls</a>
               </li>
               <li>
-                <a href="#interactive">Interactive Controls</a>
+                <a href="#proxy">Proxy (debug)</a>
               </li>
               <li>
                 <a href="./5_radio_fieldset_demo.html">RadioFieldset demo</a>
@@ -1088,6 +1088,17 @@
             </p>
             <div className="two-col">
               <div>
+                <div className="col-label">Proxy buttons (try mousedown)</div>
+                <Box flex="y" spacing="s">
+                  <Button navi-proxy-for="proxy-demo-radio" value={true}>
+                    Enable
+                  </Button>
+                  <Button navi-proxy-for="proxy-demo-radio" value={false}>
+                    Disable
+                  </Button>
+                </Box>
+              </div>
+              <div>
                 <div className="col-label">Radio (the actual field)</div>
                 <Field>
                   <Input
@@ -1096,19 +1107,8 @@
                     name="proxy-demo"
                     value="on"
                   />
-                  <Label>Option</Label>
+                  Option
                 </Field>
-              </div>
-              <div>
-                <div className="col-label">Proxy buttons (try mousedown)</div>
-                <Box flex="y" spacing="s">
-                  <button navi-proxy-for="proxy-demo-radio" value={true}>
-                    Enable
-                  </button>
-                  <button navi-proxy-for="proxy-demo-radio" value={false}>
-                    Disable
-                  </button>
-                </Box>
               </div>
             </div>
           </div>
