@@ -22,7 +22,7 @@ import { Field } from "../field.jsx";
 import { FIELD_PROP_SET, FieldToInterfaceContext } from "../field_context.js";
 import { useFieldgroupInterfaceProps } from "../field_hooks.jsx";
 import { Input } from "../input/input.jsx";
-import { requestSetUIState, useUIState } from "../ui_state_controller.js";
+import { useUIState } from "../ui_state_controller.js";
 import { dispatchRequestAction } from "../validation/custom_constraint_validation.js";
 import { List, LIST_ITEM_PSEUDO_CLASSES, ListItem } from "./list.jsx";
 
@@ -266,15 +266,18 @@ export const Selectable = (props) => {
   const inputType = multiple ? "checkbox" : "radio";
   const inputId = `${id}_input`;
   const checkedUIState = useUIState(inputRef, selected);
-  const inputSelected = Boolean(checkedUIState);
+  const inputSelected = Boolean(checkedUIState); // ui state is value or undefined, not a boolean
+  // TODO: readonly is more complex than this it can come from context
+  const inputReadOnly = rest.readOnly;
   const realInputContextValue = useMemo(() => {
     return {
       id: inputId,
       ref: inputRef,
       type: inputType,
       selected: inputSelected,
+      readOnly: inputReadOnly,
     };
-  }, [inputId, inputType, inputSelected]);
+  }, [inputId, inputType, inputSelected, inputReadOnly]);
 
   return (
     <ListItem
@@ -350,15 +353,12 @@ const SelectableRealInput = ({ ref, type, selected }) => {
   );
 };
 const SelectableInputProxy = (props) => {
-  const defaultRef = useRef();
-  props.ref = props.ref || defaultRef;
   const {
     id: realInputId,
-    ref: realInputRef,
     type: realInputType,
     selected: realInputSelected,
+    readOnly: inputReadOnly,
   } = useContext(SelectableRealInputContext);
-  const { ref } = props;
 
   // Reset FieldToInterfaceContext to ensure we don't read id or report our
   // states (real input should take id and report)
@@ -371,20 +371,8 @@ const SelectableInputProxy = (props) => {
         aria-hidden="true"
         tabIndex={-1}
         checked={realInputSelected}
+        readOnly={inputReadOnly}
         {...props}
-        onMouseDown={(e) => {
-          // const proxyInput = e.currentTarget;
-          // transfer focus to the real input
-          const realInput = realInputRef.current;
-          e.preventDefault();
-          realInput.focus();
-          realInput.dispatchEvent(new MouseEvent("mousedown", e));
-        }}
-        action={(v, { event }) => {
-          const proxyInput = ref.current;
-          const realInput = realInputRef.current;
-          requestSetUIState(realInput, proxyInput.checked, { event });
-        }}
       />
     </FieldToInterfaceContext.Provider>
   );

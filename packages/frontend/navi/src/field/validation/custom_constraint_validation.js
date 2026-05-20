@@ -118,6 +118,17 @@ export const onRequestInteraction = (
   if (!requestStatus.canProceed) {
     requestInteractionCustomEvent.preventDefault();
   }
+
+  const field = requestInteractionCustomEvent.currentTarget;
+  const naviProxyFor = field.getAttribute("navi-proxy-for");
+  if (naviProxyFor) {
+    const mousedownEvent = findEvent(event, "mousedown");
+    if (mousedownEvent) {
+      const realField = document.getElementById(naviProxyFor);
+      mousedownEvent.preventDefault();
+      realField.focus();
+    }
+  }
 };
 
 export const dispatchRequestAction = (
@@ -733,7 +744,7 @@ export const installCustomConstraintValidation = (
   close_and_check_on_input: {
     let waitPointerRelease;
     onCalloutOpen((openingEvent) => {
-      if (findEvent(openingEvent, (e) => e.type === "mousedown")) {
+      if (findEvent(openingEvent, "mousedown")) {
         waitPointerRelease = true;
         const onMouseUp = () => {
           setTimeout(() => {

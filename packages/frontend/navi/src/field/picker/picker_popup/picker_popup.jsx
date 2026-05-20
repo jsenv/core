@@ -229,7 +229,7 @@ const PickerContentInsidePopover = (props) => {
   };
   const disableClickFor = useIgnoreClickForMousedown();
   const requestClose = (e = new CustomEvent("programmatic")) => {
-    const mousedownEvent = findEvent(e, (e) => e.type === "mousedown");
+    const mousedownEvent = findEvent(e, "mousedown");
     if (mousedownEvent) {
       debugPopup(e, `disable click`);
       disableClickFor();
@@ -239,14 +239,14 @@ const PickerContentInsidePopover = (props) => {
   };
   const moveFocusToPicker = (e) => {
     const pickerEl = ref.current;
-    const mousedownEvent = findEvent(e, (e) => e.type === "mousedown");
+    const mousedownEvent = findEvent(e, "mousedown");
     if (mousedownEvent) {
       debugFocus(e, `preventDefault and move focus to picker`);
       mousedownEvent.preventDefault();
       pickerEl.focus({ preventScroll: true });
       return;
     }
-    const focusoutEvent = findEvent(e, (e) => e.type === "focusout");
+    const focusoutEvent = findEvent(e, "focusout");
     if (focusoutEvent) {
       // If the popover closed because focus left the select (focusout),
       // don't steal focus back — let focus go where the user intended.

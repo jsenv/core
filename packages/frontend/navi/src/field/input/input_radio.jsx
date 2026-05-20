@@ -415,9 +415,7 @@ export const InputRadio = (props) => {
       if (radioIsChecked) {
         updateOtherRadiosInGroup(e);
       }
-      dispatchRequestAction(radio, {
-        event: e,
-      });
+      dispatchRequestAction(radio, { event: e });
     },
     onKeyDown: (e) => {
       onKeyDown?.(e);

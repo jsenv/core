@@ -370,7 +370,7 @@ export const openCallout = (
     if (
       closeOnClickOutside &&
       openingEvent &&
-      findEvent(openingEvent, (e) => e.type === "mousedown")
+      findEvent(openingEvent, "mousedown")
     ) {
       debug(
         openingEvent,
