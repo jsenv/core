@@ -126,32 +126,24 @@ export const onRequestInteraction = (
   }
 };
 
-export const dispatchRequestAction = (elementWithAction, params) => {
-  const {
-    event,
-    requester = elementWithAction,
-    // for keyboard shortcuts
-    // (ideally a some point we'll just make them use a different event/code path)
-    actionOrigin = "action_prop",
-    action,
-    confirmMessage,
-    meta,
-    uiState,
-  } = params;
-  if (!event) {
+export const dispatchRequestAction = (elementWithAction, detail) => {
+  if (!detail.event) {
     throw new TypeError("dispatchRequestAction requires an event");
   }
-  const detail = {
+  detail = {
+    requester: elementWithAction,
+    actionOrigin: "action_prop",
+    ...detail,
+    /*
     event,
     requester,
     actionOrigin,
     action,
     confirmMessage,
     meta,
+    uiState,
+    */
   };
-  if ("uiState" in params) {
-    detail.uiState = uiState;
-  }
   const allowed = dispatchInternalCustomEvent(
     elementWithAction,
     "navi_request_action",
