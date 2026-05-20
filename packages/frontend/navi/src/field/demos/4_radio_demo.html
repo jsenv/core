@@ -22,6 +22,51 @@
         text-align: center;
       }
 
+      .demo-section h3 {
+        margin: 0 0 10px;
+        color: #333;
+        font-size: 1.05rem;
+      }
+
+      .demo-section p {
+        margin: 0 0 16px;
+        color: #555;
+        font-size: 0.9rem;
+        line-height: 1.5;
+      }
+
+      .two-col {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+      }
+
+      .col-label {
+        margin-bottom: 8px;
+        color: #888;
+        font-weight: 600;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+
+      .value-display {
+        min-height: 24px;
+        margin-top: 12px;
+        padding: 8px 10px;
+        font-size: 0.85rem;
+        font-family: monospace;
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+      }
+
+      .value-display:empty::before {
+        color: #999;
+        font-style: italic;
+        content: "(no events yet)";
+      }
+
       .demo-section {
         margin-bottom: 40px;
         padding: 20px;
@@ -143,9 +188,16 @@
             <div>
               <TableOfContents />
               <BasicStatesDemo />
-              <IconStatesDemo />
-              <ButtonIconStatesDemo />
-              <ColorDemo />
+              <div id="customization">
+                <div className="demo-section">
+                  <h2>Customization</h2>
+                </div>
+                <IconAppearanceDemo />
+                <ToggleAppearanceDemo />
+                <ButtonAppearanceDemo />
+                <ColorDemo />
+              </div>
+              <ProxyDemo />
               <InteractiveDemo />
             </div>
           </NaviDebug>
@@ -154,20 +206,31 @@
 
       const TableOfContents = () => {
         return (
-          <div class="demo-section">
+          <div className="demo-section">
             <h2>Table of contents</h2>
             <ol style={{ margin: 0, paddingLeft: "20px", lineHeight: "2" }}>
               <li>
                 <a href="#radio-states">Radio States</a>
               </li>
               <li>
-                <a href="#radio-icons">Radio with Icons</a>
+                Customization
+                <ol style={{ margin: 0, paddingLeft: "20px" }}>
+                  <li>
+                    <a href="#icon-appearance">Icon appearance</a>
+                  </li>
+                  <li>
+                    <a href="#toggle-appearance">Toggle appearance</a>
+                  </li>
+                  <li>
+                    <a href="#button-appearance">Button appearance</a>
+                  </li>
+                  <li>
+                    <a href="#custom-colors">Custom colors</a>
+                  </li>
+                </ol>
               </li>
               <li>
-                <a href="#button-icons">Button Appearance with Icons</a>
-              </li>
-              <li>
-                <a href="#custom-colors">Custom Colors</a>
+                <a href="#proxy">Proxy</a>
               </li>
               <li>
                 <a href="#interactive">Interactive Controls</a>
@@ -423,852 +486,630 @@
         );
       };
 
-      const IconStatesDemo = () => {
+      const IconAppearanceDemo = () => {
         return (
-          <div id="radio-icons" className="demo-section">
-            <h2>Radio with Icons</h2>
+          <div id="icon-appearance" className="demo-section">
+            <h3>Icon appearance</h3>
+            <p>
+              Pass an <code>icon</code> prop to display an icon instead of the
+              radio circle. Use <code>style</code> to adjust opacity based on
+              checked state.
+            </p>
 
-            <div className="states-section">
-              <div className="states-title">Icon Radio States</div>
-              <p className="states-description">
-                Radio buttons can display icons instead of traditional radio
-                circles. Here are all the possible states when using the{" "}
-                <code>icon</code> prop.
-              </p>
-
-              <Box flex spacing="s">
-                <Box as="fieldset" width="200">
-                  <legend>Default (unchecked)</legend>
-                  <Box flex="y" spacing="s" alignX="start">
-                    <Field>
-                      <Input
-                        type="radio"
-                        name="demo-icon-default"
-                        value="1"
-                        icon={<Icon>🎵</Icon>}
-                        opacity="0.3"
-                        style={{ ":checked": { opacity: 1 } }}
-                      />
-                      <Label>Music</Label>
-                    </Field>
-                    <Field>
-                      <Input
-                        type="radio"
-                        name="demo-icon-default"
-                        value="2"
-                        icon={<Icon>🎨</Icon>}
-                        opacity="0.3"
-                        style={{ ":checked": { opacity: 1 } }}
-                      />
-                      <Label>Art</Label>
-                    </Field>
-                    <Field>
-                      <Input
-                        type="radio"
-                        name="demo-icon-default"
-                        value="3"
-                        icon={<Icon>🏃</Icon>}
-                        opacity="0.3"
-                        style={{ ":checked": { opacity: 1 } }}
-                      />
-                      <Label>Sports</Label>
-                    </Field>
-                  </Box>
-                </Box>
-
-                <Box as="fieldset" width="200">
-                  <legend>:focus-visible (unchecked)</legend>
-                  <Box flex="y" spacing="s" alignX="start">
-                    <Field>
-                      <Input
-                        type="radio"
-                        name="demo-icon-focus"
-                        value="1"
-                        icon={<Icon>🎵</Icon>}
-                        pseudoState={{ ":focus-visible": true }}
-                      />
-                      <Label>Music</Label>
-                    </Field>
-                    <Field>
-                      <Input
-                        type="radio"
-                        name="demo-icon-focus"
-                        value="2"
-                        icon={<Icon>🎨</Icon>}
-                      />
-                      <Label>Art</Label>
-                    </Field>
-                  </Box>
-                </Box>
-
-                <Box as="fieldset" width="200">
-                  <legend>:disabled (unchecked)</legend>
-                  <Box flex="y" spacing="s" alignX="start">
-                    <Field>
-                      <Input
-                        type="radio"
-                        name="demo-icon-disabled"
-                        value="1"
-                        icon={<Icon>🎵</Icon>}
-                        disabled
-                      />
-                      <Label>Music</Label>
-                    </Field>
-                    <Field>
-                      <Input
-                        type="radio"
-                        name="demo-icon-disabled"
-                        value="2"
-                        icon={<Icon>🎨</Icon>}
-                        disabled
-                      />
-                      <Label>Art</Label>
-                    </Field>
-                  </Box>
+            <Box flex spacing="s">
+              <Box as="fieldset" width="200">
+                <legend>Default</legend>
+                <Box flex="y" spacing="s" alignX="start">
+                  <Field>
+                    <Input
+                      type="radio"
+                      name="icon-demo"
+                      value="1"
+                      icon={<Icon>🎵</Icon>}
+                      opacity="0.3"
+                      style={{ ":checked": { opacity: 1 } }}
+                    />
+                    <Label>Music</Label>
+                  </Field>
+                  <Field>
+                    <Input
+                      type="radio"
+                      name="icon-demo"
+                      value="2"
+                      icon={<Icon>🎨</Icon>}
+                      opacity="0.3"
+                      style={{ ":checked": { opacity: 1 } }}
+                      defaultChecked
+                    />
+                    <Label>Art</Label>
+                  </Field>
+                  <Field>
+                    <Input
+                      type="radio"
+                      name="icon-demo"
+                      value="3"
+                      icon={<Icon>🏃</Icon>}
+                      opacity="0.3"
+                      style={{ ":checked": { opacity: 1 } }}
+                    />
+                    <Label>Sports</Label>
+                  </Field>
                 </Box>
               </Box>
 
-              <Box flex spacing="s">
-                <Box as="fieldset" width="200">
-                  <legend>:checked</legend>
-                  <Box flex="y" spacing="s" alignX="start">
-                    <Field>
-                      <Input
-                        type="radio"
-                        name="demo-icon-checked"
-                        value="1"
-                        icon={<Icon>🎵</Icon>}
-                        defaultChecked
-                      />
-                      <Label>Music</Label>
-                    </Field>
-                    <Field>
-                      <Input
-                        type="radio"
-                        name="demo-icon-checked"
-                        value="2"
-                        icon={<Icon>🎨</Icon>}
-                      />
-                      <Label>Art</Label>
-                    </Field>
-                  </Box>
-                </Box>
-
-                <Box as="fieldset" width="200">
-                  <legend>:focus-visible:checked</legend>
-                  <Box flex="y" spacing="s" alignX="start">
-                    <Field>
-                      <Input
-                        type="radio"
-                        name="demo-icon-focus-checked"
-                        value="1"
-                        icon={<Icon>🎵</Icon>}
-                        defaultChecked
-                        pseudoState={{ ":focus-visible": true }}
-                      />
-                      <Label>Music</Label>
-                    </Field>
-                    <Field>
-                      <Input
-                        type="radio"
-                        name="demo-icon-focus-checked"
-                        value="2"
-                        icon={<Icon>🎨</Icon>}
-                      />
-                      <Label>Art</Label>
-                    </Field>
-                  </Box>
-                </Box>
-
-                <Box as="fieldset" width="200">
-                  <legend>:disabled:checked</legend>
-                  <Box flex="y" spacing="s" alignX="start">
-                    <Field>
-                      <Input
-                        type="radio"
-                        name="demo-icon-disabled-checked"
-                        value="1"
-                        icon={<Icon>🎵</Icon>}
-                        defaultChecked
-                        disabled
-                      />
-                      <Label>Music</Label>
-                    </Field>
-                    <Field>
-                      <Input
-                        type="radio"
-                        name="demo-icon-disabled-checked"
-                        value="2"
-                        icon={<Icon>🎨</Icon>}
-                        disabled
-                      />
-                      <Label>Art</Label>
-                    </Field>
-                  </Box>
+              <Box as="fieldset" width="200">
+                <legend>:disabled</legend>
+                <Box flex="y" spacing="s" alignX="start">
+                  <Field>
+                    <Input
+                      type="radio"
+                      name="icon-disabled"
+                      value="1"
+                      icon={<Icon>🎵</Icon>}
+                      disabled
+                    />
+                    <Label>Music</Label>
+                  </Field>
+                  <Field>
+                    <Input
+                      type="radio"
+                      name="icon-disabled"
+                      value="2"
+                      icon={<Icon>🎨</Icon>}
+                      disabled
+                      defaultChecked
+                    />
+                    <Label>Art</Label>
+                  </Field>
                 </Box>
               </Box>
 
-              <div className="enhanced-states-title">Enhanced Icon States</div>
-              <p className="states-description">
-                Additional Navi-specific states for radio buttons with icons.
-              </p>
-
-              <Box flex spacing="s">
-                <Box as="fieldset" width="200">
-                  <legend>:read-only (unchecked)</legend>
-                  <Box flex="y" spacing="s" alignX="start">
-                    <Field>
-                      <Input
-                        type="radio"
-                        name="demo-icon-readonly"
-                        value="1"
-                        icon={<Icon>🎵</Icon>}
-                        readOnly
-                      />
-                      <Label>Music</Label>
-                    </Field>
-                    <Field>
-                      <Input
-                        type="radio"
-                        name="demo-icon-readonly"
-                        value="2"
-                        icon={<Icon>🎨</Icon>}
-                        readOnly
-                      />
-                      <Label>Art</Label>
-                    </Field>
-                  </Box>
-                </Box>
-
-                <Box as="fieldset" width="200">
-                  <legend>:read-only:checked</legend>
-                  <Box flex="y" spacing="s" alignX="start">
-                    <Field>
-                      <Input
-                        type="radio"
-                        name="demo-icon-readonly-checked"
-                        value="1"
-                        icon={<Icon>🎵</Icon>}
-                        readOnly
-                        checked
-                      />
-                      <Label>Music</Label>
-                    </Field>
-                    <Field>
-                      <Input
-                        type="radio"
-                        name="demo-icon-readonly-checked"
-                        value="2"
-                        icon={<Icon>🎨</Icon>}
-                        readOnly
-                      />
-                      <Label>Art</Label>
-                    </Field>
-                  </Box>
-                </Box>
-
-                <Box as="fieldset" width="200">
-                  <legend>:-navi-loading (unchecked)</legend>
-                  <Box flex="y" spacing="s" alignX="start">
-                    <Field>
-                      <Input
-                        type="radio"
-                        name="demo-icon-loading"
-                        value="1"
-                        icon={<Icon>🎵</Icon>}
-                        loading
-                      />
-                      <Label>Music</Label>
-                    </Field>
-                    <Field>
-                      <Input
-                        type="radio"
-                        name="demo-icon-loading"
-                        value="2"
-                        icon={<Icon>🎨</Icon>}
-                        loading
-                      />
-                      <Label>Art</Label>
-                    </Field>
-                  </Box>
-                </Box>
-
-                <Box as="fieldset" width="200">
-                  <legend>:-navi-loading:checked</legend>
-                  <Box flex="y" spacing="s" alignX="start">
-                    <Field>
-                      <Input
-                        type="radio"
-                        name="demo-icon-loading-checked"
-                        value="1"
-                        icon={<Icon>🎵</Icon>}
-                        loading
-                        checked
-                      />
-                      <Label>Music</Label>
-                    </Field>
-                    <Field>
-                      <Input
-                        type="radio"
-                        name="demo-icon-loading-checked"
-                        value="2"
-                        icon={<Icon>🎨</Icon>}
-                        loading
-                      />
-                      <Label>Art</Label>
-                    </Field>
-                  </Box>
+              <Box as="fieldset" width="200">
+                <legend>:read-only</legend>
+                <Box flex="y" spacing="s" alignX="start">
+                  <Field>
+                    <Input
+                      type="radio"
+                      name="icon-readonly"
+                      value="1"
+                      icon={<Icon>🌅</Icon>}
+                      readOnly
+                    />
+                    <Label>Morning</Label>
+                  </Field>
+                  <Field>
+                    <Input
+                      type="radio"
+                      name="icon-readonly"
+                      value="2"
+                      icon={<Icon>☀️</Icon>}
+                      readOnly
+                      checked
+                    />
+                    <Label>Afternoon</Label>
+                  </Field>
                 </Box>
               </Box>
-            </div>
+            </Box>
           </div>
         );
       };
 
-      const ButtonIconStatesDemo = () => {
+      const ToggleAppearanceDemo = () => {
         return (
-          <div id="button-icons" className="demo-section">
-            <h2>Button Appearance with Icons</h2>
+          <div id="toggle-appearance" className="demo-section">
+            <h3>Toggle appearance</h3>
+            <p>
+              Pass <code>appearance="toggle"</code> to render the radio as a
+              toggle switch. One radio per group can be checked; toggling a
+              checked radio has no effect (radio semantics).
+            </p>
 
-            <div className="states-section">
-              <div className="states-title">Button-styled Icon Radios</div>
-              <p className="states-description">
-                Radio buttons can be styled as buttons when using{" "}
-                <code>appearance="button"</code>
-                combined with <code>icon</code>. This creates toggle button
-                groups that look and feel like traditional button controls while
-                maintaining radio semantics.
-              </p>
-
-              <Box flex spacing="s">
-                <Box as="fieldset" width="300">
-                  <legend>Default Group (one selected)</legend>
-                  <Box flex="y" spacing="s" alignX="start" wrap>
-                    <Field>
-                      <Input
-                        borderRadius="s"
-                        type="radio"
-                        name="demo-button-default"
-                        value="home"
-                        square
-                        alignX="center"
-                        alignY="center"
-                        width="36"
-                        icon={<Icon>🏠</Icon>}
-                        appearance="button"
-                        defaultChecked
-                      />
-                      <Label>Home</Label>
-                    </Field>
-                    <Field>
-                      <Input
-                        borderRadius="s"
-                        type="radio"
-                        name="demo-button-default"
-                        value="work"
-                        square
-                        width="36"
-                        alignX="center"
-                        alignY="center"
-                        icon={<Icon>💼</Icon>}
-                        appearance="button"
-                      />
-                      <Label>Work</Label>
-                    </Field>
-                    <Field>
-                      <Input
-                        borderRadius="s"
-                        type="radio"
-                        name="demo-button-default"
-                        value="travel"
-                        flex
-                        square
-                        width="36"
-                        alignX="center"
-                        alignY="center"
-                        icon={<Icon>✈️</Icon>}
-                        appearance="button"
-                      />
-                      <Label>Travel</Label>
-                    </Field>
-                  </Box>
-                </Box>
-
-                <Box as="fieldset" width="300">
-                  <legend>:focus-visible state</legend>
-                  <Box flex="y" spacing="s" alignX="start" wrap>
-                    <Field>
-                      <Input
-                        type="radio"
-                        name="demo-button-focus"
-                        value="music"
-                        icon={<Icon>🎵</Icon>}
-                        appearance="button"
-                        pseudoState={{ ":focus-visible": true }}
-                      />
-                      <Label>Music</Label>
-                    </Field>
-                    <Field>
-                      <Input
-                        type="radio"
-                        name="demo-button-focus"
-                        value="art"
-                        icon={<Icon>🎨</Icon>}
-                        appearance="button"
-                        defaultChecked
-                      />
-                      <Label>Art</Label>
-                    </Field>
-                    <Field>
-                      <Input
-                        type="radio"
-                        name="demo-button-focus"
-                        value="sports"
-                        icon={<Icon>🏃</Icon>}
-                        appearance="button"
-                      />
-                      <Label>Sports</Label>
-                    </Field>
-                  </Box>
-                </Box>
-
-                <Box as="fieldset" width="300">
-                  <legend>:disabled state</legend>
-                  <Box flex="y" spacing="s" alignX="start" wrap>
-                    <Field>
-                      <Input
-                        type="radio"
-                        name="demo-button-disabled"
-                        value="read"
-                        icon={<Icon>📚</Icon>}
-                        appearance="button"
-                        disabled
-                      />
-                      <Label>Read</Label>
-                    </Field>
-                    <Field>
-                      <Input
-                        type="radio"
-                        name="demo-button-disabled"
-                        value="write"
-                        icon={<Icon>✍️</Icon>}
-                        appearance="button"
-                        defaultChecked
-                        disabled
-                      />
-                      <Label>Write</Label>
-                    </Field>
-                    <Field>
-                      <Input
-                        type="radio"
-                        name="demo-button-disabled"
-                        value="code"
-                        icon={<Icon>💻</Icon>}
-                        appearance="button"
-                        disabled
-                      />
-                      <Label>Code</Label>
-                    </Field>
-                  </Box>
-                </Box>
+            <Box flex spacing="s" wrap>
+              <Box as="fieldset" width="200">
+                <legend>Default (unchecked)</legend>
+                <Field>
+                  <Input
+                    type="radio"
+                    name="toggle-unchecked"
+                    value="on"
+                    appearance="toggle"
+                  />
+                  <Label>Notifications</Label>
+                </Field>
               </Box>
 
-              <Box flex spacing="s">
-                <Box as="fieldset" width="300">
-                  <legend>:read-only state</legend>
-                  <Box flex="y" spacing="s" alignX="start" wrap>
-                    <Field>
-                      <Input
-                        type="radio"
-                        name="demo-button-readonly"
-                        value="morning"
-                        icon={<Icon>🌅</Icon>}
-                        appearance="button"
-                        readOnly
-                      />
-                      <Label>Morning</Label>
-                    </Field>
-                    <Field>
-                      <Input
-                        type="radio"
-                        name="demo-button-readonly"
-                        value="afternoon"
-                        icon={<Icon>☀️</Icon>}
-                        appearance="button"
-                        defaultChecked
-                        readOnly
-                      />
-                      <Label>Afternoon</Label>
-                    </Field>
-                    <Field>
-                      <Input
-                        type="radio"
-                        name="demo-button-readonly"
-                        value="evening"
-                        icon={<Icon>🌙</Icon>}
-                        appearance="button"
-                        readOnly
-                      />
-                      <Label>Evening</Label>
-                    </Field>
-                  </Box>
-                </Box>
-
-                <Box as="fieldset" width="300">
-                  <legend>:-navi-loading state</legend>
-                  <Box flex="y" spacing="s" alignX="start" wrap>
-                    <Field>
-                      <Input
-                        type="radio"
-                        name="demo-button-loading"
-                        value="upload"
-                        icon={<Icon>📤</Icon>}
-                        appearance="button"
-                        loading
-                      />
-                      <Label>Upload</Label>
-                    </Field>
-                    <Field>
-                      <Input
-                        type="radio"
-                        name="demo-button-loading"
-                        value="download"
-                        icon={<Icon>📥</Icon>}
-                        appearance="button"
-                        defaultChecked
-                        loading
-                      />
-                      <Label>Download</Label>
-                    </Field>
-                    <Field>
-                      <Input
-                        type="radio"
-                        name="demo-button-loading"
-                        value="sync"
-                        icon={<Icon>🔄</Icon>}
-                        appearance="button"
-                        loading
-                      />
-                      <Label>Sync</Label>
-                    </Field>
-                  </Box>
-                </Box>
-
-                <Box as="fieldset" width="400">
-                  <legend>Different sizes</legend>
-                  <Box flex="y" spacing="s" alignX="start" wrap>
-                    <Field>
-                      <Input
-                        type="radio"
-                        name="demo-button-sizes"
-                        value="small"
-                        icon={<Icon>📱</Icon>}
-                        appearance="button"
-                        size="s"
-                        defaultChecked
-                      />
-                      <Label>Small</Label>
-                    </Field>
-                    <Field>
-                      <Input
-                        type="radio"
-                        name="demo-button-sizes"
-                        value="medium"
-                        icon={<Icon>📱</Icon>}
-                        appearance="button"
-                      />
-                      <Label>Medium</Label>
-                    </Field>
-                    <Field>
-                      <Input
-                        type="radio"
-                        name="demo-button-sizes"
-                        value="large"
-                        icon={<Icon>📱</Icon>}
-                        appearance="button"
-                        size="l"
-                      />
-                      <Label>Large</Label>
-                    </Field>
-                  </Box>
-                </Box>
+              <Box as="fieldset" width="200">
+                <legend>:checked</legend>
+                <Field>
+                  <Input
+                    type="radio"
+                    name="toggle-checked"
+                    value="on"
+                    appearance="toggle"
+                    defaultChecked
+                  />
+                  <Label>Dark mode</Label>
+                </Field>
               </Box>
-            </div>
+
+              <Box as="fieldset" width="200">
+                <legend>:disabled</legend>
+                <Field>
+                  <Input
+                    type="radio"
+                    name="toggle-disabled"
+                    value="on"
+                    appearance="toggle"
+                    disabled
+                  />
+                  <Label>Auto-save</Label>
+                </Field>
+              </Box>
+
+              <Box as="fieldset" width="200">
+                <legend>:disabled:checked</legend>
+                <Field>
+                  <Input
+                    type="radio"
+                    name="toggle-disabled-checked"
+                    value="on"
+                    appearance="toggle"
+                    disabled
+                    defaultChecked
+                  />
+                  <Label>Two-factor auth</Label>
+                </Field>
+              </Box>
+
+              <Box as="fieldset" width="200">
+                <legend>:read-only:checked</legend>
+                <Field>
+                  <Input
+                    type="radio"
+                    name="toggle-readonly"
+                    value="on"
+                    appearance="toggle"
+                    readOnly
+                    checked
+                  />
+                  <Label>System setting</Label>
+                </Field>
+              </Box>
+            </Box>
           </div>
         );
       };
 
+      const ButtonAppearanceDemo = () => {
+        return (
+          <div id="button-appearance" className="demo-section">
+            <h3>Button appearance</h3>
+            <p>
+              Use <code>appearance="button"</code> with an <code>icon</code> to
+              render radios as toggle button groups. Button groups maintain
+              radio semantics — exactly one item selected at a time.
+            </p>
+
+            <Box flex spacing="s">
+              <Box as="fieldset" width="300">
+                <legend>Default (one selected)</legend>
+                <Box flex="y" spacing="s" alignX="start" wrap>
+                  <Field>
+                    <Input
+                      borderRadius="s"
+                      type="radio"
+                      name="button-demo"
+                      value="home"
+                      square
+                      alignX="center"
+                      alignY="center"
+                      width="36"
+                      icon={<Icon>🏠</Icon>}
+                      appearance="button"
+                      defaultChecked
+                    />
+                    <Label>Home</Label>
+                  </Field>
+                  <Field>
+                    <Input
+                      borderRadius="s"
+                      type="radio"
+                      name="button-demo"
+                      value="work"
+                      square
+                      width="36"
+                      alignX="center"
+                      alignY="center"
+                      icon={<Icon>💼</Icon>}
+                      appearance="button"
+                    />
+                    <Label>Work</Label>
+                  </Field>
+                  <Field>
+                    <Input
+                      borderRadius="s"
+                      type="radio"
+                      name="button-demo"
+                      value="travel"
+                      square
+                      width="36"
+                      alignX="center"
+                      alignY="center"
+                      icon={<Icon>✈️</Icon>}
+                      appearance="button"
+                    />
+                    <Label>Travel</Label>
+                  </Field>
+                </Box>
+              </Box>
+
+              <Box as="fieldset" width="300">
+                <legend>:disabled</legend>
+                <Box flex="y" spacing="s" alignX="start" wrap>
+                  <Field>
+                    <Input
+                      type="radio"
+                      name="button-disabled"
+                      value="read"
+                      icon={<Icon>📚</Icon>}
+                      appearance="button"
+                      disabled
+                    />
+                    <Label>Read</Label>
+                  </Field>
+                  <Field>
+                    <Input
+                      type="radio"
+                      name="button-disabled"
+                      value="write"
+                      icon={<Icon>✍️</Icon>}
+                      appearance="button"
+                      defaultChecked
+                      disabled
+                    />
+                    <Label>Write</Label>
+                  </Field>
+                </Box>
+              </Box>
+
+              <Box as="fieldset" width="300">
+                <legend>:read-only</legend>
+                <Box flex="y" spacing="s" alignX="start" wrap>
+                  <Field>
+                    <Input
+                      type="radio"
+                      name="button-readonly"
+                      value="morning"
+                      icon={<Icon>🌅</Icon>}
+                      appearance="button"
+                      readOnly
+                    />
+                    <Label>Morning</Label>
+                  </Field>
+                  <Field>
+                    <Input
+                      type="radio"
+                      name="button-readonly"
+                      value="afternoon"
+                      icon={<Icon>☀️</Icon>}
+                      appearance="button"
+                      checked
+                      readOnly
+                    />
+                    <Label>Afternoon</Label>
+                  </Field>
+                </Box>
+              </Box>
+            </Box>
+          </div>
+        );
+      };
       const ColorDemo = () => {
         return (
           <div id="custom-colors" className="demo-section">
-            <h2>Custom Colors</h2>
-
-            <div className="states-section">
-              <div className="states-title">Custom Color Themes</div>
-              <p className="states-description">
-                Radio color can be customized and will maintain color contrast.
-                Each row shows unchecked and checked state side by side.
-              </p>
-
-              <Box flex="y" spacing="s">
-                <fieldset style="margin: 0; background: lightgrey">
-                  <legend>Orange</legend>
-                  <div
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "max-content max-content",
-                      gap: "4px 24px",
-                      alignItems: "center",
-                    }}
-                  >
-                    <Field>
-                      <Input
-                        type="radio"
-                        name="demo-orange"
-                        value="unchecked"
-                        accentColor="#f39c12"
-                      />
-                      <Label>Navi</Label>
-                    </Field>
-                    <Field>
-                      <Input
-                        type="radio"
-                        name="demo-orange"
-                        value="checked"
-                        accentColor="#f39c12"
-                        defaultChecked
-                      />
-                      <Label>Navi</Label>
-                    </Field>
-                    <label>
-                      <input
-                        type="radio"
-                        name="demo-orange-native"
-                        value="unchecked"
-                        style={{ accentColor: "#f39c12" }}
-                      />
-                      Native
-                    </label>
-                    <label>
-                      <input
-                        type="radio"
-                        name="demo-orange-native"
-                        value="checked"
-                        style={{ accentColor: "#f39c12" }}
-                        defaultChecked
-                      />
-                      Native
-                    </label>
-                  </div>
-                </fieldset>
-                <fieldset style="margin: 0">
-                  <legend>Green</legend>
-                  <div
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "max-content max-content",
-                      gap: "4px 24px",
-                      alignItems: "center",
-                    }}
-                  >
-                    <Field>
-                      <Input
-                        type="radio"
-                        name="demo-green"
-                        value="unchecked"
-                        accentColor="#2ecc71"
-                      />
-                      <Label>Navi</Label>
-                    </Field>
-                    <Field>
-                      <Input
-                        type="radio"
-                        name="demo-green"
-                        value="checked"
-                        accentColor="#2ecc71"
-                        defaultChecked
-                      />
-                      <Label>Navi</Label>
-                    </Field>
-                    <label>
-                      <input
-                        type="radio"
-                        name="demo-green-native"
-                        value="unchecked"
-                        style={{ accentColor: "#2ecc71" }}
-                      />
-                      Native
-                    </label>
-                    <label>
-                      <input
-                        type="radio"
-                        name="demo-green-native"
-                        value="checked"
-                        style={{ accentColor: "#2ecc71" }}
-                        defaultChecked
-                      />
-                      Native
-                    </label>
-                  </div>
-                </fieldset>
-                <fieldset style="margin: 0">
-                  <legend>Dark grey</legend>
-                  <div
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "max-content max-content",
-                      gap: "4px 24px",
-                      alignItems: "center",
-                    }}
-                  >
-                    <Field>
-                      <Input
-                        type="radio"
-                        name="demo-dark"
-                        value="unchecked"
-                        accentColor="#34495e"
-                      />
-                      <Label>Navi</Label>
-                    </Field>
-                    <Field>
-                      <Input
-                        type="radio"
-                        name="demo-dark"
-                        value="checked"
-                        accentColor="#34495e"
-                        defaultChecked
-                      />
-                      <Label>Navi</Label>
-                    </Field>
-                    <label>
-                      <input
-                        type="radio"
-                        name="demo-dark-native"
-                        value="unchecked"
-                        style={{ accentColor: "#34495e" }}
-                      />
-                      Native
-                    </label>
-                    <label>
-                      <input
-                        type="radio"
-                        name="demo-dark-native"
-                        value="checked"
-                        style={{ accentColor: "#34495e" }}
-                        defaultChecked
-                      />
-                      Native
-                    </label>
-                  </div>
-                </fieldset>
-                <fieldset style="margin: 0; background: lightgrey">
-                  <legend>Pink</legend>
-                  <div
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "max-content max-content",
-                      gap: "4px 24px",
-                      alignItems: "center",
-                    }}
-                  >
-                    <Field>
-                      <Input
-                        type="radio"
-                        name="demo-pink"
-                        value="unchecked"
-                        accentColor="#e91e8c"
-                      />
-                      <Label>Navi</Label>
-                    </Field>
-                    <Field>
-                      <Input
-                        type="radio"
-                        name="demo-pink"
-                        value="checked"
-                        accentColor="#e91e8c"
-                        defaultChecked
-                      />
-                      <Label>Navi</Label>
-                    </Field>
-                    <label>
-                      <input
-                        type="radio"
-                        name="demo-pink-native"
-                        value="unchecked"
-                        style={{ accentColor: "#e91e8c" }}
-                      />
-                      Native
-                    </label>
-                    <label>
-                      <input
-                        type="radio"
-                        name="demo-pink-native"
-                        value="checked"
-                        style={{ accentColor: "#e91e8c" }}
-                        defaultChecked
-                      />
-                      Native
-                    </label>
-                  </div>
-                </fieldset>
-                <fieldset
+            <h3>Custom colors</h3>
+            <p>
+              Radio color can be customized and will maintain color contrast.
+              Each row shows unchecked and checked state side by side.
+            </p>
+            <Box flex="y" spacing="s">
+              <fieldset style="margin: 0; background: lightgrey">
+                <legend>Orange</legend>
+                <div
                   style={{
-                    margin: 0,
-                    background: "#1e1e1e",
-                    color: "white",
-                    borderColor: "#444",
+                    display: "grid",
+                    gridTemplateColumns: "max-content max-content",
+                    gap: "4px 24px",
+                    alignItems: "center",
                   }}
                 >
-                  <legend style={{ color: "white" }}>White</legend>
-                  <div
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "max-content max-content",
-                      gap: "4px 24px",
-                      alignItems: "center",
-                    }}
-                  >
-                    <Field>
-                      <Input
-                        type="radio"
-                        name="demo-white"
-                        value="unchecked"
-                        accentColor="#ffffff"
-                      />
-                      <Label>Navi</Label>
-                    </Field>
-                    <Field>
-                      <Input
-                        type="radio"
-                        name="demo-white"
-                        value="checked"
-                        accentColor="#ffffff"
-                        defaultChecked
-                      />
-                      <Label>Navi</Label>
-                    </Field>
-                    <label>
-                      <input
-                        type="radio"
-                        name="demo-white-native"
-                        value="unchecked"
-                        style={{ accentColor: "#ffffff" }}
-                      />
-                      Native
-                    </label>
-                    <label>
-                      <input
-                        type="radio"
-                        name="demo-white-native"
-                        value="checked"
-                        style={{ accentColor: "#ffffff" }}
-                        defaultChecked
-                      />
-                      Native
-                    </label>
-                  </div>
-                </fieldset>
-              </Box>
+                  <Field>
+                    <Input
+                      type="radio"
+                      name="demo-orange"
+                      value="unchecked"
+                      accentColor="#f39c12"
+                    />
+                    <Label>Navi</Label>
+                  </Field>
+                  <Field>
+                    <Input
+                      type="radio"
+                      name="demo-orange"
+                      value="checked"
+                      accentColor="#f39c12"
+                      defaultChecked
+                    />
+                    <Label>Navi</Label>
+                  </Field>
+                  <label>
+                    <input
+                      type="radio"
+                      name="demo-orange-native"
+                      value="unchecked"
+                      style={{ accentColor: "#f39c12" }}
+                    />
+                    Native
+                  </label>
+                  <label>
+                    <input
+                      type="radio"
+                      name="demo-orange-native"
+                      value="checked"
+                      style={{ accentColor: "#f39c12" }}
+                      defaultChecked
+                    />
+                    Native
+                  </label>
+                </div>
+              </fieldset>
+              <fieldset style="margin: 0">
+                <legend>Green</legend>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "max-content max-content",
+                    gap: "4px 24px",
+                    alignItems: "center",
+                  }}
+                >
+                  <Field>
+                    <Input
+                      type="radio"
+                      name="demo-green"
+                      value="unchecked"
+                      accentColor="#2ecc71"
+                    />
+                    <Label>Navi</Label>
+                  </Field>
+                  <Field>
+                    <Input
+                      type="radio"
+                      name="demo-green"
+                      value="checked"
+                      accentColor="#2ecc71"
+                      defaultChecked
+                    />
+                    <Label>Navi</Label>
+                  </Field>
+                  <label>
+                    <input
+                      type="radio"
+                      name="demo-green-native"
+                      value="unchecked"
+                      style={{ accentColor: "#2ecc71" }}
+                    />
+                    Native
+                  </label>
+                  <label>
+                    <input
+                      type="radio"
+                      name="demo-green-native"
+                      value="checked"
+                      style={{ accentColor: "#2ecc71" }}
+                      defaultChecked
+                    />
+                    Native
+                  </label>
+                </div>
+              </fieldset>
+              <fieldset style="margin: 0">
+                <legend>Dark grey</legend>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "max-content max-content",
+                    gap: "4px 24px",
+                    alignItems: "center",
+                  }}
+                >
+                  <Field>
+                    <Input
+                      type="radio"
+                      name="demo-dark"
+                      value="unchecked"
+                      accentColor="#34495e"
+                    />
+                    <Label>Navi</Label>
+                  </Field>
+                  <Field>
+                    <Input
+                      type="radio"
+                      name="demo-dark"
+                      value="checked"
+                      accentColor="#34495e"
+                      defaultChecked
+                    />
+                    <Label>Navi</Label>
+                  </Field>
+                  <label>
+                    <input
+                      type="radio"
+                      name="demo-dark-native"
+                      value="unchecked"
+                      style={{ accentColor: "#34495e" }}
+                    />
+                    Native
+                  </label>
+                  <label>
+                    <input
+                      type="radio"
+                      name="demo-dark-native"
+                      value="checked"
+                      style={{ accentColor: "#34495e" }}
+                      defaultChecked
+                    />
+                    Native
+                  </label>
+                </div>
+              </fieldset>
+              <fieldset style="margin: 0; background: lightgrey">
+                <legend>Pink</legend>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "max-content max-content",
+                    gap: "4px 24px",
+                    alignItems: "center",
+                  }}
+                >
+                  <Field>
+                    <Input
+                      type="radio"
+                      name="demo-pink"
+                      value="unchecked"
+                      accentColor="#e91e8c"
+                    />
+                    <Label>Navi</Label>
+                  </Field>
+                  <Field>
+                    <Input
+                      type="radio"
+                      name="demo-pink"
+                      value="checked"
+                      accentColor="#e91e8c"
+                      defaultChecked
+                    />
+                    <Label>Navi</Label>
+                  </Field>
+                  <label>
+                    <input
+                      type="radio"
+                      name="demo-pink-native"
+                      value="unchecked"
+                      style={{ accentColor: "#e91e8c" }}
+                    />
+                    Native
+                  </label>
+                  <label>
+                    <input
+                      type="radio"
+                      name="demo-pink-native"
+                      value="checked"
+                      style={{ accentColor: "#e91e8c" }}
+                      defaultChecked
+                    />
+                    Native
+                  </label>
+                </div>
+              </fieldset>
+              <fieldset
+                style={{
+                  margin: 0,
+                  background: "#1e1e1e",
+                  color: "white",
+                  borderColor: "#444",
+                }}
+              >
+                <legend style={{ color: "white" }}>White</legend>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "max-content max-content",
+                    gap: "4px 24px",
+                    alignItems: "center",
+                  }}
+                >
+                  <Field>
+                    <Input
+                      type="radio"
+                      name="demo-white"
+                      value="unchecked"
+                      accentColor="#ffffff"
+                    />
+                    <Label>Navi</Label>
+                  </Field>
+                  <Field>
+                    <Input
+                      type="radio"
+                      name="demo-white"
+                      value="checked"
+                      accentColor="#ffffff"
+                      defaultChecked
+                    />
+                    <Label>Navi</Label>
+                  </Field>
+                  <label>
+                    <input
+                      type="radio"
+                      name="demo-white-native"
+                      value="unchecked"
+                      style={{ accentColor: "#ffffff" }}
+                    />
+                    Native
+                  </label>
+                  <label>
+                    <input
+                      type="radio"
+                      name="demo-white-native"
+                      value="checked"
+                      style={{ accentColor: "#ffffff" }}
+                      defaultChecked
+                    />
+                    Native
+                  </label>
+                </div>
+              </fieldset>
+            </Box>
+          </div>
+        );
+      };
+
+      const ProxyDemo = () => {
+        return (
+          <div id="proxy" className="demo-section">
+            <h2>Proxy</h2>
+            <p>
+              Any element can act as a proxy for a radio input using the{" "}
+              <code>navi-proxy-for</code> attribute. On mousedown the radio
+              receives focus; on click the proxy's <code>value</code> prop is
+              forwarded as the new checked state.
+            </p>
+            <div className="two-col">
+              <div>
+                <div className="col-label">Radio (the actual field)</div>
+                <Field>
+                  <Input
+                    type="radio"
+                    id="proxy-demo-radio"
+                    name="proxy-demo"
+                    value="on"
+                  />
+                  <Label>Option</Label>
+                </Field>
+              </div>
+              <div>
+                <div className="col-label">Proxy buttons (try mousedown)</div>
+                <Box flex="y" spacing="s">
+                  <button navi-proxy-for="proxy-demo-radio" value={true}>
+                    Enable
+                  </button>
+                  <button navi-proxy-for="proxy-demo-radio" value={false}>
+                    Disable
+                  </button>
+                </Box>
+              </div>
             </div>
           </div>
         );
