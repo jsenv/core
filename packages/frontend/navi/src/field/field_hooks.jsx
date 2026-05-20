@@ -372,16 +372,41 @@ const useActionProps = (
     },
     "onnavi_request_interaction": (e) => {
       onRequestInteraction(e, { debugInteraction });
-      const naviProxyTarget = getNaviProxyTarget(e);
-      if (naviProxyTarget) {
+
+      transfer_focus_to_target: {
+        const naviProxyTarget = getNaviProxyTarget(e);
+        if (!naviProxyTarget) {
+          break transfer_focus_to_target;
+        }
         const mousedownEvent = findEvent(e, "mousedown");
-        if (mousedownEvent && !mousedownEvent.defaultPrevented) {
+        if (mousedownEvent) {
+          if (mousedownEvent.defaultPrevented) {
+            // not really used but any code calling preventDefault can also prevent navi custom behaviors
+            break transfer_focus_to_target;
+          }
           debugFocus(
             e,
             "move focus to proxy (using preventDefault() + focus({ focusVisible: false })",
           );
           mousedownEvent.preventDefault();
           naviProxyTarget.focus({ focusVisible: false });
+          break transfer_focus_to_target;
+        }
+        // We also transfer on click even if mousedown is there because:
+        // - it's possible to receive a click without a mousedown (<label>)
+        // - so it's possible to end up focused by the browser without having a chance to preventDefault on the mousedown
+        // -> We do it also on click
+        // No need to preventDefault here though
+        // -> This ensure browser don't complain we try to focus a aria-hidden element
+        // and ensure the focus ends up where it should
+        const clickEvent = findEvent(e, "click");
+        if (clickEvent) {
+          if (clickEvent.defaultPrevented) {
+            // not really used but any code calling preventDefault can also prevent navi custom behavior
+            break transfer_focus_to_target;
+          }
+          naviProxyTarget.focus({ focusVisible: false });
+          break transfer_focus_to_target;
         }
       }
     },
