@@ -459,9 +459,9 @@
                         name="demo-enhanced-readonly-checked"
                         value="1"
                         readOnly
-                        checked
+                        defaultChecked
                       />
-                      <Label>Read-only</Label>
+                      Read-only
                     </Field>
                   </Box>
                 </Box>
@@ -474,9 +474,9 @@
                         name="demo-loading-checked"
                         value="1"
                         loading
-                        checked
+                        defaultChecked
                       />
-                      <Label>Loading</Label>
+                      Loading
                     </Field>
                   </Box>
                 </Box>
@@ -584,7 +584,7 @@
                       value="2"
                       icon={<Icon>☀️</Icon>}
                       readOnly
-                      checked
+                      defaultChecked
                     />
                     <Label>Afternoon</Label>
                   </Field>
@@ -671,7 +671,7 @@
                     value="on"
                     appearance="toggle"
                     readOnly
-                    checked
+                    defaultChecked
                   />
                   <Label>System setting</Label>
                 </Field>
@@ -794,7 +794,7 @@
                       value="afternoon"
                       icon={<Icon>☀️</Icon>}
                       appearance="button"
-                      checked
+                      defaultChecked
                       readOnly
                     />
                     <Label>Afternoon</Label>
@@ -1157,7 +1157,7 @@
                     name="interactive-demo"
                     value="option1"
                     checked={checked}
-                    onUIStateChange={(newChecked) => {
+                    action={(newChecked) => {
                       if (!disabled) {
                         setChecked(newChecked);
                       }
@@ -1165,7 +1165,7 @@
                     loading={loading}
                     disabled={disabled}
                   />
-                  <Label>Interactive Radio</Label>
+                  Interactive Radio
                 </Field>
                 <div
                   style={{
