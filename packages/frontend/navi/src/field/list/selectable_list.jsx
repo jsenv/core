@@ -13,13 +13,7 @@
 
 import { dispatchCustomEvent, dispatchPublicCustomEvent } from "@jsenv/dom";
 import { createContext } from "preact";
-import {
-  useContext,
-  useId,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-} from "preact/hooks";
+import { useContext, useId, useMemo, useRef } from "preact/hooks";
 
 import { BoxForwardedPropsContext } from "@jsenv/navi/src/box/box.jsx";
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
@@ -287,16 +281,17 @@ export const Selectable = (props) => {
   const inputRef = useRef();
   const inputType = multiple ? "checkbox" : "radio";
   const inputId = `${id}_input`;
+  const checkedUIState = useUIState(inputRef, selected);
+  const inputSelected = Boolean(checkedUIState);
   const realInputContextValue = useMemo(() => {
     return {
       id: inputId,
       ref: inputRef,
       type: inputType,
-      selected,
+      selected: inputSelected,
     };
-  }, [inputId, inputType, selected]);
+  }, [inputId, inputType, inputSelected]);
 
-  const checkedUIState = useUIState(inputRef, selected);
   return (
     <ListItem
       id={id}
@@ -305,8 +300,8 @@ export const Selectable = (props) => {
       filtered={filtered}
       hidden={hidden}
       pseudoClasses={SELECTABLE_PSEUDO_CLASSES}
-      data-selected={checkedUIState || undefined}
-      aria-selected={checkedUIState ? "true" : "false"}
+      data-selected={inputSelected ? "" : undefined}
+      aria-selected={inputSelected}
     >
       <Field
         id={inputId}
@@ -365,43 +360,25 @@ const SelectableRealInput = ({ ref, type, selected }) => {
 const SelectableInputProxy = (props) => {
   const defaultRef = useRef();
   props.ref = props.ref || defaultRef;
-  const { ref, icons } = props;
   const {
     id: realInputId,
     ref: realInputRef,
     type: realInputType,
     selected: realInputSelected,
   } = useContext(SelectableRealInputContext);
-
-  useLayoutEffect(() => {
-    const realInput = realInputRef.current;
-    const proxyInput = ref.current;
-    if (!realInput) {
-      return undefined;
-    }
-    const onnavi_set_ui_state = (e) => {
-      requestSetUIState(proxyInput, e.detail.value, {
-        event: e.detail.event,
-      });
-    };
-    realInput.addEventListener("navi_set_ui_state", onnavi_set_ui_state);
-    return () => {
-      realInput.removeEventListener("navi_set_ui_state", onnavi_set_ui_state);
-    };
-  }, []);
+  const { ref } = props;
 
   return (
     // Reset FieldToInterfaceContext to ensure we don't read id or report our states (real input should take id and report)
     <FieldToInterfaceContext.Provider value={undefined}>
       <Input
-        ref={ref}
         name="navi_input_proxy" // give it a specific name to avoid radio name (would unselect others)
         navi-proxy-for={realInputId}
         type={realInputType}
         aria-hidden="true"
         tabIndex={-1}
         checked={realInputSelected}
-        icons={icons}
+        {...props}
         onMouseDown={(e) => {
           // const proxyInput = e.currentTarget;
           // transfer focus to the real input
