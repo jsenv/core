@@ -117,9 +117,15 @@ export const performArrowNavigation = (
   }
 
   const predicate = (candidate) => {
-    // cssSelector check first: cheaper than elementIsFocusable
-    if (axisCssSelector && !candidate.matches(axisCssSelector)) {
-      return false;
+    // cssSelector check first: cheaper than elementIsFocusable.
+    // Guard against nodes without matches() (e.g. text nodes).
+    if (axisCssSelector) {
+      if (typeof candidate.matches !== "function") {
+        return false;
+      }
+      if (!candidate.matches(axisCssSelector)) {
+        return false;
+      }
     }
     return elementIsFocusable(candidate, { excludeAriaHidden });
   };
