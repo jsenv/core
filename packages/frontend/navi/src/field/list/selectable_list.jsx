@@ -289,7 +289,7 @@ export const Selectable = (props) => {
       hidden={hidden}
       pseudoClasses={SELECTABLE_PSEUDO_CLASSES}
       basePseudoState={{
-        ":-navi-selected": selected,
+        ":-navi-selected": inputSelected,
         ...basePseudoState,
       }}
       aria-selected={inputSelected}
