@@ -327,33 +327,6 @@ const useActionProps = (
     "onnavi_request_ui_state": (e) => {
       e.detail.respondWith(readUIState(e));
     },
-    "onnavi_set_ui_state": (e) => {
-      const { value } = e.detail;
-      uiStateController.setUIState(value, e);
-      const naviProxyTarget = getNaviProxyTarget(e);
-      if (naviProxyTarget) {
-        debugInteraction(
-          e,
-          `forwarding set_ui_state "${value}" to ${getElementSignature(naviProxyTarget)}`,
-        );
-        requestSetUIState(naviProxyTarget, value, { event: e.detail.event });
-      }
-    },
-    "onnavi_request_interaction": (e) => {
-      onRequestInteraction(e, { debugInteraction });
-      const naviProxyTarget = getNaviProxyTarget(e);
-      if (naviProxyTarget) {
-        const mousedownEvent = findEvent(e, "mousedown");
-        if (mousedownEvent && !mousedownEvent.defaultPrevented) {
-          debugFocus(
-            e,
-            "move focus to proxy (using preventDefault() + focus({ focusVisible: false })",
-          );
-          mousedownEvent.preventDefault();
-          naviProxyTarget.focus({ focusVisible: false });
-        }
-      }
-    },
     "onnavi_cancel": (e) => {
       const { reason } = e.detail;
       const isBlurInvalid = reason.startsWith("blur_invalid");
@@ -385,13 +358,34 @@ const useActionProps = (
       }
       onCancel?.(e, reason);
     },
-    "onnavi_request_action": (e) => {
+    "onnavi_set_ui_state": (e) => {
+      const { value } = e.detail;
+      uiStateController.setUIState(value, e);
       const naviProxyTarget = getNaviProxyTarget(e);
       if (naviProxyTarget) {
-        debugAction(e, "forwarding action request to navi proxy target");
-        dispatchRequestAction(naviProxyTarget, { event: e });
-        return;
+        debugInteraction(
+          e,
+          `forwarding set_ui_state "${value}" to ${getElementSignature(naviProxyTarget)}`,
+        );
+        requestSetUIState(naviProxyTarget, value, { event: e.detail.event });
       }
+    },
+    "onnavi_request_interaction": (e) => {
+      onRequestInteraction(e, { debugInteraction });
+      const naviProxyTarget = getNaviProxyTarget(e);
+      if (naviProxyTarget) {
+        const mousedownEvent = findEvent(e, "mousedown");
+        if (mousedownEvent && !mousedownEvent.defaultPrevented) {
+          debugFocus(
+            e,
+            "move focus to proxy (using preventDefault() + focus({ focusVisible: false })",
+          );
+          mousedownEvent.preventDefault();
+          naviProxyTarget.focus({ focusVisible: false });
+        }
+      }
+    },
+    "onnavi_request_action": (e) => {
       let uiStateRaw;
       dispatchInternalCustomEvent(e.currentTarget, "navi_request_ui_state", {
         respondWith: (v) => {
@@ -402,8 +396,16 @@ const useActionProps = (
           uiStateRaw = v;
         },
       });
-      e.detail.uiState = normalizeUIState(uiStateRaw);
+      const uiState = normalizeUIState(uiStateRaw);
+      const naviProxyTarget = getNaviProxyTarget(e);
+      if (naviProxyTarget) {
+        requestSetUIState(naviProxyTarget, uiState, { event: e });
+        debugAction(e, "forwarding action request to navi proxy target");
+        dispatchRequestAction(naviProxyTarget, { event: e });
+        return;
+      }
 
+      e.detail.uiState = uiState;
       if (e.detail.action) {
         // keyboard shortcut give the action and action is irrelevant here, the kayboard shortcut must win
       } else {
@@ -419,7 +421,6 @@ const useActionProps = (
         // special case for the use case where form.submit is called
         e.detail.action = action;
       }
-
       const { uiState } = e.detail;
       requestSetUIState(e.currentTarget, uiState, { event: e.detail.event });
       executeAction(e);
