@@ -137,6 +137,7 @@ export const dispatchRequestAction = (
     action,
     confirmMessage,
     meta,
+    uiState,
   },
 ) => {
   if (!event) {
@@ -152,6 +153,7 @@ export const dispatchRequestAction = (
       action,
       confirmMessage,
       meta,
+      uiState,
     },
   );
   return allowed;

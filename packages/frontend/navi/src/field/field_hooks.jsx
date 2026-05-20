@@ -410,7 +410,7 @@ const useActionProps = (
       if (naviProxyTarget) {
         requestSetUIState(naviProxyTarget, uiState, { event: e });
         debugAction(e, "forwarding action request to navi proxy target");
-        dispatchRequestAction(naviProxyTarget, { event: e });
+        dispatchRequestAction(naviProxyTarget, { event: e, uiState });
         return;
       }
       if (e.detail.action) {
@@ -449,6 +449,7 @@ const useActionProps = (
       const { data } = e.detail;
       uiStateController.actionEnd(e);
       onActionEnd?.(data, e);
+      remainingProps.onnavi_action_end?.(e);
     },
   };
 };
