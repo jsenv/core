@@ -376,25 +376,33 @@ export const InputRadio = (props) => {
   props.value = props.value === undefined ? "on" : props.value;
 
   const debugInteraction = useDebugInteraction();
-  const fieldInterfaceProps = useFieldInterfaceProps(props, {
-    fieldType: "radio",
-    statePropName: "checked",
-    defaultStatePropName: "defaultChecked",
-    readUIState: () => {
-      const radio = props.ref.current;
-      const radioIsChecked = radio.checked;
-      return radioIsChecked ? props.value : undefined;
+  const fieldInterfaceProps = useFieldInterfaceProps(
+    {
+      ...props,
+      resetOnCancel: true,
+      resetOnAbort: true,
+      resetOnError: true,
     },
-    fallbackState: false,
-    getStateFromProp: (checked) => (checked ? props.value : undefined),
-    getPropFromState: Boolean,
-    getStateFromParent: (parentUIStateController) => {
-      if (parentUIStateController.componentType === "radio_fieldset") {
-        return parentUIStateController.uiState === props.value;
-      }
-      return undefined;
+    {
+      fieldType: "radio",
+      statePropName: "checked",
+      defaultStatePropName: "defaultChecked",
+      readUIState: () => {
+        const radio = props.ref.current;
+        const radioIsChecked = radio.checked;
+        return radioIsChecked ? props.value : undefined;
+      },
+      fallbackState: false,
+      getStateFromProp: (checked) => (checked ? props.value : undefined),
+      getPropFromState: Boolean,
+      getStateFromParent: (parentUIStateController) => {
+        if (parentUIStateController.componentType === "radio_fieldset") {
+          return parentUIStateController.uiState === props.value;
+        }
+        return undefined;
+      },
     },
-  });
+  );
   const { ref, checked, onMouseDown, onClick, onInput, onKeyDown } =
     fieldInterfaceProps;
   const interactionProps = {
