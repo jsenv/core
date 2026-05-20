@@ -64,6 +64,7 @@ export const useUIStateController = (
   const formContext = useContext(FormContext);
   const pickerElementContext = useContext(PickerElementContext);
   const { id, name, uiAction, action } = props;
+  const ref = props.ref;
   const isProxy = Boolean(props["navi-proxy-for"]);
   const hasStateProp = Object.hasOwn(props, statePropName);
   /**
@@ -191,6 +192,7 @@ export const useUIStateController = (
     state: stateInitial,
     uiState: stateInitial,
     uiStateSignal,
+    elementRef: ref,
     getPropFromState,
     getStateFromProp,
     setUIState: (prop, e) => {
@@ -348,6 +350,7 @@ export const useUIGroupStateController = (
   }
   const parentUIStateController = useContext(ParentUIStateControllerContext);
   const { name, value } = props;
+  const ref = props.ref;
   const childUIStateControllerArrayRef = useRef([]);
   const childUIStateControllerArray = childUIStateControllerArrayRef.current;
   const uiStateControllerRef = useRef();
@@ -429,6 +432,7 @@ export const useUIGroupStateController = (
     value,
     uiState: emptyState,
     uiStateSignal,
+    elementRef: ref,
     getPropFromState: (uiState) => uiState,
     setUIState: (newUIState, e, { notifyExternal = true } = {}) => {
       if (isSignal(newUIState)) {
@@ -497,13 +501,14 @@ export const useUIGroupStateController = (
       );
     },
     resetUIState: (e) => {
-      debugAction(
-        e,
-        `resetUIState to ${JSON.stringify(uiStateController.state)}`,
-      );
-      // we should likely batch the changes that will be reported for performances
       for (const childUIStateController of childUIStateControllerArray) {
-        childUIStateController.resetUIState(e);
+        if (!isMonitoringChild(childUIStateController)) {
+          continue;
+        }
+        const el = childUIStateController.elementRef?.current;
+        if (el) {
+          requestResetUIState(el, e);
+        }
       }
     },
     actionEnd: (e) => {
