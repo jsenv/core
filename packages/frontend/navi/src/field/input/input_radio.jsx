@@ -482,7 +482,12 @@ export const InputRadio = (props) => {
 
 const InputRadioVisuallyHidden = (props) => {
   return (
-    <RealInputRadio {...props} appearance={undefined} navi-visually-hidden="" />
+    <RealInputRadio
+      pseudoClasses={RadioPseudoClasses}
+      {...props}
+      appearance={undefined}
+      navi-visually-hidden=""
+    />
   );
 };
 const InputRadioFieldInterface = (props) => {

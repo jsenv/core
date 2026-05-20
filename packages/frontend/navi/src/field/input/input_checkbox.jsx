@@ -452,6 +452,7 @@ export const InputCheckbox = (props) => {
 const InputCheckboxVisuallyHidden = (props) => {
   return (
     <RealInputCheckbox
+      pseudoClasses={CheckboxPseudoClasses}
       {...props}
       appearance={undefined}
       navi-visually-hidden=""
