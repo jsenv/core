@@ -314,7 +314,7 @@ const ButtonRouteResolver = (props) => {
 const ButtonFieldResolver = (props) => {
   const Next = useNextResolver();
 
-  if (props.name || props.action) {
+  if (props.name || props.action || Object.hasOwn(props, "value")) {
     return <ButtonFieldInterface {...props} />;
   }
   return <Next {...props} />;

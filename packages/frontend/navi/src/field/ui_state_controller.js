@@ -95,7 +95,8 @@ export const useUIStateController = (
     !action &&
     !formContext &&
     !pickerElementContext &&
-    !parentUIStateController;
+    !parentUIStateController &&
+    !isProxy;
   const readOnly = uncontrolled && hasStateProp;
   if (readOnly && import.meta.dev) {
     console.warn(
