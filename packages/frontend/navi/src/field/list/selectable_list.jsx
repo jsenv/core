@@ -281,6 +281,7 @@ export const Selectable = (props) => {
     selected,
     children,
     selectableArea,
+    basePseudoState,
     ...rest
   } = props;
   const multiple = useContext(SelectableListMultipleContext);
@@ -306,7 +307,10 @@ export const Selectable = (props) => {
       filtered={filtered}
       hidden={hidden}
       pseudoClasses={SELECTABLE_PSEUDO_CLASSES}
-      data-selected={inputSelected ? "" : undefined}
+      basePseudoState={{
+        ":-navi-selected": selected,
+        ...basePseudoState,
+      }}
       aria-selected={inputSelected}
     >
       <Field
@@ -344,6 +348,10 @@ const SELECTABLE_PSEUDO_CLASSES = [
   ":focus",
   ":focus-visible",
   ":-navi-loading",
+  ":-navi-pointed",
+  ":-navi-selected",
+  ":disabled",
+  ":read-only",
 ];
 const SELECTABLE_REAL_INPUT_CHILD_PROP_SET = new Set([
   ...FIELD_PROP_SET,

@@ -1311,12 +1311,7 @@ const LIST_ITEM_STYLE_CSS_VARS = {
     backgroundColor: "--suggestion-background-color-highlight",
   },
 };
-export const LIST_ITEM_PSEUDO_CLASSES = [
-  ":-navi-pointed",
-  ":-navi-selected",
-  ":disabled",
-  ":read-only",
-];
+export const LIST_ITEM_PSEUDO_CLASSES = [];
 const LIST_ITEM_PSEUDO_ELEMENTS = ["::highlight"];
 
 /**
