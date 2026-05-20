@@ -374,28 +374,10 @@ export const InputRadio = (props) => {
   props.ref = props.ref || defaultRef;
   props.value = props.value === undefined ? "on" : props.value;
 
-  return <InputRadioFieldInterface {...props} />;
-};
-
-const InputRadioFieldInterface = (props) => {
-  import.meta.css = css;
-  const {
-    ref,
-    /* eslint-disable no-unused-vars */
-    type,
-    /* eslint-enable no-unused-vars */
-    onMouseDown,
-    onInput,
-    onKeyDown,
-    icon,
-    appearance = icon ? "icon" : "radio",
-    color,
-    accentColor,
-  } = props;
   const fieldInterfaceProps = useFieldInterfaceProps(props, {
     fieldType: "radio",
     readUIState: () => {
-      const radio = ref.current;
+      const radio = props.ref.current;
       const radioIsChecked = radio.checked;
       return radioIsChecked ? props.value : undefined;
     },
@@ -410,8 +392,47 @@ const InputRadioFieldInterface = (props) => {
       return undefined;
     },
   });
-  const { checked, basePseudoState } = fieldInterfaceProps;
-  const loading = basePseudoState[":-navi-loading"];
+  const { ref, checked, onMouseDown, onClick, onInput, onKeyDown } =
+    fieldInterfaceProps;
+  const interactionProps = {
+    onMouseDown: (e) => {
+      onMouseDown?.(e);
+      const radio = ref.current;
+      dispatchRequestInteraction(radio, e);
+    },
+    onClick: (e) => {
+      onClick?.(e);
+      const radio = ref.current;
+      const allowed = dispatchRequestInteraction(radio, e);
+      if (!allowed) {
+        e.preventDefault();
+      }
+    },
+    onInput: (e) => {
+      onInput?.(e);
+      const radio = ref.current;
+      const radioIsChecked = radio.checked;
+      if (radioIsChecked) {
+        updateOtherRadiosInGroup(e);
+      }
+      dispatchRequestAction(radio, {
+        event: e,
+      });
+    },
+    onKeyDown: (e) => {
+      onKeyDown?.(e);
+      if (e.key === "Enter") {
+        requestClosestAction(e);
+      }
+      if (e.key === " ") {
+        const radio = ref.current;
+        const allowed = dispatchRequestInteraction(radio, e);
+        if (!allowed) {
+          e.preventDefault();
+        }
+      }
+    },
+  };
 
   // we must first dispatch an event to inform all other radios they where unchecked
   // this way each other radio uiStateController knows thery are unchecked
@@ -446,19 +467,48 @@ const InputRadioFieldInterface = (props) => {
     }
   }, [checked]);
 
+  if (props.appearance === "hidden") {
+    return (
+      <InputRadioVisuallyHidden
+        {...fieldInterfaceProps}
+        {...interactionProps}
+      />
+    );
+  }
+  return (
+    <InputRadioFieldInterface {...fieldInterfaceProps} {...interactionProps} />
+  );
+};
+
+const InputRadioVisuallyHidden = (props) => {
+  return (
+    <RealInputRadio {...props} appearance={undefined} navi-visually-hidden="" />
+  );
+};
+const InputRadioFieldInterface = (props) => {
+  import.meta.css = css;
+  const {
+    accentColor,
+    color,
+    icon,
+    appearance = icon ? "icon" : "radio",
+    ...rest
+  } = props;
+  const { ref, basePseudoState, checked } = props;
+  const loading = basePseudoState[":-navi-loading"];
   const boxRef = useRef();
   useAccentColorAttributes(boxRef, accentColor, {
     elementSelector: ".navi_radio_accent_probe",
   });
-
   let visualVNode;
-  if (appearance === "icon") {
+  if (appearance === "hidden") {
+    visualVNode = null;
+  } else if (appearance === "icon") {
     visualVNode = Array.isArray(icon) ? icon[checked ? 1 : 0] : icon;
   } else if (appearance === "toggle") {
     visualVNode = <span className="navi_toggle_thumb" />;
-  }
-  // appearance === "radio"
-  else {
+  } else {
+    // appearance === "radio"
     visualVNode = (
       <svg
         viewBox="0 0 12 12"
@@ -495,7 +545,7 @@ const InputRadioFieldInterface = (props) => {
       // Radio displayed as button are usually squarish
       // (passsing any custom width/height would auto disable aspectRatio forced by the square prop)
       square={appearance === "button" ? true : undefined}
-      {...fieldInterfaceProps}
+      {...rest}
       ref={boxRef}
       data-appearance={appearance}
       baseClassName="navi_radio"
@@ -509,42 +559,6 @@ const InputRadioFieldInterface = (props) => {
       color={color}
       hasChildUsingForwardedProps
       baseChildPropSet={RadioChildPropSet}
-      onMouseDown={(e) => {
-        onMouseDown?.(e);
-        const radio = ref.current;
-        dispatchRequestInteraction(radio, e);
-      }}
-      onClick={(e) => {
-        const radio = ref.current;
-        const allowed = dispatchRequestInteraction(radio, e);
-        if (!allowed) {
-          e.preventDefault();
-        }
-      }}
-      onInput={(e) => {
-        onInput?.(e);
-        const radio = ref.current;
-        const radioIsChecked = radio.checked;
-        if (radioIsChecked) {
-          updateOtherRadiosInGroup(e);
-        }
-        dispatchRequestAction(radio, {
-          event: e,
-        });
-      }}
-      onKeyDown={(e) => {
-        onKeyDown?.(e);
-        if (e.key === "Enter") {
-          requestClosestAction(e);
-        }
-        if (e.key === " ") {
-          const radio = ref.current;
-          const allowed = dispatchRequestInteraction(radio, e);
-          if (!allowed) {
-            e.preventDefault();
-          }
-        }
-      }}
     >
       <span className="navi_radio_accent_probe" aria-hidden="true" />
       <LoadingOutline
@@ -557,13 +571,13 @@ const InputRadioFieldInterface = (props) => {
     </Box>
   );
 };
-const RealInputRadio = ({ ref }) => {
+const RealInputRadio = (props) => {
   const radioProps = useContext(BoxForwardedPropsContext);
   return (
     <Box
       {...radioProps}
+      {...props}
       as="input"
-      ref={ref}
       type="radio"
       baseClassName="navi_real_input_radio"
       navi-rendered-by=".navi_radio"

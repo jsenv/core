@@ -116,25 +116,6 @@ const css = /* css */ `
   .navi_list_item {
     position: relative;
 
-    [navi-visually-hidden] {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      margin: -1px;
-      padding: 0;
-      white-space: nowrap;
-      border: 0;
-      clip-path: inset(50%);
-      overflow: hidden;
-
-      &[navi-debug] {
-        right: 10px;
-        width: 15px;
-        height: 15px;
-        clip-path: none;
-      }
-    }
-
     &[data-interactive] {
       cursor: pointer;
       user-select: none;
@@ -362,10 +343,10 @@ const SelectableRealInput = ({ ref, type, selected }) => {
 
   return (
     <Input
-      className="selectable_real_input"
-      navi-visually-hidden
       // navi-debug
       {...inputProps}
+      navi-selectable-real-input="" // not used, just a marker for now
+      appearance="hidden"
       ref={ref}
       type={type}
       checked={selected}
@@ -383,32 +364,35 @@ const SelectableInputProxy = (props) => {
   } = useContext(SelectableRealInputContext);
   const { ref } = props;
 
+  // Reset FieldToInterfaceContext to ensure we don't read id or report our
+  // states (real input should take id and report)
   return (
-    // Reset FieldToInterfaceContext to ensure we don't read id or report our states (real input should take id and report)
-    <FieldToInterfaceContext.Provider value={undefined}>
-      <Input
-        name="navi_input_proxy" // give it a specific name to avoid radio name (would unselect others)
-        navi-proxy-for={realInputId}
-        type={realInputType}
-        aria-hidden="true"
-        tabIndex={-1}
-        checked={realInputSelected}
-        {...props}
-        onMouseDown={(e) => {
-          // const proxyInput = e.currentTarget;
-          // transfer focus to the real input
-          const realInput = realInputRef.current;
-          e.preventDefault();
-          realInput.focus();
-          realInput.dispatchEvent(new MouseEvent("mousedown", e));
-        }}
-        action={(v, { event }) => {
-          const proxyInput = ref.current;
-          const realInput = realInputRef.current;
-          requestSetUIState(realInput, proxyInput.checked, { event });
-        }}
-      />
-    </FieldToInterfaceContext.Provider>
+    <BoxForwardedPropsContext.Provider value={undefined}>
+      <FieldToInterfaceContext.Provider value={undefined}>
+        <Input
+          name="navi_input_proxy" // give it a specific name to avoid radio name (would unselect others)
+          navi-proxy-for={realInputId}
+          type={realInputType}
+          aria-hidden="true"
+          tabIndex={-1}
+          checked={realInputSelected}
+          {...props}
+          onMouseDown={(e) => {
+            // const proxyInput = e.currentTarget;
+            // transfer focus to the real input
+            const realInput = realInputRef.current;
+            e.preventDefault();
+            realInput.focus();
+            realInput.dispatchEvent(new MouseEvent("mousedown", e));
+          }}
+          action={(v, { event }) => {
+            const proxyInput = ref.current;
+            const realInput = realInputRef.current;
+            requestSetUIState(realInput, proxyInput.checked, { event });
+          }}
+        />
+      </FieldToInterfaceContext.Provider>
+    </BoxForwardedPropsContext.Provider>
   );
 };
 Selectable.Input = SelectableInputProxy;

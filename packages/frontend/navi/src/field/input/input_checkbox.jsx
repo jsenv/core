@@ -373,24 +373,7 @@ export const InputCheckbox = (props) => {
   props.ref = props.ref || defaultRef;
   props.value = props.value === undefined ? "on" : props.value;
 
-  return <InputCheckboxFieldInterface {...props} />;
-};
-
-const InputCheckboxFieldInterface = (props) => {
-  import.meta.css = css;
-  const {
-    ref,
-    /* eslint-disable no-unused-vars */
-    type,
-    defaultChecked,
-    /* eslint-enable no-unused-vars */
-    onClick,
-    onInput,
-    accentColor,
-    icon,
-    appearance = icon ? "icon" : "checkbox", // "checkbox", "toggle", "icon", "button"
-    onKeyDown,
-  } = props;
+  const { ref } = props;
   const fieldInterfaceProps = useFieldInterfaceProps(
     {
       // In this situation updating the ui state === calling associated action
@@ -415,16 +398,85 @@ const InputCheckboxFieldInterface = (props) => {
       getPropFromState: Boolean,
     },
   );
-  const { basePseudoState, checked } = fieldInterfaceProps;
-  const loading = basePseudoState[":-navi-loading"];
+  const { onMouseDown, onClick, onInput, onKeyDown } = props;
+  const interactionProps = {
+    onMouseDown: (e) => {
+      onMouseDown?.(e);
+      const checkbox = ref.current;
+      dispatchRequestInteraction(checkbox, e);
+    },
+    onClick: (e) => {
+      onClick?.(e);
+      const checkbox = ref.current;
+      const allowed = dispatchRequestInteraction(checkbox, e);
+      if (!allowed) {
+        e.preventDefault();
+      }
+    },
+    onInput: (e) => {
+      onInput?.(e);
+      const checkbox = ref.current;
+      dispatchRequestAction(checkbox, { event: e });
+    },
+    onKeyDown: (e) => {
+      onKeyDown?.(e);
+      if (e.key === "Enter") {
+        requestClosestAction(e);
+      }
+      if (e.key === " ") {
+        const checkbox = ref.current;
+        const allowed = dispatchRequestInteraction(checkbox, e);
+        if (!allowed) {
+          e.preventDefault();
+        }
+      }
+    },
+  };
 
+  if (props.appearance === "hidden") {
+    return (
+      <InputCheckboxVisuallyHidden
+        {...fieldInterfaceProps}
+        {...interactionProps}
+        defaultChecked={undefined}
+      />
+    );
+  }
+  return (
+    <InputCheckboxFieldInterface
+      {...fieldInterfaceProps}
+      {...interactionProps}
+      defaultChecked={undefined}
+    />
+  );
+};
+
+const InputCheckboxVisuallyHidden = (props) => {
+  return (
+    <RealInputCheckbox
+      {...props}
+      appearance={undefined}
+      navi-visually-hidden=""
+    />
+  );
+};
+
+const InputCheckboxFieldInterface = (props) => {
+  import.meta.css = css;
+  const {
+    accentColor,
+    icon,
+    appearance = icon ? "icon" : "checkbox", // "checkbox", "toggle", "icon", "button"
+    ...rest
+  } = props;
+  const { ref, basePseudoState, checked } = props;
+  const loading = basePseudoState[":-navi-loading"];
   const boxRef = useRef();
   useAccentColorAttributes(boxRef, accentColor, {
     elementSelector: ".navi_checkbox_accent_probe",
   });
-
   let visualVnode;
-  if (icon) {
+  if (appearance === "icon") {
     visualVnode = (
       <div className="navi_checkbox_icon" aria-hidden="true">
         {Array.isArray(icon) ? icon[checked ? 1 : 0] : icon}
@@ -460,7 +512,7 @@ const InputCheckboxFieldInterface = (props) => {
       // Checkbox displayed as button are usually squarish
       // (passsing any custom width/height would auto disable aspectRatio forced by the square prop)
       square={appearance === "button" ? true : undefined}
-      {...fieldInterfaceProps}
+      {...rest}
       ref={boxRef}
       data-appearance={appearance}
       baseClassName="navi_checkbox"
@@ -478,36 +530,6 @@ const InputCheckboxFieldInterface = (props) => {
       accentColor={accentColor}
       hasChildUsingForwardedProps
       baseChildPropSet={CheckboxChildPropSet}
-      onMouseDown={(e) => {
-        const checkbox = ref.current;
-        dispatchRequestInteraction(checkbox, e);
-      }}
-      onClick={(e) => {
-        onClick?.(e);
-        const checkbox = ref.current;
-        const allowed = dispatchRequestInteraction(checkbox, e);
-        if (!allowed) {
-          e.preventDefault();
-        }
-      }}
-      onInput={(e) => {
-        onInput?.(e);
-        const checkbox = ref.current;
-        dispatchRequestAction(checkbox, { event: e });
-      }}
-      onKeyDown={(e) => {
-        onKeyDown?.(e);
-        if (e.key === "Enter") {
-          requestClosestAction(e);
-        }
-        if (e.key === " ") {
-          const checkbox = ref.current;
-          const allowed = dispatchRequestInteraction(checkbox, e);
-          if (!allowed) {
-            e.preventDefault();
-          }
-        }
-      }}
     >
       <span className="navi_checkbox_accent_probe" aria-hidden="true" />
       <LoadingOutline
@@ -520,13 +542,13 @@ const InputCheckboxFieldInterface = (props) => {
     </Box>
   );
 };
-const RealInputCheckbox = ({ ref }) => {
+const RealInputCheckbox = (props) => {
   const checkboxProps = useContext(BoxForwardedPropsContext);
   return (
     <Box
       {...checkboxProps}
+      {...props}
       as="input"
-      ref={ref}
       type="checkbox"
       baseClassName="navi_real_input_checkbox"
       navi-rendered-by=".navi_checkbox"

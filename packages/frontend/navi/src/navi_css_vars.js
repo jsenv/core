@@ -54,5 +54,19 @@ const css = /* css */ `
       --navi-color-hint: color-mix(in srgb, currentColor 25%, transparent);
     }
   }
+
+  /* Hidden appearance */
+  input[navi-visually-hidden] {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    white-space: nowrap;
+    border: 0;
+    clip-path: inset(50%);
+    appearance: none;
+    overflow: hidden;
+  }
 `;
 import.meta.css = css;
