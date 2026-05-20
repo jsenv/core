@@ -108,6 +108,7 @@
               <BasicDemo />
               <ReadOnlyDemo />
               <FormDemo />
+              <ValidationDemo />
               <div id="customization">
                 <div class="demo-section">
                   <h2>Customization</h2>
@@ -136,6 +137,9 @@
               </li>
               <li>
                 <a href="#form">Form integration</a>
+              </li>
+              <li>
+                <a href="#validation">Validation</a>
               </li>
               <li>
                 Customization
@@ -420,6 +424,110 @@
                         key={fruit}
                         index={i}
                         id={`form_m_${fruit.toLowerCase()}`}
+                        value={fruit}
+                        selected={selectedMultiple.includes(fruit)}
+                        flex
+                        spacing="s"
+                      >
+                        <Selectable.Input />
+                        {fruit}
+                      </Selectable>
+                    ))}
+                  </SelectableList>
+                  <Button type="submit" style={{ marginTop: 12 }}>
+                    Submit
+                  </Button>
+                </Form>
+                <div className="value-display">
+                  {submittedMultiple !== null
+                    ? `Submitted: ${submittedMultiple}`
+                    : ""}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      // ── Validation ─────────────────────────────────────────────────────────────
+
+      const ValidationDemo = () => {
+        const [selectedSingle, setSelectedSingle] = useState(null);
+        const [selectedMultiple, setSelectedMultiple] = useState([]);
+        const [submittedSingle, setSubmittedSingle] = useState(null);
+        const [submittedMultiple, setSubmittedMultiple] = useState(null);
+        return (
+          <div id="validation" className="demo-section">
+            <h2>Validation</h2>
+            <p>
+              Pass <code>required</code> to <code>SelectableList</code> to
+              prevent form submission when nothing is selected. Try submitting
+              without selecting anything.
+            </p>
+            <div className="two-col">
+              <div>
+                <div className="col-label">Single</div>
+                <Form
+                  action={({ fruit }) => {
+                    setSubmittedSingle(fruit ?? "(none)");
+                  }}
+                >
+                  <SelectableList
+                    name="fruit"
+                    required
+                    action={(v) => {
+                      setSelectedSingle(v ?? null);
+                    }}
+                  >
+                    {FRUITS.map((fruit, i) => (
+                      <Selectable
+                        key={fruit}
+                        index={i}
+                        id={`val_s_${fruit.toLowerCase()}`}
+                        value={fruit}
+                        selected={selectedSingle === fruit}
+                        flex
+                        spacing="s"
+                      >
+                        <Selectable.Input />
+                        {fruit}
+                      </Selectable>
+                    ))}
+                  </SelectableList>
+                  <Button type="submit" style={{ marginTop: 12 }}>
+                    Submit
+                  </Button>
+                </Form>
+                <div className="value-display">
+                  {submittedSingle !== null
+                    ? `Submitted: ${submittedSingle}`
+                    : ""}
+                </div>
+              </div>
+              <div>
+                <div className="col-label">Multiple</div>
+                <Form
+                  action={({ fruit }) => {
+                    setSubmittedMultiple(
+                      Array.isArray(fruit)
+                        ? fruit.join(", ")
+                        : (fruit ?? "(none)"),
+                    );
+                  }}
+                >
+                  <SelectableList
+                    multiple
+                    name="fruit"
+                    required
+                    action={(v) => {
+                      setSelectedMultiple(v ?? []);
+                    }}
+                  >
+                    {FRUITS.map((fruit, i) => (
+                      <Selectable
+                        key={fruit}
+                        index={i}
+                        id={`val_m_${fruit.toLowerCase()}`}
                         value={fruit}
                         selected={selectedMultiple.includes(fruit)}
                         flex
