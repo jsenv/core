@@ -386,13 +386,13 @@ export const InputCheckbox = (props) => {
     },
     {
       fieldType: "checkbox",
+      statePropName: "checked",
+      defaultStatePropName: "defaultChecked",
       readUIState: () => {
         const checkbox = ref.current;
         const checkboxIsChecked = checkbox.checked;
         return checkboxIsChecked ? props.value : undefined;
       },
-      statePropName: "checked",
-      defaultStatePropName: "defaultChecked",
       fallbackState: false,
       getStateFromProp: (checked) => (checked ? props.value : undefined),
       getPropFromState: Boolean,
@@ -438,7 +438,6 @@ export const InputCheckbox = (props) => {
       <InputCheckboxVisuallyHidden
         {...fieldInterfaceProps}
         {...interactionProps}
-        defaultChecked={undefined}
       />
     );
   }
@@ -446,7 +445,6 @@ export const InputCheckbox = (props) => {
     <InputCheckboxFieldInterface
       {...fieldInterfaceProps}
       {...interactionProps}
-      defaultChecked={undefined}
     />
   );
 };

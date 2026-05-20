@@ -255,6 +255,8 @@ const InputRangeFieldInterface = (props) => {
   const { ref, onInput, accentColor } = props;
   const fieldInterfaceProps = useFieldInterfaceProps(props, {
     fieldType: "input",
+    statePropName: "value",
+    defaultStatePropName: "defaultValue",
     readUIState: () => {
       const input = ref.current;
       return input.valueAsNumber;

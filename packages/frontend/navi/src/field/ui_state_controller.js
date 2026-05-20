@@ -61,8 +61,8 @@ export const useUIStateController = (
   props,
   componentType,
   {
-    statePropName = "value",
-    defaultStatePropName = "defaultValue",
+    statePropName,
+    defaultStatePropName,
     fallbackState = "",
     getStateFromProp = (prop) => prop,
     getPropFromState = (state) => state,

@@ -89,13 +89,17 @@ export const useFieldInterfaceProps = (
   );
   const boundAction = externalBoundAction || internalBoundAction;
 
-  return useActionProps(props, {
+  const actionProps = useActionProps(props, {
     action: boundAction,
     uiStateController,
     readUIState,
     getDisplayValue,
     normalizeUIState,
   });
+  if (defaultStatePropName) {
+    delete actionProps[defaultStatePropName];
+  }
+  return actionProps;
 };
 
 /**

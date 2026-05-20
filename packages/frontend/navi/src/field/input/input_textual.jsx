@@ -296,6 +296,8 @@ const InputTextualFieldInterface = (props) => {
   const { ref, type, icon, children, onKeyDown, onPaste } = props;
   const fieldInterfaceProps = useFieldInterfaceProps(props, {
     fieldType: "input",
+    statePropName: "value",
+    defaultStatePropName: "defaultValue",
     readUIState: () => {
       const input = ref.current;
       return input.value;

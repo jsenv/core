@@ -376,12 +376,12 @@ export const InputRadio = (props) => {
 
   const fieldInterfaceProps = useFieldInterfaceProps(props, {
     fieldType: "radio",
+    statePropName: "checked",
     readUIState: () => {
       const radio = props.ref.current;
       const radioIsChecked = radio.checked;
       return radioIsChecked ? props.value : undefined;
     },
-    statePropName: "checked",
     fallbackState: false,
     getStateFromProp: (checked) => (checked ? props.value : undefined),
     getPropFromState: Boolean,

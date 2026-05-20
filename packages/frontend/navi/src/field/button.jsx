@@ -542,6 +542,7 @@ const ButtonFieldInterface = (props) => {
   const ancestorAction = useContext(ActionContext);
   const fieldInterfaceProps = useFieldInterfaceProps(props, {
     fieldType: "button",
+    statePropName: "value",
     readUIState: () => {
       const button = ref.current;
       // The button uiState is a combination of its own state (if it has a name)

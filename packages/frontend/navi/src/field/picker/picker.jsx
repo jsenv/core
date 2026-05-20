@@ -283,6 +283,8 @@ const PickerButton = (props) => {
     },
     {
       fieldType: "picker",
+      statePropName: "value",
+      defaultStatePropName: "defaultValue",
     },
   );
   const { value, basePseudoState, children } = fieldInterfaceProps;
