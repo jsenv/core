@@ -259,7 +259,7 @@ const checkEvent = (requestStatus, event) => {
     });
     return;
   }
-  if (pointerEventTypeSet.has(event) && event.button !== 0) {
+  if (pointerEventTypeSet.has(event.type) && event.button !== 0) {
     Object.assign(requestStatus, {
       canProceed: false,
       preventReason: `non-primary pointer button (button ${event.button})`,
