@@ -340,7 +340,7 @@ const useActionProps = (
         if (mousedownEvent && !mousedownEvent.defaultPrevented) {
           debugFocus(
             e,
-            "preventDefault() and focus() to proxy interaction to navi proxy target",
+            "move focus to proxy (using preventDefault() + focus({ focusVisible: false })",
           );
           mousedownEvent.preventDefault();
           naviProxyTarget.focus({ focusVisible: false });

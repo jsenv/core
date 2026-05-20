@@ -408,10 +408,11 @@ export const InputCheckbox = (props) => {
     onClick: (e) => {
       onClick?.(e);
       const checkbox = ref.current;
-      const allowed = dispatchRequestInteraction(checkbox, e);
-      if (!allowed) {
-        e.preventDefault();
-      }
+      dispatchRequestInteraction(checkbox, e, {
+        onPrevented: () => {
+          e.preventDefault();
+        },
+      });
     },
     onInput: (e) => {
       onInput?.(e);
@@ -425,10 +426,11 @@ export const InputCheckbox = (props) => {
       }
       if (e.key === " ") {
         const checkbox = ref.current;
-        const allowed = dispatchRequestInteraction(checkbox, e);
-        if (!allowed) {
-          e.preventDefault();
-        }
+        dispatchRequestInteraction(checkbox, e, {
+          onPrevented: () => {
+            e.preventDefault();
+          },
+        });
       }
     },
   };

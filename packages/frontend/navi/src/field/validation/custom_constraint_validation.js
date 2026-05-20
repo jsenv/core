@@ -88,12 +88,17 @@ import {
 
 export const NAVI_VALIDITY_CHANGE_CUSTOM_EVENT = "navi_validity_change";
 
-export const dispatchRequestInteraction = (element, event) => {
+export const dispatchRequestInteraction = (
+  element,
+  event,
+  { onPrevented } = {},
+) => {
   const allowed = dispatchInternalCustomEvent(
     element,
     "navi_request_interaction",
     {
       event,
+      onPrevented,
     },
   );
   return allowed;
@@ -102,9 +107,9 @@ export const onRequestInteraction = (
   requestInteractionCustomEvent,
   { debugInteraction },
 ) => {
+  const { event, onPrevented } = requestInteractionCustomEvent.detail;
   const requestStatus = { canProceed: true, preventReason: undefined };
 
-  const { event } = requestInteractionCustomEvent.detail;
   if (requestStatus.canProceed) {
     checkEvent(requestStatus, event);
   }
@@ -116,6 +121,7 @@ export const onRequestInteraction = (
     });
   }
   if (!requestStatus.canProceed) {
+    onPrevented?.();
     requestInteractionCustomEvent.preventDefault();
   }
 };

@@ -405,11 +405,15 @@ export const InputRadio = (props) => {
     onClick: (e) => {
       onClick?.(e);
       const radio = ref.current;
-      const allowed = dispatchRequestInteraction(radio, e);
-      if (!allowed) {
-        debugInteraction(e, "preventDefault() to prevent radio being checked");
-        e.preventDefault();
-      }
+      dispatchRequestInteraction(radio, e, {
+        onPrevented: () => {
+          debugInteraction(
+            e,
+            "prevent radio being checked (click.preventDefault())",
+          );
+          e.preventDefault();
+        },
+      });
     },
     onInput: (e) => {
       onInput?.(e);
@@ -427,14 +431,15 @@ export const InputRadio = (props) => {
       }
       if (e.key === " ") {
         const radio = ref.current;
-        const allowed = dispatchRequestInteraction(radio, e);
-        if (!allowed) {
-          debugInteraction(
-            e,
-            "preventDefault() to prevent radio being checked and page from scrolling",
-          );
-          e.preventDefault();
-        }
+        dispatchRequestInteraction(radio, e, {
+          onPrevented: () => {
+            debugInteraction(
+              e,
+              "prevent radio being checked and container scroll (keydownEvent.preventDefault())",
+            );
+            e.preventDefault();
+          },
+        });
       }
     },
   };
