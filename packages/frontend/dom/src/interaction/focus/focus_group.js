@@ -15,13 +15,17 @@ import { performTabNavigation } from "./tab_navigation.js";
 export const initFocusGroup = (
   element,
   {
-    direction = "both",
     // extend = true,
     skipTab = true,
-    loop = false,
     name, // Can be undefined for implicit ancestor-descendant grouping
     excludeAriaHidden = true,
-    cssSelector,
+    // Which axes are active: "x", "y", or "both" (default)
+    direction = "both",
+    // Which axes loop at boundaries: "x", "y", "both", or undefined (no looping)
+    wrap,
+    // CSS selector to restrict candidates on each axis
+    xSelector,
+    ySelector,
   } = {},
 ) => {
   const cleanupCallbackSet = new Set();
@@ -35,7 +39,6 @@ export const initFocusGroup = (
   // Store focus group data in registry
   const removeFocusGroup = setFocusGroup(element, {
     direction,
-    loop,
     name, // Store undefined as-is for implicit grouping
   });
   cleanupCallbackSet.add(removeFocusGroup);
@@ -77,11 +80,12 @@ export const initFocusGroup = (
         return;
       }
       performArrowNavigation(event, element, {
-        direction,
-        loop,
         name,
         excludeAriaHidden,
-        cssSelector,
+        direction,
+        wrap,
+        xSelector,
+        ySelector,
       });
     };
     element.addEventListener("keydown", handleArrowKeyDown, {

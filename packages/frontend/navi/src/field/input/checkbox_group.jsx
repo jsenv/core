@@ -51,7 +51,7 @@ const CheckboxGroupInterface = (props) => {
     },
   );
   const { ref, name } = fieldgroupInterfaceProps;
-  useFocusGroup(ref, { direction: "both", loop: true });
+  useFocusGroup(ref, { wrap: "both" });
 
   return (
     <Box

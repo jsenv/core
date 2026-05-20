@@ -14,7 +14,17 @@ const DEBUG = false;
 export const performArrowNavigation = (
   event,
   element,
-  { direction = "both", loop, name, excludeAriaHidden, cssSelector } = {},
+  {
+    name,
+    excludeAriaHidden,
+    // Which axes are active: "x", "y", or "both" (default)
+    direction = "both",
+    // Which axes loop at boundaries: "x", "y", "both", or undefined (no looping)
+    wrap,
+    // CSS selector to restrict candidates on each axis
+    xSelector,
+    ySelector,
+  } = {},
 ) => {
   if (!canInterceptKeys(event, { intent: "override_arrow_navigation" })) {
     return false;
@@ -25,16 +35,6 @@ export const performArrowNavigation = (
     // (and it would prevent scroll via keyboard that we might want here)
     return true;
   }
-
-  const predicate = (candidate) => {
-    if (!elementIsFocusable(candidate, { excludeAriaHidden })) {
-      return false;
-    }
-    if (cssSelector && !candidate.matches(cssSelector)) {
-      return false;
-    }
-    return true;
-  };
 
   const onTargetToFocus = (targetToFocus) => {
     if (DEBUG) {
@@ -53,9 +53,12 @@ export const performArrowNavigation = (
   // Grid navigation: we support only TABLE element for now
   // A role="table" or an element with display: table could be used too but for now we need only TABLE support
   if (element.tagName === "TABLE") {
+    const tablePredicate = (candidate) =>
+      elementIsFocusable(candidate, { excludeAriaHidden });
+    const tableLoop = wrap === "both" || wrap === "x" || wrap === "y";
     const targetInGrid = getTargetInTableFocusGroup(event, element, {
-      loop,
-      predicate,
+      loop: tableLoop,
+      predicate: tablePredicate,
     });
     if (!targetInGrid) {
       return false;
@@ -64,21 +67,54 @@ export const performArrowNavigation = (
     return true;
   }
 
+  // Linear navigation: detect which axis the pressed key belongs to.
+  const isVerticalKey = event.key === "ArrowUp" || event.key === "ArrowDown";
+  const isHorizontalKey =
+    event.key === "ArrowLeft" || event.key === "ArrowRight";
+  if (!isVerticalKey && !isHorizontalKey) {
+    return false;
+  }
+
+  // Check whether this axis is enabled and resolve its loop + cssSelector.
+  let axisDirection;
+  let axisLoop;
+  let axisCssSelector;
+  if (isVerticalKey) {
+    if (direction !== "both" && direction !== "y") {
+      return false;
+    }
+    axisDirection = "vertical";
+    axisLoop = wrap === "both" || wrap === "y";
+    axisCssSelector = ySelector;
+  } else {
+    if (direction !== "both" && direction !== "x") {
+      return false;
+    }
+    axisDirection = "horizontal";
+    axisLoop = wrap === "both" || wrap === "x";
+    axisCssSelector = xSelector;
+  }
+
+  const predicate = (candidate) => {
+    // cssSelector check first: cheaper than elementIsFocusable
+    if (axisCssSelector && !candidate.matches(axisCssSelector)) {
+      return false;
+    }
+    return elementIsFocusable(candidate, { excludeAriaHidden });
+  };
+
   const targetInLinearGroup = getTargetInLinearFocusGroup(event, element, {
-    direction,
-    loop,
+    direction: axisDirection,
+    loop: axisLoop,
     name,
     predicate,
   });
   if (!targetInLinearGroup) {
-    // Even with no target to move to, the active element may have native
-    // arrow-key behavior (e.g. radio inputs cycle through their name group)
-    // that would take over at the boundary when loop=false.
-    // Prevent that if the pressed key is relevant to our direction.
-    if (
-      (isForwardArrow(event, direction) || isBackwardArrow(event, direction)) &&
-      browserWouldLoopWithoutPreventDefault(document.activeElement)
-    ) {
+    // We decided not to loop, but the browser may loop anyway for certain element
+    // types (e.g. radio inputs cycle through their name group on arrow keys).
+    // Return true when the browser would do something we explicitly chose not to
+    // do, so the caller can preventDefault to enforce our decision.
+    if (!axisLoop && browserWouldLoopWithoutPreventDefault(activeElement)) {
       event.preventDefault();
       markFocusNav(event);
     }

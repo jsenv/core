@@ -149,7 +149,13 @@ export const SelectableList = (props) => {
   const defaultRef = useRef();
   props.ref = props.ref || defaultRef;
   props.name = props.name || `listbox_${defaultName}`;
-  const { ref, multiple, selectedIndicator } = props;
+  const {
+    ref,
+    multiple,
+    selectedIndicator,
+    focusGroupDirection,
+    focusGroupWrap,
+  } = props;
   const fieldgroupInterfaceProps = useFieldgroupInterfaceProps(props, {
     fieldType: "list",
     childComponentType: multiple ? "checkbox" : "radio",
@@ -175,9 +181,10 @@ export const SelectableList = (props) => {
         },
   });
   useFocusGroup(ref, {
-    direction: "both",
-    loop: true,
-    cssSelector: "[navi-selectable-real-input]",
+    direction: focusGroupDirection,
+    wrap: focusGroupWrap,
+    // Up/Down navigate between list items only (the visually-hidden real inputs).
+    ySelector: "[navi-selectable-real-input]",
   });
 
   const listVnode = (

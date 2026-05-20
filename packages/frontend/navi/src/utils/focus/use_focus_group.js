@@ -3,7 +3,18 @@ import { useLayoutEffect } from "preact/hooks";
 
 export const useFocusGroup = (
   elementRef,
-  { enabled = true, direction, skipTab, loop, name, cssSelector } = {},
+  {
+    enabled = true,
+    skipTab,
+    name,
+    // Which axes are active: "x", "y", or "both" (default)
+    direction = "both",
+    // Which axes loop at boundaries: "x", "y", "both", or undefined (no looping)
+    wrap,
+    // CSS selector to restrict candidates on each axis
+    xSelector,
+    ySelector,
+  } = {},
 ) => {
   useLayoutEffect(() => {
     if (!enabled) {
@@ -14,12 +25,13 @@ export const useFocusGroup = (
       return null;
     }
     const focusGroup = initFocusGroup(element, {
-      direction,
       skipTab,
-      loop,
       name,
-      cssSelector,
+      direction,
+      wrap,
+      xSelector,
+      ySelector,
     });
     return focusGroup.cleanup;
-  }, [direction, skipTab, loop, name, cssSelector]);
+  }, [direction, wrap, skipTab, name, xSelector, ySelector]);
 };
