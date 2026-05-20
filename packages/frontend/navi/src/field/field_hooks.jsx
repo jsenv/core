@@ -408,6 +408,11 @@ const useActionProps = (
       }
       const naviProxyTarget = getNaviProxyTarget(e);
       if (naviProxyTarget) {
+        // Apply the proxy's desired uiState optimistically before dispatching so
+        // the target's UI updates immediately, then forward the action.
+        // uiState is included explicitly so the target's onnavi_request_action
+        // can detect it via Object.hasOwn and skip re-computing from its own
+        // navi_request_ui_state (which would return undefined for an already-set radio).
         requestSetUIState(naviProxyTarget, uiState, { event: e });
         debugAction(e, "forwarding action request to navi proxy target");
         dispatchRequestAction(naviProxyTarget, { event: e, uiState });
