@@ -14,7 +14,7 @@ const DEBUG = false;
 export const performArrowNavigation = (
   event,
   element,
-  { direction = "both", loop, name, excludeAriaHidden } = {},
+  { direction = "both", loop, name, excludeAriaHidden, cssSelector } = {},
 ) => {
   if (!canInterceptKeys(event, { intent: "override_arrow_navigation" })) {
     return false;
@@ -26,8 +26,15 @@ export const performArrowNavigation = (
     return true;
   }
 
-  const predicate = (candidate) =>
-    elementIsFocusable(candidate, { excludeAriaHidden });
+  const predicate = (candidate) => {
+    if (!elementIsFocusable(candidate, { excludeAriaHidden })) {
+      return false;
+    }
+    if (cssSelector && !candidate.matches(cssSelector)) {
+      return false;
+    }
+    return true;
+  };
 
   const onTargetToFocus = (targetToFocus) => {
     if (DEBUG) {

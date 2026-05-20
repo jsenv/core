@@ -21,6 +21,7 @@ export const initFocusGroup = (
     loop = false,
     name, // Can be undefined for implicit ancestor-descendant grouping
     excludeAriaHidden = true,
+    cssSelector,
   } = {},
 ) => {
   const cleanupCallbackSet = new Set();
@@ -80,6 +81,7 @@ export const initFocusGroup = (
         loop,
         name,
         excludeAriaHidden,
+        cssSelector,
       });
     };
     element.addEventListener("keydown", handleArrowKeyDown, {

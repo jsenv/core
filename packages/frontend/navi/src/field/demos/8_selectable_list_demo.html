@@ -866,6 +866,8 @@
           >
             {/* The <label> wrapping Selectable.Input + text is the clickable selection zone */}
             <label
+              // We must ensure our label points to the real input
+              // (otherwise browser will try to focus the proxy and complain about aria-hidden)
               htmlFor={`${id}_input`}
               style={{
                 display: "flex",
