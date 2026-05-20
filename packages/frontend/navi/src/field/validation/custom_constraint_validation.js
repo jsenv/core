@@ -780,11 +780,12 @@ export const installCustomConstraintValidation = (
       return element;
     })();
     onCalloutOpen((openingEvent) => {
+      const openingMousedownEvent = findEvent(openingEvent, "mousedown");
       const onmousedown = (e) => {
         if (e.button !== 0) {
           return;
         }
-        if (e === openingEvent) {
+        if (e === openingMousedownEvent) {
           // The callout was opened during this same mousedown — don't close it immediately.
           return;
         }
@@ -795,7 +796,6 @@ export const installCustomConstraintValidation = (
       };
 
       let label;
-
       const closestLabel = element.closest("label");
       if (closestLabel && closestLabel !== element) {
         label = closestLabel;
