@@ -1,12 +1,15 @@
 import { dispatchInternalCustomEvent, findEvent } from "@jsenv/dom";
-import { useContext, useLayoutEffect } from "preact/hooks";
+import { useContext, useLayoutEffect, useState } from "preact/hooks";
 
 import { useActionBoundToOneParam } from "@jsenv/navi/src/action/use_action.js";
 import { useActionStatus } from "@jsenv/navi/src/action/use_action_status.js";
 import { useExecuteAction } from "@jsenv/navi/src/action/use_execute_action.js";
 import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
-import { useState } from "preact/hooks";
-import { useDebugAction, useDebugInteraction } from "../navi_debug.jsx";
+import {
+  useDebugAction,
+  useDebugFocus,
+  useDebugInteraction,
+} from "../navi_debug.jsx";
 import {
   ActionContext,
   ActionRequesterContext,
@@ -248,6 +251,7 @@ const useActionProps = (
   });
   const debugAction = useDebugAction();
   const debugInteraction = useDebugInteraction();
+  const debugFocus = useDebugFocus();
 
   // infom any <Field> parent of our readOnly state + that we are interactive
   useLayoutEffect(() => {
@@ -324,6 +328,7 @@ const useActionProps = (
       uiStateController.setUIState(value, e);
       const naviProxyTarget = getNaviProxyTarget(e);
       if (naviProxyTarget) {
+        debugInteraction(e, "forwarding set_ui_state to navi proxy target");
         requestSetUIState(naviProxyTarget, value, { event: e.detail.event });
       }
     },
@@ -333,6 +338,10 @@ const useActionProps = (
       if (naviProxyTarget) {
         const mousedownEvent = findEvent(e, "mousedown");
         if (mousedownEvent && !mousedownEvent.defaultPrevented) {
+          debugFocus(
+            e,
+            "preventDefault() and focus() to proxy interaction to navi proxy target",
+          );
           mousedownEvent.preventDefault();
           naviProxyTarget.focus({ focusVisible: false });
         }
@@ -371,6 +380,7 @@ const useActionProps = (
     "onnavi_request_action": (e) => {
       const naviProxyTarget = getNaviProxyTarget(e);
       if (naviProxyTarget) {
+        debugAction(e, "forwarding action request to navi proxy target");
         dispatchRequestAction(naviProxyTarget, { event: e });
         return;
       }
