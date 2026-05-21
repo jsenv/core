@@ -10,7 +10,7 @@ import { Icon } from "@jsenv/navi/src/text/icon.jsx";
 import { FIELD_PROP_SET } from "../field_context.js";
 import { useTextualFieldInterfaceProps } from "../input/use_textual_field_interface_props.js";
 import { createUICallback } from "../ui_callback.js";
-import { dispatchRequestAction } from "../validation/custom_constraint_validation.js";
+// import { dispatchRequestAction } from "../validation/custom_constraint_validation.js";
 import { PickerContext, PickerElementContext } from "./picker_context.jsx";
 import { pickerResolvers } from "./picker_resolvers.jsx";
 
@@ -233,19 +233,18 @@ const PickerButton = (props) => {
   const inputRef = useRef(null);
   const inputFieldInterfaceProps = useTextualFieldInterfaceProps({
     ref: inputRef,
+    // action: undefined, // no specific action actually
+    actionAfterChange: true,
     ...props,
   });
-  const { id, type, value, basePseudoState, onChange, children } =
+  const { id, type, value, basePseudoState, children } =
     inputFieldInterfaceProps;
   const loading = basePseudoState[":-navi-loading"];
 
   return (
     <Box
       as="button"
-      {...inputFieldInterfaceProps}
       ref={ref}
-      icon={undefined}
-      ui={undefined}
       type="button"
       baseClassName="navi_picker"
       navi-field=".navi_picker_input"
@@ -274,13 +273,15 @@ const PickerButton = (props) => {
       <PickerInput
         {...inputFieldInterfaceProps}
         id={undefined}
+        icon={undefined}
+        ui={undefined}
         ref={inputRef}
         type={type}
-        onChange={(e) => {
-          onChange?.(e);
-          const input = inputRef.current;
-          dispatchRequestAction(input, { event: e });
-        }}
+        // onChange={(e) => {
+        //   onChange?.(e);
+        //   const input = inputRef.current;
+        //   dispatchRequestAction(input, { event: e });
+        // }}
       />
 
       <span className="navi_picker_right_slot">
@@ -297,10 +298,10 @@ const PICKER_INPUT_PROP_SET = new Set([...FIELD_PROP_SET]);
 PICKER_INPUT_PROP_SET.delete("id"); // button takes it
 const PickerInput = (props) => {
   return (
-    <input
+    <Box
+      as="input"
       {...props}
       className="navi_picker_input"
-      // eslint-disable-next-line react/no-unknown-property
       navi-rendered-by=".navi_picker"
       tabIndex={-1}
     />
