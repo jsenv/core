@@ -98,6 +98,7 @@ export const useFieldInterfaceProps = (
   const boundAction = externalBoundAction || internalBoundAction;
 
   const result = useActionProps(props, {
+    readOnlySupported: fieldType === "input",
     action: boundAction,
     uiStateController,
     readUIState,
@@ -192,6 +193,7 @@ export const useFieldgroupInterfaceProps = (
 const useActionProps = (
   props,
   {
+    readOnlySupported,
     action,
     uiStateController,
     readUIState,
@@ -296,7 +298,6 @@ const useActionProps = (
   const uiState = uiStateController.uiStateSignal.value;
   const actionProps = {
     "children": childrenWithContext,
-    ...remainingProps,
     ref,
     type,
     "id": idResolved,
@@ -312,7 +313,6 @@ const useActionProps = (
           ? props.action
           : action.callSource,
     "navi-autofocus": autoFocus ? "" : undefined,
-    "aria-readonly": readOnlyResolved,
     "aria-busy": loadingResolved,
     "basePseudoState": {
       ...basePseudoState,
@@ -520,6 +520,10 @@ const useActionProps = (
       remainingProps.onnavi_action_end?.(e);
     },
   };
+
+  if (!readOnlySupported) {
+    actionProps["aria-readonly"] = readOnlyResolved;
+  }
 
   const { statePropName, defaultStatePropName } = uiStateController;
   if (statePropName) {

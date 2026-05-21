@@ -7,7 +7,6 @@ import { LoadingOutline } from "@jsenv/navi/src/graphic/loading/loading_outline.
 import { createComponentResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { Icon } from "@jsenv/navi/src/text/icon.jsx";
 // import { useFieldInterfaceProps } from "../field_hooks.jsx";
-import { FIELD_PROP_SET } from "../field_context.js";
 import { useTextualFieldInterfaceProps } from "../input/use_textual_field_interface_props.js";
 import { createUICallback } from "../ui_callback.js";
 // import { dispatchRequestAction } from "../validation/custom_constraint_validation.js";
@@ -291,8 +290,6 @@ const PickerButton = (props) => {
     </Box>
   );
 };
-const PICKER_INPUT_PROP_SET = new Set([...FIELD_PROP_SET]);
-PICKER_INPUT_PROP_SET.delete("id"); // button takes it
 const PickerInput = (props) => {
   return (
     <Box
