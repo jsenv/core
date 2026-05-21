@@ -85,11 +85,36 @@
       const App = () => {
         return (
           <NaviDebug debugAction debugInteraction>
+            <TableOfContents />
             <DisplayOnlyDemo />
             <SearchableExternalInputDemo />
             <SearchableDemo />
             <PopoverDemo />
           </NaviDebug>
+        );
+      };
+
+      const TableOfContents = () => {
+        return (
+          <div class="demo-section">
+            <h2>Table of contents</h2>
+            <ol style={{ margin: 0, paddingLeft: "20px", lineHeight: "2" }}>
+              <li>
+                <a href="#display-only">Display only</a>
+              </li>
+              <li>
+                <a href="#search-external">
+                  Search — input outside list (listId)
+                </a>
+              </li>
+              <li>
+                <a href="#search-inline">Search — input inside list</a>
+              </li>
+              <li>
+                <a href="#popover">Popover</a>
+              </li>
+            </ol>
+          </div>
         );
       };
 
@@ -115,8 +140,7 @@
 
       const DisplayOnlyDemo = () => {
         return (
-          <div className="demo-section">
-            <h2>1. Display only</h2>
+          <div id="display-only" className="demo-section">
             <p>
               By default a <code>List</code> is purely presentational — no hover
               state, no selection, no keyboard navigation. Items render as
@@ -140,8 +164,7 @@
         const [searchText, setSearchText] = useState("");
         const [fruits, getItemMatchInfo] = useSearchText(searchText, FRUITS);
         return (
-          <div className="demo-section">
-            <h2>3b. Search — input outside list (listId)</h2>
+          <div id="search-external" className="demo-section">
             <p>
               When the input lives outside the list, pass <code>listId</code> on
               the <code>Input</code> pointing to the list's <code>id</code>.
@@ -208,8 +231,7 @@
         const [searchText, setSearchText] = useState("");
         const [fruits, getItemMatchInfo] = useSearchText(searchText, FRUITS);
         return (
-          <div className="demo-section">
-            <h2>3. Search — input inside list</h2>
+          <div id="search-inline" className="demo-section">
             <p>
               Placing an <code>Input</code> inside a <code>ListItemHeader</code>{" "}
               auto-connects it to the list via context. Keyboard events (arrows,
@@ -270,8 +292,7 @@
         };
 
         return (
-          <div className="demo-section">
-            <h2>4. Popover</h2>
+          <div id="popover" className="demo-section">
             <p>
               Pass <code>popover</code> to render the list as a managed popover.
               Call <code>requestListOpen</code> with an anchor element to show

@@ -1122,6 +1122,7 @@
                     id={`legend_${fruit.toLowerCase()}`}
                     value={fruit}
                     selected={selected === fruit}
+                    pointed={FRUIT_SUGAR[fruit] === hoveredSugar}
                     onMouseEnter={() => {
                       setHoveredFruit(fruit);
                     }}
@@ -1129,11 +1130,7 @@
                       setHoveredFruit(null);
                     }}
                     style={{
-                      background:
-                        hoveredSugar !== null &&
-                        FRUIT_SUGAR[fruit] === hoveredSugar
-                          ? "#eef2ff"
-                          : undefined,
+                      "--list-item-background-color-pointed": "#dbeafe",
                     }}
                   >
                     {SUGAR_ICON[FRUIT_SUGAR[fruit]]} {fruit}

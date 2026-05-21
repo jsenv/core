@@ -47,6 +47,9 @@ const css = /* css */ `
     /* Pointed by keyboard — subtle light blue highlight */
     --list-item-color-keyboard-pointed: var(--list-item-color);
     --list-item-background-color-keyboard-pointed: light-dark(#c2dcff, #1c3a6e);
+    /* Pointed by proxy */
+    --list-item-color-pointed: var(--list-item-color);
+    --list-item-background-color-pointed: light-dark(#dbeafe, #1c3a6e);
     /* Selected — vivid blue accent */
     --list-item-color-selected: light-dark(#ffffff, #ffffff);
     --list-item-background-color-selected: light-dark(#1a73e8, #2b5fcc);
