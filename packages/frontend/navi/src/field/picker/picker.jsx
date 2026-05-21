@@ -7,6 +7,8 @@ import { LoadingOutline } from "@jsenv/navi/src/graphic/loading/loading_outline.
 import { createComponentResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { Icon } from "@jsenv/navi/src/text/icon.jsx";
 // import { useFieldInterfaceProps } from "../field_hooks.jsx";
+import { useStableCallback } from "@jsenv/navi/src/utils/use_stable_callback.js";
+import { useOnInputValueChange } from "../input/input_value_listener.js";
 import { useTextualFieldInterfaceProps } from "../input/use_textual_field_interface_props.js";
 import { createUICallback } from "../ui_callback.js";
 import { dispatchRequestAction } from "../validation/custom_constraint_validation.js";
@@ -243,6 +245,19 @@ const PickerButton = (props) => {
   const { id, value, basePseudoState, children } = inputFieldInterfaceProps;
   const loading = basePseudoState[":-navi-loading"];
 
+  const onChangeStable = useStableCallback(onChange);
+  useOnInputValueChange(
+    inputRef,
+    (e) => {
+      onChangeStable?.(e);
+      const input = inputRef.current;
+      dispatchRequestAction(input, { event: e });
+    },
+    {
+      waitForChange: true,
+    },
+  );
+
   return (
     <Box
       as="button"
@@ -281,11 +296,6 @@ const PickerButton = (props) => {
         // eslint-disable-next-line react/no-children-prop
         children={undefined} // we will render children into the button
         id={undefined}
-        onChange={(e) => {
-          onChange?.(e);
-          const input = inputRef.current;
-          dispatchRequestAction(input, { event: e });
-        }}
       />
 
       <span className="navi_picker_right_slot">
