@@ -224,12 +224,11 @@ const css = /* css */ `
       --x-color: var(--color-readonly);
     }
     /* Focus */
-    &[data-focus],
     &[data-focus-visible] {
       --x-background-color: var(--background-color-focus);
       --x-border-color: transparent;
 
-      .navi_native_input {
+      .navi_real_input {
         outline-style: solid;
       }
     }
@@ -246,10 +245,10 @@ const css = /* css */ `
     }
   }
 
-  .navi_input .navi_native_input::placeholder {
+  .navi_input .navi_real_input::placeholder {
     color: var(--x-placeholder-color);
   }
-  .navi_input .navi_native_input:-internal-autofill-selected {
+  .navi_input .navi_real_input:-internal-autofill-selected {
     /* Webkit is putting some nasty styles after automplete that look as follow */
     /* input:-internal-autofill-selected { color: FieldText !important; } */
     /* Fortunately we can override it as follow */
