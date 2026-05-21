@@ -45,6 +45,7 @@ import {
   requestListSelectCurrent,
 } from "../list/list.jsx";
 import { requestClosestAction } from "../string_actions.js";
+import { dispatchRequestSetUIState } from "../ui_state_controller.js";
 import {
   dispatchRequestAction,
   dispatchRequestInteraction,
@@ -337,17 +338,12 @@ const InputTextualFieldInterface = (props) => {
           )}
           <InputRightSlot
             hideWhileEmpty
-            onClick={() => {
-              // TODO: find how to do this with new field approach
-              // const input = ref.current;
-              // dispatchRequestAction(input, {
-              //   event: e,
-              //   value: "",
-              //   uiAction: () => {
-              //     input.value = "";
-              //     input.dispatchEvent(new CustomEvent("navi_delete_content"));
-              //   },
-              // });
+            onClick={(e) => {
+              const input = ref.current;
+              const allowed = dispatchRequestInteraction(input, e);
+              if (allowed) {
+                dispatchRequestSetUIState(input, "", { event: e });
+              }
             }}
           >
             <Icon color="rgba(28, 43, 52, 0.5)">
@@ -573,7 +569,6 @@ const getDisplayValueForType = (type) => {
   }
   return undefined;
 };
-
 const getNormalizeUIStateForType = (type) => {
   if (type === "number") {
     return (uiStateRaw) => {
@@ -589,7 +584,6 @@ const getNormalizeUIStateForType = (type) => {
   }
   return undefined;
 };
-
 // As explained in https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/input/datetime-local#setting_timezones
 // datetime-local does not support timezones
 const convertToLocalTimezone = (dateTimeString) => {
@@ -605,7 +599,6 @@ const convertToLocalTimezone = (dateTimeString) => {
   const seconds = String(date.getSeconds()).padStart(2, "0");
   return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
 };
-
 const convertToUTCTimezone = (localDateTimeString) => {
   if (!localDateTimeString) {
     return localDateTimeString;

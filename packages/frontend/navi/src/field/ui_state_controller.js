@@ -235,7 +235,9 @@ export const useUIStateController = (
       }
     },
     resetUIState: (e) => {
-      requestSetUIState(e.currentTarget, uiStateController.state, { event: e });
+      dispatchRequestSetUIState(e.currentTarget, uiStateController.state, {
+        event: e,
+      });
     },
     actionEnd: () => {
       debugUIState(`"${componentType}" actionEnd called`);
@@ -522,7 +524,7 @@ export const useUIGroupStateController = (
         }
         const el = childUIStateController.elementRef?.current;
         if (el) {
-          requestResetUIState(el, e);
+          dispatchRequestResetUIState(el, e);
         }
       }
     },
@@ -590,13 +592,13 @@ export const useUIAction = (uiStateController, uiAction) => {
   }, [Boolean(uiAction)]);
 };
 
-export const requestSetUIState = (element, value, detail) => {
+export const dispatchRequestSetUIState = (element, value, detail) => {
   return dispatchInternalCustomEvent(element, "navi_set_ui_state", {
     ...detail,
     value,
   });
 };
-export const requestResetUIState = (element, e) => {
+export const dispatchRequestResetUIState = (element, e) => {
   return dispatchInternalCustomEvent(element, "navi_request_reset_ui_state", {
     event: e,
   });

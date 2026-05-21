@@ -11,7 +11,7 @@ import { useAccentColorAttributes } from "../../utils/use_accent_color_attribute
 import { FIELD_PROP_SET } from "../field_context.js";
 import { useFieldInterfaceProps } from "../field_hooks.jsx";
 import { requestClosestAction } from "../string_actions.js";
-import { requestSetUIState } from "../ui_state_controller.js";
+import { dispatchRequestSetUIState } from "../ui_state_controller.js";
 import { ToggleCSSVars, ToggleUI } from "./toggle_ui.jsx";
 
 const css = /* css */ `
@@ -479,7 +479,7 @@ export const InputRadio = (props) => {
       // radio propagates its state up, otherwise aggregation may find multiple "truthy" children.
       // suppressParentNotification: true prevents the group from aggregating and calling uiAction during
       // this intermediate state (all unchecked) — only the clicked radio's setUIState triggers aggregation.
-      requestSetUIState(radioInput, false, {
+      dispatchRequestSetUIState(radioInput, false, {
         event: e,
         suppressParentNotification: true,
       });

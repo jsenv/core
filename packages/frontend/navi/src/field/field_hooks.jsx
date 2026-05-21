@@ -27,9 +27,9 @@ import {
 } from "./field_context.js";
 import { resolveActionProp } from "./string_actions.js";
 import {
+  dispatchRequestResetUIState,
+  dispatchRequestSetUIState,
   ParentUIStateControllerContext,
-  requestResetUIState,
-  requestSetUIState,
   useUIGroupStateController,
   useUIStateController,
 } from "./ui_state_controller.js";
@@ -328,7 +328,7 @@ const useActionProps = (
         if (isBlurInvalid) {
           return;
         }
-        requestResetUIState(e.currentTarget, e);
+        dispatchRequestResetUIState(e.currentTarget, e);
         onCancel?.(e, reason);
         return;
       }
@@ -360,7 +360,9 @@ const useActionProps = (
           e,
           `forwarding set_ui_state "${value}" to ${getElementSignature(naviProxyTarget)}`,
         );
-        requestSetUIState(naviProxyTarget, value, { event: e.detail.event });
+        dispatchRequestSetUIState(naviProxyTarget, value, {
+          event: e.detail.event,
+        });
       }
     },
     "onnavi_request_interaction": (e) => {
@@ -431,7 +433,7 @@ const useActionProps = (
         // uiState is included explicitly so the target's onnavi_request_action
         // can detect it via Object.hasOwn and skip re-computing from its own
         // navi_request_ui_state (which would return undefined for an already-set radio).
-        requestSetUIState(naviProxyTarget, uiState, { event: e });
+        dispatchRequestSetUIState(naviProxyTarget, uiState, { event: e });
         debugAction(e, "forwarding action request to navi proxy target");
         dispatchRequestAction(naviProxyTarget, { event: e, uiState });
         return;
@@ -452,19 +454,21 @@ const useActionProps = (
         e.detail.action = action;
       }
       const { uiState } = e.detail;
-      requestSetUIState(e.currentTarget, uiState, { event: e.detail.event });
+      dispatchRequestSetUIState(e.currentTarget, uiState, {
+        event: e.detail.event,
+      });
       executeAction(e);
     },
     "onnavi_action_abort": (e) => {
       if (resetOnAbort) {
-        requestResetUIState(e.currentTarget, e);
+        dispatchRequestResetUIState(e.currentTarget, e);
       }
       onActionAborted?.(e);
     },
     "onnavi_action_error": (e) => {
       const { error } = e.detail;
       if (resetOnError) {
-        requestResetUIState(e.currentTarget, e);
+        dispatchRequestResetUIState(e.currentTarget, e);
       }
       onActionError?.(error, e);
     },
