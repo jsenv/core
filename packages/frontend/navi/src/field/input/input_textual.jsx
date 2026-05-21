@@ -35,7 +35,6 @@ import {
 } from "../../resolver/resolver.jsx";
 import { Label } from "../field.jsx";
 import { FIELD_PROP_SET } from "../field_context.js";
-import { useFieldInterfaceProps } from "../field_hooks.jsx";
 import {
   InsideRealListItemContext,
   ListIdContext,
@@ -52,6 +51,7 @@ import {
   dispatchRequestInteraction,
 } from "../validation/custom_constraint_validation.js";
 import { useOnInputValueChange } from "./input_value_listener.js";
+import { useTextualFieldInterfaceProps } from "./use_textual_field_interface_props.js";
 
 const css = /* css */ `
   @layer navi {
@@ -312,20 +312,11 @@ const InputNativeContext = createContext(null);
 const InputTextualFieldInterface = (props) => {
   import.meta.css = css;
   const { ref, type, icon, discrete, children, onKeyDown, onPaste } = props;
-  const fieldInterfaceProps = useFieldInterfaceProps(props, {
-    fieldType: "input",
-    statePropName: "value",
-    defaultStatePropName: "defaultValue",
-    readUIState: () => {
-      const input = ref.current;
-      return input.value;
-    },
-    getDisplayValue: getDisplayValueForType(type),
-    normalizeUIState: getNormalizeUIStateForType(type),
-  });
+  const textualFieldInterfaceProps = useTextualFieldInterfaceProps(props);
   const idDefault = useId();
-  fieldInterfaceProps.id = fieldInterfaceProps.id || `input_${idDefault}`;
-  const { id, basePseudoState } = fieldInterfaceProps;
+  textualFieldInterfaceProps.id =
+    textualFieldInterfaceProps.id || `input_${idDefault}`;
+  const { id, basePseudoState } = textualFieldInterfaceProps;
   const disabled = basePseudoState[":disabled"];
   const readOnly = basePseudoState[":read-only"];
   const loading = basePseudoState[":-navi-loading"];
@@ -406,7 +397,7 @@ const InputTextualFieldInterface = (props) => {
       pseudoElements={InputPseudoElements}
       hasChildUsingForwardedProps
       baseChildPropSet={InputChildPropSet}
-      {...fieldInterfaceProps}
+      {...textualFieldInterfaceProps}
       ref={undefined} // input takes the ref
       discrete={undefined} // handled via data attribute
       onKeyDown={(e) => {
@@ -579,56 +570,6 @@ export const InputLeftSlot = (props) => {
 };
 export const InputRightSlot = (props) => {
   return <InputSlot {...props} side="right" />;
-};
-
-const getDisplayValueForType = (type) => {
-  if (type === "datetime-local") {
-    return convertToLocalTimezone;
-  }
-  if (type === "color") {
-    return (uiState) => uiState || "#000000";
-  }
-  return undefined;
-};
-const getNormalizeUIStateForType = (type) => {
-  if (type === "number") {
-    return (uiStateRaw) => {
-      const inputValueAsNumber = Number(uiStateRaw);
-      if (isNaN(inputValueAsNumber)) {
-        return uiStateRaw;
-      }
-      return inputValueAsNumber;
-    };
-  }
-  if (type === "datetime-local") {
-    return convertToUTCTimezone;
-  }
-  return undefined;
-};
-// As explained in https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/input/datetime-local#setting_timezones
-// datetime-local does not support timezones
-const convertToLocalTimezone = (dateTimeString) => {
-  const date = new Date(dateTimeString);
-  if (isNaN(date.getTime())) {
-    return dateTimeString;
-  }
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  const hours = String(date.getHours()).padStart(2, "0");
-  const minutes = String(date.getMinutes()).padStart(2, "0");
-  const seconds = String(date.getSeconds()).padStart(2, "0");
-  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
-};
-const convertToUTCTimezone = (localDateTimeString) => {
-  if (!localDateTimeString) {
-    return localDateTimeString;
-  }
-  const localDate = new Date(localDateTimeString);
-  if (isNaN(localDate.getTime())) {
-    return localDateTimeString;
-  }
-  return localDate.toISOString();
 };
 
 const InputControllingList = (props) => {

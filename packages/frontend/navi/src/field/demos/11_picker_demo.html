@@ -646,32 +646,30 @@
               value and <code>usePickerRequestClose()</code> to close.
             </p>
             <Field vertical>
-              <Label>Choose a color</Label>
-              <NaviDebug debugPopup debugFocus>
-                <Picker type="color" placeholder="Pick a color" mode="dialog">
-                  <div>
-                    {["Red", "Green", "Blue", "Yellow"].map((color) => (
-                      <button
-                        key={color}
-                        style={`display:block;width:100%;padding:8px 16px;text-align:left;background:none;border:none;cursor:pointer;font-size:14px;color:${color.toLowerCase()};`}
-                        onClick={(e) => {
-                          Picker.update(color, e);
-                          Picker.close(e);
-                        }}
-                      >
-                        {color}
-                      </button>
-                    ))}
-                  </div>
-                </Picker>
-              </NaviDebug>
+              Choose a color
+              <Picker type="color" placeholder="Pick a color" mode="dialog">
+                <div>
+                  {["Red", "Green", "Blue", "Yellow"].map((color) => (
+                    <button
+                      key={color}
+                      style={`display:block;width:100%;padding:8px 16px;text-align:left;background:none;border:none;cursor:pointer;font-size:14px;color:${color.toLowerCase()};`}
+                      onClick={(e) => {
+                        Picker.update(color, e);
+                        Picker.close(e);
+                      }}
+                    >
+                      {color}
+                    </button>
+                  ))}
+                </div>
+              </Picker>
             </Field>
           </div>
         );
       };
 
       render(
-        <NaviDebug debugPopup debugFocus debugAction>
+        <NaviDebug debugAction debugInteraction>
           <App />
         </NaviDebug>,
         document.getElementById("app"),

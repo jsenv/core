@@ -6,7 +6,7 @@ import { ChevronDownSvg } from "@jsenv/navi/src/graphic/icons/chevron_updown_svg
 import { LoadingOutline } from "@jsenv/navi/src/graphic/loading/loading_outline.jsx";
 import { createComponentResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { Icon } from "@jsenv/navi/src/text/icon.jsx";
-import { useFieldInterfaceProps } from "../field_hooks.jsx";
+import { useTextualFieldInterfaceProps } from "../input/use_textual_field_interface_props.js";
 import { createUICallback } from "../ui_callback.js";
 import { dispatchRequestAction } from "../validation/custom_constraint_validation.js";
 import { PickerContext, PickerElementContext } from "./picker_context.jsx";
@@ -276,18 +276,8 @@ const PickerButton = (props) => {
     onChange,
   } = props;
   const pickerInputRef = useRef(null);
-  const fieldInterfaceProps = useFieldInterfaceProps(
-    {
-      ...props,
-      ref: pickerInputRef,
-    },
-    {
-      fieldType: "picker",
-      statePropName: "value",
-      defaultStatePropName: "defaultValue",
-    },
-  );
-  const { value, basePseudoState, children } = fieldInterfaceProps;
+  const inputFieldInterfaceProps = useTextualFieldInterfaceProps(props);
+  const { value, basePseudoState, children } = inputFieldInterfaceProps;
   const loading = basePseudoState[":-navi-loading"];
   const readOnly = basePseudoState[":read-only"];
   const disabled = basePseudoState[":disabled"];
@@ -296,7 +286,7 @@ const PickerButton = (props) => {
     <Box
       as="button"
       type="button"
-      {...fieldInterfaceProps}
+      {...inputFieldInterfaceProps}
       ref={ref}
       baseClassName="navi_picker"
       navi-field=".navi_picker_input"
