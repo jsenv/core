@@ -86,7 +86,7 @@
           <DatetimePickerDemo />
           <ColorPickerDemo />
           <CustomUIDemo />
-          <PopoverPickerDemo />
+          <PromptDemo />
           <DialogPickerDemo />
           <DisabledDemo />
           <FormIntegrationDemo />
@@ -125,7 +125,7 @@
               <a href="#custom-ui">Custom UI</a>
             </li>
             <li>
-              <a href="#popover">Custom popover</a>
+              <a href="#popover">Prompt</a>
             </li>
             <li>
               <a href="#dialog">Custom dialog</a>
@@ -611,8 +611,9 @@
         );
       };
 
-      const PopoverPickerDemo = () => {
+      const PromptDemo = () => {
         const [value, setValue] = useState("Hello");
+        const [mode, setMode] = useState("dialog");
         return (
           <div id="popover" class="demo-section">
             <p>
@@ -620,10 +621,23 @@
               <code>Input</code> with <code>action="picker"</code> binds its
               value to the picker automatically.
             </p>
+            <label>
+              <input
+                type="checkbox"
+                id="mode"
+                checked={mode === "popover"}
+                onChange={(e) =>
+                  setMode(e.target.checked ? "popover" : "dialog")
+                }
+              />
+              Popover mode (uncheck for dialog)
+            </label>
+
             <Field vertical>
               <Label>Free text</Label>
 
               <Picker
+                mode={mode}
                 type="text"
                 value={value}
                 action={(v) => {
