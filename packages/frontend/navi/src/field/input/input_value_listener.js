@@ -118,16 +118,16 @@ export const listenInputValue = (
     input.removeEventListener("focus", onEvent);
   });
 
-  const onNaviDeleteContent = (e) => {
-    // "navi_delete_content" behaves like an async event
+  const onNaviClear = (e) => {
+    // "navi_clear" behaves like an async event
     // a bit like form reset because
     // our action will be updated async after the component re-renders
     // and we need to wait that to happen to properly call action with the right value
     onAsyncEvent(e, { skipDebounce: true });
   };
-  input.addEventListener("navi_delete_content", onNaviDeleteContent);
+  input.addEventListener("navi_clear", onNaviClear);
   addTeardown(() => {
-    input.removeEventListener("navi_delete_content", onNaviDeleteContent);
+    input.removeEventListener("navi_clear", onNaviClear);
   });
   return () => {
     teardown();

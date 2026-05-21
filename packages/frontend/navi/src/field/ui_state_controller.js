@@ -219,7 +219,7 @@ export const useUIStateController = (
       }
       const currentUIState = uiStateController.uiState;
       if (newUIState === currentUIState) {
-        return;
+        return false;
       }
       const controllerSig = getElementSignature(e.currentTarget || ref.current);
       debugAction(
@@ -233,6 +233,7 @@ export const useUIStateController = (
       if (!e.detail?.suppressParentNotification) {
         notifyParentAboutChildUIStateChange(e);
       }
+      return true;
     },
     resetUIState: (e) => {
       dispatchRequestSetUIState(e.currentTarget, uiStateController.state, {

@@ -19,7 +19,7 @@ import { useMemo, useRef } from "preact/hooks";
 import { Box } from "../box/box.jsx";
 import { useFieldgroupInterfaceProps } from "./field_hooks.jsx";
 import { FormContext } from "./form_context.js";
-import { requestResetUIState } from "./ui_state_controller.js";
+import { dispatchRequestResetUIState } from "./ui_state_controller.js";
 
 export const Form = (props) => {
   const defaultRef = useRef();
@@ -85,7 +85,7 @@ const FormField = (props) => {
       }}
       onReset={(e) => {
         const form = ref.current;
-        requestResetUIState(form, e);
+        dispatchRequestResetUIState(form, e);
         // browser would empty all fields to their default values (likely empty/unchecked)
         // we want to reset to the last known external state instead
         e.preventDefault();

@@ -353,7 +353,7 @@ const useActionProps = (
     },
     "onnavi_set_ui_state": (e) => {
       const { value } = e.detail;
-      uiStateController.setUIState(value, e);
+      const modified = uiStateController.setUIState(value, e);
       const naviProxyTarget = getNaviProxyTarget(e);
       if (naviProxyTarget) {
         debugInteraction(
@@ -368,34 +368,36 @@ const useActionProps = (
       // When updating the ui state we want to dispatch "input" so that any code listening to input event
       // can know the latest value
       // but we don't need/want to do it when we come from a input event already
-      const currentTarget = e.currentTarget;
-      const existingInputEvent = findEvent(
-        e,
-        (e) => e.type === "input" && e.target === currentTarget,
-      );
-      if (!existingInputEvent) {
-        if (currentTarget.tagName === "INPUT") {
-          if (
-            currentTarget.type === "radio" ||
-            currentTarget.type === "checkbox"
-          ) {
-            currentTarget.dispatchEvent(
-              new InputEvent("input", {
-                bubbles: true,
-                cancelable: true,
-                inputType: "insertText",
-                data: value,
-              }),
-            );
-          } else {
-            currentTarget.dispatchEvent(
-              new Event("input", {
-                bubbles: true,
-              }),
-            );
+      if (modified) {
+        const currentTarget = e.currentTarget;
+        const existingInputEvent = findEvent(
+          e,
+          (e) => e.type === "input" && e.target === currentTarget,
+        );
+        if (!existingInputEvent) {
+          if (currentTarget.tagName === "INPUT") {
+            if (
+              currentTarget.type === "radio" ||
+              currentTarget.type === "checkbox"
+            ) {
+              currentTarget.dispatchEvent(
+                new InputEvent("input", {
+                  bubbles: true,
+                  cancelable: true,
+                  inputType: "insertText",
+                  data: value,
+                }),
+              );
+            } else {
+              currentTarget.dispatchEvent(
+                new Event("input", {
+                  bubbles: true,
+                }),
+              );
+            }
           }
+          // TODO: select, textarea
         }
-        // TODO: select, textarea
       }
     },
     "onnavi_request_interaction": (e) => {

@@ -16,6 +16,7 @@
  * - <InputRadio /> for type="radio"
  */
 
+import { dispatchCustomEvent } from "@jsenv/dom";
 import { createContext } from "preact";
 import { useContext, useEffect, useId, useRef, useState } from "preact/hooks";
 
@@ -343,6 +344,7 @@ const InputTextualFieldInterface = (props) => {
               const allowed = dispatchRequestInteraction(input, e);
               if (allowed) {
                 dispatchRequestSetUIState(input, "", { event: e });
+                dispatchCustomEvent(input, "navi_clear", { event: e });
               }
             }}
           >
