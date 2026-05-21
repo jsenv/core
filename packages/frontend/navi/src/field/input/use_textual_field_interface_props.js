@@ -8,7 +8,8 @@ export const useTextualFieldInterfaceProps = (props) => {
     defaultStatePropName: "defaultValue",
     readUIState: () => {
       const input = ref.current;
-      return input.value;
+      const inputValue = input.value;
+      return inputValue;
     },
     getDisplayValue: getDisplayValueForType(type),
     normalizeUIState: getNormalizeUIStateForType(type),

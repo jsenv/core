@@ -7,32 +7,36 @@ import { Time } from "@jsenv/navi/src/text/time.jsx";
 import { PickerContext } from "../picker_context.jsx";
 import { parseStepToSeconds } from "../time_helpers.js";
 
+const getPickerInputFromButtonEvent = (e) => {
+  const pickerButton = e.currentTarget;
+  const pickerInput = getPickerInput(pickerButton);
+  return pickerInput;
+};
+const getPickerInput = (pickerButton) => {
+  const pickerInput = pickerButton.querySelector(".navi_picker_input");
+  return pickerInput;
+};
 const getPropsToShowPicker = (props) => {
   return {
     ...props,
     onMouseDown: (e) => {
       props.onMouseDown?.(e);
-      dispatchRequestInteraction(e.currentTarget, e);
+      const pickerInput = getPickerInputFromButtonEvent(e);
+      dispatchRequestInteraction(pickerInput, e);
     },
     onClick: (e) => {
       props.onClick?.(e);
-      const allowed = dispatchRequestInteraction(e.currentTarget, e);
+      const pickerInput = getPickerInputFromButtonEvent(e);
+      const allowed = dispatchRequestInteraction(pickerInput, e);
       if (allowed) {
-        callInputShowPicker(e);
+        try {
+          pickerInput.showPicker();
+        } catch {
+          pickerInput.click();
+        }
       }
     },
   };
-};
-const callInputShowPicker = (e) => {
-  const button = e.currentTarget;
-  const inputEl = button.querySelector(".navi_picker_input");
-  if (inputEl) {
-    try {
-      inputEl.showPicker();
-    } catch {
-      inputEl.click();
-    }
-  }
 };
 
 export const PickerColor = (props) => {

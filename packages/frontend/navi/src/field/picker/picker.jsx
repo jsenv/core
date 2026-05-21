@@ -1,7 +1,7 @@
 import { dispatchCustomEvent } from "@jsenv/dom";
 import { useContext, useRef } from "preact/hooks";
 
-import { Box, BoxForwardedPropsContext } from "@jsenv/navi/src/box/box.jsx";
+import { Box } from "@jsenv/navi/src/box/box.jsx";
 import { ChevronDownSvg } from "@jsenv/navi/src/graphic/icons/chevron_updown_svg.jsx";
 import { LoadingOutline } from "@jsenv/navi/src/graphic/loading/loading_outline.jsx";
 import { createComponentResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
@@ -230,9 +230,9 @@ const renderPicker = createComponentResolver(pickerResolvers);
 const PickerButton = (props) => {
   import.meta.css = css;
   const { ref, icon, placeholder, ui } = props;
-  const pickerInputRef = useRef(null);
+  const inputRef = useRef(null);
   const inputFieldInterfaceProps = useTextualFieldInterfaceProps({
-    ref: pickerInputRef,
+    ref: inputRef,
     ...props,
   });
   const { id, type, value, basePseudoState, onChange, children } =
@@ -250,13 +250,11 @@ const PickerButton = (props) => {
       baseClassName="navi_picker"
       navi-field=".navi_picker_input"
       navi-has-placeholder={placeholder ? "" : undefined}
-      // pseudoStateSelector=".navi_picker_input"
+      pseudoStateSelector=".navi_picker_input"
       pseudoClasses={PICKER_PSEUDO_CLASSES}
       // we must put the id on the button and not the input
       // so that a <label> tries to give focus to the button and not the input
       id={id}
-      hasChildUsingForwardedProps
-      baseChildPropSet={PICKER_INPUT_PROP_SET}
       onnavi_get_managed_fields={(e) => {
         // we must check for the pickerEl content to search for a valid input because we might be a button used to validate for instance
         // no necessarily the field itself
@@ -264,29 +262,31 @@ const PickerButton = (props) => {
         const managedField = getPickerManagedField(pickerEl);
         e.detail.respondWith(managedField);
       }}
-      onChange={(e) => {
-        onChange?.(e);
-        const input = ref.current;
-        dispatchRequestAction(input, { event: e });
-      }}
     >
       <LoadingOutline
         loading={loading}
         color="var(--picker-loader-color)"
         inset={-1}
       />
-      <PickerContext.Provider
-        value={{
-          placeholder,
-          value,
-        }}
-      >
+      <PickerContext.Provider value={{ placeholder, value }}>
         {ui === undefined ? <PickerDefaultUI /> : ui}
       </PickerContext.Provider>
+      <PickerInput
+        {...inputFieldInterfaceProps}
+        id={undefined}
+        ref={inputRef}
+        type={type}
+        onChange={(e) => {
+          onChange?.(e);
+          const input = inputRef.current;
+          dispatchRequestAction(input, { event: e });
+        }}
+      />
+
       <span className="navi_picker_right_slot">
         <Icon size="m">{icon === undefined ? <ChevronDownSvg /> : icon}</Icon>
       </span>
-      <PickerInput ref={pickerInputRef} type={type} />
+
       <PickerElementContext.Provider value={ref}>
         {children}
       </PickerElementContext.Provider>
@@ -296,11 +296,8 @@ const PickerButton = (props) => {
 const PICKER_INPUT_PROP_SET = new Set([...FIELD_PROP_SET]);
 PICKER_INPUT_PROP_SET.delete("id"); // button takes it
 const PickerInput = (props) => {
-  const inputProps = useContext(BoxForwardedPropsContext);
-
   return (
     <input
-      {...inputProps}
       {...props}
       className="navi_picker_input"
       // eslint-disable-next-line react/no-unknown-property
