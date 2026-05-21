@@ -394,26 +394,21 @@ const InputTextualFieldInterface = (props) => {
       ref={undefined} // input takes the ref
       onKeyDown={(e) => {
         onKeyDown?.(e);
-        if (e.defaultPrevented) {
-          return;
-        }
-        const input = ref.current;
-        if (readOnly && isTypingIntent(e)) {
-          e.preventDefault(); // prevent space from scrolling the page, etc.
-          dispatchRequestInteraction(input, e);
-          return;
-        }
         if (e.key === "Enter") {
           requestClosestAction(e);
+          return;
         }
-
-        return;
+        if (isTypingIntent(e)) {
+          const input = e.currentTarget;
+          const allowed = dispatchRequestInteraction(input, e);
+          if (!allowed) {
+            e.preventDefault(); // prevent space from scrolling the page, etc.
+          }
+        }
       }}
       onPaste={(e) => {
         onPaste?.(e);
-        if (readOnly) {
-          dispatchRequestInteraction(ref.current, e);
-        }
+        dispatchRequestInteraction(ref.current, e);
       }}
     >
       <LoadingOutline
