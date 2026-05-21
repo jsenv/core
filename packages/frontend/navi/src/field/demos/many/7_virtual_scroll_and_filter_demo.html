@@ -312,7 +312,20 @@
               </span>
             </fieldset>
 
-            <NaviDebug debugScroll>
+            <NaviDebug debugInteraction>
+              <Input
+                placeholder="Filter…"
+                paddingX="8px"
+                paddingY="12px"
+                expandX
+                borderColor="#ccc"
+                value={searchText}
+                action={(text) => {
+                  setSearchText(text);
+                }}
+                marginBottom="s"
+                borderRadius="s"
+              />
               <List
                 ref={listRef}
                 maxHeight={maxHeight}
@@ -348,24 +361,6 @@
                 searchText={searchText}
                 separator
               >
-                <ListItemHeader>
-                  <Input
-                    placeholder="Filter…"
-                    paddingX="8px"
-                    paddingY="12px"
-                    expandX
-                    border="1px solid #ccc"
-                    value={searchText}
-                    uiAction={(text) => {
-                      setSearchText(text);
-                    }}
-                    style={{
-                      boxSizing: "border-box",
-                      borderRadius: "6px",
-                      fontSize: "1rem",
-                    }}
-                  />
-                </ListItemHeader>
                 {orderedItems.map((item, i) => {
                   const { match, score, ranges } = getItemMatchInfo(item);
                   return (
