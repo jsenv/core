@@ -9,7 +9,7 @@ import { Icon } from "@jsenv/navi/src/text/icon.jsx";
 // import { useFieldInterfaceProps } from "../field_hooks.jsx";
 import { useTextualFieldInterfaceProps } from "../input/use_textual_field_interface_props.js";
 import { createUICallback } from "../ui_callback.js";
-// import { dispatchRequestAction } from "../validation/custom_constraint_validation.js";
+import { dispatchRequestAction } from "../validation/custom_constraint_validation.js";
 import { PickerContext, PickerElementContext } from "./picker_context.jsx";
 import { pickerResolvers } from "./picker_resolvers.jsx";
 
@@ -228,13 +228,18 @@ export const Picker = (props) => {
 const renderPicker = createComponentResolver(pickerResolvers);
 const PickerButton = (props) => {
   import.meta.css = css;
-  const { ref, icon, placeholder, ui } = props;
+  const { ref, icon, placeholder, ui, onChange } = props;
   const inputRef = useRef(null);
   const [inputFieldInterfaceProps, remainingProps] =
-    useTextualFieldInterfaceProps({
-      ref: inputRef,
-      ...props,
-    });
+    useTextualFieldInterfaceProps(
+      {
+        ...props,
+        ref: inputRef,
+      },
+      {
+        fieldType: "picker_input",
+      },
+    );
   const { id, value, basePseudoState, children } = inputFieldInterfaceProps;
   const loading = basePseudoState[":-navi-loading"];
 
@@ -249,6 +254,7 @@ const PickerButton = (props) => {
       pseudoStateSelector=".navi_picker_input"
       pseudoClasses={PICKER_PSEUDO_CLASSES}
       {...remainingProps}
+      basePseudoState={basePseudoState} // inherit input pseudo states
       // we must put the id on the button and not the input
       // so that a <label> tries to give focus to the button and not the input
       id={id}
@@ -273,11 +279,11 @@ const PickerButton = (props) => {
       <PickerInput
         {...inputFieldInterfaceProps}
         id={undefined}
-        // onChange={(e) => {
-        //   onChange?.(e);
-        //   const input = inputRef.current;
-        //   dispatchRequestAction(input, { event: e });
-        // }}
+        onChange={(e) => {
+          onChange?.(e);
+          const input = inputRef.current;
+          dispatchRequestAction(input, { event: e });
+        }}
       />
 
       <span className="navi_picker_right_slot">

@@ -75,6 +75,7 @@ export const useFieldInterfaceProps = (
     normalizeUIState,
     paramsSignal,
     externalBoundAction,
+    readOnlySupported,
   },
 ) => {
   const debugAction = useDebugAction();
@@ -98,7 +99,7 @@ export const useFieldInterfaceProps = (
   const boundAction = externalBoundAction || internalBoundAction;
 
   const result = useActionProps(props, {
-    readOnlySupported: fieldType === "input",
+    readOnlySupported,
     action: boundAction,
     uiStateController,
     readUIState,

@@ -1,9 +1,12 @@
 import { useFieldInterfaceProps } from "../field_hooks.jsx";
 
-export const useTextualFieldInterfaceProps = (props) => {
+export const useTextualFieldInterfaceProps = (
+  props,
+  { fieldType = "input" } = {},
+) => {
   const { ref, type } = props;
   const result = useFieldInterfaceProps(props, {
-    fieldType: "input",
+    fieldType,
     statePropName: "value",
     defaultStatePropName: "defaultValue",
     readUIState: () => {
@@ -13,6 +16,7 @@ export const useTextualFieldInterfaceProps = (props) => {
     },
     getDisplayValue: getDisplayValueForType(type),
     normalizeUIState: getNormalizeUIStateForType(type),
+    readOnlySupported: true,
   });
   return result;
 };
