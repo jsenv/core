@@ -1,11 +1,13 @@
 import { dispatchCustomEvent } from "@jsenv/dom";
 import { useContext, useRef } from "preact/hooks";
 
-import { Box } from "@jsenv/navi/src/box/box.jsx";
+import { Box, BoxForwardedPropsContext } from "@jsenv/navi/src/box/box.jsx";
 import { ChevronDownSvg } from "@jsenv/navi/src/graphic/icons/chevron_updown_svg.jsx";
 import { LoadingOutline } from "@jsenv/navi/src/graphic/loading/loading_outline.jsx";
 import { createComponentResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { Icon } from "@jsenv/navi/src/text/icon.jsx";
+// import { useFieldInterfaceProps } from "../field_hooks.jsx";
+import { FIELD_PROP_SET } from "../field_context.js";
 import { useTextualFieldInterfaceProps } from "../input/use_textual_field_interface_props.js";
 import { createUICallback } from "../ui_callback.js";
 import { dispatchRequestAction } from "../validation/custom_constraint_validation.js";
@@ -259,28 +261,12 @@ const dispatchToPicker = (e, customEventName, detail) => {
 
 const PickerButton = (props) => {
   import.meta.css = css;
-  const {
-    id,
-    type,
-    name,
-    ref,
-    placeholder,
-    ui,
-    icon,
-    // props forwarded to picker.input, not the picker.button
-    required,
-    min,
-    max,
-    step,
-    onInput,
-    onChange,
-  } = props;
+  const { ref, icon, placeholder, ui } = props;
   const pickerInputRef = useRef(null);
   const inputFieldInterfaceProps = useTextualFieldInterfaceProps(props);
-  const { value, basePseudoState, children } = inputFieldInterfaceProps;
+  const { id, value, basePseudoState, children, onInput } =
+    inputFieldInterfaceProps;
   const loading = basePseudoState[":-navi-loading"];
-  const readOnly = basePseudoState[":read-only"];
-  const disabled = basePseudoState[":disabled"];
 
   return (
     <Box
@@ -288,6 +274,8 @@ const PickerButton = (props) => {
       type="button"
       {...inputFieldInterfaceProps}
       ref={ref}
+      icon={undefined}
+      ui={undefined}
       baseClassName="navi_picker"
       navi-field=".navi_picker_input"
       navi-has-placeholder={placeholder ? "" : undefined}
@@ -296,12 +284,19 @@ const PickerButton = (props) => {
       // we must put the id on the button and not the input
       // so that a <label> tries to give focus to the button and not the input
       id={id}
+      hasChildUsingForwardedProps
+      baseChildPropSet={PICKER_INPUT_PROP_SET}
       onnavi_get_managed_fields={(e) => {
         // we must check for the pickerEl content to search for a valid input because we might be a button used to validate for instance
         // no necessarily the field itself
         const pickerEl = e.currentTarget;
         const managedField = getPickerManagedField(pickerEl);
         e.detail.respondWith(managedField);
+      }}
+      onInput={(e) => {
+        onInput?.(e);
+        const input = ref.current;
+        dispatchRequestAction(input, { event: e });
       }}
     >
       <LoadingOutline
@@ -320,37 +315,27 @@ const PickerButton = (props) => {
       <span className="navi_picker_right_slot">
         <Icon size="m">{icon === undefined ? <ChevronDownSvg /> : icon}</Icon>
       </span>
-
-      <input
-        ref={pickerInputRef}
-        className="navi_picker_input"
-        type={type}
-        name={name}
-        value={value}
-        required={required}
-        min={min}
-        max={max}
-        step={step}
-        tabIndex={-1}
-        readOnly={readOnly}
-        disabled={disabled}
-        aria-busy={loading}
-        // eslint-disable-next-line react/no-unknown-property
-        navi-rendered-by=".navi_picker"
-        onInput={(e) => {
-          onInput?.(e);
-          const input = ref.current;
-          dispatchRequestAction(input, {
-            event: e,
-          });
-        }}
-        onChange={onChange}
-      />
-
+      <PickerInput ref={pickerInputRef} />
       <PickerElementContext.Provider value={ref}>
         {children}
       </PickerElementContext.Provider>
     </Box>
+  );
+};
+const PICKER_INPUT_PROP_SET = new Set([...FIELD_PROP_SET]);
+PICKER_INPUT_PROP_SET.delete("id"); // button takes it
+const PickerInput = (props) => {
+  const inputProps = useContext(BoxForwardedPropsContext);
+
+  return (
+    <input
+      {...inputProps}
+      {...props}
+      className="navi_picker_input"
+      // eslint-disable-next-line react/no-unknown-property
+      navi-rendered-by=".navi_picker"
+      tabIndex={-1}
+    />
   );
 };
 const getPickerManagedField = (pickerEl) => {
@@ -369,7 +354,13 @@ const getPickerManagedField = (pickerEl) => {
 };
 const findFieldWithName = (el) => {
   const tag = el.tagName.toLowerCase();
-  if ((tag === "input" || tag === "textarea" || tag === "select") && el.name) {
+  if (
+    (tag === "input" ||
+      tag === "textarea" ||
+      tag === "select" ||
+      tag === "button") &&
+    el.name
+  ) {
     return el;
   }
   for (const child of el.children) {

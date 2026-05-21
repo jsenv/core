@@ -152,7 +152,7 @@
                   name="color_normal"
                   type="color"
                   value={colorSignal.value}
-                  uiAction={(v) => {
+                  action={(v) => {
                     colorSignal.value = v;
                   }}
                 />
@@ -164,6 +164,7 @@
                   type="color"
                   value={colorSignal.value}
                   readOnly
+                  action={() => {}}
                 />
               </Field>
               <Field vertical spacing="s">

@@ -109,7 +109,7 @@ const FieldAsLabel = (props) => {
 const FieldAsContainer = (props) => {
   const idDefault = useId();
   const fieldId = `field_${idDefault}`;
-  props.id = props.id || fieldId;
+  props.fieldId = props.fieldId || props.id ? `${props.id}_field` : fieldId;
 
   return (
     <FieldUI
@@ -125,7 +125,8 @@ const FieldCSSVars = {
 const FieldUI = (props) => {
   import.meta.css = css;
   const { vertical } = props;
-  const { id, name, disabled, readOnly, required, loading, ...rest } = props;
+  const { fieldId, name, disabled, readOnly, required, loading, ...rest } =
+    props;
 
   const [messageProps, remainingProps] = extractMessageAndRemainingProps(rest);
   const messagePropsRef = useRef();
@@ -147,12 +148,12 @@ const FieldUI = (props) => {
   const loadingResolved = loading || parentFieldLoading;
   const fieldToInterfaceContextValue = useMemo(
     () => ({
-      id,
+      id: fieldId,
       setReadOnly: setReadOnlyFromChild,
       setDisabled: setDisabledByChild,
       setInteractive,
     }),
-    [id],
+    [fieldId],
   );
   let childrenWithContext;
   if (props.children === undefined) {
