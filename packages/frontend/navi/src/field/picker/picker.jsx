@@ -278,6 +278,8 @@ const PickerButton = (props) => {
       </PickerContext.Provider>
       <PickerInput
         {...inputFieldInterfaceProps}
+        // eslint-disable-next-line react/no-children-prop
+        children={undefined} // we will render children into the button
         id={undefined}
         onChange={(e) => {
           onChange?.(e);
