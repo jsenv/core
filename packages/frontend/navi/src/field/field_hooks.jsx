@@ -97,14 +97,14 @@ export const useFieldInterfaceProps = (
   );
   const boundAction = externalBoundAction || internalBoundAction;
 
-  const actionProps = useActionProps(props, {
+  const result = useActionProps(props, {
     action: boundAction,
     uiStateController,
     readUIState,
     getDisplayValue,
     normalizeUIState,
   });
-  return actionProps;
+  return result;
 };
 
 /**
@@ -138,7 +138,7 @@ export const useFieldgroupInterfaceProps = (
     uiGroupStateController.uiStateSignal,
   );
   const [actionRequester, setActionRequester] = useState();
-  const actionProps = useActionProps(props, {
+  const [actionProps, remainingProps] = useActionProps(props, {
     action: boundAction,
     uiStateController: uiGroupStateController,
     readUIState: () => {
@@ -174,17 +174,19 @@ export const useFieldgroupInterfaceProps = (
       </ParentUIStateControllerContext.Provider>
     );
   }
-
-  return {
-    ...actionProps,
-    name: undefined, // useful to children, not the the group itself
-    required: undefined, // useful to children, not the the group itself
-    children: childrenWithContext,
-    onnavi_action_ready: (e) => {
-      setActionRequester(e.detail.requester);
-      actionProps.onnavi_action_ready(e);
+  return [
+    {
+      ...actionProps,
+      name: undefined, // useful to children, not the the group itself
+      required: undefined, // useful to children, not the the group itself
+      children: childrenWithContext,
+      onnavi_action_ready: (e) => {
+        setActionRequester(e.detail.requester);
+        actionProps.onnavi_action_ready(e);
+      },
     },
-  };
+    remainingProps,
+  ];
 };
 
 const useActionProps = (
@@ -526,7 +528,7 @@ const useActionProps = (
     }
   }
 
-  return actionProps;
+  return [actionProps, remainingProps];
 };
 
 const getNaviProxyTarget = (event) => {

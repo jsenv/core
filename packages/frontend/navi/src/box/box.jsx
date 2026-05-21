@@ -605,7 +605,7 @@ export const Box = (props) => {
       }
       const isEventHandler = propName.startsWith("on");
       if (isEventHandler) {
-        if (canForwardToChild && pseudoStateSelector) {
+        if (shouldForwardAllToChild) {
           childForwardedProps[propName] = propValue;
           continue;
         }

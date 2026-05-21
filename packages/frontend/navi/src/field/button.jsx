@@ -543,7 +543,7 @@ const ButtonFieldInterface = (props) => {
   const { ref, onClick, onMouseDown } = props;
   const parentUIStateController = useContext(ParentUIStateControllerContext);
   const ancestorAction = useContext(ActionContext);
-  const fieldInterfaceProps = useFieldInterfaceProps(props, {
+  const [fieldInterfaceProps, remainingProps] = useFieldInterfaceProps(props, {
     fieldType: "button",
     statePropName: "value",
     readUIState: () => {
@@ -582,6 +582,7 @@ const ButtonFieldInterface = (props) => {
   return (
     <Next
       {...fieldInterfaceProps}
+      {...remainingProps}
       onMouseDown={(e) => {
         onMouseDown?.(e);
         // we set pressed state on mouse down so that button feels responsive, but we dispatch action on click to allow preventing default without blocking pressed state

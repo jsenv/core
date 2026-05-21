@@ -231,12 +231,13 @@ const PickerButton = (props) => {
   import.meta.css = css;
   const { ref, icon, placeholder, ui } = props;
   const inputRef = useRef(null);
-  const inputFieldInterfaceProps = useTextualFieldInterfaceProps({
-    ref: inputRef,
-    // action: undefined, // no specific action actually
-    actionAfterChange: true,
-    ...props,
-  });
+  const [inputFieldInterfaceProps, remainingProps] =
+    useTextualFieldInterfaceProps({
+      ref: inputRef,
+      // action: undefined, // no specific action actually
+      actionAfterChange: true,
+      ...props,
+    });
   const { id, type, value, basePseudoState, children } =
     inputFieldInterfaceProps;
   const loading = basePseudoState[":-navi-loading"];
@@ -251,9 +252,12 @@ const PickerButton = (props) => {
       navi-has-placeholder={placeholder ? "" : undefined}
       pseudoStateSelector=".navi_picker_input"
       pseudoClasses={PICKER_PSEUDO_CLASSES}
+      {...remainingProps}
       // we must put the id on the button and not the input
       // so that a <label> tries to give focus to the button and not the input
       id={id}
+      icon={undefined}
+      ui={undefined}
       onnavi_get_managed_fields={(e) => {
         // we must check for the pickerEl content to search for a valid input because we might be a button used to validate for instance
         // no necessarily the field itself
@@ -273,8 +277,6 @@ const PickerButton = (props) => {
       <PickerInput
         {...inputFieldInterfaceProps}
         id={undefined}
-        icon={undefined}
-        ui={undefined}
         ref={inputRef}
         type={type}
         // onChange={(e) => {

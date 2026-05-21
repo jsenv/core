@@ -145,45 +145,47 @@
         return (
           <div id="color-states" class="demo-section">
             <p>Normal, readonly, disabled, loading.</p>
-            <Field vertical spacing="s">
-              <Label>Normal</Label>
-              <Picker
-                name="color_normal"
-                type="color"
-                value={colorSignal.value}
-                action={(v) => {
-                  colorSignal.value = v;
-                }}
-              />
-            </Field>
-            <Field vertical spacing="s">
-              <Label>Readonly</Label>
-              <Picker
-                name="color_readonly"
-                type="color"
-                value={colorSignal.value}
-                readOnly
-                action={() => {}}
-              />
-            </Field>
-            <Field vertical spacing="s">
-              <Label>Disabled</Label>
-              <Picker
-                name="color_disabled"
-                type="color"
-                value={colorSignal.value}
-                disabled
-              />
-            </Field>
-            <Field vertical spacing="s">
-              <Label>Loading</Label>
-              <Picker
-                name="color_loading"
-                type="color"
-                value={colorSignal.value}
-                loading
-              />
-            </Field>
+            <Box flex="y" spacing="s">
+              <Field vertical>
+                <Label>Normal</Label>
+                <Picker
+                  name="color_normal"
+                  type="color"
+                  value={colorSignal.value}
+                  action={(v) => {
+                    colorSignal.value = v;
+                  }}
+                />
+              </Field>
+              <Field vertical>
+                <Label>Readonly</Label>
+                <Picker
+                  name="color_readonly"
+                  type="color"
+                  value={colorSignal.value}
+                  readOnly
+                  action={() => {}}
+                />
+              </Field>
+              <Field vertical>
+                <Label>Disabled</Label>
+                <Picker
+                  name="color_disabled"
+                  type="color"
+                  value={colorSignal.value}
+                  disabled
+                />
+              </Field>
+              <Field vertical>
+                <Label>Loading</Label>
+                <Picker
+                  name="color_loading"
+                  type="color"
+                  value={colorSignal.value}
+                  loading
+                />
+              </Field>
+            </Box>
           </div>
         );
       };

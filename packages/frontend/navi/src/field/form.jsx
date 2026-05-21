@@ -31,27 +31,28 @@ export const Form = (props) => {
 
 const FormField = (props) => {
   const { ref, method = "GET" } = props;
-  const fieldgroupInterfaceProps = useFieldgroupInterfaceProps(props, {
-    fieldType: "form",
-    childComponentType: "*",
-    aggregateChildStates: (childUIStateControllers) => {
-      const formValues = {};
-      for (const childUIStateController of childUIStateControllers) {
-        const { name, uiState, allowNameless } = childUIStateController;
-        if (!name) {
-          if (!allowNameless) {
-            console.warn(
-              "A form child component is missing a name property, its state won't be included in the form state",
-              childUIStateController,
-            );
+  const [fieldgroupInterfaceProps, remainingProps] =
+    useFieldgroupInterfaceProps(props, {
+      fieldType: "form",
+      childComponentType: "*",
+      aggregateChildStates: (childUIStateControllers) => {
+        const formValues = {};
+        for (const childUIStateController of childUIStateControllers) {
+          const { name, uiState, allowNameless } = childUIStateController;
+          if (!name) {
+            if (!allowNameless) {
+              console.warn(
+                "A form child component is missing a name property, its state won't be included in the form state",
+                childUIStateController,
+              );
+            }
+            continue;
           }
-          continue;
+          formValues[name] = uiState;
         }
-        formValues[name] = uiState;
-      }
-      return formValues;
-    },
-  });
+        return formValues;
+      },
+    });
   const { basePseudoState, children } = fieldgroupInterfaceProps;
   // const disabled = basePseudoState[":disabled"];
   // const readOnly = basePseudoState[":read-only"];
@@ -63,6 +64,7 @@ const FormField = (props) => {
   return (
     <Box
       {...fieldgroupInterfaceProps}
+      {...remainingProps}
       as="form"
       data-method={method}
       novalidate="" // make sure browser don't prevent "submit" when invalid, nor display messages

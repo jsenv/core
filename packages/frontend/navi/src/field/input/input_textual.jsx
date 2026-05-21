@@ -34,7 +34,6 @@ import {
   useNextResolver,
 } from "../../resolver/resolver.jsx";
 import { Label } from "../field.jsx";
-import { FIELD_PROP_SET } from "../field_context.js";
 import {
   InsideRealListItemContext,
   ListIdContext,
@@ -311,16 +310,21 @@ const renderInput = createComponentResolver([InputTextualWithListResolver]);
 const InputNativeContext = createContext(null);
 const InputTextualFieldInterface = (props) => {
   import.meta.css = css;
-  const { ref, type, icon, discrete, children, onKeyDown, onPaste } = props;
-  const textualFieldInterfaceProps = useTextualFieldInterfaceProps(props);
-  const idDefault = useId();
-  textualFieldInterfaceProps.id =
-    textualFieldInterfaceProps.id || `input_${idDefault}`;
-  const { id, basePseudoState } = textualFieldInterfaceProps;
-  const disabled = basePseudoState[":disabled"];
-  const readOnly = basePseudoState[":read-only"];
-  const loading = basePseudoState[":-navi-loading"];
-  const { actionDebounce, actionAfterChange } = props;
+  const {
+    ref,
+    type,
+    icon,
+    discrete,
+    actionDebounce,
+    actionAfterChange,
+    onKeyDown,
+    onPaste,
+  } = props;
+  if (props.children === undefined) {
+    props.children = (
+      <InputTextualDefaultChildren ref={ref} type={type} icon={icon} />
+    );
+  }
   useOnInputValueChange(
     ref,
     (e) => {
@@ -332,55 +336,22 @@ const InputTextualFieldInterface = (props) => {
       debounce: actionDebounce,
     },
   );
-
-  let innerChildren;
-  if (children === undefined) {
-    if (type === "search") {
-      innerChildren = (
-        <>
-          {icon === undefined && (
-            <InputLeftSlot>
-              <Icon color="rgba(28, 43, 52, 0.5)">
-                <SearchSvg />
-              </Icon>
-            </InputLeftSlot>
-          )}
-          <InputRightSlot
-            hideWhileEmpty
-            onClick={(e) => {
-              const input = ref.current;
-              const allowed = dispatchRequestInteraction(input, e);
-              if (allowed) {
-                dispatchRequestSetUIState(input, "", { event: e });
-                dispatchCustomEvent(input, "navi_clear", { event: e });
-              }
-            }}
-          >
-            <Icon color="rgba(28, 43, 52, 0.5)">
-              <CloseSvg />
-            </Icon>
-          </InputRightSlot>
-        </>
-      );
-    } else if (type === "email") {
-      innerChildren = icon === undefined && (
-        <InputLeftSlot>
-          <Icon color="rgba(28, 43, 52, 0.5)">
-            <EmailSvg />
-          </Icon>
-        </InputLeftSlot>
-      );
-    } else if (type === "tel") {
-      innerChildren = icon === undefined && (
-        <InputLeftSlot>
-          <Icon color="rgba(28, 43, 52, 0.5)">
-            <PhoneSvg />
-          </Icon>
-        </InputLeftSlot>
-      );
-    }
-  } else {
-    innerChildren = children;
+  const [textualFieldInterfaceProps, remainingProps] =
+    useTextualFieldInterfaceProps(props);
+  const idDefault = useId();
+  textualFieldInterfaceProps.id =
+    textualFieldInterfaceProps.id || `input_${idDefault}`;
+  const { id, basePseudoState, children } = textualFieldInterfaceProps;
+  const disabled = basePseudoState[":disabled"];
+  const readOnly = basePseudoState[":read-only"];
+  const loading = basePseudoState[":-navi-loading"];
+  let childrenWithContext;
+  if (children !== undefined) {
+    childrenWithContext = (
+      <InputNativeContext.Provider value={{ id, readOnly, disabled }}>
+        {children}
+      </InputNativeContext.Provider>
+    );
   }
 
   return (
@@ -388,7 +359,9 @@ const InputTextualFieldInterface = (props) => {
       as="span"
       flex
       baseClassName="navi_input"
+      {...remainingProps}
       data-discrete={discrete ? "" : undefined}
+      discrete={undefined} // handled via data attribute
       styleCSSVars={InputStyleCSSVars}
       navi-field=".navi_real_input"
       pseudoStateSelector=".navi_real_input"
@@ -396,48 +369,91 @@ const InputTextualFieldInterface = (props) => {
       pseudoClasses={InputPseudoClasses}
       pseudoElements={InputPseudoElements}
       hasChildUsingForwardedProps
-      baseChildPropSet={InputChildPropSet}
-      {...textualFieldInterfaceProps}
-      ref={undefined} // input takes the ref
-      discrete={undefined} // handled via data attribute
-      onKeyDown={(e) => {
-        onKeyDown?.(e);
-        if (e.key === "Enter") {
-          requestClosestAction(e);
-          return;
-        }
-        if (isTypingIntent(e)) {
-          const input = e.currentTarget;
-          const allowed = dispatchRequestInteraction(input, e);
-          if (!allowed) {
-            e.preventDefault(); // prevent space from scrolling the page, etc.
-          }
-        }
-      }}
-      onPaste={(e) => {
-        onPaste?.(e);
-        dispatchRequestInteraction(ref.current, e);
-      }}
     >
       <LoadingOutline
         loading={loading}
         color="var(--loader-color)"
         inset={-1}
       />
-      <RealInput ref={ref} type={type} />
-      {innerChildren ? (
-        <InputNativeContext.Provider
-          value={{
-            id,
-            readOnly,
-            disabled,
-          }}
-        >
-          {innerChildren}
-        </InputNativeContext.Provider>
-      ) : null}
+      <RealInput
+        {...textualFieldInterfaceProps}
+        ref={ref}
+        type={type}
+        onKeyDown={(e) => {
+          onKeyDown?.(e);
+          if (e.key === "Enter") {
+            requestClosestAction(e);
+            return;
+          }
+          if (isTypingIntent(e)) {
+            const input = e.currentTarget;
+            const allowed = dispatchRequestInteraction(input, e);
+            if (!allowed) {
+              e.preventDefault(); // prevent space from scrolling the page, etc.
+            }
+          }
+        }}
+        onPaste={(e) => {
+          onPaste?.(e);
+          dispatchRequestInteraction(ref.current, e);
+        }}
+      />
+      {childrenWithContext}
     </Box>
   );
+};
+const InputTextualDefaultChildren = ({ ref, type, icon }) => {
+  if (type === "search") {
+    return (
+      <>
+        {icon === undefined && (
+          <InputLeftSlot>
+            <Icon color="rgba(28, 43, 52, 0.5)">
+              <SearchSvg />
+            </Icon>
+          </InputLeftSlot>
+        )}
+        <InputRightSlot
+          hideWhileEmpty
+          onClick={(e) => {
+            const input = ref.current;
+            const allowed = dispatchRequestInteraction(input, e);
+            if (allowed) {
+              dispatchRequestSetUIState(input, "", { event: e });
+              dispatchCustomEvent(input, "navi_clear", { event: e });
+            }
+          }}
+        >
+          <Icon color="rgba(28, 43, 52, 0.5)">
+            <CloseSvg />
+          </Icon>
+        </InputRightSlot>
+      </>
+    );
+  }
+  if (type === "email") {
+    if (icon === undefined) {
+      return (
+        <InputLeftSlot>
+          <Icon color="rgba(28, 43, 52, 0.5)">
+            <EmailSvg />
+          </Icon>
+        </InputLeftSlot>
+      );
+    }
+  }
+  if (type === "tel") {
+    if (icon === undefined) {
+      return (
+        <InputLeftSlot>
+          <Icon color="rgba(28, 43, 52, 0.5)">
+            <PhoneSvg />
+          </Icon>
+        </InputLeftSlot>
+      );
+    }
+  }
+  return null;
 };
 const RealInput = (props) => {
   const inputProps = useContext(BoxForwardedPropsContext);
@@ -527,7 +543,6 @@ const InputPseudoClasses = [
   ":-navi-expanded",
 ];
 const InputPseudoElements = ["::-navi-loader"];
-const InputChildPropSet = new Set([...FIELD_PROP_SET]);
 const InputSlot = ({ side, onClick, hideWhileEmpty, ...props }) => {
   const ctx = useContext(InputNativeContext);
   const { id, readOnly, disabled } = ctx;
