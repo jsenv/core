@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <link rel="icon" href="data:," />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Sticky Header in List Demo</title>
+    <title>Search adress list Demo</title>
     <style>
       body {
         max-width: 600px;
@@ -276,6 +276,17 @@
             </p>
 
             <div className="scroll-container">
+              <p className="sticky-header-title">
+                Veuillez sélectionner une suggestion
+              </p>
+
+              <Input
+                type="search"
+                placeholder="Filtrer par nom ou adresse…"
+                expandX
+                action={(v) => setSearch(v)}
+                marginBottom="s"
+              />
               <List
                 role="listbox"
                 fallback="No results"
@@ -286,18 +297,6 @@
                 renderBudget={15}
                 separator={<Separator margin="0" />}
               >
-                <ListItemHeader>
-                  <p className="sticky-header-title">
-                    Veuillez sélectionner une suggestion
-                  </p>
-                  <Input
-                    type="search"
-                    placeholder="Filtrer par nom ou adresse…"
-                    expandX
-                    uiAction={(v) => setSearch(v)}
-                  />
-                </ListItemHeader>
-
                 {orderedItems.map((item, i) => {
                   const { score, match, ranges } = getItemMatchInfo(item);
                   return (
