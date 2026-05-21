@@ -871,7 +871,16 @@ const getScrollInfo = (
   const containerRect = listScrollContainerEl.getBoundingClientRect();
   let hitEl = null;
   let hitFiller = null;
-  for (let y = containerRect.top + 1; y < containerRect.bottom; y += 4) {
+  // Start scanning from the vertical center of the viewport rather than the top.
+  // The render window places half its budget above and half below the hit index.
+  // Anchoring to the center maximises how many rendered items fall within the
+  // visible area: starting from the top would waste the "above" budget on items
+  // already scrolled past, leaving the bottom of the viewport uncovered.
+  // For large lists where renderBudget >> visible item count this never matters
+  // in practice (the window always covers the whole viewport), but it is
+  // strictly better and costs nothing.
+  const scanStartY = (containerRect.top + containerRect.bottom) / 2;
+  for (let y = scanStartY; y < containerRect.bottom; y += 4) {
     const el = document.elementFromPoint(containerRect.left + 1, y);
     if (!el || !listEl.contains(el)) {
       continue;
