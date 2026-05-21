@@ -178,15 +178,6 @@ const css = /* css */ `
       --x-picker-border-color: var(--callout-color);
     }
   }
-
-  .navi_picker_color_display {
-    display: block;
-    width: 1em;
-    height: 1em;
-    background-color: var(--picker-color);
-    border: 1px solid rgba(0, 0, 0, 0.2);
-    border-radius: 2px;
-  }
 `;
 
 /**

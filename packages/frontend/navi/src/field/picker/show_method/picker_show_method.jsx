@@ -6,6 +6,7 @@ import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { Time } from "@jsenv/navi/src/text/time.jsx";
 import { PickerContext } from "../picker_context.jsx";
 import { parseStepToSeconds } from "../time_helpers.js";
+import { Color } from "./color.jsx";
 
 const getPickerInputFromButtonEvent = (e) => {
   const pickerButton = e.currentTarget;
@@ -54,25 +55,9 @@ export const PickerColor = (props) => {
 const PickerColorUI = () => {
   const { value, placeholder } = useContext(PickerContext);
   if (!value) {
-    return (
-      placeholder || (
-        <span
-          className="navi_picker_color_display"
-          style={{
-            "--picker-color": "black",
-          }}
-        />
-      )
-    );
+    return placeholder || <Color>black</Color>;
   }
-  return (
-    <span
-      className="navi_picker_color_display"
-      style={{
-        "--picker-color": value,
-      }}
-    />
-  );
+  return <Color>{value}</Color>;
 };
 
 export const PickerDay = (props) => {
