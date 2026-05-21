@@ -316,7 +316,6 @@ const InputTextualFieldInterface = (props) => {
   import.meta.css = css;
   const {
     ref,
-    type,
     ui,
     discrete,
     actionDebounce,
@@ -324,9 +323,6 @@ const InputTextualFieldInterface = (props) => {
     onKeyDown,
     onPaste,
   } = props;
-  if (props.children === undefined) {
-    props.children = ui;
-  }
   useOnInputValueChange(
     ref,
     (e) => {
@@ -347,14 +343,11 @@ const InputTextualFieldInterface = (props) => {
   const disabled = basePseudoState[":disabled"];
   const readOnly = basePseudoState[":read-only"];
   const loading = basePseudoState[":-navi-loading"];
-  let childrenWithContext;
-  if (children !== undefined) {
-    childrenWithContext = (
-      <InputNativeContext.Provider value={{ id, readOnly, disabled }}>
-        {children}
-      </InputNativeContext.Provider>
-    );
-  }
+  const childrenWithContext = (
+    <InputNativeContext.Provider value={{ id, readOnly, disabled }}>
+      {children || ui}
+    </InputNativeContext.Provider>
+  );
 
   return (
     <Box
@@ -380,8 +373,6 @@ const InputTextualFieldInterface = (props) => {
       />
       <RealInput
         {...textualFieldInterfaceProps}
-        ref={ref}
-        type={type}
         onKeyDown={(e) => {
           onKeyDown?.(e);
           if (e.key === "Enter") {

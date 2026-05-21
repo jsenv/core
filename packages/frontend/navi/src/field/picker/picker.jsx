@@ -234,12 +234,9 @@ const PickerButton = (props) => {
   const [inputFieldInterfaceProps, remainingProps] =
     useTextualFieldInterfaceProps({
       ref: inputRef,
-      // action: undefined, // no specific action actually
-      actionAfterChange: true,
       ...props,
     });
-  const { id, type, value, basePseudoState, children } =
-    inputFieldInterfaceProps;
+  const { id, value, basePseudoState, children } = inputFieldInterfaceProps;
   const loading = basePseudoState[":-navi-loading"];
 
   return (
@@ -277,8 +274,6 @@ const PickerButton = (props) => {
       <PickerInput
         {...inputFieldInterfaceProps}
         id={undefined}
-        ref={inputRef}
-        type={type}
         // onChange={(e) => {
         //   onChange?.(e);
         //   const input = inputRef.current;

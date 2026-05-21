@@ -202,6 +202,7 @@ const useActionProps = (
   const {
     ref,
 
+    type,
     name,
     id,
     autoFocus,
@@ -297,9 +298,12 @@ const useActionProps = (
     "children": childrenWithContext,
     ...remainingProps,
     ref,
+    type,
     "id": idResolved,
     "name": nameResolved,
     "required": requiredResolved,
+    "readOnly": readOnlyResolved,
+    "disabled": disabledResolved,
     "action": undefined,
     "data-action":
       props.action === undefined
