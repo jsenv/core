@@ -177,6 +177,8 @@ export const useFieldgroupInterfaceProps = (
 
   return {
     ...actionProps,
+    name: undefined, // useful to children, not the the group itself
+    required: undefined, // useful to children, not the the group itself
     children: childrenWithContext,
     onnavi_action_ready: (e) => {
       setActionRequester(e.detail.requester);

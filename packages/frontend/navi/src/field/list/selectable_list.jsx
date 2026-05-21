@@ -200,6 +200,7 @@ export const SelectableList = (props) => {
         selectedIndicator === "backgroundColor" ? "" : undefined
       }
       {...fieldgroupInterfaceProps}
+      name={undefined}
       selectedIndicator={undefined}
       multiple={undefined}
       onnavi_list_nav={(e) => {

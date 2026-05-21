@@ -35,34 +35,36 @@ export const REQUIRED_CONSTRAINT = {
       return null;
     }
     if (field.type === "checkbox") {
+      const checkboxGroupContainer = field.closest(
+        "[navi-checkbox-list], fieldset, form",
+      );
       const isCheckboxGroup =
-        field.name?.endsWith("[]") ||
-        Boolean(field.closest("[navi-checkbox-list]"));
+        field.name?.endsWith("[]") || checkboxGroupContainer;
       if (isCheckboxGroup) {
         const name = field.name;
-        const checkboxSetContainer =
-          field.closest("[navi-checkbox-list], fieldset, form") || document;
+        const container = checkboxGroupContainer || document;
         const checkboxSelector = `input[type="checkbox"][name="${CSS.escape(name)}"]`;
-        const checkboxes =
-          checkboxSetContainer.querySelectorAll(checkboxSelector);
-        for (const checkbox of checkboxes) {
-          if (checkbox.checked) {
-            return null;
+        const checkboxArray = container.querySelectorAll(checkboxSelector);
+        if (checkboxArray.length > 1) {
+          for (const checkbox of checkboxArray) {
+            if (checkbox.checked) {
+              return null;
+            }
+            registerChange((onChange) => {
+              checkbox.addEventListener("change", onChange);
+              return () => {
+                checkbox.removeEventListener("change", onChange);
+              };
+            });
           }
-          registerChange((onChange) => {
-            checkbox.addEventListener("change", onChange);
-            return () => {
-              checkbox.removeEventListener("change", onChange);
-            };
-          });
+          return {
+            message: naviI18n("constraint.required.checkbox_group"),
+            target:
+              checkboxGroupContainer.tagName === "FIELDSET"
+                ? checkboxGroupContainer
+                : undefined,
+          };
         }
-        return {
-          message: naviI18n("constraint.required.checkbox_group"),
-          target:
-            checkboxSetContainer.tagName === "FIELDSET"
-              ? checkboxSetContainer
-              : undefined,
-        };
       }
       if (!field.checked) {
         return naviI18n("constraint.required.checkbox");
