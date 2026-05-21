@@ -199,9 +199,9 @@ export const SelectableList = (props) => {
       navi-has-selected-background={
         selectedIndicator === "backgroundColor" ? "" : undefined
       }
-      aria-multiselectable={multiple ? "true" : undefined}
       {...fieldgroupInterfaceProps}
       selectedIndicator={undefined}
+      multiple={undefined}
       onnavi_list_nav={(e) => {
         const { item, event } = e.detail;
         // const id = item ? item.id : null;

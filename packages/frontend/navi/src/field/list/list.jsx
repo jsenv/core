@@ -545,7 +545,6 @@ const LIST_PSEUDO_CLASSES = [
   ":read-only",
   ":disabled",
   ":-navi-void",
-  ":-navi-has-value",
   ":-navi-expanded",
 ];
 const useListScrollSync = ({
