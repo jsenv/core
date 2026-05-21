@@ -642,20 +642,21 @@ export const installCustomConstraintValidation = (
       });
       return;
     }
+    const anchorElement =
+      failedConstraintInfo.target || elementReceivingValidationMessage;
     if (
       !skipFocus &&
       // skip focus on proxy (which uses aria-hidden and are not meant to be focused)
-      !element.closest('[aria-hidden="true"]')
+      !anchorElement.closest('[aria-hidden="true"]')
     ) {
-      element.focus();
+      anchorElement.focus();
     }
     const removeCloseOnCleanup = addTeardown(() => {
       closeElementValidationMessage(new CustomEvent("cleanup"), "cleanup");
     });
 
     validationInterface.validationMessage = openCallout(message, {
-      anchorElement:
-        failedConstraintInfo.target || elementReceivingValidationMessage,
+      anchorElement,
       status: failedConstraintInfo.status,
       closeOnClickOutside: failedConstraintInfo.closeOnClickOutside,
       openingEvent: event,

@@ -397,11 +397,7 @@
                 <div className="col-label">Multiple</div>
                 <Form
                   action={({ fruit }) => {
-                    setSubmittedMultiple(
-                      Array.isArray(fruit)
-                        ? fruit.join(", ")
-                        : (fruit ?? "(none)"),
-                    );
+                    setSubmittedMultiple(fruit);
                     setSelectedMultiple(fruit);
                   }}
                 >
@@ -427,7 +423,7 @@
                 </Form>
                 <div className="value-display">
                   {submittedMultiple !== null
-                    ? `Submitted: ${submittedMultiple}`
+                    ? `Submitted: ${submittedMultiple.length ? submittedMultiple.join(", ") : "(none)"}`
                     : ""}
                 </div>
               </div>
@@ -457,15 +453,10 @@
                 <Form
                   action={({ fruit }) => {
                     setSubmittedSingle(fruit ?? "(none)");
+                    setSelectedSingle(fruit);
                   }}
                 >
-                  <SelectableList
-                    name="fruit"
-                    required
-                    action={(v) => {
-                      setSelectedSingle(v ?? null);
-                    }}
-                  >
+                  <SelectableList name="fruit" required>
                     {FRUITS.map((fruit, i) => (
                       <Selectable
                         key={fruit}
@@ -495,21 +486,11 @@
                 <div className="col-label">Multiple</div>
                 <Form
                   action={({ fruit }) => {
-                    setSubmittedMultiple(
-                      Array.isArray(fruit)
-                        ? fruit.join(", ")
-                        : (fruit ?? "(none)"),
-                    );
+                    setSubmittedMultiple(fruit);
+                    setSelectedMultiple(fruit);
                   }}
                 >
-                  <SelectableList
-                    multiple
-                    name="fruit"
-                    required
-                    action={(v) => {
-                      setSelectedMultiple(v ?? []);
-                    }}
-                  >
+                  <SelectableList multiple name="fruit" required>
                     {FRUITS.map((fruit, i) => (
                       <Selectable
                         key={fruit}
@@ -531,7 +512,7 @@
                 </Form>
                 <div className="value-display">
                   {submittedMultiple !== null
-                    ? `Submitted: ${submittedMultiple}`
+                    ? `Submitted: ${submittedMultiple.length ? submittedMultiple.join(", ") : "(none)"}`
                     : ""}
                 </div>
               </div>
