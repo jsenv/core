@@ -304,8 +304,24 @@ const InputTextualWithListResolver = (props) => {
   }
   return <Next {...props} />;
 };
+const InputTypeResolver = (props) => {
+  const Next = useNextResolver();
+  if (props.type === "search") {
+    return <InputSearch {...props} />;
+  }
+  if (props.type === "email") {
+    return <InputEmail {...props} />;
+  }
+  if (props.type === "tel") {
+    return <InputTel {...props} />;
+  }
+  return <Next {...props} />;
+};
 
-const renderInput = createComponentResolver([InputTextualWithListResolver]);
+const renderInput = createComponentResolver([
+  InputTextualWithListResolver,
+  InputTypeResolver,
+]);
 
 const InputNativeContext = createContext(null);
 const InputTextualFieldInterface = (props) => {
@@ -313,7 +329,7 @@ const InputTextualFieldInterface = (props) => {
   const {
     ref,
     type,
-    icon,
+    ui,
     discrete,
     actionDebounce,
     actionAfterChange,
@@ -321,9 +337,7 @@ const InputTextualFieldInterface = (props) => {
     onPaste,
   } = props;
   if (props.children === undefined) {
-    props.children = (
-      <InputTextualDefaultChildren ref={ref} type={type} icon={icon} />
-    );
+    props.children = ui;
   }
   useOnInputValueChange(
     ref,
@@ -360,6 +374,7 @@ const InputTextualFieldInterface = (props) => {
       flex
       baseClassName="navi_input"
       {...remainingProps}
+      ui={undefined}
       data-discrete={discrete ? "" : undefined}
       discrete={undefined} // handled via data attribute
       styleCSSVars={InputStyleCSSVars}
@@ -401,59 +416,6 @@ const InputTextualFieldInterface = (props) => {
       {childrenWithContext}
     </Box>
   );
-};
-const InputTextualDefaultChildren = ({ ref, type, icon }) => {
-  if (type === "search") {
-    return (
-      <>
-        {icon === undefined && (
-          <InputLeftSlot>
-            <Icon color="rgba(28, 43, 52, 0.5)">
-              <SearchSvg />
-            </Icon>
-          </InputLeftSlot>
-        )}
-        <InputRightSlot
-          hideWhileEmpty
-          onClick={(e) => {
-            const input = ref.current;
-            const allowed = dispatchRequestInteraction(input, e);
-            if (allowed) {
-              dispatchRequestSetUIState(input, "", { event: e });
-              dispatchCustomEvent(input, "navi_clear", { event: e });
-            }
-          }}
-        >
-          <Icon color="rgba(28, 43, 52, 0.5)">
-            <CloseSvg />
-          </Icon>
-        </InputRightSlot>
-      </>
-    );
-  }
-  if (type === "email") {
-    if (icon === undefined) {
-      return (
-        <InputLeftSlot>
-          <Icon color="rgba(28, 43, 52, 0.5)">
-            <EmailSvg />
-          </Icon>
-        </InputLeftSlot>
-      );
-    }
-  }
-  if (type === "tel") {
-    if (icon === undefined) {
-      return (
-        <InputLeftSlot>
-          <Icon color="rgba(28, 43, 52, 0.5)">
-            <PhoneSvg />
-          </Icon>
-        </InputLeftSlot>
-      );
-    }
-  }
-  return null;
 };
 const RealInput = (props) => {
   const inputProps = useContext(BoxForwardedPropsContext);
@@ -585,6 +547,71 @@ export const InputLeftSlot = (props) => {
 };
 export const InputRightSlot = (props) => {
   return <InputSlot {...props} side="right" />;
+};
+
+const InputSearch = (props) => {
+  const Next = useNextResolver();
+  return <Next ui={<InputSearchUI icon={props.icon} />} {...props} />;
+};
+const InputSearchUI = ({ icon }) => {
+  return (
+    <>
+      {icon === undefined && (
+        <InputLeftSlot>
+          <Icon color="rgba(28, 43, 52, 0.5)">
+            <SearchSvg />
+          </Icon>
+        </InputLeftSlot>
+      )}
+      <InputRightSlot
+        hideWhileEmpty
+        onClick={(e) => {
+          const input = e.currentTarget;
+          const allowed = dispatchRequestInteraction(input, e);
+          if (allowed) {
+            dispatchRequestSetUIState(input, "", { event: e });
+            dispatchCustomEvent(input, "navi_clear", { event: e });
+          }
+        }}
+      >
+        <Icon color="rgba(28, 43, 52, 0.5)">
+          <CloseSvg />
+        </Icon>
+      </InputRightSlot>
+    </>
+  );
+};
+const InputEmail = (props) => {
+  const Next = useNextResolver();
+  return <Next ui={<InputEmailUI />} {...props} />;
+};
+const InputEmailUI = ({ icon }) => {
+  if (icon !== undefined) {
+    return null;
+  }
+  return (
+    <InputLeftSlot>
+      <Icon color="rgba(28, 43, 52, 0.5)">
+        <EmailSvg />
+      </Icon>
+    </InputLeftSlot>
+  );
+};
+const InputTel = (props) => {
+  const Next = useNextResolver();
+  return <Next ui={<InputTelUI icon={props.icon} />} {...props} />;
+};
+const InputTelUI = ({ icon }) => {
+  if (icon !== undefined) {
+    return null;
+  }
+  return (
+    <InputLeftSlot>
+      <Icon color="rgba(28, 43, 52, 0.5)">
+        <PhoneSvg />
+      </Icon>
+    </InputLeftSlot>
+  );
 };
 
 const InputControllingList = (props) => {
