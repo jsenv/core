@@ -125,6 +125,10 @@ const css = /* css */ `
         --list-item-background-color-mouse-pointed
       );
     }
+    &[data-pointed] {
+      --x-list-item-color: var(--list-item-color-pointed);
+      --x-list-item-background-color: var(--list-item-background-color-pointed);
+    }
     &[data-disabled] {
       --x-list-item-color: var(--list-item-color-disabled);
       --x-list-item-background-color: var(
@@ -277,6 +281,7 @@ export const Selectable = (props) => {
     hidden,
     filtered,
     selected,
+    pointed,
     children,
     selectableArea,
     basePseudoState,
@@ -309,6 +314,7 @@ export const Selectable = (props) => {
       pseudoClasses={SELECTABLE_PSEUDO_CLASSES}
       basePseudoState={{
         ":-navi-selected": inputSelected,
+        ":-navi-pointed": pointed,
         ...basePseudoState,
       }}
       aria-selected={inputSelected}
