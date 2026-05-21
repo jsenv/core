@@ -226,46 +226,16 @@ export const Picker = (props) => {
 
   return picker;
 };
-
 const renderPicker = createComponentResolver(pickerResolvers);
-Picker.update = createUICallback({
-  name: "Picker.update",
-  action: (value, e) => {
-    return dispatchToPicker(e, "navi_picker_set_value", { value });
-  },
-});
-Picker.cancel = createUICallback({
-  name: "Picker.cancel",
-  event: (e) => dispatchToPicker(e, "navi_picker_request_cancel"),
-  action: (_, e) => {
-    return dispatchToPicker(e, "navi_picker_request_cancel");
-  },
-});
-Picker.submit = createUICallback({
-  name: "Picker.submit",
-  event: (e) => dispatchToPicker(e, "navi_request_action"),
-  action: (_, e) => {
-    return dispatchToPicker(e, "navi_request_action");
-  },
-});
-
-const dispatchToPicker = (e, customEventName, detail) => {
-  const pickerEl = e.currentTarget.closest(".navi_picker");
-  if (!pickerEl) {
-    return false;
-  }
-  return dispatchCustomEvent(pickerEl, customEventName, {
-    event: e,
-    ...detail,
-  });
-};
-
 const PickerButton = (props) => {
   import.meta.css = css;
   const { ref, icon, placeholder, ui } = props;
   const pickerInputRef = useRef(null);
-  const inputFieldInterfaceProps = useTextualFieldInterfaceProps(props);
-  const { id, type, value, basePseudoState, children, onInput } =
+  const inputFieldInterfaceProps = useTextualFieldInterfaceProps({
+    ref: pickerInputRef,
+    ...props,
+  });
+  const { id, type, value, basePseudoState, onChange, children } =
     inputFieldInterfaceProps;
   const loading = basePseudoState[":-navi-loading"];
 
@@ -294,8 +264,8 @@ const PickerButton = (props) => {
         const managedField = getPickerManagedField(pickerEl);
         e.detail.respondWith(managedField);
       }}
-      onInput={(e) => {
-        onInput?.(e);
+      onChange={(e) => {
+        onChange?.(e);
         const input = ref.current;
         dispatchRequestAction(input, { event: e });
       }}
@@ -371,6 +341,38 @@ const findFieldWithName = (el) => {
     }
   }
   return null;
+};
+
+Picker.update = createUICallback({
+  name: "Picker.update",
+  action: (value, e) => {
+    return dispatchToPicker(e, "navi_picker_set_value", { value });
+  },
+});
+Picker.cancel = createUICallback({
+  name: "Picker.cancel",
+  event: (e) => dispatchToPicker(e, "navi_picker_request_cancel"),
+  action: (_, e) => {
+    return dispatchToPicker(e, "navi_picker_request_cancel");
+  },
+});
+Picker.submit = createUICallback({
+  name: "Picker.submit",
+  event: (e) => dispatchToPicker(e, "navi_request_action"),
+  action: (_, e) => {
+    return dispatchToPicker(e, "navi_request_action");
+  },
+});
+
+const dispatchToPicker = (e, customEventName, detail) => {
+  const pickerEl = e.currentTarget.closest(".navi_picker");
+  if (!pickerEl) {
+    return false;
+  }
+  return dispatchCustomEvent(pickerEl, customEventName, {
+    event: e,
+    ...detail,
+  });
 };
 
 const PICKER_PSEUDO_CLASSES = [

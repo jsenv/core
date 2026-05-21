@@ -235,7 +235,7 @@
                     name="day"
                     required
                     value={daySignal.value}
-                    uiAction={(v) => {
+                    action={(v) => {
                       daySignal.value = v;
                     }}
                     min={today}
@@ -252,7 +252,7 @@
                       isToday(daySignal.value) ? getNowHours(-5) : undefined
                     }
                     value={hourSignal.value}
-                    uiAction={(v) => {
+                    action={(v) => {
                       hourSignal.value = v;
                     }}
                   />
@@ -306,7 +306,7 @@
                 name="day"
                 type="day"
                 value={daySignal.value}
-                uiAction={(v) => {
+                action={(v) => {
                   daySignal.value = v;
                 }}
                 min={today}
@@ -322,7 +322,7 @@
                 name="day_limited"
                 type="day"
                 value={dayLimitedSignal.value}
-                uiAction={(v) => {
+                action={(v) => {
                   dayLimitedSignal.value = v;
                 }}
                 min={today}
@@ -340,7 +340,7 @@
                 name="day_past"
                 type="day"
                 value={dayPastSignal.value}
-                uiAction={(v) => {
+                action={(v) => {
                   dayPastSignal.value = v;
                 }}
                 min={tenDaysAgo}
@@ -364,7 +364,7 @@
                 name="month"
                 type="month"
                 value={monthSignal.value}
-                uiAction={(v) => {
+                action={(v) => {
                   monthSignal.value = v;
                 }}
                 placeholder="Choisir un mois"
@@ -386,7 +386,7 @@
                 name="week"
                 type="week"
                 value={weekSignal.value}
-                uiAction={(v) => {
+                action={(v) => {
                   weekSignal.value = v;
                 }}
                 placeholder="Choisir une semaine"
@@ -409,7 +409,7 @@
                 name="time"
                 type="time"
                 value={timeSignal.value}
-                uiAction={(v) => {
+                action={(v) => {
                   timeSignal.value = v;
                 }}
                 min="08:00"
@@ -428,7 +428,7 @@
                 name="time_restricted"
                 type="time"
                 value={timeRestrictedSignal.value}
-                uiAction={(v) => {
+                action={(v) => {
                   timeRestrictedSignal.value = v;
                 }}
                 min="07:00"
@@ -453,7 +453,7 @@
                 name="datetime"
                 type="datetime"
                 value={datetimeSignal.value}
-                uiAction={(v) => {
+                action={(v) => {
                   datetimeSignal.value = v;
                 }}
                 placeholder="Choisir date &amp; heure"
@@ -476,7 +476,7 @@
                 name="color"
                 type="color"
                 value={colorSignal.value}
-                uiAction={(v) => {
+                action={(v) => {
                   colorSignal.value = v;
                 }}
               />
@@ -488,7 +488,7 @@
                 name="color_with_placeholder"
                 type="color"
                 value={colorWithPlaceholderSignal.value}
-                uiAction={(v) => {
+                action={(v) => {
                   colorWithPlaceholderSignal.value = v;
                 }}
                 placeholder="Choisir une couleur"
@@ -516,7 +516,7 @@
                 name="birthday"
                 type="day"
                 value={daySignal.value}
-                uiAction={(v) => {
+                action={(v) => {
                   daySignal.value = v;
                 }}
                 ui={
@@ -623,14 +623,14 @@
               <Picker
                 type="text"
                 value={value}
-                uiAction={(v) => {
+                action={(v) => {
                   setValue(v);
                 }}
                 placeholder="Type something"
               >
                 <Box flex="y" spacing="s" padding="s">
                   <Input type="text" value={value} placeholder="Enter value" />
-                  <Button uiAction={Picker.submit}>Close</Button>
+                  <Button action={Picker.submit}>Close</Button>
                 </Box>
               </Picker>
             </Field>
