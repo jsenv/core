@@ -216,7 +216,6 @@
       // ── 3. Searchable list — input inside list ─────────────────────────────────
 
       const SearchableDemo = () => {
-        const [selected, setSelected] = useState(null);
         const [searchText, setSearchText] = useState("");
         const [fruits, getItemMatchInfo] = useSearchText(searchText, FRUITS);
         return (
@@ -226,11 +225,7 @@
               auto-connects it to the list via context. Keyboard events (arrows,
               enter, escape) forward from the input to the list automatically.
             </p>
-            <List
-              uiAction={(value) => {
-                setSelected(value);
-              }}
-            >
+            <List>
               <ListItemHeader>
                 <Input
                   placeholder="Search fruits…"
@@ -238,8 +233,7 @@
                   paddingX="10"
                   paddingY="6"
                   size="m"
-                  style="border-bottom: 1px solid #eee; border-radius: 0;"
-                  uiAction={(value) => {
+                  action={(value) => {
                     setSearchText(value);
                   }}
                 />
@@ -252,7 +246,6 @@
                     index={i}
                     id={fruit}
                     value={fruit}
-                    selected={selected === fruit}
                     filtered={!match}
                     highlight={ranges}
                   >
