@@ -16,8 +16,8 @@ import {
  */
 export const useConstraintMessages = (elementRef, props) => {
   const messagePropsRefFromContext = useContext(MessagePropsRefContext);
-  const messagePropsRef = useRef();
   const [messageProps, remainingProps] = extractMessageAndRemainingProps(props);
+  const messagePropsRef = useRef();
   messagePropsRef.current = messageProps;
 
   const onConstraintMessage = useCallback(

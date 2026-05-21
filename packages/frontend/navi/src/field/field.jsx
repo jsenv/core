@@ -84,8 +84,8 @@ const css = /* css */ `
  *   ...rest   — forwarded to the wrapping `<div>` (className, style, flex, spacing, …)
  *
  * @example
- * <Field vertical spacing="s">
- *   <Label>Date de début</Label>
+ * <Field flex spacing="s">
+ *   Date de début
  *   <Input name="start_date" required />
  * </Field>
  */

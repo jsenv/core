@@ -106,7 +106,8 @@ const css = /* css */ `
       .navi_callout_body {
         position: relative;
         display: flex;
-        max-width: 47vw;
+        /* 85vw on small screens (<500px), then 47vw to not grow too large capped at 1000px */
+        max-width: min(85dvw, max(47dvw, 500px), 1000px);
         padding: var(--callout-padding);
         flex-direction: row;
         gap: 10px;

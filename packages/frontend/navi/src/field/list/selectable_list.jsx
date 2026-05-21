@@ -312,7 +312,7 @@ export const Selectable = (props) => {
       <Field
         id={inputId}
         as={selectableArea === "manual" ? "div" : undefined}
-        requiredMessage={naviI18n(`list_item.readonly`, props)}
+        readOnlyMessage={naviI18n(`list_item.readonly`, props)}
         padding="m"
         flex
         alignY="center"
