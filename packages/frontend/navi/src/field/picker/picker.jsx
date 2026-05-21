@@ -265,18 +265,18 @@ const PickerButton = (props) => {
   const { ref, icon, placeholder, ui } = props;
   const pickerInputRef = useRef(null);
   const inputFieldInterfaceProps = useTextualFieldInterfaceProps(props);
-  const { id, value, basePseudoState, children, onInput } =
+  const { id, type, value, basePseudoState, children, onInput } =
     inputFieldInterfaceProps;
   const loading = basePseudoState[":-navi-loading"];
 
   return (
     <Box
       as="button"
-      type="button"
       {...inputFieldInterfaceProps}
       ref={ref}
       icon={undefined}
       ui={undefined}
+      type="button"
       baseClassName="navi_picker"
       navi-field=".navi_picker_input"
       navi-has-placeholder={placeholder ? "" : undefined}
@@ -316,7 +316,7 @@ const PickerButton = (props) => {
       <span className="navi_picker_right_slot">
         <Icon size="m">{icon === undefined ? <ChevronDownSvg /> : icon}</Icon>
       </span>
-      <PickerInput ref={pickerInputRef} />
+      <PickerInput ref={pickerInputRef} type={type} />
       <PickerElementContext.Provider value={ref}>
         {children}
       </PickerElementContext.Provider>

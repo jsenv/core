@@ -12,6 +12,7 @@ const getPropsToShowPicker = (props) => {
     ...props,
     onMouseDown: (e) => {
       props.onMouseDown?.(e);
+      dispatchRequestInteraction(e.currentTarget, e);
     },
     onClick: (e) => {
       props.onClick?.(e);
