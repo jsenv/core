@@ -290,9 +290,11 @@ const PickerButton = (props) => {
         <Icon size="m">{icon === undefined ? <ChevronDownSvg /> : icon}</Icon>
       </span>
 
-      <PickerElementContext.Provider value={ref}>
-        {children}
-      </PickerElementContext.Provider>
+      {children && (
+        <PickerElementContext.Provider value={ref}>
+          {children}
+        </PickerElementContext.Provider>
+      )}
     </Box>
   );
 };

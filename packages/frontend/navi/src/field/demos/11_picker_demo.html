@@ -632,7 +632,12 @@
                 placeholder="Type something"
               >
                 <Box flex="y" spacing="s" padding="s">
-                  <Input type="text" value={value} placeholder="Enter value" />
+                  <Input
+                    type="text"
+                    value={value}
+                    // action={() => {}}
+                    placeholder="Enter value"
+                  />
                   <Button action={Picker.submit}>Close</Button>
                 </Box>
               </Picker>
