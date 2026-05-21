@@ -35,7 +35,6 @@ import {
 } from "../../resolver/resolver.jsx";
 import { Label } from "../field.jsx";
 import {
-  InsideRealListItemContext,
   ListIdContext,
   requestListClose,
   requestListInteractionStateReset,
@@ -284,18 +283,7 @@ export const InputTextual = (props) => {
 
 const InputTextualWithListResolver = (props) => {
   const Next = useNextResolver();
-  const listIdFromContext = useContext(ListIdContext);
-  const isInsideRealListItem = useContext(InsideRealListItemContext);
 
-  if (
-    listIdFromContext &&
-    // When inside a ListItem the input is not considered as controlling the list
-    // (A list item may contain an input)
-    // Note that you can still have an input controlling list in a ListItemHeader or Footer
-    !isInsideRealListItem
-  ) {
-    return <InputControllingList listId={listIdFromContext} {...props} />;
-  }
   if (props.listId) {
     return <InputControllingList {...props} />;
   }
