@@ -482,6 +482,19 @@
                 <button onClick={scrollToItem}>Go</button>
               </span>
             </fieldset>
+            <Input
+              placeholder="Sort suggestions…"
+              paddingX="8px"
+              paddingY="12px"
+              expandX
+              bordeColor="#ccc"
+              value={search}
+              action={(v) => {
+                setSearch(v);
+              }}
+              marginBottom="s"
+              borderRadius="s"
+            />
             <List
               role="listbox"
               ref={listRef}
@@ -492,24 +505,6 @@
               searchText={search}
               separator={<Separator margin="0" />}
             >
-              <ListItemHeader>
-                <Input
-                  placeholder="Sort suggestions…"
-                  paddingX="8px"
-                  paddingY="12px"
-                  expandX
-                  border="1px solid #ccc"
-                  value={search}
-                  uiAction={(v) => {
-                    setSearch(v);
-                  }}
-                  style={{
-                    boxSizing: "border-box",
-                    borderRadius: "6px",
-                    fontSize: "1rem",
-                  }}
-                />
-              </ListItemHeader>
               {orderedItems.map((item, i) => {
                 const { score, ranges } = getItemMatchInfo(item);
                 return (
