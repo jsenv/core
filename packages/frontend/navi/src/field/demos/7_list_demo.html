@@ -78,6 +78,7 @@
         useSearchText,
         requestListOpen,
         requestListClose,
+        Box,
         NaviDebug,
       } from "@jsenv/navi";
 
@@ -133,7 +134,7 @@
         );
       };
 
-      // ── 2. Interactive list (uiAction) ─────────────────────────────────────────
+      // ── Customization — legend ─────────────────────────────────────────────────
 
       // Sugar level for each fruit: low / medium / high
       const FRUIT_SUGAR = {
@@ -161,7 +162,7 @@
         { key: "high", label: "🔴 Très sucré" },
       ];
 
-      const InteractiveDemo = () => {
+      const LegendDemo = () => {
         const [selected, setSelected] = useState(null);
         // hoveredFruit: set when hovering a fruit row → highlights its category in the legend
         const [hoveredFruit, setHoveredFruit] = useState(null);
@@ -169,43 +170,15 @@
         const [hoveredSugar, setHoveredSugar] = useState(null);
         return (
           <div className="demo-section">
-            <h2>2. Interactive — uiAction</h2>
+            <h2>Customization — legend</h2>
             <p>
-              Adding a <code>uiAction</code> prop makes the list interactive.
-              The legend demonstrates <code>:-navi-pointed-by-proxy</code>:
-              hovering a sugar level proxy-points matching fruits; hovering a
-              fruit highlights its category in the legend.
+              A legend placed alongside the list can cross-highlight items.
+              Hovering a sugar level highlights matching fruits; hovering a fruit
+              highlights its category in the legend.
             </p>
             <div
               style={{ display: "flex", gap: "16px", alignItems: "flex-start" }}
             >
-              <List
-                uiAction={(value) => {
-                  setSelected(value);
-                }}
-              >
-                {FRUITS.map((fruit, i) => (
-                  <ListItem
-                    key={fruit}
-                    index={i}
-                    id={fruit}
-                    value={fruit}
-                    selected={selected === fruit}
-                    pointed={
-                      hoveredSugar !== null &&
-                      FRUIT_SUGAR[fruit] === hoveredSugar
-                    }
-                    onMouseEnter={() => {
-                      setHoveredFruit(fruit);
-                    }}
-                    onMouseLeave={() => {
-                      setHoveredFruit(null);
-                    }}
-                  >
-                    {SUGAR_ICON[FRUIT_SUGAR[fruit]]} {fruit}
-                  </ListItem>
-                ))}
-              </List>
               <div
                 style={{
                   display: "flex",
@@ -258,10 +231,40 @@
                   );
                 })}
               </div>
+              <List
+                uiAction={(value) => {
+                  setSelected(value);
+                }}
+              >
+                {FRUITS.map((fruit, i) => (
+                  <ListItem
+                    key={fruit}
+                    index={i}
+                    id={fruit}
+                    value={fruit}
+                    selected={selected === fruit}
+                    pointed={
+                      hoveredSugar !== null &&
+                      FRUIT_SUGAR[fruit] === hoveredSugar
+                    }
+                    onMouseEnter={() => {
+                      setHoveredFruit(fruit);
+                    }}
+                    onMouseLeave={() => {
+                      setHoveredFruit(null);
+                    }}
+                  >
+                    {SUGAR_ICON[FRUIT_SUGAR[fruit]]} {fruit}
+                  </ListItem>
+                ))}
+              </List>
             </div>
             <div className="value-display">{selected ?? ""}</div>
           </div>
         );
+      };
+
+
       };
 
       // ── 3b. Searchable list — input outside list (listId) ──────────────────────
@@ -436,178 +439,6 @@
               ))}
             </List>
             <div className="value-display">{selected ?? ""}</div>
-          </div>
-        );
-      };
-
-      // ── 5. List inside a form ──────────────────────────────────────────────────
-
-      const FormDemo = () => {
-        const [submittedValues, setSubmittedValues] = useState(null);
-        const [selected, setSelected] = useState(null);
-        return (
-          <div className="demo-section">
-            <h2>5. List inside a form</h2>
-            <p>
-              A <code>List</code> with a <code>name</code> prop registers its
-              selected value with the parent <code>Form</code>. Submitting the
-              form collects the list value alongside other fields.
-            </p>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                const data = new FormData(e.currentTarget);
-                setSubmittedValues(Object.fromEntries(data.entries()));
-              }}
-            >
-              <label
-                style={{
-                  display: "block",
-                  marginBottom: "4px",
-                  fontWeight: 600,
-                }}
-              >
-                Choose a fruit:
-              </label>
-              <Box background="orange" padding="m" width="fit-content">
-                <List
-                  name="fruit"
-                  value={selected}
-                  uiAction={(value) => {
-                    setSelected(value);
-                  }}
-                >
-                  {FRUITS.slice(0, 6).map((fruit, i) => (
-                    <ListItem
-                      key={fruit}
-                      index={i}
-                      id={fruit}
-                      value={fruit}
-                      selected={selected === fruit}
-                    >
-                      {fruit}
-                    </ListItem>
-                  ))}
-                </List>
-              </Box>
-              <button type="submit" style={{ marginTop: "12px" }}>
-                Submit
-              </button>
-            </form>
-            {submittedValues && (
-              <div className="value-display">
-                {JSON.stringify(submittedValues)}
-              </div>
-            )}
-          </div>
-        );
-      };
-
-      // ── 6. List required inside a form ─────────────────────────────────────────
-
-      const RequiredFormDemo = () => {
-        const [submittedValues, setSubmittedValues] = useState(null);
-        const [selected, setSelected] = useState(null);
-        return (
-          <div className="demo-section">
-            <h2>6. Required list inside a form</h2>
-            <p>
-              Adding <code>required</code> makes the hidden input required.
-              Submitting without selecting a value triggers native browser
-              validation.
-            </p>
-            <Form
-              action={(value) => {
-                setSubmittedValues(value);
-              }}
-            >
-              <Label>
-                Choose a fruit (required):
-                <List
-                  name="fruit"
-                  value={selected}
-                  required
-                  uiAction={(value) => {
-                    setSelected(value);
-                  }}
-                >
-                  {FRUITS.slice(0, 6).map((fruit, i) => (
-                    <ListItem
-                      key={fruit}
-                      index={i}
-                      id={fruit}
-                      value={fruit}
-                      selected={selected === fruit}
-                    >
-                      {fruit}
-                    </ListItem>
-                  ))}
-                </List>
-              </Label>
-              <Button type="submit" style={{ marginTop: "12px" }}>
-                Submit
-              </Button>
-            </Form>
-            {submittedValues && (
-              <div className="value-display">
-                {JSON.stringify(submittedValues)}
-              </div>
-            )}
-          </div>
-        );
-      };
-
-      // ── InputInsideListItemDemo ───────────────────────────────────────────────
-
-      const InputInsideListItemDemo = () => {
-        const [pickedDate, setPickedDate] = useState(null);
-        const inputRef = useRef(null);
-        return (
-          <div className="demo-section">
-            <h2>Input inside ListItem</h2>
-            <p>
-              Clicking anywhere on the item calls <code>showPicker()</code> to
-              force the calendar popup — no manual text entry.
-            </p>
-            <List>
-              <ListItem index={0} id="option_a" value="option_a">
-                Option A (normal item)
-              </ListItem>
-              <ListItem index={1} id="option_b" value="option_b">
-                Option B (normal item)
-              </ListItem>
-              <ListItem
-                index={2}
-                id="pick_date"
-                value="pick_date"
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  inputRef.current.showPicker();
-                }}
-              >
-                <span>Pick a date…</span>
-                {pickedDate && <span> ({pickedDate})</span>}
-                <input
-                  ref={inputRef}
-                  type="date"
-                  value={pickedDate ?? ""}
-                  style={{
-                    position: "absolute",
-                    opacity: 0,
-                    pointerEvents: "none",
-                    width: 0,
-                    height: 0,
-                  }}
-                  onChange={(e) => {
-                    setPickedDate(e.target.value);
-                  }}
-                />
-              </ListItem>
-            </List>
-            {pickedDate && (
-              <div className="value-display">Picked: {pickedDate}</div>
-            )}
           </div>
         );
       };
