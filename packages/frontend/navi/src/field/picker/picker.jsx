@@ -158,6 +158,7 @@ const css = /* css */ `
       --x-picker-border-color: var(--picker-border-color-readonly);
       --x-picker-background-color: var(--picker-background-color-readonly);
       --x-picker-color: var(--picker-color-readonly);
+      --x-picker-cursor: default;
     }
     /* Focus */
     &[data-focus-visible] {
