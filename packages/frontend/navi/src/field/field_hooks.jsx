@@ -104,9 +104,6 @@ export const useFieldInterfaceProps = (
     getDisplayValue,
     normalizeUIState,
   });
-  if (defaultStatePropName) {
-    delete actionProps[defaultStatePropName];
-  }
   return actionProps;
 };
 
@@ -293,11 +290,7 @@ const useActionProps = (
   }
 
   const uiState = uiStateController.uiStateSignal.value;
-  const { statePropName } = uiStateController;
-  const statePropValueRaw = uiStateController.getPropFromState(uiState);
-  const statePropValue = getDisplayValue(statePropValueRaw);
-
-  return {
+  const actionProps = {
     "children": childrenWithContext,
     ...remainingProps,
     ref,
@@ -311,7 +304,6 @@ const useActionProps = (
         : typeof props.action === "string"
           ? props.action
           : action.callSource,
-    [statePropName]: statePropValue,
     "navi-autofocus": autoFocus ? "" : undefined,
     "aria-readonly": readOnlyResolved,
     "aria-busy": loadingResolved,
@@ -482,6 +474,19 @@ const useActionProps = (
       remainingProps.onnavi_action_end?.(e);
     },
   };
+
+  const { statePropName, defaultStatePropName } = uiStateController;
+  if (statePropName) {
+    const statePropValueRaw = uiStateController.getPropFromState(uiState);
+    const statePropValue = getDisplayValue(statePropValueRaw);
+    actionProps[statePropName] = statePropValue;
+
+    if (defaultStatePropName) {
+      delete actionProps[defaultStatePropName];
+    }
+  }
+
+  return actionProps;
 };
 
 const getNaviProxyTarget = (event) => {

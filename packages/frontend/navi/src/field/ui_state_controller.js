@@ -202,6 +202,7 @@ export const useUIStateController = (
     readOnly,
     name,
     statePropName,
+    defaultStatePropName,
     hasStateProp,
     state: stateInitial,
     uiState: stateInitial,
