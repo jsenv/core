@@ -364,14 +364,10 @@
                 <Form
                   action={({ fruit }) => {
                     setSubmittedSingle(fruit ?? "(none)");
+                    setSelectedSingle(fruit ?? null);
                   }}
                 >
-                  <SelectableList
-                    name="fruit"
-                    action={(v) => {
-                      setSelectedSingle(v ?? null);
-                    }}
-                  >
+                  <SelectableList name="fruit">
                     {FRUITS.map((fruit, i) => (
                       <Selectable
                         key={fruit}
@@ -406,15 +402,10 @@
                         ? fruit.join(", ")
                         : (fruit ?? "(none)"),
                     );
+                    setSelectedMultiple(fruit);
                   }}
                 >
-                  <SelectableList
-                    multiple
-                    name="fruit"
-                    action={(v) => {
-                      setSelectedMultiple(v ?? []);
-                    }}
-                  >
+                  <SelectableList multiple name="fruit">
                     {FRUITS.map((fruit, i) => (
                       <Selectable
                         key={fruit}
