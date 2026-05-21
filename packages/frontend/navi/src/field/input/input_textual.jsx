@@ -245,6 +245,23 @@ const css = /* css */ `
       --x-border-color: var(--callout-color);
       --x-outline-color: var(--callout-color);
     }
+
+    &[data-discrete] {
+      --x-background-color: transparent;
+
+      &[data-hover] {
+        --x-background-color: white;
+      }
+      &[data-focus] {
+        --x-background-color: white;
+      }
+      &[data-readonly] {
+        --x-background-color: transparent;
+      }
+      &[data-disabled] {
+        --x-background-color: transparent;
+      }
+    }
   }
 
   .navi_input .navi_real_input::placeholder {
@@ -294,7 +311,7 @@ const renderInput = createComponentResolver([InputTextualWithListResolver]);
 const InputNativeContext = createContext(null);
 const InputTextualFieldInterface = (props) => {
   import.meta.css = css;
-  const { ref, type, icon, children, onKeyDown, onPaste } = props;
+  const { ref, type, icon, discrete, children, onKeyDown, onPaste } = props;
   const fieldInterfaceProps = useFieldInterfaceProps(props, {
     fieldType: "input",
     statePropName: "value",
@@ -380,6 +397,7 @@ const InputTextualFieldInterface = (props) => {
       as="span"
       flex
       baseClassName="navi_input"
+      data-discrete={discrete ? "" : undefined}
       styleCSSVars={InputStyleCSSVars}
       navi-field=".navi_real_input"
       pseudoStateSelector=".navi_real_input"
@@ -390,6 +408,7 @@ const InputTextualFieldInterface = (props) => {
       baseChildPropSet={InputChildPropSet}
       {...fieldInterfaceProps}
       ref={undefined} // input takes the ref
+      discrete={undefined} // handled via data attribute
       onKeyDown={(e) => {
         onKeyDown?.(e);
         if (e.key === "Enter") {

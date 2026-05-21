@@ -403,16 +403,18 @@
         );
 
         const scrollTo = (position) => {
-          const containerEl = listRef.current;
-          if (!containerEl) {
+          const scrollContainer = listRef.current.closest(
+            ".navi_list_scroll_container",
+          );
+          if (!scrollContainer) {
             return;
           }
           if (position === "top") {
-            containerEl.scrollTop = 0;
+            scrollContainer.scrollTop = 0;
           } else if (position === "middle") {
-            containerEl.scrollTop = containerEl.scrollHeight / 2;
+            scrollContainer.scrollTop = scrollContainer.scrollHeight / 2;
           } else if (position === "bottom") {
-            containerEl.scrollTop = containerEl.scrollHeight;
+            scrollContainer.scrollTop = scrollContainer.scrollHeight;
           }
         };
 
@@ -483,6 +485,7 @@
               </span>
             </fieldset>
             <Input
+              type="search"
               placeholder="Sort suggestions…"
               paddingX="8px"
               paddingY="12px"
@@ -492,6 +495,7 @@
               action={(v) => {
                 setSearch(v);
               }}
+              discrete
               marginBottom="s"
               borderRadius="s"
             />
