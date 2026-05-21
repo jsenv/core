@@ -242,7 +242,8 @@ const PickerButton = (props) => {
         fieldType: "picker_input",
       },
     );
-  const { id, value, basePseudoState, children } = inputFieldInterfaceProps;
+  const { id, value, basePseudoState, disabled, children } =
+    inputFieldInterfaceProps;
   const loading = basePseudoState[":-navi-loading"];
 
   const onChangeStable = useStableCallback(onChange);
@@ -268,6 +269,7 @@ const PickerButton = (props) => {
       navi-has-placeholder={placeholder ? "" : undefined}
       pseudoStateSelector=".navi_picker_input"
       pseudoClasses={PICKER_PSEUDO_CLASSES}
+      disabled={disabled}
       {...remainingProps}
       basePseudoState={basePseudoState} // inherit input pseudo states
       // we must put the id on the button and not the input
