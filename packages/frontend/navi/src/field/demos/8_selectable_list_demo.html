@@ -117,6 +117,7 @@
                 <ToggleDemo />
                 <BgColorDemo />
                 <ManualAreaDemo />
+                <LegendDemo />
               </div>
             </div>
           </NaviDebug>
@@ -154,6 +155,9 @@
                   </li>
                   <li>
                     <a href="#manual-area">Manual selectable area</a>
+                  </li>
+                  <li>
+                    <a href="#legend">Legend</a>
                   </li>
                 </ol>
               </li>
@@ -989,6 +993,155 @@
                 </div>
               </div>
             </div>
+          </div>
+        );
+      };
+
+      // ── Legend ────────────────────────────────────────────────────────────────
+
+      const LEGEND_FRUITS = [
+        "Apple",
+        "Banana",
+        "Cherry",
+        "Date",
+        "Elderberry",
+        "Fig",
+        "Grape",
+        "Honeydew",
+        "Kiwi",
+        "Lemon",
+        "Mango",
+        "Nectarine",
+        "Orange",
+        "Papaya",
+        "Quince",
+      ];
+
+      const FRUIT_SUGAR = {
+        Apple: "medium",
+        Banana: "high",
+        Cherry: "high",
+        Date: "high",
+        Elderberry: "low",
+        Fig: "high",
+        Grape: "high",
+        Honeydew: "medium",
+        Kiwi: "medium",
+        Lemon: "low",
+        Mango: "high",
+        Nectarine: "medium",
+        Orange: "medium",
+        Papaya: "medium",
+        Quince: "low",
+      };
+
+      const SUGAR_ICON = { low: "🟢", medium: "🟡", high: "🔴" };
+      const SUGAR_LEVELS = [
+        { key: "low", label: "🟢 Peu sucré" },
+        { key: "medium", label: "🟡 Moyennement sucré" },
+        { key: "high", label: "🔴 Très sucré" },
+      ];
+
+      const LegendDemo = () => {
+        const [selected, setSelected] = useState(null);
+        const [hoveredFruit, setHoveredFruit] = useState(null);
+        const [hoveredSugar, setHoveredSugar] = useState(null);
+        return (
+          <div id="legend" className="demo-section">
+            <h2>Legend</h2>
+            <p>
+              A legend placed alongside the list can cross-highlight items.
+              Hovering a sugar level highlights matching fruits; hovering a
+              fruit highlights its category in the legend.
+            </p>
+            <div
+              style={{ display: "flex", gap: "16px", alignItems: "flex-start" }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "6px",
+                  paddingTop: "4px",
+                  flexShrink: 0,
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: "0.8rem",
+                    color: "#888",
+                    marginBottom: "2px",
+                    fontWeight: 600,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.04em",
+                  }}
+                >
+                  Teneur en sucre
+                </div>
+                {SUGAR_LEVELS.map(({ key, label }) => {
+                  const isHoveredFromList =
+                    hoveredFruit !== null && FRUIT_SUGAR[hoveredFruit] === key;
+                  const isHoveredFromLegend = hoveredSugar === key;
+                  const isActive = isHoveredFromList || isHoveredFromLegend;
+                  return (
+                    <div
+                      key={key}
+                      onMouseEnter={() => {
+                        setHoveredSugar(key);
+                      }}
+                      onMouseLeave={() => {
+                        setHoveredSugar(null);
+                      }}
+                      style={{
+                        padding: "5px 10px",
+                        borderRadius: "4px",
+                        fontSize: "0.85rem",
+                        cursor: "default",
+                        userSelect: "none",
+                        background: isActive ? "#eef2ff" : "#f5f5f5",
+                        border: isActive
+                          ? "1px solid #c7d2fe"
+                          : "1px solid #e5e5e5",
+                        fontWeight: isActive ? 600 : "normal",
+                      }}
+                    >
+                      {label}
+                    </div>
+                  );
+                })}
+              </div>
+              <SelectableList
+                action={(value) => {
+                  setSelected(value);
+                }}
+              >
+                {LEGEND_FRUITS.map((fruit, i) => (
+                  <Selectable
+                    key={fruit}
+                    index={i}
+                    id={`legend_${fruit.toLowerCase()}`}
+                    value={fruit}
+                    selected={selected === fruit}
+                    onMouseEnter={() => {
+                      setHoveredFruit(fruit);
+                    }}
+                    onMouseLeave={() => {
+                      setHoveredFruit(null);
+                    }}
+                    style={{
+                      background:
+                        hoveredSugar !== null &&
+                        FRUIT_SUGAR[fruit] === hoveredSugar
+                          ? "#eef2ff"
+                          : undefined,
+                    }}
+                  >
+                    {SUGAR_ICON[FRUIT_SUGAR[fruit]]} {fruit}
+                  </Selectable>
+                ))}
+              </SelectableList>
+            </div>
+            <div className="value-display">{selected ?? ""}</div>
           </div>
         );
       };
