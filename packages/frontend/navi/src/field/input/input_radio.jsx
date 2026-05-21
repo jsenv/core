@@ -115,7 +115,9 @@ const css = /* css */ `
     display: inline-flex;
     box-sizing: border-box;
     width: var(--x-width);
+    min-width: var(--x-width); /* Do not allow to shrink */
     height: var(--x-height);
+    min-height: var(--x-height); /* Do not allow to shrink */
     margin: var(--margin);
     outline-width: var(--x-outline-width);
     outline-style: none;

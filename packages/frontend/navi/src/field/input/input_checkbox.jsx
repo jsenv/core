@@ -95,7 +95,9 @@ const css = /* css */ `
     display: inline-flex;
     box-sizing: border-box;
     width: var(--width);
+    min-width: var(--width); /* Do not allow to shrink */
     height: var(--height);
+    min-height: var(--height); /* Do not allow to shrink */
     margin: var(--margin);
     background-color: var(--x-background-color);
     border-width: var(--border-width);
