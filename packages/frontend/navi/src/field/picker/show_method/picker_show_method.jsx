@@ -5,6 +5,7 @@ import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { Time } from "@jsenv/navi/src/text/time.jsx";
 import { PickerContext } from "../picker_context.jsx";
+import { PickerPlaceholder } from "../picker_placeholder.jsx";
 import { parseStepToSeconds } from "../time_helpers.js";
 import { Color } from "./color.jsx";
 
@@ -55,7 +56,11 @@ export const PickerColor = (props) => {
 const PickerColorUI = () => {
   const { value, placeholder } = useContext(PickerContext);
   if (!value) {
-    return placeholder || <Color>black</Color>;
+    return placeholder ? (
+      <PickerPlaceholder>{placeholder}</PickerPlaceholder>
+    ) : (
+      <Color>black</Color>
+    );
   }
   return <Color>{value}</Color>;
 };
@@ -80,7 +85,9 @@ export const PickerDay = (props) => {
 const PickerDayUI = () => {
   const { value, placeholder } = useContext(PickerContext);
   if (!value) {
-    return placeholder || null;
+    return placeholder ? (
+      <PickerPlaceholder>{placeholder}</PickerPlaceholder>
+    ) : null;
   }
   return (
     <Time type="day" capitalize>

@@ -96,7 +96,6 @@ const css = /* css */ `
       --picker-padding-bottom,
       var(--picker-padding-y, var(--picker-padding-y-default))
     );
-    --x-picker-color: var(--picker-placeholder-color);
 
     position: relative;
     display: inline-flex;
@@ -124,12 +123,15 @@ const css = /* css */ `
     cursor: var(--x-picker-cursor, pointer);
     user-select: none;
 
+    .navi_picker_placeholder {
+      color: var(--picker-placeholder-color);
+    }
     .navi_picker_right_slot {
       position: absolute;
       right: 0;
       width: var(--picker-right-slot-size);
       flex-shrink: 0;
-      opacity: 0.6;
+      color: #5e4e4e;
     }
     .navi_picker_input {
       position: absolute;
