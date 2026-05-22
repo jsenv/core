@@ -1135,17 +1135,20 @@ const measureOptimalBodyWidth = (calloutElementClone, { maxHeight } = {}) => {
   }
   const range = document.createRange();
   range.selectNodeContents(calloutMessageElement);
-  const lineRects = Array.from(range.getClientRects()).filter(
-    (r) => r.width > 0,
-  );
-  if (lineRects.length <= 1) {
-    return null;
-  }
+  let lineCount = 0;
   let longestLineWidth = 0;
-  for (const r of lineRects) {
+  const rangeClientRects = range.getClientRects();
+  for (const r of rangeClientRects) {
+    if (r.width === 0) {
+      continue;
+    }
+    lineCount++;
     if (r.width > longestLineWidth) {
       longestLineWidth = r.width;
     }
+  }
+  if (lineCount <= 1) {
+    return null;
   }
   const messageRect = calloutMessageElement.getBoundingClientRect();
   // bodyRect.width is always the border-box size (content + padding + border).
