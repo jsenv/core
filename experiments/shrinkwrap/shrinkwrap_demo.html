@@ -117,31 +117,10 @@
       */
 
 
-      /* ─── Controls ─────────────────────────────────────── */
-      .controls {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-        font-size: 0.9rem;
-      }
-
-      label {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        cursor: pointer;
-      }
-
-      textarea.message-input {
-        width: 100%;
-        box-sizing: border-box;
-        padding: 8px;
-        font: inherit;
-        font-size: 0.9rem;
-        border: 1px solid #ccc;
-        border-radius: 4px;
-        resize: vertical;
-        min-height: 70px;
+      .measure {
+        font-size: 0.82rem;
+        font-family: ui-monospace, monospace;
+        color: #888;
       }
 
       /* highlight trailing space visually */
@@ -213,6 +192,7 @@
             </div>
           </div>
         </div>
+        <div class="measure">width: <span id="broken-width">—</span></div>
         <div class="note">
           <code>.callout-body</code> has <code>max-width: 340px</code>.
           Once text wraps, the element stays at <code>max-width</code>
@@ -231,17 +211,13 @@
             </div>
           </div>
         </div>
+        <div class="measure">width: <span id="fixed-width">—</span></div>
         <div class="note">
           After layout, JS uses <code>Range.getClientRects()</code> to find the
           widest text line and sets an explicit <code>width</code> on the body —
           shrinkwrapping it to the actual content.
         </div>
       </div>
-    </div>
-
-    <h2>Controls</h2>
-    <div class="controls">
-      <textarea class="message-input" id="message-input">This field is required and must be filled in before continuing.</textarea>
     </div>
 
     <script>
@@ -285,6 +261,14 @@
 
       const fixedBody = document.getElementById("fixed-body");
       const fixedMessage = document.getElementById("fixed-message");
+      const brokenBody = document.getElementById("broken-body");
+      const brokenWidthDisplay = document.getElementById("broken-width");
+      const fixedWidthDisplay = document.getElementById("fixed-width");
+
+      const updateMeasures = () => {
+        brokenWidthDisplay.textContent = `${Math.round(brokenBody.getBoundingClientRect().width)}px`;
+        fixedWidthDisplay.textContent = `${Math.round(fixedBody.getBoundingClientRect().width)}px`;
+      };
 
       const applyFix = () => {
         // Reset to natural size first so we measure the unconstrained layout.
@@ -294,26 +278,15 @@
         if (optimal !== null) {
           fixedBody.style.width = `${optimal}px`;
         }
+        updateMeasures();
       };
-
-      // Sync message text to both callouts.
-      const syncMessage = () => {
-        const text = document.getElementById("message-input").value;
-        document.getElementById("broken-message").textContent = text;
-        document.getElementById("fixed-message").textContent = text;
-        applyFix();
-      };
-
-      document
-        .getElementById("message-input")
-        .addEventListener("input", syncMessage);
 
       // Re-apply on resize (callout-body elements are resizable by the user).
       const resizeObserver = new ResizeObserver(() => {
         applyFix();
       });
       resizeObserver.observe(fixedBody);
-      resizeObserver.observe(document.getElementById("broken-body"));
+      resizeObserver.observe(brokenBody);
 
       // Initial apply.
       applyFix();
