@@ -54,11 +54,15 @@
       }
 
       .demo-box {
-        width: 350px;
+        width: 340px;
         flex: none;
         display: flex;
         flex-direction: column;
         gap: 12px;
+        padding: 16px;
+        border: 1.5px solid #ccc;
+        border-radius: 8px;
+        background: #fff;
       }
 
       .demo-label {
@@ -72,14 +76,12 @@
       /* The "stage" — a centered container that shows the whitespace problem */
       .stage {
         display: flex;
-        justify-content: center;
+        justify-content: flex-start;
         align-items: flex-start;
-        min-height: 120px;
-        padding: 20px;
+        min-height: 80px;
+        padding: 12px;
         background: #f9f9f9;
-        border: 1px solid #ddd;
-        border-radius: 6px;
-        overflow: hidden;
+        border-radius: 4px;
       }
 
       /* ─── Broken example ───────────────────────────────── */
@@ -95,11 +97,12 @@
 
       .callout-body {
         display: inline-block;
-        max-width: 340px;
         padding: 10px 14px;
         background: #fff3cd;
         border: 1.5px solid #f0c040;
         border-radius: 6px;
+        resize: horizontal;
+        overflow: hidden;
       }
 
       .callout-message {
@@ -112,9 +115,7 @@
         Same markup & styles — the JS below will call shrinkwrapElement()
         on the fixed variant's .callout-body after each resize.
       */
-      .callout-fixed .callout-body {
-        /* JS will set an explicit width here */
-      }
+
 
       /* ─── Controls ─────────────────────────────────────── */
       .controls {
@@ -207,7 +208,7 @@
           <div class="callout callout-broken">
             <div class="callout-body" id="broken-body">
               <div class="callout-message" id="broken-message">
-                This field is required and must be filled in before continuing.
+               Yeah! It measures text without the DOM. Pure JavaScript arithmetic.
               </div>
             </div>
           </div>
@@ -225,7 +226,7 @@
           <div class="callout callout-fixed">
             <div class="callout-body" id="fixed-body">
               <div class="callout-message" id="fixed-message">
-                This field is required and must be filled in before continuing.
+             Yeah! It measures text without the DOM. Pure JavaScript arithmetic.
               </div>
             </div>
           </div>
@@ -307,7 +308,7 @@
         .getElementById("message-input")
         .addEventListener("input", syncMessage);
 
-      // Re-apply on resize (the stage panels are resizable).
+      // Re-apply on resize (callout-body elements are resizable by the user).
       const resizeObserver = new ResizeObserver(() => {
         applyFix();
       });
