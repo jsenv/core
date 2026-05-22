@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CSS Shrinkwrap Demo</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        max-width: 900px;
+        margin: 40px auto;
+        padding: 0 24px;
+        line-height: 1.6;
+        color: #222;
+      }
+
+      h1 {
+        font-size: 1.6rem;
+        margin-bottom: 0.25em;
+      }
+
+      .resources {
+        margin: 0 0 40px;
+        padding: 12px 16px;
+        background: #f5f5f5;
+        border-left: 3px solid #888;
+        font-size: 0.9rem;
+      }
+
+      .resources a {
+        color: #0066cc;
+      }
+
+      h2 {
+        font-size: 1.2rem;
+        margin-top: 48px;
+        margin-bottom: 8px;
+        border-bottom: 2px solid #ddd;
+        padding-bottom: 4px;
+      }
+
+      p.description {
+        margin: 0 0 20px;
+        color: #555;
+        font-size: 0.95rem;
+      }
+
+      /* ─── Demo playground ──────────────────────────────── */
+      .playground {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 24px;
+        margin-bottom: 40px;
+      }
+
+      .demo-box {
+        width: 350px;
+        flex: none;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .demo-label {
+        font-size: 0.78rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: #888;
+      }
+
+      /* The "stage" — a centered container that shows the whitespace problem */
+      .stage {
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+        min-height: 120px;
+        padding: 20px;
+        background: #f9f9f9;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        overflow: hidden;
+      }
+
+      /* ─── Broken example ───────────────────────────────── */
+      /*
+        The callout body is the element that suffers from the shrinkwrap problem.
+        When text wraps inside .callout-message, .callout-body expands to the
+        full max-width instead of hugging the longest line.
+        The trailing whitespace becomes visible when the background is colored.
+      */
+      .callout {
+        display: inline-flex; /* tries to be as small as possible */
+      }
+
+      .callout-body {
+        display: inline-block;
+        max-width: 340px;
+        padding: 10px 14px;
+        background: #fff3cd;
+        border: 1.5px solid #f0c040;
+        border-radius: 6px;
+      }
+
+      .callout-message {
+        white-space: normal;
+        word-break: break-word;
+      }
+
+      /* ─── Fixed example ────────────────────────────────── */
+      /*
+        Same markup & styles — the JS below will call shrinkwrapElement()
+        on the fixed variant's .callout-body after each resize.
+      */
+      .callout-fixed .callout-body {
+        /* JS will set an explicit width here */
+      }
+
+      /* ─── Controls ─────────────────────────────────────── */
+      .controls {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        font-size: 0.9rem;
+      }
+
+      label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+      }
+
+      textarea.message-input {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 8px;
+        font: inherit;
+        font-size: 0.9rem;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        resize: vertical;
+        min-height: 70px;
+      }
+
+      /* highlight trailing space visually */
+      .callout-body {
+        /* semi-transparent red shows the "empty" righthand space */
+        background-image: linear-gradient(
+          to right,
+          transparent 0,
+          rgba(255, 0, 0, 0.07) 0
+        );
+      }
+
+      /* ─── Explanation notes ────────────────────────────── */
+      .note {
+        font-size: 0.82rem;
+        color: #555;
+        background: #fafafa;
+        border: 1px solid #e0e0e0;
+        border-radius: 4px;
+        padding: 8px 12px;
+      }
+
+      code {
+        font-family: ui-monospace, monospace;
+        font-size: 0.88em;
+        background: #f0f0f0;
+        padding: 1px 4px;
+        border-radius: 3px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>CSS Shrinkwrap Demo</h1>
+    <div class="resources">
+      <strong>References:</strong><br />
+      &bull;
+      <a
+        href="https://github.com/w3c/csswg-drafts/issues/191"
+        target="_blank"
+        rel="noopener"
+        >CSSWG issue #191 — How to shrink to fit the width?</a
+      ><br />
+      &bull;
+      <a
+        href="https://kizu.dev/shrinkwrap-solution/"
+        target="_blank"
+        rel="noopener"
+        >kizu.dev — Solving Shrinkwrap: New Experimental Technique</a
+      >
+    </div>
+
+    <h2>The problem</h2>
+    <p class="description">
+      When block-level content (text, flex rows, etc.) wraps inside an element
+      with a <code>max-width</code>, CSS "shrink-to-fit" sizing expands the
+      element to fill all available space — leaving trailing whitespace on the
+      right. The red tint makes the unused space visible.
+    </p>
+
+    <div class="playground">
+      <div class="demo-box">
+        <div class="demo-label">Broken — no fix</div>
+        <div class="stage">
+          <div class="callout callout-broken">
+            <div class="callout-body" id="broken-body">
+              <div class="callout-message" id="broken-message">
+                This field is required and must be filled in before continuing.
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="note">
+          <code>.callout-body</code> has <code>max-width: 340px</code>.
+          Once text wraps, the element stays at <code>max-width</code>
+          — trailing whitespace appears to the right of the longest line.
+        </div>
+      </div>
+
+      <div class="demo-box">
+        <div class="demo-label">Fixed — JS Range API</div>
+        <div class="stage">
+          <div class="callout callout-fixed">
+            <div class="callout-body" id="fixed-body">
+              <div class="callout-message" id="fixed-message">
+                This field is required and must be filled in before continuing.
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="note">
+          After layout, JS uses <code>Range.getClientRects()</code> to find the
+          widest text line and sets an explicit <code>width</code> on the body —
+          shrinkwrapping it to the actual content.
+        </div>
+      </div>
+    </div>
+
+    <h2>Controls</h2>
+    <div class="controls">
+      <textarea class="message-input" id="message-input">This field is required and must be filled in before continuing.</textarea>
+    </div>
+
+    <script>
+      /**
+       * Measures the width the element would need to be in order to hug
+       * its wrapped text content without trailing whitespace.
+       *
+       * Strategy: use document.createRange() to get client rects of every
+       * text line inside messageElement, find the widest one, then compute
+       * the bodyElement width as: (bodyWidth - messageWidth) + longestLineWidth.
+       *
+       * Returns null when the message fits on a single line (no wrapping →
+       * no shrinkwrap needed).
+       *
+       * This is the JS-based workaround for the long-standing CSS issue:
+       * https://github.com/w3c/csswg-drafts/issues/191
+       */
+      const measureShrinkwrappedWidth = (bodyElement, messageElement) => {
+        const range = document.createRange();
+        range.selectNodeContents(messageElement);
+        const lineRects = Array.from(range.getClientRects());
+        if (lineRects.length <= 1) {
+          // Single line — nothing to shrink.
+          return null;
+        }
+        const longestLineWidth = lineRects.reduce((max, r) => {
+          if (r.width > max) {
+            return r.width;
+          }
+          return max;
+        }, 0);
+        const messageRect = messageElement.getBoundingClientRect();
+        const bodyRect = bodyElement.getBoundingClientRect();
+        // The body is wider than the message by its padding.
+        // We preserve that offset and only replace messageRect.width with
+        // the longest actual line.
+        return Math.ceil(
+          bodyRect.width - messageRect.width + longestLineWidth,
+        );
+      };
+
+      const fixedBody = document.getElementById("fixed-body");
+      const fixedMessage = document.getElementById("fixed-message");
+
+      const applyFix = () => {
+        // Reset to natural size first so we measure the unconstrained layout.
+        fixedBody.style.width = "";
+
+        const optimal = measureShrinkwrappedWidth(fixedBody, fixedMessage);
+        if (optimal !== null) {
+          fixedBody.style.width = `${optimal}px`;
+        }
+      };
+
+      // Sync message text to both callouts.
+      const syncMessage = () => {
+        const text = document.getElementById("message-input").value;
+        document.getElementById("broken-message").textContent = text;
+        document.getElementById("fixed-message").textContent = text;
+        applyFix();
+      };
+
+      document
+        .getElementById("message-input")
+        .addEventListener("input", syncMessage);
+
+      // Re-apply on resize (the stage panels are resizable).
+      const resizeObserver = new ResizeObserver(() => {
+        applyFix();
+      });
+      resizeObserver.observe(fixedBody);
+      resizeObserver.observe(document.getElementById("broken-body"));
+
+      // Initial apply.
+      applyFix();
+    </script>
+  </body>
+</html>
