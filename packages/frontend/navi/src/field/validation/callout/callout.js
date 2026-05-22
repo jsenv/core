@@ -706,11 +706,6 @@ const centerCalloutInViewport = (
   const updateCenteredPosition = () => {
     const calloutElementClone =
       cloneCalloutToMeasureNaturalSize(calloutElement);
-    const calloutBodyClone =
-      calloutElementClone.querySelector(".navi_callout_body");
-    const calloutMessageClone = calloutElementClone.querySelector(
-      ".navi_callout_message",
-    );
 
     const { height } = calloutElementClone.getBoundingClientRect();
 
@@ -718,28 +713,22 @@ const centerCalloutInViewport = (
     const viewportHeight = window.innerHeight;
     const maxAllowedHeight = viewportHeight - 40; // Leave some margin from viewport edges
 
+    let maxHeight;
     if (height > maxAllowedHeight) {
       const paddingSizes = getPaddingSizes(calloutBodyElement);
       const paddingY = paddingSizes.top + paddingSizes.bottom;
       const spaceNeededAroundContent = BORDER_WIDTH * 2 + paddingY;
-      const spaceAvailableForContent =
-        maxAllowedHeight - spaceNeededAroundContent;
-      // Apply to clone so optimalBodyWidth accounts for scrollbar width
-      calloutMessageClone.style.maxHeight = `${spaceAvailableForContent}px`;
-      calloutMessageClone.style.overflowY = "scroll";
-      calloutMessageElement.style.maxHeight = `${spaceAvailableForContent}px`;
+      maxHeight = maxAllowedHeight - spaceNeededAroundContent;
+      calloutMessageElement.style.maxHeight = `${maxHeight}px`;
       calloutMessageElement.style.overflowY = "scroll";
     } else {
-      calloutMessageClone.style.maxHeight = "";
-      calloutMessageClone.style.overflowY = "";
       calloutMessageElement.style.maxHeight = "";
       calloutMessageElement.style.overflowY = "";
     }
 
-    const optimalBodyWidth = measureOptimalBodyWidth(
-      calloutBodyClone,
-      calloutMessageClone,
-    );
+    const optimalBodyWidth = measureOptimalBodyWidth(calloutElementClone, {
+      maxHeight,
+    });
     calloutElementClone.remove();
 
     calloutBodyElement.style.width =
@@ -863,11 +852,6 @@ const stickCalloutToAnchor = (
       }
       const calloutElementClone =
         cloneCalloutToMeasureNaturalSize(calloutElement);
-      const calloutBodyClone =
-        calloutElementClone.querySelector(".navi_callout_body");
-      const calloutMessageClone = calloutElementClone.querySelector(
-        ".navi_callout_message",
-      );
       const {
         positionY,
         left: calloutLeft,
@@ -972,24 +956,19 @@ const stickCalloutToAnchor = (
       const contentHeight = calloutHeight - BORDER_WIDTH * 2 - paddingY;
       const spaceRemainingAfterContent =
         spaceAvailableForContent - contentHeight;
+      let maxHeight;
       if (spaceRemainingAfterContent < 2) {
-        const maxHeight = spaceAvailableForContent;
-        // Apply to clone so optimalBodyWidth accounts for scrollbar width
-        calloutMessageClone.style.maxHeight = `${maxHeight}px`;
-        calloutMessageClone.style.overflowY = "scroll";
+        maxHeight = spaceAvailableForContent;
         calloutMessageElement.style.maxHeight = `${maxHeight}px`;
         calloutMessageElement.style.overflowY = "scroll";
       } else {
-        calloutMessageClone.style.maxHeight = "";
-        calloutMessageClone.style.overflowY = "";
         calloutMessageElement.style.maxHeight = "";
         calloutMessageElement.style.overflowY = "";
       }
 
-      const optimalBodyWidth = measureOptimalBodyWidth(
-        calloutBodyClone,
-        calloutMessageClone,
-      );
+      const optimalBodyWidth = measureOptimalBodyWidth(calloutElementClone, {
+        maxHeight,
+      });
       calloutElementClone.remove();
 
       calloutBodyElement.style.width =
@@ -1139,17 +1118,50 @@ const isHtmlDocument = (content) => {
 };
 
 // It's ok to do this because the element is absolutely positioned
-const measureOptimalBodyWidth = (calloutBodyElement, calloutMessageElement) => {
+// maxHeight, when provided, is applied to the clone's message so the measurement
+// accounts for the scrollbar width that will appear on the real element.
+const measureOptimalBodyWidth = (calloutElementClone, { maxHeight } = {}) => {
+  const calloutBodyElement =
+    calloutElementClone.querySelector(".navi_callout_body");
+  const calloutMessageElement = calloutElementClone.querySelector(
+    ".navi_callout_message",
+  );
+  if (maxHeight !== undefined) {
+    calloutMessageElement.style.maxHeight = `${maxHeight}px`;
+    calloutMessageElement.style.overflowY = "scroll";
+  } else {
+    calloutMessageElement.style.maxHeight = "";
+    calloutMessageElement.style.overflowY = "";
+  }
   const range = document.createRange();
   range.selectNodeContents(calloutMessageElement);
-  const lineRects = Array.from(range.getClientRects());
+  const lineRects = Array.from(range.getClientRects()).filter(
+    (r) => r.width > 0,
+  );
   if (lineRects.length <= 1) {
     return null;
   }
-  const longestLineWidth = Math.max(...lineRects.map((r) => r.width));
+  let longestLineWidth = 0;
+  for (const r of lineRects) {
+    if (r.width > longestLineWidth) {
+      longestLineWidth = r.width;
+    }
+  }
   const messageRect = calloutMessageElement.getBoundingClientRect();
+  // bodyRect.width is always the border-box size (content + padding + border).
+  // style.width interprets differently depending on box-sizing:
+  //   border-box → sets total width (includes padding) → use bodyRect.width directly
+  //   content-box → sets content only → subtract body horizontal padding first
   const bodyRect = calloutBodyElement.getBoundingClientRect();
-  return Math.ceil(bodyRect.width - messageRect.width + longestLineWidth);
+  const bodyStyle = getComputedStyle(calloutBodyElement);
+  if (bodyStyle.boxSizing === "border-box") {
+    return Math.ceil(bodyRect.width - messageRect.width + longestLineWidth);
+  }
+  const bodyPaddingH =
+    parseFloat(bodyStyle.paddingLeft) + parseFloat(bodyStyle.paddingRight);
+  return Math.ceil(
+    bodyRect.width - bodyPaddingH - messageRect.width + longestLineWidth,
+  );
 };
 
 const cloneCalloutToMeasureNaturalSize = (calloutElement) => {
