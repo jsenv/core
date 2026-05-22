@@ -8,7 +8,7 @@ import { createComponentResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { Icon } from "@jsenv/navi/src/text/icon.jsx";
 import { useStableCallback } from "@jsenv/navi/src/utils/use_stable_callback.js";
 import { useFieldInterfaceProps } from "../field_hooks.jsx";
-import { getToInputValue } from "../input/input_textual.jsx";
+import { getFromInputValue, getToInputValue } from "../input/input_textual.jsx";
 import { useOnInputValueChange } from "../input/input_value_listener.js";
 import { createUICallback } from "../ui_callback.js";
 import { dispatchRequestAction } from "../validation/custom_constraint_validation.js";
@@ -233,8 +233,9 @@ export const Picker = (props) => {
 const renderPicker = createComponentResolver(pickerResolvers);
 const PickerButton = (props) => {
   import.meta.css = css;
-  const { ref, icon, placeholder, ui, onChange } = props;
+  const { ref, type, icon, placeholder, ui, onChange } = props;
   const inputRef = useRef(null);
+  const fromInputValue = getFromInputValue(type);
   const [inputFieldInterfaceProps, remainingProps] = useFieldInterfaceProps(
     {
       ...props,
@@ -248,8 +249,7 @@ const PickerButton = (props) => {
       readUIState: () => {
         const input = inputRef.current;
         const inputValue = input.value;
-        return inputValue;
-        // return fromInputValue(inputValue);
+        return fromInputValue(inputValue);
       },
     },
   );

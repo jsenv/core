@@ -699,6 +699,12 @@ export const getToInputValue = (type) => {
   }
   return (v) => v;
 };
+export const getFromInputValue = (type) => {
+  if (type === "datetime-local") {
+    return convertToUTCTimezone;
+  }
+  return (v) => v;
+};
 
 const InputControllingList = (props) => {
   const Next = useNextResolver();
