@@ -11,6 +11,7 @@ import { useFieldInterfaceProps } from "../field_hooks.jsx";
 import { getFromInputValue, getToInputValue } from "../input/input_textual.jsx";
 import { useOnInputValueChange } from "../input/input_value_listener.js";
 import { createUICallback } from "../ui_callback.js";
+import { dispatchRequestSetUIState } from "../ui_state_controller.js";
 import { dispatchRequestAction } from "../validation/custom_constraint_validation.js";
 import { PickerContext, PickerElementContext } from "./picker_context.jsx";
 import { PickerPlaceholder } from "./picker_placeholder.jsx";
@@ -399,16 +400,24 @@ const findFieldWithName = (el) => {
 Picker.update = createUICallback({
   name: "Picker.update",
   action: (value, e) => {
-    return dispatchToPicker(e, "navi_picker_set_value", { value });
+    const pickerEl = e.currentTarget.closest(".navi_picker");
+    if (!pickerEl) {
+      return false;
+    }
+    return dispatchRequestSetUIState(pickerEl, value, { event: e });
   },
 });
+// c'est pas juste close au final?
 Picker.cancel = createUICallback({
   name: "Picker.cancel",
-  event: (e) => dispatchToPicker(e, "navi_picker_request_cancel"),
+  event: (e) => {
+    return dispatchToPicker(e, "navi_picker_request_cancel");
+  },
   action: (_, e) => {
     return dispatchToPicker(e, "navi_picker_request_cancel");
   },
 });
+// ça demande surement aussi un close
 Picker.submit = createUICallback({
   name: "Picker.submit",
   event: (e) => dispatchToPicker(e, "navi_request_action"),
