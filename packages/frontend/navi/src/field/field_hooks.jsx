@@ -369,22 +369,40 @@ const useActionProps = (
       // but we don't need/want to do it when we come from a input event already
       if (modified) {
         const currentTarget = e.currentTarget;
-        const existingInputEvent = findEvent(
-          e,
-          (e) => e.type === "input" && e.target === currentTarget,
-        );
+        const existingInputEvent = findEvent(e, (eInChain) => {
+          if (eInChain.type !== "input") {
+            return false;
+          }
+          if (eInChain.target === currentTarget) {
+            return true;
+          }
+          if (eInChain.currentTarget === e.currentTarget) {
+            // the set_ui_state came from the proxy which already dispatched
+            // its own request_set_ui_state — no need for a synthetic input event
+            return true;
+          }
+          return false;
+        });
         if (!existingInputEvent) {
           if (currentTarget.tagName === "INPUT") {
             if (
               currentTarget.type === "radio" ||
               currentTarget.type === "checkbox"
             ) {
+              debugInteraction(
+                e,
+                "dispatching synthetic input event without data for checkbox/radio",
+              );
               currentTarget.dispatchEvent(
                 new Event("input", {
                   bubbles: true,
                 }),
               );
             } else {
+              debugInteraction(
+                e,
+                `dispatching synthetic input event with data "${value}" for input`,
+              );
               currentTarget.dispatchEvent(
                 new InputEvent("input", {
                   bubbles: true,
