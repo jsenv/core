@@ -389,6 +389,7 @@ const InputCheckboxVisuallyHidden = (props) => {
         pseudoClasses={CheckboxPseudoClasses}
         {...props}
         {...props.checkboxProps}
+        checkboxProps={undefined}
         appearance={undefined}
         navi-visually-hidden=""
       />

@@ -507,6 +507,7 @@ const InputRadioVisuallyHidden = (props) => {
         pseudoClasses={RadioPseudoClasses}
         {...props}
         {...props.radioProps}
+        radioProps={undefined}
         appearance={undefined}
         navi-visually-hidden=""
       />
