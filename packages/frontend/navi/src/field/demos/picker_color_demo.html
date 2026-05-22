@@ -87,58 +87,40 @@
       // ── 1. États ──────────────────────────────────────────────────────────
 
       const StatesDemo = () => {
-        const colorSignal = useSignal("#4caf50");
         return (
           <div class="demo-section">
             <h2>1. États</h2>
             <p class="desc">
-              Comparaison jsenv Picker vs native{" "}
-              <code>&lt;input type="color"&gt;</code> pour chaque état.
+              Chaque état du picker couleur jsenv. La colonne native est fournie
+              à titre de comparaison (elle ne supporte pas l'état "vide").
             </p>
             <div class="states-grid">
               <div>
                 <div class="states-col-header">jsenv Picker</div>
                 <Box flex="y" spacing="s">
                   <Field vertical>
-                    <Label>Normal</Label>
+                    <Label>Vide</Label>
+                    <Picker name="color_empty" type="color" />
+                  </Field>
+                  <Field vertical>
+                    <Label>Vide + placeholder</Label>
                     <Picker
-                      name="color_normal"
+                      name="color_empty_placeholder"
                       type="color"
-                      value={colorSignal.value}
-                      action={(v) => {
-                        colorSignal.value = v;
-                      }}
+                      placeholder="Choisir une couleur"
                     />
                   </Field>
                   <Field vertical>
                     <Label>Readonly</Label>
-                    <Picker
-                      name="color_readonly"
-                      type="color"
-                      value={colorSignal.value}
-                      readOnly
-                      action={() => {}}
-                    />
+                    <Picker name="color_readonly" type="color" readOnly />
                   </Field>
                   <Field vertical>
                     <Label>Disabled</Label>
-                    <Picker
-                      name="color_disabled"
-                      type="color"
-                      value={colorSignal.value}
-                      action={() => {}}
-                      disabled
-                    />
+                    <Picker name="color_disabled" type="color" disabled />
                   </Field>
                   <Field vertical>
                     <Label>Loading</Label>
-                    <Picker
-                      name="color_loading"
-                      type="color"
-                      value={colorSignal.value}
-                      action={() => {}}
-                      loading
-                    />
+                    <Picker name="color_loading" type="color" loading />
                   </Field>
                 </Box>
               </div>
@@ -146,43 +128,28 @@
                 <div class="states-col-header">Native</div>
                 <Box flex="y" spacing="s">
                   <Field vertical>
-                    <Label>Normal</Label>
-                    <input
-                      type="color"
-                      value={colorSignal.value}
-                      onInput={(e) => {
-                        colorSignal.value = e.target.value;
-                      }}
-                    />
+                    <Label>Vide (n/a — toujours noir)</Label>
+                    <input type="color" />
+                  </Field>
+                  <Field vertical>
+                    <Label>Vide + placeholder (n/a)</Label>
+                    <input type="color" />
                   </Field>
                   <Field vertical>
                     <Label>Readonly</Label>
-                    <input type="color" value={colorSignal.value} readOnly />
+                    <input type="color" readOnly />
                   </Field>
                   <Field vertical>
                     <Label>Disabled</Label>
-                    <input type="color" value={colorSignal.value} disabled />
+                    <input type="color" disabled />
                   </Field>
                   <Field vertical>
                     <Label>Loading (n/a)</Label>
-                    <input type="color" value={colorSignal.value} disabled />
+                    <input type="color" disabled />
                   </Field>
                 </Box>
               </div>
             </div>
-            <p class="value-display">
-              Couleur sélectionnée :{" "}
-              <strong
-                style={{
-                  color: colorSignal.value,
-                  background: "#eee",
-                  padding: "0 4px",
-                  borderRadius: "3px",
-                }}
-              >
-                {colorSignal.value}
-              </strong>
-            </p>
           </div>
         );
       };
@@ -298,12 +265,7 @@
             >
               <Field vertical>
                 <Label>Couleur (obligatoire)</Label>
-                <Picker
-                  name="required_color"
-                  type="color"
-                  required
-                  // placeholder="Choisir une couleur"
-                />
+                <Picker name="required_color" type="color" required />
               </Field>
               <Field vertical>
                 <Label>Couleur (message personnalisé)</Label>
@@ -311,8 +273,7 @@
                   name="required_color_custom"
                   type="color"
                   required
-                  data-required-message="Merci de choisir une couleur."
-                  placeholder="Choisir une couleur"
+                  requiredMessage="Merci de choisir une couleur."
                 />
               </Field>
               <Button type="submit">Soumettre</Button>
@@ -358,7 +319,6 @@
                 action={(v) => {
                   colorSignal.value = v;
                 }}
-                placeholder="Choisir une couleur"
               >
                 <Box flex="y" padding="s" spacing="xs">
                   {SWATCHES.map(({ label, value }) => (
