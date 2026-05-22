@@ -89,17 +89,23 @@
         display: inline-block;
         max-width: 280px;
         padding: 10px 14px;
-        background: #fff3cd;
         border: 1.5px solid #f0c040;
         border-radius: 6px;
-        resize: horizontal;
         overflow: hidden;
-        /* semi-transparent red shows the trailing unused space */
+        /* padding zone: warm yellow */
+        background-color: #f0c040;
+        /* content zone: light yellow + red tint to show trailing space */
         background-image: linear-gradient(
           to right,
-          transparent 0,
-          rgba(255, 0, 0, 0.07) 0
+          #fff3cd 0,
+          rgba(255, 200, 200, 0.5) 0
         );
+        background-clip: content-box;
+        background-origin: content-box;
+      }
+
+      #broken-body {
+        resize: horizontal;
       }
 
       /* ─── Fixed example ────────────────────────────────── */
@@ -249,6 +255,10 @@
       };
 
       const applyFix = () => {
+        // Mirror broken-body's current width as fixed-body's max-width,
+        // so both start from the same constraint before the fix shrinks it.
+        const brokenWidth = brokenBody.getBoundingClientRect().width;
+        fixedBody.style.maxWidth = `${brokenWidth}px`;
         fixedBody.style.width = "";
         const optimal = measureShrinkwrappedWidth(fixedBody);
         if (optimal !== null) {
