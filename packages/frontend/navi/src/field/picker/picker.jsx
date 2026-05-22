@@ -67,6 +67,14 @@ const css = /* css */ `
         var(--picker-color) 95%,
         grey
       );
+      /* Icon */
+      --picker-icon-color: #5e4e4e;
+      --picker-icon-color-readonly: color-mix(
+        in srgb,
+        var(--picker-icon-color) 45%,
+        transparent
+      );
+      --picker-icon-color-disabled: var(--picker-icon-color-readonly);
     }
   }
 
@@ -131,7 +139,7 @@ const css = /* css */ `
       right: 0;
       width: var(--picker-right-slot-size);
       flex-shrink: 0;
-      color: #5e4e4e;
+      color: var(--x-picker-icon-color, var(--picker-icon-color));
     }
     .navi_picker_input {
       position: absolute;
@@ -161,6 +169,7 @@ const css = /* css */ `
       --x-picker-border-color: var(--picker-border-color-readonly);
       --x-picker-background-color: var(--picker-background-color-readonly);
       --x-picker-color: var(--picker-color-readonly);
+      --x-picker-icon-color: var(--picker-icon-color-readonly);
       --x-picker-cursor: default;
     }
     /* Focus */
@@ -173,6 +182,7 @@ const css = /* css */ `
       --x-picker-border-color: var(--picker-border-color-disabled);
       --x-picker-background-color: var(--picker-background-color-disabled);
       --x-picker-color: var(--picker-color-disabled);
+      --x-picker-icon-color: var(--picker-icon-color-disabled);
       --x-picker-cursor: default;
     }
     /* Callout (info, warning, error) */
