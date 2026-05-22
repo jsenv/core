@@ -168,6 +168,7 @@ export { Badge } from "./src/text/badge.jsx";
 export { BadgeCount } from "./src/text/badge_count.jsx";
 export { Caption } from "./src/text/caption.jsx";
 export { Code } from "./src/text/code.jsx";
+export { Color } from "./src/text/color.jsx";
 export { formatNumber } from "./src/text/format_number.js";
 export {
   formatDatetime,

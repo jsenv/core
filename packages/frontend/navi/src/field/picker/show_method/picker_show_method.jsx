@@ -2,12 +2,12 @@ import { useContext } from "preact/hooks";
 
 import { dispatchRequestInteraction } from "@jsenv/navi/src/field/validation/custom_constraint_validation.js";
 import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
+import { Color } from "@jsenv/navi/src/text/color.jsx";
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { Time } from "@jsenv/navi/src/text/time.jsx";
 import { PickerContext } from "../picker_context.jsx";
 import { PickerPlaceholder } from "../picker_placeholder.jsx";
 import { parseStepToSeconds } from "../time_helpers.js";
-import { Color } from "./color.jsx";
 
 const getPickerInputFromButtonEvent = (e) => {
   const pickerButton = e.currentTarget;

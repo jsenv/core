@@ -69,8 +69,11 @@
         Field,
         Label,
         Picker,
+        Color,
         Form,
         Button,
+        SelectableList,
+        Selectable,
         NaviDebug,
       } from "@jsenv/navi";
 
@@ -334,10 +337,10 @@
           <div class="demo-section">
             <h2>5. Customization</h2>
             <p class="desc">
-              On passe des enfants au Picker pour remplacer le sélecteur natif
-              par une palette de swatches personnalisée.{" "}
-              <code>Picker.update(value, event)</code> met à jour la valeur et{" "}
-              <code>Picker.close(event)</code> ferme le popover/dialog.
+              On passe des enfants au Picker pour afficher une palette de
+              swatches construite avec <code>SelectableList</code> +{" "}
+              <code>Selectable</code>. La couleur sélectionnée est mise en
+              évidence et le popover se ferme automatiquement.
             </p>
             <Field vertical>
               <Label>Couleur de badge</Label>
@@ -349,43 +352,35 @@
                   colorSignal.value = v;
                 }}
               >
-                <Box flex="y" padding="s" spacing="xs">
-                  {SWATCHES.map(({ label, value }) => (
-                    <button
+                <SelectableList
+                  selectedIndicator="backgroundColor"
+                  action={(v, { event }) => {
+                    Picker.submit(event);
+                  }}
+                >
+                  {SWATCHES.map(({ label, value }, i) => (
+                    <Selectable
                       key={value}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "10px",
-                        width: "100%",
-                        padding: "6px 10px",
-                        background:
-                          colorSignal.value === value ? "#f0f0f0" : "none",
-                        border: "none",
-                        borderRadius: "4px",
-                        cursor: "pointer",
-                        fontSize: "14px",
-                        textAlign: "left",
-                      }}
-                      onClick={(e) => {
-                        Picker.submit(e);
-                      }}
+                      index={i}
+                      id={`badge_swatch_${value.slice(1)}`}
+                      value={value}
+                      selected={colorSignal.value === value}
+                      flex
+                      alignY="center"
+                      spacing="s"
+                      padding="s"
                     >
-                      <span
-                        style={{
-                          display: "inline-block",
-                          width: "20px",
-                          height: "20px",
-                          borderRadius: "50%",
-                          background: value,
-                          border: "1px solid rgba(0,0,0,0.15)",
-                          flexShrink: 0,
-                        }}
-                      />
+                      <Color
+                        circle
+                        border="1px solid rgba(0,0,0,0.15)"
+                        height="18"
+                      >
+                        {label}
+                      </Color>
                       {label}
-                    </button>
+                    </Selectable>
                   ))}
-                </Box>
+                </SelectableList>
               </Picker>
             </Field>
             <p class="value-display">
