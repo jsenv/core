@@ -203,6 +203,13 @@
       Re-apply fix on resize (ResizeObserver)
     </label>
 
+    <h2>How the width is computed</h2>
+    <p class="description">
+      <code>Range.getClientRects()</code> returns one rect per text line.
+      We find the widest — that becomes the new content width.
+    </p>
+    <div id="lines-viz" style="display:flex; flex-direction:column; gap:6px; font-size:0.82rem; font-family:ui-monospace,monospace;"></div>
+
     <script>
       /**
        * Measures the width needed to hug the wrapped text without trailing whitespace.
@@ -254,12 +261,69 @@
         fixedWidthDisplay.textContent = `${Math.round(fixedBody.getBoundingClientRect().width)}px`;
       };
 
+      const linesViz = document.getElementById("lines-viz");
+
+      const updateLinesViz = (element) => {
+        const range = document.createRange();
+        range.selectNodeContents(element);
+        const lineRects = Array.from(range.getClientRects()).filter((r) => r.width > 0);
+        if (lineRects.length === 0) {
+          linesViz.innerHTML = "";
+          return;
+        }
+        const maxW = lineRects.reduce((m, r) => (r.width > m ? r.width : m), 0);
+        const scale = 300 / maxW;
+
+        // Find text content per line by walking characters
+        const lineTexts = Array(lineRects.length).fill("");
+        const textNodes = [];
+        const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+        let node;
+        while ((node = walker.nextNode())) {
+          textNodes.push(node);
+        }
+        const charRange = document.createRange();
+        for (const textNode of textNodes) {
+          const text = textNode.textContent;
+          for (let i = 0; i < text.length; i++) {
+            charRange.setStart(textNode, i);
+            charRange.setEnd(textNode, i + 1);
+            const charRect = charRange.getBoundingClientRect();
+            if (charRect.width === 0 && charRect.height === 0) {
+              continue;
+            }
+            const lineIndex = lineRects.findIndex(
+              (r) => Math.abs(r.top - charRect.top) < 2,
+            );
+            if (lineIndex !== -1) {
+              lineTexts[lineIndex] += text[i];
+            }
+          }
+        }
+
+        linesViz.innerHTML = lineRects
+          .map((r, i) => {
+            const isLongest = Math.abs(r.width - maxW) < 0.5;
+            const barW = Math.round(r.width * scale);
+            const color = isLongest ? "#f0c040" : "#ddd";
+            const lineText = lineTexts[i].trim();
+            return `<div style="display:flex; align-items:center; gap:8px;">
+              <div style="width:${barW}px; height:18px; background:${color}; border:1px solid #ccc; border-radius:2px; flex-shrink:0; position:relative;">
+                <span style="position:absolute; inset:0; padding:0 4px; overflow:hidden; white-space:nowrap; line-height:18px; font-size:0.72rem; color:#555;">${lineText}</span>
+              </div>
+              <span style="color:${isLongest ? "#b8860b" : "#888"}; font-weight:${isLongest ? 700 : 400}; white-space:nowrap;">${Math.ceil(r.width)}px${isLongest ? " ← longest" : ""}</span>
+            </div>`;
+          })
+          .join("");
+      };
+
       const applyFix = () => {
         // Mirror broken-body's current width as fixed-body's max-width,
         // so both start from the same constraint before the fix shrinks it.
         const brokenWidth = brokenBody.getBoundingClientRect().width;
         fixedBody.style.maxWidth = `${brokenWidth}px`;
         fixedBody.style.width = "";
+        updateLinesViz(fixedBody);
         const optimal = measureShrinkwrappedWidth(fixedBody);
         if (optimal !== null) {
           fixedBody.style.width = `${optimal}px`;

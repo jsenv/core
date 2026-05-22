@@ -706,8 +706,13 @@ const centerCalloutInViewport = (
   const updateCenteredPosition = () => {
     const calloutElementClone =
       cloneCalloutToMeasureNaturalSize(calloutElement);
+    const calloutBodyClone =
+      calloutElementClone.querySelector(".navi_callout_body");
+    const calloutMessageClone = calloutElementClone.querySelector(
+      ".navi_callout_message",
+    );
+
     const { height } = calloutElementClone.getBoundingClientRect();
-    calloutElementClone.remove();
 
     // Handle content overflow when viewport is too small
     const viewportHeight = window.innerHeight;
@@ -719,13 +724,26 @@ const centerCalloutInViewport = (
       const spaceNeededAroundContent = BORDER_WIDTH * 2 + paddingY;
       const spaceAvailableForContent =
         maxAllowedHeight - spaceNeededAroundContent;
+      // Apply to clone so optimalBodyWidth accounts for scrollbar width
+      calloutMessageClone.style.maxHeight = `${spaceAvailableForContent}px`;
+      calloutMessageClone.style.overflowY = "scroll";
       calloutMessageElement.style.maxHeight = `${spaceAvailableForContent}px`;
       calloutMessageElement.style.overflowY = "scroll";
     } else {
-      // Reset overflow styles if not needed
+      calloutMessageClone.style.maxHeight = "";
+      calloutMessageClone.style.overflowY = "";
       calloutMessageElement.style.maxHeight = "";
       calloutMessageElement.style.overflowY = "";
     }
+
+    const optimalBodyWidth = measureOptimalBodyWidth(
+      calloutBodyClone,
+      calloutMessageClone,
+    );
+    calloutElementClone.remove();
+
+    calloutBodyElement.style.width =
+      optimalBodyWidth !== null ? `${optimalBodyWidth}px` : "";
 
     // Get final dimensions after potential overflow adjustments
     const { width: finalWidth, height: finalHeight } =
@@ -845,6 +863,11 @@ const stickCalloutToAnchor = (
       }
       const calloutElementClone =
         cloneCalloutToMeasureNaturalSize(calloutElement);
+      const calloutBodyClone =
+        calloutElementClone.querySelector(".navi_callout_body");
+      const calloutMessageClone = calloutElementClone.querySelector(
+        ".navi_callout_message",
+      );
       const {
         positionY,
         left: calloutLeft,
@@ -951,12 +974,26 @@ const stickCalloutToAnchor = (
         spaceAvailableForContent - contentHeight;
       if (spaceRemainingAfterContent < 2) {
         const maxHeight = spaceAvailableForContent;
+        // Apply to clone so optimalBodyWidth accounts for scrollbar width
+        calloutMessageClone.style.maxHeight = `${maxHeight}px`;
+        calloutMessageClone.style.overflowY = "scroll";
         calloutMessageElement.style.maxHeight = `${maxHeight}px`;
         calloutMessageElement.style.overflowY = "scroll";
       } else {
+        calloutMessageClone.style.maxHeight = "";
+        calloutMessageClone.style.overflowY = "";
         calloutMessageElement.style.maxHeight = "";
         calloutMessageElement.style.overflowY = "";
       }
+
+      const optimalBodyWidth = measureOptimalBodyWidth(
+        calloutBodyClone,
+        calloutMessageClone,
+      );
+      calloutElementClone.remove();
+
+      calloutBodyElement.style.width =
+        optimalBodyWidth !== null ? `${optimalBodyWidth}px` : "";
 
       const { width, height } = calloutElement.getBoundingClientRect();
       if (positionY === "above" || positionY === "above-overlap") {
@@ -1102,14 +1139,30 @@ const isHtmlDocument = (content) => {
 };
 
 // It's ok to do this because the element is absolutely positioned
+const measureOptimalBodyWidth = (calloutBodyElement, calloutMessageElement) => {
+  const range = document.createRange();
+  range.selectNodeContents(calloutMessageElement);
+  const lineRects = Array.from(range.getClientRects());
+  if (lineRects.length <= 1) {
+    return null;
+  }
+  const longestLineWidth = Math.max(...lineRects.map((r) => r.width));
+  const messageRect = calloutMessageElement.getBoundingClientRect();
+  const bodyRect = calloutBodyElement.getBoundingClientRect();
+  return Math.ceil(bodyRect.width - messageRect.width + longestLineWidth);
+};
+
 const cloneCalloutToMeasureNaturalSize = (calloutElement) => {
   // Create invisible clone to measure natural size
   const calloutElementClone = calloutElement.cloneNode(true);
   calloutElementClone.style.visibility = "hidden";
+  const calloutBodyElementClone =
+    calloutElementClone.querySelector(".navi_callout_body");
   const calloutMessageElementClone = calloutElementClone.querySelector(
     ".navi_callout_message",
   );
-  // Reset any overflow constraints on the clone
+  // Reset any constrained styles on the clone so it measures natural size
+  calloutBodyElementClone.style.width = "";
   calloutMessageElementClone.style.maxHeight = "";
   calloutMessageElementClone.style.overflowY = "";
 
