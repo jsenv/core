@@ -1,39 +1,28 @@
 import { createPubSub } from "@jsenv/dom";
-import { useLayoutEffect } from "preact/hooks";
 
-import { useStableCallback } from "@jsenv/navi/src/utils/use_stable_callback.js";
-
-export const useOnInputValueChange = (
-  inputRef,
-  callback,
-  { waitForChange, debounce = 0 } = {},
-) => {
-  callback = useStableCallback(callback);
-  useLayoutEffect(() => {
-    const input = inputRef.current;
-    if (!input) {
-      return undefined;
-    }
-    const stopListening = listenInputValue(input, callback, {
-      waitForChange,
-      debounce,
-    });
-    return () => {
-      stopListening();
-    };
-  }, [waitForChange, debounce, callback]);
+export const addInputCheckedEffect = (input, callback, options) => {
+  return addInputStateEffect(input, callback, {
+    getState: () => input.checked,
+    ...options,
+  });
+};
+export const addInputValueEffect = (input, callback, options) => {
+  return addInputStateEffect(input, callback, {
+    getState: () => input.value,
+    ...options,
+  });
 };
 
-export const listenInputValue = (
+const addInputStateEffect = (
   input,
   callback,
-  { waitForChange = false, debounce = 0 } = {},
+  { getState, waitForChange = false, debounce = 0 },
 ) => {
   if (waitForChange) {
-    return listenInputValueChange(input, callback);
+    return listenInputStateChange(input, callback, { getState });
   }
   const [teardown, addTeardown] = createPubSub();
-  let currentValue = input.value;
+  let currentState = getState();
   let timeout;
   let debounceTimeout;
 
@@ -49,37 +38,41 @@ export const listenInputValue = (
       clearTimeout(timeout);
       clearTimeout(debounceTimeout);
 
-      const value = input.value;
-      if (value === currentValue) {
+      const state = getState();
+      if (state === currentState) {
         return;
       }
 
       if (skipDebounce) {
-        currentValue = value;
+        currentState = state;
         callback(e);
       } else {
         debounceTimeout = setTimeout(() => {
-          currentValue = value;
+          currentState = state;
           callback(e);
         }, debounce);
       }
     };
     // no need to wait for change events (blur, enter key)
     // we consider this as strong interactions requesting an immediate response
-    const stop = listenInputValueChange(input, (e) => {
-      onEvent(e, { skipDebounce: true });
-    });
+    const stop = listenInputStateChange(
+      input,
+      (e) => {
+        onEvent(e, { skipDebounce: true });
+      },
+      { getState },
+    );
     addTeardown(() => {
       stop();
     });
   } else {
     onEvent = (e) => {
       clearTimeout(timeout);
-      const value = input.value;
-      if (value === currentValue) {
+      const state = getState();
+      if (state === currentState) {
         return;
       }
-      currentValue = value;
+      currentState = state;
       callback(e);
     };
     // Autocomplete, programmatic changes, form restoration
@@ -133,13 +126,12 @@ export const listenInputValue = (
     teardown();
   };
 };
-
-const listenInputValueChange = (input, callback) => {
+const listenInputStateChange = (input, callback, { getState }) => {
   const [teardown, addTeardown] = createPubSub();
 
-  let valueAtInteraction;
+  let stateAtInteraction;
   const oninput = () => {
-    valueAtInteraction = undefined;
+    stateAtInteraction = undefined;
   };
   const onkeydown = (e) => {
     if (e.key === "Enter") {
@@ -148,7 +140,7 @@ const listenInputValueChange = (input, callback) => {
        * if the input value has changed.
        * We need to prevent the next change event otherwise we would request action twice
        */
-      valueAtInteraction = input.value;
+      stateAtInteraction = getState();
     }
     if (e.key === "Escape") {
       /**
@@ -157,15 +149,15 @@ const listenInputValueChange = (input, callback) => {
        * We need to prevent the next change event otherwise we would request action when
        * we actually want to cancel
        */
-      valueAtInteraction = input.value;
+      stateAtInteraction = getState();
     }
   };
   const onchange = (e) => {
     if (
-      valueAtInteraction !== undefined &&
-      e.target.value === valueAtInteraction
+      stateAtInteraction !== undefined &&
+      getState(e.target) === stateAtInteraction
     ) {
-      valueAtInteraction = undefined;
+      stateAtInteraction = undefined;
       return;
     }
     callback(e);
@@ -201,12 +193,12 @@ const listenInputValueChange = (input, callback) => {
     //
     // We achieve this by checking if the input value has changed between focus and blur without any user interaction
     // if yes we fire the callback because input value did change
-    let valueAtStart = input.value;
+    let stateAtStart = getState();
     let interacted = false;
 
     const onfocus = () => {
       interacted = false;
-      valueAtStart = input.value;
+      stateAtStart = input.value;
     };
     const oninput = (e) => {
       if (!e.isTrusted) {
@@ -220,7 +212,7 @@ const listenInputValueChange = (input, callback) => {
       if (interacted) {
         return;
       }
-      if (valueAtStart === input.value) {
+      if (stateAtStart === getState()) {
         return;
       }
       callback(e);
