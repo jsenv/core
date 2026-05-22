@@ -190,6 +190,11 @@
       </div>
     </div>
 
+    <label style="font-size:0.85rem; display:flex; align-items:center; gap:6px; cursor:pointer;">
+      <input type="checkbox" id="observer-toggle" />
+      Re-apply fix on resize (ResizeObserver)
+    </label>
+
     <script>
       /**
        * Measures the width needed to hug the wrapped text without trailing whitespace.
@@ -224,6 +229,7 @@
       const brokenBody = document.getElementById("broken-body");
       const brokenWidthDisplay = document.getElementById("broken-width");
       const fixedWidthDisplay = document.getElementById("fixed-width");
+      const observerToggle = document.getElementById("observer-toggle");
 
       const updateMeasures = () => {
         brokenWidthDisplay.textContent = `${Math.round(brokenBody.getBoundingClientRect().width)}px`;
@@ -239,11 +245,16 @@
         updateMeasures();
       };
 
-      const resizeObserver = new ResizeObserver(() => {
-        applyFix();
+      const resizeObserver = new ResizeObserver(applyFix);
+
+      observerToggle.addEventListener("change", () => {
+        if (observerToggle.checked) {
+          resizeObserver.observe(fixedBody);
+          resizeObserver.observe(brokenBody);
+        } else {
+          resizeObserver.disconnect();
+        }
       });
-      resizeObserver.observe(fixedBody);
-      resizeObserver.observe(brokenBody);
 
       applyFix();
     </script>
