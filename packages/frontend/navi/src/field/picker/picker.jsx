@@ -6,17 +6,14 @@ import { ChevronDownSvg } from "@jsenv/navi/src/graphic/icons/chevron_updown_svg
 import { LoadingOutline } from "@jsenv/navi/src/graphic/loading/loading_outline.jsx";
 import { createComponentResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { Icon } from "@jsenv/navi/src/text/icon.jsx";
-import { useStableCallback } from "@jsenv/navi/src/utils/use_stable_callback.js";
 import {
   useFieldInterfaceProps,
   useFieldgroupInterfaceProps,
 } from "../field_hooks.jsx";
 import { getFromInputValue, getToInputValue } from "../input/input_textual.jsx";
-import { useOnInputValueChange } from "../input/input_value_listener.js";
 import { requestClosestAction } from "../string_actions.js";
 import { createUICallback } from "../ui_callback.js";
 import { dispatchRequestSetUIState } from "../ui_state_controller.js";
-import { dispatchRequestAction } from "../validation/custom_constraint_validation.js";
 import { PickerContext, PickerElementContext } from "./picker_context.jsx";
 import { PickerPlaceholder } from "./picker_placeholder.jsx";
 import { pickerResolvers } from "./picker_resolvers.jsx";
@@ -279,7 +276,7 @@ const dispatchToPicker = (e, customEventName, detail) => {
 const renderPicker = createComponentResolver(pickerResolvers);
 const PickerButton = (props) => {
   import.meta.css = css;
-  const { ref, type, icon, placeholder, ui, onChange } = props;
+  const { ref, type, icon, placeholder, ui } = props;
   const inputRef = useRef(null);
   const fromInputValue = getFromInputValue(type);
   const [inputProps, pickerRemainingProps] = useFieldInterfaceProps(
@@ -298,18 +295,6 @@ const PickerButton = (props) => {
         const inputValue = input.value;
         return fromInputValue(inputValue);
       },
-    },
-  );
-  const onChangeStable = useStableCallback(onChange);
-  useOnInputValueChange(
-    inputRef,
-    (e) => {
-      onChangeStable?.(e);
-      const input = inputRef.current;
-      dispatchRequestAction(input, { event: e });
-    },
-    {
-      waitForChange: true,
     },
   );
 
