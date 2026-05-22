@@ -361,8 +361,8 @@
                   {SWATCHES.map(({ label, value }, i) => (
                     <Selectable
                       key={value}
+                      id={value}
                       index={i}
-                      id={`badge_swatch_${value.slice(1)}`}
                       value={value}
                       selected={colorSignal.value === value}
                       flex

@@ -27,7 +27,8 @@ export const RadioGroup = (props) => {
 
 const RadioGroupInterface = (props) => {
   import.meta.css = css;
-  const fieldgroupInterfaceProps = useFieldgroupInterfaceProps(
+  const { ref } = props;
+  const [radioGroupProps, remainingProps] = useFieldgroupInterfaceProps(
     {
       resetOnCancel: true,
       resetOnAbort: true,
@@ -49,14 +50,15 @@ const RadioGroupInterface = (props) => {
       },
     },
   );
-  const { ref, name } = fieldgroupInterfaceProps;
+  const { name } = radioGroupProps;
   useFocusGroup(ref, { wrap: "both" });
 
   return (
     <Box
       as="fieldset"
       flex="y"
-      {...fieldgroupInterfaceProps}
+      {...radioGroupProps}
+      {...remainingProps}
       name={undefined}
       baseClassName="navi_radio_group"
       data-callout-anchor="legend"

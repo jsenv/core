@@ -166,7 +166,7 @@ export const SelectableList = (props) => {
     focusGroupDirection,
     focusGroupWrap,
   } = props;
-  const fieldgroupInterfaceProps = useFieldgroupInterfaceProps(props, {
+  const [listFieldProps, remainingProps] = useFieldgroupInterfaceProps(props, {
     fieldType: "list",
     childComponentType: multiple ? "checkbox" : "radio",
     aggregateChildStates: multiple
@@ -206,7 +206,8 @@ export const SelectableList = (props) => {
       navi-has-selected-background={
         selectedIndicator === "backgroundColor" ? "" : undefined
       }
-      {...fieldgroupInterfaceProps}
+      {...listFieldProps}
+      {...remainingProps}
       name={undefined}
       selectedIndicator={undefined}
       multiple={undefined}

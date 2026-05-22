@@ -29,7 +29,8 @@ export const CheckboxGroup = (props) => {
 
 const CheckboxGroupInterface = (props) => {
   import.meta.css = css;
-  const fieldgroupInterfaceProps = useFieldgroupInterfaceProps(
+  const { ref } = props;
+  const [checkboxGroupProps, remainingProps] = useFieldgroupInterfaceProps(
     {
       resetOnCancel: true,
       resetOnAbort: true,
@@ -50,14 +51,15 @@ const CheckboxGroupInterface = (props) => {
       },
     },
   );
-  const { ref, name } = fieldgroupInterfaceProps;
+  const { name } = checkboxGroupProps;
   useFocusGroup(ref, { wrap: "both" });
 
   return (
     <Box
       as="fieldset"
       flex
-      {...fieldgroupInterfaceProps}
+      {...checkboxGroupProps}
+      {...remainingProps}
       name={undefined}
       baseClassName="navi_checkbox_group"
       navi-checkbox-list=""
