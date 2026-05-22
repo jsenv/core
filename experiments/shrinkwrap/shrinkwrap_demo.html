@@ -104,9 +104,6 @@
         background-origin: content-box;
       }
 
-      #broken-body {
-        resize: horizontal;
-      }
 
       /* ─── Fixed example ────────────────────────────────── */
       /* Same styles — JS sets an explicit width after measuring */
@@ -188,6 +185,11 @@
       </div>
     </div>
 
+    <label style="font-size:0.85rem; display:flex; align-items:center; gap:8px;">
+      max-width: <input type="range" id="max-width-slider" min="80" max="400" value="280" style="width:200px;" />
+      <span id="max-width-value">280px</span>
+    </label>
+
     <label style="font-size:0.85rem; display:flex; align-items:center; gap:6px; cursor:pointer;">
       <input type="checkbox" id="observer-toggle" />
       Re-apply fix on resize (ResizeObserver)
@@ -246,6 +248,15 @@
       const brokenContentWidthDisplay = document.getElementById("broken-content-width");
       const fixedContentWidthDisplay = document.getElementById("fixed-content-width");
       const observerToggle = document.getElementById("observer-toggle");
+      const maxWidthSlider = document.getElementById("max-width-slider");
+      const maxWidthValue = document.getElementById("max-width-value");
+
+      maxWidthSlider.addEventListener("input", () => {
+        const v = maxWidthSlider.value;
+        maxWidthValue.textContent = `${v}px`;
+        brokenBody.style.maxWidth = `${v}px`;
+        applyFix();
+      });
 
       const getContentWidth = (el) => {
         const rect = el.getBoundingClientRect();
