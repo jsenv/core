@@ -105,6 +105,7 @@ const css = /* css */ `
       --picker-padding-bottom,
       var(--picker-padding-y, var(--picker-padding-y-default))
     );
+    --x-picker-color: var(--picker-color);
 
     position: relative;
     display: inline-flex;
@@ -127,6 +128,7 @@ const css = /* css */ `
     border-color: var(--x-picker-border-color);
     border-radius: var(--picker-border-radius);
     outline-width: var(--x-picker-outline-width);
+    outline-style: none;
     outline-color: var(--picker-outline-color);
     outline-offset: var(--x-picker-outline-offset);
     cursor: var(--x-picker-cursor, pointer);
@@ -276,8 +278,7 @@ const PickerButton = (props) => {
       baseClassName="navi_picker"
       navi-field=".navi_picker_input"
       navi-has-placeholder={placeholder ? "" : undefined}
-      pseudoStateSelector=".navi_picker_input"
-      pseudoClasses={PICKER_PSEUDO_CLASSES}
+      pseudoClasses={PICKER_BUTTON_PSEUDO_CLASSES}
       disabled={disabled}
       {...remainingProps}
       basePseudoState={{
@@ -324,6 +325,7 @@ const PickerButton = (props) => {
     </Box>
   );
 };
+
 const PickerInput = (props) => {
   const { type } = props;
   const toInputValue = getToInputValue(type);
@@ -341,6 +343,17 @@ const PickerInput = (props) => {
     />
   );
 };
+const PICKER_BUTTON_PSEUDO_CLASSES = [
+  ":hover",
+  ":focus",
+  ":focus-visible",
+  ":focus-within",
+  ":read-only",
+  ":disabled",
+  ":-navi-loading",
+  ":-navi-expanded",
+  ":-navi-has-value",
+];
 const PickerInputPseudoClasses = [
   ":read-only",
   ":disabled",
@@ -348,6 +361,7 @@ const PickerInputPseudoClasses = [
   ":-navi-has-value",
   ":-navi-expanded",
 ];
+
 const getPickerManagedField = (pickerEl) => {
   let pickerInput = pickerEl.querySelector(".navi_picker_input");
   let firstField;
@@ -414,17 +428,6 @@ const dispatchToPicker = (e, customEventName, detail) => {
   });
 };
 
-const PICKER_PSEUDO_CLASSES = [
-  ":hover",
-  ":focus",
-  ":focus-visible",
-  ":focus-within",
-  ":read-only",
-  ":disabled",
-  ":-navi-loading",
-  ":-navi-expanded",
-  ":-navi-has-value",
-];
 const PickerDefaultUI = () => {
   const { value, placeholder } = useContext(PickerContext);
   if (!value) {
