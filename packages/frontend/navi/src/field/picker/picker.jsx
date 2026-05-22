@@ -7,7 +7,10 @@ import { LoadingOutline } from "@jsenv/navi/src/graphic/loading/loading_outline.
 import { createComponentResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { Icon } from "@jsenv/navi/src/text/icon.jsx";
 import { useStableCallback } from "@jsenv/navi/src/utils/use_stable_callback.js";
-import { useFieldInterfaceProps } from "../field_hooks.jsx";
+import {
+  useFieldInterfaceProps,
+  useFieldgroupInterfaceProps,
+} from "../field_hooks.jsx";
 import { getFromInputValue, getToInputValue } from "../input/input_textual.jsx";
 import { useOnInputValueChange } from "../input/input_value_listener.js";
 import { requestClosestAction } from "../string_actions.js";
@@ -279,7 +282,7 @@ const PickerButton = (props) => {
   const { ref, type, icon, placeholder, ui, onChange } = props;
   const inputRef = useRef(null);
   const fromInputValue = getFromInputValue(type);
-  const [inputFieldInterfaceProps, remainingProps] = useFieldInterfaceProps(
+  const [inputProps, pickerRemainingProps] = useFieldInterfaceProps(
     {
       ...props,
       ref: inputRef,
@@ -296,10 +299,6 @@ const PickerButton = (props) => {
       },
     },
   );
-  const { id, value, basePseudoState, disabled, children } =
-    inputFieldInterfaceProps;
-  const loading = basePseudoState[":-navi-loading"];
-
   const onChangeStable = useStableCallback(onChange);
   useOnInputValueChange(
     inputRef,
@@ -313,6 +312,33 @@ const PickerButton = (props) => {
     },
   );
 
+  const { id, value, basePseudoState, disabled, children } = inputProps;
+  const loading = basePseudoState[":-navi-loading"];
+  const [buttonProps, remainingProps] = useFieldgroupInterfaceProps(
+    {
+      ...props,
+      ...pickerRemainingProps,
+      // action: () => {
+      //   const pickerEl = ref.current;
+      //   const managedField = getPickerManagedField(pickerEl);
+      // },
+    },
+    {
+      fieldType: "picker",
+      childComponentType: "*",
+      aggregateChildStates: (childUIStateControllers) => {
+        let activeValue;
+        for (const childUIStateController of childUIStateControllers) {
+          if (childUIStateController.name && childUIStateController.uiState) {
+            activeValue = childUIStateController.uiState;
+            break;
+          }
+        }
+        return activeValue;
+      },
+    },
+  );
+
   return (
     <Box
       as="button"
@@ -323,6 +349,7 @@ const PickerButton = (props) => {
       navi-has-placeholder={placeholder ? "" : undefined}
       pseudoClasses={PICKER_BUTTON_PSEUDO_CLASSES}
       disabled={disabled}
+      {...buttonProps}
       {...remainingProps}
       basePseudoState={{
         ...basePseudoState, // inherit input pseudo states
@@ -350,7 +377,7 @@ const PickerButton = (props) => {
         {ui === undefined ? <PickerDefaultUI /> : ui}
       </PickerContext.Provider>
       <PickerInput
-        {...inputFieldInterfaceProps}
+        {...inputProps}
         // eslint-disable-next-line react/no-children-prop
         children={undefined} // we will render children into the button
         id={undefined}
