@@ -214,7 +214,7 @@
       const measureShrinkwrappedWidth = (element) => {
         const range = document.createRange();
         range.selectNodeContents(element);
-        const lineRects = Array.from(range.getClientRects());
+        const lineRects = Array.from(range.getClientRects()).filter((r) => r.width > 0);
         if (lineRects.length <= 1) {
           return null;
         }
@@ -224,10 +224,19 @@
           }
           return max;
         }, 0);
+        // longestLineWidth is the content width (no padding, no border).
+        // What we set as style.width depends on box-sizing:
+        //   content-box → style.width sets content width only → set longestLineWidth directly
+        //   border-box  → style.width sets total (content + padding + border) → add them back
         const style = getComputedStyle(element);
-        const paddingH =
-          parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
-        return Math.ceil(longestLineWidth + paddingH);
+        const boxSizing = style.boxSizing;
+        if (boxSizing === "border-box") {
+          const paddingH = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
+          const borderH = parseFloat(style.borderLeftWidth) + parseFloat(style.borderRightWidth);
+          return Math.ceil(longestLineWidth + paddingH + borderH);
+        }
+        // content-box (default)
+        return Math.ceil(longestLineWidth);
       };
 
       const fixedBody = document.getElementById("fixed-body");
