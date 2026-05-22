@@ -135,7 +135,11 @@
                       placeholder="Search..."
                       pseudoState={{ ":focus-visible": true }}
                     />
-                    <input type="search" placeholder="Search..." autoFocus />
+                    <input
+                      type="search"
+                      placeholder="Search..."
+                      // autoFocus
+                    />
                   </Box>
                 </fieldset>
                 <fieldset>
@@ -362,7 +366,7 @@
       };
 
       const VariationsDemo = () => {
-        const [searchValue1, setSearchValue1] = useState("");
+        const [searchValue1, setSearchValue1] = useState("ab");
         const [searchValue2, setSearchValue2] = useState("");
         const [searchValue3, setSearchValue3] = useState("");
         const [searchValue4, setSearchValue4] = useState("");
@@ -384,7 +388,7 @@
                   action={setSearchValue1}
                   placeholder="Placholder..."
                   paddingX="16"
-                  paddingY="20"
+                  paddingY="10"
                   size="l"
                   borderRadius="12"
                 />

@@ -96,6 +96,9 @@ const css = /* css */ `
         grey
       );
       --color-disabled: color-mix(in srgb, var(--color) 95%, grey);
+
+      --left-slot-size: 1.2em;
+      --right-slot-size: 1.2em;
     }
   }
 
@@ -103,8 +106,8 @@ const css = /* css */ `
     /* outline will draw the border when visible */
     --x-outline-width: calc(var(--outline-width) + var(--border-width));
     --x-outline-offset: calc(-1 * var(--border-width));
-    --left-slot-size: 0px;
-    --right-slot-size: 0px;
+    --x-left-slot-size: 0px;
+    --x-right-slot-size: 0xp;
     --x-border-color: var(--border-color);
     --x-background-color: var(--background-color);
     --x-color: var(--color);
@@ -138,9 +141,9 @@ const css = /* css */ `
       box-sizing: border-box;
       min-width: 50px;
       padding-top: var(--x-padding-top-base);
-      padding-right: calc(var(--x-padding-right-base) + var(--right-slot-size));
+      padding-right: var(--x-padding-right-base);
       padding-bottom: var(--x-padding-bottom-base);
-      padding-left: calc(var(--x-padding-left-base) + var(--left-slot-size));
+      padding-left: var(--x-padding-left-base);
       color: var(--x-color);
       font-size: var(--font-size);
       background-color: var(--x-background-color);
@@ -161,6 +164,25 @@ const css = /* css */ `
       }
     }
 
+    &:has(.navi_input_slot[data-left]) {
+      --x-left-slot-size: calc(
+        var(--left-slot-size) + var(--x-padding-left-base) / 2
+      );
+
+      .navi_real_input {
+        padding-left: var(--x-left-slot-size);
+      }
+    }
+    &:has(.navi_input_slot[data-right]) {
+      --x-right-slot-size: calc(
+        var(--right-slot-size) + var(--x-padding-right-base) / 2
+      );
+
+      .navi_real_input {
+        padding-right: var(--x-right-slot-size);
+      }
+    }
+
     .navi_input_slot {
       position: absolute;
       top: 0;
@@ -173,11 +195,11 @@ const css = /* css */ `
 
       &[data-left] {
         left: 0;
-        width: var(--left-slot-size);
+        width: var(--x-left-slot-size);
       }
       &[data-right] {
         right: 0;
-        width: var(--right-slot-size);
+        width: var(--x-right-slot-size);
       }
       &[data-hide-while-empty] {
         opacity: 0;
@@ -203,12 +225,6 @@ const css = /* css */ `
           pointer-events: none;
         }
       }
-    }
-    &:has(.navi_input_slot[data-left]) {
-      --left-slot-size: 1.5em;
-    }
-    &:has(.navi_input_slot[data-right]) {
-      --right-slot-size: 1.5em;
     }
 
     /* Hover */
