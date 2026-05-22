@@ -50,7 +50,7 @@
         display: flex;
         flex-wrap: wrap;
         gap: 24px;
-        margin-bottom: 40px;
+        margin-bottom: 15px;
       }
 
       .demo-box {
@@ -174,11 +174,6 @@
         </div>
         <div class="measure">content: <span id="broken-content-width">—</span></div>
         <div class="measure">total: <span id="broken-width">—</span></div>
-        <div class="note">
-          <code>.callout-body</code> has <code>max-width: 340px</code>.
-          Once text wraps, the element stays at <code>max-width</code>
-          — trailing whitespace appears to the right of the longest line.
-        </div>
       </div>
 
       <div class="demo-box">
@@ -190,11 +185,6 @@
         </div>
         <div class="measure">content: <span id="fixed-content-width">—</span></div>
         <div class="measure">total: <span id="fixed-width">—</span></div>
-        <div class="note">
-          After layout, JS uses <code>Range.getClientRects()</code> to find the
-          widest text line and sets an explicit <code>width</code> on the body —
-          shrinkwrapping it to the actual content.
-        </div>
       </div>
     </div>
 
