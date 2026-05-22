@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>Picker Demo</title>
+    <title>Picker Vrac Demo</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" href="data:," />
     <style>
@@ -50,7 +50,7 @@
   </head>
   <body>
     <div id="container">
-      <h1>Picker Demo</h1>
+      <h1>Picker Vrac Demo</h1>
       <div id="app"></div>
     </div>
     <script type="module" jsenv-type="module/jsx">
@@ -64,7 +64,6 @@
         Picker,
         Input,
         Time,
-        Text,
         Icon,
         Form,
         Button,
@@ -76,15 +75,12 @@
 
       const App = () => (
         <div class="demo-grid">
-          <TableOfContents />
-          <ColorPickerStatesDemo />
           <DayHourPickerDemo />
           <DayPickerDemo />
           <MonthPickerDemo />
           <WeekPickerDemo />
           <TimePickerDemo />
           <DatetimePickerDemo />
-          <ColorPickerDemo />
           <CustomUIDemo />
           <PromptDemo />
           <DialogPickerDemo />
@@ -92,105 +88,6 @@
           <FormIntegrationDemo />
         </div>
       );
-
-      const TableOfContents = () => (
-        <div class="demo-section">
-          <h2>Table of contents</h2>
-          <ol style={{ margin: 0, paddingLeft: "20px", lineHeight: "2" }}>
-            <li>
-              <a href="#color-states">Color picker — états</a>
-            </li>
-            <li>
-              <a href="#day-hour">Jour + Heure</a>
-            </li>
-            <li>
-              <a href="#day">Day picker</a>
-            </li>
-            <li>
-              <a href="#month">Month picker</a>
-            </li>
-            <li>
-              <a href="#week">Week picker</a>
-            </li>
-            <li>
-              <a href="#time">Time picker</a>
-            </li>
-            <li>
-              <a href="#datetime">Datetime picker</a>
-            </li>
-            <li>
-              <a href="#color">Color picker</a>
-            </li>
-            <li>
-              <a href="#custom-ui">Custom UI</a>
-            </li>
-            <li>
-              <a href="#popover">Prompt</a>
-            </li>
-            <li>
-              <a href="#dialog">Custom dialog</a>
-            </li>
-            <li>
-              <a href="#disabled">Disabled</a>
-            </li>
-            <li>
-              <a href="#form">Form integration</a>
-            </li>
-          </ol>
-        </div>
-      );
-
-      const ColorPickerStatesDemo = () => {
-        const colorSignal = useSignal("#4caf50");
-        return (
-          <div id="color-states" class="demo-section">
-            <p>Normal, readonly, disabled, loading.</p>
-            <Box flex="y" spacing="s">
-              <Field vertical>
-                <Label>Normal</Label>
-                <Picker
-                  name="color_normal"
-                  type="color"
-                  value={colorSignal.value}
-                  action={(v) => {
-                    colorSignal.value = v;
-                  }}
-                />
-              </Field>
-              <Field vertical>
-                <Label>Readonly</Label>
-                <Picker
-                  name="color_readonly"
-                  type="color"
-                  value={colorSignal.value}
-                  readOnly
-                  action={() => {}}
-                />
-              </Field>
-              <Field vertical>
-                <Label>Disabled</Label>
-                <Picker
-                  name="color_disabled"
-                  type="color"
-                  value={colorSignal.value}
-                  action={() => {}}
-                  disabled
-                />
-              </Field>
-              <Field vertical>
-                <Label>Loading</Label>
-                <Picker
-                  name="color_loading"
-                  type="color"
-                  value={colorSignal.value}
-                  action={() => {}}
-                  loading
-                />
-              </Field>
-            </Box>
-          </div>
-        );
-      };
 
       // ── date helpers ────────────────────────────────────────────────────────
       const today = new Date();
@@ -213,6 +110,7 @@
 
         return (
           <div id="day-hour" class="demo-section">
+            <h2>Jour + Heure</h2>
             <p>
               Le picker d'heure ne propose que les créneaux disponibles. Si le
               jour sélectionné est aujourd'hui, les heures passées sont
@@ -301,6 +199,7 @@
         const dayPastSignal = useSignal("");
         return (
           <div id="day" class="demo-section">
+            <h2>Day picker</h2>
             <p>Picks a calendar day. Min = today, max = today + 30 days.</p>
             <Field vertical>
               <Label>Date</Label>
@@ -359,6 +258,7 @@
         const monthSignal = useSignal("");
         return (
           <div id="month" class="demo-section">
+            <h2>Month picker</h2>
             <p>Picks a year + month.</p>
             <Field vertical>
               <Label>Mois</Label>
@@ -381,6 +281,7 @@
         const weekSignal = useSignal("");
         return (
           <div id="week" class="demo-section">
+            <h2>Week picker</h2>
             <p>Picks an ISO week (year + week number).</p>
             <Field vertical>
               <Label>Semaine</Label>
@@ -404,6 +305,7 @@
         const timeRestrictedSignal = useSignal("");
         return (
           <div id="time" class="demo-section">
+            <h2>Time picker</h2>
             <p>Picks a time of day (hours + minutes).</p>
             <Field vertical>
               <Label>Heure</Label>
@@ -448,6 +350,7 @@
         const datetimeSignal = useSignal("");
         return (
           <div id="datetime" class="demo-section">
+            <h2>Datetime picker</h2>
             <p>Picks a date + time (datetime-local).</p>
             <Field vertical spacing="s">
               <Label>Date &amp; heure</Label>
@@ -466,48 +369,11 @@
         );
       };
 
-      const ColorPickerDemo = () => {
-        const colorSignal = useSignal(undefined);
-        const colorWithPlaceholderSignal = useSignal(undefined);
-        return (
-          <div id="color" class="demo-section">
-            <p>Picks a color using the browser color chooser.</p>
-            <Field vertical spacing="s">
-              <Label>Sans placeholder</Label>
-              <Picker
-                name="color"
-                type="color"
-                value={colorSignal.value}
-                action={(v) => {
-                  colorSignal.value = v;
-                }}
-              />
-            </Field>
-            <ValueDisplay label="Value" value={colorSignal.value} />
-            <Field vertical spacing="s">
-              <Label>Avec placeholder</Label>
-              <Picker
-                name="color_with_placeholder"
-                type="color"
-                value={colorWithPlaceholderSignal.value}
-                action={(v) => {
-                  colorWithPlaceholderSignal.value = v;
-                }}
-                placeholder="Choisir une couleur"
-              />
-            </Field>
-            <ValueDisplay
-              label="Value"
-              value={colorWithPlaceholderSignal.value}
-            />
-          </div>
-        );
-      };
-
       const CustomUIDemo = () => {
         const daySignal = useSignal("");
         return (
           <div id="custom-ui" class="demo-section">
+            <h2>Custom UI (day picker)</h2>
             <p>
               Override both the placeholder and the value display with custom
               children.
@@ -542,6 +408,7 @@
 
       const DisabledDemo = () => (
         <div id="disabled" class="demo-section">
+          <h2>Disabled</h2>
           <p>Picker is non-interactive when disabled.</p>
           <Field vertical spacing="s">
             <Label>Date</Label>
@@ -560,6 +427,7 @@
         const submittedSignal = useSignal(null);
         return (
           <div id="form" class="demo-section">
+            <h2>Form integration</h2>
             <p>
               Pickers participate in form submission. The day field is required.
             </p>
@@ -616,6 +484,7 @@
         const [mode, setMode] = useState("dialog");
         return (
           <div id="popover" class="demo-section">
+            <h2>Prompt (custom popover/dialog)</h2>
             <p>
               Passing children to Picker opens a custom popover. An{" "}
               <code>Input</code> with <code>action="picker"</code> binds its
@@ -635,7 +504,6 @@
 
             <Field vertical>
               <Label>Free text</Label>
-
               <Picker
                 mode={mode}
                 type="text"
@@ -646,12 +514,7 @@
                 placeholder="Type something"
               >
                 <Box flex="y" spacing="s" padding="s">
-                  <Input
-                    type="text"
-                    value={value}
-                    // action={() => {}}
-                    placeholder="Enter value"
-                  />
+                  <Input type="text" value={value} placeholder="Enter value" />
                   <Button action={Picker.submit}>Close</Button>
                 </Box>
               </Picker>
@@ -663,10 +526,11 @@
       const DialogPickerDemo = () => {
         return (
           <div id="dialog" class="demo-section">
+            <h2>Custom dialog (color)</h2>
             <p>
               Use <code>mode="dialog"</code> to always open in a dialog.
-              Children use <code>usePickerSetValue()</code> to update the picker
-              value and <code>usePickerRequestClose()</code> to close.
+              Children use <code>Picker.update()</code> and{" "}
+              <code>Picker.close()</code>.
             </p>
             <Field vertical>
               Choose a color
