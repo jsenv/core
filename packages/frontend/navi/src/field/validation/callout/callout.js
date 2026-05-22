@@ -890,7 +890,6 @@ const stickCalloutToAnchor = (
       } else {
         calloutElement.removeAttribute("data-position-y-current");
       }
-      calloutElementClone.remove();
       if (debug && positionY !== previousPositionY) {
         const anchorRect = anchorElement.getBoundingClientRect();
         debug(
@@ -1120,6 +1119,21 @@ const isHtmlDocument = (content) => {
 // It's ok to do this because the element is absolutely positioned
 // maxHeight, when provided, is applied to the clone's message so the measurement
 // accounts for the scrollbar width that will appear on the real element.
+//
+// Goal: shrink-wrap the callout body so it hugs the wrapped text with no blank
+// space to the right of shorter lines.
+//
+// The CSS "shrink-to-fit" algorithm (display:inline-block / fit-content) expands
+// the element to the widest line it *could* have given the max-width constraint,
+// not to the widest line that actually rendered. This leaves trailing whitespace
+// when text wraps at a point shorter than max-width.
+// See: https://github.com/w3c/csswg-drafts/issues/191
+//
+// Fix: use Range.getClientRects() to get one rect per rendered text line, find
+// the widest one, and set an explicit width on the body equal to that line width
+// (adjusted for the body's box-sizing and the non-message siblings — icon, gap,
+// close button). After the explicit width is set the element is exactly as wide
+// as its longest line, so no blank area remains to the right of shorter lines.
 const measureOptimalBodyWidth = (calloutElementClone, { maxHeight } = {}) => {
   const calloutBodyElement =
     calloutElementClone.querySelector(".navi_callout_body");
@@ -1137,8 +1151,7 @@ const measureOptimalBodyWidth = (calloutElementClone, { maxHeight } = {}) => {
   range.selectNodeContents(calloutMessageElement);
   let lineCount = 0;
   let longestLineWidth = 0;
-  const rangeClientRects = range.getClientRects();
-  for (const r of rangeClientRects) {
+  for (const r of range.getClientRects()) {
     if (r.width === 0) {
       continue;
     }
