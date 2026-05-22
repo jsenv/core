@@ -362,6 +362,9 @@ const useActionProps = (
         dispatchRequestSetUIState(naviProxyTarget, value, {
           event: e.detail.event,
         });
+        // The proxy target will receive its own navi_set_ui_state and dispatch
+        // the synthetic input event — nothing more to do here.
+        return;
       }
 
       // When updating the ui state we want to dispatch "input" so that any code listening to input event
@@ -374,11 +377,6 @@ const useActionProps = (
             return false;
           }
           if (eInChain.target === currentTarget) {
-            return true;
-          }
-          if (eInChain.currentTarget === e.currentTarget) {
-            // the set_ui_state came from the proxy which already dispatched
-            // its own request_set_ui_state — no need for a synthetic input event
             return true;
           }
           return false;
