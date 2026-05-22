@@ -86,6 +86,8 @@
 
       // ── 1. États ──────────────────────────────────────────────────────────
 
+      const DEFAULT_COLOR = "#4caf50";
+
       const StatesDemo = () => {
         return (
           <div class="demo-section">
@@ -111,16 +113,39 @@
                     />
                   </Field>
                   <Field vertical>
+                    <Label>Avec valeur</Label>
+                    <Picker
+                      name="color_with_value"
+                      type="color"
+                      defaultValue={DEFAULT_COLOR}
+                    />
+                  </Field>
+                  <Field vertical>
                     <Label>Readonly</Label>
-                    <Picker name="color_readonly" type="color" readOnly />
+                    <Picker
+                      name="color_readonly"
+                      type="color"
+                      defaultValue={DEFAULT_COLOR}
+                      readOnly
+                    />
                   </Field>
                   <Field vertical>
                     <Label>Disabled</Label>
-                    <Picker name="color_disabled" type="color" disabled />
+                    <Picker
+                      name="color_disabled"
+                      type="color"
+                      defaultValue={DEFAULT_COLOR}
+                      disabled
+                    />
                   </Field>
                   <Field vertical>
                     <Label>Loading</Label>
-                    <Picker name="color_loading" type="color" loading />
+                    <Picker
+                      name="color_loading"
+                      type="color"
+                      defaultValue={DEFAULT_COLOR}
+                      loading
+                    />
                   </Field>
                 </Box>
               </div>
@@ -136,16 +161,20 @@
                     <input type="color" />
                   </Field>
                   <Field vertical>
+                    <Label>Avec valeur</Label>
+                    <input type="color" value={DEFAULT_COLOR} readOnly />
+                  </Field>
+                  <Field vertical>
                     <Label>Readonly</Label>
-                    <input type="color" readOnly />
+                    <input type="color" value={DEFAULT_COLOR} readOnly />
                   </Field>
                   <Field vertical>
                     <Label>Disabled</Label>
-                    <input type="color" disabled />
+                    <input type="color" value={DEFAULT_COLOR} disabled />
                   </Field>
                   <Field vertical>
                     <Label>Loading (n/a)</Label>
-                    <input type="color" disabled />
+                    <input type="color" value={DEFAULT_COLOR} disabled />
                   </Field>
                 </Box>
               </div>
