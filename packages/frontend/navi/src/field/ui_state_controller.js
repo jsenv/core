@@ -604,3 +604,12 @@ export const dispatchRequestResetUIState = (element, e) => {
     event: e,
   });
 };
+export const getUIStateFromElement = (el) => {
+  let uiState;
+  dispatchInternalCustomEvent(el, "navi_get_ui_state", {
+    respondWith: (v) => {
+      uiState = v;
+    },
+  });
+  return uiState;
+};

@@ -4,8 +4,8 @@ import {
   mergeTwoStyles,
 } from "@jsenv/dom";
 
-import { getUIStateFromElement } from "../field/field_hooks.jsx";
 import { listenInputValue } from "../field/input/input_value_listener.js";
+import { getUIStateFromElement } from "../field/ui_state_controller.js";
 
 const requestPseudoStateCheck = (element, detail) => {
   dispatchInternalCustomEvent(
@@ -425,6 +425,7 @@ definePseudoClass(":-navi-has-value", {
       if (uiState === undefined || uiState === "") {
         return false;
       }
+      return true;
     }
     if (el.value === "") {
       return false;

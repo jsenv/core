@@ -5,6 +5,7 @@
 import { formatDay, formatMonth } from "@jsenv/navi/src/text/format_time.js";
 import { langSignal } from "@jsenv/navi/src/text/lang_signal.js";
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
+import { getUIStateFromElement } from "../../ui_state_controller.js";
 import { CONSTRAINT_ATTRIBUTE_SET } from "../constraint_attribute_set.js";
 import { generateFieldInvalidMessage } from "./constraint_message_util.js";
 
@@ -108,9 +109,10 @@ export const REQUIRED_CONSTRAINT = {
       };
     }
     if (field.type === "color") {
+      const uiState = getUIStateFromElement(field);
       // The color input always has a value (#000000 when empty) so we rely on
-      // data-color-empty to know the user hasn't actually chosen a color yet.
-      if (field.hasAttribute("data-color-empty")) {
+      // uiState to know the user hasn't actually chosen a color
+      if (uiState === undefined || uiState === "") {
         return naviI18n("picker.required.color");
       }
       return null;

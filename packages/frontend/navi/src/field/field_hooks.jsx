@@ -522,6 +522,7 @@ const useActionProps = (
     actionProps[statePropName] = statePropValueRaw;
     if (defaultStatePropName) {
       delete actionProps[defaultStatePropName];
+      delete remainingProps[defaultStatePropName];
     }
   }
 
@@ -536,14 +537,4 @@ const getNaviProxyTarget = (event) => {
   }
   const realInput = document.getElementById(proxyFor);
   return realInput;
-};
-
-export const getUIStateFromElement = (el) => {
-  let uiState;
-  dispatchInternalCustomEvent(el, "onnavi_get_ui_state", {
-    respondWith: (v) => {
-      uiState = v;
-    },
-  });
-  return uiState;
 };
