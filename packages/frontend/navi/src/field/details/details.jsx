@@ -80,6 +80,7 @@ const DetailsField = (props) => {
       ...props,
     },
     {
+      primaryInteractionMode: "pointer",
       fieldType: "details",
       getUIValue: () => {
         const details = ref.current;

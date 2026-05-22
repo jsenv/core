@@ -270,6 +270,7 @@ const InputRangeFieldInterface = (props) => {
       },
     },
     {
+      primaryInteractionMode: "pointer",
       fieldType: "input",
       statePropName: "value",
       defaultStatePropName: "defaultValue",

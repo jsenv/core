@@ -312,6 +312,7 @@ export const InputCheckbox = (props) => {
       ...props,
     },
     {
+      primaryInteractionMode: "pointer",
       fieldType: "checkbox",
       statePropName: "checked",
       defaultStatePropName: "defaultChecked",

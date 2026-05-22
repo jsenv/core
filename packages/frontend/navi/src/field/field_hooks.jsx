@@ -61,6 +61,7 @@ import { useConstraints } from "./validation/hooks/use_constraints.js";
 export const useFieldInterfaceProps = (
   props,
   {
+    primaryInteractionMode, // "pointer", "keyboard"
     fieldType,
     statePropName,
     defaultStatePropName,
@@ -101,24 +102,23 @@ export const useFieldInterfaceProps = (
   const debugInteraction = useDebugInteraction();
   const onMouseDown = (e) => {
     props.onMouseDown?.(e);
-    const field = ref.current;
-    dispatchRequestInteraction(field, e);
+    if (primaryInteractionMode === "pointer") {
+      const field = ref.current;
+      dispatchRequestInteraction(field, e);
+    }
   };
   const onClick = (e) => {
     props.onClick?.(e);
-    const field = ref.current;
-    const allowed = dispatchRequestInteraction(field, e);
-    if (!allowed) {
-      // Here we want to prevent:
-      // - toggle of radio/checkbox on click
-      debugInteraction(e, "click.preventDefault()");
-      e.preventDefault();
+    if (primaryInteractionMode === "pointer") {
+      const field = ref.current;
+      const allowed = dispatchRequestInteraction(field, e);
+      if (!allowed) {
+        // Here we want to prevent:
+        // - toggle of radio/checkbox on click
+        debugInteraction(e, "click.preventDefault()");
+        e.preventDefault();
+      }
     }
-  };
-  const onInput = (e) => {
-    props.onInput?.(e);
-    const field = ref.current;
-    dispatchRequestAction(field, { event: e });
   };
   const onKeyDown = (e) => {
     props.onKeyDown?.(e);
@@ -139,17 +139,26 @@ export const useFieldInterfaceProps = (
       }
       return;
     }
-    if (isTypingIntent(e)) {
-      const input = e.currentTarget;
-      const allowed = dispatchRequestInteraction(input, e);
-      if (!allowed) {
-        e.preventDefault();
+    if (primaryInteractionMode === "keyboard") {
+      if (isTypingIntent(e)) {
+        // inside a checkbox/radio does not make much sense so we'll see
+        // but for input it allows to show the readonly message when trying to type into it
+        const input = e.currentTarget;
+        const allowed = dispatchRequestInteraction(input, e);
+        if (!allowed) {
+          e.preventDefault();
+        }
       }
     }
   };
   const onPaste = (e) => {
     props.onPaste?.(e);
     dispatchRequestInteraction(ref.current, e);
+  };
+  const onInput = (e) => {
+    props.onInput?.(e);
+    const field = ref.current;
+    dispatchRequestAction(field, { event: e });
   };
 
   //   useOnInputValueChange(

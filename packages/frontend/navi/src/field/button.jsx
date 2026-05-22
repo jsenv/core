@@ -544,6 +544,7 @@ const ButtonFieldInterface = (props) => {
   const parentUIStateController = useContext(ParentUIStateControllerContext);
   const ancestorAction = useContext(ActionContext);
   const [fieldInterfaceProps, remainingProps] = useFieldInterfaceProps(props, {
+    primaryInteractionMode: "pointer",
     fieldType: "button",
     statePropName: "value",
     getUIValue: () => {

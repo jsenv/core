@@ -417,6 +417,7 @@ export const InputRadio = (props) => {
       resetOnError: true,
     },
     {
+      primaryInteractionMode: "pointer",
       fieldType: "radio",
       statePropName: "checked",
       defaultStatePropName: "defaultChecked",

@@ -344,6 +344,7 @@ const InputTextualFieldInterface = (props) => {
   const [textualFieldInterfaceProps, remainingProps] = useFieldInterfaceProps(
     props,
     {
+      primaryInteractionMode: "keyboard",
       fieldType: "input",
       statePropName: "value",
       defaultStatePropName: "defaultValue",

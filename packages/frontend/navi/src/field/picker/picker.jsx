@@ -288,6 +288,7 @@ const PickerButton = (props) => {
       ref: inputRef,
     },
     {
+      primaryInteractionMode: "keyboard",
       fieldType: "picker_input",
       statePropName: "value",
       defaultStatePropName: "defaultValue",
