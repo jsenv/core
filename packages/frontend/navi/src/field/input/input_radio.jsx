@@ -378,7 +378,8 @@ export const InputRadio = (props) => {
   props.value = props.value === undefined ? "on" : props.value;
 
   const debugInteraction = useDebugInteraction();
-  const fieldInterfaceProps = useFieldInterfaceProps(
+  const { ref, onMouseDown, onClick, onInput, onKeyDown } = props;
+  const [radioProps, remainingProps] = useFieldInterfaceProps(
     {
       ...props,
       resetOnCancel: true,
@@ -405,8 +406,7 @@ export const InputRadio = (props) => {
       },
     },
   );
-  const { ref, checked, onMouseDown, onClick, onInput, onKeyDown } =
-    fieldInterfaceProps;
+  const { checked } = radioProps;
   const interactionProps = {
     onMouseDown: (e) => {
       onMouseDown?.(e);
@@ -494,13 +494,18 @@ export const InputRadio = (props) => {
   if (props.appearance === "hidden") {
     return (
       <InputRadioVisuallyHidden
-        {...fieldInterfaceProps}
+        {...radioProps}
+        {...remainingProps}
         {...interactionProps}
       />
     );
   }
   return (
-    <InputRadioFieldInterface {...fieldInterfaceProps} {...interactionProps} />
+    <InputRadioFieldInterface
+      {...radioProps}
+      {...remainingProps}
+      {...interactionProps}
+    />
   );
 };
 

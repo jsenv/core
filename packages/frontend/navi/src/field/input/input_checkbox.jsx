@@ -305,8 +305,8 @@ export const InputCheckbox = (props) => {
   props.ref = props.ref || defaultRef;
   props.value = props.value === undefined ? "on" : props.value;
 
-  const { ref } = props;
-  const fieldInterfaceProps = useFieldInterfaceProps(
+  const { ref, onMouseDown, onClick, onInput, onKeyDown } = props;
+  const [checkboxProps, remainingProps] = useFieldInterfaceProps(
     {
       // In this situation updating the ui state === calling associated action
       // so cance/abort/error have to revert the ui state to the one before user interaction
@@ -330,7 +330,6 @@ export const InputCheckbox = (props) => {
       getPropFromState: Boolean,
     },
   );
-  const { onMouseDown, onClick, onInput, onKeyDown } = props;
   const interactionProps = {
     onMouseDown: (e) => {
       onMouseDown?.(e);
@@ -370,14 +369,16 @@ export const InputCheckbox = (props) => {
   if (props.appearance === "hidden") {
     return (
       <InputCheckboxVisuallyHidden
-        {...fieldInterfaceProps}
+        {...checkboxProps}
+        {...remainingProps}
         {...interactionProps}
       />
     );
   }
   return (
     <InputCheckboxFieldInterface
-      {...fieldInterfaceProps}
+      {...checkboxProps}
+      {...remainingProps}
       {...interactionProps}
     />
   );
