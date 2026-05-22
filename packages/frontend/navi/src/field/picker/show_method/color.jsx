@@ -5,9 +5,25 @@ const css = /* css */ `
     display: block;
     width: 1em;
     height: 1em;
-    background-color: var(--color);
+    background-color: currentColor;
     border: 1px solid rgba(0, 0, 0, 0.2);
     border-radius: 2px;
+
+    &[navi-color-empty] {
+      background-image:
+        linear-gradient(45deg, #ccc 25%, transparent 25%),
+        linear-gradient(-45deg, #ccc 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #ccc 75%),
+        linear-gradient(-45deg, transparent 75%, #ccc 75%);
+      background-position:
+        0 0,
+        0 3px,
+        3px -3px,
+        -3px 0;
+      background-size: 6px 6px;
+      /* Checkerboard pattern to convey "no color / transparent" */
+      background-color: white;
+    }
   }
 `;
 
@@ -18,8 +34,13 @@ export const Color = ({ children, ...rest }) => {
     <Box
       as="span"
       className="navi_color"
+      navi-color-empty={children ? undefined : ""}
+      // propsCSSVars={COLOR_PROP_CSS_VAR}
+      color={children || "currentColor"}
       {...rest}
-      style={{ "--color": children }}
     />
   );
 };
+// const COLOR_PROP_CSS_VAR = {
+//   color: "--color",
+// };

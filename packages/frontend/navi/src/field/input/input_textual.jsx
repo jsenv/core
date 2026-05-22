@@ -319,6 +319,15 @@ const InputTypeResolver = (props) => {
   if (props.type === "tel") {
     return <InputTel {...props} />;
   }
+  if (props.type === "number") {
+    return <InputNumber {...props} />;
+  }
+  if (props.type === "color") {
+    return <InputColor {...props} />;
+  }
+  if (props.type === "datetime-local") {
+    return <InputDatetimeLocal {...props} />;
+  }
   return <Next {...props} />;
 };
 
@@ -338,6 +347,8 @@ const InputTextualFieldInterface = (props) => {
     actionAfterChange,
     onKeyDown,
     onPaste,
+    fromInputValue = (v) => v,
+    toInputValue = (v) => v,
   } = props;
   useOnInputValueChange(
     ref,
@@ -351,7 +362,13 @@ const InputTextualFieldInterface = (props) => {
     },
   );
   const [textualFieldInterfaceProps, remainingProps] =
-    useTextualFieldInterfaceProps(props);
+    useTextualFieldInterfaceProps(props, {
+      readUIState: () => {
+        const input = ref.current;
+        const inputValue = input.value;
+        return fromInputValue(inputValue);
+      },
+    });
   const idDefault = useId();
   textualFieldInterfaceProps.id =
     textualFieldInterfaceProps.id || `input_${idDefault}`;
@@ -389,6 +406,7 @@ const InputTextualFieldInterface = (props) => {
       />
       <RealInput
         {...textualFieldInterfaceProps}
+        value={toInputValue(textualFieldInterfaceProps.value)}
         onKeyDown={(e) => {
           onKeyDown?.(e);
           if (e.key === "Enter") {
@@ -607,6 +625,68 @@ const InputTelUI = ({ icon }) => {
       </Icon>
     </InputLeftSlot>
   );
+};
+const InputNumber = (props) => {
+  const Next = useNextResolver();
+  return (
+    <Next
+      toInputValue={(uiState) => {
+        const inputValueAsNumber = Number(uiState);
+        if (isNaN(inputValueAsNumber)) {
+          return uiState;
+        }
+        return inputValueAsNumber;
+      }}
+      {...props}
+    />
+  );
+};
+const InputColor = (props) => {
+  const Next = useNextResolver();
+  return (
+    <Next
+      // Browser requires a non-empty value for <input type="color">.
+      // When our logical value is empty we give it #000000 so it doesn't choke.
+      // The UI uses the original (possibly empty) value to show the checkerboard.
+      toInputValue={(uiState) => uiState || "#000000"}
+      {...props}
+    />
+  );
+};
+const InputDatetimeLocal = (props) => {
+  const Next = useNextResolver();
+  return (
+    <Next
+      fromInputValue={convertToUTCTimezone}
+      toInputValue={convertToLocalTimezone}
+      {...props}
+    />
+  );
+};
+// As explained in https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/input/datetime-local#setting_timezones
+// datetime-local does not support timezones
+const convertToLocalTimezone = (dateTimeString) => {
+  const date = new Date(dateTimeString);
+  if (isNaN(date.getTime())) {
+    return dateTimeString;
+  }
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  const seconds = String(date.getSeconds()).padStart(2, "0");
+  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+};
+const convertToUTCTimezone = (localDateTimeString) => {
+  if (!localDateTimeString) {
+    return localDateTimeString;
+  }
+  const localDate = new Date(localDateTimeString);
+  if (isNaN(localDate.getTime())) {
+    return localDateTimeString;
+  }
+  return localDate.toISOString();
 };
 
 const InputControllingList = (props) => {

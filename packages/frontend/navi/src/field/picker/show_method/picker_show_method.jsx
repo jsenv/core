@@ -56,11 +56,10 @@ export const PickerColor = (props) => {
 const PickerColorUI = () => {
   const { value, placeholder } = useContext(PickerContext);
   if (!value) {
-    return placeholder ? (
-      <PickerPlaceholder>{placeholder}</PickerPlaceholder>
-    ) : (
-      <Color>black</Color>
-    );
+    if (!placeholder) {
+      return <Color />;
+    }
+    return <PickerPlaceholder>{placeholder}</PickerPlaceholder>;
   }
   return <Color>{value}</Color>;
 };

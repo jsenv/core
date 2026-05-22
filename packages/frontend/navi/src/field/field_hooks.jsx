@@ -71,8 +71,6 @@ export const useFieldInterfaceProps = (
     persists,
 
     readUIState,
-    getDisplayValue,
-    normalizeUIState,
     paramsSignal,
     externalBoundAction,
     readOnlySupported,
@@ -103,8 +101,6 @@ export const useFieldInterfaceProps = (
     action: boundAction,
     uiStateController,
     readUIState,
-    getDisplayValue,
-    normalizeUIState,
   });
   return result;
 };
@@ -193,14 +189,7 @@ export const useFieldgroupInterfaceProps = (
 
 const useActionProps = (
   props,
-  {
-    readOnlySupported,
-    action,
-    uiStateController,
-    readUIState,
-    getDisplayValue = (v) => v,
-    normalizeUIState = (v) => v,
-  },
+  { readOnlySupported, action, uiStateController, readUIState },
 ) => {
   const {
     ref,
@@ -455,17 +444,15 @@ const useActionProps = (
         // the optimistic update and return undefined for radio)
         uiState = e.detail.uiState;
       } else {
-        let uiStateRaw;
         dispatchInternalCustomEvent(e.currentTarget, "navi_request_ui_state", {
           respondWith: (v) => {
             debugAction(
               e,
               `navi_request_ui_state.respondWith(${JSON.stringify(v)})`,
             );
-            uiStateRaw = v;
+            uiState = v;
           },
         });
-        uiState = normalizeUIState(uiStateRaw);
         e.detail.uiState = uiState;
       }
       const naviProxyTarget = getNaviProxyTarget(e);
@@ -529,9 +516,7 @@ const useActionProps = (
   const { statePropName, defaultStatePropName } = uiStateController;
   if (statePropName) {
     const statePropValueRaw = uiStateController.getPropFromState(uiState);
-    const statePropValue = getDisplayValue(statePropValueRaw);
-    actionProps[statePropName] = statePropValue;
-
+    actionProps[statePropName] = statePropValueRaw;
     if (defaultStatePropName) {
       delete actionProps[defaultStatePropName];
     }
