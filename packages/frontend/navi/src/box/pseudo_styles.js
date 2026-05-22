@@ -4,6 +4,7 @@ import {
   mergeTwoStyles,
 } from "@jsenv/dom";
 
+import { getUIStateFromElement } from "../field/field_hooks.jsx";
 import { listenInputValue } from "../field/input/input_value_listener.js";
 
 const requestPseudoStateCheck = (element, detail) => {
@@ -408,9 +409,23 @@ Object.assign(PSEUDO_CLASSES, {
 definePseudoClass(":-navi-has-value", {
   attribute: "data-has-value",
   setup: (el, callback) => {
-    return listenInputValue(el, callback);
+    let inputEl = el;
+    const fieldCssSelector = el.hasAttribute("data-field");
+    if (fieldCssSelector) {
+      const field = el.querySelector(fieldCssSelector);
+      if (field) {
+        inputEl = field;
+      }
+    }
+    return listenInputValue(inputEl, callback);
   },
   test: (el) => {
+    if (el.hasAttribute("navi-ui-state")) {
+      const uiState = getUIStateFromElement(el);
+      if (uiState === undefined || uiState === "") {
+        return false;
+      }
+    }
     if (el.value === "") {
       return false;
     }

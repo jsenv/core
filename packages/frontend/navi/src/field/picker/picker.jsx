@@ -13,6 +13,7 @@ import { useOnInputValueChange } from "../input/input_value_listener.js";
 import { createUICallback } from "../ui_callback.js";
 import { dispatchRequestAction } from "../validation/custom_constraint_validation.js";
 import { PickerContext, PickerElementContext } from "./picker_context.jsx";
+import { PickerPlaceholder } from "./picker_placeholder.jsx";
 import { pickerResolvers } from "./picker_resolvers.jsx";
 
 const css = /* css */ `
@@ -156,9 +157,6 @@ const css = /* css */ `
       pointer-events: none;
     }
 
-    &[data-has-value] {
-      --x-picker-color: var(--picker-color);
-    }
     /* Hover */
     &[data-hover] {
       --x-picker-background-color: var(--picker-background-color-hover);
@@ -246,7 +244,7 @@ const PickerButton = (props) => {
       statePropName: "value",
       defaultStatePropName: "defaultValue",
       readOnlySupported: true,
-      readUIState: () => {
+      getUIValue: () => {
         const input = inputRef.current;
         const inputValue = input.value;
         return fromInputValue(inputValue);
@@ -282,7 +280,10 @@ const PickerButton = (props) => {
       pseudoClasses={PICKER_PSEUDO_CLASSES}
       disabled={disabled}
       {...remainingProps}
-      basePseudoState={basePseudoState} // inherit input pseudo states
+      basePseudoState={{
+        ...basePseudoState, // inherit input pseudo states
+        // ":-navi-has-value": value ? "" : undefined,
+      }}
       // we must put the id on the button and not the input
       // so that a <label> tries to give focus to the button and not the input
       id={id}
@@ -332,11 +333,21 @@ const PickerInput = (props) => {
       {...props}
       value={toInputValue(props.value)}
       className="navi_picker_input"
+      pseudoClasses={PickerInputPseudoClasses}
+      // for some input navi-ui-state differs (like color where ui-state would be "" while value would be "#000000")
+      navi-ui-state={props.value}
       navi-rendered-by=".navi_picker"
       tabIndex={-1}
     />
   );
 };
+const PickerInputPseudoClasses = [
+  ":read-only",
+  ":disabled",
+  ":-navi-loading",
+  ":-navi-has-value",
+  ":-navi-expanded",
+];
 const getPickerManagedField = (pickerEl) => {
   let pickerInput = pickerEl.querySelector(".navi_picker_input");
   let firstField;
@@ -417,7 +428,10 @@ const PICKER_PSEUDO_CLASSES = [
 const PickerDefaultUI = () => {
   const { value, placeholder } = useContext(PickerContext);
   if (!value) {
-    return placeholder || null;
+    if (!placeholder) {
+      return null;
+    }
+    return <PickerPlaceholder>{placeholder}</PickerPlaceholder>;
   }
   return value;
 };

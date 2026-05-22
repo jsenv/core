@@ -70,7 +70,7 @@ export const useFieldInterfaceProps = (
     allowNameless,
     persists,
 
-    readUIState,
+    getUIValue,
     paramsSignal,
     externalBoundAction,
     readOnlySupported,
@@ -100,7 +100,7 @@ export const useFieldInterfaceProps = (
     readOnlySupported,
     action: boundAction,
     uiStateController,
-    readUIState,
+    getUIValue,
   });
   return result;
 };
@@ -139,7 +139,7 @@ export const useFieldgroupInterfaceProps = (
   const [actionProps, remainingProps] = useActionProps(props, {
     action: boundAction,
     uiStateController: uiGroupStateController,
-    readUIState: () => {
+    getUIValue: () => {
       return uiGroupStateController.uiStateSignal.peek();
     },
   });
@@ -189,7 +189,7 @@ export const useFieldgroupInterfaceProps = (
 
 const useActionProps = (
   props,
-  { readOnlySupported, action, uiStateController, readUIState },
+  { readOnlySupported, action, uiStateController, getUIValue },
 ) => {
   const {
     ref,
@@ -313,8 +313,11 @@ const useActionProps = (
     "onnavi_request_reset_ui_state": (e) => {
       uiStateController.resetUIState(e);
     },
-    "onnavi_request_ui_state": (e) => {
-      e.detail.respondWith(readUIState(e));
+    "onnavi_get_ui_state": (e) => {
+      e.detail.respondWith(uiState);
+    },
+    "onnavi_get_ui_value": (e) => {
+      e.detail.respondWith(getUIValue(e));
     },
     "onnavi_cancel": (e) => {
       const { reason } = e.detail;
@@ -444,11 +447,11 @@ const useActionProps = (
         // the optimistic update and return undefined for radio)
         uiState = e.detail.uiState;
       } else {
-        dispatchInternalCustomEvent(e.currentTarget, "navi_request_ui_state", {
+        dispatchInternalCustomEvent(e.currentTarget, "navi_get_ui_value", {
           respondWith: (v) => {
             debugAction(
               e,
-              `navi_request_ui_state.respondWith(${JSON.stringify(v)})`,
+              `navi_get_ui_value.respondWith(${JSON.stringify(v)})`,
             );
             uiState = v;
           },
@@ -533,4 +536,14 @@ const getNaviProxyTarget = (event) => {
   }
   const realInput = document.getElementById(proxyFor);
   return realInput;
+};
+
+export const getUIStateFromElement = (el) => {
+  let uiState;
+  dispatchInternalCustomEvent(el, "onnavi_get_ui_state", {
+    respondWith: (v) => {
+      uiState = v;
+    },
+  });
+  return uiState;
 };

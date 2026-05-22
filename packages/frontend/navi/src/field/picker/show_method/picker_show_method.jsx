@@ -48,6 +48,7 @@ export const PickerColor = (props) => {
       requiredMessage={naviI18n(`picker.required.color`)}
       ui={<PickerColorUI />}
       icon={<ColorSvg />}
+      // data-color-empty={props.value ? undefined : ""}
       {...getPropsToShowPicker(props)}
       type="color"
     />

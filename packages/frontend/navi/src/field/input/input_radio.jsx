@@ -389,7 +389,7 @@ export const InputRadio = (props) => {
       fieldType: "radio",
       statePropName: "checked",
       defaultStatePropName: "defaultChecked",
-      readUIState: () => {
+      getUIValue: () => {
         const radio = props.ref.current;
         const radioIsChecked = radio.checked;
         return radioIsChecked ? props.value : undefined;

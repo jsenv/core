@@ -546,7 +546,7 @@ const ButtonFieldInterface = (props) => {
   const [fieldInterfaceProps, remainingProps] = useFieldInterfaceProps(props, {
     fieldType: "button",
     statePropName: "value",
-    readUIState: () => {
+    getUIValue: () => {
       const button = ref.current;
       // The button uiState is a combination of its own state (if it has a name)
       // and its parent state (if the parent is named or is a named collection)

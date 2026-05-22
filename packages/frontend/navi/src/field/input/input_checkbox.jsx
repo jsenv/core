@@ -320,7 +320,7 @@ export const InputCheckbox = (props) => {
       fieldType: "checkbox",
       statePropName: "checked",
       defaultStatePropName: "defaultChecked",
-      readUIState: () => {
+      getUIValue: () => {
         const checkbox = ref.current;
         const checkboxIsChecked = checkbox.checked;
         return checkboxIsChecked ? props.value : undefined;

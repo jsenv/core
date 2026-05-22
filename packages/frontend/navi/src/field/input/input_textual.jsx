@@ -368,7 +368,7 @@ const InputTextualFieldInterface = (props) => {
       statePropName: "value",
       defaultStatePropName: "defaultValue",
       readOnlySupported: true,
-      readUIState: () => {
+      getUIValue: () => {
         const input = ref.current;
         const inputValue = input.value;
         return fromInputValue(inputValue);

@@ -81,7 +81,7 @@ const DetailsField = (props) => {
     },
     {
       fieldType: "details",
-      readUIState: () => {
+      getUIValue: () => {
         const details = ref.current;
         const opened = details.open;
         return opened ? props.value : undefined;

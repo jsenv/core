@@ -107,6 +107,14 @@ export const REQUIRED_CONSTRAINT = {
             : undefined,
       };
     }
+    if (field.type === "color") {
+      // The color input always has a value (#000000 when empty) so we rely on
+      // data-color-empty to know the user hasn't actually chosen a color yet.
+      if (field.hasAttribute("data-color-empty")) {
+        return naviI18n("picker.required.color");
+      }
+      return null;
+    }
     if (field.value) {
       return null;
     }
@@ -128,6 +136,7 @@ export const REQUIRED_CONSTRAINT = {
 };
 CONSTRAINT_ATTRIBUTE_SET.add("required");
 CONSTRAINT_ATTRIBUTE_SET.add("data-required-message");
+CONSTRAINT_ATTRIBUTE_SET.add("data-color-empty");
 
 export const PATTERN_CONSTRAINT = {
   name: "pattern",
