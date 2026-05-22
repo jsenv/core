@@ -260,19 +260,11 @@
             >
               <Field vertical>
                 <Label>Couleur principale</Label>
-                <Picker
-                  name="primary_color"
-                  type="color"
-                  placeholder="Choisir une couleur"
-                />
+                <Picker name="primary_color" type="color" />
               </Field>
               <Field vertical>
                 <Label>Couleur secondaire</Label>
-                <Picker
-                  name="secondary_color"
-                  type="color"
-                  placeholder="Choisir une couleur"
-                />
+                <Picker name="secondary_color" type="color" />
               </Field>
               <Button type="submit">Soumettre</Button>
               {submittedSignal.value && (

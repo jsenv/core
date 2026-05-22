@@ -34,6 +34,7 @@ import {
   useNextResolver,
 } from "../../resolver/resolver.jsx";
 import { Label } from "../field.jsx";
+import { useFieldInterfaceProps } from "../field_hooks.jsx";
 import {
   ListIdContext,
   requestListClose,
@@ -49,7 +50,6 @@ import {
   dispatchRequestInteraction,
 } from "../validation/custom_constraint_validation.js";
 import { useOnInputValueChange } from "./input_value_listener.js";
-import { useTextualFieldInterfaceProps } from "./use_textual_field_interface_props.js";
 
 const css = /* css */ `
   @layer navi {
@@ -361,14 +361,20 @@ const InputTextualFieldInterface = (props) => {
       debounce: actionDebounce,
     },
   );
-  const [textualFieldInterfaceProps, remainingProps] =
-    useTextualFieldInterfaceProps(props, {
+  const [textualFieldInterfaceProps, remainingProps] = useFieldInterfaceProps(
+    props,
+    {
+      fieldType: "input",
+      statePropName: "value",
+      defaultStatePropName: "defaultValue",
+      readOnlySupported: true,
       readUIState: () => {
         const input = ref.current;
         const inputValue = input.value;
         return fromInputValue(inputValue);
       },
-    });
+    },
+  );
   const idDefault = useId();
   textualFieldInterfaceProps.id =
     textualFieldInterfaceProps.id || `input_${idDefault}`;
