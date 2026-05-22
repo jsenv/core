@@ -380,17 +380,17 @@ const useActionProps = (
               currentTarget.type === "checkbox"
             ) {
               currentTarget.dispatchEvent(
+                new Event("input", {
+                  bubbles: true,
+                }),
+              );
+            } else {
+              currentTarget.dispatchEvent(
                 new InputEvent("input", {
                   bubbles: true,
                   cancelable: true,
                   inputType: "insertText",
                   data: value,
-                }),
-              );
-            } else {
-              currentTarget.dispatchEvent(
-                new Event("input", {
-                  bubbles: true,
                 }),
               );
             }

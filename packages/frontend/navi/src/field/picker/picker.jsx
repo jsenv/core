@@ -231,6 +231,46 @@ export const Picker = (props) => {
 
   return picker;
 };
+// Allow to synchronously update the picker value (will also dispatch "input" on the button)
+Picker.update = createUICallback({
+  name: "Picker.update",
+  action: (value, e) => {
+    const pickerEl = e.currentTarget.closest(".navi_picker");
+    if (!pickerEl) {
+      return false;
+    }
+    return dispatchRequestSetUIState(pickerEl, value, { event: e });
+  },
+});
+// c'est pas juste close au final?
+Picker.cancel = createUICallback({
+  name: "Picker.cancel",
+  event: (e) => {
+    return dispatchToPicker(e, "navi_picker_request_cancel");
+  },
+  action: (_, e) => {
+    return dispatchToPicker(e, "navi_picker_request_cancel");
+  },
+});
+// ça demande surement aussi un close
+Picker.submit = createUICallback({
+  name: "Picker.submit",
+  event: (e) => dispatchToPicker(e, "navi_request_action"),
+  action: (_, e) => {
+    return dispatchToPicker(e, "navi_request_action");
+  },
+});
+const dispatchToPicker = (e, customEventName, detail) => {
+  const pickerEl = e.currentTarget.closest(".navi_picker");
+  if (!pickerEl) {
+    return false;
+  }
+  return dispatchCustomEvent(pickerEl, customEventName, {
+    event: e,
+    ...detail,
+  });
+};
+
 const renderPicker = createComponentResolver(pickerResolvers);
 const PickerButton = (props) => {
   import.meta.css = css;
@@ -396,47 +436,6 @@ const findFieldWithName = (el) => {
   }
   return null;
 };
-
-Picker.update = createUICallback({
-  name: "Picker.update",
-  action: (value, e) => {
-    const pickerEl = e.currentTarget.closest(".navi_picker");
-    if (!pickerEl) {
-      return false;
-    }
-    return dispatchRequestSetUIState(pickerEl, value, { event: e });
-  },
-});
-// c'est pas juste close au final?
-Picker.cancel = createUICallback({
-  name: "Picker.cancel",
-  event: (e) => {
-    return dispatchToPicker(e, "navi_picker_request_cancel");
-  },
-  action: (_, e) => {
-    return dispatchToPicker(e, "navi_picker_request_cancel");
-  },
-});
-// ça demande surement aussi un close
-Picker.submit = createUICallback({
-  name: "Picker.submit",
-  event: (e) => dispatchToPicker(e, "navi_request_action"),
-  action: (_, e) => {
-    return dispatchToPicker(e, "navi_request_action");
-  },
-});
-
-const dispatchToPicker = (e, customEventName, detail) => {
-  const pickerEl = e.currentTarget.closest(".navi_picker");
-  if (!pickerEl) {
-    return false;
-  }
-  return dispatchCustomEvent(pickerEl, customEventName, {
-    event: e,
-    ...detail,
-  });
-};
-
 const PickerDefaultUI = () => {
   const { value, placeholder } = useContext(PickerContext);
   if (!value) {
