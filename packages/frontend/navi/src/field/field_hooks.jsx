@@ -1,3 +1,17 @@
+/**
+ * Core hooks for wiring navi field components to the action/validation system.
+ *
+ * Why this exists instead of using native events directly:
+ *
+ * 1. Preact maps `onChange` to the native `change` event, not `input`. For text inputs
+ *    this means the handler fires only on blur, not on every keystroke. All navi fields
+ *    use `onInput` internally and route through `dispatchRequestAction` so the behavior
+ *    is consistent regardless of input type.
+ *
+ * 2. Any field (text, checkbox, radio, picker…) can opt into debounce simply by passing
+ *    a debounced action. The request-action event chain handles the timing centrally
+ *    rather than each component having to manage its own debounce logic.
+ */
 import {
   dispatchInternalCustomEvent,
   findEvent,
