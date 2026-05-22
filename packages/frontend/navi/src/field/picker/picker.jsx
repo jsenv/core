@@ -10,6 +10,7 @@ import { useStableCallback } from "@jsenv/navi/src/utils/use_stable_callback.js"
 import { useFieldInterfaceProps } from "../field_hooks.jsx";
 import { getFromInputValue, getToInputValue } from "../input/input_textual.jsx";
 import { useOnInputValueChange } from "../input/input_value_listener.js";
+import { requestClosestAction } from "../string_actions.js";
 import { createUICallback } from "../ui_callback.js";
 import { dispatchRequestSetUIState } from "../ui_state_controller.js";
 import { dispatchRequestAction } from "../validation/custom_constraint_validation.js";
@@ -242,22 +243,23 @@ Picker.update = createUICallback({
     return dispatchRequestSetUIState(pickerEl, value, { event: e });
   },
 });
-// c'est pas juste close au final?
-Picker.cancel = createUICallback({
-  name: "Picker.cancel",
+// Will allow to close the picker without updating the value
+// (ideally if an update was called it should still trigger the action?)
+Picker.close = createUICallback({
+  name: "Picker.close",
   event: (e) => {
-    return dispatchToPicker(e, "navi_picker_request_cancel");
+    return dispatchToPicker(e, "navi_picker_request_close");
   },
   action: (_, e) => {
-    return dispatchToPicker(e, "navi_picker_request_cancel");
+    return dispatchToPicker(e, "navi_picker_request_close");
   },
 });
 // ça demande surement aussi un close
 Picker.submit = createUICallback({
   name: "Picker.submit",
-  event: (e) => dispatchToPicker(e, "navi_request_action"),
+  event: (e) => requestClosestAction(e),
   action: (_, e) => {
-    return dispatchToPicker(e, "navi_request_action");
+    return requestClosestAction(e);
   },
 });
 const dispatchToPicker = (e, customEventName, detail) => {

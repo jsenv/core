@@ -55,6 +55,10 @@ const submit = createUICallback({
   },
 });
 
+export const registerStringAction = (name, uiCallback) => {
+  STRING_ACTIONS[name] = uiCallback;
+};
+
 const STRING_ACTIONS = {
   submit,
 };
