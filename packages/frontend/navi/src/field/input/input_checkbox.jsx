@@ -330,7 +330,7 @@ export const InputCheckbox = (props) => {
       getPropFromState: Boolean,
     },
   );
-  const interactionProps = {
+  Object.assign(remainingProps, {
     onMouseDown: (e) => {
       onMouseDown?.(e);
       const checkbox = ref.current;
@@ -364,22 +364,20 @@ export const InputCheckbox = (props) => {
         });
       }
     },
-  };
+  });
 
   if (props.appearance === "hidden") {
     return (
       <InputCheckboxVisuallyHidden
-        {...checkboxProps}
         {...remainingProps}
-        {...interactionProps}
+        checkboxProps={checkboxProps}
       />
     );
   }
   return (
     <InputCheckboxFieldInterface
-      {...checkboxProps}
       {...remainingProps}
-      {...interactionProps}
+      checkboxProps={checkboxProps}
     />
   );
 };
@@ -390,6 +388,7 @@ const InputCheckboxVisuallyHidden = (props) => {
       <RealInputCheckbox
         pseudoClasses={CheckboxPseudoClasses}
         {...props}
+        {...props.checkboxProps}
         appearance={undefined}
         navi-visually-hidden=""
       />
@@ -402,12 +401,13 @@ const InputCheckboxFieldInterface = (props) => {
   const {
     icon,
     appearance = icon ? "icon" : "checkbox", // "checkbox", "toggle", "icon", "button"
+    checkboxProps,
     ...rest
   } = props;
-  const { ref, basePseudoState, checked, accentColor } = props;
+  const { basePseudoState, checked } = checkboxProps;
   const loading = basePseudoState[":-navi-loading"];
   const boxRef = useRef();
-  useAccentColorAttributes(boxRef, accentColor, {
+  useAccentColorAttributes(boxRef, props.accentColor, {
     elementSelector: ".navi_checkbox_accent_probe",
   });
   let visualVnode;
@@ -463,15 +463,15 @@ const InputCheckboxFieldInterface = (props) => {
         color="var(--loader-color)"
       />
       {visualVnode}
-      <RealInputCheckbox ref={ref} />
+      <RealInputCheckbox {...checkboxProps} />
     </Box>
   );
 };
 const RealInputCheckbox = (props) => {
-  const checkboxProps = useContext(BoxForwardedPropsContext);
+  const checkboxBoxProps = useContext(BoxForwardedPropsContext);
   return (
     <Box
-      {...checkboxProps}
+      {...checkboxBoxProps}
       {...props}
       as="input"
       type="checkbox"

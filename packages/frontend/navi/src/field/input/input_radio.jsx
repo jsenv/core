@@ -406,8 +406,7 @@ export const InputRadio = (props) => {
       },
     },
   );
-  const { checked } = radioProps;
-  const interactionProps = {
+  Object.assign(remainingProps, {
     onMouseDown: (e) => {
       onMouseDown?.(e);
       const radio = ref.current;
@@ -453,8 +452,7 @@ export const InputRadio = (props) => {
         });
       }
     },
-  };
-
+  });
   // we must first dispatch an event to inform all other radios they where unchecked
   // this way each other radio uiStateController knows thery are unchecked
   // we do this on "input"
@@ -485,6 +483,7 @@ export const InputRadio = (props) => {
       });
     }
   };
+  const { checked } = radioProps;
   useLayoutEffect(() => {
     if (checked) {
       updateOtherRadiosInGroup(new CustomEvent("external_state_sync"));
@@ -493,19 +492,11 @@ export const InputRadio = (props) => {
 
   if (props.appearance === "hidden") {
     return (
-      <InputRadioVisuallyHidden
-        {...radioProps}
-        {...remainingProps}
-        {...interactionProps}
-      />
+      <InputRadioVisuallyHidden {...remainingProps} radioProps={radioProps} />
     );
   }
   return (
-    <InputRadioFieldInterface
-      {...radioProps}
-      {...remainingProps}
-      {...interactionProps}
-    />
+    <InputRadioFieldInterface {...remainingProps} radioProps={radioProps} />
   );
 };
 
@@ -515,6 +506,7 @@ const InputRadioVisuallyHidden = (props) => {
       <RealInputRadio
         pseudoClasses={RadioPseudoClasses}
         {...props}
+        {...props.radioProps}
         appearance={undefined}
         navi-visually-hidden=""
       />
@@ -523,11 +515,16 @@ const InputRadioVisuallyHidden = (props) => {
 };
 const InputRadioFieldInterface = (props) => {
   import.meta.css = css;
-  const { icon, appearance = icon ? "icon" : "radio", ...rest } = props;
-  const { ref, basePseudoState, checked, accentColor } = props;
+  const {
+    icon,
+    appearance = icon ? "icon" : "radio",
+    radioProps,
+    ...rest
+  } = props;
+  const { basePseudoState, checked } = radioProps;
   const loading = basePseudoState[":-navi-loading"];
   const boxRef = useRef();
-  useAccentColorAttributes(boxRef, accentColor, {
+  useAccentColorAttributes(boxRef, props.accentColor, {
     elementSelector: ".navi_radio_accent_probe",
   });
   let visualVNode;
@@ -600,15 +597,15 @@ const InputRadioFieldInterface = (props) => {
         color="var(--loader-color)"
       />
       {visualVNode}
-      <RealInputRadio ref={ref} />
+      <RealInputRadio {...radioProps} />
     </Box>
   );
 };
 const RealInputRadio = (props) => {
-  const radioProps = useContext(BoxForwardedPropsContext);
+  const radioBoxProps = useContext(BoxForwardedPropsContext);
   return (
     <Box
-      {...radioProps}
+      {...radioBoxProps}
       {...props}
       as="input"
       type="radio"
