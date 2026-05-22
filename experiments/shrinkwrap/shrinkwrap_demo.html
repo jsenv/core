@@ -85,39 +85,25 @@
       }
 
       /* ─── Broken example ───────────────────────────────── */
-      /*
-        The callout body is the element that suffers from the shrinkwrap problem.
-        When text wraps inside .callout-message, .callout-body expands to the
-        full max-width instead of hugging the longest line.
-        The trailing whitespace becomes visible when the background is colored.
-      */
-      .callout {
-        display: inline-flex; /* tries to be as small as possible */
-      }
-
-      .callout-body {
+      .text-box {
         display: inline-block;
+        max-width: 280px;
         padding: 10px 14px;
         background: #fff3cd;
         border: 1.5px solid #f0c040;
         border-radius: 6px;
         resize: horizontal;
         overflow: hidden;
-      }
-
-      .callout-message {
-        white-space: normal;
-        word-break: break-word;
+        /* semi-transparent red shows the trailing unused space */
+        background-image: linear-gradient(
+          to right,
+          transparent 0,
+          rgba(255, 0, 0, 0.07) 0
+        );
       }
 
       /* ─── Fixed example ────────────────────────────────── */
-      /*
-        Same markup & styles — the JS below will call shrinkwrapElement()
-        on the fixed variant's .callout-body after each resize.
-      */
-
-
-      .measure {
+      /* Same styles — JS sets an explicit width after measuring */
         font-size: 0.82rem;
         font-family: ui-monospace, monospace;
         color: #888;
@@ -184,12 +170,8 @@
       <div class="demo-box">
         <div class="demo-label">Broken — no fix</div>
         <div class="stage">
-          <div class="callout callout-broken">
-            <div class="callout-body" id="broken-body">
-              <div class="callout-message" id="broken-message">
-               Yeah! It measures text without the DOM. Pure JavaScript arithmetic.
-              </div>
-            </div>
+          <div class="text-box" id="broken-body">
+            Yeah! It measures text without the DOM. Pure JavaScript arithmetic.
           </div>
         </div>
         <div class="measure">width: <span id="broken-width">—</span></div>
@@ -203,12 +185,8 @@
       <div class="demo-box">
         <div class="demo-label">Fixed — JS Range API</div>
         <div class="stage">
-          <div class="callout callout-fixed">
-            <div class="callout-body" id="fixed-body">
-              <div class="callout-message" id="fixed-message">
-             Yeah! It measures text without the DOM. Pure JavaScript arithmetic.
-              </div>
-            </div>
+          <div class="text-box" id="fixed-body">
+            Yeah! It measures text without the DOM. Pure JavaScript arithmetic.
           </div>
         </div>
         <div class="measure">width: <span id="fixed-width">—</span></div>
@@ -222,25 +200,20 @@
 
     <script>
       /**
-       * Measures the width the element would need to be in order to hug
-       * its wrapped text content without trailing whitespace.
+       * Measures the width needed to hug the wrapped text without trailing whitespace.
        *
-       * Strategy: use document.createRange() to get client rects of every
-       * text line inside messageElement, find the widest one, then compute
-       * the bodyElement width as: (bodyWidth - messageWidth) + longestLineWidth.
+       * Uses document.createRange() to get client rects of every text line,
+       * finds the widest one, and returns that as the new element width.
        *
-       * Returns null when the message fits on a single line (no wrapping →
-       * no shrinkwrap needed).
+       * Returns null when text fits on a single line (no wrapping → no fix needed).
        *
-       * This is the JS-based workaround for the long-standing CSS issue:
-       * https://github.com/w3c/csswg-drafts/issues/191
+       * JS workaround for: https://github.com/w3c/csswg-drafts/issues/191
        */
-      const measureShrinkwrappedWidth = (bodyElement, messageElement) => {
+      const measureShrinkwrappedWidth = (element) => {
         const range = document.createRange();
-        range.selectNodeContents(messageElement);
+        range.selectNodeContents(element);
         const lineRects = Array.from(range.getClientRects());
         if (lineRects.length <= 1) {
-          // Single line — nothing to shrink.
           return null;
         }
         const longestLineWidth = lineRects.reduce((max, r) => {
@@ -249,18 +222,13 @@
           }
           return max;
         }, 0);
-        const messageRect = messageElement.getBoundingClientRect();
-        const bodyRect = bodyElement.getBoundingClientRect();
-        // The body is wider than the message by its padding.
-        // We preserve that offset and only replace messageRect.width with
-        // the longest actual line.
-        return Math.ceil(
-          bodyRect.width - messageRect.width + longestLineWidth,
-        );
+        const style = getComputedStyle(element);
+        const paddingH =
+          parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
+        return Math.ceil(longestLineWidth + paddingH);
       };
 
       const fixedBody = document.getElementById("fixed-body");
-      const fixedMessage = document.getElementById("fixed-message");
       const brokenBody = document.getElementById("broken-body");
       const brokenWidthDisplay = document.getElementById("broken-width");
       const fixedWidthDisplay = document.getElementById("fixed-width");
@@ -271,24 +239,20 @@
       };
 
       const applyFix = () => {
-        // Reset to natural size first so we measure the unconstrained layout.
         fixedBody.style.width = "";
-
-        const optimal = measureShrinkwrappedWidth(fixedBody, fixedMessage);
+        const optimal = measureShrinkwrappedWidth(fixedBody);
         if (optimal !== null) {
           fixedBody.style.width = `${optimal}px`;
         }
         updateMeasures();
       };
 
-      // Re-apply on resize (callout-body elements are resizable by the user).
       const resizeObserver = new ResizeObserver(() => {
         applyFix();
       });
       resizeObserver.observe(fixedBody);
       resizeObserver.observe(brokenBody);
 
-      // Initial apply.
       applyFix();
     </script>
   </body>
