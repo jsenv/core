@@ -5,11 +5,6 @@ import { LoadingOutline } from "../../graphic/loading/loading_outline.jsx";
 import { useAccentColorAttributes } from "../../utils/use_accent_color_attributes.js";
 import { FIELD_PROP_SET } from "../field_context.js";
 import { useFieldInterfaceProps } from "../field_hooks.jsx";
-import { requestClosestAction } from "../string_actions.js";
-import {
-  dispatchRequestAction,
-  dispatchRequestInteraction,
-} from "../validation/custom_constraint_validation.js";
 import { ToggleCSSVars, ToggleUI } from "./toggle_ui.jsx";
 
 const css = /* css */ `
@@ -305,7 +300,7 @@ export const InputCheckbox = (props) => {
   props.ref = props.ref || defaultRef;
   props.value = props.value === undefined ? "on" : props.value;
 
-  const { ref, onMouseDown, onClick, onInput, onKeyDown } = props;
+  const { ref } = props;
   const [checkboxProps, remainingProps] = useFieldInterfaceProps(
     {
       // In this situation updating the ui state === calling associated action
@@ -330,41 +325,6 @@ export const InputCheckbox = (props) => {
       getPropFromState: Boolean,
     },
   );
-  Object.assign(remainingProps, {
-    onMouseDown: (e) => {
-      onMouseDown?.(e);
-      const checkbox = ref.current;
-      dispatchRequestInteraction(checkbox, e);
-    },
-    onClick: (e) => {
-      onClick?.(e);
-      const checkbox = ref.current;
-      dispatchRequestInteraction(checkbox, e, {
-        onPrevented: () => {
-          e.preventDefault();
-        },
-      });
-    },
-    onInput: (e) => {
-      onInput?.(e);
-      const checkbox = ref.current;
-      dispatchRequestAction(checkbox, { event: e });
-    },
-    onKeyDown: (e) => {
-      onKeyDown?.(e);
-      if (e.key === "Enter") {
-        requestClosestAction(e);
-      }
-      if (e.key === " ") {
-        const checkbox = ref.current;
-        dispatchRequestInteraction(checkbox, e, {
-          onPrevented: () => {
-            e.preventDefault();
-          },
-        });
-      }
-    },
-  });
 
   if (props.appearance === "hidden") {
     return (

@@ -1,16 +1,10 @@
 import { useContext, useLayoutEffect, useRef } from "preact/hooks";
 
 import { Box, BoxForwardedPropsContext } from "@jsenv/navi/src/box/box.jsx";
-import {
-  dispatchRequestAction,
-  dispatchRequestInteraction,
-} from "@jsenv/navi/src/field/validation/custom_constraint_validation.js";
-import { useDebugInteraction } from "@jsenv/navi/src/navi_debug.jsx";
 import { LoadingOutline } from "../../graphic/loading/loading_outline.jsx";
 import { useAccentColorAttributes } from "../../utils/use_accent_color_attributes.js";
 import { FIELD_PROP_SET } from "../field_context.js";
 import { useFieldInterfaceProps } from "../field_hooks.jsx";
-import { requestClosestAction } from "../string_actions.js";
 import { dispatchRequestSetUIState } from "../ui_state_controller.js";
 import { ToggleCSSVars, ToggleUI } from "./toggle_ui.jsx";
 
@@ -377,82 +371,7 @@ export const InputRadio = (props) => {
   props.ref = props.ref || defaultRef;
   props.value = props.value === undefined ? "on" : props.value;
 
-  const debugInteraction = useDebugInteraction();
-  const { ref, onMouseDown, onClick, onInput, onKeyDown } = props;
-  const [radioProps, remainingProps] = useFieldInterfaceProps(
-    {
-      ...props,
-      resetOnCancel: true,
-      resetOnAbort: true,
-      resetOnError: true,
-    },
-    {
-      fieldType: "radio",
-      statePropName: "checked",
-      defaultStatePropName: "defaultChecked",
-      getUIValue: () => {
-        const radio = props.ref.current;
-        const radioIsChecked = radio.checked;
-        return radioIsChecked ? props.value : undefined;
-      },
-      fallbackState: false,
-      getStateFromProp: (checked) => (checked ? props.value : undefined),
-      getPropFromState: Boolean,
-      getStateFromParent: (parentUIStateController) => {
-        if (parentUIStateController.componentType === "radio_fieldset") {
-          return parentUIStateController.uiState === props.value;
-        }
-        return undefined;
-      },
-    },
-  );
-  Object.assign(remainingProps, {
-    onMouseDown: (e) => {
-      onMouseDown?.(e);
-      const radio = ref.current;
-      dispatchRequestInteraction(radio, e);
-    },
-    onClick: (e) => {
-      onClick?.(e);
-      const radio = ref.current;
-      dispatchRequestInteraction(radio, e, {
-        onPrevented: () => {
-          debugInteraction(
-            e,
-            "prevent radio being checked (click.preventDefault())",
-          );
-          e.preventDefault();
-        },
-      });
-    },
-    onInput: (e) => {
-      onInput?.(e);
-      const radio = ref.current;
-      const radioIsChecked = radio.checked;
-      if (radioIsChecked) {
-        updateOtherRadiosInGroup(e);
-      }
-      dispatchRequestAction(radio, { event: e });
-    },
-    onKeyDown: (e) => {
-      onKeyDown?.(e);
-      if (e.key === "Enter") {
-        requestClosestAction(e);
-      }
-      if (e.key === " ") {
-        const radio = ref.current;
-        dispatchRequestInteraction(radio, e, {
-          onPrevented: () => {
-            debugInteraction(
-              e,
-              "prevent radio being checked and container scroll (keydownEvent.preventDefault())",
-            );
-            e.preventDefault();
-          },
-        });
-      }
-    },
-  });
+  const { ref } = props;
   // we must first dispatch an event to inform all other radios they where unchecked
   // this way each other radio uiStateController knows thery are unchecked
   // we do this on "input"
@@ -483,6 +402,41 @@ export const InputRadio = (props) => {
       });
     }
   };
+  const [radioProps, remainingProps] = useFieldInterfaceProps(
+    {
+      ...props,
+      onInput: (e) => {
+        props.onInput?.(e);
+        const radio = ref.current;
+        if (radio.checked) {
+          updateOtherRadiosInGroup(e);
+        }
+      },
+      resetOnCancel: true,
+      resetOnAbort: true,
+      resetOnError: true,
+    },
+    {
+      fieldType: "radio",
+      statePropName: "checked",
+      defaultStatePropName: "defaultChecked",
+      getUIValue: () => {
+        const radio = props.ref.current;
+        const radioIsChecked = radio.checked;
+        return radioIsChecked ? props.value : undefined;
+      },
+      fallbackState: false,
+      getStateFromProp: (checked) => (checked ? props.value : undefined),
+      getPropFromState: Boolean,
+      getStateFromParent: (parentUIStateController) => {
+        if (parentUIStateController.componentType === "radio_fieldset") {
+          return parentUIStateController.uiState === props.value;
+        }
+        return undefined;
+      },
+    },
+  );
+
   const { checked } = radioProps;
   useLayoutEffect(() => {
     if (checked) {

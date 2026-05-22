@@ -8,12 +8,18 @@ import { useContext, useLayoutEffect, useState } from "preact/hooks";
 import { useActionBoundToOneParam } from "@jsenv/navi/src/action/use_action.js";
 import { useActionStatus } from "@jsenv/navi/src/action/use_action_status.js";
 import { useExecuteAction } from "@jsenv/navi/src/action/use_execute_action.js";
-import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
+import {
+  dispatchRequestAction,
+  dispatchRequestInteraction,
+  onRequestAction,
+  onRequestInteraction,
+} from "@jsenv/navi/src/field/validation/custom_constraint_validation.js";
 import {
   useDebugAction,
   useDebugFocus,
   useDebugInteraction,
-} from "../navi_debug.jsx";
+} from "@jsenv/navi/src/navi_debug.jsx";
+import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
 import {
   ActionContext,
   ActionRequesterContext,
@@ -25,7 +31,7 @@ import {
   ReadOnlyContext,
   RequiredContext,
 } from "./field_context.js";
-import { resolveActionProp } from "./string_actions.js";
+import { requestClosestAction, resolveActionProp } from "./string_actions.js";
 import {
   dispatchRequestResetUIState,
   dispatchRequestSetUIState,
@@ -33,11 +39,6 @@ import {
   useUIGroupStateController,
   useUIStateController,
 } from "./ui_state_controller.js";
-import {
-  dispatchRequestAction,
-  onRequestAction,
-  onRequestInteraction,
-} from "./validation/custom_constraint_validation.js";
 import { useConstraintMessages } from "./validation/hooks/use_constraint_messages.js";
 import { useConstraints } from "./validation/hooks/use_constraints.js";
 
@@ -96,13 +97,113 @@ export const useFieldInterfaceProps = (
   );
   const boundAction = externalBoundAction || internalBoundAction;
 
-  const result = useActionProps(props, {
-    readOnlySupported,
-    action: boundAction,
-    uiStateController,
-    getUIValue,
-  });
+  const { ref } = props;
+  const debugInteraction = useDebugInteraction();
+  const onMouseDown = (e) => {
+    props.onMouseDown?.(e);
+    const field = ref.current;
+    dispatchRequestInteraction(field, e);
+  };
+  const onClick = (e) => {
+    props.onClick?.(e);
+    const field = ref.current;
+    const allowed = dispatchRequestInteraction(field, e);
+    if (!allowed) {
+      // Here we want to prevent:
+      // - toggle of radio/checkbox on click
+      debugInteraction(e, "click.preventDefault()");
+      e.preventDefault();
+    }
+  };
+  const onInput = (e) => {
+    props.onInput?.(e);
+    const field = ref.current;
+    dispatchRequestAction(field, { event: e });
+  };
+  const onKeyDown = (e) => {
+    props.onKeyDown?.(e);
+    if (e.key === "Enter") {
+      requestClosestAction(e);
+      return;
+    }
+    if (e.key === " ") {
+      const field = ref.current;
+      const allowed = dispatchRequestInteraction(field, e);
+      if (!allowed) {
+        // Here we want to prevent
+        // - space to toggle radio/checkbox
+        // - space to scroll scrollable container (usually document)
+        // No need to prevent space from typing into input, browser supports readonly on thoose
+        debugInteraction(e, "space.preventDefault()");
+        e.preventDefault();
+      }
+      return;
+    }
+    if (isTypingIntent(e)) {
+      const input = e.currentTarget;
+      const allowed = dispatchRequestInteraction(input, e);
+      if (!allowed) {
+        e.preventDefault();
+      }
+    }
+  };
+  const onPaste = (e) => {
+    props.onPaste?.(e);
+    dispatchRequestInteraction(ref.current, e);
+  };
+
+  //   useOnInputValueChange(
+  //   ref,
+  //   (e) => {
+  //     const input = ref.current;
+  //     dispatchRequestAction(input, { event: e });
+  //   },
+  //   {
+  //     waitForChange: actionAfterChange,
+  //     debounce: actionDebounce,
+  //   },
+  // );
+
+  const result = useActionProps(
+    {
+      ...props,
+      onMouseDown,
+      onClick,
+      onInput,
+      onKeyDown,
+      onPaste,
+    },
+    {
+      readOnlySupported,
+      action: boundAction,
+      uiStateController,
+      getUIValue,
+    },
+  );
   return result;
+};
+
+// Returns true when the key combination looks like the user is trying to type
+// into the input (as opposed to a keyboard shortcut, navigation key, etc.).
+// Used to trigger the readonly callout when relevant.
+const isTypingIntent = (e) => {
+  // Modifier keys used for shortcuts: skip
+  if (e.metaKey || e.ctrlKey) {
+    return false;
+  }
+  // Shift alone (or Shift+arrow for selection): skip
+  // Characters produced with Shift (e.g. uppercase, symbols) are caught below
+  // via key.length === 1, so we only need to filter out non-printable Shift combos.
+  const { key } = e;
+  // Single printable character — the user is typing
+  if (key.length === 1) {
+    return true;
+  }
+  // Editing keys that would modify the text
+  if (key === "Backspace" || key === "Delete" || key === "Enter") {
+    return true;
+  }
+  return false;
 };
 
 /**

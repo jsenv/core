@@ -5,7 +5,6 @@ import { LoadingOutline } from "../../graphic/loading/loading_outline.jsx";
 import { useAccentColorAttributes } from "../../utils/use_accent_color_attributes.js";
 import { FIELD_PROP_SET } from "../field_context.js";
 import { useFieldInterfaceProps } from "../field_hooks.jsx";
-import { dispatchRequestAction } from "../validation/custom_constraint_validation.js";
 
 const css = /* css */ `
   @layer navi {
@@ -252,28 +251,7 @@ export const InputRange = (props) => {
 
 const InputRangeFieldInterface = (props) => {
   import.meta.css = css;
-  const { ref, onInput, accentColor } = props;
-  const fieldInterfaceProps = useFieldInterfaceProps(props, {
-    fieldType: "input",
-    statePropName: "value",
-    defaultStatePropName: "defaultValue",
-    getUIValue: () => {
-      const input = ref.current;
-      return input.valueAsNumber;
-    },
-  });
-  const { basePseudoState } = fieldInterfaceProps;
-  const disabled = basePseudoState[":disabled"];
-  const readOnly = basePseudoState[":read-only"];
-  const loading = basePseudoState[":-navi-loading"];
-
-  const boxRef = useRef();
-  useAccentColorAttributes(boxRef, accentColor, {
-    elementSelector: ".navi_input_range_accent_probe",
-  });
-  const focusProxyId = `input_range_focus_proxy_${useId()}`;
-  const inertButFocusable = readOnly && !disabled;
-
+  const { ref } = props;
   const updateFillRatio = () => {
     const input = ref.current;
     if (!input) {
@@ -283,6 +261,35 @@ const InputRangeFieldInterface = (props) => {
     const ratio = (inputValue - input.min) / (input.max - input.min);
     input.parentNode.style.setProperty("--x-fill-ratio", ratio);
   };
+  const [rangeProps, remainingProps] = useFieldInterfaceProps(
+    {
+      ...props,
+      onInput: (e) => {
+        props.onInput?.(e);
+        updateFillRatio();
+      },
+    },
+    {
+      fieldType: "input",
+      statePropName: "value",
+      defaultStatePropName: "defaultValue",
+      getUIValue: () => {
+        const input = ref.current;
+        return input.valueAsNumber;
+      },
+    },
+  );
+  const { basePseudoState } = rangeProps;
+  const disabled = basePseudoState[":disabled"];
+  const readOnly = basePseudoState[":read-only"];
+  const loading = basePseudoState[":-navi-loading"];
+
+  const boxRef = useRef();
+  useAccentColorAttributes(boxRef, props.accentColor, {
+    elementSelector: ".navi_input_range_accent_probe",
+  });
+  const focusProxyId = `input_range_focus_proxy_${useId()}`;
+  const inertButFocusable = readOnly && !disabled;
 
   return (
     <Box
@@ -296,16 +303,8 @@ const InputRangeFieldInterface = (props) => {
       pseudoElements={RangePseudoElements}
       hasChildUsingForwardedProps
       baseChildPropSet={RangeChildPropSet}
-      {...fieldInterfaceProps}
+      {...remainingProps}
       ref={boxRef}
-      onInput={(e) => {
-        onInput?.(e);
-        updateFillRatio();
-        const input = ref.current;
-        dispatchRequestAction(input, {
-          event: e,
-        });
-      }}
     >
       <span className="navi_input_range_accent_probe" aria-hidden="true" />
       <LoadingOutline
@@ -323,23 +322,16 @@ const InputRangeFieldInterface = (props) => {
         tabIndex={inertButFocusable ? "0" : "-1"}
       />
       <RangeNativeInput
-        ref={ref}
-        disabled={disabled}
-        readOnly={readOnly}
+        {...rangeProps}
         focusProxyId={focusProxyId}
         updateFillRatio={updateFillRatio}
       />
     </Box>
   );
 };
-const RangeNativeInput = ({
-  ref,
-  disabled,
-  readOnly,
-  focusProxyId,
-  updateFillRatio,
-}) => {
-  const inputProps = useContext(BoxForwardedPropsContext);
+const RangeNativeInput = (props) => {
+  const { ref, updateFillRatio, disabled, readOnly, focusProxyId } = props;
+  const rangeBoxProps = useContext(BoxForwardedPropsContext);
 
   useLayoutEffect(() => {
     updateFillRatio();
@@ -355,7 +347,6 @@ const RangeNativeInput = ({
     if (!input) {
       return;
     }
-
     const focusProxy = document.querySelector(`#${focusProxyId}`);
     if (readOnly) {
       if (document.activeElement === input) {
@@ -376,8 +367,8 @@ const RangeNativeInput = ({
 
   return (
     <Box
-      {...inputProps}
-      ref={ref}
+      {...props}
+      {...rangeBoxProps}
       as="input"
       type="range"
       baseClassName="navi_native_input"

@@ -43,13 +43,8 @@ import {
   requestListOpen,
   requestListSelectCurrent,
 } from "../list/list.jsx";
-import { requestClosestAction } from "../string_actions.js";
 import { dispatchRequestSetUIState } from "../ui_state_controller.js";
-import {
-  dispatchRequestAction,
-  dispatchRequestInteraction,
-} from "../validation/custom_constraint_validation.js";
-import { useOnInputValueChange } from "./input_value_listener.js";
+import { dispatchRequestInteraction } from "../validation/custom_constraint_validation.js";
 
 const css = /* css */ `
   @layer navi {
@@ -343,24 +338,9 @@ const InputTextualFieldInterface = (props) => {
     ref,
     ui,
     discrete,
-    actionDebounce,
-    actionAfterChange,
-    onKeyDown,
-    onPaste,
     fromInputValue = (v) => v,
     toInputValue = (v) => v,
   } = props;
-  useOnInputValueChange(
-    ref,
-    (e) => {
-      const input = ref.current;
-      dispatchRequestAction(input, { event: e });
-    },
-    {
-      waitForChange: actionAfterChange,
-      debounce: actionDebounce,
-    },
-  );
   const [textualFieldInterfaceProps, remainingProps] = useFieldInterfaceProps(
     props,
     {
@@ -413,24 +393,6 @@ const InputTextualFieldInterface = (props) => {
       <RealInput
         {...textualFieldInterfaceProps}
         value={toInputValue(textualFieldInterfaceProps.value)}
-        onKeyDown={(e) => {
-          onKeyDown?.(e);
-          if (e.key === "Enter") {
-            requestClosestAction(e);
-            return;
-          }
-          if (isTypingIntent(e)) {
-            const input = e.currentTarget;
-            const allowed = dispatchRequestInteraction(input, e);
-            if (!allowed) {
-              e.preventDefault(); // prevent space from scrolling the page, etc.
-            }
-          }
-        }}
-        onPaste={(e) => {
-          onPaste?.(e);
-          dispatchRequestInteraction(ref.current, e);
-        }}
       />
       {childrenWithContext}
     </Box>
@@ -447,29 +409,6 @@ const RealInput = (props) => {
       navi-rendered-by=".navi_input"
     />
   );
-};
-
-// Returns true when the key combination looks like the user is trying to type
-// into the input (as opposed to a keyboard shortcut, navigation key, etc.).
-// Used to trigger the readonly callout when relevant.
-const isTypingIntent = (e) => {
-  // Modifier keys used for shortcuts: skip
-  if (e.metaKey || e.ctrlKey) {
-    return false;
-  }
-  // Shift alone (or Shift+arrow for selection): skip
-  // Characters produced with Shift (e.g. uppercase, symbols) are caught below
-  // via key.length === 1, so we only need to filter out non-printable Shift combos.
-  const { key } = e;
-  // Single printable character — the user is typing
-  if (key.length === 1) {
-    return true;
-  }
-  // Editing keys that would modify the text
-  if (key === "Backspace" || key === "Delete" || key === "Enter") {
-    return true;
-  }
-  return false;
 };
 
 const InputStyleCSSVars = {
