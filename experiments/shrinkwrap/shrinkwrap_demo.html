@@ -166,7 +166,8 @@
             Yeah! It measures text without the DOM. Pure JavaScript arithmetic.
           </div>
         </div>
-        <div class="measure">width: <span id="broken-width">—</span></div>
+        <div class="measure">content: <span id="broken-content-width">—</span></div>
+        <div class="measure">total: <span id="broken-width">—</span></div>
         <div class="note">
           <code>.callout-body</code> has <code>max-width: 340px</code>.
           Once text wraps, the element stays at <code>max-width</code>
@@ -181,7 +182,8 @@
             Yeah! It measures text without the DOM. Pure JavaScript arithmetic.
           </div>
         </div>
-        <div class="measure">width: <span id="fixed-width">—</span></div>
+        <div class="measure">content: <span id="fixed-content-width">—</span></div>
+        <div class="measure">total: <span id="fixed-width">—</span></div>
         <div class="note">
           After layout, JS uses <code>Range.getClientRects()</code> to find the
           widest text line and sets an explicit <code>width</code> on the body —
@@ -229,10 +231,20 @@
       const brokenBody = document.getElementById("broken-body");
       const brokenWidthDisplay = document.getElementById("broken-width");
       const fixedWidthDisplay = document.getElementById("fixed-width");
+      const brokenContentWidthDisplay = document.getElementById("broken-content-width");
+      const fixedContentWidthDisplay = document.getElementById("fixed-content-width");
       const observerToggle = document.getElementById("observer-toggle");
 
+      const getContentWidth = (el) => {
+        const rect = el.getBoundingClientRect();
+        const style = getComputedStyle(el);
+        return rect.width - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+      };
+
       const updateMeasures = () => {
+        brokenContentWidthDisplay.textContent = `${Math.round(getContentWidth(brokenBody))}px`;
         brokenWidthDisplay.textContent = `${Math.round(brokenBody.getBoundingClientRect().width)}px`;
+        fixedContentWidthDisplay.textContent = `${Math.round(getContentWidth(fixedBody))}px`;
         fixedWidthDisplay.textContent = `${Math.round(fixedBody.getBoundingClientRect().width)}px`;
       };
 
