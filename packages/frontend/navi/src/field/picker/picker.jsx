@@ -8,6 +8,7 @@ import { createComponentResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { Icon } from "@jsenv/navi/src/text/icon.jsx";
 import { useStableCallback } from "@jsenv/navi/src/utils/use_stable_callback.js";
 import { useFieldInterfaceProps } from "../field_hooks.jsx";
+import { getToInputValue } from "../input/input_textual.jsx";
 import { useOnInputValueChange } from "../input/input_value_listener.js";
 import { createUICallback } from "../ui_callback.js";
 import { dispatchRequestAction } from "../validation/custom_constraint_validation.js";
@@ -245,7 +246,7 @@ const PickerButton = (props) => {
       defaultStatePropName: "defaultValue",
       readOnlySupported: true,
       readUIState: () => {
-        const input = ref.current;
+        const input = inputRef.current;
         const inputValue = input.value;
         return inputValue;
         // return fromInputValue(inputValue);
@@ -323,10 +324,13 @@ const PickerButton = (props) => {
   );
 };
 const PickerInput = (props) => {
+  const { type } = props;
+  const toInputValue = getToInputValue(type);
   return (
     <Box
       as="input"
       {...props}
+      value={toInputValue(props.value)}
       className="navi_picker_input"
       navi-rendered-by=".navi_picker"
       tabIndex={-1}

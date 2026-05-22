@@ -3,8 +3,9 @@ import { Box } from "@jsenv/navi/src/box/box.jsx";
 const css = /* css */ `
   .navi_color {
     display: block;
-    width: 1em;
+    aspect-ratio: 1/1;
     height: 1em;
+    height: 1lh;
     background-color: currentColor;
     border: 1px solid rgba(0, 0, 0, 0.2);
     border-radius: 2px;

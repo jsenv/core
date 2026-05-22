@@ -634,31 +634,23 @@ const InputTelUI = ({ icon }) => {
 };
 const InputNumber = (props) => {
   const Next = useNextResolver();
-  return (
-    <Next
-      toInputValue={(uiState) => {
-        const inputValueAsNumber = Number(uiState);
-        if (isNaN(inputValueAsNumber)) {
-          return uiState;
-        }
-        return inputValueAsNumber;
-      }}
-      {...props}
-    />
-  );
+  return <Next toInputValue={numberToInputValue} {...props} />;
+};
+const numberToInputValue = (uiState) => {
+  const inputValueAsNumber = Number(uiState);
+  if (isNaN(inputValueAsNumber)) {
+    return uiState;
+  }
+  return inputValueAsNumber;
 };
 const InputColor = (props) => {
   const Next = useNextResolver();
-  return (
-    <Next
-      // Browser requires a non-empty value for <input type="color">.
-      // When our logical value is empty we give it #000000 so it doesn't choke.
-      // The UI uses the original (possibly empty) value to show the checkerboard.
-      toInputValue={(uiState) => uiState || "#000000"}
-      {...props}
-    />
-  );
+  return <Next toInputValue={colorToInputValue} {...props} />;
 };
+// Browser requires a non-empty value for <input type="color">.
+// When our logical value is empty we give it #000000 so it doesn't choke.
+// The UI uses the original (possibly empty) value to show the checkerboard.
+const colorToInputValue = (uiState) => uiState || "#000000";
 const InputDatetimeLocal = (props) => {
   const Next = useNextResolver();
   return (
@@ -693,6 +685,19 @@ const convertToUTCTimezone = (localDateTimeString) => {
     return localDateTimeString;
   }
   return localDate.toISOString();
+};
+
+export const getToInputValue = (type) => {
+  if (type === "number") {
+    return numberToInputValue;
+  }
+  if (type === "color") {
+    return colorToInputValue;
+  }
+  if (type === "datetime-local") {
+    return convertToLocalTimezone;
+  }
+  return (v) => v;
 };
 
 const InputControllingList = (props) => {
