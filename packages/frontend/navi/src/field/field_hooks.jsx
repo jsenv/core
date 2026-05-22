@@ -31,6 +31,10 @@ import {
   ReadOnlyContext,
   RequiredContext,
 } from "./field_context.js";
+import {
+  addInputCheckedEffect,
+  addInputValueEffect,
+} from "./input_state_effect.js";
 import { requestClosestAction, resolveActionProp } from "./string_actions.js";
 import {
   dispatchRequestResetUIState,
@@ -155,30 +159,35 @@ export const useFieldInterfaceProps = (
     props.onPaste?.(e);
     dispatchRequestInteraction(ref.current, e);
   };
-  const onInput = (e) => {
-    props.onInput?.(e);
-    const field = ref.current;
-    dispatchRequestAction(field, { event: e });
-  };
 
-  //   useOnInputValueChange(
-  //   ref,
-  //   (e) => {
-  //     const input = ref.current;
-  //     dispatchRequestAction(input, { event: e });
-  //   },
-  //   {
-  //     waitForChange: actionAfterChange,
-  //     debounce: actionDebounce,
-  //   },
-  // );
+  const { actionWaitForChange, actionDebounce } = props;
+  useLayoutEffect(() => {
+    const input = ref.current;
+    if (!input) {
+      return undefined;
+    }
+    const addInputEffect =
+      statePropName === "checked" ? addInputCheckedEffect : addInputValueEffect;
+    const stopListening = addInputEffect(
+      input,
+      (e) => {
+        dispatchRequestAction(input, { event: e });
+      },
+      {
+        waitForChange: actionWaitForChange,
+        debounce: actionDebounce,
+      },
+    );
+    return () => {
+      stopListening();
+    };
+  }, [statePropName, actionWaitForChange, actionDebounce]);
 
   const result = useActionProps(
     {
       ...props,
       onMouseDown,
       onClick,
-      onInput,
       onKeyDown,
       onPaste,
     },
