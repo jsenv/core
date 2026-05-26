@@ -210,6 +210,7 @@ export const openCallout = (
     status = "",
     onClose,
     closeOnClickOutside = status === "info",
+    closeOnBlur = closeOnClickOutside,
     openingEvent,
     showErrorStack,
     debug = () => {},
@@ -398,6 +399,25 @@ export const openCallout = (
       });
     } else {
       registerClickOutsideListener();
+    }
+  }
+  close_on_blur: {
+    if (closeOnBlur && anchorElement) {
+      const handleFocusOut = (event) => {
+        // relatedTarget is the element receiving focus; null means focus left the document
+        const { relatedTarget } = event;
+        if (relatedTarget && anchorElement.contains(relatedTarget)) {
+          return;
+        }
+        if (relatedTarget && calloutElement.contains(relatedTarget)) {
+          return;
+        }
+        requestClose(event, "blur_outside");
+      };
+      anchorElement.addEventListener("focusout", handleFocusOut);
+      addTeardown(() => {
+        anchorElement.removeEventListener("focusout", handleFocusOut);
+      });
     }
   }
   close_on_custom_event: {
