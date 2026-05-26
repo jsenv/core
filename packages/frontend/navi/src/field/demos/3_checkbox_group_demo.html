@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <link rel="icon" href="data:," />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>CheckboxFieldset Demo</title>
+    <title>CheckboxGroup Demo</title>
     <style>
       body {
         max-width: 800px;
@@ -40,7 +40,7 @@
     </style>
   </head>
   <body>
-    <h1>CheckboxFieldset Demo</h1>
+    <h1>CheckboxGroup Demo</h1>
     <div id="root"></div>
 
     <script type="module" jsenv-type="module/jsx">
@@ -49,7 +49,7 @@
       import {
         Button,
         Form,
-        CheckboxFieldset,
+        CheckboxGroup,
         Field,
         Label,
         Input,
@@ -80,7 +80,7 @@
               receives the current array of selected values, or{" "}
               <code>undefined</code> when nothing is selected.
             </p>
-            <CheckboxFieldset
+            <CheckboxGroup
               name="standalone_options"
               action={(values) => {
                 setLastCall(values);
@@ -101,7 +101,7 @@
                   Gamma
                 </Field>
               </Box>
-            </CheckboxFieldset>
+            </CheckboxGroup>
             <p
               style={{
                 marginTop: "12px",
@@ -126,7 +126,7 @@
           <div class="demo-section">
             <h2>In a form</h2>
             <p style={{ margin: "0 0 12px", color: "#555" }}>
-              A <code>CheckboxFieldset</code> inside a <code>Form</code>. The
+              A <code>CheckboxGroup</code> inside a <code>Form</code>. The
               selected values are submitted with the form.
             </p>
             <Form
@@ -134,7 +134,7 @@
                 setSubmitted(params);
               }}
             >
-              <CheckboxFieldset name="form_options" flex="y" spacing="s">
+              <CheckboxGroup name="form_options" flex="y" spacing="s">
                 <legend>Pick options</legend>
                 <Field flex alignY="center" spacing="s">
                   <Input type="checkbox" value="alpha" />
@@ -148,7 +148,7 @@
                   <Input type="checkbox" value="gamma" />
                   <Label>Gamma</Label>
                 </Field>
-              </CheckboxFieldset>
+              </CheckboxGroup>
               <Button type="submit" style={{ marginTop: "12px" }}>
                 Submit
               </Button>
@@ -178,7 +178,7 @@
             <h2>With required validation</h2>
             <p style={{ margin: "0 0 12px", color: "#555" }}>
               The <code>required</code> attribute on a{" "}
-              <code>CheckboxFieldset</code> means at least one option must be
+              <code>CheckboxGroup</code> means at least one option must be
               selected before the form can be submitted.
             </p>
             <Form
@@ -186,7 +186,7 @@
                 setSubmitted(params);
               }}
             >
-              <CheckboxFieldset
+              <CheckboxGroup
                 name="required_options"
                 required
                 flex="y"
@@ -205,7 +205,7 @@
                   <Input type="checkbox" value="gamma" />
                   <Label>Gamma</Label>
                 </Field>
-              </CheckboxFieldset>
+              </CheckboxGroup>
               <Button type="submit" style={{ marginTop: "12px" }}>
                 Submit
               </Button>
@@ -238,7 +238,7 @@
               readonly one shows a message. Readonly checkboxes are skipped when
               navigating with the keyboard.
             </p>
-            <CheckboxFieldset name="readonly_options">
+            <CheckboxGroup name="readonly_options">
               <legend>Pick options</legend>
               <Box flex="y" alignX="start" spacing="s">
                 <Field as="label" flex alignY="center" spacing="s">
@@ -272,7 +272,7 @@
                   Epsilon (normal)
                 </Field>
               </Box>
-            </CheckboxFieldset>
+            </CheckboxGroup>
           </div>
         );
       };
