@@ -176,6 +176,8 @@
           "Apple",
           "Cherry",
         ]);
+        const [singleLog, setSingleLog] = useState([]);
+        const [multipleLog, setMultipleLog] = useState([]);
         return (
           <div id="basic" className="demo-section">
             <h2>Basic (with Selectable.Input)</h2>
@@ -190,6 +192,7 @@
                 <SelectableList
                   action={(v) => {
                     setSelectedSingle(v);
+                    setSingleLog((prev) => [...prev, v ?? "(none)"]);
                   }}
                   expandX
                 >
@@ -209,7 +212,9 @@
                   ))}
                 </SelectableList>
                 <div className="value-display">
-                  {selectedSingle ? `Selected: ${selectedSingle}` : ""}
+                  {singleLog.length
+                    ? singleLog.map((v, i) => <div key={i}>→ {v}</div>)
+                    : "(no action yet)"}
                 </div>
               </div>
               <div>
@@ -218,6 +223,10 @@
                   multiple
                   action={(v) => {
                     setSelectedMultiple(v);
+                    setMultipleLog((prev) => [
+                      ...prev,
+                      v && v.length ? v.join(", ") : "(none)",
+                    ]);
                   }}
                   expandX
                 >
@@ -237,9 +246,9 @@
                   ))}
                 </SelectableList>
                 <div className="value-display">
-                  {selectedMultiple.length
-                    ? `Selected: ${selectedMultiple.join(", ")}`
-                    : ""}
+                  {multipleLog.length
+                    ? multipleLog.map((v, i) => <div key={i}>→ {v}</div>)
+                    : "(no action yet)"}
                 </div>
               </div>
             </div>

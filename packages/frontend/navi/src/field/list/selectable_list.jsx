@@ -167,7 +167,7 @@ export const SelectableList = (props) => {
     focusGroupWrap,
   } = props;
   const [listFieldProps, remainingProps] = useFieldgroupInterfaceProps(props, {
-    fieldType: "list",
+    fieldType: multiple ? "checkbox_group" : "radio_group",
     childComponentType: multiple ? "checkbox" : "radio",
     aggregateChildStates: multiple
       ? (childUIStateControllers) => {

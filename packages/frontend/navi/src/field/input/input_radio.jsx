@@ -364,6 +364,13 @@ export const InputRadio = (props) => {
         if (!checked) {
           return;
         }
+        // Proxy radios all share the same name ("navi_input_proxy"), so we
+        // must skip the sibling-uncheck logic for them — otherwise checking
+        // one proxy would cascade into every other list's proxy and
+        // trigger unwanted state changes across the whole page.
+        if (radio.hasAttribute("navi-proxy-for")) {
+          return;
+        }
         const { name } = radio;
         if (!name) {
           return;
