@@ -283,9 +283,10 @@ const PickerButton = (props) => {
     {
       ...props,
       ref: inputRef,
-      // good pour le color, faut voir pour le reste
-      // aussi quid si on veut le faire tout le temps?
-      actionAfterChange: true,
+      // Only wait for the native "change" event (dialog close) when the picker has its own
+      // action. Without an action, the change event would trigger a noop action cycle and
+      // cause spurious state updates (e.g. when closing the color dialog on form submit).
+      actionAfterChange: props.action === undefined ? undefined : true,
     },
     {
       primaryInteractionMode: "keyboard",
