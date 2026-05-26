@@ -7,8 +7,8 @@ export const addInputEffect = (
 ) => {
   const getState =
     input.type === "checkbox" || input.type === "radio"
-      ? (input) => input.checked
-      : (input) => input.value;
+      ? () => input.checked
+      : () => input.value;
 
   if (waitForChange) {
     return listenInputStateChange(input, callback, { getState });
@@ -145,10 +145,7 @@ const listenInputStateChange = (input, callback, { getState }) => {
     }
   };
   const onchange = (e) => {
-    if (
-      stateAtInteraction !== undefined &&
-      getState(e.target) === stateAtInteraction
-    ) {
+    if (stateAtInteraction !== undefined && getState() === stateAtInteraction) {
       stateAtInteraction = undefined;
       return;
     }
