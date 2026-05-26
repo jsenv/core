@@ -227,20 +227,22 @@ export const useUIStateController = (
         e,
         `${controllerSig}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> updating to ${JSON.stringify(newUIState)}`,
       );
-      uiStateController.uiState = newUIState;
-      uiStateSignal.value = newUIState;
       const el = ref.current;
       if (el) {
         // set immediatly (don't wait for preact re-render) so ui is in the right state for:
         // - side effect
         // - any "input" event that might be dispatched by field_hooks.jsx when programmatically setting the ui state
-        el[statePropName] = getPropFromState(newUIState);
-        if (sideEffect) {
-          sideEffect(el, newUIState, e);
-        }
+        const propValue = uiStateController.getPropFromState(newUIState);
+        debugAction(e, `[${statePropName}] = ${JSON.stringify(propValue)};`);
+        el[statePropName] = propValue;
       }
-      publishUIState(newUIState, e);
+      uiStateController.uiState = newUIState;
+      uiStateSignal.value = newUIState;
+      if (el && sideEffect) {
+        sideEffect(el, newUIState, e);
+      }
       debugAction(e, `publishUIState(${JSON.stringify(newUIState)})`);
+      publishUIState(newUIState, e);
       if (!e.detail?.suppressParentNotification) {
         notifyParentAboutChildUIStateChange(e);
       }
