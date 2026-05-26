@@ -629,6 +629,7 @@
             <Box flex spacing="s">
               <Input
                 placeholder="Type something (debounced 600ms)..."
+                value={debouncedValue}
                 action={async (value) => {
                   setDebouncedCallCount((c) => c + 1);
                   await new Promise((resolve) => setTimeout(resolve, 1500));
