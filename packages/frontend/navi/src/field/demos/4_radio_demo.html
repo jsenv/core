@@ -1079,7 +1079,7 @@
       const ProxyDemo = () => {
         const [log, setLog] = useState([]);
         const addLog = (msg) => {
-          setLog((prev) => [...prev.slice(-4), msg]);
+          setLog((prev) => [...prev.slice(-9), msg]);
         };
         return (
           <div id="proxy" className="demo-section">
@@ -1112,13 +1112,18 @@
                     value="on"
                     action={(v) => addLog(`action called with ${v}`)}
                     onnavi_action_end={() => addLog("action ended")}
+                    onInput={(e) => {
+                      addLog(
+                        `input event on radio (checked=${e.target.checked})`,
+                      );
+                    }}
                   />
                   Option
                 </Field>
                 <div className="value-display">
-                  {log.map((msg, i) => (
-                    <div key={i}>{msg}</div>
-                  ))}
+                  {log.length === 0
+                    ? null
+                    : log.map((msg, i) => <div key={i}>{msg}</div>)}
                 </div>
               </div>
             </div>
