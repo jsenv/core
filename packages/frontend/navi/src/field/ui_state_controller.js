@@ -1,6 +1,7 @@
 import {
   createPubSub,
   dispatchInternalCustomEvent,
+  findEvent,
   getElementSignature,
 } from "@jsenv/dom";
 import { signal } from "@preact/signals";
@@ -231,20 +232,98 @@ export const useUIStateController = (
       if (el) {
         // set immediatly (don't wait for preact re-render) so ui is in the right state for:
         // - side effect
-        // - any "input" event that might be dispatched by field_hooks.jsx when programmatically setting the ui state
+        // - any "input" event that might be dispatched below
         const propValue = uiStateController.getPropFromState(newUIState);
         debugAction(e, `[${statePropName}] = ${JSON.stringify(propValue)};`);
         el[statePropName] = propValue;
       }
       uiStateController.uiState = newUIState;
       uiStateSignal.value = newUIState;
-      if (el && sideEffect) {
+      if (sideEffect) {
         sideEffect(el, newUIState, e);
+      }
+      // Radio group: when a radio becomes checked, uncheck all siblings.
+      // We only update their UIState — no parent notification, no synthetic
+      // input event (the browser never fires input on the unchecked radios,
+      // and we don't want to trigger their action flow with a stale DOM value).
+      if (
+        componentType === "radio" &&
+        newUIState &&
+        !el.hasAttribute("navi-proxy-for")
+      ) {
+        const { name } = el;
+        if (name) {
+          const radioGroupContainer = el.form || document;
+          const radioInputs = radioGroupContainer.querySelectorAll(
+            `input[type="radio"][name="${name}"]`,
+          );
+          for (const radioInput of radioInputs) {
+            if (radioInput === el) {
+              continue;
+            }
+            dispatchRequestSetUIState(radioInput, false, {
+              event: e,
+              suppressParentNotification: true,
+              suppressSyntheticInput: true,
+            });
+          }
+        }
       }
       debugAction(e, `publishUIState(${JSON.stringify(newUIState)})`);
       publishUIState(newUIState, e);
       if (!e.detail?.suppressParentNotification) {
         notifyParentAboutChildUIStateChange(e);
+      }
+      // Proxy: forward the state change to the real input
+      // The real input will handle its own UIState update + synthetic input.
+      if (el) {
+        const proxyFor = el.getAttribute("navi-proxy-for");
+        if (proxyFor) {
+          const naviProxyTarget = document.getElementById(proxyFor);
+          if (naviProxyTarget) {
+            debugAction(
+              e,
+              `forwarding set_ui_state "${prop}" to ${getElementSignature(naviProxyTarget)}`,
+            );
+            dispatchRequestSetUIState(naviProxyTarget, prop, {
+              event: e.detail?.event ?? e,
+            });
+          }
+        }
+      }
+      // Dispatch a synthetic "input" event so external listeners see the new
+      // value. Skip when:
+      // - suppressSyntheticInput is set (e.g. radio sibling uncheck)
+      // - an input event on this element already exists in the event chain
+      if (el && !e.detail?.suppressSyntheticInput) {
+        const existingInputEvent = findEvent(e, (eInChain) => {
+          return eInChain.type === "input" && eInChain.target === el;
+        });
+        if (!existingInputEvent) {
+          if (el.tagName === "INPUT") {
+            if (el.type === "radio" || el.type === "checkbox") {
+              debugAction(
+                e,
+                "dispatching synthetic input event without data for checkbox/radio",
+              );
+              el.dispatchEvent(new Event("input", { bubbles: true }));
+            } else {
+              debugAction(
+                e,
+                `dispatching synthetic input event with data "${newUIState}" for input`,
+              );
+              el.dispatchEvent(
+                new InputEvent("input", {
+                  bubbles: true,
+                  cancelable: true,
+                  inputType: "insertText",
+                  data: newUIState,
+                }),
+              );
+            }
+          }
+          // TODO: select, textarea
+        }
       }
       return true;
     },

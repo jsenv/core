@@ -12,11 +12,7 @@
  *    a debounced action. The request-action event chain handles the timing centrally
  *    rather than each component having to manage its own debounce logic.
  */
-import {
-  dispatchInternalCustomEvent,
-  findEvent,
-  getElementSignature,
-} from "@jsenv/dom";
+import { dispatchInternalCustomEvent, findEvent } from "@jsenv/dom";
 import {
   useCallback,
   useContext,
@@ -487,69 +483,7 @@ const useActionProps = (
       onCancel?.(e, reason);
     },
     "onnavi_set_ui_state": (e) => {
-      const { value } = e.detail;
-      const modified = uiStateController.setUIState(value, e);
-      const naviProxyTarget = getNaviProxyTarget(e);
-      if (naviProxyTarget) {
-        debugInteraction(
-          e,
-          `forwarding set_ui_state "${value}" to ${getElementSignature(naviProxyTarget)}`,
-        );
-        dispatchRequestSetUIState(naviProxyTarget, value, {
-          event: e.detail.event,
-        });
-        // The proxy target will receive its own navi_set_ui_state and dispatch
-        // the synthetic input event — nothing more to do here.
-        return;
-      }
-
-      // When updating the ui state we want to dispatch "input" so that any code listening to input event
-      // can know the latest value
-      // but we don't need/want to do it when we come from a input event already
-      if (modified) {
-        const currentTarget = e.currentTarget;
-        const existingInputEvent = findEvent(e, (eInChain) => {
-          if (eInChain.type !== "input") {
-            return false;
-          }
-          if (eInChain.target === currentTarget) {
-            return true;
-          }
-          return false;
-        });
-        if (!existingInputEvent) {
-          if (currentTarget.tagName === "INPUT") {
-            if (
-              currentTarget.type === "radio" ||
-              currentTarget.type === "checkbox"
-            ) {
-              debugInteraction(
-                e,
-                "dispatching synthetic input event without data for checkbox/radio",
-              );
-              currentTarget.dispatchEvent(
-                new Event("input", {
-                  bubbles: true,
-                }),
-              );
-            } else {
-              debugInteraction(
-                e,
-                `dispatching synthetic input event with data "${value}" for input`,
-              );
-              currentTarget.dispatchEvent(
-                new InputEvent("input", {
-                  bubbles: true,
-                  cancelable: true,
-                  inputType: "insertText",
-                  data: value,
-                }),
-              );
-            }
-          }
-          // TODO: select, textarea
-        }
-      }
+      uiStateController.setUIState(e.detail.value, e);
     },
     "onnavi_request_interaction": (e) => {
       onRequestInteraction(e, { debugInteraction });
