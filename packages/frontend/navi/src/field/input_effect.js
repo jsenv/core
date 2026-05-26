@@ -23,7 +23,6 @@ export const addInputEffect = (
     onEvent = (e, { skipDebounce } = {}) => {
       clearTimeout(timeout);
       clearTimeout(debounceTimeout);
-
       const state = getState();
       if (state === currentState) {
         return;
@@ -96,12 +95,24 @@ export const addInputEffect = (
     input.removeEventListener("paste", onEvent);
   });
 
-  // Focus events to catch programmatic changes that don't fire other events
-  // (like when value is set before user interaction)
-  input.addEventListener("focus", onEvent);
-  addTeardown(() => {
-    input.removeEventListener("focus", onEvent);
-  });
+  if (input.type === "radio") {
+    // radios are unchecked by an internal set_ui_state event dispatched when an other radio is checked
+    // we must update our internal state in that case otherwise we keep thinking it's checked when it's not
+    input.addEventListener("navi_set_ui_state", (e) => {
+      if (e.detail.suppressSyntheticInput) {
+        currentState = getState();
+      }
+    });
+  } else {
+    // Focus events to catch programmatic changes that don't fire other events
+    // (like when value is set before user interaction)
+    // Skip for radio/checkbox: their "checked" state doesn't change on focus,
+    // so focusing an unchecked radio would incorrectly appear as a state change.
+    input.addEventListener("focus", onEvent);
+    addTeardown(() => {
+      input.removeEventListener("focus", onEvent);
+    });
+  }
 
   const onNaviClear = (e) => {
     // "navi_clear" behaves like an async event
