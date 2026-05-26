@@ -88,7 +88,6 @@ const DEFAULT_BEHAVIORS = [
       ArrowUp: "focus_nav",
       ArrowDown: "focus_nav",
     },
-    fallback: "",
   },
   {
     test: (el) =>
@@ -104,11 +103,12 @@ const DEFAULT_BEHAVIORS = [
       Home: "cursor_move",
       End: "cursor_move",
     },
-    fallback: (e) => (isTypingIntent(e) ? "type" : ""),
+    fallback: (e) => (isTypingIntent(e) ? "type" : undefined),
   },
   {
     test: (el) => el.matches("input[type='range']"),
     keys: {
+      Space: "scroll",
       Enter: (e) => (e.target.form ? "form_submit" : ""),
       ArrowLeft: "value_change",
       ArrowRight: "value_change",
@@ -119,7 +119,6 @@ const DEFAULT_BEHAVIORS = [
       PageUp: "value_change",
       PageDown: "value_change",
     },
-    fallback: "",
   },
   {
     test: (el) => el.matches("input[type='number']"),
@@ -132,7 +131,7 @@ const DEFAULT_BEHAVIORS = [
       Home: "cursor_move",
       End: "cursor_move",
     },
-    fallback: (e) => (isTypingIntent(e) ? "type" : ""),
+    fallback: (e) => (isTypingIntent(e) ? "type" : undefined),
   },
   {
     test: (el) =>
@@ -147,7 +146,6 @@ const DEFAULT_BEHAVIORS = [
       ArrowUp: "value_change",
       ArrowDown: "value_change",
     },
-    fallback: "",
   },
   {
     // Color input: Space opens the color picker, Enter submits the form
@@ -156,7 +154,6 @@ const DEFAULT_BEHAVIORS = [
       Space: "activate",
       Enter: (e) => (e.target.form ? "form_submit" : ""),
     },
-    fallback: "",
   },
   {
     // File input: Space opens the picker, Enter submits the form
@@ -165,13 +162,12 @@ const DEFAULT_BEHAVIORS = [
       Space: "activate",
       Enter: (e) => (e.target.form ? "form_submit" : ""),
     },
-    fallback: "",
   },
   {
     // Generic INPUT fallback for any remaining input types
     test: (el) => el.tagName === "INPUT",
     keys: {},
-    fallback: (e) => (isTypingIntent(e) ? "type" : ""),
+    fallback: (e) => (isTypingIntent(e) ? "type" : undefined),
   },
   {
     test: (el) =>
@@ -187,7 +183,7 @@ const DEFAULT_BEHAVIORS = [
       Home: "cursor_move",
       End: "cursor_move",
     },
-    fallback: (e) => (isTypingIntent(e) ? "type" : ""),
+    fallback: (e) => (isTypingIntent(e) ? "type" : undefined),
   },
   {
     // Buttons and links: Space/Enter trigger the element's default action
@@ -199,7 +195,6 @@ const DEFAULT_BEHAVIORS = [
       Space: "activate",
       Enter: "activate",
     },
-    fallback: "",
   },
   {
     // details/summary: Space/Enter toggle the disclosure widget
@@ -208,13 +203,11 @@ const DEFAULT_BEHAVIORS = [
       Space: "activate",
       Enter: "activate",
     },
-    fallback: "",
   },
   {
     // SELECT: don't intercept anything while the dropdown may be open
     test: (el) => el.tagName === "SELECT",
     keys: {},
-    fallback: "",
   },
   {
     // Non-interactive elements: browser scrolls on Space and arrow keys
@@ -230,7 +223,6 @@ const DEFAULT_BEHAVIORS = [
       Home: "scroll",
       End: "scroll",
     },
-    fallback: "",
   },
 ];
 
