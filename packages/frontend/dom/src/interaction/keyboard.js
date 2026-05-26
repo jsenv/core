@@ -6,9 +6,11 @@
  * - `"value_change"` — key increments/decrements the field value (number, range, date…)
  * - `"cursor_move"`  — key moves the text cursor within the field
  * - `"type"`         — key produces or deletes text content
+ * - `"form_submit"`  — Enter on a single-line input submits the enclosing form
+ * - `"activate"`     — Space/Enter triggers the element's action (button, link)
  * - `""`             — no meaningful browser default; safe to intercept freely
  */
-export const getKeyboardEventDefault = (keyboardEvent) => {
+export const getKeyboardEventBehavior = (keyboardEvent) => {
   const target = keyboardEvent.target;
   const key = keyboardEvent.key;
 
@@ -26,7 +28,8 @@ export const getKeyboardEventDefault = (keyboardEvent) => {
       continue;
     }
     if (Object.hasOwn(keys, key)) {
-      return keys[key];
+      const value = keys[key];
+      return typeof value === "function" ? value(keyboardEvent) : value;
     }
     if (fallback === undefined) {
       // This entry only handles specific keys — keep looking for other entries
@@ -37,11 +40,30 @@ export const getKeyboardEventDefault = (keyboardEvent) => {
   return "";
 };
 
+const isTypingIntent = (e) => {
+  // Modifier keys used for shortcuts: skip
+  if (e.metaKey || e.ctrlKey) {
+    return false;
+  }
+  const { key } = e;
+  // Single printable character — the user is typing
+  if (key.length === 1) {
+    return true;
+  }
+  // Editing keys that would modify the text
+  if (key === "Backspace" || key === "Delete") {
+    return true;
+  }
+  return false;
+};
+
 const DEFAULT_BEHAVIORS = [
   {
-    // Tab moves focus on any element
     test: () => true,
-    keys: { Tab: "focus_nav" },
+    keys: {
+      // Tab moves focus on any element
+      Tab: "focus_nav",
+    },
     // no fallback: only claims Tab, other keys continue to next entries
   },
   {
@@ -86,6 +108,7 @@ const DEFAULT_BEHAVIORS = [
       ArrowDown: "value_change",
       Home: "cursor_move",
       End: "cursor_move",
+      Enter: (e) => (e.target.form ? "form_submit" : ""),
     },
     fallback: (e) => (isTypingIntent(e) ? "type" : ""),
   },
@@ -99,6 +122,7 @@ const DEFAULT_BEHAVIORS = [
       ArrowRight: "cursor_move",
       Home: "cursor_move",
       End: "cursor_move",
+      Enter: (e) => (e.target.form ? "form_submit" : ""),
     },
     fallback: (e) => (isTypingIntent(e) ? "type" : ""),
   },
@@ -120,8 +144,21 @@ const DEFAULT_BEHAVIORS = [
       ArrowDown: "cursor_move",
       Home: "cursor_move",
       End: "cursor_move",
+      Enter: "type",
     },
     fallback: (e) => (isTypingIntent(e) ? "type" : ""),
+  },
+  {
+    // Buttons and links: Space/Enter trigger the element's default action
+    test: (el) =>
+      el.tagName === "BUTTON" ||
+      el.tagName === "A" ||
+      el.getAttribute("role") === "button",
+    keys: {
+      Space: "activate",
+      Enter: "activate",
+    },
+    fallback: "",
   },
   {
     // SELECT: don't intercept anything while the dropdown may be open
@@ -131,25 +168,8 @@ const DEFAULT_BEHAVIORS = [
   },
 ];
 
-const isTypingIntent = (e) => {
-  // Modifier keys used for shortcuts: skip
-  if (e.metaKey || e.ctrlKey) {
-    return false;
-  }
-  const { key } = e;
-  // Single printable character — the user is typing
-  if (key.length === 1) {
-    return true;
-  }
-  // Editing keys that would modify the text
-  if (key === "Backspace" || key === "Delete" || key === "Enter") {
-    return true;
-  }
-  return false;
-};
-
 export const canInterceptKeyboardEvent = (event, { intent } = {}) => {
-  const defaultBehavior = getKeyboardEventDefault(event);
+  const defaultBehavior = getKeyboardEventBehavior(event);
   if (!defaultBehavior) {
     return true;
   }

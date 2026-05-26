@@ -15,7 +15,7 @@
 import {
   dispatchInternalCustomEvent,
   findEvent,
-  getKeyboardEventDefault,
+  getKeyboardEventBehavior,
 } from "@jsenv/dom";
 import {
   useCallback,
@@ -163,7 +163,7 @@ export const useFieldInterfaceProps = (
       return;
     }
     if (primaryInteractionMode === "keyboard") {
-      if (getKeyboardEventDefault(e)) {
+      if (getKeyboardEventBehavior(e)) {
         // inside a checkbox/radio does not make much sense so we'll see
         // but for input it allows to show the readonly message when trying to type into it
         const input = e.currentTarget;
