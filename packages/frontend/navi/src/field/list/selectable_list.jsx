@@ -81,7 +81,7 @@ const css = /* css */ `
     }
 
     /* opt-in: apply background color to selected items */
-    &[navi-has-selected-background] {
+    &[navi-has-selected-background]:not(:has(input[navi-proxy-for])) {
       .navi_list_item[data-selected] {
         --x-list-item-color: var(--list-item-color-selected);
         --x-list-item-background-color: var(
