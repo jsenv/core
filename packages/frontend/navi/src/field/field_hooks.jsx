@@ -524,6 +524,7 @@ const useActionProps = (
                 e,
                 "dispatching synthetic input event without data for checkbox/radio",
               );
+              currentTarget.checked = value; // set immeditaly (don't wait for preact re-render) so ui is in the right state for this event
               currentTarget.dispatchEvent(
                 new Event("input", {
                   bubbles: true,
@@ -534,6 +535,7 @@ const useActionProps = (
                 e,
                 `dispatching synthetic input event with data "${value}" for input`,
               );
+              currentTarget.value = value;
               currentTarget.dispatchEvent(
                 new InputEvent("input", {
                   bubbles: true,
@@ -615,8 +617,6 @@ const useActionProps = (
         // can detect it via Object.hasOwn and skip re-computing from its own
         // navi_request_ui_state (which would return undefined for an already-set radio).
         dispatchRequestSetUIState(naviProxyTarget, uiState, { event: e });
-        debugAction(e, "forwarding action request to navi proxy target");
-        dispatchRequestAction(naviProxyTarget, { event: e, uiState });
         return;
       }
       if (e.detail.action) {

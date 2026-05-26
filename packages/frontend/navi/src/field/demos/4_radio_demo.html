@@ -193,7 +193,6 @@
                   <h2>Customization</h2>
                 </div>
                 <IconAppearanceDemo />
-                <ToggleAppearanceDemo />
                 <ButtonAppearanceDemo />
                 <ColorDemo />
               </div>
@@ -217,9 +216,6 @@
                 <ol style={{ margin: 0, paddingLeft: "20px" }}>
                   <li>
                     <a href="#icon-appearance">Icon appearance</a>
-                  </li>
-                  <li>
-                    <a href="#toggle-appearance">Toggle appearance</a>
                   </li>
                   <li>
                     <a href="#button-appearance">Button appearance</a>
@@ -589,92 +585,6 @@
                     <Label>Afternoon</Label>
                   </Field>
                 </Box>
-              </Box>
-            </Box>
-          </div>
-        );
-      };
-
-      const ToggleAppearanceDemo = () => {
-        return (
-          <div id="toggle-appearance" className="demo-section">
-            <h3>Toggle appearance</h3>
-            <p>
-              Pass <code>appearance="toggle"</code> to render the radio as a
-              toggle switch. One radio per group can be checked; toggling a
-              checked radio has no effect (radio semantics).
-            </p>
-
-            <Box flex spacing="s" wrap>
-              <Box as="fieldset" width="200">
-                <legend>Default (unchecked)</legend>
-                <Field>
-                  <Input
-                    type="radio"
-                    name="toggle-unchecked"
-                    value="on"
-                    appearance="toggle"
-                  />
-                  <Label>Notifications</Label>
-                </Field>
-              </Box>
-
-              <Box as="fieldset" width="200">
-                <legend>:checked</legend>
-                <Field>
-                  <Input
-                    type="radio"
-                    name="toggle-checked"
-                    value="on"
-                    appearance="toggle"
-                    defaultChecked
-                  />
-                  <Label>Dark mode</Label>
-                </Field>
-              </Box>
-
-              <Box as="fieldset" width="200">
-                <legend>:disabled</legend>
-                <Field>
-                  <Input
-                    type="radio"
-                    name="toggle-disabled"
-                    value="on"
-                    appearance="toggle"
-                    disabled
-                  />
-                  <Label>Auto-save</Label>
-                </Field>
-              </Box>
-
-              <Box as="fieldset" width="200">
-                <legend>:disabled:checked</legend>
-                <Field>
-                  <Input
-                    type="radio"
-                    name="toggle-disabled-checked"
-                    value="on"
-                    appearance="toggle"
-                    disabled
-                    defaultChecked
-                  />
-                  <Label>Two-factor auth</Label>
-                </Field>
-              </Box>
-
-              <Box as="fieldset" width="200">
-                <legend>:read-only:checked</legend>
-                <Field>
-                  <Input
-                    type="radio"
-                    name="toggle-readonly"
-                    value="on"
-                    appearance="toggle"
-                    readOnly
-                    defaultChecked
-                  />
-                  <Label>System setting</Label>
-                </Field>
               </Box>
             </Box>
           </div>
@@ -1079,7 +989,7 @@
       const ProxyDemo = () => {
         const [log, setLog] = useState([]);
         const addLog = (msg) => {
-          setLog((prev) => [...prev.slice(-9), msg]);
+          setLog((prev) => [...prev, msg]);
         };
         return (
           <div id="proxy" className="demo-section">
