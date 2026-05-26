@@ -12,6 +12,13 @@ const generateSignalId = () => {
   return id;
 };
 
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    globalSignalRegistry.clear();
+    signalIdCounter = 0;
+  });
+}
+
 /**
  * Creates an advanced signal with dynamic default value, local storage persistence, and validation.
  *

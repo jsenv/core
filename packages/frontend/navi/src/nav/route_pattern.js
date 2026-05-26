@@ -76,6 +76,7 @@ export const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
   const applyOn = (url) => {
     const result = matchUrl(parsedPattern, url, {
       baseUrl,
+      baseFileUrl,
       queryConnectionMap,
       patternObj: patternObject,
     });
@@ -2432,7 +2433,7 @@ const tryExtractChildParameters = (
 const matchUrl = (
   parsedPattern,
   url,
-  { baseUrl, queryConnectionMap, patternObj = null },
+  { baseUrl, baseFileUrl, queryConnectionMap, patternObj = null },
 ) => {
   // Parse the URL
   const urlObj = new URL(url, baseUrl);
@@ -2459,10 +2460,16 @@ const matchUrl = (
       return extractSearchParams(urlObj, queryConnectionMap);
     }
 
-    // Special case: if URL exactly matches baseUrl, treat as root route
+    // Special case: if URL exactly matches baseUrl or baseFileUrl (the HTML root file), treat as root route
     if (baseUrl) {
       const baseUrlObj = new URL(baseUrl);
       if (originalPathname === baseUrlObj.pathname) {
+        return extractSearchParams(urlObj, queryConnectionMap);
+      }
+    }
+    if (baseFileUrl) {
+      const baseFileUrlObj = new URL(baseFileUrl);
+      if (originalPathname === baseFileUrlObj.pathname) {
         return extractSearchParams(urlObj, queryConnectionMap);
       }
     }
