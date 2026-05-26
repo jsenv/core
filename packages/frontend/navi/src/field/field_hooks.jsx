@@ -12,11 +12,7 @@
  *    a debounced action. The request-action event chain handles the timing centrally
  *    rather than each component having to manage its own debounce logic.
  */
-import {
-  dispatchInternalCustomEvent,
-  findEvent,
-  getKeyboardEventDefaultAction,
-} from "@jsenv/dom";
+import { dispatchInternalCustomEvent, findEvent } from "@jsenv/dom";
 import {
   useCallback,
   useContext,
@@ -149,30 +145,16 @@ export const useFieldInterfaceProps = (
       requestClosestAction(e);
       return;
     }
-    if (e.key === " ") {
-      const field = ref.current;
-      const allowed = dispatchRequestInteraction(field, e);
-      if (!allowed) {
-        // Here we want to prevent
-        // - space to toggle radio/checkbox
-        // - space to scroll scrollable container (usually document)
-        // No need to prevent space from typing into input, browser supports readonly on thoose
-        debugInteraction(e, "space.preventDefault()");
-        e.preventDefault();
-      }
-      return;
-    }
-    if (primaryInteractionMode === "keyboard") {
-      const keyboardDefaultAction = getKeyboardEventDefaultAction(e);
-      if (keyboardDefaultAction) {
-        // inside a checkbox/radio does not make much sense so we'll see
-        // but for input it allows to show the readonly message when trying to type into it
-        const input = e.currentTarget;
-        const allowed = dispatchRequestInteraction(input, e);
-        if (!allowed) {
-          e.preventDefault();
-        }
-      }
+    const input = e.currentTarget;
+    const allowed = dispatchRequestInteraction(input, e);
+    if (!allowed) {
+      // Here we want to prevent
+      // - space to toggle radio/checkbox
+      // - space to scroll scrollable container (usually document)
+      // - any keyboard interaction that would affect input value
+      // or would not make sense on a readonly field
+      debugInteraction(e, "space.preventDefault()");
+      e.preventDefault();
     }
   };
   const onPaste = (e) => {

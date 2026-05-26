@@ -59,6 +59,7 @@ import {
   dispatchPublicCustomEvent,
   findEvent,
   getElementSignature,
+  getKeyboardEventDefaultAction,
 } from "@jsenv/dom";
 
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
@@ -113,12 +114,30 @@ export const onRequestInteraction = (
   if (requestStatus.canProceed) {
     checkEvent(requestStatus, event);
   }
+
   if (requestStatus.canProceed) {
-    checkAndReportConstraints(requestStatus, INTERACTION_CONSTRAINTS, {
-      event: requestInteractionCustomEvent,
-      requester: event.target,
-      debug: debugInteraction,
-    });
+    let skipConstraints = false;
+
+    if (event.type === "keydown") {
+      const defaultAction = getKeyboardEventDefaultAction(event);
+      if (
+        defaultAction === "type" ||
+        defaultAction === "value_change" ||
+        defaultAction === "activate" ||
+        defaultAction === "scroll"
+      ) {
+      } else {
+        // "focus_nav", "form_submit", "cursor_move", "dismiss"
+        skipConstraints = true;
+      }
+    }
+    if (!skipConstraints) {
+      checkAndReportConstraints(requestStatus, INTERACTION_CONSTRAINTS, {
+        event: requestInteractionCustomEvent,
+        requester: event.target,
+        debug: debugInteraction,
+      });
+    }
   }
   if (!requestStatus.canProceed) {
     onPrevented?.();
@@ -272,6 +291,7 @@ const checkEvent = (requestStatus, event) => {
     return;
   }
 };
+
 const checkAndReportConstraints = (
   requestStatus,
   constraints,
