@@ -502,14 +502,179 @@
       };
 
       const InputInteractivityDemo = () => {
+        return (
+          <div className="demo-section" id="interactivity">
+            <h2>Input Interactivity</h2>
+
+            <ActionValueDemo />
+
+            <h3 id="interactivity-action">action</h3>
+
+            <ActionBasicSyncDemo />
+            <ActionAsyncDemo />
+            <ActionDebouncedDemo />
+            <ActionAfterChangeDemo />
+            <ActionWithAbortDemo />
+
+            <h3 id="interactivity-form">Inside Form</h3>
+
+            <p className="states-description">
+              When an input is inside a <code>Form</code>, its <code>name</code>{" "}
+              is used to collect the value on submit.
+            </p>
+
+            <FormBasicDemo />
+            <FormWithInputActionDemo />
+          </div>
+        );
+      };
+
+      const ActionValueDemo = () => {
         const [controlledValue, setControlledValue] = useState("Controlled");
+
+        return (
+          <fieldset>
+            <legend>value</legend>
+            <p className="states-description">
+              Use <code>defaultValue</code> for an initial value the user can
+              freely change. Use <code>value</code> combined with{" "}
+              <code>action</code> to control the input externally.
+            </p>
+            <Box flex="y" spacing="s" alignX="start">
+              <div>
+                <label style={{ fontSize: "0.9rem" }}>defaultValue</label>
+                <Input
+                  defaultValue="Hello World!"
+                  placeholder="Enter text..."
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: "0.9rem" }}>
+                  value + action (controlled)
+                </label>
+                <Input
+                  value={controlledValue}
+                  action={setControlledValue}
+                  placeholder="Controlled input"
+                />
+                <div className="value-display">{controlledValue}</div>
+              </div>
+            </Box>
+          </fieldset>
+        );
+      };
+
+      const ActionBasicSyncDemo = () => {
         const [uiStateValue, setUiStateValue] = useState("");
+
+        return (
+          <fieldset>
+            <legend>basic (sync)</legend>
+            <p className="states-description">
+              <code>action</code> fires on every user interaction, reflecting
+              what the input currently shows.
+            </p>
+            <Box flex spacing="s">
+              <Input placeholder="Type something..." action={setUiStateValue} />
+              <div className="value-display">
+                Current value: "{uiStateValue}"
+              </div>
+            </Box>
+          </fieldset>
+        );
+      };
+
+      const ActionAsyncDemo = () => {
         const [basicActionValue, setBasicActionValue] = useState("");
         const [basicActionCallCount, setBasicActionCallCount] = useState(0);
+
+        return (
+          <fieldset>
+            <legend>async</legend>
+            <p className="states-description">
+              When <code>action</code> is async, it is called on{" "}
+              <strong>every keystroke</strong>. Type quickly to see multiple
+              overlapping calls — the displayed value jumps as each one
+              resolves. Use the options below to avoid this.
+            </p>
+            <Box flex spacing="s">
+              <Input
+                placeholder="Type something..."
+                action={async (value) => {
+                  setBasicActionCallCount((c) => c + 1);
+                  await delay(1000);
+                  setBasicActionValue(value);
+                }}
+              />
+              <div className="value-display">
+                Value: "{basicActionValue}" | Calls: {basicActionCallCount}
+              </div>
+            </Box>
+          </fieldset>
+        );
+      };
+
+      const ActionDebouncedDemo = () => {
         const [debouncedValue, setDebouncedValue] = useState("");
         const [debouncedCallCount, setDebouncedCallCount] = useState(0);
+
+        return (
+          <fieldset>
+            <legend>debounced</legend>
+            <p className="states-description">
+              Use <code>actionDebounce</code> to wait for the user to stop
+              typing before calling the action. Ideal for search queries or any
+              slow async operation.
+            </p>
+            <Box flex spacing="s">
+              <Input
+                placeholder="Type something (debounced 600ms)..."
+                action={async (value) => {
+                  setDebouncedCallCount((c) => c + 1);
+                  await new Promise((resolve) => setTimeout(resolve, 1500));
+                  setDebouncedValue(value);
+                }}
+                actionDebounce={600}
+              />
+              <div className="value-display">
+                Value: "{debouncedValue}" | Calls: {debouncedCallCount}
+              </div>
+            </Box>
+          </fieldset>
+        );
+      };
+
+      const ActionAfterChangeDemo = () => {
         const [afterChangeValue, setAfterChangeValue] = useState("");
         const [afterChangeCallCount, setAfterChangeCallCount] = useState(0);
+
+        return (
+          <fieldset>
+            <legend>after change (blur / Enter)</legend>
+            <p className="states-description">
+              <code>actionAfterChange</code> delays the action until blur or
+              Enter. The input shows a loading state and becomes read-only while
+              the action is running.
+            </p>
+            <Box flex spacing="s">
+              <Input
+                placeholder="Type and press Enter or blur..."
+                action={async (value) => {
+                  setAfterChangeCallCount((c) => c + 1);
+                  await new Promise((resolve) => setTimeout(resolve, 1500));
+                  setAfterChangeValue(value);
+                }}
+                actionAfterChange
+              />
+              <div className="value-display">
+                Value: "{afterChangeValue}" | Calls: {afterChangeCallCount}
+              </div>
+            </Box>
+          </fieldset>
+        );
+      };
+
+      const ActionWithAbortDemo = () => {
         const [abortValue, setAbortValue] = useState("");
         const [abortCallCount, setAbortCallCount] = useState(0);
         const [abortedCount, setAbortedCount] = useState(0);
@@ -525,163 +690,32 @@
         };
 
         return (
-          <div className="demo-section" id="interactivity">
-            <h2>Input Interactivity</h2>
-
-            <fieldset>
-              <legend>value</legend>
-              <p className="states-description">
-                Use <code>defaultValue</code> for an initial value the user can
-                freely change. Use <code>value</code> combined with{" "}
-                <code>action</code> to control the input externally.
-              </p>
-              <Box flex="y" spacing="s" alignX="start">
-                <div>
-                  <label style={{ fontSize: "0.9rem" }}>defaultValue</label>
-                  <Input
-                    defaultValue="Hello World!"
-                    placeholder="Enter text..."
-                  />
-                </div>
-                <div>
-                  <label style={{ fontSize: "0.9rem" }}>
-                    value + action (controlled)
-                  </label>
-                  <Input
-                    value={controlledValue}
-                    action={setControlledValue}
-                    placeholder="Controlled input"
-                  />
-                  <div className="value-display">{controlledValue}</div>
-                </div>
-              </Box>
-            </fieldset>
-
-            <h3 id="interactivity-action">action</h3>
-
-            <fieldset>
-              <legend>basic (sync)</legend>
-              <p className="states-description">
-                <code>action</code> fires on every user interaction, reflecting
-                what the input currently shows.
-              </p>
-              <Box flex spacing="s">
-                <Input
-                  placeholder="Type something..."
-                  action={setUiStateValue}
-                />
-                <div className="value-display">
-                  Current value: "{uiStateValue}"
-                </div>
-              </Box>
-            </fieldset>
-
-            <fieldset>
-              <legend>async</legend>
-              <p className="states-description">
-                When <code>action</code> is async, it is called on{" "}
-                <strong>every keystroke</strong>. Type quickly to see multiple
-                overlapping calls — the displayed value jumps as each one
-                resolves. Use the options below to avoid this.
-              </p>
-              <Box flex spacing="s">
-                <Input
-                  placeholder="Type something..."
-                  action={async (value) => {
-                    setBasicActionCallCount((c) => c + 1);
-                    await delay(1000);
-                    setBasicActionValue(value);
-                  }}
-                />
-                <div className="value-display">
-                  Value: "{basicActionValue}" | Calls: {basicActionCallCount}
-                </div>
-              </Box>
-            </fieldset>
-
-            <fieldset>
-              <legend>debounced</legend>
-              <p className="states-description">
-                Use <code>actionDebounce</code> to wait for the user to stop
-                typing before calling the action. Ideal for search queries or
-                any slow async operation.
-              </p>
-              <Box flex spacing="s">
-                <Input
-                  placeholder="Type something (debounced 600ms)..."
-                  action={async (value) => {
-                    setDebouncedCallCount((c) => c + 1);
-                    await new Promise((resolve) => setTimeout(resolve, 1500));
-                    setDebouncedValue(value);
-                  }}
-                  actionDebounce={600}
-                />
-                <div className="value-display">
-                  Value: "{debouncedValue}" | Calls: {debouncedCallCount}
-                </div>
-              </Box>
-            </fieldset>
-
-            <fieldset>
-              <legend>after change (blur / Enter)</legend>
-              <p className="states-description">
-                <code>actionAfterChange</code> delays the action until blur or
-                Enter. The input shows a loading state and becomes read-only
-                while the action is running.
-              </p>
-              <Box flex spacing="s">
-                <Input
-                  placeholder="Type and press Enter or blur..."
-                  action={async (value) => {
-                    setAfterChangeCallCount((c) => c + 1);
-                    await new Promise((resolve) => setTimeout(resolve, 1500));
-                    setAfterChangeValue(value);
-                  }}
-                  actionAfterChange
-                />
-                <div className="value-display">
-                  Value: "{afterChangeValue}" | Calls: {afterChangeCallCount}
-                </div>
-              </Box>
-            </fieldset>
-
-            <fieldset>
-              <legend>with abort</legend>
-              <p className="states-description">
-                Keep the action synchronous to stay non-blocking, and use an{" "}
-                <code>AbortController</code> to cancel in-flight async work when
-                a new value arrives.
-              </p>
-              <Box flex spacing="s">
-                <Input
-                  placeholder="Type something (with abort)..."
-                  action={(value) => {
-                    const abortSignal = cancelPrevious();
-                    setAbortCallCount((c) => c + 1);
-                    setTimeout(() => {
-                      if (!abortSignal.aborted) {
-                        setAbortValue(value);
-                      }
-                    }, 1500);
-                  }}
-                />
-                <div className="value-display">
-                  Value: "{abortValue}" | Calls: {abortCallCount} | Aborted:{" "}
-                  {abortedCount}
-                </div>
-              </Box>
-            </fieldset>
-
-            <h3 id="interactivity-form">Inside Form</h3>
-
+          <fieldset>
+            <legend>with abort</legend>
             <p className="states-description">
-              When an input is inside a <code>Form</code>, its <code>name</code>{" "}
-              is used to collect the value on submit.
+              Keep the action synchronous to stay non-blocking, and use an{" "}
+              <code>AbortController</code> to cancel in-flight async work when a
+              new value arrives.
             </p>
-
-            <FormBasicDemo />
-            <FormWithInputActionDemo />
-          </div>
+            <Box flex spacing="s">
+              <Input
+                placeholder="Type something (with abort)..."
+                action={(value) => {
+                  const abortSignal = cancelPrevious();
+                  setAbortCallCount((c) => c + 1);
+                  setTimeout(() => {
+                    if (!abortSignal.aborted) {
+                      setAbortValue(value);
+                    }
+                  }, 1500);
+                }}
+              />
+              <div className="value-display">
+                Value: "{abortValue}" | Calls: {abortCallCount} | Aborted:{" "}
+                {abortedCount}
+              </div>
+            </Box>
+          </fieldset>
         );
       };
 
