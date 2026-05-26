@@ -153,7 +153,7 @@ export const useFieldInterfaceProps = (
       // - space to scroll scrollable container (usually document)
       // - any keyboard interaction that would affect input value
       // or would not make sense on a readonly field
-      debugInteraction(e, "space.preventDefault()");
+      debugInteraction(e, "keydown.preventDefault()");
       e.preventDefault();
     }
   };

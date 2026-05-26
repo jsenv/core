@@ -246,6 +246,10 @@ export const openCallout = (
       debug(event, `callout close (reason: ${reason})`);
     }
     if (event.type === "mousedown") {
+      debug(
+        event,
+        "preventing mousedown default to avoid focus change on callout close",
+      );
       event.preventDefault(); // prevent focus change to the callout, let it on the input
     }
     callout.opened = false;
@@ -359,7 +363,7 @@ export const openCallout = (
       if (keyTarget === calloutElement || calloutElement.contains(keyTarget)) {
         return;
       }
-      requestClose(event, "click_outside");
+      requestClose(event, "space_outside");
     };
     const registerClickOutsideListener = () => {
       document.addEventListener("click", handleClickOutside, true);
