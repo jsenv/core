@@ -338,7 +338,7 @@ export const Selectable = (props) => {
           ref={inputRef}
           type={inputType}
           checked={selected}
-          onChange={(e) => {
+          onInput={(e) => {
             const listContainerEl = e.currentTarget.closest(
               ".navi_list_container",
             );
