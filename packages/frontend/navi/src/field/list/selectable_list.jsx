@@ -162,7 +162,7 @@ export const SelectableList = (props) => {
   const {
     ref,
     multiple,
-    selectedIndicator,
+    selectedIndicator = "backgroundColor",
     focusGroupDirection,
     focusGroupWrap,
   } = props;

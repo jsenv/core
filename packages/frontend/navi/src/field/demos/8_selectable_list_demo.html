@@ -114,7 +114,7 @@
                   <h2>Customization</h2>
                 </div>
                 <IconInputDemo />
-                <ToggleDemo />
+                <SwitchDemo />
                 <BgColorDemo />
                 <ManualAreaDemo />
                 <LegendDemo />
@@ -148,7 +148,7 @@
                     <a href="#icons">Custom icons</a>
                   </li>
                   <li>
-                    <a href="#toggle">Toggle appearance</a>
+                    <a href="#switch">Switch appearance</a>
                   </li>
                   <li>
                     <a href="#bg-color">Background color indicator</a>
@@ -625,68 +625,78 @@
         );
       };
 
-      // ── Toggle appearance ──────────────────────────────────────────────────────
+      // ── Switch appearance ──────────────────────────────────────────────────────
 
-      const ToggleDemo = () => {
+      const SwitchDemo = () => {
         const [selectedSingle, setSelectedSingle] = useState("Apple");
         const [selectedMultiple, setSelectedMultiple] = useState([
           "Apple",
           "Cherry",
         ]);
-        const renderList = ({ multiple, selected, setSelected }) => (
-          <SelectableList
-            multiple={multiple}
-            action={(v) => {
-              setSelected(multiple ? (v ?? []) : (v ?? null));
-            }}
-          >
-            {FRUITS.map((fruit, i) => (
-              <Selectable
-                key={fruit}
-                index={i}
-                id={`toggle_${multiple ? "m" : "s"}_${fruit.toLowerCase()}`}
-                value={fruit}
-                selected={
-                  multiple ? selected.includes(fruit) : selected === fruit
-                }
-                flex
-                spacing="s"
-                expandX
-                alignY="center"
-              >
-                <span style={{ flex: 1 }}>{fruit}</span>
-                <Selectable.Input appearance="toggle" />
-              </Selectable>
-            ))}
-          </SelectableList>
-        );
         return (
-          <div id="toggle" className="demo-section">
-            <h2>Toggle appearance</h2>
+          <div id="switch" className="demo-section">
+            <h2>Switch appearance</h2>
             <p>
-              Pass <code>appearance="toggle"</code> to{" "}
-              <code>Selectable.Input</code> to render a toggle switch instead of
-              a radio/checkbox mark.
+              Pass <code>appearance="switch"</code> to{" "}
+              <code>Selectable.Input</code> to render a switch instead of a
+              checkbox mark. Only available for multiple selection — switch and
+              radio don't work well together in terms of affordance (a switch
+              implies an independent on/off, not mutual exclusion).
             </p>
             <div className="two-col">
               <div>
-                <div className="col-label">Single</div>
-                {renderList({
-                  multiple: false,
-                  selected: selectedSingle,
-                  setSelected: setSelectedSingle,
-                })}
+                <div className="col-label">Single — no switch</div>
+                <SelectableList
+                  action={(v) => {
+                    setSelectedSingle(v);
+                  }}
+                >
+                  {FRUITS.map((fruit, i) => (
+                    <Selectable
+                      key={fruit}
+                      index={i}
+                      id={`switch_s_${fruit.toLowerCase()}`}
+                      value={fruit}
+                      selected={selectedSingle === fruit}
+                      flex
+                      spacing="s"
+                      expandX
+                      alignY="center"
+                    >
+                      <span style={{ flex: 1 }}>{fruit}</span>
+                      <Selectable.Input />
+                    </Selectable>
+                  ))}
+                </SelectableList>
                 <div className="value-display">
                   {selectedSingle ? `Selected: ${selectedSingle}` : ""}
                 </div>
               </div>
               <div>
-                <div className="col-label">Multiple</div>
-                {renderList({
-                  multiple: true,
-                  selected: selectedMultiple,
-                  setSelected: setSelectedMultiple,
-                })}
+                <div className="col-label">Multiple — with switch</div>
+                <SelectableList
+                  multiple
+                  action={(v) => {
+                    setSelectedMultiple(v ?? []);
+                  }}
+                >
+                  {FRUITS.map((fruit, i) => (
+                    <Selectable
+                      key={fruit}
+                      index={i}
+                      id={`switch_m_${fruit.toLowerCase()}`}
+                      value={fruit}
+                      selected={selectedMultiple.includes(fruit)}
+                      flex
+                      spacing="s"
+                      expandX
+                      alignY="center"
+                    >
+                      <span style={{ flex: 1 }}>{fruit}</span>
+                      <Selectable.Input appearance="switch" />
+                    </Selectable>
+                  ))}
+                </SelectableList>
                 <div className="value-display">
                   {selectedMultiple.length
                     ? `Selected: ${selectedMultiple.join(", ")}`
