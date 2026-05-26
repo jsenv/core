@@ -1,15 +1,15 @@
 /**
- * Returns the browser's default behavior for a keyboard event on its target element.
+ * Returns the browser's default action for a keyboard event on its target element.
  *
  * Possible return values:
- * - `"focus_nav"`    — key moves focus (Tab, arrow in radio/checkbox group)
- * - `"value_change"` — key increments/decrements the field value (number, range, date…)
+ * - `"activate"`     — Space/Enter triggers the element's primary action (button click, checkbox toggle, picker open…)
+ * - `"form_submit"`  — Enter submits the enclosing form (single-line inputs)
+ * - `"dismiss"`      — Escape closes a dialog, clears a search field, collapses a dropdown
+ * - `"focus_nav"`    — key moves focus (Tab, arrow keys in a radio/checkbox group)
+ * - `"value_change"` — key increments/decrements the field value (range, number, date…)
  * - `"cursor_move"`  — key moves the text cursor within the field
  * - `"type"`         — key produces or deletes text content
- * - `"form_submit"`  — Enter on a single-line input submits the enclosing form
- * - `"activate"`     — Space/Enter triggers the element's action (button, link)
- * - `"dismiss"`      — Escape closes a dialog, clears a search field, collapses a dropdown
- * - `"scroll"`       — key scrolls the page/scrollable container (Space, Arrow keys on non-interactive elements)
+ * - `"scroll"`       — key scrolls the page or a scrollable container
  * - `""`             — no meaningful browser default; safe to intercept freely
  */
 export const getKeyboardEventDefaultAction = (keyboardEvent) => {
@@ -88,17 +88,18 @@ const DEFAULT_BEHAVIORS = [
         "input[type='text'], input[type='search'], input[type='url'], input[type='email'], input[type='password'], input[type='tel']",
       ),
     keys: {
+      Enter: (e) => (e.target.form ? "form_submit" : ""),
       ArrowLeft: "cursor_move",
       ArrowRight: "cursor_move",
       Home: "cursor_move",
       End: "cursor_move",
-      Enter: (e) => (e.target.form ? "form_submit" : ""),
     },
     fallback: (e) => (isTypingIntent(e) ? "type" : ""),
   },
   {
     test: (el) => el.matches("input[type='range']"),
     keys: {
+      Enter: (e) => (e.target.form ? "form_submit" : ""),
       ArrowLeft: "value_change",
       ArrowRight: "value_change",
       ArrowUp: "value_change",
@@ -107,20 +108,19 @@ const DEFAULT_BEHAVIORS = [
       End: "value_change",
       PageUp: "value_change",
       PageDown: "value_change",
-      Enter: (e) => (e.target.form ? "form_submit" : ""),
     },
     fallback: "",
   },
   {
     test: (el) => el.matches("input[type='number']"),
     keys: {
+      Enter: (e) => (e.target.form ? "form_submit" : ""),
       ArrowLeft: "cursor_move",
       ArrowRight: "cursor_move",
       ArrowUp: "value_change",
       ArrowDown: "value_change",
       Home: "cursor_move",
       End: "cursor_move",
-      Enter: (e) => (e.target.form ? "form_submit" : ""),
     },
     fallback: (e) => (isTypingIntent(e) ? "type" : ""),
   },
@@ -130,12 +130,12 @@ const DEFAULT_BEHAVIORS = [
         "input[type='date'], input[type='time'], input[type='datetime-local'], input[type='month'], input[type='week']",
       ),
     keys: {
+      Space: "activate",
+      Enter: (e) => (e.target.form ? "form_submit" : ""),
       ArrowLeft: "value_change",
       ArrowRight: "value_change",
       ArrowUp: "value_change",
       ArrowDown: "value_change",
-      Space: "activate",
-      Enter: (e) => (e.target.form ? "form_submit" : ""),
     },
     fallback: "",
   },
@@ -169,13 +169,13 @@ const DEFAULT_BEHAVIORS = [
       el.contentEditable === "true" ||
       el.isContentEditable,
     keys: {
+      Enter: "type",
       ArrowLeft: "cursor_move",
       ArrowRight: "cursor_move",
       ArrowUp: "cursor_move",
       ArrowDown: "cursor_move",
       Home: "cursor_move",
       End: "cursor_move",
-      Enter: "type",
     },
     fallback: (e) => (isTypingIntent(e) ? "type" : ""),
   },
