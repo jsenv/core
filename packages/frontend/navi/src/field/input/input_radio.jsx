@@ -411,9 +411,13 @@ export const InputRadio = (props) => {
     }
   }, [checked]);
 
-  if (props.appearance === "hidden") {
+  if (props.headless) {
     return (
-      <InputRadioVisuallyHidden {...remainingProps} radioProps={radioProps} />
+      <InputRadioHeadless
+        {...remainingProps}
+        headless={undefined}
+        radioProps={radioProps}
+      />
     );
   }
   return (
@@ -421,7 +425,7 @@ export const InputRadio = (props) => {
   );
 };
 
-const InputRadioVisuallyHidden = (props) => {
+const InputRadioHeadless = (props) => {
   return (
     <BoxForwardedPropsContext.Provider value={undefined}>
       <RealInputRadio
@@ -438,7 +442,7 @@ const InputRadioVisuallyHidden = (props) => {
 const InputRadioFieldInterface = (props) => {
   import.meta.css = css;
   const { icon, appearance: props_appearance, radioProps, ...rest } = props;
-  const VALID_APPEARANCES = ["hidden", "icon", "button", "radio"];
+  const VALID_APPEARANCES = ["icon", "button", "radio"];
   let appearance = props_appearance ?? (icon ? "icon" : "radio");
   if (!VALID_APPEARANCES.includes(appearance) && !icon) {
     console.warn(
@@ -453,9 +457,7 @@ const InputRadioFieldInterface = (props) => {
     elementSelector: ".navi_radio_accent_probe",
   });
   let visualVNode;
-  if (appearance === "hidden") {
-    visualVNode = null;
-  } else if (appearance === "icon" || icon) {
+  if (appearance === "icon" || icon) {
     visualVNode = Array.isArray(icon) ? icon[checked ? 1 : 0] : icon;
   } else {
     // appearance === "radio"

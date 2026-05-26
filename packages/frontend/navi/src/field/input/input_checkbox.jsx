@@ -327,10 +327,11 @@ export const InputCheckbox = (props) => {
     },
   );
 
-  if (props.appearance === "hidden") {
+  if (props.headless) {
     return (
-      <InputCheckboxVisuallyHidden
+      <InputCheckboxHeadless
         {...remainingProps}
+        headless={undefined}
         checkboxProps={checkboxProps}
       />
     );
@@ -343,7 +344,7 @@ export const InputCheckbox = (props) => {
   );
 };
 
-const InputCheckboxVisuallyHidden = (props) => {
+const InputCheckboxHeadless = (props) => {
   return (
     <BoxForwardedPropsContext.Provider value={undefined}>
       <RealInputCheckbox
