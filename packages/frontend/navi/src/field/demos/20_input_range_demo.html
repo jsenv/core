@@ -177,7 +177,84 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      import { Box, Input, NaviDebug } from "@jsenv/navi";
+      import {
+        Box,
+        Input,
+        NaviDebug,
+        route,
+        setupRoutes,
+        stateSignal,
+      } from "@jsenv/navi";
+
+      const basicDefaultSignal = stateSignal(50, {
+        id: "basic_default",
+        type: "number",
+        min: 0,
+        max: 100,
+      });
+      const focusValueSignal = stateSignal(30, {
+        id: "focus_value",
+        type: "number",
+        min: 0,
+        max: 100,
+      });
+      const immediateRadiusSignal = stateSignal(50, {
+        id: "immediate_radius",
+        type: "number",
+        min: 10,
+        max: 100,
+      });
+      const slowRadiusSignal = stateSignal(50, {
+        id: "slow_radius",
+        type: "number",
+        min: 10,
+        max: 100,
+      });
+      const debouncedRadiusSignal = stateSignal(50, {
+        id: "debounced_radius",
+        type: "number",
+        min: 10,
+        max: 100,
+      });
+      const redValueSignal = stateSignal(25, {
+        id: "red_value",
+        type: "number",
+        min: 0,
+        max: 100,
+      });
+      const greenValueSignal = stateSignal(50, {
+        id: "green_value",
+        type: "number",
+        min: 0,
+        max: 100,
+      });
+      const smallThumbSignal = stateSignal(30, {
+        id: "small_thumb",
+        type: "number",
+        min: 0,
+        max: 100,
+      });
+      const largeThumbSignal = stateSignal(70, {
+        id: "large_thumb",
+        type: "number",
+        min: 0,
+        max: 100,
+      });
+
+      const DEMO_ROUTE = route("", {
+        searchParams: {
+          basic_default: basicDefaultSignal,
+          focus_value: focusValueSignal,
+          immediate_radius: immediateRadiusSignal,
+          slow_radius: slowRadiusSignal,
+          debounced_radius: debouncedRadiusSignal,
+          red_value: redValueSignal,
+          green_value: greenValueSignal,
+          small_thumb: smallThumbSignal,
+          large_thumb: largeThumbSignal,
+        },
+      });
+      setupRoutes([DEMO_ROUTE]);
 
       const App = () => {
         return (
@@ -194,7 +271,6 @@
       };
 
       const BasicStatesDemo = () => {
-        const [defaultValue, setDefaultValue] = useState(50);
         const [disabledValue] = useState(75);
 
         return (
@@ -217,24 +293,26 @@
                     <div className="range-group">
                       <Input
                         type="range"
-                        value={defaultValue}
+                        value={basicDefaultSignal}
                         action={(v) => {
-                          setDefaultValue(v);
+                          basicDefaultSignal.value = v;
                         }}
                         min="0"
                         max="100"
                       />
-                      <div className="value-display">{defaultValue}</div>
+                      <div className="value-display">{basicDefaultSignal}</div>
                     </div>
                     <div className="range-group">
                       <input
                         type="range"
-                        value={defaultValue}
-                        onChange={(e) => setDefaultValue(e.target.value)}
+                        value={basicDefaultSignal.value}
+                        onChange={(e) => {
+                          basicDefaultSignal.value = Number(e.target.value);
+                        }}
                         min="0"
                         max="100"
                       />
-                      <div className="value-display">{defaultValue}</div>
+                      <div className="value-display">{basicDefaultSignal}</div>
                     </div>
                   </Box>
                 </fieldset>
@@ -340,8 +418,6 @@
       };
 
       const FocusStatesDemo = () => {
-        const [focusedValue, setFocusedValue] = useState(30);
-
         return (
           <div className="demo-section">
             <h2>Focus States</h2>
@@ -359,24 +435,28 @@
                   <div className="range-group">
                     <Input
                       type="range"
-                      value={focusedValue}
-                      action={(v) => setFocusedValue(v)}
+                      value={focusValueSignal}
+                      action={(v) => {
+                        focusValueSignal.value = v;
+                      }}
                       min="0"
                       max="100"
                       pseudoState={{ ":focus-visible": true }}
                     />
-                    <div className="value-display">{focusedValue}</div>
+                    <div className="value-display">{focusValueSignal}</div>
                   </div>
                   <div className="range-group">
                     <input
                       type="range"
-                      value={focusedValue}
-                      onChange={(e) => setFocusedValue(e.target.value)}
+                      value={focusValueSignal.value}
+                      onChange={(e) => {
+                        focusValueSignal.value = Number(e.target.value);
+                      }}
                       min="0"
                       max="100"
                       autoFocus
                     />
-                    <div className="value-display">{focusedValue}</div>
+                    <div className="value-display">{focusValueSignal}</div>
                   </div>
                 </Box>
               </fieldset>
@@ -448,10 +528,6 @@
       };
 
       const ActionHandlingDemo = () => {
-        const [immediateRadius, setImmediateRadius] = useState(50);
-        const [slowRadius, setSlowRadius] = useState(50);
-        const [debouncedRadius, setDebouncedRadius] = useState(50);
-
         const [immediateCallCount, setImmediateCallCount] = useState(0);
         const [slowCallCount, setSlowCallCount] = useState(0);
         const [debouncedCallCount, setDebouncedCallCount] = useState(0);
@@ -563,13 +639,14 @@
                   type="range"
                   min="10"
                   max="100"
+                  value={immediateRadiusSignal}
                   action={(value) => {
+                    immediateRadiusSignal.value = value;
                     setImmediateCallCount((c) => c + 1);
-                    setImmediateRadius(parseInt(value));
                   }}
                 />
                 <CircleVisualization
-                  radius={immediateRadius}
+                  radius={immediateRadiusSignal.value}
                   label="Immediate Response"
                   callCount={immediateCallCount}
                 />
@@ -587,17 +664,20 @@
                   type="range"
                   min="10"
                   max="100"
+                  value={slowRadiusSignal}
                   action={(value) =>
                     slowAction(
                       parseInt(value),
-                      setSlowRadius,
+                      (v) => {
+                        slowRadiusSignal.value = v;
+                      },
                       slowCallCount,
                       setSlowCallCount,
                     )
                   }
                 />
                 <CircleVisualization
-                  radius={slowRadius}
+                  radius={slowRadiusSignal.value}
                   label="Slow Response (1.5s delay)"
                   callCount={slowCallCount}
                 />
@@ -616,10 +696,13 @@
                   type="range"
                   min="10"
                   max="100"
+                  value={debouncedRadiusSignal}
                   action={(value) =>
                     slowAction(
                       parseInt(value),
-                      setDebouncedRadius,
+                      (v) => {
+                        debouncedRadiusSignal.value = v;
+                      },
                       debouncedCallCount,
                       setDebouncedCallCount,
                     )
@@ -627,7 +710,7 @@
                   actionDebounce={300}
                 />
                 <CircleVisualization
-                  radius={debouncedRadius}
+                  radius={debouncedRadiusSignal.value}
                   label="Debounced Response (300ms + 1.5s delay)"
                   callCount={debouncedCallCount}
                 />
@@ -640,9 +723,6 @@
       };
 
       const ColorVariationsDemo = () => {
-        const [redValue, setRedValue] = useState(25);
-        const [greenValue, setGreenValue] = useState(50);
-
         return (
           <div className="demo-section">
             <h2>Color Variations</h2>
@@ -659,24 +739,28 @@
                   <div className="range-group">
                     <Input
                       type="range"
-                      value={redValue}
-                      uiAction={(v) => setRedValue(v)}
+                      value={redValueSignal}
+                      action={(v) => {
+                        redValueSignal.value = Number(v);
+                      }}
                       min="0"
                       max="100"
                       accentColor="red"
                     />
-                    <div className="value-display">{redValue}</div>
+                    <div className="value-display">{redValueSignal}</div>
                   </div>
                   <div className="range-group">
                     <input
                       type="range"
-                      value={redValue}
-                      onChange={(e) => setRedValue(e.target.value)}
+                      value={redValueSignal.value}
+                      onChange={(e) => {
+                        redValueSignal.value = Number(e.target.value);
+                      }}
                       min="0"
                       max="100"
                       style={{ accentColor: "red" }}
                     />
-                    <div className="value-display">{redValue}</div>
+                    <div className="value-display">{redValueSignal}</div>
                   </div>
                 </Box>
               </fieldset>
@@ -729,24 +813,28 @@
                   <div className="range-group">
                     <Input
                       type="range"
-                      value={greenValue}
-                      uiAction={(v) => setGreenValue(v)}
+                      value={greenValueSignal}
+                      action={(v) => {
+                        greenValueSignal.value = v;
+                      }}
                       min="0"
                       max="100"
                       accentColor="green"
                     />
-                    <div className="value-display">{greenValue}</div>
+                    <div className="value-display">{greenValueSignal}</div>
                   </div>
                   <div className="range-group">
                     <input
                       type="range"
-                      value={greenValue}
-                      onChange={(e) => setGreenValue(e.target.value)}
+                      value={greenValueSignal.value}
+                      onChange={(e) => {
+                        greenValueSignal.value = Number(e.target.value);
+                      }}
                       min="0"
                       max="100"
                       style={{ accentColor: "green" }}
                     />
-                    <div className="value-display">{greenValue}</div>
+                    <div className="value-display">{greenValueSignal}</div>
                   </div>
                 </Box>
               </fieldset>
@@ -793,9 +881,6 @@
       };
 
       const ThumbCustomizationDemo = () => {
-        const [smallThumbValue, setSmallThumbValue] = useState(30);
-        const [largeThumbValue, setLargeThumbValue] = useState(70);
-
         return (
           <div className="demo-section">
             <h2>Thumb Customization</h2>
@@ -812,8 +897,10 @@
                   <div className="range-group">
                     <Input
                       type="range"
-                      value={smallThumbValue}
-                      uiAction={(e) => setSmallThumbValue(e)}
+                      value={smallThumbSignal}
+                      action={(v) => {
+                        smallThumbSignal.value = v;
+                      }}
                       min="0"
                       max="100"
                       style={{
@@ -821,18 +908,20 @@
                         "--thumb-color": "#ff6b35",
                       }}
                     />
-                    <div className="value-display">{smallThumbValue}</div>
+                    <div className="value-display">{smallThumbSignal}</div>
                   </div>
                   <div className="range-group">
                     <input
                       type="range"
-                      value={smallThumbValue}
-                      onChange={(e) => setSmallThumbValue(e.target.value)}
+                      value={smallThumbSignal.value}
+                      onChange={(e) => {
+                        smallThumbSignal.value = Number(e.target.value);
+                      }}
                       min="0"
                       max="100"
                       className="small-thumb-range"
                     />
-                    <div className="value-display">{smallThumbValue}</div>
+                    <div className="value-display">{smallThumbSignal}</div>
                   </div>
                 </Box>
               </fieldset>
@@ -842,8 +931,10 @@
                   <div className="range-group">
                     <Input
                       type="range"
-                      value={largeThumbValue}
-                      uiAction={(e) => setLargeThumbValue(e)}
+                      value={largeThumbSignal}
+                      action={(v) => {
+                        largeThumbSignal.value = v;
+                      }}
                       min="0"
                       max="100"
                       style={{
@@ -851,18 +942,20 @@
                         "--thumb-color": "#4a90e2",
                       }}
                     />
-                    <div className="value-display">{largeThumbValue}</div>
+                    <div className="value-display">{largeThumbSignal}</div>
                   </div>
                   <div className="range-group">
                     <input
                       type="range"
-                      value={largeThumbValue}
-                      onChange={(e) => setLargeThumbValue(e.target.value)}
+                      value={largeThumbSignal.value}
+                      onChange={(e) => {
+                        largeThumbSignal.value = Number(e.target.value);
+                      }}
                       min="0"
                       max="100"
                       className="large-thumb-range"
                     />
-                    <div className="value-display">{largeThumbValue}</div>
+                    <div className="value-display">{largeThumbSignal}</div>
                   </div>
                 </Box>
               </fieldset>

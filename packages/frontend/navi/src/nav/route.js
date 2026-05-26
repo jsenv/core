@@ -433,6 +433,7 @@ const [publishRouteMutations, observeRouteMutations] = createPubSub();
 export { observeRouteMutations };
 
 let setupRoutesCalled = false;
+let activeCleanup = null;
 export const setupRoutes = (routes) => {
   if (setupRoutesCalled) {
     throw new Error(
@@ -724,17 +725,20 @@ This prevents cross-test pollution and ensures clean state.`,
   onAllRouteReady(updateRoutes);
 
   // for unit test purposes code can call updateRoutes and clearRoutes
+  const clearRoutes = () => {
+    for (const route of routeSet) {
+      const routePrivateProperties = getRoutePrivateProperties(route);
+      routePrivateProperties.cleanup();
+      routePrivatePropertiesMap.delete(route);
+    }
+    routeSet.clear();
+    setupRoutesCalled = false;
+    activeCleanup = null;
+  };
+  activeCleanup = clearRoutes;
   return {
     updateRoutes,
-    clearRoutes: () => {
-      for (const route of routeSet) {
-        const routePrivateProperties = getRoutePrivateProperties(route);
-        routePrivateProperties.cleanup();
-        routePrivatePropertiesMap.delete(route);
-      }
-      routeSet.clear();
-      setupRoutesCalled = false;
-    },
+    clearRoutes,
   };
 };
 
@@ -780,3 +784,11 @@ let onAllRouteReady = () => {};
 export const setOnAllRouteReady = (callback) => {
   onAllRouteReady = callback;
 };
+
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    if (activeCleanup) {
+      activeCleanup();
+    }
+  });
+}

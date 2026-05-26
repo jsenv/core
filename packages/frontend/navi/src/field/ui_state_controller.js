@@ -111,11 +111,12 @@ export const useUIStateController = (
   }
   const [navState, setNavState] = useNavState(id);
   const state = props[statePropName];
+  const stateValue = isSignal(state) ? state.value : state;
   const defaultState = props[defaultStatePropName];
   const stateInitial = useInitialValue(() => {
     if (hasStateProp) {
       // controlled by state prop ("value" or "checked")
-      return getStateFromProp(state);
+      return getStateFromProp(stateValue);
     }
     if (defaultState) {
       // not controlled but want an initial state (a value or being checked)
@@ -183,8 +184,13 @@ export const useUIStateController = (
 
       if (hasStateProp) {
         uiStateController.hasStateProp = true;
+        uiStateController.valuePropSignal = isSignal(state) ? state : null;
         const currentState = uiStateController.state;
-        const stateFromProp = getStateFromProp(state);
+        const stateFromProp = getStateFromProp(
+          uiStateController.valuePropSignal
+            ? uiStateController.valuePropSignal.value
+            : state,
+        );
         if (stateFromProp !== currentState) {
           uiStateController.state = stateFromProp;
           uiStateController.setUIState(
@@ -194,6 +200,7 @@ export const useUIStateController = (
         }
       } else if (uiStateController.hasStateProp) {
         uiStateController.hasStateProp = false;
+        uiStateController.valuePropSignal = null;
         uiStateController.state = uiStateController.stateInitial;
       }
     },
@@ -206,6 +213,7 @@ export const useUIStateController = (
     statePropName,
     defaultStatePropName,
     hasStateProp,
+    valuePropSignal: isSignal(state) ? state : null,
     state: stateInitial,
     uiState: stateInitial,
     uiStateSignal,
