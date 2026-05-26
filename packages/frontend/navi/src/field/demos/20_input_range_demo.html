@@ -589,14 +589,14 @@
                   min="10"
                   max="100"
                   value={uiValue}
-                  uiAction={(value) => {
+                  onInput={(e) => {
                     // Immediate UI update
-                    setUIValue(parseInt(value));
+                    setUIValue(e.target.valueAsNumber);
                   }}
                   action={(value) => {
                     // Async processing - only updates processed state
                     return slowAction(
-                      parseInt(value),
+                      value,
                       setProcessedRadius,
                       afterChangeCallCount,
                       setAfterChangeCallCount,
@@ -604,7 +604,7 @@
                   }}
                   actionAfterChange
                 />
-                <Box column spacing="sm">
+                <Box flex spacing="s">
                   <div
                     style={{
                       fontSize: "0.85rem",

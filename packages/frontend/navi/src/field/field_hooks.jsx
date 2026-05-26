@@ -170,8 +170,7 @@ export const useFieldInterfaceProps = (
     dispatchRequestInteraction(ref.current, e);
   };
 
-  const { actionWaitForChange, actionDebounce } = props;
-
+  const { actionAfterChange, actionDebounce } = props;
   const installInputEffect = useCallback(
     (input) => {
       return addInputEffect(
@@ -180,12 +179,12 @@ export const useFieldInterfaceProps = (
           dispatchRequestAction(input, { event: e });
         },
         {
-          waitForChange: actionWaitForChange,
+          waitForChange: actionAfterChange,
           debounce: actionDebounce,
         },
       );
     },
-    [actionWaitForChange, actionDebounce],
+    [actionAfterChange, actionDebounce],
   );
 
   const refComposed = useComposeElementRef(installInputEffect, props.ref);
@@ -198,6 +197,8 @@ export const useFieldInterfaceProps = (
       onClick,
       onKeyDown,
       onPaste,
+      actionAfterChange: undefined,
+      actionDebounce: undefined,
     },
     {
       readOnlySupported,
