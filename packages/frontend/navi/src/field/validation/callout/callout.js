@@ -812,7 +812,7 @@ const stickCalloutToAnchor = (
       ? anchorElement.querySelector(naviFieldSelector)
       : anchorElement;
     const tagName = (fieldElement || anchorElement).tagName;
-    if (tagName === "INPUT" || tagName === "BUTTON") {
+    if (tagName === "INPUT" || tagName === "BUTTON" || tagName === "FIELDSET") {
       alignToAnchorBox = "border-box";
     } else {
       alignToAnchorBox = "content-box";

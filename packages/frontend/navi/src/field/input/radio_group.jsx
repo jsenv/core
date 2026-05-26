@@ -59,7 +59,7 @@ const RadioGroupInterface = (props) => {
       {...remainingProps}
       name={undefined}
       baseClassName="navi_radio_group"
-      data-callout-anchor="legend"
+      data-callout-point-to-border-box=""
       onInput={(e) => {
         // we rely on change event bubbling but we want to catch only the relevant radio change events
         const target = e.target;

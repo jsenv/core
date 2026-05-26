@@ -61,6 +61,7 @@ const CheckboxGroupInterface = (props) => {
       name={undefined}
       baseClassName="navi_checkbox_group"
       navi-checkbox-list=""
+      data-callout-point-to-border-box=""
       onChange={(e) => {
         // we rely on change event bubbling but we want to catch only the relevant checkbox change events
         const target = e.target;
