@@ -23,33 +23,19 @@ export const getKeyboardEventDefault = (keyboardEvent) => {
     return "";
   }
 
+  if (key === "Tab") {
+    return "focus_nav";
+  }
+
   if (target.tagName === "INPUT") {
     if (key === "ArrowLeft" || key === "ArrowRight") {
       if (target.type === "radio" || target.type === "checkbox") {
         // Browser moves focus to the previous/next sibling in the radio/checkbox group
         return "focus_nav";
       }
-      if (
-        target.type === "range" ||
-        target.type === "date" ||
-        target.type === "time" ||
-        target.type === "datetime-local" ||
-        target.type === "month" ||
-        target.type === "week"
-      ) {
-        // Browser changes range value or moves between date sub-fields (day/month/year)
-        return "value_change";
-      }
-      if (
-        target.type === "text" ||
-        target.type === "search" ||
-        target.type === "url" ||
-        target.type === "email" ||
-        target.type === "password" ||
-        target.type === "tel" ||
-        target.type === "number"
-      ) {
-        return "cursor_move";
+      const effect = ARROW_X_EFFECT_BY_INPUT_TYPE[target.type];
+      if (effect) {
+        return effect;
       }
       return "";
     }
@@ -59,32 +45,17 @@ export const getKeyboardEventDefault = (keyboardEvent) => {
         // Browser moves focus to the previous/next sibling in the radio/checkbox group
         return "focus_nav";
       }
-      if (
-        target.type === "number" ||
-        target.type === "range" ||
-        target.type === "date" ||
-        target.type === "time" ||
-        target.type === "datetime-local" ||
-        target.type === "month" ||
-        target.type === "week"
-      ) {
-        // Browser increments or decrements the value (spinner, date picker…)
-        return "value_change";
+      const effect = ARROW_Y_EFFECT_BY_INPUT_TYPE[target.type];
+      if (effect) {
+        return effect;
       }
       return "";
     }
 
     if (key === "Home" || key === "End") {
-      if (
-        target.type === "text" ||
-        target.type === "search" ||
-        target.type === "url" ||
-        target.type === "email" ||
-        target.type === "password" ||
-        target.type === "tel" ||
-        target.type === "number"
-      ) {
-        return "cursor_move";
+      const effect = HOME_END_EFFECT[target.type];
+      if (effect) {
+        return effect;
       }
       return "";
     }
@@ -121,6 +92,39 @@ export const getKeyboardEventDefault = (keyboardEvent) => {
     return "";
   }
   return true;
+};
+const ARROW_X_EFFECT_BY_INPUT_TYPE = {
+  "range": "value_change",
+  "date": "value_change",
+  "time": "value_change",
+  "datetime-local": "value_change",
+  "month": "value_change",
+  "week": "value_change",
+  "text": "cursor_move",
+  "search": "cursor_move",
+  "url": "cursor_move",
+  "email": "cursor_move",
+  "password": "cursor_move",
+  "tel": "cursor_move",
+  "number": "cursor_move",
+};
+const ARROW_Y_EFFECT_BY_INPUT_TYPE = {
+  "number": "value_change",
+  "range": "value_change",
+  "date": "value_change",
+  "time": "value_change",
+  "datetime-local": "value_change",
+  "month": "value_change",
+  "week": "value_change",
+};
+const HOME_END_EFFECT = {
+  text: "cursor_move",
+  search: "cursor_move",
+  url: "cursor_move",
+  email: "cursor_move",
+  password: "cursor_move",
+  tel: "cursor_move",
+  number: "cursor_move",
 };
 const isTypingIntent = (e) => {
   // Modifier keys used for shortcuts: skip
