@@ -29,7 +29,7 @@ export const CheckboxGroup = (props) => {
 
 const CheckboxGroupInterface = (props) => {
   import.meta.css = css;
-  const { ref } = props;
+  const { ref, name } = props;
   const [checkboxGroupProps, remainingProps] = useFieldgroupInterfaceProps(
     {
       resetOnCancel: true,
@@ -51,13 +51,11 @@ const CheckboxGroupInterface = (props) => {
       },
     },
   );
-  const { name } = checkboxGroupProps;
   useFocusGroup(ref, { wrap: "both" });
 
   return (
     <Box
       as="fieldset"
-      flex
       {...checkboxGroupProps}
       {...remainingProps}
       name={undefined}

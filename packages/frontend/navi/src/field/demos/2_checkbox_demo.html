@@ -175,7 +175,7 @@
               <InteractivityDemo />
               <SizeDemo />
               <ColorDemo />
-              <ToggleAppearanceDemo />
+              <SwitchAppearanceDemo />
               <IconDemo />
               <InteractiveDemo />
             </div>
@@ -201,7 +201,7 @@
                 <a href="#colors">Custom Colors</a>
               </li>
               <li>
-                <a href="#toggle">Toggle Appearance</a>
+                <a href="#switch">Switch Appearance</a>
               </li>
               <li>
                 <a href="#icons">Custom Icons</a>
@@ -283,7 +283,7 @@
               .
             </p>
             <Box flex="y" spacing="s" alignX="start" alignY="center">
-              <Field>
+              <Field border="1px dotted grey">
                 <Input
                   type="checkbox"
                   name="enabled"
@@ -292,7 +292,7 @@
                     setFired(true);
                   }}
                 />
-                <Label>Enable feature</Label>
+                Enable feature
               </Field>
               {fired && (
                 <span style={{ fontSize: "0.85rem", color: "#555" }}>
@@ -748,9 +748,9 @@
                 <Box as="fieldset" width="100">
                   <legend>Default</legend>
                   <Box flex="y" spacing="s" alignX="start">
-                    <Field>
+                    <Field border="1px dotted grey">
                       <Input type="checkbox" />
-                      <Label>Navi</Label>
+                      Navi
                     </Field>
                     <label>
                       <input type="checkbox" />
@@ -761,12 +761,12 @@
                 <Box as="fieldset" width="200">
                   <legend>:focus-visible</legend>
                   <Box flex="y" spacing="s" alignX="start">
-                    <Field>
+                    <Field border="1px dotted grey">
                       <Input
                         type="checkbox"
                         pseudoState={{ ":focus-visible": true }}
                       />
-                      <Label>Navi</Label>
+                      Navi
                     </Field>
                     <label>
                       <input type="checkbox" autofocus />
@@ -939,26 +939,31 @@
                       alignItems: "center",
                     }}
                   >
-                    <Field>
-                      <Input type="checkbox" accentColor="#f39c12" />
-                      <Label>Navi</Label>
+                    <Field alignY="center" border="1px dotted grey">
+                      <Input
+                        type="checkbox"
+                        accentColor="#f39c12"
+                        margin="3px 3px 3px 4px"
+                      />
+                      Navi
                     </Field>
-                    <Field>
+                    <Field border="1px dotted grey">
                       <Input
                         type="checkbox"
                         accentColor="#f39c12"
                         defaultChecked
+                        margin="3px 3px 3px 4px"
                       />
-                      <Label>Navi</Label>
+                      Navi
                     </Field>
-                    <label>
+                    <label style="border: 1px dotted grey">
                       <input
                         type="checkbox"
                         style={{ accentColor: "#f39c12" }}
                       />
                       Native
                     </label>
-                    <label>
+                    <label style="border: 1px dotted grey">
                       <input
                         type="checkbox"
                         style={{ accentColor: "#f39c12" }}
@@ -1046,6 +1051,9 @@
                     </label>
                   </div>
                 </fieldset>
+              </Box>
+
+              <Box flex spacing="s">
                 <fieldset style="margin: 0">
                   <legend>Pink</legend>
                   <div
@@ -1230,15 +1238,15 @@
         );
       };
 
-      const ToggleAppearanceDemo = () => {
+      const SwitchAppearanceDemo = () => {
         return (
-          <div className="demo-section" id="toggle">
-            <h2>Toggle Appearance</h2>
+          <div className="demo-section" id="switch">
+            <h2>Switch Appearance</h2>
 
             <div className="states-section">
-              <div className="states-title">Standard Toggle States</div>
+              <div className="states-title">Standard Switch States</div>
               <p className="states-description">
-                Toggle appearance provides a switch-like visual style with the
+                Switch appearance provides a switch-like visual style with the
                 same state behaviors as standard checkboxes.
               </p>
 
@@ -1246,7 +1254,7 @@
                 <Box as="fieldset" width="250">
                   <legend>Default</legend>
                   <Field column alignY="center" borderRadius="50%">
-                    <Input type="checkbox" appearance="toggle" />
+                    <Input type="checkbox" appearance="switch" />
                     <Label>Label</Label>
                   </Field>
                 </Box>
@@ -1255,7 +1263,7 @@
                   <Field column alignY="center">
                     <Input
                       type="checkbox"
-                      appearance="toggle"
+                      appearance="switch"
                       pseudoState={{ ":focus-visible": true }}
                     />
                     <Label>Label</Label>
@@ -1264,7 +1272,7 @@
                 <Box as="fieldset" width="250">
                   <legend>:disabled</legend>
                   <Field column alignY="center">
-                    <Input type="checkbox" appearance="toggle" disabled />
+                    <Input type="checkbox" appearance="switch" disabled />
                     <Label>Label</Label>
                   </Field>
                 </Box>
@@ -1273,7 +1281,7 @@
                 <Box as="fieldset" width="250">
                   <legend>:checked</legend>
                   <Field column alignY="center">
-                    <Input type="checkbox" appearance="toggle" defaultChecked />
+                    <Input type="checkbox" appearance="switch" defaultChecked />
                     <Label>Label</Label>
                   </Field>
                 </Box>
@@ -1283,7 +1291,7 @@
                   <Field column alignY="center">
                     <Input
                       type="checkbox"
-                      appearance="toggle"
+                      appearance="switch"
                       defaultChecked
                       pseudoState={{ ":focus-visible": true }}
                     />
@@ -1296,7 +1304,7 @@
                   <Field column alignY="center">
                     <Input
                       type="checkbox"
-                      appearance="toggle"
+                      appearance="switch"
                       disabled
                       defaultChecked
                     />
@@ -1308,24 +1316,24 @@
 
             <div className="states-section">
               <div className="states-title enhanced-states-title">
-                Enhanced Toggle States
+                Enhanced Switch States
               </div>
               <p className="states-description">
-                Additional toggle states for enhanced UX patterns.
+                Additional switch states for enhanced UX patterns.
               </p>
 
               <Box flex spacing="s">
                 <Box as="fieldset" width="200">
                   <legend>:read-only</legend>
                   <Field column alignY="center" spacing="s">
-                    <Input type="checkbox" appearance="toggle" readOnly />
+                    <Input type="checkbox" appearance="switch" readOnly />
                     <Label>Label</Label>
                   </Field>
                 </Box>
                 <Box as="fieldset" width="200">
                   <legend>:-navi-loading</legend>
                   <Field column alignY="center" spacing="s">
-                    <Input type="checkbox" appearance="toggle" loading />
+                    <Input type="checkbox" appearance="switch" loading />
                     <Label>Label</Label>
                   </Field>
                 </Box>
@@ -1336,7 +1344,7 @@
                   <Field column alignY="center" spacing="s">
                     <Input
                       type="checkbox"
-                      appearance="toggle"
+                      appearance="switch"
                       readOnly
                       checked
                     />
@@ -1348,7 +1356,7 @@
                   <Field column alignY="center" spacing="s">
                     <Input
                       type="checkbox"
-                      appearance="toggle"
+                      appearance="switch"
                       loading
                       checked
                     />
@@ -1359,9 +1367,9 @@
             </div>
 
             <div className="states-section">
-              <div className="states-title">Custom Color Toggle</div>
+              <div className="states-title">Custom Color Switch</div>
               <p className="states-description">
-                Toggle appearance with custom colors maintains the same color
+                Switch appearance with custom colors maintains the same color
                 theming as regular checkboxes.
               </p>
 
@@ -1379,7 +1387,7 @@
                     <Field column alignY="center" spacing="s">
                       <Input
                         type="checkbox"
-                        appearance="toggle"
+                        appearance="switch"
                         accentColor="#f39c12"
                       />
                       <Label>Label</Label>
@@ -1387,7 +1395,7 @@
                     <Field column alignY="center" spacing="s">
                       <Input
                         type="checkbox"
-                        appearance="toggle"
+                        appearance="switch"
                         accentColor="#f39c12"
                         defaultChecked
                       />
@@ -1408,7 +1416,7 @@
                     <Field column alignY="center" spacing="s">
                       <Input
                         type="checkbox"
-                        appearance="toggle"
+                        appearance="switch"
                         accentColor="#2ecc71"
                       />
                       <Label>Label</Label>
@@ -1416,7 +1424,7 @@
                     <Field column alignY="center" spacing="s">
                       <Input
                         type="checkbox"
-                        appearance="toggle"
+                        appearance="switch"
                         accentColor="#2ecc71"
                         defaultChecked
                       />
@@ -1437,7 +1445,7 @@
                     <Field column alignY="center" spacing="s">
                       <Input
                         type="checkbox"
-                        appearance="toggle"
+                        appearance="switch"
                         accentColor="#34495e"
                       />
                       <Label>Label</Label>
@@ -1445,7 +1453,7 @@
                     <Field column alignY="center" spacing="s">
                       <Input
                         type="checkbox"
-                        appearance="toggle"
+                        appearance="switch"
                         accentColor="#34495e"
                         defaultChecked
                       />
@@ -1471,7 +1479,7 @@
                     >
                       <Input
                         type="checkbox"
-                        appearance="toggle"
+                        appearance="switch"
                         accentColor="white"
                       />
                       Label
@@ -1484,7 +1492,7 @@
                     >
                       <Input
                         type="checkbox"
-                        appearance="toggle"
+                        appearance="switch"
                         accentColor="white"
                         defaultChecked
                       />
@@ -1496,9 +1504,9 @@
             </div>
 
             <div className="states-section">
-              <div className="states-title">Toggle Sizes</div>
+              <div className="states-title">Switch Sizes</div>
               <p className="states-description">
-                Toggle size can be controlled with the size prop, affecting both
+                Switch size can be controlled with the size prop, affecting both
                 the track and thumb proportionally.
               </p>
 
@@ -1507,13 +1515,13 @@
                   <legend>Small</legend>
                   <Box flex="y" spacing="s" alignX="start" alignY="center">
                     <Field column alignY="center" spacing="s">
-                      <Input type="checkbox" appearance="toggle" size="s" />
+                      <Input type="checkbox" appearance="switch" size="s" />
                       Label
                     </Field>
                     <Field column alignY="center" spacing="s">
                       <Input
                         type="checkbox"
-                        appearance="toggle"
+                        appearance="switch"
                         size="s"
                         defaultChecked
                       />
@@ -1525,13 +1533,13 @@
                   <legend>Medium (Default)</legend>
                   <Box flex="y" spacing="s" alignX="start" alignY="center">
                     <Field column alignY="center" spacing="s">
-                      <Input type="checkbox" appearance="toggle" />
+                      <Input type="checkbox" appearance="switch" />
                       Label
                     </Field>
                     <Field column alignY="center" spacing="s">
                       <Input
                         type="checkbox"
-                        appearance="toggle"
+                        appearance="switch"
                         defaultChecked
                       />
                       Label
@@ -1542,13 +1550,13 @@
                   <legend>Large</legend>
                   <Box flex="y" spacing="s" alignX="start" alignY="center">
                     <Field column alignY="center" spacing="s">
-                      <Input type="checkbox" appearance="toggle" size="l" />
+                      <Input type="checkbox" appearance="switch" size="l" />
                       Label
                     </Field>
                     <Field column alignY="center" spacing="s">
                       <Input
                         type="checkbox"
-                        appearance="toggle"
+                        appearance="switch"
                         size="l"
                         defaultChecked
                       />
@@ -1560,9 +1568,9 @@
             </div>
 
             <div className="states-section">
-              <div className="states-title">Toggle Width Control</div>
+              <div className="states-title">Switch Width Control</div>
               <p className="states-description">
-                Toggle width can be controlled with the width prop for custom
+                Switch width can be controlled with the width prop for custom
                 sizing.
               </p>
 
@@ -1571,13 +1579,13 @@
                   <legend>Default Width</legend>
                   <Box flex spacing="s" alignX="start" alignY="center">
                     <Field flex alignY="center" spacing="s">
-                      <Input type="checkbox" appearance="toggle" />
+                      <Input type="checkbox" appearance="switch" />
                       Label
                     </Field>
                     <Field flex alignY="center" spacing="s">
                       <Input
                         type="checkbox"
-                        appearance="toggle"
+                        appearance="switch"
                         defaultChecked
                       />
                       Label
@@ -1588,13 +1596,13 @@
                   <legend>Custom Width (50px)</legend>
                   <Box flex spacing="s" alignX="start" alignY="center">
                     <Field flex alignY="center" spacing="s">
-                      <Input type="checkbox" appearance="toggle" width="50" />
+                      <Input type="checkbox" appearance="switch" width="50" />
                       Label
                     </Field>
                     <Field flex alignY="center" spacing="s">
                       <Input
                         type="checkbox"
-                        appearance="toggle"
+                        appearance="switch"
                         width="50"
                         defaultChecked
                       />
@@ -1606,13 +1614,13 @@
                   <legend>Big Width (80px)</legend>
                   <Box flex spacing="s" alignX="start" alignY="center">
                     <Field flex alignY="center" spacing="s">
-                      <Input type="checkbox" appearance="toggle" width="80" />
+                      <Input type="checkbox" appearance="switch" width="80" />
                       Label
                     </Field>
                     <Field flex alignY="center" spacing="s">
                       <Input
                         type="checkbox"
-                        appearance="toggle"
+                        appearance="switch"
                         width="80"
                         defaultChecked
                       />
@@ -1624,9 +1632,9 @@
             </div>
 
             <div className="states-section">
-              <div className="states-title">Toggle Padding</div>
+              <div className="states-title">Switch Padding</div>
               <p className="states-description">
-                With a large padding the toggle keeps enough width to be
+                With a large padding the switch keeps enough width to be
                 displayed correctly (min-width enforced).
               </p>
 
@@ -1635,13 +1643,13 @@
                   <legend>Big Padding</legend>
                   <Box flex spacing="s" alignX="start" alignY="center">
                     <Field flex alignY="center" spacing="s">
-                      <Input type="checkbox" appearance="toggle" padding="l" />
+                      <Input type="checkbox" appearance="switch" padding="l" />
                       Label
                     </Field>
                     <Field flex alignY="center" spacing="s">
                       <Input
                         type="checkbox"
-                        appearance="toggle"
+                        appearance="switch"
                         padding="l"
                         defaultChecked
                       />
