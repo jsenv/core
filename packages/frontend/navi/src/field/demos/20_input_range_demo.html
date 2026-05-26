@@ -258,7 +258,7 @@
 
       const App = () => {
         return (
-          <NaviDebug debugInteraction>
+          <NaviDebug debugInteraction debugAction>
             <div>
               <BasicStatesDemo />
               <FocusStatesDemo />
@@ -662,6 +662,7 @@
               <Box column spacing="sm">
                 <Input
                   type="range"
+                  name="slow_action"
                   min="10"
                   max="100"
                   value={slowRadiusSignal}

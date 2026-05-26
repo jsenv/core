@@ -103,15 +103,6 @@ export const addInputEffect = (
         currentState = getState();
       }
     });
-  } else {
-    // Focus events to catch programmatic changes that don't fire other events
-    // (like when value is set before user interaction)
-    // Skip for radio/checkbox: their "checked" state doesn't change on focus,
-    // so focusing an unchecked radio would incorrectly appear as a state change.
-    input.addEventListener("focus", onEvent);
-    addTeardown(() => {
-      input.removeEventListener("focus", onEvent);
-    });
   }
 
   const onNaviClear = (e) => {
@@ -198,7 +189,7 @@ const listenInputStateChange = (input, callback, { getState }) => {
 
     const onfocus = () => {
       interacted = false;
-      stateAtStart = input.value;
+      stateAtStart = getState();
     };
     const oninput = (e) => {
       if (!e.isTrusted) {

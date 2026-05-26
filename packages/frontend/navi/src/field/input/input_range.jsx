@@ -262,7 +262,7 @@ const InputRangeFieldInterface = (props) => {
   };
   const [rangeProps, remainingProps] = useFieldInterfaceProps(props, {
     primaryInteractionMode: "pointer",
-    fieldType: "input",
+    fieldType: "input_range",
     statePropName: "value",
     defaultStatePropName: "defaultValue",
     getUIValue: () => {

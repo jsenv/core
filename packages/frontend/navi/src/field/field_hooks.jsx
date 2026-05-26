@@ -119,17 +119,25 @@ export const useFieldInterfaceProps = (
 
   const { ref } = props;
   const debugInteraction = useDebugInteraction();
+  const hasPointerDownInteraction = fieldType === "input_range";
   const onMouseDown = (e) => {
     props.onMouseDown?.(e);
     if (primaryInteractionMode === "pointer") {
       const field = ref.current;
-      dispatchRequestInteraction(field, e);
+      const allowed = dispatchRequestInteraction(field, e);
+      if (hasPointerDownInteraction && !allowed) {
+        e.preventDefault();
+      }
     }
   };
   const onClick = (e) => {
     props.onClick?.(e);
     if (primaryInteractionMode === "pointer") {
       const field = ref.current;
+      if (hasPointerDownInteraction) {
+        // click is has no effect, mousedown has (click on range input does nothing)
+        return;
+      }
       const allowed = dispatchRequestInteraction(field, e);
       if (!allowed) {
         // Here we want to prevent:
