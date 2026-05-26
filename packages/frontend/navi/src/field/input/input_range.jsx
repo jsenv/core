@@ -1,4 +1,4 @@
-import { useContext, useId, useLayoutEffect, useRef } from "preact/hooks";
+import { useContext, useLayoutEffect, useRef } from "preact/hooks";
 
 import { Box, BoxForwardedPropsContext } from "../../box/box.jsx";
 import { LoadingOutline } from "../../graphic/loading/loading_outline.jsx";
@@ -273,18 +273,15 @@ const InputRangeFieldInterface = (props) => {
     sideEffect: (input, uiState, e) => {
       updateFillRatio(e);
     },
+    readOnlySupported: true,
   });
   const { basePseudoState } = rangeProps;
-  const disabled = basePseudoState[":disabled"];
-  const readOnly = basePseudoState[":read-only"];
   const loading = basePseudoState[":-navi-loading"];
 
   const boxRef = useRef();
   useAccentColorAttributes(boxRef, props.accentColor, {
     elementSelector: ".navi_input_range_accent_probe",
   });
-  const focusProxyId = `input_range_focus_proxy_${useId()}`;
-  const inertButFocusable = readOnly && !disabled;
 
   return (
     <Box
@@ -299,6 +296,7 @@ const InputRangeFieldInterface = (props) => {
       hasChildUsingForwardedProps
       baseChildPropSet={RangeChildPropSet}
       {...remainingProps}
+      basePseudoState={basePseudoState}
       ref={boxRef}
     >
       <span className="navi_input_range_accent_probe" aria-hidden="true" />
@@ -311,54 +309,17 @@ const InputRangeFieldInterface = (props) => {
       <div className="navi_input_range_fill" />
       <div className="navi_input_range_track" />
       <div className="navi_input_range_thumb" />
-      <div
-        id={focusProxyId}
-        className="navi_input_range_focus_proxy"
-        tabIndex={inertButFocusable ? "0" : "-1"}
-      />
-      <RangeNativeInput
-        {...rangeProps}
-        focusProxyId={focusProxyId}
-        updateFillRatio={updateFillRatio}
-      />
+      <RangeNativeInput {...rangeProps} updateFillRatio={updateFillRatio} />
     </Box>
   );
 };
 const RangeNativeInput = (props) => {
-  const { ref, updateFillRatio, disabled, readOnly, focusProxyId } = props;
+  const { updateFillRatio } = props;
   const rangeBoxProps = useContext(BoxForwardedPropsContext);
 
   useLayoutEffect(() => {
     updateFillRatio();
   }, []);
-
-  // we must disable the input when readOnly to prevent drag and keyboard interactions effectively
-  // for some reason we have to do this here instead of just giving the disabled attribute
-  // via props, as for some reason preact won't set it correctly on the input element in that case
-  // this means however that the input is no longer focusable
-  // we have to put an other focusable element somewhere
-  useLayoutEffect(() => {
-    const input = ref.current;
-    if (!input) {
-      return;
-    }
-    const focusProxy = document.querySelector(`#${focusProxyId}`);
-    if (readOnly) {
-      if (document.activeElement === input) {
-        focusProxy.focus({ preventScroll: true });
-      }
-      input.setAttribute("focus-proxy", focusProxyId);
-      input.disabled = readOnly;
-    } else {
-      if (document.activeElement === focusProxy) {
-        input.focus({ preventScroll: true });
-      }
-      if (!disabled) {
-        input.disabled = false;
-      }
-      input.removeAttribute("focus-proxy");
-    }
-  }, [disabled, readOnly]);
 
   return (
     <Box
