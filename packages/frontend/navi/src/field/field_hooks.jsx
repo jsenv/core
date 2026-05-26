@@ -389,7 +389,6 @@ const useActionProps = (
     "id": idResolved,
     "name": nameResolved,
     "required": requiredResolved,
-    "readOnly": readOnlyResolved,
     "disabled": disabledResolved,
     "action": undefined,
     "data-action":
@@ -560,8 +559,9 @@ const useActionProps = (
     },
   };
 
-  if (!readOnlySupported) {
-    actionProps.readOnly = undefined;
+  if (readOnlySupported) {
+    actionProps.readOnly = readOnlyResolved;
+  } else {
     actionProps["aria-readonly"] = readOnlyResolved;
   }
 

@@ -124,7 +124,7 @@ definePseudoClass(":read-only", {
         // there is no readOnly for checkboxes/radios
         return;
       }
-      el.readOnly = true;
+      // el.readOnly = true;
     }
   },
   remove: (el) => {
@@ -137,7 +137,7 @@ definePseudoClass(":read-only", {
         // there is no readOnly for checkboxes/radios
         return;
       }
-      el.readOnly = false;
+      // el.readOnly = false;
     }
   },
 });

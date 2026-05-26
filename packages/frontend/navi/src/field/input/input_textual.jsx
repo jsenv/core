@@ -397,6 +397,7 @@ const InputTextualFieldInterface = (props) => {
       flex
       baseClassName="navi_input"
       {...remainingProps}
+      basePseudoState={basePseudoState}
       ui={undefined}
       data-discrete={discrete ? "" : undefined}
       discrete={undefined} // handled via data attribute
@@ -511,10 +512,12 @@ const InputSlot = ({ side, onClick, hideWhileEmpty, ...props }) => {
         }
       }}
       onClick={(e) => {
-        if (readOnly || disabled) {
-          return;
-        }
         onClick?.(e);
+        const input = document.getElementById(id);
+        const allowed = dispatchRequestInteraction(input, e);
+        if (!allowed) {
+          e.preventDefault();
+        }
       }}
       {...props}
     />
