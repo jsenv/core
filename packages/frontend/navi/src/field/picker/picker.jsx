@@ -318,7 +318,7 @@ const PickerButton = (props) => {
       aggregateChildStates: (childUIStateControllers) => {
         let activeValue;
         for (const childUIStateController of childUIStateControllers) {
-          if (childUIStateController.name && childUIStateController.uiState) {
+          if (childUIStateController.elementRef === inputRef) {
             activeValue = childUIStateController.uiState;
             break;
           }
