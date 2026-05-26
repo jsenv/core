@@ -350,7 +350,7 @@ const PickerButton = (props) => {
       icon={undefined}
       ui={undefined}
       onnavi_get_managed_fields={(e) => {
-        const pickerInput = e.currentTarget;
+        const pickerInput = inputRef.current;
         e.detail.respondWith(pickerInput);
       }}
     >
