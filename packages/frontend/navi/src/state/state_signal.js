@@ -294,25 +294,23 @@ export const stateSignal = (defaultValue, options = {}) => {
   };
   const preactSignal = signal(processValue(getFallbackValue()));
 
-  // Create wrapper signal that applies step rounding on setValue
-  const facadeSignal = {
-    get value() {
-      return preactSignal.value;
+  // Override the value setter on the instance to intercept writes and apply processValue.
+  // We do this on the instance (not the prototype) so preactSignal remains a real Signal
+  // instance — Preact's JSX integration requires instanceof Signal to render signals as children.
+  const signalProto = Object.getPrototypeOf(preactSignal);
+  const valueDescriptor = Object.getOwnPropertyDescriptor(signalProto, "value");
+  Object.defineProperty(preactSignal, "value", {
+    get() {
+      return valueDescriptor.get.call(preactSignal);
     },
-    set value(newValue) {
-      preactSignal.value = processValue(newValue);
+    set(newValue) {
+      valueDescriptor.set.call(preactSignal, processValue(newValue));
     },
-    peek() {
-      return preactSignal.peek();
-    },
-    subscribe(fn) {
-      return preactSignal.subscribe(fn);
-    },
-    valueOf() {
-      return preactSignal.valueOf();
-    },
-  };
+    enumerable: true,
+    configurable: true,
+  });
 
+  const facadeSignal = preactSignal;
   facadeSignal.validity = validity;
   facadeSignal.__signalId = signalIdString;
   facadeSignal.toString = () => `{navi_state_signal:${signalIdString}}`;
