@@ -4,7 +4,7 @@ import {
   mergeTwoStyles,
 } from "@jsenv/dom";
 
-import { addInputValueEffect } from "../field/input_state_effect.js";
+import { addInputEffect } from "../field/input_effect.js";
 import { getUIStateFromElement } from "../field/ui_state_controller.js";
 
 const requestPseudoStateCheck = (element, detail) => {
@@ -415,7 +415,7 @@ definePseudoClass(":-navi-has-value", {
         inputEl = field;
       }
     }
-    return addInputValueEffect(inputEl, callback);
+    return addInputEffect(inputEl, callback);
   },
   test: (el) => {
     if (el.hasAttribute("navi-ui-state")) {

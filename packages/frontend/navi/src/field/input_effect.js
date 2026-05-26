@@ -3,7 +3,7 @@ import { createPubSub } from "@jsenv/dom";
 export const addInputEffect = (
   input,
   callback,
-  { waitForChange = false, debounce = 0 },
+  { waitForChange = false, debounce = 0 } = {},
 ) => {
   const getState = (input) => input.value;
 
