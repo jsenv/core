@@ -29,10 +29,6 @@ export const getKeyboardEventDefault = (keyboardEvent) => {
 
   if (target.tagName === "INPUT") {
     if (key === "ArrowLeft" || key === "ArrowRight") {
-      if (target.type === "radio" || target.type === "checkbox") {
-        // Browser moves focus to the previous/next sibling in the radio/checkbox group
-        return "focus_nav";
-      }
       const effect = ARROW_X_EFFECT_BY_INPUT_TYPE[target.type];
       if (effect) {
         return effect;
@@ -41,10 +37,6 @@ export const getKeyboardEventDefault = (keyboardEvent) => {
     }
 
     if (key === "ArrowUp" || key === "ArrowDown") {
-      if (target.type === "radio" || target.type === "checkbox") {
-        // Browser moves focus to the previous/next sibling in the radio/checkbox group
-        return "focus_nav";
-      }
       const effect = ARROW_Y_EFFECT_BY_INPUT_TYPE[target.type];
       if (effect) {
         return effect;
@@ -94,12 +86,17 @@ export const getKeyboardEventDefault = (keyboardEvent) => {
   return true;
 };
 const ARROW_X_EFFECT_BY_INPUT_TYPE = {
+  // Browser moves focus to the previous/next sibling in the radio/checkbox group
+  "radio": "focus_nav",
+  "checkbox": "focus_nav",
+  // Browser update input value
   "range": "value_change",
   "date": "value_change",
   "time": "value_change",
   "datetime-local": "value_change",
   "month": "value_change",
   "week": "value_change",
+  // Browser moves the text cursor within the field, but only if it's not at the start/end already
   "text": "cursor_move",
   "search": "cursor_move",
   "url": "cursor_move",
@@ -109,6 +106,10 @@ const ARROW_X_EFFECT_BY_INPUT_TYPE = {
   "number": "cursor_move",
 };
 const ARROW_Y_EFFECT_BY_INPUT_TYPE = {
+  // Browser moves focus to the previous/next sibling in the radio/checkbox group
+  "radio": "focus_nav",
+  "checkbox": "focus_nav",
+  // Browser update input value
   "number": "value_change",
   "range": "value_change",
   "date": "value_change",
