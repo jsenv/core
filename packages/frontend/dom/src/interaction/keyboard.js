@@ -93,7 +93,7 @@ const DEFAULT_BEHAVIORS = [
   {
     test: (el) =>
       el.matches(
-        "input[type='text'], input[type='search'], input[type='url'], input[type='email'], input[type='password'], input[type='tel']",
+        "input:not([type]), input[type='text'], input[type='search'], input[type='url'], input[type='email'], input[type='password'], input[type='tel']",
       ),
     keys: {
       Enter: (e) => (e.target.form ? "form_submit" : ""),
