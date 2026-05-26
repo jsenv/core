@@ -175,6 +175,9 @@ export const useFieldInterfaceProps = (
   const lastEventRequestingActionRef = useRef();
   const onInput = (e) => {
     props.onInput?.(e);
+    if (!e.isTrusted) {
+      return;
+    }
     const field = ref.current;
     const eventSameAsAction = e === lastEventRequestingActionRef.current;
     const allowed = eventSameAsAction || dispatchRequestInteraction(field, e);

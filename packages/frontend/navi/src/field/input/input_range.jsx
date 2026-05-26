@@ -292,6 +292,7 @@ const InputRangeFieldInterface = (props) => {
       visualSelector=".navi_native_input"
       pseudoClasses={RangePseudoClasses}
       pseudoElements={RangePseudoElements}
+      data-callout-anchor=".navi_input_range_thumb"
       hasChildUsingForwardedProps
       {...remainingProps}
       basePseudoState={basePseudoState}
@@ -306,7 +307,7 @@ const InputRangeFieldInterface = (props) => {
       <div className="navi_input_range_background" />
       <div className="navi_input_range_fill" />
       <div className="navi_input_range_track" />
-      <div className="navi_input_range_thumb" />
+      <div className="navi_input_range_thumb" data-callout-arrow-x="center" />
       <RangeNativeInput {...rangeProps} updateFillRatio={updateFillRatio} />
     </Box>
   );
@@ -326,6 +327,7 @@ const RangeNativeInput = (props) => {
       as="input"
       type="range"
       baseClassName="navi_native_input"
+      navi-rendered-by=".navi_input_range"
     />
   );
 };
