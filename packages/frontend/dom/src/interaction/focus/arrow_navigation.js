@@ -47,9 +47,7 @@ export const performArrowNavigation = (
     ySelector,
   } = {},
 ) => {
-  if (
-    !canInterceptKeyboardEvent(event, { intent: "override_arrow_navigation" })
-  ) {
+  if (!canInterceptKeyboardEvent(event, { intent: "override_focus_nav" })) {
     return false;
   }
   const activeElement = document.activeElement;
