@@ -173,6 +173,7 @@ export const useFieldInterfaceProps = (
 
   const { actionAfterChange, actionDebounce } = props;
   const lastEventRequestingActionRef = useRef();
+  const lastActionValueRef = useRef();
   const onInput = (e) => {
     props.onInput?.(e);
     if (!e.isTrusted) {
@@ -180,7 +181,17 @@ export const useFieldInterfaceProps = (
     }
     const field = ref.current;
     const eventSameAsAction = e === lastEventRequestingActionRef.current;
-    const allowed = eventSameAsAction || dispatchRequestInteraction(field, e);
+    // Ignore input events that carry the same value as the last action we dispatched.
+    // This avoids showing a spurious "read-only" callout for redundant input events
+    // that browsers fire with no UI change — e.g. range inputs fire several input
+    // events around mouse release even though the value hasn't moved.
+    const valueSameAsLastAction =
+      lastActionValueRef.current !== undefined &&
+      e.currentTarget.value === lastActionValueRef.current;
+    const allowed =
+      eventSameAsAction ||
+      valueSameAsLastAction ||
+      dispatchRequestInteraction(field, e);
     if (allowed) {
       uiStateController.requestUIAction(e);
     } else {
@@ -193,6 +204,7 @@ export const useFieldInterfaceProps = (
         input,
         (e) => {
           lastEventRequestingActionRef.current = e;
+          lastActionValueRef.current = input.value;
           dispatchRequestAction(input, { event: e });
         },
         {
