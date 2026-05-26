@@ -73,6 +73,8 @@ const DEFAULT_BEHAVIORS = [
   {
     test: (el) => el.matches("input[type='radio'], input[type='checkbox']"),
     keys: {
+      Space: "activate",
+      Enter: (e) => (e.target.form ? "form_submit" : ""),
       ArrowLeft: "focus_nav",
       ArrowRight: "focus_nav",
       ArrowUp: "focus_nav",
@@ -101,6 +103,11 @@ const DEFAULT_BEHAVIORS = [
       ArrowRight: "value_change",
       ArrowUp: "value_change",
       ArrowDown: "value_change",
+      Home: "value_change",
+      End: "value_change",
+      PageUp: "value_change",
+      PageDown: "value_change",
+      Enter: (e) => (e.target.form ? "form_submit" : ""),
     },
     fallback: "",
   },
@@ -128,16 +135,25 @@ const DEFAULT_BEHAVIORS = [
       ArrowUp: "value_change",
       ArrowDown: "value_change",
       Space: "activate",
-      Enter: "activate",
+      Enter: (e) => (e.target.form ? "form_submit" : ""),
     },
     fallback: "",
   },
   {
-    // Color and file inputs: Space/Enter open their picker
-    test: (el) => el.matches("input[type='color'], input[type='file']"),
+    // Color input: Space opens the color picker, Enter submits the form
+    test: (el) => el.matches("input[type='color']"),
     keys: {
       Space: "activate",
-      Enter: "activate",
+      Enter: (e) => (e.target.form ? "form_submit" : ""),
+    },
+    fallback: "",
+  },
+  {
+    // File input: Space opens the picker, Enter submits the form
+    test: (el) => el.matches("input[type='file']"),
+    keys: {
+      Space: "activate",
+      Enter: (e) => (e.target.form ? "form_submit" : ""),
     },
     fallback: "",
   },
