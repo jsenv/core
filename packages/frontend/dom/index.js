@@ -89,7 +89,7 @@ export { trapFocusInside } from "./src/interaction/focus/focus_trap.js";
 // interaction/keyboard
 export {
   canInterceptKeyboardEvent,
-  getKeyboardEventBehavior,
+  getKeyboardEventDefaultAction,
 } from "./src/interaction/keyboard.js";
 // interaction/scroll
 export { captureScrollState } from "./src/interaction/scroll/capture_scroll.js";
