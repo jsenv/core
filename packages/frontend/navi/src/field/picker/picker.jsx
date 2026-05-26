@@ -283,6 +283,9 @@ const PickerButton = (props) => {
     {
       ...props,
       ref: inputRef,
+      // good pour le color, faut voir pour le reste
+      // aussi quid si on veut le faire tout le temps?
+      actionAfterChange: true,
     },
     {
       primaryInteractionMode: "keyboard",

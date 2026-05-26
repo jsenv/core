@@ -414,7 +414,10 @@ const InputTextualFieldInterface = (props) => {
         color="var(--loader-color)"
         inset={-1}
       />
-      <RealInput {...textualFieldInterfaceProps} />
+      <RealInput
+        navi-rendered-by=".navi_input"
+        {...textualFieldInterfaceProps}
+      />
       {childrenWithContext}
     </Box>
   );
@@ -427,7 +430,7 @@ const RealInput = (props) => {
       {...props}
       as="input"
       baseClassName="navi_real_input"
-      navi-rendered-by=".navi_input"
+      navi-ui-state={props.value}
     />
   );
 };
