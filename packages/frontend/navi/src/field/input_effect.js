@@ -3,7 +3,7 @@ import { createPubSub } from "@jsenv/dom";
 export const addInputEffect = (
   input,
   callback,
-  { waitForChange = false, debounce = 0 } = {},
+  { waitForChange = false, debounce = 0, debugInteraction = () => {} } = {},
 ) => {
   const getState =
     input.type === "checkbox" || input.type === "radio"
@@ -25,14 +25,27 @@ export const addInputEffect = (
       clearTimeout(debounceTimeout);
       const state = getState();
       if (state === currentState) {
+        debugInteraction(
+          e,
+          `interaction ignored (state unchanged: "${state}")`,
+        );
         return;
       }
 
       if (skipDebounce) {
+        debugInteraction(e, `skip debounce, callback called with "${state}"`);
         currentState = state;
         callback(e);
       } else {
+        debugInteraction(
+          e,
+          `debounced ${debounce}ms, pending callback with "${state}"`,
+        );
         debounceTimeout = setTimeout(() => {
+          debugInteraction(
+            e,
+            `debounce elapsed, callback called with "${state}"`,
+          );
           currentState = state;
           callback(e);
         }, debounce);
@@ -55,8 +68,13 @@ export const addInputEffect = (
       clearTimeout(timeout);
       const state = getState();
       if (state === currentState) {
+        debugInteraction(
+          e,
+          `interaction ignored (state unchanged: "${state}")`,
+        );
         return;
       }
+      debugInteraction(e, `callback called with "${state}"`);
       currentState = state;
       callback(e);
     };
@@ -68,6 +86,7 @@ export const addInputEffect = (
   }
 
   const onAsyncEvent = (e, options) => {
+    debugInteraction(e, `async event, scheduling callback`);
     timeout = setTimeout(() => {
       onEvent(e, options);
     }, 0);
@@ -100,6 +119,10 @@ export const addInputEffect = (
     // we must update our internal state in that case otherwise we keep thinking it's checked when it's not
     input.addEventListener("navi_set_ui_state", (e) => {
       if (e.detail.suppressSyntheticInput) {
+        debugInteraction(
+          e,
+          `radio unchecked via navi_set_ui_state, updating internal state`,
+        );
         currentState = getState();
       }
     });
@@ -110,6 +133,7 @@ export const addInputEffect = (
     // a bit like form reset because
     // our action will be updated async after the component re-renders
     // and we need to wait that to happen to properly call action with the right value
+    debugInteraction(e, `navi_clear received, scheduling callback`);
     onAsyncEvent(e, { skipDebounce: true });
   };
   input.addEventListener("navi_clear", onNaviClear);

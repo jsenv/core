@@ -181,6 +181,7 @@ export const useFieldInterfaceProps = (
         {
           waitForChange: actionAfterChange,
           debounce: actionDebounce,
+          debugInteraction,
         },
       );
     },
