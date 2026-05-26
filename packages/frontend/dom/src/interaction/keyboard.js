@@ -23,7 +23,6 @@ const CURSOR_NAV_INPUT_TYPE_SET = new Set([
   // number/date/etc. also allow cursor navigation inside their value but
   // they are already handled above as "arrow_modifier"
 ]);
-const TEXTAREA_ALLOWED_KEYS = new Set(["Escape"]);
 
 export const getKeyboardEventDefault = (keyboardEvent) => {
   const target = keyboardEvent.target;
@@ -49,18 +48,18 @@ export const getKeyboardEventDefault = (keyboardEvent) => {
     const isArrowVertical = key === "ArrowDown" || key === "ArrowUp";
     if (isArrowHorizontal) {
       if (ARROW_X_NAV_INPUT_TYPE_SET.has(target.type)) {
-        return "arrow_nav";
+        return "focus_nav";
       }
       if (CURSOR_NAV_INPUT_TYPE_SET.has(target.type)) {
-        return "arrow_nav";
+        return "focus_nav";
       }
-      return "";
+      return "cursor_nav";
     }
     if (isArrowVertical) {
       if (ARROW_Y_NAV_INPUT_TYPE_SET.has(target.type)) {
-        return "arrow_nav";
+        return "focus_nav";
       }
-      return "";
+      return "cursor_nav";
     }
     if (key === "Home" || key === "End") {
       if (CURSOR_NAV_INPUT_TYPE_SET.has(target.type)) {
