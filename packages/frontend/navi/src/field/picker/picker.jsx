@@ -377,11 +377,11 @@ const PickerButton = (props) => {
             const candidate = findFieldWithName(sibling);
             if (candidate) {
               firstField = candidate;
-              return firstField;
+              break;
             }
             sibling = sibling.nextElementSibling;
           }
-          e.detail.respondWith(sibling);
+          e.detail.respondWith(firstField);
         }}
       />
 
