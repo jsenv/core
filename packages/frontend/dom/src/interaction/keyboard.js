@@ -99,6 +99,8 @@ const DEFAULT_BEHAVIORS = [
       Enter: (e) => (e.target.form ? "form_submit" : ""),
       ArrowLeft: "cursor_move",
       ArrowRight: "cursor_move",
+      ArrowUp: "cursor_move",
+      ArrowDown: "cursor_move",
       Home: "cursor_move",
       End: "cursor_move",
     },

@@ -124,10 +124,11 @@ export const onRequestInteraction = (
         defaultAction === "type" ||
         defaultAction === "value_change" ||
         defaultAction === "activate" ||
-        defaultAction === "scroll"
+        defaultAction === "scroll" ||
+        defaultAction === "cursor_move"
       ) {
       } else {
-        // "focus_nav", "form_submit", "cursor_move", "dismiss"
+        // "focus_nav", "form_submit", "dismiss"
         skipConstraints = true;
       }
     }
