@@ -163,7 +163,8 @@ export const useFieldInterfaceProps = (
       return;
     }
     if (primaryInteractionMode === "keyboard") {
-      if (getKeyboardEventBehavior(e)) {
+      const keyboardEffect = getKeyboardEventBehavior(e);
+      if (keyboardEffect) {
         // inside a checkbox/radio does not make much sense so we'll see
         // but for input it allows to show the readonly message when trying to type into it
         const input = e.currentTarget;

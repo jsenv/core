@@ -8,6 +8,7 @@
  * - `"type"`         — key produces or deletes text content
  * - `"form_submit"`  — Enter on a single-line input submits the enclosing form
  * - `"activate"`     — Space/Enter triggers the element's action (button, link)
+ * - `"scroll"`       — key scrolls the page/scrollable container (Space, Arrow keys on non-interactive elements)
  * - `""`             — no meaningful browser default; safe to intercept freely
  */
 export const getKeyboardEventBehavior = (keyboardEvent) => {
@@ -164,6 +165,22 @@ const DEFAULT_BEHAVIORS = [
     // SELECT: don't intercept anything while the dropdown may be open
     test: (el) => el.tagName === "SELECT",
     keys: {},
+    fallback: "",
+  },
+  {
+    // Non-interactive elements: browser scrolls on Space and arrow keys
+    test: () => true,
+    keys: {
+      Space: "scroll",
+      ArrowUp: "scroll",
+      ArrowDown: "scroll",
+      ArrowLeft: "scroll",
+      ArrowRight: "scroll",
+      PageUp: "scroll",
+      PageDown: "scroll",
+      Home: "scroll",
+      End: "scroll",
+    },
     fallback: "",
   },
 ];
