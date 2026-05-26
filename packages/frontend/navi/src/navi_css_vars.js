@@ -67,6 +67,15 @@ const css = /* css */ `
     clip-path: inset(50%);
     appearance: none;
     overflow: hidden;
+
+    &[navi-debug] {
+      position: static;
+      width: auto;
+      height: auto;
+      margin: 0;
+      clip-path: none;
+      appearance: auto;
+    }
   }
 `;
 import.meta.css = css;

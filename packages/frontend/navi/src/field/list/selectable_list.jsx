@@ -295,6 +295,7 @@ export const Selectable = (props) => {
   const checkedUIState = useUIState(inputRef, selected);
   const inputSelected = Boolean(checkedUIState); // ui state is value or undefined, not a boolean
   const inputReadOnly = rest.readOnly; // TODO: readonly is more complex than this it can come from context
+  const inputValue = rest.value;
   const realInputContextValue = useMemo(() => {
     return {
       id: inputId,
@@ -302,8 +303,9 @@ export const Selectable = (props) => {
       type: inputType,
       selected: inputSelected,
       readOnly: inputReadOnly,
+      value: inputValue,
     };
-  }, [inputId, inputType, inputSelected, inputReadOnly]);
+  }, [inputId, inputType, inputSelected, inputReadOnly, inputValue]);
 
   return (
     <ListItem
@@ -375,11 +377,11 @@ const SelectableRealInput = (props) => {
 
   return (
     <Input
-      // navi-debug
       {...inputProps}
       {...props}
       navi-selectable-real-input=""
       headless
+      navi-debug
     />
   );
 };
@@ -392,6 +394,7 @@ const SelectableInputProxy = (props) => {
     type: realInputType,
     selected: realInputSelected,
     readOnly: inputReadOnly,
+    value: inputValue,
   } = useContext(SelectableRealInputContext);
 
   // Reset FieldToInterfaceContext to ensure we don't read id or report our
@@ -399,11 +402,12 @@ const SelectableInputProxy = (props) => {
   return (
     <FieldToInterfaceContext.Provider value={undefined}>
       <Input
-        name="navi_input_proxy" // give it a specific name to avoid radio name (would unselect others)
         navi-proxy-for={realInputId}
-        type={realInputType}
         aria-hidden="true"
         tabIndex={-1}
+        type={realInputType}
+        name="navi_input_proxy" // give it a specific name to avoid radio name (would unselect others)
+        value={inputValue}
         checked={realInputSelected}
         readOnly={inputReadOnly}
         {...props}
