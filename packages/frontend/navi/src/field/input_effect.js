@@ -5,7 +5,10 @@ export const addInputEffect = (
   callback,
   { waitForChange = false, debounce = 0 } = {},
 ) => {
-  const getState = (input) => input.value;
+  const getState =
+    input.type === "checkbox" || input.type === "radio"
+      ? (input) => input.checked
+      : (input) => input.value;
 
   if (waitForChange) {
     return listenInputStateChange(input, callback, { getState });
