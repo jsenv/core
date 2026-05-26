@@ -17,6 +17,7 @@ import {
   useCallback,
   useContext,
   useLayoutEffect,
+  useRef,
   useState,
 } from "preact/hooks";
 
@@ -171,15 +172,24 @@ export const useFieldInterfaceProps = (
   };
 
   const { actionAfterChange, actionDebounce } = props;
+  const lastEventRequestingActionRef = useRef();
   const onInput = (e) => {
     props.onInput?.(e);
-    uiStateController.requestUIAction(e);
+    const field = ref.current;
+    const eventSameAsAction = e === lastEventRequestingActionRef.current;
+    const allowed = eventSameAsAction || dispatchRequestInteraction(field, e);
+    if (allowed) {
+      uiStateController.requestUIAction(e);
+    } else {
+      e.preventDefault();
+    }
   };
   const installInputEffect = useCallback(
     (input) => {
       return addInputEffect(
         input,
         (e) => {
+          lastEventRequestingActionRef.current = e;
           dispatchRequestAction(input, { event: e });
         },
         {

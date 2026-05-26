@@ -117,7 +117,6 @@ export const onRequestInteraction = (
 
   if (requestStatus.canProceed) {
     let skipConstraints = false;
-
     if (event.type === "keydown") {
       const defaultAction = getKeyboardEventDefaultAction(event);
       if (
@@ -768,6 +767,10 @@ export const installCustomConstraintValidation = (
   };
 
   close_and_check_on_input: {
+    if (element.type === "range") {
+      break close_and_check_on_input; // range inputs have a special behavior where "input" is triggered on pointer release, so we don't need to wait for it
+    }
+
     let waitPointerRelease;
     onCalloutOpen((openingEvent) => {
       if (findEvent(openingEvent, "mousedown")) {
