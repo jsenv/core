@@ -362,7 +362,8 @@ const InputCheckboxFieldInterface = (props) => {
   import.meta.css = css;
   const {
     icon,
-    appearance = icon ? "icon" : "checkbox", // "checkbox", "switch", "icon", "button"
+    switch: switchProp,
+    appearance = icon ? "icon" : switchProp ? "switch" : "checkbox", // "checkbox", "switch", "icon", "button"
     checkboxProps,
     ...rest
   } = props;
@@ -425,7 +426,7 @@ const InputCheckboxFieldInterface = (props) => {
         color="var(--loader-color)"
       />
       {visualVnode}
-      <RealInputCheckbox {...checkboxProps} />
+      <RealInputCheckbox {...checkboxProps} switch={switchProp} />
     </Box>
   );
 };
