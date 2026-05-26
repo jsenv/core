@@ -1,4 +1,4 @@
-import { useContext, useLayoutEffect, useRef } from "preact/hooks";
+import { useContext, useRef } from "preact/hooks";
 
 import { Box, BoxForwardedPropsContext } from "@jsenv/navi/src/box/box.jsx";
 import { LoadingOutline } from "../../graphic/loading/loading_outline.jsx";
@@ -338,51 +338,9 @@ export const InputRadio = (props) => {
   props.value = props.value === undefined ? "on" : props.value;
 
   const { ref } = props;
-  // we must first dispatch an event to inform all other radios they where unchecked
-  // this way each other radio uiStateController knows thery are unchecked
-  // we do this on "input"
-  // but also when we are becoming checked from outside (hence the useLayoutEffect)
-  const updateOtherRadiosInGroup = (e) => {
-    const thisRadio = ref.current;
-    if (!thisRadio) {
-      return;
-    }
-    const { name } = thisRadio;
-    if (!name) {
-      return;
-    }
-    const { form } = thisRadio;
-    const radioGroupContainer = form || document;
-    const radioInputs = radioGroupContainer.querySelectorAll(
-      `input[type="radio"][name="${thisRadio.name}"]`,
-    );
-    for (const radioInput of radioInputs) {
-      if (radioInput === thisRadio) {
-        continue;
-      }
-      // Dispatch "navi_set_ui_state" with value: false to set the sibling radio's uiState to false (unchecked).
-      // Each radio's own uiState is a boolean (true = checked, false = unchecked).
-      // This is necessary because the group controller aggregates child states to determine
-      // the selected value — it needs all siblings to be unchecked before the newly checked
-      // radio propagates its state up, otherwise aggregation may find multiple "truthy" children.
-      // suppressParentNotification: true prevents the group from aggregating and calling uiAction during
-      // this intermediate state (all unchecked) — only the clicked radio's setUIState triggers aggregation.
-      dispatchRequestSetUIState(radioInput, false, {
-        event: e,
-        suppressParentNotification: true,
-      });
-    }
-  };
   const [radioProps, remainingProps] = useFieldInterfaceProps(
     {
       ...props,
-      onInput: (e) => {
-        props.onInput?.(e);
-        const radio = ref.current;
-        if (radio.checked) {
-          updateOtherRadiosInGroup(e);
-        }
-      },
       resetOnCancel: true,
       resetOnAbort: true,
       resetOnError: true,
@@ -393,28 +351,46 @@ export const InputRadio = (props) => {
       statePropName: "checked",
       defaultStatePropName: "defaultChecked",
       getUIValue: () => {
-        const radio = props.ref.current;
+        const radio = ref.current;
         const radioIsChecked = radio.checked;
         return radioIsChecked ? props.value : undefined;
       },
       fallbackState: false,
       getStateFromProp: (checked) => (checked ? props.value : undefined),
       getPropFromState: Boolean,
-      getStateFromParent: (parentUIStateController) => {
-        if (parentUIStateController.componentType === "radio_group") {
-          return parentUIStateController.uiState === props.value;
+      // we must first dispatch an event to inform all other radios they where unchecked
+      // this way each other radio uiStateController knows they are unchecked
+      sideEffect: (radio, checked, e) => {
+        if (!checked) {
+          return;
         }
-        return undefined;
+        const { name } = radio;
+        if (!name) {
+          return;
+        }
+        const radioGroupContainer = radio.form || document;
+        const radioInputs = radioGroupContainer.querySelectorAll(
+          `input[type="radio"][name="${name}"]`,
+        );
+        for (const radioInput of radioInputs) {
+          if (radioInput === radio) {
+            continue;
+          }
+          // Dispatch "navi_set_ui_state" with value: false to set the sibling radio's uiState to false (unchecked).
+          // Each radio's own uiState is a boolean (true = checked, false = unchecked).
+          // This is necessary because the group controller aggregates child states to determine
+          // the selected value — it needs all siblings to be unchecked before the newly checked
+          // radio propagates its state up, otherwise aggregation may find multiple "truthy" children.
+          // suppressParentNotification: true prevents the group from aggregating and calling uiAction during
+          // this intermediate state (all unchecked) — only the clicked radio's setUIState triggers aggregation.
+          dispatchRequestSetUIState(radioInput, false, {
+            event: e,
+            suppressParentNotification: true,
+          });
+        }
       },
     },
   );
-
-  const { checked } = radioProps;
-  useLayoutEffect(() => {
-    if (checked) {
-      updateOtherRadiosInGroup(new CustomEvent("external_state_sync"));
-    }
-  }, [checked]);
 
   if (props.headless) {
     return (

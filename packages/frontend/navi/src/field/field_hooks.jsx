@@ -87,6 +87,7 @@ export const useFieldInterfaceProps = (
     getStateFromProp,
     getPropFromState,
     getStateFromParent,
+    sideEffect,
     allowNameless,
     persists,
 
@@ -104,6 +105,7 @@ export const useFieldInterfaceProps = (
     getStateFromProp,
     getPropFromState,
     getStateFromParent,
+    sideEffect,
     allowNameless,
     persists,
     debugAction,
@@ -524,7 +526,6 @@ const useActionProps = (
                 e,
                 "dispatching synthetic input event without data for checkbox/radio",
               );
-              currentTarget.checked = value; // set immeditaly (don't wait for preact re-render) so ui is in the right state for this event
               currentTarget.dispatchEvent(
                 new Event("input", {
                   bubbles: true,
@@ -535,7 +536,6 @@ const useActionProps = (
                 e,
                 `dispatching synthetic input event with data "${value}" for input`,
               );
-              currentTarget.value = value;
               currentTarget.dispatchEvent(
                 new InputEvent("input", {
                   bubbles: true,

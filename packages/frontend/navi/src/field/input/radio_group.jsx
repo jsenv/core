@@ -27,7 +27,7 @@ export const RadioGroup = (props) => {
 
 const RadioGroupInterface = (props) => {
   import.meta.css = css;
-  const { ref } = props;
+  const { ref, name } = props;
   const [radioGroupProps, remainingProps] = useFieldgroupInterfaceProps(
     {
       resetOnCancel: true,
@@ -50,7 +50,6 @@ const RadioGroupInterface = (props) => {
       },
     },
   );
-  const { name } = radioGroupProps;
   useFocusGroup(ref, { wrap: "both" });
 
   return (
@@ -62,7 +61,7 @@ const RadioGroupInterface = (props) => {
       name={undefined}
       baseClassName="navi_radio_group"
       data-callout-anchor="legend"
-      onChange={(e) => {
+      onInput={(e) => {
         // we rely on change event bubbling but we want to catch only the relevant radio change events
         const target = e.target;
         if (target.tagName !== "INPUT" || target.type !== "radio") {
