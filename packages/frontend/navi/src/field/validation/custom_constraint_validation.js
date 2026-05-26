@@ -880,10 +880,8 @@ export const installCustomConstraintValidation = (
   close_on_escape: {
     const onkeydown = (e) => {
       if (e.key === "Escape") {
-        if (closeElementValidationMessage(e, "escape_key")) {
-          // closing the callout should prevent anything else from hapenning
-          e.stopPropagation();
-          e.preventDefault();
+        if (validationInterface.validationMessage) {
+          // When a callout is open, callout.js handles Escape on the anchor element
         } else {
           dispatchCancelCustomEvent({
             event: e,

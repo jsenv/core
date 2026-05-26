@@ -420,6 +420,21 @@ export const openCallout = (
       });
     }
   }
+  close_on_escape_from_anchor: {
+    if (!anchorElement) break close_on_escape_from_anchor;
+    calloutCloseButton.tabIndex = -1;
+    const onAnchorKeydown = (e) => {
+      if (e.key === "Escape") {
+        requestClose(e, "escape_key");
+        e.stopPropagation();
+        e.preventDefault();
+      }
+    };
+    anchorElement.addEventListener("keydown", onAnchorKeydown);
+    addTeardown(() => {
+      anchorElement.removeEventListener("keydown", onAnchorKeydown);
+    });
+  }
   close_on_custom_event: {
     const handleCustomCloseEvent = (e) => {
       requestClose(e, "custom_event");
