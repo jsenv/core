@@ -177,17 +177,19 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      import { Box, Input } from "@jsenv/navi";
+      import { Box, Input, NaviDebug } from "@jsenv/navi";
 
       const App = () => {
         return (
-          <div>
-            <BasicStatesDemo />
-            <FocusStatesDemo />
-            <ActionHandlingDemo />
-            <ColorVariationsDemo />
-            <ThumbCustomizationDemo />
-          </div>
+          <NaviDebug debugInteraction>
+            <div>
+              <BasicStatesDemo />
+              <FocusStatesDemo />
+              <ActionHandlingDemo />
+              <ColorVariationsDemo />
+              <ThumbCustomizationDemo />
+            </div>
+          </NaviDebug>
         );
       };
 
