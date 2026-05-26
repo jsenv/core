@@ -177,8 +177,7 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      import { Box } from "@jsenv/navi";
-      import { InputRange } from "../input_range.jsx";
+      import { Box, Input } from "@jsenv/navi";
 
       const App = () => {
         return (
@@ -214,7 +213,8 @@
                   <legend>Default</legend>
                   <Box row spacing="sm" alignX="start">
                     <div className="range-group">
-                      <InputRange
+                      <Input
+                        type="range"
                         value={defaultValue}
                         action={(v) => {
                           setDefaultValue(v);
@@ -240,7 +240,8 @@
                   <legend>:disabled</legend>
                   <Box row spacing="sm" alignX="start">
                     <div className="range-group">
-                      <InputRange
+                      <Input
+                        type="range"
                         value={disabledValue}
                         min="0"
                         max="100"
@@ -278,7 +279,8 @@
                   <legend>:read-only</legend>
                   <Box row spacing="sm" alignX="start">
                     <div className="range-group">
-                      <InputRange
+                      <Input
+                        type="range"
                         value="60"
                         min="0"
                         max="100"
@@ -293,7 +295,8 @@
                   <legend>:-navi-loading</legend>
                   <Box row spacing="sm" alignX="start">
                     <div className="range-group">
-                      <InputRange
+                      <Input
+                        type="range"
                         value="40"
                         min="0"
                         max="100"
@@ -352,7 +355,8 @@
                 <legend>:focus-visible</legend>
                 <Box row spacing="sm" alignX="start">
                   <div className="range-group">
-                    <InputRange
+                    <Input
+                      type="range"
                       value={focusedValue}
                       action={(v) => setFocusedValue(v)}
                       min="0"
@@ -381,7 +385,8 @@
                 <legend>:read-only + :focus-visible</legend>
                 <Box row spacing="sm" alignX="start">
                   <div className="range-group">
-                    <InputRange
+                    <Input
+                      type="range"
                       value="45"
                       min="0"
                       max="100"
@@ -397,7 +402,8 @@
                 <legend>:-navi-loading + :focus-visible</legend>
                 <Box row spacing="sm" alignX="start">
                   <div className="range-group">
-                    <InputRange
+                    <Input
+                      type="range"
                       value="75"
                       min="0"
                       max="100"
@@ -500,7 +506,8 @@
                 updated only after the action completes.
               </p>
               <Box column spacing="sm">
-                <InputRange
+                <Input
+                  type="range"
                   min="10"
                   max="100"
                   value={uiValue}
@@ -550,7 +557,8 @@
                 Basic action called immediately on every input value change.
               </p>
               <Box column spacing="sm" alignX="start" alignY="center">
-                <InputRange
+                <Input
+                  type="range"
                   min="10"
                   max="100"
                   action={(value) => {
@@ -573,7 +581,8 @@
                 experience.
               </p>
               <Box column spacing="sm">
-                <InputRange
+                <Input
+                  type="range"
                   min="10"
                   max="100"
                   action={(value) =>
@@ -601,7 +610,8 @@
                 during dragging.
               </p>
               <Box column spacing="sm">
-                <InputRange
+                <Input
+                  type="range"
                   min="10"
                   max="100"
                   action={(value) =>
@@ -645,7 +655,8 @@
                 <legend>Red Theme</legend>
                 <Box row spacing="sm" alignX="start">
                   <div className="range-group">
-                    <InputRange
+                    <Input
+                      type="range"
                       value={redValue}
                       uiAction={(v) => setRedValue(v)}
                       min="0"
@@ -671,7 +682,8 @@
                 <legend>Different Thumb & Track Colors</legend>
                 <Box row spacing="sm" alignX="start">
                   <div className="range-group">
-                    <InputRange
+                    <Input
+                      type="range"
                       value="45"
                       min="0"
                       max="100"
@@ -713,7 +725,8 @@
                 <legend>Green Theme</legend>
                 <Box row spacing="sm" alignX="start">
                   <div className="range-group">
-                    <InputRange
+                    <Input
+                      type="range"
                       value={greenValue}
                       uiAction={(v) => setGreenValue(v)}
                       min="0"
@@ -739,7 +752,8 @@
                 <legend style={{ color: "white" }}>White Theme</legend>
                 <Box row spacing="sm" alignX="start">
                   <div className="range-group">
-                    <InputRange
+                    <Input
+                      type="range"
                       value="50"
                       uiAction={() => {}}
                       min="0"
@@ -794,7 +808,8 @@
                 <legend>Small Thumb</legend>
                 <Box row spacing="sm" alignX="start">
                   <div className="range-group">
-                    <InputRange
+                    <Input
+                      type="range"
                       value={smallThumbValue}
                       uiAction={(e) => setSmallThumbValue(e)}
                       min="0"
@@ -823,7 +838,8 @@
                 <legend>Large Thumb</legend>
                 <Box row spacing="sm" alignX="start">
                   <div className="range-group">
-                    <InputRange
+                    <Input
+                      type="range"
                       value={largeThumbValue}
                       uiAction={(e) => setLargeThumbValue(e)}
                       min="0"
@@ -852,7 +868,8 @@
                 <legend>Square Thumb</legend>
                 <Box row spacing="sm" alignX="start">
                   <div className="range-group">
-                    <InputRange
+                    <Input
+                      type="range"
                       value="50"
                       min="0"
                       uiAction={() => {}}
