@@ -5,7 +5,7 @@ import { LoadingOutline } from "../../graphic/loading/loading_outline.jsx";
 import { useAccentColorAttributes } from "../../utils/use_accent_color_attributes.js";
 import { FIELD_PROP_SET } from "../field_context.js";
 import { useFieldInterfaceProps } from "../field_hooks.jsx";
-import { ToggleCSSVars, ToggleUI } from "./toggle_ui.jsx";
+import { SwitchCSSVars, SwitchUI } from "./switch_ui.jsx";
 
 const css = /* css */ `
   @layer navi {
@@ -206,35 +206,35 @@ const css = /* css */ `
       }
     }
 
-    /* Toggle appearance */
-    &[data-appearance="toggle"] {
+    /* Switch appearance */
+    &[data-appearance="switch"] {
       /* We compute ourselves the width + padding otherwise during 
       translation subpixel rounding makes the thumb feels too much to the right by 1px */
       box-sizing: content-box;
-      --toggle-outer-width: calc(var(--toggle-width) + var(--toggle-padding));
+      --switch-outer-width: calc(var(--switch-width) + var(--switch-padding));
 
-      --margin: var(--toggle-margin);
-      --width: var(--toggle-outer-width);
+      --margin: var(--switch-margin);
+      --width: var(--switch-outer-width);
       --height: unset;
-      min-width: var(--toggle-outer-width);
-      --border-radius: var(--toggle-border-radius);
-      --background-color: var(--toggle-background-color);
-      --background-color-hover: var(--toggle-background-color-hover);
-      --background-color-readonly: var(--toggle-background-color-readonly);
-      --background-color-disabled: var(--toggle-background-color-disabled);
-      --background-color-checked: var(--toggle-background-color-checked);
+      min-width: var(--switch-outer-width);
+      --border-radius: var(--switch-border-radius);
+      --background-color: var(--switch-background-color);
+      --background-color-hover: var(--switch-background-color-hover);
+      --background-color-readonly: var(--switch-background-color-readonly);
+      --background-color-disabled: var(--switch-background-color-disabled);
+      --background-color-checked: var(--switch-background-color-checked);
       --background-color-hover-checked: var(
-        --toggle-background-color-hover-checked
+        --switch-background-color-hover-checked
       );
       --background-color-readonly-checked: var(
-        --toggle-background-color-readonly-checked
+        --switch-background-color-readonly-checked
       );
       --background-color-disabled-checked: var(
-        --toggle-background-color-disabled-checked
+        --switch-background-color-disabled-checked
       );
 
       position: relative;
-      padding: var(--toggle-padding);
+      padding: var(--switch-padding);
       background-color: var(--x-background-color);
       border-color: transparent;
     }
@@ -362,7 +362,7 @@ const InputCheckboxFieldInterface = (props) => {
   import.meta.css = css;
   const {
     icon,
-    appearance = icon ? "icon" : "checkbox", // "checkbox", "toggle", "icon", "button"
+    appearance = icon ? "icon" : "checkbox", // "checkbox", "switch", "icon", "button"
     checkboxProps,
     ...rest
   } = props;
@@ -379,8 +379,8 @@ const InputCheckboxFieldInterface = (props) => {
         {Array.isArray(icon) ? icon[checked ? 1 : 0] : icon}
       </div>
     );
-  } else if (appearance === "toggle") {
-    visualVnode = <ToggleUI />;
+  } else if (appearance === "switch") {
+    visualVnode = <SwitchUI />;
   } else {
     visualVnode = (
       <Box
@@ -407,8 +407,8 @@ const InputCheckboxFieldInterface = (props) => {
       navi-field=".navi_real_input_checkbox"
       pseudoStateSelector=".navi_real_input_checkbox"
       styleCSSVars={
-        appearance === "toggle"
-          ? CheckboxToggleStyleCSSVars
+        appearance === "switch"
+          ? CheckboxSwitchStyleCSSVars
           : appearance === "button"
             ? CheckboxButtonStyleCSSVars
             : CheckboxStyleCSSVars
@@ -467,9 +467,9 @@ const CheckboxStyleCSSVars = {
     borderColor: "--border-color-disabled",
   },
 };
-const CheckboxToggleStyleCSSVars = {
+const CheckboxSwitchStyleCSSVars = {
   ...CheckboxStyleCSSVars,
-  ...ToggleCSSVars,
+  ...SwitchCSSVars,
 };
 const CheckboxButtonStyleCSSVars = {
   ...CheckboxStyleCSSVars,

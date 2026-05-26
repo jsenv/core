@@ -6,7 +6,6 @@ import { useAccentColorAttributes } from "../../utils/use_accent_color_attribute
 import { FIELD_PROP_SET } from "../field_context.js";
 import { useFieldInterfaceProps } from "../field_hooks.jsx";
 import { dispatchRequestSetUIState } from "../ui_state_controller.js";
-import { ToggleCSSVars, ToggleUI } from "./toggle_ui.jsx";
 
 const css = /* css */ `
   @layer navi {
@@ -330,39 +329,6 @@ const css = /* css */ `
         --x-background-color: var(--button-background-color-disabled);
       }
     }
-
-    /* Toggle appearance */
-    &[data-appearance="toggle"] {
-      /* We compute ourselves the width + padding otherwise during
-      translation subpixel rounding makes the thumb feel too much to the right by 1px */
-      box-sizing: content-box;
-      --toggle-outer-width: calc(var(--toggle-width) + var(--toggle-padding));
-
-      --margin: var(--toggle-margin);
-      --width: var(--toggle-outer-width);
-      --height: unset;
-      min-width: var(--toggle-outer-width);
-      border-radius: var(--toggle-border-radius);
-      --background-color: var(--toggle-background-color);
-      --background-color-hover: var(--toggle-background-color-hover);
-      --background-color-readonly: var(--toggle-background-color-readonly);
-      --background-color-disabled: var(--toggle-background-color-disabled);
-      --background-color-checked: var(--toggle-background-color-checked);
-      --background-color-hover-checked: var(
-        --toggle-background-color-hover-checked
-      );
-      --background-color-readonly-checked: var(
-        --toggle-background-color-readonly-checked
-      );
-      --background-color-disabled-checked: var(
-        --toggle-background-color-disabled-checked
-      );
-
-      position: relative;
-      padding: var(--toggle-padding);
-      background-color: var(--x-background-color);
-      border-color: transparent;
-    }
   }
 `;
 
@@ -471,12 +437,15 @@ const InputRadioVisuallyHidden = (props) => {
 };
 const InputRadioFieldInterface = (props) => {
   import.meta.css = css;
-  const {
-    icon,
-    appearance = icon ? "icon" : "radio",
-    radioProps,
-    ...rest
-  } = props;
+  const { icon, appearance: props_appearance, radioProps, ...rest } = props;
+  const VALID_APPEARANCES = ["hidden", "icon", "button", "radio"];
+  let appearance = props_appearance ?? (icon ? "icon" : "radio");
+  if (!VALID_APPEARANCES.includes(appearance) && !icon) {
+    console.warn(
+      `InputRadio: unsupported appearance "${appearance}". Falling back to "radio". Only checkbox supports "switch".`,
+    );
+    appearance = "radio";
+  }
   const { basePseudoState, checked } = radioProps;
   const loading = basePseudoState[":-navi-loading"];
   const boxRef = useRef();
@@ -488,8 +457,6 @@ const InputRadioFieldInterface = (props) => {
     visualVNode = null;
   } else if (appearance === "icon" || icon) {
     visualVNode = Array.isArray(icon) ? icon[checked ? 1 : 0] : icon;
-  } else if (appearance === "toggle") {
-    visualVNode = <ToggleUI />;
   } else {
     // appearance === "radio"
     visualVNode = (
@@ -535,11 +502,7 @@ const InputRadioFieldInterface = (props) => {
       navi-field=".navi_real_input_radio"
       pseudoStateSelector=".navi_real_input_radio"
       styleCSSVars={
-        appearance === "button"
-          ? RadioButtonStyleCSSVars
-          : appearance === "toggle"
-            ? RadioToggleCSSVars
-            : RadioStyleCSSVars
+        appearance === "button" ? RadioButtonStyleCSSVars : RadioStyleCSSVars
       }
       pseudoClasses={RadioPseudoClasses}
       pseudoElements={RadioPseudoElements}
@@ -621,10 +584,6 @@ const RadioButtonStyleCSSVars = {
     backgroundColor: "--button-background-color-disabled",
     borderColor: "--button-border-color-disabled",
   },
-};
-const RadioToggleCSSVars = {
-  ...RadioStyleCSSVars,
-  ...ToggleCSSVars,
 };
 const RadioPseudoClasses = [
   ":hover",
