@@ -425,9 +425,9 @@ const InputRadioFieldInterface = (props) => {
   import.meta.css = css;
   const { icon, appearance, radioProps, ...rest } = props;
   let appearanceResolved = appearance || (icon ? "icon" : "radio");
-  if (!APPEARANCE_SET.has(appearance) && !icon) {
+  if (appearance && !APPEARANCE_SET.has(appearance)) {
     console.warn(
-      `InputRadio: unsupported appearance "${appearance}". Falling back to "radio". Only checkbox supports "switch".`,
+      `InputRadio: unsupported appearance "${appearance}". Falling back to "radio".`,
     );
     appearanceResolved = "radio";
   }

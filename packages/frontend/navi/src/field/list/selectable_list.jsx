@@ -379,7 +379,7 @@ const SelectableRealInput = (props) => {
       {...inputProps}
       {...props}
       navi-selectable-real-input=""
-      appearance="hidden"
+      headless
     />
   );
 };
