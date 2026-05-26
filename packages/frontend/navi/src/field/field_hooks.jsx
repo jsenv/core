@@ -12,7 +12,11 @@
  *    a debounced action. The request-action event chain handles the timing centrally
  *    rather than each component having to manage its own debounce logic.
  */
-import { dispatchInternalCustomEvent, findEvent } from "@jsenv/dom";
+import {
+  dispatchInternalCustomEvent,
+  findEvent,
+  getKeyboardEventDefault,
+} from "@jsenv/dom";
 import {
   useCallback,
   useContext,
@@ -159,7 +163,7 @@ export const useFieldInterfaceProps = (
       return;
     }
     if (primaryInteractionMode === "keyboard") {
-      if (isTypingIntent(e)) {
+      if (getKeyboardEventDefault(e)) {
         // inside a checkbox/radio does not make much sense so we'll see
         // but for input it allows to show the readonly message when trying to type into it
         const input = e.currentTarget;
@@ -212,29 +216,6 @@ export const useFieldInterfaceProps = (
     },
   );
   return result;
-};
-
-// Returns true when the key combination looks like the user is trying to type
-// into the input (as opposed to a keyboard shortcut, navigation key, etc.).
-// Used to trigger the readonly callout when relevant.
-const isTypingIntent = (e) => {
-  // Modifier keys used for shortcuts: skip
-  if (e.metaKey || e.ctrlKey) {
-    return false;
-  }
-  // Shift alone (or Shift+arrow for selection): skip
-  // Characters produced with Shift (e.g. uppercase, symbols) are caught below
-  // via key.length === 1, so we only need to filter out non-printable Shift combos.
-  const { key } = e;
-  // Single printable character — the user is typing
-  if (key.length === 1) {
-    return true;
-  }
-  // Editing keys that would modify the text
-  if (key === "Backspace" || key === "Delete" || key === "Enter") {
-    return true;
-  }
-  return false;
 };
 
 /**

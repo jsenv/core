@@ -1,4 +1,4 @@
-import { activeElementSignal, canInterceptKeys } from "@jsenv/dom";
+import { activeElementSignal, canInterceptKeyboardEvent } from "@jsenv/dom";
 import { effect, signal } from "@preact/signals";
 import { useEffect, useRef } from "preact/hooks";
 
@@ -225,7 +225,7 @@ export const shortcutsViaOnKeyDown = (shortcuts, onKeyDown) => {
 };
 
 const applyKeyboardShortcuts = (shortcuts, keyboardEvent) => {
-  if (!canInterceptKeys(keyboardEvent)) {
+  if (!canInterceptKeyboardEvent(keyboardEvent)) {
     return null;
   }
   for (const shortcutCandidate of shortcuts) {

@@ -4,7 +4,7 @@ import {
   findDescendant,
   findLastDescendant,
 } from "../../traversal.js";
-import { canInterceptKeys } from "../keyboard.js";
+import { canInterceptKeyboardEvent } from "../keyboard.js";
 import { elementIsFocusable } from "./element_is_focusable.js";
 import { getFocusGroup } from "./focus_group_registry.js";
 import { markFocusNav } from "./focus_nav_event_marker.js";
@@ -47,7 +47,9 @@ export const performArrowNavigation = (
     ySelector,
   } = {},
 ) => {
-  if (!canInterceptKeys(event, { intent: "override_arrow_navigation" })) {
+  if (
+    !canInterceptKeyboardEvent(event, { intent: "override_arrow_navigation" })
+  ) {
     return false;
   }
   const activeElement = document.activeElement;
