@@ -261,25 +261,19 @@ const InputRangeFieldInterface = (props) => {
     const ratio = (inputValue - input.min) / (input.max - input.min);
     input.parentNode.style.setProperty("--x-fill-ratio", ratio);
   };
-  const [rangeProps, remainingProps] = useFieldInterfaceProps(
-    {
-      ...props,
-      onInput: (e) => {
-        props.onInput?.(e);
-        updateFillRatio();
-      },
+  const [rangeProps, remainingProps] = useFieldInterfaceProps(props, {
+    primaryInteractionMode: "pointer",
+    fieldType: "input",
+    statePropName: "value",
+    defaultStatePropName: "defaultValue",
+    getUIValue: () => {
+      const input = ref.current;
+      return input.valueAsNumber;
     },
-    {
-      primaryInteractionMode: "pointer",
-      fieldType: "input",
-      statePropName: "value",
-      defaultStatePropName: "defaultValue",
-      getUIValue: () => {
-        const input = ref.current;
-        return input.valueAsNumber;
-      },
+    sideEffect: (input, uiState, e) => {
+      updateFillRatio(e);
     },
-  );
+  });
   const { basePseudoState } = rangeProps;
   const disabled = basePseudoState[":disabled"];
   const readOnly = basePseudoState[":read-only"];

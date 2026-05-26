@@ -360,8 +360,8 @@ export const InputRadio = (props) => {
       getPropFromState: Boolean,
       // we must first dispatch an event to inform all other radios they where unchecked
       // this way each other radio uiStateController knows they are unchecked
-      sideEffect: (radio, checked, e) => {
-        if (!checked) {
+      sideEffect: (radio, uiState, e) => {
+        if (!radio.checked) {
           return;
         }
         // Proxy radios all share the same name ("navi_input_proxy"), so we
