@@ -269,8 +269,8 @@ const InputRangeFieldInterface = (props) => {
       const input = ref.current;
       return input.valueAsNumber;
     },
-    sideEffect: (input, uiState, e) => {
-      updateFillRatio(e);
+    uiActionInternal: () => {
+      updateFillRatio();
     },
     readOnlySupported: true,
   });

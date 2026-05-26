@@ -68,7 +68,7 @@ export const useUIStateController = (
     getStateFromProp = (prop) => prop,
     getPropFromState = (state) => state,
     getStateFromParent,
-    sideEffect,
+    uiActionInternal,
     persists,
     allowNameless = false,
     debugAction,
@@ -220,6 +220,13 @@ export const useUIStateController = (
     elementRef: ref,
     getPropFromState,
     getStateFromProp,
+    requestUIAction: (e) => {
+      if (uiAction || uiActionInternal) {
+        const uiState = getUIStateFromElement(e.currentTarget);
+        uiActionInternal?.(uiState, e);
+        uiAction?.(uiState, e);
+      }
+    },
     setUIState: (prop, e) => {
       const newUIState = uiStateController.getStateFromProp(
         isSignal(prop) ? prop.value : prop,
@@ -247,9 +254,6 @@ export const useUIStateController = (
       }
       uiStateController.uiState = newUIState;
       uiStateSignal.value = newUIState;
-      if (sideEffect) {
-        sideEffect(el, newUIState, e);
-      }
       // Radio group: when a radio becomes checked, uncheck all siblings.
       // We only update their UIState — no parent notification, no synthetic
       // input event (the browser never fires input on the unchecked radios,
@@ -678,19 +682,6 @@ export const useUIState = (ref, initialValue) => {
     };
   }, [ref]);
   return uiState;
-};
-
-export const useUIAction = (uiStateController, uiAction) => {
-  const uiActionRef = useRef(uiAction);
-  uiActionRef.current = uiAction;
-  useLayoutEffect(() => {
-    if (!uiAction) {
-      return undefined;
-    }
-    return uiStateController.subscribe((newUIState, e) => {
-      uiActionRef.current?.(newUIState, e);
-    });
-  }, [Boolean(uiAction)]);
 };
 
 export const dispatchRequestSetUIState = (element, value, detail) => {

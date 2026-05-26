@@ -86,11 +86,11 @@ export const useFieldInterfaceProps = (
     getStateFromProp,
     getPropFromState,
     getStateFromParent,
-    sideEffect,
     allowNameless,
     persists,
 
     getUIValue,
+    uiActionInternal,
     paramsSignal,
     externalBoundAction,
     readOnlySupported,
@@ -104,10 +104,10 @@ export const useFieldInterfaceProps = (
     getStateFromProp,
     getPropFromState,
     getStateFromParent,
-    sideEffect,
     allowNameless,
     persists,
     debugAction,
+    uiActionInternal,
   });
 
   paramsSignal = paramsSignal || uiStateController.uiStateSignal;
@@ -171,6 +171,10 @@ export const useFieldInterfaceProps = (
   };
 
   const { actionAfterChange, actionDebounce } = props;
+  const onInput = (e) => {
+    props.onInput?.(e);
+    uiStateController.requestUIAction(e);
+  };
   const installInputEffect = useCallback(
     (input) => {
       return addInputEffect(
@@ -198,8 +202,10 @@ export const useFieldInterfaceProps = (
       onClick,
       onKeyDown,
       onPaste,
+      onInput,
       actionAfterChange: undefined,
       actionDebounce: undefined,
+      uiAction: undefined,
     },
     {
       readOnlySupported,
