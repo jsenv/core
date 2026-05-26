@@ -1,37 +1,20 @@
 import { createPubSub } from "@jsenv/dom";
 
-export const addInputCheckedEffect = (input, callback, options) => {
-  return addInputStateEffect(input, callback, {
-    getState: () => input.checked,
-    ...options,
-  });
-};
-export const addInputValueEffect = (input, callback, options) => {
-  return addInputStateEffect(input, callback, {
-    getState: () => input.value,
-    ...options,
-  });
-};
-
-const addInputStateEffect = (
+export const addInputEffect = (
   input,
   callback,
-  { getState, waitForChange = false, debounce = 0 },
+  { waitForChange = false, debounce = 0 },
 ) => {
+  const getState = (input) => input.value;
+
   if (waitForChange) {
     return listenInputStateChange(input, callback, { getState });
   }
+
   const [teardown, addTeardown] = createPubSub();
   let currentState = getState();
   let timeout;
   let debounceTimeout;
-
-  const onAsyncEvent = (e, options) => {
-    timeout = setTimeout(() => {
-      onEvent(e, options);
-    }, 0);
-  };
-
   let onEvent;
   if (debounce) {
     onEvent = (e, { skipDebounce } = {}) => {
@@ -82,6 +65,12 @@ const addInputStateEffect = (
     });
   }
 
+  const onAsyncEvent = (e, options) => {
+    timeout = setTimeout(() => {
+      onEvent(e, options);
+    }, 0);
+  };
+
   // Standard user input (typing)
   input.addEventListener("input", onEvent);
   addTeardown(() => {
@@ -122,10 +111,10 @@ const addInputStateEffect = (
   addTeardown(() => {
     input.removeEventListener("navi_clear", onNaviClear);
   });
-  return () => {
-    teardown();
-  };
+
+  return teardown;
 };
+
 const listenInputStateChange = (input, callback, { getState }) => {
   const [teardown, addTeardown] = createPubSub();
 

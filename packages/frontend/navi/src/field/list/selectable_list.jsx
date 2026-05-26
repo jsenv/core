@@ -338,11 +338,11 @@ export const Selectable = (props) => {
           ref={inputRef}
           type={inputType}
           checked={selected}
-          onInput={(e) => {
-            const listContainerEl = e.currentTarget.closest(
+          action={(v, { event }) => {
+            const listContainerEl = event.currentTarget.closest(
               ".navi_list_container",
             );
-            dispatchRequestAction(listContainerEl, { event: e });
+            dispatchRequestAction(listContainerEl, { event });
           }}
         />
         <SelectableRealInputContext.Provider value={realInputContextValue}>

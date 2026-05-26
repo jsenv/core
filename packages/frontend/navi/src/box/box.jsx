@@ -53,7 +53,7 @@
 
 import { normalizeStyles } from "@jsenv/dom";
 import { createContext, isValidElement, toChildArray } from "preact";
-import { useContext } from "preact/hooks";
+import { useCallback, useContext } from "preact/hooks";
 
 import { withPropsClassName } from "../utils/with_props_class_name.js";
 import { BoxFlowContext } from "./box_flow_context.jsx";
@@ -70,7 +70,7 @@ import {
   PSEUDO_NAMED_STYLES_DEFAULT,
   PSEUDO_STATE_DEFAULT,
 } from "./pseudo_styles.js";
-import { useElementRefEffect } from "./use_element_ref.js";
+import { useComposeElementRef } from "./use_element_ref.js";
 import { usePartiallyHidden } from "./use_partially_hidden.js";
 
 export const BoxForwardedPropsContext = createContext({});
@@ -652,39 +652,36 @@ export const Box = (props) => {
         styleDeps.push(...pseudoClasses);
       }
     }
-    ref = useElementRefEffect(
-      props.ref,
-      (boxEl) => {
-        const pseudoStateEl = pseudoStateSelector
-          ? boxEl.querySelector(pseudoStateSelector)
-          : boxEl;
-        if (!pseudoStateEl) {
-          console.error(
-            `pseudoStateSelector "${pseudoStateSelector}" did not match any element inside the box`,
+    const syncBox = useCallback((boxEl) => {
+      const pseudoStateEl = pseudoStateSelector
+        ? boxEl.querySelector(pseudoStateSelector)
+        : boxEl;
+      if (!pseudoStateEl) {
+        console.error(
+          `pseudoStateSelector "${pseudoStateSelector}" did not match any element inside the box`,
+        );
+      }
+      const visualEl = visualSelector
+        ? boxEl.querySelector(visualSelector)
+        : null;
+      return initPseudoStyles(pseudoStateEl, {
+        pseudoClasses: innerPseudoClasses,
+        pseudoState: innerPseudoState,
+        effect: (state) => {
+          applyStyle(
+            boxEl,
+            boxStyles,
+            state,
+            boxPseudoNamedStyles,
+            preventInitialTransition,
           );
-        }
-        const visualEl = visualSelector
-          ? boxEl.querySelector(visualSelector)
-          : null;
-        return initPseudoStyles(pseudoStateEl, {
-          pseudoClasses: innerPseudoClasses,
-          pseudoState: innerPseudoState,
-          effect: (state) => {
-            applyStyle(
-              boxEl,
-              boxStyles,
-              state,
-              boxPseudoNamedStyles,
-              preventInitialTransition,
-            );
-          },
-          elementToImpact: boxEl,
-          elementListeningPseudoState:
-            visualEl === pseudoStateEl ? null : visualEl,
-        });
-      },
-      styleDeps,
-    );
+        },
+        elementToImpact: boxEl,
+        elementListeningPseudoState:
+          visualEl === pseudoStateEl ? null : visualEl,
+      });
+    }, styleDeps);
+    ref = useComposeElementRef(syncBox, props.ref);
 
     usePartiallyHidden(ref, Boolean(rest.viewTransitionName));
   }

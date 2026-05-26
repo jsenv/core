@@ -17,11 +17,17 @@ import {
   findEvent,
   getElementSignature,
 } from "@jsenv/dom";
-import { useContext, useLayoutEffect, useState } from "preact/hooks";
+import {
+  useCallback,
+  useContext,
+  useLayoutEffect,
+  useState,
+} from "preact/hooks";
 
 import { useActionBoundToOneParam } from "@jsenv/navi/src/action/use_action.js";
 import { useActionStatus } from "@jsenv/navi/src/action/use_action_status.js";
 import { useExecuteAction } from "@jsenv/navi/src/action/use_execute_action.js";
+import { useComposeElementRef } from "@jsenv/navi/src/box/use_element_ref.js";
 import {
   dispatchRequestAction,
   dispatchRequestInteraction,
@@ -45,10 +51,7 @@ import {
   ReadOnlyContext,
   RequiredContext,
 } from "./field_context.js";
-import {
-  addInputCheckedEffect,
-  addInputValueEffect,
-} from "./input_state_effect.js";
+import { addInputEffect } from "./input_effect.js";
 import { requestClosestAction, resolveActionProp } from "./string_actions.js";
 import {
   dispatchRequestResetUIState,
@@ -177,31 +180,29 @@ export const useFieldInterfaceProps = (
   };
 
   const { actionWaitForChange, actionDebounce } = props;
-  useLayoutEffect(() => {
-    const input = ref.current;
-    if (!input) {
-      return undefined;
-    }
-    const addInputEffect =
-      statePropName === "checked" ? addInputCheckedEffect : addInputValueEffect;
-    const stopListening = addInputEffect(
-      input,
-      (e) => {
-        dispatchRequestAction(input, { event: e });
-      },
-      {
-        waitForChange: actionWaitForChange,
-        debounce: actionDebounce,
-      },
-    );
-    return () => {
-      stopListening();
-    };
-  }, [statePropName, actionWaitForChange, actionDebounce]);
+
+  const installInputEffect = useCallback(
+    (input) => {
+      return addInputEffect(
+        input,
+        (e) => {
+          dispatchRequestAction(input, { event: e });
+        },
+        {
+          waitForChange: actionWaitForChange,
+          debounce: actionDebounce,
+        },
+      );
+    },
+    [actionWaitForChange, actionDebounce],
+  );
+
+  const refComposed = useComposeElementRef(installInputEffect, props.ref);
 
   const result = useActionProps(
     {
       ...props,
+      ref: refComposed,
       onMouseDown,
       onClick,
       onKeyDown,

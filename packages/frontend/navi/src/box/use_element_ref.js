@@ -11,19 +11,21 @@ export const useElementRef = (externalRef) => {
 };
 
 /**
- * Keeps a DOM element in sync with `syncElement(el)` whenever deps change.
+ * Keeps a DOM element in sync with `syncElement(el)` whenever syncElement changes.
  * - If element is already mounted: runs syncElement immediately during render.
  * - If not yet mounted: runs syncElement in the ref callback when element arrives.
  * - Calls cleanup (if returned by syncElement) before each re-run and on unmount.
  *
+ * Wrap `syncElement` in `useCallback(fn, deps)` at the call site to control
+ * when re-sync happens.
+ *
+ * @param {function} syncElement - Called with the DOM element when its reference changes
  * @param {function|object|null} externalRef - Optional ref to forward to
- * @param {function} syncElement - Called with the DOM element when deps change
- * @param {Array} deps - syncElement is re-called only when deps change
  */
-export const useElementRefEffect = (externalRef, syncElement, deps) => {
+export const useComposeElementRef = (syncElement, externalRef) => {
   const cleanupRef = useRef(null);
   const elRef = useRef(null);
-  const prevDepsRef = useRef(undefined);
+  const prevSyncElementRef = useRef(undefined);
   const refCallbackRef = useRef(null);
 
   const runSync = (el) => {
@@ -31,31 +33,16 @@ export const useElementRefEffect = (externalRef, syncElement, deps) => {
       cleanupRef.current();
       cleanupRef.current = null;
     }
-    prevDepsRef.current = deps;
+    prevSyncElementRef.current = syncElement;
     const cleanup = syncElement(el);
     if (typeof cleanup === "function") {
       cleanupRef.current = cleanup;
     }
   };
 
-  // If element already mounted, check deps and sync during render.
-  if (elRef.current) {
-    const prevDeps = prevDepsRef.current;
-    let depsChanged;
-    if (!prevDeps || prevDeps.length !== deps.length) {
-      depsChanged = true;
-    } else {
-      depsChanged = false;
-      for (let i = 0; i < deps.length; i++) {
-        if (!Object.is(deps[i], prevDeps[i])) {
-          depsChanged = true;
-          break;
-        }
-      }
-    }
-    if (depsChanged) {
-      runSync(elRef.current);
-    }
+  // If element already mounted, re-sync when syncElement reference changed.
+  if (elRef.current && syncElement !== prevSyncElementRef.current) {
+    runSync(elRef.current);
   }
 
   if (!refCallbackRef.current) {
@@ -78,7 +65,7 @@ export const useElementRefEffect = (externalRef, syncElement, deps) => {
           cleanupRef.current();
           cleanupRef.current = null;
         }
-        prevDepsRef.current = undefined;
+        prevSyncElementRef.current = undefined;
       }
     };
     refCallbackRef.current = refCallback;
