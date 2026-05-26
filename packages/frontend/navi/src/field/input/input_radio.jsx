@@ -347,8 +347,13 @@ export const InputRadio = (props) => {
     if (!thisRadio) {
       return;
     }
-    const radioSetContainer = thisRadio.closest("fieldset, form") || document;
-    const radioInputs = radioSetContainer.querySelectorAll(
+    const { name } = thisRadio;
+    if (!name) {
+      return;
+    }
+    const { form } = thisRadio;
+    const radioGroupContainer = form || document;
+    const radioInputs = radioGroupContainer.querySelectorAll(
       `input[type="radio"][name="${thisRadio.name}"]`,
     );
     for (const radioInput of radioInputs) {
@@ -396,7 +401,7 @@ export const InputRadio = (props) => {
       getStateFromProp: (checked) => (checked ? props.value : undefined),
       getPropFromState: Boolean,
       getStateFromParent: (parentUIStateController) => {
-        if (parentUIStateController.componentType === "radio_fieldset") {
+        if (parentUIStateController.componentType === "radio_group") {
           return parentUIStateController.uiState === props.value;
         }
         return undefined;

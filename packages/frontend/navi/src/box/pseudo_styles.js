@@ -167,10 +167,8 @@ definePseudoClass(":checked", {
       };
     }
     if (el.type === "radio") {
-      // Listen to changes on the radio group
-      const radioSetContainer = el.closest("fieldset, form") || document;
-      radioSetContainer.addEventListener("input", callback);
-
+      // Listen to changes on the radio
+      el.addEventListener("input", callback);
       // Intercept programmatic changes to .checked property
       const originalDescriptor = Object.getOwnPropertyDescriptor(
         HTMLInputElement.prototype,
@@ -185,7 +183,7 @@ definePseudoClass(":checked", {
         configurable: true,
       });
       return () => {
-        radioSetContainer.removeEventListener("input", callback);
+        el.removeEventListener("input", callback);
         // Restore original property descriptor
         Object.defineProperty(el, "checked", originalDescriptor);
       };

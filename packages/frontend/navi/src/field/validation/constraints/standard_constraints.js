@@ -36,37 +36,31 @@ export const REQUIRED_CONSTRAINT = {
       return null;
     }
     if (field.type === "checkbox") {
-      const checkboxGroupContainer = field.closest(
-        "[navi-checkbox-list], fieldset, form",
-      );
-      const isCheckboxGroup =
-        field.name?.endsWith("[]") || checkboxGroupContainer;
-      if (isCheckboxGroup) {
-        const name = field.name;
-        const container = checkboxGroupContainer || document;
+      const name = field.name;
+      if (name) {
+        const checkboxGroupContainer = field.form || document;
         const checkboxSelector = `input[type="checkbox"][name="${CSS.escape(name)}"]`;
-        const checkboxArray = container.querySelectorAll(checkboxSelector);
+        const checkboxArray =
+          checkboxGroupContainer.querySelectorAll(checkboxSelector);
         if (checkboxArray.length > 1) {
           for (const checkbox of checkboxArray) {
             if (checkbox.checked) {
               return null;
             }
             registerChange((onChange) => {
-              checkbox.addEventListener("change", onChange);
+              checkbox.addEventListener("input", onChange);
               return () => {
-                checkbox.removeEventListener("change", onChange);
+                checkbox.removeEventListener("input", onChange);
               };
             });
           }
           return {
             message: naviI18n("constraint.required.checkbox_group"),
-            target:
-              checkboxGroupContainer.tagName === "FIELDSET"
-                ? checkboxGroupContainer
-                : undefined,
+            target: field.closest("fieldset") || undefined,
           };
         }
       }
+      // no name or single checkbox with that name
       if (!field.checked) {
         return naviI18n("constraint.required.checkbox");
       }
@@ -75,38 +69,34 @@ export const REQUIRED_CONSTRAINT = {
     if (field.type === "radio") {
       // For radio buttons, check if any radio with the same name is selected
       const name = field.name;
-      if (!name) {
-        // If no name, check just this radio
-        if (!field.checked) {
-          return naviI18n("constraint.required.radio");
+      if (name) {
+        const radioGroupContainer = field.form || document;
+        // Check if any radio with the same name is checked
+        const radioSelector = `input[type="radio"][name="${CSS.escape(name)}"]`;
+        const radiosWithSameName =
+          radioGroupContainer.querySelectorAll(radioSelector);
+        for (const radio of radiosWithSameName) {
+          if (radio.checked) {
+            return null; // At least one radio is selected
+          }
+          registerChange((onChange) => {
+            radio.addEventListener("change", onChange);
+            return () => {
+              radio.removeEventListener("change", onChange);
+            };
+          });
         }
-        return null;
-      }
-      const radioSetContainer =
-        field.closest("[navi-radio-list], fieldset, form") || document;
-      // Check if any radio with the same name is checked
-      const radioSelector = `input[type="radio"][name="${CSS.escape(name)}"]`;
-      const radiosWithSameName =
-        radioSetContainer.querySelectorAll(radioSelector);
-      for (const radio of radiosWithSameName) {
-        if (radio.checked) {
-          return null; // At least one radio is selected
-        }
-        registerChange((onChange) => {
-          radio.addEventListener("change", onChange);
-          return () => {
-            radio.removeEventListener("change", onChange);
-          };
-        });
-      }
 
-      return {
-        message: naviI18n("constraint.required.radio"),
-        target:
-          radioSetContainer.tagName === "FIELDSET"
-            ? radioSetContainer
-            : undefined,
-      };
+        return {
+          message: naviI18n("constraint.required.radio"),
+          target: field.closest("fieldset") || undefined,
+        };
+      }
+      // If no name, check just this radio
+      if (!field.checked) {
+        return naviI18n("constraint.required.radio");
+      }
+      return null;
     }
     if (field.type === "color") {
       const uiState = getUIStateFromElement(field);
