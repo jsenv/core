@@ -325,22 +325,32 @@ const InputTypeResolver = (props) => {
   }
   return <Next {...props} />;
 };
+const InputHeadlessResolver = (props) => {
+  const Next = useNextResolver();
+  if (props.headless) {
+    return <InputTextualHeadless {...props} />;
+  }
+  return <Next {...props} />;
+};
 
 const renderInput = createComponentResolver([
   InputTextualWithListResolver,
   InputTypeResolver,
+  InputHeadlessResolver,
 ]);
 
-const InputNativeContext = createContext(null);
-const InputTextualFieldInterface = (props) => {
-  import.meta.css = css;
-  const {
-    ref,
-    ui,
-    discrete,
-    fromInputValue = (v) => v,
-    toInputValue = (v) => v,
-  } = props;
+const InputTextualHeadless = (props) => {
+  const [textualFieldInterfaceProps, remainingProps] =
+    useInputTextualProps(props);
+  return (
+    <BoxForwardedPropsContext.Provider value={undefined}>
+      <RealInput {...textualFieldInterfaceProps} {...remainingProps} />
+    </BoxForwardedPropsContext.Provider>
+  );
+};
+
+const useInputTextualProps = (props) => {
+  const { ref, fromInputValue = (v) => v, toInputValue = (v) => v } = props;
   const [textualFieldInterfaceProps, remainingProps] = useFieldInterfaceProps(
     props,
     {
@@ -356,6 +366,18 @@ const InputTextualFieldInterface = (props) => {
       },
     },
   );
+  textualFieldInterfaceProps.value = toInputValue(
+    textualFieldInterfaceProps.value,
+  );
+  return [textualFieldInterfaceProps, remainingProps];
+};
+
+const InputNativeContext = createContext(null);
+const InputTextualFieldInterface = (props) => {
+  import.meta.css = css;
+  const { ui, discrete } = props;
+  const [textualFieldInterfaceProps, remainingProps] =
+    useInputTextualProps(props);
   const idDefault = useId();
   textualFieldInterfaceProps.id =
     textualFieldInterfaceProps.id || `input_${idDefault}`;
@@ -391,10 +413,7 @@ const InputTextualFieldInterface = (props) => {
         color="var(--loader-color)"
         inset={-1}
       />
-      <RealInput
-        {...textualFieldInterfaceProps}
-        value={toInputValue(textualFieldInterfaceProps.value)}
-      />
+      <RealInput {...textualFieldInterfaceProps} />
       {childrenWithContext}
     </Box>
   );
