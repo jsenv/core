@@ -31,13 +31,21 @@ export const getKeyboardEventDefaultAction = (keyboardEvent) => {
     }
     if (Object.hasOwn(keys, key)) {
       const value = keys[key];
-      return typeof value === "function" ? value(keyboardEvent) : value;
+      const defaultActionForKey =
+        typeof value === "function" ? value(keyboardEvent) : value;
+      if (defaultActionForKey !== undefined) {
+        return defaultActionForKey;
+      }
     }
     if (fallback === undefined) {
       // This entry only handles specific keys — keep looking for other entries
       continue;
     }
-    return typeof fallback === "function" ? fallback(keyboardEvent) : fallback;
+    const defaultAction =
+      typeof fallback === "function" ? fallback(keyboardEvent) : fallback;
+    if (defaultAction !== undefined) {
+      return defaultAction;
+    }
   }
   return "";
 };
