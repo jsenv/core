@@ -420,16 +420,16 @@ const InputRadioHeadless = (props) => {
     </BoxForwardedPropsContext.Provider>
   );
 };
+const APPEARANCE_SET = new Set(["icon", "button", "radio"]);
 const InputRadioFieldInterface = (props) => {
   import.meta.css = css;
-  const { icon, appearance: props_appearance, radioProps, ...rest } = props;
-  const VALID_APPEARANCES = ["icon", "button", "radio"];
-  let appearance = props_appearance ?? (icon ? "icon" : "radio");
-  if (!VALID_APPEARANCES.includes(appearance) && !icon) {
+  const { icon, appearance, radioProps, ...rest } = props;
+  let appearanceResolved = appearance || (icon ? "icon" : "radio");
+  if (!APPEARANCE_SET.has(appearance) && !icon) {
     console.warn(
       `InputRadio: unsupported appearance "${appearance}". Falling back to "radio". Only checkbox supports "switch".`,
     );
-    appearance = "radio";
+    appearanceResolved = "radio";
   }
   const { basePseudoState, checked } = radioProps;
   const loading = basePseudoState[":-navi-loading"];
@@ -438,10 +438,10 @@ const InputRadioFieldInterface = (props) => {
     elementSelector: ".navi_radio_accent_probe",
   });
   let visualVNode;
-  if (appearance === "icon" || icon) {
+  if (appearanceResolved === "icon" || icon) {
     visualVNode = Array.isArray(icon) ? icon[checked ? 1 : 0] : icon;
   } else {
-    // appearance === "radio"
+    // appearanceResolved === "radio"
     visualVNode = (
       <svg
         viewBox="0 0 12 12"
@@ -477,15 +477,18 @@ const InputRadioFieldInterface = (props) => {
       as="span"
       // Radio displayed as button are usually squarish
       // (passsing any custom width/height would auto disable aspectRatio forced by the square prop)
-      square={appearance === "button" ? true : undefined}
+      square={appearanceResolved === "button" ? true : undefined}
       {...rest}
       ref={boxRef}
-      data-appearance={appearance}
+      data-appearance={appearanceResolved}
       baseClassName="navi_radio"
       navi-field=".navi_real_input_radio"
       pseudoStateSelector=".navi_real_input_radio"
+      basePseudoState={basePseudoState}
       styleCSSVars={
-        appearance === "button" ? RadioButtonStyleCSSVars : RadioStyleCSSVars
+        appearanceResolved === "button"
+          ? RadioButtonStyleCSSVars
+          : RadioStyleCSSVars
       }
       pseudoClasses={RadioPseudoClasses}
       pseudoElements={RadioPseudoElements}

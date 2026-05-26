@@ -85,17 +85,19 @@
               action={(value) => {
                 setLastCall(value);
               }}
+              flex="y"
+              alignX="start"
             >
               <legend>Pick an option</legend>
-              <Field flex alignY="center" spacing="s">
+              <Field flex alignY="center" spacing="s" border="1px dotted #ccc">
                 <Input type="radio" value="alpha" />
                 Alpha
               </Field>
-              <Field flex alignY="center" spacing="s">
+              <Field flex alignY="center" spacing="s" border="1px dotted #ccc">
                 <Input type="radio" value="beta" />
                 Beta
               </Field>
-              <Field flex alignY="center" spacing="s">
+              <Field flex alignY="center" spacing="s" border="1px dotted #ccc">
                 <Input type="radio" value="gamma" />
                 Gamma
               </Field>
@@ -133,17 +135,32 @@
                 setSubmitted(params);
               }}
             >
-              <RadioGroup name="form_option">
+              <RadioGroup name="form_option" flex="y" alignX="start">
                 <legend>Pick an option</legend>
-                <Field flex alignY="center" spacing="s">
+                <Field
+                  flex
+                  alignY="center"
+                  spacing="s"
+                  border="1px dotted #ccc"
+                >
                   <Input type="radio" value="alpha" />
                   Alpha
                 </Field>
-                <Field flex alignY="center" spacing="s">
+                <Field
+                  flex
+                  alignY="center"
+                  spacing="s"
+                  border="1px dotted #ccc"
+                >
                   <Input type="radio" value="beta" />
                   Beta
                 </Field>
-                <Field flex alignY="center" spacing="s">
+                <Field
+                  flex
+                  alignY="center"
+                  spacing="s"
+                  border="1px dotted #ccc"
+                >
                   <Input type="radio" value="gamma" />
                   Gamma
                 </Field>
@@ -185,17 +202,37 @@
                 setSubmitted(params);
               }}
             >
-              <RadioGroup name="required_option" required>
+              <RadioGroup
+                name="required_option"
+                required
+                flex="y"
+                alignX="start"
+              >
                 <legend>Pick an option (required)</legend>
-                <Field flex alignY="center" spacing="s">
+                <Field
+                  flex
+                  alignY="center"
+                  spacing="s"
+                  border="1px dotted #ccc"
+                >
                   <Input type="radio" value="alpha" />
                   Alpha
                 </Field>
-                <Field flex alignY="center" spacing="s">
+                <Field
+                  flex
+                  alignY="center"
+                  spacing="s"
+                  border="1px dotted #ccc"
+                >
                   <Input type="radio" value="beta" />
                   Beta
                 </Field>
-                <Field flex alignY="center" spacing="s">
+                <Field
+                  flex
+                  alignY="center"
+                  spacing="s"
+                  border="1px dotted #ccc"
+                >
                   <Input type="radio" value="gamma" />
                   Gamma
                 </Field>
@@ -233,17 +270,35 @@
               options.
             </p>
 
-            <RadioGroup name="readonly_option">
+            <RadioGroup name="readonly_option" flex="y" alignX="start">
               <legend>Pick an option</legend>
-              <Field as="label" flex alignY="center" spacing="s">
+              <Field
+                as="label"
+                flex
+                alignY="center"
+                spacing="s"
+                border="1px dotted #ccc"
+              >
                 <Input type="radio" value="alpha" />
                 Alpha (normal)
               </Field>
-              <Field as="label" flex alignY="center" spacing="s">
+              <Field
+                as="label"
+                flex
+                alignY="center"
+                spacing="s"
+                border="1px dotted #ccc"
+              >
                 <Input type="radio" value="beta" />
                 Beta (normal)
               </Field>
-              <Field as="label" flex alignY="center" spacing="s">
+              <Field
+                as="label"
+                flex
+                alignY="center"
+                spacing="s"
+                border="1px dotted #ccc"
+              >
                 <Input
                   type="radio"
                   value="gamma"
@@ -252,7 +307,13 @@
                 />
                 Gamma (readonly)
               </Field>
-              <Field as="label" flex alignY="center" spacing="s">
+              <Field
+                as="label"
+                flex
+                alignY="center"
+                spacing="s"
+                border="1px dotted #ccc"
+              >
                 <Input
                   type="radio"
                   value="delta"
@@ -261,7 +322,13 @@
                 />
                 Delta (readonly)
               </Field>
-              <Field as="label" flex alignY="center" spacing="s">
+              <Field
+                as="label"
+                flex
+                alignY="center"
+                spacing="s"
+                border="1px dotted #ccc"
+              >
                 <Input type="radio" value="epsilon" />
                 Epsilon (normal)
               </Field>

@@ -415,6 +415,7 @@ const InputCheckboxFieldInterface = (props) => {
             ? CheckboxButtonStyleCSSVars
             : CheckboxStyleCSSVars
       }
+      basePseudoState={basePseudoState}
       pseudoClasses={CheckboxPseudoClasses}
       pseudoElements={CheckboxPseudoElements}
       hasChildUsingForwardedProps

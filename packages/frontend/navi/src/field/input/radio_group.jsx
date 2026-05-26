@@ -55,7 +55,6 @@ const RadioGroupInterface = (props) => {
   return (
     <Box
       as="fieldset"
-      flex="y"
       {...radioGroupProps}
       {...remainingProps}
       name={undefined}

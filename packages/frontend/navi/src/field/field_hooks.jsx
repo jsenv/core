@@ -662,6 +662,7 @@ const useActionProps = (
   };
 
   if (!readOnlySupported) {
+    actionProps.readOnly = undefined;
     actionProps["aria-readonly"] = readOnlyResolved;
   }
 
