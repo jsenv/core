@@ -171,7 +171,19 @@
         Field,
         Label,
         NaviDebug,
+        stateSignal,
+        route,
+        setupRoutes,
       } from "@jsenv/navi";
+
+      const searchValueSignal = stateSignal("", {
+        id: "search",
+        persists: true,
+      });
+      const DEMO_ROUTE = route("/", {
+        searchParams: { search: searchValueSignal },
+      });
+      setupRoutes([DEMO_ROUTE]);
 
       const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -513,6 +525,7 @@
             <ActionBasicSyncDemo />
             <ActionAsyncDemo />
             <ActionDebouncedDemo />
+            <ActionDebouncedWithSignalDemo />
             <ActionAfterChangeDemo />
             <ActionWithAbortDemo />
 
@@ -639,6 +652,36 @@
               />
               <div className="value-display">
                 Value: "{debouncedValue}" | Calls: {debouncedCallCount}
+              </div>
+            </Box>
+          </fieldset>
+        );
+      };
+
+      const ActionDebouncedWithSignalDemo = () => {
+        const [callCount, setCallCount] = useState(0);
+
+        return (
+          <fieldset>
+            <legend>debounced (stateSignal connected to URL)</legend>
+            <p className="states-description">
+              Same as above but <code>value</code> is a <code>stateSignal</code>{" "}
+              connected to the URL search param <code>?search=</code>. The value
+              persists across page reloads.
+            </p>
+            <Box flex spacing="s">
+              <Input
+                placeholder="Type something (debounced 600ms)..."
+                value={searchValueSignal}
+                action={async (value) => {
+                  setCallCount((c) => c + 1);
+                  await new Promise((resolve) => setTimeout(resolve, 1500));
+                  searchValueSignal.value = value;
+                }}
+                actionDebounce={600}
+              />
+              <div className="value-display">
+                Value: "{searchValueSignal}" | Calls: {callCount}
               </div>
             </Box>
           </fieldset>
