@@ -142,7 +142,9 @@ export const onRequestInteraction = (
   if (!requestStatus.canProceed) {
     onPrevented?.();
     requestInteractionCustomEvent.preventDefault();
+    return false;
   }
+  return true;
 };
 
 export const dispatchRequestAction = (elementWithAction, detail) => {
@@ -265,11 +267,11 @@ export const onRequestAction = (
   }
   debugAction(
     requestActionCustomEvent,
-    `${DEFAULT_CONSTRAINT_SET.size} constraints verified -> ${getElementSignature(elementHandlingAction)}.dispatchEvent("navi_action_ready")`,
+    `${DEFAULT_CONSTRAINT_SET.size} constraints verified -> ${getElementSignature(elementHandlingAction)}.dispatchEvent("navi_action_allowed")`,
   );
   dispatchInternalCustomEvent(
     elementHandlingAction,
-    "navi_action_ready",
+    "navi_action_allowed",
     customEventDetail,
   );
   return true;

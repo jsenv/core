@@ -71,7 +71,7 @@ const FormField = (props) => {
       onSubmit={(e) => {
         const form = e.currentTarget;
         e.preventDefault();
-        dispatchInternalCustomEvent(form, "navi_action_ready", {
+        dispatchInternalCustomEvent(form, "navi_action_allowed", {
           event: e,
           action: "auto",
           method: "rerun",

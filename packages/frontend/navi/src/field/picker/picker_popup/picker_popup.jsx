@@ -15,6 +15,7 @@ import {
   requestPopoverOpen,
 } from "@jsenv/navi/src/popup/popover.jsx";
 import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
+import { dispatchRequestInteraction } from "../../validation/custom_constraint_validation.js";
 import { PickerRequestCloseContext } from "../picker_context.jsx";
 
 const css = /* css */ `
@@ -267,30 +268,20 @@ const PickerContentInsidePopover = (props) => {
       {...rest}
       ref={ref}
       onnavi_picker_request_close={(e) => {
-        //  if (event.type === "mousedown") {
-        //   event.preventDefault(); // prevent browser trying to give focus to the list item
-        //   debugFocus(e, `preventDefault()`);
-        // }
-        // if (event.key === " ") {
-        //   // space can open the popover we don't want space to propagate to the select otherwise it would open it back immediatly
-        //   event.stopPropagation();
-        // }
-        requestClose(e);
+        if (dispatchRequestInteraction(ref.current, e)) {
+          requestClose(e);
+        }
       }}
       onMouseDown={(e) => {
         props.onMouseDown?.(e);
-        if (e.button !== 0) {
-          return;
-        }
-        if (disabled) {
-          return;
-        }
-        if (expandedRef.current) {
-          requestClose(e);
-        } else {
-          e.preventDefault(); // prevent browser trying to give focus to the select (popover will take focus)
-          debugFocus(e, `preventDefault()`);
-          requestOpen(e);
+        if (dispatchRequestInteraction(ref.current, e)) {
+          if (expandedRef.current) {
+            requestClose(e);
+          } else {
+            e.preventDefault(); // prevent browser trying to give focus to the select (popover will take focus)
+            debugFocus(e, `preventDefault()`);
+            requestOpen(e);
+          }
         }
       }}
       onClick={(e) => {
@@ -299,10 +290,12 @@ const PickerContentInsidePopover = (props) => {
           // click triggered by enter won't open the popover
           return;
         }
-        // When a label is clicked it transfers focus to the select
-        // in that case we want to open it (otherwise we have already opened on mousedown interaction)
-        e.preventDefault();
-        requestOpen(e);
+        if (dispatchRequestInteraction(ref.current, e)) {
+          // When a label is clicked it transfers focus to the select
+          // in that case we want to open it (otherwise we have already opened on mousedown interaction)
+          e.preventDefault();
+          requestOpen(e);
+        }
       }}
       onFocusOut={(e) => {
         if (import.meta.dev) {
@@ -317,30 +310,38 @@ const PickerContentInsidePopover = (props) => {
         const focusStaysInside =
           (pickerEl && pickerEl.contains(relatedTarget)) ||
           (popoverEl && popoverEl.contains(relatedTarget));
-        if (!focusStaysInside) {
+        if (!focusStaysInside && dispatchRequestInteraction(pickerEl, e)) {
           requestClose(e);
         }
       }}
       onKeyDown={shortcutsViaOnKeyDown(
         {
           arrowdown: (e) => {
-            e.preventDefault(); // prevent container scroll
-            requestOpen(e);
+            if (dispatchRequestInteraction(ref.current, e)) {
+              e.preventDefault(); // prevent container scroll
+              requestOpen(e);
+            }
           },
           arrowup: (e) => {
-            e.preventDefault(); // prevent container scroll
-            requestOpen(e);
+            if (dispatchRequestInteraction(ref.current, e)) {
+              e.preventDefault(); // prevent container scroll
+              requestOpen(e);
+            }
           },
           space: (e) => {
-            e.preventDefault(); // prevent scroll
-            requestOpen(e);
+            if (dispatchRequestInteraction(ref.current, e)) {
+              e.preventDefault(); // prevent scroll
+              requestOpen(e);
+            }
           },
           escape: (e) => {
             if (!expandedRef.current) {
               return;
             }
-            e.preventDefault();
-            requestClose(e);
+            if (dispatchRequestInteraction(ref.current, e)) {
+              e.preventDefault();
+              requestClose(e);
+            }
           },
         },
         onKeyDown,

@@ -320,9 +320,9 @@ export const useFieldgroupInterfaceProps = (
       name: undefined, // useful to children, not the the group itself
       required: undefined, // useful to children, not the the group itself
       children: childrenWithContext,
-      onnavi_action_ready: (e) => {
+      onnavi_action_allowed: (e) => {
         setActionRequester(e.detail.requester);
-        actionProps.onnavi_action_ready(e);
+        actionProps.onnavi_action_allowed(e);
       },
     },
     remainingProps,
@@ -660,7 +660,7 @@ const useActionProps = (
         onRequestAction(e, { debugAction });
       },
       onnavi_action_prevented: onActionPrevented,
-      onnavi_action_ready: (e) => {
+      onnavi_action_allowed: (e) => {
         if (e.detail.action === "auto") {
           // special case for the use case where form.submit is called
           e.detail.action = boundAction;

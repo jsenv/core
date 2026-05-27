@@ -11,7 +11,7 @@ export const useRequestedActionStatus = (elementRef, { actionOrigin } = {}) => {
 
   useActionEvents(elementRef, {
     actionOrigin,
-    onReady: (actionEvent) => {
+    onAllowed: (actionEvent) => {
       setActionRequester(actionEvent.detail.requester);
     },
     onStart: () => {
@@ -51,7 +51,7 @@ export const useActionEvents = (
     onCancel,
     onRequested,
     onPrevented,
-    onReady,
+    onAllowed,
     onStart,
     onAbort,
     onError,
@@ -61,7 +61,7 @@ export const useActionEvents = (
   onCancel = useStableCallback(onCancel);
   onRequested = useStableCallback(onRequested);
   onPrevented = useStableCallback(onPrevented);
-  onReady = useStableCallback(onReady);
+  onAllowed = useStableCallback(onAllowed);
   onStart = useStableCallback(onStart);
   onAbort = useStableCallback(onAbort);
   onError = useStableCallback(onError);
@@ -93,11 +93,11 @@ export const useActionEvents = (
         }
         onPrevented?.(e);
       },
-      navi_action_ready: (e) => {
+      navi_action_allowed: (e) => {
         if (e.detail.actionOrigin !== actionOrigin) {
           return;
         }
-        onReady?.(e);
+        onAllowed?.(e);
       },
       navi_action_start: (e) => {
         if (e.detail.actionOrigin !== actionOrigin) {
@@ -129,7 +129,7 @@ export const useActionEvents = (
     onCancel,
     onRequested,
     onPrevented,
-    onReady,
+    onAllowed,
     onStart,
     onAbort,
     onError,

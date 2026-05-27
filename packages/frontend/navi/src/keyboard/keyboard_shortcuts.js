@@ -87,7 +87,7 @@ export const useKeyboardShortcuts = (
   useActionEvents(elementRef, {
     actionOrigin: "keyboard_shortcut",
     onPrevented: onActionPrevented,
-    onReady: (actionEvent) => {
+    onAllowed: (actionEvent) => {
       const { shortcut } = actionEvent.detail.meta || {};
       if (!shortcut) {
         // not a shortcut (an other interaction triggered the action, don't request it again)
