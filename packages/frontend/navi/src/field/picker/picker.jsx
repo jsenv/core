@@ -286,8 +286,8 @@ const PickerButton = (props) => {
       actionAfterChange: props.action === undefined ? undefined : true,
     },
     {
-      primaryInteractionMode: "keyboard",
-      fieldType: "picker_input",
+      primaryInteractionMode: "pointer",
+      fieldType: "input",
       statePropName: "value",
       defaultStatePropName: "defaultValue",
       readOnlySupported: true,
@@ -298,7 +298,6 @@ const PickerButton = (props) => {
       },
     },
   );
-
   const { id, value, basePseudoState, disabled, children } = inputProps;
   const loading = basePseudoState[":-navi-loading"];
 
@@ -313,26 +312,19 @@ const PickerButton = (props) => {
       pseudoClasses={PICKER_BUTTON_PSEUDO_CLASSES}
       disabled={disabled}
       {...pickerRemainingProps}
-      basePseudoState={{
-        ...basePseudoState, // inherit input pseudo states
-        // ":-navi-has-value": value ? "" : undefined,
-      }}
+      basePseudoState={basePseudoState}
       // we must put the id on the button and not the input
       // so that a <label> tries to give focus to the button and not the input
       id={id}
       icon={undefined}
       ui={undefined}
-      onnavi_get_managed_fields={(e) => {
-        const pickerInput = inputRef.current;
-        e.detail.respondWith(pickerInput);
-      }}
     >
       <LoadingOutline
         loading={loading}
         color="var(--picker-loader-color)"
         inset={-1}
       />
-      <PickerContext.Provider value={{ placeholder, value }}>
+      <PickerContext.Provider value={{ value, placeholder }}>
         {ui === undefined ? <PickerDefaultUI /> : ui}
       </PickerContext.Provider>
       <PickerInput
@@ -340,22 +332,6 @@ const PickerButton = (props) => {
         // eslint-disable-next-line react/no-children-prop
         children={undefined} // we will render children into the button
         id={undefined}
-        onnavi_get_managed_fields={(e) => {
-          // we must check for the pickerEl content to search for a valid input because we might be a button used to validate for instance
-          // no necessarily the field itself
-          const pickerInput = e.currentTarget;
-          let firstField;
-          let sibling = pickerInput.nextElementSibling;
-          while (sibling) {
-            const candidate = findFieldWithName(sibling);
-            if (candidate) {
-              firstField = candidate;
-              break;
-            }
-            sibling = sibling.nextElementSibling;
-          }
-          e.detail.respondWith(firstField);
-        }}
       />
 
       <span className="navi_picker_right_slot">
@@ -377,14 +353,28 @@ const PickerInput = (props) => {
   return (
     <Box
       as="input"
+      navi-rendered-by=".navi_picker"
       {...props}
       value={toInputValue(props.value)}
       className="navi_picker_input"
       pseudoClasses={PickerInputPseudoClasses}
-      // for some input navi-ui-state differs (like color where ui-state would be "" while value would be "#000000")
-      navi-ui-state={props.value}
-      navi-rendered-by=".navi_picker"
       tabIndex={-1}
+      onnavi_get_managed_fields={(e) => {
+        // we must check for the pickerEl content to search for a valid input because we might be a button used to validate for instance
+        // no necessarily the field itself
+        const pickerInput = e.currentTarget;
+        let firstField;
+        let sibling = pickerInput.nextElementSibling;
+        while (sibling) {
+          const candidate = findFieldWithName(sibling);
+          if (candidate) {
+            firstField = candidate;
+            break;
+          }
+          sibling = sibling.nextElementSibling;
+        }
+        e.detail.respondWith(firstField);
+      }}
     />
   );
 };

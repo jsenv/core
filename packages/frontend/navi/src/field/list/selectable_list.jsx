@@ -15,14 +15,14 @@ import { dispatchCustomEvent, dispatchPublicCustomEvent } from "@jsenv/dom";
 import { createContext } from "preact";
 import { useContext, useId, useMemo, useRef } from "preact/hooks";
 
-import { BoxForwardedPropsContext } from "@jsenv/navi/src/box/box.jsx";
+import { Box } from "@jsenv/navi/src/box/box.jsx";
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { useFocusGroup } from "@jsenv/navi/src/utils/focus/use_focus_group.js";
 import { Field } from "../field.jsx";
-import { FIELD_PROP_SET, FieldToInterfaceContext } from "../field_context.js";
+import { FieldToInterfaceContext } from "../field_context.js";
 import { useFieldgroupInterfaceProps } from "../field_hooks.jsx";
 import { Input } from "../input/input.jsx";
-import { useUIState } from "../ui_state_controller.js";
+import { useCheckableProps } from "../input/use_checkable_props.js";
 import { dispatchRequestAction } from "../validation/custom_constraint_validation.js";
 import { List, LIST_ITEM_PSEUDO_CLASSES, ListItem } from "./list.jsx";
 
@@ -281,31 +281,48 @@ export const Selectable = (props) => {
     highlight,
     hidden,
     filtered,
+    defaultSelected,
     selected,
     pointed,
-    children,
     selectableArea,
-    basePseudoState,
     ...rest
   } = props;
   const multiple = useContext(SelectableListMultipleContext);
   const inputRef = useRef();
   const inputType = multiple ? "checkbox" : "radio";
   const inputId = `${id}_input`;
-  const checkedUIState = useUIState(inputRef, selected);
-  const inputSelected = Boolean(checkedUIState); // ui state is value or undefined, not a boolean
-  const inputReadOnly = rest.readOnly; // TODO: readonly is more complex than this it can come from context
-  const inputValue = rest.value;
+  const [checkableProps, remainingProps] = useCheckableProps(
+    {
+      ...rest,
+      ref: inputRef,
+      id: inputId,
+      type: inputType,
+      defaultChecked: defaultSelected,
+      checked: selected,
+      readOnlyMessage: naviI18n(`list_item.readonly`, props),
+      action: (v, { event }) => {
+        const listContainerEl = event.currentTarget.closest(
+          ".navi_list_container",
+        );
+        dispatchRequestAction(listContainerEl, { event });
+      },
+    },
+    {
+      multiple,
+    },
+  );
+  const { checked, value, basePseudoState, children } = checkableProps;
+  const readOnly = basePseudoState[":read-only"];
   const realInputContextValue = useMemo(() => {
     return {
       id: inputId,
       ref: inputRef,
       type: inputType,
-      selected: inputSelected,
-      readOnly: inputReadOnly,
-      value: inputValue,
+      selected: checked,
+      readOnly,
+      value,
     };
-  }, [inputId, inputType, inputSelected, inputReadOnly, inputValue]);
+  }, [inputId, inputType, checked, readOnly, value]);
 
   return (
     <ListItem
@@ -316,36 +333,30 @@ export const Selectable = (props) => {
       hidden={hidden}
       pseudoClasses={SELECTABLE_PSEUDO_CLASSES}
       basePseudoState={{
-        ":-navi-selected": inputSelected,
+        ":-navi-selected": checked,
         ":-navi-pointed": pointed,
+        ...props.basePseudoState,
         ...basePseudoState,
       }}
-      aria-selected={inputSelected}
+      aria-selected={checked}
     >
       <Field
         id={inputId}
         as={selectableArea === "manual" ? "div" : undefined}
-        readOnlyMessage={naviI18n(`list_item.readonly`, props)}
         padding="m"
         flex
         alignY="center"
         spacing="s"
         expandX
-        {...rest}
+        {...remainingProps}
+        basePseudoState={basePseudoState}
         selectableArea={undefined}
-        baseChildPropSet={SELECTABLE_REAL_INPUT_CHILD_PROP_SET}
-        hasChildUsingForwardedProps
+        value={undefined} // checkable don't consume value prop
       >
         <SelectableRealInput
-          ref={inputRef}
-          type={inputType}
-          checked={selected}
-          action={(v, { event }) => {
-            const listContainerEl = event.currentTarget.closest(
-              ".navi_list_container",
-            );
-            dispatchRequestAction(listContainerEl, { event });
-          }}
+          {...checkableProps}
+          // eslint-disable-next-line react/no-children-prop
+          children={undefined}
         />
         <SelectableRealInputContext.Provider value={realInputContextValue}>
           {children}
@@ -368,34 +379,32 @@ const SELECTABLE_PSEUDO_CLASSES = [
   ":disabled",
   ":read-only",
 ];
-const SELECTABLE_REAL_INPUT_CHILD_PROP_SET = new Set([
-  ...FIELD_PROP_SET,
-  "selected",
-]);
 const SelectableRealInput = (props) => {
-  const inputProps = useContext(BoxForwardedPropsContext);
-
   return (
-    <Input
-      {...inputProps}
+    <Box
+      as="input"
       {...props}
       navi-selectable-real-input=""
-      headless
+      navi-visually-hidden=""
+      data-callout-arrow-x="center"
       // navi-debug
     />
   );
 };
 const SelectableInputProxy = (props) => {
-  // const defaultRef = useRef();
-  // props.ref = props.ref || defaultRef;
-  // const { ref } = props;
+  const selectableRealInput = useContext(SelectableRealInputContext);
+  if (!selectableRealInput) {
+    throw new Error(
+      "Selectable.Input must be used within a Selectable component",
+    );
+  }
   const {
     id: realInputId,
     type: realInputType,
     selected: realInputSelected,
     readOnly: inputReadOnly,
     value: inputValue,
-  } = useContext(SelectableRealInputContext);
+  } = selectableRealInput;
 
   // Reset FieldToInterfaceContext to ensure we don't read id or report our
   // states (real input should take id and report)

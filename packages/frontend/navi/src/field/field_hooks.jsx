@@ -446,6 +446,8 @@ const useActionProps = (
       ":read-only": readOnlyResolved,
       ":-navi-loading": loadingResolved,
     },
+    // for some input navi-ui-state differs (like color where ui-state would be "" while value would be "#000000")
+    "navi-ui-state": uiState,
     "onnavi_request_reset_ui_state": (e) => {
       uiStateController.resetUIState(e);
     },
@@ -610,6 +612,7 @@ const useActionProps = (
   if (statePropName) {
     const statePropValueRaw = uiStateController.getPropFromState(uiState);
     actionProps[statePropName] = statePropValueRaw;
+    delete remainingProps[statePropName];
     if (defaultStatePropName) {
       delete actionProps[defaultStatePropName];
       delete remainingProps[defaultStatePropName];

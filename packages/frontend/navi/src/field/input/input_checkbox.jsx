@@ -4,8 +4,8 @@ import { Box, BoxForwardedPropsContext } from "../../box/box.jsx";
 import { LoadingOutline } from "../../graphic/loading/loading_outline.jsx";
 import { useAccentColorAttributes } from "../../utils/use_accent_color_attributes.js";
 import { FIELD_PROP_SET } from "../field_context.js";
-import { useFieldInterfaceProps } from "../field_hooks.jsx";
 import { SwitchCSSVars, SwitchUI } from "./switch_ui.jsx";
+import { useCheckableProps } from "./use_checkable_props.js";
 
 const css = /* css */ `
   @layer navi {
@@ -299,33 +299,9 @@ export const InputCheckbox = (props) => {
   const defaultRef = useRef();
   props.ref = props.ref || defaultRef;
   props.value = props.value === undefined ? "on" : props.value;
-
-  const { ref } = props;
-  const [checkboxProps, remainingProps] = useFieldInterfaceProps(
-    {
-      // In this situation updating the ui state === calling associated action
-      // so cance/abort/error have to revert the ui state to the one before user interaction
-      // to show back the real state of the checkbox (not the one user tried to set)
-      resetOnCancel: true,
-      resetOnAbort: true,
-      resetOnError: true,
-      ...props,
-    },
-    {
-      primaryInteractionMode: "pointer",
-      fieldType: "checkbox",
-      statePropName: "checked",
-      defaultStatePropName: "defaultChecked",
-      getUIValue: () => {
-        const checkbox = ref.current;
-        const checkboxIsChecked = checkbox.checked;
-        return checkboxIsChecked ? props.value : undefined;
-      },
-      fallbackState: false,
-      getStateFromProp: (checked) => (checked ? props.value : undefined),
-      getPropFromState: Boolean,
-    },
-  );
+  const [checkboxProps, remainingProps] = useCheckableProps(props, {
+    multiple: true,
+  });
 
   if (props.headless) {
     return (
