@@ -14,7 +14,6 @@ import {
   useState,
 } from "preact/hooks";
 
-import { isSignal } from "@jsenv/navi/src/utils/is_signal.js";
 import { useNavState } from "../nav/browser_integration/browser_integration.js";
 import { useInitialValue } from "../state/use_initial_value.js";
 import { FormContext } from "./form_context.js";
@@ -111,7 +110,7 @@ export const useUIStateController = (
   }
   const [navState, setNavState] = useNavState(id);
   const state = props[statePropName];
-  const stateValue = isSignal(state) ? state.value : state;
+  const stateValue = state;
   const defaultState = props[defaultStatePropName];
   const stateInitial = useInitialValue(() => {
     if (hasStateProp) {
@@ -184,13 +183,8 @@ export const useUIStateController = (
 
       if (hasStateProp) {
         uiStateController.hasStateProp = true;
-        uiStateController.valuePropSignal = isSignal(state) ? state : null;
         const currentState = uiStateController.state;
-        const stateFromProp = getStateFromProp(
-          uiStateController.valuePropSignal
-            ? uiStateController.valuePropSignal.value
-            : state,
-        );
+        const stateFromProp = getStateFromProp(state);
         if (stateFromProp !== currentState) {
           uiStateController.state = stateFromProp;
           uiStateController.setUIState(
@@ -200,7 +194,6 @@ export const useUIStateController = (
         }
       } else if (uiStateController.hasStateProp) {
         uiStateController.hasStateProp = false;
-        uiStateController.valuePropSignal = null;
         uiStateController.state = uiStateController.stateInitial;
       }
     },
@@ -213,7 +206,6 @@ export const useUIStateController = (
     statePropName,
     defaultStatePropName,
     hasStateProp,
-    valuePropSignal: isSignal(state) ? state : null,
     state: stateInitial,
     uiState: stateInitial,
     uiStateSignal,
@@ -228,9 +220,7 @@ export const useUIStateController = (
       }
     },
     setUIState: (prop, e) => {
-      const newUIState = uiStateController.getStateFromProp(
-        isSignal(prop) ? prop.value : prop,
-      );
+      const newUIState = uiStateController.getStateFromProp(prop);
       if (persists) {
         setNavState(prop);
       }
@@ -564,9 +554,6 @@ export const useUIGroupStateController = (
     elementRef: ref,
     getPropFromState: (uiState) => uiState,
     setUIState: (newUIState, e, { notifyExternal = true } = {}) => {
-      if (isSignal(newUIState)) {
-        newUIState = newUIState.value;
-      }
       const currentUIState = uiStateController.uiState;
       if (newUIState === currentUIState) {
         return;

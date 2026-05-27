@@ -37,6 +37,7 @@ import {
   useDebugInteraction,
 } from "@jsenv/navi/src/navi_debug.jsx";
 import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
+import { isSignal } from "@jsenv/navi/src/utils/is_signal.js";
 import {
   ActionContext,
   ActionRequesterContext,
@@ -98,6 +99,13 @@ export const useFieldInterfaceProps = (
   },
 ) => {
   const debugInteraction = useDebugInteraction();
+  const state = props[statePropName];
+  if (isSignal(state)) {
+    props = {
+      ...props,
+      [statePropName]: state.value,
+    };
+  }
   const uiStateController = useUIStateController(props, fieldType, {
     statePropName,
     defaultStatePropName,
