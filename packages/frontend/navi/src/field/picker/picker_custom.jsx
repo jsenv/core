@@ -1,19 +1,11 @@
-import { findEvent } from "@jsenv/dom";
+import { dispatchCustomEvent, findEvent } from "@jsenv/dom";
 import { useId, useRef, useState } from "preact/hooks";
 
 import { shortcutsViaOnKeyDown } from "@jsenv/navi/src/keyboard/keyboard_shortcuts.js";
 import { windowWidthSignal } from "@jsenv/navi/src/layout/responsive.js";
 import { useDebugFocus, useDebugPopup } from "@jsenv/navi/src/navi_debug.jsx";
-import {
-  Dialog,
-  requestDialogClose,
-  requestDialogOpen,
-} from "@jsenv/navi/src/popup/dialog.jsx";
-import {
-  Popover,
-  requestPopoverClose,
-  requestPopoverOpen,
-} from "@jsenv/navi/src/popup/popover.jsx";
+import { Dialog } from "@jsenv/navi/src/popup/dialog.jsx";
+import { Popover } from "@jsenv/navi/src/popup/popover.jsx";
 import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { dispatchRequestInteraction } from "../validation/custom_constraint_validation.js";
 import { PickerRequestCloseContext } from "./picker_context.jsx";
@@ -177,7 +169,201 @@ const css = /* css */ `
 export const PickerCustom = (props) => {
   const isSmallScreen = windowWidthSignal.value <= 600;
   const defaultMode = isSmallScreen ? "dialog" : "popover";
-  const { mode = defaultMode } = props;
+  const { ref, mode = defaultMode } = props;
+
+  const popupProps = {};
+  Object.assign(props, {
+    popupProps,
+  });
+  // ref
+  const popupRef = useRef(null);
+  popupProps.ref = popupRef;
+  // aria-controls + id
+  id: {
+    const popupId = useId();
+    Object.assign(props, {
+      "aria-controls": popupId,
+    });
+    Object.assign(popupProps, {
+      id: popupId,
+    });
+  }
+  // aria-expanded + open close + interactions to open close
+  open_close: {
+    const debugFocus = useDebugFocus();
+    const debugPopup = useDebugPopup();
+    const moveFocusToPicker = (e) => {
+      const pickerEl = ref.current;
+      const mousedownEvent = findEvent(e, "mousedown");
+      if (mousedownEvent) {
+        debugFocus(
+          e,
+          `move focus to picker (mousedown.preventDefault() + pickerEl.focus()`,
+        );
+        mousedownEvent.preventDefault();
+        pickerEl.focus({ preventScroll: true });
+        return;
+      }
+      const focusoutEvent = findEvent(e, "focusout");
+      if (focusoutEvent) {
+        // If the popover closed because focus left the select (focusout),
+        // don't steal focus back — let focus go where the user intended.
+        debugFocus(e, `let focus go away`);
+        return;
+      }
+      debugFocus(e, `move focus to picker`);
+      pickerEl.focus({ preventScroll: true });
+    };
+
+    const [expanded, setExpanded] = useState(false);
+    const expandedRef = useRef(expanded);
+    expandedRef.current = expanded;
+    const onOpen = () => {
+      expandedRef.current = true;
+      setExpanded(true);
+    };
+    const onClose = (e) => {
+      expandedRef.current = false;
+      setExpanded(false);
+      moveFocusToPicker(e);
+    };
+    const disableClickFor = useIgnoreClickForMousedown();
+    const requestOpen = (e) => {
+      // scroll <button> of the picker into view when opening it
+      const pickerEl = ref.current;
+      pickerEl.scrollIntoView({ block: "nearest" });
+      const popupEl = popupRef.current;
+      return dispatchCustomEvent(popupEl, "navi_request_open", {
+        event: e,
+        anchor: pickerEl,
+      });
+    };
+    const requestClose = (e = new CustomEvent("programmatic")) => {
+      const mousedownEvent = findEvent(e, "mousedown");
+      if (mousedownEvent) {
+        debugPopup(e, `disable click`);
+        disableClickFor();
+      }
+      const popupEl = popupRef.current;
+      return dispatchCustomEvent(popupEl, "navi_request_close", { event: e });
+    };
+
+    Object.assign(props, {
+      "aria-expanded": expanded,
+      "onActionStart": (e) => {
+        props.onActionStart?.(e);
+        requestClose(e);
+      },
+      "onnavi_request_close": (e) => {
+        if (dispatchRequestInteraction(ref.current, e)) {
+          requestClose(e);
+        }
+      },
+      "children": (
+        <PickerRequestCloseContext.Provider value={requestClose}>
+          {props.children}
+        </PickerRequestCloseContext.Provider>
+      ),
+    });
+    Object.assign(popupProps, {
+      onnavi_open: (e) => {
+        onOpen(e);
+      },
+      onnavi_close: (e) => {
+        onClose(e);
+      },
+    });
+
+    interactions: {
+      const { onMouseDown, onClick, onKeyDown } = props;
+      Object.assign(props, {
+        onMouseDown: (e) => {
+          onMouseDown?.(e);
+          const pickerEl = ref.current;
+          if (
+            dispatchRequestInteraction(pickerEl, e, "mousedown to open picker")
+          ) {
+            if (expandedRef.current) {
+              requestClose(e);
+            } else {
+              e.preventDefault(); // prevent browser trying to give focus to the select (popover will take focus)
+              debugFocus(
+                e,
+                `prevent browser giving focus to button (mousedown.preventDefault())`,
+              );
+              requestOpen(e);
+            }
+          }
+        },
+        onClick: (e) => {
+          onClick?.(e);
+          if (e.detail === 0) {
+            // click triggered by enter won't open the popover
+            return;
+          }
+          if (
+            dispatchRequestInteraction(ref.current, e, "click to open picker")
+          ) {
+            // When a label is clicked it transfers focus to the select
+            // in that case we want to open it (otherwise we have already opened on mousedown interaction)
+            e.preventDefault();
+            requestOpen(e);
+          }
+        },
+        onKeyDown: shortcutsViaOnKeyDown(
+          {
+            arrowdown: (e) => {
+              if (dispatchRequestInteraction(ref.current, e)) {
+                e.preventDefault(); // prevent container scroll
+                requestOpen(e);
+              }
+            },
+            arrowup: (e) => {
+              if (dispatchRequestInteraction(ref.current, e)) {
+                e.preventDefault(); // prevent container scroll
+                requestOpen(e);
+              }
+            },
+            space: (e) => {
+              if (dispatchRequestInteraction(ref.current, e)) {
+                e.preventDefault(); // prevent scroll
+                requestOpen(e);
+              }
+            },
+            escape: (e) => {
+              if (!expandedRef.current) {
+                return;
+              }
+              if (dispatchRequestInteraction(ref.current, e)) {
+                e.preventDefault();
+                requestClose(e);
+              }
+            },
+          },
+          onKeyDown,
+        ),
+      });
+      Object.assign(popupProps, {
+        onMouseDown: (e) => {
+          if (e.button !== 0) {
+            return;
+          }
+          // mousedown inside popover should not bubble to the select (would re-open it if that mousedown closes it)
+          debugPopup(e, `popover mouseDown stopPropagation`);
+          e.stopPropagation();
+        },
+        onClick: (e) => {
+          if (e.button !== 0) {
+            return;
+          }
+          // click inside popover should not bubble to the select (would re-open it if that click closes it)
+          debugPopup(e, `popover click stopPropagation`);
+          e.stopPropagation();
+        },
+      });
+    }
+  }
+
   if (mode === "popover") {
     return <PickerContentInsidePopover {...props} />;
   }
@@ -188,11 +374,10 @@ export const PickerCustom = (props) => {
 };
 
 const PickerContentInsidePopover = (props) => {
+  const Next = useNextResolver();
   import.meta.css = css;
   const {
-    ref,
-    disabled,
-    onKeyDown,
+    popupProps,
     children,
     pointerTrap,
     scrollTrap = true,
@@ -202,113 +387,12 @@ const PickerContentInsidePopover = (props) => {
     viewportSpacing = 10,
     ...rest
   } = props;
-  const Next = useNextResolver();
-  const debugFocus = useDebugFocus();
-  const debugPopup = useDebugPopup();
-  const popoverRef = useRef(null);
-  const popoverId = useId();
-  const [expanded, setExpanded] = useState(false);
-  const expandedRef = useRef(expanded);
-  expandedRef.current = expanded;
-  const onOpen = () => {
-    expandedRef.current = true;
-    setExpanded(true);
-  };
-  const onClose = (e) => {
-    expandedRef.current = false;
-    setExpanded(false);
-    moveFocusToPicker(e);
-  };
-  const requestOpen = (e) => {
-    // scroll <button> of the picker into view when opening it
-    const pickerEl = ref.current;
-    pickerEl.scrollIntoView({ block: "nearest" });
-    const popoverEl = popoverRef.current;
-    return requestPopoverOpen(popoverEl, {
-      event: e,
-      anchor: pickerEl,
-    });
-  };
-  const disableClickFor = useIgnoreClickForMousedown();
-  const requestClose = (e = new CustomEvent("programmatic")) => {
-    const mousedownEvent = findEvent(e, "mousedown");
-    if (mousedownEvent) {
-      debugPopup(e, `disable click`);
-      disableClickFor();
-    }
-    const popoverEl = popoverRef.current;
-    return requestPopoverClose(popoverEl, { event: e });
-  };
-  const moveFocusToPicker = (e) => {
-    const pickerEl = ref.current;
-    const mousedownEvent = findEvent(e, "mousedown");
-    if (mousedownEvent) {
-      debugFocus(
-        e,
-        `move focus to picker (mousedown.preventDefault() + pickerEl.focus()`,
-      );
-      mousedownEvent.preventDefault();
-      pickerEl.focus({ preventScroll: true });
-      return;
-    }
-    const focusoutEvent = findEvent(e, "focusout");
-    if (focusoutEvent) {
-      // If the popover closed because focus left the select (focusout),
-      // don't steal focus back — let focus go where the user intended.
-      debugFocus(e, `let focus go away`);
-      return;
-    }
-    debugFocus(e, `move focus to picker`);
-    pickerEl.focus({ preventScroll: true });
-  };
 
   return (
     <Next
-      disabled={disabled}
       aria-haspopup="listbox"
-      aria-expanded={expanded}
-      aria-controls={popoverId}
       navi-popover-mode={popoverMode}
       {...rest}
-      ref={ref}
-      onnavi_request_close={(e) => {
-        if (dispatchRequestInteraction(ref.current, e)) {
-          requestClose(e);
-        }
-      }}
-      onMouseDown={(e) => {
-        props.onMouseDown?.(e);
-        const pickerEl = ref.current;
-        if (
-          dispatchRequestInteraction(pickerEl, e, "mousedown to open picker")
-        ) {
-          if (expandedRef.current) {
-            requestClose(e);
-          } else {
-            e.preventDefault(); // prevent browser trying to give focus to the select (popover will take focus)
-            debugFocus(
-              e,
-              `prevent browser giving focus to button (mousedown.preventDefault())`,
-            );
-            requestOpen(e);
-          }
-        }
-      }}
-      onClick={(e) => {
-        props.onClick?.(e);
-        if (e.detail === 0) {
-          // click triggered by enter won't open the popover
-          return;
-        }
-        if (
-          dispatchRequestInteraction(ref.current, e, "click to open picker")
-        ) {
-          // When a label is clicked it transfers focus to the select
-          // in that case we want to open it (otherwise we have already opened on mousedown interaction)
-          e.preventDefault();
-          requestOpen(e);
-        }
-      }}
       onFocusOut={(e) => {
         if (import.meta.dev) {
           // during dev disable to allow inspecting the select (hot fix for now to ease life during dev)
@@ -317,77 +401,19 @@ const PickerContentInsidePopover = (props) => {
         // Close when focus leaves the select entirely (not just moving between internal elements).
         // relatedTarget is the element receiving focus; if it's inside the select or the popover, keep open.
         const relatedTarget = e.relatedTarget;
-        const pickerEl = ref.current;
-        const popoverEl = popoverRef.current;
+        const pickerEl = props.ref.current;
+        const popoverEl = popupProps.ref.current;
         const focusStaysInside =
           (pickerEl && pickerEl.contains(relatedTarget)) ||
           (popoverEl && popoverEl.contains(relatedTarget));
         if (!focusStaysInside && dispatchRequestInteraction(pickerEl, e)) {
-          requestClose(e);
+          dispatchCustomEvent(popoverEl, "navi_request_close", { event: e });
         }
-      }}
-      onKeyDown={shortcutsViaOnKeyDown(
-        {
-          arrowdown: (e) => {
-            if (dispatchRequestInteraction(ref.current, e)) {
-              e.preventDefault(); // prevent container scroll
-              requestOpen(e);
-            }
-          },
-          arrowup: (e) => {
-            if (dispatchRequestInteraction(ref.current, e)) {
-              e.preventDefault(); // prevent container scroll
-              requestOpen(e);
-            }
-          },
-          space: (e) => {
-            if (dispatchRequestInteraction(ref.current, e)) {
-              e.preventDefault(); // prevent scroll
-              requestOpen(e);
-            }
-          },
-          escape: (e) => {
-            if (!expandedRef.current) {
-              return;
-            }
-            if (dispatchRequestInteraction(ref.current, e)) {
-              e.preventDefault();
-              requestClose(e);
-            }
-          },
-        },
-        onKeyDown,
-      )}
-      onActionStart={(e) => {
-        props.onActionStart?.(e);
-        requestClose(e);
       }}
     >
       <Popover
-        ref={popoverRef}
+        {...popupProps}
         className="navi_picker_popover"
-        onMouseDown={(e) => {
-          if (e.button !== 0) {
-            return;
-          }
-          // mousedown inside popover should not bubble to the select (would re-open it if that mousedown closes it)
-          debugPopup(e, `popover mouseDown stopPropagation`);
-          e.stopPropagation();
-        }}
-        onClick={(e) => {
-          if (e.button !== 0) {
-            return;
-          }
-          // click inside popover should not bubble to the select (would re-open it if that click closes it)
-          debugPopup(e, `popover click stopPropagation`);
-          e.stopPropagation();
-        }}
-        onnavi_popover_open={(e) => {
-          onOpen(e);
-        }}
-        onnavi_popover_close={(e) => {
-          onClose(e);
-        }}
         positionX="left-aligned"
         positionY={popoverMode === "nearby" ? "below" : "below-overlap"}
         spacing={popoverSpacing}
@@ -406,184 +432,39 @@ const PickerContentInsidePopover = (props) => {
               if (e.button !== 0) {
                 return;
               }
-              requestClose(e);
+              const popupEl = popupProps.ref.current;
+              dispatchCustomEvent(popupEl, "navi_request_close", { event: e });
             }}
           >
             {props.trigger}
           </div>
         ) : null}
-        <PickerRequestCloseContext.Provider value={requestClose}>
-          {children}
-        </PickerRequestCloseContext.Provider>
+        {children}
       </Popover>
     </Next>
   );
 };
 
 const PickerContentInsideDialog = (props) => {
+  const Next = useNextResolver();
   import.meta.css = css;
   const {
-    ref,
-    disabled,
-    onKeyDown,
+    popupProps,
     children,
     scrollTrap = true,
     pointerTrap,
     ...rest
   } = props;
-  const Next = useNextResolver();
-  const debugFocus = useDebugFocus();
-  const debugPopup = useDebugPopup();
-  const dialogRef = useRef(null);
-  const dialogId = useId();
-  const [expanded, setExpanded] = useState(false);
-  const expandedRef = useRef(expanded);
-  expandedRef.current = expanded;
-  const onOpen = () => {
-    expandedRef.current = true;
-    setExpanded(true);
-  };
-  const onClose = (e) => {
-    expandedRef.current = false;
-    setExpanded(false);
-    moveFocusToPicker(e);
-  };
-  const moveFocusToPicker = (e) => {
-    const pickerEl = ref.current;
-    const mousedownEvent = findEvent(e, (e) => e.type === "mousedown");
-    if (mousedownEvent) {
-      debugFocus(e, `preventDefault and move focus to picker`);
-      mousedownEvent.preventDefault();
-      pickerEl.focus({ preventScroll: true });
-      return;
-    }
-    debugFocus(e, `move focus to picker`);
-    pickerEl.focus({ preventScroll: true });
-  };
-  const requestOpen = (e) => {
-    return requestDialogOpen(dialogRef.current, {
-      event: e,
-    });
-  };
-  const disableClickFor = useIgnoreClickForMousedown();
-
-  const requestClose = (e = new CustomEvent("programmatic")) => {
-    const mousedownEvent = findEvent(e, (e) => e.type === "mousedown");
-    if (mousedownEvent) {
-      debugPopup(e, `disable click`);
-      disableClickFor();
-    }
-    return requestDialogClose(dialogRef.current, {
-      event: e,
-    });
-  };
 
   return (
-    <Next
-      disabled={disabled}
-      aria-haspopup="dialog"
-      aria-expanded={expanded}
-      aria-controls={dialogId}
-      onnavi_request_close={(e) => {
-        requestClose(e);
-      }}
-      onMouseDown={(e) => {
-        props.onMouseDown?.(e);
-        const pickerEl = ref.current;
-        if (
-          dispatchRequestInteraction(pickerEl, e, "mousedown to open picker")
-        ) {
-          if (expandedRef.current) {
-            requestClose(e);
-          } else {
-            e.preventDefault(); // prevent browser trying to give focus to the select (popover will take focus)
-            debugFocus(
-              e,
-              `prevent browser giving focus to button (mousedown.preventDefault())`,
-            );
-            requestOpen(e);
-          }
-        }
-      }}
-      onClick={(e) => {
-        props.onClick?.(e);
-        if (e.detail === 0) {
-          // click triggered by enter won't open the popover
-          return;
-        }
-        if (
-          dispatchRequestInteraction(ref.current, e, "click to open picker")
-        ) {
-          // When a label is clicked it transfers focus to the select
-          // in that case we want to open it (otherwise we have already opened on mousedown interaction)
-          e.preventDefault();
-          requestOpen(e);
-        }
-      }}
-      {...rest}
-      onKeyDown={shortcutsViaOnKeyDown(
-        {
-          arrowdown: (e) => {
-            if (dispatchRequestInteraction(ref.current, e)) {
-              e.preventDefault(); // prevent container scroll
-              requestOpen(e);
-            }
-          },
-          arrowup: (e) => {
-            if (dispatchRequestInteraction(ref.current, e)) {
-              e.preventDefault(); // prevent container scroll
-              requestOpen(e);
-            }
-          },
-          space: (e) => {
-            if (dispatchRequestInteraction(ref.current, e)) {
-              e.preventDefault(); // prevent scroll
-              if (!expandedRef.current) {
-                requestOpen(e);
-              }
-            }
-          },
-          escape: () => {
-            if (!expandedRef.current) {
-              return;
-            }
-            // native <dialog> handles closing on Escape; we just need focus back
-            // (the onClose handler also calls moveFocusToSelect but escape fires before it)
-          },
-        },
-        onKeyDown,
-      )}
-      ref={ref}
-    >
+    <Next aria-haspopup="dialog" {...rest}>
       <Dialog
-        ref={dialogRef}
+        {...popupProps}
         className="navi_picker_dialog"
-        onnavi_dialog_open={(e) => {
-          onOpen(e);
-        }}
-        onnavi_dialog_close={(e) => {
-          onClose(e);
-        }}
-        onMouseDown={(e) => {
-          if (e.button !== 0) {
-            return;
-          }
-          // mousedown inside dialog should not bubble to the picker (would re-open it if that mousedown closes it)
-          e.stopPropagation();
-        }}
-        onClick={(e) => {
-          if (e.button !== 0) {
-            return;
-          }
-          // click inside dialog should not bubble to the picker (would re-open it if that click closes it)
-          e.stopPropagation();
-        }}
         scrollTrap={scrollTrap}
         pointerTrap={pointerTrap}
       >
-        <PickerRequestCloseContext.Provider value={requestClose}>
-          {children}
-        </PickerRequestCloseContext.Provider>
+        {children}
       </Dialog>
     </Next>
   );

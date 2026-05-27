@@ -1,6 +1,5 @@
 import {
   dispatchCustomEvent,
-  dispatchPublicCustomEvent,
   getBorderSizes,
   pickPositionRelativeTo,
   snapToPixel,
@@ -144,7 +143,7 @@ export const Popover = (props) => {
     });
     openedRef.current = true;
     setOpened(true);
-    dispatchPublicCustomEvent(popoverEl, "navi_popover_open", {
+    dispatchCustomEvent(popoverEl, "navi_open", {
       event: e,
     });
   };
@@ -155,7 +154,7 @@ export const Popover = (props) => {
     cleanup();
     openedRef.current = false;
     setOpened(false);
-    dispatchPublicCustomEvent(popoverEl, "navi_popover_close", {
+    dispatchCustomEvent(popoverEl, "navi_close", {
       event: e,
     });
   };
@@ -207,11 +206,11 @@ export const Popover = (props) => {
         ref={ref}
         baseClassName="navi_popover"
         pseudoClasses={PopoverPseudoClasses}
-        onnavi_popover_request_open={(e) => {
+        onnavi_request_open={(e) => {
           const { anchor } = e.detail;
           onRequestOpen(e, { anchor });
         }}
-        onnavi_popover_request_close={(e) => {
+        onnavi_request_close={(e) => {
           onRequestClose(e);
         }}
       >
@@ -229,15 +228,3 @@ const PopoverPseudoClasses = [
   ":read-only",
   ":disabled",
 ];
-
-export const requestPopoverOpen = (popoverElement, { event, anchor }) => {
-  return dispatchCustomEvent(popoverElement, "navi_popover_request_open", {
-    event,
-    anchor,
-  });
-};
-export const requestPopoverClose = (popoverElement, { event } = {}) => {
-  return dispatchCustomEvent(popoverElement, "navi_popover_request_close", {
-    event,
-  });
-};

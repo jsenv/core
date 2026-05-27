@@ -1,6 +1,5 @@
 import {
   dispatchCustomEvent,
-  dispatchPublicCustomEvent,
   getElementSignature,
   trapScrollInside,
 } from "@jsenv/dom";
@@ -42,7 +41,7 @@ export const Dialog = (props) => {
       addCleanup(trapScrollInside(dialogEl));
     }
     openedRef.current = true;
-    dispatchPublicCustomEvent(dialogEl, "navi_dialog_open", {
+    dispatchCustomEvent(dialogEl, "navi_open", {
       event: e,
     });
   };
@@ -54,7 +53,7 @@ export const Dialog = (props) => {
     dialogEl.close();
     cleanup();
     openedRef.current = false;
-    dispatchPublicCustomEvent(dialogEl, "navi_dialog_close", {
+    dispatchCustomEvent(dialogEl, "navi_close", {
       event: e,
     });
   };
@@ -100,11 +99,11 @@ export const Dialog = (props) => {
         e.preventDefault();
         onRequestClose(e);
       }}
-      onnavi_dialog_request_open={(e) => {
+      onnavi_request_open={(e) => {
         const { event = e } = e.detail;
         onRequestOpen(event);
       }}
-      onnavi_dialog_request_close={(e) => {
+      onnavi_request_close={(e) => {
         const { event = e } = e.detail;
         onRequestClose(event);
       }}
@@ -112,15 +111,4 @@ export const Dialog = (props) => {
       {children}
     </Box>
   );
-};
-
-export const requestDialogOpen = (popoverElement, { event }) => {
-  return dispatchCustomEvent(popoverElement, "navi_dialog_request_open", {
-    event,
-  });
-};
-export const requestDialogClose = (popoverElement, { event } = {}) => {
-  return dispatchCustomEvent(popoverElement, "navi_dialog_request_close", {
-    event,
-  });
 };
