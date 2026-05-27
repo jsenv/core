@@ -14,7 +14,8 @@ export const resolveActionProp = (action) => {
 
 export const requestClosestAction = (e) => {
   const target = e.target;
-  const elementWithAction = target.closest("[data-action]");
+  // some element (like list) can have their own action, we want to trigger closest parent, not itself
+  const elementWithAction = target.parentNode.closest("[data-action]");
   if (!elementWithAction) {
     console.warn(
       "submit event triggered but no element with [data-action] found in event path",
@@ -24,22 +25,19 @@ export const requestClosestAction = (e) => {
   }
   let requester = target;
   const { form } = target;
-  if (elementWithAction.tagName === "FORM") {
-    // when present, we use first button submitting the form as the requester
-    // not the input, it aligns with browser behavior where
-    // hitting Enter in a text input triggers the first submit button of the form, not the input itself
-    const firstButtonSubmittingForm = elementWithAction.querySelector(
-      `button[type="submit"], input[type="submit"], input[type="image"], [data-action="submit"]`,
-    );
-    if (firstButtonSubmittingForm) {
-      requester = firstButtonSubmittingForm;
-    }
+  // when present, we use first button submitting the form as the requester
+  // not the input, it aligns with browser behavior where
+  // hitting Enter in a text input triggers the first submit button of the form, not the input itself
+  const firstButtonSubmitting = elementWithAction.querySelector(
+    `button[type="submit"], input[type="submit"], input[type="image"], [data-action="submit"]`,
+  );
+  if (firstButtonSubmitting) {
+    requester = firstButtonSubmitting;
   }
   const allowed = dispatchRequestAction(elementWithAction, {
     event: e,
     requester,
   });
-
   if (form) {
     // prevent form submission when cliking buttons or pressing enter on inputs
     e.preventDefault();

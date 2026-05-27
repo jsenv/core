@@ -354,9 +354,7 @@
               >
                 <SelectableList
                   selectedIndicator="backgroundColor"
-                  action={(v, { event }) => {
-                    Picker.submit(event);
-                  }}
+                  action="submit"
                 >
                   {SWATCHES.map(({ label, value }, i) => (
                     <Selectable

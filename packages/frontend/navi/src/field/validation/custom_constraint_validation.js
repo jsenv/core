@@ -151,16 +151,17 @@ export const onRequestInteraction = (
   return true;
 };
 
-export const dispatchRequestAction = (elementWithAction, detail) => {
+export const dispatchRequestAction = (element, detail) => {
   if (!detail.event) {
     throw new TypeError("dispatchRequestAction requires an event");
   }
+  const fieldElement = findFieldElement(element);
   // Spread caller's detail last so explicit fields (e.g. uiState forwarded by a proxy)
   // survive into the dispatched event. Fields absent from the caller's object are
   // intentionally absent — Object.hasOwn checks on the receiving side rely on this
   // to distinguish "caller provided a value" from "no value was given".
   detail = {
-    requester: elementWithAction,
+    requester: element,
     actionOrigin: "action_prop",
     ...detail,
     /*
@@ -174,7 +175,7 @@ export const dispatchRequestAction = (elementWithAction, detail) => {
     */
   };
   const allowed = dispatchInternalCustomEvent(
-    elementWithAction,
+    fieldElement,
     "navi_request_action",
     detail,
   );

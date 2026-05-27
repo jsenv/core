@@ -311,6 +311,7 @@ const PickerButton = (props) => {
       navi-has-placeholder={placeholder ? "" : undefined}
       pseudoClasses={PICKER_BUTTON_PSEUDO_CLASSES}
       disabled={disabled}
+      data-action={inputProps["data-action"]}
       {...pickerRemainingProps}
       basePseudoState={basePseudoState}
       // we must put the id on the button and not the input

@@ -289,7 +289,7 @@ export const useFieldgroupInterfaceProps = (
     debugAction,
   });
   const [boundAction] = useActionBoundToOneParam(
-    action,
+    resolveActionProp(action),
     uiGroupStateController.uiStateSignal,
   );
   const [actionRequester, setActionRequester] = useState();
