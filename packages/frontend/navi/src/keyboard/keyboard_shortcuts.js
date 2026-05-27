@@ -226,7 +226,8 @@ export const shortcutsViaOnKeyDown = (shortcuts, onKeyDown) => {
 
 const applyKeyboardShortcuts = (shortcuts, keyboardEvent) => {
   const defaultAction = getKeyboardEventDefaultAction(keyboardEvent);
-  const canIntercept = !defaultAction || defaultAction === "scroll";
+  const canIntercept =
+    !defaultAction || defaultAction === "scroll" || defaultAction === "dismiss";
   if (!canIntercept) {
     return null;
   }
