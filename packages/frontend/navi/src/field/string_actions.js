@@ -55,7 +55,7 @@ const submit = createUICallback({
   },
 });
 
-const requestClose = (target, event) => {
+const requestClose = (target, event, { cancel = false } = {}) => {
   const currentTarget = event.currentTarget;
   const expandableEl = currentTarget.closest("[aria-expanded]");
   if (!expandableEl) {
@@ -65,7 +65,10 @@ const requestClose = (target, event) => {
     );
     return false;
   }
-  return dispatchCustomEvent(expandableEl, "navi_request_close", { event });
+  return dispatchCustomEvent(expandableEl, "navi_request_close", {
+    event,
+    cancel,
+  });
 };
 
 const close = createUICallback({
@@ -78,7 +81,18 @@ const close = createUICallback({
   },
 });
 
+const cancel = createUICallback({
+  name: "cancel",
+  event: (e) => {
+    return requestClose(e.target, e, { cancel: true });
+  },
+  action: (_, { event }) => {
+    return requestClose(event.target, event, { cancel: true });
+  },
+});
+
 const STRING_ACTIONS = {
   submit,
   close,
+  cancel,
 };
