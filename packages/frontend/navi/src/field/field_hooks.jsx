@@ -375,6 +375,7 @@ const fieldPropSet = new Set([
   "cancelOnBlurInvalid",
   "cancelOnEscape",
   "onActionPrevented",
+  "onActionStart",
   "onActionAborted",
   "onActionError",
   "actionErrorEffect",
@@ -555,6 +556,7 @@ const useActionProps = (
       cancelOnBlurInvalid,
       cancelOnEscape,
       onActionPrevented,
+      onActionStart,
       onActionAborted,
       onActionError,
       onActionEnd,
@@ -685,6 +687,7 @@ const useActionProps = (
           event: e.detail.event,
         });
         executeAction(e);
+        onActionStart?.(e);
       },
       onnavi_action_abort: (e) => {
         if (resetOnAbort) {

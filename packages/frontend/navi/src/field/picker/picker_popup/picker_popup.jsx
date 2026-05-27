@@ -358,6 +358,10 @@ const PickerContentInsidePopover = (props) => {
         },
         onKeyDown,
       )}
+      onActionStart={(e) => {
+        props.onActionStart?.(e);
+        requestClose(e);
+      }}
     >
       <Popover
         ref={popoverRef}
