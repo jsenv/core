@@ -89,17 +89,13 @@ import {
 
 export const NAVI_VALIDITY_CHANGE_CUSTOM_EVENT = "navi_validity_change";
 
-export const dispatchRequestInteraction = (
-  element,
-  event,
-  { onPrevented } = {},
-) => {
+export const dispatchRequestInteraction = (element, event) => {
+  const fieldElement = findFieldElement(element);
   const allowed = dispatchInternalCustomEvent(
-    element,
+    fieldElement,
     "navi_request_interaction",
     {
       event,
-      onPrevented,
     },
   );
   return allowed;
@@ -108,13 +104,12 @@ export const onRequestInteraction = (
   requestInteractionCustomEvent,
   { debugInteraction },
 ) => {
-  const { event, onPrevented } = requestInteractionCustomEvent.detail;
+  const { event } = requestInteractionCustomEvent.detail;
   const requestStatus = { canProceed: true, preventReason: undefined };
 
   if (requestStatus.canProceed) {
     checkEvent(requestStatus, event);
   }
-
   if (requestStatus.canProceed) {
     let skipConstraints = false;
     if (event.type === "keydown") {
@@ -140,7 +135,10 @@ export const onRequestInteraction = (
     }
   }
   if (!requestStatus.canProceed) {
-    onPrevented?.();
+    debugInteraction(
+      event,
+      `interaction prevented (${requestStatus.preventReason})`,
+    );
     requestInteractionCustomEvent.preventDefault();
     return false;
   }
@@ -1002,16 +1000,12 @@ HTMLFormElement.prototype.requestSubmit = function (submitter) {
 // list container), look for a field element declared via data-field on the
 // closest [data-action] ancestor.
 const findFieldElement = (element) => {
-  const elementWithAction = element.closest("[data-action]");
-  if (!elementWithAction) {
-    return null;
+  const fieldSelector = element.getAttribute("data-field");
+  if (fieldSelector) {
+    const field = element.querySelector(fieldSelector);
+    if (field) {
+      return field;
+    }
   }
-  const fieldSelector = elementWithAction.getAttribute("data-field");
-  if (!fieldSelector) {
-    return null;
-  }
-  return (
-    elementWithAction.querySelector(fieldSelector) ||
-    document.querySelector(fieldSelector)
-  );
+  return element;
 };
