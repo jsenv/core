@@ -1,9 +1,8 @@
-import { useContext, useRef } from "preact/hooks";
+import { useRef } from "preact/hooks";
 
-import { Box, BoxForwardedPropsContext } from "@jsenv/navi/src/box/box.jsx";
+import { Box } from "@jsenv/navi/src/box/box.jsx";
 import { LoadingOutline } from "../../graphic/loading/loading_outline.jsx";
 import { useAccentColorAttributes } from "../../utils/use_accent_color_attributes.js";
-import { FIELD_PROP_SET } from "../field_context.js";
 import { useCheckableProps } from "./use_checkable_props.js";
 
 const css = /* css */ `
@@ -335,41 +334,35 @@ export const InputRadio = (props) => {
   const defaultRef = useRef();
   props.ref = props.ref || defaultRef;
   props.value = props.value === undefined ? "on" : props.value;
-  const [radioProps, remainingProps] = useCheckableProps(props, {
-    multiple: false,
-  });
+
   if (props.headless) {
-    return (
-      <InputRadioHeadless
-        {...remainingProps}
-        headless={undefined}
-        radioProps={radioProps}
-      />
-    );
+    return <InputRadioHeadless {...props} headless={undefined} />;
   }
-  return (
-    <InputRadioFieldInterface {...remainingProps} radioProps={radioProps} />
-  );
+  return <InputRadioFieldInterface {...props} />;
 };
 
 const InputRadioHeadless = (props) => {
+  const [radioProps, remainingProps] = useCheckableProps(props, {
+    multiple: false,
+  });
+
   return (
-    <BoxForwardedPropsContext.Provider value={undefined}>
-      <RealInputRadio
-        pseudoClasses={RadioPseudoClasses}
-        {...props}
-        {...props.radioProps}
-        radioProps={undefined}
-        appearance={undefined}
-        navi-visually-hidden=""
-      />
-    </BoxForwardedPropsContext.Provider>
+    <RealInputRadio
+      pseudoClasses={RadioPseudoClasses}
+      {...remainingProps}
+      {...radioProps}
+      appearance={undefined}
+      navi-visually-hidden=""
+    />
   );
 };
 const APPEARANCE_SET = new Set(["icon", "button", "radio"]);
 const InputRadioFieldInterface = (props) => {
   import.meta.css = css;
-  const { icon, appearance, radioProps, ...rest } = props;
+  const [radioProps, remainingProps] = useCheckableProps(props, {
+    multiple: false,
+  });
+  const { icon, appearance } = props;
   let appearanceResolved = appearance || (icon ? "icon" : "radio");
   if (appearance && !APPEARANCE_SET.has(appearance)) {
     console.warn(
@@ -424,8 +417,10 @@ const InputRadioFieldInterface = (props) => {
       // Radio displayed as button are usually squarish
       // (passsing any custom width/height would auto disable aspectRatio forced by the square prop)
       square={appearanceResolved === "button" ? true : undefined}
-      {...rest}
+      {...remainingProps}
       ref={boxRef}
+      icon={undefined}
+      appearance={undefined}
       data-appearance={appearanceResolved}
       baseClassName="navi_radio"
       navi-field=".navi_real_input_radio"
@@ -438,8 +433,6 @@ const InputRadioFieldInterface = (props) => {
       }
       pseudoClasses={RadioPseudoClasses}
       pseudoElements={RadioPseudoElements}
-      hasChildUsingForwardedProps
-      baseChildPropSet={RadioChildPropSet}
     >
       <span className="navi_radio_accent_probe" aria-hidden="true" />
       <LoadingOutline
@@ -453,10 +446,8 @@ const InputRadioFieldInterface = (props) => {
   );
 };
 const RealInputRadio = (props) => {
-  const radioBoxProps = useContext(BoxForwardedPropsContext);
   return (
     <Box
-      {...radioBoxProps}
       {...props}
       as="input"
       baseClassName="navi_real_input_radio"
@@ -527,4 +518,3 @@ const RadioPseudoClasses = [
   ":-navi-loading",
 ];
 const RadioPseudoElements = ["::-navi-loader", "::-navi-radiomark"];
-const RadioChildPropSet = new Set([...FIELD_PROP_SET, "checked"]);

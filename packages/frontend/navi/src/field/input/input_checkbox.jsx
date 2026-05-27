@@ -1,9 +1,8 @@
-import { useContext, useRef } from "preact/hooks";
+import { useRef } from "preact/hooks";
 
-import { Box, BoxForwardedPropsContext } from "../../box/box.jsx";
+import { Box } from "../../box/box.jsx";
 import { LoadingOutline } from "../../graphic/loading/loading_outline.jsx";
 import { useAccentColorAttributes } from "../../utils/use_accent_color_attributes.js";
-import { FIELD_PROP_SET } from "../field_context.js";
 import { SwitchCSSVars, SwitchUI } from "./switch_ui.jsx";
 import { useCheckableProps } from "./use_checkable_props.js";
 
@@ -299,55 +298,43 @@ export const InputCheckbox = (props) => {
   const defaultRef = useRef();
   props.ref = props.ref || defaultRef;
   props.value = props.value === undefined ? "on" : props.value;
+
+  if (props.headless) {
+    return <InputCheckboxHeadless {...props} headless={undefined} />;
+  }
+  return <InputCheckboxFieldInterface {...props} />;
+};
+
+const InputCheckboxHeadless = (props) => {
   const [checkboxProps, remainingProps] = useCheckableProps(props, {
     multiple: true,
   });
 
-  if (props.headless) {
-    return (
-      <InputCheckboxHeadless
-        {...remainingProps}
-        headless={undefined}
-        checkboxProps={checkboxProps}
-      />
-    );
-  }
   return (
-    <InputCheckboxFieldInterface
+    <RealInputCheckbox
+      pseudoClasses={CheckboxPseudoClasses}
+      {...checkboxProps}
       {...remainingProps}
-      checkboxProps={checkboxProps}
+      navi-visually-hidden=""
     />
-  );
-};
-
-const InputCheckboxHeadless = (props) => {
-  return (
-    <BoxForwardedPropsContext.Provider value={undefined}>
-      <RealInputCheckbox
-        pseudoClasses={CheckboxPseudoClasses}
-        {...props}
-        {...props.checkboxProps}
-        checkboxProps={undefined}
-        appearance={undefined}
-        navi-visually-hidden=""
-      />
-    </BoxForwardedPropsContext.Provider>
   );
 };
 
 const InputCheckboxFieldInterface = (props) => {
   import.meta.css = css;
+  const [checkboxProps, remainingProps] = useCheckableProps(props, {
+    multiple: true,
+  });
   const {
     icon,
     switch: switchProp,
     appearance = icon ? "icon" : switchProp ? "switch" : "checkbox", // "checkbox", "switch", "icon", "button"
-    checkboxProps,
-    ...rest
+    accentColor,
   } = props;
   const { basePseudoState, checked } = checkboxProps;
   const loading = basePseudoState[":-navi-loading"];
   const boxRef = useRef();
-  useAccentColorAttributes(boxRef, props.accentColor, {
+  useAccentColorAttributes(boxRef, accentColor, {
     elementSelector: ".navi_checkbox_accent_probe",
   });
   let visualVnode;
@@ -378,8 +365,12 @@ const InputCheckboxFieldInterface = (props) => {
       // Checkbox displayed as button are usually squarish
       // (passsing any custom width/height would auto disable aspectRatio forced by the square prop)
       square={appearance === "button" ? true : undefined}
-      {...rest}
+      {...remainingProps}
       ref={boxRef}
+      appearance={undefined}
+      switch={undefined}
+      icon={undefined}
+      accentColor={undefined}
       data-appearance={appearance}
       baseClassName="navi_checkbox"
       navi-field=".navi_real_input_checkbox"
@@ -394,8 +385,6 @@ const InputCheckboxFieldInterface = (props) => {
       basePseudoState={basePseudoState}
       pseudoClasses={CheckboxPseudoClasses}
       pseudoElements={CheckboxPseudoElements}
-      hasChildUsingForwardedProps
-      baseChildPropSet={CheckboxChildPropSet}
     >
       <span className="navi_checkbox_accent_probe" aria-hidden="true" />
       <LoadingOutline
@@ -409,10 +398,8 @@ const InputCheckboxFieldInterface = (props) => {
   );
 };
 const RealInputCheckbox = (props) => {
-  const checkboxBoxProps = useContext(BoxForwardedPropsContext);
   return (
     <Box
-      {...checkboxBoxProps}
       {...props}
       as="input"
       type="checkbox"
@@ -471,4 +458,3 @@ const CheckboxPseudoClasses = [
   ":-navi-loading",
 ];
 const CheckboxPseudoElements = ["::-navi-loader", "::-navi-checkmark"];
-const CheckboxChildPropSet = new Set([...FIELD_PROP_SET, "checked"]);
