@@ -318,6 +318,7 @@ const PickerButton = (props) => {
       id={id}
       icon={undefined}
       ui={undefined}
+      // The button is handling the pointer interactions
       onMouseDown={(e) => {
         inputProps.onMouseDown(e);
       }}

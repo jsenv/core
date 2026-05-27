@@ -154,7 +154,7 @@ export const useFieldInterfaceProps = (
       if (primaryInteractionMode === "pointer") {
         const field = ref.current;
         if (hasPointerDownInteraction) {
-          // click is has no effect, mousedown has (click on range input does nothing)
+          // click on range input does nothing if interaction is not allowed, so we can just ignore it here
           return;
         }
         const allowed = dispatchRequestInteraction(field, e);

@@ -21,11 +21,6 @@ const getPickerInput = (pickerButton) => {
 const getPropsToShowPicker = (props) => {
   return {
     ...props,
-    onMouseDown: (e) => {
-      props.onMouseDown?.(e);
-      const pickerInput = getPickerInputFromButtonEvent(e);
-      dispatchRequestInteraction(pickerInput, e);
-    },
     onClick: (e) => {
       props.onClick?.(e);
       const pickerInput = getPickerInputFromButtonEvent(e);
