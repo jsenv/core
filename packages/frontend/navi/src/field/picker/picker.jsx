@@ -8,7 +8,6 @@ import { createComponentResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { Icon } from "@jsenv/navi/src/text/icon.jsx";
 import { useFieldInterfaceProps } from "../field_hooks.jsx";
 import { getFromInputValue, getToInputValue } from "../input/input_textual.jsx";
-import { requestClosestAction } from "../string_actions.js";
 import { createUICallback } from "../ui_callback.js";
 import { dispatchRequestSetUIState } from "../ui_state_controller.js";
 import { PickerContext, PickerElementContext } from "./picker_context.jsx";
@@ -251,14 +250,7 @@ Picker.close = createUICallback({
     return dispatchToPicker(e, "navi_picker_request_close");
   },
 });
-// ça demande surement aussi un close
-Picker.submit = createUICallback({
-  name: "Picker.submit",
-  event: (e) => requestClosestAction(e),
-  action: (_, e) => {
-    return requestClosestAction(e);
-  },
-});
+Picker.submit = "submit";
 const dispatchToPicker = (e, customEventName, detail) => {
   const pickerEl = e.currentTarget.closest(".navi_picker");
   if (!pickerEl) {
