@@ -15,8 +15,8 @@ import {
   requestPopoverOpen,
 } from "@jsenv/navi/src/popup/popover.jsx";
 import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
-import { dispatchRequestInteraction } from "../../validation/custom_constraint_validation.js";
-import { PickerRequestCloseContext } from "../picker_context.jsx";
+import { dispatchRequestInteraction } from "../validation/custom_constraint_validation.js";
+import { PickerRequestCloseContext } from "./picker_context.jsx";
 
 const css = /* css */ `
   .navi_picker {
@@ -174,7 +174,7 @@ const css = /* css */ `
   }
 `;
 
-export const PickerPopup = (props) => {
+export const PickerCustom = (props) => {
   const isSmallScreen = windowWidthSignal.value <= 600;
   const defaultMode = isSmallScreen ? "dialog" : "popover";
   const { mode = defaultMode } = props;

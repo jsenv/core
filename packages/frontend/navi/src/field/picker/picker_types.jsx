@@ -1,44 +1,12 @@
 import { useContext } from "preact/hooks";
 
-import { dispatchRequestInteraction } from "@jsenv/navi/src/field/validation/custom_constraint_validation.js";
 import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { Color } from "@jsenv/navi/src/text/color.jsx";
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { Time } from "@jsenv/navi/src/text/time.jsx";
-import { PickerContext } from "../picker_context.jsx";
-import { PickerPlaceholder } from "../picker_placeholder.jsx";
-import { parseStepToSeconds } from "../time_helpers.js";
-
-const getPickerInputFromButtonEvent = (e) => {
-  const pickerButton = e.currentTarget;
-  const pickerInput = getPickerInput(pickerButton);
-  return pickerInput;
-};
-const getPickerInput = (pickerButton) => {
-  const pickerInput = pickerButton.querySelector(".navi_picker_input");
-  return pickerInput;
-};
-const getPropsToShowPicker = (props) => {
-  return {
-    ...props,
-    onClick: (e) => {
-      props.onClick?.(e);
-      const pickerInput = getPickerInputFromButtonEvent(e);
-      const allowed = dispatchRequestInteraction(
-        pickerInput,
-        e,
-        "click_to_show_picker",
-      );
-      if (allowed) {
-        try {
-          pickerInput.showPicker();
-        } catch {
-          pickerInput.click();
-        }
-      }
-    },
-  };
-};
+import { PickerContext } from "./picker_context.jsx";
+import { PickerPlaceholder } from "./picker_placeholder.jsx";
+import { parseStepToSeconds } from "./time_helpers.js";
 
 export const PickerColor = (props) => {
   const Next = useNextResolver();
@@ -47,8 +15,8 @@ export const PickerColor = (props) => {
       requiredMessage={naviI18n(`picker.required.color`)}
       ui={<PickerColorUI />}
       icon={<ColorSvg />}
-      {...getPropsToShowPicker(props)}
       type="color"
+      {...props}
     />
   );
 };
@@ -73,10 +41,10 @@ export const PickerDay = (props) => {
       requiredMessage={naviI18n(`picker.required.day`)}
       ui={<PickerDayUI />}
       icon={<CalendarSvg />}
-      {...getPropsToShowPicker(props)}
       min={min}
       max={max}
       type="date"
+      {...props}
     />
   );
 };
@@ -109,10 +77,10 @@ export const PickerMonth = (props) => {
       requiredMessage={naviI18n(`picker.required.month`)}
       ui={<PickerMonthUI />}
       icon={<CalendarSvg />}
-      {...getPropsToShowPicker(props)}
       type="month"
       min={min}
       max={max}
+      {...props}
     />
   );
 };
@@ -142,10 +110,10 @@ export const PickerWeek = (props) => {
       requiredMessage={naviI18n(`picker.required.week`)}
       ui={<PickerWeekUI />}
       icon={<CalendarSvg />}
-      {...getPropsToShowPicker(props)}
       type="week"
       min={min}
       max={max}
+      {...props}
     />
   );
 };
@@ -183,11 +151,11 @@ export const PickerTime = (props) => {
       requiredMessage={naviI18n(`picker.required.time`)}
       ui={<PickerTimeUI />}
       icon={<ClockSvg />}
-      {...getPropsToShowPicker(props)}
       type="time"
       min={min}
       max={max}
       step={step}
+      {...props}
     />
   );
 };
@@ -214,11 +182,11 @@ export const PickerDatetime = (props) => {
       requiredMessage={naviI18n(`picker.required.datetime`)}
       ui={<PickerDatetimeUI />}
       icon={<CalendarSvg />}
-      {...getPropsToShowPicker(props)}
       type="datetime-local"
       min={min}
       max={max}
       step={step}
+      {...props}
     />
   );
 };
@@ -248,8 +216,8 @@ export const PickerFile = (props) => {
       requiredMessage={requiredMessage}
       ui={<PickerFileUI />}
       icon={<FileSvg />}
-      {...getPropsToShowPicker(props)}
       type="file"
+      {...props}
     />
   );
 };

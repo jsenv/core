@@ -1,6 +1,6 @@
 import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
-import { PickerPopup } from "./picker_popup/picker_popup.jsx";
-import { PickerHour } from "./preset/picker_hour.jsx";
+import { PickerCustom } from "./picker_custom.jsx";
+import { PickerNative } from "./picker_native.jsx";
 import {
   PickerColor,
   PickerDatetime,
@@ -9,7 +9,8 @@ import {
   PickerMonth,
   PickerTime,
   PickerWeek,
-} from "./show_method/picker_show_method.jsx";
+} from "./picker_types.jsx";
+import { PickerHour } from "./preset/picker_hour.jsx";
 
 const PickerPresetResolver = (props) => {
   const Next = useNextResolver();
@@ -19,15 +20,14 @@ const PickerPresetResolver = (props) => {
   return <Next {...props} />;
 };
 
-const PickerPopupResolver = (props) => {
-  const Next = useNextResolver();
-  if (props.children !== undefined) {
-    return <PickerPopup {...props} />;
+const PickerCustomResolver = (props) => {
+  if (props.children === undefined) {
+    return <PickerNative {...props} />;
   }
-  return <Next {...props} />;
+  return <PickerCustom {...props} />;
 };
 
-const PickerShowMethodResolver = (props) => {
+const PickerTypeResolver = (props) => {
   const Next = useNextResolver();
   if (props.type === "color") {
     return <PickerColor {...props} />;
@@ -55,6 +55,6 @@ const PickerShowMethodResolver = (props) => {
 
 export const pickerResolvers = [
   PickerPresetResolver,
-  PickerPopupResolver,
-  PickerShowMethodResolver,
+  PickerCustomResolver,
+  PickerTypeResolver,
 ];
