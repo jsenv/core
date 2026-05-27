@@ -7,7 +7,11 @@ import { useDebugFocus, useDebugPopup } from "@jsenv/navi/src/navi_debug.jsx";
 import { Dialog } from "@jsenv/navi/src/popup/dialog.jsx";
 import { Popover } from "@jsenv/navi/src/popup/popover.jsx";
 import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
-import { dispatchRequestInteraction } from "../validation/custom_constraint_validation.js";
+import { getUIStateFromElement } from "../ui_state_controller.js";
+import {
+  dispatchRequestAction,
+  dispatchRequestInteraction,
+} from "../validation/custom_constraint_validation.js";
 import { PickerRequestCloseContext } from "./picker_context.jsx";
 
 const css = /* css */ `
@@ -219,14 +223,22 @@ export const PickerCustom = (props) => {
     const [expanded, setExpanded] = useState(false);
     const expandedRef = useRef(expanded);
     expandedRef.current = expanded;
+    const valueAtOpenRef = useRef(null);
     const onOpen = () => {
       expandedRef.current = true;
       setExpanded(true);
+      const valueAtOpen = getPickerInputUIState(ref.current);
+      valueAtOpenRef.current = valueAtOpen;
     };
     const onClose = (e) => {
       expandedRef.current = false;
       setExpanded(false);
       moveFocusToPicker(e);
+      const pickerEl = ref.current;
+      const valueAtClose = getPickerInputUIState(pickerEl);
+      if (valueAtClose !== valueAtOpenRef.current) {
+        dispatchRequestAction(pickerEl, { event: e });
+      }
     };
     const disableClickFor = useIgnoreClickForMousedown();
     const requestOpen = (e) => {
@@ -372,6 +384,14 @@ export const PickerCustom = (props) => {
     return <PickerContentInsideDialog {...props} />;
   }
   return null;
+};
+
+const getPickerInput = (pickerEl) => {
+  return pickerEl.querySelector(".navi_picker_input");
+};
+const getPickerInputUIState = (pickerEl) => {
+  const pickerInput = getPickerInput(pickerEl);
+  return getUIStateFromElement(pickerInput);
 };
 
 const PickerContentInsidePopover = (props) => {
