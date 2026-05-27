@@ -6,10 +6,7 @@ import { ChevronDownSvg } from "@jsenv/navi/src/graphic/icons/chevron_updown_svg
 import { LoadingOutline } from "@jsenv/navi/src/graphic/loading/loading_outline.jsx";
 import { createComponentResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { Icon } from "@jsenv/navi/src/text/icon.jsx";
-import {
-  useFieldInterfaceProps,
-  useFieldgroupInterfaceProps,
-} from "../field_hooks.jsx";
+import { useFieldInterfaceProps } from "../field_hooks.jsx";
 import { getFromInputValue, getToInputValue } from "../input/input_textual.jsx";
 import { requestClosestAction } from "../string_actions.js";
 import { createUICallback } from "../ui_callback.js";
@@ -304,30 +301,6 @@ const PickerButton = (props) => {
 
   const { id, value, basePseudoState, disabled, children } = inputProps;
   const loading = basePseudoState[":-navi-loading"];
-  const [buttonProps, remainingProps] = useFieldgroupInterfaceProps(
-    {
-      ...props,
-      ...pickerRemainingProps,
-      // action: () => {
-      //   const pickerEl = ref.current;
-      //   const managedField = getPickerManagedField(pickerEl);
-      // },
-    },
-    {
-      fieldType: "picker",
-      childComponentType: "*",
-      aggregateChildStates: (childUIStateControllers) => {
-        let activeValue;
-        for (const childUIStateController of childUIStateControllers) {
-          if (childUIStateController.elementRef === inputRef) {
-            activeValue = childUIStateController.uiState;
-            break;
-          }
-        }
-        return activeValue;
-      },
-    },
-  );
 
   return (
     <Box
@@ -339,8 +312,7 @@ const PickerButton = (props) => {
       navi-has-placeholder={placeholder ? "" : undefined}
       pseudoClasses={PICKER_BUTTON_PSEUDO_CLASSES}
       disabled={disabled}
-      {...buttonProps}
-      {...remainingProps}
+      {...pickerRemainingProps}
       basePseudoState={{
         ...basePseudoState, // inherit input pseudo states
         // ":-navi-has-value": value ? "" : undefined,
