@@ -28,10 +28,9 @@ const css = /* css */ `
   }
 `;
 
-export const Color = ({ inherit, children, ...rest }) => {
+export const Color = ({ children, ...rest }) => {
   import.meta.css = css;
-
-  const color = children || inherit ? "currentColor" : undefined;
+  const color = children || undefined;
 
   return (
     <Box
