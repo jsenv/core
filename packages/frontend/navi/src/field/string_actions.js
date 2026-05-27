@@ -1,3 +1,4 @@
+import { dispatchCustomEvent } from "@jsenv/dom";
 import { createUICallback } from "./ui_callback.js";
 import { dispatchRequestAction } from "./validation/custom_constraint_validation.js";
 
@@ -53,10 +54,29 @@ const submit = createUICallback({
   },
 });
 
-export const registerStringAction = (name, uiCallback) => {
-  STRING_ACTIONS[name] = uiCallback;
+const requestClose = (target, event) => {
+  const expandableEl = target.closest("[aria-expanded]");
+  if (!expandableEl) {
+    console.warn(
+      "close action triggered but no element with [aria-expanded] found in event path",
+      event,
+    );
+    return false;
+  }
+  return dispatchCustomEvent(expandableEl, "navi_request_close", { event });
 };
+
+const close = createUICallback({
+  name: "close",
+  event: (e) => {
+    return requestClose(e.target, e);
+  },
+  action: (_, { event }) => {
+    return requestClose(event.target, event);
+  },
+});
 
 const STRING_ACTIONS = {
   submit,
+  close,
 };
