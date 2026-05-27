@@ -129,128 +129,122 @@ export const useFieldInterfaceProps = (
     paramsSignal,
   );
   const boundAction = externalBoundAction || internalBoundAction;
+  const [fieldProps, remainingProps] = useActionProps(props, {
+    readOnlySupported,
+    boundAction,
+    uiStateController,
+    getUIValue,
+  });
 
-  const { ref } = props;
-  const hasPointerDownInteraction = fieldType === "input_range";
-  const onMouseDown = (e) => {
-    props.onMouseDown?.(e);
-    if (primaryInteractionMode === "pointer") {
-      const field = ref.current;
-      const allowed = dispatchRequestInteraction(field, e);
-      if (hasPointerDownInteraction && !allowed) {
-        e.preventDefault();
+  interactions: {
+    const { ref } = props;
+    const hasPointerDownInteraction = fieldType === "input_range";
+    const onMouseDown = (e) => {
+      props.onMouseDown?.(e);
+      if (primaryInteractionMode === "pointer") {
+        const field = ref.current;
+        const allowed = dispatchRequestInteraction(field, e);
+        if (hasPointerDownInteraction && !allowed) {
+          e.preventDefault();
+        }
       }
-    }
-  };
-  const onClick = (e) => {
-    props.onClick?.(e);
-    if (primaryInteractionMode === "pointer") {
-      const field = ref.current;
-      if (hasPointerDownInteraction) {
-        // click is has no effect, mousedown has (click on range input does nothing)
+    };
+    const onClick = (e) => {
+      props.onClick?.(e);
+      if (primaryInteractionMode === "pointer") {
+        const field = ref.current;
+        if (hasPointerDownInteraction) {
+          // click is has no effect, mousedown has (click on range input does nothing)
+          return;
+        }
+        const allowed = dispatchRequestInteraction(field, e);
+        if (!allowed) {
+          // Here we want to prevent:
+          // - toggle of radio/checkbox on click
+          debugInteraction(e, "click.preventDefault()");
+          e.preventDefault();
+        }
+      }
+    };
+    const onKeyDown = (e) => {
+      props.onKeyDown?.(e);
+      if (e.key === "Enter") {
+        requestClosestAction(e);
         return;
       }
-      const allowed = dispatchRequestInteraction(field, e);
+      const input = e.currentTarget;
+      const allowed = dispatchRequestInteraction(input, e);
       if (!allowed) {
-        // Here we want to prevent:
-        // - toggle of radio/checkbox on click
-        debugInteraction(e, "click.preventDefault()");
+        // Here we want to prevent
+        // - space to toggle radio/checkbox
+        // - space to scroll scrollable container (usually document)
+        // - any keyboard interaction that would affect input value
+        // or would not make sense on a readonly field
+        debugInteraction(e, "keydown.preventDefault()");
         e.preventDefault();
       }
-    }
-  };
-  const onKeyDown = (e) => {
-    props.onKeyDown?.(e);
-    if (e.key === "Enter") {
-      requestClosestAction(e);
-      return;
-    }
-    const input = e.currentTarget;
-    const allowed = dispatchRequestInteraction(input, e);
-    if (!allowed) {
-      // Here we want to prevent
-      // - space to toggle radio/checkbox
-      // - space to scroll scrollable container (usually document)
-      // - any keyboard interaction that would affect input value
-      // or would not make sense on a readonly field
-      debugInteraction(e, "keydown.preventDefault()");
-      e.preventDefault();
-    }
-  };
-  const onPaste = (e) => {
-    props.onPaste?.(e);
-    dispatchRequestInteraction(ref.current, e);
-  };
-
-  const { actionAfterChange, actionDebounce } = props;
-  const lastEventRequestingActionRef = useRef();
-  const lastActionValueRef = useRef();
-  const onInput = (e) => {
-    props.onInput?.(e);
-    if (!e.isTrusted) {
-      return;
-    }
-    const field = ref.current;
-    const eventSameAsAction = e === lastEventRequestingActionRef.current;
-    // Ignore input events that carry the same value as the last action we dispatched.
-    // This avoids showing a spurious "read-only" callout for redundant input events
-    // that browsers fire with no UI change — e.g. range inputs fire several input
-    // events around mouse release even though the value hasn't moved.
-    const valueSameAsLastAction =
-      lastActionValueRef.current !== undefined &&
-      e.currentTarget.value === lastActionValueRef.current;
-    const allowed =
-      eventSameAsAction ||
-      valueSameAsLastAction ||
-      dispatchRequestInteraction(field, e);
-    if (allowed) {
-      uiStateController.requestUIAction(e);
-    } else {
-      e.preventDefault();
-    }
-  };
-  const installInputEffect = useCallback(
-    (input) => {
-      return addInputEffect(
-        input,
-        (e) => {
-          lastEventRequestingActionRef.current = e;
-          lastActionValueRef.current = input.value;
-          dispatchRequestAction(input, { event: e });
-        },
-        {
-          waitForChange: actionAfterChange,
-          debounce: actionDebounce,
-          debugInteraction,
-        },
-      );
-    },
-    [actionAfterChange, actionDebounce],
-  );
-
-  const refComposed = useComposeElementRef(installInputEffect, props.ref);
-
-  const result = useActionProps(
-    {
-      ...props,
+    };
+    const onPaste = (e) => {
+      props.onPaste?.(e);
+      dispatchRequestInteraction(ref.current, e);
+    };
+    const { actionAfterChange, actionDebounce } = props;
+    const lastEventRequestingActionRef = useRef();
+    const lastActionValueRef = useRef();
+    const onInput = (e) => {
+      props.onInput?.(e);
+      if (!e.isTrusted) {
+        return;
+      }
+      const field = ref.current;
+      const eventSameAsAction = e === lastEventRequestingActionRef.current;
+      // Ignore input events that carry the same value as the last action we dispatched.
+      // This avoids showing a spurious "read-only" callout for redundant input events
+      // that browsers fire with no UI change — e.g. range inputs fire several input
+      // events around mouse release even though the value hasn't moved.
+      const valueSameAsLastAction =
+        lastActionValueRef.current !== undefined &&
+        e.currentTarget.value === lastActionValueRef.current;
+      const allowed =
+        eventSameAsAction ||
+        valueSameAsLastAction ||
+        dispatchRequestInteraction(field, e);
+      if (allowed) {
+        uiStateController.requestUIAction(e);
+      } else {
+        e.preventDefault();
+      }
+    };
+    const refCallback = useCallback(
+      (input) => {
+        return addInputEffect(
+          input,
+          (e) => {
+            lastEventRequestingActionRef.current = e;
+            lastActionValueRef.current = input.value;
+            dispatchRequestAction(input, { event: e });
+          },
+          {
+            waitForChange: actionAfterChange,
+            debounce: actionDebounce,
+            debugInteraction,
+          },
+        );
+      },
+      [actionAfterChange, actionDebounce],
+    );
+    const refComposed = useComposeElementRef(refCallback, ref);
+    Object.assign(fieldProps, {
       ref: refComposed,
       onMouseDown,
       onClick,
       onKeyDown,
       onPaste,
       onInput,
-      actionAfterChange: undefined,
-      actionDebounce: undefined,
-      uiAction: undefined,
-    },
-    {
-      readOnlySupported,
-      boundAction,
-      uiStateController,
-      getUIValue,
-    },
-  );
-  return result;
+    });
+  }
+
+  return [fieldProps, remainingProps];
 };
 
 /**
@@ -338,6 +332,8 @@ export const useFieldgroupInterfaceProps = (
 const fieldPropSet = new Set([
   "ref",
   "action",
+  "actionAfterChange",
+  "actionDebounce",
   "children",
 
   "id",

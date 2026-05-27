@@ -318,6 +318,12 @@ const PickerButton = (props) => {
       id={id}
       icon={undefined}
       ui={undefined}
+      onMouseDown={(e) => {
+        inputProps.onMouseDown(e);
+      }}
+      onClick={(e) => {
+        inputProps.onClick(e);
+      }}
     >
       <LoadingOutline
         loading={loading}
