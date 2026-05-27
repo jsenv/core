@@ -235,7 +235,11 @@ Picker.update = createUICallback({
     if (!pickerEl) {
       return false;
     }
-    return dispatchRequestSetUIState(pickerEl, value, { event });
+    const pickerInput = pickerEl.querySelector(".navi_picker_input");
+    if (!pickerInput) {
+      return false;
+    }
+    return dispatchRequestSetUIState(pickerInput, value, { event });
   },
 });
 // Will allow to close the picker without updating the value

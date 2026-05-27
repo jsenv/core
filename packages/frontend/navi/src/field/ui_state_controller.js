@@ -680,7 +680,15 @@ export const useUIState = (ref, initialValue) => {
 };
 
 export const dispatchRequestSetUIState = (element, value, detail) => {
-  return dispatchInternalCustomEvent(element, "navi_set_ui_state", {
+  let field = element;
+  const fieldSelector = element.getAttribute("navi-field");
+  if (fieldSelector) {
+    const fieldEl = element.querySelector(fieldSelector);
+    if (fieldEl) {
+      field = fieldEl;
+    }
+  }
+  return dispatchInternalCustomEvent(field, "navi_set_ui_state", {
     ...detail,
     value,
   });
