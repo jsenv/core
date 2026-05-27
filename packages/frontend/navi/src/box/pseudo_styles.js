@@ -290,9 +290,12 @@ focus_classes: {
       if (el.matches(":focus")) {
         return true;
       }
-      const focusProxy = el.getAttribute("focus-proxy");
-      if (focusProxy) {
-        return document.querySelector(`#${focusProxy}`).matches(":focus");
+      const proxyFor = el.getAttribute("navi-proxy-for");
+      if (proxyFor) {
+        const proxyTarget = document.getElementById(proxyFor);
+        if (proxyTarget && proxyTarget.matches(":focus")) {
+          return true;
+        }
       }
       if (isControlledByFocusedElement(el)) {
         return true;
@@ -322,11 +325,12 @@ focus_classes: {
       if (el.matches(":focus-visible")) {
         return true;
       }
-      const focusProxy = el.getAttribute("focus-proxy");
-      if (focusProxy) {
-        return document
-          .querySelector(`#${focusProxy}`)
-          .matches(":focus-visible");
+      const proxyFor = el.getAttribute("navi-proxy-for");
+      if (proxyFor) {
+        const proxyTarget = document.getElementById(proxyFor);
+        if (proxyTarget && proxyTarget.matches(":focus-visible")) {
+          return true;
+        }
       }
       if (isControlledByFocusedElement(el, { requireFocusVisible: true })) {
         return true;
@@ -568,12 +572,13 @@ export const initPseudoStyles = (
     }
     // When this element's state changes, notify any proxy element that mirrors it
     // so it can re-check and visually reflect the new state.
-    if (element.id) {
-      const proxyTarget = document.querySelector(
-        `[navi-proxy-for="${element.id}"]`,
+    const id = element.id;
+    if (id) {
+      const proxy = document.querySelector(
+        `[navi-proxy-for="${CSS.escape(id)}"]`,
       );
-      if (proxyTarget) {
-        requestPseudoStateCheck(proxyTarget, {});
+      if (proxy) {
+        requestPseudoStateCheck(proxy, {});
       }
     }
   };
