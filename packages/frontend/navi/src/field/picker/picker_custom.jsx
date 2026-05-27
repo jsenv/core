@@ -270,14 +270,20 @@ export const PickerCustom = (props) => {
         anchor: pickerEl,
       });
     };
-    const requestClose = (e = new CustomEvent("programmatic")) => {
+    const requestClose = (
+      e = new CustomEvent("programmatic"),
+      { cancel = false } = {},
+    ) => {
       const mousedownEvent = findEvent(e, "mousedown");
       if (mousedownEvent) {
         debugPopup(e, `disable click`);
         disableClickFor();
       }
       const popupEl = popupRef.current;
-      return dispatchCustomEvent(popupEl, "navi_request_close", { event: e });
+      return dispatchCustomEvent(popupEl, "navi_request_close", {
+        event: e,
+        cancel,
+      });
     };
 
     const { onActionStart } = props;
@@ -369,7 +375,7 @@ export const PickerCustom = (props) => {
               }
               if (dispatchRequestInteraction(ref.current, e)) {
                 e.preventDefault();
-                requestClose(e);
+                requestClose(e, { cancel: true });
               }
             },
           },
