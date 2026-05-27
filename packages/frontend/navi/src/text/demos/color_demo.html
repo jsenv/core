@@ -1,0 +1,132 @@
+<!doctype html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Color Demo</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { Box, Text, Title, Color } from "@jsenv/navi";
+
+      const BasicUsageSection = () => (
+        <Box as="section" marginBottom="xl">
+          <Title as="h2">Basic usage</Title>
+          <Text>
+            Color renders a small color swatch sized to the current line height.
+          </Text>
+          <Box flex="x" spacing="m" alignY="center" marginTop="m">
+            <Color>#e53935</Color>
+            <Color>#1e88e5</Color>
+            <Color>#43a047</Color>
+            <Color>#fb8c00</Color>
+            <Color>#8e24aa</Color>
+          </Box>
+        </Box>
+      );
+
+      const EmptySection = () => (
+        <Box as="section" marginBottom="xl">
+          <Title as="h2">Empty / no color</Title>
+          <Text>
+            When no color is provided, a checkerboard pattern conveys "no color
+            / transparent".
+          </Text>
+          <Box flex="x" spacing="m" alignY="center" marginTop="m">
+            <Color />
+            <Color>{""}</Color>
+          </Box>
+        </Box>
+      );
+
+      const InlineWithTextSection = () => (
+        <Box as="section" marginBottom="xl">
+          <Title as="h2">Inline with text</Title>
+          <Text>
+            The swatch is inline and inherits the line height, making it easy to
+            pair with a label.
+          </Text>
+          <Box flex="y" spacing="s" marginTop="m">
+            <Box flex="x" spacing="s" alignY="center">
+              <Color>#e53935</Color>
+              <Text>Red</Text>
+            </Box>
+            <Box flex="x" spacing="s" alignY="center">
+              <Color>#1e88e5</Color>
+              <Text>Blue</Text>
+            </Box>
+            <Box flex="x" spacing="s" alignY="center">
+              <Color>#43a047</Color>
+              <Text>Green</Text>
+            </Box>
+            <Box flex="x" spacing="s" alignY="center">
+              <Color />
+              <Text>None</Text>
+            </Box>
+          </Box>
+        </Box>
+      );
+
+      const InheritedColorSection = () => (
+        <Box as="section" marginBottom="xl">
+          <Title as="h2">Inherited color</Title>
+          <Text>
+            Without a child value the swatch uses <code>currentColor</code> from
+            the surrounding text.
+          </Text>
+          <Box flex="y" spacing="s" marginTop="m">
+            <Box flex="x" spacing="s" alignY="center" color="tomato">
+              <Color />
+              <Text>Inherits tomato from parent</Text>
+            </Box>
+            <Box flex="x" spacing="s" alignY="center" color="steelblue">
+              <Color />
+              <Text>Inherits steelblue from parent</Text>
+            </Box>
+          </Box>
+        </Box>
+      );
+
+      const SizesSection = () => (
+        <Box as="section" marginBottom="xl">
+          <Title as="h2">Size scales with font size</Title>
+          <Text>
+            The swatch uses <code>1lh</code> so it automatically scales with the
+            surrounding font size.
+          </Text>
+          <Box flex="y" spacing="m" marginTop="m">
+            <Box flex="x" spacing="s" alignY="center" style="font-size: 12px">
+              <Color>#8e24aa</Color>
+              <Text>12px text</Text>
+            </Box>
+            <Box flex="x" spacing="s" alignY="center" style="font-size: 16px">
+              <Color>#8e24aa</Color>
+              <Text>16px text</Text>
+            </Box>
+            <Box flex="x" spacing="s" alignY="center" style="font-size: 24px">
+              <Color>#8e24aa</Color>
+              <Text>24px text</Text>
+            </Box>
+          </Box>
+        </Box>
+      );
+
+      const App = () => (
+        <Box padding="xl" maxWidth="600px">
+          <Title as="h1" marginBottom="xl">
+            Color
+          </Title>
+          <BasicUsageSection />
+          <EmptySection />
+          <InlineWithTextSection />
+          <InheritedColorSection />
+          <SizesSection />
+        </Box>
+      );
+
+      render(<App />, document.getElementById("app"));
+    </script>
+  </body>
+</html>
