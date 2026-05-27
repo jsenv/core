@@ -555,7 +555,7 @@ export const initPseudoStyles = (
     elementListeningPseudoState = null;
   }
 
-  const proxyForId = element.getAttribute("navi-proxy-for");
+  const proxyFor = element.getAttribute("navi-proxy-for");
 
   const onStateChange = (value, oldValue) => {
     effect?.(value, oldValue);
@@ -569,9 +569,11 @@ export const initPseudoStyles = (
     // When this element's state changes, notify any proxy element that mirrors it
     // so it can re-check and visually reflect the new state.
     if (element.id) {
-      const proxy = document.querySelector(`[navi-proxy-for="${element.id}"]`);
-      if (proxy) {
-        requestPseudoStateCheck(proxy, {});
+      const proxyTarget = document.querySelector(
+        `[navi-proxy-for="${element.id}"]`,
+      );
+      if (proxyTarget) {
+        requestPseudoStateCheck(proxyTarget, {});
       }
     }
   };
@@ -610,13 +612,13 @@ export const initPseudoStyles = (
       // inherit the target's active pseudo-state when the element itself isn't in that state.
       // We check the target's elementToImpact (not the target itself) because the
       // data-* attribute may be set on a different element (e.g. pseudoStateSelector).
-      if (!currentValue && proxyForId) {
+      if (!currentValue && proxyFor) {
         const { attribute } = pseudoClassDefinition;
         if (attribute) {
-          const target = document.getElementById(proxyForId);
-          if (target) {
+          const proxyTarget = document.getElementById(proxyFor);
+          if (proxyTarget) {
             const targetElementToImpact =
-              elementToImpactWeakMap.get(target) || target;
+              elementToImpactWeakMap.get(proxyTarget) || proxyTarget;
             if (targetElementToImpact.hasAttribute(attribute)) {
               currentValue = true;
             }
