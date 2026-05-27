@@ -350,6 +350,7 @@ export const Selectable = (props) => {
         {...remainingProps}
         selectableArea={undefined}
         basePseudoState={basePseudoState}
+        pseudoStateSelector="[navi-selectable-real-input]"
         disabled={disabled}
         readOnly={readOnly}
         loading={loading}
