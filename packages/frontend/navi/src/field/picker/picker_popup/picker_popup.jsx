@@ -271,7 +271,7 @@ const PickerContentInsidePopover = (props) => {
       navi-popover-mode={popoverMode}
       {...rest}
       ref={ref}
-      onnavi_picker_request_close={(e) => {
+      onnavi_request_close={(e) => {
         if (dispatchRequestInteraction(ref.current, e)) {
           requestClose(e);
         }
@@ -484,7 +484,7 @@ const PickerContentInsideDialog = (props) => {
       aria-haspopup="dialog"
       aria-expanded={expanded}
       aria-controls={dialogId}
-      onnavi_picker_request_close={(e) => {
+      onnavi_request_close={(e) => {
         requestClose(e);
       }}
       onMouseDown={(e) => {

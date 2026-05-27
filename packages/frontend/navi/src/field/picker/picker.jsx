@@ -1,4 +1,3 @@
-import { dispatchCustomEvent } from "@jsenv/dom";
 import { useContext, useRef } from "preact/hooks";
 
 import { Box } from "@jsenv/navi/src/box/box.jsx";
@@ -241,26 +240,8 @@ Picker.update = createUICallback({
 });
 // Will allow to close the picker without updating the value
 // (ideally if an update was called it should still trigger the action?)
-Picker.close = createUICallback({
-  name: "Picker.close",
-  event: (e) => {
-    return dispatchToPicker(e, "navi_picker_request_close");
-  },
-  action: (_, e) => {
-    return dispatchToPicker(e, "navi_picker_request_close");
-  },
-});
+Picker.close = "close";
 Picker.submit = "submit";
-const dispatchToPicker = (e, customEventName, detail) => {
-  const pickerEl = e.currentTarget.closest(".navi_picker");
-  if (!pickerEl) {
-    return false;
-  }
-  return dispatchCustomEvent(pickerEl, customEventName, {
-    event: e,
-    ...detail,
-  });
-};
 
 const renderPicker = createComponentResolver(pickerResolvers);
 const PickerButton = (props) => {
