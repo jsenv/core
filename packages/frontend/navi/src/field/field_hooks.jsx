@@ -245,7 +245,7 @@ export const useFieldInterfaceProps = (
     },
     {
       readOnlySupported,
-      action: boundAction,
+      boundAction,
       uiStateController,
       getUIValue,
     },
@@ -285,7 +285,7 @@ export const useFieldgroupInterfaceProps = (
   );
   const [actionRequester, setActionRequester] = useState();
   const [actionProps, remainingProps] = useActionProps(props, {
-    action: boundAction,
+    boundAction,
     uiStateController: uiGroupStateController,
     getUIValue: () => {
       return uiGroupStateController.uiStateSignal.peek();
@@ -335,42 +335,61 @@ export const useFieldgroupInterfaceProps = (
   ];
 };
 
+const fieldPropSet = new Set([
+  "ref",
+  "action",
+  "children",
+
+  "id",
+  "name",
+  "type",
+  "value",
+  "defaultValue",
+  "navi-proxy-for",
+  "checked",
+  "defaultChecked",
+
+  "disabled",
+  "readOnly",
+  "required",
+  "loading",
+  "basePseudoState",
+  "constraints",
+
+  "autoFocus",
+  "autoFocusVisible",
+  "autoSelect",
+
+  "onCancel",
+  "cancelOnBlurInvalid",
+  "cancelOnEscape",
+  "onActionPrevented",
+  "onActionAborted",
+  "onActionError",
+  "actionErrorEffect",
+  "errorMapping",
+  "onActionEnd",
+
+  "resetOnCancel",
+  "resetOnAbort",
+  "resetOnError",
+]);
+
 const useActionProps = (
   props,
-  { readOnlySupported, action, uiStateController, getUIValue },
+  { readOnlySupported, boundAction, uiStateController, getUIValue },
 ) => {
-  const {
-    ref,
+  const fieldProps = {};
+  let remainingProps = {};
+  const propKeySet = new Set(Object.keys(props));
+  for (const key of propKeySet) {
+    if (fieldPropSet.has(key)) {
+    } else {
+      remainingProps[key] = props[key];
+    }
+  }
 
-    type,
-    name,
-    id,
-    autoFocus,
-    autoFocusVisible,
-    autoSelect,
-    basePseudoState,
-    children,
-
-    constraints,
-    disabled,
-    readOnly,
-    required,
-    loading,
-    onCancel,
-    onActionPrevented,
-    onActionAborted,
-    onActionError,
-    onActionEnd,
-    actionErrorEffect,
-    errorMapping,
-    resetOnCancel,
-    resetOnAbort,
-    resetOnError,
-    cancelOnBlurInvalid,
-    cancelOnEscape,
-    ...rest
-  } = props;
-  const actionStatus = useActionStatus(action);
+  const actionStatus = useActionStatus(boundAction);
   const fieldToInterfaceContext = useContext(FieldToInterfaceContext);
   const fieldName = useContext(FieldNameContext);
   const fieldDisabled = useContext(DisabledContext);
@@ -378,267 +397,307 @@ const useActionProps = (
   const fieldRequired = useContext(RequiredContext);
   const fieldLoading = useContext(LoadingContext);
   const parentActionRequester = useContext(ActionRequesterContext);
-
-  const idResolved = id || fieldToInterfaceContext?.id;
-  const nameResolved = name || fieldName;
-  const disabledResolved = disabled || fieldDisabled;
-  const requiredResolved = required || fieldRequired;
-  const loadingResolved =
-    loading ||
-    actionStatus.loading ||
-    (fieldLoading && parentActionRequester === ref.current);
-  const readOnlyResolved =
-    readOnly || fieldReadOnly || loadingResolved || uiStateController.readOnly;
-
-  const executeAction = useExecuteAction(ref, {
-    errorEffect: actionErrorEffect,
-    errorMapping,
-  });
   const debugAction = useDebugAction();
   const debugInteraction = useDebugInteraction();
   const debugFocus = useDebugFocus();
 
-  // infom any <Field> parent of our readOnly state + that we are interactive
-  useLayoutEffect(() => {
-    if (fieldToInterfaceContext) {
-      fieldToInterfaceContext.setInteractive(true);
-      fieldToInterfaceContext.setDisabled(disabledResolved);
-      fieldToInterfaceContext.setReadOnly(readOnlyResolved);
-    }
-  }, [fieldToInterfaceContext, disabledResolved, readOnlyResolved]);
+  const { ref } = props;
+  Object.assign(fieldProps, { ref });
 
-  useAutoFocus(ref, autoFocus, {
-    focusVisible: autoFocusVisible,
-    autoSelect,
-  });
-  useConstraints(ref, constraints);
-  const remainingProps = useConstraintMessages(ref, rest);
-
-  let childrenWithContext;
-  if (children === undefined) {
-    childrenWithContext = undefined;
-  } else {
-    /**
-     * We are a field ourselve, which can contain other fields that should not inherit some of the context:
-     * - id was used by this field, no other field use it
-     * - message props are not meant to be propagated either, they are specific to a given field
-     * - readonly/required reporting is specific to this field interface. No other field interface should be able to report to parent
-     */
-    childrenWithContext = (
-      <MessagePropsRefContext.Provider value={undefined}>
-        <FieldToInterfaceContext.Provider value={undefined}>
-          {children}
-        </FieldToInterfaceContext.Provider>
-      </MessagePropsRefContext.Provider>
-    );
+  autofocus: {
+    const { autoFocus, autoFocusVisible, autoSelect } = props;
+    useAutoFocus(ref, autoFocus, {
+      focusVisible: autoFocusVisible,
+      autoSelect,
+    });
+    Object.assign(fieldProps, {
+      "navi-autofocus": autoFocus ? "" : undefined,
+    });
   }
-
-  const uiState = uiStateController.uiStateSignal.value;
-  const actionProps = {
-    "children": childrenWithContext,
-    ref,
-    type,
-    "id": idResolved,
-    "name": nameResolved,
-    "required": requiredResolved,
-    "disabled": disabledResolved,
-    "action": undefined,
-    "data-action":
-      props.action === undefined
-        ? undefined
-        : typeof props.action === "string"
-          ? props.action
-          : action.callSource,
-    "navi-autofocus": autoFocus ? "" : undefined,
-    "aria-busy": loadingResolved,
-    "basePseudoState": {
-      ...basePseudoState,
-      ":disabled": disabledResolved,
-      ":read-only": readOnlyResolved,
-      ":-navi-loading": loadingResolved,
-    },
-    // for some input navi-ui-state differs (like color where ui-state would be "" while value would be "#000000")
-    "navi-ui-state": uiState,
-    "onnavi_request_reset_ui_state": (e) => {
-      uiStateController.resetUIState(e);
-    },
-    "onnavi_get_ui_state": (e) => {
-      e.detail.respondWith(uiState);
-    },
-    "onnavi_get_ui_value": (e) => {
-      e.detail.respondWith(getUIValue(e));
-    },
-    "onnavi_cancel": (e) => {
-      const { reason } = e.detail;
-      const isBlurInvalid = reason.startsWith("blur_invalid");
-
-      if (resetOnCancel) {
-        if (isBlurInvalid) {
-          return;
-        }
-        dispatchRequestResetUIState(e.currentTarget, e);
-        onCancel?.(e, reason);
-        return;
+  form_props: {
+    const {
+      id,
+      "navi-proxy-for": naviProxyFor,
+      name,
+      type,
+      disabled,
+      required,
+      readOnly,
+      loading,
+    } = props;
+    const idResolved = id || fieldToInterfaceContext?.id;
+    const nameResolved = name || fieldName;
+    const disabledResolved = disabled || fieldDisabled;
+    const requiredResolved = required || fieldRequired;
+    const loadingResolved =
+      loading ||
+      actionStatus.loading ||
+      (fieldLoading && parentActionRequester === ref.current);
+    const readOnlyResolved =
+      readOnly ||
+      fieldReadOnly ||
+      loadingResolved ||
+      uiStateController.readOnly;
+    Object.assign(fieldProps, {
+      "id": idResolved,
+      "navi-proxy-for": naviProxyFor,
+      "name": nameResolved,
+      type,
+      "required": requiredResolved,
+      "disabled": disabledResolved,
+      "aria-busy": loadingResolved,
+      "basePseudoState": {
+        ...fieldProps.basePseudoState,
+        ":disabled": disabledResolved,
+        ":read-only": readOnlyResolved,
+        ":-navi-loading": loadingResolved,
+      },
+    });
+    if (readOnlySupported) {
+      fieldProps.readOnly = readOnlyResolved;
+    } else {
+      fieldProps["aria-readonly"] = readOnlyResolved;
+    }
+    // infom any <Field> parent of our readOnly state + that we are interactive
+    useLayoutEffect(() => {
+      if (fieldToInterfaceContext) {
+        fieldToInterfaceContext.setInteractive(true);
+        fieldToInterfaceContext.setDisabled(disabledResolved);
+        fieldToInterfaceContext.setReadOnly(readOnlyResolved);
       }
-      if (isBlurInvalid) {
-        if (!cancelOnBlurInvalid) {
-          return;
-        }
-        if (
-          // error prevent cancellation until the user closes it (or something closes it)
-          e.detail.failedConstraintInfo.level === "error" &&
-          e.detail.failedConstraintInfo.reportStatus !== "closed"
-        ) {
-          return;
-        }
-      }
-      if (reason === "escape_key") {
-        if (!cancelOnEscape) {
-          return;
-        }
-      }
-      onCancel?.(e, reason);
-    },
-    "onnavi_set_ui_state": (e) => {
-      uiStateController.setUIState(e.detail.value, e);
-    },
-    "onnavi_request_interaction": (e) => {
-      onRequestInteraction(e, { debugInteraction });
+    }, [fieldToInterfaceContext, disabledResolved, readOnlyResolved]);
 
-      transfer_focus_to_target: {
-        const naviProxyTarget = getNaviProxyTarget(e);
-        if (!naviProxyTarget) {
-          break transfer_focus_to_target;
-        }
-        const mousedownEvent = findEvent(e, "mousedown");
-        if (mousedownEvent) {
-          if (mousedownEvent.defaultPrevented) {
-            // not really used but any code calling preventDefault can also prevent navi custom behaviors
+    const { constraints } = fieldProps;
+    useConstraints(ref, constraints);
+    remainingProps = useConstraintMessages(ref, remainingProps);
+  }
+  ui_state_and_value: {
+    const uiState = uiStateController.uiStateSignal.value;
+    Object.assign(fieldProps, {
+      // for some input navi-ui-state differs (like color where ui-state would be "" while value would be "#000000")
+      "navi-ui-state": uiState,
+      "onnavi_request_reset_ui_state": (e) => {
+        uiStateController.resetUIState(e);
+      },
+      "onnavi_get_ui_state": (e) => {
+        e.detail.respondWith(uiState);
+      },
+      "onnavi_get_ui_value": (e) => {
+        e.detail.respondWith(getUIValue(e));
+      },
+      "onnavi_set_ui_state": (e) => {
+        uiStateController.setUIState(e.detail.value, e);
+      },
+    });
+
+    const { statePropName } = uiStateController;
+    if (statePropName) {
+      const statePropValueRaw = uiStateController.getPropFromState(uiState);
+      fieldProps[statePropName] = statePropValueRaw;
+      if (statePropName === "checked") {
+        const { value } = props;
+        fieldProps.value = value;
+      }
+    }
+  }
+  children_prop: {
+    const { children } = props;
+    let childrenWithContext;
+    if (children === undefined) {
+      childrenWithContext = undefined;
+    } else {
+      /**
+       * We are a field ourselve, which can contain other fields that should not inherit some of the context:
+       * - id was used by this field, no other field use it
+       * - message props are not meant to be propagated either, they are specific to a given field
+       * - readonly/required reporting is specific to this field interface. No other field interface should be able to report to parent
+       */
+      childrenWithContext = (
+        <MessagePropsRefContext.Provider value={undefined}>
+          <FieldToInterfaceContext.Provider value={undefined}>
+            {children}
+          </FieldToInterfaceContext.Provider>
+        </MessagePropsRefContext.Provider>
+      );
+    }
+    Object.assign(fieldProps, {
+      children: childrenWithContext,
+    });
+  }
+  action_props: {
+    const { action, actionErrorEffect, errorMapping } = props;
+    const executeAction = useExecuteAction(ref, {
+      errorEffect: actionErrorEffect,
+      errorMapping,
+    });
+    Object.assign(fieldProps, {
+      "data-action":
+        action === undefined
+          ? undefined
+          : typeof action === "string"
+            ? action
+            : boundAction.callSource,
+    });
+
+    const {
+      onCancel,
+      cancelOnBlurInvalid,
+      cancelOnEscape,
+      onActionPrevented,
+      onActionAborted,
+      onActionError,
+      onActionEnd,
+      resetOnCancel,
+      resetOnAbort,
+      resetOnError,
+    } = props;
+    Object.assign(fieldProps, {
+      onnavi_request_interaction: (e) => {
+        transfer_focus_to_target: {
+          const naviProxyTarget = getNaviProxyTarget(e);
+          if (!naviProxyTarget) {
             break transfer_focus_to_target;
           }
-          debugFocus(
-            e,
-            "move focus to proxy (using preventDefault() + focus({ focusVisible: false })",
-          );
-          mousedownEvent.preventDefault();
-          naviProxyTarget.focus({ focusVisible: false });
-          break transfer_focus_to_target;
-        }
-        // We also transfer on click even if mousedown is there because:
-        // - it's possible to receive a click without a mousedown (<label>)
-        // - so it's possible to end up focused by the browser without having a chance to preventDefault on the mousedown
-        // -> We do it also on click
-        // No need to preventDefault here though
-        // -> This ensure browser don't complain we try to focus a aria-hidden element
-        // and ensure the focus ends up where it should
-        const clickEvent = findEvent(e, "click");
-        if (clickEvent) {
-          if (clickEvent.defaultPrevented) {
-            // not really used but any code calling preventDefault can also prevent navi custom behavior
-            break transfer_focus_to_target;
-          }
-          naviProxyTarget.focus({ focusVisible: false });
-          break transfer_focus_to_target;
-        }
-      }
-    },
-    "onnavi_request_action": (e) => {
-      let uiState;
-      if (Object.hasOwn(e.detail, "uiState")) {
-        // uiState was forwarded by a proxy — use it directly to avoid
-        // re-computing from the element's own state (which may already reflect
-        // the optimistic update and return undefined for radio)
-        uiState = e.detail.uiState;
-      } else {
-        dispatchInternalCustomEvent(e.currentTarget, "navi_get_ui_value", {
-          respondWith: (v) => {
-            debugAction(
+          const mousedownEvent = findEvent(e, "mousedown");
+          if (mousedownEvent) {
+            if (mousedownEvent.defaultPrevented) {
+              // not really used but any code calling preventDefault can also prevent navi custom behaviors
+              break transfer_focus_to_target;
+            }
+            debugFocus(
               e,
-              `navi_get_ui_value.respondWith(${JSON.stringify(v)})`,
+              `move focus to proxy (mousedown.preventDefault() + ${getElementSignature(naviProxyTarget)}.focus({ focusVisible: false })`,
             );
-            uiState = v;
-          },
+            mousedownEvent.preventDefault();
+            naviProxyTarget.focus({ focusVisible: false });
+            break transfer_focus_to_target;
+          }
+          // We also transfer on click even if mousedown is there because:
+          // - it's possible to receive a click without a mousedown (<label>)
+          // - so it's possible to end up focused by the browser without having a chance to preventDefault on the mousedown
+          // -> We do it also on click
+          // No need to preventDefault here though
+          // -> This ensure browser don't complain we try to focus a aria-hidden element
+          // and ensure the focus ends up where it should
+          const clickEvent = findEvent(e, "click");
+          if (clickEvent) {
+            if (clickEvent.defaultPrevented) {
+              // not really used but any code calling preventDefault can also prevent navi custom behavior
+              break transfer_focus_to_target;
+            }
+            naviProxyTarget.focus({ focusVisible: false });
+            break transfer_focus_to_target;
+          }
+        }
+        onRequestInteraction(e, { debugInteraction });
+      },
+      onnavi_cancel: (e) => {
+        const { reason } = e.detail;
+        const isBlurInvalid = reason.startsWith("blur_invalid");
+
+        if (resetOnCancel) {
+          if (isBlurInvalid) {
+            return;
+          }
+          dispatchRequestResetUIState(e.currentTarget, e);
+          onCancel?.(e, reason);
+          return;
+        }
+        if (isBlurInvalid) {
+          if (!cancelOnBlurInvalid) {
+            return;
+          }
+          if (
+            // error prevent cancellation until the user closes it (or something closes it)
+            e.detail.failedConstraintInfo.level === "error" &&
+            e.detail.failedConstraintInfo.reportStatus !== "closed"
+          ) {
+            return;
+          }
+        }
+        if (reason === "escape_key") {
+          if (!cancelOnEscape) {
+            return;
+          }
+        }
+        onCancel?.(e, reason);
+      },
+      onnavi_request_action: (e) => {
+        let uiState;
+        if (Object.hasOwn(e.detail, "uiState")) {
+          // uiState was forwarded by a proxy — use it directly to avoid
+          // re-computing from the element's own state (which may already reflect
+          // the optimistic update and return undefined for radio)
+          uiState = e.detail.uiState;
+        } else {
+          dispatchInternalCustomEvent(e.currentTarget, "navi_get_ui_value", {
+            respondWith: (v) => {
+              debugAction(
+                e,
+                `navi_get_ui_value.respondWith(${JSON.stringify(v)})`,
+              );
+              uiState = v;
+            },
+          });
+          e.detail.uiState = uiState;
+        }
+        const naviProxyTarget = getNaviProxyTarget(e);
+        if (naviProxyTarget) {
+          // Apply the proxy's desired uiState optimistically before dispatching so
+          // the target's UI updates immediately, then forward the action.
+          // uiState is included explicitly so the target's onnavi_request_action
+          // can detect it via Object.hasOwn and skip re-computing from its own
+          // navi_request_ui_state (which would return undefined for an already-set radio).
+          debugAction(
+            e,
+            `${getElementSignature(naviProxyTarget)}.dispatchEvent("navi_set_ui_state", ${JSON.stringify(uiState)})`,
+          );
+          dispatchRequestSetUIState(naviProxyTarget, uiState, { event: e });
+          return;
+        }
+        if (e.detail.action) {
+          // keyboard shortcut give the action and action is irrelevant here, the kayboard shortcut must win
+        } else {
+          e.detail.actionOrigin = "action_prop";
+          e.detail.action = boundAction;
+        }
+        onRequestAction(e, { debugAction });
+      },
+      onnavi_action_prevented: onActionPrevented,
+      onnavi_action_ready: (e) => {
+        if (e.detail.action === "auto") {
+          // special case for the use case where form.submit is called
+          e.detail.action = boundAction;
+        }
+        const { uiState } = e.detail;
+        dispatchRequestSetUIState(e.currentTarget, uiState, {
+          event: e.detail.event,
         });
-        e.detail.uiState = uiState;
-      }
-      const naviProxyTarget = getNaviProxyTarget(e);
-      if (naviProxyTarget) {
-        // Apply the proxy's desired uiState optimistically before dispatching so
-        // the target's UI updates immediately, then forward the action.
-        // uiState is included explicitly so the target's onnavi_request_action
-        // can detect it via Object.hasOwn and skip re-computing from its own
-        // navi_request_ui_state (which would return undefined for an already-set radio).
-        debugAction(
-          e,
-          `${getElementSignature(naviProxyTarget)}.dispatchEvent("navi_set_ui_state", ${JSON.stringify(uiState)})`,
-        );
-        dispatchRequestSetUIState(naviProxyTarget, uiState, { event: e });
-        return;
-      }
-      if (e.detail.action) {
-        // keyboard shortcut give the action and action is irrelevant here, the kayboard shortcut must win
-      } else {
-        e.detail.actionOrigin = "action_prop";
-        e.detail.action = action;
-      }
-      onRequestAction(e, { debugAction });
-    },
-    "onnavi_action_prevented": onActionPrevented,
-    "onnavi_action_ready": (e) => {
-      if (e.detail.action === "auto") {
-        // special case for the use case where form.submit is called
-        e.detail.action = action;
-      }
-      const { uiState } = e.detail;
-      dispatchRequestSetUIState(e.currentTarget, uiState, {
-        event: e.detail.event,
-      });
-      executeAction(e);
-    },
-    "onnavi_action_abort": (e) => {
-      if (resetOnAbort) {
-        dispatchRequestResetUIState(e.currentTarget, e);
-      }
-      onActionAborted?.(e);
-    },
-    "onnavi_action_error": (e) => {
-      const { error } = e.detail;
-      if (resetOnError) {
-        dispatchRequestResetUIState(e.currentTarget, e);
-      }
-      onActionError?.(error, e);
-    },
-    "onnavi_action_end": (e) => {
-      const { data } = e.detail;
-      uiStateController.actionEnd(e);
-      onActionEnd?.(data, e);
-      remainingProps.onnavi_action_end?.(e);
-    },
-  };
-
-  if (readOnlySupported) {
-    actionProps.readOnly = readOnlyResolved;
-  } else {
-    actionProps["aria-readonly"] = readOnlyResolved;
+        executeAction(e);
+      },
+      onnavi_action_abort: (e) => {
+        if (resetOnAbort) {
+          dispatchRequestResetUIState(e.currentTarget, e);
+        }
+        onActionAborted?.(e);
+      },
+      onnavi_action_error: (e) => {
+        const { error } = e.detail;
+        if (resetOnError) {
+          dispatchRequestResetUIState(e.currentTarget, e);
+        }
+        onActionError?.(error, e);
+      },
+      onnavi_action_end: (e) => {
+        const { data } = e.detail;
+        uiStateController.actionEnd(e);
+        onActionEnd?.(data, e);
+        remainingProps.onnavi_action_end?.(e);
+      },
+    });
   }
 
-  const { statePropName, defaultStatePropName } = uiStateController;
-  if (statePropName) {
-    const statePropValueRaw = uiStateController.getPropFromState(uiState);
-    actionProps[statePropName] = statePropValueRaw;
-    delete remainingProps[statePropName];
-
-    if (statePropName === "checked") {
-      actionProps.value = remainingProps.value;
-      delete remainingProps.value;
-    }
-    if (defaultStatePropName) {
-      delete actionProps[defaultStatePropName];
-      delete remainingProps[defaultStatePropName];
-    }
-  }
-
-  return [actionProps, remainingProps];
+  return [fieldProps, remainingProps];
 };
 
 const getNaviProxyTarget = (event) => {
