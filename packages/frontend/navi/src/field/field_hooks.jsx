@@ -100,7 +100,6 @@ export const useFieldInterfaceProps = (
     paramsSignal,
     externalBoundAction,
     readOnlySupported,
-    actionInteraction = "input",
   },
 ) => {
   const debugInteraction = useDebugInteraction();
@@ -205,6 +204,7 @@ export const useFieldInterfaceProps = (
       }
     };
     const {
+      actionInteraction = "input",
       actionAfterChange = actionInteraction === "change",
       actionDebounce,
     } = props;
@@ -694,6 +694,8 @@ const useActionProps = (
           event: e.detail.event,
         });
         executeAction(e);
+      },
+      onnavi_action_start: (e) => {
         onActionStart?.(e);
       },
       onnavi_action_abort: (e) => {
