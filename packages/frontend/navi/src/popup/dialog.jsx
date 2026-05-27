@@ -100,12 +100,10 @@ export const Dialog = (props) => {
         onRequestClose(e);
       }}
       onnavi_request_open={(e) => {
-        const { event = e } = e.detail;
-        onRequestOpen(event);
+        onRequestOpen(e);
       }}
       onnavi_request_close={(e) => {
-        const { event = e } = e.detail;
-        onRequestClose(event);
+        onRequestClose(e);
       }}
     >
       {children}
