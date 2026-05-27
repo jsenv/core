@@ -381,34 +381,7 @@ const InputRadioFieldInterface = (props) => {
     visualVNode = Array.isArray(icon) ? icon[checked ? 1 : 0] : icon;
   } else {
     // appearanceResolved === "radio"
-    visualVNode = (
-      <svg
-        viewBox="0 0 12 12"
-        aria-hidden="true"
-        preserveAspectRatio="xMidYMid meet"
-      >
-        {/* Border circle - always visible */}
-        <circle
-          className="navi_radio_border"
-          cx="6"
-          cy="6"
-          r="5.5"
-          strokeWidth="1"
-        />
-        {/* Dashed border for readonly - calculated for even distribution */}
-        <circle
-          className="navi_radio_dashed_border"
-          cx="6"
-          cy="6"
-          r="5.5"
-          strokeWidth="1"
-          strokeDasharray="2.16 2.16"
-          strokeDashoffset="0"
-        />
-        {/* Inner fill circle - only visible when checked */}
-        <circle className="navi_radio_marker" cx="6" cy="6" r="3.5" />
-      </svg>
-    );
+    visualVNode = <RadioSvg />;
   }
 
   return (
@@ -443,6 +416,36 @@ const InputRadioFieldInterface = (props) => {
       {visualVNode}
       <RealInputRadio {...radioProps} />
     </Box>
+  );
+};
+const RadioSvg = () => {
+  return (
+    <svg
+      viewBox="0 0 12 12"
+      aria-hidden="true"
+      preserveAspectRatio="xMidYMid meet"
+    >
+      {/* Border circle - always visible */}
+      <circle
+        className="navi_radio_border"
+        cx="6"
+        cy="6"
+        r="5.5"
+        strokeWidth="1"
+      />
+      {/* Dashed border for readonly - calculated for even distribution */}
+      <circle
+        className="navi_radio_dashed_border"
+        cx="6"
+        cy="6"
+        r="5.5"
+        strokeWidth="1"
+        strokeDasharray="2.16 2.16"
+        strokeDashoffset="0"
+      />
+      {/* Inner fill circle - only visible when checked */}
+      <circle className="navi_radio_marker" cx="6" cy="6" r="3.5" />
+    </svg>
   );
 };
 const RealInputRadio = (props) => {
