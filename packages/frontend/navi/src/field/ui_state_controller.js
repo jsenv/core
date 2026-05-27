@@ -103,6 +103,7 @@ export const useUIStateController = (
     console.warn(
       `"${componentType}" is controlled by "${statePropName}" prop. Replace it by "${defaultStatePropName}" or pass "uiAction"/"action" to make field interactive.`,
     );
+    console.log(props);
   }
 
   if (persists === undefined && formContext) {

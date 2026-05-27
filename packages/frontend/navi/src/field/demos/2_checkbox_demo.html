@@ -871,7 +871,7 @@
                   <legend>:read-only:checked</legend>
                   <Box flex="y" spacing="s" alignX="start">
                     <Field>
-                      <Input type="checkbox" readOnly checked />
+                      <Input type="checkbox" readOnly defaultChecked />
                       <Label>Read-only</Label>
                     </Field>
                   </Box>
@@ -880,7 +880,7 @@
                   <legend>:-navi-loading:checked</legend>
                   <Box flex="y" spacing="s" alignX="start">
                     <Field>
-                      <Input type="checkbox" loading checked />
+                      <Input type="checkbox" loading defaultChecked />
                       <Label>Loading</Label>
                     </Field>
                   </Box>
@@ -1370,7 +1370,7 @@
                       type="checkbox"
                       appearance="switch"
                       readOnly
-                      checked
+                      defaultChecked
                     />
                     <Label>Label</Label>
                   </Field>
@@ -1382,7 +1382,7 @@
                       type="checkbox"
                       appearance="switch"
                       loading
-                      checked
+                      defaultChecked
                     />
                     <Label>Label</Label>
                   </Field>
@@ -1936,7 +1936,7 @@
                     loading={loading}
                     disabled={disabled}
                     checked={checked}
-                    onUIStateChange={setChecked}
+                    uiAction={setChecked}
                   />
                   Interactive Checkbox
                 </Field>
