@@ -87,10 +87,7 @@ export { preventFocusNavViaKeyboard } from "./src/interaction/focus/focus_nav.js
 export { preventFocusNav } from "./src/interaction/focus/focus_nav_event_marker.js";
 export { trapFocusInside } from "./src/interaction/focus/focus_trap.js";
 // interaction/keyboard
-export {
-  canInterceptKeyboardEvent,
-  getKeyboardEventDefaultAction,
-} from "./src/interaction/keyboard.js";
+export { getKeyboardEventDefaultAction } from "./src/interaction/keyboard.js";
 // interaction/scroll
 export { captureScrollState } from "./src/interaction/scroll/capture_scroll.js";
 export { isScrollable } from "./src/interaction/scroll/is_scrollable.js";

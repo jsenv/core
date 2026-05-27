@@ -225,18 +225,3 @@ const DEFAULT_BEHAVIORS = [
     },
   },
 ];
-
-export const canInterceptKeyboardEvent = (event, { intent } = {}) => {
-  const defaultBehavior = getKeyboardEventDefaultAction(event);
-  if (!defaultBehavior) {
-    return true;
-  }
-  if (intent === "override_focus_nav") {
-    // A focus group takes over arrow-key navigation entirely, including cases
-    // where the browser would otherwise scroll (e.g. arrow keys on a <button>).
-    if (defaultBehavior === "focus_nav" || defaultBehavior === "scroll") {
-      return true;
-    }
-  }
-  return false;
-};

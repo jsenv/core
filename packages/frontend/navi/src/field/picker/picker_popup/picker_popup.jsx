@@ -264,6 +264,8 @@ const PickerContentInsidePopover = (props) => {
       aria-expanded={expanded}
       aria-controls={popoverId}
       navi-popover-mode={popoverMode}
+      {...rest}
+      ref={ref}
       onnavi_picker_request_close={(e) => {
         //  if (event.type === "mousedown") {
         //   event.preventDefault(); // prevent browser trying to give focus to the list item
@@ -276,6 +278,7 @@ const PickerContentInsidePopover = (props) => {
         requestClose(e);
       }}
       onMouseDown={(e) => {
+        props.onMouseDown?.(e);
         if (e.button !== 0) {
           return;
         }
@@ -291,6 +294,7 @@ const PickerContentInsidePopover = (props) => {
         }
       }}
       onClick={(e) => {
+        props.onClick?.(e);
         if (e.detail === 0) {
           // click triggered by enter won't open the popover
           return;
@@ -317,7 +321,6 @@ const PickerContentInsidePopover = (props) => {
           requestClose(e);
         }
       }}
-      {...rest}
       onKeyDown={shortcutsViaOnKeyDown(
         {
           arrowdown: (e) => {
@@ -342,7 +345,6 @@ const PickerContentInsidePopover = (props) => {
         },
         onKeyDown,
       )}
-      ref={ref}
     >
       <Popover
         ref={popoverRef}

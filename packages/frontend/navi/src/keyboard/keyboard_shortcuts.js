@@ -1,4 +1,4 @@
-import { activeElementSignal, canInterceptKeyboardEvent } from "@jsenv/dom";
+import { activeElementSignal, getKeyboardEventDefaultAction } from "@jsenv/dom";
 import { effect, signal } from "@preact/signals";
 import { useEffect, useRef } from "preact/hooks";
 
@@ -225,7 +225,9 @@ export const shortcutsViaOnKeyDown = (shortcuts, onKeyDown) => {
 };
 
 const applyKeyboardShortcuts = (shortcuts, keyboardEvent) => {
-  if (!canInterceptKeyboardEvent(keyboardEvent)) {
+  const defaultAction = getKeyboardEventDefaultAction(keyboardEvent);
+  const canIntercept = !defaultAction || defaultAction === "scroll";
+  if (!canIntercept) {
     return null;
   }
   for (const shortcutCandidate of shortcuts) {

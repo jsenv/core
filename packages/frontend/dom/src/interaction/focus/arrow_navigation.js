@@ -4,7 +4,7 @@ import {
   findDescendant,
   findLastDescendant,
 } from "../../traversal.js";
-import { canInterceptKeyboardEvent } from "../keyboard.js";
+import { getKeyboardEventDefaultAction } from "../keyboard.js";
 import { elementIsFocusable } from "./element_is_focusable.js";
 import { getFocusGroup } from "./focus_group_registry.js";
 import { markFocusNav } from "./focus_nav_event_marker.js";
@@ -47,7 +47,14 @@ export const performArrowNavigation = (
     ySelector,
   } = {},
 ) => {
-  if (!canInterceptKeyboardEvent(event, { intent: "override_focus_nav" })) {
+  const defaultAction = getKeyboardEventDefaultAction(event);
+  // A focus group takes over arrow-key navigation entirely, including cases
+  // where the browser would otherwise scroll (e.g. arrow keys on a <button>).
+  const canIntercept =
+    defaultAction === "focus_nav" ||
+    defaultAction === "scroll" ||
+    !defaultAction;
+  if (!canIntercept) {
     return false;
   }
   const activeElement = document.activeElement;
