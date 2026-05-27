@@ -310,6 +310,13 @@ const checkAndReportConstraints = (
   };
 
   let elementToValidate = event.currentTarget;
+  const proxyFor = elementToValidate.getAttribute("navi-proxy-for");
+  if (proxyFor) {
+    const proxyTarget = document.getElementById(proxyFor);
+    if (proxyTarget) {
+      elementToValidate = proxyTarget;
+    }
+  }
   if (!elementToValidate.__validationInterface__) {
     const fieldElement = findFieldElement(requester);
     if (fieldElement) {
