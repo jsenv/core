@@ -71,7 +71,7 @@ export const useUIStateController = (
     uiActionInternal,
     persists,
     allowNameless = false,
-    debugAction,
+    debugInteraction,
   } = {},
 ) => {
   const uiStateControllerRef = useRef();
@@ -236,10 +236,14 @@ export const useUIStateController = (
       }
       const currentUIState = uiStateController.uiState;
       if (newUIState === currentUIState) {
+        debugInteraction(
+          e,
+          `setUIState called with "${newUIState}" but state is unchanged, ignoring`,
+        );
         return false;
       }
       const controllerSig = getElementSignature(e.currentTarget || ref.current);
-      debugAction(
+      debugInteraction(
         e,
         `${controllerSig}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> updating to ${JSON.stringify(newUIState)}`,
       );
@@ -249,7 +253,10 @@ export const useUIStateController = (
         // - side effect
         // - any "input" event that might be dispatched below
         const propValue = uiStateController.getPropFromState(newUIState);
-        debugAction(e, `[${statePropName}] = ${JSON.stringify(propValue)};`);
+        debugInteraction(
+          e,
+          `[${statePropName}] = ${JSON.stringify(propValue)};`,
+        );
         el[statePropName] = propValue;
       }
       uiStateController.uiState = newUIState;
@@ -281,7 +288,7 @@ export const useUIStateController = (
           }
         }
       }
-      debugAction(e, `publishUIState(${JSON.stringify(newUIState)})`);
+      debugInteraction(e, `publishUIState(${JSON.stringify(newUIState)})`);
       publishUIState(newUIState, e);
       if (!e.detail?.suppressParentNotification) {
         notifyParentAboutChildUIStateChange(e);
@@ -293,7 +300,7 @@ export const useUIStateController = (
         if (proxyFor) {
           const naviProxyTarget = document.getElementById(proxyFor);
           if (naviProxyTarget) {
-            debugAction(
+            debugInteraction(
               e,
               `forwarding set_ui_state "${prop}" to ${getElementSignature(naviProxyTarget)}`,
             );
@@ -314,13 +321,13 @@ export const useUIStateController = (
         if (!existingInputEvent) {
           if (el.tagName === "INPUT") {
             if (el.type === "radio" || el.type === "checkbox") {
-              debugAction(
+              debugInteraction(
                 e,
                 "dispatching synthetic input event without data for checkbox/radio",
               );
               el.dispatchEvent(new Event("input", { bubbles: true }));
             } else {
-              debugAction(
+              debugInteraction(
                 e,
                 `dispatching synthetic input event with data "${newUIState}" for input`,
               );

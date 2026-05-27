@@ -97,7 +97,7 @@ export const useFieldInterfaceProps = (
     readOnlySupported,
   },
 ) => {
-  const debugAction = useDebugAction();
+  const debugInteraction = useDebugInteraction();
   const uiStateController = useUIStateController(props, fieldType, {
     statePropName,
     defaultStatePropName,
@@ -107,7 +107,7 @@ export const useFieldInterfaceProps = (
     getStateFromParent,
     allowNameless,
     persists,
-    debugAction,
+    debugInteraction,
     uiActionInternal,
   });
 
@@ -119,7 +119,6 @@ export const useFieldInterfaceProps = (
   const boundAction = externalBoundAction || internalBoundAction;
 
   const { ref } = props;
-  const debugInteraction = useDebugInteraction();
   const hasPointerDownInteraction = fieldType === "input_range";
   const onMouseDown = (e) => {
     props.onMouseDown?.(e);
