@@ -261,10 +261,11 @@ export const PickerCustom = (props) => {
       return dispatchCustomEvent(popupEl, "navi_request_close", { event: e });
     };
 
+    const { onActionStart } = props;
     Object.assign(props, {
       "aria-expanded": expanded,
       "onActionStart": (e) => {
-        props.onActionStart?.(e);
+        onActionStart?.(e);
         requestClose(e);
       },
       "onnavi_request_close": (e) => {
