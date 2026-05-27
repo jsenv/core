@@ -480,54 +480,62 @@ const PickerContentInsideDialog = (props) => {
       aria-expanded={expanded}
       aria-controls={dialogId}
       onnavi_picker_request_close={(e) => {
-        //  if (event.type === "mousedown") {
-        //   event.preventDefault(); // prevent browser trying to give focus to the list item
-        //   debugFocus(e, `preventDefault()`);
-        // }
-        // if (event.key === " ") {
-        //   // space can open the popover we don't want space to propagate to the select otherwise it would open it back immediatly
-        //   event.stopPropagation();
-        // }
         requestClose(e);
       }}
       onMouseDown={(e) => {
-        if (e.button !== 0) {
-          return;
-        }
-        if (disabled) {
-          return;
-        }
-        if (expandedRef.current) {
-          requestClose(e);
-        } else {
-          e.preventDefault(); // prevent browser trying to give focus to the select (dialog will take focus)
-          debugFocus(e, `preventDefault()`);
-          requestOpen(e);
+        props.onMouseDown?.(e);
+        const pickerEl = ref.current;
+        if (
+          dispatchRequestInteraction(pickerEl, e, "mousedown to open picker")
+        ) {
+          if (expandedRef.current) {
+            requestClose(e);
+          } else {
+            e.preventDefault(); // prevent browser trying to give focus to the select (popover will take focus)
+            debugFocus(
+              e,
+              `prevent browser giving focus to button (mousedown.preventDefault())`,
+            );
+            requestOpen(e);
+          }
         }
       }}
       onClick={(e) => {
+        props.onClick?.(e);
         if (e.detail === 0) {
-          // click triggered by enter won't open the dialog
+          // click triggered by enter won't open the popover
           return;
         }
-        // When a label is clicked it transfers focus to the select, in that case we want to open it
-        requestOpen(e);
+        if (
+          dispatchRequestInteraction(ref.current, e, "click to open picker")
+        ) {
+          // When a label is clicked it transfers focus to the select
+          // in that case we want to open it (otherwise we have already opened on mousedown interaction)
+          e.preventDefault();
+          requestOpen(e);
+        }
       }}
       {...rest}
       onKeyDown={shortcutsViaOnKeyDown(
         {
           arrowdown: (e) => {
-            e.preventDefault();
-            requestOpen(e);
+            if (dispatchRequestInteraction(ref.current, e)) {
+              e.preventDefault(); // prevent container scroll
+              requestOpen(e);
+            }
           },
           arrowup: (e) => {
-            e.preventDefault();
-            requestOpen(e);
+            if (dispatchRequestInteraction(ref.current, e)) {
+              e.preventDefault(); // prevent container scroll
+              requestOpen(e);
+            }
           },
           space: (e) => {
-            e.preventDefault();
-            if (!expandedRef.current) {
-              requestOpen(e);
+            if (dispatchRequestInteraction(ref.current, e)) {
+              e.preventDefault(); // prevent scroll
+              if (!expandedRef.current) {
+                requestOpen(e);
+              }
             }
           },
           escape: () => {
