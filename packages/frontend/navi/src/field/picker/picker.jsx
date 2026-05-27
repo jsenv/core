@@ -230,12 +230,12 @@ export const Picker = (props) => {
 // Allow to synchronously update the picker value (will also dispatch "input" on the button)
 Picker.update = createUICallback({
   name: "Picker.update",
-  action: (value, e) => {
-    const pickerEl = e.currentTarget.closest(".navi_picker");
+  action: (value, { event }) => {
+    const pickerEl = event.currentTarget.closest(".navi_picker");
     if (!pickerEl) {
       return false;
     }
-    return dispatchRequestSetUIState(pickerEl, value, { event: e });
+    return dispatchRequestSetUIState(pickerEl, value, { event });
   },
 });
 // Will allow to close the picker without updating the value

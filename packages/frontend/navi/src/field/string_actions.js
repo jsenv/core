@@ -14,9 +14,10 @@ export const resolveActionProp = (action) => {
 };
 
 export const requestClosestAction = (e) => {
+  const currentTarget = e.currentTarget;
   const target = e.target;
   // some element (like list) can have their own action, we want to trigger closest parent, not itself
-  const elementWithAction = target.parentNode.closest("[data-action]");
+  const elementWithAction = currentTarget.parentNode.closest("[data-action]");
   if (!elementWithAction) {
     console.warn(
       "submit event triggered but no element with [data-action] found in event path",
@@ -55,7 +56,8 @@ const submit = createUICallback({
 });
 
 const requestClose = (target, event) => {
-  const expandableEl = target.closest("[aria-expanded]");
+  const currentTarget = event.currentTarget;
+  const expandableEl = currentTarget.closest("[aria-expanded]");
   if (!expandableEl) {
     console.warn(
       "close action triggered but no element with [aria-expanded] found in event path",
