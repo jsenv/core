@@ -316,7 +316,6 @@ export const Selectable = (props) => {
   const realInputContextValue = useMemo(() => {
     return {
       id: inputId,
-      ref: inputRef,
       type: inputType,
       checked,
       readOnly,
