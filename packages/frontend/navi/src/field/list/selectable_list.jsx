@@ -313,6 +313,8 @@ export const Selectable = (props) => {
   );
   const { checked, value, basePseudoState, children } = checkableProps;
   const readOnly = basePseudoState[":read-only"];
+  const disabled = basePseudoState[":disabled"];
+  const loading = basePseudoState[":-navi-loading"];
   const realInputContextValue = useMemo(() => {
     return {
       id: inputId,
@@ -347,8 +349,12 @@ export const Selectable = (props) => {
         spacing="s"
         expandX
         {...remainingProps}
-        basePseudoState={basePseudoState}
         selectableArea={undefined}
+        basePseudoState={basePseudoState}
+        disabled={disabled}
+        readOnly={readOnly}
+        loading={loading}
+        interactive
       >
         <SelectableRealInput
           {...checkableProps}
@@ -384,7 +390,6 @@ const SelectableRealInput = (props) => {
       navi-selectable-real-input=""
       navi-visually-hidden=""
       data-callout-arrow-x="center"
-      navi-debug
     />
   );
 };

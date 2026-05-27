@@ -125,8 +125,16 @@ const FieldCSSVars = {
 const FieldUI = (props) => {
   import.meta.css = css;
   const { vertical } = props;
-  const { fieldId, name, disabled, readOnly, required, loading, ...rest } =
-    props;
+  const {
+    fieldId,
+    name,
+    disabled,
+    readOnly,
+    required,
+    loading,
+    interactive,
+    ...rest
+  } = props;
 
   const [messageProps, remainingProps] = extractMessageAndRemainingProps(rest);
   const messagePropsRef = useRef();
@@ -134,7 +142,7 @@ const FieldUI = (props) => {
 
   const [disabledByChild, setDisabledByChild] = useState(false);
   const [readOnlyFromChild, setReadOnlyFromChild] = useState(false);
-  const [interactive, setInteractive] = useState(false);
+  const [interactiveFromChild, setInteractiveFromChild] = useState(false);
 
   const parentFieldName = useContext(FieldNameContext);
   const parentFieldDisabled = useContext(DisabledContext);
@@ -151,7 +159,7 @@ const FieldUI = (props) => {
       id: fieldId,
       setReadOnly: setReadOnlyFromChild,
       setDisabled: setDisabledByChild,
-      setInteractive,
+      setInteractive: setInteractiveFromChild,
     }),
     [fieldId],
   );
@@ -183,9 +191,10 @@ const FieldUI = (props) => {
   // (apart from action requested by child which cause ancestor action to execute)
   const disabledOrByChild = disabledResolved || disabledByChild;
   const readOnlyOrByChild = readOnlyResolved || readOnlyFromChild;
+  const interactiveOrByChild = interactive || interactiveFromChild;
   const fieldProps = {
     "data-navi-field": "",
-    "data-interactive": interactive ? "" : undefined,
+    "data-interactive": interactiveOrByChild ? "" : undefined,
     ...remainingProps,
     "children": childrenWithContext,
     "pseudoClasses": FieldPseudoClasses,
