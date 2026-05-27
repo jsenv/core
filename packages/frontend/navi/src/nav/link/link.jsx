@@ -472,8 +472,9 @@ const LinkPlain = (props) => {
     overflowEllipsis,
 
     children,
+    constraints,
 
-    ...rest
+    ...remainingProps
   } = props;
   const defaultRef = useRef();
   const ref = props.ref || defaultRef;
@@ -486,7 +487,7 @@ const LinkPlain = (props) => {
   });
 
   useAutoFocus(ref, autoFocus);
-  const remainingProps = useConstraints(ref, rest);
+  useConstraints(ref, constraints);
   const shouldDimColor = readOnly || disabled;
   useDimColorWhen(ref, shouldDimColor);
   // subscribe to document url to re-render and re-compute getHrefTargetInfo
