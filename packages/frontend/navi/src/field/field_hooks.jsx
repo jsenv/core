@@ -569,7 +569,6 @@ const useActionProps = (
         e.detail.actionOrigin = "action_prop";
         e.detail.action = action;
       }
-
       onRequestAction(e, { debugAction });
     },
     "onnavi_action_prevented": onActionPrevented,
