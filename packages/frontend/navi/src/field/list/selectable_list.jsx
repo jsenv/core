@@ -318,7 +318,7 @@ export const Selectable = (props) => {
       id: inputId,
       ref: inputRef,
       type: inputType,
-      selected: checked,
+      checked,
       readOnly,
       value,
     };
@@ -390,33 +390,24 @@ const SelectableRealInput = (props) => {
   );
 };
 const SelectableInputProxy = (props) => {
-  const selectableRealInput = useContext(SelectableRealInputContext);
-  if (!selectableRealInput) {
+  const selectableRealInputProps = useContext(SelectableRealInputContext);
+  if (!selectableRealInputProps) {
     throw new Error(
       "Selectable.Input must be used within a Selectable component",
     );
   }
-  const {
-    id: realInputId,
-    type: realInputType,
-    selected: realInputSelected,
-    readOnly: realInputReadOnly,
-    value: realInputValue,
-  } = selectableRealInput;
 
   // Reset FieldToInterfaceContext to ensure we don't read id or report our
   // states (real input should take id and report)
   return (
     <FieldToInterfaceContext.Provider value={undefined}>
       <Input
-        navi-proxy-for={realInputId}
+        {...selectableRealInputProps}
+        id={undefined}
+        navi-proxy-for={selectableRealInputProps.id}
         aria-hidden="true"
         tabIndex={-1}
-        type={realInputType}
         name="navi_input_proxy" // give it a specific name to avoid radio name (would unselect others)
-        value={realInputValue}
-        checked={realInputSelected}
-        readOnly={realInputReadOnly}
         {...props}
       />
     </FieldToInterfaceContext.Provider>
