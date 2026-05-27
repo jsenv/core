@@ -336,7 +336,6 @@ export const Selectable = (props) => {
       basePseudoState={{
         ":-navi-selected": checked,
         ":-navi-pointed": pointed,
-        ...props.basePseudoState,
         ...basePseudoState,
       }}
       aria-selected={checked}

@@ -447,10 +447,10 @@ const useActionProps = (
       "disabled": disabledResolved,
       "aria-busy": loadingResolved,
       "basePseudoState": {
-        ...fieldProps.basePseudoState,
         ":disabled": disabledResolved,
         ":read-only": readOnlyResolved,
         ":-navi-loading": loadingResolved,
+        ...props.basePseudoState,
       },
     });
     if (readOnlySupported) {
