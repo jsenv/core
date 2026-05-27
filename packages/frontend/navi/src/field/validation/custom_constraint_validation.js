@@ -89,13 +89,18 @@ import {
 
 export const NAVI_VALIDITY_CHANGE_CUSTOM_EVENT = "navi_validity_change";
 
-export const dispatchRequestInteraction = (element, event) => {
+export const dispatchRequestInteraction = (
+  element,
+  event,
+  interactionName = "interaction",
+) => {
   const fieldElement = findFieldElement(element);
   const allowed = dispatchInternalCustomEvent(
     fieldElement,
     "navi_request_interaction",
     {
       event,
+      interactionName,
     },
   );
   return allowed;
@@ -104,7 +109,7 @@ export const onRequestInteraction = (
   requestInteractionCustomEvent,
   { debugInteraction },
 ) => {
-  const { event } = requestInteractionCustomEvent.detail;
+  const { event, interactionName } = requestInteractionCustomEvent.detail;
   const requestStatus = { canProceed: true, preventReason: undefined };
 
   if (requestStatus.canProceed) {
@@ -137,11 +142,12 @@ export const onRequestInteraction = (
   if (!requestStatus.canProceed) {
     debugInteraction(
       event,
-      `interaction prevented (${requestStatus.preventReason})`,
+      `"${interactionName}" prevented (${requestStatus.preventReason})`,
     );
     requestInteractionCustomEvent.preventDefault();
     return false;
   }
+  debugInteraction(event, `"${interactionName}" allowed`);
   return true;
 };
 
