@@ -283,7 +283,7 @@
               .
             </p>
             <Box flex="y" spacing="s" alignX="start" alignY="center">
-              <Field border="1px dotted grey">
+              <Field flex spacing="xs" alignY="center" border="1px dotted grey">
                 <Input
                   type="checkbox"
                   name="enabled"
@@ -745,30 +745,31 @@
               </p>
 
               <Box flex spacing="s">
-                <Box as="fieldset" width="100">
+                <Box as="fieldset" width="250">
                   <legend>Default</legend>
                   <Box flex="y" spacing="s" alignX="start">
                     <Field border="1px dotted grey">
-                      <Input type="checkbox" />
+                      <Input type="checkbox" margin="3px 3px 3px 4px" />
                       Navi
                     </Field>
-                    <label>
+                    <label style="border: 1px dotted grey;">
                       <input type="checkbox" />
                       User Agent
                     </label>
                   </Box>
                 </Box>
-                <Box as="fieldset" width="200">
+                <Box as="fieldset" width="250">
                   <legend>:focus-visible</legend>
                   <Box flex="y" spacing="s" alignX="start">
                     <Field border="1px dotted grey">
                       <Input
                         type="checkbox"
                         pseudoState={{ ":focus-visible": true }}
+                        margin="3px 3px 3px 4px"
                       />
                       Navi
                     </Field>
-                    <label>
+                    <label style="border: 1px dotted grey;">
                       <input type="checkbox" autofocus />
                       User agent
                     </label>
@@ -777,11 +778,15 @@
                 <Box as="fieldset" width="150">
                   <legend>:disabled</legend>
                   <Box flex="y" spacing="s" alignX="start">
-                    <Field>
-                      <Input type="checkbox" disabled />
+                    <Field border="1px dotted grey">
+                      <Input
+                        type="checkbox"
+                        disabled
+                        margin="3px 3px 3px 4px"
+                      />
                       <Label>Navi</Label>
                     </Field>
-                    <label>
+                    <label style="border: 1px dotted grey;">
                       <input type="checkbox" disabled />
                       User Agent
                     </label>
@@ -789,32 +794,37 @@
                 </Box>
               </Box>
               <Box flex spacing="s">
-                <Box as="fieldset" width="100">
+                <Box as="fieldset" width="250">
                   <legend>:checked</legend>
                   <Box flex="y" spacing="s" alignX="start">
-                    <Field>
-                      <Input type="checkbox" defaultChecked />
+                    <Field border="1px dotted grey">
+                      <Input
+                        type="checkbox"
+                        defaultChecked
+                        margin="3px 3px 3px 4px"
+                      />
                       <Label>Navi</Label>
                     </Field>
-                    <label>
+                    <label style="border: 1px dotted grey;">
                       <input type="checkbox" checked />
                       User Agent
                     </label>
                   </Box>
                 </Box>
 
-                <Box as="fieldset" width="200">
+                <Box as="fieldset" width="250">
                   <legend>:focus-visible:checked</legend>
                   <Box flex="y" spacing="s" alignX="start">
-                    <Field>
+                    <Field border="1px dotted grey">
                       <Input
                         type="checkbox"
                         defaultChecked
                         pseudoState={{ ":focus-visible": true }}
+                        margin="3px 3px 3px 4px"
                       />
                       <Label>Navi</Label>
                     </Field>
-                    <label>
+                    <label style="border: 1px dotted grey;">
                       <input type="checkbox" autofocus defaultChecked />
                       User Agent
                     </label>
@@ -824,11 +834,16 @@
                 <Box as="fieldset" width="150">
                   <legend>:disabled:checked</legend>
                   <Box flex="y" spacing="s" alignX="start">
-                    <Field>
-                      <Input type="checkbox" disabled defaultChecked />
+                    <Field border="1px dotted grey">
+                      <Input
+                        type="checkbox"
+                        disabled
+                        defaultChecked
+                        margin="3px 3px 3px 4px"
+                      />
                       <Label>Navi</Label>
                     </Field>
-                    <label>
+                    <label style="border: 1px dotted grey;">
                       <input type="checkbox" disabled checked />
                       User agent
                     </label>
