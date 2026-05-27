@@ -1003,10 +1003,10 @@ HTMLFormElement.prototype.requestSubmit = function (submitter) {
 // };
 
 // When the requester is not a validated element itself (e.g. a <li> inside a
-// list container), look for a field element declared via data-field on the
+// list container), look for a field element declared via navi-field on the
 // closest [data-action] ancestor.
 const findFieldElement = (element) => {
-  const fieldSelector = element.getAttribute("data-field");
+  const fieldSelector = element.getAttribute("navi-field");
   if (fieldSelector) {
     const field = element.querySelector(fieldSelector);
     if (field) {

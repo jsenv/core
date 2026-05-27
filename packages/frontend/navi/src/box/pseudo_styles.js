@@ -412,7 +412,7 @@ definePseudoClass(":-navi-has-value", {
   attribute: "data-has-value",
   setup: (el, callback) => {
     let inputEl = el;
-    const fieldCssSelector = el.hasAttribute("data-field");
+    const fieldCssSelector = el.hasAttribute("navi-field");
     if (fieldCssSelector) {
       const field = el.querySelector(fieldCssSelector);
       if (field) {

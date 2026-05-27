@@ -24,7 +24,11 @@ const getPropsToShowPicker = (props) => {
     onClick: (e) => {
       props.onClick?.(e);
       const pickerInput = getPickerInputFromButtonEvent(e);
-      const allowed = dispatchRequestInteraction(pickerInput, e);
+      const allowed = dispatchRequestInteraction(
+        pickerInput,
+        e,
+        "click_to_show_picker",
+      );
       if (allowed) {
         try {
           pickerInput.showPicker();

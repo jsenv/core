@@ -143,7 +143,11 @@ export const useFieldInterfaceProps = (
       props.onMouseDown?.(e);
       if (primaryInteractionMode === "pointer") {
         const field = ref.current;
-        const allowed = dispatchRequestInteraction(field, e);
+        const allowed = dispatchRequestInteraction(
+          field,
+          e,
+          "mousedown to interact with input",
+        );
         if (hasPointerDownInteraction && !allowed) {
           e.preventDefault();
         }
@@ -157,7 +161,11 @@ export const useFieldInterfaceProps = (
           // click on range input does nothing if interaction is not allowed, so we can just ignore it here
           return;
         }
-        const allowed = dispatchRequestInteraction(field, e);
+        const allowed = dispatchRequestInteraction(
+          field,
+          e,
+          "click to interact with input",
+        );
         if (!allowed) {
           // Here we want to prevent:
           // - toggle of radio/checkbox on click
@@ -173,7 +181,11 @@ export const useFieldInterfaceProps = (
         return;
       }
       const input = e.currentTarget;
-      const allowed = dispatchRequestInteraction(input, e);
+      const allowed = dispatchRequestInteraction(
+        input,
+        e,
+        "keydown to interact with field",
+      );
       if (!allowed) {
         // Here we want to prevent
         // - space to toggle radio/checkbox
@@ -186,7 +198,10 @@ export const useFieldInterfaceProps = (
     };
     const onPaste = (e) => {
       props.onPaste?.(e);
-      dispatchRequestInteraction(ref.current, e);
+      const allowed = dispatchRequestInteraction(ref.current, e);
+      if (!allowed) {
+        e.preventDefault();
+      }
     };
     const { actionAfterChange, actionDebounce } = props;
     const lastEventRequestingActionRef = useRef();
