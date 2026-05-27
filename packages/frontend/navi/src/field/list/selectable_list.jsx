@@ -401,13 +401,15 @@ const SelectableInputProxy = (props) => {
   return (
     <FieldToInterfaceContext.Provider value={undefined}>
       <Input
+        {...props}
         {...selectableRealInputProps}
         id={undefined}
         navi-proxy-for={selectableRealInputProps.id}
+        // give it a specific name to avoid radio name (would unselect others)
+        // (making it unique to the list would be enough, but here it's even more unique)
+        name={`${selectableRealInputProps.id}_proxy`}
         aria-hidden="true"
         tabIndex={-1}
-        name="navi_input_proxy" // give it a specific name to avoid radio name (would unselect others)
-        {...props}
       />
     </FieldToInterfaceContext.Provider>
   );
