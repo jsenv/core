@@ -242,7 +242,10 @@ const PickerContentInsidePopover = (props) => {
     const pickerEl = ref.current;
     const mousedownEvent = findEvent(e, "mousedown");
     if (mousedownEvent) {
-      debugFocus(e, `preventDefault and move focus to picker`);
+      debugFocus(
+        e,
+        `move focus to picker (mousedown.preventDefault() + pickerEl.focus()`,
+      );
       mousedownEvent.preventDefault();
       pickerEl.focus({ preventScroll: true });
       return;
@@ -279,7 +282,10 @@ const PickerContentInsidePopover = (props) => {
             requestClose(e);
           } else {
             e.preventDefault(); // prevent browser trying to give focus to the select (popover will take focus)
-            debugFocus(e, `preventDefault()`);
+            debugFocus(
+              e,
+              `prevent browser giving focus to button (mousedown.preventDefault())`,
+            );
             requestOpen(e);
           }
         }
