@@ -28,16 +28,18 @@ const css = /* css */ `
   }
 `;
 
-export const Color = ({ children, ...rest }) => {
+export const Color = ({ inherit, children, ...rest }) => {
   import.meta.css = css;
+
+  const color = children || inherit ? "currentColor" : undefined;
 
   return (
     <Box
       as="span"
       className="navi_color"
-      navi-color-empty={children ? undefined : ""}
+      navi-color-empty={color ? undefined : ""}
       // propsCSSVars={COLOR_PROP_CSS_VAR}
-      color={children || "currentColor"}
+      color={color}
       {...rest}
     />
   );
