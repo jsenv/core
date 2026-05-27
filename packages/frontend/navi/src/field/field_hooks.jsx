@@ -556,6 +556,10 @@ const useActionProps = (
         // uiState is included explicitly so the target's onnavi_request_action
         // can detect it via Object.hasOwn and skip re-computing from its own
         // navi_request_ui_state (which would return undefined for an already-set radio).
+        debugAction(
+          e,
+          `forwarding action with optimistic uiState ${JSON.stringify(uiState)} to proxy target`,
+        );
         dispatchRequestSetUIState(naviProxyTarget, uiState, { event: e });
         return;
       }
@@ -612,6 +616,11 @@ const useActionProps = (
     const statePropValueRaw = uiStateController.getPropFromState(uiState);
     actionProps[statePropName] = statePropValueRaw;
     delete remainingProps[statePropName];
+
+    if (statePropName === "checked") {
+      actionProps.value = remainingProps.value;
+      delete remainingProps.value;
+    }
     if (defaultStatePropName) {
       delete actionProps[defaultStatePropName];
       delete remainingProps[defaultStatePropName];

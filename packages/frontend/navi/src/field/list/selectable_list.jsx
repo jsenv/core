@@ -351,7 +351,6 @@ export const Selectable = (props) => {
         {...remainingProps}
         basePseudoState={basePseudoState}
         selectableArea={undefined}
-        value={undefined} // checkable don't consume value prop
       >
         <SelectableRealInput
           {...checkableProps}
@@ -402,8 +401,8 @@ const SelectableInputProxy = (props) => {
     id: realInputId,
     type: realInputType,
     selected: realInputSelected,
-    readOnly: inputReadOnly,
-    value: inputValue,
+    readOnly: realInputReadOnly,
+    value: realInputValue,
   } = selectableRealInput;
 
   // Reset FieldToInterfaceContext to ensure we don't read id or report our
@@ -416,9 +415,9 @@ const SelectableInputProxy = (props) => {
         tabIndex={-1}
         type={realInputType}
         name="navi_input_proxy" // give it a specific name to avoid radio name (would unselect others)
-        value={inputValue}
+        value={realInputValue}
         checked={realInputSelected}
-        readOnly={inputReadOnly}
+        readOnly={realInputReadOnly}
         {...props}
       />
     </FieldToInterfaceContext.Provider>
