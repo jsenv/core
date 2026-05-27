@@ -86,6 +86,7 @@ const css = /* css */ `
 
         /* The list scrolls inside the popover */
         .navi_list_container {
+          border-radius: inherit;
           overflow: auto;
           overscroll-behavior: none;
         }
