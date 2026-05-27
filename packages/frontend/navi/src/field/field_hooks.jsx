@@ -100,6 +100,7 @@ export const useFieldInterfaceProps = (
     paramsSignal,
     externalBoundAction,
     readOnlySupported,
+    actionInteraction = "input",
   },
 ) => {
   const debugInteraction = useDebugInteraction();
@@ -203,7 +204,10 @@ export const useFieldInterfaceProps = (
         e.preventDefault();
       }
     };
-    const { actionAfterChange, actionDebounce } = props;
+    const {
+      actionAfterChange = actionInteraction === "change",
+      actionDebounce,
+    } = props;
     const lastEventRequestingActionRef = useRef();
     const lastActionValueRef = useRef();
     const onInput = (e) => {
@@ -232,6 +236,9 @@ export const useFieldInterfaceProps = (
     };
     const refCallback = useCallback(
       (input) => {
+        if (actionInteraction === "manual") {
+          return undefined;
+        }
         return addInputEffect(
           input,
           (e) => {
@@ -246,7 +253,7 @@ export const useFieldInterfaceProps = (
           },
         );
       },
-      [actionAfterChange, actionDebounce],
+      [actionInteraction, actionAfterChange, actionDebounce],
     );
     const refComposed = useComposeElementRef(refCallback, ref);
     Object.assign(fieldProps, {

@@ -17,6 +17,10 @@ export const PickerNative = (props) => {
   return (
     <Next
       {...props}
+      // Only wait for the native "change" event (dialog close) when the picker has its own
+      // action. Without an action, the change event would trigger a noop action cycle and
+      // cause spurious state updates (e.g. when closing the color dialog on form submit).
+      actionInteraction={props.action ? "change" : undefined}
       onClick={(e) => {
         props.onClick?.(e);
         const pickerInput = getPickerInputFromButtonEvent(e);
