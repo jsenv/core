@@ -12,7 +12,11 @@
  *    a debounced action. The request-action event chain handles the timing centrally
  *    rather than each component having to manage its own debounce logic.
  */
-import { dispatchInternalCustomEvent, findEvent } from "@jsenv/dom";
+import {
+  dispatchInternalCustomEvent,
+  findEvent,
+  getElementSignature,
+} from "@jsenv/dom";
 import {
   useCallback,
   useContext,
@@ -566,7 +570,7 @@ const useActionProps = (
         // navi_request_ui_state (which would return undefined for an already-set radio).
         debugAction(
           e,
-          `forwarding action with optimistic uiState ${JSON.stringify(uiState)} to proxy target`,
+          `${getElementSignature(naviProxyTarget)}.dispatchEvent("navi_set_ui_state", ${JSON.stringify(uiState)})`,
         );
         dispatchRequestSetUIState(naviProxyTarget, uiState, { event: e });
         return;

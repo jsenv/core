@@ -341,7 +341,6 @@ export const Selectable = (props) => {
       aria-selected={checked}
     >
       <Field
-        id={inputId}
         as={selectableArea === "manual" ? "div" : undefined}
         padding="m"
         flex
