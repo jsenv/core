@@ -234,9 +234,56 @@
             </div>
           </div>
 
-          {/* 4. Padding and spacing */}
+          {/* 4. Multiline behavior */}
           <div class="demo-section">
-            <h2>4. Padding and spacing</h2>
+            <h2>4. Multiline behavior</h2>
+            <p>
+              Width hugs the longest line when text wraps. Icons stay
+              top-aligned across all lines.
+            </p>
+            <div class="column">
+              <div>
+                <div class="label">Wrapping text — icon stays top-aligned</div>
+                <TextBox
+                  padding="s"
+                  spacing="s"
+                  iconBefore={<CheckSvg />}
+                  iconAfter={<EditSvg />}
+                  style="max-width: 200px"
+                >
+                  First line of content that wraps naturally to multiple lines
+                  inside a constrained width box
+                </TextBox>
+              </div>
+              <div>
+                <div class="label">
+                  Width hugs longest line (no trailing space)
+                </div>
+                <TextBox padding="s" spacing="s" iconAfter={<EditSvg />}>
+                  Short{"\n"}A much longer second line{"\n"}
+                  Mid
+                </TextBox>
+              </div>
+              <div>
+                <div class="label">
+                  singleLine — forces one line, no wrapping
+                </div>
+                <TextBox
+                  padding="s"
+                  spacing="s"
+                  iconAfter={<EditSvg />}
+                  singleLine
+                  style="max-width: 200px"
+                >
+                  First line of content that wraps naturally to multiple lines
+                </TextBox>
+              </div>
+            </div>
+          </div>
+
+          {/* 5. Padding and spacing */}
+          <div class="demo-section">
+            <h2>5. Padding and spacing</h2>
             <p>
               <code>padding</code> applies around the whole box (text + icons).{" "}
               <code>spacing</code> controls the gap between icons and text.

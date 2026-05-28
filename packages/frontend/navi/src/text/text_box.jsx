@@ -11,8 +11,6 @@ const css = /* css */ `
   }
 
   .navi_text_box_content {
-    min-width: 0;
-    flex: 1;
     white-space: normal;
     word-break: break-word;
     overflow-wrap: anywhere;
@@ -91,32 +89,15 @@ export const TextBox = ({
 const adjustWidth = (boxEl, contentEl) => {
   // Reset any previously forced width so we measure the natural size
   boxEl.style.width = "";
+  contentEl.style.width = "";
   contentEl.removeAttribute("data-overflow-ellipsis");
-  contentEl.style.whiteSpace = "";
 
   const optimalWidth = measureOptimalContentWidth(contentEl);
   if (optimalWidth === null) {
-    // Single line — check if it overflows
-    const boxStyle = getComputedStyle(boxEl);
-    const maxHeightValue = parseFloat(boxStyle.maxHeight);
-    const lineHeight = parseFloat(getComputedStyle(contentEl).lineHeight);
-    const contentOverflows =
-      !isNaN(maxHeightValue) &&
-      !isNaN(lineHeight) &&
-      lineHeight > maxHeightValue;
-    if (contentOverflows) {
-      contentEl.setAttribute("data-overflow-ellipsis", "");
-    }
     return;
   }
 
-  // We need to translate "content width" to "box width".
-  // The box uses inline-flex; its width = sum of children widths + gap.
-  // Easiest: measure current box width and current content width, then substitute.
-  const boxRect = boxEl.getBoundingClientRect();
-  const contentRect = contentEl.getBoundingClientRect();
-  const nonContentWidth = boxRect.width - contentRect.width;
-  boxEl.style.width = `${Math.ceil(nonContentWidth + optimalWidth)}px`;
+  contentEl.style.width = `${Math.ceil(optimalWidth)}px`;
 };
 
 // Returns the width of the longest rendered text line inside el,
