@@ -189,17 +189,8 @@
           },
           { multiple: false },
         );
-        const { checked, basePseudoState } = checkableProps;
         return (
-          <ListItem
-            id={id}
-            index={index}
-            basePseudoState={{
-              ":-navi-selected": checked,
-              ...basePseudoState,
-            }}
-            aria-selected={checked}
-          >
+          <ListItem id={id} index={index}>
             <Box
               as="input"
               ref={inputRef}
