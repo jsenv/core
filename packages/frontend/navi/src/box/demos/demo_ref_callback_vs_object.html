@@ -129,9 +129,12 @@
       import { useId, useRef } from "preact/hooks";
       import { Picker } from "@jsenv/navi";
       import { Box } from "@jsenv/navi/src/box/box.jsx";
-      import { useControlgroupProps } from "@jsenv/navi/src/control/control_hooks.jsx";
-      import { useCheckableProps } from "@jsenv/navi/src/control/input/use_checkable_props.js";
+      import {
+        useControlProps,
+        useControlgroupProps,
+      } from "@jsenv/navi/src/control/control_hooks.jsx";
       import { dispatchRequestAction } from "@jsenv/navi/src/control/validation/custom_constraint_validation.js";
+      // import { dispatchRequestSetUIState } from "@jsenv/navi/src/control/ui_state_controller.js";
       import { List, ListItem } from "@jsenv/navi/src/control/list/list.jsx";
       import { windowWidthSignal } from "@jsenv/navi/src/layout/responsive.js";
 
@@ -173,7 +176,7 @@
       const MockSelectable = (props) => {
         const { id, value, children, index, ...rest } = props;
         const inputRef = useRef();
-        const [checkableProps] = useCheckableProps(
+        const [controlProps] = useControlProps(
           {
             ...rest,
             ref: inputRef,
@@ -187,14 +190,23 @@
               dispatchRequestAction(listContainerEl, { event });
             },
           },
-          { multiple: false },
+          {
+            primaryInteractionMode: "pointer",
+            controlType: "radio",
+            statePropName: "checked",
+            defaultStatePropName: "defaultChecked",
+            getUIValue: () => (inputRef.current?.checked ? value : undefined),
+            fallbackState: false,
+            getStateFromProp: (checked) => (checked ? value : undefined),
+            getPropFromState: Boolean,
+          },
         );
         return (
           <ListItem id={id} index={index}>
             <Box
               as="input"
               ref={inputRef}
-              {...checkableProps}
+              {...controlProps}
               navi-selectable-real-input=""
               children={undefined}
             />
