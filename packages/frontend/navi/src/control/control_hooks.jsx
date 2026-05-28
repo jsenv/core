@@ -692,7 +692,7 @@ const useInteractiveProps = (
         }
         const { uiState } = e.detail;
         dispatchRequestSetUIState(e.currentTarget, uiState, {
-          event: e.detail.event,
+          event: e,
         });
         debugAction(e, `executing action ${e.detail.action.callSource}`);
         executeAction(e);
