@@ -126,10 +126,92 @@
 
       import { useSignal } from "@preact/signals";
       import { render } from "preact";
-      import { Picker, SelectableList, Selectable } from "@jsenv/navi";
+      import { useId, useRef } from "preact/hooks";
+      import { Picker } from "@jsenv/navi";
+      import { useControlgroupProps } from "@jsenv/navi/src/control/control_hooks.jsx";
+      import { useCheckableProps } from "@jsenv/navi/src/control/input/use_checkable_props.js";
+      import { dispatchRequestAction } from "@jsenv/navi/src/control/validation/custom_constraint_validation.js";
+      import { List, ListItem } from "@jsenv/navi/src/control/list/list.jsx";
       import { windowWidthSignal } from "@jsenv/navi/src/layout/responsive.js";
 
       const OPTIONS = ["Apple", "Banana", "Cherry"];
+
+      // Minimal SelectableList: calls useControlgroupProps (the real one) and
+      // renders a real <List> (which creates the .navi_list_container used by
+      // useListScrollSync). Skips useFocusGroup and selectedIndicator.
+      const MockSelectableList = (props) => {
+        const defaultRef = useRef();
+        props.ref = props.ref || defaultRef;
+        const defaultName = useId();
+        props.name = props.name || `mock_list_${defaultName}`;
+        const [listControlProps, remainingProps] = useControlgroupProps(props, {
+          controlType: "radio_group",
+          childComponentType: "radio",
+          aggregateChildStates: (childUIStateControllers) => {
+            for (const c of childUIStateControllers) {
+              if (c.uiState) {
+                return c.uiState;
+              }
+            }
+            return undefined;
+          },
+        });
+        return (
+          <List
+            as="fieldset"
+            {...listControlProps}
+            {...remainingProps}
+            name={undefined}
+          />
+        );
+      };
+
+      // Minimal Selectable: calls useCheckableProps (the real one), renders a real
+      // <ListItem> with a visually-hidden radio input. On action, dispatches
+      // navi_request_action on the nearest .navi_list_container — same as the real Selectable.
+      const MockSelectable = (props) => {
+        const { id, value, children, index, ...rest } = props;
+        const inputRef = useRef();
+        const [checkableProps] = useCheckableProps(
+          {
+            ...rest,
+            ref: inputRef,
+            id: `${id}_input`,
+            type: "radio",
+            value,
+            action: (v, { event }) => {
+              const listContainerEl = event.currentTarget.closest(
+                ".navi_list_container",
+              );
+              dispatchRequestAction(listContainerEl, { event });
+            },
+          },
+          { multiple: false },
+        );
+        return (
+          <ListItem id={id} index={index}>
+            <input
+              ref={inputRef}
+              {...checkableProps}
+              navi-selectable-real-input=""
+              style={{
+                position: "absolute",
+                opacity: 0,
+                pointerEvents: "none",
+              }}
+            />
+            <span
+              style={{
+                padding: "6px 12px",
+                display: "block",
+                cursor: "pointer",
+              }}
+            >
+              {children}
+            </span>
+          </ListItem>
+        );
+      };
 
       const App = () => {
         const selectedSignal = useSignal();
@@ -157,18 +239,18 @@
                 selectedSignal.value = v;
               }}
             >
-              <SelectableList action="update">
+              <MockSelectableList action="update">
                 {OPTIONS.map((opt, i) => (
-                  <Selectable
+                  <MockSelectable
                     key={opt}
                     id={`${opt}_item`}
                     index={i}
                     value={opt}
                   >
                     {opt}
-                  </Selectable>
+                  </MockSelectable>
                 ))}
-              </SelectableList>
+              </MockSelectableList>
             </Picker>
           </div>
         );
