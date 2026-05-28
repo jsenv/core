@@ -2,11 +2,11 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>Ref callback vs object ref repro</title>
+    <title>Ref callback vs object ref</title>
     <style>
       body {
-        max-width: 720px;
-        padding: 16px;
+        max-width: 680px;
+        padding: 20px;
         font-family: monospace;
       }
       h2 {
@@ -15,22 +15,22 @@
       .modes {
         display: flex;
         margin-bottom: 16px;
-        padding: 12px;
+        padding: 12px 16px;
         flex-direction: column;
-        gap: 6px;
+        gap: 10px;
         background: #f9f9f9;
         border: 1px solid #ccc;
         border-radius: 6px;
       }
       .modes label {
-        display: flex;
-        align-items: flex-start;
+        display: grid;
+        grid-template-columns: auto 1fr;
+        align-items: start;
         gap: 8px;
         cursor: pointer;
       }
-      .modes label input {
-        margin-top: 2px;
-        flex-shrink: 0;
+      .mode-title {
+        font-weight: bold;
       }
       .mode-desc {
         margin-top: 2px;
@@ -41,42 +41,60 @@
         margin-bottom: 16px;
         padding: 8px 12px;
         font-size: 0.9em;
-        border: 1px solid;
+        border-left: 4px solid;
         border-radius: 4px;
       }
       .expectation.bug {
         color: #900;
         background: #fff0f0;
-        border-color: #f88;
+        border-color: #c00;
       }
       .expectation.ok {
-        color: #090;
+        color: #060;
         background: #f0fff0;
-        border-color: #8c8;
+        border-color: #090;
+      }
+      .controls {
+        display: flex;
+        margin-bottom: 16px;
+        gap: 8px;
       }
       button {
         padding: 8px 16px;
+        background: #fff;
+        border: 1px solid #aaa;
+        border-radius: 4px;
         cursor: pointer;
       }
+      button:disabled {
+        opacity: 0.4;
+        cursor: default;
+      }
       dialog {
-        min-width: 280px;
+        min-width: 240px;
         padding: 20px;
         border: 1px solid #aaa;
         border-radius: 8px;
       }
-      .log-entry {
-        padding: 4px 0;
-        border-bottom: 1px solid #eee;
-      }
-      .log-entry.ok {
-        color: green;
-      }
-      .log-entry.bug {
-        color: red;
-        font-weight: bold;
-      }
       #log {
         margin-top: 16px;
+        padding-top: 8px;
+        border-top: 1px solid #eee;
+      }
+      .log-entry {
+        padding: 3px 0;
+        font-size: 0.9em;
+        border-bottom: 1px solid #f0f0f0;
+      }
+      .log-entry.ok {
+        color: #090;
+      }
+      .log-entry.bug {
+        color: #c00;
+        font-weight: bold;
+      }
+      .log-entry.info {
+        color: #555;
       }
     </style>
   </head>
@@ -84,38 +102,21 @@
     <div id="app"></div>
     <script type="module" jsenv-type="module/jsx">
       /**
-       * Reproduces the bug where ref.current is null inside scrollToItem
-       * when a dialog containing a conditionally-rendered list is opened.
+       * Investigates ref timing: is externalRef.current set by the time
+       * useLayoutEffect runs, regardless of whether Box uses a stable
+       * callback ref or an object ref?
        *
-       * The timing issue:
+       * Background: in the picker bug, scrollToItem reads ref.current and
+       * gets undefined. We suspect Box's stable callback ref might not be
+       * forwarding to the external ref in time. This demo verifies that.
        *
-       *   Click handler (synchronous):
-       *     1. setIsOpen(true)          — Preact batches this, does NOT render yet
-       *     2. dialog.showModal()       — fires "toggle" event synchronously
-       *     3. toggle handler runs      — reads ref.current  ← null! (List not mounted)
+       * Preact guarantees: refs are applied (refQueue) BEFORE layout effects
+       * (commitQueue). So both approaches should have ref.current set
+       * when useLayoutEffect fires.
        *
-       *   After click handler returns:
-       *     4. Preact renders           — List mounts, ref.current = element  (too late)
-       *
-       * With a CALLBACK REF (Box's approach):
-       *   - On close: Box's callback is called with null → ref.current = null
-       *   - On next open (step 3): ref.current = null → crash
-       *
-       * With a plain OBJECT REF (direct ref={defaultRef} on the DOM element):
-       *   - On close: Preact clears the ref on unmount → ref.current = null
-       *   - On next open (step 3): ref.current = null → same crash!
-       *
-       * So BOTH approaches fail in the pure timing scenario.
-       * The real question is: when exactly does the component unmount relative
-       * to showModal() being called?
-       *
-       * If close and open happen in SEPARATE event handlers (close button first,
-       * then open button), Preact renders between them:
-       *   - Close click → Preact renders → List unmounts → ref cleared
-       *   - Open click → showModal() → toggle fires → ref.current = null → crash
-       *   - Preact renders → List mounts → ref.current = element (too late)
-       *
-       * This demo isolates that exact scenario.
+       * If both show DIV here, the bug is NOT a simple ref-timing issue —
+       * it must require a more specific sequence (signal re-render, specific
+       * dialog lifecycle, etc.) that is harder to isolate.
        */
 
       import { render } from "preact";
@@ -123,80 +124,72 @@
 
       // ---- Box variants ----
 
-      // Box with STABLE CALLBACK REF — does NOT set .current on the function.
-      // Box's current simplified approach in box.jsx.
-      const BoxCallbackRef = ({ ref: externalRef, children }) => {
+      // Box with STABLE CALLBACK REF (current box.jsx approach).
+      // Creates one stable function; reads externalRef via a ref-of-ref.
+      const BoxCallbackRef = ({ ref: externalRef, id, children }) => {
         const externalRefRef = useRef(externalRef);
         externalRefRef.current = externalRef;
 
         const refCallbackRef = useRef(null);
         if (!refCallbackRef.current) {
           refCallbackRef.current = (el) => {
-            const currentRef = externalRefRef.current;
-            if (currentRef) {
-              if (typeof currentRef === "function") {
-                currentRef(el);
+            const cur = externalRefRef.current;
+            if (cur) {
+              if (typeof cur === "function") {
+                cur(el);
               } else {
-                currentRef.current = el;
+                cur.current = el;
               }
             }
-            // NOTE: refCallbackRef.current.current is NOT set here
           };
         }
 
-        return <div ref={refCallbackRef.current}>{children}</div>;
+        return (
+          <div
+            ref={refCallbackRef.current}
+            data-box={id}
+            style={{ border: "1px dashed #aaa", padding: 4 }}
+          >
+            BoxCallbackRef#{id} {children}
+          </div>
+        );
       };
 
-      // Box with plain OBJECT REF — direct passthrough, no wrapping.
-      const BoxObjectRef = ({ ref: externalRef, children }) => {
+      // Box with OBJECT REF passthrough (the alternative approach).
+      const BoxObjectRef = ({ ref: externalRef, id, children }) => {
         const defaultRef = useRef(null);
         const finalRef = externalRef || defaultRef;
-        return <div ref={finalRef}>{children}</div>;
+        return (
+          <div
+            ref={finalRef}
+            data-box={id}
+            style={{ border: "1px dashed #aaa", padding: 4 }}
+          >
+            BoxObjectRef#{id} {children}
+          </div>
+        );
       };
 
       // ---- List component ----
-      // Conditionally rendered inside the dialog (key changes to force remount).
-      // On mount, sets up a "toggle" listener on the ancestor dialog via
-      // useLayoutEffect([]), mirroring what useDisplayedLayoutEffect does.
-      // The listener reads ref.current to simulate scrollToItem.
+      // Mounted only when the dialog is open.
+      // useLayoutEffect reads containerRef.current — if the callback ref
+      // forwarded correctly, it should be the div element.
       const List = ({ mode, instanceId }) => {
         const containerRef = useRef(null);
 
-        // Simulates useDisplayedLayoutEffect's toggle listener setup.
-        // Captures el = containerRef.current ONCE at mount.
         useLayoutEffect(() => {
           const el = containerRef.current;
-          const ancestor = el ? el.closest("dialog") : null;
-          if (!ancestor) {
-            return;
-          }
-          const onToggle = (e) => {
-            const isOpen = e.newState === "open";
-            if (!isOpen) {
-              return;
-            }
-            // This mirrors: callbackRef.current(el, e)
-            // where el was captured at mount time.
-            const liveEl = containerRef.current;
-            const capturedEl = el;
-            appendLog({
-              instanceId,
-              captured: capturedEl ? capturedEl.tagName : "null",
-              live: liveEl ? liveEl.tagName : "null",
-              ok: capturedEl !== null && capturedEl !== undefined,
-            });
-          };
-          ancestor.addEventListener("toggle", onToggle);
-          return () => {
-            ancestor.removeEventListener("toggle", onToggle);
-          };
+          appendLog({
+            kind: el ? "ok" : "bug",
+            text: `[${instanceId}] useLayoutEffect — containerRef.current = ${el ? `<${el.tagName.toLowerCase()}>` : "null"}`,
+          });
         }, []);
 
         const BoxComponent =
           mode === "callback" ? BoxCallbackRef : BoxObjectRef;
         return (
-          <BoxComponent ref={containerRef}>
-            <ul>
+          <BoxComponent ref={containerRef} id={instanceId}>
+            <ul style={{ margin: 0, paddingLeft: 16 }}>
               <li>item A</li>
               <li>item B</li>
             </ul>
@@ -207,24 +200,23 @@
       // ---- App ----
       let appendLog;
 
-      const EXPECTATIONS = {
+      const MODES = {
         callback: {
-          label: "Callback ref — no .current on fn (bug expected)",
+          title: "BoxCallbackRef — stable callback, forwards to externalRef",
           desc:
-            "Box wraps the ref in a stable callback. The callback forwards to " +
-            "containerRef.current = el but never sets callbackFn.current = el. " +
-            "When the List remounts between opens, the toggle listener still works " +
-            "because containerRef is a plain useRef object. " +
-            "Expected result: works — this mode may not repro the bug here.",
-          ok: true,
+            "Box wraps the ref in a stable function. The function writes to " +
+            "externalRef.current when called by Preact. Preact calls refs before " +
+            "layout effects (refQueue before commitQueue). " +
+            "Expected: containerRef.current = <div> on mount.",
+          expectOk: true,
         },
         object: {
-          label: "Object ref — direct passthrough (works)",
+          title: "BoxObjectRef — direct object ref passthrough",
           desc:
-            "Box passes the external ref directly to the DOM element. " +
+            "Box passes the external useRef directly to the DOM element. " +
             "Preact sets ref.current = element before layout effects run. " +
-            "Expected: captured el is always the container element.",
-          ok: true,
+            "Expected: containerRef.current = <div> on mount.",
+          expectOk: true,
         },
       };
 
@@ -233,17 +225,13 @@
         const [isOpen, setIsOpen] = useState(false);
         const [openCount, setOpenCount] = useState(0);
         const [logs, setLogs] = useState([]);
-        appendLog = (entry) =>
-          setLogs((l) => [{ ...entry, open: openCount + 1 }, ...l]);
+        appendLog = (entry) => setLogs((l) => [...l, entry]);
 
         const dialogRef = useRef(null);
 
         const openDialog = () => {
           setIsOpen(true);
           setOpenCount((c) => c + 1);
-          // showModal() fires "toggle" synchronously.
-          // At this point Preact has NOT yet processed the setIsOpen(true) update —
-          // the List is still unmounted (or from previous instance).
           dialogRef.current.showModal();
         };
 
@@ -252,68 +240,69 @@
           dialogRef.current.close();
         };
 
-        const exp = EXPECTATIONS[mode];
+        const switchMode = (newMode) => {
+          if (isOpen) {
+            closeDialog();
+          }
+          setLogs([]);
+          setOpenCount(0);
+          setMode(newMode);
+        };
+
+        const exp = MODES[mode];
 
         return (
           <div>
-            <h2>Ref callback vs object ref — timing repro</h2>
+            <h2>Ref callback vs object ref</h2>
             <p>
-              The list is <strong>conditionally rendered</strong> (
-              <code>{`{isOpen && <List />}`}</code>). On each open,{" "}
-              <code>showModal()</code> fires the <code>toggle</code> event{" "}
-              <strong>synchronously</strong>, before Preact processes the state
-              update. The listener (set up in <code>useLayoutEffect([])</code>{" "}
-              at mount) reads <code>containerRef.current</code> — which may be{" "}
-              null if the previous List instance was unmounted.
+              Is <code>containerRef.current</code> set by the time{" "}
+              <code>useLayoutEffect</code> runs? The list is conditionally
+              rendered (<code>{"{isOpen && <List />}"}</code>) so it remounts on
+              each open. Each open uses <code>key=openCount</code> to force a
+              fresh instance.
             </p>
 
             <div class="modes">
-              {Object.entries(EXPECTATIONS).map(([key, e]) => (
+              {Object.entries(MODES).map(([key, m]) => (
                 <label key={key}>
                   <input
                     type="radio"
                     name="mode"
                     checked={mode === key}
-                    onChange={() => {
-                      if (isOpen) {
-                        closeDialog();
-                      }
-                      setLogs([]);
-                      setMode(key);
-                      setOpenCount(0);
-                    }}
+                    onChange={() => switchMode(key)}
                   />
                   <div>
-                    <div>{e.label}</div>
-                    <div class="mode-desc">{e.desc}</div>
+                    <div class="mode-title">{m.title}</div>
+                    <div class="mode-desc">{m.desc}</div>
                   </div>
                 </label>
               ))}
             </div>
 
-            <div class={`expectation ${exp.ok ? "ok" : "bug"}`}>
-              Expected: {exp.ok ? "✓ works" : "✗ bug — captured el is null"}
+            <div class={`expectation ${exp.expectOk ? "ok" : "bug"}`}>
+              Expected:{" "}
+              {exp.expectOk
+                ? "✓ containerRef.current = <div> — ref is set before layout effect"
+                : "✗ containerRef.current = null — ref was not set in time"}
             </div>
 
-            <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+            <div class="controls">
               <button onClick={openDialog} disabled={isOpen}>
-                Open dialog
+                Open dialog #{openCount + 1}
               </button>
               <button onClick={closeDialog} disabled={!isOpen}>
                 Close dialog
               </button>
+              <button onClick={() => setLogs([])}>Clear log</button>
             </div>
 
             <dialog ref={dialogRef}>
-              <p>
-                Open #{openCount} — list is{" "}
-                {isOpen ? "mounted" : "not mounted yet"}
-              </p>
+              <strong>Dialog open #{openCount}</strong>
               {isOpen && (
                 <List
                   key={openCount}
                   mode={mode}
-                  instanceId={`#${openCount}`}
+                  instanceId={`open${openCount}`}
                 />
               )}
               <br />
@@ -321,18 +310,15 @@
             </dialog>
 
             <div id="log">
-              <strong>Toggle log</strong> (what the listener captured on each
-              open):
+              <strong>Log:</strong>
               {logs.length === 0 && (
-                <div class="log-entry" style={{ color: "#999" }}>
+                <div class="log-entry info">
                   — open the dialog to see results —
                 </div>
               )}
               {logs.map((entry, i) => (
-                <div key={i} class={`log-entry ${entry.ok ? "ok" : "bug"}`}>
-                  Open {entry.open} (List {entry.instanceId}): captured=
-                  {entry.captured}, live={entry.live}{" "}
-                  {entry.ok ? "✓" : "✗ captured is null!"}
+                <div key={i} class={`log-entry ${entry.kind}`}>
+                  {entry.text}
                 </div>
               ))}
             </div>
