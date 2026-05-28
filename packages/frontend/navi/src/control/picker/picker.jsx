@@ -322,22 +322,6 @@ const PickerInput = (props) => {
       className="navi_picker_input"
       pseudoClasses={PickerInputPseudoClasses}
       tabIndex={-1}
-      onnavi_get_managed_controls={(e) => {
-        // we must check for the pickerEl content to search for a valid input because we might be a button used to validate for instance
-        // no necessarily the field itself
-        const pickerInput = e.currentTarget;
-        let firstControl;
-        let sibling = pickerInput.nextElementSibling;
-        while (sibling) {
-          const candidate = findControlWithName(sibling);
-          if (candidate) {
-            firstControl = candidate;
-            break;
-          }
-          sibling = sibling.nextElementSibling;
-        }
-        e.detail.respondWith(firstControl);
-      }}
     />
   );
 };
@@ -360,25 +344,6 @@ const PickerInputPseudoClasses = [
   ":-navi-expanded",
 ];
 
-const findControlWithName = (el) => {
-  const tag = el.tagName.toLowerCase();
-  if (
-    (tag === "input" ||
-      tag === "textarea" ||
-      tag === "select" ||
-      tag === "button") &&
-    el.name
-  ) {
-    return el;
-  }
-  for (const child of el.children) {
-    const found = findControlWithName(child);
-    if (found) {
-      return found;
-    }
-  }
-  return null;
-};
 const PickerDefaultUI = () => {
   const { value, placeholder } = useContext(PickerContext);
   if (!value) {
