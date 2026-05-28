@@ -4,9 +4,7 @@ import { Box } from "../box/box.jsx";
 
 const css = /* css */ `
   .navi_text_box {
-    display: inline-flex;
     min-width: 0;
-    flex-direction: row;
     align-items: flex-start;
   }
 
@@ -101,23 +99,32 @@ const adjustWidth = (boxEl, contentEl) => {
 };
 
 // Returns the width of the longest rendered text line inside el,
-// or null when there is only one line (no optimisation needed).
+// or null when there is only one visual line (no optimisation needed).
 const measureOptimalContentWidth = (el) => {
   const range = document.createRange();
   range.selectNodeContents(el);
-  let lineCount = 0;
-  let longestLineWidth = 0;
+
+  // getClientRects() returns one rect per text node segment, not per visual
+  // line. Multiple text nodes can share the same Y position (same visual line).
+  // We group by rounded top position to get actual visual line widths.
+  const lineWidthByTop = new Map();
   for (const r of range.getClientRects()) {
     if (r.width === 0) {
       continue;
     }
-    lineCount++;
-    if (r.width > longestLineWidth) {
-      longestLineWidth = r.width;
-    }
+    const top = Math.round(r.top);
+    lineWidthByTop.set(top, (lineWidthByTop.get(top) || 0) + r.width);
   }
-  if (lineCount <= 1) {
+
+  if (lineWidthByTop.size <= 1) {
     return null;
+  }
+
+  let longestLineWidth = 0;
+  for (const w of lineWidthByTop.values()) {
+    if (w > longestLineWidth) {
+      longestLineWidth = w;
+    }
   }
   return longestLineWidth;
 };
