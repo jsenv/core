@@ -63,7 +63,7 @@ import {
 } from "@jsenv/dom";
 
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
-import { findControlElement } from "../control_context.js";
+import { findControlElement, getControlProxyTarget } from "../control_dom.js";
 import { openCallout } from "./callout/callout.js";
 import { getConstraintMessage } from "./constraint_message.js";
 import {
@@ -318,12 +318,9 @@ const checkAndReportConstraints = (
   };
 
   let elementToValidate = event.currentTarget;
-  const proxyFor = elementToValidate.getAttribute("navi-control-proxy-for");
-  if (proxyFor) {
-    const proxyTarget = document.getElementById(proxyFor);
-    if (proxyTarget) {
-      elementToValidate = proxyTarget;
-    }
+  const proxyTarget = getControlProxyTarget(elementToValidate);
+  if (proxyTarget) {
+    elementToValidate = proxyTarget;
   }
   if (!elementToValidate.__validationInterface__) {
     const controlElement = findControlElement(requester);

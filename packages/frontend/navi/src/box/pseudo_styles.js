@@ -4,7 +4,10 @@ import {
   mergeTwoStyles,
 } from "@jsenv/dom";
 
-import { findControlElement } from "../control/control_context.js";
+import {
+  findControlElement,
+  getControlProxyTarget,
+} from "../control/control_dom.js";
 import { addInputEffect } from "../control/input_effect.js";
 import { getUIStateFromElement } from "../control/ui_state_controller.js";
 
@@ -291,12 +294,9 @@ focus_classes: {
       if (el.matches(":focus")) {
         return true;
       }
-      const proxyFor = el.getAttribute("navi-control-proxy-for");
-      if (proxyFor) {
-        const proxyTarget = document.getElementById(proxyFor);
-        if (proxyTarget && proxyTarget.matches(":focus")) {
-          return true;
-        }
+      const proxyTarget = getControlProxyTarget(el);
+      if (proxyTarget && proxyTarget.matches(":focus")) {
+        return true;
       }
       if (isControlledByFocusedElement(el)) {
         return true;
@@ -326,12 +326,9 @@ focus_classes: {
       if (el.matches(":focus-visible")) {
         return true;
       }
-      const proxyFor = el.getAttribute("navi-control-proxy-for");
-      if (proxyFor) {
-        const proxyTarget = document.getElementById(proxyFor);
-        if (proxyTarget && proxyTarget.matches(":focus-visible")) {
-          return true;
-        }
+      const proxyTarget = getControlProxyTarget(el);
+      if (proxyTarget && proxyTarget.matches(":focus-visible")) {
+        return true;
       }
       if (isControlledByFocusedElement(el, { requireFocusVisible: true })) {
         return true;
@@ -553,7 +550,7 @@ export const initPseudoStyles = (
     elementListeningPseudoState = null;
   }
 
-  const proxyFor = element.getAttribute("navi-control-proxy-for");
+  const proxyTarget = getControlProxyTarget(element);
 
   const onStateChange = (value, oldValue) => {
     effect?.(value, oldValue);
@@ -611,16 +608,13 @@ export const initPseudoStyles = (
       // inherit the target's active pseudo-state when the element itself isn't in that state.
       // We check the target's elementToImpact (not the target itself) because the
       // data-* attribute may be set on a different element (e.g. pseudoStateSelector).
-      if (!currentValue && proxyFor) {
+      if (!currentValue && proxyTarget) {
         const { attribute } = pseudoClassDefinition;
         if (attribute) {
-          const proxyTarget = document.getElementById(proxyFor);
-          if (proxyTarget) {
-            const targetElementToImpact =
-              elementToImpactWeakMap.get(proxyTarget) || proxyTarget;
-            if (targetElementToImpact.hasAttribute(attribute)) {
-              currentValue = true;
-            }
+          const targetElementToImpact =
+            elementToImpactWeakMap.get(proxyTarget) || proxyTarget;
+          if (targetElementToImpact.hasAttribute(attribute)) {
+            currentValue = true;
           }
         }
       }

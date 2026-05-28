@@ -103,7 +103,7 @@ const css = /* css */ `
     outline-color: var(--outline-color);
     outline-offset: var(--outline-offset);
 
-    .navi_real_input_checkbox {
+    .navi_control_input {
       position: absolute;
       inset: 0;
       margin: 0;
@@ -373,8 +373,8 @@ const InputCheckboxFieldInterface = (props) => {
       accentColor={undefined}
       data-appearance={appearance}
       baseClassName="navi_checkbox"
-      navi-control-input=".navi_real_input_checkbox"
-      pseudoStateSelector=".navi_real_input_checkbox"
+      navi-control-input=".navi_control_input"
+      pseudoStateSelector=".navi_control_input"
       styleCSSVars={
         appearance === "switch"
           ? CheckboxSwitchStyleCSSVars
@@ -403,7 +403,7 @@ const RealInputCheckbox = (props) => {
       {...props}
       as="input"
       type="checkbox"
-      baseClassName="navi_real_input_checkbox"
+      baseClassName="navi_control_input"
       navi-control-owner=".navi_checkbox"
       data-callout-arrow-x="center"
     />

@@ -124,7 +124,7 @@ const css = /* css */ `
       pointer-events: none;
     }
 
-    .navi_real_input_radio {
+    .navi_control_input {
       position: absolute;
       inset: 0;
       margin: 0;
@@ -396,8 +396,8 @@ const InputRadioFieldInterface = (props) => {
       appearance={undefined}
       data-appearance={appearanceResolved}
       baseClassName="navi_radio"
-      navi-control-input=".navi_real_input_radio"
-      pseudoStateSelector=".navi_real_input_radio"
+      navi-control-input=".navi_control_input"
+      pseudoStateSelector=".navi_control_input"
       basePseudoState={basePseudoState}
       styleCSSVars={
         appearanceResolved === "button"
@@ -453,7 +453,7 @@ const RealInputRadio = (props) => {
     <Box
       {...props}
       as="input"
-      baseClassName="navi_real_input_radio"
+      baseClassName="navi_control_input"
       navi-control-owner=".navi_radio"
       data-callout-arrow-x="center"
     />

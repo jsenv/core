@@ -1,6 +1,6 @@
 import { dispatchCustomEvent } from "@jsenv/dom";
 
-import { findAncestorControlElement } from "./control_context.js";
+import { findAncestorControlElement } from "./control_dom.js";
 import { createUICallback } from "./ui_callback.js";
 import { dispatchRequestSetUIState } from "./ui_state_controller.js";
 import { dispatchRequestAction } from "./validation/custom_constraint_validation.js";

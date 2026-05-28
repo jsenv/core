@@ -16,7 +16,7 @@ import {
 
 import { useNavState } from "../nav/browser_integration/browser_integration.js";
 import { useInitialValue } from "../state/use_initial_value.js";
-import { findControlElement } from "./control_context.js";
+import { findControlElement, getControlProxyTarget } from "./control_dom.js";
 import { FormContext } from "./form_context.js";
 import { PickerElementContext } from "./picker/picker_context.jsx";
 
@@ -288,18 +288,15 @@ export const useUIStateController = (
       // Proxy: forward the state change to the real input
       // The real input will handle its own UIState update + synthetic input.
       if (el) {
-        const proxyFor = el.getAttribute("navi-control-proxy-for");
-        if (proxyFor) {
-          const naviProxyTarget = document.getElementById(proxyFor);
-          if (naviProxyTarget) {
-            debugInteraction(
-              e,
-              `forwarding set_ui_state "${prop}" to ${getElementSignature(naviProxyTarget)}`,
-            );
-            dispatchRequestSetUIState(naviProxyTarget, prop, {
-              event: e.detail?.event ?? e,
-            });
-          }
+        const naviProxyTarget = getControlProxyTarget(el);
+        if (naviProxyTarget) {
+          debugInteraction(
+            e,
+            `forwarding set_ui_state "${prop}" to ${getElementSignature(naviProxyTarget)}`,
+          );
+          dispatchRequestSetUIState(naviProxyTarget, prop, {
+            event: e.detail?.event ?? e,
+          });
         }
       }
       // Dispatch a synthetic "input" event so external listeners see the new

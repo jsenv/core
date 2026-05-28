@@ -53,6 +53,7 @@ import {
   ReadOnlyContext,
   RequiredContext,
 } from "./control_context.js";
+import { getControlProxyTarget } from "./control_dom.js";
 import { addInputEffect } from "./input_effect.js";
 import { resolveActionProp, STRING_ACTIONS } from "./string_actions.js";
 import {
@@ -573,7 +574,7 @@ const useInteractiveProps = (
     Object.assign(controlProps, {
       onnavi_request_interaction: (e) => {
         transfer_focus_to_target: {
-          const naviProxyTarget = getNaviProxyTarget(e);
+          const naviProxyTarget = getControlProxyTarget(e.currentTarget);
           if (!naviProxyTarget) {
             break transfer_focus_to_target;
           }
@@ -660,7 +661,7 @@ const useInteractiveProps = (
           });
           e.detail.uiState = uiState;
         }
-        const naviProxyTarget = getNaviProxyTarget(e);
+        const naviProxyTarget = getControlProxyTarget(e.currentTarget);
         if (naviProxyTarget) {
           // Apply the proxy's desired uiState optimistically before dispatching so
           // the target's UI updates immediately, then forward the action.
@@ -720,38 +721,4 @@ const useInteractiveProps = (
   }
 
   return [controlProps, remainingProps];
-};
-
-export const getNaviProxyTarget = (event) => {
-  const currentTarget = event.currentTarget;
-  const proxyFor = currentTarget.getAttribute("navi-control-proxy-for");
-  if (!proxyFor) {
-    return null;
-  }
-  const realControl = document.getElementById(proxyFor);
-  return realControl;
-};
-
-export const findControlElement = (el) => {
-  const naviControlInputAttribute = el.getAttribute("navi-control-input");
-  if (!naviControlInputAttribute) {
-    return null;
-  }
-  const fieldEl = el.querySelector(naviControlInputAttribute);
-  return fieldEl;
-};
-
-export const findAncestorControlElement = (el) => {
-  let ancestor;
-  const renderedBy = el.getAttribute("navi-control-owner");
-  if (renderedBy) {
-    // event usually occur on inputs that are sometimes wrapped by a custom ui element
-    // these custom ui element have a [navi-control-input] attribute on them
-    // we want to look for their ancestor otherwise input would consider their wrapper as a field instead of finding a parent field
-    ancestor = el.closest(renderedBy).parentNode;
-  } else {
-    ancestor = el.parentNode;
-  }
-  const closestField = ancestor.closest("[navi-control-input]");
-  return closestField;
 };

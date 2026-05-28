@@ -132,7 +132,7 @@ const css = /* css */ `
     border-radius: inherit;
     cursor: inherit;
 
-    .navi_real_input {
+    .navi_control_input {
       box-sizing: border-box;
       min-width: 50px;
       padding-top: var(--x-padding-top-base);
@@ -164,7 +164,7 @@ const css = /* css */ `
         var(--left-slot-size) + var(--x-padding-left-base) / 2
       );
 
-      .navi_real_input {
+      .navi_control_input {
         padding-left: var(--x-left-slot-size);
       }
     }
@@ -173,7 +173,7 @@ const css = /* css */ `
         var(--right-slot-size) + var(--x-padding-right-base) / 2
       );
 
-      .navi_real_input {
+      .navi_control_input {
         padding-right: var(--x-right-slot-size);
       }
     }
@@ -239,7 +239,7 @@ const css = /* css */ `
       --x-background-color: var(--background-color-focus);
       --x-border-color: transparent;
 
-      .navi_real_input {
+      .navi_control_input {
         outline-style: solid;
       }
     }
@@ -273,10 +273,10 @@ const css = /* css */ `
     }
   }
 
-  .navi_input .navi_real_input::placeholder {
+  .navi_input .navi_control_input::placeholder {
     color: var(--x-placeholder-color);
   }
-  .navi_input .navi_real_input:-internal-autofill-selected {
+  .navi_input .navi_control_input:-internal-autofill-selected {
     /* Webkit is putting some nasty styles after automplete that look as follow */
     /* input:-internal-autofill-selected { color: FieldText !important; } */
     /* Fortunately we can override it as follow */
@@ -395,9 +395,9 @@ const InputTextualControlInterface = (props) => {
       data-discrete={discrete ? "" : undefined}
       discrete={undefined} // handled via data attribute
       styleCSSVars={InputStyleCSSVars}
-      navi-control-input=".navi_real_input"
-      pseudoStateSelector=".navi_real_input"
-      visualSelector=".navi_real_input"
+      navi-control-input=".navi_control_input"
+      pseudoStateSelector=".navi_control_input"
+      visualSelector=".navi_control_input"
       pseudoClasses={InputPseudoClasses}
       pseudoElements={InputPseudoElements}
       hasChildUsingForwardedProps
@@ -419,7 +419,7 @@ const RealInput = (props) => {
       {...inputProps}
       {...props}
       as="input"
-      baseClassName="navi_real_input"
+      baseClassName="navi_control_input"
       navi-ui-state={props.value}
     />
   );

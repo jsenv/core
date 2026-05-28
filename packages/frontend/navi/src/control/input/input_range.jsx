@@ -115,7 +115,7 @@ const css = /* css */ `
     outline-color: var(--outline-color);
     outline-offset: 2px;
 
-    .navi_native_input {
+    .navi_control_input {
       margin: 0;
       opacity: 0;
       --webkit-appearance: none;
@@ -288,8 +288,8 @@ const InputRangeFieldInterface = (props) => {
       flex
       baseClassName="navi_input_range"
       styleCSSVars={RangeStyleCSSVars}
-      pseudoStateSelector=".navi_native_input"
-      visualSelector=".navi_native_input"
+      pseudoStateSelector=".navi_control_input"
+      visualSelector=".navi_control_input"
       pseudoClasses={RangePseudoClasses}
       pseudoElements={RangePseudoElements}
       data-callout-anchor=".navi_input_range_thumb"
@@ -326,7 +326,7 @@ const RangeNativeInput = (props) => {
       {...rangeBoxProps}
       as="input"
       type="range"
-      baseClassName="navi_native_input"
+      baseClassName="navi_control_input"
       navi-control-owner=".navi_input_range"
     />
   );
