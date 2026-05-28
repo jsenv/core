@@ -123,6 +123,16 @@
         const selectedSignal = useSignal([]);
         const selectedArray = selectedSignal.value;
 
+        const SelectedValues = () => {
+          return (
+            <Box separator=", ">
+              {selectedArray.map((selected) => {
+                return <span>{selected}</span>;
+              })}
+            </Box>
+          );
+        };
+
         return (
           <div class="demo-section">
             <h2>1. Text display — comma-separated</h2>
@@ -139,13 +149,9 @@
                 value={selectedArray}
                 ui={
                   selectedArray.length === 0 ? (
-                    "Select fruits..."
+                    "Select frhuhuihiuhacsiufdbhidufdbhsiughiuuits"
                   ) : (
-                    <>
-                      {selectedArray.map((selected) => {
-                        return <span>{selected}</span>;
-                      })}
-                    </>
+                    <SelectedValues />
                   )
                 }
                 action={(v) => {

@@ -267,7 +267,7 @@ export const PickerCustom = (props) => {
           `picker closed with same value as when it opened (${JSON.stringify(valueAtClose)}), no action dispatched`,
         );
       } else {
-        dispatchRequestAction(inputEl, { event: e });
+        dispatchRequestAction(inputEl, { event: e, uiState: valueAtClose });
       }
       moveFocusToPicker(e);
     };
