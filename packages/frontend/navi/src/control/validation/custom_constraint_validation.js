@@ -251,7 +251,7 @@ export const onRequestAction = (
   }
 
   const customEventDetail = {
-    event,
+    event: requestActionCustomEvent,
     requester,
     uiState,
     actionOrigin,

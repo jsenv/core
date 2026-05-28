@@ -87,13 +87,18 @@ export const useExecuteAction = (
   // errorEffectRef.current = errorEffect;
   const executeAction = useCallback(
     (actionEvent) => {
-      const { action, actionOrigin, requester, event, method } =
-        actionEvent.detail;
+      const {
+        action,
+        actionOrigin,
+        requester,
+        event: firstEvent,
+        method,
+      } = actionEvent.detail;
       const sharedActionEventDetail = {
         action,
         actionOrigin,
         requester,
-        event,
+        event: actionEvent,
         method,
       };
 
@@ -101,7 +106,7 @@ export const useExecuteAction = (
         console.debug(
           "executing action, requested by",
           requester,
-          `(event: ${event?.type})`,
+          `(event: ${firstEvent?.type})`,
         );
       }
 
@@ -122,8 +127,8 @@ export const useExecuteAction = (
       );
 
       return action[method]({
-        event,
-        reason: `"${event.type}" event on ${getElementSignature(event.target)}`,
+        event: actionEvent,
+        reason: `"${firstEvent.type}" event on ${getElementSignature(firstEvent.target)}`,
         onAbort: (reason) => {
           const element = elementRef.current;
           if (

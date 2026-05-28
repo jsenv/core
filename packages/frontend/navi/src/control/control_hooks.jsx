@@ -694,7 +694,7 @@ const useInteractiveProps = (
         dispatchRequestSetUIState(e.currentTarget, uiState, {
           event: e.detail.event,
         });
-        debugAction(e, `executing action`);
+        debugAction(e, `executing action ${e.detail.action.callSource}`);
         executeAction(e);
       },
       onnavi_action_start: (e) => {
@@ -716,6 +716,7 @@ const useInteractiveProps = (
       onnavi_action_end: (e) => {
         const { data } = e.detail;
         uiStateController.actionEnd(e);
+        debugAction(e, `action end with data: ${JSON.stringify(data)}`);
         onActionEnd?.(data, e);
         remainingProps.onnavi_action_end?.(e);
       },
