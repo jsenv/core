@@ -246,10 +246,10 @@ export const PickerCustom = (props) => {
       const isCancel = Boolean(cancelEvent);
       expandedRef.current = false;
       setExpanded(false);
-      moveFocusToPicker(e);
       const pickerEl = ref.current;
       const inputEl = getPickerInput(pickerEl);
       if (!inputEl) {
+        moveFocusToPicker(e);
         return;
       }
       const valueAtOpen = valueAtOpenRef.current;
@@ -257,6 +257,7 @@ export const PickerCustom = (props) => {
         dispatchRequestSetUIState(inputEl, valueAtOpen, {
           event: e,
         });
+        moveFocusToPicker(e);
         return;
       }
       const valueAtClose = getPickerInputUIState(pickerEl);
@@ -268,6 +269,7 @@ export const PickerCustom = (props) => {
       } else {
         dispatchRequestAction(inputEl, { event: e });
       }
+      moveFocusToPicker(e);
     };
     const disableClickFor = useIgnoreClickForMousedown();
     const requestOpen = (e) => {
