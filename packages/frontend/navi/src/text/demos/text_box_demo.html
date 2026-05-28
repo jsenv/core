@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>TextBox Demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:," />
+    <style>
+      body {
+        margin: 40px;
+        font-family: system-ui, sans-serif;
+        background: #f5f5f5;
+      }
+      #container {
+        max-width: 700px;
+        margin: 0 auto;
+      }
+      .demo-section {
+        margin-bottom: 24px;
+        padding: 24px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      h1 {
+        margin-bottom: 24px;
+        font-size: 1.4rem;
+      }
+      h2 {
+        margin: 0 0 6px;
+        font-size: 1rem;
+      }
+      p {
+        margin: 0 0 16px;
+        color: #555;
+        font-size: 13px;
+      }
+      .row {
+        display: flex;
+        margin-bottom: 12px;
+        flex-wrap: wrap;
+        align-items: flex-start;
+        gap: 16px;
+      }
+      .label {
+        margin-bottom: 4px;
+        color: #888;
+        font-size: 12px;
+      }
+      /* outline the TextBox so we can see its actual width */
+      .navi_text_box {
+        outline: 1px dashed #aaa;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="container">
+      <h1>TextBox Demo</h1>
+      <div id="app"></div>
+    </div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { TextBox } from "@jsenv/navi/src/text/text_box.jsx";
+
+      const EditSvg = () => (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+          width="16"
+          height="16"
+          style="flex-shrink:0"
+        >
+          <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
+        </svg>
+      );
+
+      const CheckSvg = () => (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+          width="16"
+          height="16"
+          style="flex-shrink:0"
+        >
+          <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" />
+        </svg>
+      );
+
+      const App = () => (
+        <div>
+          {/* 1. Width hugs longest line */}
+          <div class="demo-section">
+            <h2>1. Width = longest line</h2>
+            <p>
+              Each TextBox width is exactly as wide as its longest wrapped line
+              — no trailing blank space to the right of shorter lines.
+            </p>
+            <div class="row">
+              <div>
+                <div class="label">Short text (1 line)</div>
+                <TextBox padding="s">Hello world</TextBox>
+              </div>
+              <div>
+                <div class="label">Wrapping text (hugs longest line)</div>
+                <TextBox padding="s" style="max-width: 200px">
+                  The quick brown fox jumps over the lazy dog near the riverbank
+                </TextBox>
+              </div>
+              <div>
+                <div class="label">Long word forces wider line</div>
+                <TextBox padding="s" style="max-width: 200px">
+                  Short line here. Antidisestablishmentarianism is a very long
+                  word. Short again.
+                </TextBox>
+              </div>
+            </div>
+          </div>
+
+          {/* 2. Icons before and after — icon after stays on same line as last text line */}
+          <div class="demo-section">
+            <h2>2. Icons before and after</h2>
+            <p>
+              The icon after the text stays aligned with the text on the same
+              row, even when the text wraps to multiple lines.
+            </p>
+            <div class="row">
+              <div>
+                <div class="label">Icon before only</div>
+                <TextBox
+                  padding="s"
+                  gap="s"
+                  iconBefore={<EditSvg />}
+                  style="max-width: 220px"
+                >
+                  Edit this long description that wraps to the next line
+                </TextBox>
+              </div>
+              <div>
+                <div class="label">Icon after only</div>
+                <TextBox
+                  padding="s"
+                  gap="s"
+                  iconAfter={<CheckSvg />}
+                  style="max-width: 220px"
+                >
+                  Confirm this long description that wraps to the next line
+                </TextBox>
+              </div>
+              <div>
+                <div class="label">Icons before and after</div>
+                <TextBox
+                  padding="s"
+                  gap="s"
+                  iconBefore={<EditSvg />}
+                  iconAfter={<CheckSvg />}
+                  style="max-width: 220px"
+                >
+                  Both icons with wrapping text that spans multiple lines here
+                </TextBox>
+              </div>
+            </div>
+          </div>
+
+          {/* 3. Ellipsis when text cannot wrap */}
+          <div class="demo-section">
+            <h2>3. Ellipsis for non-wrapping overflow</h2>
+            <p>
+              When <code>maxHeight</code> limits the box to a single line and
+              the text cannot wrap (e.g. a URL or long word), the overflow is
+              shown with ellipsis.
+            </p>
+            <div class="row">
+              <div>
+                <div class="label">Normal wrapping (no maxHeight)</div>
+                <TextBox padding="s" style="max-width: 260px">
+                  https://very-long-domain-name.example.com/some/deeply/nested/path/to/a/resource
+                </TextBox>
+              </div>
+              <div>
+                <div class="label">maxHeight="1.5em" → ellipsis</div>
+                <TextBox padding="s" maxHeight="1.5em" style="max-width: 260px">
+                  https://very-long-domain-name.example.com/some/deeply/nested/path/to/a/resource
+                </TextBox>
+              </div>
+              <div>
+                <div class="label">Icon after + ellipsis</div>
+                <TextBox
+                  padding="s"
+                  gap="s"
+                  iconAfter={<EditSvg />}
+                  maxHeight="1.5em"
+                  style="max-width: 260px"
+                >
+                  https://very-long-domain-name.example.com/some/deeply/nested/path/to/a/resource
+                </TextBox>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+
+      render(<App />, document.getElementById("app"));
+    </script>
+  </body>
+</html>

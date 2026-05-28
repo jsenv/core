@@ -95,7 +95,7 @@ export const MessageBox = ({
       inline
       column
       alignY="start"
-      spacing="sm"
+      spacing="s"
       {...rest}
       className={withPropsClassName("navi_message_box", rest.className)}
       padding={padding}

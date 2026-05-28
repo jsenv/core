@@ -64,6 +64,7 @@
         <Box flex="y" spacing="l">
           <BasicDemo />
           <WithActionDemo />
+          <LongValueDemo />
           <ReadonlyDemo />
         </Box>
       );
@@ -205,12 +206,72 @@
         );
       };
 
-      // ── 3. Readonly ───────────────────────────────────────────────────────
+      // ── 3. Long value ─────────────────────────────────────────────────────
+
+      const LongValueDemo = () => {
+        const longText =
+          "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua";
+        const valueSignal = useSignal(longText);
+        const actionCallsSignal = useSignal([]);
+        return (
+          <div class="demo-section">
+            <h2>3. Long value overflow</h2>
+            <p>
+              Checks how a very long value is displayed in the picker button.
+            </p>
+            <Field vertical>
+              <Label>Description</Label>
+              <Picker
+                type="text"
+                name="text_long"
+                value={valueSignal.value}
+                placeholder="Click to edit…"
+                action={(v) => {
+                  actionCallsSignal.value = [...actionCallsSignal.value, v];
+                  valueSignal.value = v;
+                }}
+              >
+                <Box flex="y" spacing="s" padding="s">
+                  <Input
+                    type="text"
+                    action="update"
+                    value={valueSignal.value}
+                    placeholder="Type something…"
+                    autoFocus
+                  />
+                  <Box flex spacing="s">
+                    <Button action="send">Confirm</Button>
+                    <Button action="clear">Clear</Button>
+                    <Button action="cancel">Cancel</Button>
+                  </Box>
+                </Box>
+              </Picker>
+            </Field>
+            <p class="value-display">
+              Action calls ({actionCallsSignal.value.length}):{" "}
+              {actionCallsSignal.value.length === 0 ? (
+                <em style="color:#999">none</em>
+              ) : (
+                actionCallsSignal.value.map((v, i) => (
+                  <span
+                    key={i}
+                    style="margin-right:8px; background:#eee; padding:1px 5px; border-radius:3px; font-family:monospace"
+                  >
+                    {JSON.stringify(v)}
+                  </span>
+                ))
+              )}
+            </p>
+          </div>
+        );
+      };
+
+      // ── 4. Readonly ───────────────────────────────────────────────────────
 
       const ReadonlyDemo = () => {
         return (
           <div class="demo-section">
-            <h2>3. Readonly</h2>
+            <h2>4. Readonly</h2>
             <p>A readonly text picker cannot be opened.</p>
             <Field vertical>
               <Label>Name</Label>
