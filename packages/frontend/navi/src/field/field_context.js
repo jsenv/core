@@ -30,3 +30,27 @@ export const LoadingElementContext = createContext();
 
 export const ActionContext = createContext();
 export const ActionRequesterContext = createContext();
+
+export const findFieldElement = (el) => {
+  const naviFieldAttribute = el.getAttribute("navi-field");
+  if (!naviFieldAttribute) {
+    return null;
+  }
+  const fieldEl = el.querySelector(naviFieldAttribute);
+  return fieldEl;
+};
+
+export const findAncestorFieldElement = (el) => {
+  let ancestor;
+  const renderedBy = el.getAttribute("navi-rendered-by");
+  if (renderedBy) {
+    // event usually occur on inputs that are sometimes wrapped by a custom ui element
+    // these custom ui element have a [navi-field] attribute on them
+    // we want to look for their ancestor otherwise input would consider their wrapper as a field instead of finding a parent field
+    ancestor = el.closest(renderedBy).parentNode;
+  } else {
+    ancestor = el.parentNode;
+  }
+  const closestField = ancestor.closest("[navi-field]");
+  return closestField;
+};

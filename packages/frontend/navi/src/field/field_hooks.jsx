@@ -54,7 +54,7 @@ import {
   RequiredContext,
 } from "./field_context.js";
 import { addInputEffect } from "./input_effect.js";
-import { requestClosestAction, resolveActionProp } from "./string_actions.js";
+import { resolveActionProp, STRING_ACTIONS } from "./string_actions.js";
 import {
   dispatchRequestResetUIState,
   dispatchRequestSetUIState,
@@ -177,7 +177,7 @@ export const useFieldInterfaceProps = (
     const onKeyDown = (e) => {
       props.onKeyDown?.(e);
       if (e.key === "Enter") {
-        requestClosestAction(e);
+        STRING_ACTIONS.submit(e);
         return;
       }
       const input = e.currentTarget;

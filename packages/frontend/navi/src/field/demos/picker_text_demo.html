@@ -76,8 +76,9 @@
             <h2>1. Basic text picker</h2>
             <p>
               A text picker with a popover containing a text input, a confirm
-              button (<code>action="submit"</code>), and a cancel button (
-              <code>action="close"</code>).
+              button (<code>action="send"</code>), a clear button (
+              <code>action="clear"</code>), and a cancel button (
+              <code>action="cancel"</code>).
             </p>
             <Field vertical>
               <Label>Label</Label>
@@ -93,13 +94,14 @@
                 <Box flex="y" spacing="s" padding="s">
                   <Input
                     type="text"
-                    action={Picker.update}
+                    action="update"
                     value={valueSignal.value}
                     placeholder="Type something…"
                     autoFocus
                   />
                   <Box flex spacing="s">
-                    <Button action="close">Confirm</Button>
+                    <Button action="send">Confirm</Button>
+                    <Button action="clear">Clear</Button>
                     <Button action="cancel">Cancel</Button>
                   </Box>
                 </Box>
@@ -145,13 +147,14 @@
                 <Box flex="y" spacing="s" padding="s">
                   <Input
                     type="text"
-                    action={Picker.update}
+                    action="update"
                     value={valueSignal.value}
                     placeholder="Type something…"
                     autoFocus
                   />
                   <Box flex spacing="s">
-                    <Button action="close">Save</Button>
+                    <Button action="send">Save</Button>
+                    <Button action="clear">Clear</Button>
                     <Button action="cancel">Cancel</Button>
                   </Box>
                 </Box>

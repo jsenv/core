@@ -63,6 +63,7 @@ import {
 } from "@jsenv/dom";
 
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
+import { findFieldElement } from "../field_context.js";
 import { openCallout } from "./callout/callout.js";
 import { getConstraintMessage } from "./constraint_message.js";
 import {
@@ -94,9 +95,9 @@ export const dispatchRequestInteraction = (
   event,
   interactionName = "interaction",
 ) => {
-  const fieldElement = findFieldElement(element);
+  const fieldOrEl = findFieldElement(element) || element;
   const allowed = dispatchInternalCustomEvent(
-    fieldElement,
+    fieldOrEl,
     "navi_request_interaction",
     {
       event,
@@ -155,7 +156,7 @@ export const dispatchRequestAction = (element, detail) => {
   if (!detail.event) {
     throw new TypeError("dispatchRequestAction requires an event");
   }
-  const fieldElement = findFieldElement(element);
+  const fieldOrEl = findFieldElement(element) || element;
   // Spread caller's detail last so explicit fields (e.g. uiState forwarded by a proxy)
   // survive into the dispatched event. Fields absent from the caller's object are
   // intentionally absent — Object.hasOwn checks on the receiving side rely on this
@@ -175,7 +176,7 @@ export const dispatchRequestAction = (element, detail) => {
     */
   };
   const allowed = dispatchInternalCustomEvent(
-    fieldElement,
+    fieldOrEl,
     "navi_request_action",
     detail,
   );
@@ -1002,17 +1003,3 @@ HTMLFormElement.prototype.requestSubmit = function (submitter) {
 //   }
 //   return submit.apply(this, args);
 // };
-
-// When the requester is not a validated element itself (e.g. a <li> inside a
-// list container), look for a field element declared via navi-field on the
-// closest [data-action] ancestor.
-const findFieldElement = (element) => {
-  const fieldSelector = element.getAttribute("navi-field");
-  if (fieldSelector) {
-    const field = element.querySelector(fieldSelector);
-    if (field) {
-      return field;
-    }
-  }
-  return element;
-};

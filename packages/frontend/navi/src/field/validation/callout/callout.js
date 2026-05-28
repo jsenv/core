@@ -16,6 +16,7 @@ import {
 } from "@jsenv/dom";
 import { isValidElement } from "preact";
 
+import { findFieldElement } from "../../field_context.js";
 import { renderIntoCallout } from "./callout.jsx";
 
 /**
@@ -846,11 +847,8 @@ const stickCalloutToAnchor = (
     // Smart default: inputs and buttons are tight boxes where border-box makes sense.
     // For everything else (labels, divs, fieldsets…) content-box maximizes the chance
     // the arrow points at visible text rather than the outer padding/border.
-    const naviFieldSelector = anchorElement.getAttribute("navi-field");
-    const fieldElement = naviFieldSelector
-      ? anchorElement.querySelector(naviFieldSelector)
-      : anchorElement;
-    const tagName = (fieldElement || anchorElement).tagName;
+    const fieldOrEl = findFieldElement(anchorElement) || anchorElement;
+    const tagName = fieldOrEl.tagName;
     if (tagName === "INPUT" || tagName === "BUTTON" || tagName === "FIELDSET") {
       alignToAnchorBox = "border-box";
     } else {

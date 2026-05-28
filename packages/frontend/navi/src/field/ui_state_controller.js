@@ -16,6 +16,7 @@ import {
 
 import { useNavState } from "../nav/browser_integration/browser_integration.js";
 import { useInitialValue } from "../state/use_initial_value.js";
+import { findFieldElement } from "./field_context.js";
 import { FormContext } from "./form_context.js";
 import { PickerElementContext } from "./picker/picker_context.jsx";
 
@@ -680,15 +681,8 @@ export const useUIState = (ref, initialValue) => {
 };
 
 export const dispatchRequestSetUIState = (element, value, detail) => {
-  let field = element;
-  const fieldSelector = element.getAttribute("navi-field");
-  if (fieldSelector) {
-    const fieldEl = element.querySelector(fieldSelector);
-    if (fieldEl) {
-      field = fieldEl;
-    }
-  }
-  return dispatchInternalCustomEvent(field, "navi_set_ui_state", {
+  const fieldOrEl = findFieldElement(element) || element;
+  return dispatchInternalCustomEvent(fieldOrEl, "navi_set_ui_state", {
     ...detail,
     value,
   });

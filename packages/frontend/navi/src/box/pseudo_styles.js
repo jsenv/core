@@ -4,6 +4,7 @@ import {
   mergeTwoStyles,
 } from "@jsenv/dom";
 
+import { findFieldElement } from "../field/field_context.js";
 import { addInputEffect } from "../field/input_effect.js";
 import { getUIStateFromElement } from "../field/ui_state_controller.js";
 
@@ -411,15 +412,8 @@ Object.assign(PSEUDO_CLASSES, {
 definePseudoClass(":-navi-has-value", {
   attribute: "data-has-value",
   setup: (el, callback) => {
-    let inputEl = el;
-    const fieldCssSelector = el.hasAttribute("navi-field");
-    if (fieldCssSelector) {
-      const field = el.querySelector(fieldCssSelector);
-      if (field) {
-        inputEl = field;
-      }
-    }
-    return addInputEffect(inputEl, callback);
+    const fieldOrEl = findFieldElement(el) || el;
+    return addInputEffect(fieldOrEl, callback);
   },
   test: (el) => {
     if (el.hasAttribute("navi-ui-state")) {

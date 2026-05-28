@@ -7,8 +7,6 @@ import { createComponentResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { Icon } from "@jsenv/navi/src/text/icon.jsx";
 import { useFieldInterfaceProps } from "../field_hooks.jsx";
 import { getFromInputValue, getToInputValue } from "../input/input_textual.jsx";
-import { createUICallback } from "../ui_callback.js";
-import { dispatchRequestSetUIState } from "../ui_state_controller.js";
 import { PickerContext, PickerElementContext } from "./picker_context.jsx";
 import { PickerPlaceholder } from "./picker_placeholder.jsx";
 import { pickerResolvers } from "./picker_resolvers.jsx";
@@ -227,25 +225,6 @@ export const Picker = (props) => {
 
   return picker;
 };
-// Allow to synchronously update the picker value (will also dispatch "input" on the button)
-Picker.update = createUICallback({
-  name: "Picker.update",
-  action: (value, { event }) => {
-    const pickerEl = event.currentTarget.closest(".navi_picker");
-    if (!pickerEl) {
-      return false;
-    }
-    const pickerInput = pickerEl.querySelector(".navi_picker_input");
-    if (!pickerInput) {
-      return false;
-    }
-    return dispatchRequestSetUIState(pickerInput, value, { event });
-  },
-});
-// Will allow to close the picker without updating the value
-// (ideally if an update was called it should still trigger the action?)
-Picker.close = "close";
-Picker.submit = "submit";
 
 const renderPicker = createComponentResolver(pickerResolvers);
 const PickerButton = (props) => {
