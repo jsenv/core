@@ -7,6 +7,7 @@ import {
   PickerDay,
   PickerFile,
   PickerMonth,
+  PickerText,
   PickerTime,
   PickerWeek,
 } from "./picker_types.jsx";
@@ -49,6 +50,9 @@ const PickerTypeResolver = (props) => {
   }
   if (props.type === "file") {
     return <PickerFile {...props} />;
+  }
+  if (props.type === "text") {
+    return <PickerText {...props} />;
   }
   return <Next {...props} />;
 };
