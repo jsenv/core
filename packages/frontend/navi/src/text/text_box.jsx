@@ -7,7 +7,7 @@ const css = /* css */ `
     display: inline-flex;
     min-width: 0;
     flex-direction: row;
-    align-items: center;
+    align-items: flex-start;
   }
 
   .navi_text_box_content {

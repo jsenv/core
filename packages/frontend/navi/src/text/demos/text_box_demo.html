@@ -118,19 +118,77 @@
             </div>
           </div>
 
-          {/* 2. Icons before and after — icon after stays on same line as last text line */}
+          {/* 2. Padding and spacing */}
           <div class="demo-section">
-            <h2>2. Icons before and after</h2>
+            <h2>2. Padding and spacing</h2>
             <p>
-              The icon after the text stays aligned with the text on the same
-              row, even when the text wraps to multiple lines.
+              <code>padding</code> applies around the whole box (text + icons).{" "}
+              <code>spacing</code> controls the gap between icons and text.
+              Icons sit at the top of the box.
+            </p>
+            <div class="row">
+              <div>
+                <div class="label">No padding, no spacing</div>
+                <TextBox
+                  iconBefore={<EditSvg />}
+                  iconAfter={<CheckSvg />}
+                  style="max-width: 180px"
+                >
+                  Text with icons but no padding or spacing
+                </TextBox>
+              </div>
+              <div>
+                <div class="label">padding="s", spacing="s"</div>
+                <TextBox
+                  padding="s"
+                  spacing="s"
+                  iconBefore={<EditSvg />}
+                  iconAfter={<CheckSvg />}
+                  style="max-width: 180px"
+                >
+                  Text with small padding and spacing
+                </TextBox>
+              </div>
+              <div>
+                <div class="label">padding="m", spacing="m"</div>
+                <TextBox
+                  padding="m"
+                  spacing="m"
+                  iconBefore={<EditSvg />}
+                  iconAfter={<CheckSvg />}
+                  style="max-width: 180px"
+                >
+                  Text with medium padding and spacing
+                </TextBox>
+              </div>
+              <div>
+                <div class="label">padding="l", spacing="l"</div>
+                <TextBox
+                  padding="l"
+                  spacing="l"
+                  iconBefore={<EditSvg />}
+                  iconAfter={<CheckSvg />}
+                  style="max-width: 180px"
+                >
+                  Text with large padding and spacing between icons
+                </TextBox>
+              </div>
+            </div>
+          </div>
+
+          {/* 3. Icons before and after — icon stays at top when text wraps */}
+          <div class="demo-section">
+            <h2>3. Icons before and after</h2>
+            <p>
+              Icons are top-aligned. When text wraps to multiple lines the icons
+              stay pinned at the top of the box.
             </p>
             <div class="row">
               <div>
                 <div class="label">Icon before only</div>
                 <TextBox
                   padding="s"
-                  gap="s"
+                  spacing="s"
                   iconBefore={<EditSvg />}
                   style="max-width: 220px"
                 >
@@ -141,7 +199,7 @@
                 <div class="label">Icon after only</div>
                 <TextBox
                   padding="s"
-                  gap="s"
+                  spacing="s"
                   iconAfter={<CheckSvg />}
                   style="max-width: 220px"
                 >
@@ -152,20 +210,21 @@
                 <div class="label">Icons before and after</div>
                 <TextBox
                   padding="s"
-                  gap="s"
+                  spacing="s"
                   iconBefore={<EditSvg />}
                   iconAfter={<CheckSvg />}
                   style="max-width: 220px"
                 >
-                  Both icons with wrapping text that spans multiple lines here
+                  Both icons at top with wrapping text that spans multiple lines
+                  here
                 </TextBox>
               </div>
             </div>
           </div>
 
-          {/* 3. Ellipsis when text cannot wrap */}
+          {/* 4. Ellipsis when text cannot wrap */}
           <div class="demo-section">
-            <h2>3. Ellipsis for non-wrapping overflow</h2>
+            <h2>4. Ellipsis for non-wrapping overflow</h2>
             <p>
               When <code>maxHeight</code> limits the box to a single line and
               the text cannot wrap (e.g. a URL or long word), the overflow is
@@ -188,7 +247,7 @@
                 <div class="label">Icon after + ellipsis</div>
                 <TextBox
                   padding="s"
-                  gap="s"
+                  spacing="s"
                   iconAfter={<EditSvg />}
                   maxHeight="1.5em"
                   style="max-width: 260px"

@@ -27,7 +27,7 @@
         SearchSvg,
         SettingsSvg,
         LinkBlankTargetSvg,
-        RadioFieldset,
+        RadioGroup,
         UserSvg,
         HomeSvg,
       } from "@jsenv/navi";
@@ -478,7 +478,7 @@
               </Label>
               <Box flex="x" alignY="center" spacing="s">
                 font color
-                <RadioFieldset flex action={(v) => setFontColor(v)}>
+                <RadioGroup flex action={(v) => setFontColor(v)}>
                   {[
                     { label: "black", value: "#000000" },
                     { label: "red", value: "#cc0000" },
@@ -493,11 +493,11 @@
                       {label}
                     </Label>
                   ))}
-                </RadioFieldset>
+                </RadioGroup>
               </Box>
               <Box flex="x" alignY="center" spacing="s">
                 textAnchor
-                <RadioFieldset flex action={(v) => setTextAnchor(v)}>
+                <RadioGroup flex action={(v) => setTextAnchor(v)}>
                   {TEXT_ANCHOR_VALUES.map((v) => (
                     <Label key={v} flex="x" alignY="center" spacing="xs">
                       <Input
@@ -509,7 +509,7 @@
                       {v}
                     </Label>
                   ))}
-                </RadioFieldset>
+                </RadioGroup>
               </Box>
             </Box>
             <Paragraph
