@@ -8,7 +8,7 @@ import { Icon } from "@jsenv/navi/src/text/icon.jsx";
 import { useControlProps } from "../control_hooks.jsx";
 import { getFromInputValue, getToInputValue } from "../input/input_textual.jsx";
 import { PickerPlaceholder, PickerValue } from "./picker_components.jsx";
-import { PickerContext, PickerElementContext } from "./picker_context.jsx";
+import { PickerContext } from "./picker_context.jsx";
 import { pickerResolvers } from "./picker_resolvers.jsx";
 
 const css = /* css */ `
@@ -309,11 +309,7 @@ const PickerButton = (props) => {
         <Icon size="m">{icon === undefined ? <ChevronDownSvg /> : icon}</Icon>
       </span>
 
-      {children && (
-        <PickerElementContext.Provider value={ref}>
-          {children}
-        </PickerElementContext.Provider>
-      )}
+      {children}
     </Box>
   );
 };

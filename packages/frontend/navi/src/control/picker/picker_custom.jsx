@@ -16,7 +16,6 @@ import {
   dispatchRequestAction,
   dispatchRequestInteraction,
 } from "../validation/custom_constraint_validation.js";
-import { PickerRequestCloseContext } from "./picker_context.jsx";
 
 const css = /* css */ `
   .navi_picker {
@@ -310,11 +309,7 @@ export const PickerCustom = (props) => {
           requestClose(e);
         }
       },
-      "children": (
-        <PickerRequestCloseContext.Provider value={requestClose}>
-          {children}
-        </PickerRequestCloseContext.Provider>
-      ),
+      children,
     });
     Object.assign(popupProps, {
       onnavi_open: (e) => {
