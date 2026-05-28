@@ -1,0 +1,153 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Ref callback vs object ref repro</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" jsenv-type="module/jsx">
+      /**
+       * Reproduces the bug where a *stable callback ref* inside a component
+       * fails to update externalRef.current when the component remounts.
+       *
+       * Root cause (Preact children.js):
+       *   if (childVNode.ref && oldVNode.ref != childVNode.ref) {
+       *     refQueue.push(...)
+       *   }
+       *
+       * When the callback function is stable (same reference across renders /
+       * component instances that Preact considers the "same" vnode slot),
+       * oldVNode.ref === childVNode.ref → Preact skips re-applying the ref →
+       * externalRef.current is never updated.
+       *
+       * With an object ref the prop itself is a different object on each new
+       * parent instance → Preact detects the change → re-applies → works.
+       */
+
+      import { render } from "preact";
+      import { useRef, useState, useLayoutEffect } from "preact/hooks";
+
+      // ---- BoxLike with STABLE CALLBACK REF (reproduces the bug) ----
+      const BoxCallbackRef = ({ ref: externalRef, id }) => {
+        const externalRefRef = useRef(externalRef);
+        externalRefRef.current = externalRef;
+
+        const refCallbackRef = useRef(null);
+        if (!refCallbackRef.current) {
+          refCallbackRef.current = (el) => {
+            const currentRef = externalRefRef.current;
+            if (currentRef) {
+              if (typeof currentRef === "function") {
+                currentRef(el);
+              } else {
+                currentRef.current = el;
+              }
+            }
+          };
+        }
+
+        return <div ref={refCallbackRef.current} data-id={id} />;
+      };
+
+      // ---- BoxLike with plain OBJECT REF passthrough (works correctly) ----
+      const BoxObjectRef = ({ ref: externalRef, id }) => {
+        const defaultRef = useRef(null);
+        const finalRef = externalRef || defaultRef;
+        return <div ref={finalRef} data-id={id} />;
+      };
+
+      // ---- List component ----
+      // Mimics SelectableList: creates defaultRef, passes it down.
+      // Simulates useDisplayedLayoutEffect reading ref.current on open.
+      const List = ({ opened, useCallbackRef, instanceId }) => {
+        const defaultRef = useRef(null);
+
+        // Simulates useDisplayedLayoutEffect: on open, read ref.current
+        useLayoutEffect(() => {
+          if (opened) {
+            const el = defaultRef.current;
+            setLastResult(
+              el
+                ? { ok: true, msg: `[${instanceId}] ref.current = <div data-id="${el.dataset.id}">` }
+                : { ok: false, msg: `[${instanceId}] BUG — ref.current is null!` },
+            );
+          }
+        }, [opened]);
+
+        const BoxComponent = useCallbackRef ? BoxCallbackRef : BoxObjectRef;
+        return <BoxComponent ref={defaultRef} id={instanceId} />;
+      };
+
+      // ---- App ----
+      let setLastResult;
+
+      const App = () => {
+        const [opened, setOpened] = useState(false);
+        const [useCallbackRef, setUseCallbackRef] = useState(true);
+        const [openCount, setOpenCount] = useState(0);
+        const [lastResult, _setLastResult] = useState(null);
+        setLastResult = _setLastResult;
+
+        const toggle = () => {
+          setOpened((v) => {
+            const next = !v;
+            if (next) {
+              setOpenCount((c) => c + 1);
+            }
+            return next;
+          });
+        };
+
+        return (
+          <div style={{ fontFamily: "monospace", padding: 16 }}>
+            <h2>Ref callback vs object ref</h2>
+            <p>
+              Each open uses <code>key=&#123;openCount&#125;</code> on List to
+              force a remount — simulating what happens between picker opens.
+            </p>
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ marginRight: 16 }}>
+                <input
+                  type="radio"
+                  checked={useCallbackRef}
+                  onChange={() => setUseCallbackRef(true)}
+                />{" "}
+                Callback ref (bug)
+              </label>
+              <label>
+                <input
+                  type="radio"
+                  checked={!useCallbackRef}
+                  onChange={() => setUseCallbackRef(false)}
+                />{" "}
+                Object ref (works)
+              </label>
+            </div>
+            <button onClick={toggle}>{opened ? "Close" : "Open"}</button>
+            {lastResult && (
+              <p
+                style={{
+                  color: lastResult.ok ? "green" : "red",
+                  fontWeight: lastResult.ok ? "normal" : "bold",
+                }}
+              >
+                {lastResult.msg}
+              </p>
+            )}
+            {opened && (
+              <List
+                key={openCount}
+                opened={opened}
+                useCallbackRef={useCallbackRef}
+                instanceId={`L${openCount}`}
+              />
+            )}
+          </div>
+        );
+      };
+
+      render(<App />, document.getElementById("app"));
+    </script>
+  </body>
+</html>
