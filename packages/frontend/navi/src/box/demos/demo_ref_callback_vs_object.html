@@ -134,7 +134,7 @@
         useControlgroupProps,
       } from "@jsenv/navi/src/control/control_hooks.jsx";
       import { dispatchRequestAction } from "@jsenv/navi/src/control/validation/custom_constraint_validation.js";
-      // import { dispatchRequestSetUIState } from "@jsenv/navi/src/control/ui_state_controller.js";
+      //  import { dispatchRequestSetUIState } from "@jsenv/navi/src/control/ui_state_controller.js";
       import { List, ListItem } from "@jsenv/navi/src/control/list/list.jsx";
       import { windowWidthSignal } from "@jsenv/navi/src/layout/responsive.js";
 
@@ -184,10 +184,8 @@
             type: "radio",
             value,
             action: (v, { event }) => {
-              const listContainerEl = event.currentTarget.closest(
-                ".navi_list_container",
-              );
-              dispatchRequestAction(listContainerEl, { event });
+              const listEl = inputRef.current.closest(".navi_list_container");
+              dispatchRequestAction(listEl, { event });
             },
           },
           {
@@ -201,6 +199,7 @@
             getPropFromState: Boolean,
           },
         );
+
         return (
           <ListItem id={id} index={index}>
             <Box
