@@ -126,9 +126,12 @@
 
       import { useSignal } from "@preact/signals";
       import { render } from "preact";
-      import { useId, useRef } from "preact/hooks";
+      import { useRef } from "preact/hooks";
       import { Picker } from "@jsenv/navi";
-      import { useControlgroupProps } from "@jsenv/navi/src/control/control_hooks.jsx";
+      import {
+        useControlProps,
+        useControlgroupProps,
+      } from "@jsenv/navi/src/control/control_hooks.jsx";
       import { dispatchRequestAction } from "@jsenv/navi/src/control/validation/custom_constraint_validation.js";
       import { List, ListItem } from "@jsenv/navi/src/control/list/list.jsx";
       import { windowWidthSignal } from "@jsenv/navi/src/layout/responsive.js";
@@ -141,19 +144,14 @@
       const MockSelectableList = (props) => {
         const defaultRef = useRef();
         props.ref = props.ref || defaultRef;
-        const defaultName = useId();
-        props.name = props.name || `mock_list_${defaultName}`;
-        const [listControlProps, remainingProps] = useControlgroupProps(props, {
-          controlType: "radio_group",
-          childComponentType: "radio",
-          aggregateChildStates: (childUIStateControllers) => {
-            for (const c of childUIStateControllers) {
-              if (c.uiState) {
-                return c.uiState;
-              }
-            }
-            return undefined;
-          },
+        const [listControlProps, remainingProps] = useControlProps(props, {
+          controlType: "text",
+          statePropName: "value",
+          defaultStatePropName: "defaultValue",
+          getUIValue: () => undefined,
+          fallbackState: "",
+          getStateFromProp: (v) => v ?? "",
+          getPropFromState: (s) => s,
         });
         return (
           <List
