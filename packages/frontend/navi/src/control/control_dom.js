@@ -1,3 +1,23 @@
+/**
+ * Returns the nearest ancestor of `el` (exclusive) that has a `[data-action]`
+ * attribute.
+ *
+ * Starts from `el.parentNode` to skip `el` itself: `el` is the host and may
+ * carry `data-action`, but we want an ancestor's action, not the host's own.
+ * The wrapper never has `data-action`, so `closest` reaches the right target:
+ *
+ * ```html
+ * <form data-action="something_else">              ← found by closest
+ *   <span navi-control navi-control-host="input">  ← wrapper, no data-action
+ *     <input data-action="something" />            ← el (host), might have data-action
+ *   </span>
+ * </form>
+ * ```
+ */
+export const findClosestControlWithAction = (el) => {
+  return el.parentNode.closest("[data-action]");
+};
+
 export const getControlProxyTarget = (el) => {
   const proxyFor = el.getAttribute("navi-control-proxy-for");
   if (!proxyFor) {

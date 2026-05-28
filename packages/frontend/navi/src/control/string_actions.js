@@ -1,6 +1,9 @@
 import { dispatchCustomEvent } from "@jsenv/dom";
 
-import { getParentControl } from "./control_dom.js";
+import {
+  findClosestControlWithAction,
+  getParentControl,
+} from "./control_dom.js";
 import { createUICallback } from "./ui_callback.js";
 import { dispatchRequestSetUIState } from "./ui_state_controller.js";
 import { dispatchRequestAction } from "./validation/custom_constraint_validation.js";
@@ -46,11 +49,10 @@ const update = createUICallback({
 const requestClosestAction = (event) => {
   const currentTarget = event.currentTarget;
   const target = event.target;
-  // some element (like list) can have their own action, we want to trigger closest parent, not itself
-  const elementWithAction = currentTarget.parentNode.closest("[data-action]");
-  if (!elementWithAction) {
+  const controlWithAction = findClosestControlWithAction(currentTarget);
+  if (!controlWithAction) {
     console.warn(
-      "submit event triggered but no element with [data-action] found in event path",
+      "submit event triggered but no control with [data-action] found in event path",
       event,
     );
     return false;
@@ -60,13 +62,13 @@ const requestClosestAction = (event) => {
   // when present, we use first button submitting the form as the requester
   // not the input, it aligns with browser behavior where
   // hitting Enter in a text input triggers the first submit button of the form, not the input itself
-  const firstButtonSubmitting = elementWithAction.querySelector(
+  const firstButtonSubmitting = controlWithAction.querySelector(
     `button[type="submit"], input[type="submit"], input[type="image"], [data-action="submit"]`,
   );
   if (firstButtonSubmitting) {
     requester = firstButtonSubmitting;
   }
-  const allowed = dispatchRequestAction(elementWithAction, {
+  const allowed = dispatchRequestAction(controlWithAction, {
     event,
     requester,
   });
