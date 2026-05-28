@@ -110,26 +110,28 @@
     <script type="module" jsenv-type="module/jsx">
       /**
        * Attempts to reproduce the bug where ref.current is null/undefined
-       * inside scrollToItem when the picker dialog is reopened.
+       * inside scrollToItem when the picker is reopened.
        *
        * Steps to reproduce:
-       * 1. Resize while closed — simulate re-render while dialog is closed
+       * 1. Resize — switches between popover and dialog mode (like a responsive breakpoint)
        * 2. Open picker + select first item
-       * 3. Close picker
-       * 4. Open picker + select second item → BUG: scrollToItem crashes
+       * 3. Close picker (click outside)
+       * 4. Open picker + select second item → BUG?
        *
-       * The list is conditionally rendered (only when dialog is open) and
-       * uses a key that changes on each open to force a remount.
-       *
-       * The Box component wraps the container and ul refs in stable callback
-       * refs. The useDisplayedLayoutEffect uses containerRef to find the
-       * dialog ancestor and set up the toggle listener.
+       * The list is conditionally rendered (only when open) with a key that
+       * changes on each open to force a remount. Switching mode while closed
+       * triggers a re-render of the parent that may disrupt stable callback refs.
        */
 
       import { signal } from "@preact/signals";
       import { render } from "preact";
       import { useRef, useState, useCallback } from "preact/hooks";
-      import { Box, Dialog, useDisplayedLayoutEffect } from "@jsenv/navi";
+      import {
+        Box,
+        Dialog,
+        Popover,
+        useDisplayedLayoutEffect,
+      } from "@jsenv/navi";
 
       // ---- Shared state ----
       const selectedIdSignal = signal(null);
@@ -241,21 +243,22 @@
         const [logs, setLogs] = useState([]);
         const [isOpen, setIsOpen] = useState(false);
         const [openKey, setOpenKey] = useState(0);
-        const [rerenderCount, setRerenderCount] = useState(0);
+        const [mode, setMode] = useState("popover"); // "popover" | "dialog"
         appendLog = (entry) => setLogs((l) => [...l, entry].slice(-40));
 
         const dialogRef = useRef(null);
+        const anchorRef = useRef(null);
 
         const openPicker = () => {
           const nextKey = openKey + 1;
           setOpenKey(nextKey);
           setIsOpen(true);
-          log(`--- openPicker (key=${nextKey}) ---`, "info");
-          // Use the Dialog component's event API so openedRef is tracked correctly
-          // (needed for backdrop-click to close)
-          dialogRef.current.dispatchEvent(
-            new CustomEvent("navi_request_open", { bubbles: true }),
-          );
+          log(`--- openPicker (key=${nextKey}, mode=${mode}) ---`, "info");
+          if (mode === "dialog") {
+            dialogRef.current.dispatchEvent(
+              new CustomEvent("navi_request_open", { bubbles: true }),
+            );
+          }
         };
 
         const closePicker = () => {
@@ -263,13 +266,15 @@
           log("--- closePicker ---", "info");
         };
 
-        const simulateRerender = () => {
-          setRerenderCount((c) => c + 1);
-          log(
-            `--- simulateRerender #${rerenderCount + 1} (dialog closed) ---`,
-            "warn",
-          );
+        const toggleMode = () => {
+          const next = mode === "popover" ? "dialog" : "popover";
+          setMode(next);
+          log(`--- resize: switched to ${next} mode ---`, "warn");
         };
+
+        const pickerList = isOpen ? (
+          <PickerList key={openKey} instanceId={`open${openKey}`} />
+        ) : null;
 
         return (
           <div>
@@ -277,8 +282,7 @@
 
             <div className="steps">
               <strong>Steps to reproduce:</strong>
-              1. <b>Resize while closed</b> — simulate re-render while dialog is
-              closed
+              1. <b>Resize</b> — toggle between popover/dialog mode while closed
               <br />
               2. <b>Open picker</b> + select <b>first item</b>
               <br />
@@ -288,10 +292,10 @@
             </div>
 
             <div className="controls">
-              <button onClick={simulateRerender} disabled={isOpen}>
-                1. Resize while closed #{rerenderCount + 1}
+              <button onClick={toggleMode} disabled={isOpen}>
+                1. Resize (currently: {mode})
               </button>
-              <button onClick={openPicker} disabled={isOpen}>
+              <button ref={anchorRef} onClick={openPicker} disabled={isOpen}>
                 2/4. Open picker (key={openKey + 1})
               </button>
             </div>
@@ -303,20 +307,35 @@
                 color: "#555",
               }}
             >
-              Selected: {selectedIdSignal.value ?? "(none)"} · Dialog:{" "}
-              {isOpen ? "open" : "closed"} · Re-renders: {rerenderCount}
+              Selected: {selectedIdSignal.value ?? "(none)"} · Mode: {mode} ·
+              Dialog: {isOpen ? "open" : "closed"}
             </p>
 
-            <Dialog ref={dialogRef} onnavi_close={closePicker}>
-              <div className="dialog-inner">
-                <div style={{ marginBottom: 8, fontWeight: "bold" }}>
-                  Picker (open #{openKey})
+            {mode === "dialog" ? (
+              <Dialog ref={dialogRef} onnavi_close={closePicker}>
+                <div className="dialog-inner">
+                  <div style={{ marginBottom: 8, fontWeight: "bold" }}>
+                    Picker — dialog mode (open #{openKey})
+                  </div>
+                  {pickerList}
                 </div>
-                {isOpen && (
-                  <PickerList key={openKey} instanceId={`open${openKey}`} />
-                )}
-              </div>
-            </Dialog>
+              </Dialog>
+            ) : (
+              isOpen && (
+                <Popover
+                  anchor={anchorRef}
+                  onnavi_close={closePicker}
+                  style={{ minWidth: 200 }}
+                >
+                  <div className="dialog-inner">
+                    <div style={{ marginBottom: 8, fontWeight: "bold" }}>
+                      Picker — popover mode (open #{openKey})
+                    </div>
+                    {pickerList}
+                  </div>
+                </Popover>
+              )
+            )}
 
             <div id="log">
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
