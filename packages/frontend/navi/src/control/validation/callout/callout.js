@@ -16,7 +16,7 @@ import {
 } from "@jsenv/dom";
 import { isValidElement } from "preact";
 
-import { findControlHost, getControlRoot } from "../../control_dom.js";
+import { findControlHost, findControlRoot } from "../../control_dom.js";
 import { renderIntoCallout } from "./callout.jsx";
 
 /**
@@ -478,7 +478,7 @@ export const openCallout = (
         anchorElement = proxyElement;
       }
     }
-    const controlRoot = getControlRoot(anchorElement);
+    const controlRoot = findControlRoot(anchorElement);
     if (controlRoot) {
       anchorElement = controlRoot;
     }

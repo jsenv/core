@@ -65,8 +65,8 @@ import {
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
 import {
   findControlHost,
+  findControlRoot,
   getControlProxyTarget,
-  getControlRoot,
 } from "../control_dom.js";
 import { openCallout } from "./callout/callout.js";
 import { getConstraintMessage } from "./constraint_message.js";
@@ -825,7 +825,7 @@ export const installCustomConstraintValidation = (
     // and dismiss the callout — unless the status is "error", which requires explicit action.
     // The listener is registered when the callout opens and removed when it closes,
     // so it can never accidentally close the next callout.
-    const interactionTarget = getControlRoot(element) || element;
+    const interactionTarget = findControlRoot(element) || element;
     onCalloutOpen((openingEvent) => {
       const openingMousedownEvent = findEvent(openingEvent, "mousedown");
       const onmousedown = (e) => {

@@ -31,6 +31,9 @@
  * Returns `null` when `el` is itself the host (no separate wrapper).
  */
 export const findControlHost = (el) => {
+  if (el.hasAttribute("navi-control-host")) {
+    return el;
+  }
   return el.querySelector("[navi-control-host]");
 };
 
@@ -75,14 +78,21 @@ export const getParentControl = (el) => {
 };
 
 /**
- * Returns the control root element of `el` — the nearest `[navi-control]`
- * ancestor-or-self (the wrapper in layered controls, `el` itself in flat ones).
+ * Returns the root element of the control that `el` belongs to, or `null` if
+ * `el` is not part of a control.
  *
- * Useful when the visual anchor for a callout or tooltip should be the
- * control's visible root rather than the inner host element.
+ * Use this when you have an element that may be a host (inner input) and need
+ * the visual boundary of its control — e.g. to anchor a callout, track
+ * mousedown interactions, or measure the control's bounding box.
  */
-export const getControlRoot = (el) => {
-  return el.closest("[navi-control]");
+export const findControlRoot = (el) => {
+  if (el.hasAttribute("navi-control")) {
+    return el;
+  }
+  if (el.hasAttribute("navi-control-host")) {
+    return el.closest("[navi-control]");
+  }
+  return null;
 };
 
 export const getControlProxyTarget = (el) => {
