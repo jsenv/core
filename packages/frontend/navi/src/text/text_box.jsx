@@ -54,7 +54,7 @@ export const TextBox = ({ iconBefore, iconAfter, children, ...rest }) => {
   });
 
   return (
-    <Box ref={boxRef} inline {...rest} baseClassName="navi_text_box">
+    <Box ref={boxRef} flex inline {...rest} baseClassName="navi_text_box">
       {iconBefore}
       <span ref={contentRef} className="navi_text_box_content">
         {children}
