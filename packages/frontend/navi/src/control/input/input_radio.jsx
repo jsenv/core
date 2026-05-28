@@ -396,7 +396,6 @@ const InputRadioFieldInterface = (props) => {
       appearance={undefined}
       data-appearance={appearanceResolved}
       baseClassName="navi_radio"
-      navi-control-host=".navi_control_input"
       pseudoStateSelector=".navi_control_input"
       basePseudoState={basePseudoState}
       styleCSSVars={
@@ -454,7 +453,6 @@ const RealInputRadio = (props) => {
       {...props}
       as="input"
       baseClassName="navi_control_input"
-      navi-control-root=".navi_radio"
       data-callout-arrow-x="center"
     />
   );

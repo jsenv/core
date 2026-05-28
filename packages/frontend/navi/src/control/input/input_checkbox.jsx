@@ -373,7 +373,6 @@ const InputCheckboxFieldInterface = (props) => {
       accentColor={undefined}
       data-appearance={appearance}
       baseClassName="navi_checkbox"
-      navi-control-host=".navi_control_input"
       pseudoStateSelector=".navi_control_input"
       styleCSSVars={
         appearance === "switch"
@@ -404,7 +403,6 @@ const RealInputCheckbox = (props) => {
       as="input"
       type="checkbox"
       baseClassName="navi_control_input"
-      navi-control-root=".navi_checkbox"
       data-callout-arrow-x="center"
     />
   );

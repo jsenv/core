@@ -421,7 +421,7 @@ const useInteractiveProps = (
   const debugFocus = useDebugFocus();
 
   const { ref } = props;
-  Object.assign(controlProps, { ref });
+  Object.assign(controlProps, { ref, "navi-control-host": "" });
   remainingProps["navi-control"] = "";
 
   autofocus: {

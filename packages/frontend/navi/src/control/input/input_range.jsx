@@ -327,7 +327,6 @@ const RangeNativeInput = (props) => {
       as="input"
       type="range"
       baseClassName="navi_control_input"
-      navi-control-root=".navi_input_range"
     />
   );
 };

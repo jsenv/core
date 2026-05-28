@@ -259,7 +259,6 @@ const PickerButton = (props) => {
       ref={ref}
       type="button"
       baseClassName="navi_picker"
-      navi-control-host=".navi_picker_input"
       navi-has-placeholder={placeholder ? "" : undefined}
       pseudoClasses={PICKER_BUTTON_PSEUDO_CLASSES}
       disabled={disabled}
@@ -313,7 +312,6 @@ const PickerInput = (props) => {
   return (
     <Box
       as="input"
-      navi-control-root=".navi_picker"
       {...props}
       value={toInputValue(props.value)}
       className="navi_picker_input"

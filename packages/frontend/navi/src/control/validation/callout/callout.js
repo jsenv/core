@@ -818,7 +818,6 @@ const stickCalloutToAnchor = (
   { debug, originalAnchorElement = anchorElement },
 ) => {
   // Read an attribute from the original anchor first, then the visual anchor.
-  // The visual anchor may differ from the original when navi-control-root redirects
   // the anchor to a wrapper element that doesn't carry the data-callout-* attributes.
   const getAnchorAttribute = (name) => {
     return (

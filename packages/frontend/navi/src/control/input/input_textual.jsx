@@ -395,7 +395,6 @@ const InputTextualControlInterface = (props) => {
       data-discrete={discrete ? "" : undefined}
       discrete={undefined} // handled via data attribute
       styleCSSVars={InputStyleCSSVars}
-      navi-control-host=".navi_control_input"
       pseudoStateSelector=".navi_control_input"
       visualSelector=".navi_control_input"
       pseudoClasses={InputPseudoClasses}
@@ -407,7 +406,6 @@ const InputTextualControlInterface = (props) => {
         color="var(--loader-color)"
         inset={-1}
       />
-      <RealInput navi-control-root=".navi_input" {...inputProps} />
       {childrenWithContext}
     </Box>
   );
