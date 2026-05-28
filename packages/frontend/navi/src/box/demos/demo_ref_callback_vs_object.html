@@ -2,65 +2,38 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>Ref callback vs object ref</title>
+    <title>Ref callback bug repro</title>
     <style>
       body {
-        max-width: 680px;
+        max-width: 600px;
         padding: 20px;
         font-family: monospace;
       }
       h2 {
         margin-top: 0;
       }
-      .modes {
-        display: flex;
+      .steps {
         margin-bottom: 16px;
         padding: 12px 16px;
-        flex-direction: column;
-        gap: 10px;
-        background: #f9f9f9;
-        border: 1px solid #ccc;
+        font-size: 0.9em;
+        line-height: 1.8;
+        background: #fffbe6;
+        border: 1px solid #e6c700;
         border-radius: 6px;
       }
-      .modes label {
-        display: grid;
-        grid-template-columns: auto 1fr;
-        align-items: start;
-        gap: 8px;
-        cursor: pointer;
-      }
-      .mode-title {
-        font-weight: bold;
-      }
-      .mode-desc {
-        margin-top: 2px;
-        color: #555;
-        font-size: 0.85em;
-      }
-      .expectation {
-        margin-bottom: 16px;
-        padding: 8px 12px;
-        font-size: 0.9em;
-        border-left: 4px solid;
-        border-radius: 4px;
-      }
-      .expectation.bug {
-        color: #900;
-        background: #fff0f0;
-        border-color: #c00;
-      }
-      .expectation.ok {
-        color: #060;
-        background: #f0fff0;
-        border-color: #090;
+      .steps strong {
+        display: block;
+        margin-bottom: 4px;
       }
       .controls {
         display: flex;
         margin-bottom: 16px;
+        flex-wrap: wrap;
         gap: 8px;
       }
       button {
-        padding: 8px 16px;
+        padding: 8px 14px;
+        font-family: monospace;
         background: #fff;
         border: 1px solid #aaa;
         border-radius: 4px;
@@ -71,10 +44,40 @@
         cursor: default;
       }
       dialog {
-        min-width: 240px;
-        padding: 20px;
+        min-width: 260px;
+        padding: 0;
         border: 1px solid #aaa;
         border-radius: 8px;
+      }
+      .dialog-inner {
+        padding: 16px;
+      }
+      .item-list {
+        max-height: 160px;
+        margin: 8px 0;
+        padding: 0;
+        list-style: none;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        overflow-y: auto;
+      }
+      .item-list li {
+        padding: 6px 12px;
+        border-bottom: 1px solid #f0f0f0;
+        cursor: pointer;
+      }
+      .item-list li:last-child {
+        border-bottom: none;
+      }
+      .item-list li.selected {
+        font-weight: bold;
+        background: #e8f0fe;
+      }
+      .item-list li:hover {
+        background: #f5f5f5;
+      }
+      .item-list li.selected:hover {
+        background: #dce8fd;
       }
       #log {
         margin-top: 16px;
@@ -83,8 +86,9 @@
       }
       .log-entry {
         padding: 3px 0;
-        font-size: 0.9em;
-        border-bottom: 1px solid #f0f0f0;
+        font-size: 0.85em;
+        white-space: pre-wrap;
+        border-bottom: 1px solid #f5f5f5;
       }
       .log-entry.ok {
         color: #090;
@@ -96,228 +100,246 @@
       .log-entry.info {
         color: #555;
       }
+      .log-entry.warn {
+        color: #c60;
+      }
     </style>
   </head>
   <body>
     <div id="app"></div>
     <script type="module" jsenv-type="module/jsx">
       /**
-       * Investigates ref timing: is externalRef.current set by the time
-       * useLayoutEffect runs, regardless of whether Box uses a stable
-       * callback ref or an object ref?
+       * Attempts to reproduce the bug where ref.current is null/undefined
+       * inside scrollToItem when the picker dialog is reopened.
        *
-       * Background: in the picker bug, scrollToItem reads ref.current and
-       * gets undefined. We suspect Box's stable callback ref might not be
-       * forwarding to the external ref in time. This demo verifies that.
+       * Steps to reproduce (try in this order):
+       * 1. Click "Open picker" — list mounts, scroll works
+       * 2. Select an item — note the selection
+       * 3. Close the picker
+       * 4. Click "Simulate re-render" — forces a re-render of everything
+       *    while the dialog is closed (mimics window resize / signal update)
+       * 5. Click "Open picker" again — BUG: scrollToItem may crash
        *
-       * Preact guarantees: refs are applied (refQueue) BEFORE layout effects
-       * (commitQueue). So both approaches should have ref.current set
-       * when useLayoutEffect fires.
+       * The list is conditionally rendered (only when dialog is open) and
+       * uses a key that changes on each open to force a remount.
        *
-       * If both show DIV here, the bug is NOT a simple ref-timing issue —
-       * it must require a more specific sequence (signal re-render, specific
-       * dialog lifecycle, etc.) that is harder to isolate.
+       * The Box component wraps the container and ul refs in stable callback
+       * refs. The useDisplayedLayoutEffect uses containerRef to find the
+       * dialog ancestor and set up the toggle listener.
        */
 
+      import { signal } from "@preact/signals";
       import { render } from "preact";
-      import { useRef, useState, useLayoutEffect } from "preact/hooks";
+      import { useRef, useState, useCallback } from "preact/hooks";
+      import { Box, Dialog, useDisplayedLayoutEffect } from "@jsenv/navi";
 
-      // ---- Box variants ----
+      // ---- Shared state ----
+      const selectedIdSignal = signal(null);
+      const ITEMS = [
+        { id: "item-1", label: "Apple" },
+        { id: "item-2", label: "Banana" },
+        { id: "item-3", label: "Cherry" },
+        { id: "item-4", label: "Date" },
+        { id: "item-5", label: "Elderberry" },
+        { id: "item-6", label: "Fig" },
+        { id: "item-7", label: "Grape" },
+      ];
 
-      // Box with STABLE CALLBACK REF (current box.jsx approach).
-      // Creates one stable function; reads externalRef via a ref-of-ref.
-      const BoxCallbackRef = ({ ref: externalRef, id, children }) => {
-        const externalRefRef = useRef(externalRef);
-        externalRefRef.current = externalRef;
-
-        const refCallbackRef = useRef(null);
-        if (!refCallbackRef.current) {
-          refCallbackRef.current = (el) => {
-            const cur = externalRefRef.current;
-            if (cur) {
-              if (typeof cur === "function") {
-                cur(el);
-              } else {
-                cur.current = el;
-              }
-            }
-          };
+      // ---- Logging ----
+      let appendLog;
+      const log = (text, kind = "info") => {
+        if (appendLog) {
+          appendLog({ text, kind });
         }
-
-        return (
-          <div
-            ref={refCallbackRef.current}
-            data-box={id}
-            style={{ border: "1px dashed #aaa", padding: 4 }}
-          >
-            BoxCallbackRef#{id} {children}
-          </div>
-        );
+        console.debug(`[demo] ${text}`);
       };
 
-      // Box with OBJECT REF passthrough (the alternative approach).
-      const BoxObjectRef = ({ ref: externalRef, id, children }) => {
-        const defaultRef = useRef(null);
-        const finalRef = externalRef || defaultRef;
-        return (
-          <div
-            ref={finalRef}
-            data-box={id}
-            style={{ border: "1px dashed #aaa", padding: 4 }}
-          >
-            BoxObjectRef#{id} {children}
-          </div>
-        );
-      };
-
-      // ---- List component ----
-      // Mounted only when the dialog is open.
-      // useLayoutEffect reads containerRef.current — if the callback ref
-      // forwarded correctly, it should be the div element.
-      const List = ({ mode, instanceId }) => {
+      // ---- PickerList ----
+      // Mimics the SelectableList inside the picker dialog.
+      // - containerRef → passed to outer Box (container)
+      // - ref → passed to inner Box (ul)
+      // - useDisplayedLayoutEffect scrolls to selected on dialog open
+      const PickerList = ({ instanceId }) => {
         const containerRef = useRef(null);
+        const ulRef = useRef(null);
 
-        useLayoutEffect(() => {
-          const el = containerRef.current;
-          appendLog({
-            kind: el ? "ok" : "bug",
-            text: `[${instanceId}] useLayoutEffect — containerRef.current = ${el ? `<${el.tagName.toLowerCase()}>` : "null"}`,
-          });
+        const selectedId = selectedIdSignal.value;
+
+        log(
+          `PickerList[${instanceId}] render — selectedId=${selectedId}`,
+          "info",
+        );
+
+        // scrollToItem: reads containerRef.current and ulRef.current live
+        const scrollToItem = useCallback((itemId, reason) => {
+          const containerEl = containerRef.current;
+          const ulEl = ulRef.current;
+          if (!containerEl) {
+            log(
+              `scrollToItem(${itemId}, "${reason}") BUG — containerRef.current is null/undefined!`,
+              "bug",
+            );
+            return;
+          }
+          if (!ulEl) {
+            log(
+              `scrollToItem(${itemId}, "${reason}") BUG — ulRef.current is null/undefined!`,
+              "bug",
+            );
+            return;
+          }
+          const itemEl = ulEl.querySelector(`[data-id="${itemId}"]`);
+          if (itemEl) {
+            itemEl.scrollIntoView({ block: "nearest" });
+          }
+          log(
+            `scrollToItem(${itemId}, "${reason}") OK — containerEl=<${containerEl.tagName.toLowerCase()}>, ulEl=<${ulEl.tagName.toLowerCase()}>`,
+            "ok",
+          );
         }, []);
 
-        const BoxComponent =
-          mode === "callback" ? BoxCallbackRef : BoxObjectRef;
+        // Mimics useListScrollSync: scroll to selected on display
+        useDisplayedLayoutEffect(
+          containerRef,
+          (el, openEvent) => {
+            log(
+              `useDisplayedLayoutEffect fired (instanceId=${instanceId}, el=${el ? `<${el.tagName.toLowerCase()}>` : "null"})`,
+              el ? "info" : "bug",
+            );
+            const selected = selectedIdSignal.peek();
+            if (selected) {
+              scrollToItem(selected, "scroll to selected");
+            } else {
+              scrollToItem(ITEMS[0].id, "scroll to top");
+            }
+          },
+          [ulRef],
+        );
+
         return (
-          <BoxComponent ref={containerRef} id={instanceId}>
-            <ul style={{ margin: 0, paddingLeft: 16 }}>
-              <li>item A</li>
-              <li>item B</li>
-            </ul>
-          </BoxComponent>
+          <Box ref={containerRef} flex="y" style={{ gap: 0 }}>
+            <Box as="ul" ref={ulRef} className="item-list">
+              {ITEMS.map((item) => (
+                <li
+                  key={item.id}
+                  data-id={item.id}
+                  className={selectedId === item.id ? "selected" : ""}
+                  onClick={() => {
+                    selectedIdSignal.value = item.id;
+                    log(`selected: ${item.label}`, "info");
+                  }}
+                >
+                  {selectedId === item.id ? "▶ " : "  "}
+                  {item.label}
+                </li>
+              ))}
+            </Box>
+          </Box>
         );
       };
 
       // ---- App ----
-      let appendLog;
-
-      const MODES = {
-        callback: {
-          title: "BoxCallbackRef — stable callback, forwards to externalRef",
-          desc:
-            "Box wraps the ref in a stable function. The function writes to " +
-            "externalRef.current when called by Preact. Preact calls refs before " +
-            "layout effects (refQueue before commitQueue). " +
-            "Expected: containerRef.current = <div> on mount.",
-          expectOk: true,
-        },
-        object: {
-          title: "BoxObjectRef — direct object ref passthrough",
-          desc:
-            "Box passes the external useRef directly to the DOM element. " +
-            "Preact sets ref.current = element before layout effects run. " +
-            "Expected: containerRef.current = <div> on mount.",
-          expectOk: true,
-        },
-      };
-
       const App = () => {
-        const [mode, setMode] = useState("callback");
-        const [isOpen, setIsOpen] = useState(false);
-        const [openCount, setOpenCount] = useState(0);
         const [logs, setLogs] = useState([]);
-        appendLog = (entry) => setLogs((l) => [...l, entry]);
+        const [isOpen, setIsOpen] = useState(false);
+        const [openKey, setOpenKey] = useState(0);
+        const [rerenderCount, setRerenderCount] = useState(0);
+        appendLog = (entry) => setLogs((l) => [entry, ...l].slice(0, 40));
 
         const dialogRef = useRef(null);
 
-        const openDialog = () => {
+        const openPicker = () => {
+          const nextKey = openKey + 1;
+          setOpenKey(nextKey);
           setIsOpen(true);
-          setOpenCount((c) => c + 1);
           dialogRef.current.showModal();
+          log(`--- openPicker (key=${nextKey}) ---`, "info");
         };
 
-        const closeDialog = () => {
+        const closePicker = () => {
           setIsOpen(false);
           dialogRef.current.close();
+          log("--- closePicker ---", "info");
         };
 
-        const switchMode = (newMode) => {
-          if (isOpen) {
-            closeDialog();
-          }
-          setLogs([]);
-          setOpenCount(0);
-          setMode(newMode);
+        const simulateRerender = () => {
+          setRerenderCount((c) => c + 1);
+          log(
+            `--- simulateRerender #${rerenderCount + 1} (dialog closed) ---`,
+            "warn",
+          );
         };
 
-        const exp = MODES[mode];
+        const clearSelection = () => {
+          selectedIdSignal.value = null;
+          log("selection cleared", "info");
+        };
 
         return (
           <div>
-            <h2>Ref callback vs object ref</h2>
-            <p>
-              Is <code>containerRef.current</code> set by the time{" "}
-              <code>useLayoutEffect</code> runs? The list is conditionally
-              rendered (<code>{"{isOpen && <List />}"}</code>) so it remounts on
-              each open. Each open uses <code>key=openCount</code> to force a
-              fresh instance.
-            </p>
+            <h2>Ref callback bug repro</h2>
 
-            <div class="modes">
-              {Object.entries(MODES).map(([key, m]) => (
-                <label key={key}>
-                  <input
-                    type="radio"
-                    name="mode"
-                    checked={mode === key}
-                    onChange={() => switchMode(key)}
-                  />
-                  <div>
-                    <div class="mode-title">{m.title}</div>
-                    <div class="mode-desc">{m.desc}</div>
-                  </div>
-                </label>
-              ))}
+            <div className="steps">
+              <strong>Steps to reproduce:</strong>
+              1. <b>Open picker</b> → works ✓<br />
+              2. <b>Select an item</b> in the list
+              <br />
+              3. <b>Close picker</b>
+              <br />
+              4. <b>Simulate re-render</b> (forces re-render while dialog is
+              closed)
+              <br />
+              5. <b>Open picker again</b> → bug? (check the log)
             </div>
 
-            <div class={`expectation ${exp.expectOk ? "ok" : "bug"}`}>
-              Expected:{" "}
-              {exp.expectOk
-                ? "✓ containerRef.current = <div> — ref is set before layout effect"
-                : "✗ containerRef.current = null — ref was not set in time"}
-            </div>
-
-            <div class="controls">
-              <button onClick={openDialog} disabled={isOpen}>
-                Open dialog #{openCount + 1}
+            <div className="controls">
+              <button onClick={openPicker} disabled={isOpen}>
+                Open picker (key={openKey + 1})
               </button>
-              <button onClick={closeDialog} disabled={!isOpen}>
-                Close dialog
+              <button onClick={closePicker} disabled={!isOpen}>
+                Close picker
               </button>
+              <button onClick={simulateRerender} disabled={isOpen}>
+                Simulate re-render #{rerenderCount + 1}
+              </button>
+              <button onClick={clearSelection}>Clear selection</button>
               <button onClick={() => setLogs([])}>Clear log</button>
             </div>
 
-            <dialog ref={dialogRef}>
-              <strong>Dialog open #{openCount}</strong>
-              {isOpen && (
-                <List
-                  key={openCount}
-                  mode={mode}
-                  instanceId={`open${openCount}`}
-                />
-              )}
-              <br />
-              <button onClick={closeDialog}>Close</button>
-            </dialog>
+            <p
+              style={{
+                margin: "4px 0 16px",
+                fontSize: "0.85em",
+                color: "#555",
+              }}
+            >
+              Selected: {selectedIdSignal.value ?? "(none)"} · Dialog:{" "}
+              {isOpen ? "open" : "closed"} · Re-renders: {rerenderCount}
+            </p>
+
+            <Dialog ref={dialogRef}>
+              <div className="dialog-inner">
+                <div style={{ marginBottom: 8, fontWeight: "bold" }}>
+                  Picker (open #{openKey})
+                </div>
+                {isOpen && (
+                  <PickerList key={openKey} instanceId={`open${openKey}`} />
+                )}
+                <div style={{ marginTop: 8 }}>
+                  <button onClick={closePicker}>Close</button>
+                </div>
+              </div>
+            </Dialog>
 
             <div id="log">
-              <strong>Log:</strong>
+              <strong>Log (newest first):</strong>
               {logs.length === 0 && (
-                <div class="log-entry info">
-                  — open the dialog to see results —
+                <div className="log-entry info">
+                  — open the picker to start —
                 </div>
               )}
               {logs.map((entry, i) => (
-                <div key={i} class={`log-entry ${entry.kind}`}>
+                <div key={i} className={`log-entry ${entry.kind}`}>
                   {entry.text}
                 </div>
               ))}
