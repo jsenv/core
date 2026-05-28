@@ -129,7 +129,6 @@
       import { useId, useRef } from "preact/hooks";
       import { Picker } from "@jsenv/navi";
       import { Box } from "@jsenv/navi/src/box/box.jsx";
-      import { Field } from "@jsenv/navi/src/control/field.jsx";
       import { useControlgroupProps } from "@jsenv/navi/src/control/control_hooks.jsx";
       import { useCheckableProps } from "@jsenv/navi/src/control/input/use_checkable_props.js";
       import { dispatchRequestAction } from "@jsenv/navi/src/control/validation/custom_constraint_validation.js";
@@ -201,25 +200,14 @@
             }}
             aria-selected={checked}
           >
-            <Field
-              padding="m"
-              flex
-              alignY="center"
-              expandX
-              basePseudoState={basePseudoState}
-              pseudoStateSelector="[navi-selectable-real-input]"
-              interactive
-            >
-              <Box
-                as="input"
-                ref={inputRef}
-                {...checkableProps}
-                navi-selectable-real-input=""
-                navi-visually-hidden=""
-                children={undefined}
-              />
-              {children}
-            </Field>
+            <Box
+              as="input"
+              ref={inputRef}
+              {...checkableProps}
+              navi-selectable-real-input=""
+              children={undefined}
+            />
+            {children}
           </ListItem>
         );
       };
