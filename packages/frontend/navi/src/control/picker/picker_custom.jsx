@@ -7,6 +7,7 @@ import { useDebugFocus, useDebugPopup } from "@jsenv/navi/src/navi_debug.jsx";
 import { Dialog } from "@jsenv/navi/src/popup/dialog.jsx";
 import { Popover } from "@jsenv/navi/src/popup/popover.jsx";
 import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
+import { compareTwoJsValues } from "@jsenv/navi/src/utils/compare_two_js_values.js";
 import {
   dispatchRequestSetUIState,
   getUIStateFromElement,
@@ -85,6 +86,7 @@ const css = /* css */ `
 
         /* The list scrolls inside the popover */
         .navi_list_container {
+          width: 100%;
           border-radius: inherit;
           overflow: auto;
           overscroll-behavior: none;
@@ -258,7 +260,7 @@ export const PickerCustom = (props) => {
         return;
       }
       const valueAtClose = getPickerInputUIState(pickerEl);
-      if (valueAtClose === valueAtOpen) {
+      if (compareTwoJsValues(valueAtClose, valueAtOpen)) {
         debugPopup(
           e,
           `picker closed with same value as when it opened (${JSON.stringify(valueAtClose)}), no action dispatched`,

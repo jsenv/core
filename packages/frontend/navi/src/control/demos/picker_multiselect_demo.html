@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Multiselect Picker Demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:," />
+    <style>
+      body {
+        margin: 40px;
+        font-family: system-ui, sans-serif;
+        background: #f5f5f5;
+      }
+      #container {
+        max-width: 600px;
+        margin: 0 auto;
+      }
+      .demo-section {
+        margin-bottom: 24px;
+        padding: 24px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      h1 {
+        margin-bottom: 24px;
+        font-size: 1.4rem;
+      }
+      h2 {
+        margin: 0 0 6px;
+        font-size: 1rem;
+      }
+      p {
+        margin: 0 0 16px;
+        color: #555;
+        font-size: 13px;
+      }
+      .value-display {
+        margin-top: 12px;
+        color: #333;
+        font-size: 13px;
+      }
+      /* Chips */
+      .chip-list {
+        display: flex;
+        min-height: 28px;
+        margin-top: 10px;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+      .chip {
+        display: inline-flex;
+        padding: 2px 10px;
+        align-items: center;
+        gap: 4px;
+        color: #1a56cc;
+        font-weight: 500;
+        font-size: 13px;
+        background: #e8f0fe;
+        border-radius: 999px;
+      }
+      .chip-remove {
+        display: inline-flex;
+        width: 16px;
+        height: 16px;
+        padding: 0;
+        align-items: center;
+        justify-content: center;
+        color: #1a56cc;
+        font-size: 14px;
+        line-height: 1;
+        background: none;
+        border: none;
+        border-radius: 50%;
+        opacity: 0.7;
+        cursor: pointer;
+      }
+      .chip-remove:hover {
+        background: #c6d8ff;
+        opacity: 1;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="container">
+      <h1>Multiselect Picker Demo</h1>
+      <div id="app"></div>
+    </div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useSignal } from "@preact/signals";
+      import {
+        Box,
+        Field,
+        Label,
+        Picker,
+        Button,
+        SelectableList,
+        Selectable,
+        NaviDebug,
+      } from "@jsenv/navi";
+
+      const OPTIONS = [
+        "Apple",
+        "Banana",
+        "Cherry",
+        "Date",
+        "Elderberry",
+        "Fig",
+        "Grape",
+      ];
+
+      const App = () => (
+        <Box flex="y" spacing="l">
+          <TextDisplay />
+          <ChipsDisplay />
+        </Box>
+      );
+
+      // ── 1. Text display ───────────────────────────────────────────────────
+
+      const TextDisplay = () => {
+        const selectedSignal = useSignal([]);
+        const selectedArray = selectedSignal.value;
+
+        return (
+          <div class="demo-section">
+            <h2>1. Text display — comma-separated</h2>
+            <p>
+              <code>SelectableList multiple action="update"</code> updates the
+              picker's pending state on each click. Confirming commits the array
+              to the action callback, which updates the displayed value.
+            </p>
+            <Field vertical>
+              <Label>Fruits</Label>
+              <Picker
+                type="text"
+                name="multiselect_text"
+                value={selectedArray}
+                ui={
+                  selectedArray.length === 0 ? (
+                    "Select fruits..."
+                  ) : (
+                    <>
+                      {selectedArray.map((selected) => {
+                        return <span>{selected}</span>;
+                      })}
+                    </>
+                  )
+                }
+                action={(v) => {
+                  selectedSignal.value = v;
+                }}
+              >
+                <SelectableList multiple action="update">
+                  {OPTIONS.map((opt, i) => (
+                    <Selectable
+                      key={opt}
+                      id={`${opt}_chip`}
+                      index={i}
+                      value={opt}
+                      selected={selectedArray.includes(opt)}
+                      padding="s"
+                      spacing="s"
+                    >
+                      {opt}
+                    </Selectable>
+                  ))}
+                </SelectableList>
+              </Picker>
+            </Field>
+          </div>
+        );
+      };
+
+      // ── 2. Chips display ──────────────────────────────────────────────────
+
+      const ChipsDisplay = () => {
+        const selectedSignal = useSignal([]);
+
+        const removeSelected = (option) => {
+          selectedSignal.value = selectedSignal.value.filter(
+            (o) => o !== option,
+          );
+        };
+
+        const count = selectedSignal.value.length;
+        const displayValue =
+          count === 0 ? "" : `${count} fruit${count > 1 ? "s" : ""} selected`;
+
+        return (
+          <div class="demo-section">
+            <h2>2. Chips display</h2>
+            <p>
+              Selected items appear as removable chip pills below the picker.
+              Each chip has an × button to deselect without reopening the
+              picker.
+            </p>
+            <Field vertical>
+              <Label>Fruits</Label>
+              <Picker
+                type="text"
+                name="multiselect_chips"
+                value={displayValue}
+                placeholder="Select fruits…"
+                action={(v) => {
+                  selectedSignal.value = Array.isArray(v) ? v : [];
+                }}
+              >
+                <Box flex="y" spacing="s" padding="s">
+                  <SelectableList
+                    multiple
+                    action="update"
+                    style="min-width: 180px"
+                  >
+                    {OPTIONS.map((opt, i) => (
+                      <Selectable
+                        key={opt}
+                        id={opt}
+                        index={i}
+                        value={opt}
+                        selected={selectedSignal.value.includes(opt)}
+                        padding="s"
+                        spacing="s"
+                      >
+                        {opt}
+                      </Selectable>
+                    ))}
+                  </SelectableList>
+                  <Box flex spacing="s">
+                    <Button action="send">Confirm</Button>
+                    <Button action="cancel">Cancel</Button>
+                  </Box>
+                </Box>
+              </Picker>
+            </Field>
+            <div class="chip-list">
+              {selectedSignal.value.length === 0 ? (
+                <em style="color:#999; font-size:13px">No items selected</em>
+              ) : (
+                selectedSignal.value.map((opt) => (
+                  <span key={opt} class="chip">
+                    {opt}
+                    <button
+                      class="chip-remove"
+                      onClick={() => removeSelected(opt)}
+                      aria-label={`Remove ${opt}`}
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))
+              )}
+            </div>
+          </div>
+        );
+      };
+
+      render(
+        <NaviDebug debugAction debugInteraction debugPopup>
+          <App />
+        </NaviDebug>,
+        document.getElementById("app"),
+      );
+    </script>
+  </body>
+</html>
