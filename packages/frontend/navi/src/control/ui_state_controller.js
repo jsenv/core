@@ -16,7 +16,7 @@ import {
 
 import { useNavState } from "../nav/browser_integration/browser_integration.js";
 import { useInitialValue } from "../state/use_initial_value.js";
-import { findControlElement, getControlProxyTarget } from "./control_dom.js";
+import { findControlInput, getControlProxyTarget } from "./control_dom.js";
 import { FormContext } from "./form_context.js";
 import { PickerElementContext } from "./picker/picker_context.jsx";
 
@@ -678,7 +678,7 @@ export const useUIState = (ref, initialValue) => {
 };
 
 export const dispatchRequestSetUIState = (element, value, detail) => {
-  const controlEl = findControlElement(element) || element;
+  const controlEl = findControlInput(element) || element;
   return dispatchInternalCustomEvent(controlEl, "navi_set_ui_state", {
     ...detail,
     value,

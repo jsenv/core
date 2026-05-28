@@ -422,6 +422,7 @@ const useInteractiveProps = (
 
   const { ref } = props;
   Object.assign(controlProps, { ref });
+  remainingProps["navi-control"] = "";
 
   autofocus: {
     const { autoFocus, autoFocusVisible, autoSelect } = props;

@@ -16,7 +16,7 @@ import {
 } from "@jsenv/dom";
 import { isValidElement } from "preact";
 
-import { findControlElement } from "../../control_context.js";
+import { findControlInput } from "../../control_dom.js";
 import { renderIntoCallout } from "./callout.jsx";
 
 /**
@@ -847,7 +847,7 @@ const stickCalloutToAnchor = (
     // Smart default: inputs and buttons are tight boxes where border-box makes sense.
     // For everything else (labels, divs, fieldsets…) content-box maximizes the chance
     // the arrow points at visible text rather than the outer padding/border.
-    const controlEl = findControlElement(anchorElement) || anchorElement;
+    const controlEl = findControlInput(anchorElement) || anchorElement;
     const tagName = controlEl.tagName;
     if (tagName === "INPUT" || tagName === "BUTTON" || tagName === "FIELDSET") {
       alignToAnchorBox = "border-box";

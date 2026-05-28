@@ -5,7 +5,7 @@ import {
 } from "@jsenv/dom";
 
 import {
-  findControlElement,
+  findControlInput,
   getControlProxyTarget,
 } from "../control/control_dom.js";
 import { addInputEffect } from "../control/input_effect.js";
@@ -409,7 +409,7 @@ Object.assign(PSEUDO_CLASSES, {
 definePseudoClass(":-navi-has-value", {
   attribute: "data-has-value",
   setup: (el, callback) => {
-    const controlEl = findControlElement(el) || el;
+    const controlEl = findControlInput(el) || el;
     return addInputEffect(controlEl, callback);
   },
   test: (el) => {

@@ -1,6 +1,6 @@
 import { dispatchCustomEvent } from "@jsenv/dom";
 
-import { findAncestorControlElement } from "./control_dom.js";
+import { getParentControl } from "./control_dom.js";
 import { createUICallback } from "./ui_callback.js";
 import { dispatchRequestSetUIState } from "./ui_state_controller.js";
 import { dispatchRequestAction } from "./validation/custom_constraint_validation.js";
@@ -18,7 +18,7 @@ export const resolveActionProp = (action) => {
 
 const requestUpdate = (event, value) => {
   const currentTarget = event.currentTarget;
-  const parentControl = findAncestorControlElement(currentTarget);
+  const parentControl = getParentControl(currentTarget);
   if (!parentControl) {
     console.warn(
       "update triggered but no element with [navi-control-input] found in event path",

@@ -63,7 +63,7 @@ import {
 } from "@jsenv/dom";
 
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
-import { findControlElement, getControlProxyTarget } from "../control_dom.js";
+import { findControlInput, getControlProxyTarget } from "../control_dom.js";
 import { openCallout } from "./callout/callout.js";
 import { getConstraintMessage } from "./constraint_message.js";
 import {
@@ -95,7 +95,7 @@ export const dispatchRequestInteraction = (
   event,
   interactionName = "interaction",
 ) => {
-  const controlEl = findControlElement(element) || element;
+  const controlEl = findControlInput(element) || element;
   const allowed = dispatchInternalCustomEvent(
     controlEl,
     "navi_request_interaction",
@@ -156,7 +156,7 @@ export const dispatchRequestAction = (element, detail) => {
   if (!detail.event) {
     throw new TypeError("dispatchRequestAction requires an event");
   }
-  const controlEl = findControlElement(element) || element;
+  const controlEl = findControlInput(element) || element;
   // Spread caller's detail last so explicit fields (e.g. uiState forwarded by a proxy)
   // survive into the dispatched event. Fields absent from the caller's object are
   // intentionally absent — Object.hasOwn checks on the receiving side rely on this
@@ -323,7 +323,7 @@ const checkAndReportConstraints = (
     elementToValidate = proxyTarget;
   }
   if (!elementToValidate.__validationInterface__) {
-    const controlElement = findControlElement(requester);
+    const controlElement = findControlInput(requester);
     if (controlElement) {
       elementToValidate = controlElement;
     }
