@@ -56,15 +56,21 @@ export const useDisplayedLayoutEffect = (ref, callback, deps) => {
     if (!el) {
       return undefined;
     }
-    const ancestor = el.closest("dialog, details, [popover]");
+    const ancestor = el.closest("dialog, details, [popover], [aria-expanded]");
     if (!ancestor) {
       return undefined;
     }
     const onToggle = (e) => {
       // <dialog> and [popover] fire toggle with newState; <details> uses the
       // older toggle event without newState — fall back to checking .open.
-      const isOpen =
-        e.newState !== undefined ? e.newState === "open" : e.target.open;
+      let isOpen;
+      if (typeof e.newState === "string") {
+        isOpen = e.newState === "open";
+      } else if (e.target.open) {
+        isOpen = true;
+      } else if (e.target.getAttribute("aria-expanded") === "true") {
+        isOpen = true;
+      }
       if (!isOpen) {
         return;
       }
