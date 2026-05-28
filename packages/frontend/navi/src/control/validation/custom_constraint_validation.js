@@ -319,10 +319,6 @@ const checkAndReportConstraints = (
   };
 
   let elementToValidate = event.currentTarget;
-  const proxyTarget = findControlProxyTarget(elementToValidate);
-  if (proxyTarget) {
-    elementToValidate = proxyTarget;
-  }
   if (!elementToValidate.__validationInterface__) {
     const controlHost = findControlHost(requester);
     if (controlHost) {
@@ -520,6 +516,22 @@ export const installCustomConstraintValidation = (
     fromRequestAction,
     skipReadonly,
   } = {}) => {
+    // Never validate a proxy — always delegate to the underlying element
+    const proxyTarget = findControlProxyTarget(element);
+    if (proxyTarget) {
+      let targetVI = proxyTarget.__validationInterface__;
+      if (!targetVI) {
+        targetVI = installCustomConstraintValidation(proxyTarget);
+      }
+      return targetVI.checkValidity({
+        constraints,
+        event,
+        fromRequestAction,
+        requester,
+        skipReadonly,
+      });
+    }
+
     // Always check managed fields first. If any fails, stop immediately and
     // expose the failing interface so the caller can reportValidity on the right element.
     failingManagedValidationInterface = null;

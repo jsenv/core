@@ -86,7 +86,6 @@ export const REQUIRED_CONSTRAINT = {
             };
           });
         }
-
         return {
           message: naviI18n("constraint.required.radio"),
           target: field.closest("fieldset") || undefined,

@@ -694,6 +694,7 @@ const useInteractiveProps = (
         dispatchRequestSetUIState(e.currentTarget, uiState, {
           event: e.detail.event,
         });
+        debugAction(e, `executing action`);
         executeAction(e);
       },
       onnavi_action_start: (e) => {
