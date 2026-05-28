@@ -724,7 +724,7 @@ export const Box = (props) => {
   );
 };
 
-const toCopySet = new Set(["data-action", "aria-readonly", "aria-busy"]);
+const toCopySet = new Set([]);
 
 export const applySeparatorOnChildren = (children, separator) => {
   const flattenedChildren = toChildArray(children);
